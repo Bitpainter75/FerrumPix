@@ -26,11 +26,47 @@ Module Program
     End Function
 
     Function BuildAvaloniaApp() As AppBuilder
-        Return AppBuilder.Configure(Of App)().
+        Dim builder = AppBuilder.Configure(Of App)().
             UsePlatformDetect().
             UseReactiveUI(AddressOf ConfigureReactiveUI).
             LogToTrace().
             With(New X11PlatformOptions With {.UseDBusMenu = False})
+
+        ' Nur macOS, und nur wenn jemand ausdrücklich einen Weg wählt: die Wahl gilt VOR dem Aufbau
+        ' des Toolkits, deshalb steht sie hier und nicht in den Einstellungen. Was sie soll, steht
+        ' an AppSettings.MacRenderingMode.
+        Dim renderingMode = MacRenderingMode()
+        If renderingMode IsNot Nothing Then
+            builder = builder.With(New AvaloniaNativePlatformOptions With {.RenderingMode = renderingMode})
+        End If
+        Return builder
+    End Function
+
+    ''' <summary>Die gewählte Reihenfolge der Zeichenwege, oder Nothing für die des Toolkits.
+    '''
+    ''' Der gewählte Weg steht VORN, die übrigen bleiben als Rückfall dahinter: eine Wahl, die
+    ''' auf dem Gerät nicht trägt, darf ein schwarzes Fenster nicht zur Folge haben. Bei "Software"
+    ''' gibt es nichts darunter, das ist der Boden.</summary>
+    Private Function MacRenderingMode() As IReadOnlyList(Of AvaloniaNativeRenderingMode)
+        If Not OperatingSystem.IsMacOS() Then Return Nothing
+        Try
+            Select Case AppSettingsService.NormalizeMacRenderingMode(AppSettingsService.Load().MacRenderingMode)
+                Case "Metal"
+                    Return {AvaloniaNativeRenderingMode.Metal,
+                            AvaloniaNativeRenderingMode.OpenGl,
+                            AvaloniaNativeRenderingMode.Software}
+                Case "OpenGl"
+                    Return {AvaloniaNativeRenderingMode.OpenGl,
+                            AvaloniaNativeRenderingMode.Software}
+                Case "Software"
+                    Return {AvaloniaNativeRenderingMode.Software}
+                Case Else
+                    Return Nothing
+            End Select
+        Catch ex As Exception
+            DiagnosticLogService.LogException("App.Start", ex)
+            Return Nothing
+        End Try
     End Function
 
     ''' Seit Avalonia 12 kommt die ReactiveUI-Anbindung aus dem Paket ReactiveUI.Avalonia, und

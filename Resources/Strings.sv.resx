@@ -8184,4 +8184,10 @@
   <data name="Um_wie_viele_Bildpunkte_die_Maske_ber_die_erkann_03649db8" xml:space="preserve">
     <value>Hur många bildpunkter masken växer utanför den funna kanten; negativt krymper den. Klipper modellen ett hårstrå för snävt hämtar du tillbaka det så här.</value>
   </data>
+  <data name="Zeichenweg_Versuch_19554efe" xml:space="preserve">
+    <value>Ritväg (försök)</value>
+  </data>
+  <data name="Welchen_Weg_FerrumPix_zum_Zeichnen_nimmt_Wirkt_n_fc363cc1" xml:space="preserve">
+    <value>Vilken väg FerrumPix använder för att rita. Börjar gälla efter en omstart.</value>
+  </data>
 </root>

@@ -571,34 +571,107 @@ Namespace ViewModels
             End Get
         End Property
 
-        ''' <summary>Der Zeichenfläche den Farbraum sRGB aufprägen. Wirkt erst nach einem
-        ''' Neustart, weil er beim Öffnen des Fensters gesetzt wird.</summary>
-        Public Property MacTagWindowColorSpace As Boolean
+        ''' <summary>Die Verfahren, mit denen der Farbraum aufgeprägt werden kann.
+        '''
+        ''' MEHRERE ZUR WAHL, weil das erste gemessen nicht trägt und niemand hier ein Gerät mit
+        ''' weitem Farbumfang hat, an dem sich das nächste prüfen ließe. Wer eines hat, probiert sie
+        ''' durch und liest unter der Auswahl ab, was passiert ist; die Begründung zu jedem einzelnen
+        ''' steht an MacWindowColorSpaceService.
+        '''
+        ''' Die Namen stehen absichtlich technisch da und laufen NICHT durch T(): sie sind für eine
+        ''' Rückfrage gedacht und verschwinden wieder, sobald der Weg gefunden ist.</summary>
+        Public ReadOnly Property WindowColorSpaceMethodOptions As New ObservableCollection(Of GraphicsPathOption)(
+            MacWindowColorSpaceService.Methods.Select(
+                Function(key) New GraphicsPathOption With {.Key = key, .Name = WindowColorSpaceMethodName(key)}))
+
+        Private Shared Function WindowColorSpaceMethodName(key As String) As String
+            Select Case key
+                Case MacWindowColorSpaceService.MethodViewLayer : Return "Ebene der Ansicht (mit wantsLayer)"
+                Case MacWindowColorSpaceService.MethodViewLayerNoWantsLayer : Return "Ebene der Ansicht (ohne wantsLayer)"
+                Case MacWindowColorSpaceService.MethodLayerTree : Return "Erste Ebene im Baum, die einen Farbraum annimmt"
+                Case MacWindowColorSpaceService.MethodContentViewLayer : Return "Ebene der Inhaltsansicht des Fensters"
+                Case MacWindowColorSpaceService.MethodWindow : Return "Farbraum des Fensters (NSWindow)"
+                Case MacWindowColorSpaceService.MethodWindowAndLayer : Return "Fenster und Ebene zusammen"
+                Case Else : Return "Aus"
+            End Select
+        End Function
+
+        Public Property SelectedWindowColorSpaceMethod As GraphicsPathOption
             Get
-                Return _macTagWindowColorSpace
+                Dim key = MacWindowColorSpaceService.NormalizeMethod(_windowColorSpaceMethod)
+                Return If(WindowColorSpaceMethodOptions.FirstOrDefault(Function(o) o.Key = key),
+                          WindowColorSpaceMethodOptions.FirstOrDefault())
             End Get
-            Set(value As Boolean)
-                If _macTagWindowColorSpace = value Then Return
-                Me.RaiseAndSetIfChanged(_macTagWindowColorSpace, value)
-                AppSettingsService.Update(Sub(s) s.MacTagWindowColorSpace = value)
+            Set(value As GraphicsPathOption)
+                If value Is Nothing Then Return
+                Dim key = MacWindowColorSpaceService.NormalizeMethod(value.Key)
+                If String.Equals(key, _windowColorSpaceMethod, StringComparison.Ordinal) Then Return
+                _windowColorSpaceMethod = key
+                AppSettingsService.Update(Sub(s) s.MacWindowColorSpaceMethod = key)
+                Me.RaisePropertyChanged(NameOf(SelectedWindowColorSpaceMethod))
+                ' Das Hauptfenster hängt daran und versucht es sofort - für alles außer dem
+                ' Zeichenweg braucht es dazu keinen Neustart.
+                MacWindowColorSpaceService.NotifyMethodChanged()
                 Me.RaisePropertyChanged(NameOf(WindowColorSpaceStatusText))
             End Set
         End Property
-        Private _macTagWindowColorSpace As Boolean
+        Private _windowColorSpaceMethod As String = MacWindowColorSpaceService.MethodOff
 
-        ''' <summary>Was der letzte Versuch ergeben hat. Ohne diese Zeile bliebe dem Nutzer nur
-        ''' "es sieht anders aus" oder "es sieht gleich aus" - und uns bei einer Rückfrage nichts,
-        ''' woran wir erkennen könnten, ob die Ebene den Farbraum überhaupt angenommen hat.</summary>
+        ''' <summary>Der Zeichenweg, den Avalonia nehmen soll. Er entscheidet mit, ob überhaupt eine
+        ''' Ebene entsteht, die einen Farbraum tragen kann: nur der Metal-Weg legt eine solche an.
+        ''' Wirkt erst beim nächsten Start, weil die Wahl vor dem Aufbau des Toolkits gilt.</summary>
+        Public ReadOnly Property MacRenderingModeOptions As New ObservableCollection(Of GraphicsPathOption)(
+            AppSettingsService.MacRenderingModeChoices.Select(
+                Function(key) New GraphicsPathOption With {.Key = key, .Name = MacRenderingModeName(key)}))
+
+        Private Shared Function MacRenderingModeName(key As String) As String
+            Select Case key
+                Case "Metal" : Return "Metal bevorzugen"
+                Case "OpenGl" : Return "OpenGL, ohne Metal"
+                Case "Software" : Return "Software"
+                Case Else : Return "Automatisch (Metal, dann OpenGL, dann Software)"
+            End Select
+        End Function
+
+        Public Property SelectedMacRenderingMode As GraphicsPathOption
+            Get
+                Dim key = AppSettingsService.NormalizeMacRenderingMode(_macRenderingMode)
+                Return If(MacRenderingModeOptions.FirstOrDefault(Function(o) o.Key = key),
+                          MacRenderingModeOptions.FirstOrDefault())
+            End Get
+            Set(value As GraphicsPathOption)
+                If value Is Nothing Then Return
+                Dim key = AppSettingsService.NormalizeMacRenderingMode(value.Key)
+                If String.Equals(key, _macRenderingMode, StringComparison.Ordinal) Then Return
+                _macRenderingMode = key
+                AppSettingsService.Update(Sub(s) s.MacRenderingMode = key)
+                Me.RaisePropertyChanged(NameOf(SelectedMacRenderingMode))
+            End Set
+        End Property
+        Private _macRenderingMode As String = AppSettingsService.MacRenderingModeDefault
+
+        ''' <summary>Was der letzte Versuch ergeben hat UND was dabei vorgefunden wurde. Ohne diese
+        ''' Zeile bliebe dem Nutzer nur "es sieht anders aus" oder "es sieht gleich aus" - und uns
+        ''' bei einer Rückfrage nichts, woran wir erkennen könnten, ob die Ebene den Farbraum
+        ''' überhaupt angenommen hat.
+        '''
+        ''' Der zweite Teil ist der wichtigere: er nennt den tatsächlich benutzten Zeichenweg und
+        ''' den Baum aus Ansichten und Ebenen mit ihren Klassennamen. Erst daran lässt sich sehen,
+        ''' ob es überhaupt eine Ebene gibt, die einen Farbraum annehmen würde.</summary>
         Public ReadOnly Property WindowColorSpaceStatusText As String
             Get
                 If Not OperatingSystem.IsMacOS() Then Return ""
                 Dim result = MacWindowColorSpaceService.LastResult
+                ' NICHT "environment" nennen: VB unterscheidet keine Gross- und Kleinschreibung, und
+                ' der Name verdeckte dann den Typ System.Environment eine Zeile weiter.
+                Dim surroundings = MacWindowColorSpaceService.LastEnvironment
                 If String.IsNullOrWhiteSpace(result) Then
-                    Return If(_macTagWindowColorSpace,
-                              LocalizationService.T("Wirkt nach einem Neustart."),
-                              LocalizationService.T("Aus."))
+                    result = LocalizationService.T("Wirkt nach einem Neustart.")
+                Else
+                    result = LocalizationService.T("Letzter Versuch") & ": " & result
                 End If
-                Return LocalizationService.T("Letzter Versuch") & ": " & result
+                If String.IsNullOrWhiteSpace(surroundings) Then Return result
+                Return result & Environment.NewLine & surroundings
             End Get
         End Property
 
@@ -3198,7 +3271,8 @@ Namespace ViewModels
             _useCameraBaselineTable = _appSettings.UseCameraBaselineTable
             _lensCorrectionEnabled = _appSettings.LensCorrectionEnabled
             _rawDemosaicAlgorithm = AppSettingsService.NormalizeRawDemosaicAlgorithm(_appSettings.RawDemosaicAlgorithm)
-            _macTagWindowColorSpace = _appSettings.MacTagWindowColorSpace
+            _windowColorSpaceMethod = MacWindowColorSpaceService.NormalizeMethod(_appSettings.MacWindowColorSpaceMethod)
+            _macRenderingMode = AppSettingsService.NormalizeMacRenderingMode(_appSettings.MacRenderingMode)
             _thumbnailCacheEnabled = _appSettings.ThumbnailCacheEnabled
             _thumbnailQuality = _appSettings.ThumbnailQuality
             _thumbnailMemoryCacheCapacity = AppSettingsService.NormalizeGalleryThumbnailMemoryCacheCapacity(_appSettings.GalleryThumbnailMemoryCacheCapacity)
@@ -4953,6 +5027,17 @@ Namespace ViewModels
     ''' Name steht im Feld - er traegt die Abkuerzung, weil genau die in der Fachwelt gebraucht
     ''' wird; die Erklaerung steht in der Zeile darunter.</summary>
     Public Class RawDemosaicOption
+        Public Property Key As String = ""
+        Public Property Name As String = ""
+        Public Overrides Function ToString() As String
+            Return Name
+        End Function
+    End Class
+
+    ''' <summary>Ein Eintrag in den beiden Auswahllisten rund um den Zeichenweg (Verfahren fuer den
+    ''' Farbraum, Zeichenweg selbst). Der Schluessel liegt in der settings.json, der Name steht in
+    ''' der Liste.</summary>
+    Public Class GraphicsPathOption
         Public Property Key As String = ""
         Public Property Name As String = ""
         Public Overrides Function ToString() As String

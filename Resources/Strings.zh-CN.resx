@@ -8142,4 +8142,10 @@
   <data name="Um_wie_viele_Bildpunkte_die_Maske_ber_die_erkann_03649db8" xml:space="preserve">
     <value>蒙版在识别到的边缘之外扩展多少像素；负值则收缩。若模型少切了一根头发的宽度，用它补回来。</value>
   </data>
+  <data name="Zeichenweg_Versuch_19554efe" xml:space="preserve">
+    <value>绘制方式(试验)</value>
+  </data>
+  <data name="Welchen_Weg_FerrumPix_zum_Zeichnen_nimmt_Wirkt_n_fc363cc1" xml:space="preserve">
+    <value>FerrumPix 使用哪种方式绘制。重启后生效。</value>
+  </data>
 </root>

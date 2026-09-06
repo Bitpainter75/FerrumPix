@@ -8184,4 +8184,10 @@
   <data name="Um_wie_viele_Bildpunkte_die_Maske_ber_die_erkann_03649db8" xml:space="preserve">
     <value>検出された縁からマスクが何画素外へ広がるか。負の値では縮みます。モデルが髪一本分だけ内側で切った場合、これで取り戻せます。</value>
   </data>
+  <data name="Zeichenweg_Versuch_19554efe" xml:space="preserve">
+    <value>描画経路 (試験)</value>
+  </data>
+  <data name="Welchen_Weg_FerrumPix_zum_Zeichnen_nimmt_Wirkt_n_fc363cc1" xml:space="preserve">
+    <value>FerrumPix が描画に使う経路です。再起動後に有効になります。</value>
+  </data>
 </root>

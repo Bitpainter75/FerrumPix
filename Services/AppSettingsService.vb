@@ -525,11 +525,28 @@ Namespace Services
 
         ''' <summary>Nur macOS: der Zeichenflaeche des Fensters den Farbraum sRGB aufpraegen.
         '''
-        ''' Ab Werk AUS, weil der Weg experimentell ist - ob die Ebene den Farbraum annimmt, haengt
-        ''' am Toolkit, und hier gibt es kein Geraet mit weitem Farbumfang, an dem sich das pruefen
-        ''' liesse. Was er soll und warum er nichts umrechnet, steht in
-        ''' <see cref="MacWindowColorSpaceService"/>.</summary>
+        ''' ABGELOEST durch <see cref="MacWindowColorSpaceMethod"/>, bleibt aber als Eigenschaft
+        ''' stehen: in vorhandenen Installationen liegt der Wert in der settings.json, und wer den
+        ''' Versuch eingeschaltet hatte, soll das Verfahren bekommen und nicht ein stilles Aus. Die
+        ''' Uebernahme geschieht beim Laden, danach ist der Schalter aus.</summary>
         Public Property MacTagWindowColorSpace As Boolean = False
+
+        ''' <summary>Nur macOS: WIE der Farbraum aufgepraegt wird. Eines der
+        ''' <see cref="MacWindowColorSpaceService.Methods"/>, ab Werk "Off".
+        '''
+        ''' Zur Wahl statt fest verdrahtet, weil der erste Weg gemessen nicht traegt und mehrere
+        ''' weitere in Betracht kommen; die Begruendung steht am Dienst. Gespeichert wird der Name
+        ''' des Verfahrens, Unbekanntes faellt beim Laden auf "Off" zurueck.</summary>
+        Public Property MacWindowColorSpaceMethod As String = MacWindowColorSpaceService.MethodOff
+
+        ''' <summary>Nur macOS: welchen Zeichenweg Avalonia nehmen soll (siehe
+        ''' <see cref="AppSettingsService.MacRenderingModeChoices"/>). Ab Werk "Auto", also die
+        ''' Reihenfolge des Toolkits.
+        '''
+        ''' Der Weg entscheidet mit, ob ein Farbraum ueberhaupt unterzubringen ist: nur der
+        ''' Metal-Weg legt eine Ebene an, die einen tragen kann. Wirkt erst beim naechsten Start,
+        ''' weil die Wahl vor dem Aufbau des Toolkits gilt.</summary>
+        Public Property MacRenderingMode As String = AppSettingsService.MacRenderingModeDefault
 
         ''' <summary>Das Verfahren, mit dem aus den Sensordaten ein Farbbild wird (Demosaic).
         ''' Gespeichert wird der NAME, nicht LibRaws Nummer: die Nummern gehoeren einer fremden
@@ -766,6 +783,7 @@ Namespace Services
                 settings.JpgSaveQuality = NormalizeJpgSaveQuality(settings.JpgSaveQuality)
                 settings.DefaultSaveFormat = NormalizeDefaultSaveFormat(settings.DefaultSaveFormat)
                 settings.RawDemosaicAlgorithm = NormalizeRawDemosaicAlgorithm(settings.RawDemosaicAlgorithm)
+                NormalizeMacGraphicsSettings(settings)
                 settings.ViewerSlideshowIntervalSeconds = NormalizeViewerSlideshowIntervalSeconds(settings.ViewerSlideshowIntervalSeconds)
                 settings.EditorGridSize = NormalizeEditorGridSize(settings.EditorGridSize)
                 settings.ViewerFitBehavior = NormalizeViewerFitBehavior(settings.ViewerFitBehavior)
@@ -1002,6 +1020,7 @@ Namespace Services
                 settings.JpgSaveQuality = NormalizeJpgSaveQuality(settings.JpgSaveQuality)
                 settings.DefaultSaveFormat = NormalizeDefaultSaveFormat(settings.DefaultSaveFormat)
                 settings.RawDemosaicAlgorithm = NormalizeRawDemosaicAlgorithm(settings.RawDemosaicAlgorithm)
+                NormalizeMacGraphicsSettings(settings)
                 settings.ViewerSlideshowIntervalSeconds = NormalizeViewerSlideshowIntervalSeconds(settings.ViewerSlideshowIntervalSeconds)
                 settings.EditorGridSize = NormalizeEditorGridSize(settings.EditorGridSize)
                 settings.ViewerFitBehavior = NormalizeViewerFitBehavior(settings.ViewerFitBehavior)
@@ -1888,6 +1907,39 @@ Namespace Services
             Next
             Return RawDemosaicDefault
         End Function
+
+        ''' <summary>Die Reihenfolge des Toolkits: Metal, dann OpenGL, dann Software.</summary>
+        Public Const MacRenderingModeDefault As String = "Auto"
+
+        ''' <summary>Die waehlbaren Zeichenwege, in der Reihenfolge der Auswahlliste. Die Namen
+        ''' liegen in der settings.json und sind keine Anzeigetexte.</summary>
+        Public Shared ReadOnly MacRenderingModeChoices As String() = {"Auto", "Metal", "OpenGl", "Software"}
+
+        Public Shared Function NormalizeMacRenderingMode(value As String) As String
+            If String.IsNullOrWhiteSpace(value) Then Return MacRenderingModeDefault
+            Dim trimmed = value.Trim()
+            For Each choice In MacRenderingModeChoices
+                If String.Equals(choice, trimmed, StringComparison.OrdinalIgnoreCase) Then Return choice
+            Next
+            Return MacRenderingModeDefault
+        End Function
+
+        ''' <summary>Farbraum-Verfahren und Zeichenweg geradeziehen, samt der einmaligen Uebernahme
+        ''' des alten Schalters. Sie steht hier und nicht zweimal in den Normalisierungsbloecken,
+        ''' weil sie in beiden gleich lauten muss.</summary>
+        Private Shared Sub NormalizeMacGraphicsSettings(settings As AppSettings)
+            ' Wer den Versuch eingeschaltet hatte, bekommt das Verfahren, das damals gemeint war,
+            ' und der alte Schalter geht aus - sonst holte er die Wahl bei jedem Laden zurueck.
+            If settings.MacTagWindowColorSpace Then
+                settings.MacTagWindowColorSpace = False
+                If MacWindowColorSpaceService.NormalizeMethod(settings.MacWindowColorSpaceMethod) =
+                   MacWindowColorSpaceService.MethodOff Then
+                    settings.MacWindowColorSpaceMethod = MacWindowColorSpaceService.MethodViewLayer
+                End If
+            End If
+            settings.MacWindowColorSpaceMethod = MacWindowColorSpaceService.NormalizeMethod(settings.MacWindowColorSpaceMethod)
+            settings.MacRenderingMode = NormalizeMacRenderingMode(settings.MacRenderingMode)
+        End Sub
 
         Public Shared Function NormalizeGalleryFilterRatings(value As List(Of Integer)) As List(Of Integer)
             If value Is Nothing Then Return New List(Of Integer)()

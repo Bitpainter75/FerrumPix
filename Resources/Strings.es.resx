@@ -8144,4 +8144,10 @@
   <data name="Um_wie_viele_Bildpunkte_die_Maske_ber_die_erkann_03649db8" xml:space="preserve">
     <value>Cuántos píxeles crece la máscara más allá del borde detectado; en negativo se encoge. Si el modelo corta un pelo de más, así se recupera.</value>
   </data>
+  <data name="Zeichenweg_Versuch_19554efe" xml:space="preserve">
+    <value>Ruta de dibujo (prueba)</value>
+  </data>
+  <data name="Welchen_Weg_FerrumPix_zum_Zeichnen_nimmt_Wirkt_n_fc363cc1" xml:space="preserve">
+    <value>Qué ruta usa FerrumPix para dibujar. Se aplica tras reiniciar.</value>
+  </data>
 </root>

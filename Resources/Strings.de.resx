@@ -8144,4 +8144,10 @@
   <data name="Um_wie_viele_Bildpunkte_die_Maske_ber_die_erkann_03649db8" xml:space="preserve">
     <value>Um wie viele Bildpunkte die Maske über die erkannte Kante hinauswächst, negativ schrumpft sie. Erkennt das Modell eine Haaresbreite zu wenig, holt man sie damit zurück.</value>
   </data>
+  <data name="Zeichenweg_Versuch_19554efe" xml:space="preserve">
+    <value>Zeichenweg (Versuch)</value>
+  </data>
+  <data name="Welchen_Weg_FerrumPix_zum_Zeichnen_nimmt_Wirkt_n_fc363cc1" xml:space="preserve">
+    <value>Welchen Weg FerrumPix zum Zeichnen nimmt. Wirkt nach einem Neustart.</value>
+  </data>
 </root>

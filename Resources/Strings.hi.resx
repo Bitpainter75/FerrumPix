@@ -8188,4 +8188,10 @@
   <data name="Um_wie_viele_Bildpunkte_die_Maske_ber_die_erkann_03649db8" xml:space="preserve">
     <value>मास्क पहचाने गए किनारे से कितने पिक्सेल आगे बढ़ता है; ऋणात्मक मान उसे सिकोड़ता है। यदि मॉडल बाल भर कम काटे, तो इससे वह वापस मिल जाता है।</value>
   </data>
+  <data name="Zeichenweg_Versuch_19554efe" xml:space="preserve">
+    <value>ड्रॉइंग पथ (प्रयोग)</value>
+  </data>
+  <data name="Welchen_Weg_FerrumPix_zum_Zeichnen_nimmt_Wirkt_n_fc363cc1" xml:space="preserve">
+    <value>FerrumPix ड्रॉइंग के लिए कौन सा पथ उपयोग करता है। पुनः आरंभ करने के बाद लागू होता है।</value>
+  </data>
 </root>

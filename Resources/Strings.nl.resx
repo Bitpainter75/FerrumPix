@@ -8184,4 +8184,10 @@
   <data name="Um_wie_viele_Bildpunkte_die_Maske_ber_die_erkann_03649db8" xml:space="preserve">
     <value>Hoeveel beeldpunten het masker voorbij de gevonden rand groeit; negatief krimpt het. Snijdt het model een haarbreedte te krap, dan haal je dat hiermee terug.</value>
   </data>
+  <data name="Zeichenweg_Versuch_19554efe" xml:space="preserve">
+    <value>Tekenpad (proef)</value>
+  </data>
+  <data name="Welchen_Weg_FerrumPix_zum_Zeichnen_nimmt_Wirkt_n_fc363cc1" xml:space="preserve">
+    <value>Welk pad FerrumPix gebruikt om te tekenen. Werkt na een herstart.</value>
+  </data>
 </root>

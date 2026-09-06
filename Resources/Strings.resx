@@ -8145,4 +8145,10 @@
   <data name="Um_wie_viele_Bildpunkte_die_Maske_ber_die_erkann_03649db8" xml:space="preserve">
     <value>By how many pixels the mask grows beyond the detected edge; negative shrinks it. If the model cuts a hair's breadth too tight, this brings it back.</value>
   </data>
+  <data name="Zeichenweg_Versuch_19554efe" xml:space="preserve">
+    <value>Rendering path (experiment)</value>
+  </data>
+  <data name="Welchen_Weg_FerrumPix_zum_Zeichnen_nimmt_Wirkt_n_fc363cc1" xml:space="preserve">
+    <value>Which path FerrumPix uses for drawing. Takes effect after a restart.</value>
+  </data>
 </root>

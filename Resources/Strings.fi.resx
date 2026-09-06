@@ -8184,4 +8184,10 @@
   <data name="Um_wie_viele_Bildpunkte_die_Maske_ber_die_erkann_03649db8" xml:space="preserve">
     <value>Kuinka monta kuvapistettä maski kasvaa havaitun reunan yli; negatiivisena se kutistuu. Jos malli leikkaa hiuksenhienosti liikaa, tällä saa sen takaisin.</value>
   </data>
+  <data name="Zeichenweg_Versuch_19554efe" xml:space="preserve">
+    <value>Piirtotapa (kokeilu)</value>
+  </data>
+  <data name="Welchen_Weg_FerrumPix_zum_Zeichnen_nimmt_Wirkt_n_fc363cc1" xml:space="preserve">
+    <value>Mitä tapaa FerrumPix käyttää piirtämiseen. Tulee voimaan uudelleenkäynnistyksen jälkeen.</value>
+  </data>
 </root>

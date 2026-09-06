@@ -8188,4 +8188,10 @@
   <data name="Um_wie_viele_Bildpunkte_die_Maske_ber_die_erkann_03649db8" xml:space="preserve">
     <value>마스크가 인식된 가장자리 바깥으로 몇 픽셀 자라는지. 음수면 줄어듭니다. 모델이 머리카락 한 올만큼 좁게 잘랐다면 이것으로 되찾습니다.</value>
   </data>
+  <data name="Zeichenweg_Versuch_19554efe" xml:space="preserve">
+    <value>그리기 경로 (실험)</value>
+  </data>
+  <data name="Welchen_Weg_FerrumPix_zum_Zeichnen_nimmt_Wirkt_n_fc363cc1" xml:space="preserve">
+    <value>FerrumPix가 그리기에 사용하는 경로입니다. 다시 시작한 후에 적용됩니다.</value>
+  </data>
 </root>

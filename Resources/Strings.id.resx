@@ -8188,4 +8188,10 @@
   <data name="Um_wie_viele_Bildpunkte_die_Maske_ber_die_erkann_03649db8" xml:space="preserve">
     <value>Berapa piksel masker tumbuh melewati tepi yang terdeteksi; nilai negatif mengecilkannya. Jika model memotong sehelai rambut terlalu rapat, ini mengembalikannya.</value>
   </data>
+  <data name="Zeichenweg_Versuch_19554efe" xml:space="preserve">
+    <value>Jalur menggambar (percobaan)</value>
+  </data>
+  <data name="Welchen_Weg_FerrumPix_zum_Zeichnen_nimmt_Wirkt_n_fc363cc1" xml:space="preserve">
+    <value>Jalur yang dipakai FerrumPix untuk menggambar. Berlaku setelah dimulai ulang.</value>
+  </data>
 </root>

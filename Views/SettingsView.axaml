@@ -597,19 +597,57 @@
                         <!-- Nur macOS: dort rechnet das System selbst um, sobald die Zeichenflaeche
                              einen Farbraum traegt. Warum das anderswo nicht hilft, steht am
                              ViewModel. Ausdruecklich als Versuch beschriftet - ob die Ebene den
-                             Farbraum annimmt, konnte hier niemand pruefen. -->
+                             Farbraum annimmt, konnte hier niemand pruefen.
+
+                             ZWEI AUSWAHLEN statt eines Schalters: das erste Verfahren traegt
+                             gemessen nicht, und welches der uebrigen es tut, entscheidet nur ein
+                             Geraet mit weitem Farbumfang. Wer eines hat, probiert sie durch, ohne
+                             fuer jeden Versuch eine neue Fassung zu brauchen. Der Zeichenweg
+                             gehoert dazu, weil nur einer von ihnen ueberhaupt eine Ebene anlegt,
+                             die einen Farbraum tragen kann. Begruendung im
+                             MacWindowColorSpaceService. -->
                         <StackPanel Spacing="14" IsVisible="{Binding IsWindowColorSpaceFixSupported}">
                             <Grid ColumnDefinitions="*,Auto">
                                 <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
                                     <TextBlock Text="Farben an Bildschirme mit weitem Farbumfang anpassen (Versuch)" FontSize="{DynamicResource FP.Font.Body}"/>
                                     <TextBlock Text="Auf Bildschirmen mit weitem Farbumfang, etwa Display P3, wirken Fotos und Oberfläche zu kräftig. Eingeschaltet sagt FerrumPix dem System, dass es in sRGB zeichnet, damit es selbst umrechnet. Ob das greift, hängt vom verwendeten Zeichenweg ab; deshalb ist es ein Versuch und kein Versprechen. Wirkt nach einem Neustart." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
-                                    <TextBlock Text="{Binding WindowColorSpaceStatusText}" Foreground="{DynamicResource FP.Text.Muted}" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap"/>
+                                    <!-- Auswaehlbar statt nur lesbar: die Zeile ist der ganze
+                                         Messbefund und soll sich kopieren lassen. no-translate,
+                                         weil der Inhalt aus einer Bindung kommt (siehe
+                                         LocalizationService.NoTranslateClass). -->
+                                    <SelectableTextBlock Classes="no-translate"
+                                                         Text="{Binding WindowColorSpaceStatusText}"
+                                                         Foreground="{DynamicResource FP.Text.Muted}"
+                                                         FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap"/>
                                 </StackPanel>
-                                <ToggleSwitch Grid.Column="1"
-                                              IsChecked="{Binding MacTagWindowColorSpace}"
-                                              OnContent=""
-                                              OffContent=""
-                                              VerticalAlignment="Center"/>
+                                <ComboBox Grid.Column="1"
+                                          MinWidth="260"
+                                          ItemsSource="{Binding WindowColorSpaceMethodOptions}"
+                                          SelectedItem="{Binding SelectedWindowColorSpaceMethod, Mode=TwoWay}"
+                                          VerticalAlignment="Center">
+                                    <ComboBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Classes="no-translate" Text="{Binding Name}"/>
+                                        </DataTemplate>
+                                    </ComboBox.ItemTemplate>
+                                </ComboBox>
+                            </Grid>
+                            <Grid ColumnDefinitions="*,Auto">
+                                <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                    <TextBlock Text="Zeichenweg (Versuch)" FontSize="{DynamicResource FP.Font.Body}"/>
+                                    <TextBlock Text="Welchen Weg FerrumPix zum Zeichnen nimmt. Wirkt nach einem Neustart." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                </StackPanel>
+                                <ComboBox Grid.Column="1"
+                                          MinWidth="260"
+                                          ItemsSource="{Binding MacRenderingModeOptions}"
+                                          SelectedItem="{Binding SelectedMacRenderingMode, Mode=TwoWay}"
+                                          VerticalAlignment="Center">
+                                    <ComboBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Classes="no-translate" Text="{Binding Name}"/>
+                                        </DataTemplate>
+                                    </ComboBox.ItemTemplate>
+                                </ComboBox>
                             </Grid>
                         </StackPanel>
 

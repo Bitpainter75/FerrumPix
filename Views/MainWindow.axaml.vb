@@ -46,6 +46,9 @@ Namespace Views
             ' haengen koennte. Der Aufruf prueft die Einstellung selbst und tut ausserhalb von
             ' macOS nichts.
             AddHandler Opened, Sub(s, e) ApplyWindowColorSpace()
+            ' Wer in den Einstellungen ein anderes Verfahren waehlt, soll es sofort sehen und nicht
+            ' fuer jeden Versuch neu starten muessen.
+            AddHandler Services.MacWindowColorSpaceService.MethodChanged, Sub(s, e) ApplyWindowColorSpace()
             AddHandler Closing, AddressOf HandleWindowClosing
             AddHandler PositionChanged, Sub(s, e) OnWindowPlacementChanged()
             AddHandler SizeChanged, Sub(s, e) OnWindowPlacementChanged()
@@ -159,21 +162,21 @@ Namespace Views
         ''' Geraet mit weitem Farbumfang laesst er sich hier nicht pruefen, deshalb entscheidet der
         ''' Nutzer und nicht wir.
         '''
-        ''' WIEDERHOLT, NICHT EINMAL BEIM OEFFNEN. Das Toolkit legt seine Metall-Ebene erst an,
-        ''' wenn wirklich gezeichnet wird, und haengt sie dann als Ebene der Ansicht ein
-        ''' (<c>setLayer:</c>, in libAvaloniaNative nachgesehen). Ein Farbraum, den wir vorher auf
-        ''' die leere Ebene legen, geht dabei verloren - der Versuch beim Oeffnen kam also
-        ''' moeglicherweise immer zu frueh. Deshalb wird er wiederholt, bis das Nachlesen ihn
-        ''' bestaetigt, hoechstens aber fuer wenige Sekunden.</summary>
+        ''' WIEDERHOLT, NICHT EINMAL BEIM OEFFNEN. Das Toolkit legt seine Ebene fuer den Zeichenweg
+        ''' erst an, wenn wirklich gezeichnet wird (in libAvaloniaNative nachgesehen). Ein Farbraum,
+        ''' den wir vorher auf eine leere Ebene legen, geht dabei verloren - der Versuch beim
+        ''' Oeffnen kam also moeglicherweise immer zu frueh. Deshalb wird er wiederholt, bis das
+        ''' Nachlesen ihn bestaetigt, hoechstens aber fuer wenige Sekunden.</summary>
         Private _colorSpaceTimer As DispatcherTimer
         Private _colorSpaceTries As Integer
 
         Private Sub ApplyWindowColorSpace()
             If Not OperatingSystem.IsMacOS() Then Return
             Try
-                If Not Services.AppSettingsService.Load().MacTagWindowColorSpace Then Return
+                ' Ein laufender Wiederholer gehoert dem alten Verfahren; beim Wechsel faengt die
+                ' Zaehlung neu an, sonst laufen zwei Versuche gegeneinander.
+                StopColorSpaceTimer()
                 If TryApplyWindowColorSpace() Then Return
-                If _colorSpaceTimer IsNot Nothing Then Return
                 _colorSpaceTries = 0
                 _colorSpaceTimer = New DispatcherTimer With {.Interval = TimeSpan.FromMilliseconds(250)}
                 AddHandler _colorSpaceTimer.Tick,
@@ -182,10 +185,7 @@ Namespace Views
                         ' Zwanzig Versuche in einem Viertelsekundentakt, also fuenf Sekunden. Wer
                         ' bis dahin nicht gezeichnet hat, zeichnet auch spaeter nicht mehr auf einer
                         ' Ebene, die wir vorbereiten koennten.
-                        If TryApplyWindowColorSpace() OrElse _colorSpaceTries >= 20 Then
-                            _colorSpaceTimer.Stop()
-                            _colorSpaceTimer = Nothing
-                        End If
+                        If TryApplyWindowColorSpace() OrElse _colorSpaceTries >= 20 Then StopColorSpaceTimer()
                     End Sub
                 _colorSpaceTimer.Start()
             Catch ex As Exception
@@ -193,10 +193,17 @@ Namespace Views
             End Try
         End Sub
 
+        Private Sub StopColorSpaceTimer()
+            If _colorSpaceTimer Is Nothing Then Return
+            _colorSpaceTimer.Stop()
+            _colorSpaceTimer = Nothing
+        End Sub
+
         Private Function TryApplyWindowColorSpace() As Boolean
             Dim platformHandle = TryGetPlatformHandle()
             If platformHandle Is Nothing Then Return False
-            Return Services.MacWindowColorSpaceService.Apply(platformHandle.Handle, platformHandle.HandleDescriptor)
+            Return Services.MacWindowColorSpaceService.Apply(platformHandle.Handle, platformHandle.HandleDescriptor,
+                                                             Services.AppSettingsService.Load().MacWindowColorSpaceMethod)
         End Function
 
         Private Sub RestoreWindowPlacement()

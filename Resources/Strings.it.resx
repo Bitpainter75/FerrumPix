@@ -8144,4 +8144,10 @@
   <data name="Um_wie_viele_Bildpunkte_die_Maske_ber_die_erkann_03649db8" xml:space="preserve">
     <value>Di quanti pixel la maschera cresce oltre il bordo rilevato; in negativo si restringe. Se il modello taglia un capello troppo stretto, così lo si recupera.</value>
   </data>
+  <data name="Zeichenweg_Versuch_19554efe" xml:space="preserve">
+    <value>Percorso di disegno (prova)</value>
+  </data>
+  <data name="Welchen_Weg_FerrumPix_zum_Zeichnen_nimmt_Wirkt_n_fc363cc1" xml:space="preserve">
+    <value>Quale percorso usa FerrumPix per disegnare. Ha effetto dopo un riavvio.</value>
+  </data>
 </root>

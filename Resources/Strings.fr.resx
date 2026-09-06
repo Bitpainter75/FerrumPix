@@ -8144,4 +8144,10 @@
   <data name="Um_wie_viele_Bildpunkte_die_Maske_ber_die_erkann_03649db8" xml:space="preserve">
     <value>De combien de pixels le masque dépasse le bord détecté ; en négatif il se rétracte. Si le modèle coupe d'un cheveu trop court, cela le rattrape.</value>
   </data>
+  <data name="Zeichenweg_Versuch_19554efe" xml:space="preserve">
+    <value>Chemin de rendu (essai)</value>
+  </data>
+  <data name="Welchen_Weg_FerrumPix_zum_Zeichnen_nimmt_Wirkt_n_fc363cc1" xml:space="preserve">
+    <value>Le chemin que FerrumPix utilise pour dessiner. Prend effet après un redémarrage.</value>
+  </data>
 </root>
