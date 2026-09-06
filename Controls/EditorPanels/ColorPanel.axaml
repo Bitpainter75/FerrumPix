@@ -75,8 +75,11 @@
                 <TextBlock Text="Temperatur"
                            Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                <!-- Der Rueckfall des Doppelklicks ist hier kein fester Wert, sondern die
+                     Temperatur DIESER Aufnahme, also gebunden. -->
                 <icons:RoundSlider Grid.Column="1" Minimum="2000" Maximum="12000"
-                                   Value="{Binding KelvinTemperature}" Margin="0,0" />
+                                   Value="{Binding KelvinTemperature}"
+                                   DefaultValue="{Binding CaptureKelvinDefault}" Margin="0,0" />
                 <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value slider-value-wide"
                                          Value="{Binding KelvinTemperature, Mode=TwoWay}"
                                          Minimum="2000" Maximum="12000" />

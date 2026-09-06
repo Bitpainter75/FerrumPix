@@ -5299,6 +5299,7 @@ Namespace ViewModels
         Private Sub RaiseWhiteBalanceModeChanged()
             Me.RaisePropertyChanged(NameOf(HasAbsoluteWhiteBalance))
             Me.RaisePropertyChanged(NameOf(KelvinTemperature))
+            Me.RaisePropertyChanged(NameOf(CaptureKelvinDefault))
             Me.RaisePropertyChanged(NameOf(Tint))
         End Sub
 
@@ -5313,6 +5314,19 @@ Namespace ViewModels
             Return Math.Max(WhiteBalanceAdaptation.MinKelvin,
                             Math.Min(WhiteBalanceAdaptation.MaxKelvin, 1000000.0 / mired))
         End Function
+
+        ''' <summary>Der Rückfallwert des Kelvin-Reglers: ein Doppelklick stellt „wie aufgenommen"
+        ''' wieder her.
+        '''
+        ''' GEBUNDEN und nicht als Zahl im XAML: der Rückfall ist bei diesem Regler kein fester
+        ''' Wert, sondern die Temperatur DIESER Aufnahme. Eine 0 im XAML wäre nicht nur falsch,
+        ''' sondern läge auch ausserhalb des Reglerbereichs von 2000 bis 12000 - genau das hat die
+        ''' Diagnose gemeldet.</summary>
+        Public ReadOnly Property CaptureKelvinDefault As Double
+            Get
+                Return CaptureKelvin()
+            End Get
+        End Property
 
         ''' <summary>Die Temperatur der Aufnahme, aus dem Anker zurückgerechnet. Ohne Anker D65 -
         ''' dann ist die Zahl allerdings nie sichtbar, weil die Kelvin-Zeile nur mit Anker
@@ -18891,7 +18905,7 @@ Namespace ViewModels
                     Return LocalizationService.T("Filter")
                 Case NameOf(FilterStrength)
                     Return LocalizationService.T("Filterstärke")
-                Case NameOf(WhiteBalance), NameOf(Temperature), NameOf(Tint)
+                Case NameOf(WhiteBalance), NameOf(Temperature), NameOf(Tint), NameOf(KelvinTemperature)
                     Return LocalizationService.T("Weißabgleich")
                 Case NameOf(NegativeEnabled), NameOf(NegativeMonochrome), NameOf(NegativeGamma)
                     Return LocalizationService.T("Filmnegativ")
@@ -19184,7 +19198,7 @@ Namespace ViewModels
                      NameOf(BlueHue), NameOf(BlueSaturation), NameOf(BlueLuminance),
                      NameOf(PurpleHue), NameOf(PurpleSaturation), NameOf(PurpleLuminance),
                      NameOf(MagentaHue), NameOf(MagentaSaturation), NameOf(MagentaLuminance),
-                     NameOf(WhiteBalance), NameOf(Temperature), NameOf(Tint)
+                     NameOf(WhiteBalance), NameOf(Temperature), NameOf(Tint), NameOf(KelvinTemperature)
                     Return outline & "color-filter.svg"
                 Case NameOf(Sharpness), NameOf(SharpenRadius), NameOf(SharpenDetail), NameOf(SharpenMasking), NameOf(NoiseReduction),
                      NameOf(NoiseReductionDetail), NameOf(NoiseReductionMethodLabel), NameOf(Clarity)
