@@ -1,4 +1,4 @@
-<img src="Assets/FerrumPix_SettingsDark.png" />
+<img src="Assets/FerrumPix_Settings_Dark.png" />
 
 # FerrumPix
 
