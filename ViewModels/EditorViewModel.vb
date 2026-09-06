@@ -134,6 +134,21 @@ Namespace ViewModels
         Private _blacks As Double = 0
         Private _temperature As Double = 0
         Private _tint As Double = 0
+
+        ''' <summary>Weißabgleich nach dem Adaptionsmodell (siehe WhiteBalanceAdaptation). Gilt für
+        ''' RAW-Dateien: nur dort gibt es einen Aufnahme-Weißpunkt, auf den sich eine absolute
+        ''' Kelvin-Zahl beziehen kann. Alles andere behält den relativen Regler und das alte
+        ''' Modell - dessen Skala ist gegen nichts geeicht, und sie umzudeuten würde jede
+        ''' vorhandene Bearbeitung eines JPEG verändern.
+        '''
+        ''' Der ANKER gehört dem Bild und wird beim Öffnen eingetragen; Kelvin und Tönung sind
+        ''' Reglerwerte. Kelvin 0 heißt „wie aufgenommen", und das ist mehr als ein Zahlenwert: der
+        ''' Anker selbst, also garantiert keine Stufe in der Pixelkette.</summary>
+        Private _whiteBalanceModel As Integer = 0
+        Private _whiteBalanceAnchorX As Double = 0
+        Private _whiteBalanceAnchorY As Double = 0
+        Private _whiteBalanceKelvin As Double = 0
+        Private _whiteBalanceKelvinTint As Double = 0
         Private _colorGradeShadowHue As Double = 0
         Private _colorGradeShadowSaturation As Double = 0
         Private _colorGradeHighlightHue As Double = 0
@@ -1814,10 +1829,13 @@ Namespace ViewModels
             End Get
         End Property
 
-        ''' Die neun Regler, die die Automatik setzt - IMMER in dieser Reihenfolge.
+        ''' Die Regler, die die Automatik setzt - IMMER in dieser Reihenfolge. Die beiden letzten
+        ''' gehören zum Weißabgleich mit Anker: dort schreibt die Automatik in die Kelvin-Zahl,
+        ''' und ohne sie im Schnappschuss ließe sich „Auto" nicht mehr zurücknehmen.
         Private Function CurrentAutoAdjustValues() As Double()
             Return New Double() {_exposure, _contrast, _highlights, _shadowsLevel, _whites, _blacks,
-                                 _vibrance, _temperature, _tint}
+                                 _vibrance, _temperature, _tint,
+                                 _whiteBalanceKelvin, _whiteBalanceKelvinTint}
         End Function
 
         Private Sub WriteAutoAdjustValues(values As Double())
@@ -1830,9 +1848,17 @@ Namespace ViewModels
             _vibrance = values(6)
             _temperature = values(7)
             _tint = values(8)
+            ' Älterer Schnappschuss ohne die beiden Weißabgleichsfelder: dann bleibt es bei dem,
+            ' was steht. Der Fall kann nur innerhalb einer Sitzung auftreten, gespeichert wird
+            ' dieses Feld nicht - der Wächter kostet aber nichts und verhindert einen Absturz.
+            If values.Length > 10 Then
+                _whiteBalanceKelvin = values(9)
+                _whiteBalanceKelvinTint = values(10)
+            End If
             RaiseLightPropertiesChanged()
             Me.RaisePropertyChanged(NameOf(Vibrance))
             Me.RaisePropertyChanged(NameOf(Temperature))
+            Me.RaisePropertyChanged(NameOf(KelvinTemperature))
             Me.RaisePropertyChanged(NameOf(Tint))
         End Sub
 
@@ -1886,7 +1912,20 @@ Namespace ViewModels
                 Whites = measured.Whites
                 Blacks = measured.Blacks
                 Vibrance = measured.Vibrance
-                Temperature = measured.Temperature
+                ' MIT ANKER GEHÖRT DER WERT AN DEN KELVIN-REGLER. Die Automatik rechnet ihren
+                ' Wert für die alte Verstärkung aus (siehe ImageProcessorAutoAdjust) und liefert
+                ' einen relativen Ausschlag; blieb der im relativen Feld stehen, verschöbe sich
+                ' das Bild, während der sichtbare Kelvin-Regler unverändert dastünde. Die
+                ' Oberfläche hätte dann über den eigenen Zustand gelogen.
+                '
+                ' OFFEN, und bewusst nicht hier geraten: die MENGE stammt aus der Eichung der
+                ' alten Verstärkung und wirkt als mired-Versatz anders. Richtung, Dämpfung und
+                ' die enge Klemmung auf ±20 bleiben sinnvoll, der Betrag gehört gemessen.
+                If HasAbsoluteWhiteBalance Then
+                    KelvinTemperature = MiredShiftToKelvin(measured.Temperature)
+                Else
+                    Temperature = measured.Temperature
+                End If
                 Tint = measured.Tint
             Finally
                 _suppressUndoCapture = False
@@ -5191,12 +5230,113 @@ Namespace ViewModels
             End Set
         End Property
 
-        Public Property Tint As Double
+        ''' <summary>Trägt das offene Bild einen Aufnahme-Weißabgleich? Dann läuft der Weißabgleich
+        ''' über eine absolute Kelvin-Zahl, sonst über den relativen Regler. Die Oberfläche schaltet
+        ''' daran die beiden Zeilen um.</summary>
+        Public ReadOnly Property HasAbsoluteWhiteBalance As Boolean
             Get
-                Return _tint
+                Return _whiteBalanceModel >= 2 AndAlso _whiteBalanceAnchorX > 0.0 AndAlso _whiteBalanceAnchorY > 0.0
+            End Get
+        End Property
+
+        ''' <summary>Die Farbtemperatur in Kelvin, wie sie am Regler steht.
+        '''
+        ''' GELESEN wird bei „wie aufgenommen" die Temperatur des Ankers - der Regler soll dort
+        ''' nicht auf 0 stehen, sondern auf dem Wert der Aufnahme, so wie ihn jedes andere
+        ''' Entwicklungsprogramm zeigt. GESCHRIEBEN wird 0, wenn der Wert wieder genau auf dem
+        ''' Anker landet: 0 heißt „wie aufgenommen" und ist die einzige Stellung, die garantiert
+        ''' gar keine Rechnung auslöst.</summary>
+        Public Property KelvinTemperature As Double
+            Get
+                If _whiteBalanceKelvin >= WhiteBalanceAdaptation.MinKelvin Then Return _whiteBalanceKelvin
+                Return CaptureKelvin()
             End Get
             Set(value As Double)
-                SetUndoableDouble(_tint, value, NameOf(Tint))
+                Dim clamped = Math.Max(WhiteBalanceAdaptation.MinKelvin,
+                                       Math.Min(WhiteBalanceAdaptation.MaxKelvin, value))
+                Dim anchorKelvin = CaptureKelvin()
+                Dim target = If(Math.Abs(clamped - anchorKelvin) < 1.0, 0.0, clamped)
+                If Math.Abs(_whiteBalanceKelvin - target) < 0.0001 Then Return
+                CaptureUndoState(NameOf(KelvinTemperature))
+                _whiteBalanceKelvin = target
+                Me.RaisePropertyChanged(NameOf(KelvinTemperature))
+                RaiseResetButtonStateChanged()
+                SchedulePreviewForCurrentTarget()
+            End Set
+        End Property
+
+        ''' <summary>Trägt beim Öffnen den Aufnahme-Weißpunkt ins Rezept ein, wenn die Datei einen
+        ''' hat und das Rezept noch keinen mitbringt.
+        '''
+        ''' NACH dem Anwenden eines gespeicherten Rezepts aufgerufen, nicht davor: ein Rezept
+        ''' bringt seinen Anker selbst mit, und der gespeicherte gilt.
+        '''
+        ''' EIN VORHANDENES REZEPT MIT MODELL 1 BLEIBT BEI MODELL 1. Dessen Reglerwert bedeutet nur
+        ''' in der alten Rechnung das, was der Nutzer beim Speichern gesehen hat; ihn umzudeuten
+        ''' würde die Bearbeitung verändern, ohne dass jemand etwas angefasst hat. Das neue Modell
+        ''' bekommen deshalb nur Bilder ohne Weißabgleich-Vorgeschichte.
+        '''
+        ''' Kostet gemessen unter einer Millisekunde, weil dafür kein Entpacken nötig ist - der
+        ''' Aufruf darf also im Öffnungsweg stehen.</summary>
+        Private Sub EnsureCaptureWhiteBalanceAnchor(path As String)
+            If _whiteBalanceModel = 1 Then Return
+            If _whiteBalanceAnchorX > 0.0 AndAlso _whiteBalanceAnchorY > 0.0 Then
+                If _whiteBalanceModel < 2 Then _whiteBalanceModel = 2
+                RaiseWhiteBalanceModeChanged()
+                Return
+            End If
+
+            Dim capture = CaptureWhiteBalanceService.ForRawFile(path)
+            If capture Is Nothing Then Return
+            _whiteBalanceAnchorX = capture.X
+            _whiteBalanceAnchorY = capture.Y
+            _whiteBalanceModel = 2
+            RaiseWhiteBalanceModeChanged()
+        End Sub
+
+        ''' <summary>Meldet der Oberfläche, dass sich die Form des Weißabgleichs geändert hat -
+        ''' daran hängt, welche der beiden Zeilen im Farbpanel steht und was die Tönung schreibt.</summary>
+        Private Sub RaiseWhiteBalanceModeChanged()
+            Me.RaisePropertyChanged(NameOf(HasAbsoluteWhiteBalance))
+            Me.RaisePropertyChanged(NameOf(KelvinTemperature))
+            Me.RaisePropertyChanged(NameOf(Tint))
+        End Sub
+
+        ''' <summary>Rechnet einen relativen Versatz in mired in eine absolute Kelvin-Zahl um,
+        ''' bezogen auf die Aufnahmetemperatur. Vorzeichen wie am Regler: positiv ist wärmer, weil
+        ''' höhere Kelvin niedrigere mired haben.</summary>
+        Private Function MiredShiftToKelvin(miredShift As Double) As Double
+            Dim anchorKelvin = CaptureKelvin()
+            If miredShift = 0.0 Then Return anchorKelvin
+            Dim mired = 1000000.0 / anchorKelvin - miredShift
+            If mired <= 1.0 Then Return WhiteBalanceAdaptation.MaxKelvin
+            Return Math.Max(WhiteBalanceAdaptation.MinKelvin,
+                            Math.Min(WhiteBalanceAdaptation.MaxKelvin, 1000000.0 / mired))
+        End Function
+
+        ''' <summary>Die Temperatur der Aufnahme, aus dem Anker zurückgerechnet. Ohne Anker D65 -
+        ''' dann ist die Zahl allerdings nie sichtbar, weil die Kelvin-Zeile nur mit Anker
+        ''' erscheint.</summary>
+        Private Function CaptureKelvin() As Double
+            If _whiteBalanceAnchorX <= 0.0 OrElse _whiteBalanceAnchorY <= 0.0 Then Return 6504.0
+            Dim kelvin = CaptureWhiteBalanceService.CorrelatedColorTemperature(_whiteBalanceAnchorX, _whiteBalanceAnchorY)
+            If Double.IsNaN(kelvin) OrElse kelvin <= 0.0 Then Return 6504.0
+            Return Math.Max(WhiteBalanceAdaptation.MinKelvin, Math.Min(WhiteBalanceAdaptation.MaxKelvin, kelvin))
+        End Function
+
+        ''' <summary>Die Tönung. EIN Regler in der Oberfläche, aber zwei Ablagen: im absoluten
+        ''' Modell gehört sie zur Kelvin-Zahl, sonst zum relativen Regler. Der Umweg über diese
+        ''' Eigenschaft hält die Oberfläche bei einer einzigen Zeile.</summary>
+        Public Property Tint As Double
+            Get
+                Return If(HasAbsoluteWhiteBalance, _whiteBalanceKelvinTint, _tint)
+            End Get
+            Set(value As Double)
+                If HasAbsoluteWhiteBalance Then
+                    SetUndoableDouble(_whiteBalanceKelvinTint, value, NameOf(Tint))
+                Else
+                    SetUndoableDouble(_tint, value, NameOf(Tint))
+                End If
             End Set
         End Property
 
@@ -11909,6 +12049,34 @@ Namespace ViewModels
                 If String.Equals(_whiteBalance, value, StringComparison.Ordinal) Then Return
                 CaptureUndoState(NameOf(WhiteBalance))
                 Me.RaiseAndSetIfChanged(_whiteBalance, value)
+
+                ' MIT ANKER sind die Vorgaben echte Beleuchtungen und keine Reglerstellungen:
+                ' Tageslicht ist 5500 K, nicht „ein bisschen wärmer". Die Zahlen sind die
+                ' üblichen Werte der Beleuchtungsarten; „Wie Aufnahme" ist die 0 und damit der
+                ' Anker selbst. „Automatisch" bleibt hier aussen vor - die Automatik vermisst das
+                ' Bild und ist ein eigener Weg (siehe ImageProcessorAutoAdjust).
+                If HasAbsoluteWhiteBalance Then
+                    Dim targetKelvin As Double = -1.0
+                    Select Case value
+                        Case "Wie Aufnahme" : targetKelvin = 0.0
+                        Case "Tageslicht" : targetKelvin = 5500.0
+                        Case "Bewölkt" : targetKelvin = 6500.0
+                        Case "Schatten" : targetKelvin = 7500.0
+                        Case "Glühlampe" : targetKelvin = 2850.0
+                        Case "Leuchtstoff" : targetKelvin = 3800.0
+                        Case "Blitz" : targetKelvin = 5500.0
+                    End Select
+                    If targetKelvin >= 0.0 Then
+                        _whiteBalanceKelvin = targetKelvin
+                        _whiteBalanceKelvinTint = 0.0
+                        Me.RaisePropertyChanged(NameOf(KelvinTemperature))
+                        Me.RaisePropertyChanged(NameOf(Tint))
+                        RaiseResetButtonStateChanged()
+                        SchedulePreviewForCurrentTarget()
+                        Return
+                    End If
+                End If
+
                 Dim targetTemperature = _temperature
                 Dim targetTint = _tint
                 Select Case value
@@ -12910,8 +13078,12 @@ Namespace ViewModels
 
         Public ReadOnly Property HasColorChanges As Boolean
             Get
+                ' Die absoluten Weißabgleichsfelder gehören dazu, sonst blieb der
+                ' Zurücksetzen-Knopf nach einem Zug am Kelvin-Regler grau: der relative Regler
+                ' steht dabei unverändert auf 0.
                 Return Not String.Equals(_whiteBalance, "Wie Aufnahme", StringComparison.Ordinal) OrElse
-                       _temperature <> 0 OrElse _tint <> 0 OrElse _vibrance <> 0 OrElse _saturation <> 0
+                       _temperature <> 0 OrElse _tint <> 0 OrElse _vibrance <> 0 OrElse _saturation <> 0 OrElse
+                       _whiteBalanceKelvin <> 0 OrElse _whiteBalanceKelvinTint <> 0
             End Get
         End Property
 
@@ -14609,6 +14781,12 @@ Namespace ViewModels
                     Me.RaisePropertyChanged(NameOf(HasUnsavedChanges))
                     SchedulePendingBakedOperationsQuestion()
                 End If
+                ' Der Aufnahme-Weißpunkt der Datei, falls sie einen hat. Kein Bildpunkt ändert sich
+                ' dadurch: solange kein Weißabgleichsregler steht, baut die Kette keine Stufe.
+                ' Deshalb auch keine Änderungsmarke - der Anker gehört dem Bild, nicht der
+                ' Bearbeitung. Über _currentImagePath und nicht über die Renderquelle: bei einem
+                ' .fpx-Projekt ist die Quelle eine Zwischendatei ohne Kameradaten.
+                EnsureCaptureWhiteBalanceAnchor(_currentImagePath)
             Finally
                 _suppressPreviewDirty = previousSuppressPreviewDirty
             End Try
@@ -14938,6 +15116,12 @@ Namespace ViewModels
                     Me.RaisePropertyChanged(NameOf(HasUnsavedChanges))
                     SchedulePendingBakedOperationsQuestion()
                 End If
+                ' Der Aufnahme-Weißpunkt der Datei, falls sie einen hat. Kein Bildpunkt ändert sich
+                ' dadurch: solange kein Weißabgleichsregler steht, baut die Kette keine Stufe.
+                ' Deshalb auch keine Änderungsmarke - der Anker gehört dem Bild, nicht der
+                ' Bearbeitung. Über _currentImagePath und nicht über die Renderquelle: bei einem
+                ' .fpx-Projekt ist die Quelle eine Zwischendatei ohne Kameradaten.
+                EnsureCaptureWhiteBalanceAnchor(_currentImagePath)
             Finally
                 _suppressPreviewDirty = previousSuppressPreviewDirty
             End Try
@@ -18064,6 +18248,11 @@ Namespace ViewModels
                 .Blacks = CSng(_blacks),
                 .Temperature = CSng(_temperature),
                 .Tint = CSng(_tint),
+                .WhiteBalanceModel = _whiteBalanceModel,
+                .WhiteBalanceAnchorX = _whiteBalanceAnchorX,
+                .WhiteBalanceAnchorY = _whiteBalanceAnchorY,
+                .WhiteBalanceKelvin = _whiteBalanceKelvin,
+                .WhiteBalanceKelvinTint = _whiteBalanceKelvinTint,
                 .Exposure = CSng(_exposure),
                 .Sharpness = CSng(_sharpness),
                 .SharpenRadius = CSng(_sharpenRadius),
@@ -19142,6 +19331,11 @@ Namespace ViewModels
             _blacks = adj.Blacks
             _temperature = adj.Temperature
             _tint = adj.Tint
+            _whiteBalanceModel = adj.WhiteBalanceModel
+            _whiteBalanceAnchorX = adj.WhiteBalanceAnchorX
+            _whiteBalanceAnchorY = adj.WhiteBalanceAnchorY
+            _whiteBalanceKelvin = adj.WhiteBalanceKelvin
+            _whiteBalanceKelvinTint = adj.WhiteBalanceKelvinTint
             _exposure = adj.Exposure
             _sharpness = adj.Sharpness
             _sharpenRadius = adj.SharpenRadius
@@ -19591,6 +19785,17 @@ Namespace ViewModels
             _blacks = 0
             _temperature = 0
             _tint = 0
+            ' WEISSABGLEICH GANZ ZURÜCK, ANKER EINGESCHLOSSEN. Dieser Weg läuft auch beim
+            ' BILDWECHSEL, und dort ist ein stehengebliebener Anker ein echter Fehler: Bild B
+            ' bekäme das Aufnahmelicht von Bild A, und dieselbe Kelvin-Zahl bedeutete etwas
+            ' anderes. Genau das hat die Diagnose gemeldet ("Bild B erbt sie von Bild A").
+            ' Der Anker der GÜLTIGEN Datei kommt gleich danach wieder - entweder aus deren
+            ' gespeichertem Rezept oder aus der Datei selbst.
+            _whiteBalanceKelvin = 0
+            _whiteBalanceKelvinTint = 0
+            _whiteBalanceAnchorX = 0
+            _whiteBalanceAnchorY = 0
+            _whiteBalanceModel = 0
             _colorGradeShadowHue = 0
             _colorGradeShadowSaturation = 0
             _colorGradeHighlightHue = 0
@@ -19802,6 +20007,11 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(HasLutApplied))
             RaiseCropPropertiesChanged()
             RaiseResetButtonStateChanged()
+            ' Der Anker der GÜLTIGEN Datei, nachdem er oben mitgelöscht wurde. Hier und nicht nur
+            ' im Öffnungsweg, damit auch ein „alles zurücksetzen" am offenen Bild den
+            ' Kelvin-Regler behält: ohne diesen Aufruf fiele die Oberfläche danach auf den
+            ' relativen Regler zurück, obwohl die Datei einen Aufnahme-Weißabgleich hat.
+            EnsureCaptureWhiteBalanceAnchor(_currentImagePath)
             PreviewImage = Nothing
             ComparisonImage = Nothing
             Me.RaisePropertyChanged(NameOf(DisplayImage))
@@ -23081,10 +23291,14 @@ Namespace ViewModels
             _whiteBalance = "Wie Aufnahme"
             _temperature = 0
             _tint = 0
+            ' Anker und Modell bleiben: sie sind Eigenschaften des Bildes, keine Anpassung.
+            _whiteBalanceKelvin = 0
+            _whiteBalanceKelvinTint = 0
             _vibrance = 0
             _saturation = 0
             Me.RaisePropertyChanged(NameOf(WhiteBalance))
             Me.RaisePropertyChanged(NameOf(Temperature))
+            Me.RaisePropertyChanged(NameOf(KelvinTemperature))
             Me.RaisePropertyChanged(NameOf(Tint))
             Me.RaisePropertyChanged(NameOf(Vibrance))
             Me.RaisePropertyChanged(NameOf(Saturation))
@@ -23918,7 +24132,9 @@ Namespace ViewModels
                 ' neue XMP nicht setzt, dürfen nicht vom zuvor gewählten Preset übrigbleiben.
                 ' Deshalb KEINE aktuellen Regler als Basis übergeben. (Der Service unterstützt
                 ' weiterhin partielle Übernahme für andere Aufrufer ausdrücklich über baseLook.)
-                Dim look = XmpPresetService.LoadLook(xmpPath)
+                ' Das offene Bild geht mit: bei einem RAW-Preset mit absolutem crs:Temperature
+                ' braucht der Import die Aufnahmetemperatur dieses Fotos als Bezug.
+                Dim look = XmpPresetService.LoadLook(xmpPath, imagePath:=_currentImagePath)
                 If look Is Nothing Then Return
 
                 PushUndo(LocalizationService.T("Preset angewendet"))
@@ -24121,8 +24337,38 @@ Namespace ViewModels
             VignetteRoundness = look.VignetteRoundness
             _vignetteStyle = look.VignetteStyle
             Me.RaisePropertyChanged(NameOf(VignetteStyleLabel))
-            Temperature = look.Temperature
-            Tint = look.Tint
+            ' WEISSABGLEICH: der Look kann ihn in ZWEI Formen tragen, und beide muessen ankommen.
+            ' Ein Preset fuer eine RAW-Datei bringt eine ABSOLUTE Kelvin-Zahl mit (siehe
+            ' XmpPresetService.LoadLook), alles andere den relativen Regler. Hier standen nur die
+            ' alten zwei Felder, und damit blieb ein crs:Temperature im Editor wirkungslos - der
+            ' Weg ueber die Beistelldatei war nicht betroffen, weil er das ganze Rezept schreibt.
+            '
+            ' Geschrieben werden die FELDER, nicht die Eigenschaften: die Toenung leitet je
+            ' Betriebsart um, und ein "Tint = look.Tint" haette im absoluten Modus die absolute
+            ' Toenung mit der relativen des Looks ueberschrieben.
+            If look.WhiteBalanceKelvin >= WhiteBalanceAdaptation.MinKelvin Then
+                _whiteBalanceKelvin = look.WhiteBalanceKelvin
+                _whiteBalanceKelvinTint = look.WhiteBalanceKelvinTint
+                _temperature = 0
+                _tint = 0
+            ElseIf HasAbsoluteWhiteBalance Then
+                ' Ein relativer Look auf ein Bild mit Aufnahme-Weisspunkt: der Versatz wird als
+                ' mired gelesen und in Kelvin gelegt, damit der sichtbare Regler den Zustand zeigt.
+                ' Dieselbe Abwaegung wie bei der Automatik - die MENGE stammt aus der Eichung der
+                ' alten Verstaerkung und ist offen, die Richtung stimmt.
+                _whiteBalanceKelvin = If(look.Temperature = 0.0F, 0.0, MiredShiftToKelvin(look.Temperature))
+                _whiteBalanceKelvinTint = look.Tint
+                _temperature = 0
+                _tint = 0
+            Else
+                _whiteBalanceKelvin = 0
+                _whiteBalanceKelvinTint = 0
+                _temperature = look.Temperature
+                _tint = look.Tint
+            End If
+            Me.RaisePropertyChanged(NameOf(Temperature))
+            Me.RaisePropertyChanged(NameOf(KelvinTemperature))
+            Me.RaisePropertyChanged(NameOf(Tint))
 
             RedHue = look.RedHue : RedSaturation = look.RedSaturation : RedLuminance = look.RedLuminance
             OrangeHue = look.OrangeHue : OrangeSaturation = look.OrangeSaturation : OrangeLuminance = look.OrangeLuminance

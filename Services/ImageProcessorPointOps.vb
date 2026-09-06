@@ -55,6 +55,15 @@ Namespace Services
             Public ScalarG As Single()
             Public ScalarB As Single()
 
+            ''' <summary>Weissabgleich als chromatische Adaption, 3x3 zeilenweise, ODER Nothing.
+            ''' Nothing ist der Normalfall: Modell 1 rechnet den Weissabgleich weiter in der
+            ''' Farbmatrix, und auch unter Modell 2 steht der Regler meist auf dem Anker.
+            '''
+            ''' Eigene Stufe und nicht in die Farbmatrix gefaltet, weil sie im LINEARLICHT rechnet:
+            ''' sie dekodiert, multipliziert und kodiert wieder. Zusammenfalten liesse sich nur mit
+            ''' einer Matrix, die im selben Raum arbeitet.</summary>
+            Public WhiteBalanceMatrix As Single()
+
             ''' Farbmatrix (Temperatur/Toenung/Saettigung), 20 Eintraege wie bei Skia.
             ''' Die Offset-Spalte liegt hier bereits in 0..1 vor. Dynamik liegt NICHT mehr hier -
             ''' sie ist chroma-abhaengig und damit keine lineare Matrix (siehe Vibrance).
@@ -137,6 +146,16 @@ Namespace Services
                 chain.NegG = BuildPointOpFilmNegativeTable(stats.BaseColor.Green, stats.DensityColor.Green, gamma)
                 chain.NegB = BuildPointOpFilmNegativeTable(stats.BaseColor.Blue, stats.DensityColor.Blue, gamma)
                 chain.NegMonochrome = adj.NegativeMonochrome
+                chain.IsIdentity = False
+            End If
+
+            ' --- Weissabgleich als Adaption (Modell 2), NACH dem Filmnegativ und VOR der Farbmatrix ---
+            ' Reihenfolge wie beim Filmnegativ begruendet: der Weissabgleich gehoert an den Anfang
+            ' der Farbbearbeitung, alles danach soll auf dem abgeglichenen Bild arbeiten. Unter
+            ' Modell 1 liefert der Bauer Nothing, und die Kette ist dann bitgleich wie bisher.
+            chain.WhiteBalanceMatrix = BuildWhiteBalanceMatrix(adj)
+            If chain.WhiteBalanceMatrix IsNot Nothing Then
+                EnsureGammaTables()
                 chain.IsIdentity = False
             End If
 
@@ -390,10 +409,85 @@ Namespace Services
             Return r
         End Function
 
+        ''' <summary>Die Adaptionsmatrix fuer diese Anpassungen, oder Nothing.
+        '''
+        ''' Nothing heisst: keine Stufe rechnen. Das gilt fuer Modell 1 (dort steckt der
+        ''' Weissabgleich in der Farbmatrix) und fuer jeden Regler, der auf dem Anker steht.
+        '''
+        ''' ZWEI REGLERFORMEN, wie bei Adobe: eine absolute Kelvin-Zahl gilt fuer RAW-Dateien und
+        ''' nennt das Licht der Szene; ein relativer Wert verschiebt vom Anker aus und gilt fuer
+        ''' alles andere. Ist beides gesetzt, gewinnt die absolute Zahl - sie ist die genauere
+        ''' Aussage.</summary>
+        Friend Shared Function BuildWhiteBalanceMatrix(adj As ImageAdjustments) As Single()
+            If adj Is Nothing OrElse adj.WhiteBalanceModel < 2 Then Return Nothing
+
+            Dim anchor = If(adj.WhiteBalanceAnchorX > 0.0 AndAlso adj.WhiteBalanceAnchorY > 0.0,
+                            New WhitePoint(adj.WhiteBalanceAnchorX, adj.WhiteBalanceAnchorY),
+                            WhiteBalanceAdaptation.D65)
+
+            Dim claimed As WhitePoint
+            If adj.WhiteBalanceKelvin >= 1000.0 Then
+                claimed = WhiteBalanceAdaptation.FromKelvinAndTint(adj.WhiteBalanceKelvin, adj.WhiteBalanceKelvinTint)
+            ElseIf adj.WhiteBalanceKelvinTint <> 0.0 Then
+                ' NUR DIE TÖNUNG, bei „wie aufgenommen". Ohne diesen Zweig fiel eine reine
+                ' Toenungsaenderung durch alle Bedingungen und wirkte nicht: die Kelvin-Zahl steht
+                ' dabei auf 0 (der Anker selbst) und die alten relativen Regler auf 0. Der Regler
+                ' aenderte damit den Zustand der Oberflaeche und der Datei, aber kein Bildpunkt.
+                ' Verschoben wird vom Anker aus, quer zur Kurve.
+                claimed = WhiteBalanceAdaptation.ShiftFromAnchor(anchor, 0.0, adj.WhiteBalanceKelvinTint)
+            ElseIf adj.Temperature <> 0.0F OrElse adj.Tint <> 0.0F Then
+                claimed = WhiteBalanceAdaptation.ShiftFromAnchor(anchor, adj.Temperature, adj.Tint)
+            Else
+                Return Nothing
+            End If
+
+            Dim m = WhiteBalanceAdaptation.BuildMatrix(anchor, claimed)
+            If m Is Nothing Then Return Nothing
+            Dim result(8) As Single
+            For i = 0 To 8
+                result(i) = CSng(m(i))
+            Next
+            Return result
+        End Function
+
+        ''' <summary>sRGB-Gamma nach Linearlicht und zurueck, als Tabellen mit der Aufloesung der
+        ''' Kette. Einmal gebaut, danach nur noch gelesen: die Adaptionsstufe braucht sie je
+        ''' Bildpunkt sechsmal, und <c>Math.Pow</c> wuerde dort die ganze Kette ausbremsen.
+        '''
+        ''' Der Interpolationsfehler ist rechnerisch belanglos: die Kurve ist unterhalb von 0,0031
+        ''' exakt eine Gerade (und genau dort liegt die erste Stuetzstelle), darueber liegt der
+        ''' Fehler der linearen Zwischenwerte bei 4097 Stuetzstellen unter einem Hundertstel eines
+        ''' 8-Bit-Schritts.</summary>
+        Private Shared _srgbToLinearTable As Single()
+        Private Shared _linearToSrgbTable As Single()
+        Private Shared ReadOnly _gammaTableLock As New Object()
+
+        Private Shared Sub EnsureGammaTables()
+            If _srgbToLinearTable IsNot Nothing Then Return
+            SyncLock _gammaTableLock
+                If _srgbToLinearTable IsNot Nothing Then Return
+                Dim decodeTable = New Single(PointOpTableSize - 1) {}
+                Dim encodeTable = New Single(PointOpTableSize - 1) {}
+                For i = 0 To PointOpTableSize - 1
+                    Dim v = i / CDbl(PointOpTableSize - 1)
+                    decodeTable(i) = CSng(If(v <= 0.04045, v / 12.92, Math.Pow((v + 0.055) / 1.055, 2.4)))
+                    encodeTable(i) = CSng(If(v <= 0.0031308, v * 12.92, 1.055 * Math.Pow(v, 1.0 / 2.4) - 0.055))
+                Next
+                _linearToSrgbTable = encodeTable
+                ' ZULETZT zuweisen: der Wächter oben prüft dieses Feld, und beide Tabellen müssen
+                ' fertig sein, bevor ein anderer Faden an ihnen vorbeikommt.
+                _srgbToLinearTable = decodeTable
+            End SyncLock
+        End Sub
+
         Private Shared Function BuildPointOpColorMatrix(adj As ImageAdjustments) As Single()
-            Dim tempR = 1.0F + adj.Temperature / 200.0F
-            Dim tempB = 1.0F - adj.Temperature / 200.0F
-            Dim tintG = 1.0F + adj.Tint / 200.0F
+            ' MODELL 2 NIMMT TEMPERATUR UND TÖNUNG HIER HERAUS: sie laufen dort als eigene
+            ' Adaptionsstufe im Linearlicht (siehe BuildWhiteBalanceMatrix). Bliebe der Anteil
+            ' hier stehen, wirkte der Weissabgleich zweimal - einmal richtig und einmal falsch.
+            Dim adaptive = adj.WhiteBalanceModel >= 2
+            Dim tempR = If(adaptive, 1.0F, 1.0F + adj.Temperature / 200.0F)
+            Dim tempB = If(adaptive, 1.0F, 1.0F - adj.Temperature / 200.0F)
+            Dim tintG = If(adaptive, 1.0F, 1.0F + adj.Tint / 200.0F)
 
             Const lumR As Single = 0.299F
             Const lumG As Single = 0.587F
@@ -853,6 +947,9 @@ Namespace Services
             Dim dstStride = width * 4
 
             Dim m = chain.ColorMatrix
+            Dim wbm = chain.WhiteBalanceMatrix
+            Dim toLinear = _srgbToLinearTable
+            Dim toGamma = _linearToSrgbTable
             Dim sr = chain.ScalarR
             Dim sg = chain.ScalarG
             Dim sb = chain.ScalarB
@@ -927,6 +1024,23 @@ Namespace Services
                                 Dim gray = 0.299F * rr + 0.587F * gg + 0.114F * bb
                                 rr = gray : gg = gray : bb = gray
                             End If
+                        End If
+
+                        ' --- 1b. Weissabgleich als Adaption, im LINEARLICHT ---
+                        ' Dekodieren, 3x3, kodieren. Die Klemmung liegt im LINEAREN Raum, also VOR
+                        ' dem Kodieren: eine Adaption kann einen Kanal ueber 1 heben (bei starker
+                        ' Erwaermung das Rot), und das Kodieren einer Zahl groesser 1 gaebe Werte
+                        ' ausserhalb der Tabelle.
+                        If wbm IsNot Nothing Then
+                            Dim linR = SampleTable(toLinear, rr)
+                            Dim linG = SampleTable(toLinear, gg)
+                            Dim linB = SampleTable(toLinear, bb)
+                            Dim ar = wbm(0) * linR + wbm(1) * linG + wbm(2) * linB
+                            Dim ag = wbm(3) * linR + wbm(4) * linG + wbm(5) * linB
+                            Dim ab = wbm(6) * linR + wbm(7) * linG + wbm(8) * linB
+                            rr = SampleTable(toGamma, If(ar < 0.0F, 0.0F, If(ar > 1.0F, 1.0F, ar)))
+                            gg = SampleTable(toGamma, If(ag < 0.0F, 0.0F, If(ag > 1.0F, 1.0F, ag)))
+                            bb = SampleTable(toGamma, If(ab < 0.0F, 0.0F, If(ab > 1.0F, 1.0F, ab)))
                         End If
 
                         ' --- 2. Farbmatrix. Skia klemmt danach auf [0,1] (gemessen) - hier ebenso. ---

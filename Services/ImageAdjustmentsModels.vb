@@ -252,6 +252,51 @@ Namespace Services
         ''' ältere Rezepte weiterhin die bisherige, feste Geometriekette.</summary>
         Public Property GeometryOperations As List(Of GeometryOperation) = New List(Of GeometryOperation)()
         Public Property RecipeCoordinateVersion As Integer = 2
+
+        ''' <summary>Welches Weißabgleichsmodell für dieses Rezept gilt.
+        '''
+        ''' 1 = die alte Verstärkung auf Rot und Blau, gerechnet im Gamma-Raum. 2 = chromatische
+        ''' Adaption im Linearlicht (<see cref="WhiteBalanceAdaptation"/>).
+        '''
+        ''' WARUM ÜBERHAUPT ZWEI: die beiden geben demselben Reglerwert eine ANDERE Bedeutung.
+        ''' Würde die Kette einfach umschalten, sähe jede bereits gespeicherte Bearbeitung anders
+        ''' aus als beim Speichern - ohne dass der Nutzer etwas angefasst hätte. Ein Rezept, das
+        ''' aus einer Datei ohne dieses Feld kommt, ist deshalb ausdrücklich Modell 1 und bleibt
+        ''' bitgleich; nur neu entstehende Rezepte nehmen das neue Modell.
+        '''
+        ''' 0 heißt „nicht angegeben" und wird wie 1 gerechnet. Diese Null ist Absicht und kein
+        ''' Versehen: nur mit ihr lässt sich eine Datei OHNE das Feld später noch von einer
+        ''' unterscheiden, die ausdrücklich das alte Modell trägt. Geladene Rezepte bekommen in
+        ''' <c>NormalizeLoadedAdjustments</c> die 1 eingetragen; die Vorgabe hier wird auf 2
+        ''' gestellt, sobald Anker und Oberfläche überall verdrahtet sind. Genau diese eine Zahl
+        ''' ist der Umschalter, und alte Bearbeitungen bleiben davon unberührt, weil sie ihre 1
+        ''' beim Laden mitbekommen haben.</summary>
+        Public Property WhiteBalanceModel As Integer = 0
+
+        ''' <summary>Der Weißpunkt der AUFNAHME als Farbort, für Modell 2. Beide 0 heißt: kein
+        ''' Anker bekannt, dann gilt D65 - so wie bei allem, was keine RAW-Datei ist.
+        '''
+        ''' MITGESPEICHERT, nicht bei jedem Öffnen neu geholt: der gespeicherte Reglerwert ist nur
+        ''' zusammen mit seinem Anker deutbar. Käme der Anker jedes Mal frisch aus der Bibliothek,
+        ''' würde eine neue libraw-Fassung mit leicht anderen Kameradaten alte Bearbeitungen
+        ''' stillschweigend umdeuten.</summary>
+        Public Property WhiteBalanceAnchorX As Double = 0
+        Public Property WhiteBalanceAnchorY As Double = 0
+
+        ''' <summary>Die behauptete Farbtemperatur in Kelvin, für Modell 2 an RAW-Dateien. 0 heißt
+        ''' „wie aufgenommen", und das ist etwas anderes als 6504: es ist der Anker selbst, also
+        ''' garantiert keine Stufe und kein Rundungsrest.
+        '''
+        ''' Für alles, was keine RAW-Datei ist, bleibt es beim relativen Regler
+        ''' (<see cref="Temperature"/>) - dort gibt es keine Aufnahmetemperatur, auf die sich eine
+        ''' absolute Zahl beziehen könnte. Dieselbe Aufteilung fährt Adobe mit crs:Temperature
+        ''' gegen crs:IncrementalTemperature.</summary>
+        Public Property WhiteBalanceKelvin As Double = 0
+
+        ''' <summary>Die Tönung zur absoluten Farbtemperatur, in Punkten wie
+        ''' <see cref="Tint"/>. Gilt nur zusammen mit <see cref="WhiteBalanceKelvin"/>.</summary>
+        Public Property WhiteBalanceKelvinTint As Double = 0
+
         Public Property Exposure As Single = 0
         Public Property Brightness As Single = 0
         Public Property Contrast As Single = 0
@@ -716,8 +761,20 @@ Namespace Services
         ''' „Rahmen" steht bewusst hier: er zieht seinen Rand an den BILDkanten. Ein Rahmen um ein Objekt
         ''' wäre etwas anderes und gibt es noch nicht - er bliebe sonst als Rahmen ums ganze Bild stehen,
         ''' während man ein Objekt bearbeitet.</summary>
+        ''' <remarks>DER WEISSABGLEICH-ANKER UND SEIN MODELL STEHEN HIER, WEIL SIE DEM BILD GEHÖREN,
+        ''' NICHT DEM LOOK. Beim Übertragen von Anpassungen dürfen sie nicht mitwandern: sonst zöge
+        ''' ein Look von Foto A das Aufnahmelicht von A auf Foto B, und dieselbe Kelvin-Zahl
+        ''' bedeutete dort etwas anderes. Das Zielbild bringt sein Modell selbst mit - eine
+        ''' RAW-Datei mit Aufnahme-Weißabgleich das neue, alles andere das alte.
+        '''
+        ''' UND ES IST DER GRUND, WARUM EIN GEÖFFNETES RAW NICHT ALS BEARBEITET GILT: die Prüfung
+        ''' „trägt dieses Rezept überhaupt eine Anpassung" läuft über die Pixel-Eigenschaften. Stünde
+        ''' das Modell dort, hätte jede bloß geöffnete RAW-Datei als bearbeitet gezählt, und der
+        ''' Sidecar-Import hätte neben jedes Foto eine Rezeptdatei ohne Inhalt gelegt. Die
+        ''' Reglerwerte selbst sind Teil des Looks und wandern mit.</remarks>
         Private Shared ReadOnly StructuralPropertyNames As New HashSet(Of String)(StringComparer.Ordinal) From {
             "SourceWidthPixels", "SourceHeightPixels", "RecipeCoordinateVersion",
+            "WhiteBalanceAnchorX", "WhiteBalanceAnchorY", "WhiteBalanceModel",
             "WorkingImageVersion", "WorkingImageHasTransparency",
             "GeometryOperations",
             "BakedOperations", "BakedOperationsApplied",
@@ -786,9 +843,21 @@ Namespace Services
         End Sub
 
         ''' <summary>Nur die Pixel-Anpassungen als eigenes Objekt - das ist der Satz, den ein Objekt mitträgt.</summary>
+        ''' <summary>Die Pixel-Anpassungen als eigenes Rezept - für eine Maskenebene oder ein
+        ''' Objekt, also für einen TEIL DIESES BILDES.
+        '''
+        ''' DER WEISSABGLEICH IST DIE AUSNAHME VON DER STRUKTURREGEL. Modell und Anker stehen unter
+        ''' den strukturellen Feldern, weil sie dem Bild gehören und nicht dem Look; beim
+        ''' Übertragen eines Looks auf ein ANDERES Foto dürfen sie deshalb nicht mitwandern. Hier
+        ''' geht es aber nicht auf ein anderes Foto, sondern auf einen Teil desselben - und ohne
+        ''' sie stünde in der Ebene eine Kelvin-Zahl mit Modell 0, die die Renderkette sofort
+        ''' verwirft. Der Regler bewegte sich dann in der Oberfläche, ohne im Bild etwas zu tun.</summary>
         Public Function ExtractPixelAdjustments() As ImageAdjustments
             Dim result = New ImageAdjustments()
             result.CopyPixelAdjustmentsFrom(Me)
+            result.WhiteBalanceModel = WhiteBalanceModel
+            result.WhiteBalanceAnchorX = WhiteBalanceAnchorX
+            result.WhiteBalanceAnchorY = WhiteBalanceAnchorY
             Return result
         End Function
 
@@ -894,6 +963,11 @@ Namespace Services
                 .SourceWidthPixels = SourceWidthPixels,
                 .SourceHeightPixels = SourceHeightPixels,
                 .RecipeCoordinateVersion = RecipeCoordinateVersion,
+                .WhiteBalanceModel = WhiteBalanceModel,
+                .WhiteBalanceAnchorX = WhiteBalanceAnchorX,
+                .WhiteBalanceAnchorY = WhiteBalanceAnchorY,
+                .WhiteBalanceKelvin = WhiteBalanceKelvin,
+                .WhiteBalanceKelvinTint = WhiteBalanceKelvinTint,
                 .WorkingImageVersion = WorkingImageVersion,
                 .WorkingImageHasTransparency = WorkingImageHasTransparency,
                 .BakedOperationsApplied = BakedOperationsApplied,

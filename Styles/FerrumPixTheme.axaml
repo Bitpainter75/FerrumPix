@@ -970,6 +970,14 @@
         <Setter Property="HorizontalContentAlignment" Value="Right"/>
         <Setter Property="TextAlignment" Value="Right"/>
     </Style>
+    <!-- Vierstellige Werte, etwa die Farbtemperatur in Kelvin. Nur das FELD wird breiter, die
+         Spalte der Zeile bleibt bei 44 wie ueberall - sonst endete der Regler dieser Zeile
+         frueher als die darunter, und die gemeinsame Kante der Regler ist die auffaelligste
+         Linie im Panel. -->
+    <Style Selector="TextBox.slider-value-wide">
+        <Setter Property="Width" Value="40"/>
+        <Setter Property="MinWidth" Value="40"/>
+    </Style>
     <!-- Das Zahlenfeld sitzt AUF der Reglerzeile und nimmt deren Farbe an, nicht die eines Feldes.
          Deshalb holt es die Feldflaeche, die weiter oben fuer jedes Textfeld am Rahmenelement
          steht, hier ausdruecklich zurueck. -->

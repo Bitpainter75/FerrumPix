@@ -1,47 +1,65 @@
-## FerrumPix 0.9.38
+## FerrumPix 0.9.39
 
 ### What's new
 
-- **The lens database is current again.** Lens correction now knows around 1550 lenses and 1050
-  camera bodies including recent camera models.
+- **RAW files get a real temperature slider.** For a RAW photo the white balance now reads in
+  Kelvin, starting at the value your camera recorded, the way a photographer thinks about light.
+  Behind it the white balance is no longer a nudge to red and blue but a proper conversion between
+  two lights, computed in linear light: grey stays grey, green takes part, and the brightness of
+  the picture no longer creeps along when you move the slider. The presets in the list are real
+  illuminants now, so Daylight is daylight rather than "a little warmer". Other file types keep
+  their familiar slider, because a photo without camera data has no shot temperature a Kelvin
+  number could refer to. Photos you already edited keep the look you saved.
 
-- **The Windows packages and the Flatpak carry a newer LibRaw.** It recognises a good seventy
-  camera models more than the one before, so more recent cameras develop from their sensor data
-  instead of falling back to the embedded preview. The Windows build now also opens lossy
-  compressed DNG files, which stayed closed there while Linux opened them.
+- **A Lightroom preset arrives in the light you shot in.** Presets for RAW files state the colour
+  temperature as a fixed number, and that number only means something next to the light the photo
+  was taken in. Where a preset did not bring that reference along, FerrumPix had to assume daylight,
+  which went wrong for pictures taken under lamps or at night. It now reads the white balance of the
+  shot from the RAW file itself, so such a preset lands where it was meant to. This works when you
+  apply a preset in the editor and when FerrumPix picks up develop settings from a sidecar; over a
+  whole selection at once it still uses the old estimate.
 
-- **You can choose how RAW files are demosaiced.** RAW development settings now offer AHD, DCB and
-  PPG: the default balances detail and speed, DCB draws finer at the cost of more colour noise and
-  clearly more time, PPG is the quick one. Thumbnails rebuild themselves after a change.
+- **A picture from the filmstrip becomes a layer.** Drag a thumbnail from the strip at the bottom of
+  the editor onto your photo and it is placed there as a picture layer, at the spot where you drop
+  it. The same as dropping a file from the file manager, only without leaving the application.
 
-- **An experiment for wide-gamut displays on macOS.** On a Display P3 screen everything looks too
-  strong, photos and interface alike, because the window is drawn without a colour space and macOS
-  reads the numbers as screen values. A switch under Appearance tells the system that FerrumPix
-  draws in sRGB, so macOS converts for whichever screen the window is on. Whether it takes effect
-  depends on the drawing path underneath, so it is off by default, and the settings show what the
-  last attempt did. Takes effect after a restart.
+- **On macOS the colours now match your screen.** Most Mac screens can show more colours than a
+  photo contains, and until now photos and the interface looked too strong on them. FerrumPix now
+  tells the system what it draws, so macOS converts the colours for the screen you are using. On an
+  ordinary screen nothing changes. The switch for it is in the settings and it is on.
 
-- **Application scaling is set per display.** On Linux, where the system does not scale each
-  monitor by itself, every connected display now has its own slider instead of one value plus a
-  choice of which display it applies to, so the interface does not end up smaller on a
-  high-resolution display than on the one next to it. A value for a display that is currently
-  unplugged is kept and marked as such, so it is still there when you plug it back in.
+- **More of the local models can use your graphics card now.** Removing an object, the two quick
+  upscalers and face comparison were held back on the processor because they were slower on the
+  card. With the updated model runtime they are not, so they now run there as well. Nothing changes
+  if you have no card, or leave the setting off.
 
-- **Gallery filters survive a folder change.** Rating, favourite, file type and colour label stay as
-  you set them while you walk through folders, so a series can be gone through with the same
-  selection in view. They still reset when you change source, to Immich, Nextcloud or a search,
-  where nobody chose them for what you are now looking at.
+- **The model runtime does not phone home.** Its newest version brings its own reporting along on
+  every system, not just Windows. FerrumPix switches it off before the runtime starts, so nothing
+  about your photos or your machine is collected or sent.
+
+- **The folder tree starts where your photos are.** The folders you have added for the catalog now
+  sit at the top of the tree as their own starting points, with their subfolders. The tree no longer
+  begins at your home folder and the root of the drive alone.
+
+- **On macOS the application is called FerrumPix again.** The menu bar named it after the toolkit it
+  is built with, and its About entry opened that toolkit's window. It now carries its own name and
+  its own menu.
+
+- **Edge and extent of a clicked selection are set in pixels now.** Both were percentages of
+  something you could not see: the edge did nothing visible over nine tenths of its travel, and the
+  extent went from nothing to everything within a third of it. The number you set is now the number
+  of pixels you get, the soft edge only runs outwards so the selection no longer loses ground on the
+  inside, and a double click puts either slider back on its default.
 
 ### Fixes
 
-- **Lens matching no longer falls for a lens of a different make.** When your lens is not in the
-  database, a third-party lens with the same focal length and aperture could win the match and
-  bend the picture with the wrong curve. It now stays out unless the shot data names that maker.
+- **A saved photo no longer carries the old preview picture inside it.** Cameras and phones put a
+  small copy of the picture into the file, and it travelled along unchanged when you saved: a file
+  manager showing that copy showed your photo without the edits, in the old size. The same went for
+  the width and height noted in the shot data, which still described the original after a crop or a
+  resize. Both now match the file you actually saved.
 
-- **Gallery tiles of RAW files are no longer demosaiced with the weakest method.** In one path the
-  quality setting was reset to linear interpolation instead of the normal one.
-
-- **On macOS, RAW development and HEIC now work with libraries installed through Homebrew.**
-  FerrumPix looks in Homebrew's library folders for LibRaw and libheif, as it already did for mpv.
-  On Apple Silicon those folders lie outside the paths macOS searches by itself, so an installed
-  LibRaw stayed invisible and RAW files quietly fell back to the embedded preview.
+- **The grouped gallery view scrolls as smoothly as the grid.** It now builds only the tiles that
+  are actually on screen and hands them on as you scroll, instead of rebuilding them on every
+  movement. Large folders and long date ranges stay responsive, and the scrollbar no longer shifts
+  under your hand.

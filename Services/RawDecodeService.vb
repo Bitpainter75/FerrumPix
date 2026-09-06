@@ -54,6 +54,10 @@ Namespace Services
         Private Delegate Function IntFn(handle As IntPtr) As Integer
         Private Delegate Sub SetIntFn(handle As IntPtr, value As Integer)
         Private Delegate Function GetCamMulFn(handle As IntPtr, index As Integer) As Single
+        ''' <summary>libraw_get_rgb_cam: Zeile und Spalte der Matrix Kameraraum -> Ausgabefarbraum.
+        ''' Eigener Delegat, weil er ZWEI Indizes nimmt; pre_mul hat dieselbe Signatur wie cam_mul
+        ''' und benutzt deshalb <see cref="GetCamMulFn"/> mit.</summary>
+        Private Delegate Function GetRgbCamFn(handle As IntPtr, row As Integer, column As Integer) As Single
         Private Delegate Sub SetUserMulFn(handle As IntPtr, index As Integer, value As Single)
         Private Delegate Sub SetGammaFn(handle As IntPtr, index As Integer, value As Single)   ' libraw_set_gamma nimmt FLOAT, nicht double
         Private Delegate Function MakeMemImageFn(handle As IntPtr, ByRef errc As Integer) As IntPtr
@@ -91,11 +95,14 @@ Namespace Services
         Private Shared _setOutputBps As SetIntFn
         Private Shared _setOutputColor As SetIntFn
         Private Shared _getCamMul As GetCamMulFn
+        Private Shared _getPreMul As GetCamMulFn
+        Private Shared _getRgbCam As GetRgbCamFn
         Private Shared _setUserMul As SetUserMulFn
         Private Shared _setNoAutoBright As SetIntFn
         Private Shared _setGamma As SetGammaFn
         Private Shared _setFbdd As SetIntFn
         Private Shared _setDemosaic As SetIntFn
+        Private Shared _setHighlight As SetIntFn
         Private Shared _process As IntFn
         Private Shared _unpackThumb As IntFn
         Private Shared _makeMemThumb As MakeMemImageFn
@@ -251,12 +258,31 @@ Namespace Services
                     Catch
                         _setDemosaic = Nothing
                     End Try
+                    Try
+                        _setHighlight = GetExport(Of SetIntFn)(handle, "libraw_set_highlight")
+                    Catch
+                        _setHighlight = Nothing
+                    End Try
+                    ' OPTIONAL, eigenes Try wie oben: diese zwei tragen NUR den Aufnahme-
+                    ' Weissabgleich als Zahl (siehe ReadCameraColorFacts). Fehlen sie, entwickelt
+                    ' die Anwendung unveraendert weiter - es fehlt dann die Kelvin-Angabe, kein
+                    ' Bildpunkt. Beide zusammen oder keiner: die Rechnung braucht pre_mul UND
+                    ' rgb_cam, mit nur einem davon waere sie nicht bloss ungenau, sondern falsch.
+                    Try
+                        _getPreMul = GetExport(Of GetCamMulFn)(handle, "libraw_get_pre_mul")
+                        _getRgbCam = GetExport(Of GetRgbCamFn)(handle, "libraw_get_rgb_cam")
+                    Catch
+                        _getPreMul = Nothing
+                        _getRgbCam = Nothing
+                    End Try
                     _library = handle
                 Catch
                     ' Ein fehlender Export = Bibliothek unbrauchbar; alles auf Anfang.
                     _init = Nothing : _openFile = Nothing : _unpack = Nothing
                     _setOutputBps = Nothing : _setOutputColor = Nothing
                     _getCamMul = Nothing : _setUserMul = Nothing
+                    _getPreMul = Nothing : _getRgbCam = Nothing
+                    _setHighlight = Nothing
                     _setNoAutoBright = Nothing : _setGamma = Nothing : _setFbdd = Nothing : _setDemosaic = Nothing
                     _process = Nothing : _makeMemImage = Nothing : _clearMem = Nothing : _close = Nothing
                     _unpackThumb = Nothing : _makeMemThumb = Nothing
@@ -640,6 +666,132 @@ Namespace Services
             Return (0, 0)
         End Function
 
+        ''' <summary>Die Farbdaten der Kamera zu einer RAW-Datei: die Multiplikatoren der AUFNAHME
+        ''' (cam_mul), die der Referenzbeleuchtung der Kamera (pre_mul) und die Matrix vom
+        ''' Kameraraum nach sRGB (rgb_cam). Aus diesen drei Größen rechnet
+        ''' <see cref="CaptureWhiteBalanceService"/> den Aufnahme-Weißabgleich in Kelvin.
+        '''
+        ''' KEIN Decode: im Regelfall nur open_file, also nicht einmal entpackte Sensordaten, und
+        ''' damit kein Demosaic, keine Tonabbildung und kein Puffer in Bildgröße. Gemessen unter
+        ''' einer Millisekunde je Datei. Der Decode-Zwischenspeicher wird nicht angefasst und nicht
+        ''' entwertet. Die Serialisierung ist dieselbe wie bei den anderen nativen Wegen.
+        '''
+        ''' <paramref name="includeProcessed"/> hängt einen vollen <c>dcraw_process</c> an, nur um
+        ''' rgb_cam ein ZWEITES Mal zu lesen. Das ist teuer und ausschließlich für die Messung
+        ''' gedacht: es ist offen, ob LibRaw die Matrix schon nach unpack füllt oder erst dort.
+        ''' Nothing, wenn die Datei nicht lesbar ist oder die Bibliothek die beiden optionalen
+        ''' Exporte nicht mitbringt.</summary>
+        Public Shared Function ReadCameraColorFacts(path As String,
+                                                    Optional includeProcessed As Boolean = False) As CameraColorFacts
+            If String.IsNullOrWhiteSpace(path) OrElse Not IsAvailable Then Return Nothing
+            If _getPreMul Is Nothing OrElse _getRgbCam Is Nothing Then Return Nothing
+            If Not _reentrant Then
+                SyncLock _nativeLock
+                    Return ReadCameraColorFactsCore(path, includeProcessed)
+                End SyncLock
+            End If
+            Return ReadCameraColorFactsCore(path, includeProcessed)
+        End Function
+
+        Private Shared Function ReadCameraColorFactsCore(path As String, includeProcessed As Boolean) As CameraColorFacts
+            Dim handle = _init(0UI)
+            If handle = IntPtr.Zero Then Return Nothing
+            Dim pathPtr As IntPtr = IntPtr.Zero
+            Try
+                pathPtr = StringToUtf8(path)
+                If _openFile(handle, pathPtr) <> 0 Then Return Nothing
+
+                ' GELESEN WIRD NACH open_file, NICHT NACH unpack. LibRaw hat die drei Groessen
+                ' schon beim Erkennen der Datei gefuellt. Gemessen an 14 RAWs aus zehn Kameras
+                ' (ARW, CR2, CR3, DNG, NEF, PEF, RW2): die Werte sind identisch mit denen nach
+                ' unpack, die Lesezeit faellt von 31 bis 126 ms auf unter eine Millisekunde. Das
+                ' ist der Unterschied zwischen "der Preset-Import holt die Zahl nebenbei" und
+                ' "er braucht dafuer einen Zwischenspeicher".
+                Dim facts = ReadColorFactsFromHandle(handle)
+
+                ' SICHERHEITSNETZ fuer Formate, die bei der Messung nicht auf dem Tisch lagen
+                ' (RAF, ORF): liefert der schnelle Weg keine brauchbaren Multiplikatoren, wird
+                ' doch entpackt und noch einmal gelesen. Ohne das Netz waere der Rueckfall still -
+                ' die Farbtemperatur fehlte einfach, ohne dass etwas darauf hindeutet.
+                Dim unpacked = False
+                If Not HasUsableMultipliers(facts) Then
+                    unpacked = _unpack(handle) = 0
+                    If unpacked Then facts = ReadColorFactsFromHandle(handle)
+                End If
+
+                If includeProcessed Then
+                    ' rgb_cam hängt am AUSGABEFARBRAUM. Wer die Matrix nach dem Prozess liest, muss
+                    ' denselben setzen wie der echte Decode, sonst vergleicht die Messung zwei
+                    ' verschiedene Dinge. Und dcraw_process braucht entpackte Daten - deshalb die
+                    ' Marke: ob ein zweiter unpack-Aufruf gutgeht, ist nicht zugesagt, also wird er
+                    ' nicht gemacht.
+                    _setOutputBps(handle, DecodeOutputBits)
+                    _setOutputColor(handle, 1) ' sRGB
+                    If unpacked OrElse _unpack(handle) = 0 Then
+                        If _process(handle) = 0 Then facts.RgbCamAfterProcess = ReadRgbCamMatrix(handle)
+                    End If
+                End If
+
+                Return facts
+            Catch ex As Exception
+                DiagnosticLogService.LogException("RawDecodeService.ReadCameraColorFacts", ex)
+                Return Nothing
+            Finally
+                _close(handle)
+                If pathPtr <> IntPtr.Zero Then Marshal.FreeCoTaskMem(pathPtr)
+            End Try
+        End Function
+
+        ''' <summary>Die drei Größen am offenen Handle abgreifen. Eigene Funktion, weil der
+        ''' Rückfall sie ein zweites Mal liest.</summary>
+        Private Shared Function ReadColorFactsFromHandle(handle As IntPtr) As CameraColorFacts
+            Return New CameraColorFacts With {
+                .CamMul = ReadFourMultipliers(_getCamMul, handle),
+                .PreMul = ReadFourMultipliers(_getPreMul, handle),
+                .RgbCam = ReadRgbCamMatrix(handle)
+            }
+        End Function
+
+        ''' <summary>Tragen die gelesenen Multiplikatoren überhaupt eine Aussage? Nur die ersten
+        ''' drei Kanäle zählen; der vierte ist das zweite Grün und darf 0 sein.
+        '''
+        ''' Ein sauberes Nein gibt es wirklich: eine als DNG verpackte, bereits fertig gerenderte
+        ''' RGB-Datei hat cam_mul auf 0 stehen. Für sie bleibt es beim Nein, auch nach dem
+        ''' Entpacken - sie hat keinen Aufnahme-Weißabgleich, und ein erfundener wäre schlimmer als
+        ''' keiner.</summary>
+        Private Shared Function HasUsableMultipliers(facts As CameraColorFacts) As Boolean
+            If facts Is Nothing OrElse facts.CamMul Is Nothing OrElse facts.PreMul Is Nothing Then Return False
+            If facts.CamMul.Length < 3 OrElse facts.PreMul.Length < 3 Then Return False
+            For i = 0 To 2
+                If Not Single.IsFinite(facts.CamMul(i)) OrElse facts.CamMul(i) <= 0.0F Then Return False
+                If Not Single.IsFinite(facts.PreMul(i)) OrElse facts.PreMul(i) <= 0.0F Then Return False
+            Next
+            Return True
+        End Function
+
+        ''' <summary>Vier Multiplikatoren am Stück. Der vierte ist das zweite Grün und bei den
+        ''' meisten Sensoren 0 - die Rechnung darf ihn deshalb nicht blind mitnehmen.</summary>
+        Private Shared Function ReadFourMultipliers(reader As GetCamMulFn, handle As IntPtr) As Single()
+            Dim values(3) As Single
+            For i = 0 To 3
+                values(i) = reader(handle, i)
+            Next
+            Return values
+        End Function
+
+        ''' <summary>rgb_cam als 3x3 zeilenweise. LibRaw führt die Matrix als 3x4 (das vierte
+        ''' Element gehört zum zweiten Grün); für RGB-Sensoren sind die ersten drei Spalten die
+        ''' ganze Abbildung.</summary>
+        Private Shared Function ReadRgbCamMatrix(handle As IntPtr) As Single()
+            Dim matrix(8) As Single
+            For row = 0 To 2
+                For column = 0 To 2
+                    matrix(row * 3 + column) = _getRgbCam(handle, row, column)
+                Next
+            Next
+            Return matrix
+        End Function
+
         ''' Bildwechsel im Editor: der ~180-MB-Eintrag muss nicht auf den nächsten RAW-Decode warten.
         Public Shared Sub ClearCache()
             SyncLock _cacheLock
@@ -650,10 +802,13 @@ Namespace Services
             End SyncLock
         End Sub
 
-        ''' <summary>Ausgabetiefe, die von LibRaw angefordert wird - der Schalter fuer den
-        ''' 16-Bit-Zweig. DERZEIT 8: der Zweig ist STILLGELEGT, nicht entfernt.
+        ''' <summary>Ausgabetiefe, die von LibRaw angefordert wird. DERZEIT 16, und das ist
+        ''' VORAUSSETZUNG, nicht Option: die Basisstufe rechnet linear, und lineare Daten in 8 Bit
+        ''' haetten in den Tiefen nur eine Handvoll Stufen, bevor die Tonkurve sie hochzieht.
+        ''' Die Abwaegung darunter stammt aus der Zeit, als die Stufe noch gamma-kodiert ankam;
+        ''' sie steht als Begruendung der Kosten weiter da, nicht als offene Wahl.
         '''
-        ''' Auf 16 gestellt dekodiert LibRaw mit voller Tiefe und Convert16 quantisiert mit
+        ''' Mit 16 dekodiert LibRaw mit voller Tiefe und Convert16 quantisiert mit
         ''' Bayer-Dither statt durch Abschneiden. Gemessen bringt das wenig: an der dunkelsten
         ''' 64x64-Kachel eines Konzert-RAW 481 statt 459 unterscheidbare Farbwerte (+5 %),
         ''' Chroma-Median unveraendert - Sensorrauschen dithert dort bereits selbst. Spuerbar
@@ -664,6 +819,24 @@ Namespace Services
         ''' Diagnose ruft Convert16 direkt auf, damit er nicht unbemerkt verrottet. Umschalten
         ''' ist genau diese eine Zahl.</summary>
         Private Const DecodeOutputBits As Integer = 16
+
+        ''' <summary>Behandlung der Lichter im Decode. 0 ist BESCHNITT, und das ist LibRaws eigene
+        ''' Vorgabe - gesetzt wird sie trotzdem ausdruecklich, damit eine andere Fassung der
+        ''' Bibliothek die Zahl nicht stillschweigend verschieben kann.
+        '''
+        ''' MODUS 2 (BLEND) IST GEMESSEN UND VERWORFEN, und zwar nicht wegen der Lichter, sondern
+        ''' wegen der HELLIGKEIT: der Modus entscheidet in LibRaw auch die Normierung. Unter
+        ''' Beschnitt ist der Bezug das MINIMUM der Referenzmultiplikatoren, unter Blend ihr
+        ''' MAXIMUM - das ganze Bild wird also um deren Verhaeltnis dunkler. Gemessen an zwei
+        ''' Motiven ueber dcraw_emu (linear, 16 Bit): Mittelwert 1389,8 auf 672,8 und 4083,8 auf
+        ''' 2180,9, also Faktor 2,07 und 1,87, bei einem gerechneten max/min von 2,12. Der
+        ''' Spitzenwert erreicht dabei nicht mehr den Vollausschlag (47955 bzw. 50074 von 65535).
+        '''
+        ''' Als Einstellung angeboten waere das eine Falle: es sieht aus wie eine Lichterrettung
+        ''' und ist eine Blendenstufe. Wer es einbaut, muss die Basisstufe um genau diesen Faktor
+        ''' gegenrechnen - der ist seit dem 06.09.2026 aus <c>pre_mul</c> auch bekannt - und die
+        ''' Kennlinie danach neu messen. Nicht ohne das.</summary>
+        Private Const HighlightMode As Integer = 0
 
         ''' <summary>LibRaws Nummer fuer das voreingestellte Verfahren. NACHGEMESSEN, nicht
         ''' angenommen: ein Decode ohne gesetztes Verfahren liefert bitgleich dieselben Bilddaten
@@ -749,6 +922,8 @@ Namespace Services
                     _setOutputColor(handle, 1)
                     _setOutputBps(handle, DecodeOutputBits)
                     _setDemosaic(handle, ConfiguredDemosaic())
+                    ' Ausdruecklich, nicht auf die Vorgabe der Bibliothek verlassen (HighlightMode).
+                    If _setHighlight IsNot Nothing Then _setHighlight(handle, HighlightMode)
                 Catch
                 End Try
             End Try
@@ -815,6 +990,9 @@ Namespace Services
                 ' Das gewaehlte Demosaic-Verfahren. Fehlt der Setter (aeltere libraw), bleibt es bei
                 ' LibRaws Vorgabe - die Auswahl ist dann wirkungslos, aber nichts geht kaputt.
                 If _setDemosaic IsNot Nothing Then _setDemosaic(handle, ConfiguredDemosaic())
+                ' Lichter: BESCHNITT, und zwar ausdruecklich gesetzt. Die Zahl steht bei
+                ' HighlightMode, samt der Messung, warum Blend dort nicht steht.
+                If _setHighlight IsNot Nothing Then _setHighlight(handle, HighlightMode)
                 ' Kamera-Weißabgleich: die As-Shot-Multiplikatoren als user_mul setzen (die C-API
                 ' hat keinen use_camera_wb-Setter). Ohne gültige cam_mul bleibt der Standard.
                 Dim mul0 = _getCamMul(handle, 0)

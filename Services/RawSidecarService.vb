@@ -289,7 +289,10 @@ Namespace Services
             Try
                 Dim xmpPath = XmpSidecarService.FindSidecar(rawPath)
                 If String.IsNullOrEmpty(xmpPath) Then Return False
-                Dim look = XmpPresetService.LoadLook(xmpPath)
+                ' Der RAW-Pfad geht mit: trägt die Sidecar ein absolutes crs:Temperature ohne
+                ' crs:AsShotTemperature, holt der Import die Aufnahmetemperatur aus der RAW-Datei
+                ' selbst, statt D65 anzunehmen.
+                Dim look = XmpPresetService.LoadLook(xmpPath, imagePath:=rawPath)
                 If look Is Nothing OrElse Not HasAnyAdjustment(look) Then Return False
                 Return TryWrite(rawPath, look)
             Catch

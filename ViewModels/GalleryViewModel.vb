@@ -10798,6 +10798,12 @@ Namespace ViewModels
         Private Shared Function BuildBatchFilterAdjustments(result As BatchFilterDialogResult) As ImageAdjustments
             Select Case result.SourceKind
                 Case BatchFilterDialogResult.SourceXmpPreset
+                    ' KEIN Bildpfad, und das ist hier eine Grenze, keine Nachlässigkeit: die
+                    ' Anpassungen entstehen EINMAL für die ganze Auswahl. Ein RAW-Preset mit
+                    ' absolutem crs:Temperature bräuchte die Aufnahmetemperatur JE BILD, und die
+                    ' gibt es an dieser Stelle nicht. Für diesen Fall bleibt es bei der Näherung
+                    ' über D65 (siehe XmpPresetService.LoadLook). Wer das ändern will, muss den
+                    ' Weißabgleich pro Bild auflösen, nicht die Vorlage erweitern.
                     Return XmpPresetService.LoadLook(result.PresetPath)
 
                 Case BatchFilterDialogResult.SourceAdjustmentPreset

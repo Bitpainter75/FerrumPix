@@ -50,7 +50,13 @@
                         </ComboBox.ItemTemplate>
                       </ComboBox>
             </Grid>
-            <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
+            <!-- ZWEI TEMPERATURZEILEN, eine davon sichtbar. Eine RAW-Datei traegt den
+                 Weissabgleich der Aufnahme; dort nennt der Regler die Farbtemperatur der Szene in
+                 Kelvin, so wie in jedem Entwicklungsprogramm. Alles andere hat keine
+                 Aufnahmetemperatur, auf die sich eine absolute Zahl beziehen koennte, und behaelt
+                 den relativen Regler. -->
+            <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center"
+                  IsVisible="{Binding !HasAbsoluteWhiteBalance}">
                 <TextBlock Text="Temperatur"
                            Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
@@ -58,6 +64,22 @@
                                    Value="{Binding Temperature}" Margin="0,0" />
                 <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
                                          Value="{Binding Temperature, Mode=TwoWay}" Minimum="-100" Maximum="100" />
+            </Grid>
+            <!-- SPALTENTEILUNG WIE ALLE ANDEREN ZEILEN: 92, Rest, 44. Eine eigene Breite fuer die
+                 Zahlenspalte laesst den Regler frueher enden als die Zeilen darunter, und die
+                 gemeinsame Kante der Regler ist die auffaelligste Linie im Panel. Der
+                 Kelvin-Wert ist vierstellig und braucht dafuer ein etwas breiteres Feld - das
+                 regelt die Klasse, nicht die Spalte. -->
+            <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center"
+                  IsVisible="{Binding HasAbsoluteWhiteBalance}">
+                <TextBlock Text="Temperatur"
+                           Foreground="{DynamicResource FP.Text.Secondary}"
+                           VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                <icons:RoundSlider Grid.Column="1" Minimum="2000" Maximum="12000"
+                                   Value="{Binding KelvinTemperature}" Margin="0,0" />
+                <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value slider-value-wide"
+                                         Value="{Binding KelvinTemperature, Mode=TwoWay}"
+                                         Minimum="2000" Maximum="12000" />
             </Grid>
             <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
                 <TextBlock Text="Tönung" Foreground="{DynamicResource FP.Text.Secondary}"

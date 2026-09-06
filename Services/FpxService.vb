@@ -132,6 +132,23 @@ Namespace Services
         ''' Heute ist es reiner UI-Zustand und wird nie aus einem Dokument wiederhergestellt.</summary>
         Private Shared Function NormalizeLoadedAdjustments(adj As ImageAdjustments) As ImageAdjustments
             If adj Is Nothing Then Return Nothing
+
+            ' WEISSABGLEICHSMODELL FESTNAGELN, UND ZWAR ZUERST. Eine Datei ohne dieses Feld stammt
+            ' aus der Zeit der alten Rechnung. Trägt sie einen Weißabgleichswert, bedeutet der nur
+            ' in jener Rechnung das, was der Nutzer beim Speichern gesehen hat - sie bekommt
+            ' deshalb ausdrücklich Modell 1 eingetragen und bleibt bitgleich.
+            '
+            ' WURDE DER WEISSABGLEICH NIE ANGEFASST, gibt es nichts zu bewahren: das Rezept bleibt
+            ' „nicht angegeben" und darf das neue Modell bekommen, sobald es geöffnet wird. Sonst
+            ' hinge jede jemals bearbeitete Datei für immer am alten Regler, auch wenn an ihrem
+            ' Weißabgleich nie etwas stand.
+            '
+            ' Vor der Auswahl-Migration unten, damit eine übernommene Maskenebene das Modell
+            ' mitnimmt.
+            If adj.WhiteBalanceModel <= 0 AndAlso (adj.Temperature <> 0.0F OrElse adj.Tint <> 0.0F) Then
+                adj.WhiteBalanceModel = 1
+            End If
+
             Dim hadLegacyScope = adj.SelectionScopeEnabled OrElse adj.HasActiveSelection
             If hadLegacyScope AndAlso (adj.MaskedAdjustmentLayers Is Nothing OrElse adj.MaskedAdjustmentLayers.Count = 0) Then
                 ' Alte Ein-Auswahl-Rezepte direkt in das neue Modell überführen. Dabei sind exakt die

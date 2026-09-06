@@ -3374,6 +3374,8 @@ Namespace Services
             Return String.Join("|", New Object() {
                 adj.Exposure, adj.Brightness, adj.Contrast, adj.Saturation, adj.Highlights, adj.ShadowsLevel,
                 adj.Whites, adj.Blacks, adj.Temperature, adj.Tint, adj.Sharpness, adj.SharpenRadius, adj.SharpenDetail,
+                adj.WhiteBalanceModel, adj.WhiteBalanceAnchorX, adj.WhiteBalanceAnchorY,
+                adj.WhiteBalanceKelvin, adj.WhiteBalanceKelvinTint,
                 adj.SharpenMasking,
                 adj.NoiseReduction, adj.NoiseReductionMethod, adj.NoiseReductionDetail, adj.ColorNoiseReduction,
                 adj.FarbrauschGrob, adj.ColorNoiseCoarseScale,

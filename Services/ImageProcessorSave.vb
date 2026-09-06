@@ -676,6 +676,19 @@ Namespace Services
             Dim targetBytes = File.ReadAllBytes(targetPath)
             If targetBytes.Length < 4 OrElse targetBytes(0) <> &HFF OrElse targetBytes(1) <> &HD8 Then Return
 
+            ' ZWEI DINGE, DIE SONST FALSCH MITREISEN. Die Aufnahmedaten werden bytegenau
+            ' uebernommen; nach einem Beschnitt oder einer Groessenaenderung beschreiben ihre
+            ' Bildmasse noch die Quelle, und ihr eingebettetes Vorschaubild zeigt das
+            ' unbearbeitete Bild. Beides wird hier geradegezogen, an EINER Stelle fuer beide
+            ' Quellwege (JPEG-Quelle und aufgebaute Segmente).
+            Dim frame = TryReadJpegFrameSize(targetBytes)
+            For Each segment In metadataSegments
+                If IsExifSegment(segment) Then
+                    If frame.Width > 0 Then PatchExifPixelDimensions(segment, 10, frame.Width, frame.Height)
+                    DetachExifThumbnail(segment, 10)
+                End If
+            Next
+
             Dim stripped = StripJpegMetadataSegments(targetBytes)
             Dim insertAt = FindJpegMetadataInsertOffset(stripped)
             Dim output As New List(Of Byte)(stripped.Length + metadataSegments.Sum(Function(s) s.Length))
@@ -1106,6 +1119,116 @@ Namespace Services
             Dim target = tiffStart + CInt(ReadUInt32Endian(buffer, entry + 8, littleEndian))
             If target <= tiffStart OrElse target + 2 > buffer.Length Then Return 0
             Return target
+        End Function
+
+        ''' <summary>Setzt die Bildmasse in den Aufnahmedaten auf die Masse der GESCHRIEBENEN
+        ''' Datei.
+        '''
+        ''' Warum ueberhaupt: die Aufnahmedaten reisen sonst bytegenau mit, und 0xA002/0xA003
+        ''' (PixelXDimension/PixelYDimension) beschreiben dann noch die Quelle. Nach einem
+        ''' Beschnitt oder einer Groessenaenderung behauptet die Zieldatei damit Masse, die sie
+        ''' nicht hat - ein Programm, das diese Felder auswertet statt den Rahmenkopf zu lesen,
+        ''' rechnet damit falsch.
+        '''
+        ''' Beide Eintraege liegen inline in ihren vier Wertbytes (Anzahl 1), die Laenge des Blocks
+        ''' aendert sich also nicht - wie beim Patch der Ausrichtung. Ein SHORT-Eintrag, in den die
+        ''' Zahl nicht passt (Bildkante ueber 65535), bleibt unangetastet: eine falsche kleine Zahl
+        ''' waere schlimmer als die alte.</summary>
+        Private Shared Sub PatchExifPixelDimensions(buffer As Byte(), tiffStart As Integer,
+                                                    width As Integer, height As Integer)
+            Try
+                If buffer Is Nothing OrElse buffer.Length < tiffStart + 8 Then Return
+                If width <= 0 OrElse height <= 0 Then Return
+                Dim littleEndian = buffer(tiffStart) = AscW("I"c) AndAlso buffer(tiffStart + 1) = AscW("I"c)
+                Dim bigEndian = buffer(tiffStart) = AscW("M"c) AndAlso buffer(tiffStart + 1) = AscW("M"c)
+                If Not littleEndian AndAlso Not bigEndian Then Return
+
+                Dim ifd0 = tiffStart + CInt(ReadUInt32Endian(buffer, tiffStart + 4, littleEndian))
+                Dim exifIfd = FindIfdPointer(buffer, tiffStart, ifd0, &H8769, littleEndian)
+                If exifIfd <= 0 Then Return
+
+                WriteInlineDimension(buffer, FindIfdEntry(buffer, exifIfd, &HA002, littleEndian), width, littleEndian)
+                WriteInlineDimension(buffer, FindIfdEntry(buffer, exifIfd, &HA003, littleEndian), height, littleEndian)
+            Catch
+                ' Aufnahmedaten sind Beiwerk - lieber unveraendert weitergeben.
+            End Try
+        End Sub
+
+        Private Shared Sub WriteInlineDimension(buffer As Byte(), entry As Integer, value As Integer,
+                                                littleEndian As Boolean)
+            If entry <= 0 OrElse entry + 12 > buffer.Length Then Return
+            Dim type = ReadUInt16Endian(buffer, entry + 2, littleEndian)
+            Dim count = ReadUInt32Endian(buffer, entry + 4, littleEndian)
+            If count <> 1UI Then Return
+            If type = 3 Then
+                If value > &HFFFF Then Return
+                WriteUInt16Endian(buffer, entry + 8, value, littleEndian)
+                ' Die zweite Haelfte der Wertbytes gehoert bei SHORT zum zweiten Element und ist
+                ' bei Anzahl 1 Auffuellung; sie wird genullt, damit dort kein Rest steht.
+                WriteUInt16Endian(buffer, entry + 10, 0, littleEndian)
+            ElseIf type = 4 Then
+                WriteUInt32Endian(buffer, entry + 8, CUInt(value), littleEndian)
+            End If
+        End Sub
+
+        ''' <summary>Haengt das eingebettete Vorschaubild aus den Aufnahmedaten aus.
+        '''
+        ''' Es steht im ZWEITEN Verzeichnis (IFD1), auf das das erste am Ende verweist. Nach einer
+        ''' Bearbeitung zeigt es das UNBEARBEITETE Bild in der alten Groesse; ein Dateimanager, der
+        ''' es anzeigt, zeigt damit etwas anderes als die Datei enthaelt.
+        '''
+        ''' AUSGEHAENGT, NICHT HERAUSGESCHNITTEN: der Verweis am Ende von IFD0 wird auf 0 gesetzt,
+        ''' vier Bytes, und damit findet kein Leser das zweite Verzeichnis mehr. Die Bytes des
+        ''' Vorschaubildes bleiben als toter Ballast im Block stehen - typisch einige Kilobyte.
+        ''' Sie herauszuschneiden hiesse, jeden Verweis im Block umzurechnen, und das an einem
+        ''' Aufbau, den wir nicht selbst gebaut haben. Der tote Ballast ist der guenstigere Preis.</summary>
+        Private Shared Sub DetachExifThumbnail(buffer As Byte(), tiffStart As Integer)
+            Try
+                If buffer Is Nothing OrElse buffer.Length < tiffStart + 8 Then Return
+                Dim littleEndian = buffer(tiffStart) = AscW("I"c) AndAlso buffer(tiffStart + 1) = AscW("I"c)
+                Dim bigEndian = buffer(tiffStart) = AscW("M"c) AndAlso buffer(tiffStart + 1) = AscW("M"c)
+                If Not littleEndian AndAlso Not bigEndian Then Return
+
+                Dim ifd0 = tiffStart + CInt(ReadUInt32Endian(buffer, tiffStart + 4, littleEndian))
+                If ifd0 <= tiffStart OrElse ifd0 + 2 > buffer.Length Then Return
+                Dim count = ReadUInt16Endian(buffer, ifd0, littleEndian)
+                Dim nextPointer = ifd0 + 2 + count * 12
+                If nextPointer + 4 > buffer.Length Then Return
+                WriteUInt32Endian(buffer, nextPointer, 0UI, littleEndian)
+            Catch
+            End Try
+        End Sub
+
+        ''' <summary>Breite und Hoehe aus dem RAHMENKOPF eines JPEG (SOFn). Die einzige Quelle, die
+        ''' die tatsaechlich geschriebenen Masse kennt - die Aufnahmedaten sind gerade das, was
+        ''' korrigiert werden soll, und ein Decode waere fuer zwei Zahlen zu teuer.</summary>
+        Private Shared Function TryReadJpegFrameSize(bytes As Byte()) As (Width As Integer, Height As Integer)
+            If bytes Is Nothing OrElse bytes.Length < 4 Then Return (0, 0)
+            If bytes(0) <> &HFF OrElse bytes(1) <> &HD8 Then Return (0, 0)
+            Dim i = 2
+            While i + 4 <= bytes.Length
+                If bytes(i) <> &HFF Then Return (0, 0)
+                Dim marker = bytes(i + 1)
+                ' Marken ohne Laengenfeld.
+                If marker = &HD8 OrElse marker = &HD9 OrElse marker = &H1 OrElse
+                   (marker >= &HD0 AndAlso marker <= &HD7) Then
+                    i += 2
+                    Continue While
+                End If
+                If marker = &HDA Then Return (0, 0)   ' Bilddatenstrom: kein Rahmenkopf mehr davor
+                Dim length = (CInt(bytes(i + 2)) << 8) Or CInt(bytes(i + 3))
+                If length < 2 OrElse i + 2 + length > bytes.Length Then Return (0, 0)
+                ' SOF0 bis SOF15, ohne die drei Marken, die keine Rahmenkoepfe sind.
+                If marker >= &HC0 AndAlso marker <= &HCF AndAlso
+                   marker <> &HC4 AndAlso marker <> &HC8 AndAlso marker <> &HCC Then
+                    If i + 9 > bytes.Length Then Return (0, 0)
+                    Dim h = (CInt(bytes(i + 5)) << 8) Or CInt(bytes(i + 6))
+                    Dim w = (CInt(bytes(i + 7)) << 8) Or CInt(bytes(i + 8))
+                    Return (w, h)
+                End If
+                i += 2 + length
+            End While
+            Return (0, 0)
         End Function
 
         Private Shared Sub CopyPngMetadata(sourcePath As String, targetPath As String)
@@ -1554,6 +1677,20 @@ Namespace Services
             Next
             Return Not crc
         End Function
+
+        Private Shared Sub WriteUInt32Endian(bytes As Byte(), offset As Integer, value As UInteger, littleEndian As Boolean)
+            If littleEndian Then
+                bytes(offset) = CByte(value And &HFFUI)
+                bytes(offset + 1) = CByte((value >> 8) And &HFFUI)
+                bytes(offset + 2) = CByte((value >> 16) And &HFFUI)
+                bytes(offset + 3) = CByte((value >> 24) And &HFFUI)
+            Else
+                bytes(offset) = CByte((value >> 24) And &HFFUI)
+                bytes(offset + 1) = CByte((value >> 16) And &HFFUI)
+                bytes(offset + 2) = CByte((value >> 8) And &HFFUI)
+                bytes(offset + 3) = CByte(value And &HFFUI)
+            End If
+        End Sub
 
         Private Shared Sub WriteUInt16Endian(bytes As Byte(), offset As Integer, value As Integer, littleEndian As Boolean)
             If littleEndian Then

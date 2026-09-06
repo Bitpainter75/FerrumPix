@@ -95,8 +95,15 @@ Namespace Services
         ''' Ohne <paramref name="baseLook"/> entsteht wie bisher ein vollständiger Look mit neutralen
         ''' Ausgangswerten - nötig für Sidecars und Stapelverarbeitung. Übergibt der Editor dagegen
         ''' sein aktuelles Rezept, überschreibt der Import ausschließlich die crs:-Schlüssel, die in
-        ''' der XMP-Datei tatsächlich stehen. Genau so verhalten sich partielle Lightroom-Presets.</summary>
-        Public Shared Function LoadLook(xmpPath As String, Optional baseLook As ImageAdjustments = Nothing) As ImageAdjustments
+        ''' der XMP-Datei tatsächlich stehen. Genau so verhalten sich partielle Lightroom-Presets.
+        '''
+        ''' <paramref name="imagePath"/> ist das Bild, auf das der Look gehen soll, und wird für
+        ''' GENAU EINEN Fall gebraucht: ein RAW-Preset mit absolutem crs:Temperature lässt sich nur
+        ''' aufnahmespezifisch in unseren relativen Regler umrechnen, und die Aufnahmetemperatur
+        ''' steht in der RAW-Datei. Leer lassen ist zulässig; dann bleibt es bei der bisherigen
+        ''' Näherung über D65.</summary>
+        Public Shared Function LoadLook(xmpPath As String, Optional baseLook As ImageAdjustments = Nothing,
+                                        Optional imagePath As String = "") As ImageAdjustments
             If String.IsNullOrWhiteSpace(xmpPath) OrElse Not File.Exists(xmpPath) Then Return Nothing
             Dim rawText = File.ReadAllText(xmpPath)
             ' Das Profil MUSS aus dem ungekuerzten Text gelesen werden - gleich danach faellt sein Block
@@ -217,12 +224,11 @@ Namespace Services
             ''' Dateien, portable Presets liegen praktisch immer in dieser Form vor) - sie hat deshalb
             ''' IMMER Vorrang. crs:Temperature dagegen ist ein ABSOLUTER Kelvin-Wert (z.B. 5500), wie ihn
             ''' RAW-Presets schreiben. Es gibt keine aufnahmeunabhängig korrekte Umrechnung in unseren
-            ''' relativen Regler - ohne die aufnahmespezifische Referenztemperatur ist jede Übernahme eine
-            ''' NÄHERUNG. Wir rechnen sie über eine feste Tageslicht-Referenz (D65) im mired-Raum um
-            ''' (siehe KelvinToRelativeTemperature) und übernehmen sie nur als RÜCKFALL, wenn kein
-            ''' Incremental vorliegt: für ein bei Tageslicht aufgenommenes Bild trifft sie gut, für
-            ''' Kunstlicht/Nacht liegt sie systematisch daneben. crs:Tint ohne Präfix wird weiterhin
-            ''' als relative Tönung akzeptiert.
+            ''' relativen Regler; gebraucht wird die Temperatur der AUFNAHME als Bezug. Sie kommt aus
+            ''' der XMP-Datei (crs:AsShotTemperature), sonst aus der RAW-Datei selbst, sonst gilt D65
+            ''' als Annahme (siehe unten und KelvinToRelativeTemperature). Übernommen wird
+            ''' crs:Temperature nur als RÜCKFALL, wenn kein Incremental vorliegt. crs:Tint ohne
+            ''' Präfix wird weiterhin als relative Tönung akzeptiert.
             ' KAMERAKALIBRIERUNG. Steckte in 3 von 5 untersuchten Presets und war der groesste
             ' verbliebene Import-Ausfall: sie dreht und saettigt die Primaerfarben und macht damit
             ' einen guten Teil des charakteristischen Farbstichs aus. Ohne sie kam ein Preset
@@ -246,17 +252,73 @@ Namespace Services
             ' meinen ausdrücklich eine Änderung.
             Dim whiteBalanceMode = GetXmpString(values, "WhiteBalance")
             Dim keepsCaptureWhiteBalance = whiteBalanceMode.Replace(" ", "").Equals("AsShot", StringComparison.OrdinalIgnoreCase)
-            If Not keepsCaptureWhiteBalance Then
+
+            ' DER AUFNAHME-WEISSPUNKT DES ZIELBILDES. Er entscheidet, in welcher Form der
+            ' Weißabgleich ankommt: mit ihm als absolute Kelvin-Zahl, ohne ihn als relativer
+            ' Regler wie bisher. Einmal gelesen, kostet unter einer Millisekunde.
+            '
+            ' Ein Rezept, das AUSDRÜCKLICH das alte Modell trägt (Modell 1), wird nicht
+            ' umgestellt: sein Reglerwert bedeutet nur dort das, was beim Speichern zu sehen war.
+            Dim capture = CaptureWhiteBalanceService.ForRawFile(imagePath)
+            Dim absoluteWhiteBalance = capture IsNot Nothing AndAlso adj.WhiteBalanceModel <> 1
+            If absoluteWhiteBalance Then
+                adj.WhiteBalanceAnchorX = capture.X
+                adj.WhiteBalanceAnchorY = capture.Y
+                adj.WhiteBalanceModel = 2
+            End If
+
+            If Not keepsCaptureWhiteBalance AndAlso absoluteWhiteBalance Then
+                ' ABSOLUT NACH ABSOLUT, ohne Näherung: crs:Temperature ist eine Kelvin-Zahl, und
+                ' unser Regler ist jetzt eine Kelvin-Zahl. Damit entfällt die mired-Umrechnung
+                ' samt ihrem Anschlag - eine Aufnahme bei 3000 K und ein Preset auf 6500 K sind
+                ' kein Sonderfall mehr, sondern einfach 6500.
+                Dim kelvin As Double
+                Dim tintPoints As Double
+                Dim hasKelvin = False
+                If TryGetXmpDouble(values, "Temperature", kelvin) AndAlso kelvin >= 1000 Then
+                    hasKelvin = True
+                ElseIf TryGetXmpDouble(values, "IncrementalTemperature", d) Then
+                    ' Ein relatives Preset auf eine RAW-Datei: der Versatz wird über die
+                    ' Aufnahmetemperatur in eine absolute Zahl gelegt, damit im Rezept nur EINE
+                    ' Form steht. ACHTUNG, offener Punkt: Adobes Incremental-Skala ist nicht als
+                    ' mired dokumentiert und gegen nichts geeicht - hier steht sie 1:1 als mired,
+                    ' wie im alten Weg auch. Eine Eichung gegen Referenzdateien fehlt.
+                    Dim anchorKelvin = CaptureWhiteBalanceService.CorrelatedColorTemperature(capture.X, capture.Y)
+                    If Not Double.IsNaN(anchorKelvin) AndAlso anchorKelvin > 0.0 Then
+                        Dim mired = 1000000.0 / anchorKelvin - Clamp100(d)
+                        If mired > 1.0 Then
+                            kelvin = 1000000.0 / mired
+                            hasKelvin = True
+                        End If
+                    End If
+                End If
+
+                If hasKelvin Then
+                    adj.WhiteBalanceKelvin = Math.Max(WhiteBalanceAdaptation.MinKelvin,
+                                                      Math.Min(WhiteBalanceAdaptation.MaxKelvin, kelvin))
+                End If
+                If TryGetXmpDouble(values, "IncrementalTint", tintPoints) OrElse
+                   TryGetXmpDouble(values, "Tint", tintPoints) Then
+                    adj.WhiteBalanceKelvinTint = Clamp(tintPoints, -150, 150)
+                End If
+            ElseIf Not keepsCaptureWhiteBalance Then
                 If TryGetXmpDouble(values, "IncrementalTemperature", d) Then
                     adj.Temperature = Clamp100(d)
                 ElseIf TryGetXmpDouble(values, "Temperature", d) AndAlso d >= 1000 Then
                     ' Absolutes Kelvin (Adobe-Bereich 2000..50000). Der >=1000-Wächter trennt es sicher von
                     ' einem versehentlich relativen Wert; crs:Temperature ist bei Adobe immer Kelvin.
-                    ' Referenz: crs:AsShotTemperature, wenn vorhanden (Sidecar-XMPs von RAWs tragen den
-                    ' Aufnahme-Weißabgleich) - damit ist die Näherung aufnahmespezifisch exakt. Der
-                    ' gleiche >=1000-Wächter, damit ein kaputter Wert nicht als Referenz durchgeht.
+                    ' DIESER ZWEIG IST DER WEG OHNE AUFNAHME-WEISSPUNKT: eine JPEG- oder
+                    ' Photoshop-Datei, oder ein Rezept, das ausdrücklich beim alten Modell bleibt.
+                    ' Referenz ist dann crs:AsShotTemperature aus der XMP-Datei, wenn sie eine
+                    ' trägt, sonst D65 als Annahme - gut für Tageslicht, bei Kunstlicht und Nacht
+                    ' bewusst nur annähernd. Der >=1000-Wächter hält kaputte Werte als Referenz
+                    ' heraus. (Trägt die Zieldatei einen Aufnahme-Weißpunkt, läuft der Import
+                    ' oben ohne jede Näherung.)
                     Dim asShotKelvin As Double
-                    If TryGetXmpDouble(values, "AsShotTemperature", asShotKelvin) AndAlso asShotKelvin >= 1000 Then
+                    If Not (TryGetXmpDouble(values, "AsShotTemperature", asShotKelvin) AndAlso asShotKelvin >= 1000) Then
+                        asShotKelvin = If(capture Is Nothing, 0.0, capture.Kelvin)
+                    End If
+                    If asShotKelvin >= 1000 Then
                         adj.Temperature = KelvinToRelativeTemperature(d, asShotKelvin)
                     Else
                         adj.Temperature = KelvinToRelativeTemperature(d)
