@@ -81,7 +81,11 @@ Namespace Services
                 ' DIE entscheidende Stelle: eine CAMetalLayer kennt setColorspace:, eine schlichte
                 ' CALayer nicht. Gefragt wird das Objekt selbst, statt seinen Typ zu raten.
                 If Not RespondsTo(layer, "setColorspace:") Then
-                    Report("die Ebene kennt setColorspace: nicht - dieser Weg traegt hier nicht")
+                    ' MIT DEM NAMEN DER KLASSE. "Kennt es nicht" allein liess offen, ob dort die
+                    ' Metall-Ebene des Toolkits sitzt oder eine leere, die AppKit auf unser
+                    ' wantsLayer hin angelegt hat und die gleich darauf ersetzt wird.
+                    Report($"die Ebene ({ClassNameOf(layer)}) kennt setColorspace: nicht - " &
+                           "entweder ist sie noch nicht die des Zeichenwegs, oder dieser Weg traegt hier nicht")
                     Return False
                 End If
 
@@ -91,14 +95,30 @@ Namespace Services
                     Return False
                 End If
 
+                Dim klasse = ClassNameOf(layer)
                 Try
                     MsgSendPtrArg(layer, Selector("setColorspace:"), srgb)
+
+                    ' NACHGELESEN, NICHT ANGENOMMEN. Ein setColorspace:, das die Ebene annimmt,
+                    ' beantwortet ihr colorspace mit demselben Farbraum. Bleibt es leer oder steht
+                    ' etwas anderes darin, war der Aufruf folgenlos - und genau das ist der Fall,
+                    ' den ein Nutzer sonst als "wirkt nicht" meldet, ohne dass wir wissen, woran es
+                    ' lag (Bericht 2026-09-06).
+                    Dim jetzt = MsgSend(layer, Selector("colorspace"))
+                    If jetzt = IntPtr.Zero Then
+                        Report($"gesetzt, aber die Ebene ({klasse}) meldet weiterhin keinen Farbraum")
+                        Return False
+                    End If
+                    If Not CGColorSpaceEqualToColorSpace(jetzt, srgb) Then
+                        Report($"gesetzt, aber die Ebene ({klasse}) meldet einen anderen Farbraum")
+                        Return False
+                    End If
                 Finally
                     ' Die Ebene haelt den Farbraum selbst fest; unsere Zaehlung geht zurueck.
                     CGColorSpaceRelease(srgb)
                 End Try
 
-                Report("Farbraum sRGB an der Ebene gesetzt")
+                Report($"sRGB sitzt auf der Ebene ({klasse}), nachgelesen")
                 Return True
             Catch ex As Exception
                 Report("fehlgeschlagen: " & ex.Message)
@@ -107,8 +127,15 @@ Namespace Services
             End Try
         End Function
 
+        ''' <summary>Nur bei einer AENDERUNG ins Protokoll. Der Versuch wird wiederholt, bis die
+        ''' Ebene des Zeichenwegs steht; ohne diese Bremse stuenden dieselben Zeilen dutzendfach da
+        ''' und die eine, auf die es ankommt, ginge darin unter.</summary>
+        Private Shared _lastLogged As String = ""
+
         Private Shared Sub Report(text As String)
             LastResult = text
+            If String.Equals(_lastLogged, text, StringComparison.Ordinal) Then Return
+            _lastLogged = text
             DiagnosticLogService.LogAlways("Farbraum", "Fensterfarbraum: " & text)
         End Sub
 
@@ -122,6 +149,18 @@ Namespace Services
             Dim name = Marshal.ReadIntPtr(exported)
             If name = IntPtr.Zero Then Return IntPtr.Zero
             Return CGColorSpaceCreateWithName(name)
+        End Function
+
+        ''' <summary>Der Klassenname eines ObjC-Objekts, fuer die Meldung. Leer, wenn es keinen gibt.</summary>
+        Private Shared Function ClassNameOf(target As IntPtr) As String
+            If target = IntPtr.Zero Then Return "keine"
+            Try
+                Dim name = object_getClassName(target)
+                If name = IntPtr.Zero Then Return "unbekannt"
+                Return If(Marshal.PtrToStringAnsi(name), "unbekannt")
+            Catch
+                Return "unbekannt"
+            End Try
         End Function
 
         Private Shared Function Selector(name As String) As IntPtr
@@ -172,6 +211,14 @@ Namespace Services
         <DllImport(CoreGraphicsFramework, CallingConvention:=CallingConvention.Cdecl)>
         Private Shared Sub CGColorSpaceRelease(space As IntPtr)
         End Sub
+
+        <DllImport(CoreGraphicsFramework, CallingConvention:=CallingConvention.Cdecl)>
+        Private Shared Function CGColorSpaceEqualToColorSpace(a As IntPtr, b As IntPtr) As <MarshalAs(UnmanagedType.I1)> Boolean
+        End Function
+
+        <DllImport(ObjCRuntime, CallingConvention:=CallingConvention.Cdecl)>
+        Private Shared Function object_getClassName(target As IntPtr) As IntPtr
+        End Function
 
     End Class
 

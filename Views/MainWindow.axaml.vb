@@ -157,18 +157,47 @@ Namespace Views
         ''' Nur macOS und nur auf ausdruecklichen Wunsch: der Weg ist experimentell, weil er davon
         ''' abhaengt, welche Art Ebene das Toolkit anlegt (siehe MacWindowColorSpaceService). Ohne
         ''' Geraet mit weitem Farbumfang laesst er sich hier nicht pruefen, deshalb entscheidet der
-        ''' Nutzer und nicht wir.</summary>
+        ''' Nutzer und nicht wir.
+        '''
+        ''' WIEDERHOLT, NICHT EINMAL BEIM OEFFNEN. Das Toolkit legt seine Metall-Ebene erst an,
+        ''' wenn wirklich gezeichnet wird, und haengt sie dann als Ebene der Ansicht ein
+        ''' (<c>setLayer:</c>, in libAvaloniaNative nachgesehen). Ein Farbraum, den wir vorher auf
+        ''' die leere Ebene legen, geht dabei verloren - der Versuch beim Oeffnen kam also
+        ''' moeglicherweise immer zu frueh. Deshalb wird er wiederholt, bis das Nachlesen ihn
+        ''' bestaetigt, hoechstens aber fuer wenige Sekunden.</summary>
+        Private _colorSpaceTimer As DispatcherTimer
+        Private _colorSpaceTries As Integer
+
         Private Sub ApplyWindowColorSpace()
             If Not OperatingSystem.IsMacOS() Then Return
             Try
                 If Not Services.AppSettingsService.Load().MacTagWindowColorSpace Then Return
-                Dim platformHandle = TryGetPlatformHandle()
-                If platformHandle Is Nothing Then Return
-                Services.MacWindowColorSpaceService.Apply(platformHandle.Handle, platformHandle.HandleDescriptor)
+                If TryApplyWindowColorSpace() Then Return
+                If _colorSpaceTimer IsNot Nothing Then Return
+                _colorSpaceTries = 0
+                _colorSpaceTimer = New DispatcherTimer With {.Interval = TimeSpan.FromMilliseconds(250)}
+                AddHandler _colorSpaceTimer.Tick,
+                    Sub()
+                        _colorSpaceTries += 1
+                        ' Zwanzig Versuche in einem Viertelsekundentakt, also fuenf Sekunden. Wer
+                        ' bis dahin nicht gezeichnet hat, zeichnet auch spaeter nicht mehr auf einer
+                        ' Ebene, die wir vorbereiten koennten.
+                        If TryApplyWindowColorSpace() OrElse _colorSpaceTries >= 20 Then
+                            _colorSpaceTimer.Stop()
+                            _colorSpaceTimer = Nothing
+                        End If
+                    End Sub
+                _colorSpaceTimer.Start()
             Catch ex As Exception
                 Services.DiagnosticLogService.LogException("Farbraum.Fenster", ex)
             End Try
         End Sub
+
+        Private Function TryApplyWindowColorSpace() As Boolean
+            Dim platformHandle = TryGetPlatformHandle()
+            If platformHandle Is Nothing Then Return False
+            Return Services.MacWindowColorSpaceService.Apply(platformHandle.Handle, platformHandle.HandleDescriptor)
+        End Function
 
         Private Sub RestoreWindowPlacement()
             If _isRestoringPlacement OrElse _hasRestoredPlacement Then Return
