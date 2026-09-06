@@ -80,7 +80,7 @@ Two photos can be put side by side for comparison, sharing one zoom so you alway
 
 **Objects and layers.** Text, shapes, symbols, images, QR codes and watermarks, each with opacity, blend mode, shadow, glow and transform, and text that follows an arc, a circle or a wave. Any of them can carry a mask or be clipped to the layer below, and an adjustment placed above an object can be held to that object the same way. A picture comes in as a layer by dragging it onto the photo, either from the filmstrip below the editor or from your file manager. The layers panel holds the whole stack with visibility, order, grouping, merging and rasterizing, and layers can be copied and pasted, also from and to other programs. A group counts as one layer, with its own opacity, blend mode and mask, and groups can go inside groups. The panel has a second tab with the history of the picture: every step by name, from the original onwards, and clicking one takes the picture back to it. The list belongs to the session at hand; close the picture and what you saved comes back, but not the road you took to it.
 
-<img src="Screenshots/Editor_Edit.png" />
+<img src="Screenshots/Editor_Light.png" />
 
 **Filters and presets.** Filters, LUT files (`.cube`) and XMP presets as written by Lightroom and Camera Raw. All of them, and the slider sets you saved yourself, can also be applied to a whole selection at once.
 
@@ -97,6 +97,8 @@ Save a RAW and your edits go into a small sidecar next to it; the RAW itself is 
 A picture that carries its own colour profile, such as Adobe RGB or Display P3, is converted when it is opened, so it looks the way it was meant to instead of flat and shifted. That covers JPEG, PNG, WEBP, TIFF, Photoshop files and HEIC. Pictures without a profile are left exactly as they are, and what you save is sRGB and says so.
 
 Pictures from a phone or a scanner open too, and your edit is saved as a new file next to them. A Photoshop file keeps its layers, masks and groups, so a picture can go back to Photoshop, Affinity or GIMP and still be worked on there, and text stays text you can keep typing on. Photoshop files that FerrumPix cannot take apart open as one finished picture.
+
+<img src="Screenshots/Editor_Color.png" />
 
 ### Model files
 
