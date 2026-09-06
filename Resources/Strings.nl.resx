@@ -8172,4 +8172,16 @@
   <data name="Skaliert_die_komplette_Oberfl_che_beim_n_chsten__142c773d" xml:space="preserve">
     <value>Schaalt de hele interface bij de volgende start. Elk scherm krijgt zijn eigen waarde, zodat de interface op een scherm met hoge resolutie niet kleiner uitvalt dan op het scherm ernaast.</value>
   </data>
+  <data name="Wie_breit_die_Kante_nach_au_en_ausl_uft_in_Bildp_5916a913" xml:space="preserve">
+    <value>Hoe breed de rand naar buiten uitloopt, in beeldpunten. Nul snijdt hard, grotere waarden passen bij haar, takken en vacht. Naar binnen blijft de selectie volledig gedekt.</value>
+  </data>
+  <data name="Um_wie_viele_Bildpunkte_die_Auswahl_ber_die_erka_829308fc" xml:space="preserve">
+    <value>Hoeveel beeldpunten de selectie voorbij de gevonden rand groeit; negatief krimpt ze. Snijdt het model een haarbreedte te krap, dan haal je dat hiermee terug.</value>
+  </data>
+  <data name="Wie_breit_die_Kante_nach_au_en_ausl_uft_in_Bildp_eb12ee5f" xml:space="preserve">
+    <value>Hoe breed de rand naar buiten uitloopt, in beeldpunten. Nul snijdt hard, grotere waarden passen bij haar, takken en vacht. Naar binnen blijft het masker volledig gedekt.</value>
+  </data>
+  <data name="Um_wie_viele_Bildpunkte_die_Maske_ber_die_erkann_03649db8" xml:space="preserve">
+    <value>Hoeveel beeldpunten het masker voorbij de gevonden rand groeit; negatief krimpt het. Snijdt het model een haarbreedte te krap, dan haal je dat hiermee terug.</value>
+  </data>
 </root>

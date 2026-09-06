@@ -8176,4 +8176,16 @@
   <data name="Skaliert_die_komplette_Oberfl_che_beim_n_chsten__142c773d" xml:space="preserve">
     <value>Menskalakan seluruh antarmuka pada awalan berikutnya. Setiap layar mendapat nilainya sendiri, sehingga antarmuka tidak menjadi lebih kecil di layar beresolusi tinggi daripada di layar sebelahnya.</value>
   </data>
+  <data name="Wie_breit_die_Kante_nach_au_en_ausl_uft_in_Bildp_5916a913" xml:space="preserve">
+    <value>Seberapa lebar tepi memudar ke luar, dalam piksel. Nol memotong tajam, nilai lebih besar cocok untuk rambut, ranting, dan bulu. Ke dalam, seleksi tetap tertutup penuh.</value>
+  </data>
+  <data name="Um_wie_viele_Bildpunkte_die_Auswahl_ber_die_erka_829308fc" xml:space="preserve">
+    <value>Berapa piksel seleksi tumbuh melewati tepi yang terdeteksi; nilai negatif mengecilkannya. Jika model memotong sehelai rambut terlalu rapat, ini mengembalikannya.</value>
+  </data>
+  <data name="Wie_breit_die_Kante_nach_au_en_ausl_uft_in_Bildp_eb12ee5f" xml:space="preserve">
+    <value>Seberapa lebar tepi memudar ke luar, dalam piksel. Nol memotong tajam, nilai lebih besar cocok untuk rambut, ranting, dan bulu. Ke dalam, masker tetap tertutup penuh.</value>
+  </data>
+  <data name="Um_wie_viele_Bildpunkte_die_Maske_ber_die_erkann_03649db8" xml:space="preserve">
+    <value>Berapa piksel masker tumbuh melewati tepi yang terdeteksi; nilai negatif mengecilkannya. Jika model memotong sehelai rambut terlalu rapat, ini mengembalikannya.</value>
+  </data>
 </root>

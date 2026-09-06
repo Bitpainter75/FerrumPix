@@ -8130,4 +8130,16 @@
   <data name="Skaliert_die_komplette_Oberfl_che_beim_n_chsten__142c773d" xml:space="preserve">
     <value>下次启动时缩放整个界面。每台显示器都有各自的数值，这样界面在高分辨率显示器上不会比旁边那台显得更小。</value>
   </data>
+  <data name="Wie_breit_die_Kante_nach_au_en_ausl_uft_in_Bildp_5916a913" xml:space="preserve">
+    <value>边缘向外过渡的宽度，以像素计。零为硬切，数值越大越适合头发、树枝和毛发。向内选区保持完全覆盖。</value>
+  </data>
+  <data name="Um_wie_viele_Bildpunkte_die_Auswahl_ber_die_erka_829308fc" xml:space="preserve">
+    <value>选区在识别到的边缘之外扩展多少像素；负值则收缩。若模型少切了一根头发的宽度，用它补回来。</value>
+  </data>
+  <data name="Wie_breit_die_Kante_nach_au_en_ausl_uft_in_Bildp_eb12ee5f" xml:space="preserve">
+    <value>边缘向外过渡的宽度，以像素计。零为硬切，数值越大越适合头发、树枝和毛发。向内蒙版保持完全覆盖。</value>
+  </data>
+  <data name="Um_wie_viele_Bildpunkte_die_Maske_ber_die_erkann_03649db8" xml:space="preserve">
+    <value>蒙版在识别到的边缘之外扩展多少像素；负值则收缩。若模型少切了一根头发的宽度，用它补回来。</value>
+  </data>
 </root>

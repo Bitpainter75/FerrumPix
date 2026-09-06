@@ -3,6 +3,7 @@
              xmlns:local="clr-namespace:FerrumPix"
              xmlns:conv="clr-namespace:FerrumPix.Converters"
              x:Class="FerrumPix.App"
+             Name="FerrumPix"
              RequestedThemeVariant="Dark">
     <Application.DataTemplates>
         <local:ViewLocator/>

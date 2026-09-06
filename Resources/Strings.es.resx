@@ -8132,4 +8132,16 @@
   <data name="Skaliert_die_komplette_Oberfl_che_beim_n_chsten__142c773d" xml:space="preserve">
     <value>Escala toda la interfaz en el siguiente inicio. Cada pantalla recibe su propio valor, de modo que la interfaz no quede más pequeña en una pantalla de alta resolución que en la de al lado.</value>
   </data>
+  <data name="Wie_breit_die_Kante_nach_au_en_ausl_uft_in_Bildp_5916a913" xml:space="preserve">
+    <value>Anchura del degradado hacia fuera, en píxeles. Cero corta duro, los valores mayores van bien para pelo, ramas y pelaje. Hacia dentro la selección queda cubierta por completo.</value>
+  </data>
+  <data name="Um_wie_viele_Bildpunkte_die_Auswahl_ber_die_erka_829308fc" xml:space="preserve">
+    <value>Cuántos píxeles crece la selección más allá del borde detectado; en negativo se encoge. Si el modelo corta un pelo de más, así se recupera.</value>
+  </data>
+  <data name="Wie_breit_die_Kante_nach_au_en_ausl_uft_in_Bildp_eb12ee5f" xml:space="preserve">
+    <value>Anchura del degradado hacia fuera, en píxeles. Cero corta duro, los valores mayores van bien para pelo, ramas y pelaje. Hacia dentro la máscara queda cubierta por completo.</value>
+  </data>
+  <data name="Um_wie_viele_Bildpunkte_die_Maske_ber_die_erkann_03649db8" xml:space="preserve">
+    <value>Cuántos píxeles crece la máscara más allá del borde detectado; en negativo se encoge. Si el modelo corta un pelo de más, así se recupera.</value>
+  </data>
 </root>

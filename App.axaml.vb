@@ -124,9 +124,45 @@ Public Class App
             desktop.MainWindow = win
 
             desktop.ShutdownMode = ShutdownMode.OnMainWindowClose
+            BuildApplicationMenu(vm)
         End If
 
         MyBase.OnFrameworkInitializationCompleted()
+    End Sub
+
+    ''' <summary>Das Programmmenue in der Menueleiste des Mac.
+    '''
+    ''' Auf macOS baut Avalonia dieses Menue selbst, wenn die Anwendung keines mitbringt - und dann
+    ''' heisst der erste Eintrag "About Avalonia" und oeffnet Avalonias eigenes Fenster mit deren
+    ''' Logo und Versionsnummer. Ein Nutzer hat genau das am 2026-09-06 gemeldet, mit Bildschirmfoto.
+    ''' Nachgesehen im dekompilierten Avalonia.Native 12.1.2: liegt am Application-Objekt ein
+    ''' NativeMenu, nimmt Avalonia dieses und legt nur noch Dienste, Ausblenden und Beenden dazu.
+    '''
+    ''' Der Name der Anwendung selbst kommt aus <c>Application.Name</c> (in App.axaml gesetzt) -
+    ''' ohne ihn stuende in der Menueleiste "Avalonia Application".
+    '''
+    ''' Windows und Linux kennen kein Programmmenue dieser Art; dort bleibt der Aufbau folgenlos.
+    ''' Deshalb steht er hier ohne Plattformabfrage: eine Abfrage mehr, die niemand pflegt, waere
+    ''' die schlechtere Loesung als ein Menue, das nur einer der drei Systeme anzeigt.</summary>
+    Private Sub BuildApplicationMenu(vm As MainWindowViewModel)
+        Try
+            Dim about As New NativeMenuItem(LocalizationService.T("Über FerrumPix"))
+            AddHandler about.Click, Sub() vm?.OpenSettings()
+
+            Dim settings As New NativeMenuItem(LocalizationService.T("Einstellungen")) With {
+                .Gesture = New Avalonia.Input.KeyGesture(Avalonia.Input.Key.OemComma,
+                                                         Avalonia.Input.KeyModifiers.Meta)}
+            AddHandler settings.Click, Sub() vm?.OpenSettings()
+
+            Dim menu As New NativeMenu()
+            menu.Add(about)
+            menu.Add(New NativeMenuItemSeparator())
+            menu.Add(settings)
+            NativeMenu.SetMenu(Me, menu)
+        Catch ex As Exception
+            ' Ein Menue ist kein Grund, den Start zu verlieren.
+            DiagnosticLogService.LogException("App.Programmmenue", ex)
+        End Try
     End Sub
 
     Public Shared Sub ApplyIcon(win As Window)

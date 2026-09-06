@@ -15,6 +15,15 @@ Namespace Models
         Public Property Children As ObservableCollection(Of FolderNode)
         Public Property ImageCount As Integer
 
+        ''' <summary>Steht dieser Knoten als ZUSAETZLICHE Wurzel im Baum - also weil er ein
+        ''' ueberwachter Katalogordner oder ein Favorit ist, und nicht der persoenliche Ordner oder
+        ''' die Wurzel des Dateisystems?
+        '''
+        ''' Nur zum Wiedererkennen beim Abgleich: diese Wurzeln werden ausgetauscht, wenn sich die
+        ''' Einstellungen oder die Favoriten aendern, und alles andere im Baum bleibt dabei stehen -
+        ''' samt aufgeklappter Ordner.</summary>
+        Public Property IsExtraRoot As Boolean
+
         Private _isExpanded As Boolean
         Private _childrenLoaded As Boolean
 

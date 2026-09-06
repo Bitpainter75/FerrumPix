@@ -8172,4 +8172,16 @@
   <data name="Skaliert_die_komplette_Oberfl_che_beim_n_chsten__142c773d" xml:space="preserve">
     <value>次回の起動時に画面全体を拡大縮小します。ディスプレイごとに値を持つため、高解像度のディスプレイで隣のものより小さくなることがありません。</value>
   </data>
+  <data name="Wie_breit_die_Kante_nach_au_en_ausl_uft_in_Bildp_5916a913" xml:space="preserve">
+    <value>縁が外側へどれだけ広がるか（画素単位）。ゼロは硬く切り、大きい値は髪や小枝、毛並みに向きます。内側では選択は完全に不透明のままです。</value>
+  </data>
+  <data name="Um_wie_viele_Bildpunkte_die_Auswahl_ber_die_erka_829308fc" xml:space="preserve">
+    <value>検出された縁から選択が何画素外へ広がるか。負の値では縮みます。モデルが髪一本分だけ内側で切った場合、これで取り戻せます。</value>
+  </data>
+  <data name="Wie_breit_die_Kante_nach_au_en_ausl_uft_in_Bildp_eb12ee5f" xml:space="preserve">
+    <value>縁が外側へどれだけ広がるか（画素単位）。ゼロは硬く切り、大きい値は髪や小枝、毛並みに向きます。内側ではマスクは完全に不透明のままです。</value>
+  </data>
+  <data name="Um_wie_viele_Bildpunkte_die_Maske_ber_die_erkann_03649db8" xml:space="preserve">
+    <value>検出された縁からマスクが何画素外へ広がるか。負の値では縮みます。モデルが髪一本分だけ内側で切った場合、これで取り戻せます。</value>
+  </data>
 </root>

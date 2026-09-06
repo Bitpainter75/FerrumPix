@@ -730,6 +730,9 @@ Namespace ViewModels
         End Sub
 
         Public Sub CloseSettings()
+            ' Die ueberwachten Ordner koennen sich gerade geaendert haben, und sie sind zugleich die
+            ' zusaetzlichen Anfaenge im Ordnerbaum. Der Abgleich laesst alles Aufgeklappte stehen.
+            Gallery?.SyncExtraFolderRoots()
             CurrentMode = _previousModeBeforeSettings
         End Sub
 
@@ -737,6 +740,7 @@ Namespace ViewModels
         ''' geoeffnet wurde. Beide teilen sich denselben Merker: man ist immer nur in einem von
         ''' beiden, und von einem zum anderen zu wechseln soll den Rueckweg nicht verlieren.</summary>
         Public Sub CloseSecondaryMode()
+            Gallery?.SyncExtraFolderRoots()
             CurrentMode = _previousModeBeforeSettings
         End Sub
 

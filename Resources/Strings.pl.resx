@@ -8172,4 +8172,16 @@
   <data name="Skaliert_die_komplette_Oberfl_che_beim_n_chsten__142c773d" xml:space="preserve">
     <value>Skaluje cały interfejs przy następnym uruchomieniu. Każdy ekran otrzymuje własną wartość, dzięki czemu interfejs nie wypada mniejszy na ekranie o wysokiej rozdzielczości niż na sąsiednim.</value>
   </data>
+  <data name="Wie_breit_die_Kante_nach_au_en_ausl_uft_in_Bildp_5916a913" xml:space="preserve">
+    <value>Jak szeroko krawędź wygasa na zewnątrz, w pikselach. Zero tnie twardo, większe wartości pasują do włosów, gałązek i futra. Do wewnątrz zaznaczenie pozostaje w pełni kryjące.</value>
+  </data>
+  <data name="Um_wie_viele_Bildpunkte_die_Auswahl_ber_die_erka_829308fc" xml:space="preserve">
+    <value>O ile pikseli zaznaczenie wykracza poza wykrytą krawędź; wartość ujemna je kurczy. Jeśli model utnie o włos za ciasno, tak się to odzyskuje.</value>
+  </data>
+  <data name="Wie_breit_die_Kante_nach_au_en_ausl_uft_in_Bildp_eb12ee5f" xml:space="preserve">
+    <value>Jak szeroko krawędź wygasa na zewnątrz, w pikselach. Zero tnie twardo, większe wartości pasują do włosów, gałązek i futra. Do wewnątrz maska pozostaje w pełni kryjąca.</value>
+  </data>
+  <data name="Um_wie_viele_Bildpunkte_die_Maske_ber_die_erkann_03649db8" xml:space="preserve">
+    <value>O ile pikseli maska wykracza poza wykrytą krawędź; wartość ujemna ją kurczy. Jeśli model utnie o włos za ciasno, tak się to odzyskuje.</value>
+  </data>
 </root>

@@ -8131,4 +8131,16 @@
   <data name="Skaliert_die_komplette_Oberfl_che_beim_n_chsten__142c773d" xml:space="preserve">
     <value>Dimensiona toda a interface no próximo arranque. Cada ecrã recebe o seu próprio valor, para que a interface não fique mais pequena num ecrã de alta resolução do que no do lado.</value>
   </data>
+  <data name="Wie_breit_die_Kante_nach_au_en_ausl_uft_in_Bildp_5916a913" xml:space="preserve">
+    <value>Largura do esbatimento para fora, em pixels. Zero corta a direito, valores maiores servem para cabelo, ramos e pelo. Para dentro, a seleção mantém-se totalmente coberta.</value>
+  </data>
+  <data name="Um_wie_viele_Bildpunkte_die_Auswahl_ber_die_erka_829308fc" xml:space="preserve">
+    <value>Quantos pixels a seleção cresce além do limite detetado; em negativo encolhe. Se o modelo cortar um cabelo a mais, assim recupera-se.</value>
+  </data>
+  <data name="Wie_breit_die_Kante_nach_au_en_ausl_uft_in_Bildp_eb12ee5f" xml:space="preserve">
+    <value>Largura do esbatimento para fora, em pixels. Zero corta a direito, valores maiores servem para cabelo, ramos e pelo. Para dentro, a máscara mantém-se totalmente coberta.</value>
+  </data>
+  <data name="Um_wie_viele_Bildpunkte_die_Maske_ber_die_erkann_03649db8" xml:space="preserve">
+    <value>Quantos pixels a máscara cresce além do limite detetado; em negativo encolhe. Se o modelo cortar um cabelo a mais, assim recupera-se.</value>
+  </data>
 </root>

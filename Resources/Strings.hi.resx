@@ -8176,4 +8176,16 @@
   <data name="Skaliert_die_komplette_Oberfl_che_beim_n_chsten__142c773d" xml:space="preserve">
     <value>अगली बार शुरू करने पर पूरे इंटरफ़ेस का आकार बदलता है। हर स्क्रीन को अपना मान मिलता है, ताकि उच्च रिज़ॉल्यूशन वाली स्क्रीन पर इंटरफ़ेस बगल वाली स्क्रीन से छोटा न पड़े।</value>
   </data>
+  <data name="Wie_breit_die_Kante_nach_au_en_ausl_uft_in_Bildp_5916a913" xml:space="preserve">
+    <value>किनारा बाहर की ओर कितना चौड़ा फैलता है, पिक्सेल में। शून्य कठोर काटता है, बड़े मान बाल, टहनियों और रोएँ के लिए उपयुक्त हैं। भीतर की ओर चयन पूरी तरह ढका रहता है।</value>
+  </data>
+  <data name="Um_wie_viele_Bildpunkte_die_Auswahl_ber_die_erka_829308fc" xml:space="preserve">
+    <value>चयन पहचाने गए किनारे से कितने पिक्सेल आगे बढ़ता है; ऋणात्मक मान उसे सिकोड़ता है। यदि मॉडल बाल भर कम काटे, तो इससे वह वापस मिल जाता है।</value>
+  </data>
+  <data name="Wie_breit_die_Kante_nach_au_en_ausl_uft_in_Bildp_eb12ee5f" xml:space="preserve">
+    <value>किनारा बाहर की ओर कितना चौड़ा फैलता है, पिक्सेल में। शून्य कठोर काटता है, बड़े मान बाल, टहनियों और रोएँ के लिए उपयुक्त हैं। भीतर की ओर मास्क पूरी तरह ढका रहता है।</value>
+  </data>
+  <data name="Um_wie_viele_Bildpunkte_die_Maske_ber_die_erkann_03649db8" xml:space="preserve">
+    <value>मास्क पहचाने गए किनारे से कितने पिक्सेल आगे बढ़ता है; ऋणात्मक मान उसे सिकोड़ता है। यदि मॉडल बाल भर कम काटे, तो इससे वह वापस मिल जाता है।</value>
+  </data>
 </root>

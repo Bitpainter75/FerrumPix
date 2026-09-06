@@ -8172,4 +8172,16 @@
   <data name="Skaliert_die_komplette_Oberfl_che_beim_n_chsten__142c773d" xml:space="preserve">
     <value>Škáluje celé rozhraní při příštím spuštění. Každá obrazovka dostane vlastní hodnotu, aby rozhraní nevyšlo na obrazovce s vysokým rozlišením menší než na té vedle.</value>
   </data>
+  <data name="Wie_breit_die_Kante_nach_au_en_ausl_uft_in_Bildp_5916a913" xml:space="preserve">
+    <value>Jak široce okraj vybíhá ven, v obrazových bodech. Nula řeže tvrdě, vyšší hodnoty se hodí na vlasy, větvičky a srst. Dovnitř zůstává výběr plně krytý.</value>
+  </data>
+  <data name="Um_wie_viele_Bildpunkte_die_Auswahl_ber_die_erka_829308fc" xml:space="preserve">
+    <value>O kolik obrazových bodů výběr přesahuje nalezený okraj; záporná hodnota jej zmenší. Když model ubere o vlas víc, takto se to vrátí.</value>
+  </data>
+  <data name="Wie_breit_die_Kante_nach_au_en_ausl_uft_in_Bildp_eb12ee5f" xml:space="preserve">
+    <value>Jak široce okraj vybíhá ven, v obrazových bodech. Nula řeže tvrdě, vyšší hodnoty se hodí na vlasy, větvičky a srst. Dovnitř zůstává maska plně krytá.</value>
+  </data>
+  <data name="Um_wie_viele_Bildpunkte_die_Maske_ber_die_erkann_03649db8" xml:space="preserve">
+    <value>O kolik obrazových bodů maska přesahuje nalezený okraj; záporná hodnota ji zmenší. Když model ubere o vlas víc, takto se to vrátí.</value>
+  </data>
 </root>

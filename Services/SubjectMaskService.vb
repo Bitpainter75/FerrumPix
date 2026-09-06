@@ -119,36 +119,47 @@ Namespace Services
             End Sub
         End Structure
 
+        ''' <summary>Groesste einstellbare Breite des weichen Uebergangs, in Bildpunkten der
+        ''' Maske.</summary>
+        Public Const MaxEdgePixels As Double = 20.0
+
+        ''' <summary>Wie weit die Maske hoechstens wachsen oder schrumpfen darf, in Bildpunkten.</summary>
+        Public Const MaxExtentPixels As Double = 30.0
+
+        ''' <summary>Die Vorgabe fuer die Kante: ein sichtbarer, aber schmaler Verlauf.</summary>
+        Public Const DefaultEdgePixels As Double = 3.0
+
+        ''' <summary>Die Vorgabe fuer den Umfang. Modelle dieser Art schneiden gern eine Haaresbreite
+        ''' INNERHALB des Objekts; drei Bildpunkte holen das zurueck, ohne merklich Umgebung
+        ''' mitzunehmen.</summary>
+        Public Const DefaultExtentPixels As Double = 3.0
+
         ''' <summary>Maske zu den angeklickten Punkten, als Alpha8-Bild in der Groesse des
         ''' Quellbildes. Nothing bei jedem Fehlschlag - eine halbe Maske waere schlimmer als keine.</summary>
-        ''' <param name="edgePct">Wie steil die Kante ist, 0 bis 100. Klein = breiter, weicher
-        ''' Uebergang (Haare, Zweige, Fell), gross = knapp und knackig (harte Gegenstaende). Das ist
-        ''' KEINE Weichzeichnung im Nachhinein: es aendert, wie die Rohwerte des Modells in Deckung
-        ''' uebersetzt werden, und folgt damit dem, was das Modell an dieser Stelle wirklich
-        ''' unsicher findet.</param>
-        ''' <param name="umfangPct">Verschiebt die Entscheidungsgrenze, -100 bis 100. Positiv laesst
-        ''' die Maske wachsen, negativ schrumpfen. Modelle dieser Art schneiden gern eine Haaresbreite
-        ''' INNERHALB des Objekts; damit holt man das zurueck, ohne von vorn anzufangen.
+        ''' <param name="edgePixels">Breite des weichen Uebergangs in BILDPUNKTEN, 0 bis
+        ''' <see cref="MaxEdgePixels"/>. Der Verlauf laeuft nur NACH AUSSEN: innen bleibt volle
+        ''' Deckung. Null heisst harte Kante.
         '''
-        ''' Die Vorgabe steht deshalb NICHT auf null, und das ist gemessen. Bei null erfasst die
-        ''' Maske an einem Foto mit Himmel ueber einer Baumreihe nur 83 Prozent des Himmels; der
-        ''' Rest bleibt als blauer Saum vor der Baumgrenze stehen, und derselbe Saum steht bei einer
-        ''' Person um Schulter und Kopf. Bei 25 sind es rund 98 Prozent.
+        ''' Die Zahl ist der Uebergang, nicht ein Reglerprozent - das ist der Unterschied zur
+        ''' frueheren Fassung. Dort stand eine Steilheit im Rohwert des Modells, und die Breite in
+        ''' Bildpunkten fiel hyperbolisch: gemessen an einem Foto von 4800 Punkten Breite waren es
+        ''' bei Reglerwert 0 rund 1685 Bildpunkte, bei 10 noch 332, bei 20 dann 21 und ab 30 unter
+        ''' zehn. Der ganze sichtbare Bereich lag in den ersten zwanzig Prozent des Wegs, die
+        ''' Vorgabe stand mit 4,3 Punkten weit dahinter.</param>
+        ''' <param name="extentPixels">Wie weit die Maske um ihre Kante herum waechst, in
+        ''' BILDPUNKTEN, negativ schrumpft sie.
         '''
-        ''' Und es kostet an einer harten Kante nichts: an einer Person vor Rasen gemessen waechst
-        ''' die Maske dabei um gut drei Prozent, holt aber nur ein Promille Rasen mit und steht
-        ''' waagerecht keinen einzigen Punkt ueber. Am synthetischen Kreis auf EINFARBIGEM Grund
-        ''' sieht dieselbe Einstellung dramatisch aus (rund vierzig Punkte Ueberstand) - dort fehlt
-        ''' jeder konkurrierende Kontrast, die Rohwerte laufen weit aus, und die Grenze wandert
-        ''' entsprechend. Wer die Vorgabe hier anfasst, misst an einem ECHTEN Motiv nach, nicht an
-        ''' einer gezeichneten Flaeche.</param>
+        ''' Auch das war vorher eine Verschiebung im Rohwert und damit vom Motiv abhaengig. Am
+        ''' selben Foto gemessen: bei -30 war die Maske LEER, bei 0 belegte sie 9,9 von 23,0
+        ''' Millionen Punkten, bei 25 dann 12,1, bei 40 schon 19,8 und ab 60 das GANZE Bild. Zwei
+        ''' Drittel des Reglerwegs waren also entweder nichts oder alles.</param>
         ''' <param name="grain">Welche der drei Koernungen: 0 = fein (ein Teil), 1 = mittel (ein
         ''' Unterobjekt), 2 = grob (das ganze Objekt). Ein Klick ist mehrdeutig - meint man die
         ''' Jacke, die Person oder die Gruppe? Das Modell beantwortet alle drei auf einmal, und der
         ''' Nutzer waehlt aus, statt neu zu klicken.</param>
         Public Shared Function MaskFor(einbettung As Einbettung, points As IList(Of Point),
-                                         Optional edgePct As Double = 50.0,
-                                         Optional umfangPct As Double = 25.0,
+                                         Optional edgePixels As Double = DefaultEdgePixels,
+                                         Optional extentPixels As Double = DefaultExtentPixels,
                                          Optional grain As Integer = 2) As SKBitmap
             If einbettung Is Nothing OrElse einbettung.Values Is Nothing Then Return Nothing
             If points Is Nothing OrElse points.Count = 0 Then Return Nothing
@@ -185,7 +196,7 @@ Namespace Services
                 Using result = session.Run(input)
                     Dim masks = TryCast(result.First(Function(r) r.Name = "masks").Value, DenseTensor(Of Single))
                     If masks Is Nothing Then Return Nothing
-                    Return AsAlphaImage(masks, einbettung, edgePct, umfangPct, grain)
+                    Return AsAlphaImage(masks, einbettung, edgePixels, extentPixels, grain, points)
                 End Using
             Catch ex As Exception
                 DiagnosticLogService.LogAlways("MotivMaske", "Dekodierer: " & ex.Message)
@@ -201,8 +212,8 @@ Namespace Services
         ''' ausgeschnitten aus, und die Maske laesst sich hinterher ohnehin mit dem Pinsel
         ''' nachbessern.</summary>
         Private Shared Function AsAlphaImage(masks As DenseTensor(Of Single), einbettung As Einbettung,
-                                             edgePct As Double, umfangPct As Double,
-                                             grain As Integer) As SKBitmap
+                                             edgePixels As Double, extentPixels As Double,
+                                             grain As Integer, points As IList(Of Point)) As SKBitmap
             ' Als Feld statt als Span - siehe unten, VB kann einen Span nicht indizieren.
             Dim d = masks.Dimensions.ToArray()
             If d.Length < 2 Then Return Nothing
@@ -236,24 +247,30 @@ Namespace Services
             ' Bildpunkte breit - das ist der helle Saum, der bei einer Himmelsauswahl um jedes Objekt
             ' steht und den man am fertigen Bild als Rand sieht. Die Mitte des Reglers ist der
             ' Wert, der sich an echten Fotos als brauchbarster Ausgangspunkt gezeigt hat.
-            Dim k = Math.Max(0.0, Math.Min(100.0, edgePct))
-            Dim Steepness = CSng(1.0 + k / 100.0 * 90.0)
-            ' Der Umfang verschiebt die Grenze. Der Reglerweg reicht bis plus minus zwoelf, und das
-            ' ist mehr, als gebraucht wird.
+            ' BEIDE REGLER RECHNEN IN BILDPUNKTEN, nicht im Rohwert des Modells. Der Rohwert sagt
+            ' nur "wie sicher gehoert das dazu"; wie weit eine Aenderung daran die Kante verschiebt,
+            ' haengt am Motiv. Genau das war der Fehler der frueheren Fassung, und es ist gemessen:
             '
-            ' GEMESSEN an einem echten Foto (Himmel ueber einer Baumreihe, 4096 Punkte breit,
-            ' Anteil des erfassten Himmels): bei einer Verschiebung von -4,8 sind es 10 Prozent,
-            ' bei 0 gut 82, bei +2,4 schon 97 und bei +4,8 dann 99. Ausserhalb von rund plus minus
-            ' fuenf passiert nichts mehr - jenseits von etwa vierzig Reglerprozent liegt also
-            ' Saettigung, und der brauchbare Teil draengt sich um die Mitte. Die Vorgabe von 25
-            ' entspricht einer Verschiebung von 3,0 und liegt damit mitten im wirksamen Bereich.
+            '   Kante (Uebergang in Bildpunkten, Foto 4800 Punkte breit)
+            '     Regler 0 -> 1685, 5 -> 872, 10 -> 332, 20 -> 21, 30 -> 9,8, 50 -> 4,3, 100 -> 2,0
+            '   Umfang (belegte Flaeche desselben Fotos, 23,0 Mio Punkte insgesamt)
+            '     -30 -> LEER, -10 -> 0,4 Mio, 0 -> 9,9, 25 -> 12,1, 40 -> 19,8, 60 -> ALLES
             '
-            ' Den Weg deswegen enger zu ziehen waere eine Scheinloesung: dieselbe Zahl bedeutet je
-            ' nach Motiv Verschiedenes, weil sie im ROHWERT des Modells verschiebt. Vorhersagbar
-            ' wird der Regler erst, wenn er die fertige Maske um Bildpunkte wachsen laesst - das
-            ' steht als eigener Punkt in OFFENE_PUNKTE.md.
-            Dim Verschiebung = CSng(Math.Max(-100.0, Math.Min(100.0, umfangPct)) / 100.0 * 12.0)
-            Const Mindestdeckung As Single = 0.06F
+            ' Der brauchbare Teil lag also bei der Kante in den ersten zwanzig Reglerprozent und
+            ' beim Umfang zwischen -10 und +30; ausserhalb war die Maske leer oder das ganze Bild.
+            '
+            ' Gerechnet wird deshalb mit einem ECHTEN Abstand: erst entscheidet der Rohwert nur noch
+            ' "innen oder aussen", danach laeuft eine Abstandsrechnung ueber die fertige Flaeche und
+            ' sagt je Bildpunkt, wie weit er von der Grenze weg ist. Erst darauf wirken Umfang und
+            ' Kante, beide in Bildpunkten.
+            '
+            ' Der naheliegende kuerzere Weg - Rohwert geteilt durch sein oertliches Gefaelle - ist
+            ' ausprobiert und gemessen VERWORFEN: er gilt nur unmittelbar an der Kante. An einem
+            ' gezeichneten Kreis auf einfarbigem Grund, wo das Gefaelle an der Kante steil und
+            ' daneben fast null ist, ergab er fuer drei Bildpunkte Umfang ein Flaechenwachstum von
+            ' 56 Prozent und ab zehn Punkten lief die Maske ueber das ganze Bild.
+            Dim FeatherPixels = CSng(Math.Max(0.0, Math.Min(MaxEdgePixels, edgePixels)))
+            Dim GrowPixels As Single = CSng(Math.Max(-MaxExtentPixels, Math.Min(MaxExtentPixels, extentPixels)))
 
             ' ZUERST vergroessern, DANN die Kennlinie - nicht umgekehrt.
             '
@@ -278,6 +295,11 @@ Namespace Services
             ' Umrechnung Bildpunkt -> Rasterfeld. Das halbe Feld Versatz sorgt dafuer, dass die
             ' Rohwerte in der MITTE ihres Feldes sitzen und nicht an dessen Ecke.
             Dim sx = gb / CDbl(targetB), sy = gh / CDbl(zielH)
+
+            ' SCHRITT 1: innen oder aussen. Der Rohwert wird dafuer weiterhin bilinear zwischen den
+            ' Rasterfeldern interpoliert - so liegt die Grenze dort, wo sie wirklich verlaeuft, und
+            ' nicht auf dem naechsten Rasterpunkt.
+            Dim inside(targetB * zielH - 1) As Byte
             For y = 0 To zielH - 1
                 Dim fy = (y + 0.5) * sy - 0.5
                 Dim y0 = CInt(Math.Floor(fy))
@@ -295,13 +317,177 @@ Namespace Services
                     Dim xb = Math.Max(0, Math.Min(gb - 1, x0 + 1))
                     Dim top = source(rowA + xa) * (1.0F - tx) + source(rowA + xb) * tx
                     Dim bottom = source(rowB + xa) * (1.0F - tx) + source(rowB + xb) * tx
-                    Dim roh = top * (1.0F - ty) + bottom * ty
-
-                    Dim v = (roh + Verschiebung) * Steepness
-                    Dim sValue = 1.0F / (1.0F + CSng(Math.Exp(-v)))
-                    If sValue < Mindestdeckung Then sValue = 0.0F
-                    buffer(targetRow + x) = CByte(Math.Max(0, Math.Min(255, CInt(Math.Round(sValue * 255.0F)))))
+                    If top * (1.0F - ty) + bottom * ty >= 0.0F Then inside(targetRow + x) = 1
                 Next
+            Next
+
+            ' SCHRITT 1b: NUR DIE FLAECHE, IN DIE GEKLICKT WURDE.
+            '
+            ' Auf einer strukturlosen Flaeche - Himmel, eine glatte Wand, ein gezeichneter
+            ' Hintergrund - liegt der Rohwert des Modells nahe null, und sein Vorzeichen kippt dann
+            ' von Punkt zu Punkt. Solche Sprenkel sind fuer sich harmlos, fuer eine Abstandsrechnung
+            ' aber nicht: jeder von ihnen ist eine eigene Grenze, der weiche Verlauf zieht um jeden
+            ' einen Hof, und die Hoefe schliessen sich zu einem Schleier. GEMESSEN an einem
+            ' gezeichneten Kreis mit Radius 150: die Maske reichte so bis 206 Punkte hinaus.
+            '
+            ' Deshalb bleibt stehen, was mit einem angeklickten Punkt zusammenhaengt. Das ist auch
+            ' die Erwartung an das Werkzeug: geklickt wird ein Gegenstand, nicht Streusel ueber dem
+            ' ganzen Bild. Findet sich kein Anker - etwa weil der Klick knapp daneben liegt -,
+            ' bleibt alles stehen; lieber zu viel als gar nichts.
+            If points IsNot Nothing AndAlso points.Count > 0 Then
+                Dim keep(inside.Length - 1) As Byte
+                Dim stack As New Stack(Of Integer)()
+                For Each p In points
+                    If Not p.Dazu Then Continue For
+                    Dim px = CInt(Math.Round(p.XPixel)), py = CInt(Math.Round(p.YPixel))
+                    If px < 0 OrElse py < 0 OrElse px >= targetB OrElse py >= zielH Then Continue For
+                    Dim idx = py * targetB + px
+                    If inside(idx) = 0 OrElse keep(idx) <> 0 Then Continue For
+                    keep(idx) = 1
+                    stack.Push(idx)
+                Next
+                If stack.Count > 0 Then
+                    While stack.Count > 0
+                        Dim idx = stack.Pop()
+                        Dim ix = idx Mod targetB, iy = idx \ targetB
+                        If ix > 0 AndAlso inside(idx - 1) <> 0 AndAlso keep(idx - 1) = 0 Then
+                            keep(idx - 1) = 1 : stack.Push(idx - 1)
+                        End If
+                        If ix < targetB - 1 AndAlso inside(idx + 1) <> 0 AndAlso keep(idx + 1) = 0 Then
+                            keep(idx + 1) = 1 : stack.Push(idx + 1)
+                        End If
+                        If iy > 0 AndAlso inside(idx - targetB) <> 0 AndAlso keep(idx - targetB) = 0 Then
+                            keep(idx - targetB) = 1 : stack.Push(idx - targetB)
+                        End If
+                        If iy < zielH - 1 AndAlso inside(idx + targetB) <> 0 AndAlso keep(idx + targetB) = 0 Then
+                            keep(idx + targetB) = 1 : stack.Push(idx + targetB)
+                        End If
+                    End While
+                    inside = keep
+                End If
+            End If
+
+            ' SCHRITT 1c: EINZELNE PUNKTE ZAEHLEN NICHT ALS FLAECHE.
+            '
+            ' Auf einer strukturlosen Flaeche liegt der Rohwert nahe null und sein Vorzeichen kippt
+            ' von Punkt zu Punkt. Solche Sprenkel haengen ueber Ecken oft noch mit dem Motiv
+            ' zusammen, ueberstehen also den Schritt davor - und der weiche Verlauf zieht um jeden
+            ' einen Hof, bis sich die Hoefe zu einem Schleier schliessen. GEMESSEN am gezeichneten
+            ' Kreis mit Radius 150: mit harter Kante endete die Maske bei 151 Punkten, mit drei
+            ' Punkten Verlauf reichte sie bis 205.
+            '
+            ' Gemessen wird der Abstand deshalb nicht zum Rand der rohen Flaeche, sondern zu ihrem
+            ' KERN: nur was ringsum dazugehoert, zaehlt als Anker. Ein einzelner Punkt hat keinen
+            ' Kern und traegt damit keinen Hof mehr. Der Kern liegt einen Punkt weiter innen als der
+            ' Rand, und genau dieser eine Punkt kommt beim Umfang wieder dazu.
+            Dim core(inside.Length - 1) As Byte
+            For y = 0 To zielH - 1
+                Dim row = y * targetB
+                For x = 0 To targetB - 1
+                    If inside(row + x) = 0 Then Continue For
+                    If x = 0 OrElse y = 0 OrElse x = targetB - 1 OrElse y = zielH - 1 Then
+                        core(row + x) = 1
+                        Continue For
+                    End If
+                    If inside(row + x - 1) <> 0 AndAlso inside(row + x + 1) <> 0 AndAlso
+                       inside(row - targetB + x) <> 0 AndAlso inside(row + targetB + x) <> 0 Then
+                        core(row + x) = 1
+                    End If
+                Next
+            Next
+            ' Faellt dabei alles weg - eine Maske aus lauter Einzelpunkten -, bleibt es beim
+            ' Rohbefund; eine leere Maske waere schlechter als eine unsaubere.
+            Dim coreCount = 0
+            For i = 0 To core.Length - 1
+                coreCount += core(i)
+            Next
+            If coreCount > 0 Then
+                inside = core
+                GrowPixels += 1.0F
+            End If
+
+            ' SCHRITT 2: der Abstand zur Grenze, in Bildpunkten.
+            '
+            ' Zwei Durchlaeufe ueber das Bild, einer vorwaerts, einer rueckwaerts, mit den Gewichten
+            ' 1 fuer den geraden und Wurzel zwei fuer den schraegen Nachbarn. Das ist die uebliche
+            ' Naeherung; sie liegt ein paar Prozent ueber dem wahren Abstand und kostet zwei Laeufe
+            ' statt einer Suche je Punkt.
+            Dim reach = CSng(MaxEdgePixels + MaxExtentPixels) + 2.0F
+            Dim dist(targetB * zielH - 1) As Single
+            For i = 0 To dist.Length - 1
+                dist(i) = reach
+            Next
+            ' Die Grenze selbst: jeder Punkt, der einen Nachbarn der anderen Art hat, liegt auf ihr.
+            For y = 0 To zielH - 1
+                Dim row = y * targetB
+                For x = 0 To targetB - 1
+                    Dim self = inside(row + x)
+                    Dim onBorder = (x > 0 AndAlso inside(row + x - 1) <> self) OrElse
+                                   (x < targetB - 1 AndAlso inside(row + x + 1) <> self) OrElse
+                                   (y > 0 AndAlso inside(row - targetB + x) <> self) OrElse
+                                   (y < zielH - 1 AndAlso inside(row + targetB + x) <> self)
+                    If onBorder Then dist(row + x) = 0.0F
+                Next
+            Next
+            Const Diagonal As Single = 1.41421356F
+            For y = 0 To zielH - 1
+                Dim row = y * targetB
+                Dim above = row - targetB
+                For x = 0 To targetB - 1
+                    Dim best = dist(row + x)
+                    If best <= 0.0F Then Continue For
+                    If x > 0 Then best = Math.Min(best, dist(row + x - 1) + 1.0F)
+                    If y > 0 Then
+                        best = Math.Min(best, dist(above + x) + 1.0F)
+                        If x > 0 Then best = Math.Min(best, dist(above + x - 1) + Diagonal)
+                        If x < targetB - 1 Then best = Math.Min(best, dist(above + x + 1) + Diagonal)
+                    End If
+                    dist(row + x) = best
+                Next
+            Next
+            For y = zielH - 1 To 0 Step -1
+                Dim row = y * targetB
+                Dim below = row + targetB
+                For x = targetB - 1 To 0 Step -1
+                    Dim best = dist(row + x)
+                    If best <= 0.0F Then Continue For
+                    If x < targetB - 1 Then best = Math.Min(best, dist(row + x + 1) + 1.0F)
+                    If y < zielH - 1 Then
+                        best = Math.Min(best, dist(below + x) + 1.0F)
+                        If x < targetB - 1 Then best = Math.Min(best, dist(below + x + 1) + Diagonal)
+                        If x > 0 Then best = Math.Min(best, dist(below + x - 1) + Diagonal)
+                    End If
+                    dist(row + x) = best
+                Next
+            Next
+
+            ' SCHRITT 3: Umfang und Kante, beide in Bildpunkten.
+            '
+            ' Der Verlauf laeuft NUR NACH AUSSEN: innen bleibt volle Deckung, nach aussen faellt sie
+            ' ueber die eingestellte Breite auf null. Frueher sass die Kurve mittig auf der Grenze
+            ' und fraß dieselbe Strecke nach innen weg - wer eine weiche Kante wollte, verlor dafuer
+            ' Motiv.
+            For i = 0 To buffer.Length - 1
+                ' Vorzeichen aus der Zugehoerigkeit, Betrag aus der Abstandsrechnung. Der halbe
+                ' Punkt Versatz ruecke die Null auf die Kante zwischen den Bildpunkten statt auf den
+                ' Bildpunkt selbst.
+                Dim signed = If(inside(i) <> 0, dist(i) + 0.5F, -(dist(i) + 0.5F)) + GrowPixels
+                Dim sValue As Single
+                If signed >= 0.0F Then
+                    sValue = 1.0F
+                ElseIf FeatherPixels <= 0.0F Then
+                    sValue = 0.0F
+                Else
+                    Dim t = 1.0F + signed / FeatherPixels
+                    If t <= 0.0F Then
+                        sValue = 0.0F
+                    Else
+                        ' Sanfter Ein- und Ausstieg statt einer geraden Rampe: an beiden Enden ist
+                        ' die Ableitung null, der Uebergang setzt also nicht mit einem Knick an.
+                        sValue = t * t * (3.0F - 2.0F * t)
+                    End If
+                End If
+                buffer(i) = CByte(Math.Max(0, Math.Min(255, CInt(Math.Round(sValue * 255.0F)))))
             Next
             Runtime.InteropServices.Marshal.Copy(buffer, 0, large.GetPixels(), buffer.Length)
             Return large

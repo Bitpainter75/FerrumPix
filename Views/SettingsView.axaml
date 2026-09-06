@@ -181,11 +181,11 @@
                     <StackPanel Spacing="16">
                         <Border Height="180" BorderThickness="0" Padding="0, 20" Margin="-22,0,0,0" >
                             <Grid HorizontalAlignment="Center">
-                                <Image Source="avares://FerrumPix/Assets/FerrumPix_SettingsDark.png"
+                                <Image Source="avares://FerrumPix/Assets/FerrumPix_Settings_Dark.png"
                                        Stretch="Uniform"
                                        HorizontalAlignment="Left"
                                        IsVisible="{Binding IsDarkOrGrayDarkThemeMode}"/>
-                                <Image Source="avares://FerrumPix/Assets/FerrumPix_SettingsLight.png"
+                                <Image Source="avares://FerrumPix/Assets/FerrumPix_Settings_Light.png"
                                        Stretch="Uniform"
                                        HorizontalAlignment="Left"
                                        IsVisible="{Binding IsLightOrGrayLightThemeMode}"/>

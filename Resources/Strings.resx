@@ -8133,4 +8133,16 @@
   <data name="Skaliert_die_komplette_Oberfl_che_beim_n_chsten__142c773d" xml:space="preserve">
     <value>Scales the whole interface at the next start. Each display gets its own value, so the interface does not end up smaller on a high-resolution display than on the one next to it.</value>
   </data>
+  <data name="Wie_breit_die_Kante_nach_au_en_ausl_uft_in_Bildp_5916a913" xml:space="preserve">
+    <value>How far the edge fades outwards, in pixels. Zero cuts hard, larger values suit hair, twigs and fur. Towards the inside the selection stays fully covered.</value>
+  </data>
+  <data name="Um_wie_viele_Bildpunkte_die_Auswahl_ber_die_erka_829308fc" xml:space="preserve">
+    <value>By how many pixels the selection grows beyond the detected edge; negative shrinks it. If the model cuts a hair's breadth too tight, this brings it back.</value>
+  </data>
+  <data name="Wie_breit_die_Kante_nach_au_en_ausl_uft_in_Bildp_eb12ee5f" xml:space="preserve">
+    <value>How far the edge fades outwards, in pixels. Zero cuts hard, larger values suit hair, twigs and fur. Towards the inside the mask stays fully covered.</value>
+  </data>
+  <data name="Um_wie_viele_Bildpunkte_die_Maske_ber_die_erkann_03649db8" xml:space="preserve">
+    <value>By how many pixels the mask grows beyond the detected edge; negative shrinks it. If the model cuts a hair's breadth too tight, this brings it back.</value>
+  </data>
 </root>

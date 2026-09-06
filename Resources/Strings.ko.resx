@@ -8176,4 +8176,16 @@
   <data name="Skaliert_die_komplette_Oberfl_che_beim_n_chsten__142c773d" xml:space="preserve">
     <value>다음 시작 때 전체 화면을 확대하거나 축소합니다. 화면마다 값을 따로 두어 고해상도 화면에서 옆 화면보다 작게 보이지 않습니다.</value>
   </data>
+  <data name="Wie_breit_die_Kante_nach_au_en_ausl_uft_in_Bildp_5916a913" xml:space="preserve">
+    <value>가장자리가 바깥쪽으로 얼마나 넓게 번지는지, 픽셀 단위입니다. 0은 딱 잘라내고, 값이 클수록 머리카락, 잔가지, 털에 알맞습니다. 안쪽에서는 선택이 완전히 채워진 채로 남습니다.</value>
+  </data>
+  <data name="Um_wie_viele_Bildpunkte_die_Auswahl_ber_die_erka_829308fc" xml:space="preserve">
+    <value>선택이 인식된 가장자리 바깥으로 몇 픽셀 자라는지. 음수면 줄어듭니다. 모델이 머리카락 한 올만큼 좁게 잘랐다면 이것으로 되찾습니다.</value>
+  </data>
+  <data name="Wie_breit_die_Kante_nach_au_en_ausl_uft_in_Bildp_eb12ee5f" xml:space="preserve">
+    <value>가장자리가 바깥쪽으로 얼마나 넓게 번지는지, 픽셀 단위입니다. 0은 딱 잘라내고, 값이 클수록 머리카락, 잔가지, 털에 알맞습니다. 안쪽에서는 마스크가 완전히 채워진 채로 남습니다.</value>
+  </data>
+  <data name="Um_wie_viele_Bildpunkte_die_Maske_ber_die_erkann_03649db8" xml:space="preserve">
+    <value>마스크가 인식된 가장자리 바깥으로 몇 픽셀 자라는지. 음수면 줄어듭니다. 모델이 머리카락 한 올만큼 좁게 잘랐다면 이것으로 되찾습니다.</value>
+  </data>
 </root>

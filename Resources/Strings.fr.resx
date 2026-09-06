@@ -8132,4 +8132,16 @@
   <data name="Skaliert_die_komplette_Oberfl_che_beim_n_chsten__142c773d" xml:space="preserve">
     <value>Met à l'échelle toute l'interface au prochain démarrage. Chaque écran reçoit sa propre valeur, afin que l'interface ne soit pas plus petite sur un écran haute résolution que sur celui d'à côté.</value>
   </data>
+  <data name="Wie_breit_die_Kante_nach_au_en_ausl_uft_in_Bildp_5916a913" xml:space="preserve">
+    <value>Largeur du dégradé vers l'extérieur, en pixels. Zéro coupe net, des valeurs plus grandes conviennent aux cheveux, aux branches et à la fourrure. Vers l'intérieur, la sélection reste entièrement couverte.</value>
+  </data>
+  <data name="Um_wie_viele_Bildpunkte_die_Auswahl_ber_die_erka_829308fc" xml:space="preserve">
+    <value>De combien de pixels la sélection dépasse le bord détecté ; en négatif elle se rétracte. Si le modèle coupe d'un cheveu trop court, cela le rattrape.</value>
+  </data>
+  <data name="Wie_breit_die_Kante_nach_au_en_ausl_uft_in_Bildp_eb12ee5f" xml:space="preserve">
+    <value>Largeur du dégradé vers l'extérieur, en pixels. Zéro coupe net, des valeurs plus grandes conviennent aux cheveux, aux branches et à la fourrure. Vers l'intérieur, le masque reste entièrement couvert.</value>
+  </data>
+  <data name="Um_wie_viele_Bildpunkte_die_Maske_ber_die_erkann_03649db8" xml:space="preserve">
+    <value>De combien de pixels le masque dépasse le bord détecté ; en négatif il se rétracte. Si le modèle coupe d'un cheveu trop court, cela le rattrape.</value>
+  </data>
 </root>

@@ -136,24 +136,29 @@
                                    HorizontalAlignment="Center"/>
                     </Button>
                 </Grid>
+                <!-- Beide Zahlen sind BILDPUNKTE, kein Reglerprozent: die Kante ist die Breite des
+                     Verlaufs, der Umfang die Strecke, um die die Auswahl waechst. Vorher stand dort
+                     ein Prozentweg, dessen sichtbarer Teil im ersten Fuenftel lag; die Zahlen dazu
+                     stehen bei SubjectMaskService.MaskFor. -->
                 <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center"
-                      ToolTip.Tip="Wie knapp die Kante sitzt. Klein lässt sie breiter auslaufen - für Haare, Zweige und Fell. Groß schneidet knapp - für harte Gegenstände.">
+                      ToolTip.Tip="Wie breit die Kante nach außen ausläuft, in Bildpunkten. Null schneidet hart, größere Werte für Haare, Zweige und Fell. Nach innen bleibt die Auswahl voll gedeckt.">
                     <TextBlock Text="Kante" Foreground="{DynamicResource FP.Text.Secondary}"
                                VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
-                    <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
-                                       DefaultValue="50"
+                    <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="20"
+                                       DefaultValue="3"
                                        Value="{Binding SubjectMaskEdge}" Margin="0,0" />
                     <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
-                                             Value="{Binding SubjectMaskEdge, Mode=TwoWay}" Minimum="0" Maximum="100" />
+                                             Value="{Binding SubjectMaskEdge, Mode=TwoWay}" Minimum="0" Maximum="20" />
                 </Grid>
                 <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center"
-                      ToolTip.Tip="Lässt die Auswahl um die Kante herum wachsen oder schrumpfen. Erkennt das Modell eine Haaresbreite zu wenig, holt man sie damit zurück.">
+                      ToolTip.Tip="Um wie viele Bildpunkte die Auswahl über die erkannte Kante hinauswächst, negativ schrumpft sie. Erkennt das Modell eine Haaresbreite zu wenig, holt man sie damit zurück.">
                     <TextBlock Text="Umfang" Foreground="{DynamicResource FP.Text.Secondary}"
                                VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
-                    <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100"
+                    <icons:RoundSlider Grid.Column="1" Minimum="-30" Maximum="30"
+                                       DefaultValue="3"
                                        Value="{Binding SubjectMaskExtent}" Margin="0,0" />
                     <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
-                                             Value="{Binding SubjectMaskExtent, Mode=TwoWay}" Minimum="-100" Maximum="100" />
+                                             Value="{Binding SubjectMaskExtent, Mode=TwoWay}" Minimum="-30" Maximum="30" />
                 </Grid>
             </StackPanel>
 

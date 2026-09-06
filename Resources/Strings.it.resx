@@ -8132,4 +8132,16 @@
   <data name="Skaliert_die_komplette_Oberfl_che_beim_n_chsten__142c773d" xml:space="preserve">
     <value>Ridimensiona l'intera interfaccia al prossimo avvio. Ogni schermo riceve il proprio valore, così l'interfaccia non risulta più piccola su uno schermo ad alta risoluzione che su quello accanto.</value>
   </data>
+  <data name="Wie_breit_die_Kante_nach_au_en_ausl_uft_in_Bildp_5916a913" xml:space="preserve">
+    <value>Quanto sfuma il bordo verso l'esterno, in pixel. Zero taglia netto, valori più alti sono adatti a capelli, rami e pelo. Verso l'interno la selezione resta piena.</value>
+  </data>
+  <data name="Um_wie_viele_Bildpunkte_die_Auswahl_ber_die_erka_829308fc" xml:space="preserve">
+    <value>Di quanti pixel la selezione cresce oltre il bordo rilevato; in negativo si restringe. Se il modello taglia un capello troppo stretto, così lo si recupera.</value>
+  </data>
+  <data name="Wie_breit_die_Kante_nach_au_en_ausl_uft_in_Bildp_eb12ee5f" xml:space="preserve">
+    <value>Quanto sfuma il bordo verso l'esterno, in pixel. Zero taglia netto, valori più alti sono adatti a capelli, rami e pelo. Verso l'interno la maschera resta piena.</value>
+  </data>
+  <data name="Um_wie_viele_Bildpunkte_die_Maske_ber_die_erkann_03649db8" xml:space="preserve">
+    <value>Di quanti pixel la maschera cresce oltre il bordo rilevato; in negativo si restringe. Se il modello taglia un capello troppo stretto, così lo si recupera.</value>
+  </data>
 </root>

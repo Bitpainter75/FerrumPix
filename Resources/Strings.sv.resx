@@ -8172,4 +8172,16 @@
   <data name="Skaliert_die_komplette_Oberfl_che_beim_n_chsten__142c773d" xml:space="preserve">
     <value>Skalar hela gränssnittet vid nästa start. Varje skärm får sitt eget värde, så att gränssnittet inte blir mindre på en högupplöst skärm än på den bredvid.</value>
   </data>
+  <data name="Wie_breit_die_Kante_nach_au_en_ausl_uft_in_Bildp_5916a913" xml:space="preserve">
+    <value>Hur brett kanten tonar utåt, i bildpunkter. Noll klipper hårt, större värden passar hår, kvistar och päls. Inåt förblir markeringen helt täckt.</value>
+  </data>
+  <data name="Um_wie_viele_Bildpunkte_die_Auswahl_ber_die_erka_829308fc" xml:space="preserve">
+    <value>Hur många bildpunkter markeringen växer utanför den funna kanten; negativt krymper den. Klipper modellen ett hårstrå för snävt hämtar du tillbaka det så här.</value>
+  </data>
+  <data name="Wie_breit_die_Kante_nach_au_en_ausl_uft_in_Bildp_eb12ee5f" xml:space="preserve">
+    <value>Hur brett kanten tonar utåt, i bildpunkter. Noll klipper hårt, större värden passar hår, kvistar och päls. Inåt förblir masken helt täckt.</value>
+  </data>
+  <data name="Um_wie_viele_Bildpunkte_die_Maske_ber_die_erkann_03649db8" xml:space="preserve">
+    <value>Hur många bildpunkter masken växer utanför den funna kanten; negativt krymper den. Klipper modellen ett hårstrå för snävt hämtar du tillbaka det så här.</value>
+  </data>
 </root>

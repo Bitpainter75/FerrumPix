@@ -191,9 +191,16 @@ Namespace ViewModels
             Get
                 If _isVirtualFolder Then Return ""
                 If String.IsNullOrEmpty(_currentFolder) Then Return ""
-                Dim parent = IO.Path.GetDirectoryName(_currentFolder)
+                ' ERST DEN SCHLUSSTRENNER WEG. Ohne ihn gibt GetDirectoryName bei "/pfad/ordner/"
+                ' den Ordner SELBST zurueck, und in der Leiste stand dann "Ordner > Ordner". Die
+                ' Zeile darueber schneidet ihn laengst ab; hier fehlte es (Nutzerbefund 2026-09-06,
+                ' aufgefallen an einem ueberwachten Katalogordner - der kommt aus den Einstellungen
+                ' und darf einen Schlusstrenner tragen, waehrend die uebrigen Wurzeln keinen haben).
+                Dim self = _currentFolder.TrimEnd(IO.Path.DirectorySeparatorChar, IO.Path.AltDirectorySeparatorChar)
+                If String.IsNullOrEmpty(self) Then Return ""
+                Dim parent = IO.Path.GetDirectoryName(self)
                 If String.IsNullOrEmpty(parent) Then Return ""
-                Return IO.Path.GetFileName(parent)
+                Return IO.Path.GetFileName(parent.TrimEnd(IO.Path.DirectorySeparatorChar, IO.Path.AltDirectorySeparatorChar))
             End Get
         End Property
 
@@ -2533,6 +2540,8 @@ Namespace ViewModels
                 If Directory.Exists(rootPath) Then FolderTree.Add(New FolderNode(LocalizationService.T("Root"), rootPath))
             End If
 
+            SyncExtraFolderRoots()
+
             Dim picPath = Environment.GetFolderPath(Environment.SpecialFolder.MyPictures)
             If Directory.Exists(picPath) Then _initialFolderNode = FindFolderNode(FolderTree, picPath)
 
@@ -2540,6 +2549,90 @@ Namespace ViewModels
                 _initialFolderNode = If(homeNode, FolderTree.FirstOrDefault())
             End If
         End Sub
+
+        ''' <summary>Die ueberwachten Katalogordner stehen zusaetzlich als eigene WURZELN im
+        ''' Ordnerbaum.
+        '''
+        ''' Der Baum kannte bisher genau zwei Anfaenge: den persoenlichen Ordner und die Wurzel des
+        ''' Dateisystems (unter Windows die Laufwerke). Wer seine Fotos woanders liegen hat, klappte
+        ''' sich denselben Weg jedes Mal wieder auf (Nutzerbefund 2026-09-06).
+        '''
+        ''' Wo die Fotos liegen, steht dabei laengst in den Einstellungen - eingetragen fuer den
+        ''' Katalogindex. Diese Angabe ein zweites Mal am Ordnerbaum zu verlangen waere dieselbe
+        ''' Frage in einer zweiten Maske gewesen.
+        '''
+        ''' FAVORITEN GEHOEREN AUSDRUECKLICH NICHT HIERHER (Entscheidung 2026-09-06). Sie sind der
+        ''' schnelle Sprung an ein Ziel und haben ihren eigenen Tab; jeden von ihnen zusaetzlich als
+        ''' Ast in den Ordnerbaum zu legen macht aus einer Handablage eine zweite Ordnerstruktur und
+        ''' den Baum unuebersichtlich.
+        '''
+        ''' ABGEGLICHEN, NICHT NEU GEBAUT: ein neuer Baum wuerde bei jeder Aenderung alle
+        ''' aufgeklappten Ordner zuklappen und die Auswahl verlieren.</summary>
+        Public Sub SyncExtraFolderRoots()
+            ' In der eingetragenen Reihenfolge - sie ist die des Nutzers.
+            Dim wanted As New List(Of (Path As String, Label As String))()
+            Dim Merken As Action(Of String) =
+                Sub(rohPfad As String)
+                    If String.IsNullOrWhiteSpace(rohPfad) OrElse Not Directory.Exists(rohPfad) Then Return
+                    ' OHNE SCHLUSSTRENNER in den Baum. Die Einstellung darf einen tragen, der Baum
+                    ' nicht: an ihm haengen Vergleiche und die Pfadleiste, und beide rechnen mit der
+                    ' knappen Schreibweise.
+                    Dim path = rohPfad.TrimEnd(IO.Path.DirectorySeparatorChar, IO.Path.AltDirectorySeparatorChar)
+                    If String.IsNullOrEmpty(path) Then path = rohPfad
+                    ' Was ohnehin schon eine Wurzel ist, kommt kein zweites Mal - sonst stuende der
+                    ' persoenliche Ordner zweimal da, sobald ihn jemand eintraegt.
+                    If FolderTree.Any(Function(n) n IsNot Nothing AndAlso Not n.IsExtraRoot AndAlso
+                                                  PathsEqual(n.FullPath, path)) Then Return
+                    If wanted.Any(Function(w) PathsEqual(w.Path, path)) Then Return
+                    Dim name = IO.Path.GetFileName(path.TrimEnd(IO.Path.DirectorySeparatorChar,
+                                                                IO.Path.AltDirectorySeparatorChar))
+                    If String.IsNullOrWhiteSpace(name) Then name = path
+                    wanted.Add((path, name))
+                End Sub
+
+            Try
+                For Each watched In AppSettingsService.Load().CatalogWatchFolders
+                    Merken(watched)
+                Next
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Galerie.Ordnerwurzeln", ex)
+            End Try
+
+            ' Weg, was nicht mehr gewuenscht ist.
+            For i = FolderTree.Count - 1 To 0 Step -1
+                Dim node = FolderTree(i)
+                If node Is Nothing OrElse Not node.IsExtraRoot Then Continue For
+                If Not wanted.Any(Function(w) PathsEqual(w.Path, node.FullPath) AndAlso
+                                              String.Equals(w.Label, If(node.Name, ""), StringComparison.Ordinal)) Then
+                    FolderTree.RemoveAt(i)
+                End If
+            Next
+
+            ' Und dazu, was fehlt - vorn, weil es die eigene Wahl des Nutzers ist.
+            Dim insertAt = 0
+            For Each eintrag In wanted
+                Dim existing = FolderTree.FirstOrDefault(Function(n) n IsNot Nothing AndAlso n.IsExtraRoot AndAlso
+                                                                     PathsEqual(n.FullPath, eintrag.Path))
+                If existing Is Nothing Then
+                    FolderTree.Insert(Math.Min(insertAt, FolderTree.Count),
+                                      New FolderNode(eintrag.Label, eintrag.Path) With {.IsExtraRoot = True})
+                Else
+                    Dim current = FolderTree.IndexOf(existing)
+                    If current <> insertAt AndAlso insertAt < FolderTree.Count Then FolderTree.Move(current, insertAt)
+                End If
+                insertAt += 1
+            Next
+        End Sub
+
+        ''' <summary>Zwei Pfade auf denselben Ordner? Abschliessender Trenner und - ausserhalb von
+        ''' Linux - die Schreibweise sind dabei egal.</summary>
+        Private Shared Function PathsEqual(a As String, b As String) As Boolean
+            If String.IsNullOrEmpty(a) OrElse String.IsNullOrEmpty(b) Then Return False
+            Dim left = a.TrimEnd(IO.Path.DirectorySeparatorChar, IO.Path.AltDirectorySeparatorChar)
+            Dim right = b.TrimEnd(IO.Path.DirectorySeparatorChar, IO.Path.AltDirectorySeparatorChar)
+            Dim mode = If(OperatingSystem.IsLinux(), StringComparison.Ordinal, StringComparison.OrdinalIgnoreCase)
+            Return String.Equals(left, right, mode)
+        End Function
 
         Private Sub InitializeVirtualNavigation()
             SearchTree.Clear()
@@ -5248,7 +5341,10 @@ Namespace ViewModels
                 Await StartCachedServerSearchAsync(node)
             Catch ex As Exception
                 DiagnosticLogService.LogException("Galerie.Serversuche", ex)
-                StatusText = LocalizationService.T("Die Suche konnte nicht ausgeführt werden.")
+                ' DERSELBE Wortlaut wie im inneren Suchlauf weiter unten: er ist in allen Sprachen
+                ' uebersetzt, und zwei verschiedene Saetze fuer denselben Fall waeren fuer den
+                ' Nutzer ein Unterschied, den es nicht gibt.
+                StatusText = LocalizationService.T("Die Suche ist fehlgeschlagen")
                 IsLoading = False
             End Try
         End Sub

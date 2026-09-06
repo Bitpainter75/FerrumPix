@@ -712,39 +712,42 @@ Namespace ViewModels
             End Try
         End Function
 
-        ''' <summary>Kantenschaerfe der Objektmaske, 0 bis 100. Aendert nur die Umrechnung der
-        ''' Modellausgabe in Deckung, nicht die Erkennung - das Modell wird deshalb NICHT erneut
-        ''' gefragt, die Maske entsteht in Millisekunden neu.</summary>
+        ''' <summary>Breite des weichen Uebergangs der Objektmaske, in BILDPUNKTEN. Aendert nur die
+        ''' Umrechnung der Modellausgabe in Deckung, nicht die Erkennung - das Modell wird deshalb
+        ''' NICHT erneut gefragt, die Maske entsteht in Millisekunden neu.</summary>
         Public Property SubjectMaskEdge As Double
             Get
-                Return _motivKante
+                Return _subjectEdgePixels
             End Get
             Set(value As Double)
-                Dim v = Math.Max(0.0, Math.Min(100.0, value))
-                If Math.Abs(_motivKante - v) < 0.0001 Then Return
-                _motivKante = v
+                Dim v = Math.Max(0.0, Math.Min(SubjectMaskService.MaxEdgePixels, value))
+                If Math.Abs(_subjectEdgePixels - v) < 0.0001 Then Return
+                _subjectEdgePixels = v
                 Me.RaisePropertyChanged(NameOf(SubjectMaskEdge))
                 Dim ignoriert = RedrawSubjectMask()
             End Set
         End Property
 
-        ''' <summary>Umfang der Objektmaske, -100 bis 100: waechst oder schrumpft sie um die
-        ''' Kante herum.</summary>
+        ''' <summary>Umfang der Objektmaske in BILDPUNKTEN: so weit waechst sie um ihre Kante herum,
+        ''' negativ schrumpft sie.</summary>
         Public Property SubjectMaskExtent As Double
             Get
-                Return _motivUmfang
+                Return _subjectExtentPixels
             End Get
             Set(value As Double)
-                Dim v = Math.Max(-100.0, Math.Min(100.0, value))
-                If Math.Abs(_motivUmfang - v) < 0.0001 Then Return
-                _motivUmfang = v
+                Dim v = Math.Max(-SubjectMaskService.MaxExtentPixels,
+                                 Math.Min(SubjectMaskService.MaxExtentPixels, value))
+                If Math.Abs(_subjectExtentPixels - v) < 0.0001 Then Return
+                _subjectExtentPixels = v
                 Me.RaisePropertyChanged(NameOf(SubjectMaskExtent))
                 Dim ignoriert = RedrawSubjectMask()
             End Set
         End Property
 
-        Private _motivKante As Double = 50.0
-        Private _motivUmfang As Double = 25.0
+        ' Die Vorgaben stehen beim Dienst, nicht hier: dort werden sie gebraucht, wenn jemand die
+        ' Maske ohne die Oberflaeche rechnet, und zwei Orte fuer dieselbe Zahl laufen auseinander.
+        Private _subjectEdgePixels As Double = SubjectMaskService.DefaultEdgePixels
+        Private _subjectExtentPixels As Double = SubjectMaskService.DefaultExtentPixels
         ' Die MITTLERE Koernung als Vorgabe: die grobste faellt bei einem freistehenden Motiv
         ' gern auf das ganze Bild zusammen, die feinste greift nur einen Teil heraus. Die mittlere
         ' ist das, was man mit "dieses Objekt" meistens meint.
@@ -795,7 +798,7 @@ Namespace ViewModels
             Try
                 Dim einbettung = _motivEinbettung
                 Dim points = _motivPunkte.ToList()
-                Dim edge = _motivKante, umfang = _motivUmfang, koernung = _motivKoernung
+                Dim edge = _subjectEdgePixels, umfang = _subjectExtentPixels, koernung = _motivKoernung
                 Dim mask = Await Task.Run(Function() SubjectMaskService.MaskFor(einbettung, points, edge, umfang, koernung))
                 If mask Is Nothing Then Return
                 Using mask
@@ -886,7 +889,7 @@ Namespace ViewModels
 
                 Dim einbettung = _motivEinbettung
                 Dim points = _motivPunkte.ToList()
-                Dim edge = _motivKante, umfang = _motivUmfang, koernung = _motivKoernung
+                Dim edge = _subjectEdgePixels, umfang = _subjectExtentPixels, koernung = _motivKoernung
                 Dim mask = Await Task.Run(Function() SubjectMaskService.MaskFor(einbettung, points, edge, umfang, koernung))
                 If mask Is Nothing Then
                     StatusText = LocalizationService.T("Objektauswahl nicht möglich")
