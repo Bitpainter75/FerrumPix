@@ -532,12 +532,23 @@ Namespace Services
         Public Property MacTagWindowColorSpace As Boolean = False
 
         ''' <summary>Nur macOS: WIE der Farbraum aufgepraegt wird. Eines der
-        ''' <see cref="MacWindowColorSpaceService.Methods"/>, ab Werk "Off".
+        ''' <see cref="MacWindowColorSpaceService.Methods"/>.
         '''
-        ''' Zur Wahl statt fest verdrahtet, weil der erste Weg gemessen nicht traegt und mehrere
-        ''' weitere in Betracht kommen; die Begruendung steht am Dienst. Gespeichert wird der Name
-        ''' des Verfahrens, Unbekanntes faellt beim Laden auf "Off" zurueck.</summary>
-        Public Property MacWindowColorSpaceMethod As String = MacWindowColorSpaceService.MethodOff
+        ''' AB WERK "Fenster und Ebene zusammen", also AN. Am Gerät gemessen tragen drei der sieben
+        ''' Verfahren; diese Kombination ist die haltbare, weil das Kennzeichen am Fenster bleibt,
+        ''' wenn die Ebene des Zeichenwegs neu entsteht. Auf einem Bildschirm mit gewoehnlichem
+        ''' Farbumfang ist die Umrechnung wirkungslos, das Kennzeichen also nie falsch.
+        '''
+        ''' Die uebrigen Verfahren bleiben waehlbar, aber nur bei eingeschaltetem Diagnoseprotokoll
+        ''' sichtbar: sie sind fuer eine Rueckfrage da. Unbekanntes faellt beim Laden auf "Off"
+        ''' zurueck.</summary>
+        Public Property MacWindowColorSpaceMethod As String = MacWindowColorSpaceService.MethodWindowAndLayer
+
+        ''' <summary>Ob die Werksvorgabe schon einmal angewandt wurde. Ohne diesen Merkposten bliebe
+        ''' jeder, der die Fassung mit den Auswahllisten benutzt hat, auf dem damaligen Werkswert
+        ''' "Off" stehen - der war die Vorgabe eines Versuchs und keine Wahl gegen die
+        ''' Farbanpassung.</summary>
+        Public Property MacWindowColorSpaceDefaultApplied As Boolean = False
 
         ''' <summary>Nur macOS: welchen Zeichenweg Avalonia nehmen soll (siehe
         ''' <see cref="AppSettingsService.MacRenderingModeChoices"/>). Ab Werk "Auto", also die
@@ -1928,14 +1939,14 @@ Namespace Services
         ''' des alten Schalters. Sie steht hier und nicht zweimal in den Normalisierungsbloecken,
         ''' weil sie in beiden gleich lauten muss.</summary>
         Private Shared Sub NormalizeMacGraphicsSettings(settings As AppSettings)
-            ' Wer den Versuch eingeschaltet hatte, bekommt das Verfahren, das damals gemeint war,
-            ' und der alte Schalter geht aus - sonst holte er die Wahl bei jedem Laden zurueck.
-            If settings.MacTagWindowColorSpace Then
-                settings.MacTagWindowColorSpace = False
-                If MacWindowColorSpaceService.NormalizeMethod(settings.MacWindowColorSpaceMethod) =
-                   MacWindowColorSpaceService.MethodOff Then
-                    settings.MacWindowColorSpaceMethod = MacWindowColorSpaceService.MethodViewLayer
-                End If
+            ' EINMALIG auf die Werksvorgabe ziehen. Der alte Schalter und der damalige Werkswert
+            ' "Off" sagen beide nichts darueber, ob jemand die Farbanpassung nicht will - es gab
+            ' sie damals nur als Versuch, dessen Weg nicht trug. Danach gilt, was eingestellt wird:
+            ' wer abschaltet, bleibt aus.
+            settings.MacTagWindowColorSpace = False
+            If Not settings.MacWindowColorSpaceDefaultApplied Then
+                settings.MacWindowColorSpaceDefaultApplied = True
+                settings.MacWindowColorSpaceMethod = MacWindowColorSpaceService.MethodWindowAndLayer
             End If
             settings.MacWindowColorSpaceMethod = MacWindowColorSpaceService.NormalizeMethod(settings.MacWindowColorSpaceMethod)
             settings.MacRenderingMode = NormalizeMacRenderingMode(settings.MacRenderingMode)

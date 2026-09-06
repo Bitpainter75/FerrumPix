@@ -8190,4 +8190,10 @@
   <data name="Welchen_Weg_FerrumPix_zum_Zeichnen_nimmt_Wirkt_n_fc363cc1" xml:space="preserve">
     <value>Kterou cestu FerrumPix používá ke kreslení. Projeví se po restartu.</value>
   </data>
+  <data name="Farben_an_den_Bildschirm_anpassen_71f5bef0" xml:space="preserve">
+    <value>Přizpůsobit barvy obrazovce</value>
+  </data>
+  <data name="Viele_Bildschirme_k_nnen_mehr_Farben_zeigen_als__9f4aaab0" xml:space="preserve">
+    <value>Mnoho obrazovek zobrazí více barev, než fotografie obsahuje. Bez přizpůsobení na nich fotografie i rozhraní působí příliš silně. Zapnuto macOS přepočítá barvy pro použitou obrazovku; na běžné obrazovce se nic nezmění.</value>
+  </data>
 </root>

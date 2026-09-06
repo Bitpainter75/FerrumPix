@@ -8150,4 +8150,10 @@
   <data name="Welchen_Weg_FerrumPix_zum_Zeichnen_nimmt_Wirkt_n_fc363cc1" xml:space="preserve">
     <value>Welchen Weg FerrumPix zum Zeichnen nimmt. Wirkt nach einem Neustart.</value>
   </data>
+  <data name="Farben_an_den_Bildschirm_anpassen_71f5bef0" xml:space="preserve">
+    <value>Farben an den Bildschirm anpassen</value>
+  </data>
+  <data name="Viele_Bildschirme_k_nnen_mehr_Farben_zeigen_als__9f4aaab0" xml:space="preserve">
+    <value>Viele Bildschirme können mehr Farben zeigen, als ein Foto enthält. Ohne Anpassung wirken Fotos und Oberfläche dort zu kräftig. Eingeschaltet rechnet macOS die Farben für den angeschlossenen Bildschirm um; auf einem gewöhnlichen Bildschirm bleibt alles wie es ist.</value>
+  </data>
 </root>

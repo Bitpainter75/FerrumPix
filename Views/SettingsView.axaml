@@ -607,48 +607,66 @@
                              die einen Farbraum tragen kann. Begruendung im
                              MacWindowColorSpaceService. -->
                         <StackPanel Spacing="14" IsVisible="{Binding IsWindowColorSpaceFixSupported}">
+                            <!-- EIN Schalter, ohne Fachbegriffe. Was dahinter steht, entscheidet
+                                 das ViewModel: eingeschaltet ist die haltbare Kombination. -->
                             <Grid ColumnDefinitions="*,Auto">
                                 <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
-                                    <TextBlock Text="Farben an Bildschirme mit weitem Farbumfang anpassen (Versuch)" FontSize="{DynamicResource FP.Font.Body}"/>
-                                    <TextBlock Text="Auf Bildschirmen mit weitem Farbumfang, etwa Display P3, wirken Fotos und Oberfläche zu kräftig. Eingeschaltet sagt FerrumPix dem System, dass es in sRGB zeichnet, damit es selbst umrechnet. Ob das greift, hängt vom verwendeten Zeichenweg ab; deshalb ist es ein Versuch und kein Versprechen. Wirkt nach einem Neustart." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
-                                    <!-- Auswaehlbar statt nur lesbar: die Zeile ist der ganze
-                                         Messbefund und soll sich kopieren lassen. no-translate,
-                                         weil der Inhalt aus einer Bindung kommt (siehe
-                                         LocalizationService.NoTranslateClass). -->
-                                    <SelectableTextBlock Classes="no-translate"
-                                                         Text="{Binding WindowColorSpaceStatusText}"
-                                                         Foreground="{DynamicResource FP.Text.Muted}"
-                                                         FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap"/>
+                                    <TextBlock Text="Farben an den Bildschirm anpassen" FontSize="{DynamicResource FP.Font.Body}"/>
+                                    <TextBlock Text="Viele Bildschirme können mehr Farben zeigen, als ein Foto enthält. Ohne Anpassung wirken Fotos und Oberfläche dort zu kräftig. Eingeschaltet rechnet macOS die Farben für den angeschlossenen Bildschirm um; auf einem gewöhnlichen Bildschirm bleibt alles wie es ist." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                                 </StackPanel>
-                                <ComboBox Grid.Column="1"
-                                          MinWidth="260"
-                                          ItemsSource="{Binding WindowColorSpaceMethodOptions}"
-                                          SelectedItem="{Binding SelectedWindowColorSpaceMethod, Mode=TwoWay}"
-                                          VerticalAlignment="Center">
-                                    <ComboBox.ItemTemplate>
-                                        <DataTemplate>
-                                            <TextBlock Classes="no-translate" Text="{Binding Name}"/>
-                                        </DataTemplate>
-                                    </ComboBox.ItemTemplate>
-                                </ComboBox>
+                                <ToggleSwitch Grid.Column="1"
+                                              IsChecked="{Binding MacWindowColorSpaceEnabled}"
+                                              OnContent=""
+                                              OffContent=""
+                                              VerticalAlignment="Center"/>
                             </Grid>
-                            <Grid ColumnDefinitions="*,Auto">
-                                <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
-                                    <TextBlock Text="Zeichenweg (Versuch)" FontSize="{DynamicResource FP.Font.Body}"/>
-                                    <TextBlock Text="Welchen Weg FerrumPix zum Zeichnen nimmt. Wirkt nach einem Neustart." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
-                                </StackPanel>
-                                <ComboBox Grid.Column="1"
-                                          MinWidth="260"
-                                          ItemsSource="{Binding MacRenderingModeOptions}"
-                                          SelectedItem="{Binding SelectedMacRenderingMode, Mode=TwoWay}"
-                                          VerticalAlignment="Center">
-                                    <ComboBox.ItemTemplate>
-                                        <DataTemplate>
-                                            <TextBlock Classes="no-translate" Text="{Binding Name}"/>
-                                        </DataTemplate>
-                                    </ComboBox.ItemTemplate>
-                                </ComboBox>
-                            </Grid>
+
+                            <!-- Nur bei eingeschaltetem Diagnoseprotokoll: die Felder sind fuer eine
+                                 Rueckfrage gebaut. Welches Verfahren greift und welchen Zeichenweg
+                                 das Toolkit nimmt, interessiert niemanden, dessen Farben stimmen. -->
+                            <StackPanel Spacing="14" IsVisible="{Binding IsWindowColorSpaceDetailVisible}">
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                        <TextBlock Text="Farben an Bildschirme mit weitem Farbumfang anpassen (Versuch)" FontSize="{DynamicResource FP.Font.Body}"/>
+                                        <!-- Auswaehlbar statt nur lesbar: die Zeile ist der ganze
+                                             Messbefund und soll sich kopieren lassen. no-translate,
+                                             weil der Inhalt aus einer Bindung kommt (siehe
+                                             LocalizationService.NoTranslateClass). -->
+                                        <SelectableTextBlock Classes="no-translate"
+                                                             Text="{Binding WindowColorSpaceStatusText}"
+                                                             Foreground="{DynamicResource FP.Text.Muted}"
+                                                             FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap"/>
+                                    </StackPanel>
+                                    <ComboBox Grid.Column="1"
+                                              MinWidth="260"
+                                              ItemsSource="{Binding WindowColorSpaceMethodOptions}"
+                                              SelectedItem="{Binding SelectedWindowColorSpaceMethod, Mode=TwoWay}"
+                                              VerticalAlignment="Center">
+                                        <ComboBox.ItemTemplate>
+                                            <DataTemplate>
+                                                <TextBlock Classes="no-translate" Text="{Binding Name}"/>
+                                            </DataTemplate>
+                                        </ComboBox.ItemTemplate>
+                                    </ComboBox>
+                                </Grid>
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                        <TextBlock Text="Zeichenweg (Versuch)" FontSize="{DynamicResource FP.Font.Body}"/>
+                                        <TextBlock Text="Welchen Weg FerrumPix zum Zeichnen nimmt. Wirkt nach einem Neustart." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                    </StackPanel>
+                                    <ComboBox Grid.Column="1"
+                                              MinWidth="260"
+                                              ItemsSource="{Binding MacRenderingModeOptions}"
+                                              SelectedItem="{Binding SelectedMacRenderingMode, Mode=TwoWay}"
+                                              VerticalAlignment="Center">
+                                        <ComboBox.ItemTemplate>
+                                            <DataTemplate>
+                                                <TextBlock Classes="no-translate" Text="{Binding Name}"/>
+                                            </DataTemplate>
+                                        </ComboBox.ItemTemplate>
+                                    </ComboBox>
+                                </Grid>
+                            </StackPanel>
                         </StackPanel>
 
                         <!-- Anwendungsskalierung wirkt nur auf Avalonias X11-Backend, siehe

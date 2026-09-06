@@ -8190,4 +8190,10 @@
   <data name="Welchen_Weg_FerrumPix_zum_Zeichnen_nimmt_Wirkt_n_fc363cc1" xml:space="preserve">
     <value>Hvilken vej FerrumPix bruger til at tegne. Virker efter en genstart.</value>
   </data>
+  <data name="Farben_an_den_Bildschirm_anpassen_71f5bef0" xml:space="preserve">
+    <value>Tilpas farverne til skærmen</value>
+  </data>
+  <data name="Viele_Bildschirme_k_nnen_mehr_Farben_zeigen_als__9f4aaab0" xml:space="preserve">
+    <value>Mange skærme kan vise flere farver, end et foto indeholder. Uden tilpasning ser fotos og brugerfladen for stærke ud på dem. Slået til omregner macOS farverne til den tilsluttede skærm; på en almindelig skærm ændres ingenting.</value>
+  </data>
 </root>

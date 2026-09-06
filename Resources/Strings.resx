@@ -8151,4 +8151,10 @@
   <data name="Welchen_Weg_FerrumPix_zum_Zeichnen_nimmt_Wirkt_n_fc363cc1" xml:space="preserve">
     <value>Which path FerrumPix uses for drawing. Takes effect after a restart.</value>
   </data>
+  <data name="Farben_an_den_Bildschirm_anpassen_71f5bef0" xml:space="preserve">
+    <value>Match colours to the screen</value>
+  </data>
+  <data name="Viele_Bildschirme_k_nnen_mehr_Farben_zeigen_als__9f4aaab0" xml:space="preserve">
+    <value>Many screens can show more colours than a photo contains. Without matching, photos and interface look too strong on them. When switched on, macOS converts the colours for the screen you are using; on an ordinary screen nothing changes.</value>
+  </data>
 </root>

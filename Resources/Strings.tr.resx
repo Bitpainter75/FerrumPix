@@ -8194,4 +8194,10 @@
   <data name="Welchen_Weg_FerrumPix_zum_Zeichnen_nimmt_Wirkt_n_fc363cc1" xml:space="preserve">
     <value>FerrumPix'in çizim için kullandığı yol. Yeniden başlattıktan sonra etkili olur.</value>
   </data>
+  <data name="Farben_an_den_Bildschirm_anpassen_71f5bef0" xml:space="preserve">
+    <value>Renkleri ekrana uyarla</value>
+  </data>
+  <data name="Viele_Bildschirme_k_nnen_mehr_Farben_zeigen_als__9f4aaab0" xml:space="preserve">
+    <value>Birçok ekran bir fotoğrafın içerdiğinden daha fazla rengi gösterebilir. Uyarlama olmadan fotoğraflar ve arayüz bu ekranlarda fazla güçlü görünür. Açıkken macOS renkleri kullanılan ekran için dönüştürür; sıradan bir ekranda hiçbir şey değişmez.</value>
+  </data>
 </root>

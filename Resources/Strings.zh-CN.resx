@@ -8148,4 +8148,10 @@
   <data name="Welchen_Weg_FerrumPix_zum_Zeichnen_nimmt_Wirkt_n_fc363cc1" xml:space="preserve">
     <value>FerrumPix 使用哪种方式绘制。重启后生效。</value>
   </data>
+  <data name="Farben_an_den_Bildschirm_anpassen_71f5bef0" xml:space="preserve">
+    <value>让颜色适配屏幕</value>
+  </data>
+  <data name="Viele_Bildschirme_k_nnen_mehr_Farben_zeigen_als__9f4aaab0" xml:space="preserve">
+    <value>许多屏幕能显示的颜色比照片本身更多。不做适配时，照片和界面在这类屏幕上会显得过于浓艳。开启后，macOS 会为当前所用的屏幕转换颜色；在普通屏幕上没有变化。</value>
+  </data>
 </root>

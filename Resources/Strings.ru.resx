@@ -8190,4 +8190,10 @@
   <data name="Welchen_Weg_FerrumPix_zum_Zeichnen_nimmt_Wirkt_n_fc363cc1" xml:space="preserve">
     <value>Каким путём FerrumPix рисует. Вступает в силу после перезапуска.</value>
   </data>
+  <data name="Farben_an_den_Bildschirm_anpassen_71f5bef0" xml:space="preserve">
+    <value>Подстраивать цвета под экран</value>
+  </data>
+  <data name="Viele_Bildschirme_k_nnen_mehr_Farben_zeigen_als__9f4aaab0" xml:space="preserve">
+    <value>Многие экраны показывают больше цветов, чем есть в фотографии. Без подстройки фотографии и интерфейс выглядят на них слишком насыщенно. При включении macOS пересчитывает цвета для используемого экрана; на обычном экране ничего не меняется.</value>
+  </data>
 </root>

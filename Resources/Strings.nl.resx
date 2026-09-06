@@ -8190,4 +8190,10 @@
   <data name="Welchen_Weg_FerrumPix_zum_Zeichnen_nimmt_Wirkt_n_fc363cc1" xml:space="preserve">
     <value>Welk pad FerrumPix gebruikt om te tekenen. Werkt na een herstart.</value>
   </data>
+  <data name="Farben_an_den_Bildschirm_anpassen_71f5bef0" xml:space="preserve">
+    <value>Kleuren aanpassen aan het scherm</value>
+  </data>
+  <data name="Viele_Bildschirme_k_nnen_mehr_Farben_zeigen_als__9f4aaab0" xml:space="preserve">
+    <value>Veel schermen kunnen meer kleuren weergeven dan een foto bevat. Zonder aanpassing zien foto's en de interface er daar te sterk uit. Ingeschakeld rekent macOS de kleuren om voor het aangesloten scherm; op een gewoon scherm verandert er niets.</value>
+  </data>
 </root>

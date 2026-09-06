@@ -8194,4 +8194,10 @@
   <data name="Welchen_Weg_FerrumPix_zum_Zeichnen_nimmt_Wirkt_n_fc363cc1" xml:space="preserve">
     <value>Jalur yang dipakai FerrumPix untuk menggambar. Berlaku setelah dimulai ulang.</value>
   </data>
+  <data name="Farben_an_den_Bildschirm_anpassen_71f5bef0" xml:space="preserve">
+    <value>Sesuaikan warna dengan layar</value>
+  </data>
+  <data name="Viele_Bildschirme_k_nnen_mehr_Farben_zeigen_als__9f4aaab0" xml:space="preserve">
+    <value>Banyak layar dapat menampilkan lebih banyak warna daripada yang ada dalam foto. Tanpa penyesuaian, foto dan antarmuka terlihat terlalu kuat di layar itu. Saat aktif, macOS mengonversi warna untuk layar yang dipakai; pada layar biasa tidak ada yang berubah.</value>
+  </data>
 </root>

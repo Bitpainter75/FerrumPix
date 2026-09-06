@@ -8190,4 +8190,10 @@
   <data name="Welchen_Weg_FerrumPix_zum_Zeichnen_nimmt_Wirkt_n_fc363cc1" xml:space="preserve">
     <value>FerrumPix が描画に使う経路です。再起動後に有効になります。</value>
   </data>
+  <data name="Farben_an_den_Bildschirm_anpassen_71f5bef0" xml:space="preserve">
+    <value>画面に合わせて色を調整</value>
+  </data>
+  <data name="Viele_Bildschirme_k_nnen_mehr_Farben_zeigen_als__9f4aaab0" xml:space="preserve">
+    <value>多くの画面は写真に含まれるより多くの色を表示できます。調整しないと、そうした画面では写真も画面表示も濃く見えます。有効にすると、macOS が使用中の画面に合わせて色を変換します。通常の画面では何も変わりません。</value>
+  </data>
 </root>

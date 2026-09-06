@@ -8194,4 +8194,10 @@
   <data name="Welchen_Weg_FerrumPix_zum_Zeichnen_nimmt_Wirkt_n_fc363cc1" xml:space="preserve">
     <value>FerrumPix ड्रॉइंग के लिए कौन सा पथ उपयोग करता है। पुनः आरंभ करने के बाद लागू होता है।</value>
   </data>
+  <data name="Farben_an_den_Bildschirm_anpassen_71f5bef0" xml:space="preserve">
+    <value>रंगों को स्क्रीन के अनुसार समायोजित करें</value>
+  </data>
+  <data name="Viele_Bildschirme_k_nnen_mehr_Farben_zeigen_als__9f4aaab0" xml:space="preserve">
+    <value>कई स्क्रीन उससे अधिक रंग दिखा सकती हैं जितने एक फ़ोटो में होते हैं। समायोजन के बिना उन पर फ़ोटो और इंटरफ़ेस बहुत तेज़ दिखते हैं। चालू होने पर macOS रंगों को उपयोग की जा रही स्क्रीन के लिए बदल देता है; सामान्य स्क्रीन पर कुछ नहीं बदलता।</value>
+  </data>
 </root>

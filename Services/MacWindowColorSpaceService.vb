@@ -59,9 +59,11 @@ Namespace Services
         ''' 0.9.38, an dem der Melder eine <c>NSViewBackingLayer</c> vorfand.</summary>
         Public Const MethodViewLayer As String = "ViewLayer"
 
-        ''' <summary>Dieselbe Ebene, aber OHNE <c>setWantsLayer:</c>. Das Toolkit ruft es nirgends
-        ''' selbst (in der Bibliothek nachgesehen), also kann unser Aufruf derjenige gewesen sein,
-        ''' der die leere Backing-Ebene ueberhaupt erst hat entstehen lassen.</summary>
+        ''' <summary>Dieselbe Ebene, aber OHNE <c>setWantsLayer:</c>. Als Gegenprobe: das Toolkit
+        ''' ruft es selbst (in der Bibliothek nachgesehen, neben <c>setLayer:</c> und
+        ''' <c>setLayerContentsPlacement:</c>), unser Aufruf sollte also folgenlos sein. Meldet
+        ''' dieses Verfahren dieselbe Ebenenklasse wie das vorige, ist das bestaetigt; meldet es
+        ''' eine andere, hat unser Aufruf die Ebene veraendert.</summary>
         Public Const MethodViewLayerNoWantsLayer As String = "ViewLayerNoWantsLayer"
 
         ''' <summary>Den Ebenen- und Ansichtsbaum durchsuchen und die erste Ebene nehmen, die

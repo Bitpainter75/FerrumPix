@@ -8150,4 +8150,10 @@
   <data name="Welchen_Weg_FerrumPix_zum_Zeichnen_nimmt_Wirkt_n_fc363cc1" xml:space="preserve">
     <value>Le chemin que FerrumPix utilise pour dessiner. Prend effet après un redémarrage.</value>
   </data>
+  <data name="Farben_an_den_Bildschirm_anpassen_71f5bef0" xml:space="preserve">
+    <value>Adapter les couleurs à l'écran</value>
+  </data>
+  <data name="Viele_Bildschirme_k_nnen_mehr_Farben_zeigen_als__9f4aaab0" xml:space="preserve">
+    <value>Beaucoup d'écrans peuvent afficher plus de couleurs qu'une photo n'en contient. Sans adaptation, les photos et l'interface y paraissent trop saturées. Activé, macOS convertit les couleurs pour l'écran utilisé ; sur un écran ordinaire, rien ne change.</value>
+  </data>
 </root>

@@ -571,6 +571,36 @@ Namespace ViewModels
             End Get
         End Property
 
+        ''' <summary>Farben an den Bildschirm anpassen, als EIN Schalter für gewöhnliche Anwender.
+        '''
+        ''' Dahinter steht die Wahl des Verfahrens: eingeschaltet heißt „Fenster und Ebene zusammen",
+        ''' das ist die haltbare Kombination (am Gerät gemessen, siehe OFFENE_PUNKTE). Wer über die
+        ''' technischen Felder ein anderes Verfahren gewählt hat, sieht den Schalter an - jedes
+        ''' Verfahren außer „Aus" ist ein Ja zur Anpassung.</summary>
+        Public Property MacWindowColorSpaceEnabled As Boolean
+            Get
+                Return MacWindowColorSpaceService.NormalizeMethod(_windowColorSpaceMethod) <>
+                       MacWindowColorSpaceService.MethodOff
+            End Get
+            Set(value As Boolean)
+                If value = MacWindowColorSpaceEnabled Then Return
+                SelectedWindowColorSpaceMethod = WindowColorSpaceMethodOptions.FirstOrDefault(
+                    Function(o) o.Key = If(value, MacWindowColorSpaceService.MethodWindowAndLayer,
+                                                  MacWindowColorSpaceService.MethodOff))
+                Me.RaisePropertyChanged(NameOf(MacWindowColorSpaceEnabled))
+            End Set
+        End Property
+
+        ''' <summary>Die technischen Felder darunter zeigen sich nur bei eingeschaltetem
+        ''' Diagnoseprotokoll. Sie sind für eine Rückfrage gebaut, nicht für den Alltag: welches
+        ''' Verfahren greift und welchen Zeichenweg das Toolkit nimmt, interessiert niemanden, dessen
+        ''' Farben stimmen.</summary>
+        Public ReadOnly Property IsWindowColorSpaceDetailVisible As Boolean
+            Get
+                Return OperatingSystem.IsMacOS() AndAlso _enableDiagnosticLogging
+            End Get
+        End Property
+
         ''' <summary>Die Verfahren, mit denen der Farbraum aufgeprägt werden kann.
         '''
         ''' MEHRERE ZUR WAHL, weil das erste gemessen nicht trägt und niemand hier ein Gerät mit
@@ -613,6 +643,7 @@ Namespace ViewModels
                 ' Zeichenweg braucht es dazu keinen Neustart.
                 MacWindowColorSpaceService.NotifyMethodChanged()
                 Me.RaisePropertyChanged(NameOf(WindowColorSpaceStatusText))
+                Me.RaisePropertyChanged(NameOf(MacWindowColorSpaceEnabled))
             End Set
         End Property
         Private _windowColorSpaceMethod As String = MacWindowColorSpaceService.MethodOff
@@ -629,7 +660,11 @@ Namespace ViewModels
                 Case "Metal" : Return "Metal bevorzugen"
                 Case "OpenGl" : Return "OpenGL, ohne Metal"
                 Case "Software" : Return "Software"
-                Case Else : Return "Automatisch (Metal, dann OpenGL, dann Software)"
+                ' KEINE Reihenfolge in der Beschriftung: Avalonia 12.1.2 nimmt im Code Metal,
+                ' OpenGL, Software, der Kommentar an derselben Eigenschaft nennt aber OpenGL,
+                ' Software. Welche der beiden Angaben in der naechsten Fassung gilt, weiss hier
+                ' niemand - und die Statuszeile sagt ohnehin, welcher Weg wirklich laeuft.
+                Case Else : Return "Automatisch (Reihenfolge des Toolkits)"
             End Select
         End Function
 
@@ -4011,6 +4046,9 @@ Namespace ViewModels
                 Else
                     PerformanceTraceService.StopUiThreadWatchdog()
                 End If
+                ' An diesem Schalter hängt auch, wer die technischen Felder zum Fensterfarbraum
+                ' sieht: sie gehören zu einer Rückfrage, nicht in eine gewöhnliche Einstellung.
+                Me.RaisePropertyChanged(NameOf(IsWindowColorSpaceDetailVisible))
             End Set
         End Property
 
