@@ -1602,9 +1602,15 @@
             <!-- Zweite Zeile auf Auto statt fest 28: die Hoehe bringt die Leiste selbst mit, damit
                  die Zeile beim Ausblenden ganz wegfaellt und der Filmstreifen nach unten aufrueckt. -->
             <Grid RowDefinitions="Auto,Auto">
+                <!-- Bewegen und Loslassen haengen an der LISTE, nicht am einzelnen Vorschaubild:
+                     der Zug auf die Leinwand beginnt sonst nicht, wenn der Zeiger das Bild in
+                     einem Sprung verlaesst, und ein Loslassen zwischen zwei Bildern taete nichts.
+                     Gedrueckt wird weiterhin am Bild - nur dort steht, welches gemeint ist. -->
                 <ListBox Name="FilmstripListBox"
                          Classes="filmstrip-list"
                          Height="110"
+                         PointerMoved="OnFilmstripPointerMoved"
+                         PointerReleased="OnFilmstripPointerReleased"
                          IsVisible="{Binding ShowFilmstrip}"
                          ItemsSource="{Binding FilmstripItems}"
                          SelectedIndex="{Binding CurrentFilmstripIndex, Mode=OneWay}"
