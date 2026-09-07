@@ -11,9 +11,14 @@
             <Setter Property="HorizontalAlignment" Value="Center"/>
             <Setter Property="Margin" Value="0,0,0,4"/>
         </Style>
+        <!-- 108 Bildpunkte: die Zelle des 2x2-Rasters ist im Panel 134 breit (Spalte 330, davon
+             gehen Rahmen, Rand der Bildlaufleiste, Rand des Stapels, die Polsterung der Gruppe und
+             die halbe Rasterbreite ab). Der Rest ist Luft für die Bildlaufleiste, die sich über den
+             Inhalt legt. Grösser heisst auch höher, und zwar zweimal - das Raster hat zwei Reihen.
+             Die Prüfung "Farbgradierung: die vier Raeder passen in ihre Spalten" misst es. -->
         <Style Selector="icons|ColorGradeWheel">
-            <Setter Property="Width" Value="86"/>
-            <Setter Property="Height" Value="86"/>
+            <Setter Property="Width" Value="108"/>
+            <Setter Property="Height" Value="108"/>
             <Setter Property="HorizontalAlignment" Value="Center"/>
         </Style>
     </UserControl.Styles>

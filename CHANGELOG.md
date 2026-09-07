@@ -18,6 +18,15 @@
 
 ### What's new
 
+- **The colour mixer takes up much less room.** The colour wheel has given way to a row of eight
+  small colour dots, the same shape as the colour labels in the gallery. Click one to work on that
+  colour range; the dot you picked wears a ring, and any range that carries a setting wears a dot in
+  its middle, so you can see at a glance where something is set. A middle click on a dot puts that
+  colour range back to zero.
+
+- **The colour grading wheels are bigger.** They were small enough that hitting a particular hue
+  took care; the space the colour mixer gave up went to them.
+
 - **Old raw formats keep their date and camera.** Pictures from Canon's early CRW files, Minolta
   MRW, the plain .RAW of Leica, Panasonic and Kodak and Leaf's MOS arrived without a shooting date,
   without a camera name and without dimensions, so they dropped out of the timeline, out of sorting

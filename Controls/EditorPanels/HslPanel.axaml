@@ -28,13 +28,59 @@
             </DataTemplate>
         </Expander.HeaderTemplate>
         <StackPanel Spacing="8" Margin="0,8,0,0">
-            <icons:HslWheelPicker SelectedBand="{Binding SelectedHslBand, Mode=TwoWay}"
-                                  AdjustedBands="{Binding AdjustedHslBands}"
-                                  Width="150" Height="150"
-                                  HorizontalAlignment="Center" />
+            <!-- EINE ZEILE statt eines Farbrades: dieselbe Bauform wie die Etiketten der Galerie
+                 (Kreis in einem runden Knopf). Das Rad brauchte 150 Bildpunkte Hoehe samt
+                 Beschriftung fuer dieselbe Aussage, und darunter stehen noch drei Regler.
+
+                 Zwei Marken je Kreis, beide ohne Zeichen: der GEWAEHLTE Kreis bekommt einen Ring
+                 in der Akzentfarbe, ein ABWEICHENDES Band einen Punkt in der Mitte. Ohne die
+                 zweite Marke saehe man nicht, wo sonst noch etwas eingestellt ist - bei einem
+                 importierten Preset ist das der Normalfall. -->
+            <ItemsControl ItemsSource="{Binding HslBandChips}" HorizontalAlignment="Center">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <StackPanel Orientation="Horizontal" Spacing="5" />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <!-- 28 Bildpunkte je Knopf bei 5 Abstand: acht davon brauchen 259 der 275
+                             Bildpunkte, die im Panel wirklich zur Verfügung stehen (Spalte 330,
+                             davon gehen Rahmen, Rand der Bildlaufleiste, Rand des Stapels und die
+                             Polsterung der Gruppe ab). Der Rest ist Luft für die Bildlaufleiste,
+                             die sich über den Inhalt legt. Die Prüfung "Farbmischer: acht Kreise
+                             ..." baut genau diese Umgebung nach und wird rot, sobald die Zeile aus
+                             dem Panel läuft. -->
+                        <Button Classes="ghost" Width="28" Height="28" Padding="0" CornerRadius="14"
+                                Command="{Binding $parent[ItemsControl].DataContext.SelectHslBandCommand}"
+                                CommandParameter="{Binding Key}"
+                                PointerPressed="OnBandPointerPressed">
+                            <ToolTip.Tip>
+                                <StackPanel Spacing="2">
+                                    <TextBlock Text="{Binding Label, Converter={StaticResource TranslateConverter}}" />
+                                    <TextBlock Text="Mittlere Maustaste setzt dieses Band zurück"
+                                               Foreground="{DynamicResource FP.Text.Secondary}"
+                                               FontSize="{DynamicResource FP.Font.Small}" />
+                                </StackPanel>
+                            </ToolTip.Tip>
+                            <Grid>
+                                <!-- Der sichtbare Farbkreis waechst staerker als der Knopf: 20
+                                     statt 16 Bildpunkte in einem Knopf von 28. Der Ring des
+                                     gewaehlten Bandes liegt mit 26 knapp darum. -->
+                                <Ellipse Width="20" Height="20" Fill="{Binding Fill}" />
+                                <Ellipse Width="26" Height="26" StrokeThickness="2"
+                                         Stroke="{DynamicResource FP.Accent}"
+                                         IsVisible="{Binding IsSelected}" />
+                                <Ellipse Width="7" Height="7" Fill="White"
+                                         IsVisible="{Binding IsAdjusted}" />
+                            </Grid>
+                        </Button>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
             <TextBlock Text="{Binding SelectedHslBandLabel}"
-                       FontWeight="SemiBold"
-                       FontSize="{DynamicResource FP.Font.Body}"
+                       Foreground="{DynamicResource FP.Text.Secondary}"
+                       FontSize="{DynamicResource FP.Font.Small}"
                        HorizontalAlignment="Center" />
             <!-- Die Regler stehen enger beieinander als Rad und Beschriftung darüber - wie in den
                  übrigen Anpassungs-Panels. -->

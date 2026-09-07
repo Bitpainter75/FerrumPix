@@ -1153,7 +1153,7 @@ Namespace Views
         ''' Ausgenommen ist der Zoom-Regler: er ist reine Ansicht.</summary>
         Private Function IsUndoGestureSource(source As Object) As Boolean
             If TypeOf source Is CurveEditor OrElse TypeOf source Is ColorWheel OrElse
-               TypeOf source Is ColorGradeWheel OrElse TypeOf source Is HslWheelPicker Then Return True
+               TypeOf source Is ColorGradeWheel Then Return True
             Dim slider = TryCast(source, RoundSlider)
             If slider Is Nothing Then Return False
             Return Not String.Equals(slider.Name, "EditorZoomSlider", StringComparison.Ordinal)

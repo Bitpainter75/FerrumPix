@@ -7195,6 +7195,7 @@ Namespace ViewModels
             Set(value As String)
                 Dim normalized = If(String.IsNullOrWhiteSpace(value), "Red", value)
                 Me.RaiseAndSetIfChanged(_selectedHslBand, normalized)
+                RefreshHslBandChips()
                 Me.RaisePropertyChanged(NameOf(SelectedHslBandLabel))
                 Me.RaisePropertyChanged(NameOf(ActiveHslHue))
                 Me.RaisePropertyChanged(NameOf(ActiveHslSaturation))
@@ -7232,20 +7233,131 @@ Namespace ViewModels
             Return Math.Abs(farbton) > 0.001 OrElse Math.Abs(saettigung) > 0.001 OrElse Math.Abs(luminanz) > 0.001
         End Function
 
+        ''' <summary>Reihenfolge, Anzeigename und Farbwinkel der acht Baender - die EINZIGE Stelle,
+        ''' an der das steht. Die Winkel sind die ECHTEN Farbwinkel und nicht acht gleiche
+        ''' Abstaende: nur so traegt der Kreis in der Auswahlzeile die Farbe, die das Band auch
+        ''' bearbeitet.
+        '''
+        ''' Der Name ist der DEUTSCHE Quelltext; uebersetzt wird beim Anzeigen (TranslateConverter
+        ''' in der Oberflaeche, LocalizationService.T hier) - sonst steht die Zeile nach einem
+        ''' Sprachwechsel in der alten Sprache da.</summary>
+        Friend Shared ReadOnly HslBands As (Key As String, Label As String, Hue As Double)() = {
+            ("Red", "Rot", 0.0),
+            ("Orange", "Orange", 30.0),
+            ("Yellow", "Gelb", 60.0),
+            ("Green", "Grün", 120.0),
+            ("Aqua", "Aqua", 180.0),
+            ("Blue", "Blau", 240.0),
+            ("Purple", "Lila", 275.0),
+            ("Magenta", "Magenta", 315.0)}
+
         Public ReadOnly Property SelectedHslBandLabel As String
             Get
-                Select Case _selectedHslBand
-                    Case "Orange" : Return LocalizationService.T("Orange")
-                    Case "Yellow" : Return LocalizationService.T("Gelb")
-                    Case "Green" : Return LocalizationService.T("Grün")
-                    Case "Aqua" : Return LocalizationService.T("Aqua")
-                    Case "Blue" : Return LocalizationService.T("Blau")
-                    Case "Purple" : Return LocalizationService.T("Lila")
-                    Case "Magenta" : Return LocalizationService.T("Magenta")
-                    Case Else : Return LocalizationService.T("Rot")
-                End Select
+                For Each band In HslBands
+                    If String.Equals(band.Key, _selectedHslBand, StringComparison.Ordinal) Then
+                        Return LocalizationService.T(band.Label)
+                    End If
+                Next
+                Return LocalizationService.T(HslBands(0).Label)
             End Get
         End Property
+
+        ''' <summary>Ein Farbband als kleiner Kreis, dieselbe Bauform wie die Etiketten der Galerie.
+        '''
+        ''' Die Zeile aus acht Kreisen ersetzt das frueher hier stehende Farbrad. Das Rad brauchte
+        ''' 150 Bildpunkte Hoehe samt Beschriftung fuer dieselbe Aussage, und im Werkzeugbereich ist
+        ''' Hoehe das knappe Gut - darunter stehen noch drei Regler und die naechste Gruppe.</summary>
+        Public NotInheritable Class HslBandChip
+            Inherits ViewModelBase
+
+            Public Property Key As String = ""
+            ''' Deutscher Quelltext, siehe HslBands.
+            Public Property Label As String = ""
+            Public Property Fill As Avalonia.Media.IBrush
+
+            Private _isSelected As Boolean
+            Public Property IsSelected As Boolean
+                Get
+                    Return _isSelected
+                End Get
+                Set(value As Boolean)
+                    Me.RaiseAndSetIfChanged(_isSelected, value)
+                End Set
+            End Property
+
+            ''' <summary>Weicht dieses Band vom Standard ab? Die Regler zeigen immer nur EIN Band;
+            ''' ohne diese Marke sieht man nicht, wo sonst noch etwas eingestellt ist - bei einem
+            ''' importierten Preset ist das der Normalfall.</summary>
+            Private _isAdjusted As Boolean
+            Public Property IsAdjusted As Boolean
+                Get
+                    Return _isAdjusted
+                End Get
+                Set(value As Boolean)
+                    Me.RaiseAndSetIfChanged(_isAdjusted, value)
+                End Set
+            End Property
+        End Class
+
+        Private _hslBandChips As ObservableCollection(Of HslBandChip)
+
+        ''' <summary>Die acht Kreise fuer die Auswahlzeile des Farbmischers. Einmal aufgebaut; was
+        ''' sich aendert, sind nur die beiden Marken je Kreis.</summary>
+        Public ReadOnly Property HslBandChips As ObservableCollection(Of HslBandChip)
+            Get
+                If _hslBandChips Is Nothing Then
+                    _hslBandChips = New ObservableCollection(Of HslBandChip)()
+                    For Each band In HslBands
+                        ' Sattheit und Helligkeit wie im vorherigen Farbrad, damit die Kreise
+                        ' dieselben Farben tragen wie zuvor die Radsegmente.
+                        Dim color = New Avalonia.Media.HsvColor(1.0, band.Hue, 0.78, 0.85).ToRgb()
+                        _hslBandChips.Add(New HslBandChip With {
+                            .Key = band.Key,
+                            .Label = band.Label,
+                            .Fill = New Avalonia.Media.SolidColorBrush(color)})
+                    Next
+                    RefreshHslBandChips()
+                End If
+                Return _hslBandChips
+            End Get
+        End Property
+
+        ''' <summary>Der uebersetzte Name eines Bandes.</summary>
+        Private Shared Function HslBandLabel(key As String) As String
+            For Each band In HslBands
+                If String.Equals(band.Key, key, StringComparison.Ordinal) Then Return LocalizationService.T(band.Label)
+            Next
+            Return ""
+        End Function
+
+        ''' <summary>Die drei Werte EINES Bandes auf den Standard. Geschrieben wird ueber die
+        ''' Eigenschaften und nicht auf die Felder: nur so laufen Historie, Aenderungsmerker und die
+        ''' Marken der Kreise mit.</summary>
+        Private Sub ResetHslBandValues(key As String)
+            Select Case key
+                Case "Orange" : OrangeHue = 0 : OrangeSaturation = 0 : OrangeLuminance = 0
+                Case "Yellow" : YellowHue = 0 : YellowSaturation = 0 : YellowLuminance = 0
+                Case "Green" : GreenHue = 0 : GreenSaturation = 0 : GreenLuminance = 0
+                Case "Aqua" : AquaHue = 0 : AquaSaturation = 0 : AquaLuminance = 0
+                Case "Blue" : BlueHue = 0 : BlueSaturation = 0 : BlueLuminance = 0
+                Case "Purple" : PurpleHue = 0 : PurpleSaturation = 0 : PurpleLuminance = 0
+                Case "Magenta" : MagentaHue = 0 : MagentaSaturation = 0 : MagentaLuminance = 0
+                Case Else : RedHue = 0 : RedSaturation = 0 : RedLuminance = 0
+            End Select
+        End Sub
+
+        ''' <summary>Auswahl und Abweichungsmarken der Kreise nachziehen. Aufgerufen bei jedem
+        ''' Bandwechsel und bei jeder Aenderung eines Bandwertes.</summary>
+        Private Sub RefreshHslBandChips()
+            If _hslBandChips Is Nothing Then Return
+            Dim adjusted = AdjustedHslBands
+            For Each chip In _hslBandChips
+                chip.IsSelected = String.Equals(chip.Key, _selectedHslBand, StringComparison.Ordinal)
+                ' Die Liste ist kommagetrennt; verglichen wird der ganze Eintrag, damit "Red" nicht
+                ' in einem anderen Namen als Teilzeichenkette trifft.
+                chip.IsAdjusted = adjusted.Split(","c).Any(Function(k) String.Equals(k, chip.Key, StringComparison.Ordinal))
+            Next
+        End Sub
 
         Public Property ActiveHslHue As Double
             Get
@@ -13595,6 +13707,12 @@ Namespace ViewModels
         Public ReadOnly Property ResetCurveCommand As ICommand
         Public ReadOnly Property SetCurveChannelCommand As ICommand
         Public ReadOnly Property ResetHslCommand As ICommand
+        ''' <summary>Ein Farbband ueber seinen Kreis waehlen - der Ersatz fuer den Klick ins
+        ''' Farbrad.</summary>
+        Public ReadOnly Property SelectHslBandCommand As ICommand
+        ''' <summary>EIN Farbband auf den Standard zuruecksetzen (mittlere Maustaste auf seinem
+        ''' Kreis).</summary>
+        Public ReadOnly Property ResetHslBandCommand As ICommand
         Public ReadOnly Property ResetCalibrationCommand As ICommand
         Public ReadOnly Property ResetColorGradingCommand As ICommand
         Public ReadOnly Property PickNegativeBaseCommand As ICommand
@@ -14112,6 +14230,15 @@ Namespace ViewModels
                                                          PushUndo(ResetHistoryLabel("Farbmischer"))
                                                          ResetHslInternal()
                                                      End Sub)
+            SelectHslBandCommand = ReactiveCommand.Create(Of String)(Sub(key) SelectedHslBand = key)
+            ResetHslBandCommand = ReactiveCommand.Create(Of String)(
+                Sub(key)
+                    If String.IsNullOrWhiteSpace(key) Then Return
+                    ' Der Bandname steht im Schritt: "Zurücksetzen: Farbmischer" waere bei acht
+                    ' Baendern nicht auseinanderzuhalten.
+                    PushUndo(ResetHistoryLabel(LocalizationService.T("Farbmischer") & " " & HslBandLabel(key)))
+                    ResetHslBandValues(key)
+                End Sub)
             ResetColorGradingCommand = ReactiveCommand.Create(Sub()
                                                                   PushUndo(ResetHistoryLabel("Farbgradierung"))
                                                                   ResetColorGradingInternal()
@@ -18586,9 +18713,10 @@ Namespace ViewModels
         End Function
 
         ''' Wie SetUndoableDouble, aber zusätzlich für die 16 HSL-Bandregler (RedHue...MagentaSaturation):
-        ''' der Farbrad-Bandmischer (HslWheelPicker + ActiveHslHue/ActiveHslSaturation/ActiveHslLuminance)
-        ''' zeigt/bearbeitet immer nur das GERADE per Rad ausgewählte Band, muss also bei JEDER Bandänderung
-        ''' benachrichtigt werden, egal ob die Änderung von diesen Reglern selbst oder direkt (Undo/Reset) kommt.
+        ''' die drei gemeinsamen Regler (ActiveHslHue/ActiveHslSaturation/ActiveHslLuminance) zeigen und
+        ''' bearbeiten immer nur das GERADE in der Farbzeile gewählte Band, müssen also bei JEDER
+        ''' Bandänderung benachrichtigt werden, egal ob die Änderung von diesen Reglern selbst oder
+        ''' direkt (Undo/Reset) kommt. Dasselbe gilt für die Abweichungsmarken der acht Kreise.
         Private Function SetUndoableHslDouble(ByRef field As Double, value As Double, propertyName As String) As Boolean
             Dim changed = SetUndoableDouble(field, value, propertyName)
             If changed Then
@@ -18596,6 +18724,7 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(ActiveHslSaturation))
                 Me.RaisePropertyChanged(NameOf(ActiveHslLuminance))
                 Me.RaisePropertyChanged(NameOf(AdjustedHslBands))
+                RefreshHslBandChips()
             End If
             Return changed
         End Function
