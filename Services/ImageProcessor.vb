@@ -256,7 +256,17 @@ Namespace Services
                     End If
                 Next
             End If
+            Dim upscaleCount = 0
+            If adj.BakedOperations IsNot Nothing Then
+                For Each op In adj.BakedOperations
+                    If op IsNot Nothing AndAlso
+                       String.Equals(op.Kind, BakedOperation.KindUpscale, StringComparison.OrdinalIgnoreCase) Then
+                        upscaleCount += 1
+                    End If
+                Next
+            End If
             If denoiseCount > 0 Then parts.Add(LocalizationService.T("Entrauschen"))
+            If upscaleCount > 0 Then parts.Add(LocalizationService.T("Hochskalieren"))
             If removalCount = 1 Then
                 parts.Add(LocalizationService.T("Objekt entfernen"))
             ElseIf removalCount > 1 Then
@@ -311,6 +321,14 @@ Namespace Services
                             current = ReplaceBitmapOwned(current, RunBakedDenoise(current, op, cancel), owned)
                         ElseIf String.Equals(op.Kind, BakedOperation.KindObjectRemoval, StringComparison.OrdinalIgnoreCase) Then
                             current = ReplaceBitmapOwned(current, RunBakedObjectRemoval(current, op, cancel), owned)
+                        ElseIf String.Equals(op.Kind, BakedOperation.KindUpscale, StringComparison.OrdinalIgnoreCase) Then
+                            ' Der EINZIGE Vorgang hier, der die BILDMASSE aendert. Das geht, weil
+                            ' diese Stufe das ganze Bitmap tauscht und VOR der Reglerkette liegt:
+                            ' ein Beschnitt steht als Prozentwert im Rezept, eine Maske
+                            ' aufloesungsunabhaengig, und eine Groessenaenderung dahinter rechnet
+                            ' auf ihr eigenes Zielmass. Faellt er aus, bleibt das Bild in seiner
+                            ' Groesse - siehe RunBakedUpscale.
+                            current = ReplaceBitmapOwned(current, RunBakedUpscale(current, op, cancel), owned)
                         End If
                     Next
                 End If
@@ -367,6 +385,49 @@ Namespace Services
         ''' Vorgang liegen, statt mit einem ANDEREN Modell nachgezogen zu werden. Ein Bild, das
         ''' anders aussieht als beim letzten Mal, ist schlechter als eines, dem etwas fehlt und das
         ''' es sagt.</summary>
+        ''' <summary>Ein vermerktes Hochskalieren nachziehen. Nothing, wenn es nicht geht - dann
+        ''' behaelt der Aufrufer sein Bild in der bisherigen Groesse.
+        '''
+        ''' KEIN RUECKFALL AUF EIN ANDERES MODELL: der Massstab haengt am Modell, und ein anderes
+        ''' liefe auf eine andere Bildgroesse hinaus als in der Sitzung, in der der Vermerk entstand.
+        ''' Ein Rezept, das mal die vierfache und mal die zweifache Groesse ergibt, waere schlimmer
+        ''' als eines, das die Vergroesserung liegen laesst.</summary>
+        Private Shared Function RunBakedUpscale(source As SKBitmap, op As BakedOperation,
+                                                cancel As Threading.CancellationToken) As SKBitmap
+            If source Is Nothing Then Return Nothing
+            If String.IsNullOrWhiteSpace(op.UpscaleModel) Then Return Nothing
+            ' GENAU dieses Modell muss da sein. UpscaleModelService.Upscale nimmt sonst das
+            ' erstbeste - fuer einen Vermerk waere das falsch, denn der Massstab haengt am Modell.
+            If String.IsNullOrEmpty(AiModelService.BestFile(op.UpscaleModel)) Then
+                DiagnosticLogService.LogAlways("Hochskalieren",
+                    $"Vermerk nennt das Modell '{op.UpscaleModel}', das hier fehlt - die Vergroesserung wird nicht nachgezogen")
+                Return Nothing
+            End If
+            ' Das Modell nimmt nur Bgra8888 - wie beim Entrauschen wird ein anders belegtes Bild
+            ' einmal umgelegt, statt den Vorgang wortlos ausfallen zu lassen.
+            Dim converted As SKBitmap = Nothing
+            Try
+                Dim input = source
+                If source.ColorType <> SKColorType.Bgra8888 Then
+                    converted = New SKBitmap(New SKImageInfo(source.Width, source.Height,
+                                                             SKColorType.Bgra8888, source.AlphaType))
+                    Using canvas = New SKCanvas(converted)
+                        canvas.Clear(SKColors.Transparent)
+                        Using paint = New SKPaint With {.BlendMode = SKBlendMode.Src}
+                            canvas.DrawBitmap(source, 0, 0, paint)
+                        End Using
+                    End Using
+                    input = converted
+                End If
+                Return UpscaleModelService.Upscale(input, op.UpscaleModel, cancel)
+            Catch ex As Exception
+                DiagnosticLogService.LogException("ImageProcessor.RunBakedUpscale", ex)
+                Return Nothing
+            Finally
+                converted?.Dispose()
+            End Try
+        End Function
+
         Private Shared Function RunBakedDenoise(source As SKBitmap, op As BakedOperation,
                                                 cancel As Threading.CancellationToken) As SKBitmap
             Dim known = DenoiseModelService.KindFromRecipeName(op.DenoiseModel)
@@ -4117,7 +4178,11 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             Return normalized = "brush" OrElse normalized = "eraser"
         End Function
 
-        Private Shared Function ScaleAnnotationForSource(annotation As ImageAnnotation, scaleX As Single, scaleY As Single) As ImageAnnotation
+        ''' <summary>Ein Objekt von einem Quellraum in einen anderen bringen. Friend, weil das
+        ''' Hochskalieren im Editor denselben Weg braucht: es aendert die Masse der QUELLE, und
+        ''' Objekte leben in deren Pixelraum. Zwei Fassungen davon waeren zwei Gelegenheiten, ein
+        ''' Feld zu vergessen - und ein vergessenes Feld sieht man erst am fertigen Bild.</summary>
+        Friend Shared Function ScaleAnnotationForSource(annotation As ImageAnnotation, scaleX As Single, scaleY As Single) As ImageAnnotation
             If annotation Is Nothing Then Return Nothing
             If Math.Abs(scaleX - 1.0F) < 0.0001F AndAlso Math.Abs(scaleY - 1.0F) < 0.0001F Then Return annotation
 

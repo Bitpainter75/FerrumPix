@@ -16,13 +16,28 @@
   you press Apply. Leaving the tool with either of them still open now asks whether to apply it
   first, instead of quietly putting the picture back the way it was.
 
-### What's new
-
 - **The colour mixer takes up much less room.** The colour wheel has given way to a row of eight
   small colour dots, the same shape as the colour labels in the gallery. Click one to work on that
   colour range; the dot you picked wears a ring, and any range that carries a setting wears a dot in
   its middle, so you can see at a glance where something is set. A middle click on a dot puts that
   colour range back to zero.
+
+- **Upscaling with a model is in the editor now.** The image size tool has its own Upscale section:
+  pick a model, see what size it will produce, and press the button. The model brings its own scale,
+  so afterwards the ordinary width and height fields work on the new size and can take you down to a
+  target size from there. It is computed into the pixels like a retouch, so it can be undone, and
+  raw files keep a note of it so the work is not lost when the file is opened again.
+
+- **The info panel follows the picture you are editing.** Its dimensions row used to keep showing
+  the size stored in the file, even after cropping, resizing or changing the canvas, while the
+  megapixels next to it already followed the edit. It now shows the size of the picture in front of
+  you, and it keeps up when you undo.
+
+- **Each adjustment tool remembers its own diagram.** With the histogram, waveform or RGB parade
+  shown above the sliders, the choice now belongs to the tool: pick the histogram while working on
+  light and the parade while working on colour, and switching between the two tools brings the right
+  one along. A tool without a diagram leaves your choice alone, and a tool you have never switched in
+  simply shows the last one you picked.
 
 - **The colour grading wheels are bigger.** They were small enough that hitting a particular hue
   took care; the space the colour mixer gave up went to them.

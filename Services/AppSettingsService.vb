@@ -81,6 +81,16 @@ Namespace Services
         Public Property Modell As String = ""
     End Class
 
+    ''' <summary>Welche Darstellung des Analysebildes zu EINEM Anpassungswerkzeug gehoert. Eine
+    ''' Liste und keine Eigenschaft je Werkzeug: kommt ein Werkzeug dazu, ist hier nichts zu tun,
+    ''' und ein Werkzeug, das es nicht mehr gibt, faellt beim Lesen einfach weg.</summary>
+    Public Class ScopePanelToolMode
+        ''' Der Name des Werkzeugs (EditorTool), unuebersetzt.
+        Public Property Tool As String = ""
+        ''' "Histogram", "Waveform" oder "Parade".
+        Public Property Mode As String = ""
+    End Class
+
     ''' <summary>Ein Skalierungsfaktor fuer EINEN Bildschirm. Der Name ist der Anzeigename, unter
     ''' dem der Bildschirm auch in der Liste der Einstellungen steht - Avalonia vergleicht genau
     ''' diesen, wenn es die Faktoren aus der Umgebung liest.</summary>
@@ -158,6 +168,13 @@ Namespace Services
         ''' <summary>Die Darstellung im Anpassungspanel - EIGENE Wahl neben ScopeMode. Wer das Bild
         ''' an zwei Orten sieht, will dort meist zwei verschiedene Fragen beantwortet haben.</summary>
         Public Property ScopePanelMode As String = "Parade"
+
+        ''' <summary>Die Darstellung JE ANPASSUNGSWERKZEUG. Wer die Regler fuer Licht zieht, will
+        ''' meist die Verteilung sehen, wer an der Farbe arbeitet die Kanaltrennung - und beim
+        ''' Wechsel des Werkzeugs soll das Bild mitwechseln, statt von Hand umgestellt zu werden.
+        ''' Was hier nicht steht, faellt auf <see cref="ScopePanelMode"/> zurueck; die Liste
+        ''' entsteht also erst, wenn jemand in einem Werkzeug wirklich umschaltet.</summary>
+        Public Property ScopePanelToolModes As New List(Of ScopePanelToolMode)()
 
         ' ── Welche Zeilen der Reiter "Allgemein" im Infopanel zeigt ──────────────
         '
@@ -786,6 +803,7 @@ Namespace Services
                 settings.GalleryViewMode = NormalizeGalleryViewMode(settings.GalleryViewMode)
                 settings.ScopeMode = NormalizeScopeMode(settings.ScopeMode)
                 settings.ScopePanelMode = NormalizeScopeMode(settings.ScopePanelMode)
+                settings.ScopePanelToolModes = NormalizeScopePanelToolModes(settings.ScopePanelToolModes)
                 settings.GallerySortMode = NormalizeGallerySortMode(settings.GallerySortMode)
                 settings.GalleryGroupDateStep = NormalizeGalleryGroupDateStep(settings.GalleryGroupDateStep)
                 settings.GalleryTimelineMode = NormalizeGalleryTimelineMode(settings.GalleryTimelineMode)
@@ -1023,6 +1041,7 @@ Namespace Services
                 settings.GalleryViewMode = NormalizeGalleryViewMode(settings.GalleryViewMode)
                 settings.ScopeMode = NormalizeScopeMode(settings.ScopeMode)
                 settings.ScopePanelMode = NormalizeScopeMode(settings.ScopePanelMode)
+                settings.ScopePanelToolModes = NormalizeScopePanelToolModes(settings.ScopePanelToolModes)
                 settings.GallerySortMode = NormalizeGallerySortMode(settings.GallerySortMode)
                 settings.GalleryGroupDateStep = NormalizeGalleryGroupDateStep(settings.GalleryGroupDateStep)
                 settings.GalleryTimelineMode = NormalizeGalleryTimelineMode(settings.GalleryTimelineMode)
@@ -1493,6 +1512,55 @@ Namespace Services
         Public Shared Sub SaveScopePanelMode(value As String)
             Update(Sub(s) s.ScopePanelMode = NormalizeScopeMode(value))
         End Sub
+
+        ''' <summary>Die Darstellung fuer EIN Anpassungswerkzeug festhalten. Der letzte gewaehlte
+        ''' Wert bleibt zusaetzlich in <see cref="AppSettings.ScopePanelMode"/> stehen: er ist die
+        ''' Vorgabe fuer jedes Werkzeug, in dem noch nie umgeschaltet wurde.</summary>
+        Public Shared Sub SaveScopePanelToolMode(tool As String, value As String)
+            If String.IsNullOrWhiteSpace(tool) Then Return
+            Dim normalized = NormalizeScopeMode(value)
+            Update(Sub(s)
+                       s.ScopePanelMode = normalized
+                       Dim list = If(s.ScopePanelToolModes, New List(Of ScopePanelToolMode)())
+                       Dim entry = list.FirstOrDefault(Function(e) e IsNot Nothing AndAlso
+                           String.Equals(e.Tool, tool, StringComparison.OrdinalIgnoreCase))
+                       If entry Is Nothing Then
+                           list.Add(New ScopePanelToolMode With {.Tool = tool, .Mode = normalized})
+                       Else
+                           entry.Mode = normalized
+                       End If
+                       s.ScopePanelToolModes = list
+                   End Sub)
+        End Sub
+
+        ''' <summary>Die gemerkte Darstellung eines Werkzeugs, sonst die allgemeine Vorgabe.</summary>
+        Public Shared Function ScopePanelModeForTool(tool As String) As String
+            Dim settings = Load()
+            If Not String.IsNullOrWhiteSpace(tool) AndAlso settings.ScopePanelToolModes IsNot Nothing Then
+                For Each entry In settings.ScopePanelToolModes
+                    If entry IsNot Nothing AndAlso String.Equals(entry.Tool, tool, StringComparison.OrdinalIgnoreCase) Then
+                        Return NormalizeScopeMode(entry.Mode)
+                    End If
+                Next
+            End If
+            Return NormalizeScopeMode(settings.ScopePanelMode)
+        End Function
+
+        ''' <summary>Raeumt die gemerkten Darstellungen: leere Namen weg, jeden Wert normalisiert,
+        ''' und je Werkzeug nur EINEN Eintrag - eine von Hand bearbeitete Datei darf die Liste nicht
+        ''' zweideutig machen.</summary>
+        Private Shared Function NormalizeScopePanelToolModes(
+                list As List(Of ScopePanelToolMode)) As List(Of ScopePanelToolMode)
+            Dim result = New List(Of ScopePanelToolMode)()
+            If list Is Nothing Then Return result
+            For Each entry In list
+                If entry Is Nothing OrElse String.IsNullOrWhiteSpace(entry.Tool) Then Continue For
+                Dim tool = entry.Tool.Trim()
+                If result.Any(Function(e) String.Equals(e.Tool, tool, StringComparison.OrdinalIgnoreCase)) Then Continue For
+                result.Add(New ScopePanelToolMode With {.Tool = tool, .Mode = NormalizeScopeMode(entry.Mode)})
+            Next
+            Return result
+        End Function
 
         ''' <summary>Die beiden Orte des Analysebildes. Zusammen gespeichert, weil sie zusammen
         ''' gewaehlt werden - zwei Schreibvorgaenge fuer eine Entscheidung waeren zwei Gelegenheiten,

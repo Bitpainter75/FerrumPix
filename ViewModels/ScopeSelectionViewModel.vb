@@ -35,6 +35,18 @@ Namespace ViewModels
         Private Shared _panelMode As String =
             AppSettingsService.NormalizeScopeMode(AppSettingsService.Load().ScopePanelMode)
 
+        ''' <summary>Zu WELCHEM Anpassungswerkzeug die Wahl des Panels gerade gehoert.
+        '''
+        ''' Das Panel steht bei fuenf Werkzeugen (Licht, Farbe, Details, Effekte, Filter), und die
+        ''' Frage ist bei jedem eine andere: an den Lichtreglern will man die Verteilung sehen, an
+        ''' den Farbreglern die Kanaltrennung. Gemerkt wird deshalb JE WERKZEUG, und beim Wechsel
+        ''' kommt das Bild mit, statt von Hand umgestellt zu werden.
+        '''
+        ''' Der Name steht hier und nicht am Konstruktor: es gibt genau eine Instanz fuer das Panel,
+        ''' und welches Werkzeug gerade offen ist, weiss der Editor. Er meldet es ueber
+        ''' <see cref="SetPanelTool"/>.</summary>
+        Private Shared _panelTool As String = ""
+
         ''' <summary>Welcher der beiden Orte. Der Kanal steht am Konstruktor und aendert sich
         ''' nicht - eine Instanz gehoert zu einem Kasten auf dem Schirm.</summary>
         Public Enum ScopeChannel
@@ -99,7 +111,14 @@ Namespace ViewModels
                 If String.Equals(Mode, normalized, StringComparison.Ordinal) Then Return
                 If _channel = ScopeChannel.AdjustmentPanel Then
                     _panelMode = normalized
-                    AppSettingsService.SaveScopePanelMode(normalized)
+                    ' Beim Werkzeug gemerkt UND als allgemeine Vorgabe geschrieben: die Vorgabe gilt
+                    ' fuer jedes Werkzeug, in dem noch nie umgeschaltet wurde. Ohne offenes
+                    ' Anpassungswerkzeug bleibt es bei der Vorgabe allein.
+                    If _panelTool.Length > 0 Then
+                        AppSettingsService.SaveScopePanelToolMode(_panelTool, normalized)
+                    Else
+                        AppSettingsService.SaveScopePanelMode(normalized)
+                    End If
                 Else
                     _sharedMode = normalized
                     AppSettingsService.SaveScopeMode(normalized)
@@ -122,6 +141,28 @@ Namespace ViewModels
                 Return _panelMode
             End Get
         End Property
+
+        ''' <summary>Das Anpassungswerkzeug wechseln: die dort gemerkte Darstellung wird gueltig.
+        '''
+        ''' Rueckgabe WAHR, wenn sich dadurch etwas geaendert hat - dann muss der Aufrufer sein
+        ''' Analysebild verwerfen. Die Meldung laeuft ueber denselben Weg wie ein Klick auf die
+        ''' Knoepfe, damit deren Markierung mitkommt und nicht zwei Wege dasselbe tun.
+        '''
+        ''' Ein leerer Name ist zulaessig und heisst "kein Anpassungswerkzeug offen": dann bleibt
+        ''' die letzte Wahl stehen, statt auf eine Vorgabe zurueckzufallen.</summary>
+        Public Shared Function SetPanelTool(tool As String) As Boolean
+            Dim normalizedTool = If(tool, "").Trim()
+            If String.Equals(_panelTool, normalizedTool, StringComparison.Ordinal) Then Return False
+            _panelTool = normalizedTool
+            If normalizedTool.Length = 0 Then Return False
+
+            Dim wanted = AppSettingsService.ScopePanelModeForTool(normalizedTool)
+            If String.Equals(_panelMode, wanted, StringComparison.Ordinal) Then Return False
+            _panelMode = wanted
+            Threading.Interlocked.Increment(_panelGeneration)
+            RaiseEvent SharedModeChanged(ScopeChannel.AdjustmentPanel)
+            Return True
+        End Function
 
         ''' <summary>Die Wahl der Infoleiste, fuer die Rechenwege.</summary>
         Public Shared ReadOnly Property SidebarMode As String

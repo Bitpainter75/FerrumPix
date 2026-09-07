@@ -1257,6 +1257,19 @@ Namespace ViewModels
             ''' <summary>Das Symbol des Schritts, dasselbe wie in der Werkzeugleiste. Es wandert mit
             ''' der Beschriftung.</summary>
             Public IconSource As String
+
+            ''' <summary>Das VOLLE Arbeitsbild dieses Standes - nur bei einem Schritt, der die
+            ''' BILDMASSE aendert (Hochskalieren mit Modell).
+            '''
+            ''' Ein Pixel-Patch kann das nicht: er tauscht eine Region innerhalb eines Bitmaps
+            ''' gleicher Groesse. Deshalb hier eine ganze Kopie, und zwar bewusst - die Alternative
+            ''' waere, das Arbeitsbild beim Zurueckgehen aus der Datei neu zu entwickeln, und dann
+            ''' waeren auch alle anderen eingebackenen Vorgaenge (Retusche, Striche, Entrauschen)
+            ''' weg. Die Kopie kostet einmal die Groesse des Bildes VOR der Vergroesserung; das ist
+            ''' ein Viertel dessen, was der Durchlauf selbst ohnehin belegt.
+            '''
+            ''' Der Eintrag besitzt das Bitmap und gibt es frei, wenn er vom Stapel faellt.</summary>
+            Public WorkingFull As SKBitmap
         End Class
 
         Private ReadOnly _undoStack As New Stack(Of UndoEntry)()
@@ -4619,6 +4632,10 @@ Namespace ViewModels
                     ' dem Bild und wuerde sonst in einem anderen Werkzeug stehen bleiben, wo ihre
                     ' Regler gar nicht mehr zu sehen sind.
                     DisposeBokehPreview()
+                    ' Das Analysebild gehoert ebenfalls zum Werkzeug: die dort gemerkte Darstellung
+                    ' wird gueltig. Gemeldet wird sie ueber denselben Weg wie ein Klick auf die drei
+                    ' Knoepfe, das Bild wird also von PanelScope selbst verworfen und neu gerechnet.
+                    ScopeSelectionViewModel.SetPanelTool(ScopePanelToolKey)
                     ' Dasselbe fuer das Verzerren: die Live-Vorschau, das Gitternetz und der
                     ' Perspektivrahmen gehoeren zu einem Werkzeug, das man gerade verlaesst.
                     WarpMode = ""
@@ -4958,6 +4975,23 @@ Namespace ViewModels
         ''' denen es etwas zu sagen hat: Anpassen, Farbe, Details, Effekte, Filter. Beim Zuschneiden
         ''' oder Retuschieren waere es ein Kasten, der Platz kostet und keine Frage beantwortet.
         ''' Videos haben keines (siehe InfoPanelViewModel.HasScope).</summary>
+        ''' <summary>Unter welchem Namen die Darstellung des Analysebildes gemerkt wird - LEER,
+        ''' wenn das Panel bei diesem Werkzeug gar nicht steht.
+        '''
+        ''' Leer heisst bewusst "nicht umschalten": wer von den Farbreglern zum Zuschneiden geht und
+        ''' zurueck, soll dort wieder seine Kanaltrennung finden und nicht die Vorgabe.</summary>
+        Private ReadOnly Property ScopePanelToolKey As String
+            Get
+                Select Case _currentTool
+                    Case EditorTool.Adjust, EditorTool.Color, EditorTool.Details,
+                         EditorTool.Effects, EditorTool.Filters
+                        Return _currentTool.ToString()
+                    Case Else
+                        Return ""
+                End Select
+            End Get
+        End Property
+
         Public ReadOnly Property IsScopeInAdjustmentPanelsVisible As Boolean
             Get
                 If Not ScopeSelectionViewModel.ShowInAdjustmentPanels Then Return False
@@ -8884,6 +8918,264 @@ Namespace ViewModels
             End Get
         End Property
 
+        ' ── Hochskalieren mit Modell ────────────────────────────────────────────
+        '
+        ' EIGENER ABSCHNITT im Werkzeug "Bildgroesse", nicht als Verfahren in der Liste
+        ' "Neuberechnung": das Modell bringt seinen MASSSTAB mit (zwei- oder vierfach), es gibt dort
+        ' also keine freie Zielgroesse. Wer eine bestimmte Groesse will, geht danach mit den
+        ' gewohnten Feldern von der neuen herunter - und das ist die richtige Reihenfolge, denn vom
+        ' Grossen herunter ist ein Mitteln und verliert nichts.
+        '
+        ' Und es ist ein Zug IN DIE PIXEL, wie Entrauschen oder Objektentfernen, kein Rezeptwert:
+        ' der Durchlauf kostet Sekunden bis Minuten und kann nicht bei jeder Reglerbewegung neu
+        ' laufen. Der Vermerk im Rezept (BakedOperation.KindUpscale) ist der einzige Grund, warum er
+        ' ein RAW ueberlebt.
+
+        Private _upscaleModelKey As String = ""
+
+        ''' <summary>Steht ueberhaupt ein Modell bereit? Ohne eines bleibt der ganze Abschnitt weg -
+        ''' eine Auswahl ohne Antwortmoeglichkeit waere eine Frage ohne Sinn.</summary>
+        Public ReadOnly Property IsUpscaleWithModelAvailable As Boolean
+            Get
+                Return UpscaleModelService.Available
+            End Get
+        End Property
+
+        ''' <summary>Die Beschriftungen der vorhandenen Modelle, in der Reihenfolge des Registers -
+        ''' mit einem LEEREN Eintrag davor.
+        '''
+        ''' Der leere Eintrag ist die Vorbelegung, und das mit Absicht: ein Knopf, der ohne Wahl
+        ''' schon bereitsteht, laedt zu einem Durchlauf von Minuten ein, den niemand bestellt hat.
+        ''' Und welches Modell das richtige ist, haengt am Motiv und daran, ob eine Grafikkarte
+        ''' mitrechnet - das kann keine Vorbelegung wissen.</summary>
+        Public ReadOnly Property UpscaleModelOptions As List(Of String)
+            Get
+                Dim options = New List(Of String) From {""}
+                options.AddRange(UpscaleModelService.AvailableModels.Select(Function(m) m.Label))
+                Return options
+            End Get
+        End Property
+
+        ''' <summary>Das gewaehlte Modell, als Beschriftung - die Auswahlliste bindet daran.
+        ''' Gespeichert wird der SCHLUESSEL: die Beschriftung wird uebersetzt, der Schluessel steht
+        ''' im Vermerk.</summary>
+        Public Property UpscaleModelLabel As String
+            Get
+                Dim model = CurrentUpscaleModel()
+                Return If(model Is Nothing, "", model.Label)
+            End Get
+            Set(value As String)
+                ' Der leere Eintrag ist eine gueltige Wahl: er nimmt die Auswahl zurueck, und der
+                ' Knopf wird wieder grau.
+                Dim match = UpscaleModelService.AvailableModels.FirstOrDefault(
+                    Function(m) String.Equals(m.Label, value, StringComparison.Ordinal))
+                Dim key = If(match Is Nothing, "", match.Key)
+                If match Is Nothing AndAlso Not String.IsNullOrEmpty(value) Then Return
+                If String.Equals(_upscaleModelKey, key, StringComparison.Ordinal) Then Return
+                _upscaleModelKey = key
+                Me.RaisePropertyChanged(NameOf(UpscaleModelLabel))
+                Me.RaisePropertyChanged(NameOf(UpscaleModelHint))
+                Me.RaisePropertyChanged(NameOf(UpscaleTargetText))
+                Me.RaisePropertyChanged(NameOf(CanUpscaleWithModel))
+                Me.RaisePropertyChanged(NameOf(UpscaleWithModelHint))
+            End Set
+        End Property
+
+        ''' <summary>Das gewaehlte Modell, oder Nothing, solange keines gewaehlt ist. KEIN Rueckfall
+        ''' auf das erste vorhandene: ohne Wahl soll nichts laufen, und ein stiller Rueckfall waere
+        ''' genau das Gegenteil - der Knopf saehe bereit aus und rechnete mit einem Modell, das
+        ''' niemand ausgesucht hat.
+        '''
+        ''' Geprueft wird gegen die VORHANDENEN Modelle, nicht gegen das Feld allein: die Liste
+        ''' haengt daran, welche Dateien vorliegen, und die kann sich in der Sitzung aendern (der
+        ''' Einstellungsdialog laedt sie nach).</summary>
+        Private Function CurrentUpscaleModel() As UpscaleModelService.UpscaleModel
+            If String.IsNullOrEmpty(_upscaleModelKey) Then Return Nothing
+            Return UpscaleModelService.AvailableModels.FirstOrDefault(
+                Function(m) String.Equals(m.Key, _upscaleModelKey, StringComparison.OrdinalIgnoreCase))
+        End Function
+
+        Public ReadOnly Property UpscaleModelHint As String
+            Get
+                Dim model = CurrentUpscaleModel()
+                Return If(model Is Nothing, "", LocalizationService.T(model.Hint))
+            End Get
+        End Property
+
+        ''' <summary>"Aus 6000 x 4000 wird 24000 x 16000" - die Groesse, die herauskommt, VOR dem
+        ''' Druck auf den Knopf. Ohne diese Zeile ist der Massstab des Modells eine Ueberraschung,
+        ''' und zwar eine, die Minuten dauert.</summary>
+        Public ReadOnly Property UpscaleTargetText As String
+            Get
+                Dim model = CurrentUpscaleModel()
+                If model Is Nothing OrElse _workingImage Is Nothing OrElse Not _workingImage.IsInitialized Then Return ""
+                Dim w = _workingImage.FullWidth, h = _workingImage.FullHeight
+                If w <= 0 OrElse h <= 0 Then Return ""
+                Return String.Format(LocalizationService.T("Aus {0} x {1} wird {2} x {3}"),
+                                     w, h, w * model.Scale, h * model.Scale)
+            End Get
+        End Property
+
+        Public ReadOnly Property CanUpscaleWithModel As Boolean
+            Get
+                Return CurrentUpscaleModel() IsNot Nothing AndAlso
+                       _workingImage IsNot Nothing AndAlso _workingImage.IsInitialized AndAlso
+                       IsInteractionAllowed
+            End Get
+        End Property
+
+        ''' <summary>Der Hinweis am Knopf - er muss den grauen Zustand ERKLAEREN. Ein Knopf, der
+        ''' grau ist und nicht sagt warum, ist eine Sackgasse: hier gibt es zwei Gruende, und beide
+        ''' haben eine andere Antwort (Modell holen oder Modell waehlen).</summary>
+        Public ReadOnly Property UpscaleWithModelHint As String
+            Get
+                If Not UpscaleModelService.Available Then Return MissingModelHint
+                If CurrentUpscaleModel() Is Nothing Then Return LocalizationService.T("Erst ein Modell wählen.")
+                Return LocalizationService.T("Rechnet das Bild mit dem Modell groesser. Wird in die Pixel gerechnet, wie eine Retusche.")
+            End Get
+        End Property
+
+        ''' <summary>Alle Objekte auf einen neuen Quellraum umrechnen. In derselben Reihenfolge und
+        ''' an derselben Stelle in der Liste - ein Objekt zu ersetzen statt zu aendern haelt die
+        ''' Ebenenordnung, an der die Auswahl im Ebenenpanel haengt.</summary>
+        Private Sub ScaleAnnotationsForNewSource(scaleX As Single, scaleY As Single)
+            If Math.Abs(scaleX - 1.0F) < 0.0001F AndAlso Math.Abs(scaleY - 1.0F) < 0.0001F Then Return
+            For i = 0 To _annotations.Count - 1
+                Dim annotation = _annotations(i)
+                If annotation Is Nothing Then Continue For
+                ' DIESELBE AUSNAHME wie im Renderer: ein VERANKERTES Wasserzeichen, das nicht
+                ' mitwachsen soll, traegt seine Masse im AUSGABEraum. Es mitzuskalieren hiesse,
+                ' genau die Zusage zu brechen, fuer die der Haken da ist.
+                If String.Equals(If(annotation.Kind, "").Trim(), "watermark", StringComparison.OrdinalIgnoreCase) AndAlso
+                   Not String.IsNullOrWhiteSpace(annotation.Anchor) AndAlso Not annotation.ScaleWithImage Then Continue For
+                Dim scaled = ImageProcessor.ScaleAnnotationForSource(annotation, scaleX, scaleY)
+                If scaled IsNot Nothing AndAlso Not ReferenceEquals(scaled, annotation) Then
+                    _annotations(i) = scaled
+                End If
+            Next
+        End Sub
+
+        Private Sub RaiseUpscaleStateChanged()
+            Me.RaisePropertyChanged(NameOf(IsUpscaleWithModelAvailable))
+            Me.RaisePropertyChanged(NameOf(UpscaleModelOptions))
+            Me.RaisePropertyChanged(NameOf(UpscaleModelLabel))
+            Me.RaisePropertyChanged(NameOf(UpscaleModelHint))
+            Me.RaisePropertyChanged(NameOf(UpscaleTargetText))
+            Me.RaisePropertyChanged(NameOf(CanUpscaleWithModel))
+            Me.RaisePropertyChanged(NameOf(UpscaleWithModelHint))
+        End Sub
+
+        ''' <summary>Das ganze Bild mit dem Modell vergroessern.
+        '''
+        ''' ANDERS ALS ALLE UEBRIGEN eingebackenen Vorgaenge aendert dieser die BILDMASSE. Er kann
+        ''' deshalb nicht ueber CommitRegion laufen (das tauscht eine Region in einem Bitmap gleicher
+        ''' Groesse), sondern uebernimmt ein neues Vollbild - und der Rueckgaengig-Eintrag traegt
+        ''' dafuer das Arbeitsbild von vorher (siehe UndoEntry.WorkingFull).</summary>
+        Public Sub ApplyModelUpscale()
+            If Not CanUpscaleWithModel Then Return
+            Dim model = CurrentUpscaleModel()
+            If model Is Nothing Then Return
+            Dim key = model.Key
+
+            ' Das Arbeitsbild von VORHER, bevor irgendetwas laeuft: es ist der Rueckweg.
+            Dim before = _workingImage.CloneFull()
+            If before Is Nothing Then Return
+
+            PushUndo(LocalizationService.T("Hochskalieren"))
+            Dim undoItem = _lastPushedUndoEntry
+            StatusText = LocalizationService.T("Bild wird hochskaliert…")
+            SetBusyReason(LocalizationService.T("Bild wird hochskaliert"))
+            Dim cancel = BeginCancellableBusy()
+            Dim input = _workingImage.CloneFull()
+            Dim result As SKBitmap = Nothing
+
+            Task.Run(
+                Sub()
+                    Try
+                        UpscaleModelService.Progress =
+                            Sub(schritt, gesamt)
+                                Dispatcher.UIThread.Post(
+                                    Sub() SetBusyReason(String.Format(
+                                        LocalizationService.T("Bild wird hochskaliert ({0} von {1})"),
+                                        schritt, gesamt)))
+                            End Sub
+                        result = UpscaleModelService.Upscale(input, key, cancel)
+                    Catch ex As Exception
+                        DiagnosticLogService.LogException("Editor.ApplyModelUpscale", ex)
+                    Finally
+                        UpscaleModelService.Progress = Nothing
+                        input?.Dispose()
+                    End Try
+                End Sub).ContinueWith(
+                Sub()
+                    Dispatcher.UIThread.Post(
+                        Sub()
+                            Dim cancelled = BusyWasCancelled()
+                            EndCancellableBusy()
+                            If result Is Nothing Then
+                                before.Dispose()
+                                ' ABGEBROCHEN ist kein Fehlschlag - die Meldung muss das
+                                ' auseinanderhalten, sonst liest sich ein Druck auf das X wie ein
+                                ' Defekt.
+                                StatusText = If(cancelled,
+                                    LocalizationService.T("Hochskalieren abgebrochen - das Bild ist unverändert"),
+                                    LocalizationService.T("Hochskalieren fehlgeschlagen"))
+                                Return
+                            End If
+
+                            ' OBJEKTE GEHEN MIT. Sie leben im Pixelraum der QUELLE (XPixels und
+                            ' Nachbarn), und die wird hier groesser - ohne diesen Schritt saesse
+                            ' jedes Objekt auf einem Viertel seiner Stelle und waere ein Viertel so
+                            ' gross. Gerechnet wird mit DEMSELBEN Weg wie im Renderer
+                            ' (ImageProcessor.ScaleAnnotationForSource), damit kein Feld
+                            ' auseinanderlaeuft.
+                            Dim factorX = result.Width / CSng(Math.Max(1, _workingImage.FullWidth))
+                            Dim factorY = result.Height / CSng(Math.Max(1, _workingImage.FullHeight))
+                            ScaleAnnotationsForNewSource(factorX, factorY)
+                            ' Die aktive Auswahl liegt im Anzeigeraum von VORHER - dieselbe Regel
+                            ' wie bei jedem Geometrieschritt.
+                            ClearActiveSelectionForGeometry()
+
+                            ' Erst jetzt uebernehmen: bis hier ist nichts passiert, ein Abbruch
+                            ' laesst also wirklich alles stehen.
+                            If Not AdoptWorkingImage(result, hasBakedContent:=True,
+                                                     hasAlphaHoles:=_workingImage.HasAlphaHoles,
+                                                     scheduleInitialRender:=True) Then
+                                before.Dispose()
+                                StatusText = LocalizationService.T("Hochskalieren fehlgeschlagen")
+                                Return
+                            End If
+                            If undoItem IsNot Nothing Then
+                                undoItem.WorkingFull = before
+                            Else
+                                before.Dispose()
+                            End If
+
+                            ' Der Vermerk fuers Rezept: ohne ihn waere die Wartezeit beim naechsten
+                            ' Oeffnen einer RAW-Datei spurlos weg.
+                            _bakedOperations.Add(New BakedOperation With {
+                                .Kind = BakedOperation.KindUpscale,
+                                .UpscaleModel = key})
+                            MarkBakedIntoWorkingImage()
+                            _hasChanges = True
+                            ' Die Groessenfelder arbeiten ab jetzt auf der NEUEN Groesse: sie
+                            ' zeigen bei 0 die aktuelle (GetCroppedWidth), und ein noch offener
+                            ' Wunsch von vorher waere jetzt eine VERKLEINERUNG, die niemand
+                            ' bestellt hat.
+                            _resizeWidth = 0 : _resizeHeight = 0
+                            _appliedResizeWidth = 0 : _appliedResizeHeight = 0
+                            RaiseDisplayImageGeometryProperties()
+                            RaiseUpscaleStateChanged()
+                            Dim report = UpscaleModelService.LastReport
+                            StatusText = LocalizationService.T("Bild hochskaliert") &
+                                         If(String.IsNullOrEmpty(report), "", " - " & report)
+                            NameHistoryStep(LocalizationService.T("Hochskalieren") &
+                                            If(String.IsNullOrEmpty(report), "", " - " & report))
+                            SchedulePreviewUpdate()
+                        End Sub)
+                End Sub)
+        End Sub
+
         Public ReadOnly Property CanDenoiseWithModel As Boolean
             Get
                 Return DenoiseModelService.Available
@@ -12014,6 +12306,26 @@ Namespace ViewModels
             If Not _isLoadingAnnotation AndAlso HasSelectedAnnotation Then LoadSelectedAnnotationIntoEditor()
             RaiseAnnotationPositionControlProperties()
             RaiseEnvelopeChanged()
+            ' DAS INFOPANEL GEHOERT DAZU: Abmessungen, Megapixel und Seitenverhaeltnis beschreiben
+            ' das Bild, das gerade bearbeitet wird. Ohne diesen Aufruf blieben sie auf dem Stand des
+            ' Ladens stehen - gemeldet nach dem Hochskalieren, gilt aber genauso fuer Zuschnitt,
+            ' Groesse und Leinwand.
+            RefreshInfoPanelImageFacts()
+        End Sub
+
+        ''' <summary>Die technischen Angaben des Infopanels aus dem BEARBEITETEN Bild neu aufbauen.
+        ''' Nur wenn eines offen ist und die Leiste ueberhaupt etwas zeigt - der Aufbau liest die
+        ''' Aufnahmedaten, und die kommen bei einem RAW aus dem Zwischenspeicher, nicht aus der
+        ''' Datei.</summary>
+        Private Sub RefreshInfoPanelImageFacts()
+            If CurrentImage Is Nothing Then Return
+            If String.IsNullOrWhiteSpace(RenderSourcePath) Then Return
+            If InfoPanel Is Nothing OrElse InfoPanel.ExifInfo Is Nothing Then Return
+            Try
+                InfoPanel.ExifInfo = BuildImageInfo(RenderSourcePath)
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Editor.RefreshInfoPanelImageFacts", ex)
+            End Try
         End Sub
 
         ''' <summary>Der Drehwinkel, unter dem ein gespeichertes Objekt auf dem Bildschirm steht.
@@ -13575,6 +13887,9 @@ Namespace ViewModels
         ''' <summary>Der EINE Knopf des Werkzeugs: Ausschnitt und Lage zusammen.</summary>
         Public ReadOnly Property ApplyTransformCommand As ICommand
         Public ReadOnly Property ApplyResizeCommand As ICommand
+        ''' <summary>Das Bild mit dem Modell vergroessern - eigener Knopf im Werkzeug Bildgroesse,
+        ''' weil der Massstab aus dem Modell kommt und nicht aus einem Zielmass.</summary>
+        Public ReadOnly Property UpscaleWithModelCommand As ICommand
         Public ReadOnly Property ApplyCanvasCommand As ICommand
         Public ReadOnly Property ApplyRotateCommand As ICommand
         Public ReadOnly Property ApplyPerspectiveCommand As ICommand
@@ -13919,6 +14234,7 @@ Namespace ViewModels
             ApplyResizeCommand = ReactiveCommand.Create(Async Function() As Task
                                                             Await ApplyResizeAsync()
                                                         End Function)
+            UpscaleWithModelCommand = ReactiveCommand.Create(Sub() ApplyModelUpscale())
             ApplyCanvasCommand = ReactiveCommand.Create(Async Function() As Task
                                                             Await ApplyCanvasAsync()
                                                         End Function)
@@ -15448,13 +15764,31 @@ Namespace ViewModels
                     width = compositeDimensions.ImageWidth.GetValueOrDefault()
                     height = compositeDimensions.ImageHeight.GetValueOrDefault()
                 Else
-                    width = CurrentImage.PixelSize.Width
-                    height = CurrentImage.PixelSize.Height
+                    ' DIE ANGEZEIGTEN MASSE, nicht die des Arbeitsbildes: Zuschnitt, Bildgroesse und
+                    ' Leinwand sind Geometrieschritte im Rezept - das Arbeitsbild bleibt dabei
+                    ' unveraendert, und seine Masse waeren nach jedem dieser Schritte die falsche
+                    ' Antwort. Das Hochskalieren aendert dagegen das Arbeitsbild selbst; beide Faelle
+                    ' sind hier abgedeckt, weil die Anzeigemasse aus dem Arbeitsbild DURCH die
+                    ' Geometrie gerechnet werden.
+                    Dim displaySize = GetAnnotationDisplayPixelSize()
+                    If displaySize.Width > 0 AndAlso displaySize.Height > 0 Then
+                        width = displaySize.Width
+                        height = displaySize.Height
+                    Else
+                        width = CurrentImage.PixelSize.Width
+                        height = CurrentImage.PixelSize.Height
+                    End If
                 End If
 
                 If width > 0 AndAlso height > 0 Then
-                    If String.IsNullOrWhiteSpace(data.ImageWidth) Then data.ImageWidth = width.ToString()
-                    If String.IsNullOrWhiteSpace(data.ImageHeight) Then data.ImageHeight = height.ToString()
+                    ' IM EDITOR GEWINNT DAS BEARBEITETE BILD, nicht die Angabe aus der Datei. Vorher
+                    ' stand hier "nur wenn leer", und damit zeigte die Zeile "Abmessungen" nach
+                    ' jedem Zuschnitt, jeder Groessenaenderung und nach dem Hochskalieren weiter die
+                    ' Masse der DATEI - waehrend Megapixel und Seitenverhaeltnis daneben schon dem
+                    ' bearbeiteten Bild folgten. Eine Zeile, die etwas anderes sagt als die zwei
+                    ' unter ihr, ist schlimmer als keine.
+                    data.ImageWidth = width.ToString()
+                    data.ImageHeight = height.ToString()
 
                     Dim mp = width * height / 1_000_000.0
                     data.Megapixels = $"{mp:F1} MP"
@@ -16540,10 +16874,28 @@ Namespace ViewModels
             End If
             SetWorkingImagePending(False)
 
-            Dim source = If(decoded.Full IsNot Nothing,
-                            _workingImage.Init(decoded.Full, PreviewMaxDimension,
-                                               hasBakedContent:=decoded.Baked,
-                                               hasAlphaHoles:=(decoded.Baked AndAlso _workingImageOverrideHasAlpha) OrElse _newDocTransparentBackground),
+            Return AdoptWorkingImage(decoded.Full,
+                                     hasBakedContent:=decoded.Baked,
+                                     hasAlphaHoles:=(decoded.Baked AndAlso _workingImageOverrideHasAlpha) OrElse _newDocTransparentBackground,
+                                     scheduleInitialRender:=scheduleInitialRender)
+        End Function
+
+        ''' <summary>Ein fertiges Vollbild als Arbeitsbild uebernehmen: Anzeige, Vorschauquelle,
+        ''' Zwischenspeicher, Aufwaermrender.
+        '''
+        ''' DIE EINZIGE STELLE, die das tut. Zwei Wege dorthin gibt es: der Quellwechsel (ein
+        ''' anderes Bild) und das Hochskalieren mit Modell (dasselbe Bild in anderer Groesse). Waere
+        ''' es zweimal geschrieben, haette der zweite Weg garantiert einen der Punkte vergessen -
+        ''' und ein vergessener Basis-Cache zeigt sich nicht als Fehler, sondern als Bild, das
+        ''' still das vorherige bleibt.
+        '''
+        ''' Das uebergebene Bitmap geht in den Besitz des Arbeitsbilds ueber.</summary>
+        Private Function AdoptWorkingImage(full As SKBitmap, hasBakedContent As Boolean,
+                                           hasAlphaHoles As Boolean, scheduleInitialRender As Boolean) As Boolean
+            Dim source = If(full IsNot Nothing,
+                            _workingImage.Init(full, PreviewMaxDimension,
+                                               hasBakedContent:=hasBakedContent,
+                                               hasAlphaHoles:=hasAlphaHoles),
                             Nothing)
             If source Is Nothing Then
                 ClearPreviewSource()
@@ -16557,7 +16909,7 @@ Namespace ViewModels
             ' Vorschau sogar eine zweite volle Entwicklung.
             ' WithFull statt CloneFull: ToAvaloniaBitmap kopiert die Pixel ohnehin in ein
             ' Avalonia-Bitmap, eine 180-MB-Zwischenkopie waere reine Verschwendung.
-            CurrentImage = _workingImage.WithFull(Function(full) ImageProcessor.ToAvaloniaBitmap(full))
+            CurrentImage = _workingImage.WithFull(Function(f) ImageProcessor.ToAvaloniaBitmap(f))
 
             Dim oldSource As SKBitmap = Nothing
             SyncLock _previewSync
@@ -18945,6 +19297,8 @@ Namespace ViewModels
             _historyStepNamed = True
             For Each entry In _undoStack
                 If entry.Patch IsNot Nothing Then _workingImage.DiscardPatch(entry.Patch)
+                entry.WorkingFull?.Dispose()
+                entry.WorkingFull = Nothing
             Next
             _undoStack.Clear()
             ClearRedoStack()
@@ -19069,6 +19423,10 @@ Namespace ViewModels
         Private Sub ClearRedoStack()
             For Each entry In _redoStack
                 If entry.Patch IsNot Nothing Then _workingImage.DiscardPatch(entry.Patch)
+                ' Auch das volle Arbeitsbild eines Groessenschritts - unerreichbar geworden, und es
+                ' ist das groesste Einzelstueck, das ein Eintrag halten kann.
+                entry.WorkingFull?.Dispose()
+                entry.WorkingFull = Nothing
             Next
             _redoStack.Clear()
         End Sub
@@ -19532,9 +19890,14 @@ Namespace ViewModels
             ' danach die Wiederholen-Pixel im selben Objekt (Tausch-Schema im Service).
             ' Die Beschriftung wandert MIT: sie gehoert dem Schritt, nicht dem Stapel. Ohne sie
             ' hiesse der Schritt nach einem Rueckgaengig in der Vorwaerts-Liste anders als vorher.
+            ' Ein Schritt, der die Bildmasse geaendert hat, traegt das Arbeitsbild von VORHER.
+            ' Der Tausch ist symmetrisch: was jetzt steht, wandert in den Wiederholen-Eintrag.
+            Dim currentFull As SKBitmap = Nothing
+            If entry.WorkingFull IsNot Nothing Then currentFull = _workingImage.CloneFull()
             _redoStack.Push(New UndoEntry With {.Adjustments = GetCurrentAdjustments(), .Patch = entry.Patch,
                                                 .WarpSession = CaptureWarpSession(), .Label = entry.Label,
-                                                .IconSource = entry.IconSource})
+                                                .IconSource = entry.IconSource,
+                                                .WorkingFull = currentFull})
             _suppressUndoCapture = True
             Try
                 ApplyAdjustments(entry.Adjustments, resetTransientSelectionBinding:=True)
@@ -19548,6 +19911,14 @@ Namespace ViewModels
             RefreshSelectionAdjustMode()
             If entry.Patch IsNot Nothing AndAlso _workingImage.RevertPatch(entry.Patch) Then
                 OnWorkingImageRegionChanged(entry.Patch.Rect)
+            End If
+            ' NACH ApplyAdjustments: das Rezept des Schritts kennt die Vergroesserung nicht mehr,
+            ' und das Arbeitsbild muss dazu passen.
+            If entry.WorkingFull IsNot Nothing Then
+                AdoptWorkingImage(entry.WorkingFull, hasBakedContent:=True,
+                                  hasAlphaHoles:=_workingImage.HasAlphaHoles, scheduleInitialRender:=True)
+                entry.WorkingFull = Nothing
+                RaiseDisplayImageGeometryProperties()
             End If
             RebuildHistorySteps()
             ' Das rote Overlay neu zeichnen: ApplyAdjustments hat die transiente Auswahl-Bindung
@@ -19568,9 +19939,14 @@ Namespace ViewModels
             _lastPushedUndoEntry = Nothing
             _historyStepNamed = True
             Dim entry = _redoStack.Pop()
+            ' Spiegelbildlich zum Rueckgaengig: das Arbeitsbild von jetzt geht in den
+            ' Rueckgaengig-Eintrag, das des Schritts wird uebernommen.
+            Dim currentFull As SKBitmap = Nothing
+            If entry.WorkingFull IsNot Nothing Then currentFull = _workingImage.CloneFull()
             _undoStack.Push(New UndoEntry With {.Adjustments = GetCurrentAdjustments(), .Patch = entry.Patch,
                                                 .WarpSession = CaptureWarpSession(), .Label = entry.Label,
-                                                .IconSource = entry.IconSource})
+                                                .IconSource = entry.IconSource,
+                                                .WorkingFull = currentFull})
             _suppressUndoCapture = True
             Try
                 ApplyAdjustments(entry.Adjustments, resetTransientSelectionBinding:=True)
@@ -19581,6 +19957,12 @@ Namespace ViewModels
             RefreshSelectionAdjustMode()
             If entry.Patch IsNot Nothing AndAlso _workingImage.ReapplyPatch(entry.Patch) Then
                 OnWorkingImageRegionChanged(entry.Patch.Rect)
+            End If
+            If entry.WorkingFull IsNot Nothing Then
+                AdoptWorkingImage(entry.WorkingFull, hasBakedContent:=True,
+                                  hasAlphaHoles:=_workingImage.HasAlphaHoles, scheduleInitialRender:=True)
+                entry.WorkingFull = Nothing
+                RaiseDisplayImageGeometryProperties()
             End If
             RebuildHistorySteps()
             ' Das rote Overlay neu zeichnen: ApplyAdjustments hat die transiente Auswahl-Bindung
@@ -19958,6 +20340,11 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(SelectionShapePointsY))
             RaiseCropPropertiesChanged()
             RaiseResetButtonStateChanged()
+            ' DIE ANGEZEIGTE GEOMETRIE HAT SICH GEAENDERT. Der Schnappschuss bringt Zuschnitt,
+            ' Bildgroesse und Leinwand von vorher zurueck - ohne diese Meldung blieben die Masse in
+            ' der Anzeige und im Infopanel auf dem Stand VOR dem Rueckgaengig stehen. Gemeldet am
+            ' Hochskalieren, gilt aber fuer jeden Geometrieschritt.
+            RaiseDisplayImageGeometryProperties()
             If scheduleRender Then SchedulePreviewUpdate()
             ' Nach Rückgängig/Wiederholen: Bedienen die Regler gerade ein Objekt, dann tragen die Felder
             ' jetzt die BILD-Werte aus dem Schnappschuss. Also Bildwerte wieder parken und die Werte des

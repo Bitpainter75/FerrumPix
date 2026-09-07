@@ -155,6 +155,72 @@
             </Expander>
         </Border>
 
+        <!-- HOCHSKALIEREN MIT MODELL: eigener Abschnitt und kein Verfahren in der Liste
+             "Neuberechnung" darueber. Das Modell bringt seinen Massstab mit (zwei- oder vierfach),
+             es gibt dort also keine freie Zielgroesse - wer eine bestimmte Groesse will, geht
+             danach mit den Feldern darueber von der neuen herunter. Vom Grossen herunter ist ein
+             Mitteln und verliert nichts, hinauf wird geraten.
+
+             Der ganze Abschnitt bleibt WEG, solange kein Modell vorliegt: eine Auswahl ohne
+             Antwortmoeglichkeit waere eine Frage ohne Sinn. Den Weg zum Modell zeigt der
+             Einstellungsdialog. -->
+        <Border Classes="adjustment-group" IsVisible="{Binding IsUpscaleWithModelAvailable}">
+            <Expander Header="Hochskalieren" icons:ExpanderState.Key="resize-upscale">
+                <Expander.HeaderTemplate>
+                    <DataTemplate>
+                        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                            <icons:SvgIcon
+                                Source="avares://FerrumPix/Assets/Icons/outline/arrow-up-right.svg"
+                                Width="14" Height="14" />
+                            <TextBlock Text="{Binding}" FontWeight="SemiBold" />
+                        </StackPanel>
+                    </DataTemplate>
+                </Expander.HeaderTemplate>
+                <StackPanel Spacing="8" Margin="0,8,0,0">
+                    <Grid ColumnDefinitions="92,*" VerticalAlignment="Center">
+                        <TextBlock Text="Modell" Foreground="{DynamicResource FP.Text.Secondary}"
+                                   VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                        <ComboBox Grid.Column="1"
+                                  ItemsSource="{Binding UpscaleModelOptions}"
+                                  SelectedItem="{Binding UpscaleModelLabel}"
+                                  FontSize="{DynamicResource FP.Font.Small}"
+                                  Margin="6,0,0,0"
+                                  HorizontalAlignment="Stretch"
+                                  ToolTip.Tip="{Binding UpscaleModelHint}">
+                            <ComboBox.ItemTemplate>
+                                <!-- Angezeigt wird uebersetzt, gewaehlt bleibt der deutsche WERT:
+                                     an ihm haengt die Zuordnung zum Modell. -->
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding Converter={StaticResource TranslateConverter}}"
+                                               VerticalAlignment="Center" />
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                    </Grid>
+                    <!-- WAS HERAUSKOMMT, vor dem Druck auf den Knopf. Ohne diese Zeile ist der
+                         Massstab des Modells eine Ueberraschung, und zwar eine, die Minuten
+                         dauert. -->
+                    <TextBlock Text="{Binding UpscaleTargetText}"
+                               Foreground="{DynamicResource FP.Text.Muted}"
+                               FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap" />
+                    <Button Classes="accent"
+                            HorizontalAlignment="Stretch"
+                            Padding="10,6"
+                            Command="{Binding UpscaleWithModelCommand}"
+                            IsEnabled="{Binding CanUpscaleWithModel}"
+                            ToolTip.Tip="{Binding UpscaleWithModelHint}" ToolTip.ShowOnDisabled="True">
+                        <StackPanel Orientation="Horizontal" Spacing="6"
+                                    HorizontalAlignment="Center">
+                            <icons:SvgIcon
+                                Source="avares://FerrumPix/Assets/Icons/outline/arrow-up-right.svg"
+                                Width="16" Height="16" />
+                            <TextBlock Text="Hochskalieren" />
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+            </Expander>
+        </Border>
+
         <Border Classes="adjustment-group"
         IsVisible="{Binding HiddenAdjustmentGroups, Converter={StaticResource NotInListConverter}, ConverterParameter=resize-canvas}">
             <Expander Header="Leinwand" icons:ExpanderState.Key="resize-canvas">

@@ -198,10 +198,16 @@ Namespace Services
     ''' schreibt, setzt es falsch. Sonst behauptet das Rezept frueher oder spaeter etwas, das im
     ''' Bild nicht steht.</summary>
     Public Class BakedOperation
-        ''' <summary>"denoise" oder "objectremoval". Ein unbekannter Wert wird beim Nachziehen
-        ''' uebersprungen - eine aeltere Programmfassung soll an einem neuen Vorgang nicht
+        ''' <summary>"denoise", "objectremoval" oder "upscale". Ein unbekannter Wert wird beim
+        ''' Nachziehen uebersprungen - eine aeltere Programmfassung soll an einem neuen Vorgang nicht
         ''' scheitern, sondern ihn liegen lassen.</summary>
         Public Property Kind As String = ""
+
+        ''' <summary>Nur beim Hochskalieren: der Schluessel des Modells (siehe
+        ''' UpscaleModelService.KnownModels). Er entscheidet ueber den Massstab UND die Zeichnung,
+        ''' gehoert also zum Auftrag. Fehlt das Modell beim Nachziehen, bleibt das Bild in seiner
+        ''' Groesse - lieber unveraendert als in einer anderen Groesse als beim ersten Mal.</summary>
+        Public Property UpscaleModel As String = ""
 
         ''' <summary>Nur beim Entrauschen: "quality" oder "fast". Welches Modell gerechnet hat,
         ''' gehoert dazu - die beiden liefern sichtbar Verschiedenes.</summary>
@@ -219,12 +225,14 @@ Namespace Services
         Public Function Clone() As BakedOperation
             Return New BakedOperation With {
                 .Kind = Kind, .DenoiseModel = DenoiseModel, .DenoiseStrength = DenoiseStrength,
+                .UpscaleModel = UpscaleModel,
                 .Mask = If(Mask Is Nothing, Nothing, Mask.Clone())
             }
         End Function
 
         Public Const KindDenoise As String = "denoise"
         Public Const KindObjectRemoval As String = "objectremoval"
+        Public Const KindUpscale As String = "upscale"
     End Class
 
     Public Class ImageAdjustments
