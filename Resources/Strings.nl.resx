@@ -8211,4 +8211,37 @@
   <data name="das_Werkzeug_wechselst_072515cf" xml:space="preserve">
     <value>van gereedschap wisselt</value>
   </data>
+  <data name="Modell_a2eae7cb" xml:space="preserve">
+    <value>Model</value>
+  </data>
+  <data name="Mittlere_Maustaste_setzt_dieses_Band_zur_ck_eb0b261e" xml:space="preserve">
+    <value>Met de middelste muisknop zet je deze kleurband terug</value>
+  </data>
+  <data name="Aus_0_x_1_wird_2_x_3_64c23bdc" xml:space="preserve">
+    <value>{0} x {1} wordt {2} x {3}</value>
+  </data>
+  <data name="Erst_ein_Modell_w_hlen_e67195c1" xml:space="preserve">
+    <value>Kies eerst een model.</value>
+  </data>
+  <data name="Rechnet_das_Bild_mit_dem_Modell_gr_er_Wird_in_di_af46cd3c" xml:space="preserve">
+    <value>Maakt de afbeelding groter met het model. Wordt in de pixels gerekend, net als een retouche.</value>
+  </data>
+  <data name="Bild_wird_hochskaliert_f775f845" xml:space="preserve">
+    <value>Afbeelding wordt opgeschaald…</value>
+  </data>
+  <data name="Bild_wird_hochskaliert_71aa941f" xml:space="preserve">
+    <value>Afbeelding wordt opgeschaald</value>
+  </data>
+  <data name="Bild_wird_hochskaliert_0_von_1_0ebc1df8" xml:space="preserve">
+    <value>Afbeelding wordt opgeschaald ({0} van {1})</value>
+  </data>
+  <data name="Hochskalieren_abgebrochen_das_Bild_ist_unver_nde_d15c1435" xml:space="preserve">
+    <value>Opschalen afgebroken; de afbeelding is ongewijzigd</value>
+  </data>
+  <data name="Hochskalieren_fehlgeschlagen_de8e02e9" xml:space="preserve">
+    <value>Opschalen mislukt</value>
+  </data>
+  <data name="Bild_hochskaliert_9fa07ea6" xml:space="preserve">
+    <value>Afbeelding opgeschaald</value>
+  </data>
 </root>

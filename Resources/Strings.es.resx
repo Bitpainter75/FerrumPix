@@ -8171,4 +8171,37 @@
   <data name="das_Werkzeug_wechselst_072515cf" xml:space="preserve">
     <value>cambiar de herramienta</value>
   </data>
+  <data name="Modell_a2eae7cb" xml:space="preserve">
+    <value>Modelo</value>
+  </data>
+  <data name="Mittlere_Maustaste_setzt_dieses_Band_zur_ck_eb0b261e" xml:space="preserve">
+    <value>El botón central del ratón restablece esta banda de color</value>
+  </data>
+  <data name="Aus_0_x_1_wird_2_x_3_64c23bdc" xml:space="preserve">
+    <value>De {0} x {1} a {2} x {3}</value>
+  </data>
+  <data name="Erst_ein_Modell_w_hlen_e67195c1" xml:space="preserve">
+    <value>Primero elige un modelo.</value>
+  </data>
+  <data name="Rechnet_das_Bild_mit_dem_Modell_gr_er_Wird_in_di_af46cd3c" xml:space="preserve">
+    <value>Amplía la imagen con el modelo. Se calcula en los píxeles, como un retoque.</value>
+  </data>
+  <data name="Bild_wird_hochskaliert_f775f845" xml:space="preserve">
+    <value>Escalando imagen…</value>
+  </data>
+  <data name="Bild_wird_hochskaliert_71aa941f" xml:space="preserve">
+    <value>Escalando imagen</value>
+  </data>
+  <data name="Bild_wird_hochskaliert_0_von_1_0ebc1df8" xml:space="preserve">
+    <value>Escalando imagen ({0} de {1})</value>
+  </data>
+  <data name="Hochskalieren_abgebrochen_das_Bild_ist_unver_nde_d15c1435" xml:space="preserve">
+    <value>Escalado cancelado: la foto no ha cambiado</value>
+  </data>
+  <data name="Hochskalieren_fehlgeschlagen_de8e02e9" xml:space="preserve">
+    <value>Error al escalar</value>
+  </data>
+  <data name="Bild_hochskaliert_9fa07ea6" xml:space="preserve">
+    <value>Imagen escalada</value>
+  </data>
 </root>

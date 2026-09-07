@@ -55,7 +55,11 @@ Namespace ViewModels
                               NameOf(IsObjectRemovalAvailable), NameOf(CanRemoveObject), NameOf(RemoveObjectHint),
                               NameOf(CanDenoiseWithModel), NameOf(DenoiseWithModelHint),
                               NameOf(CanDenoiseFast), NameOf(DenoiseFastHint),
-                              NameOf(CanDenoiseWithAnyModel)}
+                              NameOf(CanDenoiseWithAnyModel),
+                              NameOf(IsUpscaleWithModelAvailable), NameOf(UpscaleModelOptions),
+                              NameOf(UpscaleModelLabel), NameOf(UpscaleModelHint),
+                              NameOf(UpscaleTargetText), NameOf(CanUpscaleWithModel),
+                              NameOf(UpscaleWithModelHint)}
                 Me.RaisePropertyChanged(name)
             Next
         End Sub

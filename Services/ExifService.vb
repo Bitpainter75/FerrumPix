@@ -679,7 +679,11 @@ Namespace Services
         ' Version 4 holt die eingebetteten Stichwoerter nach. Sie sind kein Summary-Text, haengen aber
         ' an genau demselben Stempel: ohne die Erhoehung gilt jede schon eingelesene Datei weiter als
         ' unveraendert, und ein bestehender Katalog bekaeme die Stichwoerter NIE - nur neue Fotos.
-        Public Const SummaryFormatVersion As Integer = 4
+        ' Version 5 holt die Aufnahmedaten der Container ohne eigenen Leser nach (CRW, MRW, die alten
+        ' .raw, MOS - siehe FillGapsFromRawFile). Dasselbe Muster wie bei den Stichwoertern: die
+        ' Dateien liegen laengst im Katalog, ihre Zeit- und Kameraspalten sind leer, und ohne die
+        ' Erhoehung blieben sie es. Gemessen an einem Bestand von 464 RAW-Dateien betrifft das 71.
+        Public Const SummaryFormatVersion As Integer = 5
 
         Public Shared ReadOnly Property CurrentSummaryFormat As String
             Get

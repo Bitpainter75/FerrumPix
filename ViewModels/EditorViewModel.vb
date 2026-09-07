@@ -9031,9 +9031,43 @@ Namespace ViewModels
             Get
                 If Not UpscaleModelService.Available Then Return MissingModelHint
                 If CurrentUpscaleModel() Is Nothing Then Return LocalizationService.T("Erst ein Modell wählen.")
-                Return LocalizationService.T("Rechnet das Bild mit dem Modell groesser. Wird in die Pixel gerechnet, wie eine Retusche.")
+                Return LocalizationService.T("Rechnet das Bild mit dem Modell größer. Wird in die Pixel gerechnet, wie eine Retusche.")
             End Get
         End Property
+
+        ''' <summary>Ein Bitmap auf Bgra8888 legen, falls es das nicht schon ist.
+        '''
+        ''' DER BESITZ GEHT UEBER: gelingt die Umsetzung, ist das uebergebene Bild danach
+        ''' freigegeben und der Aufrufer haelt die Umsetzung. Gelingt sie NICHT, bekommt er sein
+        ''' Original unangetastet zurueck - dann rechnet er damit weiter oder scheitert sichtbar am
+        ''' Farbtyp, aber er haelt kein freigegebenes Bitmap in der Hand.
+        '''
+        ''' Ohne Finally, und das ist der Grund: dort stand die Freigabe des Originals an der
+        ''' Bedingung "es gibt eine Umsetzung", und die stimmte auch dann noch, wenn die Umsetzung im
+        ''' Catch gerade verworfen und das Original zurueckgegeben wurde. Der Aufrufer bekam ein
+        ''' freigegebenes Bitmap. Jetzt steht die Freigabe hinter dem Erfolg, in einer Zeile, die
+        ''' nur auf dem gelungenen Weg liegt.</summary>
+        Private Shared Function AsBgra8888(bitmap As SKBitmap) As SKBitmap
+            If bitmap Is Nothing Then Return Nothing
+            If bitmap.ColorType = SKColorType.Bgra8888 Then Return bitmap
+            Dim converted As SKBitmap = Nothing
+            Try
+                converted = New SKBitmap(New SKImageInfo(bitmap.Width, bitmap.Height,
+                                                         SKColorType.Bgra8888, bitmap.AlphaType))
+                Using canvas = New SKCanvas(converted)
+                    canvas.Clear(SKColors.Transparent)
+                    Using paint = New SKPaint With {.BlendMode = SKBlendMode.Src}
+                        canvas.DrawBitmap(bitmap, 0, 0, paint)
+                    End Using
+                End Using
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Editor.AsBgra8888", ex)
+                converted?.Dispose()
+                Return bitmap
+            End Try
+            bitmap.Dispose()
+            Return converted
+        End Function
 
         ''' <summary>Alle Objekte auf einen neuen Quellraum umrechnen. In derselben Reihenfolge und
         ''' an derselben Stelle in der Liste - ein Objekt zu ersetzen statt zu aendern haelt die
@@ -9081,12 +9115,18 @@ Namespace ViewModels
             Dim before = _workingImage.CloneFull()
             If before Is Nothing Then Return
 
-            PushUndo(LocalizationService.T("Hochskalieren"))
-            Dim undoItem = _lastPushedUndoEntry
+            ' VORBEREITET, nicht abgelegt: erst der Erfolg macht daraus einen Schritt. Ein
+            ' Fehlschlag oder ein Abbruch soll keinen Eintrag hinterlassen, der nichts
+            ' zurueckzunehmen hat - und er soll den Wiederholen-Zweig nicht wegraeumen.
+            Dim undoItem = PrepareUndo(LocalizationService.T("Hochskalieren"))
             StatusText = LocalizationService.T("Bild wird hochskaliert…")
             SetBusyReason(LocalizationService.T("Bild wird hochskaliert"))
             Dim cancel = BeginCancellableBusy()
-            Dim input = _workingImage.CloneFull()
+            ' AUF Bgra8888 LEGEN. Das Modell nimmt nur diesen Farbtyp und steigt bei jedem anderen
+            ' sofort aus - ein Arbeitsbild mit Objekt-Ebenen ist Rgba8888, und dort waere das
+            ' Hochskalieren still ausgefallen. Denselben Schritt macht ImageProcessor.RunBakedUpscale
+            ' beim Nachziehen.
+            Dim input = AsBgra8888(_workingImage.CloneFull())
             Dim result As SKBitmap = Nothing
 
             Task.Run(
@@ -9145,11 +9185,8 @@ Namespace ViewModels
                                 StatusText = LocalizationService.T("Hochskalieren fehlgeschlagen")
                                 Return
                             End If
-                            If undoItem IsNot Nothing Then
-                                undoItem.WorkingFull = before
-                            Else
-                                before.Dispose()
-                            End If
+                            undoItem.WorkingFull = before
+                            CommitPreparedUndo(undoItem)
 
                             ' Der Vermerk fuers Rezept: ohne ihn waere die Wartezeit beim naechsten
                             ' Oeffnen einer RAW-Datei spurlos weg.
@@ -9520,50 +9557,87 @@ Namespace ViewModels
             Dim recipe = GetCurrentAdjustments()
             If Not ImageProcessor.HasPendingBakedOperations(recipe) Then Return
 
-            PushUndo()
-            Dim undoItem = _lastPushedUndoEntry
+            ' NICHT ueber CommitRegion, obwohl das der Weg des Entrauschens und der Retusche ist:
+            ' unter den vermerkten Vorgaengen kann ein HOCHSKALIEREN sein, und das aendert die
+            ' Bildmasse. CommitRegion tauscht eine Region in einem Bitmap GLEICHER Groesse - das
+            ' groessere Ergebnis wurde dort in das alte Bild gezeichnet, also beschnitten, und der
+            ' Vorgang galt anschliessend trotzdem als erledigt. Uebernommen wird deshalb ein neues
+            ' Vollbild (AdoptWorkingImage), genau wie beim Hochskalieren im Werkzeug.
+            Dim before = _workingImage.CloneFull()
+            If before Is Nothing Then Return
+            ' VORBEREITET, nicht abgelegt: erst der Erfolg macht daraus einen Schritt. Sonst bleibt
+            ' nach einem Abbruch ein Schritt stehen, der nichts zurueckzunehmen hat.
+            Dim undoItem = PrepareUndo()
             StatusText = LocalizationService.T("Gespeicherte Bearbeitung wird angewendet…")
             SetBusyReason(LocalizationService.T("Gespeicherte Bearbeitung wird angewendet"))
-            Dim done = False
             Dim cancel = BeginCancellableBusy()
-            EnqueueWorkingCommit(
-                Function()
-                    Return _workingImage.CommitRegion(New SKRectI(0, 0, _workingImage.FullWidth, _workingImage.FullHeight),
-                        Sub(full)
-                            Dim produced = ImageProcessor.ApplyPendingBakedOperations(full, recipe, cancel)
-                            If produced Is Nothing Then Return
-                            Using produced
-                                Using canvas = New SKCanvas(full)
-                                    canvas.Clear(SKColors.Transparent)
-                                    Using paint = New SKPaint With {.BlendMode = SKBlendMode.Src}
-                                        canvas.DrawBitmap(produced, 0, 0, paint)
-                                    End Using
-                                End Using
-                            End Using
-                            done = True
-                        End Sub, recordedInRecipe:=True)
-                End Function,
-                Sub(patch)
-                    Dim cancelled = BusyWasCancelled()
-                    EndCancellableBusy()
-                    If cancelled Then
-                        ' Der Vermerk bleibt - abgebrochen heisst vertagt, nicht verworfen.
-                        StatusText = LocalizationService.T("Anwenden abgebrochen - das Bild ist unverändert")
-                        Return
-                    End If
-                    If patch Is Nothing OrElse Not done Then
-                        ' Kein Erfolg heisst hier ausdruecklich NICHT "Vermerk weg": beim naechsten
-                        ' Mal (oder auf einem Rechner mit der fehlenden Modelldatei) soll es wieder
-                        ' angeboten werden.
-                        StatusText = LocalizationService.T("Gespeicherte Bearbeitung konnte nicht angewendet werden")
-                        Return
-                    End If
-                    If undoItem IsNot Nothing Then undoItem.Patch = patch
-                    _pendingBakedFromRecipe = False
-                    _bakedOperationsApplied = True
-                    StatusText = LocalizationService.T("Gespeicherte Bearbeitung angewendet")
-                    NameHistoryStep(LocalizationService.T("Gespeicherte Bearbeitung angewendet"))
-                    SchedulePreviewUpdate()
+            Dim input = AsBgra8888(_workingImage.CloneFull())
+            Dim result As SKBitmap = Nothing
+
+            Task.Run(
+                Sub()
+                    Try
+                        result = ImageProcessor.ApplyPendingBakedOperations(input, recipe, cancel)
+                    Catch ex As Exception
+                        DiagnosticLogService.LogException("Editor.ApplyPendingBakedOperations", ex)
+                    Finally
+                        input?.Dispose()
+                    End Try
+                End Sub).ContinueWith(
+                Sub()
+                    Dispatcher.UIThread.Post(
+                        Sub()
+                            Dim cancelled = BusyWasCancelled()
+                            EndCancellableBusy()
+                            If result Is Nothing Then
+                                before.Dispose()
+                                ' Der Vermerk bleibt in beiden Faellen stehen: abgebrochen heisst
+                                ' vertagt, und kein Erfolg heisst ausdruecklich nicht "Vermerk weg" -
+                                ' beim naechsten Mal (oder auf einem Rechner mit der fehlenden
+                                ' Modelldatei) soll es wieder angeboten werden.
+                                StatusText = If(cancelled,
+                                    LocalizationService.T("Anwenden abgebrochen - das Bild ist unverändert"),
+                                    LocalizationService.T("Gespeicherte Bearbeitung konnte nicht angewendet werden"))
+                                Return
+                            End If
+
+                            ' Hat sich die GROESSE geaendert, gehen die Objekte mit - sie leben im
+                            ' Pixelraum der Quelle. Beim Laden wurden sie auf die kleine Datei
+                            ' heruntergerechnet (ImageProcessor.ScaleRecipeToSource); jetzt wird das
+                            ' Bild wirklich groesser, und ohne diesen Schritt blieben sie klein.
+                            Dim factorX = result.Width / CSng(Math.Max(1, _workingImage.FullWidth))
+                            Dim factorY = result.Height / CSng(Math.Max(1, _workingImage.FullHeight))
+                            Dim sizeChanged = result.Width <> _workingImage.FullWidth OrElse
+                                              result.Height <> _workingImage.FullHeight
+                            If sizeChanged Then
+                                ScaleAnnotationsForNewSource(factorX, factorY)
+                                ClearActiveSelectionForGeometry()
+                            End If
+
+                            If Not AdoptWorkingImage(result, hasBakedContent:=True,
+                                                     hasAlphaHoles:=_workingImage.HasAlphaHoles,
+                                                     scheduleInitialRender:=True) Then
+                                before.Dispose()
+                                StatusText = LocalizationService.T("Gespeicherte Bearbeitung konnte nicht angewendet werden")
+                                Return
+                            End If
+                            undoItem.WorkingFull = before
+                            CommitPreparedUndo(undoItem)
+
+                            _pendingBakedFromRecipe = False
+                            _bakedOperationsApplied = True
+                            MarkBakedIntoWorkingImage()
+                            _hasChanges = True
+                            If sizeChanged Then
+                                ' Die Groessenfelder zeigen ab jetzt die neue Groesse.
+                                _resizeWidth = 0 : _resizeHeight = 0
+                                _appliedResizeWidth = 0 : _appliedResizeHeight = 0
+                            End If
+                            RaiseDisplayImageGeometryProperties()
+                            StatusText = LocalizationService.T("Gespeicherte Bearbeitung angewendet")
+                            NameHistoryStep(LocalizationService.T("Gespeicherte Bearbeitung angewendet"))
+                            SchedulePreviewUpdate()
+                        End Sub)
                 End Sub)
         End Sub
 
@@ -15334,6 +15408,11 @@ Namespace ViewModels
                                                 scheduleInitialRender:=Not publishAtomically,
                                                 showRawQuickPreview:=Not publishAtomically)
                 If fpxAdjustments IsNot Nothing Then
+                    ' Das geladene Rezept auf DIESES Bild umrechnen: Objekte, Retuschestellen und
+                    ' Pinselstriche liegen im Pixelraum, in dem das Rezept entstanden ist (siehe
+                    ' ImageProcessor.ScaleRecipeToSource). Nach einem Hochskalieren mit Modell ist
+                    ' das der vierfache - die Datei wird beim Oeffnen aber einfach entwickelt.
+                    ImageProcessor.ScaleRecipeToSource(fpxAdjustments, GetBaseWidth(), GetBaseHeight())
                     ApplyAdjustments(fpxAdjustments, resetTransientSelectionBinding:=True)
                     _hasChanges = False
                     Me.RaisePropertyChanged(NameOf(HasUnsavedChanges))
@@ -15669,6 +15748,11 @@ Namespace ViewModels
                 ' Gespeicherten Bearbeitungszustand aus der .fpx wiederherstellen (Regler, Ebenenstapel, Auswahl …)
                 ' und als "keine ungespeicherten Änderungen" markieren - es ist ja gerade der gespeicherte Stand.
                 If fpxAdjustments IsNot Nothing Then
+                    ' Das geladene Rezept auf DIESES Bild umrechnen: Objekte, Retuschestellen und
+                    ' Pinselstriche liegen im Pixelraum, in dem das Rezept entstanden ist (siehe
+                    ' ImageProcessor.ScaleRecipeToSource). Nach einem Hochskalieren mit Modell ist
+                    ' das der vierfache - die Datei wird beim Oeffnen aber einfach entwickelt.
+                    ImageProcessor.ScaleRecipeToSource(fpxAdjustments, GetBaseWidth(), GetBaseHeight())
                     ApplyAdjustments(fpxAdjustments, resetTransientSelectionBinding:=True)
                     _hasChanges = False
                     Me.RaisePropertyChanged(NameOf(HasUnsavedChanges))
@@ -19716,14 +19800,32 @@ Namespace ViewModels
         ''' passiert, aus dem Schnappschuss laesst sie sich also nicht ablesen - das Werkzeug in der
         ''' Hand sagt dagegen genau, was gleich geschieht ("Pinsel", "Maske", "Zuschneiden").</summary>
         Private Sub PushUndo(Optional label As String = Nothing)
+            CommitPreparedUndo(PrepareUndo(label))
+        End Sub
+
+        ''' <summary>Den Schritt VORBEREITEN, ohne ihn abzulegen - fuer Vorgaenge, die Minuten
+        ''' brauchen und scheitern oder abgebrochen werden koennen.
+        '''
+        ''' Wer erst nach dem Erfolg ablegt, hinterlaesst bei einem Fehlschlag keinen Schritt, der
+        ''' nichts zurueckzunehmen hat. Und er behaelt den WIEDERHOLEN-Zweig: den raeumt jeder neue
+        ''' Schritt weg, ein nachtraeglich entfernter Eintrag brachte ihn nicht zurueck. Dasselbe
+        ''' Muster tragen die Reglerzuege (BeginSliderUndoGesture), nur mit einem eigenen Feld -
+        ''' hier reicht der Rueckgabewert, weil der Aufrufer ihn ohnehin in der Hand behaelt.</summary>
+        Private Function PrepareUndo(Optional label As String = Nothing) As UndoEntry
             ' Ein noch offener Reglerzug gehoert VOR diese Aktion auf den Stapel, sonst stuende sein
             ' Stand von vorher hinterher ueber ihr.
             EndSliderUndoGesture()
             ResetUndoCapture()
-            Dim entry As New UndoEntry With {.Adjustments = GetCurrentAdjustments(),
-                                             .WarpSession = CaptureWarpSession(),
-                                             .Label = BuildUndoLabel(label),
-                                             .IconSource = HistoryIconForTool(_currentTool)}
+            Return New UndoEntry With {.Adjustments = GetCurrentAdjustments(),
+                                       .WarpSession = CaptureWarpSession(),
+                                       .Label = BuildUndoLabel(label),
+                                       .IconSource = HistoryIconForTool(_currentTool)}
+        End Function
+
+        ''' <summary>Einen vorbereiteten Schritt ablegen. Der Stand darin ist der von der
+        ''' Vorbereitung - genau das ist der Sinn, denn ein Schritt sichert immer das VORHER.</summary>
+        Private Sub CommitPreparedUndo(entry As UndoEntry)
+            If entry Is Nothing Then Return
             _undoStack.Push(entry)
             _lastPushedUndoEntry = entry
             _historyStepNamed = False

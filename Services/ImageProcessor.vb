@@ -4178,6 +4178,72 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             Return normalized = "brush" OrElse normalized = "eraser"
         End Function
 
+        ''' <summary>Ein GELADENES Rezept auf die Masse des Bildes umrechnen, das wirklich vorliegt.
+        '''
+        ''' WOFUER: im Rezept steht mit <c>SourceWidthPixels</c>, in welchem Pixelraum seine Objekte,
+        ''' Retuschestellen und Pinselstriche liegen. Weicht das geladene Bild davon ab, zeigt jedes
+        ''' davon an der falschen Stelle - und der Editor stempelt beim naechsten Rezeptaufbau
+        ''' stillschweigend die AKTUELLEN Masse darauf, womit die Abweichung nicht mehr zu erkennen
+        ''' ist. Systematisch wird das durch das Hochskalieren mit Modell: der Editor speichert das
+        ''' Rezept im vierfachen Raum, die Datei wird beim naechsten Oeffnen aber einfach entwickelt.
+        '''
+        ''' Rueckgabe WAHR, wenn etwas umgerechnet wurde. Masken bleiben unberuehrt: sie tragen ihre
+        ''' eigenen Quellmasse und sind damit selbsterklaerend. Der Beschnitt steht in Prozent.</summary>
+        Friend Shared Function ScaleRecipeToSource(adj As ImageAdjustments,
+                                                   width As Integer, height As Integer) As Boolean
+            If adj Is Nothing OrElse width < 2 OrElse height < 2 Then Return False
+            Dim recipeWidth = adj.SourceWidthPixels, recipeHeight = adj.SourceHeightPixels
+            If recipeWidth < 2 OrElse recipeHeight < 2 Then Return False
+            If recipeWidth = width AndAlso recipeHeight = height Then Return False
+
+            Dim scaleX = width / CSng(recipeWidth)
+            Dim scaleY = height / CSng(recipeHeight)
+            Dim uniform = CSng(Math.Sqrt(Math.Max(0.0001F, scaleX * scaleY)))
+
+            If adj.Annotations IsNot Nothing Then
+                For i = 0 To adj.Annotations.Count - 1
+                    Dim annotation = adj.Annotations(i)
+                    If annotation Is Nothing Then Continue For
+                    ' DIESELBE AUSNAHME wie beim Zeichnen: ein verankertes Wasserzeichen, das nicht
+                    ' mitwachsen soll, traegt seine Masse im Ausgaberaum.
+                    If String.Equals(If(annotation.Kind, "").Trim(), "watermark", StringComparison.OrdinalIgnoreCase) AndAlso
+                       Not String.IsNullOrWhiteSpace(annotation.Anchor) AndAlso Not annotation.ScaleWithImage Then Continue For
+                    adj.Annotations(i) = ScaleAnnotationForSource(annotation, scaleX, scaleY)
+                Next
+            End If
+
+            If adj.RetouchSpots IsNot Nothing Then
+                For Each spot In adj.RetouchSpots
+                    If spot Is Nothing Then Continue For
+                    spot.XPixels *= scaleX
+                    spot.YPixels *= scaleY
+                    ' Ein Radius hat nur EINEN Massstab. Bei ungleichen Faktoren ist das
+                    ' geometrische Mittel die einzige Wahl, die keine Achse bevorzugt.
+                    spot.RadiusPixels *= uniform
+                Next
+            End If
+
+            If adj.RasterPaintStrokes IsNot Nothing Then
+                For Each stroke In adj.RasterPaintStrokes
+                    If stroke Is Nothing Then Continue For
+                    stroke.XPixels *= scaleX
+                    stroke.YPixels *= scaleY
+                    stroke.WidthPixels *= scaleX
+                    stroke.HeightPixels *= scaleY
+                    stroke.StrokeWidth *= uniform
+                    If stroke.Strokes IsNot Nothing Then
+                        stroke.Strokes = stroke.Strokes.Select(Function(b) b.Scale(scaleX, scaleY)).ToList()
+                    End If
+                Next
+            End If
+
+            adj.SourceWidthPixels = width
+            adj.SourceHeightPixels = height
+            DiagnosticLogService.LogAlways("Rezept",
+                $"auf die Bildmasse umgerechnet: {recipeWidth}x{recipeHeight} auf {width}x{height}")
+            Return True
+        End Function
+
         ''' <summary>Ein Objekt von einem Quellraum in einen anderen bringen. Friend, weil das
         ''' Hochskalieren im Editor denselben Weg braucht: es aendert die Masse der QUELLE, und
         ''' Objekte leben in deren Pixelraum. Zwei Fassungen davon waeren zwei Gelegenheiten, ein
