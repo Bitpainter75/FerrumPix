@@ -18,6 +18,11 @@
 
 ### Fixes
 
+- Fujifilm RAF files open as the picture again. The lens corrections were sized against the small
+  preview image stored inside the file instead of the photo itself, so they pulled the whole frame
+  into a ball with smeared, washed out edges and green corners. The same mistake made the
+  corrections come out too strong on gallery thumbnails of every raw format.
+
 - The straighten slider follows the mouse again. While you drag it, turn the wheel over it or step
   it in the number box, the preview is computed from a smaller copy of the picture, the way the
   exposure and colour sliders have done for a while; the full resolution comes back as soon as you

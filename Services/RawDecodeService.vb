@@ -582,20 +582,22 @@ Namespace Services
             ' VB kann keinen Span als Parameter fuehren, deshalb eine Kopie der Quelle. Bei 20 MP
             ' sind das 80 MB fuer die Dauer der Umrechnung - vertretbar, weil die Stufe nur laeuft,
             ' wenn fuer dieses Objektiv wirklich Messwerte vorliegen.
-            Dim stepQ = source.RowBytes
-            Dim quellPixel(stepQ * height - 1) As Byte
-            Marshal.Copy(source.GetPixels(), quellPixel, 0, quellPixel.Length)
+            Dim sourceStride = source.RowBytes
+            Dim sourcePixels(sourceStride * height - 1) As Byte
+            Marshal.Copy(source.GetPixels(), sourcePixels, 0, sourcePixels.Length)
             Dim targetPointer = target.GetPixels()
-            Dim ausgabe(width * height * 4 - 1) As Byte
+            Dim output(width * height * 4 - 1) As Byte
 
             Dim cx = (width - 1) / 2.0, cy = (height - 1) / 2.0
             ' Die Kennlinie rechnet im normierten System (r = 1 an der Mitte der langen Kante), die
-            ' Bildpunkte in Pixeln - der Faktor bringt beide zusammen.
-            Dim norm = k.NormScale
+            ' Bildpunkte in Pixeln - der Faktor bringt beide zusammen. Er wird mit den Massen DIESES
+            ' Bildes geholt und nicht aus dem Abgleich uebernommen: der halbe Decode der Kachelbilder
+            ' und jede Datei ohne Bildmasse in den Aufnahmedaten haetten dort einen Faktor daneben.
+            Dim norm = LensDataService.NormScaleFor(k, width, height)
             If norm <= 0.0 Then Return Nothing
 
             ' ZEILENWEISE PARALLEL. Jede Zeile schreibt ausschliesslich in ihren eigenen Abschnitt
-            ' von "ausgabe" und liest nur aus der unveraenderlichen Quellkopie - die Zeilen sind
+            ' der Ausgabe und liest nur aus der unveraenderlichen Quellkopie - die Zeilen sind
             ' voneinander unabhaengig, es braucht keine Sperre. Der Grund: die Schleife rechnet je
             ' Pixel eine Wurzel und ein Polynom, und bei 45 MP dauerte sie auf einem Kern so lange,
             ' dass ein Objektivwechsel spuerbar stand.
@@ -617,34 +619,47 @@ Namespace Services
                             sx = cx + dx * factor
                             sy = cy + dy * factor
                         End If
-                        ZieheBilinear(quellPixel, width, height, stepQ, sx, sy, ausgabe, z)
+                        SampleBilinear(sourcePixels, width, height, sourceStride, sx, sy, output, z)
                         z += 4
                     Next
                 End Sub)
-            Marshal.Copy(ausgabe, 0, targetPointer, ausgabe.Length)
+            Marshal.Copy(output, 0, targetPointer, output.Length)
             Return target
         End Function
+
+        ''' <summary>Wie weit innerhalb des Bildes die Abtastung der Verzeichnung spaetestens
+        ''' haengen bleibt. Der AEUSSERSTE Ring eines entwickelten RAW ist unzuverlaessig: dort
+        ''' fehlt dem Demosaic die Nachbarschaft, und libraw liefert am Bildeck einzelne
+        ''' Ausfallpixel (an einem Fuji-RAW gemessen reines Gruen in 0,0). Beim Klemmen wird genau
+        ''' dieser Punkt ueber die ganze Ecke verteilt - am gemessenen Bild ein gruener Block von
+        ''' rund 90 x 60 Pixeln. Zwei Pixel weiter innen ist der Wert brauchbar, und die zwei
+        ''' Pixel fehlen an einer 6000 Pixel breiten Kante nirgends.</summary>
+        Private Const DistortionEdgeInset As Integer = 2
 
         ''' <summary>Ein Bgra-Pixel bilinear aus der Quelle ziehen. Ausserhalb wird auf den Rand
         ''' geklemmt: die Korrektur zieht das Bild an den Ecken ueber den Rand hinaus, und ein
         ''' geklemmter Streifen ist unauffaelliger als ein schwarzer.</summary>
-        Private Shared Sub ZieheBilinear(source As Byte(), width As Integer, height As Integer,
-                                         schritt As Integer, sx As Double, sy As Double,
-                                         target As Byte(), zielOffset As Integer)
-            If sx < 0 Then sx = 0
-            If sy < 0 Then sy = 0
-            If sx > width - 1.001 Then sx = width - 1.001
-            If sy > height - 1.001 Then sy = height - 1.001
+        Private Shared Sub SampleBilinear(source As Byte(), width As Integer, height As Integer,
+                                          stride As Integer, sx As Double, sy As Double,
+                                          target As Byte(), targetOffset As Integer)
+            ' Der Rand wird um DistortionEdgeInset nach innen gezogen, solange das Bild dafuer
+            ' gross genug ist - bei einem winzigen Bild bleibt es beim Bildrand selbst.
+            Dim inset = If(width > 4 * DistortionEdgeInset AndAlso height > 4 * DistortionEdgeInset,
+                           DistortionEdgeInset, 0)
+            If sx < inset Then sx = inset
+            If sy < inset Then sy = inset
+            If sx > width - 1.001 - inset Then sx = width - 1.001 - inset
+            If sy > height - 1.001 - inset Then sy = height - 1.001 - inset
             Dim x0 = CInt(Math.Floor(sx)), y0 = CInt(Math.Floor(sy))
             Dim fx = sx - x0, fy = sy - y0
             Dim x1 = Math.Min(x0 + 1, width - 1)
             Dim y1 = Math.Min(y0 + 1, height - 1)
-            Dim o00 = y0 * schritt + x0 * 4, o01 = y0 * schritt + x1 * 4
-            Dim o10 = y1 * schritt + x0 * 4, o11 = y1 * schritt + x1 * 4
+            Dim o00 = y0 * stride + x0 * 4, o01 = y0 * stride + x1 * 4
+            Dim o10 = y1 * stride + x0 * 4, o11 = y1 * stride + x1 * 4
             For k = 0 To 3
                 Dim top = source(o00 + k) * (1.0 - fx) + source(o01 + k) * fx
                 Dim bottom = source(o10 + k) * (1.0 - fx) + source(o11 + k) * fx
-                target(zielOffset + k) = CByte(Math.Min(255.0, Math.Max(0.0, top * (1.0 - fy) + bottom * fy)))
+                target(targetOffset + k) = CByte(Math.Min(255.0, Math.Max(0.0, top * (1.0 - fy) + bottom * fy)))
             Next
         End Sub
 
@@ -1308,7 +1323,9 @@ Namespace Services
             Dim korrigiertVignette = lens IsNot Nothing AndAlso lens.HasVignetting
             Dim korrigiert = korrigiertTca OrElse korrigiertVignette
             Dim cx = (width - 1) / 2.0, cy = (height - 1) / 2.0
-            Dim normScale = If(lens IsNot Nothing, lens.NormScale, 0.0)
+            ' Der Faktor kommt mit den Massen DIESES Bildes, nicht aus dem Abgleich - siehe
+            ' LensDataService.NormScaleFor.
+            Dim normScale = LensDataService.NormScaleFor(lens, width, height)
             Dim cornerScale = If(lens IsNot Nothing, lens.CornerScale, 1.0)
 
             ' Zeilenring: Gruen kommt aus der eigenen Zeile, Rot und Blau aus benachbarten. Die

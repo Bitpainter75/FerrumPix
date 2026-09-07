@@ -1086,10 +1086,10 @@ Namespace Views
             Dim control = TryCast(source, Control)
             If control Is Nothing Then Return Nothing
             If TypeOf control Is RoundSlider OrElse TypeOf control Is SliderValueUpDown Then Return control
-            Dim schritte = 0
+            Dim depth = 0
             For Each ancestor In control.GetVisualAncestors()
-                schritte += 1
-                If schritte > SliderValueControlSearchDepth Then Exit For
+                depth += 1
+                If depth > SliderValueControlSearchDepth Then Exit For
                 If TypeOf ancestor Is RoundSlider OrElse TypeOf ancestor Is SliderValueUpDown Then
                     Return TryCast(ancestor, Control)
                 End If

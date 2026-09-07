@@ -90,11 +90,20 @@ Namespace Services
             Public Property Aperture As Double
 
             ''' Pixel mal diesem Faktor ergibt den Radius im System der Verzeichnung/des
-            ''' Farbquerfehlers (r = 1 an der Mitte der langen Kante).
+            ''' Farbquerfehlers (r = 1 an der Mitte der langen Kante). VORLAEUFIG: er gilt fuer die
+            ''' Masse, mit denen gesucht wurde. Die Korrekturstufen rechnen ihn ueber
+            ''' <see cref="NormScaleFor"/> auf die Masse des Bildes um, das WIRKLICH vor ihnen liegt.
             Public Property NormScale As Double = 1.0
             ''' Der Radius der Verzeichnung mal diesem Faktor ergibt den Radius der Vignettierung
             ''' (r = 1 in der Ecke).
             Public Property CornerScale As Double = 1.0
+
+            ''' Das Seitenverhaeltnis, bei dem die Kennlinie gemessen wurde, und der Quotient aus
+            ''' dem Crop-Faktor des Objektivs und dem der Kamera. Nur damit laesst sich die
+            ''' Normierung auf andere Bildmasse umrechnen; 0 heisst "nicht belegt", dann bleibt es
+            ''' bei <see cref="NormScale"/>.
+            Public Property CalibrationAspectRatio As Double
+            Public Property CropRatio As Double
 
             Public Property HasDistortion As Boolean
             Public Property DistortionModel As String = ""
@@ -589,6 +598,7 @@ Namespace Services
             Return New Korrektur With {
                 .LensName = k.LensName, .Brennweite = k.Brennweite, .Aperture = k.Aperture,
                 .NormScale = k.NormScale, .CornerScale = k.CornerScale,
+                .CalibrationAspectRatio = k.CalibrationAspectRatio, .CropRatio = k.CropRatio,
                 .HasDistortion = k.HasDistortion, .DistortionModel = k.DistortionModel,
                 .Va = k.Va, .Vb = k.Vb, .Vc = k.Vc,
                 .HasChromaticAberration = k.HasChromaticAberration,
@@ -812,28 +822,56 @@ Namespace Services
             Return If(besteGuete >= MatchThreshold, bester, Nothing)
         End Function
 
-        ''' <summary>Die Umrechnung von Pixeln in den normierten Radius.
+        ''' <summary>Legt die beiden Radien fest: r = 1 in der Mitte der LANGEN Kante fuer
+        ''' Verzeichnung und Farbquerfehler, r = 1 in der ECKE fuer die Vignettierung.
         '''
-        ''' r = 1 liegt in der Mitte der LANGEN Kante, also bei der halben kurzen Bildseite. Dazu
-        ''' kommt der Ausgleich dafuer, dass die Kennlinie an einem anderen Sensor gemessen wurde:
-        ''' der Weg fuehrt ueber die Bilddiagonale, weil Crop-Faktoren genau darueber definiert
-        ''' sind.</summary>
+        ''' Die Kalibrierdaten (Seitenverhaeltnis der Messung, Crop-Quotient) bleiben am Ergebnis
+        ''' stehen, damit jede Stufe die Umrechnung mit ihren EIGENEN Bildmassen holen kann - siehe
+        ''' <see cref="NormScaleFor"/>. Der hier gesetzte NormScale ist nur der Wert fuer die Masse,
+        ''' mit denen gesucht wurde.</summary>
         Private Shared Sub ComputeNormalization(k As Korrektur, obj As LensEntry,
                                               cameraCrop As Double, width As Integer, height As Integer)
-            Dim w = Math.Max(1, width - 1)
-            Dim h = Math.Max(1, height - 1)
+            k.CalibrationAspectRatio = obj.Seitenverhaeltnis
+            k.CropRatio = obj.CropFactor / Math.Max(0.0001, cameraCrop)
+            ' Die Vignettierung rechnet mit r = 1 in der ECKE. Im System der Verzeichnung liegt die
+            ' Ecke bei Wurzel(Seitenverhaeltnis^2 + 1) - genau darum wird geteilt.
+            k.CornerScale = 1.0 / CalibrationDiagonal(k)
+            k.NormScale = NormScaleFor(k, width, height)
+        End Sub
+
+        Private Shared Function CalibrationDiagonal(k As Korrektur) As Double
+            Return Math.Sqrt(k.CalibrationAspectRatio * k.CalibrationAspectRatio + 1.0)
+        End Function
+
+        ''' <summary>Die Umrechnung von Pixeln in den normierten Radius fuer GENAU DIESE Bildmasse.
+        '''
+        ''' Jede Stufe muss sie mit den Massen des Bildes holen, das wirklich vor ihr liegt, statt
+        ''' den Wert aus dem Abgleich zu nehmen. Der stammt aus den Aufnahmedaten, und die weichen
+        ''' von der Wirklichkeit ab: eine RAF nennt dort ueberhaupt keine Masse, dann kommen sie aus
+        ''' der eingebetteten Vorschau (1920 x 1280 statt 6032 x 4028). Der Radius war damit
+        ''' dreifach zu gross - die Kennlinien liefen weit hinter ihren Messbereich, die
+        ''' Vignettierung schlug ins Negative und die Verzeichnung zog das ganze Bild in eine Kugel.
+        ''' Derselbe Fehler steckt in jedem halb aufgeloesten Decode (Kachelbilder), dort um den
+        ''' Faktor zwei.
+        '''
+        ''' Rueckgabe ist der Wert aus dem Abgleich, wenn die Kalibrierdaten fehlen - so bleiben von
+        ''' Hand aufgebaute Kennlinien (Pruefstand) bei dem, was der Aufrufer gesetzt hat.</summary>
+        Public Shared Function NormScaleFor(k As Korrektur, width As Integer, height As Integer) As Double
+            If k Is Nothing Then Return 0.0
+            If k.CropRatio <= 0.0 OrElse k.CalibrationAspectRatio <= 0.0 OrElse
+               width < 2 OrElse height < 2 Then Return k.NormScale
+
+            Dim w = width - 1
+            Dim h = height - 1
             Dim shortSide = CDbl(Math.Min(w, h))
             Dim imageAspectRatio = If(w < h, CDbl(h) / w, CDbl(w) / h)
 
-            Dim kalibrierAusgleich = Math.Sqrt(obj.Seitenverhaeltnis * obj.Seitenverhaeltnis + 1.0)
-            Dim ausgleich = 1.0 / Math.Sqrt(imageAspectRatio * imageAspectRatio + 1.0) *
-                            (obj.CropFactor / Math.Max(0.0001, cameraCrop)) * kalibrierAusgleich
-
-            k.NormScale = 2.0 / shortSide * ausgleich
-            ' Die Vignettierung rechnet mit r = 1 in der ECKE. Im System oben liegt die Ecke bei
-            ' Wurzel(Seitenverhaeltnis^2 + 1) - genau darum wird geteilt.
-            k.CornerScale = 1.0 / kalibrierAusgleich
-        End Sub
+            ' Der Ausgleich dafuer, dass die Kennlinie an einem anderen Sensor gemessen wurde,
+            ' fuehrt ueber die Bilddiagonale - Crop-Faktoren sind genau darueber definiert.
+            Dim adjust = CalibrationDiagonal(k) /
+                         Math.Sqrt(imageAspectRatio * imageAspectRatio + 1.0) * k.CropRatio
+            Return 2.0 / shortSide * adjust
+        End Function
 
         ' ── Stuetzstellen ueber die Brennweite mitteln ──────────────────────────
 
