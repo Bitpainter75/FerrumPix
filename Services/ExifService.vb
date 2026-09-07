@@ -388,7 +388,90 @@ Namespace Services
                 ' Kein EXIF oder Lesefehler
             End Try
 
+            FillGapsFromRawFile(imagePath, data)
             Return data
+        End Function
+
+        ''' <summary>Was der Metadatenleser nicht gefunden hat, aus der RAW-Datei selbst nachtragen -
+        ''' ueber LibRaw, das beim Oeffnen ohnehin alles davon liest.
+        '''
+        ''' WOFUER: fuenf Containerarten bringen dem Leser gar nichts bei, weil er keinen Leser
+        ''' dafuer hat - CIFF von Canon (.crw), Minoltas .mrw, die alten .raw von Leica, Panasonic
+        ''' und Kodak sowie .mos von Leaf. Er erkennt die Datei sauber als Typ und liefert dann null
+        ''' Angaben. Gemessen an einem Bestand von 464 RAW-Dateien sind das 71 Dateien ohne Kamera,
+        ''' ohne Aufnahmezeit und ohne Bildmasse - sie fallen damit aus Zeitleiste, Sortierung,
+        ''' Gruppierung und jedem Filter heraus.
+        '''
+        ''' NUR LUECKEN FUELLEN, nie ueberschreiben. Der eingebettete Wert ist der genauere: er
+        ''' traegt Sekundenbruchteile, Zeitzonen und die Schreibweise des Herstellers. Und die Regel
+        ''' haelt den Preis bei null - bei einer Datei, deren Angaben vollstaendig sind, wird LibRaw
+        ''' gar nicht erst gefragt.
+        '''
+        ''' Ein Aufruf kostet ein open_file, also unter einer Millisekunde, und faellt damit auch
+        ''' beim Kataloglauf ueber einen grossen Bestand nicht auf. Der Decode-Zwischenspeicher
+        ''' bleibt unberuehrt.</summary>
+        Private Shared Sub FillGapsFromRawFile(imagePath As String, data As ExifData)
+            If data Is Nothing OrElse String.IsNullOrWhiteSpace(imagePath) Then Return
+            If Not RawPreviewService.IsSupportedRaw(imagePath) Then Return
+
+            ' Die Frage lohnt nur, wenn wirklich etwas fehlt - und dann fuer ALLE Felder, die von
+            ' dort kommen koennen. Sonst haengt es am Zufall: eine Nikon-NEF, die ihre Empfindlichkeit
+            ' nur im Herstellerblock fuehrt, hat Kamera und Zeit, und die ISO-Zeile blieb leer,
+            ' obwohl LibRaw sie kennt.
+            Dim needsCamera = String.IsNullOrWhiteSpace(data.Camera)
+            Dim needsTaken = String.IsNullOrWhiteSpace(data.DateTaken)
+            ' Breite und Hoehe EINZELN: eine Datei, die nur eine der beiden Angaben traegt, darf die
+            ' vorhandene nicht verlieren. Ein gemeinsames Kennzeichen hatte genau das getan.
+            Dim needsWidth = String.IsNullOrWhiteSpace(data.ImageWidth)
+            Dim needsHeight = String.IsNullOrWhiteSpace(data.ImageHeight)
+            Dim needsIso = String.IsNullOrWhiteSpace(data.ISO)
+            Dim needsAperture = String.IsNullOrWhiteSpace(data.Aperture)
+            Dim needsShutter = String.IsNullOrWhiteSpace(data.ShutterSpeed)
+            Dim needsFocal = String.IsNullOrWhiteSpace(data.FocalLength)
+            If Not (needsCamera OrElse needsTaken OrElse needsWidth OrElse needsHeight OrElse
+                    needsIso OrElse needsAperture OrElse needsShutter OrElse needsFocal) Then Return
+
+            Try
+                Dim fromFile = RawDecodeService.ReadFileMetadata(imagePath)
+                If fromFile Is Nothing Then Return
+
+                If needsCamera Then data.Camera = (fromFile.Make & " " & fromFile.Model).Trim()
+                If needsTaken AndAlso fromFile.Taken.HasValue Then
+                    ' Dasselbe Rohformat wie im EXIF - der Katalog liest die Zeichenkette so.
+                    data.DateTaken = fromFile.Taken.Value.ToString("yyyy:MM:dd HH:mm:ss", CultureInfo.InvariantCulture)
+                End If
+                If needsWidth AndAlso fromFile.Width > 1 Then
+                    data.ImageWidth = fromFile.Width.ToString(CultureInfo.InvariantCulture)
+                End If
+                If needsHeight AndAlso fromFile.Height > 1 Then
+                    data.ImageHeight = fromFile.Height.ToString(CultureInfo.InvariantCulture)
+                End If
+                ' Die Aufnahmeeinstellungen in der Schreibweise, die der Metadatenleser fuer die
+                ' anderen Formate liefert - das Infopanel und die typisierten Suchfelder lesen sie
+                ' beide ueber dieselbe Zahlenerkennung.
+                If needsIso AndAlso fromFile.Iso > 0 Then
+                    data.ISO = fromFile.Iso.ToString("0", CultureInfo.InvariantCulture)
+                End If
+                If needsAperture AndAlso fromFile.Aperture > 0 Then
+                    data.Aperture = "f/" & fromFile.Aperture.ToString("0.0", CultureInfo.InvariantCulture)
+                End If
+                If needsShutter AndAlso fromFile.ShutterSeconds > 0 Then
+                    data.ShutterSpeed = FormatShutter(fromFile.ShutterSeconds)
+                End If
+                If needsFocal AndAlso fromFile.FocalLengthMm > 0 Then
+                    data.FocalLength = fromFile.FocalLengthMm.ToString("0.#", CultureInfo.InvariantCulture) & " mm"
+                End If
+            Catch ex As Exception
+                DiagnosticLogService.LogException("ExifService.FillGapsFromRawFile", ex)
+            End Try
+        End Sub
+
+        ''' <summary>Belichtungszeit wie im EXIF gelesen: unter einer Sekunde als Stammbruch, darueber
+        ''' als Dezimalzahl.</summary>
+        Private Shared Function FormatShutter(seconds As Double) As String
+            If seconds <= 0 Then Return ""
+            If seconds >= 1.0 Then Return seconds.ToString("0.#", CultureInfo.InvariantCulture) & " sec"
+            Return "1/" & Math.Round(1.0 / seconds).ToString("0", CultureInfo.InvariantCulture) & " sec"
         End Function
 
         ''' <summary>Liest die Metadaten direkt aus base.* im FPX-Buendel. Der Eintrag wird nicht in

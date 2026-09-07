@@ -166,35 +166,91 @@ Namespace Services
                 Loop
                 If totalRead < 4 Then Return Nothing
 
-                Dim bestStart As Integer = -1
-                Dim bestLen As Integer = 0
+                ' ALLE Kandidaten sammeln, nicht nur den groessten: der groesste kann die
+                ' SENSORAUFNAHME selbst sein (siehe IsSensorFrame), und dann ist der
+                ' naechstgroessere das gesuchte Vorschaubild.
+                Dim candidates = New List(Of (Start As Integer, Length As Integer, Width As Integer, Height As Integer))()
 
                 Dim i = 0
                 Do While i < totalRead - 3
                     If data(i) = &HFF AndAlso data(i + 1) = &HD8 AndAlso data(i + 2) = &HFF Then
-                        If IsDisplayableJpeg(data, i) Then
+                        Dim width = 0, height = 0
+                        If TryReadFrameHeader(data, i, width, height) Then
                             Dim jLen = WalkJpegLength(data, i)
-                            If jLen > bestLen Then
-                                bestLen = jLen
-                                bestStart = i
+                            If jLen >= 8192 AndAlso candidates.Count < MaxCandidates Then
+                                candidates.Add((i, jLen, width, height))
                             End If
                         End If
                     End If
                     i += 1
                 Loop
 
-                If bestStart < 0 OrElse bestLen < 8192 Then Return Nothing
+                If candidates.Count = 0 Then Return Nothing
 
-                Dim result(bestLen - 1) As Byte
-                Array.Copy(data, bestStart, result, 0, bestLen)
-                Return New MemoryStream(result)
+                ' Groesste zuerst: fuer die Anzeige zaehlt Aufloesung.
+                candidates.Sort(Function(a, b) b.Length.CompareTo(a.Length))
+                Dim frame = SensorFrameSize(filePath)
+                For Each candidate In candidates
+                    If IsSensorFrame(candidate.Width, candidate.Height, frame) Then Continue For
+                    Dim result(candidate.Length - 1) As Byte
+                    Array.Copy(data, candidate.Start, result, 0, candidate.Length)
+                    Return New MemoryStream(result)
+                Next
+                ' Jeder Fund war die Sensoraufnahme - dann gibt es hier nichts, und die Stufen
+                ' darueber entwickeln die Datei.
+                Return Nothing
             End Using
+        End Function
+
+        ''' <summary>Wie viele Funde hoechstens mitgeschrieben werden. Die Schranke schuetzt nur
+        ''' gegen eine Datei, in der zufaellig hunderte Startmarken stehen; echte RAWs tragen eine
+        ''' Handvoll eingebetteter Bilder.</summary>
+        Private Const MaxCandidates As Integer = 32
+
+        ''' <summary>Die Masse der Sensoraufnahme einer RAW-Datei, oder (0, 0), wenn sie sich nicht
+        ''' feststellen lassen. Kostet ein open_file, unter einer Millisekunde, und nur dann, wenn
+        ''' der Scanner ueberhaupt etwas gefunden hat.</summary>
+        Private Shared Function SensorFrameSize(filePath As String) As (Width As Integer, Height As Integer)
+            Try
+                Dim facts = RawDecodeService.ReadFileMetadata(filePath)
+                If facts Is Nothing Then Return (0, 0)
+                Return (facts.RawFrameWidth, facts.RawFrameHeight)
+            Catch
+                Return (0, 0)
+            End Try
+        End Function
+
+        ''' <summary>Ist dieser Fund in Wahrheit die SENSORAUFNAHME und kein Vorschaubild?
+        '''
+        ''' Canons altes CIFF-Format (.crw) legt die Sensordaten als JPEG mit einer gewoehnlichen,
+        ''' anzeigbaren Rahmenart ab. Die Markenpruefung greift dort also nicht, und weil diese
+        ''' Aufnahme das groesste eingebettete Bild der Datei ist, gewann sie: der Betrachter und
+        ''' die Galerie zeigten graues Rauschen statt des Bildes. Gemessen an acht von 34 CRW im
+        ''' Pruefbestand (G3, G5, G6, S45, S50, S60, S70, Pro1).
+        '''
+        ''' Erkannt wird es an der Groesse, und zwar GENAU: die Sensoraufnahme misst den ganzen
+        ''' Sensorrahmen einschliesslich des abgedeckten Randes (bei einer G5 2672 x 1968), ein
+        ''' Vorschaubild dagegen den sichtbaren Ausschnitt oder weniger (2616 x 1960 und kleiner).
+        ''' Eine Toleranz gibt es nicht, damit kein echtes Vorschaubild abgelehnt wird.</summary>
+        Private Shared Function IsSensorFrame(width As Integer, height As Integer,
+                                              frame As (Width As Integer, Height As Integer)) As Boolean
+            If frame.Width < 2 OrElse frame.Height < 2 Then Return False
+            If width < 2 OrElse height < 2 Then Return False
+            Return width = frame.Width AndAlso height = frame.Height
         End Function
 
         ''' Wahr, wenn das JPEG an dieser Stelle eine ANZEIGBARE Rahmenart benutzt. Verlustfreies
         ''' JPEG (SOF3, SOF5 bis 7, SOF11, SOF13 bis 15) dient zum Packen der Sensordaten einer RAW
         ''' und laesst sich mit einem gewoehnlichen Bilddecoder nicht lesen.
-        Private Shared Function IsDisplayableJpeg(data As Byte(), offset As Integer) As Boolean
+        '''
+        ''' Die MASSE kommen im selben Durchgang heraus - sie stehen im Rahmenkopf, und ein zweiter
+        ''' Lauf durch die Markenkette nur dafuer waere die gleiche Arbeit zweimal. Bleiben sie 0,
+        ''' liess sich der Kopf nicht auswerten; der Aufrufer darf den Fund dann nicht anhand seiner
+        ''' Groesse beurteilen.
+        Private Shared Function TryReadFrameHeader(data As Byte(), offset As Integer,
+                                                   ByRef width As Integer, ByRef height As Integer) As Boolean
+            width = 0
+            height = 0
             Dim pos = offset + 2           ' die Startmarke SOI (FF D8) ueberspringen
             Dim limit = Math.Min(data.Length, offset + 8192)
             Do While pos + 3 < limit
@@ -203,7 +259,13 @@ Namespace Services
                 If marker >= &HC0 AndAlso marker <= &HCF AndAlso
                    marker <> &HC4 AndAlso marker <> &HC8 AndAlso marker <> &HCC Then
                     ' C0=baseline, C1=extended, C2=progressive → displayable
-                    Return marker = &HC0 OrElse marker = &HC1 OrElse marker = &HC2
+                    Dim displayable = marker = &HC0 OrElse marker = &HC1 OrElse marker = &HC2
+                    ' Der Rahmenkopf: Laenge (2), Genauigkeit (1), Hoehe (2), Breite (2).
+                    If displayable AndAlso pos + 8 < data.Length Then
+                        height = CInt(data(pos + 5)) * 256 + CInt(data(pos + 6))
+                        width = CInt(data(pos + 7)) * 256 + CInt(data(pos + 8))
+                    End If
+                    Return displayable
                 End If
                 If (marker >= &HD0 AndAlso marker <= &HD9) OrElse marker = &H01 Then
                     pos += 2

@@ -58,6 +58,10 @@ Namespace Services
         ''' Eigener Delegat, weil er ZWEI Indizes nimmt; pre_mul hat dieselbe Signatur wie cam_mul
         ''' und benutzt deshalb <see cref="GetCamMulFn"/> mit.</summary>
         Private Delegate Function GetRgbCamFn(handle As IntPtr, row As Integer, column As Integer) As Single
+        ''' <summary>libraw_get_iparams/libraw_get_imgother: Zeiger auf eine Struktur INNERHALB des
+        ''' libraw-Handles. Sie gehoert der Bibliothek, wird nicht freigegeben und ist nur so lange
+        ''' gueltig, wie das Handle offen ist.</summary>
+        Private Delegate Function GetStructFn(handle As IntPtr) As IntPtr
         Private Delegate Sub SetUserMulFn(handle As IntPtr, index As Integer, value As Single)
         Private Delegate Sub SetGammaFn(handle As IntPtr, index As Integer, value As Single)   ' libraw_set_gamma nimmt FLOAT, nicht double
         Private Delegate Function MakeMemImageFn(handle As IntPtr, ByRef errc As Integer) As IntPtr
@@ -97,6 +101,12 @@ Namespace Services
         Private Shared _getCamMul As GetCamMulFn
         Private Shared _getPreMul As GetCamMulFn
         Private Shared _getRgbCam As GetRgbCamFn
+        Private Shared _getIparams As GetStructFn
+        Private Shared _getImgOther As GetStructFn
+        Private Shared _getIwidth As IntFn
+        Private Shared _getIheight As IntFn
+        Private Shared _getRawWidth As IntFn
+        Private Shared _getRawHeight As IntFn
         Private Shared _setUserMul As SetUserMulFn
         Private Shared _setNoAutoBright As SetIntFn
         Private Shared _setGamma As SetGammaFn
@@ -275,6 +285,25 @@ Namespace Services
                         _getPreMul = Nothing
                         _getRgbCam = Nothing
                     End Try
+                    ' OPTIONAL, eigenes Try wie oben: die beiden liefern die AUFNAHMEDATEN, die
+                    ' LibRaw beim Oeffnen selbst aus der Datei liest - fuer die Container, zu denen
+                    ' unser Metadatenleser gar keinen Leser mitbringt (siehe ReadFileMetadata).
+                    ' Fehlen sie, bleibt es bei dem, was aus den Aufnahmedaten kommt.
+                    Try
+                        _getIparams = GetExport(Of GetStructFn)(handle, "libraw_get_iparams")
+                        _getImgOther = GetExport(Of GetStructFn)(handle, "libraw_get_imgother")
+                        _getIwidth = GetExport(Of IntFn)(handle, "libraw_get_iwidth")
+                        _getIheight = GetExport(Of IntFn)(handle, "libraw_get_iheight")
+                        _getRawWidth = GetExport(Of IntFn)(handle, "libraw_get_raw_width")
+                        _getRawHeight = GetExport(Of IntFn)(handle, "libraw_get_raw_height")
+                    Catch
+                        _getIparams = Nothing
+                        _getImgOther = Nothing
+                        _getIwidth = Nothing
+                        _getIheight = Nothing
+                        _getRawWidth = Nothing
+                        _getRawHeight = Nothing
+                    End Try
                     _library = handle
                 Catch
                     ' Ein fehlender Export = Bibliothek unbrauchbar; alles auf Anfang.
@@ -282,6 +311,9 @@ Namespace Services
                     _setOutputBps = Nothing : _setOutputColor = Nothing
                     _getCamMul = Nothing : _setUserMul = Nothing
                     _getPreMul = Nothing : _getRgbCam = Nothing
+                    _getIparams = Nothing : _getImgOther = Nothing
+                    _getIwidth = Nothing : _getIheight = Nothing
+                    _getRawWidth = Nothing : _getRawHeight = Nothing
                     _setHighlight = Nothing
                     _setNoAutoBright = Nothing : _setGamma = Nothing : _setFbdd = Nothing : _setDemosaic = Nothing
                     _process = Nothing : _makeMemImage = Nothing : _clearMem = Nothing : _close = Nothing
@@ -679,6 +711,194 @@ Namespace Services
             Catch
             End Try
             Return (0, 0)
+        End Function
+
+        ''' <summary>Die Aufnahmedaten, die LibRaw beim Oeffnen selbst aus der Datei liest. Alle
+        ''' Felder sind leer oder null, wenn die Datei sie nicht traegt.</summary>
+        Public NotInheritable Class FileMetadata
+            Public Property Make As String = ""
+            Public Property Model As String = ""
+            Public Property Taken As DateTime?
+            Public Property Iso As Double
+            Public Property Aperture As Double
+            Public Property ShutterSeconds As Double
+            Public Property FocalLengthMm As Double
+            ''' Die Masse des SICHTBAREN Bildes.
+            Public Property Width As Integer
+            Public Property Height As Integer
+            ''' Die Masse des ganzen Sensorrahmens, also einschliesslich des abgedeckten Randes.
+            ''' Sie sind immer groesser als die des sichtbaren Bildes; gebraucht werden sie, um eine
+            ''' als Vorschau ausgegebene Sensoraufnahme zu erkennen (siehe RawPreviewService).
+            Public Property RawFrameWidth As Integer
+            Public Property RawFrameHeight As Integer
+        End Class
+
+        ' Der Aufbau der beiden Strukturen, gegen libraw_types.h. Gelesen wird an festen Versaetzen,
+        ' weil die C-Schnittstelle nur einen Zeiger auf die Struktur herausgibt und keine
+        ' Einzelabfragen dafuer kennt.
+        '
+        '   libraw_iparams_t:   guard[4] make[64] model[64] software[64] normalized_make[64] ...
+        '   libraw_imgother_t:  iso_speed shutter aperture focal_len (je Single), timestamp (time_t)
+        Private Const IparamsMakeOffset As Integer = 4
+        Private Const IparamsModelOffset As Integer = 68
+        Private Const IparamsNormalizedMakeOffset As Integer = 196
+        Private Const IparamsTextLength As Integer = 64
+        Private Const ImgOtherIsoOffset As Integer = 0
+        Private Const ImgOtherShutterOffset As Integer = 4
+        Private Const ImgOtherApertureOffset As Integer = 8
+        Private Const ImgOtherFocalOffset As Integer = 12
+        Private Const ImgOtherTimestampOffset As Integer = 16
+
+        ''' <summary>Aufnahmedaten aus der RAW-Datei, gelesen von LibRaw selbst.
+        '''
+        ''' WOFUER: fuenf Containerarten bringen unserem Metadatenleser gar nichts bei - CIFF von
+        ''' Canon (.crw), Minoltas .mrw, die alten .raw von Leica, Panasonic und Kodak sowie .mos
+        ''' von Leaf. Gemessen an einem Bestand von 464 RAW-Dateien betrifft das 71 Dateien: ohne
+        ''' Kamera, ohne Aufnahmezeit und ohne Bildmasse fallen sie aus Zeitleiste, Sortierung und
+        ''' jedem Filter heraus. LibRaw liest all das beim Oeffnen ohnehin.
+        '''
+        ''' KEIN Decode, nur open_file - dieselbe Groessenordnung wie ReadCameraColorFacts, unter
+        ''' einer Millisekunde je Datei, ohne den Decode-Zwischenspeicher anzufassen.
+        '''
+        ''' WARUM DAS TROTZ DER FESTEN VERSAETZE VERTRETBAR IST: die Werte lassen sich PRUEFEN. Ein
+        ''' Herstellername ist druckbarer Text, ein Zeitstempel liegt zwischen 1990 und heute, ein
+        ''' ISO-Wert in einem bekannten Bereich. Zusaetzlich wird ein ZWEITES Textfeld 192 Byte
+        ''' weiter gelesen (normalized_make); ein verschobener Aufbau liefert nicht an beiden
+        ''' Stellen zufaellig plausiblen Text. Schlaegt die Pruefung fehl, gibt es Nothing und es
+        ''' bleibt bei dem, was aus den Aufnahmedaten kommt - kein falscher Wert, sondern keiner.
+        ''' Genau daran scheitert der Schwarzpunkt (siehe OFFENE_PUNKTE.md): den koennte man nicht
+        ''' pruefen, ein verschobener Aufbau schriebe dort still einen falschen Wert ins Bild.</summary>
+        Public Shared Function ReadFileMetadata(path As String) As FileMetadata
+            If String.IsNullOrWhiteSpace(path) OrElse Not IsAvailable Then Return Nothing
+            If _getIparams Is Nothing OrElse _getImgOther Is Nothing Then Return Nothing
+            If Not _reentrant Then
+                SyncLock _nativeLock
+                    Return ReadFileMetadataCore(path)
+                End SyncLock
+            End If
+            Return ReadFileMetadataCore(path)
+        End Function
+
+        Private Shared Function ReadFileMetadataCore(path As String) As FileMetadata
+            Dim handle = _init(0UI)
+            If handle = IntPtr.Zero Then Return Nothing
+            Dim pathPtr As IntPtr = IntPtr.Zero
+            Try
+                pathPtr = StringToUtf8(path)
+                If _openFile(handle, pathPtr) <> 0 Then Return Nothing
+
+                Dim iparams = _getIparams(handle)
+                If iparams = IntPtr.Zero Then Return Nothing
+                Dim make = FixedText(iparams, IparamsMakeOffset)
+                Dim model = FixedText(iparams, IparamsModelOffset)
+                ' Die Aufbaupruefung: zwei Textfelder, 192 Byte auseinander.
+                Dim normalizedMake = FixedText(iparams, IparamsNormalizedMakeOffset)
+                If Not IsPlausibleText(make) OrElse Not IsPlausibleText(normalizedMake) Then
+                    DiagnosticLogService.LogAlways("RawDecodeService.ReadFileMetadata",
+                        "Die Aufnahmedaten von libraw sehen nicht wie Text aus - der Aufbau der " &
+                        "Struktur passt nicht zu dieser Fassung. Es bleibt beim Metadatenleser.")
+                    Return Nothing
+                End If
+
+                Dim result = New FileMetadata With {
+                    .Make = make,
+                    .Model = If(IsPlausibleText(model), model, "")
+                }
+
+                Dim other = _getImgOther(handle)
+                If other <> IntPtr.Zero Then
+                    result.Iso = InRange(ReadSingle(other, ImgOtherIsoOffset), 1.0, 10000000.0)
+                    result.ShutterSeconds = InRange(ReadSingle(other, ImgOtherShutterOffset), 0.000001, 7200.0)
+                    result.Aperture = InRange(ReadSingle(other, ImgOtherApertureOffset), 0.4, 99.0)
+                    result.FocalLengthMm = InRange(ReadSingle(other, ImgOtherFocalOffset), 0.5, 3000.0)
+                    result.Taken = PlausibleTimestamp(Marshal.ReadInt64(other, ImgOtherTimestampOffset))
+                End If
+
+                ' Die Bildmasse stehen nach open_file bereit und sind die des SICHTBAREN Bildes,
+                ' ungedreht - dieselbe Zaehlweise, die auch die Aufnahmedaten anderer Formate
+                ' melden.
+                If _getIwidth IsNot Nothing AndAlso _getIheight IsNot Nothing Then
+                    Dim width = _getIwidth(handle)
+                    Dim height = _getIheight(handle)
+                    If width > 1 AndAlso height > 1 AndAlso width < 200000 AndAlso height < 200000 Then
+                        result.Width = width
+                        result.Height = height
+                    End If
+                End If
+                If _getRawWidth IsNot Nothing AndAlso _getRawHeight IsNot Nothing Then
+                    Dim frameWidth = _getRawWidth(handle)
+                    Dim frameHeight = _getRawHeight(handle)
+                    If frameWidth > 1 AndAlso frameHeight > 1 AndAlso
+                       frameWidth < 200000 AndAlso frameHeight < 200000 Then
+                        result.RawFrameWidth = frameWidth
+                        result.RawFrameHeight = frameHeight
+                    End If
+                End If
+
+                Return result
+            Catch ex As Exception
+                DiagnosticLogService.LogException("RawDecodeService.ReadFileMetadata", ex)
+                Return Nothing
+            Finally
+                _close(handle)
+                If pathPtr <> IntPtr.Zero Then Marshal.FreeCoTaskMem(pathPtr)
+            End Try
+        End Function
+
+        ''' <summary>Ein Textfeld fester Laenge aus einer nativen Struktur. Gelesen wird bis zum
+        ''' ersten Nullbyte, hoechstens aber die Feldlaenge - ein nicht abgeschlossenes Feld darf
+        ''' nicht in die naechste Struktur hineinlesen.</summary>
+        Private Shared Function FixedText(structPtr As IntPtr, offset As Integer) As String
+            Dim raw(IparamsTextLength - 1) As Byte
+            Marshal.Copy(IntPtr.Add(structPtr, offset), raw, 0, raw.Length)
+            Dim length = Array.IndexOf(raw, CByte(0))
+            If length < 0 Then length = raw.Length
+            If length = 0 Then Return ""
+            Return Text.Encoding.UTF8.GetString(raw, 0, length).Trim()
+        End Function
+
+        ''' <summary>Sieht das nach einem Hersteller- oder Modellnamen aus? Verlangt wird druckbarer
+        ''' Text mit mindestens einem Buchstaben - genau das liefert ein verschobener Strukturaufbau
+        ''' nicht.</summary>
+        Private Shared Function IsPlausibleText(value As String) As Boolean
+            If String.IsNullOrWhiteSpace(value) Then Return False
+            Dim hasLetter = False
+            For Each c In value
+                If Char.IsLetter(c) Then hasLetter = True
+                If Char.IsControl(c) OrElse AscW(c) > 126 Then Return False
+            Next
+            Return hasLetter
+        End Function
+
+        Private Shared Function ReadSingle(structPtr As IntPtr, offset As Integer) As Double
+            Return BitConverter.Int32BitsToSingle(Marshal.ReadInt32(structPtr, offset))
+        End Function
+
+        ''' <summary>Null, wenn der Wert ausserhalb des Erwarteten liegt. Ein unbelegtes Feld traegt
+        ''' bei LibRaw eine Null, ein falsch gelesenes irgendetwas.</summary>
+        Private Shared Function InRange(value As Double, minimum As Double, maximum As Double) As Double
+            If Double.IsNaN(value) OrElse value < minimum OrElse value > maximum Then Return 0
+            Return value
+        End Function
+
+        ''' <summary>Der Zeitstempel als Unix-Sekunden, sofern er in einem Bereich liegt, in dem es
+        ''' Digitalkameras gibt. Nothing bei null (Datei traegt keine Zeit) und bei allem, was nach
+        ''' einem Fehlgriff aussieht.
+        '''
+        ''' ORTSZEIT, nicht UTC. Eine Aufnahmezeit im Bild hat keine Zeitzone - sie ist die Zeit,
+        ''' die die Kamera anzeigte. LibRaw rechnet sie mit der Zeitzone DIESES Rechners in einen
+        ''' Zeitstempel um; sie mit derselben Zeitzone zurueckzurechnen holt genau die Uhrzeit
+        ''' wieder heraus, die in der Datei steht - unabhaengig davon, wo das Bild entstanden ist.
+        ''' Ueber UTC gerechnet waeren es je nach Jahreszeit ein oder zwei Stunden daneben.</summary>
+        Private Shared Function PlausibleTimestamp(unixSeconds As Long) As DateTime?
+            If unixSeconds <= 0 Then Return Nothing
+            Try
+                Dim stamp = DateTimeOffset.FromUnixTimeSeconds(unixSeconds).LocalDateTime
+                If stamp.Year < 1990 OrElse stamp > DateTime.Now.AddDays(2) Then Return Nothing
+                Return stamp
+            Catch
+                Return Nothing
+            End Try
         End Function
 
         ''' <summary>Die Farbdaten der Kamera zu einer RAW-Datei: die Multiplikatoren der AUFNAHME

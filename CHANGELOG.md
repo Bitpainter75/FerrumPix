@@ -16,7 +16,19 @@
   you press Apply. Leaving the tool with either of them still open now asks whether to apply it
   first, instead of quietly putting the picture back the way it was.
 
+### What's new
+
+- **Old raw formats keep their date and camera.** Pictures from Canon's early CRW files, Minolta
+  MRW, the plain .RAW of Leica, Panasonic and Kodak and Leaf's MOS arrived without a shooting date,
+  without a camera name and without dimensions, so they dropped out of the timeline, out of sorting
+  and out of every filter. Those details are read from the raw file itself now, together with ISO,
+  aperture, shutter speed and focal length. Anything a picture already carries stays untouched.
+
 ### Fixes
+
+- Old Canon CRW files no longer show grey noise in the viewer and the gallery. Those files store
+  the sensor data in a way that looked like a preview image, and being the largest picture inside
+  the file, it won. The real preview is used now, and where there is none, the picture is developed.
 
 - Fujifilm RAF files open as the picture again. The lens corrections were sized against the small
   preview image stored inside the file instead of the photo itself, so they pulled the whole frame
