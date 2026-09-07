@@ -8196,4 +8196,19 @@
   <data name="Viele_Bildschirme_k_nnen_mehr_Farben_zeigen_als__9f4aaab0" xml:space="preserve">
     <value>Mange skjermer kan vise flere farger enn et bilde inneholder. Uten tilpasning ser bilder og grensesnitt for sterke ut på dem. Slått på regner macOS om fargene for skjermen du bruker; på en vanlig skjerm endres ingenting.</value>
   </data>
+  <data name="Leinwand_automatisch_zuschneiden_b17b6882" xml:space="preserve">
+    <value>Beskjær lerretet automatisk</value>
+  </data>
+  <data name="Schneidet_die_Leinwand_beim_Ausrichten_so_weit_z_29c3fc3b" xml:space="preserve">
+    <value>Beskjærer lerretet ved oppretting, slik at det ikke blir tomme kiler i hjørnene</value>
+  </data>
+  <data name="Transformieren_anwenden_14dfa3fb" xml:space="preserve">
+    <value>Bruk Transformer?</value>
+  </data>
+  <data name="Zuschnitt_und_Lage_sind_noch_nicht_bernommen_Sol_5a2fe4b2" xml:space="preserve">
+    <value>Beskjæringen og retningen er ennå ikke brukt. Skal de brukes før du {0}?</value>
+  </data>
+  <data name="das_Werkzeug_wechselst_072515cf" xml:space="preserve">
+    <value>bytter verktøy</value>
+  </data>
 </root>

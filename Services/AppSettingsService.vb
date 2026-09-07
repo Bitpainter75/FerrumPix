@@ -391,6 +391,19 @@ Namespace Services
         ''' Ob der Vorher/Nachher-Vergleich im Editor zuletzt eingeschaltet war - gemerkter Bedienzustand
         ''' (wie die Info-Leiste), kein Schalter in den Einstellungen.
         Public Property EditorShowComparison As Boolean = True
+
+        ''' <summary>Die beiden Leinwand-Haken des Ausrichtens, wie sie zuletzt standen. Sie sagen,
+        ''' WIE gedreht wird, und nicht, wie weit - eine Gewohnheit also, keine Eigenschaft des
+        ''' Bildes, und sie kehren beim naechsten Start zurueck (Patricks Wunsch 2026-09-07).
+        '''
+        ''' Ab Werk beide AUS: die Leinwand bleibt dann, wie sie ist. Ein GELADENES Rezept sticht
+        ''' die Erinnerung aus - dort steht, was dieses Bild tatsaechlich tut; die Erinnerung gilt
+        ''' fuer ein Bild ohne Drehung und fuer das Zuruecksetzen.
+        '''
+        ''' Sie schliessen sich aus (erweitern gegen zuschneiden). Gespeichert werden sie trotzdem
+        ''' getrennt, weil "beide aus" ein eigener, gueltiger Stand ist.</summary>
+        Public Property EditorStraightenExpandCanvas As Boolean = False
+        Public Property EditorStraightenAutoCrop As Boolean = False
         Public Property ViewerInfoSidebarExpanded As Boolean = True
         ''' In der Galerie ist die Info-Leiste ab Werk ZU: dort stehen links schon Ordnerbaum und
         ''' Filter, und wer die Galerie oeffnet, sucht ein Bild und liest keine Metadaten.
@@ -2122,6 +2135,16 @@ Namespace Services
 
         Public Shared Sub SaveEditorShowComparison(value As Boolean)
             Update(Sub(s) s.EditorShowComparison = value)
+        End Sub
+
+        ''' <summary>Die beiden Leinwand-Haken des Ausrichtens in EINEM Zug schreiben: sie schliessen
+        ''' sich aus, und zwei getrennte Schreibvorgaenge liessen zwischendurch einen Stand stehen,
+        ''' den es in der Bedienung nicht gibt.</summary>
+        Public Shared Sub SaveEditorStraightenCanvas(expandCanvas As Boolean, autoCrop As Boolean)
+            Update(Sub(s)
+                       s.EditorStraightenExpandCanvas = expandCanvas
+                       s.EditorStraightenAutoCrop = autoCrop
+                   End Sub)
         End Sub
 
         Public Shared Sub SaveEditorShowRulers(value As Boolean)

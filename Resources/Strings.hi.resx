@@ -8200,4 +8200,19 @@
   <data name="Viele_Bildschirme_k_nnen_mehr_Farben_zeigen_als__9f4aaab0" xml:space="preserve">
     <value>कई स्क्रीन उससे अधिक रंग दिखा सकती हैं जितने एक फ़ोटो में होते हैं। समायोजन के बिना उन पर फ़ोटो और इंटरफ़ेस बहुत तेज़ दिखते हैं। चालू होने पर macOS रंगों को उपयोग की जा रही स्क्रीन के लिए बदल देता है; सामान्य स्क्रीन पर कुछ नहीं बदलता।</value>
   </data>
+  <data name="Leinwand_automatisch_zuschneiden_b17b6882" xml:space="preserve">
+    <value>कैनवास स्वतः काटें</value>
+  </data>
+  <data name="Schneidet_die_Leinwand_beim_Ausrichten_so_weit_z_29c3fc3b" xml:space="preserve">
+    <value>सीधा करते समय कैनवास इतना काटता है कि कोनों में खाली हिस्से न रहें</value>
+  </data>
+  <data name="Transformieren_anwenden_14dfa3fb" xml:space="preserve">
+    <value>रूपांतरण लागू करें?</value>
+  </data>
+  <data name="Zuschnitt_und_Lage_sind_noch_nicht_bernommen_Sol_5a2fe4b2" xml:space="preserve">
+    <value>कटाई और दिशा अभी लागू नहीं हुई हैं। {0} से पहले उन्हें लागू करें?</value>
+  </data>
+  <data name="das_Werkzeug_wechselst_072515cf" xml:space="preserve">
+    <value>उपकरण बदलने</value>
+  </data>
 </root>

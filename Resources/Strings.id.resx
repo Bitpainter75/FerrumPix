@@ -8200,4 +8200,19 @@
   <data name="Viele_Bildschirme_k_nnen_mehr_Farben_zeigen_als__9f4aaab0" xml:space="preserve">
     <value>Banyak layar dapat menampilkan lebih banyak warna daripada yang ada dalam foto. Tanpa penyesuaian, foto dan antarmuka terlihat terlalu kuat di layar itu. Saat aktif, macOS mengonversi warna untuk layar yang dipakai; pada layar biasa tidak ada yang berubah.</value>
   </data>
+  <data name="Leinwand_automatisch_zuschneiden_b17b6882" xml:space="preserve">
+    <value>Pangkas kanvas secara otomatis</value>
+  </data>
+  <data name="Schneidet_die_Leinwand_beim_Ausrichten_so_weit_z_29c3fc3b" xml:space="preserve">
+    <value>Memangkas kanvas saat meluruskan agar tidak ada sudut kosong yang tersisa</value>
+  </data>
+  <data name="Transformieren_anwenden_14dfa3fb" xml:space="preserve">
+    <value>Terapkan Transformasi?</value>
+  </data>
+  <data name="Zuschnitt_und_Lage_sind_noch_nicht_bernommen_Sol_5a2fe4b2" xml:space="preserve">
+    <value>Pemangkasan dan orientasi belum diterapkan. Terapkan sebelum Anda {0}?</value>
+  </data>
+  <data name="das_Werkzeug_wechselst_072515cf" xml:space="preserve">
+    <value>mengganti alat</value>
+  </data>
 </root>

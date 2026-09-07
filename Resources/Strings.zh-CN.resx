@@ -8154,4 +8154,19 @@
   <data name="Viele_Bildschirme_k_nnen_mehr_Farben_zeigen_als__9f4aaab0" xml:space="preserve">
     <value>许多屏幕能显示的颜色比照片本身更多。不做适配时，照片和界面在这类屏幕上会显得过于浓艳。开启后，macOS 会为当前所用的屏幕转换颜色；在普通屏幕上没有变化。</value>
   </data>
+  <data name="Leinwand_automatisch_zuschneiden_b17b6882" xml:space="preserve">
+    <value>自动裁剪画布</value>
+  </data>
+  <data name="Schneidet_die_Leinwand_beim_Ausrichten_so_weit_z_29c3fc3b" xml:space="preserve">
+    <value>拉直时裁剪画布，使边角不留空白</value>
+  </data>
+  <data name="Transformieren_anwenden_14dfa3fb" xml:space="preserve">
+    <value>应用变换吗？</value>
+  </data>
+  <data name="Zuschnitt_und_Lage_sind_noch_nicht_bernommen_Sol_5a2fe4b2" xml:space="preserve">
+    <value>裁剪和方向尚未应用。在{0}前应用吗？</value>
+  </data>
+  <data name="das_Werkzeug_wechselst_072515cf" xml:space="preserve">
+    <value>切换工具</value>
+  </data>
 </root>

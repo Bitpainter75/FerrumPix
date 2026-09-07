@@ -164,6 +164,47 @@
                                     Spacing="14"
                                     Margin="0,14,0,0"
                                     IsVisible="{Binding DialogShowsCopyright}">
+                            <!-- Beim UEBERSCHREIBEN ist das Speichern-unter-Raster darunter
+                                 ausgeblendet (Format und Ziel gibt es dann nicht), neu encodiert
+                                 wird die Datei trotzdem: die JPG-Qualitaet bekommt deshalb ihre
+                                 eigene Zeile, sichtbar nur mit JPG-Quellen im Stapel.
+
+                                 SIE STEHT IM STAPEL DIESES BLOCKS und nicht mehr als zweites Kind
+                                 derselben Rasterzeile 4. Dort lag sie, solange "immer nur einer
+                                 von beiden sichtbar" stimmte - der Urheberrechtshinweis ist
+                                 seither aus dem Speichern-unter-Raster herausgewandert und
+                                 erscheint AUCH beim Ueberschreiben. Damit waren beide Kinder
+                                 gleichzeitig sichtbar und lagen uebereinander: "JPG-Qualitaet" auf
+                                 "Copyright", der Regler auf dem Textfeld (Nutzerbefund mit
+                                 Bildschirmaufnahme, 2026-09-07). -->
+                            <Grid ColumnSpacing="14"
+                                  IsVisible="{Binding IsDialogOverwriteJpgQualityVisible}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" SharedSizeGroup="DialogLabelColumn"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="JPG-Qualität"
+                                           VerticalAlignment="Center"
+                                           Foreground="{DynamicResource FP.Text.Secondary}"/>
+                                <Grid Grid.Column="1"
+                                      ColumnDefinitions="*,Auto"
+                                      ColumnSpacing="12">
+                                    <icons:RoundSlider Minimum="1"
+                                                       Maximum="100"
+                                                       DefaultValue="{Binding DialogJpgQualityDefault}"
+                                                       Value="{Binding DialogJpgQuality, Mode=TwoWay}"
+                                                       VerticalAlignment="Center"
+                                                       HorizontalAlignment="Stretch"
+                                                       Height="28"
+                                                       MinHeight="0"/>
+                                    <TextBlock Grid.Column="1"
+                                               Text="{Binding DialogJpgQuality, StringFormat={}{0}%}"
+                                               MinWidth="42"
+                                               TextAlignment="Right"
+                                               VerticalAlignment="Center"
+                                               Foreground="{DynamicResource FP.Text.Secondary}"/>
+                                </Grid>
+                            </Grid>
                             <!-- Die Labelspalte teilt ihre Breite mit den dialogeigenen Sektionen
                                  (SharedSizeGroup): Eingabefelder beider Bereiche beginnen auf derselben
                                  Linie, egal welches Label das längste ist. -->
@@ -389,42 +430,6 @@
                                       FontSize="{DynamicResource FP.Font.Small}"
                                       ToolTip.Tip="Bei RAW- und Photoshop-Dateien liegt Entrauschen, Objektentfernen, Retusche und Pinsel nur als Vermerk neben der Datei. Mit Haken werden sie mitgerechnet, was mehrere Minuten je Bild kostet; ohne Haken kommen die Bilder ohne diese Bearbeitung heraus."/>
                         </StackPanel>
-
-                        <!-- Beim UEBERSCHREIBEN ist der Speichern-unter-Block oben ausgeblendet
-                             (Format und Ziel gibt es nicht), neu encodiert wird die Datei trotzdem:
-                             die JPG-Qualitaet bekommt hier ihre eigene Zeile, sichtbar nur mit
-                             JPG-Quellen im Stapel. Teilt sich die Zeile mit dem Block - es ist
-                             immer nur einer von beiden sichtbar. -->
-                        <Grid Grid.Row="4"
-                              Margin="0,14,0,0"
-                              ColumnSpacing="14"
-                              IsVisible="{Binding IsDialogOverwriteJpgQualityVisible}">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto" SharedSizeGroup="DialogLabelColumn"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Text="JPG-Qualität"
-                                       VerticalAlignment="Center"
-                                       Foreground="{DynamicResource FP.Text.Secondary}"/>
-                            <Grid Grid.Column="1"
-                                  ColumnDefinitions="*,Auto"
-                                  ColumnSpacing="12">
-                                <icons:RoundSlider Minimum="1"
-                                                   Maximum="100"
-                                                   DefaultValue="{Binding DialogJpgQualityDefault}"
-                                                   Value="{Binding DialogJpgQuality, Mode=TwoWay}"
-                                                   VerticalAlignment="Center"
-                                                   HorizontalAlignment="Stretch"
-                                                   Height="28"
-                                                   MinHeight="0"/>
-                                <TextBlock Grid.Column="1"
-                                           Text="{Binding DialogJpgQuality, StringFormat={}{0}%}"
-                                           MinWidth="42"
-                                           TextAlignment="Right"
-                                           VerticalAlignment="Center"
-                                           Foreground="{DynamicResource FP.Text.Secondary}"/>
-                            </Grid>
-                        </Grid>
 
                         <views:BatchRenameDialogView Grid.Row="3"
                                                      Margin="0,16,0,0"

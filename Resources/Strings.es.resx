@@ -8156,4 +8156,19 @@
   <data name="Viele_Bildschirme_k_nnen_mehr_Farben_zeigen_als__9f4aaab0" xml:space="preserve">
     <value>Muchas pantallas pueden mostrar más colores de los que contiene una foto. Sin ajuste, las fotos y la interfaz se ven demasiado intensas en ellas. Activado, macOS convierte los colores para la pantalla que usas; en una pantalla normal no cambia nada.</value>
   </data>
+  <data name="Leinwand_automatisch_zuschneiden_b17b6882" xml:space="preserve">
+    <value>Recortar automáticamente el lienzo</value>
+  </data>
+  <data name="Schneidet_die_Leinwand_beim_Ausrichten_so_weit_z_29c3fc3b" xml:space="preserve">
+    <value>Recorta el lienzo al enderezar para que no queden cuñas vacías en las esquinas</value>
+  </data>
+  <data name="Transformieren_anwenden_14dfa3fb" xml:space="preserve">
+    <value>¿Aplicar Transformar?</value>
+  </data>
+  <data name="Zuschnitt_und_Lage_sind_noch_nicht_bernommen_Sol_5a2fe4b2" xml:space="preserve">
+    <value>El recorte y la orientación aún no se han aplicado. ¿Aplicarlos antes de {0}?</value>
+  </data>
+  <data name="das_Werkzeug_wechselst_072515cf" xml:space="preserve">
+    <value>cambiar de herramienta</value>
+  </data>
 </root>

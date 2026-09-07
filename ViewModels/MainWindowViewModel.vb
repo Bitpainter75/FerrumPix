@@ -3084,10 +3084,15 @@ Namespace ViewModels
                 ' Die Stapel-Dialoge teilen sich mit „Exportieren nach“ umfangreiche Formulare
                 ' und den Speichern-unter-Block. 570 px lässt insbesondere die Quellenwahl,
                 ' Wasserzeichenoptionen und die Zielauswahl unnötig gedrängt wirken.
+                '
+                ' 840 UND NICHT 780: bei 780 blieben von den fünfzehn Größen-Vorgaben genau zwei
+                ' Bildpunkte zu wenig, und die letzte („32") rutschte allein in eine zweite Zeile
+                ' (Nutzerbefund mit Bildschirmaufnahme, 2026-09-07). Eine Vorgabenreihe, die
+                ' umbricht, liest sich wie zwei Gruppen, die es nicht gibt.
                 If DialogShowsBatchResize OrElse DialogShowsExportTo OrElse
                    _dialogKind = AppDialogKind.BatchConvert OrElse
                    _dialogKind = AppDialogKind.BatchFilter OrElse
-                   _dialogKind = AppDialogKind.WatermarkPreset Then Return 780
+                   _dialogKind = AppDialogKind.WatermarkPreset Then Return 840
                 If _dialogKind = AppDialogKind.SaveAs Then Return 570
                 Return 440
             End Get

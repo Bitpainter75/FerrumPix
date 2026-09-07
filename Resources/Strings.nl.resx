@@ -8196,4 +8196,19 @@
   <data name="Viele_Bildschirme_k_nnen_mehr_Farben_zeigen_als__9f4aaab0" xml:space="preserve">
     <value>Veel schermen kunnen meer kleuren weergeven dan een foto bevat. Zonder aanpassing zien foto's en de interface er daar te sterk uit. Ingeschakeld rekent macOS de kleuren om voor het aangesloten scherm; op een gewoon scherm verandert er niets.</value>
   </data>
+  <data name="Leinwand_automatisch_zuschneiden_b17b6882" xml:space="preserve">
+    <value>Canvas automatisch bijsnijden</value>
+  </data>
+  <data name="Schneidet_die_Leinwand_beim_Ausrichten_so_weit_z_29c3fc3b" xml:space="preserve">
+    <value>Snijdt het canvas bij het rechtzetten zo bij dat er geen lege hoeken overblijven</value>
+  </data>
+  <data name="Transformieren_anwenden_14dfa3fb" xml:space="preserve">
+    <value>Transformeren toepassen?</value>
+  </data>
+  <data name="Zuschnitt_und_Lage_sind_noch_nicht_bernommen_Sol_5a2fe4b2" xml:space="preserve">
+    <value>Het uitsnijden en de stand zijn nog niet toegepast. Toepassen voordat u {0}?</value>
+  </data>
+  <data name="das_Werkzeug_wechselst_072515cf" xml:space="preserve">
+    <value>van gereedschap wisselt</value>
+  </data>
 </root>

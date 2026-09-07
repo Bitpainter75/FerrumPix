@@ -8196,4 +8196,19 @@
   <data name="Viele_Bildschirme_k_nnen_mehr_Farben_zeigen_als__9f4aaab0" xml:space="preserve">
     <value>Monet näytöt voivat näyttää enemmän värejä kuin valokuvassa on. Ilman sovitusta valokuvat ja käyttöliittymä näyttävät niissä liian voimakkailta. Käytössä macOS muuntaa värit käytössä olevalle näytölle; tavallisella näytöllä mikään ei muutu.</value>
   </data>
+  <data name="Leinwand_automatisch_zuschneiden_b17b6882" xml:space="preserve">
+    <value>Rajaa kangasta automaattisesti</value>
+  </data>
+  <data name="Schneidet_die_Leinwand_beim_Ausrichten_so_weit_z_29c3fc3b" xml:space="preserve">
+    <value>Rajaa kanvaasia suoristettaessa, jotta kulmiin ei jää tyhjiä kiiloja</value>
+  </data>
+  <data name="Transformieren_anwenden_14dfa3fb" xml:space="preserve">
+    <value>Otetaanko Muunna käyttöön?</value>
+  </data>
+  <data name="Zuschnitt_und_Lage_sind_noch_nicht_bernommen_Sol_5a2fe4b2" xml:space="preserve">
+    <value>Rajausta ja asentoa ei ole vielä otettu käyttöön. Otetaanko ne käyttöön, ennen kuin {0}?</value>
+  </data>
+  <data name="das_Werkzeug_wechselst_072515cf" xml:space="preserve">
+    <value>vaihdat työkalua</value>
+  </data>
 </root>

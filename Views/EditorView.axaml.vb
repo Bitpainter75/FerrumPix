@@ -1005,6 +1005,14 @@ Namespace Views
                           RoutingStrategies.Tunnel, handledEventsToo:=True)
             Me.AddHandler(InputElement.PointerCaptureLostEvent, AddressOf OnRoundSliderPreviewCaptureLost,
                           RoutingStrategies.Tunnel, handledEventsToo:=True)
+            ' RAD UND ZAHLENFELD HABEN KEIN LOSLASSEN. Sie aendern den Wert in kurzer Folge wie ein
+            ' Zug, hingen aber an keinem Druecken - und liefen deshalb weiter in voller
+            ' Vorschauaufloesung (Nutzerbefund 2026-09-07). Beide melden ihren Schritt; beendet wird
+            ' der Lauf ueber eine Pause, siehe EditorViewModel.NoteSliderStepPreview.
+            Me.AddHandler(InputElement.PointerWheelChangedEvent, AddressOf OnSliderStepWheel,
+                          RoutingStrategies.Tunnel, handledEventsToo:=True)
+            Me.AddHandler(InputElement.KeyDownEvent, AddressOf OnSliderStepKeyDown,
+                          RoutingStrategies.Tunnel, handledEventsToo:=True)
             ' Tunnel direkt auf dem Text-Overlay-Editor: siehe OnTextOverlayEditorKeyDown.
             Me.FindControl(Of TextBox)("TextOverlayEditor")?.AddHandler(InputElement.KeyDownEvent, AddressOf OnTextOverlayEditorKeyDown, RoutingStrategies.Tunnel)
             AddHandler Loaded, Sub(s, e)
@@ -1061,10 +1069,40 @@ Namespace Views
         ''' naechsten neuen Regler still falsch. Wer ein Korrektur-Panel hinzufuegt, traegt es
         ''' hier ein - sonst bleibt seine Vorschau beim alten, langsameren Verhalten, was der
         ''' harmlose Fehler von beiden ist.</para></summary>
+        ''' <summary>Der Wertgeber, zu dem dieses Ereignis gehoert: der Regler selbst oder das
+        ''' Zahlenfeld daneben. Ein Rad- oder Tastenereignis kommt aus dessen INNEREN Teilen,
+        ''' deshalb wird von der Quelle aufwaerts gesucht - mit harter Grenze, wie jeder Elternpfad
+        ''' in diesem Programm.
+        '''
+        ''' DIE GRENZE IST GEMESSEN UND NICHT GESCHAETZT: unter dem Zeiger liegt beim Zahlenfeld
+        ''' nicht das Feld, sondern der Textblock TIEF in seiner Vorlage - dreiundzwanzig Ebenen
+        ''' darunter (Zahlenfeld, Drehknopf, Textfeld und deren Bildlauf bringen jeder mehrere mit).
+        ''' Eine erste Fassung stand bei zwoelf, und genau daran blieb das Rad ueber dem Zahlenfeld
+        ''' zaeh, waehrend es ueber dem Regler schon flott war (Nutzerbefund 2026-09-07). Vierundsechzig
+        ''' laesst Luft fuer eine tiefere Vorlage und bleibt eine Grenze; der Weg kostet nichts.</summary>
+        Private Const SliderValueControlSearchDepth As Integer = 64
+
+        Private Shared Function FindSliderValueControl(source As Object) As Control
+            Dim control = TryCast(source, Control)
+            If control Is Nothing Then Return Nothing
+            If TypeOf control Is RoundSlider OrElse TypeOf control Is SliderValueUpDown Then Return control
+            Dim schritte = 0
+            For Each ancestor In control.GetVisualAncestors()
+                schritte += 1
+                If schritte > SliderValueControlSearchDepth Then Exit For
+                If TypeOf ancestor Is RoundSlider OrElse TypeOf ancestor Is SliderValueUpDown Then
+                    Return TryCast(ancestor, Control)
+                End If
+            Next
+            Return Nothing
+        End Function
+
         Private Function ClassifySlider(source As Object) As SliderKind
             ' Die Tonwertkurve ist kein RoundSlider, aber dieselbe Sache: sie rechnet je Bildpunkt.
             If TypeOf source Is CurveEditor Then Return SliderKind.Adjustment
-            Dim slider = TryCast(source, RoundSlider)
+            ' Das Zahlenfeld zaehlt mit: es steht neben demselben Regler, aendert denselben Wert und
+            ' war ueber Rad und Pfeile genauso zaeh.
+            Dim slider = FindSliderValueControl(source)
             If slider Is Nothing Then Return SliderKind.None
             ' MASSSTABSABHAENGIG zuerst, denn ein Panel kann nur eines von beidem sein: Schaerfe,
             ' Rauschen, Klarheit/Struktur/Staub-Kratzer, Koernung, Bokeh und die Objektivkorrektur
@@ -1086,7 +1124,16 @@ Namespace Views
                 If TypeOf ancestor Is LightPanel OrElse TypeOf ancestor Is ColorPanel OrElse
                    TypeOf ancestor Is HslPanel OrElse TypeOf ancestor Is ColorGradingPanel OrElse
                    TypeOf ancestor Is CalibrationPanel OrElse TypeOf ancestor Is FilmNegativePanel OrElse
-                   TypeOf ancestor Is FilterPanel OrElse TypeOf ancestor Is LutPresetPanel Then
+                   TypeOf ancestor Is FilterPanel OrElse TypeOf ancestor Is LutPresetPanel OrElse
+                   TypeOf ancestor Is RotatePanel Then
+                    ' DAS AUSRICHTEN GEHOERT HIERHER, auch wenn es keine Farbkorrektur ist: es dreht
+                    ' den Bildinhalt, und ein verkleinertes Bild um denselben Winkel gedreht zeigt
+                    ' dasselbe, nur mit weniger Punkten - genau das Merkmal dieser Gruppe. Am
+                    ' Bildmassstab haengt daran nichts. Ohne den Eintrag lief JEDER
+                    ' 90-Millisekunden-Schritt des Zuges auf der vollen Vorschauaufloesung
+                    ' (mindestens 2560, auf grossen Bildschirmen mehr) durch die ganze Kette, und
+                    ' der Regler fuehlte sich zaeh an (Nutzerbefund 2026-09-07). Das Loslassen zieht
+                    ' wie ueberall in voller Vorschauaufloesung nach.
                     Return SliderKind.Adjustment
                 End If
             Next
@@ -1122,6 +1169,29 @@ Namespace Views
             Dim art = ClassifySlider(e.Source)
             If art = SliderKind.None Then Return
             vm.BeginSliderPreviewDrag(scaleSensitive:=(art = SliderKind.ScaleSensitive))
+        End Sub
+
+        ''' <summary>Ein Radschritt ueber einem Korrekturregler oder seinem Zahlenfeld.</summary>
+        Private Sub OnSliderStepWheel(sender As Object, e As PointerWheelEventArgs)
+            NoteSliderStep(e.Source)
+        End Sub
+
+        ''' <summary>Die Pfeile im Zahlenfeld eines Korrekturreglers. Andere Tasten gehen leer aus:
+        ''' die Einteilung kennt nur Wertgeber, und wo keiner unter dem Zeiger liegt, passiert
+        ''' nichts.</summary>
+        Private Sub OnSliderStepKeyDown(sender As Object, e As KeyEventArgs)
+            Select Case e.Key
+                Case Key.Up, Key.Down, Key.PageUp, Key.PageDown
+                    NoteSliderStep(e.Source)
+            End Select
+        End Sub
+
+        Private Sub NoteSliderStep(source As Object)
+            Dim vm = TryCast(DataContext, EditorViewModel)
+            If vm Is Nothing Then Return
+            Dim art = ClassifySlider(source)
+            If art = SliderKind.None Then Return
+            vm.NoteSliderStepPreview(scaleSensitive:=(art = SliderKind.ScaleSensitive))
         End Sub
 
         Private Sub OnRoundSliderPreviewReleased(sender As Object, e As PointerReleasedEventArgs)

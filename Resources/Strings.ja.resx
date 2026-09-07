@@ -8196,4 +8196,19 @@
   <data name="Viele_Bildschirme_k_nnen_mehr_Farben_zeigen_als__9f4aaab0" xml:space="preserve">
     <value>多くの画面は写真に含まれるより多くの色を表示できます。調整しないと、そうした画面では写真も画面表示も濃く見えます。有効にすると、macOS が使用中の画面に合わせて色を変換します。通常の画面では何も変わりません。</value>
   </data>
+  <data name="Leinwand_automatisch_zuschneiden_b17b6882" xml:space="preserve">
+    <value>カンバスを自動的に切り詰める</value>
+  </data>
+  <data name="Schneidet_die_Leinwand_beim_Ausrichten_so_weit_z_29c3fc3b" xml:space="preserve">
+    <value>傾き補正のときにカンバスを切り詰め、角に空白が残らないようにします</value>
+  </data>
+  <data name="Transformieren_anwenden_14dfa3fb" xml:space="preserve">
+    <value>変形を適用しますか。</value>
+  </data>
+  <data name="Zuschnitt_und_Lage_sind_noch_nicht_bernommen_Sol_5a2fe4b2" xml:space="preserve">
+    <value>切り抜きと向きはまだ適用されていません。{0}前に適用しますか。</value>
+  </data>
+  <data name="das_Werkzeug_wechselst_072515cf" xml:space="preserve">
+    <value>ツールを切り替える</value>
+  </data>
 </root>

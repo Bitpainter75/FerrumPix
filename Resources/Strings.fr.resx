@@ -8156,4 +8156,19 @@
   <data name="Viele_Bildschirme_k_nnen_mehr_Farben_zeigen_als__9f4aaab0" xml:space="preserve">
     <value>Beaucoup d'écrans peuvent afficher plus de couleurs qu'une photo n'en contient. Sans adaptation, les photos et l'interface y paraissent trop saturées. Activé, macOS convertit les couleurs pour l'écran utilisé ; sur un écran ordinaire, rien ne change.</value>
   </data>
+  <data name="Leinwand_automatisch_zuschneiden_b17b6882" xml:space="preserve">
+    <value>Rogner automatiquement le canevas</value>
+  </data>
+  <data name="Schneidet_die_Leinwand_beim_Ausrichten_so_weit_z_29c3fc3b" xml:space="preserve">
+    <value>Rogne la zone de travail lors du redressement afin qu'aucun coin vide ne subsiste</value>
+  </data>
+  <data name="Transformieren_anwenden_14dfa3fb" xml:space="preserve">
+    <value>Appliquer Transformer ?</value>
+  </data>
+  <data name="Zuschnitt_und_Lage_sind_noch_nicht_bernommen_Sol_5a2fe4b2" xml:space="preserve">
+    <value>Le recadrage et l'orientation ne sont pas encore appliqués. Les appliquer avant de {0} ?</value>
+  </data>
+  <data name="das_Werkzeug_wechselst_072515cf" xml:space="preserve">
+    <value>changer d'outil</value>
+  </data>
 </root>

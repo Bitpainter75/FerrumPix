@@ -2804,6 +2804,47 @@ Namespace Services
             Return Math.Max(1.0, Math.Max(width / expanded.Width, height / expanded.Height))
         End Function
 
+        ''' <summary>Die Masse einer Begradigung MIT automatischem Zuschnitt: das groesste
+        ''' achsenparallele Rechteck im Seitenverhaeltnis der Vorlage, das ganz im gekippten Bild
+        ''' liegt. Damit bleibt kein leerer Keil in einer Ecke stehen.
+        '''
+        ''' DIE RECHNUNG IST DIE UMKEHRUNG VON <see cref="StraightenExpandedSize"/>: ein Rechteck
+        ''' der Kantenlaengen f*Breite und f*Hoehe passt genau dann in die gekippte Vorlage, wenn
+        ''' seine eigene gekippte Huelle nicht groesser ist als sie - also fuer
+        ''' f = min(Breite/HuelleBreite, Hoehe/HuelleHoehe). Abgerundet und nicht aufgerundet:
+        ''' ein aufgerundetes Pixel liegt schon im Leeren, und genau darum geht es hier.</summary>
+        Friend Shared Function StraightenAutoCropSize(width As Double, height As Double, degrees As Double) As (Width As Double, Height As Double)
+            Dim expanded = StraightenExpandedSize(width, height, degrees)
+            If expanded.Width <= 0 OrElse expanded.Height <= 0 Then Return (width, height)
+            Dim factor = Math.Min(width / expanded.Width, height / expanded.Height)
+            If factor <= 0.0 OrElse factor >= 1.0 Then Return (width, height)
+            Return (Math.Max(1.0, Math.Floor(width * factor)), Math.Max(1.0, Math.Floor(height * factor)))
+        End Function
+
+        ''' <summary>Masse UND Massstab der Begradigungsstufe in EINER Rechnung - die Stelle, an
+        ''' der die drei Leinwand-Regeln stehen:
+        '''   * erweiterte Leinwand: die Huelle des gekippten Bildes, nichts fehlt;
+        '''   * automatischer Zuschnitt: das eingeschriebene Rechteck, keine leeren Ecken;
+        '''   * keins von beiden: die Leinwand bleibt, die Ecken bleiben leer.
+        ''' Die erweiterte Leinwand hat Vorrang: sie will die Ecken ausdruecklich behalten, und das
+        ''' Zuschneide-Werkzeug stellt jede Begradigung darauf um.
+        '''
+        ''' EINE STELLE FUER ALLE - Ausgabemasse, Renderer, Punktabbildung hin und zurueck und die
+        ''' Objektabbildung. Laufen sie auseinander, sitzen Anfasser und Objekte neben dem Bild.</summary>
+        Friend Shared Function StraightenStageSize(width As Double, height As Double, degrees As Double,
+                                                   expandCanvas As Boolean, autoCrop As Boolean) As (Width As Double, Height As Double, Scale As Double)
+            If Math.Abs(degrees) < 0.01 Then Return (width, height, 1.0)
+            If expandCanvas Then
+                Dim expanded = StraightenExpandedSize(width, height, degrees)
+                Return (expanded.Width, expanded.Height, 1.0)
+            End If
+            If autoCrop Then
+                Dim cropped = StraightenAutoCropSize(width, height, degrees)
+                Return (cropped.Width, cropped.Height, 1.0)
+            End If
+            Return (width, height, StraightenFillScale(width, height, degrees))
+        End Function
+
         Private Shared Function ComputeGeometryOperationOutputSize(width As Integer, height As Integer,
                                                                     operation As GeometryOperation) As SKSizeI
             If operation?.Adjustments Is Nothing Then Return New SKSizeI(width, height)
@@ -2818,10 +2859,10 @@ Namespace Services
                     If q = 90 OrElse q = 270 Then
                         Dim swap = w : w = h : h = swap
                     End If
-                    If Math.Abs(a.StraightenDegrees) >= 0.01F AndAlso a.StraightenExpandCanvas Then
-                        Dim expanded = StraightenExpandedSize(w, h, a.StraightenDegrees)
-                        w = Math.Max(1, CInt(expanded.Width))
-                        h = Math.Max(1, CInt(expanded.Height))
+                    If Math.Abs(a.StraightenDegrees) >= 0.01F Then
+                        Dim stage = StraightenStageSize(w, h, a.StraightenDegrees, a.StraightenExpandCanvas, a.StraightenAutoCrop)
+                        w = Math.Max(1, CInt(stage.Width))
+                        h = Math.Max(1, CInt(stage.Height))
                     End If
                     Return New SKSizeI(w, h)
                 Case "resize"
@@ -2905,7 +2946,8 @@ Namespace Services
 
         Private Shared Sub CopyTransformGeometry(source As ImageAdjustments, target As ImageAdjustments)
             target.RotationDegrees = source.RotationDegrees : target.StraightenDegrees = source.StraightenDegrees
-            target.StraightenExpandCanvas = source.StraightenExpandCanvas : target.FlipHorizontal = source.FlipHorizontal : target.FlipVertical = source.FlipVertical
+            target.StraightenExpandCanvas = source.StraightenExpandCanvas : target.StraightenAutoCrop = source.StraightenAutoCrop
+            target.FlipHorizontal = source.FlipHorizontal : target.FlipVertical = source.FlipVertical
         End Sub
 
         Private Shared Sub CopyPerspectiveGeometry(source As ImageAdjustments, target As ImageAdjustments)
@@ -3002,14 +3044,8 @@ Namespace Services
 
             If Math.Abs(adj.StraightenDegrees) >= 0.01F Then
                 Dim radians = adj.StraightenDegrees * Math.PI / 180.0
-                Dim absRadians = Math.Abs(adj.StraightenDegrees) * Math.PI / 180.0
-                Dim outW = w, outH = h, scale = 1.0
-                If adj.StraightenExpandCanvas Then
-                    Dim expanded = StraightenExpandedSize(w, h, adj.StraightenDegrees)
-                    outW = expanded.Width : outH = expanded.Height
-                Else
-                    scale = StraightenFillScale(w, h, adj.StraightenDegrees)
-                End If
+                Dim stage = StraightenStageSize(w, h, adj.StraightenDegrees, adj.StraightenExpandCanvas, adj.StraightenAutoCrop)
+                Dim outW = stage.Width, outH = stage.Height, scale = stage.Scale
                 Dim dx = x - w / 2.0, dy = y - h / 2.0
                 Dim cosA = Math.Cos(radians), sinA = Math.Sin(radians)
                 x = outW / 2.0 + scale * (cosA * dx - sinA * dy)
@@ -3121,13 +3157,8 @@ Namespace Services
             Dim hasStraighten = Math.Abs(adj.StraightenDegrees) >= 0.01F
             Dim outW = rotW, outH = rotH, scale = 1.0
             If hasStraighten Then
-                Dim absRadians = Math.Abs(adj.StraightenDegrees) * Math.PI / 180.0
-                If adj.StraightenExpandCanvas Then
-                    Dim expanded = StraightenExpandedSize(rotW, rotH, adj.StraightenDegrees)
-                    outW = expanded.Width : outH = expanded.Height
-                Else
-                    scale = StraightenFillScale(rotW, rotH, adj.StraightenDegrees)
-                End If
+                Dim stage = StraightenStageSize(rotW, rotH, adj.StraightenDegrees, adj.StraightenExpandCanvas, adj.StraightenAutoCrop)
+                outW = stage.Width : outH = stage.Height : scale = stage.Scale
             End If
 
             Dim resizeSize = ComputeResizeOutputSize(CInt(Math.Round(outW)), CInt(Math.Round(outH)), adj)
@@ -3402,7 +3433,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                 adj.ColorGradeHighlightHue, adj.ColorGradeHighlightSaturation, adj.ColorGradeHighlightLuminance,
                 adj.ColorGradeGlobalHue, adj.ColorGradeGlobalSaturation, adj.ColorGradeGlobalLuminance,
                 adj.ColorGradeBalance, adj.ColorGradeBlending,
-                adj.RotationDegrees, adj.StraightenDegrees, adj.StraightenExpandCanvas, adj.FlipHorizontal, adj.FlipVertical,
+                adj.RotationDegrees, adj.StraightenDegrees, adj.StraightenExpandCanvas, adj.StraightenAutoCrop, adj.FlipHorizontal, adj.FlipVertical,
                 adj.CropLeftPercent, adj.CropTopPercent, adj.CropRightPercent, adj.CropBottomPercent,
                 adj.ResizeWidth, adj.ResizeHeight, adj.LockResizeAspect, adj.ResizeFitInsideBox, adj.ResizeScalePercent, adj.NoResizeUpscale, adj.ResizeInterpolation,
                 adj.CanvasWidth, adj.CanvasHeight, adj.LockCanvasAspect, adj.CanvasAnchor, adj.CanvasBackgroundColor,
@@ -3430,7 +3461,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                     Dim a = operation.Adjustments
                     If a Is Nothing Then Return If(operation.Kind, "")
                     Return String.Join(",", If(operation.Kind, ""), a.CropLeftPercent, a.CropTopPercent, a.CropRightPercent, a.CropBottomPercent,
-                                       a.RotationDegrees, a.StraightenDegrees, a.StraightenExpandCanvas, a.FlipHorizontal, a.FlipVertical,
+                                       a.RotationDegrees, a.StraightenDegrees, a.StraightenExpandCanvas, a.StraightenAutoCrop, a.FlipHorizontal, a.FlipVertical,
                                        a.PerspectiveHorizontal, a.PerspectiveVertical, a.PerspectiveAspect, a.PerspectiveScale,
                                        a.PerspectiveCorner0X, a.PerspectiveCorner0Y, a.PerspectiveCorner1X, a.PerspectiveCorner1Y,
                                        a.PerspectiveCorner2X, a.PerspectiveCorner2Y, a.PerspectiveCorner3X, a.PerspectiveCorner3Y,
@@ -4254,9 +4285,11 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                 Dim beforeWidth = If(turned = 90 OrElse turned = 270, crop.Height, crop.Width)
                 Dim beforeHeight = If(turned = 90 OrElse turned = 270, crop.Width, crop.Height)
                 If beforeWidth > 0 AndAlso beforeHeight > 0 Then
-                    Dim afterSize = StraightenOutputSize(beforeWidth, beforeHeight, adj.StraightenDegrees, adj.StraightenExpandCanvas)
+                    Dim afterSize = StraightenOutputSize(beforeWidth, beforeHeight, adj.StraightenDegrees,
+                                                        adj.StraightenExpandCanvas, adj.StraightenAutoCrop)
                     Dim body = TransformAnnotationThroughGeometryFieldsCore(annotation, adj, beforeWidth, beforeHeight)
-                    body = StraightenAnnotation(body, beforeWidth, beforeHeight, adj.StraightenDegrees, adj.StraightenExpandCanvas)
+                    body = StraightenAnnotation(body, beforeWidth, beforeHeight, adj.StraightenDegrees,
+                                                adj.StraightenExpandCanvas, adj.StraightenAutoCrop)
                     If body Is Nothing Then Return Nothing
                     If afterSize.Width <= 0 OrElse afterSize.Height <= 0 Then Return body
                     If outputWidth = afterSize.Width AndAlso outputHeight = afterSize.Height Then Return body
@@ -4270,36 +4303,29 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
 
         ''' <summary>Die Masse nach dem Begradigen. Dieselbe Rechnung wie <see cref="ApplyStraighten"/>
         ''' und wie im Punktweg - laufen die drei auseinander, sitzt das Objekt neben dem Bild.</summary>
-        Private Shared Function StraightenOutputSize(width As Double, height As Double,
-                                                     degrees As Single, expandCanvas As Boolean) As SKSizeI
-            If Not expandCanvas Then Return New SKSizeI(CInt(Math.Round(width)), CInt(Math.Round(height)))
-            Dim expanded = StraightenExpandedSize(width, height, degrees)
-            Return New SKSizeI(Math.Max(1, CInt(expanded.Width)), Math.Max(1, CInt(expanded.Height)))
+        Private Shared Function StraightenOutputSize(width As Double, height As Double, degrees As Single,
+                                                     expandCanvas As Boolean, autoCrop As Boolean) As SKSizeI
+            Dim stage = StraightenStageSize(width, height, degrees, expandCanvas, autoCrop)
+            Return New SKSizeI(Math.Max(1, CInt(Math.Round(stage.Width))), Math.Max(1, CInt(Math.Round(stage.Height))))
         End Function
 
         ''' <summary>Dreht ein Objekt mit der Begradigung des Bildes: sein Mittelpunkt wandert um
-        ''' den Bildmittelpunkt, sein eigener Drehwinkel waechst um den Winkel, und ohne erweiterte
-        ''' Leinwand nimmt es dieselbe Vergroesserung mit, mit der die Stufe die gedrehten Ecken
-        ''' wieder in den Rahmen holt.
+        ''' den Bildmittelpunkt, und sein eigener Drehwinkel waechst um denselben Winkel. Den
+        ''' Massstab der Stufe nimmt es mit, falls sie einen hat.
         '''
         ''' AUSGENOMMEN sind das verankerte Wasserzeichen und der Rahmen: die liegen bewusst AUF dem
         ''' fertigen Bild und loesen ihre Lage gegen die Ausgabe auf. Ein mitgekipptes Wasserzeichen
         ''' waere kein Wasserzeichen mehr.</summary>
         Private Shared Function StraightenAnnotation(annotation As ImageAnnotation, width As Double, height As Double,
-                                                    degrees As Single, expandCanvas As Boolean) As ImageAnnotation
+                                                    degrees As Single, expandCanvas As Boolean, autoCrop As Boolean) As ImageAnnotation
             If annotation Is Nothing OrElse width <= 0 OrElse height <= 0 Then Return annotation
             Dim kind = If(annotation.Kind, "").Trim().ToLowerInvariant()
             If kind = "frame" Then Return annotation
             If kind = "watermark" AndAlso Not String.IsNullOrWhiteSpace(annotation.Anchor) Then Return annotation
 
             Dim radians = degrees * Math.PI / 180.0
-            Dim outWidth = width, outHeight = height, scale = 1.0
-            If expandCanvas Then
-                Dim size = StraightenOutputSize(width, height, degrees, True)
-                outWidth = size.Width : outHeight = size.Height
-            Else
-                scale = StraightenFillScale(width, height, degrees)
-            End If
+            Dim stage = StraightenStageSize(width, height, degrees, expandCanvas, autoCrop)
+            Dim outWidth = stage.Width, outHeight = stage.Height, scale = stage.Scale
             Dim cosA = Math.Cos(radians), sinA = Math.Sin(radians)
             Dim MapPoint = Function(px As Double, py As Double) As (X As Double, Y As Double)
                                Dim dx = px - width / 2.0, dy = py - height / 2.0
@@ -5065,33 +5091,21 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             Dim degrees = adj.StraightenDegrees
             If Math.Abs(degrees) < 0.01F Then Return source
 
-            Dim radians = Math.Abs(degrees) * Math.PI / 180.0
+            ' EINE Leinwandrechnung fuer alle drei Faelle (erweitern, automatisch zuschneiden,
+            ' lassen wie sie ist) - siehe StraightenStageSize. Die Zeichnung ist in allen drei
+            ' dieselbe: um die Mitte der neuen Leinwand drehen und die Vorlage mittig darauf
+            ' legen; ohne Massstab ist die Skalierung eine Eins.
+            Dim stage = StraightenStageSize(source.Width, source.Height, degrees,
+                                            adj.StraightenExpandCanvas, adj.StraightenAutoCrop)
+            Dim targetWidth = Math.Max(1, CInt(stage.Width))
+            Dim targetHeight = Math.Max(1, CInt(stage.Height))
 
-            If adj.StraightenExpandCanvas Then
-                Dim expandedSize = StraightenExpandedSize(source.Width, source.Height, degrees)
-                Dim expandedWidth = Math.Max(1, CInt(expandedSize.Width))
-                Dim expandedHeight = Math.Max(1, CInt(expandedSize.Height))
-
-                Dim expanded = New SKBitmap(expandedWidth, expandedHeight, source.ColorType, source.AlphaType)
-                Using canvas = New SKCanvas(expanded)
-                    ' Siehe ApplyCanvasResize: gefuellt wird einmal am Ende der Kette.
-                    canvas.Clear(SKColors.Transparent)
-                    canvas.Translate(expandedWidth / 2.0F, expandedHeight / 2.0F)
-                    canvas.RotateDegrees(degrees)
-                    Using paint = New SKPaint With {.IsAntialias = True}
-                        DrawBitmapSampled(canvas, source, -source.Width / 2.0F, -source.Height / 2.0F, SamplingHigh, paint)
-                    End Using
-                End Using
-                Return expanded
-            End If
-
-            Dim scale = StraightenFillScale(source.Width, source.Height, degrees)
-
-            Dim result = New SKBitmap(source.Width, source.Height, source.ColorType, source.AlphaType)
+            Dim result = New SKBitmap(targetWidth, targetHeight, source.ColorType, source.AlphaType)
             Using canvas = New SKCanvas(result)
+                ' Siehe ApplyCanvasResize: gefuellt wird einmal am Ende der Kette.
                 canvas.Clear(SKColors.Transparent)
-                canvas.Translate(source.Width / 2.0F, source.Height / 2.0F)
-                canvas.Scale(CSng(scale))
+                canvas.Translate(targetWidth / 2.0F, targetHeight / 2.0F)
+                canvas.Scale(CSng(stage.Scale))
                 canvas.RotateDegrees(degrees)
                 Using paint = New SKPaint With {.IsAntialias = True}
                     DrawBitmapSampled(canvas, source, -source.Width / 2.0F, -source.Height / 2.0F, SamplingHigh, paint)

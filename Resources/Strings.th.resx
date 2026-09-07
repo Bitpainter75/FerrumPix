@@ -8200,4 +8200,19 @@
   <data name="Viele_Bildschirme_k_nnen_mehr_Farben_zeigen_als__9f4aaab0" xml:space="preserve">
     <value>จอหลายรุ่นแสดงสีได้มากกว่าที่มีอยู่ในภาพถ่าย เมื่อไม่ปรับ ภาพถ่ายและหน้าจอโปรแกรมจะดูจัดจ้านเกินไปบนจอเหล่านั้น เมื่อเปิด macOS จะแปลงสีให้เข้ากับจอที่ใช้อยู่ บนจอทั่วไปจะไม่มีอะไรเปลี่ยน</value>
   </data>
+  <data name="Leinwand_automatisch_zuschneiden_b17b6882" xml:space="preserve">
+    <value>ครอบตัดผืนผ้าใบอัตโนมัติ</value>
+  </data>
+  <data name="Schneidet_die_Leinwand_beim_Ausrichten_so_weit_z_29c3fc3b" xml:space="preserve">
+    <value>ครอบตัดผืนผ้าใบขณะปรับให้ตรง เพื่อไม่ให้เหลือช่องว่างที่มุม</value>
+  </data>
+  <data name="Transformieren_anwenden_14dfa3fb" xml:space="preserve">
+    <value>ใช้การแปลงหรือไม่</value>
+  </data>
+  <data name="Zuschnitt_und_Lage_sind_noch_nicht_bernommen_Sol_5a2fe4b2" xml:space="preserve">
+    <value>การครอบตัดและทิศทางยังไม่ได้ใช้ ต้องการใช้ก่อน{0}หรือไม่</value>
+  </data>
+  <data name="das_Werkzeug_wechselst_072515cf" xml:space="preserve">
+    <value>เปลี่ยนเครื่องมือ</value>
+  </data>
 </root>

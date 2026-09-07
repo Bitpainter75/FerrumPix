@@ -100,7 +100,7 @@ Namespace Services
 
         Private Shared Function GeometryJsonFields(kind As String) As String()
             Const crop = "CropLeftPercent|CropTopPercent|CropRightPercent|CropBottomPercent"
-            Const transform = "RotationDegrees|StraightenDegrees|StraightenExpandCanvas|FlipHorizontal|FlipVertical"
+            Const transform = "RotationDegrees|StraightenDegrees|StraightenExpandCanvas|StraightenAutoCrop|FlipHorizontal|FlipVertical"
             Const perspective = "PerspectiveHorizontal|PerspectiveVertical|PerspectiveAspect|PerspectiveScale|PerspectiveCorner0X|PerspectiveCorner0Y|PerspectiveCorner1X|PerspectiveCorner1Y|PerspectiveCorner2X|PerspectiveCorner2Y|PerspectiveCorner3X|PerspectiveCorner3Y"
             Const warp = "ImageWarp"
             Const resize = "ResizeWidth|ResizeHeight|ResizeScalePercent|ResizeFitInsideBox|LockResizeAspect|NoResizeUpscale|ResizeInterpolation"
@@ -201,7 +201,8 @@ Namespace Services
             Dim hatte = adj.CropLeftPercent <> 0 OrElse adj.CropTopPercent <> 0 OrElse
                         adj.CropRightPercent <> 0 OrElse adj.CropBottomPercent <> 0 OrElse
                         adj.RotationDegrees <> 0 OrElse adj.StraightenDegrees <> 0 OrElse
-                        adj.StraightenExpandCanvas OrElse adj.FlipHorizontal OrElse adj.FlipVertical OrElse
+                        adj.StraightenExpandCanvas OrElse adj.StraightenAutoCrop OrElse
+                        adj.FlipHorizontal OrElse adj.FlipVertical OrElse
                         adj.PerspectiveHorizontal <> 0 OrElse adj.PerspectiveVertical <> 0 OrElse
                         adj.PerspectiveAspect <> 0 OrElse adj.PerspectiveScale <> 0 OrElse
                         adj.PerspectiveCorner0X <> 0 OrElse adj.PerspectiveCorner0Y <> 0 OrElse
@@ -214,7 +215,14 @@ Namespace Services
 
             adj.CropLeftPercent = 0 : adj.CropTopPercent = 0
             adj.CropRightPercent = 0 : adj.CropBottomPercent = 0
-            adj.RotationDegrees = 0 : adj.StraightenDegrees = 0 : adj.StraightenExpandCanvas = False
+            adj.RotationDegrees = 0 : adj.StraightenDegrees = 0
+            ' BEIDE Leinwand-Haken, nicht nur die Erweiterung. Ein stehengebliebenes "zuschneiden"
+            ' waere still in die naechste Ausrichtung uebergegangen: der Editor las die oberen
+            ' Felder beim Laden in seine Regler, und ohne Transform-Schritt im Rezept ueberschrieb
+            ' sie danach niemand mehr. Er nimmt dafuer heute den gemerkten Stand des Nutzers
+            ' (EditorViewModel.LoadStraightenCanvasPreference) - umso wichtiger, dass hier nichts
+            ' liegen bleibt, das ihn ausstechen koennte.
+            adj.StraightenExpandCanvas = False : adj.StraightenAutoCrop = False
             adj.FlipHorizontal = False : adj.FlipVertical = False
             adj.PerspectiveHorizontal = 0 : adj.PerspectiveVertical = 0
             adj.PerspectiveAspect = 0 : adj.PerspectiveScale = 0

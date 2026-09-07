@@ -118,8 +118,27 @@
                     <TextBlock Text="3:2" FontSize="{DynamicResource FP.Font.Small}" />
                 </Button>
                 <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6"
+                        Command="{Binding SetCropPresetCommand}" CommandParameter="5:4">
+                    <TextBlock Text="5:4" FontSize="{DynamicResource FP.Font.Small}" />
+                </Button>
+                <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6"
                         Command="{Binding SetCropPresetCommand}" CommandParameter="16:9">
                     <TextBlock Text="16:9" FontSize="{DynamicResource FP.Font.Small}" />
+                </Button>
+                <!-- Und dieselben Formate hochkant. Sie sind nicht dasselbe wie ein gedrehtes
+                     Bild: die Vorgabe rechnet im ANGEZEIGTEN Seitenverhaeltnis, ein Hochformat
+                     braucht deshalb seinen eigenen Knopf. -->
+                <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6"
+                        Command="{Binding SetCropPresetCommand}" CommandParameter="3:4">
+                    <TextBlock Text="3:4" FontSize="{DynamicResource FP.Font.Small}" />
+                </Button>
+                <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6"
+                        Command="{Binding SetCropPresetCommand}" CommandParameter="2:3">
+                    <TextBlock Text="2:3" FontSize="{DynamicResource FP.Font.Small}" />
+                </Button>
+                <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6"
+                        Command="{Binding SetCropPresetCommand}" CommandParameter="4:5">
+                    <TextBlock Text="4:5" FontSize="{DynamicResource FP.Font.Small}" />
                 </Button>
                 <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6"
                         Command="{Binding SetCropPresetCommand}" CommandParameter="9:16">

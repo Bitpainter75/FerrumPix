@@ -8196,4 +8196,19 @@
   <data name="Viele_Bildschirme_k_nnen_mehr_Farben_zeigen_als__9f4aaab0" xml:space="preserve">
     <value>Många skärmar kan visa fler färger än ett foto innehåller. Utan anpassning ser foton och gränssnitt för starka ut på dem. Påslaget räknar macOS om färgerna för skärmen du använder; på en vanlig skärm ändras inget.</value>
   </data>
+  <data name="Leinwand_automatisch_zuschneiden_b17b6882" xml:space="preserve">
+    <value>Beskär arbetsytan automatiskt</value>
+  </data>
+  <data name="Schneidet_die_Leinwand_beim_Ausrichten_so_weit_z_29c3fc3b" xml:space="preserve">
+    <value>Beskär arbetsytan vid uträtning så att inga tomma kilar blir kvar i hörnen</value>
+  </data>
+  <data name="Transformieren_anwenden_14dfa3fb" xml:space="preserve">
+    <value>Använd Transformera?</value>
+  </data>
+  <data name="Zuschnitt_und_Lage_sind_noch_nicht_bernommen_Sol_5a2fe4b2" xml:space="preserve">
+    <value>Beskärningen och riktningen är ännu inte använda. Ska de användas innan du {0}?</value>
+  </data>
+  <data name="das_Werkzeug_wechselst_072515cf" xml:space="preserve">
+    <value>byter verktyg</value>
+  </data>
 </root>

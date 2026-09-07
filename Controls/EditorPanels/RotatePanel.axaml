@@ -74,6 +74,13 @@
                                              Minimum="-180" Maximum="180" Increment="0.1"
                                              FormatString="F1" />
                 </Grid>
+                <!-- DIE ZWEI HAKEN SIND GEGENTEILE und schliessen sich im ViewModel gegenseitig
+                     aus: der eine behaelt die gekippten Ecken, der andere nimmt sie weg. Beide
+                     aus heisst, die Leinwand bleibt wie sie ist und die Ecken bleiben leer. -->
+                <CheckBox Content="Leinwand automatisch zuschneiden"
+                          IsChecked="{Binding StraightenAutoCrop}"
+                          FontSize="{DynamicResource FP.Font.Small}"
+                          ToolTip.Tip="Schneidet die Leinwand beim Ausrichten so weit zu, dass keine leeren Keile in den Ecken stehen bleiben" />
                 <CheckBox Content="Leinwand automatisch vergrößern"
                           IsChecked="{Binding StraightenExpandCanvas}"
                           FontSize="{DynamicResource FP.Font.Small}"

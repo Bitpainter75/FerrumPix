@@ -370,7 +370,11 @@ Namespace ViewModels
         Private _whiteBalance As String = "Wie Aufnahme"
         Private _rotationDegrees As Integer = 0
         Private _straightenDegrees As Double = 0
+        ' DIE BEIDEN LEINWAND-HAKEN sind eine Gewohnheit und kein Bildwert: ihr Anfangsstand kommt
+        ' aus den Einstellungen (LoadStraightenCanvasPreference im Konstruktor), die Werte hier sind
+        ' nur der neutrale Boden darunter. Ab Werk beide aus - die Leinwand bleibt dann, wie sie ist.
         Private _straightenExpandCanvas As Boolean = False
+        Private _straightenAutoCrop As Boolean = False
         Private _flipH As Boolean = False
         Private _flipV As Boolean = False
         ' DER SCHRITT, DEN DIE DREHREGLER GERADE VERTRETEN. Er bleibt bis zum Anwenden in der Liste,
@@ -416,6 +420,7 @@ Namespace ViewModels
         Private _appliedRotationDegrees As Integer = 0
         Private _appliedStraightenDegrees As Double = 0
         Private _appliedStraightenExpandCanvas As Boolean = False
+        Private _appliedStraightenAutoCrop As Boolean = False
         Private _appliedFlipH As Boolean = False
         Private _appliedFlipV As Boolean = False
         ' Die bestätigten Geometrieschritte sind nicht vertauschbar: ihr Eintrag hier ist die
@@ -1052,6 +1057,9 @@ Namespace ViewModels
         ' Bei massstabsabhaengigen Reglern gilt das erste, aber nicht das zweite.
         Private _sliderDragActive As Boolean
         Private _sliderPreviewDragActive As Boolean
+        ' Der Takt fuer einzelne Schritte ohne Zug (Rad, Zahlenfeld, Pfeiltasten) - siehe
+        ' NoteSliderStepPreview. Erst bei Bedarf angelegt, es gibt Sitzungen ohne einen solchen Griff.
+        Private _sliderStepIdleTimer As DispatcherTimer
         Private _previewRenderCts As CancellationTokenSource
         Private _previewRequestId As Integer
         ''' Zaehlt JEDE angemeldete Aenderung - siehe MarkPreviewPending. Getrennt von
@@ -1158,6 +1166,11 @@ Namespace ViewModels
         ''' (Patrick am 2026-08-28: auch 2304 war dort noch verfaelschend). Der durchlaufende Takt
         ''' gilt fuer sie trotzdem - das war der eigentliche Befund.</para></summary>
         Private Const SliderPreviewMaxDimension As Integer = 2048
+        ''' <summary>Wie lange nach einem einzelnen Reglerschritt (Rad, Zahlenfeld, Pfeiltasten) noch
+        ''' mit dem naechsten gerechnet wird - siehe <see cref="NoteSliderStepPreview"/>. Etwas
+        ''' laenger als der Vorschautakt von 90 ms, damit ein Rad, das in Schueben laeuft, nicht
+        ''' zwischen kleiner und voller Aufloesung hin und her springt.</summary>
+        Private Const SliderStepIdleMs As Double = 400.0
         ''' <summary>Deutlich traeger als die Vorschau: das Analysebild ist eine Begleitanzeige, und
         ''' es bei jedem der 90-Millisekunden-Schritte mitzurechnen waere verschenkte Arbeit an einer
         ''' Stelle, die niemand so schnell abliest.</summary>
@@ -11110,6 +11123,7 @@ Namespace ViewModels
                 .FlipHorizontal = _flipH, .FlipVertical = _flipV,
                 .StraightenDegrees = CSng(_straightenDegrees),
                 .StraightenExpandCanvas = _straightenExpandCanvas,
+                .StraightenAutoCrop = _straightenAutoCrop,
                 .ResizeWidth = _resizeWidth, .ResizeHeight = _resizeHeight,
                 .CanvasWidth = _canvasWidth, .CanvasHeight = _canvasHeight,
                 .CanvasAnchor = _canvasAnchor,
@@ -11249,6 +11263,7 @@ Namespace ViewModels
                     .RotationDegrees = _rotationDegrees,
                     .StraightenDegrees = CSng(_straightenDegrees),
                     .StraightenExpandCanvas = _straightenExpandCanvas,
+                    .StraightenAutoCrop = _straightenAutoCrop,
                     .FlipHorizontal = _flipH,
                     .FlipVertical = _flipV}}
         End Function
@@ -11267,11 +11282,13 @@ Namespace ViewModels
             _rotationDegrees = transform.RotationDegrees
             _straightenDegrees = transform.StraightenDegrees
             _straightenExpandCanvas = transform.StraightenExpandCanvas
+            _straightenAutoCrop = transform.StraightenAutoCrop
             _flipH = transform.FlipHorizontal
             _flipV = transform.FlipVertical
             _appliedRotationDegrees = _rotationDegrees
             _appliedStraightenDegrees = _straightenDegrees
             _appliedStraightenExpandCanvas = _straightenExpandCanvas
+            _appliedStraightenAutoCrop = _straightenAutoCrop
             _appliedFlipH = _flipH
             _appliedFlipV = _flipV
             _editingCommittedTransform = step_
@@ -11350,6 +11367,7 @@ Namespace ViewModels
         Private Sub RaiseRotateFieldsChanged()
             Me.RaisePropertyChanged(NameOf(StraightenDegrees))
             Me.RaisePropertyChanged(NameOf(StraightenExpandCanvas))
+            Me.RaisePropertyChanged(NameOf(StraightenAutoCrop))
             Me.RaisePropertyChanged(NameOf(HasRotateChanges))
             Me.RaisePropertyChanged(NameOf(HasTransformChanges))
             Me.RaisePropertyChanged(NameOf(CanApplyTransform))
@@ -12048,12 +12066,84 @@ Namespace ViewModels
                 CaptureUndoState(NameOf(StraightenExpandCanvas))
                 Me.RaiseAndSetIfChanged(_straightenExpandCanvas, value)
                 _appliedStraightenExpandCanvas = value
+                ' Erweitern und Zuschneiden sind Gegenteile - der eine Haken nimmt den anderen mit.
+                If value Then SetStraightenAutoCropSilently(False)
+                RememberStraightenCanvasPreference()
                 Me.RaisePropertyChanged(NameOf(HasRotateChanges))
                 Me.RaisePropertyChanged(NameOf(HasTransformChanges))
                 RaiseResetButtonStateChanged()
                 SchedulePreviewUpdate()
             End Set
         End Property
+
+        ''' <summary>Der Haken, der die leeren Keile einer Drehung wegnimmt: die Leinwand wird auf
+        ''' das groesste Rechteck im Seitenverhaeltnis der Vorlage zugeschnitten, das ganz im
+        ''' gekippten Bild liegt.
+        '''
+        ''' Er ist wie die erweiterte Leinwand eine OPTION der Drehung und hat deshalb keinen
+        ''' eigenen bestaetigten Stand: der Spiegel wird mitgezogen, damit jeder Weg, der offene
+        ''' Regler zurueckstellt, ihn in Ruhe laesst.</summary>
+        Public Property StraightenAutoCrop As Boolean
+            Get
+                Return _straightenAutoCrop
+            End Get
+            Set(value As Boolean)
+                If _straightenAutoCrop = value Then Return
+                CaptureUndoState(NameOf(StraightenAutoCrop))
+                Me.RaiseAndSetIfChanged(_straightenAutoCrop, value)
+                _appliedStraightenAutoCrop = value
+                If value AndAlso _straightenExpandCanvas Then
+                    _straightenExpandCanvas = False
+                    _appliedStraightenExpandCanvas = False
+                    Me.RaisePropertyChanged(NameOf(StraightenExpandCanvas))
+                End If
+                RememberStraightenCanvasPreference()
+                Me.RaisePropertyChanged(NameOf(HasRotateChanges))
+                Me.RaisePropertyChanged(NameOf(HasTransformChanges))
+                RaiseResetButtonStateChanged()
+                SchedulePreviewUpdate()
+            End Set
+        End Property
+
+        ''' <summary>Den Zuschnitt-Haken ohne Undo-Schritt und ohne Vorschaulauf umlegen - fuer den
+        ''' Gegenhaken, der ihn mitnimmt. Beide Wege gehoeren zu EINEM Griff des Nutzers.
+        '''
+        ''' Gemerkt wird hier NICHTS: wer den Gegenhaken setzt, schreibt beide Werte gleich danach in
+        ''' EINEM Zug (siehe die Setter), und wo der Zuschnitt einem Beschnitt weichen muss, ist das
+        ''' eine Folge und keine Gewohnheit.</summary>
+        Private Sub SetStraightenAutoCropSilently(value As Boolean)
+            If _straightenAutoCrop = value Then Return
+            _straightenAutoCrop = value
+            _appliedStraightenAutoCrop = value
+            Me.RaisePropertyChanged(NameOf(StraightenAutoCrop))
+        End Sub
+
+        ''' <summary>Die gemerkten Leinwand-Haken einsetzen - beim Aufbau des Editors und bei jedem
+        ''' Zuruecksetzen der Lage. Sie sagen, WIE gedreht wird, gelten also fuer das naechste Bild
+        ''' weiter (siehe AppSettings.EditorStraightenExpandCanvas).
+        '''
+        ''' Ein GELADENES Rezept sticht sie aus: dort steht, was dieses Bild wirklich tut, und das
+        ''' setzt <see cref="RestoreEditableTransformTail"/> aus dem Transform-Schritt ein, gleich
+        ''' nachdem <see cref="ApplyAdjustments"/> diese Vorgabe eingesetzt hat.
+        '''
+        ''' Der Ausschluss wird beim Einsetzen noch einmal erzwungen: eine von Hand verstellte
+        ''' Einstellungsdatei koennte beide Haken tragen, und in der Bedienung gibt es diesen Stand
+        ''' nicht.</summary>
+        ''' <summary>Den Stand der beiden Haken als Gewohnheit festhalten. Nur aus den SETTERN, also
+        ''' nur nach einem Griff des Nutzers - nicht aus einem geladenen Rezept und nicht aus dem
+        ''' Zwang eines Beschnitts, sonst merkte sich der Editor die Eigenart eines einzelnen
+        ''' Bildes als Vorgabe fuer alle weiteren.</summary>
+        Private Sub RememberStraightenCanvasPreference()
+            AppSettingsService.SaveEditorStraightenCanvas(_straightenExpandCanvas, _straightenAutoCrop)
+        End Sub
+
+        Private Sub LoadStraightenCanvasPreference()
+            Dim settings = AppSettingsService.Load()
+            _straightenExpandCanvas = settings.EditorStraightenExpandCanvas
+            _straightenAutoCrop = settings.EditorStraightenAutoCrop AndAlso Not _straightenExpandCanvas
+            _appliedStraightenExpandCanvas = _straightenExpandCanvas
+            _appliedStraightenAutoCrop = _straightenAutoCrop
+        End Sub
 
         Public Property WhiteBalance As String
             Get
@@ -13545,6 +13635,7 @@ Namespace ViewModels
 
         Public Sub New(mainVm As IEditorHost)
             _mainVm = mainVm
+            LoadStraightenCanvasPreference()
             FilmstripItems = New BulkObservableCollection(Of ImageItem)()
             HistorySteps = New ObservableCollection(Of HistoryStep)()
             RebuildHistorySteps()
@@ -13605,8 +13696,18 @@ Namespace ViewModels
 
             OpenTagSearchCommand = ReactiveCommand.Create(Of String)(Sub(tag) _mainVm?.OpenTagSearchInGallery(tag))
 
-            SetToolCommand = ReactiveCommand.Create(Of String)(Sub(toolName)
+            ' CreateFromTask und nicht Create: das Kommando fragt seit der Sicherheitsabfrage nach,
+            ' und eine verworfene Aufgabe wuerde jede Ausnahme darin verschlucken.
+            SetToolCommand = ReactiveCommand.CreateFromTask(Of String)(Async Function(toolName) As Task
                                                                    Dim normalizedToolName = If(toolName, "").Trim().ToLowerInvariant()
+
+                                                                   ' ERST FRAGEN, DANN WECHSELN. Das Transformieren hat einen eigenen
+                                                                   ' Anwenden-Knopf, und der Werkzeugwechsel wirft weg, was nicht
+                                                                   ' bestaetigt wurde - siehe ConfirmPendingTransformAsync. Ins eigene
+                                                                   ' Werkzeug zurueck wird nicht gefragt: dort geht die Arbeit weiter.
+                                                                   If _currentTool = EditorTool.Transform AndAlso normalizedToolName <> "transform" Then
+                                                                       If Not Await ConfirmPendingTransformAsync("das Werkzeug wechselst") Then Return
+                                                                   End If
 
                                                                    Select Case normalizedToolName
                                                                        Case "brush", "pinsel", "eraser", "radiergummi", "blur", "verwischen", "repair", "reparatur", "reparaturpinsel", "heal", "heilen", "retusche", "clone", "stempel"
@@ -13647,7 +13748,7 @@ Namespace ViewModels
                                                                        NotifyAnnotationOverlayStateChanged()
                                                                        Return
                                                                    End If
-                                                               End Sub)
+                                                               End Function)
             SetPendingInsertKindCommand = ReactiveCommand.Create(Of String)(Sub(kind)
                                                                                 If String.IsNullOrEmpty(kind) Then Return
                                                                                 If PendingInsertKind = kind Then
@@ -16748,12 +16849,38 @@ Namespace ViewModels
         ''' Fassung stehen - sichtbar weicher, und ausgerechnet bei Schaerfe und Rauschen faellt das
         ''' am meisten auf. Ein ueberzaehliger Render je Reglerzug kostet dagegen nichts.</para></summary>
         Public Sub EndSliderPreviewDrag()
+            _sliderStepIdleTimer?.Stop()
             If Not _sliderDragActive AndAlso Not _sliderPreviewDragActive Then Return
             _sliderDragActive = False
             _sliderPreviewDragActive = False
             _sliderPreviewRequestedMaxDimension = 0
             MarkPreviewPending()
             RestartPreviewTimer(1.0)
+        End Sub
+
+        ''' <summary>EIN EINZELNER SCHRITT statt eines Zuges: Mausrad ueber dem Regler, die Pfeile
+        ''' des Zahlenfelds, die Pfeiltasten. Sie haben kein Druecken und Loslassen, an dem die
+        ''' verkleinerte Live-Quelle haengen koennte - und ohne sie lief jeder Schritt durch die
+        ''' ganze Kette in voller Vorschauaufloesung. Wer am Rad dreht, macht aber genau dasselbe wie
+        ''' beim Ziehen: viele Aenderungen in kurzer Folge (Nutzerbefund 2026-09-07, das Ausrichten
+        ''' blieb per Rad und Zahlenfeld zaeh, obwohl der gezogene Regler laengst flott war).
+        '''
+        ''' Beendet wird der Lauf deshalb ueber eine PAUSE und nicht ueber ein Loslassen: bleibt eine
+        ''' Weile alles still, war es der letzte Schritt, und der Nachzug rendert in voller
+        ''' Vorschauaufloesung. Dieselbe Bauart wie die Undo-Klammer fuer diese Eingabewege
+        ''' (<see cref="UndoCaptureWindowMs"/>), nur mit eigener Frist.</summary>
+        Public Sub NoteSliderStepPreview(Optional scaleSensitive As Boolean = False)
+            BeginSliderPreviewDrag(scaleSensitive)
+            ' Massstabsabhaengige Regler bekommen keine verkleinerte Quelle - dann gibt es auch
+            ' nichts zu takten, und ein Nachzug waere ein Render umsonst.
+            If Not _sliderPreviewDragActive Then Return
+            If _sliderStepIdleTimer Is Nothing Then
+                _sliderStepIdleTimer = New DispatcherTimer With {
+                    .Interval = TimeSpan.FromMilliseconds(SliderStepIdleMs)}
+                AddHandler _sliderStepIdleTimer.Tick, Sub() EndSliderPreviewDrag()
+            End If
+            _sliderStepIdleTimer.Stop()
+            _sliderStepIdleTimer.Start()
         End Sub
 
         Private Sub EnsureSliderPreviewSource()
@@ -17059,6 +17186,10 @@ Namespace ViewModels
                     _straightenExpandCanvas = True
                     _appliedStraightenExpandCanvas = True
                     Me.RaisePropertyChanged(NameOf(StraightenExpandCanvas))
+                    ' Und der Gegenhaken geht aus: der Rahmen lag auf dem erweiterten Bild und
+                    ' sagt jetzt allein, was stehen bleibt. Ein automatischer Zuschnitt daneben
+                    ' waere ein zweiter, den niemand gezogen hat.
+                    SetStraightenAutoCropSilently(False)
                 End If
             End If
             Dim baseWidth = currentSize.Width
@@ -17201,11 +17332,12 @@ Namespace ViewModels
             PushUndo(LocalizationService.T("Drehen"))
             ClearActiveSelectionForGeometry()
             CommitOpenTransform()
-            ' Der Winkel ist verbraucht, der HAKEN NICHT: er sagt, WIE gedreht wird, und gilt
-            ' weiter fuer die naechste Drehung. Ihn hier zu leeren war der eigentliche Fehler -
-            ' wer ihn setzte und zweimal drehte, drehte beim zweiten Mal ohne ihn.
+            ' Der Winkel ist verbraucht, die HAKEN NICHT: sie sagen, WIE gedreht wird, und gelten
+            ' weiter fuer die naechste Drehung. Sie hier zu leeren war der eigentliche Fehler -
+            ' wer einen setzte und zweimal drehte, drehte beim zweiten Mal ohne ihn.
             Me.RaisePropertyChanged(NameOf(StraightenDegrees))
             Me.RaisePropertyChanged(NameOf(StraightenExpandCanvas))
+            Me.RaisePropertyChanged(NameOf(StraightenAutoCrop))
             Me.RaisePropertyChanged(NameOf(HasRotateChanges))
             Me.RaisePropertyChanged(NameOf(HasTransformChanges))
             Me.RaisePropertyChanged(NameOf(CanApplyTransform))
@@ -18144,6 +18276,32 @@ Namespace ViewModels
             Return True
         End Function
 
+        ''' <summary>Die Frage vor dem Verlassen des Transformieren-Werkzeugs: es hat einen eigenen
+        ''' Anwenden-Knopf, und was nicht bestaetigt wurde, wirft der Werkzeugwechsel weg
+        ''' (<see cref="DiscardUncommittedToolEdits"/>). Ohne Frage war eine gezogene Lage damit
+        ''' still verloren - dieselbe Lage, fuer die der Betrachter mit
+        ''' <c>ConfirmPendingRotationAsync</c> schon lange fragt.
+        '''
+        ''' Sie fragt NUR, wenn es etwas zu uebernehmen gibt (<see cref="CanApplyTransform"/>), und
+        ''' die Antwort "verwerfen" macht nichts weiter: das Zuruecknehmen macht der Werkzeugwechsel
+        ''' selbst, an genau EINER Stelle.</summary>
+        ''' <returns>False heisst: der Nutzer will bleiben - der Wechsel unterbleibt.</returns>
+        Public Async Function ConfirmPendingTransformAsync(actionDescription As String) As Task(Of Boolean)
+            If _currentTool <> EditorTool.Transform Then Return True
+            If Not CanApplyTransform Then Return True
+            If _mainVm Is Nothing Then Return True
+
+            Dim apply = Await _mainVm.ShowConfirmAsync(
+                LocalizationService.T("Transformieren anwenden?"),
+                String.Format(
+                    LocalizationService.T("Zuschnitt und Lage sind noch nicht übernommen. Sollen sie angewendet werden, bevor du {0}?"),
+                    LocalizationService.T(actionDescription)),
+                LocalizationService.T("Anwenden"),
+                LocalizationService.T("Verwerfen"))
+            If apply Then Await ApplyTransformAsync()
+            Return True
+        End Function
+
         Public Async Function ConfirmSaveBeforeLeavingAsync(actionDescription As String) As Task(Of Boolean)
             If Not _hasChanges Then Return True
             If _mainVm Is Nothing Then Return True
@@ -18347,6 +18505,7 @@ Namespace ViewModels
                 .RotationDegrees = If(forPreview, _rotationDegrees, _appliedRotationDegrees),
                 .StraightenDegrees = CSng(If(forPreview, _straightenDegrees, _appliedStraightenDegrees)),
                 .StraightenExpandCanvas = If(forPreview, _straightenExpandCanvas, _appliedStraightenExpandCanvas),
+                .StraightenAutoCrop = If(forPreview, _straightenAutoCrop, _appliedStraightenAutoCrop),
                 .FlipHorizontal = If(forPreview, _flipH, _appliedFlipH),
                 .FlipVertical = If(forPreview, _flipV, _appliedFlipV),
                 .CropLeftPercent = CSng(EffectiveCrop(forPreview).Left),
@@ -18603,10 +18762,12 @@ Namespace ViewModels
                         _rotationDegrees = _appliedRotationDegrees
                         _straightenDegrees = _appliedStraightenDegrees
                         _straightenExpandCanvas = _appliedStraightenExpandCanvas
+                        _straightenAutoCrop = _appliedStraightenAutoCrop
                         _flipH = _appliedFlipH
                         _flipV = _appliedFlipV
                         Me.RaisePropertyChanged(NameOf(StraightenDegrees))
                         Me.RaisePropertyChanged(NameOf(StraightenExpandCanvas))
+                        Me.RaisePropertyChanged(NameOf(StraightenAutoCrop))
                         reverted = True
                         discarded.Add(LocalizationService.T("Drehen"))
                     End If
@@ -18869,7 +19030,7 @@ Namespace ViewModels
                 Case NameOf(CanvasWidth), NameOf(CanvasHeight), NameOf(LockCanvasAspect), NameOf(CanvasBackgroundColor),
                      NameOf(CanvasAnchor)
                     Return LocalizationService.T("Leinwandgröße")
-                Case NameOf(StraightenDegrees), NameOf(StraightenExpandCanvas)
+                Case NameOf(StraightenDegrees), NameOf(StraightenExpandCanvas), NameOf(StraightenAutoCrop)
                     Return LocalizationService.T("Gerade richten")
                 Case "Tonwertkurve"
                     Return LocalizationService.T("Tonwertkurve")
@@ -19184,7 +19345,7 @@ Namespace ViewModels
                     Return outline & "palette.svg"
                 Case NameOf(LensAssignment)
                     Return outline & "aperture.svg"
-                Case NameOf(StraightenDegrees), NameOf(StraightenExpandCanvas)
+                Case NameOf(StraightenDegrees), NameOf(StraightenExpandCanvas), NameOf(StraightenAutoCrop)
                     Return outline & "rotate-2.svg"
                 Case "Tonwertkurve"
                     Return outline & "chart-line.svg"
@@ -19459,14 +19620,19 @@ Namespace ViewModels
             ' Die Verzerrung des Bildes steht in Schritten; ein oberes Feld gibt es nicht mehr.
             RaiseImageWarpChanged()
             _straightenDegrees = adj.StraightenDegrees
-            _straightenExpandCanvas = adj.StraightenExpandCanvas
             _flipH = adj.FlipHorizontal
             _flipV = adj.FlipVertical
             _appliedRotationDegrees = adj.RotationDegrees
             _appliedStraightenDegrees = adj.StraightenDegrees
-            _appliedStraightenExpandCanvas = adj.StraightenExpandCanvas
             _appliedFlipH = adj.FlipHorizontal
             _appliedFlipV = adj.FlipVertical
+            ' DIE ZWEI LEINWAND-HAKEN KOMMEN NICHT AUS DEM REZEPT, sondern aus der Erinnerung. Sie
+            ' aus den oberen Feldern zu lesen war eine Altlast: die raeumt der Ladeweg inzwischen
+            ' ausdruecklich (FpxService.DropRecipeGeometryFields), sie stehen also immer auf aus -
+            ' jedes geoeffnete Bild hätte damit den gemerkten Stand des Nutzers geloescht.
+            ' Was DIESES Bild wirklich tut, steht in seinem Transform-Schritt, und den setzt
+            ' RestoreEditableTransformTail gleich danach ein.
+            LoadStraightenCanvasPreference()
             RestoreEditableTransformTail()
             ' Ein geladener Beschnitt ist IMMER ein bestaetigter - er stand ja schon im Rezept. Der
             ' Rahmen startet leer; wo das ganze Bild sichtbar bleibt, legt ihn das Betreten des
@@ -19915,14 +20081,15 @@ Namespace ViewModels
             ResetHslFields()
             _rotationDegrees = 0
             _straightenDegrees = 0
-            _straightenExpandCanvas = False
             _flipH = False
             _flipV = False
             _appliedRotationDegrees = 0
             _appliedStraightenDegrees = 0
-            _appliedStraightenExpandCanvas = False
             _appliedFlipH = False
             _appliedFlipV = False
+            ' Die beiden Leinwand-Haken auf den GEMERKTEN Stand, nicht auf aus: sie sagen, WIE
+            ' gedreht wird, und das ist eine Gewohnheit - siehe LoadStraightenCanvasPreference.
+            LoadStraightenCanvasPreference()
             _cropLeft = 0
             _cropTop = 0
             _cropRight = 0
@@ -20514,8 +20681,19 @@ Namespace ViewModels
                     ApplyCenteredAspectCrop(4.0 / 3.0)
                 Case "3:2"
                     ApplyCenteredAspectCrop(3.0 / 2.0)
+                Case "5:4"
+                    ApplyCenteredAspectCrop(5.0 / 4.0)
                 Case "16:9"
                     ApplyCenteredAspectCrop(16.0 / 9.0)
+                ' Die Hochformate. Sie stehen einzeln da, weil die Vorgabe im ANGEZEIGTEN
+                ' Seitenverhaeltnis rechnet: aus "4:3" wird durch eine Vierteldrehung des Bildes
+                ' kein "3:4"-Ausschnitt.
+                Case "3:4"
+                    ApplyCenteredAspectCrop(3.0 / 4.0)
+                Case "2:3"
+                    ApplyCenteredAspectCrop(2.0 / 3.0)
+                Case "4:5"
+                    ApplyCenteredAspectCrop(4.0 / 5.0)
                 Case "9:16"
                     ApplyCenteredAspectCrop(9.0 / 16.0)
             End Select
@@ -23764,16 +23942,18 @@ Namespace ViewModels
             ResetCommittedTransform()
             _rotationDegrees = 0
             _straightenDegrees = 0
-            _straightenExpandCanvas = False
             _flipH = False
             _flipV = False
             _appliedRotationDegrees = 0
             _appliedStraightenDegrees = 0
-            _appliedStraightenExpandCanvas = False
             _appliedFlipH = False
             _appliedFlipV = False
+            ' Die beiden Leinwand-Haken auf den GEMERKTEN Stand, nicht auf aus: sie sagen, WIE
+            ' gedreht wird, und das ist eine Gewohnheit - siehe LoadStraightenCanvasPreference.
+            LoadStraightenCanvasPreference()
             Me.RaisePropertyChanged(NameOf(StraightenDegrees))
             Me.RaisePropertyChanged(NameOf(StraightenExpandCanvas))
+            Me.RaisePropertyChanged(NameOf(StraightenAutoCrop))
             ' Wie bei Bildgroesse und Leinwand: das Zuruecksetzen nimmt bestaetigte Schritte aus
             ' dem Rezept und ist damit eine Aenderung am Dokument.
             _hasChanges = True
@@ -23923,7 +24103,7 @@ Namespace ViewModels
                 NameOf(ColorGradeShadowHue), NameOf(ColorGradeShadowSaturation),
                 NameOf(ColorGradeHighlightHue), NameOf(ColorGradeHighlightSaturation), NameOf(ColorGradeBalance),
                 NameOf(ColorGradeShadowLuminance), NameOf(ColorGradeMidtoneHue), NameOf(ColorGradeMidtoneSaturation), NameOf(ColorGradeMidtoneLuminance), NameOf(ColorGradeHighlightLuminance), NameOf(ColorGradeGlobalHue), NameOf(ColorGradeGlobalSaturation), NameOf(ColorGradeGlobalLuminance), NameOf(ColorGradeBlending),
-                NameOf(StraightenDegrees), NameOf(StraightenExpandCanvas)}
+                NameOf(StraightenDegrees), NameOf(StraightenExpandCanvas), NameOf(StraightenAutoCrop)}
                 Me.RaisePropertyChanged(propertyName)
             Next
             RaiseResetButtonStateChanged()

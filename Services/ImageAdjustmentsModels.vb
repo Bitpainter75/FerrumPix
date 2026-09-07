@@ -138,6 +138,7 @@ Namespace Services
                 Case "transform"
                     result.RotationDegrees = source.RotationDegrees : result.StraightenDegrees = source.StraightenDegrees
                     result.StraightenExpandCanvas = source.StraightenExpandCanvas
+                    result.StraightenAutoCrop = source.StraightenAutoCrop
                     result.FlipHorizontal = source.FlipHorizontal : result.FlipVertical = source.FlipVertical
                 Case "perspective"
                     CopyPerspective(source, result)
@@ -528,6 +529,23 @@ Namespace Services
 
         Public Property StraightenDegrees As Single = 0
         Public Property StraightenExpandCanvas As Boolean = False
+
+        ''' <summary>Die Begradigung schneidet die Leinwand auf das groesste Rechteck IM
+        ''' SEITENVERHAELTNIS DER VORLAGE, das ganz im gekippten Bild liegt. Damit bleiben keine
+        ''' leeren Keile in den Ecken stehen.
+        '''
+        ''' AB WERK AUS (Patricks Entscheidung vom 2026-09-07), und das ist zugleich der neutrale
+        ''' Wert: ein Rezept aus der Zeit vor diesem Feld kommt damit auf denselben Bildstand wie
+        ''' vorher heraus, ohne Umrechnung und ohne Migration.
+        '''
+        ''' ER GILT NUR OHNE <see cref="StraightenExpandCanvas"/>: die erweiterte Leinwand will die
+        ''' Ecken ausdruecklich behalten (und das Zuschneide-Werkzeug stellt jede Begradigung darauf
+        ''' um, damit ein Ausschnitt wieder aufziehbar ist). Beide Schalter aus heisst: die Leinwand
+        ''' bleibt, wie sie ist, und die gekippten Ecken bleiben leer.
+        '''
+        ''' Zugeschnitten wird statt hineingezoomt, weil ein Zuschnitt die vorhandenen Pixel
+        ''' behaelt; ein Zoom auf dieselbe Bildflaeche muesste sie neu berechnen.</summary>
+        Public Property StraightenAutoCrop As Boolean = False
         Public Property FlipHorizontal As Boolean = False
         Public Property FlipVertical As Boolean = False
         Public Property CropLeftPercent As Single = 0
@@ -778,7 +796,7 @@ Namespace Services
             "WorkingImageVersion", "WorkingImageHasTransparency",
             "GeometryOperations",
             "BakedOperations", "BakedOperationsApplied",
-            "RotationDegrees", "StraightenDegrees", "StraightenExpandCanvas", "FlipHorizontal", "FlipVertical",
+            "RotationDegrees", "StraightenDegrees", "StraightenExpandCanvas", "StraightenAutoCrop", "FlipHorizontal", "FlipVertical",
             "PerspectiveHorizontal", "PerspectiveVertical", "PerspectiveAspect", "PerspectiveScale",
             "PerspectiveCorner0X", "PerspectiveCorner0Y", "PerspectiveCorner1X", "PerspectiveCorner1Y",
             "PerspectiveCorner2X", "PerspectiveCorner2Y", "PerspectiveCorner3X", "PerspectiveCorner3Y",
@@ -1068,6 +1086,7 @@ Namespace Services
                 .ImageWarp = ImageWarp?.Clone(),
                 .StraightenDegrees = StraightenDegrees,
                 .StraightenExpandCanvas = StraightenExpandCanvas,
+                .StraightenAutoCrop = StraightenAutoCrop,
                 .FlipHorizontal = FlipHorizontal,
                 .FlipVertical = FlipVertical,
                 .CropLeftPercent = CropLeftPercent,

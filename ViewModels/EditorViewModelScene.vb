@@ -59,7 +59,7 @@ Namespace ViewModels
             ' merkt also nichts davon - die Objekte blieben gerade stehen, waehrend das Bild
             ' darunter schon gekippt war.
             Dim key = String.Join("|", GetBaseWidth(), GetBaseHeight(), ImageProcessor.GeometryOperationsKey(geometry.GeometryOperations),
-                                  _rotationDegrees, _flipH, _flipV, _straightenDegrees, _straightenExpandCanvas,
+                                  _rotationDegrees, _flipH, _flipV, _straightenDegrees, _straightenExpandCanvas, _straightenAutoCrop,
                                   crop.Left, crop.Top, crop.Right, crop.Bottom, _sceneContentVersion)
             If _compositorBlitSnapshot IsNot Nothing AndAlso String.Equals(_compositorBlitGeometryKey, key, StringComparison.Ordinal) Then
                 Return _compositorBlitSnapshot
@@ -73,6 +73,7 @@ Namespace ViewModels
                 .FlipVertical = _flipV,
                 .StraightenDegrees = CSng(_straightenDegrees),
                 .StraightenExpandCanvas = _straightenExpandCanvas,
+                .StraightenAutoCrop = _straightenAutoCrop,
                 .CropLeftPercent = CSng(crop.Left),
                 .CropTopPercent = CSng(crop.Top),
                 .CropRightPercent = CSng(crop.Right),

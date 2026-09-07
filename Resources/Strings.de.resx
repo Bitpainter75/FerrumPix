@@ -8156,4 +8156,19 @@
   <data name="Viele_Bildschirme_k_nnen_mehr_Farben_zeigen_als__9f4aaab0" xml:space="preserve">
     <value>Viele Bildschirme können mehr Farben zeigen, als ein Foto enthält. Ohne Anpassung wirken Fotos und Oberfläche dort zu kräftig. Eingeschaltet rechnet macOS die Farben für den angeschlossenen Bildschirm um; auf einem gewöhnlichen Bildschirm bleibt alles wie es ist.</value>
   </data>
+  <data name="Leinwand_automatisch_zuschneiden_b17b6882" xml:space="preserve">
+    <value>Leinwand automatisch zuschneiden</value>
+  </data>
+  <data name="Schneidet_die_Leinwand_beim_Ausrichten_so_weit_z_29c3fc3b" xml:space="preserve">
+    <value>Schneidet die Leinwand beim Ausrichten so weit zu, dass keine leeren Keile in den Ecken stehen bleiben</value>
+  </data>
+  <data name="Transformieren_anwenden_14dfa3fb" xml:space="preserve">
+    <value>Transformieren anwenden?</value>
+  </data>
+  <data name="Zuschnitt_und_Lage_sind_noch_nicht_bernommen_Sol_5a2fe4b2" xml:space="preserve">
+    <value>Zuschnitt und Lage sind noch nicht übernommen. Sollen sie angewendet werden, bevor du {0}?</value>
+  </data>
+  <data name="das_Werkzeug_wechselst_072515cf" xml:space="preserve">
+    <value>das Werkzeug wechselst</value>
+  </data>
 </root>
