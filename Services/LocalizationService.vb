@@ -176,6 +176,25 @@ Namespace Services
             Next
         End Sub
 
+        ''' <summary>Uebersetzt einen gerade erst entstandenen Teilbaum - eine Listenzeile aus einem
+        ''' DataTemplate, eine Kachel der Galerie.
+        '''
+        ''' BEIDE BAEUME, und der logische ist hier der wichtigere. Beim Anhaengen steht erst das
+        ''' Geruest: was ein Panel als Kinder traegt, haengt schon im Sichtbaum, der INHALT EINES
+        ''' STEUERELEMENTS aber noch nicht - den legt der Inhaltsdarsteller erst beim Messen an.
+        ''' Ein Knopf, dessen Aufschrift kein blosser Text ist, sondern ein Stapel mit Text und
+        ''' Zahl, blieb deshalb in der Ausgangssprache stehen, waehrend die Zeile um ihn herum
+        ''' laengst uebersetzt war (Nutzerbefund: „Aktionen" im Katalogbereich). Im LOGISCHEN Baum
+        ''' haengt dieser Inhalt von Anfang an.
+        '''
+        ''' Zweimal zu laufen ist unschaedlich: jeder Knoten merkt sich seinen Ursprungstext.</summary>
+        Public Shared Sub ApplyToMaterialized(root As Visual)
+            If root Is Nothing Then Return
+            Dim logical = TryCast(root, ILogical)
+            If logical IsNot Nothing Then ApplyTo(logical)
+            ApplyToVisualTree(root)
+        End Sub
+
         ''' <summary>Lokalisiert die Eintraege eines MenuFlyout.
         '''
         ''' EIGENER WEG, weil ein MenuFlyout seine Eintraege als <c>Items</c> traegt und nicht als

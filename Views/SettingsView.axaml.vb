@@ -43,10 +43,11 @@ Namespace Views
 
         ''' <summary>Eine Listenzeile entsteht erst aus dem DataTemplate und meist erst NACH dem
         ''' Sprachdurchlauf ueber das Fenster. Jede neu materialisierte Zeile uebersetzt deshalb
-        ''' ihren eigenen Teilbaum - so wie es die Galerie fuer ihre Kacheln tut.</summary>
+        ''' ihren eigenen Teilbaum - ueber BEIDE Baeume, siehe
+        ''' <see cref="LocalizationService.ApplyToMaterialized"/>.</summary>
         Private Sub OnLocalizedItemAttachedToVisualTree(sender As Object, e As Avalonia.VisualTreeAttachmentEventArgs)
             Dim itemRoot = TryCast(sender, Avalonia.Visual)
-            If itemRoot IsNot Nothing Then LocalizationService.ApplyToVisualTree(itemRoot)
+            If itemRoot IsNot Nothing Then LocalizationService.ApplyToMaterialized(itemRoot)
         End Sub
 
         Public Sub New()

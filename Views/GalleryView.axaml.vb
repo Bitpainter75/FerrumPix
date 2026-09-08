@@ -270,7 +270,7 @@ Namespace Views
         ''' Wechsel des DisplayItems-Fensters.</summary>
         Private Sub OnGalleryItemAttachedToVisualTree(sender As Object, e As VisualTreeAttachmentEventArgs)
             Dim itemRoot = TryCast(sender, Visual)
-            If itemRoot IsNot Nothing Then LocalizationService.ApplyToVisualTree(itemRoot)
+            If itemRoot IsNot Nothing Then LocalizationService.ApplyToMaterialized(itemRoot)
         End Sub
 
         Private Sub OnDescendantGotFocus(sender As Object, e As FocusChangedEventArgs)

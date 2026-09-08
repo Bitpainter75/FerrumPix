@@ -16,12 +16,13 @@ Namespace Views
     Public Class LayersPanelView
         Inherits UserControl
 
-        ''' <summary>Inhalte aus einem DataTemplate haengen nicht im logischen Baum und entstehen
-        ''' oft erst NACH dem Sprachdurchlauf ueber das Fenster. Jedes neu materialisierte Element
-        ''' uebersetzt deshalb seinen eigenen Teilbaum.</summary>
+        ''' <summary>Inhalte aus einem DataTemplate entstehen oft erst NACH dem Sprachdurchlauf
+        ''' ueber das Fenster. Jedes neu materialisierte Element uebersetzt deshalb seinen eigenen
+        ''' Teilbaum - ueber BEIDE Baeume, siehe
+        ''' <see cref="LocalizationService.ApplyToMaterialized"/>.</summary>
         Private Sub OnLocalizedItemAttachedToVisualTree(sender As Object, e As VisualTreeAttachmentEventArgs)
             Dim itemRoot = TryCast(sender, Visual)
-            If itemRoot IsNot Nothing Then LocalizationService.ApplyToVisualTree(itemRoot)
+            If itemRoot IsNot Nothing Then LocalizationService.ApplyToMaterialized(itemRoot)
         End Sub
 
         ' Ebene, die gerade inline umbenannt wird, plus ihr Name vor der Bearbeitung (für Esc = verwerfen).
