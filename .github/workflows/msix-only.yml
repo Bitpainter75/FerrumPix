@@ -43,6 +43,30 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # ZUERST, noch vor dem Auschecken. package.sh prueft dasselbe, kommt damit aber erst nach
+      # Auscheck, SDK und Fremdbinaerdateien dran - und seine Meldung nennt das Partner Center,
+      # nicht die Stelle, an der die Werte hier einzutragen sind. Beides zusammen laesst einen
+      # Lauf an etwas scheitern, das schon beim Start feststand.
+      #
+      # Die Werte gehen ueber env hinein und nicht direkt in den Skripttext: was in einer
+      # Repository-Variablen steht, gehoert nicht in eine Zeile, die die Shell auswertet.
+      - name: Angaben aus dem Partner Center vorhanden?
+        env:
+          IDENTITY: ${{ vars.MSIX_IDENTITY_NAME }}
+          HERAUSGEBER: ${{ vars.MSIX_PUBLISHER }}
+          ANZEIGENAME: ${{ vars.MSIX_PUBLISHER_DISPLAY_NAME }}
+        run: |
+          fehlt=""
+          [ -n "$IDENTITY" ]    || fehlt="$fehlt MSIX_IDENTITY_NAME"
+          [ -n "$HERAUSGEBER" ] || fehlt="$fehlt MSIX_PUBLISHER"
+          [ -n "$ANZEIGENAME" ] || fehlt="$fehlt MSIX_PUBLISHER_DISPLAY_NAME"
+          if [ -n "$fehlt" ]; then
+            echo "::error::Es fehlen die Repository-Variablen:$fehlt - einzutragen unter Settings > Secrets and variables > Actions > Variables. Die Werte stehen im Partner Center unter der Identitaet der Anwendung."
+            exit 1
+          fi
+          echo "Identitaet:  $IDENTITY"
+          echo "Herausgeber: $HERAUSGEBER"
+
       - uses: actions/checkout@v7
 
       - uses: actions/checkout@v7
