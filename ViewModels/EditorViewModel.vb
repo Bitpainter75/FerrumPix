@@ -1907,7 +1907,13 @@ Namespace ViewModels
                 Return
             End If
             Dim values = CurrentAutoAdjustValues()
-            For i = 0 To values.Length - 1
+            ' Nur so weit, wie ALLE DREI reichen. Der Schnappschuss kann kuerzer sein als die
+            ' heutige Liste - genau den Fall faengt WriteAutoAdjustValues weiter oben schon ab
+            ' (er entstand, als die beiden Weissabgleichsfelder dazukamen). Hier fehlte der
+            ' Waechter, und der Zurueckzieher lief dann in einen Indexfehler statt einfach das
+            ' stehen zu lassen, wozu der Schnappschuss nichts sagt.
+            Dim gemeinsam = Math.Min(values.Length, Math.Min(_autoAdjustApplied.Length, _autoAdjustBefore.Length))
+            For i = 0 To gemeinsam - 1
                 If Math.Abs(values(i) - _autoAdjustApplied(i)) < 0.0001 Then values(i) = _autoAdjustBefore(i)
             Next
             WriteAutoAdjustValues(values)
