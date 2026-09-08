@@ -145,6 +145,12 @@ Namespace Controls
             If pts Is Nothing OrElse pts.Count = 0 Then Return
             Dim ordered = pts.OrderBy(Function(p) p.X).ToList()
 
+            ' EINMAL umgewandelt, nicht je Stuetzstelle: die Schleife darunter laeuft ueber die
+            ' Breite des Steuerelements, also einige hundert Mal je Durchlauf, und beim Ziehen eines
+            ' Punktes gibt es einen Durchlauf je Mausbewegung. Eine Liste je Stuetzstelle waere
+            ' Muell im Sekundentakt, genau waehrend jemand eine ruhige Hand braucht.
+            Dim curvePoints = ordered.Select(Function(p) (X:=p.X, Y:=p.Y)).ToList()
+
             Dim curvePen = New Pen(CurveBrush, 2, lineCap:=PenLineCap.Round)
             Dim geometry = New StreamGeometry()
             Using ctx = geometry.Open()
@@ -152,7 +158,7 @@ Namespace Controls
                 Dim stepCount = Math.Max(32, CInt(w))
                 For i = 0 To stepCount
                     Dim x = i / CDbl(stepCount) * 255.0
-                    Dim y = EvaluateCurve(ordered, x)
+                    Dim y = EvaluateCurve(curvePoints, x)
                     Dim sp = ToScreen(New Point(x, y))
                     If first Then
                         ctx.BeginFigure(sp, False)
@@ -172,37 +178,25 @@ Namespace Controls
             Next
         End Sub
 
-        Private Shared Function EvaluateCurve(points As List(Of Point), x As Double) As Double
-            Dim n = points.Count
-            If n = 0 Then Return x
-            If n = 1 Then Return points(0).Y
-            If x <= points(0).X Then Return points(0).Y
-            If x >= points(n - 1).X Then Return points(n - 1).Y
-
-            Dim segIndex = 0
-            For i = 0 To n - 2
-                If x >= points(i).X AndAlso x <= points(i + 1).X Then
-                    segIndex = i
-                    Exit For
-                End If
-            Next
-
-            Dim p0 = If(segIndex > 0, points(segIndex - 1), points(segIndex))
-            Dim p1 = points(segIndex)
-            Dim p2 = points(segIndex + 1)
-            Dim p3 = If(segIndex + 2 < n, points(segIndex + 2), points(segIndex + 1))
-
-            Dim span = p2.X - p1.X
-            If span <= 0.0001 Then Return p1.Y
-            Dim t = (x - p1.X) / span
-            Dim t2 = t * t
-            Dim t3 = t2 * t
-
-            Dim y = 0.5 * ((2 * p1.Y) +
-                           (-p0.Y + p2.Y) * t +
-                           (2 * p0.Y - 5 * p1.Y + 4 * p2.Y - p3.Y) * t2 +
-                           (-p0.Y + 3 * p1.Y - 3 * p2.Y + p3.Y) * t3)
-            Return Math.Max(0.0, Math.Min(255.0, y))
+        ''' <summary>Der Y-Wert der Kurve an dieser Stelle - GEZEICHNET WIRD, WAS GERECHNET WIRD.
+        '''
+        ''' Die Auswertung stand hier einmal ein zweites Mal, Zeichen fuer Zeichen dieselbe
+        ''' Catmull-Rom-Formel wie in der Bildkette. Zwei Kopien heisst: die gezeichnete Kurve ist
+        ''' nur so lange die angewendete, wie beide gleich bleiben - und wer eine davon anfasst,
+        ''' sieht der anderen nicht an, dass sie jetzt etwas anderes tut. Gerechnet wird deshalb an
+        ''' EINER Stelle; warum es Catmull-Rom ist und nicht der natuerliche Spline der Referenz,
+        ''' steht dort und ist gemessen.
+        '''
+        ''' Die Klemmung bleibt hier: sie gehoert der Anzeige, die Kurve soll im Kasten bleiben. Die
+        ''' Bildkette klemmt auf denselben Bereich, nur eine Stufe spaeter beim Bauen ihrer
+        ''' Tabelle.
+        '''
+        ''' Die Punkte kommen SCHON UMGEWANDELT herein. Der Aufrufer ist eine Schleife ueber die
+        ''' Breite des Steuerelements; wandelte diese Funktion selbst um, entstuende je Stuetzstelle
+        ''' eine Liste.</summary>
+        Private Shared Function EvaluateCurve(points As List(Of (X As Double, Y As Double)), x As Double) As Double
+            If points Is Nothing OrElse points.Count = 0 Then Return x
+            Return Math.Max(0.0, Math.Min(255.0, Services.ImageProcessor.EvaluateCurveSpline(points, x)))
         End Function
 
         Private Function FindNearestPointIndex(screenPos As Point) As Integer
