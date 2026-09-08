@@ -9115,52 +9115,31 @@ Namespace ViewModels
         ''' Ausschnitt des riesigen Bildes in ihrem alten Kasten, die Masse im Infopanel aenderten
         ''' sich nicht, und der ganze Durchlauf war verloren (Nutzerbefund 2026-09-08).
         '''
+        ''' DIE SCHRITTE rechnet <see cref="ImageProcessor.ScaleGeometryStepsForSource"/> - dieselbe
+        ''' Stelle, die ein GELADENES Rezept auf die dekodierte Datei herunterrechnet. Zwei
+        ''' Fassungen davon waeren zwei Gelegenheiten, eine Art zu vergessen, und die beiden Wege
+        ''' muessen sich genau aufheben: was beim Laden geteilt wurde, wird hier wieder
+        ''' multipliziert.
+        '''
         ''' DIE OFFENEN FELDER GEHEN MIT, statt geleert zu werden. Frueher wurden Breite und Hoehe
         ''' auf 0 gesetzt, damit kein alter Wunsch das frisch vergroesserte Bild wieder
         ''' zusammenstaucht; das war richtig, solange gar nichts mitwuchs. Jetzt wird alles
         ''' Sichtbare mit demselben Faktor groesser - und ein mitgezogener Wunsch ist genau das,
-        ''' was die Zeile "Aus ... wird ..." verspricht.
-        '''
-        ''' Ersetzt statt geaendert: die Schritte liegen als Abschrift auch in den
-        ''' Rueckgaengig-Eintraegen, und die duerfen sich nicht mitverstellen.</summary>
+        ''' was die Zeile "Aus ... wird ..." verspricht.</summary>
         Private Sub ScaleGeometryForNewSource(scaleX As Single, scaleY As Single)
             If Math.Abs(scaleX - 1.0F) < 0.0001F AndAlso Math.Abs(scaleY - 1.0F) < 0.0001F Then Return
 
-            For i = 0 To _geometryOperations.Count - 1
-                Dim operation = _geometryOperations(i)
-                Dim a = operation?.Adjustments
-                If a Is Nothing Then Continue For
-                Select Case If(operation.Kind, "").Trim().ToLowerInvariant()
-                    Case "resize"
-                        If a.ResizeWidth <= 0 AndAlso a.ResizeHeight <= 0 Then Continue For
-                        Dim scaledResize = operation.Clone()
-                        scaledResize.Adjustments.ResizeWidth = ScaledEdge(a.ResizeWidth, scaleX)
-                        scaledResize.Adjustments.ResizeHeight = ScaledEdge(a.ResizeHeight, scaleY)
-                        _geometryOperations(i) = scaledResize
-                    Case "canvas"
-                        If a.CanvasWidth <= 0 AndAlso a.CanvasHeight <= 0 Then Continue For
-                        Dim scaledCanvas = operation.Clone()
-                        scaledCanvas.Adjustments.CanvasWidth = ScaledEdge(a.CanvasWidth, scaleX)
-                        scaledCanvas.Adjustments.CanvasHeight = ScaledEdge(a.CanvasHeight, scaleY)
-                        _geometryOperations(i) = scaledCanvas
-                End Select
-            Next
+            ImageProcessor.ScaleGeometryStepsForSource(_geometryOperations, scaleX, scaleY)
 
-            _resizeWidth = ScaledEdge(_resizeWidth, scaleX)
-            _resizeHeight = ScaledEdge(_resizeHeight, scaleY)
-            _appliedResizeWidth = ScaledEdge(_appliedResizeWidth, scaleX)
-            _appliedResizeHeight = ScaledEdge(_appliedResizeHeight, scaleY)
-            _canvasWidth = ScaledEdge(_canvasWidth, scaleX)
-            _canvasHeight = ScaledEdge(_canvasHeight, scaleY)
-            _appliedCanvasWidth = ScaledEdge(_appliedCanvasWidth, scaleX)
-            _appliedCanvasHeight = ScaledEdge(_appliedCanvasHeight, scaleY)
+            _resizeWidth = ImageProcessor.ScaleEdgeForSource(_resizeWidth, scaleX)
+            _resizeHeight = ImageProcessor.ScaleEdgeForSource(_resizeHeight, scaleY)
+            _appliedResizeWidth = ImageProcessor.ScaleEdgeForSource(_appliedResizeWidth, scaleX)
+            _appliedResizeHeight = ImageProcessor.ScaleEdgeForSource(_appliedResizeHeight, scaleY)
+            _canvasWidth = ImageProcessor.ScaleEdgeForSource(_canvasWidth, scaleX)
+            _canvasHeight = ImageProcessor.ScaleEdgeForSource(_canvasHeight, scaleY)
+            _appliedCanvasWidth = ImageProcessor.ScaleEdgeForSource(_appliedCanvasWidth, scaleX)
+            _appliedCanvasHeight = ImageProcessor.ScaleEdgeForSource(_appliedCanvasHeight, scaleY)
         End Sub
-
-        ''' Eine Kantenlaenge mitziehen. 0 heisst "nicht gesetzt" und bleibt es.
-        Private Shared Function ScaledEdge(value As Integer, scale As Single) As Integer
-            If value <= 0 Then Return 0
-            Return Math.Max(1, CInt(Math.Round(value * CDbl(scale))))
-        End Function
 
         Private Sub RaiseUpscaleStateChanged()
             Me.RaisePropertyChanged(NameOf(IsUpscaleWithModelAvailable))
@@ -9695,6 +9674,12 @@ Namespace ViewModels
                                               result.Height <> _workingImage.FullHeight
                             If sizeChanged Then
                                 ScaleAnnotationsForNewSource(factorX, factorY)
+                                ' UND DIE GEOMETRIE, aus demselben Grund: Bildgroesse und Leinwand
+                                ' stehen in Pixeln. Beim Laden wurden sie zusammen mit den Objekten
+                                ' auf die kleine Datei heruntergerechnet; jetzt gehoert beides
+                                ' wieder hinauf. Ohne das begrenzte eine gespeicherte Leinwand das
+                                ' Ergebnis erneut auf ihr altes Mass.
+                                ScaleGeometryForNewSource(factorX, factorY)
                                 ClearActiveSelectionForGeometry()
                             End If
 
@@ -9713,9 +9698,14 @@ Namespace ViewModels
                             MarkBakedIntoWorkingImage()
                             _hasChanges = True
                             If sizeChanged Then
-                                ' Die Groessenfelder zeigen ab jetzt die neue Groesse.
-                                _resizeWidth = 0 : _resizeHeight = 0
-                                _appliedResizeWidth = 0 : _appliedResizeHeight = 0
+                                ' Die Groessenfelder stehen auf der neuen Groesse - mitgezogen
+                                ' oben, nicht geleert. Sie muessen es nur noch zeigen.
+                                Me.RaisePropertyChanged(NameOf(ResizeWidth))
+                                Me.RaisePropertyChanged(NameOf(ResizeHeight))
+                                Me.RaisePropertyChanged(NameOf(CanvasWidth))
+                                Me.RaisePropertyChanged(NameOf(CanvasHeight))
+                                RaiseOutputSizeChanged()
+                                RaiseResetButtonStateChanged()
                             End If
                             RaiseDisplayImageGeometryProperties()
                             StatusText = LocalizationService.T("Gespeicherte Bearbeitung angewendet")

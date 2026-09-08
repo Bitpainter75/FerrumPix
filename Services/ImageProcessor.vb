@@ -4200,6 +4200,12 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             Dim scaleY = height / CSng(recipeHeight)
             Dim uniform = CSng(Math.Sqrt(Math.Max(0.0001F, scaleX * scaleY)))
 
+            ' Die Geometrie gehoert dazu, auch wenn sie kein Objekt ist: zwei Arten stehen in
+            ' PIXELN. Ohne sie zeigte ein Rezept aus dem vierfachen Raum seine Leinwand von 28000
+            ' Punkten um ein Bild von 6000 - und beim spaeteren Anwenden des vermerkten
+            ' Hochskalierens waere sie ein zweites Mal falsch.
+            ScaleGeometryStepsForSource(adj.GeometryOperations, scaleX, scaleY)
+
             If adj.Annotations IsNot Nothing Then
                 For i = 0 To adj.Annotations.Count - 1
                     Dim annotation = adj.Annotations(i)
@@ -4242,6 +4248,53 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             DiagnosticLogService.LogAlways("Rezept",
                 $"auf die Bildmasse umgerechnet: {recipeWidth}x{recipeHeight} auf {width}x{height}")
             Return True
+        End Function
+
+        ''' <summary>Die Geometrieschritte von einem Quellraum in einen anderen bringen.
+        '''
+        ''' NUR ZWEI ARTEN STEHEN IN PIXELN: <c>resize</c> und <c>canvas</c>. Beschnitt, Drehung,
+        ''' Ausrichten, Perspektive und Bildverzerrung stehen in Prozent und wachsen von selbst mit.
+        '''
+        ''' Der Quellraum wechselt an genau zwei Stellen, und beide brauchen dieselbe Rechnung: das
+        ''' Hochskalieren mit Modell macht das Arbeitsbild groesser, das Laden eines Rezepts rechnet
+        ''' es auf die tatsaechlich dekodierte Datei herunter (<see cref="ScaleRecipeToSource"/>).
+        ''' Bleiben die Zahlen stehen, pinnen sie das Ergebnis auf ein fremdes Mass - eine
+        ''' bestaetigte Leinwand zeigte nach dem vierfachen Hochskalieren einen Ausschnitt in ihrem
+        ''' alten Kasten (Nutzerbefund 2026-09-08).
+        '''
+        ''' ERSETZT STATT GEAENDERT: dieselben Schritt-Objekte liegen als Abschrift auch in den
+        ''' Rueckgaengig-Eintraegen des Editors, und die duerfen sich nicht mitverstellen.</summary>
+        Friend Shared Sub ScaleGeometryStepsForSource(steps As List(Of GeometryOperation),
+                                                      scaleX As Single, scaleY As Single)
+            If steps Is Nothing Then Return
+            If Math.Abs(scaleX - 1.0F) < 0.0001F AndAlso Math.Abs(scaleY - 1.0F) < 0.0001F Then Return
+
+            For i = 0 To steps.Count - 1
+                Dim operation = steps(i)
+                Dim a = operation?.Adjustments
+                If a Is Nothing Then Continue For
+                Select Case If(operation.Kind, "").Trim().ToLowerInvariant()
+                    Case "resize"
+                        If a.ResizeWidth <= 0 AndAlso a.ResizeHeight <= 0 Then Continue For
+                        Dim scaledResize = operation.Clone()
+                        scaledResize.Adjustments.ResizeWidth = ScaleEdgeForSource(a.ResizeWidth, scaleX)
+                        scaledResize.Adjustments.ResizeHeight = ScaleEdgeForSource(a.ResizeHeight, scaleY)
+                        steps(i) = scaledResize
+                    Case "canvas"
+                        If a.CanvasWidth <= 0 AndAlso a.CanvasHeight <= 0 Then Continue For
+                        Dim scaledCanvas = operation.Clone()
+                        scaledCanvas.Adjustments.CanvasWidth = ScaleEdgeForSource(a.CanvasWidth, scaleX)
+                        scaledCanvas.Adjustments.CanvasHeight = ScaleEdgeForSource(a.CanvasHeight, scaleY)
+                        steps(i) = scaledCanvas
+                End Select
+            Next
+        End Sub
+
+        ''' <summary>Eine Kantenlaenge mitziehen. 0 heisst "nicht gesetzt" und bleibt es - eine
+        ''' fehlende Kante leitet die Kette selbst aus dem Bildformat ab.</summary>
+        Friend Shared Function ScaleEdgeForSource(value As Integer, scale As Single) As Integer
+            If value <= 0 Then Return 0
+            Return Math.Max(1, CInt(Math.Round(value * CDbl(scale))))
         End Function
 
         ''' <summary>Ein Objekt von einem Quellraum in einen anderen bringen. Friend, weil das

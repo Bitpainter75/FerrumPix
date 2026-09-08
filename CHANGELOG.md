@@ -30,7 +30,9 @@
 - Upscaling with a model after enlarging the canvas works. The canvas kept its old size in pixels
   while the picture grew, so the result was a cutout of the enlarged photo in the old frame, and
   the dimensions in the info sidebar never changed. Everything now grows by the same factor, and
-  the line that announces the new size counts the picture you see rather than the one on disk.
+  the line that announces the new size counts the picture you see rather than the one on disk. The
+  same holds for a saved edit that is applied later: reopening a raw file now shows its canvas at
+  the size that fits the undeveloped photo, and applying the stored upscale puts it back up.
 
 - Double clicking a slider lands where the slider started. Two of them went somewhere else: the
   text size dropped to the smallest size there is, and the denoise strength jumped up instead of
