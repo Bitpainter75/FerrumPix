@@ -1,4 +1,5 @@
 Imports Avalonia.Controls
+Imports Avalonia.Input
 Imports Avalonia.Interactivity
 Imports Avalonia.Markup.Xaml
 Imports Avalonia.Threading
@@ -17,6 +18,41 @@ Namespace Views
         Public Sub New()
             AvaloniaXamlLoader.Load(Me)
         End Sub
+
+        ''' <summary>Beim Betreten eines Kantenfeldes haelt das ViewModel das Seitenverhaeltnis an,
+        ''' das JETZT gilt - bis zum Verlassen bleibt die andere Kante stehen.
+        '''
+        ''' Ohne das zieht sie bei jedem Anschlag nach: wer in 1000x500 eine 1500 tippt, sieht die
+        ''' Hoehe ueber 1, 5 und 50 wandern, und im Feld steht laufend etwas anderes, als er gerade
+        ''' schreibt.</summary>
+        Private Sub OnEdgeFieldGotFocus(sender As Object, e As RoutedEventArgs)
+            Dim vm = TryCast(DataContext, MainWindowViewModel)
+            If vm Is Nothing Then Return
+            vm.BeginBatchResizeEdgeEdit()
+        End Sub
+
+        Private Sub OnEdgeFieldLostFocus(sender As Object, e As RoutedEventArgs)
+            Dim vm = TryCast(DataContext, MainWindowViewModel)
+            If vm Is Nothing Then Return
+            vm.CommitBatchResizeEdgeEdit(IsWidthField(sender))
+        End Sub
+
+        ''' Die Eingabetaste bestaetigt den Dialog (Fenster-Tastenhandler) - die gekoppelte Kante
+        ''' muss VORHER nachgezogen sein, sonst liefe der Stapel mit der alten Zahl. Dieser Handler
+        ''' liegt am Feld und damit vor dem Fenster. Bleibt der Dialog wider Erwarten offen, faengt
+        ''' das erneute Betreten die naechste Eingabe wieder ein.
+        Private Sub OnEdgeFieldKeyDown(sender As Object, e As KeyEventArgs)
+            If e.Key <> Key.Enter AndAlso e.Key <> Key.Return Then Return
+            Dim vm = TryCast(DataContext, MainWindowViewModel)
+            If vm Is Nothing Then Return
+            vm.CommitBatchResizeEdgeEdit(IsWidthField(sender))
+            vm.BeginBatchResizeEdgeEdit()
+        End Sub
+
+        Private Shared Function IsWidthField(sender As Object) As Boolean
+            Dim box = TryCast(sender, TextBox)
+            Return box Is Nothing OrElse Not String.Equals(box.Name, "BatchResizeHeightTextBox", StringComparison.Ordinal)
+        End Function
 
         Private Sub OnPresetClick(sender As Object, e As RoutedEventArgs)
             Dim button = TryCast(sender, Button)

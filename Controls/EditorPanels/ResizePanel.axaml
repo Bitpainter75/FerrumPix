@@ -29,11 +29,15 @@
             </DataTemplate>
         </Expander.HeaderTemplate>
         <StackPanel Spacing="8" Margin="0,8,0,0">
+            <!-- DeferTextCommit: das Getippte zaehlt erst beim Verlassen des Feldes. Sonst zieht
+                 die gekoppelte Kante schon bei jedem einzelnen Anschlag nach und springt
+                 unterwegs durch Zwischenstaende, die niemand gemeint hat. -->
             <Grid ColumnDefinitions="92,*,Auto" VerticalAlignment="Center">
                 <TextBlock Text="Breite" Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                 <icons:SliderValueUpDown Classes="combo-like" Grid.Column="1"
                                Value="{Binding ResizeWidth}" Minimum="0" Maximum="50000"
+                               DeferTextCommit="True"
                                Increment="10" Margin="6,0,0,0" FontSize="{DynamicResource FP.Font.Small}" />
                 <TextBlock Grid.Column="2" Text="px"
                            Foreground="{DynamicResource FP.Text.Secondary}"
@@ -44,6 +48,7 @@
                            VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                 <icons:SliderValueUpDown Classes="combo-like" Grid.Column="1"
                                Value="{Binding ResizeHeight}" Minimum="0" Maximum="50000"
+                               DeferTextCommit="True"
                                Increment="10" Margin="6,0,0,0" FontSize="{DynamicResource FP.Font.Small}" />
                 <TextBlock Grid.Column="2" Text="px"
                            Foreground="{DynamicResource FP.Text.Secondary}"
@@ -253,6 +258,7 @@
                                    VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                         <icons:SliderValueUpDown Classes="combo-like" Grid.Column="1"
                                        Value="{Binding CanvasWidth}" Minimum="0" Maximum="50000"
+                                       DeferTextCommit="True"
                                        Increment="10" Margin="6,0,0,0" FontSize="{DynamicResource FP.Font.Small}" />
                         <TextBlock Grid.Column="2" Text="px"
                                    Foreground="{DynamicResource FP.Text.Secondary}"
@@ -263,6 +269,7 @@
                                    VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                         <icons:SliderValueUpDown Classes="combo-like" Grid.Column="1"
                                        Value="{Binding CanvasHeight}" Minimum="0" Maximum="50000"
+                                       DeferTextCommit="True"
                                        Increment="10" Margin="6,0,0,0" FontSize="{DynamicResource FP.Font.Small}" />
                         <TextBlock Grid.Column="2" Text="px"
                                    Foreground="{DynamicResource FP.Text.Secondary}"

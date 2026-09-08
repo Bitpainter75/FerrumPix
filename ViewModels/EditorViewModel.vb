@@ -4347,7 +4347,7 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(ResizeHeight))
             Me.RaisePropertyChanged(NameOf(CanvasWidth))
             Me.RaisePropertyChanged(NameOf(CanvasHeight))
-            Me.RaisePropertyChanged(NameOf(OutputSizeText))
+            RaiseOutputSizeChanged()
             Me.RaisePropertyChanged(NameOf(AnnotationXPixels))
             Me.RaisePropertyChanged(NameOf(AnnotationYPixels))
             Me.RaisePropertyChanged(NameOf(AnnotationWidthPixels))
@@ -7939,7 +7939,7 @@ Namespace ViewModels
                 If _lockResizeAspect AndAlso Not _isUpdatingResize Then
                     SyncResizeHeightFromWidth()
                 End If
-                Me.RaisePropertyChanged(NameOf(OutputSizeText))
+                RaiseOutputSizeChanged()
                 RaiseResetButtonStateChanged()
                 ScheduleToolPreviewUpdate()
             End Set
@@ -7956,7 +7956,7 @@ Namespace ViewModels
                 If _lockResizeAspect AndAlso Not _isUpdatingResize Then
                     SyncResizeWidthFromHeight()
                 End If
-                Me.RaisePropertyChanged(NameOf(OutputSizeText))
+                RaiseOutputSizeChanged()
                 RaiseResetButtonStateChanged()
                 ScheduleToolPreviewUpdate()
             End Set
@@ -8003,7 +8003,7 @@ Namespace ViewModels
                     _isUpdatingCanvas = False
                     Me.RaisePropertyChanged(NameOf(CanvasHeight))
                 End If
-                Me.RaisePropertyChanged(NameOf(OutputSizeText))
+                RaiseOutputSizeChanged()
                 RaiseResetButtonStateChanged()
                 ScheduleToolPreviewUpdate()
             End Set
@@ -8025,7 +8025,7 @@ Namespace ViewModels
                     _isUpdatingCanvas = False
                     Me.RaisePropertyChanged(NameOf(CanvasWidth))
                 End If
-                Me.RaisePropertyChanged(NameOf(OutputSizeText))
+                RaiseOutputSizeChanged()
                 RaiseResetButtonStateChanged()
                 ScheduleToolPreviewUpdate()
             End Set
@@ -9010,12 +9010,22 @@ Namespace ViewModels
 
         ''' <summary>"Aus 6000 x 4000 wird 24000 x 16000" - die Groesse, die herauskommt, VOR dem
         ''' Druck auf den Knopf. Ohne diese Zeile ist der Massstab des Modells eine Ueberraschung,
-        ''' und zwar eine, die Minuten dauert.</summary>
+        ''' und zwar eine, die Minuten dauert.
+        '''
+        ''' GEZAEHLT WIRD DAS ANGEZEIGTE BILD, nicht das Arbeitsbild. Zuschnitt, Bildgroesse und
+        ''' Leinwand sind Geometrieschritte: das Arbeitsbild bleibt dabei, wie es ist, und seine
+        ''' Masse waeren nach jedem dieser Schritte die falsche Antwort - wer die Leinwand
+        ''' vergroessert und danach ein Modell waehlt, las hier die Zahlen von vorher
+        ''' (Nutzerbefund 2026-09-08). Das Hochskalieren zieht die Geometrie mit
+        ''' (<see cref="ScaleGeometryForNewSource"/>), der angezeigte Massstab gilt also fuer alles,
+        ''' was man sieht.</summary>
         Public ReadOnly Property UpscaleTargetText As String
             Get
                 Dim model = CurrentUpscaleModel()
                 If model Is Nothing OrElse _workingImage Is Nothing OrElse Not _workingImage.IsInitialized Then Return ""
-                Dim w = _workingImage.FullWidth, h = _workingImage.FullHeight
+                Dim displaySize = GetAnnotationDisplayPixelSize()
+                Dim w = If(displaySize.Width > 0, displaySize.Width, _workingImage.FullWidth)
+                Dim h = If(displaySize.Height > 0, displaySize.Height, _workingImage.FullHeight)
                 If w <= 0 OrElse h <= 0 Then Return ""
                 Return String.Format(LocalizationService.T("Aus {0} x {1} wird {2} x {3}"),
                                      w, h, w * model.Scale, h * model.Scale)
@@ -9094,6 +9104,63 @@ Namespace ViewModels
                 End If
             Next
         End Sub
+
+        ''' <summary>Die GEOMETRIE auf einen groesseren Quellraum umrechnen - die bestaetigten
+        ''' Schritte und die offenen Felder.
+        '''
+        ''' WARUM DAS SEIN MUSS: Zuschnitt, Drehung, Perspektive und Verzerrung stehen in Prozent
+        ''' und wachsen von selbst mit. Bildgroesse und Leinwand stehen dagegen in PIXELN. Bleiben
+        ''' sie stehen, waehrend das Arbeitsbild viermal so gross wird, dann pinnen sie das Ergebnis
+        ''' auf die alte Zahl: die vergroesserte Leinwand zeigte nach dem Hochskalieren einen
+        ''' Ausschnitt des riesigen Bildes in ihrem alten Kasten, die Masse im Infopanel aenderten
+        ''' sich nicht, und der ganze Durchlauf war verloren (Nutzerbefund 2026-09-08).
+        '''
+        ''' DIE OFFENEN FELDER GEHEN MIT, statt geleert zu werden. Frueher wurden Breite und Hoehe
+        ''' auf 0 gesetzt, damit kein alter Wunsch das frisch vergroesserte Bild wieder
+        ''' zusammenstaucht; das war richtig, solange gar nichts mitwuchs. Jetzt wird alles
+        ''' Sichtbare mit demselben Faktor groesser - und ein mitgezogener Wunsch ist genau das,
+        ''' was die Zeile "Aus ... wird ..." verspricht.
+        '''
+        ''' Ersetzt statt geaendert: die Schritte liegen als Abschrift auch in den
+        ''' Rueckgaengig-Eintraegen, und die duerfen sich nicht mitverstellen.</summary>
+        Private Sub ScaleGeometryForNewSource(scaleX As Single, scaleY As Single)
+            If Math.Abs(scaleX - 1.0F) < 0.0001F AndAlso Math.Abs(scaleY - 1.0F) < 0.0001F Then Return
+
+            For i = 0 To _geometryOperations.Count - 1
+                Dim operation = _geometryOperations(i)
+                Dim a = operation?.Adjustments
+                If a Is Nothing Then Continue For
+                Select Case If(operation.Kind, "").Trim().ToLowerInvariant()
+                    Case "resize"
+                        If a.ResizeWidth <= 0 AndAlso a.ResizeHeight <= 0 Then Continue For
+                        Dim scaledResize = operation.Clone()
+                        scaledResize.Adjustments.ResizeWidth = ScaledEdge(a.ResizeWidth, scaleX)
+                        scaledResize.Adjustments.ResizeHeight = ScaledEdge(a.ResizeHeight, scaleY)
+                        _geometryOperations(i) = scaledResize
+                    Case "canvas"
+                        If a.CanvasWidth <= 0 AndAlso a.CanvasHeight <= 0 Then Continue For
+                        Dim scaledCanvas = operation.Clone()
+                        scaledCanvas.Adjustments.CanvasWidth = ScaledEdge(a.CanvasWidth, scaleX)
+                        scaledCanvas.Adjustments.CanvasHeight = ScaledEdge(a.CanvasHeight, scaleY)
+                        _geometryOperations(i) = scaledCanvas
+                End Select
+            Next
+
+            _resizeWidth = ScaledEdge(_resizeWidth, scaleX)
+            _resizeHeight = ScaledEdge(_resizeHeight, scaleY)
+            _appliedResizeWidth = ScaledEdge(_appliedResizeWidth, scaleX)
+            _appliedResizeHeight = ScaledEdge(_appliedResizeHeight, scaleY)
+            _canvasWidth = ScaledEdge(_canvasWidth, scaleX)
+            _canvasHeight = ScaledEdge(_canvasHeight, scaleY)
+            _appliedCanvasWidth = ScaledEdge(_appliedCanvasWidth, scaleX)
+            _appliedCanvasHeight = ScaledEdge(_appliedCanvasHeight, scaleY)
+        End Sub
+
+        ''' Eine Kantenlaenge mitziehen. 0 heisst "nicht gesetzt" und bleibt es.
+        Private Shared Function ScaledEdge(value As Integer, scale As Single) As Integer
+            If value <= 0 Then Return 0
+            Return Math.Max(1, CInt(Math.Round(value * CDbl(scale))))
+        End Function
 
         Private Sub RaiseUpscaleStateChanged()
             Me.RaisePropertyChanged(NameOf(IsUpscaleWithModelAvailable))
@@ -9178,6 +9245,9 @@ Namespace ViewModels
                             Dim factorX = result.Width / CSng(Math.Max(1, _workingImage.FullWidth))
                             Dim factorY = result.Height / CSng(Math.Max(1, _workingImage.FullHeight))
                             ScaleAnnotationsForNewSource(factorX, factorY)
+                            ' UND DIE GEOMETRIE GEHT MIT. Bildgroesse und Leinwand stehen in Pixeln
+                            ' und pinnten das Ergebnis sonst auf die alte Zahl - siehe dort.
+                            ScaleGeometryForNewSource(factorX, factorY)
                             ' Die aktive Auswahl liegt im Anzeigeraum von VORHER - dieselbe Regel
                             ' wie bei jedem Geometrieschritt.
                             ClearActiveSelectionForGeometry()
@@ -9201,12 +9271,15 @@ Namespace ViewModels
                                 .UpscaleModel = key})
                             MarkBakedIntoWorkingImage()
                             _hasChanges = True
-                            ' Die Groessenfelder arbeiten ab jetzt auf der NEUEN Groesse: sie
-                            ' zeigen bei 0 die aktuelle (GetCroppedWidth), und ein noch offener
-                            ' Wunsch von vorher waere jetzt eine VERKLEINERUNG, die niemand
-                            ' bestellt hat.
-                            _resizeWidth = 0 : _resizeHeight = 0
-                            _appliedResizeWidth = 0 : _appliedResizeHeight = 0
+                            ' Die Groessenfelder stehen jetzt auf der NEUEN Groesse - mitgezogen in
+                            ' ScaleGeometryForNewSource. Sie muessen es auch zeigen: ohne diese
+                            ' Meldungen stuenden die alten Zahlen in Bildgroesse und Leinwand.
+                            Me.RaisePropertyChanged(NameOf(ResizeWidth))
+                            Me.RaisePropertyChanged(NameOf(ResizeHeight))
+                            Me.RaisePropertyChanged(NameOf(CanvasWidth))
+                            Me.RaisePropertyChanged(NameOf(CanvasHeight))
+                            RaiseOutputSizeChanged()
+                            RaiseResetButtonStateChanged()
                             RaiseDisplayImageGeometryProperties()
                             RaiseUpscaleStateChanged()
                             Dim report = UpscaleModelService.LastReport
@@ -12156,8 +12229,14 @@ Namespace ViewModels
         End Sub
 
         ''' <summary>Der Teil ohne die Drehung - fuer die Wege, die sie selbst schon an ihre Stelle
-        ''' gesetzt haben (<see cref="ApplyOpenTransformInPlace"/>).</summary>
-        Private Sub AppendOpenGeometryOperationsWithoutTransform(result As List(Of GeometryOperation))
+        ''' gesetzt haben (<see cref="ApplyOpenTransformInPlace"/>).
+        '''
+        ''' <paramref name="includeTargetSize"/> laesst die beiden ZIELMASSE weg (Bildgroesse und
+        ''' Leinwand). Das braucht genau einer: die Kopplung von Breite und Hoehe
+        ''' (<see cref="ResizeBaseSize"/>) - sie misst das Bild, AUF DAS sich die Felder beziehen,
+        ''' und darf dabei nicht ihr eigenes Ergebnis mitzaehlen.</summary>
+        Private Sub AppendOpenGeometryOperationsWithoutTransform(result As List(Of GeometryOperation),
+                                                                 Optional includeTargetSize As Boolean = True)
             If result Is Nothing Then Return
             If HasPerspectiveChanges Then
                 result.Add(New GeometryOperation With {.Kind = "perspective", .Adjustments = New ImageAdjustments With {
@@ -12168,6 +12247,7 @@ Namespace ViewModels
                     .PerspectiveCorner2X = CSng(_perspectiveCorners(4)), .PerspectiveCorner2Y = CSng(_perspectiveCorners(5)),
                     .PerspectiveCorner3X = CSng(_perspectiveCorners(6)), .PerspectiveCorner3Y = CSng(_perspectiveCorners(7))}})
             End If
+            If Not includeTargetSize Then Return
             If _resizeWidth > 0 OrElse _resizeHeight > 0 Then
                 result.Add(New GeometryOperation With {.Kind = "resize", .Adjustments = New ImageAdjustments With {
                     .ResizeWidth = _resizeWidth, .ResizeHeight = _resizeHeight,
@@ -12179,6 +12259,38 @@ Namespace ViewModels
                     .CanvasAnchor = _canvasAnchor, .CanvasBackgroundColor = _canvasBackgroundColor}})
             End If
         End Sub
+
+        ''' <summary>Die Groesse, AUF DIE sich die Felder Breite und Hoehe beziehen: das Bild nach
+        ''' allen bestaetigten Schritten, dem offenen Drehen und dem offenen Zuschnitt - aber OHNE
+        ''' die offenen Zielmasse selbst.
+        '''
+        ''' DAS WEGLASSEN IST DER GANZE PUNKT. Die Kopplung rechnete gegen
+        ''' <c>GetCroppedWidth</c>, und darin steckt die Kette EINSCHLIESSLICH der offenen
+        ''' Bildgroesse - sie mass also ihr eigenes Ergebnis. Solange nur eine Kante gesetzt war,
+        ''' ging das gut: die Kette leitet die andere selbst aus dem Bildformat ab. Sobald aber
+        ''' beide Kanten frei standen (Sperre aus, Breite UND Hoehe getippt, Sperre wieder an), war
+        ''' das Verhaeltnis genau das der beiden Felder - die Rechnung ergab jedes Mal den Wert, der
+        ''' schon dastand, und die Gegenkante ruehrte sich nie wieder (Nutzerbefund 2026-09-08).
+        '''
+        ''' Der offene Zuschnitt zaehlt anteilig mit, genau wie in <see cref="GetCroppedWidth"/>: er
+        ''' steht bis zum Bestaetigen nicht in der Kette, aendert aber das Format.</summary>
+        Private Function ResizeBaseSize() As (Width As Integer, Height As Integer)
+            Dim baseWidth = GetBaseWidth()
+            Dim baseHeight = GetBaseHeight()
+            If baseWidth <= 0 OrElse baseHeight <= 0 Then Return (0, 0)
+
+            Dim steps = _geometryOperations.Select(Function(operation) operation.Clone()).ToList()
+            ApplyOpenTransformInPlace(steps, EditableTransformIndex())
+            AppendOpenGeometryOperationsWithoutTransform(steps, includeTargetSize:=False)
+            Dim size = ImageProcessor.ComputeGeometryOutputSize(
+                baseWidth, baseHeight,
+                New ImageAdjustments With {.GeometryOperations = NormalizeGeometryOperations(steps)})
+            If size.Width <= 0 OrElse size.Height <= 0 Then Return (0, 0)
+
+            Dim width = Math.Max(1, size.Width - PercentToPixels(_cropLeft, size.Width) - PercentToPixels(_cropRight, size.Width))
+            Dim height = Math.Max(1, size.Height - PercentToPixels(_cropTop, size.Height) - PercentToPixels(_cropBottom, size.Height))
+            Return (width, height)
+        End Function
 
         ''' <summary>Das FPX-Rezept braucht die bestätigten Schritte UND sichtbar offene
         ''' Geometrie-Regler. Die Vorschau-Variante darf hier nicht verwendet werden: im
@@ -13374,6 +13486,15 @@ Namespace ViewModels
                 Return $"{w} × {h}"
             End Get
         End Property
+
+        ''' <summary>Die Ausgabegroesse hat sich geaendert. ZWEI Zeilen nennen sie, und beide
+        ''' muessen es erfahren: die Plakette unter dem Bild und die Vorschau des Hochskalierens
+        ''' ("Aus ... wird ..."). Letztere hing frueher nur an der Modellwahl und stand danach auf
+        ''' den Zahlen von vorher.</summary>
+        Private Sub RaiseOutputSizeChanged()
+            Me.RaisePropertyChanged(NameOf(OutputSizeText))
+            Me.RaisePropertyChanged(NameOf(UpscaleTargetText))
+        End Sub
 
         Public ReadOnly Property CanUndo As Boolean
             Get
@@ -19363,7 +19484,7 @@ Namespace ViewModels
                         reverted = True
                     End If
                     If reverted Then
-                        Me.RaisePropertyChanged(NameOf(OutputSizeText))
+                        RaiseOutputSizeChanged()
                         discarded.Add(LocalizationService.T("Bildgröße"))
                     End If
                 Case EditorTool.Warp
@@ -21067,7 +21188,7 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(CropMaxVerticalPixels))
             Me.RaisePropertyChanged(NameOf(CropWidthPixels))
             Me.RaisePropertyChanged(NameOf(CropHeightPixels))
-            Me.RaisePropertyChanged(NameOf(OutputSizeText))
+            RaiseOutputSizeChanged()
         End Sub
 
         Private Function GetBaseWidth() As Integer
@@ -21366,7 +21487,7 @@ Namespace ViewModels
             _isUpdatingResize = False
             Me.RaisePropertyChanged(NameOf(ResizeWidth))
             Me.RaisePropertyChanged(NameOf(ResizeHeight))
-            Me.RaisePropertyChanged(NameOf(OutputSizeText))
+            RaiseOutputSizeChanged()
             RaiseResetButtonStateChanged()
             ScheduleToolPreviewUpdate()
         End Sub
@@ -21378,7 +21499,7 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(CanvasWidth))
             Me.RaisePropertyChanged(NameOf(CanvasHeight))
             Me.RaisePropertyChanged(NameOf(CanvasAnchor))
-            Me.RaisePropertyChanged(NameOf(OutputSizeText))
+            RaiseOutputSizeChanged()
             RaiseResetButtonStateChanged()
             ScheduleToolPreviewUpdate()
         End Sub
@@ -23897,9 +24018,12 @@ Namespace ViewModels
             End Try
         End Function
 
+        ''' Die Vorgaben meinen das BILD, nicht das schon eingetragene Zielmass: "50%" muss beim
+        ''' zweiten Druck dasselbe ergeben wie beim ersten. Deshalb dieselbe Basis wie die Kopplung.
         Private Sub ApplyResizePreset(preset As String)
-            Dim sourceWidth = GetCroppedWidth()
-            Dim sourceHeight = GetCroppedHeight()
+            Dim source = ResizeBaseSize()
+            Dim sourceWidth = source.Width
+            Dim sourceHeight = source.Height
             If sourceWidth <= 0 OrElse sourceHeight <= 0 Then Return
 
             Select Case If(preset, "").Trim().ToLowerInvariant()
@@ -23911,34 +24035,68 @@ Namespace ViewModels
                     SetResizeValues(Math.Max(1, sourceWidth \ 2), Math.Max(1, sourceHeight \ 2))
                 Case "25%"
                     SetResizeValues(Math.Max(1, sourceWidth \ 4), Math.Max(1, sourceHeight \ 4))
+                ' DIE DREI FORMATE TRAGEN ZWEI KANTEN, und zwar dieselben wie im Stapeldialog -
+                ' derselbe Knopf muss in beiden Teilen der Anwendung dasselbe Bild ergeben. SD
+                ' stand hier auf einer langen Kante von 640 und meinte damit etwas anderes als
+                ' nebenan (Entscheidung von Patrick am 2026-09-09).
                 Case "uhd"
-                    SetLongestEdge(3840)
+                    SetResizeFrame(3840, 2160)
                 Case "full-hd"
-                    SetLongestEdge(1920)
+                    SetResizeFrame(1920, 1080)
                 Case "sd"
-                    SetLongestEdge(640)
-                Case "1500"
-                    SetResizeValues(1500, 1500)
-                Case "1000"
-                    SetResizeValues(1000, 1000)
-                Case "800"
-                    SetResizeValues(800, 800)
-                Case "500"
-                    SetResizeValues(500, 500)
-                Case "256"
-                    SetResizeValues(256, 256)
-                Case "128"
-                    SetResizeValues(128, 128)
-                Case "64"
-                    SetResizeValues(64, 64)
-                Case "32"
-                    SetResizeValues(32, 32)
+                    SetResizeFrame(1280, 720)
+                Case Else
+                    ' EINE ZAHL, ZWEI BEDEUTUNGEN - der Haken entscheidet, und das ist genau seine
+                    ' Aufgabe:
+                    '   MIT Haken ist sie die LAENGSTE KANTE (wie UHD/Full-HD/SD daneben und wie im
+                    '   Stapeldialog), das Format bleibt: 128 macht aus 200x100 ein 128x64.
+                    '   OHNE Haken steht sie in BEIDEN Feldern, das Bild wird also auf das Quadrat
+                    '   gezogen - wer die Sperre abwaehlt, will genau diese Freiheit.
+                    ' Vorher stand sie IMMER in beiden Feldern, auch mit Haken: der Editor nimmt die
+                    ' Masse exakt (kein Kasten-Modus), und damit verzerrte die Vorgabe ein Bild, das
+                    ' gerade sein Verhaeltnis halten sollte.
+                    Dim edge As Integer
+                    If Integer.TryParse(preset, Globalization.NumberStyles.Integer,
+                                        Globalization.CultureInfo.InvariantCulture, edge) AndAlso edge > 0 Then
+                        If _lockResizeAspect Then
+                            SetLongestEdge(edge)
+                        Else
+                            SetResizeValues(edge, edge)
+                        End If
+                    End If
             End Select
         End Sub
 
+        ''' <summary>Eine Vorgabe mit ZWEI Kanten (UHD, Full-HD, SD). Der Haken entscheidet, was sie
+        ''' bedeutet - dieselbe Trennung wie bei den Zahlen-Vorgaben und dieselbe wie im
+        ''' Stapeldialog:
+        '''
+        ''' MIT Haken wird das Bild in den Rahmen EINGEPASST: es bleibt in seinem Format und passt
+        ''' vollstaendig hinein (3:2 in Full-HD sind 1620x1080). Die lange Kante allein reichte dafuer
+        ''' nicht - damit kam ein 3:2-Bild auf 1920x1280 heraus und war hoeher als der Rahmen, also
+        ''' gerade NICHT Full-HD.
+        '''
+        ''' OHNE Haken gelten die beiden Zahlen exakt, auch wenn das Bild dabei verzerrt: wer die
+        ''' Sperre abwaehlt, will die Aufloesung und nicht das Format (Nutzerbefund 2026-09-09).</summary>
+        Private Sub SetResizeFrame(frameWidth As Integer, frameHeight As Integer)
+            If frameWidth <= 0 OrElse frameHeight <= 0 Then Return
+            If Not _lockResizeAspect Then
+                SetResizeValues(frameWidth, frameHeight)
+                Return
+            End If
+
+            Dim source = ResizeBaseSize()
+            If source.Width <= 0 OrElse source.Height <= 0 Then Return
+            Dim factor = Math.Min(frameWidth / CDbl(source.Width), frameHeight / CDbl(source.Height))
+            If factor <= 0 Then Return
+            SetResizeValues(Math.Max(1, CInt(Math.Round(source.Width * factor))),
+                            Math.Max(1, CInt(Math.Round(source.Height * factor))))
+        End Sub
+
         Private Sub SetLongestEdge(edge As Integer)
-            Dim sourceWidth = GetCroppedWidth()
-            Dim sourceHeight = GetCroppedHeight()
+            Dim source = ResizeBaseSize()
+            Dim sourceWidth = source.Width
+            Dim sourceHeight = source.Height
             If sourceWidth <= 0 OrElse sourceHeight <= 0 OrElse edge <= 0 Then Return
 
             If sourceWidth >= sourceHeight Then
@@ -23950,27 +24108,32 @@ Namespace ViewModels
             End If
         End Sub
 
+        ''' Gerechnet wird gegen <see cref="ResizeBaseSize"/> und NICHT gegen die angezeigte Groesse:
+        ''' in der steckt die offene Bildgroesse schon drin, und damit maesse die Kopplung ihr
+        ''' eigenes Ergebnis.
         Private Sub SyncResizeHeightFromWidth()
-            Dim sourceWidth = GetCroppedWidth()
-            Dim sourceHeight = GetCroppedHeight()
+            Dim source = ResizeBaseSize()
+            Dim sourceWidth = source.Width
+            Dim sourceHeight = source.Height
             If sourceWidth <= 0 OrElse sourceHeight <= 0 OrElse _resizeWidth <= 0 Then Return
             _isUpdatingResize = True
             _resizeHeight = Math.Max(1, CInt(Math.Round(sourceHeight * (_resizeWidth / CDbl(sourceWidth)))))
             _isUpdatingResize = False
             Me.RaisePropertyChanged(NameOf(ResizeHeight))
-            Me.RaisePropertyChanged(NameOf(OutputSizeText))
+            RaiseOutputSizeChanged()
             RaiseResetButtonStateChanged()
         End Sub
 
         Private Sub SyncResizeWidthFromHeight()
-            Dim sourceWidth = GetCroppedWidth()
-            Dim sourceHeight = GetCroppedHeight()
+            Dim source = ResizeBaseSize()
+            Dim sourceWidth = source.Width
+            Dim sourceHeight = source.Height
             If sourceWidth <= 0 OrElse sourceHeight <= 0 OrElse _resizeHeight <= 0 Then Return
             _isUpdatingResize = True
             _resizeWidth = Math.Max(1, CInt(Math.Round(sourceWidth * (_resizeHeight / CDbl(sourceHeight)))))
             _isUpdatingResize = False
             Me.RaisePropertyChanged(NameOf(ResizeWidth))
-            Me.RaisePropertyChanged(NameOf(OutputSizeText))
+            RaiseOutputSizeChanged()
             RaiseResetButtonStateChanged()
         End Sub
 

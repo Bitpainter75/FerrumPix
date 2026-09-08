@@ -1780,6 +1780,7 @@ Namespace ViewModels
             End If
             If _dialogBatchResizeScalePercent > 0 Then SetDialogBatchResizeTextsFromScale(_dialogBatchResizeScalePercent)
             If _dialogBatchResizeLongEdge Then CollapseBatchResizeToLongEdge()
+            _dialogBatchResizeEdgeEditing = False
             RaiseDialogBatchResizeProperties()
 
             For Each name In {NameOf(DialogFilterSourceKind), NameOf(IsDialogFilterSourceFilter),
@@ -3296,7 +3297,10 @@ Namespace ViewModels
                 Dim oldWidth = ParseBatchResizeDimension(_dialogBatchResizeWidthText)
                 Dim oldHeight = ParseBatchResizeDimension(_dialogBatchResizeHeightText)
                 Me.RaiseAndSetIfChanged(_dialogBatchResizeWidthText, normalized)
-                CoupleBatchResizeEdge(vonBreite:=True, oldWidth:=oldWidth, oldHeight:=oldHeight)
+                ' Waehrend im Feld getippt wird, bleibt die andere Kante stehen - sie zieht beim
+                ' Verlassen nach (CommitBatchResizeEdgeEdit).
+                If _dialogBatchResizeEdgeEditing Then Return
+                CoupleBatchResizeEdge(fromWidth:=True, oldWidth:=oldWidth, oldHeight:=oldHeight)
             End Set
         End Property
 
@@ -3310,7 +3314,8 @@ Namespace ViewModels
                 Dim oldWidth = ParseBatchResizeDimension(_dialogBatchResizeWidthText)
                 Dim oldHeight = ParseBatchResizeDimension(_dialogBatchResizeHeightText)
                 Me.RaiseAndSetIfChanged(_dialogBatchResizeHeightText, normalized)
-                CoupleBatchResizeEdge(vonBreite:=False, oldWidth:=oldWidth, oldHeight:=oldHeight)
+                If _dialogBatchResizeEdgeEditing Then Return
+                CoupleBatchResizeEdge(fromWidth:=False, oldWidth:=oldWidth, oldHeight:=oldHeight)
             End Set
         End Property
 
@@ -3330,30 +3335,59 @@ Namespace ViewModels
         ''' Gekoppelt wird nur, wenn BEIDE Felder gefuellt sind: ein einzelner Wert bedeutet
         ''' weiterhin "laengste Kante" und haette gar kein Verhaeltnis, aus dem sich etwas ableiten
         ''' liesse.</summary>
-        Private Sub CoupleBatchResizeEdge(vonBreite As Boolean, oldWidth As Integer, oldHeight As Integer)
+        Private Sub CoupleBatchResizeEdge(fromWidth As Boolean, oldWidth As Integer, oldHeight As Integer)
             If _dialogBatchResizeSyncing OrElse Not _dialogBatchResizeLockAspect Then Return
             If oldWidth <= 0 OrElse oldHeight <= 0 Then Return
-            Dim verhaeltnis = oldWidth / CDbl(oldHeight)
-            If verhaeltnis <= 0.0001 Then Return
+            Dim ratio = oldWidth / CDbl(oldHeight)
+            If ratio <= 0.0001 Then Return
 
             _dialogBatchResizeSyncing = True
             Try
-                If vonBreite Then
+                If fromWidth Then
                     Dim width = ParseBatchResizeDimension(_dialogBatchResizeWidthText)
                     If width <= 0 Then Return
-                    Dim height = Math.Max(1, CInt(Math.Round(width / verhaeltnis)))
+                    Dim height = Math.Max(1, CInt(Math.Round(width / ratio)))
                     _dialogBatchResizeHeightText = height.ToString(CultureInfo.InvariantCulture)
                     Me.RaisePropertyChanged(NameOf(DialogBatchResizeHeightText))
                 Else
                     Dim height = ParseBatchResizeDimension(_dialogBatchResizeHeightText)
                     If height <= 0 Then Return
-                    Dim width = Math.Max(1, CInt(Math.Round(height * verhaeltnis)))
+                    Dim width = Math.Max(1, CInt(Math.Round(height * ratio)))
                     _dialogBatchResizeWidthText = width.ToString(CultureInfo.InvariantCulture)
                     Me.RaisePropertyChanged(NameOf(DialogBatchResizeWidthText))
                 End If
             Finally
                 _dialogBatchResizeSyncing = False
             End Try
+        End Sub
+
+        ''' Steht die Tastatur gerade in einem der beiden Kantenfelder? Dann bleibt die Kopplung
+        ''' liegen, samt dem Verhaeltnis, das beim Betreten des Feldes galt.
+        Private _dialogBatchResizeEdgeEditing As Boolean = False
+        Private _dialogBatchResizeEdgeWidth As Integer = 0
+        Private _dialogBatchResizeEdgeHeight As Integer = 0
+
+        ''' <summary>Das Feld wurde betreten: ab jetzt zieht die andere Kante NICHT mehr bei jedem
+        ''' Anschlag nach, sondern erst beim Verlassen.
+        '''
+        ''' Der Grund ist das Verhaeltnis, aus dem gekoppelt wird: es kommt aus den beiden
+        ''' eingetragenen Werten. Bei jedem Anschlag gerechnet, ist jeder Zwischenstand eine neue
+        ''' Vorgabe - wer in 1000x500 eine 1500 tippt, sieht die Hoehe ueber 1, 5 und 50 wandern,
+        ''' und jede dieser Zwischenrundungen ist ein Fehler, der in der naechsten steckt. Gemerkt
+        ''' wird deshalb das Verhaeltnis von VOR der Eingabe, angewandt wird es einmal am
+        ''' Ende.</summary>
+        Public Sub BeginBatchResizeEdgeEdit()
+            _dialogBatchResizeEdgeWidth = ParseBatchResizeDimension(_dialogBatchResizeWidthText)
+            _dialogBatchResizeEdgeHeight = ParseBatchResizeDimension(_dialogBatchResizeHeightText)
+            _dialogBatchResizeEdgeEditing = True
+        End Sub
+
+        ''' <summary>Das Feld ist verlassen (oder mit der Eingabetaste bestaetigt): jetzt zieht die
+        ''' andere Kante nach, im Verhaeltnis von vor der Eingabe.</summary>
+        Public Sub CommitBatchResizeEdgeEdit(fromWidth As Boolean)
+            If Not _dialogBatchResizeEdgeEditing Then Return
+            _dialogBatchResizeEdgeEditing = False
+            CoupleBatchResizeEdge(fromWidth, _dialogBatchResizeEdgeWidth, _dialogBatchResizeEdgeHeight)
         End Sub
 
         Private Shared Function ParseBatchResizeDimension(text As String) As Integer
@@ -3833,6 +3867,9 @@ Namespace ViewModels
             If _dialogBatchResizeScalePercent > 0 Then SetDialogBatchResizeTextsFromScale(_dialogBatchResizeScalePercent)
             If _dialogBatchResizeLongEdge Then CollapseBatchResizeToLongEdge()
 
+            ' Kein Feld ist betreten: eine liegengebliebene Eingabe des letzten Dialogs haette die
+            ' Kopplung stumm ausgeschaltet.
+            _dialogBatchResizeEdgeEditing = False
             RaiseDialogBatchResizeProperties()
 
             Dim result = Await ShowDialogAsync(AppDialogKind.BatchResize,

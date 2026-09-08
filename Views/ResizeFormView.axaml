@@ -56,10 +56,15 @@
                     </Grid.ColumnDefinitions>
                     <TextBlock Text="Breite" Foreground="{DynamicResource FP.Text.Secondary}"
                                VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                    <!-- Die drei Fokus-Anschluesse koppeln die andere Kante ERST beim Verlassen des
+                         Feldes; getippt wird ungestoert (siehe BeginBatchResizeEdgeEdit). -->
                     <TextBox Name="BatchResizeWidthTextBox"
                              Classes="combo-like"
                              Grid.Column="1"
                              Text="{Binding DialogBatchResizeWidthText, Mode=TwoWay}"
+                             GotFocus="OnEdgeFieldGotFocus"
+                             LostFocus="OnEdgeFieldLostFocus"
+                             KeyDown="OnEdgeFieldKeyDown"
                              ToolTip.Tip="Leer lassen, wenn nur die andere Kante zählen soll"
                              FontSize="{DynamicResource FP.Font.Small}" />
                     <TextBlock Grid.Column="2" Text="px"
@@ -75,9 +80,13 @@
                     </Grid.ColumnDefinitions>
                     <TextBlock Text="Höhe" Foreground="{DynamicResource FP.Text.Secondary}"
                                VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
-                    <TextBox Classes="combo-like"
+                    <TextBox Name="BatchResizeHeightTextBox"
+                             Classes="combo-like"
                              Grid.Column="1"
                              Text="{Binding DialogBatchResizeHeightText, Mode=TwoWay}"
+                             GotFocus="OnEdgeFieldGotFocus"
+                             LostFocus="OnEdgeFieldLostFocus"
+                             KeyDown="OnEdgeFieldKeyDown"
                              ToolTip.Tip="Leer lassen, wenn nur die andere Kante zählen soll"
                              FontSize="{DynamicResource FP.Font.Small}" />
                     <TextBlock Grid.Column="2" Text="px"

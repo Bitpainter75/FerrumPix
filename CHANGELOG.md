@@ -10,6 +10,28 @@
 
 ### Fixes
 
+- Typing a width or a height is no longer interrupted. With Keep aspect ratio on, the other field
+  used to be recalculated after every single keystroke, so the number you were about to type kept
+  moving under your hands and it looked as if only one of the two could be set at all. The second
+  field now follows once you leave the first one. This covers image size and canvas size in the
+  editor as well as the width and height of the resize and export dialogs.
+
+- Keep aspect ratio keeps working after you switch it off and on again. Once both width and height
+  had been set by hand, the second field stopped following the first for good, and the two could
+  only be changed one by one.
+
+- The size presets in the editor do what they say, and the tick decides how. With Keep aspect ratio
+  on, a plain number is the longer edge and UHD, Full-HD and SD fit the photo inside that frame, so
+  it keeps its shape. With the tick off you get exactly those numbers, distortion included, which is
+  the point of switching it off. Before, a number went into both fields and squashed the photo into
+  a square, and Full-HD only set the longer edge, so the result was taller than Full-HD. SD in the
+  editor now means the same 1280 by 720 as it does in the batch dialog.
+
+- Upscaling with a model after enlarging the canvas works. The canvas kept its old size in pixels
+  while the picture grew, so the result was a cutout of the enlarged photo in the old frame, and
+  the dimensions in the info sidebar never changed. Everything now grows by the same factor, and
+  the line that announces the new size counts the picture you see rather than the one on disk.
+
 - Double clicking a slider lands where the slider started. Two of them went somewhere else: the
   text size dropped to the smallest size there is, and the denoise strength jumped up instead of
   going back.
