@@ -1,0 +1,135 @@
+# Baut das Paket fuer den Windows Store und legt es als Artefakt des Laufs ab. Wie AUR und
+# Flatpak ist das ein EIGENER Lauf und nicht Teil des Releases: eine Einreichung im Store hat
+# ihren eigenen Takt, sie faellt nicht mit jeder Ausgabe zusammen, und sie braucht Angaben aus
+# dem Partner Center, die ein gewoehnlicher Release-Lauf nicht mitbringt.
+#
+# ZWEI JOBS, UND WARUM. Gepackt wird mit makeappx.exe aus dem Windows SDK, und das laeuft nur
+# unter Windows. Alles davor - uebersetzen, Symbole, AppxManifest.xml - macht package.sh auf
+# Linux, genau wie fuer das ZIP und das Setup. Damit steckt im Store-Paket dasselbe Ergebnis
+# wie in den uebrigen Windows-Paketen und nicht ein zweites, auf einem anderen Laeufer
+# entstandenes. Der Umweg kostet das Hoch- und Herunterladen der Nutzlast.
+#
+# DAS ERGEBNIS GEHT NICHT INS RELEASE. Ein Store-Paket wird unsigniert eingereicht, der Store
+# signiert selbst - und unsigniert laesst Windows es nicht installieren. Es steht deshalb als
+# Artefakt am Lauf, von wo aus es ins Partner Center hochgeladen wird, und nicht bei den
+# Downloads, wo es nur eine Fehlermeldung ergaebe.
+#
+# WAS EINMALIG EINZUTRAGEN IST, als Repository-Variablen (Settings > Secrets and variables >
+# Actions > Variables). Keine Secrets: die Werte stehen ohnehin in jedem veroeffentlichten
+# Paket. Alle drei kommen aus dem Partner Center, aus der Identitaet der Anwendung:
+#   MSIX_IDENTITY_NAME           z.B. 12345Bitpainter75.FerrumPix
+#   MSIX_PUBLISHER               z.B. CN=ABCDEF12-3456-7890-ABCD-EF1234567890
+#   MSIX_PUBLISHER_DISPLAY_NAME  der Name, den der Store anzeigt
+# Fehlt eine davon, bricht package.sh gleich zu Beginn ab, vor dem Uebersetzen.
+name: MSIX fuer den Windows Store
+
+on:
+  workflow_dispatch:
+    inputs:
+      paketversion:
+        description: "Paketversion, vier Zahlen, die letzte 0 (z.B. 1.0.0.0). Pflicht, solange VERSION mit 0 beginnt"
+        type: string
+        required: true
+
+# Der Lauf schreibt nichts ins Repo. Artefakte haengen am Lauf selbst und brauchen keine
+# contents-Berechtigung.
+permissions:
+  contents: read
+
+jobs:
+
+  nutzlast:
+    name: Nutzlast bauen (Linux)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/checkout@v7
+        with:
+          repository: Bitpainter75/FerrumPix-Build
+          path: packaging
+          ssh-key: ${{ secrets.PACKAGING_DEPLOY_KEY }}
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '10.0.x'
+
+      # Dieselbe Zeitschranke wie im Release-Lauf: klemmt der Azure-Spiegel, wartet apt sonst
+      # ohne Ende. ImageMagick verkleinert das Anwendungssymbol auf die vier Groessen, die der
+      # Store verlangt.
+      - name: Werkzeuge
+        timeout-minutes: 10
+        run: |
+          printf 'Acquire::Retries "2";\nAcquire::http::Timeout "20";\nAcquire::https::Timeout "20";\nAcquire::ForceIPv4 "true";\n' \
+            | sudo tee /etc/apt/apt.conf.d/99-release-timeouts >/dev/null
+          sudo apt-get update
+          sudo apt-get install -y imagemagick xz-utils
+
+      # libmpv-2.dll liegt im Repo nur komprimiert; package.sh erwartet sie ausgepackt.
+      - name: Fremdbinaerdateien bereitlegen
+        run: packaging/ci/ensure-binaries.sh
+
+      - name: Nutzlast anlegen
+        run: packaging/package.sh msix
+        env:
+          FERRUMPIX_BUILD_BOX: ""     # der Runner ist bereits Ubuntu
+          MSIX_IDENTITY_NAME: ${{ vars.MSIX_IDENTITY_NAME }}
+          MSIX_PUBLISHER: ${{ vars.MSIX_PUBLISHER }}
+          MSIX_PUBLISHER_DISPLAY_NAME: ${{ vars.MSIX_PUBLISHER_DISPLAY_NAME }}
+          MSIX_VERSION: ${{ inputs.paketversion }}
+
+      # include-hidden-files, weil die Voreinstellung Punktdateien stillschweigend weglaesst.
+      # Was in der Nutzlast fehlt, fehlt spaeter im Paket, und niemand sieht es hier.
+      - uses: actions/upload-artifact@v7
+        with:
+          name: msix-nutzlast
+          path: packaging/work/msix/win-x64
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 1
+
+  paket:
+    name: MSIX packen (Windows)
+    runs-on: windows-latest
+    needs: nutzlast
+
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: msix-nutzlast
+          path: nutzlast
+
+      # NICHT aus dem Windows Kits des Laeufers. Dort liegt makeappx.exe unter einem Pfad mit
+      # der SDK-Fassung darin, und welche das Laeufer-Abbild gerade mitbringt, aendert sich ohne
+      # Vorwarnung. Das NuGet-Paket ist eine festgenagelte Fassung und ein einziger Download;
+      # check-updates.sh meldet, wenn es eine neuere gibt.
+      - name: makeappx bereitlegen
+        shell: pwsh
+        run: |
+          $fassung = "10.0.28000.2705"
+          $adresse = "https://api.nuget.org/v3-flatcontainer/microsoft.windows.sdk.buildtools/$fassung/microsoft.windows.sdk.buildtools.$fassung.nupkg"
+          Invoke-WebRequest -Uri $adresse -OutFile sdk.zip
+          Expand-Archive -Path sdk.zip -DestinationPath sdk
+          # Der Ordner unter bin traegt die SDK-Fassung, nicht die Paketfassung - die beiden
+          # sind nicht dieselbe Zahl, deshalb wird er gesucht und nicht ausgeschrieben.
+          $exe = Get-ChildItem -Path sdk\bin\*\x64\makeappx.exe | Select-Object -First 1
+          if (-not $exe) { throw "makeappx.exe steckt nicht im Paket $fassung" }
+          "MAKEAPPX=$($exe.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+
+      # /o ueberschreibt ohne Rueckfrage. Eine Rueckfrage saehe hier niemand, der Lauf stuende
+      # bis zum Zeitlimit. Geprueft wird dabei sehr wohl: makeappx liest das AppxManifest.xml
+      # gegen das Schema, und ein Fehler darin faellt genau hier auf.
+      - name: Packen
+        shell: pwsh
+        run: |
+          & $env:MAKEAPPX pack /o /d nutzlast /p FerrumPix-win-x64.msix
+          Get-Item FerrumPix-win-x64.msix | Format-List Name, Length
+
+      # Von hier aus geht es von Hand ins Partner Center. Eine Einreichung ueber die Store-API
+      # gaebe es, sie braucht aber eigene Azure-Zugangsdaten und ist nicht eingerichtet.
+      - uses: actions/upload-artifact@v7
+        with:
+          name: FerrumPix-msix
+          path: FerrumPix-win-x64.msix
+          if-no-files-found: error
