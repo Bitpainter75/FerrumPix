@@ -2217,6 +2217,27 @@
                                            FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </StackPanel>
 
+                            <!-- Das Aufräumen meldet sich HIER, nicht nur unten bei "Datenbank
+                                 bereinigen": angestoßen wird es aus dem Zeilenmenü und aus dem
+                                 Aktionsmenü darüber, und bei einer langen Liste steht der andere
+                                 Ort außerhalb des Bildes. Dasselbe Objekt, zwei Anzeigen. -->
+                            <StackPanel Spacing="2" IsVisible="{Binding Cleanup.IsRunning}">
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <TextBlock Text="{Binding Cleanup.StatusText}"
+                                               Classes="no-translate"
+                                               Foreground="{DynamicResource FP.Text.Secondary}"
+                                               FontSize="{DynamicResource FP.Font.Body}"
+                                               TextWrapping="Wrap"
+                                               VerticalAlignment="Center"/>
+                                    <Button Grid.Column="1" Classes="ghost" Padding="10,5"
+                                            VerticalAlignment="Center"
+                                            Command="{Binding Cleanup.StopCommand}">Stoppen</Button>
+                                </Grid>
+                                <ProgressBar Height="4" Minimum="0" Maximum="100"
+                                             Value="{Binding Cleanup.ProgressPercent}"
+                                             IsVisible="{Binding Cleanup.HasProgress}"/>
+                            </StackPanel>
+
                             <TextBlock Text="{Binding FolderSummaryText}"
                                        Classes="no-translate"
                                        Foreground="{DynamicResource FP.Text.Secondary}"

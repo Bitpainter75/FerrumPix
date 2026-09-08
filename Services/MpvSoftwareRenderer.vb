@@ -165,12 +165,12 @@ Namespace Services
             ' Der Zeichenfaden steht hier bereits. Erst herausnehmen, dann freigeben: eine Anzeige,
             ' die gleich noch einmal laeuft, bekommt so Nothing und nicht eine Bitmap, die gerade
             ' verschwindet.
-            Dim letzte As WriteableBitmap
+            Dim last As WriteableBitmap
             SyncLock _sync
-                letzte = _bitmap
+                last = _bitmap
                 _bitmap = Nothing
             End SyncLock
-            RetireBitmap(letzte)
+            RetireBitmap(last)
         End Sub
 
         Public Sub Dispose() Implements IDisposable.Dispose
@@ -243,12 +243,12 @@ Namespace Services
                                              New Vector(96, 96),
                                              PixelFormat.Bgra8888,
                                              AlphaFormat.Opaque)
-            Dim vorherige As WriteableBitmap
+            Dim previous As WriteableBitmap
             SyncLock _sync
-                vorherige = _bitmap
+                previous = _bitmap
                 _bitmap = bitmap
             End SyncLock
-            RetireBitmap(vorherige)
+            RetireBitmap(previous)
         End Sub
 
         ''' <summary>Gibt eine abgeloeste Bitmap frei, und zwar AUF DEM ANZEIGEFADEN.

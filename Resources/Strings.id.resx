@@ -8266,4 +8266,13 @@
   <data name="Abgebrochen_es_wurde_nichts_entfernt_d8e3dcde" xml:space="preserve">
     <value>Dibatalkan, tidak ada yang dihapus</value>
   </data>
+  <data name="Wird_entfernt_15520b10" xml:space="preserve">
+    <value>Menghapus...</value>
+  </data>
+  <data name="Ordner_0_von_1_294204ff" xml:space="preserve">
+    <value>Folder {0} dari {1}</value>
+  </data>
+  <data name="Abgebrochen_625c4098" xml:space="preserve">
+    <value>Dibatalkan.</value>
+  </data>
 </root>

@@ -8220,4 +8220,13 @@
   <data name="Abgebrochen_es_wurde_nichts_entfernt_d8e3dcde" xml:space="preserve">
     <value>已取消，未删除任何内容</value>
   </data>
+  <data name="Wird_entfernt_15520b10" xml:space="preserve">
+    <value>正在删除...</value>
+  </data>
+  <data name="Ordner_0_von_1_294204ff" xml:space="preserve">
+    <value>第 {0} / {1} 个文件夹</value>
+  </data>
+  <data name="Abgebrochen_625c4098" xml:space="preserve">
+    <value>已取消。</value>
+  </data>
 </root>

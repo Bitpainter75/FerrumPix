@@ -8266,4 +8266,13 @@
   <data name="Abgebrochen_es_wurde_nichts_entfernt_d8e3dcde" xml:space="preserve">
     <value>취소했습니다. 아무것도 삭제하지 않았습니다</value>
   </data>
+  <data name="Wird_entfernt_15520b10" xml:space="preserve">
+    <value>삭제하는 중...</value>
+  </data>
+  <data name="Ordner_0_von_1_294204ff" xml:space="preserve">
+    <value>폴더 {1}개 중 {0}개</value>
+  </data>
+  <data name="Abgebrochen_625c4098" xml:space="preserve">
+    <value>취소했습니다.</value>
+  </data>
 </root>

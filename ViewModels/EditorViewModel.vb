@@ -1912,8 +1912,8 @@ Namespace ViewModels
             ' (er entstand, als die beiden Weissabgleichsfelder dazukamen). Hier fehlte der
             ' Waechter, und der Zurueckzieher lief dann in einen Indexfehler statt einfach das
             ' stehen zu lassen, wozu der Schnappschuss nichts sagt.
-            Dim gemeinsam = Math.Min(values.Length, Math.Min(_autoAdjustApplied.Length, _autoAdjustBefore.Length))
-            For i = 0 To gemeinsam - 1
+            Dim commonLength = Math.Min(values.Length, Math.Min(_autoAdjustApplied.Length, _autoAdjustBefore.Length))
+            For i = 0 To commonLength - 1
                 If Math.Abs(values(i) - _autoAdjustApplied(i)) < 0.0001 Then values(i) = _autoAdjustBefore(i)
             Next
             WriteAutoAdjustValues(values)

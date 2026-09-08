@@ -2843,9 +2843,10 @@ Namespace ViewModels
         Public ReadOnly Property CleanupDatabaseCommand As ICommand
         Public ReadOnly Property RefreshThumbnailCacheCommand As ICommand
 
-        ''' <summary>Zustand und Fortschritt von „Datenbank bereinigen". Eigenes Objekt und keine
-        ''' Handvoll Eigenschaften hier: Drossel und Dispatcher-Wechsel stehen damit an derselben
-        ''' Stelle wie beim Katalogindex und bei der Gesichtssuche.</summary>
+        ''' <summary>Zustand und Fortschritt der beiden Aufraeumwege - „Datenbank bereinigen" und das
+        ''' Aufraeumen gewaehlter Ordner. Eigenes Objekt und keine Handvoll Eigenschaften hier:
+        ''' Drossel und Dispatcher-Wechsel stehen damit an derselben Stelle wie beim Katalogindex und
+        ''' bei der Gesichtssuche.</summary>
         Public ReadOnly Property Cleanup As New CatalogCleanupViewModel()
 
         ''' <summary>Die Wege der gruppierten Ordnerliste: je Zeile aufraeumen, ueberwachen an und
@@ -3084,10 +3085,15 @@ Namespace ViewModels
             End Get
         End Property
 
-        ''' <summary>Sind die Aktionen bedienbar? Nur mit fertiger Erhebung und mit Zeilen.</summary>
+        ''' <summary>Sind die Aktionen bedienbar? Nur mit fertiger Erhebung, mit Zeilen und solange
+        ''' kein Aufraeumen laeuft.
+        '''
+        ''' Der letzte Punkt ist nicht Kosmetik: es darf ohnehin nur EINES laufen, ein zweiter
+        ''' Anlauf wird vom Riegel abgewiesen - aber still. Ein Knopf, der sich druecken laesst und
+        ''' nichts tut, ist schlimmer als ein grauer.</summary>
         Public ReadOnly Property CanRunFolderActions As Boolean
             Get
-                Return Not _isThumbnailCacheRefreshing AndAlso FolderRows.Count > 0
+                Return Not _isThumbnailCacheRefreshing AndAlso FolderRows.Count > 0 AndAlso Not Cleanup.IsRunning
             End Get
         End Property
 
@@ -3285,6 +3291,12 @@ Namespace ViewModels
 
         Public Sub New(mainVm As MainWindowViewModel)
             _mainVm = mainVm
+            ' Solange ein Aufraeumen laeuft, sind die Ordneraktionen grau - dafuer muss die
+            ' Ordnerliste vom Lauf erfahren.
+            AddHandler Cleanup.PropertyChanged,
+                Sub(s, e)
+                    If e.PropertyName = NameOf(CatalogCleanupViewModel.IsRunning) Then RaiseFolderListChanged()
+                End Sub
             _appSettings = AppSettingsService.Load()
             ThumbnailCacheFolders = New ObservableCollection(Of ThumbnailCacheFolderInfo)()
             CatalogWatchFolders = New ObservableCollection(Of String)(
@@ -4289,8 +4301,17 @@ Namespace ViewModels
         ''' nimmt je Ordner dieselbe Sperre, und ein zweiter echter Erwerb scheitert an der eigenen
         ''' Datei. Mit der Rohsperre flogen die Vorschaubilder, die Katalogzeilen aber blieben stehen
         ''' und die Meldung zaehlte wortlos null.</summary>
-        Private Sub CleanFolderSet(targets As IEnumerable(Of ThumbnailCacheFolderInfo),
-                                   catalog As Boolean, thumbnails As Boolean)
+        ''' <summary>Raeumt die gewaehlten Ordner auf - ALS HINTERGRUNDLAUF mit Anzeige.
+        '''
+        ''' Es lief einmal geradeheraus auf dem Anzeigefaden. Bei 1800 Ordnern loescht die Schleife
+        ''' je Ordner einen Vorschau-Zwischenspeicher und die Katalogzeilen darunter; die Anwendung
+        ''' stand dabei still und sagte kein Wort - beim LOESCHENDEN Weg der schlechteste Moment
+        ''' dafuer. Derselbe Fehler wie beim Knopf „Datenbank bereinigen", eine Ebene tiefer.
+        '''
+        ''' Der Abbruch wirkt ZWISCHEN den Ordnern: was bis dahin weg ist, bleibt weg, und der
+        ''' Abschlusssatz nennt die Zahlen. Ein Ordner mittendrin wird nicht halb geraeumt.</summary>
+        Private Async Function CleanFolderSetAsync(targets As IEnumerable(Of ThumbnailCacheFolderInfo),
+                                                   catalog As Boolean, thumbnails As Boolean) As Task
             Dim list = If(targets, Enumerable.Empty(Of ThumbnailCacheFolderInfo)()).
                        Where(Function(t) t IsNot Nothing).ToList()
             If list.Count = 0 Then
@@ -4298,44 +4319,58 @@ Namespace ViewModels
                 Return
             End If
 
-            Dim crossProcess = Services.BackgroundRunLock.TryEnterCleanup()
-            If crossProcess Is Nothing Then
-                ' SAUBER ABBRECHEN statt danebenzuschreiben: was hier geloescht wuerde, legte der
-                ' Lauf im anderen Fenster gleich wieder an.
-                ThumbnailCacheResultMessage = OtherWindowBusyMessage
-                Return
-            End If
-
             Dim thumbsRemoved = 0
             Dim catalogRemoved = 0
-            Try
-                For Each item In list
-                    If thumbnails AndAlso Not String.IsNullOrEmpty(item.CacheId) Then
-                        thumbsRemoved += Services.ThumbnailCacheService.DeleteFolderCacheById(item.CacheId)
-                    End If
-                    If catalog AndAlso Not String.IsNullOrEmpty(item.FolderPath) Then
-                        catalogRemoved += Services.LibraryService.Instance.DeleteFolderCatalogData(item.FolderPath)
-                    End If
-                Next
-            Catch ex As Exception
-                DiagnosticLogService.LogException("Settings.CleanFolderSet", ex)
-            Finally
-                crossProcess.Dispose()
-            End Try
+            Dim summary = Await Cleanup.StartFolderCleanupAsync(
+                Function(report, token)
+                    Dim done = 0
+                    report(0, list.Count)
+                    For Each item In list
+                        If token.IsCancellationRequested Then Exit For
+                        Try
+                            If thumbnails AndAlso Not String.IsNullOrEmpty(item.CacheId) Then
+                                thumbsRemoved += Services.ThumbnailCacheService.DeleteFolderCacheById(item.CacheId)
+                            End If
+                            If catalog AndAlso Not String.IsNullOrEmpty(item.FolderPath) Then
+                                catalogRemoved += Services.LibraryService.Instance.DeleteFolderCatalogData(item.FolderPath)
+                            End If
+                        Catch ex As Exception
+                            ' Ein einzelner Ordner, der klemmt, darf die uebrigen nicht aufhalten.
+                            DiagnosticLogService.LogException("Settings.CleanFolderSet", ex)
+                        End Try
+                        done += 1
+                        report(done, list.Count)
+                    Next
+                    Return SummarizeFolderCleanup(thumbsRemoved, catalogRemoved, catalog, thumbnails,
+                                                  token.IsCancellationRequested)
+                End Function)
 
-            Dim teile As New List(Of String)()
-            If thumbnails Then teile.Add(String.Format(LocalizationService.T("{0} Vorschaubilder"), thumbsRemoved))
-            If catalog Then teile.Add(String.Format(LocalizationService.T("{0} Katalogeinträge"), catalogRemoved))
-            ThumbnailCacheResultMessage = If(teile.Count = 0,
-                                             LocalizationService.T("Nichts zu entfernen."),
-                                             String.Join(", ", teile) & " " & LocalizationService.T("entfernt."))
+            ' DAS ERGEBNIS GEHOERT UNTER DIE LISTE. Die Laufanzeige darueber ist nur sichtbar,
+            ' solange gearbeitet wird - stuende die Abschlussmeldung nur dort, waere sie im selben
+            ' Augenblick weg, in dem sie entsteht, und hier bliebe die Meldung der VORIGEN Aktion
+            ' stehen. Leer heisst: es lief gar nicht, dann bleibt stehen, was steht.
+            If Not String.IsNullOrEmpty(summary) Then ThumbnailCacheResultMessage = summary
 
             RefreshThumbnailCacheFolders()
             ' Die Personenwand liegt woanders: mit den Katalogdaten gehen auch Gesichter, und eine
             ' Gruppe, deren Bilder es nicht mehr gibt, darf dort nicht stehenbleiben.
             _mainVm?.People?.RefreshPeople()
             _mainVm?.Gallery?.LoadCurrentFolder()
-        End Sub
+        End Function
+
+        Private Shared Function SummarizeFolderCleanup(thumbsRemoved As Integer, catalogRemoved As Integer,
+                                                       catalog As Boolean, thumbnails As Boolean,
+                                                       cancelled As Boolean) As String
+            Dim parts As New List(Of String)()
+            If thumbnails Then parts.Add(String.Format(LocalizationService.T("{0} Vorschaubilder"), thumbsRemoved))
+            If catalog Then parts.Add(String.Format(LocalizationService.T("{0} Katalogeinträge"), catalogRemoved))
+            If parts.Count = 0 Then Return LocalizationService.T("Nichts zu entfernen.")
+            Dim text = String.Join(", ", parts) & " " & LocalizationService.T("entfernt.")
+            ' Nach einem Abbruch gehoert dazu, dass es NICHT alles war - sonst liest sich die Zahl
+            ' wie ein vollstaendiger Lauf.
+            If cancelled Then text &= " " & LocalizationService.T("Abgebrochen.")
+            Return text
+        End Function
 
         ''' <summary>Dieselben drei Wege ueber ALLE gerade gefilterten Ordner.</summary>
         Private Function CleanFilteredAsync(catalog As Boolean, thumbnails As Boolean) As Task
@@ -4383,7 +4418,7 @@ Namespace ViewModels
                                                       LocalizationService.T("Entfernen"),
                                                       LocalizationService.T("Abbrechen")) Then Return
             End If
-            CleanFolderSet(targets, catalog, thumbnails)
+            Await CleanFolderSetAsync(targets, catalog, thumbnails)
         End Function
 
         Private Shared Function FormatBytes(bytes As Long) As String

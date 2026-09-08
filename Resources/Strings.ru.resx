@@ -8262,4 +8262,13 @@
   <data name="Abgebrochen_es_wurde_nichts_entfernt_d8e3dcde" xml:space="preserve">
     <value>Прервано, ничего не удалено</value>
   </data>
+  <data name="Wird_entfernt_15520b10" xml:space="preserve">
+    <value>Идёт удаление...</value>
+  </data>
+  <data name="Ordner_0_von_1_294204ff" xml:space="preserve">
+    <value>Папка {0} из {1}</value>
+  </data>
+  <data name="Abgebrochen_625c4098" xml:space="preserve">
+    <value>Прервано.</value>
+  </data>
 </root>

@@ -1779,7 +1779,7 @@ Namespace Services
                 ' Zeile ist es nicht - und nur mit der vorher bekannten Gesamtzahl laesst sich ein
                 ' Anteil melden. Ueber den offenen Leser zu pruefen hiesse ausserdem, ihn ueber
                 ' Minuten offen zu halten, waehrend das Netzlaufwerk antwortet.
-                Dim alle As New List(Of String)()
+                Dim allPaths As New List(Of String)()
                 Using cmd = conn.CreateCommand()
                     ' AUS ALLEN Tabellen, die auf einen Pfad zeigen. Ein Bild, ueber das nur die
                     ' Gesichtssuche oder nur die KI-Analyse gelaufen ist, steht nicht zwingend in
@@ -1791,22 +1791,22 @@ Namespace Services
                                       "UNION SELECT FilePath FROM AiTagScan"
                     Using reader = cmd.ExecuteReader()
                         While reader.Read()
-                            alle.Add(reader.GetString(0))
+                            allPaths.Add(reader.GetString(0))
                         End While
                     End Using
                 End Using
 
-                Dim geprueft = 0
-                progress?.Invoke(0, alle.Count)
-                For Each p In alle
+                Dim checkedCount = 0
+                progress?.Invoke(0, allPaths.Count)
+                For Each p In allPaths
                     If token.IsCancellationRequested Then Return 0
-                    geprueft += 1
+                    checkedCount += 1
                     ' Serverbilder stehen unter einem Pseudo-Pfad und liegen auf KEINER
                     ' Platte - File.Exists ist fuer sie immer False. Ohne diese Ausnahme
                     ' raeumt "Verwaiste Eintraege entfernen" jede Bewertung, jedes Stichwort
                     ' und jede Personenzuordnung zu einem Nextcloud- oder Immich-Bild weg.
                     If IsServerPseudoPath(p) Then
-                        progress?.Invoke(geprueft, alle.Count)
+                        progress?.Invoke(checkedCount, allPaths.Count)
                         Continue For
                     End If
                     ' Was im Papierkorb liegt, kommt seit dem Riegel in SetExifData nicht
@@ -1816,11 +1816,11 @@ Namespace Services
                     ' geschieht nichts still nebenbei.
                     If FileOperationPolicy.IsTrashFolder(p) Then
                         orphans.Add(p)
-                        progress?.Invoke(geprueft, alle.Count)
+                        progress?.Invoke(checkedCount, allPaths.Count)
                         Continue For
                     End If
                     If Not File.Exists(p) Then orphans.Add(p)
-                    progress?.Invoke(geprueft, alle.Count)
+                    progress?.Invoke(checkedCount, allPaths.Count)
                 Next
                 If orphans.Count > 0 Then
                     Using transaction = conn.BeginTransaction()

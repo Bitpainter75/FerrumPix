@@ -8222,4 +8222,13 @@
   <data name="Abgebrochen_es_wurde_nichts_entfernt_d8e3dcde" xml:space="preserve">
     <value>Interrompu, rien n'a été supprimé</value>
   </data>
+  <data name="Wird_entfernt_15520b10" xml:space="preserve">
+    <value>Suppression...</value>
+  </data>
+  <data name="Ordner_0_von_1_294204ff" xml:space="preserve">
+    <value>Dossier {0} sur {1}</value>
+  </data>
+  <data name="Abgebrochen_625c4098" xml:space="preserve">
+    <value>Interrompu.</value>
+  </data>
 </root>

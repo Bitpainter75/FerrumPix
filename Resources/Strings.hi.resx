@@ -8266,4 +8266,13 @@
   <data name="Abgebrochen_es_wurde_nichts_entfernt_d8e3dcde" xml:space="preserve">
     <value>रद्द किया गया, कुछ भी नहीं हटाया गया</value>
   </data>
+  <data name="Wird_entfernt_15520b10" xml:space="preserve">
+    <value>हटाया जा रहा है...</value>
+  </data>
+  <data name="Ordner_0_von_1_294204ff" xml:space="preserve">
+    <value>{1} में से {0} फ़ोल्डर</value>
+  </data>
+  <data name="Abgebrochen_625c4098" xml:space="preserve">
+    <value>रद्द किया गया।</value>
+  </data>
 </root>

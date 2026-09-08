@@ -10,10 +10,12 @@
   killed, and stepping on to a photo did it every time. This was worst on macOS, and there it is
   gone.
 
-- Cleaning the database shows what it is doing. It checks every catalogue entry against the disk,
-  which over a network drive takes minutes; until now the app simply stood still with nothing to
-  see. It runs in the background now, counts its way through and can be stopped, and stopping it
-  removes nothing.
+- Clearing up the catalogue shows what it is doing. Both ways did their work with the app standing
+  still and nothing to see: cleaning the database checks every catalogue entry against the disk,
+  and clearing up folders walks through every one of them, which with a few thousand folders on a
+  network drive takes minutes. Both run in the background now, count their way through and can be
+  stopped. Stopping the database clean removes nothing at all; stopping the folder clean keeps what
+  it managed and says so.
 
 - Progress bars actually appear. The bar for the catalogue index, the face scan and the clean-up
   was never drawn, so a long run showed a line of text and nothing else.
