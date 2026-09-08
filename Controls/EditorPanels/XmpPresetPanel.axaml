@@ -86,6 +86,7 @@
                     <DataTemplate>
                         <Border Classes="look-pill"
                                 Classes.active="{Binding IsLastApplied}"
+                                AttachedToVisualTree="OnLocalizedItemAttachedToVisualTree"
                                 CornerRadius="12"
                                 Background="{DynamicResource FP.Bg.Input}"
                                 BorderBrush="{DynamicResource FP.Border.Normal}"

@@ -488,7 +488,8 @@
                                                 BorderBrush="{DynamicResource FP.Border.Normal}"
                                                 BorderThickness="1"
                                                 Margin="0,0,6,6"
-                                                Padding="0">
+                                                Padding="0"
+                                                AttachedToVisualTree="OnLocalizedItemAttachedToVisualTree">
                                             <Grid ColumnDefinitions="Auto,Auto">
                                                 <!-- Das Stichwort selbst ist eine Schaltflaeche: ein Klick zeigt
                                                      alle Bilder mit diesem Stichwort. Das Kreuz daneben entfernt
@@ -572,6 +573,7 @@
                                                 CornerRadius="12" Padding="8,4" Margin="0,0,6,6"
                                                 Command="{Binding DataContext.OpenAiTagSearchCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                 CommandParameter="{Binding}"
+                                                AttachedToVisualTree="OnLocalizedItemAttachedToVisualTree"
                                                 ToolTip.Tip="Alle Bilder mit diesem KI-Stichwort zeigen">
                                             <StackPanel Orientation="Horizontal" Spacing="5">
                                                 <TextBlock Text="{Binding DisplayText}" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}"/>
@@ -608,7 +610,8 @@
                                          dem Ausschnitt daneben ist es offensichtlich. Der Knopf
                                          rechts meint NUR dieses Gesicht: er löst es aus der Gruppe,
                                          wenn die Erkennung jemanden verwechselt hat. -->
-                                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8" Margin="0,0,0,8">
+                                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8" Margin="0,0,0,8"
+                                          AttachedToVisualTree="OnLocalizedItemAttachedToVisualTree">
                                         <Border Width="44" Height="44" CornerRadius="4"
                                                 ClipToBounds="True"
                                                 Background="{DynamicResource FP.Bg.Elevated}"

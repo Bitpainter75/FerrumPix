@@ -1229,7 +1229,8 @@
                                 <Expander Header="Anpassungen" icons:ExpanderState.Key="adjust-presets">
                                     <Expander.HeaderTemplate>
                                         <DataTemplate>
-                                            <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
+                                            <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center"
+                                                  AttachedToVisualTree="OnLocalizedItemAttachedToVisualTree">
                                                 <StackPanel Orientation="Horizontal" Spacing="8"
                                                             VerticalAlignment="Center">
                                                     <icons:SvgIcon

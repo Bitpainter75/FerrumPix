@@ -126,6 +126,7 @@
                     <DataTemplate>
                         <Border Classes="layers-panel-row" Padding="8,5" MinHeight="46"
                                 Classes.multi-selected="{Binding IsInMultiSelection}"
+                                AttachedToVisualTree="OnLocalizedItemAttachedToVisualTree"
                                 DragDrop.AllowDrop="True"
                                 PointerPressed="OnLayerRowPointerPressed"
                                 PointerMoved="OnLayerRowPointerMoved"

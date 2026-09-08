@@ -2193,6 +2193,11 @@ Namespace ViewModels
                 AddHandler _mediaPlayer.PauseChanged, AddressOf OnVideoPauseChanged
                 AddHandler _mediaPlayer.MuteChanged, AddressOf OnVideoMuteChanged
                 AddHandler _mediaPlayer.InitializationFailed, AddressOf OnVideoInitializationFailed
+                AddHandler _mediaPlayer.PlaybackTerminated, AddressOf OnVideoPlaybackTerminated
+                ' ERST JETZT anstoßen: der Aufbau läuft auf einem eigenen Faden und kann scheitern,
+                ' bevor diese Zeile erreicht ist. Im Konstruktor angestoßen, ginge die Meldung
+                ' darüber an niemanden.
+                _mediaPlayer.Start()
             Catch ex As Exception
                 DiagnosticLogService.LogException("VideoPlayback.EnsureMediaPlayer", ex)
                 _mediaPlayer = Nothing
@@ -2264,6 +2269,7 @@ Namespace ViewModels
             RemoveHandler player.PauseChanged, AddressOf OnVideoPauseChanged
             RemoveHandler player.MuteChanged, AddressOf OnVideoMuteChanged
             RemoveHandler player.InitializationFailed, AddressOf OnVideoInitializationFailed
+            RemoveHandler player.PlaybackTerminated, AddressOf OnVideoPlaybackTerminated
         End Sub
 
         Private Sub ToggleVideoPlayPause()
@@ -2313,6 +2319,20 @@ Namespace ViewModels
 
                                           Me.RaisePropertyChanged(NameOf(IsVideoPlaybackAvailable))
                                           Me.RaisePropertyChanged(NameOf(ShowVideoUnavailableNotice))
+                                          Me.RaisePropertyChanged(NameOf(ShowVideoSurface))
+                                      End Sub)
+        End Sub
+
+        ''' <summary>mpv hat sich selbst beendet. Der Spieler ist danach tot; Befehle an ihn
+        ''' verpuffen, und ohne diesen Weg bliebe eine Oberfläche stehen, die weiter ein laufendes
+        ''' Video anzeigt. Weggeworfen wird er hier, das nächste Video legt einen neuen an.</summary>
+        Private Sub OnVideoPlaybackTerminated()
+            Dispatcher.UIThread.Post(Sub()
+                                          DiagnosticLogService.LogAlways("VideoPlayback", "mpv hat sich beendet")
+                                          _pendingVideoAutoplay = False
+                                          IsVideoPlaying = False
+                                          _isVideoEnded = True
+                                          ShutdownVideo()
                                           Me.RaisePropertyChanged(NameOf(ShowVideoSurface))
                                       End Sub)
         End Sub

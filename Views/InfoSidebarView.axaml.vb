@@ -10,6 +10,14 @@ Namespace Views
     Public Class InfoSidebarView
         Inherits UserControl
 
+        ''' <summary>Inhalte aus einem DataTemplate haengen nicht im logischen Baum und entstehen
+        ''' oft erst NACH dem Sprachdurchlauf ueber das Fenster. Jedes neu materialisierte Element
+        ''' uebersetzt deshalb seinen eigenen Teilbaum.</summary>
+        Private Sub OnLocalizedItemAttachedToVisualTree(sender As Object, e As Avalonia.VisualTreeAttachmentEventArgs)
+            Dim itemRoot = TryCast(sender, Avalonia.Visual)
+            If itemRoot IsNot Nothing Then FerrumPix.Services.LocalizationService.ApplyToVisualTree(itemRoot)
+        End Sub
+
         Public Sub New()
             AvaloniaXamlLoader.Load(Me)
             Me.AddHandler(InputElement.PointerWheelChangedEvent, AddressOf HandlePointerWheelChanged, RoutingStrategies.Bubble)

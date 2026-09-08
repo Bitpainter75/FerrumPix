@@ -52,6 +52,7 @@
                              ..." baut genau diese Umgebung nach und wird rot, sobald die Zeile aus
                              dem Panel läuft. -->
                         <Button Classes="ghost" Width="28" Height="28" Padding="0" CornerRadius="14"
+                                AttachedToVisualTree="OnLocalizedItemAttachedToVisualTree"
                                 Command="{Binding $parent[ItemsControl].DataContext.SelectHslBandCommand}"
                                 CommandParameter="{Binding Key}"
                                 PointerPressed="OnBandPointerPressed">

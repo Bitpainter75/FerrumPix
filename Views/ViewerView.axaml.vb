@@ -1217,22 +1217,35 @@ Namespace Views
         Private Sub UpdateActiveVideoView()
             Dim vm = GetVm()
             Dim videoView = Me.FindControl(Of MpvVideoView)("TheVideoView")
-            If videoView Is Nothing Then Return
+            Dim videoSurface = Me.FindControl(Of MpvVideoSurface)("TheVideoSurface")
+
+            ' Welche der beiden Flächen zeigt, hängt am Ausgabeweg von libmpv: unter macOS holt
+            ' die Anwendung das Bild ab, sonst hängt mpv es in eine native Fläche.
+            Dim useRenderSurface = MpvPlayer.UsesRenderSurfaceOnThisPlatform
+            Dim active As Control = If(useRenderSurface, CType(videoSurface, Control), CType(videoView, Control))
+            Dim target = TryCast(active, IMpvVideoTarget)
+            If active Is Nothing OrElse target Is Nothing Then Return
+
+            If videoView IsNot Nothing AndAlso useRenderSurface Then videoView.IsVisible = False
+            If videoSurface IsNot Nothing AndAlso Not useRenderSurface Then videoSurface.IsVisible = False
 
             If _pendingVideoAttachHandler IsNot Nothing Then
-                RemoveHandler videoView.LayoutUpdated, _pendingVideoAttachHandler
+                RemoveHandler active.LayoutUpdated, _pendingVideoAttachHandler
                 _pendingVideoAttachHandler = Nothing
             End If
 
             Dim isVideoActive = vm IsNot Nothing AndAlso vm.IsVideoFile AndAlso vm.IsVideoPlaybackAvailable
+            active.IsVisible = isVideoActive AndAlso vm.ShowVideoSurface
             If Not isVideoActive Then
-                videoView.Player = Nothing
+                target.Player = Nothing
                 Return
             End If
 
-            AttachVideoPlayer(videoView, vm.VideoMediaPlayer, vm)
+            AttachVideoPlayer(active, target, vm.VideoMediaPlayer, vm)
         End Sub
 
+        ''' Beide Videoflächen brauchen erst eine reale Größe, bevor der Spieler an sie darf: die
+        ''' abholende, weil sie sonst nichts anzufordern hat, und die native aus diesem Grund:
         ''' Das native Fenster-Handle eines MpvVideoView-Controls entsteht erst, sobald für es
         ''' tatsächlich ein Layout-Durchlauf stattgefunden hat (insbesondere direkt nachdem sein
         ''' Container durch einen Sichtbarkeits-Wechsel gerade erst sichtbar wurde). MediaPlayer
@@ -1240,8 +1253,8 @@ Namespace Views
         ''' dazu bringen, mangels Ausgabeziel kurz ein eigenes Fenster zu erzeugen. Statt einer
         ''' geschätzten Dispatcher-Verzögerung wird hier direkt auf LayoutUpdated gewartet, bis
         ''' das Control tatsächlich eine reale Größe hat.
-        Private Sub AttachVideoPlayer(target As MpvVideoView, mediaPlayer As MpvPlayer, vm As ViewerViewModel)
-            If target.Bounds.Width > 0 AndAlso target.Bounds.Height > 0 Then
+        Private Sub AttachVideoPlayer(control As Control, target As IMpvVideoTarget, mediaPlayer As MpvPlayer, vm As ViewerViewModel)
+            If control.Bounds.Width > 0 AndAlso control.Bounds.Height > 0 Then
                 target.Player = mediaPlayer
                 StartPendingVideoAutoplayAfterHostReady(target, mediaPlayer, vm)
                 Return
@@ -1249,17 +1262,17 @@ Namespace Views
 
             Dim handler As EventHandler = Nothing
             handler = Sub(s As Object, e As EventArgs)
-                          If target.Bounds.Width <= 0 OrElse target.Bounds.Height <= 0 Then Return
-                          RemoveHandler target.LayoutUpdated, handler
+                          If control.Bounds.Width <= 0 OrElse control.Bounds.Height <= 0 Then Return
+                          RemoveHandler control.LayoutUpdated, handler
                           If Object.ReferenceEquals(_pendingVideoAttachHandler, handler) Then _pendingVideoAttachHandler = Nothing
                           target.Player = mediaPlayer
                           StartPendingVideoAutoplayAfterHostReady(target, mediaPlayer, vm)
                       End Sub
             _pendingVideoAttachHandler = handler
-            AddHandler target.LayoutUpdated, handler
+            AddHandler control.LayoutUpdated, handler
         End Sub
 
-        Private Async Sub StartPendingVideoAutoplayAfterHostReady(target As MpvVideoView, mediaPlayer As MpvPlayer, vm As ViewerViewModel)
+        Private Async Sub StartPendingVideoAutoplayAfterHostReady(target As IMpvVideoTarget, mediaPlayer As MpvPlayer, vm As ViewerViewModel)
             Try
                 Await Task.Delay(180)
                 If target Is Nothing OrElse vm Is Nothing Then Return

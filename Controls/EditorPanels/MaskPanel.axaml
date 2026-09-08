@@ -489,7 +489,8 @@
                 <ItemsControl ItemsSource="{Binding MaskComponentRows}">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
-                            <Grid ColumnDefinitions="Auto,Auto,*,Auto,Auto,Auto" Margin="0,1">
+                            <Grid ColumnDefinitions="Auto,Auto,*,Auto,Auto,Auto" Margin="0,1"
+                                  AttachedToVisualTree="OnLocalizedItemAttachedToVisualTree">
                                 <!-- Das Auge, wie an einer Ebenenzeile: ausgeschaltet bleibt der
                                      Bestandteil erhalten und zaehlt nur nicht mehr mit. Bis dahin
                                      gab es nur das Kreuz - wer wissen wollte, was ein Bestandteil

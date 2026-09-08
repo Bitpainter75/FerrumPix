@@ -214,7 +214,8 @@
                             </ItemsControl.ItemsPanel>
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate DataType="{x:Type models:PersonFaceEntry}">
-                                    <Panel Classes="face-tile" Margin="0,0,10,10">
+                                    <Panel Classes="face-tile" Margin="0,0,10,10"
+                                           AttachedToVisualTree="OnLocalizedItemAttachedToVisualTree">
                                         <Border Width="84" Height="84" CornerRadius="6"
                                                 ClipToBounds="True"
                                                 Background="{DynamicResource FP.Bg.Elevated}"

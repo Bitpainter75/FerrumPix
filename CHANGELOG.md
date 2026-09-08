@@ -1,70 +1,31 @@
-## FerrumPix 0.9.40
+## FerrumPix 0.9.41
 
 ### What's new
 
-- **Straightening can trim the empty corners away.** Switch on "crop canvas automatically" in the
-  transform tool and levelling a horizon trims the canvas to the largest rectangle that still lies
-  fully inside the tilted picture, so no empty wedges are left at the corners. It keeps the shape of
-  the picture, and the trimmed strip is not gone: open the transform tool again and the whole tilted
-  picture is back under the frame, ready to be pulled out. The switch above it does the opposite and
-  enlarges the canvas instead; both remember how you left them.
-
-- **More crop formats to pick from.** Next to the familiar ones there is now 5:4, and the same
-  formats upright: 3:4, 2:3 and 4:5.
-
-- **The transform tool asks before it drops your work.** Crop and orientation only take effect when
-  you press Apply. Leaving the tool with either of them still open now asks whether to apply it
-  first, instead of quietly putting the picture back the way it was.
-
-- **The colour mixer takes up much less room.** The colour wheel has given way to a row of eight
-  small colour dots, the same shape as the colour labels in the gallery. Click one to work on that
-  colour range; the dot you picked wears a ring, and any range that carries a setting wears a dot in
-  its middle, so you can see at a glance where something is set. A middle click on a dot puts that
-  colour range back to zero.
-
-- **Upscaling with a model is in the editor now.** The image size tool has its own Upscale section:
-  pick a model, see what size it will produce, and press the button. The model brings its own scale,
-  so afterwards the ordinary width and height fields work on the new size and can take you down to a
-  target size from there. It is computed into the pixels like a retouch, so it can be undone, and
-  raw files keep a note of it so the work is not lost when the file is opened again.
-
-- **The info panel follows the picture you are editing.** Its dimensions row used to keep showing
-  the size stored in the file, even after cropping, resizing or changing the canvas, while the
-  megapixels next to it already followed the edit. It now shows the size of the picture in front of
-  you, and it keeps up when you undo.
-
-- **Each adjustment tool remembers its own diagram.** With the histogram, waveform or RGB parade
-  shown above the sliders, the choice now belongs to the tool: pick the histogram while working on
-  light and the parade while working on colour, and switching between the two tools brings the right
-  one along. A tool without a diagram leaves your choice alone, and a tool you have never switched in
-  simply shows the last one you picked.
-
-- **The colour grading wheels are bigger.** They were small enough that hitting a particular hue
-  took care; the space the colour mixer gave up went to them.
-
-- **Old raw formats keep their date and camera.** Pictures from Canon's early CRW files, Minolta
-  MRW, the plain .RAW of Leica, Panasonic and Kodak and Leaf's MOS arrived without a shooting date,
-  without a camera name and without dimensions, so they dropped out of the timeline, out of sorting
-  and out of every filter. Those details are read from the raw file itself now, together with ISO,
-  aperture, shutter speed and focal length. Anything a picture already carries stays untouched.
 
 ### Fixes
 
-- Old Canon CRW files no longer show grey noise in the viewer and the gallery. Those files store
-  the sensor data in a way that looked like a preview image, and being the largest picture inside
-  the file, it won. The real preview is used now, and where there is none, the picture is developed.
+- The app no longer freezes while a video is playing. Clicking a button, stepping on to the next
+  item or leaving the viewer before the video had ended could lock everything up until the app was
+  killed, and stepping on to a photo did it every time. This was worst on macOS, and there it is
+  gone.
 
-- Fujifilm RAF files open as the picture again. The lens corrections were sized against the small
-  preview image stored inside the file instead of the photo itself, so they pulled the whole frame
-  into a ball with smeared, washed out edges and green corners. The same mistake made the
-  corrections come out too strong on gallery thumbnails of every raw format.
+- A video no longer sometimes stays black. Two things could leave you with sound and no picture: if
+  the picture area was ready a moment later than the player expected, the file was never handed
+  over at all; and coming back to a video you had just left showed nothing, because the picture was
+  still going to the area from before. Both are gone.
 
-- The straighten slider follows the mouse again. While you drag it, turn the wheel over it or step
-  it in the number box, the preview is computed from a smaller copy of the picture, the way the
-  exposure and colour sliders have done for a while; the full resolution comes back as soon as you
-  stop.
+- Playing video no longer piles up memory. Every resize and every switch to full screen left the
+  previous frame buffer behind.
 
-- The batch dialogs no longer print two rows on top of each other: with "overwrite the originals"
-  switched on, the JPG quality row and the copyright field shared the same line. The dialogs are
-  also a little wider, so the size presets fit on one row again.
+- The Catalog section in the settings is no longer German. The folder list, the two action menus
+  and the search status line stayed in the source language whatever you had picked; they are
+  translated now, and so are the two-line tooltips (the colour ranges in the colour mixer, for one),
+  the keyword chips, the layer rows, the people tiles and the preset lists, which had the same
+  problem.
+
+- On macOS a video no longer opens in a window of its own. It plays inside the picture area, the
+  way it does on Windows and Linux, so it cannot slip behind the main window when you pick the next
+  one, there is no close button on it that takes the app down with it, and the playback bar sits on
+  top of the picture where you can see it.
 

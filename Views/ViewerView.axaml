@@ -768,9 +768,14 @@
               ClipToBounds="True"
               IsVisible="{Binding IsVideoFile}"
               RowDefinitions="*,Auto">
+            <!-- Zwei Ausgabewege, immer nur einer sichtbar: die native Fläche für Windows und
+                 Linux, die abholende Fläche für macOS. Welcher gilt, entscheidet der Spieler
+                 (MpvPlayer.UsesRenderSurfaceOnThisPlatform); die Sichtbarkeit setzt UpdateActiveVideoView. -->
             <icons:MpvVideoView Name="TheVideoView" Grid.Row="0"
-                             IsVisible="{Binding ShowVideoSurface}"
+                             IsVisible="False"
                              Tapped="OnVideoViewTapped"/>
+            <icons:MpvVideoSurface Name="TheVideoSurface" Grid.Row="0"
+                             IsVisible="False"/>
             <Border Grid.Row="0"
                     Background="Transparent"
                     PointerMoved="OnGlobalPointerActivity"

@@ -84,18 +84,36 @@ Public Class App
             End Sub
     End Sub
 
-    ''' <summary>Ein Expander erzeugt seinen Inhalt erst beim Aufklappen. Der Durchlauf ueber das
-    ''' Fenster hat ihn dann schon hinter sich, also wird hier nachgezogen - EIN Klassen-Handler fuer
-    ''' alle Expander der Anwendung, statt eines Ereignisses je Panel.</summary>
-    Private Shared Sub LokalisiereNachgeladenes()
+    ''' <summary>Zwei Bauformen, deren Inhalt der Durchlauf ueber das Fenster nie zu sehen bekommt.
+    ''' Je EIN Klassen-Handler fuer die ganze Anwendung, statt eines Ereignisses je Stelle.</summary>
+    Private Shared Sub LocalizeLateContent()
+        ' Ein Expander erzeugt seinen Inhalt erst beim Aufklappen. Der Durchlauf ueber das Fenster
+        ' hat ihn dann schon hinter sich.
         Avalonia.Controls.Expander.ExpandedEvent.AddClassHandler(Of Avalonia.Controls.Expander)(
             Sub(expander, e)
                 Services.LocalizationService.ApplyToVisualTree(expander)
             End Sub)
+
+        ' EIN KURZHINWEIS AUS MEHR ALS EINEM TEXT ist kein String, sondern ein kleiner Baum
+        ' (typisch: ein StackPanel mit Bezeichnung und Erklaerung darunter). Der Durchlauf
+        ' uebersetzt an einem Steuerelement nur den Kurzhinweis, der ein String IST; ein Baum haengt
+        ' weder im logischen noch im sichtbaren Baum seines Besitzers, sondern entsteht in einem
+        ' eigenen Popup. Die Farbbaender des Farbmischers standen dadurch in jeder Sprache deutsch
+        ' da (Nutzerbefund).
+        '
+        ' Das Ereignis wird auf dem Steuerelement ausgeloest, dem der Hinweis gehoert, und zwar VOR
+        ' dem Anzeigen - also jedes Mal neu, damit auch ein Sprachwechsel mitten in der Sitzung
+        ' ankommt. Gegangen wird ueber den logischen Baum des Hinweises: seine Kinder haengen daran,
+        ' auch solange er nirgends angezeigt wird.
+        Avalonia.Controls.ToolTip.ToolTipOpeningEvent.AddClassHandler(Of Avalonia.Controls.Control)(
+            Sub(control, e)
+                Dim tip = TryCast(Avalonia.Controls.ToolTip.GetTip(control), Avalonia.LogicalTree.ILogical)
+                If tip IsNot Nothing Then Services.LocalizationService.ApplyTo(tip)
+            End Sub)
     End Sub
 
     Public Overrides Sub OnFrameworkInitializationCompleted()
-        LokalisiereNachgeladenes()
+        LocalizeLateContent()
         If TypeOf ApplicationLifetime Is IClassicDesktopStyleApplicationLifetime Then
             Dim desktop = CType(ApplicationLifetime, IClassicDesktopStyleApplicationLifetime)
 

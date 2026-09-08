@@ -8244,4 +8244,10 @@
   <data name="Bild_hochskaliert_9fa07ea6" xml:space="preserve">
     <value>Billedet opskaleret</value>
   </data>
+  <data name="Suche_l_uft_0_Bilder_265b4fee" xml:space="preserve">
+    <value>Søgning i gang... {0} billeder</value>
+  </data>
+  <data name="0_gespeicherte_Bilder_Suche_l_uft_65daf9b3" xml:space="preserve">
+    <value>{0} gemte billeder  •  Søgning i gang...</value>
+  </data>
 </root>

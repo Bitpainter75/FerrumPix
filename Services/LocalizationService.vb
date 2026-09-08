@@ -176,6 +176,22 @@ Namespace Services
             Next
         End Sub
 
+        ''' <summary>Lokalisiert die Eintraege eines MenuFlyout.
+        '''
+        ''' EIGENER WEG, weil ein MenuFlyout seine Eintraege als <c>Items</c> traegt und nicht als
+        ''' <c>Content</c>: der Haken, mit dem ein gewoehnlicher Flyout nachgezogen wird, greift dort
+        ''' ins Leere, und die Eintraege standen in jeder Sprache in der Ausgangssprache da. Gegangen
+        ''' wird ueber die Eintraege SELBST und nicht ueber den Inhalt des Popups - ein MenuItem
+        ''' traegt seine Untereintraege als logische Kinder, damit sind Untermenues abgedeckt, und es
+        ''' braucht kein geoeffnetes Popup.</summary>
+        Public Shared Sub ApplyToMenuFlyout(flyout As MenuFlyout)
+            If flyout Is Nothing OrElse flyout.Items Is Nothing Then Return
+            For Each entry As Object In flyout.Items
+                Dim logical = TryCast(entry, ILogical)
+                If logical IsNot Nothing Then ApplyTo(logical)
+            Next
+        End Sub
+
         ''' <summary>Lokalisiert einen bereits materialisierten SICHTbaum. Inhalte aus DataTemplates -
         ''' Flyouts, Galerie-Kacheln - liegen nicht vollstaendig im logischen Baum; ohne diesen
         ''' Einstieg blieben sie deutsch, obwohl der Durchlauf ueber das Fenster lief.</summary>

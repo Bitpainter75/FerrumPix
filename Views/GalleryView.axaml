@@ -25,7 +25,8 @@
              die Bindung. -->
         <DataTemplate x:Key="GalleryGroupHeaderTemplate" DataType="{x:Type models:ImageItem}">
             <Border Height="48"
-                    Padding="5,0,5,0">
+                    Padding="5,0,5,0"
+                    AttachedToVisualTree="OnGalleryItemAttachedToVisualTree">
                 <Grid ColumnDefinitions="Auto,Auto,*,Auto" Margin="0,0,0,6" VerticalAlignment="Bottom">
                     <!-- Derselbe Kreis wie auf der Kachel, nur eine Ebene hoeher: er markiert die
                          ganze Gruppe und hebt sie wieder auf. Gefuellt steht er, wenn JEDES Bild
@@ -239,7 +240,8 @@
                                         CornerRadius="8"
                                         Padding="12,0"
                                         Height="34"
-                                        Margin="0,0,6,0">
+                                        Margin="0,0,6,0"
+                                        AttachedToVisualTree="OnGalleryItemAttachedToVisualTree">
                                     <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
                                         <StackPanel Grid.Column="0" Spacing="3" VerticalAlignment="Center">
                                             <TextBlock Classes="no-translate"

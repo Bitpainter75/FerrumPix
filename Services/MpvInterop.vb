@@ -204,9 +204,8 @@ Namespace Services
         End Function
 
         ''' <summary>Reiht einen Befehl bei mpv ein, ohne auf dessen Core-Thread zu warten.
-        ''' Das ist für Stop/Load/Quit wichtig: diese Aufrufe entstehen häufig aus einer
-        ''' UI-Geste, und ein synchrones mpv_command kann während eines nativen macOS-Redraws
-        ''' auf eben diesen UI-Thread zurückwarten.</summary>
+        ''' Für Stop und Load ist das die richtige Form: der Aufrufer will nur, dass der Befehl
+        ''' ankommt, und braucht das Ergebnis nicht.</summary>
         <DllImport("libmpv", EntryPoint:="mpv_command_async", CallingConvention:=CallingConvention.Cdecl)>
         Friend Shared Function CommandAsync(handle As IntPtr, replyUserData As ULong, args As IntPtr) As Integer
         End Function
@@ -214,6 +213,67 @@ Namespace Services
         <DllImport("libmpv", EntryPoint:="mpv_wait_event", CallingConvention:=CallingConvention.Cdecl)>
         Friend Shared Function WaitEvent(handle As IntPtr, timeout As Double) As IntPtr
         End Function
+
+        ' ── Render-API ───────────────────────────────────────────────────────────
+        '
+        ' Der zweite Ausgabeweg von libmpv: statt in ein Fenster zu zeichnen, gibt mpv das
+        ' fertige Bild an den Aufrufer. Das ist der EINZIGE Weg, ein Video unter macOS in die
+        ' eigene Oberfläche zu bekommen - die Option "wid" kennt dort kein Ziel (die Anleitung
+        ' nennt bei --wid nur X11, win32 und Android; im macOS-Teil von mpv wird sie nirgends
+        ' ausgewertet), mpv macht dort immer ein eigenes Fenster auf.
+
+        ''' <summary>Der Software-Renderer: mpv schreibt das Bild in einen Speicherbereich.</summary>
+        Friend Const RenderApiTypeSoftware As String = "sw"
+
+        ''' <summary>Vier Bytes je Bildpunkt in der Reihenfolge Blau, Grün, Rot, ungenutzt.
+        ''' Deckt sich mit <c>PixelFormat.Bgra8888</c>; das ungenutzte Byte enthält Müll, deshalb
+        ''' muss die Zielbitmap als undurchsichtig angelegt werden.</summary>
+        Friend Const RenderFormatBgr0 As String = "bgr0"
+
+        Friend Const RenderParamApiType As Integer = 1
+        Friend Const RenderParamSoftwareSize As Integer = 17
+        Friend Const RenderParamSoftwareFormat As Integer = 18
+        Friend Const RenderParamSoftwareStride As Integer = 19
+        Friend Const RenderParamSoftwarePointer As Integer = 20
+
+        ''' <summary>Es liegt ein neues Einzelbild bereit.</summary>
+        Friend Const RenderUpdateFrame As ULong = 1UL
+
+        ''' <summary>Größe eines <c>mpv_render_param</c>: eine Kennzahl und ein Zeiger, beide auf
+        ''' Zeigerbreite ausgerichtet.</summary>
+        Friend Shared ReadOnly RenderParamSize As Integer = IntPtr.Size * 2
+
+        ''' <summary>Schreibt einen Parameter an seinen Platz im Parameterblock.</summary>
+        Friend Shared Sub WriteRenderParam(block As IntPtr, index As Integer, paramType As Integer, data As IntPtr)
+            Dim offset = index * RenderParamSize
+            Marshal.WriteInt32(block, offset, paramType)
+            Marshal.WriteIntPtr(block, offset + IntPtr.Size, data)
+        End Sub
+
+        ''' <summary>Wird von mpv aus einem beliebigen Faden gerufen, sobald etwas zu zeichnen
+        ''' ist. Darf selbst KEINE libmpv-Funktion rufen, nur wecken.</summary>
+        <UnmanagedFunctionPointer(CallingConvention.Cdecl)>
+        Friend Delegate Sub RenderUpdateCallback(callbackContext As IntPtr)
+
+        <DllImport("libmpv", EntryPoint:="mpv_render_context_create", CallingConvention:=CallingConvention.Cdecl)>
+        Friend Shared Function RenderContextCreate(ByRef context As IntPtr, handle As IntPtr, parameters As IntPtr) As Integer
+        End Function
+
+        <DllImport("libmpv", EntryPoint:="mpv_render_context_set_update_callback", CallingConvention:=CallingConvention.Cdecl)>
+        Friend Shared Sub RenderContextSetUpdateCallback(context As IntPtr, callback As RenderUpdateCallback, callbackContext As IntPtr)
+        End Sub
+
+        <DllImport("libmpv", EntryPoint:="mpv_render_context_update", CallingConvention:=CallingConvention.Cdecl)>
+        Friend Shared Function RenderContextUpdate(context As IntPtr) As ULong
+        End Function
+
+        <DllImport("libmpv", EntryPoint:="mpv_render_context_render", CallingConvention:=CallingConvention.Cdecl)>
+        Friend Shared Function RenderContextRender(context As IntPtr, parameters As IntPtr) As Integer
+        End Function
+
+        <DllImport("libmpv", EntryPoint:="mpv_render_context_free", CallingConvention:=CallingConvention.Cdecl)>
+        Friend Shared Sub RenderContextFree(context As IntPtr)
+        End Sub
     End Class
 
 End Namespace

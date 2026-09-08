@@ -5704,7 +5704,9 @@ Namespace ViewModels
 
             IsLoading = True
             Dim runRow = BeginSearchRun()
-            StatusText = $"Suche läuft... 0 {LocalizationService.T("Bilder")}"
+            ' EIN Text mit Platzhalter statt zusammengesetzter Stuecke: nur der ist uebersetzbar,
+            ' und die Wortstellung ist nicht in jeder Sprache dieselbe.
+            StatusText = String.Format(LocalizationService.T("Suche läuft... {0} Bilder"), 0.ToString("N0"))
 
             Try
                 Await Task.Run(Async Function()
@@ -5794,7 +5796,9 @@ Namespace ViewModels
                                            Dim localPublished = published
                                            Await Dispatcher.UIThread.InvokeAsync(Sub()
                                                If Not SearchMayPublish(node, token) Then Return
-                                               StatusText = $"{localPublished:N0} gespeicherte {LocalizationService.T("Bilder")}  •  Suche läuft..."
+                                               StatusText = String.Format(
+                                                   LocalizationService.T("{0} gespeicherte Bilder  •  Suche läuft..."),
+                                                   localPublished.ToString("N0"))
                                            End Sub, DispatcherPriority.Background)
                                        Next
                                    End If
@@ -5833,7 +5837,7 @@ Namespace ViewModels
                                                Dim localFound = foundCount
                                                Await Dispatcher.UIThread.InvokeAsync(Sub()
                                                    If Not SearchMayPublish(node, token) Then Return
-                                                   StatusText = $"Suche läuft... {localFound:N0} {LocalizationService.T("Bilder")}"
+                                                   StatusText = String.Format(LocalizationService.T("Suche läuft... {0} Bilder"), localFound.ToString("N0"))
                                                End Sub)
                                            End If
                                        Next
@@ -5869,7 +5873,7 @@ Namespace ViewModels
                                                Dim localFound = foundCount
                                                Await Dispatcher.UIThread.InvokeAsync(Sub()
                                                    If Not SearchMayPublish(node, token) Then Return
-                                                   StatusText = $"Suche läuft... {localFound:N0} {LocalizationService.T("Bilder")}"
+                                                   StatusText = String.Format(LocalizationService.T("Suche läuft... {0} Bilder"), localFound.ToString("N0"))
                                                End Sub)
                                            End If
                                        Next
@@ -5908,7 +5912,7 @@ Namespace ViewModels
                                                    Dim localFoundImmich = foundCount
                                                    Await Dispatcher.UIThread.InvokeAsync(Sub()
                                                        If Not SearchMayPublish(node, token) Then Return
-                                                       StatusText = $"Suche läuft... {localFoundImmich:N0} {LocalizationService.T("Bilder")}"
+                                                       StatusText = String.Format(LocalizationService.T("Suche läuft... {0} Bilder"), localFoundImmich.ToString("N0"))
                                                    End Sub)
                                                Next
                                                If immichPending.Count > 0 Then

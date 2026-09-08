@@ -11,6 +11,14 @@ Namespace Views
     Public Class SearchDialogView
         Inherits UserControl
 
+        ''' <summary>Inhalte aus einem DataTemplate haengen nicht im logischen Baum und entstehen
+        ''' oft erst NACH dem Sprachdurchlauf ueber das Fenster. Jedes neu materialisierte Element
+        ''' uebersetzt deshalb seinen eigenen Teilbaum.</summary>
+        Private Sub OnLocalizedItemAttachedToVisualTree(sender As Object, e As Avalonia.VisualTreeAttachmentEventArgs)
+            Dim itemRoot = TryCast(sender, Avalonia.Visual)
+            If itemRoot IsNot Nothing Then LocalizationService.ApplyToVisualTree(itemRoot)
+        End Sub
+
         ''' <summary>Ein Flyout entsteht erst beim Oeffnen aus seinem Template und ist beim
         ''' einmaligen Durchlauf ueber das Fenster noch nicht da. Ohne diesen Einstieg bleibt sein
         ''' Inhalt in der Ausgangssprache stehen, waehrend die uebrige Oberflaeche umgeschaltet

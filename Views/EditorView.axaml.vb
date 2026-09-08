@@ -31,6 +31,14 @@ Namespace Views
     Public Class EditorView
         Inherits UserControl
 
+        ''' <summary>Inhalte aus einem DataTemplate haengen nicht im logischen Baum und entstehen
+        ''' oft erst NACH dem Sprachdurchlauf ueber das Fenster. Jedes neu materialisierte Element
+        ''' uebersetzt deshalb seinen eigenen Teilbaum.</summary>
+        Private Sub OnLocalizedItemAttachedToVisualTree(sender As Object, e As VisualTreeAttachmentEventArgs)
+            Dim itemRoot = TryCast(sender, Visual)
+            If itemRoot IsNot Nothing Then LocalizationService.ApplyToVisualTree(itemRoot)
+        End Sub
+
         Private _isDraggingSlider As Boolean = False
         Private _sliderPosition As Double = 0.5
         Private _currentVm As EditorViewModel

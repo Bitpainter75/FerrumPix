@@ -1242,6 +1242,7 @@
                                                 CornerRadius="6"
                                                 Padding="10,6"
                                                 Margin="0,0,0,6"
+                                                AttachedToVisualTree="OnLocalizedItemAttachedToVisualTree"
                                                 HorizontalAlignment="Stretch">
                                             <Grid ColumnDefinitions="*,Auto,Auto">
                                                 <TextBlock Text="{Binding Label}"
@@ -2170,7 +2171,7 @@
                                                    VerticalAlignment="Center"/>
                                     </StackPanel>
                                     <Button.Flyout>
-                                        <MenuFlyout>
+                                        <MenuFlyout Opened="OnLocalizedMenuFlyoutOpened">
                                             <!-- Das Suchen steht ÜBER dem Trenner, das Entfernen
                                                  darunter: das eine legt etwas an, das andere wirft
                                                  etwas weg, und die beiden sollen nicht so dicht
@@ -2249,11 +2250,18 @@
                                 </ListBox.ItemContainerTheme>
                                 <ListBox.ItemTemplate>
                                     <DataTemplate>
+                                        <!-- Die Zeilen entstehen erst aus dem Template, und zwar
+                                             lange NACH dem Sprachdurchlauf ueber das Fenster: die
+                                             Ordnerzahlen werden im Hintergrund erhoben, die Liste
+                                             virtualisiert, und nach jeder Aktion wird sie neu
+                                             gebaut. Ohne diesen Einstieg stand alles darin in der
+                                             Ausgangssprache (Nutzerbefund). -->
                                         <Border Background="{DynamicResource FP.Bg.Input}"
                                                 BorderBrush="{DynamicResource FP.Border.Normal}"
                                                 BorderThickness="1"
                                                 CornerRadius="6"
                                                 Padding="10,8"
+                                                AttachedToVisualTree="OnLocalizedItemAttachedToVisualTree"
                                                 Margin="{Binding Depth, Converter={StaticResource FolderDepthToMarginConverter}}">
                                             <Grid ColumnDefinitions="Auto,*,Auto">
                                                 <!-- Das Aufklapp-Zeichen ist ein Knopf und kein
@@ -2329,7 +2337,7 @@
                                                             IsEnabled="{Binding Actions.CanRunFolderActions}">
                                                         <TextBlock Text="Aktionen"/>
                                                         <Button.Flyout>
-                                                            <MenuFlyout>
+                                                            <MenuFlyout Opened="OnLocalizedMenuFlyoutOpened">
                                                                 <MenuItem Header="Gesichter suchen"
                                                                           Command="{Binding Actions.ScanFacesRowCommand}"
                                                                           CommandParameter="{Binding}"

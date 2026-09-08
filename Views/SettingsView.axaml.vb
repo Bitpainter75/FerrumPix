@@ -32,6 +32,23 @@ Namespace Views
             If content IsNot Nothing Then LocalizationService.ApplyTo(content)
         End Sub
 
+        ''' <summary>Dasselbe fuer ein MenuFlyout, das seine Eintraege NICHT als Content traegt,
+        ''' sondern als Items - der Weg oben findet dort nichts und liess beide Aktionsmenues des
+        ''' Katalogbereichs in der Ausgangssprache stehen (Nutzerbefund). Die Mechanik steht in
+        ''' <see cref="LocalizationService.ApplyToMenuFlyout"/>, damit die Diagnose sie messen
+        ''' kann.</summary>
+        Private Sub OnLocalizedMenuFlyoutOpened(sender As Object, e As EventArgs)
+            LocalizationService.ApplyToMenuFlyout(TryCast(sender, MenuFlyout))
+        End Sub
+
+        ''' <summary>Eine Listenzeile entsteht erst aus dem DataTemplate und meist erst NACH dem
+        ''' Sprachdurchlauf ueber das Fenster. Jede neu materialisierte Zeile uebersetzt deshalb
+        ''' ihren eigenen Teilbaum - so wie es die Galerie fuer ihre Kacheln tut.</summary>
+        Private Sub OnLocalizedItemAttachedToVisualTree(sender As Object, e As Avalonia.VisualTreeAttachmentEventArgs)
+            Dim itemRoot = TryCast(sender, Avalonia.Visual)
+            If itemRoot IsNot Nothing Then LocalizationService.ApplyToVisualTree(itemRoot)
+        End Sub
+
         Public Sub New()
             AvaloniaXamlLoader.Load(Me)
             AddHandler Me.AttachedToVisualTree, AddressOf OnAttachedFocus
