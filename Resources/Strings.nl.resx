@@ -8271,4 +8271,22 @@
   <data name="Abgebrochen_625c4098" xml:space="preserve">
     <value>Afgebroken.</value>
   </data>
+  <data name="DNG_kann_nur_aus_unterst_tzten_RAW_Dateien_erzeu_e751dce6" xml:space="preserve">
+    <value>DNG kan alleen uit ondersteunde RAW-bestanden worden gemaakt.</value>
+  </data>
+  <data name="DNG_Konverter_fehlt_3668e809" xml:space="preserve">
+    <value>DNG-omzetter ontbreekt</value>
+  </data>
+  <data name="F_r_die_Umwandlung_von_RAW_nach_DNG_wird_das_Pro_3f6ed972" xml:space="preserve">
+    <value>Voor het omzetten van RAW naar DNG is het programma dnglab nodig. Het moet geïnstalleerd zijn en via het zoekpad te vinden.</value>
+  </data>
+  <data name="dnglab_16941026" xml:space="preserve">
+    <value>dnglab</value>
+  </data>
+  <data name="RAW_in_DNG_umwandeln_nur_vom_System_d2aa37fd" xml:space="preserve">
+    <value>RAW naar DNG omzetten, alleen van het systeem</value>
+  </data>
+  <data name="dnglab_wandelt_RAW_Dateien_in_DNG_um_und_wird_da_9e05e80e" xml:space="preserve">
+    <value>dnglab zet RAW-bestanden om naar DNG en wordt daarvoor als apart programma aangeroepen, niet ingebouwd. Het zit in geen enkel pakket en moet zelf worden geïnstalleerd; ontbreekt het, dan meldt het stapelgewijs omzetten dat bij de poging, en al het andere werkt onveranderd.</value>
+  </data>
 </root>

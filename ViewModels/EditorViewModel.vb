@@ -9265,14 +9265,19 @@ Namespace ViewModels
             End Get
         End Property
 
-        Private _denoiseStrength As Double = 25.0
+        Private _denoiseStrength As Double = 30.0
 
         ''' <summary>Wie stark die HELLIGKEIT entrauscht wird, 0 bis 100. Die Farbe wird immer voll
         ''' entrauscht - warum, steht bei DenoiseModelService.Denoise.
         '''
-        ''' Die Vorgabe steht auf 25 und nicht auf 100, damit das Modell Details nur behutsam
-        ''' glättet. Wer die Zeit hat, dreht am
-        ''' einzelnen Bild nach - ein Schritt zurueck und der andere Wert kostet nur die Wartezeit.
+        ''' Die Vorgabe steht auf 30 und nicht auf 100, damit das Modell Details nur behutsam
+        ''' glättet. Wer die Zeit hat, dreht am einzelnen Bild nach - ein Schritt zurueck und der
+        ''' andere Wert kostet nur die Wartezeit.
+        '''
+        ''' DERSELBE Wert steht als <c>DefaultValue</c> am Regler im NoisePanel: dorthin springt ein
+        ''' Doppelklick, und ein Regler, der auf etwas anderes zurueckspringt als auf seinen
+        ''' Startwert, behauptet eine Vorgabe, die es nicht gibt. Die Diagnose haelt die beiden
+        ''' Zahlen zusammen.
         '''
         ''' KEIN Rezeptwert: das Entrauschen ist ein Zug in die Pixel, kein Regler an der Vorschau.
         ''' Was hier steht, gilt fuer den NAECHSTEN Druck auf den Knopf und aendert an einem bereits

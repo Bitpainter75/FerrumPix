@@ -11887,6 +11887,24 @@ Namespace ViewModels
             Dim result = Await _mainVm.ShowBatchConvertAsync(targetItems.Count, MainWindowViewModel.DefaultSaveFormat(),
                                                              currentFolder:=BatchFolderHint(targetItems))
             If result Is Nothing Then Return
+            Dim isDngConversion = String.Equals(result.Format, "DNG", StringComparison.OrdinalIgnoreCase)
+            If isDngConversion Then
+                targetItems = targetItems.Where(Function(i) RawPreviewService.IsSupportedRaw(i.FilePath) AndAlso
+                                                        Not String.Equals(Path.GetExtension(i.FilePath), ".dng", StringComparison.OrdinalIgnoreCase)).
+                                          ToList()
+                If targetItems.Count = 0 Then
+                    Await _mainVm.ShowMessageAsync(LocalizationService.T("Konvertierung fehlgeschlagen"),
+                                                   LocalizationService.T("DNG kann nur aus unterstützten RAW-Dateien erzeugt werden."))
+                    Return
+                End If
+                ' Die Suche nach dnglab startet einen Prozess und wartet bis zu drei Sekunden auf
+                ' ihn. Auf dem Oberflaechenfaden waere das ein sichtbarer Haenger nach dem Klick.
+                If Not Await Task.Run(Function() DngConverterService.IsAvailable()) Then
+                    Await _mainVm.ShowMessageAsync(LocalizationService.T("DNG-Konverter fehlt"),
+                                                   LocalizationService.T("Für die Umwandlung von RAW nach DNG wird das Programm dnglab benötigt. Es muss installiert und über den Suchpfad erreichbar sein."))
+                    Return
+                End If
+            End If
             ' Der Haken wird JETZT festgehalten: der Schreiblauf liest ihn im Hintergrund, und bis
             ' dahin kann der naechste Dialog ihn laengst zurueckgesetzt haben.
             Dim applyPendingBaked = _mainVm.DialogApplyPendingBaked
@@ -11907,6 +11925,7 @@ Namespace ViewModels
             ' das ihm die Uebersicht zeigt. Gemeldet ueber Reddit am 2026-08-17.
             Dim cancel = BeginBatchRun(targetItems.Count)
             Dim writer = Function(source As String, target As String)
+                             If isDngConversion Then Return DngConverterService.ConvertRawToDng(source, target, cancel)
                              Dim adj = BatchBaseAdjustments(source)
                              Return ImageProcessor.SaveImage(source, target, adj, result.JpgQuality, preserveMetadata,
                                                              developRaw:=BatchDevelopsRaw(source),

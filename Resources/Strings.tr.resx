@@ -8275,4 +8275,22 @@
   <data name="Abgebrochen_625c4098" xml:space="preserve">
     <value>İptal edildi.</value>
   </data>
+  <data name="DNG_kann_nur_aus_unterst_tzten_RAW_Dateien_erzeu_e751dce6" xml:space="preserve">
+    <value>DNG yalnızca desteklenen RAW dosyalarından oluşturulabilir.</value>
+  </data>
+  <data name="DNG_Konverter_fehlt_3668e809" xml:space="preserve">
+    <value>DNG dönüştürücü yok</value>
+  </data>
+  <data name="F_r_die_Umwandlung_von_RAW_nach_DNG_wird_das_Pro_3f6ed972" xml:space="preserve">
+    <value>RAW dosyalarını DNG biçimine dönüştürmek için dnglab programı gerekir. Kurulu olması ve arama yolundan bulunabilmesi gerekir.</value>
+  </data>
+  <data name="dnglab_16941026" xml:space="preserve">
+    <value>dnglab</value>
+  </data>
+  <data name="RAW_in_DNG_umwandeln_nur_vom_System_d2aa37fd" xml:space="preserve">
+    <value>RAW dosyalarını DNG biçimine dönüştür, yalnızca sistemden</value>
+  </data>
+  <data name="dnglab_wandelt_RAW_Dateien_in_DNG_um_und_wird_da_9e05e80e" xml:space="preserve">
+    <value>dnglab, RAW dosyalarını DNG biçimine dönüştürür ve içine gömülmeden ayrı bir program olarak çağrılır. Hiçbir pakette gelmez, kendiniz kurmanız gerekir; yoksa toplu dönüştürme denemede bunu söyler ve geri kalan her şey aynı şekilde çalışır.</value>
+  </data>
 </root>

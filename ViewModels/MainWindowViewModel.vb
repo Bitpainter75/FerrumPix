@@ -4194,7 +4194,7 @@ Namespace ViewModels
         ''' Dateinamen-Feld (BatchConvert lässt die Originalnamen unangetastet, ändert nur die Endung).
         Public Async Function ShowBatchConvertAsync(fileCount As Integer, initialFormat As String, Optional initialJpgQuality As Integer = 0,
                                                     Optional currentFolder As String = "") As Task(Of SaveAsDialogResult)
-            SetDialogFormats(includeFpx:=False)
+            SetDialogFormats(includeFpx:=False, includeDng:=True)
             DialogSelectedFormat = NormalizeSaveAsFormat(initialFormat)
             ' 0 = kein eigener Startwert, dann gilt die Einstellung.
             DialogJpgQuality = If(initialJpgQuality > 0, initialJpgQuality, DefaultJpgQuality())
@@ -4565,6 +4565,8 @@ Namespace ViewModels
                     Return "PDF"
                 Case "PSD"
                     Return "PSD"
+                Case "DNG"
+                    Return "DNG"
                 Case Else
                     Return "JPG"
             End Select
@@ -4572,7 +4574,7 @@ Namespace ViewModels
 
         ''' <summary>Setzt die Formatliste des Speichern-Dialogs. FPX (nicht-destruktives Projektformat) nur beim
         ''' Editor-"Speichern unter" anbieten, nicht beim Stapel-Konvertieren (dort gibt es keinen Ebenenstand).</summary>
-        Private Sub SetDialogFormats(includeFpx As Boolean)
+        Private Sub SetDialogFormats(includeFpx As Boolean, Optional includeDng As Boolean = False)
             DialogFormatOptions.Clear()
             DialogFormatOptions.Add("JPG")
             DialogFormatOptions.Add("PNG")
@@ -4580,6 +4582,10 @@ Namespace ViewModels
             ' PDF in BEIDEN Dialogen: einzeln als druckfertige Datei speichern und stapelweise
             ' konvertieren (dort entsteht wie bei allen Formaten eine Zieldatei je Bild).
             DialogFormatOptions.Add("PDF")
+            ' DNG ist ausschliesslich eine RAW-zu-RAW-Konvertierung. Es gehoert weder in den
+            ' Export noch in "Speichern unter", da sichtbare Editor-Bearbeitungen darin nicht
+            ' als gewoehnliches gerendertes Bild landen koennen.
+            If includeDng Then DialogFormatOptions.Add("DNG")
             ' PSD an derselben Bedingung wie FPX: es traegt den Ebenenstapel hinaus, und den gibt es
             ' nur beim Speichern aus dem Editor. Im Stapel-Konvertieren waere jede Datei einebnig.
             If includeFpx Then DialogFormatOptions.Add("PSD")

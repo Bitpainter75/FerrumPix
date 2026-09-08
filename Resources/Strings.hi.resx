@@ -8275,4 +8275,22 @@
   <data name="Abgebrochen_625c4098" xml:space="preserve">
     <value>रद्द किया गया।</value>
   </data>
+  <data name="DNG_kann_nur_aus_unterst_tzten_RAW_Dateien_erzeu_e751dce6" xml:space="preserve">
+    <value>DNG केवल समर्थित RAW फ़ाइलों से बनाया जा सकता है।</value>
+  </data>
+  <data name="DNG_Konverter_fehlt_3668e809" xml:space="preserve">
+    <value>DNG परिवर्तक मौजूद नहीं है</value>
+  </data>
+  <data name="F_r_die_Umwandlung_von_RAW_nach_DNG_wird_das_Pro_3f6ed972" xml:space="preserve">
+    <value>RAW को DNG में बदलने के लिए dnglab प्रोग्राम आवश्यक है। यह स्थापित होना चाहिए और खोज पथ से मिलना चाहिए।</value>
+  </data>
+  <data name="dnglab_16941026" xml:space="preserve">
+    <value>dnglab</value>
+  </data>
+  <data name="RAW_in_DNG_umwandeln_nur_vom_System_d2aa37fd" xml:space="preserve">
+    <value>RAW को DNG में बदलें, केवल सिस्टम से</value>
+  </data>
+  <data name="dnglab_wandelt_RAW_Dateien_in_DNG_um_und_wird_da_9e05e80e" xml:space="preserve">
+    <value>dnglab, RAW फ़ाइलों को DNG में बदलता है और इसे अलग प्रोग्राम के रूप में चलाया जाता है, यह भीतर शामिल नहीं है। यह किसी पैकेज के साथ नहीं आता, इसे स्वयं स्थापित करना पड़ता है; न होने पर बैच रूपांतरण कोशिश करते समय यह बता देता है, और बाकी सब पहले जैसा काम करता है।</value>
+  </data>
 </root>

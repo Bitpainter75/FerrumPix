@@ -8275,4 +8275,22 @@
   <data name="Abgebrochen_625c4098" xml:space="preserve">
     <value>Dibatalkan.</value>
   </data>
+  <data name="DNG_kann_nur_aus_unterst_tzten_RAW_Dateien_erzeu_e751dce6" xml:space="preserve">
+    <value>DNG hanya bisa dibuat dari berkas RAW yang didukung.</value>
+  </data>
+  <data name="DNG_Konverter_fehlt_3668e809" xml:space="preserve">
+    <value>Pengonversi DNG tidak ada</value>
+  </data>
+  <data name="F_r_die_Umwandlung_von_RAW_nach_DNG_wird_das_Pro_3f6ed972" xml:space="preserve">
+    <value>Mengubah RAW menjadi DNG memerlukan program dnglab. Program itu harus terpasang dan dapat ditemukan melalui jalur pencarian.</value>
+  </data>
+  <data name="dnglab_16941026" xml:space="preserve">
+    <value>dnglab</value>
+  </data>
+  <data name="RAW_in_DNG_umwandeln_nur_vom_System_d2aa37fd" xml:space="preserve">
+    <value>Mengubah RAW menjadi DNG, hanya dari sistem</value>
+  </data>
+  <data name="dnglab_wandelt_RAW_Dateien_in_DNG_um_und_wird_da_9e05e80e" xml:space="preserve">
+    <value>dnglab mengubah berkas RAW menjadi DNG dan dijalankan sebagai program tersendiri, bukan disertakan di dalamnya. Program itu tidak ikut dalam paket mana pun dan harus dipasang sendiri; jika tidak ada, pengubahan massal mengatakannya saat dicoba, dan semua yang lain bekerja seperti biasa.</value>
+  </data>
 </root>

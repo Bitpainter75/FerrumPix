@@ -8232,4 +8232,22 @@
   <data name="Abgebrochen_625c4098" xml:space="preserve">
     <value>Stopped.</value>
   </data>
+  <data name="DNG_kann_nur_aus_unterst_tzten_RAW_Dateien_erzeu_e751dce6" xml:space="preserve">
+    <value>DNG can only be created from supported RAW files.</value>
+  </data>
+  <data name="DNG_Konverter_fehlt_3668e809" xml:space="preserve">
+    <value>DNG converter missing</value>
+  </data>
+  <data name="F_r_die_Umwandlung_von_RAW_nach_DNG_wird_das_Pro_3f6ed972" xml:space="preserve">
+    <value>Converting RAW to DNG requires the dnglab program. It must be installed and reachable through the search path.</value>
+  </data>
+  <data name="dnglab_16941026" xml:space="preserve">
+    <value>dnglab</value>
+  </data>
+  <data name="RAW_in_DNG_umwandeln_nur_vom_System_d2aa37fd" xml:space="preserve">
+    <value>Convert RAW to DNG, from the system only</value>
+  </data>
+  <data name="dnglab_wandelt_RAW_Dateien_in_DNG_um_und_wird_da_9e05e80e" xml:space="preserve">
+    <value>dnglab converts RAW files to DNG and is called as a separate program, not linked in. It comes with no package and has to be installed separately; if it is missing, batch conversion says so when you try, and everything else works unchanged.</value>
+  </data>
 </root>

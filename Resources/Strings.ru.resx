@@ -8271,4 +8271,22 @@
   <data name="Abgebrochen_625c4098" xml:space="preserve">
     <value>Прервано.</value>
   </data>
+  <data name="DNG_kann_nur_aus_unterst_tzten_RAW_Dateien_erzeu_e751dce6" xml:space="preserve">
+    <value>DNG можно создать только из поддерживаемых файлов RAW.</value>
+  </data>
+  <data name="DNG_Konverter_fehlt_3668e809" xml:space="preserve">
+    <value>Преобразователь DNG отсутствует</value>
+  </data>
+  <data name="F_r_die_Umwandlung_von_RAW_nach_DNG_wird_das_Pro_3f6ed972" xml:space="preserve">
+    <value>Для преобразования RAW в DNG нужна программа dnglab. Она должна быть установлена и доступна через путь поиска.</value>
+  </data>
+  <data name="dnglab_16941026" xml:space="preserve">
+    <value>dnglab</value>
+  </data>
+  <data name="RAW_in_DNG_umwandeln_nur_vom_System_d2aa37fd" xml:space="preserve">
+    <value>Преобразование RAW в DNG, только из системы</value>
+  </data>
+  <data name="dnglab_wandelt_RAW_Dateien_in_DNG_um_und_wird_da_9e05e80e" xml:space="preserve">
+    <value>dnglab преобразует файлы RAW в DNG и вызывается как отдельная программа, а не встраивается. Она не входит ни в один пакет, её нужно установить самостоятельно; если её нет, пакетное преобразование сообщит об этом при попытке, а всё остальное работает без изменений.</value>
+  </data>
 </root>

@@ -88,8 +88,12 @@
                     <TextBlock Text="Stärke" Foreground="{DynamicResource FP.Text.Secondary}"
                                VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap"
                                ToolTip.Tip="Wie stark die Helligkeit entrauscht wird. Niedriger lässt mehr feine Zeichnung stehen, höher nimmt mehr Korn. Die Farbe wird immer voll entrauscht, das kostet keine Zeichnung. Gilt für den nächsten Druck auf einen der beiden Knöpfe." />
+                    <!-- Der Rueckfallwert des Doppelklicks ist der Startwert aus dem ViewModel
+                         (DenoiseStrength). Er stand einmal auf 70, waehrend der Regler mit 25
+                         aufging: der Doppelklick hob die Staerke dann an, statt sie
+                         zurueckzusetzen. -->
                     <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
-                                       DefaultValue="70"
+                                       DefaultValue="30"
                                        Value="{Binding DenoiseStrength}" Margin="0,0" />
                     <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
                                              Value="{Binding DenoiseStrength, Mode=TwoWay}" Minimum="0" Maximum="100" />

@@ -8231,4 +8231,22 @@
   <data name="Abgebrochen_625c4098" xml:space="preserve">
     <value>Abgebrochen.</value>
   </data>
+  <data name="DNG_kann_nur_aus_unterst_tzten_RAW_Dateien_erzeu_e751dce6" xml:space="preserve">
+    <value>DNG kann nur aus unterstützten RAW-Dateien erzeugt werden.</value>
+  </data>
+  <data name="DNG_Konverter_fehlt_3668e809" xml:space="preserve">
+    <value>DNG-Konverter fehlt</value>
+  </data>
+  <data name="F_r_die_Umwandlung_von_RAW_nach_DNG_wird_das_Pro_3f6ed972" xml:space="preserve">
+    <value>Für die Umwandlung von RAW nach DNG wird das Programm dnglab benötigt. Es muss installiert und über den Suchpfad erreichbar sein.</value>
+  </data>
+  <data name="dnglab_16941026" xml:space="preserve">
+    <value>dnglab</value>
+  </data>
+  <data name="RAW_in_DNG_umwandeln_nur_vom_System_d2aa37fd" xml:space="preserve">
+    <value>RAW in DNG umwandeln, nur vom System</value>
+  </data>
+  <data name="dnglab_wandelt_RAW_Dateien_in_DNG_um_und_wird_da_9e05e80e" xml:space="preserve">
+    <value>dnglab wandelt RAW-Dateien in DNG um und wird dafür als eigenes Programm aufgerufen, nicht eingebunden. Es liegt keinem Paket bei und muss selbst installiert werden; fehlt es, sagt das Stapel-Konvertieren das beim Versuch, und alles andere arbeitet unverändert.</value>
+  </data>
 </root>

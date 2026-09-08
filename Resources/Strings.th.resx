@@ -8275,4 +8275,22 @@
   <data name="Abgebrochen_625c4098" xml:space="preserve">
     <value>ยกเลิกแล้ว</value>
   </data>
+  <data name="DNG_kann_nur_aus_unterst_tzten_RAW_Dateien_erzeu_e751dce6" xml:space="preserve">
+    <value>สร้าง DNG ได้จากไฟล์ RAW ที่รองรับเท่านั้น</value>
+  </data>
+  <data name="DNG_Konverter_fehlt_3668e809" xml:space="preserve">
+    <value>ไม่มีตัวแปลง DNG</value>
+  </data>
+  <data name="F_r_die_Umwandlung_von_RAW_nach_DNG_wird_das_Pro_3f6ed972" xml:space="preserve">
+    <value>การแปลง RAW เป็น DNG ต้องใช้โปรแกรม dnglab โดยต้องติดตั้งไว้และเรียกใช้ได้จากเส้นทางค้นหา</value>
+  </data>
+  <data name="dnglab_16941026" xml:space="preserve">
+    <value>dnglab</value>
+  </data>
+  <data name="RAW_in_DNG_umwandeln_nur_vom_System_d2aa37fd" xml:space="preserve">
+    <value>แปลง RAW เป็น DNG จากระบบเท่านั้น</value>
+  </data>
+  <data name="dnglab_wandelt_RAW_Dateien_in_DNG_um_und_wird_da_9e05e80e" xml:space="preserve">
+    <value>dnglab แปลงไฟล์ RAW เป็น DNG โดยถูกเรียกใช้เป็นโปรแกรมแยก ไม่ได้รวมอยู่ในตัวโปรแกรม ไม่มาพร้อมกับแพ็กเกจใด จึงต้องติดตั้งเอง หากไม่มี การแปลงเป็นชุดจะแจ้งให้ทราบเมื่อลองใช้ ส่วนอย่างอื่นทำงานได้ตามปกติ</value>
+  </data>
 </root>

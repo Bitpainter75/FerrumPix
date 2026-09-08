@@ -49,6 +49,8 @@
                         Return ".pdf"
                     Case "PSD"
                         Return ".psd"
+                    Case "DNG"
+                        Return ".dng"
                     Case Else
                         Return ".jpg"
                 End Select

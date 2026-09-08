@@ -2,8 +2,17 @@
 
 ### What's new
 
+- **RAW to DNG.** Converting a selection now offers DNG as a target, so RAW files from the camera
+  can be kept as raw files in a format every program reads. This one is passed to dnglab, which
+  has to be installed; if it is not there, or the selection holds nothing that could become a DNG,
+  the app says so instead of quietly doing nothing.
+
 
 ### Fixes
+
+- Double clicking a slider lands where the slider started. Two of them went somewhere else: the
+  text size dropped to the smallest size there is, and the denoise strength jumped up instead of
+  going back.
 
 - The app no longer freezes while a video is playing. Clicking a button, stepping on to the next
   item or leaving the viewer before the video had ended could lock everything up until the app was

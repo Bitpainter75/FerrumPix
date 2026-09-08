@@ -8231,4 +8231,22 @@
   <data name="Abgebrochen_625c4098" xml:space="preserve">
     <value>Cancelado.</value>
   </data>
+  <data name="DNG_kann_nur_aus_unterst_tzten_RAW_Dateien_erzeu_e751dce6" xml:space="preserve">
+    <value>El DNG solo puede crearse a partir de archivos RAW compatibles.</value>
+  </data>
+  <data name="DNG_Konverter_fehlt_3668e809" xml:space="preserve">
+    <value>Falta el conversor DNG</value>
+  </data>
+  <data name="F_r_die_Umwandlung_von_RAW_nach_DNG_wird_das_Pro_3f6ed972" xml:space="preserve">
+    <value>Para convertir de RAW a DNG se necesita el programa dnglab. Debe estar instalado y accesible a través de la ruta de búsqueda.</value>
+  </data>
+  <data name="dnglab_16941026" xml:space="preserve">
+    <value>dnglab</value>
+  </data>
+  <data name="RAW_in_DNG_umwandeln_nur_vom_System_d2aa37fd" xml:space="preserve">
+    <value>Convertir RAW a DNG, solo del sistema</value>
+  </data>
+  <data name="dnglab_wandelt_RAW_Dateien_in_DNG_um_und_wird_da_9e05e80e" xml:space="preserve">
+    <value>dnglab convierte archivos RAW a DNG y se ejecuta como un programa aparte, no va integrado. No se incluye en ningún paquete y hay que instalarlo por cuenta propia; si falta, la conversión por lotes lo indica al intentarlo, y todo lo demás funciona igual.</value>
+  </data>
 </root>

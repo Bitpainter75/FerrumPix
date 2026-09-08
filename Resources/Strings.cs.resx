@@ -8271,4 +8271,22 @@
   <data name="Abgebrochen_625c4098" xml:space="preserve">
     <value>Přerušeno.</value>
   </data>
+  <data name="DNG_kann_nur_aus_unterst_tzten_RAW_Dateien_erzeu_e751dce6" xml:space="preserve">
+    <value>DNG lze vytvořit jen z podporovaných souborů RAW.</value>
+  </data>
+  <data name="DNG_Konverter_fehlt_3668e809" xml:space="preserve">
+    <value>Chybí převodník DNG</value>
+  </data>
+  <data name="F_r_die_Umwandlung_von_RAW_nach_DNG_wird_das_Pro_3f6ed972" xml:space="preserve">
+    <value>Pro převod z RAW do DNG je potřeba program dnglab. Musí být nainstalovaný a dosažitelný přes vyhledávací cestu.</value>
+  </data>
+  <data name="dnglab_16941026" xml:space="preserve">
+    <value>dnglab</value>
+  </data>
+  <data name="RAW_in_DNG_umwandeln_nur_vom_System_d2aa37fd" xml:space="preserve">
+    <value>Převod RAW do DNG, jen ze systému</value>
+  </data>
+  <data name="dnglab_wandelt_RAW_Dateien_in_DNG_um_und_wird_da_9e05e80e" xml:space="preserve">
+    <value>dnglab převádí soubory RAW do DNG a spouští se jako samostatný program, není zabudovaný. Není součástí žádného balíčku a je třeba jej nainstalovat samostatně; pokud chybí, dávkový převod to při pokusu oznámí a vše ostatní pracuje beze změny.</value>
+  </data>
 </root>

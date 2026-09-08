@@ -8275,4 +8275,22 @@
   <data name="Abgebrochen_625c4098" xml:space="preserve">
     <value>취소했습니다.</value>
   </data>
+  <data name="DNG_kann_nur_aus_unterst_tzten_RAW_Dateien_erzeu_e751dce6" xml:space="preserve">
+    <value>DNG는 지원되는 RAW 파일에서만 만들 수 있습니다.</value>
+  </data>
+  <data name="DNG_Konverter_fehlt_3668e809" xml:space="preserve">
+    <value>DNG 변환 프로그램 없음</value>
+  </data>
+  <data name="F_r_die_Umwandlung_von_RAW_nach_DNG_wird_das_Pro_3f6ed972" xml:space="preserve">
+    <value>RAW를 DNG로 변환하려면 dnglab 프로그램이 필요합니다. 설치되어 있고 검색 경로에서 찾을 수 있어야 합니다.</value>
+  </data>
+  <data name="dnglab_16941026" xml:space="preserve">
+    <value>dnglab</value>
+  </data>
+  <data name="RAW_in_DNG_umwandeln_nur_vom_System_d2aa37fd" xml:space="preserve">
+    <value>RAW를 DNG로 변환, 시스템에서만</value>
+  </data>
+  <data name="dnglab_wandelt_RAW_Dateien_in_DNG_um_und_wird_da_9e05e80e" xml:space="preserve">
+    <value>dnglab은 RAW 파일을 DNG로 변환하며 내장되지 않고 별도 프로그램으로 실행됩니다. 어떤 패키지에도 포함되지 않으므로 직접 설치해야 합니다. 없으면 일괄 변환이 시도할 때 알려주고, 나머지는 그대로 작동합니다.</value>
+  </data>
 </root>

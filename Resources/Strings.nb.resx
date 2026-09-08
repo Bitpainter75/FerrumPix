@@ -8271,4 +8271,22 @@
   <data name="Abgebrochen_625c4098" xml:space="preserve">
     <value>Avbrutt.</value>
   </data>
+  <data name="DNG_kann_nur_aus_unterst_tzten_RAW_Dateien_erzeu_e751dce6" xml:space="preserve">
+    <value>DNG kan bare lages fra RAW-filer som støttes.</value>
+  </data>
+  <data name="DNG_Konverter_fehlt_3668e809" xml:space="preserve">
+    <value>DNG-omformer mangler</value>
+  </data>
+  <data name="F_r_die_Umwandlung_von_RAW_nach_DNG_wird_das_Pro_3f6ed972" xml:space="preserve">
+    <value>For å gjøre om RAW til DNG trengs programmet dnglab. Det må være installert og tilgjengelig via søkestien.</value>
+  </data>
+  <data name="dnglab_16941026" xml:space="preserve">
+    <value>dnglab</value>
+  </data>
+  <data name="RAW_in_DNG_umwandeln_nur_vom_System_d2aa37fd" xml:space="preserve">
+    <value>Gjør om RAW til DNG, bare fra systemet</value>
+  </data>
+  <data name="dnglab_wandelt_RAW_Dateien_in_DNG_um_und_wird_da_9e05e80e" xml:space="preserve">
+    <value>dnglab gjør om RAW-filer til DNG og kalles som et eget program, det bygges ikke inn. Det følger ikke med noen pakke og må installeres selv; mangler det, sier den samlede omgjøringen det ved forsøket, og alt annet virker uendret.</value>
+  </data>
 </root>

@@ -119,8 +119,12 @@
               IsVisible="{Binding ShowFontControls}">
             <TextBlock Text="Größe" Foreground="{DynamicResource FP.Text.Secondary}"
                        VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+            <!-- 48 ist der Startwert des Schriftgrades (EditorViewModel._annotationFontSize), und
+                 dorthin muss der Doppelklick fuehren. Hier stand die 8, also das Minimum des
+                 Reglers: ein Doppelklick schrumpfte den Text auf die kleinste moegliche Groesse,
+                 und das sah aus wie ein Zuruecksetzen. -->
             <icons:RoundSlider Grid.Column="1" Minimum="8" Maximum="5000"
-                               DefaultValue="8"
+                               DefaultValue="48"
                                Value="{Binding AnnotationFontSizePixels}" Margin="0,0" />
             <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
                                      Value="{Binding AnnotationFontSizePixels, Mode=TwoWay}"
