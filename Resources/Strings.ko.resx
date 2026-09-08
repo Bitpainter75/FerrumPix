@@ -8254,4 +8254,16 @@
   <data name="0_gespeicherte_Bilder_Suche_l_uft_65daf9b3" xml:space="preserve">
     <value>저장된 사진 {0}장  •  검색 중...</value>
   </data>
+  <data name="Katalog_wird_gelesen_2efc08d3" xml:space="preserve">
+    <value>카탈로그를 읽는 중...</value>
+  </data>
+  <data name="Pr_fe_0_von_1_bd01ae2a" xml:space="preserve">
+    <value>확인 중 {1}개 중 {0}개</value>
+  </data>
+  <data name="Das_Bereinigen_ist_fehlgeschlagen_0e8cc3e1" xml:space="preserve">
+    <value>정리에 실패했습니다</value>
+  </data>
+  <data name="Abgebrochen_es_wurde_nichts_entfernt_d8e3dcde" xml:space="preserve">
+    <value>취소했습니다. 아무것도 삭제하지 않았습니다</value>
+  </data>
 </root>

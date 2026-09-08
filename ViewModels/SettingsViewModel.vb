@@ -2843,6 +2843,11 @@ Namespace ViewModels
         Public ReadOnly Property CleanupDatabaseCommand As ICommand
         Public ReadOnly Property RefreshThumbnailCacheCommand As ICommand
 
+        ''' <summary>Zustand und Fortschritt von „Datenbank bereinigen". Eigenes Objekt und keine
+        ''' Handvoll Eigenschaften hier: Drossel und Dispatcher-Wechsel stehen damit an derselben
+        ''' Stelle wie beim Katalogindex und bei der Gesichtssuche.</summary>
+        Public ReadOnly Property Cleanup As New CatalogCleanupViewModel()
+
         ''' <summary>Die Wege der gruppierten Ordnerliste: je Zeile aufraeumen, ueberwachen an und
         ''' aus, aufklappen, und dieselben drei Aufraeum-Wege ueber die ganze gefilterte Menge.</summary>
         Public ReadOnly Property CleanRowCatalogCommand As ICommand
@@ -3455,32 +3460,11 @@ Namespace ViewModels
             MoveEditorToolGroupDownCommand = ReactiveCommand.Create(Of String)(Sub(k) MoveEditorToolGroup(k, 1))
             SetLanguageModeCommand = ReactiveCommand.Create(Of String)(Sub(m) LanguageMode = m)
             SetTransparencyBackgroundModeCommand = ReactiveCommand.Create(Of String)(Sub(m) TransparencyBackgroundMode = m)
-            CleanupDatabaseCommand = ReactiveCommand.Create(Sub()
-                                                                ' Wie beim Aufraeumen der Ordner: nur EIN Fenster
-                                                                ' darf am Bestand schreiben. Ueber die
-                                                                ' AUFRAEUMKLAMMER und nicht ueber TryAcquire:
-                                                                ' PurgeOrphanedRecords holt sich dieselbe Sperre
-                                                                ' gleich noch einmal, und ein zweiter echter
-                                                                ' Erwerb scheitert an der eigenen Datei
-                                                                ' (FileShare.None gilt auch fuer den, der sie
-                                                                ' haelt). Der Loeschweg saehe dann aus wie von
-                                                                ' einem fremden Fenster blockiert und gaebe
-                                                                ' wortlos 0 zurueck.
-                                                                Dim crossProcess = Services.BackgroundRunLock.TryEnterCleanup()
-                                                                If crossProcess Is Nothing Then
-                                                                    CleanupResultMessage = OtherWindowBusyMessage
-                                                                    Return
-                                                                End If
-                                                                Dim removed As Integer
-                                                                Try
-                                                                    removed = Services.LibraryService.Instance.PurgeOrphanedRecords()
-                                                                Finally
-                                                                    crossProcess.Dispose()
-                                                                End Try
-                                                                CleanupResultMessage = If(removed = 0,
-                                                                    "Keine verwaisten Einträge gefunden.",
-                                                                    String.Format(LocalizationService.T("{0} verwaiste Einträge entfernt."), removed))
-                                                            End Sub)
+            ' Das Aufraeumen ist ein Hintergrundlauf mit Anzeige (siehe CatalogCleanupViewModel):
+            ' es arbeitet je Katalogzeile ein File.Exists ab, und bei einem Bestand auf einem
+            ' Netzlaufwerk sind das Minuten. Auf dem Anzeigefaden stand die Anwendung dabei still,
+            ' ohne zu sagen warum (Nutzerbefund).
+            CleanupDatabaseCommand = Cleanup.StartCommand
             RefreshThumbnailCacheCommand = ReactiveCommand.Create(Sub() RefreshThumbnailCacheFolders())
 
             ' Die gruppierte Ordnerliste: je Zeile und ueber die ganze gefilterte Menge.

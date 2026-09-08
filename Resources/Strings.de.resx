@@ -8210,4 +8210,16 @@
   <data name="0_gespeicherte_Bilder_Suche_l_uft_65daf9b3" xml:space="preserve">
     <value>{0} gespeicherte Bilder  •  Suche läuft...</value>
   </data>
+  <data name="Katalog_wird_gelesen_2efc08d3" xml:space="preserve">
+    <value>Katalog wird gelesen...</value>
+  </data>
+  <data name="Pr_fe_0_von_1_bd01ae2a" xml:space="preserve">
+    <value>Prüfe {0} von {1}</value>
+  </data>
+  <data name="Das_Bereinigen_ist_fehlgeschlagen_0e8cc3e1" xml:space="preserve">
+    <value>Das Bereinigen ist fehlgeschlagen</value>
+  </data>
+  <data name="Abgebrochen_es_wurde_nichts_entfernt_d8e3dcde" xml:space="preserve">
+    <value>Abgebrochen, es wurde nichts entfernt</value>
+  </data>
 </root>

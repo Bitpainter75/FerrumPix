@@ -4,6 +4,7 @@ Imports System.Globalization
 Imports System.IO
 Imports System.Linq
 Imports System.Text.RegularExpressions
+Imports System.Threading
 Imports Microsoft.Data.Sqlite
 
 Namespace Services
@@ -1695,14 +1696,24 @@ Namespace Services
             Return removed
         End Function
 
-        Public Function PurgeOrphanedRecords() As Integer
+        ''' <summary>Raeumt die Katalogzeilen weg, deren Datei es nicht mehr gibt.
+        '''
+        ''' <param name="progress">Wird waehrend des Pruefens gerufen, mit erledigten und gesamten
+        ''' Zeilen. Die teure Stelle ist das <c>File.Exists</c> je Zeile: bei einem Bestand auf einem
+        ''' Netzlaufwerk dauert das Minuten, und ohne Meldung sieht die Anwendung dabei aus, als tue
+        ''' sie nichts (Nutzerbefund).</param>
+        ''' <param name="token">Abbruch. Er wirkt NUR waehrend des Pruefens - ab dem Loeschen laeuft
+        ''' der Durchgang zu Ende, denn ein halb geraeumter Katalog waere schlimmer als ein voller.
+        ''' Wer waehrend des Pruefens abbricht, hat nichts geloescht.</param></summary>
+        Public Function PurgeOrphanedRecords(Optional progress As Action(Of Integer, Integer) = Nothing,
+                                             Optional token As CancellationToken = Nothing) As Integer
             ' Auch hier gilt: erst die Schreiblaeufe anhalten. Er sammelt die verwaisten Pfade in
             ' einem Durchgang und loescht sie danach - was ein Lauf dazwischen anlegt, faellt sonst
             ' entweder mit weg oder erscheint gleich wieder.
             Dim klammer = TryBeginCleanup("Library.PurgeOrphanedRecords")
             If klammer Is Nothing Then Return 0
             Using klammer
-                Return PurgeOrphanedRecordsLocked()
+                Return PurgeOrphanedRecordsLocked(progress, token)
             End Using
         End Function
 
@@ -1758,10 +1769,17 @@ Namespace Services
             Return orphans
         End Function
 
-        Private Function PurgeOrphanedRecordsLocked() As Integer
+        Private Function PurgeOrphanedRecordsLocked(Optional progress As Action(Of Integer, Integer) = Nothing,
+                                                    Optional token As CancellationToken = Nothing) As Integer
             Dim orphans As New List(Of String)()
             Using conn = New SqliteConnection(_connectionString)
                 conn.Open()
+
+                ' ERST DIE PFADE HOLEN, DANN PRUEFEN. Die Abfrage ist schnell, das File.Exists je
+                ' Zeile ist es nicht - und nur mit der vorher bekannten Gesamtzahl laesst sich ein
+                ' Anteil melden. Ueber den offenen Leser zu pruefen hiesse ausserdem, ihn ueber
+                ' Minuten offen zu halten, waehrend das Netzlaufwerk antwortet.
+                Dim alle As New List(Of String)()
                 Using cmd = conn.CreateCommand()
                     ' AUS ALLEN Tabellen, die auf einen Pfad zeigen. Ein Bild, ueber das nur die
                     ' Gesichtssuche oder nur die KI-Analyse gelaufen ist, steht nicht zwingend in
@@ -1773,25 +1791,37 @@ Namespace Services
                                       "UNION SELECT FilePath FROM AiTagScan"
                     Using reader = cmd.ExecuteReader()
                         While reader.Read()
-                            Dim p = reader.GetString(0)
-                            ' Serverbilder stehen unter einem Pseudo-Pfad und liegen auf KEINER
-                            ' Platte - File.Exists ist fuer sie immer False. Ohne diese Ausnahme
-                            ' raeumt "Verwaiste Eintraege entfernen" jede Bewertung, jedes Stichwort
-                            ' und jede Personenzuordnung zu einem Nextcloud- oder Immich-Bild weg.
-                            If IsServerPseudoPath(p) Then Continue While
-                            ' Was im Papierkorb liegt, kommt seit dem Riegel in SetExifData nicht
-                            ' mehr herein - aus der Zeit davor stehen aber noch Zeilen da, und die
-                            ' Datei EXISTIERT ja, faellt also nicht unter "verwaist". Hier ist der
-                            ' benannte Ort zum Aufraeumen: der Nutzer hat ihn angeklickt, es
-                            ' geschieht nichts still nebenbei.
-                            If FileOperationPolicy.IsTrashFolder(p) Then
-                                orphans.Add(p)
-                                Continue While
-                            End If
-                            If Not File.Exists(p) Then orphans.Add(p)
+                            alle.Add(reader.GetString(0))
                         End While
                     End Using
                 End Using
+
+                Dim geprueft = 0
+                progress?.Invoke(0, alle.Count)
+                For Each p In alle
+                    If token.IsCancellationRequested Then Return 0
+                    geprueft += 1
+                    ' Serverbilder stehen unter einem Pseudo-Pfad und liegen auf KEINER
+                    ' Platte - File.Exists ist fuer sie immer False. Ohne diese Ausnahme
+                    ' raeumt "Verwaiste Eintraege entfernen" jede Bewertung, jedes Stichwort
+                    ' und jede Personenzuordnung zu einem Nextcloud- oder Immich-Bild weg.
+                    If IsServerPseudoPath(p) Then
+                        progress?.Invoke(geprueft, alle.Count)
+                        Continue For
+                    End If
+                    ' Was im Papierkorb liegt, kommt seit dem Riegel in SetExifData nicht
+                    ' mehr herein - aus der Zeit davor stehen aber noch Zeilen da, und die
+                    ' Datei EXISTIERT ja, faellt also nicht unter "verwaist". Hier ist der
+                    ' benannte Ort zum Aufraeumen: der Nutzer hat ihn angeklickt, es
+                    ' geschieht nichts still nebenbei.
+                    If FileOperationPolicy.IsTrashFolder(p) Then
+                        orphans.Add(p)
+                        progress?.Invoke(geprueft, alle.Count)
+                        Continue For
+                    End If
+                    If Not File.Exists(p) Then orphans.Add(p)
+                    progress?.Invoke(geprueft, alle.Count)
+                Next
                 If orphans.Count > 0 Then
                     Using transaction = conn.BeginTransaction()
                         ' ALLE Tabellen, die auf den Pfad zeigen - dieselbe Reihenfolge wie in

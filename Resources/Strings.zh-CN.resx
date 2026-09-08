@@ -8208,4 +8208,16 @@
   <data name="0_gespeicherte_Bilder_Suche_l_uft_65daf9b3" xml:space="preserve">
     <value>已保存 {0} 张图片  •  正在搜索...</value>
   </data>
+  <data name="Katalog_wird_gelesen_2efc08d3" xml:space="preserve">
+    <value>正在读取目录...</value>
+  </data>
+  <data name="Pr_fe_0_von_1_bd01ae2a" xml:space="preserve">
+    <value>正在检查第 {0} / {1} 项</value>
+  </data>
+  <data name="Das_Bereinigen_ist_fehlgeschlagen_0e8cc3e1" xml:space="preserve">
+    <value>清理失败</value>
+  </data>
+  <data name="Abgebrochen_es_wurde_nichts_entfernt_d8e3dcde" xml:space="preserve">
+    <value>已取消，未删除任何内容</value>
+  </data>
 </root>

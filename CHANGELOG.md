@@ -10,6 +10,14 @@
   killed, and stepping on to a photo did it every time. This was worst on macOS, and there it is
   gone.
 
+- Cleaning the database shows what it is doing. It checks every catalogue entry against the disk,
+  which over a network drive takes minutes; until now the app simply stood still with nothing to
+  see. It runs in the background now, counts its way through and can be stopped, and stopping it
+  removes nothing.
+
+- Progress bars actually appear. The bar for the catalogue index, the face scan and the clean-up
+  was never drawn, so a long run showed a line of text and nothing else.
+
 - A video no longer sometimes stays black. Two things could leave you with sound and no picture: if
   the picture area was ready a moment later than the player expected, the file was never handed
   over at all; and coming back to a video you had just left showed nothing, because the picture was

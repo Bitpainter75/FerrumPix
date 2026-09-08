@@ -149,11 +149,19 @@ Namespace ViewModels
 
         ''' <summary>Setzt Text und Balken auf dem Oberflaechen-Thread. Eigener Weg, weil jede
         ''' Meldung aus dem Hintergrund kommt und ein gebundener Wert nur dort gesetzt werden darf.</summary>
-        Protected Function SetStatusAsync(text As String, percent As Double, hasProgress As Boolean) As Task
+        ''' <summary>Der Parameter heisst NICHT wie die Eigenschaft, und das ist kein Geschmack.
+        '''
+        ''' VB unterscheidet keine Gross- und Kleinschreibung: hiess er <c>hasProgress</c>, war
+        ''' <c>HasProgress = hasProgress</c> eine Zuweisung des Parameters an sich selbst. Die
+        ''' Eigenschaft blieb dadurch fuer immer False, der Balken wurde nie sichtbar - bei KEINEM
+        ''' der Laeufe, denn sie alle gehen hier durch. Aufgefallen ist es erst, als eine Pruefung
+        ''' den Fortschritt gemessen hat; Text und Prozentwert kamen ja an, nur der Balken fehlte,
+        ''' und ein fehlender Balken sieht aus wie "es gibt eben keinen".</summary>
+        Protected Function SetStatusAsync(text As String, percent As Double, showProgress As Boolean) As Task
             Return Dispatcher.UIThread.InvokeAsync(Sub()
-                                                       StatusText = text
-                                                       ProgressPercent = percent
-                                                       HasProgress = hasProgress
+                                                       Me.StatusText = text
+                                                       Me.ProgressPercent = percent
+                                                       Me.HasProgress = showProgress
                                                    End Sub).GetTask()
         End Function
 

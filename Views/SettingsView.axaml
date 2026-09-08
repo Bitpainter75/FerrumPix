@@ -2493,10 +2493,30 @@
                             <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
                                 <TextBlock Text="Datenbank bereinigen" FontSize="{DynamicResource FP.Font.Body}"/>
                                 <TextBlock Text="Entfernt Metadaten (Bewertungen, Favoriten, Stichwörter) von Bildern, die nicht mehr existieren." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <!-- Stand und Balken wie bei "Jetzt indizieren": der Lauf prüft
+                                     jede Katalogzeile einzeln auf der Platte und braucht über
+                                     einem Netzlaufwerk Minuten. Ohne Anzeige sah es aus, als tue
+                                     die Anwendung nichts (Nutzerbefund). -->
+                                <TextBlock Text="{Binding Cleanup.StatusText}"
+                                           IsVisible="{Binding Cleanup.HasStatus}"
+                                           Classes="no-translate"
+                                           Foreground="{DynamicResource FP.Text.Secondary}"
+                                           FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <ProgressBar Height="4" Minimum="0" Maximum="100"
+                                             Value="{Binding Cleanup.ProgressPercent}"
+                                             IsVisible="{Binding Cleanup.HasProgress}"/>
                             </StackPanel>
                             <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
-                                <TextBlock Text="{Binding CleanupResultMessage}" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" VerticalAlignment="Center"/>
-                                <Button Classes="ghost" Padding="12,7" Command="{Binding CleanupDatabaseCommand}">Bereinigen</Button>
+                                <TextBlock Text="{Binding CleanupResultMessage}" Classes="no-translate" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" VerticalAlignment="Center"/>
+                                <!-- Starten und Stoppen tauschen die Plätze, wie beim Indexlauf
+                                     darüber: zwei Knöpfe, von denen immer einer tot ist, sagen
+                                     weniger als einer, der das Richtige tut. -->
+                                <Button Classes="ghost" Padding="12,7"
+                                        IsVisible="{Binding !Cleanup.IsRunning}"
+                                        Command="{Binding CleanupDatabaseCommand}">Bereinigen</Button>
+                                <Button Classes="ghost" Padding="12,7"
+                                        IsVisible="{Binding Cleanup.IsRunning}"
+                                        Command="{Binding Cleanup.StopCommand}">Stoppen</Button>
                             </StackPanel>
                         </Grid>
 
