@@ -88,10 +88,12 @@ Public Class App
     ''' Je EIN Klassen-Handler fuer die ganze Anwendung, statt eines Ereignisses je Stelle.</summary>
     Private Shared Sub LocalizeLateContent()
         ' Ein Expander erzeugt seinen Inhalt erst beim Aufklappen. Der Durchlauf ueber das Fenster
-        ' hat ihn dann schon hinter sich.
+        ' hat ihn dann schon hinter sich. Ueber BEIDE Baeume, aus demselben Grund wie bei den
+        ' Listenzeilen: beim Aufklappen steht der Inhalt schon im logischen Baum, im sichtbaren erst
+        ' nach dem naechsten Messen.
         Avalonia.Controls.Expander.ExpandedEvent.AddClassHandler(Of Avalonia.Controls.Expander)(
             Sub(expander, e)
-                Services.LocalizationService.ApplyToVisualTree(expander)
+                Services.LocalizationService.ApplyToMaterialized(expander)
             End Sub)
 
         ' EIN KURZHINWEIS AUS MEHR ALS EINEM TEXT ist kein String, sondern ein kleiner Baum
