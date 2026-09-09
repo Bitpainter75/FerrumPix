@@ -8,6 +8,14 @@
   the app says so instead of quietly doing nothing.
 
 
+- **A switch for when nothing works.** Starting FerrumPix with `--debug` writes a log for that run
+  even though logging is otherwise off, and puts a line about the machine at the top of it: version,
+  Windows or Linux build, architecture, .NET version and what kind of drive the program sits on. It
+  is meant for the case where the app does not come up at all, where the settings that would switch
+  logging on cannot be reached. The log is in `%LOCALAPPDATA%\FerrumPix\logs` on Windows and in
+  `~/.local/share/FerrumPix/logs` elsewhere, and it carries no user or computer name.
+
+
 ### Fixes
 
 - Saving over the original keeps the shot data. Camera, exposure, date, keywords and copyright

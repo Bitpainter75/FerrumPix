@@ -42,6 +42,13 @@ Namespace Services
         ''' <see cref="RefreshEnabled"/>.</para></summary>
         Private Shared _enabled As Integer = -1   ' -1 = noch nicht gelesen, 0 = aus, 1 = an
 
+        ''' <summary>Der Startparameter hat das Protokoll erzwungen. Dann darf die EINSTELLUNG es
+        ''' nicht wieder ausschalten: sie wird beim ersten Laden der Einstellungsdatei angewandt, und
+        ''' das passiert kurz nach dem Start. Wer mit dem Parameter startet, will das Protokoll fuer
+        ''' DIESEN Lauf, unabhaengig davon, was in der Datei steht - und genau der Fall, den er
+        ''' aufklaeren soll, ist der, in dem noch niemand etwas einstellen konnte.</summary>
+        Private Shared _forcedOn As Boolean
+
         Public Shared ReadOnly Property IsVerboseEnabled As Boolean
             Get
                 Dim state = Threading.Volatile.Read(_enabled)
@@ -58,8 +65,26 @@ Namespace Services
 
         ''' <summary>Nach dem Umlegen des Schalters in den Einstellungen aufrufen.</summary>
         Public Shared Sub RefreshEnabled(value As Boolean)
+            If _forcedOn AndAlso Not value Then Return
             Threading.Volatile.Write(_enabled, If(value, 1, 0))
         End Sub
+
+        ''' <summary>Das Protokoll fuer diesen Lauf einschalten und eingeschaltet lassen.</summary>
+        Public Shared Sub ForceEnable()
+            _forcedOn = True
+            Threading.Volatile.Write(_enabled, 1)
+        End Sub
+
+        ''' <summary>Der Ordner, in dem die beiden Protokolldateien liegen - fuer die Meldung an den
+        ''' Nutzer, der sie heraussuchen soll.
+        '''
+        ''' NICHT "Directory" nennen: das verdeckt in dieser Klasse System.IO.Directory, das sie beim
+        ''' Anlegen des Ordners selbst benutzt.</summary>
+        Public Shared ReadOnly Property LogFolder As String
+            Get
+                Return LogDirectory
+            End Get
+        End Property
 
         ''' <summary>Schreibt eine Info-Zeile - nur bei eingeschaltetem EnableDiagnosticLogging.</summary>
         Public Shared Sub LogAlways(area As String, message As String)
