@@ -47,10 +47,11 @@ Namespace Services
     Public Class GeotagService
 
         ' TIFF-Feldtypen, wie sie in der EXIF-Spezifikation nummeriert sind.
-        Private Const TiffTypeByte As Integer = 1
+        Friend Const TiffTypeByte As Integer = 1
         Friend Const TiffTypeAscii As Integer = 2
-        Private Const TiffTypeLong As Integer = 4
-        Private Const TiffTypeRational As Integer = 5
+        Friend Const TiffTypeShort As Integer = 3
+        Friend Const TiffTypeLong As Integer = 4
+        Friend Const TiffTypeRational As Integer = 5
 
         Private Const GpsInfoIfdPointerTag As Integer = &H8825
 
@@ -672,7 +673,7 @@ Namespace Services
 
             ' Erst das GPS-IFD, weil die Kopie von IFD0 seine Adresse braucht.
             Dim gpsIfdOffset = output.Count
-            output.AddRange(BuildGpsIfd(BuildGpsFields(latitude, longitude, altitudeMeters, littleEndian),
+            output.AddRange(BuildIfd(BuildGpsFields(latitude, longitude, altitudeMeters, littleEndian),
                                         gpsIfdOffset, littleEndian))
             PadToEven(output)
 
@@ -749,7 +750,7 @@ Namespace Services
             AppendUInt32(output, CUInt(gpsIfdOffset), littleEndian)
             AppendUInt32(output, 0UI, littleEndian)
 
-            output.AddRange(BuildGpsIfd(BuildGpsFields(latitude, longitude, altitudeMeters, littleEndian),
+            output.AddRange(BuildIfd(BuildGpsFields(latitude, longitude, altitudeMeters, littleEndian),
                                         gpsIfdOffset, littleEndian))
             Return output.ToArray()
         End Function
@@ -758,7 +759,10 @@ Namespace Services
         ' Das GPS-IFD
         ' ---------------------------------------------------------------------------------------
 
-        Private Structure GpsField
+        ''' <summary>Ein Eintrag in einem IFD. Nicht auf GPS beschraenkt: derselbe Aufbau traegt
+        ''' IFD0 und das Aufnahme-Verzeichnis, und <see cref="ExifBuilderService"/> baut damit einen
+        ''' EXIF-Block fuer Quellen, deren Container sich nicht bytegenau kopieren laesst.</summary>
+        Friend Structure TiffField
             Public Tag As Integer
             Public FieldType As Integer
             Public Count As Integer
@@ -770,27 +774,27 @@ Namespace Services
         Private Shared Function BuildGpsFields(latitude As Double,
                                                longitude As Double,
                                                altitudeMeters As Double?,
-                                               littleEndian As Boolean) As List(Of GpsField)
-            Dim fields As New List(Of GpsField)()
+                                               littleEndian As Boolean) As List(Of TiffField)
+            Dim fields As New List(Of TiffField)()
 
             ' 2.3.0.0 - die Fassung, die Koordinaten in dieser Form beschreibt.
-            fields.Add(New GpsField With {.Tag = &H0, .FieldType = TiffTypeByte, .Count = 4,
+            fields.Add(New TiffField With {.Tag = &H0, .FieldType = TiffTypeByte, .Count = 4,
                                           .Data = New Byte() {2, 3, 0, 0}})
             fields.Add(AsciiField(&H1, If(latitude >= 0.0, "N", "S")))
-            fields.Add(New GpsField With {.Tag = &H2, .FieldType = TiffTypeRational, .Count = 3,
+            fields.Add(New TiffField With {.Tag = &H2, .FieldType = TiffTypeRational, .Count = 3,
                                           .Data = EncodeCoordinate(Math.Abs(latitude), littleEndian)})
             fields.Add(AsciiField(&H3, If(longitude >= 0.0, "E", "W")))
-            fields.Add(New GpsField With {.Tag = &H4, .FieldType = TiffTypeRational, .Count = 3,
+            fields.Add(New TiffField With {.Tag = &H4, .FieldType = TiffTypeRational, .Count = 3,
                                           .Data = EncodeCoordinate(Math.Abs(longitude), littleEndian)})
 
             If altitudeMeters.HasValue AndAlso Not Double.IsNaN(altitudeMeters.Value) AndAlso
                Not Double.IsInfinity(altitudeMeters.Value) Then
                 ' Unter dem Meeresspiegel wird nicht negativ gerechnet, sondern ueber das
                 ' Vorzeichenfeld ausgedrueckt - der Betrag selbst ist immer positiv.
-                fields.Add(New GpsField With {.Tag = &H5, .FieldType = TiffTypeByte, .Count = 1,
+                fields.Add(New TiffField With {.Tag = &H5, .FieldType = TiffTypeByte, .Count = 1,
                                               .Data = New Byte() {CByte(If(altitudeMeters.Value < 0.0, 1, 0))}})
                 Dim centimeters = CLng(Math.Round(Math.Abs(altitudeMeters.Value) * 100.0))
-                fields.Add(New GpsField With {.Tag = &H6, .FieldType = TiffTypeRational, .Count = 1,
+                fields.Add(New TiffField With {.Tag = &H6, .FieldType = TiffTypeRational, .Count = 1,
                                               .Data = EncodeRational(centimeters, 100, littleEndian)})
             End If
 
@@ -800,17 +804,39 @@ Namespace Services
             Return fields
         End Function
 
-        Private Shared Function AsciiField(tag As Integer, value As String) As GpsField
+        Friend Shared Function AsciiField(tag As Integer, value As String) As TiffField
             Dim raw = System.Text.Encoding.ASCII.GetBytes(value)
             Dim data(raw.Length) As Byte
             Buffer.BlockCopy(raw, 0, data, 0, raw.Length)
             ' Das abschliessende Nullbyte zaehlt in EXIF zur Laenge.
-            Return New GpsField With {.Tag = tag, .FieldType = TiffTypeAscii, .Count = data.Length, .Data = data}
+            Return New TiffField With {.Tag = tag, .FieldType = TiffTypeAscii, .Count = data.Length, .Data = data}
         End Function
 
-        Private Shared Function BuildGpsIfd(fields As List(Of GpsField),
+        ''' <summary>Wie viele Byte <see cref="BuildIfd"/> fuer diese Eintraege belegen wird -
+        ''' Verzeichnis und Wertebereich zusammen.
+        '''
+        ''' Gebraucht, um einen ZEIGER auf ein nachfolgendes Verzeichnis zu setzen, bevor dieses
+        ''' geschrieben ist: IFD0 verweist ueber Tag 34665 auf das Aufnahme-Verzeichnis, und dessen
+        ''' Adresse steht erst fest, wenn die Groesse von IFD0 bekannt ist. Muss mit dem Aufbau in
+        ''' BuildIfd Schritt halten, deshalb steht die Rechnung unmittelbar daneben.</summary>
+        Friend Shared Function IfdBlockSize(fields As List(Of TiffField)) As Integer
+            Dim size = 2 + fields.Count * 12 + 4
+            For Each field In fields
+                If field.Data.Length > 4 Then
+                    size += field.Data.Length
+                    If size Mod 2 <> 0 Then size += 1
+                End If
+            Next
+            Return size
+        End Function
+
+        ''' <summary>Ein IFD als Bytes: erst die Eintraege, dann die Werte, die nicht in vier Byte
+        ''' passen. <paramref name="ifdOffset"/> ist die Stelle im TIFF-Block, an der das Verzeichnis
+        ''' zu liegen kommt - die Wertzeiger sind absolut und brauchen sie.</summary>
+        Friend Shared Function BuildIfd(fields As List(Of TiffField),
                                             ifdOffset As Integer,
-                                            littleEndian As Boolean) As Byte()
+                                            littleEndian As Boolean,
+                                            Optional nextIfdOffset As Integer = 0) As Byte()
             Dim directorySize = 2 + fields.Count * 12 + 4
             Dim valueBase = ifdOffset + directorySize
             Dim directory As New List(Of Byte)(directorySize)
@@ -831,8 +857,10 @@ Namespace Services
                     PadToEven(values)
                 End If
             Next
-            ' Hinter dem GPS-IFD folgt kein weiteres.
-            AppendUInt32(directory, 0UI, littleEndian)
+            ' Hinter einem GPS- oder Aufnahme-Verzeichnis folgt kein weiteres; nur IFD0 kann auf
+            ' IFD1 zeigen, und das tut hier niemand (ein neu gebauter Block traegt kein
+            ' Vorschaubild).
+            AppendUInt32(directory, CUInt(Math.Max(0, nextIfdOffset)), littleEndian)
 
             directory.AddRange(values)
             Return directory.ToArray()
@@ -857,7 +885,7 @@ Namespace Services
             Return data.ToArray()
         End Function
 
-        Private Shared Function EncodeRational(numerator As Long, denominator As Long, littleEndian As Boolean) As Byte()
+        Friend Shared Function EncodeRational(numerator As Long, denominator As Long, littleEndian As Boolean) As Byte()
             Dim data As New List(Of Byte)(8)
             AppendUInt32(data, CUInt(Math.Max(0L, numerator)), littleEndian)
             AppendUInt32(data, CUInt(Math.Max(1L, denominator)), littleEndian)

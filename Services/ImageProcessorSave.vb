@@ -472,6 +472,13 @@ Namespace Services
                                  If(ext = ".webp", SKEncodedImageFormat.Webp,
                                     SKEncodedImageFormat.Jpeg))
 
+                    ' DIE AUFNAHMEDATEN DER QUELLE VOR DEM SCHREIBEN EINLESEN. Beim Speichern ueber
+                    ' das Original sind Quelle und Ziel dieselbe Datei; danach gelesen kaeme nur noch
+                    ' die frisch kodierte heraus. Siehe ReadSourceMetadata, dort steht der ganze
+                    ' Hergang. Ein .fpx-Buendel traegt keine, und in ein PDF passt kein EXIF-Block.
+                    Dim keepMetadata = preserveMetadata AndAlso Not isFpxSource AndAlso Not isPdf AndAlso Not isFpxTarget
+                    Dim sourceMetadata = If(keepMetadata, ReadSourceMetadata(sourcePath, targetPath), Nothing)
+
                     Using processed = ProcessBitmap(original, adj)
                         ' DIE LETZTE FRAGE VOR DEM SCHREIBEN. Die Modellwege steigen an ihrer
                         ' Kachelgrenze aus, aber die Reglerkette darunter laeuft am Stueck und kostet
@@ -514,10 +521,7 @@ Namespace Services
                             If Not Object.ReferenceEquals(toEncode, processed) Then toEncode.Dispose()
                         End Try
                     End Using
-                    ' Metadaten nur von echten Bildquellen kopieren (ein .fpx-Bündel trägt keine).
-                    ' In ein PDF lässt sich kein EXIF-Block kopieren - der Versuch würde die Datei
-                    ' beschädigen.
-                    If preserveMetadata AndAlso Not isFpxSource AndAlso Not isPdf AndAlso Not isFpxTarget Then TryCopyMetadata(sourcePath, targetPath)
+                    ApplySourceMetadata(sourceMetadata, targetPath)
                     ' Der Urheberrechtshinweis kommt NACH dem Kopieren der Metadaten: sonst
                     ' ueberschriebe der Hinweis aus der Quelle den gerade gesetzten wieder. Ein
                     ' leerer Text tut nichts - das ist die Regel der Stapelformulare, "leer heisst
@@ -599,22 +603,72 @@ Namespace Services
             End Try
         End Sub
 
-        Private Shared Sub TryCopyMetadata(sourcePath As String, targetPath As String)
-            If String.IsNullOrWhiteSpace(sourcePath) OrElse String.IsNullOrWhiteSpace(targetPath) Then Return
-            If Not File.Exists(sourcePath) OrElse Not File.Exists(targetPath) Then Return
+        ''' <summary>Was aus der QUELLE fuer die Uebernahme gebraucht wird, in der Form, die zum
+        ''' Zielformat passt. Immer nur eins der drei Felder ist gefuellt.</summary>
+        Private NotInheritable Class SourceMetadata
+            Public JpegSegments As List(Of Byte()) = Nothing
+            Public PngChunks As List(Of Byte()) = Nothing
+            Public WebpChunks As List(Of WebpChunk) = Nothing
+
+            Public ReadOnly Property IsEmpty As Boolean
+                Get
+                    Return (JpegSegments Is Nothing OrElse JpegSegments.Count = 0) AndAlso
+                           (PngChunks Is Nothing OrElse PngChunks.Count = 0) AndAlso
+                           (WebpChunks Is Nothing OrElse WebpChunks.Count = 0)
+                End Get
+            End Property
+        End Class
+
+        ''' <summary>Die Aufnahmedaten der Quelle einlesen. VOR dem Schreiben, und das ist der ganze
+        ''' Grund fuer die Zweiteilung.
+        '''
+        ''' Beim Speichern UEBER das Original - der normale Weg des Editors bei JPEG, PNG und WEBP -
+        ''' sind Quelle und Ziel dieselbe Datei. Wer erst schreibt und danach aus der Quelle liest,
+        ''' liest aus der gerade frisch kodierten Datei: sie traegt keine Segmente, die Uebernahme
+        ''' fand nichts und kehrte still zurueck. JEDES Speichern in place verlor damit EXIF, XMP und
+        ''' IPTC, obwohl die Uebernahme eingeschaltet war (Befund aus der Beta, an 0.9.40-7). Bei
+        ''' "Speichern unter" in eine andere Datei war es nie ein Problem.
+        '''
+        ''' EINGELESEN WIRD IN DEN SPEICHER, nicht in eine Kopie der Quelldatei. Es geht um ein paar
+        ''' Kilobyte; eine Sicherungskopie haette bei einem 50-MB-Foto 50 MB kopiert, bei jedem
+        ''' Speichern. Welche Form gebraucht wird, entscheidet das ZIELformat - deshalb steht der
+        ''' Zielpfad hier schon dabei, obwohl noch nichts geschrieben ist.</summary>
+        Private Shared Function ReadSourceMetadata(sourcePath As String, targetPath As String) As SourceMetadata
+            If String.IsNullOrWhiteSpace(sourcePath) OrElse String.IsNullOrWhiteSpace(targetPath) Then Return Nothing
+            If Not File.Exists(sourcePath) Then Return Nothing
 
             Try
-                Dim targetExt = IO.Path.GetExtension(targetPath).ToLowerInvariant()
-
-                Select Case targetExt
+                Select Case IO.Path.GetExtension(targetPath).ToLowerInvariant()
                     Case ".jpg", ".jpeg"
-                        CopyJpegMetadata(sourcePath, targetPath)
+                        Return New SourceMetadata With {.JpegSegments = ReadJpegSourceSegments(sourcePath)}
                     Case ".png"
-                        CopyPngMetadata(sourcePath, targetPath)
+                        Return New SourceMetadata With {.PngChunks = ReadPngSourceChunks(sourcePath)}
                     Case ".webp"
-                        CopyWebpMetadata(sourcePath, targetPath)
+                        Return New SourceMetadata With {.WebpChunks = ReadWebpSourceChunks(sourcePath)}
                 End Select
-            Catch
+            Catch ex As Exception
+                ' Protokollieren statt schlucken: ein stiller Fehlschlag hier sieht von aussen aus
+                ' wie ein Foto ohne Aufnahmedaten und faellt erst Wochen spaeter auf.
+                DiagnosticLogService.LogException("ImageProcessor.ReadSourceMetadata", ex)
+            End Try
+            Return Nothing
+        End Function
+
+        ''' <summary>Das Eingelesene ins fertig geschriebene Ziel legen.</summary>
+        Private Shared Sub ApplySourceMetadata(metadata As SourceMetadata, targetPath As String)
+            If metadata Is Nothing OrElse metadata.IsEmpty Then Return
+            If String.IsNullOrWhiteSpace(targetPath) OrElse Not File.Exists(targetPath) Then Return
+
+            Try
+                If metadata.JpegSegments IsNot Nothing Then
+                    WriteJpegMetadata(metadata.JpegSegments, targetPath)
+                ElseIf metadata.PngChunks IsNot Nothing Then
+                    WritePngMetadata(metadata.PngChunks, targetPath)
+                ElseIf metadata.WebpChunks IsNot Nothing Then
+                    WriteWebpMetadata(metadata.WebpChunks, targetPath)
+                End If
+            Catch ex As Exception
+                DiagnosticLogService.LogException("ImageProcessor.ApplySourceMetadata", ex)
             End Try
         End Sub
 
@@ -667,26 +721,21 @@ Namespace Services
             Return ext = ".jpg" OrElse ext = ".jpeg"
         End Function
 
-        Private Shared Sub CopyJpegMetadata(sourcePath As String, targetPath As String)
-            Dim metadataSegments = If(IsJpegPath(sourcePath),
-                                      ReadJpegMetadataSegments(sourcePath),
-                                      BuildJpegMetadataSegmentsFromSource(sourcePath))
-            If metadataSegments.Count = 0 Then Return
+        Private Shared Function ReadJpegSourceSegments(sourcePath As String) As List(Of Byte())
+            Return If(IsJpegPath(sourcePath),
+                      ReadJpegMetadataSegments(sourcePath),
+                      BuildJpegMetadataSegmentsFromSource(sourcePath))
+        End Function
+
+        Private Shared Sub WriteJpegMetadata(metadataSegments As List(Of Byte()), targetPath As String)
+            If metadataSegments Is Nothing OrElse metadataSegments.Count = 0 Then Return
 
             Dim targetBytes = File.ReadAllBytes(targetPath)
             If targetBytes.Length < 4 OrElse targetBytes(0) <> &HFF OrElse targetBytes(1) <> &HD8 Then Return
 
-            ' ZWEI DINGE, DIE SONST FALSCH MITREISEN. Die Aufnahmedaten werden bytegenau
-            ' uebernommen; nach einem Beschnitt oder einer Groessenaenderung beschreiben ihre
-            ' Bildmasse noch die Quelle, und ihr eingebettetes Vorschaubild zeigt das
-            ' unbearbeitete Bild. Beides wird hier geradegezogen, an EINER Stelle fuer beide
-            ' Quellwege (JPEG-Quelle und aufgebaute Segmente).
             Dim frame = TryReadJpegFrameSize(targetBytes)
             For Each segment In metadataSegments
-                If IsExifSegment(segment) Then
-                    If frame.Width > 0 Then PatchExifPixelDimensions(segment, 10, frame.Width, frame.Height)
-                    DetachExifThumbnail(segment, 10)
-                End If
+                If IsExifSegment(segment) Then PatchExifToWrittenSize(segment, 10, frame.Width, frame.Height)
             Next
 
             Dim stripped = StripJpegMetadataSegments(targetBytes)
@@ -738,7 +787,7 @@ Namespace Services
                             segment(2) = header(2) : segment(3) = header(3)
                             If length > 2 AndAlso Not ReadExactly(stream, segment, 4, length - 2) Then Exit While
                             If marker = &HE1 AndAlso IsExifSegment(segment) Then
-                                PatchExifOrientationToNormal(segment)
+                                PatchExifOrientationToNormal(segment, 10)
                                 PatchExifColorSpaceToSrgb(segment, 10)
                             End If
                             segment = WithoutXmpColorFields(segment)
@@ -872,9 +921,18 @@ Namespace Services
                    segment(8) = 0 AndAlso segment(9) = 0
         End Function
 
-        Private Shared Sub PatchExifOrientationToNormal(segment As Byte())
+        ''' <summary>Setzt die AUSRICHTUNG der uebernommenen Aufnahmedaten auf "normal".
+        '''
+        ''' Die geschriebenen Bildpunkte sind bereits gedreht (siehe DecodeOriented). Bleibt die
+        ''' Angabe der Quelle stehen, dreht ein Betrachter, der sie auswertet, ein ZWEITES Mal.
+        '''
+        ''' <paramref name="tiffStart"/>, weil derselbe TIFF-Block in drei Verpackungen vorkommt:
+        ''' im JPEG hinter der Kennung "Exif" mit ihren Nullbytes (also ab 10), im PNG-Block eXIf und
+        ''' im WEBP-Block EXIF nackt (also ab 0). Der Wert passt in die vier Byte des Eintrags
+        ''' selbst, die Laenge des Blocks aendert sich also nicht.</summary>
+        Private Shared Sub PatchExifOrientationToNormal(segment As Byte(), tiffStart As Integer)
             Try
-                Dim tiff = 10
+                Dim tiff = tiffStart
                 If segment.Length < tiff + 8 Then Return
                 Dim littleEndian = segment(tiff) = AscW("I"c) AndAlso segment(tiff + 1) = AscW("I"c)
                 Dim bigEndian = segment(tiff) = AscW("M"c) AndAlso segment(tiff + 1) = AscW("M"c)
@@ -1134,6 +1192,20 @@ Namespace Services
         ''' aendert sich also nicht - wie beim Patch der Ausrichtung. Ein SHORT-Eintrag, in den die
         ''' Zahl nicht passt (Bildkante ueber 65535), bleibt unangetastet: eine falsche kleine Zahl
         ''' waere schlimmer als die alte.</summary>
+        ''' <summary>ZWEI DINGE, DIE SONST FALSCH MITREISEN. Die Aufnahmedaten werden bytegenau
+        ''' uebernommen; nach einem Beschnitt oder einer Groessenaenderung beschreiben ihre Bildmasse
+        ''' noch die Quelle, und ihr eingebettetes Vorschaubild zeigt das unbearbeitete Bild.
+        '''
+        ''' EINE Stelle fuer ALLE drei Zielformate. Sie stand lange nur im JPEG-Schreibweg, und PNG
+        ''' und WEBP uebernahmen den Block unveraendert: ihre Zieldateien behaupteten nach jedem
+        ''' Beschnitt die alten Masse und trugen die alte Vorschau weiter.</summary>
+        Private Shared Sub PatchExifToWrittenSize(tiff As Byte(), tiffStart As Integer,
+                                                  width As Integer, height As Integer)
+            If tiff Is Nothing Then Return
+            If width > 0 AndAlso height > 0 Then PatchExifPixelDimensions(tiff, tiffStart, width, height)
+            DetachExifThumbnail(tiff, tiffStart)
+        End Sub
+
         Private Shared Sub PatchExifPixelDimensions(buffer As Byte(), tiffStart As Integer,
                                                     width As Integer, height As Integer)
             Try
@@ -1231,14 +1303,32 @@ Namespace Services
             Return (0, 0)
         End Function
 
-        Private Shared Sub CopyPngMetadata(sourcePath As String, targetPath As String)
-            Dim metadataChunks = If(IO.Path.GetExtension(sourcePath).ToLowerInvariant() = ".png",
-                                    ReadPngMetadataChunks(sourcePath),
-                                    BuildPngMetadataChunksFromSource(sourcePath))
-            If metadataChunks.Count = 0 Then Return
+        Private Shared Function ReadPngSourceChunks(sourcePath As String) As List(Of Byte())
+            Return If(IO.Path.GetExtension(sourcePath).ToLowerInvariant() = ".png",
+                      ReadPngMetadataChunks(sourcePath),
+                      BuildPngMetadataChunksFromSource(sourcePath))
+        End Function
+
+        Private Shared Sub WritePngMetadata(metadataChunks As List(Of Byte()), targetPath As String)
+            If metadataChunks Is Nothing OrElse metadataChunks.Count = 0 Then Return
 
             Dim targetBytes = File.ReadAllBytes(targetPath)
             If Not IsPngBytes(targetBytes) Then Return
+
+            ' Bildmasse und Vorschau am GESCHRIEBENEN Bild ausrichten, siehe PatchExifToWrittenSize.
+            ' Der Block wird dafuer neu gebaut statt an Ort und Stelle geaendert: ein PNG-Block
+            ' traegt eine Pruefsumme ueber seinen Inhalt, und die waere danach falsch.
+            Dim pngSize = TryReadPngSize(targetBytes)
+            For i = 0 To metadataChunks.Count - 1
+                Dim chunk = metadataChunks(i)
+                If chunk.Length < 12 OrElse Text.Encoding.ASCII.GetString(chunk, 4, 4) <> "eXIf" Then Continue For
+                Dim payloadLength = ReadInt32BE(chunk, 0)
+                If payloadLength <= 0 OrElse 8 + payloadLength > chunk.Length Then Continue For
+                Dim data(payloadLength - 1) As Byte
+                Buffer.BlockCopy(chunk, 8, data, 0, payloadLength)
+                PatchExifToWrittenSize(data, 0, pngSize.Width, pngSize.Height)
+                metadataChunks(i) = CreatePngChunk("eXIf", data)
+            Next
 
             Dim output As New List(Of Byte)(targetBytes.Length + metadataChunks.Sum(Function(c) c.Length))
             output.AddRange(targetBytes.Take(8))
@@ -1330,6 +1420,18 @@ Namespace Services
             Return result
         End Function
 
+        ''' <summary>Die Masse eines PNG aus seinem IHDR: er ist der ERSTE Block hinter der
+        ''' Signatur, Breite und Hoehe stehen dort als zwei 32-Bit-Zahlen. 0/0, wenn die Datei
+        ''' anders aussieht, als sie soll - der Aufrufer laesst die Masse dann in Ruhe.</summary>
+        Private Shared Function TryReadPngSize(bytes As Byte()) As (Width As Integer, Height As Integer)
+            If Not IsPngBytes(bytes) OrElse bytes.Length < 24 Then Return (0, 0)
+            If Text.Encoding.ASCII.GetString(bytes, 12, 4) <> "IHDR" Then Return (0, 0)
+            Dim width = ReadInt32BE(bytes, 16)
+            Dim height = ReadInt32BE(bytes, 20)
+            If width <= 0 OrElse height <= 0 Then Return (0, 0)
+            Return (width, height)
+        End Function
+
         Private Shared Function IsPngBytes(bytes As Byte()) As Boolean
             Return bytes.Length >= 8 AndAlso bytes(0) = &H89 AndAlso bytes(1) = &H50 AndAlso bytes(2) = &H4E AndAlso bytes(3) = &H47 AndAlso
                    bytes(4) = &HD AndAlso bytes(5) = &HA AndAlso bytes(6) = &H1A AndAlso bytes(7) = &HA
@@ -1349,7 +1451,7 @@ Namespace Services
             End Select
         End Function
 
-        Private Shared Sub CopyWebpMetadata(sourcePath As String, targetPath As String)
+        Private Shared Function ReadWebpSourceChunks(sourcePath As String) As List(Of WebpChunk)
             ' "ICCP" fehlt hier bewusst: das Farbprofil der Quelle gehoert nach dem Farbmanagement
             ' nicht mehr zu den geschriebenen Bildpunkten, siehe IsJpegIccSegment.
             Dim sourceChunks = If(IO.Path.GetExtension(sourcePath).ToLowerInvariant() = ".webp",
@@ -1365,13 +1467,22 @@ Namespace Services
             ' kann - in den Block gehoeren die nackten TIFF-Bytes.
             For Each chunk In sourceChunks.Where(Function(c) c.Type = "EXIF")
                 chunk.Data = WithoutExifPreamble(chunk.Data)
+                ' AUSRICHTUNG WIE BEIM JPEG GERADEZIEHEN. Skia wertet die Angabe eines WEBP beim
+                ' Dekodieren aus (gemessen: EncodedOrigin=RightTop), die geschriebenen Bildpunkte
+                ' sind also schon gedreht. Blieb die 6 der Quelle stehen, drehte ein Betrachter ein
+                ' zweites Mal - aus einem querformatigen Bild wurde ein hochkantes.
+                PatchExifOrientationToNormal(chunk.Data, 0)
                 PatchExifColorSpaceToSrgb(chunk.Data, 0)
             Next
             For Each chunk In sourceChunks.Where(Function(c) c.Type = "XMP ")
                 Dim cleaned = StripXmpColorFields(chunk.Data)
                 If cleaned IsNot Nothing Then chunk.Data = cleaned
             Next
-            If sourceChunks.Count = 0 Then Return
+            Return sourceChunks
+        End Function
+
+        Private Shared Sub WriteWebpMetadata(sourceChunks As List(Of WebpChunk), targetPath As String)
+            If sourceChunks Is Nothing OrElse sourceChunks.Count = 0 Then Return
 
             Dim targetBytes = File.ReadAllBytes(targetPath)
             Dim targetChunks = ReadWebpChunks(targetBytes)
@@ -1395,6 +1506,13 @@ Namespace Services
                 If targetChunks.Any(Function(c) c.Type = "ALPH") Then flags = CByte(flags Or &H10)
             End If
             If width <= 0 OrElse height <= 0 Then Return
+
+            ' Bildmasse und Vorschau am GESCHRIEBENEN Bild ausrichten, siehe PatchExifToWrittenSize.
+            ' Hier ist es ein Patch an Ort und Stelle: ein WEBP-Block traegt keine Pruefsumme, und
+            ' die Laenge der beiden Eintraege aendert sich nicht.
+            For Each chunk In sourceChunks.Where(Function(c) c.Type = "EXIF")
+                PatchExifToWrittenSize(chunk.Data, 0, width, height)
+            Next
 
             ' Das Profil-Flag wird GELOESCHT, weil unten kein ICCP-Block mehr geschrieben wird -
             ' weder aus der Quelle noch aus dem Ziel. Ein gesetztes Flag ohne zugehoerigen Block
@@ -1550,6 +1668,14 @@ Namespace Services
                             PatchExifColorSpaceToSrgb(tiff, 0)
                             Return tiff
                         End If
+                    Case Else
+                        ' JEDE ANDERE QUELLE - RAW, HEIC, TIFF, PSD. Ihren Container koennen wir
+                        ' nicht aufschneiden, und ihre EXIF-Bytes waeren im Ziel ohnehin unbrauchbar
+                        ' (die Adressen darin zeigen in die Quelldatei). Der Block wird deshalb aus
+                        ' gelesenen Werten NEU gebaut. Bis hierher kam gar nichts heraus: eine RAW
+                        ' als JPEG exportiert verlor Kamera, Zeit und Objektiv restlos, obwohl die
+                        ' Uebernahme eingeschaltet war.
+                        Return ExifBuilderService.BuildExifTiff(path)
                 End Select
             Catch
             End Try

@@ -10,11 +10,33 @@
 
 ### Fixes
 
+- Saving over the original keeps the shot data. Camera, exposure, date, keywords and copyright
+  used to be dropped from a JPEG, PNG or WEBP every time you pressed Save on the file it came from,
+  even with Keep metadata switched on. Saving under a new name was never affected.
+
+- Exporting a raw file now carries its shot data into the JPEG, PNG or WEBP. Camera, lens,
+  exposure, date and the place the photo was taken come along; before, a raw file exported without
+  any of it, although the info sidebar had been showing it the whole time.
+
+- A WEBP that was taken sideways is no longer turned twice. The picture was straightened on the way
+  out but still carried the note asking for it to be turned, so anything that read the note laid a
+  landscape photo on its side.
+
+- The size written into a photo's shot data matches the photo. After a crop or a resize, a PNG or a
+  WEBP still claimed the size it had before, and kept the old thumbnail inside it.
+
+- The EXIF button in the editor's Save as dialog does something. Switching it off left the shot
+  data in the exported file anyway, because the editor followed the setting instead of the button.
+
 - Typing a width or a height is no longer interrupted. With Keep aspect ratio on, the other field
   used to be recalculated after every single keystroke, so the number you were about to type kept
   moving under your hands and it looked as if only one of the two could be set at all. The second
   field now follows once you leave the first one. This covers image size and canvas size in the
   editor as well as the width and height of the resize and export dialogs.
+
+- Width and height in the editor step by one pixel, and by ten while SHIFT is held. The arrows, the
+  little buttons and the mouse wheel moved in tens only, so an odd number could be reached by typing
+  it and no other way. This covers image size and canvas size.
 
 - Keep aspect ratio keeps working after you switch it off and on again. Once both width and height
   had been set by hand, the second field stopped following the first for good, and the two could

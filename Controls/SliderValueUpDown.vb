@@ -1,6 +1,7 @@
 Imports Avalonia
 Imports Avalonia.Controls
 Imports Avalonia.Input
+Imports Avalonia.Interactivity
 Imports Avalonia.Styling
 
 Namespace Controls
@@ -29,6 +30,25 @@ Namespace Controls
             End Set
         End Property
 
+        ''' <summary>Die Schrittweite, solange SHIFT gedrückt ist. 0 heißt: kein grober Schritt,
+        ''' SHIFT ändert dann nichts.
+        '''
+        ''' Gedacht für Felder mit weitem Wertebereich, bei denen beides gebraucht wird: Pixelmaße
+        ''' gehen bis 50000, da ist ein Schritt von 1 zum Feinjustieren nötig und zugleich lästig,
+        ''' wenn man ein Bild um ein paar hundert Pixel schmaler haben will. Die feine Weite bleibt
+        ''' die normale, weil sie die Weite ist, die man ohne Wissen um den Zusatzgriff bekommt.</summary>
+        Public Shared ReadOnly CoarseIncrementProperty As StyledProperty(Of Decimal) =
+            AvaloniaProperty.Register(Of SliderValueUpDown, Decimal)(NameOf(CoarseIncrement), 0D)
+
+        Public Property CoarseIncrement As Decimal
+            Get
+                Return GetValue(CoarseIncrementProperty)
+            End Get
+            Set(value As Decimal)
+                SetValue(CoarseIncrementProperty, value)
+            End Set
+        End Property
+
         Protected Overrides ReadOnly Property StyleKeyOverride As Type
             Get
                 Return GetType(NumericUpDown)
@@ -39,6 +59,52 @@ Namespace Controls
             Increment = 1D
             FormatString = "F0"
             AddHandler LostFocus, Sub(s, e) RestoreTextFromValue()
+            ' TUNNELND, nicht blasend: die Schrittknöpfe sind Knöpfe im Template und melden ihren
+            ' Druck als behandelt, und das Mausrad fängt der ButtonSpinner selbst ab (er sitzt
+            ' zwischen uns und dem Textfeld). Auf dem Weg nach unten kommen beide Ereignisse hier
+            ' aber vorbei, und nur dort steht noch, ob SHIFT lag: SpinEventArgs trägt die
+            ' Zusatztasten nicht, OnSpin allein könnte die Frage also nicht beantworten.
+            ' In eckigen Klammern, weil AddHandler in VB ein Schlüsselwort ist und die gleichnamige
+            ' Methode sonst verdeckt bleibt.
+            Me.[AddHandler](PointerPressedEvent, New EventHandler(Of PointerPressedEventArgs)(AddressOf OnPointerDownForCoarseStep), RoutingStrategies.Tunnel)
+            Me.[AddHandler](PointerWheelChangedEvent, New EventHandler(Of PointerWheelEventArgs)(AddressOf OnPointerWheelForCoarseStep), RoutingStrategies.Tunnel)
+        End Sub
+
+        ''' Lag SHIFT auf dem Zeigerereignis, das den laufenden Schritt ausgelöst hat? Beim Halten
+        ''' eines Schrittknopfes zählt der Stand vom Drücken: die Wiederholung schickt weitere
+        ''' Klicks ohne eigenes Zeigerereignis, und wer mit SHIFT angefangen hat, meint den groben
+        ''' Schritt auch für die Wiederholung.
+        Private _coarseModifierOnPointer As Boolean
+
+        Private Sub OnPointerDownForCoarseStep(sender As Object, e As PointerPressedEventArgs)
+            _coarseModifierOnPointer = (e.KeyModifiers And KeyModifiers.Shift) = KeyModifiers.Shift
+        End Sub
+
+        Private Sub OnPointerWheelForCoarseStep(sender As Object, e As PointerWheelEventArgs)
+            _coarseModifierOnPointer = (e.KeyModifiers And KeyModifiers.Shift) = KeyModifiers.Shift
+        End Sub
+
+        ''' <summary>Die Weite für den nächsten Schritt: grob, wenn eine grobe eingestellt ist UND
+        ''' SHIFT liegt.</summary>
+        Private ReadOnly Property StepIncrement(coarse As Boolean) As Decimal
+            Get
+                If coarse AndAlso CoarseIncrement > 0D Then Return CoarseIncrement
+                Return Increment
+            End Get
+        End Property
+
+        ''' <summary>Schrittknöpfe und Mausrad. Der eigene Schritt ersetzt den der Basisklasse
+        ''' vollständig, weil deren Rechnung fest an <c>Increment</c> hängt.</summary>
+        ''' NICHT "increment" nennen: VB unterscheidet keine Groß- und Kleinschreibung, ein solcher
+        ''' Name verdeckt die geerbte Eigenschaft Increment, und der Vergleich unten prüfte sich
+        ''' dann selbst. Er war damit immer wahr, der grobe Schritt kam auf Knopf und Rad nie an.
+        Protected Overrides Sub OnSpin(e As SpinEventArgs)
+            Dim stepSize = StepIncrement(_coarseModifierOnPointer)
+            If stepSize = Increment Then
+                MyBase.OnSpin(e)
+                Return
+            End If
+            StepValue(If(e.Direction = SpinDirection.Increase, stepSize, -stepSize))
         End Sub
 
         ''' <summary>Ein leeres Feld (Entf/Rücktaste) darf nicht in den Wert durchschlagen. NumericUpDown
@@ -60,12 +126,13 @@ Namespace Controls
             MyBase.OnKeyDown(e)
             If e.Handled Then Return
 
+            Dim stepSize = StepIncrement((e.KeyModifiers And KeyModifiers.Shift) = KeyModifiers.Shift)
             Select Case e.Key
                 Case Key.Up, Key.PageUp
-                    StepValue(Increment)
+                    StepValue(stepSize)
                     e.Handled = True
                 Case Key.Down, Key.PageDown
-                    StepValue(-Increment)
+                    StepValue(-stepSize)
                     e.Handled = True
                 Case Key.Enter, Key.Return
                     RestoreTextFromValue()

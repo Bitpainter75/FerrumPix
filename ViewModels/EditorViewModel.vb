@@ -18370,7 +18370,13 @@ Namespace ViewModels
                 DiagnosticLogService.LogAlways("Editor.Save", "stage=afterCommitObjectAdjustments")
                 Dim adj = If(isFpxSave, GetCurrentFpxSaveAdjustments(), GetCurrentAdjustments())
                 DiagnosticLogService.LogAlways("Editor.Save", $"stage=adjustmentsReady annotations={If(adj.Annotations Is Nothing, 0, adj.Annotations.Count)}")
-                Dim preserveMetadata = If(saveAs AndAlso _mainVm?.Settings IsNot Nothing, _mainVm.Settings.PreserveMetadataOnSave, True)
+                ' DER KNOPF IM DIALOG ENTSCHEIDET, nicht die Einstellung. Er ist aus ihr vorbelegt
+                ' (ResetDialogSaveAsMetaOptions bei jedem Öffnen), wer ihn umlegt meint aber genau
+                ' diese eine Datei. Hier stand vorher die Einstellung selbst: der Knopf war sichtbar,
+                ' zurückgemeldet wurde sein Stand auch, und trotzdem blieb er wirkungslos - die
+                ' Stapelwege der Galerie folgten ihm längst. Beim Speichern ÜBER das Original gibt es
+                ' keinen Dialog und damit keine Frage; dort bleiben die Aufnahmedaten.
+                Dim preserveMetadata = If(saveAs AndAlso saveAsResult IsNot Nothing, saveAsResult.PreserveMetadata, True)
                 Dim ok As Boolean
                 If isFpxSave Then
                     ' Nicht-destruktiv als .fpx-Bündel sichern: das gerenderte Komposit (für die Anzeige) plus
