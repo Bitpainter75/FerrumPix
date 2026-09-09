@@ -24,12 +24,21 @@ Module Program
         AiModelService.SuppressRuntimeTelemetry()
         AppSettingsService.ApplyApplicationScaleEnvironment()
 
-        ' DER ABSTURZFANG GEHOERT HIERHER, nicht erst in die Anwendungsklasse. Dort wird er erst
-        ' angemeldet, wenn Avalonia schon steht - ein Absturz beim Aufbau des Toolkits (fehlende
-        ' Grafikbibliothek, fehlende Laufzeit) faellt vorher und hinterliesse keine Spur.
+        ' DIE BEIDEN SICHERHEITSNETZE GEHOEREN HIERHER, nicht in die Anwendungsklasse. Dort werden
+        ' sie erst angemeldet, wenn Avalonia schon steht - ein Absturz beim Aufbau des Toolkits
+        ' (fehlende Grafikbibliothek, fehlende Laufzeit) faellt vorher und hinterliesse keine Spur.
+        '
+        ' UND NUR HIER: eine zweite Anmeldung in der Anwendungsklasse schriebe jede Ausnahme, die
+        ' nach dem Hochlauf faellt, doppelt in errors.log. Sie fangen den Absturz nicht ab, das ist
+        ' nicht ihr Zweck - sie sichern den Stacktrace, bevor der Prozess endet.
         AddHandler AppDomain.CurrentDomain.UnhandledException,
-            Sub(sender, e) DiagnosticLogService.LogException("Start.UnhandledException",
+            Sub(sender, e) DiagnosticLogService.LogException("UnhandledException",
                                                             TryCast(e.ExceptionObject, Exception))
+        AddHandler TaskScheduler.UnobservedTaskException,
+            Sub(sender, e)
+                DiagnosticLogService.LogException("UnobservedTaskException", e.Exception)
+                e.SetObserved()
+            End Sub
 
         ' Build-Marker: beim Auswerten von Logs/Stacktraces muss zweifelsfrei erkennbar sein, WELCHER
         ' Build lief - mehrere Meldungen stammten unbemerkt aus einem veralteten Binary, und die

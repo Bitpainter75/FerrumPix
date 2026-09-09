@@ -64,24 +64,20 @@ Public Class App
         ' beim Bauen und wuerde einen frueher gesetzten ersetzen. Mit eingeschaltetem Diagnoselog
         ' schreibt sie danach mit, was sie beim Ziehen und Ablegen tut - die einzige Stelle, die
         ' ueber ihr eigenes Warten Auskunft gibt.
+        ' NICHT die Einstellung fragen, sondern den GELTENDEN Schalter: der Startparameter --debug
+        ' erzwingt das Protokoll für diesen Lauf, und dann sind es gerade die Meldungen der
+        ' Oberflächenschicht, die gebraucht werden. IsVerboseEnabled liest die Einstellung von
+        ' selbst, wenn nichts erzwungen wurde - ohne den Parameter ändert sich also nichts.
         Try
-            If AppSettingsService.Load().EnableDiagnosticLogging Then AvaloniaLogBridge.Install()
+            If DiagnosticLogService.IsVerboseEnabled Then AvaloniaLogBridge.Install()
         Catch
         End Try
         AppIcon = New WindowIcon(AssetLoader.Open(New Uri("avares://FerrumPix/Assets/FerrumPix_Icon.ico")))
 
-        ' Globales Sicherheitsnetz für Ausnahmen, die NICHT bereits lokal per Try/Catch abgefangen
-        ' werden (würden sonst kommentarlos abstürzen bzw. spurlos verschwinden) - nur relevant für
-        ' Diagnose, daher wie alle DiagnosticLogService-Aufrufe an den Einstellungen-Schalter
-        ' gekoppelt. Verhindert den Absturz selbst NICHT (das ist hier auch nicht das Ziel), sichert
-        ' aber den Stacktrace, bevor der Prozess endet.
-        AddHandler AppDomain.CurrentDomain.UnhandledException,
-            Sub(sender, e) DiagnosticLogService.LogException("UnhandledException", TryCast(e.ExceptionObject, Exception))
-        AddHandler TaskScheduler.UnobservedTaskException,
-            Sub(sender, e)
-                DiagnosticLogService.LogException("UnobservedTaskException", e.Exception)
-                e.SetObserved()
-            End Sub
+        ' Die beiden globalen Sicherheitsnetze stehen in Program.Main, nicht hier: dort greifen sie
+        ' AB DEM ERSTEN BEFEHL, während diese Stelle erst erreicht wird, wenn Avalonia bereits steht.
+        ' Ein Absturz beim Aufbau des Toolkits fällt vorher. Sie hier ein zweites Mal anzumelden
+        ' schriebe jede Ausnahme doppelt ins Protokoll.
     End Sub
 
     ''' <summary>Zwei Bauformen, deren Inhalt der Durchlauf ueber das Fenster nie zu sehen bekommt.
