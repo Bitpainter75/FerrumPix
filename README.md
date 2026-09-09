@@ -8,27 +8,15 @@ It is built with [Avalonia UI](https://avaloniaui.net/) and .NET 10, in VB.NET, 
 
 To be transparent: yes, I use AI to support my development workflow. However, it still requires a massive amount of manual work, architecture planning, and debugging. I am currently investing a lot of time. A ton of passion, unique ideas, and genuine hard work went into this project.
 
-FerrumPix is in active development. The gallery, viewer, editor, settings and Immich integration are already usable. Current work focuses on stability, performance, workflow polish and cleanup.
-
-Project website: [FerrumPix.app](https://ferrumpix.app/)
-
 ## Why FerrumPix?
 
-I wanted a fast, native desktop app that could handle my entire photo workflow without locking me into a large ecosystem or forcing me to jump between several different applications.
+I wanted a fast, native desktop app for my whole photo workflow, without being locked into a big ecosystem or jumping between four programs.
 
-Most tools in this space specialize in one particular area.
+Most tools in this space are good at one thing. Photo library apps organise, rate and tag well but edit only a little. RAW converters are excellent at tone and colour, and stay purely parametric. Pixel editors can do almost anything to a single image but have no real library. Immich and Nextcloud store and share photos beautifully, but they live in the browser.
 
-Photo library applications are great at organizing, rating, and tagging images, but often offer only limited editing. RAW converters excel at tone and color adjustments, but remain purely parametric. Pixel editors can do almost anything to an individual image, but usually have no real photo library. And self-hosted platforms such as Immich and Nextcloud are excellent for storing and accessing photos, but are primarily browser-based and don't provide a full desktop editing workflow.
+FerrumPix closes those gaps. It puts photo management, non-destructive RAW development, pixel editing, local folders and direct access to Immich and Nextcloud into one native application. Browse, rate and tag your library, open a photo for non-destructive adjustments, go down to the pixel when you need to, and work with your own server alongside your local folders.
 
-FerrumPix tries to bridge those gaps.
-
-It combines photo management, non-destructive RAW development, pixel editing, local files, and direct access to Immich and Nextcloud in one native desktop application.
-
-Browse, rate, tag and organize your library, open an image for non-destructive adjustments, switch to pixel-level editing when needed, and access photos from your own Immich server alongside your local folders.
-
-FerrumPix runs on Windows, Linux and macOS and is designed to stay fast, lightweight and local-first.
-
-It is primarily aimed at hobby photographers and enthusiasts rather than large professional studio workflows - and it doesn't really care whether you feed it RAW files from a camera or JPEGs from your phone.
+It runs on Windows, Linux and macOS, stays fast and local-first, and is built for hobby photographers and enthusiasts rather than studio pipelines. It does not care whether you feed it RAW files from a camera or JPEGs from your phone.
 
 ## What you can do with it
 
@@ -269,5 +257,8 @@ dotnet run --project FerrumPix.vbproj
 
 FerrumPix is [GPL-3.0-only](LICENSE). Every package carries that licence text and a `THIRD-PARTY-NOTICES.txt` naming each component and the licence it is used under: Avalonia UI, .NET, ReactiveUI, SkiaSharp, Svg.Skia, Microsoft.Data.Sqlite with SQLitePCLRaw, MetadataExtractor with XmpCore, QRCoder, BitMiracle.LibTiff.NET and ONNX Runtime (MIT, Apache-2.0 or BSD-3-Clause), the [Lensfun](https://github.com/lensfun/lensfun) lens database (CC-BY-SA 3.0), [Tabler Icons](https://github.com/tabler/tabler-icons) (MIT), and the bundled [LibRaw](https://www.libraw.org/) (LGPL-2.1) with [zlib](https://zlib.net/) (zlib licence) and [libjpeg](https://www.ijg.org/) (IJG licence), [libmpv](https://mpv.io/) (GPL-2.0-or-later) and [libheif](https://github.com/strukturag/libheif) with [libde265](https://github.com/strukturag/libde265) (both LGPL-3.0). For the GPL and LGPL libraries the packages also name the matching source: version, commit and build recipe.
 
+Project website: [FerrumPix.app](https://ferrumpix.app/)
+
+FerrumPix is in active development. The gallery, viewer, editor, settings and Immich integration are already usable. Current work focuses on stability, performance, workflow polish and cleanup.
 
 [Share your FerrumPix experience](https://github.com/Bitpainter75/FerrumPix/discussions/29)
