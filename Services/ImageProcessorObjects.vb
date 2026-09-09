@@ -49,7 +49,7 @@ Namespace Services
             ' Kontur: es fängt den Fall ab, dass eine sehr dünne Kontur beim Verkleinern ganz
             ' verschwindet. Vorher galt es auch für die Null, und dann zeichnete ein Objekt mit
             ' ausdrücklich abgeschalteter Kontur trotzdem eine Haarlinie - beim freien Pfad, dessen
-            ' ganze Erscheinung die Kontur ist, war das besonders sichtbar (Nutzerbefund 2026-08-08:
+            ' ganze Erscheinung die Kontur ist, war das besonders sichtbar (Nutzerbefund:
             ' "ich habe die Kontur beim Pfad auf 0, dennoch wird eine Linie gezeichnet").
             Dim strokeWidth = If(renderAnnotation.StrokeWidth <= 0.0F, 0.0F,
                                  Math.Max(1.0F, renderAnnotation.StrokeWidth))
@@ -94,7 +94,7 @@ Namespace Services
                 ' Die Farbe MUSS hier noch einmal aufgelegt werden: sie kommt in der Basis-Kette unter
                 ' das Bild (ApplyDocumentBackground, gleich nach der Leinwandgröße), und genau diese
                 ' Basis wird hier weggeworfen. Ohne das war der Grund nach dem Ausblenden immer
-                ' durchsichtig, auch wenn im Werkzeug eine Farbe stand (Nutzerbefund 2026-08-08).
+                ' durchsichtig, auch wenn im Werkzeug eine Farbe stand (Nutzerbefund).
                 result = New SKBitmap(source.Width, source.Height, SKColorType.Rgba8888, SKAlphaType.Premul)
                 Using clearCanvas = New SKCanvas(result)
                     clearCanvas.Clear(DocumentBackgroundColor(adj))

@@ -193,7 +193,7 @@ Namespace ViewModels
                 If String.IsNullOrEmpty(_currentFolder) Then Return ""
                 ' ERST DEN SCHLUSSTRENNER WEG. Ohne ihn gibt GetDirectoryName bei "/pfad/ordner/"
                 ' den Ordner SELBST zurueck, und in der Leiste stand dann "Ordner > Ordner". Die
-                ' Zeile darueber schneidet ihn laengst ab; hier fehlte es (Nutzerbefund 2026-09-06,
+                ' Zeile darueber schneidet ihn laengst ab; hier fehlte es (Nutzerbefund,
                 ' aufgefallen an einem ueberwachten Katalogordner - der kommt aus den Einstellungen
                 ' und darf einen Schlusstrenner tragen, waehrend die uebrigen Wurzeln keinen haben).
                 Dim self = _currentFolder.TrimEnd(IO.Path.DirectorySeparatorChar, IO.Path.AltDirectorySeparatorChar)
@@ -1384,7 +1384,7 @@ Namespace ViewModels
         Public Property ContextCommands As MenuCommands
 
         ''' <summary>Die Eintraege des Kontextmenues, gebaut aus Aufrufort und Auswahl. Die Regeln
-        ''' stehen in Audits/KONTEXTMENUE.md und gelten fuer alle Bereiche gleich - die Galerie ist
+        ''' stehen in KONTEXTMENUE.md und gelten fuer alle Bereiche gleich - die Galerie ist
         ''' dabei die fuehrende Vorlage.</summary>
         Public ReadOnly Property ContextActions As IReadOnlyList(Of Object)
             Get
@@ -1603,7 +1603,7 @@ Namespace ViewModels
         ''' <para>Sichtbar wurde das ueberall dort, wo der Inhalt ERST NACH dem Aufbau der Ansicht
         ''' eintrifft: ein Ordner ohne Katalogdaten, Suchlisten, Immich und Nextcloud blieben leer,
         ''' bis ein Ansichts- oder Ordnerwechsel die Flaeche neu aufbaute (Nutzerbefund
-        ''' 2026-08-28). Nur wo der Katalog vorfuellte, stand schon Inhalt da, als der Repeater das
+        ''' ). Nur wo der Katalog vorfuellte, stand schon Inhalt da, als der Repeater das
         ''' erste Mal vermessen wurde - deshalb fiel es dort nicht auf.</para>
         '''
         ''' <para>MinHeight und nicht Height: braucht der Repeater mehr, soll er sich nehmen, was
@@ -2555,7 +2555,7 @@ Namespace ViewModels
         '''
         ''' Der Baum kannte bisher genau zwei Anfaenge: den persoenlichen Ordner und die Wurzel des
         ''' Dateisystems (unter Windows die Laufwerke). Wer seine Fotos woanders liegen hat, klappte
-        ''' sich denselben Weg jedes Mal wieder auf (Nutzerbefund 2026-09-06).
+        ''' sich denselben Weg jedes Mal wieder auf (Nutzerbefund).
         '''
         ''' Wo die Fotos liegen, steht dabei laengst in den Einstellungen - eingetragen fuer den
         ''' Katalogindex. Diese Angabe ein zweites Mal am Ordnerbaum zu verlangen waere dieselbe
@@ -2901,7 +2901,7 @@ Namespace ViewModels
                 Case "NextcloudAll", "NextcloudAlbum", "NextcloudPerson", "NextcloudPlace", "NextcloudTag"
                     ' Ohne diesen Zweig blieb "Zu Favoriten hinzufügen" auf einem Nextcloud-Knoten
                     ' WIRKUNGSLOS: der Eintrag war sichtbar, es entstand nur kein Favorit
-                    ' (Nutzerbefund 2026-08-10).
+                    ' (Nutzerbefund).
                     entry = New FavoriteEntry With {
                         .Kind = "Nextcloud", .Name = node.Name, .NodeKind = node.Kind,
                         .NodeId = If(String.IsNullOrWhiteSpace(node.Id), If(node.Query, ""), node.Id)}
@@ -2947,7 +2947,7 @@ Namespace ViewModels
             ' NavigateToFolderAsync; die virtuellen Ziele (Favoriten, Immich, Nextcloud, gespeicherte
             ' Suchen) liefen bisher daran vorbei - dort blieb ein Personen-, Orts- oder
             ' Stichwortfilter stehen und siebte still die Liste des neuen Ziels, waehrend die drei
-            ' Knoepfe ihre Akzentfarbe behielten (Nutzerbefund 2026-08-16). Die reinen Klappknoten
+            ' Knoepfe ihre Akzentfarbe behielten (Nutzerbefund). Die reinen Klappknoten
             ' oeffnen gar keine Ansicht und lassen die Auswahl deshalb, wie sie ist.
             Select Case node.Kind
                 Case "ImmichPeopleRoot", "ImmichPlacesRoot",
@@ -4407,7 +4407,7 @@ Namespace ViewModels
         ''' Person und Ort gehen trotzdem weg - sie gehoeren zu genau einer Ansicht. Die allgemeine
         ''' Leiste (Favorit, Sterne, Dateityp, Farbmarkierung) bleibt dagegen stehen: wer eine Serie
         ''' ordnerweise durchgeht, will dabei dieselbe Auswahl sehen und nicht in jedem Ordner neu
-        ''' filtern (Nutzerbefund und Entscheidung am 2026-09-05). Beim Wechsel der QUELLE bleibt es
+        ''' filtern (Nutzerbefund, bewusst so entschieden). Beim Wechsel der QUELLE bleibt es
         ''' beim Zuruecksetzen, dort haette sie fuer die neue Ansicht nie jemand gewaehlt.</param>
         Private Sub ClearButtonFiltersSilently(Optional scopeChanged As Boolean = True)
             ' Der Text im Suchfeld ist ebenfalls ein Filter auf die gerade sichtbare Menge.
@@ -5970,7 +5970,7 @@ Namespace ViewModels
             ' aus Durchlaeufen von frueher und von jedem Ordner, den jemand mit eingeschalteten
             ' versteckten Ordnern besucht hat. Ueber Person, Ort, Stichwort oder Bewertung stand ein
             ' weggeworfenes Bild damit wieder in der Trefferliste, und loeschen liess es sich nicht
-            ' (die Regel weist versteckte Pfade ab, siehe Bildschirmfoto Nutzerbefund 2026-08-11).
+            ' (die Regel weist versteckte Pfade ab, siehe Bildschirmfoto Nutzerbefund).
             ' Beide Bedingungen VOR File.Exists: Zeichenkettenarbeit ist billiger als ein Zugriff.
             Dim showHidden = FolderNode.ShowHiddenFolders
             For Each meta In source
@@ -6253,7 +6253,7 @@ Namespace ViewModels
                     }
                     ' DEN KATALOG KENNT DIESE DATEI NOCH NICHT - dann kommen ihre Dateidaten direkt
                     ' von der Platte. Ohne sie stuende das Element ohne Datum da, und die Zeitleiste
-                    ' meldete fuer den ganzen Bereich "Ohne Datum" (Nutzerbefund 2026-08-28: in einer
+                    ' meldete fuer den ganzen Bereich "Ohne Datum" (Nutzerbefund: in einer
                     ' Suche ueber 7500 Bilder war der Katalog noch nicht vollstaendig).
                     '
                     ' HIER und nicht beim Anzeigen: dieser Lauf ist der Hintergrundfaden. Auf einer
@@ -6649,7 +6649,7 @@ Namespace ViewModels
                         ' diese Bedingung - und stieg damit in den Systempapierkorb (".Trash-1000").
                         ' Geloeschte Bilder standen in der Trefferliste, liessen sich aber nicht
                         ' loeschen: die Regel weist versteckte Pfade ab, und es passierte wortlos
-                        ' nichts (Nutzerbefund 2026-08-10).
+                        ' nichts (Nutzerbefund).
                         ' DER PAPIERKORB IMMER NICHT - auch mit eingeschalteten versteckten
                         ' Ordnern. Was dort liegt, ist weggeworfen.
                         If FileOperationPolicy.IsTrashFolder(child) Then Continue For
@@ -7553,7 +7553,7 @@ Namespace ViewModels
             ' Loaded: das Reset von DisplayItems stellt InvalidateGalleryItemsLayout auf Loaded, und
             ' erst DIESE Aufgabe stellt das Anfordern der Vorschaubilder nach. Ein Yield auf Render
             ' laeuft damit VOR beidem - er wartete also auf gar nichts, und die Kacheln blieben leer,
-            ' bis der Scan durch war (Nutzerbefund 2026-08-28: "erst wenn die Meldung weg ist sieht
+            ' bis der Scan durch war (Nutzerbefund: "erst wenn die Meldung weg ist sieht
             ' man die ersten Bilder").
             '
             ' Background liegt unter Loaded UND unter Render und kommt deshalb zuverlaessig als
@@ -7608,7 +7608,7 @@ Namespace ViewModels
             '
             ' ERSETZEN tauschte JEDES Objekt aus, auch die unveraenderten. Die Anzeige sah lauter
             ' neue Elemente und baute saemtliche Kacheln neu auf - sichtbar als Flackern kurz nach
-            ' dem ersten Bild, obwohl sich nichts geaendert hatte (Nutzerbefund 2026-08-28).
+            ' dem ersten Bild, obwohl sich nichts geaendert hatte (Nutzerbefund).
             '
             ' Also behaelt jedes bereits gezeigte Element seine Identitaet und bekommt nur die
             ' geprueften Werte (ImageItem.AdoptScannedState). Danach stehen in Items und
@@ -7737,7 +7737,7 @@ Namespace ViewModels
         ''' <para>BEIDE Wege in den Ordner bauen sie ueber DIESE Stelle - der Sofortbestand aus dem
         ''' Katalog und der Dateisystemlauf danach. Fehlten sie im Sofortbestand, schoebe der Lauf
         ''' sie kurz darauf VOR den Bildern ein, und die ganze Galerie ruckte um eine Zeile weiter
-        ''' (Nutzerbefund 2026-08-28: "ansonsten springt die Gallery danach"). Ein
+        ''' (Nutzerbefund: "ansonsten springt die Gallery danach"). Ein
         ''' Verzeichnis-Listing zweimal zu machen kostet weniger als dieser Sprung; das zweite
         ''' beantwortet ohnehin das Betriebssystem aus seinem Zwischenspeicher.</para>
         '''
@@ -7956,8 +7956,8 @@ Namespace ViewModels
         '
         ' Zwei Laeufe arbeiten der Galerie zu, ohne sich bisher zu zeigen: das Erzeugen der
         ' Vorschaubilder und das Nachlesen der Metadaten. Beide waren nur daran zu erkennen, dass
-        ' nach und nach etwas erschien (Patrick, 2026-08-27: "man sollte auch erkennen koennen,
-        ' wenn im Hintergrund noch weitere Threads Thumbnails erstellen und Metadaten einlesen").
+        ' nach und nach etwas erschien. Dass im Hintergrund noch Vorschaubilder entstehen und
+        ' Metadaten eingelesen werden, soll ablesbar sein.
         Private Shared _metaRefreshTotal As Integer = 0
         Private Shared _metaRefreshDone As Integer = 0
 
@@ -8321,7 +8321,7 @@ Namespace ViewModels
 
             ' Nach den DATEIEN fragen, nicht nach dem Ordner. Eine Ordnerabfrage ueber
             ' "FilePath LIKE 'ordner/%'" holt auch alles aus den Unterordnern - beim Oeffnen eines
-            ' reinen Elternordners waren das an Patricks Bestand 17178 Katalogzeilen zu
+            ' reinen Elternordners waren das an einem gewachsenen Bestand 17178 Katalogzeilen zu
             ' zweiunddreissig Spalten fuer null angezeigte Bilder. Hier steht die Dateiliste schon
             ' fertig da, und ueber sie geht die Abfrage auf den Primaerschluessel.
             '
@@ -8372,7 +8372,7 @@ Namespace ViewModels
                 ' ThreadPool legt danach nur ein bis zwei Faeden je Sekunde nach - deshalb konnte
                 ' schon die schnelle Katalogabfrage Sekunden auf einen freien Worker warten, und
                 ' beim Ordnerwechsel blieben die Kacheln leer, bis dieser Lauf durch war
-                ' (Nutzerbefund 2026-08-28).
+                ' (Nutzerbefund).
                 '
                 ' EIN VIERTEL BLEIBT FREI, nicht eine feste Zahl: fest reserviert (vier Leser plus
                 ' ein Hintergrundlader) waere ein Vierkerner auf einen einzigen Faden zurueckgefallen
@@ -8384,7 +8384,7 @@ Namespace ViewModels
                 ' Ordnerwechsel prueft die Marke erst hinterher. Wer aus einem grossen Ordner in
                 ' einen anderen wechselte, wartete deshalb darauf, dass der ALTE Ordner fertig
                 ' gebaut wird, bevor die Katalogabfrage des neuen ueberhaupt einen freien Worker
-                ' bekam (Nutzerbefund 2026-08-28: "gefuehlt mehrere Sekunden, bis die ersten Bilder
+                ' bekam (Nutzerbefund: "gefuehlt mehrere Sekunden, bis die ersten Bilder
                 ' sichtbar werden"). Parallel.For wirft dann OperationCanceledException, und die
                 ' faengt der Ordnerwechsel bereits ab.
                 Dim reservedForThumbnails = Math.Max(1, Environment.ProcessorCount \ 4)
@@ -8615,7 +8615,7 @@ Namespace ViewModels
             ' werden vorn und hinten so viele Plaetze entfernt und angehaengt, wie das Fenster
             ' wirklich weitergerueckt ist - alles dazwischen behaelt seine fertig aufgebaute
             ' Kachel. Beim Rollen um eine Zeile sind das fuenf Aenderungen statt sechzig
-            ' Neuaufbauten (Nutzerbefund 2026-08-28: Position fuer Position zu ersetzen brachte das
+            ' Neuaufbauten (Nutzerbefund: Position fuer Position zu ersetzen brachte das
             ' Rollen "mehr ins Stocken").
             '
             ' Ganz zuruecksetzen, wenn das neue Fenster mit dem alten NICHTS zu tun hat - beim
@@ -8626,7 +8626,7 @@ Namespace ViewModels
             ' gemeldet, und das nicht virtualisierende WrapPanel des Rasters wiederholt daraufhin
             ' sein Layout ueber alle Kacheln. Ein Rollschritt ueber zwei Zeilen bei sechs Spalten
             ' sind vierundzwanzig Meldungen und damit vierundzwanzig Layoutlaeufe; am echten
-            ' Fenster gemessen bis zu 350 ms (Nutzerprotokoll 2026-08-27, 1000 Bilder). Die
+            ' Fenster gemessen bis zu 350 ms (an 1000 Bildern). Die
             ' LISTENansicht hat das seit der Umstellung auf den ItemsRepeater nicht mehr - der
             ' verarbeitet einzelne Aenderungen guenstig. Fuer das Raster bleibt es offen; ein
             ' Buendeln zu einer einzigen Meldung hilft dort nicht, weil eine Ruecksetzung genau den
@@ -11508,7 +11508,7 @@ Namespace ViewModels
 
                 ' ES DAUERT, UND ZWAR SICHTBAR. Ein Stapel mit Modell-Hochskalierung rechnet je Bild
                 ' Minuten; ohne Anzeige sitzt die Oberflaeche still da und ist von einem Haenger
-                ' nicht zu unterscheiden (Nutzerbefund 2026-08-08). Die Anzeige zaehlt seither
+                ' nicht zu unterscheiden (Nutzerbefund). Die Anzeige zaehlt seither
                 ' Bilder UND Kacheln mit und traegt das X zum Abbrechen.
                 _mainVm.BeginBusyOverlay(BatchProgressText())
                 Await Task.Run(Sub()

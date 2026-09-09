@@ -414,7 +414,7 @@ Namespace Services
         ''' Nachlaessigkeit: die Perspektive laeuft einmal je Render in der Pipeline, dieser Weg
         ''' aber auch je REGION-PATCH fuer jede verzerrte Objektebene, also bei jedem Ziehen eines
         ''' Objekts je Mausbewegung. Mit Mitchell (16 Abtastungen je Pixel statt 4) wurde genau
-        ''' das zaeh und trieb die CPU hoch (Nutzerbefund 2026-08-05); die Treppen des
+        ''' das zaeh und trieb die CPU hoch (Nutzerbefund); die Treppen des
         ''' Naechster-Nachbar beseitigt Linear ebenso.</summary>
         Private Shared ReadOnly WarpSampling As New SKSamplingOptions(SKFilterMode.Linear)
 

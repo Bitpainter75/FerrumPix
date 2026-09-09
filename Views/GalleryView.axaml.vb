@@ -496,7 +496,7 @@ Namespace Views
                     ' bevor es eine Hoehe hatte, und forderte dann kein einziges Vorschaubild an.
                     ' Beim Ordnerwechsel blieben die Kacheln dadurch leer, bis der Dateisystemlauf
                     ' mit seinem eigenen Reset einen zweiten Versuch ausloeste (Nutzerbefund
-                    ' 2026-08-28). Background liegt unter beidem und kommt sicher danach.
+                    ' ). Background liegt unter beidem und kommt sicher danach.
                     Dispatcher.UIThread.Post(AddressOf RequestViewportThumbnails, DispatcherPriority.Background)
                 End Sub, DispatcherPriority.Loaded)
         End Sub
@@ -597,7 +597,7 @@ Namespace Views
                 ' ContentHeight sass, kam dieser Durchlauf von selbst - SetDisplayWindow aenderte
                 ' beim Zoomen die Gesamthoehe. Seit der Repeater direkt am ScrollViewer haengt,
                 ' aendert sich von aussen nichts mehr, und die Kacheln wurden zwar groesser, standen
-                ' aber weiter im alten Raster - sie liefen ineinander (Nutzerbefund 2026-08-28).
+                ' aber weiter im alten Raster - sie liefen ineinander (Nutzerbefund).
                 InvalidateGalleryItemsLayout()
                 QueueViewportThumbnailRefresh()
                 Return
@@ -737,7 +737,7 @@ Namespace Views
         ' Solange beide ueber denselben ScrollViewer liefen, behielt ein Wechsel die Position von
         ' selbst. Seit sie getrennt sind, hat jede ihren eigenen Stand - und die Gruppenansicht
         ' sprang beim ersten Wechsel an ihren alten, meist ganz nach oben (Nutzerbefund
-        ' 2026-08-28). Die Liste bleibt bewusst aussen vor: sie hatte schon immer einen eigenen
+        ' ). Die Liste bleibt bewusst aussen vor: sie hatte schon immer einen eigenen
         ' ScrollViewer, und ihr Stand soll ein Wechsel ins Raster nicht mitnehmen.
         Private _tileScrollOffsetY As Double = 0
 
@@ -873,10 +873,10 @@ Namespace Views
                 ' oben und unten je ZWEI Bildschirmhoehen - das Fenster war damit fuenfmal so gross
                 ' wie der sichtbare Bereich, und jeder Rollschritt baute entsprechend viele Kacheln
                 ' auf. Am echten Fenster gemessen waren das bis zu 160 gewechselte Plaetze und
-                ' 100 bis 400 ms je Schritt (Nutzerprotokoll 2026-08-28).
+                ' 100 bis 400 ms je Schritt (gemessen).
                 '
-                ' EINE Hoehe nach oben und unten (Patrick am 2026-08-28, nach dem Vergleich am echten
-                ' Fenster): eine halbe war beim Ziehen am Regler zu knapp, zwei sind zu teuer. Damit
+                ' EINE Hoehe nach oben und unten, am echten Fenster verglichen: eine halbe war beim Ziehen
+                ' am Regler zu knapp, zwei sind zu teuer. Damit
                 ' ist das Fenster dreimal so gross wie der sichtbare Bereich statt fuenfmal - und
                 ' jeder Sprung kostet entsprechend weniger.
                 ' KEIN SetDisplayWindow MEHR. Der Repeater des Rasters haengt direkt an Items und
@@ -1361,7 +1361,7 @@ Namespace Views
         ''' Unter X11 laeuft auch ein anwendungsinterner Zug ueber das Fenstersystem, und die Daten
         ''' kommen dort erst beim Ablegen heraus - waehrend der Bewegung liest sich die Last leer.
         ''' Wer daran den Mauszeiger festmacht, zeigt "geht nicht" ueber einem Ziel, auf dem der Drop
-        ''' anschliessend laeuft (Nutzerbefund 2026-08-10: Verbotszeichen an allen Baumzielen).
+        ''' anschliessend laeuft (Nutzerbefund: Verbotszeichen an allen Baumzielen).
         ''' Angeboten wird deshalb, sobald der Knoten ueberhaupt etwas annehmen KANN; was wirklich
         ''' ankommt, entscheidet der Drop.</summary>
         Public Sub OnImmichTreeDragOver(sender As Object, e As DragEventArgs)
@@ -1847,7 +1847,7 @@ Namespace Views
             ' SERVERBILDER ZIEHEN IHREN PSEUDO-PFAD, keine Datei.
             '
             ' Vorher holte diese Stelle für jedes Immich-Asset das ORIGINAL in eine Temp-Datei und
-            ' legte deren Pfad in die Ziehlast. Zwei Schäden auf einmal (Nutzerbefund 2026-08-10:
+            ' legte deren Pfad in die Ziehlast. Zwei Schäden auf einmal (Nutzerbefund:
             ' "CPU geht hoch, App nicht mehr bedienbar"):
             '
             ' 1. Der Zug begann erst NACH dem Herunterladen. Bei mehreren markierten Bildern zieht
@@ -3307,7 +3307,7 @@ Namespace Views
 
         ''' <summary>Der benannte Weg: „Anzeigen" im Kontext- und Fußmenü und das Auge auf der
         ''' Kachel. Der Eintrag sagt, wohin es geht, also geht es dorthin - die Einstellung hat hier
-        ''' nichts zu entscheiden (Nutzerbefund 2026-08-06: beide landeten im Editor, sobald die
+        ''' nichts zu entscheiden (Nutzerbefund: beide landeten im Editor, sobald die
         ''' Einstellung auf Editor stand). Wer bearbeiten will, hat daneben „Bearbeiten".</summary>
         Private Sub OpenGalleryItemInViewer(item As ImageItem)
             Dim vm = GetVm()

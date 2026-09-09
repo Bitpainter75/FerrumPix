@@ -2014,6 +2014,38 @@ Namespace ViewModels
                 CurrentImage = Nothing
                 ImageWidth = 0
                 ImageHeight = 0
+                ' DASSELBE VIDEO NICHT ZWEIMAL LADEN. Zwei Ladeauftraege kurz hintereinander bauen
+                ' mpv um, waehrend der Renderfaden noch Einzelbilder der ersten Fassung holt; das
+                ' Zuschneiden rechnet dann mit Massen, die nicht mehr gelten, und libmpv bricht mit
+                ' einer Zusicherung ab ("mp_image_crop"). Gemeldet unter macOS an 0.9.41, wo das
+                ' Bild seit dem Umzug in die Bildflaeche ueber diesen Renderweg laeuft.
+                '
+                ' WARUM ES UEBERHAUPT ZWEIMAL KOMMT: dieser Weg hat sieben Aufrufer, und ein Video
+                ' aus Immich oder Nextcloud liegt erst nach dem Herunterladen als Datei vor - der
+                ' Weg dorthin laeuft ein zweites Mal. Eine lokale Datei nicht, deshalb liefen die
+                ' seit jeher.
+                '
+                ' DER MERKER STEHT HIER und nicht im Spieler: dort wird der geladene Pfad beim Stop
+                ' geloescht, und LoadVideo stoppt als Erstes - ein Riegel dort haette nie gegriffen.
+                ' Und ein erster Ladeauftrag, der mangels Ausgabeflaeche liegen blieb, geht nicht
+                ' verloren: den holt LoadPending nach (StartPendingVideoAutoplay), nicht ein
+                ' zweiter Durchlauf hier.
+                '
+                ' Das WIEDERHOLEN nach dem Ende ist nicht betroffen: es ruft LoadVideo direkt.
+                '
+                ' UND ES MUSS NOCH EIN SPIELER DA SEIN. Der Merker allein reichte nicht: mpv kann
+                ' sich selbst beenden (OnVideoPlaybackTerminated) oder am Aufbau scheitern
+                ' (OnVideoInitializationFailed), und beide werfen den Spieler weg. Der Merker stuende
+                ' dann noch auf der Datei, und dasselbe Video liesse sich NIE WIEDER abspielen - ein
+                ' Riegel, der genau im Fehlerfall zuschlaegt. Die Frage nach dem Spieler haengt an
+                ' der Bedingung selbst und nicht an einer Liste von Abbauwegen, die jeder neue Weg
+                ' wieder vergessen kann.
+                If _mediaPlayer IsNot Nothing AndAlso
+                   String.Equals(_currentImagePath, _loadedVideoPath, StringComparison.Ordinal) Then
+                    DiagnosticLogService.LogAlways("VideoPlayback.Weg",
+                        $"schon geladen, zweites Laden uebersprungen ({IO.Path.GetFileName(_currentImagePath)})")
+                    Return
+                End If
                 LoadVideo(_currentImagePath)
                 Return
             End If
@@ -2215,6 +2247,10 @@ Namespace ViewModels
 
         Private _pendingVideoAutoplay As Boolean = False
 
+        ''' <summary>Das Video, das der Betrachter GERADE ZEIGT - die Datei, für die er zuletzt einen
+        ''' Ladeauftrag gegeben hat. Leer, sobald die Wiedergabe beendet wurde.</summary>
+        Private _loadedVideoPath As String = ""
+
         Private Sub LoadVideo(path As String)
             EnsureMediaPlayer()
             If _mediaPlayer Is Nothing Then Return
@@ -2226,6 +2262,7 @@ Namespace ViewModels
                 _isVideoEnded = False
                 Me.RaisePropertyChanged(NameOf(ShowVideoSurface))
                 _mediaPlayer.Load(path)
+                _loadedVideoPath = If(path, "")
                 _pendingVideoAutoplay = True
             Catch ex As Exception
                 DiagnosticLogService.LogException("VideoPlayback.LoadVideo", ex)
@@ -2244,6 +2281,9 @@ Namespace ViewModels
         End Sub
 
         Public Sub StopVideoPlayback()
+            ' AUCH OHNE SPIELER vergessen, was gezeigt wurde: sonst hielte der Merker eine Datei
+            ' fest, die niemand mehr abspielt, und das nächste Auswählen derselben Datei täte nichts.
+            _loadedVideoPath = ""
             If _mediaPlayer Is Nothing Then Return
             Try
                 _mediaPlayer.Stop()
@@ -2254,6 +2294,10 @@ Namespace ViewModels
         End Sub
 
         Public Sub ShutdownVideo()
+            ' Der Merker darf nichts behaupten, was es nicht mehr gibt: ohne Spieler laeuft kein
+            ' Video. Der Riegel in LoadBitmap fragt zwar ohnehin nach dem Spieler, aber ein Zustand,
+            ' der luegt, wird beim naechsten Leser zur Falle.
+            _loadedVideoPath = ""
             If _mediaPlayer IsNot Nothing Then
                 DetachMediaPlayerHandlers(_mediaPlayer)
                 _mediaPlayer.Dispose()
@@ -2612,7 +2656,7 @@ Namespace ViewModels
                          ' keines davon beschreibt das Asset, das der Nutzer sieht. Das gilt auch
                          ' für ihren NAMEN: sie heißt nach der Asset-Kennung ({uuid}.jpg), damit
                          ' der Rückweg zum Asset daran hängt. In der Leiste stand deshalb eine
-                         ' Kennung statt des Fotonamens (Nutzerbefund 2026-08-27); der richtige
+                         ' Kennung statt des Fotonamens (Nutzerbefund); der richtige
                          ' Name kommt vom Sitzungs-Element, der Temp-Ordner geht niemanden an.
                          If _isImmichSession Then
                              info.FileCreated = ""

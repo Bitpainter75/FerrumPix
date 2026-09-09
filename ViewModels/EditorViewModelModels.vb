@@ -1204,7 +1204,7 @@ Namespace ViewModels
                                                     ' Reglerwert traf damit etwas anderes, sobald
                                                     ' die Farbe nur in EINEM Kanal abwich, und der
                                                     ' Uebergang blieb dort ganz wirkungslos
-                                                    ' (Nutzerbefund 2026-08-16).
+                                                    ' (Nutzerbefund).
                                                     Dim mask = ImageProcessor.BuildColorRangeMask(
                                                         rendered, x, y, tolerance, feather, bounds, contiguous)
                                                     Return (Mask:=mask, Bounds:=bounds)

@@ -384,7 +384,7 @@ Namespace ViewModels
         ' selbst, nicht seine Position (Referenz, deshalb übersteht sie jedes Umsortieren).
         '
         ' Er bleibt auch nach dem Anwenden vertreten: der Winkel steht danach weiter am Regler und
-        ' lässt sich nachziehen oder auf null stellen (Nutzerbefund 2026-09-04, vorher sprang der
+        ' lässt sich nachziehen oder auf null stellen (Nutzerbefund, vorher sprang der
         ' Regler beim Übernehmen auf 0 und der Schritt war nur noch über Rückgängig erreichbar).
         Private _editingCommittedTransform As GeometryOperation = Nothing
         Private _cropLeft As Double = 0
@@ -1011,7 +1011,7 @@ Namespace ViewModels
         ''' (Region- und Patch-Render) halten den Vorschau-Zeitgeber an und malen nur in die
         ''' vorhandene Szene - was seit dem letzten Vollrender am ARBEITSBILD geschehen ist, bliebe
         ''' damit unsichtbar. Genau so stand ein ausgeschnittener Bereich nach dem Einfuegen noch
-        ''' im Hintergrund, bis irgendwann ein Vollrender kam (Nutzerbefund 2026-08-27):
+        ''' im Hintergrund, bis irgendwann ein Vollrender kam (Nutzerbefund):
         ''' Strg+X plant einen Vollrender, Strg+V hielt ihn an und rendert nur um das eingefuegte
         ''' Objekt herum. Steht das Merkmal, gehen die Kurzwege deshalb auf den Vollrender zurueck.
         Private _fullRenderPending As Boolean
@@ -1163,7 +1163,7 @@ Namespace ViewModels
         ''' gewoehnliche Vorschau - siehe BeginSliderPreviewDrag. Fuer sie gibt es kein "gross
         ''' genug": Schaerferadius, Koernungsgroesse, Fleckengroesse und Strukturradius zaehlen in
         ''' Bildpunkten, und jede Verkleinerung zeigt etwas anderes, als hinterher herauskommt
-        ''' (Patrick am 2026-08-28: auch 2304 war dort noch verfaelschend). Der durchlaufende Takt
+        ''' (auch 2304 war dort noch verfaelschend). Der durchlaufende Takt
         ''' gilt fuer sie trotzdem - das war der eigentliche Befund.</para></summary>
         Private Const SliderPreviewMaxDimension As Integer = 2048
         ''' <summary>Wie lange nach einem einzelnen Reglerschritt (Rad, Zahlenfeld, Pfeiltasten) noch
@@ -1711,7 +1711,7 @@ Namespace ViewModels
         Private Sub LoadFixedShapeItems()
             _fixedShapeItems.Clear()
             Const base As String = ShapeIconFolder
-            ' Der PFAD gehoert hier NICHT hin (Patrick am 2026-08-04): jede Form dieser Liste wird
+            ' Der PFAD gehoert hier NICHT hin: jede Form dieser Liste wird
             ' AUFGEZOGEN, der Pfad wird Punkt fuer Punkt gesetzt. Er ist ein eigenes Werkzeug und
             ' keine Form - und stand hier zuletzt nur als zweiter Weg in dasselbe Werkzeug.
             AddFixedShape("Rectangle", "Rechteck", base & "rectangle.svg")
@@ -2460,7 +2460,7 @@ Namespace ViewModels
                 ' Regel wie beim Werkzeugwechsel: ab zwei Punkten wird er uebernommen, darunter ist
                 ' er nichts und wird verworfen. Sonst laeuft er neben der neuen Markierung weiter,
                 ' und weil die Stuetzpunkt-Bedienung einen Entwurf ausschliesst, standen am
-                ' angeklickten Pfad keine Knoepfe (Nutzerbefund 2026-08-09: nach "Neuer Pfad" und
+                ' angeklickten Pfad keine Knoepfe (Nutzerbefund: nach "Neuer Pfad" und
                 ' einem Klick neben das Bild fehlte die ganze Punktarbeit).
                 '
                 ' VOR dem Abbruch oben: uebernimmt der Entwurf, legt er selbst eine Ebene an und
@@ -2472,7 +2472,7 @@ Namespace ViewModels
                 End If
                 If clamped = _selectedAnnotationIndex AndAlso _extraSelectedAnnotations.Count = 0 Then Return
                 ' Die Miniatur der Zeile wird beim ABWAEHLEN nachgezogen, nicht bei jeder Aenderung
-                ' (Nutzerentscheidung 2026-08-04). Waehrend man tippt oder malt, sieht man die
+                ' (bewusst so, siehe MASKEN_EBENEN_AUSWAHL.md). Waehrend man tippt oder malt, sieht man die
                 ' Miniatur ohnehin nicht an - sie bei jedem Strich neu zu zeichnen hiesse, eine
                 ' Pinselebene mit allen ihren Strichen je Strich einmal mehr zu zeichnen.
                 RefreshThumbnailForAnnotationIndex(_selectedAnnotationIndex)
@@ -2522,7 +2522,7 @@ Namespace ViewModels
                     ' Details, Effekte und Filter arbeiten auf Bildpunkten, und die hat er nicht -
                     ' dort waere seine Zeile markiert, ohne dass irgendetwas davon zu bedienen
                     ' waere. Beim Drehen, Verschieben und Transformieren bleibt es dagegen beim
-                    ' Werkzeug: dort ist der Pfad als Objekt gemeint (Nutzerbefund 2026-08-09).
+                    ' Werkzeug: dort ist der Pfad als Objekt gemeint (Nutzerbefund).
                     If IsObjectAdjustTool(_currentTool) AndAlso
                        String.Equals(NormalizeAnnotationKind(_annotations(clamped).Kind), "Path", StringComparison.Ordinal) Then
                         targetTool = EditorTool.Path
@@ -2532,20 +2532,20 @@ Namespace ViewModels
                     ' Objekts nahm einem genau die Bedienung weg, die man gerade brauchte - samt
                     ' rotem Overlay. Sonst SPRINGT der Editor aus der Maske heraus bewusst in das
                     ' Werkzeug der Ebene: wer eine Ebene anklickt, will an sie heran
-                    ' (Nutzerentscheidung 2026-08-05).
+                    ' (bewusst so, siehe MASKEN_EBENEN_AUSWAHL.md).
                     If _currentTool = EditorTool.Mask AndAlso
                        Not String.IsNullOrEmpty(_annotations(clamped).MaskId) Then targetTool = _currentTool
                     ' Im AUSWAHL-Werkzeug bleibt der Editor IMMER stehen. Dort markiert man eine
                     ' Ebene, um auf ihr eine Pixelauswahl aufzuziehen - Zauberstab, Rechteck, Lasso;
                     ' ein Sprung ins Werkzeug der Ebene nahm einem genau diese Werkzeuge weg
-                    ' (Nutzerbefund 2026-08-07). Verloren geht dabei nichts: der Platzierungstyp
+                    ' (Nutzerbefund). Verloren geht dabei nichts: der Platzierungstyp
                     ' akzentuiert weiterhin das Werkzeugsymbol der Ebene, und ihre Eigenschaften
                     ' stehen unter den Auswahleinstellungen - ShowAnnotationProperties haengt am
                     ' markierten Objekt, nicht am Werkzeug.
                     ' EIN PFAD IST DAVON AUSGENOMMEN. Auf ihm gibt es nichts auszuwaehlen - er hat
                     ' keine Pixel -, und im Auswahl-Werkzeug kommt man an seine Stuetzpunkte nicht
                     ' heran. Wer seine Zeile anklickt, sah deshalb einen Auswahlrahmen und sonst
-                    ' nichts (Nutzerbefund 2026-08-09). Ein TEXT auf freiem Pfad bleibt ein
+                    ' nichts (Nutzerbefund). Ein TEXT auf freiem Pfad bleibt ein
                     ' Textobjekt und faellt nicht darunter.
                     If _currentTool = EditorTool.Selection AndAlso
                        Not String.Equals(NormalizeAnnotationKind(_annotations(clamped).Kind), "Path", StringComparison.Ordinal) Then
@@ -2767,7 +2767,7 @@ Namespace ViewModels
                                             (row.AdjustmentLayer IsNot Nothing AndAlso layers.Contains(row.AdjustmentLayer)))
                 ' EINE UNTERGRUPPE ZAEHLT MIT, wenn alles in ihr markiert ist: ihre Kopfzeile blieb
                 ' sonst als einzige Zeile dunkel, waehrend rundherum alles markiert war - es sah aus,
-                ' als gehoere sie nicht dazu (Nutzerbefund 2026-08-09).
+                ' als gehoere sie nicht dazu (Nutzerbefund).
                 If Not inside AndAlso mehrere AndAlso row.IsGroupHeader AndAlso row.Group IsNot Nothing Then
                     Dim baum = AnnotationsInGroupTree(row.Group.Id)
                     inside = baum.Count > 0 AndAlso baum.All(Function(a) objects.Contains(a))
@@ -2980,7 +2980,7 @@ Namespace ViewModels
             Dim hit = _annotations(index)
             ' Der GANZE Baum der Gruppe: mit Untergruppen gehoeren deren Mitglieder mit dazu, sonst
             ' bliebe von einer markierten Gruppe die Haelfte unmarkiert und jede Anpassung ginge an
-            ' ihr vorbei (Nutzerbefund 2026-08-09).
+            ' ihr vorbei (Nutzerbefund).
             Dim members = AnnotationsInGroupTree(hit.GroupId)
             Dim memberIndices = IndicesOfAnnotations(members)
             Dim groupId = hit.GroupId
@@ -3381,7 +3381,7 @@ Namespace ViewModels
         ''' Buehne und den der Ebenenliste. Der zweite hatte seine eigene, kuerzere Fassung - er
         ''' loeschte immer die Ebene und meldete die Taste als behandelt. Wer im Panel gearbeitet
         ''' hatte und danach Entf drueckte, bekam damit nie den Auswahlinhalt geloescht
-        ''' (Nutzerbefund 2026-08-09: "die Entf-Taste auf der Pfad-Auswahl geht nicht"). Zwei
+        ''' (Nutzerbefund: "die Entf-Taste auf der Pfad-Auswahl geht nicht"). Zwei
         ''' Fassungen derselben Regel laufen auseinander; jetzt ist es eine.</summary>
         Public Sub ApplyDeleteShortcut()
             If HasPixelSelectionScope Then
@@ -3427,7 +3427,7 @@ Namespace ViewModels
                 ' VON AUSSEN NACH INNEN die ERSTE Gruppe suchen, die GANZ markiert ist. Vorher wurde
                 ' nur die aeusserste geprueft: war die nur teilweise markiert, fiel auch eine
                 ' vollstaendig markierte UNTERgruppe durch, und ihre Mitglieder wanderten einzeln in
-                ' die neue Gruppe - die Verschachtelung ging verloren (Nutzerbefund 2026-08-08).
+                ' die neue Gruppe - die Verschachtelung ging verloren (Nutzerbefund).
                 Dim chain = AnnotationGroupChain(m.GroupId)
                 If chain.Any(Function(g) wholeGroups.Contains(g.Id)) Then Continue For
                 For Each candidate In chain
@@ -5950,7 +5950,7 @@ Namespace ViewModels
                 Function(w) n.IndexOf(w, StringComparison.OrdinalIgnoreCase) >= 0)), "")
         End Function
 
-        ''' <summary>Sucheingabe fuer die Objektivliste. Die Sammlung fuehrt ueber 1300 Objektive -
+        ''' <summary>Sucheingabe fuer die Objektivliste. Die Sammlung fuehrt ueber 1500 Objektive -
         ''' ohne Filter ist die Liste unbenutzbar, mit Filter aber weiterhin vollstaendig sichtbar,
         ''' wenn das Feld leer ist.</summary>
         Public Property LensFilter As String
@@ -8538,7 +8538,7 @@ Namespace ViewModels
         ''' <summary>Die sieben Regler der KALIBRIERUNG gehen ueber denselben Weg wie jeder andere
         ''' Regler (<see cref="SetUndoableDouble"/>). Vorher schrieben sie nur ihren Wert und stiessen
         ''' die Vorschau an: es gab keinen Rueckgaengig-Punkt, Strg+Z ging an ihnen vorbei, und in
-        ''' der Historie stand nichts (Nutzerbefund 2026-08-29).</summary>
+        ''' der Historie stand nichts (Nutzerbefund).</summary>
         Public Property CalibrationRedHue As Double
             Get
                 Return _calibrationRedHue
@@ -8635,7 +8635,7 @@ Namespace ViewModels
                 ' Ist genau EINE Ebene markiert, ist SIE das Ziel. Ohne diese Grenze las der
                 ' Zauberstab die fertige Szene und lief an der Ebenenkante einfach ins Foto weiter -
                 ' die Auswahl war danach groesser als die Ebene, auf der man arbeitete
-                ' (Nutzerbefund 2026-08-07). Der Bauplan entsteht hier, die Deckung im Worker.
+                ' (Nutzerbefund). Der Bauplan entsteht hier, die Deckung im Worker.
                 Dim confinePlan = BuildSelectedAnnotationConfinePlan()
                 Dim confineRect = If(confinePlan Is Nothing, SKRectI.Empty, confinePlan.Rect)
                 Dim result = Await Task.Run(Function()
@@ -8743,7 +8743,7 @@ Namespace ViewModels
             ' EndMaskMove sie in den Quellraum zurueck, und der reicht nur ueber das Bild - der
             ' hinausgeschobene Teil ist danach weg (gemessen 2026-08-04: 0..400 wird zu 0..40).
             ' Warum das so ist und was es kostet, das zu aendern, steht in
-            ' Audits/OFFENE_PUNKTE.md unter "Eine EBENENMASKE laesst sich nicht aus dem Bild
+            ' OFFENE_PUNKTE.md unter "Eine EBENENMASKE laesst sich nicht aus dem Bild
             ' schieben".
             InvalidateSelectionLayerLink()
             SetSelectionBoundsFromPixels(neu)
@@ -9016,7 +9016,7 @@ Namespace ViewModels
         ''' Leinwand sind Geometrieschritte: das Arbeitsbild bleibt dabei, wie es ist, und seine
         ''' Masse waeren nach jedem dieser Schritte die falsche Antwort - wer die Leinwand
         ''' vergroessert und danach ein Modell waehlt, las hier die Zahlen von vorher
-        ''' (Nutzerbefund 2026-09-08). Das Hochskalieren zieht die Geometrie mit
+        ''' (Nutzerbefund). Das Hochskalieren zieht die Geometrie mit
         ''' (<see cref="ScaleGeometryForNewSource"/>), der angezeigte Massstab gilt also fuer alles,
         ''' was man sieht.</summary>
         Public ReadOnly Property UpscaleTargetText As String
@@ -9113,7 +9113,7 @@ Namespace ViewModels
         ''' sie stehen, waehrend das Arbeitsbild viermal so gross wird, dann pinnen sie das Ergebnis
         ''' auf die alte Zahl: die vergroesserte Leinwand zeigte nach dem Hochskalieren einen
         ''' Ausschnitt des riesigen Bildes in ihrem alten Kasten, die Masse im Infopanel aenderten
-        ''' sich nicht, und der ganze Durchlauf war verloren (Nutzerbefund 2026-09-08).
+        ''' sich nicht, und der ganze Durchlauf war verloren (Nutzerbefund).
         '''
         ''' DIE SCHRITTE rechnet <see cref="ImageProcessor.ScaleGeometryStepsForSource"/> - dieselbe
         ''' Stelle, die ein GELADENES Rezept auf die dekodierte Datei herunterrechnet. Zwei
@@ -9914,7 +9914,7 @@ Namespace ViewModels
         ''' Editor ihn zusätzlich in die System-Zwischenablage, und von dort kommt er als DATEI
         ''' zurück. Ohne diese Frage entstünde daraus eine gewöhnliche Bild-Ebene, die nach ihrer
         ''' Zwischendatei heisst ("Bild: selection_a1b2…") - der eigene Weg kennt dagegen Lage, Größe
-        ''' und einen lesbaren Namen (Nutzerbefund 2026-08-08).</summary>
+        ''' und einen lesbaren Namen (Nutzerbefund).</summary>
         Public Function IsOwnSelectionClipboardFile(path As String) As Boolean
             If String.IsNullOrWhiteSpace(path) OrElse String.IsNullOrWhiteSpace(_selectionClipboardPath) Then Return False
             Return String.Equals(IO.Path.GetFullPath(path), IO.Path.GetFullPath(_selectionClipboardPath),
@@ -9965,7 +9965,7 @@ Namespace ViewModels
         '''
         ''' Ist eine Ebene mit einem Bild markiert, wird aus IHR gelöscht statt aus dem Foto - genau
         ''' wie ein Pinselstrich in ihr Bild geht (<see cref="AddBrushStroke"/>). Vorher löschte die
-        ''' Entf-Taste in diesem Fall die ganze Ebene (Nutzerbefund 2026-08-07).</summary>
+        ''' Entf-Taste in diesem Fall die ganze Ebene (Nutzerbefund).</summary>
         Public Sub EraseSelection()
             If Not CanUsePixelTools Then Return
             If Not HasPixelSelectionScope Then Return
@@ -11112,7 +11112,7 @@ Namespace ViewModels
             ' bleibt deshalb bis zum Loslassen liegen (ApplyDeferredGroupMaskTransform).
             ' Ohne das steht die Freistellung während des Zuges still und das Objekt wandert
             ' darunter durch - richtig wird es erst beim Loslassen, und dazwischen sieht man etwas,
-            ' das es so nie gab (Nutzerbefund 2026-08-05).
+            ' das es so nie gab (Nutzerbefund).
             Dim part = ImageProcessor.MaskTransformPart.All
             If _annotationPlacementEditActive Then
                 If Not ImageProcessor.HasGradientComponent(mask) Then Return
@@ -11893,7 +11893,7 @@ Namespace ViewModels
         '''
         ''' DIE REGLER BEHALTEN IHREN WERT und vertreten danach den neuen Schritt. Vorher wurden sie
         ''' geleert: der Winkel war weg, und der eben bestätigte Schritt liess sich weder nachziehen
-        ''' noch auf null stellen (Nutzerbefund 2026-09-04). Der Haken bleibt ohnehin stehen - er
+        ''' noch auf null stellen (Nutzerbefund). Der Haken bleibt ohnehin stehen - er
         ''' sagt, WIE gedreht wird, nicht WIE WEIT.</summary>
         Private Sub CommitOpenTransform()
             Dim index = EditableTransformIndex()
@@ -12260,7 +12260,7 @@ Namespace ViewModels
         ''' ging das gut: die Kette leitet die andere selbst aus dem Bildformat ab. Sobald aber
         ''' beide Kanten frei standen (Sperre aus, Breite UND Hoehe getippt, Sperre wieder an), war
         ''' das Verhaeltnis genau das der beiden Felder - die Rechnung ergab jedes Mal den Wert, der
-        ''' schon dastand, und die Gegenkante ruehrte sich nie wieder (Nutzerbefund 2026-09-08).
+        ''' schon dastand, und die Gegenkante ruehrte sich nie wieder (Nutzerbefund).
         '''
         ''' Der offene Zuschnitt zaehlt anteilig mit, genau wie in <see cref="GetCroppedWidth"/>: er
         ''' steht bis zum Bestaetigen nicht in der Kette, aendert aber das Format.</summary>
@@ -13662,8 +13662,8 @@ Namespace ViewModels
         ' dem unbeschnittenen Ursprungsbild aufbewahren. Bei JPG und PNG zeigte das Werkzeug den
         ' bereits bestaetigten Ausschnitt, und der Rahmen schnitt von dort aus weiter; ein zu eng
         ' gezogener Ausschnitt war damit fuer den Rest der Sitzung verloren, obwohl die Datei noch
-        ' unangetastet war. Patricks Entscheidung vom 4. September 2026: dasselbe Verhalten fuer
-        ' alle Formate, erst das Speichern macht den Schnitt.
+        ' unangetastet war. Bewusst entschieden: dasselbe Verhalten fuer alle Formate, erst das
+        ' Speichern macht den Schnitt. Siehe FALLEN_UND_ENTSCHEIDUNGEN.md.
 
         ''' <summary>Ein .fpx-Buendel ist offen - erkannt am Pfad des Buendels, an der Endung des
         ''' Dokuments ODER am ausgepackten Ordner.
@@ -13725,7 +13725,7 @@ Namespace ViewModels
             ' andere Ausgabegroesse hat. Das kann am Zuschnitt liegen - oder an der erweiterten
             ' Leinwand einer bestaetigten Begradigung, und genau die fiel durch, solange hier nur
             ' der Zuschnitt geprueft wurde: beim Verlassen des Werkzeugs blieb die Buehne auf dem
-            ' vollen Bild stehen (Nutzerbefund 2026-09-04).
+            ' vollen Bild stehen (Nutzerbefund).
             '
             ' Vorher stand hier der Blick in die alten oberen Felder - die stehen seit der
             ' Schrittfolge auf null, und die Meldung fiel IMMER aus.
@@ -13861,7 +13861,7 @@ Namespace ViewModels
         ''' angezeigten Bild; dreht man daran, bezeichnet er eine andere Bildregion als der
         ''' bestätigte Ausschnitt - der Zuschnitt-Knopf wurde also von einer Drehung mit aktiv, und
         ''' zwei Knöpfe sagten dasselbe. Wer die Lage übernimmt, übernimmt auch den Rahmen darauf
-        ''' (Nutzerbefund 2026-09-04).</summary>
+        ''' (Nutzerbefund).</summary>
         Public ReadOnly Property CanApplyTransform As Boolean
             Get
                 Return HasCropChanges OrElse HasRotateChanges
@@ -15616,7 +15616,7 @@ Namespace ViewModels
         ''' Gebraucht fuer die Rueckkehr aus den Einstellungen: danach stand der Editor mit leerer
         ''' Flaeche da, bei einer .fpx sichtbar als blosses Schachbrett. Statt einzelne Teile des
         ''' Zustands nachzuziehen, wird der ganze Weg noch einmal gegangen - er ist die einzige
-        ''' Stelle, die alles wiederherstellt (Nutzerentscheidung 2026-08-04).
+        ''' Stelle, die alles wiederherstellt. Bewusst so, siehe FALLEN_UND_ENTSCHEIDUNGEN.md.
         '''
         ''' Gefahrlos, weil der WEG in die Einstellungen die Speicherfrage stellt: was hier ankommt,
         ''' ist entweder gespeichert oder bewusst verworfen. Ein Immich-Element traegt einen
@@ -16458,7 +16458,7 @@ Namespace ViewModels
             ' laenger als der Takt, wird nie einer fertig: A wird von B abgebrochen, B von C. Der
             ' Nutzer sieht waehrend des Zugs gar nichts, und die verworfene Arbeit kostet trotzdem
             ' Rechenzeit, die dem Zeiger fehlt - das Ziehen wurde dadurch TRAEGER statt fluessiger
-            ' (Patrick am 2026-08-28).
+            ' (gemessen).
             '
             ' Mit der Kette laeuft jeder Render durch und wird auch gezeigt. Die Bildrate ist dann
             ' genau das, was die Maschine hergibt, und keine einzige Rechnung ist umsonst.
@@ -16645,7 +16645,7 @@ Namespace ViewModels
         End Function
 
         ''' <summary>SCHREIBT DIE REGLERWERTE SOFORT IN DIE MARKIERTEN OBJEKTE, statt erst beim
-        ''' Abwählen. Zwei Dinge hingen daran, und beide waren kaputt (Nutzerbefund 2026-08-08):
+        ''' Abwählen. Zwei Dinge hingen daran, und beide waren kaputt (Nutzerbefund):
         '''
         ''' - **Das Bild.** Der Kompositor zeichnet die Objekte aus den LEBENDEN Ebenen
         '''   (<c>GetCompositorBlitAdjustments</c> reicht <c>_annotations</c> unverändert weiter) und
@@ -17547,7 +17547,7 @@ Namespace ViewModels
         ''' des Zahlenfelds, die Pfeiltasten. Sie haben kein Druecken und Loslassen, an dem die
         ''' verkleinerte Live-Quelle haengen koennte - und ohne sie lief jeder Schritt durch die
         ''' ganze Kette in voller Vorschauaufloesung. Wer am Rad dreht, macht aber genau dasselbe wie
-        ''' beim Ziehen: viele Aenderungen in kurzer Folge (Nutzerbefund 2026-09-07, das Ausrichten
+        ''' beim Ziehen: viele Aenderungen in kurzer Folge (Nutzerbefund, das Ausrichten
         ''' blieb per Rad und Zahlenfeld zaeh, obwohl der gezogene Regler laengst flott war).
         '''
         ''' Beendet wird der Lauf deshalb ueber eine PAUSE und nicht ueber ein Loslassen: bleibt eine
@@ -19267,7 +19267,8 @@ Namespace ViewModels
             field = value
             Me.RaisePropertyChanged(propertyName)
             RaiseResetButtonStateChanged()
-            HideMaskOverlayAfterChange()
+            ' Das Ausblenden des roten Overlays steht jetzt in CaptureUndoState, das eine Zeile
+            ' darueber ohnehin gerufen wird - dort erwischt es auch die Setter mit eigenem Rumpf.
             If HasSelectedAnnotation AndAlso IsObjectAdjustTool(_currentTool) Then
                 RefreshSelectedAnnotationPreviewImmediatelyIfNeeded()
             Else
@@ -19294,6 +19295,24 @@ Namespace ViewModels
         End Function
 
         Private Sub CaptureUndoState(propertyName As String)
+            ' DAS ROTE OVERLAY GEHT HIER WEG, nicht bei den Aufrufern. Es hing an
+            ' SetUndoableDouble, und damit an dem einen Weg, den die meisten Regler nehmen. NEUN
+            ' Eigenschaften haben aber einen eigenen Setter, und keine davon blendete aus - unter
+            ' ihnen die Farbtemperatur des Weissabgleichs. Weitere waeren Filmnegativ,
+            ' Entrauschungsverfahren, Objektivzuordnung, Vignettenform, Filter und LUT. Wer eine
+            ' zehnte anlegt, kann es jetzt nicht mehr vergessen.
+            '
+            ' GANZ OBEN, VOR JEDEM AUSSTIEG. Diese Methode steigt DREIMAL vorzeitig aus, und in
+            ' allen drei Faellen aendert sich das Bild sehr wohl: bei unterdrueckter Sicherung
+            ' (Auto, geladenes Rezept, XMP- und LUT-Vorgabe), waehrend eines laufenden Reglerzuges
+            ' und innerhalb der Zusammenfassungsfrist. Stand das Ausblenden hinter dem ersten,
+            ' blieb das Overlay nach "Auto" und nach jeder angewandten Vorgabe stehen.
+            '
+            ' Die Frage, OB ausgeblendet wird, beantwortet HideMaskOverlayAfterChange selbst: nur in
+            ' den Anpassungswerkzeugen und nur bei einer Maske. In den Maskenwerkzeugen bleibt das
+            ' Overlay damit stehen, auch wenn dort Regler wie Deckkraft oder weiche Kante laufen.
+            HideMaskOverlayAfterChange()
+
             If _suppressUndoCapture Then Return
 
             ' EIN ZUG AM REGLER IST EIN SCHRITT, und er entsteht beim LOSLASSEN. Waehrend des Zuges
@@ -21777,7 +21796,7 @@ Namespace ViewModels
                 Case "SelectionFill", "SelectionImage" : Return EditorTool.Move
                 ' DER PFAD FUEHRT IN SEIN EIGENES WERKZEUG. Ohne diesen Zweig fiel er auf den
                 ' Rueckfall unten und landete im EINFUEGEN-Werkzeug: wer seine Zeile anklickte,
-                ' bekam die Symbolauswahl statt seiner Stuetzpunkte (Nutzerbefund 2026-08-09).
+                ' bekam die Symbolauswahl statt seiner Stuetzpunkte (Nutzerbefund).
                 Case "Path" : Return EditorTool.Path
                 Case Else : Return EditorTool.Insert
             End Select
@@ -21906,7 +21925,7 @@ Namespace ViewModels
             '
             ' EINE AUSNAHME: die MALEBENE. Sie ist das eigene Raster, angelegt zum Bemalen - dort
             ' heisst radieren, dass die Farbe weg ist, und nicht, dass sie unter einer Maske
-            ' liegenbleibt (Nutzerbefund 2026-08-08: "radiere ich einen Malpinselstrich auf einer
+            ' liegenbleibt (Nutzerbefund: "radiere ich einen Malpinselstrich auf einer
             ' Malebene, bleibt der Strich als transparente Stelle erhalten"). Bei allem anderen -
             ' eingefügtes Bild, Text, Form, SVG - sind die Pixel fremd oder gar nicht da, und die
             ' Maske ist der richtige Weg.
@@ -22145,7 +22164,7 @@ Namespace ViewModels
             ' Die geloeschte Ebene war vielleicht die, deren rote Deckung gerade zu sehen ist. Ohne
             ' diese zwei Zeilen bleibt das alte Overlay-Bitmap stehen, und die View bekommt nicht
             ' einmal mit, dass es keinen markierten Verlauf mehr gibt - die Maske sieht dann aus,
-            ' als waere sie noch da. Vierter Fall derselben Klasse, siehe Audits/MASKEN_EBENEN_AUSWAHL.md.
+            ' als waere sie noch da. Vierter Fall derselben Klasse, siehe MASKEN_EBENEN_AUSWAHL.md.
             RaiseGradientPropertiesChanged()
             PublishMaskBrushOverlay()
             RebuildLayerRows()
@@ -23023,8 +23042,7 @@ Namespace ViewModels
 
         ''' <summary>Schiebt die Auswahl um ganze BILDPIXEL (Pfeiltasten; Umschalt = groesserer
         ''' Schritt). Vorher wanderte je Tastendruck ein PROZENT der Bildbreite - auf einem grossen
-        ''' Foto waren das dutzende Pixel, feines Ausrichten war unmoeglich (Nutzerwunsch
-        ''' 2026-07-31). Eine Mehrfachauswahl zieht als Ganzes ueber die gemeinsame Box mit.</summary>
+        ''' Foto waren das dutzende Pixel, feines Ausrichten war unmoeglich. Eine Mehrfachauswahl zieht als Ganzes ueber die gemeinsame Box mit.</summary>
         Public Sub NudgeSelectedAnnotationPixels(dxPixels As Double, dyPixels As Double)
             If _selectedAnnotationIndex < 0 OrElse _selectedAnnotationIndex >= _annotations.Count Then Return
             Dim displaySize = GetAnnotationDisplayPixelSize()
@@ -23135,9 +23153,24 @@ Namespace ViewModels
         ''' man gerade beurteilen will. Gilt nur bei markierter Maskenebene - ohne sie gibt es nichts
         ''' auszublenden.</summary>
         Private Sub HideMaskOverlayAfterChange()
-            If Not IsObjectAdjustTool(_currentTool) Then Return
-            If Not _activeSelectionIsMask AndAlso SelectedGradientMask Is Nothing Then Return
+            ' SPUR AN DEN DREI ENTSCHEIDUNGEN. Ein Nutzerbefund sagt, das Overlay bleibe nach dem
+            ' ersten Reglerzug stehen; headless gemessen verschwindet es. Der Unterschied muss also
+            ' im laufenden Programm liegen, und dann hilft nur, jede Bedingung einzeln zu sehen.
+            Dim tool = _currentTool
+            Dim istMaske = _activeSelectionIsMask
+            Dim verlauf = SelectedGradientMask IsNot Nothing
+            Dim hatteBild = _selectionMaskPreviewImage IsNot Nothing
+            If Not IsObjectAdjustTool(tool) Then
+                TraceMask(Function() $"Overlay bleibt: Werkzeug={tool} ist kein Anpassungswerkzeug")
+                Return
+            End If
+            If Not istMaske AndAlso Not verlauf Then
+                TraceMask(Function() $"Overlay bleibt: weder Maske noch Verlauf (Werkzeug={tool}, Bild={hatteBild})")
+                Return
+            End If
             HideMaskOverlay()
+            TraceMask(Function() $"Overlay ausgeblendet nach Reglerzug: Werkzeug={tool} Maske={istMaske}" &
+                                 $" Verlauf={verlauf} Bild vorher={hatteBild} nachher={_selectionMaskPreviewImage IsNot Nothing}")
         End Sub
 
         ''' <summary>Der Zoom, mit dem ein Bild in die Bearbeitungsflaeche passt - in Prozent.
@@ -23233,7 +23266,7 @@ Namespace ViewModels
             ' im Auswahl-Werkzeug gibt es auf ihm nichts auszuwaehlen und an seine Stuetzpunkte
             ' kommt man nicht heran. Bliebe er markiert, verschwaende die Kurve (ohne Kontur
             ' zeichnet er nichts) und stattdessen stuende ein Auswahlrahmen da - sichtbar waere
-            ' also nur noch die Box (Nutzerbefund 2026-08-09).
+            ' also nur noch die Box (Nutzerbefund).
             If tool = EditorTool.Selection Then
                 Return Not String.Equals(NormalizeAnnotationKind(annotation.Kind), "Path", StringComparison.Ordinal)
             End If
@@ -23607,7 +23640,7 @@ Namespace ViewModels
                                                      Optional scheduleRender As Boolean = True)
             ' DIE GANZE AUSWAHL GEHOERT DAZU, nicht nur der Anker. ApplyAdjustments raeumt die
             ' Mehrfachauswahl mit ab; wurde nur der Anker zurueckgesetzt, blieb von einer markierten
-            ' GRUPPE nach dem Werkzeugwechsel genau ein Objekt markiert (Nutzerbefund 2026-08-08).
+            ' GRUPPE nach dem Werkzeugwechsel genau ein Objekt markiert (Nutzerbefund).
             ' Gemerkt wird ueber INDIZES: der Neuaufbau ersetzt die Objekte durch Klone, ein
             ' gemerkter Verweis zeigt danach auf eine Instanz, die nicht mehr in der Liste steht.
             Dim extraIndices = IndicesOfAnnotations(SelectedExtraAnnotations())
@@ -24034,7 +24067,7 @@ Namespace ViewModels
                 ' DIE DREI FORMATE TRAGEN ZWEI KANTEN, und zwar dieselben wie im Stapeldialog -
                 ' derselbe Knopf muss in beiden Teilen der Anwendung dasselbe Bild ergeben. SD
                 ' stand hier auf einer langen Kante von 640 und meinte damit etwas anderes als
-                ' nebenan (Entscheidung von Patrick am 2026-09-09).
+                ' nebenan. Bewusst vereinheitlicht, siehe FALLEN_UND_ENTSCHEIDUNGEN.md.
                 Case "uhd"
                     SetResizeFrame(3840, 2160)
                 Case "full-hd"
@@ -24073,7 +24106,7 @@ Namespace ViewModels
         ''' gerade NICHT Full-HD.
         '''
         ''' OHNE Haken gelten die beiden Zahlen exakt, auch wenn das Bild dabei verzerrt: wer die
-        ''' Sperre abwaehlt, will die Aufloesung und nicht das Format (Nutzerbefund 2026-09-09).</summary>
+        ''' Sperre abwaehlt, will die Aufloesung und nicht das Format (Nutzerbefund).</summary>
         Private Sub SetResizeFrame(frameWidth As Integer, frameHeight As Integer)
             If frameWidth <= 0 OrElse frameHeight <= 0 Then Return
             If Not _lockResizeAspect Then
@@ -24141,7 +24174,7 @@ Namespace ViewModels
         ''' Anzeigeraum sein Raum; die Permutation drehte die Werte nur noch gegen das, was man
         ''' sieht. Sichtbar an einem Bild mit Vierteldrehung im Rezept: der Regler "Links" rückte
         ''' die OBERE Kante, und Breite und Höhe im Panel standen vertauscht zur Größenplakette am
-        ''' Rahmen (Nutzerbefund 2026-09-04).</summary>
+        ''' Rahmen (Nutzerbefund).</summary>
         Public Sub SetCropPercentagesFromDisplay(left As Double, top As Double, right As Double, bottom As Double)
             SetCropPercentages(left, top, right, bottom)
         End Sub
@@ -25616,8 +25649,8 @@ Namespace ViewModels
         ''' <summary>Das Analysebild aus der FERTIGEN SZENE rechnen, also mit allen Reglern, Filtern,
         ''' Masken und Ebenen - mit dem, was auf dem Schirm steht.
         '''
-        ''' Bis 2026-08-15 zeigte die Leiste bewusst den Stand der DATEI und lief bei einem
-        ''' Reglerdreh nicht mit. Umgestellt auf Patricks Wunsch: wer an Belichtung oder Kontrast
+        ''' Frueher zeigte die Leiste bewusst den Stand der DATEI und lief bei einem
+        ''' Reglerdreh nicht mit. Bewusst umgestellt: wer an Belichtung oder Kontrast
         ''' zieht, will genau daran ablesen, ob ihm die Lichter ausbrennen - ein Histogramm, das
         ''' dabei stehen bleibt, beantwortet die Frage nicht.
         '''

@@ -26,7 +26,7 @@ Namespace ViewModels
     '''    Zugbeginn - der käme sonst doppelt.
     '''
     ''' Objekt entfernen bleibt außen vor: es arbeitet mit einem gelernten Modell und einer eigenen
-    ''' Regionenmechanik (siehe <c>Audits/OFFENE_PUNKTE.md</c>).</summary>
+    ''' Regionenmechanik (siehe <c>OFFENE_PUNKTE.md</c>).</summary>
     Partial Public Class EditorViewModel
 
         ''' Die Punkte des laufenden Zuges im Raster des EBENENBILDS - sie werden beim Loslassen

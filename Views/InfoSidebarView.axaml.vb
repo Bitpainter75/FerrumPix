@@ -43,7 +43,7 @@ Namespace Views
         ''' ankam. Fuer den Benutzer sah das so aus, als liesse sich in der Liste nichts anklicken.
         '''
         ''' Schlimmer noch war die stille Nebenwirkung: wer "Chr" tippte und dann "Christina" anklickte,
-        ''' benannte die Gruppe "Chr". In Patricks Bibliothek steht genau so ein abgeschnittener Name.
+        ''' benannte die Gruppe "Chr". In einem gewachsenen Bestand steht genau so ein abgeschnittener Name.
         '''
         ''' Ein Klick in die Liste waehlt damit nur aus; uebernommen wird danach mit der Eingabetaste
         ''' oder beim Verlassen des Feldes. Dieselbe Zweistufigkeit gilt seit jeher fuer die

@@ -8,7 +8,7 @@ Namespace Services
     ''' <summary>
     ''' Messpunkte in der laufenden Anwendung, fuer Befunde, die sich nur am ECHTEN Fenster zeigen.
     '''
-    ''' <para>Anlass war die Bildlaufleiste in grossen Ordnern (Nutzerbefund 2026-08-27): im
+    ''' <para>Anlass war die Bildlaufleiste in grossen Ordnern (Nutzerbefund): im
     ''' Pruefstand ohne Bildschirm liessen sich Suche, Fadenfuehrung, Rollbereich und das Erzeugen
     ''' der Vorschaubilder als Ursache ausschliessen, der Rest liegt im Aufbau der Kacheln - und den
     ''' misst ein Lauf ohne Grafikkarte nicht ehrlich. Also misst die Anwendung selbst, der Benutzer

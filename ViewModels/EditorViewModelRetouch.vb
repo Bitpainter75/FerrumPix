@@ -22,7 +22,7 @@ Namespace ViewModels
     '''
     ''' Sechste Scheibe der Dateiaufteilung (2026-08-04), Regeln wie in
     ''' <c>ViewModels/EditorViewModelMask.vb</c>. Warum die Live-Puffer eine Doppelrolle haben und
-    ''' woran ihre Gueltigkeit haengt, steht in <c>Audits/RENDERPIPELINE.md</c>.</summary>
+    ''' woran ihre Gueltigkeit haengt, steht in <c>RENDERPIPELINE.md</c>.</summary>
     Partial Public Class EditorViewModel
 
         Private Function TransformWorkingPixelToDisplayPixel(x As Double, y As Double,

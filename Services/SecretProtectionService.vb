@@ -15,7 +15,7 @@ Namespace Services
     '''
     ''' Der echte Schutz waere der Tresor des Systems (Secret Service, Keychain, Credential
     ''' Manager). Er ist plattform- und unter Flatpak portalabhaengig und ein eigenes Vorhaben; die
-    ''' Entscheidung dazu steht in Audits/FALLEN_UND_ENTSCHEIDUNGEN.md.
+    ''' Entscheidung dazu steht in FALLEN_UND_ENTSCHEIDUNGEN.md.
     '''
     ''' KEINE GERAETEBINDUNG, und das ist Absicht. Ein Schluessel, der zusaetzlich an die Maschine
     ''' gebunden ist, macht ein gesichertes Profil auf einem neuen Rechner unbrauchbar - und wer

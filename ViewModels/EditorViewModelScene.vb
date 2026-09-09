@@ -23,7 +23,7 @@ Namespace ViewModels
     '''
     ''' Fuenfte Scheibe der Dateiaufteilung (2026-08-04), Regeln wie in
     ''' <c>ViewModels/EditorViewModelMask.vb</c>. Wie die Stufen zusammenspielen, steht in
-    ''' <c>Audits/RENDERPIPELINE.md</c>.</summary>
+    ''' <c>RENDERPIPELINE.md</c>.</summary>
     Partial Public Class EditorViewModel
 
         ''' <summary>Schlanker Snapshot ausschließlich für den UI-Thread-Kompositor. Ein Blit
@@ -44,7 +44,7 @@ Namespace ViewModels
         ''' passiert das ohne jeden Render. Der Schluessel aus Geometrie und Szenenversion aendert
         ''' sich dabei nicht, der Schnappschuss zeigte also weiter auf die weggeworfenen Instanzen:
         ''' der Blit zeichnete das Objekt an seiner ALTEN Stelle, waehrend Auswahlrahmen und
-        ''' Treffertest der neuen folgten (Nutzerbefund 2026-08-25: "der Selektionsrahmen verschiebt
+        ''' Treffertest der neuen folgten (Nutzerbefund: "der Selektionsrahmen verschiebt
         ''' sich, das Objekt bleibt stehen" - ebenso beim Drehen und Skalieren).</summary>
         Private Sub InvalidateCompositorBlitSnapshot()
             _compositorBlitSnapshot = Nothing
@@ -272,7 +272,7 @@ Namespace ViewModels
         ''' Frueher wurde je Blit ein Zwischenbitmap in Regionsgroesse angelegt, komponiert und
         ''' zeilenweise hineinkopiert - bei einer Mehrfachauswahl, deren Vereinigungsrechteck die
         ''' Szene deckt, waren das 38 MB Anlage plus zwei Kopien JE MAUSBEWEGUNG auf dem UI-Faden
-        ''' (Nutzerbefund 2026-08-05: Ziehen zaeh, CPU hoch, GC-Laeufe im Sekundentakt).
+        ''' (Nutzerbefund: Ziehen zaeh, CPU hoch, GC-Laeufe im Sekundentakt).
         ''' InstallPixels legt stattdessen eine SKBitmap-Sicht UEBER die Lock-Adresse, und alles
         ''' wird genau einmal gezeichnet.
         '''

@@ -1007,7 +1007,7 @@ Namespace ViewModels
 
         ''' <summary>Eine der acht Stufen des Schriftgrads, als eigene Schaltfläche.
         '''
-        ''' WARUM SCHALTFLÄCHEN UND KEIN REGLER (Nutzerbefund vom 2026-08-26, mit Video): Der Regler
+        ''' WARUM SCHALTFLÄCHEN UND KEIN REGLER (Nutzerbefund mit Video): Der Regler
         ''' hatte zwei Fehler auf einmal. Er rechnete eine Stufe je Bildpunkt Mausweg, alle acht
         ''' Stufen lagen also auf acht Bildpunkten. Und er misst den Zug RELATIV ZU SICH SELBST -
         ''' während die Schrift wächst, verschiebt er sich im Layout, der gemessene Abstand ändert
@@ -1741,7 +1741,7 @@ Namespace ViewModels
         ''' <summary>Was mit den Textebenen einer fremden Photoshop-Datei geschieht: „Ask", „Text"
         ''' oder „Image". Ab Werk wird gefragt - beide Antworten sind vertretbar, und welche man will,
         ''' hängt am Vorhaben. Wer immer dasselbe tut, stellt es hier einmal ein, statt die Frage bei
-        ''' jedem Bild wegzuklicken (Nutzerwunsch 2026-08-05).</summary>
+        ''' jedem Bild wegzuklicken.</summary>
         Public Property PsdTextImport As String
             Get
                 Return _psdTextImport
@@ -4678,7 +4678,7 @@ Namespace ViewModels
         ''' dazu in FerrumPixTheme.axaml). Dort stehen feste Farben, und die passen nur zum dunklen
         ''' Standardthema: nach einem Wechsel auf Grau oder Hell stand das Untermenue weiter
         ''' dunkelblau da, waehrend das Menue darueber die neue Farbe hatte (Nutzerbefund
-        ''' 2026-08-27). Dasselbe gilt fuer die Aufklappliste einer Auswahl und fuer die Zeilen
+        ''' ). Dasselbe gilt fuer die Aufklappliste einer Auswahl und fuer die Zeilen
         ''' einer Liste.
         '''
         ''' Deshalb werden diese Schluessel nach jedem Themenwechsel aus den FerrumPix-Farben

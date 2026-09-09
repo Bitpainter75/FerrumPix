@@ -198,7 +198,7 @@ Namespace Services
         ''' <summary>Traegt Ort und Land fuer alle Eintraege nach, die Koordinaten haben und noch
         ''' keinen Namen.
         '''
-        ''' Gemessen an Patricks Bestand: 13333 Eintraege, davon 4471 mit Koordinaten und NULL mit
+        ''' Gemessen an einem gewachsenen Bestand: 13333 Eintraege, davon 4471 mit Koordinaten und NULL mit
         ''' Ortsnamen - die Spalten kamen erst spaeter dazu und werden nur beim Einlesen gefuellt.
         ''' Ohne diesen Lauf ist der Ortsfilter auf einem gewachsenen Bestand dauerhaft leer, und
         ''' genau so sah es auch aus.

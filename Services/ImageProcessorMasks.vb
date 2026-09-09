@@ -20,7 +20,7 @@ Imports QRCoder
 ' und die Rasterarbeit daran (Zauberstab, Ausschneiden, Fuellen, Verschieben, Drehen, Spiegeln).
 ' Eigener Zustand: der Deckungs-Zwischenspeicher der Objektmasken.
 ' Herausgeloest am 2026-08-06 aus ImageProcessor.vb, Zeile fuer Zeile unveraendert.
-' Die Regeln dahinter stehen in Audits/MASKEN_EBENEN_AUSWAHL.md.
+' Die Regeln dahinter stehen in MASKEN_EBENEN_AUSWAHL.md.
 Namespace Services
 
     Partial Public Class ImageProcessor
@@ -64,7 +64,7 @@ Namespace Services
                     ' fuer die erste Ebene, und ohne dieselben Zeilen hier ging die Beschraenkung
                     ' jedes weiteren Geschwisters beim Vereinigen verloren: seine Korrektur wirkte
                     ' dann ausserhalb der Ebene, auf die sie beschraenkt war (Nutzerbefund
-                    ' 2026-08-08). Dieselbe Quelle wie dort, damit die zwei Wege nicht auseinander
+                    ' ). Dieselbe Quelle wie dort, damit die zwei Wege nicht auseinander
                     ' laufen.
                     If g.ClipToLayerBelow AndAlso stacked.Length > 0 Then
                         Dim clipBase = FindAnnotationById(adj, stacked)
@@ -1096,7 +1096,7 @@ Namespace Services
         ''' Ebenen-Maske laufen weiterhin ueber die Auswahl (ApplySelectionCandidate ->
         ''' WriteSelectionMaskBackToLayer), weil deren Raster zugleich die Quelle des roten Overlays
         ''' ist. MergePaintedMaskStroke ist der vorbereitete Weg dorthin und wird heute nur von der
-        ''' Diagnose gefahren - siehe Audits/OFFENE_PUNKTE.md.</summary>
+        ''' Diagnose gefahren - siehe OFFENE_PUNKTE.md.</summary>
         Public Shared Function ApplyMaskBrushStroke(target As ImageMask, stroke As ImageMask,
                                                     subtract As Boolean,
                                                     Optional mode As String = "") As Boolean
@@ -1750,7 +1750,7 @@ Namespace Services
         ''' Gelesen wird die SUMME ALLER BESTANDTEILE, nicht nur der erste. Vorher stand hier
         ''' `mask.PngBase64`, also allein der erste: ein per Plus angehaengter Verlauf wirkte im Bild
         ''' weiter, war beim Bearbeiten aber unsichtbar - es sah aus, als waeren frühere
-        ''' Bearbeitungen verloren (Nutzerbefund 2026-08-04). Zusammengesetzt wird mit DENSELBEN
+        ''' Bearbeitungen verloren (Nutzerbefund). Zusammengesetzt wird mit DENSELBEN
         ''' Bausteinen wie beim Rendern (BuildComponentMaskForInput plus CombineMaskInto), damit
         ''' Anzeige und Ergebnis nicht auseinanderlaufen koennen.</summary>
         Public Shared Function BuildSelectionMaskFromLayerMask(mask As ImageMask, adj As ImageAdjustments,
@@ -2539,7 +2539,7 @@ Namespace Services
             ' DER REGLER GEHT QUADRATISCH IN DEN ABSTAND, nicht linear. An vier Fotos gemessen lag
             ' linear der ganze nutzbare Bereich zwischen 5 und 25: dort sprang die gefasste Flaeche
             ' von wenigen Prozent auf ueber 80, und die oberen zwei Drittel des Reglers taten nichts
-            ' mehr (Nutzerbefund 2026-08-16). Quadratisch liegt derselbe Uebergang etwa in der Mitte
+            ' mehr (Nutzerbefund). Quadratisch liegt derselbe Uebergang etwa in der Mitte
             ' des Wegs und ist ueber rund 30 Reglerpunkte gestreckt. Der Wert selbst bleibt, was er
             ' war - die Kennlinie sitzt hier an EINER Stelle und nicht in den Aufrufern.
             Dim norm = Math.Max(0.0, Math.Min(100.0, tolerancePct)) / 100.0
@@ -3087,7 +3087,7 @@ Namespace Services
         ''' Ohne das bleibt eine Verlaufsmaske liegen, während ihr Objekt wandert. Sichtbar wurde es
         ''' an einer Ebenenmaske, deren gemalter Bestandteil gelöscht war: dann gibt es gar kein
         ''' Raster mehr, die drei Funktionen stiegen ganz oben aus, und die Maske klebte am Bild
-        ''' statt an der Ebene (Nutzerbefund 2026-08-05).</summary>
+        ''' statt an der Ebene (Nutzerbefund).</summary>
         Private Shared Sub MapGradientComponents(mask As ImageMask, map As MaskPointMap)
             If mask Is Nothing OrElse map Is Nothing Then Return
             Dim sw = CDbl(Math.Max(1, mask.SourceWidthPixels))

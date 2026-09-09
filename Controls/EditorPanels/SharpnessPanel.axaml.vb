@@ -21,7 +21,7 @@ Namespace Controls.EditorPanels
         ''' Zuerst hing die Vorschau am Ziehen mit gedrueckter ALT-Taste, wie in Lightroom. Auf dem
         ''' Schreibtisch von Linux ist ALT plus Ziehen aber vielerorts die Geste des
         ''' FENSTERVERWALTERS zum Verschieben von Fenstern: er faengt sie ab, und in der Anwendung
-        ''' kommt kein einziges Zeigerereignis mehr an (Nutzerbefund 2026-08-12, "klappt nicht").
+        ''' kommt kein einziges Zeigerereignis mehr an (Nutzerbefund, "klappt nicht").
         ''' Am Zeiger UEBER dem Regler zu haengen umgeht das - eine gedrueckte Taste allein nimmt
         ''' kein Fensterverwalter weg. Wer ziehen kann, zieht weiter; die Vorschau bleibt dabei
         ''' stehen.</summary>

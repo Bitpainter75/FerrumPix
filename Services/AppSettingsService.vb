@@ -308,7 +308,7 @@ Namespace Services
         ''' <summary>KI-Stichwörter zusätzlich in vorhandene bzw. erlaubte neue XMP-Sidecars schreiben.
         ''' Standard AUS: KI-Ergebnisse bleiben sonst ausschließlich in der lokalen Bibliothek.</summary>
         Public Property WriteAiTagsToXmp As Boolean = False
-        ''' <summary>500 seit 2026-08-27 (vorher 250, Patrick): in einem Ordner mittlerer Groesse
+        ''' <summary>500 statt frueher 250: in einem Ordner mittlerer Groesse
         ''' reicht das fuer den ganzen Bestand, und Hin- und Herrollen loest dann keinen einzigen
         ''' neuen Decode mehr aus. Die Obergrenze liegt bei 10.000.</summary>
         Public Property GalleryThumbnailMemoryCacheCapacity As Integer = 500
@@ -340,7 +340,7 @@ Namespace Services
         ''' Standard AUS: die Werte gleichen die Kameramodelle UNTEREINANDER an, ihre absolute Lage
         ''' haengt aber an einer einzigen Kamera mit echtem Referenzexport - und die ist selbst
         ''' untypisch. Bis ein zweiter Referenzexport vorliegt, ist das eine Wahl des Nutzers und
-        ''' keine Vorgabe. Siehe Audits/OFFENE_PUNKTE.md.</summary>
+        ''' keine Vorgabe. Siehe OFFENE_PUNKTE.md.</summary>
         Public Property UseCameraBaselineTable As Boolean = False
         Public Property EditorInfoSidebarExpanded As Boolean = True
         ''' Ob das Ebenen-Panel im Editor zuletzt eingeblendet war - gemerkter Bedienzustand (wie die
@@ -411,7 +411,8 @@ Namespace Services
 
         ''' <summary>Die beiden Leinwand-Haken des Ausrichtens, wie sie zuletzt standen. Sie sagen,
         ''' WIE gedreht wird, und nicht, wie weit - eine Gewohnheit also, keine Eigenschaft des
-        ''' Bildes, und sie kehren beim naechsten Start zurueck (Patricks Wunsch 2026-09-07).
+        ''' Bildes, und sie kehren beim naechsten Start zurueck. Bewusst so, siehe
+        ''' FALLEN_UND_ENTSCHEIDUNGEN.md.
         '''
         ''' Ab Werk beide AUS: die Leinwand bleibt dann, wie sie ist. Ein GELADENES Rezept sticht
         ''' die Erinnerung aus - dort steht, was dieses Bild tatsaechlich tut; die Erinnerung gilt
@@ -604,7 +605,7 @@ Namespace Services
         ' gegen versehentliches Mitlesen beim Sichern oder in einem Bildschirmfoto, keine Sicherheit
         ' gegen jemanden mit Zugriff auf das Konto. Im SPEICHER steht der Wert im Klartext, sonst
         ' muesste jede der dutzenden Abfragen entschluesseln. Die Entscheidung dazu steht in
-        ' Audits/FALLEN_UND_ENTSCHEIDUNGEN.md.
+        ' FALLEN_UND_ENTSCHEIDUNGEN.md.
         Public Property ImmichEnabled As Boolean = False
         Public Property ImmichServerUrl As String = ""
         Public Property ImmichApiKey As String = ""
@@ -716,17 +717,15 @@ Namespace Services
         ''' JEDEM <see cref="Load"/> ein frisches Objekt: deserialisieren plus rund fünfzig
         ''' Normalisierungen. Gemessen an einer benutzten Einstellungsdatei (25 Vorlagen) sind das
         ''' 118 Mikrosekunden - je Aufruf, und aufgerufen wird an 148 Stellen, im Zweifel hundertfach
-        ''' je Bedienschritt und aus Vorschaubild-Fäden heraus. „Es macht doch keinen Sinn, die immer
-        ''' neu reinzuladen in einer aktiven App" (Patrick, 2026-08-27).</para>
+        ''' je Bedienschritt und aus Vorschaubild-Fäden heraus. Eine laufende Anwendung hat keinen Grund,
+        ''' die Einstellungen immer wieder neu einzulesen.</para>
         '''
         ''' <para>ES GIBT GENAU EINEN STAND, und <see cref="Load"/> gibt ihn heraus - ohne Kopie.
         ''' Zwischenzeitlich bekam jeder Aufrufer seine eigene Ausfertigung, weil das übliche Muster
         ''' „laden, ändern, speichern" lautete und eine geteilte Instanz aus dem Ändern ein
         ''' sofortiges, ungespeichertes Wirken für alle gemacht hätte. Es gab 22 solcher Stellen,
-        ''' 17 davon im Einstellungsdialog; sie gehen seit dem 2026-08-27 alle über
-        ''' <see cref="Update"/>. „Ich verstehe zudem auch nicht, wieso wir mehrere Instanzen von
-        ''' Einstellungsobjekten brauchen und die je Anforderer neu erzeugen statt einem globalen"
-        ''' (Patrick, 2026-08-27).</para>
+        ''' 17 davon im Einstellungsdialog; sie gehen alle über <see cref="Update"/>. Mehrere Instanzen
+        ''' desselben Einstellungsobjekts, je Anforderer neu erzeugt, hatten keinen Zweck.</para>
         '''
         ''' <para>DAMIT GILT EINE REGEL: wer etwas ändern will, ruft <see cref="Update"/>. Eine
         ''' Zuweisung am Ergebnis von <see cref="Load"/> wirkt sofort für alle und wird nie
@@ -1194,7 +1193,7 @@ Namespace Services
             Return Math.Max(45, Math.Min(95, value))
         End Function
 
-        ''' <summary>Obergrenze 10.000 (vorher 5.000, Patrick am 2026-08-27): ein Ordner mit 7.500
+        ''' <summary>Obergrenze 10.000 statt frueher 5.000: ein Ordner mit 7.500
         ''' Bildern passte nicht mehr hinein, und beim Zurueckrollen wurde deshalb neu geladen, was
         ''' eben noch da war. Der Preis ist Arbeitsspeicher - eine Kachel belegt je nach eingestellter
         ''' Groesse einige hundert Kilobyte, zehntausend davon also durchaus ein bis zwei Gigabyte.
@@ -1572,7 +1571,7 @@ Namespace Services
                    End Sub)
         End Sub
 
-        ''' <summary>Bei Datumssortierung ist der Tag der Normalfall (Vorgabe Patrick, 2026-08-12);
+        ''' <summary>Bei Datumssortierung ist der Tag der Normalfall;
         ''' Monat und Jahr sind fuer grosse Bestaende umschaltbar.</summary>
         Public Const DefaultGalleryGroupDateStep As String = "Day"
 

@@ -16,7 +16,7 @@ Namespace ViewModels
     '''
     ''' Hier steht nur, WIE ein Eintrag heisst und aussieht. WANN er erscheint, entscheidet
     ''' <see cref="ContextMenuBuilder"/> aus Aufrufort und Auswahl - die Regeln dazu stehen in
-    ''' Audits/KONTEXTMENUE.md.
+    ''' KONTEXTMENUE.md.
     ''' </summary>
     Public NotInheritable Class FooterMenuCatalog
 

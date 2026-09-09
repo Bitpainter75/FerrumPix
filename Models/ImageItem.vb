@@ -64,7 +64,7 @@ Namespace Models
 
         ''' <summary>Wie viele Vorschaubilder noch ausstehen - sichtbare und vorsorgliche zusammen.
         ''' Fuer die Fusszeile der Galerie: dass im Hintergrund noch gearbeitet wird, war bisher nur
-        ''' daran zu merken, dass Kacheln nach und nach auftauchten (Patrick, 2026-08-27).</summary>
+        ''' daran zu merken, dass Kacheln nach und nach auftauchten.</summary>
         Public Shared ReadOnly Property PendingThumbnails As Integer
             Get
                 SyncLock _thumbnailQueueLock
@@ -335,7 +335,7 @@ Namespace Models
         ''' Temp-Kopie eines Immich-Assets heisst nach dessen Kennung ({uuid}.jpg), damit der
         ''' Rueckweg zum Asset daran haengen kann. Wer den Dateinamen aus dem Arbeitspfad zieht,
         ''' zeigt dem Nutzer deshalb eine Kennung statt seines Fotos - genau das stand in der
-        ''' Info-Leiste (Nutzerbefund 2026-08-27).</summary>
+        ''' Info-Leiste (Nutzerbefund).</summary>
         Public ReadOnly Property DisplayFileName As String
             Get
                 If Not String.IsNullOrEmpty(_immichOriginalFileName) Then Return _immichOriginalFileName
@@ -591,7 +591,7 @@ Namespace Models
         ''' Dateiangaben auf die Welt: die holt <see cref="EnsureFileInfoLoaded"/> erst, wenn eine
         ''' Kachel sie ANZEIGT. Zeitleiste und Sortierung lesen die Felder aber roh, und beide standen
         ''' deshalb bei einer Suche auf Anfang - die Zeitleiste meldete "Ohne Datum", und "Erstellt
-        ''' (Datei)" sortierte in Wahrheit nach nichts (Nutzerbefund 2026-08-27).</para>
+        ''' (Datei)" sortierte in Wahrheit nach nichts (Nutzerbefund).</para>
         '''
         ''' <para>Der Katalog kennt beide Werte seit dem Scan. Sie hier zu setzen kostet keinen
         ''' Plattenzugriff - und der Merker <c>_fileInfoLoaded</c> bleibt bewusst OFFEN: die
@@ -616,7 +616,7 @@ Namespace Models
         ''' <para>Gedacht fuer den Ordnerwechsel: dort steht zuerst eine Kachel aus dem Katalog auf
         ''' dem Schirm, und kurz darauf kommt der geprüfte Stand von der Platte. Wuerde dabei das
         ''' ganze Element getauscht, baute die Anzeige jede Kachel neu auf - sichtbar als Flackern,
-        ''' obwohl sich an keinem Bild etwas geaendert hat (Nutzerbefund 2026-08-28). Stattdessen
+        ''' obwohl sich an keinem Bild etwas geaendert hat (Nutzerbefund). Stattdessen
         ''' behaelt das vorhandene Element seine Identitaet und sein bereits geladenes Vorschaubild
         ''' und bekommt nur die Werte; die gebundenen Sammlungen enthalten danach dieselben Objekte
         ''' in derselben Reihenfolge, und die Anzeige merkt gar nichts.</para>

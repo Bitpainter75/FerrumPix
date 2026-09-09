@@ -513,7 +513,7 @@ Namespace Services
         ''' Blende kommen aus dem EXIF. Findet sich nichts Passendes, ist die Rueckgabe Nothing -
         ''' lieber keine Korrektur als die eines fremden Objektivs.
         '''
-        ''' Das Ergebnis wird je Datei gemerkt: der Abgleich laeuft ueber 1300 Objektive und wird
+        ''' Das Ergebnis wird je Datei gemerkt: der Abgleich laeuft ueber 1500 Objektive und wird
         ''' beim Blaettern durch einen Ordner sonst fuer jedes Bild neu gerechnet.</summary>
         Public Shared Function FindCorrectionForFile(path As String,
                                                        Optional modellVorgabe As String = "") As Korrektur

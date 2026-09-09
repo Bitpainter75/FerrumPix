@@ -488,7 +488,7 @@ Namespace Services
         ''' als Immichs vier getrennte Wege.
         '''
         ''' Zur KENNUNG, gemessen an einem Album: es traegt BEIDE Felder, <c>album_id</c> als Zahl
-        ''' (1) und <c>cluster_id</c> als Text ("patrick/Nordsee"). Der Text ist der richtige, denn
+        ''' (1) und <c>cluster_id</c> als Text ("benutzer/Album"). Der Text ist der richtige, denn
         ''' er ist der, mit dem der Server anschliessend gefragt wird; die Zahl ist die interne
         ''' Zeilennummer. <see cref="Id"/> nimmt deshalb <c>cluster_id</c> zuerst.</summary>
         Public Class NextcloudCluster
@@ -504,7 +504,7 @@ Namespace Services
             <JsonPropertyName("location")> Public Property Location As String = ""
             ''' <summary>Der Benutzer, dem der Cluster gehoert. Bei einem Personencluster steht er
             ''' NEBEN der Kennung, waehrend ein Album ihn schon in seiner Kennung traegt
-            ''' ("patrick/Nordsee") - und der Filter verlangt beides zusammen.</summary>
+            ''' ("benutzer/Album") - und der Filter verlangt beides zusammen.</summary>
             <JsonPropertyName("user_id")> Public Property UserId As String = ""
             ''' <summary>Welches Backend geantwortet hat ("albums", "recognize", "places", "tags").
             ''' Der Server schickt es mit, und es entscheidet, wie die Kennung zu bilden ist.</summary>
@@ -523,12 +523,12 @@ Namespace Services
             ''' EIN PERSONENCLUSTER BRAUCHT DEN BENUTZER DAVOR, und das ist am Server GEMESSEN
             ''' (2026-08-10, Recognize auf Nextcloud 34):
             '''
-            '''   ?recognize=patrick/4   liefert genau die 7 Bilder des Clusters
+            '''   ?recognize=benutzer/4  liefert genau die Bilder des Clusters
             '''   ?recognize=4           wird abgewiesen: {"message":"Invalid face query"}
-            '''   ?face=patrick/4        wird STILLSCHWEIGEND IGNORIERT - die Antwort kommt
+            '''   ?face=benutzer/4       wird STILLSCHWEIGEND IGNORIERT - die Antwort kommt
             '''                          ungefiltert und sieht richtig aus
             '''
-            ''' Ein Album traegt den Benutzer schon in seiner Kennung ("patrick/Nordsee"), dort darf
+            ''' Ein Album traegt den Benutzer schon in seiner Kennung ("benutzer/Album"), dort darf
             ''' nichts davorgesetzt werden. Unterschieden wird deshalb am cluster_type, den der
             ''' Server selbst mitschickt - nicht daran, ob zufaellig ein Schraegstrich vorkommt.</summary>
             <JsonIgnore>
@@ -627,7 +627,7 @@ Namespace Services
         ''' <summary>Der Filter auf ein Album, an Zeitachse UND Tagesabruf angehaengt.
         '''
         ''' GEMESSEN: der Parameter heisst <c>albums</c> und nimmt die <c>cluster_id</c>
-        ''' ("patrick/Nordsee"). Ein naheliegendes <c>album=1</c> mit der Zahlenkennung wird
+        ''' ("benutzer/Album"). Ein naheliegendes <c>album=1</c> mit der Zahlenkennung wird
         ''' STILLSCHWEIGEND IGNORIERT - die Antwort kommt dann ungefiltert und sieht richtig aus.
         ''' Der Schraegstrich in der Kennung muss kodiert werden, sonst endet er als Pfadtrenner.</summary>
         ''' <summary>Der Filter auf einen Cluster. Der Parameter heisst wie das BACKEND

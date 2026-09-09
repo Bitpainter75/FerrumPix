@@ -24,7 +24,7 @@ Namespace ViewModels
     ''' Zweite Scheibe der Dateiaufteilung (2026-08-04), Regeln wie in
     ''' <c>ViewModels/EditorViewModelMask.vb</c>: geschnitten entlang des ZUSTANDS, reiner
     ''' TEXTumzug, Kontrolle ueber die Zaehlung der Bloecke vor und nach dem Schnitt. Was die
-    ''' Objekte inhaltlich ausmacht, steht in <c>Audits/EDITOR_OBJEKTE.md</c>.</summary>
+    ''' Objekte inhaltlich ausmacht, steht in <c>EDITOR_OBJEKTE.md</c>.</summary>
     Partial Public Class EditorViewModel
 
         ''' Sichtbarkeit der Checkbox: nur wo Verzerren real droht - Bild-Objekte und
@@ -848,7 +848,7 @@ Namespace ViewModels
             ' im GEBACKENEN Block (siehe ComputeCompositorStartIndex), und der schnelle Weg legt nur
             ' die zwischengespeicherten Objekte über die vorhandene Szene - die Gruppenebene entsteht
             ' dabei gar nicht. Deshalb sah eine geänderte Mischmethode aus, als täte sie nichts
-            ' (Nutzerbefund 2026-08-08). Ohne Rechteck heißt: die ganze Szene, denn eine Gruppe kann
+            ' (Nutzerbefund). Ohne Rechteck heißt: die ganze Szene, denn eine Gruppe kann
             ' überall liegen.
             RefreshOverlayAfterAnnotationChange()
         End Sub
@@ -1455,7 +1455,7 @@ Namespace ViewModels
             ' einer Ebene als Auswahl (siehe LoadSelectionFromAnnotationAlpha), und aus denselben
             ' Gründen: der Rahmen der markierten Ebene läge über der frisch geholten Ameisenlinie,
             ' ein Zug darin verschöbe den Pfad statt der Auswahl - und die Entf-Taste meinte das
-            ' markierte OBJEKT statt des Auswahlinhalts (Nutzerbefund 2026-08-09: "per Entf kann ich
+            ' markierte OBJEKT statt des Auswahlinhalts (Nutzerbefund: "per Entf kann ich
             ' den Inhalt nicht entfernen").
             '
             ' Zum Nachbessern holt man den Pfad im Pfad-Werkzeug mit einem Klick zurück; die Auswahl
@@ -1712,7 +1712,7 @@ Namespace ViewModels
                 ' Vorher hatten die Griffe unbedingten Vorrang, und zwar in der Reihenfolge der
                 ' Punktliste: wer einen Stuetzpunkt anklickte, dessen Griffe kurz sind (also bei
                 ' jedem herausgezoomten Bild), zog den Griff und verbog die Kurve, statt den Punkt zu
-                ' verschieben (Nutzerbefund 2026-08-08: "man kann keinen verschieben"). Der Abstand
+                ' verschieben (Nutzerbefund: "man kann keinen verschieben"). Der Abstand
                 ' entscheidet das ohne Sonderfall, und der Stuetzpunkt ist der wichtigere Anfasser.
                 Dim bestIndex = -1
                 Dim bestPart = ""
@@ -1781,7 +1781,7 @@ Namespace ViewModels
                 ' Abschnitt, statt das Objekt zu verschieben (siehe SplitPathSegmentAt).
                 ' MIT ABSTAND ZU DEN PUNKTEN. Ein neuer Stützpunkt entsteht nur, wo eindeutig KEIN
                 ' Anfasser gemeint sein kann - sonst kostet ein knapp danebengegangener Griff einen
-                ' ungewollten Punkt, und das ist der teurere Fehler (Nutzerbefund 2026-08-08: "es
+                ' ungewollten Punkt, und das ist der teurere Fehler (Nutzerbefund: "es
                 ' wird direkt ein neuer Knoten erstellt"). Zwei Greifzonen Abstand zu jedem
                 ' Stützpunkt und jedem abstehenden Griff.
                 Dim nearAnyHandle = False

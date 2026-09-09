@@ -542,7 +542,7 @@ Namespace Services
         ''' SEITENVERHAELTNIS DER VORLAGE, das ganz im gekippten Bild liegt. Damit bleiben keine
         ''' leeren Keile in den Ecken stehen.
         '''
-        ''' AB WERK AUS (Patricks Entscheidung vom 2026-09-07), und das ist zugleich der neutrale
+        ''' AB WERK AUS, bewusst so, und das ist zugleich der neutrale
         ''' Wert: ein Rezept aus der Zeit vor diesem Feld kommt damit auf denselben Bildstand wie
         ''' vorher heraus, ohne Umrechnung und ohne Migration.
         '''

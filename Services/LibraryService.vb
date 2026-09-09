@@ -1039,7 +1039,7 @@ Namespace Services
         ''' <para>ES GIBT KEINE ORDNER-ABFRAGE MEHR. Hier stand einmal ein GetFolderMeta ueber
         ''' "FilePath LIKE 'ordner/%'", und das war an zwei Stellen teuer. Erstens holte das Muster
         ''' auch ALLE UNTERORDNER: wer einen Elternordner oeffnete, der selbst kein Bild enthaelt,
-        ''' zog dessen ganzen Unterbau herein - an Patricks Bestand gemessen 17178 Zeilen zu
+        ''' zog dessen ganzen Unterbau herein - an einem gewachsenen Bestand gemessen 17178 Zeilen zu
         ''' zweiunddreissig Spalten (rund 5,5 MB Text, davon 4,4 MB vorformatierte
         ''' Zusammenfassungen) fuer null angezeigte Bilder. Zweitens laesst SQLite die
         ''' LIKE-Optimierung fallen, sobald eine ESCAPE-Klausel danebensteht - die Abfrage lief

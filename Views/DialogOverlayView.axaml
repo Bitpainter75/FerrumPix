@@ -294,7 +294,7 @@
                                             IsVisible="{Binding IsSaveAsTargetRowVisible}">
                                     <!-- Immer sichtbar, ohne Ordner nur ausgegraut: Knoepfe, die je
                                          nach Aufrufweg auftauchen und verschwinden, machen die Zeile
-                                         unlesbar (Nutzerwunsch). -->
+                                         unlesbar. -->
                                     <Button Classes="segmented"
                                             Classes.active="{Binding IsDialogFolderChoiceCurrentActive}"
                                             IsEnabled="{Binding IsDialogFolderChoiceCurrentEnabled}"

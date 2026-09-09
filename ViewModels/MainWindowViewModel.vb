@@ -100,7 +100,7 @@ Namespace ViewModels
         ' Der Editor wechselt den Modus ERST, wenn das Bild offen ist - vorher weiss niemand, ob es
         ' ueberhaupt aufgeht. Bei einem RAW dauert das Sekunden, und in dieser Zeit passierte
         ' sichtbar gar nichts: man haelt den Klick fuer danebengegangen und klickt noch einmal
-        ' (Nutzerbefund 2026-08-07). Deshalb zwei Dinge, und beide gehoeren HIERHIN, weil hier ALLE
+        ' (Nutzerbefund). Deshalb zwei Dinge, und beide gehoeren HIERHIN, weil hier ALLE
         ' Wege in den Editor zusammenlaufen - aus der Galerie, aus dem Betrachter, aus dem
         ' Filmstreifen.
 
@@ -135,7 +135,7 @@ Namespace ViewModels
         ''' <summary>Dieselbe Anzeige fuer einen LANGEN VORGANG, der kein Bildoeffnen ist: Stapel
         ''' schreiben, Hochskalieren, Konvertieren. Ohne sie sass die Oberflaeche waehrend eines
         ''' Stapels still da - bei einem Modelllauf ueber mehrere Bilder minutenlang, und nichts
-        ''' unterschied das von einem Haenger (Nutzerbefund 2026-08-08 zum Hochskalieren).
+        ''' unterschied das von einem Haenger (Nutzerbefund zum Hochskalieren).
         '''
         ''' <paramref name="text"/> kommt FERTIG UEBERSETZT herein: T() liest seinen Schluessel aus
         ''' dem Literal, ein T(variable) fiele aus der Lokalisierung heraus.</summary>
@@ -297,8 +297,8 @@ Namespace ViewModels
                     Editor?.SetEntryMode(previousMode)
                 End If
 
-                ' Zurueck aus den EINSTELLUNGEN: das offene Bild neu laden (Nutzerentscheidung
-                ' 2026-08-04). Nach diesem Ausflug stand der Editor mit leerer Flaeche da - bei
+                ' Zurueck aus den EINSTELLUNGEN: das offene Bild neu laden, bewusst so (siehe
+                ' FALLEN_UND_ENTSCHEIDUNGEN.md). Nach diesem Ausflug stand der Editor mit leerer Flaeche da - bei
                 ' einer .fpx sichtbar als blosses Schachbrett.
                 '
                 ' Neu laden ist hier gefahrlos, weil der WEG in die Einstellungen die Speicherfrage
@@ -1176,7 +1176,7 @@ Namespace ViewModels
 
         ''' <summary>Bedienbar, sobald es den Ordner gibt. Die Knoepfe sind IMMER sichtbar und
         ''' werden ohne Ordner nur ausgegraut - eine Zeile, in der Knoepfe je nach Aufrufweg
-        ''' auftauchen und verschwinden, ist schwerer zu lesen als eine stabile (Nutzerwunsch).
+        ''' auftauchen und verschwinden, ist schwerer zu lesen als eine stabile.
         ''' Frueher versteckte die Regel die Schaltflaeche komplett, und aus Viewer und Editor
         ''' fehlte der Knopf "Aktueller Ordner" dadurch ganz.</summary>
         Public ReadOnly Property IsDialogFolderChoiceCurrentEnabled As Boolean
@@ -1255,7 +1255,7 @@ Namespace ViewModels
             ' gleich im Betrachter oder im Editor - die Galerie wird dabei nie aufgebaut, und ihr
             ' Ordner ist leer (siehe OpenInitialImage). "Speichern unter" zeigte dann keinen
             ' aktuellen Ordner an und schlug den zuletzt benutzten vor, obwohl der Ordner des
-            ' offenen Bildes bekannt ist (Nutzerbefund 2026-08-27). Derselbe Fall tritt ein, wenn
+            ' offenen Bildes bekannt ist (Nutzerbefund). Derselbe Fall tritt ein, wenn
             ' die Galerie auf einer Suchliste oder auf Immich steht: dort gibt es keinen Ordner,
             ' das offene Bild kann trotzdem eines auf der Platte sein.
             If String.IsNullOrWhiteSpace(folder) OrElse Not Directory.Exists(folder) Then
@@ -2349,7 +2349,7 @@ Namespace ViewModels
         ''' ACHTUNG, AUSSCHLUSSLISTE: hier steht, wer es NICHT bekommt. Eine neue Dialogart, die
         ''' hier fehlt, bekommt es also stillschweigend - und dann steht ueber ihrem eigenen Inhalt
         ''' ein zweites, leeres Feld, das nichts tut. Genau das ist beim Ortsdialog passiert
-        ''' (Nutzerbefund 2026-08-11: "fuer was ist das obere Eingabefeld"). Jede Dialogart mit
+        ''' (Nutzerbefund: "fuer was ist das obere Eingabefeld"). Jede Dialogart mit
         ''' eigenem Inhalt gehoert in diese Liste.</summary>
         Public ReadOnly Property DialogShowsInput As Boolean
             Get
@@ -3088,7 +3088,7 @@ Namespace ViewModels
                 '
                 ' 840 UND NICHT 780: bei 780 blieben von den fünfzehn Größen-Vorgaben genau zwei
                 ' Bildpunkte zu wenig, und die letzte („32") rutschte allein in eine zweite Zeile
-                ' (Nutzerbefund mit Bildschirmaufnahme, 2026-09-07). Eine Vorgabenreihe, die
+                ' (Nutzerbefund mit Bildschirmaufnahme). Eine Vorgabenreihe, die
                 ' umbricht, liest sich wie zwei Gruppen, die es nicht gibt.
                 If DialogShowsBatchResize OrElse DialogShowsExportTo OrElse
                    _dialogKind = AppDialogKind.BatchConvert OrElse
@@ -3143,7 +3143,7 @@ Namespace ViewModels
         ''' <summary>Die EIGENE Qualitaetszeile fuer das UEBERSCHREIBEN: der Speichern-unter-Block
         ''' (Format, Ziel, Qualitaet) ist dann komplett ausgeblendet, neu encodiert wird die Datei
         ''' trotzdem. Vorher wurde still mit einem festen bzw. dem Vorgabewert gespeichert, ohne
-        ''' dass man es sehen oder aendern konnte (Nutzerwunsch 2026-07-31). Sichtbar nur, wenn
+        ''' dass man es sehen oder aendern konnte. Sichtbar nur, wenn
         ''' JPG-Quellen im Stapel sind - bei reinen PNG-Stapeln gibt es nichts einzustellen.</summary>
         Public ReadOnly Property IsDialogOverwriteJpgQualityVisible As Boolean
             Get
@@ -4148,7 +4148,7 @@ Namespace ViewModels
             ' Schreibt der Lauf auf die Datei, die er gerade LIEST? Dann ist "eine Datei mit diesem
             ' Namen existiert bereits" die falsche Auskunft - es ist dieselbe Datei, und sie wird
             ' ersetzt. Kommt vor, wenn der Zielordner der Ordner der Quelle ist und das Namensmuster
-            ' nichts anhaengt (Nutzerbefund 2026-08-06: Bildgroesse aendern in den aktuellen Ordner).
+            ' nichts anhaengt (Nutzerbefund: Bildgroesse aendern in den aktuellen Ordner).
             Dim targetIsSource = incomingIsPlanned AndAlso PathIdentity.AreSame(existingPath, incomingPath)
 
             DialogExistingFile = FileConflictInfo.FromPath(existingPath)
@@ -4663,7 +4663,7 @@ Namespace ViewModels
             If pathList.Count = 0 Then
                 ' Ein wortloser Abbruch ist die schlimmste Sorte: der Nutzer bestaetigt nichts, es
                 ' passiert nichts, und niemand erfaehrt warum. Der Grund steht im Log UND in der
-                ' Meldung - beim Nutzerbefund am 2026-08-10 lagen die Bilder im Systempapierkorb,
+                ' Meldung - beim Nutzerbefund lagen die Bilder im Systempapierkorb,
                 ' und dort ist Loeschen zu Recht gesperrt.
                 Dim gesperrt = 0
                 For Each p In angefragt

@@ -499,7 +499,7 @@
                          Von 2026-08-04 bis 2026-08-08 ausgeblendet, weil die Bedienung nicht trug;
                          wieder da, seit das Zeichnen am Zeiger hängt, glatte Punkte glatt bleiben,
                          die Kurve selbst anfassbar ist und ein Pfad zur Auswahl wird (Einzelheiten
-                         in Audits/EDITOR_OBJEKTE.md). Die Form "Pfad" im Einfügen-Werkzeug bleibt
+                         in EDITOR_OBJEKTE.md). Die Form "Pfad" im Einfügen-Werkzeug bleibt
                          entfallen: sie gehörte nie dorthin, jede Form dort wird aufgezogen. -->
                     <Button Classes="tool-btn-row"
                             ToolTip.Tip="Pfad"

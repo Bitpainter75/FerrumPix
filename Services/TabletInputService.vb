@@ -10,7 +10,7 @@ Namespace Services
     ''' <summary>
     ''' Der Zeichentablett-Modus: alles loest beim DRUECKEN aus statt beim Loslassen.
     '''
-    ''' Hintergrund (Nutzerbefund 2026-08-28): mit einem Stift liessen sich die Regler bedienen, die
+    ''' Hintergrund (Nutzerbefund): mit einem Stift liessen sich die Regler bedienen, die
     ''' Schaltflaechen der Galerieleiste aber nicht. Das passt zu dem, was Avalonia tut. Ein
     ''' <see cref="Button"/> setzt beim Druecken nur <c>IsPressed</c>; der Klick entsteht erst beim
     ''' Loslassen, und dafuer muessen DREI Dinge gleichzeitig zutreffen: <c>IsPressed</c> ist noch

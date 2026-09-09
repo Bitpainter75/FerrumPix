@@ -13,7 +13,7 @@ Namespace ViewModels
     ''' Vorher gab es fuenf ausgeschriebene Menues und 112 Zeilen Sichtbarkeitslogik, die auf
     ''' benannte Eintraege zugriffen. Beschriftungen liefen auseinander, Symbole fehlten mal hier
     ''' mal dort, und eine Aktion aus dem Filmstreifen traf das falsche Bild. Die Regeln stehen
-    ''' jetzt einmal, nachlesbar in Audits/KONTEXTMENUE.md.
+    ''' jetzt einmal, nachlesbar in KONTEXTMENUE.md.
     '''
     ''' Fuehrende Vorlage ist die GALERIE: ihre Regeln sind erprobt, alles andere leitet sich ab.
     ''' </summary>
@@ -40,7 +40,7 @@ Namespace ViewModels
             Dim first = entries.FirstOrDefault()
             Dim images = entries.Where(Function(i) i.IsImage).ToList()
 
-            ' Die Zustandsgroessen aus Audits/KONTEXTMENUE.md, eins zu eins.
+            ' Die Zustandsgroessen aus KONTEXTMENUE.md, eins zu eins.
             Dim isParentEntry = first IsNot Nothing AndAlso first.IsParentFolderEntry
             Dim isSingle = entries.Count = 1
             Dim singleItemActions = isSingle AndAlso Not isParentEntry

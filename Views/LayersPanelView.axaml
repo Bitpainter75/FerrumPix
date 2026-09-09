@@ -302,8 +302,8 @@
                  Arbeitsbild mit Retusche und Pinselstrichen und der Hintergrund. Sie sind nicht
                  umsortier- oder loeschbar, es gibt an ihnen also nur EINE Handlung: ein- und
                  ausblenden. Drei volle Zeilen mit Vorschaubild, Namen und Schloss standen fuer diese
-                 eine Handlung, obwohl keine von ihnen ein Vorschaubild traegt (Nutzerentscheidung
-                 2026-08-06). Das Symbol selbst ist jetzt der Schalter: Akzentfarbe heisst sichtbar,
+                 eine Handlung, obwohl keine von ihnen ein Vorschaubild traegt. Bewusst so, siehe
+                 FALLEN_UND_ENTSCHEIDUNGEN.md. Das Symbol selbst ist jetzt der Schalter: Akzentfarbe heisst sichtbar,
                  gedaempft heisst ausgeblendet - dieselbe Sprache, die das Auge in den Ebenenzeilen
                  darueber spricht.
 
@@ -470,7 +470,7 @@
                          markierte Ebenen bleibt der Weg über das Kontextmenü, das weiterhin alles
                          Markierte gemeinsam sperrt. -->
                     <!-- Transparente Punkte sperren steht NICHT hier, sondern im Kontextmenü der
-                         Zeile (Nutzerwunsch 2026-08-08): die Reihe war voll, und der Schalter wird
+                         Zeile: die Reihe war voll, und der Schalter wird
                          einmal gesetzt und dann lange nicht mehr angefasst. -->
                     <Button Classes="icon-btn" Width="30" Height="30" Padding="0"
                             Command="{Binding RasterizeSelectedAnnotationCommand}"

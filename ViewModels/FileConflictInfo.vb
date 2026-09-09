@@ -26,7 +26,7 @@ Namespace ViewModels
         ''' Groesse, Zeitstempel und Masse stehen deshalb NICHT da: sie entstehen erst beim Rechnen.
         ''' Vorher las der Dialog hier die QUELLdatei aus und zeigte deren Werte als die der neuen
         ''' Datei - beim Verkleinern auf 800x800 stand dort weiter die Groesse und "1600 x 1600" des
-        ''' Originals (Nutzerbefund 2026-08-06). Die Vorschau kommt weiter aus der Quelle, denn das
+        ''' Originals (Nutzerbefund). Die Vorschau kommt weiter aus der Quelle, denn das
         ''' MOTIV stimmt ja; nur die Zahlen daneben duerfen nicht von ihr kommen.</summary>
         Public Shared Function ForPlannedWrite(targetPath As String, previewSourcePath As String) As FileConflictInfo
             Dim pending = LocalizationService.T("wird berechnet")

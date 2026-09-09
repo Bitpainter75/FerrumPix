@@ -1413,7 +1413,7 @@ Namespace Services
         ''' MESSHINWEIS: der Referenz-Export entzerrt standardmaessig mit dem Objektivprofil und skaliert
         ''' dabei um rund 2 %. Ohne Geometrie-Angleich misst ein Vergleich vor allem
         ''' Fehlregistrierung (WID_7643: 27,2 statt 15,9). FerrumPix baut die Objektivkorrektur
-        ''' bewusst NICHT nach - siehe Audits/RAW_UND_FARBE.md.</summary>
+        ''' bewusst NICHT nach - siehe RAW_UND_FARBE.md.</summary>
         ''' <summary>FBDD-Stufe von LibRaw: 0 = aus, 1 = leicht, 2 = voll. Siehe Begruendung an der
         ''' Aufrufstelle - 2 ist beim Farbrauschen gemessen schlechter als 1.</summary>
         Private Const FbddRauschminderung As Integer = 1

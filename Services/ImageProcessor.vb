@@ -84,7 +84,7 @@ Namespace Services
         ''' Sichtbar wurde das beim Ausschneiden mit anschliessendem Einfuegen: der ausgeschnittene
         ''' Bereich stand doppelt da, einmal als eingefuegtes Objekt und einmal noch im Hintergrund,
         ''' weil die schnellen Wege ihre Komposition auf dem alten Basisbild aufbauten
-        ''' (Nutzerbefund 2026-08-27). Erst ein Vollrender raeumte ihn weg.
+        ''' (Nutzerbefund). Erst ein Vollrender raeumte ihn weg.
         '''
         ''' Der Zaehler ist die fehlende Angabe: wer die Bildpunkte der Quelle anfasst, erhoeht ihn,
         ''' und der Cache gilt nur fuer den Stand, mit dem er gebaut wurde.</summary>
@@ -1624,7 +1624,7 @@ Namespace Services
             ' NULL HEISST KEINE KONTUR - dieselbe Regel wie im Bildrender (DrawAnnotationOnCanvas).
             ' Die Untergrenze steht hier ein ZWEITES Mal, und genau daran zeichnete der Kompositor
             ' weiter eine Haarlinie, nachdem der Bildrender sie schon nicht mehr zog: das markierte
-            ' Objekt kommt aus DIESEM Weg (Nutzerbefund 2026-08-08: "beim Pfad bleibt weiterhin eine
+            ' Objekt kommt aus DIESEM Weg (Nutzerbefund: "beim Pfad bleibt weiterhin eine
             ' Linie zu sehen"). Zwei Stellen, eine Regel - siehe EDITOR_OBJEKTE.md.
             Dim strokeWidth = If(renderAnnotation.StrokeWidth <= 0.0F, 0.0F,
                                  Math.Max(1.0F, renderAnnotation.StrokeWidth))
@@ -2834,7 +2834,7 @@ Namespace Services
         ''' MIT DEM BETRAG DES KOSINUS. Über 90 Grad ist er negativ, und ohne Betrag wurde die
         ''' Leinwand KLEINER statt größer: bei 102 Grad schrumpfte sie von 1088 auf 827, das
         ''' gedrehte Bild ragte weit darüber hinaus und man sah nur noch dessen Mitte; bei 180
-        ''' Grad blieb rechnerisch eine Kante von einem Pixel. Nutzerbefund vom 4. September
+        ''' Grad blieb rechnerisch eine Kante von einem Pixel. Nutzerbefund
         ''' 2026, zwei Bildschirmaufnahmen mit und ohne Haken. Der Sinus ist über den Betrag des
         ''' Winkels ohnehin nie negativ, steht hier aber der Symmetrie halber genauso.
         '''
@@ -4260,7 +4260,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
         ''' es auf die tatsaechlich dekodierte Datei herunter (<see cref="ScaleRecipeToSource"/>).
         ''' Bleiben die Zahlen stehen, pinnen sie das Ergebnis auf ein fremdes Mass - eine
         ''' bestaetigte Leinwand zeigte nach dem vierfachen Hochskalieren einen Ausschnitt in ihrem
-        ''' alten Kasten (Nutzerbefund 2026-09-08).
+        ''' alten Kasten (Nutzerbefund).
         '''
         ''' ERSETZT STATT GEAENDERT: dieselben Schritt-Objekte liegen als Abschrift auch in den
         ''' Rueckgaengig-Eintraegen des Editors, und die duerfen sich nicht mitverstellen.</summary>

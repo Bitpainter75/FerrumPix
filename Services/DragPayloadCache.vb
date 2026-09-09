@@ -17,7 +17,7 @@ Namespace Services
     ''' nach den Daten beantworten, sitzt aber selbst in dieser Warteschleife. Ergebnis ist ein
     ''' Poll-Lauf bis zum Zeitablauf - und zwar bei JEDEM Zeigerbericht waehrend des Ziehens.
     ''' Sichtbar wurde das als hohe Prozessorlast und eine stehende Anwendung, sobald jemand ein
-    ''' Bild auf einen Baumknoten zog (Nutzerbefund 2026-08-10).
+    ''' Bild auf einen Baumknoten zog (Nutzerbefund).
     '''
     ''' Deshalb merkt sich die Ziehquelle ihre Pfade hier. Wer waehrend eines eigenen Zuges wissen
     ''' will, was gezogen wird, fragt DIESE Stelle; das Fenstersystem wird nur noch fuer FREMDE

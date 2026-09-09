@@ -24,7 +24,7 @@ Namespace ViewModels
     ''' Erste Scheibe der Dateiaufteilung (2026-08-04). Geschnitten ist entlang des ZUSTANDS, nicht
     ''' entlang der Funktion: ein Schnitt nach Features ergaebe Dateien, die alle dieselben Felder
     ''' anfassen, und gewonnen waere nur Scrollweg. Die Regeln, die dieser Bereich einhalten muss,
-    ''' stehen in <c>Audits/MASKEN_EBENEN_AUSWAHL.md</c>.
+    ''' stehen in <c>MASKEN_EBENEN_AUSWAHL.md</c>.
     '''
     ''' Der Umzug war ein reiner TEXTumzug - keine Zeile wurde dabei geaendert. Wer hier aufraeumt,
     ''' tut das als eigenen Schritt, damit ein Fehler nicht zwischen tausend verschobenen Zeilen
@@ -1388,9 +1388,13 @@ Namespace ViewModels
         ' Zeilen beantworten genau das - eingeschaltet ueber "Diagnose-Log" in den Einstellungen,
         ' ausgeschaltet kosten sie nichts (die teuren Angaben entstehen erst hinter der Abfrage).
 
+        ''' <summary>Den GELTENDEN Schalter fragen, nicht die gespeicherte Einstellung: mit dem
+        ''' Startparameter --debug ist das Protokoll fuer diesen Lauf an, ohne dass in der Datei
+        ''' etwas steht. Wer die Anwendung deswegen aus der Konsole startet, will gerade DIESE Spur
+        ''' sehen. IsVerboseEnabled liest die Einstellung von selbst, wenn nichts erzwungen wurde.</summary>
         Private Shared Function IsMaskTraceEnabled() As Boolean
             Try
-                Return AppSettingsService.Load().EnableDiagnosticLogging
+                Return DiagnosticLogService.IsVerboseEnabled
             Catch
                 Return False
             End Try
@@ -2343,7 +2347,7 @@ Namespace ViewModels
 
             ' ALLE Bestandteile in ihrer Reihenfolge, gemalte wie gerechnete. Vorher las diese Stelle
             ' die Verlaufsfelder der MASKE - also den ersten Bestandteil -, und ein zweiter, per Plus
-            ' angehaengter Verlauf blieb ohne Rot (Nutzerbefund 2026-08-04). Danach zeichnete sie zwar
+            ' angehaengter Verlauf blieb ohne Rot (Nutzerbefund). Danach zeichnete sie zwar
             ' alle VERLAEUFE, aber keinen gemalten Anteil: an einer Maske aus gemalt plus Verlauf
             ' verschwand der gemalte Teil, solange man an einem Regler drehte.
             '
@@ -3643,8 +3647,8 @@ Namespace ViewModels
         '''
         ''' Waehrend der Arbeit an einer Ebene bleibt ihre Miniatur stehen: man sieht sie dabei
         ''' ohnehin nicht an, und bei jeder Aenderung neu zu zeichnen hiesse, eine Pinselebene mit
-        ''' allen ihren Strichen je Strich einmal mehr zu zeichnen (Nutzerentscheidung
-        ''' 2026-08-04).</summary>
+        ''' allen ihren Strichen je Strich einmal mehr zu zeichnen. Bewusst so, siehe
+        ''' MASKEN_EBENEN_AUSWAHL.md.</summary>
         Private Sub RefreshThumbnailForAnnotationIndex(index As Integer)
             If index < 0 OrElse index >= _annotations.Count Then Return
             If Not AppSettingsService.Load().EditorLayerThumbnails Then Return

@@ -1016,7 +1016,7 @@ Namespace Views
                           RoutingStrategies.Tunnel, handledEventsToo:=True)
             ' RAD UND ZAHLENFELD HABEN KEIN LOSLASSEN. Sie aendern den Wert in kurzer Folge wie ein
             ' Zug, hingen aber an keinem Druecken - und liefen deshalb weiter in voller
-            ' Vorschauaufloesung (Nutzerbefund 2026-09-07). Beide melden ihren Schritt; beendet wird
+            ' Vorschauaufloesung (Nutzerbefund). Beide melden ihren Schritt; beendet wird
             ' der Lauf ueber eine Pause, siehe EditorViewModel.NoteSliderStepPreview.
             Me.AddHandler(InputElement.PointerWheelChangedEvent, AddressOf OnSliderStepWheel,
                           RoutingStrategies.Tunnel, handledEventsToo:=True)
@@ -1087,7 +1087,7 @@ Namespace Views
         ''' nicht das Feld, sondern der Textblock TIEF in seiner Vorlage - dreiundzwanzig Ebenen
         ''' darunter (Zahlenfeld, Drehknopf, Textfeld und deren Bildlauf bringen jeder mehrere mit).
         ''' Eine erste Fassung stand bei zwoelf, und genau daran blieb das Rad ueber dem Zahlenfeld
-        ''' zaeh, waehrend es ueber dem Regler schon flott war (Nutzerbefund 2026-09-07). Vierundsechzig
+        ''' zaeh, waehrend es ueber dem Regler schon flott war (Nutzerbefund). Vierundsechzig
         ''' laesst Luft fuer eine tiefere Vorlage und bleibt eine Grenze; der Weg kostet nichts.</summary>
         Private Const SliderValueControlSearchDepth As Integer = 64
 
@@ -1117,8 +1117,8 @@ Namespace Views
             ' Rauschen, Klarheit/Struktur/Staub-Kratzer, Koernung, Bokeh und die Objektivkorrektur
             ' rechnen in BILDPUNKTEN. Verkleinert man die Quelle, wirkt derselbe Reglerwert auf
             ' einen anderen Bildausschnitt, und die Vorschau zeigt etwas anderes als das Ergebnis.
-            ' Ein groesserer Zwischenwert half nicht (Patrick am 2026-08-28: auch 2304 war noch
-            ' verfaelschend) - "gross genug" gibt es hier nicht, nur die Vorschauaufloesung selbst.
+            ' Ein groesserer Zwischenwert half nicht, auch 2304 war noch verfaelschend - "gross genug"
+            ' gibt es hier nicht, nur die Vorschauaufloesung selbst.
             '
             ' Danach die uebrigen Korrekturen: Licht, Farbe, Farbmischer, Farbgradierung,
             ' Kalibrierung, Filmnegativ, Filter und LUT rechnen je Bildpunkt, ein verkleinertes
@@ -1141,7 +1141,7 @@ Namespace Views
                     ' Bildmassstab haengt daran nichts. Ohne den Eintrag lief JEDER
                     ' 90-Millisekunden-Schritt des Zuges auf der vollen Vorschauaufloesung
                     ' (mindestens 2560, auf grossen Bildschirmen mehr) durch die ganze Kette, und
-                    ' der Regler fuehlte sich zaeh an (Nutzerbefund 2026-09-07). Das Loslassen zieht
+                    ' der Regler fuehlte sich zaeh an (Nutzerbefund). Das Loslassen zieht
                     ' wie ueberall in voller Vorschauaufloesung nach.
                     Return SliderKind.Adjustment
                 End If
@@ -3285,7 +3285,7 @@ Namespace Views
                 If eraserFill.A <= 0 Then
                     ' DAS SCHACHBRETT IST EINE AUSSAGE ÜBER DAS ERGEBNIS - und sie stimmt nur im
                     ' Foto: dort entsteht ein echtes Loch. Auf einer BILD-EBENE kommt unter dem Strich
-                    ' das zum Vorschein, was darunter liegt (Nutzerbefund 2026-08-08: "im Live zeigt
+                    ' das zum Vorschein, was darunter liegt (Nutzerbefund: "im Live zeigt
                     ' der Radierer dann das Schachbrett"). Was das ist, weiss die Ansicht nicht - die
                     ' Szene ohne genau diese Ebene liegt ihr nicht vor. Also behauptet sie nichts
                     ' mehr: die Kontur zeigt weiter, WO radiert wird, die Fläche bleibt frei.
@@ -3637,7 +3637,7 @@ Namespace Views
                 ' DIE KONTUR DES BESTAETIGTEN AUSSCHNITTS GEHOERT INS WERKZEUG und muss hier mit
                 ' verschwinden: PositionCropOverlayFromViewModel steigt ausserhalb des Werkzeugs
                 ' sofort aus und kaeme gar nicht mehr dazu, sie auszublenden - sie blieb im
-                ' naechsten Werkzeug stehen (Nutzerbefund 2026-09-04).
+                ' naechsten Werkzeug stehen (Nutzerbefund).
                 For Each outlineName As String In {"AppliedCropOutline", "AppliedCropOutlineShadow"}
                     Dim outline = Me.FindControl(Of Avalonia.Controls.Shapes.Polygon)(outlineName)
                     If outline IsNot Nothing Then outline.IsVisible = False
@@ -5380,7 +5380,7 @@ Namespace Views
             ' rahmen laege also genau auf der Bildkante und saehe aus wie ein zweiter Rahmen.
             '
             ' DASSELBE GILT FUER PFADPUNKTE, und genau daran ist es aufgefallen (Nutzerbefund
-            ' 2026-08-08: "die gestrichelte Linie der Box verhindert, dass man die Anfasser anfassen
+            ' : "die gestrichelte Linie der Box verhindert, dass man die Anfasser anfassen
             ' kann", und zwar erst beim ERNEUTEN Markieren). UpdateTextOverlayVisibility blendete den
             ' Rahmen richtig aus, der naechste Layout-Durchlauf holte ihn zurueck - und der laeuft bei
             ' jeder Zeigerbewegung. Wer eine Abschaltung dort ergaenzt, muss sie IMMER auch hier

@@ -688,7 +688,7 @@ Namespace Services
     ''' Unterschied ist die Darstellung (rot gegen Laufameisen), nicht der Aufbau.
     '''
     ''' Der Klassenname trägt noch das Wort "Adjustment"; in der Oberfläche kommt es NICHT vor
-    ''' (Patrick am 2026-08-06: "was das mit der Korrektur soll ist mir auch unklar"). Dort gibt es
+    ''' (siehe MASKEN_EBENEN_AUSWAHL.md, Abschnitt zu den Wörtern der Oberfläche). Dort gibt es
     ''' Maskenebene, Auswahlebene, Ebene mit Maske und Bestandteil, mehr nicht.</summary>
     Public Class MaskedAdjustmentLayer
         Public Property Id As String = Guid.NewGuid().ToString("N")

@@ -250,7 +250,7 @@ Namespace Services
         ''' einer Masken-Art das rote Overlay veroeffentlicht, lag es sofort ueber dem Bild. Die
         ''' Ansicht zeigt es allein an der Art und am Vorhandensein des Bildes, nicht an
         ''' HasActiveSelection. Sichtbar wurde es als "rotes Overlay einer Maske, obwohl im
-        ''' Ebenenpanel nichts markiert ist und das Auswahlwerkzeug steht" (Nutzerbefund 2026-08-08) -
+        ''' Ebenenpanel nichts markiert ist und das Auswahlwerkzeug steht" (Nutzerbefund) -
         ''' und weil das Wiederherstellen die Bindung an die Ebene loescht, gehoerte das Rot zu gar
         ''' nichts mehr.
         '''

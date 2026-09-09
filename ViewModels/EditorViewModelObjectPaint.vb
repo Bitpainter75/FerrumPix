@@ -19,8 +19,8 @@ Namespace ViewModels
     ''' die das Original des Nutzers sein kann. Rückgängig fällt damit von selbst ab: der Schnappschuss
     ''' von <c>PushUndo</c> trägt den vorigen Pfad, und der zeigt weiter auf die vorige Datei.
     '''
-    ''' Die Regeln zu Objekten stehen in <c>Audits/EDITOR_OBJEKTE.md</c>, die zur Auswahl in
-    ''' <c>Audits/MASKEN_EBENEN_AUSWAHL.md</c>.</summary>
+    ''' Die Regeln zu Objekten stehen in <c>EDITOR_OBJEKTE.md</c>, die zur Auswahl in
+    ''' <c>MASKEN_EBENEN_AUSWAHL.md</c>.</summary>
     Partial Public Class EditorViewModel
 
         ''' <summary>Speicherdeckel für die Zwischenstände des Objekt-Malens. Jeder Zug legt eine neue
@@ -59,7 +59,7 @@ Namespace ViewModels
         ''' Zwei Entscheidungen dahinter:
         ''' - Das Raster hat die volle Größe des Anzeigebilds. Ein kleineres wäre ein Pinselstrich in
         '''   niedrigerer Auflösung, und das sähe man beim Speichern. Der Preis steht in
-        '''   <c>Audits/EDITOR_OBJEKTE.md</c>: jeder Zug dekodiert und schreibt dieses Raster.
+        '''   <c>EDITOR_OBJEKTE.md</c>: jeder Zug dekodiert und schreibt dieses Raster.
         ''' - Die Art ist <c>SelectionImage</c> und nicht <c>Image</c>. Nur dort trägt die Zeile den
         '''   eigenen Namen ("Malebene 1") statt eines Dateinamens, und nur dort wird das Raster auf
         '''   das Ebenenrechteck gespannt statt seitenverhältnisgetreu eingepasst - beides ist genau

@@ -409,7 +409,7 @@ Namespace Services
         ''' Weichzeichnung des ganzen Bildes (Skia, separierbar, Sigma hoechstens 2,45) und danach
         ''' das Verrechnen beider Bilder ueber alle Bildpunkte. Klarheit und Struktur waren mit
         ''' zusammen 325 ms der groesste Posten der Kette, nachdem die Koernung erledigt war
-        ''' (Patricks Protokoll vom 2026-08-28) - und ohne diese Teilung ist nicht zu sagen, welche
+        ''' (gemessen) - und ohne diese Teilung ist nicht zu sagen, welche
         ''' Haelfte das ist. Beide Aufrufer teilen sich die Namen; die Summe steht im Protokoll.</remarks>
         Private Shared Function ApplyLocalContrast(source As SKBitmap, blurSigma As Single, amount As Single, strengthMultiplier As Single) As SKBitmap
             Using blurred = PerformanceTraceService.Measure(
@@ -1386,15 +1386,15 @@ Namespace Services
         ''' Startwert, nicht als Zug aus einem Strom.
         '''
         ''' <para>WARUM DAS DEN STROM ABLOEST: die Koernung war mit 345 ms die teuerste Stufe der
-        ''' ganzen Pixelkette, ein knappes Drittel (Messung an 3840x2564, Patricks Protokoll vom
-        ''' 2026-08-28). Sie stand ganz am Ende, also zahlte JEDER Regler sie mit - auch die
+        ''' ganzen Pixelkette, ein knappes Drittel (gemessen an 3840x2564).
+        ''' Sie stand ganz am Ende, also zahlte JEDER Regler sie mit - auch die
         ''' Belichtung. Der Grund war nicht die Rechnung, sondern die Reihenfolge: ein
         ''' <c>Random</c>-Strom laesst sich nicht vorspulen, also musste die Schleife seriell
         ''' bleiben. Ein Ortshash haengt an gar nichts und laeuft zeilenparallel.</para>
         '''
         ''' <para>DER PREIS IST EIN ANDERES KORNMUSTER. Gleich stark und gleich fein, aber nicht
         ''' dasselbe Korn wie vorher - gespeicherte Rezepte mit Koernung sehen danach anders aus.
-        ''' Bewusst so entschieden (Patrick am 2026-08-28).</para>
+        ''' Bewusst so entschieden, siehe FALLEN_UND_ENTSCHEIDUNGEN.md.</para>
         '''
         ''' <para>Der Startwert kommt wie vorher aus der Bildgroesse, damit zwei verschiedene
         ''' Groessen nicht dasselbe Muster tragen.</para></summary>

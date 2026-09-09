@@ -939,7 +939,7 @@ Namespace Views
                 ' Bedienfeld nicht mehr der Fall, sobald dieses Bedienfeld daraufhin verschwindet.
                 ' So verhielt es sich bei "Auswahl aus dem Pfad": der Knopf wird mit dem Pfad-
                 ' Bedienfeld ausgeblendet, der Fokus faellt weg, die Taste ging ans Fenster, und die
-                ' frisch entstandene Auswahl liess sich nicht leeren (Nutzerbefund 2026-08-09,
+                ' frisch entstandene Auswahl liess sich nicht leeren (Nutzerbefund,
                 ' zweimal gemeldet - die Regel selbst war da laengst richtig, sie wurde nur nie
                 ' gefragt).
                 '

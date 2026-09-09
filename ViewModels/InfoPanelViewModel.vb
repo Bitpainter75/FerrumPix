@@ -385,7 +385,7 @@ Namespace ViewModels
         ''' Fusszeile, Kontextmenue, Klick auf die Kachel, Ruecknahme nach einem abgelehnten
         ''' Immich-Schreibvorgang. Jeden dieser Wege daran zu erinnern, das Panel anzustossen, ist
         ''' eine Liste, die jemand vergisst - genau das ist beim Herz auf der Kachel passiert
-        ''' (Nutzerbefund 2026-08-06, nachdem die uebrigen Wege schon versorgt waren).
+        ''' (Nutzerbefund, nachdem die uebrigen Wege schon versorgt waren).
         '''
         ''' Die Elemente melden ihre Aenderung ohnehin, sonst zeigte die Kachel sie nicht. Wer
         ''' kuenftig einen neuen Weg baut, ist damit bauartbedingt versorgt.</summary>

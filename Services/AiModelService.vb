@@ -337,7 +337,7 @@ Namespace Services
         ''' Nutzung zusichert, ist das ein Widerspruch. Sein <c>Herkunft</c> zeigt deshalb auf den
         ''' Herausgeber selbst: der Anwender holt die Datei dort, statt dass WIR sie weitergeben.
         ''' Am 2026-08-08 geprueft, die Datei dort ist mit unserer bit fuer bit gleich. Warum ein
-        ''' Modellwechsel das NICHT loest, steht in Audits/PERSONEN_UND_ORTE.md, Abschnitt 3a.</summary>
+        ''' Modellwechsel das NICHT loest, steht in PERSONEN_UND_ORTE.md, Abschnitt 3a.</summary>
         Public Shared ReadOnly Property KnownEntries As IReadOnlyList(Of ModelEntry) =
             New List(Of ModelEntry) From {
                 New ModelEntry With {.Key = "mobilesam-encoder",
