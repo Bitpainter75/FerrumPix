@@ -28,7 +28,7 @@ Browse, rate, tag and organize your library, open an image for non-destructive a
 
 FerrumPix runs on Windows, Linux and macOS and is designed to stay fast, lightweight and local-first.
 
-It is primarily aimed at hobby photographers and enthusiasts rather than large professional studio workflows — and it doesn't really care whether you feed it RAW files from a camera or JPEGs from your phone.
+It is primarily aimed at hobby photographers and enthusiasts rather than large professional studio workflows - and it doesn't really care whether you feed it RAW files from a camera or JPEGs from your phone.
 
 ## What you can do with it
 
