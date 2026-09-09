@@ -472,58 +472,80 @@ Namespace Services
                                  If(ext = ".webp", SKEncodedImageFormat.Webp,
                                     SKEncodedImageFormat.Jpeg))
 
-                    Using processed = ProcessBitmap(original, adj)
-                        ' DIE LETZTE FRAGE VOR DEM SCHREIBEN. Die Modellwege steigen an ihrer
-                        ' Kachelgrenze aus, aber die Reglerkette darunter laeuft am Stueck und kostet
-                        ' bei einem grossen Bild Sekunden. Wer in dieser Zeit abbricht, bekaeme sonst
-                        ' doch noch eine Datei - und die saehe aus wie das Ergebnis.
-                        If cancel.IsCancellationRequested Then Return False
-                        If isFpxTarget Then
-                            ' composite.png ist nur das Anzeigebild des Bündels und bewusst gedeckelt -
-                            ' die volle Auflösung entsteht beim Öffnen wieder aus Basisbild + Rezept.
-                            Using composite = EncodePngStream(processed, FpxCompositeMaxDimension)
-                                If composite Is Nothing Then Return False
-                                FpxService.Save(targetPath, adj, sourcePath, composite)
-                            End Using
-                            Return IO.File.Exists(targetPath)
-                        End If
-
-                        ' JPEG und PDF kennen kein Alpha: transparente Bereiche (Radierer-Löcher,
-                        ' ausgeblendeter Hintergrund) liefen beim Encode auf SCHWARZ
-                        '. Auf WEISS flatten - wie Photoshop.
-                        Dim toEncode = processed
-                        If isPdf OrElse fileFormat = SKEncodedImageFormat.Jpeg Then
-                            toEncode = FlattenAlphaToWhite(processed)
-                        End If
-                        Try
-                            If isPdf Then
-                                ' Druckfertiges einseitiges PDF mit dem zuletzt im Druckdialog
-                                ' gewählten Seitenlayout - so sehen Drucken und PDF-Export gleich aus.
-                                If Not PrintService.WriteSinglePagePdf(toEncode, targetPath,
-                                                                      AppSettingsService.Load().ToPrintOptions()) Then Return False
-                            Else
-                                Using image = SKImage.FromBitmap(toEncode)
-                                    Using data = image.Encode(fileFormat, quality)
-                                        ' Atomar: erst daneben schreiben, dann darüberbewegen - ein
-                                        ' abgebrochener Encode darf das Original nicht zerstören.
-                                        WriteFileAtomic(targetPath, Sub(fs) data.SaveTo(fs))
-                                    End Using
-                                End Using
-                            End If
-                        Finally
-                            If Not Object.ReferenceEquals(toEncode, processed) Then toEncode.Dispose()
-                        End Try
-                    End Using
                     ' Metadaten nur von echten Bildquellen kopieren (ein .fpx-Bündel trägt keine).
                     ' In ein PDF lässt sich kein EXIF-Block kopieren - der Versuch würde die Datei
                     ' beschädigen.
-                    If preserveMetadata AndAlso Not isFpxSource AndAlso Not isPdf AndAlso Not isFpxTarget Then TryCopyMetadata(sourcePath, targetPath)
-                    ' Der Urheberrechtshinweis kommt NACH dem Kopieren der Metadaten: sonst
-                    ' ueberschriebe der Hinweis aus der Quelle den gerade gesetzten wieder. Ein
-                    ' leerer Text tut nichts - das ist die Regel der Stapelformulare, "leer heisst
-                    ' dieses Feld nicht anfassen". In ein PDF und in ein Buendel geht er nicht.
-                    If Not isPdf AndAlso Not isFpxTarget Then ApplyCopyright(targetPath, copyrightText)
-                    Return True
+                    Dim keepMetadata = preserveMetadata AndAlso Not isFpxSource AndAlso Not isPdf AndAlso Not isFpxTarget
+
+                    ' DIE QUELLE DER METADATEN VOR DEM SCHREIBEN SICHERN. Beim Speichern ÜBER das
+                    ' Original (Quelle = Ziel, der normale Weg des Editors bei JPEG/PNG/WEBP) ist
+                    ' sourcePath nach WriteFileAtomic bereits die NEUE Datei - frisch encodiert, ohne
+                    ' Aufnahmedaten. TryCopyMetadata las dann aus genau dieser Datei, fand keine
+                    ' Segmente und kehrte still zurück: jedes In-place-Speichern verlor EXIF, XMP und
+                    ' IPTC, obwohl PreserveMetadataOnSave an war. Eine Kopie der Quelle im
+                    ' Temp-Verzeichnis (NICHT neben dem Ziel: die Galerie beobachtet den Ordner und
+                    ' zeigte sonst kurz ein zweites Bild) hält die Daten fest, bis sie zurück ins
+                    ' Ziel geschrieben sind. Bei "Speichern unter" in eine andere Datei ist die
+                    ' Quelle unberührt und es wird nichts kopiert.
+                    Dim metadataSource = sourcePath
+                    Dim metadataSnapshot As String = Nothing
+                    If keepMetadata Then
+                        metadataSnapshot = SnapshotMetadataSource(sourcePath, targetPath)
+                        If metadataSnapshot IsNot Nothing Then metadataSource = metadataSnapshot
+                    End If
+                    Try
+                        Using processed = ProcessBitmap(original, adj)
+                            ' DIE LETZTE FRAGE VOR DEM SCHREIBEN. Die Modellwege steigen an ihrer
+                            ' Kachelgrenze aus, aber die Reglerkette darunter laeuft am Stueck und kostet
+                            ' bei einem grossen Bild Sekunden. Wer in dieser Zeit abbricht, bekaeme sonst
+                            ' doch noch eine Datei - und die saehe aus wie das Ergebnis.
+                            If cancel.IsCancellationRequested Then Return False
+                            If isFpxTarget Then
+                                ' composite.png ist nur das Anzeigebild des Bündels und bewusst gedeckelt -
+                                ' die volle Auflösung entsteht beim Öffnen wieder aus Basisbild + Rezept.
+                                Using composite = EncodePngStream(processed, FpxCompositeMaxDimension)
+                                    If composite Is Nothing Then Return False
+                                    FpxService.Save(targetPath, adj, sourcePath, composite)
+                                End Using
+                                Return IO.File.Exists(targetPath)
+                            End If
+
+                            ' JPEG und PDF kennen kein Alpha: transparente Bereiche (Radierer-Löcher,
+                            ' ausgeblendeter Hintergrund) liefen beim Encode auf SCHWARZ
+                            '. Auf WEISS flatten - wie Photoshop.
+                            Dim toEncode = processed
+                            If isPdf OrElse fileFormat = SKEncodedImageFormat.Jpeg Then
+                                toEncode = FlattenAlphaToWhite(processed)
+                            End If
+                            Try
+                                If isPdf Then
+                                    ' Druckfertiges einseitiges PDF mit dem zuletzt im Druckdialog
+                                    ' gewählten Seitenlayout - so sehen Drucken und PDF-Export gleich aus.
+                                    If Not PrintService.WriteSinglePagePdf(toEncode, targetPath,
+                                                                          AppSettingsService.Load().ToPrintOptions()) Then Return False
+                                Else
+                                    Using image = SKImage.FromBitmap(toEncode)
+                                        Using data = image.Encode(fileFormat, quality)
+                                            ' Atomar: erst daneben schreiben, dann darüberbewegen - ein
+                                            ' abgebrochener Encode darf das Original nicht zerstören.
+                                            WriteFileAtomic(targetPath, Sub(fs) data.SaveTo(fs))
+                                        End Using
+                                    End Using
+                                End If
+                            Finally
+                                If Not Object.ReferenceEquals(toEncode, processed) Then toEncode.Dispose()
+                            End Try
+                        End Using
+                        If keepMetadata Then TryCopyMetadata(metadataSource, targetPath)
+                        ' Der Urheberrechtshinweis kommt NACH dem Kopieren der Metadaten: sonst
+                        ' ueberschriebe der Hinweis aus der Quelle den gerade gesetzten wieder. Ein
+                        ' leerer Text tut nichts - das ist die Regel der Stapelformulare, "leer heisst
+                        ' dieses Feld nicht anfassen". In ein PDF und in ein Buendel geht er nicht.
+                        If Not isPdf AndAlso Not isFpxTarget Then ApplyCopyright(targetPath, copyrightText)
+                        Return True
+                    Finally
+                        DeleteMetadataSnapshot(metadataSnapshot)
+                    End Try
                 End Using
             Catch ex As Exception
                 ' Ein False ohne jede Spur lässt den Editor beim Verlassen immer wieder nach
@@ -596,6 +618,49 @@ Namespace Services
                 End If
             Catch ex As Exception
                 DiagnosticLogService.LogException("Save.Copyright", ex)
+            End Try
+        End Sub
+
+        ''' <summary>Quelle und Ziel sind dieselbe Datei - das In-place-Speichern des Editors.
+        ''' Verglichen wird der volle Pfad ohne Rücksicht auf Groß-/Kleinschreibung: auf einem
+        ''' Dateisystem, das sie unterscheidet, kostet ein Fehlalarm nur eine überflüssige
+        ''' Kopie, ein übersehener Treffer dagegen die Aufnahmedaten.</summary>
+        Private Shared Function IsSameFile(a As String, b As String) As Boolean
+            If String.IsNullOrWhiteSpace(a) OrElse String.IsNullOrWhiteSpace(b) Then Return False
+            Try
+                Return String.Equals(IO.Path.GetFullPath(a), IO.Path.GetFullPath(b), StringComparison.OrdinalIgnoreCase)
+            Catch
+                Return False
+            End Try
+        End Function
+
+        ''' <summary>Legt eine Kopie der Quelle im Temp-Verzeichnis an, wenn das Ziel die Quelle
+        ''' überschreiben wird - sonst Nothing. Die Kopie behält die ENDUNG der Quelle, denn die
+        ''' Kopierwege (<see cref="TryCopyMetadata"/>, <see cref="ExtractExifTiffBytes"/>)
+        ''' entscheiden am Suffix, welchen Container sie lesen. Der Aufrufer räumt mit
+        ''' <see cref="DeleteMetadataSnapshot"/> auf. Schlägt die Kopie fehl, wird ohne Sicherung
+        ''' gespeichert - wie bisher, nur ohne Aufnahmedaten; das Bild selbst darf daran nicht
+        ''' scheitern.</summary>
+        Private Shared Function SnapshotMetadataSource(sourcePath As String, targetPath As String) As String
+            If Not IsSameFile(sourcePath, targetPath) Then Return Nothing
+            If Not File.Exists(sourcePath) Then Return Nothing
+            Try
+                Dim snapshot = IO.Path.Combine(IO.Path.GetTempPath(),
+                    "FerrumPix-metadata-" & Environment.ProcessId.ToString() & "-" &
+                    Guid.NewGuid().ToString("N") & IO.Path.GetExtension(sourcePath))
+                File.Copy(sourcePath, snapshot, overwrite:=True)
+                Return snapshot
+            Catch ex As Exception
+                DiagnosticLogService.LogException("ImageProcessor.SnapshotMetadataSource", ex)
+                Return Nothing
+            End Try
+        End Function
+
+        Private Shared Sub DeleteMetadataSnapshot(snapshotPath As String)
+            If String.IsNullOrWhiteSpace(snapshotPath) Then Return
+            Try
+                If File.Exists(snapshotPath) Then File.Delete(snapshotPath)
+            Catch
             End Try
         End Sub
 
