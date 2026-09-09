@@ -665,6 +665,49 @@ Namespace Services
         ''' einmal unter dem Bau-Schloss - waehrend des Wartens kann ein anderer Faden dieselbe
         ''' Sitzung schon gebaut haben.</summary>
         Public Shared Function Session(fileName As String) As InferenceSession
+            Return SessionAndDevice(fileName)?.Session
+        End Function
+
+        ''' <summary>Eine Sitzung SAMT der Auskunft, auf welchem Rechenwerk GENAU SIE gebaut wurde.
+        ''' Leerer <c>Accelerator</c> heisst Prozessor, sonst steht dort der Schluessel der Karte.
+        '''
+        ''' WOFUER: Wer seine Arbeit am Rechenwerk ausrichtet - die Kachelgroesse am
+        ''' Kartenspeicher etwa -, darf nicht zweimal fragen. Zwischen "Sitzung holen" und
+        ''' "Rechenwerk nachschlagen" kann der Schalter umgelegt werden oder ein anderer Auftrag
+        ''' die Sitzung in der Liste ersetzen; die zweite Antwort gehoerte dann zu einer anderen
+        ''' Sitzung als der, mit der gerechnet wird. Genau in dieser Richtung ist es teuer: ein
+        ''' Auftrag, der auf der Karte laeuft, bekaeme die grosse Kachel, und der Schutz vor dem
+        ''' vollen Kartenspeicher waere weg. Deshalb kommt beides aus EINEM Aufruf.</summary>
+        Public Shared Function SessionAndDevice(fileName As String) As SessionHandle
+            Dim loaded = LoadSession(fileName)
+            If loaded Is Nothing Then Return Nothing
+            Return New SessionHandle With {.Session = loaded.Session, .Accelerator = loaded.Accelerator}
+        End Function
+
+        ''' <summary>Dasselbe fuer den gerade benutzten Stand eines Modells.</summary>
+        Public Shared Function SessionAndDeviceFor(key As String) As SessionHandle
+            Dim file = BestFile(key)
+            If String.IsNullOrEmpty(file) Then Return Nothing
+            Return SessionAndDevice(file)
+        End Function
+
+        ''' <summary>Eine Sitzung und ihr Rechenwerk, wie der Aufrufer sie bekommt. Eine Kopie des
+        ''' Listeneintrags: was danach in der Liste passiert, aendert diese Antwort nicht mehr.</summary>
+        Public NotInheritable Class SessionHandle
+            Public Property Session As InferenceSession
+            ''' Leer heisst Prozessor, sonst der Schluessel der Karte.
+            Public Property Accelerator As String = ""
+            Public ReadOnly Property OnGpu As Boolean
+                Get
+                    Return Not String.IsNullOrEmpty(Accelerator)
+                End Get
+            End Property
+        End Class
+
+        ''' <summary>Der Listeneintrag zu einer Modelldatei: bauen, falls noetig, sonst den
+        ''' vorhandenen zurueckgeben. Der Ablauf steht bei <see cref="Session"/>, das ist die
+        ''' oeffentliche Tuer dazu.</summary>
+        Private Shared Function LoadSession(fileName As String) As LoadedSession
             If Not RuntimeAvailable Then Return Nothing
             Dim filePath = ModelPath(fileName)
             If String.IsNullOrEmpty(filePath) Then Return Nothing
@@ -680,7 +723,7 @@ Namespace Services
             SyncLock _lock
                 Dim ready As LoadedSession = Nothing
                 If _sessions.TryGetValue(filePath, ready) AndAlso ready.Accelerator = target Then
-                    Return ready.Session
+                    Return ready
                 End If
             End SyncLock
 
@@ -688,7 +731,7 @@ Namespace Services
                 SyncLock _lock
                     Dim existing As LoadedSession = Nothing
                     If _sessions.TryGetValue(filePath, existing) Then
-                        If existing.Accelerator = target Then Return existing.Session
+                        If existing.Accelerator = target Then Return existing
                         _sessions.Remove(filePath)
                     End If
                 End SyncLock
@@ -698,9 +741,15 @@ Namespace Services
                 If onGpu Then
                     Try
                         Using options = BuildOptions()
-                            If GpuAccelerationService.TryApply(options) Then
+                            ' Vermerkt wird die Karte, die WIRKLICH angehaengt wurde, nicht das
+                            ' vorhin gelesene Ziel: dazwischen kann eine andere gewaehlt worden
+                            ' sein. Stuende hier das alte Ziel, liefe die Sitzung auf Karte B und
+                            ' waere als A eingetragen - und wer daran seine Kachelgroesse bemisst,
+                            ' bekaeme die grosse Kachel auf der kleinen Karte.
+                            Dim appliedTo As String = ""
+                            If GpuAccelerationService.TryApply(options, appliedTo) Then
                                 created = New InferenceSession(filePath, options)
-                                builtWith = target
+                                builtWith = appliedTo
                                 GpuAccelerationService.NoteSuccess()
                             End If
                         End Using
@@ -720,15 +769,39 @@ Namespace Services
                         End Using
                         builtWith = ""
                     End If
+                    Dim entry = New LoadedSession With {.Session = created, .Accelerator = builtWith}
                     SyncLock _lock
-                        _sessions(filePath) = New LoadedSession With {.Session = created, .Accelerator = builtWith}
+                        _sessions(filePath) = entry
                     End SyncLock
-                    Return created
+                    Return entry
                 Catch ex As Exception
                     DiagnosticLogService.LogAlways("KiModell", $"laedt nicht: {Path.GetFileName(filePath)} - {ex.Message}")
                     Return Nothing
                 End Try
             End SyncLock
+        End Function
+
+        ''' <summary>Auf welchem Rechenwerk die Sitzung dieser Datei GERADE steht, allein zum
+        ''' Anzeigen und Pruefen. Leer heisst Prozessor oder nicht geladen.
+        '''
+        ''' NICHT fuer Entscheidungen innerhalb eines Auftrags benutzen: die Antwort gehoert zum
+        ''' Listenstand von JETZT, und der kann sich zwischen zwei Aufrufen aendern. Wer rechnet,
+        ''' nimmt <see cref="SessionAndDevice"/> und bekommt beides in einem Stueck.</summary>
+        Public Shared Function AcceleratorOf(fileName As String) As String
+            Dim filePath = ModelPath(fileName)
+            If String.IsNullOrEmpty(filePath) Then Return ""
+            SyncLock _lock
+                Dim loaded As LoadedSession = Nothing
+                If Not _sessions.TryGetValue(filePath, loaded) Then Return ""
+                Return loaded.Accelerator
+            End SyncLock
+        End Function
+
+        ''' <summary>Dasselbe fuer den gerade benutzten Stand eines Modells.</summary>
+        Public Shared Function AcceleratorOfFor(key As String) As String
+            Dim file = BestFile(key)
+            If String.IsNullOrEmpty(file) Then Return ""
+            Return AcceleratorOf(file)
         End Function
 
         ''' <summary>Alle Sitzungen schliessen. Fuer den Prueftstand und das Beenden.</summary>

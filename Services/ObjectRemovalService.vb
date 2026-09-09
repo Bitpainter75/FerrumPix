@@ -40,8 +40,54 @@ Namespace Services
         ''' <see cref="ToModelSize"/>), und alles zwischen 513 und 1024 landet in derselben Kachel.
         ''' Bei 768 wurde also auf 1024 gerechnet und ein Drittel der Flaeche mit fortgeschriebenem
         ''' Rand verschenkt. Mit 1024 steckt dort Bildinhalt statt Saum - mehr Aufloesung fuer die
-        ''' Fuellung, bei gleicher Rechenzeit.</summary>
+        ''' Fuellung, bei gleicher Rechenzeit.
+        '''
+        ''' Auf einer KLEINEN Karte gilt sie nicht - siehe <see cref="MaxEdgeForRun"/>.</summary>
         Public Const MaxEdge As Integer = 1024
+
+        ''' <summary>Die Obergrenze fuer eine Karte, deren Speicher knapp ist.
+        '''
+        ''' Die naechstkleinere Zweierpotenz, denn dazwischen gibt es nichts: aufgefuellt wird auf
+        ''' 128, 256, 512 oder 1024 (siehe <see cref="ToModelSize"/>).</summary>
+        Private Const SmallCardMaxEdge As Integer = 512
+
+        ''' <summary>Ab wieviel eigenem Kartenspeicher mit voller Kante gerechnet wird, in Mebibyte.
+        ''' Dieselbe Schwelle wie beim Entrauschen, aus demselben Grund.</summary>
+        Private Const FullEdgeMinimumMiB As Integer = 4096
+
+        ''' <summary>Mit welcher Obergrenze DIESER Durchlauf rechnet.
+        '''
+        ''' GEMESSEN (NVIDIA, WebGPU): ein Lauf ueber 1024 mal 1024 belegt auf der Karte rund
+        ''' 2180 MiB, ueber 512 mal 512 noch 860. Auf einer Karte mit zwei Gigabyte scheitert der
+        ''' grosse Lauf also - und nicht mit einer Meldung, sondern mit dem Ende des Prozesses aus
+        ''' nativem Code heraus. Die kleinere Kante kostet Aufloesung in der Fuellung; sie ist
+        ''' trotzdem die bessere Antwort als eine Anwendung, die sich beim Klick beendet.
+        '''
+        ''' Auf dem Prozessor und bei unbekanntem Kartenspeicher bleibt es bei der vollen Kante.
+        '''
+        ''' Entschieden wird an der SITZUNG, die dieser Lauf benutzt, und nicht an der Einstellung:
+        ''' nimmt die Karte das Modell nicht an, rechnet <see cref="AiModelService.Session"/> still
+        ''' auf dem Prozessor weiter, und dort kostete die kleinere Kante nur Aufloesung, ohne
+        ''' irgendetwas zu verhindern. Uebergeben wird deshalb der Schluessel der Karte, unter dem
+        ''' die Sitzung GEBAUT wurde (leer heisst Prozessor).</summary>
+        Private Shared Function MaxEdgeForRun(accelerator As String) As Integer
+            If String.IsNullOrEmpty(accelerator) Then Return MaxEdge
+            Dim memory = GpuAccelerationService.DeviceMemoryMiBFor(accelerator)
+            Dim edge = MaxEdgeForMemory(memory)
+            If edge < MaxEdge Then
+                DiagnosticLogService.LogAlways("Objekt entfernen",
+                    $"Karte hat {memory} MiB, Rechenkante auf {edge} begrenzt")
+            End If
+            Return edge
+        End Function
+
+        ''' <summary>Die Entscheidung selbst, nur an der Zahl - wie beim Entrauschen getrennt
+        ''' gehalten, damit die Grenzfaelle messbar sind und nicht erst bei einem Nutzer auffallen.
+        ''' Unbekannt (0) heisst volle Kante.</summary>
+        Friend Shared Function MaxEdgeForMemory(memoryMiB As Integer) As Integer
+            If memoryMiB <= 0 OrElse memoryMiB >= FullEdgeMinimumMiB Then Return MaxEdge
+            Return SmallCardMaxEdge
+        End Function
 
         ''' <summary>Kleinste Rechengroesse. Darunter lohnt das Aufrunden nicht, und dem Modell
         ''' bleibt zu wenig Umgebung.</summary>
@@ -331,7 +377,9 @@ Namespace Services
             If image Is Nothing OrElse mask Is Nothing Then Return Nothing
             If image.Width <= 0 OrElse image.Height <= 0 Then Return Nothing
             If cancel.IsCancellationRequested Then Return Nothing
-            Dim session = AiModelService.SessionFor(ModelFile)
+            ' Sitzung und Rechenwerk in EINEM Stueck - Begruendung bei MaxEdgeForRun.
+            Dim loaded = AiModelService.SessionAndDeviceFor(ModelFile)
+            Dim session = loaded?.Session
             If session Is Nothing Then Return Nothing
             Dim runTimer = Stopwatch.StartNew()
             Dim timing = New FillTiming()
@@ -370,7 +418,7 @@ Namespace Services
                 ' nur so weit verkleinert, wie die Obergrenze es verlangt. Genau daran ist die
                 ' erste Fassung gescheitert: ein grosses Objekt auf 512 Punkte gestaucht ergab
                 ' einen weichen Verlauf statt Hintergrund.
-                Dim factor = Math.Min(1.0, MaxEdge / CDbl(Math.Max(window.Width, window.Height)))
+                Dim factor = Math.Min(1.0, MaxEdgeForRun(loaded.Accelerator) / CDbl(Math.Max(window.Width, window.Height)))
                 Dim aw = Math.Max(32, CInt(Math.Round(window.Width * factor)))
                 Dim ah = Math.Max(32, CInt(Math.Round(window.Height * factor)))
                 Dim pw = ToModelSize(aw), ph = ToModelSize(ah)

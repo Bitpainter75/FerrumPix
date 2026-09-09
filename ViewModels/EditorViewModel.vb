@@ -9317,7 +9317,7 @@ Namespace ViewModels
             End Get
         End Property
 
-        Private _denoiseStrength As Double = 30.0
+        Private _denoiseStrength As Double = 50.0
 
         ''' <summary>Wie stark die HELLIGKEIT entrauscht wird, 0 bis 100. Die Farbe wird immer voll
         ''' entrauscht - warum, steht bei DenoiseModelService.Denoise.
@@ -23157,20 +23157,20 @@ Namespace ViewModels
             ' ersten Reglerzug stehen; headless gemessen verschwindet es. Der Unterschied muss also
             ' im laufenden Programm liegen, und dann hilft nur, jede Bedingung einzeln zu sehen.
             Dim tool = _currentTool
-            Dim istMaske = _activeSelectionIsMask
-            Dim verlauf = SelectedGradientMask IsNot Nothing
-            Dim hatteBild = _selectionMaskPreviewImage IsNot Nothing
+            Dim isMask = _activeSelectionIsMask
+            Dim isGradient = SelectedGradientMask IsNot Nothing
+            Dim hadOverlay = _selectionMaskPreviewImage IsNot Nothing
             If Not IsObjectAdjustTool(tool) Then
                 TraceMask(Function() $"Overlay bleibt: Werkzeug={tool} ist kein Anpassungswerkzeug")
                 Return
             End If
-            If Not istMaske AndAlso Not verlauf Then
-                TraceMask(Function() $"Overlay bleibt: weder Maske noch Verlauf (Werkzeug={tool}, Bild={hatteBild})")
+            If Not isMask AndAlso Not isGradient Then
+                TraceMask(Function() $"Overlay bleibt: weder Maske noch Verlauf (Werkzeug={tool}, Bild={hadOverlay})")
                 Return
             End If
             HideMaskOverlay()
-            TraceMask(Function() $"Overlay ausgeblendet nach Reglerzug: Werkzeug={tool} Maske={istMaske}" &
-                                 $" Verlauf={verlauf} Bild vorher={hatteBild} nachher={_selectionMaskPreviewImage IsNot Nothing}")
+            TraceMask(Function() $"Overlay ausgeblendet nach Reglerzug: Werkzeug={tool} Maske={isMask}" &
+                                 $" Verlauf={isGradient} Bild vorher={hadOverlay} nachher={_selectionMaskPreviewImage IsNot Nothing}")
         End Sub
 
         ''' <summary>Der Zoom, mit dem ein Bild in die Bearbeitungsflaeche passt - in Prozent.

@@ -164,6 +164,34 @@ Namespace Services
             End Get
         End Property
 
+        ''' <summary>Wieviel eigenen Speicher die benutzte Karte hat, in Mebibyte. 0 heisst
+        ''' unbekannt - dann darf niemand daraus etwas ableiten.
+        '''
+        ''' Die Zahl kommt von Vulkan (<see cref="VulkanMemoryService"/>), weil sie sonst nirgends
+        ''' steht: die Laufzeit nennt sie nicht, Skia kennt nur seinen eigenen Zwischenspeicher, und
+        ''' unter .NET gibt es sie gar nicht. Gebraucht wird sie dort, wo die Rechnung in Kacheln
+        ''' zerlegt wird - eine grosse Kachel ist schneller, aber auf einer kleinen Karte geht ihr
+        ''' der Speicher aus, und zwar mit einem Abbruch des Prozesses statt einer Meldung.
+        '''
+        ''' Unter macOS bleibt es bei 0: dort rechnet die Laufzeit ueber Metal, und dort tritt der
+        ''' Fall nicht auf (geteilter Arbeitsspeicher, weit ueber dem Bedarf).</summary>
+        Public Shared ReadOnly Property DeviceMemoryMiB As Integer
+            Get
+                Return DeviceMemoryMiBFor(ActiveDeviceKey)
+            End Get
+        End Property
+
+        ''' <summary>Der eigene Speicher EINER BESTIMMTEN Karte, in Mebibyte. 0 heisst unbekannt.
+        '''
+        ''' Wer einen laufenden Auftrag bemisst, fragt mit dem Schluessel, unter dem dessen Sitzung
+        ''' gebaut wurde, und nicht nach der gerade aktiven Karte: zwischen dem Bau der Sitzung und
+        ''' der Rechnung kann eine andere gewaehlt worden sein, und dann gehoerte die Zahl zur
+        ''' falschen Karte.</summary>
+        Public Shared Function DeviceMemoryMiBFor(deviceKey As String) As Integer
+            If String.IsNullOrEmpty(deviceKey) Then Return 0
+            Return VulkanMemoryService.DeviceLocalMiBFor(deviceKey)
+        End Function
+
         ''' <summary>Steckt die benutzte Karte fuer sich, oder sitzt sie im Prozessor? Das ist die
         ''' Unterscheidung, an der haengt, ob sich das Einschalten lohnt.</summary>
         Public Shared ReadOnly Property IsDiscrete As Boolean
@@ -224,13 +252,33 @@ Namespace Services
         End Property
 
         ''' <summary>Die Karte an eine Sitzungsoption haengen. False heisst: es bleibt beim
-        ''' Prozessor, und der Aufrufer soll ohne sie weitermachen.</summary>
-        Public Shared Function TryApply(options As SessionOptions) As Boolean
+        ''' Prozessor, und der Aufrufer soll ohne sie weitermachen.
+        '''
+        ''' <paramref name="deviceKey"/> nennt die Karte, die WIRKLICH angehaengt wurde. Der
+        ''' Aufrufer darf sie NICHT vorher selbst bestimmen und danach als gesetzt annehmen: hier
+        ''' laeuft <see cref="EnsureActive"/>, und das liest die Auswahl des Benutzers neu. Wird
+        ''' zwischen den beiden Zeitpunkten eine andere Karte gewaehlt, entsteht die Sitzung auf
+        ''' Karte B, waehrend der Aufrufer noch Karte A im Kopf hat - und wer daran seine
+        ''' Kachelgroesse bemisst, bekommt die grosse Kachel auf der kleinen Karte, also genau den
+        ''' Absturz, der vermieden werden soll.
+        '''
+        ''' Deshalb wird die Geraeteliste unter dem Schloss als MOMENTAUFNAHME genommen und der
+        ''' Schluessel aus derselben Aufnahme zurueckgegeben. Was danach gewaehlt wird, betrifft
+        ''' erst die naechste Sitzung.</summary>
+        Public Shared Function TryApply(options As SessionOptions, ByRef deviceKey As String) As Boolean
+            deviceKey = ""
             If options Is Nothing Then Return False
             EnsureActive()
-            If _devices.Count = 0 Then Return False
+            Dim devices As List(Of OrtEpDevice)
+            Dim applied As String
+            SyncLock _lock
+                If _devices.Count = 0 OrElse _active Is Nothing Then Return False
+                devices = New List(Of OrtEpDevice)(_devices)
+                applied = _active.Key
+            End SyncLock
             Try
-                options.AppendExecutionProvider(OrtEnv.Instance(), _devices, New Dictionary(Of String, String)())
+                options.AppendExecutionProvider(OrtEnv.Instance(), devices, New Dictionary(Of String, String)())
+                deviceKey = applied
                 Return True
             Catch ex As Exception
                 DiagnosticLogService.LogAlways("Grafik", $"Beschleunigung laesst sich nicht anhaengen: {ex.Message}")
@@ -294,7 +342,8 @@ Namespace Services
             Try
                 Using options = New SessionOptions()
                     options.LogSeverityLevel = OrtLoggingLevel.ORT_LOGGING_LEVEL_ERROR
-                    If Not TryApply(options) Then
+                    Dim probedOn As String = ""
+                    If Not TryApply(options, probedOn) Then
                         _probe = ProbeResult.Failed
                         _probeError = ""
                         Return _probe

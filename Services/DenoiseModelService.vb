@@ -101,13 +101,77 @@ Namespace Services
             End Select
         End Function
 
-        ''' <summary>Kantenlaenge einer Kachel.
+        ''' <summary>Kantenlaenge einer Kachel, im Regelfall.
         '''
         ''' Das Modell nimmt freie Groessen, also waere auch das ganze Bild moeglich - aber der
         ''' Speicher waechst mit der Flaeche, und ein 40-Megapixel-Bild als ein Tensor sind mehrere
         ''' Gigabyte. Die Rechenzeit haengt ohnehin nur an der Gesamtflaeche und nicht an der
-        ''' Kachelgroesse; gemessen sind 256er und 512er Kacheln gleich schnell.</summary>
-        Private Const TileEdge As Integer = 512
+        ''' Kachelgroesse; gemessen sind 256er und 512er Kacheln gleich schnell.
+        '''
+        ''' Nach oben ist damit auch nichts zu holen: 1024 ist nicht schneller, sondern nur groesser
+        ''' im Bedarf, und faellt schon auf einer Karte mit acht Gigabyte um. Die Kachelgroesse ist
+        ''' hier deshalb kein Regler fuer Tempo, sondern nur ein Schutz nach unten.
+        '''
+        ''' Jede Kantenlaenge muss durch 64 teilbar sein - siehe die Begruendung an der
+        ''' Ausschnittsberechnung in <see cref="Denoise"/>.</summary>
+        Private Const LargeTileEdge As Integer = 512
+
+        ''' <summary>Die kleine Kachel fuer Karten mit wenig eigenem Speicher.
+        '''
+        ''' GEMESSEN (Qualitaetsmodell, NVIDIA, WebGPU): die 512er Kachel belegt in der Spitze rund
+        ''' 2300 MiB, die 256er zwischen 630 und 870. Auf einer Karte mit zwei Gigabyte scheitert die
+        ''' grosse also zwangslaeufig - und nicht mit einer Meldung, sondern mit dem Ende des ganzen
+        ''' Prozesses aus nativem Code heraus.</summary>
+        Private Const SmallTileEdge As Integer = 256
+
+        ''' <summary>Ab wieviel eigenem Kartenspeicher die grosse Kachel gefahren wird, in Mebibyte.
+        '''
+        ''' Vier Gigabyte, nicht zweieinhalb: die 2300 MiB der Kachel sind nicht alles, was auf der
+        ''' Karte liegt. Dort stehen auch die Gewichte des Modells, der Bildschirminhalt und alles,
+        ''' was sonst noch laeuft - ein Browser nimmt sich ohne weiteres ein Gigabyte. Wer knapp
+        ''' rechnet, hat den Abbruch beim zweiten Fenster.</summary>
+        Private Const LargeTileMinimumMiB As Integer = 4096
+
+        ''' <summary>Die Entscheidung selbst, nur an der Zahl.
+        '''
+        ''' Sie steht getrennt, damit sie sich MESSEN laesst: mit welchem Speicher welche Kachel
+        ''' herauskommt, ist sonst nur auf der Karte pruefbar, die gerade im Rechner steckt - und
+        ''' die hat immer genug. Die Grenzfaelle (unbekannt, knapp darunter, genau die Schwelle)
+        ''' faellt sonst niemand auf, bis sie bei einem Nutzer auffallen.
+        '''
+        ''' Unbekannt (0) heisst GROSS und nicht klein: eine Vermutung waere hier schlechter als die
+        ''' Erfahrung, dass es auf den allermeisten Karten passt. Wer eine kleine Karte hat und kein
+        ''' Vulkan, hat ohnehin keine Beschleunigung.</summary>
+        Friend Shared Function TileEdgeForMemory(memoryMiB As Integer) As Integer
+            If memoryMiB <= 0 OrElse memoryMiB >= LargeTileMinimumMiB Then Return LargeTileEdge
+            Return SmallTileEdge
+        End Function
+
+        ''' <summary>Wie gross die Kachel in DIESEM Durchlauf sein darf.
+        '''
+        ''' Auf dem Prozessor ist die Frage keine: dort liegt alles im Arbeitsspeicher, und der ist
+        ''' um Groessenordnungen reichlicher. Nur wenn wirklich auf der Karte gerechnet wird, zaehlt
+        ''' deren Speicher.
+        '''
+        ''' Entschieden wird an der SITZUNG, die dieser Lauf benutzt, und nicht an der Einstellung.
+        ''' Der Unterschied ist kein feiner: nimmt die Karte das Modell nicht an, baut
+        ''' <see cref="AiModelService.Session"/> es still auf dem Prozessor, und dort waere die
+        ''' kleine Kachel reine Mehrarbeit an einer Grenze, die es gar nicht gibt.
+        '''
+        ''' Uebergeben wird deshalb der Schluessel der Karte, unter dem die Sitzung GEBAUT wurde
+        ''' (leer heisst Prozessor) - nicht die gerade aktive Karte. Beides kann auseinanderlaufen,
+        ''' waehrend gerechnet wird, und dann gehoerte die Speichergroesse zur falschen Karte oder
+        ''' der Schutz fiele ganz aus.</summary>
+        Private Shared Function TileEdgeForRun(accelerator As String) As Integer
+            If String.IsNullOrEmpty(accelerator) Then Return LargeTileEdge
+            Dim memory = GpuAccelerationService.DeviceMemoryMiBFor(accelerator)
+            Dim edge = TileEdgeForMemory(memory)
+            If edge < LargeTileEdge Then
+                DiagnosticLogService.LogAlways("Entrauschen",
+                    $"Karte hat {memory} MiB, Kachel auf {edge} verkleinert")
+            End If
+            Return edge
+        End Function
 
         ''' <summary>Wie weit sich zwei Kacheln ueberlappen.
         '''
@@ -178,11 +242,15 @@ Namespace Services
                                        Optional strength As Single = 1.0F,
                                        Optional cancel As Threading.CancellationToken = Nothing) As SKBitmap
             If image Is Nothing OrElse image.Width <= 0 OrElse image.Height <= 0 Then Return Nothing
-            Dim session = AiModelService.SessionFor(KeyFor(kind))
-            If session Is Nothing Then Return Nothing
+            ' Sitzung und Rechenwerk in EINEM Stueck: die Kachelgroesse haengt daran, und zweimal
+            ' zu fragen hiesse, die zweite Antwort koennte schon zu einer anderen Sitzung gehoeren.
+            Dim loaded = AiModelService.SessionAndDeviceFor(KeyFor(kind))
+            If loaded Is Nothing OrElse loaded.Session Is Nothing Then Return Nothing
+            Dim session = loaded.Session
             If image.ColorType <> SKColorType.Bgra8888 Then Return Nothing
 
             Dim amount = Math.Max(0.0F, Math.Min(1.0F, strength))
+            Dim edge = TileEdgeForRun(loaded.Accelerator)
 
             Dim result As SKBitmap = Nothing
             Dim padded As SKBitmap = Nothing
@@ -195,9 +263,9 @@ Namespace Services
                 ' harte Kunstkante am Bildrand das Modell dort etwas erfinden liesse, was es dann in
                 ' die letzten Bildpunkte hineinrechnet.
                 Dim tiledSource = image
-                If image.Width < TileEdge OrElse image.Height < TileEdge Then
-                    padded = New SKBitmap(Math.Max(image.Width, TileEdge),
-                                              Math.Max(image.Height, TileEdge),
+                If image.Width < edge OrElse image.Height < edge Then
+                    padded = New SKBitmap(Math.Max(image.Width, edge),
+                                              Math.Max(image.Height, edge),
                                               image.ColorType, image.AlphaType)
                     Using canvas = New SKCanvas(padded)
                         Using shader = SKShader.CreateBitmap(image, SKShaderTileMode.Mirror, SKShaderTileMode.Mirror)
@@ -216,7 +284,7 @@ Namespace Services
                     End Using
                 End Using
 
-                Dim stride = Math.Max(1, TileEdge - 2 * TileOverlap)
+                Dim stride = Math.Max(1, edge - 2 * TileOverlap)
                 Dim tileCount = ((tiledSource.Width + stride - 1) \ stride) * ((tiledSource.Height + stride - 1) \ stride)
                 Dim name = session.InputMetadata.Keys.First()
                 Dim clock = Diagnostics.Stopwatch.StartNew()
@@ -242,15 +310,15 @@ Namespace Services
                         ' sein. Ein beschnittener Randstreifen von 480 Punkten bricht mitten im
                         ' Modell ab, mit einer Meldung ueber eine Umformung, die die Ursache nicht
                         ' erkennen laesst.
-                        Dim l = Math.Max(0, Math.Min(x - TileOverlap, tiledSource.Width - TileEdge))
-                        Dim t = Math.Max(0, Math.Min(y - TileOverlap, tiledSource.Height - TileEdge))
-                        Dim r = Math.Min(tiledSource.Width, l + TileEdge)
-                        Dim b = Math.Min(tiledSource.Height, t + TileEdge)
+                        Dim l = Math.Max(0, Math.Min(x - TileOverlap, tiledSource.Width - edge))
+                        Dim t = Math.Max(0, Math.Min(y - TileOverlap, tiledSource.Height - edge))
+                        Dim r = Math.Min(tiledSource.Width, l + edge)
+                        Dim b = Math.Min(tiledSource.Height, t + edge)
                         ' Und der Teil davon, der wirklich uebernommen wird.
                         Dim keepL = x, keepT = y
                         Dim keepR = Math.Min(tiledSource.Width, x + stride)
                         Dim keepB = Math.Min(tiledSource.Height, y + stride)
-                        If r - l = TileEdge AndAlso b - t = TileEdge AndAlso
+                        If r - l = edge AndAlso b - t = edge AndAlso
                            keepR > keepL AndAlso keepB > keepT Then
                             DenoiseTile(session, name, tiledSource, result,
                                         New SKRectI(l, t, r, b), New SKRectI(keepL, keepT, keepR, keepB), amount)
