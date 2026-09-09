@@ -12,6 +12,24 @@ FerrumPix is in active development. The gallery, viewer, editor, settings and Im
 
 Project website: [FerrumPix.app](https://ferrumpix.app/)
 
+## Why FerrumPix?
+
+I wanted a fast, native desktop app that could handle my entire photo workflow without locking me into a large ecosystem or forcing me to jump between several different applications.
+
+Most tools in this space specialize in one particular area.
+
+Photo library applications are great at organizing, rating, and tagging images, but often offer only limited editing. RAW converters excel at tone and color adjustments, but remain purely parametric. Pixel editors can do almost anything to an individual image, but usually have no real photo library. And self-hosted platforms such as Immich and Nextcloud are excellent for storing and accessing photos, but are primarily browser-based and don't provide a full desktop editing workflow.
+
+FerrumPix tries to bridge those gaps.
+
+It combines photo management, non-destructive RAW development, pixel editing, local files, and direct access to Immich and Nextcloud in one native desktop application.
+
+Browse, rate, tag and organize your library, open an image for non-destructive adjustments, switch to pixel-level editing when needed, and access photos from your own Immich server alongside your local folders.
+
+FerrumPix runs on Windows, Linux and macOS and is designed to stay fast, lightweight and local-first.
+
+It is primarily aimed at hobby photographers and enthusiasts rather than large professional studio workflows — and it doesn't really care whether you feed it RAW files from a camera or JPEGs from your phone.
+
 ## What you can do with it
 
 - Browse local photo folders with fast thumbnails, ratings, favourites, keywords and saved searches.
