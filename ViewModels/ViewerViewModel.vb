@@ -2014,38 +2014,19 @@ Namespace ViewModels
                 CurrentImage = Nothing
                 ImageWidth = 0
                 ImageHeight = 0
-                ' DASSELBE VIDEO NICHT ZWEIMAL LADEN. Zwei Ladeauftraege kurz hintereinander bauen
-                ' mpv um, waehrend der Renderfaden noch Einzelbilder der ersten Fassung holt; das
-                ' Zuschneiden rechnet dann mit Massen, die nicht mehr gelten, und libmpv bricht mit
-                ' einer Zusicherung ab ("mp_image_crop"). Gemeldet unter macOS an 0.9.41, wo das
-                ' Bild seit dem Umzug in die Bildflaeche ueber diesen Renderweg laeuft.
+                ' HIER STEHT KEIN RIEGEL MEHR gegen das zweite Laden. Er stand hier, hing an einem
+                ' eigenen Merker im Betrachter - und den leert StopVideoPlayback, das der
+                ' NICHT-Video-Zweig weiter unten selbst ruft. Ein Element aus Immich oder Nextcloud
+                ' laeuft durch BEIDE Zweige, weil es erst nach dem Herunterladen eine Datei ist; der
+                ' Merker war beim zweiten Durchlauf also wieder leer, und geladen wurde erneut. So
+                ' kam der Absturz an 0.9.42 zurueck, mit zwei gleichen "geladen"-Zeilen im Protokoll.
                 '
-                ' WARUM ES UEBERHAUPT ZWEIMAL KOMMT: dieser Weg hat sieben Aufrufer, und ein Video
-                ' aus Immich oder Nextcloud liegt erst nach dem Herunterladen als Datei vor - der
-                ' Weg dorthin laeuft ein zweites Mal. Eine lokale Datei nicht, deshalb liefen die
-                ' seit jeher.
+                ' Die Frage gehoert dorthin, wo die Antwort nicht veralten kann: an den Spieler
+                ' selbst (MpvPlayer.LoadCore). Dieser Weg darf deshalb gefahrlos so oft laufen, wie
+                ' seine sieben Aufrufer ihn rufen.
                 '
-                ' DER MERKER STEHT HIER und nicht im Spieler: dort wird der geladene Pfad beim Stop
-                ' geloescht, und LoadVideo stoppt als Erstes - ein Riegel dort haette nie gegriffen.
-                ' Und ein erster Ladeauftrag, der mangels Ausgabeflaeche liegen blieb, geht nicht
-                ' verloren: den holt LoadPending nach (StartPendingVideoAutoplay), nicht ein
-                ' zweiter Durchlauf hier.
-                '
-                ' Das WIEDERHOLEN nach dem Ende ist nicht betroffen: es ruft LoadVideo direkt.
-                '
-                ' UND ES MUSS NOCH EIN SPIELER DA SEIN. Der Merker allein reichte nicht: mpv kann
-                ' sich selbst beenden (OnVideoPlaybackTerminated) oder am Aufbau scheitern
-                ' (OnVideoInitializationFailed), und beide werfen den Spieler weg. Der Merker stuende
-                ' dann noch auf der Datei, und dasselbe Video liesse sich NIE WIEDER abspielen - ein
-                ' Riegel, der genau im Fehlerfall zuschlaegt. Die Frage nach dem Spieler haengt an
-                ' der Bedingung selbst und nicht an einer Liste von Abbauwegen, die jeder neue Weg
-                ' wieder vergessen kann.
-                If _mediaPlayer IsNot Nothing AndAlso
-                   String.Equals(_currentImagePath, _loadedVideoPath, StringComparison.Ordinal) Then
-                    DiagnosticLogService.LogAlways("VideoPlayback.Weg",
-                        $"schon geladen, zweites Laden uebersprungen ({IO.Path.GetFileName(_currentImagePath)})")
-                    Return
-                End If
+                ' Ein erster Ladeauftrag, der mangels Ausgabeflaeche liegen blieb, geht weiterhin
+                ' nicht verloren: den holt LoadPending nach (StartPendingVideoAutoplay).
                 LoadVideo(_currentImagePath)
                 Return
             End If
@@ -2222,6 +2203,7 @@ Namespace ViewModels
                 AddHandler _mediaPlayer.TimeChanged, AddressOf OnVideoTimeChanged
                 AddHandler _mediaPlayer.DurationChanged, AddressOf OnVideoLengthChanged
                 AddHandler _mediaPlayer.EndReached, AddressOf OnVideoEndReached
+                AddHandler _mediaPlayer.FileLoaded, AddressOf OnVideoFileLoaded
                 AddHandler _mediaPlayer.PauseChanged, AddressOf OnVideoPauseChanged
                 AddHandler _mediaPlayer.MuteChanged, AddressOf OnVideoMuteChanged
                 AddHandler _mediaPlayer.InitializationFailed, AddressOf OnVideoInitializationFailed
@@ -2247,26 +2229,50 @@ Namespace ViewModels
 
         Private _pendingVideoAutoplay As Boolean = False
 
-        ''' <summary>Das Video, das der Betrachter GERADE ZEIGT - die Datei, für die er zuletzt einen
-        ''' Ladeauftrag gegeben hat. Leer, sobald die Wiedergabe beendet wurde.</summary>
-        Private _loadedVideoPath As String = ""
-
-        Private Sub LoadVideo(path As String)
+        ''' <summary>Ein Video in den Spieler geben.
+        '''
+        ''' <paramref name="force"/> laedt auch dann neu, wenn genau dieser Film schon laeuft - das
+        ''' WIEDERHOLEN nach dem Ende, wo das erneute Laden der ganze Zweck ist.
+        '''
+        ''' KEIN Stop() mehr davor. "loadfile ... replace" ersetzt den laufenden Film ohnehin; das
+        ''' Stop davor loeschte nur den gemerkten Pfad im Spieler - also genau die Auskunft, an der
+        ''' der Riegel gegen das doppelte Laden haengt. Es war der Grund, warum der Riegel frueher
+        ''' nicht im Spieler stehen konnte.
+        '''
+        ''' HIER WIRD NICHTS ABGEFRAGT UND NICHTS ZURUECKGESETZT. Beides stand einmal hier, und
+        ''' beides war falsch am Platz:
+        '''
+        ''' Der ABGLEICH mit dem geladenen Pfad las einen Wert, den der Befehlsfaden fuehrt, auf dem
+        ''' Anzeigefaden. StopVideoPlayback reiht seinen Stop nur EIN. Wer von Video A auf ein Bild
+        ''' und sofort zurueck auf A wechselte, bekam deshalb noch A gemeldet, stieg hier aus - und
+        ''' danach lief der laengst eingereihte Stop. A blieb gestoppt, obwohl es wieder ausgewaehlt
+        ''' war. Der Schutz vor dem doppelten Laden steht ausschliesslich im Befehlsfaden
+        ''' (MpvPlayer.LoadCore), wo der Wert nicht veralten kann.
+        '''
+        ''' Das ZURUECKSETZEN der Anzeige - Stelle, Laufzeit, Endemerker - haengt jetzt am Ereignis
+        ''' FileLoaded des Spielers. Es darf nur geschehen, wenn wirklich geladen wurde; blind
+        ''' zurueckgesetzt spraenge die Anzeige auf null, waehrend der Film weiterlaeuft, und die
+        ''' Laufzeit bliebe dort stehen, weil mpv einen unveraenderten Wert nicht neu meldet.</summary>
+        Private Sub LoadVideo(path As String, Optional force As Boolean = False)
             EnsureMediaPlayer()
             If _mediaPlayer Is Nothing Then Return
             Try
-                _mediaPlayer.Stop()
-                VideoPositionSeconds = 0
-                VideoDurationSeconds = 0
-                IsVideoPlaying = False
-                _isVideoEnded = False
-                Me.RaisePropertyChanged(NameOf(ShowVideoSurface))
-                _mediaPlayer.Load(path)
-                _loadedVideoPath = If(path, "")
+                _mediaPlayer.Load(path, force)
                 _pendingVideoAutoplay = True
             Catch ex As Exception
                 DiagnosticLogService.LogException("VideoPlayback.LoadVideo", ex)
             End Try
+        End Sub
+
+        ''' <summary>Der Spieler hat wirklich geladen: die Anzeige faengt von vorn an.</summary>
+        Private Sub OnVideoFileLoaded(path As String)
+            Dispatcher.UIThread.Post(Sub()
+                                         VideoPositionSeconds = 0
+                                         VideoDurationSeconds = 0
+                                         IsVideoPlaying = False
+                                         _isVideoEnded = False
+                                         Me.RaisePropertyChanged(NameOf(ShowVideoSurface))
+                                     End Sub)
         End Sub
 
         Public Sub StartPendingVideoAutoplay()
@@ -2281,9 +2287,6 @@ Namespace ViewModels
         End Sub
 
         Public Sub StopVideoPlayback()
-            ' AUCH OHNE SPIELER vergessen, was gezeigt wurde: sonst hielte der Merker eine Datei
-            ' fest, die niemand mehr abspielt, und das nächste Auswählen derselben Datei täte nichts.
-            _loadedVideoPath = ""
             If _mediaPlayer Is Nothing Then Return
             Try
                 _mediaPlayer.Stop()
@@ -2294,10 +2297,10 @@ Namespace ViewModels
         End Sub
 
         Public Sub ShutdownVideo()
-            ' Der Merker darf nichts behaupten, was es nicht mehr gibt: ohne Spieler laeuft kein
-            ' Video. Der Riegel in LoadBitmap fragt zwar ohnehin nach dem Spieler, aber ein Zustand,
-            ' der luegt, wird beim naechsten Leser zur Falle.
-            _loadedVideoPath = ""
+            ' Kein eigener Merker mehr zu raeumen: was geladen ist, weiss der Spieler, und mit ihm
+            ' faellt auch die Auskunft. Ein weggeworfener Spieler kann deshalb nichts Falsches mehr
+            ' behaupten - der Fall, der frueher dazu fuehrte, dass sich genau dieses Video nie
+            ' wieder abspielen liess.
             If _mediaPlayer IsNot Nothing Then
                 DetachMediaPlayerHandlers(_mediaPlayer)
                 _mediaPlayer.Dispose()
@@ -2310,6 +2313,7 @@ Namespace ViewModels
             RemoveHandler player.TimeChanged, AddressOf OnVideoTimeChanged
             RemoveHandler player.DurationChanged, AddressOf OnVideoLengthChanged
             RemoveHandler player.EndReached, AddressOf OnVideoEndReached
+            RemoveHandler player.FileLoaded, AddressOf OnVideoFileLoaded
             RemoveHandler player.PauseChanged, AddressOf OnVideoPauseChanged
             RemoveHandler player.MuteChanged, AddressOf OnVideoMuteChanged
             RemoveHandler player.InitializationFailed, AddressOf OnVideoInitializationFailed
@@ -2321,7 +2325,10 @@ Namespace ViewModels
 
             If _isVideoEnded Then
                 If String.IsNullOrEmpty(_currentImagePath) Then Return
-                LoadVideo(_currentImagePath)
+                ' ERZWUNGEN: derselbe Film noch einmal, und genau das ist hier gemeint. Ohne den
+                ' Zwang faengt der Riegel gegen das doppelte Laden diesen Fall mit ab, und der
+                ' Wiederholen-Knopf taete nichts.
+                LoadVideo(_currentImagePath, force:=True)
                 Return
             End If
 

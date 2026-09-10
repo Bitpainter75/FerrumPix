@@ -59,7 +59,13 @@ Namespace Services
         Private _initializationFailed As Boolean = False
         Private _windowHandle As IntPtr = IntPtr.Zero
 
-        ''' <summary>Der zuletzt tatsächlich an mpv gegebene Pfad.</summary>
+        ''' <summary>Der zuletzt tatsächlich an mpv gegebene Pfad, und damit die EINZIGE Antwort auf
+        ''' die Frage, welcher Film gerade laeuft.
+        '''
+        ''' GESCHRIEBEN NUR AUF DEM BEFEHLSFADEN, gelesen auch vom Anzeigefaden (siehe
+        ''' <see cref="LoadedPath"/>). Eine Zuweisung an eine Verweisvariable ist unteilbar, mehr
+        ''' braucht es hier nicht - gelesen wird ueber <c>Volatile</c>, damit der Leser nicht auf
+        ''' einem Wert von vorhin sitzen bleibt.</summary>
         Private _loadedPath As String = Nothing
 
         Private _eventLoopStopping As Boolean = False
@@ -77,6 +83,22 @@ Namespace Services
         Public Event PauseChanged(isPaused As Boolean)
         Public Event MuteChanged(isMuted As Boolean)
         Public Event EndReached(reason As Integer, [error] As Integer)
+
+        ''' <summary>Ein Ladebefehl ist WIRKLICH an mpv gegangen. Feuert nicht, wenn der Riegel in
+        ''' <see cref="LoadCore"/> ein zweites Laden desselben Films abgewiesen hat.
+        '''
+        ''' WOFUER: der Betrachter setzt daran seine Anzeige zurueck - Wiedergabestelle, Laufzeit,
+        ''' Endemerker. Das darf nur geschehen, wenn auch wirklich ein anderer Film kommt; sonst
+        ''' springt die Anzeige auf null, waehrend der Film unbeirrt weiterlaeuft.
+        '''
+        ''' DIE FRAGE IST HIER RICHTIG AUFGEHOBEN und auf der Anzeigeseite nicht. Dort wurde sie
+        ''' einmal aus dem gemerkten Pfad beantwortet, und das ging schief: der Pfad wird auf dem
+        ''' Befehlsfaden gefuehrt, gelesen wurde er auf dem Anzeigefaden. Wer von Video A auf ein
+        ''' Bild und sofort zurueck auf A wechselte, las noch A - waehrend der Stop fuer A schon in
+        ''' der Warteschlange stand und gleich danach lief. A blieb gestoppt, obwohl es wieder
+        ''' ausgewaehlt war. Hier kann nichts veralten: die Meldung entsteht in demselben Faden, der
+        ''' auch stoppt und laedt, und in derselben Reihenfolge.</summary>
+        Public Event FileLoaded(path As String)
         Public Event InitializationFailed([error] As Exception)
 
         ''' <summary>mpv selbst hat sich beendet. Der Spieler ist danach unbrauchbar; wer ihn hält,
@@ -176,13 +198,29 @@ Namespace Services
             Enqueue(Sub() ForgetWindowCore(windowHandle))
         End Sub
 
-        Public Sub Load(path As String)
+        ''' <summary>Welcher Film gerade geladen ist. Nothing heisst: keiner.
+        '''
+        ''' Fuer den Betrachter, der daran entscheidet, ob er seine Anzeige (Stelle, Laufzeit,
+        ''' Endemerker) zuruecksetzt. Die Antwort kann im selben Augenblick veralten, in dem sie
+        ''' gegeben wird - der Befehlsfaden laeuft weiter. Sie taugt deshalb NUR fuer Anzeigeleisten
+        ''' und niemals als Riegel gegen ein zweites Laden: der steht in <see cref="LoadCore"/>, wo
+        ''' der Wert nicht veralten kann.</summary>
+        Public ReadOnly Property LoadedPath As String
+            Get
+                Return Volatile.Read(_loadedPath)
+            End Get
+        End Property
+
+        ''' <summary><paramref name="force"/> laedt auch dann neu, wenn genau dieser Film schon
+        ''' laeuft. Gebraucht fuer das WIEDERHOLEN nach dem Ende: dort ist das erneute Laden der
+        ''' ganze Zweck.</summary>
+        Public Sub Load(path As String, Optional force As Boolean = False)
             If String.IsNullOrWhiteSpace(path) Then Return
             SyncLock _syncRoot
                 If _disposed Then Return
                 _pendingPath = path
             End SyncLock
-            Enqueue(Sub() LoadCore(path))
+            Enqueue(Sub() LoadCore(path, force))
         End Sub
 
         ''' <summary>Lädt den zuletzt vorgemerkten Pfad. Gebraucht, wenn beim Vormerken noch keine
@@ -377,7 +415,35 @@ Namespace Services
             End Try
         End Sub
 
-        Private Sub LoadCore(path As String)
+        Private Sub LoadCore(path As String, Optional force As Boolean = False)
+            ' DASSELBE ZWEIMAL ZU LADEN IST EIN ABSTURZ, und der Riegel dagegen steht HIER.
+            '
+            ' Zwei "loadfile ... replace" kurz hintereinander bauen mpv um, waehrend der Zeichenfaden
+            ' noch Einzelbilder der ersten Fassung holt; das Zuschneiden rechnet dann mit Massen, die
+            ' nicht mehr gelten, und libmpv bricht mit einer Zusicherung ab ("mp_image_crop"). Der
+            ' Prozess ist damit weg - aus nativem Code heraus, ohne Ausnahme, die sich fangen liesse.
+            '
+            ' ER STAND FRUEHER IM BETRACHTER und hat nicht gehalten: dort haengt er an einem eigenen
+            ' Merker, und den leert jeder Weg ueber StopVideoPlayback - unter anderem der
+            ' NICHT-Video-Zweig desselben Ladewegs. Ein Element aus Immich laeuft durch beide, weil
+            ' es erst nach dem Herunterladen eine Datei ist. Gemeldet an 0.9.42 unter macOS, mit zwei
+            ' gleichen "geladen"-Zeilen im Protokoll.
+            '
+            ' HIER KANN IHN NIEMAND UMGEHEN: jeder Weg zu mpv geht durch diese Stelle, und der Wert,
+            ' an dem er haengt, ist derselbe, den mpv gerade wirklich spielt. Die drei Faelle, die
+            ' nicht brechen duerfen, bleiben heil:
+            '   - WIEDERHOLEN nach dem Ende laedt denselben Pfad mit Absicht: dafuer ist "force" da.
+            '   - EIN FENSTERWECHSEL setzt _loadedPath selbst auf Nothing (AttachWindowCore), das
+            '     Nachladen laeuft also durch.
+            '   - EIN WEGGEWORFENER SPIELER bringt einen frischen Merker mit, weil der Merker jetzt
+            '     IM Spieler sitzt. Genau das war am alten Ort die Sorge, und sie loest sich hier
+            '     von selbst: ein neuer Spieler hat nichts geladen.
+            If Not force AndAlso ReadyForPlayback() AndAlso
+               String.Equals(path, _loadedPath, StringComparison.Ordinal) Then
+                LogState("schon geladen, zweites Laden uebersprungen")
+                Return
+            End If
+
             ' Zuerst verwerfen, was mpv bisher hatte: gelingt das Laden nicht (etwa weil noch
             ' keine Ausgabefläche steht), muss LoadPending es später NACHHOLEN dürfen - auch dann,
             ' wenn es derselbe Pfad ist, der vorhin schon einmal lief.
@@ -392,6 +458,9 @@ Namespace Services
                 Return
             End If
             _loadedPath = path
+            ' VOR dem Abspielen melden: der Betrachter setzt daran seine Anzeige zurueck, und ein
+            ' Zuruecksetzen NACH dem ersten Zeitbericht loeschte genau den wieder.
+            RaiseEvent FileLoaded(path)
             If PendingPlay() Then SetPauseCore(False)
             LogState("geladen")
         End Sub
@@ -405,7 +474,8 @@ Namespace Services
             ' Nur nachholen, was liegen geblieben ist. Laeuft derselbe Film schon, setzte ein
             ' zweites Laden ihn sichtbar auf den Anfang zurueck. Nach einem Fensterwechsel gilt
             ' er nicht mehr als geladen (siehe AttachWindowCore) - dort MUSS neu geladen werden.
-            If String.Equals(path, _loadedPath, StringComparison.Ordinal) Then Return
+            ' Die Regel dazu steht seit dem Riegel in LoadCore und wird hier nicht zweitgefasst:
+            ' zwei Fassungen derselben Regel laufen auseinander.
             LoadCore(path)
         End Sub
 
@@ -424,6 +494,12 @@ Namespace Services
 
         Private Sub StopCore()
             _loadedPath = Nothing
+            ' MITGESCHRIEBEN, weil der Stop den gemerkten Pfad loescht und damit den Riegel gegen das
+            ' zweite Laden aufhebt. Faellt einer zwischen zwei Ladeauftraege, laden beide - und genau
+            ' diese Abfolge ist die letzte offene Frage zum Absturz unter macOS. Ohne diese Zeile
+            ' steht im Protokoll zweimal "geladen" und nichts dazwischen, und man kann nicht sagen,
+            ' ob ein Stop dabei war.
+            LogState("gestoppt")
             If Not ReadyForPlayback() Then Return
             CommandAsyncRaw(_handle, "stop")
         End Sub
