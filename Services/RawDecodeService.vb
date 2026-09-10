@@ -1670,8 +1670,8 @@ Namespace Services
 
         ' Die frueher hier stehende SCHAETZUNG des Farbquerfehlers aus dem Bildinhalt ist
         ' entfernt. Sie fand auf echten Fotos nur ein Neuntel des Farbsaums, waehrend Messwerte
-        ' aus der mitgelieferten Objektiv-Sammlung 30 bis 45 Prozent entfernen (gemessen
-        ' 28.07.2026, siehe RAW_UND_FARBE.md). Zwei Erklaerungsversuche fuer ihr Versagen sind
+        ' aus der mitgelieferten Objektiv-Sammlung 30 bis 45 Prozent entfernen (gemessen, siehe
+        ' RAW_UND_FARBE.md). Zwei Erklaerungsversuche fuer ihr Versagen sind
         ' widerlegt und stehen dort; wer sie wiederbeleben will, faengt nicht bei null an.
 
 

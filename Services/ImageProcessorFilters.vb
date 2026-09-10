@@ -295,8 +295,8 @@ Namespace Services
                 ' Quelle und schreiben in getrennte Bereiche des Ziels.
                 '
                 ' ALLE KACHELN ALS EINE LISTE und nicht Reihe fuer Reihe: ein Vorschaubild von
-                ' 2300 Punkten Kante hat funf Kachelreihen, und ueber Reihen verteilt liefen dann
-                ' fuenf Faeden auf vierundzwanzig Kernen. Flach sind es fuenfundzwanzig Einheiten.
+                ' 2300 Punkten Kante hat neun Kachelreihen, und ueber Reihen verteilt liefen dann
+                ' neun Faeden auf vierundzwanzig Kernen. Flach sind es einundachtzig Einheiten.
                 Dim tilesX = (w + GuidedTileEdge - 1) \ GuidedTileEdge
                 Dim tilesY = (h + GuidedTileEdge - 1) \ GuidedTileEdge
                 Dim tiles = tilesX * tilesY
@@ -343,10 +343,10 @@ Namespace Services
             If w <= 0 OrElse h <= 0 Then Return
 
             ' ALLE ZWISCHENBILDER SIND GELIEHEN, und das ist kein Feinschliff. Eine Kachel mit Rand
-            ' misst 530 mal 530, ein Gleitkomma-Zwischenbild davon 1,1 MB. Neu angelegt entstuenden
-            ' je Kachel rund ein Dutzend davon als Muell, und weil mehrere Kacheln nebeneinander
-            ' laufen, an jedem Reglerschritt hunderte Megabyte - der Aufraeumer haette dann mehr zu
-            ' tun als der Filter.
+            ' misst 274 mal 274, ein Gleitkomma-Zwischenbild davon 300 KB. Neu angelegt entstuenden
+            ' je Kachel zehn davon als Muell, und weil bis zu zwoelf Kacheln nebeneinander laufen,
+            ' an jedem Reglerschritt zig Megabyte - der Aufraeumer haette dann mehr zu tun als der
+            ' Filter.
             '
             ' WER LEIHT, BEKOMMT MEHR ALS BESTELLT: die Laenge des geliehenen Feldes ist groesser
             ' oder gleich der angeforderten. Keine Schleife hier darf deshalb ueber .Length laufen,
@@ -358,7 +358,7 @@ Namespace Services
             ' derselben Gerade: der Gauss-Weg daneben nahm beim Ziehen des Helligkeitsreglers das
             ' Farbrauschen mit (gemessen 64 Prozent am Anschlag), weil er alle Kanaele gleich
             ' weichzeichnet. Ohne diesen Schritt blieben die bunten Sprenkel stehen, und der Regler
-            ' taete plotzlich weniger als vorher. Fuer starkes Farbrauschen bleibt der eigene Regler
+            ' taete ploetzlich weniger als vorher. Fuer starkes Farbrauschen bleibt der eigene Regler
             ' zustaendig - der greift tiefer.
             Dim chromaR = pool.Rent(n)
             Dim chromaB = pool.Rent(n)
@@ -388,7 +388,7 @@ Namespace Services
             Next
 
             ' Die QUADRATE brauchen kein eigenes Bild: sie werden in ihr Ziel geschrieben und dort
-            ' gleich gemittelt. Ein Puffer weniger, und einer ist hier 1,1 MB.
+            ' gleich gemittelt. Ein Puffer weniger, und einer ist hier 300 KB.
             For i = 0 To n - 1
                 meanSquares(i) = luma(i) * luma(i)
             Next
@@ -704,8 +704,7 @@ Namespace Services
         ''' Weichzeichnung des ganzen Bildes (Skia, separierbar, Sigma hoechstens 2,45) und danach
         ''' das Verrechnen beider Bilder ueber alle Bildpunkte. Klarheit und Struktur waren mit
         ''' zusammen 325 ms der groesste Posten der Kette, nachdem die Koernung erledigt war
-        ''' (gemessen) - und ohne diese Teilung ist nicht zu sagen, welche
-        ''' Haelfte das ist. Beide Aufrufer teilen sich die Namen; die Summe steht im Protokoll.</remarks>
+        ''' (gemessen) - und ohne diese Teilung ist nicht zu sagen, welche Haelfte das ist. Beide Aufrufer teilen sich die Namen; die Summe steht im Protokoll.</remarks>
         Private Shared Function ApplyLocalContrast(source As SKBitmap, blurSigma As Single, amount As Single, strengthMultiplier As Single) As SKBitmap
             Using blurred = PerformanceTraceService.Measure(
                 "Pixel: Lokalkontrast Unschaerfe", Function() ApplyNoiseReduction(source, blurSigma / 8.0F))
@@ -1279,8 +1278,8 @@ Namespace Services
         ''' <summary>Die Farbmatrix eines Presets - einzige Quelle für ApplyFilterPreset UND die
         ''' verschmolzene Punktoperationskette. Nothing heißt "keine Matrix": unbekanntes Preset oder
         ''' "weich" (das ist ein Weichzeichner, kein Farbfilter).
-        ''' Skia liest die 5. Matrixspalte (Offset) in der Skala 0..1, NICHT 0..255 - gemessen
-        ''': Offset 0.1 auf Grau 100 ergibt 126, also +25.5 Tonwerte. Die Offsets unten
+        ''' Skia liest die 5. Matrixspalte (Offset) in der Skala 0..1, NICHT 0..255 - gemessen:
+        ''' Offset 0.1 auf Grau 100 ergibt 126, also +25.5 Tonwerte. Die Offsets unten
         ''' sind aber als TONWERTE gemeint. Ohne die Division waren fuenf Presets unbrauchbar:
         ''' "Fade"/"Vintage" lieferten reines Weiss, "Kontrast" reines Schwarz, "Warm"/"Kuehl"
         ''' knallorange bzw. knallblau. Die Zahlen bleiben in Tonwerten lesbar, geteilt wird hier.
@@ -1656,8 +1655,7 @@ Namespace Services
             Return result
         End Function
 
-        ''' <summary>Koernung. Von GetPixel/SetPixel auf Puffer umgestellt (gemessen
-        ''' 4,3 s bei 6,3 MP).
+        ''' <summary>Koernung. Von GetPixel/SetPixel auf Puffer umgestellt (gemessen 4,3 s bei 6,3 MP).
         ''' BEWUSST SERIELL: der Zufallsstrom haengt an der Durchlaufreihenfolge. Parallel wuerde das
         ''' Korn bei jedem Lauf anders fallen - wiederholte Laeufe muessen bitgleich sein, und
         ''' ein Bild, das sich beim zweiten Rendern aendert, waere auch fuer den Nutzer falsch.

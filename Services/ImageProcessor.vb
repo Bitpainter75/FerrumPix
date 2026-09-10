@@ -2839,8 +2839,8 @@ Namespace Services
         ''' MIT DEM BETRAG DES KOSINUS. Über 90 Grad ist er negativ, und ohne Betrag wurde die
         ''' Leinwand KLEINER statt größer: bei 102 Grad schrumpfte sie von 1088 auf 827, das
         ''' gedrehte Bild ragte weit darüber hinaus und man sah nur noch dessen Mitte; bei 180
-        ''' Grad blieb rechnerisch eine Kante von einem Pixel. Nutzerbefund
-        ''' 2026, zwei Bildschirmaufnahmen mit und ohne Haken. Der Sinus ist über den Betrag des
+        ''' Grad blieb rechnerisch eine Kante von einem Pixel. Nutzerbefund mit zwei
+        ''' Bildschirmaufnahmen, mit und ohne Haken. Der Sinus ist über den Betrag des
         ''' Winkels ohnehin nie negativ, steht hier aber der Symmetrie halber genauso.
         '''
         ''' EINE Stelle für alle: Ausgabemaße, Renderer, Punktabbildung hin und zurück und die

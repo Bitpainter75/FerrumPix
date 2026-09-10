@@ -1265,8 +1265,8 @@ Namespace ViewModels
                 ' zusammen, weil hier zwei Fallen liegen: das gesetzte Element meldet SOFORT, und
                 ' das Neueinlesen sah die Auswahl dann halb geschrieben - ein Element rot, die
                 ' uebrigen noch leer, also "gemischt", also leer. Der Rest der Schleife trug
-                ' anschliessend genau dieses Leer weiter, und der Katalog bekam es auch (gemessen
-                ' 2026-08-06: von drei markierten Bildern behielt nur das erste die Farbe).
+                ' anschliessend genau dieses Leer weiter, und der Katalog bekam es auch (gemessen:
+                ' von drei markierten Bildern behielt nur das erste die Farbe).
                 _isWritingItems = True
                 Try
                     For Each entry In _items

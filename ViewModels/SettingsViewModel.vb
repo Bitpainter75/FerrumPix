@@ -4759,9 +4759,8 @@ Namespace ViewModels
         ''' Regeln, sondern aus den Schluesseln des Standarderscheinungsbilds (siehe den Kommentar
         ''' dazu in FerrumPixTheme.axaml). Dort stehen feste Farben, und die passen nur zum dunklen
         ''' Standardthema: nach einem Wechsel auf Grau oder Hell stand das Untermenue weiter
-        ''' dunkelblau da, waehrend das Menue darueber die neue Farbe hatte (Nutzerbefund
-        ''' ). Dasselbe gilt fuer die Aufklappliste einer Auswahl und fuer die Zeilen
-        ''' einer Liste.
+        ''' dunkelblau da, waehrend das Menue darueber die neue Farbe hatte (Nutzerbefund).
+        ''' Dasselbe gilt fuer die Aufklappliste einer Auswahl und fuer die Zeilen einer Liste.
         '''
         ''' Deshalb werden diese Schluessel nach jedem Themenwechsel aus den FerrumPix-Farben
         ''' nachgezogen. Im AXAML bleiben sie stehen: sie gelten, bevor ein Thema angewandt ist.</summary>

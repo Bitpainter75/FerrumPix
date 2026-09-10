@@ -9408,7 +9408,7 @@ Namespace ViewModels
         ''' entrauscht - warum, steht bei DenoiseModelService.Denoise.
         '''
         ''' Die Vorgabe steht auf 70 und nicht auf 100: das Modell soll spuerbar wirken, ohne die
-        ''' feine Zeichnung ganz wegzunehmen. Sie lag einmal bei 50, und das war zu vorsichtig -
+        ''' feine Zeichnung ganz wegzunehmen. Sie lag einmal bei 30, und das war zu vorsichtig -
         ''' wer den Regler uebersieht, bekam einen Lauf, der Minuten kostet und wenig zeigt, und
         ''' hielt das Ergebnis fuer die volle Leistung des Modells. Wer die Zeit hat, dreht am
         ''' einzelnen Bild nach; ein Schritt zurueck und der andere Wert kostet nur die Wartezeit.
@@ -22195,8 +22195,8 @@ Namespace ViewModels
             ' Szene, die aber per Rezept gedreht ist - bei 90/180/270 säße der Strich für den Sekunden-
             ' bruchteil bis zum Voll-Render an der falschen Stelle. Deshalb bei Drehung die
             ' Brücke überspringen: der Strich erscheint dann minimal später, aber sofort korrekt platziert.
-            ' Gleiches gilt für Flip UND jede angewendete Crop-/Begradigungs-/Resize-/Canvas-Geometrie
-            ': ScaleRectBetweenSpaces setzt "Szene = skalierte Basis" voraus, was
+            ' Gleiches gilt für Flip UND jede angewendete Crop-/Begradigungs-/Resize-/Canvas-Geometrie:
+            ' ScaleRectBetweenSpaces setzt "Szene = skalierte Basis" voraus, was
             ' dann nicht mehr stimmt - der Strich erschiene gespiegelt/versetzt.
             If AppliedRotationDegrees <> 0 OrElse AppliedFlipHorizontal OrElse AppliedFlipVertical OrElse HasAppliedNonRotationGeometry() Then Return
             Dim previewRect = ImageProcessor.ScaleRectBetweenSpaces(dirtyFull, baseW, baseH, _sceneSk.Width, _sceneSk.Height)

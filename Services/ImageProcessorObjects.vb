@@ -516,8 +516,8 @@ Namespace Services
                 ' AUSSERHALB DES CLIPS GAR NICHT ERST ZEICHNEN. Ein Region-Patch ist nur wenige hundert
                 ' Pixel groß, zeichnete bisher aber JEDES Objekt des Dokuments - bei 36 eingefügten
                 ' Bildern hieß das 36 Decodes und Skalierungen für einen 400x400-Fleck (gemessen 550 ms
-                ' statt ~20 ms; der Zug wirkte dadurch zäh und die Ghost-Übergabe kam nicht durch,
-                '). QuickReject prüft gegen den aktuellen Clip des Canvas und ist
+                ' statt ~20 ms; der Zug wirkte dadurch zäh und die Ghost-Übergabe kam nicht durch).
+                ' QuickReject prüft gegen den aktuellen Clip des Canvas und ist
                 ' selbst praktisch kostenlos.
                 Dim eigenRect = ComputeAnnotationDirtyRectCore(sourceWidth, sourceHeight, renderAnnotation)
                 If Not eigenRect.IsEmpty Then

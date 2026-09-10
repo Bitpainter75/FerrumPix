@@ -193,7 +193,7 @@ Namespace ViewModels
                 If String.IsNullOrEmpty(_currentFolder) Then Return ""
                 ' ERST DEN SCHLUSSTRENNER WEG. Ohne ihn gibt GetDirectoryName bei "/pfad/ordner/"
                 ' den Ordner SELBST zurueck, und in der Leiste stand dann "Ordner > Ordner". Die
-                ' Zeile darueber schneidet ihn laengst ab; hier fehlte es (Nutzerbefund,
+                ' Zeile darueber schneidet ihn laengst ab; hier fehlte es (Nutzerbefund;
                 ' aufgefallen an einem ueberwachten Katalogordner - der kommt aus den Einstellungen
                 ' und darf einen Schlusstrenner tragen, waehrend die uebrigen Wurzeln keinen haben).
                 Dim self = _currentFolder.TrimEnd(IO.Path.DirectorySeparatorChar, IO.Path.AltDirectorySeparatorChar)
@@ -1602,8 +1602,8 @@ Namespace ViewModels
         '''
         ''' <para>Sichtbar wurde das ueberall dort, wo der Inhalt ERST NACH dem Aufbau der Ansicht
         ''' eintrifft: ein Ordner ohne Katalogdaten, Suchlisten, Immich und Nextcloud blieben leer,
-        ''' bis ein Ansichts- oder Ordnerwechsel die Flaeche neu aufbaute (Nutzerbefund
-        ''' ). Nur wo der Katalog vorfuellte, stand schon Inhalt da, als der Repeater das
+        ''' bis ein Ansichts- oder Ordnerwechsel die Flaeche neu aufbaute (Nutzerbefund). Nur wo
+        ''' der Katalog vorfuellte, stand schon Inhalt da, als der Repeater das
         ''' erste Mal vermessen wurde - deshalb fiel es dort nicht auf.</para>
         '''
         ''' <para>MinHeight und nicht Height: braucht der Repeater mehr, soll er sich nehmen, was

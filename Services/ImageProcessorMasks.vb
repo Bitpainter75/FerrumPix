@@ -63,9 +63,8 @@ Namespace Services
                     ' Maske, sondern wird beim Anwenden aufmultipliziert - die Hauptschleife tut das
                     ' fuer die erste Ebene, und ohne dieselben Zeilen hier ging die Beschraenkung
                     ' jedes weiteren Geschwisters beim Vereinigen verloren: seine Korrektur wirkte
-                    ' dann ausserhalb der Ebene, auf die sie beschraenkt war (Nutzerbefund
-                    ' ). Dieselbe Quelle wie dort, damit die zwei Wege nicht auseinander
-                    ' laufen.
+                    ' dann ausserhalb der Ebene, auf die sie beschraenkt war (Nutzerbefund).
+                    ' Dieselbe Quelle wie dort, damit die zwei Wege nicht auseinander laufen.
                     If g.ClipToLayerBelow AndAlso stacked.Length > 0 Then
                         Dim clipBase = FindAnnotationById(adj, stacked)
                         If clipBase IsNot Nothing AndAlso adj.IsAnnotationRenderVisible(clipBase) Then

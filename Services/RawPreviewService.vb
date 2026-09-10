@@ -59,8 +59,8 @@ Namespace Services
         ''' <summary>Grosse Vorschau fuer Betrachter/Editor-Anzeige in ZWEI Stufen: erst der eigene
         ''' Scanner (er sucht das GROESSTE eingebettete JPEG - fuer die Anzeige zaehlt Aufloesung),
         ''' sonst LibRaws Thumbnail-API. Der Rueckfall ist nicht theoretisch: Leica-DNGs betten kein
-        ''' vom Scanner auffindbares JPEG ein, dort blieb die Anzeige sonst leer (gemessen
-        '''). Umgekehrte Reihenfolge als bei den Galerie-Kacheln, wo LibRaw zuerst
+        ''' vom Scanner auffindbares JPEG ein, dort blieb die Anzeige sonst leer (gemessen).
+        ''' Umgekehrte Reihenfolge als bei den Galerie-Kacheln, wo LibRaw zuerst
         ''' kommt - dort zaehlt Tempo, nicht Aufloesung.</summary>
         Public Shared Function ExtractPreviewWithFallback(filePath As String) As MemoryStream
             Dim scanned = ExtractPreview(filePath)

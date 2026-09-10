@@ -5419,8 +5419,8 @@ Namespace Views
             ' dort sonst gleich wieder aufgehoben. Sein Rechteck ist das ganze Bild, der Auswahl-
             ' rahmen laege also genau auf der Bildkante und saehe aus wie ein zweiter Rahmen.
             '
-            ' DASSELBE GILT FUER PFADPUNKTE, und genau daran ist es aufgefallen (Nutzerbefund
-            ' : "die gestrichelte Linie der Box verhindert, dass man die Anfasser anfassen
+            ' DASSELBE GILT FUER PFADPUNKTE, und genau daran ist es aufgefallen (Nutzerbefund:
+            ' "die gestrichelte Linie der Box verhindert, dass man die Anfasser anfassen
             ' kann", und zwar erst beim ERNEUTEN Markieren). UpdateTextOverlayVisibility blendete den
             ' Rahmen richtig aus, der naechste Layout-Durchlauf holte ihn zurueck - und der laeuft bei
             ' jeder Zeigerbewegung. Wer eine Abschaltung dort ergaenzt, muss sie IMMER auch hier

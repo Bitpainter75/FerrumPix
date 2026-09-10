@@ -495,8 +495,8 @@ Namespace Views
                     ' Aufgabe stand darin vorn - sie fragte das Sichtfenster also womoeglich ab,
                     ' bevor es eine Hoehe hatte, und forderte dann kein einziges Vorschaubild an.
                     ' Beim Ordnerwechsel blieben die Kacheln dadurch leer, bis der Dateisystemlauf
-                    ' mit seinem eigenen Reset einen zweiten Versuch ausloeste (Nutzerbefund
-                    ' ). Background liegt unter beidem und kommt sicher danach.
+                    ' mit seinem eigenen Reset einen zweiten Versuch ausloeste (Nutzerbefund).
+                    ' Background liegt unter beidem und kommt sicher danach.
                     Dispatcher.UIThread.Post(AddressOf RequestViewportThumbnails, DispatcherPriority.Background)
                 End Sub, DispatcherPriority.Loaded)
         End Sub
@@ -736,8 +736,8 @@ Namespace Views
         ' Der Bildlaufstand der KACHEL-Ansichten, geteilt zwischen Raster und Gruppenansicht.
         ' Solange beide ueber denselben ScrollViewer liefen, behielt ein Wechsel die Position von
         ' selbst. Seit sie getrennt sind, hat jede ihren eigenen Stand - und die Gruppenansicht
-        ' sprang beim ersten Wechsel an ihren alten, meist ganz nach oben (Nutzerbefund
-        ' ). Die Liste bleibt bewusst aussen vor: sie hatte schon immer einen eigenen
+        ' sprang beim ersten Wechsel an ihren alten, meist ganz nach oben (Nutzerbefund).
+        ' Die Liste bleibt bewusst aussen vor: sie hatte schon immer einen eigenen
         ' ScrollViewer, und ihr Stand soll ein Wechsel ins Raster nicht mitnehmen.
         Private _tileScrollOffsetY As Double = 0
 

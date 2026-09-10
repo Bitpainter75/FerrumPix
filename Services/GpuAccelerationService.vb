@@ -487,18 +487,18 @@ Namespace Services
                     ' bemisst sich die Kachelgroesse, und die faellt dann viel zu gross aus.
                     _found = New List(Of OrtEpDevice)()
                     _infos = New List(Of GpuDeviceInfo)()
-                    Dim uebergangen = New List(Of String)()
+                    Dim skipped = New List(Of String)()
                     For i = 0 To gemeldet.Count - 1
                         If IsSoftwareRenderer(daten(i)) Then
-                            uebergangen.Add($"{daten(i).VendorName} {daten(i).DeviceName}".Trim())
+                            skipped.Add($"{daten(i).VendorName} {daten(i).DeviceName}".Trim())
                         Else
                             _found.Add(gemeldet(i))
                             _infos.Add(daten(i))
                         End If
                     Next
-                    If uebergangen.Count > 0 Then
+                    If skipped.Count > 0 Then
                         DiagnosticLogService.LogAlways("Grafik",
-                            "uebergangen, weil auf dem Prozessor gerechnet wuerde: " & String.Join(", ", uebergangen))
+                            "uebergangen, weil auf dem Prozessor gerechnet wuerde: " & String.Join(", ", skipped))
                     End If
                     If _found.Count = 0 Then
                         DiagnosticLogService.LogAlways("Grafik", "keine geeignete Grafikkarte gefunden")

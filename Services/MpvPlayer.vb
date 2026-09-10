@@ -331,7 +331,7 @@ Namespace Services
             ' Die Option allein reicht dafuer nicht. mpv nimmt den neuen Wert an, aber die
             ' Bildausgabe, die es beim Laden aufgebaut hat, haengt weiter an dem Fenster von
             ' damals - und das ist entweder verschwunden oder wurde beim Wegschalten mit "wid=-1"
-            ' aufgegeben. Der Ton lief in diesem Fall weiter, das Bild blieb weg (Nutzerbefund
+            ' aufgegeben. Der Ton lief in diesem Fall weiter, das Bild blieb weg (Nutzerbefund unter
             ' Linux: Video ansehen, auf ein Foto wechseln, zurueck auf dasselbe Video).
             '
             ' Neu aufbauen laesst sich die Ausgabe nur ueber ein neues Laden. Deshalb gilt hier,

@@ -1,4 +1,4 @@
-## FerrumPix 0.9.42 Unreleased
+## FerrumPix 0.9.42
 
 ### What's new
 
@@ -6,7 +6,7 @@
   is what you want for fine work: the same mouse movement now changes the value in smaller steps.
   FerrumPix remembers the width you picked.
 
-- The strength of the AI denoiser now starts at 70 and is remembered. It used to sit at 50 every
+- The strength of the AI denoiser now starts at 70 and is remembered. It used to sit at 30 every
   time you opened FerrumPix, and it is easy to miss next to the two buttons - so a run cost minutes
   and showed less than the model can do. Whatever you set is kept for next time.
 

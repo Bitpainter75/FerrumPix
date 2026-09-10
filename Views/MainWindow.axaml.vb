@@ -939,9 +939,8 @@ Namespace Views
                 ' Bedienfeld nicht mehr der Fall, sobald dieses Bedienfeld daraufhin verschwindet.
                 ' So verhielt es sich bei "Auswahl aus dem Pfad": der Knopf wird mit dem Pfad-
                 ' Bedienfeld ausgeblendet, der Fokus faellt weg, die Taste ging ans Fenster, und die
-                ' frisch entstandene Auswahl liess sich nicht leeren (Nutzerbefund,
-                ' zweimal gemeldet - die Regel selbst war da laengst richtig, sie wurde nur nie
-                ' gefragt).
+                ' frisch entstandene Auswahl liess sich nicht leeren (Nutzerbefund, zweimal
+                ' gemeldet - die Regel selbst war da laengst richtig, sie wurde nur nie gefragt).
                 '
                 ' WAS die Taste bedeutet, steht weiterhin an einer einzigen Stelle im ViewModel.
                 ' Ein Eingabefeld behaelt sie: dort loescht sie Zeichen.
