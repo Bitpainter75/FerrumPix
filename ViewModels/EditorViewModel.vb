@@ -4833,31 +4833,59 @@ Namespace ViewModels
         ''' <summary>Das sichtbare WIRKZIEL des Editors. Werkzeug und Ziel sind bewusst getrennt:
         ''' "Maske" sagt, womit gearbeitet wird; "Ebenenmaske" sagt, worauf die nächste Geste
         ''' wirkt. So muss man den Zustand nicht aus Panel-Akzent, Overlay und Werkzeugknopf
-        ''' zusammensetzen.</summary>
+        ''' zusammensetzen.
+        '''
+        ''' ES NENNT DIE EBENE, NICHT IHRE ART. Eine markierte Bild-Ebene hiess hier "Bild" - und
+        ''' das ganze Bild hiess genauso. Zwei verschiedene Ziele unter demselben Wort sind
+        ''' schlimmer als gar keine Anzeige, denn man glaubt, man haette nachgesehen. Deshalb steht
+        ''' hier jetzt DERSELBE Wortlaut wie in der markierten Zeile des Ebenenpanels
+        ''' (<see cref="LayerPanelRow.LayerLabel"/> und <c>ImageAnnotation.LayerLabel</c>): eine
+        ''' umbenannte Ebene mit ihrem Namen, eine automatisch beschriftete mit Art und Herkunft
+        ''' ("Bild: logo.png"). Wer die Beschriftung dort aendert, aendert sie hier mit.</summary>
         Public ReadOnly Property CurrentTargetLabel As String
             Get
-                If IsMultiLayerSelection Then Return LocalizationService.T("Mehrfachauswahl")
+                ' Die Kopfzeile einer GRUPPE meint die Gruppe als Ganzes. Ohne diesen Zweig faellt
+                ' sie in die Mehrfachauswahl darunter und stuende dort wie eine beliebige Menge von
+                ' Ebenen da, obwohl genau eine Zeile markiert ist.
+                If IsGroupRowSelected Then
+                    Dim groupName = If(_selectedLayerRow?.Group?.Name, "")
+                    If String.IsNullOrWhiteSpace(groupName) Then Return LocalizationService.T("Gruppe")
+                    Return LocalizationService.T("Gruppe") & ": " & groupName
+                End If
+
+                ' MIT ANZAHL: "Mehrfachauswahl" allein sagt nicht, ob zwei oder zwanzig Ebenen an der
+                ' naechsten Geste haengen, und genau das entscheidet, ob man sie ausfuehrt.
+                If IsMultiLayerSelection Then
+                    Return LocalizationService.T("Mehrfachauswahl") &
+                           " (" & (SelectedAnnotationCount + SelectedAdjustmentLayers.Count).ToString() & ")"
+                End If
 
                 Dim adjustment = _maskedAdjustmentLayers.FirstOrDefault(
                     Function(layer) layer IsNot Nothing AndAlso layer.Id = _selectedMaskedAdjustmentLayerId)
                 If adjustment IsNot Nothing Then
-                    If adjustment.IsMaskLayer Then Return LocalizationService.T("Maskenebene")
+                    ' Der NAME zuerst, wie im Panel: eine Maskenebene traegt ab Werk "Maskenebene",
+                    ' und wer sie "Himmel" nennt, will das hier lesen und nicht wieder ihre Art.
                     If Not String.IsNullOrWhiteSpace(adjustment.Name) Then Return adjustment.Name
-                    Return LocalizationService.T("Auswahl")
+                    Return If(adjustment.IsMaskLayer, LocalizationService.T("Maskenebene"),
+                                                      LocalizationService.T("Auswahlebene"))
                 End If
 
                 Dim annotation = SelectedLayer
                 If annotation IsNot Nothing Then
                     If _currentTool = EditorTool.Mask AndAlso Not String.IsNullOrWhiteSpace(annotation.MaskId) Then
-                        Return LocalizationService.T("Ebenenmaske")
+                        ' Die Maske gehoert einer bestimmten Ebene, und bei mehreren Ebenen mit Maske
+                        ' ist "Ebenenmaske" allein keine Auskunft. Zusammengesetzt erst NACH der
+                        ' Uebersetzung, wie alle Wortlaute dieser Art.
+                        Return LocalizationService.T("Ebenenmaske") & ": " & annotation.LayerLabel
                     End If
-                    Return LocalizationService.T(ImageAnnotation.GermanKindLabel(annotation.Kind))
+                    Return annotation.LayerLabel
                 End If
 
                 If HasActiveSelection Then
                     Return If(_activeSelectionIsMask, LocalizationService.T("Maske"), LocalizationService.T("Auswahl"))
                 End If
-                Return LocalizationService.T("Bild")
+                ' NICHT "Bild": so heisst auch eine eingefuegte Bild-Ebene.
+                Return LocalizationService.T("Gesamtes Bild")
             End Get
         End Property
 
@@ -8110,6 +8138,9 @@ Namespace ViewModels
                 Me.RaiseAndSetIfChanged(_annotationText, If(value, ""))
                 UpdatePendingTextAnnotationSize()
                 SyncSelectedAnnotation()
+                ' Eine Textebene heisst nach ihrem Text, im Panel wie im Wirkziel. Ohne diese
+                ' Meldung stuende im Ziel der Wortlaut von vor dem Tippen.
+                RaiseCurrentTargetChanged()
             End Set
         End Property
 
@@ -22264,6 +22295,9 @@ Namespace ViewModels
             For Each row In _layerRows
                 row.IsRenaming = False
             Next
+            ' Das Wirkziel nennt die Ebene beim Namen (siehe CurrentTargetLabel) - nach einer
+            ' Umbenennung stuende dort sonst der alte, und zwar bis zum naechsten Zeilenwechsel.
+            RaiseCurrentTargetChanged()
         End Sub
 
         Public Sub MarkLayerMetadataChanged()

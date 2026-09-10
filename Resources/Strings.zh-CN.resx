@@ -234,6 +234,9 @@
   <data name="Bibliothek_d75732b8" xml:space="preserve">
     <value>图库</value>
   </data>
+  <data name="Gesamtes_Bild_241de55c" xml:space="preserve">
+    <value>整个图像</value>
+  </data>
   <data name="Bild_d4248534" xml:space="preserve">
     <value>图像</value>
   </data>
