@@ -1108,6 +1108,26 @@
 
         <!-- Klasse und Spalte gelten fuer die Vorgabe (rechts neben der Buehne). Auf der linken
              Seite setzt UpdateAdjustmentsPanelSide beides um, samt Trennlinie. -->
+        <!-- DER ZIEHRAND DES ANPASSUNGSPANELS. Er liegt IN dessen Spalte und klebt an der Kante zur
+             Buehne; welche Kante das ist, entscheidet die Seite des Panels (UpdateAdjustmentsPanelSide
+             setzt Spalte, Ausrichtung und Zugrichtung um). Sechs Punkte breit: schmal genug, um im
+             Rand des Panels zu verschwinden, breit genug, um ihn zu treffen.
+
+             Die Untergrenze steht an der Spalte selbst (MinWidth), nicht hier: der Splitter
+             verhandelt zwischen zwei Spalten, und eine Grenze am Splitter liesse die Buehne
+             beliebig schmal werden. -->
+        <GridSplitter x:Name="AdjustmentsPanelSplitter"
+                      Grid.Row="1" Grid.Column="2"
+                      Width="6"
+                      HorizontalAlignment="Left"
+                      VerticalAlignment="Stretch"
+                      Background="Transparent"
+                      ResizeDirection="Columns"
+                      ResizeBehavior="PreviousAndCurrent"
+                      Cursor="SizeWestEast"
+                      ZIndex="10"
+                      DragCompleted="OnAdjustmentsPanelSplitterDragCompleted" />
+
         <Border x:Name="AdjustmentsPanelBorder"
                 Grid.Row="1" Grid.Column="2" Classes="panel-right">
             <Grid RowDefinitions="*">

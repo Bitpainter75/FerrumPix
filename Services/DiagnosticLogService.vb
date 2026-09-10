@@ -75,6 +75,36 @@ Namespace Services
             Threading.Volatile.Write(_enabled, 1)
         End Sub
 
+        ''' <summary>Laeuft dieser Start mit dem Protokollschalter? Nur dafuer gedacht, dass der
+        ''' Start selbst etwas SIEHT - siehe <see cref="EchoToConsole"/>.</summary>
+        Public Shared ReadOnly Property IsForcedOn As Boolean
+            Get
+                Return _forcedOn
+            End Get
+        End Property
+
+        ''' <summary>Jede Protokollzeile zusaetzlich auf die Standardausgabe, aber NUR beim
+        ''' erzwungenen Protokoll.
+        '''
+        ''' WOZU: Eine Anwendung ohne Fenster und ohne Konsolenausgabe ist von aussen nicht von
+        ''' einer zu unterscheiden, die gar nicht erst angelaufen ist. Genau daran ist eine
+        ''' Fehlersuche unter Windows haengengeblieben: der Aufruf kehrte sofort zurueck, es stand
+        ''' nichts im Fenster, es entstand keine Datei - und niemand konnte sagen, ob das Programm
+        ''' nie startete oder nur nichts zu sagen hatte. Wer mit dem Schalter startet, sieht jetzt
+        ''' beim Mitlesen, wie weit es kommt.
+        '''
+        ''' NICHT im Normalbetrieb: ohne Schalter kostet die Spiegelung genau eine Abfrage, und die
+        ''' Ausgabe einer Fensteranwendung landet sonst im Nichts oder in einer fremden Konsole.</summary>
+        Private Shared Sub EchoToConsole(entry As String)
+            If Not _forcedOn Then Return
+            Try
+                Console.Out.Write(entry)
+            Catch
+                ' Keine Konsole angebunden (Doppelklick unter Windows, Dienst, Pipe zu). Das
+                ' Protokoll steht davon unberuehrt in der Datei.
+            End Try
+        End Sub
+
         ''' <summary>Der Ordner, in dem die beiden Protokolldateien liegen - fuer die Meldung an den
         ''' Nutzer, der sie heraussuchen soll.
         '''
@@ -89,8 +119,12 @@ Namespace Services
         ''' <summary>Schreibt eine Info-Zeile - nur bei eingeschaltetem EnableDiagnosticLogging.</summary>
         Public Shared Sub LogAlways(area As String, message As String)
             If Not IsVerboseEnabled Then Return
+            Dim entry = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] [{area}] {message}" & Environment.NewLine
+            ' ERST die Konsole, dann die Datei: scheitert das Schreiben (kein Schreibrecht im
+            ' Benutzerordner, volle Platte), ist die Zeile trotzdem zu sehen - und gerade dieser
+            ' Fall ist einer, bei dem hinterher niemand eine Datei findet.
+            EchoToConsole(entry)
             Try
-                Dim entry = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] [{area}] {message}" & Environment.NewLine
                 SyncLock _writeLock
                     Directory.CreateDirectory(LogDirectory)
                     File.AppendAllText(LogPath, entry)
@@ -105,6 +139,7 @@ Namespace Services
             Dim entry = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] [{area}] {ex}" & Environment.NewLine &
                         New String("-"c, 80) & Environment.NewLine
             Dim verbose = IsVerboseEnabled
+            EchoToConsole(entry)
             Try
                 SyncLock _writeLock
                     Directory.CreateDirectory(LogDirectory)

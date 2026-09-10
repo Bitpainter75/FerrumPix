@@ -24,10 +24,43 @@ Namespace ViewModels
     Partial Public Class EditorViewModel
         Inherits ViewModelBase
 
-        ''' <summary>Breite des Anpassungspanels. Steht HIER und nicht nur in der Ansicht,
-        ''' weil zwei Dinge davon abhaengen: die Spalte, in die das Panel gesetzt wird, und
-        ''' die Schwelle fuer die Beschriftungen der Kopfleiste darunter.</summary>
-        Public Const AdjustmentsPanelWidth As Double = 330.0
+        ''' <summary>MINDESTbreite des Anpassungspanels, und zugleich seine Vorgabe. Steht HIER und
+        ''' nicht nur in der Ansicht, weil zwei Dinge davon abhaengen: die Spalte, in die das Panel
+        ''' gesetzt wird, und die Schwelle fuer die Beschriftungen der Kopfleiste darunter.
+        '''
+        ''' Bis zum 2026-09-10 war das die feste Breite. Seitdem laesst sich der Rand ziehen; die
+        ''' Zahl bleibt die Untergrenze, damit Beschriftung, Regler und Zahlenfeld nebeneinander
+        ''' passen.</summary>
+        Public Const AdjustmentsPanelMinWidth As Double = 330.0
+
+        ''' <summary>Und die Obergrenze. Ein Panel, das die halbe Bühne einnimmt, hilft beim
+        ''' Feineinstellen nicht mehr - dort sieht man nicht mehr, was man einstellt. Gemessen an
+        ''' einem 1500 Punkte breiten Fenster bleibt bei 700 noch gut die Haelfte fuer das Bild.</summary>
+        Public Const AdjustmentsPanelMaxWidth As Double = 700.0
+
+        ''' <summary>Die geltende Breite: was der Nutzer gezogen hat, auf den erlaubten Bereich
+        ''' geklemmt. Eine Einstellungsdatei aus einer aelteren Fassung kennt den Wert nicht und
+        ''' bringt 0 mit - dann gilt die Vorgabe.</summary>
+        Public Shared Function ClampAdjustmentsPanelWidth(value As Double) As Double
+            If Double.IsNaN(value) OrElse value <= 0 Then Return AdjustmentsPanelMinWidth
+            Return Math.Max(AdjustmentsPanelMinWidth, Math.Min(AdjustmentsPanelMaxWidth, value))
+        End Function
+
+        ''' <summary>Die Breite, mit der die Ansicht ihre Spalte setzt.</summary>
+        Public ReadOnly Property AdjustmentsPanelWidth As Double
+            Get
+                If _mainVm Is Nothing OrElse _mainVm.Settings Is Nothing Then Return AdjustmentsPanelMinWidth
+                Return ClampAdjustmentsPanelWidth(_mainVm.Settings.EditorAdjustmentsPanelWidth)
+            End Get
+        End Property
+
+        ''' <summary>Merkt sich eine gezogene Panelbreite. Gerufen von der Ansicht, wenn der
+        ''' Ziehrand losgelassen wird - ohne Fenster (Pruefstand) gibt es nichts zu merken.</summary>
+        Public Sub StoreAdjustmentsPanelWidth(width As Double)
+            If _mainVm Is Nothing OrElse _mainVm.Settings Is Nothing Then Return
+            _mainVm.Settings.EditorAdjustmentsPanelWidth = ClampAdjustmentsPanelWidth(width)
+            Me.RaisePropertyChanged(NameOf(AdjustmentsPanelWidth))
+        End Sub
 
         ''' Die vollste Leiste der App: links Navigation + Dateiname, mittig die vier
         ''' Modus-Schalter, rechts Speichern/Speichern unter und acht Symbolschalter.
@@ -174,7 +207,7 @@ Namespace ViewModels
         Private _farbrauschGrob As Double = 0
         Private _farbrauschGrobSkala As Double = 50
         Private _colorNoiseAdd As Double = 0
-        Private _noiseReductionMethod As NoiseReductionMethod = NoiseReductionMethod.Gaussian
+        Private _noiseReductionMethod As NoiseReductionMethod = NoiseReductionMethod.Guided
         Private _dustScratches As Double = 0
         Private _haze As Double = 0
         Private _addNoise As Double = 0
@@ -5677,9 +5710,11 @@ Namespace ViewModels
             End Set
         End Property
 
+        ''' <summary>Die drei Verfahren, unter ihren Fachnamen und deshalb unuebersetzt - wie schon
+        ''' bei den beiden aelteren. "Guided" steht vorn, weil es die Vorgabe ist.</summary>
         Public ReadOnly Property NoiseReductionMethodOptions As IReadOnlyList(Of String)
             Get
-                Return New String() {"Gaussian", "Median"}
+                Return New String() {"Guided", "Gaussian", "Median"}
             End Get
         End Property
 
@@ -5688,12 +5723,19 @@ Namespace ViewModels
                 Select Case _noiseReductionMethod
                     Case NoiseReductionMethod.Median
                         Return "Median"
-                    Case Else
+                    Case NoiseReductionMethod.Gaussian
                         Return "Gaussian"
+                    Case Else
+                        Return "Guided"
                 End Select
             End Get
             Set(value As String)
-                Dim method = If(String.Equals(value, "Median", StringComparison.OrdinalIgnoreCase), NoiseReductionMethod.Median, NoiseReductionMethod.Gaussian)
+                Dim method = NoiseReductionMethod.Guided
+                If String.Equals(value, "Median", StringComparison.OrdinalIgnoreCase) Then
+                    method = NoiseReductionMethod.Median
+                ElseIf String.Equals(value, "Gaussian", StringComparison.OrdinalIgnoreCase) Then
+                    method = NoiseReductionMethod.Gaussian
+                End If
                 If _noiseReductionMethod = method Then Return
                 CaptureUndoState(NameOf(NoiseReductionMethodLabel))
                 Me.RaiseAndSetIfChanged(_noiseReductionMethod, method)
@@ -9348,14 +9390,28 @@ Namespace ViewModels
             End Get
         End Property
 
-        Private _denoiseStrength As Double = 50.0
+        ''' <summary>Vorgabe der Entrausch-Staerke, und zugleich der Rueckfallwert des Doppelklicks
+        ''' am Regler (DefaultValue im NoisePanel). Wer die Zahl aendert, aendert beide - die
+        ''' Diagnose haelt sie zusammen.</summary>
+        Public Const DefaultDenoiseStrength As Double = 70.0
+
+        ''' <summary>Die Staerke auf ihren Bereich geklemmt. Was aus der Einstellungsdatei kommt,
+        ''' kann von Hand geaendert oder aus einer aelteren Fassung gar nicht vorhanden sein.</summary>
+        Public Shared Function ClampDenoiseStrength(value As Double) As Double
+            If Double.IsNaN(value) Then Return DefaultDenoiseStrength
+            Return Math.Max(0.0, Math.Min(100.0, value))
+        End Function
+
+        Private _denoiseStrength As Double = DefaultDenoiseStrength
 
         ''' <summary>Wie stark die HELLIGKEIT entrauscht wird, 0 bis 100. Die Farbe wird immer voll
         ''' entrauscht - warum, steht bei DenoiseModelService.Denoise.
         '''
-        ''' Die Vorgabe steht auf 30 und nicht auf 100, damit das Modell Details nur behutsam
-        ''' glättet. Wer die Zeit hat, dreht am einzelnen Bild nach - ein Schritt zurueck und der
-        ''' andere Wert kostet nur die Wartezeit.
+        ''' Die Vorgabe steht auf 70 und nicht auf 100: das Modell soll spuerbar wirken, ohne die
+        ''' feine Zeichnung ganz wegzunehmen. Sie lag einmal bei 50, und das war zu vorsichtig -
+        ''' wer den Regler uebersieht, bekam einen Lauf, der Minuten kostet und wenig zeigt, und
+        ''' hielt das Ergebnis fuer die volle Leistung des Modells. Wer die Zeit hat, dreht am
+        ''' einzelnen Bild nach; ein Schritt zurueck und der andere Wert kostet nur die Wartezeit.
         '''
         ''' DERSELBE Wert steht als <c>DefaultValue</c> am Regler im NoisePanel: dorthin springt ein
         ''' Doppelklick, und ein Regler, der auf etwas anderes zurueckspringt als auf seinen
@@ -9370,12 +9426,29 @@ Namespace ViewModels
                 Return _denoiseStrength
             End Get
             Set(value As Double)
-                Dim v = Math.Max(0.0, Math.Min(100.0, value))
+                Dim v = ClampDenoiseStrength(value)
                 If Math.Abs(_denoiseStrength - v) < 0.0001 Then Return
                 _denoiseStrength = v
                 Me.RaisePropertyChanged(NameOf(DenoiseStrength))
             End Set
         End Property
+
+        ''' <summary>Holt die zuletzt benutzte Staerke aus den Einstellungen. Gerufen, wenn das
+        ''' ViewModel seinen Rahmen kennt - ohne Fenster (Pruefstand) bleibt es bei der Vorgabe.</summary>
+        Private Sub RestoreRememberedDenoiseStrength()
+            If _mainVm Is Nothing OrElse _mainVm.Settings Is Nothing Then Return
+            DenoiseStrength = ClampDenoiseStrength(_mainVm.Settings.EditorDenoiseStrength)
+        End Sub
+
+        ''' <summary>Merkt sich die Staerke fuer die naechste Sitzung.
+        '''
+        ''' BEIM START EINES LAUFS und nicht bei jeder Reglerbewegung: das Speichern schreibt die
+        ''' Einstellungsdatei, und ein Zug ueber den Regler waere sonst hundert Schreibvorgaenge.
+        ''' Der Start ist ausserdem der Zeitpunkt, an dem die Zahl wirklich gemeint ist.</summary>
+        Private Sub RememberDenoiseStrength()
+            If _mainVm Is Nothing OrElse _mainVm.Settings Is Nothing Then Return
+            _mainVm.Settings.EditorDenoiseStrength = ClampDenoiseStrength(_denoiseStrength)
+        End Sub
 
         ''' <summary>Die in die PIXEL gerechneten Vorgaenge dieses Bildes (Entrauschen,
         ''' Objektentfernen). Warum sie ins Rezept gehoeren, steht bei
@@ -9474,6 +9547,9 @@ Namespace ViewModels
             ' bleibt waehrend der Rechenzeit bedienbar, und ein Bild, das zur Haelfte mit dem einen
             ' und zur Haelfte mit dem anderen Wert entrauscht ist, waere nicht wiederholbar.
             Dim strength = CSng(_denoiseStrength / 100.0)
+            ' Und derselbe Wert wird gemerkt: wer ihn einmal eingestellt hat, findet ihn beim
+            ' naechsten Start wieder. Hier und nicht am Regler - siehe RememberDenoiseStrength.
+            RememberDenoiseStrength()
             Dim cancel = BeginCancellableBusy()
             EnqueueWorkingCommit(
                 Function()
@@ -14296,6 +14372,7 @@ Namespace ViewModels
         Public Sub New(mainVm As IEditorHost)
             _mainVm = mainVm
             LoadStraightenCanvasPreference()
+            RestoreRememberedDenoiseStrength()
             FilmstripItems = New BulkObservableCollection(Of ImageItem)()
             HistorySteps = New ObservableCollection(Of HistoryStep)()
             RebuildHistorySteps()
@@ -20797,7 +20874,7 @@ Namespace ViewModels
             _farbrauschGrob = 0
             _farbrauschGrobSkala = 50
             _colorNoiseAdd = 0
-            _noiseReductionMethod = NoiseReductionMethod.Gaussian
+            _noiseReductionMethod = NoiseReductionMethod.Guided
             _vignette = 0
             _vignetteStyle = VignetteStyle.ColorPriority
             _grain = 0
@@ -24513,7 +24590,7 @@ Namespace ViewModels
             _farbrauschGrob = 0
             _farbrauschGrobSkala = 50
             _colorNoiseAdd = 0
-            _noiseReductionMethod = NoiseReductionMethod.Gaussian
+            _noiseReductionMethod = NoiseReductionMethod.Guided
             _dustScratches = 0
             _haze = 0
             _addNoise = 0
@@ -24591,7 +24668,7 @@ Namespace ViewModels
         Private Sub ResetSoftenGroupInternal()
             _noiseReduction = 0
             _noiseReductionDetail = 0
-            _noiseReductionMethod = NoiseReductionMethod.Gaussian
+            _noiseReductionMethod = NoiseReductionMethod.Guided
             Me.RaisePropertyChanged(NameOf(NoiseReduction))
             Me.RaisePropertyChanged(NameOf(NoiseReductionDetail))
             Me.RaisePropertyChanged(NameOf(NoiseReductionMethod))
@@ -24678,7 +24755,7 @@ Namespace ViewModels
             _sharpenMasking = 0
             _noiseReduction = 0
             _noiseReductionDetail = 0
-            _noiseReductionMethod = NoiseReductionMethod.Gaussian
+            _noiseReductionMethod = NoiseReductionMethod.Guided
             Me.RaisePropertyChanged(NameOf(Sharpness))
             Me.RaisePropertyChanged(NameOf(SharpenRadius))
             Me.RaisePropertyChanged(NameOf(SharpenDetail))

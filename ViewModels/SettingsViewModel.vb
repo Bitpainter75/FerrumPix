@@ -68,6 +68,21 @@ Namespace ViewModels
         Private _editorLayersPanelExpanded As Boolean = False
         Private _editorLayerThumbnails As Boolean = True
         Private _editorToolSidebarCollapsed As Boolean = False
+        Private _editorAdjustmentsPanelWidth As Double = EditorViewModel.AdjustmentsPanelMinWidth
+        Private _editorDenoiseStrength As Double = EditorViewModel.DefaultDenoiseStrength
+        Private _savedEditorDenoiseStrength As Double = EditorViewModel.DefaultDenoiseStrength
+        ' ACHT WEITERE, die dasselbe brauchten: sie werden vom Zuruecksetzen gesetzt, waren aber
+        ' weder gesichert noch zurueckgespielt - ein Abbrechen danach liess die Vorgabe stehen.
+        Private _savedEditorLayerThumbnails As Boolean = True
+        Private _savedPsdTextImport As String = "Ask"
+        Private _savedHiddenAdjustmentGroups As String = ""
+        Private _savedGpuAccelerationEnabled As Boolean = False
+        ' Heisst wie die EIGENSCHAFT und nicht wie das Feld dahinter, damit der Waechter ihn ohne
+        ' Sonderregel findet; sein Inhalt ist der Schluessel der Karte, kein Listeneintrag.
+        Private _savedSelectedGpuDevice As String = ""
+        Private _savedFaceRecognitionEnabled As Boolean = False
+        Private _savedFaceMinimumSizePercent As Double = 0
+        Private _savedPhotoMapEnabled As Boolean = False
         Private _editorAdjustmentsPanelOnLeft As Boolean = False
         Private _editorStartupTool As String = "Selection"
         Private _psdTextImport As String = "Ask"
@@ -1689,6 +1704,37 @@ Namespace ViewModels
                 If _editorToolSidebarCollapsed = value Then Return
                 Me.RaiseAndSetIfChanged(_editorToolSidebarCollapsed, value)
                 _mainVm?.RefreshLayoutBindings()
+                SaveLayoutSettings()
+            End Set
+        End Property
+
+        ''' <summary>Zuletzt benutzte Staerke des Entrauschens. Gemerkter Bedienzustand, kein
+        ''' Schalter im Dialog - gesetzt wird sie am Regler im Rauschen-Panel.</summary>
+        Public Property EditorDenoiseStrength As Double
+            Get
+                Return _editorDenoiseStrength
+            End Get
+            Set(value As Double)
+                Dim geklemmt = EditorViewModel.ClampDenoiseStrength(value)
+                If Math.Abs(_editorDenoiseStrength - geklemmt) < 0.0001 Then Return
+                Me.RaiseAndSetIfChanged(_editorDenoiseStrength, geklemmt)
+                SaveLayoutSettings()
+            End Set
+        End Property
+
+        ''' <summary>Breite des Anpassungspanels, gezogen am Rand des Panels. Gemerkter
+        ''' Bedienzustand wie die eingeklappte Werkzeugleiste, kein Schalter im Dialog.
+        '''
+        ''' KEIN RefreshLayoutBindings: die Ansicht setzt ihre Spalte beim Ziehen selbst, und ein
+        ''' Neuaufbau des Layouts mitten im Zug ruckelte sichtbar.</summary>
+        Public Property EditorAdjustmentsPanelWidth As Double
+            Get
+                Return _editorAdjustmentsPanelWidth
+            End Get
+            Set(value As Double)
+                Dim geklemmt = EditorViewModel.ClampAdjustmentsPanelWidth(value)
+                If Math.Abs(_editorAdjustmentsPanelWidth - geklemmt) < 0.5 Then Return
+                Me.RaiseAndSetIfChanged(_editorAdjustmentsPanelWidth, geklemmt)
                 SaveLayoutSettings()
             End Set
         End Property
@@ -3364,6 +3410,8 @@ Namespace ViewModels
             _editorLayersPanelExpanded = _appSettings.EditorLayersPanelExpanded
             _editorLayerThumbnails = _appSettings.EditorLayerThumbnails
             _editorToolSidebarCollapsed = _appSettings.EditorToolSidebarCollapsed
+            _editorAdjustmentsPanelWidth = EditorViewModel.ClampAdjustmentsPanelWidth(_appSettings.EditorAdjustmentsPanelWidth)
+            _editorDenoiseStrength = EditorViewModel.ClampDenoiseStrength(_appSettings.EditorDenoiseStrength)
             _editorAdjustmentsPanelOnLeft = _appSettings.EditorAdjustmentsPanelOnLeft
             _editorStartupTool = AppSettingsService.NormalizeEditorStartupTool(_appSettings.EditorStartupTool)
             _psdTextImport = AppSettingsService.NormalizePsdTextImport(_appSettings.PsdTextImport)
@@ -3631,6 +3679,19 @@ Namespace ViewModels
         End Sub
 
         Private Sub SnapshotSettings()
+            ' Die Staerke des Entrauschens wird im Dialog nur EINEN Weg veraendert: ueber
+            ' "Auf Standardeinstellungen zuruecksetzen". Genau deshalb gehoert sie hierher - ohne
+            ' den Schnappschuss bliebe die Vorgabe stehen, auch wenn danach Abbrechen gedrueckt
+            ' wird, und ein Abbrechen, das etwas veraendert, ist schlimmer als kein Abbrechen.
+            _savedEditorDenoiseStrength = _editorDenoiseStrength
+            _savedEditorLayerThumbnails = _editorLayerThumbnails
+            _savedPsdTextImport = _psdTextImport
+            _savedHiddenAdjustmentGroups = _versteckteAnpassungsgruppen
+            _savedGpuAccelerationEnabled = _gpuAccelerationEnabled
+            _savedSelectedGpuDevice = _gpuAccelerationDevice
+            _savedFaceRecognitionEnabled = _faceRecognitionEnabled
+            _savedFaceMinimumSizePercent = _faceMinimumSizePercent
+            _savedPhotoMapEnabled = _photoMapEnabled
             _savedThemeMode = _themeMode
             _savedAccentColor = _accentColor
             _savedAccentStrength = _accentStrength
@@ -3708,6 +3769,20 @@ Namespace ViewModels
         End Sub
 
         Private Sub RestoreSnapshot()
+            EditorDenoiseStrength = _savedEditorDenoiseStrength
+            EditorLayerThumbnails = _savedEditorLayerThumbnails
+            PsdTextImport = _savedPsdTextImport
+            ' UEBER DIE EIGENSCHAFT, nicht ueber das Feld: an ihr haengt der Neuaufbau der
+            ' Ankreuzliste. Das Feld allein zurueckzusetzen liesse die Haken stehen, waehrend
+            ' nichts mehr ausgeblendet ist - derselbe Fall, den das Zuruecksetzen schon einmal
+            ' hatte.
+            HiddenAdjustmentGroups = _savedHiddenAdjustmentGroups
+            GpuAccelerationEnabled = _savedGpuAccelerationEnabled
+            SelectedGpuDevice = GpuDeviceOptions.FirstOrDefault(
+                Function(o) String.Equals(o.Key, _savedSelectedGpuDevice, StringComparison.Ordinal))
+            FaceRecognitionEnabled = _savedFaceRecognitionEnabled
+            FaceMinimumSizePercent = _savedFaceMinimumSizePercent
+            PhotoMapEnabled = _savedPhotoMapEnabled
             ThemeMode = _savedThemeMode
             AccentColor = _savedAccentColor
             ' Auch die Staerke zurueck: sie wirkt sofort beim Antippen, ein Abbrechen muss sie
@@ -3828,6 +3903,11 @@ Namespace ViewModels
         End Sub
 
         Private Sub ResetToDefaults()
+            ' Die Staerke des Entrauschens gehoert dazu: sie hat eine Vorgabe, und "auf
+            ' Standardeinstellungen zuruecksetzen" soll sie wiederherstellen. Die Panelbreite und
+            ' der Klappzustand der Werkzeugleiste bleiben ausgenommen - beides ist gemerkte
+            ' Bedienung ohne Vorgabe, die jemand gewaehlt haette.
+            EditorDenoiseStrength = EditorViewModel.DefaultDenoiseStrength
             ThemeMode = "Dark"
             AccentColor = "#F08A1A"
             ViewerOpenFitToWindow = True
@@ -4143,6 +4223,8 @@ Namespace ViewModels
                                           s.EditorLayersPanelExpanded = _editorLayersPanelExpanded
                                           s.EditorLayerThumbnails = _editorLayerThumbnails
                                           s.EditorToolSidebarCollapsed = _editorToolSidebarCollapsed
+                                          s.EditorAdjustmentsPanelWidth = _editorAdjustmentsPanelWidth
+                                          s.EditorDenoiseStrength = _editorDenoiseStrength
                                           s.EditorAdjustmentsPanelOnLeft = _editorAdjustmentsPanelOnLeft
                                           s.EditorStartupTool = _editorStartupTool
                                           s.PsdTextImport = _psdTextImport

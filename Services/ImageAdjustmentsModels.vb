@@ -29,9 +29,18 @@ Namespace Services
         Bicubic
     End Enum
 
+    ''' <summary>Womit das Helligkeitsrauschen weggerechnet wird.
+    '''
+    ''' DIE REIHENFOLGE IST DER GESPEICHERTE WERT: die Zahlen stehen so in jedem Rezept, das je
+    ''' geschrieben wurde. Ein neues Verfahren kommt deshalb HINTEN dazu, nie dazwischen - sonst
+    ''' rechnete jede alte Datei ab dem naechsten Oeffnen mit einem anderen Filter.</summary>
     Public Enum NoiseReductionMethod
-        Gaussian
-        Median
+        Gaussian = 0
+        Median = 1
+        ''' <summary>Fuehrungsfilter: glaettet nur, wo die Umgebung flach ist. Vorgabe seit dem
+        ''' 2026-09-10, siehe ImageProcessorFilters.ApplyGuidedNoiseReduction. Die beiden aelteren
+        ''' Wege bleiben waehlbar und rechnen unveraendert weiter.</summary>
+        Guided = 2
     End Enum
 
     ''' <summary>Ein bestätigter, nicht-destruktiver Schritt der Bildgeometrie. Anders als die
@@ -329,11 +338,15 @@ Namespace Services
         ''' Flächen wie Himmel und Haut bleiben ruhig. Bei 0 rechnet ApplySharpness bitgenau wie zuvor.</summary>
         Public Property SharpenMasking As Single = 0
         Public Property NoiseReduction As Single = 0
-        ''' <summary>Kantenerhalt der (gaußschen) Rauschreduzierung, 0-100. 0 = reines Weichzeichnen wie
-        ''' bisher; höher = an kontrastreichen Kanten wird das Original zurückgemischt, Details bleiben
-        ''' stehen. Wirkt nur bei aktiver NoiseReduction.</summary>
+        ''' <summary>Kantenerhalt der Rauschreduzierung, 0-100. 0 = die Glaettung gilt ueberall;
+        ''' höher = an kontrastreichen Kanten wird das Original zurückgemischt, Details bleiben
+        ''' stehen. Wirkt nur bei aktiver NoiseReduction, und in jedem der drei Verfahren gleich.</summary>
         Public Property NoiseReductionDetail As Single = 0
-        Public Property NoiseReductionMethod As NoiseReductionMethod = NoiseReductionMethod.Gaussian
+        ''' <summary>VORGABE IST DER FUEHRUNGSFILTER, seit dem 2026-09-10. Ein Rezept, das den Wert
+        ''' TRAEGT, behaelt seinen - alle .fpxmp und .fpx mit Rauschminderung tun das, sie rechnen
+        ''' also unveraendert weiter. Es aendert sich fuer neue Bearbeitungen und fuer Quellen ohne
+        ''' eigene Angabe, etwa ein XMP-Preset: dort steht nur die Staerke.</summary>
+        Public Property NoiseReductionMethod As NoiseReductionMethod = NoiseReductionMethod.Guided
         ''' Farb-Rauschreduzierung 0-100: glaettet NUR die Farbanteile (Chroma), die Helligkeit
         ''' bleibt unangetastet - Details bleiben stehen, Farbflecken verschwinden. Gerade bei der
         ''' echten RAW-Entwicklung sichtbar, wo die Kamera-Vorschau schon entrauscht war.

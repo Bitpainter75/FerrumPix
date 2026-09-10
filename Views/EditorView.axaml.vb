@@ -1548,7 +1548,10 @@ Namespace Views
                     UpdateInfoSidebarLayoutState()
                 Case NameOf(EditorViewModel.IsLayersPanelVisible)
                     UpdateLayersPanelLayout()
-                Case NameOf(EditorViewModel.IsAdjustmentsPanelOnLeft)
+                Case NameOf(EditorViewModel.IsAdjustmentsPanelOnLeft),
+                     NameOf(EditorViewModel.AdjustmentsPanelWidth)
+                    ' Dieselbe Stelle setzt Seite UND Breite: das Panel steht in einer Spalte, und
+                    ' beide Angaben beschreiben dieselbe Spalte.
                     UpdateAdjustmentsPanelSide()
                 Case NameOf(EditorViewModel.EditorGridSize)
                     UpdateGridOverlay()
@@ -3689,10 +3692,28 @@ Namespace Views
             End If
         End Sub
 
-        ' Breite des Anpassungspanels. Sie steht im EditorViewModel, weil auch die Schwelle fuer
-        ' die Beschriftungen der Kopfleiste daran haengt - zwei Zahlen an zwei Orten waeren genau
-        ' die Art Paar, das irgendwann auseinanderlaeuft.
-        Private Const AdjustmentsPanelWidth As Double = EditorViewModel.AdjustmentsPanelWidth
+        ' MINDESTbreite des Anpassungspanels. Sie steht im EditorViewModel, weil auch die Schwelle
+        ' fuer die Beschriftungen der Kopfleiste daran haengt - zwei Zahlen an zwei Orten waeren
+        ' genau die Art Paar, das irgendwann auseinanderlaeuft.
+        Private Const AdjustmentsPanelWidth As Double = EditorViewModel.AdjustmentsPanelMinWidth
+
+        ''' <summary>Der Ziehrand ist losgelassen: die neue Breite MERKEN.
+        '''
+        ''' ERST BEIM LOSLASSEN und nicht waehrend des Zugs: die Einstellungen schreiben ihre Datei,
+        ''' und das je Mausbewegung zu tun hiesse hunderte Schreibvorgaenge fuer eine Bewegung.
+        '''
+        ''' Die Spalte selbst haelt ihre Grenzen ein (MinWidth/MaxWidth stehen dort), gespeichert
+        ''' wird trotzdem noch einmal geklemmt: was in der Datei landet, muss auch dann gelten,
+        ''' wenn diese Spalte spaeter einmal anders gebaut ist.</summary>
+        Private Sub OnAdjustmentsPanelSplitterDragCompleted(sender As Object, e As VectorEventArgs)
+            Dim vm = TryCast(DataContext, EditorViewModel)
+            Dim root = Me.FindControl(Of Grid)("EditorRootGrid")
+            If vm Is Nothing OrElse root Is Nothing OrElse root.ColumnDefinitions.Count < 3 Then Return
+            Dim panelColumn = If(vm.IsAdjustmentsPanelOnLeft, 1, 2)
+            Dim gezogen = root.ColumnDefinitions(panelColumn).ActualWidth
+            If gezogen <= 0 Then Return
+            vm.StoreAdjustmentsPanelWidth(gezogen)
+        End Sub
 
         ''' <summary>Tauscht Bühne und Anpassungspanel zwischen Spalte 1 und 2, je nach Einstellung
         ''' (EditorAdjustmentsPanelOnLeft). Links steht das Panel dann direkt neben der
@@ -3710,8 +3731,27 @@ Namespace Views
             Dim panelColumn = If(onLeft, 1, 2)
             Dim stageColumn = If(onLeft, 2, 1)
 
-            root.ColumnDefinitions(panelColumn).Width = New GridLength(AdjustmentsPanelWidth)
+            ' Die Breite kommt aus den Einstellungen und ist dort geklemmt. Die Grenzen stehen
+            ' zusaetzlich an der SPALTE: der Ziehrand verhandelt zwischen zwei Spalten, und ohne
+            ' sie liesse sich das Panel bis zum Verschwinden zusammenschieben.
+            Dim width = If(vm IsNot Nothing, vm.AdjustmentsPanelWidth, AdjustmentsPanelWidth)
+            root.ColumnDefinitions(panelColumn).MinWidth = AdjustmentsPanelWidth
+            root.ColumnDefinitions(panelColumn).MaxWidth = EditorViewModel.AdjustmentsPanelMaxWidth
+            root.ColumnDefinitions(panelColumn).Width = New GridLength(width)
+            root.ColumnDefinitions(stageColumn).MinWidth = 0
+            root.ColumnDefinitions(stageColumn).MaxWidth = Double.PositiveInfinity
             root.ColumnDefinitions(stageColumn).Width = GridLength.Star
+
+            ' Der Ziehrand wandert mit und dreht sich um: er klebt immer an der Kante zur Buehne.
+            Dim splitter = Me.FindControl(Of GridSplitter)("AdjustmentsPanelSplitter")
+            If splitter IsNot Nothing Then
+                Grid.SetColumn(splitter, panelColumn)
+                ' Voll qualifiziert: der Name gehoert hier zugleich der Eigenschaft des Controls,
+                ' und VB nimmt sonst die Eigenschaft statt der Aufzaehlung (Warnung BC42025).
+                splitter.HorizontalAlignment = If(onLeft, Avalonia.Layout.HorizontalAlignment.Right,
+                                                          Avalonia.Layout.HorizontalAlignment.Left)
+                splitter.ResizeBehavior = If(onLeft, GridResizeBehavior.CurrentAndNext, GridResizeBehavior.PreviousAndCurrent)
+            End If
 
             Dim panel = Me.FindControl(Of Border)("AdjustmentsPanelBorder")
             If panel IsNot Nothing Then

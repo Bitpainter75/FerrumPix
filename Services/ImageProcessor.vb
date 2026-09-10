@@ -2195,13 +2195,18 @@ Namespace Services
             End If
 
             If adj.NoiseReduction > 0 Then
-                If adj.NoiseReductionMethod = NoiseReductionMethod.Median Then
-                    processed = ReplaceBitmapOwned(processed, PerformanceTraceService.Measure(
-                        "Pixel: Rauschen (Median)", Function() ApplyMedianBlur(processed, adj.NoiseReduction / 100.0F)), owned)
-                Else
-                    processed = ReplaceBitmapOwned(processed, PerformanceTraceService.Measure(
-                        "Pixel: Rauschen", Function() ApplyNoiseReduction(processed, adj.NoiseReduction / 100.0F, adj.NoiseReductionDetail / 100.0F)), owned)
-                End If
+                Select Case adj.NoiseReductionMethod
+                    Case NoiseReductionMethod.Median
+                        processed = ReplaceBitmapOwned(processed, PerformanceTraceService.Measure(
+                            "Pixel: Rauschen (Median)", Function() ApplyMedianBlur(processed, adj.NoiseReduction / 100.0F)), owned)
+                    Case NoiseReductionMethod.Guided
+                        processed = ReplaceBitmapOwned(processed, PerformanceTraceService.Measure(
+                            "Pixel: Rauschen (Fuehrung)", Function() ApplyGuidedNoiseReduction(
+                                processed, adj.NoiseReduction / 100.0F, adj.NoiseReductionDetail / 100.0F)), owned)
+                    Case Else
+                        processed = ReplaceBitmapOwned(processed, PerformanceTraceService.Measure(
+                            "Pixel: Rauschen", Function() ApplyNoiseReduction(processed, adj.NoiseReduction / 100.0F, adj.NoiseReductionDetail / 100.0F)), owned)
+                End Select
             End If
             ' Die beiden Seiten desselben Panel-Reglers: Minus glaettet die Farbanteile, Plus faerbt
             ' sie ein. Getrennte Felder, weil nur die Reduzierung eine Entsprechung in den Presets hat

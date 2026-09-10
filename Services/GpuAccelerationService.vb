@@ -192,6 +192,22 @@ Namespace Services
             Return VulkanMemoryService.DeviceLocalMiBFor(deviceKey)
         End Function
 
+        ''' <summary>Der Klarname EINER BESTIMMTEN Karte, fuer das Protokoll.
+        '''
+        ''' Der Schluessel taugt dafuer nicht: "10de:1287:0000:01:00.0" sagt einem Melder nichts,
+        ''' und genau dorthin geht diese Zeile. Ist der Schluessel leer, wurde auf dem Prozessor
+        ''' gerechnet; ist er unbekannt, steht er selbst da - besser als gar nichts.</summary>
+        Public Shared Function DeviceLabelFor(deviceKey As String) As String
+            If String.IsNullOrEmpty(deviceKey) Then Return "Prozessor"
+            Dim info As GpuDeviceInfo = Nothing
+            SyncLock _lock
+                info = _infos.FirstOrDefault(Function(i) String.Equals(i.Key, deviceKey, StringComparison.Ordinal))
+            End SyncLock
+            If info Is Nothing Then Return deviceKey
+            Dim name = $"{info.VendorName} {info.DeviceName}".Trim()
+            Return If(name.Length = 0, deviceKey, name)
+        End Function
+
         ''' <summary>Steckt die benutzte Karte fuer sich, oder sitzt sie im Prozessor? Das ist die
         ''' Unterscheidung, an der haengt, ob sich das Einschalten lohnt.</summary>
         Public Shared ReadOnly Property IsDiscrete As Boolean
@@ -458,10 +474,32 @@ Namespace Services
 
                     OrtEnv.Instance().RegisterExecutionProviderLibrary(RegistrationName, path)
 
-                    _found = OrtEnv.Instance().GetEpDevices().
+                    Dim gemeldet = OrtEnv.Instance().GetEpDevices().
                         Where(Function(d) String.Equals(d.EpName, WebGpuEp.GetEpName(), StringComparison.Ordinal)).
                         ToList()
-                    _infos = _found.Select(AddressOf FactsOf).ToList()
+                    Dim daten = gemeldet.Select(AddressOf FactsOf).ToList()
+
+                    ' EIN SOFTWARE-RENDERER IST KEINE KARTE. Vulkan meldet auf vielen Linux-Systemen
+                    ' auch dann ein Geraet, wenn gar keine Grafikkarte antwortet: Mesa bringt
+                    ' lavapipe/llvmpipe mit, und das rechnet auf dem Prozessor. Es als Karte zu
+                    ' nehmen kehrt den Zweck um - es ist LANGSAMER als der gewoehnliche Weg ueber
+                    ' den Prozessor, und der Speicher, den es meldet, ist Arbeitsspeicher. Daran
+                    ' bemisst sich die Kachelgroesse, und die faellt dann viel zu gross aus.
+                    _found = New List(Of OrtEpDevice)()
+                    _infos = New List(Of GpuDeviceInfo)()
+                    Dim uebergangen = New List(Of String)()
+                    For i = 0 To gemeldet.Count - 1
+                        If IsSoftwareRenderer(daten(i)) Then
+                            uebergangen.Add($"{daten(i).VendorName} {daten(i).DeviceName}".Trim())
+                        Else
+                            _found.Add(gemeldet(i))
+                            _infos.Add(daten(i))
+                        End If
+                    Next
+                    If uebergangen.Count > 0 Then
+                        DiagnosticLogService.LogAlways("Grafik",
+                            "uebergangen, weil auf dem Prozessor gerechnet wuerde: " & String.Join(", ", uebergangen))
+                    End If
                     If _found.Count = 0 Then
                         DiagnosticLogService.LogAlways("Grafik", "keine geeignete Grafikkarte gefunden")
                         Return
@@ -479,6 +517,32 @@ Namespace Services
                 End Try
             End SyncLock
         End Sub
+
+        ''' <summary>Rechnet dieses "Geraet" in Wahrheit auf dem Prozessor?
+        '''
+        ''' ERKANNT AM NAMEN, und das ist hier die richtige Form: die Software-Rasterisierer heissen
+        ''' seit Jahren so, es sind fremde Namen und keine eigenen, und ein Merkmal in den Metadaten
+        ''' gibt es nicht - "nicht diskret" trifft auch jede eingebaute Grafikeinheit, und die ist
+        ''' eine echte.
+        '''
+        ''' Der Fall ist nicht selten: eine Linux-Installation ohne passenden Grafiktreiber (etwa
+        ''' eine aeltere NVIDIA-Karte unter Nouveau, das fuer sie kein Vulkan hat) liefert genau
+        ''' das - Mesa haelt lavapipe als Rueckfall bereit, und dann steht in der Auswahl eine
+        ''' "Karte", die keine ist.</summary>
+        Friend Shared Function IsSoftwareRenderer(info As GpuDeviceInfo) As Boolean
+            If info Is Nothing Then Return False
+            Dim name = $"{info.VendorName} {info.DeviceName}".ToLowerInvariant()
+            If name.Trim().Length = 0 Then Return False
+            For Each marke In SoftwareRendererNames
+                If name.Contains(marke) Then Return True
+            Next
+            Return False
+        End Function
+
+        ''' <summary>Die Namen, unter denen Software-Rasterisierer auftreten: Mesa (lavapipe/
+        ''' llvmpipe), Googles SwiftShader und der Rueckfall von Windows.</summary>
+        Private Shared ReadOnly SoftwareRendererNames As String() =
+            {"lavapipe", "llvmpipe", "swiftshader", "software rasterizer", "basic render driver"}
 
         ''' <summary>Was sich ueber eine Karte sagen laesst.</summary>
         Private Shared Function FactsOf(device As OrtEpDevice) As GpuDeviceInfo

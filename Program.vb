@@ -7,6 +7,19 @@ Module Program
     ''' <summary>Startparameter, der das Protokoll fuer diesen Lauf einschaltet.</summary>
     Private Const DebugSwitch As String = "--debug"
 
+    ''' <summary>Die Konsole des AUFRUFENDEN Prozesses, nicht die einer bestimmten Kennung.</summary>
+    Private Const AttachParentProcess As UInteger = &HFFFFFFFFUI
+
+    ' Als Declare und nicht ueber DllImport: die Bibliothek wird damit erst beim AUFRUF gesucht,
+    ' und der steht hinter der Windows-Abfrage in AttachDebugConsole. Unter Linux und macOS wird
+    ' kernel32 deshalb nie angefasst.
+    Private Declare Function AttachConsole Lib "kernel32.dll" (processId As UInteger) As Boolean
+    Private Declare Function AllocConsole Lib "kernel32.dll" () As Boolean
+
+    ''' <summary>Die Konsole haben WIR geoeffnet, sie gehoert keinem Aufrufer. Entscheidet allein
+    ''' darueber, ob am Ende auf eine Taste gewartet wird.</summary>
+    Private _ownsConsole As Boolean
+
     <STAThread>
     Function Main(args As String()) As Integer
         ' DER PROTOKOLLSCHALTER ZUERST, noch vor allem anderen. Er ist fuer den Fall gebaut, in dem
@@ -15,7 +28,11 @@ Module Program
         ' Genau daran ist eine Fehlersuche unter Windows 10 schon einmal haengengeblieben.
         Dim debugRequested = args IsNot Nothing AndAlso
                              args.Any(Function(a) String.Equals(a, DebugSwitch, StringComparison.OrdinalIgnoreCase))
-        If debugRequested Then DiagnosticLogService.ForceEnable()
+        If debugRequested Then
+            DiagnosticLogService.ForceEnable()
+            AttachDebugConsole()
+            EchoStartupBanner()
+        End If
 
         ' Der Riegel gegen die Telemetrie der Modelllaufzeit. Er wirkt nur, solange noch keine
         ' ORT-Umgebung entstanden ist, deshalb steht er hier und nicht dort, wo die Laufzeit zum
@@ -31,9 +48,7 @@ Module Program
         ' UND NUR HIER: eine zweite Anmeldung in der Anwendungsklasse schriebe jede Ausnahme, die
         ' nach dem Hochlauf faellt, doppelt in errors.log. Sie fangen den Absturz nicht ab, das ist
         ' nicht ihr Zweck - sie sichern den Stacktrace, bevor der Prozess endet.
-        AddHandler AppDomain.CurrentDomain.UnhandledException,
-            Sub(sender, e) DiagnosticLogService.LogException("UnhandledException",
-                                                            TryCast(e.ExceptionObject, Exception))
+        AddHandler AppDomain.CurrentDomain.UnhandledException, AddressOf OnUnhandledException
         AddHandler TaskScheduler.UnobservedTaskException,
             Sub(sender, e)
                 DiagnosticLogService.LogException("UnobservedTaskException", e.Exception)
@@ -52,8 +67,118 @@ Module Program
         Catch
         End Try
 
-        Return BuildAvaloniaApp().StartWithClassicDesktopLifetime(ForwardedArguments(args))
+        Dim exitCode = BuildAvaloniaApp().StartWithClassicDesktopLifetime(ForwardedArguments(args))
+        ' DIE LETZTE ZEILE IST SELBST EIN BEFUND: kommt sie, hat der Aufbau des Toolkits gehalten
+        ' und die Anwendung ist geordnet zu Ende gegangen. Bleibt sie aus, endete der Prozess
+        ' vorher - und der Unterschied ist genau der, den ein Fehlerbericht sonst nicht hergibt.
+        EchoLine($"FerrumPix exited with code {exitCode}.")
+        WaitBeforeClosingOwnConsole()
+        Return exitCode
     End Function
+
+    ''' <summary>Das Sicherheitsnetz fuer alles, was niemand gefangen hat.
+    '''
+    ''' EINE BENANNTE METHODE UND KEIN LAMBDA, damit sie messbar ist: der Prueffall ruft sie mit
+    ''' einer Ausnahme und <c>isTerminating</c> auf und sieht nach, ob gewartet wird. Als Lambda in
+    ''' Main waere genau der Fehlerfall der einzige, den keine Pruefung je betritt.
+    '''
+    ''' <para>DAS WARTEN STEHT HIER, nicht nur am Ende von Main: bei einem Absturz endet der Prozess
+    ''' direkt nach diesem Handler, der Stapel wird nicht abgewickelt, und kein Finally laeuft mehr.
+    ''' Eine selbst geoeffnete Konsole verschwaende sonst in dem Augenblick, fuer den sie gebaut
+    ''' ist.</para>
+    '''
+    ''' <para>Nur bei <c>IsTerminating</c>. Eine Ausnahme, nach der die Laufzeit weiterlaeuft, darf
+    ''' den Faden nicht an einer Eingabeaufforderung festhalten.</para></summary>
+    Friend Sub OnUnhandledException(sender As Object, e As UnhandledExceptionEventArgs)
+        DiagnosticLogService.LogException("UnhandledException", TryCast(e.ExceptionObject, Exception))
+        If e IsNot Nothing AndAlso e.IsTerminating Then WaitBeforeClosingOwnConsole()
+    End Sub
+
+    ''' <summary>Haelt eine selbst geoeffnete Konsole offen, bis jemand die Eingabetaste drueckt.
+    '''
+    ''' NUR fuer die eigene: eine uebernommene gehoert der PowerShell, und die dort auf eine Taste
+    ''' warten zu lassen waere eine Zumutung fuer den, der weiterarbeiten will.
+    '''
+    ''' GENAU EINMAL: der Merker faellt vor dem Warten. Ein Absturz waehrend des Beendens liefe sonst
+    ''' durch den Handler UND durch das Ende von Main, und die zweite Aufforderung stuende da, ohne
+    ''' dass jemand wuesste, worauf sie wartet.</summary>
+    Friend Sub WaitBeforeClosingOwnConsole()
+        If Not _ownsConsole Then Return
+        _ownsConsole = False
+        Try
+            Console.Out.WriteLine("Press Enter to close this window.")
+            Console.In.ReadLine()
+        Catch
+        End Try
+    End Sub
+
+    ''' <summary>Windows: eine Konsole beschaffen, damit der Protokollschalter etwas ZEIGT.
+    '''
+    ''' Die Anwendung ist eine Fensteranwendung (WinExe) und haengt deshalb an keiner Konsole: aus
+    ''' PowerShell gestartet kehrt der Aufruf sofort zurueck, ohne eine Zeile zu hinterlassen. Genau
+    ''' das kam in einem Fehlerbericht als "es passiert gar nichts" an, waehrend niemand sagen
+    ''' konnte, ob das Programm angelaufen war.
+    '''
+    ''' ZWEI WEGE, in dieser Reihenfolge: hat der Aufrufer eine Konsole (PowerShell, cmd), wird sie
+    ''' uebernommen und die Ausgabe steht in demselben Fenster, in dem der Befehl steht. Sonst
+    ''' (Doppelklick, Verknuepfung) wird eine eigene geoeffnet - ohne sie saehe wieder niemand etwas.
+    '''
+    ''' Danach MUSS die Standardausgabe neu gebunden werden: die Laufzeit merkt sich beim ersten
+    ''' Zugriff, wohin sie schreibt, und das war bis hierher das Nichts.
+    '''
+    ''' Nur unter Windows. Linux und macOS geben die Ausgabe des Terminals ohnehin weiter.</summary>
+    Private Sub AttachDebugConsole()
+        If Not OperatingSystem.IsWindows() Then Return
+        Try
+            If Not AttachConsole(AttachParentProcess) Then
+                ' Eine SELBST geoeffnete Konsole gehoert uns, und sie verschwindet mit dem Prozess.
+                ' Wer per Doppelklick startet, saehe die Ausgabe sonst fuer den Bruchteil einer
+                ' Sekunde - also fuer denselben Nutzer nichts, fuer den sie gebaut ist.
+                '
+                ' DER MERKER KOMMT AUS DEM RUECKGABEWERT und wird nicht daneben gesetzt: auch
+                ' AllocConsole kann scheitern (der Prozess haengt schon an einer Konsole, das System
+                ' gibt keine her). Dann gehoert uns keine - und am Ende auf eine Eingabe zu warten
+                ' hiesse, ein fremdes Fenster festzuhalten oder auf eine Taste zu warten, die
+                ' niemand sieht.
+                _ownsConsole = AllocConsole()
+            End If
+            Dim writer = New IO.StreamWriter(Console.OpenStandardOutput())
+            writer.AutoFlush = True
+            Console.SetOut(writer)
+            ' Ohne das stehen Umlaute aus dem Protokoll in der Windows-Konsole als Fragezeichen.
+            Try
+                Console.OutputEncoding = Text.Encoding.UTF8
+            Catch
+            End Try
+        Catch
+            ' Keine Konsole zu bekommen ist kein Grund, den Start abzubrechen - das Protokoll
+            ' schreibt weiterhin in seine Datei.
+        End Try
+    End Sub
+
+    ''' <summary>Was am Anfang auf der Konsole steht: die Fassung und WO die Protokolldatei liegt.
+    '''
+    ''' Der Pfad gehoert hierher, weil er unter Windows in einem versteckten Ordner endet. Im
+    ''' Fehlerbericht, der diesen Schalter ausgeloest hat, suchte der Melder ihn vergeblich im
+    ''' Benutzerordner - er war da, nur unsichtbar.</summary>
+    Private Sub EchoStartupBanner()
+        Try
+            Dim version = Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString()
+            EchoLine($"FerrumPix {version} starting with {DebugSwitch}.")
+            EchoLine($"log file: {IO.Path.Combine(DiagnosticLogService.LogFolder, "diagnostics.log")}")
+        Catch
+        End Try
+    End Sub
+
+    ''' <summary>Eine Zeile auf die Konsole, aber nur beim erzwungenen Protokoll. Dieselbe Regel wie
+    ''' bei der Spiegelung der Protokollzeilen: ohne den Schalter schreibt die Anwendung nichts.</summary>
+    Private Sub EchoLine(text As String)
+        If Not DiagnosticLogService.IsForcedOn Then Return
+        Try
+            Console.Out.WriteLine(text)
+        Catch
+        End Try
+    End Sub
 
     ''' <summary>Die Argumente ohne den Protokollschalter.
     '''

@@ -93,7 +93,7 @@
                          hob die Staerke dann an, statt sie zurueckzusetzen. Wer den einen Wert
                          aendert, aendert den anderen mit. -->
                     <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
-                                       DefaultValue="50"
+                                       DefaultValue="70"
                                        Value="{Binding DenoiseStrength}" Margin="0,0" />
                     <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
                                              Value="{Binding DenoiseStrength, Mode=TwoWay}" Minimum="0" Maximum="100" />

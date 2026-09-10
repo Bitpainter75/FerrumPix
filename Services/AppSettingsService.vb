@@ -355,6 +355,23 @@ Namespace Services
         ''' Linke Werkzeugleiste des Editors eingeklappt (nur Symbole, keine Beschriftungen) -
         ''' gemerkter Bedienzustand wie die Info-Leiste, der Umschalter sitzt in der Leiste selbst.
         Public Property EditorToolSidebarCollapsed As Boolean = False
+        ''' <summary>Breite des Anpassungspanels im Editor, in Punkten. Gemerkter Bedienzustand wie
+        ''' die eingeklappte Werkzeugleiste: gezogen wird sie am Rand des Panels, nicht im
+        ''' Einstellungsdialog.
+        '''
+        ''' Die Vorgabe ist die alte feste Breite. Wer nichts zieht, sieht deshalb genau das, was er
+        ''' vorher sah - und unter diese Zahl geht es auch nicht, sie ist zugleich die Mindestbreite
+        ''' (<see cref="ViewModels.EditorViewModel.AdjustmentsPanelMinWidth"/>).</summary>
+        Public Property EditorAdjustmentsPanelWidth As Double = 330
+        ''' <summary>Zuletzt gewaehlte Staerke fuer das Entrauschen mit Modell, 0 bis 100.
+        '''
+        ''' Gemerkt wird sie beim START eines Laufs und nicht bei jeder Reglerbewegung: das Speichern
+        ''' schreibt die Datei, und ein Zug ueber den Regler waere sonst hundert Schreibvorgaenge.
+        ''' Wer den Regler zieht und nichts entrauscht, hat auch nichts eingestellt, was zaehlt.
+        '''
+        ''' Die Vorgabe ist zugleich der Rueckfallwert des Doppelklicks am Regler (DefaultValue im
+        ''' NoisePanel). Die Diagnose haelt die beiden Zahlen zusammen.</summary>
+        Public Property EditorDenoiseStrength As Double = 70
         ''' <summary>Steht das Anpassungspanel links neben der Werkzeugleiste statt rechts neben der
         ''' Buehne? Ab Werk rechts, also wie bisher.
         '''

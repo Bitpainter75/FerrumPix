@@ -241,16 +241,45 @@ Namespace Services
                                        Optional kind As DenoiseKind = DenoiseKind.Quality,
                                        Optional strength As Single = 1.0F,
                                        Optional cancel As Threading.CancellationToken = Nothing) As SKBitmap
-            If image Is Nothing OrElse image.Width <= 0 OrElse image.Height <= 0 Then Return Nothing
+            If image Is Nothing OrElse image.Width <= 0 OrElse image.Height <= 0 Then
+                DiagnosticLogService.LogAlways("Entrauschen", "kein Bild uebergeben")
+                Return Nothing
+            End If
             ' Sitzung und Rechenwerk in EINEM Stueck: die Kachelgroesse haengt daran, und zweimal
             ' zu fragen hiesse, die zweite Antwort koennte schon zu einer anderen Sitzung gehoeren.
             Dim loaded = AiModelService.SessionAndDeviceFor(KeyFor(kind))
-            If loaded Is Nothing OrElse loaded.Session Is Nothing Then Return Nothing
+            ' DIESE BEIDEN AUSSTIEGE WAREN STUMM, und das ist die schlechteste Sorte Fehler: der
+            ' Lauf endet ohne Wirkung und ohne Spur, und in der Anwendung sieht es aus, als habe das
+            ' Entrauschen nichts getan. Genau so kam es aus einer Nutzermeldung zurueck.
+            If loaded Is Nothing OrElse loaded.Session Is Nothing Then
+                DiagnosticLogService.LogAlways("Entrauschen",
+                    $"Modell {KeyFor(kind)} steht nicht bereit - keine Sitzung. Fehlt die Datei, oder hat die Karte sie abgelehnt?")
+                Return Nothing
+            End If
             Dim session = loaded.Session
-            If image.ColorType <> SKColorType.Bgra8888 Then Return Nothing
+            If image.ColorType <> SKColorType.Bgra8888 Then
+                DiagnosticLogService.LogAlways("Entrauschen",
+                    $"Bild liegt als {image.ColorType} vor, gebraucht wird Bgra8888 - Lauf faellt aus")
+                Return Nothing
+            End If
 
             Dim amount = Math.Max(0.0F, Math.Min(1.0F, strength))
             Dim edge = TileEdgeForRun(loaded.Accelerator)
+
+            ' DIE ZEILE VOR DEM RECHNEN, und sie ist der eigentliche Grund fuer dieses Protokoll:
+            ' geht dem Modell auf der Karte der Speicher aus, endet nicht der Lauf, sondern der
+            ' ganze PROZESS - aus nativem Code heraus, ohne Ausnahme, die sich fangen liesse. Der
+            ' Abschlussbericht weiter unten kommt dann nie. Was hier steht, ist danach die letzte
+            ' Zeile im Protokoll und sagt, WOMIT es passiert ist: Modell, Bildgroesse, Kachelkante,
+            ' Rechenwerk und der Speicher, den die Karte gemeldet hat.
+            ' Der KLARNAME der Karte und nicht ihr Schluessel: diese Zeile geht in Fehlerberichte,
+            ' und "10de:1287:0000:01:00.0" sagt dort niemandem etwas.
+            Dim wo = GpuAccelerationService.DeviceLabelFor(loaded.Accelerator)
+            Dim speicher = If(String.IsNullOrEmpty(loaded.Accelerator), 0,
+                              GpuAccelerationService.DeviceMemoryMiBFor(loaded.Accelerator))
+            DiagnosticLogService.LogAlways("Entrauschen",
+                $"Start: {KeyFor(kind)}, Bild {image.Width}x{image.Height}, Kachel {edge}, " &
+                $"Staerke {CInt(amount * 100)} %, auf {wo}, Kartenspeicher {speicher} MiB")
 
             Dim result As SKBitmap = Nothing
             Dim padded As SKBitmap = Nothing

@@ -604,7 +604,25 @@ Namespace Services
                    a.FarbrauschGrob = 0 AndAlso
                    a.ColorNoiseAdd = 0 AndAlso
                    a.Sharpness = 0 AndAlso
+                   IsNoiseReductionCropSafe(a) AndAlso
                    Not a.NegativeEnabled
+        End Function
+
+        ''' <summary>Vertraegt die Rauschminderung dieser Ebene einen Ausschnitt?
+        '''
+        ''' DER FUEHRUNGSFILTER NICHT, und das ist gemessen: er liest je Bildpunkt die Statistik
+        ''' seiner Umgebung und mittelt danach ein zweites Mal darueber. Am Rand eines Ausschnitts
+        ''' fehlt ihm diese Umgebung, und das Ergebnis weicht dort um zwei Stufen ab - genau der
+        ''' Fall, den die Whitelist fernhalten soll. Der Gauss daneben bleibt drin: sein Sigma
+        ''' erreicht 2,45, das haelt die Toleranz.
+        '''
+        ''' Der Preis ist derselbe wie bei der Schaerfe: eine Korrekturebene mit dem neuen Verfahren
+        ''' rechnet wieder ueber das ganze Bild. Ihn zu vermeiden hiesse, den Ausschnittweg mit einem
+        ''' RAND rechnen zu lassen - das waere die bessere Loesung und ein eigener Umbau, denn der
+        ''' Rand muesste durch die ganze Kette wandern.</summary>
+        Private Shared Function IsNoiseReductionCropSafe(a As ImageAdjustments) As Boolean
+            If a.NoiseReduction = 0 Then Return True
+            Return a.NoiseReductionMethod <> NoiseReductionMethod.Guided
         End Function
 
         ''' <summary>Das ausgerichtete Rechteck, in dem diese Maske überhaupt deckt, oder Nothing,

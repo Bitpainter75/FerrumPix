@@ -217,6 +217,301 @@ Namespace Services
             End Try
         End Function
 
+        ''' <summary>Kantenlaenge der Kacheln, in denen der detailerhaltende Filter rechnet, und der
+        ''' Rand, den jede Kachel dafuer ueber ihre Grenze hinaus mitliest.
+        '''
+        ''' KACHELWEISE, WEIL DER SPEICHER SONST NICHT REICHT: der Filter braucht zehn
+        ''' Gleitkomma-Zwischenbilder. Auf einem 24-Megapixel-Foto waere das fast ein Gigabyte an
+        ''' einem einzigen Regler. Je Kachel sind es rund drei Megabyte, und sie sind geliehen -
+        ''' wie viele davon gleichzeitig entstehen duerfen, steht an GuidedMaxParallelTiles.
+        '''
+        ''' Der Rand ist der doppelte Radius plus eins: der Filter mittelt zweimal ueber den Radius
+        ''' (einmal die Momente, einmal die Koeffizienten). Waere er knapper, saehe man die
+        ''' Kachelgrenzen als Raster im Bild.</summary>
+        Private Const GuidedTileEdge As Integer = 256
+        Private Const GuidedRadius As Integer = 4
+        Private Const GuidedMargin As Integer = 2 * GuidedRadius + 1
+
+        ''' <summary>Wie viele Kacheln hoechstens gleichzeitig gerechnet werden.
+        '''
+        ''' DIE ZAHL IST EINE SPEICHERRECHNUNG, keine Vorsicht: eine Kachel samt Rand misst
+        ''' 274 mal 274, und zehn geliehene Gleitkomma-Zwischenbilder davon sind rund drei Megabyte.
+        ''' Zwoelf davon nebeneinander belegen also gut sechsunddreissig - auf einem Rechner mit
+        ''' vierundzwanzig Kernen waeren es sonst zweiundsiebzig, und mit der urspruenglichen
+        ''' Kachelkante von 512 waren es einmal fast fuenfhundert.
+        '''
+        ''' Mehr Faeden brauchte es ohnehin nicht: der Filter liest und schreibt mehr, als er
+        ''' rechnet, und haengt damit eher am Speicher als an den Kernen.</summary>
+        Private Const GuidedMaxParallelTiles As Integer = 12
+
+        ''' <summary>Was der Regler bedeutet: bis zu welcher Streuung eine Flaeche als RAUSCHEN gilt,
+        ''' in Grauwerten. Der Filter laesst alles stehen, was darueber liegt - das ist die Kante.
+        '''
+        ''' DIE KENNLINIE FAENGT BEI EINEM GRAUWERT AN und nicht bei null: darunter passiert auch
+        ''' beim staerksten Filter nichts Sichtbares, und ein Regler, der auf dem ersten Fuenftel
+        ''' seines Weges nichts tut, gilt als kaputt. Genau das war der Fall beim Gauss-Weg daneben,
+        ''' gemessen am 2026-09-10: bei Reglerwert 10 stand dort Sigma 0,47 und das Ergebnis war
+        ''' bitgleich mit dem Original.
+        '''
+        ''' Zwoelf Grauwerte am Anschlag decken auch stark verrauschte Aufnahmen ab; die Streuung im
+        ''' Flachen lag beim Messbild bei 5,2. Quadriert, weil der Filter mit Varianzen rechnet.</summary>
+        Friend Shared Function GuidedNoiseEpsilon(amount As Single) As Single
+            Dim a = Clamp(amount, 0, 1)
+            Dim sigma = 1.0F + a * 11.0F
+            Return sigma * sigma
+        End Function
+
+        ''' <summary>Detailerhaltendes Entrauschen: glaettet flache Flaechen und laesst Kanten stehen.
+        '''
+        ''' DER UNTERSCHIED ZUM GAUSS-WEG DANEBEN ist nicht die Staerke, sondern die Bauart. Ein Gauss
+        ''' kann Rauschen nur wegwischen und nimmt die Zeichnung mit; gemessen kam er ueber 62 Prozent
+        ''' Rauschabbau nicht hinaus, und was darunter blieb, war weich. Dieser Filter entscheidet je
+        ''' Umgebung: wo die Streuung unter der Reglerschwelle liegt, wird gemittelt, wo sie darueber
+        ''' liegt, bleibt das Bild stehen.
+        '''
+        ''' <para>Er rechnet als FUEHRUNGSFILTER auf der Helligkeit und legt die Differenz auf alle
+        ''' drei Kanaele. Die Farbe fasst er nicht an - dafuer gibt es den Farbrausch-Regler, und
+        ''' zweimal an derselben Sache zu drehen ergaebe zwei Regler, die sich gegenseitig
+        ''' aufheben.</para>
+        '''
+        ''' <para>Der Detail-Regler mischt danach an Kanten das Original zurueck, wie beim Gauss-Weg:
+        ''' derselbe Regler soll dasselbe bedeuten, egal welches Verfahren darunter liegt.</para></summary>
+        Private Shared Function ApplyGuidedNoiseReduction(source As SKBitmap, amount As Single,
+                                                          Optional detail As Single = 0) As SKBitmap
+            Dim srcBuf As Byte() = Nothing, dstBuf As Byte() = Nothing
+            Dim stride, ri, gi, bi, ai As Integer
+            Dim sLen = 0
+            Dim result = New SKBitmap(source.Width, source.Height, source.ColorType, source.AlphaType)
+            Try
+                If Not TryRentRgbaLikeBuffer(source, srcBuf, sLen, stride, ri, gi, bi, ai) Then Return result
+                dstBuf = ArrayPool(Of Byte).Shared.Rent(sLen)
+                Array.Copy(srcBuf, dstBuf, sLen)
+
+                Dim w = source.Width, h = source.Height
+                Dim eps = GuidedNoiseEpsilon(amount)
+                Dim d = Clamp(detail, 0, 1)
+
+                ' Die Kacheln laufen NEBENEINANDER, aber jede fuer sich: sie lesen aus derselben
+                ' Quelle und schreiben in getrennte Bereiche des Ziels.
+                '
+                ' ALLE KACHELN ALS EINE LISTE und nicht Reihe fuer Reihe: ein Vorschaubild von
+                ' 2300 Punkten Kante hat funf Kachelreihen, und ueber Reihen verteilt liefen dann
+                ' fuenf Faeden auf vierundzwanzig Kernen. Flach sind es fuenfundzwanzig Einheiten.
+                Dim tilesX = (w + GuidedTileEdge - 1) \ GuidedTileEdge
+                Dim tilesY = (h + GuidedTileEdge - 1) \ GuidedTileEdge
+                Dim tiles = tilesX * tilesY
+                Dim options = New ParallelOptions With {
+                    .MaxDegreeOfParallelism = Math.Max(1, Math.Min(Environment.ProcessorCount, GuidedMaxParallelTiles))
+                }
+                ' EIGENE SCHLEIFE statt ForEachRow: nur hier gilt die Obergrenze fuer die Zahl der
+                ' gleichzeitigen Kacheln, und die ist eine Speicherrechnung (siehe dort).
+                Parallel.For(0, tiles, options,
+                    Sub(index)
+                        GuidedTile(srcBuf, dstBuf, stride, ri, gi, bi, ai, w, h,
+                                   (index Mod tilesX) * GuidedTileEdge,
+                                   (index \ tilesX) * GuidedTileEdge, eps, d)
+                    End Sub)
+
+                Runtime.InteropServices.Marshal.Copy(dstBuf, 0, result.GetPixels(), sLen)
+                Return result
+            Finally
+                ReturnPooledBuffer(srcBuf)
+                ReturnPooledBuffer(dstBuf)
+            End Try
+        End Function
+
+        ''' <summary>Eine Kachel des detailerhaltenden Filters, samt ihrem Rand.
+        '''
+        ''' Der Ablauf ist der Fuehrungsfilter in seiner einfachen Form: aus Mittelwert und Varianz
+        ''' der Umgebung entsteht je Bildpunkt eine Gerade (a, b), die das Bild auf sich selbst
+        ''' abbildet. Wo die Varianz gross gegen die Schwelle ist, geht a gegen eins und das Bild
+        ''' bleibt; wo sie klein ist, geht a gegen null und es bleibt der Mittelwert. Die Geraden
+        ''' selbst werden noch einmal gemittelt, sonst stuenden ihre Spruenge als Kanten im
+        ''' Ergebnis.</summary>
+        Private Shared Sub GuidedTile(srcBuf As Byte(), dstBuf As Byte(), stride As Integer,
+                                      ri As Integer, gi As Integer, bi As Integer, ai As Integer,
+                                      imageWidth As Integer, imageHeight As Integer,
+                                      tileLeft As Integer, tileTop As Integer,
+                                      eps As Single, detail As Single)
+            Dim innerRight = Math.Min(tileLeft + GuidedTileEdge, imageWidth)
+            Dim innerBottom = Math.Min(tileTop + GuidedTileEdge, imageHeight)
+            Dim left = Math.Max(0, tileLeft - GuidedMargin)
+            Dim top = Math.Max(0, tileTop - GuidedMargin)
+            Dim right = Math.Min(imageWidth, innerRight + GuidedMargin)
+            Dim bottom = Math.Min(imageHeight, innerBottom + GuidedMargin)
+            Dim w = right - left, h = bottom - top
+            If w <= 0 OrElse h <= 0 Then Return
+
+            ' ALLE ZWISCHENBILDER SIND GELIEHEN, und das ist kein Feinschliff. Eine Kachel mit Rand
+            ' misst 530 mal 530, ein Gleitkomma-Zwischenbild davon 1,1 MB. Neu angelegt entstuenden
+            ' je Kachel rund ein Dutzend davon als Muell, und weil mehrere Kacheln nebeneinander
+            ' laufen, an jedem Reglerschritt hunderte Megabyte - der Aufraeumer haette dann mehr zu
+            ' tun als der Filter.
+            '
+            ' WER LEIHT, BEKOMMT MEHR ALS BESTELLT: die Laenge des geliehenen Feldes ist groesser
+            ' oder gleich der angeforderten. Keine Schleife hier darf deshalb ueber .Length laufen,
+            ' sondern nur ueber n - genau daran ist schon ein Puffer im Bestand haengengeblieben.
+            Dim n = w * h
+            Dim pool = ArrayPool(Of Single).Shared
+            Dim luma = pool.Rent(n)
+            ' Die beiden FARBABSTAENDE zur Helligkeit. Sie werden mitgeglaettet, und zwar mit
+            ' derselben Gerade: der Gauss-Weg daneben nahm beim Ziehen des Helligkeitsreglers das
+            ' Farbrauschen mit (gemessen 64 Prozent am Anschlag), weil er alle Kanaele gleich
+            ' weichzeichnet. Ohne diesen Schritt blieben die bunten Sprenkel stehen, und der Regler
+            ' taete plotzlich weniger als vorher. Fuer starkes Farbrauschen bleibt der eigene Regler
+            ' zustaendig - der greift tiefer.
+            Dim chromaR = pool.Rent(n)
+            Dim chromaB = pool.Rent(n)
+            Dim meanI = pool.Rent(n)
+            Dim meanSquares = pool.Rent(n)
+            Dim aCoef = pool.Rent(n)
+            Dim bCoef = pool.Rent(n)
+            Dim meanChromaR = pool.Rent(n)
+            Dim meanChromaB = pool.Rent(n)
+            ' Der waagerechte Zwischenschritt der Fenstermittel. EINER fuer alle sechs Durchlaeufe:
+            ' er ist nach jedem verbraucht.
+            Dim scratch = pool.Rent(n)
+            Try
+            For y = 0 To h - 1
+                Dim row = (top + y) * stride
+                Dim at = y * w
+                For x = 0 To w - 1
+                    Dim o = row + (left + x) * 4
+                    Dim cr As Integer, cg As Integer, cb As Integer, a As Integer
+                    ReadUnpremultiplied(srcBuf, o, ri, gi, bi, ai, cr, cg, cb, a)
+                    ' Rec.601, dieselbe Gewichtung wie im Farbrausch-Weg daneben.
+                    Dim y601 = CSng(0.299 * cr + 0.587 * cg + 0.114 * cb)
+                    luma(at + x) = y601
+                    chromaR(at + x) = cr - y601
+                    chromaB(at + x) = cb - y601
+                Next
+            Next
+
+            ' Die QUADRATE brauchen kein eigenes Bild: sie werden in ihr Ziel geschrieben und dort
+            ' gleich gemittelt. Ein Puffer weniger, und einer ist hier 1,1 MB.
+            For i = 0 To n - 1
+                meanSquares(i) = luma(i) * luma(i)
+            Next
+            BoxMean(meanSquares, meanSquares, scratch, w, h, GuidedRadius)
+            BoxMean(luma, meanI, scratch, w, h, GuidedRadius)
+
+            For i = 0 To n - 1
+                Dim variance = meanSquares(i) - meanI(i) * meanI(i)
+                If variance < 0.0F Then variance = 0.0F
+                Dim a = variance / (variance + eps)
+                aCoef(i) = a
+                bCoef(i) = (1.0F - a) * meanI(i)
+            Next
+            ' Die Mittel der Geraden ueberschreiben die Bilder, aus denen sie entstanden sind:
+            ' meanI und meanSquares werden ab hier nicht mehr gelesen. Zwei Puffer weniger.
+            Dim meanA = meanI
+            Dim meanB = meanSquares
+            BoxMean(aCoef, meanA, scratch, w, h, GuidedRadius)
+            BoxMean(bCoef, meanB, scratch, w, h, GuidedRadius)
+            BoxMean(chromaR, meanChromaR, scratch, w, h, GuidedRadius)
+            BoxMean(chromaB, meanChromaB, scratch, w, h, GuidedRadius)
+
+            For y = tileTop To innerBottom - 1
+                Dim row = y * stride
+                Dim at = (y - top) * w - left
+                For x = tileLeft To innerRight - 1
+                    Dim i = at + x
+                    Dim before = luma(i)
+                    Dim a = meanA(i)
+                    Dim after = a * before + meanB(i)
+                    Dim shift = after - before
+                    ' Der Detail-Regler haelt an Kanten das Original: je weiter die Glaettung vom
+                    ' Ausgangswert abweicht, desto mehr davon kommt zurueck. Dieselbe Schwelle wie
+                    ' im Gauss-Weg, damit der Regler dort und hier dasselbe bedeutet.
+                    Dim keep = 0.0F
+                    If detail > 0.0F Then
+                        keep = Clamp(Math.Abs(shift) / 16.0F, 0, 1) * detail
+                        shift *= (1.0F - keep)
+                    End If
+
+                    Dim o = row + x * 4
+                    Dim cr As Integer, cg As Integer, cb As Integer, al As Integer
+                    ReadUnpremultiplied(srcBuf, o, ri, gi, bi, ai, cr, cg, cb, al)
+
+                    ' Die Farbe folgt derselben Gerade: wo geglaettet wird, wandert auch der
+                    ' Farbabstand auf seinen Umgebungsmittelwert zu. Der Detail-Rueckhalt gilt
+                    ' dabei mit, sonst faerbte eine Kante nach, an der die Helligkeit stehenblieb.
+                    Dim mix = (1.0F - a) * (1.0F - keep)
+                    Dim newChromaR = chromaR(i) + (meanChromaR(i) - chromaR(i)) * mix
+                    Dim newChromaB = chromaB(i) + (meanChromaB(i) - chromaB(i)) * mix
+                    Dim newLuma = before + shift
+                    Dim newR = newLuma + newChromaR
+                    Dim newB = newLuma + newChromaB
+                    ' Gruen bleibt nicht uebrig, es FOLGT: aus der Helligkeitsgleichung, sonst
+                    ' verschoebe sich die Helligkeit gegenueber dem, was gerade gerechnet wurde.
+                    Dim newG = (newLuma - 0.299F * newR - 0.114F * newB) / 0.587F
+
+                    WritePremultiplied(dstBuf, o, ri, gi, bi, ai,
+                                       ClampToByte(newR), ClampToByte(newG), ClampToByte(newB), al)
+                Next
+            Next
+            Finally
+                pool.Return(luma)
+                pool.Return(chromaR)
+                pool.Return(chromaB)
+                pool.Return(meanI)
+                pool.Return(meanSquares)
+                pool.Return(aCoef)
+                pool.Return(bCoef)
+                pool.Return(meanChromaR)
+                pool.Return(meanChromaB)
+                pool.Return(scratch)
+            End Try
+        End Sub
+
+        ''' <summary>Mittelwert ueber ein quadratisches Fenster, in zwei Durchlaeufen: erst waagerecht,
+        ''' dann senkrecht. Das Fenster WANDERT (ein Wert kommt hinzu, einer faellt weg), die Kosten
+        ''' haengen deshalb nicht am Radius. Am Rand zaehlt nur, was da ist - ein gespiegelter Rand
+        ''' waere hier falsch, denn die Kachel liest ihren echten Rand ohnehin mit.
+        '''
+        ''' ZIEL UND ZWISCHENSPEICHER KOMMEN VON AUSSEN, statt hier zu entstehen: der Aufrufer leiht
+        ''' sie einmal und benutzt sie sechsmal. <paramref name="target"/> darf dieselbe Flaeche sein
+        ''' wie <paramref name="values"/> - der waagerechte Durchlauf liest die Quelle fertig, bevor
+        ''' der senkrechte ins Ziel schreibt. <paramref name="scratch"/> darf es NICHT.
+        '''
+        ''' Alle drei duerfen laenger sein als width*height (geliehene Felder sind das oft); gerechnet
+        ''' wird nur ueber die angegebenen Masse.</summary>
+        Private Shared Sub BoxMean(values As Single(), target As Single(), scratch As Single(),
+                                   width As Integer, height As Integer, radius As Integer)
+            Dim horizontal = scratch
+            For y = 0 To height - 1
+                Dim row = y * width
+                Dim sum = 0.0F
+                Dim count = 0
+                For x = 0 To Math.Min(radius, width - 1)
+                    sum += values(row + x) : count += 1
+                Next
+                For x = 0 To width - 1
+                    horizontal(row + x) = sum / count
+                    Dim add = x + radius + 1
+                    If add < width Then sum += values(row + add) : count += 1
+                    Dim drop = x - radius
+                    If drop >= 0 Then sum -= values(row + drop) : count -= 1
+                Next
+            Next
+
+            Dim result = target
+            For x = 0 To width - 1
+                Dim sum = 0.0F
+                Dim count = 0
+                For y = 0 To Math.Min(radius, height - 1)
+                    sum += horizontal(y * width + x) : count += 1
+                Next
+                For y = 0 To height - 1
+                    result(y * width + x) = sum / count
+                    Dim add = y + radius + 1
+                    If add < height Then sum += horizontal(add * width + x) : count += 1
+                    Dim drop = y - radius
+                    If drop >= 0 Then sum -= horizontal(drop * width + x) : count -= 1
+                Next
+            Next
+        End Sub
+
         Private Shared Function ApplyNoiseReduction(source As SKBitmap, amount As Single, Optional detail As Single = 0) As SKBitmap
             Dim sigma = 0.25F + Clamp(amount, 0, 1) * 2.2F
             Dim filter = SKImageFilter.CreateBlur(sigma, sigma)
