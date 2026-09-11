@@ -190,6 +190,7 @@ The AppImage carries update information, so tools that manage AppImages find new
 
 | Package | For | Download |
 |---|---|---|
+| Microsoft Store | Installs and updates through Windows (x64) | [FerrumPix in the Microsoft Store](https://apps.microsoft.com/detail/9phllcbtmdfg) |
 | Setup | Installs with start menu entry and file types (x64) | [FerrumPix-win-x64-Setup.exe](https://github.com/Bitpainter75/FerrumPix/releases/download/latest/FerrumPix-win-x64-Setup.exe) |
 | ZIP | Portable, unpack and run (x64) | [FerrumPix-win-x64.zip](https://github.com/Bitpainter75/FerrumPix/releases/download/latest/FerrumPix-win-x64.zip) |
 | ZIP | Portable, unpack and run (ARM64) | [FerrumPix-win-arm64.zip](https://github.com/Bitpainter75/FerrumPix/releases/download/latest/FerrumPix-win-arm64.zip) |
