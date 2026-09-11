@@ -10703,7 +10703,10 @@ Namespace ViewModels
         ''' AddImageAnnotationAt, das für das Einfügen beliebiger externer Bilddateien eine Kappung auf
         ''' 60% der Basisbildgröße vornimmt) - für Auswahl-Kopien muss die Größe exakt der Auswahl
         ''' entsprechen, sonst wirkt die Kopie kleiner/größer als das aufgezogene Rechteck.
-        Private Sub AddSelectionImageAnnotationAt(imagePath As String, xPercent As Double, yPercent As Double, widthPercent As Double, heightPercent As Double)
+        ''' <param name="label">Name in der Ebenenliste; ohne Angabe "Auswahl N". Der G'MIC-Rundweg
+        ''' legt sein Ergebnis auf demselben Weg ab und nennt es nach dem Programm.</param>
+        Private Sub AddSelectionImageAnnotationAt(imagePath As String, xPercent As Double, yPercent As Double, widthPercent As Double, heightPercent As Double,
+                                                  Optional label As String = Nothing)
             If String.IsNullOrWhiteSpace(imagePath) Then Return
             PushUndo()
             ' Eine Auswahl-Kopie ist ein reiner Pixelausschnitt: sie entsteht nie ueber ein scharfgestelltes
@@ -10712,7 +10715,7 @@ Namespace ViewModels
             Dim stored = DisplayAnnotationRectToStoredPercent("SelectionImage", xPercent, yPercent, widthPercent, heightPercent)
             Dim annotation = New ImageAnnotation With {
                 .Kind = "SelectionImage",
-                .Text = NextSelectionObjectLabel(),
+                .Text = If(String.IsNullOrWhiteSpace(label), NextSelectionObjectLabel(), label),
                 .ImagePath = imagePath,
                 .XPixels = CSng(PercentXToPixels(stored.X)),
                 .YPixels = CSng(PercentYToPixels(stored.Y)),
@@ -15157,6 +15160,7 @@ Namespace ViewModels
                                                     .RemoveMetadata = RemoveMetadataCommand,
                                                     .CopyPath = CopyPathCommand,
                                                     .ShowInFileManager = OpenFileManagerCommand,
+                                                    .EditWithGmic = If(GmicService.IsAvailable, EditWithGmicCommand, Nothing),
                                                     .Delete = DeleteCurrentCommand})
             End Get
         End Property

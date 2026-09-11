@@ -25,7 +25,8 @@ It runs on Windows, Linux and macOS, stays fast and local-first, and is built fo
 - Edit: crop, resize, rotate and distort, exposure and colour, curves, filters, masks, retouching, text and shapes, layers.
 - Develop RAW files from the sensor data, with lens correction from measured data for more than 1500 lenses.
 - Run batch work over a whole selection: rename, convert, resize, watermark, filters, metadata, export.
-- Open JPEG, PNG, WEBP, BMP, GIF and RAW, plus HEIC/HEIF/AVIF and TIFF read-only, and Photoshop files with their layers.
+- Open JPEG, PNG, WEBP, TIFF, BMP, GIF and RAW, plus HEIC/HEIF/AVIF read-only, and Photoshop files with their layers.
+- Hand a picture to another program with *Open with*, and pass it through G'MIC from the editor if you have it installed.
 - Find the people in your photos and search by them, and search by where a photo was taken - both entirely on your own machine.
 - Connect to your own Immich or Nextcloud server for browsing, upload, download, editing and metadata sync.
 - Work in your own language: sixteen are built in, and the symbol search finds shapes by their name in each of them.
@@ -88,9 +89,9 @@ Two photos can be put side by side for comparison, sharing one zoom so you alway
 
 <img src="Screenshots/Editor_Light.png" />
 
-**Filters and presets.** Filters, LUT files (`.cube`) and XMP presets as written by Lightroom and Camera Raw. All of them, and the slider sets you saved yourself, can also be applied to a whole selection at once.
+**Filters and presets.** Filters, LUT files (`.cube`) and XMP presets as written by Lightroom and Camera Raw. All of them, and the slider sets you saved yourself, can also be applied to a whole selection at once. With [G'MIC](https://gmic.eu) installed, the footer menu hands the picture to its filter window, and the result comes back as a layer.
 
-**Saving.** Save as JPEG, PNG, WEBP or PDF, as a Photoshop file with the layer stack intact, or as an `.fpx` project that keeps adjustments and layers editable when you open it again. `CTRL+P` prints what you see, edits included.
+**Saving.** Save as JPEG, PNG, WEBP, TIFF or PDF, as a Photoshop file with the layer stack intact, or as an `.fpx` project that keeps adjustments and layers editable when you open it again. `CTRL+P` prints what you see, edits included.
 
 ### RAW and other formats
 

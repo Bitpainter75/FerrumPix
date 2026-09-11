@@ -8292,4 +8292,91 @@
   <data name="dnglab_wandelt_RAW_Dateien_in_DNG_um_und_wird_da_9e05e80e" xml:space="preserve">
     <value>dnglab zet RAW-bestanden om naar DNG en wordt daarvoor als apart programma aangeroepen, niet ingebouwd. Het zit in geen enkel pakket en moet zelf worden geïnstalleerd; ontbreekt het, dan meldt het stapelgewijs omzetten dat bij de poging, en al het andere werkt onveranderd.</value>
   </data>
+  <data name="ffnen_mit_e45094f2" xml:space="preserve">
+    <value>Openen met</value>
+  </data>
+  <data name="In_G_MIC_bearbeiten_4f7be568" xml:space="preserve">
+    <value>Bewerken in G'MIC</value>
+  </data>
+  <data name="0_konnte_nicht_gestartet_werden_0283ad6a" xml:space="preserve">
+    <value>{0} kon niet worden gestart</value>
+  </data>
+  <data name="G_MIC_ist_bereits_ge_ffnet_21df20f1" xml:space="preserve">
+    <value>G'MIC is al geopend</value>
+  </data>
+  <data name="G_MIC_wurde_nicht_gefunden_1e1ba16d" xml:space="preserve">
+    <value>G'MIC niet gevonden</value>
+  </data>
+  <data name="Bild_wird_f_r_G_MIC_vorbereitet_ebdac917" xml:space="preserve">
+    <value>Afbeelding wordt voorbereid voor G'MIC</value>
+  </data>
+  <data name="Das_Bild_konnte_nicht_an_G_MIC_bergeben_werden_96ca411f" xml:space="preserve">
+    <value>De afbeelding kon niet aan G'MIC worden doorgegeven</value>
+  </data>
+  <data name="G_MIC_ist_ge_ffnet_2f19e903" xml:space="preserve">
+    <value>G'MIC is geopend</value>
+  </data>
+  <data name="G_MIC_konnte_nicht_gestartet_werden_c5d1cc6c" xml:space="preserve">
+    <value>G'MIC kon niet worden gestart</value>
+  </data>
+  <data name="Das_G_MIC_Ergebnis_wurde_verworfen_inzwischen_is_659c067e" xml:space="preserve">
+    <value>Het G'MIC-resultaat is verworpen, inmiddels is een andere afbeelding geopend</value>
+  </data>
+  <data name="G_MIC_wurde_ohne_Ergebnis_beendet_f5963de1" xml:space="preserve">
+    <value>G'MIC is zonder resultaat afgesloten</value>
+  </data>
+  <data name="G_MIC_angewendet_08dd6c5d" xml:space="preserve">
+    <value>G'MIC toegepast</value>
+  </data>
+  <data name="Das_G_MIC_Ergebnis_liegt_als_Ebene_ber_dem_Bild_13bcb580" xml:space="preserve">
+    <value>Het G'MIC-resultaat ligt als laag boven de afbeelding</value>
+  </data>
+  <data name="Programm_w_hlen_8509d945" xml:space="preserve">
+    <value>Programma kiezen</value>
+  </data>
+  <data name="gmic_qt_w_hlen_439907c0" xml:space="preserve">
+    <value>gmic_qt kiezen</value>
+  </data>
+  <data name="Gefunden_0_82f51d25" xml:space="preserve">
+    <value>Gevonden: {0}</value>
+  </data>
+  <data name="Unter_diesem_Pfad_liegt_kein_ausf_hrbares_gmic_q_355c1275" xml:space="preserve">
+    <value>Op dit pad staat geen uitvoerbaar gmic_qt.</value>
+  </data>
+  <data name="G_MIC_wurde_nicht_gefunden_Nach_der_Installation_0ead4643" xml:space="preserve">
+    <value>G'MIC niet gevonden. Na de installatie verschijnt het item vanzelf in de editor.</value>
+  </data>
+  <data name="Externe_Programme_567111f3" xml:space="preserve">
+    <value>Externe programma's</value>
+  </data>
+  <data name="Programme_an_die_FerrumPix_Bilder_weitergeben_ka_8642f6ff" xml:space="preserve">
+    <value>Programma's waaraan FerrumPix afbeeldingen kan doorgeven.</value>
+  </data>
+  <data name="Diese_Programme_stehen_im_Kontextmen_von_Galerie_63302502" xml:space="preserve">
+    <value>Deze programma's staan in het contextmenu van de galerij en de viewer onder Openen met. Er wordt altijd het originele bestand doorgegeven, zonder bewerkingen. In de parameters staat %f voor het bestandspad; zonder %f wordt het achteraan toegevoegd.</value>
+  </data>
+  <data name="Programm_hinzuf_gen_4f890947" xml:space="preserve">
+    <value>Programma toevoegen</value>
+  </data>
+  <data name="Programm_0496f662" xml:space="preserve">
+    <value>Programma</value>
+  </data>
+  <data name="Parameter_f699f295" xml:space="preserve">
+    <value>Parameters</value>
+  </data>
+  <data name="Mit_G_MIC_l_sst_sich_das_Bild_im_Editor_ber_das__822d68e4" xml:space="preserve">
+    <value>Met G'MIC kun je de afbeelding in de editor via het menu in de voettekst bewerken; het resultaat komt terug als laag. G'MIC wordt niet meegeleverd. Blijft het veld leeg, dan zoekt FerrumPix zelf naar gmic_qt.</value>
+  </data>
+  <data name="Automatisch_suchen_3e0efce1" xml:space="preserve">
+    <value>Automatisch zoeken</value>
+  </data>
+  <data name="Zwischen_100_Prozent_und_Einpassen_wechseln_ed153103" xml:space="preserve">
+    <value>Wisselen tussen 100 procent en passend maken</value>
+  </data>
+  <data name="SHIFT_PFEILTASTEN_90403c6a" xml:space="preserve">
+    <value>SHIFT+PIJLTOETSEN</value>
+  </data>
+  <data name="Ausschnitt_verschieben_8ede81fd" xml:space="preserve">
+    <value>Zichtbaar deel verschuiven</value>
+  </data>
 </root>

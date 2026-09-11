@@ -118,6 +118,7 @@ Namespace ViewModels
                 Select Case If(Format, "").Trim().ToUpperInvariant()
                     Case "PNG" : Return ".png"
                     Case "WEBP" : Return ".webp"
+                    Case "TIFF" : Return ".tif"
                     Case "PDF" : Return ".pdf"
                     Case "FPX" : Return ".fpx"
                     Case Else : Return ".jpg"
@@ -239,6 +240,8 @@ Namespace ViewModels
                         Return ".png"
                     Case "WEBP"
                         Return ".webp"
+                    Case "TIFF"
+                        Return ".tif"
                     Case Else
                         Return ".jpg"
                 End Select
@@ -286,6 +289,8 @@ Namespace ViewModels
                         Return ".png"
                     Case "WEBP"
                         Return ".webp"
+                    Case "TIFF"
+                        Return ".tif"
                     Case Else
                         Return ".jpg"
                 End Select

@@ -44,17 +44,7 @@ Namespace Services
                     .FileName = target,
                     .UseShellExecute = True
                 }
-
-                ' Das Token gilt für GENAU EINEN Start und wird vom Compositor danach verworfen.
-                ' Es wird deshalb weitergereicht und aus der eigenen Umgebung genommen, damit ein
-                ' zweiter Aufruf nicht mit einem verbrauchten Token dasteht.
-                Dim token = Environment.GetEnvironmentVariable(ActivationTokenVariable)
-                If Not String.IsNullOrEmpty(token) Then
-                    info.Environment(ActivationTokenVariable) = token
-                    info.Environment(StartupIdVariable) = token
-                    Environment.SetEnvironmentVariable(ActivationTokenVariable, Nothing)
-                End If
-
+                PassActivationToken(info)
                 Process.Start(info)
                 Return True
             Catch ex As Exception
@@ -62,6 +52,21 @@ Namespace Services
                 Return False
             End Try
         End Function
+
+        ''' <summary>Reicht das Aktivierungs-Token an den Start weiter, sofern die Sitzung eines
+        ''' vergeben hat. Auch fuer Starts ausserhalb dieses Dienstes ("Öffnen mit", G'MIC), damit
+        ''' deren Fenster unter Wayland ebenfalls nach vorn darf.</summary>
+        Friend Shared Sub PassActivationToken(info As ProcessStartInfo)
+            If info Is Nothing Then Return
+            ' Das Token gilt für GENAU EINEN Start und wird vom Compositor danach verworfen.
+            ' Es wird deshalb weitergereicht und aus der eigenen Umgebung genommen, damit ein
+            ' zweiter Aufruf nicht mit einem verbrauchten Token dasteht.
+            Dim token = Environment.GetEnvironmentVariable(ActivationTokenVariable)
+            If String.IsNullOrEmpty(token) Then Return
+            info.Environment(ActivationTokenVariable) = token
+            info.Environment(StartupIdVariable) = token
+            Environment.SetEnvironmentVariable(ActivationTokenVariable, Nothing)
+        End Sub
 
     End Class
 

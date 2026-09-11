@@ -1354,6 +1354,30 @@ Namespace ViewModels
         Public ReadOnly Property SelectAllCommand As ICommand
         Public ReadOnly Property ClearSelectionCommand As ICommand
         Public ReadOnly Property OpenFileManagerCommand As ICommand
+
+        ''' <summary>"Öffnen mit": gibt die Originaldateien der gemeinten Elemente an das Programm
+        ''' mit dieser Kennung. Gemeint ist, was das Kontextmenue meint, sonst die Auswahl.</summary>
+        Public ReadOnly Property OpenWithCommand As ICommand = ReactiveCommand.Create(Of Object)(
+            Sub(programId) OpenWithProgram(programId))
+
+        Private Sub OpenWithProgram(programId As Object)
+            Dim program = OpenWithService.FindProgram(If(programId, "").ToString())
+            If program Is Nothing Then Return
+            Dim items As IEnumerable(Of ImageItem) = ContextItems
+            If items Is Nothing OrElse Not items.Any() Then
+                items = If(SelectedItems Is Nothing OrElse SelectedItems.Count = 0,
+                           If(SelectedItem Is Nothing, Enumerable.Empty(Of ImageItem)(), {SelectedItem}),
+                           SelectedItems.AsEnumerable())
+            End If
+            Dim paths = items.Where(AddressOf OpenWithService.IsOpenable).
+                              Select(Function(i) i.FilePath).
+                              Distinct(PathIdentity.Comparer).
+                              ToList()
+            If Not OpenWithService.Launch(program, paths, "Gallery.OpenWith") Then
+                StatusText = String.Format(LocalizationService.T("{0} konnte nicht gestartet werden"),
+                                           OpenWithService.DisplayName(program))
+            End If
+        End Sub
         Public ReadOnly Property CopyPathCommand As ICommand
         Public ReadOnly Property ToggleFavoriteCommand As ICommand
         Public ReadOnly Property ToggleSelectedFavoriteCommand As ICommand

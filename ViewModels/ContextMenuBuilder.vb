@@ -108,6 +108,11 @@ Namespace ViewModels
             If Not videoOnly Then AddIfOffered(list, commands.PinImage, FooterMenuCatalog.PinImage(commands.PinImage))
             AddIfOffered(list, commands.Save, FooterMenuCatalog.Save(commands.Save))
             AddIfOffered(list, commands.SaveAs, FooterMenuCatalog.SaveAs(commands.SaveAs))
+            ' G'MIC arbeitet am geoeffneten Dokument. Im Filmstreifen meint ein Rechtsklick dagegen
+            ' eine andere Kachel, dort gehoert der Eintrag nicht hin.
+            If site = MenuSite.EditorFooter OrElse site = MenuSite.EditorStage Then
+                AddIfOffered(list, commands.EditWithGmic, FooterMenuCatalog.EditWithGmic(commands.EditWithGmic))
+            End If
             Divider(list)
 
             ' --- Dateiarbeit -------------------------------------------------------------------
@@ -173,6 +178,24 @@ Namespace ViewModels
             If metadataChildren.Count > 0 Then
                 list.Add(FooterMenuCatalog.Metadata(metadataChildren))
                 Divider(list)
+            End If
+
+            ' --- Öffnen mit (Untermenue) -------------------------------------------------------
+            ' Gibt die ORIGINALDATEI an ein eingetragenes Programm, ohne Bearbeitungen und ohne
+            ' Rueckweg. Nur lokale Dateien: ein Serverbild traegt einen Pseudo-Pfad, den kein
+            ' fremdes Programm oeffnen kann. Ohne eingetragenes Programm faellt das Untermenue weg,
+            ' wie "Metadaten" ohne erlaubten Eintrag.
+            If commands.OpenWith IsNot Nothing AndAlso commands.OpenWithPrograms IsNot Nothing AndAlso
+               entries.Any(AddressOf OpenWithService.IsOpenable) Then
+                Dim openWithChildren As New List(Of Object)()
+                For Each program In commands.OpenWithPrograms
+                    If program Is Nothing OrElse String.IsNullOrWhiteSpace(program.ProgramPath) Then Continue For
+                    openWithChildren.Add(FooterMenuCatalog.OpenWithProgram(commands.OpenWith, program))
+                Next
+                If openWithChildren.Count > 0 Then
+                    list.Add(FooterMenuCatalog.OpenWith(openWithChildren))
+                    Divider(list)
+                End If
             End If
 
             ' --- Wege nach draussen ------------------------------------------------------------

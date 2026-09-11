@@ -63,10 +63,51 @@ Namespace Services
         ''' Kleinschreibendes "II" wie beim Block, den GeotagService neu anlegt.
         Private Const LittleEndian As Boolean = True
 
+        ''' <summary>Die gelesenen Aufnahmeangaben, noch nicht zu einem Block zusammengesetzt. Der
+        ''' TIFF-Schreiber braucht sie einzeln: dort ist IFD0 das Verzeichnis des Bildes selbst, und
+        ''' das Aufnahme-Verzeichnis haengt er an seine eigene Datei an.</summary>
+        Friend NotInheritable Class ExifFieldSet
+            Public Ifd0 As List(Of GeotagService.TiffField)
+            Public Exif As List(Of GeotagService.TiffField)
+            Public HasGps As Boolean
+            Public Latitude As Double
+            Public Longitude As Double
+            Public Altitude As Double?
+        End Class
+
         ''' <summary>Der EXIF-Block als nackte TIFF-Bytes, ohne die JPEG-Kennung "Exif" davor - der
         ''' Aufrufer setzt sie selbst. Nothing, wenn sich nichts Nennenswertes lesen laesst; dann
         ''' wird wie bisher ohne Aufnahmedaten geschrieben, statt einen leeren Block anzulegen.</summary>
         Friend Shared Function BuildExifTiff(sourcePath As String) As Byte()
+            Dim fields = CollectFields(sourcePath)
+            If fields Is Nothing Then Return Nothing
+
+            Try
+                Dim tiff = Assemble(fields.Ifd0, fields.Exif)
+                If tiff Is Nothing Then Return Nothing
+
+                If fields.HasGps Then
+                    Dim withGps = GeotagService.AppendGpsToTiff(tiff, fields.Latitude, fields.Longitude, fields.Altitude)
+                    If withGps IsNot Nothing Then tiff = withGps
+                End If
+
+                ' Ein Block, der nicht mehr in ein JPEG-Segment passt, wird nicht halbiert, sondern
+                ' gar nicht geschrieben - eine abgeschnittene Adresstabelle ist schlimmer als keine.
+                If tiff.Length > GeotagService.MaxTiffBlockInJpeg Then
+                    DiagnosticLogService.LogAlways("ExifBuilder",
+                        $"Block zu gross fuer ein JPEG-Segment ({tiff.Length} Byte) - {IO.Path.GetFileName(sourcePath)} bekommt keine Aufnahmedaten")
+                    Return Nothing
+                End If
+                Return tiff
+            Catch ex As Exception
+                DiagnosticLogService.LogException("ExifBuilderService.BuildExifTiff", ex)
+                Return Nothing
+            End Try
+        End Function
+
+        ''' <summary>Liest die Aufnahmeangaben der Quelle als einzelne Felder. Nothing, wenn sich
+        ''' nichts Nennenswertes lesen laesst.</summary>
+        Friend Shared Function CollectFields(sourcePath As String) As ExifFieldSet
             If String.IsNullOrWhiteSpace(sourcePath) OrElse Not IO.File.Exists(sourcePath) Then Return Nothing
 
             Try
@@ -96,26 +137,17 @@ Namespace Services
                 ' aus wie eine Aufnahmeangabe und enthielte keine. Erst ein echter Wert zaehlt.
                 If Not HasSubstance(ifd0) AndAlso Not HasSubstance(exif) AndAlso Not gps.HasValue Then Return Nothing
 
-                Dim tiff = Assemble(ifd0, exif)
-                If tiff Is Nothing Then Return Nothing
-
+                Dim fields As New ExifFieldSet With {.Ifd0 = ifd0, .Exif = exif, .HasGps = gps.HasValue}
                 If gps.HasValue Then
-                    Dim withGps = GeotagService.AppendGpsToTiff(tiff, gps.Value.Latitude, gps.Value.Longitude, gps.Value.Altitude)
-                    If withGps IsNot Nothing Then tiff = withGps
+                    fields.Latitude = gps.Value.Latitude
+                    fields.Longitude = gps.Value.Longitude
+                    fields.Altitude = gps.Value.Altitude
                 End If
-
-                ' Ein Block, der nicht mehr in ein JPEG-Segment passt, wird nicht halbiert, sondern
-                ' gar nicht geschrieben - eine abgeschnittene Adresstabelle ist schlimmer als keine.
-                If tiff.Length > GeotagService.MaxTiffBlockInJpeg Then
-                    DiagnosticLogService.LogAlways("ExifBuilder",
-                        $"Block zu gross fuer ein JPEG-Segment ({tiff.Length} Byte) - {IO.Path.GetFileName(sourcePath)} bekommt keine Aufnahmedaten")
-                    Return Nothing
-                End If
-                Return tiff
+                Return fields
             Catch ex As Exception
                 ' Ein unlesbarer Kopf darf das Speichern nicht kosten: das BILD ist der Auftrag,
                 ' die Aufnahmedaten sind die Zugabe.
-                DiagnosticLogService.LogException("ExifBuilderService.BuildExifTiff", ex)
+                DiagnosticLogService.LogException("ExifBuilderService.CollectFields", ex)
                 Return Nothing
             End Try
         End Function

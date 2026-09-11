@@ -14,9 +14,9 @@ Namespace Services
     ''' Beigabe - damit funktioniert es auf allen Paketen (Linux, Windows, macOS, portabel) ohne
     ''' zusätzliche Systembibliothek. Lizenz BSD-3-Clause, verträglich mit der GPL-3 der Anwendung.
     '''
-    ''' NUR LESEN, wie bei PSD und HEIC: geschrieben wird in ein Format, für das es einen Encoder
-    ''' gibt. Ein TIFF-Ziel weist <see cref="ImageProcessor.CanEncodeToTargetExtension"/> ab, damit
-    ''' keine Datei still JPEG-Bytes unter der Endung .tif bekommt.
+    ''' Hier wird nur GELESEN. Geschrieben wird TIFF über <see cref="TiffWriterService"/>, und zwar nur
+    ''' als neue Datei: <see cref="ImageProcessor.CanEncodeToTargetExtension"/> bleibt bei TIFF False,
+    ''' damit nichts über ein TIFF-Original schreibt, das 16 Bit oder mehrere Seiten tragen kann.
     '''
     ''' Gelesen wird über ReadRGBAImageOriented: libtiff setzt dabei die vielen TIFF-Spielarten
     ''' (8/16 Bit, Graustufen, Palette, CMYK, LZW/Deflate/JPEG-komprimiert, Streifen und Kacheln)

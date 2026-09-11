@@ -771,7 +771,7 @@ Namespace Services
             Public Data As Byte()
         End Structure
 
-        Private Shared Function BuildGpsFields(latitude As Double,
+        Friend Shared Function BuildGpsFields(latitude As Double,
                                                longitude As Double,
                                                altitudeMeters As Double?,
                                                littleEndian As Boolean) As List(Of TiffField)

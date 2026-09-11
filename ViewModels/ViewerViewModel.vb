@@ -708,6 +708,8 @@ Namespace ViewModels
                                                     .RemoveMetadata = RemoveMetadataCommand,
                                                     .CopyPath = CopyPathCommand,
                                                     .ShowInFileManager = OpenFileManagerCommand,
+                                                    .OpenWith = OpenWithCommand,
+                                                    .OpenWithPrograms = OpenWithService.ConfiguredPrograms(),
                                                     .Delete = DeleteCurrentCommand})
             End Get
         End Property
@@ -722,6 +724,19 @@ Namespace ViewModels
         Public ReadOnly Property RenameCurrentCommand As ICommand
         Public ReadOnly Property CopyPathCommand As ICommand
         Public ReadOnly Property OpenFileManagerCommand As ICommand
+
+        ''' <summary>"Öffnen mit": gibt die Originaldatei des gemeinten Bildes an das Programm mit
+        ''' dieser Kennung - ohne Bearbeitungen, siehe OpenWithService.</summary>
+        Public ReadOnly Property OpenWithCommand As ICommand = ReactiveCommand.Create(Of Object)(
+            Sub(programId)
+                Dim program = OpenWithService.FindProgram(If(programId, "").ToString())
+                Dim path = TargetPath()
+                If program Is Nothing OrElse String.IsNullOrWhiteSpace(path) Then Return
+                If Not OpenWithService.Launch(program, {path}, "Viewer.OpenWith") Then
+                    StatusInfo = String.Format(LocalizationService.T("{0} konnte nicht gestartet werden"),
+                                               OpenWithService.DisplayName(program))
+                End If
+            End Sub)
 
         ''' <summary>Das Untermenue "Metadaten" fuer das angezeigte Bild. Dieselben Ablaeufe wie in
         ''' der Galerie, nur auf einem Bild statt auf einer Auswahl.</summary>
@@ -764,6 +779,9 @@ Namespace ViewModels
                                                         UpdateFitZoom()
                                                     End Sub)
             ZoomActualCommand = ReactiveCommand.Create(Sub()
+                                                           ' Um die Mitte, siehe CenteredZoomRequested: aus
+                                                           ' dem Einpassen heraus ist das die Bildmitte.
+                                                           RaiseEvent CenteredZoomRequested(Me, EventArgs.Empty)
                                                            ActiveZoomPreset = ZoomPresetMode.Actual
                                                            IsFitToWindow = False
                                                            ZoomLevel = 1.0
@@ -3431,16 +3449,36 @@ Namespace ViewModels
             ShellOpenService.Open(folder, "Viewer.OpenInFileManager")
         End Sub
 
+        ''' <summary>Kommt VOR jeder Zoomaenderung, die um die Mitte des Sichtfensters gehen soll:
+        ''' Plus und Minus (Taste wie Knopf), der Sprung auf 100 Prozent und Z. Die View merkt sich
+        ''' dabei, welche Stelle des Bildes gerade in der Mitte steht, und rueckt sie nach dem
+        ''' Neu-Vermessen wieder dorthin. Ohne das blieb der Ausschnitt oben links stehen, und 100
+        ''' Prozent zeigten die obere Ecke statt der Bildmitte (Nutzerwunsch). Das Mausrad verankert
+        ''' am Zeiger und geht nicht hier durch.</summary>
+        Public Event CenteredZoomRequested As EventHandler
+
         Public Sub ZoomIn()
+            RaiseEvent CenteredZoomRequested(Me, EventArgs.Empty)
             ActiveZoomPreset = ZoomPresetMode.Manual
             IsFitToWindow = False
             ZoomLevel = ZoomLevel * 1.25
         End Sub
 
         Public Sub ZoomOut()
+            RaiseEvent CenteredZoomRequested(Me, EventArgs.Empty)
             ActiveZoomPreset = ZoomPresetMode.Manual
             IsFitToWindow = False
             ZoomLevel = ZoomLevel / 1.25
+        End Sub
+
+        ''' <summary>Z: zwischen 100 Prozent und Einpassen wechseln. Aus einem freien Zoom geht es
+        ''' auf 100 Prozent, erst das zweite Z passt wieder ein.</summary>
+        Public Sub ToggleActualZoom()
+            If ActiveZoomPreset = ZoomPresetMode.Actual Then
+                ZoomFitCommand.Execute(Nothing)
+            Else
+                ZoomActualCommand.Execute(Nothing)
+            End If
         End Sub
 
         Public Sub SetImageViewportSize(width As Double, height As Double)

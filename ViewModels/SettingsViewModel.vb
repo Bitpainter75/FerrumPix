@@ -868,8 +868,8 @@ Namespace ViewModels
                 If _defaultSaveFormat = value Then Return
                 Me.RaiseAndSetIfChanged(_defaultSaveFormat, value)
                 For Each name In {NameOf(IsDefaultSaveFormatJpg), NameOf(IsDefaultSaveFormatPng),
-                                  NameOf(IsDefaultSaveFormatWebp), NameOf(IsDefaultSaveFormatPdf),
-                                  NameOf(IsDefaultSaveFormatFpx)}
+                                  NameOf(IsDefaultSaveFormatWebp), NameOf(IsDefaultSaveFormatTiff),
+                                  NameOf(IsDefaultSaveFormatPdf), NameOf(IsDefaultSaveFormatFpx)}
                     Me.RaisePropertyChanged(name)
                 Next
                 SaveLayoutSettings()
@@ -891,6 +891,83 @@ Namespace ViewModels
         Public ReadOnly Property IsDefaultSaveFormatWebp As Boolean
             Get
                 Return String.Equals(_defaultSaveFormat, "WEBP", StringComparison.OrdinalIgnoreCase)
+            End Get
+        End Property
+
+        Public ReadOnly Property IsDefaultSaveFormatTiff As Boolean
+            Get
+                Return String.Equals(_defaultSaveFormat, "TIFF", StringComparison.OrdinalIgnoreCase)
+            End Get
+        End Property
+
+        ' --- Externe Programme: "Öffnen mit" und G'MIC -----------------------------------------
+
+        Private _openWithRows As ObservableCollection(Of OpenWithProgramRow)
+
+        ''' <summary>Die Zeilen der Liste "Öffnen mit", beim ersten Zugriff aus den Einstellungen
+        ''' gelesen. Das Menue liest bei jedem Oeffnen neu, eine Aenderung wirkt also sofort.</summary>
+        Public ReadOnly Property OpenWithRows As ObservableCollection(Of OpenWithProgramRow)
+            Get
+                If _openWithRows Is Nothing Then
+                    _openWithRows = New ObservableCollection(Of OpenWithProgramRow)()
+                    Dim stored = If(AppSettingsService.Load().OpenWithPrograms, New List(Of OpenWithProgramSettings)())
+                    For Each program In stored
+                        If program Is Nothing Then Continue For
+                        _openWithRows.Add(New OpenWithProgramRow(program, AddressOf SaveOpenWithPrograms, AddressOf RemoveOpenWithRow))
+                    Next
+                End If
+                Return _openWithRows
+            End Get
+        End Property
+
+        ''' <summary>Legt eine leere Zeile an. Das Programm kommt ueber "Auswählen" oder von Hand -
+        ''' ein Befehl wie "gimp" aus dem Suchpfad genuegt.</summary>
+        Public ReadOnly Property AddOpenWithProgramCommand As ICommand = ReactiveCommand.Create(
+            Sub()
+                OpenWithRows.Add(New OpenWithProgramRow(New OpenWithProgramSettings(), AddressOf SaveOpenWithPrograms,
+                                                        AddressOf RemoveOpenWithRow))
+                SaveOpenWithPrograms()
+            End Sub)
+
+        Private Sub RemoveOpenWithRow(row As OpenWithProgramRow)
+            If row Is Nothing OrElse Not OpenWithRows.Remove(row) Then Return
+            SaveOpenWithPrograms()
+        End Sub
+
+        Private Sub SaveOpenWithPrograms()
+            Dim programs = OpenWithRows.Select(Function(r) r.ToSettings()).ToList()
+            AppSettingsService.Update(Sub(s) s.OpenWithPrograms = programs)
+        End Sub
+
+        ''' <summary>Wo gmic_qt liegt. Leer heisst: im Suchpfad suchen.</summary>
+        Public Property GmicQtPath As String
+            Get
+                Return If(AppSettingsService.Load().GmicQtPath, "")
+            End Get
+            Set(value As String)
+                Dim cleaned = If(value, "").Trim()
+                If cleaned = GmicQtPath Then Return
+                AppSettingsService.Update(Sub(s) s.GmicQtPath = cleaned)
+                GmicService.Refresh()
+                Me.RaisePropertyChanged(NameOf(GmicQtPath))
+                Me.RaisePropertyChanged(NameOf(GmicStatusText))
+            End Set
+        End Property
+
+        ''' <summary>Ob und wo gmic_qt gefunden wurde. Jedes Lesen sucht neu: wer G'MIC bei laufender
+        ''' Anwendung installiert, sieht es beim naechsten Oeffnen der Seite, und der Editor bekommt
+        ''' seinen Eintrag ohne Neustart.</summary>
+        Public ReadOnly Property GmicStatusText As String
+            Get
+                GmicService.Refresh()
+                Dim found = GmicService.FindGmicQt()
+                If Not String.IsNullOrEmpty(found) Then
+                    Return String.Format(LocalizationService.T("Gefunden: {0}"), found)
+                End If
+                If GmicQtPath.Length > 0 Then
+                    Return LocalizationService.T("Unter diesem Pfad liegt kein ausführbares gmic_qt.")
+                End If
+                Return LocalizationService.T("G'MIC wurde nicht gefunden. Nach der Installation erscheint der Eintrag im Editor von selbst.")
             End Get
         End Property
 

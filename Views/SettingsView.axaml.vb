@@ -95,6 +95,52 @@ Namespace Views
             e.Handled = True
         End Sub
 
+        ''' <summary>Das Programm einer Zeile von "Öffnen mit" auswählen. Ein leerer Name wird aus dem
+        ''' Dateinamen gefuellt, damit im Menue gleich etwas Lesbares steht.</summary>
+        Private Async Sub OnBrowseOpenWithProgramClick(sender As Object, e As RoutedEventArgs)
+            Dim row = TryCast(TryCast(sender, Control)?.DataContext, OpenWithProgramRow)
+            If row Is Nothing Then Return
+            e.Handled = True
+            Try
+                Dim path = Await PickProgramFileAsync(LocalizationService.T("Programm wählen"))
+                If String.IsNullOrWhiteSpace(path) Then Return
+                row.ProgramPath = path
+                If String.IsNullOrWhiteSpace(row.Name) Then
+                    row.Name = OpenWithService.DisplayName(New OpenWithProgramSettings With {.ProgramPath = path})
+                End If
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Settings.BrowseOpenWithProgram", ex)
+            End Try
+        End Sub
+
+        Private Async Sub OnBrowseGmicClick(sender As Object, e As RoutedEventArgs)
+            Dim vm = TryCast(DataContext, SettingsViewModel)
+            If vm Is Nothing Then Return
+            e.Handled = True
+            Try
+                Dim path = Await PickProgramFileAsync(LocalizationService.T("gmic_qt wählen"))
+                If Not String.IsNullOrWhiteSpace(path) Then vm.GmicQtPath = path
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Settings.BrowseGmic", ex)
+            End Try
+        End Sub
+
+        ''' <summary>Der Dateiwaehler haengt am TopLevel und ist nur von der View aus erreichbar.</summary>
+        Private Async Function PickProgramFileAsync(title As String) As Task(Of String)
+            Try
+                Dim topLevel As TopLevel = TopLevel.GetTopLevel(Me)
+                If topLevel Is Nothing Then Return Nothing
+                Dim files = Await topLevel.StorageProvider.OpenFilePickerAsync(New FilePickerOpenOptions With {
+                    .Title = title,
+                    .AllowMultiple = False
+                })
+                Return files?.FirstOrDefault()?.Path?.LocalPath
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Settings.PickProgram", ex)
+                Return Nothing
+            End Try
+        End Function
+
         ''' <summary>Einen Ordner in die Liste des Katalogindex aufnehmen. Der Auswahldialog haengt
         ''' am TopLevel und ist nur von der View aus erreichbar - deshalb hier und nicht im
         ''' ViewModel, genau wie beim Startordner der Galerie darueber.</summary>

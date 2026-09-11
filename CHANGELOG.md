@@ -1,3 +1,28 @@
+## FerrumPix Unreleased
+
+### What's new
+
+- Pictures can be saved as TIFF, in *Save as* and in every batch run that writes new files. The
+  shot data and a copyright note go along.
+
+- *Open with* hands a picture to another program. You name the programs in the settings, and they
+  appear in the context menu of the gallery and the viewer. They always get the original file,
+  without your edits.
+
+- With G'MIC installed, the editor can pass the picture to it from the footer menu. Whatever you
+  apply there comes back as a new layer on top of your photo.
+
+- In the viewer, `Z` switches between 100 % and fit, and `SHIFT` with the arrow keys moves around a
+  zoomed picture. Zooming with the keys or the buttons keeps the middle of the view in place, so
+  100 % now shows the centre of the picture instead of its top edge.
+
+### Fixes
+
+- A video from an Immich or Nextcloud server no longer takes the app down with it. The fix in 0.9.42
+  did not hold: such a video is only a file once it has been downloaded, so the viewer runs through
+  its picture path twice, and the second pass started it again while the first was still drawing.
+  Local videos were never affected.
+
 ## FerrumPix 0.9.42
 
 ### What's new

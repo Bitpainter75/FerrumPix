@@ -265,7 +265,8 @@ Namespace ViewModels
         Public ReadOnly Property DialogFormatOptions As ObservableCollection(Of String) = New ObservableCollection(Of String) From {
             "JPG",
             "PNG",
-            "WEBP"
+            "WEBP",
+            "TIFF"
         }
         Public ReadOnly Property DialogBatchRenamePreview As ObservableCollection(Of BatchRenamePreviewItem) = New ObservableCollection(Of BatchRenamePreviewItem)()
         Public ReadOnly Property DialogWatermarkPresetNames As ObservableCollection(Of String) = New ObservableCollection(Of String)()
@@ -4596,6 +4597,8 @@ Namespace ViewModels
                     Return "PNG"
                 Case "WEBP"
                     Return "WEBP"
+                Case "TIFF", "TIF"
+                    Return "TIFF"
                 Case "FPX"
                     Return If(FpxService.Enabled, "FPX", "JPG")
                 Case "PDF"
@@ -4616,6 +4619,8 @@ Namespace ViewModels
             DialogFormatOptions.Add("JPG")
             DialogFormatOptions.Add("PNG")
             DialogFormatOptions.Add("WEBP")
+            ' TIFF mit 8 Bit, siehe TiffWriterService. Immer als neue Datei, deshalb in beiden Dialogen.
+            DialogFormatOptions.Add("TIFF")
             ' PDF in BEIDEN Dialogen: einzeln als druckfertige Datei speichern und stapelweise
             ' konvertieren (dort entsteht wie bei allen Formaten eine Zieldatei je Bild).
             DialogFormatOptions.Add("PDF")

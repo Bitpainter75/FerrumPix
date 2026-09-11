@@ -8292,4 +8292,91 @@
   <data name="dnglab_wandelt_RAW_Dateien_in_DNG_um_und_wird_da_9e05e80e" xml:space="preserve">
     <value>dnglab muuntaa RAW-tiedostot DNG-muotoon, ja sitä kutsutaan omana ohjelmana, sitä ei ole liitetty mukaan. Se ei tule minkään paketin mukana ja on asennettava itse; jos se puuttuu, erämuunnos kertoo sen yritettäessä, ja kaikki muu toimii ennallaan.</value>
   </data>
+  <data name="ffnen_mit_e45094f2" xml:space="preserve">
+    <value>Avaa sovelluksella</value>
+  </data>
+  <data name="In_G_MIC_bearbeiten_4f7be568" xml:space="preserve">
+    <value>Muokkaa G'MICissä</value>
+  </data>
+  <data name="0_konnte_nicht_gestartet_werden_0283ad6a" xml:space="preserve">
+    <value>Ohjelmaa {0} ei voitu käynnistää</value>
+  </data>
+  <data name="G_MIC_ist_bereits_ge_ffnet_21df20f1" xml:space="preserve">
+    <value>G'MIC on jo auki</value>
+  </data>
+  <data name="G_MIC_wurde_nicht_gefunden_1e1ba16d" xml:space="preserve">
+    <value>G'MICiä ei löytynyt</value>
+  </data>
+  <data name="Bild_wird_f_r_G_MIC_vorbereitet_ebdac917" xml:space="preserve">
+    <value>Kuvaa valmistellaan G'MICiä varten</value>
+  </data>
+  <data name="Das_Bild_konnte_nicht_an_G_MIC_bergeben_werden_96ca411f" xml:space="preserve">
+    <value>Kuvaa ei voitu välittää G'MICille</value>
+  </data>
+  <data name="G_MIC_ist_ge_ffnet_2f19e903" xml:space="preserve">
+    <value>G'MIC on auki</value>
+  </data>
+  <data name="G_MIC_konnte_nicht_gestartet_werden_c5d1cc6c" xml:space="preserve">
+    <value>G'MICiä ei voitu käynnistää</value>
+  </data>
+  <data name="Das_G_MIC_Ergebnis_wurde_verworfen_inzwischen_is_659c067e" xml:space="preserve">
+    <value>G'MICin tulos hylättiin, sillä välin on avattu toinen kuva</value>
+  </data>
+  <data name="G_MIC_wurde_ohne_Ergebnis_beendet_f5963de1" xml:space="preserve">
+    <value>G'MIC suljettiin ilman tulosta</value>
+  </data>
+  <data name="G_MIC_angewendet_08dd6c5d" xml:space="preserve">
+    <value>G'MIC käytetty</value>
+  </data>
+  <data name="Das_G_MIC_Ergebnis_liegt_als_Ebene_ber_dem_Bild_13bcb580" xml:space="preserve">
+    <value>G'MICin tulos on tasona kuvan päällä</value>
+  </data>
+  <data name="Programm_w_hlen_8509d945" xml:space="preserve">
+    <value>Valitse ohjelma</value>
+  </data>
+  <data name="gmic_qt_w_hlen_439907c0" xml:space="preserve">
+    <value>Valitse gmic_qt</value>
+  </data>
+  <data name="Gefunden_0_82f51d25" xml:space="preserve">
+    <value>Löytyi: {0}</value>
+  </data>
+  <data name="Unter_diesem_Pfad_liegt_kein_ausf_hrbares_gmic_q_355c1275" xml:space="preserve">
+    <value>Tästä polusta ei löydy suoritettavaa gmic_qt-ohjelmaa.</value>
+  </data>
+  <data name="G_MIC_wurde_nicht_gefunden_Nach_der_Installation_0ead4643" xml:space="preserve">
+    <value>G'MICiä ei löytynyt. Asennuksen jälkeen kohta ilmestyy editoriin itsestään.</value>
+  </data>
+  <data name="Externe_Programme_567111f3" xml:space="preserve">
+    <value>Ulkoiset ohjelmat</value>
+  </data>
+  <data name="Programme_an_die_FerrumPix_Bilder_weitergeben_ka_8642f6ff" xml:space="preserve">
+    <value>Ohjelmat, joille FerrumPix voi välittää kuvia.</value>
+  </data>
+  <data name="Diese_Programme_stehen_im_Kontextmen_von_Galerie_63302502" xml:space="preserve">
+    <value>Nämä ohjelmat näkyvät gallerian ja katselimen pikavalikossa kohdassa Avaa sovelluksella. Aina välitetään alkuperäinen tiedosto ilman muokkauksia. Parametreissa %f tarkoittaa tiedostopolkua; ilman %f polku lisätään loppuun.</value>
+  </data>
+  <data name="Programm_hinzuf_gen_4f890947" xml:space="preserve">
+    <value>Lisää ohjelma</value>
+  </data>
+  <data name="Programm_0496f662" xml:space="preserve">
+    <value>Ohjelma</value>
+  </data>
+  <data name="Parameter_f699f295" xml:space="preserve">
+    <value>Parametrit</value>
+  </data>
+  <data name="Mit_G_MIC_l_sst_sich_das_Bild_im_Editor_ber_das__822d68e4" xml:space="preserve">
+    <value>G'MICillä kuvaa voi muokata editorissa alapalkin valikon kautta, ja tulos palaa tasona. G'MIC ei tule mukana. Jos kenttä jätetään tyhjäksi, FerrumPix etsii gmic_qt-ohjelman itse.</value>
+  </data>
+  <data name="Automatisch_suchen_3e0efce1" xml:space="preserve">
+    <value>Etsi automaattisesti</value>
+  </data>
+  <data name="Zwischen_100_Prozent_und_Einpassen_wechseln_ed153103" xml:space="preserve">
+    <value>Vaihda 100 prosentin ja sovituksen välillä</value>
+  </data>
+  <data name="SHIFT_PFEILTASTEN_90403c6a" xml:space="preserve">
+    <value>SHIFT+NUOLINÄPPÄIMET</value>
+  </data>
+  <data name="Ausschnitt_verschieben_8ede81fd" xml:space="preserve">
+    <value>Siirrä näkyvää aluetta</value>
+  </data>
 </root>

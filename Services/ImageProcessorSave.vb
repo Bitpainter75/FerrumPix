@@ -40,6 +40,16 @@ Namespace Services
             End Select
         End Function
 
+        ''' <summary>True, wenn SaveImage eine NEUE Datei in diesem Format schreiben kann. Das ist
+        ''' mehr als <see cref="CanEncodeToTargetExtension"/>: TIFF gibt es nur als neue Datei
+        ''' (Speichern unter, Stapelwege mit Zielordner), nie ueber ein TIFF-Original. Das Original
+        ''' kann 16 Bit, mehrere Seiten oder Ebenen tragen, und ein Speichern darueber machte daraus
+        ''' still ein einseitiges 8-Bit-Bild. CanEncodeToTargetExtension bleibt deshalb bei TIFF
+        ''' False: danach richten sich Editor und Stapel, wenn sie ueber das Original schreiben.</summary>
+        Public Shared Function CanEncodeAsNewFile(path As String) As Boolean
+            Return CanEncodeToTargetExtension(path) OrElse TiffPreviewService.IsSupportedTiff(path)
+        End Function
+
         ''' <paramref name="workingFull"/>: voll aufgelöstes ARBEITSBILD des Editors (Umbau Stufe C) -
         ''' wenn gesetzt, ersetzt es den Datei-Decode als Pipeline-Eingang (Besitz wechselt hierher,
         ''' wird disposed). Aufrufer übergeben einen Klon (WorkingImageService.CloneFull).
@@ -384,8 +394,10 @@ Namespace Services
             ' ".cr2" mangels eigenem Zweig ein JPEG. Ergebnis: die Original-RAW war unwiederbringlich
             ' durch ihre eigene eingebettete Vorschau ersetzt. Ein Ziel
             ' mit RAW-/PSD-Endung ist IMMER falsch - wir können diese Formate nicht schreiben.
+            ' TIFF steht NICHT in dieser Reihe: eine neue TIFF-Datei schreibt TiffWriterService. Ueber
+            ' ein TIFF-Original schreiben darf dagegen nichts, das haelt die Regel darunter fest.
             If RawPreviewService.IsSupportedRaw(targetPath) OrElse PsdPreviewService.IsSupportedPsd(targetPath) OrElse
-               HeifDecodeService.IsSupportedHeif(targetPath) OrElse TiffPreviewService.IsSupportedTiff(targetPath) Then
+               HeifDecodeService.IsSupportedHeif(targetPath) Then
                 workingFull?.Dispose()
                 Return False
             End If
@@ -395,12 +407,21 @@ Namespace Services
                 workingFull?.Dispose()
                 Return False
             End If
+            ' Dasselbe fuer ein ANDERES, schon vorhandenes TIFF als Ziel ("Speichern unter" mit
+            ' Ueberschreiben): ersetzt wird es nur, wenn es nicht mehr traegt, als wir schreiben -
+            ' sonst wuerde aus einem mehrseitigen oder 16-Bit-TIFF still ein 8-Bit-Einzelbild.
+            If TiffPreviewService.IsSupportedTiff(targetPath) AndAlso Not TiffWriterService.CanReplaceExisting(targetPath) Then
+                DiagnosticLogService.LogAlways("ImageProcessor.Save",
+                    $"refused: vorhandenes TIFF traegt mehr als 8 Bit, mehrere Seiten, CMYK oder Ebenen target={IO.Path.GetFileName(targetPath)}")
+                workingFull?.Dispose()
+                Return False
+            End If
             ' Dieselbe Fehlerklasse eine Formatstufe weiter: die Formatwahl unten
-            ' kennt nur PNG/WEBP/PDF und faellt sonst auf JPEG zurueck. Ein Ziel ".tiff"/".bmp"/
+            ' kennt nur PNG/WEBP/TIFF/PDF und faellt sonst auf JPEG zurueck. Ein Ziel ".bmp"/
             ' ".gif"/".heic"/... bekam damit still JPEG-Bytes unter fremder Endung - beim
             ' in-place-Speichern wurde das Original verlustbehaftet konvertiert UND falsch
             ' etikettiert. Verboten wird am Ziel-FORMAT, nicht am Pfad (siehe RAW-Lehre oben).
-            If Not CanEncodeToTargetExtension(targetPath) Then
+            If Not CanEncodeAsNewFile(targetPath) Then
                 DiagnosticLogService.LogAlways("ImageProcessor.Save",
                     $"refused: target extension not encodable target={IO.Path.GetFileName(targetPath)}")
                 workingFull?.Dispose()
@@ -471,6 +492,7 @@ Namespace Services
                     Dim fileFormat = If(ext = ".png", SKEncodedImageFormat.Png,
                                  If(ext = ".webp", SKEncodedImageFormat.Webp,
                                     SKEncodedImageFormat.Jpeg))
+                    Dim isTiff = TiffPreviewService.IsSupportedTiff(targetPath)
 
                     ' DIE AUFNAHMEDATEN DER QUELLE VOR DEM SCHREIBEN EINLESEN. Beim Speichern ueber
                     ' das Original sind Quelle und Ziel dieselbe Datei; danach gelesen kaeme nur noch
@@ -478,6 +500,10 @@ Namespace Services
                     ' Hergang. Ein .fpx-Buendel traegt keine, und in ein PDF passt kein EXIF-Block.
                     Dim keepMetadata = preserveMetadata AndAlso Not isFpxSource AndAlso Not isPdf AndAlso Not isFpxTarget
                     Dim sourceMetadata = If(keepMetadata, ReadSourceMetadata(sourcePath, targetPath), Nothing)
+                    ' TIFF nimmt die Aufnahmedaten nicht bytegenau mit, sondern als einzelne Felder: die
+                    ' Datei IST dort der TIFF-Block, und die Felder gehen beim Schreiben selbst hinein.
+                    Dim tiffMetadata As ExifBuilderService.ExifFieldSet = Nothing
+                    If isTiff AndAlso keepMetadata Then tiffMetadata = ExifBuilderService.CollectFields(sourcePath)
 
                     Using processed = ProcessBitmap(original, adj)
                         ' DIE LETZTE FRAGE VOR DEM SCHREIBEN. Die Modellwege steigen an ihrer
@@ -499,7 +525,8 @@ Namespace Services
                         ' ausgeblendeter Hintergrund) liefen beim Encode auf SCHWARZ
                         '. Auf WEISS flatten - wie Photoshop.
                         Dim toEncode = processed
-                        If isPdf OrElse fileFormat = SKEncodedImageFormat.Jpeg Then
+                        ' TIFF traegt Alpha wie PNG und bleibt deshalb ohne weissen Untergrund.
+                        If isPdf OrElse (fileFormat = SKEncodedImageFormat.Jpeg AndAlso Not isTiff) Then
                             toEncode = FlattenAlphaToWhite(processed)
                         End If
                         Try
@@ -508,6 +535,10 @@ Namespace Services
                                 ' gewählten Seitenlayout - so sehen Drucken und PDF-Export gleich aus.
                                 If Not PrintService.WriteSinglePagePdf(toEncode, targetPath,
                                                                       AppSettingsService.Load().ToPrintOptions()) Then Return False
+                            ElseIf isTiff Then
+                                ' Aufnahmedaten und Urheberhinweis gehen beim Schreiben selbst mit
+                                ' hinein; atomar ueber die Nachbardatei wie alle anderen Formate.
+                                If Not TiffWriterService.Write(targetPath, toEncode, tiffMetadata, copyrightText) Then Return False
                             Else
                                 Using image = SKImage.FromBitmap(toEncode)
                                     Using data = image.Encode(fileFormat, quality)
@@ -525,8 +556,10 @@ Namespace Services
                     ' Der Urheberrechtshinweis kommt NACH dem Kopieren der Metadaten: sonst
                     ' ueberschriebe der Hinweis aus der Quelle den gerade gesetzten wieder. Ein
                     ' leerer Text tut nichts - das ist die Regel der Stapelformulare, "leer heisst
-                    ' dieses Feld nicht anfassen". In ein PDF und in ein Buendel geht er nicht.
-                    If Not isPdf AndAlso Not isFpxTarget Then ApplyCopyright(targetPath, copyrightText)
+                    ' dieses Feld nicht anfassen". In ein PDF und in ein Buendel geht er nicht, und ein
+                    ' TIFF traegt ihn schon: TiffWriterService hat ihn in IFD0 geschrieben, und der Weg
+                    ' hier legte fuer alles ausser JPEG eine Beistelldatei an.
+                    If Not isPdf AndAlso Not isFpxTarget AndAlso Not isTiff Then ApplyCopyright(targetPath, copyrightText)
                     Return True
                 End Using
             Catch ex As Exception

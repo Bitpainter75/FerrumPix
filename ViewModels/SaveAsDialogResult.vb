@@ -43,6 +43,8 @@
                         Return ".png"
                     Case "WEBP"
                         Return ".webp"
+                    Case "TIFF"
+                        Return ".tif"
                     Case "FPX"
                         Return ".fpx"
                     Case "PDF"

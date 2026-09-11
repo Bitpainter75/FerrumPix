@@ -188,6 +188,21 @@ Namespace ViewModels
             Return Build("Im Dateimanager zeigen", "folder-open", c)
         End Function
 
+        ''' <summary>Das Untermenue "Öffnen mit", je eingetragenem Programm ein Eintrag.</summary>
+        Public Shared Function OpenWith(children As IReadOnlyList(Of Object)) As AppAction
+            Return New AppAction(LocalizationService.T("Öffnen mit"), "external-link", Nothing, Nothing, children)
+        End Function
+
+        ''' <summary>Ein Programm im Untermenue. Der Name stammt vom Nutzer und bleibt, wie er ist;
+        ''' der Parameter ist die Kennung des Eintrags.</summary>
+        Public Shared Function OpenWithProgram(c As ICommand, program As OpenWithProgramSettings) As AppAction
+            Return New AppAction(OpenWithService.DisplayName(program), "app-window", c, program?.Id)
+        End Function
+
+        Public Shared Function EditWithGmic(c As ICommand) As AppAction
+            Return Build("In G'MIC bearbeiten", "color-filter", c)
+        End Function
+
         Public Shared Function Delete(c As ICommand) As AppAction
             Return Build("Löschen", "trash", c)
         End Function

@@ -2358,6 +2358,8 @@ Namespace Views
                 .SetCaptureDate = vm.SetCaptureDateCommand,
                 .CopyPath = New DelegateCommand(Sub() OnContextCopyPath(Nothing, Nothing)),
                 .ShowInFileManager = vm.OpenFileManagerCommand,
+                .OpenWith = vm.OpenWithCommand,
+                .OpenWithPrograms = Services.OpenWithService.ConfiguredPrograms(),
                 .Delete = vm.DeleteSelectedCommand,
                 .RestoreFromTrash = New DelegateCommand(Sub()
                                                             Dim ignored = vm.RestoreSelectedFromTrashAsync()

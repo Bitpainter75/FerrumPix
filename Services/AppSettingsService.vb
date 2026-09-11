@@ -18,6 +18,16 @@ Namespace Services
         Public Property RatingMin As Integer = -1
     End Class
 
+    ''' <summary>Ein Eintrag im Untermenue "Öffnen mit": ein fremdes Programm, dem die ORIGINALDATEI
+    ''' uebergeben wird, ohne Bearbeitungen und ohne Rueckweg. In den Parametern steht %f fuer den
+    ''' Dateipfad; fehlt es, wird der Pfad hinten angehaengt.</summary>
+    Public Class OpenWithProgramSettings
+        Public Property Id As String = Guid.NewGuid().ToString("N")
+        Public Property Name As String = ""
+        Public Property ProgramPath As String = ""
+        Public Property Arguments As String = ""
+    End Class
+
     Public Class WatermarkPresetSettings
         Public Property Id As String = Guid.NewGuid().ToString("N")
         Public Property Name As String = ""
@@ -314,8 +324,8 @@ Namespace Services
         Public Property GalleryThumbnailMemoryCacheCapacity As Integer = 500
         Public Property JpgSaveQuality As Integer = 90
         ''' Vorgewähltes Zielformat in „Speichern unter", „Konvertieren nach" und „Exportieren nach".
-        ''' "JPG" | "PNG" | "WEBP" | "FPX" - FPX gibt es nur beim Speichern unter, die übrigen
-        ''' Dialoge fallen dort auf JPG zurück.
+        ''' "JPG" | "PNG" | "WEBP" | "TIFF" | "PDF" | "FPX" - FPX gibt es nur beim Speichern unter,
+        ''' die übrigen Dialoge fallen dort auf JPG zurück.
         Public Property DefaultSaveFormat As String = "JPG"
         Public Property PreserveMetadataOnSave As Boolean = True
         ''' Optionaler XMP-Katalog-Sync (Standard AUS): schreibt Rating/Farb-Label/Stichworte zusätzlich
@@ -558,6 +568,11 @@ Namespace Services
         ''' Eigene Gestenbelegung für Trackpads; standardmäßig aus, damit Mauswege unverändert bleiben.
         Public Property TrackpadMode As Boolean = False
         Public Property WatermarkPresets As New List(Of WatermarkPresetSettings)()
+        ''' <summary>Die Programme im Untermenue "Öffnen mit", in der Reihenfolge der Einstellungen.</summary>
+        Public Property OpenWithPrograms As New List(Of OpenWithProgramSettings)()
+        ''' <summary>Wo gmic_qt liegt. Leer heisst: im Suchpfad suchen. Unter Windows liegt es dort
+        ''' nicht, weil G'MIC als Archiv kommt - dann traegt der Nutzer den Pfad hier ein.</summary>
+        Public Property GmicQtPath As String = ""
         ''' Gespeicherte Regler-Zusammenstellungen aus dem Anpassen-Werkzeug (siehe
         ''' AdjustmentPresetSettings) und der Name der zuletzt benutzten.
         Public Property AdjustmentPresets As New List(Of AdjustmentPresetSettings)()
@@ -1278,6 +1293,7 @@ Namespace Services
             Select Case If(value, "").Trim().ToUpperInvariant()
                 Case "PNG" : Return "PNG"
                 Case "WEBP" : Return "WEBP"
+                Case "TIFF", "TIF" : Return "TIFF"
                 Case "PDF" : Return "PDF"
                 Case "FPX" : Return "FPX"
                 Case Else : Return "JPG"

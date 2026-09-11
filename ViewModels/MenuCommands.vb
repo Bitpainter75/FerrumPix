@@ -78,6 +78,16 @@ Namespace ViewModels
         Public Property CopyPath As ICommand
         Public Property ShowInFileManager As ICommand
 
+        ''' <summary>"Öffnen mit": das Kommando bekommt die Kennung des Programms als Parameter.
+        ''' Die Programme stehen daneben, damit der Bauplan ohne Blick in die Einstellungen
+        ''' auskommt. Keine Programme heisst: das Untermenue faellt weg.</summary>
+        Public Property OpenWith As ICommand
+        Public Property OpenWithPrograms As IReadOnlyList(Of Services.OpenWithProgramSettings)
+
+        ''' <summary>Das gerenderte Bild an G'MIC geben und das Ergebnis als Ebene zurueckholen.
+        ''' Nur der Editor setzt es, und nur, wenn G'MIC gefunden wurde.</summary>
+        Public Property EditWithGmic As ICommand
+
     End Class
 
 End Namespace

@@ -376,7 +376,24 @@ Namespace Views
                         vm.EditCommand.Execute(Nothing)
                         e.Handled = True
                         Return
+                    Case Key.Z
+                        ' Zwischen 100 Prozent und Einpassen. Nicht auf der 1: die blanken Ziffern
+                        ' setzen in allen drei Ansichten die Bewertung.
+                        vm.ToggleActualZoom()
+                        ApplyImageFitMode()
+                        e.Handled = True
+                        Return
                 End Select
+            End If
+
+            ' SHIFT+PFEIL verschiebt den Ausschnitt eines vergroesserten Bildes. Die blanken Pfeile
+            ' blaettern und STRG+PFEIL dreht - deshalb SHIFT, und deshalb steht diese Weiche VOR dem
+            ' Blaettern darunter, das die Zusatztasten nicht prueft.
+            Dim panDirectionValue = PanDirection(e.Key, e.KeyModifiers)
+            If panDirectionValue.HasValue Then
+                PanBy(panDirectionValue.Value)
+                e.Handled = True
+                Return
             End If
 
             Select Case e.Key
@@ -1034,13 +1051,99 @@ Namespace Views
             _subscribedVm = GetVm()
             If _subscribedVm IsNot Nothing Then
                 AddHandler _subscribedVm.PropertyChanged, AddressOf OnViewModelPropertyChanged
+                AddHandler _subscribedVm.CenteredZoomRequested, AddressOf OnCenteredZoomRequested
             End If
         End Sub
 
         Private Sub UnsubscribeViewModel()
             If _subscribedVm Is Nothing Then Return
             RemoveHandler _subscribedVm.PropertyChanged, AddressOf OnViewModelPropertyChanged
+            RemoveHandler _subscribedVm.CenteredZoomRequested, AddressOf OnCenteredZoomRequested
             _subscribedVm = Nothing
+        End Sub
+
+        ''' Ein Druck auf SHIFT+PFEIL verschiebt um ein Achtel des Sichtfensters.
+        Private Const PanStepFraction As Double = 0.125
+
+        ''' <summary>Zoom um die Mitte des Sichtfensters (Plus, Minus, 100 Prozent, Z). Die Stelle, die
+        ''' gerade in der Mitte steht, wird VOR dem Neu-Vermessen abgelesen - danach stuenden Umfang
+        ''' und Versatz schon fuer den neuen Zoom - und nach dem Layout-Durchlauf wieder in die Mitte
+        ''' gerueckt. Im Vergleich gekoppelt nur die fokussierte Flaeche, die andere folgt ueber die
+        ''' Spiegelung; entkoppelt behaelt jede ihre eigene Mitte.</summary>
+        Private Sub OnCenteredZoomRequested(sender As Object, e As EventArgs)
+            Dim vm = GetVm()
+            If vm Is Nothing Then Return
+            Dim paneNames As String()
+            If Not vm.IsCompareMode Then
+                paneNames = {"ImageScrollViewer"}
+            ElseIf vm.IsCompareViewportLinked Then
+                paneNames = {If(vm.FocusedComparePane = 1, "CompareRightScroll", "CompareLeftScroll")}
+            Else
+                paneNames = {"CompareLeftScroll", "CompareRightScroll"}
+            End If
+
+            Dim anchors As New List(Of (Pane As ScrollViewer, X As Double, Y As Double))()
+            For Each paneName In paneNames
+                Dim pane = Me.FindControl(Of ScrollViewer)(paneName)
+                If pane Is Nothing Then Continue For
+                anchors.Add((pane,
+                             CenterAnchor(pane.Offset.X, pane.Viewport.Width, pane.Extent.Width),
+                             CenterAnchor(pane.Offset.Y, pane.Viewport.Height, pane.Extent.Height)))
+            Next
+            If anchors.Count = 0 Then Return
+
+            Dispatcher.UIThread.Post(
+                Sub()
+                    For Each anchor In anchors
+                        Dim pane = anchor.Pane
+                        pane.Offset = New Vector(OffsetForAnchor(anchor.X, pane.Viewport.Width, pane.Extent.Width),
+                                                 OffsetForAnchor(anchor.Y, pane.Viewport.Height, pane.Extent.Height))
+                    Next
+                End Sub, DispatcherPriority.Background)
+        End Sub
+
+        ''' <summary>Welche Stelle des Inhalts (0 bis 1) in der Mitte des Sichtfensters steht. Passt der
+        ''' Inhalt ganz hinein - eingepasst -, ist es seine Mitte; der Sprung auf 100 Prozent zeigt dann
+        ''' die Bildmitte statt der oberen Ecke.</summary>
+        Friend Shared Function CenterAnchor(offset As Double, viewport As Double, extent As Double) As Double
+            If extent <= 0 OrElse extent <= viewport + 0.5 Then Return 0.5
+            Return Math.Max(0, Math.Min(1, (offset + viewport / 2) / extent))
+        End Function
+
+        ''' <summary>Der Versatz, der die Stelle <paramref name="anchor"/> in die Mitte bringt, am Rand
+        ''' geklemmt: ueber das Bild hinaus wird nicht geschoben.</summary>
+        Friend Shared Function OffsetForAnchor(anchor As Double, viewport As Double, extent As Double) As Double
+            Dim maxOffset = Math.Max(0, extent - viewport)
+            Return Math.Max(0, Math.Min(maxOffset, anchor * extent - viewport / 2))
+        End Function
+
+        ''' <summary>Die Richtung fuer SHIFT+PFEIL, sonst Nothing. Nur SHIFT allein: der blanke Pfeil
+        ''' blaettert, STRG+PFEIL dreht. Der Parameter heisst nicht "key" - der Name verdeckte in VB
+        ''' den Typ Key, und die Faelle darunter vergliechen mit sich selbst.</summary>
+        Friend Shared Function PanDirection(pressedKey As Key, modifiers As KeyModifiers) As Vector?
+            If modifiers <> KeyModifiers.Shift Then Return Nothing
+            Select Case pressedKey
+                Case Key.Left : Return New Vector(-1, 0)
+                Case Key.Right : Return New Vector(1, 0)
+                Case Key.Up : Return New Vector(0, -1)
+                Case Key.Down : Return New Vector(0, 1)
+            End Select
+            Return Nothing
+        End Function
+
+        ''' <summary>Verschiebt den Ausschnitt; im Vergleich den der fokussierten Flaeche, gekoppelt
+        ''' folgt die andere. Eingepasst gibt es nichts zu verschieben, der Druck bleibt folgenlos.</summary>
+        Private Sub PanBy(direction As Vector)
+            Dim vm = GetVm()
+            If vm Is Nothing Then Return
+            Dim paneName = If(Not vm.IsCompareMode, "ImageScrollViewer",
+                              If(vm.FocusedComparePane = 1, "CompareRightScroll", "CompareLeftScroll"))
+            Dim pane = Me.FindControl(Of ScrollViewer)(paneName)
+            If pane Is Nothing Then Return
+            Dim targetX = pane.Offset.X + direction.X * pane.Viewport.Width * PanStepFraction
+            Dim targetY = pane.Offset.Y + direction.Y * pane.Viewport.Height * PanStepFraction
+            pane.Offset = New Vector(Math.Max(0, Math.Min(targetX, pane.Extent.Width - pane.Viewport.Width)),
+                                     Math.Max(0, Math.Min(targetY, pane.Extent.Height - pane.Viewport.Height)))
         End Sub
 
         Private Sub HandleDataContextChanged(sender As Object, e As EventArgs)

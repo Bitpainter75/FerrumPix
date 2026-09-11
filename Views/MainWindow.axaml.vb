@@ -965,7 +965,11 @@ Namespace Views
                     Return
                 End If
 
-                If vm.IsFullscreen Then
+                ' SHIFT+PFEIL verschiebt im Betrachter den Ausschnitt, auch im Vollbild. Der Zweig
+                ' darunter prueft keine Zusatztasten und machte daraus sonst ein Blaettern.
+                Dim isViewerPanKey = e.KeyModifiers = KeyModifiers.Shift AndAlso
+                                     (e.Key = Key.Left OrElse e.Key = Key.Right OrElse e.Key = Key.Up OrElse e.Key = Key.Down)
+                If vm.IsFullscreen AndAlso Not isViewerPanKey Then
                     Select Case e.Key
                         Case Key.Escape, Key.Back, Key.Space
                             vm.ExitFullscreen()
