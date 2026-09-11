@@ -29,7 +29,7 @@ It runs on Windows, Linux and macOS, stays fast and local-first, and is built fo
 - Hand a picture to another program with *Open with*, and pass it through G'MIC from the editor if you have it installed.
 - Find the people in your photos and search by them, and search by where a photo was taken - both entirely on your own machine.
 - Connect to your own Immich or Nextcloud server for browsing, upload, download, editing and metadata sync.
-- Work in your own language: sixteen are built in, and the symbol search finds shapes by their name in each of them.
+- Work in your own language: twenty-one are built in, and the symbol search finds shapes by their name in each of them.
 
 Your originals are never changed behind your back, and nothing at all is written until you save. Saving a RAW or a Photoshop file puts your edits in a small sidecar beside it, because those two are never written to; everything else is written the way you asked for it.
 

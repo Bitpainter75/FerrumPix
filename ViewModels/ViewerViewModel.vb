@@ -3453,7 +3453,7 @@ Namespace ViewModels
         ''' Plus und Minus (Taste wie Knopf), der Sprung auf 100 Prozent und Z. Die View merkt sich
         ''' dabei, welche Stelle des Bildes gerade in der Mitte steht, und rueckt sie nach dem
         ''' Neu-Vermessen wieder dorthin. Ohne das blieb der Ausschnitt oben links stehen, und 100
-        ''' Prozent zeigten die obere Ecke statt der Bildmitte (Nutzerwunsch). Das Mausrad verankert
+        ''' Prozent zeigten die obere Ecke statt der Bildmitte (Nutzerbefund). Das Mausrad verankert
         ''' am Zeiger und geht nicht hier durch.</summary>
         Public Event CenteredZoomRequested As EventHandler
 

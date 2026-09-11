@@ -658,7 +658,7 @@ Namespace ViewModels
         ''' <summary>Laeuft gerade ein Speichern: Rendern, Schreiben, Hochladen? Zaehlt in IsBusy.
         ''' Waehrend die Datei entsteht, setzte jede Aenderung am Bild an einem Stand an, der gleich
         ''' abgeloest wird - und ein grosses TIFF oder ein Upload sah ohne Anzeige aus wie ein
-        ''' Haenger (Nutzerwunsch: Balken beim Speichern unter, gleich welches Format). Das
+        ''' Haenger (Nutzerbefund, bei jedem Format von Speichern unter). Das
         ''' Neuladen der gespeicherten Datei danach zaehlt NICHT mehr hierher, dort zeigt der
         ''' Ladezustand den Hinweis.</summary>
         Private _saving As Boolean = False
