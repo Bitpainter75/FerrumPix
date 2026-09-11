@@ -119,6 +119,14 @@ Namespace Services
             End Try
         End Function
 
+        ''' <summary>Die Werte fuer gmic_qt. OPTIONEN VOR DEN DATEIEN: gmic_qt liest alles nach der
+        ''' ersten Datei als weitere Eingabedatei. Mit "eingabe -o ausgabe" hielt es "-o" fuer ein
+        ''' Bild, meldete "File cannot be read: -o" und beendete sich sofort, ohne Fenster
+        ''' (Nutzerbefund).</summary>
+        Friend Shared Function BuildArguments(inputPath As String, outputPath As String) As List(Of String)
+            Return New List(Of String) From {"-o", outputPath, inputPath}
+        End Function
+
         ''' <summary>Startet gmic_qt mit dem Eingangsbild und wartet, bis das Fenster geschlossen ist.
         ''' Ob ein Ergebnis entstand, sagt allein die Ausgabedatei: der Rueckgabewert des Programms
         ''' ist dafuer nicht belegt. False nur, wenn gar nicht gestartet werden konnte.</summary>
@@ -126,14 +134,24 @@ Namespace Services
             Dim program = FindGmicQt()
             If String.IsNullOrEmpty(program) Then Return False
             Try
-                Dim info As New ProcessStartInfo(program) With {.UseShellExecute = False}
-                info.ArgumentList.Add(inputPath)
-                info.ArgumentList.Add("-o")
-                info.ArgumentList.Add(outputPath)
+                Dim info As New ProcessStartInfo(program) With {.UseShellExecute = False, .RedirectStandardError = True}
+                For Each value In BuildArguments(inputPath, outputPath)
+                    info.ArgumentList.Add(value)
+                Next
                 ShellOpenService.PassActivationToken(info)
                 Using process = System.Diagnostics.Process.Start(info)
                     If process Is Nothing Then Return False
+                    ' Nebenlaeufig lesen: ein voller Puffer hielte das Programm sonst an.
+                    Dim errorText = process.StandardError.ReadToEndAsync()
                     Await process.WaitForExitAsync()
+                    Dim message = If(Await errorText, "").Trim()
+                    ' Ohne diese Zeile blieb ein Fehlstart unsichtbar: gmic_qt beendete sich sofort,
+                    ' und im Protokoll stand nichts, nur in der Statuszeile "ohne Ergebnis".
+                    If process.ExitCode <> 0 OrElse Not File.Exists(outputPath) Then
+                        If message.Length > 2000 Then message = message.Substring(message.Length - 2000)
+                        DiagnosticLogService.LogAlways("Gmic.Run",
+                            $"exit={process.ExitCode} ausgabe={File.Exists(outputPath)} {message}")
+                    End If
                     Return True
                 End Using
             Catch ex As Exception

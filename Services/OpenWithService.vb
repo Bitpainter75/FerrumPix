@@ -43,13 +43,14 @@ Namespace Services
             Return ConfiguredPrograms().FirstOrDefault(Function(p) String.Equals(p.Id, id, StringComparison.Ordinal))
         End Function
 
-        ''' <summary>Was im Menue steht: der eingetragene Name, sonst der Dateiname des Programms.
-        ''' Der Name stammt vom Nutzer und wird nicht uebersetzt.</summary>
+        ''' <summary>Was im Menue steht: der eingetragene Name, sonst der Dateiname des Programms -
+        ''' bei einer Befehlszeile im Programmfeld der des ersten Stuecks. Der Name stammt vom Nutzer
+        ''' und wird nicht uebersetzt.</summary>
         Public Shared Function DisplayName(program As OpenWithProgramSettings) As String
             If program Is Nothing Then Return ""
             Dim name = If(program.Name, "").Trim()
             If name.Length > 0 Then Return name
-            Dim path = If(program.ProgramPath, "").Trim().TrimEnd("/"c, "\"c)
+            Dim path = SplitProgramField(program.ProgramPath).Program.TrimEnd("/"c, "\"c)
             Dim fileName = IO.Path.GetFileNameWithoutExtension(path)
             Return If(String.IsNullOrWhiteSpace(fileName), path, fileName)
         End Function
@@ -101,10 +102,14 @@ Namespace Services
         ''' die Dateien hinten angehaengt. So bekommt ein Programm eine ganze Auswahl in EINEM
         ''' Aufruf, statt fuer jedes Bild eine eigene Instanz zu starten.</summary>
         Public Shared Function BuildArguments(arguments As String, filePaths As IList(Of String)) As List(Of String)
+            Return ExpandPlaceholders(SplitArguments(arguments), filePaths)
+        End Function
+
+        Private Shared Function ExpandPlaceholders(tokens As IEnumerable(Of String), filePaths As IList(Of String)) As List(Of String)
             Dim files = If(filePaths, New List(Of String)())
             Dim result As New List(Of String)()
             Dim placed = False
-            For Each token In SplitArguments(arguments)
+            For Each token In tokens
                 If token.Contains(FilePlaceholder) Then
                     For Each file In files
                         result.Add(token.Replace(FilePlaceholder, file))
@@ -116,6 +121,35 @@ Namespace Services
             Next
             If Not placed Then result.AddRange(files)
             Return result
+        End Function
+
+        ''' <summary>Das Programmfeld, zerlegt in Programm und vorangestellte Werte.
+        '''
+        ''' Im Feld darf eine ganze Befehlszeile stehen, etwa env "WINEPREFIX=/home/name/.wine" wine
+        ''' fuer ein Windows-Programm unter Wine: ist der Eintrag keine vorhandene Datei und enthaelt er
+        ''' Leerzeichen, wird er wie die Parameter zerlegt, das erste Stueck ist das Programm. Ein
+        ''' VORHANDENER Pfad mit Leerzeichen bleibt ein Pfad - sonst liefe "/opt/Mein Programm/app"
+        ''' als Programm "/opt/Mein" los.</summary>
+        Private Shared Function SplitProgramField(programField As String) As (Program As String, Leading As List(Of String))
+            Dim program = If(programField, "").Trim()
+            Dim leading As New List(Of String)()
+            If program.Length = 0 OrElse File.Exists(program) OrElse Not program.Any(AddressOf Char.IsWhiteSpace) Then
+                Return (program, leading)
+            End If
+            Dim parts = SplitArguments(program)
+            If parts.Count = 0 Then Return (program, leading)
+            leading.AddRange(parts.Skip(1))
+            Return (parts(0), leading)
+        End Function
+
+        ''' <summary>Programm und Werte fuer den Start ausserhalb eines Mac-Buendels. Die Werte aus
+        ''' dem Programmfeld stehen vor den Parametern, und %f wirkt in beiden - wer die ganze Zeile
+        ''' samt %f ins Programmfeld schreibt, bekommt dasselbe wie mit getrennten Feldern.</summary>
+        Friend Shared Function BuildCommand(programField As String, arguments As String,
+                                            files As IList(Of String)) As (FileName As String, Arguments As List(Of String))
+            Dim split = SplitProgramField(programField)
+            Dim tokens = split.Leading.Concat(SplitArguments(arguments))
+            Return (split.Program, ExpandPlaceholders(tokens, files))
         End Function
 
         ''' <summary>Startet das Programm mit den Dateien. True, wenn der Start gelang - was das
@@ -175,7 +209,8 @@ Namespace Services
         End Function
 
         ''' <summary>Auf dem Mac ist ein Programm meist ein .app-Buendel und kein ausfuehrbarer Pfad;
-        ''' es startet ueber "open -a", siehe <see cref="BuildMacOpenArguments"/>.</summary>
+        ''' es startet ueber "open -a", siehe <see cref="BuildMacOpenArguments"/>. Alles andere
+        ''' ueber <see cref="BuildCommand"/>.</summary>
         Private Shared Function CreateStartInfo(programPath As String, arguments As String,
                                                 files As List(Of String)) As ProcessStartInfo
             Dim info As ProcessStartInfo
@@ -186,8 +221,9 @@ Namespace Services
                     info.ArgumentList.Add(token)
                 Next
             Else
-                info = New ProcessStartInfo(programPath)
-                For Each token In BuildArguments(arguments, files)
+                Dim command = BuildCommand(programPath, arguments, files)
+                info = New ProcessStartInfo(command.FileName)
+                For Each token In command.Arguments
                     info.ArgumentList.Add(token)
                 Next
             End If

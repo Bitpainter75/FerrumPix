@@ -79,15 +79,6 @@
                 </Button>
                 <Button Classes="ghost" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
                         Padding="14,10"
-                        Tag="ExternalProgramsSection"
-                        Click="OnSectionNavClick">
-                    <StackPanel Orientation="Horizontal" Spacing="10">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/external-link.svg" Width="16" Height="16"/>
-                        <TextBlock Text="Externe Programme"/>
-                    </StackPanel>
-                </Button>
-                <Button Classes="ghost" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
-                        Padding="14,10"
                         Tag="RawSection"
                         Click="OnSectionNavClick">
                     <StackPanel Orientation="Horizontal" Spacing="10">
@@ -111,6 +102,15 @@
                     <StackPanel Orientation="Horizontal" Spacing="10">
                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/cloud.svg" Width="16" Height="16"/>
                         <TextBlock Text="Nextcloud"/>
+                    </StackPanel>
+                </Button>
+                <Button Classes="ghost" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
+                        Padding="14,10"
+                        Tag="ExternalProgramsSection"
+                        Click="OnSectionNavClick">
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/external-link.svg" Width="16" Height="16"/>
+                        <TextBlock Text="Externe Programme"/>
                     </StackPanel>
                 </Button>
                 <Button Classes="ghost" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
@@ -1511,75 +1511,6 @@
                     </StackPanel>
                 </Border>
 
-                <!-- Externe Programme. "Öffnen mit" gibt die Originaldatei an ein eingetragenes
-                     Programm, ohne Bearbeitungen und ohne Rückweg. G'MIC ist der eine Rundweg aus
-                     dem Editor; es wird nicht mitgeliefert, sondern hier gefunden oder eingetragen. -->
-                <Border x:Name="ExternalProgramsSection" Classes="section">
-                    <StackPanel Spacing="14">
-                        <StackPanel Spacing="2">
-                            <TextBlock Text="Externe Programme" FontSize="{DynamicResource FP.Font.Title}" FontWeight="SemiBold"/>
-                            <TextBlock Text="Programme, an die FerrumPix Bilder weitergeben kann." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
-                        </StackPanel>
-
-                        <StackPanel Spacing="8">
-                            <Grid ColumnDefinitions="*,Auto">
-                                <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
-                                    <TextBlock Text="Öffnen mit" FontSize="{DynamicResource FP.Font.Body}"/>
-                                    <TextBlock Text="Diese Programme stehen im Kontextmenü von Galerie und Betrachter unter Öffnen mit. Weitergegeben wird immer die Originaldatei, ohne Bearbeitungen. In den Parametern steht %f für den Dateipfad, ohne %f wird er angehängt." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
-                                </StackPanel>
-                                <Button Grid.Column="1" Classes="ghost" Padding="12,7"
-                                        VerticalAlignment="Center"
-                                        Command="{Binding AddOpenWithProgramCommand}">Programm hinzufügen</Button>
-                            </Grid>
-                            <ItemsControl ItemsSource="{Binding OpenWithRows}">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate>
-                                        <Grid ColumnDefinitions="170,*,Auto,190,Auto" ColumnSpacing="6" Margin="0,0,0,6"
-                                              AttachedToVisualTree="OnLocalizedItemAttachedToVisualTree">
-                                            <TextBox Grid.Column="0"
-                                                     Text="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
-                                                     PlaceholderText="Name"/>
-                                            <TextBox Grid.Column="1"
-                                                     Text="{Binding ProgramPath, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
-                                                     PlaceholderText="Programm"/>
-                                            <Button Grid.Column="2" Classes="ghost" Padding="10,6"
-                                                    Click="OnBrowseOpenWithProgramClick">Auswählen</Button>
-                                            <TextBox Grid.Column="3"
-                                                     Text="{Binding Arguments, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
-                                                     PlaceholderText="Parameter"/>
-                                            <Button Grid.Column="4" Classes="ghost"
-                                                    Width="30" Height="30" Padding="0"
-                                                    VerticalAlignment="Center"
-                                                    Command="{Binding RemoveCommand}"
-                                                    ToolTip.Tip="Entfernen">
-                                                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/trash.svg"
-                                                               Width="14" Height="14"
-                                                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                            </Button>
-                                        </Grid>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-                        </StackPanel>
-
-                        <StackPanel Spacing="8">
-                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660">
-                                <TextBlock Text="G'MIC" FontSize="{DynamicResource FP.Font.Body}"/>
-                                <TextBlock Text="Mit G'MIC lässt sich das Bild im Editor über das Menü der Fußzeile bearbeiten, das Ergebnis kommt als Ebene zurück. G'MIC wird nicht mitgeliefert. Bleibt das Feld leer, sucht FerrumPix gmic_qt selbst." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
-                            </StackPanel>
-                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6" MaxWidth="660" HorizontalAlignment="Left">
-                                <TextBox Text="{Binding GmicQtPath, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
-                                         PlaceholderText="Automatisch suchen"/>
-                                <Button Grid.Column="1" Classes="ghost" Padding="10,6"
-                                        Click="OnBrowseGmicClick">Auswählen</Button>
-                            </Grid>
-                            <TextBlock Classes="no-translate" Text="{Binding GmicStatusText}"
-                                       Foreground="{DynamicResource FP.Text.Secondary}"
-                                       FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
-                        </StackPanel>
-                    </StackPanel>
-                </Border>
-
                 <Border x:Name="RawSection" Classes="section">
                     <StackPanel Spacing="14">
                         <StackPanel Spacing="2">
@@ -1981,6 +1912,76 @@
                      KEINE ANZAHL im Text darunter. Hier stand "Vier Werkzeuge", und es waren
                      laengst sieben Gruppen - eine Zahl in einer Ueberschrift veraltet mit dem
                      naechsten Eintrag, ohne dass jemand sie ansieht. -->
+                <!-- Externe Programme. "Öffnen mit" gibt die Originaldatei an ein eingetragenes
+                     Programm, ohne Bearbeitungen und ohne Rückweg. G'MIC ist der eine Rundweg aus
+                     dem Editor; es wird nicht mitgeliefert, sondern hier gefunden oder eingetragen.
+                     Steht hinter Nextcloud: wie die Server ein Weg aus FerrumPix hinaus. -->
+                <Border x:Name="ExternalProgramsSection" Classes="section">
+                    <StackPanel Spacing="14">
+                        <StackPanel Spacing="2">
+                            <TextBlock Text="Externe Programme" FontSize="{DynamicResource FP.Font.Title}" FontWeight="SemiBold"/>
+                            <TextBlock Text="Programme, an die FerrumPix Bilder weitergeben kann." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                        </StackPanel>
+
+                        <StackPanel Spacing="8">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                    <TextBlock Text="Öffnen mit" FontSize="{DynamicResource FP.Font.Body}"/>
+                                    <TextBlock Text="Diese Programme stehen im Kontextmenü von Galerie und Betrachter unter Öffnen mit. Weitergegeben wird immer die Originaldatei, ohne Bearbeitungen. In den Parametern steht %f für den Dateipfad, ohne %f wird er angehängt." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                </StackPanel>
+                                <Button Grid.Column="1" Classes="ghost" Padding="12,7"
+                                        VerticalAlignment="Center"
+                                        Command="{Binding AddOpenWithProgramCommand}">Programm hinzufügen</Button>
+                            </Grid>
+                            <ItemsControl ItemsSource="{Binding OpenWithRows}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid ColumnDefinitions="170,*,Auto,190,Auto" ColumnSpacing="6" Margin="0,0,0,6"
+                                              AttachedToVisualTree="OnLocalizedItemAttachedToVisualTree">
+                                            <TextBox Grid.Column="0"
+                                                     Text="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
+                                                     PlaceholderText="Name"/>
+                                            <TextBox Grid.Column="1"
+                                                     Text="{Binding ProgramPath, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
+                                                     PlaceholderText="Programm"/>
+                                            <Button Grid.Column="2" Classes="ghost" Padding="10,6"
+                                                    Click="OnBrowseOpenWithProgramClick">Auswählen</Button>
+                                            <TextBox Grid.Column="3"
+                                                     Text="{Binding Arguments, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
+                                                     PlaceholderText="Parameter"/>
+                                            <Button Grid.Column="4" Classes="ghost"
+                                                    Width="30" Height="30" Padding="0"
+                                                    VerticalAlignment="Center"
+                                                    Command="{Binding RemoveCommand}"
+                                                    ToolTip.Tip="Entfernen">
+                                                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/trash.svg"
+                                                               Width="14" Height="14"
+                                                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                            </Button>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+
+                        <StackPanel Spacing="8">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660">
+                                <TextBlock Text="G'MIC" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Mit G'MIC lässt sich das Bild im Editor über das Menü der Fußzeile bearbeiten, das Ergebnis kommt als Ebene zurück. G'MIC wird nicht mitgeliefert. Bleibt das Feld leer, sucht FerrumPix gmic_qt selbst." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6" MaxWidth="660" HorizontalAlignment="Left">
+                                <TextBox Text="{Binding GmicQtPath, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
+                                         PlaceholderText="Automatisch suchen"/>
+                                <Button Grid.Column="1" Classes="ghost" Padding="10,6"
+                                        Click="OnBrowseGmicClick">Auswählen</Button>
+                            </Grid>
+                            <TextBlock Classes="no-translate" Text="{Binding GmicStatusText}"
+                                       Foreground="{DynamicResource FP.Text.Secondary}"
+                                       FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
                 <Border x:Name="ModelsSection" Classes="section" IsVisible="{Binding ModelRuntimeAvailable}">
                     <StackPanel Spacing="14">
                         <StackPanel Spacing="2">

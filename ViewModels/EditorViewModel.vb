@@ -651,9 +651,24 @@ Namespace ViewModels
             Get
                 Return _pendingWorkingCommits > 0 OrElse _depthRunning OrElse _subjectRunning OrElse
                        _creatingAdjustmentLayer OrElse
-                       _pendingLayerModelRuns > 0
+                       _pendingLayerModelRuns > 0 OrElse _saving
             End Get
         End Property
+
+        ''' <summary>Laeuft gerade ein Speichern: Rendern, Schreiben, Hochladen? Zaehlt in IsBusy.
+        ''' Waehrend die Datei entsteht, setzte jede Aenderung am Bild an einem Stand an, der gleich
+        ''' abgeloest wird - und ein grosses TIFF oder ein Upload sah ohne Anzeige aus wie ein
+        ''' Haenger (Nutzerwunsch: Balken beim Speichern unter, gleich welches Format). Das
+        ''' Neuladen der gespeicherten Datei danach zaehlt NICHT mehr hierher, dort zeigt der
+        ''' Ladezustand den Hinweis.</summary>
+        Private _saving As Boolean = False
+
+        Private Sub SetSavingBusy(value As Boolean)
+            If _saving = value Then Return
+            _saving = value
+            If value Then SetBusyReason(LocalizationService.T("Wird gespeichert…"))
+            RefreshBusyState()
+        End Sub
 
         ''' <summary>Der sichtbare Zustand - IstBeschaeftigt, aber erst nach der Verzoegerung.</summary>
         Public ReadOnly Property ShowsBusy As Boolean
@@ -15857,7 +15872,8 @@ Namespace ViewModels
         ''' <summary><paramref name="displayFileName"/>: der Name, unter dem der Nutzer dieses Bild
         ''' kennt. Nur noetig, wenn <paramref name="imagePath"/> bloss eine Arbeitskopie ist - bei
         ''' beiden Serverquellen also. Ohne ihn stuende der Name der Temp-Datei in der Fusszeile.</summary>
-        Public Async Function OpenImageAsync(imagePath As String, Optional allPaths As List(Of String) = Nothing, Optional cacheScopeId As String = Nothing, Optional cacheScopeName As String = Nothing, Optional forceSaveAsOnly As Boolean = False, Optional immichAlbumId As String = Nothing, Optional nextcloudSource As Models.NextcloudOrigin = Nothing, Optional deferFolderContext As Boolean = False, Optional displayFileName As String = Nothing) As Task(Of Boolean)
+        Public Async Function OpenImageAsync(imagePath As String, Optional allPaths As List(Of String) = Nothing, Optional cacheScopeId As String = Nothing, Optional cacheScopeName As String = Nothing, Optional forceSaveAsOnly As Boolean = False, Optional immichAlbumId As String = Nothing, Optional nextcloudSource As Models.NextcloudOrigin = Nothing, Optional deferFolderContext As Boolean = False, Optional displayFileName As String = Nothing,
+                                             Optional showLoadingState As Boolean = False) As Task(Of Boolean)
             If String.IsNullOrEmpty(imagePath) OrElse Not File.Exists(imagePath) Then Return False
             ' Dasselbe von aussen: waehrend der Editor noch aufbaut, wird kein zweites Dokument
             ' daruebergelegt - auch nicht aus der Galerie oder dem Betrachter.
@@ -15866,7 +15882,11 @@ Namespace ViewModels
                 If Not Await ConfirmSaveBeforeLeavingAsync("ein anderes Bild öffnest") Then Return False
             End If
 
-            Dim publishAtomically = FpxService.IsFpx(imagePath) OrElse RawSidecarService.IsSidecarFormat(imagePath)
+            ' showLoadingState: das Neuladen nach dem Speichern. Ohne den Ladezustand stand dort bei
+            ' JPEG, PNG und TIFF einen Moment "Kein Bild" auf der Buehne, bis die gespeicherte Datei
+            ' gelesen war - beim TIFF lange genug, um aufzufallen (Nutzerbefund).
+            Dim publishAtomically = FpxService.IsFpx(imagePath) OrElse RawSidecarService.IsSidecarFormat(imagePath) OrElse
+                                    showLoadingState
             If publishAtomically Then SetDocumentLoading(True)
             BeginDocumentLoad()
             Try
@@ -18474,6 +18494,8 @@ Namespace ViewModels
             Dim errorMessage As String = Nothing
             Try
                 StatusText = LocalizationService.T("Wird gespeichert…")
+                ' Erst hier, nach dem Dialog: waehrend der offen ist, rechnet nichts.
+                SetSavingBusy(True)
                 If _retouchStrokeActive Then CommitRetouchStroke()
                 DiagnosticLogService.LogAlways("Editor.Save", "stage=beforeSyncSelectedAnnotation")
                 If HasSelectedAnnotation Then SyncSelectedAnnotation()
@@ -18709,8 +18731,11 @@ Namespace ViewModels
                         ' GESPEICHERTEN Datei weiter (.fpx bzw. exportiertes Bild), nicht mehr auf dem
                         ' Ursprungsbild. _hasChanges ist False, der Wechsel fragt also nicht nach.
                         Dim statusAfterSave = StatusText
+                        ' Die Datei steht; ab hier zeigt der Ladezustand den Hinweis, nicht mehr die
+                        ' Beschaeftigt-Anzeige - beide zugleich waeren zwei Schleier uebereinander.
+                        SetSavingBusy(False)
                         If targetIsOtherFile Then
-                            Await OpenImageAsync(targetPath)
+                            Await OpenImageAsync(targetPath, showLoadingState:=True)
                         Else
                             ' Derselbe Pfad: die Filmstreifen-Liste muss erhalten bleiben. Ohne sie
                             ' faellt eine Such- oder Auswahlliste auf den blossen Ordnerinhalt zurueck,
@@ -18721,7 +18746,7 @@ Namespace ViewModels
                             ' Arbeitskopie muss deshalb mit - sonst hiesse das Bild nach einem
                             ' Speichern wieder nach seiner Temp-Datei.
                             Await OpenImageAsync(targetPath, filmstripPaths, _thumbCacheScopeId, _thumbCacheScopeName,
-                                                 displayFileName:=_sourceDisplayFileName)
+                                                 displayFileName:=_sourceDisplayFileName, showLoadingState:=True)
                         End If
                         StatusText = statusAfterSave
                     Else
@@ -18736,6 +18761,8 @@ Namespace ViewModels
                     ' zurückgeben. Eine Statuszeile geht beim anschließenden Schließen unter und
                     ' führte so zu einer nicht erklärten Endlosschleife aus Speichern-Frage und
                     ' Abbruch. Den Fehlzustand deshalb unmittelbar zeigen.
+                    ' Vorher die Beschaeftigt-Anzeige weg, sonst stuende sie hinter dem Dialog.
+                    SetSavingBusy(False)
                     Await _mainVm.ShowMessageAsync(LocalizationService.T("Speichern fehlgeschlagen"),
                                                    LocalizationService.T("Die Datei konnte nicht gespeichert werden. Details stehen in der Statuszeile bzw. im Diagnoseprotokoll."))
                     Return False
@@ -18746,6 +18773,10 @@ Namespace ViewModels
                 ' Speicherfehler landeten bisher NUR im Dialog - fürs Log-Debugging (z.B.
                 ' „Basisbild fehlt") braucht es den vollen Stacktrace in der Diagnose.
                 DiagnosticLogService.LogException("Editor.Save", ex)
+            Finally
+                ' Auf JEDEM Weg hinaus: Upload-Fehler, fruehes Return, Ausnahme. Eine stehen gebliebene
+                ' Beschaeftigt-Anzeige sperrte den Editor fuer immer.
+                SetSavingBusy(False)
             End Try
             If errorMessage IsNot Nothing Then Await _mainVm.ShowMessageAsync(LocalizationService.T("Speichern fehlgeschlagen"), errorMessage)
             Return False

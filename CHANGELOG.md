@@ -18,6 +18,9 @@
 
 ### Fixes
 
+- Saving in the editor shows a progress bar while the file is written, and the editor no longer
+  flashes "no image" while it opens the saved file. Both were most noticeable with TIFF.
+
 - A video from an Immich or Nextcloud server no longer takes the app down with it. The fix in 0.9.42
   did not hold: such a video is only a file once it has been downloaded, so the viewer runs through
   its picture path twice, and the second pass started it again while the first was still drawing.
