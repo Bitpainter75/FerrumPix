@@ -1198,8 +1198,6 @@ Namespace ViewModels
                 Return resolved
             End Get
         End Property
-        ' Deckel des Anzeigebilds im Bündel - EINE Quelle für Editor und Stapel-Export.
-        Private Const FpxCompositeMaxDimension As Integer = ImageProcessor.FpxCompositeMaxDimension
         Private Const PreviewDebounceMs As Double = 90.0
         ''' <summary>Die Kantenlaenge der Live-Quelle waehrend eines Reglerzugs.
         '''
@@ -18486,26 +18484,24 @@ Namespace ViewModels
                     Dim renderMs As Long = 0
                     Dim packageMs As Long = 0
                     Dim preparedComposite As IO.MemoryStream = Nothing
-                    ' Gebackener Inhalt (Striche/Retusche) erzwingt den Vorschau-Pfad: der
-                    ' Datei-Render (RenderPngStream vom Basisbild) kennt das Arbeitsbild nicht.
-                    If _workingImage.HasBakedContent Then
-                        Dim swPreview = Diagnostics.Stopwatch.StartNew()
-                        Await UpdatePreviewAsync()
-                        processMs = swPreview.ElapsedMilliseconds
-                        Dim swEncode = Diagnostics.Stopwatch.StartNew()
-                        preparedComposite = SaveCurrentPreviewImageToPngStream()
-                        encodeMs = swEncode.ElapsedMilliseconds
-                    End If
+                    ' composite.png ist die Anzeigequelle für Galerie und Viewer. Es muss daher
+                    ' DIESELBE Szene sein wie im Editor - insbesondere bei verzerrten Objekten,
+                    ' die der Editor über den Objekt-Cache zusammensetzt. Der Dateirenderer führt
+                    ' deren Drehung und OwnWarp in einer anderen Reihenfolge aus und erzeugte
+                    ' dadurch ein sichtbar anderes FPX-Komposit. Für gebackene Pixel war dieser
+                    ' Weg ohnehin nötig; er gilt nun bewusst für jedes FPX-Projekt.
+                    Dim swPreview = Diagnostics.Stopwatch.StartNew()
+                    Await UpdatePreviewAsync()
+                    processMs = swPreview.ElapsedMilliseconds
+                    Dim swEncode = Diagnostics.Stopwatch.StartNew()
+                    preparedComposite = SaveCurrentPreviewImageToPngStream()
+                    encodeMs = swEncode.ElapsedMilliseconds
                     Dim retouchStageIncluded As Boolean = False
                     ok = Await Task.Run(Function() As Boolean
                                             Dim sw = Diagnostics.Stopwatch.StartNew()
                                             Dim composite As IO.MemoryStream = Nothing
-                                            If preparedComposite IsNot Nothing Then
-                                                decodeMs = 0
-                                                composite = preparedComposite
-                                            Else
-                                                composite = ImageProcessor.RenderPngStream(sourcePath, adj, FpxCompositeMaxDimension, decodeMs, processMs, encodeMs)
-                                            End If
+                                            decodeMs = 0
+                                            composite = preparedComposite
                                             renderMs = sw.ElapsedMilliseconds
                                             If composite Is Nothing Then Return False
                                             ' retouch.png = das gebackene ARBEITSBILD in Vollauflösung; ohne

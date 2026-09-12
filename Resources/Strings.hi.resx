@@ -8383,4 +8383,7 @@
   <data name="Ausschnitt_verschieben_8ede81fd" xml:space="preserve">
     <value>दिखने वाला हिस्सा खिसकाएँ</value>
   </data>
+  <data name="G_MIC_wird_f_r_externe_Bildfilter_als_eigenes_Pr_cd7ac063" xml:space="preserve">
+    <value>G'MIC को बाहरी छवि फ़िल्टरों के लिए अलग प्रोग्राम के रूप में चलाया जाता है, यह एकीकृत नहीं है। यह किसी पैकेज में शामिल नहीं है और इसे अलग से स्थापित करना होगा; उपलब्ध न होने पर संपादक में G'MIC प्रविष्टि का कोई प्रभाव नहीं होगा, जबकि बाकी सब पहले की तरह काम करता रहेगा।</value>
+  </data>
 </root>

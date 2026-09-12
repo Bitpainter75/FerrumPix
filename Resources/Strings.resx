@@ -8340,4 +8340,7 @@
   <data name="Ausschnitt_verschieben_8ede81fd" xml:space="preserve">
     <value>Move the visible area</value>
   </data>
+  <data name="G_MIC_wird_f_r_externe_Bildfilter_als_eigenes_Pr_cd7ac063" xml:space="preserve">
+    <value>G'MIC is invoked as a separate program for external image filters, not integrated. It is not included with any package and must be installed separately; if it is unavailable, the G'MIC entry in the editor has no effect and everything else continues to work unchanged.</value>
+  </data>
 </root>

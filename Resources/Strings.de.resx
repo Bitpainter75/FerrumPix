@@ -8339,4 +8339,7 @@
   <data name="Ausschnitt_verschieben_8ede81fd" xml:space="preserve">
     <value>Ausschnitt verschieben</value>
   </data>
+  <data name="G_MIC_wird_f_r_externe_Bildfilter_als_eigenes_Pr_cd7ac063" xml:space="preserve">
+    <value>G'MIC wird für externe Bildfilter als eigenes Programm aufgerufen, nicht eingebunden. Es liegt keinem Paket bei und muss selbst installiert werden; fehlt es, bleibt der G'MIC-Eintrag im Editor ohne Wirkung, und alles andere arbeitet unverändert.</value>
+  </data>
 </root>

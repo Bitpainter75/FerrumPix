@@ -79,7 +79,7 @@ Namespace Services
                                 basisPng.CopyTo(fs)
                             End Using
                         End Using
-                        Using composite = ImageProcessor.EncodePngStream(surfaceBitmap, ImageProcessor.FpxCompositeMaxDimension)
+                        Using composite = ImageProcessor.EncodePngStream(surfaceBitmap)
                             If composite Is Nothing Then Return False
                             FpxService.Save(options.OutputPath, New ImageAdjustments(), tempBase, composite)
                         End Using

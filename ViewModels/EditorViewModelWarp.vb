@@ -1435,9 +1435,11 @@ Namespace ViewModels
         ''' Die 2401 Knoten sind gegenüber dem Bildrender weiterhin klein.</summary>
         Private Const EnvelopeSteps As Integer = 48
 
-        ''' <summary>Wie viele Hilfslinien das Overlay im Inneren zeigt. Nur zum Hinsehen - sie
-        ''' sagen, wohin sich die Flaeche zwischen den Raendern legt.</summary>
-        Private Const EnvelopeMeshSteps As Integer = 4
+        ''' <summary>Das Overlay bekommt die gleiche Mesh-Feinheit wie der Renderer. Seine
+        ''' Begrenzung kann damit nicht eine ideale Bézier-Kurve zeigen, waehrend das Objekt nach
+        ''' dem Loslassen aus anderen, geraden Mesh-Segmenten entsteht. Das Steuerelement zeichnet
+        ''' davon weiterhin nur wenige innere Hilfslinien (siehe EnvelopeWarpOverlayControl).</summary>
+        Private Const EnvelopeMeshSteps As Integer = EnvelopeSteps
 
         Private _envelope As Double() = Nothing
         Private _envelopeDragIndex As Integer = -1

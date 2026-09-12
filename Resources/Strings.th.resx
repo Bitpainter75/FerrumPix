@@ -8383,4 +8383,7 @@
   <data name="Ausschnitt_verschieben_8ede81fd" xml:space="preserve">
     <value>เลื่อนพื้นที่ที่มองเห็น</value>
   </data>
+  <data name="G_MIC_wird_f_r_externe_Bildfilter_als_eigenes_Pr_cd7ac063" xml:space="preserve">
+    <value>G'MIC ถูกเรียกใช้เป็นโปรแกรมแยกต่างหากสำหรับฟิลเตอร์ภาพภายนอก และไม่ได้รวมอยู่ในโปรแกรม ไม่มีในแพ็กเกจใด ๆ และต้องติดตั้งเอง หากไม่มี รายการ G'MIC ในตัวแก้ไขจะไม่มีผล แต่ทุกอย่างอื่นยังทำงานได้ตามเดิม</value>
+  </data>
 </root>

@@ -8379,4 +8379,7 @@
   <data name="Ausschnitt_verschieben_8ede81fd" xml:space="preserve">
     <value>Siirrä näkyvää aluetta</value>
   </data>
+  <data name="G_MIC_wird_f_r_externe_Bildfilter_als_eigenes_Pr_cd7ac063" xml:space="preserve">
+    <value>G'MIC käynnistetään erillisenä ohjelmana ulkoisia kuvansuodattimia varten, eikä sitä ole integroitu. Se ei sisälly mihinkään pakettiin ja se on asennettava erikseen; jos se puuttuu, editorin G'MIC-kohta ei vaikuta mihinkään ja kaikki muu toimii ennallaan.</value>
+  </data>
 </root>

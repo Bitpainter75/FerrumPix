@@ -8379,4 +8379,7 @@
   <data name="Ausschnitt_verschieben_8ede81fd" xml:space="preserve">
     <value>Сдвинуть видимую область</value>
   </data>
+  <data name="G_MIC_wird_f_r_externe_Bildfilter_als_eigenes_Pr_cd7ac063" xml:space="preserve">
+    <value>G'MIC запускается как отдельная программа для внешних фильтров изображений и не встраивается. Он не входит ни в один пакет и должен быть установлен отдельно; если его нет, пункт G'MIC в редакторе не действует, а всё остальное продолжает работать без изменений.</value>
+  </data>
 </root>

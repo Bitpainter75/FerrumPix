@@ -8338,4 +8338,7 @@
   <data name="Ausschnitt_verschieben_8ede81fd" xml:space="preserve">
     <value>Mover a área visível</value>
   </data>
+  <data name="G_MIC_wird_f_r_externe_Bildfilter_als_eigenes_Pr_cd7ac063" xml:space="preserve">
+    <value>O G'MIC é chamado como um programa separado para filtros de imagem externos e não é integrado. Não é incluído em nenhum pacote e deve ser instalado separadamente; se estiver ausente, a entrada G'MIC no editor não terá efeito e tudo o resto continuará a funcionar sem alterações.</value>
+  </data>
 </root>

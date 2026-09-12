@@ -8337,4 +8337,7 @@
   <data name="Ausschnitt_verschieben_8ede81fd" xml:space="preserve">
     <value>移动可见区域</value>
   </data>
+  <data name="G_MIC_wird_f_r_externe_Bildfilter_als_eigenes_Pr_cd7ac063" xml:space="preserve">
+    <value>G'MIC 作为独立程序用于外部图像滤镜，并未集成到程序中。它不随任何软件包提供，必须自行安装；如果缺失，编辑器中的 G'MIC 项目不会生效，其他所有功能仍可正常使用。</value>
+  </data>
 </root>

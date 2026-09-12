@@ -8379,4 +8379,7 @@
   <data name="Ausschnitt_verschieben_8ede81fd" xml:space="preserve">
     <value>表示範囲を移動</value>
   </data>
+  <data name="G_MIC_wird_f_r_externe_Bildfilter_als_eigenes_Pr_cd7ac063" xml:space="preserve">
+    <value>G'MIC は外部画像フィルター用の別プログラムとして呼び出され、統合されていません。どのパッケージにも含まれていないため、別途インストールが必要です。利用できない場合、エディターの G'MIC 項目は機能しませんが、その他の機能はこれまでどおり使用できます。</value>
+  </data>
 </root>

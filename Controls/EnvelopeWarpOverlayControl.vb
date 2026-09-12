@@ -92,20 +92,64 @@ Namespace Controls
 
             ' Zwei Stifte uebereinander, wie bei den uebrigen Overlays: ein dunkler breiter
             ' darunter, damit der Rand auch auf hellem Bild sichtbar bleibt.
-            ' Jede Kante ist eine eigene Figur: fehlt einer ihrer vier Punkte, entfaellt genau sie.
+            '
+            ' Der gespeicherte Warp wird als regelmaessiges Mesh gerendert. Der Rahmen muss
+            ' deshalb dieselben Randsegmente zeigen: eine ideale CubicBezier sah beim Ziehen etwas
+            ' anders aus als die nach dem Loslassen sichtbare Mesh-Kante, besonders bei stark
+            ' gebogenen Rändern. Die zwölf Punkte bleiben nur die Bediengriffe; die Mesh-Ränder
+            ' sind die verbindliche Vorschau des Ergebnisses.
             Dim shadow = New Pen(New SolidColorBrush(Color.FromArgb(120, 0, 0, 0)), 3.0)
             Dim line = New Pen(StrokeBrush, 1.4)
             Dim outline = New StreamGeometry()
             Dim hasOutline = False
             Using sink = outline.Open()
-                For edge = 0 To 3
-                    Dim b = (edge + 1) Mod 4
-                    If Not (valid(edge) AndAlso valid(b) AndAlso valid(4 + edge * 2) AndAlso valid(5 + edge * 2)) Then Continue For
-                    sink.BeginFigure(p(edge), False)
-                    sink.CubicBezierTo(p(4 + edge * 2), p(5 + edge * 2), p(b))
-                    sink.EndFigure(False)
-                    hasOutline = True
-                Next
+                Dim mesh = MeshValues
+                Dim meshColumns = If(mesh IsNot Nothing AndAlso mesh.Length >= 2, CInt(mesh(0)), 0)
+                Dim meshRows = If(mesh IsNot Nothing AndAlso mesh.Length >= 2, CInt(mesh(1)), 0)
+                Dim meshComplete = meshColumns > 0 AndAlso meshRows > 0 AndAlso
+                                   mesh.Length >= 2 + (meshColumns + 1) * (meshRows + 1) * 2
+                Dim meshPoint = Function(colIdx As Integer, rowIdx As Integer) As Point
+                                    Dim i = 2 + (rowIdx * (meshColumns + 1) + colIdx) * 2
+                                    Return New Point(mesh(i), mesh(i + 1))
+                                End Function
+                Dim finite = Function(point As Point) Not (Double.IsNaN(point.X) OrElse Double.IsNaN(point.Y) OrElse
+                                                            Double.IsInfinity(point.X) OrElse Double.IsInfinity(point.Y))
+
+                If meshComplete Then
+                    Dim edges = New (StartCol As Integer, StartRow As Integer, DeltaCol As Integer, DeltaRow As Integer, Count As Integer)() {
+                        (0, 0, 1, 0, meshColumns),
+                        (meshColumns, 0, 0, 1, meshRows),
+                        (meshColumns, meshRows, -1, 0, meshColumns),
+                        (0, meshRows, 0, -1, meshRows)}
+                    For Each edge In edges
+                        Dim first = meshPoint(edge.StartCol, edge.StartRow)
+                        If Not finite(first) Then Continue For
+                        sink.BeginFigure(first, False)
+                        Dim complete = True
+                        For stepIndex = 1 To edge.Count
+                            Dim point = meshPoint(edge.StartCol + edge.DeltaCol * stepIndex,
+                                                  edge.StartRow + edge.DeltaRow * stepIndex)
+                            If Not finite(point) Then
+                                complete = False
+                                Exit For
+                            End If
+                            sink.LineTo(point)
+                        Next
+                        sink.EndFigure(False)
+                        hasOutline = hasOutline OrElse complete
+                    Next
+                Else
+                    ' Rueckfall fuer alte/teilweise initialisierte Overlays: die Bediengriffe
+                    ' bleiben auch ohne Mesh sichtbar und greifbar.
+                    For edge = 0 To 3
+                        Dim b = (edge + 1) Mod 4
+                        If Not (valid(edge) AndAlso valid(b) AndAlso valid(4 + edge * 2) AndAlso valid(5 + edge * 2)) Then Continue For
+                        sink.BeginFigure(p(edge), False)
+                        sink.CubicBezierTo(p(4 + edge * 2), p(5 + edge * 2), p(b))
+                        sink.EndFigure(False)
+                        hasOutline = True
+                    Next
+                End If
             End Using
             If hasOutline Then
                 For Each pen In New Pen() {shadow, line}
@@ -152,13 +196,18 @@ Namespace Controls
                        End Function
 
             Dim hilfe = New Pen(New SolidColorBrush(Color.FromArgb(90, 255, 255, 255)), 1.0)
-            For rowIdx = 1 To rows - 1
+            ' Das Ergebnisraster kann 48x48 fein sein. Alle Linien zu zeichnen verdeckte dann
+            ' das Bild; vier Zwischenlinien genügen als Orientierung. Die Randsegmente zeichnet
+            ' Render dagegen oben exakt, damit sie mit dem gespeicherten Warp übereinstimmen.
+            Dim rowStride = Math.Max(1, CInt(Math.Ceiling(rows / 4.0)))
+            Dim columnStride = Math.Max(1, CInt(Math.Ceiling(columns / 4.0)))
+            For rowIdx = rowStride To rows - 1 Step rowStride
                 For colIdx = 0 To columns - 1
                     Dim a = pt(colIdx, rowIdx), b = pt(colIdx + 1, rowIdx)
                     If gilt(a) AndAlso gilt(b) Then context.DrawLine(hilfe, a, b)
                 Next
             Next
-            For colIdx = 1 To columns - 1
+            For colIdx = columnStride To columns - 1 Step columnStride
                 For rowIdx = 0 To rows - 1
                     Dim a = pt(colIdx, rowIdx), b = pt(colIdx, rowIdx + 1)
                     If gilt(a) AndAlso gilt(b) Then context.DrawLine(hilfe, a, b)

@@ -8379,4 +8379,7 @@
   <data name="Ausschnitt_verschieben_8ede81fd" xml:space="preserve">
     <value>Flytt utsnittet</value>
   </data>
+  <data name="G_MIC_wird_f_r_externe_Bildfilter_als_eigenes_Pr_cd7ac063" xml:space="preserve">
+    <value>G'MIC kjøres som et eget program for eksterne bildefiltre og er ikke integrert. Det følger ikke med noen pakke og må installeres separat; hvis det mangler, har G'MIC-valget i redigeringsprogrammet ingen virkning, mens alt annet fortsetter å fungere uendret.</value>
+  </data>
 </root>
