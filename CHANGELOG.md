@@ -1,3 +1,34 @@
+## Unreleased
+
+### What's new
+
+- A new application icon, used everywhere the program shows up: window and task bar, the
+  start menu, the dock and the installers.
+
+- FerrumPix is in the Microsoft Store. Windows installs it and keeps it up to date for you.
+
+- Picking a layer no longer changes your tool. Retouching, drawing, selecting, masking and the
+  sliders all stay where they are, and the layer you clicked simply becomes the new target. Only
+  inserted objects still bring up their own settings, because that is where you edit them.
+
+- Pictures are inserted at their original size. They get smaller or larger when you say so, over
+  the handles or the size fields, and not before.
+
+- Hold CTRL while dragging an object to move it freely, without the guides pulling it into place.
+  ALT does the same as before.
+
+### Fixes
+
+- People found on pictures from an Immich server now show their faces. The tiles in the people view
+  stayed empty, and a person you had named yourself turned up none of their other pictures.
+
+- While you bend an object, its frame now shows the shape the object really takes. It used to draw
+  a smoother curve than what appeared after letting go.
+
+- Smaller things: projects saved as a project file keep a slightly larger preview, so the gallery
+  and the viewer stay sharper when you zoom in, and the settings now name G'MIC among the separate
+  programs FerrumPix can use.
+
 ## FerrumPix 0.9.43
 
 ### What's new

@@ -677,6 +677,18 @@ Namespace Services
             End Using
         End Function
 
+        ''' <summary>Obergrenze für das Anzeigebild (composite.png) in einem .fpx-Bündel. Es ist nur
+        ''' die schnelle Vorschau für Galerie und Betrachter; die volle Auflösung entsteht beim
+        ''' Öffnen wieder aus Basisbild und Rezept. Ohne Deckel wäre jedes Bündel doppelt so groß
+        ''' wie nötig.
+        '''
+        ''' DIESELBE Zahl für JEDEN Schreibweg: Editor, Stapel-Speichern und Collage. Der Editor
+        ''' legt seine fertige Vorschau ab, und deren Kantenlänge hängt am Bildschirm (siehe
+        ''' PreviewMaxDimension im EditorViewModel). Ohne gemeinsamen Deckel trüge dasselbe Projekt
+        ''' an einem 4K-Schirm ein anderes Anzeigebild als an einem kleineren, und der Stapelweg
+        ''' wieder ein drittes in voller Auflösung.</summary>
+        Public Const FpxCompositeMaxDimension As Integer = 3072
+
         ''' <summary>Kodiert ein Bitmap als PNG in einen Speicherstrom, bei Bedarf auf
         ''' <paramref name="maxDimension"/> verkleinert. Der Aufrufer übernimmt den Strom.</summary>
         Friend Shared Function EncodePngStream(bitmap As SKBitmap, Optional maxDimension As Integer = 0) As MemoryStream

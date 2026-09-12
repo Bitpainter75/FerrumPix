@@ -1198,6 +1198,8 @@ Namespace ViewModels
                 Return resolved
             End Get
         End Property
+        ' Deckel des Anzeigebilds im Bündel - EINE Quelle für Editor und Stapel-Export.
+        Private Const FpxCompositeMaxDimension As Integer = ImageProcessor.FpxCompositeMaxDimension
         Private Const PreviewDebounceMs As Double = 90.0
         ''' <summary>Die Kantenlaenge der Live-Quelle waehrend eines Reglerzugs.
         '''
@@ -17779,9 +17781,27 @@ Namespace ViewModels
             End If
         End Sub
 
-        Private Function SaveCurrentPreviewImageToPngStream() As IO.MemoryStream
+        ''' <summary>Die aktuelle Vorschau als PNG-Strom, auf Wunsch gedeckelt.
+        '''
+        ''' Die Vorschau selbst ist so groß wie der Bildschirm es verlangt (PreviewMaxDimension).
+        ''' Wandert sie als Anzeigebild in ein Bündel, gilt für sie dieselbe Kantenlänge wie auf
+        ''' jedem anderen Schreibweg (ImageProcessor.FpxCompositeMaxDimension) - sonst hinge der
+        ''' Inhalt der Datei am Monitor dessen, der sie gespeichert hat.</summary>
+        Private Function SaveCurrentPreviewImageToPngStream(Optional maxDimension As Integer = 0) As IO.MemoryStream
             Dim preview = PreviewImage
             If preview Is Nothing Then Return Nothing
+            Dim longest = Math.Max(preview.PixelSize.Width, preview.PixelSize.Height)
+            If maxDimension > 0 AndAlso longest > maxDimension Then
+                Dim ratio = maxDimension / CDbl(longest)
+                Dim target = New PixelSize(Math.Max(1, CInt(Math.Round(preview.PixelSize.Width * ratio))),
+                                           Math.Max(1, CInt(Math.Round(preview.PixelSize.Height * ratio))))
+                Using scaled = preview.CreateScaledBitmap(target, BitmapInterpolationMode.HighQuality)
+                    Dim reduced As New IO.MemoryStream()
+                    scaled.Save(reduced, PngBitmapEncoderOptions.Default)
+                    reduced.Position = 0
+                    Return reduced
+                End Using
+            End If
             Dim ms As New IO.MemoryStream()
             preview.Save(ms, PngBitmapEncoderOptions.Default)
             ms.Position = 0
@@ -18494,14 +18514,31 @@ Namespace ViewModels
                     Await UpdatePreviewAsync()
                     processMs = swPreview.ElapsedMilliseconds
                     Dim swEncode = Diagnostics.Stopwatch.StartNew()
-                    preparedComposite = SaveCurrentPreviewImageToPngStream()
+                    preparedComposite = SaveCurrentPreviewImageToPngStream(FpxCompositeMaxDimension)
                     encodeMs = swEncode.ElapsedMilliseconds
                     Dim retouchStageIncluded As Boolean = False
                     ok = Await Task.Run(Function() As Boolean
                                             Dim sw = Diagnostics.Stopwatch.StartNew()
                                             Dim composite As IO.MemoryStream = Nothing
-                                            decodeMs = 0
-                                            composite = preparedComposite
+                                            If preparedComposite IsNot Nothing Then
+                                                decodeMs = 0
+                                                composite = preparedComposite
+                                            Else
+                                                ' KEINE VORSCHAU DA, TROTZDEM EINE DATEI. Die
+                                                ' Vorschau kann ausbleiben: kein Bild geladen, ein
+                                                ' fehlgeschlagener Decode, oder ein neuerer Lauf hat
+                                                ' den gerade laufenden abgeloest. Ohne diesen
+                                                ' Rueckfall gaebe das Speichern still False zurueck,
+                                                ' obwohl das Basisbild samt Rezept vorliegt. Objekte
+                                                ' zeichnet dieser Weg mit; abweichen kann er in zwei
+                                                ' Punkten - der Reihenfolge bei gedreht UND
+                                                ' verzerrten Objekten, und gebackenen Strichen, die
+                                                ' im Arbeitsbild stecken statt im Basisbild. Beides
+                                                ' ist einer Datei ohne Anzeigebild vorzuziehen, und
+                                                ' retouch.png liegt fuer das erneute Oeffnen bei.
+                                                composite = ImageProcessor.RenderPngStream(sourcePath, adj, FpxCompositeMaxDimension,
+                                                                                           decodeMs, processMs, encodeMs)
+                                            End If
                                             renderMs = sw.ElapsedMilliseconds
                                             If composite Is Nothing Then Return False
                                             ' retouch.png = das gebackene ARBEITSBILD in Vollauflösung; ohne

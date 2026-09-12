@@ -512,9 +512,10 @@ Namespace Services
                         ' doch noch eine Datei - und die saehe aus wie das Ergebnis.
                         If cancel.IsCancellationRequested Then Return False
                         If isFpxTarget Then
-                            ' Das FPX-Komposit bleibt ungekürzt: Galerie und Betrachter sollen beim
-                            ' Hineinzoomen nicht auf eine künstlich verkleinerte Vorschau fallen.
-                            Using composite = EncodePngStream(processed)
+                            ' composite.png ist nur das Anzeigebild des Bündels und auf dieselbe
+                            ' Kantenlänge gedeckelt wie auf jedem anderen Schreibweg - die volle
+                            ' Auflösung entsteht beim Öffnen wieder aus Basisbild und Rezept.
+                            Using composite = EncodePngStream(processed, FpxCompositeMaxDimension)
                                 If composite Is Nothing Then Return False
                                 FpxService.Save(targetPath, adj, sourcePath, composite)
                             End Using
