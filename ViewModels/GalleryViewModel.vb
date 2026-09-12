@@ -6166,10 +6166,20 @@ Namespace ViewModels
             Return Await EvaluateConditionsAsync(meta, node.Conditions, node.ConditionCombinator)
         End Function
 
-        ''' <summary>Die Asset-IDs der Immich-Personen, die fuer einen gespeicherten
-        ''' Personenfilter gemeinsam gelten. Die Assetliste im lokalen Index traegt bewusst keine
-        ''' Gesichter; erst der gezielte Serverabruf pro ausgewaehlter Person liefert diese
-        ''' Zuordnung. Ohne Personenfilter gibt Nothing zurueck, damit der normale Suchlauf keine
+        ''' <summary>Die Asset-IDs, die fuer einen Personenfilter gelten - aus BEIDEN Quellen.
+        '''
+        ''' Der Server kennt seine eigenen Gesichter, der eigene Katalog seine. Beide zaehlen: der
+        ''' Gesichtslauf durchsucht Immich-Elemente ueber die Server-Vorschau, und eine hier von Hand
+        ''' benannte Gruppe kennt der Server nicht. Frueher entschied allein der Server, und eine
+        ''' solche Auswahl blieb ohne einen einzigen Treffer, obwohl die Gesichter laengst zugeordnet
+        ''' waren.
+        '''
+        ''' VEREINIGT, nicht geschnitten: eine Zuordnung genuegt, gleich von welcher Seite. Bei
+        ''' mehreren Personen ist jede Menge fuer sich bereits verundet ("gemeinsam auf einem Bild").
+        ''' Eine Auswahl, bei der die eine Person nur der Server und die andere nur der Katalog
+        ''' kennt, faellt damit durch - dafuer braeuchte es eine Zuordnung je Person statt je Menge.
+        '''
+        ''' Ohne Personenfilter kommt Nothing zurueck, damit der normale Suchlauf keine
         ''' Netzverbindung benoetigt.</summary>
         Private Async Function ResolveImmichPersonAssetIdsAsync(personNames As IList(Of String),
                                                                  token As CancellationToken) As Task(Of HashSet(Of String))
@@ -6178,6 +6188,35 @@ Namespace ViewModels
                 Select(Function(n) n.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).ToList()
             If wanted.Count = 0 Then Return Nothing
 
+            Dim result = Await ResolveImmichPersonAssetIdsFromServerAsync(wanted, token)
+            result.UnionWith(LocalImmichAssetIdsForPersonNames(wanted))
+            Return result
+        End Function
+
+        ''' <summary>Die Asset-IDs, die der eigene Katalog einem Personenfilter zuordnet. Die
+        ''' Gesichter eines Immich-Elements stehen dort unter seinem Pseudo-Pfad; verundet sind die
+        ''' Pfade bereits (<see cref="LibraryService.GetPathsForPersonNames"/>).</summary>
+        Private Shared Function LocalImmichAssetIdsForPersonNames(names As List(Of String)) As HashSet(Of String)
+            Dim result As New HashSet(Of String)(StringComparer.Ordinal)
+            Try
+                For Each path In LibraryService.Instance.GetPathsForPersonNames(names)
+                    Dim assetId As String = Nothing, fileName As String = Nothing
+                    If ImmichService.TryParsePseudoPath(path, assetId, fileName) AndAlso
+                       Not String.IsNullOrWhiteSpace(assetId) Then
+                        result.Add(assetId)
+                    End If
+                Next
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Gallery.LocalImmichPersonAssets", ex)
+            End Try
+            Return result
+        End Function
+
+        ''' <summary>Die Asset-IDs der Immich-Personen, die fuer einen Personenfilter gemeinsam
+        ''' gelten. Die Assetliste im lokalen Index traegt bewusst keine Gesichter; erst der gezielte
+        ''' Serverabruf pro ausgewaehlter Person liefert diese Zuordnung.</summary>
+        Private Async Function ResolveImmichPersonAssetIdsFromServerAsync(wanted As List(Of String),
+                                                                          token As CancellationToken) As Task(Of HashSet(Of String))
             Dim people = _immichPeople.Where(Function(p) p IsNot Nothing AndAlso
                                                            Not String.IsNullOrWhiteSpace(p.Id) AndAlso
                                                            Not String.IsNullOrWhiteSpace(p.Name)).ToList()

@@ -2560,71 +2560,17 @@ Namespace ViewModels
                     ' Im Drehen-Werkzeug wird KEIN Platzierungstyp scharfgestellt: dort will man ein Objekt
                     ' drehen, nicht ein weiteres anlegen - der nächste Klick auf freie Fläche würde sonst
                     ' eines setzen.
-                    PendingInsertKind = If(IsObjectScopeTool(_currentTool), "", PlacementKindForAnnotation(_annotations(clamped)))
-                    Dim targetTool = AnnotationKindToTool(_annotations(clamped).Kind)
-                    ' Im Drehen-Werkzeug NICHT ins Werkzeug des Objekts springen: dort markiert man ein Objekt,
-                    ' um es zu drehen oder zu spiegeln. Ein Sprung nach „Text"/„Einfügen" würde einen Klick auf
-                    ' das Objekt aussehen lassen, als hätte er gar nicht selektiert.
-                    If IsObjectScopeTool(_currentTool) Then targetTool = _currentTool
-                    ' EIN PFAD ZIEHT AUS DEN REGLER-WERKZEUGEN TROTZDEM WEITER. Anpassen, Farbe,
-                    ' Details, Effekte und Filter arbeiten auf Bildpunkten, und die hat er nicht -
-                    ' dort waere seine Zeile markiert, ohne dass irgendetwas davon zu bedienen
-                    ' waere. Beim Drehen, Verschieben und Transformieren bleibt es dagegen beim
-                    ' Werkzeug: dort ist der Pfad als Objekt gemeint (Nutzerbefund).
-                    If IsObjectAdjustTool(_currentTool) AndAlso
-                       String.Equals(NormalizeAnnotationKind(_annotations(clamped).Kind), "Path", StringComparison.Ordinal) Then
-                        targetTool = EditorTool.Path
-                    End If
-                    ' Und im MASKEN-Werkzeug ebenso, sobald das Objekt eine Ebenenmaske traegt: dort
-                    ' markiert man es, um an seine Maske heranzukommen. Der Sprung ins Werkzeug des
-                    ' Objekts nahm einem genau die Bedienung weg, die man gerade brauchte - samt
-                    ' rotem Overlay. Sonst SPRINGT der Editor aus der Maske heraus bewusst in das
-                    ' Werkzeug der Ebene: wer eine Ebene anklickt, will an sie heran
-                    ' (bewusst so, siehe MASKEN_EBENEN_AUSWAHL.md).
-                    If _currentTool = EditorTool.Mask AndAlso
-                       Not String.IsNullOrEmpty(_annotations(clamped).MaskId) Then targetTool = _currentTool
-                    ' Im AUSWAHL-Werkzeug bleibt der Editor IMMER stehen. Dort markiert man eine
-                    ' Ebene, um auf ihr eine Pixelauswahl aufzuziehen - Zauberstab, Rechteck, Lasso;
-                    ' ein Sprung ins Werkzeug der Ebene nahm einem genau diese Werkzeuge weg
-                    ' (Nutzerbefund). Verloren geht dabei nichts: der Platzierungstyp
-                    ' akzentuiert weiterhin das Werkzeugsymbol der Ebene, und ihre Eigenschaften
-                    ' stehen unter den Auswahleinstellungen - ShowAnnotationProperties haengt am
-                    ' markierten Objekt, nicht am Werkzeug.
-                    ' EIN PFAD IST DAVON AUSGENOMMEN. Auf ihm gibt es nichts auszuwaehlen - er hat
-                    ' keine Pixel -, und im Auswahl-Werkzeug kommt man an seine Stuetzpunkte nicht
-                    ' heran. Wer seine Zeile anklickt, sah deshalb einen Auswahlrahmen und sonst
-                    ' nichts (Nutzerbefund). Ein TEXT auf freiem Pfad bleibt ein
-                    ' Textobjekt und faellt nicht darunter.
-                    If _currentTool = EditorTool.Selection AndAlso
-                       Not String.Equals(NormalizeAnnotationKind(_annotations(clamped).Kind), "Path", StringComparison.Ordinal) Then
-                        targetTool = _currentTool
-                    End If
-                    ' Und im ZEICHNEN-Werkzeug ebenso, sobald die Ebene ein Bild traegt: dort
-                    ' markiert man sie, um auf ihr zu malen (siehe AddBrushStroke). Ein Sprung ins
-                    ' Einfuegen-Werkzeug nahm einem den Pinsel genau in dem Moment weg, in dem man
-                    ' das Ziel dafuer bestimmt hat.
-                    If _currentTool = EditorTool.Draw AndAlso
-                       IsPaintableImageAnnotation(_annotations(clamped)) Then targetTool = _currentTool
-                    ' Im RETUSCHE-Werkzeug aus demselben Grund: dort markiert man eine Bild-Ebene,
-                    ' um auf ihr zu stempeln, zu verwischen oder zu reparieren (siehe
-                    ' EditorViewModelObjectRetouch.vb).
-                    If _currentTool = EditorTool.Retouch AndAlso
-                       IsPaintableImageAnnotation(_annotations(clamped)) Then targetTool = _currentTool
-                    ' Eine MALEBENE führt immer ins Zeichnen-Werkzeug, aus welchem man auch kommt: sie
-                    ' ist zum Bemalen da, und ins Verschieben zu springen (die Art ist technisch eine
-                    ' Auswahl-Kopie) nähme einem genau das weg. Verschieben geht danach über die
-                    ' Werkzeugleiste - der Wechsel dorthin behält die markierte Ebene.
-                    If _annotations(clamped).IsPaintLayer AndAlso Not IsObjectScopeTool(_currentTool) AndAlso
-                       _currentTool <> EditorTool.Retouch AndAlso _currentTool <> EditorTool.Selection AndAlso
-                       _currentTool <> EditorTool.Mask Then targetTool = EditorTool.Draw
-                    ' Der Rahmen ist nur ausserhalb eines Objekt-Werkzeugs die Ausnahme: seine Regler
-                    ' stehen unter Effekte. In Transformieren und Verzerren ist er dagegen genau wie
-                    ' jedes andere Objekt das Ziel; der nachtraegliche Sprung nach Effekte hebelte
-                    ' dort die Schutzregel von IsObjectScopeTool wieder aus.
-                    If Not IsObjectScopeTool(_currentTool) AndAlso
-                       String.Equals(_annotations(clamped).Kind, "Frame", StringComparison.OrdinalIgnoreCase) Then
-                        targetTool = EditorTool.Effects
-                    End If
+                    ' Das Werkzeug beschreibt die AKTION, die Ebenenzeile nur ihr ZIEL. Wer im
+                    ' Retuschieren, Zeichnen, Auswählen, Maskieren oder einem Anpassungswerkzeug eine
+                    ' andere Ebene wählt, will genau dort weiterarbeiten und darf deshalb nicht in das
+                    ' Werkzeug der angeklickten Ebene springen. Nur Overlay-Werkzeuge sind eine
+                    ' Ausnahme: dort bedeutet ein Ebenenklick „dieses Overlay bearbeiten“, also wird
+                    ' der passende Overlay-Kontext (Text/Bild/QR, Form oder Symbol) gezeigt.
+                    Dim overlaysBearbeiten = IsOverlayEditingTool(_currentTool)
+                    PendingInsertKind = If(overlaysBearbeiten, PlacementKindForAnnotation(_annotations(clamped)), "")
+                    Dim targetTool = If(overlaysBearbeiten,
+                                        AnnotationKindToTool(_annotations(clamped).Kind),
+                                        _currentTool)
                     If targetTool <> _currentTool Then
                         _overlayNotifySuppressDepth += 1
                         Try
@@ -23372,6 +23318,14 @@ Namespace ViewModels
             Return tool = EditorTool.Text OrElse tool = EditorTool.Draw OrElse tool = EditorTool.Geometry OrElse
                    tool = EditorTool.Insert OrElse tool = EditorTool.Move OrElse
                    IsObjectScopeTool(tool)
+        End Function
+
+        ''' <summary>Werkzeuge zum Bearbeiten eingefügter Overlays. Nur aus diesen Werkzeugen heraus
+        ''' darf ein Ebenenklick den Werkzeugkontext nach der Art des gewählten Overlays wechseln.
+        ''' Alle Arbeitswerkzeuge (Anpassen, Auswahl, Maske, Zeichnen, Retusche, Verschieben usw.)
+        ''' bleiben beim Zielwechsel unverändert.</summary>
+        Private Shared Function IsOverlayEditingTool(tool As EditorTool) As Boolean
+            Return tool = EditorTool.Text OrElse tool = EditorTool.Geometry OrElse tool = EditorTool.Insert
         End Function
 
         ''' <summary>Die AUSNAHMEN zum Abwählen beim Werkzeugwechsel: Werkzeuge, die kein

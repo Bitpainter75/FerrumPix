@@ -3234,15 +3234,13 @@ Namespace ViewModels
             End Set
         End Property
 
-        ''' <summary>Der Anzeigezustand EINER Korrekturebene: ihre Maske in die Auswahl laden, das
-        ''' zustaendige Werkzeug samt Maskenmodus setzen und rotes Overlay bzw. Laufameisen zeigen.
+        ''' <summary>Der Anzeigezustand EINER Korrekturebene: ihre Maske in die Auswahl laden, den
+        ''' Maskenmodus setzen und rotes Overlay bzw. Laufameisen zeigen.
         '''
-        ''' Eine Korrektur lebt von ihrer Maske - wer sie im Panel anklickt, will an genau die heran.
-        ''' Eine Verlaufsmaske hat weder Ameisen noch malbare Form, fuer sie ist das MASKEN-Werkzeug
-        ''' zustaendig (Griffe und Regler). Eine MASKEN-Ebene (gemalt oder aus der Objektauswahl)
-        ''' gehoert ebenfalls dorthin: sie zeigt rotes Overlay und wird mit dem Maskenpinsel
-        ''' bearbeitet. Nur eine echte AUSWAHL-Ebene fuehrt ins Auswahl-Werkzeug. Bei Mehrfachauswahl
-        ''' bleibt das Werkzeug, wie es ist - dort geht es um die Menge, nicht um eine Maske.
+        ''' Die Ebenenzeile wechselt nur das ZIEL, nicht die AKTION: wer im Anpassen eine andere
+        ''' Korrekturebene waehlt, will deren Werte einstellen; wer maskiert, an deren Maske
+        ''' weiterarbeiten. Das Masken- bzw. Auswahlwerkzeug wird deshalb ausschliesslich durch eine
+        ''' ausdrueckliche Aktion (Werkzeugleiste, Maskensymbol oder „Ebenenmaske bearbeiten") aktiv.
         '''
         ''' Steht als EIGENE Methode da, weil derselbe Zustand auch OHNE Zeilenwechsel gebraucht
         ''' wird - siehe <see cref="ReapplySelectedLayerPresentation"/>.</summary>
@@ -3251,10 +3249,6 @@ Namespace ViewModels
             LoadLayerMaskIntoSelection(picked)
             Dim isGradient = _imageMasks.Any(Function(m) m IsNot Nothing AndAlso m.Id = picked.MaskId AndAlso m.IsGradient)
             Dim isMaskLayer = isGradient OrElse picked.IsMaskLayer
-            Dim layerTool = If(isMaskLayer, EditorTool.Mask, EditorTool.Selection)
-            If SelectedAdjustmentLayers.Count <= 1 AndAlso _currentTool <> layerTool Then
-                CurrentTool = layerTool
-            End If
             ' Eine gemalte Maskenebene wird mit dem PINSEL bearbeitet - der Verlaufsmodus
             ' zoege beim ersten Zug einen neuen Verlauf auf, statt sie nachzubessern.
             If isMaskLayer AndAlso Not isGradient Then MaskMode = "Brush"

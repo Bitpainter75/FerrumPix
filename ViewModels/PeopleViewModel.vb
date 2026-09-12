@@ -111,7 +111,8 @@ Namespace ViewModels
         ' Das Bild kommt aus dem Vorschau-Zwischenspeicher (ThumbnailCacheService) und NICHT ueber
         ' einen eigenen Decode: der laege bei einem RAW im Sekundenbereich, und die Kachel ist meist
         ' ohnehin schon einmal gebaut worden. Die Decode-Schleuse ist dafuer ausdruecklich nicht
-        ' zustaendig (siehe DecodeGate).
+        ' zustaendig (siehe DecodeGate). Bei einem Serverbild gibt es keine Datei - dort kommt es
+        ' aus der Vorschau vom Server, und zwar ueber dieselbe Stelle wie die Kachel selbst.
 
         Private _previewImage As Avalonia.Media.Imaging.Bitmap
         Private _previewTitle As String = ""
@@ -148,26 +149,19 @@ Namespace ViewModels
 
         Public Async Sub ShowPreview(entry As PersonFaceEntry)
             If entry Is Nothing OrElse String.IsNullOrWhiteSpace(entry.FilePath) Then Return
-            Dim pfad = entry.FilePath
+            Dim path = entry.FilePath
             _previewToken += 1
             Dim token = _previewToken
             PreviewImage = Nothing
-            PreviewTitle = IO.Path.GetFileName(pfad)
+            PreviewTitle = IO.Path.GetFileName(path)
             Try
-                Dim bild = Await Task.Run(Function()
-                                              Try
-                                                  Dim info As New IO.FileInfo(pfad)
-                                                  If Not info.Exists Then Return Nothing
-                                                  Return ThumbnailCacheService.LoadOrCreate(pfad, info.LastWriteTimeUtc, info.Length)
-                                              Catch ex As Exception
-                                                  DiagnosticLogService.LogException("People.Preview", ex)
-                                                  Return Nothing
-                                              End Try
-                                          End Function)
+                ' UEBER DIESELBE STELLE WIE DIE KACHEL (FacePanelService): ein Serverbild hat keine
+                ' Datei, und der Weg zu seinem Bild gehoert genau einmal aufgeschrieben.
+                Dim image = Await Task.Run(Function() FacePanelService.LoadPreviewImage(path))
                 ' Wer waehrenddessen eine andere Kachel angetippt hat, bekommt nicht dieses Bild
                 ' nachgereicht - und wer die Vorschau geschlossen hat, gar keines.
                 If token <> _previewToken Then Return
-                PreviewImage = bild
+                PreviewImage = image
             Catch ex As Exception
                 DiagnosticLogService.LogException("People.ShowPreview", ex)
             End Try

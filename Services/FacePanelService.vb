@@ -94,9 +94,12 @@ Namespace Services
                          Try
                              Await Task.Delay(150).ConfigureAwait(False)
                              If stillCurrent IsNot Nothing AndAlso Not stillCurrent() Then Return
-                             If Not IO.File.Exists(filePath) Then Return
+                             Dim previewBytes = TryLoadServerPreviewBytes(filePath)
+                             If previewBytes Is Nothing AndAlso Not IO.File.Exists(filePath) Then Return
+                             ' Der Abruf kann gedauert haben - vor dem teuren Teil noch einmal fragen.
+                             If stillCurrent IsNot Nothing AndAlso Not stillCurrent() Then Return
 
-                             Dim crops = DecodeGate.Run(Function() CropAll(pending, filePath))
+                             Dim crops = DecodeGate.Run(Function() CropAll(pending, filePath, previewBytes))
                              If crops Is Nothing Then Return
                              ' Zwischen Decode und Anzeige kann das Bild gewechselt haben. Die
                              ' Ausschnitte sind dann fertig dekodiert und werden nie eingehaengt -
@@ -140,11 +143,15 @@ Namespace Services
                                  ' Zeile las das Zurueckblaettern jede Datei der Seite erneut - die
                                  ' Kacheln waren laengst da, und trotzdem lief die Wand nochmal an.
                                  If entry.Cover IsNot Nothing Then Continue For
-                                 If String.IsNullOrWhiteSpace(entry.CoverPath) OrElse Not IO.File.Exists(entry.CoverPath) Then Continue For
+                                 If String.IsNullOrWhiteSpace(entry.CoverPath) Then Continue For
+                                 Dim previewBytes = TryLoadServerPreviewBytes(entry.CoverPath)
+                                 If previewBytes Is Nothing AndAlso Not IO.File.Exists(entry.CoverPath) Then Continue For
+                                 If stillCurrent IsNot Nothing AndAlso Not stillCurrent() Then Return
 
                                  Dim cover = DecodeGate.Run(Function() CropFromFile(entry.CoverPath,
                                                                                    entry.BoxX, entry.BoxY,
-                                                                                   entry.BoxWidth, entry.BoxHeight))
+                                                                                   entry.BoxWidth, entry.BoxHeight,
+                                                                                   previewBytes))
                                  If cover Is Nothing Then Continue For
                                  Dim target = entry
                                  Dispatcher.UIThread.Post(Sub()
@@ -177,10 +184,14 @@ Namespace Services
                              For i = 0 To Math.Min(pending.Count, pendingPaths.Count) - 1
                                  If stillCurrent IsNot Nothing AndAlso Not stillCurrent() Then Return
                                  Dim path = pendingPaths(i)
-                                 If String.IsNullOrWhiteSpace(path) OrElse Not IO.File.Exists(path) Then Continue For
+                                 If String.IsNullOrWhiteSpace(path) Then Continue For
+                                 Dim previewBytes = TryLoadServerPreviewBytes(path)
+                                 If previewBytes Is Nothing AndAlso Not IO.File.Exists(path) Then Continue For
+                                 If stillCurrent IsNot Nothing AndAlso Not stillCurrent() Then Return
                                  Dim entry = pending(i)
                                  Dim crop = DecodeGate.Run(Function() CropFromFile(path, entry.BoxX, entry.BoxY,
-                                                                                  entry.BoxWidth, entry.BoxHeight))
+                                                                                  entry.BoxWidth, entry.BoxHeight,
+                                                                                  previewBytes))
                                  If crop Is Nothing Then Continue For
                                  Dispatcher.UIThread.Post(Sub()
                                                               ' Siehe LoadCovers: ein Ausschnitt, der
@@ -199,12 +210,82 @@ Namespace Services
                      End Sub)
         End Sub
 
+        ''' <summary>Die Vorschau eines Serverbildes, oder Nothing fuer alles andere.
+        '''
+        ''' EIN SERVERBILD HAT KEINE DATEI. Gefunden wurden seine Gesichter trotzdem: der Durchlauf
+        ''' sucht sie in der Vorschau vom Server (siehe FaceScanRunner.DecodeImmichPreview). Genau
+        ''' die wird hier wieder geholt, denn die gespeicherte Box liegt in IHREN Bildpunkten - aus
+        ''' dem Original geschnitten traefe sie eine voellig andere Stelle. Ohne das blieb jede
+        ''' Kachel eines Immich-Bildes leer, waehrend Name und Gruppe richtig dastanden.
+        '''
+        ''' AUSSERHALB DER DECODE-SCHLEUSE: ein Netzabruf ist kein Decode, und die Schleuse laesst in
+        ''' der ganzen Anwendung nur einen gleichzeitig zu. Haengt der Server, stuende sonst auch
+        ''' jedes Bild im Betrachter.
+        '''
+        ''' Nur Immich: Nextcloud-Elemente durchsucht der Gesichtslauf gar nicht erst, fuer sie gibt
+        ''' es also auch keine Zeile zu fuellen.</summary>
+        Private Shared Function TryLoadServerPreviewBytes(path As String) As Byte()
+            If Not ImmichService.IsImmichPseudoPath(path) OrElse Not ImmichService.IsConfigured Then Return Nothing
+            Try
+                Dim assetId As String = Nothing, fileName As String = Nothing
+                If Not ImmichService.TryParsePseudoPath(path, assetId, fileName) Then Return Nothing
+                Dim bytes = ImmichService.GetPreviewBytesAsync(assetId).GetAwaiter().GetResult()
+                If bytes Is Nothing OrElse bytes.Length = 0 Then Return Nothing
+                Return bytes
+            Catch ex As Exception
+                DiagnosticLogService.LogException("FacePanel.ServerVorschau", ex)
+                Return Nothing
+            End Try
+        End Function
+
+        ''' <summary>Das GANZE Bild hinter einer Gesichtskachel, fuer die Vorschau hinter dem
+        ''' Auge-Zeichen in der Personenverwaltung.
+        '''
+        ''' Hier und nicht im ViewModel, weil hier schon steht, woher das Bild eines Gesichts kommt:
+        ''' bei einer Datei aus dem Vorschau-Zwischenspeicher, bei einem Serverbild aus der Vorschau
+        ''' vom Server. Zwei Fassungen dieser Frage waeren zwei Gelegenheiten, die eine zu
+        ''' vergessen.</summary>
+        Public Shared Function LoadPreviewImage(path As String) As Bitmap
+            If String.IsNullOrWhiteSpace(path) Then Return Nothing
+            Try
+                Dim previewBytes = TryLoadServerPreviewBytes(path)
+                If previewBytes IsNot Nothing Then
+                    Using decoded = DecodePreviewOwned(previewBytes)
+                        If decoded Is Nothing Then Return Nothing
+                        Return ImageOrientationService.ToAvaloniaBitmapFast(decoded)
+                    End Using
+                End If
+                Dim info As New IO.FileInfo(path)
+                If Not info.Exists Then Return Nothing
+                Return ThumbnailCacheService.LoadOrCreate(path, info.LastWriteTimeUtc, info.Length)
+            Catch ex As Exception
+                DiagnosticLogService.LogException("FacePanel.LoadPreviewImage", ex)
+                Return Nothing
+            End Try
+        End Function
+
+        ''' <summary>Dekodiert die Vorschau AUFRECHT. Auch sie kann ein Drehfeld tragen, und der
+        ''' Durchlauf hat sie gedreht durchsucht - ohne dieselbe Drehung hier laege die Box quer.</summary>
+        Private Shared Function DecodePreviewOwned(bytes As Byte()) As SkiaSharp.SKBitmap
+            Dim origin As SkiaSharp.SKEncodedOrigin
+            Using probe As New IO.MemoryStream(bytes)
+                origin = ImageOrientationService.ReadOrigin(probe)
+            End Using
+            Return FaceScanRunner.ApplyOrientationOwned(SkiaSharp.SKBitmap.Decode(bytes), origin)
+        End Function
+
         Private Shared Function CropFromFile(path As String, x As Double, y As Double,
-                                             w As Double, h As Double) As Bitmap
+                                             w As Double, h As Double, previewBytes As Byte()) As Bitmap
             Dim source As SkiaSharp.SKBitmap = Nothing
             Try
                 Dim scale As Double = 1
-                source = DecodeForFace(path, Math.Max(w, h), scale)
+                If previewBytes IsNot Nothing Then
+                    ' Die Vorschau kommt in EINER Groesse, und genau in ihr liegt die Box. Hier wird
+                    ' deshalb weder kleiner bestellt noch umgerechnet.
+                    source = DecodePreviewOwned(previewBytes)
+                Else
+                    source = DecodeForFace(path, Math.Max(w, h), scale)
+                End If
                 If source Is Nothing Then Return Nothing
                 Return CropFace(source, x * scale, y * scale, w * scale, h * scale)
             Catch ex As Exception
@@ -282,12 +363,15 @@ Namespace Services
         ''' dann ohne Bild stehen, was immer noch besser ist als gar keine Zeile.
         '''
         ''' Auch hier AUFRECHT: die Boxen kommen aus dem gedrehten Bild (siehe DecodeForFace).</summary>
-        Private Shared Function CropAll(entries As IReadOnlyList(Of PersonFaceEntry), filePath As String) As List(Of Bitmap)
+        Private Shared Function CropAll(entries As IReadOnlyList(Of PersonFaceEntry), filePath As String,
+                                        previewBytes As Byte()) As List(Of Bitmap)
             Dim result As New List(Of Bitmap)()
             Dim source As SkiaSharp.SKBitmap = Nothing
             Try
-                source = FaceScanRunner.ApplyOrientationOwned(SkiaSharp.SKBitmap.Decode(filePath),
-                                                              ImageOrientationService.ReadOrigin(filePath))
+                source = If(previewBytes IsNot Nothing,
+                            DecodePreviewOwned(previewBytes),
+                            FaceScanRunner.ApplyOrientationOwned(SkiaSharp.SKBitmap.Decode(filePath),
+                                                                 ImageOrientationService.ReadOrigin(filePath)))
                 For Each entry In entries
                     result.Add(If(source Is Nothing, Nothing,
                                   CropFace(source, entry.BoxX, entry.BoxY, entry.BoxWidth, entry.BoxHeight)))
