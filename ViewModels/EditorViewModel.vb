@@ -10658,10 +10658,10 @@ Namespace ViewModels
             Return label
         End Function
 
-        ''' Legt ein Bild-Objekt mit EXAKT der übergebenen Größe an (keine Skalierung/Kappung wie bei
-        ''' AddImageAnnotationAt, das für das Einfügen beliebiger externer Bilddateien eine Kappung auf
-        ''' 60% der Basisbildgröße vornimmt) - für Auswahl-Kopien muss die Größe exakt der Auswahl
-        ''' entsprechen, sonst wirkt die Kopie kleiner/größer als das aufgezogene Rechteck.
+        ''' Legt ein Bild-Objekt mit EXAKT der übergebenen Größe an. Für Auswahl-Kopien muss die
+        ''' Größe exakt der Auswahl entsprechen, sonst wirkt die Kopie kleiner/größer als das
+        ''' aufgezogene Rechteck. Externe Bilddateien starten ebenfalls 1:1, ihre Größe wird dort
+        ''' aber aus der Quelldatei ermittelt (siehe AddImageAnnotationAt).
         ''' <param name="label">Name in der Ebenenliste; ohne Angabe "Auswahl N". Der G'MIC-Rundweg
         ''' legt sein Ergebnis auf demselben Weg ab und nennt es nach dem Programm.</param>
         Private Sub AddSelectionImageAnnotationAt(imagePath As String, xPercent As Double, yPercent As Double, widthPercent As Double, heightPercent As Double,
@@ -21834,6 +21834,10 @@ Namespace ViewModels
             RefreshOverlayAfterAnnotationChange(ComputeSceneDirtyRectFor(annotation))
         End Sub
 
+        ''' <summary>Ermittelt die Startgröße eines eingefügten Bildes im Bildraum. Die Quellpixel
+        ''' werden bewusst 1:1 übernommen: Ein Bild aus dem Filmstreifen, über den Bild-Button oder
+        ''' als Bild-Wasserzeichen startet in seiner Originalauflösung. Es wird erst auf ausdrückliche
+        ''' Nutzeraktion über die Objektgriffe bzw. Größenfelder skaliert.</summary>
         Private Function GetInitialImageAnnotationSize(imagePath As String) As (WidthPercent As Double, HeightPercent As Double)
             Dim displaySize = GetAnnotationDisplayPixelSize()
             If displaySize.Width <= 0 OrElse displaySize.Height <= 0 Then Return (30.0, 30.0)
@@ -21842,26 +21846,8 @@ Namespace ViewModels
                 Using bitmap = SKBitmap.Decode(imagePath)
                     If bitmap Is Nothing OrElse bitmap.Width <= 0 OrElse bitmap.Height <= 0 Then Return (30.0, 30.0)
 
-                    Dim maxWidth = displaySize.Width * 0.6
-                    Dim maxHeight = displaySize.Height * 0.6
-                    Dim scale = Math.Min(1.0, Math.Min(maxWidth / bitmap.Width, maxHeight / bitmap.Height))
-                    Dim widthPercent = bitmap.Width * scale / displaySize.Width * 100.0
-                    Dim heightPercent = bitmap.Height * scale / displaySize.Height * 100.0
-
-                    If widthPercent < 5.0 Then
-                        Dim factor = 5.0 / Math.Max(0.0001, widthPercent)
-                        widthPercent *= factor
-                        heightPercent *= factor
-                    End If
-                    If heightPercent < 4.0 Then
-                        Dim factor = 4.0 / Math.Max(0.0001, heightPercent)
-                        widthPercent *= factor
-                        heightPercent *= factor
-                    End If
-
-                    Dim clampFactor = Math.Min(1.0, Math.Min(90.0 / Math.Max(0.0001, widthPercent), 90.0 / Math.Max(0.0001, heightPercent)))
-                    Return (Math.Max(5.0, Math.Min(90.0, widthPercent * clampFactor)),
-                            Math.Max(4.0, Math.Min(90.0, heightPercent * clampFactor)))
+                    Return (bitmap.Width / CDbl(displaySize.Width) * 100.0,
+                            bitmap.Height / CDbl(displaySize.Height) * 100.0)
                 End Using
             Catch
                 Return (30.0, 30.0)

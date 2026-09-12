@@ -5933,8 +5933,9 @@ Namespace Views
                 Dim height = _textDragInitialRect.Height
                 left = ClampOverlayOriginToReachable(left + dx, width, imageRect.Left, imageRect.Width)
                 top = ClampOverlayOriginToReachable(top + dy, height, imageRect.Top, imageRect.Height)
-                If e.KeyModifiers.HasFlag(KeyModifiers.Alt) Then
-                    ' Alt = frei verschieben ohne Einrasten (Hilfslinien aus).
+                If e.KeyModifiers.HasFlag(KeyModifiers.Control) OrElse e.KeyModifiers.HasFlag(KeyModifiers.Alt) Then
+                    ' Strg = frei verschieben ohne Einrasten und ohne Smart Guides. Alt bleibt
+                    ' aus Kompatibilitätsgründen derselbe alternative Freihand-Modifikator.
                     HideTextSnapGuides()
                 Else
                     left = ApplyTextSnap(left, width, imageRect.Left, imageRect.Width, True)
