@@ -31,6 +31,10 @@
 
 ### Fixes
 
+- Setting the perspective with the sliders now makes Apply available. It only woke up when you
+  dragged the corners in the picture, so a perspective set by the sliders could not be taken into
+  the recipe at all.
+
 - People found on pictures from an Immich server now show their faces. The tiles in the people view
   stayed empty, and a person you had named yourself turned up none of their other pictures.
 

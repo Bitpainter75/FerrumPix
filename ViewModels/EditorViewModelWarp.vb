@@ -48,8 +48,7 @@ Namespace ViewModels
             Set(value As Double)
                 SetUndoableDouble(_perspectiveHorizontal, Math.Max(-100, Math.Min(100, value)),
                                   NameOf(PerspectiveHorizontal))
-                Me.RaisePropertyChanged(NameOf(HasPerspectiveWarning))
-                Me.RaisePropertyChanged(NameOf(HasAnyImageWarp))
+                RaisePerspectiveStateChanged()
             End Set
         End Property
 
@@ -60,8 +59,7 @@ Namespace ViewModels
             Set(value As Double)
                 SetUndoableDouble(_perspectiveVertical, Math.Max(-100, Math.Min(100, value)),
                                   NameOf(PerspectiveVertical))
-                Me.RaisePropertyChanged(NameOf(HasPerspectiveWarning))
-                Me.RaisePropertyChanged(NameOf(HasAnyImageWarp))
+                RaisePerspectiveStateChanged()
             End Set
         End Property
 
@@ -72,8 +70,7 @@ Namespace ViewModels
             Set(value As Double)
                 SetUndoableDouble(_perspectiveAspect, Math.Max(-100, Math.Min(100, value)),
                                   NameOf(PerspectiveAspect))
-                Me.RaisePropertyChanged(NameOf(HasPerspectiveWarning))
-                Me.RaisePropertyChanged(NameOf(HasAnyImageWarp))
+                RaisePerspectiveStateChanged()
             End Set
         End Property
 
@@ -84,10 +81,22 @@ Namespace ViewModels
             Set(value As Double)
                 SetUndoableDouble(_perspectiveScale, Math.Max(-100, Math.Min(100, value)),
                                   NameOf(PerspectiveScale))
-                Me.RaisePropertyChanged(NameOf(HasPerspectiveWarning))
-                Me.RaisePropertyChanged(NameOf(HasAnyImageWarp))
+                RaisePerspectiveStateChanged()
             End Set
         End Property
+
+        ''' <summary>Was sich mitaendert, wenn einer der vier Perspektivregler wandert.
+        '''
+        ''' <para><c>HasPerspectiveChanges</c> gehoert dazu, und das fehlte: gemeldet wurde es nur aus
+        ''' <see cref="RaiseCornersChanged"/>, also nur beim Ziehen der ECKEN. Der Knopf "Anwenden"
+        ''' haengt aber daran - er blieb grau, wenn die Perspektive ueber die Regler kam, und die
+        ''' Einstellung liess sich damit gar nicht ins Rezept uebernehmen. Dass es lange niemandem
+        ''' auffiel, liegt daran, dass man die Perspektive meist an den Ecken zieht.</para></summary>
+        Private Sub RaisePerspectiveStateChanged()
+            Me.RaisePropertyChanged(NameOf(HasPerspectiveChanges))
+            Me.RaisePropertyChanged(NameOf(HasPerspectiveWarning))
+            Me.RaisePropertyChanged(NameOf(HasAnyImageWarp))
+        End Sub
 
         ''' <summary>Der Hinweis erscheint nur, wenn er zutrifft: es wird gekippt UND es gibt
         ''' Objekte, die dabei nicht mitwandern. Ein Hinweis, der immer dasteht, wird nicht
