@@ -624,6 +624,13 @@ Namespace Services
             ' Summen der beiden Haufen. Ein Bild ohne vorherrschende Richtung hat viele aehnlich
             ' starke Kanten; ihre Summen liegen dann je nach Zufall auch mal zwei zu eins
             ' auseinander, ihre Spitzen aber nicht.
+            '
+            ' UEBER HAUFEN ZU PRUEFEN WURDE VERSUCHT UND WIEDER VERWORFEN, und zwar an Zahlen: es
+            ' sollte Stadt- und Hafenbilder mitnehmen, bei denen keine einzelne Kante herausragt,
+            ' die Schraegstaende sich aber haeufen. Gemessen liegt das Hafenbild bei 1,98 Haufen
+            ' gegen Rivale - und das Bild aus lauter Kreisen, das NICHTS liefern darf, darueber.
+            ' Es gibt also keinen Schwellenwert, der die beiden trennt; einen auf zwei Stichproben
+            ' zu biegen haette nur die Probe gegen Fehlmessungen aufgeweicht.
             Dim strongestInside As Double = 0, strongestOutside As Double = 0
             For i As Integer = 0 To values.Count - 1
                 Dim distance = Math.Abs(values(i) - peak)
