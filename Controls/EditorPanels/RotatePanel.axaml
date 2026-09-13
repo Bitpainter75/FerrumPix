@@ -74,6 +74,31 @@
                                              Minimum="-180" Maximum="180" Increment="0.1"
                                              FormatString="F1" />
                 </Grid>
+                <!-- DER KNOPF STEHT BEIM REGLER, den er setzt: er misst die geraden Kanten des
+                     Bildes und schreibt seinen Winkel in "Ausrichten". Danach laesst sich das
+                     Ergebnis am Regler darueber nachziehen wie ein selbst gezogener Wert - deshalb
+                     gehoert er hierher und nicht in eine eigene Ecke. Die Perspektivkorrektur ist
+                     der Zwilling dazu und sitzt aus demselben Grund im Verzerren-Panel. -->
+                <Button Classes="ghost"
+                        HorizontalAlignment="Stretch"
+                        HorizontalContentAlignment="Center"
+                        Padding="8,6"
+                        Command="{Binding AutoStraightenCommand}"
+                        ToolTip.Tip="Sucht die geraden Kanten im Bild - Horizont, Hauskante, Fensterreihe - und dreht es so, dass sie waagerecht und senkrecht stehen">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <icons:SvgIcon
+                            Source="avares://FerrumPix/Assets/Icons/outline/wand.svg"
+                            Width="14" Height="14"
+                            VerticalAlignment="Center" />
+                        <!-- Umbruch statt Abschneiden: die Beschriftung ist in anderen Sprachen
+                             deutlich länger, und das Panel ist schmal. -->
+                        <TextBlock Text="Automatisch auf den Horizont"
+                                   FontSize="{DynamicResource FP.Font.Small}"
+                                   TextWrapping="Wrap"
+                                   TextAlignment="Center"
+                                   VerticalAlignment="Center" />
+                    </StackPanel>
+                </Button>
                 <!-- DIE ZWEI HAKEN SIND GEGENTEILE und schliessen sich im ViewModel gegenseitig
                      aus: der eine behaelt die gekippten Ecken, der andere nimmt sie weg. Beide
                      aus heisst, die Leinwand bleibt wie sie ist und die Ecken bleiben leer. -->

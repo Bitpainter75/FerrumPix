@@ -8386,4 +8386,40 @@
   <data name="G_MIC_wird_f_r_externe_Bildfilter_als_eigenes_Pr_cd7ac063" xml:space="preserve">
     <value>G'MIC ถูกเรียกใช้เป็นโปรแกรมแยกต่างหากสำหรับฟิลเตอร์ภาพภายนอก และไม่ได้รวมอยู่ในโปรแกรม ไม่มีในแพ็กเกจใด ๆ และต้องติดตั้งเอง หากไม่มี รายการ G'MIC ในตัวแก้ไขจะไม่มีผล แต่ทุกอย่างอื่นยังทำงานได้ตามเดิม</value>
   </data>
+  <data name="Automatisch_auf_den_Horizont_d9d45ed1" xml:space="preserve">
+    <value>ปรับให้ตรงกับเส้นขอบฟ้า</value>
+  </data>
+  <data name="Sucht_die_geraden_Kanten_im_Bild_Horizont_Hauska_14dc0fb2" xml:space="preserve">
+    <value>ค้นหาขอบตรงในภาพ ทั้งเส้นขอบฟ้า ขอบอาคาร และแนวหน้าต่าง แล้วหมุนภาพให้อยู่ในแนวระดับและแนวดิ่ง</value>
+  </data>
+  <data name="Perspektive_automatisch_korrigieren_f71067f5" xml:space="preserve">
+    <value>แก้ไขเปอร์สเปกทีฟอัตโนมัติ</value>
+  </data>
+  <data name="Sucht_st_rzende_Linien_im_Bild_und_stellt_sie_ge_555c2d81" xml:space="preserve">
+    <value>ค้นหาเส้นแนวตั้งที่เอียงในภาพแล้วปรับให้ตรง มุมภาพที่ว่างลงสามารถปิดได้ด้วยแถบเลื่อนขนาด</value>
+  </data>
+  <data name="Keine_gerade_Kante_gefunden_an_der_sich_ausricht_29c44aba" xml:space="preserve">
+    <value>ไม่พบขอบตรงที่จะใช้ปรับระดับ</value>
+  </data>
+  <data name="Das_Bild_steht_bereits_gerade_78cdd39e" xml:space="preserve">
+    <value>ภาพอยู่ในแนวตรงอยู่แล้ว</value>
+  </data>
+  <data name="Automatisch_ausgerichtet_69f7b5d9" xml:space="preserve">
+    <value>ปรับระดับอัตโนมัติแล้ว</value>
+  </data>
+  <data name="Ausgerichtet_um_0_Grad_8801cb34" xml:space="preserve">
+    <value>ปรับระดับ {0} องศา</value>
+  </data>
+  <data name="Keine_st_rzenden_Linien_gefunden_ee5cc723" xml:space="preserve">
+    <value>ไม่พบเส้นแนวตั้งที่เอียง</value>
+  </data>
+  <data name="Die_Perspektive_steht_bereits_richtig_18696c0f" xml:space="preserve">
+    <value>เปอร์สเปกทีฟถูกต้องอยู่แล้ว</value>
+  </data>
+  <data name="Perspektive_automatisch_korrigiert_88d28437" xml:space="preserve">
+    <value>แก้ไขเปอร์สเปกทีฟอัตโนมัติแล้ว</value>
+  </data>
+  <data name="Perspektive_korrigiert_7c395a1f" xml:space="preserve">
+    <value>แก้ไขเปอร์สเปกทีฟแล้ว</value>
+  </data>
 </root>

@@ -73,6 +73,8 @@ Two photos can be put side by side for comparison, sharing one zoom so you alway
 
 **Geometry.** Crop, resize, rotate, flip and canvas size, plus four ways to distort a picture: perspective, a line you lay on an edge and drag, a grid, and a frame whose edges you bend. None of them is computed into the pixels, so they can be adjusted or taken off at any time, and with an object selected they distort that object instead.
 
+Two of them can find their own setting. *Level to the horizon* looks for the straight edges in the picture - the horizon, the edge of a house, a row of windows - and turns the photo until they sit level; *Correct perspective automatically* finds the verticals of a building shot that lean together and pulls them upright. Both put their result on the ordinary sliders, to be nudged afterwards like a value you set yourself, and both say so when the picture already stands right.
+
 **Light and colour.** Exposure, contrast, highlights, shadows, black and white point, white balance, tone curves, HSL, vibrance and saturation, colour grading with four colour wheels, and camera calibration. *Auto* sets a sensible starting point, and a set of slider values can be saved and put on any other photo.
 
 **Details and effects.** Clarity, structure, dust and scratches, sharpening, softening and three kinds of noise reduction. *Depth blur* takes its strength from how far away each point is, so lights in the background open into bright discs. Vignette, grain and frame sit in a separate *Effects* tool, where the grain can also be coloured: a slider lets the three colour channels drift apart, from plain grey grain to the coloured speckles of a fast film.

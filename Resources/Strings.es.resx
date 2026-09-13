@@ -8342,4 +8342,40 @@
   <data name="G_MIC_wird_f_r_externe_Bildfilter_als_eigenes_Pr_cd7ac063" xml:space="preserve">
     <value>G'MIC se invoca como programa independiente para filtros de imagen externos, no se integra. No se incluye en ningún paquete y debe instalarse por separado; si no está disponible, la entrada de G'MIC del editor no tendrá efecto y todo lo demás seguirá funcionando sin cambios.</value>
   </data>
+  <data name="Automatisch_auf_den_Horizont_d9d45ed1" xml:space="preserve">
+    <value>Nivelar con el horizonte</value>
+  </data>
+  <data name="Sucht_die_geraden_Kanten_im_Bild_Horizont_Hauska_14dc0fb2" xml:space="preserve">
+    <value>Busca los bordes rectos de la imagen - horizonte, esquina de un edificio, hilera de ventanas - y la gira para que queden horizontales y verticales</value>
+  </data>
+  <data name="Perspektive_automatisch_korrigieren_f71067f5" xml:space="preserve">
+    <value>Corregir la perspectiva automáticamente</value>
+  </data>
+  <data name="Sucht_st_rzende_Linien_im_Bild_und_stellt_sie_ge_555c2d81" xml:space="preserve">
+    <value>Busca las líneas convergentes de la imagen y las endereza. El control Tamaño cubre las esquinas que quedan vacías</value>
+  </data>
+  <data name="Keine_gerade_Kante_gefunden_an_der_sich_ausricht_29c44aba" xml:space="preserve">
+    <value>No se ha encontrado ningún borde recto con el que nivelar</value>
+  </data>
+  <data name="Das_Bild_steht_bereits_gerade_78cdd39e" xml:space="preserve">
+    <value>La imagen ya está derecha</value>
+  </data>
+  <data name="Automatisch_ausgerichtet_69f7b5d9" xml:space="preserve">
+    <value>Nivelado automáticamente</value>
+  </data>
+  <data name="Ausgerichtet_um_0_Grad_8801cb34" xml:space="preserve">
+    <value>Nivelado {0} grados</value>
+  </data>
+  <data name="Keine_st_rzenden_Linien_gefunden_ee5cc723" xml:space="preserve">
+    <value>No se han encontrado líneas convergentes</value>
+  </data>
+  <data name="Die_Perspektive_steht_bereits_richtig_18696c0f" xml:space="preserve">
+    <value>La perspectiva ya es correcta</value>
+  </data>
+  <data name="Perspektive_automatisch_korrigiert_88d28437" xml:space="preserve">
+    <value>Perspectiva corregida automáticamente</value>
+  </data>
+  <data name="Perspektive_korrigiert_7c395a1f" xml:space="preserve">
+    <value>Perspectiva corregida</value>
+  </data>
 </root>

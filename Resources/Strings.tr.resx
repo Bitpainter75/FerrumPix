@@ -8386,4 +8386,40 @@
   <data name="G_MIC_wird_f_r_externe_Bildfilter_als_eigenes_Pr_cd7ac063" xml:space="preserve">
     <value>G'MIC, harici görüntü filtreleri için ayrı bir program olarak çağrılır ve entegre değildir. Herhangi bir paketle birlikte gelmez ve ayrıca kurulmalıdır; yoksa düzenleyicideki G'MIC girdisinin etkisi olmaz, diğer her şey değişmeden çalışmaya devam eder.</value>
   </data>
+  <data name="Automatisch_auf_den_Horizont_d9d45ed1" xml:space="preserve">
+    <value>Ufka göre otomatik düzelt</value>
+  </data>
+  <data name="Sucht_die_geraden_Kanten_im_Bild_Horizont_Hauska_14dc0fb2" xml:space="preserve">
+    <value>Görüntüdeki düz kenarları arar - ufuk, bina kenarı, pencere sırası - ve bunlar yatay ve dikey duracak şekilde döndürür</value>
+  </data>
+  <data name="Perspektive_automatisch_korrigieren_f71067f5" xml:space="preserve">
+    <value>Perspektifi otomatik düzelt</value>
+  </data>
+  <data name="Sucht_st_rzende_Linien_im_Bild_und_stellt_sie_ge_555c2d81" xml:space="preserve">
+    <value>Görüntüdeki devrilen dikey çizgileri bulup düzeltir. Boşalan köşeleri Boyut sürgüsü kapatır</value>
+  </data>
+  <data name="Keine_gerade_Kante_gefunden_an_der_sich_ausricht_29c44aba" xml:space="preserve">
+    <value>Hizalanacak düz bir kenar bulunamadı</value>
+  </data>
+  <data name="Das_Bild_steht_bereits_gerade_78cdd39e" xml:space="preserve">
+    <value>Görüntü zaten düz</value>
+  </data>
+  <data name="Automatisch_ausgerichtet_69f7b5d9" xml:space="preserve">
+    <value>Otomatik hizalandı</value>
+  </data>
+  <data name="Ausgerichtet_um_0_Grad_8801cb34" xml:space="preserve">
+    <value>{0} derece hizalandı</value>
+  </data>
+  <data name="Keine_st_rzenden_Linien_gefunden_ee5cc723" xml:space="preserve">
+    <value>Devrilen dikey çizgi bulunamadı</value>
+  </data>
+  <data name="Die_Perspektive_steht_bereits_richtig_18696c0f" xml:space="preserve">
+    <value>Perspektif zaten doğru</value>
+  </data>
+  <data name="Perspektive_automatisch_korrigiert_88d28437" xml:space="preserve">
+    <value>Perspektif otomatik düzeltildi</value>
+  </data>
+  <data name="Perspektive_korrigiert_7c395a1f" xml:space="preserve">
+    <value>Perspektif düzeltildi</value>
+  </data>
 </root>

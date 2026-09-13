@@ -12723,17 +12723,27 @@ Namespace ViewModels
                     AnnotationRotation = value
                     Return
                 End If
-                ' Nur 1 Nachkommastelle - siehe AnnotationRotation.
-                Dim clamped = Math.Round(Math.Max(-180, Math.Min(180, value)), 1)
-                If Math.Abs(_straightenDegrees - clamped) < 0.0001 Then Return
-                CaptureUndoState(NameOf(StraightenDegrees))
-                Me.RaiseAndSetIfChanged(_straightenDegrees, clamped)
-                Me.RaisePropertyChanged(NameOf(HasRotateChanges))
-                Me.RaisePropertyChanged(NameOf(HasTransformChanges))
-                RaiseResetButtonStateChanged()
-                SchedulePreviewUpdate()
+                SetImageStraightenDegrees(value)
             End Set
         End Property
+
+        ''' <summary>Der Weg zur Begradigung des BILDES, ohne den Umweg ueber das markierte Objekt.
+        '''
+        ''' <para>Der Regler oben bedient zwei Dinge: mit markiertem Objekt dreht er das Objekt, sonst
+        ''' das Bild. Die automatische Drehung auf den Horizont meint aber immer das Bild - sie hat
+        ''' das Bild gemessen, nicht das Objekt. Ueber die Eigenschaft gesetzt haette sie bei
+        ''' markiertem Objekt stillschweigend dieses gedreht.</para></summary>
+        Private Sub SetImageStraightenDegrees(value As Double)
+            ' Nur 1 Nachkommastelle - siehe AnnotationRotation.
+            Dim clamped = Math.Round(Math.Max(-180, Math.Min(180, value)), 1)
+            If Math.Abs(_straightenDegrees - clamped) < 0.0001 Then Return
+            CaptureUndoState(NameOf(StraightenDegrees))
+            Me.RaiseAndSetIfChanged(_straightenDegrees, clamped, NameOf(StraightenDegrees))
+            Me.RaisePropertyChanged(NameOf(HasRotateChanges))
+            Me.RaisePropertyChanged(NameOf(HasTransformChanges))
+            RaiseResetButtonStateChanged()
+            SchedulePreviewUpdate()
+        End Sub
 
         ''' <summary>Wie gedreht wird, nicht wie weit: der Haken ist eine OPTION der Drehung und
         ''' hat deshalb KEINEN eigenen bestaetigten Stand mehr. Der Spiegel wird mitgezogen, damit
@@ -14276,6 +14286,8 @@ Namespace ViewModels
         Public ReadOnly Property SetBrushPresetCommand As ICommand
         Public ReadOnly Property SetFilterPresetCommand As ICommand
         Public ReadOnly Property AutoAdjustCommand As ICommand
+        Public ReadOnly Property AutoStraightenCommand As ICommand
+        Public ReadOnly Property AutoPerspectiveCommand As ICommand
         Public ReadOnly Property ResetSharpnessCommand As ICommand
         Public ReadOnly Property ResetSharpenCommand As ICommand
         Public ReadOnly Property ResetSoftenCommand As ICommand
@@ -14744,6 +14756,8 @@ Namespace ViewModels
                                                                           ApplyExclusiveFilterPreset(preset)
                                                                       End Sub)
             AutoAdjustCommand = ReactiveCommand.Create(AddressOf ApplyAutoAdjustments)
+            AutoStraightenCommand = ReactiveCommand.Create(AddressOf ApplyAutoStraighten)
+            AutoPerspectiveCommand = ReactiveCommand.Create(AddressOf ApplyAutoPerspective)
             ' Gruppen-Zurücksetzer: nur die Filter-Regler - er nimmt den gewählten Filter und „Auto"
             ' heraus, lässt die übrigen Gruppen aber stehen. Seit der Knopf „Keine" aus der Liste
             ' raus ist, ist er der sichtbare Weg zurück auf „kein Filter"; das WEITE Neutralisieren

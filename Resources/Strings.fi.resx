@@ -8382,4 +8382,40 @@
   <data name="G_MIC_wird_f_r_externe_Bildfilter_als_eigenes_Pr_cd7ac063" xml:space="preserve">
     <value>G'MIC käynnistetään erillisenä ohjelmana ulkoisia kuvansuodattimia varten, eikä sitä ole integroitu. Se ei sisälly mihinkään pakettiin ja se on asennettava erikseen; jos se puuttuu, editorin G'MIC-kohta ei vaikuta mihinkään ja kaikki muu toimii ennallaan.</value>
   </data>
+  <data name="Automatisch_auf_den_Horizont_d9d45ed1" xml:space="preserve">
+    <value>Automaattisesti horisonttiin</value>
+  </data>
+  <data name="Sucht_die_geraden_Kanten_im_Bild_Horizont_Hauska_14dc0fb2" xml:space="preserve">
+    <value>Etsii kuvan suorat reunat - horisontin, talon reunan, ikkunarivin - ja kääntää kuvan niin, että ne ovat vaaka- ja pystysuorassa</value>
+  </data>
+  <data name="Perspektive_automatisch_korrigieren_f71067f5" xml:space="preserve">
+    <value>Korjaa perspektiivi automaattisesti</value>
+  </data>
+  <data name="Sucht_st_rzende_Linien_im_Bild_und_stellt_sie_ge_555c2d81" xml:space="preserve">
+    <value>Etsii kuvasta kaatuvat pystylinjat ja suoristaa ne. Tyhjiksi jääneet kulmat peittää Koko-liukusäädin</value>
+  </data>
+  <data name="Keine_gerade_Kante_gefunden_an_der_sich_ausricht_29c44aba" xml:space="preserve">
+    <value>Ei löytynyt suoraa reunaa, jonka mukaan suoristaa</value>
+  </data>
+  <data name="Das_Bild_steht_bereits_gerade_78cdd39e" xml:space="preserve">
+    <value>Kuva on jo suorassa</value>
+  </data>
+  <data name="Automatisch_ausgerichtet_69f7b5d9" xml:space="preserve">
+    <value>Suoristettu automaattisesti</value>
+  </data>
+  <data name="Ausgerichtet_um_0_Grad_8801cb34" xml:space="preserve">
+    <value>Suoristettu {0} astetta</value>
+  </data>
+  <data name="Keine_st_rzenden_Linien_gefunden_ee5cc723" xml:space="preserve">
+    <value>Kaatuvia pystylinjoja ei löytynyt</value>
+  </data>
+  <data name="Die_Perspektive_steht_bereits_richtig_18696c0f" xml:space="preserve">
+    <value>Perspektiivi on jo kohdallaan</value>
+  </data>
+  <data name="Perspektive_automatisch_korrigiert_88d28437" xml:space="preserve">
+    <value>Perspektiivi korjattu automaattisesti</value>
+  </data>
+  <data name="Perspektive_korrigiert_7c395a1f" xml:space="preserve">
+    <value>Perspektiivi korjattu</value>
+  </data>
 </root>

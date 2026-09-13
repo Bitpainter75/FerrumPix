@@ -8386,4 +8386,40 @@
   <data name="G_MIC_wird_f_r_externe_Bildfilter_als_eigenes_Pr_cd7ac063" xml:space="preserve">
     <value>G'MIC은 외부 이미지 필터용 별도 프로그램으로 호출되며 통합되어 있지 않습니다. 어떤 패키지에도 포함되지 않으므로 별도로 설치해야 합니다. 사용할 수 없으면 편집기의 G'MIC 항목은 작동하지 않지만, 다른 모든 기능은 그대로 사용할 수 있습니다.</value>
   </data>
+  <data name="Automatisch_auf_den_Horizont_d9d45ed1" xml:space="preserve">
+    <value>수평선에 자동 정렬</value>
+  </data>
+  <data name="Sucht_die_geraden_Kanten_im_Bild_Horizont_Hauska_14dc0fb2" xml:space="preserve">
+    <value>사진에서 직선 가장자리(수평선, 건물 모서리, 창문 배열)를 찾아 수평과 수직이 되도록 회전합니다</value>
+  </data>
+  <data name="Perspektive_automatisch_korrigieren_f71067f5" xml:space="preserve">
+    <value>원근 자동 보정</value>
+  </data>
+  <data name="Sucht_st_rzende_Linien_im_Bild_und_stellt_sie_ge_555c2d81" xml:space="preserve">
+    <value>사진에서 기울어진 수직선을 찾아 바로 세웁니다. 비어 버린 모서리는 크기 슬라이더로 덮습니다</value>
+  </data>
+  <data name="Keine_gerade_Kante_gefunden_an_der_sich_ausricht_29c44aba" xml:space="preserve">
+    <value>정렬할 만한 직선 가장자리를 찾지 못했습니다</value>
+  </data>
+  <data name="Das_Bild_steht_bereits_gerade_78cdd39e" xml:space="preserve">
+    <value>사진이 이미 수평입니다</value>
+  </data>
+  <data name="Automatisch_ausgerichtet_69f7b5d9" xml:space="preserve">
+    <value>자동으로 수평 맞춤</value>
+  </data>
+  <data name="Ausgerichtet_um_0_Grad_8801cb34" xml:space="preserve">
+    <value>{0}도 회전하여 수평을 맞췄습니다</value>
+  </data>
+  <data name="Keine_st_rzenden_Linien_gefunden_ee5cc723" xml:space="preserve">
+    <value>기울어진 수직선을 찾지 못했습니다</value>
+  </data>
+  <data name="Die_Perspektive_steht_bereits_richtig_18696c0f" xml:space="preserve">
+    <value>원근이 이미 올바릅니다</value>
+  </data>
+  <data name="Perspektive_automatisch_korrigiert_88d28437" xml:space="preserve">
+    <value>원근을 자동으로 보정했습니다</value>
+  </data>
+  <data name="Perspektive_korrigiert_7c395a1f" xml:space="preserve">
+    <value>원근을 보정했습니다</value>
+  </data>
 </root>

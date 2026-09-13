@@ -177,6 +177,33 @@
                         <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
                                                  Value="{Binding PerspectiveScale, Mode=TwoWay}" Minimum="-100" Maximum="100" />
                     </Grid>
+                    <!-- DER KNOPF STEHT BEI DEN REGLERN, die er setzt: er misst, wohin die
+                         senkrechten und waagerechten Kanten des Bildes fluchten, und schreibt die
+                         beiden oberen Regler. Danach laesst sich das Ergebnis nachziehen wie ein
+                         selbst gezogener Wert. Die Drehung auf den Horizont ist der Zwilling dazu
+                         und sitzt aus demselben Grund im Drehen-Panel. Er setzt NUR die beiden
+                         Kipp-Regler: "Seitenverhaeltnis" und "Groesse" sind Geschmack, nicht
+                         Messung - die "Groesse" deckt hinterher die leer gewordenen Ecken zu, und
+                         wie weit, entscheidet der Nutzer. -->
+                    <Button Classes="ghost"
+                            HorizontalAlignment="Stretch"
+                            HorizontalContentAlignment="Center"
+                            Padding="8,6"
+                            Margin="0,6,0,0"
+                            Command="{Binding AutoPerspectiveCommand}"
+                            ToolTip.Tip="Sucht stürzende Linien im Bild und stellt sie gerade. Die leer gewordenen Ecken deckt der Regler Größe zu">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <icons:SvgIcon
+                                Source="avares://FerrumPix/Assets/Icons/outline/wand.svg"
+                                Width="14" Height="14"
+                                VerticalAlignment="Center" />
+                            <TextBlock Text="Perspektive automatisch korrigieren"
+                                       FontSize="{DynamicResource FP.Font.Small}"
+                                       TextWrapping="Wrap"
+                                       TextAlignment="Center"
+                                       VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
                     <TextBlock Text="Die vier Ecken lassen sich auch direkt im Bild ziehen."
                                Foreground="{DynamicResource FP.Text.Muted}"
                                FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"

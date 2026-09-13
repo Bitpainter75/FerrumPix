@@ -8342,4 +8342,40 @@
   <data name="G_MIC_wird_f_r_externe_Bildfilter_als_eigenes_Pr_cd7ac063" xml:space="preserve">
     <value>G'MIC wird für externe Bildfilter als eigenes Programm aufgerufen, nicht eingebunden. Es liegt keinem Paket bei und muss selbst installiert werden; fehlt es, bleibt der G'MIC-Eintrag im Editor ohne Wirkung, und alles andere arbeitet unverändert.</value>
   </data>
+  <data name="Automatisch_auf_den_Horizont_d9d45ed1" xml:space="preserve">
+    <value>Automatisch auf den Horizont</value>
+  </data>
+  <data name="Sucht_die_geraden_Kanten_im_Bild_Horizont_Hauska_14dc0fb2" xml:space="preserve">
+    <value>Sucht die geraden Kanten im Bild - Horizont, Hauskante, Fensterreihe - und dreht es so, dass sie waagerecht und senkrecht stehen</value>
+  </data>
+  <data name="Perspektive_automatisch_korrigieren_f71067f5" xml:space="preserve">
+    <value>Perspektive automatisch korrigieren</value>
+  </data>
+  <data name="Sucht_st_rzende_Linien_im_Bild_und_stellt_sie_ge_555c2d81" xml:space="preserve">
+    <value>Sucht stürzende Linien im Bild und stellt sie gerade. Die leer gewordenen Ecken deckt der Regler Größe zu</value>
+  </data>
+  <data name="Keine_gerade_Kante_gefunden_an_der_sich_ausricht_29c44aba" xml:space="preserve">
+    <value>Keine gerade Kante gefunden, an der sich ausrichten ließe</value>
+  </data>
+  <data name="Das_Bild_steht_bereits_gerade_78cdd39e" xml:space="preserve">
+    <value>Das Bild steht bereits gerade</value>
+  </data>
+  <data name="Automatisch_ausgerichtet_69f7b5d9" xml:space="preserve">
+    <value>Automatisch ausgerichtet</value>
+  </data>
+  <data name="Ausgerichtet_um_0_Grad_8801cb34" xml:space="preserve">
+    <value>Ausgerichtet um {0} Grad</value>
+  </data>
+  <data name="Keine_st_rzenden_Linien_gefunden_ee5cc723" xml:space="preserve">
+    <value>Keine stürzenden Linien gefunden</value>
+  </data>
+  <data name="Die_Perspektive_steht_bereits_richtig_18696c0f" xml:space="preserve">
+    <value>Die Perspektive steht bereits richtig</value>
+  </data>
+  <data name="Perspektive_automatisch_korrigiert_88d28437" xml:space="preserve">
+    <value>Perspektive automatisch korrigiert</value>
+  </data>
+  <data name="Perspektive_korrigiert_7c395a1f" xml:space="preserve">
+    <value>Perspektive korrigiert</value>
+  </data>
 </root>
