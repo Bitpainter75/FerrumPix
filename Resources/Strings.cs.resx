@@ -8424,4 +8424,22 @@
   <data name="Entwickelt_im_Viewer_und_im_Vollbild_jedes_RAW_a_f4206803" xml:space="preserve">
     <value>Vyvolá každý soubor RAW v prohlížeči i na celé obrazovce, také bez souboru .fpxmp. Obrázek pak ukazuje vlastní vyvolání místo náhledu z fotoaparátu. Zobrazení proto trvá znatelně déle.</value>
   </data>
+  <data name="Einmalig_installieren_mit_brew_install_libraw_a2ecd49b" xml:space="preserve">
+    <value>Nainstalujte jednorázově příkazem: brew install libraw</value>
+  </data>
+  <data name="Die_mitgelieferte_Datei_libraw_dll_fehlt_neben_d_00f5fd19" xml:space="preserve">
+    <value>Přiložený soubor libraw.dll chybí vedle aplikace.</value>
+  </data>
+  <data name="Das_Paket_libraw_der_Distribution_installieren_58bce08e" xml:space="preserve">
+    <value>Nainstalujte balíček libraw své distribuce.</value>
+  </data>
+  <data name="RAW_Vorschau_LibRaw_fehlt_855297ed" xml:space="preserve">
+    <value>Náhled RAW (chybí LibRaw)</value>
+  </data>
+  <data name="RAW_Entwicklung_nicht_verf_gbar_7bac4f5a" xml:space="preserve">
+    <value>Vyvolání RAW není dostupné</value>
+  </data>
+  <data name="LibRaw_ist_auf_diesem_System_nicht_installiert_F_e4d4879d" xml:space="preserve">
+    <value>LibRaw není v tomto systému nainstalována. FerrumPix proto nemůže vyvolat soubory RAW ze senzorových dat a zobrazuje místo toho vložený náhled JPEG z fotoaparátu. Ten je podle fotoaparátu výrazně menší než snímek a při přiblížení se rozmazává.</value>
+  </data>
 </root>

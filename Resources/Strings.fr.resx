@@ -8384,4 +8384,22 @@
   <data name="Entwickelt_im_Viewer_und_im_Vollbild_jedes_RAW_a_f4206803" xml:space="preserve">
     <value>Développe chaque RAW dans la visionneuse et en plein écran, même sans fichier .fpxmp. L'image montre alors votre propre développement au lieu de l'aperçu de l'appareil photo. L'affichage prend donc nettement plus de temps.</value>
   </data>
+  <data name="Einmalig_installieren_mit_brew_install_libraw_a2ecd49b" xml:space="preserve">
+    <value>Installez-le une fois avec : brew install libraw</value>
+  </data>
+  <data name="Die_mitgelieferte_Datei_libraw_dll_fehlt_neben_d_00f5fd19" xml:space="preserve">
+    <value>Le fichier libraw.dll fourni est absent à côté de l'application.</value>
+  </data>
+  <data name="Das_Paket_libraw_der_Distribution_installieren_58bce08e" xml:space="preserve">
+    <value>Installez le paquet libraw de votre distribution.</value>
+  </data>
+  <data name="RAW_Vorschau_LibRaw_fehlt_855297ed" xml:space="preserve">
+    <value>Aperçu RAW (LibRaw manquant)</value>
+  </data>
+  <data name="RAW_Entwicklung_nicht_verf_gbar_7bac4f5a" xml:space="preserve">
+    <value>Développement RAW indisponible</value>
+  </data>
+  <data name="LibRaw_ist_auf_diesem_System_nicht_installiert_F_e4d4879d" xml:space="preserve">
+    <value>LibRaw n'est pas installé sur ce système. FerrumPix ne peut donc pas développer les fichiers RAW à partir des données du capteur et affiche à la place l'aperçu JPEG intégré de l'appareil photo. Selon l'appareil, il est nettement plus petit que la prise de vue et devient flou au zoom.</value>
+  </data>
 </root>

@@ -8424,4 +8424,22 @@
   <data name="Entwickelt_im_Viewer_und_im_Vollbild_jedes_RAW_a_f4206803" xml:space="preserve">
     <value>Kehittää jokaisen RAW-tiedoston katselimessa ja koko näytön tilassa myös ilman .fpxmp-tiedostoa. Kuva näyttää silloin oman kehityksesi kameran esikatselun sijaan. Kuvan muodostuminen kestää siksi selvästi kauemmin.</value>
   </data>
+  <data name="Einmalig_installieren_mit_brew_install_libraw_a2ecd49b" xml:space="preserve">
+    <value>Asenna se kerran komennolla: brew install libraw</value>
+  </data>
+  <data name="Die_mitgelieferte_Datei_libraw_dll_fehlt_neben_d_00f5fd19" xml:space="preserve">
+    <value>Mukana toimitettu tiedosto libraw.dll puuttuu sovelluksen vierestä.</value>
+  </data>
+  <data name="Das_Paket_libraw_der_Distribution_installieren_58bce08e" xml:space="preserve">
+    <value>Asenna jakelusi libraw-paketti.</value>
+  </data>
+  <data name="RAW_Vorschau_LibRaw_fehlt_855297ed" xml:space="preserve">
+    <value>RAW-esikatselu (LibRaw puuttuu)</value>
+  </data>
+  <data name="RAW_Entwicklung_nicht_verf_gbar_7bac4f5a" xml:space="preserve">
+    <value>RAW-kehitys ei käytettävissä</value>
+  </data>
+  <data name="LibRaw_ist_auf_diesem_System_nicht_installiert_F_e4d4879d" xml:space="preserve">
+    <value>LibRaw ei ole asennettuna tässä järjestelmässä. Siksi FerrumPix ei voi kehittää RAW-tiedostoja kennodatasta, vaan näyttää sen sijaan kameran upotetun JPEG-esikatselun. Kamerasta riippuen se on selvästi kuvaa pienempi ja muuttuu epäteräväksi lähennettäessä.</value>
+  </data>
 </root>

@@ -8382,4 +8382,22 @@
   <data name="Entwickelt_im_Viewer_und_im_Vollbild_jedes_RAW_a_f4206803" xml:space="preserve">
     <value>在查看器和全屏中冲洗每个 RAW 文件，即使没有 .fpxmp 文件。图像随后显示你自己的冲洗结果，而不是相机预览。因此图像的显示会明显变慢。</value>
   </data>
+  <data name="Einmalig_installieren_mit_brew_install_libraw_a2ecd49b" xml:space="preserve">
+    <value>用以下命令安装一次: brew install libraw</value>
+  </data>
+  <data name="Die_mitgelieferte_Datei_libraw_dll_fehlt_neben_d_00f5fd19" xml:space="preserve">
+    <value>应用程序旁边缺少随附的文件 libraw.dll。</value>
+  </data>
+  <data name="Das_Paket_libraw_der_Distribution_installieren_58bce08e" xml:space="preserve">
+    <value>请安装您所用发行版的 libraw 软件包。</value>
+  </data>
+  <data name="RAW_Vorschau_LibRaw_fehlt_855297ed" xml:space="preserve">
+    <value>RAW 预览 (缺少 LibRaw)</value>
+  </data>
+  <data name="RAW_Entwicklung_nicht_verf_gbar_7bac4f5a" xml:space="preserve">
+    <value>无法冲洗 RAW</value>
+  </data>
+  <data name="LibRaw_ist_auf_diesem_System_nicht_installiert_F_e4d4879d" xml:space="preserve">
+    <value>本系统未安装 LibRaw。因此 FerrumPix 无法从传感器数据冲洗 RAW 文件，只能显示相机内嵌的 JPEG 预览。视相机而定，它比照片小得多，放大后会变模糊。</value>
+  </data>
 </root>

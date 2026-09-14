@@ -8428,4 +8428,22 @@
   <data name="Entwickelt_im_Viewer_und_im_Vollbild_jedes_RAW_a_f4206803" xml:space="preserve">
     <value>व्यूअर और पूर्ण स्क्रीन में हर RAW को विकसित करता है, भले ही .fpxmp फ़ाइल न हो। तब छवि कैमरे के पूर्वावलोकन के बजाय आपका अपना विकास दिखाती है। इसलिए छवि दिखने में काफ़ी अधिक समय लगता है।</value>
   </data>
+  <data name="Einmalig_installieren_mit_brew_install_libraw_a2ecd49b" xml:space="preserve">
+    <value>इसे एक बार इस आदेश से स्थापित करें: brew install libraw</value>
+  </data>
+  <data name="Die_mitgelieferte_Datei_libraw_dll_fehlt_neben_d_00f5fd19" xml:space="preserve">
+    <value>अनुप्रयोग के बगल में साथ दी गई फ़ाइल libraw.dll नहीं है।</value>
+  </data>
+  <data name="Das_Paket_libraw_der_Distribution_installieren_58bce08e" xml:space="preserve">
+    <value>अपने वितरण का libraw पैकेज स्थापित करें।</value>
+  </data>
+  <data name="RAW_Vorschau_LibRaw_fehlt_855297ed" xml:space="preserve">
+    <value>RAW पूर्वावलोकन (LibRaw अनुपस्थित)</value>
+  </data>
+  <data name="RAW_Entwicklung_nicht_verf_gbar_7bac4f5a" xml:space="preserve">
+    <value>RAW विकास उपलब्ध नहीं</value>
+  </data>
+  <data name="LibRaw_ist_auf_diesem_System_nicht_installiert_F_e4d4879d" xml:space="preserve">
+    <value>इस सिस्टम पर LibRaw स्थापित नहीं है। इसलिए FerrumPix सेंसर डेटा से RAW फ़ाइलें विकसित नहीं कर सकता और इसके बजाय कैमरे का अंतर्निहित JPEG पूर्वावलोकन दिखाता है। कैमरे के अनुसार यह तस्वीर से काफ़ी छोटा होता है और बड़ा करने पर धुंधला हो जाता है।</value>
+  </data>
 </root>

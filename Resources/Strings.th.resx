@@ -8428,4 +8428,22 @@
   <data name="Entwickelt_im_Viewer_und_im_Vollbild_jedes_RAW_a_f4206803" xml:space="preserve">
     <value>ล้างไฟล์ RAW ทุกไฟล์ในโปรแกรมดูภาพและในโหมดเต็มจอ แม้ไม่มีไฟล์ .fpxmp ภาพจะแสดงการล้างของคุณเองแทนภาพตัวอย่างจากกล้อง การแสดงภาพจึงใช้เวลานานขึ้นอย่างเห็นได้ชัด</value>
   </data>
+  <data name="Einmalig_installieren_mit_brew_install_libraw_a2ecd49b" xml:space="preserve">
+    <value>ติดตั้งครั้งเดียวด้วยคำสั่ง: brew install libraw</value>
+  </data>
+  <data name="Die_mitgelieferte_Datei_libraw_dll_fehlt_neben_d_00f5fd19" xml:space="preserve">
+    <value>ไม่พบไฟล์ libraw.dll ที่ให้มาข้างแอปพลิเคชัน</value>
+  </data>
+  <data name="Das_Paket_libraw_der_Distribution_installieren_58bce08e" xml:space="preserve">
+    <value>ติดตั้งแพ็กเกจ libraw ของดิสทริบิวชันของคุณ</value>
+  </data>
+  <data name="RAW_Vorschau_LibRaw_fehlt_855297ed" xml:space="preserve">
+    <value>ตัวอย่าง RAW (ไม่มี LibRaw)</value>
+  </data>
+  <data name="RAW_Entwicklung_nicht_verf_gbar_7bac4f5a" xml:space="preserve">
+    <value>ใช้การล้างไฟล์ RAW ไม่ได้</value>
+  </data>
+  <data name="LibRaw_ist_auf_diesem_System_nicht_installiert_F_e4d4879d" xml:space="preserve">
+    <value>ระบบนี้ไม่ได้ติดตั้ง LibRaw FerrumPix จึงล้างไฟล์ RAW จากข้อมูลเซนเซอร์ไม่ได้ และแสดงภาพตัวอย่าง JPEG ที่ฝังมาจากกล้องแทน ภาพนั้นเล็กกว่าภาพถ่ายมากตามแต่ละกล้อง และจะเบลอเมื่อขยาย</value>
+  </data>
 </root>

@@ -8384,4 +8384,22 @@
   <data name="Entwickelt_im_Viewer_und_im_Vollbild_jedes_RAW_a_f4206803" xml:space="preserve">
     <value>Revela cada RAW en el visor y en pantalla completa, incluso sin un archivo .fpxmp. La imagen muestra entonces tu propio revelado en lugar de la vista previa de la cámara. Por eso la imagen tarda bastante más en aparecer.</value>
   </data>
+  <data name="Einmalig_installieren_mit_brew_install_libraw_a2ecd49b" xml:space="preserve">
+    <value>Instálalo una vez con: brew install libraw</value>
+  </data>
+  <data name="Die_mitgelieferte_Datei_libraw_dll_fehlt_neben_d_00f5fd19" xml:space="preserve">
+    <value>Falta el archivo libraw.dll incluido junto a la aplicación.</value>
+  </data>
+  <data name="Das_Paket_libraw_der_Distribution_installieren_58bce08e" xml:space="preserve">
+    <value>Instala el paquete libraw de tu distribución.</value>
+  </data>
+  <data name="RAW_Vorschau_LibRaw_fehlt_855297ed" xml:space="preserve">
+    <value>Vista previa RAW (falta LibRaw)</value>
+  </data>
+  <data name="RAW_Entwicklung_nicht_verf_gbar_7bac4f5a" xml:space="preserve">
+    <value>Revelado RAW no disponible</value>
+  </data>
+  <data name="LibRaw_ist_auf_diesem_System_nicht_installiert_F_e4d4879d" xml:space="preserve">
+    <value>LibRaw no está instalado en este sistema. Por eso FerrumPix no puede revelar los archivos RAW a partir de los datos del sensor y muestra en su lugar la vista previa JPEG incrustada de la cámara. Según la cámara, es bastante más pequeña que la foto y se ve borrosa al ampliar.</value>
+  </data>
 </root>

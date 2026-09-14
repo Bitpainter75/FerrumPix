@@ -128,6 +128,35 @@ Namespace Services
             End Get
         End Property
 
+        ''' <summary>Wie sich eine fehlende LibRaw auf DIESEM System nachruesten laesst, als fertiger
+        ''' Satz fuer die Oberflaeche.
+        '''
+        ''' Der Text steht hier und nicht in der Oberflaeche, weil direkt darunter festgelegt ist, WO
+        ''' gesucht wird. Liefe beides auseinander, naennte der Hinweis einen Ort, an dem gar nicht
+        ''' nachgesehen wird - und der Nutzer legt die Datei genau dorthin.
+        '''
+        ''' Anlass ist ein Feldbericht von einem Mac: die macOS-Pakete bringen keine LibRaw mit, die
+        ''' Anwendung fiel wortlos auf die eingebettete Vorschau zurueck, und der Nutzer sah im Editor
+        ''' ein winziges Bild, ohne dass ihm irgendetwas sagte, woran es liegt.</summary>
+        Public Shared Function MissingLibraryHint() As String
+            ' Der erste Ladeversuch wird absichtlich fuer die ganze Sitzung gecacht. Nach einer
+            ' Installation kann FerrumPix die neue Bibliothek deshalb erst nach einem Neustart
+            ' verwenden; der Hinweis muss das unmittelbar sagen, statt einen wirkungslosen
+            ' erneuten Bildwechsel nahezulegen.
+            Dim restartHint = " " & LocalizationService.T("Wirkt nach einem Neustart.")
+            If OperatingSystem.IsMacOS() Then
+                ' Homebrew ist auf dem Mac der uebliche Weg, und EnsureLoaded sucht genau in dessen
+                ' beiden Verzeichnissen zusaetzlich mit vollem Pfad nach.
+                Return LocalizationService.T("Einmalig installieren mit: brew install libraw") & restartHint
+            End If
+            If OperatingSystem.IsWindows() Then
+                ' Windows-Pakete liefern die Datei mit. Fehlt sie, ist das Paket unvollstaendig oder
+                ' es wurde nur die Programmdatei herauskopiert.
+                Return LocalizationService.T("Die mitgelieferte Datei libraw.dll fehlt neben der Anwendung.") & restartHint
+            End If
+            Return LocalizationService.T("Das Paket libraw der Distribution installieren.") & restartHint
+        End Function
+
         ''' <summary>Die Pfade, unter denen eine mitgelieferte LibRaw liegen kann: direkt neben der
         ''' Anwendung oder unter runtimes/&lt;rid&gt;/native, wohin packaging/package.sh sie kopiert.</summary>
         ''' <summary>Dieselben Namen in den beiden Homebrew-Verzeichnissen, mit vollem Pfad.

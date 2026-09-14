@@ -8428,4 +8428,22 @@
   <data name="Entwickelt_im_Viewer_und_im_Vollbild_jedes_RAW_a_f4206803" xml:space="preserve">
     <value>Mengembangkan setiap RAW di penampil dan layar penuh, bahkan tanpa berkas .fpxmp. Gambar lalu menampilkan hasil pengembanganmu sendiri, bukan pratinjau kamera. Karena itu gambar butuh waktu jauh lebih lama untuk muncul.</value>
   </data>
+  <data name="Einmalig_installieren_mit_brew_install_libraw_a2ecd49b" xml:space="preserve">
+    <value>Pasang sekali dengan: brew install libraw</value>
+  </data>
+  <data name="Die_mitgelieferte_Datei_libraw_dll_fehlt_neben_d_00f5fd19" xml:space="preserve">
+    <value>Berkas libraw.dll yang disertakan tidak ada di samping aplikasi.</value>
+  </data>
+  <data name="Das_Paket_libraw_der_Distribution_installieren_58bce08e" xml:space="preserve">
+    <value>Pasang paket libraw dari distribusi Anda.</value>
+  </data>
+  <data name="RAW_Vorschau_LibRaw_fehlt_855297ed" xml:space="preserve">
+    <value>Pratinjau RAW (LibRaw tidak ada)</value>
+  </data>
+  <data name="RAW_Entwicklung_nicht_verf_gbar_7bac4f5a" xml:space="preserve">
+    <value>Pengembangan RAW tidak tersedia</value>
+  </data>
+  <data name="LibRaw_ist_auf_diesem_System_nicht_installiert_F_e4d4879d" xml:space="preserve">
+    <value>LibRaw tidak terpasang di sistem ini. Karena itu FerrumPix tidak dapat mengembangkan berkas RAW dari data sensor dan menampilkan pratinjau JPEG bawaan kamera. Tergantung kameranya, pratinjau itu jauh lebih kecil daripada fotonya dan menjadi buram saat diperbesar.</value>
+  </data>
 </root>

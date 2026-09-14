@@ -8428,4 +8428,22 @@
   <data name="Entwickelt_im_Viewer_und_im_Vollbild_jedes_RAW_a_f4206803" xml:space="preserve">
     <value>Görüntüleyicide ve tam ekranda her RAW dosyasını, .fpxmp dosyası olmasa bile işler. Görüntü o zaman fotoğraf makinesinin önizlemesi yerine kendi işlemenizi gösterir. Bu nedenle görüntünün oluşması belirgin biçimde daha uzun sürer.</value>
   </data>
+  <data name="Einmalig_installieren_mit_brew_install_libraw_a2ecd49b" xml:space="preserve">
+    <value>Bir kez şu komutla kurun: brew install libraw</value>
+  </data>
+  <data name="Die_mitgelieferte_Datei_libraw_dll_fehlt_neben_d_00f5fd19" xml:space="preserve">
+    <value>Birlikte verilen libraw.dll dosyası uygulamanın yanında yok.</value>
+  </data>
+  <data name="Das_Paket_libraw_der_Distribution_installieren_58bce08e" xml:space="preserve">
+    <value>Dağıtımınızın libraw paketini kurun.</value>
+  </data>
+  <data name="RAW_Vorschau_LibRaw_fehlt_855297ed" xml:space="preserve">
+    <value>RAW önizlemesi (LibRaw yok)</value>
+  </data>
+  <data name="RAW_Entwicklung_nicht_verf_gbar_7bac4f5a" xml:space="preserve">
+    <value>RAW geliştirme kullanılamıyor</value>
+  </data>
+  <data name="LibRaw_ist_auf_diesem_System_nicht_installiert_F_e4d4879d" xml:space="preserve">
+    <value>Bu sistemde LibRaw kurulu değil. Bu yüzden FerrumPix, RAW dosyalarını sensör verisinden geliştiremiyor ve bunun yerine fotoğraf makinesinin gömülü JPEG önizlemesini gösteriyor. Makineye göre bu önizleme fotoğraftan epey küçüktür ve yakınlaştırınca bulanıklaşır.</value>
+  </data>
 </root>

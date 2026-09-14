@@ -8424,4 +8424,22 @@
   <data name="Entwickelt_im_Viewer_und_im_Vollbild_jedes_RAW_a_f4206803" xml:space="preserve">
     <value>Fremkalder hver RAW i fremviseren og i fuld skærm, også uden en .fpxmp. Billedet viser så din egen fremkaldelse i stedet for kameraets forhåndsvisning. Det tager derfor mærkbart længere tid, før billedet vises.</value>
   </data>
+  <data name="Einmalig_installieren_mit_brew_install_libraw_a2ecd49b" xml:space="preserve">
+    <value>Installer det én gang med: brew install libraw</value>
+  </data>
+  <data name="Die_mitgelieferte_Datei_libraw_dll_fehlt_neben_d_00f5fd19" xml:space="preserve">
+    <value>Den medfølgende fil libraw.dll mangler ved siden af programmet.</value>
+  </data>
+  <data name="Das_Paket_libraw_der_Distribution_installieren_58bce08e" xml:space="preserve">
+    <value>Installer distributionens libraw-pakke.</value>
+  </data>
+  <data name="RAW_Vorschau_LibRaw_fehlt_855297ed" xml:space="preserve">
+    <value>RAW-forhåndsvisning (LibRaw mangler)</value>
+  </data>
+  <data name="RAW_Entwicklung_nicht_verf_gbar_7bac4f5a" xml:space="preserve">
+    <value>RAW-fremkaldelse ikke tilgængelig</value>
+  </data>
+  <data name="LibRaw_ist_auf_diesem_System_nicht_installiert_F_e4d4879d" xml:space="preserve">
+    <value>LibRaw er ikke installeret på dette system. FerrumPix kan derfor ikke fremkalde RAW-filer ud fra sensordataene og viser i stedet kameraets indlejrede JPEG-forhåndsvisning. Afhængigt af kameraet er den betydeligt mindre end optagelsen og bliver uskarp, når du zoomer ind.</value>
+  </data>
 </root>

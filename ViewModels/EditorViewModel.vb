@@ -13182,9 +13182,13 @@ Namespace ViewModels
         Public ReadOnly Property RawFooterTooltip As String
             Get
                 If Not RawPreviewService.IsSupportedRaw(RenderSourcePath) Then Return Nothing
-                Return If(IsRawDeveloped,
-                          LocalizationService.T("RAW entwickelt"),
-                          LocalizationService.T("RAW-Vorschau"))
+                If IsRawDeveloped Then Return LocalizationService.T("RAW entwickelt")
+                ' Der Tooltip hat Platz fuer den ganzen Grund, die Statuszeile nur fuer den Merksatz.
+                If Not RawDecodeService.IsAvailable Then
+                    Return LocalizationService.T("RAW-Vorschau (LibRaw fehlt)") & vbLf &
+                           RawDecodeService.MissingLibraryHint()
+                End If
+                Return LocalizationService.T("RAW-Vorschau")
             End Get
         End Property
 
@@ -13602,12 +13606,56 @@ Namespace ViewModels
         ''' Datei, Reglerstände gehen in das .fpxmp-Sidecar.</summary>
         Private Function RawStatusSuffix() As String
             If Not RawPreviewService.IsSupportedRaw(RenderSourcePath) Then Return ""
-            Dim developed = RawDecodeService.IsAvailable AndAlso
-                            RawDecodeService.TryGetCachedSize(RenderSourcePath).Width > 0
+            ' Fehlt LibRaw ganz, ist "RAW-Vorschau" die halbe Auskunft: sie sagt, WAS angezeigt wird,
+            ' aber nicht, dass sich das beheben laesst. Genau daran scheiterte ein Mac-Nutzer.
+            If Not RawDecodeService.IsAvailable Then
+                Return "  •  " & LocalizationService.T("RAW-Vorschau (LibRaw fehlt)")
+            End If
+            Dim developed = RawDecodeService.TryGetCachedSize(RenderSourcePath).Width > 0
             Return "  •  " & If(developed,
                                 LocalizationService.T("RAW entwickelt"),
                                 LocalizationService.T("RAW-Vorschau"))
         End Function
+
+        ''' <summary>Einmal je Programmlauf gezeigt, nicht je Bild: beim Blaettern durch einen Ordner
+        ''' voller RAWs kaeme der Hinweis sonst bei jeder Datei erneut. Shared, damit auch ein zweites
+        ''' Editor-Fenster ihn nicht wiederholt.</summary>
+        Private Shared _missingRawLibraryNoticeShown As Boolean
+
+        ''' <summary>Sagen, dass ohne LibRaw gar nicht entwickelt wird - und wie sich das beheben
+        ''' laesst.
+        '''
+        ''' Anlass ist ein Feldbericht von einem Mac: die macOS-Pakete bringen keine LibRaw mit, der
+        ''' Editor zeigte deshalb die eingebettete JPEG-Vorschau einer RAF-Datei, und die ist bei
+        ''' Fujifilm klein. Der Nutzer sah ein winziges, beim Vergroessern unscharfes Bild und hielt
+        ''' es fuer einen Bedienfehler. Die Statuszeile sagte "RAW-Vorschau" - richtig, aber zu leise.
+        '''
+        ''' NACH dem Anzeigen, nicht mittendrin: dieselbe Begruendung wie bei
+        ''' <see cref="SchedulePendingBakedOperationsQuestion"/>. Ein Dialog ueber einem noch leeren
+        ''' Editor erklaert ein Bild, das der Nutzer noch gar nicht gesehen hat.</summary>
+        Private Sub ScheduleMissingRawDevelopmentNotice()
+            If _mainVm Is Nothing Then Return
+            If _missingRawLibraryNoticeShown Then Return
+            If Not RawPreviewService.IsSupportedRaw(RenderSourcePath) Then Return
+            If RawDecodeService.IsAvailable Then Return
+            ' VOR dem Anzeigen setzen: der Dialog laeuft asynchron, und bis er steht, kann der
+            ' naechste Bildwechsel schon hier durch sein.
+            _missingRawLibraryNoticeShown = True
+            Avalonia.Threading.Dispatcher.UIThread.Post(
+                Async Sub()
+                    Try
+                        ' Der Erklaertext ist EIN Literal, der Nachruest-Hinweis ein zweites: beide
+                        ' sind fuer sich uebersetzbar, aber der zweite haengt an der Plattform und
+                        ' kann deshalb nicht im ersten stehen.
+                        Await _mainVm.ShowMessageAsync(
+                            LocalizationService.T("RAW-Entwicklung nicht verfügbar"),
+                            LocalizationService.T("LibRaw ist auf diesem System nicht installiert. FerrumPix kann RAW-Dateien deshalb nicht aus den Sensordaten entwickeln und zeigt stattdessen die eingebettete JPEG-Vorschau der Kamera. Je nach Kamera ist die deutlich kleiner als die Aufnahme und wird beim Vergrößern unscharf.") &
+                            vbLf & vbLf & RawDecodeService.MissingLibraryHint())
+                    Catch ex As Exception
+                        DiagnosticLogService.LogException("Editor.MissingRawLibrary", ex)
+                    End Try
+                End Sub, Avalonia.Threading.DispatcherPriority.Background)
+        End Sub
 
         Public ReadOnly Property IsCurrentImageRaw As Boolean
             Get
@@ -15688,6 +15736,7 @@ Namespace ViewModels
                 ' Erst hier steht fest, ob wirklich entwickelt wurde - die Fensterleiste faerbt den
                 ' Dateinamen danach.
                 _mainVm?.RefreshWindowTitle()
+                ScheduleMissingRawDevelopmentNotice()
             Catch
                 StatusText = LocalizationService.T("Fehler beim Laden")
             End Try
@@ -16038,6 +16087,7 @@ Namespace ViewModels
                 ' Erst hier steht fest, ob wirklich entwickelt wurde - die Fensterleiste faerbt den
                 ' Dateinamen danach.
                 _mainVm?.RefreshWindowTitle()
+                ScheduleMissingRawDevelopmentNotice()
             Catch ex As Exception
                 StatusText = LocalizationService.T("Fehler beim Laden")
             End Try
