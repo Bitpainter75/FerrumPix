@@ -8378,4 +8378,10 @@
   <data name="Perspektive_korrigiert_7c395a1f" xml:space="preserve">
     <value>Perspective corrigée</value>
   </data>
+  <data name="Auch_unbearbeitete_RAWs_im_Viewer_entwickeln_23883b93" xml:space="preserve">
+    <value>Développer aussi les RAW non modifiés dans la visionneuse</value>
+  </data>
+  <data name="Entwickelt_im_Viewer_und_im_Vollbild_jedes_RAW_a_f4206803" xml:space="preserve">
+    <value>Développe chaque RAW dans la visionneuse et en plein écran, même sans fichier .fpxmp. L'image montre alors votre propre développement au lieu de l'aperçu de l'appareil photo. L'affichage prend donc nettement plus de temps.</value>
+  </data>
 </root>

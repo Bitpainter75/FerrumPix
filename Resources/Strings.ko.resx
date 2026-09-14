@@ -8422,4 +8422,10 @@
   <data name="Perspektive_korrigiert_7c395a1f" xml:space="preserve">
     <value>원근을 보정했습니다</value>
   </data>
+  <data name="Auch_unbearbeitete_RAWs_im_Viewer_entwickeln_23883b93" xml:space="preserve">
+    <value>편집하지 않은 RAW도 뷰어에서 현상</value>
+  </data>
+  <data name="Entwickelt_im_Viewer_und_im_Vollbild_jedes_RAW_a_f4206803" xml:space="preserve">
+    <value>뷰어와 전체 화면에서 .fpxmp 파일이 없어도 모든 RAW를 현상합니다. 그러면 카메라 미리 보기 대신 직접 현상한 결과가 표시됩니다. 그만큼 이미지가 나타나기까지 눈에 띄게 오래 걸립니다.</value>
+  </data>
 </root>

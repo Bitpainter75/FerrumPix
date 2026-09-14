@@ -8378,4 +8378,10 @@
   <data name="Perspektive_korrigiert_7c395a1f" xml:space="preserve">
     <value>Perspectiva corregida</value>
   </data>
+  <data name="Auch_unbearbeitete_RAWs_im_Viewer_entwickeln_23883b93" xml:space="preserve">
+    <value>Revelar también los RAW sin editar en el visor</value>
+  </data>
+  <data name="Entwickelt_im_Viewer_und_im_Vollbild_jedes_RAW_a_f4206803" xml:space="preserve">
+    <value>Revela cada RAW en el visor y en pantalla completa, incluso sin un archivo .fpxmp. La imagen muestra entonces tu propio revelado en lugar de la vista previa de la cámara. Por eso la imagen tarda bastante más en aparecer.</value>
+  </data>
 </root>

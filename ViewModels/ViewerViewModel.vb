@@ -2108,17 +2108,19 @@ Namespace ViewModels
 
         ''' Reiner Decode ohne ViewModel-Zustand - laeuft im Task.Run-Worker.
         ''' <summary>Die Entscheidung, ob ein RAW entwickelt oder als eingebettete Kamera-Vorschau
-        ''' gezeigt wird - bewusst als parameterlose reine Funktion und nicht als Eigenschaft, damit
-        ''' sie ohne Anwendung, ohne Einstellungen und ohne LibRaw geprueft werden kann.
+        ''' gezeigt wird - bewusst eine reine Funktion ohne Anwendungszustand und keine Eigenschaft,
+        ''' damit sie ohne Anwendung, ohne Einstellungen und ohne LibRaw geprueft werden kann.
         '''
-        ''' Im Vergleich gilt sie IMMER: dort ist die Kamera-Vorschau die falsche Quelle. Sonst nur
-        ''' bei eingeschalteter Einstellung UND vorhandener Begleitdatei - ohne Rezept lohnt der
-        ''' teure Decode in der Einzelansicht nicht.</summary>
-        Friend Shared Function SollRawEntwickeln(alwaysDevelop As Boolean, libRawVorhanden As Boolean,
-                                                 einstellungAn As Boolean, begleitdateiDa As Boolean) As Boolean
-            If Not libRawVorhanden Then Return False
-            If alwaysDevelop Then Return True
-            Return einstellungAn AndAlso begleitdateiDa
+        ''' Im Vergleich gilt sie IMMER: dort ist die Kamera-Vorschau die falsche Quelle. Sonst
+        ''' entweder bei eingeschalteter Einstellung UND vorhandener Begleitdatei, oder wenn die
+        ''' zweite Einstellung das Rezept gar nicht zur Bedingung macht - dann wird auch ein
+        ''' unbearbeitetes RAW entwickelt, was je Bild einen vollen Decode kostet.</summary>
+        Friend Shared Function ShouldDevelopRaw(alwaysDevelop As Boolean, libRawAvailable As Boolean,
+                                                settingEnabled As Boolean, sidecarExists As Boolean,
+                                                developWithoutRecipe As Boolean) As Boolean
+            If Not libRawAvailable Then Return False
+            If alwaysDevelop OrElse developWithoutRecipe Then Return True
+            Return settingEnabled AndAlso sidecarExists
         End Function
 
         ''' <param name="alwaysDevelop">Im Bildvergleich gesetzt. Dort ist die eingebettete
@@ -2130,13 +2132,17 @@ Namespace ViewModels
         Private Shared Function DecodeViewerBitmap(path As String, Optional alwaysDevelop As Boolean = False) As Bitmap
             If RawPreviewService.IsSupportedRaw(path) Then
                 ' Entwickelte Vorschau statt der schnellen eingebetteten: im Vergleich immer, sonst
-                ' nur bei aktiver Einstellung und vorhandener .fpxmp. ApplyAdjustments liefert
-                ' bereits orientiert + mit Rezept-Geometrie.
-                If SollRawEntwickeln(alwaysDevelop, RawDecodeService.IsAvailable,
-                                     AppSettingsService.Load().DevelopRawInViewer,
-                                     RawSidecarService.Exists(path)) Then
+                ' bei aktiver Einstellung und vorhandener .fpxmp - oder bei der zweiten Einstellung
+                ' auch ohne Rezept. ApplyAdjustments liefert bereits orientiert + mit
+                ' Rezept-Geometrie. Einmal laden genuegt, beide Schalter stehen in derselben Datei.
+                Dim settings = AppSettingsService.Load()
+                If ShouldDevelopRaw(alwaysDevelop, RawDecodeService.IsAvailable,
+                                    settings.DevelopRawInViewer,
+                                    RawSidecarService.Exists(path),
+                                    settings.DevelopRawInViewerWithoutRecipe) Then
                     ' Ohne Begleitdatei die Vorgabewerte: entwickelt wird trotzdem, nur eben ohne
-                    ' Rezept. Genau das ist im Vergleich gewollt.
+                    ' Rezept. Genau das ist im Vergleich und beim Schalter fuer unbearbeitete
+                    ' RAWs gewollt.
                     Dim adj = If(RawSidecarService.Exists(path), RawSidecarService.TryRead(path), Nothing)
                     If adj Is Nothing Then adj = New ImageAdjustments()
                     Try

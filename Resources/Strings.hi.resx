@@ -8422,4 +8422,10 @@
   <data name="Perspektive_korrigiert_7c395a1f" xml:space="preserve">
     <value>परिप्रेक्ष्य ठीक किया गया</value>
   </data>
+  <data name="Auch_unbearbeitete_RAWs_im_Viewer_entwickeln_23883b93" xml:space="preserve">
+    <value>बिना संपादित RAW भी व्यूअर में विकसित करें</value>
+  </data>
+  <data name="Entwickelt_im_Viewer_und_im_Vollbild_jedes_RAW_a_f4206803" xml:space="preserve">
+    <value>व्यूअर और पूर्ण स्क्रीन में हर RAW को विकसित करता है, भले ही .fpxmp फ़ाइल न हो। तब छवि कैमरे के पूर्वावलोकन के बजाय आपका अपना विकास दिखाती है। इसलिए छवि दिखने में काफ़ी अधिक समय लगता है।</value>
+  </data>
 </root>

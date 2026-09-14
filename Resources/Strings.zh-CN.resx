@@ -8376,4 +8376,10 @@
   <data name="Perspektive_korrigiert_7c395a1f" xml:space="preserve">
     <value>已校正透视</value>
   </data>
+  <data name="Auch_unbearbeitete_RAWs_im_Viewer_entwickeln_23883b93" xml:space="preserve">
+    <value>在查看器中也冲洗未编辑的 RAW</value>
+  </data>
+  <data name="Entwickelt_im_Viewer_und_im_Vollbild_jedes_RAW_a_f4206803" xml:space="preserve">
+    <value>在查看器和全屏中冲洗每个 RAW 文件，即使没有 .fpxmp 文件。图像随后显示你自己的冲洗结果，而不是相机预览。因此图像的显示会明显变慢。</value>
+  </data>
 </root>

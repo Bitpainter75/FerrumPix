@@ -340,6 +340,12 @@ Namespace Services
         ''' Galerie-Thumbnails und Viewer, weil der Viewer teurer entwickelt.
         Public Property DevelopRawThumbnails As Boolean = False
         Public Property DevelopRawInViewer As Boolean = False
+        ''' Auch RAWs OHNE .fpxmp-Rezept in Viewer und Vollbild entwickeln (Standard AUS). Der
+        ''' Schalter darueber haengt an der Begleitdatei, und deren blosses Vorhandensein belegt
+        ''' keine Bearbeitung: der Katalog legt sie schon fuer einen Stern an. Wer immer die eigene
+        ''' Entwicklung statt der Kamera-Vorschau sehen will, schaltet diesen hier ein - er wirkt
+        ''' unabhaengig vom Rezept-Schalter und kostet je Bild einen vollen Decode.
+        Public Property DevelopRawInViewerWithoutRecipe As Boolean = False
         ''' RAWs OHNE .fpxmp-Rezept auch in den Stapelfunktionen voll entwickeln (Demosaic in
         ''' Sensoraufloesung) statt ihre eingebettete JPEG-Vorschau zu nehmen. Mit Rezept wird
         ''' IMMER entwickelt - dort waere die Vorschau schlicht das falsche Bild.

@@ -8422,4 +8422,10 @@
   <data name="Perspektive_korrigiert_7c395a1f" xml:space="preserve">
     <value>Perspektif dikoreksi</value>
   </data>
+  <data name="Auch_unbearbeitete_RAWs_im_Viewer_entwickeln_23883b93" xml:space="preserve">
+    <value>Kembangkan juga RAW yang belum diedit di penampil</value>
+  </data>
+  <data name="Entwickelt_im_Viewer_und_im_Vollbild_jedes_RAW_a_f4206803" xml:space="preserve">
+    <value>Mengembangkan setiap RAW di penampil dan layar penuh, bahkan tanpa berkas .fpxmp. Gambar lalu menampilkan hasil pengembanganmu sendiri, bukan pratinjau kamera. Karena itu gambar butuh waktu jauh lebih lama untuk muncul.</value>
+  </data>
 </root>

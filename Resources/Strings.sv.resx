@@ -8418,4 +8418,10 @@
   <data name="Perspektive_korrigiert_7c395a1f" xml:space="preserve">
     <value>Perspektivet korrigerat</value>
   </data>
+  <data name="Auch_unbearbeitete_RAWs_im_Viewer_entwickeln_23883b93" xml:space="preserve">
+    <value>Framkalla även obearbetade RAW-filer i visaren</value>
+  </data>
+  <data name="Entwickelt_im_Viewer_und_im_Vollbild_jedes_RAW_a_f4206803" xml:space="preserve">
+    <value>Framkallar varje RAW i visaren och i helskärm, även utan .fpxmp. Bilden visar då din egen framkallning i stället för kamerans förhandsvisning. Det tar därför märkbart längre tid innan bilden visas.</value>
+  </data>
 </root>

@@ -1,3 +1,11 @@
+## Unreleased
+
+### What's new
+
+- The viewer can develop every RAW, edited or not. A new setting under RAW development shows your
+  own development in the viewer and in fullscreen instead of the preview the camera put in the
+  file. It is off to begin with, because a picture then takes longer to appear.
+
 ## FerrumPix 0.9.44
 
 ### What's new
