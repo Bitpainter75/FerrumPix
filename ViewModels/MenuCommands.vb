@@ -69,6 +69,10 @@ Namespace ViewModels
         Public Property CopyPlace As ICommand
         Public Property PastePlace As ICommand
         Public Property SetPlace As ICommand
+        ''' <summary>Den Ort aus einer GPS-Aufzeichnung holen, ueber die Aufnahmezeit. Steht neben
+        ''' "Setzen", weil es dieselbe Frage beantwortet - nur fuer eine ganze Reihe Bilder auf
+        ''' einmal und mit je eigener Koordinate.</summary>
+        Public Property SetPlaceFromTrack As ICommand
         Public Property RemovePlace As ICommand
         Public Property SetCopyright As ICommand
         Public Property SetCaptureDate As ICommand

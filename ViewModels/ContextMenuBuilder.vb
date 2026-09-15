@@ -260,6 +260,10 @@ Namespace ViewModels
                                  FooterMenuCatalog.PastePlace(commands.PastePlace, GeotagClipboard.Label))
                 End If
                 AddIfOffered(children, commands.SetPlace, FooterMenuCatalog.SetPlace(commands.SetPlace))
+                ' Der Weg ueber eine Aufzeichnung steht direkt daneben: dieselbe Frage, nur
+                ' beantwortet die Aufnahmezeit sie hier selbst.
+                AddIfOffered(children, commands.SetPlaceFromTrack,
+                             FooterMenuCatalog.SetPlaceFromTrack(commands.SetPlaceFromTrack))
                 ' LOESCHEN nur, wo einer steht - bei einer Auswahl reicht EIN Bild mit Ort. EINE
                 ' Abfrage fuer die ganze Auswahl, nicht eine je Bild: bei einem grossen Stapel
                 ' waere der Rechtsklick sonst spuerbar traege.

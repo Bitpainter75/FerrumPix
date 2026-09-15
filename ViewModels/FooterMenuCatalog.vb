@@ -172,6 +172,13 @@ Namespace ViewModels
             Return Build("Aufnahmeort setzen", "map-pin-search", c)
         End Function
 
+        ''' <summary>Der Weg ueber die Aufnahmezeit. Die Beschriftung nennt die Aufzeichnung und
+        ''' nicht das Dateiformat: wer einen Weg mitgeschnitten hat, weiss, dass das eine GPX-Datei
+        ''' ist - wer nicht, dem sagt das Kuerzel ohnehin nichts.</summary>
+        Public Shared Function SetPlaceFromTrack(c As ICommand) As AppAction
+            Return Build("Aufnahmeort aus Aufzeichnung", "route", c)
+        End Function
+
         Public Shared Function RemovePlace(c As ICommand) As AppAction
             Return Build("Aufnahmeort löschen", "map-pin-x", c)
         End Function

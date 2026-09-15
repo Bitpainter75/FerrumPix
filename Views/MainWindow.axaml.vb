@@ -442,6 +442,7 @@ Namespace Views
                 Dim batchResizeView = overlay?.FindControl(Of BatchResizeDialogView)("BatchResizeDialog")
                 ' Der Ortsdialog hat genau EIN Feld, und wer ihn oeffnet, will tippen oder einfuegen.
                 Dim setPlaceView = overlay?.FindControl(Of SetPlaceDialogView)("SetPlaceDialog")
+                Dim gpxTrackView = overlay?.FindControl(Of GpxTrackDialogView)("GpxTrackDialog")
                 If input IsNot Nothing AndAlso vm.DialogShowsInput Then
                     input.Focus()
                     input.SelectAll()
@@ -449,6 +450,8 @@ Namespace Views
                     batchResizeView.FocusWidthField()
                 ElseIf setPlaceView IsNot Nothing AndAlso vm.DialogShowsSetPlace Then
                     setPlaceView.FocusQueryField()
+                ElseIf gpxTrackView IsNot Nothing AndAlso vm.DialogShowsGpxTrack Then
+                    gpxTrackView.FocusOffsetField()
                 Else
                     Focus()
                 End If

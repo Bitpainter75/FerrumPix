@@ -2353,6 +2353,7 @@ Namespace Views
                 .OpenPlaceInOsm = vm.OpenPlaceInOsmCommand,
                 .PastePlace = vm.PastePlaceCommand,
                 .SetPlace = vm.SetPlaceCommand,
+                .SetPlaceFromTrack = vm.SetPlaceFromTrackCommand,
                 .RemovePlace = vm.RemovePlaceCommand,
                 .SetCopyright = vm.SetCopyrightCommand,
                 .SetCaptureDate = vm.SetCaptureDateCommand,

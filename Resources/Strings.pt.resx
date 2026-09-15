@@ -8401,4 +8401,58 @@
   <data name="LibRaw_ist_auf_diesem_System_nicht_installiert_F_e4d4879d" xml:space="preserve">
     <value>O LibRaw não está instalado neste sistema. Por isso o FerrumPix não consegue revelar ficheiros RAW a partir dos dados do sensor e mostra em vez disso a pré-visualização JPEG incorporada da câmara. Conforme a câmara, é bastante menor do que a fotografia e fica desfocada ao ampliar.</value>
   </data>
+  <data name="Aufnahmeort_aus_Aufzeichnung_eee78abc" xml:space="preserve">
+    <value>Local a partir do trajeto</value>
+  </data>
+  <data name="Jedes_Bild_bekommt_den_Ort_an_dem_die_Aufzeichnu_f769c5ea" xml:space="preserve">
+    <value>Cada foto recebe o local onde o trajeto estava na sua hora de captura. O desvio de tempo alinha o relógio da câmara com o trajeto.</value>
+  </data>
+  <data name="Zeitversatz_der_Kamerauhr_1faf2dc0" xml:space="preserve">
+    <value>Desvio do relógio da câmara</value>
+  </data>
+  <data name="Zum_Beispiel_02_00_f_r_Mitteleuropa_im_Sommer_d7d15db5" xml:space="preserve">
+    <value>Por exemplo +02:00 para a Europa Central no verão</value>
+  </data>
+  <data name="H_chster_Abstand_zu_einem_aufgezeichneten_Punkt__9431063b" xml:space="preserve">
+    <value>Maior distância a um ponto registado em minutos</value>
+  </data>
+  <data name="Kein_Bild_liegt_in_der_Aufzeichnung_5c7c8bc7" xml:space="preserve">
+    <value>Nenhuma foto está dentro do trajeto</value>
+  </data>
+  <data name="0_von_1_Bildern_bekommen_einen_Aufnahmeort_930decfe" xml:space="preserve">
+    <value>{0} de {1} fotos recebem um local</value>
+  </data>
+  <data name="Vorgeschlagen_weil_die_Aufnahmezeiten_sonst_au_e_6e24a9d4" xml:space="preserve">
+    <value>Sugerido porque as horas de captura ficariam fora do trajeto</value>
+  </data>
+  <data name="0_Bilder_gew_hlt_1_davon_mit_Aufnahmezeit_123fdf8d" xml:space="preserve">
+    <value>{0} fotos selecionadas, {1} delas com hora de captura</value>
+  </data>
+  <data name="0_Punkte_32b77346" xml:space="preserve">
+    <value>{0} pontos</value>
+  </data>
+  <data name="0_bis_1_16a0d7dc" xml:space="preserve">
+    <value>{0} a {1}</value>
+  </data>
+  <data name="Aufzeichnung_w_hlen_710b9a30" xml:space="preserve">
+    <value>Escolher trajeto</value>
+  </data>
+  <data name="GPS_Aufzeichnung_8075f2a6" xml:space="preserve">
+    <value>Trajeto GPS</value>
+  </data>
+  <data name="Die_Aufzeichnung_wird_gelesen_ba84e3b0" xml:space="preserve">
+    <value>O trajeto está a ser lido</value>
+  </data>
+  <data name="Die_Aufzeichnung_lie_sich_nicht_lesen_202cfc9e" xml:space="preserve">
+    <value>Não foi possível ler o trajeto</value>
+  </data>
+  <data name="Die_Aufzeichnung_enth_lt_keine_Punkte_mit_Uhrzei_6ec16b21" xml:space="preserve">
+    <value>O trajeto não tem pontos com hora</value>
+  </data>
+  <data name="Kein_Bild_der_Auswahl_hat_eine_Aufnahmezeit_554215da" xml:space="preserve">
+    <value>Nenhuma foto da seleção tem hora de captura</value>
+  </data>
+  <data name="Aufnahmeort_f_r_0_von_1_Bildern_aus_der_Aufzeich_91ffd8fa" xml:space="preserve">
+    <value>Local do trajeto definido para {0} de {1} fotos</value>
+  </data>
 </root>

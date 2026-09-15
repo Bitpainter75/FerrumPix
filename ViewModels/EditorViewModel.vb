@@ -14387,6 +14387,7 @@ Namespace ViewModels
         Public ReadOnly Property OpenPlaceInOsmCommand As ICommand
         Public ReadOnly Property PastePlaceCommand As ICommand
         Public ReadOnly Property SetPlaceCommand As ICommand
+        Public ReadOnly Property SetPlaceFromTrackCommand As ICommand
         Public ReadOnly Property SetCopyrightCommand As ICommand
         Public ReadOnly Property SetCaptureDateCommand As ICommand
         Public ReadOnly Property ReanalyzeAiTagsCommand As ICommand
@@ -14965,6 +14966,7 @@ Namespace ViewModels
                                                            AfterPlaceChanged()
                                                        End Sub)
             SetPlaceCommand = ReactiveCommand.CreateFromTask(Function() SetPlaceCurrentAsync())
+            SetPlaceFromTrackCommand = ReactiveCommand.CreateFromTask(Function() SetPlaceFromTrackCurrentAsync())
             SetCopyrightCommand = ReactiveCommand.CreateFromTask(Function() SetCopyrightCurrentAsync())
             SetCaptureDateCommand = ReactiveCommand.CreateFromTask(Function() SetCaptureDateCurrentAsync())
             ReanalyzeAiTagsCommand = ReactiveCommand.CreateFromTask(Function() ReanalyzeAiTagsCurrentAsync())
@@ -15108,6 +15110,15 @@ Namespace ViewModels
             AfterPlaceChanged()
         End Function
 
+        ''' <summary>Der Ort aus einer Aufzeichnung, fuer das bearbeitete Bild - derselbe Weg wie
+        ''' in der Galerie, nur auf einem Bild statt auf einer Auswahl.</summary>
+        Private Async Function SetPlaceFromTrackCurrentAsync() As Task
+            Await WithCurrentImageAsync(Async Function(g, i)
+                                            Await g.SetPlaceFromTrackForImageItemsAsync(i)
+                                        End Function)
+            AfterPlaceChanged()
+        End Function
+
         ''' <summary>Der Urheberrechtshinweis fuer das angezeigte Bild - derselbe Weg wie beim
         ''' Aufnahmeort. Refresh und nicht ShowItem: der Pfad hat sich nicht geaendert, nur sein
         ''' Inhalt, und bei gleichem Pfad steigt das Panel sofort wieder aus.</summary>
@@ -15176,6 +15187,7 @@ Namespace ViewModels
                                                     .OpenPlaceInOsm = OpenPlaceInOsmCommand,
                                                     .PastePlace = PastePlaceCommand,
                                                     .SetPlace = SetPlaceCommand,
+                                                    .SetPlaceFromTrack = SetPlaceFromTrackCommand,
                                                     .SetCopyright = SetCopyrightCommand,
                                                     .SetCaptureDate = SetCaptureDateCommand,
                                                     .ReanalyzeAiTags = ReanalyzeAiTagsCommand,

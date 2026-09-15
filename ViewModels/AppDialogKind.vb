@@ -17,6 +17,7 @@ Namespace ViewModels
         WatermarkPreset
         ExportTo
         SetPlace
+        GpxTrack
         CaptureDate
     End Enum
 
@@ -27,6 +28,15 @@ Namespace ViewModels
         Public Property Latitude As Double
         Public Property Longitude As Double
         Public Property Label As String = ""
+    End Class
+
+    ''' <summary>Was der Dialog "Aufnahmeort aus Aufzeichnung" herausgibt: der Zeitversatz der
+    ''' Kamerauhr gegen die Aufzeichnung und der zugelassene Abstand zum naechsten aufgezeichneten
+    ''' Punkt. Die Koordinaten selbst stehen nicht darin - die rechnet der Aufrufer damit aus, Bild
+    ''' fuer Bild (siehe GpxTrackService).</summary>
+    Public Class GpxTrackDialogResult
+        Public Property CameraOffset As TimeSpan
+        Public Property ToleranceMinutes As Integer
     End Class
 
     ''' <summary>Was der Dialog "Aufnahmedatum setzen" herausgibt. ZWEI Wege, und sie beantworten

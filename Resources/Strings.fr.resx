@@ -8402,4 +8402,58 @@
   <data name="LibRaw_ist_auf_diesem_System_nicht_installiert_F_e4d4879d" xml:space="preserve">
     <value>LibRaw n'est pas installé sur ce système. FerrumPix ne peut donc pas développer les fichiers RAW à partir des données du capteur et affiche à la place l'aperçu JPEG intégré de l'appareil photo. Selon l'appareil, il est nettement plus petit que la prise de vue et devient flou au zoom.</value>
   </data>
+  <data name="Aufnahmeort_aus_Aufzeichnung_eee78abc" xml:space="preserve">
+    <value>Lieu depuis une trace</value>
+  </data>
+  <data name="Jedes_Bild_bekommt_den_Ort_an_dem_die_Aufzeichnu_f769c5ea" xml:space="preserve">
+    <value>Chaque photo reçoit le lieu où se trouvait la trace à son heure de prise de vue. Le décalage horaire aligne l'horloge de l'appareil sur la trace.</value>
+  </data>
+  <data name="Zeitversatz_der_Kamerauhr_1faf2dc0" xml:space="preserve">
+    <value>Décalage de l'horloge de l'appareil</value>
+  </data>
+  <data name="Zum_Beispiel_02_00_f_r_Mitteleuropa_im_Sommer_d7d15db5" xml:space="preserve">
+    <value>Par exemple +02:00 pour l'Europe centrale en été</value>
+  </data>
+  <data name="H_chster_Abstand_zu_einem_aufgezeichneten_Punkt__9431063b" xml:space="preserve">
+    <value>Écart maximal avec un point enregistré en minutes</value>
+  </data>
+  <data name="Kein_Bild_liegt_in_der_Aufzeichnung_5c7c8bc7" xml:space="preserve">
+    <value>Aucune photo ne se situe dans la trace</value>
+  </data>
+  <data name="0_von_1_Bildern_bekommen_einen_Aufnahmeort_930decfe" xml:space="preserve">
+    <value>{0} photos sur {1} reçoivent un lieu</value>
+  </data>
+  <data name="Vorgeschlagen_weil_die_Aufnahmezeiten_sonst_au_e_6e24a9d4" xml:space="preserve">
+    <value>Proposé car les heures de prise de vue se situeraient sinon hors de la trace</value>
+  </data>
+  <data name="0_Bilder_gew_hlt_1_davon_mit_Aufnahmezeit_123fdf8d" xml:space="preserve">
+    <value>{0} photos sélectionnées, dont {1} avec une heure de prise de vue</value>
+  </data>
+  <data name="0_Punkte_32b77346" xml:space="preserve">
+    <value>{0} points</value>
+  </data>
+  <data name="0_bis_1_16a0d7dc" xml:space="preserve">
+    <value>{0} à {1}</value>
+  </data>
+  <data name="Aufzeichnung_w_hlen_710b9a30" xml:space="preserve">
+    <value>Choisir une trace</value>
+  </data>
+  <data name="GPS_Aufzeichnung_8075f2a6" xml:space="preserve">
+    <value>Trace GPS</value>
+  </data>
+  <data name="Die_Aufzeichnung_wird_gelesen_ba84e3b0" xml:space="preserve">
+    <value>Lecture de la trace</value>
+  </data>
+  <data name="Die_Aufzeichnung_lie_sich_nicht_lesen_202cfc9e" xml:space="preserve">
+    <value>La trace n'a pas pu être lue</value>
+  </data>
+  <data name="Die_Aufzeichnung_enth_lt_keine_Punkte_mit_Uhrzei_6ec16b21" xml:space="preserve">
+    <value>La trace ne contient aucun point horodaté</value>
+  </data>
+  <data name="Kein_Bild_der_Auswahl_hat_eine_Aufnahmezeit_554215da" xml:space="preserve">
+    <value>Aucune photo de la sélection n'a d'heure de prise de vue</value>
+  </data>
+  <data name="Aufnahmeort_f_r_0_von_1_Bildern_aus_der_Aufzeich_91ffd8fa" xml:space="preserve">
+    <value>Lieu défini depuis la trace pour {0} photos sur {1}</value>
+  </data>
 </root>

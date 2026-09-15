@@ -417,6 +417,74 @@ Namespace Services
             Return batch
         End Function
 
+        ''' <summary>Jedem Bild SEINE Koordinate - fuer den Abgleich mit einer Aufzeichnung, wo
+        ''' jedes Bild dort steht, wo der Weg zu seiner Aufnahmezeit war.
+        '''
+        ''' Derselbe Aufbau wie <see cref="SetGpsCoordinatesForMany"/>: Katalog in EINER
+        ''' Transaktion, Dateien danach einzeln. Der Unterschied ist nur, dass die Koordinate nicht
+        ''' fuer alle dieselbe ist.</summary>
+        Public Function SetGpsCoordinatesForEach(assignments As IEnumerable(Of GeotagAssignment),
+                                                 Optional writeToFile As Boolean = True,
+                                                 Optional createSidecarIfMissing As Boolean = True) As GeotagBatchResult
+            Dim batch As New GeotagBatchResult()
+            If assignments Is Nothing Then Return batch
+
+            ' Ein Pfad darf nur EINMAL vorkommen: zweimal dieselbe Datei hiesse, sie zweimal neu zu
+            ' schreiben, und die zweite Koordinate gewaenne ohne Grund.
+            Dim entries As New List(Of GeotagAssignment)()
+            Dim seen As New HashSet(Of String)(PathIdentity.Comparer)
+            For Each entry In assignments
+                If entry Is Nothing OrElse String.IsNullOrWhiteSpace(entry.FilePath) Then Continue For
+                If Not seen.Add(entry.FilePath) Then Continue For
+                entries.Add(entry)
+            Next
+            If entries.Count = 0 Then Return batch
+            batch.Total = entries.Count
+
+            ' Eine unbrauchbare Koordinate kommt gar nicht erst in die Transaktion - sie zaehlt als
+            ' Fehlschlag und nennt ihre Datei, wie ueberall sonst auch.
+            Dim invalid = entries.Where(Function(e) Not GeotagService.IsValidCoordinate(e.Latitude, e.Longitude)).ToList()
+            For Each entry In invalid
+                batch.Failed.Add(entry.FilePath)
+            Next
+            entries = entries.Except(invalid).ToList()
+            If entries.Count = 0 Then Return batch
+
+            Try
+                Using conn = New SqliteConnection(_connectionString)
+                    conn.Open()
+                    Using tx = conn.BeginTransaction()
+                        For Each entry In entries
+                            WriteGpsCoordinates(conn, tx, entry.FilePath, entry.Latitude, entry.Longitude)
+                        Next
+                        tx.Commit()
+                    End Using
+                End Using
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Library.SetGpsCoordinatesForEach", ex)
+                batch.Failed.AddRange(entries.Select(Function(e) e.FilePath))
+                Return batch
+            End Try
+
+            If Not writeToFile Then
+                batch.CatalogOnly = entries.Count
+                Return batch
+            End If
+
+            For Each entry In entries
+                Dim written = GeotagService.WriteCoordinates(entry.FilePath, entry.Latitude, entry.Longitude,
+                                                             entry.AltitudeMeters, createSidecarIfMissing)
+                If Not written.Success Then
+                    batch.Failed.Add(entry.FilePath)
+                ElseIf written.Target = GeotagService.GeotagTarget.EmbeddedExif Then
+                    batch.WrittenToFile += 1
+                Else
+                    batch.WrittenToSidecar += 1
+                End If
+            Next
+            Return batch
+        End Function
+
         ''' <summary>Nimmt den Aufnahmeort wieder weg: aus Datei und Beistelldatei (siehe
         ''' <see cref="GeotagService.RemoveCoordinates"/>) und aus dem Katalog, samt Ort, Land und
         ''' Kuerzel - die gehoerten zur geloeschten Koordinate.</summary>

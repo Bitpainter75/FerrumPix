@@ -53,6 +53,8 @@ Photos can be filtered by keyword, by person and by where they were taken, alone
 
 Photos without a location can be given one: type a coordinate or just a town name, or copy the place from a picture that already has it and paste it onto the rest. JPEG files carry it inside the file, everything else in a sidecar next to the original. The town search runs on your own machine.
 
+If you had a GPS track running - on a phone, a watch, a logger - the whole selection can take its places from that instead. FerrumPix reads the GPX file and gives every photo the spot the track was at when the picture was taken. You confirm how far the camera clock is from the recording, and the dialog counts along and tells you how many photos that reaches before anything is written.
+
 The time a picture was taken can be corrected the same way. Set a date and time outright, or shift what is already there by days, hours, minutes and seconds - for the trip where the camera clock was wrong and every photo is off by the same amount. Whole selections at once, and the file's own date follows along.
 
 Batch work runs over a whole selection: rename, convert, resize, watermark, filters, metadata removal, and *Export to* for putting a name pattern, a look, a size and a target format into one run, locally or straight to Immich. Converting can also turn RAW files into DNG, keeping them raw instead of rendering them out; that one needs [dnglab](https://github.com/dnglab/dnglab) installed, and says so if it is missing. Photos can also be printed, laid out as contact sheets or combined into a collage, each showing your edits.

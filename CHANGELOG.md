@@ -2,6 +2,10 @@
 
 ### What's new
 
+- **Places from a GPS track.** Select photos, point FerrumPix at a GPX file, and every one of them
+  gets the spot the track was at when it was taken. You set how far the camera clock is from the
+  recording; the dialog counts how many photos that reaches before anything is written.
+
 - The viewer can develop every RAW, edited or not. A new setting under RAW development shows your
   own development in the viewer and in fullscreen instead of the preview the camera put in the
   file. It is off to begin with, because a picture then takes longer to appear.

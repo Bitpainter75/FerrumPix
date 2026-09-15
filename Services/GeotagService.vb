@@ -44,6 +44,18 @@ Namespace Services
         End Property
     End Class
 
+    ''' <summary>Ein Bild und die Koordinate, die es bekommen soll. Fuer die Faelle, in denen JEDES
+    ''' Bild seine eigene hat - beim Abgleich mit einer Aufzeichnung (siehe
+    ''' <see cref="GpxTrackService"/>) steht jedes dort, wo der Weg zu seiner Aufnahmezeit war.</summary>
+    Public Class GeotagAssignment
+        Public Property FilePath As String = ""
+        Public Property Latitude As Double
+        Public Property Longitude As Double
+        ''' <summary>Meter, wenn die Quelle eine Hoehe kennt. Sonst Nothing - dann bleibt das Feld
+        ''' in der Datei leer, statt eine Zahl zu erfinden.</summary>
+        Public Property AltitudeMeters As Double?
+    End Class
+
     Public Class GeotagService
 
         ' TIFF-Feldtypen, wie sie in der EXIF-Spezifikation nummeriert sind.

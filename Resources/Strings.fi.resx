@@ -8442,4 +8442,58 @@
   <data name="LibRaw_ist_auf_diesem_System_nicht_installiert_F_e4d4879d" xml:space="preserve">
     <value>LibRaw ei ole asennettuna tässä järjestelmässä. Siksi FerrumPix ei voi kehittää RAW-tiedostoja kennodatasta, vaan näyttää sen sijaan kameran upotetun JPEG-esikatselun. Kamerasta riippuen se on selvästi kuvaa pienempi ja muuttuu epäteräväksi lähennettäessä.</value>
   </data>
+  <data name="Aufnahmeort_aus_Aufzeichnung_eee78abc" xml:space="preserve">
+    <value>Sijainti jäljestä</value>
+  </data>
+  <data name="Jedes_Bild_bekommt_den_Ort_an_dem_die_Aufzeichnu_f769c5ea" xml:space="preserve">
+    <value>Jokainen kuva saa paikan, jossa jälki oli sen ottohetkellä. Aikasiirtymä sovittaa kameran kellon jälkeen.</value>
+  </data>
+  <data name="Zeitversatz_der_Kamerauhr_1faf2dc0" xml:space="preserve">
+    <value>Kameran kellon aikasiirtymä</value>
+  </data>
+  <data name="Zum_Beispiel_02_00_f_r_Mitteleuropa_im_Sommer_d7d15db5" xml:space="preserve">
+    <value>Esimerkiksi +02:00 Keski-Euroopalle kesällä</value>
+  </data>
+  <data name="H_chster_Abstand_zu_einem_aufgezeichneten_Punkt__9431063b" xml:space="preserve">
+    <value>Suurin etäisyys tallennettuun pisteeseen minuutteina</value>
+  </data>
+  <data name="Kein_Bild_liegt_in_der_Aufzeichnung_5c7c8bc7" xml:space="preserve">
+    <value>Yksikään kuva ei osu jäljelle</value>
+  </data>
+  <data name="0_von_1_Bildern_bekommen_einen_Aufnahmeort_930decfe" xml:space="preserve">
+    <value>{0} kuvaa {1} kuvasta saa sijainnin</value>
+  </data>
+  <data name="Vorgeschlagen_weil_die_Aufnahmezeiten_sonst_au_e_6e24a9d4" xml:space="preserve">
+    <value>Ehdotettu, koska ottoajat jäisivät muuten jäljen ulkopuolelle</value>
+  </data>
+  <data name="0_Bilder_gew_hlt_1_davon_mit_Aufnahmezeit_123fdf8d" xml:space="preserve">
+    <value>{0} kuvaa valittu, {1} niistä ottoajan kanssa</value>
+  </data>
+  <data name="0_Punkte_32b77346" xml:space="preserve">
+    <value>{0} pistettä</value>
+  </data>
+  <data name="0_bis_1_16a0d7dc" xml:space="preserve">
+    <value>{0} ja {1} välillä</value>
+  </data>
+  <data name="Aufzeichnung_w_hlen_710b9a30" xml:space="preserve">
+    <value>Valitse jälki</value>
+  </data>
+  <data name="GPS_Aufzeichnung_8075f2a6" xml:space="preserve">
+    <value>GPS-jälki</value>
+  </data>
+  <data name="Die_Aufzeichnung_wird_gelesen_ba84e3b0" xml:space="preserve">
+    <value>Jälkeä luetaan</value>
+  </data>
+  <data name="Die_Aufzeichnung_lie_sich_nicht_lesen_202cfc9e" xml:space="preserve">
+    <value>Jälkeä ei voitu lukea</value>
+  </data>
+  <data name="Die_Aufzeichnung_enth_lt_keine_Punkte_mit_Uhrzei_6ec16b21" xml:space="preserve">
+    <value>Jäljessä ei ole pisteitä kellonajan kanssa</value>
+  </data>
+  <data name="Kein_Bild_der_Auswahl_hat_eine_Aufnahmezeit_554215da" xml:space="preserve">
+    <value>Yhdelläkään valitulla kuvalla ei ole ottoaikaa</value>
+  </data>
+  <data name="Aufnahmeort_f_r_0_von_1_Bildern_aus_der_Aufzeich_91ffd8fa" xml:space="preserve">
+    <value>Sijainti jäljestä asetettu {0} kuvalle {1} kuvasta</value>
+  </data>
 </root>

@@ -1733,6 +1733,7 @@ Namespace ViewModels
             OpenPlaceInOsmCommand = ReactiveCommand.Create(Sub() OpenPlaceInOsmFromSelected())
             PastePlaceCommand = ReactiveCommand.Create(Sub() PastePlaceToSelected())
             SetPlaceCommand = ReactiveCommand.CreateFromTask(Function() SetPlaceForSelectedAsync())
+            SetPlaceFromTrackCommand = ReactiveCommand.CreateFromTask(Function() SetPlaceFromTrackForSelectedAsync())
             SetCopyrightCommand = ReactiveCommand.CreateFromTask(Function() SetCopyrightForSelectedAsync())
             SetCaptureDateCommand = ReactiveCommand.CreateFromTask(Function() SetCaptureDateForSelectedAsync())
             RemovePlaceCommand = ReactiveCommand.CreateFromTask(Function() RemovePlaceFromSelectedAsync())
@@ -1853,6 +1854,7 @@ Namespace ViewModels
         Public ReadOnly Property CopyPlaceCommand As ICommand
         Public ReadOnly Property PastePlaceCommand As ICommand
         Public ReadOnly Property SetPlaceCommand As ICommand
+        Public ReadOnly Property SetPlaceFromTrackCommand As ICommand
         Public ReadOnly Property SetCopyrightCommand As ICommand
         Public ReadOnly Property SetCaptureDateCommand As ICommand
         Public ReadOnly Property RemovePlaceCommand As ICommand
@@ -1913,6 +1915,90 @@ Namespace ViewModels
                 RefreshContextActions()
             Catch ex As Exception
                 DiagnosticLogService.LogException("Gallery.SetPlace", ex)
+            End Try
+        End Function
+
+        ''' <summary>Holt den Aufnahmeort aus einer GPS-Aufzeichnung: jedes Bild bekommt den Ort,
+        ''' an dem der aufgezeichnete Weg zu SEINER Aufnahmezeit war.
+        '''
+        ''' Der Ablauf hat vier Schritte, und jeder kann sauber enden: Datei waehlen, Aufzeichnung
+        ''' lesen, Zeitversatz bestaetigen, schreiben. Was zwischendurch nicht geht, sagt die
+        ''' Statuszeile - ein Dialog, der sich oeffnet und nichts bewirkt, waere schlechter.
+        '''
+        ''' GELESEN WIRD IM HINTERGRUND: die Aufzeichnung kann Hunderttausende Punkte haben, und
+        ''' die Aufnahmezeit steht in jeder Bilddatei einzeln. Beides gehoert nicht auf den
+        ''' Bedienfaden.</summary>
+        Private Async Function SetPlaceFromTrackForSelectedAsync(Optional preset As IList(Of ImageItem) = Nothing) As Task
+            Try
+                Dim images = GetPlaceTargets(preset)
+                If images.Count = 0 OrElse _mainVm Is Nothing Then Return
+
+                Dim trackPath = Await FilePickerService.PickOpenFileAsync(
+                    LocalizationService.T("Aufzeichnung wählen"),
+                    LocalizationService.T("GPS-Aufzeichnung"),
+                    New String() {"*.gpx", "*.GPX"})
+                If String.IsNullOrEmpty(trackPath) Then Return
+
+                StatusText = LocalizationService.T("Die Aufzeichnung wird gelesen")
+                Dim track = Await Task.Run(Function() GpxTrackService.Load(trackPath))
+                If track Is Nothing Then
+                    StatusText = LocalizationService.T("Die Aufzeichnung ließ sich nicht lesen")
+                    Return
+                End If
+                If track.IsEmpty Then
+                    StatusText = LocalizationService.T("Die Aufzeichnung enthält keine Punkte mit Uhrzeit")
+                    Return
+                End If
+
+                ' Die geltende Aufnahmezeit kommt aus derselben Quelle wie ueberall sonst - aus der
+                ' Datei und, wo eine danebenliegt, aus der Beistelldatei.
+                Dim paths = images.Select(Function(i) i.FilePath).ToList()
+                Dim timed = Await Task.Run(
+                    Function()
+                        Dim found As New List(Of (FilePath As String, CapturedAt As DateTime))()
+                        For Each path In paths
+                            Dim capturedAt = CaptureDateService.ReadCaptureDate(path)
+                            If capturedAt.HasValue Then found.Add((path, capturedAt.Value))
+                        Next
+                        Return found
+                    End Function)
+                If timed.Count = 0 Then
+                    StatusText = LocalizationService.T("Kein Bild der Auswahl hat eine Aufnahmezeit")
+                    Return
+                End If
+
+                Dim chosen = Await _mainVm.ShowGpxTrackAsync(track,
+                                                             timed.Select(Function(t) t.CapturedAt).ToList(),
+                                                             images.Count)
+                If chosen Is Nothing Then Return
+
+                Dim tolerance = TimeSpan.FromMinutes(chosen.ToleranceMinutes)
+                Dim assignments As New List(Of GeotagAssignment)()
+                For Each entry In timed
+                    Dim hit = GpxTrackService.Match(track, entry.CapturedAt, chosen.CameraOffset, tolerance)
+                    If hit Is Nothing Then Continue For
+                    assignments.Add(New GeotagAssignment With {
+                        .FilePath = entry.FilePath,
+                        .Latitude = hit.Latitude,
+                        .Longitude = hit.Longitude,
+                        .AltitudeMeters = hit.ElevationMeters})
+                Next
+                If assignments.Count = 0 Then
+                    StatusText = LocalizationService.T("Kein Bild liegt in der Aufzeichnung")
+                    Return
+                End If
+
+                Dim batch = Await Task.Run(Function() LibraryService.Instance.SetGpsCoordinatesForEach(assignments))
+                StatusText = String.Format(
+                    LocalizationService.T("Aufnahmeort für {0} von {1} Bildern aus der Aufzeichnung gesetzt"),
+                    batch.SucceededCount, images.Count)
+
+                UpdateInfoPanelTarget()
+                InfoPanel.RefreshPlace()
+                RefreshContextActions()
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Gallery.SetPlaceFromTrack", ex)
+                StatusText = LocalizationService.T("Die Aufzeichnung ließ sich nicht lesen")
             End Try
         End Function
 
@@ -2028,6 +2114,11 @@ Namespace ViewModels
         Public Async Function SetPlaceForImageItemsAsync(items As IList(Of ImageItem)) As Task
             If items Is Nothing OrElse items.Count = 0 Then Return
             Await SetPlaceForSelectedAsync(items)
+        End Function
+
+        Public Async Function SetPlaceFromTrackForImageItemsAsync(items As IList(Of ImageItem)) As Task
+            If items Is Nothing OrElse items.Count = 0 Then Return
+            Await SetPlaceFromTrackForSelectedAsync(items)
         End Function
 
         ''' <summary>Derselbe Weg fuer den Urheberrechtshinweis: Betrachter und Editor loesen damit

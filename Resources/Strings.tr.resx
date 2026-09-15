@@ -8446,4 +8446,58 @@
   <data name="LibRaw_ist_auf_diesem_System_nicht_installiert_F_e4d4879d" xml:space="preserve">
     <value>Bu sistemde LibRaw kurulu değil. Bu yüzden FerrumPix, RAW dosyalarını sensör verisinden geliştiremiyor ve bunun yerine fotoğraf makinesinin gömülü JPEG önizlemesini gösteriyor. Makineye göre bu önizleme fotoğraftan epey küçüktür ve yakınlaştırınca bulanıklaşır.</value>
   </data>
+  <data name="Aufnahmeort_aus_Aufzeichnung_eee78abc" xml:space="preserve">
+    <value>Konum kayıttan</value>
+  </data>
+  <data name="Jedes_Bild_bekommt_den_Ort_an_dem_die_Aufzeichnu_f769c5ea" xml:space="preserve">
+    <value>Her fotoğraf, kaydın çekim anında bulunduğu yeri alır. Zaman farkı, fotoğraf makinesinin saatini kayıtla hizalar.</value>
+  </data>
+  <data name="Zeitversatz_der_Kamerauhr_1faf2dc0" xml:space="preserve">
+    <value>Fotoğraf makinesi saati farkı</value>
+  </data>
+  <data name="Zum_Beispiel_02_00_f_r_Mitteleuropa_im_Sommer_d7d15db5" xml:space="preserve">
+    <value>Örneğin yaz aylarında Orta Avrupa için +02:00</value>
+  </data>
+  <data name="H_chster_Abstand_zu_einem_aufgezeichneten_Punkt__9431063b" xml:space="preserve">
+    <value>Kayıtlı bir noktaya en büyük uzaklık, dakika olarak</value>
+  </data>
+  <data name="Kein_Bild_liegt_in_der_Aufzeichnung_5c7c8bc7" xml:space="preserve">
+    <value>Hiçbir fotoğraf kaydın içine düşmüyor</value>
+  </data>
+  <data name="0_von_1_Bildern_bekommen_einen_Aufnahmeort_930decfe" xml:space="preserve">
+    <value>{1} fotoğraftan {0} tanesi konum alıyor</value>
+  </data>
+  <data name="Vorgeschlagen_weil_die_Aufnahmezeiten_sonst_au_e_6e24a9d4" xml:space="preserve">
+    <value>Önerildi, çünkü çekim saatleri aksi halde kaydın dışında kalıyor</value>
+  </data>
+  <data name="0_Bilder_gew_hlt_1_davon_mit_Aufnahmezeit_123fdf8d" xml:space="preserve">
+    <value>{0} fotoğraf seçildi, {1} tanesinde çekim saati var</value>
+  </data>
+  <data name="0_Punkte_32b77346" xml:space="preserve">
+    <value>{0} nokta</value>
+  </data>
+  <data name="0_bis_1_16a0d7dc" xml:space="preserve">
+    <value>{0} ile {1}</value>
+  </data>
+  <data name="Aufzeichnung_w_hlen_710b9a30" xml:space="preserve">
+    <value>Kayıt seç</value>
+  </data>
+  <data name="GPS_Aufzeichnung_8075f2a6" xml:space="preserve">
+    <value>GPS kaydı</value>
+  </data>
+  <data name="Die_Aufzeichnung_wird_gelesen_ba84e3b0" xml:space="preserve">
+    <value>Kayıt okunuyor</value>
+  </data>
+  <data name="Die_Aufzeichnung_lie_sich_nicht_lesen_202cfc9e" xml:space="preserve">
+    <value>Kayıt okunamadı</value>
+  </data>
+  <data name="Die_Aufzeichnung_enth_lt_keine_Punkte_mit_Uhrzei_6ec16b21" xml:space="preserve">
+    <value>Kayıtta saat bilgisi olan nokta yok</value>
+  </data>
+  <data name="Kein_Bild_der_Auswahl_hat_eine_Aufnahmezeit_554215da" xml:space="preserve">
+    <value>Seçimdeki hiçbir fotoğrafta çekim saati yok</value>
+  </data>
+  <data name="Aufnahmeort_f_r_0_von_1_Bildern_aus_der_Aufzeich_91ffd8fa" xml:space="preserve">
+    <value>{1} fotoğraftan {0} tanesine kayıttan konum atandı</value>
+  </data>
 </root>

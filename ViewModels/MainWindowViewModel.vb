@@ -2322,6 +2322,7 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(DialogShowsWatermarkPreset))
                 Me.RaisePropertyChanged(NameOf(DialogShowsExportTo))
                 Me.RaisePropertyChanged(NameOf(DialogShowsSetPlace))
+                Me.RaisePropertyChanged(NameOf(DialogShowsGpxTrack))
                 Me.RaisePropertyChanged(NameOf(DialogShowsCaptureDate))
                 Me.RaisePropertyChanged(NameOf(IsDialogPrimaryEnabled))
                 Me.RaisePropertyChanged(NameOf(IsDialogBatchOverwriteAvailable))
@@ -2735,6 +2736,8 @@ Namespace ViewModels
         Public ReadOnly Property IsDialogPrimaryEnabled As Boolean
             Get
                 If _dialogKind = AppDialogKind.SetPlace Then Return HasDialogPlace
+                ' Kein Treffer, nichts zu setzen: der Knopf bliebe sonst offen und taete nichts.
+                If _dialogKind = AppDialogKind.GpxTrack Then Return HasDialogGpxMatch
                 If _dialogKind = AppDialogKind.CaptureDate Then Return HasDialogCaptureDate
                 If NeedsFilterChoice() Then Return Not String.IsNullOrWhiteSpace(_dialogSelectedFilterChoice)
                 Return True
@@ -3045,6 +3048,206 @@ Namespace ViewModels
             If otherCount > 0 Then
                 parts.Add(String.Format(LocalizationService.T("{0} Dateien bekommen eine Beistelldatei daneben"), otherCount))
             End If
+            Return String.Join(", ", parts)
+        End Function
+
+        ' ── Aufnahmeort aus einer GPS-Aufzeichnung ──────────────────────────────
+        '
+        ' Der Dialog stellt genau ZWEI Fragen, und beide muss er stellen:
+        '
+        ' DER ZEITVERSATZ ist unvermeidlich. In der Aufzeichnung steht UTC, im Bild eine Ortszeit
+        ' ohne Zeitzone - ohne den Versatz gibt es keinen Abgleich, sondern nur Raten. Der
+        ' Vorschlag steht im Feld (siehe GpxTrackService.SuggestOffset), und daneben zaehlt die
+        ' Vorschau mit, wie viele Bilder damit einen Ort bekaemen. Das ist die einzige
+        ' Rueckmeldung, die VOR dem Schreiben moeglich ist.
+        '
+        ' DER ABSTAND entscheidet ueber die Raender: ob eine Aufnahme kurz vor dem Einschalten des
+        ' Geraets noch dazugehoert und ob eine Luecke mitten in der Aufzeichnung ueberbrueckt
+        ' werden darf. Zehn Minuten sind die Vorgabe, aenderbar, weil beides vom Geraet abhaengt.
+
+        Private _dialogGpxTrack As GpxTrack
+        Private _dialogGpxCaptureTimes As New List(Of DateTime)()
+        Private _dialogGpxOffset As String = "+00:00"
+        Private _dialogGpxTolerance As String = GpxTrackService.DefaultToleranceMinutes.ToString(CultureInfo.InvariantCulture)
+        Private _dialogGpxTrackSummary As String = ""
+        Private _dialogGpxSelectionSummary As String = ""
+        Private _dialogGpxHint As String = ""
+
+        Public ReadOnly Property DialogShowsGpxTrack As Boolean
+            Get
+                Return _dialogKind = AppDialogKind.GpxTrack
+            End Get
+        End Property
+
+        ''' <summary>Was in der Datei steht: Name, Zeitraum und Anzahl der Punkte. Ohne diese Zeile
+        ''' waere nicht zu sehen, ob ueberhaupt die gemeinte Aufzeichnung offen ist.</summary>
+        Public ReadOnly Property DialogGpxTrackSummary As String
+            Get
+                Return _dialogGpxTrackSummary
+            End Get
+        End Property
+
+        ''' <summary>Wie viele Bilder gemeint sind und wie viele davon ueberhaupt eine Aufnahmezeit
+        ''' tragen. Ein Bild ohne Zeit ist nicht zuzuordnen, und das gehoert vorher gesagt.</summary>
+        Public ReadOnly Property DialogGpxSelectionSummary As String
+            Get
+                Return _dialogGpxSelectionSummary
+            End Get
+        End Property
+
+        Public Property DialogGpxOffset As String
+            Get
+                Return _dialogGpxOffset
+            End Get
+            Set(value As String)
+                Dim wanted = If(value, "")
+                If String.Equals(_dialogGpxOffset, wanted, StringComparison.Ordinal) Then Return
+                _dialogGpxOffset = wanted
+                Me.RaisePropertyChanged()
+                RaiseGpxDialogProperties()
+            End Set
+        End Property
+
+        Public Property DialogGpxTolerance As String
+            Get
+                Return _dialogGpxTolerance
+            End Get
+            Set(value As String)
+                Dim wanted = If(value, "")
+                If String.Equals(_dialogGpxTolerance, wanted, StringComparison.Ordinal) Then Return
+                _dialogGpxTolerance = wanted
+                Me.RaisePropertyChanged()
+                RaiseGpxDialogProperties()
+            End Set
+        End Property
+
+        ''' <summary>Warum der Versatz so im Feld steht. Leer, wenn er einfach die Zeitzone dieses
+        ''' Rechners ist - dann gibt es nichts zu erklaeren.</summary>
+        Public ReadOnly Property DialogGpxHint As String
+            Get
+                Return _dialogGpxHint
+            End Get
+        End Property
+
+        Public ReadOnly Property HasDialogGpxHint As Boolean
+            Get
+                Return _dialogGpxHint.Length > 0
+            End Get
+        End Property
+
+        ''' <summary>Wie viele Bilder mit den Werten im Feld einen Ort bekaemen. Sie zaehlt beim
+        ''' Tippen mit: wer am Versatz dreht, sieht sofort, ob er naeher herankommt.</summary>
+        Public ReadOnly Property DialogGpxPreview As String
+            Get
+                If _dialogGpxTrack Is Nothing Then Return ""
+                Dim matched = CountDialogGpxMatches()
+                If matched <= 0 Then Return LocalizationService.T("Kein Bild liegt in der Aufzeichnung")
+                Return String.Format(LocalizationService.T("{0} von {1} Bildern bekommen einen Aufnahmeort"),
+                                     matched, _dialogGpxCaptureTimes.Count)
+            End Get
+        End Property
+
+        Public ReadOnly Property HasDialogGpxMatch As Boolean
+            Get
+                Return CountDialogGpxMatches() > 0
+            End Get
+        End Property
+
+        ''' <summary>Die Werte aus den beiden Feldern. Nothing, solange eines davon nicht taugt -
+        ''' daran haengt der Knopf.</summary>
+        Private Function TryReadDialogGpxValues() As GpxTrackDialogResult
+            Dim offset As TimeSpan
+            If Not GpxTrackService.TryParseOffset(_dialogGpxOffset, offset) Then Return Nothing
+            Dim minutes As Integer
+            If Not Integer.TryParse(If(_dialogGpxTolerance, "").Trim(), NumberStyles.Integer,
+                                    CultureInfo.InvariantCulture, minutes) Then Return Nothing
+            If minutes < 0 OrElse minutes > 1440 Then Return Nothing
+            Return New GpxTrackDialogResult With {.CameraOffset = offset, .ToleranceMinutes = minutes}
+        End Function
+
+        Private Function CountDialogGpxMatches() As Integer
+            Dim values = TryReadDialogGpxValues()
+            If values Is Nothing OrElse _dialogGpxTrack Is Nothing Then Return 0
+            Return GpxTrackService.CountMatches(_dialogGpxTrack, _dialogGpxCaptureTimes,
+                                                values.CameraOffset,
+                                                TimeSpan.FromMinutes(values.ToleranceMinutes))
+        End Function
+
+        Private Sub RaiseGpxDialogProperties()
+            Me.RaisePropertyChanged(NameOf(DialogGpxPreview))
+            Me.RaisePropertyChanged(NameOf(HasDialogGpxMatch))
+            Me.RaisePropertyChanged(NameOf(DialogGpxHint))
+            Me.RaisePropertyChanged(NameOf(HasDialogGpxHint))
+            Me.RaisePropertyChanged(NameOf(IsDialogPrimaryEnabled))
+        End Sub
+
+        ''' <summary>Fragt Zeitversatz und Abstand fuer diese Aufzeichnung ab. Nothing, wenn
+        ''' abgebrochen wurde.</summary>
+        ''' <param name="track">Die gelesene Aufzeichnung.</param>
+        ''' <param name="captureTimes">Die Aufnahmezeiten der gewaehlten Bilder - nur die, die eine
+        ''' haben.</param>
+        ''' <param name="selectedCount">Wie viele Bilder insgesamt gewaehlt sind. Die Differenz zu
+        ''' den Aufnahmezeiten steht im Dialog, damit niemand raten muss, warum weniger Bilder
+        ''' gemeint sind als markiert.</param>
+        Public Async Function ShowGpxTrackAsync(track As GpxTrack,
+                                                captureTimes As IReadOnlyList(Of DateTime),
+                                                selectedCount As Integer) As Task(Of GpxTrackDialogResult)
+            _dialogGpxTrack = track
+            _dialogGpxCaptureTimes = If(captureTimes Is Nothing, New List(Of DateTime)(), captureTimes.ToList())
+            _dialogGpxTolerance = GpxTrackService.DefaultToleranceMinutes.ToString(CultureInfo.InvariantCulture)
+
+            Dim tolerance = TimeSpan.FromMinutes(GpxTrackService.DefaultToleranceMinutes)
+            Dim suggested = GpxTrackService.SuggestOffset(track, _dialogGpxCaptureTimes, tolerance)
+            _dialogGpxOffset = GpxTrackService.FormatOffset(suggested)
+
+            ' Der Hinweis steht nur da, wo der Vorschlag NICHT die hiesige Zeitzone ist: dann ist er
+            ' aus den Daten gerechnet, und der Nutzer soll wissen, dass er geraten wurde.
+            Dim localOffset = TimeSpan.Zero
+            If _dialogGpxCaptureTimes.Count > 0 Then
+                localOffset = TimeZoneInfo.Local.GetUtcOffset(
+                    DateTime.SpecifyKind(_dialogGpxCaptureTimes(0), DateTimeKind.Local))
+            End If
+            _dialogGpxHint = If(suggested = localOffset, "",
+                                LocalizationService.T("Vorgeschlagen, weil die Aufnahmezeiten sonst außerhalb der Aufzeichnung liegen"))
+
+            _dialogGpxTrackSummary = BuildGpxTrackSummary(track)
+            _dialogGpxSelectionSummary = String.Format(
+                LocalizationService.T("{0} Bilder gewählt, {1} davon mit Aufnahmezeit"),
+                selectedCount, _dialogGpxCaptureTimes.Count)
+
+            Me.RaisePropertyChanged(NameOf(DialogGpxOffset))
+            Me.RaisePropertyChanged(NameOf(DialogGpxTolerance))
+            Me.RaisePropertyChanged(NameOf(DialogGpxTrackSummary))
+            Me.RaisePropertyChanged(NameOf(DialogGpxSelectionSummary))
+            RaiseGpxDialogProperties()
+
+            Dim result = Await ShowDialogAsync(AppDialogKind.GpxTrack,
+                                               "Aufnahmeort aus Aufzeichnung",
+                                               "Jedes Bild bekommt den Ort, an dem die Aufzeichnung zu seiner Aufnahmezeit war. Der Zeitversatz bringt die Kamerauhr mit der Aufzeichnung zur Deckung.",
+                                               "",
+                                               "Setzen",
+                                               "Abbrechen")
+            If result Is Nothing Then Return Nothing
+            Return TryReadDialogGpxValues()
+        End Function
+
+        ''' <summary>"Wanderung Norddeich, 4212 Punkte, 14.06.2026 09:12 bis 17:40 Uhr". Die Zeiten
+        ''' stehen in der Zeitzone DIESES Rechners da und nicht in UTC: so steht es auch auf der
+        ''' Uhr, mit der der Nutzer den Versatz abschaetzt.</summary>
+        Private Shared Function BuildGpxTrackSummary(track As GpxTrack) As String
+            If track Is Nothing OrElse track.IsEmpty Then Return ""
+            Dim parts As New List(Of String)()
+            Dim name = If(track.Name, "").Trim()
+            If name.Length = 0 Then name = Path.GetFileName(track.SourcePath)
+            If name.Length > 0 Then parts.Add(name)
+            parts.Add(String.Format(LocalizationService.T("{0} Punkte"), track.Points.Count))
+            Dim startLocal = track.StartUtc.ToLocalTime()
+            Dim endLocal = track.EndUtc.ToLocalTime()
+            parts.Add(String.Format(LocalizationService.T("{0} bis {1}"),
+                                    startLocal.ToString("dd.MM.yyyy HH:mm"),
+                                    If(startLocal.Date = endLocal.Date,
+                                       endLocal.ToString("HH:mm"),
+                                       endLocal.ToString("dd.MM.yyyy HH:mm"))))
             Return String.Join(", ", parts)
         End Function
 

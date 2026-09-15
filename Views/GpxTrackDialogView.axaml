@@ -1,0 +1,100 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:icons="clr-namespace:FerrumPix.Controls"
+             x:Class="FerrumPix.Views.GpxTrackDialogView">
+
+    <StackPanel Spacing="10">
+
+        <!-- WAS OFFEN IST und WORAUF es wirkt, ganz oben: die Aufzeichnung mit Zeitraum und
+             Punktzahl, darunter die Auswahl. Wer den Dialog öffnet, soll zuerst sehen, ob
+             überhaupt die gemeinte Datei offen ist und wie viele Bilder eine Aufnahmezeit
+             haben - ohne die ist kein Abgleich möglich. -->
+        <Border Background="{DynamicResource FP.Bg.Input}"
+                BorderBrush="{DynamicResource FP.Border.Subtle}"
+                BorderThickness="1"
+                CornerRadius="6"
+                Padding="10,8">
+            <StackPanel Spacing="4">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/route.svg"
+                                   Width="16" Height="16"
+                                   VerticalAlignment="Center"/>
+                    <TextBlock Text="{Binding DialogGpxTrackSummary}"
+                               Classes="no-translate"
+                               VerticalAlignment="Center"
+                               TextWrapping="Wrap"/>
+                </StackPanel>
+                <TextBlock Text="{Binding DialogGpxSelectionSummary}"
+                           Classes="no-translate"
+                           Foreground="{DynamicResource FP.Text.Secondary}"
+                           FontSize="{DynamicResource FP.Font.Small}"
+                           TextWrapping="Wrap"/>
+            </StackPanel>
+        </Border>
+
+        <!-- DER ZEITVERSATZ ist die eine Angabe, die niemand ausrechnen kann außer dem Nutzer:
+             die Aufzeichnung führt UTC, das Bild eine Ortszeit ohne Zeitzone. Vorbelegt ist der
+             Vorschlag aus GpxTrackService.SuggestOffset. -->
+        <TextBlock Text="Zeitversatz der Kamerauhr"
+                   FontSize="{DynamicResource FP.Font.Small}"
+                   Foreground="{DynamicResource FP.Text.Secondary}"/>
+
+        <Grid ColumnDefinitions="Auto,*">
+            <icons:SvgIcon Grid.Column="0"
+                           Source="avares://FerrumPix/Assets/Icons/outline/clock-hour-4.svg"
+                           Width="18" Height="18"
+                           VerticalAlignment="Center"
+                           Margin="2,0,10,0"/>
+            <TextBox Grid.Column="1"
+                     x:Name="GpxOffsetTextBox"
+                     Text="{Binding DialogGpxOffset, Mode=TwoWay}"
+                     Classes="no-translate"
+                     MinHeight="36"/>
+        </Grid>
+
+        <TextBlock Text="Zum Beispiel +02:00 für Mitteleuropa im Sommer"
+                   Foreground="{DynamicResource FP.Text.Muted}"
+                   FontSize="{DynamicResource FP.Font.Small}"
+                   TextWrapping="Wrap"/>
+
+        <!-- Steht hier nur, wenn der Vorschlag NICHT die Zeitzone dieses Rechners ist: dann ist er
+             aus den Daten geraten, und das gehört dazugesagt. -->
+        <TextBlock Text="{Binding DialogGpxHint}"
+                   IsVisible="{Binding HasDialogGpxHint}"
+                   Classes="no-translate"
+                   Foreground="{DynamicResource FP.Text.Muted}"
+                   FontSize="{DynamicResource FP.Font.Small}"
+                   TextWrapping="Wrap"/>
+
+        <!-- DER ABSTAND entscheidet über die Ränder: ob eine Aufnahme kurz vor dem Einschalten des
+             Geräts noch dazugehört und ob eine Lücke in der Aufzeichnung überbrückt werden darf. -->
+        <TextBlock Text="Höchster Abstand zu einem aufgezeichneten Punkt in Minuten"
+                   FontSize="{DynamicResource FP.Font.Small}"
+                   Foreground="{DynamicResource FP.Text.Secondary}"/>
+
+        <TextBox x:Name="GpxToleranceTextBox"
+                 Text="{Binding DialogGpxTolerance, Mode=TwoWay}"
+                 Classes="no-translate"
+                 MinHeight="36"
+                 HorizontalAlignment="Left"
+                 Width="120"/>
+
+        <!-- Die einzige Rückmeldung, die vor dem Schreiben möglich ist: sie zählt beim Tippen mit. -->
+        <Border Background="{DynamicResource FP.Bg.Input}"
+                BorderBrush="{DynamicResource FP.Accent}"
+                BorderThickness="1"
+                CornerRadius="6"
+                Padding="10,8">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/map-pin-check.svg"
+                               Width="16" Height="16"
+                               VerticalAlignment="Center"/>
+                <TextBlock Text="{Binding DialogGpxPreview}"
+                           Classes="no-translate"
+                           VerticalAlignment="Center"
+                           TextWrapping="Wrap"/>
+            </StackPanel>
+        </Border>
+
+    </StackPanel>
+</UserControl>

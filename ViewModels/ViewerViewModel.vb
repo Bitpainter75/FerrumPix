@@ -701,6 +701,7 @@ Namespace ViewModels
                                                     .OpenPlaceInOsm = OpenPlaceInOsmCommand,
                                                     .PastePlace = PastePlaceCommand,
                                                     .SetPlace = SetPlaceCommand,
+                                                    .SetPlaceFromTrack = SetPlaceFromTrackCommand,
                                                     .SetCopyright = SetCopyrightCommand,
                                                     .SetCaptureDate = SetCaptureDateCommand,
                                                     .ReanalyzeAiTags = ReanalyzeAiTagsCommand,
@@ -744,6 +745,7 @@ Namespace ViewModels
         Public ReadOnly Property OpenPlaceInOsmCommand As ICommand
         Public ReadOnly Property PastePlaceCommand As ICommand
         Public ReadOnly Property SetPlaceCommand As ICommand
+        Public ReadOnly Property SetPlaceFromTrackCommand As ICommand
         Public ReadOnly Property SetCopyrightCommand As ICommand
         Public ReadOnly Property SetCaptureDateCommand As ICommand
         Public ReadOnly Property ReanalyzeAiTagsCommand As ICommand
@@ -822,6 +824,7 @@ Namespace ViewModels
                                                            AfterPlaceChanged()
                                                        End Sub)
             SetPlaceCommand = ReactiveCommand.CreateFromTask(Function() SetPlaceCurrentAsync())
+            SetPlaceFromTrackCommand = ReactiveCommand.CreateFromTask(Function() SetPlaceFromTrackCurrentAsync())
             SetCopyrightCommand = ReactiveCommand.CreateFromTask(Function() SetCopyrightCurrentAsync())
             SetCaptureDateCommand = ReactiveCommand.CreateFromTask(Function() SetCaptureDateCurrentAsync())
             ReanalyzeAiTagsCommand = ReactiveCommand.CreateFromTask(Function() ReanalyzeAiTagsCurrentAsync())
@@ -3318,6 +3321,15 @@ Namespace ViewModels
         Private Async Function SetPlaceCurrentAsync() As Task
             Await WithCurrentImageAsync(Async Function(g, i)
                                             Await g.SetPlaceForImageItemsAsync(i)
+                                        End Function)
+            AfterPlaceChanged()
+        End Function
+
+        ''' <summary>Der Ort aus einer Aufzeichnung, fuer das angezeigte Bild. Lohnt auch fuer ein
+        ''' einzelnes: die Aufnahmezeit steht schon da, die Koordinate muss niemand abtippen.</summary>
+        Private Async Function SetPlaceFromTrackCurrentAsync() As Task
+            Await WithCurrentImageAsync(Async Function(g, i)
+                                            Await g.SetPlaceFromTrackForImageItemsAsync(i)
                                         End Function)
             AfterPlaceChanged()
         End Function
