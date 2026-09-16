@@ -1830,8 +1830,11 @@
   <data name="F_llen_52ab7ed8" xml:space="preserve">
     <value>भरें</value>
   </data>
-  <data name="Gaussian_gleichm_iges_Weichzeichnen_Median_kante_72b86f62" xml:space="preserve">
-    <value>गॉसियन: एक-सा धुंधलापन। मीडियन: किनारे बचाता है, असली शोर हटाना।</value>
+  <data name="Unsharp_Mask_verst_rkt_Kanten_und_legt_dabei_hel_f79ad433" xml:space="preserve">
+    <value>Unsharp Mask: किनारों को उभारता है और उनके आसपास हल्के और गहरे घेरे बनाता है। Deconvolution: धुंधलेपन को उलटकर गणना करता है, बारीक विवरण बिना घेरों के फिर से तीखे हो जाते हैं। वहाँ Detail दोहरावों की संख्या तय करता है।</value>
+  </data>
+  <data name="Adaptive_gl_ttet_so_stark_wie_das_Bild_bei_der_j_c2a3e582" xml:space="preserve">
+    <value>Adaptive: हर चमक पर छवि में जितना शोर है, उतना ही चिकना करता है। Guided: तय सीमा से सिर्फ़ समतल हिस्सों को चिकना करता है। गॉसियन: एक-सा धुंधलापन। मीडियन: किनारे बचाता है, असली शोर हटाना।</value>
   </data>
   <data name="Glow_d5545dea" xml:space="preserve">
     <value>चमक</value>

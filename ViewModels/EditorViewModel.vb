@@ -201,13 +201,14 @@ Namespace ViewModels
         Private _sharpenRadius As Double = 0
         Private _sharpenDetail As Double = 0
         Private _sharpenMasking As Double = 0
+        Private _sharpenMethod As SharpenMethod = SharpenMethod.UnsharpMask
         Private _noiseReduction As Double = 0
         Private _noiseReductionDetail As Double = 0
         Private _colorNoiseReduction As Double = 0
         Private _farbrauschGrob As Double = 0
         Private _farbrauschGrobSkala As Double = 50
         Private _colorNoiseAdd As Double = 0
-        Private _noiseReductionMethod As NoiseReductionMethod = NoiseReductionMethod.Guided
+        Private _noiseReductionMethod As NoiseReductionMethod = NoiseReductionMethod.AdaptiveGuided
         Private _dustScratches As Double = 0
         Private _haze As Double = 0
         Private _addNoise As Double = 0
@@ -2571,6 +2572,15 @@ Namespace ViewModels
                     Dim targetTool = If(overlaysBearbeiten,
                                         AnnotationKindToTool(_annotations(clamped).Kind),
                                         _currentTool)
+                    ' EIN PFAD IST DIE AUSNAHME: er hat keine Bildpunkte. Anpassen, Farbe, Auswahl,
+                    ' Maske, Zeichnen und Retusche haben an ihm nichts zu tun, und seine Stuetzpunkte
+                    ' erreicht man nur im Pfad-Werkzeug - wer seine Zeile anklickt, saehe sonst einen
+                    ' Rahmen und sonst nichts. Verschieben, Transformieren und Verzerren bleiben
+                    ' stehen: dort ist der Pfad als Objekt gemeint.
+                    If Not overlaysBearbeiten AndAlso Not IsObjectTransformTool(_currentTool) AndAlso
+                       String.Equals(NormalizeAnnotationKind(_annotations(clamped).Kind), "Path", StringComparison.Ordinal) Then
+                        targetTool = EditorTool.Path
+                    End If
                     If targetTool <> _currentTool Then
                         _overlayNotifySuppressDepth += 1
                         Try
@@ -4721,8 +4731,17 @@ Namespace ViewModels
                 ' NACH dem Umschalten das Overlay nachziehen: RefreshSelectionAdjustMode laedt die
                 ' Maske der markierten Ebene, und SetSelectionMaskData loescht dabei die Anzeige und
                 ' baut nur die Ameisenlinie neu auf - das rote Overlay bliebe sonst weg. In den
-                ' Werkzeugen, die es ohnehin verdecken, wird bewusst NICHT veroeffentlicht.
-                If Not CoversMaskOverlay(value) Then PublishMaskBrushOverlay(nurWennSichtbar:=True)
+                ' Werkzeugen, die es ohnehin verdecken, wird bewusst NICHT veroeffentlicht - und ein
+                ' dort schon wieder stehendes wird ausgeblendet: kommt man aus einem
+                ' Anpassungswerkzeug, schliesst RefreshSelectionAdjustMode die Anpassung der
+                ' markierten Maskenebene ab und laedt deren Maske dabei samt rotem Overlay neu,
+                ' NACH dem Ausblenden weiter oben. Seit die Ebenenzeile das Werkzeug nicht mehr
+                ' wechselt, landet man mit einer Maskenebene genau dort.
+                If CoversMaskOverlay(value) Then
+                    HideMaskOverlay()
+                Else
+                    PublishMaskBrushOverlay(nurWennSichtbar:=True)
+                End If
                 RequestOverlayStateNotify()
                 ' STEMPEL-LIVE: Live-Puffer (Ziel + Sample, 2 Pipeline-Renders)
                 ' schon beim Werkzeugwechsel asynchron vorwaermen - erst beim ersten Spot gebaut,
@@ -5671,11 +5690,33 @@ Namespace ViewModels
             End Set
         End Property
 
-        ''' <summary>Die drei Verfahren, unter ihren Fachnamen und deshalb unuebersetzt - wie schon
-        ''' bei den beiden aelteren. "Guided" steht vorn, weil es die Vorgabe ist.</summary>
+        ''' <summary>Die beiden Schaerfverfahren, unter ihren Fachnamen und deshalb unuebersetzt wie
+        ''' beim Entrauschen. Die Unschaerfemaske steht vorn, weil sie die Vorgabe ist.</summary>
+        Public ReadOnly Property SharpenMethodOptions As IReadOnlyList(Of String)
+            Get
+                Return New String() {"Unsharp Mask", "Deconvolution"}
+            End Get
+        End Property
+
+        Public Property SharpenMethodLabel As String
+            Get
+                Return If(_sharpenMethod = SharpenMethod.Deconvolution, "Deconvolution", "Unsharp Mask")
+            End Get
+            Set(value As String)
+                Dim method = If(String.Equals(value, "Deconvolution", StringComparison.OrdinalIgnoreCase),
+                                SharpenMethod.Deconvolution, SharpenMethod.UnsharpMask)
+                If _sharpenMethod = method Then Return
+                CaptureUndoState(NameOf(SharpenMethodLabel))
+                Me.RaiseAndSetIfChanged(_sharpenMethod, method)
+                SchedulePreviewForCurrentTarget()
+            End Set
+        End Property
+
+        ''' <summary>Die vier Verfahren, unter ihren Fachnamen und deshalb unuebersetzt - wie schon
+        ''' bei den aelteren. "Adaptive" steht vorn, weil es die Vorgabe ist.</summary>
         Public ReadOnly Property NoiseReductionMethodOptions As IReadOnlyList(Of String)
             Get
-                Return New String() {"Guided", "Gaussian", "Median"}
+                Return New String() {"Adaptive", "Guided", "Gaussian", "Median"}
             End Get
         End Property
 
@@ -5686,16 +5727,20 @@ Namespace ViewModels
                         Return "Median"
                     Case NoiseReductionMethod.Gaussian
                         Return "Gaussian"
-                    Case Else
+                    Case NoiseReductionMethod.Guided
                         Return "Guided"
+                    Case Else
+                        Return "Adaptive"
                 End Select
             End Get
             Set(value As String)
-                Dim method = NoiseReductionMethod.Guided
+                Dim method = NoiseReductionMethod.AdaptiveGuided
                 If String.Equals(value, "Median", StringComparison.OrdinalIgnoreCase) Then
                     method = NoiseReductionMethod.Median
                 ElseIf String.Equals(value, "Gaussian", StringComparison.OrdinalIgnoreCase) Then
                     method = NoiseReductionMethod.Gaussian
+                ElseIf String.Equals(value, "Guided", StringComparison.OrdinalIgnoreCase) Then
+                    method = NoiseReductionMethod.Guided
                 End If
                 If _noiseReductionMethod = method Then Return
                 CaptureUndoState(NameOf(NoiseReductionMethodLabel))
@@ -15621,6 +15666,12 @@ Namespace ViewModels
                 ' .fpx-Laden wieder an - ein defekter Sidecar wird still ignoriert.
                 fpxAdjustments = RawSidecarService.TryRead(path)
             End If
+            ' Eine RAW ohne Rezept beginnt mit den Startwerten einer unbearbeiteten RAW, genau wie im
+            ' Betrachter. Sie laufen durch denselben Weg wie ein geladenes Rezept und gelten damit
+            ' nicht als ungespeicherte Aenderung.
+            If fpxAdjustments Is Nothing AndAlso RawPreviewService.IsSupportedRaw(path) Then
+                fpxAdjustments = ImageAdjustments.ForUneditedRaw()
+            End If
 
             CleanupCurrentFpxTempDir()
             ' Filmstreifen-Navigation verlässt ein neues Dokument endgültig - Temp-Ordner weg.
@@ -15954,6 +16005,10 @@ Namespace ViewModels
                 ' Bleibt nach dem Zweig darüber die RAW: die zuletzt gespeicherten Regler kommen
                 ' wie beim .fpx-Laden wieder an, ein defekter Sidecar wird still ignoriert.
                 fpxAdjustments = RawSidecarService.TryRead(imagePath)
+            End If
+            ' Ohne Rezept die Startwerte einer unbearbeiteten RAW - derselbe Weg wie beim Blaettern.
+            If fpxAdjustments Is Nothing AndAlso RawPreviewService.IsSupportedRaw(imagePath) Then
+                fpxAdjustments = ImageAdjustments.ForUneditedRaw()
             End If
 
             CleanupCurrentFpxTempDir()
@@ -18189,6 +18244,12 @@ Namespace ViewModels
             PushUndo(LocalizationService.T("Drehen"))
             ClearActiveSelectionForGeometry()
             CommitOpenTransform()
+            ' DER RAHMEN ZIEHT AUF DEN BESTAETIGTEN STAND NACH, wie nach dem Zuschneiden. Mit
+            ' "Leinwand automatisch zuschneiden" ist der bestaetigte Stand ein Ausschnitt des
+            ' gedrehten Bildes, das Werkzeug zeigt aber das ganze: blieb der Rahmen auf dem vollen
+            ' Bild stehen, galt er als offene Aenderung, das Verlassen fragte erneut, und das
+            ' Anwenden nahm den Zuschnitt-Weg, erweiterte die Leinwand und brachte die Keile zurueck.
+            If ShowsFullImageWhileCropping Then SyncCropFrameToApplied()
             ' Der Winkel ist verbraucht, die HAKEN NICHT: sie sagen, WIE gedreht wird, und gelten
             ' weiter fuer die naechste Drehung. Sie hier zu leeren war der eigentliche Fehler -
             ' wer einen setzte und zweimal drehte, drehte beim zweiten Mal ohne ihn.
@@ -19319,6 +19380,7 @@ Namespace ViewModels
                 .SharpenRadius = CSng(_sharpenRadius),
                 .SharpenDetail = CSng(_sharpenDetail),
                 .SharpenMasking = CSng(_sharpenMasking),
+                .SharpenMethod = _sharpenMethod,
                 .NoiseReduction = CSng(_noiseReduction),
                 .NoiseReductionDetail = CSng(_noiseReductionDetail),
                 .ColorNoiseReduction = CSng(_colorNoiseReduction),
@@ -19893,6 +19955,7 @@ Namespace ViewModels
                 Case NameOf(SharpenRadius) : Return CombineHistoryLabel("Schärfe", "Radius")
                 Case NameOf(SharpenDetail) : Return CombineHistoryLabel("Schärfe", "Detail")
                 Case NameOf(SharpenMasking) : Return CombineHistoryLabel("Schärfe", "Maskierung")
+                Case NameOf(SharpenMethodLabel) : Return CombineHistoryLabel("Schärfe", "Methode")
                 ' Die Wortlaute sind die der Panels: der Regler NoiseReduction heisst dort
                 ' "Weichzeichnen", "Rauschen" ist der Regler, der welches HINZUFUEGT.
                 Case NameOf(NoiseReduction) : Return LocalizationService.T("Weichzeichnen")
@@ -20295,7 +20358,7 @@ Namespace ViewModels
                      NameOf(MagentaHue), NameOf(MagentaSaturation), NameOf(MagentaLuminance),
                      NameOf(WhiteBalance), NameOf(Temperature), NameOf(Tint), NameOf(KelvinTemperature)
                     Return outline & "color-filter.svg"
-                Case NameOf(Sharpness), NameOf(SharpenRadius), NameOf(SharpenDetail), NameOf(SharpenMasking), NameOf(NoiseReduction),
+                Case NameOf(Sharpness), NameOf(SharpenRadius), NameOf(SharpenDetail), NameOf(SharpenMasking), NameOf(SharpenMethodLabel), NameOf(NoiseReduction),
                      NameOf(NoiseReductionDetail), NameOf(NoiseReductionMethodLabel), NameOf(Clarity)
                     Return outline & "adjustments.svg"
                 Case NameOf(Vignette), NameOf(VignetteTransition), NameOf(VignetteRoundness), NameOf(VignetteFeather),
@@ -20474,6 +20537,7 @@ Namespace ViewModels
             _sharpenRadius = adj.SharpenRadius
             _sharpenDetail = adj.SharpenDetail
             _sharpenMasking = adj.SharpenMasking
+            _sharpenMethod = adj.SharpenMethod
             _noiseReduction = adj.NoiseReduction
             _noiseReductionDetail = adj.NoiseReductionDetail
             _colorNoiseReduction = adj.ColorNoiseReduction
@@ -20749,6 +20813,7 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(ColorNoiseAdd))
             Me.RaisePropertyChanged(NameOf(ColorNoiseAmount))
             Me.RaisePropertyChanged(NameOf(NoiseReductionMethodLabel))
+            Me.RaisePropertyChanged(NameOf(SharpenMethodLabel))
             RaiseEffectsPropertiesChanged()
             RaiseExtendedAdjustmentProperties()
             Me.RaisePropertyChanged(NameOf(CropLeft))
@@ -20958,13 +21023,14 @@ Namespace ViewModels
             _sharpenRadius = 0
             _sharpenDetail = 0
             _sharpenMasking = 0
+            _sharpenMethod = SharpenMethod.UnsharpMask
             _noiseReduction = 0
             _noiseReductionDetail = 0
             _colorNoiseReduction = 0
             _farbrauschGrob = 0
             _farbrauschGrobSkala = 50
             _colorNoiseAdd = 0
-            _noiseReductionMethod = NoiseReductionMethod.Guided
+            _noiseReductionMethod = NoiseReductionMethod.AdaptiveGuided
             _vignette = 0
             _vignetteStyle = VignetteStyle.ColorPriority
             _grain = 0
@@ -21115,6 +21181,7 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(ColorNoiseAdd))
             Me.RaisePropertyChanged(NameOf(ColorNoiseAmount))
             Me.RaisePropertyChanged(NameOf(NoiseReductionMethodLabel))
+            Me.RaisePropertyChanged(NameOf(SharpenMethodLabel))
             RaiseEffectsPropertiesChanged()
             RaiseExtendedAdjustmentProperties()
             ' Raises fuer die oben ergaenzten Felder (Details/Weissabgleich/Kalibrierung/Auswahl) -
@@ -24668,13 +24735,14 @@ Namespace ViewModels
             _sharpenRadius = 0
             _sharpenDetail = 0
             _sharpenMasking = 0
+            _sharpenMethod = SharpenMethod.UnsharpMask
             _noiseReduction = 0
             _noiseReductionDetail = 0
             _colorNoiseReduction = 0
             _farbrauschGrob = 0
             _farbrauschGrobSkala = 50
             _colorNoiseAdd = 0
-            _noiseReductionMethod = NoiseReductionMethod.Guided
+            _noiseReductionMethod = NoiseReductionMethod.AdaptiveGuided
             _dustScratches = 0
             _haze = 0
             _addNoise = 0
@@ -24734,16 +24802,18 @@ Namespace ViewModels
             SchedulePreviewUpdate()
         End Sub
 
-        ''' <summary>Nur die Schärfe-Gruppe (Schärfe, Radius, Detail, Maskierung).</summary>
+        ''' <summary>Nur die Schärfe-Gruppe (Schärfe, Radius, Detail, Maskierung, Methode).</summary>
         Private Sub ResetSharpenGroupInternal()
             _sharpness = 0
             _sharpenRadius = 0
             _sharpenDetail = 0
             _sharpenMasking = 0
+            _sharpenMethod = SharpenMethod.UnsharpMask
             Me.RaisePropertyChanged(NameOf(Sharpness))
             Me.RaisePropertyChanged(NameOf(SharpenRadius))
             Me.RaisePropertyChanged(NameOf(SharpenDetail))
             Me.RaisePropertyChanged(NameOf(SharpenMasking))
+            Me.RaisePropertyChanged(NameOf(SharpenMethodLabel))
             RaiseResetButtonStateChanged()
             SchedulePreviewUpdate()
         End Sub
@@ -24752,7 +24822,7 @@ Namespace ViewModels
         Private Sub ResetSoftenGroupInternal()
             _noiseReduction = 0
             _noiseReductionDetail = 0
-            _noiseReductionMethod = NoiseReductionMethod.Guided
+            _noiseReductionMethod = NoiseReductionMethod.AdaptiveGuided
             Me.RaisePropertyChanged(NameOf(NoiseReduction))
             Me.RaisePropertyChanged(NameOf(NoiseReductionDetail))
             Me.RaisePropertyChanged(NameOf(NoiseReductionMethod))
@@ -24837,13 +24907,15 @@ Namespace ViewModels
             _sharpenRadius = 0
             _sharpenDetail = 0
             _sharpenMasking = 0
+            _sharpenMethod = SharpenMethod.UnsharpMask
             _noiseReduction = 0
             _noiseReductionDetail = 0
-            _noiseReductionMethod = NoiseReductionMethod.Guided
+            _noiseReductionMethod = NoiseReductionMethod.AdaptiveGuided
             Me.RaisePropertyChanged(NameOf(Sharpness))
             Me.RaisePropertyChanged(NameOf(SharpenRadius))
             Me.RaisePropertyChanged(NameOf(SharpenDetail))
             Me.RaisePropertyChanged(NameOf(SharpenMasking))
+            Me.RaisePropertyChanged(NameOf(SharpenMethodLabel))
             Me.RaisePropertyChanged(NameOf(NoiseReduction))
             Me.RaisePropertyChanged(NameOf(NoiseReductionDetail))
             Me.RaisePropertyChanged(NameOf(NoiseReductionMethod))
@@ -25090,6 +25162,7 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(ColorNoiseAdd))
             Me.RaisePropertyChanged(NameOf(ColorNoiseAmount))
             Me.RaisePropertyChanged(NameOf(NoiseReductionMethodLabel))
+            Me.RaisePropertyChanged(NameOf(SharpenMethodLabel))
             Me.RaisePropertyChanged(NameOf(DustScratches))
             Me.RaisePropertyChanged(NameOf(Haze))
             Me.RaisePropertyChanged(NameOf(AddNoise))

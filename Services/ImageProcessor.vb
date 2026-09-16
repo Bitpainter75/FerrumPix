@@ -2209,6 +2209,10 @@ Namespace Services
                         processed = ReplaceBitmapOwned(processed, PerformanceTraceService.Measure(
                             "Pixel: Rauschen (Fuehrung)", Function() ApplyGuidedNoiseReduction(
                                 processed, adj.NoiseReduction / 100.0F, adj.NoiseReductionDetail / 100.0F)), owned)
+                    Case NoiseReductionMethod.AdaptiveGuided
+                        processed = ReplaceBitmapOwned(processed, PerformanceTraceService.Measure(
+                            "Pixel: Rauschen (Fuehrung angepasst)", Function() ApplyMultiScaleGuidedNoiseReduction(
+                                processed, adj.NoiseReduction / 100.0F, adj.NoiseReductionDetail / 100.0F)), owned)
                     Case Else
                         processed = ReplaceBitmapOwned(processed, PerformanceTraceService.Measure(
                             "Pixel: Rauschen", Function() ApplyNoiseReduction(processed, adj.NoiseReduction / 100.0F, adj.NoiseReductionDetail / 100.0F)), owned)
@@ -2243,7 +2247,7 @@ Namespace Services
 
             If adj.Sharpness > 0 Then
                 processed = ReplaceBitmapOwned(processed, PerformanceTraceService.Measure(
-                    "Pixel: Schaerfe", Function() ApplySharpness(processed, adj.Sharpness / 100.0F, adj.SharpenRadius / 100.0F, adj.SharpenDetail / 100.0F, adj.SharpenMasking / 100.0F)), owned)
+                    "Pixel: Schaerfe", Function() ApplySharpness(processed, adj.Sharpness / 100.0F, adj.SharpenRadius / 100.0F, adj.SharpenDetail / 100.0F, adj.SharpenMasking / 100.0F, adj.SharpenMethod)), owned)
             End If
 
             If adj.Vignette <> 0 Then
@@ -3479,7 +3483,7 @@ Namespace Services
                 adj.Whites, adj.Blacks, adj.Temperature, adj.Tint, adj.Sharpness, adj.SharpenRadius, adj.SharpenDetail,
                 adj.WhiteBalanceModel, adj.WhiteBalanceAnchorX, adj.WhiteBalanceAnchorY,
                 adj.WhiteBalanceKelvin, adj.WhiteBalanceKelvinTint,
-                adj.SharpenMasking,
+                adj.SharpenMasking, adj.SharpenMethod,
                 adj.NoiseReduction, adj.NoiseReductionMethod, adj.NoiseReductionDetail, adj.ColorNoiseReduction,
                 adj.FarbrauschGrob, adj.ColorNoiseCoarseScale,
                 adj.ColorNoiseAdd,
@@ -4846,7 +4850,13 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
         ''' bitgenau unverändert; sonst eine echte Unschärfemaske mit variablem Radius, Detailanhebung
         ''' und Kantenmaskierung.</summary>
         Private Shared Function ApplySharpness(source As SKBitmap, amount As Single, radiusAmount As Single,
-                                               detailAmount As Single, maskingAmount As Single) As SKBitmap
+                                               detailAmount As Single, maskingAmount As Single,
+                                               Optional method As SharpenMethod = SharpenMethod.UnsharpMask) As SKBitmap
+            ' Das Zurueckrechnen hat keine 3x3-Abkuerzung: es IST schon bei Radius, Detail und
+            ' Maskierung 0 ein eigenes Verfahren, und dort muss es genauso rechnen wie bei 1.
+            If method = SharpenMethod.Deconvolution Then
+                Return ApplyDeconvolutionSharpening(source, amount, radiusAmount, detailAmount, maskingAmount)
+            End If
             ' Die Maskierung MUSS die 3x3-Abkuerzung mit abwaehlen: dort gibt es keine Kantenmaske, ein
             ' allein gezogener Maskierungsregler waere sonst ein stummer No-Op.
             If radiusAmount <= 0 AndAlso detailAmount <= 0 AndAlso maskingAmount <= 0 Then Return ApplySharpness3x3(source, amount)
@@ -5086,6 +5096,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             unsharpened.SharpenRadius = 0
             unsharpened.SharpenDetail = 0
             unsharpened.SharpenMasking = 0
+            unsharpened.SharpenMethod = SharpenMethod.UnsharpMask
             unsharpened.Vignette = 0
             unsharpened.Grain = 0
             unsharpened.AddNoise = 0

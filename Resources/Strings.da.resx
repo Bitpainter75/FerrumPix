@@ -1830,8 +1830,11 @@
   <data name="F_llen_52ab7ed8" xml:space="preserve">
     <value>Udfyld</value>
   </data>
-  <data name="Gaussian_gleichm_iges_Weichzeichnen_Median_kante_72b86f62" xml:space="preserve">
-    <value>Gaussian: jævn sløring. Median: bevarer kanter, ægte støjreduktion.</value>
+  <data name="Unsharp_Mask_verst_rkt_Kanten_und_legt_dabei_hel_f79ad433" xml:space="preserve">
+    <value>Unsharp Mask: forstærker kanter og lægger lyse og mørke glorier omkring dem. Deconvolution: regner uskarpheden tilbage, så fine detaljer bliver skarpe igen uden glorier. Detail angiver her antallet af gennemløb.</value>
+  </data>
+  <data name="Adaptive_gl_ttet_so_stark_wie_das_Bild_bei_der_j_c2a3e582" xml:space="preserve">
+    <value>Adaptive: udglatter så kraftigt, som billedet støjer ved den enkelte lysstyrke. Guided: udglatter kun flade områder med en fast tærskel. Gaussian: jævn sløring. Median: bevarer kanter, ægte støjreduktion.</value>
   </data>
   <data name="Glow_d5545dea" xml:space="preserve">
     <value>Skær</value>

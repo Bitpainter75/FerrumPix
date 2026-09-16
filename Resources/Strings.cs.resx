@@ -1830,8 +1830,11 @@
   <data name="F_llen_52ab7ed8" xml:space="preserve">
     <value>Vyplnit</value>
   </data>
-  <data name="Gaussian_gleichm_iges_Weichzeichnen_Median_kante_72b86f62" xml:space="preserve">
-    <value>Gaussian: rovnoměrné rozostření. Median: zachovává hrany, skutečné potlačení šumu.</value>
+  <data name="Unsharp_Mask_verst_rkt_Kanten_und_legt_dabei_hel_f79ad433" xml:space="preserve">
+    <value>Unsharp Mask: zesiluje hrany a přidává kolem nich světlé a tmavé lemy. Deconvolution: zpětně vypočítá rozostření, jemná kresba je opět ostrá bez lemů. Detail tam určuje počet průchodů.</value>
+  </data>
+  <data name="Adaptive_gl_ttet_so_stark_wie_das_Bild_bei_der_j_c2a3e582" xml:space="preserve">
+    <value>Adaptive: vyhlazuje tak silně, jak je obraz zašuměný při dané jasnosti. Guided: vyhlazuje s pevným prahem jen ploché oblasti. Gaussian: rovnoměrné rozostření. Median: zachovává hrany, skutečné potlačení šumu.</value>
   </data>
   <data name="Glow_d5545dea" xml:space="preserve">
     <value>Záře</value>

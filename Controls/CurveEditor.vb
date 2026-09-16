@@ -181,11 +181,11 @@ Namespace Controls
         ''' <summary>Der Y-Wert der Kurve an dieser Stelle - GEZEICHNET WIRD, WAS GERECHNET WIRD.
         '''
         ''' Die Auswertung stand hier einmal ein zweites Mal, Zeichen fuer Zeichen dieselbe
-        ''' Catmull-Rom-Formel wie in der Bildkette. Zwei Kopien heisst: die gezeichnete Kurve ist
+        ''' Kurvenformel wie in der Bildkette. Zwei Kopien heisst: die gezeichnete Kurve ist
         ''' nur so lange die angewendete, wie beide gleich bleiben - und wer eine davon anfasst,
         ''' sieht der anderen nicht an, dass sie jetzt etwas anderes tut. Gerechnet wird deshalb an
-        ''' EINER Stelle; warum es Catmull-Rom ist und nicht der natuerliche Spline der Referenz,
-        ''' steht dort und ist gemessen.
+        ''' EINER Stelle; warum es eine monotonieerhaltende Hermite-Kurve (PCHIP) ist und nicht der
+        ''' natuerliche Spline der Referenz, steht dort und ist gemessen.
         '''
         ''' Die Klemmung bleibt hier: sie gehoert der Anzeige, die Kurve soll im Kasten bleiben. Die
         ''' Bildkette klemmt auf denselben Bereich, nur eine Stufe spaeter beim Bauen ihrer

@@ -1830,8 +1830,11 @@
   <data name="F_llen_52ab7ed8" xml:space="preserve">
     <value>Fyll</value>
   </data>
-  <data name="Gaussian_gleichm_iges_Weichzeichnen_Median_kante_72b86f62" xml:space="preserve">
-    <value>Gaussian: jämn oskärpa. Median: bevarar kanter, verklig brusreducering.</value>
+  <data name="Unsharp_Mask_verst_rkt_Kanten_und_legt_dabei_hel_f79ad433" xml:space="preserve">
+    <value>Unsharp Mask: förstärker kanter och lägger ljusa och mörka halos runt dem. Deconvolution: räknar tillbaka oskärpan, så att fina detaljer blir skarpa igen utan halos. Detalj anger där antalet genomgångar.</value>
+  </data>
+  <data name="Adaptive_gl_ttet_so_stark_wie_das_Bild_bei_der_j_c2a3e582" xml:space="preserve">
+    <value>Adaptive: jämnar ut så starkt som bilden brusar vid varje ljusstyrka. Guided: jämnar bara ut plana ytor med en fast tröskel. Gaussian: jämn oskärpa. Median: bevarar kanter, verklig brusreducering.</value>
   </data>
   <data name="Glow_d5545dea" xml:space="preserve">
     <value>Sken</value>

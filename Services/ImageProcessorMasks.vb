@@ -621,7 +621,10 @@ Namespace Services
         ''' Rand muesste durch die ganze Kette wandern.</summary>
         Private Shared Function IsNoiseReductionCropSafe(a As ImageAdjustments) As Boolean
             If a.NoiseReduction = 0 Then Return True
-            Return a.NoiseReductionMethod <> NoiseReductionMethod.Guided
+            ' Das angepasste Verfahren erst recht: es schaetzt das Rauschen am GANZEN Bild, das es
+            ' bekommt, und ein Ausschnitt ergaebe eine andere Schaetzung.
+            Return a.NoiseReductionMethod <> NoiseReductionMethod.Guided AndAlso
+                   a.NoiseReductionMethod <> NoiseReductionMethod.AdaptiveGuided
         End Function
 
         ''' <summary>Das ausgerichtete Rechteck, in dem diese Maske überhaupt deckt, oder Nothing,

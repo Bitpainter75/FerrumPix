@@ -41,6 +41,21 @@ Namespace Services
         ''' 2026-09-10, siehe ImageProcessorFilters.ApplyGuidedNoiseReduction. Die beiden aelteren
         ''' Wege bleiben waehlbar und rechnen unveraendert weiter.</summary>
         Guided = 2
+        ''' <summary>Derselbe Fuehrungsfilter, aber die Schwelle richtet sich nach dem Rauschen, das
+        ''' im Bild bei der jeweiligen Helligkeit tatsaechlich steht. Siehe
+        ''' ImageProcessorFilters.EstimateNoiseProfile.</summary>
+        AdaptiveGuided = 3
+    End Enum
+
+    ''' <summary>Womit geschaerft wird. DIE REIHENFOLGE IST DER GESPEICHERTE WERT, wie beim
+    ''' Entrauschen: Neues kommt hinten dazu.</summary>
+    Public Enum SharpenMethod
+        ''' <summary>Unschaerfemaske: Bild minus Weichzeichnung, verstaerkt aufaddiert. Die Vorgabe,
+        ''' weil jedes Rezept vor dem Feld und jedes XMP-Preset so gerechnet wurde.</summary>
+        UnsharpMask = 0
+        ''' <summary>Richardson-Lucy auf der Helligkeit: rechnet die Unschaerfe zurueck, statt
+        ''' Kanten zu ueberzeichnen. Siehe ImageProcessorFilters.ApplyDeconvolutionSharpening.</summary>
+        Deconvolution = 1
     End Enum
 
     ''' <summary>Ein bestätigter, nicht-destruktiver Schritt der Bildgeometrie. Anders als die
@@ -337,16 +352,22 @@ Namespace Services
         ''' geschärft (bisheriges Verhalten); höher = die Schärfung zieht sich auf die Kanten zurück, glatte
         ''' Flächen wie Himmel und Haut bleiben ruhig. Bei 0 rechnet ApplySharpness bitgenau wie zuvor.</summary>
         Public Property SharpenMasking As Single = 0
+        ''' <summary>Das Verfahren der Schaerfung. Radius, Detail und Maskierung gelten fuer beide;
+        ''' beim Zurueckrechnen steht Detail fuer die Zahl der Durchlaeufe. Vorgabe bleibt die
+        ''' Unschaerfemaske: ein Rezept aus der Zeit vor dem Feld traegt es nicht und muss genauso
+        ''' weiterrechnen wie bisher.</summary>
+        Public Property SharpenMethod As SharpenMethod = SharpenMethod.UnsharpMask
         Public Property NoiseReduction As Single = 0
         ''' <summary>Kantenerhalt der Rauschreduzierung, 0-100. 0 = die Glaettung gilt ueberall;
         ''' höher = an kontrastreichen Kanten wird das Original zurückgemischt, Details bleiben
         ''' stehen. Wirkt nur bei aktiver NoiseReduction, und in jedem der drei Verfahren gleich.</summary>
         Public Property NoiseReductionDetail As Single = 0
-        ''' <summary>VORGABE IST DER FUEHRUNGSFILTER, seit dem 2026-09-10. Ein Rezept, das den Wert
-        ''' TRAEGT, behaelt seinen - alle .fpxmp und .fpx mit Rauschminderung tun das, sie rechnen
-        ''' also unveraendert weiter. Es aendert sich fuer neue Bearbeitungen und fuer Quellen ohne
-        ''' eigene Angabe, etwa ein XMP-Preset: dort steht nur die Staerke.</summary>
-        Public Property NoiseReductionMethod As NoiseReductionMethod = NoiseReductionMethod.Guided
+        ''' <summary>VORGABE IST DER ANGEPASSTE FUEHRUNGSFILTER, seit dem 2026-09-16 (davor der feste
+        ''' seit dem 2026-09-10). Ein Rezept, das den Wert TRAEGT, behaelt seinen - alle .fpxmp und
+        ''' .fpx mit Rauschminderung tun das, sie rechnen also unveraendert weiter. Es aendert sich
+        ''' fuer neue Bearbeitungen und fuer Quellen ohne eigene Angabe, etwa ein XMP-Preset: dort
+        ''' steht nur die Staerke.</summary>
+        Public Property NoiseReductionMethod As NoiseReductionMethod = NoiseReductionMethod.AdaptiveGuided
         ''' Farb-Rauschreduzierung 0-100: glaettet NUR die Farbanteile (Chroma), die Helligkeit
         ''' bleibt unangetastet - Details bleiben stehen, Farbflecken verschwinden. Gerade bei der
         ''' echten RAW-Entwicklung sichtbar, wo die Kamera-Vorschau schon entrauscht war.
@@ -833,6 +854,22 @@ Namespace Services
             "SelectionMaskLeft", "SelectionMaskTop", "SelectionMaskRight", "SelectionMaskBottom",
             "SelectionMaskPngBase64", "SelectionMaskRaster", "HasSelectionMaskData", "SelectionFeatherPixels", "SelectionMaskSoftBaked", "GlobalAdjustmentsHidden", "BackgroundHidden", "PixelLayerHidden"
         }
+
+        ''' <summary>Startwert des Reglers fuer grobe Farbflecken bei einer RAW-Datei ohne Rezept.
+        '''
+        ''' Eine entwickelte RAW traegt Farbrauschen, das die Kamera in ihrer eingebetteten Vorschau
+        ''' schon weggerechnet hatte; ohne Startwert sieht die eigene Entwicklung neben der Vorschau
+        ''' fleckig aus. Gemessen am M50-Portraet, der Regler allein: 10 nimmt 14 Prozent des
+        ''' Farbrauschens, 20 nimmt 37, 30 nimmt 59, 50 nimmt 81 - die Kantensteilheit bleibt bis 30 bei
+        ''' 99 Prozent. 30 wirkt also deutlich und laesst Luft nach oben.</summary>
+        Public Const UneditedRawCoarseColorNoise As Single = 30
+
+        ''' <summary>Die Regler, mit denen eine RAW-Datei OHNE Rezept entwickelt wird. EINE Stelle fuer
+        ''' Editor, Betrachter, Stapel und Drehen: stuenden die Werte an jedem Ort einzeln, saehe
+        ''' dieselbe Datei im Editor anders aus als im Betrachter.</summary>
+        Public Shared Function ForUneditedRaw() As ImageAdjustments
+            Return New ImageAdjustments With {.FarbrauschGrob = UneditedRawCoarseColorNoise}
+        End Function
 
         Private Shared _pixelProperties As Reflection.PropertyInfo() = Nothing
         Private Shared ReadOnly _pixelPropertiesLock As New Object()

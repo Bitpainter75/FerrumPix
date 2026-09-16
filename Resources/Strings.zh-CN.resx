@@ -1830,8 +1830,11 @@
   <data name="F_llen_52ab7ed8" xml:space="preserve">
     <value>填充</value>
   </data>
-  <data name="Gaussian_gleichm_iges_Weichzeichnen_Median_kante_72b86f62" xml:space="preserve">
-    <value>高斯：均匀模糊。中值：保留边缘，真正减少噪点。</value>
+  <data name="Unsharp_Mask_verst_rkt_Kanten_und_legt_dabei_hel_f79ad433" xml:space="preserve">
+    <value>Unsharp Mask：增强边缘，并在边缘周围产生明暗光晕。Deconvolution：反算模糊，使细节重新清晰且没有光晕。此时 Detail 决定处理次数。</value>
+  </data>
+  <data name="Adaptive_gl_ttet_so_stark_wie_das_Bild_bei_der_j_c2a3e582" xml:space="preserve">
+    <value>Adaptive：按图像在各亮度下的实际噪点强度进行平滑。Guided：以固定阈值仅平滑平坦区域。高斯：均匀模糊。中值：保留边缘，真正减少噪点。</value>
   </data>
   <data name="Glow_d5545dea" xml:space="preserve">
     <value>发光</value>

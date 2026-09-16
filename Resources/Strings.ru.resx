@@ -1830,8 +1830,11 @@
   <data name="F_llen_52ab7ed8" xml:space="preserve">
     <value>Залить</value>
   </data>
-  <data name="Gaussian_gleichm_iges_Weichzeichnen_Median_kante_72b86f62" xml:space="preserve">
-    <value>Gaussian: равномерное размытие. Median: с сохранением краёв, настоящее подавление шума.</value>
+  <data name="Unsharp_Mask_verst_rkt_Kanten_und_legt_dabei_hel_f79ad433" xml:space="preserve">
+    <value>Unsharp Mask: усиливает края и добавляет вокруг них светлые и тёмные ореолы. Deconvolution: обращает размытие расчётом, мелкие детали снова становятся резкими без ореолов. Там Детали задают число проходов.</value>
+  </data>
+  <data name="Adaptive_gl_ttet_so_stark_wie_das_Bild_bei_der_j_c2a3e582" xml:space="preserve">
+    <value>Adaptive: сглаживает настолько, насколько изображение шумит при данной яркости. Guided: сглаживает только ровные участки с постоянным порогом. Gaussian: равномерное размытие. Median: с сохранением краёв, настоящее подавление шума.</value>
   </data>
   <data name="Glow_d5545dea" xml:space="preserve">
     <value>Свечение</value>

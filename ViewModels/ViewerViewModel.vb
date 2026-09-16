@@ -2147,7 +2147,7 @@ Namespace ViewModels
                     ' Rezept. Genau das ist im Vergleich und beim Schalter fuer unbearbeitete
                     ' RAWs gewollt.
                     Dim adj = If(RawSidecarService.Exists(path), RawSidecarService.TryRead(path), Nothing)
-                    If adj Is Nothing Then adj = New ImageAdjustments()
+                    If adj Is Nothing Then adj = ImageAdjustments.ForUneditedRaw()
                     Try
                         Dim developed = ImageProcessor.ApplyAdjustments(path, adj)
                         If developed IsNot Nothing Then Return developed
@@ -2960,7 +2960,13 @@ Namespace ViewModels
             Dim errorMessage As String = Nothing
             Try
                 ok = Await Task.Run(Function()
-                                        Dim adj = If(RawSidecarService.TryRead(source), New ImageAdjustments())
+                                        ' Ohne Rezept die Startwerte einer unbearbeiteten RAW: die neue
+                                        ' Beistelldatei macht die Datei sonst zu einer bearbeiteten mit
+                                        ' anderen Werten als vor dem Drehen.
+                                        Dim adj = RawSidecarService.TryRead(source)
+                                        If adj Is Nothing Then
+                                            adj = If(RawPreviewService.IsSupportedRaw(source), ImageAdjustments.ForUneditedRaw(), New ImageAdjustments())
+                                        End If
                                         AppendRotationStep(adj, angle)
                                         Return RawSidecarService.TryWrite(source, adj)
                                     End Function)

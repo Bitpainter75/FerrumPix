@@ -261,6 +261,217 @@ Namespace Services
             Return sigma * sigma
         End Function
 
+        ''' <summary>Kantenlaenge der Bloecke, an denen das Rauschen geschaetzt wird.</summary>
+        Private Const NoiseProfileBlock As Integer = 8
+
+        ''' <summary>In so viele gleich breite Helligkeitsstufen wird die Schaetzung geteilt.</summary>
+        Private Const NoiseProfileBins As Integer = 16
+
+        ''' <summary>So viele Bloecke braucht eine Stufe mindestens. Darunter ist ihr Wert Zufall, und
+        ''' sie wird aus den Nachbarstufen ergaenzt.</summary>
+        Private Const NoiseProfileMinBlocks As Integer = 24
+
+        ''' <summary>Hoechstens so viele Bloecke werden ausgewertet; auf groesseren Bildern jeder
+        ''' zweite, dritte, ... in beiden Richtungen. Die Schaetzung wird davon nicht besser, nur
+        ''' langsamer.</summary>
+        Private Const NoiseProfileMaxBlocks As Integer = 65536
+
+        ''' <summary>Welcher Anteil der Bloecke einer Stufe als flach gilt: der Wert an dieser Stelle
+        ''' der sortierten Streuungen ist das Rauschen. Nicht der Median - in einem Bild mit viel
+        ''' Zeichnung liegt der schon auf Struktur. Und nicht das Minimum - das ist der Block, der
+        ''' zufaellig am glattesten ausfiel.</summary>
+        Private Const NoiseProfilePercentile As Double = 0.2
+
+        ''' <summary>Faecher je Grauwert im Histogramm der Blockstreuungen, und wie weit es reicht.</summary>
+        Private Const NoiseHistogramScale As Integer = 8
+        Private Const NoiseHistogramBuckets As Integer = 64 * NoiseHistogramScale
+
+        ''' <summary>Gleicht aus, dass das untere Fuenftel der Blockstreuungen unter der wahren
+        ''' Streuung liegt. Geeicht an reinem Normalrauschen mit Streuung 2, 4 und 8: ohne den Faktor
+        ''' kam die Schaetzung jedes Mal auf das 0,86-Fache.</summary>
+        Private Const NoiseProfileCalibration As Single = 1.11F
+
+        ''' <summary>Obergrenze des Rauschprofils als Anteil seines Medians. Gemessen am M50-Portraet,
+        ''' mehrstufig, Staerke 100: ohne Grenze 66 Prozent Rauschabbau bei 40 Prozent
+        ''' Kantensteilheit, mit 1,0 bei 48, mit 0,8 bei 55, mit 0,6 bei 65 - der Rauschabbau im
+        ''' Flachen bleibt dabei gleich, und im Bild kommt der Bart zurueck.</summary>
+        Private Const NoiseProfileCapOfMedian As Single = 0.6F
+
+        ''' <summary>Wie stark das Bild bei jedem Helligkeitswert rauscht, als Standardabweichung in
+        ''' Grauwerten (256 Eintraege), oder Nothing, wenn das Bild zu klein fuer eine Schaetzung ist.
+        '''
+        ''' WARUM UEBERHAUPT: das Rauschen ist nicht ueberall gleich. Der Sensor rauscht mit dem
+        ''' Signal, und die Tonkurve hebt die Tiefen danach noch an - am Ende stehen die Schatten
+        ''' deutlich verrauschter da als die Lichter. Eine feste Schwelle glaettet deshalb die Lichter
+        ''' zu stark und die Schatten zu schwach.
+        '''
+        ''' WIE: je 8x8-Block die Streuung der Helligkeit, nachdem eine schiefe Ebene abgezogen ist -
+        ''' ein gleichmaessiger Verlauf ist kein Rauschen. Die Bloecke werden nach ihrer Helligkeit
+        ''' sortiert, und je Stufe gilt das untere Fuenftel als flach.
+        '''
+        ''' GEMESSEN WIRD DIESELBE GROESSE, MIT DER DER FILTER VERGLEICHT: die Streuung in einem
+        ''' Fenster von rund acht Bildpunkten. Ein Laplace-Kern stand hier zuerst und sah nur das
+        ''' feinste Korn. Nach dem Demosaic ist Kamerarauschen aber grob und fleckig, und an einer
+        ''' hellen Jacke (M50-Portraet) meldete er ein Viertel der Streuung, die dort tatsaechlich
+        ''' stand - die Lichter blieben damit fast ungeglaettet.
+        '''
+        ''' Geschaetzt wird am GANZEN Bild, das gerade gerechnet wird, und vor dem Kacheln: jede
+        ''' Kachel muss dieselbe Tabelle sehen, sonst stuenden die Kachelgrenzen im Bild. Die Vorschau
+        ''' schaetzt an ihrer eigenen, kleineren Fassung - und dort IST weniger Rauschen, weil das
+        ''' Verkleinern mittelt.</summary>
+        Friend Shared Function EstimateNoiseProfile(buf As Byte(), stride As Integer,
+                                                    ri As Integer, gi As Integer, bi As Integer, ai As Integer,
+                                                    width As Integer, height As Integer) As Single()
+            Dim blocksX = width \ NoiseProfileBlock
+            Dim blocksY = height \ NoiseProfileBlock
+            If blocksX < 1 OrElse blocksY < 1 Then Return Nothing
+            Dim stepSize = Math.Max(1, CInt(Math.Ceiling(Math.Sqrt(CDbl(blocksX) * blocksY / NoiseProfileMaxBlocks))))
+            Dim usedX = (blocksX + stepSize - 1) \ stepSize
+            Dim usedY = (blocksY + stepSize - 1) \ stepSize
+            Dim sigmas = New Single(usedX * usedY - 1) {}
+            Dim levels = New Byte(usedX * usedY - 1) {}
+            Dim count = NoiseProfileBlock * NoiseProfileBlock
+            ' Summe von (x - Mitte)^2 ueber den Block, fuer die Neigung der Ebene in beiden Richtungen
+            ' gleich: acht Zeilen mal die Summe ueber eine Zeile.
+            Dim center = (NoiseProfileBlock - 1) / 2.0
+            Dim axisSquares = 0.0
+            For x = 0 To NoiseProfileBlock - 1
+                axisSquares += (x - center) * (x - center)
+            Next
+            axisSquares *= NoiseProfileBlock
+
+            ' Je Blockzeile ein Faden. Jeder schreibt nur in seine eigenen Felder, das Ergebnis haengt
+            ' also nicht an der Aufteilung. Die Breite zaehlt nur fuer die Frage, ob sich Faeden lohnen.
+            ForEachRow(usedX * count, usedY,
+                Sub(row)
+                    For column = 0 To usedX - 1
+                        Dim left = column * stepSize * NoiseProfileBlock
+                        Dim top = row * stepSize * NoiseProfileBlock
+                        Dim sum = 0.0, sumSquares = 0.0, sumX = 0.0, sumY = 0.0
+                        For y = 0 To NoiseProfileBlock - 1
+                            Dim o = (top + y) * stride + left * 4
+                            For x = 0 To NoiseProfileBlock - 1
+                                Dim cr As Integer, cg As Integer, cb As Integer, al As Integer
+                                ReadUnpremultiplied(buf, o + x * 4, ri, gi, bi, ai, cr, cg, cb, al)
+                                ' Rec.601, dieselbe Helligkeit, auf der der Filter glaettet.
+                                Dim v = 0.299 * cr + 0.587 * cg + 0.114 * cb
+                                sum += v
+                                sumSquares += v * v
+                                sumX += (x - center) * v
+                                sumY += (y - center) * v
+                            Next
+                        Next
+                        Dim mean = sum / count
+                        ' Streuung um den Mittelwert, abzueglich dessen, was die Ebene erklaert.
+                        Dim variance = (sumSquares - sum * mean - (sumX * sumX + sumY * sumY) / axisSquares) / count
+                        Dim index = row * usedX + column
+                        sigmas(index) = CSng(Math.Sqrt(Math.Max(0.0, variance)))
+                        levels(index) = CByte(Math.Min(255, Math.Max(0, CInt(Math.Floor(mean)))))
+                    Next
+                End Sub)
+
+            ' Je Helligkeitsstufe ein Histogramm der Blockstreuungen; das Perzentil daraus ist exakt
+            ' genug (ein Achtel Grauwert) und braucht kein Sortieren.
+            Dim histogram = New Integer(NoiseProfileBins * NoiseHistogramBuckets - 1) {}
+            Dim counts = New Integer(NoiseProfileBins - 1) {}
+            For i = 0 To sigmas.Length - 1
+                Dim bin = (CInt(levels(i)) * NoiseProfileBins) \ 256
+                Dim bucket = Math.Min(NoiseHistogramBuckets - 1, CInt(Math.Floor(sigmas(i) * NoiseHistogramScale)))
+                histogram(bin * NoiseHistogramBuckets + bucket) += 1
+                counts(bin) += 1
+            Next
+
+            Dim binSigma = New Single(NoiseProfileBins - 1) {}
+            Dim valid = New Boolean(NoiseProfileBins - 1) {}
+            Dim anyValid = False
+            For bin = 0 To NoiseProfileBins - 1
+                If counts(bin) < NoiseProfileMinBlocks Then Continue For
+                Dim target = Math.Max(1, CInt(Math.Ceiling(counts(bin) * NoiseProfilePercentile)))
+                Dim cumulative = 0
+                For bucket = 0 To NoiseHistogramBuckets - 1
+                    cumulative += histogram(bin * NoiseHistogramBuckets + bucket)
+                    If cumulative >= target Then
+                        binSigma(bin) = (bucket + 0.5F) / NoiseHistogramScale * NoiseProfileCalibration
+                        Exit For
+                    End If
+                Next
+                valid(bin) = True
+                anyValid = True
+            Next
+            If Not anyValid Then Return Nothing
+
+            ' Luecken zwischen belegten Stufen gerade verbinden, an den Enden die letzte belegte
+            ' Stufe fortsetzen.
+            Dim filled = New Single(NoiseProfileBins - 1) {}
+            For bin = 0 To NoiseProfileBins - 1
+                If valid(bin) Then filled(bin) = binSigma(bin) : Continue For
+                Dim below = -1, above = -1
+                For j = bin - 1 To 0 Step -1
+                    If valid(j) Then below = j : Exit For
+                Next
+                For j = bin + 1 To NoiseProfileBins - 1
+                    If valid(j) Then above = j : Exit For
+                Next
+                If below >= 0 AndAlso above >= 0 Then
+                    Dim t = CSng(bin - below) / (above - below)
+                    filled(bin) = binSigma(below) + (binSigma(above) - binSigma(below)) * t
+                ElseIf below >= 0 Then
+                    filled(bin) = binSigma(below)
+                Else
+                    filled(bin) = binSigma(above)
+                End If
+            Next
+
+            ' Einmal 1-2-1 glaetten: benachbarte Stufen rauschen physikalisch fast gleich, ein
+            ' Sprung zwischen ihnen waere Messstreuung und stuende als Helligkeitsgrenze im Bild.
+            Dim smooth = New Single(NoiseProfileBins - 1) {}
+            For bin = 0 To NoiseProfileBins - 1
+                Dim lower = filled(Math.Max(0, bin - 1))
+                Dim upper = filled(Math.Min(NoiseProfileBins - 1, bin + 1))
+                smooth(bin) = (lower + 2.0F * filled(bin) + upper) / 4.0F
+            Next
+
+            ' Auf die 256 Helligkeitswerte, linear zwischen den Stufenmitten.
+            Dim table = New Single(255) {}
+            Dim binWidth = 256.0F / NoiseProfileBins
+            For level = 0 To 255
+                Dim position = (level + 0.5F) / binWidth - 0.5F
+                Dim lowerBin = CInt(Math.Floor(position))
+                Dim t = position - lowerBin
+                Dim a = smooth(Math.Min(NoiseProfileBins - 1, Math.Max(0, lowerBin)))
+                Dim b = smooth(Math.Min(NoiseProfileBins - 1, Math.Max(0, lowerBin + 1)))
+                table(level) = a + (b - a) * t
+            Next
+            Return table
+        End Function
+
+        ''' <summary>Die Schwelle je Helligkeitswert fuer das angepasste Verfahren, als Varianz.
+        '''
+        ''' Der Regler ist hier ein VIELFACHES DES RAUSCHENS und kein fester Grauwert: bei 100 gilt als
+        ''' glatt, was bis zum 2,4-Fachen der geschaetzten Streuung schwankt. Die Kennlinie ist so
+        ''' gelegt, dass sie am stark verrauschten Messbild (Streuung im Flachen 5,2) dieselbe
+        ''' Schwelle ergibt wie der feste Fuehrungsfilter; dort, wo weniger rauscht, glaettet sie
+        ''' weniger.
+        '''
+        ''' NACH OBEN IST DAS PROFIL BEGRENZT, auf <see cref="NoiseProfileCapOfMedian"/> seines
+        ''' Medians. In dunklen Bildteilen sind Rauschen und Zeichnung gleich stark (Bart, Fell, dunkler
+        ''' Stoff), und die Schaetzung kann beides nicht trennen: ohne Grenze wurde am M50-Portraet der
+        ''' Bart zu Brei. Das Verfahren glaettet deshalb dort, wo WENIG rauscht, schonender, folgt dem
+        ''' Rauschen aber nicht beliebig weit in die Tiefen.</summary>
+        Friend Shared Function AdaptiveNoiseEpsilonTable(profile As Single(), amount As Single) As Single()
+            Dim a = Clamp(amount, 0, 1)
+            Dim factor = (1.0F + a * 11.0F) / 5.2F
+            Dim table = New Single(255) {}
+            Dim sorted = profile.ToArray()
+            Array.Sort(sorted)
+            Dim cap = sorted(sorted.Length \ 2) * NoiseProfileCapOfMedian
+            For level = 0 To 255
+                Dim threshold = factor * Math.Max(0.25F, Math.Min(cap, profile(level)))
+                table(level) = threshold * threshold
+            Next
+            Return table
+        End Function
+
         ''' <summary>Detailerhaltendes Entrauschen: glaettet flache Flaechen und laesst Kanten stehen.
         '''
         ''' DER UNTERSCHIED ZUM GAUSS-WEG DANEBEN ist nicht die Staerke, sondern die Bauart. Ein Gauss
@@ -277,7 +488,8 @@ Namespace Services
         ''' <para>Der Detail-Regler mischt danach an Kanten das Original zurueck, wie beim Gauss-Weg:
         ''' derselbe Regler soll dasselbe bedeuten, egal welches Verfahren darunter liegt.</para></summary>
         Private Shared Function ApplyGuidedNoiseReduction(source As SKBitmap, amount As Single,
-                                                          Optional detail As Single = 0) As SKBitmap
+                                                          Optional detail As Single = 0,
+                                                          Optional adaptive As Boolean = False) As SKBitmap
             Dim srcBuf As Byte() = Nothing, dstBuf As Byte() = Nothing
             Dim stride, ri, gi, bi, ai As Integer
             Dim sLen = 0
@@ -288,7 +500,17 @@ Namespace Services
                 Array.Copy(srcBuf, dstBuf, sLen)
 
                 Dim w = source.Width, h = source.Height
-                Dim eps = GuidedNoiseEpsilon(amount)
+                ' Die Schwelle je Helligkeitswert. Beim festen Verfahren steht ueberall dieselbe Zahl,
+                ' und die Rechnung bleibt bitgleich mit der Zeit vor der Tabelle.
+                Dim epsTable As Single() = Nothing
+                If adaptive Then
+                    Dim profile = EstimateNoiseProfile(srcBuf, stride, ri, gi, bi, ai, w, h)
+                    If profile IsNot Nothing Then epsTable = AdaptiveNoiseEpsilonTable(profile, amount)
+                End If
+                If epsTable Is Nothing Then
+                    epsTable = New Single(255) {}
+                    Array.Fill(epsTable, GuidedNoiseEpsilon(amount))
+                End If
                 Dim d = Clamp(detail, 0, 1)
 
                 ' Die Kacheln laufen NEBENEINANDER, aber jede fuer sich: sie lesen aus derselben
@@ -309,7 +531,7 @@ Namespace Services
                     Sub(index)
                         GuidedTile(srcBuf, dstBuf, stride, ri, gi, bi, ai, w, h,
                                    (index Mod tilesX) * GuidedTileEdge,
-                                   (index \ tilesX) * GuidedTileEdge, eps, d)
+                                   (index \ tilesX) * GuidedTileEdge, epsTable, d)
                     End Sub)
 
                 Runtime.InteropServices.Marshal.Copy(dstBuf, 0, result.GetPixels(), sLen)
@@ -317,6 +539,187 @@ Namespace Services
             Finally
                 ReturnPooledBuffer(srcBuf)
                 ReturnPooledBuffer(dstBuf)
+            End Try
+        End Function
+
+        ''' <summary>Wie viele verkleinerte Stufen das angepasste Verfahren zusaetzlich rechnet, und ab
+        ''' welcher kuerzesten Kante sich eine weitere nicht mehr lohnt.</summary>
+        Private Const MultiScaleGuidedLevels As Integer = 2
+        Private Const MultiScaleGuidedMinEdge As Integer = 64
+
+        ''' <summary>Mit welchem Anteil der Reglerstaerke die VOLLE Groesse geglaettet wird; die
+        ''' verkleinerten Stufen bekommen die ganze.
+        '''
+        ''' Die groben Stufen nehmen die Wolken, die volle Groesse nur noch einen Teil des feinen
+        ''' Korns. Mit voller Staerke auch dort wurde das Bild wachsig: bei gleichem Rauschabbau im
+        ''' Flachen stand weniger Kantensteilheit, und im Bild war feines Korn, das Haar und Stoff
+        ''' traegt, ganz verschwunden.</summary>
+        Private Const MultiScaleFineWeight As Single = 0.5F
+
+        ''' <summary>Der angepasste Fuehrungsfilter ueber mehrere Groessen.
+        '''
+        ''' WARUM: der Filter mittelt in einem Fenster von neun Punkten. Nach dem Demosaic ist
+        ''' Kamerarauschen aber grob und wolkig, und diese Wolken sind groesser als das Fenster - sie
+        ''' bleiben stehen, oder man macht das Fenster so gross, dass die Zeichnung mitgeht. Im
+        ''' Vergleich mit einem freien RAW-Entwickler mit Wavelet-Entrauschen blieb bei uns genau
+        ''' das uebrig (FALLEN_UND_ENTSCHEIDUNGEN.md).
+        '''
+        ''' WIE: das Bild wird zweimal auf die halbe Kante verkleinert. Auf der kleinsten Stufe ist
+        ''' eine Wolke ein feines Korn, und derselbe Filter erreicht sie. Von grob nach fein wird dann
+        ''' jeweils nur die KORREKTUR der groeberen Stufe (entrauscht minus vorher) vergroessert und
+        ''' auf die feinere gelegt, bevor diese selbst geglaettet wird. Jede Stufe schaetzt ihr
+        ''' Rauschprofil an sich selbst: nach dem Verkleinern IST dort weniger feines Rauschen, und
+        ''' eine von der vollen Groesse uebernommene Schwelle glaettete zu stark.
+        '''
+        ''' Anders als die Schrumpfung ueber mehrere Groessen, die fuer die Helligkeit verworfen ist,
+        ''' bleibt der Filter auf jeder Stufe kantenerhaltend: wo die Umgebung eine Kante traegt,
+        ''' aendert er nichts, und die Korrektur ist dort null.</summary>
+        Private Shared Function ApplyMultiScaleGuidedNoiseReduction(source As SKBitmap, amount As Single,
+                                                                    detail As Single) As SKBitmap
+            Dim pyramid = New List(Of SKBitmap) From {source}
+            Try
+                For level = 1 To MultiScaleGuidedLevels
+                    Dim previous = pyramid(level - 1)
+                    If Math.Min(previous.Width, previous.Height) < 2 * MultiScaleGuidedMinEdge Then Exit For
+                    Dim half = DownsampleHalf(previous)
+                    If half Is Nothing Then Exit For
+                    pyramid.Add(half)
+                Next
+
+                Dim denoised As SKBitmap = Nothing
+                For level = pyramid.Count - 1 To 0 Step -1
+                    Dim input = pyramid(level)
+                    Dim corrected As SKBitmap = Nothing
+                    If denoised IsNot Nothing Then
+                        corrected = AddCoarseCorrection(input, denoised, pyramid(level + 1))
+                        denoised.Dispose()
+                        denoised = Nothing
+                        input = corrected
+                    End If
+                    Try
+                        ' Der Detail-Regler gilt nur auf der vollen Groesse: er vergleicht mit dem
+                        ' Bild vor der Glaettung, und auf den kleinen Stufen gibt es kein solches.
+                        denoised = ApplyGuidedNoiseReduction(input, If(level = 0, amount * MultiScaleFineWeight, amount),
+                                                             If(level = 0, detail, 0.0F), adaptive:=True)
+                    Finally
+                        corrected?.Dispose()
+                    End Try
+                Next
+                Return denoised
+            Finally
+                For i = 1 To pyramid.Count - 1
+                    pyramid(i).Dispose()
+                Next
+            End Try
+        End Function
+
+        ''' <summary>Halbe Kantenlaenge, je vier Bildpunkte gemittelt. Bei ungerader Kante zaehlt die
+        ''' letzte Zeile oder Spalte allein.</summary>
+        Private Shared Function DownsampleHalf(source As SKBitmap) As SKBitmap
+            Dim srcBuf As Byte() = Nothing
+            Dim stride, ri, gi, bi, ai As Integer
+            Dim sLen = 0
+            Try
+                If Not TryRentRgbaLikeBuffer(source, srcBuf, sLen, stride, ri, gi, bi, ai) Then Return Nothing
+                Dim w = source.Width, h = source.Height
+                Dim hw = (w + 1) \ 2, hh = (h + 1) \ 2
+                Dim result = New SKBitmap(hw, hh, source.ColorType, source.AlphaType)
+                Dim dStride = result.RowBytes
+                Dim dstBuf = New Byte(dStride * hh - 1) {}
+                ForEachRow(hw, hh,
+                    Sub(y)
+                        For x = 0 To hw - 1
+                            Dim sr = 0, sg = 0, sb = 0, sa = 0, n = 0
+                            For dy = 0 To 1
+                                Dim yy = 2 * y + dy
+                                If yy >= h Then Continue For
+                                For dx = 0 To 1
+                                    Dim xx = 2 * x + dx
+                                    If xx >= w Then Continue For
+                                    Dim cr As Integer, cg As Integer, cb As Integer, a As Integer
+                                    ReadUnpremultiplied(srcBuf, yy * stride + xx * 4, ri, gi, bi, ai, cr, cg, cb, a)
+                                    sr += cr : sg += cg : sb += cb : sa += a : n += 1
+                                Next
+                            Next
+                            WritePremultiplied(dstBuf, y * dStride + x * 4, ri, gi, bi, ai,
+                                               CByte((sr + n \ 2) \ n), CByte((sg + n \ 2) \ n), CByte((sb + n \ 2) \ n),
+                                               (sa + n \ 2) \ n)
+                        Next
+                    End Sub)
+                Runtime.InteropServices.Marshal.Copy(dstBuf, 0, result.GetPixels(), dstBuf.Length)
+                Return result
+            Finally
+                ReturnPooledBuffer(srcBuf)
+            End Try
+        End Function
+
+        ''' <summary>Legt die Korrektur einer halb so grossen Stufe auf die feinere: (entrauscht minus
+        ''' vorher), zweifach vergroessert mit bilinearer Abtastung. Alpha bleibt das der feinen Stufe.</summary>
+        Private Shared Function AddCoarseCorrection(fine As SKBitmap, coarseDenoised As SKBitmap,
+                                                    coarseOriginal As SKBitmap) As SKBitmap
+            Dim fineBuf As Byte() = Nothing, denBuf As Byte() = Nothing, origBuf As Byte() = Nothing
+            Dim fStride, ri, gi, bi, ai As Integer
+            Dim dStride, dri, dgi, dbi, dai As Integer
+            Dim oStride, ori, ogi, obi, oai As Integer
+            Dim fLen = 0, dLen = 0, oLen = 0
+            Try
+                If Not TryRentRgbaLikeBuffer(fine, fineBuf, fLen, fStride, ri, gi, bi, ai) OrElse
+                   Not TryRentRgbaLikeBuffer(coarseDenoised, denBuf, dLen, dStride, dri, dgi, dbi, dai) OrElse
+                   Not TryRentRgbaLikeBuffer(coarseOriginal, origBuf, oLen, oStride, ori, ogi, obi, oai) Then
+                    Return CloneBitmap(fine)
+                End If
+                Dim cw = coarseOriginal.Width, ch = coarseOriginal.Height
+                Dim diffR = New Single(cw * ch - 1) {}
+                Dim diffG = New Single(cw * ch - 1) {}
+                Dim diffB = New Single(cw * ch - 1) {}
+                For y = 0 To ch - 1
+                    For x = 0 To cw - 1
+                        Dim dr As Integer, dg As Integer, db As Integer, da As Integer
+                        Dim orr As Integer, og As Integer, ob As Integer, oa As Integer
+                        ReadUnpremultiplied(denBuf, y * dStride + x * 4, dri, dgi, dbi, dai, dr, dg, db, da)
+                        ReadUnpremultiplied(origBuf, y * oStride + x * 4, ori, ogi, obi, oai, orr, og, ob, oa)
+                        Dim i = y * cw + x
+                        diffR(i) = dr - orr
+                        diffG(i) = dg - og
+                        diffB(i) = db - ob
+                    Next
+                Next
+
+                Dim w = fine.Width, h = fine.Height
+                Dim result = New SKBitmap(w, h, fine.ColorType, fine.AlphaType)
+                Dim dstBuf = New Byte(fLen - 1) {}
+                ForEachRow(w, h,
+                    Sub(y)
+                        ' Mitte eines feinen Bildpunkts in Koordinaten der groben Stufe.
+                        Dim v = (y + 0.5F) / 2.0F - 0.5F
+                        Dim y0 = CInt(Math.Floor(v))
+                        Dim ty = v - y0
+                        Dim yA = Math.Min(ch - 1, Math.Max(0, y0))
+                        Dim yB = Math.Min(ch - 1, Math.Max(0, y0 + 1))
+                        For x = 0 To w - 1
+                            Dim u = (x + 0.5F) / 2.0F - 0.5F
+                            Dim x0 = CInt(Math.Floor(u))
+                            Dim tx = u - x0
+                            Dim xA = Math.Min(cw - 1, Math.Max(0, x0))
+                            Dim xB = Math.Min(cw - 1, Math.Max(0, x0 + 1))
+                            Dim i00 = yA * cw + xA, i01 = yA * cw + xB, i10 = yB * cw + xA, i11 = yB * cw + xB
+                            Dim w00 = (1.0F - tx) * (1.0F - ty), w01 = tx * (1.0F - ty), w10 = (1.0F - tx) * ty, w11 = tx * ty
+                            Dim addR = diffR(i00) * w00 + diffR(i01) * w01 + diffR(i10) * w10 + diffR(i11) * w11
+                            Dim addG = diffG(i00) * w00 + diffG(i01) * w01 + diffG(i10) * w10 + diffG(i11) * w11
+                            Dim addB = diffB(i00) * w00 + diffB(i01) * w01 + diffB(i10) * w10 + diffB(i11) * w11
+                            Dim o = y * fStride + x * 4
+                            Dim cr As Integer, cg As Integer, cb As Integer, a As Integer
+                            ReadUnpremultiplied(fineBuf, o, ri, gi, bi, ai, cr, cg, cb, a)
+                            WritePremultiplied(dstBuf, o, ri, gi, bi, ai,
+                                               ClampToByte(cr + addR), ClampToByte(cg + addG), ClampToByte(cb + addB), a)
+                        Next
+                    End Sub)
+                Runtime.InteropServices.Marshal.Copy(dstBuf, 0, result.GetPixels(), fLen)
+                Return result
+            Finally
+                ReturnPooledBuffer(fineBuf)
+                ReturnPooledBuffer(denBuf)
+                ReturnPooledBuffer(origBuf)
             End Try
         End Function
 
@@ -332,7 +735,7 @@ Namespace Services
                                       ri As Integer, gi As Integer, bi As Integer, ai As Integer,
                                       imageWidth As Integer, imageHeight As Integer,
                                       tileLeft As Integer, tileTop As Integer,
-                                      eps As Single, detail As Single)
+                                      epsTable As Single(), detail As Single)
             Dim innerRight = Math.Min(tileLeft + GuidedTileEdge, imageWidth)
             Dim innerBottom = Math.Min(tileTop + GuidedTileEdge, imageHeight)
             Dim left = Math.Max(0, tileLeft - GuidedMargin)
@@ -398,6 +801,9 @@ Namespace Services
             For i = 0 To n - 1
                 Dim variance = meanSquares(i) - meanI(i) * meanI(i)
                 If variance < 0.0F Then variance = 0.0F
+                ' Die Schwelle der HELLIGKEIT DER UMGEBUNG, nicht des einzelnen Bildpunkts: der
+                ' traegt das Rauschen selbst und spraenge sonst zwischen zwei Tabellenfeldern hin und her.
+                Dim eps = epsTable(Math.Min(255, Math.Max(0, CInt(meanI(i)))))
                 Dim a = variance / (variance + eps)
                 aCoef(i) = a
                 bCoef(i) = (1.0F - a) * meanI(i)
@@ -1115,14 +1521,20 @@ Namespace Services
         End Function
 
 
-        ''' <summary>Catmull-Rom durch die Kurvenpunkte. GEPRUEFT UND VERWORFEN: Adobes DNG-SDK
-        ''' interpoliert Tonkurven mit einem NATUERLICHEN kubischen Spline, der an derselben
-        ''' Kennlinie systematisch hoeher laeuft (Rot-Kurve des Testpresets bei x=20: 7,7 gegen
-        ''' unsere 6,5). Ein A/B mit ausgetauschter Interpolation, sonst identischer Kette, ergab
-        ''' auf der besseren Basis eine GROESSERE Abweichung zur Referenz (8,25 -> 9,39 am einen
-        ''' Motiv, 8,08 -> 9,30 am anderen) und nur auf der heutigen Basis eine kleinere
-        ''' (16,85 -> 15,93). Widerspruechlich, also nicht umgestellt - erst wenn ein Referenz-
-        ''' Export OHNE Preset vorliegt, laesst sich das sauber entscheiden.</summary>
+        ''' <summary>Monotonieerhaltende kubische Hermite-Kurve (PCHIP, Fritsch-Carlson) durch die
+        ''' Kurvenpunkte. Eine bewusste Entscheidung fuer den Editor, keine Zusage eines pixelgenauen
+        ''' Lightroom-Abgleichs.
+        '''
+        ''' ZWISCHEN ZWEI PUNKTEN BLEIBT DIE KURVE ZWISCHEN DEREN WERTEN. Sie schwingt nicht ueber,
+        ''' und steigende Punkte ergeben eine steigende Kurve. Die Hermite-Kurve mit Sehnensteigungen
+        ''' davor lief an engen steilen Punkten roh von -22 bis 265, der Editor zeigte dann Flaechen in
+        ''' Schwarz und Weiss, die niemand gezogen hat; Adobes Spline aus dem DNG SDK tut das noch viel
+        ''' staerker (-251 bis 615). Liegen Punkte auf einer Linie, ist die Kurve dort genau diese
+        ''' Linie - auch ungleich verteilt, woran das gleichfoermige Catmull-Rom davor scheiterte.
+        '''
+        ''' Der Preis: setzt man EINEN Punkt in die Tiefen, biegen die Mitten spuerbar mit ab, ganz
+        ''' aehnlich wie bei Adobe. Ein eigener Weg nur fuer importierte Presets waere ein zweites
+        ''' Kurvenmodell. Zahlen in LIGHTROOM_ANGLEICH.md.</summary>
         Friend Shared Function EvaluateCurveSpline(points As List(Of (X As Double, Y As Double)), x As Double) As Double
             Dim n = points.Count
             If n = 0 Then Return x
@@ -1137,21 +1549,53 @@ Namespace Services
                 End If
             Next
 
-            Dim p0 = If(segIndex > 0, points(segIndex - 1), points(segIndex))
             Dim p1 = points(segIndex)
             Dim p2 = points(segIndex + 1)
-            Dim p3 = If(segIndex + 2 < n, points(segIndex + 2), points(segIndex + 1))
-
             Dim span = p2.X - p1.X
             If span <= 0.0001 Then Return p1.Y
             Dim t = (x - p1.X) / span
             Dim t2 = t * t
             Dim t3 = t2 * t
 
-            Return 0.5 * ((2 * p1.Y) +
-                          (-p0.Y + p2.Y) * t +
-                          (2 * p0.Y - 5 * p1.Y + 4 * p2.Y - p3.Y) * t2 +
-                          (-p0.Y + 3 * p1.Y - 3 * p2.Y + p3.Y) * t3)
+            Dim tangentAtP1 = PchipSlope(points, segIndex) * span
+            Dim tangentAtP2 = PchipSlope(points, segIndex + 1) * span
+
+            Return (2 * t3 - 3 * t2 + 1) * p1.Y +
+                   (t3 - 2 * t2 + t) * tangentAtP1 +
+                   (-2 * t3 + 3 * t2) * p2.Y +
+                   (t3 - t2) * tangentAtP2
+        End Function
+
+        ''' <summary>Die Steigung der Kurve im Punkt <paramref name="index"/> nach Fritsch-Carlson.
+        '''
+        ''' AN DEN ENDEN die Sehne des Randabschnitts - dasselbe wie ein geradlinig fortgesetzter
+        ''' Nachbar. Ein verdoppelter Endpunkt halbierte dort frueher die Steigung, und schon die
+        ''' unveraenderte Kurve aus zwei Punkten wurde zur S-Kurve.
+        '''
+        ''' INNEN: kehrt die Richtung um oder bleibt eine Seite flach, ist die Steigung null - sonst
+        ''' schwaenge die Kurve ueber den Punkt hinaus. Andernfalls das nach den Abschnittsbreiten
+        ''' gewichtete harmonische Mittel der beiden Sehnen. Sind beide Sehnen gleich (Punkte auf einer
+        ''' Linie), ist das genau diese Steigung.</summary>
+        Private Shared Function PchipSlope(points As List(Of (X As Double, Y As Double)), index As Integer) As Double
+            Dim n = points.Count
+            If index <= 0 Then Return HermiteSlope(points(0), points(1))
+            If index >= n - 1 Then Return HermiteSlope(points(n - 2), points(n - 1))
+            Dim left = HermiteSlope(points(index - 1), points(index))
+            Dim right = HermiteSlope(points(index), points(index + 1))
+            If left * right <= 0 Then Return 0
+            Dim widthLeft = points(index).X - points(index - 1).X
+            Dim widthRight = points(index + 1).X - points(index).X
+            Dim weightLeft = 2 * widthRight + widthLeft
+            Dim weightRight = widthRight + 2 * widthLeft
+            Return (weightLeft + weightRight) / (weightLeft / left + weightRight / right)
+        End Function
+
+        ''' <summary>Steigung der Sehne zwischen zwei Punkten. Fallen beide auf dasselbe X, gibt es
+        ''' keine Richtung; dann flach statt einer Division durch null.</summary>
+        Private Shared Function HermiteSlope(a As (X As Double, Y As Double), b As (X As Double, Y As Double)) As Double
+            Dim run = b.X - a.X
+            If run <= 0.0001 Then Return 0
+            Return (b.Y - a.Y) / run
         End Function
 
         ' Rohe Histogramm-Zähldaten je Kanal (R/G/B/Luminanz) für den Kurven-Editor.
@@ -1898,6 +2342,230 @@ Namespace Services
                 ReturnPooledBuffer(dstBuf)
             End Try
         End Function
+
+        ''' <summary>Kachelkante des Zurueckrechnens, und wie weit jede Kachel ueber ihre Grenze
+        ''' hinaus mitliest. Kachelweise aus demselben Grund wie der Fuehrungsfilter: fuenf
+        ''' Gleitkomma-Zwischenbilder eines 24-Megapixel-Fotos waeren fast ein halbes Gigabyte.
+        '''
+        ''' Der Rand ist KEIN exakter Einflussbereich: jeder Durchlauf faltet zweimal, der Einfluss
+        ''' eines Bildpunkts reicht also rechnerisch weiter. Er klingt aber schnell ab, und die
+        ''' Diagnose haelt die Kachelgrenze im Blick.</summary>
+        Private Const DeconvolutionTileEdge As Integer = 256
+        Private Const DeconvolutionMargin As Integer = 32
+        Private Const DeconvolutionMaxParallelTiles As Integer = 12
+
+        ''' <summary>Durchlaeufe bei Detail 0 und bei Detail 100.
+        '''
+        ''' Richardson-Lucy naehert sich langsam an: mit 3 bis 12 Durchlaeufen und Sigma ab 0,6 tat die
+        ''' Staerke allein (Radius und Detail auf 0) fast nichts - an einer Kante mit Unschaerfe 1,5
+        ''' blieb sie bei 150 auf 3,6 statt 4,0 px, die Maske kam auf 2,4. Gemessen mit
+        ''' `Entrauschmessung schaerfe`, Werte dort und in FALLEN_UND_ENTSCHEIDUNGEN.md.</summary>
+        Private Const DeconvolutionMinIterations As Integer = 10
+        Private Const DeconvolutionMaxIterations As Integer = 30
+
+        ''' <summary>Angenommene Unschaerfe bei Radius 0 und ihr Zuwachs bis Radius 100. Nicht breiter:
+        ''' ist die angenommene Glocke groesser als die echte Unschaerfe, schwingt das Verfahren ueber
+        ''' (Unschaerfe 1,0, Sigma 1,4: Ueberschwinger 24 bei Staerke 100).</summary>
+        Private Const DeconvolutionSigmaBase As Single = 0.9F
+        Private Const DeconvolutionSigmaRange As Single = 1.1F
+
+        ''' <summary>Verstaerkung der Staerke. Das zurueckgerechnete Bild allein ist zurueckhaltender
+        ''' als die Unschaerfemaske bei gleicher Zahl; mit dem Faktor schaerft 100 etwa so steil wie die
+        ''' Maske bei 100 (Unschaerfe 1,0: 1,7 gegen 1,5 px), bei einem Bruchteil des Rauschens (4,2
+        ''' gegen 10,9) und des Ueberschwingers (11 gegen 12).</summary>
+        Private Const DeconvolutionGainScale As Single = 1.5F
+
+        ''' <summary>Um hoechstens diesen Faktor darf ein Durchlauf einen Bildpunkt aendern. Ohne die
+        ''' Grenze zieht das Verfahren Rauschen und einzelne Ausreisser mit jedem Durchlauf weiter
+        ''' hoch; mit ihr bleibt es bei der Kante, die es zurueckrechnen soll.</summary>
+        Private Const DeconvolutionStepLimit As Single = 1.25F
+        ''' <summary>Schaerfen durch Zurueckrechnen der Unschaerfe (Richardson-Lucy), auf der
+        ''' Helligkeit.
+        '''
+        ''' DER UNTERSCHIED ZUR UNSCHAERFEMASKE: die Maske verstaerkt, was sich vom weichgezeichneten
+        ''' Bild unterscheidet, und legt dabei an jeder Kante einen hellen und einen dunklen Saum an.
+        ''' Dieses Verfahren nimmt an, das Bild sei durch eine Gaussglocke unscharf geworden, und sucht
+        ''' das Bild, das nach dieser Unschaerfe genau das vorliegende ergaebe. Feine Zeichnung wie
+        ''' Fell oder Federn wird dadurch wieder steil, ohne dass Saeume entstehen.
+        '''
+        ''' Radius ist die Breite der angenommenen Unschaerfe (Sigma 0,9 bis 2,0), Detail die Zahl der
+        ''' Durchlaeufe (10 bis 30), Maskierung dieselbe Kantengewichtung wie bei der Maske. Die Staerke
+        ''' mischt das Ergebnis zum Original, verstaerkt um <see cref="DeconvolutionGainScale"/>.
+        '''
+        ''' Die Farbe folgt der Helligkeit: auf alle drei Kanaele kommt derselbe Betrag, sonst entstuenden
+        ''' an Kanten farbige Saeume.</summary>
+        Private Shared Function ApplyDeconvolutionSharpening(source As SKBitmap, amount As Single, radiusAmount As Single,
+                                                             detailAmount As Single, maskingAmount As Single) As SKBitmap
+            Dim srcBuf As Byte() = Nothing, dstBuf As Byte() = Nothing
+            Dim stride, ri, gi, bi, ai As Integer
+            Dim sLen = 0
+            Dim result = New SKBitmap(source.Width, source.Height, source.ColorType, source.AlphaType)
+            Try
+                If Not TryRentRgbaLikeBuffer(source, srcBuf, sLen, stride, ri, gi, bi, ai) Then Return result
+                dstBuf = ArrayPool(Of Byte).Shared.Rent(sLen)
+                Array.Copy(srcBuf, dstBuf, sLen)
+
+                Dim w = source.Width, h = source.Height
+                Dim gain = Math.Max(0.0F, amount) * DeconvolutionGainScale
+                If gain > 0.0F Then
+                    Dim sigma = DeconvolutionSigmaBase + Clamp(radiusAmount, 0, 1) * DeconvolutionSigmaRange
+                    Dim iterations = DeconvolutionMinIterations +
+                                     CInt(Math.Round(Clamp(detailAmount, 0, 1) * (DeconvolutionMaxIterations - DeconvolutionMinIterations)))
+                    Dim masking = Clamp(maskingAmount, 0, 1)
+                    Dim kernel = GaussianKernel(sigma)
+
+                    Dim tilesX = (w + DeconvolutionTileEdge - 1) \ DeconvolutionTileEdge
+                    Dim tilesY = (h + DeconvolutionTileEdge - 1) \ DeconvolutionTileEdge
+                    Dim options = New ParallelOptions With {
+                        .MaxDegreeOfParallelism = Math.Max(1, Math.Min(Environment.ProcessorCount, DeconvolutionMaxParallelTiles))
+                    }
+                    Parallel.For(0, tilesX * tilesY, options,
+                        Sub(index)
+                            DeconvolutionTile(srcBuf, dstBuf, stride, ri, gi, bi, ai, w, h,
+                                              (index Mod tilesX) * DeconvolutionTileEdge,
+                                              (index \ tilesX) * DeconvolutionTileEdge,
+                                              kernel, iterations, gain, masking)
+                        End Sub)
+                End If
+
+                Runtime.InteropServices.Marshal.Copy(dstBuf, 0, result.GetPixels(), sLen)
+                Return result
+            Finally
+                ReturnPooledBuffer(srcBuf)
+                ReturnPooledBuffer(dstBuf)
+            End Try
+        End Function
+
+        ''' <summary>Normierte Gaussglocke, Radius dreimal Sigma.</summary>
+        Private Shared Function GaussianKernel(sigma As Single) As Single()
+            Dim radius = Math.Max(1, CInt(Math.Ceiling(3.0F * sigma)))
+            Dim kernel = New Single(2 * radius) {}
+            Dim sum = 0.0F
+            For k = -radius To radius
+                Dim weight = CSng(Math.Exp(-(k * k) / (2.0 * sigma * sigma)))
+                kernel(k + radius) = weight
+                sum += weight
+            Next
+            For k = 0 To kernel.Length - 1
+                kernel(k) /= sum
+            Next
+            Return kernel
+        End Function
+
+        ''' <summary>Eine Kachel des Zurueckrechnens, samt Rand.</summary>
+        Private Shared Sub DeconvolutionTile(srcBuf As Byte(), dstBuf As Byte(), stride As Integer,
+                                             ri As Integer, gi As Integer, bi As Integer, ai As Integer,
+                                             imageWidth As Integer, imageHeight As Integer,
+                                             tileLeft As Integer, tileTop As Integer,
+                                             kernel As Single(), iterations As Integer,
+                                             gain As Single, masking As Single)
+            Dim innerRight = Math.Min(tileLeft + DeconvolutionTileEdge, imageWidth)
+            Dim innerBottom = Math.Min(tileTop + DeconvolutionTileEdge, imageHeight)
+            Dim left = Math.Max(0, tileLeft - DeconvolutionMargin)
+            Dim top = Math.Max(0, tileTop - DeconvolutionMargin)
+            Dim right = Math.Min(imageWidth, innerRight + DeconvolutionMargin)
+            Dim bottom = Math.Min(imageHeight, innerBottom + DeconvolutionMargin)
+            Dim w = right - left, h = bottom - top
+            If w <= 0 OrElse h <= 0 Then Return
+
+            ' Geliehen, und nur ueber n gerechnet: ein geliehenes Feld ist oft laenger als bestellt.
+            Dim n = w * h
+            Dim pool = ArrayPool(Of Single).Shared
+            Dim observed = pool.Rent(n)
+            Dim estimate = pool.Rent(n)
+            Dim blurred = pool.Rent(n)
+            Dim ratio = pool.Rent(n)
+            Dim scratch = pool.Rent(n)
+            Try
+                For y = 0 To h - 1
+                    Dim row = (top + y) * stride
+                    Dim at = y * w
+                    For x = 0 To w - 1
+                        Dim cr As Integer, cg As Integer, cb As Integer, a As Integer
+                        ReadUnpremultiplied(srcBuf, row + (left + x) * 4, ri, gi, bi, ai, cr, cg, cb, a)
+                        Dim luma = CSng(0.299 * cr + 0.587 * cg + 0.114 * cb)
+                        observed(at + x) = luma
+                        estimate(at + x) = luma
+                    Next
+                Next
+
+                ' Richardson-Lucy: Schaetzung falten, mit dem Beobachteten vergleichen, das Verhaeltnis
+                ' zurueckfalten und die Schaetzung damit malnehmen. Die Glocke ist symmetrisch, ihre
+                ' Spiegelung also sie selbst.
+                For iteration = 1 To iterations
+                    SeparableConvolve(estimate, blurred, scratch, w, h, kernel)
+                    For i = 0 To n - 1
+                        ' Ein halber Grauwert als Untergrenze: im Schwarz waere das Verhaeltnis sonst
+                        ' eine Division durch fast null.
+                        ratio(i) = observed(i) / Math.Max(0.5F, blurred(i))
+                    Next
+                    SeparableConvolve(ratio, ratio, scratch, w, h, kernel)
+                    For i = 0 To n - 1
+                        Dim factor = Math.Min(DeconvolutionStepLimit, Math.Max(1.0F / DeconvolutionStepLimit, ratio(i)))
+                        estimate(i) = Math.Min(255.0F, estimate(i) * factor)
+                    Next
+                Next
+
+                For y = tileTop To innerBottom - 1
+                    Dim row = y * stride
+                    Dim upRow = If(y > 0, (y - 1) * stride, row)
+                    Dim downRow = If(y < imageHeight - 1, (y + 1) * stride, row)
+                    Dim at = (y - top) * w - left
+                    For x = tileLeft To innerRight - 1
+                        Dim i = at + x
+                        Dim weight = gain
+                        If masking > 0.0F Then
+                            ' Dieselbe Gewichtung wie bei der Maske, damit die Vorschau bei gedrueckter
+                            ' ALT-Taste fuer beide Verfahren die Wahrheit zeigt.
+                            Dim edge = SharpenEdgeFactor(srcBuf, row, upRow, downRow, x, imageWidth, ri, gi, bi, ai)
+                            weight = gain * ((1.0F - masking) + masking * edge)
+                        End If
+                        Dim shift = (estimate(i) - observed(i)) * weight
+                        Dim o = row + x * 4
+                        Dim cr As Integer, cg As Integer, cb As Integer, al As Integer
+                        ReadUnpremultiplied(srcBuf, o, ri, gi, bi, ai, cr, cg, cb, al)
+                        WritePremultiplied(dstBuf, o, ri, gi, bi, ai,
+                                           ClampToByte(cr + shift), ClampToByte(cg + shift), ClampToByte(cb + shift), al)
+                    Next
+                Next
+            Finally
+                pool.Return(observed)
+                pool.Return(estimate)
+                pool.Return(blurred)
+                pool.Return(ratio)
+                pool.Return(scratch)
+            End Try
+        End Sub
+
+        ''' <summary>Faltung mit einer symmetrischen Glocke, erst waagerecht in den Zwischenspeicher,
+        ''' dann senkrecht ins Ziel. Am Rand wird auf den letzten Bildpunkt geklemmt.
+        ''' <paramref name="target"/> darf <paramref name="values"/> sein, <paramref name="scratch"/>
+        ''' nicht.</summary>
+        Private Shared Sub SeparableConvolve(values As Single(), target As Single(), scratch As Single(),
+                                             width As Integer, height As Integer, kernel As Single())
+            Dim radius = kernel.Length \ 2
+            For y = 0 To height - 1
+                Dim row = y * width
+                For x = 0 To width - 1
+                    Dim sum = 0.0F
+                    For k = -radius To radius
+                        Dim sx = Math.Min(width - 1, Math.Max(0, x + k))
+                        sum += kernel(k + radius) * values(row + sx)
+                    Next
+                    scratch(row + x) = sum
+                Next
+            Next
+            For x = 0 To width - 1
+                For y = 0 To height - 1
+                    Dim sum = 0.0F
+                    For k = -radius To radius
+                        Dim sy = Math.Min(height - 1, Math.Max(0, y + k))
+                        sum += kernel(k + radius) * scratch(sy * width + x)
+                    Next
+                    target(y * width + x) = sum
+                Next
+            Next
+        End Sub
 
     End Class
 

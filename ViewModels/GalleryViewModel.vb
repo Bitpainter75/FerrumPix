@@ -10517,6 +10517,12 @@ Namespace ViewModels
                 Dim rezept = RawSidecarService.TryRead(sourcePath)
                 If rezept IsNot Nothing Then Return rezept
             End If
+            ' Eine RAW ohne Rezept kommt mit denselben Startwerten aus dem Stapel wie aus dem Editor -
+            ' aber nur, wenn der Stapel sie auch ENTWICKELT. Die eingebettete Vorschau hat die Kamera
+            ' schon entrauscht.
+            If RawPreviewService.IsSupportedRaw(sourcePath) AndAlso BatchDevelopsRaw(sourcePath) Then
+                Return ImageAdjustments.ForUneditedRaw()
+            End If
             Return New ImageAdjustments()
         End Function
 

@@ -1831,8 +1831,11 @@
   <data name="F_llen_52ab7ed8" xml:space="preserve">
     <value>Preenchimento</value>
   </data>
-  <data name="Gaussian_gleichm_iges_Weichzeichnen_Median_kante_72b86f62" xml:space="preserve">
-    <value>Gaussiano: desfoque uniforme. Mediana: preserva as bordas, redução de ruído real.</value>
+  <data name="Unsharp_Mask_verst_rkt_Kanten_und_legt_dabei_hel_f79ad433" xml:space="preserve">
+    <value>Unsharp Mask: reforça as bordas e acrescenta halos claros e escuros. Deconvolution: reverte o desfoque por cálculo, e o detalhe fino volta a ficar nítido sem halos. Aí, Detalhe define o número de passagens.</value>
+  </data>
+  <data name="Adaptive_gl_ttet_so_stark_wie_das_Bild_bei_der_j_c2a3e582" xml:space="preserve">
+    <value>Adaptive: suaviza na medida do ruído que a imagem tem em cada brilho. Guided: suaviza apenas áreas planas, com um limiar fixo. Gaussiano: desfoque uniforme. Mediana: preserva as bordas, redução de ruído real.</value>
   </data>
   <data name="Glow_d5545dea" xml:space="preserve">
     <value>Resplendor</value>

@@ -1831,8 +1831,11 @@
   <data name="F_llen_52ab7ed8" xml:space="preserve">
     <value>Remplir</value>
   </data>
-  <data name="Gaussian_gleichm_iges_Weichzeichnen_Median_kante_72b86f62" xml:space="preserve">
-    <value>Gaussien : flou uniforme. Médiane : préserve les contours, réduction de bruit réelle.</value>
+  <data name="Unsharp_Mask_verst_rkt_Kanten_und_legt_dabei_hel_f79ad433" xml:space="preserve">
+    <value>Unsharp Mask : renforce les contours en ajoutant des halos clairs et sombres. Deconvolution : annule le flou par le calcul, les détails fins redeviennent nets sans halos. Détail y fixe le nombre de passes.</value>
+  </data>
+  <data name="Adaptive_gl_ttet_so_stark_wie_das_Bild_bei_der_j_c2a3e582" xml:space="preserve">
+    <value>Adaptive : lisse autant que l'image est bruitée à chaque luminosité. Guided : lisse seulement les zones planes, avec un seuil fixe. Gaussien : flou uniforme. Médiane : préserve les contours, réduction de bruit réelle.</value>
   </data>
   <data name="Glow_d5545dea" xml:space="preserve">
     <value>Glow</value>

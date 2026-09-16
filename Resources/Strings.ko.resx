@@ -1830,8 +1830,11 @@
   <data name="F_llen_52ab7ed8" xml:space="preserve">
     <value>채우기</value>
   </data>
-  <data name="Gaussian_gleichm_iges_Weichzeichnen_Median_kante_72b86f62" xml:space="preserve">
-    <value>가우시안: 고르게 흐립니다. 미디언: 가장자리를 지키는 진짜 노이즈 제거입니다.</value>
+  <data name="Unsharp_Mask_verst_rkt_Kanten_und_legt_dabei_hel_f79ad433" xml:space="preserve">
+    <value>Unsharp Mask: 가장자리를 강조하며 밝고 어두운 테두리가 생깁니다. Deconvolution: 흐림을 역으로 계산해 미세한 디테일을 테두리 없이 다시 선명하게 합니다. 이때 Detail은 반복 횟수를 정합니다.</value>
+  </data>
+  <data name="Adaptive_gl_ttet_so_stark_wie_das_Bild_bei_der_j_c2a3e582" xml:space="preserve">
+    <value>Adaptive: 밝기마다 실제 노이즈 양에 맞춰 부드럽게 합니다. Guided: 고정된 기준으로 평평한 부분만 부드럽게 합니다. 가우시안: 고르게 흐립니다. 미디언: 가장자리를 지키는 진짜 노이즈 제거입니다.</value>
   </data>
   <data name="Glow_d5545dea" xml:space="preserve">
     <value>글로우</value>

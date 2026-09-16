@@ -1830,8 +1830,11 @@
   <data name="F_llen_52ab7ed8" xml:space="preserve">
     <value>Doldur</value>
   </data>
-  <data name="Gaussian_gleichm_iges_Weichzeichnen_Median_kante_72b86f62" xml:space="preserve">
-    <value>Gauss: eşit bulanıklık. Ortanca: kenar koruyan, gerçek gürültü giderme.</value>
+  <data name="Unsharp_Mask_verst_rkt_Kanten_und_legt_dabei_hel_f79ad433" xml:space="preserve">
+    <value>Unsharp Mask: kenarları güçlendirir ve çevrelerine açık ve koyu haleler ekler. Deconvolution: bulanıklığı geri hesaplar, ince ayrıntılar halesiz yeniden keskinleşir. Orada Ayrıntı geçiş sayısını belirler.</value>
+  </data>
+  <data name="Adaptive_gl_ttet_so_stark_wie_das_Bild_bei_der_j_c2a3e582" xml:space="preserve">
+    <value>Adaptive: görüntü her parlaklıkta ne kadar gürültülüyse o kadar yumuşatır. Guided: sabit bir eşikle yalnızca düz alanları yumuşatır. Gauss: eşit bulanıklık. Ortanca: kenar koruyan, gerçek gürültü giderme.</value>
   </data>
   <data name="Glow_d5545dea" xml:space="preserve">
     <value>Parıltı</value>
