@@ -70,6 +70,7 @@ Namespace ViewModels
         Private _editorLayerThumbnails As Boolean = True
         Private _editorToolSidebarCollapsed As Boolean = False
         Private _editorAdjustmentsPanelWidth As Double = EditorViewModel.AdjustmentsPanelMinWidth
+        Private _editorSaveAsNamePattern As String = "{name}_fx"
         Private _editorDenoiseStrength As Double = EditorViewModel.DefaultDenoiseStrength
         Private _savedEditorDenoiseStrength As Double = EditorViewModel.DefaultDenoiseStrength
         ' ACHT WEITERE, die dasselbe brauchten: sie werden vom Zuruecksetzen gesetzt, waren aber
@@ -166,6 +167,7 @@ Namespace ViewModels
         Private _savedEditorAdjustmentsPanelOnLeft As Boolean = False
         Private _savedEditorToolGroupOrder As String = "Adjust,Transform,Tools"
         Private _savedDefaultSaveFormat As String = "JPG"
+        Private _savedEditorSaveAsNamePattern As String = "{name}_fx"
         Private _savedThumbnailQuality As Integer = 82
         Private _savedThumbnailMemoryCacheCapacity As Integer = 250
         Private _savedJpgSaveQuality As Integer = 90
@@ -887,6 +889,20 @@ Namespace ViewModels
                                   NameOf(IsDefaultSaveFormatPdf), NameOf(IsDefaultSaveFormatFpx)}
                     Me.RaisePropertyChanged(name)
                 Next
+                SaveLayoutSettings()
+            End Set
+        End Property
+
+        ''' <summary>Vorlage fuer den vorgeschlagenen Namen in „Speichern unter". Der Inhalt wird
+        ''' erst dort ausgefuehrt, damit er immer die Metadaten des gerade offenen Bildes benutzt.</summary>
+        Public Property EditorSaveAsNamePattern As String
+            Get
+                Return _editorSaveAsNamePattern
+            End Get
+            Set(value As String)
+                value = AppSettingsService.NormalizeEditorSaveAsNamePattern(value)
+                If _editorSaveAsNamePattern = value Then Return
+                Me.RaiseAndSetIfChanged(_editorSaveAsNamePattern, value)
                 SaveLayoutSettings()
             End Set
         End Property
@@ -2023,6 +2039,7 @@ Namespace ViewModels
                 Case InfoPanelRow.Aperture : Return LocalizationService.T("Blende")
                 Case InfoPanelRow.ShutterSpeed : Return LocalizationService.T("Belichtungszeit")
                 Case InfoPanelRow.Iso : Return "ISO"
+                Case InfoPanelRow.ExposureCompensation : Return LocalizationService.T("Belichtungskorrektur")
                 Case InfoPanelRow.FocalLength : Return LocalizationService.T("Brennweite")
                 Case InfoPanelRow.Dimensions : Return LocalizationService.T("Abmessungen")
                 Case InfoPanelRow.Megapixels : Return LocalizationService.T("Megapixel")
@@ -3493,6 +3510,7 @@ Namespace ViewModels
             _viewerFitBehavior = AppSettingsService.NormalizeViewerFitBehavior(_appSettings.ViewerFitBehavior)
             _editorFitBehavior = AppSettingsService.NormalizeViewerFitBehavior(_appSettings.EditorFitBehavior)
             _defaultSaveFormat = AppSettingsService.NormalizeDefaultSaveFormat(_appSettings.DefaultSaveFormat)
+            _editorSaveAsNamePattern = AppSettingsService.NormalizeEditorSaveAsNamePattern(_appSettings.EditorSaveAsNamePattern)
             _editorShowFilmstrip = _appSettings.EditorShowFilmstrip
             _editorGridSize = AppSettingsService.NormalizeEditorGridSize(_appSettings.EditorGridSize)
             _editorShowRulers = _appSettings.EditorShowRulers
@@ -3795,6 +3813,7 @@ Namespace ViewModels
             _savedEditorAdjustmentsPanelOnLeft = _editorAdjustmentsPanelOnLeft
             _savedEditorToolGroupOrder = _editorToolGroupOrder
             _savedDefaultSaveFormat = _defaultSaveFormat
+            _savedEditorSaveAsNamePattern = _editorSaveAsNamePattern
             _savedThumbnailQuality = _thumbnailQuality
             _savedThumbnailMemoryCacheCapacity = _thumbnailMemoryCacheCapacity
             _savedJpgSaveQuality = _jpgSaveQuality
@@ -3889,6 +3908,7 @@ Namespace ViewModels
             EditorAdjustmentsPanelOnLeft = _savedEditorAdjustmentsPanelOnLeft
             EditorToolGroupOrder = _savedEditorToolGroupOrder
             DefaultSaveFormat = _savedDefaultSaveFormat
+            EditorSaveAsNamePattern = _savedEditorSaveAsNamePattern
             ThumbnailQuality = _savedThumbnailQuality
             ThumbnailMemoryCacheCapacity = _savedThumbnailMemoryCacheCapacity
             JpgSaveQuality = _savedJpgSaveQuality
@@ -4012,6 +4032,7 @@ Namespace ViewModels
             EditorAdjustmentsPanelOnLeft = False
             EditorToolGroupOrder = "Adjust,Transform,Tools"
             DefaultSaveFormat = "JPG"
+            EditorSaveAsNamePattern = "{name}_fx"
             StartupImageMode = "Viewer"
             GalleryOpenTarget = "Viewer"
             StartupNoImageMode = "Gallery"
@@ -4327,6 +4348,7 @@ Namespace ViewModels
                                           s.EditorToolGroupOrder = _editorToolGroupOrder
                                           s.HiddenAdjustmentGroups = _versteckteAnpassungsgruppen
                                           s.DefaultSaveFormat = _defaultSaveFormat
+                                          s.EditorSaveAsNamePattern = _editorSaveAsNamePattern
                                           s.ViewerInfoSidebarExpanded = _viewerInfoSidebarExpanded
                                           s.GalleryInfoSidebarExpanded = _galleryInfoSidebarExpanded
                                       End Sub)

@@ -998,6 +998,13 @@ Namespace ViewModels
             End Get
         End Property
 
+        Public ReadOnly Property ShowExposureCompensationRow As Boolean
+            Get
+                Return InfoPanelRowSettings.IsVisible(InfoPanelRow.ExposureCompensation) AndAlso
+                       HasText(_exifInfo.ExposureCompensation)
+            End Get
+        End Property
+
         Public ReadOnly Property ShowFocalLengthRow As Boolean
             Get
                 Return InfoPanelRowSettings.IsVisible(InfoPanelRow.FocalLength) AndAlso HasText(_exifInfo.FocalLength)
@@ -1175,6 +1182,7 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(ShowApertureRow))
             Me.RaisePropertyChanged(NameOf(ShowShutterSpeedRow))
             Me.RaisePropertyChanged(NameOf(ShowIsoRow))
+            Me.RaisePropertyChanged(NameOf(ShowExposureCompensationRow))
             Me.RaisePropertyChanged(NameOf(ShowFocalLengthRow))
             Me.RaisePropertyChanged(NameOf(ShowDimensionsRow))
             Me.RaisePropertyChanged(NameOf(ShowMegapixelsRow))

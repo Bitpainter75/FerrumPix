@@ -94,6 +94,8 @@ Namespace Services
         Public Property Aperture As String = ""
         Public Property ShutterSpeed As String = ""
         Public Property ISO As String = ""
+        ''' <summary>EXIF ExposureBiasValue, als vom Kameraformatierer gelieferter EV-Text.</summary>
+        Public Property ExposureCompensation As String = ""
         Public Property ImageWidth As String = ""
         Public Property ImageHeight As String = ""
         Public Property Megapixels As String = ""
@@ -292,6 +294,7 @@ Namespace Services
                 .Aperture = source.Aperture,
                 .ShutterSpeed = source.ShutterSpeed,
                 .ISO = source.ISO,
+                .ExposureCompensation = source.ExposureCompensation,
                 .ImageWidth = source.ImageWidth,
                 .ImageHeight = source.ImageHeight,
                 .Megapixels = source.Megapixels,
@@ -344,6 +347,7 @@ Namespace Services
                 data.Aperture = GetTagDescAcross(Of ExifSubIfdDirectory)(captureDirectories, ExifSubIfdDirectory.TagFNumber)
                 data.ShutterSpeed = GetTagDescAcross(Of ExifSubIfdDirectory)(captureDirectories, ExifSubIfdDirectory.TagExposureTime)
                 data.ISO = GetTagDescAcross(Of ExifSubIfdDirectory)(captureDirectories, ExifSubIfdDirectory.TagIsoEquivalent)
+                data.ExposureCompensation = GetTagDescAcross(Of ExifSubIfdDirectory)(captureDirectories, ExifSubIfdDirectory.TagExposureBias)
                 ' Abmessungen und Farbraum gehoeren zum Composite, nicht zum Ursprungsbild.
                 data.ImageWidth = GetTagDescAcross(Of ExifSubIfdDirectory)(metaDirectories, ExifSubIfdDirectory.TagExifImageWidth)
                 data.ImageHeight = GetTagDescAcross(Of ExifSubIfdDirectory)(metaDirectories, ExifSubIfdDirectory.TagExifImageHeight)
@@ -750,6 +754,7 @@ Namespace Services
             AppendSummaryLine(lines, LocalizationService.T("Blende"), data.Aperture)
             AppendSummaryLine(lines, LocalizationService.T("Belichtungszeit"), data.ShutterSpeed)
             AppendSummaryLine(lines, "ISO", data.ISO)
+            AppendSummaryLine(lines, LocalizationService.T("Belichtungskorrektur"), data.ExposureCompensation)
             AppendSummaryLine(lines, LocalizationService.T("Aufnahmedatum"), FormatExifDate(data.DateTaken))
             AppendSummaryLine(lines, LocalizationService.T("Abmessungen"), FormatDimensions(data, fields))
             AppendSummaryLine(lines, "GPS", data.GPS)

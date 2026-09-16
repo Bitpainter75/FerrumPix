@@ -29,6 +29,7 @@ Namespace ViewModels
         ColorLabel = 18
         Tags = 19
         AiTags = 20
+        ExposureCompensation = 21
     End Enum
 
     ''' <summary>
@@ -71,6 +72,7 @@ Namespace ViewModels
             New InfoPanelRow() {InfoPanelRow.FolderPath,
                                 InfoPanelRow.DateTaken, InfoPanelRow.Camera, InfoPanelRow.Lens,
                                 InfoPanelRow.Aperture, InfoPanelRow.ShutterSpeed, InfoPanelRow.Iso,
+                                InfoPanelRow.ExposureCompensation,
                                 InfoPanelRow.FocalLength, InfoPanelRow.Dimensions,
                                 InfoPanelRow.Megapixels, InfoPanelRow.AspectRatio,
                                 InfoPanelRow.ColorSpace, InfoPanelRow.FileSize,
@@ -109,6 +111,7 @@ Namespace ViewModels
             _visible(InfoPanelRow.Aperture) = settings.InfoPanelShowAperture
             _visible(InfoPanelRow.ShutterSpeed) = settings.InfoPanelShowShutterSpeed
             _visible(InfoPanelRow.Iso) = settings.InfoPanelShowIso
+            _visible(InfoPanelRow.ExposureCompensation) = settings.InfoPanelShowExposureCompensation
             _visible(InfoPanelRow.FocalLength) = settings.InfoPanelShowFocalLength
             _visible(InfoPanelRow.Dimensions) = settings.InfoPanelShowDimensions
             _visible(InfoPanelRow.Megapixels) = settings.InfoPanelShowMegapixels
@@ -135,6 +138,7 @@ Namespace ViewModels
                 Case InfoPanelRow.Aperture : settings.InfoPanelShowAperture = visible
                 Case InfoPanelRow.ShutterSpeed : settings.InfoPanelShowShutterSpeed = visible
                 Case InfoPanelRow.Iso : settings.InfoPanelShowIso = visible
+                Case InfoPanelRow.ExposureCompensation : settings.InfoPanelShowExposureCompensation = visible
                 Case InfoPanelRow.FocalLength : settings.InfoPanelShowFocalLength = visible
                 Case InfoPanelRow.Dimensions : settings.InfoPanelShowDimensions = visible
                 Case InfoPanelRow.Megapixels : settings.InfoPanelShowMegapixels = visible

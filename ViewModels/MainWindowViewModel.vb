@@ -4708,9 +4708,15 @@ Namespace ViewModels
         ''' zwei Muster-Dialekte wären eine Falle. EXIF kommt aus dem Dialog-Cache; fehlt der
         ''' Eintrag (Stapellauf ohne Umbenennen-Dialog), wird er nachgelesen.</summary>
         Public Function ExpandTargetNamePattern(pattern As String, sourcePath As String, counter As Integer,
-                                                Optional appendSourceExtension As Boolean = False) As String
+                                                Optional appendSourceExtension As Boolean = False,
+                                                Optional baseNameOverride As String = Nothing) As String Implements IEditorHost.ExpandTargetNamePattern
             Dim extension = IO.Path.GetExtension(sourcePath)
-            Dim baseName = IO.Path.GetFileNameWithoutExtension(sourcePath)
+            ' Bei externen Bildern kann sourcePath eine technische Arbeitskopie sein. Der Editor
+            ' reicht dann den vom Benutzer gesehenen Namen ein, während Metadaten weiter aus der
+            ' Arbeitskopie gelesen werden.
+            Dim baseName = If(String.IsNullOrWhiteSpace(baseNameOverride),
+                              IO.Path.GetFileNameWithoutExtension(sourcePath),
+                              IO.Path.GetFileNameWithoutExtension(baseNameOverride))
             Dim modified = If(IO.File.Exists(sourcePath),
                               IO.File.GetLastWriteTime(sourcePath),
                               If(IO.Directory.Exists(sourcePath), IO.Directory.GetLastWriteTime(sourcePath), DateTime.Now))

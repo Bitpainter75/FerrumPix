@@ -1407,6 +1407,17 @@
                             </StackPanel>
                         </Grid>
 
+                        <Grid ColumnDefinitions="*,280">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Namensvorlage für Speichern unter" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Vorschlag für bearbeitete Kopien. Platzhalter wie beim Stapel-Umbenennen: {name}, ###, {date:yyyyMMdd}, {datetaken:yyyyMMdd_HHmmss}, {camera}, {iso}, {aperture}, {focal}, {width}, {height}." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <TextBox Grid.Column="1"
+                                     Text="{Binding EditorSaveAsNamePattern, Mode=TwoWay}"
+                                     PlaceholderText="{}{name}_fx"
+                                     ToolTip.Tip="{}{name}_fx erzeugt etwa Foto_fx; ### ist ein Zähler."/>
+                        </Grid>
+
                         <Grid ColumnDefinitions="*,Auto">
                             <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
                                 <TextBlock Text="JPG-Qualität" FontSize="{DynamicResource FP.Font.Body}"/>

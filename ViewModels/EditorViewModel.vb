@@ -14721,6 +14721,8 @@ Namespace ViewModels
             ShowLayersTabCommand = ReactiveCommand.Create(Sub() SelectedLayersPanelTab = LayersPanelTab.Layers)
             ShowHistoryTabCommand = ReactiveCommand.Create(Sub() SelectedLayersPanelTab = LayersPanelTab.History)
             TogglePixelLayerVisibilityCommand = ReactiveCommand.Create(Sub() TogglePixelLayerVisibility())
+            ResetAllAdjustmentsCommand = ReactiveCommand.CreateFromTask(
+                Function() ResetAllAdjustmentsAsync())
             ResetPixelAdjustmentsCommand = ReactiveCommand.Create(Sub()
                                                                       If Not HasDocument Then Return
                                                                       PushUndo()
@@ -18540,10 +18542,18 @@ Namespace ViewModels
                 ' Server ist das der Name auf dem Server, nicht der der Temp-Datei (Asset-Kennung
                 ' bzw. vorangestellte Dateikennung) - unter dem hätte er sein Bild sonst exportiert.
                 Dim name = IO.Path.GetFileNameWithoutExtension(If(fromFpx, _currentFpxPath, CurrentFileName))
-                ' Ein neu angelegtes Dokument bleibt bei seinem bewusst gewählten Namen. Für jede
-                ' bestehende Datei kommt dagegen die nächste freie Versionsnummer aus dem Zielordner
-                ' vor den Dialog - "Foto - 2" statt "Foto_bearbeitet_bearbeitet".
-                Dim proposedName = If(_isNewDocument, name, NextSaveAsBaseName(name, dir))
+                ' Ein neu angelegtes Dokument bleibt bei seinem bewusst gewählten Namen. Für jedes
+                ' bestehende Bild baut die Editor-Vorlage dagegen den Vorschlag - mit genau den
+                ' Platzhaltern des Stapelumbenennens. Das vermeidet die bisher fest verdrahtete
+                ' Versionsnummer und lässt etwa {name}_fx oder {datetaken:yyyyMMdd}_{name} zu.
+                Dim proposedName = name
+                If Not _isNewDocument Then
+                    Dim pattern = AppSettingsService.Load().EditorSaveAsNamePattern
+                    Dim source = If(fromFpx, _currentFpxPath, _currentImagePath)
+                    proposedName = _mainVm.ExpandTargetNamePattern(pattern, source, 1,
+                                                                     baseNameOverride:=name)
+                    If String.IsNullOrWhiteSpace(proposedName) Then proposedName = name
+                End If
                 ' FPX als Standard-Vorschlag: das Projektformat erhält
                 ' Regler + Objekte editierbar - der Export in JPG/PNG/WEBP bleibt eine bewusste Wahl.
                 ' NormalizeSaveAsFormat fällt auf JPG zurück, falls FPX deaktiviert ist.
@@ -18896,68 +18906,6 @@ Namespace ViewModels
             End Try
             If errorMessage IsNot Nothing Then Await _mainVm.ShowMessageAsync(LocalizationService.T("Speichern fehlgeschlagen"), errorMessage)
             Return False
-        End Function
-
-        ''' <summary>Erzeugt für „Speichern unter“ einen nicht kaskadierenden Namen und orientiert
-        ''' sich an der HÖCHSTEN bereits vorhandenen Versionsnummer im Zielordner. Die Endung spielt
-        ''' dabei keine Rolle: <c>Foto - 2.jpg</c> verhindert ebenso die erneute 2 wie ein bereits
-        ''' vorhandenes <c>Foto - 2.fpx</c>.</summary>
-        Private Shared Function NextSaveAsBaseName(currentName As String, targetDirectory As String) As String
-            Dim root = RemoveLegacyEditedSuffix(If(currentName, "").Trim())
-            Dim currentNumber As Integer = 0
-            Dim parsedRoot As String = Nothing
-            Dim parsedNumber As Integer
-            If TryParseSaveAsVersion(root, parsedRoot, parsedNumber) Then
-                root = RemoveLegacyEditedSuffix(parsedRoot)
-                currentNumber = parsedNumber
-            End If
-            If String.IsNullOrWhiteSpace(root) Then root = "Bild"
-
-            Dim highestNumber = currentNumber
-            Try
-                If Not String.IsNullOrWhiteSpace(targetDirectory) AndAlso Directory.Exists(targetDirectory) Then
-                    For Each filePath In Directory.EnumerateFiles(targetDirectory)
-                        Dim fileRoot = RemoveLegacyEditedSuffix(Path.GetFileNameWithoutExtension(filePath))
-                        If String.Equals(fileRoot, root, StringComparison.OrdinalIgnoreCase) Then
-                            highestNumber = Math.Max(highestNumber, 0)
-                            Continue For
-                        End If
-                        Dim candidateRoot As String = Nothing
-                        Dim candidateNumber As Integer
-                        If TryParseSaveAsVersion(fileRoot, candidateRoot, candidateNumber) AndAlso
-                           String.Equals(RemoveLegacyEditedSuffix(candidateRoot), root, StringComparison.OrdinalIgnoreCase) Then
-                            highestNumber = Math.Max(highestNumber, candidateNumber)
-                        End If
-                    Next
-                End If
-            Catch ex As UnauthorizedAccessException
-                ' Der Dialog bleibt auch in einem nicht lesbaren Ordner benutzbar; die Nummer des
-                ' gerade geöffneten Dokuments ist dann immer noch ein sinnvoller Ausgangspunkt.
-            Catch ex As IOException
-            End Try
-            Return root & " - " & (highestNumber + 1).ToString(Globalization.CultureInfo.InvariantCulture)
-        End Function
-
-        Private Shared Function RemoveLegacyEditedSuffix(value As String) As String
-            Dim result = If(value, "").Trim()
-            Const legacySuffix As String = "_bearbeitet"
-            While result.EndsWith(legacySuffix, StringComparison.OrdinalIgnoreCase)
-                result = result.Substring(0, result.Length - legacySuffix.Length).TrimEnd()
-            End While
-            Return result
-        End Function
-
-        Private Shared Function TryParseSaveAsVersion(value As String, ByRef root As String, ByRef version As Integer) As Boolean
-            root = Nothing
-            version = 0
-            Dim separator = value.LastIndexOf(" - ", StringComparison.Ordinal)
-            If separator <= 0 Then Return False
-            Dim parsed As Integer
-            If Not Integer.TryParse(value.Substring(separator + 3), Globalization.NumberStyles.None,
-                                    Globalization.CultureInfo.InvariantCulture, parsed) OrElse parsed < 1 Then Return False
-            root = value.Substring(0, separator).TrimEnd()
-            version = parsed
-            Return Not String.IsNullOrWhiteSpace(root)
         End Function
 
         ''' <summary>"Speichern" bei einem Immich-Bild (nur mit "Vorhandene Assets aktualisieren"): die

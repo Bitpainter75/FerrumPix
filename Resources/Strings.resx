@@ -8460,4 +8460,13 @@
   <data name="Aufnahmeort_f_r_0_von_1_Bildern_aus_der_Aufzeich_91ffd8fa" xml:space="preserve">
     <value>Location set from the track for {0} of {1} photos</value>
   </data>
+  <data name="Namensvorlage_f_r_Speichern_unter_1eacdd58" xml:space="preserve">
+    <value>Save as filename template</value>
+  </data>
+  <data name="Vorschlag_f_r_bearbeitete_Kopien_Platzhalter_wie_916802d1" xml:space="preserve">
+    <value>Suggested name for edited copies. The same placeholders as Batch rename: {name}, ###, {date:yyyyMMdd}, {datetaken:yyyyMMdd_HHmmss}, {camera}, {iso}, {aperture}, {focal}, {width}, {height}.</value>
+  </data>
+  <data name="Belichtungskorrektur_84d641f1" xml:space="preserve">
+    <value>Exposure compensation</value>
+  </data>
 </root>

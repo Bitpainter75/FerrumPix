@@ -202,6 +202,7 @@ Namespace Services
         Public Property InfoPanelShowAperture As Boolean = True
         Public Property InfoPanelShowShutterSpeed As Boolean = True
         Public Property InfoPanelShowIso As Boolean = True
+        Public Property InfoPanelShowExposureCompensation As Boolean = True
         Public Property InfoPanelShowFocalLength As Boolean = True
         Public Property InfoPanelShowDimensions As Boolean = True
         Public Property InfoPanelShowMegapixels As Boolean = False
@@ -550,6 +551,9 @@ Namespace Services
         ''' Wird ueber Dialogoeffnungen hinweg gemerkt: wer einmal ein Muster festgelegt hat, will
         ''' es beim naechsten Stapel meist wieder.
         Public Property LastTargetNamePattern As String = ""
+        ''' <summary>Namensvorlage fuer „Speichern unter" im Editor. Sie spricht dieselben
+        ''' Platzhalter wie das Stapel-Umbenennen; die Vorgabe markiert bearbeitete Kopien klar.</summary>
+        Public Property EditorSaveAsNamePattern As String = "{name}_fx"
         ''' Kopierte Bildanpassungen als Rezept-JSON (nur die Pixel-Anpassungen, keine Geometrie
         ''' und keine Objekte). Liegt in den Einstellungen statt im Arbeitsspeicher, damit
         ''' "Kopieren" in der einen Sitzung und "Einfuegen" in der naechsten funktioniert - genau
@@ -883,6 +887,7 @@ Namespace Services
                 settings.TransparencyBackgroundMode = NormalizeTransparencyBackgroundMode(settings.TransparencyBackgroundMode)
                 settings.TransparencyBackgroundColor = NormalizeHexColor(settings.TransparencyBackgroundColor, "#FFFFFFFF")
                 settings.LastBatchRenamePattern = NormalizeBatchRenamePattern(settings.LastBatchRenamePattern)
+                settings.EditorSaveAsNamePattern = NormalizeEditorSaveAsNamePattern(settings.EditorSaveAsNamePattern)
                 settings.LastBatchRenameStart = NormalizeBatchRenameStart(settings.LastBatchRenameStart)
                 settings.LastBatchRenameStep = NormalizeBatchRenameStep(settings.LastBatchRenameStep)
                 settings.LastBatchResizeWidth = NormalizeBatchResizeDimension(settings.LastBatchResizeWidth)
@@ -1121,6 +1126,7 @@ Namespace Services
                 settings.TransparencyBackgroundMode = NormalizeTransparencyBackgroundMode(settings.TransparencyBackgroundMode)
                 settings.TransparencyBackgroundColor = NormalizeHexColor(settings.TransparencyBackgroundColor, "#FFFFFFFF")
                 settings.LastBatchRenamePattern = NormalizeBatchRenamePattern(settings.LastBatchRenamePattern)
+                settings.EditorSaveAsNamePattern = NormalizeEditorSaveAsNamePattern(settings.EditorSaveAsNamePattern)
                 settings.LastBatchRenameStart = NormalizeBatchRenameStart(settings.LastBatchRenameStart)
                 settings.LastBatchRenameStep = NormalizeBatchRenameStep(settings.LastBatchRenameStep)
                 settings.LastBatchResizeWidth = NormalizeBatchResizeDimension(settings.LastBatchResizeWidth)
@@ -1246,6 +1252,11 @@ Namespace Services
 
         Public Shared Function NormalizeBatchRenamePattern(value As String) As String
             If String.IsNullOrWhiteSpace(value) Then Return "{name}_###"
+            Return value.Trim()
+        End Function
+
+        Public Shared Function NormalizeEditorSaveAsNamePattern(value As String) As String
+            If String.IsNullOrWhiteSpace(value) Then Return "{name}_fx"
             Return value.Trim()
         End Function
 
