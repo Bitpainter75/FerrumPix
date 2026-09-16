@@ -140,7 +140,7 @@
                                   StrokeThickness="2"
                                   StrokeLineCap="Round"
                                   StrokeJoin="Round"
-                                  Data="M 8 5 L 4 9 L 8 13 M 5 9 H 12 C 15 9 17 11 17 14 C 17 17 15 19 12 19 H 8" />
+                                  Data="M 8 3 L 4 7 L 8 11 M 5 7 H 12 C 15 7 17 9 17 12 C 17 15 15 17 12 17 H 8" />
                         </Canvas>
                     </Button>
                     <Button Classes="icon-btn" Width="34" Height="34"
@@ -152,7 +152,7 @@
                                   StrokeThickness="2"
                                   StrokeLineCap="Round"
                                   StrokeJoin="Round"
-                                  Data="M 12 5 L 16 9 L 12 13 M 15 9 H 8 C 5 9 3 11 3 14 C 3 17 5 19 8 19 H 12" />
+                                  Data="M 12 3 L 16 7 L 12 11 M 15 7 H 8 C 5 7 3 9 3 12 C 3 15 5 17 8 17 H 12" />
                         </Canvas>
                     </Button>
                     <!-- DER VOLLE AKZENT NUR BEI ÄNDERUNG: ein dauerhaft leuchtender Knopf sagt
