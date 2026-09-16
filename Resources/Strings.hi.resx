@@ -8510,4 +8510,16 @@
   <data name="Alle_Bildbearbeitungen_dieses_Dokuments_werden_z_049fe175" xml:space="preserve"><value>इस दस्तावेज़ के सभी संपादन रीसेट किए जाएंगे: स्लाइडर, क्रॉप, रीटच, मास्क और लेयर। मूल फ़ाइल अपरिवर्तित रहेगी। सहेजी गई साइडकार फ़ाइल केवल बाद में सहेजने पर अधिलेखित होगी।</value></data>
   <data name="Alles_zur_cksetzen_b07820f6" xml:space="preserve"><value>सब रीसेट करें</value></data>
   <data name="Alle_Bearbeitungen_zur_ckgesetzt_e21f2329" xml:space="preserve"><value>सभी संपादन रीसेट किए गए</value></data>
+  <data name="Datumsformat_0e4fdd99" xml:space="preserve">
+    <value>दिनांक प्रारूप</value>
+  </data>
+  <data name="Wie_Datum_und_Uhrzeit_angezeigt_werden_unabh_ngi_5b971388" xml:space="preserve">
+    <value>भाषा से अलग, दिनांक और समय कैसे दिखाए जाते हैं।</value>
+  </data>
+  <data name="Wie_im_System_0_60f3ca77" xml:space="preserve">
+    <value>सिस्टम के अनुसार ({0})</value>
+  </data>
+  <data name="Ohne_ISO_Angabe_5609fdbd" xml:space="preserve">
+    <value>ISO मान नहीं</value>
+  </data>
 </root>

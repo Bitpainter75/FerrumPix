@@ -9192,7 +9192,7 @@ Namespace ViewModels
                     Dim ext = If(item.ExtensionLower, "").TrimStart("."c)
                     Return If(ext.Length > 0, ext.ToUpperInvariant(), LocalizationService.T("Ohne Dateiendung"))
                 Case "Iso"
-                    If Not item.ExifIso.HasValue OrElse item.ExifIso.Value <= 0 Then Return LocalizationService.T("Ohne") & " ISO"
+                    If Not item.ExifIso.HasValue OrElse item.ExifIso.Value <= 0 Then Return LocalizationService.T("Ohne ISO-Angabe")
                     Return "ISO " & item.ExifIso.Value.ToString(Globalization.CultureInfo.CurrentUICulture)
                 Case "Rating"
                     If item.Rating <= 0 Then Return LocalizationService.T("Ohne Bewertung")

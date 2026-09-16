@@ -127,6 +127,7 @@ Public Class App
             End If
 
             LocalizationService.LanguageMode = AppSettingsService.Load().LanguageMode
+            LocalizationService.DateFormatMode = AppSettingsService.Load().DateFormatMode
             ' Zeichentablett-Modus VOR dem ersten Fenster anhaengen: die Stile setzen ClickMode, und
             ' ein spaeter angehaengter Stil muesste alles noch einmal durchstilen.
             TabletInputService.Apply(AppSettingsService.Load().TabletMode)

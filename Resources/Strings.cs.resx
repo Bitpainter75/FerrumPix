@@ -8506,4 +8506,16 @@
   <data name="Alle_Bildbearbeitungen_dieses_Dokuments_werden_z_049fe175" xml:space="preserve"><value>Všechny úpravy tohoto dokumentu budou resetovány: posuvníky, oříznutí, retuše, masky a vrstvy. Originál zůstane nezměněn. Uložený soubor sidecar bude přepsán až po následném uložení.</value></data>
   <data name="Alles_zur_cksetzen_b07820f6" xml:space="preserve"><value>Resetovat vše</value></data>
   <data name="Alle_Bearbeitungen_zur_ckgesetzt_e21f2329" xml:space="preserve"><value>Všechny úpravy resetovány</value></data>
+  <data name="Datumsformat_0e4fdd99" xml:space="preserve">
+    <value>Formát data</value>
+  </data>
+  <data name="Wie_Datum_und_Uhrzeit_angezeigt_werden_unabh_ngi_5b971388" xml:space="preserve">
+    <value>Jak se zobrazuje datum a čas, nezávisle na jazyce.</value>
+  </data>
+  <data name="Wie_im_System_0_60f3ca77" xml:space="preserve">
+    <value>Podle systému ({0})</value>
+  </data>
+  <data name="Ohne_ISO_Angabe_5609fdbd" xml:space="preserve">
+    <value>Bez hodnoty ISO</value>
+  </data>
 </root>

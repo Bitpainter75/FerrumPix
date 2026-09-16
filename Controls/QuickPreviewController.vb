@@ -84,19 +84,22 @@ Namespace Controls
                 If String.IsNullOrEmpty(path) Then Return
                 If run <> _run OrElse Not overlay.IsVisible Then Return
 
-                ' Auto-Variante: erkennt Buendel (Komposit), RAW, PSD und ueber den HEIF-Zweig auch
+                ' Auto-Variante: erkennt Buendel (Komposit), PSD und ueber den HEIF-Zweig auch
                 ' HEIC/HEIF/AVIF.
                 '
-                ' RAW BEKOMMT HIER KEINEN EIGENEN ZWEIG. Er stand einmal in der Galerie und nahm der
-                ' Schnellvorschau zwei Dinge, die die Auto-Variante mitbringt:
-                '
-                ' 1. die Drehung aus dem Sidecar (RawSidecarService.ReadRotationDegrees) - eine im
-                '    Betrachter gedrehte RAW steckt ihre Drehung nicht in die Pixel, sondern neben
-                '    die Datei. Ohne das stand sie hier wieder ungedreht.
-                ' 2. rawContainerPath, ueber das RawPreviewOrigin die Orientierung des CONTAINERS
-                '    heranzieht, wenn die eingebettete Vorschau kein eigenes Tag traegt. Ohne das
-                '    steht die Vorschau quer zur Entwicklung.
-                bmp = Await Task.Run(Function() ImageOrientationService.LoadOrientedAvaloniaBitmapAuto(path))
+                ' RAW GEHT DEN WEG DES BETRACHTERS, nicht einen eigenen. Die Schnellvorschau soll
+                ' dasselbe Bild zeigen wie Betrachter und Vollbild: mit den Einstellungen zur
+                ' RAW-Entwicklung die eigene Entwicklung samt Zuschnitt aus dem Rezept, sonst die
+                ' eingebettete Vorschau. Ein eigener Zweig stand hier schon einmal und verlor dabei
+                ' die Drehung aus der Beistelldatei und die Orientierung des Containers; der Weg des
+                ' Betrachters traegt beides mit.
+                Dim decodePath = path
+                bmp = Await Task.Run(Function()
+                                         If RawPreviewService.IsSupportedRaw(decodePath) Then
+                                             Return FerrumPix.ViewModels.ViewerViewModel.DecodeViewerBitmap(decodePath)
+                                         End If
+                                         Return ImageOrientationService.LoadOrientedAvaloniaBitmapAuto(decodePath)
+                                     End Function)
                 If bmp Is Nothing Then Return
                 ' UEBERHOLT: inzwischen wurde geschlossen oder eine andere Vorschau geoeffnet. Das
                 ' Ergebnis gehoert dann niemandem mehr und geht im Finally weg.

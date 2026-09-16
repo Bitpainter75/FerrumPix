@@ -20936,6 +20936,15 @@ Namespace ViewModels
 
             PushUndo(LocalizationService.T("Alle Bearbeitungen zurückgesetzt"))
             ResetAdjustmentsInternal()
+            ' EINE RAW KEHRT ZU IHREN STARTWERTEN ZURUECK, nicht zu lauter Nullen. Geoeffnet ohne
+            ' Rezept beginnt sie mit ImageAdjustments.ForUneditedRaw; stuenden hier die Nullen,
+            ' saehe das "Original" fleckiger aus als beim ersten Oeffnen, und ein Speichern
+            ' schriebe genau diesen Stand in die Beistelldatei.
+            If RawPreviewService.IsSupportedRaw(_currentImagePath) Then
+                _farbrauschGrob = ImageAdjustments.ForUneditedRaw().FarbrauschGrob
+                Me.RaisePropertyChanged(NameOf(FarbrauschGrob))
+                Me.RaisePropertyChanged(NameOf(HasColorBlotches))
+            End If
             _hasChanges = True
             Me.RaisePropertyChanged(NameOf(HasUnsavedChanges))
             RaiseResetButtonStateChanged()

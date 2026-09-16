@@ -43,6 +43,96 @@ Namespace Services
             End Set
         End Property
 
+        ''' <summary>Die waehlbaren Datumsformate. "System" folgt dem Regionalformat des
+        ''' Betriebssystems, die uebrigen sind feste Muster fuer alle, deren System etwas anderes
+        ''' meldet, als sie lesen wollen - etwa eine englische Oberflaeche mit europaeischem Datum.</summary>
+        Public Shared ReadOnly DateFormatModes As String() = {"System", "DayMonthYearDot", "DayMonthYearSlash", "MonthDayYear", "Iso"}
+
+        Private Shared _dateFormatMode As String = "System"
+        Private Shared _regionalCulture As CultureInfo
+
+        Public Shared Property DateFormatMode As String
+            Get
+                Return _dateFormatMode
+            End Get
+            Set(value As String)
+                _dateFormatMode = NormalizeDateFormatMode(value)
+            End Set
+        End Property
+
+        Public Shared Function NormalizeDateFormatMode(value As String) As String
+            For Each mode In DateFormatModes
+                If String.Equals(mode, value, StringComparison.OrdinalIgnoreCase) Then Return mode
+            Next
+            Return "System"
+        End Function
+
+        ''' <summary>Datum mit Uhrzeit fuer jede Anzeige der Anwendung. EINE Stelle: Infopanel,
+        ''' Galerie und Dialoge zeigten sonst jeweils ein eigenes Format.</summary>
+        Public Shared Function FormatDateTime(value As DateTime, Optional withSeconds As Boolean = False) As String
+            Dim time = If(withSeconds, "HH:mm:ss", "HH:mm")
+            Select Case _dateFormatMode
+                Case "DayMonthYearDot" : Return value.ToString("dd.MM.yyyy " & time, CultureInfo.InvariantCulture)
+                Case "DayMonthYearSlash" : Return value.ToString("dd/MM/yyyy " & time, CultureInfo.InvariantCulture)
+                Case "MonthDayYear" : Return value.ToString("MM/dd/yyyy " & time, CultureInfo.InvariantCulture)
+                Case "Iso" : Return value.ToString("yyyy-MM-dd " & time, CultureInfo.InvariantCulture)
+                Case Else
+                    Dim culture = RegionalCulture
+                    ' Ohne jede Regionsangabe (C-Locale) gibt es kein Format, das jemand gewaehlt
+                    ' hat; das invariante waere das amerikanische. ISO ist dann das eindeutige.
+                    If culture Is Nothing Then Return value.ToString("yyyy-MM-dd " & time, CultureInfo.InvariantCulture)
+                    Return value.ToString(If(withSeconds, "G", "g"), culture)
+            End Select
+        End Function
+
+        ''' <summary>Nur die Uhrzeit, passend zu <see cref="FormatDateTime"/>.</summary>
+        Public Shared Function FormatTime(value As DateTime) As String
+            If _dateFormatMode = "System" AndAlso RegionalCulture IsNot Nothing Then
+                Return value.ToString("t", RegionalCulture)
+            End If
+            Return value.ToString("HH:mm", CultureInfo.InvariantCulture)
+        End Function
+
+        ''' <summary>Die Kultur, deren Regionalformat das System fuer Datum und Uhrzeit meldet, oder
+        ''' Nothing, wenn es keines meldet.
+        '''
+        ''' UNTER LINUX NICHT CurrentCulture: .NET bildet sie aus LANG und LC_MESSAGES, also aus der
+        ''' SPRACHE. Das Datumsformat steht aber in LC_TIME, und genau dort setzen die Desktops eine
+        ''' abweichende Region - englische Oberflaeche, deutsches Datum. Unter Windows und macOS gibt
+        ''' CurrentCulture die Regionaleinstellung dagegen richtig wieder.</summary>
+        Public Shared ReadOnly Property RegionalCulture As CultureInfo
+            Get
+                If _regionalCulture Is Nothing Then _regionalCulture = ResolveRegionalCulture()
+                Return If(_regionalCulture Is CultureInfo.InvariantCulture, Nothing, _regionalCulture)
+            End Get
+        End Property
+
+        Private Shared Function ResolveRegionalCulture() As CultureInfo
+            If OperatingSystem.IsLinux() OrElse OperatingSystem.IsFreeBSD() Then
+                For Each variableName In {"LC_ALL", "LC_TIME", "LANG"}
+                    Dim name = ExtractCultureName(Environment.GetEnvironmentVariable(variableName))
+                    If name.Length = 0 Then Continue For
+                    Try
+                        Return CultureInfo.GetCultureInfo(name)
+                    Catch ex As CultureNotFoundException
+                    End Try
+                Next
+            End If
+            Dim current = CultureInfo.CurrentCulture
+            If current Is Nothing OrElse String.IsNullOrEmpty(current.Name) Then Return CultureInfo.InvariantCulture
+            Return current
+        End Function
+
+        ''' <summary>"de_AT.UTF-8@euro" wird zu "de-AT"; C und POSIX ergeben leer.</summary>
+        Private Shared Function ExtractCultureName(value As String) As String
+            value = If(value, "").Trim()
+            If value.Length = 0 OrElse
+               String.Equals(value, "C", StringComparison.OrdinalIgnoreCase) OrElse
+               value.StartsWith("C.", StringComparison.OrdinalIgnoreCase) OrElse
+               String.Equals(value, "POSIX", StringComparison.OrdinalIgnoreCase) Then Return ""
+            Return value.Split("."c)(0).Split("@"c)(0).Replace("_"c, "-"c)
+        End Function
+
         Public Shared ReadOnly Property EffectiveCulture As CultureInfo
             Get
                 Dim code = ResolveCultureCode(_languageMode)

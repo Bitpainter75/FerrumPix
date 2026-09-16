@@ -2139,7 +2139,7 @@ Namespace ViewModels
         ''' Entwicklung, und ein RAW neben einem JPEG vergliche zwei verschiedene Pipelines. Kostet
         ''' den vollen Decode je Bild; das linke Bild bleibt deshalb stehen und wird beim
         ''' Weiterblaettern nicht neu geladen (siehe LadeVergleichsbilder).</param>
-        Private Shared Function DecodeViewerBitmap(path As String, Optional alwaysDevelop As Boolean = False) As Bitmap
+        Friend Shared Function DecodeViewerBitmap(path As String, Optional alwaysDevelop As Boolean = False) As Bitmap
             If RawPreviewService.IsSupportedRaw(path) Then
                 ' Entwickelte Vorschau statt der schnellen eingebetteten: im Vergleich immer, sonst
                 ' bei aktiver Einstellung und vorhandener .fpxmp - oder bei der zweiten Einstellung

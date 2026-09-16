@@ -1044,7 +1044,14 @@ Namespace ViewModels
 
         Public ReadOnly Property ShowFileCreatedRow As Boolean
             Get
-                Return InfoPanelRowSettings.IsVisible(InfoPanelRow.FileCreated) AndAlso HasText(_exifInfo.FileCreated)
+                If Not InfoPanelRowSettings.IsVisible(InfoPanelRow.FileCreated) OrElse Not HasText(_exifInfo.FileCreated) Then Return False
+                ' Zeigt das Dateidatum auf die angezeigte Minute dasselbe wie das Aufnahmedatum
+                ' darueber, steht es nur einmal da: zwei gleiche Zeilen sehen nach einem Fehler aus.
+                ' Das passiert oft, wenn die Datei beim Kopieren von der Karte ihre Zeit behielt.
+                ' Blendet jemand das Aufnahmedatum aus, bleibt das Dateidatum natuerlich stehen.
+                Return Not (ShowDateTakenRow AndAlso
+                            String.Equals(ExifService.FormatExifDate(_exifInfo.FileCreated),
+                                          ExifService.FormatExifDate(_exifInfo.DateTaken), StringComparison.Ordinal))
             End Get
         End Property
 

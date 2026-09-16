@@ -784,7 +784,7 @@ Namespace Services
         Public Shared Function FormatExifDate(raw As String) As String
             Dim parsed = ParseExifDateTime(raw)
             If Not parsed.HasValue Then Return If(raw, "")
-            Return parsed.Value.ToString("g", LocalizationService.EffectiveCulture)
+            Return LocalizationService.FormatDateTime(parsed.Value)
         End Function
 
         Private Shared Function FormatDimensions(data As ExifData, fields As ExifSearchFields) As String

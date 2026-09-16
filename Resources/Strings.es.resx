@@ -8466,4 +8466,16 @@
   <data name="Alle_Bildbearbeitungen_dieses_Dokuments_werden_z_049fe175" xml:space="preserve"><value>Se restablecerán todas las ediciones de este documento: controles, recorte, retoque, máscaras y capas. El original no se modifica. Un archivo sidecar guardado solo se sobrescribe cuando guardes después.</value></data>
   <data name="Alles_zur_cksetzen_b07820f6" xml:space="preserve"><value>Restablecer todo</value></data>
   <data name="Alle_Bearbeitungen_zur_ckgesetzt_e21f2329" xml:space="preserve"><value>Se restablecieron todas las ediciones</value></data>
+  <data name="Datumsformat_0e4fdd99" xml:space="preserve">
+    <value>Formato de fecha</value>
+  </data>
+  <data name="Wie_Datum_und_Uhrzeit_angezeigt_werden_unabh_ngi_5b971388" xml:space="preserve">
+    <value>Cómo se muestran la fecha y la hora, independientemente del idioma.</value>
+  </data>
+  <data name="Wie_im_System_0_60f3ca77" xml:space="preserve">
+    <value>Como en el sistema ({0})</value>
+  </data>
+  <data name="Ohne_ISO_Angabe_5609fdbd" xml:space="preserve">
+    <value>Sin valor ISO</value>
+  </data>
 </root>

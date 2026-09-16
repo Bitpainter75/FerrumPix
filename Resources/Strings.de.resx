@@ -8480,4 +8480,16 @@
   <data name="Alle_Bearbeitungen_zur_ckgesetzt_e21f2329" xml:space="preserve">
     <value>Alle Bearbeitungen zurückgesetzt</value>
   </data>
+  <data name="Datumsformat_0e4fdd99" xml:space="preserve">
+    <value>Datumsformat</value>
+  </data>
+  <data name="Wie_Datum_und_Uhrzeit_angezeigt_werden_unabh_ngi_5b971388" xml:space="preserve">
+    <value>Wie Datum und Uhrzeit angezeigt werden, unabhängig von der Sprache.</value>
+  </data>
+  <data name="Wie_im_System_0_60f3ca77" xml:space="preserve">
+    <value>Wie im System ({0})</value>
+  </data>
+  <data name="Ohne_ISO_Angabe_5609fdbd" xml:space="preserve">
+    <value>Ohne ISO-Angabe</value>
+  </data>
 </root>

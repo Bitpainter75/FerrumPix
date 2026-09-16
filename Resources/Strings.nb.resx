@@ -8506,4 +8506,16 @@
   <data name="Alle_Bildbearbeitungen_dieses_Dokuments_werden_z_049fe175" xml:space="preserve"><value>Alle redigeringer i dette dokumentet tilbakestilles: skyvere, beskjæring, retusjering, masker og lag. Originalen forblir uendret. En lagret sidecar-fil overskrives først når du lagrer etterpå.</value></data>
   <data name="Alles_zur_cksetzen_b07820f6" xml:space="preserve"><value>Tilbakestill alt</value></data>
   <data name="Alle_Bearbeitungen_zur_ckgesetzt_e21f2329" xml:space="preserve"><value>Alle redigeringer er tilbakestilt</value></data>
+  <data name="Datumsformat_0e4fdd99" xml:space="preserve">
+    <value>Datoformat</value>
+  </data>
+  <data name="Wie_Datum_und_Uhrzeit_angezeigt_werden_unabh_ngi_5b971388" xml:space="preserve">
+    <value>Hvordan dato og klokkeslett vises, uavhengig av språket.</value>
+  </data>
+  <data name="Wie_im_System_0_60f3ca77" xml:space="preserve">
+    <value>Som i systemet ({0})</value>
+  </data>
+  <data name="Ohne_ISO_Angabe_5609fdbd" xml:space="preserve">
+    <value>Uten ISO-verdi</value>
+  </data>
 </root>

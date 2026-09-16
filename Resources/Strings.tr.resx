@@ -8510,4 +8510,16 @@
   <data name="Alle_Bildbearbeitungen_dieses_Dokuments_werden_z_049fe175" xml:space="preserve"><value>Bu belgedeki tüm düzenlemeler sıfırlanacak: kaydırıcılar, kırpma, rötuş, maskeler ve katmanlar. Özgün dosya değişmeden kalır. Kaydedilmiş bir sidecar dosyası ancak daha sonra kaydettiğinizde üzerine yazılır.</value></data>
   <data name="Alles_zur_cksetzen_b07820f6" xml:space="preserve"><value>Tümünü sıfırla</value></data>
   <data name="Alle_Bearbeitungen_zur_ckgesetzt_e21f2329" xml:space="preserve"><value>Tüm düzenlemeler sıfırlandı</value></data>
+  <data name="Datumsformat_0e4fdd99" xml:space="preserve">
+    <value>Tarih biçimi</value>
+  </data>
+  <data name="Wie_Datum_und_Uhrzeit_angezeigt_werden_unabh_ngi_5b971388" xml:space="preserve">
+    <value>Tarih ve saatin dilden bağımsız olarak nasıl gösterileceği.</value>
+  </data>
+  <data name="Wie_im_System_0_60f3ca77" xml:space="preserve">
+    <value>Sistemdeki gibi ({0})</value>
+  </data>
+  <data name="Ohne_ISO_Angabe_5609fdbd" xml:space="preserve">
+    <value>ISO değeri yok</value>
+  </data>
 </root>

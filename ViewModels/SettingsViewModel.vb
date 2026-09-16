@@ -96,6 +96,7 @@ Namespace ViewModels
         Private _startupImageMode As String = "Viewer"
         Private _startupNoImageMode As String = "Gallery"
         Private _languageMode As String = "System"
+        Private _dateFormatMode As String = "System"
         Private _fontSizeOffset As Integer = 0
         ''' <summary>Was beim Start tatsaechlich galt - der rohe Inhalt der Umgebungsvariable.
         ''' Damit laesst sich sagen, ob eine Aenderung einen Neustart braucht.</summary>
@@ -216,6 +217,7 @@ Namespace ViewModels
         Private _galleryOpenTarget As String = "Viewer"
         Private _savedStartupNoImageMode As String = "Gallery"
         Private _savedLanguageMode As String = "System"
+        Private _savedDateFormatMode As String = "System"
         Private _savedFontSizeOffset As Integer = 0
         ''' <summary>Die Faktoren beim Oeffnen des Dialogs - fuer Abbrechen.</summary>
         Private _savedScaleFactors As New List(Of ScreenScaleSetting)()
@@ -1095,6 +1097,57 @@ Namespace ViewModels
             Next
             Me.RaisePropertyChanged(NameOf(SelectedLanguage))
         End Sub
+
+        ''' <summary>Die Auswahlliste der Datumsformate. Jeder Eintrag zeigt sein Muster an einem
+        ''' Beispieldatum, das liest sich in jeder Sprache ohne Erklaerung.</summary>
+        Public ReadOnly Property DateFormatOptions As New ObservableCollection(Of DateFormatOption)()
+
+        Public Property SelectedDateFormat As DateFormatOption
+            Get
+                Return DateFormatOptions.FirstOrDefault(
+                    Function(o) String.Equals(o.Key, _dateFormatMode, StringComparison.Ordinal))
+            End Get
+            Set(value As DateFormatOption)
+                If value Is Nothing Then Return
+                DateFormatMode = value.Key
+            End Set
+        End Property
+
+        Private Sub BuildDateFormatOptions()
+            DateFormatOptions.Clear()
+            ' Der 31. als Beispiel: Tag und Monat sind daran nicht zu verwechseln.
+            Dim sample As New DateTime(2026, 12, 31, 18, 30, 0)
+            Dim current = LocalizationService.DateFormatMode
+            Try
+                For Each mode In LocalizationService.DateFormatModes
+                    LocalizationService.DateFormatMode = mode
+                    Dim example = LocalizationService.FormatDateTime(sample)
+                    DateFormatOptions.Add(New DateFormatOption With {
+                        .Key = mode,
+                        .Name = If(mode = "System",
+                                   String.Format(LocalizationService.T("Wie im System ({0})"), example),
+                                   example)})
+                Next
+            Finally
+                LocalizationService.DateFormatMode = current
+            End Try
+            Me.RaisePropertyChanged(NameOf(SelectedDateFormat))
+        End Sub
+
+        Public Property DateFormatMode As String
+            Get
+                Return _dateFormatMode
+            End Get
+            Set(value As String)
+                value = LocalizationService.NormalizeDateFormatMode(value)
+                If _dateFormatMode = value Then Return
+                Me.RaiseAndSetIfChanged(_dateFormatMode, value)
+                Me.RaisePropertyChanged(NameOf(SelectedDateFormat))
+                LocalizationService.DateFormatMode = value
+                SaveDateFormatSettings()
+                _mainVm?.RefreshLocalization()
+            End Set
+        End Property
 
         Public Property LanguageMode As String
             Get
@@ -3469,6 +3522,7 @@ Namespace ViewModels
             _galleryOpenTarget = _appSettings.GalleryOpenTarget
             _startupNoImageMode = _appSettings.StartupNoImageMode
             _languageMode = _appSettings.LanguageMode
+            _dateFormatMode = LocalizationService.NormalizeDateFormatMode(_appSettings.DateFormatMode)
             _fontSizeOffset = AppSettingsService.NormalizeFontSizeOffset(_appSettings.FontSizeOffset)
             _runningScaleFactors = ReadRunningScaleFactors()
             _syncCatalogToXmp = _appSettings.SyncCatalogToXmp
@@ -3680,6 +3734,8 @@ Namespace ViewModels
             ApplyTheme(_themeMode, _accentColor, _accentStrength)
             FontScaleService.Apply(_fontSizeOffset)
             LocalizationService.LanguageMode = _languageMode
+            LocalizationService.DateFormatMode = _dateFormatMode
+            BuildDateFormatOptions()
             SnapshotSettings()
         End Sub
 
@@ -3873,6 +3929,7 @@ Namespace ViewModels
             _savedGalleryOpenTarget = _galleryOpenTarget
             _savedStartupNoImageMode = _startupNoImageMode
             _savedLanguageMode = _languageMode
+            _savedDateFormatMode = _dateFormatMode
             _savedVideoHardwareAcceleration = _videoHardwareAcceleration
             _savedTransparencyBackgroundMode = _transparencyBackgroundMode
             _savedTransparencyBackgroundColor = _transparencyBackgroundColor
@@ -3970,6 +4027,7 @@ Namespace ViewModels
             GalleryOpenTarget = _savedGalleryOpenTarget
             StartupNoImageMode = _savedStartupNoImageMode
             LanguageMode = _savedLanguageMode
+            DateFormatMode = _savedDateFormatMode
             VideoHardwareAcceleration = _savedVideoHardwareAcceleration
             ' SOFORT GESPEICHERTE SCHALTER STEHEN HIER NICHT. Grafikbeschleunigung, Personenerkennung
             ' und Fotokarte werden beim Umlegen geschrieben, weil die Dienste dahinter die
@@ -4090,6 +4148,7 @@ Namespace ViewModels
             ViewerInfoSidebarExpanded = True
             GalleryInfoSidebarExpanded = False
             LanguageMode = "System"
+            DateFormatMode = "System"
             VideoHardwareAcceleration = False
             GpuAccelerationEnabled = False
             SelectedGpuDevice = GpuDeviceOptions.FirstOrDefault()
@@ -4118,6 +4177,10 @@ Namespace ViewModels
 
         Private Sub SaveLanguageSettings()
             AppSettingsService.Update(Sub(s) s.LanguageMode = _languageMode)
+        End Sub
+
+        Private Sub SaveDateFormatSettings()
+            AppSettingsService.Update(Sub(s) s.DateFormatMode = _dateFormatMode)
         End Sub
 
         Private Sub SavePlaybackSettings()
@@ -4708,6 +4771,7 @@ Namespace ViewModels
             BuildInfoPanelRowItems()
             BuildModelGroups()
             BuildLanguageOptions()
+            BuildDateFormatOptions()
             ' Die Kartennamen tragen ihre Bauart als übersetztes Wort in sich - sie stünden nach
             ' einem Sprachwechsel sonst in der alten Sprache da.
             BuildGpuDeviceOptions()
@@ -5229,6 +5293,15 @@ Namespace ViewModels
     ''' Name (Key) geht an die Verschiebe-Befehle, die Beschriftung ist bereits übersetzt.</summary>
     ''' <summary>Ein Eintrag in der Sprachauswahl.</summary>
     Public Class LanguageOption
+        Public Property Key As String = ""
+        Public Property Name As String = ""
+        Public Overrides Function ToString() As String
+            Return Name
+        End Function
+    End Class
+
+    ''' <summary>Ein Eintrag in der Auswahl der Datumsformate.</summary>
+    Public Class DateFormatOption
         Public Property Key As String = ""
         Public Property Name As String = ""
         Public Overrides Function ToString() As String

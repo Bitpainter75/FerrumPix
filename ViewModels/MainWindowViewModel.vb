@@ -3244,10 +3244,10 @@ Namespace ViewModels
             Dim startLocal = track.StartUtc.ToLocalTime()
             Dim endLocal = track.EndUtc.ToLocalTime()
             parts.Add(String.Format(LocalizationService.T("{0} bis {1}"),
-                                    startLocal.ToString("dd.MM.yyyy HH:mm"),
+                                    LocalizationService.FormatDateTime(startLocal),
                                     If(startLocal.Date = endLocal.Date,
-                                       endLocal.ToString("HH:mm"),
-                                       endLocal.ToString("dd.MM.yyyy HH:mm"))))
+                                       LocalizationService.FormatTime(endLocal),
+                                       LocalizationService.FormatDateTime(endLocal))))
             Return String.Join(", ", parts)
         End Function
 

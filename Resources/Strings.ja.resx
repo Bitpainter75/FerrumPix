@@ -8506,4 +8506,16 @@
   <data name="Alle_Bildbearbeitungen_dieses_Dokuments_werden_z_049fe175" xml:space="preserve"><value>このドキュメントのすべての編集をリセットします。スライダー、切り抜き、レタッチ、マスク、レイヤーが対象です。元のファイルは変更されません。保存済みのサイドカーファイルは、その後保存した場合にのみ上書きされます。</value></data>
   <data name="Alles_zur_cksetzen_b07820f6" xml:space="preserve"><value>すべてリセット</value></data>
   <data name="Alle_Bearbeitungen_zur_ckgesetzt_e21f2329" xml:space="preserve"><value>すべての編集をリセットしました</value></data>
+  <data name="Datumsformat_0e4fdd99" xml:space="preserve">
+    <value>日付の形式</value>
+  </data>
+  <data name="Wie_Datum_und_Uhrzeit_angezeigt_werden_unabh_ngi_5b971388" xml:space="preserve">
+    <value>日付と時刻の表示方法です。言語とは別に設定できます。</value>
+  </data>
+  <data name="Wie_im_System_0_60f3ca77" xml:space="preserve">
+    <value>システムと同じ ({0})</value>
+  </data>
+  <data name="Ohne_ISO_Angabe_5609fdbd" xml:space="preserve">
+    <value>ISO 情報なし</value>
+  </data>
 </root>

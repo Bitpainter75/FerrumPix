@@ -291,6 +291,9 @@ Namespace Services
         ''' Startordners, "Editor" den leeren Editor mit dem Dialog „Neues Bild".</summary>
         Public Property StartupNoImageMode As String = "Gallery"
         Public Property LanguageMode As String = "System"
+        ''' <summary>Wie Datum und Uhrzeit angezeigt werden, getrennt von der Sprache. Siehe
+        ''' LocalizationService.DateFormatModes.</summary>
+        Public Property DateFormatMode As String = "System"
         Public Property ThumbnailCacheEnabled As Boolean = True
         Public Property ThumbnailQuality As Integer = 82
 
@@ -861,6 +864,7 @@ Namespace Services
                 settings.GalleryOpenTarget = NormalizeGalleryOpenTarget(settings.GalleryOpenTarget)
                 settings.StartupNoImageMode = NormalizeStartupNoImageMode(settings.StartupNoImageMode)
                 settings.LanguageMode = LocalizationService.NormalizeLanguageMode(settings.LanguageMode)
+                settings.DateFormatMode = LocalizationService.NormalizeDateFormatMode(settings.DateFormatMode)
                 settings.ThumbnailQuality = NormalizeThumbnailQuality(settings.ThumbnailQuality)
                 settings.GalleryThumbnailMemoryCacheCapacity = NormalizeGalleryThumbnailMemoryCacheCapacity(settings.GalleryThumbnailMemoryCacheCapacity)
                 settings.JpgSaveQuality = NormalizeJpgSaveQuality(settings.JpgSaveQuality)
@@ -1100,6 +1104,7 @@ Namespace Services
                 settings.GalleryOpenTarget = NormalizeGalleryOpenTarget(settings.GalleryOpenTarget)
                 settings.StartupNoImageMode = NormalizeStartupNoImageMode(settings.StartupNoImageMode)
                 settings.LanguageMode = LocalizationService.NormalizeLanguageMode(settings.LanguageMode)
+                settings.DateFormatMode = LocalizationService.NormalizeDateFormatMode(settings.DateFormatMode)
                 settings.ThumbnailQuality = NormalizeThumbnailQuality(settings.ThumbnailQuality)
                 settings.GalleryThumbnailMemoryCacheCapacity = NormalizeGalleryThumbnailMemoryCacheCapacity(settings.GalleryThumbnailMemoryCacheCapacity)
                 settings.JpgSaveQuality = NormalizeJpgSaveQuality(settings.JpgSaveQuality)

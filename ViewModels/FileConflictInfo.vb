@@ -60,12 +60,12 @@ Namespace ViewModels
             If File.Exists(path) Then
                 Dim fileInfo As New FileInfo(path)
                 info.FileSizeText = FormatBytes(fileInfo.Length)
-                info.ModifiedText = fileInfo.LastWriteTime.ToString("dd.MM.yyyy, HH:mm:ss")
+                info.ModifiedText = LocalizationService.FormatDateTime(fileInfo.LastWriteTime, withSeconds:=True)
                 info.FileTypeText = $"{IO.Path.GetExtension(path).TrimStart("."c).ToUpperInvariant()}-Datei"
                 TryLoadImageInfo(info, path)
             ElseIf Directory.Exists(path) Then
                 Dim dirInfo As New DirectoryInfo(path)
-                info.ModifiedText = dirInfo.LastWriteTime.ToString("dd.MM.yyyy, HH:mm:ss")
+                info.ModifiedText = LocalizationService.FormatDateTime(dirInfo.LastWriteTime, withSeconds:=True)
             End If
 
             Return info
