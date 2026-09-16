@@ -9116,13 +9116,13 @@ Namespace ViewModels
             EnsureGroupEntries()
         End Sub
 
-        ''' <summary>True, wenn die aktuelle Sortierung sinnvolle Gruppen hergibt. Bei Groesse, ISO,
-        ''' Blende und den Abmessungen zeigt die Gruppenansicht ein durchgehendes Raster ohne
-        ''' Kopfzeilen - Gruppen ueber Zahlenwerte waeren Rauschen.</summary>
+        ''' <summary>True, wenn die aktuelle Sortierung sinnvolle Gruppen hergibt. ISO ist dabei
+        ''' gerade keine beliebige Zahl: gleiche Empfindlichkeiten stehen fuer dieselbe Aufnahme-
+        ''' situation zusammen und lassen sich als eigene Abschnitte sinnvoll durchsehen.</summary>
         Public Function GroupingIsAvailable() As Boolean
             Select Case _sortMode
                 Case "FileModifiedAt", "FileCreatedAt", "ExifDateTaken", "ExifDateModified",
-                     "Name", "Camera", "Type", "Rating", "Favorite"
+                     "Name", "Camera", "Type", "Iso", "Rating", "Favorite"
                     Return True
                 Case Else
                     Return False
@@ -9149,6 +9149,9 @@ Namespace ViewModels
                     Return "cam:" & If(item.ExifCamera, "").Trim().ToUpperInvariant()
                 Case "Type"
                     Return "type:" & If(item.ExtensionLower, "")
+                Case "Iso"
+                    If Not item.ExifIso.HasValue OrElse item.ExifIso.Value <= 0 Then Return "iso:none"
+                    Return "iso:" & item.ExifIso.Value.ToString(Globalization.CultureInfo.InvariantCulture)
                 Case "Rating"
                     Return "rating:" & item.Rating.ToString(Globalization.CultureInfo.InvariantCulture)
                 Case "Favorite"
@@ -9188,6 +9191,9 @@ Namespace ViewModels
                 Case "Type"
                     Dim ext = If(item.ExtensionLower, "").TrimStart("."c)
                     Return If(ext.Length > 0, ext.ToUpperInvariant(), LocalizationService.T("Ohne Dateiendung"))
+                Case "Iso"
+                    If Not item.ExifIso.HasValue OrElse item.ExifIso.Value <= 0 Then Return LocalizationService.T("Ohne") & " ISO"
+                    Return "ISO " & item.ExifIso.Value.ToString(Globalization.CultureInfo.CurrentUICulture)
                 Case "Rating"
                     If item.Rating <= 0 Then Return LocalizationService.T("Ohne Bewertung")
                     If item.Rating = 1 Then Return "1 " & LocalizationService.T("Stern")

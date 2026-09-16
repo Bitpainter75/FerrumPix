@@ -1399,7 +1399,7 @@ Namespace Models
         Public ReadOnly Property DateText As String
             Get
                 EnsureFileInfoLoaded()
-                Return DateModified.ToString("dd.MM.yyyy  HH:mm")
+                Return DateModified.ToString("g", Globalization.CultureInfo.CurrentCulture)
             End Get
         End Property
 
@@ -1407,21 +1407,21 @@ Namespace Models
             Get
                 EnsureFileInfoLoaded()
                 If FileCreatedAt = DateTime.MinValue Then Return ""
-                Return FileCreatedAt.ToString("dd.MM.yyyy  HH:mm")
+                Return FileCreatedAt.ToString("g", Globalization.CultureInfo.CurrentCulture)
             End Get
         End Property
 
         Public ReadOnly Property DateExifTakenText As String
             Get
                 If Not _exifDateTaken.HasValue Then Return ""
-                Return _exifDateTaken.Value.ToString("dd.MM.yyyy  HH:mm")
+                Return _exifDateTaken.Value.ToString("g", Globalization.CultureInfo.CurrentCulture)
             End Get
         End Property
 
         Public ReadOnly Property DateExifModifiedText As String
             Get
                 If Not _exifDateModified.HasValue Then Return ""
-                Return _exifDateModified.Value.ToString("dd.MM.yyyy  HH:mm")
+                Return _exifDateModified.Value.ToString("g", Globalization.CultureInfo.CurrentCulture)
             End Get
         End Property
 

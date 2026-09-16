@@ -1345,9 +1345,16 @@ Namespace ViewModels
             Else
                 Dim path = If(_isCompareMode, _compareLeftPath, _currentImagePath)
                 If String.IsNullOrWhiteSpace(path) OrElse Not File.Exists(path) Then Return
-                ' Sofort in die geteilte Ansicht, zunaechst mit demselben Bild auf beiden Seiten:
-                ' das Anheften wird damit unmittelbar sichtbar, statt erst beim naechsten Blaettern.
-                ActivateCompare(path, path)
+                ' Das angeheftete Bild bleibt links; rechts steht sofort der naechste Kandidat der
+                ' aktuellen Reihe. Zwei gleiche Bilder nebeneinander zeigen keinen Unterschied und
+                ' zwangen bisher erst zu einem weiteren Tastendruck. Gibt es keinen zweiten Pfad,
+                ' bleibt der bisherige sichtbare Anheft-Zustand als Rueckfall erhalten.
+                Dim nextPath = NextPathFrom(_currentIndex + 1, path)
+                If Not String.IsNullOrWhiteSpace(nextPath) AndAlso File.Exists(nextPath) Then
+                    ActivateCompare(path, nextPath)
+                Else
+                    ActivateCompare(path, path)
+                End If
                 Return
             End If
             Me.RaisePropertyChanged(NameOf(IsImagePinned))
