@@ -652,9 +652,17 @@ Namespace ViewModels
             Get
                 Return _pendingWorkingCommits > 0 OrElse _depthRunning OrElse _subjectRunning OrElse
                        _creatingAdjustmentLayer OrElse
-                       _pendingLayerModelRuns > 0 OrElse _saving
+                       _pendingLayerModelRuns > 0 OrElse _saving OrElse _fullImageModelRunning
             End Get
         End Property
+
+        ''' <summary>Laeuft gerade ein Modellweg, der ein NEUES Vollbild uebernimmt? Das sind das
+        ''' Hochskalieren und der Nachzug gespeicherter Bearbeitungen. Zaehlt in IsBusy. Beide laufen
+        ''' NICHT ueber EnqueueWorkingCommit, weil sie die Bildmasse aendern koennen - und waren
+        ''' deshalb nirgends gezaehlt: Grund und Abbruchmarke standen, aber die Warte-Anzeige mit dem
+        ''' X ging nie an, und das Bild blieb minutenlang bearbeitbar. Was man in der Zeit aenderte,
+        ''' ueberschrieb die Uebernahme des Ergebnisses danach still (Nutzerbefund).</summary>
+        Private _fullImageModelRunning As Boolean = False
 
         ''' <summary>Laeuft gerade ein Speichern: Rendern, Schreiben, Hochladen? Zaehlt in IsBusy.
         ''' Waehrend die Datei entsteht, setzte jede Aenderung am Bild an einem Stand an, der gleich
@@ -1145,10 +1153,6 @@ Namespace ViewModels
         Private _retouchLivePatchHeightPercent As Double = 0
         Private _annotationDirtyRect As SKRectI = SKRectI.Empty
         Private _annotationPlacementEditActive As Boolean = False
-
-        ''' <summary>Sind die gerechneten Maskenanteile waehrend des laufenden Zuges schon
-        ''' mitgewandert? Dann nimmt die Nachfuehrung beim Loslassen nur noch die Raster.</summary>
-        Private _gradientsFollowedDuringDrag As Boolean = False
         Private _activePreviewRenders As Integer
         Private _showBeforeImage As Boolean = False
         ''' <summary>Anschlagswarnung auf der Bühne. Reine ANSICHT: nichts davon geht ins Rezept,
@@ -9253,6 +9257,8 @@ Namespace ViewModels
             StatusText = LocalizationService.T("Bild wird hochskaliert…")
             SetBusyReason(LocalizationService.T("Bild wird hochskaliert"))
             Dim cancel = BeginCancellableBusy()
+            _fullImageModelRunning = True
+            RefreshBusyState()
             ' AUF Bgra8888 LEGEN. Das Modell nimmt nur diesen Farbtyp und steigt bei jedem anderen
             ' sofort aus - ein Arbeitsbild mit Objekt-Ebenen ist Rgba8888, und dort waere das
             ' Hochskalieren still ausgefallen. Denselben Schritt macht ImageProcessor.RunBakedUpscale
@@ -9281,6 +9287,10 @@ Namespace ViewModels
                 Sub()
                     Dispatcher.UIThread.Post(
                         Sub()
+                            ' Die Sperre geht ZUERST aus, vor jedem Return: bliebe sie auf einem
+                            ' der Wege unten stehen, waere der Editor fuer immer zu.
+                            _fullImageModelRunning = False
+                            RefreshBusyState()
                             Dim cancelled = BusyWasCancelled()
                             EndCancellableBusy()
                             If result Is Nothing Then
@@ -9747,6 +9757,8 @@ Namespace ViewModels
             StatusText = LocalizationService.T("Gespeicherte Bearbeitung wird angewendet…")
             SetBusyReason(LocalizationService.T("Gespeicherte Bearbeitung wird angewendet"))
             Dim cancel = BeginCancellableBusy()
+            _fullImageModelRunning = True
+            RefreshBusyState()
             Dim input = AsBgra8888(_workingImage.CloneFull())
             Dim result As SKBitmap = Nothing
 
@@ -9763,6 +9775,9 @@ Namespace ViewModels
                 Sub()
                     Dispatcher.UIThread.Post(
                         Sub()
+                            ' Die Sperre geht ZUERST aus, siehe ApplyModelUpscale.
+                            _fullImageModelRunning = False
+                            RefreshBusyState()
                             Dim cancelled = BusyWasCancelled()
                             EndCancellableBusy()
                             If result Is Nothing Then
@@ -10603,18 +10618,23 @@ Namespace ViewModels
             placementPx = New SKRectI(left, top, left + width, top + height)
 
             Dim tempPath = CreateSelectionAssetTempPath("selection")
-            Dim adj = GetCurrentAdjustments()
+            Dim adj = AdjustmentsForSelectionPixels()
             If _selectionMask IsNot Nothing OrElse _selectionFeather > 0.05 Then
                 ' Maskierte Auswahl: unregelmäßige Auswahl immer, Rechtecke sobald eine weiche Kante aktiv ist.
                 Dim ownsMask As Boolean
                 Dim maskRect As SKRectI
                 Dim mask = GetSelectionMaskForOutput(maskRect, ownsMask)
+                Dim ownsCutMask = False
+                Dim cutMask As SKBitmap = Nothing
                 Try
                     If mask Is Nothing Then Return Nothing
                     placementPx = maskRect
-                    If Not ImageProcessor.ExtractRegionToFileMasked(RenderSourcePath, adj, maskRect, mask, tempPath,
+                    ' Eine weiche Kante bleibt weich: nur die unveränderte, gespeicherte Form wird hart.
+                    cutMask = If(ownsMask, mask, SelectionMaskForPixelSource(mask, ownsCutMask))
+                    If Not ImageProcessor.ExtractRegionToFileMasked(RenderSourcePath, adj, maskRect, cutMask, tempPath,
                                                                     workingFull:=CloneWorkingFullForRender()) Then Return Nothing
                 Finally
+                    If ownsCutMask Then cutMask.Dispose()
                     If ownsMask Then mask.Dispose()
                 End Try
             Else
@@ -10988,6 +11008,39 @@ Namespace ViewModels
             Return tempPath
         End Function
 
+        ''' <summary>Fügt BILDDATEN aus der System-Zwischenablage als neue Bild-Ebene ein - das, was
+        ''' ein Bildschirmfoto-Werkzeug oder "Bild kopieren" im Browser hinterlässt, ohne Datei
+        ''' dahinter. True heisst: eingefügt.
+        '''
+        ''' Die Daten landen als PNG im Zwischenordner der Sitzung, genau wie ein kopierter
+        ''' Auswahl-Ausschnitt, und gehen denselben Weg zur Ebene. Die Ebene sitzt in der Mitte und in
+        ''' ihrer eigenen Pixelgröße; nur ein Bild, das größer ist als das Dokument, wird passend
+        ''' verkleinert, sonst läge es mit den Rändern außerhalb.</summary>
+        Public Function PasteClipboardBitmap(bitmap As Avalonia.Media.Imaging.Bitmap) As Boolean
+            If bitmap Is Nothing Then Return False
+            Dim displaySize = GetAnnotationDisplayPixelSize()
+            Dim documentWidth = displaySize.Width, documentHeight = displaySize.Height
+            Dim pixelWidth = bitmap.PixelSize.Width, pixelHeight = bitmap.PixelSize.Height
+            If documentWidth <= 0 OrElse documentHeight <= 0 OrElse pixelWidth <= 0 OrElse pixelHeight <= 0 Then Return False
+
+            Dim path = CreateSelectionAssetTempPath("clipboard")
+            Try
+                bitmap.Save(path, Avalonia.Media.Imaging.PngBitmapEncoderOptions.Default)
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Editor.PasteClipboardBitmap", ex)
+                StatusText = LocalizationService.T("Einfügen fehlgeschlagen")
+                Return False
+            End Try
+
+            Dim scale = Math.Min(1.0, Math.Min(documentWidth / CDbl(pixelWidth), documentHeight / CDbl(pixelHeight)))
+            Dim widthPercent = pixelWidth * scale * 100.0 / documentWidth
+            Dim heightPercent = pixelHeight * scale * 100.0 / documentHeight
+            AddSelectionImageAnnotationAt(path, (100.0 - widthPercent) / 2.0, (100.0 - heightPercent) / 2.0,
+                                          widthPercent, heightPercent, LocalizationService.T("Eingefügtes Bild"))
+            NameHistoryStep(LocalizationService.T("Bild eingefügt"))
+            Return True
+        End Function
+
         Public Sub PasteSelectionClipboard()
             If String.IsNullOrWhiteSpace(_selectionClipboardPath) OrElse Not File.Exists(_selectionClipboardPath) Then Return
             _selectionClipboardPasteCount += 1
@@ -11223,20 +11276,12 @@ Namespace ViewModels
             Dim mask = ExclusiveMaskOfObject(a)
             If mask Is Nothing Then Return
 
-            ' WÄHREND eines Zuges wandern nur die GERECHNETEN Anteile mit - sie sind vier Zahlen und
-            ' kosten nichts. Ein gemaltes Raster müsste je Mausbewegung neu gerastert werden und
-            ' bleibt deshalb bis zum Loslassen liegen (ApplyDeferredGroupMaskTransform).
-            ' Ohne das steht die Freistellung während des Zuges still und das Objekt wandert
-            ' darunter durch - richtig wird es erst beim Loslassen, und dazwischen sieht man etwas,
-            ' das es so nie gab (Nutzerbefund).
+            ' WÄHREND eines Zuges wandern die Daten NICHT: der Renderer bildet die ganze Maske über
+            ' die Lage bei Zugbeginn live ab (ImageAnnotation.MaskAnchor), und beim Loslassen führt
+            ' ApplyDeferredGroupMaskTransform alles in EINEM Schritt nach. Früher wanderten hier
+            ' während des Zuges nur die Verläufe mit, ein gemaltes Raster blieb stehen.
+            If _annotationPlacementEditActive Then Return
             Dim part = ImageProcessor.MaskTransformPart.All
-            If _annotationPlacementEditActive Then
-                If Not ImageProcessor.HasGradientComponent(mask) Then Return
-                part = ImageProcessor.MaskTransformPart.GradientsOnly
-                ' Merken, damit die Nachführung beim Loslassen die Verläufe NICHT ein zweites Mal
-                ' verschiebt - sie sind dann schon am Ziel.
-                _gradientsFollowedDuringDrag = True
-            End If
             Dim flipChanged = (a.FlipHorizontal <> oldFlipH) OrElse (a.FlipVertical <> oldFlipV)
             If a.FlipHorizontal <> oldFlipH Then
                 ImageProcessor.FlipMaskRegion(mask, True, oldX + oldW / 2.0, part)
@@ -17033,11 +17078,22 @@ Namespace ViewModels
             _groupDragRotationTotal = 0
             ' Startbox merken, sobald IRGENDEINE Maske mitwandern muss - die einer mitmarkierten
             ' Korrektur wie die Ebenenmaske eines einzelnen Objekts.
-            _gradientsFollowedDuringDrag = False
             LogMaskFollowState("dragStart")
             _groupDragBoxAtStart = If(TransformableSelectedMasks().Count > 0,
                                       CType(GetSelectionBoxDisplayRectPercent(), (X As Double, Y As Double, Width As Double, Height As Double)?),
                                       Nothing)
+            ' DIE MASKE FOLGT LIVE. Ihre Daten wandern erst beim Loslassen; bis dahin bildet der
+            ' Renderer sie von der Lage bei Zugbeginn auf die aktuelle ab - gemalt wie gerechnet.
+            ' Vorher blieb eine gemalte Maske bis zum Loslassen stehen und stanzte ihr Loch in alles,
+            ' was man darüberzog (Nutzerbefund 2026-09-16). Dieselbe Auswahl wie die Nachführung
+            ' beim Loslassen, sonst folgte live etwas, das danach liegen bleibt.
+            If _groupDragBoxAtStart.HasValue Then
+                For Each a In SelectedAnnotations
+                    If a Is Nothing OrElse Not String.IsNullOrEmpty(a.Anchor) OrElse IsAnnotationGeometryLocked(a) Then Continue For
+                    If ExclusiveMaskOfObject(a) Is Nothing Then Continue For
+                    a.MaskAnchor = AnnotationPlacement.FromAnnotation(a)
+                Next
+            End If
             _previewTimer.Stop()
             _previewPending = False
             ' Die Startregion in die Dirty-Vereinigung aufnehmen: der erste Render bzw. Blit des
@@ -17102,12 +17158,9 @@ Namespace ViewModels
                 DiagnosticLogService.LogAlways("Editor.MaskFollow", "  vorher " & DescribeMask(m))
             Next
 
-            ' Sind die Verlaeufe waehrend des Zuges schon mitgewandert, bleibt hier nur das RASTER -
-            ' sonst wanderten sie ein zweites Mal und landeten beim doppelten Versatz.
-            Dim part = If(_gradientsFollowedDuringDrag,
-                          ImageProcessor.MaskTransformPart.RasterOnly,
-                          ImageProcessor.MaskTransformPart.All)
-            _gradientsFollowedDuringDrag = False
+            ' Waehrend des Zuges ist nichts an den Daten gewandert (siehe MaskAnchor) - hier geht
+            ' also die GANZE Maske mit, Raster wie Verlauf.
+            Dim part = ImageProcessor.MaskTransformPart.All
             If Math.Abs(rotation) > 0.0001 Then
                 Dim pivotX = PercentXToPixels(ende.X + ende.Width / 2.0)
                 Dim pivotY = PercentYToPixels(ende.Y + ende.Height / 2.0)
@@ -17178,6 +17231,11 @@ Namespace ViewModels
             _annotationPlacementEditActive = False
             ' Aufgeschobene Masken-Nachführung nachholen, BEVOR der Commit die Endfassung rendert.
             ApplyDeferredGroupMaskTransform()
+            ' Die Daten liegen jetzt am Ziel. Die Bezugslage muss SOFORT weg, sonst bildete der
+            ' Renderer die schon nachgeführte Maske ein zweites Mal ab.
+            For Each a In _annotations
+                If a IsNot Nothing Then a.MaskAnchor = Nothing
+            Next
             LogMaskFollowState("dragEnde")
             ' Aufzeichnen wieder freigeben (siehe PushUndo beim Zug-Start). Läuft auch über den
             ' PointerCaptureLost-Weg, damit ein abgebrochener Zug das Undo nicht dauerhaft stilllegt.
@@ -22156,23 +22214,28 @@ Namespace ViewModels
             Dim normalized = points.ToList()
             If normalized.Count < 2 Then Return
 
-            ' RADIEREN AUF EINER EBENE GEHT IN IHRE EBENENMASKE, nicht in ihre Bildpunkte: die Pixel
-            ' bleiben, die Deckung geht weg, und der Zug ist mit dem Maskenpinsel zurückzuholen. Das
-            ' gilt für JEDE Ebene, die eine Maske tragen kann - auch für Text, Formen und SVG, in die
-            ' sich bisher gar nicht radieren liess. Nicht dafür gilt es, wenn der Radierer eine
-            ' Hintergrundfarbe trägt: der malt eine Farbe und gehört in die Bildpunkte.
+            ' RADIEREN AUF EINER EBENE MIT BILD GEHT IN IHRE BILDPUNKTE, genau wie Pinsel und
+            ' Retusche: gemerkt wird das Ergebnis, nicht der Zug. Früher ging der Radierer auf jeder
+            ' Ebene in eine Ebenenmaske; die Pixel blieben darunter stehen und blitzten beim
+            ' Verschieben der Ebene kurz wieder auf (Nutzerbefund 2026-09-16). Wer Deckung
+            ' zurückholbar wegnehmen will, legt dafür bewusst eine Maske an.
             '
-            ' EINE AUSNAHME: die MALEBENE. Sie ist das eigene Raster, angelegt zum Bemalen - dort
-            ' heisst radieren, dass die Farbe weg ist, und nicht, dass sie unter einer Maske
-            ' liegenbleibt (Nutzerbefund: "radiere ich einen Malpinselstrich auf einer
-            ' Malebene, bleibt der Strich als transparente Stelle erhalten"). Bei allem anderen -
-            ' eingefügtes Bild, Text, Form, SVG - sind die Pixel fremd oder gar nicht da, und die
-            ' Maske ist der richtige Weg.
+            ' In die EBENENMASKE geht der Radierer nur noch bei Ebenen OHNE eigenes Raster - Text,
+            ' Formen, SVG. Dort gibt es keine Bildpunkte, und ohne Maske liesse sich gar nicht
+            ' radieren. Nicht dafür gilt es, wenn der Radierer eine Hintergrundfarbe trägt: der malt
+            ' eine Farbe und gehört in die Bildpunkte.
             If isEraser AndAlso EraserRemovesCoverage Then
                 Dim maskObject = MaskTargetAnnotation()
                 If maskObject IsNot Nothing AndAlso maskObject.IsVisible AndAlso
-                   Not maskObject.IsPaintLayer AndAlso
                    Not String.Equals(NormalizeAnnotationKind(maskObject.Kind), "Frame", StringComparison.Ordinal) Then
+                    ' Das Ziel steht fest - auch wenn die Ebene gerade nicht als einzige markiert ist.
+                    ' Ein Rückfall auf das Foto wäre das Schlimmere, siehe unten.
+                    If IsPaintableImageAnnotation(maskObject) Then
+                        If Not TryPaintStrokeIntoImageAnnotation(maskObject, normalized, isEraser:=True) Then
+                            StatusText = LocalizationService.T("Radieren fehlgeschlagen")
+                        End If
+                        Return
+                    End If
                     If Not TryEraseIntoAnnotationMask(maskObject, normalized) Then
                         StatusText = LocalizationService.T("Radieren fehlgeschlagen")
                     End If

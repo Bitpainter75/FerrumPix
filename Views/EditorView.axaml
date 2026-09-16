@@ -1104,7 +1104,7 @@
                                         Width="26" Height="26" Padding="0"
                                         IsVisible="{Binding CanCancelBusy}"
                                         Command="{Binding CancelBusyCommand}"
-                                        ToolTip.Tip="Abbrechen (ESC). Das Entrauschen steigt an der nächsten Kachel aus, das Entfernen nach seinem Durchlauf - das Bild bleibt dabei unverändert.">
+                                        ToolTip.Tip="Abbrechen (ESC). Entrauschen und Hochskalieren steigen an der nächsten Kachel aus, das Entfernen nach seinem Durchlauf - das Bild bleibt dabei unverändert.">
                                     <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/x.svg"
                                                    Width="14" Height="14" />
                                 </Button>

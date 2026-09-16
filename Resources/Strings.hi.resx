@@ -6183,8 +6183,8 @@
   <data name="Anwenden_abgebrochen_das_Bild_ist_unver_ndert_a6a00426" xml:space="preserve">
     <value>लागू करना रद्द किया गया - तस्वीर अपरिवर्तित है</value>
   </data>
-  <data name="Abbrechen_ESC_Das_Entrauschen_steigt_an_der_n_ch_4e3132fa" xml:space="preserve">
-    <value>रद्द करें (ESC)। शोर हटाना अगली टाइल पर रुकता है, हटाना अपनी बारी के बाद; दोनों ही हाल में तस्वीर अपरिवर्तित रहती है।</value>
+  <data name="Abbrechen_ESC_Entrauschen_und_Hochskalieren_stei_6b560a31" xml:space="preserve">
+    <value>रद्द करें (ESC)। शोर हटाना और बड़ा करना अगली टाइल पर रुकते हैं, हटाना अपनी बारी के बाद; हर हाल में तस्वीर अपरिवर्तित रहती है।</value>
   </data>
   <data name="Hochskalieren_mit_Modell_36fbab7e" xml:space="preserve">
     <value>मॉडल से बड़ा करें</value>
@@ -8536,5 +8536,14 @@
   </data>
   <data name="Alle_Presets_aus_der_Liste_entfernen_9ec2886a" xml:space="preserve">
     <value>सूची से सभी प्रीसेट हटाएँ</value>
+  </data>
+  <data name="Eingef_gtes_Bild_9d1262b8" xml:space="preserve">
+    <value>चिपकाई गई तस्वीर</value>
+  </data>
+  <data name="Bild_eingef_gt_9190b1be" xml:space="preserve">
+    <value>तस्वीर चिपकाई गई</value>
+  </data>
+  <data name="Die_kopierte_Datei_gibt_es_nicht_mehr_f41f8442" xml:space="preserve">
+    <value>कॉपी की गई फ़ाइल अब मौजूद नहीं है</value>
   </data>
 </root>

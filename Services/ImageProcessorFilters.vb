@@ -1094,9 +1094,9 @@ Namespace Services
             Return result
         End Function
 
-        ''' Gemeinsamer Unsharp-Mask-artiger Lokalkontrast-Kern für Clarity/Structure - Unterschied
-        ''' zwischen beiden Reglern ist ausschließlich blurSigma (Frequenzband) und strengthMultiplier.
-        ''' <summary>Lokaler Kontrast (Unschaerfemaske) - Grundlage von Klarheit und Struktur.
+        ''' Unsharp-Mask-artiger Lokalkontrast-Kern der Struktur. Die Klarheit lief frueher auch hier
+        ''' durch und hat seit ihrem Umbau einen eigenen Weg, siehe ApplyClarity.
+        ''' <summary>Lokaler Kontrast (Unschaerfemaske) - Grundlage der Struktur.
         '''
         ''' Lief bis ueber GetPixel/SetPixel, also mit einem P/Invoke JE PIXEL. Gemessen
         ''' kostete Klarheit dadurch 4,3 s bei 6,3 MP - waehrend die gesamte verschmolzene Farbkette
@@ -1209,16 +1209,143 @@ Namespace Services
             End Using
         End Function
 
+        ''' <summary>Reichweite der Klarheit als Anteil der KURZEN Bildseite. An der Bildgroesse und
+        ''' nicht in Bildpunkten, damit Vorschau und Export dieselbe Wirkung zeigen.</summary>
+        Private Const ClarityRadiusShare As Double = 0.015
+
+        ''' <summary>Schwelle des Fuehrungsfilters, als Varianz auf der Skala 0 bis 1. Kleiner schont
+        ''' harte Kanten staerker, hebt aber auch weniger an. Gemessen bei Klarheit +50 an einer Kante
+        ''' 50 gegen 190: 0,01 ergab einen Lichthof von 4 Tonwerten, 0,02 von 6,7, 0,05 von 13.</summary>
+        Private Const ClarityEdgeEpsilon As Single = 0.02F
+
+        ''' <summary>Verstaerkung der Plus-Seite. Der Fuehrungsfilter laesst harte Kanten aus und wirkt
+        ''' deshalb bei gleicher Zahl zurueckhaltender als ein Gauss. Die Minus-Seite bleibt bei 1:
+        ''' darueber kehrte sich die Mitteltonstruktur bei starken Werten um.</summary>
+        Private Const ClarityPositiveGain As Single = 1.5F
+
+        ''' <summary>Klarheit: Kontrast der Mitteltoene in einer BREITEN Umgebung, ohne Saeume an
+        ''' harten Kanten.
+        '''
+        ''' FRUEHER eine Unschaerfemaske mit Sigma 1,6 bis 2,45 Bildpunkten, also im Radius eines
+        ''' Schaerfefilters. Gemessen (Klarheit +50, Rauschen 16, Entrauschen 100) hob sie den
+        ''' Rauschfehler von 16,3 auf 27,7 Tonwerte, zog an einer harten Kante einen Hof von 62
+        ''' Tonwerten und war von der Struktur kaum zu unterscheiden. Ein breiter Gauss behob das
+        ''' Rauschen (19,7), zog aber einen sichtbaren dunklen Hof von 29 Bildpunkten um helle Motive.
+        '''
+        ''' JETZT ein Fuehrungsfilter auf der Helligkeit als Basis: er folgt harten Kanten und
+        ''' glaettet nur, was darunter liegt. Die Differenz Helligkeit minus Basis wird, auf die
+        ''' Mitteltoene gewichtet, auf alle drei Kanaele addiert. Gerechnet wird die Basis auf einer
+        ''' verkleinerten Fassung und bilinear hochgezogen - bei dieser Reichweite geht dabei nichts
+        ''' verloren, und die Kosten haengen nicht am Radius.
+        '''
+        ''' Die Reichweite von mehreren Dutzend Bildpunkten passt nicht in den Rand des
+        ''' Ausschnittwegs der Maskenebenen; LayerAdjustmentsAreCropSafe nimmt die Klarheit deshalb
+        ''' aus.</summary>
         Private Shared Function ApplyClarity(source As SKBitmap, amount As Single) As SKBitmap
-            ' Clarity = breiter Mitteltonkontrast: bewusst deutlich größerer Blur-Radius als Structure.
-            ' Untergrenze so wählen, dass ApplyNoiseReduction einen effektiven Gauß-Sigma > ~1.6 liefert
-            ' (blurSigma 5.0 → 0.625 → eff. ~1.6); bei 2.0 war Clarity bei kleinen Stärken fast ein No-Op
-            ' und vom feinen Structure-Radius (eff. ~1.24) kaum zu unterscheiden.
-            Dim sigma = 5.0F + Math.Abs(amount) * 5.0F
-            Return ApplyLocalContrast(source, sigma, amount, 1.6F)
+            Dim strength = Clamp(amount, -1, 1)
+            If Math.Abs(strength) <= 0.001F Then Return source
+            Dim gain = If(strength > 0, strength * ClarityPositiveGain, strength)
+            Dim width = source.Width, height = source.Height
+            Dim result = New SKBitmap(width, height, source.ColorType, source.AlphaType)
+
+            Dim srcBuf As Byte() = Nothing, dstBuf As Byte() = Nothing
+            Dim stride, ri, gi, bi, ai As Integer
+            Dim sLen = 0
+            Try
+                If Not TryRentRgbaLikeBuffer(source, srcBuf, sLen, stride, ri, gi, bi, ai) Then Return result
+                dstBuf = ArrayPool(Of Byte).Shared.Rent(sLen)
+                If stride <> width * 4 Then Array.Clear(dstBuf, 0, sLen)
+
+                ' Verkleinern: je Feld der Mittelwert der Helligkeit (0 bis 1). Der Faktor haelt
+                ' rund vier Felder im Radius, das reicht fuer eine glatte Basis.
+                Dim radius = Math.Max(1.0, Math.Min(width, height) * ClarityRadiusShare)
+                Dim factor = Math.Max(1, CInt(Math.Floor(radius / 4.0)))
+                Dim smallWidth = (width + factor - 1) \ factor
+                Dim smallHeight = (height + factor - 1) \ factor
+                Dim small(smallWidth * smallHeight - 1) As Single
+                ForEachRow(smallWidth, smallHeight,
+                    Sub(sy)
+                        Dim yEnd = Math.Min(height, (sy + 1) * factor)
+                        For sx = 0 To smallWidth - 1
+                            Dim xEnd = Math.Min(width, (sx + 1) * factor)
+                            Dim sum = 0.0
+                            Dim count = 0
+                            For y = sy * factor To yEnd - 1
+                                Dim row = y * stride
+                                For x = sx * factor To xEnd - 1
+                                    Dim cr As Integer, cg As Integer, cb As Integer, a As Integer
+                                    ReadUnpremultiplied(srcBuf, row + x * 4, ri, gi, bi, ai, cr, cg, cb, a)
+                                    sum += 0.299 * cr + 0.587 * cg + 0.114 * cb
+                                    count += 1
+                                Next
+                            Next
+                            small(sy * smallWidth + sx) = CSng(sum / (count * 255.0))
+                        Next
+                    End Sub)
+
+                ' Fuehrungsfilter mit sich selbst als Fuehrung: a = Varianz / (Varianz + eps).
+                Dim boxRadius = Math.Max(1, CInt(Math.Round(radius / factor)))
+                Dim cellCount = small.Length
+                Dim scratch(cellCount - 1) As Single
+                Dim meanI(cellCount - 1) As Single
+                Dim corrI(cellCount - 1) As Single
+                BoxMean(small, meanI, scratch, smallWidth, smallHeight, boxRadius)
+                For k = 0 To cellCount - 1
+                    corrI(k) = small(k) * small(k)
+                Next
+                BoxMean(corrI, corrI, scratch, smallWidth, smallHeight, boxRadius)
+                Dim coefA(cellCount - 1) As Single
+                Dim coefB(cellCount - 1) As Single
+                For k = 0 To cellCount - 1
+                    Dim variance = Math.Max(0.0F, corrI(k) - meanI(k) * meanI(k))
+                    coefA(k) = variance / (variance + ClarityEdgeEpsilon)
+                    coefB(k) = meanI(k) - coefA(k) * meanI(k)
+                Next
+                BoxMean(coefA, coefA, scratch, smallWidth, smallHeight, boxRadius)
+                BoxMean(coefB, coefB, scratch, smallWidth, smallHeight, boxRadius)
+
+                ForEachRow(width, height,
+                    Sub(y)
+                        Dim fy = Math.Max(0.0, Math.Min(smallHeight - 1, (y + 0.5) / factor - 0.5))
+                        Dim y0 = CInt(Math.Floor(fy))
+                        Dim y1 = Math.Min(smallHeight - 1, y0 + 1)
+                        Dim ty = CSng(fy - y0)
+                        Dim row = y * stride
+                        For x = 0 To width - 1
+                            Dim fx = Math.Max(0.0, Math.Min(smallWidth - 1, (x + 0.5) / factor - 0.5))
+                            Dim x0 = CInt(Math.Floor(fx))
+                            Dim x1 = Math.Min(smallWidth - 1, x0 + 1)
+                            Dim tx = CSng(fx - x0)
+                            Dim i00 = y0 * smallWidth + x0, i01 = y0 * smallWidth + x1
+                            Dim i10 = y1 * smallWidth + x0, i11 = y1 * smallWidth + x1
+                            Dim baseA = (coefA(i00) * (1 - tx) + coefA(i01) * tx) * (1 - ty) +
+                                        (coefA(i10) * (1 - tx) + coefA(i11) * tx) * ty
+                            Dim baseB = (coefB(i00) * (1 - tx) + coefB(i01) * tx) * (1 - ty) +
+                                        (coefB(i10) * (1 - tx) + coefB(i11) * tx) * ty
+
+                            Dim o = row + x * 4
+                            Dim cr As Integer, cg As Integer, cb As Integer, a As Integer
+                            ReadUnpremultiplied(srcBuf, o, ri, gi, bi, ai, cr, cg, cb, a)
+                            Dim luma = CSng((0.299 * cr + 0.587 * cg + 0.114 * cb) / 255.0)
+                            Dim baseLuma = baseA * luma + baseB
+                            ' Mitteltoene voll, Tiefen und Lichter auslaufend.
+                            Dim t = 2.0F * baseLuma - 1.0F
+                            Dim weight = Math.Max(0.0F, 1.0F - t * t)
+                            Dim delta = (luma - baseLuma) * gain * weight * 255.0F
+                            WritePremultiplied(dstBuf, o, ri, gi, bi, ai,
+                                               ClampToByte(cr + delta), ClampToByte(cg + delta), ClampToByte(cb + delta), a)
+                        Next
+                    End Sub)
+
+                Runtime.InteropServices.Marshal.Copy(dstBuf, 0, result.GetPixels(), sLen)
+                Return result
+            Finally
+                ReturnPooledBuffer(srcBuf)
+                ReturnPooledBuffer(dstBuf)
+            End Try
         End Function
 
-        ''' Anders als Clarity (breiter, mit der Stärke wachsender Mitteltonkontrast-Radius): Structure
+        ''' Anders als Clarity (breiter, kantenerhaltender Mitteltonkontrast): Structure
         ''' arbeitet auf einem festen, kleinen Blur-Radius (feine Textur/Detailkontrast) - vorher rief
         ''' diese Funktion nur ApplyClarity mit abgeschwächter Stärke auf und war dadurch visuell nicht
         ''' von Clarity unterscheidbar, nur schwächer.

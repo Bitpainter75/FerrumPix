@@ -6735,7 +6735,8 @@ Namespace Views
             If String.IsNullOrWhiteSpace(tempPath) Then Return
             Try
                 Dim owner = TopLevel.GetTopLevel(Me)
-                Await ClipboardPathService.CopyPathsAsync(owner?.Clipboard, owner?.StorageProvider, {tempPath}, cut:=False)
+                Await ClipboardPathService.CopyPathsAsync(owner?.Clipboard, owner?.StorageProvider, {tempPath}, cut:=False,
+                                                          includeImage:=True)
             Catch
             End Try
         End Sub
@@ -6749,7 +6750,8 @@ Namespace Views
             If String.IsNullOrWhiteSpace(tempPath) Then Return
             Try
                 Dim owner = TopLevel.GetTopLevel(Me)
-                Await ClipboardPathService.CopyPathsAsync(owner?.Clipboard, owner?.StorageProvider, {tempPath}, cut:=False)
+                Await ClipboardPathService.CopyPathsAsync(owner?.Clipboard, owner?.StorageProvider, {tempPath}, cut:=False,
+                                                          includeImage:=True)
             Catch ex As Exception
                 DiagnosticLogService.LogException("EditorView.CutSelection", ex)
             End Try
@@ -6764,7 +6766,8 @@ Namespace Views
             If String.IsNullOrWhiteSpace(tempPath) Then Return
             Try
                 Dim owner = TopLevel.GetTopLevel(Me)
-                Await ClipboardPathService.CopyPathsAsync(owner?.Clipboard, owner?.StorageProvider, {tempPath}, cut:=False)
+                Await ClipboardPathService.CopyPathsAsync(owner?.Clipboard, owner?.StorageProvider, {tempPath}, cut:=False,
+                                                          includeImage:=True)
             Catch ex As Exception
                 DiagnosticLogService.LogException("EditorView.CopyCurrentImage", ex)
             End Try
@@ -6807,9 +6810,19 @@ Namespace Views
                     Return
                 End If
 
+                ' BILDDATEN OHNE DATEI (Bildschirmfoto, "Bild kopieren" im Browser). Im Textwerkzeug
+                ' erst nach dem Text: manche Programme legen zu einem Text zusätzlich ein Bild von ihm
+                ' ab, und wer dort einfügt, meint den Text.
+                If vm.CurrentTool <> EditorTool.Text AndAlso Await TryPasteClipboardBitmapAsync(vm, clipboard) Then Return
+
+                ' Einmal lesen, zweimal gebraucht: fürs Textwerkzeug und für die Meldung am Ende.
+                Dim text = Await clipboard.TryGetTextAsync()
+                ' Eine reine Datei-Adresse ist ein Verweis, kein Text. Hier kommt sie nur an, wenn
+                ' die Datei fehlt - sonst hätte sie der Dateiweg oben schon eingefügt.
+                Dim textIsFileReference = ClipboardPathService.IsFileReferenceText(text)
+
                 If vm.CurrentTool = EditorTool.Text Then
-                    Dim text = Await clipboard.TryGetTextAsync()
-                    If Not String.IsNullOrWhiteSpace(text) Then
+                    If Not String.IsNullOrWhiteSpace(text) AndAlso Not textIsFileReference Then
                         ' Erst die bisherige Ebene lösen: AnnotationText synchronisiert sonst in
                         ' genau diese hinein und würde sie vor dem Anlegen überschreiben.
                         vm.SelectedAnnotationIndex = -1
@@ -6821,16 +6834,33 @@ Namespace Views
                         FocusTextOverlayEditor()
                         Return
                     End If
+                    If Await TryPasteClipboardBitmapAsync(vm, clipboard) Then Return
                 End If
 
                 ' Kein fremdes, passend einfügbares Format: dann der zuletzt kopierte oder
                 ' ausgeschnittene Auswahl-Ausschnitt, und zwar aus JEDEM Werkzeug heraus. Er wird zu
                 ' einer neuen Bild-Ebene - vorher ging das nur im Auswahl-Werkzeug, und anderswo tat
                 ' Strg+V gar nichts.
-                vm.PasteSelectionClipboardIfAny()
+                If vm.PasteSelectionClipboardIfAny() Then Return
+                ' Sonst nicht stillschweigend nichts tun, wenn der Grund bekannt ist: die kopierte
+                ' Zwischendatei gibt es nicht mehr (Bildwechsel, Neustart), und ein Verlauf der
+                ' Zwischenablage hat nur ihre Adresse behalten.
+                If textIsFileReference Then
+                    vm.StatusText = LocalizationService.T("Die kopierte Datei gibt es nicht mehr")
+                End If
             Catch ex As Exception
                 DiagnosticLogService.LogException("EditorView.PasteExternalClipboard", ex)
             End Try
+        End Function
+
+        ''' <summary>Liegen Bilddaten in der Zwischenablage, werden sie eine neue Bild-Ebene. Das
+        ''' X11-Backend von Avalonia bietet "image/png" und "image/jpeg" als DataFormat.Bitmap an.</summary>
+        Private Shared Async Function TryPasteClipboardBitmapAsync(vm As EditorViewModel, clipboard As IClipboard) As Task(Of Boolean)
+            Dim formats = Await clipboard.GetDataFormatsAsync()
+            If formats Is Nothing OrElse Not formats.Contains(DataFormat.Bitmap) Then Return False
+            Using bitmap = Await clipboard.TryGetBitmapAsync()
+                Return vm.PasteClipboardBitmap(bitmap)
+            End Using
         End Function
 
         Public Shadows Async Sub OnKeyDown(sender As Object, e As KeyEventArgs)

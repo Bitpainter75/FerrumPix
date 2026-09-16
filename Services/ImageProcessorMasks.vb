@@ -528,8 +528,9 @@ Namespace Services
 
         ''' <summary>Rand um das Maskenrechteck, in Bildpunkten. GEMESSEN, nicht geschätzt
         ''' (<c>Diagnostics/Kettenmessung</c>, Befehl <c>raender</c>): die Reichweiten der
-        ''' Nachbarschaftsstufen sind absolut und wachsen NICHT mit der Bildgröße - Klarheit 4,
-        ''' Glühen 4, Rauschminderung 3, Struktur 2, Weichzeichner 2. Acht deckt alle ab.</summary>
+        ''' Nachbarschaftsstufen sind absolut und wachsen NICHT mit der Bildgröße - Glühen 4,
+        ''' Rauschminderung 3, Struktur 2, Weichzeichner 2. Acht deckt alle ab. Die Klarheit gehört
+        ''' nicht mehr dazu: sie wächst mit dem Bild und läuft deshalb nie im Ausschnitt.</summary>
         Private Const MaskScopeMargin As Integer = 8
 
         ''' <summary>Das Rechteck wird auf Vielfache dieser Zahl ausgerichtet, und das ist keine
@@ -576,6 +577,10 @@ Namespace Services
         ''' vollem Radius ist sie es nicht mehr, und wo genau die Grenze liegt, ist nicht gemessen.
         ''' Eine ungemessene Grenze im Quelltext wäre schlimmer als der entgangene Gewinn.
         '''
+        ''' Die KLARHEIT ist ebenfalls draußen: ihre Reichweite ist ein Anteil der Bildgröße (siehe
+        ''' ApplyClarity), auf einem Ausschnitt also eine andere, und bei großen Bildern mehrere
+        ''' Dutzend Bildpunkte - weit über dem Rand von <c>MaskScopeMargin</c>.
+        '''
         ''' <para>ZWEITE AUSSCHLUSSKLASSE, und sie ist die tückischere: Stufen, die das GANZE BILD
         ''' ANALYSIEREN und aus dem Ergebnis ihre Parameter ableiten. Sie fallen bei einem Vergleich
         ''' Vollbild gegen Ausschnitt nur dann auf, wenn der Ausschnitt zufällig eine andere
@@ -603,6 +608,7 @@ Namespace Services
                    a.FarbrauschGrob = 0 AndAlso
                    a.ColorNoiseAdd = 0 AndAlso
                    a.Sharpness = 0 AndAlso
+                   a.Clarity = 0 AndAlso
                    IsNoiseReductionCropSafe(a) AndAlso
                    Not a.NegativeEnabled
         End Function
@@ -985,6 +991,133 @@ Namespace Services
             Return annotation IsNot Nothing AndAlso
                    (Not String.IsNullOrEmpty(annotation.MaskId) OrElse annotation.ClipToLayerBelow)
         End Function
+
+        ' Die Maske folgt ihrer Ebene WAEHREND EINES ZUGES
+        '
+        ' Eine Ebenenmaske liegt im Quellraum des Bildes. Ihre Daten wandern erst beim Loslassen mit
+        ' (ApplyDeferredGroupMaskTransform im Editor). Bis dahin merkt sich die Ebene ihre Lage vom
+        ' Zugbeginn (ImageAnnotation.MaskAnchor), und der Renderer bildet die Deckung von dort auf die
+        ' aktuelle Lage ab: verschoben, skaliert, gedreht und gespiegelt wie die Ebene selbst.
+
+        ''' <summary>Die Abbildung des Einheitsquadrats auf die gezeichnete Ebene, in derselben
+        ''' Reihenfolge wie <c>DrawAnnotationOnCanvas</c>: ins Rechteck, dann um die Mitte
+        ''' spiegeln, dann um die Mitte drehen.</summary>
+        Private Shared Function AnnotationPlacementMatrix(rect As SKRect, rotationDegrees As Single,
+                                                          flipHorizontal As Boolean, flipVertical As Boolean) As SKMatrix
+            Dim toRect = SKMatrix.CreateTranslation(rect.Left, rect.Top).PreConcat(SKMatrix.CreateScale(rect.Width, rect.Height))
+            Dim flip = SKMatrix.CreateScale(If(flipHorizontal, -1.0F, 1.0F), If(flipVertical, -1.0F, 1.0F), rect.MidX, rect.MidY)
+            Dim rotation = SKMatrix.CreateRotationDegrees(rotationDegrees, rect.MidX, rect.MidY)
+            Return rotation.PreConcat(flip).PreConcat(toRect)
+        End Function
+
+        ''' <summary>Die Abbildung "Maske von der Bezugslage auf die aktuelle Lage" für zwei schon
+        ''' in den Zielraum gebrachte Fassungen derselben Ebene. False: nichts zu tun.</summary>
+        Private Shared Function TryPlacementFollowMatrix(anchored As ImageAnnotation, current As ImageAnnotation,
+                                                         width As Integer, height As Integer,
+                                                         ByRef matrix As SKMatrix) As Boolean
+            matrix = SKMatrix.Identity
+            If anchored Is Nothing OrElse current Is Nothing OrElse width <= 0 OrElse height <= 0 Then Return False
+            Dim kind = If(current.Kind, "Text").Trim().ToLowerInvariant()
+            Dim anchorRect = ComputeAnnotationRect(width, height, kind, anchored)
+            Dim currentRect = ComputeAnnotationRect(width, height, kind, current)
+            If anchorRect.Width <= 0 OrElse anchorRect.Height <= 0 Then Return False
+            Dim anchorMatrix = AnnotationPlacementMatrix(anchorRect, anchored.RotationDegrees, anchored.FlipHorizontal, anchored.FlipVertical)
+            Dim currentMatrix = AnnotationPlacementMatrix(currentRect, current.RotationDegrees, current.FlipHorizontal, current.FlipVertical)
+            Dim inverse As SKMatrix
+            If Not anchorMatrix.TryInvert(inverse) Then Return False
+            matrix = currentMatrix.PreConcat(inverse)
+            Return Not matrix.IsIdentity
+        End Function
+
+        ''' <summary>Die Abbildung im AUSGABERAUM des Renderers, also nach der Geometrie. Beide
+        ''' Lagen gehen durch <see cref="TransformAnnotationForGeometry"/>, denselben Weg wie das
+        ''' gezeichnete Objekt.</summary>
+        Friend Shared Function TryMaskFollowMatrix(annotation As ImageAnnotation, adj As ImageAdjustments,
+                                                   outputWidth As Integer, outputHeight As Integer,
+                                                   ByRef matrix As SKMatrix) As Boolean
+            matrix = SKMatrix.Identity
+            If annotation Is Nothing OrElse annotation.MaskAnchor Is Nothing OrElse annotation.MaskAnchor.Matches(annotation) Then Return False
+            Dim anchored = annotation.Clone()
+            annotation.MaskAnchor.ApplyTo(anchored)
+            Dim current = TransformAnnotationForGeometry(annotation, adj, outputWidth, outputHeight)
+            Dim anchoredOut = TransformAnnotationForGeometry(anchored, adj, outputWidth, outputHeight)
+            Return TryPlacementFollowMatrix(anchoredOut, current, outputWidth, outputHeight, matrix)
+        End Function
+
+        ''' <summary>Eine Deckung (ein Byte je Bildpunkt) durch die Abbildung schicken. Am Rand wird
+        ''' der Randwert fortgesetzt: was vom Objekt vorher außerhalb des Bildes lag, hatte keine
+        ''' gespeicherte Deckung, und der nächste bekannte Wert ist die ehrlichste Schätzung - bei
+        ''' einer umgekehrten Maske die volle Deckung statt eines Lochs.</summary>
+        Private Shared Function TransformCoverage(coverage As Byte(), width As Integer, height As Integer, matrix As SKMatrix) As Byte()
+            Using source = New SKBitmap(width, height, SKColorType.Alpha8, SKAlphaType.Premul)
+                Dim sourceStride = source.RowBytes
+                For y = 0 To height - 1
+                    Marshal.Copy(coverage, y * width, IntPtr.Add(source.GetPixels(), y * sourceStride), width)
+                Next
+                Using image = SKImage.FromBitmap(source)
+                    Using target = New SKBitmap(width, height, SKColorType.Alpha8, SKAlphaType.Premul)
+                        Using canvas = New SKCanvas(target)
+                            canvas.Clear(SKColors.Transparent)
+                            Using shader = image.ToShader(SKShaderTileMode.Clamp, SKShaderTileMode.Clamp,
+                                                          New SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.None), matrix)
+                                Using paint = New SKPaint With {.Shader = shader, .BlendMode = SKBlendMode.Src}
+                                    canvas.DrawRect(0, 0, width, height, paint)
+                                End Using
+                            End Using
+                        End Using
+                        Dim result = New Byte(width * height - 1) {}
+                        Dim targetStride = target.RowBytes
+                        For y = 0 To height - 1
+                            Marshal.Copy(IntPtr.Add(target.GetPixels(), y * targetStride), result, y * width, width)
+                        Next
+                        Return result
+                    End Using
+                End Using
+            End Using
+        End Function
+
+        ''' <summary>Die Deckung einer Objektmaske, übertragen auf die aktuelle Lage der Ebene. Im
+        ''' selben Zwischenspeicher wie die feste Deckung, mit der Abbildung im Schlüssel: beim Ziehen
+        ''' rechnet jeder Region-Patch dieselbe Lage an, und die Übertragung kostet bei großen
+        ''' Bildern mehrere Millisekunden.</summary>
+        Private Shared Function GetFollowedMaskCoverage(maskData As ImageMask, geometry As ImageAdjustments,
+                                                        targetW As Integer, targetH As Integer, matrix As SKMatrix) As Byte()
+            Dim full = GetAnnotationMaskCoverage(maskData, geometry, targetW, targetH)
+            If full Is Nothing Then Return Nothing
+            Dim values = matrix.Values
+            Dim key = String.Join("|", "follow", MaskFingerprint(maskData), MaskGeometryKey(geometry), targetW, targetH,
+                                  String.Join(",", values.Select(Function(v) v.ToString("R", Globalization.CultureInfo.InvariantCulture))))
+            SyncLock _maskCoverageLock
+                For Each entry In _maskCoverageCache
+                    If String.Equals(entry.Key, key, StringComparison.Ordinal) Then
+                        _maskCoverageClock += 1
+                        entry.LastUse = _maskCoverageClock
+                        Return entry.Coverage
+                    End If
+                Next
+            End SyncLock
+
+            Dim followed = TransformCoverage(full, targetW, targetH, matrix)
+
+            SyncLock _maskCoverageLock
+                _maskCoverageClock += 1
+                _maskCoverageCache.Add(New MaskCoverageEntry With {.Key = key, .Coverage = followed, .LastUse = _maskCoverageClock})
+                Dim total As Long = 0
+                For Each entry In _maskCoverageCache
+                    total += entry.Coverage.LongLength
+                Next
+                While _maskCoverageCache.Count > 1 AndAlso total > MaskCoverageBudgetBytes
+                    Dim victim = _maskCoverageCache(0)
+                    For Each entry In _maskCoverageCache
+                        If entry.LastUse < victim.LastUse Then victim = entry
+                    Next
+                    total -= victim.Coverage.LongLength
+                    _maskCoverageCache.Remove(victim)
+                End While
+            End SyncLock
+            Return followed
+        End Function
+
 
         ''' <summary>Pipeline-Eingangsmaße, mit denen das Rastern einer Maske genau in der
         ''' angeforderten Ausgabegröße landet.

@@ -6186,8 +6186,8 @@
   <data name="Anwenden_abgebrochen_das_Bild_ist_unver_ndert_a6a00426" xml:space="preserve">
     <value>Toepassen afgebroken; de afbeelding is ongewijzigd</value>
   </data>
-  <data name="Abbrechen_ESC_Das_Entrauschen_steigt_an_der_n_ch_4e3132fa" xml:space="preserve">
-    <value>Afbreken (ESC). Het ontruisen stopt bij de volgende tegel, het verwijderen na zijn doorloop; de afbeelding blijft daarbij ongewijzigd.</value>
+  <data name="Abbrechen_ESC_Entrauschen_und_Hochskalieren_stei_6b560a31" xml:space="preserve">
+    <value>Afbreken (ESC). Ontruisen en opschalen stoppen bij de volgende tegel, het verwijderen na zijn doorloop; de afbeelding blijft daarbij ongewijzigd.</value>
   </data>
   <data name="Hochskalieren_mit_Modell_36fbab7e" xml:space="preserve">
     <value>Opschalen met een model</value>
@@ -8532,5 +8532,14 @@
   </data>
   <data name="Alle_Presets_aus_der_Liste_entfernen_9ec2886a" xml:space="preserve">
     <value>Alle presets uit de lijst verwijderen</value>
+  </data>
+  <data name="Eingef_gtes_Bild_9d1262b8" xml:space="preserve">
+    <value>Geplakte afbeelding</value>
+  </data>
+  <data name="Bild_eingef_gt_9190b1be" xml:space="preserve">
+    <value>Afbeelding geplakt</value>
+  </data>
+  <data name="Die_kopierte_Datei_gibt_es_nicht_mehr_f41f8442" xml:space="preserve">
+    <value>Het gekopieerde bestand bestaat niet meer</value>
   </data>
 </root>

@@ -6183,8 +6183,8 @@
   <data name="Anwenden_abgebrochen_das_Bild_ist_unver_ndert_a6a00426" xml:space="preserve">
     <value>Penerapan dibatalkan - gambar tidak berubah</value>
   </data>
-  <data name="Abbrechen_ESC_Das_Entrauschen_steigt_an_der_n_ch_4e3132fa" xml:space="preserve">
-    <value>Batal (ESC). Penghilangan derau berhenti pada ubin berikutnya, penghapusan setelah proses itu selesai; gambar tetap tidak berubah pada kedua kasus.</value>
+  <data name="Abbrechen_ESC_Entrauschen_und_Hochskalieren_stei_6b560a31" xml:space="preserve">
+    <value>Batal (ESC). Penghilangan derau dan pembesaran berhenti pada ubin berikutnya, penghapusan setelah proses itu selesai; gambar tetap tidak berubah dalam semua kasus.</value>
   </data>
   <data name="Hochskalieren_mit_Modell_36fbab7e" xml:space="preserve">
     <value>Perbesar dengan sebuah model</value>
@@ -8536,5 +8536,14 @@
   </data>
   <data name="Alle_Presets_aus_der_Liste_entfernen_9ec2886a" xml:space="preserve">
     <value>Hapus semua preset dari daftar</value>
+  </data>
+  <data name="Eingef_gtes_Bild_9d1262b8" xml:space="preserve">
+    <value>Gambar yang ditempel</value>
+  </data>
+  <data name="Bild_eingef_gt_9190b1be" xml:space="preserve">
+    <value>Gambar ditempel</value>
+  </data>
+  <data name="Die_kopierte_Datei_gibt_es_nicht_mehr_f41f8442" xml:space="preserve">
+    <value>Berkas yang disalin sudah tidak ada</value>
   </data>
 </root>

@@ -6188,8 +6188,8 @@
   <data name="Anwenden_abgebrochen_das_Bild_ist_unver_ndert_a6a00426" xml:space="preserve">
     <value>Aplicación cancelada: la foto no ha cambiado</value>
   </data>
-  <data name="Abbrechen_ESC_Das_Entrauschen_steigt_an_der_n_ch_4e3132fa" xml:space="preserve">
-    <value>Cancelar (ESC). La reducción de ruido se detiene en el siguiente mosaico y la eliminación tras su pasada; en ambos casos la foto no cambia.</value>
+  <data name="Abbrechen_ESC_Entrauschen_und_Hochskalieren_stei_6b560a31" xml:space="preserve">
+    <value>Cancelar (ESC). La reducción de ruido y el escalado se detienen en el siguiente mosaico y la eliminación tras su pasada; en todos los casos la foto no cambia.</value>
   </data>
   <data name="Hochskalieren_mit_Modell_36fbab7e" xml:space="preserve">
     <value>Escalar con un modelo</value>
@@ -8492,5 +8492,14 @@
   </data>
   <data name="Alle_Presets_aus_der_Liste_entfernen_9ec2886a" xml:space="preserve">
     <value>Quitar todos los ajustes de la lista</value>
+  </data>
+  <data name="Eingef_gtes_Bild_9d1262b8" xml:space="preserve">
+    <value>Imagen pegada</value>
+  </data>
+  <data name="Bild_eingef_gt_9190b1be" xml:space="preserve">
+    <value>Imagen pegada</value>
+  </data>
+  <data name="Die_kopierte_Datei_gibt_es_nicht_mehr_f41f8442" xml:space="preserve">
+    <value>El archivo copiado ya no existe</value>
   </data>
 </root>

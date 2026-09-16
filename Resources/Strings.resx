@@ -6186,8 +6186,8 @@
   <data name="Anwenden_abgebrochen_das_Bild_ist_unver_ndert_a6a00426" xml:space="preserve">
     <value>Applying cancelled - the picture is unchanged</value>
   </data>
-  <data name="Abbrechen_ESC_Das_Entrauschen_steigt_an_der_n_ch_4e3132fa" xml:space="preserve">
-    <value>Cancel (ESC). Denoising stops at the next tile, removal after its run - the picture stays unchanged either way.</value>
+  <data name="Abbrechen_ESC_Entrauschen_und_Hochskalieren_stei_6b560a31" xml:space="preserve">
+    <value>Cancel (ESC). Denoising and upscaling stop at the next tile, removal after its run - the picture stays unchanged either way.</value>
   </data>
   <data name="Hochskalieren_mit_Modell_36fbab7e" xml:space="preserve">
     <value>Upscale with a model</value>
@@ -8507,5 +8507,14 @@
   </data>
   <data name="Alle_Presets_aus_der_Liste_entfernen_9ec2886a" xml:space="preserve">
     <value>Remove all presets from the list</value>
+  </data>
+  <data name="Eingef_gtes_Bild_9d1262b8" xml:space="preserve">
+    <value>Pasted image</value>
+  </data>
+  <data name="Bild_eingef_gt_9190b1be" xml:space="preserve">
+    <value>Image pasted</value>
+  </data>
+  <data name="Die_kopierte_Datei_gibt_es_nicht_mehr_f41f8442" xml:space="preserve">
+    <value>The copied file no longer exists</value>
   </data>
 </root>

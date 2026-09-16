@@ -6188,8 +6188,8 @@
   <data name="Anwenden_abgebrochen_das_Bild_ist_unver_ndert_a6a00426" xml:space="preserve">
     <value>Application annulée - la photo est inchangée</value>
   </data>
-  <data name="Abbrechen_ESC_Das_Entrauschen_steigt_an_der_n_ch_4e3132fa" xml:space="preserve">
-    <value>Annuler (ÉCHAP). Le débruitage s'arrête à la tuile suivante, la suppression après son passage - dans les deux cas la photo reste inchangée.</value>
+  <data name="Abbrechen_ESC_Entrauschen_und_Hochskalieren_stei_6b560a31" xml:space="preserve">
+    <value>Annuler (ÉCHAP). Le débruitage et l'agrandissement s'arrêtent à la tuile suivante, la suppression après son passage - dans tous les cas la photo reste inchangée.</value>
   </data>
   <data name="Hochskalieren_mit_Modell_36fbab7e" xml:space="preserve">
     <value>Mise à l'échelle avec un modèle</value>
@@ -8492,5 +8492,14 @@
   </data>
   <data name="Alle_Presets_aus_der_Liste_entfernen_9ec2886a" xml:space="preserve">
     <value>Retirer tous les préréglages de la liste</value>
+  </data>
+  <data name="Eingef_gtes_Bild_9d1262b8" xml:space="preserve">
+    <value>Image collée</value>
+  </data>
+  <data name="Bild_eingef_gt_9190b1be" xml:space="preserve">
+    <value>Image collée</value>
+  </data>
+  <data name="Die_kopierte_Datei_gibt_es_nicht_mehr_f41f8442" xml:space="preserve">
+    <value>Le fichier copié n'existe plus</value>
   </data>
 </root>

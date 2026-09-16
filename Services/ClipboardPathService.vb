@@ -31,7 +31,13 @@ Namespace Services
         ''' Wird beim internen Lesen zuerst geprüft, damit Kopieren/Einfügen von Immich-Items round-trippt.
         Private Shared ReadOnly InternalPathsFormat As DataFormat(Of String) = DataFormat.CreateStringApplicationFormat("FerrumPixInternalPaths")
 
-        Public Shared Async Function CopyPathsAsync(clipboard As IClipboard, storageProvider As IStorageProvider, paths As IEnumerable(Of String), cut As Boolean) As Task
+        ''' <param name="includeImage">Legt zu EINER Bilddatei auch ihre Bilddaten in die
+        ''' Zwischenablage. Für die Zwischendateien des Editors (kopierte Auswahl, kopiertes Bild):
+        ''' sie verschwinden beim Bildwechsel und beim Beenden, und ein Verlauf der Zwischenablage
+        ''' behielt danach nur die Adresse einer Datei, die es nicht mehr gab (Nutzerbefund). Mit den
+        ''' Bilddaten bleibt das Bild einfügbar, auch in anderen Programmen.</param>
+        Public Shared Async Function CopyPathsAsync(clipboard As IClipboard, storageProvider As IStorageProvider, paths As IEnumerable(Of String), cut As Boolean,
+                                                    Optional includeImage As Boolean = False) As Task
             If clipboard Is Nothing OrElse paths Is Nothing Then Return
 
             Dim validPaths = paths.
@@ -50,6 +56,15 @@ Namespace Services
                     firstItem.SetText(uriList)
                     firstItem.Set(CutFormat, If(cut, "1", "0"))
                     firstItem.Set(InternalPathsFormat, rawList)
+                    If includeImage AndAlso localPaths.Count = 1 Then
+                        Try
+                            ' NICHT freigeben: die Zwischenablage liest die Daten erst, wenn ein
+                            ' Programm sie anfragt.
+                            firstItem.Set(DataFormat.Bitmap, New Avalonia.Media.Imaging.Bitmap(localPaths(0)))
+                        Catch ex As Exception
+                            DiagnosticLogService.LogException("Clipboard.CopyImage", ex)
+                        End Try
+                    End If
                 End Sub)
 
             If transfer.Items.Count = 0 Then
@@ -229,6 +244,17 @@ Namespace Services
             Catch
                 Return Nothing
             End Try
+        End Function
+
+        ''' <summary>Besteht der Text NUR aus Datei-Adressen (file://)? Dann ist er ein Verweis und
+        ''' kein Text: eingefügt würde er zu einem Textobjekt mit einer Adresse darin.</summary>
+        Public Shared Function IsFileReferenceText(text As String) As Boolean
+            If String.IsNullOrWhiteSpace(text) Then Return False
+            Dim lines = text.Split({ControlChars.Cr, ControlChars.Lf}, StringSplitOptions.RemoveEmptyEntries).
+                Select(Function(l) l.Trim()).
+                Where(Function(l) l.Length > 0 AndAlso Not l.StartsWith("#")).ToList()
+            Return lines.Count > 0 AndAlso
+                   lines.All(Function(l) l.StartsWith("file://", StringComparison.OrdinalIgnoreCase))
         End Function
 
         Private Shared Function ParsePathText(text As String) As ClipboardPathData

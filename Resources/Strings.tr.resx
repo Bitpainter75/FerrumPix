@@ -6183,8 +6183,8 @@
   <data name="Anwenden_abgebrochen_das_Bild_ist_unver_ndert_a6a00426" xml:space="preserve">
     <value>Uygulama iptal edildi - fotoğraf değişmedi</value>
   </data>
-  <data name="Abbrechen_ESC_Das_Entrauschen_steigt_an_der_n_ch_4e3132fa" xml:space="preserve">
-    <value>İptal (ESC). Gürültü giderme bir sonraki döşemede, kaldırma ise kendi işi bittikten sonra durur; fotoğraf her iki durumda da değişmeden kalır.</value>
+  <data name="Abbrechen_ESC_Entrauschen_und_Hochskalieren_stei_6b560a31" xml:space="preserve">
+    <value>İptal (ESC). Gürültü giderme ve büyütme bir sonraki döşemede, kaldırma ise kendi işi bittikten sonra durur; fotoğraf her durumda değişmeden kalır.</value>
   </data>
   <data name="Hochskalieren_mit_Modell_36fbab7e" xml:space="preserve">
     <value>Bir modelle büyüt</value>
@@ -8536,5 +8536,14 @@
   </data>
   <data name="Alle_Presets_aus_der_Liste_entfernen_9ec2886a" xml:space="preserve">
     <value>Tüm ön ayarları listeden kaldır</value>
+  </data>
+  <data name="Eingef_gtes_Bild_9d1262b8" xml:space="preserve">
+    <value>Yapıştırılan görüntü</value>
+  </data>
+  <data name="Bild_eingef_gt_9190b1be" xml:space="preserve">
+    <value>Görüntü yapıştırıldı</value>
+  </data>
+  <data name="Die_kopierte_Datei_gibt_es_nicht_mehr_f41f8442" xml:space="preserve">
+    <value>Kopyalanan dosya artık yok</value>
   </data>
 </root>

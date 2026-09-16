@@ -235,6 +235,52 @@ Namespace Services
         End Function
     End Class
 
+    ''' <summary>Die Lage einer Ebene: Rechteck, Drehung und Spiegelung im Quellraum. Merkt, wo eine
+    ''' Ebene zu Beginn eines Zuges stand (siehe <see cref="ImageAnnotation.MaskAnchor"/>).</summary>
+    Public NotInheritable Class AnnotationPlacement
+        Public Property XPixels As Single
+        Public Property YPixels As Single
+        Public Property WidthPixels As Single
+        Public Property HeightPixels As Single
+        Public Property RotationDegrees As Single
+        Public Property FlipHorizontal As Boolean
+        Public Property FlipVertical As Boolean
+
+        Public Shared Function FromAnnotation(annotation As ImageAnnotation) As AnnotationPlacement
+            If annotation Is Nothing Then Return Nothing
+            Return New AnnotationPlacement With {
+                .XPixels = annotation.XPixels, .YPixels = annotation.YPixels,
+                .WidthPixels = annotation.WidthPixels, .HeightPixels = annotation.HeightPixels,
+                .RotationDegrees = annotation.RotationDegrees,
+                .FlipHorizontal = annotation.FlipHorizontal, .FlipVertical = annotation.FlipVertical}
+        End Function
+
+        ''' <summary>Steht die Ebene noch genau hier? Eine Toleranz von einem Tausendstel fängt die
+        ''' Rundung beim Umrechnen ab.</summary>
+        Public Function Matches(annotation As ImageAnnotation) As Boolean
+            If annotation Is Nothing Then Return False
+            Return Math.Abs(XPixels - annotation.XPixels) < 0.001F AndAlso
+                   Math.Abs(YPixels - annotation.YPixels) < 0.001F AndAlso
+                   Math.Abs(WidthPixels - annotation.WidthPixels) < 0.001F AndAlso
+                   Math.Abs(HeightPixels - annotation.HeightPixels) < 0.001F AndAlso
+                   Math.Abs(RotationDegrees - annotation.RotationDegrees) < 0.001F AndAlso
+                   FlipHorizontal = annotation.FlipHorizontal AndAlso
+                   FlipVertical = annotation.FlipVertical
+        End Function
+
+        Public Sub ApplyTo(annotation As ImageAnnotation)
+            If annotation Is Nothing Then Return
+            annotation.XPixels = XPixels : annotation.YPixels = YPixels
+            annotation.WidthPixels = WidthPixels : annotation.HeightPixels = HeightPixels
+            annotation.RotationDegrees = RotationDegrees
+            annotation.FlipHorizontal = FlipHorizontal : annotation.FlipVertical = FlipVertical
+        End Sub
+
+        Public Function Clone() As AnnotationPlacement
+            Return DirectCast(MemberwiseClone(), AnnotationPlacement)
+        End Function
+    End Class
+
     Public Class ImageAnnotation
         Implements INotifyPropertyChanged
 
@@ -285,6 +331,8 @@ Namespace Services
         Private _groupId As String = ""
         ' Ebenenmaske des Objekts (leer = keine). Siehe MaskId.
         Private _maskId As String = ""
+        ' Lage der Ebene bei Zugbeginn, nur waehrend eines Zuges gesetzt. Siehe MaskAnchor.
+        Private _maskAnchor As AnnotationPlacement = Nothing
         ' Auf die Deckung der Ebene darunter beschränkt? Siehe ClipToLayerBelow.
         Private _clipToLayerBelow As Boolean = False
         ' Stützpunkte eines freien Pfades (leer = keiner). Siehe PathPoints.
@@ -457,6 +505,24 @@ Namespace Services
             End Get
             Set(value As String)
                 SetField(_maskId, If(value, ""))
+            End Set
+        End Property
+
+        ''' <summary>Wo die Ebene zu Beginn des laufenden ZUGES stand. Nothing außerhalb eines Zuges -
+        ''' der Vermerk lebt nur zwischen Anfassen und Loslassen und wird nicht gespeichert.
+        '''
+        ''' Die Maskendaten wandern erst beim Loslassen mit (ApplyDeferredGroupMaskTransform), denn
+        ''' ein gemaltes Raster je Mausbewegung neu zu rastern wäre zu teuer. Bis dahin überträgt der
+        ''' Renderer die Deckung von dieser Lage auf die aktuelle (<c>ImageProcessor.TryMaskFollowMatrix</c>).
+        ''' Vorher blieb eine gemalte Maske während des Zuges stehen und stanzte ihr Loch in alles,
+        ''' was man darüberzog (Nutzerbefund 2026-09-16).</summary>
+        <System.Text.Json.Serialization.JsonIgnore>
+        Public Property MaskAnchor As AnnotationPlacement
+            Get
+                Return _maskAnchor
+            End Get
+            Set(value As AnnotationPlacement)
+                SetField(_maskAnchor, value)
             End Set
         End Property
 
@@ -1233,6 +1299,7 @@ Namespace Services
                 .Id = Id,
                 .GroupId = GroupId,
                 .MaskId = MaskId,
+                .MaskAnchor = MaskAnchor?.Clone(),
                 .ClipToLayerBelow = ClipToLayerBelow,
                 .PathPoints = PathPoints,
                 .PathClosed = PathClosed,

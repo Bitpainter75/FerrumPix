@@ -439,7 +439,11 @@ Namespace Services
             If Not String.IsNullOrEmpty(annotation.MaskId) AndAlso adj.Masks IsNot Nothing Then
                 Dim maskData = adj.Masks.FirstOrDefault(Function(m) m IsNot Nothing AndAlso
                                                             String.Equals(m.Id, annotation.MaskId, StringComparison.Ordinal))
-                Dim full = GetAnnotationMaskCoverage(maskData, adj, sourceWidth, sourceHeight)
+                ' Waehrend eines Zuges FOLGT die Maske der Ebene live - siehe MaskAnchor.
+                Dim follow As SKMatrix
+                Dim full = If(TryMaskFollowMatrix(annotation, adj, sourceWidth, sourceHeight, follow),
+                              GetFollowedMaskCoverage(maskData, adj, sourceWidth, sourceHeight, follow),
+                              GetAnnotationMaskCoverage(maskData, adj, sourceWidth, sourceHeight))
                 If full IsNot Nothing Then
                     If offsetX = 0 AndAlso offsetY = 0 AndAlso layerWidth = sourceWidth AndAlso layerHeight = sourceHeight Then
                         ' Vollrender: das Raster passt schon, es wird nur GELESEN.

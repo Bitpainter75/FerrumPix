@@ -322,14 +322,13 @@ Namespace ViewModels
             Return New AnnotationConfinePlan With {.Rect = hull, .ImagePath = imagePath, .Placement = placement}
         End Function
 
-        ''' <summary>RADIEREN AUF EINER EBENE GEHT IN IHRE EBENENMASKE, nicht in ihre Bildpunkte.
-        ''' True heißt: hier behandelt.
+        ''' <summary>RADIEREN AUF EINER EBENE OHNE RASTER geht in ihre Ebenenmaske. True heißt: hier
+        ''' behandelt.
         '''
-        ''' Das ist der Unterschied zwischen "weg" und "nicht mehr zu sehen". Die Pixel bleiben, die
-        ''' Maske nimmt die Deckung: der Zug lässt sich mit dem Maskenpinsel zurückholen, die Maske
-        ''' verschieben, abstufen, umkehren oder ganz entfernen. Und es geht auf JEDER Ebene, die eine
-        ''' Maske tragen kann - auch auf Text, Formen und SVG, die gar kein Raster haben und in die
-        ''' man deshalb bisher nicht radieren konnte.
+        ''' Nur für Text, Formen und SVG: sie haben keine Bildpunkte, und ohne Maske liesse sich dort
+        ''' gar nicht radieren. Eine Ebene MIT Bild radiert seit dem 2026-09-16 direkt in ihre
+        ''' Bildpunkte (siehe AddBrushStroke) - in der Maske blieben die alten Pixel stehen und
+        ''' blitzten beim Verschieben wieder auf.
         '''
         ''' Gebaut aus vorhandenen Teilen, keine neue Rechnung: der Strich wird zum weichen
         ''' Alpha8-Stempel wie beim Maskenpinsel, über denselben Weg wie eine eingefrorene Auswahl in
@@ -523,6 +522,9 @@ Namespace ViewModels
             If plan Is Nothing Then Return False
             Dim mask = BuildAnnotationConfineMask(plan)
             If mask Is Nothing Then Return False
+            ' Verrechnet sich die Form mit einer vorhandenen Auswahl, gehört das Ergebnis nicht mehr
+            ' allein zu dieser Ebene - dann merkt es sich keine Herkunft.
+            Dim replacesSelection = Not _hasActiveSelection OrElse _selectionCombineMode = "New"
             Try
                 ' Als AUSWAHL, nicht als Maske: es sind Laufameisen um die Form der Ebene, und sie
                 ' verrechnet sich mit dem eingestellten Verknüpfungsmodus wie jede andere Auswahl.
@@ -530,6 +532,9 @@ Namespace ViewModels
             Finally
                 mask.Dispose()
             End Try
+            ' ERST NACH dem Übernehmen: jede Änderung an der Auswahlmaske vergisst die Herkunft.
+            _selectionSourceAnnotationId = If(replacesSelection AndAlso IsPaintableImageAnnotation(annotation),
+                                              annotation.Id, "")
 
             ' DANACH GEHÖRT DIE BÜHNE DER AUSWAHL, NICHT DER EBENE. Die Ebene wird dafür abgewählt und
             ' der Editor stellt auf Auswahl/Verschieben:
@@ -546,6 +551,89 @@ Namespace ViewModels
             ' Rueckgaengig-Punkt (ApplySelectionCandidate sichert nichts), es gaebe also keinen
             ' Schritt, den der Name meinen koennte.
             Return True
+        End Function
+
+        ''' <summary>Die Bildebene, aus der die aktive Auswahl geladen wurde (siehe
+        ''' <see cref="LoadSelectionFromAnnotationAlpha"/>), sonst leer. Nötig, weil das Laden die
+        ''' Ebene abwählt: ohne den Vermerk wüsste das Kopieren danach nicht mehr, woher die Auswahl
+        ''' kam. Jede andere Änderung an der Auswahlmaske räumt ihn (SetSelectionMaskData,
+        ''' ClearSelectionMask).</summary>
+        Private _selectionSourceAnnotationId As String = ""
+
+        ''' <summary>Aus welcher Ebene die Bildpunkte einer Auswahl kommen: die markierte Bildebene,
+        ''' sonst die, aus der die Auswahl geladen wurde. Nothing heißt: aus dem ganzen Bild.
+        '''
+        ''' Kopieren und Löschen fragen HIER, damit Ausschneiden (erst kopieren, dann löschen) nie
+        ''' aus der einen Ebene kopiert und in einer anderen löscht.</summary>
+        Private Function SelectionPixelSourceAnnotation() As ImageAnnotation
+            Dim marked = FindStrokeTargetImageAnnotation()
+            If marked IsNot Nothing Then Return marked
+            If String.IsNullOrEmpty(_selectionSourceAnnotationId) OrElse Not _hasActiveSelection Then Return Nothing
+            Dim source = _annotations.FirstOrDefault(Function(a) a IsNot Nothing AndAlso a.Id = _selectionSourceAnnotationId)
+            Return If(IsPaintableImageAnnotation(source), source, Nothing)
+        End Function
+
+        ''' <summary>Das Rezept, aus dem eine Auswahl ausgeschnitten wird. Gehört die Auswahl zu einer
+        ''' Bildebene, bleibt darin NUR diese Ebene, auf durchsichtigem Grund.
+        '''
+        ''' BEFUND: ausgeschnitten wurde immer aus dem fertigen Bild. An den durchsichtigen und
+        ''' halbdurchsichtigen Stellen einer Ebene stand dort schon das Hintergrundbild, und die
+        ''' Kopie trug es mit, obwohl die Auswahl genau der Form der Ebene folgte.
+        '''
+        ''' Gerechnet wird über den vorhandenen Weg für eine ausgeblendete Hintergrundebene, nicht über
+        ''' einen eigenen: Lage, Drehung, Ebenenmaske und eigene Anpassungen der Ebene kommen so von
+        ''' dort, wo sie auch sonst herkommen. Deckkraft und Mischmodus bleiben draußen - kopiert
+        ''' werden die Bildpunkte der Ebene, nicht ihre Verrechnung mit dem, was darunter liegt.
+        ''' Korrekturebenen im Objektstapel ebenso; die übrigen wirken nur auf den Hintergrund, und
+        ''' der fällt weg.</summary>
+        Private Function AdjustmentsForSelectionPixels() As ImageAdjustments
+            Dim adj = GetCurrentAdjustments()
+            Dim source = SelectionPixelSourceAnnotation()
+            If source Is Nothing OrElse adj.Annotations Is Nothing Then Return adj
+            Dim layer = adj.Annotations.FirstOrDefault(Function(a) a IsNot Nothing AndAlso a.Id = source.Id)
+            If layer Is Nothing OrElse Not adj.IsAnnotationRenderVisible(layer) Then Return adj
+
+            layer.Opacity = 100
+            layer.BlendMode = "Normal"
+            ' Die Ebene darunter fehlt hier. Eine Schnittmaske fände keine Basis und nähme der Kopie
+            ' alles weg.
+            layer.ClipToLayerBelow = False
+            adj.Annotations = New List(Of ImageAnnotation) From {layer}
+            If adj.MaskedAdjustmentLayers IsNot Nothing Then
+                adj.MaskedAdjustmentLayers = adj.MaskedAdjustmentLayers.
+                    Where(Function(l) l IsNot Nothing AndAlso String.IsNullOrEmpty(l.StackAboveAnnotationId)).ToList()
+            End If
+            adj.BackgroundHidden = True
+            adj.CanvasBackgroundColor = ""
+            Return adj
+        End Function
+
+        ''' <summary>Die Maske für das Ausschneiden aus einer Ebene. Ist die Auswahl unverändert die
+        ''' FORM DIESER EBENE, kommt eine harte Fassung zurück (jede Deckung über null wird voll),
+        ''' sonst die Maske selbst. <paramref name="ownsResult"/> sagt, ob der Aufrufer sie freigibt.
+        '''
+        ''' Warum: die geladene Form IST der Alphakanal der Ebene, und die Ebene bringt denselben
+        ''' Alphakanal beim Rendern noch einmal mit. Ein Punkt mit halber Deckung käme sonst mit einem
+        ''' Viertel in der Kopie an, und die Kopie wäre blasser als ihr Original.</summary>
+        Private Function SelectionMaskForPixelSource(mask As SKBitmap, ByRef ownsResult As Boolean) As SKBitmap
+            ownsResult = False
+            If mask Is Nothing OrElse String.IsNullOrEmpty(_selectionSourceAnnotationId) Then Return mask
+            Dim source = SelectionPixelSourceAnnotation()
+            If source Is Nothing OrElse source.Id <> _selectionSourceAnnotationId Then Return mask
+
+            Dim solid = New SKBitmap(mask.Width, mask.Height, SKColorType.Alpha8, SKAlphaType.Premul)
+            Dim sourceStride = mask.RowBytes, solidStride = solid.RowBytes
+            Dim sourceRow = New Byte(sourceStride - 1) {}
+            Dim solidRow = New Byte(solidStride - 1) {}
+            For y = 0 To mask.Height - 1
+                Marshal.Copy(IntPtr.Add(mask.GetPixels(), y * sourceStride), sourceRow, 0, sourceStride)
+                For x = 0 To mask.Width - 1
+                    solidRow(x) = If(sourceRow(x) > 0, CByte(255), CByte(0))
+                Next
+                Marshal.Copy(solidRow, 0, IntPtr.Add(solid.GetPixels(), y * solidStride), solidStride)
+            Next
+            ownsResult = True
+            Return solid
         End Function
 
         ''' <summary>Die Hülle der Ebene im Anzeige-Raster: die vier Ecken ihres Bildes hinüber,
@@ -701,7 +789,7 @@ Namespace ViewModels
         ''' Trägt die markierte Ebene kein Bild (Text, Form, SVG) oder ist keine markiert, gibt es
         ''' hier nichts zu löschen und der Aufrufer nimmt seinen bisherigen Weg ins Arbeitsbild.</summary>
         Private Function TryEraseSelectionFromImageAnnotation() As Boolean
-            Dim target = FindStrokeTargetImageAnnotation()
+            Dim target = SelectionPixelSourceAnnotation()
             If target Is Nothing Then Return False
 
             Dim sourcePath = ""

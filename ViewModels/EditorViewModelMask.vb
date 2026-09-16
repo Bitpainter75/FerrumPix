@@ -429,6 +429,8 @@ Namespace ViewModels
         End Property
 
         Private Sub SetSelectionMaskData(mask As SKBitmap, rectPx As SKRectI)
+            ' Eine geänderte Maske gehört nicht mehr sicher zu der Ebene, aus der sie geladen wurde.
+            _selectionSourceAnnotationId = ""
             If _selectionMask IsNot Nothing AndAlso Not Object.ReferenceEquals(_selectionMask, mask) Then _selectionMask.Dispose()
             _selectionMask = mask
             _selectionMaskRect = rectPx
@@ -452,6 +454,7 @@ Namespace ViewModels
         End Sub
 
         Private Sub ClearSelectionMask()
+            _selectionSourceAnnotationId = ""
             _selectionMask?.Dispose()
             _selectionMask = Nothing
             _selectionMaskRect = SKRectI.Empty
