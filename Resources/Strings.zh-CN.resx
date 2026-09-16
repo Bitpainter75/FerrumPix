@@ -8476,4 +8476,19 @@
   <data name="Ohne_ISO_Angabe_5609fdbd" xml:space="preserve">
     <value>无 ISO 信息</value>
   </data>
+  <data name="Sollen_alle_0_LUTs_aus_der_Liste_entfernt_werden_4a3f27cf" xml:space="preserve">
+    <value>要从列表中移除全部 {0} 个 LUT 吗？文件本身会保留。</value>
+  </data>
+  <data name="Sollen_alle_0_XMP_Presets_aus_der_Liste_entfernt_7efdb276" xml:space="preserve">
+    <value>要从列表中移除全部 {0} 个 XMP 预设吗？文件本身会保留。</value>
+  </data>
+  <data name="Alle_Presets_entfernen_efd3f9f0" xml:space="preserve">
+    <value>移除全部预设</value>
+  </data>
+  <data name="Alle_entfernen_7766a618" xml:space="preserve">
+    <value>全部移除</value>
+  </data>
+  <data name="Alle_Presets_aus_der_Liste_entfernen_9ec2886a" xml:space="preserve">
+    <value>从列表中移除全部预设</value>
+  </data>
 </root>

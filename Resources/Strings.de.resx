@@ -8492,4 +8492,19 @@
   <data name="Ohne_ISO_Angabe_5609fdbd" xml:space="preserve">
     <value>Ohne ISO-Angabe</value>
   </data>
+  <data name="Sollen_alle_0_LUTs_aus_der_Liste_entfernt_werden_4a3f27cf" xml:space="preserve">
+    <value>Sollen alle {0} LUTs aus der Liste entfernt werden? Die Dateien selbst bleiben erhalten.</value>
+  </data>
+  <data name="Sollen_alle_0_XMP_Presets_aus_der_Liste_entfernt_7efdb276" xml:space="preserve">
+    <value>Sollen alle {0} XMP-Presets aus der Liste entfernt werden? Die Dateien selbst bleiben erhalten.</value>
+  </data>
+  <data name="Alle_Presets_entfernen_efd3f9f0" xml:space="preserve">
+    <value>Alle Presets entfernen</value>
+  </data>
+  <data name="Alle_entfernen_7766a618" xml:space="preserve">
+    <value>Alle entfernen</value>
+  </data>
+  <data name="Alle_Presets_aus_der_Liste_entfernen_9ec2886a" xml:space="preserve">
+    <value>Alle Presets aus der Liste entfernen</value>
+  </data>
 </root>

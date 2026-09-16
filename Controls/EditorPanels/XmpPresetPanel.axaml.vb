@@ -92,6 +92,17 @@ Namespace Controls.EditorPanels
                 DiagnosticLogService.LogException("XmpPresetPanel.OnRemoveSavedXmpPresetClick", ex)
             End Try
         End Sub
+
+        Public Async Sub OnClearSavedXmpPresetsClick(sender As Object, e As RoutedEventArgs)
+            Try
+                Dim vm = TryCast(DataContext, EditorViewModel)
+                If vm Is Nothing Then Return
+                e.Handled = True
+                Await vm.ConfirmClearSavedPresetsAsync(isLut:=False)
+            Catch ex As Exception
+                DiagnosticLogService.LogException("XmpPresetPanel.OnClearSavedXmpPresetsClick", ex)
+            End Try
+        End Sub
     End Class
 
 End Namespace

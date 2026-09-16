@@ -8518,4 +8518,19 @@
   <data name="Ohne_ISO_Angabe_5609fdbd" xml:space="preserve">
     <value>Bez hodnoty ISO</value>
   </data>
+  <data name="Sollen_alle_0_LUTs_aus_der_Liste_entfernt_werden_4a3f27cf" xml:space="preserve">
+    <value>Odebrat všech {0} LUT ze seznamu? Samotné soubory zůstanou zachovány.</value>
+  </data>
+  <data name="Sollen_alle_0_XMP_Presets_aus_der_Liste_entfernt_7efdb276" xml:space="preserve">
+    <value>Odebrat všech {0} předvoleb XMP ze seznamu? Samotné soubory zůstanou zachovány.</value>
+  </data>
+  <data name="Alle_Presets_entfernen_efd3f9f0" xml:space="preserve">
+    <value>Odebrat všechny předvolby</value>
+  </data>
+  <data name="Alle_entfernen_7766a618" xml:space="preserve">
+    <value>Odebrat vše</value>
+  </data>
+  <data name="Alle_Presets_aus_der_Liste_entfernen_9ec2886a" xml:space="preserve">
+    <value>Odebrat všechny předvolby ze seznamu</value>
+  </data>
 </root>

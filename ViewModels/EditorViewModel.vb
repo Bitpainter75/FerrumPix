@@ -25806,6 +25806,38 @@ Namespace ViewModels
             End If
         End Function
 
+        ''' <summary>Leert die ganze Liste eines Panels nach einer Rückfrage. Wie beim einzelnen
+        ''' Eintrag gehen nur die Verweise weg, keine Datei. Gedacht für den, der einen Ordner voller
+        ''' Presets geladen hat und nicht jede Kachel einzeln wegklicken will.</summary>
+        Public Async Function ConfirmClearSavedPresetsAsync(isLut As Boolean) As Task
+            If _mainVm Is Nothing Then Return
+            Dim count = If(isLut, SavedLutPresets.Count, SavedXmpPresets.Count)
+            If count = 0 Then Return
+
+            ' Zwei ganze Sätze statt eines Satzes mit eingesetzter Art: die Wortstellung ist nicht in
+            ' jeder Sprache dieselbe.
+            Dim message = If(isLut,
+                             LocalizationService.T("Sollen alle {0} LUTs aus der Liste entfernt werden? Die Dateien selbst bleiben erhalten."),
+                             LocalizationService.T("Sollen alle {0} XMP-Presets aus der Liste entfernt werden? Die Dateien selbst bleiben erhalten."))
+            Dim confirmed = Await _mainVm.ShowConfirmAsync(
+                LocalizationService.T("Alle Presets entfernen"),
+                String.Format(message, count),
+                LocalizationService.T("Alle entfernen"), LocalizationService.T("Behalten"))
+            If Not confirmed Then Return
+
+            If isLut Then
+                _lastAppliedLutPresetPath = ""
+                SavedLutPresets.Clear()
+                PersistSavedLutPresets()
+                SyncLastAppliedLutPreset()
+            Else
+                _lastAppliedXmpPresetPath = ""
+                SavedXmpPresets.Clear()
+                PersistSavedXmpPresets()
+                SyncLastAppliedXmpPreset()
+            End If
+        End Function
+
         ''' <summary>Der Weg, den die gespeicherten Preset-Kacheln nehmen. Die Liste steht in den
         ''' Einstellungen, die Dateien liegen irgendwo beim Nutzer - verschiebt oder löscht er eine, zeigt
         ''' die Kachel auf ins Leere. Vorher fiel ein Klick darauf STUMM aus (ApplyXmpPreset/

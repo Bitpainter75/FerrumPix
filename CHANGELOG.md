@@ -36,6 +36,9 @@
 - **Better grouping and comparison.** Grouping by ISO gives each ISO value its own section, and
   pinning a photo for comparison puts the next photo beside it right away.
 
+- **Tidy preset lists in one click.** A small button next to *Load folder* empties the XMP or LUT
+  list in the editor. The preset files themselves stay where they are.
+
 ### Fixes
 
 - The tone curve behaves the way you draw it. A straight curve stays straight, rising points give

@@ -92,6 +92,17 @@ Namespace Controls.EditorPanels
                 DiagnosticLogService.LogException("LutPresetPanel.OnRemoveSavedLutPresetClick", ex)
             End Try
         End Sub
+
+        Public Async Sub OnClearSavedLutPresetsClick(sender As Object, e As RoutedEventArgs)
+            Try
+                Dim vm = TryCast(DataContext, EditorViewModel)
+                If vm Is Nothing Then Return
+                e.Handled = True
+                Await vm.ConfirmClearSavedPresetsAsync(isLut:=True)
+            Catch ex As Exception
+                DiagnosticLogService.LogException("LutPresetPanel.OnClearSavedLutPresetsClick", ex)
+            End Try
+        End Sub
     End Class
 
 End Namespace

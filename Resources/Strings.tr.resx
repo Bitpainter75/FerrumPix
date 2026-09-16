@@ -8522,4 +8522,19 @@
   <data name="Ohne_ISO_Angabe_5609fdbd" xml:space="preserve">
     <value>ISO değeri yok</value>
   </data>
+  <data name="Sollen_alle_0_LUTs_aus_der_Liste_entfernt_werden_4a3f27cf" xml:space="preserve">
+    <value>{0} LUT'un tümü listeden kaldırılsın mı? Dosyaların kendisi korunur.</value>
+  </data>
+  <data name="Sollen_alle_0_XMP_Presets_aus_der_Liste_entfernt_7efdb276" xml:space="preserve">
+    <value>{0} XMP ön ayarının tümü listeden kaldırılsın mı? Dosyaların kendisi korunur.</value>
+  </data>
+  <data name="Alle_Presets_entfernen_efd3f9f0" xml:space="preserve">
+    <value>Tüm ön ayarları kaldır</value>
+  </data>
+  <data name="Alle_entfernen_7766a618" xml:space="preserve">
+    <value>Tümünü kaldır</value>
+  </data>
+  <data name="Alle_Presets_aus_der_Liste_entfernen_9ec2886a" xml:space="preserve">
+    <value>Tüm ön ayarları listeden kaldır</value>
+  </data>
 </root>
