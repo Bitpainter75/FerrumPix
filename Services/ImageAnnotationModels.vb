@@ -515,7 +515,7 @@ Namespace Services
         ''' ein gemaltes Raster je Mausbewegung neu zu rastern wäre zu teuer. Bis dahin überträgt der
         ''' Renderer die Deckung von dieser Lage auf die aktuelle (<c>ImageProcessor.TryMaskFollowMatrix</c>).
         ''' Vorher blieb eine gemalte Maske während des Zuges stehen und stanzte ihr Loch in alles,
-        ''' was man darüberzog (Nutzerbefund 2026-09-16).</summary>
+        ''' was man darüberzog (Nutzerbefund).</summary>
         <System.Text.Json.Serialization.JsonIgnore>
         Public Property MaskAnchor As AnnotationPlacement
             Get

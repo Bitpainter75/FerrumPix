@@ -17085,7 +17085,7 @@ Namespace ViewModels
             ' DIE MASKE FOLGT LIVE. Ihre Daten wandern erst beim Loslassen; bis dahin bildet der
             ' Renderer sie von der Lage bei Zugbeginn auf die aktuelle ab - gemalt wie gerechnet.
             ' Vorher blieb eine gemalte Maske bis zum Loslassen stehen und stanzte ihr Loch in alles,
-            ' was man darüberzog (Nutzerbefund 2026-09-16). Dieselbe Auswahl wie die Nachführung
+            ' was man darüberzog (Nutzerbefund). Dieselbe Auswahl wie die Nachführung
             ' beim Loslassen, sonst folgte live etwas, das danach liegen bleibt.
             If _groupDragBoxAtStart.HasValue Then
                 For Each a In SelectedAnnotations
@@ -22217,7 +22217,7 @@ Namespace ViewModels
             ' RADIEREN AUF EINER EBENE MIT BILD GEHT IN IHRE BILDPUNKTE, genau wie Pinsel und
             ' Retusche: gemerkt wird das Ergebnis, nicht der Zug. Früher ging der Radierer auf jeder
             ' Ebene in eine Ebenenmaske; die Pixel blieben darunter stehen und blitzten beim
-            ' Verschieben der Ebene kurz wieder auf (Nutzerbefund 2026-09-16). Wer Deckung
+            ' Verschieben der Ebene kurz wieder auf (Nutzerbefund). Wer Deckung
             ' zurückholbar wegnehmen will, legt dafür bewusst eine Maske an.
             '
             ' In die EBENENMASKE geht der Radierer nur noch bei Ebenen OHNE eigenes Raster - Text,
