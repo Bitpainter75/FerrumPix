@@ -1440,43 +1440,6 @@
 
                         <Grid ColumnDefinitions="*,Auto">
                             <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
-                                <TextBlock Text="Metadaten beim Speichern übernehmen" FontSize="{DynamicResource FP.Font.Body}"/>
-                                <TextBlock Text="Übernimmt EXIF/XMP beim Speichern unter, Exportieren und Konvertieren." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
-                            </StackPanel>
-                            <ToggleSwitch Grid.Column="1"
-                                          IsChecked="{Binding PreserveMetadataOnSave}"
-                                          OnContent=""
-                                          OffContent=""
-                                          VerticalAlignment="Center"/>
-                        </Grid>
-
-                        <Grid ColumnDefinitions="*,Auto">
-                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
-                                <TextBlock Text="XMP-Katalogdaten synchronisieren" FontSize="{DynamicResource FP.Font.Body}"/>
-                                <TextBlock Text="Schreibt Bewertung, Farb-Label und Stichworte zusätzlich in ein XMP-Sidecar, damit andere Programme sie sehen. Die .fpxmp-Bearbeitung bleibt unberührt." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
-                            </StackPanel>
-                            <ToggleSwitch Grid.Column="1"
-                                          IsChecked="{Binding SyncCatalogToXmp}"
-                                          OnContent=""
-                                          OffContent=""
-                                          VerticalAlignment="Center"/>
-                        </Grid>
-
-                        <Grid ColumnDefinitions="*,Auto">
-                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
-                                <TextBlock Text="Fehlende XMP-Sidecars anlegen" FontSize="{DynamicResource FP.Font.Body}"/>
-                                <TextBlock Text="Legt beim Synchronisieren auch neue .xmp-Dateien an, wenn noch keine existiert." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
-                            </StackPanel>
-                            <ToggleSwitch Grid.Column="1"
-                                          IsChecked="{Binding CreateXmpSidecarIfMissing}"
-                                          IsEnabled="{Binding SyncCatalogToXmp}"
-                                          OnContent=""
-                                          OffContent=""
-                                          VerticalAlignment="Center"/>
-                        </Grid>
-
-                        <Grid ColumnDefinitions="*,Auto">
-                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
                                 <TextBlock Text="Lineale im Editor anzeigen" FontSize="{DynamicResource FP.Font.Body}"/>
                                 <TextBlock Text="Blendet die Pixel-Lineale am oberen und linken Rand der Vorschau ein." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </StackPanel>
@@ -2206,6 +2169,46 @@
                             <TextBlock Text="Katalog" FontSize="{DynamicResource FP.Font.Title}" FontWeight="SemiBold"/>
                             <TextBlock Text="Welche Ordner FerrumPix kennt und was es über sie gespeichert hat." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                         </StackPanel>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Metadaten beim Speichern übernehmen" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Übernimmt EXIF/XMP beim Speichern unter, Exportieren und Konvertieren." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1"
+                                          IsChecked="{Binding PreserveMetadataOnSave}"
+                                          OnContent=""
+                                          OffContent=""
+                                          VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <!-- XMP trägt Katalogangaben in andere Programme hinaus. Es gehört deshalb
+                             zum Katalog und nicht zum Editor-Speichern; .fpxmp-Rezepte bleiben
+                             davon weiterhin ausdrücklich getrennt. -->
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="XMP-Katalogdaten synchronisieren" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Schreibt Bewertung, Farb-Label und Stichworte zusätzlich in ein XMP-Sidecar, damit andere Programme sie sehen. Die .fpxmp-Bearbeitung bleibt unberührt." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1"
+                                          IsChecked="{Binding SyncCatalogToXmp}"
+                                          OnContent=""
+                                          OffContent=""
+                                          VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Fehlende XMP-Sidecars anlegen" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Legt beim Synchronisieren auch neue .xmp-Dateien an, wenn noch keine existiert." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1"
+                                          IsChecked="{Binding CreateXmpSidecarIfMissing}"
+                                          IsEnabled="{Binding SyncCatalogToXmp}"
+                                          OnContent=""
+                                          OffContent=""
+                                          VerticalAlignment="Center"/>
+                        </Grid>
 
                         <!-- Katalogindex. Bisher entstanden Katalogeintrag und Vorschaubild erst
                              beim Ansehen eines Ordners; wer seinen Fotobestand hier einträgt, hat

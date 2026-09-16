@@ -8503,4 +8503,11 @@
   <data name="Aufnahmeort_f_r_0_von_1_Bildern_aus_der_Aufzeich_91ffd8fa" xml:space="preserve">
     <value>{1} fotoğraftan {0} tanesine kayıttan konum atandı</value>
   </data>
+  <data name="Namensvorlage_f_r_Speichern_unter_1eacdd58" xml:space="preserve"><value>Farklı kaydet için ad şablonu</value></data>
+  <data name="Vorschlag_f_r_bearbeitete_Kopien_Platzhalter_wie_916802d1" xml:space="preserve"><value>Düzenlenmiş kopyalar için önerilen ad. Toplu yeniden adlandırmayla aynı yer tutucular: {name}, ###, {date:yyyyMMdd}, {datetaken:yyyyMMdd_HHmmss}, {camera}, {iso}, {aperture}, {focal}, {width}, {height}.</value></data>
+  <data name="Belichtungskorrektur_84d641f1" xml:space="preserve"><value>Pozlama telafisi</value></data>
+  <data name="Alle_Bearbeitungen_zur_cksetzen_49aead11" xml:space="preserve"><value>Tüm düzenlemeleri sıfırla</value></data>
+  <data name="Alle_Bildbearbeitungen_dieses_Dokuments_werden_z_049fe175" xml:space="preserve"><value>Bu belgedeki tüm düzenlemeler sıfırlanacak: kaydırıcılar, kırpma, rötuş, maskeler ve katmanlar. Özgün dosya değişmeden kalır. Kaydedilmiş bir sidecar dosyası ancak daha sonra kaydettiğinizde üzerine yazılır.</value></data>
+  <data name="Alles_zur_cksetzen_b07820f6" xml:space="preserve"><value>Tümünü sıfırla</value></data>
+  <data name="Alle_Bearbeitungen_zur_ckgesetzt_e21f2329" xml:space="preserve"><value>Tüm düzenlemeler sıfırlandı</value></data>
 </root>

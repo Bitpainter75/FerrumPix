@@ -8503,4 +8503,11 @@
   <data name="Aufnahmeort_f_r_0_von_1_Bildern_aus_der_Aufzeich_91ffd8fa" xml:space="preserve">
     <value>{1} में से {0} तस्वीरों के लिए ट्रैक से स्थान सेट किया गया</value>
   </data>
+  <data name="Namensvorlage_f_r_Speichern_unter_1eacdd58" xml:space="preserve"><value>इस रूप में सहेजें के लिए नाम टेम्पलेट</value></data>
+  <data name="Vorschlag_f_r_bearbeitete_Kopien_Platzhalter_wie_916802d1" xml:space="preserve"><value>संपादित प्रतियों के लिए सुझाया गया नाम। बैच नाम बदलने जैसे ही प्लेसहोल्डर: {name}, ###, {date:yyyyMMdd}, {datetaken:yyyyMMdd_HHmmss}, {camera}, {iso}, {aperture}, {focal}, {width}, {height}.</value></data>
+  <data name="Belichtungskorrektur_84d641f1" xml:space="preserve"><value>एक्सपोज़र क्षतिपूर्ति</value></data>
+  <data name="Alle_Bearbeitungen_zur_cksetzen_49aead11" xml:space="preserve"><value>सभी संपादन रीसेट करें</value></data>
+  <data name="Alle_Bildbearbeitungen_dieses_Dokuments_werden_z_049fe175" xml:space="preserve"><value>इस दस्तावेज़ के सभी संपादन रीसेट किए जाएंगे: स्लाइडर, क्रॉप, रीटच, मास्क और लेयर। मूल फ़ाइल अपरिवर्तित रहेगी। सहेजी गई साइडकार फ़ाइल केवल बाद में सहेजने पर अधिलेखित होगी।</value></data>
+  <data name="Alles_zur_cksetzen_b07820f6" xml:space="preserve"><value>सब रीसेट करें</value></data>
+  <data name="Alle_Bearbeitungen_zur_ckgesetzt_e21f2329" xml:space="preserve"><value>सभी संपादन रीसेट किए गए</value></data>
 </root>

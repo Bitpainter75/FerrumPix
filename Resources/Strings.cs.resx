@@ -8499,4 +8499,11 @@
   <data name="Aufnahmeort_f_r_0_von_1_Bildern_aus_der_Aufzeich_91ffd8fa" xml:space="preserve">
     <value>Místo ze stopy nastaveno pro {0} z {1} fotografií</value>
   </data>
+  <data name="Namensvorlage_f_r_Speichern_unter_1eacdd58" xml:space="preserve"><value>Šablona názvu pro Uložit jako</value></data>
+  <data name="Vorschlag_f_r_bearbeitete_Kopien_Platzhalter_wie_916802d1" xml:space="preserve"><value>Návrh názvu pro upravené kopie. Stejné zástupné symboly jako při hromadném přejmenování: {name}, ###, {date:yyyyMMdd}, {datetaken:yyyyMMdd_HHmmss}, {camera}, {iso}, {aperture}, {focal}, {width}, {height}.</value></data>
+  <data name="Belichtungskorrektur_84d641f1" xml:space="preserve"><value>Kompenzace expozice</value></data>
+  <data name="Alle_Bearbeitungen_zur_cksetzen_49aead11" xml:space="preserve"><value>Resetovat všechny úpravy</value></data>
+  <data name="Alle_Bildbearbeitungen_dieses_Dokuments_werden_z_049fe175" xml:space="preserve"><value>Všechny úpravy tohoto dokumentu budou resetovány: posuvníky, oříznutí, retuše, masky a vrstvy. Originál zůstane nezměněn. Uložený soubor sidecar bude přepsán až po následném uložení.</value></data>
+  <data name="Alles_zur_cksetzen_b07820f6" xml:space="preserve"><value>Resetovat vše</value></data>
+  <data name="Alle_Bearbeitungen_zur_ckgesetzt_e21f2329" xml:space="preserve"><value>Všechny úpravy resetovány</value></data>
 </root>

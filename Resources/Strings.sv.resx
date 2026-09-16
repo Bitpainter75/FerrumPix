@@ -8499,4 +8499,11 @@
   <data name="Aufnahmeort_f_r_0_von_1_Bildern_aus_der_Aufzeich_91ffd8fa" xml:space="preserve">
     <value>Plats från spåret angiven för {0} av {1} bilder</value>
   </data>
+  <data name="Namensvorlage_f_r_Speichern_unter_1eacdd58" xml:space="preserve"><value>Namnmall för Spara som</value></data>
+  <data name="Vorschlag_f_r_bearbeitete_Kopien_Platzhalter_wie_916802d1" xml:space="preserve"><value>Föreslaget namn för redigerade kopior. Samma platshållare som vid gruppbyte av namn: {name}, ###, {date:yyyyMMdd}, {datetaken:yyyyMMdd_HHmmss}, {camera}, {iso}, {aperture}, {focal}, {width}, {height}.</value></data>
+  <data name="Belichtungskorrektur_84d641f1" xml:space="preserve"><value>Exponeringskompensation</value></data>
+  <data name="Alle_Bearbeitungen_zur_cksetzen_49aead11" xml:space="preserve"><value>Återställ alla redigeringar</value></data>
+  <data name="Alle_Bildbearbeitungen_dieses_Dokuments_werden_z_049fe175" xml:space="preserve"><value>Alla redigeringar i detta dokument återställs: reglage, beskärning, retuschering, masker och lager. Originalet förblir oförändrat. En sparad sidecar-fil skrivs över först när du sparar efteråt.</value></data>
+  <data name="Alles_zur_cksetzen_b07820f6" xml:space="preserve"><value>Återställ allt</value></data>
+  <data name="Alle_Bearbeitungen_zur_ckgesetzt_e21f2329" xml:space="preserve"><value>Alla redigeringar har återställts</value></data>
 </root>

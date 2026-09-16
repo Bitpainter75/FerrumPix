@@ -121,6 +121,17 @@
                      drei Panels, die sich zu- und abschalten. -->
 
                 <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center" HorizontalAlignment="Right">
+                    <!-- Der globale Reset gehört neben die Historie, nicht in ein einzelnes
+                         Anpassungspanel: er betrifft das GANZE Dokument. Das vorhandene
+                         restore-Symbol bedeutet Wiederherstellen/Zurücksetzen und unterscheidet
+                         sich klar von dem nach links gebogenen Pfeil für einen Undo-Schritt. -->
+                    <Button Classes="icon-btn" Width="34" Height="34"
+                            IsEnabled="{Binding HasDocument}"
+                            Command="{Binding ResetAllAdjustmentsCommand}"
+                            ToolTip.Tip="Alle Bearbeitungen zurücksetzen">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/restore.svg"
+                                       Width="19" Height="19" />
+                    </Button>
                     <Button Classes="icon-btn" Width="34" Height="34"
                             IsEnabled="{Binding CanUndo}"
                             Command="{Binding UndoCommand}"
@@ -1154,24 +1165,6 @@
                                     IsVisible="{Binding IsScopeInAdjustmentPanelsVisible}">
                                 <panels:ScopePanel />
                             </Border>
-
-                            <!-- Globaler Weg zurück zum Original. Der kleine Pfeil im Block
-                                 „Anpassungen“ setzt nur Regler zurück; dieser Knopf umfasst auch
-                                 Zuschnitt, Retusche, Masken und Ebenen und erklärt das vor dem
-                                 Ausführen noch einmal in einer Rückfrage. -->
-                            <Button Classes="ghost" Margin="0,10,0,0"
-                                    HorizontalAlignment="Stretch"
-                                    HorizontalContentAlignment="Center"
-                                    Padding="9,7"
-                                    IsVisible="{Binding HasDocument}"
-                                    Command="{Binding ResetAllAdjustmentsCommand}"
-                                    ToolTip.Tip="Alle Bearbeitungen des aktuellen Bildes zurücksetzen; das Original bleibt unverändert">
-                                <StackPanel Orientation="Horizontal" Spacing="7" HorizontalAlignment="Center">
-                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/rotate-clockwise.svg"
-                                                   Width="15" Height="15" />
-                                    <TextBlock Text="Alle Bearbeitungen zurücksetzen" />
-                                </StackPanel>
-                            </Button>
 
                             <!-- OHNE aeusseren Rahmen: das Panel bringt mehrere Gruppen mit und
                                  rahmt jede selbst (siehe DetailsPanel). -->

@@ -8499,4 +8499,11 @@
   <data name="Aufnahmeort_f_r_0_von_1_Bildern_aus_der_Aufzeich_91ffd8fa" xml:space="preserve">
     <value>{1} 枚中 {0} 枚に軌跡から撮影地を設定しました</value>
   </data>
+  <data name="Namensvorlage_f_r_Speichern_unter_1eacdd58" xml:space="preserve"><value>名前を付けて保存の名前テンプレート</value></data>
+  <data name="Vorschlag_f_r_bearbeitete_Kopien_Platzhalter_wie_916802d1" xml:space="preserve"><value>編集済みコピーの候補名。一括名前変更と同じプレースホルダーを使用できます: {name}, ###, {date:yyyyMMdd}, {datetaken:yyyyMMdd_HHmmss}, {camera}, {iso}, {aperture}, {focal}, {width}, {height}.</value></data>
+  <data name="Belichtungskorrektur_84d641f1" xml:space="preserve"><value>露出補正</value></data>
+  <data name="Alle_Bearbeitungen_zur_cksetzen_49aead11" xml:space="preserve"><value>すべての編集をリセット</value></data>
+  <data name="Alle_Bildbearbeitungen_dieses_Dokuments_werden_z_049fe175" xml:space="preserve"><value>このドキュメントのすべての編集をリセットします。スライダー、切り抜き、レタッチ、マスク、レイヤーが対象です。元のファイルは変更されません。保存済みのサイドカーファイルは、その後保存した場合にのみ上書きされます。</value></data>
+  <data name="Alles_zur_cksetzen_b07820f6" xml:space="preserve"><value>すべてリセット</value></data>
+  <data name="Alle_Bearbeitungen_zur_ckgesetzt_e21f2329" xml:space="preserve"><value>すべての編集をリセットしました</value></data>
 </root>

@@ -8459,4 +8459,11 @@
   <data name="Aufnahmeort_f_r_0_von_1_Bildern_aus_der_Aufzeich_91ffd8fa" xml:space="preserve">
     <value>Lieu défini depuis la trace pour {0} photos sur {1}</value>
   </data>
+  <data name="Namensvorlage_f_r_Speichern_unter_1eacdd58" xml:space="preserve"><value>Modèle de nom pour Enregistrer sous</value></data>
+  <data name="Vorschlag_f_r_bearbeitete_Kopien_Platzhalter_wie_916802d1" xml:space="preserve"><value>Nom proposé pour les copies modifiées. Les mêmes espaces réservés que pour le renommage par lot : {name}, ###, {date:yyyyMMdd}, {datetaken:yyyyMMdd_HHmmss}, {camera}, {iso}, {aperture}, {focal}, {width}, {height}.</value></data>
+  <data name="Belichtungskorrektur_84d641f1" xml:space="preserve"><value>Correction d'exposition</value></data>
+  <data name="Alle_Bearbeitungen_zur_cksetzen_49aead11" xml:space="preserve"><value>Réinitialiser toutes les modifications</value></data>
+  <data name="Alle_Bildbearbeitungen_dieses_Dokuments_werden_z_049fe175" xml:space="preserve"><value>Toutes les modifications de ce document seront réinitialisées : réglages, recadrage, retouche, masques et calques. L'original reste inchangé. Un fichier sidecar enregistré n'est remplacé que si vous enregistrez ensuite.</value></data>
+  <data name="Alles_zur_cksetzen_b07820f6" xml:space="preserve"><value>Tout réinitialiser</value></data>
+  <data name="Alle_Bearbeitungen_zur_ckgesetzt_e21f2329" xml:space="preserve"><value>Toutes les modifications ont été réinitialisées</value></data>
 </root>

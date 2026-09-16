@@ -8499,4 +8499,11 @@
   <data name="Aufnahmeort_f_r_0_von_1_Bildern_aus_der_Aufzeich_91ffd8fa" xml:space="preserve">
     <value>Locatie uit de track ingesteld voor {0} van {1} foto's</value>
   </data>
+  <data name="Namensvorlage_f_r_Speichern_unter_1eacdd58" xml:space="preserve"><value>Naamsjabloon voor Opslaan als</value></data>
+  <data name="Vorschlag_f_r_bearbeitete_Kopien_Platzhalter_wie_916802d1" xml:space="preserve"><value>Voorgestelde naam voor bewerkte kopieën. Dezelfde plaatshouders als bij Batch hernoemen: {name}, ###, {date:yyyyMMdd}, {datetaken:yyyyMMdd_HHmmss}, {camera}, {iso}, {aperture}, {focal}, {width}, {height}.</value></data>
+  <data name="Belichtungskorrektur_84d641f1" xml:space="preserve"><value>Belichtingscorrectie</value></data>
+  <data name="Alle_Bearbeitungen_zur_cksetzen_49aead11" xml:space="preserve"><value>Alle bewerkingen herstellen</value></data>
+  <data name="Alle_Bildbearbeitungen_dieses_Dokuments_werden_z_049fe175" xml:space="preserve"><value>Alle bewerkingen van dit document worden hersteld: schuifregelaars, uitsnijden, retoucheren, maskers en lagen. Het origineel blijft ongewijzigd. Een opgeslagen sidecar-bestand wordt pas overschreven wanneer je daarna opslaat.</value></data>
+  <data name="Alles_zur_cksetzen_b07820f6" xml:space="preserve"><value>Alles herstellen</value></data>
+  <data name="Alle_Bearbeitungen_zur_ckgesetzt_e21f2329" xml:space="preserve"><value>Alle bewerkingen zijn hersteld</value></data>
 </root>

@@ -8503,4 +8503,11 @@
   <data name="Aufnahmeort_f_r_0_von_1_Bildern_aus_der_Aufzeich_91ffd8fa" xml:space="preserve">
     <value>{1}장 중 {0}장에 경로에서 촬영 장소를 지정했습니다</value>
   </data>
+  <data name="Namensvorlage_f_r_Speichern_unter_1eacdd58" xml:space="preserve"><value>다른 이름으로 저장 이름 템플릿</value></data>
+  <data name="Vorschlag_f_r_bearbeitete_Kopien_Platzhalter_wie_916802d1" xml:space="preserve"><value>편집한 사본의 제안 이름입니다. 일괄 이름 바꾸기와 같은 자리 표시자를 사용합니다: {name}, ###, {date:yyyyMMdd}, {datetaken:yyyyMMdd_HHmmss}, {camera}, {iso}, {aperture}, {focal}, {width}, {height}.</value></data>
+  <data name="Belichtungskorrektur_84d641f1" xml:space="preserve"><value>노출 보정</value></data>
+  <data name="Alle_Bearbeitungen_zur_cksetzen_49aead11" xml:space="preserve"><value>모든 편집 재설정</value></data>
+  <data name="Alle_Bildbearbeitungen_dieses_Dokuments_werden_z_049fe175" xml:space="preserve"><value>이 문서의 모든 편집을 재설정합니다. 슬라이더, 자르기, 보정, 마스크 및 레이어가 포함됩니다. 원본은 변경되지 않습니다. 저장된 사이드카 파일은 이후 저장할 때만 덮어씁니다.</value></data>
+  <data name="Alles_zur_cksetzen_b07820f6" xml:space="preserve"><value>모두 재설정</value></data>
+  <data name="Alle_Bearbeitungen_zur_ckgesetzt_e21f2329" xml:space="preserve"><value>모든 편집을 재설정했습니다</value></data>
 </root>
