@@ -1,30 +1,3 @@
-## Unreleased
-
-### What's new
-
-- **Clarity that works like clarity.** The slider now lifts contrast in the midtones across a wide
-  area, without light or dark rims along strong edges, and brings up far less noise. Before, it
-  acted like a second sharpening. Edits with clarity look somewhat different than before.
-
-- **Paste pictures straight from the clipboard.** A screenshot or an image copied in the browser
-  becomes a new layer in the editor, not only image files. What you copy in the editor now also
-  goes to the clipboard as a picture, so it can still be pasted later and in other programs.
-
-### Fixes
-
-- Upscaling in the editor, and applying saved edits that need a model, show the progress display
-  with its cancel button. The picture stays locked while they run, so no change made in the
-  meantime is lost.
-
-- A layer mask now follows its layer while you drag, scale or rotate it, not only after you let
-  go.
-
-- Erasing on an image layer removes the pixels for good. Before, the erased spot flashed back
-  while moving the layer and stayed behind as a hole when the layer was moved elsewhere.
-
-- Copying a selection taken from a layer copies only that layer. Transparent and see-through parts
-  stay transparent instead of showing the photo underneath.
-
 ## FerrumPix 0.9.45
 
 ### What's new
@@ -66,6 +39,15 @@
 - **Tidy preset lists in one click.** A small button next to *Load folder* empties the XMP or LUT
   list in the editor. The preset files themselves stay where they are.
 
+- **Clarity that works like clarity.** The slider now lifts contrast in the midtones across a wide
+  area, without light or dark rims along strong edges, and brings up far less noise. Before, it
+  acted like a second sharpening. Edits with clarity look somewhat different than before.
+
+- **Paste pictures straight from the clipboard.** A screenshot or an image copied in the browser
+  becomes a new layer in the editor, not only image files. What you copy in the editor now also
+  goes to the clipboard as a picture, so it can still be pasted later and in other programs.
+
+  
 ### Fixes
 
 - The tone curve behaves the way you draw it. A straight curve stays straight, rising points give
@@ -78,3 +60,16 @@
 - Smaller things: the red mask overlay no longer stays on the picture when you switch to the brush
   with a mask layer selected, picking a path in the layers panel opens the Path tool again, and on
   macOS a missing LibRaw installation is pointed out.
+
+- Upscaling in the editor, and applying saved edits that need a model, show the progress display
+  with its cancel button. The picture stays locked while they run, so no change made in the
+  meantime is lost.
+
+- A layer mask now follows its layer while you drag, scale or rotate it, not only after you let
+  go.
+
+- Erasing on an image layer removes the pixels for good. Before, the erased spot flashed back
+  while moving the layer and stayed behind as a hole when the layer was moved elsewhere.
+
+- Copying a selection taken from a layer copies only that layer. Transparent and see-through parts
+  stay transparent instead of showing the photo underneath.
