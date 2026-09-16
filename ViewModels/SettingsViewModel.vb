@@ -10,6 +10,7 @@ Imports System.Windows.Input
 Imports Avalonia
 Imports Avalonia.Media
 Imports Avalonia.Styling
+Imports Avalonia.Themes.Fluent
 Imports ReactiveUI
 Imports FerrumPix.Models
 Imports FerrumPix.Services
@@ -4821,7 +4822,27 @@ Namespace ViewModels
             End If
 
             SetAccentBrushes(accentColor, isDark)
+            ApplyFluentAccentPalette(accentColor)
             MirrorAppearanceBrushes()
+        End Sub
+
+        ''' <summary>Checkboxen und Standard-ToggleSwitches kommen aus Fluent und lesen ihre
+        ''' Akzentfarbe direkt aus dessen Palette, nicht aus unseren FP.*-Pinseln. Ohne dieses
+        ''' Nachziehen folgten eigene Knöpfe der eingestellten Akzentstärke, die Häkchen aber
+        ''' weiterhin der vollen Ausgangsfarbe.</summary>
+        Private Shared Sub ApplyFluentAccentPalette(accentColor As String)
+            Dim app = Application.Current
+            If app Is Nothing Then Return
+
+            Dim accent As Avalonia.Media.Color = Avalonia.Media.Color.Parse(accentColor)
+            For Each theme In app.Styles.OfType(Of FluentTheme)()
+                For Each themeVariant As ThemeVariant In New ThemeVariant() {ThemeVariant.Light, ThemeVariant.Dark}
+                    Dim palette As ColorPaletteResources = Nothing
+                    If theme.Palettes.TryGetValue(themeVariant, palette) AndAlso palette IsNot Nothing Then
+                        palette.Accent = accent
+                    End If
+                Next
+            Next
         End Sub
 
         ''' <summary>Schluessel des Standarderscheinungsbilds, die eine FerrumPix-Farbe abbilden.

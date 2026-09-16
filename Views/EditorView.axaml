@@ -121,17 +121,6 @@
                      drei Panels, die sich zu- und abschalten. -->
 
                 <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center" HorizontalAlignment="Right">
-                    <!-- Der globale Reset gehört neben die Historie, nicht in ein einzelnes
-                         Anpassungspanel: er betrifft das GANZE Dokument. Das vorhandene
-                         restore-Symbol bedeutet Wiederherstellen/Zurücksetzen und unterscheidet
-                         sich klar von dem nach links gebogenen Pfeil für einen Undo-Schritt. -->
-                    <Button Classes="icon-btn" Width="34" Height="34"
-                            IsEnabled="{Binding HasDocument}"
-                            Command="{Binding ResetAllAdjustmentsCommand}"
-                            ToolTip.Tip="Alle Bearbeitungen zurücksetzen">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/restore.svg"
-                                       Width="19" Height="19" />
-                    </Button>
                     <Button Classes="icon-btn" Width="34" Height="34"
                             IsEnabled="{Binding CanUndo}"
                             Command="{Binding UndoCommand}"
@@ -155,6 +144,15 @@
                                   StrokeJoin="Round"
                                   Data="M 12 5 L 16 9 L 12 13 M 15 9 H 8 C 5 9 3 11 3 14 C 3 17 5 19 8 19 H 12" />
                         </Canvas>
+                    </Button>
+                    <!-- Kein weiterer Historien-Schritt: erst Undo/Redo zusammen, dann mit
+                         Abstand der globale Reset für das ganze Dokument. -->
+                    <Button Classes="icon-btn" Width="34" Height="34" Margin="8,0,0,0"
+                            IsEnabled="{Binding HasDocument}"
+                            Command="{Binding ResetAllAdjustmentsCommand}"
+                            ToolTip.Tip="Alle Bearbeitungen zurücksetzen">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/restore.svg"
+                                       Width="19" Height="19" />
                     </Button>
                     <!-- DER VOLLE AKZENT NUR BEI ÄNDERUNG: ein dauerhaft leuchtender Knopf sagt
                          nichts, ein leuchtender bei ungesicherter Arbeit sagt alles. Ohne Änderung
