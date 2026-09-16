@@ -8469,4 +8469,16 @@
   <data name="Belichtungskorrektur_84d641f1" xml:space="preserve">
     <value>Exposure compensation</value>
   </data>
+  <data name="Alle_Bearbeitungen_zur_cksetzen_49aead11" xml:space="preserve">
+    <value>Reset all edits</value>
+  </data>
+  <data name="Alle_Bildbearbeitungen_dieses_Dokuments_werden_z_049fe175" xml:space="preserve">
+    <value>All edits to this document will be reset: sliders, crop, retouching, masks and layers. The original remains unchanged. A saved sidecar file is overwritten only after you save.</value>
+  </data>
+  <data name="Alles_zur_cksetzen_b07820f6" xml:space="preserve">
+    <value>Reset all</value>
+  </data>
+  <data name="Alle_Bearbeitungen_zur_ckgesetzt_e21f2329" xml:space="preserve">
+    <value>All edits reset</value>
+  </data>
 </root>

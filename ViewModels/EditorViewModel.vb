@@ -14326,6 +14326,10 @@ Namespace ViewModels
         Public ReadOnly Property ShowLayersTabCommand As ICommand
         Public ReadOnly Property ShowHistoryTabCommand As ICommand
         Public ReadOnly Property ResetPixelAdjustmentsCommand As ICommand
+        ''' <summary>Setzt den gesamten Dokumentzustand auf das unbearbeitete Original zurück.
+        ''' Anders als <see cref="ResetPixelAdjustmentsCommand"/> umfasst das auch Geometrie,
+        ''' Retusche, Masken und Ebenen.</summary>
+        Public ReadOnly Property ResetAllAdjustmentsCommand As ICommand
         Public ReadOnly Property ResetCurrentToolCommand As ICommand
         Public ReadOnly Property ResetLightCommand As ICommand
         Public ReadOnly Property ResetColorCommand As ICommand
@@ -20911,6 +20915,33 @@ Namespace ViewModels
             RaiseResetButtonStateChanged()
             RaiseDisplayImageGeometryProperties()
             Await UpdatePreviewAsync()
+        End Function
+
+        ''' <summary>Stellt das offene Dokument auf sein Ausgangsbild zurück. Das ist absichtlich
+        ''' mehr als der kleine Reset-Pfeil im Anpassungen-Block: auch Zuschnitt, Geometrie,
+        ''' Retusche, Masken, Korrektur- und Objekt-Ebenen gehen weg. Die Originaldatei und eine
+        ''' vorhandene .fpxmp-Datei bleiben dabei unangetastet; erst Speichern schreibt den neuen,
+        ''' leeren Stand in die Sidecar.</summary>
+        Private Async Function ResetAllAdjustmentsAsync() As Task
+            If Not HasDocument Then Return
+
+            Dim confirmed = True
+            If _mainVm IsNot Nothing Then
+                confirmed = Await _mainVm.ShowConfirmAsync(
+                    LocalizationService.T("Alle Bearbeitungen zurücksetzen"),
+                    LocalizationService.T("Alle Bildbearbeitungen dieses Dokuments werden zurückgesetzt: Regler, Zuschnitt, Retusche, Masken und Ebenen. Das Original bleibt unverändert. Eine gespeicherte Sidecar-Datei wird erst überschrieben, wenn du danach speicherst."),
+                    LocalizationService.T("Alles zurücksetzen"), LocalizationService.T("Behalten"))
+            End If
+            If Not confirmed Then Return
+
+            PushUndo(LocalizationService.T("Alle Bearbeitungen zurückgesetzt"))
+            ResetAdjustmentsInternal()
+            _hasChanges = True
+            Me.RaisePropertyChanged(NameOf(HasUnsavedChanges))
+            RaiseResetButtonStateChanged()
+            NameHistoryStep(LocalizationService.T("Alle Bearbeitungen zurückgesetzt"))
+            SchedulePreviewUpdate()
+            StatusText = LocalizationService.T("Alle Bearbeitungen zurückgesetzt")
         End Function
 
         Private Sub ResetAdjustmentsInternal(Optional resetEditorUi As Boolean = False)

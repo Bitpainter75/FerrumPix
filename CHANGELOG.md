@@ -19,6 +19,22 @@
   own development in the viewer and in fullscreen instead of the preview the camera put in the
   file. It is off to begin with, because a picture then takes longer to appear.
 
+- **Name edited copies your way.** Under Editor settings, *Save as* now starts with a filename
+  template instead of a fixed version number. The default is `{name}_fx`; it understands the same
+  name, counter, date and EXIF placeholders as Batch rename.
+
+- **More useful photo facts.** The General info tab can show exposure compensation, with its own
+  visibility switch alongside the other fields. Date taken remains the camera's EXIF date, while
+  Created and Modified use the date and regional format reported by the operating system.
+
+- **A clear way back to the original.** The editor now has an explicit *Reset all edits* button.
+  After confirmation it clears sliders, crop, retouching, masks and layers from the open document;
+  the original file is never changed. RAW/PSD sidecars and FPX projects are only replaced if you
+  save the reset state afterwards.
+
+- **Better grouping and comparison.** Grouping by ISO now makes real ISO sections instead of only
+  sorting the pictures. Pinning a photo for comparison opens the next photo beside it right away.
+
 ### Fixes
 
 - The tone curve behaves the way you draw it. A straight curve stays straight, wherever you put
@@ -34,3 +50,6 @@
   the adjustment sliders to the brush with a mask layer selected, and picking a path in the layers
   panel opens the Path tool again, because a path has nothing to adjust or select and its points
   are only reachable there.
+
+- On macOS, a missing LibRaw installation is called out instead of leaving a RAW preview's limited
+  quality unexplained.

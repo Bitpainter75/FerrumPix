@@ -1155,6 +1155,24 @@
                                 <panels:ScopePanel />
                             </Border>
 
+                            <!-- Globaler Weg zurück zum Original. Der kleine Pfeil im Block
+                                 „Anpassungen“ setzt nur Regler zurück; dieser Knopf umfasst auch
+                                 Zuschnitt, Retusche, Masken und Ebenen und erklärt das vor dem
+                                 Ausführen noch einmal in einer Rückfrage. -->
+                            <Button Classes="ghost" Margin="0,10,0,0"
+                                    HorizontalAlignment="Stretch"
+                                    HorizontalContentAlignment="Center"
+                                    Padding="9,7"
+                                    IsVisible="{Binding HasDocument}"
+                                    Command="{Binding ResetAllAdjustmentsCommand}"
+                                    ToolTip.Tip="Alle Bearbeitungen des aktuellen Bildes zurücksetzen; das Original bleibt unverändert">
+                                <StackPanel Orientation="Horizontal" Spacing="7" HorizontalAlignment="Center">
+                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/rotate-clockwise.svg"
+                                                   Width="15" Height="15" />
+                                    <TextBlock Text="Alle Bearbeitungen zurücksetzen" />
+                                </StackPanel>
+                            </Button>
+
                             <!-- OHNE aeusseren Rahmen: das Panel bringt mehrere Gruppen mit und
                                  rahmt jede selbst (siehe DetailsPanel). -->
                             <panels:WarpPanel Margin="0,7,0,0"

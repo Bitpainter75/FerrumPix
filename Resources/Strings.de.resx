@@ -8468,4 +8468,16 @@
   <data name="Belichtungskorrektur_84d641f1" xml:space="preserve">
     <value>Belichtungskorrektur</value>
   </data>
+  <data name="Alle_Bearbeitungen_zur_cksetzen_49aead11" xml:space="preserve">
+    <value>Alle Bearbeitungen zurücksetzen</value>
+  </data>
+  <data name="Alle_Bildbearbeitungen_dieses_Dokuments_werden_z_049fe175" xml:space="preserve">
+    <value>Alle Bildbearbeitungen dieses Dokuments werden zurückgesetzt: Regler, Zuschnitt, Retusche, Masken und Ebenen. Das Original bleibt unverändert. Eine gespeicherte Sidecar-Datei wird erst überschrieben, wenn du danach speicherst.</value>
+  </data>
+  <data name="Alles_zur_cksetzen_b07820f6" xml:space="preserve">
+    <value>Alles zurücksetzen</value>
+  </data>
+  <data name="Alle_Bearbeitungen_zur_ckgesetzt_e21f2329" xml:space="preserve">
+    <value>Alle Bearbeitungen zurückgesetzt</value>
+  </data>
 </root>
