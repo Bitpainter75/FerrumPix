@@ -202,7 +202,7 @@
                         </Border>
 
                         <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto" ColumnSpacing="12" >
-                            <TextBlock Text="Version" Foreground="{DynamicResource FP.Text.Muted}"/>
+                            <TextBlock Text="Version" Foreground="{DynamicResource FP.Text.Muted}" VerticalAlignment="Center"/>
                             <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="12">
                                 <TextBlock Text="{Binding DisplayVersion}" VerticalAlignment="Center"/>
                                 <Button Classes="ghost" Padding="10,4" VerticalAlignment="Center"
@@ -1426,12 +1426,15 @@
                             </StackPanel>
                         </Grid>
 
-                        <Grid ColumnDefinitions="*,280">
+                        <Grid ColumnDefinitions="*,Auto">
                             <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
                                 <TextBlock Text="Namensvorlage für Speichern unter" FontSize="{DynamicResource FP.Font.Body}"/>
                                 <TextBlock Text="Vorschlag für bearbeitete Kopien. Platzhalter wie beim Stapel-Umbenennen: {name}, ###, {date:yyyyMMdd}, {datetaken:yyyyMMdd_HHmmss}, {camera}, {iso}, {aperture}, {focal}, {width}, {height}." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </StackPanel>
-                            <TextBox Grid.Column="1"
+                            <!-- Eine Zeile wie die uebrigen Textfelder: ohne feste Breite und Mittelung
+                                 streckte sich das Feld auf die Hoehe des langen Erklaertexts daneben. -->
+                            <TextBox Grid.Column="1" Width="320"
+                                     VerticalAlignment="Center"
                                      Text="{Binding EditorSaveAsNamePattern, Mode=TwoWay}"
                                      PlaceholderText="{}{name}_fx"
                                      ToolTip.Tip="{}{name}_fx erzeugt etwa Foto_fx; ### ist ein Zähler."/>
@@ -1974,7 +1977,9 @@
                                 <TextBlock Text="G'MIC" FontSize="{DynamicResource FP.Font.Body}"/>
                                 <TextBlock Text="Mit G'MIC lässt sich das Bild im Editor über das Menü der Fußzeile bearbeiten, das Ergebnis kommt als Ebene zurück. G'MIC wird nicht mitgeliefert. Bleibt das Feld leer, sucht FerrumPix gmic_qt selbst." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </StackPanel>
-                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6" MaxWidth="660" HorizontalAlignment="Left">
+                            <!-- Ueber die volle Breite: ein Programmpfad ist lang, und ein linksbuendiges
+                                 Raster war nur so breit wie sein Inhalt. -->
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
                                 <TextBox Text="{Binding GmicQtPath, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
                                          PlaceholderText="Automatisch suchen"/>
                                 <Button Grid.Column="1" Classes="ghost" Padding="10,6"

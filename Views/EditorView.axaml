@@ -121,6 +121,16 @@
                      drei Panels, die sich zu- und abschalten. -->
 
                 <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center" HorizontalAlignment="Right">
+                    <!-- Links neben Rückgängig: der Weg zurück zum Original steht bei den Knöpfen,
+                         die Bearbeitungsschritte zurücknehmen. -->
+                    <Button Classes="icon-btn"
+                            Width="34" Height="34"
+                            IsEnabled="{Binding HasDocument}"
+                            Command="{Binding ResetAllAdjustmentsCommand}"
+                            ToolTip.Tip="Alle Bearbeitungen zurücksetzen">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/restore.svg"
+                                       Width="20" Height="20" />
+                    </Button>
                     <Button Classes="icon-btn" Width="34" Height="34"
                             IsEnabled="{Binding CanUndo}"
                             Command="{Binding UndoCommand}"
@@ -166,16 +176,6 @@
                                            Width="20" Height="20" />
                             <TextBlock Text="Speichern unter" IsVisible="{Binding AreToolbarLabelsVisible}" />
                         </StackPanel>
-                    </Button>
-                    <!-- Zusammen mit Löschen: beide betreffen den ganzen Dokumentstand und sind
-                         keine einzelnen Schritte der Undo-/Redo-Historie. -->
-                    <Button Classes="icon-btn"
-                            Width="34" Height="34"
-                            IsEnabled="{Binding HasDocument}"
-                            Command="{Binding ResetAllAdjustmentsCommand}"
-                            ToolTip.Tip="Alle Bearbeitungen zurücksetzen">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/restore.svg"
-                                       Width="19" Height="19" />
                     </Button>
                     <Button Classes="icon-btn"
                             Width="34" Height="34"
