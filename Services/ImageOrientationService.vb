@@ -402,6 +402,12 @@ Namespace Services
                     Return If(stream IsNot Nothing, New Bitmap(stream), Nothing)
                 End Using
             End If
+            If JxlDecodeService.IsSupportedJxl(filePath) Then
+                ' Wie HEIF: Skia kennt das Format nicht, und libjxl liefert schon gedreht.
+                Using stream = JxlDecodeService.ExtractPreview(filePath)
+                    Return If(stream IsNot Nothing, New Bitmap(stream), Nothing)
+                End Using
+            End If
             Return LoadOrientedAvaloniaBitmap(filePath)
         End Function
 

@@ -10605,7 +10605,7 @@ Namespace ViewModels
         ''' HEIC steht hier ohne Verfuegbarkeitspruefung: ohne libheif scheitert der Decode sichtbar,
         ''' statt dass der Menuepunkt je nach System verschwindet.</summary>
         Private Shared ReadOnly BatchImageEditReadableExtensions As String() = {".jpg", ".jpeg", ".png", ".webp", ".bmp", ".gif",
-                                                                                ".heic", ".heif", ".hif", ".avif",
+                                                                                ".heic", ".heif", ".hif", ".avif", ".jxl",
                                                                                 ".tif", ".tiff"}
 
         ''' <summary>Formate, die sich AN ORT UND STELLE ueberschreiben lassen - dafuer braucht es

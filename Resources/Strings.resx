@@ -8517,4 +8517,13 @@
   <data name="Die_kopierte_Datei_gibt_es_nicht_mehr_f41f8442" xml:space="preserve">
     <value>The copied file no longer exists</value>
   </data>
+  <data name="libjxl_a5ba9e61" xml:space="preserve">
+    <value>libjxl</value>
+  </data>
+  <data name="JPEG_XL_nur_vom_System_cd6e7014" xml:space="preserve">
+    <value>JPEG XL, from the system only</value>
+  </data>
+  <data name="libjxl_liest_JPEG_XL_Dateien_und_steht_unter_der_7746769f" xml:space="preserve">
+    <value>libjxl reads JPEG XL files and is licensed under the BSD licence. On Windows it is included, on Linux it comes from your package manager, the Flatpak includes it, and on macOS it comes from Homebrew. Without it, such files simply stay closed and everything else works unchanged.</value>
+  </data>
 </root>

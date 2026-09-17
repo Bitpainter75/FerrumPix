@@ -8546,4 +8546,13 @@
   <data name="Die_kopierte_Datei_gibt_es_nicht_mehr_f41f8442" xml:space="preserve">
     <value>복사한 파일이 더 이상 없습니다</value>
   </data>
+  <data name="libjxl_a5ba9e61" xml:space="preserve">
+    <value>libjxl</value>
+  </data>
+  <data name="JPEG_XL_nur_vom_System_cd6e7014" xml:space="preserve">
+    <value>JPEG XL, 시스템에서만</value>
+  </data>
+  <data name="libjxl_liest_JPEG_XL_Dateien_und_steht_unter_der_7746769f" xml:space="preserve">
+    <value>libjxl은 JPEG XL 파일을 읽으며 BSD 라이선스를 따릅니다. Windows에서는 함께 제공되고, Linux에서는 패키지 관리자에서 제공되며, Flatpak에는 포함되어 있고, macOS에서는 Homebrew에서 제공됩니다. 없으면 해당 파일만 열리지 않고 나머지는 그대로 작동합니다.</value>
+  </data>
 </root>

@@ -1,3 +1,23 @@
+## Unreleased
+
+### What's new
+
+- **Black and white point on the tone curve.** The end points of the curve can now be dragged
+  inward as well, on every channel, so you can set the black and white point or tone colours per
+  channel.
+
+- **JPEG XL opens.** Photos in JPEG XL show up in the gallery and open in the viewer and the
+  editor, with their colour profile and rotation. Saving goes to a new file in another format.
+  The Windows downloads bring everything along, on Linux the packages recommend libjxl.
+
+### Fixes
+
+- HEIF photos with the endings .heif and .hif, as some Fujifilm and Canon cameras save them, now
+  appear in the gallery.
+- The channel switcher of the tone curve now also marks a channel whose end point was moved.
+- Lens correction knows a few more cameras and lenses, and the bundled HEIC decoder on Windows is
+  up to date.
+
 ## FerrumPix 0.9.45
 
 ### What's new

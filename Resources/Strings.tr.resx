@@ -8546,4 +8546,13 @@
   <data name="Die_kopierte_Datei_gibt_es_nicht_mehr_f41f8442" xml:space="preserve">
     <value>Kopyalanan dosya artık yok</value>
   </data>
+  <data name="libjxl_a5ba9e61" xml:space="preserve">
+    <value>libjxl</value>
+  </data>
+  <data name="JPEG_XL_nur_vom_System_cd6e7014" xml:space="preserve">
+    <value>JPEG XL, yalnızca sistemden</value>
+  </data>
+  <data name="libjxl_liest_JPEG_XL_Dateien_und_steht_unter_der_7746769f" xml:space="preserve">
+    <value>libjxl JPEG XL dosyalarını okur ve BSD lisansına tabidir. Windows'ta birlikte gelir, Linux'ta paket yöneticisinden gelir, Flatpak paketinde hazır bulunur, macOS'ta ise Homebrew'dan gelir. Yoksa bu tür dosyalar yalnızca açılmaz, geri kalan her şey değişmeden çalışır.</value>
+  </data>
 </root>

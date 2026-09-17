@@ -24,7 +24,8 @@ Namespace Services
         ''' ".fpx" gehoert dazu: FerrumPix-Projekte erscheinen wie Bilder in Galerie und Filmstreifen
         ''' (Vorschaubild aus dem eingebetteten Composite, siehe ThumbnailCacheService).</summary>
         Public Shared ReadOnly Displayable As String() = {
-            ".jpg", ".jpeg", ".png", ".bmp", ".gif", ".tiff", ".tif", ".webp", ".heic", ".avif",
+            ".jpg", ".jpeg", ".png", ".bmp", ".gif", ".tiff", ".tif", ".webp",
+            ".heic", ".heif", ".hif", ".avif", ".jxl",
             ".ico", ".svg", ".fpx", ".psd", ".psb",
             ".mp4", ".mov", ".mkv", ".avi", ".webm", ".m4v"
         }.Concat(RawPreviewService.SupportedExtensions).ToArray()

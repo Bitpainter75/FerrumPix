@@ -8546,4 +8546,13 @@
   <data name="Die_kopierte_Datei_gibt_es_nicht_mehr_f41f8442" xml:space="preserve">
     <value>Berkas yang disalin sudah tidak ada</value>
   </data>
+  <data name="libjxl_a5ba9e61" xml:space="preserve">
+    <value>libjxl</value>
+  </data>
+  <data name="JPEG_XL_nur_vom_System_cd6e7014" xml:space="preserve">
+    <value>JPEG XL, hanya dari sistem</value>
+  </data>
+  <data name="libjxl_liest_JPEG_XL_Dateien_und_steht_unter_der_7746769f" xml:space="preserve">
+    <value>libjxl membaca berkas JPEG XL dan berlisensi BSD. Di Windows pustaka ini sudah disertakan, di Linux berasal dari pengelola paket, Flatpak sudah menyertakannya, dan di macOS berasal dari Homebrew. Jika tidak ada, berkas seperti itu tetap tidak terbuka dan semua fungsi lain berjalan seperti biasa.</value>
+  </data>
 </root>

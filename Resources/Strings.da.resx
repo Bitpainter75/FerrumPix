@@ -8542,4 +8542,13 @@
   <data name="Die_kopierte_Datei_gibt_es_nicht_mehr_f41f8442" xml:space="preserve">
     <value>Den kopierede fil findes ikke længere</value>
   </data>
+  <data name="libjxl_a5ba9e61" xml:space="preserve">
+    <value>libjxl</value>
+  </data>
+  <data name="JPEG_XL_nur_vom_System_cd6e7014" xml:space="preserve">
+    <value>JPEG XL, kun fra systemet</value>
+  </data>
+  <data name="libjxl_liest_JPEG_XL_Dateien_und_steht_unter_der_7746769f" xml:space="preserve">
+    <value>libjxl læser JPEG XL-filer og er underlagt BSD-licensen. På Windows følger den med, på Linux kommer den fra pakkehåndteringen, Flatpak-pakken har den med, og på macOS kommer den fra Homebrew. Mangler den, forbliver sådanne filer bare uåbnede, og alt andet fungerer uændret.</value>
+  </data>
 </root>

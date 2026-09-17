@@ -261,6 +261,7 @@ Namespace ViewModels
             If RawPreviewService.IsSupportedRaw(path) OrElse
                PsdPreviewService.IsSupportedPsd(path) OrElse
                HeifDecodeService.IsSupportedHeif(path) OrElse
+               JxlDecodeService.IsSupportedJxl(path) OrElse
                TiffPreviewService.IsSupportedTiff(path) OrElse
                FpxService.IsFpx(path) Then
                 Return True
@@ -2198,6 +2199,11 @@ Namespace ViewModels
                     Return If(preview IsNot Nothing, New Bitmap(preview), Nothing)
                 End Using
             End If
+            If JxlDecodeService.IsSupportedJxl(path) Then
+                Using preview = JxlDecodeService.ExtractPreview(path)
+                    Return If(preview IsNot Nothing, New Bitmap(preview), Nothing)
+                End Using
+            End If
             If FpxService.IsFpx(path) Then
                 Using preview = FpxService.ExtractComposite(path)
                     Return If(preview IsNot Nothing, New Bitmap(preview), Nothing)
@@ -2470,15 +2476,11 @@ Namespace ViewModels
         ''' <summary>Liest die blätterbaren Dateien eines Ordners. Reines Lesen ohne Zustand, damit
         ''' derselbe Aufruf sowohl sofort als auch auf einem Hintergrund-Thread laufen kann.</summary>
         Private Shared Function ScanFolderImagePaths(folder As String) As List(Of String)
-            ' ".fpx" gehört dazu: Projekte blättern im Viewer/Vollbild mit (Anzeige aus dem Composite).
-            ' Feste Formate plus die kanonischen RAW-Endungen (RawPreviewService.SupportedExtensions).
-            Dim exts = {
-                ".jpg", ".jpeg", ".png", ".bmp", ".gif", ".tiff", ".tif", ".webp", ".heic", ".avif",
-                ".ico", ".svg", ".fpx", ".psd", ".psb",
-                ".mp4", ".mov", ".mkv", ".avi", ".webm", ".m4v"
-            }.Concat(RawPreviewService.SupportedExtensions).ToArray()
+            ' Dieselbe Liste wie die Galerie. Hier stand eine eigene Kopie, und die war schon
+            ' auseinandergelaufen: .heif und .hif fehlten in beiden, eine neue Endung haette nur eine
+            ' der beiden bekommen.
             Return Directory.GetFiles(folder).
-                Where(Function(f) exts.Contains(IO.Path.GetExtension(f).ToLowerInvariant())).
+                Where(Function(f) MediaFileTypes.IsDisplayable(f)).
                 OrderBy(Function(f) IO.Path.GetFileName(f)).
                 ToList()
         End Function

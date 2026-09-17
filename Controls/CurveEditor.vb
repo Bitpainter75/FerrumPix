@@ -11,7 +11,8 @@ Namespace Controls
 
     ' Interaktiver Tonwertkurven-Editor: Stützpunkte im Bereich 0..255 (X = Eingabe, Y = Ausgabe),
     ' per Maus verschiebbar, per Linksklick auf leere Fläche neue Punkte, per Rechtsklick Punkt entfernen
-    ' (Endpunkte bei X=0 und X=255 bleiben erhalten und nur vertikal verschiebbar).
+    ' (die beiden Endpunkte bleiben erhalten, lassen sich aber in beide Richtungen verschieben:
+    ' nach innen gezogen setzen sie Schwarz- und Weisspunkt, davor und dahinter haelt die Kurve).
     Public Class CurveEditor
         Inherits Control
 
@@ -269,19 +270,14 @@ Namespace Controls
             Dim pts = Points
             If pts Is Nothing OrElse _draggingIndex >= pts.Count Then Return
 
+            ' Auch die Endpunkte sind waagerecht frei, nur die Nachbarn begrenzen. Sie waren bis
+            ' 0.9.45 an X=0 und X=255 festgenagelt, damit liessen sich weder Schwarz- und Weisspunkt
+            ' setzen noch die Farbkanaele zum Tonen nutzen (aus dem Forum gemeldet). Die Bildkette
+            ' konnte das schon: vor dem ersten und hinter dem letzten Punkt haelt sie den Wert.
             Dim domainPoint = ToDomain(e.GetPosition(Me))
-            Dim minX As Double = 0
-            Dim maxX As Double = 255
-
-            If _draggingIndex = 0 Then
-                minX = 0 : maxX = 0
-            ElseIf _draggingIndex = pts.Count - 1 Then
-                minX = 255 : maxX = 255
-            Else
-                minX = pts(_draggingIndex - 1).X + 1
-                maxX = pts(_draggingIndex + 1).X - 1
-                If maxX < minX Then maxX = minX
-            End If
+            Dim minX As Double = If(_draggingIndex > 0, pts(_draggingIndex - 1).X + 1, 0.0)
+            Dim maxX As Double = If(_draggingIndex < pts.Count - 1, pts(_draggingIndex + 1).X - 1, 255.0)
+            If maxX < minX Then maxX = minX
 
             Dim clampedX = Math.Max(minX, Math.Min(maxX, domainPoint.X))
             pts(_draggingIndex) = New Point(clampedX, domainPoint.Y)

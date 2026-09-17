@@ -6964,46 +6964,50 @@ Namespace ViewModels
         ''' <summary>Traegt dieser Kanal eine Kurve, die von der Diagonalen abweicht? Der Editor zeigt
         ''' immer nur EINEN Kanal; ohne Markierung am Umschalter sieht man nicht, in welchem anderen
         ''' etwas eingestellt ist - bei einem importierten Preset ist das der Normalfall.
-        ''' Zwei Punkte in den Ecken sind die neutrale Kurve.</summary>
-        Private Shared Function KurveWirkt(points As ObservableCollection(Of Avalonia.Point)) As Boolean
+        ''' Zwei Punkte in den Ecken sind die neutrale Kurve.
+        '''
+        ''' Die Punkte laufen von 0 bis 255. Die Pruefung rechnete frueher mit 0 bis 1 und hielt
+        ''' damit jeden Punkt ueber X=1 fuer einen Eckpunkt: ein nach innen gezogener Endpunkt auf
+        ''' der Diagonalen, etwa (40,40), blieb unmarkiert, obwohl er die Tiefen anhebt.</summary>
+        Private Shared Function CurveIsEdited(points As ObservableCollection(Of Avalonia.Point)) As Boolean
             If points Is Nothing OrElse points.Count = 0 Then Return False
             If points.Count > 2 Then Return True
             For Each pt In points
-                ' Ein Eckpunkt darf auf (0,0) bzw. (1,1) liegen; alles andere ist eine Aenderung.
-                Dim aufDiagonale = Math.Abs(pt.X - pt.Y) < 0.002
-                Dim inCorner = (pt.X < 0.002 OrElse pt.X > 0.998)
-                If Not (aufDiagonale AndAlso inCorner) Then Return True
+                ' Ein Eckpunkt darf auf (0,0) bzw. (255,255) liegen; alles andere ist eine Aenderung.
+                Dim onDiagonal = Math.Abs(pt.X - pt.Y) < 0.5
+                Dim inCorner = (pt.X < 0.5 OrElse pt.X > 254.5)
+                If Not (onDiagonal AndAlso inCorner) Then Return True
             Next
             Return False
         End Function
 
         Public ReadOnly Property IsCurveRgbEdited As Boolean
             Get
-                Return KurveWirkt(_curveRgbPoints)
+                Return CurveIsEdited(_curveRgbPoints)
             End Get
         End Property
 
         Public ReadOnly Property IsCurveRedEdited As Boolean
             Get
-                Return KurveWirkt(_curveRedPoints)
+                Return CurveIsEdited(_curveRedPoints)
             End Get
         End Property
 
         Public ReadOnly Property IsCurveGreenEdited As Boolean
             Get
-                Return KurveWirkt(_curveGreenPoints)
+                Return CurveIsEdited(_curveGreenPoints)
             End Get
         End Property
 
         Public ReadOnly Property IsCurveBlueEdited As Boolean
             Get
-                Return KurveWirkt(_curveBluePoints)
+                Return CurveIsEdited(_curveBluePoints)
             End Get
         End Property
 
         Public ReadOnly Property IsCurveLuminanceEdited As Boolean
             Get
-                Return KurveWirkt(_curveLuminancePoints)
+                Return CurveIsEdited(_curveLuminancePoints)
             End Get
         End Property
 
@@ -16517,7 +16521,8 @@ Namespace ViewModels
             If SvgPreviewService.IsSupportedSvg(path) Then Return False
 
             Dim ext = IO.Path.GetExtension(path).ToLowerInvariant()
-            Dim editableExts = {".jpg", ".jpeg", ".png", ".bmp", ".gif", ".tiff", ".tif", ".webp", ".heic", ".avif", ".ico"}
+            Dim editableExts = {".jpg", ".jpeg", ".png", ".bmp", ".gif", ".tiff", ".tif", ".webp",
+                                ".heic", ".heif", ".hif", ".avif", ".jxl", ".ico"}
             ' .fpx-Projekte sind im Editor voll bearbeitbar (Rezept wird wiederhergestellt) und
             ' gehoeren deshalb in den Filmstreifen - solange das Format aktiviert ist.
             Return editableExts.Contains(ext) OrElse RawPreviewService.IsSupportedRaw(path) OrElse

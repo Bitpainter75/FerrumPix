@@ -25,7 +25,7 @@ It runs on Windows, Linux and macOS, stays fast and local-first, and is built fo
 - Edit: crop, resize, rotate and distort, exposure and colour, curves, filters, masks, retouching, text and shapes, layers.
 - Develop RAW files from the sensor data, with lens correction from measured data for more than 1500 lenses.
 - Run batch work over a whole selection: rename, convert, resize, watermark, filters, metadata, export.
-- Open JPEG, PNG, WEBP, TIFF, BMP, GIF and RAW, plus HEIC/HEIF/AVIF read-only, and Photoshop files with their layers.
+- Open JPEG, PNG, WEBP, TIFF, BMP, GIF and RAW, plus HEIC/HEIF/AVIF and JPEG XL read-only, and Photoshop files with their layers.
 - Hand a picture to another program with *Open with*, and pass it through G'MIC from the editor if you have it installed.
 - Find the people in your photos and search by them, and search by where a photo was taken - both entirely on your own machine.
 - Connect to your own Immich or Nextcloud server for browsing, upload, download, editing and metadata sync.
@@ -107,7 +107,7 @@ Lens defects are corrected from measured data covering more than 1500 lenses on 
 
 Save a RAW and your edits go into a small sidecar next to it; the RAW itself is never modified, and opening the photo again brings the edits back. Save it as a JPEG or a PNG instead and you get that one file, with the edits baked in and no sidecar. A Lightroom sidecar with develop settings is converted once, so a photo edited elsewhere opens the way you left it.
 
-A picture that carries its own colour profile, such as Adobe RGB or Display P3, is converted when it is opened, so it looks the way it was meant to instead of flat and shifted. That covers JPEG, PNG, WEBP, TIFF, Photoshop files and HEIC. Pictures without a profile are left exactly as they are, and what you save is sRGB and says so.
+A picture that carries its own colour profile, such as Adobe RGB or Display P3, is converted when it is opened, so it looks the way it was meant to instead of flat and shifted. That covers JPEG, PNG, WEBP, TIFF, Photoshop files, HEIC and JPEG XL. Pictures without a profile are left exactly as they are, and what you save is sRGB and says so.
 
 Pictures from a phone or a scanner open too, and your edit is saved as a new file next to them. A Photoshop file keeps its layers, masks and groups, so a picture can go back to Photoshop, Affinity or GIMP and still be worked on there, and text stays text you can keep typing on. Photoshop files that FerrumPix cannot take apart open as one finished picture.
 
@@ -251,6 +251,10 @@ in but no libmpv, so it plays no video, and on macOS libraw comes from Homebrew 
 libheif opens HEIC and HEIF. The Windows downloads bring it along, on Linux it comes from
 your package manager (the packages recommend it), and macOS reads those files itself.
 Without it they simply stay closed and everything else works.
+
+libjxl opens JPEG XL. The Windows downloads bring it along, on Linux it comes from your package
+manager (the packages recommend it, the Flatpak has it built in), and on macOS from Homebrew with
+"brew install jpeg-xl".
 
 ## Building from source
 

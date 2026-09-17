@@ -8542,4 +8542,13 @@
   <data name="Die_kopierte_Datei_gibt_es_nicht_mehr_f41f8442" xml:space="preserve">
     <value>コピーしたファイルはもう存在しません</value>
   </data>
+  <data name="libjxl_a5ba9e61" xml:space="preserve">
+    <value>libjxl</value>
+  </data>
+  <data name="JPEG_XL_nur_vom_System_cd6e7014" xml:space="preserve">
+    <value>JPEG XL。システムにあるものだけ</value>
+  </data>
+  <data name="libjxl_liest_JPEG_XL_Dateien_und_steht_unter_der_7746769f" xml:space="preserve">
+    <value>libjxl は JPEG XL ファイルを読み込み、BSD ライセンスで提供されています。Windows では同梱され、Linux ではパッケージマネージャーから入手し、Flatpak には同梱されており、macOS では Homebrew から入手します。ない場合はそのファイルが開けないだけで、ほかの機能はそのまま動作します。</value>
+  </data>
 </root>

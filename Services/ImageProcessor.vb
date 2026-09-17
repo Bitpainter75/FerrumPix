@@ -146,6 +146,11 @@ Namespace Services
                 Dim heif = HeifDecodeService.ExtractPreview(path)
                 If heif IsNot Nothing Then Return heif
             End If
+            ' JPEG XL ebenso, ueber libjxl (siehe JxlDecodeService).
+            If JxlDecodeService.IsSupportedJxl(path) AndAlso JxlDecodeService.IsAvailable Then
+                Dim jxl = JxlDecodeService.ExtractPreview(path)
+                If jxl IsNot Nothing Then Return jxl
+            End If
             ' TIFF kann SkiaSharp ebenfalls nicht - LibTiff.NET liefert es als PNG herein.
             If TiffPreviewService.IsSupportedTiff(path) Then
                 Dim tiff = TiffPreviewService.ExtractPreview(path)
@@ -1963,6 +1968,10 @@ Namespace Services
             If HeifDecodeService.IsSupportedHeif(imagePath) AndAlso HeifDecodeService.IsAvailable Then
                 Dim heifSize = HeifDecodeService.TryGetSize(imagePath)
                 If heifSize.Width > 0 AndAlso heifSize.Height > 0 Then Return heifSize
+            End If
+            If JxlDecodeService.IsSupportedJxl(imagePath) AndAlso JxlDecodeService.IsAvailable Then
+                Dim jxlSize = JxlDecodeService.TryGetSize(imagePath)
+                If jxlSize.Width > 0 AndAlso jxlSize.Height > 0 Then Return jxlSize
             End If
             If TiffPreviewService.IsSupportedTiff(imagePath) Then
                 Dim tiffSize = TiffPreviewService.TryGetSize(imagePath)

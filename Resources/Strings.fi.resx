@@ -8542,4 +8542,13 @@
   <data name="Die_kopierte_Datei_gibt_es_nicht_mehr_f41f8442" xml:space="preserve">
     <value>Kopioitua tiedostoa ei ole enää olemassa</value>
   </data>
+  <data name="libjxl_a5ba9e61" xml:space="preserve">
+    <value>libjxl</value>
+  </data>
+  <data name="JPEG_XL_nur_vom_System_cd6e7014" xml:space="preserve">
+    <value>JPEG XL, vain järjestelmästä</value>
+  </data>
+  <data name="libjxl_liest_JPEG_XL_Dateien_und_steht_unter_der_7746769f" xml:space="preserve">
+    <value>libjxl lukee JPEG XL -tiedostoja, ja sen lisenssi on BSD. Windowsissa se tulee mukana, Linuxissa se tulee paketinhallinnasta, Flatpak sisältää sen, ja macOS:ssä se tulee Homebrew'sta. Jos se puuttuu, tällaiset tiedostot jäävät vain avaamatta ja kaikki muu toimii ennallaan.</value>
+  </data>
 </root>

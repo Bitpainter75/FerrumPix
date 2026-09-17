@@ -397,12 +397,13 @@ Namespace Services
             ' TIFF steht NICHT in dieser Reihe: eine neue TIFF-Datei schreibt TiffWriterService. Ueber
             ' ein TIFF-Original schreiben darf dagegen nichts, das haelt die Regel darunter fest.
             If RawPreviewService.IsSupportedRaw(targetPath) OrElse PsdPreviewService.IsSupportedPsd(targetPath) OrElse
-               HeifDecodeService.IsSupportedHeif(targetPath) Then
+               HeifDecodeService.IsSupportedHeif(targetPath) OrElse JxlDecodeService.IsSupportedJxl(targetPath) Then
                 workingFull?.Dispose()
                 Return False
             End If
             If (RawPreviewService.IsSupportedRaw(sourcePath) OrElse PsdPreviewService.IsSupportedPsd(sourcePath) OrElse
-                HeifDecodeService.IsSupportedHeif(sourcePath) OrElse TiffPreviewService.IsSupportedTiff(sourcePath)) AndAlso
+                HeifDecodeService.IsSupportedHeif(sourcePath) OrElse JxlDecodeService.IsSupportedJxl(sourcePath) OrElse
+                TiffPreviewService.IsSupportedTiff(sourcePath)) AndAlso
                PathIdentity.AreSame(sourcePath, targetPath) Then
                 workingFull?.Dispose()
                 Return False

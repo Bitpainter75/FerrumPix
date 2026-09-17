@@ -8542,4 +8542,13 @@
   <data name="Die_kopierte_Datei_gibt_es_nicht_mehr_f41f8442" xml:space="preserve">
     <value>Скопированного файла больше нет</value>
   </data>
+  <data name="libjxl_a5ba9e61" xml:space="preserve">
+    <value>libjxl</value>
+  </data>
+  <data name="JPEG_XL_nur_vom_System_cd6e7014" xml:space="preserve">
+    <value>JPEG XL, только из системы</value>
+  </data>
+  <data name="libjxl_liest_JPEG_XL_Dateien_und_steht_unter_der_7746769f" xml:space="preserve">
+    <value>libjxl читает файлы JPEG XL и распространяется по лицензии BSD. В Windows она входит в комплект, в Linux берётся из менеджера пакетов, в Flatpak уже входит, а в macOS устанавливается через Homebrew. Если её нет, такие файлы просто не открываются, а всё остальное работает как прежде.</value>
+  </data>
 </root>

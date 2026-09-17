@@ -8542,4 +8542,13 @@
   <data name="Die_kopierte_Datei_gibt_es_nicht_mehr_f41f8442" xml:space="preserve">
     <value>Zkopírovaný soubor už neexistuje</value>
   </data>
+  <data name="libjxl_a5ba9e61" xml:space="preserve">
+    <value>libjxl</value>
+  </data>
+  <data name="JPEG_XL_nur_vom_System_cd6e7014" xml:space="preserve">
+    <value>JPEG XL, pouze ze systému</value>
+  </data>
+  <data name="libjxl_liest_JPEG_XL_Dateien_und_steht_unter_der_7746769f" xml:space="preserve">
+    <value>libjxl čte soubory JPEG XL a podléhá licenci BSD. Ve Windows je přiložena, v Linuxu pochází ze správce balíčků, Flatpak ji obsahuje a v macOS pochází z Homebrew. Pokud chybí, zůstanou takové soubory prostě neotevřené a vše ostatní funguje beze změny.</value>
+  </data>
 </root>

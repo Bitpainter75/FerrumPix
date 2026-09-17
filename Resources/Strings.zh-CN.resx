@@ -8500,4 +8500,13 @@
   <data name="Die_kopierte_Datei_gibt_es_nicht_mehr_f41f8442" xml:space="preserve">
     <value>复制的文件已不存在</value>
   </data>
+  <data name="libjxl_a5ba9e61" xml:space="preserve">
+    <value>libjxl</value>
+  </data>
+  <data name="JPEG_XL_nur_vom_System_cd6e7014" xml:space="preserve">
+    <value>JPEG XL，仅使用系统提供的库</value>
+  </data>
+  <data name="libjxl_liest_JPEG_XL_Dateien_und_steht_unter_der_7746769f" xml:space="preserve">
+    <value>libjxl 用于读取 JPEG XL 文件，采用 BSD 许可证。在 Windows 上随程序附带，在 Linux 上来自软件包管理器，Flatpak 已包含它，在 macOS 上则来自 Homebrew。缺少它时，这类文件只是无法打开，其他功能照常工作。</value>
+  </data>
 </root>

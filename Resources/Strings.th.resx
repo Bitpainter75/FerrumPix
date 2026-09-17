@@ -8546,4 +8546,13 @@
   <data name="Die_kopierte_Datei_gibt_es_nicht_mehr_f41f8442" xml:space="preserve">
     <value>ไฟล์ที่คัดลอกไว้ไม่มีอยู่แล้ว</value>
   </data>
+  <data name="libjxl_a5ba9e61" xml:space="preserve">
+    <value>libjxl</value>
+  </data>
+  <data name="JPEG_XL_nur_vom_System_cd6e7014" xml:space="preserve">
+    <value>JPEG XL จากระบบเท่านั้น</value>
+  </data>
+  <data name="libjxl_liest_JPEG_XL_Dateien_und_steht_unter_der_7746769f" xml:space="preserve">
+    <value>libjxl อ่านไฟล์ JPEG XL และใช้สัญญาอนุญาต BSD บน Windows มีมาให้พร้อมกัน บน Linux มาจากตัวจัดการแพ็กเกจ Flatpak มีมาให้แล้ว และบน macOS มาจาก Homebrew หากไม่มี ไฟล์ดังกล่าวจะเปิดไม่ได้เท่านั้น ส่วนอื่นทั้งหมดยังทำงานตามปกติ</value>
+  </data>
 </root>

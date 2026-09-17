@@ -824,6 +824,10 @@ Namespace Services
                 Dim heif = HeifDecodeService.ExtractPreview(filePath)
                 If heif IsNot Nothing Then Return heif
             End If
+            If JxlDecodeService.IsSupportedJxl(filePath) AndAlso JxlDecodeService.IsAvailable Then
+                Dim jxl = JxlDecodeService.ExtractPreview(filePath)
+                If jxl IsNot Nothing Then Return jxl
+            End If
             If TiffPreviewService.IsSupportedTiff(filePath) Then
                 Dim tiff = TiffPreviewService.ExtractPreview(filePath)
                 If tiff IsNot Nothing Then Return tiff
@@ -983,6 +987,12 @@ Namespace Services
                     ' libheif wendet die Drehung aus dem Container selbst an - hier also KEINE
                     ' zusaetzliche Korrektur, sonst waere sie doppelt.
                     Using preview = HeifDecodeService.ExtractPreview(filePath)
+                        cancellationToken.ThrowIfCancellationRequested()
+                        If preview IsNot Nothing Then Return DecodeCorrectedAndResize(preview, CacheWidth, SidecarRotationFor(filePath))
+                    End Using
+                ElseIf JxlDecodeService.IsSupportedJxl(filePath) AndAlso JxlDecodeService.IsAvailable Then
+                    ' Wie HEIF: libjxl dreht selbst, keine zusaetzliche Korrektur.
+                    Using preview = JxlDecodeService.ExtractPreview(filePath)
                         cancellationToken.ThrowIfCancellationRequested()
                         If preview IsNot Nothing Then Return DecodeCorrectedAndResize(preview, CacheWidth, SidecarRotationFor(filePath))
                     End Using

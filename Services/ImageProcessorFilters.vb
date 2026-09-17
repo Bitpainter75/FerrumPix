@@ -1642,8 +1642,11 @@ Namespace Services
                     result.Add((255, 255))
                 End If
             End If
-            If result(0).X > 0.0001 Then result.Insert(0, (0, result(0).Y))
-            If result(result.Count - 1).X < 254.9999 Then result.Add((255, result(result.Count - 1).Y))
+            ' Liegt ein Endpunkt innen (Schwarz- oder Weisspunkt gesetzt), wird KEIN Punkt bei 0 bzw.
+            ' 255 ergaenzt. Das stand hier frueher: der ergaenzte Punkt machte den Endpunkt fuer PCHIP
+            ' zu einem inneren Punkt mit flacher Seite, also Steigung null, und die Bildkette bog die
+            ' Kurve dort ab, waehrend der Editor eine Gerade zeichnete. Vor dem ersten und hinter dem
+            ' letzten Punkt haelt EvaluateCurveSpline den Wert ohnehin selbst.
             Return result
         End Function
 
