@@ -55,6 +55,57 @@ Namespace Services
             End Using
         End Sub
 
+        ''' <summary>Schreibt einzelne Bildpunkte wie <see cref="SKBitmap.SetPixel"/>, aber ohne dessen
+        ''' Kosten, wo das Ergebnis nachweislich dasselbe ist.
+        '''
+        ''' SetPixel legt bei JEDEM Aufruf eine Zeichenflaeche an, liest die Bildbeschreibung aus der
+        ''' nativen Bibliothek und zeichnet einen Punkt mit normaler Ueberblendung - gemessen rund
+        ''' 700 ns je Punkt. Eine DECKENDE Farbe ersetzt dabei den Punkt einfach; genau diesen Fall
+        ''' schreibt der Schreiber direkt in den Speicher, sofort, damit ein folgendes GetPixel ihn
+        ''' sieht. Alles andere - halbtransparente Farbe (die ueberblendet), ein anderer Farbtyp als
+        ''' BGRA/RGBA oder ein Farbraum ausser sRGB (dort rechnet Skia die Farbe um) - geht weiter
+        ''' ueber SetPixel. Abgesichert durch die Pruefung "Punktschreiber: dasselbe Ergebnis wie
+        ''' SetPixel".
+        '''
+        ''' Die Bitmap darf sich waehrend der Lebensdauer nicht in Groesse oder Speicher aendern.</summary>
+        Friend NotInheritable Class PixelWriter
+            Private ReadOnly _bitmap As SKBitmap
+            Private ReadOnly _pixels As IntPtr
+            Private ReadOnly _stride As Integer
+            Private ReadOnly _width As Integer
+            Private ReadOnly _height As Integer
+            Private ReadOnly _direct As Boolean
+            Private ReadOnly _bgra As Boolean
+
+            Public Sub New(bitmap As SKBitmap)
+                _bitmap = bitmap
+                If bitmap Is Nothing Then Return
+                Dim info = bitmap.Info
+                _width = info.Width
+                _height = info.Height
+                _bgra = info.ColorType = SKColorType.Bgra8888
+                Dim srgb = info.ColorSpace Is Nothing OrElse info.ColorSpace.IsSrgb
+                _pixels = bitmap.GetPixels()
+                _stride = bitmap.RowBytes
+                _direct = srgb AndAlso _pixels <> IntPtr.Zero AndAlso
+                          (_bgra OrElse info.ColorType = SKColorType.Rgba8888) AndAlso _stride >= _width * 4
+            End Sub
+
+            Public Sub SetPixel(x As Integer, y As Integer, color As SKColor)
+                If Not _direct OrElse color.Alpha <> 255 Then
+                    _bitmap.SetPixel(x, y, color)
+                    Return
+                End If
+                ' Dieselben Grenzen wie SetPixel, mit derselben Ausnahme.
+                If x < 0 OrElse x >= _width Then Throw New ArgumentOutOfRangeException(NameOf(x))
+                If y < 0 OrElse y >= _height Then Throw New ArgumentOutOfRangeException(NameOf(y))
+                Dim first = If(_bgra, color.Blue, color.Red)
+                Dim third = If(_bgra, color.Red, color.Blue)
+                Dim value = CInt(first) Or (CInt(color.Green) << 8) Or (CInt(third) << 16) Or (&HFF << 24)
+                Marshal.WriteInt32(_pixels, y * _stride + x * 4, value)
+            End Sub
+        End Class
+
         ''' Friend wie die Rechteck-Fassung darueber: das Vergleichsmodell zeichnet sein Gesicht
         ''' ueber eine gesetzte Matrix und braucht deshalb genau diese Ueberladung.
         Friend Shared Sub DrawBitmapSampled(canvas As SKCanvas, bitmap As SKBitmap, x As Single, y As Single,
@@ -3203,21 +3254,46 @@ Namespace Services
                                                               sourceWidth As Integer, sourceHeight As Integer,
                                                               adj As ImageAdjustments, ByRef source As SKPoint) As Boolean
             If sourceWidth <= 0 OrElse sourceHeight <= 0 OrElse adj Is Nothing Then Return False
+            Return TryGeometryOutputToSourcePoint(outputX, outputY, PrepareGeometryInverse(sourceWidth, sourceHeight, adj), source)
+        End Function
+
+        ''' <summary>Was die Rueckabbildung je Aufruf vorbereitet: die Schrittfolge, die Masse vor
+        ''' jedem Schritt und je Schritt seine Feldgruppe. Fuer EINEN Punkt ist das dieselbe Arbeit
+        ''' wie bisher; wer viele Punkte zurueckrechnet, baut es einmal und reicht es weiter
+        ''' (<see cref="BuildSelectionMaskFromLayerMask"/>). Sonst entstand je Punkt und Schritt
+        ''' ein vollstaendiges Rezeptobjekt, und parallele Zeilen warteten aufeinander, weil der
+        ''' Speicher staendig aufgeraeumt werden musste. Nur lesen - mehrere Faeden teilen es.</summary>
+        Friend NotInheritable Class GeometryInverse
+            Public Steps As List(Of GeometryOperation)
+            Public Sizes As List(Of SKSizeI)
+            Public Mappings As ImageAdjustments()
+        End Class
+
+        Friend Shared Function PrepareGeometryInverse(sourceWidth As Integer, sourceHeight As Integer,
+                                                      adj As ImageAdjustments) As GeometryInverse
             ' Rueckwaerts durch die SCHRITTFOLGE. Ohne Schritte ist das die Identitaet - dieselbe
             ' Regel wie auf dem Hinweg und im Pixelweg.
             Dim steps = GeometrySteps(adj)
             Dim sizes As New List(Of SKSizeI) From {New SKSizeI(sourceWidth, sourceHeight)}
-            For Each stepItem In steps
+            Dim mappings(steps.Count - 1) As ImageAdjustments
+            For index = 0 To steps.Count - 1
+                Dim stepItem = steps(index)
                 Dim previous = sizes(sizes.Count - 1)
                 sizes.Add(ComputeGeometryOperationOutputSize(previous.Width, previous.Height, stepItem))
+                If stepItem?.Adjustments IsNot Nothing Then mappings(index) = GeometryMappingAdjustments(stepItem)
             Next
+            Return New GeometryInverse With {.Steps = steps, .Sizes = sizes, .Mappings = mappings}
+        End Function
+
+        Friend Shared Function TryGeometryOutputToSourcePoint(outputX As Double, outputY As Double,
+                                                              prepared As GeometryInverse, ByRef source As SKPoint) As Boolean
             Dim operationX = outputX, operationY = outputY
-            For index = steps.Count - 1 To 0 Step -1
-                Dim stepItem = steps(index)
+            For index = prepared.Steps.Count - 1 To 0 Step -1
+                Dim stepItem = prepared.Steps(index)
                 If stepItem?.Adjustments Is Nothing Then Continue For
-                Dim before = sizes(index), mapped As SKPoint
+                Dim before = prepared.Sizes(index), mapped As SKPoint
                 If Not TryStepOutputToSourcePoint(operationX, operationY, before.Width, before.Height,
-                                                  GeometryMappingAdjustments(stepItem), mapped) Then Return False
+                                                  prepared.Mappings(index), mapped) Then Return False
                 operationX = mapped.X : operationY = mapped.Y
             Next
             source = New SKPoint(CSng(operationX), CSng(operationY))
@@ -3969,7 +4045,19 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
 
         ''' <summary>Führt bestätigte Geometrieschritte in ihrer Bearbeitungsreihenfolge aus.
         ''' Eine leere Liste bewahrt die feste Reihenfolge bestehender Rezepte.</summary>
-        Private Shared Function ApplyGeometryPipeline(source As SKBitmap, adj As ImageAdjustments) As SKBitmap
+        ''' <param name="occupied">Nur fuer den Maskenweg: das Rechteck, ausserhalb dessen die Quelle
+        ''' vollstaendig durchsichtig ist. Jede Stufe bildet es ab und zeichnet nur noch darin (mit
+        ''' Kantenglaettung nur die betroffenen Zeilen, siehe ClipCanvasToOccupied); was ausserhalb
+        ''' laege, waere ohnehin null. Die Stufen rechnen dabei mit derselben Matrix, derselben
+        ''' Quelle und derselben Abtastung wie ohne Rechteck, das Ergebnis ist also bitgleich
+        ''' (Pruefung "Maskengeometrie: nur im belegten Rechteck gezeichnet ist bitgleich").
+        ''' Ohne Angabe laeuft jede Stufe unveraendert ueber das ganze Bild.
+        '''
+        ''' ANLASS (Befund): ein Projekt mit sechs Korrekturebenen brauchte 2 s zum Oeffnen, davon
+        ''' 1,65 s fuer die Masken - jede lief ueber das ganze Bild durch zwei Begradigungen, auch
+        ''' wenn sie nur ein Zwanzigstel davon bedeckte. Mit Rechteck gemessen 1,05 s, bitgleich.</param>
+        Private Shared Function ApplyGeometryPipeline(source As SKBitmap, adj As ImageAdjustments,
+                                                      Optional occupied As SKRectI? = Nothing) As SKBitmap
             If source Is Nothing Then Return Nothing
             Dim result = source
             ' KEINE Schritte heisst KEINE Geometrie - die oberen Felder werden nicht mehr gelesen.
@@ -3977,17 +4065,116 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                 Dim stepAdj = stepItem?.Adjustments
                 If stepAdj Is Nothing Then Continue For
                 Select Case If(stepItem.Kind, "").ToLowerInvariant()
-                    Case "crop" : result = ReplaceBitmap(result, ApplyCrop(result, stepAdj))
+                    Case "crop" : result = ReplaceBitmap(result, ApplyCrop(result, stepAdj, occupied))
                     Case "transform"
-                        result = ReplaceBitmap(result, ApplyGeometryTransforms(result, stepAdj))
-                        result = ReplaceBitmap(result, ApplyStraighten(result, stepAdj))
-                    Case "perspective" : result = ReplaceBitmap(result, ApplyPerspective(result, stepAdj))
-                    Case "warp" : result = ReplaceBitmap(result, ApplyImageWarp(result, stepAdj))
-                    Case "resize" : result = ReplaceBitmap(result, ApplyResize(result, stepAdj))
-                    Case "canvas" : result = ReplaceBitmap(result, ApplyCanvasResize(result, stepAdj))
+                        result = ReplaceBitmap(result, ApplyGeometryTransforms(result, stepAdj, occupied))
+                        result = ReplaceBitmap(result, ApplyStraighten(result, stepAdj, occupied))
+                    Case "perspective" : result = ReplaceBitmap(result, ApplyPerspective(result, stepAdj, occupied))
+                    Case "warp" : result = ReplaceBitmap(result, ApplyImageWarp(result, stepAdj, occupied))
+                    Case "resize" : result = ReplaceBitmap(result, ApplyResize(result, stepAdj, occupied))
+                    Case "canvas" : result = ReplaceBitmap(result, ApplyCanvasResize(result, stepAdj, occupied))
                 End Select
             Next
             Return result
+        End Function
+
+        ''' <summary>Rand um das belegte Rechteck IN DER QUELLE: so weit reicht der Abtastkern
+        ''' (kubisch zwei Punkte, einer Reserve).</summary>
+        Private Const OccupiedSourcePad As Integer = 3
+
+        ''' <summary>Rand um das abgebildete Rechteck IM ZIEL: die Kantenglaettung der Bildkante
+        ''' und das Runden auf ganze Punkte.</summary>
+        Private Const OccupiedTargetPad As Integer = 2
+
+        ''' <summary>Begrenzt das Zeichnen einer Stufe auf das Bild des belegten Rechtecks und gibt
+        ''' dieses Bild als neues belegtes Rechteck zurueck.
+        '''
+        ''' Aufzurufen NACHDEM die Stufe ihre Matrix gesetzt hat und UNMITTELBAR vor dem Zeichnen.
+        ''' Die Matrix wird dabei nicht veraendert: der Ausschnitt geht ueber einen Clip in
+        ''' Geraetekoordinaten, damit jeder Punkt innerhalb genau so gerechnet wird wie ohne ihn.
+        ''' <paramref name="sourceToCanvas"/> ist die Lage der Quelle im Zeichenraum der Stufe
+        ''' (Versatz beim Zeichnen oder Rechteck auf Rechteck). Laesst sich das Bild nicht sicher
+        ''' bestimmen (Perspektive hinter dem Horizont), wird nicht begrenzt und das Rechteck
+        ''' verworfen - die Stufe rechnet dann wie bisher ueber alles.
+        '''
+        ''' <paramref name="antialiased"/>: die Stufe zeichnet mit Kantenglaettung. Dann werden nur
+        ''' ZEILEN begrenzt, nie Spalten, und eine Bildkante, an die die Maske reicht, bleibt in
+        ''' voller Laenge im Clip. Beides ist gemessen, nicht vorsichtshalber: endet eine Zeile mitten
+        ''' im Bild, oder stutzt der Clip eine schraege Bildkante, rechnet Skia die Kantenglaettung
+        ''' der Bildkante mit anderer Rundung, und entlang der Kante wichen Punkte der Maske um bis zu
+        ''' 49 Stufen ab (Bitgleichheitspruefung, Begradigen mit Masken am Rand). Eine Kante ohne
+        ''' Maske daneben traegt nur Nullen, dort ist die Rundung gleichgueltig. Ohne
+        ''' Kantenglaettung gibt es diese Rechnung nicht, dort gilt das Rechteck in beide Richtungen.
+        '''
+        ''' Zurueck kommt immer das enge Rechteck um den Inhalt, nicht der Clip.</summary>
+        Private Shared Function ClipCanvasToOccupied(canvas As SKCanvas, occupied As SKRectI?,
+                                                     sourceToCanvas As SKMatrix,
+                                                     sourceWidth As Integer, sourceHeight As Integer,
+                                                     targetWidth As Integer, targetHeight As Integer,
+                                                     antialiased As Boolean) As SKRectI?
+            If Not occupied.HasValue Then Return Nothing
+            Dim current = canvas.TotalMatrix
+            Dim full = current.PreConcat(sourceToCanvas)
+            Dim area = occupied.Value
+            Dim content = SKRectI.Empty
+            Dim clip = SKRectI.Empty
+            If area.Width > 0 AndAlso area.Height > 0 Then
+                Dim left = Math.Max(0, area.Left - OccupiedSourcePad)
+                Dim top = Math.Max(0, area.Top - OccupiedSourcePad)
+                Dim right = Math.Min(sourceWidth, area.Right + OccupiedSourcePad)
+                Dim bottom = Math.Min(sourceHeight, area.Bottom + OccupiedSourcePad)
+                If right > left AndAlso bottom > top Then
+                    Dim corners = New List(Of SKPoint) From {
+                        New SKPoint(left, top), New SKPoint(right, top),
+                        New SKPoint(left, bottom), New SKPoint(right, bottom)}
+                    Dim contentBounds = MapPointBounds(full, corners, targetWidth, targetHeight)
+                    If Not contentBounds.HasValue Then Return Nothing
+                    content = contentBounds.Value
+                    If Not antialiased Then
+                        clip = content
+                    ElseIf content.Width > 0 AndAlso content.Height > 0 Then
+                        If left = 0 Then corners.AddRange({New SKPoint(0, 0), New SKPoint(0, sourceHeight)})
+                        If top = 0 Then corners.AddRange({New SKPoint(0, 0), New SKPoint(sourceWidth, 0)})
+                        If right = sourceWidth Then corners.AddRange({New SKPoint(sourceWidth, 0), New SKPoint(sourceWidth, sourceHeight)})
+                        If bottom = sourceHeight Then corners.AddRange({New SKPoint(0, sourceHeight), New SKPoint(sourceWidth, sourceHeight)})
+                        Dim rowBounds = MapPointBounds(full, corners, targetWidth, targetHeight)
+                        If Not rowBounds.HasValue Then Return Nothing
+                        If rowBounds.Value.Height > 0 Then
+                            clip = New SKRectI(0, rowBounds.Value.Top, targetWidth, rowBounds.Value.Bottom)
+                        End If
+                    End If
+                End If
+            End If
+            canvas.ResetMatrix()
+            canvas.ClipRect(New SKRect(clip.Left, clip.Top, clip.Right, clip.Bottom))
+            canvas.SetMatrix(current)
+            Return content
+        End Function
+
+        ''' <summary>Das achsenparallele Rechteck um die abgebildeten Punkte: nach aussen auf ganze
+        ''' Punkte gerundet, um <see cref="OccupiedTargetPad"/> erweitert, auf das Ziel begrenzt.
+        ''' Nothing, wenn ein Punkt hinter dem Horizont einer Perspektive liegt oder nicht endlich
+        ''' abgebildet wird.</summary>
+        Private Shared Function MapPointBounds(matrix As SKMatrix, points As List(Of SKPoint),
+                                               targetWidth As Integer, targetHeight As Integer) As SKRectI?
+            For Each point In points
+                Dim w = matrix.Persp0 * point.X + matrix.Persp1 * point.Y + matrix.Persp2
+                If Not (w > 0.000001F) Then Return Nothing
+            Next
+            Dim minX = Double.MaxValue, minY = Double.MaxValue
+            Dim maxX = Double.MinValue, maxY = Double.MinValue
+            For Each p In matrix.MapPoints(points.ToArray())
+                If Single.IsNaN(p.X) OrElse Single.IsNaN(p.Y) OrElse
+                   Single.IsInfinity(p.X) OrElse Single.IsInfinity(p.Y) Then Return Nothing
+                minX = Math.Min(minX, p.X) : maxX = Math.Max(maxX, p.X)
+                minY = Math.Min(minY, p.Y) : maxY = Math.Max(maxY, p.Y)
+            Next
+            Dim boxLeft = CInt(Math.Max(0.0, Math.Floor(minX) - OccupiedTargetPad))
+            Dim boxTop = CInt(Math.Max(0.0, Math.Floor(minY) - OccupiedTargetPad))
+            Dim boxRight = CInt(Math.Min(CDbl(targetWidth), Math.Ceiling(maxX) + OccupiedTargetPad))
+            Dim boxBottom = CInt(Math.Min(CDbl(targetHeight), Math.Ceiling(maxY) + OccupiedTargetPad))
+            If boxRight <= boxLeft OrElse boxBottom <= boxTop Then Return SKRectI.Empty
+            Return New SKRectI(boxLeft, boxTop, boxRight, boxBottom)
         End Function
 
         ''' <summary>Gleicher Weg wie <see cref="ApplyGeometryPipeline"/>, aber für den
@@ -4014,7 +4201,8 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             Return result
         End Function
 
-        Private Shared Function ApplyCrop(source As SKBitmap, adj As ImageAdjustments) As SKBitmap
+        Private Shared Function ApplyCrop(source As SKBitmap, adj As ImageAdjustments,
+                                          Optional ByRef occupied As SKRectI? = Nothing) As SKBitmap
             Dim leftPct = Clamp(adj.CropLeftPercent, 0, 100) / 100.0F
             Dim topPct = Clamp(adj.CropTopPercent, 0, 100) / 100.0F
             Dim rightPct = Clamp(adj.CropRightPercent, 0, 100) / 100.0F
@@ -4034,6 +4222,13 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             Dim cropWidth = right - left
             Dim cropHeight = bottom - top
             If cropWidth = source.Width AndAlso cropHeight = source.Height Then Return source
+            ' Der Zuschnitt kopiert nur um: das belegte Rechteck wird mitgeschnitten und verschoben.
+            If occupied.HasValue Then
+                Dim kept = SKRectI.Intersect(occupied.Value, New SKRectI(left, top, right, bottom))
+                occupied = If(kept.Width > 0 AndAlso kept.Height > 0,
+                              New SKRectI(kept.Left - left, kept.Top - top, kept.Right - left, kept.Bottom - top),
+                              SKRectI.Empty)
+            End If
             Dim result = New SKBitmap(cropWidth, cropHeight, source.ColorType, source.AlphaType)
             Using canvas = New SKCanvas(result)
                 Dim srcRect = New SKRect(left, top, right, bottom)
@@ -4053,7 +4248,8 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             Return ClampByte(CInt(Math.Round(dst + (CInt(src) - CInt(dst)) * alpha)))
         End Function
 
-        Private Shared Function ApplyResize(source As SKBitmap, adj As ImageAdjustments) As SKBitmap
+        Private Shared Function ApplyResize(source As SKBitmap, adj As ImageAdjustments,
+                                            Optional ByRef occupied As SKRectI? = Nothing) As SKBitmap
             Dim targetWidth = adj.ResizeWidth
             Dim targetHeight = adj.ResizeHeight
 
@@ -4113,6 +4309,9 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             Dim result = New SKBitmap(targetWidth, targetHeight, source.ColorType, source.AlphaType)
             Using canvas = New SKCanvas(result)
                 canvas.Clear(SKColors.Transparent)
+                occupied = ClipCanvasToOccupied(canvas, occupied,
+                                                SKMatrix.CreateScale(targetWidth / CSng(source.Width), targetHeight / CSng(source.Height)),
+                                                source.Width, source.Height, targetWidth, targetHeight, antialiased:=True)
                 Using paint = New SKPaint With {.IsAntialias = True}
                     DrawBitmapSampled(canvas, source, New SKRect(0, 0, source.Width, source.Height), New SKRect(0, 0, targetWidth, targetHeight),
                                       ToSampling(adj.ResizeInterpolation), paint)
@@ -4162,7 +4361,8 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             Return result
         End Function
 
-        Private Shared Function ApplyCanvasResize(source As SKBitmap, adj As ImageAdjustments) As SKBitmap
+        Private Shared Function ApplyCanvasResize(source As SKBitmap, adj As ImageAdjustments,
+                                                  Optional ByRef occupied As SKRectI? = Nothing) As SKBitmap
             Dim targetWidth = If(adj.CanvasWidth > 0, adj.CanvasWidth, source.Width)
             Dim targetHeight = If(adj.CanvasHeight > 0, adj.CanvasHeight, source.Height)
             If targetWidth = source.Width AndAlso targetHeight = source.Height Then Return source
@@ -4192,6 +4392,8 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                 ' (ApplyDocumentBackground), sonst faerbte diese Stufe ihr Loch selbst und die
                 ' anderen Loecher blieben durchsichtig.
                 canvas.Clear(SKColors.Transparent)
+                occupied = ClipCanvasToOccupied(canvas, occupied, SKMatrix.CreateTranslation(offsetX, offsetY),
+                                                source.Width, source.Height, targetWidth, targetHeight, antialiased:=False)
                 canvas.DrawBitmap(source, offsetX, offsetY)
             End Using
             Return result
@@ -5164,7 +5366,8 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             End Try
         End Function
 
-        Private Shared Function ApplyGeometryTransforms(source As SKBitmap, adj As ImageAdjustments) As SKBitmap
+        Private Shared Function ApplyGeometryTransforms(source As SKBitmap, adj As ImageAdjustments,
+                                                        Optional ByRef occupied As SKRectI? = Nothing) As SKBitmap
             If adj.RotationDegrees = 0 AndAlso Not adj.FlipHorizontal AndAlso Not adj.FlipVertical Then
                 Return source
             End If
@@ -5194,6 +5397,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                         canvas.Translate(0, rh)
                         canvas.RotateDegrees(270)
                 End Select
+                occupied = ClipCanvasToOccupied(canvas, occupied, SKMatrix.Identity, sw, sh, rw, rh, antialiased:=False)
                 canvas.DrawBitmap(source, 0, 0)
             End Using
 
@@ -5203,6 +5407,9 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             Dim h = rotated.Height
             Dim result = New SKBitmap(w, h, rotated.ColorType, rotated.AlphaType)
             Using canvas = New SKCanvas(result)
+                ' Nur mit Rechteck: diese Stufe deckt sonst jeden Punkt selbst und leert nicht vorher.
+                ' Mit Clip bliebe ausserhalb stehen, was der neue Speicher zufaellig enthaelt.
+                If occupied.HasValue Then canvas.Clear(SKColors.Transparent)
                 Dim matrix = SKMatrix.Identity
                 If adj.FlipHorizontal Then
                     matrix = matrix.PostConcat(SKMatrix.CreateScale(-1, 1, w / 2.0F, h / 2.0F))
@@ -5211,6 +5418,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                     matrix = matrix.PostConcat(SKMatrix.CreateScale(1, -1, w / 2.0F, h / 2.0F))
                 End If
                 canvas.SetMatrix(matrix)
+                occupied = ClipCanvasToOccupied(canvas, occupied, SKMatrix.Identity, w, h, w, h, antialiased:=False)
                 canvas.DrawBitmap(rotated, 0, 0)
             End Using
             rotated.Dispose()
@@ -5243,7 +5451,8 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
         ''' im Bild- UND im Maskenweg, und unterschiedliche Ausgabemasse liessen die Maske nicht mehr
         ''' aufs Bild passen. Was aus dem Rahmen geschoben wird, ist abgeschnitten; wo nichts mehr
         ''' liegt, bleibt es durchsichtig.</summary>
-        Private Shared Function ApplyImageWarp(source As SKBitmap, adj As ImageAdjustments) As SKBitmap
+        Private Shared Function ApplyImageWarp(source As SKBitmap, adj As ImageAdjustments,
+                                               Optional ByRef occupied As SKRectI? = Nothing) As SKBitmap
             If source Is Nothing OrElse adj Is Nothing Then Return source
             Dim v = adj.ImageWarp
             If v Is Nothing OrElse v.IsEmpty OrElse Not String.Equals(v.Kind, "Gitter", StringComparison.Ordinal) Then Return source
@@ -5271,6 +5480,9 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             Next
             Dim warped = ImageGeometryMapper.WarpOverGrid(source, v.Columns, v.Rows, zx, zy)
             If warped Is Nothing OrElse Object.ReferenceEquals(warped, source) Then Return source
+            ' Das Raster bildet ein Rechteck nicht auf ein Rechteck ab: ab hier gilt keines mehr,
+            ' die folgenden Stufen rechnen wieder ueber das ganze Bild.
+            occupied = Nothing
             Return warped
         End Function
 
@@ -5282,7 +5494,8 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
         ''' die Groesse aendern, muessten beide Wege exakt dieselbe neue Groesse errechnen, sonst
         ''' passt die Maske nicht mehr aufs Bild. Gleiche Masse machen das zur Selbstverstaendlichkeit
         ''' statt zu einer Bedingung, an die jemand denken muss.</summary>
-        Private Shared Function ApplyPerspective(source As SKBitmap, adj As ImageAdjustments) As SKBitmap
+        Private Shared Function ApplyPerspective(source As SKBitmap, adj As ImageAdjustments,
+                                                 Optional ByRef occupied As SKRectI? = Nothing) As SKBitmap
             If source Is Nothing OrElse adj Is Nothing Then Return source
             Dim m = ImageGeometryMapper.WarpMatrix(source.Width, source.Height,
                                                           adj.PerspectiveHorizontal, adj.PerspectiveVertical,
@@ -5295,6 +5508,8 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             Using canvas = New SKCanvas(result)
                 canvas.Clear(SKColors.Transparent)
                 canvas.SetMatrix(m)
+                occupied = ClipCanvasToOccupied(canvas, occupied, SKMatrix.Identity,
+                                                source.Width, source.Height, source.Width, source.Height, antialiased:=True)
                 Using paint = New SKPaint With {.IsAntialias = True}
                     DrawBitmapSampled(canvas, source, 0, 0, SamplingHigh, paint)
                 End Using
@@ -5302,7 +5517,8 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             Return result
         End Function
 
-        Private Shared Function ApplyStraighten(source As SKBitmap, adj As ImageAdjustments) As SKBitmap
+        Private Shared Function ApplyStraighten(source As SKBitmap, adj As ImageAdjustments,
+                                                Optional ByRef occupied As SKRectI? = Nothing) As SKBitmap
             Dim degrees = adj.StraightenDegrees
             If Math.Abs(degrees) < 0.01F Then Return source
 
@@ -5322,6 +5538,9 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                 canvas.Translate(targetWidth / 2.0F, targetHeight / 2.0F)
                 canvas.Scale(CSng(stage.Scale))
                 canvas.RotateDegrees(degrees)
+                occupied = ClipCanvasToOccupied(canvas, occupied,
+                                                SKMatrix.CreateTranslation(-source.Width / 2.0F, -source.Height / 2.0F),
+                                                source.Width, source.Height, targetWidth, targetHeight, antialiased:=True)
                 Using paint = New SKPaint With {.IsAntialias = True}
                     DrawBitmapSampled(canvas, source, -source.Width / 2.0F, -source.Height / 2.0F, SamplingHigh, paint)
                 End Using

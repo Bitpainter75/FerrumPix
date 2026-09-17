@@ -148,18 +148,28 @@ Namespace Services
             Dim w = depth.Width, h = depth.Height
             Dim output = New SKBitmap(New SKImageInfo(w, h, SKColorType.Alpha8, SKAlphaType.Premul))
             Dim buffer(w * h - 1) As Byte
+            ' DER WERT HAENGT NUR AM TIEFENBYTE: also die 256 moeglichen Ergebnisse einmal rechnen,
+            ' mit genau derselben Formel, und je Punkt nachschlagen. Vorher lief je Punkt GetPixel -
+            ' ein Aufruf in die native Bibliothek - und die Rechnung dazu, bei jeder Reglerbewegung.
+            Dim table(255) As Byte
+            For value = 0 To 255
+                Dim t = value / 255.0 * 100.0
+                Dim d As Double
+                If t < from Then
+                    d = If(soft <= 0, 0.0, 1.0 - Math.Min(1.0, (from - t) / soft))
+                ElseIf t > bis Then
+                    d = If(soft <= 0, 0.0, 1.0 - Math.Min(1.0, (t - bis) / soft))
+                Else
+                    d = 1.0
+                End If
+                table(value) = CByte(Math.Max(0, Math.Min(255, CInt(Math.Round(d * 255.0)))))
+            Next
+            Dim stride As Integer
+            Dim depthBytes = ImageProcessor.TryReadAlpha8(depth, stride)
             For y = 0 To h - 1
                 For x = 0 To w - 1
-                    Dim t = depth.GetPixel(x, y).Alpha / 255.0 * 100.0
-                    Dim d As Double
-                    If t < from Then
-                        d = If(soft <= 0, 0.0, 1.0 - Math.Min(1.0, (from - t) / soft))
-                    ElseIf t > bis Then
-                        d = If(soft <= 0, 0.0, 1.0 - Math.Min(1.0, (t - bis) / soft))
-                    Else
-                        d = 1.0
-                    End If
-                    buffer(y * w + x) = CByte(Math.Max(0, Math.Min(255, CInt(Math.Round(d * 255.0)))))
+                    Dim value = If(depthBytes IsNot Nothing, depthBytes(y * stride + x), depth.GetPixel(x, y).Alpha)
+                    buffer(y * w + x) = table(value)
                 Next
             Next
             Runtime.InteropServices.Marshal.Copy(buffer, 0, output.GetPixels(), buffer.Length)
@@ -309,6 +319,8 @@ Namespace Services
                 Next
 
                 Using blurred = New SKBitmap(aw, ah, SKColorType.Bgra8888, SKAlphaType.Unpremul)
+                    ' Deckende Punkte direkt in den Speicher: SetPixel trug 72 % der Rechenzeit.
+                    Dim writer = New ImageProcessor.PixelWriter(blurred)
                     Dim divisor = CSng(1.0 / count)
                     For y = 0 To ah - 1
                         If y Mod 8 = 0 Then cancel.ThrowIfCancellationRequested()
@@ -347,7 +359,7 @@ Namespace Services
                                     s2 += (sums(2)(basis + aw) - sums(2)(basis + aw - 1)) * rightExtra
                                 End If
                             Next
-                            blurred.SetPixel(x, y, New SKColor(
+                            writer.SetPixel(x, y, New SKColor(
                                 BackFromLight(s0 * divisor, exponentDown),
                                 BackFromLight(s1 * divisor, exponentDown),
                                 BackFromLight(s2 * divisor, exponentDown), 255))
@@ -488,23 +500,34 @@ Namespace Services
             Dim output = New SKBitmap(New SKImageInfo(w, h, SKColorType.Alpha8, SKAlphaType.Premul))
             Dim buffer(w * h - 1) As Byte
             Dim empty = True
+            ' Wie in MaskFromDepth: der Wert haengt nur am Tiefenbyte, also einmal je moeglichem
+            ' Byte rechnen und nachschlagen.
+            Dim table(255) As Byte
+            Dim contributes(255) As Boolean
+            For value = 0 To 255
+                Dim t = value / 255.0 * 100.0
+                ' Abstand aus dem scharfen BAND heraus, auf 0..1 gebracht. Innerhalb ist er null
+                ' - dort bleibt es scharf, egal wie breit das Band ist.
+                Dim outside = 0.0
+                If t < fromPct Then
+                    outside = fromPct - t
+                ElseIf t > toPct Then
+                    outside = t - toPct
+                End If
+                Dim d = Math.Min(1.0, outside / transitionPct)
+                ' Dreieck um diese Stufe herum: voll bei "anteil", null eine Stufenbreite daneben.
+                Dim g = 1.0 - Math.Min(1.0, Math.Abs(d - share) / width)
+                contributes(value) = g > 0.0
+                table(value) = CByte(Math.Max(0, Math.Min(255, CInt(Math.Round(g * 255.0)))))
+            Next
+            Dim stride As Integer
+            Dim depthBytes = ImageProcessor.TryReadAlpha8(depth, stride)
             For y = 0 To h - 1
                 If y Mod 16 = 0 Then cancel.ThrowIfCancellationRequested()
                 For x = 0 To w - 1
-                    Dim t = depth.GetPixel(x, y).Alpha / 255.0 * 100.0
-                    ' Abstand aus dem scharfen BAND heraus, auf 0..1 gebracht. Innerhalb ist er null
-                    ' - dort bleibt es scharf, egal wie breit das Band ist.
-                    Dim outside = 0.0
-                    If t < fromPct Then
-                        outside = fromPct - t
-                    ElseIf t > toPct Then
-                        outside = t - toPct
-                    End If
-                    Dim d = Math.Min(1.0, outside / transitionPct)
-                    ' Dreieck um diese Stufe herum: voll bei "anteil", null eine Stufenbreite daneben.
-                    Dim g = 1.0 - Math.Min(1.0, Math.Abs(d - share) / width)
-                    If g > 0.0 Then empty = False
-                    buffer(y * w + x) = CByte(Math.Max(0, Math.Min(255, CInt(Math.Round(g * 255.0)))))
+                    Dim value = If(depthBytes IsNot Nothing, depthBytes(y * stride + x), depth.GetPixel(x, y).Alpha)
+                    If contributes(value) Then empty = False
+                    buffer(y * w + x) = table(value)
                 Next
             Next
             If empty Then

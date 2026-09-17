@@ -578,6 +578,8 @@ Namespace Services
                 Next
 
                 Dim repairedCount = 0
+                ' Schreibt deckende Punkte direkt, siehe PixelWriter.
+                Dim workWriter = New PixelWriter(work)
                 While queue.Count > 0
                     Dim index = queue.Dequeue()
                     queued(index) = False
@@ -593,7 +595,7 @@ Namespace Services
                     End If
                     If Not average.HasValue Then Continue While
 
-                    work.SetPixel(x, y, average.Value)
+                    workWriter.SetPixel(x, y, average.Value)
                     filled(index) = True
                     repairedCount += 1
 
@@ -616,6 +618,7 @@ Namespace Services
                     SmoothInpaintedRegion(work, maskAlpha, localTargetLeft, localTargetTop, width, height)
                 End If
 
+                Dim resultWriter = New PixelWriter(result)
                 For maskY = 0 To height - 1
                     Dim workY = localTargetTop + maskY
                     Dim resultY = workTop + workY
@@ -632,7 +635,7 @@ Namespace Services
                         If localAlpha <= 0.001F Then Continue For
                         Dim target = result.GetPixel(resultX, resultY)
                         Dim repaired = work.GetPixel(workX, workY)
-                        result.SetPixel(resultX, resultY, New SKColor(
+                        resultWriter.SetPixel(resultX, resultY, New SKColor(
                             BlendByte(target.Red, repaired.Red, localAlpha),
                             BlendByte(target.Green, repaired.Green, localAlpha),
                             BlendByte(target.Blue, repaired.Blue, localAlpha),
@@ -827,6 +830,8 @@ Namespace Services
 
             If repaired = 0 Then Return False
             BlendInpaintedBoundary(work, maskAlpha, targetLeft, targetTop, width, height)
+            ' Schreibt deckende Punkte direkt, siehe PixelWriter.
+            Dim resultWriter = New PixelWriter(result)
             For maskY = 0 To height - 1
                 Dim y = targetTop + maskY
                 If y < 0 OrElse y >= work.Height Then Continue For
@@ -842,7 +847,7 @@ Namespace Services
                     Dim localAlpha = Clamp(blendAlpha(index) / 255.0F, 0.0F, 1.0F)
                     Dim target = result.GetPixel(resultX, resultY)
                     Dim repairedColor = work.GetPixel(workX, y)
-                    result.SetPixel(resultX, resultY, New SKColor(
+                    resultWriter.SetPixel(resultX, resultY, New SKColor(
                         BlendByte(target.Red, repairedColor.Red, localAlpha),
                         BlendByte(target.Green, repairedColor.Green, localAlpha),
                         BlendByte(target.Blue, repairedColor.Blue, localAlpha),
@@ -871,6 +876,8 @@ Namespace Services
             Next
 
             Dim repaired = 0
+            ' Schreibt deckende Punkte direkt, siehe PixelWriter.
+            Dim workWriter = New PixelWriter(work)
             While queue.Count > 0
                 Dim index = queue.Dequeue()
                 queued(index) = False
@@ -889,7 +896,7 @@ Namespace Services
                 If Not average.HasValue Then average = AverageUnmaskedRays(work, maskAlpha, targetLeft, targetTop, width, height, mx, maskY)
                 If Not average.HasValue Then Continue While
 
-                work.SetPixel(x, y, average.Value)
+                workWriter.SetPixel(x, y, average.Value)
                 known(index) = True
                 repaired += 1
 
@@ -934,6 +941,8 @@ Namespace Services
                 Next
             Next
 
+            ' Schreibt deckende Punkte direkt, siehe PixelWriter.
+            Dim workWriter = New PixelWriter(work)
             For maskY = 0 To height - 1
                 Dim y = targetTop + maskY
                 If y < 0 OrElse y >= work.Height Then Continue For
@@ -944,7 +953,7 @@ Namespace Services
                     If x < 0 OrElse x >= work.Width Then Continue For
                     Dim current = work.GetPixel(x, y)
                     Dim blended = nextColors(index)
-                    work.SetPixel(x, y, New SKColor(
+                    workWriter.SetPixel(x, y, New SKColor(
                         BlendByte(current.Red, blended.Red, 0.45F),
                         BlendByte(current.Green, blended.Green, 0.45F),
                         BlendByte(current.Blue, blended.Blue, 0.45F),
@@ -1295,6 +1304,8 @@ Namespace Services
             ' Gemessen an einem 120x2000-Zug ueber Wolkentextur lag die Hochfrequenz dort bei 2,23
             ' gegen 1,27 in der Nachbarschaft - sichtbar als unsaubere Bahn in der Zugmitte.
             Dim featherRadius = Math.Max(1.0F, CSng(patchRadius))
+            ' Schreibt deckende Punkte direkt, siehe PixelWriter.
+            Dim workWriter = New PixelWriter(work)
 
             For oy = -patchRadius To patchRadius
                 Dim oySq = oy * oy
@@ -1327,14 +1338,14 @@ Namespace Services
                                 BlendByte(existing.Green, incoming.Green, w),
                                 BlendByte(existing.Blue, incoming.Blue, w),
                                 existing.Alpha)
-                            work.SetPixel(x, y, blended)
+                            workWriter.SetPixel(x, y, blended)
                             If pixels IsNot Nothing AndAlso pixels.Contains(x, y) Then pixels.SetColor(x, y, blended)
                         End If
                         Continue For
                     End If
 
                     Dim sourceColor = work.GetPixel(px, py)
-                    work.SetPixel(x, y, sourceColor)
+                    workWriter.SetPixel(x, y, sourceColor)
                     ' Puffer synchron halten - Scores im selben Pass sehen sonst den alten (defekten)
                     ' Inhalt unter frisch kopierten Pixeln.
                     If pixels IsNot Nothing AndAlso pixels.Contains(x, y) Then pixels.SetColor(x, y, sourceColor)
@@ -1449,6 +1460,8 @@ Namespace Services
                     Next
                 Next
 
+                ' Schreibt deckende Punkte direkt, siehe PixelWriter.
+                Dim workWriter = New PixelWriter(work)
                 For maskY = 0 To height - 1
                     Dim y = targetTop + maskY
                     If y < 0 OrElse y >= work.Height Then Continue For
@@ -1457,7 +1470,7 @@ Namespace Services
                         If Not hasNext(index) Then Continue For
                         Dim x = targetLeft + mx
                         If x < 0 OrElse x >= work.Width Then Continue For
-                        work.SetPixel(x, y, nextColors(index))
+                        workWriter.SetPixel(x, y, nextColors(index))
                     Next
                 Next
             Next
@@ -1742,6 +1755,8 @@ Namespace Services
             Dim dr = Math.Max(-56, Math.Min(56, CInt(targetAverage.Red) - CInt(sourceAverage.Red)))
             Dim dg = Math.Max(-56, Math.Min(56, CInt(targetAverage.Green) - CInt(sourceAverage.Green)))
             Dim db = Math.Max(-56, Math.Min(56, CInt(targetAverage.Blue) - CInt(sourceAverage.Blue)))
+            ' Schreibt deckende Punkte direkt, siehe PixelWriter.
+            Dim resultWriter = New PixelWriter(result)
 
             For maskY = 0 To mask.Height - 1
                 Dim y = targetTop + maskY
@@ -1763,7 +1778,7 @@ Namespace Services
                         localAlpha = 1.0F
                     End If
 
-                    result.SetPixel(x, y, New SKColor(
+                    resultWriter.SetPixel(x, y, New SKColor(
                         BlendByte(target.Red, ClampByte(CInt(sample.Red) + dr), localAlpha),
                         BlendByte(target.Green, ClampByte(CInt(sample.Green) + dg), localAlpha),
                         BlendByte(target.Blue, ClampByte(CInt(sample.Blue) + db), localAlpha),

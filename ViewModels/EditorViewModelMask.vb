@@ -2226,13 +2226,16 @@ Namespace ViewModels
                 Dim stride = imDisplay.RowBytes
                 Dim source = New Byte(stride * imDisplay.Height - 1) {}
                 Runtime.InteropServices.Marshal.Copy(imDisplay.GetPixels(), source, 0, source.Length)
+                ' VOR der Schleife: Width und Height eines SKBitmap sind Aufrufe in die native
+                ' Bibliothek und liefen hier je Overlay-Punkt.
+                Dim displayRasterW = imDisplay.Width, displayRasterH = imDisplay.Height
                 For y = 0 To overlayHeight - 1
                     Dim dy = CInt(Math.Floor((y + 0.5) * sy)) - rectPx.Top
-                    If dy < 0 OrElse dy >= imDisplay.Height Then Continue For
+                    If dy < 0 OrElse dy >= displayRasterH Then Continue For
                     Dim zRow = y * overlayWidth, qRow = dy * stride
                     For x = 0 To overlayWidth - 1
                         Dim dx = CInt(Math.Floor((x + 0.5) * sx)) - rectPx.Left
-                        If dx < 0 OrElse dx >= imDisplay.Width Then Continue For
+                        If dx < 0 OrElse dx >= displayRasterW Then Continue For
                         result(zRow + x) = source(qRow + dx)
                     Next
                 Next

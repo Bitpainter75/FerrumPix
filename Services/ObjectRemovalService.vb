@@ -630,12 +630,13 @@ Namespace Services
                 If values.Length < rLayer * 3 Then Return Nothing
                 ' Die Ausgabe steht in 0 bis 1 - anders als bei der Vorgaengerin, die 0 bis 255 gab.
                 Dim target = New SKBitmap(aw, ah, SKColorType.Bgra8888, SKAlphaType.Unpremul)
+                Dim writer = New ImageProcessor.PixelWriter(target)
                 For y = 0 To ah - 1
                     Dim sy = Math.Min(y, rh - 1)
                     For x = 0 To aw - 1
                         Dim sx = Math.Min(x, rw - 1)
                         Dim i = sy * rw + sx
-                        target.SetPixel(x, y, New SKColor(ClampByte(values(i) * 255.0F),
+                        writer.SetPixel(x, y, New SKColor(ClampByte(values(i) * 255.0F),
                                                         ClampByte(values(rLayer + i) * 255.0F),
                                                         ClampByte(values(rLayer * 2 + i) * 255.0F), 255))
                     Next

@@ -9957,10 +9957,20 @@ Namespace ViewModels
             Dim output = New SKBitmap(New SKImageInfo(rect.Width, rect.Height,
                                                     SKColorType.Alpha8, SKAlphaType.Premul))
             Dim buffer(rect.Width * rect.Height - 1) As Byte
+            ' Alpha8 direkt aus dem Speicher statt GetPixel je Punkt (ein Aufruf in die native
+            ' Bibliothek); ausserhalb des Rasters bleibt es wie bei GetPixel null.
+            Dim stride As Integer
+            Dim maskBytes = ImageProcessor.TryReadAlpha8(mask, stride)
+            Dim maskW = mask.Width, maskH = mask.Height
             For y = 0 To rect.Height - 1
                 Dim qy = rect.Top + y
                 For x = 0 To rect.Width - 1
-                    buffer(y * rect.Width + x) = mask.GetPixel(rect.Left + x, qy).Alpha
+                    Dim qx = rect.Left + x
+                    If maskBytes Is Nothing Then
+                        buffer(y * rect.Width + x) = mask.GetPixel(qx, qy).Alpha
+                    ElseIf qx >= 0 AndAlso qy >= 0 AndAlso qx < maskW AndAlso qy < maskH Then
+                        buffer(y * rect.Width + x) = maskBytes(qy * stride + qx)
+                    End If
                 Next
             Next
             Runtime.InteropServices.Marshal.Copy(buffer, 0, output.GetPixels(), buffer.Length)
@@ -9974,9 +9984,12 @@ Namespace ViewModels
             If mask Is Nothing Then Return SKRectI.Empty
             Dim w = mask.Width, h = mask.Height
             Dim left = w, top = h, right = -1, bottom = -1
+            Dim stride As Integer
+            Dim maskBytes = ImageProcessor.TryReadAlpha8(mask, stride)
             For y = 0 To h - 1
                 For x = 0 To w - 1
-                    If mask.GetPixel(x, y).Alpha < 128 Then Continue For
+                    Dim alpha = If(maskBytes IsNot Nothing, maskBytes(y * stride + x), mask.GetPixel(x, y).Alpha)
+                    If alpha < 128 Then Continue For
                     If x < left Then left = x
                     If x > right Then right = x
                     If y < top Then top = y

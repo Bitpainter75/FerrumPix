@@ -1,3 +1,16 @@
+## Unreleased
+
+### Fixes
+
+- Projects with several masked adjustments open faster, most of all when the masks cover only part
+  of a straightened or rotated picture.
+
+- Selecting a mask layer on a straightened, rotated or cropped picture shows its red overlay
+  almost at once instead of after a second or more.
+
+- The depth blur is calculated about three times faster, and the healing brush works a little
+  faster.
+
 ## FerrumPix 0.9.45
 
 ### What's new

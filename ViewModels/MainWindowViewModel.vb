@@ -278,7 +278,11 @@ Namespace ViewModels
             Set(value As AppMode)
                 Dim previousMode = _currentMode
                 Me.RaiseAndSetIfChanged(_currentMode, value)
-                Me.RaisePropertyChanged(NameOf(CurrentContent))
+                ' Mit Messpunkt: an dieser Meldung baut das Fenster die neue Ansicht und haengt sie
+                ' samt Stilen in den Baum. Ohne ihn meldete der Waechter bei jedem Wechsel eine
+                ' Stockung "ohne Messpunkt".
+                PerformanceTraceService.Measure("Moduswechsel: Ansicht aufbauen",
+                                                Sub() Me.RaisePropertyChanged(NameOf(CurrentContent)))
                 Me.RaisePropertyChanged(NameOf(TitleSuffix))
                 RefreshWindowTitle()
                 Me.RaisePropertyChanged(NameOf(IsFullscreenViewer))

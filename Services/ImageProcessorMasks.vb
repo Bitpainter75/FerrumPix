@@ -484,7 +484,10 @@ Namespace Services
                         End Sub)
                     Marshal.Copy(pBuf, 0, maskPixels.GetPixels(), pBuf.Length)
 
-                    maskPixels = ApplyGeometryPipeline(maskPixels, maskGeometry)
+                    ' NUR DAS BELEGTE RECHTECK wird durch die Kette gezeichnet: ausserhalb ist die
+                    ' Maske null und bliebe es nach jeder Stufe. Bitgleich, siehe ApplyGeometryPipeline.
+                    maskPixels = ApplyGeometryPipeline(maskPixels, maskGeometry,
+                                                       NonZeroBounds(alphaBuf, inputStride, pipelineInputWidth, pipelineInputHeight))
 
                     ' Derselbe Pfad sollte dieselbe Größe liefern. Der Fallback schützt dennoch vor
                     ' alten/inkonsistenten Rezeptmaßen, ohne die Korrektur global werden zu lassen.
@@ -631,6 +634,101 @@ Namespace Services
             ' bekommt, und ein Ausschnitt ergaebe eine andere Schaetzung.
             Return a.NoiseReductionMethod <> NoiseReductionMethod.Guided AndAlso
                    a.NoiseReductionMethod <> NoiseReductionMethod.AdaptiveGuided
+        End Function
+
+        ''' <summary>Der Anzeigebereich, in dem <see cref="BuildSelectionMaskFromLayerMask"/> Punkte
+        ''' zurueckrechnen muss: das Bild des belegten Maskenrechtecks auf dem HINWEG, mit Rand.
+        '''
+        ''' Warum das reicht: trifft ein Anzeigepunkt auf dem Rueckweg einen belegten Maskenpunkt,
+        ''' liegt sein Quellpunkt im belegten Rechteck, und der Hinweg bildet ihn wieder auf den
+        ''' Anzeigepunkt ab. Hin- und Rueckweg sind Umkehrungen bis auf das Klemmen an Stufenkanten
+        ''' (bis 0,5 px je Klemmung, danach mit dem Massstab der folgenden Stufen vergroessert);
+        ''' der Rand deckt das grosszuegig ab.
+        '''
+        ''' Das Bild eines Rechtecks ist nur bei Zuschnitt, Drehung, Spiegeln, Begradigen,
+        ''' Bildgroesse und Leinwand sicher das Rechteck um seine vier abgebildeten Ecken. Mit
+        ''' Perspektive oder Rasterverzerrung wird deshalb die ganze Anzeige abgesucht, ebenso wenn
+        ''' eine Ecke nicht abbildbar ist.</summary>
+        Private Shared Function ProjectionScanRect(mask As Byte(), stride As Integer, maskWidth As Integer, maskHeight As Integer,
+                                                   sourceW As Integer, sourceH As Integer, adj As ImageAdjustments,
+                                                   displayW As Integer, displayH As Integer) As SKRectI
+            Dim whole = New SKRectI(0, 0, displayW, displayH)
+            Dim steps = GeometrySteps(adj)
+            For Each stepItem In steps
+                If stepItem?.Adjustments Is Nothing Then Continue For
+                Dim kind = If(stepItem.Kind, "").Trim().ToLowerInvariant()
+                If kind <> "crop" AndAlso kind <> "transform" AndAlso kind <> "resize" AndAlso kind <> "canvas" Then Return whole
+            Next
+            Dim occupied = NonZeroBounds(mask, stride, maskWidth, maskHeight)
+            If occupied.Width <= 0 OrElse occupied.Height <= 0 Then Return SKRectI.Empty
+
+            Dim minX = Double.MaxValue, minY = Double.MaxValue
+            Dim maxX = Double.MinValue, maxY = Double.MinValue
+            For Each corner In {New SKPoint(occupied.Left, occupied.Top), New SKPoint(occupied.Right, occupied.Top),
+                                New SKPoint(occupied.Left, occupied.Bottom), New SKPoint(occupied.Right, occupied.Bottom)}
+                Dim mapped As SKPoint
+                If Not TrySourcePointToGeometryOutputUnclipped(corner.X, corner.Y, sourceW, sourceH, adj, mapped) Then Return whole
+                If Single.IsNaN(mapped.X) OrElse Single.IsNaN(mapped.Y) OrElse
+                   Single.IsInfinity(mapped.X) OrElse Single.IsInfinity(mapped.Y) Then Return whole
+                minX = Math.Min(minX, mapped.X) : maxX = Math.Max(maxX, mapped.X)
+                minY = Math.Min(minY, mapped.Y) : maxY = Math.Max(maxY, mapped.Y)
+            Next
+            ' Der Massstab, mit dem ein halber Punkt Klemmung spaeter hoechstens waechst: das
+            ' Verhaeltnis der groessten Anzeige- zur kleinsten Quellkante, mindestens eins.
+            Dim growth = Math.Max(1.0, Math.Max(displayW, displayH) / CDbl(Math.Max(1, Math.Min(sourceW, sourceH))))
+            Dim pad = CInt(Math.Ceiling(4 + 2 * steps.Count * growth))
+            Dim left = CInt(Math.Max(0.0, Math.Floor(minX) - pad))
+            Dim top = CInt(Math.Max(0.0, Math.Floor(minY) - pad))
+            Dim right = CInt(Math.Min(CDbl(displayW), Math.Ceiling(maxX) + pad))
+            Dim bottom = CInt(Math.Min(CDbl(displayH), Math.Ceiling(maxY) + pad))
+            If right <= left OrElse bottom <= top Then Return SKRectI.Empty
+            Return New SKRectI(left, top, right, bottom)
+        End Function
+
+        ''' <summary>Die Bildpunkte eines Alpha8-Rasters als Byte-Feld, oder Nothing bei einem anderen
+        ''' Farbtyp. Fuer Schleifen, die sonst je Punkt <c>GetPixel(x, y).Alpha</c> fragten: das ist
+        ''' ein Aufruf in die native Bibliothek samt Farbumrechnung, und bei Alpha8 liefert er genau
+        ''' das gespeicherte Byte. Ein Aufrufer mit Nothing bleibt bei GetPixel.</summary>
+        Friend Shared Function TryReadAlpha8(bitmap As SKBitmap, ByRef stride As Integer) As Byte()
+            stride = 0
+            If bitmap Is Nothing OrElse bitmap.ColorType <> SKColorType.Alpha8 Then Return Nothing
+            Dim pixels = bitmap.GetPixels()
+            If pixels = IntPtr.Zero Then Return Nothing
+            stride = bitmap.RowBytes
+            Dim buffer = New Byte(stride * bitmap.Height - 1) {}
+            Marshal.Copy(pixels, buffer, 0, buffer.Length)
+            Return buffer
+        End Function
+
+        ''' <summary>Das kleinste Rechteck um alle Punkte ungleich null einer Alpha8-Maske. Eine
+        ''' Maske ohne einen solchen Punkt liefert ein leeres Rechteck: dann ist nichts belegt.</summary>
+        Private Shared Function NonZeroBounds(alpha As Byte(), stride As Integer, width As Integer, height As Integer) As SKRectI
+            Dim top = -1, bottom = -1
+            Dim left = width, right = -1
+            For y = 0 To height - 1
+                Dim row = y * stride
+                Dim first = -1
+                For x = 0 To width - 1
+                    If alpha(row + x) <> 0 Then
+                        first = x
+                        Exit For
+                    End If
+                Next
+                If first < 0 Then Continue For
+                Dim last = first
+                For x = width - 1 To first Step -1
+                    If alpha(row + x) <> 0 Then
+                        last = x
+                        Exit For
+                    End If
+                Next
+                If top < 0 Then top = y
+                bottom = y
+                If first < left Then left = first
+                If last > right Then right = last
+            Next
+            If top < 0 Then Return SKRectI.Empty
+            Return New SKRectI(left, top, right + 1, bottom + 1)
         End Function
 
         ''' <summary>Das ausgerichtete Rechteck, in dem diese Maske überhaupt deckt, oder Nothing,
@@ -1943,25 +2041,48 @@ Namespace Services
                 Dim dw = displaySize.Width, dh = displaySize.Height
                 Dim sourceW = adj.SourceWidthPixels, sourceH = adj.SourceHeightPixels
                 Dim full = New Byte(dw * dh - 1) {}
+                ' NUR DORT ZURUECKRECHNEN, WO DIE MASKE LANDEN KANN, und die Zeilen nebeneinander.
+                ' Jeder Punkt fuer sich rechnet genau wie zuvor; der Suchbereich ist nur so gewaehlt,
+                ' dass kein Punkt ausserhalb auf die Maske treffen kann (ProjectionScanRect). Ein
+                ' Klick auf eine Maskenebene eines begradigten Bildes rechnete sonst jeden
+                ' Anzeigepunkt zurueck - Befund: 1,1 s je Klick im Release-Build bei 3 MP, auch fuer
+                ' eine Maske, die ein Zwanzigstel des Bildes deckt.
+                Dim scan = ProjectionScanRect(mBuf, mStride, decoded.Width, decoded.Height, sourceW, sourceH, adj, dw, dh)
+                Dim inverse = PrepareGeometryInverse(sourceW, sourceH, adj)
+                ' VOR der Schleife: Width und Height eines SKBitmap sind Aufrufe in die native
+                ' Bibliothek. Je Punkt zweimal gefragt, trugen sie ein Viertel der Zeit (Profil).
+                Dim maskW = decoded.Width, maskH = decoded.Height
+                Dim rowLeft = New Integer(dh - 1) {}
+                Dim rowRight = New Integer(dh - 1) {}
+                ForEachRow(scan.Width, scan.Height,
+                    Sub(rowIndex As Integer)
+                        Dim dy = scan.Top + rowIndex
+                        Dim firstX = dw, lastX = 0
+                        For dx = scan.Left To scan.Right - 1
+                            Dim sp As SKPoint
+                            If Not TryGeometryOutputToSourcePoint(dx + 0.5, dy + 0.5, inverse, sp) Then Continue For
+                            ' Das zusammengesetzte Raster hat QUELLGROESSE und liegt bei 0,0 - der
+                            ' Versatz der einzelnen Bestandteile steckt schon darin. Inverted ebenso:
+                            ' jeder Bestandteil bringt seine eigene Umkehrung mit.
+                            Dim mx = CInt(Math.Floor(sp.X))
+                            Dim my = CInt(Math.Floor(sp.Y))
+                            Dim alpha As Byte = 0
+                            If mx >= 0 AndAlso my >= 0 AndAlso mx < maskW AndAlso my < maskH Then
+                                alpha = mBuf(my * mStride + mx)
+                            End If
+                            If alpha = 0 Then Continue For
+                            full(dy * dw + dx) = alpha
+                            If dx < firstX Then firstX = dx
+                            lastX = dx + 1
+                        Next
+                        rowLeft(dy) = firstX
+                        rowRight(dy) = lastX
+                    End Sub)
                 Dim left = dw, top = dh, right = 0, bottom = 0
-                For dy = 0 To dh - 1
-                    For dx = 0 To dw - 1
-                        Dim sp As SKPoint
-                        If Not TryGeometryOutputToSourcePoint(dx + 0.5, dy + 0.5, sourceW, sourceH, adj, sp) Then Continue For
-                        ' Das zusammengesetzte Raster hat QUELLGROESSE und liegt bei 0,0 - der
-                        ' Versatz der einzelnen Bestandteile steckt schon darin. Inverted ebenso:
-                        ' jeder Bestandteil bringt seine eigene Umkehrung mit.
-                        Dim mx = CInt(Math.Floor(sp.X))
-                        Dim my = CInt(Math.Floor(sp.Y))
-                        Dim alpha As Byte = 0
-                        If mx >= 0 AndAlso my >= 0 AndAlso mx < decoded.Width AndAlso my < decoded.Height Then
-                            alpha = mBuf(my * mStride + mx)
-                        End If
-                        If alpha = 0 Then Continue For
-                        full(dy * dw + dx) = alpha
-                        left = Math.Min(left, dx) : top = Math.Min(top, dy)
-                        right = Math.Max(right, dx + 1) : bottom = Math.Max(bottom, dy + 1)
-                    Next
+                For dy = scan.Top To scan.Bottom - 1
+                    If rowRight(dy) <= rowLeft(dy) Then Continue For
+                    left = Math.Min(left, rowLeft(dy)) : right = Math.Max(right, rowRight(dy))
+                    top = Math.Min(top, dy) : bottom = Math.Max(bottom, dy + 1)
                 Next
                 Dim projectMs = phase.ElapsedMilliseconds - combineMs
                 If right <= left OrElse bottom <= top Then Return Nothing
