@@ -180,7 +180,32 @@ Namespace Services
         ''' um den Versatz verschoben, ein Radial-Verlauf liefert per DstIn die Kantenmaske.
         Private Shared Sub DrawCloneStamp(canvas As SKCanvas, source As SKBitmap,
                                           cx As Single, cy As Single, sx As Single, sy As Single, radius As Single, flow As Single)
-            Dim offset = SKMatrix.CreateTranslation(cx - sx, cy - sy)
+            ' NUR DEN QUELLKREIS KOPIEREN. Aus einer veraenderbaren Bitmap legt Skia fuer den Shader
+            ' eine Kopie an - aus der ganzen Bitmap waren das bei 50 MP je Punkt 200 MB, und ein Zug
+            ' mit 208 Punkten brauchte 7 s zum Einrechnen (Befund, Profil: 85 % in CreateBitmap).
+            '
+            ' Die Vorlage ist jetzt nur der Ausschnitt um den Quellkreis, mit Rand fuer
+            ' Kantenglaettung und Abtastung; ausserhalb davon liest der Kreis nie. ExtractSubset
+            ' teilt den Speicher, die Kopie legt Skia beim Shader an - nur eben vom Ausschnitt. Sie
+            ' bleibt damit eine Momentaufnahme wie zuvor: ueberlappt die Quelle das Ziel, sieht der
+            ' Punkt den Stand von vor seinem Zeichnen. Bitgleich zum Weg ueber die ganze Bitmap,
+            ' Pruefung "Stempel: Vorlage aus dem Quellausschnitt zeichnet wie aus der ganzen Bitmap".
+            Const sourcePad As Integer = 4
+            Dim sourceWidth = source.Width, sourceHeight = source.Height
+            Dim subsetLeft = Math.Max(0, CInt(Math.Floor(sx - radius)) - sourcePad)
+            Dim subsetTop = Math.Max(0, CInt(Math.Floor(sy - radius)) - sourcePad)
+            Dim subsetRight = Math.Min(sourceWidth, CInt(Math.Ceiling(sx + radius)) + sourcePad)
+            Dim subsetBottom = Math.Min(sourceHeight, CInt(Math.Ceiling(sy + radius)) + sourcePad)
+            If subsetRight <= subsetLeft OrElse subsetBottom <= subsetTop Then Return
+            Using subset = New SKBitmap()
+                If Not source.ExtractSubset(subset, New SKRectI(subsetLeft, subsetTop, subsetRight, subsetBottom)) Then Return
+                DrawCloneStampFrom(canvas, subset, subsetLeft, subsetTop, cx, cy, sx, sy, radius, flow)
+            End Using
+        End Sub
+
+        Private Shared Sub DrawCloneStampFrom(canvas As SKCanvas, source As SKBitmap, sourceLeft As Integer, sourceTop As Integer,
+                                              cx As Single, cy As Single, sx As Single, sy As Single, radius As Single, flow As Single)
+            Dim offset = SKMatrix.CreateTranslation(cx - sx + sourceLeft, cy - sy + sourceTop)
             Using bitmapShader = SKShader.CreateBitmap(source, SKShaderTileMode.Clamp, SKShaderTileMode.Clamp, offset)
                 Using mask = SKShader.CreateRadialGradient(New SKPoint(cx, cy), radius,
                                                            {SKColors.White.WithAlpha(CByte(255 * flow)), SKColors.White.WithAlpha(CByte(255 * flow)), SKColors.Transparent},

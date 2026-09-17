@@ -5,6 +5,8 @@
 - Painting with the healing brush, clone stamp or blur brush stays smooth on large pictures.
   Before, the editor became sluggish from the second stroke on.
 
+- A clone stamp stroke on a large picture is applied many times faster after you let go.
+
 ## FerrumPix 0.9.46
 
 ### What's new
