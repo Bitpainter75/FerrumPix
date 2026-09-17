@@ -10,8 +10,9 @@
 - Pictures pasted into the gallery get their preview and their capture data, and are added to the
   catalog. Before, a pasted picture could stay without a preview.
 
-- TIFF photos now show in the viewer. They appeared in the gallery and opened in the editor, but
-  the viewer stayed empty.
+- TIFF photos now show in the viewer, in full screen and in the quick preview you get with the
+  SPACE key. They appeared in the gallery and opened in the editor, but stayed empty everywhere
+  else. The quick preview also shows SVG and icon files now.
 
 - Reducing noise with a model, and upscaling, now work on every picture. On macOS they failed on
   every photo, and elsewhere on pictures with object layers.

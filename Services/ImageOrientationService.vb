@@ -408,6 +408,26 @@ Namespace Services
                     Return If(stream IsNot Nothing, New Bitmap(stream), Nothing)
                 End Using
             End If
+            If TiffPreviewService.IsSupportedTiff(filePath) Then
+                ' Auch TIFF kennt Skia nicht. Dieser Weg traegt die Schnellvorschau der Galerie
+                ' (Leertaste), die Vorschau im Konfliktdialog und den Rueckfall des Editors - dort
+                ' blieb die Flaeche bei einem TIFF leer, waehrend die Kachel daneben eines zeigte.
+                ' LibTiff legt das Orientierungs-Tag selbst auf, und TIFF fuehrt keine Beistelldatei
+                ' (RawSidecarService.IsSidecarFormat kennt nur RAW und PSD).
+                Using stream = TiffPreviewService.ExtractPreview(filePath)
+                    Return If(stream IsNot Nothing, New Bitmap(stream), Nothing)
+                End Using
+            End If
+            If SvgPreviewService.IsSupportedSvg(filePath) Then
+                Using stream = SvgPreviewService.ExtractPreview(filePath)
+                    Return If(stream IsNot Nothing, New Bitmap(stream), Nothing)
+                End Using
+            End If
+            If IcoPreviewService.IsSupportedIco(filePath) Then
+                Using stream = IcoPreviewService.ExtractPreview(filePath)
+                    Return If(stream IsNot Nothing, New Bitmap(stream), Nothing)
+                End Using
+            End If
             Return LoadOrientedAvaloniaBitmap(filePath)
         End Function
 
