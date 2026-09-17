@@ -375,13 +375,30 @@ Namespace ViewModels
             _retouchLivePatchBitmapHeight = bitmap.Height
         End Sub
 
+        ''' <summary>Laengste Kante der orangen Masken-Vorschau. Die Vorschau ist eine halbtransparente
+        ''' Markierung, gestreckt uebers Bild; ihre Aufloesung braucht nicht die des Bildes.</summary>
+        Private Const RetouchMaskPreviewMaxEdge As Integer = 2048
+
         Private Function EnsureRetouchMaskPreviewSize() As Boolean
             Dim displayWidth = DisplayImageWidthPixels
             Dim displayHeight = DisplayImageHeightPixels
             If displayWidth <= 0 OrElse displayHeight <= 0 Then Return False
-            If _retouchLiveMaskBitmapWidth = displayWidth AndAlso _retouchLiveMaskBitmapHeight = displayHeight Then Return True
-            _retouchLiveMaskBitmapWidth = displayWidth
-            _retouchLiveMaskBitmapHeight = displayHeight
+            ' NICHT IN BILDGROESSE. Die Vorschau lag frueher in EINER WriteableBitmap, und Avalonia
+            ' uebertraegt nach jedem Beschreiben die ganze Bitmap neu zum Zeichnen - unter derselben
+            ' Sperre, die das naechste Beschreiben braucht. Bei 50 MP waren das 200 MB bis zu
+            ' vierzigmal je Sekunde: der Anzeigefaden stand je 200 bis 250 ms, und der Pinsel wurde
+            ' zaeh (Befund, Reparaturpinsel auf einem 50-MP-Bild). Seit der Kachelung
+            ' (TiledOverlay) trifft das nur noch beruehrte Kacheln; die Begrenzung bleibt, weil die
+            ' orange Markierung keine Bildaufloesung braucht und so auch Rechen- und Speicherbedarf
+            ' der Maskenbitmap klein bleiben. Alle Wege hierher rechnen mit dem Verhaeltnis
+            ' Vorschau zu Anzeige (DrawRetouchMaskSpot, ExpandRetouchMaskPatchRect), das Bild wird
+            ' gestreckt angezeigt.
+            Dim scale = Math.Min(1.0, RetouchMaskPreviewMaxEdge / CDbl(Math.Max(displayWidth, displayHeight)))
+            Dim maskWidth = Math.Max(1, CInt(Math.Round(displayWidth * scale)))
+            Dim maskHeight = Math.Max(1, CInt(Math.Round(displayHeight * scale)))
+            If _retouchLiveMaskBitmapWidth = maskWidth AndAlso _retouchLiveMaskBitmapHeight = maskHeight Then Return True
+            _retouchLiveMaskBitmapWidth = maskWidth
+            _retouchLiveMaskBitmapHeight = maskHeight
             Return True
         End Function
 
@@ -516,6 +533,11 @@ Namespace ViewModels
             ' Die persistente Overlay-Bitmap hat volle Bildgroesse; ihr Inhalt ist transparent
             ' ausserhalb der bereits kopierten Teilbereiche.
             Dim l = 0.0, t = 0.0, w = 100.0, h = 100.0
+            ' Nur melden, wenn sich etwas aendert: jede Meldung laesst die Ansicht das Layout der
+            ' Buehne neu setzen, und waehrend eines Zuges kam sie bei jeder Aktualisierung viermal -
+            ' mit immer denselben Werten.
+            If _retouchLivePatchLeftPercent = l AndAlso _retouchLivePatchTopPercent = t AndAlso
+               _retouchLivePatchWidthPercent = w AndAlso _retouchLivePatchHeightPercent = h Then Return
             _retouchLivePatchLeftPercent = l
             _retouchLivePatchTopPercent = t
             _retouchLivePatchWidthPercent = w
@@ -550,26 +572,30 @@ Namespace ViewModels
                                          baseline.ColorType = source.ColorType
             Dim baselineRow As Byte() = If(compareAgainstBaseline, New Byte(bytes - 1) {}, Nothing)
             Try
-                Using fb = _retouchLiveOverlay.Lock()
-                    Dim sourcePixels = source.GetPixels()
-                    Dim baselinePixels = If(compareAgainstBaseline, baseline.GetPixels(), IntPtr.Zero)
-                    For y = 0 To clipped.Height - 1
-                        Marshal.Copy(IntPtr.Add(sourcePixels, (clipped.Top + y) * source.RowBytes + clipped.Left * 4), row, 0, bytes)
-                        If compareAgainstBaseline Then
-                            Marshal.Copy(IntPtr.Add(baselinePixels, (clipped.Top + y) * baseline.RowBytes + clipped.Left * 4), baselineRow, 0, bytes)
-                            ' Gleiche Pixel muessen transparent werden, nicht im Overlay stehen:
-                            ' sonst erscheint die zugrunde liegende Ebene hier ein zweites Mal.
-                            For x = 0 To bytes - 1 Step 4
-                                If row(x) = baselineRow(x) AndAlso row(x + 1) = baselineRow(x + 1) AndAlso
-                                   row(x + 2) = baselineRow(x + 2) AndAlso row(x + 3) = baselineRow(x + 3) Then
-                                    row(x) = 0 : row(x + 1) = 0 : row(x + 2) = 0 : row(x + 3) = 0
-                                End If
-                            Next
-                        End If
-                        Marshal.Copy(row, 0, IntPtr.Add(fb.Address, (clipped.Top + y) * fb.RowBytes + clipped.Left * 4), bytes)
-                    Next
-                End Using
-                Me.RaisePropertyChanged(NameOf(RetouchLivePatchImage))
+                ' Erst den Ausschnitt zusammenstellen, dann in die Kacheln schreiben: nur die
+                ' Kacheln, die er beruehrt, bekommen ein neues Abbild (siehe TiledOverlay).
+                Dim region(bytes * clipped.Height - 1) As Byte
+                Dim sourcePixels = source.GetPixels()
+                Dim baselinePixels = If(compareAgainstBaseline, baseline.GetPixels(), IntPtr.Zero)
+                Dim sourceStride = source.RowBytes
+                Dim baselineStride = If(compareAgainstBaseline, baseline.RowBytes, 0)
+                For y = 0 To clipped.Height - 1
+                    Marshal.Copy(IntPtr.Add(sourcePixels, (clipped.Top + y) * sourceStride + clipped.Left * 4), row, 0, bytes)
+                    If compareAgainstBaseline Then
+                        Marshal.Copy(IntPtr.Add(baselinePixels, (clipped.Top + y) * baselineStride + clipped.Left * 4), baselineRow, 0, bytes)
+                        ' Gleiche Pixel muessen transparent werden, nicht im Overlay stehen:
+                        ' sonst erscheint die zugrunde liegende Ebene hier ein zweites Mal.
+                        For x = 0 To bytes - 1 Step 4
+                            If row(x) = baselineRow(x) AndAlso row(x + 1) = baselineRow(x + 1) AndAlso
+                               row(x + 2) = baselineRow(x + 2) AndAlso row(x + 3) = baselineRow(x + 3) Then
+                                row(x) = 0 : row(x + 1) = 0 : row(x + 2) = 0 : row(x + 3) = 0
+                            End If
+                        Next
+                    End If
+                    Buffer.BlockCopy(row, 0, region, y * bytes, bytes)
+                Next
+                _retouchLiveOverlay.Write(New Avalonia.PixelRect(clipped.Left, clipped.Top, clipped.Width, clipped.Height), region)
+                Me.RaisePropertyChanged(NameOf(RetouchLivePatchOverlay))
                 Return True
             Catch ex As Exception
                 DiagnosticLogService.LogAlways("Editor.RetouchOverlay", ex.Message)
@@ -590,26 +616,21 @@ Namespace ViewModels
         Private Sub ReleaseRetouchLiveOverlay()
             Dim previous = _retouchLiveOverlay
             _retouchLiveOverlay = Nothing
-            RetouchLivePatchImage = Nothing
+            ' Der Setter entsorgt die abgehaengten Kacheln nach dem laufenden Durchlauf.
+            RetouchLivePatchOverlay = Nothing
             If previous Is Nothing Then Return
             Dispatcher.UIThread.Post(Sub() previous.Dispose(), DispatcherPriority.Background)
         End Sub
 
         Private Function EnsureRetouchLiveOverlay(width As Integer, height As Integer) As Boolean
             If width <= 0 OrElse height <= 0 Then Return False
-            If _retouchLiveOverlay IsNot Nothing AndAlso _retouchLiveOverlay.PixelSize.Width = width AndAlso
-               _retouchLiveOverlay.PixelSize.Height = height Then Return True
+            If _retouchLiveOverlay IsNot Nothing AndAlso _retouchLiveOverlay.Width = width AndAlso
+               _retouchLiveOverlay.Height = height Then Return True
             ReleaseRetouchLiveOverlay()
             Try
-                _retouchLiveOverlay = New WriteableBitmap(New Avalonia.PixelSize(width, height), New Avalonia.Vector(96, 96),
-                                                           Avalonia.Platform.PixelFormat.Bgra8888, Avalonia.Platform.AlphaFormat.Premul)
-                Using fb = _retouchLiveOverlay.Lock()
-                    Dim zero(Math.Max(0, fb.RowBytes - 1)) As Byte
-                    For y = 0 To height - 1
-                        Marshal.Copy(zero, 0, IntPtr.Add(fb.Address, y * fb.RowBytes), fb.RowBytes)
-                    Next
-                End Using
-                RetouchLivePatchImage = _retouchLiveOverlay
+                ' Kacheln entstehen erst beim ersten Beschreiben und sind dann durchsichtig.
+                _retouchLiveOverlay = New Controls.TiledOverlay(width, height)
+                RetouchLivePatchOverlay = _retouchLiveOverlay
                 _retouchLivePatchBitmapWidth = width
                 _retouchLivePatchBitmapHeight = height
                 Return True

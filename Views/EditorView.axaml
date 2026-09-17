@@ -706,9 +706,8 @@
                                IsHitTestVisible="False"
                                IsVisible="False"
                                RenderOptions.BitmapInterpolationMode="HighQuality" />
-                        <Image x:Name="RetouchLivePatchImage"
-                               Source="{Binding RetouchLivePatchImage}"
-                               Stretch="Fill"
+                        <icons:TiledOverlayControl x:Name="RetouchLivePatchImage"
+                               Overlay="{Binding RetouchLivePatchOverlay}"
                                IsHitTestVisible="False"
                                IsVisible="{Binding HasRetouchLivePatch}"
                                RenderOptions.BitmapInterpolationMode="HighQuality" />

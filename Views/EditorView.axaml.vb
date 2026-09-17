@@ -1461,7 +1461,7 @@ Namespace Views
                     End If
                     UpdateSliderLayout()
                     HideBrushPreviewLineAfterBake()
-                Case NameOf(EditorViewModel.RetouchLivePatchImage)
+                Case NameOf(EditorViewModel.RetouchLivePatchOverlay)
                     UpdateSliderLayout()
                     ' Waehrend eines Zuges bleibt es DIESELBE Bitmap, es aendern sich nur ihre
                     ' Bildpunkte. Die Bindung setzt dann denselben Verweis noch einmal, Avalonia
@@ -1469,7 +1469,7 @@ Namespace Views
                     ' haengt die Live-Vorschau daran, dass UpdateSliderLayout nebenbei ein NEUES
                     ' Clip-Objekt setzt - ein Nebeneffekt, den niemand als tragend erkennt und der
                     ' bei der naechsten Aufraeumrunde wegfaellt.
-                    Me.FindControl(Of Image)("RetouchLivePatchImage")?.InvalidateVisual()
+                    Me.FindControl(Of Controls.TiledOverlayControl)("RetouchLivePatchImage")?.InvalidateVisual()
                 Case NameOf(EditorViewModel.HasRetouchLivePatch),
                      NameOf(EditorViewModel.RetouchLivePatchLeftPercent),
                      NameOf(EditorViewModel.RetouchLivePatchTopPercent),
@@ -1885,7 +1885,7 @@ Namespace Views
         End Sub
 
         Private Sub PositionRetouchLivePatch(ix As Double, iy As Double, iw As Double, ih As Double, vm As EditorViewModel)
-            Dim patch = Me.FindControl(Of Image)("RetouchLivePatchImage")
+            Dim patch = Me.FindControl(Of Controls.TiledOverlayControl)("RetouchLivePatchImage")
             If patch Is Nothing OrElse vm Is Nothing Then Return
 
             patch.IsVisible = vm.HasRetouchLivePatch

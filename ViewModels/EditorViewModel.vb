@@ -155,7 +155,7 @@ Namespace ViewModels
         Private _previewImage As Bitmap
         Private _comparisonImage As Bitmap
         Private _isDocumentLoading As Boolean = False
-        Private _retouchLivePatchImage As Bitmap
+        Private _retouchLivePatchOverlay As Controls.TiledOverlay
         Private _currentTool As EditorTool = EditorTool.Transform
         Private _maskMode As String = "Brush"
         Private _brightness As Double = 0
@@ -1137,7 +1137,7 @@ Namespace ViewModels
         Private _retouchLiveSampleBitmap As SKBitmap = Nothing
         ' Eine persistente Anzeige statt eines mit dem Zug wachsenden Gesamtflickens. Es werden
         ' nur die Pixel um den jeweils neuen Punkt geschrieben; die UI behält den Rest des Zuges.
-        Private _retouchLiveOverlay As WriteableBitmap = Nothing
+        Private _retouchLiveOverlay As Controls.TiledOverlay = Nothing
         Private _retouchLiveMaskOverlay As SKBitmap = Nothing
         Private _retouchLivePatchRect As SKRectI = SKRectI.Empty
         ' Was seit der letzten Veroeffentlichung dazugekommen ist und noch kopiert werden muss.
@@ -4393,21 +4393,28 @@ Namespace ViewModels
             End Set
         End Property
 
-        Public Property RetouchLivePatchImage As Bitmap
+        ''' <summary>Die Live-Vorschau des laufenden Retuschezugs, in Kacheln (siehe
+        ''' <see cref="Controls.TiledOverlay"/>). Bleibt waehrend eines Zuges dasselbe Objekt; die
+        ''' Meldung zu diesem Namen heisst dann "neue Bildpunkte, neu zeichnen".</summary>
+        Public Property RetouchLivePatchOverlay As Controls.TiledOverlay
             Get
-                Return _retouchLivePatchImage
+                Return _retouchLivePatchOverlay
             End Get
-            Private Set(value As Bitmap)
-                Dim previous = _retouchLivePatchImage
-                Me.RaiseAndSetIfChanged(_retouchLivePatchImage, value)
+            Private Set(value As Controls.TiledOverlay)
+                Dim previous = _retouchLivePatchOverlay
+                Me.RaiseAndSetIfChanged(_retouchLivePatchOverlay, value)
                 Me.RaisePropertyChanged(NameOf(HasRetouchLivePatch))
-                If previous IsNot Nothing AndAlso Not Object.ReferenceEquals(previous, value) Then DisposeDeferred(previous)
+                If previous IsNot Nothing AndAlso Not Object.ReferenceEquals(previous, value) Then
+                    ' Wie bei den Bildern: erst nach dem laufenden Durchlauf, die Anzeige kann die
+                    ' Kacheln noch zum Zeichnen brauchen.
+                    Dispatcher.UIThread.Post(Sub() previous.Dispose(), DispatcherPriority.Background)
+                End If
             End Set
         End Property
 
         Public ReadOnly Property HasRetouchLivePatch As Boolean
             Get
-                Return _retouchLivePatchImage IsNot Nothing
+                Return _retouchLivePatchOverlay IsNot Nothing
             End Get
         End Property
 

@@ -1,3 +1,10 @@
+## Unreleased
+
+### Fixes
+
+- Painting with the healing brush, clone stamp or blur brush stays smooth on large pictures.
+  Before, the editor became sluggish from the second stroke on.
+
 ## FerrumPix 0.9.46
 
 ### What's new
