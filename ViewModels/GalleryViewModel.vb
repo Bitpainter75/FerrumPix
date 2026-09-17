@@ -8273,6 +8273,26 @@ Namespace ViewModels
             ' Dateioperation gelaufen sein. Dann gehoert dieses Ergebnis nicht mehr zur Ansicht.
             If Not IsCurrentFolderSync(generation, folderPath, thumbnailToken) Then Return
 
+            ' Geaenderte Dateien: die vorhandene Kachel behaelt ihre Identitaet (Auswahl, Lage in der
+            ' Anzeige) und bekommt den neuen Stand wie beim Ordnerwechsel. Ihr Vorschaubild gehoert
+            ' aber zum alten Inhalt und muss neu entstehen.
+            Dim metaRefresh = New List(Of ImageItem)(syncResult.ItemsNeedingMetaRefresh)
+            Dim thumbnails = New List(Of ImageItem)(syncResult.NewItems)
+            If syncResult.Rescanned.Count > 0 Then
+                Dim keptByPath = syncResult.Rebuilt.
+                    Where(Function(i) i IsNot Nothing AndAlso Not i.IsFolder AndAlso Not i.IsParentFolderEntry).
+                    GroupBy(Function(i) i.FilePath, StringComparer.OrdinalIgnoreCase).
+                    ToDictionary(Function(g) g.Key, Function(g) g.First(), StringComparer.OrdinalIgnoreCase)
+                For Each scanned In syncResult.Rescanned
+                    Dim kept As ImageItem = Nothing
+                    If Not keptByPath.TryGetValue(scanned.FilePath, kept) Then Continue For
+                    kept.AdoptScannedState(scanned)
+                    kept.ClearThumbnail()
+                    thumbnails.Add(kept)
+                    If syncResult.RescannedNeedingMetaRefresh.Contains(scanned.FilePath) Then metaRefresh.Add(kept)
+                Next
+            End If
+
             PruneSelection(New HashSet(Of ImageItem)(syncResult.Rebuilt))
             _allItems.Clear()
             _allItems.AddRange(syncResult.Rebuilt)
@@ -8280,10 +8300,8 @@ Namespace ViewModels
             UpdateStorageInfo()
             ApplyPendingSelection()
 
-            If syncResult.ItemsNeedingMetaRefresh.Count > 0 Then
-                QueueBackgroundMetaRefresh(syncResult.ItemsNeedingMetaRefresh, thumbnailToken)
-            End If
-            If syncResult.NewItems.Count > 0 Then ImageItem.QueueBackgroundThumbnails(syncResult.NewItems)
+            If metaRefresh.Count > 0 Then QueueBackgroundMetaRefresh(metaRefresh, thumbnailToken)
+            If thumbnails.Count > 0 Then ImageItem.QueueBackgroundThumbnails(thumbnails)
         End Function
 
         ''' <summary>Hinterlegt, welche Pfade nach dem naechsten uebernommenen Abgleich markiert sein
@@ -8331,6 +8349,10 @@ Namespace ViewModels
             Public Rebuilt As List(Of ImageItem)
             Public NewItems As List(Of ImageItem)
             Public ItemsNeedingMetaRefresh As List(Of ImageItem)
+            ''' <summary>Frisch gelesene Elemente zu Dateien, die schon eine Kachel hatten, sich seitdem
+            ''' aber geaendert haben. Sie ersetzen die Kachel nicht, sondern geben ihr nur ihren Stand.</summary>
+            Public Rescanned As List(Of ImageItem)
+            Public RescannedNeedingMetaRefresh As HashSet(Of String)
         End Structure
 
         ''' <summary>Der reine Hintergrundteil von <see cref="SyncFolderItemsAsync"/>. Die Methode
@@ -8360,10 +8382,25 @@ Namespace ViewModels
             End If
 
             Dim files = EnumerateImageFiles(folderPath)
+            ' GEAENDERTE DATEIEN WERDEN NEU GELESEN, nicht nur neue. Der Watcher meldet eine Datei
+            ' schon beim ANLEGEN, also waehrend sie noch kopiert wird. Der Abgleich dazu baute ihre
+            ' Kachel aus dem halben Inhalt: das Vorschaubild scheiterte (und gilt danach als fertig),
+            ' der Metadaten-Nachlauf las nichts und der Katalog bekam keinen brauchbaren Eintrag.
+            ' Der Abgleich nach dem Einfuegen fand die Datei dann schon vor und liess sie so stehen
+            ' (Nutzerbefund: eingefuegte Bilder ohne Vorschaubild und nicht im Katalog). Groesse
+            ' oder Aenderungszeit verraten das.
+            Dim changedFiles = files.Where(Function(f)
+                                               Dim kept As ImageItem = Nothing
+                                               Return existing.TryGetValue(f.FullName, kept) AndAlso
+                                                      Not kept.IsFolder AndAlso
+                                                      (kept.FileSize <> f.Length OrElse kept.DateModified <> f.LastWriteTime)
+                                           End Function).ToArray()
             Dim newFiles = files.Where(Function(f) Not existing.ContainsKey(f.FullName)).ToArray()
             Dim itemsNeedingMetaRefresh As New List(Of ImageItem)()
             Dim newItems = BuildFileItems(newFiles, folderPath, thumbnailToken, itemsNeedingMetaRefresh)
             Dim newItemsByPath = newItems.ToDictionary(Function(i) i.FilePath, StringComparer.OrdinalIgnoreCase)
+            Dim changedMetaRefresh As New List(Of ImageItem)()
+            Dim rescanned = BuildFileItems(changedFiles, folderPath, thumbnailToken, changedMetaRefresh)
 
             For Each file In files
                 Dim keptFile As ImageItem = Nothing
@@ -8378,7 +8415,11 @@ Namespace ViewModels
             Return New FolderSyncResult With {
                 .Rebuilt = rebuilt,
                 .NewItems = newItems,
-                .ItemsNeedingMetaRefresh = itemsNeedingMetaRefresh
+                .ItemsNeedingMetaRefresh = itemsNeedingMetaRefresh,
+                .Rescanned = rescanned,
+                .RescannedNeedingMetaRefresh = changedMetaRefresh.
+                    Select(Function(i) i.FilePath).
+                    ToHashSet(StringComparer.OrdinalIgnoreCase)
             }
         End Function
 

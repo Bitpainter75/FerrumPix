@@ -7,6 +7,9 @@
 
 - A clone stamp stroke on a large picture is applied many times faster after you let go.
 
+- Pictures pasted into the gallery get their preview and their capture data, and are added to the
+  catalog. Before, a pasted picture could stay without a preview.
+
 ## FerrumPix 0.9.46
 
 ### What's new
