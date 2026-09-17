@@ -16008,6 +16008,16 @@ Namespace ViewModels
             If Not String.IsNullOrEmpty(_currentImagePath) AndAlso Not String.Equals(_currentImagePath, imagePath, StringComparison.OrdinalIgnoreCase) Then
                 If Not Await ConfirmSaveBeforeLeavingAsync("ein anderes Bild öffnest") Then Return False
             End If
+            ' DAS STARTWERKZEUG VOR DEM LADEN SETZEN, nicht erst beim Betreten des Modus. Der
+            ' Moduswechsel folgt diesem Aufruf, und bis dahin galt das alte Werkzeug; nach dem
+            ' Programmstart ist das der Zuschnitt. Dessen Vorschau zeigt das ganze Bild ohne
+            ' Ausschnitt und mit erweiterter Leinwand, und so kam ein beschnittenes oder
+            ' begradigtes Projekt erst ungeschnitten auf die Buehne, bis der zweite Render nach
+            ' dem Werkzeugwechsel das richtige Bild brachte (Nutzerbefund). Der spaetere Aufruf
+            ' beim Moduswechsel findet das Werkzeug dann schon vor und rendert nicht erneut.
+            If _mainVm IsNot Nothing AndAlso _mainVm.CurrentMode <> AppMode.Editor Then
+                ActivateDefaultToolForModeEntry()
+            End If
 
             ' showLoadingState: das Neuladen nach dem Speichern. Ohne den Ladezustand stand dort bei
             ' JPEG, PNG und TIFF einen Moment "Kein Bild" auf der Buehne, bis die gespeicherte Datei

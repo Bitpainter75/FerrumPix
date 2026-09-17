@@ -1,26 +1,3 @@
-## Unreleased
-
-### What's new
-
-- **Black and white point on the tone curve.** The end points of the curve can now be dragged
-  inward as well, on every channel, so you can set the black and white point or tone colours per
-  channel.
-
-- **JPEG XL, reading and saving.** Photos in JPEG XL show up in the gallery and open in the
-  viewer and the editor, with their colour profile, rotation and capture data. You can save as
-  JPEG XL wherever you can choose a format, with the same quality setting as JPEG; 100 means
-  lossless. When converting JPEG files to JPEG XL, they can be repacked without any loss: about a
-  fifth smaller, and the original JPEG can be restored exactly. The Windows downloads bring
-  everything along, on Linux the packages recommend libjxl.
-
-### Fixes
-
-- HEIF photos with the endings .heif and .hif, as some Fujifilm and Canon cameras save them, now
-  appear in the gallery.
-- The channel switcher of the tone curve now also marks a channel whose end point was moved.
-- Lens correction knows a few more cameras and lenses, and the bundled HEIC decoder on Windows is
-  up to date.
-
 ## FerrumPix 0.9.45
 
 ### What's new
@@ -70,6 +47,17 @@
   becomes a new layer in the editor, not only image files. What you copy in the editor now also
   goes to the clipboard as a picture, so it can still be pasted later and in other programs.
 
+- **Black and white point on the tone curve.** The end points of the curve can now be dragged
+  inward as well, on every channel, so you can set the black and white point or tone colours per
+  channel.
+
+- **JPEG XL, reading and saving.** Photos in JPEG XL show up in the gallery and open in the
+  viewer and the editor, with their colour profile, rotation and capture data. You can save as
+  JPEG XL wherever you can choose a format, with the same quality setting as JPEG; 100 means
+  lossless. When converting JPEG files to JPEG XL, they can be repacked without any loss: about a
+  fifth smaller, and the original JPEG can be restored exactly. The Windows downloads bring
+  everything along, on Linux the packages recommend libjxl.
+  
   
 ### Fixes
 
@@ -96,3 +84,14 @@
 
 - Copying a selection taken from a layer copies only that layer. Transparent and see-through parts
   stay transparent instead of showing the photo underneath.
+  
+- HEIF photos with the endings .heif and .hif, as some Fujifilm and Canon cameras save them, now
+  appear in the gallery.
+
+- The channel switcher of the tone curve now also marks a channel whose end point was moved.
+
+- Lens correction knows a few more cameras and lenses, and the bundled HEIC decoder on Windows is
+  up to date.
+
+- A cropped or straightened project opens in the editor as it was saved, instead of showing the
+  whole uncropped picture for a moment first.
