@@ -328,9 +328,13 @@ Namespace Services
                 ' composite.png; saemtliche Metadaten-Kategorien EXIF/IPTC/XMP/ICC werden aus base.*
                 ' (Ursprungsbild) uebernommen. Bei normalen Bildern sind beide Quellen dieselbe Datei.
                 Dim isFpx = FpxService.IsFpx(imagePath)
+                ' JPEG XL kennt MetadataExtractor nicht; die Verzeichnisse kommen dort aus den Boxen
+                ' der Datei, in derselben Form (siehe JxlDecodeService.ReadMetadataDirectories).
                 Dim metaDirectories = If(isFpx,
                                          ReadFpxCompositeMetadata(imagePath),
-                                         ImageMetadataReader.ReadMetadata(imagePath))
+                                         If(JxlDecodeService.IsSupportedJxl(imagePath),
+                                            JxlDecodeService.ReadMetadataDirectories(imagePath),
+                                            ImageMetadataReader.ReadMetadata(imagePath)))
                 Dim captureDirectories = If(isFpx, ReadFpxBaseMetadata(imagePath), metaDirectories)
 
                 If isFpx Then
@@ -876,6 +880,12 @@ Namespace Services
         Public Shared Function ReadImageDimensions(imagePath As String) As (Width As Integer?, Height As Integer?)
             Try
                 If Not System.IO.File.Exists(imagePath) Then Return (Nothing, Nothing)
+                ' JPEG XL kennt SKCodec nicht; dort antworten die Kopfdaten ueber libjxl.
+                If JxlDecodeService.IsSupportedJxl(imagePath) Then
+                    Dim size = JxlDecodeService.TryGetSize(imagePath)
+                    If size.Width <= 0 Then Return (Nothing, Nothing)
+                    Return (size.Width, size.Height)
+                End If
                 Using codec = SkiaSharp.SKCodec.Create(imagePath)
                     If codec Is Nothing Then Return (Nothing, Nothing)
                     Return (codec.Info.Width, codec.Info.Height)

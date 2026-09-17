@@ -8548,7 +8548,13 @@
   <data name="JPEG_XL_nur_vom_System_cd6e7014" xml:space="preserve">
     <value>JPEG XL, vain järjestelmästä</value>
   </data>
-  <data name="libjxl_liest_JPEG_XL_Dateien_und_steht_unter_der_7746769f" xml:space="preserve">
-    <value>libjxl lukee JPEG XL -tiedostoja, ja sen lisenssi on BSD. Windowsissa se tulee mukana, Linuxissa se tulee paketinhallinnasta, Flatpak sisältää sen, ja macOS:ssä se tulee Homebrew'sta. Jos se puuttuu, tällaiset tiedostot jäävät vain avaamatta ja kaikki muu toimii ennallaan.</value>
+  <data name="libjxl_liest_und_schreibt_JPEG_XL_Dateien_und_st_d80c1c5e" xml:space="preserve">
+    <value>libjxl lukee ja kirjoittaa JPEG XL -tiedostoja, ja sen lisenssi on BSD. Windowsissa se tulee mukana, Linuxissa se tulee paketinhallinnasta, Flatpak sisältää sen, ja macOS:ssä se tulee Homebrew'sta. Jos se puuttuu, tällaiset tiedostot jäävät vain avaamatta ja kaikki muu toimii ennallaan.</value>
+  </data>
+  <data name="JPEG_verlustfrei_umpacken_c75afd6c" xml:space="preserve">
+    <value>Pakkaa JPEG uudelleen häviöttömästi</value>
+  </data>
+  <data name="JPEG_Dateien_werden_ohne_jeden_Verlust_umgepackt_9bd11bec" xml:space="preserve">
+    <value>JPEG-tiedostot pakataan uudelleen täysin häviöttömästi sen sijaan, että ne koodattaisiin uudelleen: noin viidenneksen pienempiä, ja alkuperäinen voidaan palauttaa bitilleen. Yllä oleva laatu koskee silloin vain muita kuvia. Jos tekijänoikeusmerkintä on asetettu tai EXIF on poistettu valinnasta kohdassa Ota käyttöön, ne koodataan uudelleen.</value>
   </data>
 </root>

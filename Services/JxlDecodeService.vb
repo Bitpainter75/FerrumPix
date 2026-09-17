@@ -29,7 +29,10 @@ Namespace Services
     ''' rechnet. Die Drehung aus dem Codestream legt libjxl selbst auf (JxlDecoderSetKeepOrientation
     ''' bleibt auf seiner Vorgabe), es braucht also KEINE zweite Orientierungskorrektur.
     '''
-    ''' NUR LESEN: ein Encoder ist hier nicht angebunden. SaveImage weist ein .jxl-Ziel ab.
+    ''' GESCHRIEBEN wird in <see cref="JxlEncodeService"/>. Der teilt sich mit diesem Dienst die
+    ''' geladene Bibliothek und die Faden-Funktionen (die Friend-Einstiege unten) und laedt nur seine
+    ''' eigenen Exporte dazu. Hier stehen ausserdem die beiden Lesewege, die das Schreiben braucht:
+    ''' die Metadaten-Boxen (EXIF, XMP) und das Zurueckholen eines verlustfrei umgepackten JPEG.
     ''' </summary>
     Public NotInheritable Class JxlDecodeService
 
@@ -59,6 +62,11 @@ Namespace Services
         Private Delegate Function RunnerCreateFn(memoryManager As IntPtr, workers As UIntPtr) As IntPtr
         Private Delegate Sub RunnerDestroyFn(runner As IntPtr)
         Private Delegate Function DefaultWorkersFn() As UIntPtr
+        ''' Boxen und JPEG-Rekonstruktion. Der Boxtyp ist char[4] und kommt ueber einen Zeiger auf
+        ''' vier Byte heraus; die Puffer werden wie die Eingabe als Zeiger mit Laenge gesetzt und
+        ''' melden beim Freigeben, wie viel davon UNBENUTZT blieb.
+        Private Delegate Function GetBoxTypeFn(dec As IntPtr, type As IntPtr, decompressed As Integer) As Integer
+        Private Delegate Function ReleaseBufferFn(dec As IntPtr) As UIntPtr
 
         ''' <summary>JxlPixelFormat: Kanalzahl, Datentyp, Byte-Reihenfolge, Zeilenausrichtung. Die
         ''' beiden Aufzaehlungen sind in C je vier Byte, align ist size_t; das Polster davor legt
@@ -78,6 +86,10 @@ Namespace Services
         Private Const StatusBasicInfo As Integer = &H40
         Private Const StatusColorEncoding As Integer = &H100
         Private Const StatusFullImage As Integer = &H1000
+        Private Const StatusJpegNeedMoreOutput As Integer = 6
+        Private Const StatusBoxNeedMoreOutput As Integer = 7
+        Private Const StatusJpegReconstruction As Integer = &H2000
+        Private Const StatusBox As Integer = &H4000
 
         Private Const TypeUint8 As Integer = 2
         Private Const NativeEndian As Integer = 0
@@ -90,6 +102,11 @@ Namespace Services
         Private Const BasicInfoXsizeOffset As Integer = 4
         Private Const BasicInfoYsizeOffset As Integer = 8
         Private Const BasicInfoOrientationOffset As Integer = 48
+        ''' Fuer die Frage, ob eine vorhandene Datei ersetzt werden darf: Bittiefe, Gleitkomma-Bits
+        ''' und ob eine Animation vorliegt.
+        Private Const BasicInfoBitsOffset As Integer = 12
+        Private Const BasicInfoExponentBitsOffset As Integer = 16
+        Private Const BasicInfoHaveAnimationOffset As Integer = 44
         ''' Reichlich bemessen: die Struktur ist in 0.12 rund 200 Byte gross.
         Private Const BasicInfoBufferSize As Integer = 1024
 
@@ -134,6 +151,51 @@ Namespace Services
         ''' Die Funktion JxlThreadParallelRunner selbst: sie wird nicht aus .NET gerufen, sondern
         ''' als Zeiger an den Dekoder gereicht, der sie aufruft.
         Private Shared _runnerFunction As IntPtr
+        ''' Ebenfalls optional, gebraucht nur fuer Metadaten und JPEG-Rekonstruktion.
+        Private Shared _setDecompressBoxes As SetBoolFn
+        Private Shared _getBoxType As GetBoxTypeFn
+        Private Shared _setBoxBuffer As SetInputFn
+        Private Shared _releaseBoxBuffer As ReleaseBufferFn
+        Private Shared _setJpegBuffer As SetInputFn
+        Private Shared _releaseJpegBuffer As ReleaseBufferFn
+
+        ''' <summary>Die geladene libjxl fuer <see cref="JxlEncodeService"/>, oder IntPtr.Zero. Der
+        ''' Encoder steckt in derselben Bibliothek; eine zweite Ladelogik wuerde nur eine zweite
+        ''' Kandidatenliste bedeuten, die auseinanderlaeuft.</summary>
+        Friend Shared ReadOnly Property NativeHandle As IntPtr
+            Get
+                EnsureLoaded()
+                Return _library
+            End Get
+        End Property
+
+        ''' <summary>Fassung der geladenen Bibliothek als major*1000000 + minor*1000 + patch.</summary>
+        Friend Shared ReadOnly Property NativeVersion As UInteger
+            Get
+                EnsureLoaded()
+                Return _version
+            End Get
+        End Property
+
+        ''' <summary>Ein Faden-Verteiler fuer Dekoder oder Encoder, oder IntPtr.Zero, wenn die
+        ''' Faden-Funktionen fehlen. Freigeben mit <see cref="DestroyRunner"/>.</summary>
+        Friend Shared Function CreateRunner() As IntPtr
+            EnsureLoaded()
+            If Not RunnerReady Then Return IntPtr.Zero
+            Return _runnerCreate(IntPtr.Zero, _defaultWorkers())
+        End Function
+
+        Friend Shared Sub DestroyRunner(runner As IntPtr)
+            If runner <> IntPtr.Zero AndAlso _runnerDestroy IsNot Nothing Then _runnerDestroy(runner)
+        End Sub
+
+        ''' <summary>Der Zeiger auf JxlThreadParallelRunner, der zusammen mit dem Verteiler gereicht wird.</summary>
+        Friend Shared ReadOnly Property RunnerFunction As IntPtr
+            Get
+                EnsureLoaded()
+                Return _runnerFunction
+            End Get
+        End Property
 
         Public Shared ReadOnly Property IsAvailable As Boolean
             Get
@@ -255,6 +317,12 @@ Namespace Services
                 _closeInput = TryGetExport(Of CloseInputFn)(handle, "JxlDecoderCloseInput")
                 _setUnpremultiply = TryGetExport(Of SetBoolFn)(handle, "JxlDecoderSetUnpremultiplyAlpha")
                 _setParallelRunner = TryGetExport(Of SetParallelRunnerFn)(handle, "JxlDecoderSetParallelRunner")
+                _setDecompressBoxes = TryGetExport(Of SetBoolFn)(handle, "JxlDecoderSetDecompressBoxes")
+                _getBoxType = TryGetExport(Of GetBoxTypeFn)(handle, "JxlDecoderGetBoxType")
+                _setBoxBuffer = TryGetExport(Of SetInputFn)(handle, "JxlDecoderSetBoxBuffer")
+                _releaseBoxBuffer = TryGetExport(Of ReleaseBufferFn)(handle, "JxlDecoderReleaseBoxBuffer")
+                _setJpegBuffer = TryGetExport(Of SetInputFn)(handle, "JxlDecoderSetJPEGBuffer")
+                _releaseJpegBuffer = TryGetExport(Of ReleaseBufferFn)(handle, "JxlDecoderReleaseJPEGBuffer")
                 If _version >= 9000UI Then
                     _iccSize = TryGetExport(Of IccSizeFn)(handle, "JxlDecoderGetICCProfileSize")
                     _icc = TryGetExport(Of IccFn)(handle, "JxlDecoderGetColorAsICCProfile")
@@ -532,19 +600,47 @@ Namespace Services
         ''' Wie bei HEIF bewusst NICHT durch <see cref="DecodeGate"/>: ein Blick in die Kopfdaten,
         ''' den auch die Oberflaeche stellt, soll nicht hinter einer RAW-Entwicklung warten.</summary>
         Public Shared Function TryGetSize(path As String) As (Width As Integer, Height As Integer)
-            If String.IsNullOrWhiteSpace(path) OrElse Not IsAvailable Then Return (0, 0)
+            Dim fields = TryReadBasicFields(path)
+            If fields Is Nothing Then Return (0, 0)
+            Return (fields.Width, fields.Height)
+        End Function
+
+        ''' <summary>Darf eine VORHANDENE JPEG-XL-Datei durch ein neues Bild ersetzt werden?
+        '''
+        ''' Dieselbe Frage wie bei TIFF (TiffWriterService.CanReplaceExisting): geschrieben wird mit
+        ''' 8 Bit und einem Einzelbild. Traegt die vorhandene Datei mehr, also hoehere Bittiefe,
+        ''' Gleitkomma (HDR) oder eine Animation, ginge das still verloren. Was sich nicht lesen
+        ''' laesst, gilt als nicht ersetzbar.</summary>
+        Public Shared Function CanReplaceExisting(path As String) As Boolean
+            If String.IsNullOrWhiteSpace(path) OrElse Not File.Exists(path) Then Return True
+            Dim fields = TryReadBasicFields(path)
+            If fields Is Nothing Then Return False
+            Return fields.BitsPerSample <= 8 AndAlso fields.ExponentBits = 0 AndAlso Not fields.HasAnimation
+        End Function
+
+        ''' <summary>Was die Kopfdaten ueber eine Datei sagen.</summary>
+        Private NotInheritable Class BasicFields
+            Public Width As Integer
+            Public Height As Integer
+            Public BitsPerSample As Integer
+            Public ExponentBits As Integer
+            Public HasAnimation As Boolean
+        End Class
+
+        Private Shared Function TryReadBasicFields(path As String) As BasicFields
+            If String.IsNullOrWhiteSpace(path) OrElse Not IsAvailable Then Return Nothing
             SyncLock _nativeLock
                 Try
                     Dim length = New FileInfo(path).Length
-                    If length <= 0 Then Return (0, 0)
+                    If length <= 0 Then Return Nothing
                     Dim probe = ReadHead(path, CInt(Math.Min(length, HeaderProbeBytes)))
-                    Dim size = ReadBasicSize(probe, isComplete:=probe.Length >= length)
-                    If size.Width > 0 OrElse probe.Length >= length Then Return size
+                    Dim fields = ReadBasicFields(probe, isComplete:=probe.Length >= length)
+                    If fields IsNot Nothing OrElse probe.Length >= length Then Return fields
                     ' Die Kopfdaten lagen weiter hinten, etwa hinter einer grossen EXIF-Box.
-                    If length > Integer.MaxValue Then Return (0, 0)
-                    Return ReadBasicSize(File.ReadAllBytes(path), isComplete:=True)
+                    If length > Integer.MaxValue Then Return Nothing
+                    Return ReadBasicFields(File.ReadAllBytes(path), isComplete:=True)
                 Catch
-                    Return (0, 0)
+                    Return Nothing
                 End Try
             End SyncLock
         End Function
@@ -565,30 +661,298 @@ Namespace Services
 
         ''' <summary>Liest nur die Kopfdaten. Bei unvollstaendiger Eingabe darf CloseInput NICHT
         ''' gerufen werden: dann meldete libjxl einen Fehler statt "mehr Eingabe noetig".</summary>
-        Private Shared Function ReadBasicSize(bytes As Byte(), isComplete As Boolean) As (Width As Integer, Height As Integer)
-            If bytes Is Nothing OrElse bytes.Length = 0 Then Return (0, 0)
+        Private Shared Function ReadBasicFields(bytes As Byte(), isComplete As Boolean) As BasicFields
+            If bytes Is Nothing OrElse bytes.Length = 0 Then Return Nothing
             Dim dec As IntPtr = IntPtr.Zero
             Dim info As IntPtr = IntPtr.Zero
             Dim pin As GCHandle
             Try
                 dec = _create(IntPtr.Zero)
-                If dec = IntPtr.Zero Then Return (0, 0)
-                If _subscribeEvents(dec, StatusBasicInfo) <> StatusSuccess Then Return (0, 0)
+                If dec = IntPtr.Zero Then Return Nothing
+                If _subscribeEvents(dec, StatusBasicInfo) <> StatusSuccess Then Return Nothing
                 pin = GCHandle.Alloc(bytes, GCHandleType.Pinned)
-                If _setInput(dec, pin.AddrOfPinnedObject(), CType(bytes.Length, UIntPtr)) <> StatusSuccess Then Return (0, 0)
+                If _setInput(dec, pin.AddrOfPinnedObject(), CType(bytes.Length, UIntPtr)) <> StatusSuccess Then Return Nothing
                 If isComplete Then _closeInput?.Invoke(dec)
-                If _processInput(dec) <> StatusBasicInfo Then Return (0, 0)
+                If _processInput(dec) <> StatusBasicInfo Then Return Nothing
                 info = Marshal.AllocHGlobal(BasicInfoBufferSize)
-                If _getBasicInfo(dec, info) <> StatusSuccess Then Return (0, 0)
-                Return OrientedSize(info)
+                If _getBasicInfo(dec, info) <> StatusSuccess Then Return Nothing
+                Dim size = OrientedSize(info)
+                If size.Width <= 0 OrElse size.Height <= 0 Then Return Nothing
+                Return New BasicFields With {
+                    .Width = size.Width,
+                    .Height = size.Height,
+                    .BitsPerSample = Marshal.ReadInt32(info, BasicInfoBitsOffset),
+                    .ExponentBits = Marshal.ReadInt32(info, BasicInfoExponentBitsOffset),
+                    .HasAnimation = Marshal.ReadInt32(info, BasicInfoHaveAnimationOffset) <> 0}
             Catch
-                Return (0, 0)
+                Return Nothing
             Finally
                 If dec <> IntPtr.Zero Then _destroy(dec)
                 If info <> IntPtr.Zero Then Marshal.FreeHGlobal(info)
                 If pin.IsAllocated Then pin.Free()
             End Try
         End Function
+
+        ''' <summary>EXIF und XMP aus den Boxen einer JPEG-XL-Datei. EXIF als nackter TIFF-Block (ohne
+        ''' den Versatz von vier Byte, mit dem die Box beginnt), XMP als Text in UTF-8. Fehlt etwas,
+        ''' ist das Feld Nothing.
+        '''
+        ''' Die Boxen koennen mit Brotli gepackt sein ("brob"). JxlDecoderSetDecompressBoxes packt sie
+        ''' aus, und nach dem Typ wird in der AUSGEPACKTEN Form gefragt.
+        '''
+        ''' Kein DecodeGate: gelesen werden nur Boxen, keine Bildpunkte. Das Schloss dieses Dienstes
+        ''' haelt die nativen Aufrufe auseinander.</summary>
+        Public Shared Function ReadMetadataBoxes(path As String) As (Exif As Byte(), Xmp As Byte())
+            If String.IsNullOrWhiteSpace(path) OrElse Not IsAvailable Then Return (Nothing, Nothing)
+            If _getBoxType Is Nothing OrElse _setBoxBuffer Is Nothing OrElse _releaseBoxBuffer Is Nothing Then Return (Nothing, Nothing)
+            Dim bytes As Byte()
+            Try
+                bytes = File.ReadAllBytes(path)
+            Catch
+                Return (Nothing, Nothing)
+            End Try
+            SyncLock _nativeLock
+                Dim exif As Byte() = Nothing
+                Dim xmp As Byte() = Nothing
+                Dim dec As IntPtr = IntPtr.Zero
+                Dim typeBuffer As IntPtr = IntPtr.Zero
+                Dim pin As GCHandle
+                Dim collector As New NativeGrowBuffer()
+                Try
+                    dec = _create(IntPtr.Zero)
+                    If dec = IntPtr.Zero Then Return (Nothing, Nothing)
+                    If _subscribeEvents(dec, StatusBox) <> StatusSuccess Then Return (Nothing, Nothing)
+                    _setDecompressBoxes?.Invoke(dec, 1)
+                    pin = GCHandle.Alloc(bytes, GCHandleType.Pinned)
+                    If _setInput(dec, pin.AddrOfPinnedObject(), CType(bytes.Length, UIntPtr)) <> StatusSuccess Then Return (Nothing, Nothing)
+                    _closeInput?.Invoke(dec)
+                    typeBuffer = Marshal.AllocHGlobal(4)
+
+                    Dim currentType As String = Nothing
+                    Dim finishBox = Sub()
+                                        If currentType Is Nothing Then Return
+                                        collector.Release(_releaseBoxBuffer(dec))
+                                        Dim content = collector.ToArray()
+                                        If currentType = "Exif" Then
+                                            exif = TiffFromExifBox(content)
+                                        Else
+                                            xmp = content
+                                        End If
+                                        currentType = Nothing
+                                    End Sub
+
+                    Do
+                        Dim status = _processInput(dec)
+                        Select Case status
+                            Case StatusBox
+                                finishBox()
+                                If _getBoxType(dec, typeBuffer, 1) <> StatusSuccess Then Exit Do
+                                Dim typeBytes(3) As Byte
+                                Marshal.Copy(typeBuffer, typeBytes, 0, 4)
+                                Dim type = Text.Encoding.ASCII.GetString(typeBytes)
+                                If (type = "Exif" AndAlso exif Is Nothing) OrElse (type = "xml " AndAlso xmp Is Nothing) Then
+                                    collector.Reset(64 * 1024)
+                                    If _setBoxBuffer(dec, collector.FreeStart, collector.FreeLength) <> StatusSuccess Then Exit Do
+                                    currentType = type
+                                End If
+                            Case StatusBoxNeedMoreOutput
+                                If currentType Is Nothing Then Exit Do
+                                collector.Release(_releaseBoxBuffer(dec))
+                                If Not collector.Grow(MaxMetadataBoxBytes) Then
+                                    currentType = Nothing
+                                    Exit Do
+                                End If
+                                If _setBoxBuffer(dec, collector.FreeStart, collector.FreeLength) <> StatusSuccess Then Exit Do
+                            Case StatusSuccess
+                                finishBox()
+                                Exit Do
+                            Case Else
+                                Exit Do
+                        End Select
+                    Loop
+                    Return (exif, xmp)
+                Catch ex As Exception
+                    DiagnosticLogService.LogException("JXL.ReadMetadataBoxes", ex)
+                    Return (exif, xmp)
+                Finally
+                    If dec <> IntPtr.Zero Then _destroy(dec)
+                    If typeBuffer <> IntPtr.Zero Then Marshal.FreeHGlobal(typeBuffer)
+                    If pin.IsAllocated Then pin.Free()
+                    collector.Dispose()
+                End Try
+            End SyncLock
+        End Function
+
+        ''' <summary>Eine EXIF-Box beginnt mit vier Byte, Big Endian: dem Abstand vom Ende dieser vier
+        ''' Byte bis zum TIFF-Kopf. Meist null.</summary>
+        Private Shared Function TiffFromExifBox(content As Byte()) As Byte()
+            If content Is Nothing OrElse content.Length < 12 Then Return Nothing
+            Dim offset = (CLng(content(0)) << 24) Or (CLng(content(1)) << 16) Or (CLng(content(2)) << 8) Or CLng(content(3))
+            Dim start = 4L + offset
+            If start < 4 OrElse start >= content.Length - 8 Then Return Nothing
+            Dim tiff(CInt(content.Length - start) - 1) As Byte
+            Buffer.BlockCopy(content, CInt(start), tiff, 0, tiff.Length)
+            Return tiff
+        End Function
+
+        ''' <summary>Obergrenze fuer eine EXIF- oder XMP-Box. Echte Bloecke haben Kilobyte; eine
+        ''' Box von vielen Megabyte ist kaputt oder boeswillig und wird nicht eingelesen.</summary>
+        Private Const MaxMetadataBoxBytes As Integer = 16 * 1024 * 1024
+
+        ''' <summary>Die Metadaten einer JPEG-XL-Datei in der Form, die MetadataExtractor sonst selbst
+        ''' liefert. Der kennt JPEG XL nicht (2.9.3), wohl aber einen nackten TIFF-Block und XMP.
+        ''' Damit sehen Infopanel, Katalog und die Uebernahme beim Speichern dieselben Verzeichnisse
+        ''' wie bei jedem anderen Format.</summary>
+        Public Shared Function ReadMetadataDirectories(path As String) As IReadOnlyList(Of MetadataExtractor.Directory)
+            Dim result As New List(Of MetadataExtractor.Directory)()
+            Dim boxes = ReadMetadataBoxes(path)
+            Try
+                If boxes.Exif IsNot Nothing Then
+                    result.AddRange(New MetadataExtractor.Formats.Exif.ExifReader().Extract(
+                        New MetadataExtractor.IO.ByteArrayReader(boxes.Exif), 0))
+                End If
+            Catch ex As Exception
+                DiagnosticLogService.LogException("JXL.ReadMetadataDirectories.Exif", ex)
+            End Try
+            Try
+                If boxes.Xmp IsNot Nothing Then
+                    result.Add(New MetadataExtractor.Formats.Xmp.XmpReader().Extract(boxes.Xmp))
+                End If
+            Catch ex As Exception
+                DiagnosticLogService.LogException("JXL.ReadMetadataDirectories.Xmp", ex)
+            End Try
+            Return result
+        End Function
+
+        ''' <summary>Das JPEG zurueck, aus dem diese Datei verlustfrei umgepackt wurde, Byte fuer Byte.
+        ''' Nothing, wenn die Datei kein umgepacktes JPEG ist (dann fehlt die Rekonstruktionsbox und
+        ''' das Ereignis kommt nicht).
+        '''
+        ''' Durch <see cref="DecodeGate"/>, weil libjxl dafuer den Bildstrom vollstaendig liest.</summary>
+        Public Shared Function ReconstructJpeg(path As String) As Byte()
+            If String.IsNullOrWhiteSpace(path) OrElse Not IsAvailable Then Return Nothing
+            If _setJpegBuffer Is Nothing OrElse _releaseJpegBuffer Is Nothing Then Return Nothing
+            Dim bytes As Byte()
+            Try
+                bytes = File.ReadAllBytes(path)
+            Catch
+                Return Nothing
+            End Try
+            Return DecodeGate.Run(Function()
+                                      SyncLock _nativeLock
+                                          Return ReconstructJpegCore(bytes)
+                                      End SyncLock
+                                  End Function)
+        End Function
+
+        Private Shared Function ReconstructJpegCore(bytes As Byte()) As Byte()
+            Dim dec As IntPtr = IntPtr.Zero
+            Dim pin As GCHandle
+            Dim collector As New NativeGrowBuffer()
+            Try
+                dec = _create(IntPtr.Zero)
+                If dec = IntPtr.Zero Then Return Nothing
+                If _subscribeEvents(dec, StatusJpegReconstruction Or StatusFullImage) <> StatusSuccess Then Return Nothing
+                pin = GCHandle.Alloc(bytes, GCHandleType.Pinned)
+                If _setInput(dec, pin.AddrOfPinnedObject(), CType(bytes.Length, UIntPtr)) <> StatusSuccess Then Return Nothing
+                _closeInput?.Invoke(dec)
+
+                Dim reconstructing = False
+                Do
+                    Select Case _processInput(dec)
+                        Case StatusJpegReconstruction
+                            reconstructing = True
+                            ' Ein umgepacktes JPEG ist etwas groesser als die JPEG-XL-Datei.
+                            collector.Reset(bytes.Length + bytes.Length \ 2 + 64 * 1024)
+                            If _setJpegBuffer(dec, collector.FreeStart, collector.FreeLength) <> StatusSuccess Then Return Nothing
+                        Case StatusJpegNeedMoreOutput
+                            collector.Release(_releaseJpegBuffer(dec))
+                            If Not collector.Grow(Integer.MaxValue \ 2) Then Return Nothing
+                            If _setJpegBuffer(dec, collector.FreeStart, collector.FreeLength) <> StatusSuccess Then Return Nothing
+                        Case StatusFullImage, StatusSuccess
+                            If Not reconstructing Then Return Nothing
+                            collector.Release(_releaseJpegBuffer(dec))
+                            Return collector.ToArray()
+                        Case Else
+                            ' Auch NEED_IMAGE_OUT_BUFFER landet hier: dann ist es kein umgepacktes
+                            ' JPEG, und Bildpunkte waren nicht bestellt.
+                            Return Nothing
+                    End Select
+                Loop
+            Catch ex As Exception
+                DiagnosticLogService.LogException("JXL.ReconstructJpeg", ex)
+                Return Nothing
+            Finally
+                If dec <> IntPtr.Zero Then _destroy(dec)
+                If pin.IsAllocated Then pin.Free()
+                collector.Dispose()
+            End Try
+        End Function
+
+        ''' <summary>Ein nativer Puffer, den libjxl stueckweise fuellt. Beim Freigeben meldet die
+        ''' Bibliothek, wie viel vom zuletzt gereichten Bereich UNBENUTZT blieb; daraus ergibt sich,
+        ''' wie weit der Puffer voll ist. Reicht er nicht, wird er verdoppelt und der Rest ab dem
+        ''' Fuellstand neu gereicht.</summary>
+        Private NotInheritable Class NativeGrowBuffer
+            Implements IDisposable
+
+            Private _base As IntPtr = IntPtr.Zero
+            Private _capacity As Integer
+            Private _filled As Integer
+
+            Public ReadOnly Property FreeStart As IntPtr
+                Get
+                    Return _base + _filled
+                End Get
+            End Property
+
+            Public ReadOnly Property FreeLength As UIntPtr
+                Get
+                    Return CType(CULng(_capacity - _filled), UIntPtr)
+                End Get
+            End Property
+
+            Public Sub Reset(capacity As Integer)
+                Dispose()
+                _capacity = Math.Max(4096, capacity)
+                _base = Marshal.AllocHGlobal(_capacity)
+                _filled = 0
+            End Sub
+
+            ''' <summary>Uebernimmt die Rueckmeldung der Freigabe: so viele Byte blieben leer.</summary>
+            Public Sub Release(unused As UIntPtr)
+                Dim remaining = CLng(unused.ToUInt64())
+                _filled = CInt(Math.Max(0L, Math.Min(_capacity, _capacity - remaining)))
+            End Sub
+
+            Public Function Grow(limit As Integer) As Boolean
+                If _capacity >= limit Then Return False
+                Dim newCapacity = CInt(Math.Min(CLng(limit), CLng(_capacity) * 2L))
+                Dim newBase = Marshal.AllocHGlobal(newCapacity)
+                Dim chunk(_filled - 1) As Byte
+                If _filled > 0 Then
+                    Marshal.Copy(_base, chunk, 0, _filled)
+                    Marshal.Copy(chunk, 0, newBase, _filled)
+                End If
+                Marshal.FreeHGlobal(_base)
+                _base = newBase
+                _capacity = newCapacity
+                Return True
+            End Function
+
+            Public Function ToArray() As Byte()
+                Dim result(_filled - 1) As Byte
+                If _filled > 0 Then Marshal.Copy(_base, result, 0, _filled)
+                Return result
+            End Function
+
+            Public Sub Dispose() Implements IDisposable.Dispose
+                If _base <> IntPtr.Zero Then Marshal.FreeHGlobal(_base)
+                _base = IntPtr.Zero
+                _capacity = 0
+                _filled = 0
+            End Sub
+        End Class
 
     End Class
 

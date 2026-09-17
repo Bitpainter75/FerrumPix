@@ -8552,7 +8552,13 @@
   <data name="JPEG_XL_nur_vom_System_cd6e7014" xml:space="preserve">
     <value>JPEG XL, hanya dari sistem</value>
   </data>
-  <data name="libjxl_liest_JPEG_XL_Dateien_und_steht_unter_der_7746769f" xml:space="preserve">
-    <value>libjxl membaca berkas JPEG XL dan berlisensi BSD. Di Windows pustaka ini sudah disertakan, di Linux berasal dari pengelola paket, Flatpak sudah menyertakannya, dan di macOS berasal dari Homebrew. Jika tidak ada, berkas seperti itu tetap tidak terbuka dan semua fungsi lain berjalan seperti biasa.</value>
+  <data name="libjxl_liest_und_schreibt_JPEG_XL_Dateien_und_st_d80c1c5e" xml:space="preserve">
+    <value>libjxl membaca dan menulis berkas JPEG XL dan berlisensi BSD. Di Windows pustaka ini sudah disertakan, di Linux berasal dari pengelola paket, Flatpak sudah menyertakannya, dan di macOS berasal dari Homebrew. Jika tidak ada, berkas seperti itu tetap tidak terbuka dan semua fungsi lain berjalan seperti biasa.</value>
+  </data>
+  <data name="JPEG_verlustfrei_umpacken_c75afd6c" xml:space="preserve">
+    <value>Kemas ulang JPEG tanpa kehilangan</value>
+  </data>
+  <data name="JPEG_Dateien_werden_ohne_jeden_Verlust_umgepackt_9bd11bec" xml:space="preserve">
+    <value>Berkas JPEG dikemas ulang tanpa kehilangan apa pun alih-alih dienkode ulang: sekitar seperlima lebih kecil, dan berkas asli dapat dipulihkan byte demi byte. Kualitas di atas kemudian hanya berlaku untuk gambar lainnya. Jika pemberitahuan hak cipta diisi atau EXIF tidak dipilih di bagian Bawa serta, berkas dienkode ulang.</value>
   </data>
 </root>

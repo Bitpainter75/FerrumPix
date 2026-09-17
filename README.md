@@ -25,7 +25,7 @@ It runs on Windows, Linux and macOS, stays fast and local-first, and is built fo
 - Edit: crop, resize, rotate and distort, exposure and colour, curves, filters, masks, retouching, text and shapes, layers.
 - Develop RAW files from the sensor data, with lens correction from measured data for more than 1500 lenses.
 - Run batch work over a whole selection: rename, convert, resize, watermark, filters, metadata, export.
-- Open JPEG, PNG, WEBP, TIFF, BMP, GIF and RAW, plus HEIC/HEIF/AVIF and JPEG XL read-only, and Photoshop files with their layers.
+- Open JPEG, PNG, WEBP, JPEG XL, TIFF, BMP, GIF and RAW, plus HEIC/HEIF/AVIF read-only, and Photoshop files with their layers.
 - Hand a picture to another program with *Open with*, and pass it through G'MIC from the editor if you have it installed.
 - Find the people in your photos and search by them, and search by where a photo was taken - both entirely on your own machine.
 - Connect to your own Immich or Nextcloud server for browsing, upload, download, editing and metadata sync.
@@ -57,7 +57,7 @@ If you had a GPS track running - on a phone, a watch, a logger - the whole selec
 
 The time a picture was taken can be corrected the same way. Set a date and time outright, or shift what is already there by days, hours, minutes and seconds - for the trip where the camera clock was wrong and every photo is off by the same amount. Whole selections at once, and the file's own date follows along.
 
-Batch work runs over a whole selection: rename, convert, resize, watermark, filters, metadata removal, and *Export to* for putting a name pattern, a look, a size and a target format into one run, locally or straight to Immich. Converting can also turn RAW files into DNG, keeping them raw instead of rendering them out; that one needs [dnglab](https://github.com/dnglab/dnglab) installed, and says so if it is missing. Photos can also be printed, laid out as contact sheets or combined into a collage, each showing your edits.
+Batch work runs over a whole selection: rename, convert, resize, watermark, filters, metadata removal, and *Export to* for putting a name pattern, a look, a size and a target format into one run, locally or straight to Immich. Converting JPEG files to JPEG XL can repack them without any loss, so the original JPEG can be restored exactly. Converting can also turn RAW files into DNG, keeping them raw instead of rendering them out; that one needs [dnglab](https://github.com/dnglab/dnglab) installed, and says so if it is missing. Photos can also be printed, laid out as contact sheets or combined into a collage, each showing your edits.
 
 ## Viewer
 
@@ -97,7 +97,7 @@ Two of them can find their own setting. *Level to the horizon* looks for the str
 
 **Filters and presets.** Filters, LUT files (`.cube`) and XMP presets as written by Lightroom and Camera Raw. All of them, and the slider sets you saved yourself, can also be applied to a whole selection at once. With [G'MIC](https://gmic.eu) installed, the footer menu hands the picture to its filter window, and the result comes back as a layer.
 
-**Saving.** Save as JPEG, PNG, WEBP, TIFF or PDF, as a Photoshop file with the layer stack intact, or as an `.fpx` project that keeps adjustments and layers editable when you open it again. `CTRL+P` prints what you see, edits included.
+**Saving.** Save as JPEG, PNG, WEBP, JPEG XL, TIFF or PDF, as a Photoshop file with the layer stack intact, or as an `.fpx` project that keeps adjustments and layers editable when you open it again. `CTRL+P` prints what you see, edits included.
 
 ### RAW and other formats
 
@@ -252,7 +252,7 @@ libheif opens HEIC and HEIF. The Windows downloads bring it along, on Linux it c
 your package manager (the packages recommend it), and macOS reads those files itself.
 Without it they simply stay closed and everything else works.
 
-libjxl opens JPEG XL. The Windows downloads bring it along, on Linux it comes from your package
+libjxl opens and saves JPEG XL. The Windows downloads bring it along, on Linux it comes from your package
 manager (the packages recommend it, the Flatpak has it built in), and on macOS from Homebrew with
 "brew install jpeg-xl".
 

@@ -111,7 +111,9 @@ Namespace Services
             If String.IsNullOrWhiteSpace(sourcePath) OrElse Not IO.File.Exists(sourcePath) Then Return Nothing
 
             Try
-                Dim directories = ImageMetadataReader.ReadMetadata(sourcePath)
+                Dim directories = If(JxlDecodeService.IsSupportedJxl(sourcePath),
+                                     JxlDecodeService.ReadMetadataDirectories(sourcePath),
+                                     ImageMetadataReader.ReadMetadata(sourcePath))
                 Dim ifd0 = CollectIfd0Fields(directories)
                 Dim exif = CollectExifFields(directories)
                 ' DER AUFNAHMEORT WIRD VOR DER SUBSTANZFRAGE GELESEN, weil er selbst Substanz ist.

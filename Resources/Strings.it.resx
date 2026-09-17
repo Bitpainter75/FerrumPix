@@ -8508,7 +8508,13 @@
   <data name="JPEG_XL_nur_vom_System_cd6e7014" xml:space="preserve">
     <value>JPEG XL, solo dal sistema</value>
   </data>
-  <data name="libjxl_liest_JPEG_XL_Dateien_und_steht_unter_der_7746769f" xml:space="preserve">
-    <value>libjxl legge i file JPEG XL ed è distribuita con licenza BSD. Su Windows è inclusa, su Linux proviene dal gestore dei pacchetti, il Flatpak la include e su macOS proviene da Homebrew. Se manca, questi file restano semplicemente chiusi e tutto il resto funziona come prima.</value>
+  <data name="libjxl_liest_und_schreibt_JPEG_XL_Dateien_und_st_d80c1c5e" xml:space="preserve">
+    <value>libjxl legge e scrive i file JPEG XL ed è distribuita con licenza BSD. Su Windows è inclusa, su Linux proviene dal gestore dei pacchetti, il Flatpak la include e su macOS proviene da Homebrew. Se manca, questi file restano semplicemente chiusi e tutto il resto funziona come prima.</value>
+  </data>
+  <data name="JPEG_verlustfrei_umpacken_c75afd6c" xml:space="preserve">
+    <value>Reimpacchetta i JPEG senza perdita</value>
+  </data>
+  <data name="JPEG_Dateien_werden_ohne_jeden_Verlust_umgepackt_9bd11bec" xml:space="preserve">
+    <value>I file JPEG vengono reimpacchettati senza alcuna perdita invece di essere ricodificati: circa un quinto più piccoli, e l'originale si può recuperare byte per byte. La qualità sopra vale allora solo per le altre immagini. Se è impostata una nota di copyright o EXIF è deselezionato in Trasferisci, vengono ricodificati.</value>
   </data>
 </root>

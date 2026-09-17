@@ -77,6 +77,8 @@ Namespace ViewModels
                         Return ".png"
                     Case "WEBP"
                         Return ".webp"
+                    Case "JXL"
+                        Return ".jxl"
                     Case "TIFF"
                         Return ".tif"
                     Case Else

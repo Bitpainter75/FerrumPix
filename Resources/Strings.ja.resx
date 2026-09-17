@@ -8548,7 +8548,13 @@
   <data name="JPEG_XL_nur_vom_System_cd6e7014" xml:space="preserve">
     <value>JPEG XL。システムにあるものだけ</value>
   </data>
-  <data name="libjxl_liest_JPEG_XL_Dateien_und_steht_unter_der_7746769f" xml:space="preserve">
-    <value>libjxl は JPEG XL ファイルを読み込み、BSD ライセンスで提供されています。Windows では同梱され、Linux ではパッケージマネージャーから入手し、Flatpak には同梱されており、macOS では Homebrew から入手します。ない場合はそのファイルが開けないだけで、ほかの機能はそのまま動作します。</value>
+  <data name="libjxl_liest_und_schreibt_JPEG_XL_Dateien_und_st_d80c1c5e" xml:space="preserve">
+    <value>libjxl は JPEG XL ファイルの読み込みと書き出しを行い、BSD ライセンスで提供されています。Windows では同梱され、Linux ではパッケージマネージャーから入手し、Flatpak には同梱されており、macOS では Homebrew から入手します。ない場合はそのファイルが開けないだけで、ほかの機能はそのまま動作します。</value>
+  </data>
+  <data name="JPEG_verlustfrei_umpacken_c75afd6c" xml:space="preserve">
+    <value>JPEG を劣化なしで詰め替える</value>
+  </data>
+  <data name="JPEG_Dateien_werden_ohne_jeden_Verlust_umgepackt_9bd11bec" xml:space="preserve">
+    <value>JPEG ファイルを再エンコードせず、まったく劣化させずに詰め替えます。サイズはおよそ 5 分の 1 小さくなり、元のファイルを 1 バイト単位で復元できます。上の品質はほかの画像にだけ適用されます。著作権表示を設定した場合や、引き継ぐで EXIF の選択を外した場合は再エンコードします。</value>
   </data>
 </root>

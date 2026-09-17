@@ -1090,6 +1090,7 @@ Namespace ViewModels
                 Me.RaiseAndSetIfChanged(_dialogSelectedFormat, normalized)
                 Me.RaisePropertyChanged(NameOf(IsDialogJpgQualityVisible))
                 Me.RaisePropertyChanged(NameOf(IsDialogOverwriteJpgQualityVisible))
+                Me.RaisePropertyChanged(NameOf(IsDialogConvertLosslessJpegVisible))
                 ' Verfügbarkeit des Immich-Ziels hängt vom Format ab (FPX: nur lokal); ein zuvor gewähltes
                 ' Immich-Ziel auf Lokal zurücksetzen, damit keine ausgeblendete Option aktiv bleibt.
                 Me.RaisePropertyChanged(NameOf(IsSaveAsImmichAvailable))
@@ -1558,6 +1559,28 @@ Namespace ViewModels
             Get
                 Return _dialogPendingBakedCount > 0 AndAlso _dialogKind = AppDialogKind.BatchConvert
             End Get
+        End Property
+
+        Private _dialogLosslessJpegToJxl As Boolean = True
+
+        ''' <summary>Nur im KONVERTIEREN-Dialog und nur mit Ziel JPEG XL: unbearbeitete JPEG
+        ''' verlustfrei umpacken. Vorgabe AN - umgepackt ist die Datei kleiner UND ohne jeden
+        ''' Verlust; neu kodiert ginge beides nur auf Kosten des anderen.</summary>
+        Public ReadOnly Property IsDialogConvertLosslessJpegVisible As Boolean
+            Get
+                Return _dialogKind = AppDialogKind.BatchConvert AndAlso
+                       String.Equals(_dialogSelectedFormat, "JXL", StringComparison.OrdinalIgnoreCase) AndAlso
+                       JxlEncodeService.CanTranscodeJpeg
+            End Get
+        End Property
+
+        Public Property DialogLosslessJpegToJxl As Boolean
+            Get
+                Return _dialogLosslessJpegToJxl
+            End Get
+            Set(value As Boolean)
+                Me.RaiseAndSetIfChanged(_dialogLosslessJpegToJxl, value)
+            End Set
         End Property
 
         ''' <summary>Die Beschriftung nennt die ANZAHL: "mitrechnen" allein sagt nicht, ob es um ein
@@ -2304,6 +2327,7 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(DialogShowsSaveAsOptions))
                 ' Haengt an der Dialogart UND am Zaehler - beim Wechsel der Art also mitmelden.
                 Me.RaisePropertyChanged(NameOf(IsDialogConvertPendingBakedVisible))
+                Me.RaisePropertyChanged(NameOf(IsDialogConvertLosslessJpegVisible))
                 ' MUSS hier stehen: ResetDialogSaveAsMetaOptions läuft VOR dem Öffnen, also bevor
                 ' _dialogKind gesetzt ist - die Zeile „Übernehmen" wurde dort mit der Art des VORIGEN
                 ' Dialogs gemeldet und blieb je nach Vorgeschichte weg („mal drin, mal
@@ -3335,12 +3359,16 @@ Namespace ViewModels
             Dim value = AppSettingsService.NormalizeDefaultSaveFormat(AppSettingsService.Load().DefaultSaveFormat)
             If String.Equals(value, "FPX", StringComparison.OrdinalIgnoreCase) AndAlso
                (Not allowFpx OrElse Not FpxService.Enabled) Then Return "JPG"
+            If String.Equals(value, "JXL", StringComparison.OrdinalIgnoreCase) AndAlso Not JxlEncodeService.IsAvailable Then Return "JPG"
             Return value
         End Function
 
         Public ReadOnly Property IsDialogJpgQualityVisible As Boolean
             Get
-                Return DialogShowsSaveAsOptions AndAlso String.Equals(_dialogSelectedFormat, "JPG", StringComparison.OrdinalIgnoreCase)
+                ' JPEG XL nimmt dieselbe Zahl wie JPEG, 100 heisst dort verlustfrei.
+                Return DialogShowsSaveAsOptions AndAlso
+                       (String.Equals(_dialogSelectedFormat, "JPG", StringComparison.OrdinalIgnoreCase) OrElse
+                        String.Equals(_dialogSelectedFormat, "JXL", StringComparison.OrdinalIgnoreCase))
             End Get
         End Property
 
@@ -4437,6 +4465,7 @@ Namespace ViewModels
                                                     Optional currentFolder As String = "") As Task(Of SaveAsDialogResult)
             SetDialogFormats(includeFpx:=False, includeDng:=True)
             DialogSelectedFormat = NormalizeSaveAsFormat(initialFormat)
+            DialogLosslessJpegToJxl = True
             ' 0 = kein eigener Startwert, dann gilt die Einstellung.
             DialogJpgQuality = If(initialJpgQuality > 0, initialJpgQuality, DefaultJpgQuality())
             DialogSaveAsTarget = "Local"
@@ -4458,6 +4487,7 @@ Namespace ViewModels
             Return New SaveAsDialogResult With {
                 .Format = DialogSelectedFormat,
                 .JpgQuality = DialogJpgQuality,
+                .LosslessJpegToJxl = IsDialogConvertLosslessJpegVisible AndAlso _dialogLosslessJpegToJxl,
                 .Target = DialogSaveAsTarget,
                 .TargetFolder = DialogSaveAsTargetFolder,
                 .CopyRating = _dialogSaveAsCopyRating,
@@ -4806,6 +4836,10 @@ Namespace ViewModels
                     Return "PNG"
                 Case "WEBP"
                     Return "WEBP"
+                Case "JXL", "JPEGXL", "JPEG XL"
+                    ' Ohne Encoder steht JPEG XL nicht in der Liste; eine gemerkte Vorgabe faellt
+                    ' dann auf JPG, statt ein Format vorzuwaehlen, das es nicht gibt.
+                    Return If(JxlEncodeService.IsAvailable, "JXL", "JPG")
                 Case "TIFF", "TIF"
                     Return "TIFF"
                 Case "FPX"
@@ -4828,6 +4862,9 @@ Namespace ViewModels
             DialogFormatOptions.Add("JPG")
             DialogFormatOptions.Add("PNG")
             DialogFormatOptions.Add("WEBP")
+            ' JPEG XL nur, wenn libjxl mit Encoder geladen ist - ein Format, das beim Klick scheitert,
+            ' waere schlechter als keins. Wie TIFF immer als neue Datei.
+            If JxlEncodeService.IsAvailable Then DialogFormatOptions.Add("JXL")
             ' TIFF mit 8 Bit, siehe TiffWriterService. Immer als neue Datei, deshalb in beiden Dialogen.
             DialogFormatOptions.Add("TIFF")
             ' PDF in BEIDEN Dialogen: einzeln als druckfertige Datei speichern und stapelweise

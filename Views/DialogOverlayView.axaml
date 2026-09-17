@@ -259,7 +259,7 @@
                                 </Button>
 
                                 <TextBlock Grid.Row="1"
-                                           Text="JPG-Qualität"
+                                           Text="Qualität"
                                            VerticalAlignment="Center"
                                            Foreground="{DynamicResource FP.Text.Secondary}"
                                            IsVisible="{Binding IsDialogJpgQualityVisible}"/>
@@ -434,6 +434,12 @@
                                       Classes="no-translate"
                                       FontSize="{DynamicResource FP.Font.Small}"
                                       ToolTip.Tip="Bei RAW- und Photoshop-Dateien liegt Entrauschen, Objektentfernen, Retusche und Pinsel nur als Vermerk neben der Datei. Mit Haken werden sie mitgerechnet, was mehrere Minuten je Bild kostet; ohne Haken kommen die Bilder ohne diese Bearbeitung heraus."/>
+                            <!-- Nur beim Konvertieren nach JPEG XL. -->
+                            <CheckBox Content="JPEG verlustfrei umpacken"
+                                      IsChecked="{Binding DialogLosslessJpegToJxl, Mode=TwoWay}"
+                                      IsVisible="{Binding IsDialogConvertLosslessJpegVisible}"
+                                      FontSize="{DynamicResource FP.Font.Small}"
+                                      ToolTip.Tip="JPEG-Dateien werden ohne jeden Verlust umgepackt statt neu kodiert: rund ein Fünftel kleiner, und das Original lässt sich Byte für Byte zurückholen. Die Qualität oben gilt dann nur für die übrigen Bilder. Ist ein Urheberhinweis gesetzt oder EXIF unter Übernehmen abgewählt, wird neu kodiert."/>
                         </StackPanel>
 
                         <views:BatchRenameDialogView Grid.Row="3"

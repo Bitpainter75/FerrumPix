@@ -6,9 +6,12 @@
   inward as well, on every channel, so you can set the black and white point or tone colours per
   channel.
 
-- **JPEG XL opens.** Photos in JPEG XL show up in the gallery and open in the viewer and the
-  editor, with their colour profile and rotation. Saving goes to a new file in another format.
-  The Windows downloads bring everything along, on Linux the packages recommend libjxl.
+- **JPEG XL, reading and saving.** Photos in JPEG XL show up in the gallery and open in the
+  viewer and the editor, with their colour profile, rotation and capture data. You can save as
+  JPEG XL wherever you can choose a format, with the same quality setting as JPEG; 100 means
+  lossless. When converting JPEG files to JPEG XL, they can be repacked without any loss: about a
+  fifth smaller, and the original JPEG can be restored exactly. The Windows downloads bring
+  everything along, on Linux the packages recommend libjxl.
 
 ### Fixes
 

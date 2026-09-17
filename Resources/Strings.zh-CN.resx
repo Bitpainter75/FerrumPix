@@ -8506,7 +8506,13 @@
   <data name="JPEG_XL_nur_vom_System_cd6e7014" xml:space="preserve">
     <value>JPEG XL，仅使用系统提供的库</value>
   </data>
-  <data name="libjxl_liest_JPEG_XL_Dateien_und_steht_unter_der_7746769f" xml:space="preserve">
-    <value>libjxl 用于读取 JPEG XL 文件，采用 BSD 许可证。在 Windows 上随程序附带，在 Linux 上来自软件包管理器，Flatpak 已包含它，在 macOS 上则来自 Homebrew。缺少它时，这类文件只是无法打开，其他功能照常工作。</value>
+  <data name="libjxl_liest_und_schreibt_JPEG_XL_Dateien_und_st_d80c1c5e" xml:space="preserve">
+    <value>libjxl 用于读取和写入 JPEG XL 文件，采用 BSD 许可证。在 Windows 上随程序附带，在 Linux 上来自软件包管理器，Flatpak 已包含它，在 macOS 上则来自 Homebrew。缺少它时，这类文件只是无法打开，其他功能照常工作。</value>
+  </data>
+  <data name="JPEG_verlustfrei_umpacken_c75afd6c" xml:space="preserve">
+    <value>无损重新封装 JPEG</value>
+  </data>
+  <data name="JPEG_Dateien_werden_ohne_jeden_Verlust_umgepackt_9bd11bec" xml:space="preserve">
+    <value>JPEG 文件会以完全无损的方式重新封装，而不是重新编码：体积大约缩小五分之一，并且可以逐字节还原原始文件。上方的质量设置此时只作用于其余图片。如果设置了版权声明，或在“保留”中取消选择 EXIF，会重新编码。</value>
   </data>
 </root>

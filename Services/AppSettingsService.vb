@@ -328,7 +328,7 @@ Namespace Services
         Public Property GalleryThumbnailMemoryCacheCapacity As Integer = 500
         Public Property JpgSaveQuality As Integer = 90
         ''' Vorgewähltes Zielformat in „Speichern unter", „Konvertieren nach" und „Exportieren nach".
-        ''' "JPG" | "PNG" | "WEBP" | "TIFF" | "PDF" | "FPX" - FPX gibt es nur beim Speichern unter,
+        ''' "JPG" | "PNG" | "WEBP" | "JXL" | "TIFF" | "PDF" | "FPX" - FPX gibt es nur beim Speichern unter,
         ''' die übrigen Dialoge fallen dort auf JPG zurück.
         Public Property DefaultSaveFormat As String = "JPG"
         Public Property PreserveMetadataOnSave As Boolean = True
@@ -1315,6 +1315,10 @@ Namespace Services
             Select Case If(value, "").Trim().ToUpperInvariant()
                 Case "PNG" : Return "PNG"
                 Case "WEBP" : Return "WEBP"
+                ' Bleibt gespeichert, auch wenn libjxl gerade fehlt: die Dialoge fallen dann selbst
+                ' auf JPG (MainWindowViewModel.DefaultSaveFormat), und nach der Installation gilt
+                ' die Wahl wieder.
+                Case "JXL" : Return "JXL"
                 Case "TIFF", "TIF" : Return "TIFF"
                 Case "PDF" : Return "PDF"
                 Case "FPX" : Return "FPX"

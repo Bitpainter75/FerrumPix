@@ -10,6 +10,9 @@
         Public Property BaseName As String
         Public Property Format As String
         Public Property JpgQuality As Integer
+        ''' <summary>Nur beim Konvertieren nach JPEG XL: unbearbeitete JPEG verlustfrei umpacken,
+        ''' statt sie mit der Qualitaet oben neu zu kodieren.</summary>
+        Public Property LosslessJpegToJxl As Boolean = False
         ''' Zielort: "Local" (Ordner) oder "Immich" (Upload als neues Asset).
         Public Property Target As String = "Local"
         Public Property TargetFolder As String = ""
@@ -43,6 +46,8 @@
                         Return ".png"
                     Case "WEBP"
                         Return ".webp"
+                    Case "JXL"
+                        Return ".jxl"
                     Case "TIFF"
                         Return ".tif"
                     Case "FPX"

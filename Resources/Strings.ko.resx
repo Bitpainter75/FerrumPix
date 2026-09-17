@@ -8552,7 +8552,13 @@
   <data name="JPEG_XL_nur_vom_System_cd6e7014" xml:space="preserve">
     <value>JPEG XL, 시스템에서만</value>
   </data>
-  <data name="libjxl_liest_JPEG_XL_Dateien_und_steht_unter_der_7746769f" xml:space="preserve">
-    <value>libjxl은 JPEG XL 파일을 읽으며 BSD 라이선스를 따릅니다. Windows에서는 함께 제공되고, Linux에서는 패키지 관리자에서 제공되며, Flatpak에는 포함되어 있고, macOS에서는 Homebrew에서 제공됩니다. 없으면 해당 파일만 열리지 않고 나머지는 그대로 작동합니다.</value>
+  <data name="libjxl_liest_und_schreibt_JPEG_XL_Dateien_und_st_d80c1c5e" xml:space="preserve">
+    <value>libjxl은 JPEG XL 파일을 읽고 쓰며 BSD 라이선스를 따릅니다. Windows에서는 함께 제공되고, Linux에서는 패키지 관리자에서 제공되며, Flatpak에는 포함되어 있고, macOS에서는 Homebrew에서 제공됩니다. 없으면 해당 파일만 열리지 않고 나머지는 그대로 작동합니다.</value>
+  </data>
+  <data name="JPEG_verlustfrei_umpacken_c75afd6c" xml:space="preserve">
+    <value>JPEG를 손실 없이 다시 담기</value>
+  </data>
+  <data name="JPEG_Dateien_werden_ohne_jeden_Verlust_umgepackt_9bd11bec" xml:space="preserve">
+    <value>JPEG 파일을 다시 인코딩하지 않고 손실 없이 다시 담습니다. 크기는 약 5분의 1 줄어들고 원본을 바이트 단위로 되돌릴 수 있습니다. 위의 품질은 나머지 이미지에만 적용됩니다. 저작권 표시를 설정했거나 함께 넘기기에서 EXIF 선택을 해제하면 다시 인코딩합니다.</value>
   </data>
 </root>

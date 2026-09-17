@@ -46,8 +46,12 @@ Namespace Services
         ''' kann 16 Bit, mehrere Seiten oder Ebenen tragen, und ein Speichern darueber machte daraus
         ''' still ein einseitiges 8-Bit-Bild. CanEncodeToTargetExtension bleibt deshalb bei TIFF
         ''' False: danach richten sich Editor und Stapel, wenn sie ueber das Original schreiben.</summary>
+        ''' <remarks>JPEG XL gilt wie TIFF: nur als neue Datei und nur, wenn libjxl mit Encoder geladen ist.
+        ''' Ein JPEG-XL-Original kann 16 Bit, HDR oder eine Animation tragen; ueber das Original
+        ''' geschrieben, waere daraus still ein 8-Bit-Einzelbild geworden.</remarks>
         Public Shared Function CanEncodeAsNewFile(path As String) As Boolean
-            Return CanEncodeToTargetExtension(path) OrElse TiffPreviewService.IsSupportedTiff(path)
+            Return CanEncodeToTargetExtension(path) OrElse TiffPreviewService.IsSupportedTiff(path) OrElse
+                   (JxlDecodeService.IsSupportedJxl(path) AndAlso JxlEncodeService.IsAvailable)
         End Function
 
         ''' <paramref name="workingFull"/>: voll aufgelöstes ARBEITSBILD des Editors (Umbau Stufe C) -
@@ -397,7 +401,7 @@ Namespace Services
             ' TIFF steht NICHT in dieser Reihe: eine neue TIFF-Datei schreibt TiffWriterService. Ueber
             ' ein TIFF-Original schreiben darf dagegen nichts, das haelt die Regel darunter fest.
             If RawPreviewService.IsSupportedRaw(targetPath) OrElse PsdPreviewService.IsSupportedPsd(targetPath) OrElse
-               HeifDecodeService.IsSupportedHeif(targetPath) OrElse JxlDecodeService.IsSupportedJxl(targetPath) Then
+               HeifDecodeService.IsSupportedHeif(targetPath) Then
                 workingFull?.Dispose()
                 Return False
             End If
@@ -414,6 +418,14 @@ Namespace Services
             If TiffPreviewService.IsSupportedTiff(targetPath) AndAlso Not TiffWriterService.CanReplaceExisting(targetPath) Then
                 DiagnosticLogService.LogAlways("ImageProcessor.Save",
                     $"refused: vorhandenes TIFF traegt mehr als 8 Bit, mehrere Seiten, CMYK oder Ebenen target={IO.Path.GetFileName(targetPath)}")
+                workingFull?.Dispose()
+                Return False
+            End If
+            ' Und genauso fuer ein vorhandenes JPEG XL als Ziel: 16 Bit, HDR oder eine Animation
+            ' gingen beim Ersetzen verloren.
+            If JxlDecodeService.IsSupportedJxl(targetPath) AndAlso Not JxlDecodeService.CanReplaceExisting(targetPath) Then
+                DiagnosticLogService.LogAlways("ImageProcessor.Save",
+                    $"refused: vorhandenes JPEG XL traegt mehr als 8 Bit, Gleitkomma oder eine Animation target={IO.Path.GetFileName(targetPath)}")
                 workingFull?.Dispose()
                 Return False
             End If
@@ -494,6 +506,7 @@ Namespace Services
                                  If(ext = ".webp", SKEncodedImageFormat.Webp,
                                     SKEncodedImageFormat.Jpeg))
                     Dim isTiff = TiffPreviewService.IsSupportedTiff(targetPath)
+                    Dim isJxl = JxlDecodeService.IsSupportedJxl(targetPath)
 
                     ' DIE AUFNAHMEDATEN DER QUELLE VOR DEM SCHREIBEN EINLESEN. Beim Speichern ueber
                     ' das Original sind Quelle und Ziel dieselbe Datei; danach gelesen kaeme nur noch
@@ -505,6 +518,16 @@ Namespace Services
                     ' Datei IST dort der TIFF-Block, und die Felder gehen beim Schreiben selbst hinein.
                     Dim tiffMetadata As ExifBuilderService.ExifFieldSet = Nothing
                     If isTiff AndAlso keepMetadata Then tiffMetadata = ExifBuilderService.CollectFields(sourcePath)
+                    ' JPEG XL nimmt EXIF und XMP als Boxen, und die muessen beim Kodieren dabei sein:
+                    ' ein Nachlauf, der die fertige Datei aufschneidet, wie bei JPEG und PNG, braeuchte
+                    ' einen eigenen Behaelter-Schreiber. Die Masse kommen erst nach der Reglerkette.
+                    Dim jxlExif As Byte() = Nothing
+                    Dim jxlXmp As Byte() = Nothing
+                    If isJxl AndAlso keepMetadata Then
+                        jxlExif = ExtractExifTiffBytes(sourcePath)
+                        Dim xmp = ExtractXmpBytes(sourcePath)
+                        If xmp IsNot Nothing Then jxlXmp = If(StripXmpColorFields(xmp), xmp)
+                    End If
 
                     Using processed = ProcessBitmap(original, adj)
                         ' DIE LETZTE FRAGE VOR DEM SCHREIBEN. Die Modellwege steigen an ihrer
@@ -527,8 +550,10 @@ Namespace Services
                         ' ausgeblendeter Hintergrund) liefen beim Encode auf SCHWARZ
                         '. Auf WEISS flatten - wie Photoshop.
                         Dim toEncode = processed
-                        ' TIFF traegt Alpha wie PNG und bleibt deshalb ohne weissen Untergrund.
-                        If isPdf OrElse (fileFormat = SKEncodedImageFormat.Jpeg AndAlso Not isTiff) Then
+                        ' TIFF und JPEG XL tragen Alpha wie PNG und bleiben deshalb ohne weissen
+                        ' Untergrund. Beide landen in fileFormat auf dem JPEG-Rueckfall, weil Skia sie
+                        ' nicht kennt - deshalb stehen sie hier einzeln.
+                        If isPdf OrElse (fileFormat = SKEncodedImageFormat.Jpeg AndAlso Not isTiff AndAlso Not isJxl) Then
                             toEncode = FlattenAlphaToWhite(processed)
                         End If
                         Try
@@ -541,6 +566,33 @@ Namespace Services
                                 ' Aufnahmedaten und Urheberhinweis gehen beim Schreiben selbst mit
                                 ' hinein; atomar ueber die Nachbardatei wie alle anderen Formate.
                                 If Not TiffWriterService.Write(targetPath, toEncode, tiffMetadata, copyrightText) Then Return False
+                            ElseIf isJxl Then
+                                ' Wie beim JPEG: Ausrichtung gerade (die Bildpunkte sind schon gedreht),
+                                ' Farbraum sRGB, Masse und Vorschaubild auf das geschriebene Bild. Der
+                                ' Urheberhinweis geht in denselben Block, nicht in eine Beistelldatei.
+                                If jxlExif IsNot Nothing Then
+                                    PatchExifOrientationToNormal(jxlExif, 0)
+                                    PatchExifColorSpaceToSrgb(jxlExif, 0)
+                                    PatchExifToWrittenSize(jxlExif, 0, toEncode.Width, toEncode.Height)
+                                End If
+                                Dim copyright = CopyrightService.NormalizeText(copyrightText)
+                                If copyright.Length > 0 Then
+                                    If jxlExif Is Nothing Then
+                                        jxlExif = CopyrightService.CreateTiffWithCopyright(copyright)
+                                    Else
+                                        ' Laesst sich der vorhandene Block nicht erweitern, bleiben die
+                                        ' Aufnahmedaten stehen - sie gegen einen Block nur mit dem
+                                        ' Hinweis zu tauschen, verloere mehr, als es bringt.
+                                        Dim withCopyright = CopyrightService.SetCopyrightInTiff(jxlExif, copyright)
+                                        If withCopyright IsNot Nothing Then
+                                            jxlExif = withCopyright
+                                        Else
+                                            DiagnosticLogService.LogAlways("Save.Copyright", "JPEG XL: EXIF-Block nicht erweiterbar, Hinweis nicht gesetzt")
+                                        End If
+                                    End If
+                                End If
+                                Dim exifForBox = jxlExif
+                                WriteFileAtomic(targetPath, Sub(fs) JxlEncodeService.Encode(toEncode, fs, quality, exifForBox, jxlXmp))
                             Else
                                 Using image = SKImage.FromBitmap(toEncode)
                                     Using data = image.Encode(fileFormat, quality)
@@ -561,7 +613,7 @@ Namespace Services
                     ' dieses Feld nicht anfassen". In ein PDF und in ein Buendel geht er nicht, und ein
                     ' TIFF traegt ihn schon: TiffWriterService hat ihn in IFD0 geschrieben, und der Weg
                     ' hier legte fuer alles ausser JPEG eine Beistelldatei an.
-                    If Not isPdf AndAlso Not isFpxTarget AndAlso Not isTiff Then ApplyCopyright(targetPath, copyrightText)
+                    If Not isPdf AndAlso Not isFpxTarget AndAlso Not isTiff AndAlso Not isJxl Then ApplyCopyright(targetPath, copyrightText)
                     Return True
                 End Using
             Catch ex As Exception
@@ -570,6 +622,47 @@ Namespace Services
                 ' bei einer Objektverzerrung) längst passiert ist. Der aufrufende Editor kann
                 ' den Vorgang dann sauber abbrechen; die Diagnose enthält die Ursache.
                 DiagnosticLogService.LogException("ImageProcessor.Save", ex)
+                Return False
+            End Try
+        End Function
+
+        ''' <summary>Packt ein unbearbeitetes JPEG verlustfrei nach JPEG XL um, statt es ueber die
+        ''' Bildpunkte neu zu kodieren. Die Datei wird rund ein Fuenftel kleiner, keine Stufe geht
+        ''' verloren, und das JPEG laesst sich Byte fuer Byte zurueckholen.
+        '''
+        ''' False heisst "nicht diesen Weg nehmen", und der Aufrufer schreibt wie gewohnt ueber
+        ''' SaveImage. Das gilt, wenn:
+        ''' - die Quelle kein JPEG oder das Ziel kein JPEG XL ist,
+        ''' - die Aufnahmedaten NICHT uebernommen werden sollen, also EXIF im Dialog abgewaehlt ist
+        '''   (umgepackt wandern sie zwingend mit). Gemeint ist der Schalter, NICHT der Inhalt: ein
+        '''   JPEG ohne EXIF-Block wird genauso umgepackt, denn dabei geht nichts verloren, was der
+        '''   Schalter schuetzen soll,
+        ''' - ein Urheberhinweis gesetzt werden soll (er aenderte den EXIF-Block, und das JPEG liesse
+        '''   sich nicht mehr bitgenau zurueckholen),
+        ''' - libjxl dieses JPEG nicht umpacken kann (etwa CMYK).
+        '''
+        ''' Eine gespeicherte Bearbeitung gibt es fuer JPEG nicht als Beistelldatei - Aenderungen
+        ''' stehen nach dem Speichern in den Bildpunkten. Das Umpacken nimmt die Datei also so, wie
+        ''' sie in der Galerie zu sehen ist.</summary>
+        Public Shared Function TryTranscodeJpegToJxl(sourcePath As String, targetPath As String,
+                                                     preserveMetadata As Boolean, copyrightText As String) As Boolean
+            If Not IsJpegPath(sourcePath) OrElse Not JxlDecodeService.IsSupportedJxl(targetPath) Then Return False
+            If Not preserveMetadata OrElse CopyrightService.NormalizeText(copyrightText).Length > 0 Then Return False
+            If Not JxlEncodeService.CanTranscodeJpeg OrElse Not File.Exists(sourcePath) Then Return False
+            If PathIdentity.AreSame(sourcePath, targetPath) Then Return False
+            If Not JxlDecodeService.CanReplaceExisting(targetPath) Then Return False
+            Try
+                Dim jpeg = File.ReadAllBytes(sourcePath)
+                Using packed As New MemoryStream()
+                    If Not JxlEncodeService.TryTranscodeJpeg(jpeg, packed) Then
+                        DiagnosticLogService.LogAlways("ImageProcessor.Save",
+                            $"JPEG nicht umpackbar, wird neu kodiert source={IO.Path.GetFileName(sourcePath)}")
+                        Return False
+                    End If
+                    Return WriteAllBytesAtomic(targetPath, packed.ToArray())
+                End Using
+            Catch ex As Exception
+                DiagnosticLogService.LogException("ImageProcessor.TryTranscodeJpegToJxl", ex)
                 Return False
             End Try
         End Function
@@ -1703,6 +1796,13 @@ Namespace Services
                             PatchExifColorSpaceToSrgb(tiff, 0)
                             Return tiff
                         End If
+                    Case ".jxl"
+                        ' JPEG XL traegt den TIFF-Block unveraendert in seiner Box. Die Angaben sind
+                        ' dieselben wie in der Datei; der Farbraum wird hier gerade gezogen, weil kein
+                        ' Leser davor es tut.
+                        Dim tiff = JxlDecodeService.ReadMetadataBoxes(path).Exif
+                        If tiff IsNot Nothing Then PatchExifColorSpaceToSrgb(tiff, 0)
+                        Return tiff
                     Case Else
                         ' JEDE ANDERE QUELLE - RAW, HEIC, TIFF, PSD. Ihren Container koennen wir
                         ' nicht aufschneiden, und ihre EXIF-Bytes waeren im Ziel ohnehin unbrauchbar
@@ -1753,6 +1853,9 @@ Namespace Services
                         ' die beiden anderen Wege laufen ueber ihre Leser, die das schon erledigen.
                         Dim chunk = ReadWebpChunks(File.ReadAllBytes(path)).FirstOrDefault(Function(c) c.Type = "XMP ")
                         If chunk IsNot Nothing Then Return If(StripXmpColorFields(chunk.Data), chunk.Data)
+                    Case ".jxl"
+                        Dim xmp = JxlDecodeService.ReadMetadataBoxes(path).Xmp
+                        If xmp IsNot Nothing Then Return If(StripXmpColorFields(xmp), xmp)
                 End Select
             Catch
             End Try

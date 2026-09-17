@@ -158,7 +158,11 @@ Namespace ViewModels
         ''' virtualisiert selbst, ein Anzeigefenster gibt es dort so wenig wie im Raster.</summary>
         Public Property GroupEntries As BulkObservableCollection(Of ImageItem)
         Public Property SelectedItems As ObservableCollection(Of ImageItem)
-        Public ReadOnly Property CollageFormatOptions As ObservableCollection(Of String) = New ObservableCollection(Of String) From {"JPG", "PNG", "WEBP", "PDF", "FPX"}
+        ''' JXL nur mit geladenem Encoder, wie in den Speichern-Dialogen.
+        Public ReadOnly Property CollageFormatOptions As ObservableCollection(Of String) =
+            New ObservableCollection(Of String)(
+                New String() {"JPG", "PNG", "WEBP", "JXL", "PDF", "FPX"}.
+                    Where(Function(f) f <> "JXL" OrElse JxlEncodeService.IsAvailable))
 
         Public Property CurrentFolder As String
             Get
@@ -1129,7 +1133,8 @@ Namespace ViewModels
         Public ReadOnly Property IsCollageJpgQualityVisible As Boolean
             Get
                 Return String.Equals(_collageFormat, "JPG", StringComparison.OrdinalIgnoreCase) OrElse
-                       String.Equals(_collageFormat, "WEBP", StringComparison.OrdinalIgnoreCase)
+                       String.Equals(_collageFormat, "WEBP", StringComparison.OrdinalIgnoreCase) OrElse
+                       String.Equals(_collageFormat, "JXL", StringComparison.OrdinalIgnoreCase)
             End Get
         End Property
 
@@ -10284,8 +10289,9 @@ Namespace ViewModels
                 If String.IsNullOrWhiteSpace(baseName) Then baseName = "Collage"
                 Dim ext = If(String.Equals(CollageFormat, "PNG", StringComparison.OrdinalIgnoreCase), ".png",
                           If(String.Equals(CollageFormat, "WEBP", StringComparison.OrdinalIgnoreCase), ".webp",
+                          If(String.Equals(CollageFormat, "JXL", StringComparison.OrdinalIgnoreCase), ".jxl",
                           If(String.Equals(CollageFormat, "PDF", StringComparison.OrdinalIgnoreCase), ".pdf",
-                          If(String.Equals(CollageFormat, "FPX", StringComparison.OrdinalIgnoreCase), ".fpx", ".jpg"))))
+                          If(String.Equals(CollageFormat, "FPX", StringComparison.OrdinalIgnoreCase), ".fpx", ".jpg")))))
                 Dim target = MakeUniquePath(IO.Path.Combine(CurrentFolder, baseName & ext))
                 Dim options = New CollageOptions With {
                     .OutputPath = target,
@@ -12090,8 +12096,14 @@ Namespace ViewModels
             ' Entwicklung abgeschaltet hatte, bekam trotzdem die volle Entwicklung statt des Bildes,
             ' das ihm die Uebersicht zeigt. Gemeldet ueber Reddit am 2026-08-17.
             Dim cancel = BeginBatchRun(targetItems.Count)
+            Dim losslessJpegToJxl = result.LosslessJpegToJxl
             Dim writer = Function(source As String, target As String)
                              If isDngConversion Then Return DngConverterService.ConvertRawToDng(source, target, cancel)
+                             ' Unbearbeitete JPEG nach JPEG XL werden umgepackt statt neu kodiert.
+                             ' Geht das nicht (siehe TryTranscodeJpegToJxl), faellt der Weg auf das
+                             ' gewoehnliche Rendern darunter zurueck.
+                             If losslessJpegToJxl AndAlso Not cancel.IsCancellationRequested AndAlso
+                                ImageProcessor.TryTranscodeJpegToJxl(source, target, preserveMetadata, result.Copyright) Then Return True
                              Dim adj = BatchBaseAdjustments(source)
                              Return ImageProcessor.SaveImage(source, target, adj, result.JpgQuality, preserveMetadata,
                                                              developRaw:=BatchDevelopsRaw(source),

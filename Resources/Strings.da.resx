@@ -8548,7 +8548,13 @@
   <data name="JPEG_XL_nur_vom_System_cd6e7014" xml:space="preserve">
     <value>JPEG XL, kun fra systemet</value>
   </data>
-  <data name="libjxl_liest_JPEG_XL_Dateien_und_steht_unter_der_7746769f" xml:space="preserve">
-    <value>libjxl læser JPEG XL-filer og er underlagt BSD-licensen. På Windows følger den med, på Linux kommer den fra pakkehåndteringen, Flatpak-pakken har den med, og på macOS kommer den fra Homebrew. Mangler den, forbliver sådanne filer bare uåbnede, og alt andet fungerer uændret.</value>
+  <data name="libjxl_liest_und_schreibt_JPEG_XL_Dateien_und_st_d80c1c5e" xml:space="preserve">
+    <value>libjxl læser og skriver JPEG XL-filer og er underlagt BSD-licensen. På Windows følger den med, på Linux kommer den fra pakkehåndteringen, Flatpak-pakken har den med, og på macOS kommer den fra Homebrew. Mangler den, forbliver sådanne filer bare uåbnede, og alt andet fungerer uændret.</value>
+  </data>
+  <data name="JPEG_verlustfrei_umpacken_c75afd6c" xml:space="preserve">
+    <value>Ompak JPEG uden tab</value>
+  </data>
+  <data name="JPEG_Dateien_werden_ohne_jeden_Verlust_umgepackt_9bd11bec" xml:space="preserve">
+    <value>JPEG-filer ompakkes helt uden tab i stedet for at blive kodet igen: cirka en femtedel mindre, og originalen kan gendannes byte for byte. Kvaliteten ovenfor gælder så kun for de øvrige billeder. Er der angivet en ophavsretsmeddelelse, eller er EXIF fravalgt under Overtag, kodes de igen.</value>
   </data>
 </root>

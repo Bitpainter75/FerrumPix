@@ -8548,7 +8548,13 @@
   <data name="JPEG_XL_nur_vom_System_cd6e7014" xml:space="preserve">
     <value>JPEG XL, pouze ze systému</value>
   </data>
-  <data name="libjxl_liest_JPEG_XL_Dateien_und_steht_unter_der_7746769f" xml:space="preserve">
-    <value>libjxl čte soubory JPEG XL a podléhá licenci BSD. Ve Windows je přiložena, v Linuxu pochází ze správce balíčků, Flatpak ji obsahuje a v macOS pochází z Homebrew. Pokud chybí, zůstanou takové soubory prostě neotevřené a vše ostatní funguje beze změny.</value>
+  <data name="libjxl_liest_und_schreibt_JPEG_XL_Dateien_und_st_d80c1c5e" xml:space="preserve">
+    <value>libjxl čte a zapisuje soubory JPEG XL a podléhá licenci BSD. Ve Windows je přiložena, v Linuxu pochází ze správce balíčků, Flatpak ji obsahuje a v macOS pochází z Homebrew. Pokud chybí, zůstanou takové soubory prostě neotevřené a vše ostatní funguje beze změny.</value>
+  </data>
+  <data name="JPEG_verlustfrei_umpacken_c75afd6c" xml:space="preserve">
+    <value>Přebalit JPEG bezeztrátově</value>
+  </data>
+  <data name="JPEG_Dateien_werden_ohne_jeden_Verlust_umgepackt_9bd11bec" xml:space="preserve">
+    <value>Soubory JPEG se místo nového kódování přebalí zcela bez ztrát: jsou zhruba o pětinu menší a originál lze obnovit bajt po bajtu. Kvalita výše pak platí jen pro ostatní obrázky. Pokud je nastaveno upozornění na autorská práva nebo je v části Převzít zrušen výběr EXIF, kódují se znovu.</value>
   </data>
 </root>

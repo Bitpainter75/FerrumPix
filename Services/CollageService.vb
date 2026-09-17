@@ -92,6 +92,14 @@ Namespace Services
                     End Try
                 End If
 
+                ' JPEG XL kennt Skia nicht; es geht ueber libjxl, mit derselben Qualitaetszahl.
+                If String.Equals(options.Format, "JXL", StringComparison.OrdinalIgnoreCase) Then
+                    If Not JxlEncodeService.IsAvailable Then Return False
+                    ImageProcessor.WriteFileAtomic(options.OutputPath,
+                        Sub(fs) JxlEncodeService.Encode(surfaceBitmap, fs, Math.Max(1, Math.Min(100, options.Quality))))
+                    Return True
+                End If
+
                 Dim fileFormat = If(String.Equals(options.Format, "PNG", StringComparison.OrdinalIgnoreCase),
                                 SKEncodedImageFormat.Png,
                                 If(String.Equals(options.Format, "WEBP", StringComparison.OrdinalIgnoreCase),

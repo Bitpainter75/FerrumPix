@@ -8552,7 +8552,13 @@
   <data name="JPEG_XL_nur_vom_System_cd6e7014" xml:space="preserve">
     <value>JPEG XL, yalnızca sistemden</value>
   </data>
-  <data name="libjxl_liest_JPEG_XL_Dateien_und_steht_unter_der_7746769f" xml:space="preserve">
-    <value>libjxl JPEG XL dosyalarını okur ve BSD lisansına tabidir. Windows'ta birlikte gelir, Linux'ta paket yöneticisinden gelir, Flatpak paketinde hazır bulunur, macOS'ta ise Homebrew'dan gelir. Yoksa bu tür dosyalar yalnızca açılmaz, geri kalan her şey değişmeden çalışır.</value>
+  <data name="libjxl_liest_und_schreibt_JPEG_XL_Dateien_und_st_d80c1c5e" xml:space="preserve">
+    <value>libjxl JPEG XL dosyalarını okur ve yazar ve BSD lisansına tabidir. Windows'ta birlikte gelir, Linux'ta paket yöneticisinden gelir, Flatpak paketinde hazır bulunur, macOS'ta ise Homebrew'dan gelir. Yoksa bu tür dosyalar yalnızca açılmaz, geri kalan her şey değişmeden çalışır.</value>
+  </data>
+  <data name="JPEG_verlustfrei_umpacken_c75afd6c" xml:space="preserve">
+    <value>JPEG'i kayıpsız yeniden paketle</value>
+  </data>
+  <data name="JPEG_Dateien_werden_ohne_jeden_Verlust_umgepackt_9bd11bec" xml:space="preserve">
+    <value>JPEG dosyaları yeniden kodlanmak yerine hiç kayıp olmadan yeniden paketlenir: yaklaşık beşte bir daha küçük olur ve orijinal bayt bayt geri alınabilir. Yukarıdaki kalite o zaman yalnızca diğer resimlere uygulanır. Telif hakkı notu ayarlanmışsa veya Taşı bölümünde EXIF seçimi kaldırılmışsa yeniden kodlanır.</value>
   </data>
 </root>

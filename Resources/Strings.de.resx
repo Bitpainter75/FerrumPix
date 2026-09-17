@@ -8522,7 +8522,13 @@
   <data name="JPEG_XL_nur_vom_System_cd6e7014" xml:space="preserve">
     <value>JPEG XL, nur vom System</value>
   </data>
-  <data name="libjxl_liest_JPEG_XL_Dateien_und_steht_unter_der_7746769f" xml:space="preserve">
-    <value>libjxl liest JPEG-XL-Dateien und steht unter der BSD-Lizenz. Unter Windows liegt sie bei, unter Linux kommt sie aus der Paketverwaltung, der Flatpak bringt sie mit, und unter macOS kommt sie aus Homebrew. Fehlt sie, bleiben solche Dateien einfach ungeöffnet, alles andere arbeitet unverändert.</value>
+  <data name="libjxl_liest_und_schreibt_JPEG_XL_Dateien_und_st_d80c1c5e" xml:space="preserve">
+    <value>libjxl liest und schreibt JPEG-XL-Dateien und steht unter der BSD-Lizenz. Unter Windows liegt sie bei, unter Linux kommt sie aus der Paketverwaltung, der Flatpak bringt sie mit, und unter macOS kommt sie aus Homebrew. Fehlt sie, bleiben solche Dateien einfach ungeöffnet, alles andere arbeitet unverändert.</value>
+  </data>
+  <data name="JPEG_verlustfrei_umpacken_c75afd6c" xml:space="preserve">
+    <value>JPEG verlustfrei umpacken</value>
+  </data>
+  <data name="JPEG_Dateien_werden_ohne_jeden_Verlust_umgepackt_9bd11bec" xml:space="preserve">
+    <value>JPEG-Dateien werden ohne jeden Verlust umgepackt statt neu kodiert: rund ein Fünftel kleiner, und das Original lässt sich Byte für Byte zurückholen. Die Qualität oben gilt dann nur für die übrigen Bilder. Ist ein Urheberhinweis gesetzt oder EXIF unter Übernehmen abgewählt, wird neu kodiert.</value>
   </data>
 </root>

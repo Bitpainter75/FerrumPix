@@ -8523,7 +8523,13 @@
   <data name="JPEG_XL_nur_vom_System_cd6e7014" xml:space="preserve">
     <value>JPEG XL, from the system only</value>
   </data>
-  <data name="libjxl_liest_JPEG_XL_Dateien_und_steht_unter_der_7746769f" xml:space="preserve">
-    <value>libjxl reads JPEG XL files and is licensed under the BSD licence. On Windows it is included, on Linux it comes from your package manager, the Flatpak includes it, and on macOS it comes from Homebrew. Without it, such files simply stay closed and everything else works unchanged.</value>
+  <data name="libjxl_liest_und_schreibt_JPEG_XL_Dateien_und_st_d80c1c5e" xml:space="preserve">
+    <value>libjxl reads and writes JPEG XL files and is licensed under the BSD licence. On Windows it is included, on Linux it comes from your package manager, the Flatpak includes it, and on macOS it comes from Homebrew. Without it, such files simply stay closed and everything else works unchanged.</value>
+  </data>
+  <data name="JPEG_verlustfrei_umpacken_c75afd6c" xml:space="preserve">
+    <value>Repack JPEG losslessly</value>
+  </data>
+  <data name="JPEG_Dateien_werden_ohne_jeden_Verlust_umgepackt_9bd11bec" xml:space="preserve">
+    <value>JPEG files are repacked without any loss instead of being re-encoded: about a fifth smaller, and the original can be restored byte for byte. The quality above then only applies to the other pictures. If a copyright notice is set or EXIF is deselected under Carry over, they are re-encoded.</value>
   </data>
 </root>

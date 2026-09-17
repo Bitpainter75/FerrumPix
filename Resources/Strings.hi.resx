@@ -8552,7 +8552,13 @@
   <data name="JPEG_XL_nur_vom_System_cd6e7014" xml:space="preserve">
     <value>JPEG XL, केवल तंत्र से</value>
   </data>
-  <data name="libjxl_liest_JPEG_XL_Dateien_und_steht_unter_der_7746769f" xml:space="preserve">
-    <value>libjxl JPEG XL फ़ाइलें पढ़ता है और BSD लाइसेंस के तहत है। Windows पर वह साथ आता है, Linux पर वह आपके पैकेज प्रबंधक से आता है, Flatpak में वह शामिल है, और macOS पर वह Homebrew से आता है। उसके बिना ऐसी फ़ाइलें बस बंद रह जाती हैं और बाकी सब कुछ पहले जैसा चलता है।</value>
+  <data name="libjxl_liest_und_schreibt_JPEG_XL_Dateien_und_st_d80c1c5e" xml:space="preserve">
+    <value>libjxl JPEG XL फ़ाइलें पढ़ता और लिखता है और BSD लाइसेंस के तहत है। Windows पर वह साथ आता है, Linux पर वह आपके पैकेज प्रबंधक से आता है, Flatpak में वह शामिल है, और macOS पर वह Homebrew से आता है। उसके बिना ऐसी फ़ाइलें बस बंद रह जाती हैं और बाकी सब कुछ पहले जैसा चलता है।</value>
+  </data>
+  <data name="JPEG_verlustfrei_umpacken_c75afd6c" xml:space="preserve">
+    <value>JPEG को बिना नुकसान दोबारा पैक करें</value>
+  </data>
+  <data name="JPEG_Dateien_werden_ohne_jeden_Verlust_umgepackt_9bd11bec" xml:space="preserve">
+    <value>JPEG फ़ाइलें फिर से एन्कोड करने के बजाय बिना किसी नुकसान के दोबारा पैक की जाती हैं: लगभग पाँचवाँ हिस्सा छोटी, और मूल फ़ाइल बाइट दर बाइट वापस पाई जा सकती है। ऊपर की गुणवत्ता तब केवल बाकी चित्रों पर लागू होती है। यदि कॉपीराइट सूचना दी गई है या साथ ले जाएँ में EXIF का चयन हटाया गया है, तो उन्हें फिर से एन्कोड किया जाता है।</value>
   </data>
 </root>

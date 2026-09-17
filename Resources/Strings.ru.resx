@@ -8548,7 +8548,13 @@
   <data name="JPEG_XL_nur_vom_System_cd6e7014" xml:space="preserve">
     <value>JPEG XL, только из системы</value>
   </data>
-  <data name="libjxl_liest_JPEG_XL_Dateien_und_steht_unter_der_7746769f" xml:space="preserve">
-    <value>libjxl читает файлы JPEG XL и распространяется по лицензии BSD. В Windows она входит в комплект, в Linux берётся из менеджера пакетов, в Flatpak уже входит, а в macOS устанавливается через Homebrew. Если её нет, такие файлы просто не открываются, а всё остальное работает как прежде.</value>
+  <data name="libjxl_liest_und_schreibt_JPEG_XL_Dateien_und_st_d80c1c5e" xml:space="preserve">
+    <value>libjxl читает и записывает файлы JPEG XL и распространяется по лицензии BSD. В Windows она входит в комплект, в Linux берётся из менеджера пакетов, в Flatpak уже входит, а в macOS устанавливается через Homebrew. Если её нет, такие файлы просто не открываются, а всё остальное работает как прежде.</value>
+  </data>
+  <data name="JPEG_verlustfrei_umpacken_c75afd6c" xml:space="preserve">
+    <value>Переупаковать JPEG без потерь</value>
+  </data>
+  <data name="JPEG_Dateien_werden_ohne_jeden_Verlust_umgepackt_9bd11bec" xml:space="preserve">
+    <value>Файлы JPEG переупаковываются без каких-либо потерь вместо повторного кодирования: примерно на пятую часть меньше, а оригинал можно восстановить байт в байт. Качество выше тогда относится только к остальным изображениям. Если задано уведомление об авторских правах или в разделе «Перенять» снят выбор EXIF, файлы кодируются заново.</value>
   </data>
 </root>

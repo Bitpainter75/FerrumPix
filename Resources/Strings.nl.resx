@@ -8548,7 +8548,13 @@
   <data name="JPEG_XL_nur_vom_System_cd6e7014" xml:space="preserve">
     <value>JPEG XL, alleen vanuit het systeem</value>
   </data>
-  <data name="libjxl_liest_JPEG_XL_Dateien_und_steht_unter_der_7746769f" xml:space="preserve">
-    <value>libjxl leest JPEG XL-bestanden en valt onder de BSD-licentie. Op Windows wordt het meegeleverd, op Linux komt het uit het pakketbeheer, de Flatpak bevat het, en op macOS komt het uit Homebrew. Ontbreekt het, dan blijven zulke bestanden gewoon gesloten en werkt al het andere ongewijzigd.</value>
+  <data name="libjxl_liest_und_schreibt_JPEG_XL_Dateien_und_st_d80c1c5e" xml:space="preserve">
+    <value>libjxl leest en schrijft JPEG XL-bestanden en valt onder de BSD-licentie. Op Windows wordt het meegeleverd, op Linux komt het uit het pakketbeheer, de Flatpak bevat het, en op macOS komt het uit Homebrew. Ontbreekt het, dan blijven zulke bestanden gewoon gesloten en werkt al het andere ongewijzigd.</value>
+  </data>
+  <data name="JPEG_verlustfrei_umpacken_c75afd6c" xml:space="preserve">
+    <value>JPEG verliesvrij herverpakken</value>
+  </data>
+  <data name="JPEG_Dateien_werden_ohne_jeden_Verlust_umgepackt_9bd11bec" xml:space="preserve">
+    <value>JPEG-bestanden worden zonder enig verlies herverpakt in plaats van opnieuw gecodeerd: ongeveer een vijfde kleiner, en het origineel is byte voor byte terug te halen. De kwaliteit hierboven geldt dan alleen voor de overige afbeeldingen. Is een auteursrechtvermelding ingesteld of EXIF onder Overnemen uitgezet, dan wordt opnieuw gecodeerd.</value>
   </data>
 </root>

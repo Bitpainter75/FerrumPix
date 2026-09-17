@@ -888,7 +888,8 @@ Namespace ViewModels
                 If _defaultSaveFormat = value Then Return
                 Me.RaiseAndSetIfChanged(_defaultSaveFormat, value)
                 For Each name In {NameOf(IsDefaultSaveFormatJpg), NameOf(IsDefaultSaveFormatPng),
-                                  NameOf(IsDefaultSaveFormatWebp), NameOf(IsDefaultSaveFormatTiff),
+                                  NameOf(IsDefaultSaveFormatWebp), NameOf(IsDefaultSaveFormatJxl),
+                                  NameOf(IsDefaultSaveFormatTiff),
                                   NameOf(IsDefaultSaveFormatPdf), NameOf(IsDefaultSaveFormatFpx)}
                     Me.RaisePropertyChanged(name)
                 Next
@@ -1002,6 +1003,19 @@ Namespace ViewModels
                     Return LocalizationService.T("Unter diesem Pfad liegt kein ausführbares gmic_qt.")
                 End If
                 Return LocalizationService.T("G'MIC wurde nicht gefunden. Nach der Installation erscheint der Eintrag im Editor von selbst.")
+            End Get
+        End Property
+
+        Public ReadOnly Property IsDefaultSaveFormatJxl As Boolean
+            Get
+                Return String.Equals(_defaultSaveFormat, "JXL", StringComparison.OrdinalIgnoreCase)
+            End Get
+        End Property
+
+        ''' <summary>Der Knopf fuer JPEG XL erscheint nur, wenn libjxl mit Encoder geladen ist.</summary>
+        Public ReadOnly Property IsJxlEncodeAvailable As Boolean
+            Get
+                Return JxlEncodeService.IsAvailable
             End Get
         End Property
 
