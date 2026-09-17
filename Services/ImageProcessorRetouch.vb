@@ -784,6 +784,8 @@ Namespace Services
             ' erschoepft, fuellt der bestehende Fallback (FillRemainingInpaintedPixels + Rand-
             ' Blending) den Rest - sichtbar weicher, aber in Sekundenbruchteilen statt Minuten.
             Dim searchBudget As Long = 3_000_000
+            ' Ein Schreiber fuer alle Flicken dieser Region, siehe CopyHealingPatch.
+            Dim workWriter = New PixelWriter(work)
 
             For pass = 0 To maxPasses - 1
                 Dim boundary As New List(Of Integer)()
@@ -810,7 +812,8 @@ Namespace Services
                     If Not sourcePatch.Found Then Continue For
 
                     changedThisPass += CopyHealingPatch(work, maskAlpha, known, targetLeft, targetTop,
-                                                        width, height, mx, maskY, sourcePatch.X, sourcePatch.Y, patchRadius, pixels)
+                                                        width, height, mx, maskY, sourcePatch.X, sourcePatch.Y, patchRadius, pixels,
+                                                        workWriter)
                     patchCopiesThisPass += 1
                     If patchCopiesThisPass >= maxPatchCopiesPerPass Then Exit For
                 Next
@@ -1195,6 +1198,12 @@ Namespace Services
 
             candidates.CollectNearest(targetX, targetY, maxCandidates, scratch)
 
+            ' Einmal je Suche statt je Bildpunkt: Width/Height eines SKBitmap sind Aufrufe in die
+            ' native Bibliothek, und die Gewichtssumme ist die Schranke fuer den fruehen Abbruch in
+            ' HealingPatchScore.
+            Dim workWidth = work.Width, workHeight = work.Height
+            Dim weightBound = HealingPatchWeightBound(patchRadius)
+
             Dim bestX = 0
             Dim bestY = 0
             Dim bestScore = Double.MaxValue
@@ -1204,7 +1213,8 @@ Namespace Services
                 searchBudget -= 1
                 If searchBudget <= 0 Then Exit For
                 Dim score = HealingPatchScore(work, maskAlpha, known, targetLeft, targetTop,
-                                              width, height, mx, my, candidate.X, candidate.Y, patchRadius, pixels)
+                                              width, height, mx, my, candidate.X, candidate.Y, patchRadius, pixels,
+                                              workWidth, workHeight, bestScore, weightBound)
                 If score < bestScore Then
                     bestScore = score
                     bestX = candidate.X
@@ -1215,14 +1225,15 @@ Namespace Services
 
             If found AndAlso searchBudget > 0 Then
                 ' Pixelgenaue Verfeinerung um den besten Treffer (das Kandidaten-Gitter hat Schritt 3).
-                For sy = Math.Max(patchRadius, bestY - 2) To Math.Min(work.Height - patchRadius - 1, bestY + 2)
-                    For sx = Math.Max(patchRadius, bestX - 2) To Math.Min(work.Width - patchRadius - 1, bestX + 2)
+                For sy = Math.Max(patchRadius, bestY - 2) To Math.Min(workHeight - patchRadius - 1, bestY + 2)
+                    For sx = Math.Max(patchRadius, bestX - 2) To Math.Min(workWidth - patchRadius - 1, bestX + 2)
                         If sx = bestX AndAlso sy = bestY Then Continue For
                         If Math.Abs(sx - targetX) <= patchRadius AndAlso Math.Abs(sy - targetY) <= patchRadius Then Continue For
                         If Not candidates.IsPatchClear(sx, sy, patchRadius) Then Continue For
                         searchBudget -= 1
                         Dim score = HealingPatchScore(work, maskAlpha, known, targetLeft, targetTop,
-                                                      width, height, mx, my, sx, sy, patchRadius, pixels)
+                                                      width, height, mx, my, sx, sy, patchRadius, pixels,
+                                                      workWidth, workHeight, bestScore, weightBound)
                         If score < bestScore Then
                             bestScore = score
                             bestX = sx
@@ -1235,28 +1246,57 @@ Namespace Services
             Return (bestX, bestY, found)
         End Function
 
+        ''' <summary>Die groesste Gewichtssumme, die <see cref="HealingPatchScore"/> fuer einen Flicken
+        ''' dieses Radius erreichen kann: alle Punkte der Scheibe, als waeren sie bekannt und im Bild.</summary>
+        Private Shared Function HealingPatchWeightBound(patchRadius As Integer) As Integer
+            Dim total = 0
+            For oy = -patchRadius To patchRadius
+                For ox = -patchRadius To patchRadius
+                    If ox * ox + oy * oy > patchRadius * patchRadius Then Continue For
+                    Dim distance = Math.Max(Math.Abs(ox), Math.Abs(oy))
+                    total += If(distance <= 1, 5, If(distance <= 3, 2, 1))
+                Next
+            Next
+            Return total
+        End Function
+
+        ''' <param name="cutoff">Der bisher beste Wert der Suche. Kann dieser Kandidat ihn nicht mehr
+        ''' unterbieten, kommt Double.MaxValue zurueck, ohne den Rest des Flickens zu rechnen. Die
+        ''' AUSWAHL bleibt dabei dieselbe: die Suche nimmt nur einen Wert, der echt kleiner ist.
+        ''' Die Schranke ist sicher, weil jeder Beitrag nichtnegativ ist und in derselben Reihenfolge
+        ''' aufsummiert wird wie ohne Abbruch; die Teilsumme durch <paramref name="weightBound"/>
+        ''' (nie kleiner als die spaetere Gewichtssumme) plus Abstandsmalus kann das Ergebnis also
+        ''' nur unterschaetzen.</param>
         Private Shared Function HealingPatchScore(work As SKBitmap, maskAlpha As Byte(), known As Boolean(),
                                                   targetLeft As Integer, targetTop As Integer,
                                                   width As Integer, height As Integer,
                                                   mx As Integer, my As Integer,
                                                   sx As Integer, sy As Integer,
                                                   patchRadius As Integer,
-                                                  pixels As RegionPixelBuffer) As Double
+                                                  pixels As RegionPixelBuffer,
+                                                  workWidth As Integer, workHeight As Integer,
+                                                  cutoff As Double, weightBound As Integer) As Double
             Dim score = 0.0
             Dim count = 0
             Dim targetX = targetLeft + mx
             Dim targetY = targetTop + my
+            Dim dx = sx - targetX
+            Dim dy = sy - targetY
+            Dim distancePenalty = Math.Sqrt(dx * dx + dy * dy) * 1.8
+            Dim canStop = cutoff < Double.MaxValue AndAlso weightBound > 0
+            If canStop AndAlso distancePenalty >= cutoff Then Return Double.MaxValue
 
             For oy = -patchRadius To patchRadius
+                If canStop AndAlso score / weightBound + distancePenalty >= cutoff Then Return Double.MaxValue
                 Dim oySq = oy * oy
                 Dim ty = targetY + oy
                 Dim py = sy + oy
-                If ty < 0 OrElse ty >= work.Height OrElse py < 0 OrElse py >= work.Height Then Continue For
+                If ty < 0 OrElse ty >= workHeight OrElse py < 0 OrElse py >= workHeight Then Continue For
                 For ox = -patchRadius To patchRadius
                     If ox * ox + oySq > patchRadius * patchRadius Then Continue For
                     Dim tx = targetX + ox
                     Dim px = sx + ox
-                    If tx < 0 OrElse tx >= work.Width OrElse px < 0 OrElse px >= work.Width Then Continue For
+                    If tx < 0 OrElse tx >= workWidth OrElse px < 0 OrElse px >= workWidth Then Continue For
 
                     Dim lx = mx + ox
                     Dim ly = my + oy
@@ -1276,9 +1316,6 @@ Namespace Services
             Next
 
             If count < Math.Max(8, patchRadius * patchRadius \ 2) Then Return Double.MaxValue
-            Dim dx = sx - targetX
-            Dim dy = sy - targetY
-            Dim distancePenalty = Math.Sqrt(dx * dx + dy * dy) * 1.8
             Return score / count + distancePenalty
         End Function
 
@@ -1288,10 +1325,13 @@ Namespace Services
                                                  mx As Integer, my As Integer,
                                                  sx As Integer, sy As Integer,
                                                  patchRadius As Integer,
-                                                 Optional pixels As RegionPixelBuffer = Nothing) As Integer
+                                                 Optional pixels As RegionPixelBuffer = Nothing,
+                                                 Optional workWriter As PixelWriter = Nothing) As Integer
             Dim copied = 0
             Dim targetX = targetLeft + mx
             Dim targetY = targetTop + my
+            ' Width und Height einmal, nicht je Punkt: beides sind Aufrufe in die native Bibliothek.
+            Dim workWidth = work.Width, workHeight = work.Height
             ' UEBERLAPPUNG: bereits gefuellte Zielpixel werden mit einem STETIGEN Gewicht
             ' ueberblendet, das von der Patch-Mitte (voll) zum Patch-Rand (null) ausläuft.
             ' Ungefuellte bekommen weiterhin die volle Kopie (kein Durchbluten des Defekts).
@@ -1304,14 +1344,15 @@ Namespace Services
             ' Gemessen an einem 120x2000-Zug ueber Wolkentextur lag die Hochfrequenz dort bei 2,23
             ' gegen 1,27 in der Nachbarschaft - sichtbar als unsaubere Bahn in der Zugmitte.
             Dim featherRadius = Math.Max(1.0F, CSng(patchRadius))
-            ' Schreibt deckende Punkte direkt, siehe PixelWriter.
-            Dim workWriter = New PixelWriter(work)
+            ' Schreibt deckende Punkte direkt, siehe PixelWriter. Der Aufrufer reicht ihn herein:
+            ' je Flicken neu angelegt, kostete schon das Anlegen ein Fuenftel der Suche (Profil).
+            If workWriter Is Nothing Then workWriter = New PixelWriter(work)
 
             For oy = -patchRadius To patchRadius
                 Dim oySq = oy * oy
                 Dim y = targetY + oy
                 Dim py = sy + oy
-                If y < 0 OrElse y >= work.Height OrElse py < 0 OrElse py >= work.Height Then Continue For
+                If y < 0 OrElse y >= workHeight OrElse py < 0 OrElse py >= workHeight Then Continue For
                 For ox = -patchRadius To patchRadius
                     Dim distSq = ox * ox + oySq
                     If distSq > patchRadius * patchRadius Then Continue For
@@ -1323,7 +1364,7 @@ Namespace Services
 
                     Dim x = targetX + ox
                     Dim px = sx + ox
-                    If x < 0 OrElse x >= work.Width OrElse px < 0 OrElse px >= work.Width Then Continue For
+                    If x < 0 OrElse x >= workWidth OrElse px < 0 OrElse px >= workWidth Then Continue For
 
                     If known(index) Then
                         Dim w = 1.0F - CSng(Math.Sqrt(distSq)) / featherRadius

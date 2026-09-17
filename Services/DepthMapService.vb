@@ -334,6 +334,29 @@ Namespace Services
                                 Dim basis = qy * width1
                                 Dim a = x + xFrom(row)
                                 Dim b = x + xTo(row)
+                                ' LIEGT DIE GANZE SPANNE NEBEN DEM BILD, zaehlt jeder ihrer Punkte als
+                                ' Randwert. Das kommt nur bei einer ECKIGEN Blende vor: sie ist gedreht,
+                                ' und eine ihrer Zeilen kann ganz links oder ganz rechts der Mitte
+                                ' liegen. Der Weg darunter klemmte dann beide Enden auf dieselbe Seite
+                                ' und griff mit der Praefixsumme vor den Zeilenanfang bzw. hinter das
+                                ' Zeilenende - in der ersten und letzten Bildzeile ein Absturz, sonst
+                                ' still falsche Randpunkte (Befund, sechs Lamellen). Endet die Spanne
+                                ' genau einen Punkt vor dem Rand, rechnete er schon richtig; dieser
+                                ' Zweig ergibt dort dieselbe Zahl.
+                                If b < 0 Then
+                                    Dim n = b - a + 1
+                                    s0 += (sums(0)(basis + 1) - sums(0)(basis)) * n
+                                    s1 += (sums(1)(basis + 1) - sums(1)(basis)) * n
+                                    s2 += (sums(2)(basis + 1) - sums(2)(basis)) * n
+                                    Continue For
+                                End If
+                                If a > aw - 1 Then
+                                    Dim n = b - a + 1
+                                    s0 += (sums(0)(basis + aw) - sums(0)(basis + aw - 1)) * n
+                                    s1 += (sums(1)(basis + aw) - sums(1)(basis + aw - 1)) * n
+                                    s2 += (sums(2)(basis + aw) - sums(2)(basis + aw - 1)) * n
+                                    Continue For
+                                End If
                                 ' Ausserhalb der Zeile wird der Randwert fortgesetzt: der fehlende
                                 ' Teil der Spanne zaehlt so oft, wie er ueber den Rand hinausragt.
                                 Dim leftExtra = 0, rightExtra = 0
