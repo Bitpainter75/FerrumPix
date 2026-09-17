@@ -10,6 +10,12 @@
 - Pictures pasted into the gallery get their preview and their capture data, and are added to the
   catalog. Before, a pasted picture could stay without a preview.
 
+- TIFF photos now show in the viewer. They appeared in the gallery and opened in the editor, but
+  the viewer stayed empty.
+
+- Reducing noise with a model, and upscaling, now work on every picture. On macOS they failed on
+  every photo, and elsewhere on pictures with object layers.
+
 ## FerrumPix 0.9.46
 
 ### What's new

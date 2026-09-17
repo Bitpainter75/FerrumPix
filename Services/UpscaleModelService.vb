@@ -146,11 +146,25 @@ Namespace Services
         Public Shared Function Upscale(image As SKBitmap, key As String,
                                        Optional cancel As Threading.CancellationToken = Nothing) As SKBitmap
             If image Is Nothing OrElse image.Width <= 0 OrElse image.Height <= 0 Then Return Nothing
-            If image.ColorType <> SKColorType.Bgra8888 Then Return Nothing
             Dim model = ModelFor(key)
             If model Is Nothing Then Return Nothing
             Dim session = AiModelService.SessionFor(model.Key)
             If session Is Nothing Then Return Nothing
+
+            ' Wie beim Entrauschen: die Kachelschleife liest die Bytes fest als BGRA, und ein anders
+            ' belegtes Bild wird deshalb einmal umgelegt statt abgewiesen. Ein Arbeitsbild mit
+            ' Objekt-Ebenen ist Rgba8888, auf Apple-Geraeten ist es JEDES Arbeitsbild. Zurueck kommt
+            ' Bgra8888.
+            Dim converted As SKBitmap = Nothing
+            If image.ColorType <> SKColorType.Bgra8888 Then
+                converted = DenoiseModelService.AsBgra8888(image)
+                If converted Is Nothing Then
+                    DiagnosticLogService.LogAlways("Hochskalieren",
+                        $"Bild liegt als {image.ColorType} vor und liess sich nicht auf Bgra8888 umlegen - Lauf faellt aus")
+                    Return Nothing
+                End If
+                image = converted
+            End If
 
             Dim result As SKBitmap = Nothing
             Try
@@ -249,6 +263,9 @@ Namespace Services
                 DiagnosticLogService.LogAlways("Hochskalieren", ex.Message)
                 result?.Dispose()
                 Return Nothing
+            Finally
+                ' Nur die eigene Umlegung, nie das Bild des Aufrufers.
+                converted?.Dispose()
             End Try
         End Function
 

@@ -2190,6 +2190,16 @@ Namespace ViewModels
                               Nothing)
                 End Using
             End If
+            If TiffPreviewService.IsSupportedTiff(path) Then
+                ' TIFF fehlte hier, genau wie HEIF vorher: SkiaSharp kennt das Format gar nicht, und
+                ' der Rueckfall unten lieferte deshalb nichts. In der Galerie war die Kachel da und
+                ' im Editor ging die Datei auf - nur der Betrachter blieb leer (Nutzermeldung).
+                ' LibTiff wendet das Orientierungs-Tag selbst an, also keine zweite Korrektur; eine
+                ' Beistelldatei fuehrt TIFF nicht (RawSidecarService.IsSidecarFormat).
+                Using preview = TiffPreviewService.ExtractPreview(path)
+                    Return If(preview IsNot Nothing, New Bitmap(preview), Nothing)
+                End Using
+            End If
             If HeifDecodeService.IsSupportedHeif(path) Then
                 ' HEIF fehlte hier bisher ganz: der Viewer fiel unten auf Skia zurueck, das HEIC
                 ' und AVIF nicht dekodiert. IsRenderableImagePath fuehrt die Formate laengst, und

@@ -257,10 +257,27 @@ Namespace Services
                 Return Nothing
             End If
             Dim session = loaded.Session
+            ' EIN ANDERS BELEGTES BILD WIRD UMGELEGT, statt den Lauf ausfallen zu lassen. Die
+            ' Kachelschleife liest die Bytes fest als BGRA; welchen Farbtyp ein Bild hat, entscheidet
+            ' aber nicht diese Funktion:
+            '
+            '   - Ein Arbeitsbild mit Objekt-Ebenen liegt als Rgba8888 vor.
+            '   - Skia nimmt auf Apple-Geraeten Rgba8888 als bevorzugten Typ, dort ist JEDES
+            '     Arbeitsbild so belegt. Auf dem Mac liess sich deshalb gar nicht entrauschen, und
+            '     zu sehen war nur "Entrauschen fehlgeschlagen" (Nutzermeldung).
+            '
+            ' Der Aufrufer bekommt das Ergebnis als Bgra8888 zurueck - alle Wege hier zeichnen es
+            ' ueber eine Leinwand weiter oder uebernehmen es als neues Arbeitsbild, und beides legt
+            ' den Farbtyp selbst wieder zurecht.
+            Dim converted As SKBitmap = Nothing
             If image.ColorType <> SKColorType.Bgra8888 Then
-                DiagnosticLogService.LogAlways("Entrauschen",
-                    $"Bild liegt als {image.ColorType} vor, gebraucht wird Bgra8888 - Lauf faellt aus")
-                Return Nothing
+                converted = AsBgra8888(image)
+                If converted Is Nothing Then
+                    DiagnosticLogService.LogAlways("Entrauschen",
+                        $"Bild liegt als {image.ColorType} vor und liess sich nicht auf Bgra8888 umlegen - Lauf faellt aus")
+                    Return Nothing
+                End If
+                image = converted
             End If
 
             Dim amount = Math.Max(0.0F, Math.Min(1.0F, strength))
@@ -395,7 +412,31 @@ Namespace Services
                 Return Nothing
             Finally
                 padded?.Dispose()
+                ' Nur die eigene Umlegung, nie das Bild des Aufrufers: <converted> ist Nothing,
+                ' wenn das Bild schon als Bgra8888 kam, und <image> zeigt dann auf sein Bitmap.
+                converted?.Dispose()
             End Try
+        End Function
+
+        ''' <summary>Legt ein Bild auf Bgra8888 um. Nothing, wenn das nicht gelingt; das
+        ''' uebergebene Bitmap bleibt in jedem Fall dem Aufrufer.</summary>
+        Friend Shared Function AsBgra8888(bitmap As SKBitmap) As SKBitmap
+            If bitmap Is Nothing Then Return Nothing
+            Dim converted As SKBitmap = Nothing
+            Try
+                converted = New SKBitmap(New SKImageInfo(bitmap.Width, bitmap.Height,
+                                                         SKColorType.Bgra8888, bitmap.AlphaType))
+                Using canvas = New SKCanvas(converted)
+                    Using paint = New SKPaint With {.BlendMode = SKBlendMode.Src}
+                        canvas.DrawBitmap(bitmap, 0, 0, paint)
+                    End Using
+                End Using
+            Catch ex As Exception
+                DiagnosticLogService.LogException("DenoiseModelService.AsBgra8888", ex)
+                converted?.Dispose()
+                Return Nothing
+            End Try
+            Return converted
         End Function
 
         ''' <summary>Eine Kachel durch das Modell und nur ihren INNEREN Teil zurueckschreiben.</summary>
