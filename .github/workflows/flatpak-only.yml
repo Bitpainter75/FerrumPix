@@ -7,14 +7,12 @@
 #
 # WANN ER LAUFEN MUSS: nach JEDER veroeffentlichten Version. Der
 # Upload im Release-Lauf ersetzt nur, was im Bauordner liegt - ohne diesen Lauf bleibt die alte
-# FerrumPix.flatpak im Latest-Release stehen und geht stillschweigend als aktuell durch. Bei
-# einer neuen Version mit pkgrel 1 wird das Latest-Release geloescht und neu angelegt, dann
-# fehlt der Flatpak sogar ganz.
+# FerrumPix.flatpak im Latest-Release stehen und geht stillschweigend als aktuell durch.
 #
-# REIHENFOLGE, und sie ist nicht beliebig: erst der Release-Lauf, dann dieser. Vorher steht in
-# PUBLISHED-VERSION noch die vorige Ausgabe, und publish-github-release.sh wuerde bei pkgrel 1
-# das Latest-Release loeschen und mit dem Flatpak ALLEIN neu anlegen. Der Schritt "Reihenfolge
-# pruefen" unten laesst das nicht zu.
+# HIER STEHT ABSICHTLICH KEINE REIHENFOLGE-PRUEFUNG. Sie wies Laeufe ab, die richtig sind - etwa
+# einen Flatpak, der allein nachgezogen wird. Und der Fall, den sie fernhalten sollte, gibt es
+# nicht mehr: das Latest-Release wird nicht mehr geloescht und neu angelegt, sondern behaelt
+# seine Dateien, und dieser Lauf ersetzt genau eine davon.
 #
 # Nur von Hand startbar, und wie bei jedem workflow_dispatch bietet GitHub den Start erst an,
 # wenn die Datei im Standardzweig liegt.
@@ -37,8 +35,7 @@ jobs:
       - uses: actions/checkout@v7
 
       # Das oeffentliche Repo in die Wurzel, das private nach packaging/ - genau diese Anordnung
-      # erwarten die Skripte. Der Deploy-Key braucht Schreibrechte, weil die Merkposten am Ende
-      # zurueckgeschrieben werden.
+      # erwarten die Skripte. Lesen genuegt: dieser Lauf schreibt nichts dorthin zurueck.
       - uses: actions/checkout@v7
         with:
           repository: Bitpainter75/FerrumPix-Build
@@ -48,18 +45,6 @@ jobs:
       - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: '10.0.x'
-
-      # Der Riegel gegen die falsche Reihenfolge. Steht in PUBLISHED-VERSION etwas anderes als in
-      # VERSION, war der allgemeine Release-Lauf fuer diese Version noch nicht durch.
-      - name: Reihenfolge pruefen
-        run: |
-          version="$(cat VERSION)"
-          published="$(head -1 packaging/PUBLISHED-VERSION 2>/dev/null | tr -d '[:space:]')"
-          echo "VERSION=$version  PUBLISHED-VERSION=$published"
-          if [ "$version" != "$published" ]; then
-            echo "::error::Das Latest-Release steht auf '$published', gebaut wird '$version'. Erst den Release-Lauf, dann diesen."
-            exit 1
-          fi
 
       # Dieselbe Zeitschranke wie im Release-Lauf: klemmt der Azure-Spiegel, wartet apt sonst
       # ohne Ende. Die Werkzeugliste ist kurz gehalten - nsis, rpm und zsync braucht nur, wer
@@ -128,29 +113,8 @@ jobs:
 
       # Im Bauordner liegt jetzt NUR der Flatpak, und genau das ist hier richtig: das Skript
       # laedt hoch, was es findet, und ersetzt damit allein dieses eine Asset. Die uebrigen
-      # Dateien des Latest-Release bleiben unberuehrt.
-      # --partial sagt aus, was hier ohnehin gilt: dieser Lauf bringt genau ein Paket mit. Der
-      # Riegel oben haelt den Fall schon fern, in dem das Latest-Release neu entstehen muesste;
-      # die Marke macht daraus eine Zusage des Skripts statt einer Annahme.
+      # Dateien des Latest-Release bleiben unberuehrt, und das Release selbst wird nie geloescht.
       - name: Ins Latest-Release
-        run: packaging/publish-github-release.sh --only-latest --partial
+        run: packaging/publish-github-release.sh --only-latest
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      # DOWNLOADS.md haelt die Zaehlerstaende fest, bevor der Upload sie auf null setzt. Ohne
-      # Zurueckschreiben ginge dieser Stand verloren. PUBLISHED-VERSION aendert sich hier nicht,
-      # kommt aber mit, weil das Skript beide fuehrt.
-      - name: Merkposten zurueckschreiben
-        run: |
-          cd packaging
-          git config user.name  "FerrumPix CI"
-          git config user.email "ci@bitpainter.de"
-          git add PUBLISHED-VERSION DOWNLOADS.md
-          git diff --cached --quiet || git commit -m "Flatpak-Stand nach $(cat ../VERSION)"
-          for versuch in 1 2 3; do
-            git pull --rebase --autostash origin main && git push && exit 0
-            echo "Push abgelehnt, Versuch $versuch von 3 - es wird neu aufgesetzt"
-            sleep 5
-          done
-          echo "::error::Merkposten liessen sich nicht zurueckschreiben"
-          exit 1
