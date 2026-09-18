@@ -35,7 +35,7 @@ Your originals are never changed behind your back, and nothing at all is written
 
 ## Gallery
 
-<img src="Screenshots/Gallery.png" />
+<img src="Screenshots/Gallery.jpg" />
 
 Folder tree, grid, list and group view, fast thumbnails, file operations, ratings, favourites, keywords and saved searches. Search combines plain text with metadata such as camera, ISO, aperture, focal length, date taken and image size.
 
@@ -61,7 +61,7 @@ Batch work runs over a whole selection: rename, convert, resize, watermark, filt
 
 ## Viewer
 
-<img src="Screenshots/Viewer.png" />
+<img src="Screenshots/Viewer.jpg" />
 
 Fullscreen viewing with zoom, pan, slideshow, filmstrip navigation, rating, tagging and deleting, and an info panel with EXIF, IPTC, XMP, ICC and a live histogram. Videos play inline.
 
@@ -73,7 +73,7 @@ Two photos can be put side by side for comparison, sharing one zoom so you alway
 
 ## Editor
 
-<img src="Screenshots/Editor_Text.png" />
+<img src="Screenshots/Editor_Text.jpg" />
 
 **Geometry.** Crop, resize, rotate, flip and canvas size, plus four ways to distort a picture: perspective, a line you lay on an edge and drag, a grid, and a frame whose edges you bend. None of them is computed into the pixels, so they can be adjusted or taken off at any time, and with an object selected they distort that object instead.
 
@@ -93,7 +93,7 @@ Two of them can find their own setting. *Level to the horizon* looks for the str
 
 **Objects and layers.** Text, shapes, symbols, images, QR codes and watermarks, each with opacity, blend mode, shadow, glow and transform, and text that follows an arc, a circle or a wave. Any of them can carry a mask or be clipped to the layer below, and an adjustment placed above an object can be held to that object the same way. A picture comes in as a layer by dragging it onto the photo, either from the filmstrip below the editor or from your file manager. The layers panel holds the whole stack with visibility, order, grouping, merging and rasterizing, and layers can be copied and pasted, also from and to other programs. A group counts as one layer, with its own opacity, blend mode and mask, and groups can go inside groups. The panel has a second tab with the history of the picture: every step by name, from the original onwards, and clicking one takes the picture back to it. The list belongs to the session at hand; close the picture and what you saved comes back, but not the road you took to it.
 
-<img src="Screenshots/Editor_Light.png" />
+<img src="Screenshots/Editor_Light.jpg" />
 
 **Filters and presets.** Filters, LUT files (`.cube`) and XMP presets as written by Lightroom and Camera Raw. All of them, and the slider sets you saved yourself, can also be applied to a whole selection at once. With [G'MIC](https://gmic.eu) installed, the footer menu hands the picture to its filter window, and the result comes back as a layer.
 
@@ -111,7 +111,7 @@ A picture that carries its own colour profile, such as Adobe RGB or Display P3, 
 
 Pictures from a phone or a scanner open too, and your edit is saved as a new file next to them. A Photoshop file keeps its layers, masks and groups, so a picture can go back to Photoshop, Affinity or GIMP and still be worked on there, and text stays text you can keep typing on. Photoshop files that FerrumPix cannot take apart open as one finished picture.
 
-<img src="Screenshots/Editor_Color.png" />
+<img src="Screenshots/Editor_Color.jpg" />
 
 ### Model files
 
