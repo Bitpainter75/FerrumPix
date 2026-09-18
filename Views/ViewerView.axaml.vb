@@ -266,6 +266,16 @@ Namespace Views
             e.Handled = True
         End Sub
 
+        Private Sub OnCompareRightColorLabelClick(sender As Object, e As RoutedEventArgs)
+            GetVm()?.SetCompareRightColorLabel(TryCast(TryCast(sender, Control)?.Tag, String))
+            e.Handled = True
+        End Sub
+
+        Private Sub OnCompareLeftColorLabelClick(sender As Object, e As RoutedEventArgs)
+            GetVm()?.SetCompareLeftColorLabel(TryCast(TryCast(sender, Control)?.Tag, String))
+            e.Handled = True
+        End Sub
+
         Private Sub OnCompareEditClick(sender As Object, e As RoutedEventArgs)
             GetVm()?.OpenComparePaneInEditor(PaneFrom(sender))
             e.Handled = True

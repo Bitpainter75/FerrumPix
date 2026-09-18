@@ -383,7 +383,7 @@
                                 </Button>
                             </StackPanel>
                             <StackPanel Orientation="Horizontal" Spacing="5" IsVisible="{Binding ShowColorLabelSection}">
-                                <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12"
+                                <Button Classes="ghost" Width="22" Height="22" Padding="0" CornerRadius="11"
                                         Command="{Binding SetColorLabelCommand}" CommandParameter="#F08A1A" ToolTip.Tip="Orange">
                                     <Grid>
                                         <Ellipse Width="16" Height="16" Fill="#F08A1A"/>
@@ -462,7 +462,7 @@
                                      dasselbe Kreuz an zwei Stellen verschieden aussah. -->
                                 <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12"
                                         Command="{Binding SetColorLabelCommand}" CommandParameter="" ToolTip.Tip="Kein Etikett">
-                                    <TextBlock Text="×" FontSize="14" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    <TextBlock Text="×" FontSize="14" Margin="0,-2,0,0" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                 </Button>
                             </StackPanel>
                         </StackPanel>

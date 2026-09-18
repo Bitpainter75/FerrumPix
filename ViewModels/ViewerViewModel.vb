@@ -1585,6 +1585,8 @@ Namespace ViewModels
         Private _compareRightRating As Integer
         Private _compareLeftFavorite As Boolean
         Private _compareRightFavorite As Boolean
+        Private _compareLeftColorLabel As String = ""
+        Private _compareRightColorLabel As String = ""
 
         Public ReadOnly Property CompareLeftRating As Integer
             Get
@@ -1610,6 +1612,119 @@ Namespace ViewModels
             End Get
         End Property
 
+        ''' <summary>Farbetiketten der Vergleichsbilder fuer die beiden direkten Auswahlen.</summary>
+        Public ReadOnly Property CompareLeftColorLabel As String
+            Get
+                Return _compareLeftColorLabel
+            End Get
+        End Property
+
+        Public ReadOnly Property CompareRightColorLabel As String
+            Get
+                Return _compareRightColorLabel
+            End Get
+        End Property
+
+        Public ReadOnly Property IsCompareLeftColorLabelOrange As Boolean
+            Get
+                Return String.Equals(_compareLeftColorLabel, "#F08A1A", StringComparison.OrdinalIgnoreCase)
+            End Get
+        End Property
+        Public ReadOnly Property IsCompareLeftColorLabelRed As Boolean
+            Get
+                Return String.Equals(_compareLeftColorLabel, "#E74C3C", StringComparison.OrdinalIgnoreCase)
+            End Get
+        End Property
+        Public ReadOnly Property IsCompareLeftColorLabelPink As Boolean
+            Get
+                Return String.Equals(_compareLeftColorLabel, "#F03B88", StringComparison.OrdinalIgnoreCase)
+            End Get
+        End Property
+        Public ReadOnly Property IsCompareLeftColorLabelPurple As Boolean
+            Get
+                Return String.Equals(_compareLeftColorLabel, "#8B5CF6", StringComparison.OrdinalIgnoreCase)
+            End Get
+        End Property
+        Public ReadOnly Property IsCompareLeftColorLabelBlue As Boolean
+            Get
+                Return String.Equals(_compareLeftColorLabel, "#3B82F6", StringComparison.OrdinalIgnoreCase)
+            End Get
+        End Property
+        Public ReadOnly Property IsCompareLeftColorLabelCyan As Boolean
+            Get
+                Return String.Equals(_compareLeftColorLabel, "#0891B2", StringComparison.OrdinalIgnoreCase)
+            End Get
+        End Property
+        Public ReadOnly Property IsCompareLeftColorLabelTeal As Boolean
+            Get
+                Return String.Equals(_compareLeftColorLabel, "#0F766E", StringComparison.OrdinalIgnoreCase)
+            End Get
+        End Property
+        Public ReadOnly Property IsCompareLeftColorLabelGreen As Boolean
+            Get
+                Return String.Equals(_compareLeftColorLabel, "#22C55E", StringComparison.OrdinalIgnoreCase)
+            End Get
+        End Property
+        Public ReadOnly Property IsCompareLeftColorLabelYellow As Boolean
+            Get
+                Return String.Equals(_compareLeftColorLabel, "#FACC15", StringComparison.OrdinalIgnoreCase)
+            End Get
+        End Property
+
+        Public ReadOnly Property IsCompareRightColorLabelOrange As Boolean
+            Get
+                Return String.Equals(_compareRightColorLabel, "#F08A1A", StringComparison.OrdinalIgnoreCase)
+            End Get
+        End Property
+
+        Public ReadOnly Property IsCompareRightColorLabelRed As Boolean
+            Get
+                Return String.Equals(_compareRightColorLabel, "#E74C3C", StringComparison.OrdinalIgnoreCase)
+            End Get
+        End Property
+
+        Public ReadOnly Property IsCompareRightColorLabelPink As Boolean
+            Get
+                Return String.Equals(_compareRightColorLabel, "#F03B88", StringComparison.OrdinalIgnoreCase)
+            End Get
+        End Property
+
+        Public ReadOnly Property IsCompareRightColorLabelPurple As Boolean
+            Get
+                Return String.Equals(_compareRightColorLabel, "#8B5CF6", StringComparison.OrdinalIgnoreCase)
+            End Get
+        End Property
+
+        Public ReadOnly Property IsCompareRightColorLabelBlue As Boolean
+            Get
+                Return String.Equals(_compareRightColorLabel, "#3B82F6", StringComparison.OrdinalIgnoreCase)
+            End Get
+        End Property
+
+        Public ReadOnly Property IsCompareRightColorLabelCyan As Boolean
+            Get
+                Return String.Equals(_compareRightColorLabel, "#0891B2", StringComparison.OrdinalIgnoreCase)
+            End Get
+        End Property
+
+        Public ReadOnly Property IsCompareRightColorLabelTeal As Boolean
+            Get
+                Return String.Equals(_compareRightColorLabel, "#0F766E", StringComparison.OrdinalIgnoreCase)
+            End Get
+        End Property
+
+        Public ReadOnly Property IsCompareRightColorLabelGreen As Boolean
+            Get
+                Return String.Equals(_compareRightColorLabel, "#22C55E", StringComparison.OrdinalIgnoreCase)
+            End Get
+        End Property
+
+        Public ReadOnly Property IsCompareRightColorLabelYellow As Boolean
+            Get
+                Return String.Equals(_compareRightColorLabel, "#FACC15", StringComparison.OrdinalIgnoreCase)
+            End Get
+        End Property
+
         ''' <summary>Bewertung und Favorit beider Flaechen aus dem Katalog nachziehen. Jede Stelle,
         ''' die einen der beiden Pfade aendert, ruft das - sonst zeigen die Marken die Werte des
         ''' vorherigen Bildes.</summary>
@@ -1618,8 +1733,22 @@ Namespace ViewModels
             _compareRightRating = If(String.IsNullOrEmpty(_compareRightPath), 0, LibraryService.Instance.GetRating(_compareRightPath))
             _compareLeftFavorite = Not String.IsNullOrEmpty(_compareLeftPath) AndAlso LibraryService.Instance.GetFavorite(_compareLeftPath)
             _compareRightFavorite = Not String.IsNullOrEmpty(_compareRightPath) AndAlso LibraryService.Instance.GetFavorite(_compareRightPath)
+            _compareLeftColorLabel = If(String.IsNullOrEmpty(_compareLeftPath), "", LibraryService.Instance.GetColorLabel(_compareLeftPath))
+            _compareRightColorLabel = If(String.IsNullOrEmpty(_compareRightPath), "", LibraryService.Instance.GetColorLabel(_compareRightPath))
             For Each n In {NameOf(CompareLeftRating), NameOf(CompareRightRating),
-                           NameOf(CompareLeftIsFavorite), NameOf(CompareRightIsFavorite)}
+                           NameOf(CompareLeftIsFavorite), NameOf(CompareRightIsFavorite),
+                           NameOf(CompareLeftColorLabel),
+                           NameOf(IsCompareLeftColorLabelOrange), NameOf(IsCompareLeftColorLabelRed),
+                           NameOf(IsCompareLeftColorLabelPink), NameOf(IsCompareLeftColorLabelPurple),
+                           NameOf(IsCompareLeftColorLabelBlue), NameOf(IsCompareLeftColorLabelCyan),
+                           NameOf(IsCompareLeftColorLabelTeal), NameOf(IsCompareLeftColorLabelGreen),
+                           NameOf(IsCompareLeftColorLabelYellow),
+                           NameOf(CompareRightColorLabel),
+                           NameOf(IsCompareRightColorLabelOrange), NameOf(IsCompareRightColorLabelRed),
+                           NameOf(IsCompareRightColorLabelPink), NameOf(IsCompareRightColorLabelPurple),
+                           NameOf(IsCompareRightColorLabelBlue), NameOf(IsCompareRightColorLabelCyan),
+                           NameOf(IsCompareRightColorLabelTeal), NameOf(IsCompareRightColorLabelGreen),
+                           NameOf(IsCompareRightColorLabelYellow)}
                 Me.RaisePropertyChanged(n)
             Next
         End Sub
@@ -1648,6 +1777,28 @@ Namespace ViewModels
             LibraryService.Instance.SetFavorite(path, Not bisher)
             LoadCompareMarkers()
             If pane = _focusedComparePane Then ApplyCatalogAttributes(path)
+        End Sub
+
+        ''' <summary>Etikett des rechten Vergleichsbildes setzen; die bereits gewaehlte Farbe
+        ''' entfernt es wieder, genau wie im Infopanel.</summary>
+        Public Sub SetCompareRightColorLabel(hex As String)
+            Dim path = _compareRightPath
+            If String.IsNullOrWhiteSpace(path) OrElse Not File.Exists(path) Then Return
+            Dim wanted = If(hex, "")
+            Dim value = If(String.Equals(_compareRightColorLabel, wanted, StringComparison.OrdinalIgnoreCase), "", wanted)
+            LibraryService.Instance.SetColorLabelForMany({path}, value, syncToXmp:=True)
+            LoadCompareMarkers()
+            If _focusedComparePane = 1 Then ApplyCatalogAttributes(path)
+        End Sub
+
+        Public Sub SetCompareLeftColorLabel(hex As String)
+            Dim path = _compareLeftPath
+            If String.IsNullOrWhiteSpace(path) OrElse Not File.Exists(path) Then Return
+            Dim wanted = If(hex, "")
+            Dim value = If(String.Equals(_compareLeftColorLabel, wanted, StringComparison.OrdinalIgnoreCase), "", wanted)
+            LibraryService.Instance.SetColorLabelForMany({path}, value, syncToXmp:=True)
+            LoadCompareMarkers()
+            If _focusedComparePane = 0 Then ApplyCatalogAttributes(path)
         End Sub
 
         ''' <summary>Eine Flaeche loeschen. Danach rueckt nach: bei der RECHTEN kommt das naechste
