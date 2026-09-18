@@ -11781,7 +11781,8 @@ Namespace ViewModels
             ' Das verankerte Wasserzeichen bleibt aussen vor: es speichert in X/Y keinen Ort,
             ' sondern den Abstand zu seinem Anker, und folgt dem Bildinhalt bewusst nicht.
             Dim probeKind = If(kind, "").Trim().ToLowerInvariant()
-            If Not (probeKind = "watermark" AndAlso Not String.IsNullOrWhiteSpace(_annotationAnchor)) Then
+            Dim isAnchoredWatermark = probeKind = "watermark" AndAlso Not String.IsNullOrWhiteSpace(_annotationAnchor)
+            If Not isAnchoredWatermark Then
                 Dim sourceRect As SkiaSharp.SKRect
                 If ImageProcessor.TryAnnotationOutputToSource(
                         New SkiaSharp.SKRect(CSng(dx), CSng(dy), CSng(dx + dw), CSng(dy + dh)),
@@ -11792,7 +11793,7 @@ Namespace ViewModels
                             Math.Max(1.0F, sourceRect.Height) / baseHeight * 100.0)
                 End If
             End If
-            If geometry.GeometryOperations IsNot Nothing AndAlso geometry.GeometryOperations.Count <> 0 Then
+            If geometry.GeometryOperations IsNot Nothing AndAlso geometry.GeometryOperations.Count <> 0 AndAlso Not isAnchoredWatermark Then
                 ' Der Rueckweg muss dieselbe verkuerzte Kette nehmen wie der Hinweg
                 ' (ImageProcessor.GeometryForAnnotations): die Bildverzerrung tragen Objekte in
                 ' ihrem eigenen Feld, nicht in ihrer Lage. Sonst schriebe ein Zug am Objekt nach
@@ -11811,6 +11812,19 @@ Namespace ViewModels
                             Math.Max(1.0F, right - left) / baseWidth * 100.0, Math.Max(1.0F, bottom - top) / baseHeight * 100.0)
                 End If
             End If
+            If isAnchoredWatermark Then
+                ' Der Anker gehört zur FERTIGEN Anzeige, auch wenn deren Bildinhalt davor gedreht,
+                ' begradigt oder beschnitten wurde. Die allgemeine Geometrie-Inversion oben würde
+                ' aus der gewünschten Ecke wieder eine Lage im Ursprungsbild machen. Dadurch lagen
+                ' beim Anlegen und nach einem Zug Wasserzeichen und Auswahlrahmen an verschiedenen
+                ' Stellen. Abstände und Maße deshalb unmittelbar im sichtbaren Ausgaberaum sichern.
+                Dim offsets = ComputeAnnotationOffsets(displaySize.Width, displaySize.Height, _annotationAnchor,
+                                                       dx, dy, dw, dh)
+                Return (offsets.X / baseWidth * 100.0,
+                        offsets.Y / baseHeight * 100.0,
+                        dw / baseWidth * 100.0,
+                        dh / baseHeight * 100.0)
+            End If
             ' Die sichtbare Objektposition bezieht sich auf den bereits beschnittenen Ausschnitt.
             ' Zurueckgespeichert wird weiterhin im stabilen Pixelraum des Originalbilds: erst die
             ' Anzeigeabbildung gegen die Crop-Groesse aufloesen, dann den Crop-Ursprung addieren.
@@ -11819,21 +11833,6 @@ Namespace ViewModels
                 New SkiaSharp.SKRect(CSng(dx), CSng(dy), CSng(dx + dw), CSng(dy + dh)),
                 crop.Width, crop.Height, displaySize.Width, displaySize.Height,
                 _appliedRotationDegrees, _appliedFlipH, _appliedFlipV, 0)
-            Dim normalizedKind = If(kind, "").Trim().ToLowerInvariant()
-            Dim isAnchoredWatermark = normalizedKind = "watermark" AndAlso Not String.IsNullOrWhiteSpace(_annotationAnchor)
-            If isAnchoredWatermark Then
-                ' Rueckweg zur Anzeige-Seite: dort loest ComputeAnnotationRect den Anker auf, hier
-                ' wird er wieder zu Abstaenden. Beide Richtungen benutzen dieselbe Funktion, damit
-                ' Ziehen und Anklicken nicht auseinanderlaufen koennen. Der Crop-Ursprung kommt
-                ' bewusst NICHT dazu: der Anker bezieht sich auf den sichtbaren Ausschnitt.
-                Dim offsets = ComputeAnnotationOffsets(crop.Width, crop.Height, _annotationAnchor,
-                                                       sourceGeometry.Rect.Left, sourceGeometry.Rect.Top,
-                                                       sourceGeometry.Rect.Width, sourceGeometry.Rect.Height)
-                Return (offsets.X / baseWidth * 100.0,
-                        offsets.Y / baseHeight * 100.0,
-                        sourceGeometry.Rect.Width / baseWidth * 100.0,
-                        sourceGeometry.Rect.Height / baseHeight * 100.0)
-            End If
             Return ((sourceGeometry.Rect.Left + crop.Left) / baseWidth * 100.0,
                     (sourceGeometry.Rect.Top + crop.Top) / baseHeight * 100.0,
                     sourceGeometry.Rect.Width / baseWidth * 100.0,
@@ -16873,6 +16872,14 @@ Namespace ViewModels
             End If
             Dim blitRect = ImageProcessor.UnionRects(rect, _compositorPreviousBlitRect)
             _compositorPreviousBlitRect = rect
+            ' Der Kompositor verändert nicht _sceneSk selbst, wohl aber das SICHTBARE Bild: seine
+            ' Ebene wird beim Blit über die Szene gelegt. Das Zoom-Detail ist dagegen ein Ausschnitt
+            ' einer früheren Gesamtkomposition. Bliebe es nach einem Ankerwechsel stehen, überdeckte
+            ' es dort die neu gesetzte Wasserzeichenposition, während der Auswahlrahmen (der nicht
+            ' aus dem Zoom-Detail kommt) bereits richtig stand. Deshalb ist jeder Kompositor-Blit
+            ' auch eine neue sichtbare Szenenversion.
+            _sceneContentVersion += 1
+            InvalidateZoomDetail()
             BlitSceneRegionToDisplay(blitRect)
         End Sub
 

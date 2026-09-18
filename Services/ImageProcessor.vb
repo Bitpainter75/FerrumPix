@@ -4808,6 +4808,12 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                                                             preHeight / CSng(crop.Height))
             End If
             If renderAnnotation Is Nothing Then Return Nothing
+            ' Ein verankertes Wasserzeichen liegt auf dem FERTIGEN Bild, nicht auf dessen
+            ' mitgedrehtem Inhalt. Seine X/Y-Werte sind Abstände zum Anker und werden erst in
+            ' ComputeAnnotationRect gegen die endgültige Ausgabegröße aufgelöst. Würden sie hier
+            ' durch die Vierteldrehung oder Spiegelung laufen, läge sowohl das Bild als auch sein
+            ' Auswahlrahmen an einer falschen Kante (besonders bei 90/270 Grad).
+            If isAnchoredWatermark Then Return renderAnnotation
             If q = 0 AndAlso Not adj.FlipHorizontal AndAlso Not adj.FlipVertical Then Return renderAnnotation
 
             Dim transformed = renderAnnotation.Clone()
