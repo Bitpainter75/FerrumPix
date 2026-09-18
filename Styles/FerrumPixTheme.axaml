@@ -124,6 +124,15 @@
         <SolidColorBrush x:Key="ComboBoxItemRevealBorderBrushSelectedPressed" Color="#34414C"/>
     </Styles.Resources>
 
+    <!-- Popup-Wurzeln sind keine Kinder des Hauptfensters. Die Schrift darf deshalb nicht nur am
+         Window hängen: Tooltips, Kontextmenüs, Flyouts und ComboBox-Listen würden sonst wieder
+         auf die System-Standardschrift zurückfallen. Ein defektes Inter-Face konnte dort beim
+         ersten Layout die gesamte Anwendung beenden. Diese Regel greift für jedes sichtbare
+         Avalonia-Control, auch wenn es in einem eigenen Popup-Fenster lebt. -->
+    <Style Selector=":is(Control)">
+        <Setter Property="TextElement.FontFamily" Value="{DynamicResource FP.Font.Family}"/>
+    </Style>
+
     <Style Selector="Window">
         <Setter Property="Background" Value="{DynamicResource FP.Bg.Root}"/>
         <Setter Property="Foreground" Value="{DynamicResource FP.Text.Primary}"/>
@@ -133,11 +142,6 @@
 
     <Style Selector="TextBlock">
         <Setter Property="Foreground" Value="{DynamicResource FP.Text.Primary}"/>
-        <!-- Ein Tooltip lebt in einem eigenen Popup-Fenster und erbt daher die Schrift nicht vom
-             Hauptfenster. Ohne diesen Setter nahm Avalonia dort die System-Standardschrift; bei
-             einem defekten Inter-Face unter Linux schlug ihr GlyphTypeface-Aufbau fehl und der
-             Tooltip beendete die Anwendung mit einer unbehandelten Ausnahme. -->
-        <Setter Property="FontFamily" Value="{DynamicResource FP.Font.Family}"/>
         <Setter Property="FontSize" Value="{DynamicResource FP.Font.Body}"/>
     </Style>
     <Style Selector="TextBlock.secondary">
