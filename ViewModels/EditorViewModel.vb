@@ -1153,6 +1153,10 @@ Namespace ViewModels
         Private _retouchLivePatchHeightPercent As Double = 0
         Private _annotationDirtyRect As SKRectI = SKRectI.Empty
         Private _annotationPlacementEditActive As Boolean = False
+        ' Die Startlage eines Kompositor-Zugs bleibt bis zum Loslassen erhalten. Die normalen
+        ' Zwischen-Blits duerfen ihr Dirty-Rechteck jeweils verbrauchen; der Abschluss muss aber
+        ' trotzdem auch die anfangs grosse Objektflaeche uebermalen.
+        Private _annotationPlacementStartDirtyRect As SKRectI = SKRectI.Empty
         Private _activePreviewRenders As Integer
         Private _showBeforeImage As Boolean = False
         ''' <summary>Anschlagswarnung auf der Bühne. Reine ANSICHT: nichts davon geht ins Rezept,
@@ -17067,6 +17071,8 @@ Namespace ViewModels
             ' Vollrender: gemessen 1,1 bis 2,2 Sekunden, in denen der Basis-Cache gesperrt war und
             ' kein Region-Patch mehr durchkam (daher der leere Rahmen beim nächsten Zug).
             Dim endRegion = CandidateAnnotationDirtyRect()
+            Dim completePlacementRegion = ImageProcessor.UnionRects(_annotationPlacementStartDirtyRect, endRegion)
+            _annotationPlacementStartDirtyRect = SKRectI.Empty
             ' Welcher Renderweg das Loslassen abschliesst - fuer die Fehlersuche am Log: eine Maske,
             ' die in den Daten gewandert ist, aber im Bild stehen bleibt, haengt genau hier.
             DiagnosticLogService.LogAlways("Editor.MaskFollow",
@@ -17085,8 +17091,15 @@ Namespace ViewModels
             ' KOMPOSITOR (Stufe 4): das Loslassen ist nur der letzte Blit - in der Szene hat sich
             ' waehrend des ganzen Zuges nichts geaendert.
             If CompositorCoversSelection() Then
+                ' Die Pixel in _sceneSk bleiben zwar gleich, das SICHTBARE Komposit hat sich aber
+                ' durch das darueberliegende Objekt geaendert. Das Zoom-Detail rendert sein eigenes
+                ' hochaufgeloestes Gesamtbild und prueft nur diese Versionsnummer. Ohne den Bump
+                ' nahm es nach dem Loslassen seinen Detailausschnitt von VOR dem Zug wieder und
+                ' ueberdeckte die korrekt gezeichnete neue Objektlage.
+                _sceneContentVersion += 1
+                InvalidateZoomDetail()
                 _annotationDirtyRect = SKRectI.Empty
-                CompositorBlitOrSchedule(endRegion)
+                CompositorBlitOrSchedule(completePlacementRegion)
                 Return
             End If
             ' Gebackener Block: das Objekt an der Endposition in die Szene backen. Dirty = alte +
@@ -17104,6 +17117,15 @@ Namespace ViewModels
         Public Sub BeginSelectedAnnotationPlacementEdit(Optional handle As String = "Position")
             If Not HasSelectedAnnotation Then Return
             _annotationPlacementEditActive = True
+            ' Das Zoom-Detail liegt als eigenes Image-Control ueber der Szenenanzeige. Es ist ein
+            ' Ausschnitt eines frueheren Vollrenders und kennt die schnellen Kompositor-Blits eines
+            ' Objektzugs nicht. Bliebe es sichtbar, verdeckte es genau dort die aktuelle kleine
+            ' Bildfassung durch die alte grosse. Die reguläre View-Meldung schaltet es ebenfalls
+            ' ab; hier geschieht es sofort beim Gestenbeginn, bevor der erste Blit ankommt.
+            If _zoomDetailImage IsNot Nothing OrElse _zoomDetailBeforeImage IsNot Nothing Then
+                SetZoomDetailImage(Nothing)
+                SetZoomDetailBeforeImage(Nothing)
+            End If
             ' EIN Mauszug = EIN Undo-Schritt. Ohne das legt jede Bewegung nach Ablauf des
             ' Sammelfensters (CaptureUndoState) einen weiteren Eintrag an - ein längeres Verschieben,
             ' Drehen oder Skalieren erzeugte dutzende. Der Schnappschuss
@@ -17136,11 +17158,12 @@ Namespace ViewModels
             Dim previewSource = GetPreviewSource()
             If previewSource IsNot Nothing Then
                 Dim size = GetCurrentScenePixelSize()
-                _annotationDirtyRect = ImageProcessor.UnionRects(
-                    _annotationDirtyRect,
-                    ImageProcessor.ComputeAnnotationDirtyRect(size.Width, size.Height,
-                                                              _annotations(_selectedAnnotationIndex),
-                                                              GetCurrentAdjustments(forPreview:=True)))
+                _annotationPlacementStartDirtyRect = ImageProcessor.ComputeAnnotationDirtyRect(
+                    size.Width, size.Height, _annotations(_selectedAnnotationIndex),
+                    GetCurrentAdjustments(forPreview:=True))
+                _annotationDirtyRect = ImageProcessor.UnionRects(_annotationDirtyRect, _annotationPlacementStartDirtyRect)
+            Else
+                _annotationPlacementStartDirtyRect = SKRectI.Empty
             End If
         End Sub
 
