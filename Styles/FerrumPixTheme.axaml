@@ -133,6 +133,11 @@
 
     <Style Selector="TextBlock">
         <Setter Property="Foreground" Value="{DynamicResource FP.Text.Primary}"/>
+        <!-- Ein Tooltip lebt in einem eigenen Popup-Fenster und erbt daher die Schrift nicht vom
+             Hauptfenster. Ohne diesen Setter nahm Avalonia dort die System-Standardschrift; bei
+             einem defekten Inter-Face unter Linux schlug ihr GlyphTypeface-Aufbau fehl und der
+             Tooltip beendete die Anwendung mit einer unbehandelten Ausnahme. -->
+        <Setter Property="FontFamily" Value="{DynamicResource FP.Font.Family}"/>
         <Setter Property="FontSize" Value="{DynamicResource FP.Font.Body}"/>
     </Style>
     <Style Selector="TextBlock.secondary">
