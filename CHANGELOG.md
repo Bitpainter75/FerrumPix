@@ -1,4 +1,4 @@
-## Unreleased
+## FerrumPix 0.9.47
 
 ### What's new
 
