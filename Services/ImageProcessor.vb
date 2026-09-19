@@ -3982,7 +3982,10 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
         ''' der Thread-Overhead lohnt, sonst seriell. Voraussetzung: Die Zeilen sind unabhängig, jeder
         ''' Aufruf schreibt nur in seine eigene Zeile und liest höchstens aus unveränderten Quellpuffern.
         ''' Dann ist das Ergebnis unabhängig von der Thread-Aufteilung bitgleich zum seriellen Lauf.</summary>
-        Private Shared Sub ForEachRow(width As Integer, height As Integer, body As Action(Of Integer))
+        ''' <summary>Eine Zeilenschleife, unterhalb von <see cref="ParallelPixelThreshold"/> seriell.
+        ''' DER Hausstandard dafuer - auch fuer die ViewModels (FRIEND), damit es nicht zwei
+        ''' Schwellen gibt, die auseinanderlaufen.</summary>
+        Friend Shared Sub ForEachRow(width As Integer, height As Integer, body As Action(Of Integer))
             If height <= 0 Then Return
             If CLng(width) * height < ParallelPixelThreshold Then
                 For y As Integer = 0 To height - 1

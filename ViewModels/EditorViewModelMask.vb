@@ -2160,21 +2160,25 @@ Namespace ViewModels
             Runtime.InteropServices.Marshal.Copy(overlay.GetPixels(), buffer, 0, buffer.Length)
             ' Das Overlay ist premultipliziertes BGRA in reinem Rot - Deckung steht im Alphakanal,
             ' und Rot muss mitgezogen werden, sonst leuchtet ein aufgehellter Bereich falsch.
-            For y = 0 To overlay.Height - 1
-                Dim row = y * stride, iRow = y * overlay.Width
-                For x = 0 To overlay.Width - 1
-                    Dim a = CInt(buffer(row + x * 4 + 3))
-                    Dim i = iRow + x
-                    If added IsNot Nothing Then a += CInt(added(i)) * 128 \ 255
-                    If removed IsNot Nothing Then a -= CInt(removed(i)) * 128 \ 255
-                    a = Math.Max(0, Math.Min(128, a))
-                    Dim o = row + x * 4
-                    buffer(o) = 0
-                    buffer(o + 1) = 0
-                    buffer(o + 2) = CByte(a)   ' premultipliziertes Rot = Alpha
-                    buffer(o + 3) = CByte(a)
-                Next
-            Next
+            ' Zeilenweise parallel ueber denselben Hausstandard wie die Bildkette: jede Zeile
+            ' schreibt nur in ihren eigenen Abschnitt von buffer.
+            Dim overlayWidthPx = overlay.Width
+            ImageProcessor.ForEachRow(overlayWidthPx, overlay.Height,
+                Sub(y As Integer)
+                    Dim row = y * stride, iRow = y * overlayWidthPx
+                    For x = 0 To overlayWidthPx - 1
+                        Dim a = CInt(buffer(row + x * 4 + 3))
+                        Dim i = iRow + x
+                        If added IsNot Nothing Then a += CInt(added(i)) * 128 \ 255
+                        If removed IsNot Nothing Then a -= CInt(removed(i)) * 128 \ 255
+                        a = Math.Max(0, Math.Min(128, a))
+                        Dim o = row + x * 4
+                        buffer(o) = 0
+                        buffer(o + 1) = 0
+                        buffer(o + 2) = CByte(a)   ' premultipliziertes Rot = Alpha
+                        buffer(o + 3) = CByte(a)
+                    Next
+                End Sub)
             Runtime.InteropServices.Marshal.Copy(buffer, 0, overlay.GetPixels(), buffer.Length)
         End Sub
 
@@ -2185,16 +2189,19 @@ Namespace ViewModels
                                                     width As Integer, height As Integer,
                                                     offsetX As Integer, offsetY As Integer)
             If target Is Nothing OrElse source Is Nothing Then Return
-            For y = 0 To height - 1
-                Dim qy = y - offsetY
-                If qy < 0 OrElse qy >= height Then Continue For
-                Dim zRow = y * width, qRow = qy * width
-                For x = 0 To width - 1
-                    Dim qx = x - offsetX
-                    If qx < 0 OrElse qx >= width Then Continue For
-                    If source(qRow + qx) > target(zRow + x) Then target(zRow + x) = source(qRow + qx)
-                Next
-            Next
+            ' Zeilenweise parallel: jede Zeile liest aus einer anderen Quellzeile und schreibt nur
+            ' in ihre eigene Zielzeile.
+            ImageProcessor.ForEachRow(width, height,
+                Sub(y As Integer)
+                    Dim qy = y - offsetY
+                    If qy < 0 OrElse qy >= height Then Return
+                    Dim zRow = y * width, qRow = qy * width
+                    For x = 0 To width - 1
+                        Dim qx = x - offsetX
+                        If qx < 0 OrElse qx >= width Then Continue For
+                        If source(qRow + qx) > target(zRow + x) Then target(zRow + x) = source(qRow + qx)
+                    Next
+                End Sub)
         End Sub
 
         ''' <summary>Ein Raster aus dem Quellraum auf die Overlay-Größe bringen. Nothing, wenn es

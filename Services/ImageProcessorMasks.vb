@@ -299,7 +299,22 @@ Namespace Services
                     yTo = Math.Min(pipelineInputHeight - 1, CInt(Math.Ceiling(scopeBottom * pipelineInputHeight / CDbl(sourceHeight))) + 2)
                 End If
 
-                For y = yFrom To yTo
+                ' ZEILENWEISE PARALLEL. Die Schleife liest ausschliesslich unveraenderliche Puffer
+                ' (Maskenraster, Pinselkorrektur) und schreibt je Zeile nur in ihren eigenen
+                ' Abschnitt von iBuf - keine Sperre noetig.
+                '
+                ' WARUM HIER: gemessen wurde am Overlay-Weg der Maskenbedienung. Von 326 ms je
+                ' Projektion entfielen laut eingebautem Maskenprofil 319 ms auf das ZUSAMMENSETZEN
+                ' der Bestandteile und nur 4 ms auf die Rueckprojektion daneben, die laengst
+                ' parallel lief. Das Zusammensetzen landet je Bestandteil genau hier.
+                '
+                ' Die Begrenzung auf das Maskenrechteck darueber bleibt der erste Hebel und ist
+                ' der wirksamere, solange die Maske klein ist. Sie greift nur nicht, wenn eine
+                ' Pinselkorrektur ueber das ganze Bild reicht - und genau dann zahlt sich das
+                ' Aufteilen aus.
+                ForEachRow(xTo - xFrom + 1, yTo - yFrom + 1,
+                    Sub(rowIndex As Integer)
+                    Dim y = yFrom + rowIndex
                     Dim sySource = CInt(Math.Floor((y + 0.5) * sourceHeight / pipelineInputHeight))
                     Dim sy = sySource - maskData.Top
                     Dim iRow = y * iStride
@@ -365,7 +380,7 @@ Namespace Services
                         If maskData.Inverted Then alpha = 255 - alpha
                         iBuf(iRow + x) = CByte(alpha)
                     Next
-                Next
+                    End Sub)
                 Marshal.Copy(iBuf, 0, inputMask.GetPixels(), iBuf.Length)
 
                 ' Verlaeufe sind bereits glatt - ihr Weichheits-Regler sitzt in der Geometrie
