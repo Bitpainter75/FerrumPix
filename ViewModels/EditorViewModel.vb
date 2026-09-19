@@ -23596,11 +23596,35 @@ Namespace ViewModels
             Return Math.Abs(neueBreite - alteBreite) > 0.5 OrElse Math.Abs(neueHoehe - alteHoehe) > 0.5
         End Function
 
+        ''' <summary>Der Rand, den das Einpassen wirklich abzieht. Er wird gedeckelt: ein Rand, der
+        ''' an der kurzen Seite mehr als ein Viertel der Fläche fraesse, liesse auf einem kleinen
+        ''' Fenster nichts mehr übrig, und das Bild schrumpfte auf wenige Prozent. Die Einstellung
+        ''' bleibt dabei stehen, sie wirkt nur so weit, wie die Fläche es hergibt.</summary>
+        Friend Shared Function GeklemmterEinpassRand(flaecheBreite As Double, flaecheHoehe As Double,
+                                                     randPunkte As Double) As Double
+            If randPunkte <= 0 Then Return 0
+            Dim kurzeSeite = Math.Min(flaecheBreite, flaecheHoehe)
+            If kurzeSeite <= 0 Then Return 0
+            Return Math.Min(randPunkte, kurzeSeite / 4.0)
+        End Function
+
+        ''' <summary>Der Zoom in Prozent, mit dem das Bild in die Fläche passt.
+        '''
+        ''' <paramref name="randPunkte"/> ist der gewünschte Abstand zwischen Bild und Flächenrand
+        ''' (Editor-Einstellung, 0 = bündig wie bisher). Er wird von der Fläche abgezogen, BEVOR der
+        ''' Faktor entsteht - nicht nachträglich vom Ergebnis: ein Abzug am Zoom wäre bei einem
+        ''' hochformatigen Bild in einer breiten Fläche an der falschen Achse.</summary>
         Friend Shared Function EinpassenProzent(flaecheBreite As Double, flaecheHoehe As Double,
                                                 imageWidth As Double, imageHeight As Double,
-                                                shrinkOnly As Boolean) As Double
+                                                shrinkOnly As Boolean,
+                                                Optional randPunkte As Double = 0) As Double
             If flaecheBreite <= 0 OrElse flaecheHoehe <= 0 OrElse imageWidth <= 0 OrElse imageHeight <= 0 Then Return 0
-            Dim prozent = Math.Min(flaecheBreite / imageWidth, flaecheHoehe / imageHeight) * 100.0
+            Dim rand = GeklemmterEinpassRand(flaecheBreite, flaecheHoehe, randPunkte)
+            Dim nutzbarBreite = Math.Max(1.0, flaecheBreite - 2.0 * rand)
+            Dim nutzbarHoehe = Math.Max(1.0, flaecheHoehe - 2.0 * rand)
+            Dim prozent = Math.Min(nutzbarBreite / imageWidth, nutzbarHoehe / imageHeight) * 100.0
+            ' Der Deckel bleibt bei 100: "nur verkleinern" heisst Originalgroesse, und ein Rand darf
+            ' ein Bild, das ohnehin hineinpasst, nicht unter seine eigene Groesse druecken.
             If shrinkOnly Then prozent = Math.Min(prozent, 100.0)
             Return prozent
         End Function
@@ -23612,9 +23636,12 @@ Namespace ViewModels
         ''' genau das fehlte, weshalb ein zugeschnittenes Bild klein stehen blieb.</summary>
         Friend Shared Function FitTarget(flaecheBreite As Double, flaecheHoehe As Double,
                                              imageWidth As Double, imageHeight As Double,
-                                             shrinkOnly As Boolean) As Double
-            Dim prozent = EinpassenProzent(flaecheBreite, flaecheHoehe, imageWidth, imageHeight, False)
+                                             shrinkOnly As Boolean,
+                                             Optional randPunkte As Double = 0) As Double
+            Dim prozent = EinpassenProzent(flaecheBreite, flaecheHoehe, imageWidth, imageHeight, False, randPunkte)
             If prozent <= 0 Then Return 0
+            ' "Nur verkleinern" UND es passt ohnehin hinein: Zoom des Nutzers nicht anfassen. Der
+            ' Rand aendert daran nichts - er soll ein passendes Bild nicht kuenstlich verkleinern.
             If shrinkOnly AndAlso prozent >= 100.0 Then Return 0
             Return prozent
         End Function

@@ -39,6 +39,7 @@ Namespace ViewModels
         Private _viewerOpenFitToWindow As Boolean = True
         Private _viewerFitBehavior As String = "Always"
         Private _editorFitBehavior As String = "Always"
+        Private _editorFitMargin As Integer = 0
         Private _defaultSaveFormat As String = "JPG"
         Private _showHiddenFolders As Boolean = False
         Private _followLinkedFolders As Boolean = False
@@ -165,6 +166,7 @@ Namespace ViewModels
         Private _savedViewerOpenFitToWindow As Boolean = True
         Private _savedViewerFitBehavior As String = "Always"
         Private _savedEditorFitBehavior As String = "Always"
+        Private _savedEditorFitMargin As Integer = 0
         Private _savedEditorStartupTool As String = "Selection"
         Private _savedEditorAdjustmentsPanelOnLeft As Boolean = False
         Private _savedEditorToolGroupOrder As String = "Adjust,Transform,Tools"
@@ -1058,6 +1060,20 @@ Namespace ViewModels
             Get
                 Return String.Equals(_editorFitBehavior, "OnlyWhenLarger", StringComparison.OrdinalIgnoreCase)
             End Get
+        End Property
+
+        ''' <summary>Abstand zwischen dem eingepassten Bild und dem Rand der Bearbeitungsfläche, in
+        ''' Layout-Punkten. 0 = bündig, das bisherige Verhalten.</summary>
+        Public Property EditorFitMargin As Integer
+            Get
+                Return _editorFitMargin
+            End Get
+            Set(value As Integer)
+                value = AppSettingsService.NormalizeEditorFitMargin(value)
+                If _editorFitMargin = value Then Return
+                Me.RaiseAndSetIfChanged(_editorFitMargin, value)
+                SaveLayoutSettings()
+            End Set
         End Property
 
         Public Property StartupImageMode As String
@@ -3578,6 +3594,7 @@ Namespace ViewModels
             _viewerOpenFitToWindow = _appSettings.ViewerOpenFitToWindow
             _viewerFitBehavior = AppSettingsService.NormalizeViewerFitBehavior(_appSettings.ViewerFitBehavior)
             _editorFitBehavior = AppSettingsService.NormalizeViewerFitBehavior(_appSettings.EditorFitBehavior)
+            _editorFitMargin = AppSettingsService.NormalizeEditorFitMargin(_appSettings.EditorFitMargin)
             _defaultSaveFormat = AppSettingsService.NormalizeDefaultSaveFormat(_appSettings.DefaultSaveFormat)
             _editorSaveAsNamePattern = AppSettingsService.NormalizeEditorSaveAsNamePattern(_appSettings.EditorSaveAsNamePattern)
             _editorShowFilmstrip = _appSettings.EditorShowFilmstrip
@@ -3880,6 +3897,7 @@ Namespace ViewModels
             _savedViewerOpenFitToWindow = _viewerOpenFitToWindow
             _savedViewerFitBehavior = _viewerFitBehavior
             _savedEditorFitBehavior = _editorFitBehavior
+            _savedEditorFitMargin = _editorFitMargin
             _savedEditorStartupTool = _editorStartupTool
             _savedEditorAdjustmentsPanelOnLeft = _editorAdjustmentsPanelOnLeft
             _savedEditorToolGroupOrder = _editorToolGroupOrder
@@ -3976,6 +3994,7 @@ Namespace ViewModels
             ViewerOpenFitToWindow = _savedViewerOpenFitToWindow
             ViewerFitBehavior = _savedViewerFitBehavior
             EditorFitBehavior = _savedEditorFitBehavior
+            EditorFitMargin = _savedEditorFitMargin
             EditorStartupTool = _savedEditorStartupTool
             EditorAdjustmentsPanelOnLeft = _savedEditorAdjustmentsPanelOnLeft
             EditorToolGroupOrder = _savedEditorToolGroupOrder
@@ -4101,6 +4120,7 @@ Namespace ViewModels
             ViewerOpenFitToWindow = True
             ViewerFitBehavior = "Always"
             EditorFitBehavior = "Always"
+            EditorFitMargin = 0
             EditorStartupTool = "Selection"
             EditorAdjustmentsPanelOnLeft = False
             EditorToolGroupOrder = "Adjust,Transform,Tools"
@@ -4410,6 +4430,7 @@ Namespace ViewModels
                                           s.ViewerOpenFitToWindow = _viewerOpenFitToWindow
                                           s.ViewerFitBehavior = _viewerFitBehavior
                                           s.EditorFitBehavior = _editorFitBehavior
+                                          s.EditorFitMargin = _editorFitMargin
                                           s.EditorShowFilmstrip = _editorShowFilmstrip
                                           s.EditorGridSize = _editorGridSize
                                           s.EditorShowRulers = _editorShowRulers

@@ -1975,6 +1975,12 @@
   <data name="Rand_3660b486" xml:space="preserve">
     <value>Bordo</value>
   </data>
+  <data name="Rand_beim_Einpassen_671a0039" xml:space="preserve">
+    <value>Margine nell'adattamento</value>
+  </data>
+  <data name="Abstand_zwischen_dem_eingepassten_Bild_und_dem_R_bd056a26" xml:space="preserve">
+    <value>Spazio tra l'immagine adattata e il bordo dell'area di modifica. 0 posiziona l'immagine a filo.</value>
+  </data>
   <data name="Rechteck_im_Bild_aufziehen_dann_kopieren_oder_f__3bbaa302" xml:space="preserve">
     <value>Disegna un rettangolo sull'immagine, poi copialo o riempilo.</value>
   </data>

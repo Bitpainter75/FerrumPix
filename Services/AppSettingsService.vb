@@ -261,6 +261,11 @@ Namespace Services
         ''' Leer = noch nie gesetzt; dann wird beim Laden EINMALIG der Viewer-Wert übernommen, damit
         ''' die bisherige gemeinsame Einstellung nicht stillschweigend zurückspringt.
         Public Property EditorFitBehavior As String = ""
+        ''' Abstand zwischen dem eingepassten Bild und dem Rand der Bearbeitungsfläche, in
+        ''' Layout-Punkten (derselben Einheit, in der die Fläche selbst gemessen wird - auf einem
+        ''' Bildschirm mit hoher Punktdichte sind das nicht die Geräte-Bildpunkte).
+        ''' 0 = bündig, das bisherige Verhalten.
+        Public Property EditorFitMargin As Integer = 0
         Public Property EditorShowFilmstrip As Boolean = True
         ''' Kantenlänge einer Rasterzelle im Editor, in Bildpixeln.
         Public Property EditorGridSize As Integer = 50
@@ -877,6 +882,7 @@ Namespace Services
                 ' Einmalige Übernahme: vor der Trennung galt der Viewer-Wert für beide Ansichten.
                 If String.IsNullOrWhiteSpace(settings.EditorFitBehavior) Then settings.EditorFitBehavior = settings.ViewerFitBehavior
                 settings.EditorFitBehavior = NormalizeViewerFitBehavior(settings.EditorFitBehavior)
+                settings.EditorFitMargin = NormalizeEditorFitMargin(settings.EditorFitMargin)
                 settings.EditorStartupTool = NormalizeEditorStartupTool(settings.EditorStartupTool)
                 settings.EditorToolGroupOrder = NormalizeEditorToolGroupOrder(settings.EditorToolGroupOrder)
                 settings.HiddenAdjustmentGroups = NormalizeHiddenAdjustmentGroups(settings.HiddenAdjustmentGroups)
@@ -1117,6 +1123,7 @@ Namespace Services
                 ' Einmalige Übernahme: vor der Trennung galt der Viewer-Wert für beide Ansichten.
                 If String.IsNullOrWhiteSpace(settings.EditorFitBehavior) Then settings.EditorFitBehavior = settings.ViewerFitBehavior
                 settings.EditorFitBehavior = NormalizeViewerFitBehavior(settings.EditorFitBehavior)
+                settings.EditorFitMargin = NormalizeEditorFitMargin(settings.EditorFitMargin)
                 settings.EditorStartupTool = NormalizeEditorStartupTool(settings.EditorStartupTool)
                 settings.EditorToolGroupOrder = NormalizeEditorToolGroupOrder(settings.EditorToolGroupOrder)
                 settings.HiddenAdjustmentGroups = NormalizeHiddenAdjustmentGroups(settings.HiddenAdjustmentGroups)
@@ -1300,6 +1307,13 @@ Namespace Services
 
         Public Shared Function NormalizeEditorGridSize(value As Integer) As Integer
             Return Math.Max(2, Math.Min(1000, value))
+        End Function
+
+        ''' <summary>Der Rand beim Einpassen im Editor. Obergrenze 200: darüber hinaus bliebe auf
+        ''' einem kleinen Fenster nichts mehr übrig, und der Regler in den Einstellungen soll den
+        ''' brauchbaren Bereich abdecken statt ihn nur zu enthalten.</summary>
+        Public Shared Function NormalizeEditorFitMargin(value As Integer) As Integer
+            Return Math.Max(0, Math.Min(200, value))
         End Function
 
         Public Shared Function NormalizeViewerFitBehavior(value As String) As String

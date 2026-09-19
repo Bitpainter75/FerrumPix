@@ -1186,6 +1186,28 @@
                             </StackPanel>
                         </Grid>
 
+                        <!-- Gehört direkt unter das Einpassen-Verhalten: beide ändern dieselbe
+                             Rechnung, und der Rand ergibt nur zusammen mit ihr einen Sinn. -->
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Rand beim Einpassen" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Abstand zwischen dem eingepassten Bild und dem Rand der Bearbeitungsfläche. 0 legt das Bild bündig an." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                                <icons:RoundSlider Width="150"
+                                                   Minimum="0"
+                                                   Maximum="200"
+                                                   DefaultValue="0"
+                                                   Value="{Binding EditorFitMargin}"/>
+                                <TextBlock Text="{Binding EditorFitMargin, StringFormat={}{0} px}"
+                                           Foreground="{DynamicResource FP.Text.Secondary}"
+                                           FontSize="{DynamicResource FP.Font.Body}"
+                                           Width="52"
+                                           TextAlignment="Right"
+                                           VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Grid>
+
                         <Grid ColumnDefinitions="*,Auto">
                             <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
                                 <TextBlock Text="Werkzeug beim Öffnen" FontSize="{DynamicResource FP.Font.Body}"/>

@@ -431,7 +431,7 @@ Namespace Views
             vm.ActiveZoomPreset = ZoomPresetMode.Fit
             _panX = 0
             _panY = 0
-            Dim fitPct = EditorViewModel.EinpassenProzent(cw, ch, imgW, imgH, IsOnlyWhenLargerFitBehavior())
+            Dim fitPct = EditorViewModel.EinpassenProzent(cw, ch, imgW, imgH, IsOnlyWhenLargerFitBehavior(), FitMarginPoints())
             SetZoom(ZoomToSlider(fitPct))
         End Sub
 
@@ -450,6 +450,18 @@ Namespace Views
         Private Function IsOnlyWhenLargerFitBehavior() As Boolean
             Dim mainVm = TryCast(TopLevel.GetTopLevel(Me)?.DataContext, MainWindowViewModel)
             Return String.Equals(mainVm?.Settings?.EditorFitBehavior, "OnlyWhenLarger", StringComparison.OrdinalIgnoreCase)
+        End Function
+
+        ''' <summary>Der eingestellte Abstand zwischen eingepasstem Bild und Rand der
+        ''' Bearbeitungsfläche, in Layout-Punkten - derselben Einheit, in der auch
+        ''' <c>Bounds</c> gemessen wird. 0 heisst bündig und ist die Vorgabe.
+        '''
+        ''' Gelesen wird bei JEDEM Einpassen und nicht einmal gemerkt: sonst wirkte eine Änderung in
+        ''' den Einstellungen erst nach erneutem Öffnen des Editors - genau der Fehler, den das
+        ''' Einpassen-Verhalten daneben schon einmal hatte.</summary>
+        Private Function FitMarginPoints() As Double
+            Dim mainVm = TryCast(TopLevel.GetTopLevel(Me)?.DataContext, MainWindowViewModel)
+            Return If(mainVm?.Settings?.EditorFitMargin, 0)
         End Function
 
         ''' Endungen, die DrawImageAnnotation wirklich zeichnen kann (SKBitmap.Decode). EINE Quelle
@@ -1342,7 +1354,10 @@ Namespace Views
         ''' wenn gerade wirklich eingepasst ist: wer hineingezoomt hat, will nicht herausgerissen
         ''' werden.</summary>
         Private Sub OnSettingsPropertyChanged(sender As Object, e As System.ComponentModel.PropertyChangedEventArgs)
-            If e.PropertyName <> NameOf(SettingsViewModel.EditorFitBehavior) Then Return
+            ' Der Rand gehoert aus demselben Grund dazu: er aendert dieselbe Rechnung, und ohne ihn
+            ' hier saehe der Regler in den Einstellungen am offenen Bild genauso kaputt aus.
+            If e.PropertyName <> NameOf(SettingsViewModel.EditorFitBehavior) AndAlso
+               e.PropertyName <> NameOf(SettingsViewModel.EditorFitMargin) Then Return
             Dim vm = TryCast(DataContext, EditorViewModel)
             If vm Is Nothing OrElse vm.ActiveZoomPreset <> ZoomPresetMode.Fit Then Return
             OnZoomFitClick(Nothing, Nothing)
@@ -1427,7 +1442,8 @@ Namespace Views
             Dim size = GetEffectiveDisplaySize(vm)
             Dim fitPct = EditorViewModel.FitTarget(canvas.Bounds.Width, canvas.Bounds.Height,
                                                        size.Width, size.Height,
-                                                       IsOnlyWhenLargerFitBehavior())
+                                                       IsOnlyWhenLargerFitBehavior(),
+                                                       FitMarginPoints())
             If fitPct <= 0 Then Return   ' Zoom des Nutzers nicht anfassen
             vm.ActiveZoomPreset = ZoomPresetMode.Fit
             _panX = 0
@@ -1655,7 +1671,7 @@ Namespace Views
                 _panY = 0
                 _letzteEinpassBreite = imgW
                 _letzteEinpassHoehe = imgH
-                Dim fitPct = EditorViewModel.EinpassenProzent(cw, ch, imgW, imgH, IsOnlyWhenLargerFitBehavior())
+                Dim fitPct = EditorViewModel.EinpassenProzent(cw, ch, imgW, imgH, IsOnlyWhenLargerFitBehavior(), FitMarginPoints())
                 _zoomSliderValue = ZoomToSlider(fitPct)
                 _ignoreSliderChange = True
                 Dim zs = Me.FindControl(Of RoundSlider)("EditorZoomSlider")
