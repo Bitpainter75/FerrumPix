@@ -10810,9 +10810,9 @@ Namespace ViewModels
                 .Opacity = CSng(_annotationOpacity),
                 .BlendMode = _annotationBlendMode,
                 .BlendIncludesStroke = _annotationBlendIncludesStroke,
-                .RotationDegrees = CSng(DisplayAnnotationRotationToStored("SelectionImage", 0)),
-                .FlipHorizontal = DisplayAnnotationFlipHorizontalToStored(False),
-                .FlipVertical = DisplayAnnotationFlipVerticalToStored(False),
+                .RotationDegrees = CSng(DisplayAnnotationRotationToStored("SelectionImage", "", 0)),
+                .FlipHorizontal = DisplayAnnotationFlipHorizontalToStored("SelectionImage", "", False),
+                .FlipVertical = DisplayAnnotationFlipVerticalToStored("SelectionImage", "", False),
                 .IsVisible = _annotationIsVisible
             }
             HardenAnnotationBuffersForNewObject()
@@ -11582,7 +11582,7 @@ Namespace ViewModels
                                          r.Width, r.Height)
                 Dim display = StoredAnnotationRotationToDisplay(a) + deltaDegrees
                 display = ((display + 180.0) Mod 360.0 + 360.0) Mod 360.0 - 180.0
-                a.RotationDegrees = CSng(DisplayAnnotationRotationToStored(NormalizeAnnotationKind(a.Kind), display))
+                a.RotationDegrees = CSng(DisplayAnnotationRotationToStored(NormalizeAnnotationKind(a.Kind), a.Anchor, display))
             Next
             AfterGroupTransform(beforeRect:=before)
         End Sub
@@ -12737,18 +12737,44 @@ Namespace ViewModels
         ''' <c>ApplyStraighten</c> den Ausrichtwinkel. Ein zusammengefasster Lagezustand verliert
         ''' diese Reihenfolge: bei "horizontal spiegeln + um 33 Grad ausrichten" entstand aus 0 Grad
         ''' faelschlich -33 Grad fuer den Rahmen, waehrend der Renderer korrekt +33 Grad zeichnet.</summary>
+        ''' <summary>Geht dieses Objekt die Vierteldrehung und die Spiegelung des Bildes mit?
+        '''
+        ''' NEIN beim verankerten Wasserzeichen: es liegt auf dem FERTIGEN Bild und nicht auf
+        ''' dessen Inhalt. Der Renderer laesst es in
+        ''' <c>ImageProcessor.TransformAnnotationThroughGeometryFieldsCore</c> unangetastet
+        ''' durchlaufen, und wer hier anders entscheidet, rechnet gegen ihn.</summary>
+        Private Shared Function AnnotationFollowsImageTurn(kind As String, anchor As String) As Boolean
+            Return Not (String.Equals(If(kind, "").Trim(), "watermark", StringComparison.OrdinalIgnoreCase) AndAlso
+                        Not String.IsNullOrWhiteSpace(anchor))
+        End Function
+
+        ''' <summary>Geht dieses Objekt die BEGRADIGUNG des Bildes mit? Wie oben, plus der Rahmen:
+        ''' beide nimmt <c>ImageProcessor.StraightenAnnotation</c> ausdruecklich aus.</summary>
+        Private Shared Function AnnotationFollowsStraighten(kind As String, anchor As String) As Boolean
+            If String.Equals(If(kind, "").Trim(), "frame", StringComparison.OrdinalIgnoreCase) Then Return False
+            Return AnnotationFollowsImageTurn(kind, anchor)
+        End Function
+
         Private Function StoredAnnotationRotationToDisplay(annotation As ImageAnnotation) As Double
             If annotation Is Nothing Then Return 0.0
+            Dim kind = NormalizeAnnotationKind(annotation.Kind)
+            Dim folgtDrehung = AnnotationFollowsImageTurn(kind, annotation.Anchor)
+            Dim folgtBegradigung = AnnotationFollowsStraighten(kind, annotation.Anchor)
+            If Not folgtDrehung AndAlso Not folgtBegradigung Then Return NormalizeAnnotationRotation(annotation.RotationDegrees)
             Dim rotation = CDbl(annotation.RotationDegrees)
             For Each operation In GeometryOperationsForRender(forPreview:=True)
                 Dim transform = operation?.Adjustments
                 If transform Is Nothing OrElse
                    Not String.Equals(operation.Kind, "transform", StringComparison.OrdinalIgnoreCase) Then Continue For
-                rotation = ImageGeometryMapper.SourceObjectRotationToDisplay(rotation,
-                                                                              transform.RotationDegrees,
-                                                                              transform.FlipHorizontal,
-                                                                              transform.FlipVertical)
-                rotation = NormalizeAnnotationRotation(rotation + transform.StraightenDegrees)
+                If folgtDrehung Then
+                    rotation = ImageGeometryMapper.SourceObjectRotationToDisplay(rotation,
+                                                                                  transform.RotationDegrees,
+                                                                                  transform.FlipHorizontal,
+                                                                                  transform.FlipVertical)
+                End If
+                If folgtBegradigung Then
+                    rotation = NormalizeAnnotationRotation(rotation + transform.StraightenDegrees)
+                End If
             Next
             Return NormalizeAnnotationRotation(rotation)
         End Function
@@ -12756,28 +12782,40 @@ Namespace ViewModels
         ''' <summary>Gegenstueck zu <see cref="StoredAnnotationRotationToDisplay"/>. Die Schritte
         ''' laufen rueckwaerts: erst den nach der Spiegelung aufgebrachten Ausrichtwinkel abziehen,
         ''' dann Vierteldrehung und Spiegelung umkehren.</summary>
-        Private Function DisplayAnnotationRotationToStored(kind As String, degrees As Double) As Double
+        Private Function DisplayAnnotationRotationToStored(kind As String, anchor As String, degrees As Double) As Double
+            Dim folgtDrehung = AnnotationFollowsImageTurn(kind, anchor)
+            Dim folgtBegradigung = AnnotationFollowsStraighten(kind, anchor)
             Dim rotation = NormalizeAnnotationRotation(degrees)
+            If Not folgtDrehung AndAlso Not folgtBegradigung Then Return rotation
             Dim operations = GeometryOperationsForRender(forPreview:=True)
             For index = operations.Count - 1 To 0 Step -1
                 Dim operation = operations(index)
                 Dim transform = operation?.Adjustments
                 If transform Is Nothing OrElse
                    Not String.Equals(operation.Kind, "transform", StringComparison.OrdinalIgnoreCase) Then Continue For
-                rotation = NormalizeAnnotationRotation(rotation - transform.StraightenDegrees)
-                rotation = ImageGeometryMapper.DisplayObjectRotationToSource(rotation,
-                                                                              transform.RotationDegrees,
-                                                                              transform.FlipHorizontal,
-                                                                              transform.FlipVertical)
+                If folgtBegradigung Then
+                    rotation = NormalizeAnnotationRotation(rotation - transform.StraightenDegrees)
+                End If
+                If folgtDrehung Then
+                    rotation = ImageGeometryMapper.DisplayObjectRotationToSource(rotation,
+                                                                                  transform.RotationDegrees,
+                                                                                  transform.FlipHorizontal,
+                                                                                  transform.FlipVertical)
+                End If
             Next
             Return NormalizeAnnotationRotation(rotation)
         End Function
 
-        Private Function DisplayAnnotationFlipHorizontalToStored(displayFlip As Boolean) As Boolean
+        ''' <summary>Die Spiegelungen gehen denselben Weg wie die Drehung: ein verankertes
+        ''' Wasserzeichen macht die Bildspiegelung nicht mit, also darf sie hier auch nicht
+        ''' herausgerechnet werden.</summary>
+        Private Function DisplayAnnotationFlipHorizontalToStored(kind As String, anchor As String, displayFlip As Boolean) As Boolean
+            If Not AnnotationFollowsImageTurn(kind, anchor) Then Return displayFlip
             Return displayFlip Xor AppliedFlipHorizontal
         End Function
 
-        Private Function DisplayAnnotationFlipVerticalToStored(displayFlip As Boolean) As Boolean
+        Private Function DisplayAnnotationFlipVerticalToStored(kind As String, anchor As String, displayFlip As Boolean) As Boolean
+            If Not AnnotationFollowsImageTurn(kind, anchor) Then Return displayFlip
             Return displayFlip Xor AppliedFlipVertical
         End Function
 
@@ -21983,6 +22021,10 @@ Namespace ViewModels
             Dim fill = _annotationFillColor
             Dim stroke = _annotationStrokeColor
             Dim strokeWidth = _annotationStrokeWidth
+            ' Der Anker entscheidet mit, ob Drehung und Spiegelung des BILDES aus den Anzeigewerten
+            ' herausgerechnet werden - er muss deshalb vor dem Initialisierer feststehen und darf
+            ' nicht zweimal verschieden ermittelt werden.
+            Dim neuerAnker = If(normalizedKind = "Watermark", NormalizeAnnotationAnchor(_annotationAnchor), "")
             Dim annotation = New ImageAnnotation With {
                 .Kind = normalizedKind,
                 .Text = text,
@@ -21999,10 +22041,10 @@ Namespace ViewModels
                 .Opacity = CSng(_annotationOpacity),
                 .BlendMode = _annotationBlendMode,
                 .BlendIncludesStroke = _annotationBlendIncludesStroke,
-                .RotationDegrees = CSng(DisplayAnnotationRotationToStored(normalizedKind, _annotationRotation)),
-                .FlipHorizontal = DisplayAnnotationFlipHorizontalToStored(_annotationFlipH),
-                .FlipVertical = DisplayAnnotationFlipVerticalToStored(_annotationFlipV),
-                .Anchor = If(normalizedKind = "Watermark", NormalizeAnnotationAnchor(_annotationAnchor), ""),
+                .RotationDegrees = CSng(DisplayAnnotationRotationToStored(normalizedKind, neuerAnker, _annotationRotation)),
+                .FlipHorizontal = DisplayAnnotationFlipHorizontalToStored(normalizedKind, neuerAnker, _annotationFlipH),
+                .FlipVertical = DisplayAnnotationFlipVerticalToStored(normalizedKind, neuerAnker, _annotationFlipV),
+                .Anchor = neuerAnker,
                 .IsVisible = _annotationIsVisible,
                 .FillKind = _annotationFillKind,
                 .FillColor2 = _annotationFillColor2,
@@ -22138,9 +22180,9 @@ Namespace ViewModels
                 .Opacity = CSng(_annotationOpacity),
                 .BlendMode = _annotationBlendMode,
                 .BlendIncludesStroke = _annotationBlendIncludesStroke,
-                .RotationDegrees = CSng(DisplayAnnotationRotationToStored("Image", 0)),
-                .FlipHorizontal = DisplayAnnotationFlipHorizontalToStored(False),
-                .FlipVertical = DisplayAnnotationFlipVerticalToStored(False),
+                .RotationDegrees = CSng(DisplayAnnotationRotationToStored("Image", "", 0)),
+                .FlipHorizontal = DisplayAnnotationFlipHorizontalToStored("Image", "", False),
+                .FlipVertical = DisplayAnnotationFlipVerticalToStored("Image", "", False),
                 .IsVisible = _annotationIsVisible
             }
             HardenAnnotationBuffersForNewObject()
@@ -24324,13 +24366,17 @@ Namespace ViewModels
             Dim maskOldW = CDbl(a.WidthPixels), maskOldH = CDbl(a.HeightPixels)
             Dim maskOldRot = CDbl(a.RotationDegrees)
             Dim maskOldFlipH = a.FlipHorizontal, maskOldFlipV = a.FlipVertical
+            ' Der Anker, der GLEICH gilt - nicht der, der noch am Objekt steht. Er entscheidet mit,
+            ' ob die Bilddrehung aus dem Anzeigewinkel herausgerechnet wird, und wird zwei Zeilen
+            ' weiter unten ohnehin geschrieben.
+            Dim neuerAnker = If(normalizedKind = "Watermark", NormalizeAnnotationAnchor(_annotationAnchor), "")
             If geometrieFrei Then
-                a.RotationDegrees = CSng(DisplayAnnotationRotationToStored(normalizedKind, _annotationRotation))
+                a.RotationDegrees = CSng(DisplayAnnotationRotationToStored(normalizedKind, neuerAnker, _annotationRotation))
                 a.FlipHorizontal = _annotationFlipH
                 a.FlipVertical = _annotationFlipV
             End If
             a.LockAspect = _annotationLockAspect
-            a.Anchor = If(normalizedKind = "Watermark", NormalizeAnnotationAnchor(_annotationAnchor), "")
+            a.Anchor = neuerAnker
             a.IsVisible = _annotationIsVisible
             If geometrieFrei Then
                 ' Gegenstueck zum Laden: der Puffer traegt beim verankerten Wasserzeichen den ABSTAND,

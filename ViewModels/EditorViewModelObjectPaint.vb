@@ -89,9 +89,9 @@ Namespace ViewModels
                 .WidthPixels = CSng(Math.Max(1.0, PercentXToPixels(stored.Width))),
                 .HeightPixels = CSng(Math.Max(1.0, PercentYToPixels(stored.Height))),
                 .FillColor = "#00FFFFFF",
-                .RotationDegrees = CSng(DisplayAnnotationRotationToStored("SelectionImage", 0)),
-                .FlipHorizontal = DisplayAnnotationFlipHorizontalToStored(False),
-                .FlipVertical = DisplayAnnotationFlipVerticalToStored(False),
+                .RotationDegrees = CSng(DisplayAnnotationRotationToStored("SelectionImage", "", 0)),
+                .FlipHorizontal = DisplayAnnotationFlipHorizontalToStored("SelectionImage", "", False),
+                .FlipVertical = DisplayAnnotationFlipVerticalToStored("SelectionImage", "", False),
                 .IsVisible = True
             }
             _nextPaintLayerNumber += 1
