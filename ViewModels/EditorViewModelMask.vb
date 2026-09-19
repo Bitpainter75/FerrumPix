@@ -2882,6 +2882,10 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(SelectionFeather))
             HasActiveSelection = True
             _editingLayerMaskId = mask.Id
+            ' DEN STAND MERKEN, mit dem sie geladen wurde. Wer sie danach nicht anfasst, muss beim
+            ' Abschluss nicht die ganze Rueckprojektion bezahlen (siehe SelectionMaskStamp). NACH
+            ' dem Setzen der Kennung, weil die mit im Merker steht.
+            _editingLayerMaskStamp = SelectionMaskStamp(BuildAdjustmentsFromFields())
             ' Overlay nach EBENEN-ART: Masken-Ebene → rotes Overlay, Auswahl-Ebene → Laufameisen. Kein
             ' Werkzeugwechsel; die Maske bleibt mit dem Masken-Pinsel editierbar (Auswahl-Werkzeug + Pinsel).
             SetActiveSelectionIsMask(showAsMask)
@@ -2979,6 +2983,60 @@ Namespace ViewModels
         ''' aendern will, geht deshalb an den BESTANDTEIL (ApplyMaskBrushStrokeToComponent) oder ans
         ''' Ergebnis (ImageMask.InvertResult).</summary>
         ''' <returns>False, wenn nichts geschrieben wurde - der Aufrufer muss dann seinen eigenen Weg gehen.</returns>
+        ''' <summary>Alles, was das Ergebnis des Zurueckschreibens bestimmt, in einer Zeichenkette.
+        '''
+        ''' WOFUER: das Zurueckschreiben rechnet fuer JEDEN Bildpunkt des Quellbilds die
+        ''' Geometriekette rueckwaerts. An einem begradigten, gedrehten und beschnittenen Foto sind
+        ''' das gemessen mehrere hundert Millisekunden - und es lief bei JEDEM Wechsel der
+        ''' Maskenebene im Anpassungswerkzeug, auch wenn dort gar nichts geaendert wurde.
+        '''
+        ''' WAS DRIN STEHT, und warum genau das:
+        ''' - Die KENNUNG der bearbeiteten Maske. Damit ist kein Aufraeumen noetig: wechselt sie,
+        '''   passt der gemerkte Stand ohnehin nicht mehr, und es wird geschrieben.
+        ''' - Der INHALT der Maskenbildpunkte als Pruefsumme. Bewusst der Inhalt und NICHT ein
+        '''   Zaehler an <c>SetSelectionMaskData</c>: die Umschaltmechanik baut die Maske beim
+        '''   Zeilenwechsel selbst zweimal neu auf (<c>ApplyAdjustments</c> stellt die Auswahl aus
+        '''   dem Rezept wieder her), mit identischem Inhalt. Ein Zaehler zaehlt diese Neuaufbauten
+        '''   mit und meldet eine Aenderung, die es nicht gibt - gemessen sprang er je Wechsel um
+        '''   zwei, und der Merker griff nie. Die Pruefsumme laeuft ueber wenige Millisekunden und
+        '''   steht gegen mehrere hundert, die sie erspart.
+        ''' - Das AUSWAHLRECHTECK. MoveSelection schreibt es unmittelbar, also an
+        '''   <c>SetSelectionMaskData</c> vorbei. Im Anpassungswerkzeug ist das unerreichbar (der
+        '''   Zieh-Block haengt an Auswahl bzw. Maske), aber verschoben werden kann davor - und
+        '''   dann gilt es beim naechsten Wechsel.
+        ''' - Die KANTENWEICHZEICHNUNG, die in die fertige Maske eingeht.
+        ''' - Die QUELLMASSE und die GEOMETRIE ueber <c>ImageProcessor.MaskGeometryKey</c>, also
+        '''   ueber dieselbe Feldliste, die der Maskencache benutzt. Eine zweite Liste hier waere
+        '''   die, die beim naechsten neuen Geometriefeld vergessen wird.
+        '''
+        ''' Ein vergessenes Feld ist kein Schoenheitsfehler, sondern eine nicht geschriebene
+        ''' Aenderung. Die Diagnose verstellt deshalb jedes dieser Felder einzeln und verlangt, dass
+        ''' danach geschrieben wird.</summary>
+        ''' <summary>Pruefsumme ueber die Maskenbildpunkte.
+        '''
+        ''' SHA-256 und keine selbstgebaute Multiplikationskette: VB prueft jede Multiplikation auf
+        ''' Ueberlauf und wirft dabei, eine FNV-Schleife stirbt also am ersten Bildpunkt (siehe die
+        ''' VB-Fallen). Die Hardware rechnet SHA-256 mit, ueber knapp drei Megabyte sind es wenige
+        ''' Millisekunden - gegen mehrere hundert, die die Pruefsumme erspart.</summary>
+        Private Function SelectionMaskContentHash() As String
+            Dim raster = _selectionMaskRaster
+            If raster Is Nothing OrElse raster.Pixels Is Nothing Then Return "-"
+            Return Convert.ToHexString(Security.Cryptography.SHA256.HashData(raster.Pixels))
+        End Function
+
+        Private Function SelectionMaskStamp(adj As ImageAdjustments) As String
+            Return String.Join("|", _editingLayerMaskId, SelectionMaskContentHash(),
+                               _selectionMaskRect.Left.ToString(), _selectionMaskRect.Top.ToString(),
+                               _selectionMaskRect.Right.ToString(), _selectionMaskRect.Bottom.ToString(),
+                               _selectionFeather.ToString("R", Globalization.CultureInfo.InvariantCulture),
+                               adj.SourceWidthPixels.ToString(), adj.SourceHeightPixels.ToString(),
+                               ImageProcessor.MaskGeometryKey(adj))
+        End Function
+
+        ''' <summary>Der Stand, mit dem die bearbeitete Ebenenmaske geladen wurde. Leer heisst
+        ''' "unbekannt", und unbekannt heisst IMMER schreiben.</summary>
+        Private _editingLayerMaskStamp As String = ""
+
         Private Function WriteSelectionMaskBackToLayer() As Boolean
             If _editingLayerMaskId = "" Then Return False
             Dim mask = _imageMasks.FirstOrDefault(Function(m) m IsNot Nothing AndAlso m.Id = _editingLayerMaskId)
@@ -2987,7 +3045,14 @@ Namespace ViewModels
                 TraceMask(Function() $"Zurueckschreiben abgelehnt, die Maske hat {mask.ComponentCount} Bestandteile: {MaskTrace(mask.Id)}")
                 Return False
             End If
-            Dim rebuilt = ImageProcessor.CreateSourceMaskFromSelection(BuildAdjustmentsFromFields(), mask.Name)
+            ' EINMAL bauen und fuer beides benutzen - den Merker und die Umrechnung darunter.
+            Dim adj = BuildAdjustmentsFromFields()
+            Dim stamp = SelectionMaskStamp(adj)
+            If _editingLayerMaskStamp <> "" AndAlso String.Equals(_editingLayerMaskStamp, stamp, StringComparison.Ordinal) Then
+                TraceMask(Function() $"Zurueckschreiben uebersprungen, unveraendert seit dem Laden: {MaskTrace(mask.Id)}")
+                Return True
+            End If
+            Dim rebuilt = ImageProcessor.CreateSourceMaskFromSelection(adj, mask.Name)
             If rebuilt Is Nothing Then Return False
             ' WER schreibt WOHIN: die haeufigste Ursache fuer "die falsche Ebene hat sich geaendert".
             TraceMask(Function() $"Auswahl wird in die bearbeitete Maske zurückgeschrieben: {MaskTrace(mask.Id)}" &
@@ -3003,6 +3068,9 @@ Namespace ViewModels
             ' Die Auswahl zeigt das FERTIGE Ergebnis, eine Umkehrung darin ist also schon in diesen
             ' Bildpunkten. Bliebe der Schalter stehen, kehrte er sie ein zweites Mal um.
             mask.InvertResult = False
+            ' Ab jetzt deckt sich die Ebene wieder mit der bearbeiteten Maske - der naechste
+            ' Abschluss ohne Aenderung dazwischen darf ueberspringen.
+            _editingLayerMaskStamp = stamp
             Return True
         End Function
         ''' <summary>Objektstapel in ANZEIGE-Reihenfolge fürs Ebenen-Panel: _annotations umgekehrt (vorderste

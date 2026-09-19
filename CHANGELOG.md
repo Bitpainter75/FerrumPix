@@ -12,6 +12,14 @@
 
 ### Fixes
 
+- Switching between mask layers inside an adjustment tool is more than ten times faster. On a
+  picture that has been straightened, turned and cropped, the mask was worked back through that
+  chain point by point on a single core, on every single switch - even when you had changed
+  nothing. It now only happens when the mask really was edited.
+
+- Picking a colour range or a brightness range as a selection is several times faster on large
+  photos, so the sliders keep up while you drag them.
+
 - Clicking a mask layer now puts you into the mask tool. You were left holding the selection tool
   while looking at the mask. Adjustment tools are the exception: there the layer is simply what the
   sliders act on, so you stay where you are. A selection layer keeps the selection tool as before.

@@ -1056,7 +1056,10 @@ Namespace Services
         '''
         ''' CanvasBackgroundColor steht nicht drin: BuildMaskGeometry setzt sie fest auf
         ''' durchsichtig, sie kann sich also gar nicht unterscheiden.</summary>
-        Private Shared Function MaskGeometryKey(geometry As ImageAdjustments) As String
+        ''' (FRIEND, weil der Editor denselben Schluessel fuer seinen "unveraendert"-Merker
+        ''' braucht - siehe SelectionMaskStamp. EINE Feldliste fuer beide: eine zweite waere die
+        ''' Liste, die beim naechsten neuen Geometriefeld vergessen wird.)
+        Friend Shared Function MaskGeometryKey(geometry As ImageAdjustments) As String
             If geometry Is Nothing Then Return ""
             Return String.Join(":",
                 KeyPart(geometry.CropLeftPercent), KeyPart(geometry.CropTopPercent),
