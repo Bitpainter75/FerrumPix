@@ -3204,6 +3204,33 @@ Namespace ViewModels
                     Dim picked = _maskedAdjustmentLayers.FirstOrDefault(Function(l) l IsNot Nothing AndAlso l.Id = adjustmentId)
                     If picked IsNot Nothing Then
                         TraceMask(Function() $"Zeile im Ebenenpanel gewählt: Ebene={Kurz(picked.Id)} ""{picked.Name}"" ({MaskTrace(picked.MaskId)})")
+                        ' EINE MASKENEBENE IST NICHTS ALS EINE MASKE - wie der Pfad die zweite
+                        ' Ausnahme von "die Zeile ist nur das ZIEL, das Werkzeug bleibt stehen".
+                        ' Wer sie anklickt, will an ihre Form; im Auswahl-Werkzeug sah man nur das
+                        ' rote Overlay und hatte kein Werkzeug dafuer in der Hand (Nutzerbefund).
+                        '
+                        ' DREI Grenzen, jede davon schon einmal teuer bezahlt:
+                        ' - Die ANPASSUNGSWERKZEUGE sind ausgenommen. Dort ist die Zeile wirklich
+                        '   nur das Ziel der Regler; bis 0.9.43 sprang es auch von dort, und genau
+                        '   deshalb wurde der Sprung in 0.9.44 ganz entfernt.
+                        ' - Die AUSWAHLEBENE bleibt aussen vor: dort sind die Laufameisen der
+                        '   Zweck, und das Auswahl-Werkzeug ist das richtige.
+                        ' - NUR beim echten ZeilenWECHSEL. Das erneute Anklicken derselben Zeile
+                        '   laeuft ueber ReapplySelectedLayerPresentation und hat eine andere
+                        '   Aufgabe: es holt das absichtlich ausgeblendete Overlay zurueck, dort wo
+                        '   man gerade steht. Deshalb steht der Wechsel HIER und nicht in
+                        '   ApplyAdjustmentLayerPresentation, das beide Wege teilen.
+                        '
+                        ' ERST das Werkzeug, DANN die Maske laden (siehe EditSelectedAnnotationMask):
+                        ' andersherum entsteht das rote Overlay noch im vorigen Werkzeug, das es
+                        ' sofort wieder versteckt.
+                        Dim istMaskenebene = picked.IsMaskLayer OrElse
+                                             _imageMasks.Any(Function(m) m IsNot Nothing AndAlso
+                                                                 m.Id = picked.MaskId AndAlso m.IsGradient)
+                        If istMaskenebene AndAlso _currentTool <> EditorTool.Mask AndAlso
+                           Not IsObjectAdjustTool(_currentTool) Then
+                            CurrentTool = EditorTool.Mask
+                        End If
                         ApplyAdjustmentLayerPresentation(picked)
                         TraceLayerInventory("Auswahl der Panel-Zeile")
                     End If
@@ -4058,6 +4085,17 @@ Namespace ViewModels
             ' sah der Knopf aus, als lasse sich eine bestehende Maske nicht mehr bearbeiten.
             Dim adjustmentLayer = PasteTargetLayer()
             If adjustmentLayer IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(adjustmentLayer.MaskId) Then
+                ' WIE BEIM OBJEKT: dieser Knopf heisst "Ebenenmaske bearbeiten", also gehoert man
+                ' danach ins Maskenwerkzeug. Beim Objekt tut EditSelectedAnnotationMask genau das,
+                ' hier fehlte es - man blieb im Werkzeug von vorher, in der Regel der Auswahl, und
+                ' der Knopf sah aus, als habe er nur das rote Overlay angeschaltet.
+                '
+                ' OHNE die Ausnahme fuer die Anpassungswerkzeuge, die der ZEILENKLICK in
+                ' ApplyAdjustmentLayerPresentation macht, und ohne die Beschraenkung auf
+                ' Maskenebenen: der Knopf ist kein Zielwechsel, sondern eine ausdrueckliche Ansage.
+                ' Wer ihn in einem Anpassungswerkzeug an einer Auswahlebene drueckt, will an ihre
+                ' Maske - genau dafuer ist er da.
+                If _currentTool <> EditorTool.Mask Then CurrentTool = EditorTool.Mask
                 ApplyAdjustmentLayerPresentation(adjustmentLayer)
                 Return
             End If
