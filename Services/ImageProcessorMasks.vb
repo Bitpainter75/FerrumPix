@@ -97,25 +97,33 @@ Namespace Services
             ' BYTES und darf gepolstert sein. Bei Alpha8 sind beide heute gleich, gaebe Skia je
             ' gepolsterte Zeilen zurueck, wuerden sonst Polsterbytes mitverrechnet.
             Dim width = target.Width
-            Dim normalized = If(mode, "").Trim().ToLowerInvariant()
-            For y = 0 To target.Height - 1
-                Dim tOffset = y * tStride, sOffset = y * sStride
-                For x = 0 To width - 1
-                    Dim a = CInt(tb(tOffset + x)), b = CInt(sb(sOffset + x))
-                    Dim v As Integer
-                    Select Case normalized
-                        Case "subtract"
-                            v = a - b
-                        Case "intersect"
-                            v = Math.Min(a, b)
-                        Case Else
-                            v = Math.Max(a, b)
-                    End Select
-                    If v < 0 Then v = 0
-                    If v > 255 Then v = 255
-                    tb(tOffset + x) = CByte(v)
-                Next
-            Next
+            ' DIE ART EINMAL ENTSCHEIDEN, nicht je Bildpunkt. Hier stand der Vergleich der
+            ' Zeichenkette in der INNEREN Schleife: bei 24 Megapixeln 24 Millionen
+            ' Zeichenkettenvergleiche fuer eine Entscheidung, die sich nie aendert. Gemessen kostete
+            ' die Routine damit 95 ms, fuer eine reine Byteverknuepfung viel zu viel.
+            Dim art = 0   ' 0 = Maximum (Vereinigung), 1 = Abziehen, 2 = Schnitt
+            Select Case If(mode, "").Trim().ToLowerInvariant()
+                Case "subtract" : art = 1
+                Case "intersect" : art = 2
+            End Select
+            ' Jede Zeile fasst nur ihren eigenen Abschnitt an, deshalb ohne Sperre - und ueber
+            ' ForEachRow, damit kleine Masken seriell bleiben.
+            ForEachRow(width, target.Height,
+                Sub(y As Integer)
+                    Dim tOffset = y * tStride, sOffset = y * sStride
+                    For x = 0 To width - 1
+                        Dim a = CInt(tb(tOffset + x)), b = CInt(sb(sOffset + x))
+                        Dim v As Integer
+                        Select Case art
+                            Case 1 : v = a - b
+                            Case 2 : v = Math.Min(a, b)
+                            Case Else : v = Math.Max(a, b)
+                        End Select
+                        If v < 0 Then v = 0
+                        If v > 255 Then v = 255
+                        tb(tOffset + x) = CByte(v)
+                    Next
+                End Sub)
             Marshal.Copy(tb, 0, target.GetPixels(), tb.Length)
         End Sub
 
@@ -1689,40 +1697,82 @@ Namespace Services
                     End If
                 End If
                 Dim totalRows = Math.Max(1, bisY - vonY + 1)
-                Dim lastReportedPercent = -1
-                For sy = vonY To bisY
-                    For sx = vonX To bisX
-                        Dim dp As SKPoint
-                        If Not TrySourcePointToGeometryOutput(sx + 0.5, sy + 0.5, sourceW, sourceH, adj, dp) Then Continue For
-                        Dim dx = CInt(Math.Floor(dp.X)), dy = CInt(Math.Floor(dp.Y))
-                        If dx < 0 OrElse dy < 0 OrElse dx >= displaySize.Width OrElse dy >= displaySize.Height Then Continue For
-                        Dim alpha As Byte
-                        If selectionRaster IsNot Nothing Then
-                            Dim lx = dx - adj.SelectionMaskLeft, ly = dy - adj.SelectionMaskTop
-                            If lx < 0 OrElse ly < 0 OrElse lx >= selectionRaster.Width OrElse ly >= selectionRaster.Height Then Continue For
-                            alpha = dBuf(ly * dStride + lx)
-                        Else
-                            Dim inside = dx >= displaySize.Width * adj.SelectionXPercent / 100.0 AndAlso
-                                         dy >= displaySize.Height * adj.SelectionYPercent / 100.0 AndAlso
-                                         dx < displaySize.Width * (adj.SelectionXPercent + adj.SelectionWidthPercent) / 100.0 AndAlso
-                                         dy < displaySize.Height * (adj.SelectionYPercent + adj.SelectionHeightPercent) / 100.0
-                            If Not inside Then Continue For
-                            alpha = 255
+
+                ' ZEILENWEISE PARALLEL, wie die Verzeichnungskorrektur und aus demselben Grund:
+                ' jede Zeile rechnet je Bildpunkt die ganze Geometriekette rueckwaerts, und bei
+                ' knapp drei Megapixeln dauerte das auf EINEM Kern Sekunden. Gemessen an einem
+                ' Foto mit Begradigung, Vierteldrehung und Zuschnitt kostete allein diese Schleife
+                ' rund sechs Sekunden - und sie laeuft bei jedem Wechsel der Maskenebene im
+                ' Anpassungswerkzeug (Nutzerbefund 2026-09-19).
+                '
+                ' OHNE SPERRE: jede Zeile schreibt ausschliesslich in ihren eigenen Abschnitt von
+                ' "full" (Index sy * sourceW + sx) und liest nur aus unveraenderlichen Puffern. Die
+                ' Huelle der gedeckten Bildpunkte sammelt jede Zeile fuer sich in ihren vier
+                ' Eintraegen; zusammengefasst wird sie danach der Reihe nach. Ein gemeinsames
+                ' Minimum waere der einzige Punkt, an dem sich die Faeden treffen koennten.
+                Dim rowLeft(totalRows - 1) As Integer
+                Dim rowTop(totalRows - 1) As Integer
+                Dim rowRight(totalRows - 1) As Integer
+                Dim rowBottom(totalRows - 1) As Integer
+                Dim doneRows As Integer = 0
+                Dim lastReportedPercent As Integer = -1
+                Dim reportLock As New Object()
+
+                ' Ueber ForEachRow und nicht ueber ein eigenes Parallel.For: unterhalb von
+                ' ParallelPixelThreshold bleibt es seriell, und der Faden-Aufwand lohnt bei einer
+                ' winzigen Maske nicht. Dieselbe Entscheidung wie ueberall sonst in der Kette.
+                ForEachRow(bisX - vonX + 1, totalRows,
+                    Sub(idx As Integer)
+                        Dim sy = vonY + idx
+                        Dim zLeft = sourceW, zTop = sourceH, zRight = 0, zBottom = 0
+                        For sx = vonX To bisX
+                            Dim dp As SKPoint
+                            If Not TrySourcePointToGeometryOutput(sx + 0.5, sy + 0.5, sourceW, sourceH, adj, dp) Then Continue For
+                            Dim dx = CInt(Math.Floor(dp.X)), dy = CInt(Math.Floor(dp.Y))
+                            If dx < 0 OrElse dy < 0 OrElse dx >= displaySize.Width OrElse dy >= displaySize.Height Then Continue For
+                            Dim alpha As Byte
+                            If selectionRaster IsNot Nothing Then
+                                Dim lx = dx - adj.SelectionMaskLeft, ly = dy - adj.SelectionMaskTop
+                                If lx < 0 OrElse ly < 0 OrElse lx >= selectionRaster.Width OrElse ly >= selectionRaster.Height Then Continue For
+                                alpha = dBuf(ly * dStride + lx)
+                            Else
+                                Dim inside = dx >= displaySize.Width * adj.SelectionXPercent / 100.0 AndAlso
+                                             dy >= displaySize.Height * adj.SelectionYPercent / 100.0 AndAlso
+                                             dx < displaySize.Width * (adj.SelectionXPercent + adj.SelectionWidthPercent) / 100.0 AndAlso
+                                             dy < displaySize.Height * (adj.SelectionYPercent + adj.SelectionHeightPercent) / 100.0
+                                If Not inside Then Continue For
+                                alpha = 255
+                            End If
+                            full(sy * sourceW + sx) = alpha
+                            If alpha > 0 Then
+                                zLeft = Math.Min(zLeft, sx) : zTop = Math.Min(zTop, sy)
+                                zRight = Math.Max(zRight, sx + 1) : zBottom = Math.Max(zBottom, sy + 1)
+                            End If
+                        Next
+                        rowLeft(idx) = zLeft : rowTop(idx) = zTop
+                        rowRight(idx) = zRight : rowBottom(idx) = zBottom
+
+                        ' Diese Umrechnung kann bei einer bildgrossen Tiefenmaske mehrere Sekunden
+                        ' dauern. Nicht jede Zeile melden: der UI-Faden soll Fortschritt zeigen,
+                        ' nicht von zehntausenden Dispatcher-Auftraegen beschaeftigt sein. Der
+                        ' Fortschritt ist jetzt die ZAHL der fertigen Zeilen, nicht die laufende -
+                        ' parallel kommen sie nicht der Reihe nach.
+                        If progress IsNot Nothing Then
+                            Dim fertig = Interlocked.Increment(doneRows)
+                            Dim percent = CInt((CLng(fertig) * 100L) \ totalRows)
+                            SyncLock reportLock
+                                If percent > lastReportedPercent Then
+                                    lastReportedPercent = percent
+                                    progress.Report(percent / 100.0)
+                                End If
+                            End SyncLock
                         End If
-                        full(sy * sourceW + sx) = alpha
-                        If alpha > 0 Then
-                            left = Math.Min(left, sx) : top = Math.Min(top, sy)
-                            right = Math.Max(right, sx + 1) : bottom = Math.Max(bottom, sy + 1)
-                        End If
-                    Next
-                    ' Diese Umrechnung kann bei einer bildgrossen Tiefenmaske mehrere Sekunden
-                    ' dauern. Nicht jede Zeile melden: der UI-Faden soll Fortschritt zeigen, nicht
-                    ' von zehntausenden Dispatcher-Auftraegen beschaeftigt sein.
-                    Dim percent = CInt((CLng(sy - vonY + 1) * 100L) \ totalRows)
-                    If percent > lastReportedPercent Then
-                        lastReportedPercent = percent
-                        progress?.Report(percent / 100.0)
-                    End If
+                    End Sub)
+
+                For idx = 0 To totalRows - 1
+                    If rowRight(idx) <= rowLeft(idx) Then Continue For
+                    left = Math.Min(left, rowLeft(idx)) : top = Math.Min(top, rowTop(idx))
+                    right = Math.Max(right, rowRight(idx)) : bottom = Math.Max(bottom, rowBottom(idx))
                 Next
                 If right <= left OrElse bottom <= top Then Return Nothing
 
@@ -2821,30 +2871,44 @@ Namespace Services
             Dim soft = Math.Max(1.0, Math.Min(100.0, featherPct)) / 100.0 * 220.8364779
             Dim output = New SKBitmap(image.Width, image.Height, SKColorType.Alpha8, SKAlphaType.Premul)
             Dim outStride = output.RowBytes, data(outStride * image.Height - 1) As Byte
+            ' ZEILENWEISE PARALLEL, wie die Helligkeitsauswahl daneben: je Bildpunkt ein
+            ' Farbabstand mit Wurzel und eine weiche Kennlinie - bei 24 Megapixeln gemessen 134 ms
+            ' auf einem Kern, waehrend man die Toleranz zieht. Jede Zeile schreibt nur in ihren
+            ' eigenen Abschnitt und sammelt ihre eigene Huelle.
+            Dim rowMinX(image.Height - 1) As Integer
+            Dim rowMaxX(image.Height - 1) As Integer
+            ForEachRow(image.Width, image.Height,
+                Sub(y As Integer)
+                    Dim row = y * stride, outRow = y * outStride
+                    Dim zMin = image.Width, zMax = -1
+                    For x = 0 To image.Width - 1
+                        Dim p = row + x * 4
+                        Dim dr = CDbl(raw(p + rIdx)) - sr, dg = CDbl(raw(p + gIdx)) - sg, db = CDbl(raw(p + bIdx)) - sb
+                        Dim distance = Math.Sqrt(dr * dr + dg * dg + db * db)
+                        Dim a As Double
+                        If distance <= hard Then
+                            a = 255
+                        ElseIf distance >= hard + soft Then
+                            a = 0
+                        Else
+                            Dim t = (distance - hard) / soft
+                            a = (1.0 - t * t * (3.0 - 2.0 * t)) * 255.0
+                        End If
+                        If a >= 1 Then
+                            data(outRow + x) = CByte(Math.Round(a))
+                            If x < zMin Then zMin = x
+                            If x > zMax Then zMax = x
+                        End If
+                    Next
+                    rowMinX(y) = zMin : rowMaxX(y) = zMax
+                End Sub)
             Dim minX = image.Width, minY = image.Height, maxX = -1, maxY = -1
             For y = 0 To image.Height - 1
-                Dim row = y * stride, outRow = y * outStride
-                For x = 0 To image.Width - 1
-                    Dim p = row + x * 4
-                    Dim dr = CDbl(raw(p + rIdx)) - sr, dg = CDbl(raw(p + gIdx)) - sg, db = CDbl(raw(p + bIdx)) - sb
-                    Dim distance = Math.Sqrt(dr * dr + dg * dg + db * db)
-                    Dim a As Double
-                    If distance <= hard Then
-                        a = 255
-                    ElseIf distance >= hard + soft Then
-                        a = 0
-                    Else
-                        Dim t = (distance - hard) / soft
-                        a = (1.0 - t * t * (3.0 - 2.0 * t)) * 255.0
-                    End If
-                    If a >= 1 Then
-                        data(outRow + x) = CByte(Math.Round(a))
-                        If x < minX Then minX = x
-                        If x > maxX Then maxX = x
-                        If y < minY Then minY = y
-                        If y > maxY Then maxY = y
-                    End If
-                Next
+                If rowMaxX(y) < rowMinX(y) Then Continue For
+                If rowMinX(y) < minX Then minX = rowMinX(y)
+                If rowMaxX(y) > maxX Then maxX = rowMaxX(y)
+                If y < minY Then minY = y
+                If y > maxY Then maxY = y
             Next
             If maxX < minX Then output.Dispose() : Return Nothing
 
@@ -2913,28 +2977,42 @@ Namespace Services
             Marshal.Copy(image.GetPixels(), raw, 0, raw.Length)
             Dim output = New SKBitmap(image.Width, image.Height, SKColorType.Alpha8, SKAlphaType.Premul)
             Dim outStride = output.RowBytes, data(outStride * image.Height - 1) As Byte
+            ' ZEILENWEISE PARALLEL: je Bildpunkt eine Helligkeit aus drei Kanaelen und eine
+            ' Kennlinie - bei 24 Megapixeln gemessen 223 ms auf einem Kern, und das waehrend man
+            ' den Regler zieht. Jede Zeile schreibt nur in ihren eigenen Abschnitt von "data" und
+            ' merkt sich ihre eigene Huelle; zusammengefasst wird danach der Reihe nach.
+            Dim rowMinX(image.Height - 1) As Integer
+            Dim rowMaxX(image.Height - 1) As Integer
+            ForEachRow(image.Width, image.Height,
+                Sub(y As Integer)
+                    Dim row = y * stride, outRow = y * outStride
+                    Dim zMin = image.Width, zMax = -1
+                    For x = 0 To image.Width - 1
+                        Dim p = row + x * 4
+                        Dim l = (0.2126 * raw(p + rIdx) + 0.7152 * raw(p + gIdx) + 0.0722 * raw(p + bIdx)) / 255.0
+                        Dim a As Double
+                        If l < low Then
+                            a = If(feather = 0, 0, Math.Max(0, 1 - (low - l) / feather))
+                        ElseIf l > high Then
+                            a = If(feather = 0, 0, Math.Max(0, 1 - (l - high) / feather))
+                        Else
+                            a = 1
+                        End If
+                        If a > 0 Then
+                            data(outRow + x) = CByte(Math.Round(a * 255))
+                            If x < zMin Then zMin = x
+                            If x > zMax Then zMax = x
+                        End If
+                    Next
+                    rowMinX(y) = zMin : rowMaxX(y) = zMax
+                End Sub)
             Dim minX = image.Width, minY = image.Height, maxX = -1, maxY = -1
             For y = 0 To image.Height - 1
-                Dim row = y * stride, outRow = y * outStride
-                For x = 0 To image.Width - 1
-                    Dim p = row + x * 4
-                    Dim l = (0.2126 * raw(p + rIdx) + 0.7152 * raw(p + gIdx) + 0.0722 * raw(p + bIdx)) / 255.0
-                    Dim a As Double
-                    If l < low Then
-                        a = If(feather = 0, 0, Math.Max(0, 1 - (low - l) / feather))
-                    ElseIf l > high Then
-                        a = If(feather = 0, 0, Math.Max(0, 1 - (l - high) / feather))
-                    Else
-                        a = 1
-                    End If
-                    If a > 0 Then
-                        data(outRow + x) = CByte(Math.Round(a * 255))
-                        If x < minX Then minX = x
-                        If x > maxX Then maxX = x
-                        If y < minY Then minY = y
-                        If y > maxY Then maxY = y
-                    End If
-                Next
+                If rowMaxX(y) < rowMinX(y) Then Continue For
+                If rowMinX(y) < minX Then minX = rowMinX(y)
+                If rowMaxX(y) > maxX Then maxX = rowMaxX(y)
+                If y < minY Then minY = y
+                If y > maxY Then maxY = y
             Next
             If maxX < minX Then output.Dispose() : Return Nothing
             Marshal.Copy(data, 0, output.GetPixels(), data.Length)
