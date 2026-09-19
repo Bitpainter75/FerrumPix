@@ -71,7 +71,12 @@
                               IsEnabled="{Binding HasLensVignettingData}"
                               FontSize="{DynamicResource FP.Font.Small}"
                               ToolTip.Tip="Hellt die Bildecken auf, soweit das Objektiv dort Licht verliert."/>
+                    <!-- Der Regler folgt demselben Schalter wie sein Haken darüber: liegen für
+                         diese Korrektur keine Messwerte vor, gibt es auch keine Stärke, an der
+                         sich drehen liesse. Vorher war nur der Haken gesperrt und der Regler
+                         darunter frei beweglich - und bewirkte nichts. -->
                     <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center"
+                          IsEnabled="{Binding HasLensDistortionData}"
                           ToolTip.Tip="Stärke der Verzeichnungskorrektur">
                         <TextBlock Text="Verzeichnung" Foreground="{DynamicResource FP.Text.Secondary}"
                                    VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
@@ -81,6 +86,7 @@
                                                  Value="{Binding LensDistortionAmount, Mode=TwoWay}" Minimum="0" Maximum="200" />
                     </Grid>
                     <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center"
+                          IsEnabled="{Binding HasLensTcaData}"
                           ToolTip.Tip="Stärke der Farbsaum-Korrektur">
                         <TextBlock Text="Farbsäume" Foreground="{DynamicResource FP.Text.Secondary}"
                                    VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
@@ -90,6 +96,7 @@
                                                  Value="{Binding LensTcaAmount, Mode=TwoWay}" Minimum="0" Maximum="200" />
                     </Grid>
                     <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center"
+                          IsEnabled="{Binding HasLensVignettingData}"
                           ToolTip.Tip="Stärke der Randabdunklungs-Korrektur">
                         <TextBlock Text="Randabdunklung" Foreground="{DynamicResource FP.Text.Secondary}"
                                    VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />

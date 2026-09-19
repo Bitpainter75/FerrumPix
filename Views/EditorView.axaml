@@ -1487,12 +1487,17 @@
                             </Border>
 
                             <!-- OBJEKTIVKORREKTUR (ausklappbar) - gehört unter die Kurve: sie sitzt
-                                 im Decode, also VOR allem, was die Regler darüber tun. -->
+                                 im Decode, also VOR allem, was die Regler darüber tun.
+
+                                 UND GENAU DESHALB nur bei einem entwickelten RAW: alle drei Stufen
+                                 sitzen im RAW-Decode, ein JPEG läuft an ihnen vorbei. Vorher stand
+                                 die Gruppe bei jeder Datei da und tat nichts. -->
                             <Border Classes="adjustment-group" Margin="0,7,0,0"
                                     >
                                 <Border.IsVisible>
                                     <MultiBinding Converter="{StaticResource AllTrueConverter}">
                                         <Binding Path="ShowLightAdjustments"/>
+                                        <Binding Path="LensCorrectionSupported"/>
                                         <Binding Path="HiddenAdjustmentGroups" Converter="{StaticResource NotInListConverter}" ConverterParameter="objektivkorrektur"/>
                                     </MultiBinding>
                                 </Border.IsVisible>

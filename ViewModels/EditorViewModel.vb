@@ -5932,6 +5932,25 @@ Namespace ViewModels
             End Get
         End Property
 
+        ''' <summary>Ob die Korrektur auf DIESES Bild ueberhaupt wirken kann. Alle drei Stufen
+        ''' sitzen im RAW-Decode: Farbquerfehler und Vignettierung im Umsetzungsschritt
+        ''' (Convert16Rows), die Verzeichnung als eigene Stufe dahinter. Ein JPEG, TIFF oder HEIC
+        ''' laeuft an beiden vorbei, und ohne libraw laeuft auch ein RAW an ihnen vorbei, weil dann
+        ''' die eingebettete Vorschau das Arbeitsbild ist.
+        '''
+        ''' Die Gruppe wird daran AUSGEBLENDET statt nur gesperrt. Vorher stand sie bei jeder Datei
+        ''' da, nannte das erkannte Objektiv und bot drei Haken und drei Regler an, von denen keiner
+        ''' etwas tat - gemeldet als "der Verzeichnungsregler wirkt nicht". Ein Bedienelement, das
+        ''' nichts bewirkt, ist schlimmer als keines.</summary>
+        Public ReadOnly Property LensCorrectionSupported As Boolean
+            Get
+                ' Genau der Pfad, den PreparePreviewSource dekodiert - sonst richtete sich die
+                ' Anzeige nach einer anderen Datei als die Wirkung.
+                Return RawPreviewService.IsSupportedRaw(_currentImagePath) AndAlso
+                       RawDecodeService.IsAvailable
+            End Get
+        End Property
+
         ''' <summary>Was in der Gruppe oben steht: das erkannte Objektiv, oder warum nichts gefunden
         ''' wurde. Ohne diese Zeile waere nicht unterscheidbar, ob die Korrektur nichts tut, weil
         ''' sie aus ist, weil das Objektiv fehlt oder weil es gar keine Aufnahmedaten gibt.</summary>
@@ -6178,7 +6197,13 @@ Namespace ViewModels
         End Sub
 
         ''' <summary>Die Objektiv-Wahl aus den Editor-Feldern. Eigene Stelle, damit jeder Weg, der
-        ''' das Arbeitsbild neu dekodiert, dieselben Werte benutzt.</summary>
+        ''' das Arbeitsbild neu dekodiert, dieselben Werte benutzt.
+        '''
+        ''' MUSS FELD FUER FELD mit <see cref="ImageProcessor.LensChoiceFrom"/> uebereinstimmen, dem
+        ''' Gegenstueck fuer Kachel, Vergleich und Export. Das Objektivmodell fehlte hier und stand
+        ''' dort: wer bei fehlender Objektivangabe eines von Hand waehlte, sah es in der Statuszeile
+        ''' stehen, bekam aber "kein Objektiv vorgegeben" in den Decode. Das Bild blieb
+        ''' unveraendert, Kachel und Export waren korrigiert.</summary>
         Private Function LensChoiceFromFields() As LensDataService.Wahl
             Return New LensDataService.Wahl With {
                 .Distortion = _lensDistortion,
@@ -6186,7 +6211,8 @@ Namespace ViewModels
                 .Vignetting = _lensVignetting,
                 .DistortionStrength = _lensDistortionAmount / 100.0,
                 .ChromaticAberrationStrength = _lensTcaAmount / 100.0,
-                .VignettingStrength = _lensVignettingAmount / 100.0}
+                .VignettingStrength = _lensVignettingAmount / 100.0,
+                .LensModel = _lensModel}
         End Function
 
         Private Shared Function ReleaseLensSwitch(feld As Boolean?) As Boolean
@@ -6257,7 +6283,8 @@ Namespace ViewModels
             End Try
             _lensFilter = LensAssignment
             Me.RaisePropertyChanged(NameOf(LensFilter))
-            For Each n In {NameOf(LensCorrectionAvailable), NameOf(LensCorrectionStatus),
+            For Each n In {NameOf(LensCorrectionAvailable), NameOf(LensCorrectionSupported),
+                           NameOf(LensCorrectionStatus),
                            NameOf(HasLensDistortionData), NameOf(HasLensTcaData),
                            NameOf(HasLensVignettingData), NameOf(LensCandidates),
                            NameOf(LensAssignment), NameOf(LensDistortionEnabled),

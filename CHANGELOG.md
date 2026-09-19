@@ -2,6 +2,19 @@
 
 ### Fixes
 
+- Lens correction is now only offered where it works. It corrects the sensor data while a RAW file
+  is developed, so it never had any effect on a JPEG, TIFF or HEIC photo, even though the group
+  showed the detected lens and let you move all three sliders. Those photos usually come out of the
+  camera or a RAW developer with the correction already applied, and doing it a second time would
+  bend the picture the other way.
+
+- The strength sliders for distortion, colour fringes and corner darkening can only be moved when
+  the lens has measurements for that correction. Before, only the tick box above them was locked.
+
+- Choosing a lens by hand now reaches the picture. If the capture data named no lens, the panel
+  showed your choice but the photo stayed as it was, while the thumbnail and the exported file were
+  corrected.
+
 - Painting with the healing brush, clone stamp or blur brush stays smooth on large pictures.
   Before, the editor became sluggish from the second stroke on.
 
