@@ -1974,6 +1974,12 @@
   <data name="Rand_3660b486" xml:space="preserve">
     <value>테두리</value>
   </data>
+  <data name="Rand_beim_Einpassen_671a0039" xml:space="preserve">
+    <value>맞출 때 여백</value>
+  </data>
+  <data name="Abstand_zwischen_dem_eingepassten_Bild_und_dem_R_bd056a26" xml:space="preserve">
+    <value>맞춘 이미지와 편집 영역 가장자리 사이의 간격입니다. 0이면 이미지가 가장자리에 딱 붙습니다.</value>
+  </data>
   <data name="Rechteck_im_Bild_aufziehen_dann_kopieren_oder_f__3bbaa302" xml:space="preserve">
     <value>이미지에 사각형을 그린 다음 복사하거나 채우세요.</value>
   </data>

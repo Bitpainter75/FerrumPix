@@ -1974,6 +1974,12 @@
   <data name="Rand_3660b486" xml:space="preserve">
     <value>ขอบ</value>
   </data>
+  <data name="Rand_beim_Einpassen_671a0039" xml:space="preserve">
+    <value>ระยะขอบเมื่อพอดี</value>
+  </data>
+  <data name="Abstand_zwischen_dem_eingepassten_Bild_und_dem_R_bd056a26" xml:space="preserve">
+    <value>ระยะห่างระหว่างภาพที่ปรับให้พอดีกับขอบของพื้นที่แก้ไข 0 จะวางภาพชิดขอบ</value>
+  </data>
   <data name="Rechteck_im_Bild_aufziehen_dann_kopieren_oder_f__3bbaa302" xml:space="preserve">
     <value>ลากสี่เหลี่ยมบนภาพ แล้วคัดลอกหรือเติมสีลงไป</value>
   </data>

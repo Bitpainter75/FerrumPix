@@ -1974,6 +1974,12 @@
   <data name="Rand_3660b486" xml:space="preserve">
     <value>Kant</value>
   </data>
+  <data name="Rand_beim_Einpassen_671a0039" xml:space="preserve">
+    <value>Marginal vid anpassning</value>
+  </data>
+  <data name="Abstand_zwischen_dem_eingepassten_Bild_und_dem_R_bd056a26" xml:space="preserve">
+    <value>Avstånd mellan den anpassade bilden och kanten av redigeringsytan. 0 placerar bilden tätt intill kanten.</value>
+  </data>
   <data name="Rechteck_im_Bild_aufziehen_dann_kopieren_oder_f__3bbaa302" xml:space="preserve">
     <value>Dra upp en rektangel i bilden och kopiera eller fyll den sedan.</value>
   </data>

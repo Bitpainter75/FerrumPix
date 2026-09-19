@@ -12758,21 +12758,21 @@ Namespace ViewModels
         Private Function StoredAnnotationRotationToDisplay(annotation As ImageAnnotation) As Double
             If annotation Is Nothing Then Return 0.0
             Dim kind = NormalizeAnnotationKind(annotation.Kind)
-            Dim folgtDrehung = AnnotationFollowsImageTurn(kind, annotation.Anchor)
-            Dim folgtBegradigung = AnnotationFollowsStraighten(kind, annotation.Anchor)
-            If Not folgtDrehung AndAlso Not folgtBegradigung Then Return NormalizeAnnotationRotation(annotation.RotationDegrees)
+            Dim followsImageTurn = AnnotationFollowsImageTurn(kind, annotation.Anchor)
+            Dim followsStraighten = AnnotationFollowsStraighten(kind, annotation.Anchor)
+            If Not followsImageTurn AndAlso Not followsStraighten Then Return NormalizeAnnotationRotation(annotation.RotationDegrees)
             Dim rotation = CDbl(annotation.RotationDegrees)
             For Each operation In GeometryOperationsForRender(forPreview:=True)
                 Dim transform = operation?.Adjustments
                 If transform Is Nothing OrElse
                    Not String.Equals(operation.Kind, "transform", StringComparison.OrdinalIgnoreCase) Then Continue For
-                If folgtDrehung Then
+                If followsImageTurn Then
                     rotation = ImageGeometryMapper.SourceObjectRotationToDisplay(rotation,
                                                                                   transform.RotationDegrees,
                                                                                   transform.FlipHorizontal,
                                                                                   transform.FlipVertical)
                 End If
-                If folgtBegradigung Then
+                If followsStraighten Then
                     rotation = NormalizeAnnotationRotation(rotation + transform.StraightenDegrees)
                 End If
             Next
@@ -12783,20 +12783,20 @@ Namespace ViewModels
         ''' laufen rueckwaerts: erst den nach der Spiegelung aufgebrachten Ausrichtwinkel abziehen,
         ''' dann Vierteldrehung und Spiegelung umkehren.</summary>
         Private Function DisplayAnnotationRotationToStored(kind As String, anchor As String, degrees As Double) As Double
-            Dim folgtDrehung = AnnotationFollowsImageTurn(kind, anchor)
-            Dim folgtBegradigung = AnnotationFollowsStraighten(kind, anchor)
+            Dim followsImageTurn = AnnotationFollowsImageTurn(kind, anchor)
+            Dim followsStraighten = AnnotationFollowsStraighten(kind, anchor)
             Dim rotation = NormalizeAnnotationRotation(degrees)
-            If Not folgtDrehung AndAlso Not folgtBegradigung Then Return rotation
+            If Not followsImageTurn AndAlso Not followsStraighten Then Return rotation
             Dim operations = GeometryOperationsForRender(forPreview:=True)
             For index = operations.Count - 1 To 0 Step -1
                 Dim operation = operations(index)
                 Dim transform = operation?.Adjustments
                 If transform Is Nothing OrElse
                    Not String.Equals(operation.Kind, "transform", StringComparison.OrdinalIgnoreCase) Then Continue For
-                If folgtBegradigung Then
+                If followsStraighten Then
                     rotation = NormalizeAnnotationRotation(rotation - transform.StraightenDegrees)
                 End If
-                If folgtDrehung Then
+                If followsImageTurn Then
                     rotation = ImageGeometryMapper.DisplayObjectRotationToSource(rotation,
                                                                                   transform.RotationDegrees,
                                                                                   transform.FlipHorizontal,
@@ -22024,7 +22024,7 @@ Namespace ViewModels
             ' Der Anker entscheidet mit, ob Drehung und Spiegelung des BILDES aus den Anzeigewerten
             ' herausgerechnet werden - er muss deshalb vor dem Initialisierer feststehen und darf
             ' nicht zweimal verschieden ermittelt werden.
-            Dim neuerAnker = If(normalizedKind = "Watermark", NormalizeAnnotationAnchor(_annotationAnchor), "")
+            Dim newAnchor = If(normalizedKind = "Watermark", NormalizeAnnotationAnchor(_annotationAnchor), "")
             Dim annotation = New ImageAnnotation With {
                 .Kind = normalizedKind,
                 .Text = text,
@@ -22041,10 +22041,10 @@ Namespace ViewModels
                 .Opacity = CSng(_annotationOpacity),
                 .BlendMode = _annotationBlendMode,
                 .BlendIncludesStroke = _annotationBlendIncludesStroke,
-                .RotationDegrees = CSng(DisplayAnnotationRotationToStored(normalizedKind, neuerAnker, _annotationRotation)),
-                .FlipHorizontal = DisplayAnnotationFlipHorizontalToStored(normalizedKind, neuerAnker, _annotationFlipH),
-                .FlipVertical = DisplayAnnotationFlipVerticalToStored(normalizedKind, neuerAnker, _annotationFlipV),
-                .Anchor = neuerAnker,
+                .RotationDegrees = CSng(DisplayAnnotationRotationToStored(normalizedKind, newAnchor, _annotationRotation)),
+                .FlipHorizontal = DisplayAnnotationFlipHorizontalToStored(normalizedKind, newAnchor, _annotationFlipH),
+                .FlipVertical = DisplayAnnotationFlipVerticalToStored(normalizedKind, newAnchor, _annotationFlipV),
+                .Anchor = newAnchor,
                 .IsVisible = _annotationIsVisible,
                 .FillKind = _annotationFillKind,
                 .FillColor2 = _annotationFillColor2,
@@ -23125,16 +23125,16 @@ Namespace ViewModels
                 If Not wegIds.Contains(layer.StackAboveAnnotationId) Then Continue For
                 Dim index = _annotations.ToList().FindIndex(Function(a) a IsNot Nothing AndAlso
                                                             String.Equals(a.Id, layer.StackAboveAnnotationId, StringComparison.Ordinal))
-                Dim neuerAnker As String = ""
+                Dim newAnchor As String = ""
                 If index > 0 Then
                     For k = index - 1 To 0 Step -1
                         Dim candidate = _annotations(k)
                         If candidate Is Nothing OrElse wegIds.Contains(candidate.Id) Then Continue For
-                        neuerAnker = candidate.Id
+                        newAnchor = candidate.Id
                         Exit For
                     Next
                 End If
-                layer.StackAboveAnnotationId = neuerAnker
+                layer.StackAboveAnnotationId = newAnchor
             Next
         End Sub
 
@@ -23642,29 +23642,29 @@ Namespace ViewModels
         ''' an der kurzen Seite mehr als ein Viertel der Fläche fraesse, liesse auf einem kleinen
         ''' Fenster nichts mehr übrig, und das Bild schrumpfte auf wenige Prozent. Die Einstellung
         ''' bleibt dabei stehen, sie wirkt nur so weit, wie die Fläche es hergibt.</summary>
-        Friend Shared Function GeklemmterEinpassRand(flaecheBreite As Double, flaecheHoehe As Double,
-                                                     randPunkte As Double) As Double
-            If randPunkte <= 0 Then Return 0
-            Dim kurzeSeite = Math.Min(flaecheBreite, flaecheHoehe)
-            If kurzeSeite <= 0 Then Return 0
-            Return Math.Min(randPunkte, kurzeSeite / 4.0)
+        Friend Shared Function ClampedFitMargin(flaecheBreite As Double, flaecheHoehe As Double,
+                                                     marginPoints As Double) As Double
+            If marginPoints <= 0 Then Return 0
+            Dim shortSide = Math.Min(flaecheBreite, flaecheHoehe)
+            If shortSide <= 0 Then Return 0
+            Return Math.Min(marginPoints, shortSide / 4.0)
         End Function
 
         ''' <summary>Der Zoom in Prozent, mit dem das Bild in die Fläche passt.
         '''
-        ''' <paramref name="randPunkte"/> ist der gewünschte Abstand zwischen Bild und Flächenrand
+        ''' <paramref name="marginPoints"/> ist der gewünschte Abstand zwischen Bild und Flächenrand
         ''' (Editor-Einstellung, 0 = bündig wie bisher). Er wird von der Fläche abgezogen, BEVOR der
         ''' Faktor entsteht - nicht nachträglich vom Ergebnis: ein Abzug am Zoom wäre bei einem
         ''' hochformatigen Bild in einer breiten Fläche an der falschen Achse.</summary>
         Friend Shared Function EinpassenProzent(flaecheBreite As Double, flaecheHoehe As Double,
                                                 imageWidth As Double, imageHeight As Double,
                                                 shrinkOnly As Boolean,
-                                                Optional randPunkte As Double = 0) As Double
+                                                Optional marginPoints As Double = 0) As Double
             If flaecheBreite <= 0 OrElse flaecheHoehe <= 0 OrElse imageWidth <= 0 OrElse imageHeight <= 0 Then Return 0
-            Dim rand = GeklemmterEinpassRand(flaecheBreite, flaecheHoehe, randPunkte)
-            Dim nutzbarBreite = Math.Max(1.0, flaecheBreite - 2.0 * rand)
-            Dim nutzbarHoehe = Math.Max(1.0, flaecheHoehe - 2.0 * rand)
-            Dim prozent = Math.Min(nutzbarBreite / imageWidth, nutzbarHoehe / imageHeight) * 100.0
+            Dim margin = ClampedFitMargin(flaecheBreite, flaecheHoehe, marginPoints)
+            Dim usableWidth = Math.Max(1.0, flaecheBreite - 2.0 * margin)
+            Dim usableHeight = Math.Max(1.0, flaecheHoehe - 2.0 * margin)
+            Dim prozent = Math.Min(usableWidth / imageWidth, usableHeight / imageHeight) * 100.0
             ' Der Deckel bleibt bei 100: "nur verkleinern" heisst Originalgroesse, und ein Rand darf
             ' ein Bild, das ohnehin hineinpasst, nicht unter seine eigene Groesse druecken.
             If shrinkOnly Then prozent = Math.Min(prozent, 100.0)
@@ -23679,8 +23679,8 @@ Namespace ViewModels
         Friend Shared Function FitTarget(flaecheBreite As Double, flaecheHoehe As Double,
                                              imageWidth As Double, imageHeight As Double,
                                              shrinkOnly As Boolean,
-                                             Optional randPunkte As Double = 0) As Double
-            Dim prozent = EinpassenProzent(flaecheBreite, flaecheHoehe, imageWidth, imageHeight, False, randPunkte)
+                                             Optional marginPoints As Double = 0) As Double
+            Dim prozent = EinpassenProzent(flaecheBreite, flaecheHoehe, imageWidth, imageHeight, False, marginPoints)
             If prozent <= 0 Then Return 0
             ' "Nur verkleinern" UND es passt ohnehin hinein: Zoom des Nutzers nicht anfassen. Der
             ' Rand aendert daran nichts - er soll ein passendes Bild nicht kuenstlich verkleinern.
@@ -24369,14 +24369,14 @@ Namespace ViewModels
             ' Der Anker, der GLEICH gilt - nicht der, der noch am Objekt steht. Er entscheidet mit,
             ' ob die Bilddrehung aus dem Anzeigewinkel herausgerechnet wird, und wird zwei Zeilen
             ' weiter unten ohnehin geschrieben.
-            Dim neuerAnker = If(normalizedKind = "Watermark", NormalizeAnnotationAnchor(_annotationAnchor), "")
+            Dim newAnchor = If(normalizedKind = "Watermark", NormalizeAnnotationAnchor(_annotationAnchor), "")
             If geometrieFrei Then
-                a.RotationDegrees = CSng(DisplayAnnotationRotationToStored(normalizedKind, neuerAnker, _annotationRotation))
+                a.RotationDegrees = CSng(DisplayAnnotationRotationToStored(normalizedKind, newAnchor, _annotationRotation))
                 a.FlipHorizontal = _annotationFlipH
                 a.FlipVertical = _annotationFlipV
             End If
             a.LockAspect = _annotationLockAspect
-            a.Anchor = neuerAnker
+            a.Anchor = newAnchor
             a.IsVisible = _annotationIsVisible
             If geometrieFrei Then
                 ' Gegenstueck zum Laden: der Puffer traegt beim verankerten Wasserzeichen den ABSTAND,

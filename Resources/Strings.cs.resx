@@ -1974,6 +1974,12 @@
   <data name="Rand_3660b486" xml:space="preserve">
     <value>Okraj</value>
   </data>
+  <data name="Rand_beim_Einpassen_671a0039" xml:space="preserve">
+    <value>Okraj při přizpůsobení</value>
+  </data>
+  <data name="Abstand_zwischen_dem_eingepassten_Bild_und_dem_R_bd056a26" xml:space="preserve">
+    <value>Mezera mezi přizpůsobeným obrázkem a okrajem oblasti úprav. 0 umístí obrázek těsně k okraji.</value>
+  </data>
   <data name="Rechteck_im_Bild_aufziehen_dann_kopieren_oder_f__3bbaa302" xml:space="preserve">
     <value>Roztáhněte v obrázku obdélník a poté jej zkopírujte nebo vyplňte.</value>
   </data>

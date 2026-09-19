@@ -1974,6 +1974,12 @@
   <data name="Rand_3660b486" xml:space="preserve">
     <value>किनारा</value>
   </data>
+  <data name="Rand_beim_Einpassen_671a0039" xml:space="preserve">
+    <value>फ़िट करने पर हाशिया</value>
+  </data>
+  <data name="Abstand_zwischen_dem_eingepassten_Bild_und_dem_R_bd056a26" xml:space="preserve">
+    <value>फ़िट की गई छवि और संपादन क्षेत्र के किनारे के बीच की जगह। 0 छवि को किनारे से सटाकर रखता है।</value>
+  </data>
   <data name="Rechteck_im_Bild_aufziehen_dann_kopieren_oder_f__3bbaa302" xml:space="preserve">
     <value>छवि पर एक आयत खींचें, फिर उसे कॉपी करें या भरें।</value>
   </data>

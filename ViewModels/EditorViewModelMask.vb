@@ -3299,10 +3299,10 @@ Namespace ViewModels
                         ' ERST das Werkzeug, DANN die Maske laden (siehe EditSelectedAnnotationMask):
                         ' andersherum entsteht das rote Overlay noch im vorigen Werkzeug, das es
                         ' sofort wieder versteckt.
-                        Dim istMaskenebene = picked.IsMaskLayer OrElse
+                        Dim isMaskLayer = picked.IsMaskLayer OrElse
                                              _imageMasks.Any(Function(m) m IsNot Nothing AndAlso
                                                                  m.Id = picked.MaskId AndAlso m.IsGradient)
-                        If istMaskenebene AndAlso _currentTool <> EditorTool.Mask AndAlso
+                        If isMaskLayer AndAlso _currentTool <> EditorTool.Mask AndAlso
                            Not IsObjectAdjustTool(_currentTool) Then
                             CurrentTool = EditorTool.Mask
                         End If

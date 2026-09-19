@@ -1721,7 +1721,7 @@ Namespace Services
                 ' knapp drei Megapixeln dauerte das auf EINEM Kern Sekunden. Gemessen an einem
                 ' Foto mit Begradigung, Vierteldrehung und Zuschnitt kostete allein diese Schleife
                 ' rund sechs Sekunden - und sie laeuft bei jedem Wechsel der Maskenebene im
-                ' Anpassungswerkzeug (Nutzerbefund 2026-09-19).
+                ' Anpassungswerkzeug (Nutzerbefund).
                 '
                 ' OHNE SPERRE: jede Zeile schreibt ausschliesslich in ihren eigenen Abschnitt von
                 ' "full" (Index sy * sourceW + sx) und liest nur aus unveraenderlichen Puffern. Die
