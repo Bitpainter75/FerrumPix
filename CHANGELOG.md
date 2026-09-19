@@ -20,6 +20,11 @@
 - Picking a colour range or a brightness range as a selection is several times faster on large
   photos, so the sliders keep up while you drag them.
 
+- Working with mask layers is faster throughout: building a mask, showing it as the red overlay and
+  the brush correction on top of it all got several times quicker on large photos.
+
+- Depth blur takes about half as long.
+
 - Clicking a mask layer now puts you into the mask tool. You were left holding the selection tool
   while looking at the mask. Adjustment tools are the exception: there the layer is simply what the
   sliders act on, so you stay where you are. A selection layer keeps the selection tool as before.

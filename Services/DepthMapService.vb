@@ -1,6 +1,8 @@
 Imports System
 Imports System.Collections.Generic
 Imports System.Linq
+Imports System.Runtime.InteropServices
+Imports System.Threading.Tasks
 Imports System.Threading
 Imports Microsoft.ML.OnnxRuntime
 Imports Microsoft.ML.OnnxRuntime.Tensors
@@ -305,25 +307,49 @@ Namespace Services
                 For k = 0 To 2
                     sums(k) = New Single(ah * width1 - 1) {}
                 Next
-                For y = 0 To ah - 1
-                    If y Mod 16 = 0 Then cancel.ThrowIfCancellationRequested()
-                    Dim row = y * width1
-                    Dim pass0 As Single = 0, pass1 As Single = 0, pass2 As Single = 0
-                    For x = 0 To aw - 1
-                        Dim p = small.GetPixel(x, y)
-                        pass0 += high(p.Red) : pass1 += high(p.Green) : pass2 += high(p.Blue)
-                        sums(0)(row + x + 1) = pass0
-                        sums(1)(row + x + 1) = pass1
-                        sums(2)(row + x + 1) = pass2
-                    Next
-                Next
+                ' EINMAL AUSLESEN statt je Bildpunkt: SKBitmap.GetPixel ist ein Aufruf in die
+                ' native Bibliothek und lief hier fuer jeden Punkt der verkleinerten Fassung. Die
+                ' Schwesterschleife darunter hatte dasselbe Problem beim Schreiben, dort stand
+                ' SetPixel gemessen fuer 72 Prozent der Rechenzeit.
+                Dim sStride = small.RowBytes
+                Dim sBuf(sStride * ah - 1) As Byte
+                Marshal.Copy(small.GetPixels(), sBuf, 0, sBuf.Length)
+
+                ' ZEILENWEISE PARALLEL: die Praefixsumme laeuft innerhalb EINER Zeile, die Zeilen
+                ' haengen nicht voneinander ab. Der Abbruch geht ueber ParallelOptions und nicht
+                ' ueber ThrowIfCancellationRequested im Rumpf - so kommt er als eine
+                ' OperationCanceledException heraus und nicht als gebuendelte Ausnahme.
+                Dim opts = New ParallelOptions With {.CancellationToken = cancel}
+                Parallel.For(0, ah, opts,
+                    Sub(y As Integer)
+                        Dim row = y * width1
+                        Dim sRow = y * sStride
+                        Dim pass0 As Single = 0, pass1 As Single = 0, pass2 As Single = 0
+                        For x = 0 To aw - 1
+                            Dim o = sRow + x * 4
+                            ' Bgra8888: Blau, Gruen, Rot, Alpha.
+                            pass0 += high(sBuf(o + 2)) : pass1 += high(sBuf(o + 1)) : pass2 += high(sBuf(o))
+                            sums(0)(row + x + 1) = pass0
+                            sums(1)(row + x + 1) = pass1
+                            sums(2)(row + x + 1) = pass2
+                        Next
+                    End Sub)
 
                 Using blurred = New SKBitmap(aw, ah, SKColorType.Bgra8888, SKAlphaType.Unpremul)
-                    ' Deckende Punkte direkt in den Speicher: SetPixel trug 72 % der Rechenzeit.
-                    Dim writer = New ImageProcessor.PixelWriter(blurred)
+                    ' ERST IN EINEN ROHPUFFER, danach EINMAL in die Bitmap. Der PixelWriter
+                    ' schrieb schon direkt in den Speicher, aber je Punkt einen Aufruf; ein eigener
+                    ' Puffer macht die Schleife ausserdem teilbar, weil jede Zeile nur ihren
+                    ' Abschnitt anfasst.
+                    Dim bStride = blurred.RowBytes
+                    Dim bBuf(bStride * ah - 1) As Byte
                     Dim divisor = CSng(1.0 / count)
-                    For y = 0 To ah - 1
-                        If y Mod 8 = 0 Then cancel.ThrowIfCancellationRequested()
+                    ' ZEILENWEISE PARALLEL. Das ist die teuerste Schleife der ganzen Stufe: je
+                    ' Bildpunkt laeuft sie ueber alle Zeilen der Blende. Gemessen kostete die
+                    ' Tiefenunschaerfe damit rund eine Sekunde in Vorschaugroesse und fuenf beim
+                    ' Export.
+                    Parallel.For(0, ah, opts,
+                        Sub(y As Integer)
+                        Dim bRow = y * bStride
                         For x = 0 To aw - 1
                             Dim s0 As Single = 0, s1 As Single = 0, s2 As Single = 0
                             For row = 0 To r * 2
@@ -382,12 +408,15 @@ Namespace Services
                                     s2 += (sums(2)(basis + aw) - sums(2)(basis + aw - 1)) * rightExtra
                                 End If
                             Next
-                            writer.SetPixel(x, y, New SKColor(
-                                BackFromLight(s0 * divisor, exponentDown),
-                                BackFromLight(s1 * divisor, exponentDown),
-                                BackFromLight(s2 * divisor, exponentDown), 255))
+                            ' Bgra8888: Blau, Gruen, Rot, Alpha.
+                            Dim o = bRow + x * 4
+                            bBuf(o) = BackFromLight(s2 * divisor, exponentDown)
+                            bBuf(o + 1) = BackFromLight(s1 * divisor, exponentDown)
+                            bBuf(o + 2) = BackFromLight(s0 * divisor, exponentDown)
+                            bBuf(o + 3) = 255
                         Next
-                    Next
+                        End Sub)
+                    Marshal.Copy(bBuf, 0, blurred.GetPixels(), bBuf.Length)
 
                     Dim back = If(scale < 1.0,
                                      New SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.Linear),
