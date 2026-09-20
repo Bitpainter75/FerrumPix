@@ -138,7 +138,9 @@ Namespace Views
             If e.PropertyName = NameOf(MainWindowViewModel.Title) Then
                 Return
             End If
-            If e.PropertyName = NameOf(MainWindowViewModel.IsFullscreen) Then
+            If e.PropertyName = NameOf(MainWindowViewModel.WindowButtonsOnLeft) Then
+                ApplyWindowButtonsSide()
+            ElseIf e.PropertyName = NameOf(MainWindowViewModel.IsFullscreen) Then
                 ApplyFullscreenState()
             ElseIf e.PropertyName = NameOf(MainWindowViewModel.IsDialogOpen) Then
                 Dim vm = TryCast(sender, MainWindowViewModel)
@@ -511,6 +513,59 @@ Namespace Views
             Dim titleBar = Me.FindControl(Of Grid)("TitleBar")
             If titleBar IsNot Nothing Then
                 AddHandler titleBar.PointerPressed, AddressOf TitleBarPointerPressed
+            End If
+
+            ApplyWindowButtonsSide()
+        End Sub
+
+        ''' <summary>Setzt die Fensterknoepfe auf die eingestellte Seite - rechts wie ausgeliefert
+        ''' oder links, wenn die Einstellung oder der Arbeitsplatz es so will (Nutzerwunsch
+        ''' 2026-09-20; siehe WindowButtonSideService).
+        '''
+        ''' Drei Dinge wechseln gemeinsam, sonst stimmt das Bild nicht:
+        ''' die AUSRICHTUNG des Knopfblocks samt seinem Rand zur Fensterkante, die REIHENFOLGE der
+        ''' Knoepfe (links steht Schliessen aussen, wie es auf macOS und bei einem links
+        ''' eingerichteten Linux-Arbeitsplatz ueblich ist) und das LOGO, das auf die frei gewordene
+        ''' Seite rueckt. Genau derselbe Handgriff wie fuer den nativen Rahmen auf macOS.
+        '''
+        ''' Nichts zu tun auf macOS: dort zeichnet das Betriebssystem die Knoepfe, unsere sind
+        ''' ausgeblendet.</summary>
+        Private Sub ApplyWindowButtonsSide()
+            If _usesNativeMacWindowChrome Then Return
+
+            Dim host = Me.FindControl(Of Border)("CustomWindowControlsHost")
+            Dim panel = Me.FindControl(Of StackPanel)("CustomWindowControls")
+            Dim logo = Me.FindControl(Of StackPanel)("WindowLogoPanel")
+            If host Is Nothing OrElse panel Is Nothing Then Return
+
+            Dim onLeft = TryCast(DataContext, MainWindowViewModel)?.WindowButtonsOnLeft
+            Dim left = onLeft.GetValueOrDefault(
+                WindowButtonSideService.IsLeft(AppSettingsService.Load().WindowButtonsSide))
+
+            host.HorizontalAlignment = If(left, Avalonia.Layout.HorizontalAlignment.Left,
+                                                Avalonia.Layout.HorizontalAlignment.Right)
+            ' Derselbe Abstand zur Fensterkante, nur gespiegelt. Die 4 oben halten die 24 hohen
+            ' Knoepfe in der Mitte der 32 hohen Leiste - siehe TopWindowDragArea.
+            host.Margin = If(left, New Thickness(8, 4, 0, 0), New Thickness(0, 4, 8, 0))
+
+            ' Die Knoepfe neu einhaengen statt sie zu tauschen: der Block ist drei Kinder gross,
+            ' und eine Reihenfolge zu beschreiben ist weniger fehleranfaellig, als sie zu sortieren.
+            Dim order = If(left, {"CloseButton", "MinimizeButton", "MaximizeButton"},
+                                 {"MinimizeButton", "MaximizeButton", "CloseButton"})
+            Dim buttons = order.Select(Function(n) Me.FindControl(Of Button)(n)).Where(Function(b) b IsNot Nothing).ToList()
+            If buttons.Count = panel.Children.Count Then
+                panel.Children.Clear()
+                For Each b In buttons
+                    panel.Children.Add(b)
+                Next
+            End If
+
+            ' Das Logo weicht den Knoepfen aus. Links stehende Knoepfe schoeben es sonst vor sich her.
+            If logo IsNot Nothing Then
+                Grid.SetColumn(logo, If(left, 2, 0))
+                logo.HorizontalAlignment = If(left, Avalonia.Layout.HorizontalAlignment.Right,
+                                                    Avalonia.Layout.HorizontalAlignment.Left)
+                logo.Margin = If(left, New Thickness(0, 0, 16, 0), New Thickness(16, 0, 0, 0))
             End If
         End Sub
 

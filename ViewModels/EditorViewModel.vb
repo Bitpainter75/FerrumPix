@@ -543,6 +543,9 @@ Namespace ViewModels
         Private _selectionTolerance As Double = 15
         ' Weiche Kante der Auswahl in Bildpixeln (0 = harte Kante). Die MASKE bleibt hart gespeichert.
         Private _selectionFeather As Double = 0
+        ' Deckkraft des Maskenpinsels in Prozent. Eine Einstellung des WERKZEUGS wie die Groesse,
+        ' kein Wert an der Maske - deshalb hier und nicht an ImageMask.
+        Private _maskBrushOpacity As Double = 100
         Private _selectionCombineMode As String = "New"
         Private _selectionMask As SKBitmap = Nothing
         Private _selectionMaskRect As SKRectI = SKRectI.Empty

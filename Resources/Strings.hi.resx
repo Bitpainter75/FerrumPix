@@ -8567,4 +8567,16 @@
   <data name="JPEG_Dateien_werden_ohne_jeden_Verlust_umgepackt_9bd11bec" xml:space="preserve">
     <value>JPEG फ़ाइलें फिर से एन्कोड करने के बजाय बिना किसी नुकसान के दोबारा पैक की जाती हैं: लगभग पाँचवाँ हिस्सा छोटी, और मूल फ़ाइल बाइट दर बाइट वापस पाई जा सकती है। ऊपर की गुणवत्ता तब केवल बाकी चित्रों पर लागू होती है। यदि कॉपीराइट सूचना दी गई है या साथ ले जाएँ में EXIF का चयन हटाया गया है, तो उन्हें फिर से एन्कोड किया जाता है।</value>
   </data>
+  <data name="Fensterkn_pfe_ad315b51" xml:space="preserve">
+    <value>विंडो बटन</value>
+  </data>
+  <data name="Auf_welcher_Seite_der_Titelleiste_Schlie_en_Maxi_6e9100cf" xml:space="preserve">
+    <value>शीर्षक पट्टी के किस ओर बंद करें, अधिकतम करें और न्यूनतम करें होते हैं।</value>
+  </data>
+  <data name="Die_Systemvorgabe_bernimmt_die_Anordnung_der_Arb_9eb7da33" xml:space="preserve">
+    <value>सिस्टम डिफ़ॉल्ट डेस्कटॉप की व्यवस्था का पालन करता है।</value>
+  </data>
+  <data name="Wie_stark_ein_einzelner_Strich_deckt_Bei_100_mal_5908eef9" xml:space="preserve">
+    <value>एक स्ट्रोक कितना ढकता है। 100 पर वह मास्क पूरा भरता है, 40 पर केवल 40 प्रतिशत; घटाते समय उतना ही कम हटाता है</value>
+  </data>
 </root>

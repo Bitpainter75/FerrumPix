@@ -85,7 +85,8 @@
             <!-- Objektauswahl: dieselben Regler wie im Maskenpanel. Sie zeichnen aus den GEMERKTEN
                  Klicks nach, ohne das Modell erneut zu fragen - ohne sie hier waere die Auswahl
                  nach dem Klick nicht mehr nachzujustieren. -->
-            <!-- Pinsel: nur die Groesse. Weiche Kante und Dichte gehoeren der Maske als Ganzes und
+            <!-- Pinsel: Groesse und Deckkraft. Beides gehoert dem WERKZEUG und wirkt auf den
+                 naechsten Strich. Weiche Kante und Dichte gehoeren dagegen der Maske als Ganzes und
                  stehen im Maskenwerkzeug unter den Maskeneigenschaften. -->
             <StackPanel Spacing="8" IsVisible="{Binding IsBrushSelectionMode}">
                 <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
@@ -97,6 +98,18 @@
                     <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
                                              Value="{Binding BrushSize, Mode=TwoWay}"
                                              Minimum="1" Maximum="500" Increment="1"
+                                             FormatString="F0" />
+                </Grid>
+                <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
+                    <TextBlock Text="Deckkraft" Foreground="{DynamicResource FP.Text.Secondary}"
+                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}"
+                               ToolTip.Tip="Wie stark ein einzelner Strich deckt. Bei 100 malt er die Maske voll, bei 40 nur zu 40 Prozent; beim Abziehen nimmt er entsprechend wenig weg" />
+                    <icons:RoundSlider Grid.Column="1" Minimum="1" Maximum="100"
+                                       DefaultValue="100"
+                                       Value="{Binding MaskBrushOpacity}" Margin="0,0" />
+                    <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                             Value="{Binding MaskBrushOpacity, Mode=TwoWay}"
+                                             Minimum="1" Maximum="100" Increment="1"
                                              FormatString="F0" />
                 </Grid>
             </StackPanel>

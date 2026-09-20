@@ -390,6 +390,40 @@ Namespace ViewModels
             End Set
         End Property
 
+        ''' <summary>Deckkraft des Maskenpinsels in Prozent (1..100). Wie stark EIN Strich deckt: bei 100
+        ''' malt er die Maske voll, bei 40 nur zu 40 Prozent. So lassen sich Striche unterschiedlicher
+        ''' Stärke übereinanderlegen; im Abziehen-Modus nimmt ein schwacher Strich entsprechend wenig weg.
+        '''
+        ''' Eine Einstellung des WERKZEUGS, nicht der Maske - sie wird deshalb nicht in der Bearbeitung
+        ''' gespeichert und landet auch nicht im Rückgängig-Verlauf. Getrennt vom Zeichnen-Pinsel
+        ''' (<see cref="BrushOpacity"/>): dessen Deckkraft wird je Malwerkzeug gemerkt und auf eine
+        ''' markierte Mal- oder Radierebene zurückgeschrieben; ein Maskenstrich hat dort nichts zu suchen.
+        '''
+        ''' Untergrenze 1 statt 0: ein Pinsel, der nichts tut, sieht aus wie ein kaputter Pinsel.</summary>
+        Public Property MaskBrushOpacity As Double
+            Get
+                Return _maskBrushOpacity
+            End Get
+            Set(value As Double)
+                Me.RaiseAndSetIfChanged(_maskBrushOpacity, Math.Max(1, Math.Min(100, value)))
+            End Set
+        End Property
+
+        ''' <summary>Die Deckkraft als Alphawert für den Stempel und die rote Live-Vorschau. EINE Stelle,
+        ''' damit der Strich im Bild und der Strich unter dem Zeiger nicht auseinanderlaufen.</summary>
+        Private Function MaskBrushStrokeAlpha() As Byte
+            Return CByte(Math.Max(1, Math.Min(255, CInt(Math.Round(_maskBrushOpacity * 255.0 / 100.0)))))
+        End Function
+
+        ''' <summary>Dieselbe Deckkraft für den laufenden Strich im roten Overlay. Das Rot dort ist schon
+        ''' halbdurchsichtig (volle Deckung = 128), damit das Bild darunter sichtbar bleibt; die Deckkraft
+        ''' des Pinsels geht also ANTEILIG auf diesen Wert und nicht auf 255. Sonst sähe ein schwacher
+        ''' Strich in der Vorschau noch kräftiger aus als eine voll gedeckte Maske.</summary>
+        Private Function MaskBrushStrokeOverlayColor(baseColor As SKColor) As SKColor
+            Dim a = CInt(Math.Round(baseColor.Alpha * Math.Max(1.0, Math.Min(100.0, _maskBrushOpacity)) / 100.0))
+            Return baseColor.WithAlpha(CByte(Math.Max(1, Math.Min(255, a))))
+        End Function
+
         ''' <summary>Weiche Kante der Auswahl in Bildpixeln. Wirkt auf Anpassungen innerhalb der Auswahl,
         ''' auf „Kopieren" und auf „Auswahl füllen" - die gespeicherte Maske bleibt pixelgenau, weich wird
         ''' erst das Ergebnis. Darum lässt sich der Wert jederzeit nachträglich ändern.</summary>
@@ -796,7 +830,7 @@ Namespace ViewModels
                         Next
                         Dim r = CSng(Math.Max(0.5, MaskBrushRadiusDisplay() * ovScale))
                         Dim soft = CSng(MaskBrushStrokeSoftness() * ovScale)
-                        ImageProcessor.DrawSoftMaskStroke(canvas, scaled, r, soft, redColor, eraseMode)
+                        ImageProcessor.DrawSoftMaskStroke(canvas, scaled, r, soft, MaskBrushStrokeOverlayColor(redColor), eraseMode)
                     End If
                 End Using
                 Return ImageProcessor.ToAvaloniaBitmap(overlay)
@@ -1034,7 +1068,7 @@ Namespace ViewModels
             ' entstanden ist. Der Unterschied ist jetzt eine einzige Verzweigung: WOHIN der Strich
             ' geht. Alles davor und danach ist gemeinsam.
             PushUndo(LocalizationService.T("Maske gemalt"))
-            Using stamp = ImageProcessor.BuildSoftBrushStampMask(pts, radius, softness, rectPx)
+            Using stamp = ImageProcessor.BuildSoftBrushStampMask(pts, radius, softness, rectPx, MaskBrushStrokeAlpha())
                 If stamp IsNot Nothing Then
                     Dim gradient = SelectedGradientMask
                     ' MEHRTEILIGE Maske: der Strich geht DIREKT in den ANGEFASSTEN Bestandteil (die
@@ -2434,7 +2468,7 @@ Namespace ViewModels
                         ImageProcessor.DrawSoftMaskStroke(canvas, scaled,
                                                           CSng(Math.Max(0.5, MaskBrushRadiusDisplay() * ovScale)),
                                                           CSng(Math.Max(0.0, _selectionFeather) * ovScale),
-                                                          New SKColor(255, 0, 0, 128), eraseMode)
+                                                          MaskBrushStrokeOverlayColor(New SKColor(255, 0, 0, 128)), eraseMode)
                     End Using
                 End If
                 Return ImageProcessor.ToAvaloniaBitmap(overlay)

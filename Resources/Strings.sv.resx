@@ -8563,4 +8563,16 @@
   <data name="JPEG_Dateien_werden_ohne_jeden_Verlust_umgepackt_9bd11bec" xml:space="preserve">
     <value>JPEG-filer packas om helt utan förlust i stället för att kodas om: ungefär en femtedel mindre, och originalet kan återställas byte för byte. Kvaliteten ovan gäller då bara för övriga bilder. Är ett upphovsrättsmeddelande angivet eller EXIF avmarkerat under Överta kodas de om.</value>
   </data>
+  <data name="Fensterkn_pfe_ad315b51" xml:space="preserve">
+    <value>Fönsterknappar</value>
+  </data>
+  <data name="Auf_welcher_Seite_der_Titelleiste_Schlie_en_Maxi_6e9100cf" xml:space="preserve">
+    <value>På vilken sida av namnlisten stäng, maximera och minimera sitter.</value>
+  </data>
+  <data name="Die_Systemvorgabe_bernimmt_die_Anordnung_der_Arb_9eb7da33" xml:space="preserve">
+    <value>Systemstandarden följer skrivbordets placering.</value>
+  </data>
+  <data name="Wie_stark_ein_einzelner_Strich_deckt_Bei_100_mal_5908eef9" xml:space="preserve">
+    <value>Hur mycket ett enda drag täcker. Vid 100 målas masken helt, vid 40 bara till 40 procent; vid subtraktion tas lika lite bort</value>
+  </data>
 </root>

@@ -8563,4 +8563,16 @@
   <data name="JPEG_Dateien_werden_ohne_jeden_Verlust_umgepackt_9bd11bec" xml:space="preserve">
     <value>JPEG-filer pakkes om helt uten tap i stedet for å kodes på nytt: omtrent en femtedel mindre, og originalen kan gjenopprettes byte for byte. Kvaliteten over gjelder da bare for de andre bildene. Er det satt en opphavsrettsmerknad, eller er EXIF valgt bort under Overta, kodes de på nytt.</value>
   </data>
+  <data name="Fensterkn_pfe_ad315b51" xml:space="preserve">
+    <value>Vindusknapper</value>
+  </data>
+  <data name="Auf_welcher_Seite_der_Titelleiste_Schlie_en_Maxi_6e9100cf" xml:space="preserve">
+    <value>Hvilken side av tittellinjen lukk, maksimer og minimer sitter på.</value>
+  </data>
+  <data name="Die_Systemvorgabe_bernimmt_die_Anordnung_der_Arb_9eb7da33" xml:space="preserve">
+    <value>Systemstandarden følger skrivebordets plassering.</value>
+  </data>
+  <data name="Wie_stark_ein_einzelner_Strich_deckt_Bei_100_mal_5908eef9" xml:space="preserve">
+    <value>Hvor mye ett enkelt strøk dekker. Ved 100 males masken helt, ved 40 bare til 40 prosent; ved fratrekk fjernes tilsvarende lite</value>
+  </data>
 </root>

@@ -8567,4 +8567,16 @@
   <data name="JPEG_Dateien_werden_ohne_jeden_Verlust_umgepackt_9bd11bec" xml:space="preserve">
     <value>JPEG 파일을 다시 인코딩하지 않고 손실 없이 다시 담습니다. 크기는 약 5분의 1 줄어들고 원본을 바이트 단위로 되돌릴 수 있습니다. 위의 품질은 나머지 이미지에만 적용됩니다. 저작권 표시를 설정했거나 함께 넘기기에서 EXIF 선택을 해제하면 다시 인코딩합니다.</value>
   </data>
+  <data name="Fensterkn_pfe_ad315b51" xml:space="preserve">
+    <value>창 버튼</value>
+  </data>
+  <data name="Auf_welcher_Seite_der_Titelleiste_Schlie_en_Maxi_6e9100cf" xml:space="preserve">
+    <value>제목 표시줄의 어느 쪽에 닫기, 최대화, 최소화가 있는지.</value>
+  </data>
+  <data name="Die_Systemvorgabe_bernimmt_die_Anordnung_der_Arb_9eb7da33" xml:space="preserve">
+    <value>시스템 기본값은 데스크톱의 배치를 따릅니다.</value>
+  </data>
+  <data name="Wie_stark_ein_einzelner_Strich_deckt_Bei_100_mal_5908eef9" xml:space="preserve">
+    <value>한 번의 획이 얼마나 덮는지. 100이면 마스크를 가득 칠하고 40이면 40퍼센트만 칠합니다. 뺄 때도 그만큼만 지웁니다</value>
+  </data>
 </root>

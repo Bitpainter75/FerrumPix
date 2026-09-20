@@ -1,4 +1,4 @@
-Imports System
+﻿Imports System
 Imports System.Buffers
 Imports System.Collections.Generic
 Imports System.ComponentModel
@@ -3977,9 +3977,15 @@ RasterTeil:
         ''' <summary>Weicher Pinselstrich als Alpha8-Maske in der Größe von <paramref name="rect"/>
         ''' (Display-Bildraum). Die Strichpunkte liegen im Display-Bildraum; sie werden um rect.Left/Top
         ''' in die Stempel-lokalen Koordinaten verschoben. Für den Commit eines Strichs, danach über
-        ''' ApplySelectionCandidate mit dem aktuellen Kombiniermodus verrechnet.</summary>
+        ''' ApplySelectionCandidate mit dem aktuellen Kombiniermodus verrechnet.
+        '''
+        ''' <paramref name="alpha"/> ist die Deckkraft des Strichs: 255 deckt voll, ein kleinerer Wert
+        ''' gibt einen schwächeren Strich. Er begrenzt den HÖCHSTWERT des Stempels, er dämpft ihn nicht
+        ''' nachträglich - der ganze Strich wird EINMAL als ein Pfad gezeichnet, also wird eine Stelle,
+        ''' an der der Strich sich selbst überkreuzt, nicht dunkler als der Rest.</summary>
         Public Shared Function BuildSoftBrushStampMask(pts As IReadOnlyList(Of SKPoint), radius As Single,
-                                                       softnessPx As Single, rect As SKRectI) As SKBitmap
+                                                       softnessPx As Single, rect As SKRectI,
+                                                       Optional alpha As Byte = 255) As SKBitmap
             If pts Is Nothing OrElse pts.Count = 0 OrElse rect.Width <= 0 OrElse rect.Height <= 0 Then Return Nothing
             Dim local As New List(Of SKPoint)(pts.Count)
             For Each p In pts
@@ -3988,7 +3994,7 @@ RasterTeil:
             Using rgba = New SKBitmap(rect.Width, rect.Height, SKColorType.Bgra8888, SKAlphaType.Unpremul)
                 Using canvas = New SKCanvas(rgba)
                     canvas.Clear(SKColors.Transparent)
-                    DrawSoftMaskStroke(canvas, local, radius, softnessPx, SKColors.White)
+                    DrawSoftMaskStroke(canvas, local, radius, softnessPx, New SKColor(255, 255, 255, alpha))
                 End Using
                 Return AlphaMaskFrom(rgba)
             End Using

@@ -1,3 +1,15 @@
+## Unreleased
+
+### What's new
+
+- **Opacity for the mask brush.** A stroke no longer has to cover fully: set the brush to 40 and it
+  paints the mask to 40 percent, and subtracting takes away just as little. The setting is the
+  coverage you get, so going over the same spot again does not deepen it - a stronger brush does.
+
+- **Window buttons on the left.** Close, maximize and minimize can now sit on the left of the title
+  bar. By default FerrumPix follows the arrangement of your desktop, and the settings let you pin
+  it to one side.
+
 ## FerrumPix 0.9.47
 
 ### What's new

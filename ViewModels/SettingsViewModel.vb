@@ -23,6 +23,7 @@ Namespace ViewModels
         Private ReadOnly _mainVm As MainWindowViewModel
         Private ReadOnly _appSettings As AppSettings
         Private _themeMode As String = "Dark"
+        Private _windowButtonsSide As String = WindowButtonSideService.SideSystem
         Private _accentColor As String = "#F08A1A"
         Private _accentStrength As Integer = 100
         Private _thumbnailQuality As Integer = 82
@@ -161,6 +162,7 @@ Namespace ViewModels
         Private _savedImmichWritePeopleTags As Boolean = False
 
         Private _savedThemeMode As String = "Dark"
+        Private _savedWindowButtonsSide As String = WindowButtonSideService.SideSystem
         Private _savedAccentColor As String = "#F08A1A"
         Private _savedAccentStrength As Integer = 100
         Private _savedViewerOpenFitToWindow As Boolean = True
@@ -245,6 +247,51 @@ Namespace ViewModels
                 _mainVm?.RefreshThemeBindings()
                 SaveAppearanceSettings()
             End Set
+        End Property
+
+        ''' <summary>Auf welcher Seite die Fensterknoepfe sitzen: rechts, links oder wie der
+        ''' Arbeitsplatz es vorgibt. Wirkt sofort - das Fenster setzt sie um, sobald der Wert
+        ''' gemeldet ist.</summary>
+        Public Property WindowButtonsSide As String
+            Get
+                Return _windowButtonsSide
+            End Get
+            Set(value As String)
+                value = AppSettingsService.NormalizeWindowButtonsSide(value)
+                If _windowButtonsSide = value Then Return
+                Me.RaiseAndSetIfChanged(_windowButtonsSide, value)
+                RaiseWindowButtonsSideProperties()
+                ' Erst schreiben, dann melden: das Fenster liest die Einstellung, nicht dieses
+                ' ViewModel - in der anderen Reihenfolge setzte es die alte Seite noch einmal.
+                SaveWindowButtonsSettings()
+                _mainVm?.RefreshWindowButtonsSide()
+            End Set
+        End Property
+
+        ''' <summary>Die Wahl hat nur dort einen Sinn, wo FerrumPix die Titelleiste selbst zeichnet.
+        ''' Auf macOS haengen die drei Knoepfe am nativen Rahmen und sitzen immer links.</summary>
+        Public ReadOnly Property IsWindowButtonsSideSelectable As Boolean
+            Get
+                Return Not OperatingSystem.IsMacOS()
+            End Get
+        End Property
+
+        Public ReadOnly Property IsWindowButtonsSystem As Boolean
+            Get
+                Return _windowButtonsSide = WindowButtonSideService.SideSystem
+            End Get
+        End Property
+
+        Public ReadOnly Property IsWindowButtonsLeft As Boolean
+            Get
+                Return _windowButtonsSide = WindowButtonSideService.SideLeft
+            End Get
+        End Property
+
+        Public ReadOnly Property IsWindowButtonsRight As Boolean
+            Get
+                Return _windowButtonsSide = WindowButtonSideService.SideRight
+            End Get
         End Property
 
         Public Property AccentColor As String
@@ -3059,6 +3106,7 @@ Namespace ViewModels
         Public ReadOnly Property ApplyCommand As ICommand
         Public ReadOnly Property CancelCommand As ICommand
         Public ReadOnly Property SetThemeModeCommand As ICommand
+        Public ReadOnly Property SetWindowButtonsSideCommand As ICommand
         Public ReadOnly Property SetAccentColorCommand As ICommand
         Public ReadOnly Property SetAccentStrengthCommand As ICommand
         Public ReadOnly Property SetStartupImageModeCommand As ICommand
@@ -3546,6 +3594,7 @@ Namespace ViewModels
             _aiTaggingMinimumConfidence = Math.Max(0, Math.Min(100, _appSettings.AiTaggingMinimumConfidence))
             _writeAiTagsToXmp = _appSettings.WriteAiTagsToXmp
             _themeMode = _appSettings.ThemeMode
+            _windowButtonsSide = AppSettingsService.NormalizeWindowButtonsSide(_appSettings.WindowButtonsSide)
             _accentColor = _appSettings.AccentColor
             _accentStrength = AppSettingsService.NormalizeAccentStrength(_appSettings.AccentStrength)
             _startupImageMode = _appSettings.StartupImageMode
@@ -3673,6 +3722,7 @@ Namespace ViewModels
                                                        _mainVm?.CloseSettings()
                                                    End Sub)
             SetThemeModeCommand = ReactiveCommand.Create(Of String)(Sub(m) ThemeMode = m)
+            SetWindowButtonsSideCommand = ReactiveCommand.Create(Of String)(Sub(m) WindowButtonsSide = m)
             SetAccentColorCommand = ReactiveCommand.Create(Of String)(Sub(c) AccentColor = c)
             ' Der Parameter kommt als Zeichenkette aus dem AXAML, wie bei den uebrigen
             ' Auswahl-Befehlen; was sich nicht lesen laesst, laesst den Stand, wie er ist.
@@ -3892,6 +3942,7 @@ Namespace ViewModels
             _savedFaceMinimumSizePercent = _faceMinimumSizePercent
             _savedPhotoMapEnabled = _photoMapEnabled
             _savedThemeMode = _themeMode
+            _savedWindowButtonsSide = _windowButtonsSide
             _savedAccentColor = _accentColor
             _savedAccentStrength = _accentStrength
             _savedViewerOpenFitToWindow = _viewerOpenFitToWindow
@@ -3987,6 +4038,9 @@ Namespace ViewModels
             FaceMinimumSizePercent = _savedFaceMinimumSizePercent
             PhotoMapEnabled = _savedPhotoMapEnabled
             ThemeMode = _savedThemeMode
+            ' Die Seite der Fensterknoepfe wirkt sofort beim Antippen, genau wie das Thema - ein
+            ' Abbrechen muss sie deshalb ebenso zuruecknehmen.
+            WindowButtonsSide = _savedWindowButtonsSide
             AccentColor = _savedAccentColor
             ' Auch die Staerke zurueck: sie wirkt sofort beim Antippen, ein Abbrechen muss sie
             ' genauso zuruecknehmen wie die Farbe selbst.
@@ -4116,6 +4170,7 @@ Namespace ViewModels
             ' Bedienung ohne Vorgabe, die jemand gewaehlt haette.
             EditorDenoiseStrength = EditorViewModel.DefaultDenoiseStrength
             ThemeMode = "Dark"
+            WindowButtonsSide = WindowButtonSideService.SideSystem
             AccentColor = "#F08A1A"
             ViewerOpenFitToWindow = True
             ViewerFitBehavior = "Always"
@@ -4207,6 +4262,10 @@ Namespace ViewModels
                                           s.AccentStrength = _accentStrength
                                           s.FontSizeOffset = _fontSizeOffset
                                       End Sub)
+        End Sub
+
+        Private Sub SaveWindowButtonsSettings()
+            AppSettingsService.Update(Sub(s) s.WindowButtonsSide = _windowButtonsSide)
         End Sub
 
         Private Sub SaveLanguageSettings()
@@ -4774,6 +4833,12 @@ Namespace ViewModels
 
         Private Sub RaiseGalleryTimelineModeProperties()
             Me.RaisePropertyChanged(NameOf(GalleryTimelineEnabled))
+        End Sub
+
+        Private Sub RaiseWindowButtonsSideProperties()
+            Me.RaisePropertyChanged(NameOf(IsWindowButtonsSystem))
+            Me.RaisePropertyChanged(NameOf(IsWindowButtonsLeft))
+            Me.RaisePropertyChanged(NameOf(IsWindowButtonsRight))
         End Sub
 
         Private Sub RaiseThemeModeProperties()

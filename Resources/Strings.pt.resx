@@ -8522,4 +8522,16 @@
   <data name="JPEG_Dateien_werden_ohne_jeden_Verlust_umgepackt_9bd11bec" xml:space="preserve">
     <value>Os ficheiros JPEG são reembalados sem qualquer perda em vez de serem recodificados: cerca de um quinto mais pequenos, e o original pode ser recuperado byte a byte. A qualidade acima aplica-se então apenas às restantes imagens. Se estiver definido um aviso de direitos de autor ou o EXIF estiver desmarcado em Transferir, são recodificados.</value>
   </data>
+  <data name="Fensterkn_pfe_ad315b51" xml:space="preserve">
+    <value>Botões da janela</value>
+  </data>
+  <data name="Auf_welcher_Seite_der_Titelleiste_Schlie_en_Maxi_6e9100cf" xml:space="preserve">
+    <value>Em que lado da barra de título ficam fechar, maximizar e minimizar.</value>
+  </data>
+  <data name="Die_Systemvorgabe_bernimmt_die_Anordnung_der_Arb_9eb7da33" xml:space="preserve">
+    <value>A predefinição do sistema adota a disposição do ambiente de trabalho.</value>
+  </data>
+  <data name="Wie_stark_ein_einzelner_Strich_deckt_Bei_100_mal_5908eef9" xml:space="preserve">
+    <value>Quanto cobre uma única pincelada. Com 100 pinta a máscara por completo, com 40 apenas a 40 por cento; ao subtrair remove igualmente pouco</value>
+  </data>
 </root>

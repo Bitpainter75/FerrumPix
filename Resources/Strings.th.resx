@@ -8567,4 +8567,16 @@
   <data name="JPEG_Dateien_werden_ohne_jeden_Verlust_umgepackt_9bd11bec" xml:space="preserve">
     <value>ไฟล์ JPEG จะถูกแพ็กใหม่โดยไม่สูญเสียใด ๆ แทนการเข้ารหัสใหม่ ขนาดเล็กลงราวหนึ่งในห้า และกู้ไฟล์ต้นฉบับกลับได้ทุกไบต์ คุณภาพด้านบนจะใช้กับรูปภาพอื่นเท่านั้น หากตั้งประกาศลิขสิทธิ์ไว้หรือไม่ได้เลือก EXIF ในส่วนนำติดไปด้วย จะเข้ารหัสใหม่</value>
   </data>
+  <data name="Fensterkn_pfe_ad315b51" xml:space="preserve">
+    <value>ปุ่มหน้าต่าง</value>
+  </data>
+  <data name="Auf_welcher_Seite_der_Titelleiste_Schlie_en_Maxi_6e9100cf" xml:space="preserve">
+    <value>ปุ่มปิด ขยายใหญ่สุด และย่อ อยู่ด้านใดของแถบชื่อเรื่อง</value>
+  </data>
+  <data name="Die_Systemvorgabe_bernimmt_die_Anordnung_der_Arb_9eb7da33" xml:space="preserve">
+    <value>ค่าเริ่มต้นของระบบจะใช้การจัดวางของเดสก์ท็อป</value>
+  </data>
+  <data name="Wie_stark_ein_einzelner_Strich_deckt_Bei_100_mal_5908eef9" xml:space="preserve">
+    <value>หนึ่งเส้นครอบคลุมมากเพียงใด ที่ 100 จะทาหน้ากากเต็ม ที่ 40 เพียง 40 เปอร์เซ็นต์ เมื่อลบออกก็จะลบไปเท่านั้น</value>
+  </data>
 </root>

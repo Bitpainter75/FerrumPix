@@ -403,6 +403,23 @@
                                              Minimum="1" Maximum="500" Increment="1"
                                              FormatString="F0" />
                 </Grid>
+                <!-- Deckkraft gehoert dem PINSEL, nicht der Maske: sie steht deshalb hier neben der
+                     Groesse und nicht unter den Maskeneigenschaften bei Dichte und weicher Kante.
+                     Die Dichte daempft die FERTIGE Maske ueberall gleich, die Deckkraft bestimmt,
+                     wieviel EIN Strich auftraegt - mehrere Striche unterschiedlicher Staerke
+                     bleiben danach unterscheidbar. -->
+                <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
+                    <TextBlock Text="Deckkraft" Foreground="{DynamicResource FP.Text.Secondary}"
+                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}"
+                               ToolTip.Tip="Wie stark ein einzelner Strich deckt. Bei 100 malt er die Maske voll, bei 40 nur zu 40 Prozent; beim Abziehen nimmt er entsprechend wenig weg" />
+                    <icons:RoundSlider Grid.Column="1" Minimum="1" Maximum="100"
+                                       DefaultValue="100"
+                                       Value="{Binding MaskBrushOpacity}" Margin="0,0" />
+                    <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                             Value="{Binding MaskBrushOpacity, Mode=TwoWay}"
+                                             Minimum="1" Maximum="100" Increment="1"
+                                             FormatString="F0" />
+                </Grid>
                 <Button Classes="ghost" HorizontalAlignment="Stretch" Padding="10,6"
                         IsEnabled="{Binding HasActiveSelection}"
                         Command="{Binding CreateAdjustmentLayerFromSelectionCommand}"

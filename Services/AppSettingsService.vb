@@ -283,6 +283,11 @@ Namespace Services
         Public Property ThemeMode As String = "Dark"
         Public Property AccentColor As String = "#F08A1A"
 
+        ''' <summary>Auf welcher Seite die Fensterknoepfe sitzen: "Right", "Left" oder "System".
+        ''' Ab Werk "System" - die Anwendung zeichnet ihre Titelleiste selbst und soll sich dabei so
+        ''' verhalten wie der uebrige Arbeitsplatz (siehe WindowButtonSideService).</summary>
+        Public Property WindowButtonsSide As String = WindowButtonSideService.SideSystem
+
         ''' <summary>Wie kräftig die Akzentfarbe wirkt, in Prozent: 100 ist die Farbe selbst, 0 ein
         ''' Grau DERSELBEN HELLIGKEIT. Für alle, denen die Oberfläche zu bunt ist, ohne dass sie auf
         ''' die Hervorhebung als solche verzichten müssen - bei 0 bleibt der Kontrast erhalten, nur
@@ -865,6 +870,7 @@ Namespace Services
                 settings.GalleryFilterFileType = NormalizeGalleryFilterFileType(settings.GalleryFilterFileType)
                 settings.ThemeMode = NormalizeThemeMode(settings.ThemeMode)
                 settings.AccentColor = NormalizeAccentColor(settings.AccentColor)
+                settings.WindowButtonsSide = NormalizeWindowButtonsSide(settings.WindowButtonsSide)
                 settings.StartupImageMode = NormalizeStartupImageMode(settings.StartupImageMode)
                 settings.GalleryOpenTarget = NormalizeGalleryOpenTarget(settings.GalleryOpenTarget)
                 settings.StartupNoImageMode = NormalizeStartupNoImageMode(settings.StartupNoImageMode)
@@ -1106,6 +1112,7 @@ Namespace Services
                 settings.GalleryFilterFileType = NormalizeGalleryFilterFileType(settings.GalleryFilterFileType)
                 settings.ThemeMode = NormalizeThemeMode(settings.ThemeMode)
                 settings.AccentColor = NormalizeAccentColor(settings.AccentColor)
+                settings.WindowButtonsSide = NormalizeWindowButtonsSide(settings.WindowButtonsSide)
                 settings.StartupImageMode = NormalizeStartupImageMode(settings.StartupImageMode)
                 settings.GalleryOpenTarget = NormalizeGalleryOpenTarget(settings.GalleryOpenTarget)
                 settings.StartupNoImageMode = NormalizeStartupNoImageMode(settings.StartupNoImageMode)
@@ -1680,6 +1687,17 @@ Namespace Services
                     Return "FileModifiedAt"
                 Case Else
                     Return DefaultGallerySortMode
+            End Select
+        End Function
+
+        ''' <summary>Die Seite der Fensterknoepfe auf einen der drei gueltigen Werte. Alles
+        ''' Unbekannte wird zu "System": das ist die Wahl, die sich dem Arbeitsplatz anpasst, und
+        ''' damit die harmloseste Antwort auf eine von Hand verstellte Einstellungsdatei.</summary>
+        Public Shared Function NormalizeWindowButtonsSide(value As String) As String
+            Select Case If(value, "").Trim()
+                Case WindowButtonSideService.SideRight : Return WindowButtonSideService.SideRight
+                Case WindowButtonSideService.SideLeft : Return WindowButtonSideService.SideLeft
+                Case Else : Return WindowButtonSideService.SideSystem
             End Select
         End Function
 

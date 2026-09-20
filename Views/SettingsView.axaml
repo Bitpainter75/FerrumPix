@@ -477,6 +477,41 @@
                             </Button>
                         </Grid>
 
+                        <!-- FENSTERKNÖPFE. Die Anwendung zeichnet ihre Titelleiste selbst und erbt
+                             damit nichts von der Arbeitsfläche - wer seine Knöpfe links hat, stand
+                             hier ohne (Nutzerwunsch). Ab Werk „Systemvorgabe": die Anwendung fragt
+                             den Desktop und richtet sich danach. -->
+                        <StackPanel Spacing="12" Margin="0,4,0,0"
+                                    IsVisible="{Binding IsWindowButtonsSideSelectable}">
+                            <StackPanel Spacing="2">
+                                <TextBlock Text="Fensterknöpfe" FontSize="{DynamicResource FP.Font.Title}" FontWeight="SemiBold"/>
+                                <TextBlock Text="Auf welcher Seite der Titelleiste Schließen, Maximieren und Minimieren sitzen." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <Grid ColumnDefinitions="*,Auto">
+                                <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                    <TextBlock Text="Seite" FontSize="{DynamicResource FP.Font.Body}"/>
+                                    <TextBlock Text="Die Systemvorgabe übernimmt die Anordnung der Arbeitsfläche." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                                    <Button Classes="ghost"
+                                            Classes.active="{Binding IsWindowButtonsSystem}"
+                                            Padding="10,6"
+                                            Command="{Binding SetWindowButtonsSideCommand}"
+                                            CommandParameter="System">Systemvorgabe</Button>
+                                    <Button Classes="ghost"
+                                            Classes.active="{Binding IsWindowButtonsLeft}"
+                                            Padding="10,6"
+                                            Command="{Binding SetWindowButtonsSideCommand}"
+                                            CommandParameter="Left">Links</Button>
+                                    <Button Classes="ghost"
+                                            Classes.active="{Binding IsWindowButtonsRight}"
+                                            Padding="10,6"
+                                            Command="{Binding SetWindowButtonsSideCommand}"
+                                            CommandParameter="Right">Rechts</Button>
+                                </StackPanel>
+                            </Grid>
+                        </StackPanel>
+
                         <StackPanel Spacing="12" Margin="0,4,0,0">
                         <StackPanel Spacing="2">
                             <TextBlock Text="Akzentfarbe" FontSize="{DynamicResource FP.Font.Title}" FontWeight="SemiBold"/>

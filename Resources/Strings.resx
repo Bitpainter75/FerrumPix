@@ -8538,4 +8538,16 @@
   <data name="JPEG_Dateien_werden_ohne_jeden_Verlust_umgepackt_9bd11bec" xml:space="preserve">
     <value>JPEG files are repacked without any loss instead of being re-encoded: about a fifth smaller, and the original can be restored byte for byte. The quality above then only applies to the other pictures. If a copyright notice is set or EXIF is deselected under Carry over, they are re-encoded.</value>
   </data>
+  <data name="Fensterkn_pfe_ad315b51" xml:space="preserve">
+    <value>Window buttons</value>
+  </data>
+  <data name="Auf_welcher_Seite_der_Titelleiste_Schlie_en_Maxi_6e9100cf" xml:space="preserve">
+    <value>Which side of the title bar holds close, maximize and minimize.</value>
+  </data>
+  <data name="Die_Systemvorgabe_bernimmt_die_Anordnung_der_Arb_9eb7da33" xml:space="preserve">
+    <value>The system default follows the arrangement of your desktop.</value>
+  </data>
+  <data name="Wie_stark_ein_einzelner_Strich_deckt_Bei_100_mal_5908eef9" xml:space="preserve">
+    <value>How much a single stroke covers. At 100 it paints the mask fully, at 40 only to 40 percent; when subtracting it takes away just as little</value>
+  </data>
 </root>

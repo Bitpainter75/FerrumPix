@@ -83,7 +83,7 @@ Two of them can find their own setting. *Level to the horizon* looks for the str
 
 **Details and effects.** Clarity, structure, dust and scratches, sharpening, softening and four kinds of noise reduction. Sharpening can reverse the blur instead of drawing halos along the edges, and noise reduction smooths each part of the picture by how noisy it really is. *Depth blur* takes its strength from how far away each point is, so lights in the background open into bright discs. Vignette, grain and frame sit in a separate *Effects* tool, where the grain can also be coloured: a slider lets the three colour channels drift apart, from plain grey grain to the coloured speckles of a fast film.
 
-**Masks and selections.** Rectangle, ellipse, lasso and magic wand selections, a soft-edged mask brush, and graduated and radial masks you drag onto the picture. You can also select by colour - click one and everything close to it comes along - or by brightness, taking just the deep shadows or everything above a certain lightness. Clicking a person or an object picks it out on its own. One mask can be built from several parts, each added, subtracted or intersected and changeable afterwards, and any of them becomes a layer whose adjustment applies only inside it. A mask can be looked at on its own, switched off, copied onto another layer, or put aside and pasted back later.
+**Masks and selections.** Rectangle, ellipse, lasso and magic wand selections, a soft-edged mask brush whose strokes can cover fully or only in part, and graduated and radial masks you drag onto the picture. You can also select by colour - click one and everything close to it comes along - or by brightness, taking just the deep shadows or everything above a certain lightness. Clicking a person or an object picks it out on its own. One mask can be built from several parts, each added, subtracted or intersected and changeable afterwards, and any of them becomes a layer whose adjustment applies only inside it. A mask can be looked at on its own, switched off, copied onto another layer, or put aside and pasted back later.
 
 **The pen.** Draw a curve point by point and change it at its points afterwards. One button turns it into a selection, so a cut-out stays correctable. A path draws nothing until you give it a stroke or a fill, and text can follow one.
 
@@ -165,7 +165,7 @@ FerrumPix signs in with your user name and an app password, which you create in 
 
 ## Settings
 
-Theme, accent colour, language, interface and font scale, thumbnail and export quality, metadata handling, video support, cache cleanup and the connection to an Immich or Nextcloud server.
+Theme, accent colour, the side the window buttons sit on, language, interface and font scale, thumbnail and export quality, metadata handling, video support, cache cleanup and the connection to an Immich or Nextcloud server.
 
 The interface speaks German, English, Dutch, Swedish, Danish, Norwegian, Finnish, Spanish, French, Italian, Portuguese, Polish, Czech, Russian, Chinese and Japanese. By default it follows your system; anything else it does not know falls back to English.
 

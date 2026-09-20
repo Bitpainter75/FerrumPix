@@ -8563,4 +8563,16 @@
   <data name="JPEG_Dateien_werden_ohne_jeden_Verlust_umgepackt_9bd11bec" xml:space="preserve">
     <value>Pliki JPEG są przepakowywane bez żadnej straty zamiast ponownego kodowania: są mniej więcej o jedną piątą mniejsze, a oryginał można odzyskać bajt po bajcie. Jakość powyżej dotyczy wtedy tylko pozostałych zdjęć. Jeśli ustawiono informację o prawach autorskich lub odznaczono EXIF w sekcji Przejmij, pliki są kodowane ponownie.</value>
   </data>
+  <data name="Fensterkn_pfe_ad315b51" xml:space="preserve">
+    <value>Przyciski okna</value>
+  </data>
+  <data name="Auf_welcher_Seite_der_Titelleiste_Schlie_en_Maxi_6e9100cf" xml:space="preserve">
+    <value>Po której stronie paska tytułu znajdują się zamknij, maksymalizuj i minimalizuj.</value>
+  </data>
+  <data name="Die_Systemvorgabe_bernimmt_die_Anordnung_der_Arb_9eb7da33" xml:space="preserve">
+    <value>Ustawienie systemowe przejmuje układ z pulpitu.</value>
+  </data>
+  <data name="Wie_stark_ein_einzelner_Strich_deckt_Bei_100_mal_5908eef9" xml:space="preserve">
+    <value>Jak mocno kryje pojedyncze pociągnięcie. Przy 100 maluje maskę w pełni, przy 40 tylko w 40 procentach; przy odejmowaniu zabiera tyle samo mało</value>
+  </data>
 </root>

@@ -8563,4 +8563,16 @@
   <data name="JPEG_Dateien_werden_ohne_jeden_Verlust_umgepackt_9bd11bec" xml:space="preserve">
     <value>JPEG ファイルを再エンコードせず、まったく劣化させずに詰め替えます。サイズはおよそ 5 分の 1 小さくなり、元のファイルを 1 バイト単位で復元できます。上の品質はほかの画像にだけ適用されます。著作権表示を設定した場合や、引き継ぐで EXIF の選択を外した場合は再エンコードします。</value>
   </data>
+  <data name="Fensterkn_pfe_ad315b51" xml:space="preserve">
+    <value>ウィンドウボタン</value>
+  </data>
+  <data name="Auf_welcher_Seite_der_Titelleiste_Schlie_en_Maxi_6e9100cf" xml:space="preserve">
+    <value>タイトルバーのどちら側に閉じる、最大化、最小化を置くか。</value>
+  </data>
+  <data name="Die_Systemvorgabe_bernimmt_die_Anordnung_der_Arb_9eb7da33" xml:space="preserve">
+    <value>システム設定はデスクトップの配置に従います。</value>
+  </data>
+  <data name="Wie_stark_ein_einzelner_Strich_deckt_Bei_100_mal_5908eef9" xml:space="preserve">
+    <value>一筆でどれだけ覆うか。100 ではマスクを完全に塗り、40 では 40 パーセントだけ。削るときも同じだけ少なく取り除きます</value>
+  </data>
 </root>
