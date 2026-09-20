@@ -8,7 +8,7 @@
     <Version>0.9.47</Version>
     <AssemblyVersion>0.9.47.0</AssemblyVersion>
     <FileVersion>0.9.47.0</FileVersion>
-    <InformationalVersion>0.9.47-4</InformationalVersion>
+    <InformationalVersion>0.9.47-5</InformationalVersion>
     <Nullable>enable</Nullable>
     <PublishTrimmed>false</PublishTrimmed>
     <PublishSingleFile>true</PublishSingleFile>
