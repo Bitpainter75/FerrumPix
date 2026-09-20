@@ -165,7 +165,7 @@ FerrumPix signs in with your user name and an app password, which you create in 
 
 ## Settings
 
-Theme, accent colour, the side the window buttons sit on, language, interface and font scale, thumbnail and export quality, metadata handling, video support, cache cleanup and the connection to an Immich or Nextcloud server.
+Theme, accent colour, which side the window buttons sit on, language, interface and font scale, thumbnail and export quality, metadata handling, video support, cache cleanup and the connection to an Immich or Nextcloud server.
 
 The interface speaks German, English, Dutch, Swedish, Danish, Norwegian, Finnish, Spanish, French, Italian, Portuguese, Polish, Czech, Russian, Chinese and Japanese. By default it follows your system; anything else it does not know falls back to English.
 

@@ -999,19 +999,19 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(IsDarkLogoVisible))
         End Sub
 
-        ''' <summary>Sitzen die Fensterknoepfe links? Keine Bindung im XAML, sondern das Signal fuer
-        ''' MainWindow: die Seite aendert Ausrichtung, Rand und Reihenfolge der Knoepfe und schiebt
-        ''' das Logo auf die andere Seite - das laesst sich nicht an eine einzelne Eigenschaft
+        ''' <summary>Wo die Fensterknoepfe sitzen und in welcher Reihenfolge. Keine Bindung im XAML,
+        ''' sondern das Signal fuer MainWindow: daran haengen Ausrichtung, Rand, die Reihenfolge der
+        ''' Knoepfe und die Seite des Logos - das laesst sich nicht an eine einzelne Eigenschaft
         ''' binden. Dieselbe Bauart wie die Fensterdekoration auf macOS.</summary>
-        Public ReadOnly Property WindowButtonsOnLeft As Boolean
+        Public ReadOnly Property WindowButtonLayout As WindowButtonLayout
             Get
-                Return WindowButtonSideService.IsLeft(AppSettingsService.Load().WindowButtonsSide)
+                Return WindowButtonSideService.Resolve(AppSettingsService.Load().WindowButtonsSide)
             End Get
         End Property
 
         ''' Die Seite wurde in den Einstellungen umgestellt - das Fenster soll die Knoepfe umsetzen.
         Public Sub RefreshWindowButtonsSide()
-            Me.RaisePropertyChanged(NameOf(WindowButtonsOnLeft))
+            Me.RaisePropertyChanged(NameOf(WindowButtonLayout))
         End Sub
 
         Public Sub RefreshLayoutBindings()

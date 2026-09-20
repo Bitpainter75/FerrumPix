@@ -6,9 +6,10 @@
   paints the mask to 40 percent, and subtracting takes away just as little. The setting is the
   coverage you get, so going over the same spot again does not deepen it - a stronger brush does.
 
-- **Window buttons on the left.** Close, maximize and minimize can now sit on the left of the title
-  bar. By default FerrumPix follows the arrangement of your desktop, and the settings let you pin
-  it to one side.
+- **Window buttons the way your desktop has them.** Close, maximize and minimize now take their
+  side and their order from your desktop, so they sit where you are used to them, on the left as
+  well. They stay one group, and buttons your desktop leaves out are still there - they are the
+  only way to minimize from the title bar. The settings let you pin them to one side.
 
 ## FerrumPix 0.9.47
 

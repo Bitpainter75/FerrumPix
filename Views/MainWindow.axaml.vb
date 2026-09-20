@@ -138,7 +138,7 @@ Namespace Views
             If e.PropertyName = NameOf(MainWindowViewModel.Title) Then
                 Return
             End If
-            If e.PropertyName = NameOf(MainWindowViewModel.WindowButtonsOnLeft) Then
+            If e.PropertyName = NameOf(MainWindowViewModel.WindowButtonLayout) Then
                 ApplyWindowButtonsSide()
             ElseIf e.PropertyName = NameOf(MainWindowViewModel.IsFullscreen) Then
                 ApplyFullscreenState()
@@ -524,9 +524,8 @@ Namespace Views
         '''
         ''' Drei Dinge wechseln gemeinsam, sonst stimmt das Bild nicht:
         ''' die AUSRICHTUNG des Knopfblocks samt seinem Rand zur Fensterkante, die REIHENFOLGE der
-        ''' Knoepfe (links steht Schliessen aussen, wie es auf macOS und bei einem links
-        ''' eingerichteten Linux-Arbeitsplatz ueblich ist) und das LOGO, das auf die frei gewordene
-        ''' Seite rueckt. Genau derselbe Handgriff wie fuer den nativen Rahmen auf macOS.
+        ''' Knoepfe (auch sie kommt vom Arbeitsplatz) und das LOGO, das auf die frei gewordene Seite
+        ''' rueckt. Genau derselbe Handgriff wie fuer den nativen Rahmen auf macOS.
         '''
         ''' Nichts zu tun auf macOS: dort zeichnet das Betriebssystem die Knoepfe, unsere sind
         ''' ausgeblendet.</summary>
@@ -538,9 +537,11 @@ Namespace Views
             Dim logo = Me.FindControl(Of StackPanel)("WindowLogoPanel")
             If host Is Nothing OrElse panel Is Nothing Then Return
 
-            Dim onLeft = TryCast(DataContext, MainWindowViewModel)?.WindowButtonsOnLeft
-            Dim left = onLeft.GetValueOrDefault(
-                WindowButtonSideService.IsLeft(AppSettingsService.Load().WindowButtonsSide))
+            ' Beim Bauen des Fensters gibt es noch kein ViewModel - dann direkt ueber die
+            ' Einstellung, es ist dieselbe Quelle.
+            Dim layout = TryCast(DataContext, MainWindowViewModel)?.WindowButtonLayout
+            If layout Is Nothing Then layout = WindowButtonSideService.Resolve(AppSettingsService.Load().WindowButtonsSide)
+            Dim left = layout.OnLeft
 
             host.HorizontalAlignment = If(left, Avalonia.Layout.HorizontalAlignment.Left,
                                                 Avalonia.Layout.HorizontalAlignment.Right)
@@ -550,9 +551,10 @@ Namespace Views
 
             ' Die Knoepfe neu einhaengen statt sie zu tauschen: der Block ist drei Kinder gross,
             ' und eine Reihenfolge zu beschreiben ist weniger fehleranfaellig, als sie zu sortieren.
-            Dim order = If(left, {"CloseButton", "MinimizeButton", "MaximizeButton"},
-                                 {"MinimizeButton", "MaximizeButton", "CloseButton"})
-            Dim buttons = order.Select(Function(n) Me.FindControl(Of Button)(n)).Where(Function(b) b IsNot Nothing).ToList()
+            ' Die Rollennamen sind so gewaehlt, dass Name plus "Button" der Name im Markup ist.
+            Dim buttons = layout.Order.
+                Select(Function(role) Me.FindControl(Of Button)(role & "Button")).
+                Where(Function(b) b IsNot Nothing).ToList()
             If buttons.Count = panel.Children.Count Then
                 panel.Children.Clear()
                 For Each b In buttons
