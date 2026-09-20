@@ -588,10 +588,11 @@ Namespace ViewModels
         ''' der fällt weg.</summary>
         Private Function AdjustmentsForSelectionPixels() As ImageAdjustments
             Dim adj = GetCurrentAdjustments()
+            If adj.Annotations Is Nothing Then Return adj
             Dim source = SelectionPixelSourceAnnotation()
-            If source Is Nothing OrElse adj.Annotations Is Nothing Then Return adj
+            If source Is Nothing Then Return WithoutObjectLayers(adj)
             Dim layer = adj.Annotations.FirstOrDefault(Function(a) a IsNot Nothing AndAlso a.Id = source.Id)
-            If layer Is Nothing OrElse Not adj.IsAnnotationRenderVisible(layer) Then Return adj
+            If layer Is Nothing OrElse Not adj.IsAnnotationRenderVisible(layer) Then Return WithoutObjectLayers(adj)
 
             layer.Opacity = 100
             layer.BlendMode = "Normal"
@@ -605,6 +606,28 @@ Namespace ViewModels
             End If
             adj.BackgroundHidden = True
             adj.CanvasBackgroundColor = ""
+            Return adj
+        End Function
+
+        ''' <summary>Dasselbe Rezept OHNE die Objekt-Overlays: das Foto mit seinen globalen
+        ''' Anpassungen und den lokalen Korrekturen des Basisbilds, sonst nichts.
+        '''
+        ''' Es ist die Kehrseite des Weges darüber. Gehört die Auswahl zum BASISBILD, wurde bisher aus
+        ''' dem fertigen Bild ausgeschnitten - eine darüberliegende Bild-Ebene kam mit in den
+        ''' Ausschnitt, obwohl gelöscht nur aus dem Basisbild wurde. Nach Ausschneiden und Einfügen
+        ''' stand ihr Anteil deshalb doppelt da: einmal auf ihrer Ebene, einmal in der eingefügten
+        ''' (Nutzerbefund 2026-09-20). Kopiert wird, was auch verschwindet.
+        '''
+        ''' Die Korrekturebenen des Basisbilds bleiben (sie gehören zu seinem Aussehen), die im
+        ''' Objektstapel fallen mit ihren Ankern weg. Der Hintergrund bleibt sichtbar - er IST hier
+        ''' das Gemeinte.</summary>
+        Private Shared Function WithoutObjectLayers(adj As ImageAdjustments) As ImageAdjustments
+            adj.Annotations = New List(Of ImageAnnotation)()
+            adj.AnnotationGroups = New List(Of AnnotationGroup)()
+            If adj.MaskedAdjustmentLayers IsNot Nothing Then
+                adj.MaskedAdjustmentLayers = adj.MaskedAdjustmentLayers.
+                    Where(Function(l) l IsNot Nothing AndAlso String.IsNullOrEmpty(l.StackAboveAnnotationId)).ToList()
+            End If
             Return adj
         End Function
 

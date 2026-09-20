@@ -2369,13 +2369,20 @@ Namespace Views
                     Const hitSlopPixels As Double = 10.0
                     Dim hitSlopXPercent = hitSlopPixels / imageRect.Width * 100.0
                     Dim hitSlopYPercent = hitSlopPixels / imageRect.Height * 100.0
-                    Dim hitIndex = vm.HitTestAnnotation(xPct, yPct, hitSlopXPercent, hitSlopYPercent)
+                    ' EIN DRUCK INNERHALB DER LAUFENDEN AUSWAHL MEINT DIE AUSWAHL, auch wenn eine
+                    ' Ebene darunter liegt. Sonst fing die getroffene Ebene ihn ab und der Zug
+                    ' verschob SIE - auf einer Bild-Ebene war die Auswahl damit gar nicht mehr zu
+                    ' bewegen (Nutzerbefund). Der Rahmen der markierten Ebene laesst denselben Druck
+                    ' schon durch (vierter Fall in OnTextOverlayPointerPressed); hier stand das
+                    ' Gegenstueck noch aus, und die beiden Stellen gehoeren zusammen.
+                    Dim pressInsideSelection = vm.HasActiveSelection AndAlso IsPointInsideSelection(rawPos, imageRect, vm)
+                    Dim hitIndex = If(pressInsideSelection, -1,
+                                      vm.HitTestAnnotation(xPct, yPct, hitSlopXPercent, hitSlopYPercent))
                     ' Trifft der Klick AUSSERHALB eine Ebene, ist die Bildauswahl nicht mehr
                     ' gemeint und wird vor dem Ebenenwechsel abgewählt. Auf FREIER Fläche darf
                     ' derselbe erste Druck dagegen einen neuen Auswahlrahmen anfangen; dort wird
                     ' erst ein Klick ohne Zug beim Loslassen als Abwählen gewertet.
-                    If hitIndex >= 0 AndAlso vm.HasActiveSelection AndAlso
-                       Not IsPointInsideSelection(rawPos, imageRect, vm) Then
+                    If hitIndex >= 0 AndAlso vm.HasActiveSelection Then
                         vm.ClearSelection()
                         _selectionClickOutsideActiveSelection = False
                         UpdateSelectionOverlayVisibility()
@@ -2395,8 +2402,7 @@ Namespace Views
                         End If
                         e.Handled = True
                         Return
-                    ElseIf AllowsObjectMarquee(vm) AndAlso Not (vm.HasActiveSelection AndAlso
-                                                                  IsPointInsideSelection(rawPos, imageRect, vm)) Then
+                    ElseIf AllowsObjectMarquee(vm) AndAlso Not pressInsideSelection Then
                         ' Untermodus "Verschieben": ein Zug auf freier Fläche zieht das OBJEKT-Auswahl-
                         ' rechteck auf und markiert alles, was es berührt. Ein Klick ohne Zug hebt wie
                         ' bisher die Auswahl auf (das entscheidet die Zugschwelle beim Loslassen). Eine
@@ -2406,7 +2412,10 @@ Namespace Views
                         e.Pointer.Capture(canvas)
                         e.Handled = True
                         Return
-                    ElseIf vm.HasSelectedAnnotation Then
+                    ElseIf vm.HasSelectedAnnotation AndAlso Not pressInsideSelection Then
+                        ' Ein Druck IN der Auswahl waehlt die Ebene NICHT ab: sie ist das Ziel, aus
+                        ' dem als Naechstes ausgeschnitten oder gemalt wird, und der Zug gilt der
+                        ' Auswahl, nicht ihr.
                         vm.SelectedAnnotationIndex = -1
                     End If
                     ' Ein Buehnen-Pan stand hier einmal als letzter Zweig. Er war unerreichbar,
@@ -6968,10 +6977,19 @@ Namespace Views
                             End If
                         End If
                     Case Key.C
-                        ' Eine markierte Ebene hat Vorrang: Strg+C/V meint dann die Ebene selbst,
-                        ' wie in einer Ebenenpalette üblich. Erst ohne Ebenenziel bleibt der bisherige
-                        ' Weg für den ausgeschnittenen Bildbereich zuständig.
-                        If Not isTextInputFocused AndAlso vm.CopySelectedLayerToClipboard() Then
+                        ' EINE LAUFENDE PIXELAUSWAHL KOMMT VOR DER MARKIERTEN EBENE - dieselbe
+                        ' Reihenfolge wie bei Entf (ApplyDeleteShortcut) und bei Strg+X darunter.
+                        ' Wer eine Ebene markiert und darauf eine Auswahl aufzieht, meint diesen
+                        ' Ausschnitt; er kommt dann auch aus dieser Ebene
+                        ' (AdjustmentsForSelectionPixels). Ohne den Vorrang kopierte Strg+C die
+                        ' ganze Ebene, waehrend Strg+X den Ausschnitt ausschnitt - zwei Bedeutungen
+                        ' derselben Geste.
+                        If Not isTextInputFocused AndAlso vm.HasPixelSelectionScope Then
+                            CopySelectionToSystemClipboardAsync(vm)
+                            e.Handled = True
+                        ElseIf Not isTextInputFocused AndAlso vm.CopySelectedLayerToClipboard() Then
+                            ' Ohne Auswahl meint eine markierte Ebene bei Strg+C/V die Ebene selbst,
+                            ' wie in einer Ebenenpalette üblich.
                             e.Handled = True
                         ElseIf Not isTextInputFocused AndAlso vm.HasActiveSelection Then
                             ' Eine stehende Auswahl meint IHREN Ausschnitt, gleich in welchem
@@ -6987,9 +7005,16 @@ Namespace Views
                         End If
                     Case Key.X
                         ' AUSSCHNEIDEN gibt es nur für die Auswahl im Bild: erst in die
-                        ' Zwischenablage, dann aus dem Bild. Eine markierte EBENE bleibt außen vor -
-                        ' sie wird gelöscht, nicht ausgeschnitten, und dafür gibt es Entf.
-                        If Not isTextInputFocused AndAlso Not vm.HasSelectedPanelLayer AndAlso vm.HasActiveSelection Then
+                        ' Zwischenablage, dann aus dem Bild. Eine markierte EBENE OHNE Auswahl bleibt
+                        ' außen vor - sie wird gelöscht, nicht ausgeschnitten, und dafür gibt es Entf.
+                        '
+                        ' Liegt die Auswahl dagegen AUF der markierten Ebene, ist sie gemeint: der
+                        ' Ausschnitt kommt aus dieser Ebene und wird auch dort gelöscht (beides über
+                        ' SelectionPixelSourceAnnotation). Die alte Bedingung sperrte jede markierte
+                        ' Ebene aus, und damit tat Strg+X auf einer Bild-Ebene gar nichts
+                        ' (Nutzerbefund). Gefragt wird nach demselben Zustand wie bei Entf und
+                        ' Strg+C: eine freie Pixelauswahl, keine Maske.
+                        If Not isTextInputFocused AndAlso vm.HasPixelSelectionScope Then
                             e.Handled = True
                             CutSelectionToSystemClipboardAsync(vm)
                         End If

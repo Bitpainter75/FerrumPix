@@ -23,3 +23,8 @@
   second on the way to the editor. The views are kept now, so the switch takes a few milliseconds.
   The editor is still only built the first time you go there.
 
+- Cutting out a selection now gives you what actually disappears. Cut from the photo and a layer
+  lying over it came along in the cutout, so pasting it back put that part in twice. With an image
+  layer marked, CTRL+X did nothing at all, and dragging inside the marching ants moved the layer
+  instead of the selection. CTRL+C follows the same rule as cutting: while a selection is running
+  it takes that cutout, and only without one does it copy the marked layer.
