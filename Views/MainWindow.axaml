@@ -94,7 +94,13 @@
                     </Grid>
                 </Border>
 
-                <ContentControl x:Name="MainContentHost" Grid.Row="1" Content="{Binding CurrentContent}"/>
+                <!-- DIE ANSICHTEN WERDEN BEHALTEN, nicht bei jedem Moduswechsel neu gebaut.
+                     Deshalb steht hier ein leeres Panel und keine Bindung: MainWindow baut jede
+                     Ansicht beim ERSTEN Betreten hinein und schaltet danach nur noch die
+                     Sichtbarkeit um (siehe ShowCurrentContent). Gemessen kostete der Neuaufbau
+                     300 bis 630 ms je Wechsel, fast alles davon das erneute Anwenden der Stile
+                     beim Einhaengen in den Baum; das Umschalten kostet rund 10. -->
+                <Panel x:Name="MainContentHost" Grid.Row="1"/>
             </Grid>
 
             <!-- EIN BILD WIRD GEOEFFNET. Der Editor wechselt den Modus erst, wenn das Bild offen

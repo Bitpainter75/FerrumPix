@@ -34,10 +34,10 @@ Namespace Services
     ''' FerrumPix zeichnet seine Titelleiste unter Windows und Linux selbst (WindowDecorations="None"
     ''' in MainWindow.axaml), und selbst gezeichnete Knoepfe erben keine Anordnung. Wer seinen
     ''' Arbeitsplatz auf Knoepfe links eingerichtet hat, greift bei uns ins Leere - deshalb diese
-    ''' Abfrage (Nutzerwunsch 2026-09-20).
+    ''' Abfrage.
     '''
-    ''' **DIE ANORDNUNG DES DESKTOPS BESTIMMT DIE REIHENFOLGE, NICHT DEN BESTAND** (Entscheidung
-    ''' 2026-09-20). Sie sagt naemlich beides: GNOME steht seit Jahren ab Werk auf "appmenu:close",
+    ''' **DIE ANORDNUNG DES DESKTOPS BESTIMMT DIE REIHENFOLGE, NICHT DEN BESTAND.** Sie sagt
+    ''' naemlich beides: GNOME steht seit Jahren ab Werk auf "appmenu:close",
     ''' nennt also nur EINEN Fensterknopf. Wer das woertlich uebernaehme, naehme dem Grossteil der
     ''' GNOME-Anwender Minimieren und Maximieren weg - und unsere Leiste ist der einzige Weg dorthin.
     ''' Genannte Knoepfe kommen deshalb in der genannten Reihenfolge, nicht genannte haengen hinten
@@ -268,16 +268,16 @@ Namespace Services
                     ' des Prozesses - die Frist darunter waere nie zum Zug gekommen, und ein
                     ' haengendes Werkzeug haette den Start des Fensters mitgenommen. Beide Kanaele
                     ' laufen nebenher, sonst kann ein voller Fehlerpuffer den Prozess blockieren.
-                    Dim ausgabe = proc.StandardOutput.ReadToEndAsync()
-                    Dim fehler = proc.StandardError.ReadToEndAsync()
+                    Dim output = proc.StandardOutput.ReadToEndAsync()
+                    Dim errorOutput = proc.StandardError.ReadToEndAsync()
                     If Not proc.WaitForExit(1000) Then
                         Try : proc.Kill(True) : Catch : End Try
                         Return Nothing
                     End If
                     If proc.ExitCode <> 0 Then Return Nothing
                     ' Der Prozess ist beendet, der Rest der Ausgabe liegt schon in der Leitung.
-                    If Not Task.WaitAll({ausgabe, fehler}, 500) Then Return Nothing
-                    Return ausgabe.Result
+                    If Not Task.WaitAll({output, errorOutput}, 500) Then Return Nothing
+                    Return output.Result
                 End Using
             Catch
                 Return Nothing

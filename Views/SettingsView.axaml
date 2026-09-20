@@ -479,8 +479,8 @@
 
                         <!-- FENSTERKNÖPFE. Die Anwendung zeichnet ihre Titelleiste selbst und erbt
                              damit nichts von der Arbeitsfläche - wer seine Knöpfe links hat, stand
-                             hier ohne (Nutzerwunsch). Ab Werk „Systemvorgabe": die Anwendung fragt
-                             den Desktop und richtet sich danach. -->
+                             hier ohne. Ab Werk „Systemvorgabe": die Anwendung fragt den Desktop und
+                             richtet sich danach. -->
                         <StackPanel Spacing="12" Margin="0,4,0,0"
                                     IsVisible="{Binding IsWindowButtonsSideSelectable}">
                             <StackPanel Spacing="2">

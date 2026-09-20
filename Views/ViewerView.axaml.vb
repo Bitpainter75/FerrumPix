@@ -18,6 +18,7 @@ Namespace Views
 
     Public Class ViewerView
         Inherits UserControl
+        Implements IModeView
 
         Private _subscribedVm As ViewerViewModel
         Private _isAttached As Boolean = False
@@ -1030,6 +1031,21 @@ Namespace Views
                         End Sub
             setze("CompareLeftImage", vm.CompareLeftImage)
             setze("CompareRightImage", vm.CompareRightImage)
+        End Sub
+
+        ''' <summary>Der Betrachter ist wieder der sichtbare Modus. Alles, was am Bild haengt und
+        ''' sich geaendert haben kann, waehrend er verborgen war: Fokus, Einpassen, den Filmstreifen
+        ''' zum aktuellen Bild rollen und die Videoflaeche nachfuehren. Das Bild selbst kann
+        ''' inzwischen ein anderes sein - aus der Galerie kommt man mit einer neuen Auswahl
+        ''' zurueck.</summary>
+        Public Sub OnModeEntered() Implements IModeView.OnModeEntered
+            ApplyVideoLayout()
+            Dispatcher.UIThread.Post(Sub() Me.Focus(), DispatcherPriority.Background)
+            Dispatcher.UIThread.Post(Sub()
+                                         ApplyImageFitMode()
+                                         _filmstripController.ScrollToCurrent()
+                                         UpdateActiveVideoView()
+                                     End Sub, DispatcherPriority.Loaded)
         End Sub
 
         Protected Overrides Sub OnAttachedToVisualTree(e As VisualTreeAttachmentEventArgs)

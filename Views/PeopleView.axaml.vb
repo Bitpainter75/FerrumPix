@@ -11,6 +11,7 @@ Namespace Views
     ''' Bereich mit eigenem Knopf in der Galerie - siehe <see cref="PeopleViewModel"/>.</summary>
     Public Class PeopleView
         Inherits UserControl
+        Implements IModeView
 
         ''' <summary>Inhalte aus einem DataTemplate entstehen oft erst NACH dem Sprachdurchlauf
         ''' ueber das Fenster. Jedes neu materialisierte Element uebersetzt deshalb seinen eigenen
@@ -37,6 +38,12 @@ Namespace Views
         ''' Ueber den Dispatcher und nicht sofort: beim Anhaengen steht das Layout noch nicht, und
         ''' ein Fokus auf ein Element ohne Flaeche verpufft.</summary>
         Private Sub OnAttachedFocus(sender As Object, e As EventArgs)
+            Avalonia.Threading.Dispatcher.UIThread.Post(Sub() Me.Focus())
+        End Sub
+
+        ''' <summary>Aus demselben Grund beim erneuten Betreten: seit die Ansichten behalten werden,
+        ''' haengt diese nur beim ersten Mal an den Baum, und Escape waere danach wieder tot.</summary>
+        Public Sub OnModeEntered() Implements IModeView.OnModeEntered
             Avalonia.Threading.Dispatcher.UIThread.Post(Sub() Me.Focus())
         End Sub
 

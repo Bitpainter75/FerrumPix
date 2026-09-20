@@ -30,6 +30,17 @@ Namespace Views
         ''' <summary>Wer den Tastaturfokus hatte, bevor ein Overlay-Dialog ihn an sich gezogen hat.</summary>
         Private _focusBeforeDialog As Control = Nothing
 
+        ''' <summary>Die gebauten Ansichten, eine je ViewModel. Sie bleiben im Baum und werden nur
+        ''' noch ein- und ausgeblendet - siehe <see cref="ShowCurrentContent"/>.
+        '''
+        ''' Der Schluessel ist das ViewModel SELBST und nicht sein Typ: die fuenf ViewModels leben
+        ''' die ganze Sitzung und sind je genau einmal da. Waere das eines Tages anders, bekaeme ein
+        ''' neues ViewModel so von selbst eine eigene Ansicht, statt still die fremde zu erben.</summary>
+        Private ReadOnly _modeViews As New Dictionary(Of Object, Control)
+
+        ''' Baut die Ansicht zu einem ViewModel - dieselbe Zuordnung, die auch das Datentemplate nimmt.
+        Private ReadOnly _viewLocator As New ViewLocator()
+
         Public Sub New()
             AvaloniaXamlLoader.Load(Me)
             ConfigurePlatformWindowChrome()
@@ -123,10 +134,62 @@ Namespace Views
             Height = AppSettingsService.NormalizeWindowDimension(settings.MainWindowHeight, 1024)
         End Sub
 
+        ''' <summary>Zeigt die Ansicht zum aktuellen Modus - und BAUT sie nur beim ersten Mal.
+        '''
+        ''' Vorher hing ein `ContentControl` an `CurrentContent`, und jeder Moduswechsel warf die
+        ''' alte Ansicht weg und baute die neue. Gemessen kostete das 300 ms (Galerie) und 630 ms
+        ''' (Editor) je Wechsel - und zwar zu etwa zwei Dritteln nicht das Erzeugen, sondern das
+        ''' Anwenden der Stile beim Einhaengen in den Baum (345 globale Regeln auf jedes Element).
+        ''' Dieselben Ansichten behalten und nur die Sichtbarkeit umzuschalten kostet rund 10 ms.
+        '''
+        ''' ERST BEIM BETRETEN GEBAUT, nicht auf Vorrat: wer nur Bilder ansieht, soll den Editor
+        ''' nicht bezahlen. Das ist dieselbe Entscheidung wie beim Galeriestart, nur eine Ebene
+        ''' hoeher.
+        '''
+        ''' Was dadurch WEGFAELLT, ist das Abhaengen: eine Ansicht bleibt bis zum Programmende im
+        ''' Baum. Die Abmeldungen in den Ansichten waren gegen genau das gebaut, was es jetzt nicht
+        ''' mehr gibt (eine langlebige VM, die tote Ansichten am PropertyChanged festhaelt); sie
+        ''' bleiben stehen und laufen nur nicht mehr. Was bei JEDEM Betreten noetig ist, sagen die
+        ''' Ansichten ueber <see cref="IModeView"/>.</summary>
+        Private Sub ShowCurrentContent()
+            Dim vm = TryCast(DataContext, MainWindowViewModel)
+            Dim host = Me.FindControl(Of Panel)("MainContentHost")
+            If vm Is Nothing OrElse host Is Nothing Then Return
+
+            Dim content = vm.CurrentContent
+            If content Is Nothing Then Return
+
+            Dim view As Control = Nothing
+            Dim freshlyBuilt = False
+            If Not _modeViews.TryGetValue(content, view) Then
+                view = _viewLocator.Build(content)
+                If view Is Nothing Then Return
+                view.DataContext = content
+                _modeViews(content) = view
+                freshlyBuilt = True
+            End If
+
+            ' Sichtbarkeit VOR dem Einhaengen setzen, damit eine frisch gebaute Ansicht nicht einen
+            ' Wimpernschlag lang neben der alten steht.
+            For Each existing In _modeViews.Values
+                existing.IsVisible = existing Is view
+            Next
+            If freshlyBuilt Then host.Children.Add(view)
+
+            If freshlyBuilt Then
+                ' Der Uebersetzungsdurchlauf des Fensters lief, bevor es diese Ansicht gab.
+                ApplyLocalization()
+            Else
+                ' Beim ERSTEN Mal erledigt das Anhaengen an den Baum dieselbe Arbeit.
+                TryCast(view, IModeView)?.OnModeEntered()
+            End If
+        End Sub
+
         Private Sub HandleDataContextChanged(sender As Object, e As EventArgs)
             Dim vm = TryCast(DataContext, MainWindowViewModel)
             If vm IsNot Nothing Then
                 AddHandler vm.PropertyChanged, AddressOf OnVmPropertyChanged
+                ShowCurrentContent()
                 ApplyFullscreenState()
                 ' Der erste SizeChanged kann vor dem DataContext liegen - dann bliebe die Breite
                 ' bis zur ersten Größenänderung unbekannt.
@@ -153,7 +216,11 @@ Namespace Views
                 ApplyLocalization()
             ElseIf e.PropertyName = NameOf(MainWindowViewModel.CurrentContent) OrElse
                    e.PropertyName = NameOf(MainWindowViewModel.CurrentMode) Then
-                ApplyLocalization()
+                ' OHNE Uebersetzungsdurchlauf: den braucht nur eine FRISCH gebaute Ansicht, und den
+                ' ruft ShowCurrentContent dann selbst. Eine behaltene Ansicht traegt ihre Texte
+                ' bereits, und der Durchlauf laeuft ueber das ganze Fenster - seit alle Ansichten
+                ' darin liegen, waere er bei jedem Wechsel dreimal die Arbeit von vorher.
+                ShowCurrentContent()
             End If
         End Sub
 
@@ -420,9 +487,10 @@ Namespace Views
 
                 _focusBeforeDialog = Nothing
                 ' Fallback: die aktive View selbst - GalleryView/ViewerView/EditorView sind Focusable
-                ' und tragen die Tastenkürzel an ihrem Wurzelelement.
-                Dim host = Me.FindControl(Of ContentControl)("MainContentHost")
-                Dim view = TryCast(host?.Content, Control)
+                ' und tragen die Tastenkürzel an ihrem Wurzelelement. Seit die Ansichten behalten
+                ' werden, liegen MEHRERE im Halter; gemeint ist die sichtbare.
+                Dim host = Me.FindControl(Of Panel)("MainContentHost")
+                Dim view = host?.Children.OfType(Of Control)().FirstOrDefault(Function(c) c.IsVisible)
                 If view IsNot Nothing AndAlso view.Focusable Then view.Focus()
             End Sub
 
@@ -519,8 +587,8 @@ Namespace Views
         End Sub
 
         ''' <summary>Setzt die Fensterknoepfe auf die eingestellte Seite - rechts wie ausgeliefert
-        ''' oder links, wenn die Einstellung oder der Arbeitsplatz es so will (Nutzerwunsch
-        ''' 2026-09-20; siehe WindowButtonSideService).
+        ''' oder links, wenn die Einstellung oder der Arbeitsplatz es so will (siehe
+        ''' WindowButtonSideService).
         '''
         ''' Drei Dinge wechseln gemeinsam, sonst stimmt das Bild nicht:
         ''' die AUSRICHTUNG des Knopfblocks samt seinem Rand zur Fensterkante, die REIHENFOLGE der

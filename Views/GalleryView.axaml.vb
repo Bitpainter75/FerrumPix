@@ -23,6 +23,7 @@ Namespace Views
 
     Public Class GalleryView
         Inherits UserControl
+        Implements IModeView
 
         Private Shared ReadOnly FerrumPixPathsFormat As DataFormat(Of String) =
             DataFormat.CreateStringApplicationFormat("FerrumPixPaths")
@@ -292,6 +293,20 @@ Namespace Views
             End While
             Return False
         End Function
+
+        ''' <summary>Die Galerie ist wieder der sichtbare Modus. Dieselbe Arbeit wie beim Anhaengen,
+        ''' nur ohne das einmalige Anmelden der Ereignisse - seit die Ansichten behalten werden,
+        ''' haengt diese hier nur beim ersten Mal an den Baum (siehe IModeView).</summary>
+        Public Sub OnModeEntered() Implements IModeView.OnModeEntered
+            Dispatcher.UIThread.Post(Sub() Me.Focus(), DispatcherPriority.Background)
+            ' Den Stand der Info-Leiste aus den Einstellungen holen: er kann in den Einstellungen
+            ' umgestellt worden sein, waehrend die Galerie unsichtbar war.
+            GetVm()?.RefreshInfoSidebarState()
+            ' Nachladen, was im Sichtfenster steht. Waehrend die Galerie verborgen war, kam kein
+            ' Rollereignis - ein Ordnerwechsel von aussen (etwa ueber den Betrachter) haette sonst
+            ' Kacheln ohne Bild stehen lassen.
+            QueueViewportThumbnailRefresh()
+        End Sub
 
         Private Sub OnGalleryAttachedToVisualTree(sender As Object, e As VisualTreeAttachmentEventArgs)
             _isAttached = True

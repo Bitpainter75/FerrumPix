@@ -30,6 +30,7 @@ Namespace Views
 
     Public Class EditorView
         Inherits UserControl
+        Implements IModeView
 
         ''' <summary>Inhalte aus einem DataTemplate entstehen oft erst NACH dem Sprachdurchlauf
         ''' ueber das Fenster. Jedes neu materialisierte Element uebersetzt deshalb seinen eigenen
@@ -1368,6 +1369,13 @@ Namespace Views
             If mainVm?.Settings Is Nothing Then Return
             RemoveHandler mainVm.Settings.PropertyChanged, AddressOf OnSettingsPropertyChanged
             AddHandler mainVm.Settings.PropertyChanged, AddressOf OnSettingsPropertyChanged
+        End Sub
+
+        ''' <summary>Der Editor ist wieder der sichtbare Modus. Nur der Fokus: die Anmeldung an die
+        ''' Einstellungen gilt weiter, seit die Ansicht behalten statt neu gebaut wird (siehe
+        ''' IModeView), und alles am Bild haengt am ViewModel, das ohnehin durchlaeuft.</summary>
+        Public Sub OnModeEntered() Implements IModeView.OnModeEntered
+            Dispatcher.UIThread.Post(Sub() Me.Focus(), DispatcherPriority.Background)
         End Sub
 
         Protected Overrides Sub OnAttachedToVisualTree(e As Avalonia.VisualTreeAttachmentEventArgs)
