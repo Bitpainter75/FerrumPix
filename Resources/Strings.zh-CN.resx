@@ -8533,4 +8533,7 @@
   <data name="Wie_stark_ein_einzelner_Strich_deckt_Bei_100_mal_5908eef9" xml:space="preserve">
     <value>单次笔画的覆盖强度。为 100 时完全涂满蒙版，为 40 时只覆盖 40 %；减去时同样只去掉这么多</value>
   </data>
+  <data name="Auswahl_ausschneiden_d3df5e1f" xml:space="preserve">
+    <value>剪切选区</value>
+  </data>
 </root>

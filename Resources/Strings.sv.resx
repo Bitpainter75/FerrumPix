@@ -8575,4 +8575,7 @@
   <data name="Wie_stark_ein_einzelner_Strich_deckt_Bei_100_mal_5908eef9" xml:space="preserve">
     <value>Hur mycket ett enda drag täcker. Vid 100 målas masken helt, vid 40 bara till 40 procent; vid subtraktion tas lika lite bort</value>
   </data>
+  <data name="Auswahl_ausschneiden_d3df5e1f" xml:space="preserve">
+    <value>Klipp ut markering</value>
+  </data>
 </root>

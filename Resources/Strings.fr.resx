@@ -8535,4 +8535,7 @@
   <data name="Wie_stark_ein_einzelner_Strich_deckt_Bei_100_mal_5908eef9" xml:space="preserve">
     <value>À quel point un seul trait couvre. À 100 il peint le masque entièrement, à 40 seulement à 40 pour cent ; en soustrayant il enlève tout aussi peu</value>
   </data>
+  <data name="Auswahl_ausschneiden_d3df5e1f" xml:space="preserve">
+    <value>Couper la sélection</value>
+  </data>
 </root>

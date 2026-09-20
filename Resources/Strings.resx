@@ -8550,4 +8550,7 @@
   <data name="Wie_stark_ein_einzelner_Strich_deckt_Bei_100_mal_5908eef9" xml:space="preserve">
     <value>How much a single stroke covers. At 100 it paints the mask fully, at 40 only to 40 percent; when subtracting it takes away just as little</value>
   </data>
+  <data name="Auswahl_ausschneiden_d3df5e1f" xml:space="preserve">
+    <value>Cut selection</value>
+  </data>
 </root>

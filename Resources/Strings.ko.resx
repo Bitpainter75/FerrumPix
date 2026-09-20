@@ -8579,4 +8579,7 @@
   <data name="Wie_stark_ein_einzelner_Strich_deckt_Bei_100_mal_5908eef9" xml:space="preserve">
     <value>한 번의 획이 얼마나 덮는지. 100이면 마스크를 가득 칠하고 40이면 40퍼센트만 칠합니다. 뺄 때도 그만큼만 지웁니다</value>
   </data>
+  <data name="Auswahl_ausschneiden_d3df5e1f" xml:space="preserve">
+    <value>선택 영역 잘라내기</value>
+  </data>
 </root>

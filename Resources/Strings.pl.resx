@@ -8575,4 +8575,7 @@
   <data name="Wie_stark_ein_einzelner_Strich_deckt_Bei_100_mal_5908eef9" xml:space="preserve">
     <value>Jak mocno kryje pojedyncze pociągnięcie. Przy 100 maluje maskę w pełni, przy 40 tylko w 40 procentach; przy odejmowaniu zabiera tyle samo mało</value>
   </data>
+  <data name="Auswahl_ausschneiden_d3df5e1f" xml:space="preserve">
+    <value>Wytnij zaznaczenie</value>
+  </data>
 </root>

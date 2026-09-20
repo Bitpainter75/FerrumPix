@@ -8575,4 +8575,7 @@
   <data name="Wie_stark_ein_einzelner_Strich_deckt_Bei_100_mal_5908eef9" xml:space="preserve">
     <value>Насколько сильно закрашивает один штрих. При 100 он заполняет маску полностью, при 40 только на 40 процентов; при вычитании убирает так же мало</value>
   </data>
+  <data name="Auswahl_ausschneiden_d3df5e1f" xml:space="preserve">
+    <value>Вырезать выделение</value>
+  </data>
 </root>

@@ -3104,6 +3104,10 @@
                                 <TextBlock Grid.Column="1" Text="Auswahl kopieren" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
+                                <TextBlock Text="STRG+X" Tag="Primary" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Grid.Column="1" Text="Auswahl ausschneiden" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </Grid>
+                            <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
                                 <TextBlock Text="STRG+V" Tag="Primary" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                                 <TextBlock Grid.Column="1" Text="Auswahl einfügen" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </Grid>

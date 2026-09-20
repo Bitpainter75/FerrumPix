@@ -8575,4 +8575,7 @@
   <data name="Wie_stark_ein_einzelner_Strich_deckt_Bei_100_mal_5908eef9" xml:space="preserve">
     <value>Hvor meget et enkelt strøg dækker. Ved 100 males masken helt, ved 40 kun til 40 procent; ved fratrækning fjernes tilsvarende lidt</value>
   </data>
+  <data name="Auswahl_ausschneiden_d3df5e1f" xml:space="preserve">
+    <value>Klip markering ud</value>
+  </data>
 </root>

@@ -8579,4 +8579,7 @@
   <data name="Wie_stark_ein_einzelner_Strich_deckt_Bei_100_mal_5908eef9" xml:space="preserve">
     <value>Seberapa kuat satu sapuan menutup. Pada 100 ia mengecat masker penuh, pada 40 hanya 40 persen; saat mengurangi ia menghapus sesedikit itu juga</value>
   </data>
+  <data name="Auswahl_ausschneiden_d3df5e1f" xml:space="preserve">
+    <value>Potong seleksi</value>
+  </data>
 </root>

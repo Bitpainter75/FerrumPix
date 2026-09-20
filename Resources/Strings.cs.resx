@@ -8575,4 +8575,7 @@
   <data name="Wie_stark_ein_einzelner_Strich_deckt_Bei_100_mal_5908eef9" xml:space="preserve">
     <value>Jak silně kryje jeden tah. Při 100 vykreslí masku plně, při 40 jen na 40 procent; při odečítání ubere stejně tak málo</value>
   </data>
+  <data name="Auswahl_ausschneiden_d3df5e1f" xml:space="preserve">
+    <value>Vyjmout výběr</value>
+  </data>
 </root>

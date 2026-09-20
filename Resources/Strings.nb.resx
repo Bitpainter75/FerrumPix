@@ -8575,4 +8575,7 @@
   <data name="Wie_stark_ein_einzelner_Strich_deckt_Bei_100_mal_5908eef9" xml:space="preserve">
     <value>Hvor mye ett enkelt strøk dekker. Ved 100 males masken helt, ved 40 bare til 40 prosent; ved fratrekk fjernes tilsvarende lite</value>
   </data>
+  <data name="Auswahl_ausschneiden_d3df5e1f" xml:space="preserve">
+    <value>Klipp ut utvalg</value>
+  </data>
 </root>

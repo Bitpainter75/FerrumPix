@@ -8579,4 +8579,7 @@
   <data name="Wie_stark_ein_einzelner_Strich_deckt_Bei_100_mal_5908eef9" xml:space="preserve">
     <value>एक स्ट्रोक कितना ढकता है। 100 पर वह मास्क पूरा भरता है, 40 पर केवल 40 प्रतिशत; घटाते समय उतना ही कम हटाता है</value>
   </data>
+  <data name="Auswahl_ausschneiden_d3df5e1f" xml:space="preserve">
+    <value>चयन काटें</value>
+  </data>
 </root>

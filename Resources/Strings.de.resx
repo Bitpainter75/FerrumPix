@@ -8549,4 +8549,7 @@
   <data name="Wie_stark_ein_einzelner_Strich_deckt_Bei_100_mal_5908eef9" xml:space="preserve">
     <value>Wie stark ein einzelner Strich deckt. Bei 100 malt er die Maske voll, bei 40 nur zu 40 Prozent; beim Abziehen nimmt er entsprechend wenig weg</value>
   </data>
+  <data name="Auswahl_ausschneiden_d3df5e1f" xml:space="preserve">
+    <value>Auswahl ausschneiden</value>
+  </data>
 </root>

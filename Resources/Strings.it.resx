@@ -8535,4 +8535,7 @@
   <data name="Wie_stark_ein_einzelner_Strich_deckt_Bei_100_mal_5908eef9" xml:space="preserve">
     <value>Quanto copre una singola pennellata. A 100 dipinge la maschera per intero, a 40 solo al 40 per cento; sottraendo toglie altrettanto poco</value>
   </data>
+  <data name="Auswahl_ausschneiden_d3df5e1f" xml:space="preserve">
+    <value>Taglia selezione</value>
+  </data>
 </root>

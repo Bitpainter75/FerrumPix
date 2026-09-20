@@ -8579,4 +8579,7 @@
   <data name="Wie_stark_ein_einzelner_Strich_deckt_Bei_100_mal_5908eef9" xml:space="preserve">
     <value>Tek bir fırça darbesinin ne kadar kapattığı. 100'de maskeyi tam boyar, 40'ta yalnızca yüzde 40; çıkarırken de o kadar az siler</value>
   </data>
+  <data name="Auswahl_ausschneiden_d3df5e1f" xml:space="preserve">
+    <value>Seçimi kes</value>
+  </data>
 </root>

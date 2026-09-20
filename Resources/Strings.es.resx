@@ -8535,4 +8535,7 @@
   <data name="Wie_stark_ein_einzelner_Strich_deckt_Bei_100_mal_5908eef9" xml:space="preserve">
     <value>Cuánto cubre una sola pincelada. Con 100 pinta la máscara por completo, con 40 solo al 40 por ciento; al restar quita igual de poco</value>
   </data>
+  <data name="Auswahl_ausschneiden_d3df5e1f" xml:space="preserve">
+    <value>Cortar selección</value>
+  </data>
 </root>

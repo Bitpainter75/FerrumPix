@@ -8575,4 +8575,7 @@
   <data name="Wie_stark_ein_einzelner_Strich_deckt_Bei_100_mal_5908eef9" xml:space="preserve">
     <value>一筆でどれだけ覆うか。100 ではマスクを完全に塗り、40 では 40 パーセントだけ。削るときも同じだけ少なく取り除きます</value>
   </data>
+  <data name="Auswahl_ausschneiden_d3df5e1f" xml:space="preserve">
+    <value>選択範囲を切り取り</value>
+  </data>
 </root>

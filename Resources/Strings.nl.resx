@@ -8575,4 +8575,7 @@
   <data name="Wie_stark_ein_einzelner_Strich_deckt_Bei_100_mal_5908eef9" xml:space="preserve">
     <value>Hoeveel één streek dekt. Bij 100 schildert hij het masker volledig, bij 40 slechts tot 40 procent; bij aftrekken neemt hij net zo weinig weg</value>
   </data>
+  <data name="Auswahl_ausschneiden_d3df5e1f" xml:space="preserve">
+    <value>Selectie knippen</value>
+  </data>
 </root>

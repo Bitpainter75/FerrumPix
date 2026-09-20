@@ -8575,4 +8575,7 @@
   <data name="Wie_stark_ein_einzelner_Strich_deckt_Bei_100_mal_5908eef9" xml:space="preserve">
     <value>Kuinka paljon yksi veto peittää. Arvolla 100 se maalaa maskin täyteen, arvolla 40 vain 40 prosenttiin; vähennettäessä se poistaa yhtä vähän</value>
   </data>
+  <data name="Auswahl_ausschneiden_d3df5e1f" xml:space="preserve">
+    <value>Leikkaa valinta</value>
+  </data>
 </root>

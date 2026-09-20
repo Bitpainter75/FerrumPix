@@ -8579,4 +8579,7 @@
   <data name="Wie_stark_ein_einzelner_Strich_deckt_Bei_100_mal_5908eef9" xml:space="preserve">
     <value>หนึ่งเส้นครอบคลุมมากเพียงใด ที่ 100 จะทาหน้ากากเต็ม ที่ 40 เพียง 40 เปอร์เซ็นต์ เมื่อลบออกก็จะลบไปเท่านั้น</value>
   </data>
+  <data name="Auswahl_ausschneiden_d3df5e1f" xml:space="preserve">
+    <value>ตัดส่วนที่เลือก</value>
+  </data>
 </root>
