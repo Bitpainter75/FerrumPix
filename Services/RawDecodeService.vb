@@ -64,6 +64,9 @@ Namespace Services
         Private Delegate Function GetStructFn(handle As IntPtr) As IntPtr
         Private Delegate Sub SetUserMulFn(handle As IntPtr, index As Integer, value As Single)
         Private Delegate Sub SetGammaFn(handle As IntPtr, index As Integer, value As Single)   ' libraw_set_gamma nimmt FLOAT, nicht double
+        ''' <summary>libraw_set_adjust_maximum_thr. Nimmt wie set_gamma ein FLOAT - als Double
+        ''' deklariert kaeme Unsinn an, und zwar lautlos.</summary>
+        Private Delegate Sub SetFloatFn(handle As IntPtr, value As Single)
         Private Delegate Function MakeMemImageFn(handle As IntPtr, ByRef errc As Integer) As IntPtr
         Private Delegate Sub PtrFn(handle As IntPtr)
 
@@ -113,6 +116,7 @@ Namespace Services
         Private Shared _setFbdd As SetIntFn
         Private Shared _setDemosaic As SetIntFn
         Private Shared _setHighlight As SetIntFn
+        Private Shared _setAdjustMaximumThr As SetFloatFn
         Private Shared _process As IntFn
         Private Shared _unpackThumb As IntFn
         Private Shared _makeMemThumb As MakeMemImageFn
@@ -302,6 +306,11 @@ Namespace Services
                     Catch
                         _setHighlight = Nothing
                     End Try
+                    Try
+                        _setAdjustMaximumThr = GetExport(Of SetFloatFn)(handle, "libraw_set_adjust_maximum_thr")
+                    Catch
+                        _setAdjustMaximumThr = Nothing
+                    End Try
                     ' OPTIONAL, eigenes Try wie oben: diese zwei tragen NUR den Aufnahme-
                     ' Weissabgleich als Zahl (siehe ReadCameraColorFacts). Fehlen sie, entwickelt
                     ' die Anwendung unveraendert weiter - es fehlt dann die Kelvin-Angabe, kein
@@ -343,7 +352,7 @@ Namespace Services
                     _getIparams = Nothing : _getImgOther = Nothing
                     _getIwidth = Nothing : _getIheight = Nothing
                     _getRawWidth = Nothing : _getRawHeight = Nothing
-                    _setHighlight = Nothing
+                    _setHighlight = Nothing : _setAdjustMaximumThr = Nothing
                     _setNoAutoBright = Nothing : _setGamma = Nothing : _setFbdd = Nothing : _setDemosaic = Nothing
                     _process = Nothing : _makeMemImage = Nothing : _clearMem = Nothing : _close = Nothing
                     _unpackThumb = Nothing : _makeMemThumb = Nothing
@@ -1024,11 +1033,20 @@ Namespace Services
         ''' Entpacken - sie hat keinen Aufnahme-Weißabgleich, und ein erfundener wäre schlimmer als
         ''' keiner.</summary>
         Private Shared Function HasUsableMultipliers(facts As CameraColorFacts) As Boolean
-            If facts Is Nothing OrElse facts.CamMul Is Nothing OrElse facts.PreMul Is Nothing Then Return False
-            If facts.CamMul.Length < 3 OrElse facts.PreMul.Length < 3 Then Return False
+            If facts Is Nothing Then Return False
+            Return AreUsableMultipliers(facts.CamMul) AndAlso AreUsableMultipliers(facts.PreMul)
+        End Function
+
+        ''' <summary>Tragen VIER gelesene Multiplikatoren eine Aussage? Die EINZIGE Stelle, an der
+        ''' das entschieden wird - der Decode setzt seinen Weissabgleich nach derselben Regel wie
+        ''' die Kamerafakten ihn lesen.
+        '''
+        ''' Nur die ersten drei Kanaele zaehlen: der vierte ist das zweite Gruen und ist bei den
+        ''' meisten Sensoren 0.</summary>
+        Private Shared Function AreUsableMultipliers(values As Single()) As Boolean
+            If values Is Nothing OrElse values.Length < 3 Then Return False
             For i = 0 To 2
-                If Not Single.IsFinite(facts.CamMul(i)) OrElse facts.CamMul(i) <= 0.0F Then Return False
-                If Not Single.IsFinite(facts.PreMul(i)) OrElse facts.PreMul(i) <= 0.0F Then Return False
+                If Not Single.IsFinite(values(i)) OrElse values(i) <= 0.0F Then Return False
             Next
             Return True
         End Function
@@ -1101,6 +1119,37 @@ Namespace Services
         ''' gegenrechnen - der ist seit dem 06.09.2026 aus <c>pre_mul</c> auch bekannt - und die
         ''' Kennlinie danach neu messen. Nicht ohne das.</summary>
         Private Const HighlightMode As Integer = 0
+
+        ''' <summary>LibRaws Nachfuehrung des Weisspunkts, AUSGESCHALTET (0).
+        '''
+        ''' WAS SIE TUT: <c>adjust_maximum</c> senkt den angenommenen Maximalwert des Sensors auf
+        ''' den GEMESSENEN Hoechstwert DIESER Aufnahme, sofern der zwischen Schwelle und
+        ''' Datenblattwert liegt. Bei LibRaws Vorgabe 0,75 wird jedes Bild, dessen hellster Punkt
+        ''' zwischen 75 und 100 Prozent liegt, um genau dieses Verhaeltnis heller gerechnet - bis
+        ''' zum Faktor 1,33. Der Helligkeitsmassstab haengt damit am MOTIV: dieselbe Kamera,
+        ''' dieselbe Belichtung, einmal mit und einmal ohne Glanzlicht im Bild, ergibt zwei
+        ''' verschiedene Helligkeiten.
+        '''
+        ''' GENAU DAS WOLLEN WIR NICHT. Auto-Bright ist aus demselben Grund aus: die Basisstufe
+        ''' soll eine feste, motivunabhaengige Grundentwicklung liefern, auf der die Regler
+        ''' aufsetzen. Eine zweite Automatik daneben, die nur manchmal zuschlaegt, macht die
+        ''' Wiedergabe unvorhersagbar.
+        '''
+        ''' GEMESSEN ueber dcraw_emu mit unseren Decode-Parametern (linear, 16 Bit, AHD, Beschnitt,
+        ''' Kamera-Weissabgleich), Vorgabe 0,75 gegen 0, neun RAW-Dateien aus neun Formaten:
+        ''' VIER blieben bitgleich (Canon CR3, Pentax PEF, Olympus ORF, ein DNG), bei den uebrigen
+        ''' fuenf war die Vorgabe heller - Fuji RAF um 0,04 Prozent, Leica DNG 0,7, Nikon NEF 0,9,
+        ''' Panasonic RW2 5,2, Sony ARW 6,9 (also bis zu 0,1 Blendenstufen). Es ist damit kein
+        ''' theoretischer Punkt, sondern eine Verschiebung, die man sieht, und sie faellt je Datei
+        ''' anders aus.
+        '''
+        ''' WAS DARAN OFFEN BLEIBT: die Eichung der Belichtungsrampe (Grundbelichtung, siehe
+        ''' Convert16) und die Kameratabelle sind mit LibRaws Nachfuehrung gemessen worden. Fuer
+        ''' die Ankerkamera ist das folgenlos, soweit belegbar - die Canon-Datei der Pruefstrecke
+        ''' ist eine der vier bitgleichen. Fuer die betroffenen Modelle verschiebt sich die
+        ''' Grundhelligkeit um den gemessenen Betrag; das Zurueckstellen waere diese eine
+        ''' Zahl.</summary>
+        Private Const AdjustMaximumThreshold As Single = 0.0F
 
         ''' <summary>LibRaws Nummer fuer das voreingestellte Verfahren. NACHGEMESSEN, nicht
         ''' angenommen: ein Decode ohne gesetztes Verfahren liefert bitgleich dieselben Bilddaten
@@ -1188,6 +1237,10 @@ Namespace Services
                     _setDemosaic(handle, ConfiguredDemosaic())
                     ' Ausdruecklich, nicht auf die Vorgabe der Bibliothek verlassen (HighlightMode).
                     If _setHighlight IsNot Nothing Then _setHighlight(handle, HighlightMode)
+                    ' Dasselbe fuer die motivabhaengige Weisspunkt-Nachfuehrung, siehe
+                    ' AdjustMaximumThreshold. Sie gehoert HIERHER wie in den vollen Decode: der
+                    ' Halbbild-Weg entwickelt dieselben Daten, nur in halber Kantenlaenge.
+                    If _setAdjustMaximumThr IsNot Nothing Then _setAdjustMaximumThr(handle, AdjustMaximumThreshold)
                 Catch
                 End Try
             End Try
@@ -1257,12 +1310,20 @@ Namespace Services
                 ' Lichter: BESCHNITT, und zwar ausdruecklich gesetzt. Die Zahl steht bei
                 ' HighlightMode, samt der Messung, warum Blend dort nicht steht.
                 If _setHighlight IsNot Nothing Then _setHighlight(handle, HighlightMode)
+                ' Die motivabhaengige Weisspunkt-Nachfuehrung aus, siehe AdjustMaximumThreshold.
+                If _setAdjustMaximumThr IsNot Nothing Then _setAdjustMaximumThr(handle, AdjustMaximumThreshold)
                 ' Kamera-Weißabgleich: die As-Shot-Multiplikatoren als user_mul setzen (die C-API
                 ' hat keinen use_camera_wb-Setter). Ohne gültige cam_mul bleibt der Standard.
-                Dim mul0 = _getCamMul(handle, 0)
-                If Single.IsFinite(mul0) AndAlso mul0 > 0 Then
+                '
+                ' GEPRUEFT WIRD MIT DERSELBEN FUNKTION wie bei den Kamerafakten. Hier stand eine
+                ' eigene, schwaechere Pruefung: nur der ERSTE Kanal auf endlich und groesser null.
+                ' Eine Datei mit gueltigem Rot und einer Null oder einem NaN im Gruen kam damit
+                ' durch, und alle vier Werte gingen trotzdem als Weissabgleich in den Decode.
+                ' Zwei Begriffe von "gueltiger Weissabgleich" in einer Klasse sind einer zu viel.
+                Dim camMul = ReadFourMultipliers(_getCamMul, handle)
+                If AreUsableMultipliers(camMul) Then
                     For i = 0 To 3
-                        _setUserMul(handle, i, _getCamMul(handle, i))
+                        _setUserMul(handle, i, camMul(i))
                     Next
                 End If
 

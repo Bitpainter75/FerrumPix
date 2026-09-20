@@ -13,6 +13,11 @@
 
 ### Fixes
 
+- RAW files now develop to the same brightness whatever happens to be in the picture. The RAW
+  library was quietly reading the white point off the brightest spot of each shot, so two photos
+  taken with the same settings could come out differently bright - on some cameras by a tenth of a
+  stop.
+
 - Switching between gallery, viewer and editor is now immediate. Every switch used to rebuild the
   whole view, which took about a third of a second on the way to the gallery and well over half a
   second on the way to the editor. The views are kept now, so the switch takes a few milliseconds.
