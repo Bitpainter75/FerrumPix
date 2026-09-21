@@ -6479,9 +6479,9 @@ Namespace ViewModels
         Private Sub RebuildWorkingImageForLens()
             If String.IsNullOrEmpty(_currentImagePath) Then Return
             ' Dieser Weg ersetzt die Quelle direkt und laeuft deshalb an SchedulePreviewUpdate
-            ' vorbei. Er muss eine Nutzerentscheidung trotzdem als ungespeicherte Aenderung
-            ' markieren (insbesondere die Lichterrettung), sonst ginge sie beim Schliessen still
-            ' verloren.
+            ' vorbei. Er muss eine von Hand getroffene Umstellung trotzdem als ungespeicherte
+            ' Aenderung markieren (insbesondere die Lichterrettung), sonst ginge sie beim
+            ' Schliessen still verloren.
             If Not _suppressPreviewDirty Then
                 _hasChanges = True
                 Me.RaisePropertyChanged(NameOf(HasUnsavedChanges))
@@ -20368,6 +20368,10 @@ Namespace ViewModels
                 Case NameOf(Brightness) : Return LocalizationService.T("Helligkeit")
                 Case NameOf(Contrast) : Return LocalizationService.T("Kontrast")
                 Case NameOf(Highlights) : Return LocalizationService.T("Lichter")
+                ' Wortgleich mit dem Schalter im Lichtpanel: der Eintrag in der Historie soll
+                ' heissen wie das Bedienelement, an dem man war. Ein eigener Wortlaut braeuchte
+                ' ausserdem einen eigenen Schluessel in allen Sprachen.
+                Case NameOf(RawHighlightRecoveryEnabled) : Return LocalizationService.T("Lichter aus den Rohdaten holen")
                 Case NameOf(ShadowsLevel) : Return LocalizationService.T("Tiefen")
                 Case NameOf(Whites) : Return LocalizationService.T("Weiß")
                 Case NameOf(Blacks) : Return LocalizationService.T("Schwarz")

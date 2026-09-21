@@ -616,7 +616,7 @@ Namespace ViewModels
         ''' dem fertigen Bild ausgeschnitten - eine darüberliegende Bild-Ebene kam mit in den
         ''' Ausschnitt, obwohl gelöscht nur aus dem Basisbild wurde. Nach Ausschneiden und Einfügen
         ''' stand ihr Anteil deshalb doppelt da: einmal auf ihrer Ebene, einmal in der eingefügten
-        ''' (Nutzerbefund 2026-09-20). Kopiert wird, was auch verschwindet.
+        ''' (Nutzerbefund). Kopiert wird, was auch verschwindet.
         '''
         ''' Die Korrekturebenen des Basisbilds bleiben (sie gehören zu seinem Aussehen), die im
         ''' Objektstapel fallen mit ihren Ankern weg. Der Hintergrund bleibt sichtbar - er IST hier
