@@ -756,7 +756,15 @@
                                                        TextTrimming="CharacterEllipsis"
                                                        FontSize="{DynamicResource FP.Font.Body}"/>
                                             <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
-                                                <icons:RoundSlider Width="150"
+                                                <!-- BREITER ALS DIE ANDEREN REGLER, und zwar aus einem
+                                                     nachrechenbaren Grund: dieser hier läuft über 150
+                                                     Stufen, und der Wert wird auf ganze Prozent gerundet.
+                                                     Bei 150 Punkten Breite bleiben nach dem Griff 134
+                                                     nutzbare Punkte - weniger als eine Stufe je Punkt,
+                                                     16 Werte waren also gar nicht anzufahren. 300 Punkte
+                                                     geben knapp zwei je Prozent, damit ist jeder Wert
+                                                     erreichbar. -->
+                                                <icons:RoundSlider Width="300"
                                                                    Minimum="100"
                                                                    Maximum="250"
                                                                    DefaultValue="100"
