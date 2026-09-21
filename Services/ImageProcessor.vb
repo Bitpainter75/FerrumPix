@@ -958,6 +958,51 @@ Namespace Services
             End SyncLock
         End Function
 
+        ''' <summary>Rendert eine fertige Szene ohne Editor-Zwischenspeicher in voller Aufloesung.
+        '''
+        ''' Der Editor zeichnet den unteren Stapel in die Szene und legt die einfachen Objekte des
+        ''' oberen Stapels anschliessend aus dem Objekt-Cache darueber. Dieser Weg muss auch fuer
+        ''' Datei, Export und Viewer gelten: bei eigener Verzerrung und Drehung ist das Aufbringen
+        ''' der Verzerrung vor bzw. nach der Drehung sichtbar verschieden. Eine reine
+        ''' <see cref="ProcessBitmap"/>-Ausgabe konnte deshalb von der Editor-Szene abweichen.
+        ''' </summary>
+        Public Shared Function RenderSceneFullResolution(source As SKBitmap, adj As ImageAdjustments) As SKBitmap
+            If source Is Nothing Then Return Nothing
+
+            ' Die Dateipipeline bekommt oft ein Rezept ohne Quellmasse. Der Editor setzt diese
+            ' Masse schon beim Erzeugen seines Szenenrezepts; hier wird derselbe Bezug hergestellt.
+            Dim compositorAdjustments = WithAnnotationSourceSpace(If(adj, New ImageAdjustments()).Clone(), source)
+            Dim bakedAdjustments = compositorAdjustments.Clone()
+            If bakedAdjustments.Annotations IsNot Nothing Then
+                Dim startIndex = OverlaySceneRenderer.ComputeCompositorStartIndex(compositorAdjustments)
+                For i = startIndex To bakedAdjustments.Annotations.Count - 1
+                    Dim annotation = bakedAdjustments.Annotations(i)
+                    If annotation IsNot Nothing AndAlso OverlaySceneRenderer.IsOverlayAnnotation(annotation) Then
+                        annotation.IsVisible = False
+                    End If
+                Next
+            End If
+
+            Dim scene = ProcessBitmap(source, bakedAdjustments)
+            If scene Is Nothing Then Return Nothing
+
+            ' Der kurzlebige Cache ist hier kein Optimierungsversuch, sondern der gemeinsame
+            ' Kompositionsvertrag mit dem Editor. Er wird danach sofort wieder freigegeben.
+            Dim annotationCache As New AnnotationBitmapCache()
+            Try
+                Using canvas As New SKCanvas(scene)
+                    OverlaySceneRenderer.DrawCachedAnnotations(canvas, compositorAdjustments,
+                                                                scene.Width, scene.Height, annotationCache)
+                End Using
+                Return scene
+            Catch
+                scene.Dispose()
+                Throw
+            Finally
+                annotationCache.Clear()
+            End Try
+        End Function
+
         Public Shared Function CloneForEditing(source As SKBitmap) As SKBitmap
             If source Is Nothing Then Return Nothing
             Return CloneBitmap(source)

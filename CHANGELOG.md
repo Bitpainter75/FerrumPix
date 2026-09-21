@@ -20,6 +20,12 @@
   FerrumPix now says it once per camera and names the way around it: convert the file to DNG, which
   carries the missing values itself. The status line of the editor mentions it as well.
 
+### Fixes
+
+- A picture with objects on it looks the same wherever you see it. An object that was turned and
+  pulled into shape at the same time came out a little differently in the viewer, in an export and
+  in print than it did in the editor. They all put the scene together the editor's way now.
+
 ## FerrumPix 0.9.48
 
 ### What's new

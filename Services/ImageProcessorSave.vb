@@ -697,7 +697,10 @@ Namespace Services
                 End If
                 Using baseBitmap = DecodeForAdjustments(inputPath, loaded.Adjustments)
                     If baseBitmap Is Nothing Then Return Nothing
-                    Return ProcessBitmap(baseBitmap, If(loaded.Adjustments, New ImageAdjustments()))
+                    ' Vollrenderer, Viewer und Export verwenden dieselbe geteilte Szenen-Komposition
+                    ' wie der Editor. Besonders OwnWarp plus Drehung darf nicht durch den alten,
+                    ' rein gebackenen Objektweg in einer anderen Reihenfolge gezeichnet werden.
+                    Return RenderSceneFullResolution(baseBitmap, If(loaded.Adjustments, New ImageAdjustments()))
                 End Using
             Finally
                 If Not String.IsNullOrWhiteSpace(loaded.TempDir) Then

@@ -479,33 +479,6 @@ Namespace Services
             End Try
         End Function
 
-        ''' <summary>Ob das gespeicherte Komposit im Betrachter die verbindliche Darstellung bleiben
-        ''' muss. Eigene Objektverzerrungen werden in der Editor-Szene ueber den Objekt-Cache
-        ''' zusammengesetzt; der allgemeine Vollaufloesungs-Renderer kann sie dagegen noch in einer
-        ''' anderen Reihenfolge anlegen. Er darf das bereits korrekte <c>composite.png</c> dann nicht
-        ''' nach einem kurzen Moment durch seine abweichende Fassung ersetzen.
-        '''
-        ''' Liest nur <c>recipe.json</c>, nicht Basisbild oder Assets. Das ist absichtlich ein
-        ''' leichter Vorabtest fuer den Viewer und erzeugt keinen Temp-Ordner.</summary>
-        Public Shared Function CompositeIsAuthoritativeForViewer(fpxPath As String) As Boolean
-            If Not IsFpx(fpxPath) Then Return False
-            Try
-                Using zip = ZipFile.OpenRead(fpxPath)
-                    Dim recipeZip = zip.GetEntry(RecipeEntry)
-                    If recipeZip Is Nothing Then Return False
-                    Dim recipe As FpxRecipe
-                    Using stream = recipeZip.Open()
-                        recipe = JsonSerializer.Deserialize(Of FpxRecipe)(stream, JsonOptions)
-                    End Using
-                    Return recipe?.Adjustments?.Annotations IsNot Nothing AndAlso
-                           recipe.Adjustments.Annotations.Any(Function(annotation) ImageProcessor.HasWarp(annotation))
-                End Using
-            Catch
-                ' Ein defektes oder altes Rezept bekommt weiter den bisherigen Vollrender-Versuch.
-                Return False
-            End Try
-        End Function
-
     End Class
 
 End Namespace
