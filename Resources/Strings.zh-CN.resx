@@ -8593,4 +8593,10 @@
   <data name="Ausgeschaltet_bleibt_das_bisherige_Bild_im_Edito_96a283d3" xml:space="preserve">
     <value>关闭时，原来的照片留在编辑器里，保存的文件只是放在磁盘上。开启时，编辑器会切换到新文件并在那里继续。</value>
   </data>
+  <data name="Lichter_unbeschnitten_aus_den_Sensordaten_lesen_164cb4ec" xml:space="preserve">
+    <value>从传感器数据中不截断地读取高光</value>
+  </data>
+  <data name="Holt_die_Zeichnung_herein_die_oberhalb_von_Wei_l_a3677090" xml:space="preserve">
+    <value>把位于白色之上的层次取回来，并为此补偿亮度。有了它，光线面板里的高光恢复才有可以处理的内容。关闭后，解码时会截断高光：万一某台相机的照片因此过亮，这就是退路。</value>
+  </data>
 </root>

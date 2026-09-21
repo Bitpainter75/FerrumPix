@@ -8639,4 +8639,10 @@
   <data name="Ausgeschaltet_bleibt_das_bisherige_Bild_im_Edito_96a283d3" xml:space="preserve">
     <value>เมื่อปิด ภาพเดิมจะยังอยู่ในตัวแก้ไข ส่วนไฟล์ที่บันทึกไว้จะอยู่บนดิสก์เท่านั้น เมื่อเปิด ตัวแก้ไขจะย้ายไปยังไฟล์ใหม่และทำงานต่อที่นั่น</value>
   </data>
+  <data name="Lichter_unbeschnitten_aus_den_Sensordaten_lesen_164cb4ec" xml:space="preserve">
+    <value>อ่านส่วนสว่างจากข้อมูลเซนเซอร์แบบไม่ตัดทิ้ง</value>
+  </data>
+  <data name="Holt_die_Zeichnung_herein_die_oberhalb_von_Wei_l_a3677090" xml:space="preserve">
+    <value>ดึงรายละเอียดที่อยู่เหนือสีขาวเข้ามา แล้วชดเชยความสว่างให้ ด้วยวิธีนี้เท่านั้นการกู้ส่วนสว่างในแผงแสงจึงมีอะไรให้ทำ เมื่อปิด ส่วนสว่างจะถูกตัดทิ้งตอนพัฒนาไฟล์ นี่คือทางกลับ หากภาพจากกล้องบางรุ่นสว่างเกินไปเพราะสิ่งนี้</value>
+  </data>
 </root>

@@ -827,6 +827,23 @@ Namespace ViewModels
         End Property
         Private _rawDemosaicAlgorithm As String = AppSettingsService.RawDemosaicDefault
 
+        ''' <summary>Liest der Decode die Lichter unbeschnitten aus den Sensordaten? Ab Werk ja; das
+        ''' ist der Weg, auf dem die Lichterrettung ueberhaupt etwas zu arbeiten hat. Ausgeschaltet
+        ''' entwickelt FerrumPix sie beschnitten - der Rueckweg, falls eine Kamera damit zu hell
+        ''' geraet. Der Stand steht in den Zwischenspeicher-Schluesseln des Decodes und im Namen der
+        ''' Kachel, das Umlegen wirkt also und laesst nichts Altes stehen.</summary>
+        Public Property RawHighlightUnclip As Boolean
+            Get
+                Return _rawHighlightUnclip
+            End Get
+            Set(value As Boolean)
+                If _rawHighlightUnclip = value Then Return
+                Me.RaiseAndSetIfChanged(_rawHighlightUnclip, value)
+                AppSettingsService.Update(Sub(s) s.RawHighlightUnclip = value)
+            End Set
+        End Property
+        Private _rawHighlightUnclip As Boolean = True
+
         ''' <summary>Was das gewaehlte Verfahren ausmacht - die Zeile unter der Auswahl. Die Angaben
         ''' sind gemessen, nicht aus der Literatur uebernommen.</summary>
         Public ReadOnly Property RawDemosaicDescription As String
@@ -3689,6 +3706,7 @@ Namespace ViewModels
             _useCameraBaselineTable = _appSettings.UseCameraBaselineTable
             _lensCorrectionEnabled = _appSettings.LensCorrectionEnabled
             _rawDemosaicAlgorithm = AppSettingsService.NormalizeRawDemosaicAlgorithm(_appSettings.RawDemosaicAlgorithm)
+            _rawHighlightUnclip = _appSettings.RawHighlightUnclip
             _windowColorSpaceMethod = MacWindowColorSpaceService.NormalizeMethod(_appSettings.MacWindowColorSpaceMethod)
             _macRenderingMode = AppSettingsService.NormalizeMacRenderingMode(_appSettings.MacRenderingMode)
             _thumbnailCacheEnabled = _appSettings.ThumbnailCacheEnabled

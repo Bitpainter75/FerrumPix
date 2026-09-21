@@ -8639,4 +8639,10 @@
   <data name="Ausgeschaltet_bleibt_das_bisherige_Bild_im_Edito_96a283d3" xml:space="preserve">
     <value>Jika dimatikan, gambar yang sedang dikerjakan tetap di editor dan berkas yang disimpan hanya ada di diska. Jika dinyalakan, editor berpindah ke berkas baru dan melanjutkan di sana.</value>
   </data>
+  <data name="Lichter_unbeschnitten_aus_den_Sensordaten_lesen_164cb4ec" xml:space="preserve">
+    <value>Baca sorotan tanpa terpotong dari data sensor</value>
+  </data>
+  <data name="Holt_die_Zeichnung_herein_die_oberhalb_von_Wei_l_a3677090" xml:space="preserve">
+    <value>Mengambil detail yang berada di atas putih dan mengimbangi kecerahannya. Baru dengan ini pemulihan sorotan di panel cahaya punya bahan untuk dikerjakan. Jika dimatikan, sorotan dipotong saat pengembangan: jalan kembali, seandainya foto dari sebuah kamera menjadi terlalu terang dengannya.</value>
+  </data>
 </root>

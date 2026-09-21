@@ -8595,4 +8595,10 @@
   <data name="Ausgeschaltet_bleibt_das_bisherige_Bild_im_Edito_96a283d3" xml:space="preserve">
     <value>Disattivato, l'immagine su cui si stava lavorando resta nell'editor e il file salvato sta solo sul disco. Attivato, l'editor passa al nuovo file e continua lì.</value>
   </data>
+  <data name="Lichter_unbeschnitten_aus_den_Sensordaten_lesen_164cb4ec" xml:space="preserve">
+    <value>Leggere le alte luci non tagliate dai dati del sensore</value>
+  </data>
+  <data name="Holt_die_Zeichnung_herein_die_oberhalb_von_Wei_l_a3677090" xml:space="preserve">
+    <value>Recupera il dettaglio che sta sopra il bianco e compensa la luminosità di conseguenza. Solo così il recupero delle alte luci nel pannello Luce ha qualcosa su cui lavorare. Disattivato, le alte luci vengono tagliate durante l'elaborazione: la via del ritorno, se gli scatti di una fotocamera risultassero troppo chiari.</value>
+  </data>
 </root>

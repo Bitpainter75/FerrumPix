@@ -2255,8 +2255,13 @@ Namespace ViewModels
 
             If Not ApplyLoadedBitmap(token, bmp) Then Return
             SetBitmapLoading(False)
-            ' FPX: das schnelle Komposit steht - die Vollaufloesung zieht mit demselben Token nach.
-            If isFpx AndAlso bmp IsNot Nothing Then LoadFpxFullResolutionBitmapAsync(path, token)
+            ' FPX: normalerweise zieht die Vollaufloesung mit demselben Token nach. Eigene
+            ' Objektverzerrungen sind die Ausnahme: ihr gespeichertes Komposit kommt aus exakt der
+            ' Editor-Szene, waehrend der allgemeine Vollrenderer die Ebenen noch anders kombiniert
+            ' und das korrekte Bild nach ein bis zwei Sekunden sichtbar verbiegen wuerde.
+            If isFpx AndAlso bmp IsNot Nothing AndAlso Not FpxService.CompositeIsAuthoritativeForViewer(path) Then
+                LoadFpxFullResolutionBitmapAsync(path, token)
+            End If
         End Sub
 
         ''' <summary>Uebernimmt ein fertig dekodiertes Bitmap, WENN der Token noch aktuell ist -

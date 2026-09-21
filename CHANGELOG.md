@@ -2,6 +2,11 @@
 
 ### What's new
 
+- **A way back for the highlights.** Since 0.9.48 raw files are read with their highlights unclipped,
+  which is what lets the highlight recovery work at all. If pictures from your camera come out too
+  bright since then, the new switch under Raw development turns it off and develops them the way it
+  did before. It applies everywhere the file is developed, editor, viewer and fullscreen alike.
+
 - **Save as no longer takes the picture away from you.** The editor stays on the picture you were
   working on, and the saved file simply lands on disk. A setting under Editor turns it around for
   anyone who would rather carry on in the new file.

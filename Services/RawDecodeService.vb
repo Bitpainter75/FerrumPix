@@ -509,6 +509,9 @@ Namespace Services
         ''' demselben Grund in den Schluessel wie die Grundbelichtung: die Wahl aendert die Pixel,
         ''' waehrend Pfad und Aenderungszeit gleich bleiben.</summary>
         Private Shared _cachedDemosaic As Integer = -1
+        ''' <summary>Stand des Schalters, mit dem dieses Bild entstanden ist. Ohne ihn im
+        ''' Schluessel bliebe nach dem Umlegen das alte Bild stehen.</summary>
+        Private Shared _cachedUnclip As Boolean = True
         ''' <summary>Ob der zwischengespeicherte Decode mit Lichterrettung gerechnet wurde. Aus
         ''' demselben Grund im Schluessel wie die beiden darueber: der Schalter aendert die Pixel,
         ''' waehrend Pfad und Aenderungszeit gleich bleiben. Fehlte er, saehe der Schalter aus, als
@@ -588,12 +591,14 @@ Namespace Services
                 ' Sekunden fuer eine Umrechnung, die selbst Millisekunden braucht.
                 Dim objKey = LensKey(lens)
                 Dim demosaic = ConfiguredDemosaic()
+                Dim unclip = ConfiguredHighlightUnclip()
                 SyncLock _cacheLock
                     If _cachedBitmap IsNot Nothing AndAlso
                        String.Equals(_cachedPath, path, StringComparison.Ordinal) AndAlso
                        _cachedWriteTimeUtc = writeTime AndAlso
                        _cachedGrundbelichtung = baseEv AndAlso
                        _cachedDemosaic = demosaic AndAlso
+                       _cachedUnclip = unclip AndAlso
                        _cachedHighlightRecovery = recoverHighlights AndAlso
                        _cachedHighlightKnee = knee AndAlso
                        String.Equals(_cachedObjektiv, objKey, StringComparison.Ordinal) Then
@@ -620,6 +625,7 @@ Namespace Services
                     _cachedGrundbelichtung = baseEv
                     _cachedObjektiv = objKey
                     _cachedDemosaic = demosaic
+                    _cachedUnclip = unclip
                     _cachedHighlightRecovery = recoverHighlights
                     _cachedHighlightKnee = knee
                     _cachedWriteTimeUtc = writeTime
@@ -1310,6 +1316,7 @@ Namespace Services
         Private Shared _cachedRawPath As String = ""
         Private Shared _cachedRawWriteTimeUtc As DateTime
         Private Shared _cachedRawDemosaic As Integer = -1
+        Private Shared _cachedRawUnclip As Boolean = True
 
         Private Shared Sub DropRawBits()
             _cachedRawBytes = Nothing
@@ -1371,6 +1378,7 @@ Namespace Services
                 If _cachedRawBytes Is Nothing Then Return Nothing
                 If Not String.Equals(_cachedRawPath, path, StringComparison.Ordinal) Then Return Nothing
                 If _cachedRawWriteTimeUtc <> writeTime OrElse _cachedRawDemosaic <> demosaic Then Return Nothing
+                If _cachedRawUnclip <> ConfiguredHighlightUnclip() Then Return Nothing
                 ' Die REFERENZ unter der Sperre nehmen, das Feld selbst danach nicht mehr
                 ' anfassen: der Inhalt wird nach dem Fuellen nie wieder veraendert, nur das Feld
                 ' zeigt irgendwann woandershin.
@@ -1590,6 +1598,23 @@ Namespace Services
             End Try
         End Function
 
+        ''' <summary>Liest der Decode die Lichter unbeschnitten aus den Sensordaten? Einstellung, ab
+        ''' Werk ja.
+        '''
+        ''' <para>DER RUECKWEG. Ohne sie gab es keinen: der Haken der Lichterrettung steuert nur die
+        ''' Schulter, entklemmt wurde IMMER (siehe HighlightRecoveryMode). Wem eine Kamera damit zu
+        ''' hell gerät, der hatte nur den Weg zurueck auf eine aeltere Fassung.</para>
+        '''
+        ''' <para>Sie steht in BEIDEN Zwischenspeicher-Schluesseln. Ohne das bliebe nach dem
+        ''' Umlegen das alte Bild stehen, und der Schalter waere ein Schalter, der nichts tut.</para></summary>
+        Private Shared Function ConfiguredHighlightUnclip() As Boolean
+            Try
+                Return AppSettingsService.Load().RawHighlightUnclip
+            Catch
+                Return True
+            End Try
+        End Function
+
         ' Offsets INNERHALB libraw_output_params_t. Die Basis dieses Feldes in libraw_data_t ist
         ' absichtlich nicht fest verdrahtet: sie liegt z.B. bei 5024 (LibRaw 0.21.4) bzw. 5232
         ' (0.22.2) und kann sich bei jeder Systembibliothek wieder verschieben.
@@ -1767,7 +1792,8 @@ Namespace Services
                 ' auf. Nur ohne gueltige cam_mul gilt pre_mul, weil dcraw dann bei seinen eigenen
                 ' Werten bleibt.
                 Dim scaling = If(usingCamMul, camMul, ReadFourMultipliers(_getPreMul, handle))
-                Dim normalization = If(linearMoeglich AndAlso _setHighlight IsNot Nothing,
+                Dim normalization = If(linearMoeglich AndAlso _setHighlight IsNot Nothing AndAlso
+                                       ConfiguredHighlightUnclip(),
                                        NormalizationFactor(scaling), 1.0)
                 Dim unclipping = normalization > 1.0
 
@@ -1841,6 +1867,7 @@ Namespace Services
                                 _cachedRawPath = path
                                 _cachedRawWriteTimeUtc = writeTime
                                 _cachedRawDemosaic = demosaic
+                                _cachedRawUnclip = ConfiguredHighlightUnclip()
                             End SyncLock
                             DiagnosticLogService.LogAlways("RawDecodeService.RawCache",
                                 $"abgelegt, {keep.Length \ (1024 * 1024)} MB")

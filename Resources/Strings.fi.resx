@@ -8635,4 +8635,10 @@
   <data name="Ausgeschaltet_bleibt_das_bisherige_Bild_im_Edito_96a283d3" xml:space="preserve">
     <value>Pois päältä nykyinen kuva jää muokkaimeen ja tallennettu tiedosto on vain levyllä. Päällä muokkain siirtyy uuteen tiedostoon ja jatkaa siinä.</value>
   </data>
+  <data name="Lichter_unbeschnitten_aus_den_Sensordaten_lesen_164cb4ec" xml:space="preserve">
+    <value>Lue huiput leikkaamattomina kennodatasta</value>
+  </data>
+  <data name="Holt_die_Zeichnung_herein_die_oberhalb_von_Wei_l_a3677090" xml:space="preserve">
+    <value>Tuo esiin piirron, joka on valkoisen yläpuolella, ja tasaa kirkkauden sen mukaan. Vasta tämä antaa valopaneelin huippujen palautukselle jotain työstettävää. Pois päältä huiput leikataan kehityksessä: paluutie, jos jonkin kameran kuvat tulevat tällä liian vaaleiksi.</value>
+  </data>
 </root>

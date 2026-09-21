@@ -670,6 +670,13 @@ Namespace Services
         ''' Bibliothek und koennen sich zwischen ihren Staenden verschieben, der Name nicht.
         ''' Unbekanntes faellt beim Laden auf die Vorgabe zurueck.</summary>
         Public Property RawDemosaicAlgorithm As String = AppSettingsService.RawDemosaicDefault
+        ''' Ob der Decode die Lichter UNBESCHNITTEN aus den Sensordaten liest und die Helligkeit
+        ''' dafuer ausgleicht. AB WERK AN, das ist der Weg, auf dem die Lichterrettung ueberhaupt
+        ''' etwas zu arbeiten hat. Ausgeschaltet entwickelt FerrumPix die Lichter beschnitten, wie
+        ''' vor dem Umbau - der Rueckweg fuer den Fall, dass eine Kamera damit zu hell geraet.
+        ''' Der Ausgleich rechnet mit dem Verhaeltnis der Aufnahmemultiplikatoren, und das ist je
+        ''' Kamera verschieden; belegt ist er an neun Dateien aus sechs Formaten, nicht an allen.
+        Public Property RawHighlightUnclip As Boolean = True
 
         Public Property LightroomPresets As New List(Of XmpPresetSettings)()
         Public Property LutPresets As New List(Of LutPresetSettings)()

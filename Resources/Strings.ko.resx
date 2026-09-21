@@ -8639,4 +8639,10 @@
   <data name="Ausgeschaltet_bleibt_das_bisherige_Bild_im_Edito_96a283d3" xml:space="preserve">
     <value>끄면 작업하던 사진이 편집기에 그대로 남고 저장한 파일은 디스크에만 있습니다. 켜면 편집기가 새 파일로 옮겨 가서 그곳에서 작업을 이어 갑니다.</value>
   </data>
+  <data name="Lichter_unbeschnitten_aus_den_Sensordaten_lesen_164cb4ec" xml:space="preserve">
+    <value>센서 데이터에서 하이라이트를 자르지 않고 읽기</value>
+  </data>
+  <data name="Holt_die_Zeichnung_herein_die_oberhalb_von_Wei_l_a3677090" xml:space="preserve">
+    <value>흰색 위에 있는 계조를 가져오고 그만큼 밝기를 보정합니다. 이것이 있어야 빛 패널의 하이라이트 복구가 다룰 것이 생깁니다. 끄면 현상할 때 하이라이트가 잘립니다. 어떤 카메라의 사진이 이 때문에 너무 밝게 나올 때 돌아갈 길입니다.</value>
+  </data>
 </root>

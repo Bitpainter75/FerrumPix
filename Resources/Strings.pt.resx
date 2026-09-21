@@ -8594,4 +8594,10 @@
   <data name="Ausgeschaltet_bleibt_das_bisherige_Bild_im_Edito_96a283d3" xml:space="preserve">
     <value>Desligado, a imagem em que estava a trabalhar fica no editor e o ficheiro guardado apenas fica no disco. Ligado, o editor passa para o novo ficheiro e continua aí.</value>
   </data>
+  <data name="Lichter_unbeschnitten_aus_den_Sensordaten_lesen_164cb4ec" xml:space="preserve">
+    <value>Ler as luzes altas sem corte a partir dos dados do sensor</value>
+  </data>
+  <data name="Holt_die_Zeichnung_herein_die_oberhalb_von_Wei_l_a3677090" xml:space="preserve">
+    <value>Traz o detalhe que fica acima do branco e compensa o brilho por isso. Só assim a recuperação de luzes no painel de luz tem com que trabalhar. Desligado, as luzes são cortadas ao revelar: o caminho de volta, caso as fotografias de alguma câmara fiquem demasiado claras com isto.</value>
+  </data>
 </root>

@@ -8635,4 +8635,10 @@
   <data name="Ausgeschaltet_bleibt_das_bisherige_Bild_im_Edito_96a283d3" xml:space="preserve">
     <value>Если выключено, прежний снимок остаётся в редакторе, а сохранённый файл просто лежит на диске. Если включено, редактор переходит на новый файл и работает дальше в нём.</value>
   </data>
+  <data name="Lichter_unbeschnitten_aus_den_Sensordaten_lesen_164cb4ec" xml:space="preserve">
+    <value>Читать света из данных сенсора без обрезания</value>
+  </data>
+  <data name="Holt_die_Zeichnung_herein_die_oberhalb_von_Wei_l_a3677090" xml:space="preserve">
+    <value>Забирает рисунок, который лежит выше белого, и выравнивает за это яркость. Только так восстановлению светов на панели света есть с чем работать. Если выключено, света обрезаются при проявке: путь назад, если снимки какой-то камеры выходят из-за этого слишком светлыми.</value>
+  </data>
 </root>

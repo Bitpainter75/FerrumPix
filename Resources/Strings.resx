@@ -8610,4 +8610,10 @@
   <data name="Ausgeschaltet_bleibt_das_bisherige_Bild_im_Edito_96a283d3" xml:space="preserve">
     <value>Switched off, the picture you were working on stays in the editor and the saved file simply sits on disk. Switched on, the editor moves to the new file and carries on there.</value>
   </data>
+  <data name="Lichter_unbeschnitten_aus_den_Sensordaten_lesen_164cb4ec" xml:space="preserve">
+    <value>Read the highlights unclipped from the sensor data</value>
+  </data>
+  <data name="Holt_die_Zeichnung_herein_die_oberhalb_von_Wei_l_a3677090" xml:space="preserve">
+    <value>Brings in the detail that lies above white and compensates the brightness for it. Only this gives the highlight recovery in the light panel something to work with. Switched off, the highlights are clipped while developing: the way back, should shots from a camera come out too bright with it.</value>
+  </data>
 </root>

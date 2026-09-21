@@ -8635,4 +8635,10 @@
   <data name="Ausgeschaltet_bleibt_das_bisherige_Bild_im_Edito_96a283d3" xml:space="preserve">
     <value>Uitgeschakeld blijft de huidige foto in de editor en staat het opgeslagen bestand alleen op schijf. Ingeschakeld gaat de editor naar het nieuwe bestand en werkt daar verder.</value>
   </data>
+  <data name="Lichter_unbeschnitten_aus_den_Sensordaten_lesen_164cb4ec" xml:space="preserve">
+    <value>Hoge lichten onbesneden uit de sensorgegevens lezen</value>
+  </data>
+  <data name="Holt_die_Zeichnung_herein_die_oberhalb_von_Wei_l_a3677090" xml:space="preserve">
+    <value>Haalt de tekening binnen die boven wit ligt en vereffent de helderheid daarvoor. Pas daardoor heeft het terughalen van hoge lichten in het lichtpaneel iets om mee te werken. Uitgeschakeld worden de hoge lichten bij het ontwikkelen afgesneden: de weg terug, mocht een camera hiermee te licht uitkomen.</value>
+  </data>
 </root>

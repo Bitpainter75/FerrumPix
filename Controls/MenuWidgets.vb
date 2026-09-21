@@ -253,6 +253,10 @@ Namespace Controls
         ''' <summary>Das Kreuz zum Zuruecksetzen - dieselbe Form wie die Kreise daneben, damit die
         ''' Zeile eine Reihe bleibt.</summary>
         Private Shared Function ClearButton(command As ICommand, parameter As String, tip As String) As Button
+            ' Die Glyphenbox des Multiplikationszeichens hat unten mehr Luft als oben.
+            ' Im Info-Panel sitzt dasselbe Kreuz deshalb zwei Punkte höher; ohne den
+            ' Ausgleich wirkt es in den runden Rücksetzknöpfen von Kontext- und
+            ' Footer-Menü sichtbar zu tief.
             Dim button As New Button With {
                 .Padding = New Thickness(0),
                 .Width = ButtonSize,
@@ -263,6 +267,7 @@ Namespace Controls
                 .Content = New TextBlock With {
                     .Text = "×",
                     .FontSize = 14,
+                    .Margin = New Thickness(0, -2, 0, 0),
                     .HorizontalAlignment = HorizontalAlignment.Center,
                     .VerticalAlignment = VerticalAlignment.Center
                 }

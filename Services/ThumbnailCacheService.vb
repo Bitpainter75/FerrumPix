@@ -936,13 +936,20 @@ Namespace Services
         Private Shared Function DemosaicSuffix(filePath As String) As String
             If Not RawPreviewService.IsSupportedRaw(filePath) Then Return ""
             Dim algorithm As String
+            Dim unclip As Boolean
             Try
-                algorithm = AppSettingsService.NormalizeRawDemosaicAlgorithm(
-                    AppSettingsService.Load().RawDemosaicAlgorithm)
+                Dim settings = AppSettingsService.Load()
+                algorithm = AppSettingsService.NormalizeRawDemosaicAlgorithm(settings.RawDemosaicAlgorithm)
+                unclip = settings.RawHighlightUnclip
             Catch
                 Return ""
             End Try
-            Return If(algorithm = AppSettingsService.RawDemosaicDefault, "", $"_d{algorithm}")
+            Dim suffix = If(algorithm = AppSettingsService.RawDemosaicDefault, "", $"_d{algorithm}")
+            ' Das Beschneiden der Lichter aendert die Bildpunkte genauso wie das Verfahren, also
+            ' gehoert es aus demselben Grund in den Namen. Bei der Vorgabe bleibt er unveraendert,
+            ' damit kein vorhandener Bestand entwertet wird.
+            If Not unclip Then suffix &= "_hc"
+            Return suffix
         End Function
 
         Private Shared Function DecodeDirect(filePath As String, cancellationToken As CancellationToken) As Bitmap

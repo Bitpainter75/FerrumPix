@@ -8635,4 +8635,10 @@
   <data name="Ausgeschaltet_bleibt_das_bisherige_Bild_im_Edito_96a283d3" xml:space="preserve">
     <value>Avstängt blir den nuvarande bilden kvar i redigeraren och den sparade filen ligger bara på disken. Påslaget byter redigeraren till den nya filen och arbetar vidare där.</value>
   </data>
+  <data name="Lichter_unbeschnitten_aus_den_Sensordaten_lesen_164cb4ec" xml:space="preserve">
+    <value>Läs högdagrarna obeskurna från sensordata</value>
+  </data>
+  <data name="Holt_die_Zeichnung_herein_die_oberhalb_von_Wei_l_a3677090" xml:space="preserve">
+    <value>Hämtar in teckningen som ligger över vitt och jämnar ut ljusstyrkan för det. Först då har högdagerräddningen i ljuspanelen något att arbeta med. Avstängt beskärs högdagrarna vid framkallningen: vägen tillbaka, om bilder från en kamera blir för ljusa med den.</value>
+  </data>
 </root>

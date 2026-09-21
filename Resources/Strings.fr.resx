@@ -8595,4 +8595,10 @@
   <data name="Ausgeschaltet_bleibt_das_bisherige_Bild_im_Edito_96a283d3" xml:space="preserve">
     <value>Désactivé, l'image en cours reste dans l'éditeur et le fichier enregistré se trouve simplement sur le disque. Activé, l'éditeur passe au nouveau fichier et y poursuit le travail.</value>
   </data>
+  <data name="Lichter_unbeschnitten_aus_den_Sensordaten_lesen_164cb4ec" xml:space="preserve">
+    <value>Lire les hautes lumières non écrêtées depuis les données du capteur</value>
+  </data>
+  <data name="Holt_die_Zeichnung_herein_die_oberhalb_von_Wei_l_a3677090" xml:space="preserve">
+    <value>Récupère le détail situé au-dessus du blanc et compense la luminosité en conséquence. C'est seulement ainsi que la récupération des hautes lumières du panneau Lumière a de quoi travailler. Désactivé, les hautes lumières sont écrêtées au développement : le retour en arrière, si les prises de vue d'un appareil ressortent trop claires avec.</value>
+  </data>
 </root>

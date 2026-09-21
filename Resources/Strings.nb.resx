@@ -8635,4 +8635,10 @@
   <data name="Ausgeschaltet_bleibt_das_bisherige_Bild_im_Edito_96a283d3" xml:space="preserve">
     <value>Slått av blir bildet du arbeidet med værende i redigeringen, og den lagrede filen ligger bare på disken. Slått på bytter redigeringen til den nye filen og fortsetter der.</value>
   </data>
+  <data name="Lichter_unbeschnitten_aus_den_Sensordaten_lesen_164cb4ec" xml:space="preserve">
+    <value>Les høylysene ubeskåret fra sensordataene</value>
+  </data>
+  <data name="Holt_die_Zeichnung_herein_die_oberhalb_von_Wei_l_a3677090" xml:space="preserve">
+    <value>Henter inn tegningen som ligger over hvitt, og jevner ut lysstyrken for det. Først da har høylysredningen i lyspanelet noe å arbeide med. Slått av blir høylysene beskåret under fremkallingen: veien tilbake, dersom bilder fra et kamera blir for lyse med den.</value>
+  </data>
 </root>

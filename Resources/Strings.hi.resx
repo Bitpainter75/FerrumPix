@@ -8639,4 +8639,10 @@
   <data name="Ausgeschaltet_bleibt_das_bisherige_Bild_im_Edito_96a283d3" xml:space="preserve">
     <value>बंद होने पर मौजूदा चित्र संपादक में बना रहता है और सहेजी गई फ़ाइल केवल डिस्क पर रहती है। चालू होने पर संपादक नई फ़ाइल पर चला जाता है और वहीं काम करता रहता है।</value>
   </data>
+  <data name="Lichter_unbeschnitten_aus_den_Sensordaten_lesen_164cb4ec" xml:space="preserve">
+    <value>सेंसर डेटा से हाइलाइट बिना कटे पढ़ें</value>
+  </data>
+  <data name="Holt_die_Zeichnung_herein_die_oberhalb_von_Wei_l_a3677090" xml:space="preserve">
+    <value>सफ़ेद से ऊपर की जो जानकारी है उसे भीतर लाता है और उसके लिए चमक की भरपाई करता है। इसी से प्रकाश पैनल की हाइलाइट रिकवरी को कुछ काम मिलता है। बंद होने पर विकास के समय हाइलाइट काट दिए जाते हैं: वापसी का रास्ता, अगर किसी कैमरे के चित्र इससे बहुत उजले निकलें।</value>
+  </data>
 </root>

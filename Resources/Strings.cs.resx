@@ -8635,4 +8635,10 @@
   <data name="Ausgeschaltet_bleibt_das_bisherige_Bild_im_Edito_96a283d3" xml:space="preserve">
     <value>Vypnuto zůstává v editoru dosavadní snímek a uložený soubor jen leží na disku. Zapnuto editor přejde na nový soubor a pokračuje v něm.</value>
   </data>
+  <data name="Lichter_unbeschnitten_aus_den_Sensordaten_lesen_164cb4ec" xml:space="preserve">
+    <value>Světla načítat ze senzorových dat neořezaná</value>
+  </data>
+  <data name="Holt_die_Zeichnung_herein_die_oberhalb_von_Wei_l_a3677090" xml:space="preserve">
+    <value>Přinese kresbu, která leží nad bílou, a vyrovná za to jas. Teprve tím má záchrana světel ve světelném panelu s čím pracovat. Vypnuto se světla při vyvolání ořezávají: cesta zpět, kdyby snímky z některého fotoaparátu byly takto příliš světlé.</value>
+  </data>
 </root>

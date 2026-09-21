@@ -8635,4 +8635,10 @@
   <data name="Ausgeschaltet_bleibt_das_bisherige_Bild_im_Edito_96a283d3" xml:space="preserve">
     <value>Po wyłączeniu dotychczasowe zdjęcie zostaje w edytorze, a zapisany plik leży tylko na dysku. Po włączeniu edytor przechodzi na nowy plik i pracuje dalej na nim.</value>
   </data>
+  <data name="Lichter_unbeschnitten_aus_den_Sensordaten_lesen_164cb4ec" xml:space="preserve">
+    <value>Czytaj światła z danych matrycy bez obcinania</value>
+  </data>
+  <data name="Holt_die_Zeichnung_herein_die_oberhalb_von_Wei_l_a3677090" xml:space="preserve">
+    <value>Wciąga rysunek leżący powyżej bieli i wyrównuje za to jasność. Dopiero dzięki temu ratowanie świateł w panelu światła ma z czym pracować. Po wyłączeniu światła są obcinane przy wywoływaniu: droga powrotna, gdyby zdjęcia z jakiegoś aparatu wychodziły przez to za jasne.</value>
+  </data>
 </root>
