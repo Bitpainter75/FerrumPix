@@ -489,6 +489,15 @@ Namespace Services
         ''' demselben Grund in den Schluessel wie die Grundbelichtung: die Wahl aendert die Pixel,
         ''' waehrend Pfad und Aenderungszeit gleich bleiben.</summary>
         Private Shared _cachedDemosaic As Integer = -1
+        ''' <summary>Ob der zwischengespeicherte Decode mit Lichterrettung gerechnet wurde. Aus
+        ''' demselben Grund im Schluessel wie die beiden darueber: der Schalter aendert die Pixel,
+        ''' waehrend Pfad und Aenderungszeit gleich bleiben. Fehlte er, saehe der Schalter aus, als
+        ''' tue er nichts.</summary>
+        Private Shared _cachedHighlightRecovery As Boolean = False
+        ''' <summary>Die Staerke der Lichterrettung des zwischengespeicherten Decodes. Sie steht
+        ''' aus demselben Grund im Schluessel wie der Schalter selbst - die Messung faehrt sie
+        ''' durch, und ohne sie laege beim zweiten Wert das Bild des ersten im Speicher.</summary>
+        Private Shared _cachedHighlightKnee As Double = Double.NaN
         Private Shared _cachedBitmap As SKBitmap
 
         ''' <summary>Voll aufgelöster, fertig entwickelter Decode (Besitz beim Aufrufer) oder Nothing.
@@ -500,10 +509,15 @@ Namespace Services
         ''' <see cref="DecodeGate"/>. Der Zwischenspeicher wird INNERHALB der Schleuse gefragt: wer
         ''' hinter einem laufenden Decode wartet, bekommt danach dessen Ergebnis, statt denselben
         ''' Lauf ein zweites Mal anzuwerfen.</summary>
+        ''' <param name="knee">Die Staerke der Lichterrettung, siehe
+        ''' <see cref="HighlightRecoveryKnee"/>. Die Anwendung laesst sie weg; angeben tut sie nur
+        ''' die Messung, die den Wert ueberhaupt erst bestimmt hat.</param>
         Public Shared Function TryDecode(path As String,
-                                         Optional lensChoice As LensDataService.Wahl = Nothing) As SKBitmap
+                                         Optional lensChoice As LensDataService.Wahl = Nothing,
+                                         Optional recoverHighlights As Boolean = False,
+                                         Optional knee As Double = HighlightRecoveryKnee) As SKBitmap
             If String.IsNullOrWhiteSpace(path) OrElse Not IsAvailable Then Return Nothing
-            Return DecodeGate.Run(Function() DecodeIntern(path, lensChoice))
+            Return DecodeGate.Run(Function() DecodeIntern(path, lensChoice, recoverHighlights, knee))
         End Function
 
         ''' <summary>Reduzierter RAW-Decode ausschliesslich fuer kleine Vorschauen. LibRaw kann nur
@@ -511,22 +525,24 @@ Namespace Services
         ''' Zielgroesse skaliert wird. Dieser Weg beruehrt bewusst weder den Editor-MRU-Cache noch
         ''' dessen Schluessel: ein 1/2-Decode darf niemals als Arbeitsbild wieder herauskommen.</summary>
         Friend Shared Function TryDecodeThumbnail(path As String,
-                                                   Optional lensChoice As LensDataService.Wahl = Nothing) As SKBitmap
+                                                   Optional lensChoice As LensDataService.Wahl = Nothing,
+                                                   Optional recoverHighlights As Boolean = False) As SKBitmap
             If String.IsNullOrWhiteSpace(path) OrElse Not IsAvailable Then Return Nothing
-            Return DecodeGate.Run(Function() DecodeThumbnailIntern(path, lensChoice))
+            Return DecodeGate.Run(Function() DecodeThumbnailIntern(path, lensChoice, recoverHighlights))
         End Function
 
         Private Shared Function DecodeThumbnailIntern(path As String,
-                                                       lensChoice As LensDataService.Wahl) As SKBitmap
+                                                       lensChoice As LensDataService.Wahl,
+                                                       recoverHighlights As Boolean) As SKBitmap
             Try
                 Dim baseEv = BaseExposureForFile(path)
                 Dim lens = LensCorrectionForFile(path, lensChoice)
                 Dim decoded As SKBitmap
                 If _reentrant Then
-                    decoded = DecodeCore(path, baseEv, lens, useHalfSize:=True)
+                    decoded = DecodeCore(path, baseEv, lens, useHalfSize:=True, recoverHighlights:=recoverHighlights)
                 Else
                     SyncLock _nativeLock
-                        decoded = DecodeCore(path, baseEv, lens, useHalfSize:=True)
+                        decoded = DecodeCore(path, baseEv, lens, useHalfSize:=True, recoverHighlights:=recoverHighlights)
                     End SyncLock
                 End If
                 Return WithDistortion(decoded, lens)
@@ -536,7 +552,9 @@ Namespace Services
         End Function
 
         Private Shared Function DecodeIntern(path As String,
-                                             lensChoice As LensDataService.Wahl) As SKBitmap
+                                             lensChoice As LensDataService.Wahl,
+                                             recoverHighlights As Boolean,
+                                             knee As Double) As SKBitmap
             Try
                 Dim writeTime = File.GetLastWriteTimeUtc(path)
                 Dim baseEv = BaseExposureForFile(path)
@@ -556,6 +574,8 @@ Namespace Services
                        _cachedWriteTimeUtc = writeTime AndAlso
                        _cachedGrundbelichtung = baseEv AndAlso
                        _cachedDemosaic = demosaic AndAlso
+                       _cachedHighlightRecovery = recoverHighlights AndAlso
+                       _cachedHighlightKnee = knee AndAlso
                        String.Equals(_cachedObjektiv, objKey, StringComparison.Ordinal) Then
                         Return WithDistortion(_cachedBitmap.Copy(), lens)
                     End If
@@ -565,10 +585,10 @@ Namespace Services
                 ' Thumbnail-Erzeugung ruft aus mehreren Threads hier herein (Parallel.For).
                 Dim decoded As SKBitmap
                 If _reentrant Then
-                    decoded = DecodeCore(path, baseEv, lens)
+                    decoded = DecodeCore(path, baseEv, lens, recoverHighlights:=recoverHighlights, knee:=knee)
                 Else
                     SyncLock _nativeLock
-                        decoded = DecodeCore(path, baseEv, lens)
+                        decoded = DecodeCore(path, baseEv, lens, recoverHighlights:=recoverHighlights, knee:=knee)
                     End SyncLock
                 End If
                 If decoded Is Nothing Then Return Nothing
@@ -580,6 +600,8 @@ Namespace Services
                     _cachedGrundbelichtung = baseEv
                     _cachedObjektiv = objKey
                     _cachedDemosaic = demosaic
+                    _cachedHighlightRecovery = recoverHighlights
+                    _cachedHighlightKnee = knee
                     _cachedWriteTimeUtc = writeTime
                     Return WithDistortion(_cachedBitmap.Copy(), lens)
                 End SyncLock
@@ -1081,8 +1103,112 @@ Namespace Services
                 _cachedBitmap = Nothing
                 _cachedPath = ""
                 _cachedGrundbelichtung = Double.NaN
+                DropRawBits()
             End SyncLock
         End Sub
+
+        ' ── Der 16-Bit-Zwischenspeicher ──────────────────────────────────────────
+
+        ''' <summary>LibRaws Ausgabe VOR <c>Convert16</c>, also die linearen 16-Bit-Daten.
+        '''
+        ''' <para>WOFUER. Alles, was die Belichtungsrampe steuert - Grundbelichtung, Lichterknie,
+        ''' Farbquerfehler und Vignettierung -, wird ERST in Convert16 angewandt. Ohne diesen
+        ''' Speicher muss dafuer trotzdem LibRaw neu laufen, weil der fertige 8-Bit-Stand im
+        ''' Zwischenspeicher liegt. Gemessen an einer 24-Megapixel-Datei: das Umschalten der
+        ''' Lichterrettung kostete 4034 Millisekunden, ein reiner Trefferfall 357.</para>
+        '''
+        ''' <para>WAS ER KOSTET, und das ist keine Kleinigkeit: sechs Byte je Bildpunkt, bei 24
+        ''' Megapixeln also rund 145 MB, und die liegen auf dem Haufen fuer grosse Objekte. Er
+        ''' haelt deshalb immer nur EINE Datei, wie der 8-Bit-Speicher daneben, und er wird mit
+        ''' ihm zusammen geleert.</para>
+        '''
+        ''' <para>DER 8-BIT-SPEICHER BLEIBT. Er allein bedient den haeufigen Fall "dieselbe Datei,
+        ''' dieselben Einstellungen" mit einer Bitmapkopie; liefe dafuer jedes Mal Convert16, waere
+        ''' der gewoehnliche Treffer langsamer als heute.</para></summary>
+        Private Shared _cachedRawBytes As Byte()
+        Private Shared _cachedRawWidth As Integer
+        Private Shared _cachedRawHeight As Integer
+        Private Shared _cachedRawNormalization As Double = 1.0
+        Private Shared _cachedRawPath As String = ""
+        Private Shared _cachedRawWriteTimeUtc As DateTime
+        Private Shared _cachedRawDemosaic As Integer = -1
+
+        Private Shared Sub DropRawBits()
+            _cachedRawBytes = Nothing
+            _cachedRawPath = ""
+            _cachedRawWidth = 0
+            _cachedRawHeight = 0
+            _cachedRawDemosaic = -1
+        End Sub
+
+        ''' <summary>Aus linearen 16-Bit-Daten eine fertige 8-Bit-Bitmap: Belichtungsrampe,
+        ''' ACR3-Kurve, Objektivkorrektur, Dither.
+        '''
+        ''' EIGENE FUNKTION, weil der Zeiger aus zwei Quellen kommt: frisch aus LibRaws Puffer
+        ''' oder aus dem 16-Bit-Zwischenspeicher. Beide Wege muessen dasselbe rechnen, sonst saehe
+        ''' ein Bild nach dem Umschalten anders aus als nach dem Oeffnen.</summary>
+        Private Shared Function BuildFrom16Bit(data As IntPtr, width As Integer, height As Integer,
+                                               lens As LensDataService.Korrektur,
+                                               baseEv As Double, normalization As Double,
+                                               knee As Double) As SKBitmap
+            Dim bitmap = New SKBitmap(New SKImageInfo(width, height, SKColorType.Bgra8888, SKAlphaType.Opaque))
+            Try
+                ' ZEILENWEISE direkt in die Bitmap. Ein 8-Bit-Vollbildpuffer waere bei 45
+                ' Megapixeln rund 180 MB auf dem Haufen fuer grosse Objekte und wuerde danach
+                ' noch einmal komplett kopiert; die Bitmapzeile kann breiter sein als das Bild,
+                ' deshalb laeuft der Versatz ueber RowBytes und nicht ueber die Breite.
+                Dim targetPtr = bitmap.GetPixels()
+                If targetPtr = IntPtr.Zero Then
+                    bitmap.Dispose()
+                    Return Nothing
+                End If
+                Dim targetStride = bitmap.RowBytes
+                Dim rowLength = width * 4
+                Dim row(rowLength - 1) As Byte
+                ' DIE RAMPE FOLGT DEM DATENBEREICH. Liegen dieselben Sensorwerte um den
+                ' Normierungsfaktor tiefer, muessen Weisspunkt und Schwarzpunkt mit: eine
+                ' Halbierung der Daten ist eine Blendenstufe auf der Grundbelichtung, und der
+                ' Schwarzabzug ist ein Anteil des Bereichs. Mit diesem Ausgleich allein bleibt das
+                ' Bild, was es war - die eigentliche Lichterrettung ist das Knie.
+                Dim ramp = ToneRampFor(baseEv, normalization)
+                Convert16Rows(data, width, height, row,
+                              Sub(y) Marshal.Copy(row, 0, IntPtr.Add(targetPtr, y * targetStride), rowLength),
+                              lens, ramp.ExposureEv, ramp.BlackLevel, knee)
+                Return bitmap
+            Catch
+                bitmap.Dispose()
+                Return Nothing
+            End Try
+        End Function
+
+        ''' <summary>Dieselbe Datei noch einmal umsetzen, ohne LibRaw zu bemuehen. Nothing, wenn
+        ''' der Zwischenspeicher eine andere Datei haelt.</summary>
+        Private Shared Function TryBuildFromCachedRaw(path As String, writeTime As DateTime, demosaic As Integer,
+                                                      lens As LensDataService.Korrektur,
+                                                      baseEv As Double, knee As Double) As SKBitmap
+            Dim bytes As Byte() = Nothing
+            Dim width = 0, height = 0
+            Dim normalization = 1.0
+            SyncLock _cacheLock
+                If _cachedRawBytes Is Nothing Then Return Nothing
+                If Not String.Equals(_cachedRawPath, path, StringComparison.Ordinal) Then Return Nothing
+                If _cachedRawWriteTimeUtc <> writeTime OrElse _cachedRawDemosaic <> demosaic Then Return Nothing
+                ' Die REFERENZ unter der Sperre nehmen, das Feld selbst danach nicht mehr
+                ' anfassen: der Inhalt wird nach dem Fuellen nie wieder veraendert, nur das Feld
+                ' zeigt irgendwann woandershin.
+                bytes = _cachedRawBytes
+                width = _cachedRawWidth
+                height = _cachedRawHeight
+                normalization = _cachedRawNormalization
+            End SyncLock
+
+            Dim pin = GCHandle.Alloc(bytes, GCHandleType.Pinned)
+            Try
+                Return BuildFrom16Bit(pin.AddrOfPinnedObject(), width, height, lens, baseEv, normalization, knee)
+            Finally
+                pin.Free()
+            End Try
+        End Function
 
         ''' <summary>Ausgabetiefe, die von LibRaw angefordert wird. DERZEIT 16, und das ist
         ''' VORAUSSETZUNG, nicht Option: die Basisstufe rechnet linear, und lineare Daten in 8 Bit
@@ -1117,8 +1243,115 @@ Namespace Services
         ''' Als Einstellung angeboten waere das eine Falle: es sieht aus wie eine Lichterrettung
         ''' und ist eine Blendenstufe. Wer es einbaut, muss die Basisstufe um genau diesen Faktor
         ''' gegenrechnen - der ist seit dem 06.09.2026 aus <c>pre_mul</c> auch bekannt - und die
-        ''' Kennlinie danach neu messen. Nicht ohne das.</summary>
+        ''' Kennlinie danach neu messen. Nicht ohne das.
+        '''
+        ''' GENAU DAS IST SEIT DEM 21.09.2026 GEBAUT, siehe <see cref="HighlightRecoveryMode"/>
+        ''' und <see cref="NormalizationFactor"/>. Dieser Modus hier bleibt die Vorgabe.</summary>
         Private Const HighlightMode As Integer = 0
+
+        ''' <summary>Der Lichtermodus der LICHTERRETTUNG: 1, also ENTKLEMMEN.
+        '''
+        ''' WARUM NICHT DIE REKONSTRUKTION (Modi ab 3). Gemessen mit der Lichterprobe an zwei
+        ''' Dateien mit ausgebranntem Himmel: die Modi 3, 5 und 9 unterscheiden sich vom blossen
+        ''' Entklemmen um ein HUNDERTSTEL einer 8-Bit-Stufe. LibRaws "Rekonstruktion"
+        ''' rekonstruiert nichts; was ein Umstieg bringt, ist allein die Kopffreiheit.
+        '''
+        ''' WARUM AUCH NICHT MODUS 2 (Blend). Er holt weniger: 70 statt 84 Prozent der teilweise
+        ''' ausgefressenen Bildpunkte, und 0,43 statt 0,82 Blendenstufen Kopffreiheit.
+        '''
+        ''' DER PREIS, den <see cref="NormalizationFactor"/> gegenrechnet: ab Modus 1 normiert
+        ''' LibRaw auf das MAXIMUM der Referenzmultiplikatoren statt auf ihr Minimum, das ganze
+        ''' Bild liegt also um deren Verhaeltnis tiefer.</summary>
+        Private Const HighlightRecoveryMode As Integer = 1
+
+        ''' <summary>Das Knie der Lichterschulter, das die Lichterrettung benutzt. 1,0 waere kein
+        ''' Ausrollen, also harter Beschnitt wie ohne Rettung.
+        '''
+        ''' <para>GEMESSEN, nicht gewaehlt (<c>rawsweep --knie</c>, zehn Dateien aus acht
+        ''' Formaten). Der Anteil ausgefressener Stellen gegen den mittleren Verlust dort, wo
+        ''' heute schon Zeichnung ist, in 8-Bit-Stufen:</para>
+        '''
+        ''' <code>
+        ''' Knie    350D: aus / Verlust    LX3: aus / Verlust    ohne Lichter: Verlust
+        ''' 1,00    0,946 %      0,00      42,2 %      -1,24     0,00 bis 0,01
+        ''' 0,70    0,163 %      0,04      22,6 %      -0,52     0,00 bis 0,01
+        ''' 0,60    0,040 %      0,11       9,9 %       0,17     0,00 bis 0,03
+        ''' 0,50    0,015 %      0,28       4,6 %       1,11     0,00 bis 0,14
+        ''' </code>
+        '''
+        ''' <para>0,60 ist die Stelle, an der es kippt: bis dahin verschwinden 96 bzw. 76 Prozent
+        ''' der ausgefressenen Stellen fuer weniger als ein Fuenftel einer Tonwertstufe, danach
+        ''' steigt der Preis schneller als der Gewinn. Dateien ohne ausgefressene Lichter kostet
+        ''' es bei 0,60 hoechstens 0,03 Stufen - sie merken nichts.</para>
+        '''
+        ''' <para>DASS DIE SCHULTER UEBERHAUPT ETWAS BRINGT, widerspricht der Messung von 2026-08
+        ''' nur scheinbar: die lief mit Lichtermodus Beschnitt, also ohne irgendetwas oberhalb des
+        ''' Weisspunktes, das die Schulter haette aufnehmen koennen. Erst das Entklemmen gibt ihr
+        ''' etwas zu tun.</para></summary>
+        Public Const HighlightRecoveryKnee As Double = 0.6
+
+        ''' <summary>Um wie viel tiefer LibRaw dieselben Sensorwerte legt, sobald der Lichtermodus
+        ''' nicht mehr Beschnitt ist: das Verhaeltnis von groesstem zu kleinstem
+        ''' Referenzmultiplikator. Unter Beschnitt teilt LibRaw durch das Minimum, ab Modus 1 durch
+        ''' das Maximum.
+        '''
+        ''' 1.0, wenn sich die Multiplikatoren nicht lesen lassen - dann bleibt die Rampe, wie sie
+        ''' ist, und die Lichterrettung wirkt eben nicht. Ein GERATENER Faktor waere hier das
+        ''' Schlimmste: er verschoebe die Grundhelligkeit, an der die ganze Kennlinie haengt.
+        '''
+        ''' Der vierte Multiplikator ist bei dreifarbigen Sensoren oft Null; LibRaw setzt ihn dann
+        ''' auf den Gruenwert, und dasselbe tut diese Rechnung.</summary>
+        Private Shared Function NormalizationFactor(preMul As Single()) As Double
+            If preMul Is Nothing OrElse preMul.Length < 3 Then Return 1.0
+            Dim values(3) As Double
+            For i = 0 To 2
+                values(i) = preMul(i)
+            Next
+            values(3) = If(preMul.Length > 3 AndAlso preMul(3) > 0.0F, CDbl(preMul(3)), values(1))
+
+            Dim smallest = Double.MaxValue
+            Dim largest = 0.0
+            For i = 0 To 3
+                If Not Double.IsFinite(values(i)) OrElse values(i) <= 0.0 Then Return 1.0
+                smallest = Math.Min(smallest, values(i))
+                largest = Math.Max(largest, values(i))
+            Next
+            If smallest <= 0.0 Then Return 1.0
+            Dim factor = largest / smallest
+            ' Eine Datei, deren Multiplikatoren praktisch gleich sind, hat keine Kopffreiheit zu
+            ' verschenken; eine mit einem absurden Verhaeltnis ist kaputt gelesen.
+            If Not Double.IsFinite(factor) OrElse factor < 1.0 OrElse factor > 8.0 Then Return 1.0
+            Return factor
+        End Function
+
+        ''' <summary>Weisspunkt und Schwarzpunkt der Belichtungsrampe, als Paar.</summary>
+        Friend Structure ToneRamp
+            Public ReadOnly ExposureEv As Double
+            Public ReadOnly BlackLevel As Double
+            Public Sub New(exposureEv As Double, blackLevel As Double)
+                Me.ExposureEv = exposureEv
+                Me.BlackLevel = blackLevel
+            End Sub
+        End Structure
+
+        ''' <summary>Die Rampe fuer einen um <paramref name="normalization"/> tiefer liegenden
+        ''' Datenbereich - also der AUSGLEICH des Lichtermodus, noch ohne Lichterrettung.
+        '''
+        ''' <para>DIE RECHNUNG. Liegen dieselben Sensorwerte um den Faktor F tiefer, muss die
+        ''' Rampe dasselbe Ergebnis liefern, wenn man sie um F mitzieht: aus dem Weisspunkt
+        ''' <c>1/2^ev</c> wird <c>1/(F*2^ev)</c>, also <c>ev + log2(F)</c>, und der Schwarzabzug
+        ''' ist ein ANTEIL des Bereichs und wird durch F geteilt. Beides zusammen laesst jeden
+        ''' Bildpunkt unterhalb des alten Weisspunktes dort, wo er war - und genau das ist die
+        ''' Aussage, die die Lichterprobe nachprueft.</para>
+        '''
+        ''' <para>WAS SIE NICHT TUT: die Lichter zurueckholen. Dafuer muss der Weisspunkt darunter
+        ''' noch einmal angehoben werden, und das kostet Helligkeit - siehe die Aufrufstelle.</para></summary>
+        Friend Shared Function ToneRampFor(baseEv As Double, normalization As Double) As ToneRamp
+            If Not Double.IsFinite(normalization) OrElse normalization <= 1.0 Then
+                Return New ToneRamp(baseEv, BlackSubtraction)
+            End If
+            Return New ToneRamp(baseEv + Math.Log(normalization, 2.0), BlackSubtraction / normalization)
+        End Function
 
         ''' <summary>LibRaws Nachfuehrung des Weisspunkts, AUSGESCHALTET (0).
         '''
@@ -1248,7 +1481,30 @@ Namespace Services
 
         Private Shared Function DecodeCore(path As String, baseEv As Double,
                                            lens As LensDataService.Korrektur,
-                                           Optional useHalfSize As Boolean = False) As SKBitmap
+                                           Optional useHalfSize As Boolean = False,
+                                           Optional recoverHighlights As Boolean = False,
+                                           Optional knee As Double = HighlightRecoveryKnee) As SKBitmap
+            ' ZUERST DER 16-BIT-ZWISCHENSPEICHER. Alles, was die Rampe steuert, wird erst in
+            ' Convert16 angewandt; liegen die linearen Daten noch da, ist ein LibRaw-Lauf
+            ' vergeudet. Die halbe Kantenlaenge bleibt aussen vor: sie hat eine andere Groesse
+            ' und darf nie als Arbeitsbild herauskommen.
+            Dim wantedKnee = If(recoverHighlights, knee, 1.0)
+            Dim writeTime As DateTime = Nothing
+            Dim demosaic = ConfiguredDemosaic()
+            If Not useHalfSize Then
+                Try
+                    writeTime = File.GetLastWriteTimeUtc(path)
+                    Dim reused = TryBuildFromCachedRaw(path, writeTime, demosaic, lens, baseEv, wantedKnee)
+                    If reused IsNot Nothing Then
+                        DiagnosticLogService.LogAlways("RawDecodeService.RawCache", "Treffer, LibRaw uebersprungen")
+                        Return reused
+                    End If
+                    DiagnosticLogService.LogAlways("RawDecodeService.RawCache", "kein Treffer, LibRaw laeuft")
+                Catch
+                    ' Nicht lesbare Aenderungszeit heisst nur: kein Treffer. Der Decode laeuft.
+                End Try
+            End If
+
             Dim handle = _init(0UI)
             If handle = IntPtr.Zero Then Return Nothing
             Dim pathPtr As IntPtr = IntPtr.Zero
@@ -1307,11 +1563,6 @@ Namespace Services
                 ' Das gewaehlte Demosaic-Verfahren. Fehlt der Setter (aeltere libraw), bleibt es bei
                 ' LibRaws Vorgabe - die Auswahl ist dann wirkungslos, aber nichts geht kaputt.
                 If _setDemosaic IsNot Nothing Then _setDemosaic(handle, ConfiguredDemosaic())
-                ' Lichter: BESCHNITT, und zwar ausdruecklich gesetzt. Die Zahl steht bei
-                ' HighlightMode, samt der Messung, warum Blend dort nicht steht.
-                If _setHighlight IsNot Nothing Then _setHighlight(handle, HighlightMode)
-                ' Die motivabhaengige Weisspunkt-Nachfuehrung aus, siehe AdjustMaximumThreshold.
-                If _setAdjustMaximumThr IsNot Nothing Then _setAdjustMaximumThr(handle, AdjustMaximumThreshold)
                 ' Kamera-Weißabgleich: die As-Shot-Multiplikatoren als user_mul setzen (die C-API
                 ' hat keinen use_camera_wb-Setter). Ohne gültige cam_mul bleibt der Standard.
                 '
@@ -1320,12 +1571,49 @@ Namespace Services
                 ' Eine Datei mit gueltigem Rot und einer Null oder einem NaN im Gruen kam damit
                 ' durch, und alle vier Werte gingen trotzdem als Weissabgleich in den Decode.
                 ' Zwei Begriffe von "gueltiger Weissabgleich" in einer Klasse sind einer zu viel.
+                '
+                ' STEHT VOR DEM LICHTERMODUS, seit der Normierungsfaktor daran haengt: dcraw
+                ' ersetzt pre_mul durch user_mul und bildet erst danach Minimum und Maximum.
                 Dim camMul = ReadFourMultipliers(_getCamMul, handle)
-                If AreUsableMultipliers(camMul) Then
+                Dim usingCamMul = AreUsableMultipliers(camMul)
+                If usingCamMul Then
                     For i = 0 To 3
                         _setUserMul(handle, i, camMul(i))
                     Next
                 End If
+
+                ' DER NORMIERUNGSFAKTOR KOMMT AUS DEN MULTIPLIKATOREN, DIE DCRAW WIRKLICH NIMMT.
+                ' Das sind die eben gesetzten AUFNAHME-Multiplikatoren, nicht die Referenzwerte.
+                ' Aus pre_mul gerechnet kam am LX3 2,513 heraus, wirklich gemessen waren es 2,015
+                ' - der Ausgleich hob das Bild damit um 0,36 Blendenstufen an und riss die Lichter
+                ' auf. Nur ohne gueltige cam_mul gilt pre_mul, weil dcraw dann bei seinen eigenen
+                ' Werten bleibt.
+                Dim scaling = If(usingCamMul, camMul, ReadFourMultipliers(_getPreMul, handle))
+                Dim normalization = If(linearMoeglich AndAlso _setHighlight IsNot Nothing,
+                                       NormalizationFactor(scaling), 1.0)
+                Dim unclipping = normalization > 1.0
+
+                ' ENTKLEMMT WIRD IMMER, nicht nur mit eingeschalteter Lichterrettung. Der Grund
+                ' ist der 16-Bit-Zwischenspeicher: nur wenn der Lichtermodus NICHT vom Schalter
+                ' abhaengt, taugt EIN gespeicherter Stand fuer beide Stellungen, und das
+                ' Umschalten kostet dann Convert16 statt eines ganzen LibRaw-Laufs (gemessen 4034
+                ' gegen 357 Millisekunden bei 24 Megapixeln).
+                '
+                ' DER PREIS, gemessen und bewusst in Kauf genommen: unterhalb der Lichter bleibt
+                ' das Bild auf 0,000 bis 0,312 Tonwertstufen gleich, aber rund 0,01 Prozent der
+                ' Bildpunkte aendern sich sichtbar - die mit einem geklemmten FARBKANAL. Unter
+                ' Beschnitt lief der Kanal in LibRaws sRGB-Umrechnung an den Anschlag, jetzt
+                ' traegt er seinen echten Wert. Beispiel aus der Messung: 118/119/14 wird zu
+                ' 111/115/46. Das ist der richtigere Wert, aber es ist eine Aenderung.
+                '
+                ' OHNE brauchbaren Faktor bleibt es beim Beschnitt. Ein Ausgleich, der auf einer
+                ' geratenen Zahl beruht, verschoebe die Grundhelligkeit - und an der haengt die
+                ' ganze Kennlinie.
+                If _setHighlight IsNot Nothing Then
+                    _setHighlight(handle, If(unclipping, HighlightRecoveryMode, HighlightMode))
+                End If
+                ' Die motivabhaengige Weisspunkt-Nachfuehrung aus, siehe AdjustMaximumThreshold.
+                If _setAdjustMaximumThr IsNot Nothing Then _setAdjustMaximumThr(handle, AdjustMaximumThreshold)
 
                 If _process(handle) <> 0 Then Return Nothing
                 Dim errc = 0
@@ -1352,13 +1640,45 @@ Namespace Services
                 If pixelCount <= 0 OrElse pixelCount > Integer.MaxValue \ maxBytesProPixel Then Return Nothing
                 If dataSize < pixelCount * 3L * (bits \ 8) Then Return Nothing
 
+                ' Objektivkorrektur: Farbquerfehler und Vignettierung kommen aus der
+                ' mitgelieferten Sammlung von Messwerten. Die frueher hier stehende eigene
+                ' SCHAETZUNG aus dem Bildinhalt ist stillgelegt - sie fand auf echten Fotos nur
+                ' ein Neuntel des Farbsaums. Mit Messwerten aus der Sammlung sind es gemessen 30
+                ' bis 45 Prozent (siehe RAW_UND_FARBE.md); damit lohnt die Stelle, an der die
+                ' Korrektur sitzt, obwohl sie hinter dem Demosaic liegt.
+                If bits = 16 Then
+                    ' DIE LINEAREN DATEN ZUERST SICHERN, dann daraus umsetzen. Der Umweg ueber
+                    ' den eigenen Puffer kostet eine Kopie (bei 24 Megapixeln rund 145 MB) und
+                    ' spart dafuer jeden weiteren LibRaw-Lauf, solange dieselbe Datei offen ist.
+                    ' Die halbe Kantenlaenge wird NICHT abgelegt.
+                    If Not useHalfSize Then
+                        Try
+                            Dim keep(CInt(pixelCount * 3L * 2L) - 1) As Byte
+                            Marshal.Copy(image + 16, keep, 0, keep.Length)
+                            SyncLock _cacheLock
+                                _cachedRawBytes = keep
+                                _cachedRawWidth = width
+                                _cachedRawHeight = height
+                                _cachedRawNormalization = normalization
+                                _cachedRawPath = path
+                                _cachedRawWriteTimeUtc = writeTime
+                                _cachedRawDemosaic = demosaic
+                            End SyncLock
+                            DiagnosticLogService.LogAlways("RawDecodeService.RawCache",
+                                $"abgelegt, {keep.Length \ (1024 * 1024)} MB")
+                        Catch ex As OutOfMemoryException
+                            ' Kein Speicher fuer den Zwischenspeicher ist kein Grund, den Decode
+                            ' scheitern zu lassen - er kostet dann eben wieder einen vollen Lauf.
+                            SyncLock _cacheLock
+                                DropRawBits()
+                            End SyncLock
+                        End Try
+                    End If
+                    Return BuildFrom16Bit(image + 16, width, height, lens, baseEv, normalization, wantedKnee)
+                End If
+
                 Dim bitmap = New SKBitmap(New SKImageInfo(width, height, SKColorType.Bgra8888, SKAlphaType.Opaque))
                 Try
-                    ' ZEILENWEISE direkt in die Bitmap. Vorher stand hier ein 8-Bit-Vollbildpuffer
-                    ' (bei 45 Megapixeln rund 180 MB auf dem Haufen fuer grosse Objekte), der danach
-                    ' noch einmal komplett kopiert wurde. Eine Zeile ist ein paar Kilobyte und geht
-                    ' direkt an ihr Ziel; die Bitmapzeile kann breiter sein als das Bild, deshalb
-                    ' laeuft der Versatz ueber RowBytes und nicht ueber die Breite.
                     Dim targetPtr = bitmap.GetPixels()
                     If targetPtr = IntPtr.Zero Then
                         bitmap.Dispose()
@@ -1367,32 +1687,24 @@ Namespace Services
                     Dim targetStride = bitmap.RowBytes
                     Dim rowLength = width * 4
                     Dim row(rowLength - 1) As Byte
-                    If bits = 16 Then
-                        ' Objektivkorrektur: Farbquerfehler und Vignettierung kommen aus der
-                        ' mitgelieferten Sammlung von Messwerten. Die frueher hier stehende eigene
-                        ' SCHAETZUNG aus dem Bildinhalt ist stillgelegt - sie fand auf echten Fotos
-                        ' nur ein Neuntel des Farbsaums. Mit Messwerten aus der Sammlung sind es
-                        ' gemessen 30 bis 45 Prozent (siehe RAW_UND_FARBE.md); damit lohnt die
-                        ' Stelle, an der die Korrektur sitzt, obwohl sie hinter dem Demosaic liegt.
-                        Convert16Rows(image + 16, width, height, row,
-                                      Sub(y) Marshal.Copy(row, 0, IntPtr.Add(targetPtr, y * targetStride), rowLength),
-                                      lens, baseEv)
-                    Else
-                        Dim sourceStride = width * 3
-                        Dim rgb(sourceStride - 1) As Byte
-                        For y = 0 To height - 1
-                            Marshal.Copy(image + 16 + y * sourceStride, rgb, 0, sourceStride)
-                            Dim d = 0
-                            For x = 0 To width - 1
-                                row(d) = rgb(x * 3 + 2)      ' B
-                                row(d + 1) = rgb(x * 3 + 1)  ' G
-                                row(d + 2) = rgb(x * 3)      ' R
-                                row(d + 3) = 255
-                                d += 4
-                            Next
-                            Marshal.Copy(row, 0, IntPtr.Add(targetPtr, y * targetStride), rowLength)
+                    ' NUR NOCH DER 8-BIT-FALL. Er entsteht, wenn LibRaw keine lineare Ausgabe
+                    ' liefern kann (fehlende Schalter) oder die Datei eine RGB-Huelle ist; dann
+                    ' gibt es keine Rampe, in die etwas gehoerte, und die Bildpunkte werden nur
+                    ' umgepackt. Der 16-Bit-Weg steht darueber und kehrt dort zurueck.
+                    Dim sourceStride = width * 3
+                    Dim rgb(sourceStride - 1) As Byte
+                    For y = 0 To height - 1
+                        Marshal.Copy(image + 16 + y * sourceStride, rgb, 0, sourceStride)
+                        Dim d = 0
+                        For x = 0 To width - 1
+                            row(d) = rgb(x * 3 + 2)      ' B
+                            row(d + 1) = rgb(x * 3 + 1)  ' G
+                            row(d + 2) = rgb(x * 3)      ' R
+                            row(d + 3) = 255
+                            d += 4
                         Next
-                    End If
+                        Marshal.Copy(row, 0, IntPtr.Add(targetPtr, y * targetStride), rowLength)
+                    Next
                     ' Reihenfolge: erst Vignettierung und Farbquerfehler (beide im Umsetzungsschritt
                     ' oben, auf den unveraenderten Bildpunkten gemessen), DANN die Verzeichnung.
                     ' Andersherum wuerden beide an verschobenen Stellen rechnen. Die Verzeichnung
@@ -1509,7 +1821,7 @@ Namespace Services
         Private Const FbddRauschminderung As Integer = 1
 
         Private Const BaseExposureEv As Double = 0.5
-        Private Const SchwarzAbzug As Double = 0.003
+        Private Const BlackSubtraction As Double = 0.003
         ''' <summary>Tabelle LINEAR (0..65535) -> Belichtungsrampe + ACR3-Tonkurve, wieder linear
         ''' in 0..65535. Einmal gebaut statt pro Pixel gerechnet: die Kurve wird je Pixel ZWEIMAL
         ''' gebraucht (hellster und dunkelster Kanal).</summary>
@@ -1517,42 +1829,81 @@ Namespace Services
         ''' Grundbelichtung eine Konstante war; mit den Kamera-Referenzwerten gibt es je Kamera eine.
         ''' Der Aufbau kostet 65536 Schritte, in der Praxis liegen aber nur eine Handvoll Werte an -
         ''' deshalb ein kleiner Speicher statt Neuaufbau je Bild.</summary>
-        Private Shared ReadOnly TonTabellen As New Dictionary(Of Integer, Integer())
-        Private Shared ReadOnly TonTabellenLock As New Object()
+        Private Shared ReadOnly ToneTables As New Dictionary(Of String, Integer())
+        Private Shared ReadOnly ToneTablesLock As New Object()
 
-        Friend Shared Function TonTabelleFuer(ev As Double) As Integer()
-            Dim k = CInt(Math.Round(ev * 1000.0))
-            SyncLock TonTabellenLock
-                Dim vorhanden As Integer() = Nothing
-                If TonTabellen.TryGetValue(k, vorhanden) Then Return vorhanden
-                Dim neu2 = BuildToneTable(k / 1000.0)
-                TonTabellen(k) = neu2
-                Return neu2
+        ''' <summary>Die Tontabelle zu einer Grundbelichtung und einem Schwarzabzug.
+        '''
+        ''' DER SCHWARZABZUG IST SEIT DEM 21.09.2026 EIN PARAMETER und keine Konstante mehr. Er
+        ''' ist ein Anteil des Datenbereichs, und die Lichterrettung aendert genau diesen Bereich:
+        ''' unter LibRaws Lichtermodus 1 liegen dieselben Sensorwerte um den Normierungsfaktor
+        ''' tiefer, also muss der Schwarzpunkt mit. Bliebe er stehen, zoege die Rampe an einer
+        ''' Stelle ab, die nicht mehr Schwarz ist.</summary>
+        Friend Shared Function ToneTableFor(ev As Double,
+                                            Optional blackLevel As Double = BlackSubtraction,
+                                            Optional knee As Double = 1.0) As Integer()
+            Dim key = CInt(Math.Round(ev * 1000.0)).ToString(Globalization.CultureInfo.InvariantCulture) &
+                      "/" & CInt(Math.Round(blackLevel * 1000000.0)).ToString(Globalization.CultureInfo.InvariantCulture) &
+                      "/" & CInt(Math.Round(knee * 1000.0)).ToString(Globalization.CultureInfo.InvariantCulture)
+            SyncLock ToneTablesLock
+                Dim existing As Integer() = Nothing
+                If ToneTables.TryGetValue(key, existing) Then Return existing
+                Dim built = BuildToneTable(ev, blackLevel, knee)
+                ToneTables(key) = built
+                Return built
             End SyncLock
         End Function
 
         ''' <summary>Tabelle LINEAR (0..65535) -> sRGB-kodiert (0..65535). Getrennt von der
         ''' Tonkurve, weil der mittlere Kanal ZWISCHEN den beiden anderen interpoliert wird - und
         ''' zwar linear, vor der Gamma-Kodierung.</summary>
-        Private Shared ReadOnly GammaTabelle As Integer() = BuildGammaTable()
+        Private Shared ReadOnly GammaTable As Integer() = BuildGammaTable()
 
-        Private Shared Function BuildToneTable(ev As Double) As Integer()
+        ''' <summary>Die Belichtungsrampe samt ACR3-Kurve als Tabelle.
+        '''
+        ''' <paramref name="blackLevel"/> ist seit dem 21.09.2026 ein Parameter: er ist ein ANTEIL
+        ''' des Datenbereichs, und LibRaws Lichtermodus 1 legt dieselben Sensorwerte um den
+        ''' Normierungsfaktor tiefer. Bliebe der Schwarzpunkt fest, zoege die Rampe an einer
+        ''' Stelle ab, die dann kein Schwarz mehr ist.</summary>
+        ''' <summary>Das Knie der Lichterschulter, in Einheiten der Rampe: 1,0 heisst KEINE
+        ''' Schulter, also harter Beschnitt wie bisher. Darunter rollt die Rampe alles oberhalb
+        ''' des Knies weich gegen 1 aus, statt es abzuschneiden.
+        '''
+        ''' <para>DIE FORM ist asymptotisch: <c>y = 1 - (1-k)*exp(-(v-k)/(1-k))</c>. Sie trifft am
+        ''' Knie Wert UND Steigung der Geraden, laeuft monoton weiter und erreicht 1 nie ganz -
+        ''' damit nimmt sie beliebig viel Kopffreiheit auf. Eine quadratische Schulter kann das
+        ''' nicht: mit Steigung 1 am Knie faellt sie oberhalb von <c>2-k</c> wieder ab, und die
+        ''' Kopffreiheit einer entklemmten Datei reicht gemessen bis fast zum Dreifachen.</para>
+        '''
+        ''' <para>DER PREIS steht in derselben Zeile: was heute bei 1,0 liegt, landet mit einem
+        ''' Knie bei 0,8 auf 0,926. Die Lichter werden also dunkler, und genau das hat die
+        ''' Messung von 2026-08 an der Schulter bemaengelt - damals allerdings OHNE entklemmten
+        ''' Decode, also ohne irgendetwas, das die Schulter haette aufnehmen koennen.</para></summary>
+        Private Shared Function ShoulderAt(v As Double, knee As Double) As Double
+            If knee >= 1.0 Then Return Math.Min(v, 1.0)
+            If v <= knee Then Return v
+            Dim span = 1.0 - knee
+            Return 1.0 - span * Math.Exp(-(v - knee) / span)
+        End Function
+
+        Private Shared Function BuildToneTable(ev As Double, blackLevel As Double,
+                                               Optional knee As Double = 1.0) As Integer()
             Dim t(65535) As Integer
-            Dim weiss = 1.0 / (2.0 ^ ev)
-            Dim steigung = 1.0 / (weiss - SchwarzAbzug)
+            Dim white = 1.0 / (2.0 ^ ev)
+            Dim slope = 1.0 / (white - blackLevel)
             ' Weicher Fuss wie im DNG-SDK: eine quadratische Anlaufstrecke um den Schwarzpunkt,
             ' sonst entstuende dort eine sichtbare Kante.
-            Dim radius = Math.Min(0.5 * SchwarzAbzug, (1.0 / 16.0) / steigung)
-            Dim qScale = If(radius > 0, steigung / (4.0 * radius), 0.0)
+            Dim radius = Math.Min(0.5 * blackLevel, (1.0 / 16.0) / slope)
+            Dim qScale = If(radius > 0, slope / (4.0 * radius), 0.0)
             For i = 0 To 65535
                 Dim x = i / 65535.0
                 Dim v As Double
-                If x <= SchwarzAbzug - radius Then
+                If x <= blackLevel - radius Then
                     v = 0.0
-                ElseIf x >= SchwarzAbzug + radius Then
-                    v = Math.Min((x - SchwarzAbzug) * steigung, 1.0)
+                ElseIf x >= blackLevel + radius Then
+                    v = ShoulderAt((x - blackLevel) * slope, knee)
                 Else
-                    v = qScale * (x - (SchwarzAbzug - radius)) ^ 2
+                    v = qScale * (x - (blackLevel - radius)) ^ 2
                 End If
                 ' ACR3-Kurve mit linearer Interpolation zwischen den 129 Stuetzstellen.
                 Dim pos = Math.Max(0.0, Math.Min(1.0, v)) * (Acr3Kurve.Length - 1)
@@ -1587,12 +1938,14 @@ Namespace Services
         ''' Pruefungen entfernt, entfernt auch diese Huelle.</summary>
         Private Shared Sub Convert16(data As IntPtr, width As Integer, height As Integer, pixels As Byte(),
                                      Optional lens As LensDataService.Korrektur = Nothing,
-                                     Optional grundbelichtungEvWert As Double = BaseExposureEv)
+                                     Optional exposureEv As Double = BaseExposureEv,
+                                     Optional blackLevel As Double = BlackSubtraction,
+                                     Optional knee As Double = 1.0)
             Dim rowBytes = width * 4
             Dim row(rowBytes - 1) As Byte
             Convert16Rows(data, width, height, row,
                           Sub(y) Array.Copy(row, 0, pixels, y * rowBytes, rowBytes),
-                          lens, grundbelichtungEvWert)
+                          lens, exposureEv, blackLevel, knee)
         End Sub
 
         ''' <summary>16-Bit-LINEARE LibRaw-Ausgabe in 8-Bit-sRGB umsetzen: Belichtungsrampe,
@@ -1614,10 +1967,12 @@ Namespace Services
         Private Shared Sub Convert16Rows(data As IntPtr, width As Integer, height As Integer,
                                          rowBuffer As Byte(), onRow As Action(Of Integer),
                                          Optional lens As LensDataService.Korrektur = Nothing,
-                                         Optional grundbelichtungEvWert As Double = BaseExposureEv)
+                                         Optional exposureEv As Double = BaseExposureEv,
+                                         Optional blackLevel As Double = BlackSubtraction,
+                                         Optional knee As Double = 1.0)
             Dim thresholds = DitherThresholds
-            Dim ton = TonTabelleFuer(grundbelichtungEvWert)
-            Dim gamma = GammaTabelle
+            Dim ton = ToneTableFor(exposureEv, blackLevel, knee)
+            Dim gamma = GammaTable
             Dim rowBytes = width * 6
 
             ' Farbquerfehler und Vignettierung werden BEIM UMSETZEN erledigt - ein eigener Durchgang
@@ -1771,26 +2126,95 @@ Namespace Services
         ''' durch unsere Basisstufe. Nur die RGB-Variante ist schon fertig.
         ''' Faellt das Lesen aus, gilt die Datei als normal - lieber die Basisstufe anwenden als
         ''' bei jedem unlesbaren Header darauf zu verzichten.</summary>
+        ''' <summary>Ist diese DNG-Datei nur eine Huelle um ein bereits fertig gerendertes
+        ''' RGB-Bild? Dann bleibt es bei LibRaws eigener Gammaausgabe, weil unsere Basisstufe
+        ''' sonst eine ZWEITE Tonkurve darueberlegte.
+        '''
+        ''' <para>GEFRAGT WIRD NUR DAS VOLLBILD, und das ist der Kern. Bis zum 21.09.2026 lief die
+        ''' Pruefung ueber ALLE Verzeichnisse und meldete "fertig gerendert", sobald irgendwo eine
+        ''' 2 stand. Im normalen DNG-Aufbau steht sie aber in IFD0, und das ist die eingebettete
+        ''' VORSCHAU; die Sensordaten liegen in einem SubIFD. Damit galt praktisch JEDE DNG-Datei
+        ''' als RGB-Huelle: der Decode fiel auf 8 Bit zurueck, und die ganze Basisstufe mit
+        ''' Belichtungsrampe und ACR3-Kurve lief fuer sie gar nicht. Nachgelesen an den beiden
+        ''' Pruefdateien - Leica M8: 2 (Vorschau) und 32803 (Sensormuster); die zweite: 2
+        ''' (Vorschau) und 34892 (LinearRaw). Beide sind echte RAW-Dateien.</para>
+        '''
+        ''' <para>DAS VOLLBILD ist das Verzeichnis mit <c>NewSubFileType = 0</c>. Gibt es mehrere,
+        ''' gilt das groesste; gibt es gar keines (aeltere Dateien lassen das Feld weg), gilt
+        ''' ersatzweise das groesste ueberhaupt. Ohne jede lesbare Angabe bleibt es beim normalen
+        ''' RAW-Weg, also beim bisherigen Verhalten - nie geraten.</para>
+        '''
+        ''' <para>NUR EIN SENSORMUSTER (32803) GILT SICHER ALS ROH. LinearRaw (34892) ist
+        ''' zweideutig: die Daten sind schon demosaikiert, und ob sie ausserdem tonwertkorrigiert
+        ''' sind, sagt das Feld nicht. Gemessen an `boyechik_paris_1.dng` sind sie es - durch
+        ''' unsere Basisstufe geschickt wird die Datei 44 Stufen heller als die eingebettete
+        ''' Wiedergabe und 15 Prozent des Bildes fressen aus. Solche Dateien behalten deshalb
+        ''' LibRaws eigene Gammaausgabe, genau wie bisher. Das ist eine bewusste Vorsicht und
+        ''' keine Erkenntnis: ein echtes lineares DNG waere damit ebenfalls zu flau entwickelt,
+        ''' und um die beiden zu trennen fehlt eine Datei, an der man es zeigen koennte.</para></summary>
         Private Shared Function IsFinishedRgb(path As String) As Boolean
             Try
                 If Not path.EndsWith(".dng", StringComparison.OrdinalIgnoreCase) Then Return False
-                Dim verzeichnisse = MetadataExtractor.ImageMetadataReader.ReadMetadata(path)
-                For Each d In verzeichnisse.OfType(Of MetadataExtractor.Formats.Exif.ExifDirectoryBase)()
+                Dim directories = MetadataExtractor.ImageMetadataReader.ReadMetadata(path)
+
+                Dim mainArea As Long = -1
+                Dim mainInterpretation = -1
+                Dim largestArea As Long = -1
+                Dim largestInterpretation = -1
+
+                For Each d In directories.OfType(Of MetadataExtractor.Formats.Exif.ExifDirectoryBase)()
                     ' Ausgeschrieben, weil MetadataExtractor das als Erweiterungsmethode anbietet
                     ' und diese Datei den Namensraum nicht importiert.
-                    Dim value As Integer
+                    Dim interpretation As Integer
+                    If Not MetadataExtractor.DirectoryExtensions.TryGetInt32(
+                           d, MetadataExtractor.Formats.Exif.ExifDirectoryBase.TagPhotometricInterpretation,
+                           interpretation) Then Continue For
+
+                    Dim width, height As Integer
+                    Dim area As Long = 0
                     If MetadataExtractor.DirectoryExtensions.TryGetInt32(
-                           d, MetadataExtractor.Formats.Exif.ExifDirectoryBase.TagPhotometricInterpretation, value) Then
-                        ' Bei einer DNG-Huelle um ein RGB-Bild steht 2 im Hauptbild; ein Sensormuster
-                        ' (32803) oder LinearRaw (34892) gaebe es dort gar nicht.
-                        If value = 2 Then Return True
+                           d, MetadataExtractor.Formats.Exif.ExifDirectoryBase.TagImageWidth, width) AndAlso
+                       MetadataExtractor.DirectoryExtensions.TryGetInt32(
+                           d, MetadataExtractor.Formats.Exif.ExifDirectoryBase.TagImageHeight, height) Then
+                        area = CLng(width) * height
+                    End If
+
+                    Dim subfileType As Integer
+                    If MetadataExtractor.DirectoryExtensions.TryGetInt32(
+                           d, MetadataExtractor.Formats.Exif.ExifDirectoryBase.TagNewSubfileType, subfileType) AndAlso
+                       subfileType = 0 AndAlso area > mainArea Then
+                        mainArea = area
+                        mainInterpretation = interpretation
+                    End If
+
+                    If area > largestArea Then
+                        largestArea = area
+                        largestInterpretation = interpretation
                     End If
                 Next
-                Return False
+
+                Dim decisive = If(mainInterpretation >= 0, mainInterpretation, largestInterpretation)
+                If decisive < 0 Then Return False
+                ' Sensormuster heisst roh; alles andere behaelt LibRaws Gammaausgabe.
+                If decisive = ColorFilterArrayInterpretation Then Return False
+
+                ' PROTOKOLLIERT, weil es eine VORSICHT ist und keine Erkenntnis. LinearRaw (34892)
+                ' kann ein bereits tonwertkorrigiertes Bild sein - gemessen ist genau das der Fall
+                ' gewesen - oder ein echtes lineares DNG, das hier zu flau herauskommt. Wer eine
+                ' DNG-Datei flau findet, soll im Protokoll sehen, WARUM sie an der Basisstufe
+                ' vorbeigelaufen ist, statt danach zu suchen.
+                DiagnosticLogService.LogAlways("RawDecodeService.IsFinishedRgb",
+                    $"{IO.Path.GetFileName(path)}: Vollbild traegt PhotometricInterpretation " &
+                    decisive.ToString(Globalization.CultureInfo.InvariantCulture) &
+                    ", gilt als fertiges RGB - die Basisstufe laeuft dafuer nicht")
+                Return True
             Catch
                 Return False
             End Try
         End Function
+
+        ''' <summary>PhotometricInterpretation eines Sensormusters (CFA) im DNG-Standard.</summary>
+        Private Const ColorFilterArrayInterpretation As Integer = 32803
 
         ''' <summary>Die Grundbelichtung fuer DIESE Datei. Ohne die Einstellung bleibt es beim
         ''' festen Wert; mit ihr entscheidet das Kameramodell aus den EXIF-Daten. Ein unbekanntes

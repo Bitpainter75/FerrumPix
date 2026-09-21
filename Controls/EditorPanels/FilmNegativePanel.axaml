@@ -65,8 +65,13 @@
                         <TextBlock Text="Aufnehmen" FontSize="{DynamicResource FP.Font.Small}" />
                     </StackPanel>
                 </Button>
+                <!-- "group-action" ist Pflicht: eine Stilregel blendet Symbolknoepfe in
+                     Anpassungsgruppen aus, die weder zum Gruppeninhalt gehoeren noch sie
+                     zuruecksetzen. Ohne sie war dieser Knopf unsichtbar - und er ist der EINZIGE
+                     Weg zur automatischen Messung der Filmbasis, die Pipette daneben misst
+                     nicht, sie nimmt auf. -->
                 <Button Grid.Column="3"
-                        Classes="icon-btn"
+                        Classes="icon-btn group-action"
                         Width="28" Height="28" Padding="0"
                         Command="{Binding AutoNegativeBaseCommand}"
                         ToolTip.Tip="Filmbasis automatisch aus dem Bild messen">

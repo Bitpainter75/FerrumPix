@@ -241,7 +241,7 @@ Namespace Services
                 rezept = RawSidecarService.TryRead(path)
             End If
 
-            Dim decoded = DecodeOriented(path, developRaw OrElse rezept IsNot Nothing)
+            Dim decoded = DecodeForAdjustments(path, rezept, developRaw OrElse rezept IsNot Nothing)
             If decoded Is Nothing OrElse rezept Is Nothing Then Return decoded
             Using decoded
                 ' Die gebackenen Vorgaenge gehoeren VOR die Reglerkette - sie sind Teil des Bildes,
@@ -596,13 +596,35 @@ Namespace Services
         ''' <param name="lensChoice">Welche Objektivkorrekturen fuer DIESES Bild gelten. Nothing =
         ''' wie in den Einstellungen vorgegeben. Sie gehoert hierher und nicht in die Reglerkette:
         ''' sie veraendert den DECODE, nicht die Nachbearbeitung.</param>
+        ''' <param name="recoverHighlights">Lichter aus den Rohdaten zurueckholen. Gehoert aus
+        ''' demselben Grund hierher wie die Objektivkorrektur: sie veraendert den DECODE.</param>
+        ''' <summary>Kostet das Oeffnen dieser Datei genug Zeit, dass der Nutzer es gesagt bekommen
+        ''' muss? Formate, die wirklich entwickelt oder gerendert werden, brauchen Sekunden; ein
+        ''' gewoehnliches JPEG oder PNG steht sofort da und soll beim Blaettern nicht flackern.
+        '''
+        ''' <para>EINE Liste fuer beide Ansichten. Der Betrachter hatte sie schon, der Editor eine
+        ''' eigene und engere (nur .fpx, RAW und PSD) - und genau die drei fehlenden Formate fielen
+        ''' auf: beim Wechsel aus dem Filmstreifen auf ein TIFF sprang die Auswahl sofort weiter,
+        ''' die Buehne zeigte aber noch sekundenlang das vorige Bild und kein Ladezeichen. Zwei
+        ''' Listen fuer dieselbe Frage waren die Ursache.</para></summary>
+        Public Shared Function IsSlowToOpen(path As String) As Boolean
+            If String.IsNullOrWhiteSpace(path) Then Return False
+            Return RawPreviewService.IsSupportedRaw(path) OrElse
+                   PsdPreviewService.IsSupportedPsd(path) OrElse
+                   HeifDecodeService.IsSupportedHeif(path) OrElse
+                   JxlDecodeService.IsSupportedJxl(path) OrElse
+                   TiffPreviewService.IsSupportedTiff(path) OrElse
+                   FpxService.IsFpx(path)
+        End Function
+
         Friend Shared Function DecodeOriented(path As String, Optional developRaw As Boolean = True,
-                                              Optional lensChoice As LensDataService.Wahl = Nothing) As SKBitmap
+                                              Optional lensChoice As LensDataService.Wahl = Nothing,
+                                              Optional recoverHighlights As Boolean = False) As SKBitmap
             ' Echte RAW-Entwicklung, wenn das System-libraw da ist: voll aufgelöstes Demosaic mit
             ' Kamera-Weißabgleich statt der eingebetteten JPEG-Vorschau. Liefert der Decode nichts
             ' (defekte Datei, exotisches Format), greift darunter der bisherige Vorschau-Weg.
             If developRaw AndAlso RawPreviewService.IsSupportedRaw(path) AndAlso RawDecodeService.IsAvailable Then
-                Dim developed = RawDecodeService.TryDecode(path, lensChoice)
+                Dim developed = RawDecodeService.TryDecode(path, lensChoice, recoverHighlights)
                 If developed IsNot Nothing Then Return developed
             ElseIf Not RawPreviewService.IsSupportedRaw(path) Then
                 ' Anderes Hauptbild -> der ~180-MB-Entwicklungs-Cache ist stale und kann weg.
@@ -666,6 +688,15 @@ Namespace Services
             Return managed
         End Function
 
+        ''' <summary>Dekodiert eine Quelle mit allen Einstellungen, die bereits den Decode
+        ''' beeinflussen. Damit dürfen Ausgabewege nicht versehentlich nur die Reglerkette,
+        ''' aber weder Objektivkorrektur noch RAW-Lichterrettung übernehmen.</summary>
+        Friend Shared Function DecodeForAdjustments(path As String, adj As ImageAdjustments,
+                                                    Optional developRaw As Boolean = True) As SKBitmap
+            Return DecodeOriented(path, developRaw, LensChoiceFrom(adj),
+                                  adj IsNot Nothing AndAlso adj.RawHighlightRecovery)
+        End Function
+
         ''' TEMPORÄR ( Vorher/Nachher dunkler): protokolliert den Farbraum des rohen
         ''' Datei-Decodes und ob eine Farbkonvertierung nach sRGB den Mittelpixel ändert. So lässt sich
         ''' hart bestätigen, ob die Skia-Pipeline (farbraumlose Zwischen-Bitmaps) gegenüber dem
@@ -724,7 +755,7 @@ Namespace Services
         End Sub
 
         Public Shared Function ApplyAdjustments(sourcePath As String, adj As ImageAdjustments) As Bitmap
-            Using original = DecodeOriented(sourcePath, True, LensChoiceFrom(adj))
+            Using original = DecodeForAdjustments(sourcePath, adj)
                 If original Is Nothing Then Return Nothing
 
                 Using processed = ProcessBitmap(original, adj)
@@ -793,8 +824,8 @@ Namespace Services
             ' bleibt voll aufgeloest, damit Editor, Export und Druck nie eine Vorschauauflosung
             ' bekommen. Die Objektivwahl gehoert zum Decode und muss auch fuer die Kachel gelten.
             Using original = If(preferReducedRawDecode,
-                                RawDecodeService.TryDecodeThumbnail(sourcePath, LensChoiceFrom(adj)),
-                                DecodeOriented(sourcePath))
+                                RawDecodeService.TryDecodeThumbnail(sourcePath, LensChoiceFrom(adj), adj IsNot Nothing AndAlso adj.RawHighlightRecovery),
+                                DecodeForAdjustments(sourcePath, adj))
                 decodeMs = sw.ElapsedMilliseconds
                 If original Is Nothing Then Return Nothing
 
@@ -1769,7 +1800,7 @@ Namespace Services
         End Function
 
         Public Shared Function ApplyGeometryAdjustments(sourcePath As String, adj As ImageAdjustments) As Bitmap
-            Using original = DecodeOriented(sourcePath)
+            Using original = DecodeForAdjustments(sourcePath, adj)
                 If original Is Nothing Then Return Nothing
 
                 Dim processed As SKBitmap = CloneBitmap(original)
@@ -1923,9 +1954,10 @@ Namespace Services
         ''' Zugang zum universellen Decode-Chokepoint (RAW/ICO-Sonderfälle + EXIF-Orientierung).
         ''' Der Aufrufer übernimmt den Besitz des Bitmaps.</summary>
         Public Shared Function DecodeWorkingImage(path As String,
-                                                  Optional lensChoice As LensDataService.Wahl = Nothing) As SKBitmap
+                                                  Optional lensChoice As LensDataService.Wahl = Nothing,
+                                                  Optional recoverHighlights As Boolean = False) As SKBitmap
             Try
-                Return DecodeOriented(path, True, lensChoice)
+                Return DecodeOriented(path, True, lensChoice, recoverHighlights)
             Catch
                 Return Nothing
             End Try
@@ -5571,7 +5603,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
         Public Shared Function RenderDisplayImage(sourcePath As String, adj As ImageAdjustments,
                                                  Optional workingFull As SKBitmap = Nothing) As SKBitmap
             Try
-                Using original = If(workingFull, DecodeOriented(sourcePath))
+                Using original = If(workingFull, DecodeForAdjustments(sourcePath, adj))
                     If original Is Nothing Then Return Nothing
                     Return ProcessBitmap(original, adj)
                 End Using

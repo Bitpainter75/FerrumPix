@@ -8578,4 +8578,25 @@
   <data name="Auswahl_ausschneiden_d3df5e1f" xml:space="preserve">
     <value>Вырезать выделение</value>
   </data>
+  <data name="Pipette_auf_eine_Stelle_klicken_die_neutral_grau_3b687124" xml:space="preserve">
+    <value>Пипетка: щёлкните по месту, которое должно быть нейтрально-серым.</value>
+  </data>
+  <data name="Diese_Stelle_l_sst_sich_nicht_messen_76085033" xml:space="preserve">
+    <value>Это место нельзя измерить</value>
+  </data>
+  <data name="Diese_Stelle_tr_gt_keine_Farbe_bitte_auf_ein_hel_4ec3ad3c" xml:space="preserve">
+    <value>В этом месте нет цвета - щёлкните по светло-серому</value>
+  </data>
+  <data name="Wei_abgleich_auf_die_aufgenommene_Stelle_gesetzt_42377ce4" xml:space="preserve">
+    <value>Баланс белого установлен по выбранному месту</value>
+  </data>
+  <data name="Pipette_b3b0e6db" xml:space="preserve">
+    <value>Пипетка</value>
+  </data>
+  <data name="Lichter_aus_den_Rohdaten_holen_37c6d9f0" xml:space="preserve">
+    <value>Вернуть света из необработанных данных</value>
+  </data>
+  <data name="Holt_Zeichnung_zur_ck_die_ber_Weiss_liegt_und_he_3af0d3c9" xml:space="preserve">
+    <value>Возвращает рисунок, который лежит выше белого и сегодня срезается. Действует только там, где один канал выбит, а другой нет. Переключение проявляет файл заново и поэтому занимает некоторое время.</value>
+  </data>
 </root>

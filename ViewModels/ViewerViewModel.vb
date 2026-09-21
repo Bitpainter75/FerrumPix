@@ -258,14 +258,10 @@ Namespace ViewModels
                 Return False
             End If
 
-            If RawPreviewService.IsSupportedRaw(path) OrElse
-               PsdPreviewService.IsSupportedPsd(path) OrElse
-               HeifDecodeService.IsSupportedHeif(path) OrElse
-               JxlDecodeService.IsSupportedJxl(path) OrElse
-               TiffPreviewService.IsSupportedTiff(path) OrElse
-               FpxService.IsFpx(path) Then
-                Return True
-            End If
+            ' Dieselbe Liste wie im Editor, und zwar buchstaeblich dieselbe: sie stand hier und
+            ' dort getrennt, und die dortige war enger - beim Wechsel aus dem Filmstreifen auf ein
+            ' TIFF fehlte deshalb das Ladezeichen.
+            If ImageProcessor.IsSlowToOpen(path) Then Return True
 
             ' XMP wird in beiden verbreiteten Namensformen gesucht (foto.xmp und foto.jpg.xmp).
             Return XmpSidecarService.FindSidecar(path) IsNot Nothing OrElse

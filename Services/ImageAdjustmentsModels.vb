@@ -433,6 +433,21 @@ Namespace Services
         Public Property LensTcaAmount As Single = 100
         Public Property LensVignettingAmount As Single = 100
 
+        ''' <summary>Lichter aus den Rohdaten zurueckholen. Wie die Objektivkorrektur eine Angabe,
+        ''' die den DECODE aendert und nicht die Reglerkette: LibRaw entklemmt dann die Lichter,
+        ''' die Belichtungsrampe gleicht den Normierungsfaktor aus und rollt oben weich aus.
+        '''
+        ''' AUS ist die Vorgabe. Aus heisst NICHT "wie vor dem Umbau": der Decode entklemmt seit
+        ''' dem 21.09.2026 immer, damit EIN zwischengespeicherter Stand fuer beide Stellungen
+        ''' taugt. Gegenueber dem Stand davor aendern sich dadurch rund 0,01 Prozent der
+        ''' Bildpunkte, naemlich die mit einem geklemmten Farbkanal. Aus heisst dagegen sehr wohl
+        ''' "bitgleich mit dem Bild, das dieselbe Datei ohne Haken zeigt" - zwischen den beiden
+        ''' Stellungen liegt nur das Knie der Rampe. Siehe RAW_UND_FARBE.md, Schritt 4.
+        '''
+        ''' Das Umschalten kostet eine Umsetzung aus den 16-Bit-Daten - deshalb ist es ein
+        ''' Schalter und kein Regler.</summary>
+        Public Property RawHighlightRecovery As Boolean = False
+
         Public Property Vignette As Single = 0
         Public Property VignetteTransition As Single = 55
         Public Property VignetteRoundness As Single = 0
@@ -835,6 +850,7 @@ Namespace Services
         Private Shared ReadOnly StructuralPropertyNames As New HashSet(Of String)(StringComparer.Ordinal) From {
             "SourceWidthPixels", "SourceHeightPixels", "RecipeCoordinateVersion",
             "WhiteBalanceAnchorX", "WhiteBalanceAnchorY", "WhiteBalanceModel",
+            "RawHighlightRecovery",
             "WorkingImageVersion", "WorkingImageHasTransparency",
             "GeometryOperations",
             "BakedOperations", "BakedOperationsApplied",
@@ -1044,6 +1060,7 @@ Namespace Services
                 .WhiteBalanceAnchorY = WhiteBalanceAnchorY,
                 .WhiteBalanceKelvin = WhiteBalanceKelvin,
                 .WhiteBalanceKelvinTint = WhiteBalanceKelvinTint,
+                .RawHighlightRecovery = RawHighlightRecovery,
                 .WorkingImageVersion = WorkingImageVersion,
                 .WorkingImageHasTransparency = WorkingImageHasTransparency,
                 .BakedOperationsApplied = BakedOperationsApplied,

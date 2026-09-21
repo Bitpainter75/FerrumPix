@@ -444,7 +444,7 @@ Namespace Services
                 ' .fpx-Projekte beim echten Speichern/Konvertieren immer aus Basisbild + Rezept rendern.
                 ' composite.png ist nur ein schnelles Anzeige-/Thumbnail-Bild und kann bewusst verkleinert sein.
                 Dim isFpxSource = FpxService.IsFpx(sourcePath)
-                Dim decoded = If(workingFull, If(isFpxSource, RenderFpxFullResolution(sourcePath), DecodeOriented(sourcePath, developRaw)))
+                Dim decoded = If(workingFull, If(isFpxSource, RenderFpxFullResolution(sourcePath), DecodeForAdjustments(sourcePath, adj, developRaw)))
                 ' Nur auf dem SELBST dekodierten Bild: ein hereingereichtes Arbeitsbild traegt die
                 ' Vorgaenge schon, und ein zweites Entrauschen sieht man erst, wenn man die Bilder
                 ' nebeneinanderlegt. Und VOR der Reglerkette, weil sie zum Bild gehoeren und nicht
@@ -695,7 +695,7 @@ Namespace Services
                         inputPath = loaded.RetouchStagePath
                     End If
                 End If
-                Using baseBitmap = DecodeOriented(inputPath)
+                Using baseBitmap = DecodeForAdjustments(inputPath, loaded.Adjustments)
                     If baseBitmap Is Nothing Then Return Nothing
                     Return ProcessBitmap(baseBitmap, If(loaded.Adjustments, New ImageAdjustments()))
                 End Using

@@ -1963,8 +1963,18 @@ Namespace Views
 
             If vm IsNot Nothing AndAlso vm.IsPickingColorFromImage Then
                 Dim imageRect = GetDisplayedImageRect(canvas, vm)
-                Dim sampledColor = SampleDisplayedColor(vm, imageRect, e.GetPosition(canvas))
-                If sampledColor.HasValue Then vm.CompleteColorPick(sampledColor.Value) Else vm.CancelColorPick()
+                Dim pickPoint = e.GetPosition(canvas)
+                Dim sampledColor = SampleDisplayedColor(vm, imageRect, pickPoint)
+                If sampledColor.HasValue Then
+                    ' Die STELLE geht mit: der Weissabgleich schlaegt den Bildpunkt noch einmal in
+                    ' einem Bild ohne Farbbearbeitung nach (siehe SampleWithoutColorEdits).
+                    Dim clamped = ClampPointToRect(pickPoint, imageRect)
+                    vm.CompleteColorPick(sampledColor.Value,
+                                         (clamped.X - imageRect.Left) / imageRect.Width,
+                                         (clamped.Y - imageRect.Top) / imageRect.Height)
+                Else
+                    vm.CancelColorPick()
+                End If
                 e.Handled = True
                 Return
             End If
@@ -4265,8 +4275,30 @@ Namespace Views
             Dim yPct = (pos.Y - imageRect.Top) / imageRect.Height
             Dim px = Math.Max(0, Math.Min(decoded.Width - 1, CInt(xPct * decoded.Width)))
             Dim py = Math.Max(0, Math.Min(decoded.Height - 1, CInt(yPct * decoded.Height)))
-            Dim sampled = decoded.GetPixel(px, py)
-            Return Color.FromArgb(sampled.Alpha, sampled.Red, sampled.Green, sampled.Blue)
+
+            ' Der Weissabgleich misst eine FLAECHE, die neutral sein soll, und bittet deshalb um
+            ' einen Mittelwert; Malfarbe und Filmtraeger wollen genau den Bildpunkt unter der Lupe.
+            ' Welches von beidem gilt, sagt die Pipette beim Start (BeginColorPick).
+            Dim radius = If(vm Is Nothing, 0, vm.ColorPickSampleRadius)
+            If radius <= 0 Then
+                Dim sampled = decoded.GetPixel(px, py)
+                Return Color.FromArgb(sampled.Alpha, sampled.Red, sampled.Green, sampled.Blue)
+            End If
+
+            Dim sumR As Long = 0, sumG As Long = 0, sumB As Long = 0, sumA As Long = 0, count As Integer = 0
+            For sampleY As Integer = Math.Max(0, py - radius) To Math.Min(decoded.Height - 1, py + radius)
+                For sampleX As Integer = Math.Max(0, px - radius) To Math.Min(decoded.Width - 1, px + radius)
+                    Dim pixel = decoded.GetPixel(sampleX, sampleY)
+                    sumR += pixel.Red
+                    sumG += pixel.Green
+                    sumB += pixel.Blue
+                    sumA += pixel.Alpha
+                    count += 1
+                Next
+            Next
+            If count = 0 Then Return Nothing
+            Return Color.FromArgb(CByte(sumA \ count), CByte(sumR \ count),
+                                  CByte(sumG \ count), CByte(sumB \ count))
         End Function
 
         Private Function GetPickSampleBitmap(bitmap As Bitmap) As SKBitmap

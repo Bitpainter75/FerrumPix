@@ -29,10 +29,27 @@
             </DataTemplate>
         </Expander.HeaderTemplate>
         <StackPanel Spacing="2" Margin="0,8,0,0">
-            <Grid ColumnDefinitions="92,*" VerticalAlignment="Center">
+            <!-- SPALTENTEILUNG WIE DIE REGLERZEILEN: 92, Rest, 44. Die Pipette steht in der
+                 Spalte der Zahlenfelder, damit die rechte Kante der Auswahlliste auf der der
+                 Regler darunter liegt. -->
+            <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
                 <TextBlock Text="Weißabgleich"
                            Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="NoWrap" />
+                <!-- "group-action" ist PFLICHT und keine Zierde: eine Stilregel blendet jeden
+                     Symbolknopf in einer Anpassungsgruppe aus, der weder zum Gruppeninhalt
+                     gehoert noch sie zuruecksetzt. Ohne diese Klasse ist die Pipette da, tut
+                     auch alles, und ist schlicht unsichtbar. -->
+                <Button Grid.Column="2"
+                        Classes="icon-btn group-action"
+                        Width="28" Height="28" Padding="0"
+                        HorizontalAlignment="Right"
+                        Command="{Binding PickWhiteBalanceCommand}"
+                        ToolTip.Tip="Pipette: auf eine Stelle klicken, die neutral grau sein soll.">
+                    <icons:SvgIcon
+                        Source="avares://FerrumPix/Assets/Icons/outline/color-picker.svg"
+                        Width="14" Height="14" />
+                </Button>
                 <ComboBox Grid.Column="1"
                           ItemsSource="{Binding WhiteBalanceOptions}"
                           SelectedItem="{Binding WhiteBalance}"

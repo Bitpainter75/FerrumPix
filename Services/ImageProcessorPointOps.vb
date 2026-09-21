@@ -421,26 +421,8 @@ Namespace Services
         Friend Shared Function BuildWhiteBalanceMatrix(adj As ImageAdjustments) As Single()
             If adj Is Nothing OrElse adj.WhiteBalanceModel < 2 Then Return Nothing
 
-            Dim anchor = If(adj.WhiteBalanceAnchorX > 0.0 AndAlso adj.WhiteBalanceAnchorY > 0.0,
-                            New WhitePoint(adj.WhiteBalanceAnchorX, adj.WhiteBalanceAnchorY),
-                            WhiteBalanceAdaptation.D65)
-
-            Dim claimed As WhitePoint
-            If adj.WhiteBalanceKelvin >= 1000.0 Then
-                claimed = WhiteBalanceAdaptation.FromKelvinAndTint(adj.WhiteBalanceKelvin, adj.WhiteBalanceKelvinTint)
-            ElseIf adj.WhiteBalanceKelvinTint <> 0.0 Then
-                ' NUR DIE TÖNUNG, bei „wie aufgenommen". Ohne diesen Zweig fiel eine reine
-                ' Toenungsaenderung durch alle Bedingungen und wirkte nicht: die Kelvin-Zahl steht
-                ' dabei auf 0 (der Anker selbst) und die alten relativen Regler auf 0. Der Regler
-                ' aenderte damit den Zustand der Oberflaeche und der Datei, aber kein Bildpunkt.
-                ' Verschoben wird vom Anker aus, quer zur Kurve.
-                claimed = WhiteBalanceAdaptation.ShiftFromAnchor(anchor, 0.0, adj.WhiteBalanceKelvinTint)
-            ElseIf adj.Temperature <> 0.0F OrElse adj.Tint <> 0.0F Then
-                claimed = WhiteBalanceAdaptation.ShiftFromAnchor(anchor, adj.Temperature, adj.Tint)
-            Else
-                Return Nothing
-            End If
-
+            Dim anchor = WhiteBalanceAnchorOf(adj)
+            Dim claimed = ClaimedWhitePointOf(adj)
             Dim m = WhiteBalanceAdaptation.BuildMatrix(anchor, claimed)
             If m Is Nothing Then Return Nothing
             Dim result(8) As Single
@@ -448,6 +430,52 @@ Namespace Services
                 result(i) = CSng(m(i))
             Next
             Return result
+        End Function
+
+        ''' <summary>Der Anker dieser Anpassungen: das Licht der Aufnahme, oder D65 fuer alles ohne
+        ''' Aufnahme-Weissabgleich.</summary>
+        Public Shared Function WhiteBalanceAnchorOf(adj As ImageAdjustments) As WhitePoint
+            If adj Is Nothing Then Return WhiteBalanceAdaptation.D65
+            If adj.WhiteBalanceAnchorX > 0.0 AndAlso adj.WhiteBalanceAnchorY > 0.0 Then
+                Return New WhitePoint(adj.WhiteBalanceAnchorX, adj.WhiteBalanceAnchorY)
+            End If
+            Return WhiteBalanceAdaptation.D65
+        End Function
+
+        ''' <summary>Das Licht, das die Regler BEHAUPTEN. Der Anker selbst, wenn keiner der Regler
+        ''' etwas sagt - dann ist die Matrix spaeter die Einheitsmatrix.
+        '''
+        ''' ZWEI REGLERFORMEN, wie bei Adobe: eine absolute Kelvin-Zahl gilt fuer RAW-Dateien und
+        ''' nennt das Licht der Szene; ein relativer Wert verschiebt vom Anker aus und gilt fuer
+        ''' alles andere. Ist beides gesetzt, gewinnt die absolute Zahl - sie ist die genauere
+        ''' Aussage.
+        '''
+        ''' EIGENE FUNKTION, weil die Pipette dieselbe Entscheidung braucht: sie rechnet von einem
+        ''' Bildpunkt aus auf einen neuen Weisspunkt zurueck und muss dafuer wissen, von welchem
+        ''' der Regler gerade ausgeht. Stuende die Kette hier ein zweites Mal im ViewModel, liefen
+        ''' Kette und Pipette bei jeder Aenderung auseinander.
+        '''
+        ''' OEFFENTLICH und nicht Friend, damit die Pipettenprobe des Pruefstands genau diese
+        ''' Entscheidung misst und keine nachgebaute.</summary>
+        Public Shared Function ClaimedWhitePointOf(adj As ImageAdjustments) As WhitePoint
+            Dim anchor = WhiteBalanceAnchorOf(adj)
+            If adj Is Nothing Then Return anchor
+
+            If adj.WhiteBalanceKelvin >= 1000.0 Then
+                Return WhiteBalanceAdaptation.FromKelvinAndTint(adj.WhiteBalanceKelvin, adj.WhiteBalanceKelvinTint)
+            End If
+            If adj.WhiteBalanceKelvinTint <> 0.0 Then
+                ' NUR DIE TÖNUNG, bei „wie aufgenommen". Ohne diesen Zweig fiel eine reine
+                ' Toenungsaenderung durch alle Bedingungen und wirkte nicht: die Kelvin-Zahl steht
+                ' dabei auf 0 (der Anker selbst) und die alten relativen Regler auf 0. Der Regler
+                ' aenderte damit den Zustand der Oberflaeche und der Datei, aber kein Bildpunkt.
+                ' Verschoben wird vom Anker aus, quer zur Kurve.
+                Return WhiteBalanceAdaptation.ShiftFromAnchor(anchor, 0.0, adj.WhiteBalanceKelvinTint)
+            End If
+            If adj.Temperature <> 0.0F OrElse adj.Tint <> 0.0F Then
+                Return WhiteBalanceAdaptation.ShiftFromAnchor(anchor, adj.Temperature, adj.Tint)
+            End If
+            Return anchor
         End Function
 
         ''' <summary>sRGB-Gamma nach Linearlicht und zurueck, als Tabellen mit der Aufloesung der
@@ -506,6 +534,64 @@ Namespace Services
                 0, 0, 0, 1, 0
             }
         End Function
+
+        ''' <summary>Die Umkehrung des Weissabgleichs aus <see cref="BuildPointOpColorMatrix"/>,
+        ''' fuer die Pipette im ALTEN Modell: welche Reglerwerte machen einen Bildpunkt neutral,
+        ''' der jetzt <paramref name="sampleR"/>/<paramref name="sampleG"/>/<paramref name="sampleB"/>
+        ''' zeigt? Angegeben wird der Bildpunkt gammakodiert, also so, wie er auf dem Schirm steht -
+        ''' das alte Modell rechnet ebenfalls auf gammakodierten Werten.
+        '''
+        ''' <para>DER KNOTEN: drei Kanaele, aber nur zwei Regler. Die Temperatur verstaerkt Rot und
+        ''' Blau GEGENLAEUFIG (1+T/200 gegen 1-T/200), ihre Summe ist immer 2. Frei waehlbar ist
+        ''' also nur ihr VERHAELTNIS, und daraus faellt die Temperatur; der gemeinsame Faktor, der
+        ''' dabei uebrig bleibt, geht anschliessend in die Toenung ein, sonst zoege Gruen nicht
+        ''' mit.</para>
+        '''
+        ''' <para>DIE SAETTIGUNG GEHOERT MIT HINEIN, weil sie in DERSELBEN Matrix steht und VOR der
+        ''' Verstaerkung wirkt: die Zeile lautet tempR mal (sat mal Rot plus Rest mal Helligkeit).
+        ''' Ohne diesen Schritt griff die Pipette bei Saettigung +40 daneben - gemessen blieben von
+        ''' 84 Stufen Farbstich noch 27 stehen. Was HINTER der Matrix steht (Dynamik, Belichtung,
+        ''' Kontrast, Kurven), braucht sie dagegen nicht: diese Stufen rechnen fuer alle drei
+        ''' Kanaele gleich und lassen Neutral neutral.</para>
+        '''
+        ''' <para>Geklemmt wird auf die Reglerbereiche. Ein starker Farbstich laesst sich damit
+        ''' nicht in einem Zug wegnehmen - das ist eine Eigenschaft des alten Modells, keine der
+        ''' Pipette.</para></summary>
+        Public Shared Sub NeutralizeLegacyWhiteBalance(temperature As Double, tint As Double,
+                                                       saturation As Double,
+                                                       sampleR As Double, sampleG As Double, sampleB As Double,
+                                                       ByRef newTemperature As Double, ByRef newTint As Double)
+            newTemperature = temperature
+            newTint = tint
+            If sampleR <= 0.0 OrElse sampleG <= 0.0 OrElse sampleB <= 0.0 Then Return
+
+            ' Dieselbe Rechnung wie in BuildPointOpColorMatrix, nur fuer EINE Farbe.
+            Dim sat = 1.0 + saturation / 100.0
+            Dim invSat = 1.0 - sat
+            Dim luma = 0.299 * sampleR + 0.587 * sampleG + 0.114 * sampleB
+            Dim satR = sat * sampleR + invSat * luma
+            Dim satG = sat * sampleG + invSat * luma
+            Dim satB = sat * sampleB + invSat * luma
+            If satR <= 0.0 OrElse satG <= 0.0 OrElse satB <= 0.0 Then Return
+
+            Const gainPerPoint As Double = 200.0
+            Dim tempR = 1.0 + temperature / gainPerPoint
+            Dim tempB = 1.0 - temperature / gainPerPoint
+            Dim tintG = 1.0 + tint / gainPerPoint
+            If tempR <= 0.0 OrElse tempB <= 0.0 OrElse tintG <= 0.0 Then Return
+
+            ' Das gesuchte Verhaeltnis von Rot- zu Blauverstaerkung, und die Temperatur daraus.
+            Dim ratio = (tempR / tempB) * (satB / satR)
+            If Not Double.IsFinite(ratio) OrElse ratio <= 0.0 Then Return
+            newTemperature = Math.Max(-100.0, Math.Min(100.0, gainPerPoint * (ratio - 1.0) / (ratio + 1.0)))
+
+            ' Gruen folgt der GEKLEMMTEN Temperatur, nicht der gewuenschten: sonst zoege die
+            ' Toenung an einem Rot/Blau-Stand vorbei, den es gar nicht gibt.
+            Dim newTempR = 1.0 + newTemperature / gainPerPoint
+            Dim wantedTintG = tintG * newTempR * satR / (tempR * satG)
+            If Not Double.IsFinite(wantedTintG) OrElse wantedTintG <= 0.0 Then Return
+            newTint = Math.Max(-150.0, Math.Min(150.0, gainPerPoint * (wantedTintG - 1.0)))
+        End Sub
 
         ''' <summary>Glatter Endzonen-Abfall (smoothstep), geklemmt auf [0,1]. Fuer Schwarz/Weiss:
         ''' volle Wirkung am jeweiligen Ende, glatt zur Mitte aus - im Gegensatz zur alten

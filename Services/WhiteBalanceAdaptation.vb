@@ -173,6 +173,86 @@ Namespace Services
             Return shifted
         End Function
 
+        ' ── Die Pipette: von einem Bildpunkt zurück auf den Weißpunkt ────────────
+
+        ''' <summary>Der behauptete Weißpunkt, unter dem ein Bildpunkt neutral wird, der jetzt
+        ''' <paramref name="displayed"/> zeigt. Angegeben wird der Bildpunkt so, wie er auf dem
+        ''' Schirm steht, als LINEARES sRGB - der Aufrufer dekodiert also vorher das Gamma.
+        '''
+        ''' <para>DIE HERLEITUNG in einer Zeile. Die Kette verstärkt im Zapfenraum mit
+        ''' Zapfen(Anker)/Zapfen(Behauptung). Damit der Bildpunkt neutral wird, muss sie zusätzlich
+        ''' mit Zapfen(D65)/Zapfen(Bildpunkt) verstärken; beides zusammengefasst ergibt die neue
+        ''' Behauptung Zapfen(Behauptung) mal Zapfen(Bildpunkt) durch Zapfen(D65). Neutral heißt
+        ''' dabei D65, weil das der Weißpunkt von sRGB ist. Der Anker steht nicht in der Formel -
+        ''' er kürzt sich heraus.</para>
+        '''
+        ''' <para>WELCHEN BILDPUNKT DER AUFRUFER GEBEN MUSS: den, den die Adaptionsstufe SIEHT.
+        ''' Wer <paramref name="claimed"/> auf den Anker stellt, gibt den Bildpunkt ohne jede
+        ''' Farbbearbeitung und bekommt den Weißpunkt in einem Zug; wer einen bereits
+        ''' abgeglichenen Bildpunkt gibt, muss dazu passend den geltenden behaupteten Weißpunkt
+        ''' nennen. Ein Bildpunkt vom SCHIRM passt zu keinem von beidem: Tonwertkurve und
+        ''' Sättigung stehen hinter der Stufe und verschieben den Farbort noch einmal. Gemessen
+        ''' hat das die Pipettenprobe des Prüfstands (whitebalanceprobe --pick).</para>
+        '''
+        ''' <para>Klickt man auf eine Stelle, die schon neutral ist, kommt
+        ''' <paramref name="claimed"/> unverändert zurück - das ist die Probe darauf.</para></summary>
+        Public Shared Function NeutralizeSample(claimed As WhitePoint, displayed As Double()) As WhitePoint
+            If displayed Is Nothing OrElse displayed.Length < 3 OrElse Not claimed.IsValid Then Return claimed
+
+            Dim sampleCone = ApplyMatrix(Bradford, ApplyMatrix(LinearSrgbToXyz, displayed))
+            Dim claimedCone = ConeResponse(claimed)
+            Dim neutralCone = ConeResponse(D65)
+
+            Dim wanted(2) As Double
+            For i = 0 To 2
+                ' Ein Kanal auf null trägt keine Farbe, und der Bruch wäre keine Zahl. Schwarz und
+                ' ausgefressenes Weiß fängt der Aufrufer schon vorher ab; hier steht der Riegel für
+                ' alles, was trotzdem durchkommt.
+                If Not Double.IsFinite(sampleCone(i)) OrElse sampleCone(i) <= 0.0 Then Return claimed
+                If Not Double.IsFinite(claimedCone(i)) OrElse claimedCone(i) <= 0.0 Then Return claimed
+                wanted(i) = claimedCone(i) * sampleCone(i) / neutralCone(i)
+            Next
+
+            Dim xyz = ApplyMatrix(BradfordInverse, wanted)
+            Dim sum = xyz(0) + xyz(1) + xyz(2)
+            If Not Double.IsFinite(sum) OrElse sum <= 0.0 Then Return claimed
+            Dim candidate = New WhitePoint(xyz(0) / sum, xyz(1) / sum)
+            If Not candidate.IsValid OrElse candidate.X + candidate.Y >= 1.0 Then Return claimed
+            If Not HasPositiveConeResponse(candidate) Then Return claimed
+            Return candidate
+        End Function
+
+        ''' <summary>Die Temperatur zu einem Farbort, geklemmt auf den Reglerbereich.</summary>
+        Public Shared Function KelvinOf(point As WhitePoint) As Double
+            If Not point.IsValid Then Return CaptureWhiteBalanceService.ReferenceKelvin
+            Dim kelvin = CaptureWhiteBalanceService.CorrelatedColorTemperature(point.X, point.Y)
+            If Not Double.IsFinite(kelvin) OrElse kelvin <= 0.0 Then Return CaptureWhiteBalanceService.ReferenceKelvin
+            Return Math.Max(MinKelvin, Math.Min(MaxKelvin, kelvin))
+        End Function
+
+        ''' <summary>Die Tönung zu einem Farbort, in Reglerpunkten - die Umkehrung von
+        ''' <see cref="ShiftTint"/>: der Abstand quer zur Kurve, geteilt durch den Faktor eines
+        ''' Punktes. Die Temperatur wird mitgegeben, statt sie hier noch einmal zu bestimmen; der
+        ''' Aufrufer hat sie ohnehin schon.</summary>
+        Public Shared Function TintPointsOf(point As WhitePoint, kelvin As Double) As Double
+            If Not point.IsValid Then Return 0.0
+            Dim locus = LocusPoint(kelvin)
+            If Not locus.IsValid Then Return 0.0
+            Dim pointUv = ToCie1960(point)
+            Dim locusUv = ToCie1960(locus)
+            If Double.IsNaN(pointUv.V) OrElse Double.IsNaN(locusUv.V) Then Return 0.0
+            Return (pointUv.V - locusUv.V) / TintPerPoint
+        End Function
+
+        ''' <summary>Matrix mal Vektor, beides mit drei Gliedern.</summary>
+        Private Shared Function ApplyMatrix(m As Double(), v As Double()) As Double()
+            Return New Double(2) {
+                m(0) * v(0) + m(1) * v(1) + m(2) * v(2),
+                m(3) * v(0) + m(4) * v(1) + m(5) * v(2),
+                m(6) * v(0) + m(7) * v(1) + m(8) * v(2)
+            }
+        End Function
+
         ''' <summary>Der Farbort auf der Kurve, ohne Tönung.</summary>
         Private Shared Function LocusPoint(kelvin As Double) As WhitePoint
             Const planckOnlyBelow As Double = 4000.0

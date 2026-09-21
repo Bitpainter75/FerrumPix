@@ -8582,4 +8582,25 @@
   <data name="Auswahl_ausschneiden_d3df5e1f" xml:space="preserve">
     <value>선택 영역 잘라내기</value>
   </data>
+  <data name="Pipette_auf_eine_Stelle_klicken_die_neutral_grau_3b687124" xml:space="preserve">
+    <value>스포이드: 중성 회색이어야 할 곳을 클릭하세요.</value>
+  </data>
+  <data name="Diese_Stelle_l_sst_sich_nicht_messen_76085033" xml:space="preserve">
+    <value>이 위치는 측정할 수 없습니다</value>
+  </data>
+  <data name="Diese_Stelle_tr_gt_keine_Farbe_bitte_auf_ein_hel_4ec3ad3c" xml:space="preserve">
+    <value>이 위치에는 색이 없습니다. 밝은 회색을 클릭하세요</value>
+  </data>
+  <data name="Wei_abgleich_auf_die_aufgenommene_Stelle_gesetzt_42377ce4" xml:space="preserve">
+    <value>선택한 위치로 화이트 밸런스를 맞췄습니다</value>
+  </data>
+  <data name="Pipette_b3b0e6db" xml:space="preserve">
+    <value>스포이드</value>
+  </data>
+  <data name="Lichter_aus_den_Rohdaten_holen_37c6d9f0" xml:space="preserve">
+    <value>원본 데이터에서 하이라이트 되살리기</value>
+  </data>
+  <data name="Holt_Zeichnung_zur_ck_die_ber_Weiss_liegt_und_he_3af0d3c9" xml:space="preserve">
+    <value>흰색 위에 있어 지금은 잘려 나가는 계조를 되살립니다. 한 채널이 날아가고 다른 채널이 남아 있는 곳에서만 작동합니다. 전환하면 파일을 다시 현상하므로 잠시 걸립니다.</value>
+  </data>
 </root>

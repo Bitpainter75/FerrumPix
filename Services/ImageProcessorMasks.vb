@@ -2687,7 +2687,7 @@ Namespace Services
         Public Shared Function ExtractRegionToFile(sourcePath As String, adj As ImageAdjustments, pixelRect As SKRectI, targetPngPath As String,
                                                    Optional workingFull As SKBitmap = Nothing) As Boolean
             Try
-                Using original = If(workingFull, DecodeOriented(sourcePath))
+                Using original = If(workingFull, DecodeForAdjustments(sourcePath, adj))
                     If original Is Nothing Then Return False
                     Using processed = ProcessBitmap(original, adj)
                         Dim left = Math.Max(0, pixelRect.Left)
@@ -3301,7 +3301,7 @@ Namespace Services
                     workingFull?.Dispose()
                     Return False
                 End If
-                Using original = If(workingFull, DecodeOriented(sourcePath))
+                Using original = If(workingFull, DecodeForAdjustments(sourcePath, adj))
                     If original Is Nothing Then Return False
                     Using processed = ProcessBitmap(original, adj)
                         Dim left = Math.Max(0, pixelRect.Left)

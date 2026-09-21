@@ -5338,9 +5338,31 @@ Namespace ViewModels
                 Return _temperature
             End Get
             Set(value As Double)
-                SetUndoableDouble(_temperature, value, NameOf(Temperature))
+                If SetUndoableDouble(_temperature, value, NameOf(Temperature)) Then MarkWhiteBalanceCustom()
             End Set
         End Property
+
+        ''' <summary>Die Auswahlliste auf „Benutzerdefiniert" stellen, weil jemand von Hand an
+        ''' einem der drei Weissabgleichsregler gedreht hat.
+        '''
+        ''' <para>WARUM ES DAS BRAUCHT: die Liste nennt Beleuchtungsarten, und „Tageslicht" ist
+        ''' eine Aussage ueber das Licht der Aufnahme. Wer danach am Kelvin-Regler zieht, hat kein
+        ''' Tageslicht mehr, die Liste behauptete es aber weiter. Die Oberflaeche log damit ueber
+        ''' ihren eigenen Zustand - derselbe Fehler, den der Kelvin-Regler bei der Automatik schon
+        ''' einmal hatte.</para>
+        '''
+        ''' <para>NUR BEI HANDBETRIEB. Ein geladenes Rezept schreibt die FELDER und kommt hier gar
+        ''' nicht vorbei; ein Stapelvorgang wie die Automatik setzt <c>_suppressUndoCapture</c> und
+        ''' wird daran erkannt. Sonst haette jedes Oeffnen eines Bildes die Liste umgestellt.</para>
+        '''
+        ''' <para>Das FELD wird gesetzt, nicht die Eigenschaft: deren Setter deutet den Namen als
+        ''' Wunsch nach einer Beleuchtungsart und schriebe die Regler gleich wieder um.</para></summary>
+        Private Sub MarkWhiteBalanceCustom()
+            If _suppressUndoCapture Then Return
+            If String.Equals(_whiteBalance, "Benutzerdefiniert", StringComparison.Ordinal) Then Return
+            _whiteBalance = "Benutzerdefiniert"
+            Me.RaisePropertyChanged(NameOf(WhiteBalance))
+        End Sub
 
         ''' <summary>Trägt das offene Bild einen Aufnahme-Weißabgleich? Dann läuft der Weißabgleich
         ''' über eine absolute Kelvin-Zahl, sonst über den relativen Regler. Die Oberfläche schaltet
@@ -5373,6 +5395,7 @@ Namespace ViewModels
                 _whiteBalanceKelvin = target
                 Me.RaisePropertyChanged(NameOf(KelvinTemperature))
                 RaiseResetButtonStateChanged()
+                MarkWhiteBalanceCustom()
                 SchedulePreviewForCurrentTarget()
             End Set
         End Property
@@ -5458,13 +5481,173 @@ Namespace ViewModels
                 Return If(HasAbsoluteWhiteBalance, _whiteBalanceKelvinTint, _tint)
             End Get
             Set(value As Double)
+                Dim changed As Boolean
                 If HasAbsoluteWhiteBalance Then
-                    SetUndoableDouble(_whiteBalanceKelvinTint, value, NameOf(Tint))
+                    changed = SetUndoableDouble(_whiteBalanceKelvinTint, value, NameOf(Tint))
                 Else
-                    SetUndoableDouble(_tint, value, NameOf(Tint))
+                    changed = SetUndoableDouble(_tint, value, NameOf(Tint))
                 End If
+                If changed Then MarkWhiteBalanceCustom()
             End Set
         End Property
+
+        ''' <summary>Startet die Pipette des Weissabgleichs: die angeklickte Stelle soll neutral
+        ''' grau werden.
+        '''
+        ''' GEMITTELT wird über einen kleinen Bereich statt über einen einzigen Bildpunkt. Eine
+        ''' neutrale Fläche ist das Ziel, nicht ein einzelner Punkt, und das Rauschen eines
+        ''' Bildpunkts ginge sonst unmittelbar in die Farbtemperatur ein.</summary>
+        Private Sub BeginWhiteBalancePick()
+            BeginColorPickAt(AddressOf ApplyWhiteBalanceFromPick, sampleRadius:=WhiteBalancePickRadius)
+        End Sub
+
+        ''' <summary>Wie weit die Pipette des Weissabgleichs mittelt, in Bildpunkten.</summary>
+        Private Const WhiteBalancePickRadius As Integer = 2
+
+        ''' <summary>Setzt den Weissabgleich so, dass die aufgenommene Stelle neutral wird.
+        '''
+        ''' <para>GEMESSEN WIRD NICHT AUF DEM SCHIRM. Zwischen dem Weissabgleich und dem
+        ''' Anzeigebild stehen Tonwertkurve, Sättigung und alles andere, und die verschieben den
+        ''' Farbort eines Bildpunkts ein zweites Mal. Der Prüfstand hat gezeigt, wohin das führt:
+        ''' bei Kontrast +40 zusammen mit Sättigung +40 blieben von 68 Stufen Farbstich nach dem
+        ''' Klick noch 40 stehen, und der zweite Klick pendelte auf die andere Seite, statt
+        ''' nachzurücken. Deshalb wird die Stelle in einem Bild OHNE jede Farbbearbeitung noch
+        ''' einmal nachgeschlagen: dort steht der Bildpunkt so, wie der Weissabgleich ihn
+        ''' vorfindet, und die Rechnung trifft in einem Zug - unabhängig davon, wie die übrigen
+        ''' Regler stehen.</para>
+        '''
+        ''' <para>ZWEI WEGE, weil es zwei Weissabgleiche gibt. Mit Aufnahme-Anker läuft die
+        ''' Rechnung über die Adaption und landet in Kelvin und Tönung; ohne Anker gilt das alte
+        ''' Verstärkungsmodell, und die Umkehrung dazu steht bei ihm selbst
+        ''' (<see cref="ImageProcessor.NeutralizeLegacyWhiteBalance"/>). Welcher Weg gilt, sagt
+        ''' dieselbe Eigenschaft, an der auch die Oberfläche ihre Temperaturzeile
+        ''' umschaltet.</para></summary>
+        Private Sub ApplyWhiteBalanceFromPick(picked As Avalonia.Media.Color,
+                                              xPercent As Double, yPercent As Double)
+            ' DAS VERGLEICHSBILD trägt keine einzige Farbanpassung mehr, nur noch die Geometrie.
+            ' So steht der Bildpunkt darin genau so, wie ihn die erste Farbstufe der Kette
+            ' vorfindet. Was danach kommt - Dynamik, Belichtung, Kontrast, Kurven - rechnet für
+            ' alle drei Kanäle gleich und lässt Neutral neutral; die Sättigung ist die einzige
+            ' Ausnahme, und die nimmt der alte Weg unten selbst mit hinein.
+            Dim probe = GetCurrentAdjustments(forPreview:=True)
+            If probe Is Nothing Then
+                StatusText = LocalizationService.T("Diese Stelle lässt sich nicht messen")
+                Return
+            End If
+            probe.CopyPixelAdjustmentsFrom(New ImageAdjustments())
+
+            Dim raw = SampleProbePixel(probe, xPercent, yPercent)
+            If Not raw.HasValue Then
+                StatusText = LocalizationService.T("Diese Stelle lässt sich nicht messen")
+                Return
+            End If
+
+            Dim r = raw.Value.Red / 255.0
+            Dim g = raw.Value.Green / 255.0
+            Dim b = raw.Value.Blue / 255.0
+
+            ' Schwarz trägt keine Farbe, und ausgefressenes Weiss trägt nur noch die der Klemmung.
+            ' Beides ergäbe eine Zahl, die nichts über das Licht der Aufnahme sagt.
+            Dim brightest = Math.Max(r, Math.Max(g, b))
+            Dim darkest = Math.Min(r, Math.Min(g, b))
+            If brightest < 0.04 OrElse darkest > 0.98 Then
+                StatusText = LocalizationService.T("Diese Stelle trägt keine Farbe - bitte auf ein helles Grau klicken")
+                Return
+            End If
+
+            PushUndo(CombineHistoryLabel("Weißabgleich", "Pipette"))
+            _suppressUndoCapture = True
+            Try
+                If HasAbsoluteWhiteBalance Then
+                    ' Der ANKER, nicht der jetzige Reglerstand: das nachgeschlagene Bild trägt
+                    ' keinen Weissabgleich, der Bildpunkt steht also auf dem Anker.
+                    Dim anchor = New WhitePoint(_whiteBalanceAnchorX, _whiteBalanceAnchorY)
+                    Dim neutral = WhiteBalanceAdaptation.NeutralizeSample(anchor, New Double() {
+                        SrgbToLinear(r), SrgbToLinear(g), SrgbToLinear(b)})
+                    Dim kelvin = WhiteBalanceAdaptation.KelvinOf(neutral)
+                    Dim tintPoints = WhiteBalanceAdaptation.TintPointsOf(neutral, kelvin)
+                    ' Die 0 heisst „wie aufgenommen" und ist die einzige Stellung ganz ohne
+                    ' Rechnung - genau wie im Setter des Reglers.
+                    Dim anchorKelvin = CaptureKelvin()
+                    _whiteBalanceKelvin = If(Math.Abs(kelvin - anchorKelvin) < 1.0, 0.0, kelvin)
+                    _whiteBalanceKelvinTint = Math.Max(-150.0, Math.Min(150.0, tintPoints))
+                Else
+                    Dim newTemperature As Double
+                    Dim newTint As Double
+                    ' Das Vergleichsbild trägt keine Regler, die Umkehrung geht also von Temperatur
+                    ' 0 und Tönung 0 aus - nicht vom jetzigen Stand. Die Sättigung muss dagegen
+                    ' mit: sie steht in derselben Matrix und vor der Verstärkung.
+                    ImageProcessor.NeutralizeLegacyWhiteBalance(0.0, 0.0, _saturation, r, g, b,
+                                                                newTemperature, newTint)
+                    _temperature = newTemperature
+                    _tint = newTint
+                End If
+            Finally
+                _suppressUndoCapture = False
+            End Try
+
+            ' Erst jetzt trägt „Benutzerdefiniert" etwas: die Auswahl nennt keine Beleuchtungsart
+            ' mehr, sondern die aufgenommene Stelle. Gesetzt wird das FELD, nicht die Eigenschaft -
+            ' deren Setter legte einen zweiten Schritt auf den Stapel.
+            _whiteBalance = "Benutzerdefiniert"
+
+            Me.RaisePropertyChanged(NameOf(WhiteBalance))
+            Me.RaisePropertyChanged(NameOf(KelvinTemperature))
+            Me.RaisePropertyChanged(NameOf(Temperature))
+            Me.RaisePropertyChanged(NameOf(Tint))
+            RaiseResetButtonStateChanged()
+            StatusText = LocalizationService.T("Weißabgleich auf die aufgenommene Stelle gesetzt")
+            SchedulePreviewForCurrentTarget()
+        End Sub
+
+        ''' <summary>Der Bildpunkt an dieser Stelle, gemittelt, in einem eigens gerechneten
+        ''' Vergleichsbild. Nothing, wenn sich nichts rendern lässt.
+        '''
+        ''' <para>DIE GEOMETRIE BLEIBT STEHEN, weil der Aufrufer nur Regler ändert: Beschnitt,
+        ''' Drehung und Ausrichtung sind strukturell. Deshalb trifft die Stelle im Vergleichsbild
+        ''' genau die Stelle auf dem Schirm, und es braucht keine Umkehrung von Beschnitt und
+        ''' Drehung.</para>
+        '''
+        ''' <para>KOSTET EINEN VORSCHAURENDER, und zwar an <see cref="ImageProcessor.RenderPreviewSkBitmap"/>
+        ''' vorbei am Zwischenspeicher: ein Render mit fremdem Rezept über den Basis-Cache würde
+        ''' den warmen Stand des Editors wegwerfen. Für einen Klick ist der Preis vertretbar.</para></summary>
+        Private Function SampleProbePixel(probe As ImageAdjustments,
+                                          xPercent As Double, yPercent As Double) As SKColor?
+            Dim source = GetPreviewSource()
+            If source Is Nothing OrElse probe Is Nothing Then Return Nothing
+
+            Using rendered = ImageProcessor.RenderPreviewSkBitmap(source, probe)
+                If rendered Is Nothing OrElse rendered.Width <= 0 OrElse rendered.Height <= 0 Then Return Nothing
+
+                Dim px = Math.Max(0, Math.Min(rendered.Width - 1, CInt(xPercent * rendered.Width)))
+                Dim py = Math.Max(0, Math.Min(rendered.Height - 1, CInt(yPercent * rendered.Height)))
+
+                Dim firstX = Math.Max(0, px - WhiteBalancePickRadius)
+                Dim lastX = Math.Min(rendered.Width - 1, px + WhiteBalancePickRadius)
+                Dim firstY = Math.Max(0, py - WhiteBalancePickRadius)
+                Dim lastY = Math.Min(rendered.Height - 1, py + WhiteBalancePickRadius)
+
+                Dim sumR As Long = 0, sumG As Long = 0, sumB As Long = 0, count As Integer = 0
+                For sampleY As Integer = firstY To lastY
+                    For sampleX As Integer = firstX To lastX
+                        Dim pixel = rendered.GetPixel(sampleX, sampleY)
+                        sumR += pixel.Red
+                        sumG += pixel.Green
+                        sumB += pixel.Blue
+                        count += 1
+                    Next
+                Next
+                If count = 0 Then Return Nothing
+                Return New SKColor(CByte(sumR \ count), CByte(sumG \ count), CByte(sumB \ count))
+            End Using
+        End Function
+
+        ''' <summary>sRGB-Gamma nach Linearlicht, für die eine Farbe der Pipette. Die Kette nimmt
+        ''' dafür Tabellen; für drei Zahlen wäre deren Aufbau teurer als die Potenz.</summary>
+        Private Shared Function SrgbToLinear(value As Double) As Double
+            If value <= 0.04045 Then Return value / 12.92
+            Return Math.Pow((value + 0.055) / 1.055, 2.4)
+        End Function
 
         ''' Filmnegativ umkehren. Beim Einschalten wird das Bild einmal vermessen (Filmbasis und
         ''' dichtester Punkt), damit die Umkehr sofort mit echten Werten rechnet statt zu raten.
@@ -5920,6 +6103,10 @@ Namespace ViewModels
         ' weiterhin das alte Bild. Das kostet bei RAW spuerbar Zeit; es ist eine Entscheidung, die
         ' man einmal am Anfang trifft, nicht ein Regler zum Spielen.
 
+        ''' Lichter aus den Rohdaten zurueckholen. Wie die Objektivkorrektur eine Angabe, die den
+        ''' DECODE aendert - deshalb steht sie hier bei ihr und nicht bei den Reglern.
+        Private _rawHighlightRecovery As Boolean = False
+
         Private _lensDistortion As Boolean? = Nothing
         Private _lensTca As Boolean? = Nothing
         Private _lensVignetting As Boolean? = Nothing
@@ -6259,8 +6446,46 @@ Namespace ViewModels
             RebuildWorkingImageForLens()
         End Sub
 
+        ''' <summary>Lichter aus den Rohdaten zurueckholen. Ein SCHALTER und kein Regler: die
+        ''' Belichtungsrampe sitzt im Decode, das Umschalten kostet also einen neuen Decode.
+        '''
+        ''' AUS ist die Vorgabe, und zwischen aus und an liegt NUR das Knie der Rampe: unterhalb
+        ''' der Lichter sind beide Stellungen bitgleich, gemessen an zehn Dateien aus acht
+        ''' Formaten ohne einen einzigen abweichenden Bildpunkt.
+        '''
+        ''' NICHT ZU VERWECHSELN mit "wie vor dem Umbau": der Decode entklemmt seit dem
+        ''' 21.09.2026 immer, damit ein zwischengespeicherter Stand fuer beide Stellungen taugt.
+        ''' Gegenueber dem Stand davor haben sich rund 0,01 Prozent der Bildpunkte geaendert.
+        ''' Beides steht in RAW_UND_FARBE.md, Schritt 4.
+        '''
+        ''' Nur RAW-Dateien haben etwas davon; alles andere traegt gar keine Kopffreiheit ueber
+        ''' Weiss.</summary>
+        Public Property RawHighlightRecoveryEnabled As Boolean
+            Get
+                Return _rawHighlightRecovery
+            End Get
+            Set(value As Boolean)
+                If _rawHighlightRecovery = value Then Return
+                CaptureUndoState(NameOf(RawHighlightRecoveryEnabled))
+                _rawHighlightRecovery = value
+                Me.RaisePropertyChanged(NameOf(RawHighlightRecoveryEnabled))
+                RaiseResetButtonStateChanged()
+                ' Derselbe Weg wie bei der Objektivkorrektur: die Stufe sitzt VOR der Reglerkette,
+                ' ein blosses Nachrendern zeigte weiter das alte Bild.
+                RebuildWorkingImageForLens()
+            End Set
+        End Property
+
         Private Sub RebuildWorkingImageForLens()
             If String.IsNullOrEmpty(_currentImagePath) Then Return
+            ' Dieser Weg ersetzt die Quelle direkt und laeuft deshalb an SchedulePreviewUpdate
+            ' vorbei. Er muss eine Nutzerentscheidung trotzdem als ungespeicherte Aenderung
+            ' markieren (insbesondere die Lichterrettung), sonst ginge sie beim Schliessen still
+            ' verloren.
+            If Not _suppressPreviewDirty Then
+                _hasChanges = True
+                Me.RaisePropertyChanged(NameOf(HasUnsavedChanges))
+            End If
             ' Die Anzeigeeinstellung ueberlebt den Neuaufbau: sie gehoert zur ANSICHT, nicht zum
             ' Bild. Ohne das sprang die Anzeige von "Einpassen" auf einen festen Prozentwert -
             ' bei voller Sensoraufloesung auf einstellige Prozente.
@@ -10837,7 +11062,10 @@ Namespace ViewModels
             NameHistoryStep(LocalizationService.T("Auswahl kopiert"))
         End Sub
 
-        Private _pendingColorPickCallback As Action(Of Avalonia.Media.Color) = Nothing
+        ''' Die Pipette reicht neben der Farbe auch die STELLE durch, in Anteilen der Bildbreite
+        ''' und -höhe (0 bis 1). Die Malfarbe braucht sie nicht, der Weissabgleich schon: er misst
+        ''' den Bildpunkt noch einmal in einem Bild ohne jede Farbbearbeitung.
+        Private _pendingColorPickCallback As Action(Of Avalonia.Media.Color, Double, Double) = Nothing
         Private _isPickingColorFromImage As Boolean = False
 
         ''' Ob die Pipette gerade auf den nächsten Klick auf das Bild wartet - EditorView zeigt in
@@ -10868,25 +11096,56 @@ Namespace ViewModels
             End Set
         End Property
 
+        Private _colorPickSampleRadius As Integer = 0
+
+        ''' <summary>Wie weit die Pipette um den Klickpunkt herum mittelt, in Bildpunkten des
+        ''' angezeigten Bildes. 0 nimmt genau einen Bildpunkt.
+        '''
+        ''' EINE FARBE aus einem einzigen Bildpunkt zu nehmen, ist richtig, solange die Farbe
+        ''' selbst das Ziel ist: beim Malen und beim Filmträger will man genau den Punkt, den die
+        ''' Lupe zeigt. Der Weissabgleich dagegen misst eine FLÄCHE, die neutral sein soll, und
+        ''' das Rauschen eines einzelnen Bildpunkts geht dort unmittelbar in die Farbtemperatur
+        ''' ein. Deshalb ist die Mittelung eine Angabe der jeweiligen Pipette und keine
+        ''' Eigenschaft der Bühne.</summary>
+        Public ReadOnly Property ColorPickSampleRadius As Integer
+            Get
+                Return _colorPickSampleRadius
+            End Get
+        End Property
+
         ''' Von ColorPickerButton.OnEyedropperClick aufgerufen: merkt sich, WELCHE Farbe (per Closure)
         ''' beim nächsten Bildklick gesetzt werden soll, statt eine feste ViewModel-Farbe zu kennen -
         ''' dadurch bleibt die Pipette für jede beliebige ColorPickerButton-Instanz wiederverwendbar.
-        Public Sub BeginColorPick(onPicked As Action(Of Avalonia.Media.Color))
+        Public Sub BeginColorPick(onPicked As Action(Of Avalonia.Media.Color),
+                                  Optional sampleRadius As Integer = 0)
+            BeginColorPickAt(Sub(picked, unusedX, unusedY) onPicked(picked), sampleRadius)
+        End Sub
+
+        ''' <summary>Wie <see cref="BeginColorPick"/>, aber die Rückmeldung nennt auch die STELLE,
+        ''' in Anteilen der Bildbreite und -höhe. Für alles, was den Bildpunkt noch einmal woanders
+        ''' nachschlagen muss.</summary>
+        Public Sub BeginColorPickAt(onPicked As Action(Of Avalonia.Media.Color, Double, Double),
+                                    Optional sampleRadius As Integer = 0)
             _pendingColorPickCallback = onPicked
+            _colorPickSampleRadius = Math.Max(0, sampleRadius)
             ColorPickPreview = Nothing
             IsPickingColorFromImage = True
         End Sub
 
-        Public Sub CompleteColorPick(color As Avalonia.Media.Color)
+        Public Sub CompleteColorPick(color As Avalonia.Media.Color,
+                                     Optional xPercent As Double = 0.5,
+                                     Optional yPercent As Double = 0.5)
             Dim callback = _pendingColorPickCallback
             _pendingColorPickCallback = Nothing
+            _colorPickSampleRadius = 0
             ColorPickPreview = Nothing
             IsPickingColorFromImage = False
-            callback?.Invoke(color)
+            callback?.Invoke(color, xPercent, yPercent)
         End Sub
 
         Public Sub CancelColorPick()
             _pendingColorPickCallback = Nothing
+            _colorPickSampleRadius = 0
             ColorPickPreview = Nothing
             IsPickingColorFromImage = False
             EndNegativePickSuppression()
@@ -14546,6 +14805,7 @@ Namespace ViewModels
         Public ReadOnly Property ResetHslBandCommand As ICommand
         Public ReadOnly Property ResetCalibrationCommand As ICommand
         Public ReadOnly Property ResetColorGradingCommand As ICommand
+        Public ReadOnly Property PickWhiteBalanceCommand As ICommand
         Public ReadOnly Property PickNegativeBaseCommand As ICommand
         Public ReadOnly Property AutoNegativeBaseCommand As ICommand
         Public ReadOnly Property ResetNegativeCommand As ICommand
@@ -14889,6 +15149,7 @@ Namespace ViewModels
                                                            PushUndo(ResetHistoryLabel("Farbe"))
                                                            ResetColorInternal()
                                                        End Sub)
+            PickWhiteBalanceCommand = ReactiveCommand.Create(Sub() BeginWhiteBalancePick())
             PickNegativeBaseCommand = ReactiveCommand.Create(Sub() BeginNegativeBasePick())
             AutoNegativeBaseCommand = ReactiveCommand.Create(Sub()
                                                                  PushUndo(CombineHistoryLabel("Filmnegativ", "Automatisch"))
@@ -15673,6 +15934,13 @@ Namespace ViewModels
             If idx < 0 Then Return
             If Not Await ConfirmSaveBeforeLeavingAsync("dieses Bild öffnest") Then Return
             _currentIndex = idx
+            ' DIE MARKIERUNG FOLGT SOFORT, nicht erst nach dem Laden. Die Auswahl der Liste
+            ' selbst springt beim Klick augenblicklich um; blieb die Markierung des Modells beim
+            ' vorigen Bild stehen, waren waehrend eines langsamen Aufbaus ZWEI Karten markiert -
+            ' und die Buehne zeigte dazu noch das alte Bild. Beim Aufbau wird sie erneut gesetzt,
+            ' das schadet nicht.
+            Me.RaisePropertyChanged(NameOf(CurrentFilmstripIndex))
+            MarkCurrentFilmstripItem()
             Await LoadImageContent(item.FilePath)
         End Function
 
@@ -15707,6 +15975,13 @@ Namespace ViewModels
             If idx < 0 OrElse idx >= _folderPaths.Count OrElse idx = _currentIndex Then Return
             If Not Await ConfirmSaveBeforeLeavingAsync("das nächste Bild öffnest") Then Return
             _currentIndex = idx
+            ' DIE MARKIERUNG FOLGT SOFORT, nicht erst nach dem Laden. Die Auswahl der Liste
+            ' selbst springt beim Klick augenblicklich um; blieb die Markierung des Modells beim
+            ' vorigen Bild stehen, waren waehrend eines langsamen Aufbaus ZWEI Karten markiert -
+            ' und die Buehne zeigte dazu noch das alte Bild. Beim Aufbau wird sie erneut gesetzt,
+            ' das schadet nicht.
+            Me.RaisePropertyChanged(NameOf(CurrentFilmstripIndex))
+            MarkCurrentFilmstripItem()
             Await LoadImageContent(_folderPaths(_currentIndex))
         End Function
 
@@ -15762,7 +16037,12 @@ Namespace ViewModels
                 Return
             End If
 
-            Dim publishAtomically = FpxService.IsFpx(path) OrElse RawSidecarService.IsSidecarFormat(path)
+            ' JEDES Format, dessen Oeffnen wirklich Zeit kostet - nicht nur .fpx, RAW und PSD.
+            ' Hier stand die engere Liste, und beim Wechsel aus dem Filmstreifen auf ein TIFF war
+            ' das Ergebnis: die Auswahl sprang sofort weiter, die Buehne zeigte sekundenlang noch
+            ' das vorige Bild, und nichts sagte, dass etwas laeuft. Fuer ein gewoehnliches JPEG
+            ' bleibt es beim Sofort-Wechsel, sonst flackerte jedes Blaettern.
+            Dim publishAtomically = ImageProcessor.IsSlowToOpen(path)
             If publishAtomically Then SetDocumentLoading(True)
             Try
             ' .fpx-Projekt im Filmstreifen: Bündel entpacken, Basisbild wird zur Render-Quelle, gespeicherter
@@ -16113,8 +16393,7 @@ Namespace ViewModels
             ' showLoadingState: das Neuladen nach dem Speichern. Ohne den Ladezustand stand dort bei
             ' JPEG, PNG und TIFF einen Moment "Kein Bild" auf der Buehne, bis die gespeicherte Datei
             ' gelesen war - beim TIFF lange genug, um aufzufallen (Nutzerbefund).
-            Dim publishAtomically = FpxService.IsFpx(imagePath) OrElse RawSidecarService.IsSidecarFormat(imagePath) OrElse
-                                    showLoadingState
+            Dim publishAtomically = ImageProcessor.IsSlowToOpen(imagePath) OrElse showLoadingState
             If publishAtomically Then SetDocumentLoading(True)
             BeginDocumentLoad()
             Try
@@ -17448,11 +17727,12 @@ Namespace ViewModels
         ''' sie veraendert den DECODE, nicht die Reglerkette - ohne sie taeten die Schalter und
         ''' Regler der Gruppe schlicht nichts.</param>
         Private Shared Function DecodeForPreviewSource(imagePath As String, overridePath As String,
-                                                       lensChoice As LensDataService.Wahl) As (Full As SKBitmap, Baked As Boolean)
+                                                       lensChoice As LensDataService.Wahl,
+                                                       recoverHighlights As Boolean) As (Full As SKBitmap, Baked As Boolean)
             Dim fullDecode As SKBitmap = Nothing
             Dim bakedFromFpx = False
             If Not String.IsNullOrEmpty(overridePath) AndAlso File.Exists(overridePath) Then
-                fullDecode = ImageProcessor.DecodeWorkingImage(overridePath, lensChoice)
+                fullDecode = ImageProcessor.DecodeWorkingImage(overridePath, lensChoice, recoverHighlights)
                 If fullDecode IsNot Nothing Then
                     Dim baseSize = ImageProcessor.GetOrientedImageSize(imagePath)
                     If baseSize.Width > 0 AndAlso (fullDecode.Width <> baseSize.Width OrElse fullDecode.Height <> baseSize.Height) Then
@@ -17468,7 +17748,7 @@ Namespace ViewModels
                     End If
                 End If
             End If
-            If fullDecode Is Nothing Then fullDecode = ImageProcessor.DecodeWorkingImage(imagePath, lensChoice)
+            If fullDecode Is Nothing Then fullDecode = ImageProcessor.DecodeWorkingImage(imagePath, lensChoice, recoverHighlights)
             Return (fullDecode, bakedFromFpx)
         End Function
 
@@ -17552,7 +17832,7 @@ Namespace ViewModels
         Private Sub PreparePreviewSource(imagePath As String, Optional scheduleInitialRender As Boolean = True)
             Dim token = BeginPreviewSourceSwap(imagePath)
             If token < 0 Then Return
-            CompletePreviewSourceSwap(DecodeForPreviewSource(imagePath, _workingImageOverridePath, LensChoiceFromFields()),
+            CompletePreviewSourceSwap(DecodeForPreviewSource(imagePath, _workingImageOverridePath, LensChoiceFromFields(), _rawHighlightRecovery),
                                       token, scheduleInitialRender)
         End Sub
 
@@ -17588,7 +17868,8 @@ Namespace ViewModels
             ' Feld VOR dem Wechsel in den Hintergrund lesen - es gehört dem UI-Thread.
             Dim overridePath = _workingImageOverridePath
             Dim wahl = LensChoiceFromFields()
-            Dim decoded = Await Task.Run(Function() DecodeForPreviewSource(imagePath, overridePath, wahl))
+            Dim recoverHighlights = _rawHighlightRecovery
+            Dim decoded = Await Task.Run(Function() DecodeForPreviewSource(imagePath, overridePath, wahl, recoverHighlights))
             CompletePreviewSourceSwap(decoded, token, scheduleInitialRender)
         End Function
 
@@ -19481,6 +19762,7 @@ Namespace ViewModels
         Private Function BuildAdjustmentsFromFields(Optional forPreview As Boolean = False,
                                                     Optional includeEditorOverlayAnnotations As Boolean = False) As ImageAdjustments
             Dim adj = New ImageAdjustments With {
+                .RawHighlightRecovery = _rawHighlightRecovery,
                 .LensDistortion = _lensDistortion,
                 .LensTca = _lensTca,
                 .LensVignetting = _lensVignetting,
@@ -20648,6 +20930,10 @@ Namespace ViewModels
         Private Sub ApplyAdjustments(adj As ImageAdjustments,
                                      Optional resetTransientSelectionBinding As Boolean = False,
                                      Optional scheduleRender As Boolean = True)
+            ' Die Lichterrettung liegt VOR der Reglerkette im RAW-Decode. Ein wiederhergestelltes
+            ' Rezept (Sidecar, Undo/Redo) darf deshalb nicht bloss die Eigenschaft umstellen und
+            ' das schon entwickelte Arbeitsbild weiterzeigen.
+            Dim rawHighlightRecoveryChanged = _rawHighlightRecovery <> adj.RawHighlightRecovery
             ' Die Objektliste wird hier geleert und Objekt fuer Objekt neu gefuellt. Ohne diese
             ' Klammer baut das Ebenenpanel bei JEDEM einzelnen Objekt komplett neu auf - bei 32
             ' Objekten also 33 Mal statt einmal.
@@ -20670,6 +20956,7 @@ Namespace ViewModels
             _blacks = adj.Blacks
             _temperature = adj.Temperature
             _tint = adj.Tint
+            _rawHighlightRecovery = adj.RawHighlightRecovery
             _whiteBalanceModel = adj.WhiteBalanceModel
             _whiteBalanceAnchorX = adj.WhiteBalanceAnchorX
             _whiteBalanceAnchorY = adj.WhiteBalanceAnchorY
@@ -21000,7 +21287,11 @@ Namespace ViewModels
             ' der Anzeige und im Infopanel auf dem Stand VOR dem Rueckgaengig stehen. Gemeldet am
             ' Hochskalieren, gilt aber fuer jeden Geometrieschritt.
             RaiseDisplayImageGeometryProperties()
-            If scheduleRender Then SchedulePreviewUpdate()
+            If rawHighlightRecoveryChanged Then
+                RebuildWorkingImageForLens()
+            ElseIf scheduleRender Then
+                SchedulePreviewUpdate()
+            End If
             ' Nach Rückgängig/Wiederholen: Bedienen die Regler gerade ein Objekt, dann tragen die Felder
             ' jetzt die BILD-Werte aus dem Schnappschuss. Also Bildwerte wieder parken und die Werte des
             ' Objekts (die im Schnappschuss am Objekt hängen) in die Regler holen.
@@ -21234,6 +21525,7 @@ Namespace ViewModels
             ' Zeilen erbte Bild B die Objektivwahl von Bild A - und weil eine gesetzte Wahl den
             ' Namen aus den Aufnahmedaten SCHLAEGT, fand der Abgleich danach fuer gar kein Bild mehr
             ' etwas.
+            _rawHighlightRecovery = False
             _lensDistortion = Nothing
             _lensTca = Nothing
             _lensVignetting = Nothing
@@ -21420,6 +21712,7 @@ Namespace ViewModels
             _selectedLayersPanelTab = LayersPanelTab.Tool
             _isPickingColorFromImage = False
             _pendingColorPickCallback = Nothing
+            _colorPickSampleRadius = 0
             ' Die Pipette wird hier abgebrochen - ihre Nebenwirkung auf die Vorschau muss mit weg.
             ' Blieb die Unterdrueckung stehen, zeigte das naechste Bild seine Filmumkehr nicht an,
             ' sobald sie dort eingeschaltet wird: der Regler stuende auf an, das Bild bliebe negativ.
@@ -24769,6 +25062,7 @@ Namespace ViewModels
         End Sub
 
         Private Sub ResetLightInternal()
+            Dim rawHighlightRecoveryChanged = _rawHighlightRecovery
             _brightness = 0
             _contrast = 0
             _highlights = 0
@@ -24776,9 +25070,15 @@ Namespace ViewModels
             _whites = 0
             _blacks = 0
             _exposure = 0
+            _rawHighlightRecovery = False
             RaiseLightPropertiesChanged()
+            Me.RaisePropertyChanged(NameOf(RawHighlightRecoveryEnabled))
             RaiseResetButtonStateChanged()
-            SchedulePreviewUpdate()
+            If rawHighlightRecoveryChanged Then
+                RebuildWorkingImageForLens()
+            Else
+                SchedulePreviewUpdate()
+            End If
         End Sub
 
         Private Sub ResetColorInternal()
@@ -25212,6 +25512,9 @@ Namespace ViewModels
         End Sub
 
         Private Sub RaiseEffectsPropertiesChanged()
+            ' Liegt im Licht-Panel, wird aber auch beim globalen Wiederherstellen zusammen mit den
+            ' uebrigen Dekodieroptionen gemeldet.
+            Me.RaisePropertyChanged(NameOf(RawHighlightRecoveryEnabled))
             Me.RaisePropertyChanged(NameOf(Vignette))
             Me.RaisePropertyChanged(NameOf(VignetteTransition))
             Me.RaisePropertyChanged(NameOf(VignetteRoundness))

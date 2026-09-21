@@ -8582,4 +8582,25 @@
   <data name="Auswahl_ausschneiden_d3df5e1f" xml:space="preserve">
     <value>Seçimi kes</value>
   </data>
+  <data name="Pipette_auf_eine_Stelle_klicken_die_neutral_grau_3b687124" xml:space="preserve">
+    <value>Damlalık: nötr gri olması gereken bir yere tıklayın.</value>
+  </data>
+  <data name="Diese_Stelle_l_sst_sich_nicht_messen_76085033" xml:space="preserve">
+    <value>Bu yer ölçülemiyor</value>
+  </data>
+  <data name="Diese_Stelle_tr_gt_keine_Farbe_bitte_auf_ein_hel_4ec3ad3c" xml:space="preserve">
+    <value>Bu yer renk taşımıyor - lütfen açık bir griye tıklayın</value>
+  </data>
+  <data name="Wei_abgleich_auf_die_aufgenommene_Stelle_gesetzt_42377ce4" xml:space="preserve">
+    <value>Beyaz dengesi seçilen yere göre ayarlandı</value>
+  </data>
+  <data name="Pipette_b3b0e6db" xml:space="preserve">
+    <value>Damlalık</value>
+  </data>
+  <data name="Lichter_aus_den_Rohdaten_holen_37c6d9f0" xml:space="preserve">
+    <value>Parlak yerleri ham veriden geri getir</value>
+  </data>
+  <data name="Holt_Zeichnung_zur_ck_die_ber_Weiss_liegt_und_he_3af0d3c9" xml:space="preserve">
+    <value>Beyazın üstünde kalan ve bugün kesilen ayrıntıyı geri getirir. Yalnızca bir kanalın yandığı, başka bir kanalın yanmadığı yerlerde etkilidir. Değiştirmek dosyayı yeniden geliştirir, bu yüzden biraz sürer.</value>
+  </data>
 </root>

@@ -87,6 +87,20 @@
                 <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
                                          Value="{Binding Blacks, Mode=TwoWay}" Minimum="-100" Maximum="100" />
             </Grid>
+            <!-- EIN HAKEN UND KEIN REGLER, und zwar aus einem handfesten Grund: die Stufe sitzt
+                 im Decode, das Umschalten laesst also die Umsetzung neu laufen.
+
+                 SICHTBAR AN "IsRawDeveloped", also an derselben Auskunft, die auch die Fusszeile
+                 einfaerbt: hat libraw die Datei WIRKLICH entwickelt? Die Endung allein reicht
+                 dafuer nicht - kennt libraw die Kamera nicht, faellt der Weg still auf die
+                 eingebettete Vorschau zurueck, und dort gaebe es nichts zu holen. Ein Haken, der
+                 nichts tun kann, ist schlimmer als keiner. -->
+            <CheckBox Content="Lichter aus den Rohdaten holen"
+                      IsChecked="{Binding RawHighlightRecoveryEnabled}"
+                      IsVisible="{Binding IsRawDeveloped}"
+                      FontSize="{DynamicResource FP.Font.Small}"
+                      Margin="0,6,0,0"
+                      ToolTip.Tip="Holt Zeichnung zurück, die über Weiss liegt und heute abgeschnitten wird. Wirkt nur dort, wo ein Kanal ausgefressen ist und ein anderer nicht. Das Umschalten entwickelt die Datei neu und dauert deshalb einen Moment."/>
             <!-- Die Warnung steht bei den Reglern, mit denen man auf sie reagiert: Lichter,
                  Tiefen, Weiß und Schwarz sitzen direkt darüber. Sie ist reine Ansicht und geht
                  in kein Rezept und keine Datei. -->
