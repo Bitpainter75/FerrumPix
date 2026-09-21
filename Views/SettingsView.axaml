@@ -883,7 +883,7 @@
                         <Grid ColumnDefinitions="*,Auto">
                             <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
                                 <TextBlock Text="Ansicht" FontSize="{DynamicResource FP.Font.Body}"/>
-                                <TextBlock Text="Legt fest, ob die Galerie als Raster, als Liste oder in Gruppen angezeigt wird." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Text="Legt fest, ob die Galerie als Raster, als Liste, in Gruppen oder als Fotowand angezeigt wird. Die Fotowand zeigt jedes Bild in seinem eigenen Seitenverhältnis, ohne Beschriftung und mit schmalem Abstand." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </StackPanel>
                             <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
                                 <Button Classes="ghost"
@@ -901,7 +901,44 @@
                                         Padding="10,6"
                                         Command="{Binding SetGalleryViewModeCommand}"
                                         CommandParameter="Group">Gruppen</Button>
+                                <Button Classes="ghost"
+                                        Classes.active="{Binding IsGalleryViewModeWall}"
+                                        Padding="10,6"
+                                        Command="{Binding SetGalleryViewModeCommand}"
+                                        CommandParameter="Wall">Fotowand</Button>
                             </StackPanel>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Abstand zwischen den Kacheln" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Gilt für alle Kachelansichten der Galerie; enger als vier Bildpunkte wird es nicht. Die Liste bleibt unberührt." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                                <icons:RoundSlider Width="150"
+                                                   Minimum="4"
+                                                   Maximum="24"
+                                                   DefaultValue="10"
+                                                   Value="{Binding GalleryTileGap}"/>
+                                <TextBlock Text="{Binding GalleryTileGap, StringFormat={}{0} px}"
+                                           Foreground="{DynamicResource FP.Text.Secondary}"
+                                           FontSize="{DynamicResource FP.Font.Body}"
+                                           Width="44"
+                                           TextAlignment="Right"
+                                           VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Runde Ecken und Rahmen an den Kacheln" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Ausgeschaltet stehen die Kacheln in allen Ansichten der Galerie eckig und ohne sichtbaren Rahmen da. Der Rahmen um ausgewählte Bilder bleibt, er wird nur eckig." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1"
+                                          IsChecked="{Binding GalleryTileFrame}"
+                                          OnContent=""
+                                          OffContent=""
+                                          VerticalAlignment="Center"/>
                         </Grid>
 
                         <Grid ColumnDefinitions="*,Auto">
@@ -1021,6 +1058,18 @@
                             </StackPanel>
                             <ToggleSwitch Grid.Column="1"
                                           IsChecked="{Binding FilmstripItemBadgesVisible}"
+                                          OnContent=""
+                                          OffContent=""
+                                          VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Runde Ecken und Rahmen im Filmstrip" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Ausgeschaltet stehen die Kacheln des Filmstrips eckig und ohne Rahmen da. Der Rahmen um das aktuelle Bild bleibt, er wird nur eckig." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1"
+                                          IsChecked="{Binding FilmstripTileFrame}"
                                           OnContent=""
                                           OffContent=""
                                           VerticalAlignment="Center"/>
@@ -1405,6 +1454,18 @@
                             </StackPanel>
                             <ToggleSwitch Grid.Column="1"
                                           IsChecked="{Binding EditorShowFooter}"
+                                          OnContent=""
+                                          OffContent=""
+                                          VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Nach dem Speichern unter die neue Datei öffnen" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Ausgeschaltet bleibt das bisherige Bild im Editor und die gespeicherte Datei liegt nur auf der Platte. Eingeschaltet wechselt der Editor auf die neue Datei und arbeitet dort weiter." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1"
+                                          IsChecked="{Binding EditorSaveAsOpensTarget}"
                                           OnContent=""
                                           OffContent=""
                                           VerticalAlignment="Center"/>

@@ -7299,8 +7299,11 @@
   <data name="Kein_Favorit_67705ccf" xml:space="preserve">
     <value>Není oblíbené</value>
   </data>
-  <data name="Legt_fest_ob_die_Galerie_als_Raster_als_Liste_od_e70127c6" xml:space="preserve">
-    <value>Určuje, zda se galerie zobrazuje jako mřížka, jako seznam, nebo ve skupinách.</value>
+  <data name="Legt_fest_ob_die_Galerie_als_Raster_als_Liste_in_be600a70" xml:space="preserve">
+    <value>Určuje, zda se galerie zobrazuje jako mřížka, jako seznam, ve skupinách, nebo jako fotostěna. Fotostěna ukazuje každý snímek v jeho vlastním poměru stran, bez popisku a s úzkou mezerou.</value>
+  </data>
+  <data name="Fotowand_463a8034" xml:space="preserve">
+    <value>Fotostěna</value>
   </data>
   <data name="Gruppe_ausw_hlen_e7c82c9a" xml:space="preserve">
     <value>Vybrat skupinu</value>
@@ -8598,5 +8601,38 @@
   </data>
   <data name="Holt_Zeichnung_zur_ck_die_ber_Weiss_liegt_und_he_3af0d3c9" xml:space="preserve">
     <value>Vrátí kresbu, která leží nad bílou a dnes se ořezává. Účinkuje jen tam, kde je jeden kanál vypálený a jiný ne. Přepnutí soubor znovu vyvolá, chvíli to tedy trvá.</value>
+  </data>
+  <data name="Kamera_nicht_in_der_LibRaw_Liste_58ee3e83" xml:space="preserve">
+    <value>Fotoaparát není v seznamu LibRaw</value>
+  </data>
+  <data name="Diese_Kamera_kennt_LibRaw_nicht_b17c0778" xml:space="preserve">
+    <value>Tento fotoaparát LibRaw nezná</value>
+  </data>
+  <data name="LibRaw_f_hrt_0_nicht_in_seiner_Modellliste_Ferru_e147befe" xml:space="preserve">
+    <value>LibRaw neuvádí {0} ve svém seznamu modelů. FerrumPix soubor přesto vyvolá, ale bez hodnot, které k tomuto fotoaparátu patří. Podle fotoaparátu chybí barevná matice, a pak obraz působí plocho, nebo chybí černý bod, a pak působí purpurově. Změnit to lze jen v samotné LibRaw. Východiskem je převod z RAW do DNG: DNG obě hodnoty nese přímo v souboru.</value>
+  </data>
+  <data name="Runde_Ecken_und_Rahmen_an_den_Kacheln_039bccf5" xml:space="preserve">
+    <value>Zaoblené rohy a rámečky u dlaždic</value>
+  </data>
+  <data name="Ausgeschaltet_stehen_die_Kacheln_in_allen_Ansich_a91ca397" xml:space="preserve">
+    <value>Vypnuto stojí dlaždice ve všech zobrazeních galerie hranatě a bez viditelného rámečku. Rámeček kolem vybraných snímků zůstává, jen zhranatí.</value>
+  </data>
+  <data name="Runde_Ecken_und_Rahmen_im_Filmstrip_2eea3bd2" xml:space="preserve">
+    <value>Zaoblené rohy a rámečky ve filmovém pásu</value>
+  </data>
+  <data name="Ausgeschaltet_stehen_die_Kacheln_des_Filmstrips__2f06229e" xml:space="preserve">
+    <value>Vypnuto stojí dlaždice filmového pásu hranatě a bez rámečku. Rámeček kolem aktuálního snímku zůstává, jen zhranatí.</value>
+  </data>
+  <data name="Abstand_zwischen_den_Kacheln_b0f73be2" xml:space="preserve">
+    <value>Mezera mezi dlaždicemi</value>
+  </data>
+  <data name="Gilt_f_r_alle_Kachelansichten_der_Galerie_enger__a80faeba" xml:space="preserve">
+    <value>Platí pro všechna dlaždicová zobrazení galerie; užší než čtyři body to nebude. Seznam zůstává beze změny.</value>
+  </data>
+  <data name="Nach_dem_Speichern_unter_die_neue_Datei_ffnen_aeebd97e" xml:space="preserve">
+    <value>Po uložení jako otevřít nový soubor</value>
+  </data>
+  <data name="Ausgeschaltet_bleibt_das_bisherige_Bild_im_Edito_96a283d3" xml:space="preserve">
+    <value>Vypnuto zůstává v editoru dosavadní snímek a uložený soubor jen leží na disku. Zapnuto editor přejde na nový soubor a pokračuje v něm.</value>
   </data>
 </root>

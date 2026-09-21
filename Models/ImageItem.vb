@@ -1432,6 +1432,36 @@ Namespace Models
             End Get
         End Property
 
+        ''' <summary>Breite geteilt durch Hoehe, oder 0, wenn es sich nicht sagen laesst.
+        '''
+        ''' <para>Gebraucht von der Fotowand, die jedem Bild seine echte Hoehe gibt. ZWEI Quellen,
+        ''' und die Reihenfolge ist entscheidend.</para>
+        '''
+        ''' <para>ZUERST DAS VORSCHAUBILD, denn es ist die einzige Quelle, in der die DREHUNG schon
+        ''' steckt: die Kachel wird beim Erzeugen ausgerichtet (siehe ThumbnailCacheService), und sie
+        ''' ist auf feste Breite skaliert, ihr Verhaeltnis ist also das des fertigen Bildes.</para>
+        '''
+        ''' <para>DANN DER KATALOG, und der ist nur ein Anlauf. Er traegt die Masse, WIE SIE IN DER
+        ''' DATEI STEHEN: eine Kamera, die hochkant aufnimmt und das ueber das Orientierungsmerkmal
+        ''' vermerkt, legt 6000x4000 ab und meint 4000x6000. Solange kein Vorschaubild da ist, steht
+        ''' so ein Bild deshalb quer in der Wand und rueckt sich zurecht, sobald die Kachel da ist
+        ''' (Nutzerbefund 21.09.2026). Den Katalog trotzdem zu fragen ist richtig: er antwortet
+        ''' sofort, und fuer die allermeisten Bilder stimmt es.</para>
+        '''
+        ''' <para>Fuer einen Ordner gibt es keines von beidem, er bekommt in der Wand ein festes
+        ''' Mass.</para></summary>
+        Public ReadOnly Property DisplayAspectRatio As Double
+            Get
+                If IsFolder Then Return 0
+                Dim thumb = _thumbnail
+                If thumb IsNot Nothing AndAlso thumb.PixelSize.Width > 0 AndAlso thumb.PixelSize.Height > 0 Then
+                    Return thumb.PixelSize.Width / CDbl(thumb.PixelSize.Height)
+                End If
+                If _imageWidth > 0 AndAlso _imageHeight > 0 Then Return _imageWidth / CDbl(_imageHeight)
+                Return 0
+            End Get
+        End Property
+
         ''' <summary>Reiht das Element mit niedrigster Priorität ein - wird erst abgearbeitet, wenn
         ''' die Viewport-Warteschlange leer ist (d.h. im "Ruhezustand", nicht während aktivem
         ''' Scrollen). No-op, falls das Element bereits geladen/geladen wird/schon eingereiht ist.</summary>

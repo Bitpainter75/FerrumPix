@@ -797,31 +797,158 @@ Namespace ViewModels
         ''' <summary>Die Maske aus den bereits gesammelten Klicks neu zeichnen. Ohne das Modell
         ''' erneut zu fragen: die Einbettung und die Punkte stehen, nur die Umrechnung aendert sich.</summary>
         Private Async Function RedrawSubjectMask() As Task
-            If _motivEinbettung Is Nothing OrElse _motivPunkte.Count = 0 Then Return
+            If _motivEinbettung Is Nothing OrElse _motivObjekte.Count = 0 Then Return
             Await _motivTor.WaitAsync()
             Try
-                Dim einbettung = _motivEinbettung
-                Dim points = _motivPunkte.ToList()
-                Dim edge = _subjectEdgePixels, umfang = _subjectExtentPixels, koernung = _motivKoernung
-                Dim mask = Await Task.Run(Function() SubjectMaskService.MaskFor(einbettung, points, edge, umfang, koernung))
-                If mask Is Nothing Then Return
-                Using mask
-                    Dim rect = MaskRect(mask)
-                    If rect.Width <= 0 OrElse rect.Height <= 0 Then Return
-                    Using ausschnitt = ExtractMaskRegion(mask, rect)
-                        If ausschnitt Is Nothing Then Return
-                        ' IMMER ersetzen, auch im Auswahlwerkzeug: das Hinzufuegen und Abziehen
-                        ' steckt schon in den gesammelten Klickpunkten, aus denen das Modell jedes
-                        ' Mal die GANZE Maske neu rechnet. Mit dem Kombinationsmodus "Hinzufuegen"
-                        ' ginge die kleinere neue Maske sonst in der groesseren alten unter, und ein
-                        ' Abzugspunkt koennte nie etwas wegnehmen.
-                        ApplySelectionCandidate(ausschnitt, rect, "MagicWand", Nothing, Nothing,
-                                                isMask:=_subjectAsMask, forceNew:=True)
-                    End Using
-                End Using
+                Await RebuildSubjectSelectionAsync(_subjectAsMask)
             Finally
                 _motivTor.Release()
             End Try
+        End Function
+
+        ''' <summary>Was ein Klick in der Objektauswahl mit dem angeklickten Gegenstand macht.
+        '''
+        ''' <para>"New" faengt von vorn an, "Add" legt ihn dazu, "Subtract" nimmt ihn weg,
+        ''' "Intersect" behaelt die Schnittmenge. Eine LEERE Antwort heisst: dieser Klick ergibt
+        ''' nichts, weil es nichts gibt, wovon man abziehen oder was man schneiden koennte.</para>
+        '''
+        ''' <para>ZWEI REGELN, die man leicht uebersieht: die Alt-Taste (<paramref name="dazu"/> ist
+        ''' False) bedeutet IMMER Abziehen, gleich welcher Modus eingestellt ist. Und der ERSTE
+        ''' Gegenstand ist immer ein Anfang - "Hinzufuegen" ohne Bestand ist kein Fehler, sondern
+        ''' derselbe erste Klick.</para></summary>
+        Public Shared Function SubjectClickCombineMode(currentMode As String, dazu As Boolean,
+                                                       hasObjects As Boolean) As String
+            Dim modus = If(dazu, If(currentMode, "New"), "Subtract")
+            If Not hasObjects Then
+                If String.Equals(modus, "Subtract", StringComparison.Ordinal) OrElse
+                   String.Equals(modus, "Intersect", StringComparison.Ordinal) Then Return ""
+                Return "New"
+            End If
+            Return modus
+        End Function
+
+        ''' <summary>Die Auswahl aus den gesammelten Gegenstaenden neu aufbauen: je Gegenstand eine
+        ''' Maske aus dem Modell, in der angeklickten Reihenfolge verrechnet.
+        '''
+        ''' <para>DER ERSTE ERSETZT, DIE UEBRIGEN WERDEN VERRECHNET. Jeder Gegenstand traegt den
+        ''' Modus, mit dem er angeklickt wurde - deshalb liegt er bei ihm und nicht im ViewModel:
+        ''' wer zuerst zwei Objekte hinzufuegt und dann den Modus auf Abziehen stellt, soll die
+        ''' beiden ersten nicht nachtraeglich verlieren.</para>
+        '''
+        ''' <para>Die Einbettung ist gemerkt; je Gegenstand laeuft nur der billige Teil des Modells.
+        ''' Deshalb ist der vollstaendige Neuaufbau auch beim Zug am Koernungsregler vertretbar - er
+        ''' ist die einzige Art, bei der jedes Objekt mit derselben Koernung entsteht.</para>
+        '''
+        ''' <para>DIE AUSWAHL WIRD DABEI NUR EINMAL ANGEFASST. Die Gegenstaende werden ABSEITS
+        ''' verrechnet und erst das Ergebnis eingesetzt. Vorher lief je Gegenstand ein eigener Griff
+        ''' durch die Auswahlmaschinerie: bei jedem Klick baute sich die ganze Auswahl vor den Augen
+        ''' noch einmal Stueck fuer Stueck auf, als waere jeder Gegenstand eine eigene Maske
+        ''' (Nutzerbefund 21.09.2026). Am Ende steht EINE Maske, und genau eine Ebene wird daraus.</para>
+        '''
+        ''' <para>Gibt zurueck, ob der ZULETZT hinzugefuegte Gegenstand etwas ergeben hat. Daran
+        ''' erkennt der Aufrufer, dass an dieser Stelle kein Objekt war - und weil bis zum Einsetzen
+        ''' nichts geschehen ist, kann er den Rueckgaengig-Punkt genau dann setzen, wenn es wirklich
+        ''' einen Schritt gibt.</para></summary>
+        Private Async Function RebuildSubjectSelectionAsync(isMask As Boolean,
+                                                           Optional undoLabel As String = Nothing) As Task(Of Boolean)
+            Dim einbettung = _motivEinbettung
+            If einbettung Is Nothing OrElse _motivObjekte.Count = 0 Then Return False
+            Dim edge = _subjectEdgePixels, umfang = _subjectExtentPixels, koernung = _motivKoernung
+            Dim objekte = _motivObjekte.ToList()
+
+            Dim gesamt As SKBitmap = Nothing
+            Dim gesamtRect As SKRectI = SKRectI.Empty
+            ' ZWEI ZUSTAENDE, die man leicht in einen wirft: "es gibt noch keinen Stand" und "der
+            ' Stand ist leer". Ohne diesen Merker galt ein leer gewordener Stand als Anfang, und ein
+            ' folgendes Abziehen oder Schneiden baute daraus wieder eine Auswahl auf - obwohl beide
+            ' aus nichts nichts machen koennen.
+            Dim hatStand = False
+            Dim letzterHatEtwas = False
+            Try
+                For i = 0 To objekte.Count - 1
+                    Dim punkte = objekte(i).Points.ToList()
+                    Dim mask = Await Task.Run(Function() SubjectMaskService.MaskFor(einbettung, punkte, edge, umfang, koernung))
+                    If mask Is Nothing Then Continue For
+                    Using mask
+                        Dim rect = MaskRect(mask)
+                        If rect.Width <= 0 OrElse rect.Height <= 0 Then Continue For
+                        If i = objekte.Count - 1 Then letzterHatEtwas = True
+                        ' Die Auswahlmaschinerie erwartet das Raster in der Groesse des RECHTECKS,
+                        ' nicht des Bildes - so liefert es auch der Maskenpinsel. Ein bildgrosses
+                        ' Raster mit einem kleineren Rechteck daneben wird als dessen Inhalt gelesen
+                        ' und sitzt dann skaliert und versetzt.
+                        Using ausschnitt = ExtractMaskRegion(mask, rect)
+                            If ausschnitt Is Nothing Then Continue For
+                            Dim modus = objekte(i).CombineMode
+                            If Not hatStand OrElse String.Equals(modus, "New", StringComparison.Ordinal) Then
+                                gesamt?.Dispose()
+                                gesamt = ausschnitt.Copy()
+                                gesamtRect = rect
+                                hatStand = True
+                                Continue For
+                            End If
+
+                            If gesamt Is Nothing Then
+                                ' Der Stand ist LEER. Hinzufuegen macht daraus den Gegenstand,
+                                ' abziehen und schneiden aendern an nichts nichts.
+                                If String.Equals(modus, "Add", StringComparison.Ordinal) Then
+                                    gesamt = ausschnitt.Copy()
+                                    gesamtRect = rect
+                                End If
+                                Continue For
+                            End If
+
+                            Dim zielRect = CombinedSubjectRect(gesamtRect, rect, modus)
+                            If zielRect.Width <= 0 OrElse zielRect.Height <= 0 Then
+                                ' Eine leere Schnittmenge ist ein Ergebnis, kein Fehler. Der Stand
+                                ' bleibt bestehen, er ist nur leer.
+                                gesamt.Dispose()
+                                gesamt = Nothing
+                                gesamtRect = SKRectI.Empty
+                                Continue For
+                            End If
+                            ' DERSELBE Rechner wie im Auswahlwerkzeug - es gibt keinen zweiten.
+                            Dim verrechnet = CombineSelectionMasks(gesamt, gesamtRect, ausschnitt, rect,
+                                                                   zielRect, objekte(i).CombineMode)
+                            gesamt.Dispose()
+                            gesamt = verrechnet
+                            gesamtRect = If(verrechnet Is Nothing, SKRectI.Empty, zielRect)
+                        End Using
+                    End Using
+                Next
+
+                ' ERST HIER aendert sich etwas. Der Rueckgaengig-Punkt gehoert deshalb genau hierhin:
+                ' ein Klick ins Leere hat bis zu dieser Zeile nichts angefasst und soll auch keinen
+                ' Schritt hinterlassen.
+                If undoLabel IsNot Nothing AndAlso letzterHatEtwas Then PushUndo(undoLabel)
+
+                If gesamt Is Nothing OrElse Not MaskHasVisiblePixels(gesamt) Then
+                    ' Alles wieder weggenommen: dann gibt es auch keine Auswahl mehr.
+                    If letzterHatEtwas AndAlso _hasActiveSelection Then ClearSelection(captureUndo:=False)
+                    Return letzterHatEtwas
+                End If
+                ApplySelectionCandidate(gesamt, gesamtRect, "MagicWand", Nothing, Nothing,
+                                        isMask:=isMask, forceNew:=True)
+                Return letzterHatEtwas
+            Finally
+                gesamt?.Dispose()
+            End Try
+        End Function
+
+        ''' <summary>Das Rechteck, in dem das Ergebnis zweier Masken liegt. Dieselbe Rechnung wie in
+        ''' <c>ApplySelectionCandidate</c>: beim Hinzufuegen die Vereinigung, beim Abziehen das
+        ''' bisherige (mehr kann es nicht werden), beim Schneiden die Ueberschneidung.</summary>
+        Private Shared Function CombinedSubjectRect(bisher As SKRectI, neu As SKRectI, modus As String) As SKRectI
+            Select Case modus
+                Case "Intersect"
+                    Return New SKRectI(Math.Max(bisher.Left, neu.Left), Math.Max(bisher.Top, neu.Top),
+                                       Math.Min(bisher.Right, neu.Right), Math.Min(bisher.Bottom, neu.Bottom))
+                Case "Subtract"
+                    Return bisher
+                Case Else
+                    Return New SKRectI(Math.Min(bisher.Left, neu.Left), Math.Min(bisher.Top, neu.Top),
+                                       Math.Max(bisher.Right, neu.Right), Math.Max(bisher.Bottom, neu.Bottom))
+            End Select
         End Function
 
         ''' <summary>Ein Klick ins Bild: die Maske des getroffenen Objekts.
@@ -845,7 +972,7 @@ Namespace ViewModels
                 Dim key = String.Join("|", _currentImagePath, bw, bh,
                                              ImageProcessor.ComputeBaseKey(rezept))
                 If _motivEinbettung Is Nothing OrElse Not String.Equals(_motivSchluessel, key, StringComparison.Ordinal) Then
-                    _motivPunkte.Clear()
+                    _motivObjekte.Clear()
                     _subjectRunning = True
                     Me.RaisePropertyChanged(NameOf(IsSubjectMaskRunning))
                     RefreshBusyState()
@@ -873,53 +1000,43 @@ Namespace ViewModels
                     _motivSchluessel = key
                 End If
 
-                ' Der Modus entscheidet, was ein Klick bedeutet - dieselben drei Knoepfe wie beim
-                ' Maskenpinsel. "Neu" faengt bei jedem Klick ein neues Objekt an, "Hinzufuegen"
-                ' erweitert das begonnene, "Abziehen" nimmt eine Stelle wieder weg. Die Alt-Taste
-                ' bleibt die Abkuerzung fuer Abziehen, ohne den Modus zu wechseln.
+                ' JEDER KLICK IST EIN EIGENER GEGENSTAND, und der Modus sagt, was mit ihm geschieht -
+                ' dieselben drei Knoepfe wie beim Maskenpinsel: "Neu" faengt von vorn an,
+                ' "Hinzufuegen" legt den angeklickten Gegenstand dazu, "Abziehen" nimmt ihn weg. Die
+                ' Alt-Taste bleibt die Abkuerzung fuer Abziehen, ohne den Modus zu wechseln.
+                '
+                ' FRUEHER LANDETEN ALLE KLICKS IN EINER PUNKTLISTE, aus der das Modell EINE Maske
+                ' rechnete. Das beschreibt EINEN Gegenstand genauer und sammelt nicht mehrere: der
+                ' zweite Klick auf ein anderes Objekt ergab den gemeinsamen Nenner beider, also
+                ' weniger statt mehr (Nutzerbefund 21.09.2026).
                 If String.Equals(_selectionCombineMode, "New", StringComparison.Ordinal) AndAlso dazu Then
-                    _motivPunkte.Clear()
+                    _motivObjekte.Clear()
                 End If
-                Dim gehoertDazu = dazu AndAlso Not String.Equals(_selectionCombineMode, "Subtract", StringComparison.Ordinal)
-                If _motivPunkte.Count = 0 AndAlso Not gehoertDazu Then
-                    ' Ein Abzugspunkt ohne etwas, wovon man abziehen koennte, ergibt nichts.
+                Dim modus = SubjectClickCombineMode(_selectionCombineMode, dazu, _motivObjekte.Count > 0)
+                If modus.Length = 0 Then
+                    ' Abziehen oder schneiden ohne etwas, woran man das tun koennte, ergibt nichts.
                     StatusText = LocalizationService.T("An dieser Stelle wurde kein Objekt gefunden")
                     Return
                 End If
-                _motivPunkte.Add(New SubjectMaskService.Point(
-                    bw * xPercent / 100.0, bh * yPercent / 100.0, gehoertDazu))
+                If String.Equals(modus, "New", StringComparison.Ordinal) Then _motivObjekte.Clear()
+
+                Dim neuerGegenstand As New SubjectSelectionObject With {.CombineMode = modus}
+                neuerGegenstand.Points.Add(New SubjectMaskService.Point(
+                    bw * xPercent / 100.0, bh * yPercent / 100.0, True))
+                _motivObjekte.Add(neuerGegenstand)
                 _subjectAsMask = isMask
                 RememberSamplePoint(xPercent, yPercent)
 
-                Dim einbettung = _motivEinbettung
-                Dim points = _motivPunkte.ToList()
-                Dim edge = _subjectEdgePixels, umfang = _subjectExtentPixels, koernung = _motivKoernung
-                Dim mask = Await Task.Run(Function() SubjectMaskService.MaskFor(einbettung, points, edge, umfang, koernung))
-                If mask Is Nothing Then
-                    StatusText = LocalizationService.T("Objektauswahl nicht möglich")
-                    Return
-                End If
-                Using mask
-                    Dim rect = MaskRect(mask)
-                    If rect.Width <= 0 OrElse rect.Height <= 0 Then
-                        StatusText = LocalizationService.T("An dieser Stelle wurde kein Objekt gefunden")
-                        _motivPunkte.RemoveAt(_motivPunkte.Count - 1)
-                        Return
-                    End If
-                    ' Die Auswahlmaschinerie erwartet das Raster in der Groesse des RECHTECKS, nicht
-                    ' des Bildes - so liefert es auch der Maskenpinsel. Ein bildgrosses Raster mit
-                    ' einem kleineren Rechteck daneben wird als dessen Inhalt gelesen und sitzt dann
-                    ' skaliert und versetzt.
-                    Using ausschnitt = ExtractMaskRegion(mask, rect)
-                        If ausschnitt Is Nothing Then Return
-                        PushUndo(LocalizationService.T("Motiv ausgewählt"))
-                        ' Siehe RedrawSubjectMask: die gesammelten Klickpunkte SIND die Antwort,
-                        ' der Kandidat ersetzt deshalb in beiden Werkzeugen die bisherige Auswahl.
-                        ApplySelectionCandidate(ausschnitt, rect, "MagicWand", Nothing, Nothing,
-                                                isMask:=isMask, forceNew:=True)
-                    End Using
+                ' Der Rueckgaengig-Punkt entsteht IM Neuaufbau, und nur wenn wirklich etwas
+                ' gefunden wurde - ein Klick ins Leere soll keinen Schritt hinterlassen.
+                If Await RebuildSubjectSelectionAsync(isMask, LocalizationService.T("Motiv ausgewählt")) Then
                     StatusText = LocalizationService.T("Objekt ausgewählt")
-                End Using
+                Else
+                    ' An dieser Stelle war nichts. Der Gegenstand kommt wieder weg, der Stand davor
+                    ' steht ohnehin schon - er hat zur Auswahl nichts beigetragen.
+                    _motivObjekte.Remove(neuerGegenstand)
+                    StatusText = LocalizationService.T("An dieser Stelle wurde kein Objekt gefunden")
+                End If
             Finally
                 _motivTor.Release()
             End Try

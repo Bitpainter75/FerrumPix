@@ -1015,6 +1015,21 @@ Namespace ViewModels
         End Sub
 
         Public Sub RefreshLayoutBindings()
+            ' Runde Ecken und Rahmen der Kacheln: eine Einstellung fuer die Galerie, eine fuer den
+            ' Filmstreifen. Beide sind nur gelesene Eigenschaften - ohne diese Meldungen bliebe die
+            ' Aenderung bis zum naechsten Neuaufbau der Ansicht unsichtbar.
+            ' DER KACHELABSTAND GEHOERT HIER NICHT HIN. Er laesst die ganze Kacheltabelle der
+            ' Fotowand neu bauen, und dieser Weg hier laeuft bei JEDER Layout-Einstellung - auch bei
+            ' Fusszeilen und dem Rahmen des Filmstreifens, die mit dem Abstand nichts zu tun haben.
+            ' Bei einem grossen Ordner waere das jedes Mal ein Neuaufbau fuer nichts. Den Abstand
+            ' meldet allein sein eigener Setter (SettingsViewModel.GalleryTileGap).
+            Gallery?.RaisePropertyChanged(NameOf(GalleryViewModel.TilesAreFlat))
+            Gallery?.RaisePropertyChanged(NameOf(GalleryViewModel.TileImageCornerRadius))
+            Gallery?.RaisePropertyChanged(NameOf(GalleryViewModel.TileListImageCornerRadius))
+            Viewer?.RaisePropertyChanged(NameOf(ViewerViewModel.FilmstripTilesAreFlat))
+            Viewer?.RaisePropertyChanged(NameOf(ViewerViewModel.FilmstripImageCornerRadius))
+            Editor?.RaisePropertyChanged(NameOf(EditorViewModel.FilmstripTilesAreFlat))
+            Editor?.RaisePropertyChanged(NameOf(EditorViewModel.FilmstripImageCornerRadius))
             Viewer?.RaisePropertyChanged(NameOf(ViewerViewModel.ShowFilmstrip))
             Viewer?.RaisePropertyChanged(NameOf(ViewerViewModel.ShowFilmstripItemBadges))
             Viewer?.RefreshFilmstripItemBadges()

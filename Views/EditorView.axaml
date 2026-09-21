@@ -1661,10 +1661,11 @@
                         <DataTemplate DataType="{x:Type models:ImageItem}">
                             <Border Width="148" Height="100"
                                     Classes="thumb-card"
+                                    Classes.flat="{Binding DataContext.FilmstripTilesAreFlat, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                     Classes.selected="{Binding IsSelected}"
                                     ClipToBounds="True"
                                     PointerPressed="OnFilmstripItemPressed">
-                                <Border CornerRadius="6" ClipToBounds="True">
+                                <Border CornerRadius="{Binding DataContext.FilmstripImageCornerRadius, RelativeSource={RelativeSource AncestorType=UserControl}}" ClipToBounds="True">
                                     <Grid>
                                         <Image Source="{Binding Thumbnail}" Stretch="UniformToFill"
                                                RenderOptions.BitmapInterpolationMode="LowQuality" />

@@ -7296,8 +7296,11 @@
   <data name="Kein_Favorit_67705ccf" xml:space="preserve">
     <value>Sık kullanılan değil</value>
   </data>
-  <data name="Legt_fest_ob_die_Galerie_als_Raster_als_Liste_od_e70127c6" xml:space="preserve">
-    <value>Galerinin ızgara olarak mı, liste olarak mı, yoksa gruplar halinde mi gösterileceğini belirler.</value>
+  <data name="Legt_fest_ob_die_Galerie_als_Raster_als_Liste_in_be600a70" xml:space="preserve">
+    <value>Galerinin ızgara olarak mı, liste olarak mı, gruplar halinde mi, yoksa fotoğraf duvarı olarak mı gösterileceğini belirler. Fotoğraf duvarı her görüntüyü kendi en boy oranında, yazısız ve dar aralıkla gösterir.</value>
+  </data>
+  <data name="Fotowand_463a8034" xml:space="preserve">
+    <value>Fotoğraf duvarı</value>
   </data>
   <data name="Gruppe_ausw_hlen_e7c82c9a" xml:space="preserve">
     <value>Grup seç</value>
@@ -8602,5 +8605,38 @@
   </data>
   <data name="Holt_Zeichnung_zur_ck_die_ber_Weiss_liegt_und_he_3af0d3c9" xml:space="preserve">
     <value>Beyazın üstünde kalan ve bugün kesilen ayrıntıyı geri getirir. Yalnızca bir kanalın yandığı, başka bir kanalın yanmadığı yerlerde etkilidir. Değiştirmek dosyayı yeniden geliştirir, bu yüzden biraz sürer.</value>
+  </data>
+  <data name="Kamera_nicht_in_der_LibRaw_Liste_58ee3e83" xml:space="preserve">
+    <value>Kamera LibRaw listesinde yok</value>
+  </data>
+  <data name="Diese_Kamera_kennt_LibRaw_nicht_b17c0778" xml:space="preserve">
+    <value>LibRaw bu kamerayı tanımıyor</value>
+  </data>
+  <data name="LibRaw_f_hrt_0_nicht_in_seiner_Modellliste_Ferru_e147befe" xml:space="preserve">
+    <value>LibRaw, model listesinde {0} kamerasını saymıyor. FerrumPix dosyayı yine de geliştirir, ama bu kameraya ait değerler olmadan. Kameraya göre ya renk matrisi eksiktir, o zaman görüntü sönük görünür, ya da siyah noktası eksiktir, o zaman macenta görünür. Bunu yalnızca LibRaw'ın kendisi değiştirebilir. Bir çıkış yolu, RAW dosyasını DNG'ye dönüştürmektir: DNG her iki değeri de dosyanın içinde taşır.</value>
+  </data>
+  <data name="Runde_Ecken_und_Rahmen_an_den_Kacheln_039bccf5" xml:space="preserve">
+    <value>Karolarda yuvarlatılmış köşeler ve çerçeve</value>
+  </data>
+  <data name="Ausgeschaltet_stehen_die_Kacheln_in_allen_Ansich_a91ca397" xml:space="preserve">
+    <value>Kapalıyken karolar galerinin bütün görünümlerinde köşeli ve görünür bir çerçeve olmadan durur. Seçili görüntülerin çerçevesi kalır, yalnızca köşeli olur.</value>
+  </data>
+  <data name="Runde_Ecken_und_Rahmen_im_Filmstrip_2eea3bd2" xml:space="preserve">
+    <value>Film şeridinde yuvarlatılmış köşeler ve çerçeve</value>
+  </data>
+  <data name="Ausgeschaltet_stehen_die_Kacheln_des_Filmstrips__2f06229e" xml:space="preserve">
+    <value>Kapalıyken film şeridinin karoları köşeli ve çerçevesiz durur. Geçerli görüntünün çerçevesi kalır, yalnızca köşeli olur.</value>
+  </data>
+  <data name="Abstand_zwischen_den_Kacheln_b0f73be2" xml:space="preserve">
+    <value>Karolar arasındaki boşluk</value>
+  </data>
+  <data name="Gilt_f_r_alle_Kachelansichten_der_Galerie_enger__a80faeba" xml:space="preserve">
+    <value>Galerinin bütün karo görünümleri için geçerlidir; dört pikselden dar olmaz. Liste görünümü değişmez.</value>
+  </data>
+  <data name="Nach_dem_Speichern_unter_die_neue_Datei_ffnen_aeebd97e" xml:space="preserve">
+    <value>Farklı kaydetten sonra yeni dosyayı aç</value>
+  </data>
+  <data name="Ausgeschaltet_bleibt_das_bisherige_Bild_im_Edito_96a283d3" xml:space="preserve">
+    <value>Kapalıyken üzerinde çalıştığınız görüntü düzenleyicide kalır, kaydedilen dosya yalnızca diskte durur. Açıkken düzenleyici yeni dosyaya geçer ve orada devam eder.</value>
   </data>
 </root>

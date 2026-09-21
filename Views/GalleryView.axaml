@@ -1139,6 +1139,13 @@
                                    Width="20" Height="20"/>
                         </Button>
                         <Button Classes="icon-btn" Width="34" Height="34"
+                                Classes.active="{Binding IsWallView}"
+                                Command="{Binding SetViewModeCommand}" CommandParameter="Wall"
+                                ToolTip.Tip="Fotowand">
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/layout-board.svg"
+                                   Width="20" Height="20"/>
+                        </Button>
+                        <Button Classes="icon-btn" Width="34" Height="34"
                                 Classes.active="{Binding IsInfoSidebarVisible}"
                                 Command="{Binding ToggleInfoSidebarCommand}"
                                 ToolTip.Tip="Info">
@@ -1857,10 +1864,12 @@
                   <DataTemplate x:Key="GalleryTileTemplate" DataType="{x:Type models:ImageItem}">
                                 <Border Name="ThumbBorder"
                                         Classes="thumb-card"
+                                        Classes.flat="{Binding DataContext.TilesAreFlat, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                         Classes.selected="{Binding IsSelected}"
                                         Classes.navigation-selected="{Binding IsNavigationSelected}"
                                         AttachedToVisualTree="OnGalleryItemAttachedToVisualTree"
-                                        Width="{Binding DataContext.ThumbnailSize, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                        Width="{Binding DataContext.TileWidthOrAuto, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                        Margin="{Binding DataContext.TileMargin, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                         Cursor="Hand"
                                         PointerPressed="OnThumbnailPointerPressed"
                                         PointerMoved="OnThumbnailPointerMoved"
@@ -1871,16 +1880,32 @@
                                     <!-- Beschriftungszeile: AUTO, damit der Streifen exakt so hoch ist wie sein Inhalt.
                                          Eine feste Höhe hinterließ unter dem Text einen sichtbaren Leerstreifen und
                                          würde bei größerer Schrift klemmen. -->
-                                    <Grid RowDefinitions="Auto,Auto">
+                                    <!-- ERSTE ZEILE AUF STERN, nicht auf Auto. Im Raster aendert das
+                                         nichts: die Bildflaeche traegt dort eine feste Hoehe, und die
+                                         Kachel ist so hoch wie ihr Inhalt. In der Fotowand gibt die
+                                         Anordnung der Kachel ihre Hoehe vor und die Bildflaeche steht
+                                         auf Automatik - mit Auto war sie dann nur so hoch wie ihr
+                                         INHALT. Bei einem Bild fiel das nicht auf (ein Vorschaubild
+                                         ist gross), bei einem ORDNER schon: das Sinnbild klebte oben,
+                                         der Rest der Kachel blieb leer, und der Name lag auf dem
+                                         Sinnbild (Nutzerbefund 21.09.2026). -->
+                                    <Grid RowDefinitions="*,Auto">
+                                        <!-- MASSE UND ZUSCHNITT HAENGEN AN DER ANSICHT. Im Raster ist
+                                             die Flaeche fest und das Bild wird auf sie zugeschnitten;
+                                             in der Fotowand gibt die Anordnung der Kachel das
+                                             Verhaeltnis des Bildes, die Hoehe steht auf Automatik
+                                             (NaN) und das Bild passt ganz hinein. EINE Vorlage fuer
+                                             beide - eine zweite waere dieselben sechzig
+                                             Steuerelemente ein zweites Mal. -->
                                         <Border Grid.Row="0"
                                                 Background="{DynamicResource FP.Bg.Input}"
-                                                Height="{Binding DataContext.ThumbnailImageHeight, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                Height="{Binding DataContext.TileImageHeightOrAuto, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                 ClipToBounds="True"
-                                                CornerRadius="8,8,0,0">
+                                                CornerRadius="{Binding DataContext.TileImageCornerRadius, RelativeSource={RelativeSource AncestorType=UserControl}}">
                                             <Grid>
                                                 <Image Source="{Binding Thumbnail}"
                                                        IsVisible="{Binding IsImage}"
-                                                       Stretch="UniformToFill"
+                                                       Stretch="{Binding DataContext.TileImageStretch, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                        RenderOptions.BitmapInterpolationMode="MediumQuality"/>
                                                 <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/folder.svg"
                                                                IsVisible="{Binding IsFolder}"
@@ -1888,6 +1913,33 @@
                                                                HorizontalAlignment="Center"
                                                                VerticalAlignment="Center"
                                                                IconBrush="{DynamicResource FP.Accent}"/>
+                                                <!-- DER NAME EINES ORDNERS, wenn es den
+                                                     Beschriftungsstreifen nicht gibt (Fotowand). Ein
+                                                     Bild erklaert sich selbst, ein Ordner ist ohne
+                                                     seinen Namen ein leeres Kaestchen mit einem
+                                                     Sinnbild darin. Er steht deshalb hier IM Bild,
+                                                     statt den Streifen fuer Ordner wieder
+                                                     einzuschalten - der wuerde die Kachelhoehe der
+                                                     Anordnung durchkreuzen, die fuer den Ordner
+                                                     bereits feststeht. -->
+                                                <TextBlock Text="{Binding FileName}"
+                                                           Classes="no-translate"
+                                                           HorizontalAlignment="Center"
+                                                           VerticalAlignment="Bottom"
+                                                           Margin="10,0,10,10"
+                                                           MaxWidth="240"
+                                                           TextAlignment="Center"
+                                                           TextTrimming="CharacterEllipsis"
+                                                           FontSize="{DynamicResource FP.Font.ItemTitle}"
+                                                           FontWeight="SemiBold">
+                                                    <TextBlock.IsVisible>
+                                                        <MultiBinding Converter="{StaticResource AllTrueConverter}">
+                                                            <Binding Path="IsFolder"/>
+                                                            <Binding Path="DataContext.AreTileLabelsHidden"
+                                                                     RelativeSource="{RelativeSource AncestorType=UserControl}"/>
+                                                        </MultiBinding>
+                                                    </TextBlock.IsVisible>
+                                                </TextBlock>
                                                 <Button IsVisible="{Binding IsVideoFile}"
                                                         Classes="video-play-badge"
                                                         Width="46" Height="46"
@@ -2153,7 +2205,8 @@
                                                 </StackPanel>
                                             </Grid>
                                         </Border>
-                                        <Border Grid.Row="1" Background="{DynamicResource FP.Bg.Content}" CornerRadius="0,0,8,8" Padding="14,9">
+                                        <Border Grid.Row="1" Background="{DynamicResource FP.Bg.Content}" CornerRadius="0,0,8,8" Padding="14,9"
+                                                IsVisible="{Binding DataContext.AreTileLabelsVisible, RelativeSource={RelativeSource AncestorType=UserControl}}">
                                             <StackPanel Spacing="7">
                                                 <Grid ColumnDefinitions="Auto,*">
                                                     <Ellipse Width="10" Height="10" Margin="0,0,6,0" VerticalAlignment="Center"
@@ -2207,6 +2260,33 @@
                      Aussenmass 5 der thumb-card, also GridColumnPitch); dieselbe Rechnung stellt
                      GetGridLayoutMetrics im Code dahinter an, damit Scrollrechnung und Layout
                      nicht auseinanderlaufen. -->
+                <!-- DIE FOTOWAND. Dieselbe Kachelvorlage wie das Raster, aber die Anordnung gibt
+                     jeder Kachel ihre eigene Hoehe: die Spaltenbreite steht fest, die Hoehe kommt
+                     aus dem Seitenverhaeltnis des Bildes, und jede neue Kachel geht in die Spalte,
+                     die gerade am kuerzesten ist. Der Beschriftungsstreifen faellt weg, der Abstand
+                     ist schmal - hier soll Bild stehen, nicht Fassung.
+                     Die Tabelle dahinter liegt im ViewModel (siehe GalleryWallLayout), damit
+                     Anordnung, Tastaturbewegung und Scrollrechnung dieselbe Geometrie lesen. -->
+                <ScrollViewer x:Name="GalleryWallScrollViewer"
+                              HorizontalScrollBarVisibility="Disabled"
+                              VerticalScrollBarVisibility="Auto"
+                              PointerPressed="OnGalleryAreaPointerPressed"
+                              IsVisible="{Binding IsWallView}"
+                              DragDrop.AllowDrop="True"
+                              DragDrop.DragOver="OnGalleryAreaDragOver"
+                              DragDrop.Drop="OnGalleryAreaDrop"
+                              Margin="0,0,8,0">
+                    <ItemsRepeater x:Name="GalleryWallRepeater"
+                                   ItemsSource="{Binding Items}"
+                                   Margin="12,12,18,20"
+                                   VerticalAlignment="Top"
+                                   ItemTemplate="{StaticResource GalleryTileTemplate}">
+                        <ItemsRepeater.Layout>
+                            <icons:GalleryWallLayout/>
+                        </ItemsRepeater.Layout>
+                    </ItemsRepeater>
+                </ScrollViewer>
+
                 <ScrollViewer x:Name="GalleryGridScrollViewer"
                               HorizontalScrollBarVisibility="Disabled"
                               VerticalScrollBarVisibility="Auto"
@@ -2283,6 +2363,7 @@
                             <DataTemplate DataType="{x:Type models:ImageItem}">
                             <Border Name="ListItemBorder"
                                         Classes="thumb-card list-row"
+                                        Classes.flat="{Binding DataContext.TilesAreFlat, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                         Classes.selected="{Binding IsSelected}"
                                         Classes.navigation-selected="{Binding IsNavigationSelected}"
                                         AttachedToVisualTree="OnGalleryItemAttachedToVisualTree"
@@ -2299,7 +2380,7 @@
                                                 Height="56"
                                                 Background="{DynamicResource FP.Bg.Input}"
                                                 ClipToBounds="True"
-                                                CornerRadius="6"
+                                                CornerRadius="{Binding DataContext.TileListImageCornerRadius, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                 HorizontalAlignment="Center"
                                                 VerticalAlignment="Center">
                                             <Grid>

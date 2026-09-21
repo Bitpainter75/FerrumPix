@@ -625,6 +625,23 @@ Namespace ViewModels
             End Get
         End Property
 
+        ''' <summary>Kachel des Filmstreifens ohne runde Ecken und ohne ruhenden Rahmen
+        ''' (Einstellung). Der Akzentrahmen der Auswahl bleibt und wird nur eckig - im Filmstreifen
+        ''' ist er sogar wichtiger als in der Galerie, weil er das AKTUELLE Bild zeigt.</summary>
+        Public ReadOnly Property FilmstripTilesAreFlat As Boolean
+            Get
+                Return _mainVm IsNot Nothing AndAlso _mainVm.Settings IsNot Nothing AndAlso
+                       Not _mainVm.Settings.FilmstripTileFrame
+            End Get
+        End Property
+
+        ''' <summary>Die Ecken der Bildflaeche im Filmstreifen, passend zum Schalter darueber.</summary>
+        Public ReadOnly Property FilmstripImageCornerRadius As Avalonia.CornerRadius
+            Get
+                Return If(FilmstripTilesAreFlat, New Avalonia.CornerRadius(0), New Avalonia.CornerRadius(6))
+            End Get
+        End Property
+
         ''' <summary>Ob die Fusszeile sichtbar ist: die Leiste mit Bildangaben, Zoom und Bewertung.
         ''' NICHT der Filmstreifen darueber - der hat seinen eigenen Schalter und bleibt stehen.
         ''' Ausgeblendet bleiben Blaettern, Zoomen und Bewerten ueber Tastatur, Mausrad und

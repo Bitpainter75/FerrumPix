@@ -573,7 +573,8 @@ Namespace Services
         ''' Gebraucht dort, wo mehrere Stichwörter EINZELN auseinandergehalten werden müssen und
         ''' <see cref="GetPathsForTags"/> mit seiner Vereinigungsmenge nicht genügt: die Zahl an
         ''' einer zusammengefassten Zeile der Filterliste. Ein Aufruf je Stichwort wäre ein
-        ''' Tabellendurchlauf je Stichwort, und die Liste wird bei jedem Tastendruck neu gebaut.</summary>
+        ''' Tabellendurchlauf je Stichwort, und die Liste entsteht bei jedem Wechsel der Quelle oder
+        ''' des Ordners neu.</summary>
         Public Function GetPathsByTag(tags As IEnumerable(Of String)) As Dictionary(Of String, HashSet(Of String))
             Dim result As New Dictionary(Of String, HashSet(Of String))(StringComparer.OrdinalIgnoreCase)
             For Each tag In If(tags, Enumerable.Empty(Of String)()).

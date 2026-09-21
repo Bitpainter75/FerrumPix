@@ -69,6 +69,7 @@ Namespace Views
         ' Kachelgroesse oder der Schrift, nicht mit der Scrollposition.
         Private _latchedSlotHeight As Double = 0
         Private _latchedSlotThumbnailSize As Double = -1
+        Private _latchedSlotTileGap As Double = -1
         ' Die Metriken werden im heissen Scrollpfad gebraucht. Das Durchlaufen des visuellen
         ' Baums ist nur nach einer Breiten-, Ansichts- oder Kachelgrössenänderung nötig.
         '
@@ -79,6 +80,7 @@ Namespace Views
         ' nach einer Schriftaenderung nie mehr korrigieren, und aus einer falschen Zeilenhoehe
         ' folgt ein falscher Rollbereich.
         Private _cachedMetricsThumbnailSize As Double = -1
+        Private _cachedMetricsTileGap As Double = -1
         Private _cachedMetricsViewportWidth As Double = -1
         Private _cachedMetricsFontOffset As Integer = Integer.MinValue
         Private _cachedMetricsColumns As Integer
@@ -421,7 +423,8 @@ Namespace Views
         Private Iterator Function AllGalleryScrollViewers() As IEnumerable(Of ScrollViewer)
             ' NICHT "name" als Laufvariable: das verdeckt Control.Name, und VB lehnt eine
             ' Eigenschaft als Schleifensteuervariable ab (BC30039).
-            For Each scrollViewerName In {"GalleryGridScrollViewer", "GalleryGroupScrollViewer", "GalleryListScrollViewer"}
+            For Each scrollViewerName In {"GalleryGridScrollViewer", "GalleryGroupScrollViewer",
+                                          "GalleryWallScrollViewer", "GalleryListScrollViewer"}
                 Dim scrollViewer = Me.FindControl(Of ScrollViewer)(scrollViewerName)
                 If scrollViewer IsNot Nothing Then Yield scrollViewer
             Next
@@ -431,8 +434,10 @@ Namespace Views
         ''' Wer die Scrollrechnung einer Kachelansicht anfasst, will immer diese.</summary>
         Private Function TileScrollViewer() As ScrollViewer
             Dim vm = GetVm()
-            Return Me.FindControl(Of ScrollViewer)(
-                If(vm IsNot Nothing AndAlso vm.IsGroupView, "GalleryGroupScrollViewer", "GalleryGridScrollViewer"))
+            Dim name = "GalleryGridScrollViewer"
+            If vm IsNot Nothing AndAlso vm.IsGroupView Then name = "GalleryGroupScrollViewer"
+            If vm IsNot Nothing AndAlso vm.IsWallView Then name = "GalleryWallScrollViewer"
+            Return Me.FindControl(Of ScrollViewer)(name)
         End Function
 
         ''' <summary>Die Flaeche der gerade sichtbaren Ansicht, Liste eingeschlossen.</summary>
@@ -457,6 +462,10 @@ Namespace Views
             Dim groupRepeater = Me.FindControl(Of ItemsRepeater)("GalleryGroupRepeater")
             Dim groupLayout = TryCast(groupRepeater?.Layout, GalleryGroupLayout)
             If groupLayout IsNot Nothing Then groupLayout.RowSource = _observedVm
+            ' Dasselbe fuer die Fotowand, aus demselben Grund.
+            Dim wallRepeater = Me.FindControl(Of ItemsRepeater)("GalleryWallRepeater")
+            Dim wallLayout = TryCast(wallRepeater?.Layout, GalleryWallLayout)
+            If wallLayout IsNot Nothing Then wallLayout.TileSource = _observedVm
             ' Die neue View-Instanz startet ohne Zeitleisten-Daten - vom (langlebigen) VM-Stand aufbauen.
             RebuildTimelineSegments()
         End Sub
@@ -594,6 +603,15 @@ Namespace Views
                                              ScrollToSelectedItem()
                                              QueueViewportThumbnailRefresh()
                                          End Sub, DispatcherPriority.Loaded)
+                Return
+            End If
+
+            ' Die Kacheltabelle der Fotowand ist neu gebaut worden (ein Seitenverhaeltnis war beim
+            ' ersten Bau noch nicht bekannt). Die Anordnung merkt davon nichts von selbst - eine
+            ' geaenderte Tabelle ist keine geaenderte Sammlung.
+            If e.PropertyName = NameOf(GalleryViewModel.WallRevision) Then
+                Dim wallRepeater = Me.FindControl(Of ItemsRepeater)("GalleryWallRepeater")
+                TryCast(wallRepeater?.Layout, GalleryWallLayout)?.RequestRelayout()
                 Return
             End If
 
@@ -862,6 +880,24 @@ Namespace Views
                 Return
             End If
 
+            If vm.IsWallView Then
+                ' Wie in der Gruppenansicht, nur ueber die Kacheltabelle: hier hat jedes Bild seine
+                ' eigene Hoehe, eine Zeilenrechnung gibt es nicht.
+                Dim wallScrollViewer = TileScrollViewer()
+                If wallScrollViewer Is Nothing OrElse wallScrollViewer.Bounds.Height <= 0 Then Return
+
+                Dim wallOffset = Math.Max(0.0, wallScrollViewer.Offset.Y - 12.0)
+                Dim wallHeight = wallScrollViewer.Bounds.Height
+                Dim wallFirst = -1
+                Dim wallLast = -1
+                vm.GetWallVisibleItemRange(wallOffset, wallHeight, wallFirst, wallLast)
+                If wallScrollViewer.Offset.Y + wallHeight >= wallScrollViewer.Extent.Height - 1.0 Then wallLast = vm.Items.Count - 1
+                If wallScrollViewer.Offset.Y <= 1.0 Then wallFirst = 0
+                If wallFirst >= 0 AndAlso wallLast >= wallFirst Then RequestThumbnailRange(vm, wallFirst, wallLast)
+                UpdateTimelineScrollState(wallScrollViewer)
+                Return
+            End If
+
             If vm.IsGridView Then
                 Dim scrollViewer = TileScrollViewer()
                 If scrollViewer Is Nothing OrElse scrollViewer.Bounds.Height <= 0 Then Return
@@ -971,6 +1007,29 @@ Namespace Views
                 scrollViewer.UpdateLayout()
                 Dim maxOffset = Math.Max(0.0, scrollViewer.Extent.Height - viewHeight)
                 scrollViewer.Offset = New Avalonia.Vector(0, Math.Min(targetOffset, maxOffset))
+                Return
+            End If
+
+            If vm.IsWallView Then
+                ' Wie in der Gruppenansicht: die Lage steht in der Tabelle, und die Gesamthoehe ist
+                ' von Anfang an die endgueltige - ein Fenster aufzuziehen ist hier nicht noetig.
+                Dim wallScrollViewer = TileScrollViewer()
+                If wallScrollViewer Is Nothing OrElse wallScrollViewer.Bounds.Height <= 0 Then Return
+
+                Dim tileTop = 0.0
+                Dim tileHeight = 0.0
+                If Not vm.TryGetWallItemPosition(idx, tileTop, tileHeight) Then Return
+
+                Dim wallItemTop = 12.0 + tileTop
+                Dim wallItemBottom = wallItemTop + tileHeight
+                Dim wallViewHeight = wallScrollViewer.Bounds.Height
+                If wallItemTop >= wallScrollViewer.Offset.Y AndAlso
+                   wallItemBottom <= wallScrollViewer.Offset.Y + wallViewHeight Then Return
+
+                Dim wallTarget = Math.Max(0.0, wallItemTop + tileHeight / 2 - wallViewHeight / 2)
+                wallScrollViewer.UpdateLayout()
+                Dim wallMax = Math.Max(0.0, wallScrollViewer.Extent.Height - wallViewHeight)
+                wallScrollViewer.Offset = New Avalonia.Vector(0, Math.Min(wallTarget, wallMax))
                 Return
             End If
 
@@ -3037,8 +3096,10 @@ Namespace Views
                 Case Key.Left
                     Return -1
                 Case Key.Down
+                    If GetVm()?.IsWallView Then Return GetWallRowOffset(1)
                     Return If(GetVm()?.IsGroupView, GetGroupRowOffset(1), If(GetVm()?.IsGridView, GetGridColumnCount(), 1))
                 Case Key.Up
+                    If GetVm()?.IsWallView Then Return GetWallRowOffset(-1)
                     Return If(GetVm()?.IsGroupView, GetGroupRowOffset(-1), If(GetVm()?.IsGridView, -GetGridColumnCount(), -1))
                 Case Else
                     Return 0
@@ -3054,6 +3115,17 @@ Namespace Views
             Dim idx = vm.Items.IndexOf(vm.SelectedItem)
             If idx < 0 Then Return rowDelta
             Return vm.GroupRowNavigationOffset(idx, rowDelta)
+        End Function
+
+        ''' <summary>Dasselbe fuer die Fotowand: dort gibt es keinen festen Versatz je Zeile, weil
+        ''' die Nachbarkachel oben je nach Spalte einen ganz anderen Abstand im Index hat. Das
+        ''' ViewModel sucht sie deshalb ueber ihre Lage.</summary>
+        Private Function GetWallRowOffset(rowDelta As Integer) As Integer
+            Dim vm = GetVm()
+            If vm Is Nothing OrElse vm.SelectedItem Is Nothing Then Return rowDelta
+            Dim idx = vm.Items.IndexOf(vm.SelectedItem)
+            If idx < 0 Then Return rowDelta
+            Return vm.WallRowNavigationOffset(idx, rowDelta)
         End Function
 
         Private Function GetGridColumnCount() As Integer
@@ -3076,8 +3148,11 @@ Namespace Views
 
             Dim viewportWidth = If(scrollViewer IsNot Nothing AndAlso scrollViewer.Viewport.Width > 0,
                                    scrollViewer.Viewport.Width, Bounds.Width)
+            ' Der Kachelabstand gehoert in den Schluessel: er geht in Spaltenzahl und Zeilenhoehe ein,
+            ' und ohne ihn bliebe der gemerkte Stand nach einer Aenderung der Einstellung stehen.
             If _cachedMetricsColumns > 0 AndAlso
                _cachedMetricsThumbnailSize = vm.ThumbnailSize AndAlso
+               _cachedMetricsTileGap = vm.TileGap AndAlso
                _cachedMetricsFontOffset = FontScaleService.CurrentOffset AndAlso
                Math.Abs(_cachedMetricsViewportWidth - viewportWidth) < 1.0 Then
                 columns = _cachedMetricsColumns
@@ -3112,6 +3187,7 @@ Namespace Views
         Private Sub CacheGridLayoutMetrics(vm As GalleryViewModel, viewportWidth As Double,
                                            columns As Integer, itemSlotHeight As Double)
             _cachedMetricsThumbnailSize = vm.ThumbnailSize
+            _cachedMetricsTileGap = vm.TileGap
             _cachedMetricsViewportWidth = viewportWidth
             _cachedMetricsFontOffset = FontScaleService.CurrentOffset
             _cachedMetricsColumns = columns
@@ -3129,8 +3205,9 @@ Namespace Views
         ''' fehlgeschlagener Messversuch meldet 0 und aendert nichts.</summary>
         Private Function LatchSlotHeight(vm As GalleryViewModel, measuredSlotHeight As Double) As Double
             Dim estimate = Math.Max(1, vm.GridItemSlotHeight)
-            If _latchedSlotThumbnailSize <> vm.ThumbnailSize Then
+            If _latchedSlotThumbnailSize <> vm.ThumbnailSize OrElse _latchedSlotTileGap <> vm.TileGap Then
                 _latchedSlotThumbnailSize = vm.ThumbnailSize
+                _latchedSlotTileGap = vm.TileGap
                 _latchedSlotHeight = 0
             End If
 
@@ -3218,6 +3295,7 @@ Namespace Views
             If vm Is Nothing Then Return direction
             Dim rows = GetVisibleRowCount()
             If vm.IsGroupView Then Return GetGroupRowOffset(rows * Math.Sign(direction))
+            If vm.IsWallView Then Return GetWallRowOffset(rows * Math.Sign(direction))
             Return If(vm.IsGridView, rows * GetGridColumnCount(), rows) * Math.Sign(direction)
         End Function
 

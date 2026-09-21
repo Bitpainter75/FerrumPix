@@ -244,6 +244,26 @@ Namespace Services
         Public Property ViewerShowFilmstrip As Boolean = True
         ''' Markierungen im Filmstrip kosten etwas Bildruhe und sind deshalb ab Werk aus.
         Public Property FilmstripItemBadgesVisible As Boolean = False
+        ''' Runde Ecken und der ruhende Rahmen um eine Kachel. AB WERK AN, das ist das bisherige
+        ''' Aussehen; aus heisst eckig und ohne Rahmen, und damit steht mehr Bild auf derselben
+        ''' Flaeche. Der Akzentrahmen der AUSWAHL bleibt in beiden Stellungen - nur eckig statt rund.
+        ''' Getrennt fuer Galerie und Filmstreifen: im Filmstreifen liegen die Kacheln dicht an
+        ''' dicht, in der Galerie mit Abstand.
+        Public Property GalleryTileFrame As Boolean = True
+        Public Property FilmstripTileFrame As Boolean = True
+        ''' Ob "Speichern unter" das GESCHRIEBENE Bild in den Editor holt. AB WERK AUS: die Arbeit
+        ''' geht am Ausgangsbild weiter, die neue Datei liegt nur auf der Platte. Eingeschaltet
+        ''' wechselt der Editor auf die Zieldatei und arbeitet dort weiter.
+        ''' Betrifft NUR den Fall eines ANDEREN Pfades. Wer auf dieselbe Datei speichert, bekommt sie
+        ''' immer neu geladen: dabei wandern die Regler in die Bildpunkte, und ohne das Neuladen
+        ''' legte das naechste Speichern denselben Zuschnitt ein zweites Mal darauf.
+        Public Property EditorSaveAsOpensTarget As Boolean = False
+        ''' Abstand zwischen zwei Kacheln der Galerie in Bildpunkten, in ALLEN Kachelansichten. 10
+        ''' ist der bisherige Wert und kommt vom Aussenrand der Kachel (zweimal 5). Die Zahl geht
+        ''' NICHT nur in die Optik: aus ihr und dem Kachelmass rechnen Spaltenzahl, Zeilenhoehe und
+        ''' damit der ganze Rollbereich - siehe GalleryViewModel.GridColumnPitch.
+        ''' Die Liste bleibt aussen vor, eine Zeile ist keine Kachel.
+        Public Property GalleryTileGap As Integer = 10
         ''' Fusszeile am unteren Rand, je Bereich getrennt. AB WERK AN: sie traegt nicht nur Angaben
         ''' zum Bild, sondern auch Bedienelemente (Menue, Zoom, Bewertung, im Betrachter und im Editor
         ''' zusaetzlich den Filmstreifen). Wer die Bildflaeche maximal will, schaltet sie dort ab, wo
@@ -1559,12 +1579,27 @@ Namespace Services
             End Select
         End Function
 
+        ''' <summary>Der Kachelabstand in einem Bereich, in dem er noch etwas taugt: VIER Bildpunkte
+        ''' sind das Engste (Kante an Kante liessen sich zwei Bilder nicht mehr auseinanderhalten),
+        ''' mehr als vierundzwanzig laesst die Ansicht auseinanderfallen. Eine Zahl ausserhalb wird
+        ''' auf die naechste Grenze gezogen, statt die Rollrechnung zu verbiegen.</summary>
+        Public Const GalleryTileGapMinimum As Integer = 4
+        Public Const GalleryTileGapMaximum As Integer = 24
+
+        Public Shared Function NormalizeGalleryTileGap(value As Integer) As Integer
+            If value < GalleryTileGapMinimum Then Return GalleryTileGapMinimum
+            If value > GalleryTileGapMaximum Then Return GalleryTileGapMaximum
+            Return value
+        End Function
+
         Public Shared Function NormalizeGalleryViewMode(value As String) As String
             Select Case If(value, "").Trim()
                 Case "List"
                     Return "List"
                 Case "Group"
                     Return "Group"
+                Case "Wall"
+                    Return "Wall"
                 Case Else
                     Return "Grid"
             End Select

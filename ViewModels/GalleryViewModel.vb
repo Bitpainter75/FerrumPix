@@ -20,6 +20,9 @@ Namespace ViewModels
         ' Die Gruppenansicht ordnet sich ueber eine eigene virtualisierende Anordnung an
         ' (Controls.GalleryGroupLayout); sie holt sich die Zeilentabelle ueber diese Schnittstelle.
         Implements IGalleryGroupRowSource
+        ' Dasselbe fuer die Fotowand (Controls.GalleryWallLayout), nur mit einer Tabelle je Kachel
+        ' statt je Zeile - dort hat jedes Bild seine eigene Hoehe.
+        Implements IGalleryWallSource
 
         ''' Betrifft den Brotkrümelpfad, der mit langen Ordnernamen als Erstes in die
         ''' Suchleiste läuft.
@@ -342,6 +345,10 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(GridItemSlotHeight))
                 Me.RaisePropertyChanged(NameOf(GridColumnPitch))
                 Me.RaisePropertyChanged(NameOf(TileHasRoomForDetails))
+                Me.RaisePropertyChanged(NameOf(TileWidthOrAuto))
+                Me.RaisePropertyChanged(NameOf(TileImageHeightOrAuto))
+                ' Die Spaltenbreite der Fotowand haengt an demselben Mass.
+                InvalidateWallLayout()
                 AppSettingsService.SaveGalleryThumbnailSize(value)
             End Set
         End Property
@@ -380,22 +387,32 @@ Namespace ViewModels
         ' virtualisierte Scroll-Rechnung driftete mit der Scrolltiefe.
         Private Const GridItemLabelRowHeight As Double = 59
         Private Const GridItemCardBorderHeight As Double = 4
-        Private Const GridItemCardMarginHeight As Double = 10
 
-        Public ReadOnly Property GridItemSlotHeight As Double
+        ''' <summary>Der Abstand zwischen zwei Kacheln, aus der Einstellung. Er steckt im AUSSENRAND
+        ''' der Kachel (je Seite die Haelfte), und genau deshalb geht er hier ein: die Spaltenzahl
+        ''' und die Zeilenhoehe rechnen mit Kachelmass PLUS Abstand, und aus ihnen folgt der ganze
+        ''' Rollbereich. Wer den Abstand nur im Stilblatt aendert, laesst die Rollrechnung
+        ''' zurueck - genau daran ist die Kachelhoehe schon einmal gescheitert (siehe
+        ''' GridItemLabelRowHeight).</summary>
+        Public ReadOnly Property TileGap As Double
             Get
-                Return ThumbnailImageHeight + GridItemLabelRowHeight + GridItemCardBorderHeight + GridItemCardMarginHeight
+                If _mainVm Is Nothing OrElse _mainVm.Settings Is Nothing Then Return 10
+                Return AppSettingsService.NormalizeGalleryTileGap(_mainVm.Settings.GalleryTileGap)
             End Get
         End Property
 
-        ' Zusätzliche Breite pro Spalte über die reine Thumbnail-Breite hinaus: nur das
-        ' WrapPanel-Margin (links+rechts = 10) - die Rahmenstärke wird INNERHALB der explizit
-        ' gesetzten Breite gezeichnet (Border.Width ist gebunden), kommt also nicht zusätzlich dazu.
-        Private Const GridColumnMarginWidth As Double = 10
+        Public ReadOnly Property GridItemSlotHeight As Double
+            Get
+                Return ThumbnailImageHeight + GridItemLabelRowHeight + GridItemCardBorderHeight + TileGap
+            End Get
+        End Property
 
+        ' Zusätzliche Breite pro Spalte über die reine Thumbnail-Breite hinaus: nur der Aussenrand der
+        ' Kachel (links+rechts) - die Rahmenstärke wird INNERHALB der explizit gesetzten Breite
+        ' gezeichnet (Border.Width ist gebunden), kommt also nicht zusätzlich dazu.
         Public ReadOnly Property GridColumnPitch As Double
             Get
-                Return ThumbnailSize + GridColumnMarginWidth
+                Return ThumbnailSize + TileGap
             End Get
         End Property
 
@@ -1223,8 +1240,19 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(IsGridView))
                 Me.RaisePropertyChanged(NameOf(IsListView))
                 Me.RaisePropertyChanged(NameOf(IsGroupView))
+                Me.RaisePropertyChanged(NameOf(IsWallView))
                 Me.RaisePropertyChanged(NameOf(IsTileView))
                 Me.RaisePropertyChanged(NameOf(IsGroupDateStepVisible))
+                ' Die Kachelvorlage teilen sich alle Ansichten; was sich mit dem Wechsel aendert,
+                ' sind ihre Masse und der Beschriftungsstreifen.
+                Me.RaisePropertyChanged(NameOf(TileWidthOrAuto))
+                Me.RaisePropertyChanged(NameOf(TileImageHeightOrAuto))
+                Me.RaisePropertyChanged(NameOf(AreTileLabelsVisible))
+                Me.RaisePropertyChanged(NameOf(AreTileLabelsHidden))
+                Me.RaisePropertyChanged(NameOf(TileImageStretch))
+                Me.RaisePropertyChanged(NameOf(TileMargin))
+                Me.RaisePropertyChanged(NameOf(TileImageCornerRadius))
+                InvalidateWallLayout()
                 AppSettingsService.SaveGalleryViewMode(value)
                 _mainVm?.Settings?.SyncGalleryViewMode(value)
                 ' Die Eintragsliste der Gruppenansicht gehoert nur ihr. Beim Hineinwechseln wird sie
@@ -1258,11 +1286,122 @@ Namespace ViewModels
             End Get
         End Property
 
-        ''' <summary>Raster oder Gruppenansicht - beide zeigen Kacheln und teilen sich dieselbe
+        ''' <summary>Vierte Ansicht: spaltenweise versetzt, jedes Bild in seinem echten
+        ''' Seitenverhaeltnis und ohne Beschriftungsstreifen. Sie hat als einzige eine Tabelle je
+        ''' KACHEL statt je Zeile, weil hier keine zwei Kacheln gleich hoch sein muessen.</summary>
+        Public ReadOnly Property IsWallView As Boolean
+            Get
+                Return _viewMode = "Wall"
+            End Get
+        End Property
+
+        ''' <summary>Raster, Gruppen oder Fotowand - alle drei zeigen Kacheln und teilen sich dieselbe
         ''' Flaeche in der Ansicht.</summary>
         Public ReadOnly Property IsTileView As Boolean
             Get
-                Return IsGridView OrElse IsGroupView
+                Return IsGridView OrElse IsGroupView OrElse IsWallView
+            End Get
+        End Property
+
+        ''' <summary>Die Kachelbreite fuer die Vorlage: im Raster das eingestellte Mass, in der
+        ''' Fotowand NaN. NaN heisst in Avalonia "automatisch", und genau das ist hier richtig - dort
+        ''' gibt die Anordnung jeder Kachel ihre Breite.</summary>
+        Public ReadOnly Property TileWidthOrAuto As Double
+            Get
+                Return If(IsWallView, Double.NaN, ThumbnailSize)
+            End Get
+        End Property
+
+        ''' <summary>Dasselbe fuer die Hoehe der Bildflaeche in der Kachel.</summary>
+        Public ReadOnly Property TileImageHeightOrAuto As Double
+            Get
+                Return If(IsWallView, Double.NaN, ThumbnailImageHeight)
+            End Get
+        End Property
+
+        ''' <summary>Der Beschriftungsstreifen unter dem Bild. In der Fotowand faellt er weg: sie ist
+        ''' genau dafuer da, Bild statt Fassung zu zeigen. Name und Angaben stehen weiterhin im
+        ''' Kurzhinweis der Kachel und im Infobereich.</summary>
+        Public ReadOnly Property AreTileLabelsVisible As Boolean
+            Get
+                Return Not IsWallView
+            End Get
+        End Property
+
+        ''' <summary>Das Gegenstueck fuer die Stellen, die GERADE DANN etwas zeigen, wenn es den
+        ''' Streifen nicht gibt: der Name eines ORDNERS. Ein Bild erklaert sich selbst, ein Ordner
+        ''' ist ohne seinen Namen ein leeres Kaestchen mit einem Sinnbild darin (Nutzerbefund
+        ''' 21.09.2026). Er steht deshalb in der Fotowand IM Kachelbild.</summary>
+        Public ReadOnly Property AreTileLabelsHidden As Boolean
+            Get
+                Return IsWallView
+            End Get
+        End Property
+
+        ''' <summary>Wie das Bild seine Flaeche fuellt. Im Raster ist die Kachel quadratisch und das
+        ''' Bild wird zugeschnitten (UniformToFill), in der Fotowand hat die Kachel das Verhaeltnis
+        ''' des Bildes, also passt es ganz hinein.</summary>
+        Public ReadOnly Property TileImageStretch As Avalonia.Media.Stretch
+            Get
+                Return If(IsWallView, Avalonia.Media.Stretch.Uniform, Avalonia.Media.Stretch.UniformToFill)
+            End Get
+        End Property
+
+        ''' <summary>Der Aussenrand der Kachel. Im Raster kommt der Abstand zwischen zwei Kacheln
+        ''' GENAU VON IHM (5 je Seite, siehe die Vorlage thumb-card und GridColumnPitch).
+        '''
+        ''' In der Fotowand bestimmt die Anordnung den Abstand selbst - dort muss er weg, sonst
+        ''' kommen beide zusammen: 6 Bildpunkte Fuge plus zweimal 5 Rand ergaben 16 und damit MEHR
+        ''' Abstand als im Raster, wo es 10 sind (Nutzerbefund 21.09.2026). Der oertliche Wert
+        ''' uebersteuert den aus der Vorlage.</summary>
+        Public ReadOnly Property TileMargin As Avalonia.Thickness
+            Get
+                Return If(IsWallView, New Avalonia.Thickness(0), New Avalonia.Thickness(TileGap / 2))
+            End Get
+        End Property
+
+        ''' <summary>Alles, was am Kachelabstand haengt, neu melden. Die Fotowand baut ihre Tabelle
+        ''' dazu neu - dort ist der Abstand nicht der Rand der Kachel, sondern die Fuge der
+        ''' Anordnung, und die steckt in jeder Kachellage.</summary>
+        Public Sub RefreshTileSpacing()
+            Me.RaisePropertyChanged(NameOf(TileGap))
+            Me.RaisePropertyChanged(NameOf(TileMargin))
+            Me.RaisePropertyChanged(NameOf(GridColumnPitch))
+            Me.RaisePropertyChanged(NameOf(GridItemSlotHeight))
+            InvalidateWallLayout()
+            _wallRevision += 1
+            Me.RaisePropertyChanged(NameOf(WallRevision))
+        End Sub
+
+        ''' <summary>Die Ecken der Bildflaeche. Im Raster sitzt der Beschriftungsstreifen darunter,
+        ''' also sind nur die oberen rund; in der Fotowand ist die Bildflaeche die ganze Kachel. Ist
+        ''' der Rahmen abgeschaltet, sind sie eckig.</summary>
+        Public ReadOnly Property TileImageCornerRadius As Avalonia.CornerRadius
+            Get
+                If TilesAreFlat Then Return New Avalonia.CornerRadius(0)
+                Return If(IsWallView, New Avalonia.CornerRadius(6), New Avalonia.CornerRadius(8, 8, 0, 0))
+            End Get
+        End Property
+
+        ''' <summary>Die Ecken des kleinen Vorschaubildes in der LISTE. Eigene Eigenschaft, weil die
+        ''' Liste ein anderes Mass hat als die Kachel.</summary>
+        Public ReadOnly Property TileListImageCornerRadius As Avalonia.CornerRadius
+            Get
+                Return If(TilesAreFlat, New Avalonia.CornerRadius(0), New Avalonia.CornerRadius(6))
+            End Get
+        End Property
+
+        ''' <summary>Kachel ohne runde Ecken und ohne ruhenden Rahmen (Einstellung, gilt fuer ALLE
+        ''' vier Ansichten). Der Akzentrahmen der AUSWAHL bleibt: er sagt, was ausgewaehlt ist, und
+        ''' das ist keine Verzierung. Er wird nur eckig wie die Kachel.
+        '''
+        ''' Umgesetzt wird es ueber die Stilklasse <c>flat</c> an der Kachel und nicht ueber oertliche
+        ''' Werte: ein oertlicher Wert schlaegt JEDEN Stil, auch den der Auswahl - der Rahmen der
+        ''' Auswahl waere damit ebenfalls weg.</summary>
+        Public ReadOnly Property TilesAreFlat As Boolean
+            Get
+                Return _mainVm IsNot Nothing AndAlso _mainVm.Settings IsNot Nothing AndAlso
+                       Not _mainVm.Settings.GalleryTileFrame
             End Get
         End Property
 
@@ -1582,6 +1721,17 @@ Namespace ViewModels
         Private _groupEntriesDirty As Boolean = True
         Private _groupEntryPublishQueued As Boolean = False
 
+        ' Fotowand: je Eintrag seine Lage, dazu das Seitenverhaeltnis, mit dem sie gerechnet wurde.
+        ' Das zweite Feld ist der Merkposten fuer den Nachschlag - siehe NoteWallRange.
+        Private ReadOnly _wallTiles As New List(Of GalleryWallTile)()
+        Private _wallAspects As Double() = Array.Empty(Of Double)()
+        Private _wallColumns As Integer = 0
+        Private _wallColumnWidth As Double = 0
+        Private _wallContentHeight As Double = 0
+        Private _wallDirty As Boolean = True
+        Private _wallRebuildQueued As Boolean = False
+        Private _wallRevision As Integer = 0
+
         Private _topSpacerHeight As Double
         Private _bottomSpacerHeight As Double
         Private _contentHeight As Double
@@ -1663,7 +1813,13 @@ Namespace ViewModels
             ' Die Gruppen haengen an Items. Statt an jedem der vielen Wege, die die Liste anfassen, einen
             ' Aufruf nachzutragen (einer wird immer vergessen), horcht die Gruppenansicht an der Sammlung
             ' selbst. Der Neuaufbau passiert erst beim naechsten Zeichnen, das Ereignis kostet nichts.
-            AddHandler Items.CollectionChanged, Sub(sender As Object, e As Specialized.NotifyCollectionChangedEventArgs) InvalidateGroupLayout()
+            AddHandler Items.CollectionChanged,
+                Sub(sender As Object, e As Specialized.NotifyCollectionChangedEventArgs)
+                    InvalidateGroupLayout()
+                    ' Die Fotowand rechnet ihre Tabelle aus DERSELBEN Liste; jede Aenderung daran
+                    ' verschiebt jede Kachel dahinter.
+                    InvalidateWallLayout()
+                End Sub
             DisplayItems = New BulkObservableCollection(Of ImageItem)()
             GroupEntries = New BulkObservableCollection(Of ImageItem)()
             WatchBackgroundRuns()
@@ -4718,8 +4874,10 @@ Namespace ViewModels
         ''' DIE ZAHL IST DIE VEREINIGUNGSMENGE, weder die Summe noch die groesste. Dasselbe Bild kann
         ''' das Wort von Hand UND aus der Erkennung tragen; eine Summe zaehlte es doppelt, die
         ''' groesste liesse Bilder unter den Tisch fallen. Gezaehlt wird deshalb ueber die Pfade,
-        ''' und zwar in ZWEI Abfragen fuer alle zusammengefassten Zeilen zusammen - die Liste wird
-        ''' bei jedem Tastendruck im Suchfeld neu gebaut, eine Abfrage je Zeile waere dort zu viel.
+        ''' und zwar in ZWEI Abfragen fuer alle zusammengefassten Zeilen zusammen - jede davon geht
+        ''' ueber die ganze Stichwortspalte des Katalogs, eine Abfrage je Zeile waere also ein
+        ''' Tabellendurchlauf je Zeile. Am Tippen haengt das nicht (siehe TagFilterSearch: der
+        ''' Suchtext siebt nur die fertige Liste), am Wechsel der Quelle und des Ordners schon.
         ''' Nur wo es keinen bezahlbaren Weg zu den Pfaden gibt (gemischte Serverzeilen), bleibt es
         ''' bei der groessten Zahl.</summary>
         Private Function MergeTagOptionsByLabel(entries As List(Of TagFilterOption)) As List(Of TagFilterOption)
@@ -9605,6 +9763,274 @@ Namespace ViewModels
             Dim targetItem = _groupLayoutItemIndex(targetEntry)
             If targetItem < 0 Then Return rowDelta
             Return targetItem - currentItemIndex
+        End Function
+
+        ' ---------------------------------------------------------------------------------------------
+        ' Fotowand
+        '
+        ' Spaltenweise versetzt: die BREITE steht fest (die Spalte), die HOEHE kommt aus dem
+        ' Seitenverhaeltnis des Bildes, und jede Kachel geht in die Spalte, die gerade am kuerzesten
+        ' ist. Damit steht hochkant hoch und quer flach da, und zugeschnitten wird nichts.
+        '
+        ' Wie bei der Gruppenansicht ist die Tabelle die EINZIGE Quelle der Geometrie: die Anordnung
+        ' (Controls.GalleryWallLayout) ordnet danach an, die Tastaturbewegung liest dieselbe Tabelle.
+        ' ---------------------------------------------------------------------------------------------
+
+        ''' <summary>Der Abstand zwischen zwei Kacheln der Wand ist derselbe wie im Raster und kommt
+        ''' aus der Einstellung (<see cref="TileGap"/>). Ein eigener Wert nur fuer diese Ansicht war
+        ''' der erste Stand und ist wieder weg: zwei Zahlen fuer dieselbe Sache, und die Einstellung
+        ''' haette nur eine davon getroffen.</summary>
+
+        ''' <summary>Grenzen fuer die Hoehe einer Kachel, als Vielfaches der Spaltenbreite. Ohne sie
+        ''' macht ein Panorama eine Kachel von wenigen Bildpunkten Hoehe und ein extremes Hochformat
+        ''' eine, die allein die ganze Ansicht fuellt. Der obere Wert muss mit
+        ''' <see cref="Controls.GalleryWallLayout.MaxTileHeightFactor"/> uebereinstimmen - daraus
+        ''' folgt dort, wie weit die Suche nach oben zurueckgreift.</summary>
+        Private Const WallMinHeightFactor As Double = 0.45
+        Private Const WallMaxHeightFactor As Double = Controls.GalleryWallLayout.MaxTileHeightFactor
+
+        ''' <summary>Das Verhaeltnis, mit dem gerechnet wird, solange keines bekannt ist. Bis der
+        ''' Katalog die Masse hat oder das Vorschaubild da ist, steht die Kachel im gaengigsten
+        ''' Kleinbildformat - so springt spaeter moeglichst wenig.</summary>
+        Private Const WallFallbackAspect As Double = 1.5
+
+        ''' <summary>Ordner haben kein Seitenverhaeltnis; sie tragen ein Sinnbild und bekommen ein
+        ''' festes, flaches Mass.</summary>
+        Private Const WallFolderAspect As Double = 1.4
+
+        Public ReadOnly Property WallColumnWidthTarget As Double Implements IGalleryWallSource.WallColumnWidthTarget
+            Get
+                Return Math.Max(1, ThumbnailSize)
+            End Get
+        End Property
+
+        Public ReadOnly Property WallGap As Double Implements IGalleryWallSource.WallGap
+            Get
+                Return TileGap
+            End Get
+        End Property
+
+        Public ReadOnly Property WallTiles As IReadOnlyList(Of GalleryWallTile) Implements IGalleryWallSource.WallTiles
+            Get
+                Return _wallTiles
+            End Get
+        End Property
+
+        Public ReadOnly Property WallContentHeight As Double Implements IGalleryWallSource.WallContentHeight
+            Get
+                Return _wallContentHeight
+            End Get
+        End Property
+
+        ''' <summary>Die Spaltenzahl, mit der die Tabelle gebaut ist. Fuer das Blaettern.</summary>
+        Public ReadOnly Property WallColumns As Integer
+            Get
+                Return Math.Max(1, _wallColumns)
+            End Get
+        End Property
+
+        ''' <summary>Merkt vor, dass die Tabelle neu gebaut werden muss. Gerufen bei jeder Aenderung
+        ''' an Items und beim Wechsel der Kachelgroesse.</summary>
+        Public Sub InvalidateWallLayout()
+            _wallDirty = True
+        End Sub
+
+        Public Sub UpdateWallTiles(columns As Integer, columnWidth As Double) Implements IGalleryWallSource.UpdateWallTiles
+            columns = Math.Max(1, columns)
+            columnWidth = Math.Max(1, columnWidth)
+            If Not _wallDirty AndAlso _wallColumns = columns AndAlso
+               Math.Abs(_wallColumnWidth - columnWidth) < 0.5 Then Return
+
+            _wallColumns = columns
+            _wallColumnWidth = columnWidth
+            _wallDirty = False
+            _wallTiles.Clear()
+
+            Dim count = Items.Count
+            If count = 0 Then
+                _wallAspects = Array.Empty(Of Double)()
+                _wallContentHeight = 0
+                Return
+            End If
+
+            _wallAspects = New Double(count - 1) {}
+            Dim columnBottoms(columns - 1) As Double
+            Dim minHeight = WallMinHeightFactor * columnWidth
+            Dim maxHeight = WallMaxHeightFactor * columnWidth
+            ' EINMAL lesen: die Einstellung darf sich waehrend des Baus nicht aendern, sonst stimmen
+            ' waagerechte und senkrechte Fuge nicht mehr zusammen.
+            Dim gap = TileGap
+
+            For index = 0 To count - 1
+                Dim item = Items(index)
+                Dim aspect = AspectForWall(item)
+                _wallAspects(index) = aspect
+                Dim height = Math.Max(minHeight, Math.Min(maxHeight, columnWidth / aspect))
+
+                ' Die kuerzeste Spalte nehmen. Bei Gleichstand die linke - sonst waere die Reihenfolge
+                ' der Bilder am Anfang von Rundungsfehlern abhaengig.
+                Dim best = 0
+                For c = 1 To columns - 1
+                    If columnBottoms(c) < columnBottoms(best) - 0.01 Then best = c
+                Next
+
+                _wallTiles.Add(New GalleryWallTile With {
+                    .Left = best * (columnWidth + gap),
+                    .Top = columnBottoms(best),
+                    .Width = columnWidth,
+                    .Height = height})
+                columnBottoms(best) += height + gap
+            Next
+
+            Dim tallest = 0.0
+            For c = 0 To columns - 1
+                tallest = Math.Max(tallest, columnBottoms(c))
+            Next
+            ' Der letzte Abstand gehoert nicht in die Gesamthoehe, sonst bleibt unten eine Fuge.
+            _wallContentHeight = Math.Max(0, tallest - gap)
+        End Sub
+
+        ''' <summary>Das Seitenverhaeltnis, mit dem eine Kachel gerechnet wird.</summary>
+        Private Shared Function AspectForWall(item As ImageItem) As Double
+            If item Is Nothing Then Return WallFallbackAspect
+            If item.IsFolder Then Return WallFolderAspect
+            Dim aspect = item.DisplayAspectRatio
+            If aspect > 0.05 AndAlso aspect < 20 Then Return aspect
+            Return WallFallbackAspect
+        End Function
+
+        ''' <summary>Die Anordnung meldet, welche Kacheln sie gerade gebaut hat. GENAU DAFUER ist das
+        ''' da: beim Bau der Tabelle war fuer viele Bilder noch kein Verhaeltnis bekannt (der Katalog
+        ''' kennt die Masse nicht, das Vorschaubild ist noch nicht geladen), inzwischen aber schon.
+        ''' Weicht eines ab, wird die Tabelle neu gebaut - NICHT hier, sondern ueber den Anzeigefaden:
+        ''' diese Meldung kommt mitten aus dem Layoutdurchgang.</summary>
+        Public Sub NoteWallRange(firstIndex As Integer, lastIndex As Integer) Implements IGalleryWallSource.NoteWallRange
+            If _wallDirty OrElse _wallRebuildQueued Then Return
+            If _wallAspects.Length = 0 Then Return
+            Dim first = Math.Max(0, firstIndex)
+            Dim last = Math.Min(Math.Min(lastIndex, _wallAspects.Length - 1), Items.Count - 1)
+            For index = first To last
+                Dim aspect = AspectForWall(Items(index))
+                ' Ein Prozent Unterschied ist Rundung, alles darueber verschiebt sichtbar.
+                If Math.Abs(aspect - _wallAspects(index)) > 0.01 * Math.Max(aspect, 1.0) Then
+                    QueueWallRebuild()
+                    Return
+                End If
+            Next
+        End Sub
+
+        ''' <summary>Neuaufbau anstossen, aber erst nach dem laufenden Layoutdurchgang und hoechstens
+        ''' einmal auf einmal. Beim Einlesen eines Ordners kommen die Vorschaubilder stapelweise; ohne
+        ''' diese Sammelstelle baute die Tabelle je Bild neu.</summary>
+        Private Sub QueueWallRebuild()
+            If _wallRebuildQueued Then Return
+            _wallRebuildQueued = True
+            Dispatcher.UIThread.Post(
+                Sub()
+                    _wallRebuildQueued = False
+                    If Not IsWallView Then Return
+                    _wallDirty = True
+                    _wallRevision += 1
+                    Me.RaisePropertyChanged(NameOf(WallRevision))
+                End Sub, DispatcherPriority.Background)
+        End Sub
+
+        ''' <summary>Zaehlt hoch, sobald die Tabelle neu gebaut gehoert. Die Ansicht haengt daran und
+        ''' fordert daraufhin einen neuen Layoutdurchgang an - die Anordnung selbst merkt von einer
+        ''' geaenderten Tabelle sonst nichts.</summary>
+        Public ReadOnly Property WallRevision As Integer
+            Get
+                Return _wallRevision
+            End Get
+        End Property
+
+        ''' <summary>Welche Bilder gerade im Blick sind. Dieselbe Aufgabe wie
+        ''' <see cref="GetGroupVisibleItemRange"/>, nur ueber die Kacheltabelle: gebraucht wird sie
+        ''' fuer die Dringlichkeit der Vorschaubilder.
+        '''
+        ''' <para>Der Bereich ist zusammenhaengend, obwohl die Kacheln versetzt stehen - die Tabelle
+        ''' ist nach Oberkante sortiert, also liegt alles Sichtbare zwischen der ersten und der
+        ''' letzten sichtbaren Kachel.</para></summary>
+        Public Sub GetWallVisibleItemRange(contentOffsetY As Double, viewportHeight As Double,
+                                           ByRef firstItem As Integer, ByRef lastItem As Integer)
+            firstItem = -1
+            lastItem = -1
+            If _wallTiles.Count = 0 Then Return
+            Dim top = contentOffsetY
+            Dim bottom = contentOffsetY + Math.Max(1.0, viewportHeight)
+            For index = 0 To _wallTiles.Count - 1
+                Dim tile = _wallTiles(index)
+                If tile.Top > bottom Then Exit For
+                If tile.Bottom < top Then Continue For
+                If firstItem < 0 Then firstItem = index
+                lastItem = index
+            Next
+        End Sub
+
+        ''' <summary>Die Lage einer Kachel der Fotowand. Damit holt die Ansicht ein Bild in den Blick,
+        ''' ohne selbst zu rechnen. False, solange die Tabelle nicht steht.</summary>
+        Public Function TryGetWallItemPosition(itemIndex As Integer,
+                                               ByRef tileTop As Double, ByRef tileHeight As Double) As Boolean
+            tileTop = 0
+            tileHeight = 0
+            If itemIndex < 0 OrElse itemIndex >= _wallTiles.Count Then Return False
+            tileTop = _wallTiles(itemIndex).Top
+            tileHeight = _wallTiles(itemIndex).Height
+            Return True
+        End Function
+
+        ''' <summary>Versatz in ITEMS-Indizes fuer eine Bewegung um eine Zeile nach oben oder unten.
+        '''
+        ''' <para>In der Fotowand gibt es keine Zeilen, auf die sich ein fester Versatz rechnen
+        ''' liesse: die Nachbarkachel oben hat je nach Spalte einen ganz anderen Abstand im Index.
+        ''' Gesucht wird deshalb geometrisch - die naechste Kachel in der Bewegungsrichtung, die sich
+        ''' waagerecht mit der jetzigen ueberschneidet.</para></summary>
+        Public Function WallRowNavigationOffset(currentItemIndex As Integer, rowDelta As Integer) As Integer
+            If rowDelta = 0 Then Return 0
+            If currentItemIndex < 0 OrElse currentItemIndex >= _wallTiles.Count Then Return rowDelta
+
+            Dim direction = Math.Sign(rowDelta)
+            Dim index = currentItemIndex
+            ' "Step" ist ein Schluesselwort, deshalb heisst der Zaehler anders.
+            For hop = 1 To Math.Abs(rowDelta)
+                Dim nextIndex = WallNeighbor(index, direction)
+                If nextIndex < 0 Then Exit For
+                index = nextIndex
+            Next
+            Return index - currentItemIndex
+        End Function
+
+        ''' <summary>Die Kachel ueber oder unter dieser. Genommen wird die, deren Oberkante in der
+        ''' Bewegungsrichtung am naechsten liegt; bei gleichem Abstand die mit der groessten
+        ''' waagerechten Ueberschneidung. -1, wenn es in der Richtung keine mehr gibt.</summary>
+        Private Function WallNeighbor(index As Integer, direction As Integer) As Integer
+            Dim current = _wallTiles(index)
+            Dim best = -1
+            Dim bestTop = 0.0
+            Dim bestOverlap = -1.0
+
+            For candidate = 0 To _wallTiles.Count - 1
+                If candidate = index Then Continue For
+                Dim tile = _wallTiles(candidate)
+                ' Nur was wirklich darueber oder darunter beginnt. Eine Kachel, die auf derselben
+                ' Hoehe anfaengt, ist ein Nachbar zur Seite und nicht in dieser Richtung.
+                If direction > 0 AndAlso tile.Top <= current.Top + 0.5 Then Continue For
+                If direction < 0 AndAlso tile.Top >= current.Top - 0.5 Then Continue For
+
+                Dim overlap = Math.Min(current.Left + current.Width, tile.Left + tile.Width) -
+                              Math.Max(current.Left, tile.Left)
+                If overlap <= 0 Then Continue For
+
+                If best < 0 OrElse
+                   (direction > 0 AndAlso tile.Top < bestTop - 0.5) OrElse
+                   (direction < 0 AndAlso tile.Top > bestTop + 0.5) OrElse
+                   (Math.Abs(tile.Top - bestTop) <= 0.5 AndAlso overlap > bestOverlap) Then
+                    best = candidate
+                    bestTop = tile.Top
+                    bestOverlap = overlap
+                End If
+            Next
+            Return best
         End Function
 
         ''' Cache-Scope der aktuell angezeigten Ansicht - bei Suchlisten die Suchlisten-Scope, damit

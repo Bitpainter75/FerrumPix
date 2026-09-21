@@ -1463,6 +1463,27 @@
     <Style Selector="Border.thumb-card.list-row">
         <Setter Property="Margin" Value="5,3"/>
     </Style>
+    <!-- EINSTELLUNG "runde Ecken und Rahmen": eckig und ohne ruhenden Rahmen. Als Stilklasse und
+         nicht als oertlicher Wert an der Kachel - ein oertlicher Wert schlaegt JEDEN Stil, auch den
+         der Auswahl, und damit waere deren Akzentrahmen ebenfalls weg.
+         DIE REIHENFOLGE TRAEGT: dieser Block steht VOR den beiden Auswahl-Bloecken, also gewinnt
+         deren Randfarbe. Die Ecken bleiben eckig, weil die Auswahl sie nicht setzt - genau so soll
+         es sein: der Rahmen der Auswahl folgt der Form der Kachel. Ueber dem Zeiger bleibt es
+         ebenfalls ruhig; das ist Absicht, wer keinen Rahmen will, will auch keinen beim Zeigen. -->
+    <Style Selector="Border.thumb-card.flat">
+        <Setter Property="BorderBrush" Value="Transparent"/>
+        <!-- NUR DIE FARBE, NICHT DIE STAERKE. Die Stärke auf null zu setzen war der erste Stand und
+             ist wieder draussen: die Auswahl-Bloecke darunter setzen sie wieder auf zwei, und damit
+             braucht eine AUSGEWAEHLTE Kachel vier Bildpunkte mehr als eine gewoehnliche. Die Hoehe
+             einer Kachelzeile misst die Anordnung aber an EINER Kachel - der Rahmen der Auswahl wurde
+             dadurch abgeschnitten, im Raster oben und in der Gruppenansicht unten (Nutzerbefund
+             21.09.2026). Ein durchsichtiger Rand kostet zwei Bildpunkte je Seite und haelt dafuer
+             jede Kachel gleich gross, ob ausgewaehlt oder nicht. -->
+        <Setter Property="CornerRadius" Value="0"/>
+    </Style>
+    <Style Selector="Border.thumb-card.flat:pointerover">
+        <Setter Property="BorderBrush" Value="Transparent"/>
+    </Style>
     <Style Selector="Border.thumb-card.selected">
         <Setter Property="BorderBrush" Value="{DynamicResource FP.Accent}"/>
         <Setter Property="BorderThickness" Value="2"/>

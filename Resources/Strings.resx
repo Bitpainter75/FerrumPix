@@ -7257,8 +7257,11 @@
   <data name="Kein_Favorit_67705ccf" xml:space="preserve">
     <value>Not a favorite</value>
   </data>
-  <data name="Legt_fest_ob_die_Galerie_als_Raster_als_Liste_od_e70127c6" xml:space="preserve">
-    <value>Sets whether the gallery is shown as a grid, as a list or in groups.</value>
+  <data name="Legt_fest_ob_die_Galerie_als_Raster_als_Liste_in_be600a70" xml:space="preserve">
+    <value>Sets whether the gallery is shown as a grid, as a list, in groups or as a photo wall. The photo wall shows every picture in its own aspect ratio, without a caption and with a narrow gap.</value>
+  </data>
+  <data name="Fotowand_463a8034" xml:space="preserve">
+    <value>Photo wall</value>
   </data>
   <data name="Gruppe_ausw_hlen_e7c82c9a" xml:space="preserve">
     <value>Select group</value>
@@ -8573,5 +8576,38 @@
   </data>
   <data name="Holt_Zeichnung_zur_ck_die_ber_Weiss_liegt_und_he_3af0d3c9" xml:space="preserve">
     <value>Brings back detail that lies above white and is cut off today. It only works where one channel is blown and another is not. Switching it redevelops the file, so it takes a moment.</value>
+  </data>
+  <data name="Kamera_nicht_in_der_LibRaw_Liste_58ee3e83" xml:space="preserve">
+    <value>Camera not in the LibRaw list</value>
+  </data>
+  <data name="Diese_Kamera_kennt_LibRaw_nicht_b17c0778" xml:space="preserve">
+    <value>LibRaw does not know this camera</value>
+  </data>
+  <data name="LibRaw_f_hrt_0_nicht_in_seiner_Modellliste_Ferru_e147befe" xml:space="preserve">
+    <value>LibRaw does not list {0} among its camera models. FerrumPix still develops the file, but without the values that belong to this camera. Depending on the camera the colour matrix is missing, and then the image looks flat, or the black point is missing, and then it looks magenta. Only LibRaw itself can change that. One way around it is to convert the RAW to DNG: a DNG carries both values in the file.</value>
+  </data>
+  <data name="Runde_Ecken_und_Rahmen_an_den_Kacheln_039bccf5" xml:space="preserve">
+    <value>Rounded corners and frames on the tiles</value>
+  </data>
+  <data name="Ausgeschaltet_stehen_die_Kacheln_in_allen_Ansich_a91ca397" xml:space="preserve">
+    <value>Switched off, the tiles stand square and without a visible frame in every gallery view. The frame around selected pictures stays, it only becomes square.</value>
+  </data>
+  <data name="Runde_Ecken_und_Rahmen_im_Filmstrip_2eea3bd2" xml:space="preserve">
+    <value>Rounded corners and frames in the filmstrip</value>
+  </data>
+  <data name="Ausgeschaltet_stehen_die_Kacheln_des_Filmstrips__2f06229e" xml:space="preserve">
+    <value>Switched off, the filmstrip tiles stand square and without a frame. The frame around the current picture stays, it only becomes square.</value>
+  </data>
+  <data name="Abstand_zwischen_den_Kacheln_b0f73be2" xml:space="preserve">
+    <value>Gap between the tiles</value>
+  </data>
+  <data name="Gilt_f_r_alle_Kachelansichten_der_Galerie_enger__a80faeba" xml:space="preserve">
+    <value>Applies to every tile view of the gallery; it does not get tighter than four pixels. The list is left alone.</value>
+  </data>
+  <data name="Nach_dem_Speichern_unter_die_neue_Datei_ffnen_aeebd97e" xml:space="preserve">
+    <value>Open the new file after Save as</value>
+  </data>
+  <data name="Ausgeschaltet_bleibt_das_bisherige_Bild_im_Edito_96a283d3" xml:space="preserve">
+    <value>Switched off, the picture you were working on stays in the editor and the saved file simply sits on disk. Switched on, the editor moves to the new file and carries on there.</value>
   </data>
 </root>

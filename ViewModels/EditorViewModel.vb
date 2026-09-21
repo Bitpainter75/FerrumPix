@@ -4024,6 +4024,21 @@ Namespace ViewModels
             End Get
         End Property
 
+        ''' <summary>Kachel des Filmstreifens ohne runde Ecken und ohne ruhenden Rahmen
+        ''' (Einstellung). Wie im Betrachter, derselbe Schalter.</summary>
+        Public ReadOnly Property FilmstripTilesAreFlat As Boolean
+            Get
+                Return _mainVm IsNot Nothing AndAlso _mainVm.Settings IsNot Nothing AndAlso
+                       Not _mainVm.Settings.FilmstripTileFrame
+            End Get
+        End Property
+
+        Public ReadOnly Property FilmstripImageCornerRadius As Avalonia.CornerRadius
+            Get
+                Return If(FilmstripTilesAreFlat, New Avalonia.CornerRadius(0), New Avalonia.CornerRadius(6))
+            End Get
+        End Property
+
         ''' <summary>Ob die Fusszeile sichtbar ist: die Leiste mit Bildangaben und Zoom. NICHT der
         ''' Filmstreifen darueber - der hat seinen eigenen Schalter und bleibt stehen.</summary>
         Public ReadOnly Property ShowFooter As Boolean
@@ -9041,7 +9056,22 @@ Namespace ViewModels
         Private _motivEinbettung As SubjectMaskService.Einbettung
         Private _motivSchluessel As String = ""
         Private ReadOnly _motivTor As New SemaphoreSlim(1, 1)
-        Private ReadOnly _motivPunkte As New List(Of SubjectMaskService.Point)()
+        ''' <summary>EIN angeklickter Gegenstand: die Punkte, die ihn bestimmen, und wie er mit dem
+        ''' bisherigen Stand verrechnet wird.
+        '''
+        ''' <para>WARUM JE GEGENSTAND UND NICHT EINE PUNKTLISTE. Vorher lagen alle Klicks in EINER
+        ''' Liste, aus der das Modell jedes Mal EINE Maske rechnete. Das ist die Verfeinerung EINES
+        ''' Gegenstands und nicht das Sammeln mehrerer: ein zweiter Klick auf ein anderes Objekt
+        ''' beschrieb dem Modell denselben Gegenstand ein zweites Mal, und heraus kam der
+        ''' gemeinsame Nenner - sichtbar als "mit Plus wird etwas weggenommen" (Nutzerbefund
+        ''' 21.09.2026). Jeder Klick ist jetzt ein eigener Gegenstand, und der Kombinationsmodus
+        ''' sagt, was mit ihm geschieht.</para></summary>
+        Private NotInheritable Class SubjectSelectionObject
+            Public ReadOnly Points As New List(Of SubjectMaskService.Point)()
+            Public CombineMode As String = "New"
+        End Class
+
+        Private ReadOnly _motivObjekte As New List(Of SubjectSelectionObject)()
         ''' <summary>Wurde die Objektauswahl als MASKE oder als AUSWAHL begonnen? Die Regler zeichnen
         ''' aus denselben gemerkten Klicks nach, und ihr Ergebnis muss dorthin zurueck, wo es
         ''' hergekommen ist - eine Auswahl darf beim Nachziehen nicht zur Maskenebene werden.</summary>
@@ -9210,12 +9240,12 @@ Namespace ViewModels
         Public Sub ForgetSubjectEmbedding()
             _motivEinbettung = Nothing
             _motivSchluessel = ""
-            _motivPunkte.Clear()
+            _motivObjekte.Clear()
         End Sub
 
         ''' <summary>Nur die gesammelten Klicks vergessen, die teure Einbettung behalten.</summary>
         Public Sub ForgetSubjectPoints()
-            _motivPunkte.Clear()
+            _motivObjekte.Clear()
         End Sub
 
 
@@ -10344,7 +10374,7 @@ Namespace ViewModels
             InvalidatePendingRangeMask()
             ' Die gesammelten Klicks der Objektauswahl gehoeren zu GENAU dieser Maske. Bleiben sie
             ' stehen, baut der naechste Klick auf einer Maske auf, die es nicht mehr gibt.
-            _motivPunkte.Clear()
+            _motivObjekte.Clear()
             ' Aus demselben Grund die gemerkte Pipettenstelle: ein Regler wuerde sonst eine Maske an
             ' einer Stelle nachziehen, die zur weggeraeumten Auswahl gehoerte.
             ForgetSamplePoint()
@@ -14056,9 +14086,79 @@ Namespace ViewModels
                 Return "  •  " & LocalizationService.T("RAW-Vorschau (LibRaw fehlt)")
             End If
             Dim developed = RawDecodeService.TryGetCachedSize(RenderSourcePath).Width > 0
-            Return "  •  " & If(developed,
-                                LocalizationService.T("RAW entwickelt"),
-                                LocalizationService.T("RAW-Vorschau"))
+            Dim suffix = "  •  " & If(developed,
+                                      LocalizationService.T("RAW entwickelt"),
+                                      LocalizationService.T("RAW-Vorschau"))
+            ' Die Kamera steht nicht in der Modellliste: dann ist das Bild zwar entwickelt, aber mit
+            ' Ersatzwerten. Das gehoert in dieselbe Zeile wie "entwickelt", weil es genau diese
+            ' Auskunft einschraenkt.
+            If UnknownCameraName().Length > 0 Then
+                suffix &= "  •  " & LocalizationService.T("Kamera nicht in der LibRaw-Liste")
+            End If
+            Return suffix
+        End Function
+
+        Private _unknownCameraPath As String = ""
+        Private _unknownCameraName As String = ""
+
+        ''' <summary>Der Name der Kamera, wenn LibRaw dieses Modell NICHT kennt - sonst leer.
+        ''' Gemerkt je Pfad: Statuszeile und Hinweis fragen beide dasselbe, und jede Frage oeffnet
+        ''' die Datei ein weiteres Mal.</summary>
+        Private Function UnknownCameraName() As String
+            Dim path = RenderSourcePath
+            If String.IsNullOrEmpty(path) Then Return ""
+            If String.Equals(_unknownCameraPath, path, StringComparison.Ordinal) Then Return _unknownCameraName
+            _unknownCameraPath = path
+            _unknownCameraName = ""
+            If RawPreviewService.IsSupportedRaw(path) Then
+                Dim known = RawDecodeService.CameraIsKnown(path)
+                If known.HasValue AndAlso Not known.Value Then
+                    _unknownCameraName = RawDecodeService.CameraDisplayName(path)
+                End If
+            End If
+            Return _unknownCameraName
+        End Function
+
+        ''' <summary>Je Kameramodell einmal, nicht je Bild: ein Ordner voller Aufnahmen DERSELBEN
+        ''' unbekannten Kamera soll einmal etwas sagen. Shared wie der Hinweis darueber, damit auch
+        ''' ein zweites Editor-Fenster ihn nicht wiederholt.</summary>
+        Private Shared ReadOnly _unknownCameraNoticeShown As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
+
+        ''' <summary>Sagen, dass LibRaw diese Kamera nicht kennt - und was das fuer das Bild heisst.
+        '''
+        ''' Anlass ist ein Feldbericht zu einer Canon EOS R6 Mark III (Issue #36): die Datei liess
+        ''' sich oeffnen, das Bild war durchgehend magenta, und nichts sagte warum. Gemessen ist der
+        ''' Grund ein fehlender Schwarzpunkt; bei einer anderen Kamera fehlt stattdessen die
+        ''' Farbmatrix und das Bild wird flau. Beides folgt aus DEMSELBEN fehlenden Eintrag, und
+        ''' beides sieht aus wie ein Fehler der Anwendung.
+        '''
+        ''' WIR KOENNEN ES NICHT GERADEBIEGEN: die C-Schnittstelle von LibRaw hat keinen Setzer fuer
+        ''' den Schwarzpunkt und keinen Leser fuer die Rohwerte. Der Hinweis ist deshalb die ganze
+        ''' Behebung, die es hier gibt - zusammen mit dem Weg ueber ein DNG.
+        '''
+        ''' NACH dem Anzeigen, nicht mittendrin - dieselbe Begruendung wie bei
+        ''' <see cref="ScheduleMissingRawDevelopmentNotice"/>.</summary>
+        Private Sub ScheduleUnknownCameraNotice()
+            If _mainVm Is Nothing Then Return
+            Dim camera = UnknownCameraName()
+            If camera.Length = 0 Then Return
+            SyncLock _unknownCameraNoticeShown
+                If Not _unknownCameraNoticeShown.Add(camera) Then Return
+            End SyncLock
+            Avalonia.Threading.Dispatcher.UIThread.Post(
+                Sub()
+                    Dim ignored = ShowUnknownCameraNoticeAsync(camera)
+                End Sub, Avalonia.Threading.DispatcherPriority.Background)
+        End Sub
+
+        Private Async Function ShowUnknownCameraNoticeAsync(camera As String) As Task
+            Try
+                Await _mainVm.ShowMessageAsync(
+                    LocalizationService.T("Diese Kamera kennt LibRaw nicht"),
+                    String.Format(LocalizationService.T("LibRaw führt {0} nicht in seiner Modellliste. FerrumPix entwickelt die Datei trotzdem, aber ohne die Werte, die zu dieser Kamera gehören. Je nach Kamera fehlt die Farbmatrix, dann wirkt das Bild flau, oder der Schwarzpunkt, dann wirkt es magenta. Ändern lässt sich das nur in LibRaw selbst. Ein Ausweg ist die Umwandlung von RAW nach DNG: ein DNG trägt beide Werte in der Datei."), camera))
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Editor.UnknownCamera", ex)
+            End Try
         End Function
 
         ''' <summary>Einmal je Programmlauf gezeigt, nicht je Bild: beim Blaettern durch einen Ordner
@@ -16226,6 +16326,7 @@ Namespace ViewModels
                 ' Dateinamen danach.
                 _mainVm?.RefreshWindowTitle()
                 ScheduleMissingRawDevelopmentNotice()
+                ScheduleUnknownCameraNotice()
             Catch
                 StatusText = LocalizationService.T("Fehler beim Laden")
             End Try
@@ -16590,6 +16691,7 @@ Namespace ViewModels
                 ' Dateinamen danach.
                 _mainVm?.RefreshWindowTitle()
                 ScheduleMissingRawDevelopmentNotice()
+                ScheduleUnknownCameraNotice()
             Catch ex As Exception
                 StatusText = LocalizationService.T("Fehler beim Laden")
             End Try
@@ -18960,6 +19062,9 @@ Namespace ViewModels
         Private Async Function SaveImageAsync(saveAs As Boolean) As Task(Of Boolean)
             DiagnosticLogService.LogAlways("Editor.Save",
                 $"begin saveAs={saveAs} dirty={_hasChanges} tool={_currentTool} selected={_selectedAnnotationIndex} objectWarp={HasObjectWarp} openWarp={HasOpenWarpTransaction}")
+            ' Vor dem Speichern gemerkt: bleibt das Ausgangsbild offen, gehoert der Merker zurueck -
+            ' geschrieben wurde dann eine ANDERE Datei (siehe MarkDocumentDirtyAfterSaveAs).
+            Dim wasDirtyBeforeSave = _hasChanges
             If String.IsNullOrEmpty(_currentImagePath) Then
                 DiagnosticLogService.LogException("Editor.Save", New InvalidOperationException("Kein aktuelles Bild zum Speichern."))
                 Await _mainVm?.ShowMessageAsync(LocalizationService.T("Speichern fehlgeschlagen"),
@@ -19328,32 +19433,41 @@ Namespace ViewModels
                     ' unangetastet - dort ist ein zweites Speichern folgenlos).
                     Dim savedPixelsIntoFile = Not savedAsPdf AndAlso Not isFpxSave
                     Dim targetIsOtherFile = Not String.Equals(targetPath, _currentImagePath, StringComparison.OrdinalIgnoreCase)
-                    If Not savedAsPdf AndAlso (savedPixelsIntoFile OrElse targetIsOtherFile) Then
-                        ' nach „Speichern unter" arbeitet der Editor auf der
-                        ' GESPEICHERTEN Datei weiter (.fpx bzw. exportiertes Bild), nicht mehr auf dem
-                        ' Ursprungsbild. _hasChanges ist False, der Wechsel fragt also nicht nach.
-                        Dim statusAfterSave = StatusText
-                        ' Die Datei steht; ab hier zeigt der Ladezustand den Hinweis, nicht mehr die
-                        ' Beschaeftigt-Anzeige - beide zugleich waeren zwei Schleier uebereinander.
-                        SetSavingBusy(False)
-                        If targetIsOtherFile Then
-                            Await OpenImageAsync(targetPath, showLoadingState:=True)
-                        Else
-                            ' Derselbe Pfad: die Filmstreifen-Liste muss erhalten bleiben. Ohne sie
-                            ' faellt eine Such- oder Auswahlliste auf den blossen Ordnerinhalt zurueck,
-                            ' und der Nutzer haette nach einem Strg+S eine andere Nachbarschaft.
-                            Dim filmstripPaths = If(_folderPaths IsNot Nothing AndAlso _folderPaths.Count > 0,
-                                                    New List(Of String)(_folderPaths), Nothing)
-                            ' Derselbe Pfad heisst auch: dasselbe Dokument. Der Anzeigename einer
-                            ' Arbeitskopie muss deshalb mit - sonst hiesse das Bild nach einem
-                            ' Speichern wieder nach seiner Temp-Datei.
-                            Await OpenImageAsync(targetPath, filmstripPaths, _thumbCacheScopeId, _thumbCacheScopeName,
-                                                 displayFileName:=_sourceDisplayFileName, showLoadingState:=True)
-                        End If
-                        StatusText = statusAfterSave
-                    Else
+                    ' EINE ANDERE DATEI IST EINE ANDERE DATEI: das Ausgangsbild auf der Platte hat
+                    ' sich nicht geaendert, der Editor kann also darauf weiterarbeiten. Ob er das
+                    ' tut, sagt die Einstellung (ab Werk ja: das alte Bild bleibt). Die Regel steht
+                    ' in EINER Funktion, weil an ihr vier Faelle haengen - siehe ShouldOpenSavedTarget.
+                    If Not ShouldOpenSavedTarget(savedAsPdf, savedPixelsIntoFile, targetIsOtherFile) Then
+                        ' Das Ausgangsbild bleibt offen. Es steht damit weiterhin so da, wie es VOR
+                        ' dem Speichern stand - einschliesslich seiner ungesicherten Aenderungen:
+                        ' geschrieben wurde ja die andere Datei. Ohne das Zurueckholen liesse es sich
+                        ' danach ohne Nachfrage schliessen, und die Arbeit am Original waere weg.
+                        If wasDirtyBeforeSave Then MarkDocumentDirtyAfterSaveAs()
                         ClearPreviewSource()
+                        Return True
                     End If
+                    ' nach „Speichern unter" arbeitet der Editor auf der
+                    ' GESPEICHERTEN Datei weiter (.fpx bzw. exportiertes Bild), nicht mehr auf dem
+                    ' Ursprungsbild. _hasChanges ist False, der Wechsel fragt also nicht nach.
+                    Dim statusAfterSave = StatusText
+                    ' Die Datei steht; ab hier zeigt der Ladezustand den Hinweis, nicht mehr die
+                    ' Beschaeftigt-Anzeige - beide zugleich waeren zwei Schleier uebereinander.
+                    SetSavingBusy(False)
+                    If targetIsOtherFile Then
+                        Await OpenImageAsync(targetPath, showLoadingState:=True)
+                    Else
+                        ' Derselbe Pfad: die Filmstreifen-Liste muss erhalten bleiben. Ohne sie
+                        ' faellt eine Such- oder Auswahlliste auf den blossen Ordnerinhalt zurueck,
+                        ' und der Nutzer haette nach einem Strg+S eine andere Nachbarschaft.
+                        Dim filmstripPaths = If(_folderPaths IsNot Nothing AndAlso _folderPaths.Count > 0,
+                                                New List(Of String)(_folderPaths), Nothing)
+                        ' Derselbe Pfad heisst auch: dasselbe Dokument. Der Anzeigename einer
+                        ' Arbeitskopie muss deshalb mit - sonst hiesse das Bild nach einem
+                        ' Speichern wieder nach seiner Temp-Datei.
+                        Await OpenImageAsync(targetPath, filmstripPaths, _thumbCacheScopeId, _thumbCacheScopeName,
+                                             displayFileName:=_sourceDisplayFileName, showLoadingState:=True)
+                    End If
+                    StatusText = statusAfterSave
                     Return True
                 Else
                     StatusText = LocalizationService.T("Speichern fehlgeschlagen")
@@ -20125,6 +20239,49 @@ Namespace ViewModels
             RaiseSaveAvailabilityChanged()
         End Sub
 
+        ''' <summary>Nach einem „Speichern unter", das eine ANDERE Datei geschrieben hat und bei dem
+        ''' das Ausgangsbild offen bleibt: der Merker fuer ungesicherte Aenderungen kommt zurueck.
+        ''' Geschrieben wurde die andere Datei, das Ausgangsbild auf der Platte ist unveraendert -
+        ''' ohne diesen Weg liesse es sich danach ohne Nachfrage schliessen, und die Arbeit daran
+        ''' waere weg.</summary>
+        Private Sub MarkDocumentDirtyAfterSaveAs()
+            _hasChanges = True
+            DiagnosticLogService.LogAlways("Editor.Dirty",
+                $"set=true source=MarkDocumentDirtyAfterSaveAs tool={_currentTool}")
+            RaiseSaveAvailabilityChanged()
+        End Sub
+
+        ''' <summary>Holt der Editor nach dem Speichern die GESCHRIEBENE Datei herein?
+        '''
+        ''' <para>Vier Faelle, und sie haengen nicht am selben Grund - deshalb stehen sie hier
+        ''' zusammen und nicht verstreut im Speicherweg:</para>
+        '''
+        ''' <list type="bullet">
+        ''' <item>Ein PDF ist ein AUSGABEformat. Der Editor kann es nicht dekodieren, der Wechsel
+        ''' endete in einem leeren Editor.</item>
+        ''' <item>DIESELBE Datei mit gebackenen Bildpunkten MUSS neu geladen werden: die Regler sind
+        ''' danach in den Bildpunkten, und ein zweites Speichern legte denselben Zuschnitt ein
+        ''' zweites Mal darauf.</item>
+        ''' <item>Dieselbe Datei als .fpx: das Rezept liegt im Buendel, das Basisbild bleibt
+        ''' unangetastet. Ein zweites Speichern ist dort folgenlos, ein Neuladen also unnoetig.</item>
+        ''' <item>Eine ANDERE Datei: das Ausgangsbild ist unveraendert, der Editor KANN darauf
+        ''' weiterarbeiten. Hier entscheidet die Einstellung, und ab Werk bleibt das alte Bild
+        ''' stehen.</item>
+        ''' </list></summary>
+        Public Shared Function SaveTargetOpensEditor(savedAsPdf As Boolean, savedPixelsIntoFile As Boolean,
+                                                     targetIsOtherFile As Boolean,
+                                                     saveAsOpensTarget As Boolean) As Boolean
+            If savedAsPdf Then Return False
+            If Not targetIsOtherFile Then Return savedPixelsIntoFile
+            Return saveAsOpensTarget
+        End Function
+
+        Private Function ShouldOpenSavedTarget(savedAsPdf As Boolean, savedPixelsIntoFile As Boolean,
+                                               targetIsOtherFile As Boolean) As Boolean
+            Return SaveTargetOpensEditor(savedAsPdf, savedPixelsIntoFile, targetIsOtherFile,
+                                         AppSettingsService.Load().EditorSaveAsOpensTarget)
+        End Function
+
         ''' Wird beim Verlassen eines Werkzeugs mit "Anwenden"-Bestätigung aufgerufen. Noch nicht
         ''' bestätigte Live-Werte werden verworfen und auf den zuletzt angewendeten Stand
         ''' zurückgesetzt, statt beim nächsten Speichern/Undo-Snapshot versehentlich als real zu
@@ -20866,8 +21023,27 @@ Namespace ViewModels
             ' der wiederhergestellten Maske. Bei einer gemalten Maske ohne Bindung räumt derselbe
             ' Aufruf das Overlay korrekt ab.
             PublishMaskBrushOverlay(nurWennSichtbar:=True)
+            ForgetSubjectObjectsAfterHistoryStep()
             Me.RaisePropertyChanged(NameOf(CanUndo))
             Me.RaisePropertyChanged(NameOf(CanRedo))
+        End Sub
+
+        ''' <summary>Nach einem Schritt in der Historie: die angeklickten Gegenstaende der
+        ''' Objektauswahl vergessen.
+        '''
+        ''' <para>Sie sind kein Zustand des Bildes, sondern die HERKUNFT der Auswahl, die gerade
+        ''' dastand - und nach einem Rueckgaengig steht eine andere da. Blieben sie stehen, baute der
+        ''' naechste Klick die Liste von vorn auf und brachte die zurueckgenommenen Gegenstaende
+        ''' wieder mit; das Rueckgaengig sah damit aus, als haette es nichts bewirkt (Nutzerbefund
+        ''' 21.09.2026).</para>
+        '''
+        ''' <para>Die uebrigen Auswahlwege haben dieses Problem nicht: Pinsel, Zauberstab und Lasso
+        ''' schreiben ihr Ergebnis unmittelbar in die Auswahl und spielen nichts nach. Die
+        ''' Bereichsmasken merken sich zwar ihre Probierstelle, ihr Reglerzug ERSETZT die Auswahl
+        ''' aber, statt sie zu erweitern - dort kann sich nichts aufsummieren.</para></summary>
+        Private Sub ForgetSubjectObjectsAfterHistoryStep()
+            If _motivObjekte.Count = 0 Then Return
+            _motivObjekte.Clear()
         End Sub
 
         Private Sub RedoAction()
@@ -20910,6 +21086,7 @@ Namespace ViewModels
             ' der wiederhergestellten Maske. Bei einer gemalten Maske ohne Bindung räumt derselbe
             ' Aufruf das Overlay korrekt ab.
             PublishMaskBrushOverlay(nurWennSichtbar:=True)
+            ForgetSubjectObjectsAfterHistoryStep()
             Me.RaisePropertyChanged(NameOf(CanUndo))
             Me.RaisePropertyChanged(NameOf(CanRedo))
         End Sub

@@ -69,6 +69,12 @@ Namespace Services
         Private Delegate Sub SetFloatFn(handle As IntPtr, value As Single)
         Private Delegate Function MakeMemImageFn(handle As IntPtr, ByRef errc As Integer) As IntPtr
         Private Delegate Sub PtrFn(handle As IntPtr)
+        ''' <summary>libraw_cameraList und libraw_cameraCount: die Liste der Modelle, die DIESE
+        ''' Fassung der Bibliothek kennt. Beide OHNE Handle - die Liste haengt an der Bibliothek,
+        ''' nicht an einer Datei. cameraList gibt einen Zeiger auf ein Feld von Zeigern auf
+        ''' nullterminierte Namen zurueck; es gehoert der Bibliothek und wird nicht freigegeben.</summary>
+        Private Delegate Function CameraListFn() As IntPtr
+        Private Delegate Function CameraCountFn() As Integer
 
         Private Shared ReadOnly _initLock As New Object()
 
@@ -123,6 +129,8 @@ Namespace Services
         Private Shared _makeMemImage As MakeMemImageFn
         Private Shared _clearMem As PtrFn
         Private Shared _close As PtrFn
+        Private Shared _cameraList As CameraListFn
+        Private Shared _cameraCount As CameraCountFn
 
         ''' <summary>True, wenn das System-libraw geladen werden konnte (Ergebnis wird gecacht).</summary>
         Public Shared ReadOnly Property IsAvailable As Boolean
@@ -342,6 +350,17 @@ Namespace Services
                         _getRawWidth = Nothing
                         _getRawHeight = Nothing
                     End Try
+                    ' OPTIONAL, eigenes Try wie oben: die Modellliste beantwortet EINE Frage, und
+                    ' zwar die nach der Ursache eines kaputt aussehenden Bildes (siehe
+                    ' CameraIsKnown). Fehlt sie, entwickelt die Anwendung unveraendert weiter und
+                    ' sagt nur nichts dazu.
+                    Try
+                        _cameraList = GetExport(Of CameraListFn)(handle, "libraw_cameraList")
+                        _cameraCount = GetExport(Of CameraCountFn)(handle, "libraw_cameraCount")
+                    Catch
+                        _cameraList = Nothing
+                        _cameraCount = Nothing
+                    End Try
                     _library = handle
                 Catch
                     ' Ein fehlender Export = Bibliothek unbrauchbar; alles auf Anfang.
@@ -356,6 +375,7 @@ Namespace Services
                     _setNoAutoBright = Nothing : _setGamma = Nothing : _setFbdd = Nothing : _setDemosaic = Nothing
                     _process = Nothing : _makeMemImage = Nothing : _clearMem = Nothing : _close = Nothing
                     _unpackThumb = Nothing : _makeMemThumb = Nothing
+                    _cameraList = Nothing : _cameraCount = Nothing
                     NativeLibrary.Free(handle)
                     _library = IntPtr.Zero
                 End Try
@@ -778,6 +798,12 @@ Namespace Services
         Public NotInheritable Class FileMetadata
             Public Property Make As String = ""
             Public Property Model As String = ""
+            ''' <summary>Hersteller und Modell, wie LibRaw sie selbst vereinheitlicht. Sie stehen
+            ''' naeher an der Schreibweise der Modellliste als die Felder aus der Datei: dort steht
+            ''' bei Nikon "NIKON CORPORATION" und bei Kodak "EASTMAN KODAK COMPANY". Leer, wenn die
+            ''' Fassung der Bibliothek sie nicht traegt.</summary>
+            Public Property NormalizedMake As String = ""
+            Public Property NormalizedModel As String = ""
             Public Property Taken As DateTime?
             Public Property Iso As Double
             Public Property Aperture As Double
@@ -802,6 +828,7 @@ Namespace Services
         Private Const IparamsMakeOffset As Integer = 4
         Private Const IparamsModelOffset As Integer = 68
         Private Const IparamsNormalizedMakeOffset As Integer = 196
+        Private Const IparamsNormalizedModelOffset As Integer = 260
         Private Const IparamsTextLength As Integer = 64
         Private Const ImgOtherIsoOffset As Integer = 0
         Private Const ImgOtherShutterOffset As Integer = 4
@@ -860,9 +887,12 @@ Namespace Services
                     Return Nothing
                 End If
 
+                Dim normalizedModel = FixedText(iparams, IparamsNormalizedModelOffset)
                 Dim result = New FileMetadata With {
                     .Make = make,
-                    .Model = If(IsPlausibleText(model), model, "")
+                    .Model = If(IsPlausibleText(model), model, ""),
+                    .NormalizedMake = normalizedMake,
+                    .NormalizedModel = If(IsPlausibleText(normalizedModel), normalizedModel, "")
                 }
 
                 Dim other = _getImgOther(handle)
@@ -932,6 +962,154 @@ Namespace Services
 
         Private Shared Function ReadSingle(structPtr As IntPtr, offset As Integer) As Double
             Return BitConverter.Int32BitsToSingle(Marshal.ReadInt32(structPtr, offset))
+        End Function
+
+        ' ── Die Modellliste der Bibliothek ───────────────────────────────────────
+
+        Private Shared _knownCameras As Dictionary(Of String, HashSet(Of String))
+
+        ''' <summary>Nur Buchstaben und Ziffern, gross. Punkte, Striche und Leerzeichen schreibt
+        ''' jeder Hersteller anders, und die Liste schreibt sie wieder anders als die Datei.</summary>
+        Private Shared Function AlphanumericUpper(value As String) As String
+            If String.IsNullOrEmpty(value) Then Return ""
+            Dim sb As New Text.StringBuilder(value.Length)
+            For Each c In value.ToUpperInvariant()
+                If (c >= "A"c AndAlso c <= "Z"c) OrElse (c >= "0"c AndAlso c <= "9"c) Then sb.Append(c)
+            Next
+            Return sb.ToString()
+        End Function
+
+        ''' <summary>Marke und Modell getrennt: die Marke ist das erste Wort, das Modell der Rest -
+        ''' und wenn der Rest die Marke wiederholt (Canon schreibt "Canon EOS M50"), faellt sie dort
+        ''' weg. Erst dadurch sind Datei und Liste vergleichbar: die Datei nennt bei Nikon
+        ''' "NIKON CORPORATION" und "D90", die Liste "Nikon D90".</summary>
+        Private Shared Function SplitCameraName(make As String, model As String) As (Maker As String, Model As String)
+            Dim maker = AlphanumericUpper(If(make, "").Trim().Split(" "c)(0))
+            Dim m = AlphanumericUpper(model)
+            If maker.Length > 0 AndAlso m.Length > maker.Length AndAlso m.StartsWith(maker, StringComparison.Ordinal) Then
+                m = m.Substring(maker.Length)
+            End If
+            Return (maker, m)
+        End Function
+
+        ''' <summary>Die Modelle, die DIESE Fassung von LibRaw kennt: je Marke die Menge ihrer
+        ''' Modellnamen. Einmal gelesen und behalten - es sind rund 1300 Eintraege, und sie aendern
+        ''' sich zur Laufzeit nicht.
+        '''
+        ''' <para>EIN EINTRAG KANN ZWEI KAMERAS SEIN. Die Liste fuehrt Zweitnamen mit Schraegstrich
+        ''' ("Canon EOS M50 / Kiss M"), und die Testdatei einer M50 nennt sich nur "Canon EOS M50" -
+        ''' ueber den ganzen Eintrag verglichen galt sie als unbekannt. Jeder Teil wird deshalb
+        ''' einzeln abgelegt, und die Marke des ERSTEN Teils gilt fuer alle.</para>
+        '''
+        ''' <para>Nothing heisst "keine Auskunft" - die Bibliothek bringt die Exporte nicht mit,
+        ''' oder die Liste sieht nicht nach einer Liste aus. Eine geratene Auskunft waere hier
+        ''' schlimmer als keine: an ihr haengt ein Hinweis an den Nutzer.</para></summary>
+        Private Shared Function KnownCameras() As Dictionary(Of String, HashSet(Of String))
+            EnsureLoaded()
+            If _knownCameras IsNot Nothing Then Return _knownCameras
+            If _cameraList Is Nothing OrElse _cameraCount Is Nothing Then Return Nothing
+            Try
+                Dim count = _cameraCount()
+                ' Eine Zahl weit jenseits des Plausiblen heisst: der Export ist nicht der, fuer den
+                ' wir ihn halten. Dieselbe Regel wie bei den Strukturversaetzen.
+                If count <= 0 OrElse count > 100000 Then Return Nothing
+                Dim listPtr = _cameraList()
+                If listPtr = IntPtr.Zero Then Return Nothing
+                Dim byMaker As New Dictionary(Of String, HashSet(Of String))(StringComparer.Ordinal)
+                For i = 0 To count - 1
+                    Dim entryPtr = Marshal.ReadIntPtr(listPtr, i * IntPtr.Size)
+                    If entryPtr = IntPtr.Zero Then Continue For
+                    Dim name = Marshal.PtrToStringUTF8(entryPtr)
+                    If String.IsNullOrWhiteSpace(name) Then Continue For
+                    Dim parts = name.Split("/"c)
+                    Dim maker = AlphanumericUpper(parts(0).Trim().Split(" "c)(0))
+                    If maker.Length = 0 Then Continue For
+                    Dim models As HashSet(Of String) = Nothing
+                    If Not byMaker.TryGetValue(maker, models) Then
+                        models = New HashSet(Of String)(StringComparer.Ordinal)
+                        byMaker(maker) = models
+                    End If
+                    For Each part In parts
+                        Dim split = SplitCameraName(maker, part)
+                        If split.Model.Length > 0 Then models.Add(split.Model)
+                    Next
+                Next
+                If byMaker.Count = 0 Then Return Nothing
+                _knownCameras = byMaker
+                Return _knownCameras
+            Catch ex As Exception
+                DiagnosticLogService.LogException("RawDecodeService.KnownCameras", ex)
+                Return Nothing
+            End Try
+        End Function
+
+        ''' <summary>Kennt die Liste diese Marke mit diesem Modell? Verglichen wird erst genau; erst
+        ''' wenn das misslingt, gilt auch ein Teilstueck - "EOSKISSM" aus der Datei gegen "KISSM"
+        ''' aus dem Zweitnamen der Liste. Kurze Namen sind davon ausgenommen, sonst faende "D90"
+        ''' sich in jedem zweiten Eintrag wieder.</summary>
+        Private Shared Function MatchesKnownCamera(known As Dictionary(Of String, HashSet(Of String)),
+                                                   maker As String, model As String) As Boolean
+            If maker.Length = 0 OrElse model.Length = 0 Then Return False
+            Dim models As HashSet(Of String) = Nothing
+            If Not known.TryGetValue(maker, models) Then Return False
+            If models.Contains(model) Then Return True
+            If model.Length < 5 Then Return False
+            For Each candidate In models
+                If candidate.Length >= 5 AndAlso
+                   (candidate.Contains(model) OrElse model.Contains(candidate)) Then Return True
+            Next
+            Return False
+        End Function
+
+        ''' <summary>Steht die Kamera dieser Datei in der Modellliste der geladenen LibRaw?
+        ''' True, False, oder NOTHING fuer "laesst sich nicht sagen".
+        '''
+        ''' <para>WOZU. Ein fehlender Kameraeintrag ist die gemeinsame Wurzel zweier Fehlerbilder,
+        ''' die voellig verschieden aussehen und beide nach einem Fehler der Anwendung aussehen:
+        ''' ohne Farbmatrix wird das Bild FLAU, ohne Schwarzpunkt MAGENTA (gemessen, siehe
+        ''' OFFENE_PUNKTE.md). Beheben koennen wir keines von beiden - die C-Schnittstelle hat
+        ''' weder einen Setzer fuer den Schwarzpunkt noch einen Leser fuer die Rohwerte. Sagen
+        ''' koennen wir es.</para>
+        '''
+        ''' <para>ZWEI SCHLUESSEL, und es genuegt, wenn EINER trifft: der aus den Feldern der Datei
+        ''' und der aus LibRaws eigener Vereinheitlichung. Die Liste schreibt "Kodak DCS Pro 14n",
+        ''' die Datei sagt Hersteller "EASTMAN KODAK COMPANY" - ueber das Dateifeld allein liefe
+        ''' das auf ein falsches "unbekannt" hinaus. Die Richtung des Irrtums ist mit Absicht
+        ''' einseitig: lieber eine Kamera zu viel als bekannt durchgehen lassen (dann bleibt es
+        ''' still) als einen Hinweis an jemanden, dessen Bild in Ordnung ist.</para></summary>
+        Public Shared Function CameraIsKnown(path As String) As Boolean?
+            If String.IsNullOrWhiteSpace(path) OrElse Not IsAvailable Then Return Nothing
+            Dim known = KnownCameras()
+            If known Is Nothing Then Return Nothing
+            Dim facts = ReadFileMetadata(path)
+            If facts Is Nothing Then Return Nothing
+            Dim fromFile = SplitCameraName(facts.Make, facts.Model)
+            Dim fromLibRaw = SplitCameraName(facts.NormalizedMake, facts.NormalizedModel)
+            ' Ohne Modellnamen gibt es nichts zu vergleichen - das ist keine unbekannte Kamera,
+            ' sondern eine Datei, die ihr Modell nicht nennt.
+            If fromFile.Model.Length = 0 AndAlso fromLibRaw.Model.Length = 0 Then Return Nothing
+            If MatchesKnownCamera(known, fromFile.Maker, fromFile.Model) Then Return True
+            If MatchesKnownCamera(known, fromLibRaw.Maker, fromLibRaw.Model) Then Return True
+            Return False
+        End Function
+
+        ''' <summary>Der Name der Kamera fuer den Hinweistext: was LibRaw vereinheitlicht hat, sonst
+        ''' was in der Datei steht. Leer, wenn die Datei kein Modell nennt.</summary>
+        Public Shared Function CameraDisplayName(path As String) As String
+            Dim facts = ReadFileMetadata(path)
+            If facts Is Nothing Then Return ""
+            Dim make = If(facts.NormalizedMake, "").Trim()
+            Dim model = If(facts.NormalizedModel, "").Trim()
+            If model.Length = 0 Then
+                make = If(facts.Make, "").Trim()
+                model = If(facts.Model, "").Trim()
+            End If
+            If model.Length = 0 Then Return ""
+            ' Nikon schreibt das Modell ohne Marke, Canon mit - doppelt soll sie nicht dastehen.
+            If make.Length > 0 AndAlso Not model.StartsWith(make.Split(" "c)(0), StringComparison.OrdinalIgnoreCase) Then
+                Return (make.Split(" "c)(0) & " " & model).Trim()
+            End If
+            Return model
         End Function
 
         ''' <summary>Null, wenn der Wert ausserhalb des Erwarteten liegt. Ein unbelegtes Feld traegt

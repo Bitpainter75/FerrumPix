@@ -137,8 +137,13 @@ Namespace Views
                Not String.IsNullOrEmpty(vm.PendingInsertKind) Then Return
             ' Beim Abwählen im Ebenenpanel bleibt ein aktives Bild-Geometriewerkzeug aktiv.
             ' Andernfalls wechselte ein Leerraumklick unaufgefordert in die Objekt-Auswahl.
+            ' DAS MASKENWERKZEUG GEHOERT DAZU. Eine Ebene abzuwaehlen heisst dort "kein Ziel mehr",
+            ' nicht "anderes Werkzeug": wer maskiert, waehlt gleich die naechste Ebene oder malt eine
+            ' neue Maske, und der Sprung ins Auswahlwerkzeug nahm ihm beides aus der Hand
+            ' (Nutzerbefund 21.09.2026). Dieselbe Regel steht in EditorView - beide Stellen sind
+            ' dieselbe Geste, einmal im Panel und einmal neben dem Bild.
             If vm.CurrentTool = EditorTool.Transform OrElse vm.CurrentTool = EditorTool.Resize OrElse
-               vm.CurrentTool = EditorTool.Warp Then Return
+               vm.CurrentTool = EditorTool.Warp OrElse vm.CurrentTool = EditorTool.Mask Then Return
             vm.CurrentTool = EditorTool.Selection
             vm.SelectionMode = "Move"
         End Sub

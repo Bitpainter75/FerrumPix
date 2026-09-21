@@ -2718,8 +2718,11 @@ Namespace Views
             ' Diese Werkzeuge bearbeiten das BILD, nicht die gerade markierte Ebene. Ein Klick ins
             ' Leere beendet daher nur die Ebenenauswahl; der Arbeitskontext (Crop/Drehen,
             ' Bildgröße oder Verzerren) muss sichtbar und bedienbar bleiben.
+            ' DAS MASKENWERKZEUG GEHOERT DAZU, aus demselben Grund wie im Ebenenpanel: eine Ebene
+            ' abzuwaehlen heisst "kein Ziel mehr", nicht "anderes Werkzeug" (Nutzerbefund
+            ' 21.09.2026). Die Regel steht in beiden Ansichten gleich.
             If vm.CurrentTool = EditorTool.Transform OrElse vm.CurrentTool = EditorTool.Resize OrElse
-               vm.CurrentTool = EditorTool.Warp Then Return
+               vm.CurrentTool = EditorTool.Warp OrElse vm.CurrentTool = EditorTool.Mask Then Return
             vm.CurrentTool = EditorTool.Selection
             vm.SelectionMode = "Move"
         End Sub

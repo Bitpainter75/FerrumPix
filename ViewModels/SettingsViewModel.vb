@@ -57,6 +57,10 @@ Namespace ViewModels
         Private _galleryStartupCustomFolder As String = ""
         Private _viewerShowFilmstrip As Boolean = True
         Private _filmstripItemBadgesVisible As Boolean = False
+        Private _galleryTileFrame As Boolean = True
+        Private _filmstripTileFrame As Boolean = True
+        Private _galleryTileGap As Integer = 10
+        Private _editorSaveAsOpensTarget As Boolean = False
         Private _galleryShowFooter As Boolean = True
         Private _viewerShowFooter As Boolean = True
         Private _editorShowFooter As Boolean = True
@@ -204,6 +208,10 @@ Namespace ViewModels
         Private _writeAiTagsToXmp As Boolean = False
         Private _savedViewerShowFilmstrip As Boolean = True
         Private _savedFilmstripItemBadgesVisible As Boolean = False
+        Private _savedGalleryTileFrame As Boolean = True
+        Private _savedFilmstripTileFrame As Boolean = True
+        Private _savedGalleryTileGap As Integer = 10
+        Private _savedEditorSaveAsOpensTarget As Boolean = False
         Private _savedGalleryShowFooter As Boolean = True
         Private _savedViewerShowFooter As Boolean = True
         Private _savedEditorShowFooter As Boolean = True
@@ -1722,6 +1730,12 @@ Namespace ViewModels
             End Get
         End Property
 
+        Public ReadOnly Property IsGalleryViewModeWall As Boolean
+            Get
+                Return _galleryViewMode = "Wall"
+            End Get
+        End Property
+
         ' Wird von der Galerie gerufen, wenn die Ansichtsart ueber ihre eigene Werkzeugleiste
         ' gewechselt wird - so zeigt der Einstellungsdialog denselben Stand, ohne dass der Wert
         ' zwischen beiden hin und her geschoben wird.
@@ -1736,6 +1750,7 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(IsGalleryViewModeGrid))
             Me.RaisePropertyChanged(NameOf(IsGalleryViewModeList))
             Me.RaisePropertyChanged(NameOf(IsGalleryViewModeGroup))
+            Me.RaisePropertyChanged(NameOf(IsGalleryViewModeWall))
         End Sub
 
         Public Property ViewerShowFilmstrip As Boolean
@@ -1759,6 +1774,67 @@ Namespace ViewModels
             Set(value As Boolean)
                 If _filmstripItemBadgesVisible = value Then Return
                 Me.RaiseAndSetIfChanged(_filmstripItemBadgesVisible, value)
+                _mainVm?.RefreshLayoutBindings()
+                SaveLayoutSettings()
+            End Set
+        End Property
+
+        ''' <summary>Runde Ecken und ruhender Rahmen an den Kacheln der GALERIE, in allen vier
+        ''' Ansichten. Aus heisst eckig und ohne Rahmen; der Akzentrahmen der Auswahl bleibt, wird
+        ''' aber ebenfalls eckig.</summary>
+        Public Property GalleryTileFrame As Boolean
+            Get
+                Return _galleryTileFrame
+            End Get
+            Set(value As Boolean)
+                If _galleryTileFrame = value Then Return
+                Me.RaiseAndSetIfChanged(_galleryTileFrame, value)
+                _mainVm?.RefreshLayoutBindings()
+                SaveLayoutSettings()
+            End Set
+        End Property
+
+        ''' <summary>Ob „Speichern unter" die geschriebene Datei in den Editor holt. Ab Werk aus: die
+        ''' Arbeit geht am Ausgangsbild weiter. Auf dieselbe Datei zu speichern laedt sie weiterhin
+        ''' immer neu - dort sind die Regler danach in den Bildpunkten.</summary>
+        Public Property EditorSaveAsOpensTarget As Boolean
+            Get
+                Return _editorSaveAsOpensTarget
+            End Get
+            Set(value As Boolean)
+                If _editorSaveAsOpensTarget = value Then Return
+                Me.RaiseAndSetIfChanged(_editorSaveAsOpensTarget, value)
+                SaveEditorBehaviourSettings()
+            End Set
+        End Property
+
+        ''' <summary>Abstand zwischen zwei Kacheln der Galerie, in allen Kachelansichten. Die Liste
+        ''' bleibt aussen vor - eine Zeile ist keine Kachel.</summary>
+        Public Property GalleryTileGap As Integer
+            Get
+                Return _galleryTileGap
+            End Get
+            Set(value As Integer)
+                value = AppSettingsService.NormalizeGalleryTileGap(value)
+                If _galleryTileGap = value Then Return
+                Me.RaiseAndSetIfChanged(_galleryTileGap, value)
+                ' NUR HIER, nicht ueber RefreshLayoutBindings: der Aufruf baut die Kacheltabelle der
+                ' Fotowand neu, und das gehoert an DIESE Einstellung und an keine andere.
+                _mainVm?.Gallery?.RefreshTileSpacing()
+                SaveLayoutSettings()
+            End Set
+        End Property
+
+        ''' <summary>Dasselbe fuer die Kacheln des FILMSTREIFENS in Betrachter und Editor. Eigener
+        ''' Schalter, weil der Filmstreifen ein Band dicht an dicht ist und die Galerie eine Flaeche
+        ''' mit Abstand - was dort ruhig wirkt, kann hier unruhig sein.</summary>
+        Public Property FilmstripTileFrame As Boolean
+            Get
+                Return _filmstripTileFrame
+            End Get
+            Set(value As Boolean)
+                If _filmstripTileFrame = value Then Return
+                Me.RaiseAndSetIfChanged(_filmstripTileFrame, value)
                 _mainVm?.RefreshLayoutBindings()
                 SaveLayoutSettings()
             End Set
@@ -3636,6 +3712,10 @@ Namespace ViewModels
             _galleryStartupCustomFolder = AppSettingsService.NormalizeFolderPath(_appSettings.GalleryStartupCustomFolder)
             _viewerShowFilmstrip = _appSettings.ViewerShowFilmstrip
             _filmstripItemBadgesVisible = _appSettings.FilmstripItemBadgesVisible
+            _galleryTileFrame = _appSettings.GalleryTileFrame
+            _filmstripTileFrame = _appSettings.FilmstripTileFrame
+            _galleryTileGap = AppSettingsService.NormalizeGalleryTileGap(_appSettings.GalleryTileGap)
+            _editorSaveAsOpensTarget = _appSettings.EditorSaveAsOpensTarget
             _galleryShowFooter = _appSettings.GalleryShowFooter
             _viewerShowFooter = _appSettings.ViewerShowFooter
             _editorShowFooter = _appSettings.EditorShowFooter
@@ -3996,6 +4076,10 @@ Namespace ViewModels
             _savedGalleryStartupCustomFolder = _galleryStartupCustomFolder
             _savedViewerShowFilmstrip = _viewerShowFilmstrip
             _savedFilmstripItemBadgesVisible = _filmstripItemBadgesVisible
+            _savedGalleryTileFrame = _galleryTileFrame
+            _savedFilmstripTileFrame = _filmstripTileFrame
+            _savedGalleryTileGap = _galleryTileGap
+            _savedEditorSaveAsOpensTarget = _editorSaveAsOpensTarget
             _savedGalleryShowFooter = _galleryShowFooter
             _savedViewerShowFooter = _viewerShowFooter
             _savedEditorShowFooter = _editorShowFooter
@@ -4098,6 +4182,10 @@ Namespace ViewModels
             GalleryStartupCustomFolder = _savedGalleryStartupCustomFolder
             ViewerShowFilmstrip = _savedViewerShowFilmstrip
             FilmstripItemBadgesVisible = _savedFilmstripItemBadgesVisible
+            GalleryTileFrame = _savedGalleryTileFrame
+            FilmstripTileFrame = _savedFilmstripTileFrame
+            GalleryTileGap = _savedGalleryTileGap
+            EditorSaveAsOpensTarget = _savedEditorSaveAsOpensTarget
             GalleryShowFooter = _savedGalleryShowFooter
             ViewerShowFooter = _savedViewerShowFooter
             EditorShowFooter = _savedEditorShowFooter
@@ -4217,6 +4305,10 @@ Namespace ViewModels
             GalleryStartupCustomFolder = ""
             ViewerShowFilmstrip = True
             FilmstripItemBadgesVisible = False
+            GalleryTileFrame = True
+            FilmstripTileFrame = True
+            GalleryTileGap = 10
+            EditorSaveAsOpensTarget = False
             GalleryShowFooter = True
             ViewerShowFooter = True
             EditorShowFooter = True
@@ -4430,7 +4522,16 @@ Namespace ViewModels
             End Set
         End Property
 
+        ''' <summary>Was der Editor NACH dem Speichern tut. Eine eigene kleine Gruppe, weil es weder
+        ''' Anordnung noch Anzeige ist und die anderen Gruppen Nebenwirkungen haben.</summary>
+        Private Sub SaveEditorBehaviourSettings()
+            AppSettingsService.Update(Sub(s)
+                                          s.EditorSaveAsOpensTarget = _editorSaveAsOpensTarget
+                                      End Sub)
+        End Sub
+
         Private Sub SaveDisplaySettings()
+
             AppSettingsService.Update(Sub(s)
                                           s.TransparencyBackgroundMode = _transparencyBackgroundMode
                                           s.TransparencyBackgroundColor = _transparencyBackgroundColor
@@ -4482,6 +4583,9 @@ Namespace ViewModels
             AppSettingsService.Update(Sub(s)
                                           s.ViewerShowFilmstrip = _viewerShowFilmstrip
                                           s.FilmstripItemBadgesVisible = _filmstripItemBadgesVisible
+                                          s.GalleryTileFrame = _galleryTileFrame
+                                          s.FilmstripTileFrame = _filmstripTileFrame
+                                          s.GalleryTileGap = _galleryTileGap
                                           s.GalleryShowFooter = _galleryShowFooter
                                           s.ViewerShowFooter = _viewerShowFooter
                                           s.EditorShowFooter = _editorShowFooter

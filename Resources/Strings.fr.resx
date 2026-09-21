@@ -7259,8 +7259,11 @@
   <data name="Kein_Favorit_67705ccf" xml:space="preserve">
     <value>Pas un favori</value>
   </data>
-  <data name="Legt_fest_ob_die_Galerie_als_Raster_als_Liste_od_e70127c6" xml:space="preserve">
-    <value>Définit si la galerie s'affiche en grille, en liste ou par groupes.</value>
+  <data name="Legt_fest_ob_die_Galerie_als_Raster_als_Liste_in_be600a70" xml:space="preserve">
+    <value>Définit si la galerie s'affiche en grille, en liste, par groupes ou en mur de photos. Le mur montre chaque image dans ses propres proportions, sans légende et avec un écart étroit.</value>
+  </data>
+  <data name="Fotowand_463a8034" xml:space="preserve">
+    <value>Mur de photos</value>
   </data>
   <data name="Gruppe_ausw_hlen_e7c82c9a" xml:space="preserve">
     <value>Sélectionner le groupe</value>
@@ -8558,5 +8561,38 @@
   </data>
   <data name="Holt_Zeichnung_zur_ck_die_ber_Weiss_liegt_und_he_3af0d3c9" xml:space="preserve">
     <value>Récupère le détail situé au-dessus du blanc et aujourd'hui coupé. N'agit que là où un canal est brûlé et un autre non. Le basculement redéveloppe le fichier et prend donc un instant.</value>
+  </data>
+  <data name="Kamera_nicht_in_der_LibRaw_Liste_58ee3e83" xml:space="preserve">
+    <value>Appareil absent de la liste LibRaw</value>
+  </data>
+  <data name="Diese_Kamera_kennt_LibRaw_nicht_b17c0778" xml:space="preserve">
+    <value>LibRaw ne connaît pas cet appareil</value>
+  </data>
+  <data name="LibRaw_f_hrt_0_nicht_in_seiner_Modellliste_Ferru_e147befe" xml:space="preserve">
+    <value>LibRaw ne mentionne pas {0} dans sa liste de modèles. FerrumPix développe quand même le fichier, mais sans les valeurs propres à cet appareil. Selon l'appareil, c'est la matrice de couleur qui manque et l'image paraît terne, ou le point noir et elle paraît magenta. Seul LibRaw peut y changer quelque chose. Une solution de contournement est de convertir le RAW en DNG : un DNG porte les deux valeurs dans le fichier.</value>
+  </data>
+  <data name="Runde_Ecken_und_Rahmen_an_den_Kacheln_039bccf5" xml:space="preserve">
+    <value>Coins arrondis et cadres sur les vignettes</value>
+  </data>
+  <data name="Ausgeschaltet_stehen_die_Kacheln_in_allen_Ansich_a91ca397" xml:space="preserve">
+    <value>Désactivé, les vignettes sont carrées et sans cadre visible dans toutes les vues de la galerie. Le cadre des images sélectionnées reste, il devient simplement carré.</value>
+  </data>
+  <data name="Runde_Ecken_und_Rahmen_im_Filmstrip_2eea3bd2" xml:space="preserve">
+    <value>Coins arrondis et cadres dans la pellicule</value>
+  </data>
+  <data name="Ausgeschaltet_stehen_die_Kacheln_des_Filmstrips__2f06229e" xml:space="preserve">
+    <value>Désactivé, les vignettes de la pellicule sont carrées et sans cadre. Le cadre de l'image actuelle reste, il devient simplement carré.</value>
+  </data>
+  <data name="Abstand_zwischen_den_Kacheln_b0f73be2" xml:space="preserve">
+    <value>Écart entre les vignettes</value>
+  </data>
+  <data name="Gilt_f_r_alle_Kachelansichten_der_Galerie_enger__a80faeba" xml:space="preserve">
+    <value>S'applique à toutes les vues en vignettes de la galerie ; l'écart ne descend pas sous quatre pixels. La liste reste inchangée.</value>
+  </data>
+  <data name="Nach_dem_Speichern_unter_die_neue_Datei_ffnen_aeebd97e" xml:space="preserve">
+    <value>Ouvrir le nouveau fichier après Enregistrer sous</value>
+  </data>
+  <data name="Ausgeschaltet_bleibt_das_bisherige_Bild_im_Edito_96a283d3" xml:space="preserve">
+    <value>Désactivé, l'image en cours reste dans l'éditeur et le fichier enregistré se trouve simplement sur le disque. Activé, l'éditeur passe au nouveau fichier et y poursuit le travail.</value>
   </data>
 </root>

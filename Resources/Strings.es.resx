@@ -7259,8 +7259,11 @@
   <data name="Kein_Favorit_67705ccf" xml:space="preserve">
     <value>Sin favorito</value>
   </data>
-  <data name="Legt_fest_ob_die_Galerie_als_Raster_als_Liste_od_e70127c6" xml:space="preserve">
-    <value>Define si la galería se muestra como cuadrícula, como lista o en grupos.</value>
+  <data name="Legt_fest_ob_die_Galerie_als_Raster_als_Liste_in_be600a70" xml:space="preserve">
+    <value>Define si la galería se muestra como cuadrícula, como lista, en grupos o como mural de fotos. El mural muestra cada imagen en su propia proporción, sin rótulo y con poca separación.</value>
+  </data>
+  <data name="Fotowand_463a8034" xml:space="preserve">
+    <value>Mural de fotos</value>
   </data>
   <data name="Gruppe_ausw_hlen_e7c82c9a" xml:space="preserve">
     <value>Seleccionar grupo</value>
@@ -8558,5 +8561,38 @@
   </data>
   <data name="Holt_Zeichnung_zur_ck_die_ber_Weiss_liegt_und_he_3af0d3c9" xml:space="preserve">
     <value>Recupera detalle que está por encima del blanco y hoy se recorta. Solo actúa donde un canal está quemado y otro no. Al cambiarlo se revela el archivo de nuevo, así que tarda un momento.</value>
+  </data>
+  <data name="Kamera_nicht_in_der_LibRaw_Liste_58ee3e83" xml:space="preserve">
+    <value>Cámara ausente de la lista de LibRaw</value>
+  </data>
+  <data name="Diese_Kamera_kennt_LibRaw_nicht_b17c0778" xml:space="preserve">
+    <value>LibRaw no conoce esta cámara</value>
+  </data>
+  <data name="LibRaw_f_hrt_0_nicht_in_seiner_Modellliste_Ferru_e147befe" xml:space="preserve">
+    <value>LibRaw no incluye {0} en su lista de modelos. FerrumPix revela el archivo igualmente, pero sin los valores que corresponden a esta cámara. Según la cámara falta la matriz de color, y entonces la imagen se ve apagada, o falta el punto negro, y entonces se ve magenta. Eso solo puede cambiarlo LibRaw. Una salida es convertir el RAW a DNG: un DNG lleva ambos valores en el archivo.</value>
+  </data>
+  <data name="Runde_Ecken_und_Rahmen_an_den_Kacheln_039bccf5" xml:space="preserve">
+    <value>Esquinas redondeadas y marcos en las miniaturas</value>
+  </data>
+  <data name="Ausgeschaltet_stehen_die_Kacheln_in_allen_Ansich_a91ca397" xml:space="preserve">
+    <value>Desactivado, las miniaturas se muestran rectas y sin marco visible en todas las vistas de la galería. El marco de las imágenes seleccionadas se mantiene, solo pasa a ser recto.</value>
+  </data>
+  <data name="Runde_Ecken_und_Rahmen_im_Filmstrip_2eea3bd2" xml:space="preserve">
+    <value>Esquinas redondeadas y marcos en la tira de imágenes</value>
+  </data>
+  <data name="Ausgeschaltet_stehen_die_Kacheln_des_Filmstrips__2f06229e" xml:space="preserve">
+    <value>Desactivado, las miniaturas de la tira se muestran rectas y sin marco. El marco de la imagen actual se mantiene, solo pasa a ser recto.</value>
+  </data>
+  <data name="Abstand_zwischen_den_Kacheln_b0f73be2" xml:space="preserve">
+    <value>Separación entre las miniaturas</value>
+  </data>
+  <data name="Gilt_f_r_alle_Kachelansichten_der_Galerie_enger__a80faeba" xml:space="preserve">
+    <value>Se aplica a todas las vistas de miniaturas de la galería; no baja de cuatro píxeles. La lista no cambia.</value>
+  </data>
+  <data name="Nach_dem_Speichern_unter_die_neue_Datei_ffnen_aeebd97e" xml:space="preserve">
+    <value>Abrir el archivo nuevo tras Guardar como</value>
+  </data>
+  <data name="Ausgeschaltet_bleibt_das_bisherige_Bild_im_Edito_96a283d3" xml:space="preserve">
+    <value>Desactivado, la imagen actual permanece en el editor y el archivo guardado queda solo en el disco. Activado, el editor pasa al archivo nuevo y sigue trabajando en él.</value>
   </data>
 </root>
