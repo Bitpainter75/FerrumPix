@@ -365,8 +365,14 @@ Namespace Services
             ' Kamera-MakerNotes nennen etwa "f/1.8", die Lensfun-Datenbank dagegen
             ' "f/1.8G". Ziffer und nachgestellter Buchstabe gehören für den Namensabgleich
             ' nicht zu einem untrennbaren Wort; getrennt bleiben Brennweite/Lichtstärke auch
-            ' ohne einen vollständigen Handelsnamen vergleichbar.
+            ' ohne einen vollständigen Handelsnamen vergleichbar. Dasselbe gilt umgekehrt
+            ' für EXIF-Namen ohne Wortgrenze wie "EF50mm" oder "F1.4".
             t = Regex.Replace(t, "(?<=\d)(?=[a-z])", " ")
+            t = Regex.Replace(t, "(?<=[a-z])(?=\d)", " ")
+            ' Olympus schreibt die Micro-Four-Thirds-Reihe in manchen MakerNotes als
+            ' "M.12mm" statt "M.Zuiko … 12mm". Der Punkt trennt dort Marke und
+            ' Brennweite, ist also keine Dezimalstelle.
+            t = Regex.Replace(t, "(?<=[a-z])\.(?=\d)", " ")
             Return Regex.Replace(t, "\s+", " ").Trim()
         End Function
 
@@ -427,6 +433,26 @@ Namespace Services
                 If Not tg.Contains(marke) Then Return False
             Next
             Return True
+        End Function
+
+        ''' <summary>Ein Nikon-MakerNote-Lens-Eintrag nennt oft nur Brennweite und Blende
+        ''' (etwa „35mm f/1.8“), nicht aber die Marke. Die Lensfun-Mount-Kompatibilitaet ist fuer
+        ''' adaptierte Objektive bewusst weit und liesse damit zum Beispiel ein Beroflex-T2-Profil
+        ''' an einer Nikon zu. Ohne eine Fremdmarke in der Aufnahmeangabe darf daher nur ein Profil
+        ''' des Kameraherstellers gewinnen. Nennt die Aufnahme Sigma, Tamron usw., bleibt deren
+        ''' Abgleich wie bisher zulaessig.</summary>
+        Private Shared Function HerstellerPasstBeiUnvollstaendigemNamen(gesucht As String,
+                                                                          kandidat As LensEntry,
+                                                                          camera As CameraEntry) As Boolean
+            If kandidat Is Nothing OrElse camera Is Nothing Then Return True
+            Dim gesuchtTokens = New HashSet(Of String)(NormalizedForName(gesucht).Split(" "c), StringComparer.OrdinalIgnoreCase)
+            Dim kameraTokens = NormalizedForName(camera.Maker).Split(" "c).Where(Function(token) token.Length > 0).ToArray()
+            If kameraTokens.Length = 0 Then Return True
+            If kameraTokens.Any(Function(token) gesuchtTokens.Contains(token)) Then Return True
+            If _fremdhersteller.Any(Function(marke) gesuchtTokens.Contains(marke)) Then Return True
+
+            Dim kandidatMaker = NormalizedForName(kandidat.Maker).Split(" "c)
+            Return kameraTokens.Any(Function(token) kandidatMaker.Contains(token))
         End Function
 
         ''' <summary>Unterhalb dieser Aehnlichkeit gilt ein Objektiv als NICHT gefunden. Lieber gar
@@ -776,6 +802,7 @@ Namespace Services
 
             For Each o In _objektive
                 If Not PasstAnschluss(o, camera) Then Continue For
+                If Not HerstellerPasstBeiUnvollstaendigemNamen(objektivName, o, camera) Then Continue For
                 Dim g As Double = 0
                 For Each n In o.Namen
                     If Not FremdherstellerPasst(objektivName, n, camera) Then Continue For
