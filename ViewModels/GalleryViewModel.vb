@@ -349,6 +349,12 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(TileImageHeightOrAuto))
                 ' Die Spaltenbreite der Fotowand haengt an demselben Mass.
                 InvalidateWallLayout()
+                ' In der Fotowand haben die Kacheln automatische Masse; keine geaenderte
+                ' Vorlagenbindung fordert dort von selbst einen neuen Layoutdurchgang an. Die
+                ' Revision ist deshalb das ausdrueckliche Signal an die Anordnung, ihre Spaltenzahl
+                ' und Kacheltabelle mit der neuen Zielbreite aufzubauen.
+                _wallRevision += 1
+                Me.RaisePropertyChanged(NameOf(WallRevision))
                 AppSettingsService.SaveGalleryThumbnailSize(value)
             End Set
         End Property
@@ -356,7 +362,7 @@ Namespace ViewModels
         ''' <summary>Ab welcher Kachelbreite Metadaten-Abzeichen und Dateidatum noch sinnvoll
         ''' hineinpassen. Darunter überlagern die 32-px-Abzeichen das halbe Bild und das Datum wird auf
         ''' wenige Zeichen abgeschnitten - dann bleiben beide weg.
-        ''' Der Regler geht von 140 bis 520; 200 liegt knapp über den kleinsten Stufen.</summary>
+        ''' Der Regler geht von 140 bis 640; 200 liegt knapp über den kleinsten Stufen.</summary>
         Public Const TileDetailsMinWidth As Double = 200
 
         Public ReadOnly Property TileHasRoomForDetails As Boolean

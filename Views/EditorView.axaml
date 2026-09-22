@@ -19,10 +19,10 @@
     <!-- Erste Spalte Auto statt fest 190: die Breite kommt aus ToolSidebarWidth, damit die
          Werkzeugleiste auf Symbolbreite einklappen kann (Zustand in den Einstellungen).
 
-         Die 330 der dritten Spalte ist die Breite des Anpassungspanels und muss dieselbe Zahl sein
+         Die 400 der dritten Spalte ist die Vorgabe des Anpassungspanels und muss dieselbe Zahl sein
          wie AdjustmentsPanelWidth im Codebehind: liegt das Panel links, setzt UpdateAdjustmentsPanelSide
          sie auf die zweite Spalte um. -->
-    <Grid x:Name="EditorRootGrid" RowDefinitions="52,*,Auto" ColumnDefinitions="Auto,*,330,320,300">
+    <Grid x:Name="EditorRootGrid" RowDefinitions="52,*,Auto" ColumnDefinitions="Auto,*,400,320,300">
 
         <!-- EIN Kontextmenue fuer Filmstreifen und Fusszeile. Sonst nirgends im Editor: weder auf
              der Buehne noch in den Panels rechts (siehe OnContextRequested). -->

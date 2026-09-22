@@ -34,7 +34,8 @@
                      25 Punkte sind eine Stufe (siehe ExposureStopsConverter), der volle Weg also
                      plus/minus 5 - Adobes Bereich. Vorher stand hier eine blanke Zahl zwischen
                      -125 und 125, und die sagt einem Fotografen nichts; "-1,60" sagt alles.
-                     Der Schritt ist 0,05 Stufen wie bei Adobe, mit SHIFT eine halbe.
+                     Zahlenfeld und Mausrad gehen in 0,01 Stufen, der Zug in 0,02; mit SHIFT
+                     geht das Zahlenfeld in Viertelstufen.
                      IN DER HISTORIE HEISST DER REGLER WEITER NUR "Belichtung"
                      (EditorViewModel.GetHistoryLabelForProperty): (EV) ist die Einheit der
                      Anzeige, nicht Teil seines Namens. -->
@@ -42,11 +43,12 @@
                            Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                 <icons:RoundSlider Grid.Column="1" Minimum="-125" Maximum="125"
-                                   Value="{Binding Exposure}" Margin="0,0" />
+                                   Value="{Binding Exposure}"
+                                   DragIncrement="0.5" WheelIncrement="0.25" Margin="0,0" />
                 <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
                                          Value="{Binding Exposure, Mode=TwoWay, Converter={StaticResource ExposureStopsConverter}}"
                                          Minimum="-5" Maximum="5"
-                                         Increment="0.05" CoarseIncrement="0.5" FormatString="F2" />
+                                         Increment="0.01" CoarseIncrement="0.25" FormatString="F2" />
             </Grid>
             <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
                 <TextBlock Text="Helligkeit"

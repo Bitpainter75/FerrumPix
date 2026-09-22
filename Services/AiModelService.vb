@@ -579,6 +579,49 @@ Namespace Services
             Return Not String.IsNullOrEmpty(ModelPath(fileName))
         End Function
 
+        ''' <summary>Liegt fuer diesen Baustein wenigstens eine bekannte Fassung im eigenen
+        ''' Modellordner? Nur solche Dateien darf die Anwendung aus den Einstellungen entfernen:
+        ''' mitgelieferte oder systemweit installierte Modelle bleiben unangetastet.</summary>
+        Public Shared Function CanRemoveUserModel(key As String) As Boolean
+            Dim entry = EntryFor(key)
+            If entry Is Nothing Then Return False
+            Return KnownFileNames(entry).Any(Function(name) File.Exists(Path.Combine(ModelFolder, name)))
+        End Function
+
+        ''' <summary>Entfernt bekannte Fassungen der angegebenen Modelle aus dem EIGENEN
+        ''' Modellordner. Weder fremde Dateinamen noch Dateien aus Suchpfaden des Systems werden
+        ''' angeruehrt. Offene Sitzungen bleiben bestehen, damit ein laufender Auftrag nicht durch
+        ''' das Schliessen nativer Handles abstuerzt; neue Auftraege sehen die Datei nicht mehr.</summary>
+        Public Shared Function RemoveUserModels(keys As IEnumerable(Of String)) As Boolean
+            If keys Is Nothing Then Return False
+            Dim names = keys.Select(Function(key) EntryFor(key)).
+                Where(Function(entry) entry IsNot Nothing).
+                SelectMany(Function(entry) KnownFileNames(entry)).
+                Distinct(StringComparer.OrdinalIgnoreCase).ToList()
+            If names.Count = 0 Then Return False
+
+            Dim removedAny = False
+            Try
+                For Each name In names
+                    Dim modelPath = IO.Path.Combine(ModelFolder, name)
+                    If Not File.Exists(modelPath) Then Continue For
+                    File.Delete(modelPath)
+                    removedAny = True
+                Next
+            Catch ex As Exception
+                DiagnosticLogService.LogException("AiModelService.RemoveUserModels", ex)
+                Return False
+            Finally
+                CheckAgain()
+            End Try
+            Return removedAny
+        End Function
+
+        Private Shared Function KnownFileNames(entry As ModelEntry) As IEnumerable(Of String)
+            If entry Is Nothing Then Return Enumerable.Empty(Of String)()
+            Return New String() {entry.FileName}.Concat(If(entry.Predecessors, Array.Empty(Of String)()))
+        End Function
+
         ''' <summary>Darf diese DATEI auf die Grafikkarte? Die Antwort steht am Register-Eintrag,
         ''' gilt aber auch fuer dessen aeltere Fassungen - eine alte Datei rechnet dasselbe.
         '''

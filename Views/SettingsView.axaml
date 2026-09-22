@@ -2146,7 +2146,7 @@
                                     <DataTemplate>
                                         <Border Classes="adjustment-group" Margin="0,0,0,8">
                                             <StackPanel Spacing="6">
-                                                <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+                                                <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="8">
                                                     <StackPanel Spacing="2" VerticalAlignment="Center">
                                                         <TextBlock Classes="no-translate" Text="{Binding Name}" FontSize="{DynamicResource FP.Font.Body}"/>
                                                         <TextBlock Classes="no-translate" Text="{Binding Description}" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
@@ -2158,6 +2158,12 @@
                                                             Command="{Binding $parent[ItemsControl].DataContext.FetchModelCommand}"
                                                             CommandParameter="{Binding}">
                                                         <TextBlock Classes="no-translate" Text="{Binding ButtonText}" FontSize="{DynamicResource FP.Font.Small}"/>
+                                                    </Button>
+                                                    <Button Grid.Column="3" Classes="ghost" Padding="12,7" VerticalAlignment="Center"
+                                                            IsVisible="{Binding RemoveButtonVisible}"
+                                                            Command="{Binding $parent[ItemsControl].DataContext.RemoveModelCommand}"
+                                                            CommandParameter="{Binding}">
+                                                        <TextBlock Classes="no-translate" Text="{Binding RemoveButtonText}" FontSize="{DynamicResource FP.Font.Small}"/>
                                                     </Button>
                                                 </Grid>
                                                 <ProgressBar Minimum="0" Maximum="1" Value="{Binding Progress}"

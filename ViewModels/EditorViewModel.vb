@@ -24,7 +24,7 @@ Namespace ViewModels
     Partial Public Class EditorViewModel
         Inherits ViewModelBase
 
-        ''' <summary>MINDESTbreite des Anpassungspanels, und zugleich seine Vorgabe. Steht HIER und
+        ''' <summary>MINDESTbreite des Anpassungspanels. Steht HIER und
         ''' nicht nur in der Ansicht, weil zwei Dinge davon abhaengen: die Spalte, in die das Panel
         ''' gesetzt wird, und die Schwelle fuer die Beschriftungen der Kopfleiste darunter.
         '''
@@ -32,6 +32,10 @@ Namespace ViewModels
         ''' Zahl bleibt die Untergrenze, damit Beschriftung, Regler und Zahlenfeld nebeneinander
         ''' passen.</summary>
         Public Const AdjustmentsPanelMinWidth As Double = 330.0
+
+        ''' <summary>Breite eines neuen Anpassungspanels. Die Mindestbreite bleibt darunter, damit
+        ''' bestehende, bewusst schmal gezogene Einstellungen unveraendert weiter funktionieren.</summary>
+        Public Const AdjustmentsPanelDefaultWidth As Double = 400.0
 
         ''' <summary>Und die Obergrenze. Ein Panel, das die halbe Bühne einnimmt, hilft beim
         ''' Feineinstellen nicht mehr - dort sieht man nicht mehr, was man einstellt. Gemessen an
@@ -49,7 +53,7 @@ Namespace ViewModels
         ''' <summary>Die Breite, mit der die Ansicht ihre Spalte setzt.</summary>
         Public ReadOnly Property AdjustmentsPanelWidth As Double
             Get
-                If _mainVm Is Nothing OrElse _mainVm.Settings Is Nothing Then Return AdjustmentsPanelMinWidth
+                If _mainVm Is Nothing OrElse _mainVm.Settings Is Nothing Then Return AdjustmentsPanelDefaultWidth
                 Return ClampAdjustmentsPanelWidth(_mainVm.Settings.EditorAdjustmentsPanelWidth)
             End Get
         End Property

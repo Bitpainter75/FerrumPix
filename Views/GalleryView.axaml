@@ -2780,11 +2780,12 @@
                             Command="{Binding DecreaseThumbnailSizeCommand}" ToolTip.Tip="Verkleinern">
                         <TextBlock Text="−" FontSize="{DynamicResource FP.Glyph.Large}" Foreground="{DynamicResource FP.Text.Secondary}" VerticalAlignment="Center"/>
                     </Button>
-                    <icons:RoundSlider Width="136"
+                    <icons:RoundSlider Width="200"
                                        Minimum="140"
-                                       Maximum="520"
+                                       Maximum="640"
                                        DefaultValue="260"
                                        Value="{Binding ThumbnailSize}"
+                                       DragIncrement="2"
                                        VerticalAlignment="Center"/>
                     <Button Classes="ghost" Height="20" Padding="4,0,4,2" VerticalContentAlignment="Center" Focusable="False"
                             Command="{Binding IncreaseThumbnailSizeCommand}" ToolTip.Tip="Vergrößern">

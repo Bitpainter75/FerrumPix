@@ -76,7 +76,7 @@ Namespace ViewModels
         Private _editorLayersPanelExpanded As Boolean = False
         Private _editorLayerThumbnails As Boolean = True
         Private _editorToolSidebarCollapsed As Boolean = False
-        Private _editorAdjustmentsPanelWidth As Double = EditorViewModel.AdjustmentsPanelMinWidth
+        Private _editorAdjustmentsPanelWidth As Double = EditorViewModel.AdjustmentsPanelDefaultWidth
         Private _editorSaveAsNamePattern As String = "{name}_fx"
         Private _editorDenoiseStrength As Double = EditorViewModel.DefaultDenoiseStrength
         Private _savedEditorDenoiseStrength As Double = EditorViewModel.DefaultDenoiseStrength
@@ -93,7 +93,7 @@ Namespace ViewModels
         Private _savedFaceMinimumSizePercent As Double = 0
         Private _savedPhotoMapEnabled As Boolean = False
         Private _editorAdjustmentsPanelOnLeft As Boolean = False
-        Private _editorStartupTool As String = "Selection"
+        Private _editorStartupTool As String = "Adjust"
         Private _psdTextImport As String = "Ask"
         Private _editorToolGroupOrder As String = "Adjust,Transform,Tools"
         Private _versteckteAnpassungsgruppen As String = ""
@@ -173,7 +173,7 @@ Namespace ViewModels
         Private _savedViewerFitBehavior As String = "Always"
         Private _savedEditorFitBehavior As String = "Always"
         Private _savedEditorFitMargin As Integer = 0
-        Private _savedEditorStartupTool As String = "Selection"
+        Private _savedEditorStartupTool As String = "Adjust"
         Private _savedEditorAdjustmentsPanelOnLeft As Boolean = False
         Private _savedEditorToolGroupOrder As String = "Adjust,Transform,Tools"
         Private _savedDefaultSaveFormat As String = "JPG"
@@ -3226,6 +3226,7 @@ Namespace ViewModels
         Public ReadOnly Property SetLanguageModeCommand As ICommand
         Public ReadOnly Property SetTransparencyBackgroundModeCommand As ICommand
         Public ReadOnly Property CheckGpuAccelerationCommand As ICommand
+        Public ReadOnly Property RemoveModelCommand As ICommand
         Public ReadOnly Property CleanupDatabaseCommand As ICommand
         Public ReadOnly Property RefreshThumbnailCacheCommand As ICommand
 
@@ -3812,6 +3813,10 @@ Namespace ViewModels
                 Sub(g)
                     Dim ignored = FetchModelGroupAsync(g)
                 End Sub)
+            RemoveModelCommand = ReactiveCommand.Create(Of ModelGroup)(
+                Sub(g)
+                    Dim ignored = RemoveModelGroupAsync(g)
+                End Sub)
             CheckGpuAccelerationCommand = ReactiveCommand.Create(
                 Sub()
                     Dim ignored = CheckGpuAccelerationAsync()
@@ -4288,7 +4293,7 @@ Namespace ViewModels
             ViewerFitBehavior = "Always"
             EditorFitBehavior = "Always"
             EditorFitMargin = 0
-            EditorStartupTool = "Selection"
+            EditorStartupTool = "Adjust"
             EditorAdjustmentsPanelOnLeft = False
             EditorToolGroupOrder = "Adjust,Transform,Tools"
             DefaultSaveFormat = "JPG"
@@ -5347,6 +5352,18 @@ Namespace ViewModels
                 End Get
             End Property
 
+            Public ReadOnly Property RemoveButtonVisible As Boolean
+                Get
+                    Return Not _running AndAlso Files.Any(Function(d) AiModelService.CanRemoveUserModel(d.Key))
+                End Get
+            End Property
+
+            Public ReadOnly Property RemoveButtonText As String
+                Get
+                    Return LocalizationService.T("Entfernen")
+                End Get
+            End Property
+
             Public Property Progress As Double
                 Get
                     Return _progress
@@ -5378,7 +5395,8 @@ Namespace ViewModels
 
             Public Sub RaiseStateChanged()
                 For Each n In {NameOf(IsComplete), NameOf(IsUpdatable), NameOf(StatusText),
-                               NameOf(ButtonText), NameOf(ButtonVisible)}
+                               NameOf(ButtonText), NameOf(ButtonVisible), NameOf(RemoveButtonVisible),
+                               NameOf(RemoveButtonText)}
                     Me.RaisePropertyChanged(n)
                 Next
             End Sub
@@ -5400,6 +5418,27 @@ Namespace ViewModels
                 Return AiModelService.RuntimeAvailable
             End Get
         End Property
+
+        ''' <summary>Entfernt selbst geladene Dateien einer Modellgruppe nach Rueckfrage.
+        ''' System- und Paketdateien sind von diesem Weg ausgeschlossen.</summary>
+        Public Async Function RemoveModelGroupAsync(group As ModelGroup) As Task
+            If group Is Nothing OrElse group.Running OrElse Not group.RemoveButtonVisible OrElse _mainVm Is Nothing Then Return
+            Dim confirmed = Await _mainVm.ShowConfirmAsync(LocalizationService.T("Entfernen"), group.Name,
+                                                            LocalizationService.T("Entfernen"), LocalizationService.T("Abbrechen"))
+            If Not confirmed Then Return
+
+            group.Running = True
+            Try
+                If Not AiModelService.RemoveUserModels(group.Files.Select(Function(file) file.Key)) Then
+                    group.Message = LocalizationService.T("Entfernen fehlgeschlagen")
+                Else
+                    group.Message = ""
+                End If
+            Finally
+                group.Running = False
+                group.RaiseStateChanged()
+            End Try
+        End Function
 
         Private Sub BuildModelGroups()
             ModelGroups.Clear()

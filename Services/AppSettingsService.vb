@@ -409,10 +409,10 @@ Namespace Services
         ''' die eingeklappte Werkzeugleiste: gezogen wird sie am Rand des Panels, nicht im
         ''' Einstellungsdialog.
         '''
-        ''' Die Vorgabe ist die alte feste Breite. Wer nichts zieht, sieht deshalb genau das, was er
-        ''' vorher sah - und unter diese Zahl geht es auch nicht, sie ist zugleich die Mindestbreite
-        ''' (<see cref="ViewModels.EditorViewModel.AdjustmentsPanelMinWidth"/>).</summary>
-        Public Property EditorAdjustmentsPanelWidth As Double = 330
+        ''' Die Vorgabe gibt neuen Installationen mehr Raum fuer Regler und Zahlenfelder. Darunter
+        ''' darf das Panel weiterhin bis zur Mindestbreite schrumpfen; vorhandene, bewusst schmal
+        ''' gezogene Einstellungen bleiben daher unveraendert.</summary>
+        Public Property EditorAdjustmentsPanelWidth As Double = ViewModels.EditorViewModel.AdjustmentsPanelDefaultWidth
         ''' <summary>Zuletzt gewaehlte Staerke fuer das Entrauschen mit Modell, 0 bis 100.
         '''
         ''' Gemerkt wird sie beim START eines Laufs und nicht bei jeder Reglerbewegung: das Speichern
@@ -429,9 +429,9 @@ Namespace Services
         ''' links und ihren Einstellungen rechts der halbe Monitor, und die Hand wandert bei jedem
         ''' Wechsel einmal quer. Links stehen beide beieinander.</summary>
         Public Property EditorAdjustmentsPanelOnLeft As Boolean = False
-        ''' Werkzeug, das beim Betreten des Editors aktiv ist: "Selection" (Auswahl, bisheriges
-        ''' Verhalten) oder "Adjust" (Anpassen).
-        Public Property EditorStartupTool As String = "Selection"
+        ''' Werkzeug, das beim Betreten des Editors aktiv ist: "Selection" (Auswahl) oder
+        ''' "Adjust" (Anpassen). Ab Werk steht der Editor direkt bei den Anpassungen.
+        Public Property EditorStartupTool As String = "Adjust"
 
         ''' <summary>Was mit den TEXTEBENEN einer fremden Photoshop-Datei geschieht: "Ask" fragt bei
         ''' jedem Öffnen, "Text" übernimmt sie als tippbaren Text, "Image" als Bildpunkte. Ab Werk
@@ -1276,7 +1276,7 @@ Namespace Services
 
         Public Shared Function NormalizeThumbnailSize(value As Double) As Double
             If Double.IsNaN(value) OrElse Double.IsInfinity(value) Then Return 260
-            Return Math.Max(140, Math.Min(480, value))
+            Return Math.Max(140, Math.Min(640, value))
         End Function
 
         Public Shared Function NormalizeThumbnailQuality(value As Integer) As Integer
