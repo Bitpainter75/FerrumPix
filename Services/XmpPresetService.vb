@@ -130,11 +130,11 @@ Namespace Services
             ''' irgendetwas darauf hindeutet - der Nutzer sieht ein Preset, das nichts tut. Deshalb je Regler
             ''' erst der moderne Schlüssel, dann der alte.
             If TryGetXmpDouble(values, "Exposure2012", d) Then
-                ' Belichtung deckt den vollen Adobe-Bereich ±5 EV ab: ×25 → ±125.
-                adj.Exposure = Clamp(d * 25.0, -125, 125)
+                ' Belichtung deckt den vollen Adobe-Bereich ±5 EV ab.
+                adj.Exposure = ClampExposurePoints(d)
             ElseIf TryGetXmpDouble(values, "Exposure", d) Then
                 ' Auch die alte Belichtung steht in Blendenstufen, gleiche Skalierung.
-                adj.Exposure = Clamp(d * 25.0, -125, 125)
+                adj.Exposure = ClampExposurePoints(d)
             End If
             ' Das alte crs:Brightness (-150..+150) hat in PV2012 keine Entsprechung mehr; es kommt der
             ' Helligkeit am nächsten und wird auf deren ±100 gestaucht.
@@ -491,6 +491,15 @@ Namespace Services
             Return Clamp(value, -100, 100)
         End Function
 
+        ''' <summary>Wandelt einen globalen oder lokalen XMP-Belichtungswert in die interne
+        ''' Punkteskala um. Ein EV entspricht ExposurePointsPerStop Punkten; der Bereich umfasst
+        ''' fünf Blendenstufen in beide Richtungen.</summary>
+        Private Shared Function ClampExposurePoints(ev As Double) As Single
+            Dim points = ImageAdjustments.ExposurePointsPerStop
+            Dim limit = points * 5.0
+            Return Clamp(ev * points, -limit, limit)
+        End Function
+
         ''' <summary>Erkennt den kleinen, aber folgenreichen Teil der Adobe-PV2012-Presets, in dem
         ''' eine Master-/Parametrik-Tonwertstufe zusammen mit echten R/G/B-Kanalkurven steht.
         ''' Unsere Engine hat keine Adobe-RAW-/ProPhoto-Tonwertpipeline; die Tonwertstufe nach sRGB
@@ -750,7 +759,9 @@ Namespace Services
         ''' LocalExposure2012 ist EV wie global. Toning (Hue/Sat) → Farbgradierung-Global der Ebene.</summary>
         Private Shared Function BuildLocalAdjustments(chunk As String) As ImageAdjustments
             Dim a As New ImageAdjustments()
-            a.Exposure = Clamp100(CorrAttr(chunk, "LocalExposure2012", 0) * 25.0)
+            ' LocalExposure2012 ist ebenfalls EV. Lightroom/Darktable koennen dort wie global
+            ' bis ±5 EV speichern; nicht mit Clamp100 auf ±4 EV abschneiden.
+            a.Exposure = ClampExposurePoints(CorrAttr(chunk, "LocalExposure2012", 0))
             a.Contrast = Clamp100(CorrAttr(chunk, "LocalContrast2012", 0) * 100.0)
             a.Highlights = Clamp100(CorrAttr(chunk, "LocalHighlights2012", 0) * 100.0)
             a.ShadowsLevel = Clamp100(CorrAttr(chunk, "LocalShadows2012", 0) * 100.0)
