@@ -65,5 +65,7 @@
          Avalonia-Ressource: sie werden auch ohne laufende Anwendung gelesen (Pruefstand,
          Messwerkzeuge), und Avaloniens Ressourcenlader setzt eine gestartete App voraus. -->
     <EmbeddedResource Include="Assets\Objektivdaten\objektivdaten.zip" />
+    <!-- Versionierte, pruefbare Referenzwerte fuer die kameraabhaengige RAW-Grundbelichtung. -->
+    <EmbeddedResource Include="Resources\CameraBaselineTable.json" />
   </ItemGroup>
 </Project>
