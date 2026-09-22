@@ -6131,6 +6131,10 @@ Namespace ViewModels
         Private _lensVignetting As Boolean? = Nothing
         Private _objektivKorrektur As LensDataService.Korrektur = Nothing
         Private _objektivExifName As String = ""
+        ' Der aufgelöste Profilname bleibt auch dann stehen, wenn die Aufnahme an dieser
+        ' Brennweite keine anwendbare Kennlinie hat. So zeigt die Oberfläche nicht nur den
+        ' verkürzten MakerNote-Text wie „35mm f/1.8“.
+        Private _objektivErkannterName As String = ""
         ' Von Hand gewaehltes Objektiv, wenn die Aufnahmedaten keines nennen (Rezeptfeld).
         Private _lensModel As String = ""
         Private _objektivKamera As (Maker As String, Modell As String) = ("", "")
@@ -6182,6 +6186,9 @@ Namespace ViewModels
                     Return LocalizationService.T("Keine Objektivangabe in den Aufnahmedaten")
                 End If
                 If _objektivKorrektur Is Nothing Then
+                    If Not String.IsNullOrWhiteSpace(_objektivErkannterName) Then
+                        Return _objektivErkannterName & " - " & LocalizationService.T("keine Messwerte vorhanden")
+                    End If
                     Return _objektivExifName & " - " & LocalizationService.T("keine Messwerte vorhanden")
                 End If
                 Dim zugeordnet = LensDataService.ZuordnungFuer(_objektivExifName)
@@ -6517,6 +6524,7 @@ Namespace ViewModels
         ''' ermitteln. Wird beim Oeffnen und nach einer Zuordnung gerufen.</summary>
         Private Sub RefreshLensCorrection()
             _objektivExifName = ""
+            _objektivErkannterName = ""
             _objektivKamera = ("", "")
             _objektivKorrektur = Nothing
             Try
@@ -6525,8 +6533,17 @@ Namespace ViewModels
                     _objektivExifName = If(data?.Lens, "")
                     _objektivKamera = ("", If(data?.Camera, ""))
                     _objektivKorrektur = LensDataService.FindCorrectionForFile(_currentImagePath, _lensModel)
+                    If _objektivKorrektur Is Nothing Then
+                        _objektivErkannterName = LensDataService.ResolveLensNameForFile(_currentImagePath, _lensModel)
+                    End If
+                    DiagnosticLogService.LogAlways("Editor.LensCorrection",
+                        $"file={_currentImagePath}; exif={_objektivExifName}; recipe={_lensModel}; " &
+                        $"assignment={LensDataService.ZuordnungFuer(_objektivExifName)}; " &
+                        $"correction={If(_objektivKorrektur?.LensName, "<none>")}; " &
+                        $"resolved={If(_objektivErkannterName, "<none>")}")
                 End If
-            Catch
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Editor.LensCorrection", ex)
             End Try
             _lensFilter = LensAssignment
             Me.RaisePropertyChanged(NameOf(LensFilter))

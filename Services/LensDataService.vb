@@ -361,7 +361,11 @@ Namespace Services
         ''' "Canon EF 24-70mm f/2.8L II USM"), deshalb wird nicht auf Gleichheit verglichen.</summary>
         Private Shared Function NormalizedForName(s As String) As String
             If String.IsNullOrWhiteSpace(s) Then Return ""
-            Dim t = Regex.Replace(s.ToLowerInvariant(), "[^a-z0-9\.]+", " ")
+            ' MetadataExtractor formatiert die Blende mit der Prozesskultur. Bei deutscher
+            ' Oberfläche wird aus "f/1.8" daher "f/1,8", während Lensfun stets den Punkt
+            ' führt. Vor dem Zerlegen angleichen, sonst gehen die gewichtigen Blenden-Token
+            ' auseinander und ein ansonsten eindeutiges Objektiv fällt unter die Matchschwelle.
+            Dim t = Regex.Replace(s.ToLowerInvariant().Replace(","c, "."c), "[^a-z0-9\.]+", " ")
             ' Kamera-MakerNotes nennen etwa "f/1.8", die Lensfun-Datenbank dagegen
             ' "f/1.8G". Ziffer und nachgestellter Buchstabe gehören für den Namensabgleich
             ' nicht zu einem untrennbaren Wort; getrennt bleiben Brennweite/Lichtstärke auch
@@ -746,6 +750,38 @@ Namespace Services
             ApplyChromaticAberration(k, obj, brennweiteMm)
             ApplyVignetting(k, obj, brennweiteMm, blende)
             Return If(k.HasAnything, k, Nothing)
+        End Function
+
+        ''' <summary>Löst nur den Namen des passenden Objektivprofils auf. Anders als
+        ''' <see cref="FindCorrection"/> verlangt diese Abfrage keine Bildmasse, Brennweite oder
+        ''' vorhandene Kennlinie: Die Oberfläche kann damit auch bei einer Aufnahme ohne nutzbare
+        ''' Messwerte sagen, WELCHES Objektiv erkannt wurde.</summary>
+        Public Shared Function ResolveLensName(kameraHersteller As String, kameraModell As String,
+                                               objektivName As String) As String
+            If String.IsNullOrWhiteSpace(objektivName) Then Return ""
+            LoadOnce()
+            If _objektive.Count = 0 Then Return ""
+            Dim obj = BestLens(objektivName, BestCamera(kameraHersteller, kameraModell))
+            Return If(obj?.Modell, "")
+        End Function
+
+        ''' <summary>Dateivariante von <see cref="ResolveLensName"/>. Sie folgt derselben
+        ''' Priorität wie die Korrektur: Rezeptvorgabe, dauerhafte Zuordnung, EXIF.</summary>
+        Public Shared Function ResolveLensNameForFile(path As String, Optional modellVorgabe As String = "") As String
+            If String.IsNullOrWhiteSpace(path) Then Return ""
+            Try
+                Dim verzeichnisse = MetadataExtractor.ImageMetadataReader.ReadMetadata(path)
+                Dim maker = ExifService.GetTagDescAcross(Of MetadataExtractor.Formats.Exif.ExifIfd0Directory)(
+                    verzeichnisse, MetadataExtractor.Formats.Exif.ExifDirectoryBase.TagMake)
+                Dim modell = ExifService.GetTagDescAcross(Of MetadataExtractor.Formats.Exif.ExifIfd0Directory)(
+                    verzeichnisse, MetadataExtractor.Formats.Exif.ExifDirectoryBase.TagModel)
+                Dim lens = ExifService.GetLensDescription(verzeichnisse)
+                Dim suchName = If(String.IsNullOrWhiteSpace(modellVorgabe), ZuordnungFuer(lens), modellVorgabe)
+                If String.IsNullOrWhiteSpace(suchName) Then suchName = lens
+                Return ResolveLensName(maker, modell, suchName)
+            Catch
+                Return ""
+            End Try
         End Function
 
         ''' <summary>Passt dieses Objektiv ueberhaupt an diese Kamera? Kennen wir den Anschluss der
