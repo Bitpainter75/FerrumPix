@@ -35,7 +35,7 @@ Namespace ViewModels
 
         ''' <summary>Breite eines neuen Anpassungspanels. Die Mindestbreite bleibt darunter, damit
         ''' bestehende, bewusst schmal gezogene Einstellungen unveraendert weiter funktionieren.</summary>
-        Public Const AdjustmentsPanelDefaultWidth As Double = 400.0
+        Public Const AdjustmentsPanelDefaultWidth As Double = 380.0
 
         ''' <summary>Und die Obergrenze. Ein Panel, das die halbe Bühne einnimmt, hilft beim
         ''' Feineinstellen nicht mehr - dort sieht man nicht mehr, was man einstellt. Gemessen an
@@ -46,7 +46,7 @@ Namespace ViewModels
         ''' geklemmt. Eine Einstellungsdatei aus einer aelteren Fassung kennt den Wert nicht und
         ''' bringt 0 mit - dann gilt die Vorgabe.</summary>
         Public Shared Function ClampAdjustmentsPanelWidth(value As Double) As Double
-            If Double.IsNaN(value) OrElse value <= 0 Then Return AdjustmentsPanelMinWidth
+            If Double.IsNaN(value) OrElse value <= 0 Then Return AdjustmentsPanelDefaultWidth
             Return Math.Max(AdjustmentsPanelMinWidth, Math.Min(AdjustmentsPanelMaxWidth, value))
         End Function
 

@@ -3741,7 +3741,7 @@ Namespace Views
         ' MINDESTbreite des Anpassungspanels. Sie steht im EditorViewModel, weil auch die Schwelle
         ' fuer die Beschriftungen der Kopfleiste daran haengt - zwei Zahlen an zwei Orten waeren
         ' genau die Art Paar, das irgendwann auseinanderlaeuft.
-        Private Const AdjustmentsPanelWidth As Double = EditorViewModel.AdjustmentsPanelDefaultWidth
+        Private Const AdjustmentsPanelWidth As Double = EditorViewModel.AdjustmentsPanelMinWidth
 
         ''' <summary>Der Ziehrand ist losgelassen: die neue Breite MERKEN.
         '''
