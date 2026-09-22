@@ -903,6 +903,24 @@ Namespace Services
             Dim werte = New ImageAdjustments With {.FarbrauschGrob = UneditedRawCoarseColorNoise}
             Dim stops = RawDecodeService.BaselineExposureStops(path)
             If stops <> 0.0 Then werte.Exposure = CSng(stops * ExposurePointsPerStop)
+            ' Die Kamera-Farbkalibrierung ist dieselbe sichtbare Reglergruppe wie im Editor.
+            ' Sie bleibt eine optionale Vorgabe und wird nie in ein vorhandenes Rezept gemischt.
+            If Not String.IsNullOrWhiteSpace(path) AndAlso AppSettingsService.Load().UseCameraBaselineTable Then
+                Try
+                    Dim directories = MetadataExtractor.ImageMetadataReader.ReadMetadata(path)
+                    Dim ifd0 = directories.OfType(Of MetadataExtractor.Formats.Exif.ExifIfd0Directory)().FirstOrDefault()
+                    Dim calibration = If(ifd0 Is Nothing, Nothing, CameraBaselineTable.ColorCalibrationFor(
+                        ifd0.GetDescription(MetadataExtractor.Formats.Exif.ExifDirectoryBase.TagMake),
+                        ifd0.GetDescription(MetadataExtractor.Formats.Exif.ExifDirectoryBase.TagModel)))
+                    If calibration IsNot Nothing Then
+                        werte.CalibrationRedHue = calibration.RedHue : werte.CalibrationRedSaturation = calibration.RedSaturation
+                        werte.CalibrationGreenHue = calibration.GreenHue : werte.CalibrationGreenSaturation = calibration.GreenSaturation
+                        werte.CalibrationBlueHue = calibration.BlueHue : werte.CalibrationBlueSaturation = calibration.BlueSaturation
+                        werte.CalibrationShadowTint = calibration.ShadowTint
+                    End If
+                Catch
+                End Try
+            End If
             Return werte
         End Function
 

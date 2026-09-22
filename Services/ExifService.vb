@@ -370,7 +370,6 @@ Namespace Services
                 End If
                 data.ColorSpace = GetTagDescAcross(Of ExifSubIfdDirectory)(metaDirectories, ExifSubIfdDirectory.TagColorSpace)
                 data.Lens = GetLensDescription(captureDirectories)
-
                 Dim make = GetTagDescAcross(Of ExifIfd0Directory)(captureDirectories, ExifIfd0Directory.TagMake)
                 Dim model = GetTagDescAcross(Of ExifIfd0Directory)(captureDirectories, ExifIfd0Directory.TagModel)
                 data.Camera = (make & " " & model).Trim()
@@ -973,6 +972,9 @@ Namespace Services
         Friend Shared Function GetLensDescription(metaDirectories As IEnumerable(Of MetadataExtractor.Directory)) As String
             Dim lens = GetTagDescAcross(Of ExifSubIfdDirectory)(metaDirectories, ExifSubIfdDirectory.TagLensModel)
             If Not String.IsNullOrWhiteSpace(lens) Then Return lens
+
+            Dim nikonLens = NikonLensIdService.TryGetLensName(metaDirectories)
+            If Not String.IsNullOrWhiteSpace(nikonLens) Then Return nikonLens
 
             Return GetTagDescAcross(Of NikonType2MakernoteDirectory)(metaDirectories,
                                                                        NikonType2MakernoteDirectory.TagLens)

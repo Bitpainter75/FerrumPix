@@ -222,5 +222,6 @@
       "SONYSLTA58" : 0.232,
       "SONYSLTA77V" : 0.184
    },
-   "referenceOffsetEv" : -0.26
+   "referenceOffsetEv" : -0.26,
+   "colorCalibrations" : {}
 }

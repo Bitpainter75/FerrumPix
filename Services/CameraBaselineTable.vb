@@ -48,6 +48,19 @@ Namespace Services
         Private Shared MaxShiftEv As Double
 
         Private Shared ReadOnly Table As Dictionary(Of String, Double) = LoadTable()
+        Private Shared ReadOnly ColorCalibrations As Dictionary(Of String, ColorCalibration) = LoadColorCalibrations()
+
+        ''' <summary>Die vorhandenen Regler der Kamerakalibrierung als kamerafeste Vorgabe. Sie
+        ''' werden nur bei aktivierter optionaler Kameratabelle auf uneditierte RAWs gesetzt.</summary>
+        Public NotInheritable Class ColorCalibration
+            Public Property RedHue As Single
+            Public Property RedSaturation As Single
+            Public Property GreenHue As Single
+            Public Property GreenSaturation As Single
+            Public Property BlueHue As Single
+            Public Property BlueSaturation As Single
+            Public Property ShadowTint As Single
+        End Class
 
         Private Shared Function LoadTable() As Dictionary(Of String, Double)
             Dim d As New Dictionary(Of String, Double)(StringComparer.Ordinal)
@@ -76,6 +89,33 @@ Namespace Services
             End Try
 
             Return d
+        End Function
+
+        Private Shared Function LoadColorCalibrations() As Dictionary(Of String, ColorCalibration)
+            Dim result As New Dictionary(Of String, ColorCalibration)(StringComparer.Ordinal)
+            Try
+                Dim assembly = GetType(CameraBaselineTable).GetTypeInfo().Assembly
+                Dim resourceName = assembly.GetManifestResourceNames().FirstOrDefault(Function(name) name.EndsWith("CameraBaselineTable.json", StringComparison.OrdinalIgnoreCase))
+                If resourceName Is Nothing Then Return result
+                Using stream = assembly.GetManifestResourceStream(resourceName)
+                    Using document = JsonDocument.Parse(stream)
+                        Dim entries As JsonElement
+                        If Not document.RootElement.TryGetProperty("colorCalibrations", entries) Then Return result
+                        For Each entry In entries.EnumerateObject()
+                            Dim item = entry.Value
+                            result(entry.Name) = New ColorCalibration With {
+                                .RedHue = item.GetProperty("redHue").GetSingle(), .RedSaturation = item.GetProperty("redSaturation").GetSingle(),
+                                .GreenHue = item.GetProperty("greenHue").GetSingle(), .GreenSaturation = item.GetProperty("greenSaturation").GetSingle(),
+                                .BlueHue = item.GetProperty("blueHue").GetSingle(), .BlueSaturation = item.GetProperty("blueSaturation").GetSingle(),
+                                .ShadowTint = item.GetProperty("shadowTint").GetSingle()}
+                        Next
+                    End Using
+                End Using
+            Catch ex As Exception
+                DiagnosticLogService.LogException("CameraBaselineTable.LoadColorCalibrations", ex)
+                result.Clear()
+            End Try
+            Return result
         End Function
 
         ''' <summary>Schluessel aus Hersteller und Modell: nur Buchstaben und Ziffern, gross.
@@ -117,6 +157,11 @@ Namespace Services
             If delta > MaxShiftEv Then delta = MaxShiftEv
             If delta < -MaxShiftEv Then delta = -MaxShiftEv
             Return standardEv - delta
+        End Function
+
+        Public Shared Function ColorCalibrationFor(maker As String, modell As String) As ColorCalibration
+            Dim result As ColorCalibration = Nothing
+            Return If(ColorCalibrations.TryGetValue(Key(maker, modell), result), result, Nothing)
         End Function
 
     End Class
