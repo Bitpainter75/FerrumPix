@@ -8645,4 +8645,7 @@
   <data name="Holt_die_Zeichnung_herein_die_oberhalb_von_Wei_l_a3677090" xml:space="preserve">
     <value>Mengambil detail yang berada di atas putih dan mengimbangi kecerahannya. Baru dengan ini pemulihan sorotan di panel cahaya punya bahan untuk dikerjakan. Jika dimatikan, sorotan dipotong saat pengembangan: jalan kembali, seandainya foto dari sebuah kamera menjadi terlalu terang dengannya.</value>
   </data>
+  <data name="Belichtung_EV_ce98f40d" xml:space="preserve">
+    <value>Pencahayaan (EV)</value>
+  </data>
 </root>

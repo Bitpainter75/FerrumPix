@@ -8645,4 +8645,7 @@
   <data name="Holt_die_Zeichnung_herein_die_oberhalb_von_Wei_l_a3677090" xml:space="preserve">
     <value>흰색 위에 있는 계조를 가져오고 그만큼 밝기를 보정합니다. 이것이 있어야 빛 패널의 하이라이트 복구가 다룰 것이 생깁니다. 끄면 현상할 때 하이라이트가 잘립니다. 어떤 카메라의 사진이 이 때문에 너무 밝게 나올 때 돌아갈 길입니다.</value>
   </data>
+  <data name="Belichtung_EV_ce98f40d" xml:space="preserve">
+    <value>노출 (EV)</value>
+  </data>
 </root>

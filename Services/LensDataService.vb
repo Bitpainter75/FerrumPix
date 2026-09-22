@@ -362,6 +362,11 @@ Namespace Services
         Private Shared Function NormalizedForName(s As String) As String
             If String.IsNullOrWhiteSpace(s) Then Return ""
             Dim t = Regex.Replace(s.ToLowerInvariant(), "[^a-z0-9\.]+", " ")
+            ' Kamera-MakerNotes nennen etwa "f/1.8", die Lensfun-Datenbank dagegen
+            ' "f/1.8G". Ziffer und nachgestellter Buchstabe gehören für den Namensabgleich
+            ' nicht zu einem untrennbaren Wort; getrennt bleiben Brennweite/Lichtstärke auch
+            ' ohne einen vollständigen Handelsnamen vergleichbar.
+            t = Regex.Replace(t, "(?<=\d)(?=[a-z])", " ")
             Return Regex.Replace(t, "\s+", " ").Trim()
         End Function
 
@@ -546,8 +551,7 @@ Namespace Services
                     verzeichnisse, MetadataExtractor.Formats.Exif.ExifDirectoryBase.TagMake)
                 Dim modell = ExifService.GetTagDescAcross(Of MetadataExtractor.Formats.Exif.ExifIfd0Directory)(
                     verzeichnisse, MetadataExtractor.Formats.Exif.ExifDirectoryBase.TagModel)
-                Dim lens = ExifService.GetTagDescAcross(Of MetadataExtractor.Formats.Exif.ExifSubIfdDirectory)(
-                    verzeichnisse, MetadataExtractor.Formats.Exif.ExifDirectoryBase.TagLensModel)
+                Dim lens = ExifService.GetLensDescription(verzeichnisse)
                 Dim brennweite = FirstNumber(ExifService.GetTagDescAcross(Of MetadataExtractor.Formats.Exif.ExifSubIfdDirectory)(
                     verzeichnisse, MetadataExtractor.Formats.Exif.ExifDirectoryBase.TagFocalLength))
                 Dim blende = FirstNumber(ExifService.GetTagDescAcross(Of MetadataExtractor.Formats.Exif.ExifSubIfdDirectory)(

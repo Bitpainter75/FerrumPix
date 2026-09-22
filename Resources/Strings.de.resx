@@ -8615,4 +8615,7 @@
   <data name="Holt_die_Zeichnung_herein_die_oberhalb_von_Wei_l_a3677090" xml:space="preserve">
     <value>Holt die Zeichnung herein, die oberhalb von Weiß liegt, und gleicht die Helligkeit dafür aus. Erst dadurch hat die Lichterrettung im Lichtpanel etwas zu arbeiten. Ausgeschaltet werden die Lichter beim Entwickeln beschnitten: der Rückweg, falls Aufnahmen einer Kamera damit zu hell geraten.</value>
   </data>
+  <data name="Belichtung_EV_ce98f40d" xml:space="preserve">
+    <value>Belichtung (EV)</value>
+  </data>
 </root>

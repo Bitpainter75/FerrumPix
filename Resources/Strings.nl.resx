@@ -8641,4 +8641,7 @@
   <data name="Holt_die_Zeichnung_herein_die_oberhalb_von_Wei_l_a3677090" xml:space="preserve">
     <value>Haalt de tekening binnen die boven wit ligt en vereffent de helderheid daarvoor. Pas daardoor heeft het terughalen van hoge lichten in het lichtpaneel iets om mee te werken. Uitgeschakeld worden de hoge lichten bij het ontwikkelen afgesneden: de weg terug, mocht een camera hiermee te licht uitkomen.</value>
   </data>
+  <data name="Belichtung_EV_ce98f40d" xml:space="preserve">
+    <value>Belichting (EV)</value>
+  </data>
 </root>

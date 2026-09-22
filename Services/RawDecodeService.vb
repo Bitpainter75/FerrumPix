@@ -2439,6 +2439,64 @@ Namespace Services
             End Try
         End Function
 
+        ''' <summary>DNG-Feld BaselineExposure (0xC62A) im Verzeichnis IFD0.</summary>
+        Private Const BaselineExposureTag As Integer = &HC62A
+
+        ''' <summary>Aeusserste Grenze, in Blendenstufen: so weit reicht der Regler.</summary>
+        Private Const BaselineExposureLimit As Double = 5.0
+
+        Private Shared ReadOnly BaselineExposures As New Dictionary(Of String, Double)(StringComparer.Ordinal)
+        Private Shared ReadOnly BaselineExposuresLock As New Object()
+
+        ''' <summary>Was die DATEI SELBST zu ihrer Grundhelligkeit sagt, in Blendenstufen. 0, wenn sie
+        ''' nichts sagt - und das ist der Normalfall.
+        '''
+        ''' <para>Das Feld gibt es nur im DNG-Format, und dort traegt es der Schreiber der Datei ein:
+        ''' die Kamera, der Umwandler oder eine Firmware wie CHDK. Der Bestandslauf über 462
+        ''' RAW-Dateien fand 21 DNGs, davon 17 mit dem Feld und 16 mit einem Wert ungleich null:
+        ''' alle negativ zwischen -0,2 und -1,0 Stufen. Kein einziges CR2, NEF, ARW, RW2, ORF oder
+        ''' RAF liefert hier einen Wert.</para>
+        '''
+        ''' <para>WOFUER ES GEBRAUCHT WIRD: unsere Basisstufe entwickelt mit einer FESTEN
+        ''' Grundbelichtung, gefittet an einer Kamera. Eine Datei, die ausdruecklich eine halbe Stufe
+        ''' weniger verlangt, kam bisher genau um diese halbe Stufe zu hell heraus, und niemand konnte
+        ''' sehen, warum. Der Wert landet deshalb im Regler Belichtung einer unbearbeiteten RAW
+        ''' (ImageAdjustments.ForUneditedRaw) - SICHTBAR und rueckstellbar, statt still im Decode.</para>
+        '''
+        ''' <para>Gelesen wird EINMAL je Pfad. Der Betrachter fragt beim Blaettern fuer jedes Bild,
+        ''' und ein Metadatenlauf ueber eine 30-MB-Datei ist zu teuer, um ihn zu wiederholen.</para></summary>
+        Public Shared Function BaselineExposureStops(path As String) As Double
+            If String.IsNullOrEmpty(path) Then Return 0.0
+            ' Nur DNG traegt das Feld. Die Abkuerzung spart den Metadatenlauf fuer alle anderen
+            ' Formate, und das sind in der Praxis fast alle Dateien.
+            If Not path.EndsWith(".dng", StringComparison.OrdinalIgnoreCase) Then Return 0.0
+
+            SyncLock BaselineExposuresLock
+                Dim bekannt As Double
+                If BaselineExposures.TryGetValue(path, bekannt) Then Return bekannt
+            End SyncLock
+
+            Dim stops As Double = 0.0
+            Try
+                Dim verzeichnisse = MetadataExtractor.ImageMetadataReader.ReadMetadata(path)
+                Dim ifd0 = verzeichnisse.OfType(Of MetadataExtractor.Formats.Exif.ExifIfd0Directory)().FirstOrDefault()
+                Dim gelesen As Single
+                If ifd0 IsNot Nothing AndAlso
+                   MetadataExtractor.DirectoryExtensions.TryGetSingle(ifd0, BaselineExposureTag, gelesen) AndAlso
+                   Not Single.IsNaN(gelesen) AndAlso Not Single.IsInfinity(gelesen) Then
+                    stops = Math.Max(-BaselineExposureLimit, Math.Min(BaselineExposureLimit, CDbl(gelesen)))
+                End If
+            Catch
+                ' Eine unlesbare Datei sagt nichts - dann sagt sie eben nichts. Nie raten.
+                stops = 0.0
+            End Try
+
+            SyncLock BaselineExposuresLock
+                BaselineExposures(path) = stops
+            End SyncLock
+            Return stops
+        End Function
+
         Private Shared Function CheckedPixelCount(width As Integer, height As Integer) As Long
             If width <= 0 OrElse height <= 0 Then Return 0
             Dim pixelCount = CLng(width) * CLng(height)

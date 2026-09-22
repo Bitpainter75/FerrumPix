@@ -880,11 +880,30 @@ Namespace Services
         ''' 99 Prozent. 30 wirkt also deutlich und laesst Luft nach oben.</summary>
         Public Const UneditedRawCoarseColorNoise As Single = 30
 
+        ''' <summary>Punkte des Reglers <see cref="Exposure"/> je Blendenstufe.
+        '''
+        ''' Die Skala ist Adobes: crs:Exposure2012 steht in Stufen, und der Regler traegt sie mal 25,
+        ''' laeuft also von -125 bis +125 fuer plus/minus fuenf Stufen. Dieselbe Zahl steckt in
+        ''' <c>XmpPresetService</c> beim Einlesen und in <c>ImageProcessorPointOps</c> beim Anwenden
+        ''' (dort als <c>/ 100 * 4</c> geschrieben, was dasselbe ist). Wer sie aendert, aendert sie an
+        ''' allen vier Stellen oder gar nicht.</summary>
+        Public Const ExposurePointsPerStop As Double = 25.0
+
         ''' <summary>Die Regler, mit denen eine RAW-Datei OHNE Rezept entwickelt wird. EINE Stelle fuer
         ''' Editor, Betrachter, Stapel und Drehen: stuenden die Werte an jedem Ort einzeln, saehe
-        ''' dieselbe Datei im Editor anders aus als im Betrachter.</summary>
-        Public Shared Function ForUneditedRaw() As ImageAdjustments
-            Return New ImageAdjustments With {.FarbrauschGrob = UneditedRawCoarseColorNoise}
+        ''' dieselbe Datei im Editor anders aus als im Betrachter.
+        '''
+        ''' <para><paramref name="path"/> ist die Datei, um die es geht. Sagt sie selbst etwas zu ihrer
+        ''' Grundhelligkeit - das DNG-Feld BaselineExposure -, steht das als Startwert im Regler
+        ''' Belichtung. NUR HIER, und das ist der Punkt: dieser Weg laeuft ausschliesslich fuer eine
+        ''' RAW OHNE Rezept. Liegt eine Beistelldatei mit eigener Belichtung daneben, kommen die
+        ''' Aufrufer gar nicht erst hierher, und der gespeicherte Wert bleibt der, der er war.
+        ''' Ohne Pfad bleibt es bei den blossen Startwerten.</para></summary>
+        Public Shared Function ForUneditedRaw(Optional path As String = Nothing) As ImageAdjustments
+            Dim werte = New ImageAdjustments With {.FarbrauschGrob = UneditedRawCoarseColorNoise}
+            Dim stops = RawDecodeService.BaselineExposureStops(path)
+            If stops <> 0.0 Then werte.Exposure = CSng(stops * ExposurePointsPerStop)
+            Return werte
         End Function
 
         Private Shared _pixelProperties As Reflection.PropertyInfo() = Nothing

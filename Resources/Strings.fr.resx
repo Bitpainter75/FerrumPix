@@ -8601,4 +8601,7 @@
   <data name="Holt_die_Zeichnung_herein_die_oberhalb_von_Wei_l_a3677090" xml:space="preserve">
     <value>Récupère le détail situé au-dessus du blanc et compense la luminosité en conséquence. C'est seulement ainsi que la récupération des hautes lumières du panneau Lumière a de quoi travailler. Désactivé, les hautes lumières sont écrêtées au développement : le retour en arrière, si les prises de vue d'un appareil ressortent trop claires avec.</value>
   </data>
+  <data name="Belichtung_EV_ce98f40d" xml:space="preserve">
+    <value>Exposition (EV)</value>
+  </data>
 </root>

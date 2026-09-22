@@ -8641,4 +8641,7 @@
   <data name="Holt_die_Zeichnung_herein_die_oberhalb_von_Wei_l_a3677090" xml:space="preserve">
     <value>Tuo esiin piirron, joka on valkoisen yläpuolella, ja tasaa kirkkauden sen mukaan. Vasta tämä antaa valopaneelin huippujen palautukselle jotain työstettävää. Pois päältä huiput leikataan kehityksessä: paluutie, jos jonkin kameran kuvat tulevat tällä liian vaaleiksi.</value>
   </data>
+  <data name="Belichtung_EV_ce98f40d" xml:space="preserve">
+    <value>Valotus (EV)</value>
+  </data>
 </root>

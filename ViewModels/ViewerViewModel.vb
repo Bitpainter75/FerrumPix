@@ -2320,7 +2320,7 @@ Namespace ViewModels
                     ' Rezept. Genau das ist im Vergleich und beim Schalter fuer unbearbeitete
                     ' RAWs gewollt.
                     Dim adj = If(RawSidecarService.Exists(path), RawSidecarService.TryRead(path), Nothing)
-                    If adj Is Nothing Then adj = ImageAdjustments.ForUneditedRaw()
+                    If adj Is Nothing Then adj = ImageAdjustments.ForUneditedRaw(path)
                     Try
                         Dim developed = ImageProcessor.ApplyAdjustments(path, adj)
                         If developed IsNot Nothing Then Return developed
@@ -3149,7 +3149,7 @@ Namespace ViewModels
                                         ' anderen Werten als vor dem Drehen.
                                         Dim adj = RawSidecarService.TryRead(source)
                                         If adj Is Nothing Then
-                                            adj = If(RawPreviewService.IsSupportedRaw(source), ImageAdjustments.ForUneditedRaw(), New ImageAdjustments())
+                                            adj = If(RawPreviewService.IsSupportedRaw(source), ImageAdjustments.ForUneditedRaw(source), New ImageAdjustments())
                                         End If
                                         AppendRotationStep(adj, angle)
                                         Return RawSidecarService.TryWrite(source, adj)

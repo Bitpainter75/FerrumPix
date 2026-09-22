@@ -11,6 +11,7 @@ Imports System.Text
 Imports System.Xml.Linq
 Imports MetadataExtractor
 Imports MetadataExtractor.Formats.Exif
+Imports MetadataExtractor.Formats.Exif.Makernotes
 Imports MetadataExtractor.Formats.Iptc
 
 Namespace Services
@@ -368,7 +369,7 @@ Namespace Services
                     If height.HasValue Then data.ImageHeight = height.Value.ToString(CultureInfo.InvariantCulture)
                 End If
                 data.ColorSpace = GetTagDescAcross(Of ExifSubIfdDirectory)(metaDirectories, ExifSubIfdDirectory.TagColorSpace)
-                data.Lens = GetTagDescAcross(Of ExifSubIfdDirectory)(captureDirectories, ExifSubIfdDirectory.TagLensModel)
+                data.Lens = GetLensDescription(captureDirectories)
 
                 Dim make = GetTagDescAcross(Of ExifIfd0Directory)(captureDirectories, ExifIfd0Directory.TagMake)
                 Dim model = GetTagDescAcross(Of ExifIfd0Directory)(captureDirectories, ExifIfd0Directory.TagModel)
@@ -958,6 +959,23 @@ Namespace Services
                 If Not String.IsNullOrWhiteSpace(desc) Then Return desc
             Next
             Return ""
+        End Function
+
+        ''' <summary>Der normale EXIF-Tag <c>LensModel</c> ist die beste Angabe und hat immer
+        ''' Vorrang. Manche Nikon-NEFs - unter anderem aus der D5300/D7500 - schreiben ihn aber
+        ''' nicht. Die Brennweite und die Lichtstärke stehen trotzdem als Nikon-MakerNote bereit.
+        ''' Das ist kein voller, eindeutiger Handelsname, reicht zusammen mit Gehäuse und Bajonett
+        ''' aber für den vorsichtigen Abgleich mit der Objektivdatenbank.
+        '''
+        ''' MetadataExtractor dekodiert die proprietäre Nikon-Lens-ID nicht zu einem Namen; bewusst
+        ''' wird daher nur der lesbare <c>Lens</c>-Eintrag genutzt, statt eine eigene, unvollständige
+        ''' Lens-ID-Tabelle zu pflegen.</summary>
+        Friend Shared Function GetLensDescription(metaDirectories As IEnumerable(Of MetadataExtractor.Directory)) As String
+            Dim lens = GetTagDescAcross(Of ExifSubIfdDirectory)(metaDirectories, ExifSubIfdDirectory.TagLensModel)
+            If Not String.IsNullOrWhiteSpace(lens) Then Return lens
+
+            Return GetTagDescAcross(Of NikonType2MakernoteDirectory)(metaDirectories,
+                                                                       NikonType2MakernoteDirectory.TagLens)
         End Function
 
         ''' <summary>ICC-v4-Profile hinterlegen ihren Namen mehrsprachig; MetadataExtractor gibt das roh als

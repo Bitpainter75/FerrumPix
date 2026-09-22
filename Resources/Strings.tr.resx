@@ -8645,4 +8645,7 @@
   <data name="Holt_die_Zeichnung_herein_die_oberhalb_von_Wei_l_a3677090" xml:space="preserve">
     <value>Beyazın üstünde kalan ayrıntıyı içeri alır ve bunun için parlaklığı dengeler. Işık panelindeki parlak alan kurtarmanın çalışacağı bir şey ancak böyle olur. Kapalıyken parlak alanlar geliştirme sırasında kırpılır: bir kameranın çekimleri bununla fazla açık çıkarsa dönüş yolu.</value>
   </data>
+  <data name="Belichtung_EV_ce98f40d" xml:space="preserve">
+    <value>Pozlama (EV)</value>
+  </data>
 </root>

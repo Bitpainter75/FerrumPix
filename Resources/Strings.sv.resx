@@ -8641,4 +8641,7 @@
   <data name="Holt_die_Zeichnung_herein_die_oberhalb_von_Wei_l_a3677090" xml:space="preserve">
     <value>Hämtar in teckningen som ligger över vitt och jämnar ut ljusstyrkan för det. Först då har högdagerräddningen i ljuspanelen något att arbeta med. Avstängt beskärs högdagrarna vid framkallningen: vägen tillbaka, om bilder från en kamera blir för ljusa med den.</value>
   </data>
+  <data name="Belichtung_EV_ce98f40d" xml:space="preserve">
+    <value>Exponering (EV)</value>
+  </data>
 </root>

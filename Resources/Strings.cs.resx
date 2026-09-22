@@ -8641,4 +8641,7 @@
   <data name="Holt_die_Zeichnung_herein_die_oberhalb_von_Wei_l_a3677090" xml:space="preserve">
     <value>Přinese kresbu, která leží nad bílou, a vyrovná za to jas. Teprve tím má záchrana světel ve světelném panelu s čím pracovat. Vypnuto se světla při vyvolání ořezávají: cesta zpět, kdyby snímky z některého fotoaparátu byly takto příliš světlé.</value>
   </data>
+  <data name="Belichtung_EV_ce98f40d" xml:space="preserve">
+    <value>Expozice (EV)</value>
+  </data>
 </root>

@@ -8599,4 +8599,7 @@
   <data name="Holt_die_Zeichnung_herein_die_oberhalb_von_Wei_l_a3677090" xml:space="preserve">
     <value>把位于白色之上的层次取回来，并为此补偿亮度。有了它，光线面板里的高光恢复才有可以处理的内容。关闭后，解码时会截断高光：万一某台相机的照片因此过亮，这就是退路。</value>
   </data>
+  <data name="Belichtung_EV_ce98f40d" xml:space="preserve">
+    <value>曝光度 (EV)</value>
+  </data>
 </root>

@@ -342,5 +342,53 @@ Namespace Converters
         End Function
     End Class
 
+    ''' <summary>Die Belichtung in BLENDENSTUFEN, fuer das Zahlenfeld neben dem Regler.
+    '''
+    ''' Der Regler selbst laeuft von -125 bis +125, und das ist keine willkuerliche Skala: 25 Punkte
+    ''' sind genau eine Blendenstufe. Dieselbe Rechnung steht an zwei weiteren Stellen, und beide
+    ''' muessen mit dieser hier uebereinstimmen - <c>XmpPresetService</c> liest crs:Exposure2012 mal
+    ''' 25 ein, und <c>ImageProcessorPointOps</c> rechnet beim Anwenden Exposure / 100 * 4. Der volle
+    ''' Weg sind damit plus/minus 5 Stufen, genau Adobes Bereich.
+    '''
+    ''' NUR DIE ANZEIGE WIRD UMGERECHNET. Der gespeicherte Wert bleibt die Punktzahl: er steht so im
+    ''' Rezept, in der Beistelldatei, in den Presets und in den Zwischenspeicher-Schluesseln. Ein
+    ''' Umstellen der Eigenschaft selbst hiesse, jeden dieser Staende umzurechnen.</summary>
+    Public Class ExposureStopsConverter
+        Implements IValueConverter
+
+        ''' <summary>Punkte je Blendenstufe - die Zahl steht bei der Anpassung selbst, damit es sie
+        ''' nicht zweimal gibt.</summary>
+        Private Shared ReadOnly Property PointsPerStop As Double
+            Get
+                Return Services.ImageAdjustments.ExposurePointsPerStop
+            End Get
+        End Property
+
+        ''' <summary>Die Zahl hinter dem gebundenen Wert. Ueber IConvertible statt ueber den Text:
+        ''' das Zahlenfeld reicht ein Decimal herein und die Eigenschaft ein Double, und ein Umweg
+        ''' ueber ToString haengt am Dezimaltrennzeichen der eingestellten Sprache.</summary>
+        Private Shared Function AsNumber(value As Object, ByRef number As Double) As Boolean
+            If value Is Nothing Then Return False
+            Try
+                number = System.Convert.ToDouble(value, CultureInfo.InvariantCulture)
+                Return True
+            Catch
+                Return False
+            End Try
+        End Function
+
+        Public Function Convert(value As Object, targetType As Type, parameter As Object, culture As CultureInfo) As Object Implements IValueConverter.Convert
+            Dim points As Double
+            If Not AsNumber(value, points) Then Return BindingOperations.DoNothing
+            Return CDec(points / PointsPerStop)
+        End Function
+
+        Public Function ConvertBack(value As Object, targetType As Type, parameter As Object, culture As CultureInfo) As Object Implements IValueConverter.ConvertBack
+            Dim stops As Double
+            If Not AsNumber(value, stops) Then Return BindingOperations.DoNothing
+            Return stops * PointsPerStop
+        End Function
+    End Class
+
 
 End Namespace

@@ -8641,4 +8641,7 @@
   <data name="Holt_die_Zeichnung_herein_die_oberhalb_von_Wei_l_a3677090" xml:space="preserve">
     <value>白より上にある描写を取り込み、その分の明るさを補正します。これがあって初めて、ライトパネルのハイライト復元に扱うものができます。オフにすると現像時にハイライトが切り詰められます。あるカメラの写真がこれで明るくなりすぎる場合の戻り道です。</value>
   </data>
+  <data name="Belichtung_EV_ce98f40d" xml:space="preserve">
+    <value>露出 (EV)</value>
+  </data>
 </root>

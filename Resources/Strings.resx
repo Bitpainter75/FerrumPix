@@ -8616,4 +8616,7 @@
   <data name="Holt_die_Zeichnung_herein_die_oberhalb_von_Wei_l_a3677090" xml:space="preserve">
     <value>Brings in the detail that lies above white and compensates the brightness for it. Only this gives the highlight recovery in the light panel something to work with. Switched off, the highlights are clipped while developing: the way back, should shots from a camera come out too bright with it.</value>
   </data>
+  <data name="Belichtung_EV_ce98f40d" xml:space="preserve">
+    <value>Exposure (EV)</value>
+  </data>
 </root>

@@ -11000,7 +11000,7 @@ Namespace ViewModels
             ' aber nur, wenn der Stapel sie auch ENTWICKELT. Die eingebettete Vorschau hat die Kamera
             ' schon entrauscht.
             If RawPreviewService.IsSupportedRaw(sourcePath) AndAlso BatchDevelopsRaw(sourcePath) Then
-                Return ImageAdjustments.ForUneditedRaw()
+                Return ImageAdjustments.ForUneditedRaw(sourcePath)
             End If
             Return New ImageAdjustments()
         End Function

@@ -8601,4 +8601,7 @@
   <data name="Holt_die_Zeichnung_herein_die_oberhalb_von_Wei_l_a3677090" xml:space="preserve">
     <value>Recupera el detalle que está por encima del blanco y compensa el brillo por ello. Solo así la recuperación de luces del panel de luz tiene con qué trabajar. Desactivado, las luces se recortan al revelar: la vuelta atrás, por si las tomas de alguna cámara salen demasiado claras con ella.</value>
   </data>
+  <data name="Belichtung_EV_ce98f40d" xml:space="preserve">
+    <value>Exposicion (EV)</value>
+  </data>
 </root>

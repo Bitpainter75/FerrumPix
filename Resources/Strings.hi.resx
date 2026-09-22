@@ -8645,4 +8645,7 @@
   <data name="Holt_die_Zeichnung_herein_die_oberhalb_von_Wei_l_a3677090" xml:space="preserve">
     <value>सफ़ेद से ऊपर की जो जानकारी है उसे भीतर लाता है और उसके लिए चमक की भरपाई करता है। इसी से प्रकाश पैनल की हाइलाइट रिकवरी को कुछ काम मिलता है। बंद होने पर विकास के समय हाइलाइट काट दिए जाते हैं: वापसी का रास्ता, अगर किसी कैमरे के चित्र इससे बहुत उजले निकलें।</value>
   </data>
+  <data name="Belichtung_EV_ce98f40d" xml:space="preserve">
+    <value>एक्सपोज़र (EV)</value>
+  </data>
 </root>

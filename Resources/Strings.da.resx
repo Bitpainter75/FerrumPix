@@ -8641,4 +8641,7 @@
   <data name="Holt_die_Zeichnung_herein_die_oberhalb_von_Wei_l_a3677090" xml:space="preserve">
     <value>Henter den tegning ind, der ligger over hvid, og udligner lysstyrken for det. Først derved har højlysredningen i lyspanelet noget at arbejde med. Slået fra beskæres højlysene under fremkaldelsen: vejen tilbage, hvis billeder fra et kamera bliver for lyse med den.</value>
   </data>
+  <data name="Belichtung_EV_ce98f40d" xml:space="preserve">
+    <value>Eksponering (EV)</value>
+  </data>
 </root>

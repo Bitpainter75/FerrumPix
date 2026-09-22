@@ -831,7 +831,13 @@ Namespace ViewModels
         ''' ist der Weg, auf dem die Lichterrettung ueberhaupt etwas zu arbeiten hat. Ausgeschaltet
         ''' entwickelt FerrumPix sie beschnitten - der Rueckweg, falls eine Kamera damit zu hell
         ''' geraet. Der Stand steht in den Zwischenspeicher-Schluesseln des Decodes und im Namen der
-        ''' Kachel, das Umlegen wirkt also und laesst nichts Altes stehen.</summary>
+        ''' Kachel, das Umlegen wirkt also und laesst nichts Altes stehen.
+        '''
+        ''' <para>OHNE BEDIENELEMENT: die Zeile in den Einstellungen ist ausgebaut, weil der
+        ''' Feldbericht, fuer den sie gedacht war, an einer DNG-Datei haengt - und die lief bis
+        ''' 0.9.48 als fertiges RGB an der Basisstufe vorbei (RawDecodeService.IsFinishedRgb). Der
+        ''' Schalter aendert dort nichts. Die Eigenschaft bleibt, damit die Diagnose sie messen kann
+        ''' und die Zeile zurueckkommen kann, ohne neu gebaut zu werden.</para></summary>
         Public Property RawHighlightUnclip As Boolean
             Get
                 Return _rawHighlightUnclip

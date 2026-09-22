@@ -23,6 +23,7 @@
         <conv:SearchFieldLabelConverter x:Key="SearchFieldLabelConverter"/>
         <conv:SearchOperatorLabelConverter x:Key="SearchOperatorLabelConverter"/>
         <conv:FolderDepthToMarginConverter x:Key="FolderDepthToMarginConverter"/>
+        <conv:ExposureStopsConverter x:Key="ExposureStopsConverter"/>
     </Application.Resources>
     <Application.Styles>
         <FluentTheme>

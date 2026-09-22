@@ -8645,4 +8645,7 @@
   <data name="Holt_die_Zeichnung_herein_die_oberhalb_von_Wei_l_a3677090" xml:space="preserve">
     <value>ดึงรายละเอียดที่อยู่เหนือสีขาวเข้ามา แล้วชดเชยความสว่างให้ ด้วยวิธีนี้เท่านั้นการกู้ส่วนสว่างในแผงแสงจึงมีอะไรให้ทำ เมื่อปิด ส่วนสว่างจะถูกตัดทิ้งตอนพัฒนาไฟล์ นี่คือทางกลับ หากภาพจากกล้องบางรุ่นสว่างเกินไปเพราะสิ่งนี้</value>
   </data>
+  <data name="Belichtung_EV_ce98f40d" xml:space="preserve">
+    <value>การรับแสง (EV)</value>
+  </data>
 </root>

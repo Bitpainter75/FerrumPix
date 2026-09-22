@@ -16196,7 +16196,7 @@ Namespace ViewModels
             ' Betrachter. Sie laufen durch denselben Weg wie ein geladenes Rezept und gelten damit
             ' nicht als ungespeicherte Aenderung.
             If fpxAdjustments Is Nothing AndAlso RawPreviewService.IsSupportedRaw(path) Then
-                fpxAdjustments = ImageAdjustments.ForUneditedRaw()
+                fpxAdjustments = ImageAdjustments.ForUneditedRaw(path)
             End If
 
             CleanupCurrentFpxTempDir()
@@ -16544,7 +16544,7 @@ Namespace ViewModels
             End If
             ' Ohne Rezept die Startwerte einer unbearbeiteten RAW - derselbe Weg wie beim Blaettern.
             If fpxAdjustments Is Nothing AndAlso RawPreviewService.IsSupportedRaw(imagePath) Then
-                fpxAdjustments = ImageAdjustments.ForUneditedRaw()
+                fpxAdjustments = ImageAdjustments.ForUneditedRaw(imagePath)
             End If
 
             CleanupCurrentFpxTempDir()
@@ -21603,10 +21603,17 @@ Namespace ViewModels
             ' Rezept beginnt sie mit ImageAdjustments.ForUneditedRaw; stuenden hier die Nullen,
             ' saehe das "Original" fleckiger aus als beim ersten Oeffnen, und ein Speichern
             ' schriebe genau diesen Stand in die Beistelldatei.
+            ' MIT DEM PFAD, nicht ohne: zu den Startwerten gehoert seit dem BaselineExposure auch die
+            ' Belichtung, und die haengt an der DATEI. Ohne den Pfad spraenge eine DNG, die eine halbe
+            ' Stufe weniger verlangt, beim Zuruecksetzen genau um diese Stufe heller - derselbe
+            ' Fehler, gegen den der Startwert gebaut ist.
             If RawPreviewService.IsSupportedRaw(_currentImagePath) Then
-                _farbrauschGrob = ImageAdjustments.ForUneditedRaw().FarbrauschGrob
+                Dim startwerte = ImageAdjustments.ForUneditedRaw(_currentImagePath)
+                _farbrauschGrob = startwerte.FarbrauschGrob
+                _exposure = startwerte.Exposure
                 Me.RaisePropertyChanged(NameOf(FarbrauschGrob))
                 Me.RaisePropertyChanged(NameOf(HasColorBlotches))
+                Me.RaisePropertyChanged(NameOf(Exposure))
             End If
             _hasChanges = True
             Me.RaisePropertyChanged(NameOf(HasUnsavedChanges))
@@ -25250,7 +25257,12 @@ Namespace ViewModels
             _shadowsLevel = 0
             _whites = 0
             _blacks = 0
-            _exposure = 0
+            ' NULL IST NICHT IMMER DER STARTWERT DER BELICHTUNG. Sagt eine DNG selbst, dass sie eine
+            ' halbe Stufe weniger will (BaselineExposure), dann ist DAS ihr unbearbeiteter Stand -
+            ' genau wie beim Zuruecksetzen aller Bearbeitungen. Stuende hier stur die Null, machte
+            ' ausgerechnet der kleine Knopf das Bild kaputt, das der grosse richtig stellt.
+            _exposure = ImageAdjustments.ForUneditedRaw(
+                If(RawPreviewService.IsSupportedRaw(_currentImagePath), _currentImagePath, Nothing)).Exposure
             _rawHighlightRecovery = False
             RaiseLightPropertiesChanged()
             Me.RaisePropertyChanged(NameOf(RawHighlightRecoveryEnabled))
