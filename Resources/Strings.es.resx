@@ -8604,4 +8604,8 @@
   <data name="Belichtung_EV_ce98f40d" xml:space="preserve">
     <value>Exposicion (EV)</value>
   </data>
+  <data name="Beim_Doppelklick_auf_das_Bild_8c50523e" xml:space="preserve"><value>Al hacer doble clic en la imagen</value></data>
+  <data name="ffnet_bei_Doppelklick_auf_das_Bild_den_Editor_od_d7f39cca" xml:space="preserve"><value>Al hacer doble clic en la imagen, abre el editor o vuelve a la galería.</value></data>
+  <data name="Beim_Pinselzug_STRG_ALT_SHIFT_a2100fca" xml:space="preserve"><value>Durante un trazo de pincel: CTRL / ALT / SHIFT</value></data>
+  <data name="STRG_h_lt_die_Richtung_des_ersten_kleinen_Zuges__077c64f0" xml:space="preserve"><value>CTRL fija la dirección tras el primer trazo corto; ALT pinta horizontalmente y SHIFT verticalmente. Se aplica a pintar, borrador, pinceles de máscara y selección, reparación y difuminado; el tampón de clonar solo admite CTRL (ALT fija la fuente).</value></data>
 </root>

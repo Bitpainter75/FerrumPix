@@ -8618,4 +8618,12 @@
   <data name="Belichtung_EV_ce98f40d" xml:space="preserve">
     <value>Belichtung (EV)</value>
   </data>
+  <data name="Beim_Doppelklick_auf_das_Bild_8c50523e" xml:space="preserve">
+    <value>Beim Doppelklick auf das Bild</value>
+  </data>
+  <data name="ffnet_bei_Doppelklick_auf_das_Bild_den_Editor_od_d7f39cca" xml:space="preserve">
+    <value>Öffnet bei Doppelklick auf das Bild den Editor oder kehrt zur Galerie zurück.</value>
+  </data>
+  <data name="Beim_Pinselzug_STRG_ALT_SHIFT_a2100fca" xml:space="preserve"><value>Beim Pinselzug: STRG / ALT / SHIFT</value></data>
+  <data name="STRG_h_lt_die_Richtung_des_ersten_kleinen_Zuges__077c64f0" xml:space="preserve"><value>STRG hält die Richtung des ersten kleinen Zuges; ALT malt horizontal, SHIFT vertikal. Gilt für Malen, Radierer, Masken- und Auswahlpinsel sowie Reparatur und Verwischen; beim Stempel nur STRG (ALT setzt dort die Quelle).</value></data>
 </root>

@@ -8604,4 +8604,8 @@
   <data name="Belichtung_EV_ce98f40d" xml:space="preserve">
     <value>Exposition (EV)</value>
   </data>
+  <data name="Beim_Doppelklick_auf_das_Bild_8c50523e" xml:space="preserve"><value>Au double-clic sur l’image</value></data>
+  <data name="ffnet_bei_Doppelklick_auf_das_Bild_den_Editor_od_d7f39cca" xml:space="preserve"><value>Au double-clic sur l’image, ouvre l’éditeur ou revient à la galerie.</value></data>
+  <data name="Beim_Pinselzug_STRG_ALT_SHIFT_a2100fca" xml:space="preserve"><value>Pendant un trait de pinceau : CTRL / ALT / SHIFT</value></data>
+  <data name="STRG_h_lt_die_Richtung_des_ersten_kleinen_Zuges__077c64f0" xml:space="preserve"><value>CTRL verrouille la direction après le premier petit trait ; ALT peint horizontalement, SHIFT verticalement. S’applique au pinceau, à la gomme, aux pinceaux de masque et de sélection, à la correction et au flou ; le tampon de clonage ne prend en charge que CTRL (ALT définit la source).</value></data>
 </root>

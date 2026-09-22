@@ -8644,4 +8644,8 @@
   <data name="Belichtung_EV_ce98f40d" xml:space="preserve">
     <value>Valotus (EV)</value>
   </data>
+  <data name="Beim_Doppelklick_auf_das_Bild_8c50523e" xml:space="preserve"><value>Kun kuvaa kaksoisnapsautetaan</value></data>
+  <data name="ffnet_bei_Doppelklick_auf_das_Bild_den_Editor_od_d7f39cca" xml:space="preserve"><value>Kaksoisnapsautus avaa editorin tai palaa galleriaan.</value></data>
+  <data name="Beim_Pinselzug_STRG_ALT_SHIFT_a2100fca" xml:space="preserve"><value>Siveltimen vedon aikana: CTRL / ALT / SHIFT</value></data>
+  <data name="STRG_h_lt_die_Richtung_des_ersten_kleinen_Zuges__077c64f0" xml:space="preserve"><value>CTRL lukitsee suunnan ensimmäisen lyhyen vedon jälkeen; ALT maalaa vaakasuoraan, SHIFT pystysuoraan. Koskee maalausta, pyyhekumia, maski- ja valintasiveltimiä, korjausta ja häivytystä; kloonausleima tukee vain CTRL:ää (ALT asettaa lähteen).</value></data>
 </root>

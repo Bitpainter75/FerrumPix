@@ -273,6 +273,10 @@ Namespace Services
         Public Property EditorShowFooter As Boolean = True
         Public Property ViewerSlideshowIntervalSeconds As Integer = 3
         Public Property ViewerOpenFitToWindow As Boolean = True
+        ''' <summary>Ziel des Doppelklicks auf das Bild im Viewer: "Editor" (Vorgabe) oder
+        ''' "Gallery". Der Rückweg verwendet den normalen Galeriepfad und behält damit Auswahl,
+        ''' Filter und gegebenenfalls die Rückfrage zu ungespeicherten Viewer-Änderungen bei.</summary>
+        Public Property ViewerDoubleClickTarget As String = "Editor"
         ''' "Always" (immer einpassen, auch kleinere Bilder hochskalieren) oder "OnlyWhenLarger"
         ''' (nur einpassen, wenn das Bild größer als die Darstellungsfläche ist, sonst 100%).
         Public Property ViewerFitBehavior As String = "Always"
@@ -670,14 +674,9 @@ Namespace Services
         ''' Bibliothek und koennen sich zwischen ihren Staenden verschieben, der Name nicht.
         ''' Unbekanntes faellt beim Laden auf die Vorgabe zurueck.</summary>
         Public Property RawDemosaicAlgorithm As String = AppSettingsService.RawDemosaicDefault
-        ''' Ob der Decode die Lichter UNBESCHNITTEN aus den Sensordaten liest und die Helligkeit
-        ''' dafuer ausgleicht. AB WERK AN, das ist der Weg, auf dem die Lichterrettung ueberhaupt
-        ''' etwas zu arbeiten hat. Ausgeschaltet entwickelt FerrumPix die Lichter beschnitten, wie
-        ''' vor dem Umbau - der Rueckweg fuer den Fall, dass eine Kamera damit zu hell geraet.
-        ''' Der Ausgleich rechnet mit dem Verhaeltnis der Aufnahmemultiplikatoren, und das ist je
-        ''' Kamera verschieden; belegt ist er an neun Dateien aus sechs Formaten, nicht an allen.
+        ' Legacy compatibility only. The RAW decoder always reads highlights un-clipped; this value
+        ' is deliberately ignored and is no longer exposed as an application setting.
         Public Property RawHighlightUnclip As Boolean = True
-
         Public Property LightroomPresets As New List(Of XmpPresetSettings)()
         Public Property LutPresets As New List(Of LutPresetSettings)()
 
@@ -910,6 +909,7 @@ Namespace Services
                 settings.RawDemosaicAlgorithm = NormalizeRawDemosaicAlgorithm(settings.RawDemosaicAlgorithm)
                 NormalizeMacGraphicsSettings(settings)
                 settings.ViewerSlideshowIntervalSeconds = NormalizeViewerSlideshowIntervalSeconds(settings.ViewerSlideshowIntervalSeconds)
+                settings.ViewerDoubleClickTarget = NormalizeViewerDoubleClickTarget(settings.ViewerDoubleClickTarget)
                 settings.EditorGridSize = NormalizeEditorGridSize(settings.EditorGridSize)
                 settings.ViewerFitBehavior = NormalizeViewerFitBehavior(settings.ViewerFitBehavior)
                 ' Einmalige Übernahme: vor der Trennung galt der Viewer-Wert für beide Ansichten.
@@ -1152,6 +1152,7 @@ Namespace Services
                 settings.RawDemosaicAlgorithm = NormalizeRawDemosaicAlgorithm(settings.RawDemosaicAlgorithm)
                 NormalizeMacGraphicsSettings(settings)
                 settings.ViewerSlideshowIntervalSeconds = NormalizeViewerSlideshowIntervalSeconds(settings.ViewerSlideshowIntervalSeconds)
+                settings.ViewerDoubleClickTarget = NormalizeViewerDoubleClickTarget(settings.ViewerDoubleClickTarget)
                 settings.EditorGridSize = NormalizeEditorGridSize(settings.EditorGridSize)
                 settings.ViewerFitBehavior = NormalizeViewerFitBehavior(settings.ViewerFitBehavior)
                 ' Einmalige Übernahme: vor der Trennung galt der Viewer-Wert für beide Ansichten.
@@ -1357,6 +1358,13 @@ Namespace Services
                 Case Else
                     Return "Always"
             End Select
+        End Function
+
+        ''' <summary>Normalisiert das Ziel des Bild-Doppelklicks im Viewer. Unbekannte und alte
+        ''' Einstellungen bleiben absichtlich beim bisherigen Verhalten, also im Editor.</summary>
+        Public Shared Function NormalizeViewerDoubleClickTarget(value As String) As String
+            If String.Equals(If(value, "").Trim(), "Gallery", StringComparison.OrdinalIgnoreCase) Then Return "Gallery"
+            Return "Editor"
         End Function
 
         Public Shared Function NormalizeDefaultSaveFormat(value As String) As String

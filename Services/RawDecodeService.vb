@@ -1598,21 +1598,11 @@ Namespace Services
             End Try
         End Function
 
-        ''' <summary>Liest der Decode die Lichter unbeschnitten aus den Sensordaten? Einstellung, ab
-        ''' Werk ja.
-        '''
-        ''' <para>DER RUECKWEG. Ohne sie gab es keinen: der Haken der Lichterrettung steuert nur die
-        ''' Schulter, entklemmt wurde IMMER (siehe HighlightRecoveryMode). Wem eine Kamera damit zu
-        ''' hell gerät, der hatte nur den Weg zurueck auf eine aeltere Fassung.</para>
-        '''
-        ''' <para>Sie steht in BEIDEN Zwischenspeicher-Schluesseln. Ohne das bliebe nach dem
-        ''' Umlegen das alte Bild stehen, und der Schalter waere ein Schalter, der nichts tut.</para></summary>
+        ''' <summary>Die Sensordaten werden immer unbeschnitten gelesen. Die fruehere Rueckfall-
+        ''' Einstellung wurde entfernt: ein alter gespeicherter Wert darf den RAW-Decode nicht
+        ''' mehr auf den historischen, beschnittenen Pfad schalten.</summary>
         Private Shared Function ConfiguredHighlightUnclip() As Boolean
-            Try
-                Return AppSettingsService.Load().RawHighlightUnclip
-            Catch
-                Return True
-            End Try
+            Return True
         End Function
 
         ' Offsets INNERHALB libraw_output_params_t. Die Basis dieses Feldes in libraw_data_t ist

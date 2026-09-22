@@ -89,6 +89,13 @@ Namespace Views
         Private _isBrushDrawing As Boolean = False
         Private _hideBrushPreviewAfterBake As Boolean = False
         Private ReadOnly _brushPoints As New List(Of Avalonia.Point)()
+        ' Gemeinsamer Ursprung für die temporären Linienhilfen aller Pinselzüge. Die Richtung für
+        ' Strg wird erst nach einem kleinen freien Anfangszug festgelegt, damit sie nicht auf eine
+        ' zufällige Einpixelbewegung springt.
+        Private _brushConstraintStart As Avalonia.Point
+        Private _hasBrushConstraintStart As Boolean = False
+        Private _brushControlLineUnit As Avalonia.Point? = Nothing
+        Private _brushControlWasHeld As Boolean = False
         Private _isRetouching As Boolean = False
         Private _lastRetouchPoint As Avalonia.Point
         Private _isSelectionDragging As Boolean = False
@@ -1980,9 +1987,12 @@ Namespace Views
             End If
 
             ' Im Trackpad-Modus ist Ziehen auf einem Bild, das größer als die Bühne ist, das
-            ' direkte Verschieben. Umschalt hält die gewöhnliche Werkzeug-Geste verfügbar, damit
-            ' Auswahl, Objektzug und Pinsel nicht verloren gehen.
+            ' direkte Verschieben. Ein Modifikator hält die gewöhnliche Werkzeug-Geste verfügbar:
+            ' Umschalt war das bisher schon; Strg und Alt sind es jetzt ebenso, weil sie einen
+            ' Pinselzug führen können.
             If IsTrackpadMode() AndAlso Not e.KeyModifiers.HasFlag(KeyModifiers.Shift) AndAlso
+               Not e.KeyModifiers.HasFlag(KeyModifiers.Control) AndAlso
+               Not e.KeyModifiers.HasFlag(KeyModifiers.Alt) AndAlso
                vm IsNot Nothing AndAlso CanTrackpadPan(canvas, vm) Then
                 Dim pos = e.GetPosition(canvas)
                 _panStartX = pos.X
@@ -2507,6 +2517,7 @@ Namespace Views
                         _maskBrushPoints.Add(New Avalonia.Point((pos.X - imageRect.Left) / imageRect.Width * 100.0,
                                                                 (pos.Y - imageRect.Top) / imageRect.Height * 100.0))
                         _maskBrushLastScreenPoint = pos
+                        BeginBrushLineConstraint(rawPos)
                         _isMaskBrushDrawing = True
                         e.Pointer.Capture(canvas)
                         RefreshMaskBrushLive(vm)
@@ -2544,6 +2555,7 @@ Namespace Views
 
                 vm.AddRetouchSpot(xPct, yPct)
                 _lastRetouchPoint = New Avalonia.Point(xPct, yPct)
+                BeginBrushLineConstraint(pos)
                 _isRetouching = True
                 e.Pointer.Capture(canvas)
                 e.Handled = True
@@ -2555,7 +2567,9 @@ Namespace Views
                 If imageRect.Width <= 0 OrElse imageRect.Height <= 0 Then Return
                 _hideBrushPreviewAfterBake = False
                 _brushPoints.Clear()
-                AddBrushPoint(e.GetPosition(canvas), imageRect)
+                Dim brushStart = e.GetPosition(canvas)
+                BeginBrushLineConstraint(brushStart)
+                AddBrushPoint(brushStart, imageRect)
                 _isBrushDrawing = True
                 ShowBrushPreviewLine(True)
                 UpdateBrushPreviewLine(imageRect, vm)
@@ -2849,7 +2863,7 @@ Namespace Views
                 Dim vm = TryCast(DataContext, EditorViewModel)
                 If canvas Is Nothing OrElse vm Is Nothing Then Return
                 Dim imageRect = GetDisplayedImageRect(canvas, vm)
-                AddBrushPoint(e.GetPosition(canvas), imageRect)
+                AddBrushPoint(ConstrainBrushLinePoint(e.GetPosition(canvas), e.KeyModifiers), imageRect)
                 UpdateBrushPreviewLine(imageRect, vm)
                 e.Handled = True
                 Return
@@ -2860,7 +2874,13 @@ Namespace Views
                 If canvas Is Nothing OrElse vm Is Nothing Then Return
                 Dim imageRect = GetDisplayedImageRect(canvas, vm)
                 If imageRect.Width <= 0 OrElse imageRect.Height <= 0 Then Return
-                Dim pos = ClampPointToRect(e.GetPosition(canvas), imageRect)
+                ' Der Stempel bleibt absichtlich ausgenommen: Alt+Klick setzt dort weiter die
+                ' Quelle, und nur Strg wird künftig separat als Linienhilfe ergänzt.
+                Dim rawPos = e.GetPosition(canvas)
+                If Not vm.IsCloneMode OrElse e.KeyModifiers.HasFlag(KeyModifiers.Control) Then
+                    rawPos = ConstrainBrushLinePoint(rawPos, e.KeyModifiers, allowAxisLocks:=Not vm.IsCloneMode)
+                End If
+                Dim pos = ClampPointToRect(rawPos, imageRect)
                 Dim xPct = (pos.X - imageRect.Left) / imageRect.Width * 100.0
                 Dim yPct = (pos.Y - imageRect.Top) / imageRect.Height * 100.0
                 Dim dxPixels = (xPct - _lastRetouchPoint.X) / 100.0 * Math.Max(1, vm.DisplayImageWidthPixels)
@@ -2893,8 +2913,8 @@ Namespace Views
                 If canvas Is Nothing OrElse vm Is Nothing Then Return
                 Dim imageRect = GetDisplayedImageRect(canvas, vm)
                 If imageRect.Width <= 0 OrElse imageRect.Height <= 0 Then Return
-                Dim point = ClampPointToRect(e.GetPosition(canvas), imageRect)
-                UpdateBrushCursorPreview(e.GetPosition(canvas), imageRect, vm)
+                Dim point = ClampPointToRect(ConstrainBrushLinePoint(e.GetPosition(canvas), e.KeyModifiers), imageRect)
+                UpdateBrushCursorPreview(point, imageRect, vm)
                 ' Abstands-Gate: Punkte erst ab ~1/4 Pinseldurchmesser auf dem Schirm sammeln (wie Retusche).
                 Dim spacing = Math.Max(2.0, BrushDiameterOnScreen(imageRect, vm) * 0.25)
                 Dim dxb = point.X - _maskBrushLastScreenPoint.X
@@ -3260,6 +3280,7 @@ Namespace Views
                 vm?.CommitRetouchStroke()
             End If
             _isRetouching = False
+            ResetBrushLineConstraint()
             _cropDragMode = CropDragMode.None
             e.Pointer.Capture(Nothing)
 
@@ -3290,6 +3311,65 @@ Namespace Views
             _brushPoints.Add(New Avalonia.Point(xPct, yPct))
         End Sub
 
+        ''' <summary>Beginnt die gemeinsame Linienhilfe eines Pinselzugs. Der Ursprung liegt im
+        ''' Anzeigeraum, damit die Vorschau und alle Werkzeuge dieselbe Geometrie sehen.</summary>
+        Private Sub BeginBrushLineConstraint(startPoint As Avalonia.Point)
+            _brushConstraintStart = startPoint
+            _hasBrushConstraintStart = True
+            _brushControlLineUnit = Nothing
+            _brushControlWasHeld = False
+        End Sub
+
+        Private Sub ResetBrushLineConstraint()
+            _hasBrushConstraintStart = False
+            _brushControlLineUnit = Nothing
+            _brushControlWasHeld = False
+        End Sub
+
+        ''' <summary>Führt einen Pinselpunkt relativ zum ersten Druckpunkt. Alt und Umschalt sind
+        ''' absichtlich unmittelbar horizontal bzw. vertikal. Strg lernt dagegen nach mindestens
+        ''' drei Bildschirmpixeln die freie Richtung des ersten Minizugs und projiziert danach auf
+        ''' diese Gerade. Beim Stempel ruft der Aufrufer die Methode mit ausgeschalteten Achsen auf:
+        ''' dort bleibt Alt der Quellpunkt-Geste vorbehalten.</summary>
+        Private Function ConstrainBrushLinePoint(point As Avalonia.Point, modifiers As KeyModifiers,
+                                                 Optional allowAxisLocks As Boolean = True) As Avalonia.Point
+            If Not _hasBrushConstraintStart Then Return point
+
+            If allowAxisLocks AndAlso modifiers.HasFlag(KeyModifiers.Alt) Then
+                _brushControlLineUnit = Nothing
+                _brushControlWasHeld = False
+                Return New Avalonia.Point(point.X, _brushConstraintStart.Y)
+            End If
+            If allowAxisLocks AndAlso modifiers.HasFlag(KeyModifiers.Shift) Then
+                _brushControlLineUnit = Nothing
+                _brushControlWasHeld = False
+                Return New Avalonia.Point(_brushConstraintStart.X, point.Y)
+            End If
+            If Not modifiers.HasFlag(KeyModifiers.Control) Then
+                _brushControlLineUnit = Nothing
+                _brushControlWasHeld = False
+                Return point
+            End If
+
+            If Not _brushControlWasHeld Then
+                _brushControlWasHeld = True
+                _brushControlLineUnit = Nothing
+            End If
+            Dim dx = point.X - _brushConstraintStart.X
+            Dim dy = point.Y - _brushConstraintStart.Y
+            Dim length = Math.Sqrt(dx * dx + dy * dy)
+            Const directionThresholdPixels As Double = 3.0
+            If Not _brushControlLineUnit.HasValue AndAlso length >= directionThresholdPixels Then
+                _brushControlLineUnit = New Avalonia.Point(dx / length, dy / length)
+            End If
+            If Not _brushControlLineUnit.HasValue Then Return point
+
+            Dim direction = _brushControlLineUnit.Value
+            Dim distanceAlongLine = dx * direction.X + dy * direction.Y
+            Return New Avalonia.Point(_brushConstraintStart.X + direction.X * distanceAlongLine,
+                                      _brushConstraintStart.Y + direction.Y * distanceAlongLine)
+        End Function
+
         Private Sub ShowBrushPreviewLine(visible As Boolean)
             Dim line = Me.FindControl(Of Polyline)("BrushPreviewLine")
             Dim outline = Me.FindControl(Of Polyline)("BrushPreviewOutlineLine")
@@ -3319,6 +3399,15 @@ Namespace Views
             For Each p In _brushPoints
                 pts.Add(New Avalonia.Point(imageRect.Left + p.X / 100.0 * imageRect.Width, imageRect.Top + p.Y / 100.0 * imageRect.Height))
             Next
+            ' Eine Polyline mit nur EINEM Punkt zeichnet in Avalonia keine runde Endkappe. Der
+            ' Pinsel muss seinen Abdruck aber bereits beim Mouse-Down zeigen, nicht erst nach dem
+            ' ersten Move oder beim Loslassen. Ein praktisch deckungsgleicher zweiter Punkt macht
+            ' daraus einen winzigen Linienzug mit runder Kappe; die sichtbare Form ist damit exakt
+            ' der Pinselkreis und die später gespeicherte Ein-Punkt-Geste bleibt unverändert.
+            If pts.Count = 1 Then
+                Dim dot = pts(0)
+                pts.Add(New Avalonia.Point(dot.X + 0.01, dot.Y))
+            End If
             line.Points = pts
             If outline IsNot Nothing Then outline.Points = pts
 

@@ -1022,6 +1022,25 @@
 
                         <Grid ColumnDefinitions="*,Auto">
                             <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Beim Doppelklick auf das Bild" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Öffnet bei Doppelklick auf das Bild den Editor oder kehrt zur Galerie zurück." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                                <Button Classes="ghost"
+                                        Classes.active="{Binding IsViewerDoubleClickGallery}"
+                                        Padding="10,6"
+                                        Command="{Binding SetViewerDoubleClickTargetCommand}"
+                                        CommandParameter="Gallery">Galerie</Button>
+                                <Button Classes="ghost"
+                                        Classes.active="{Binding IsViewerDoubleClickEditor}"
+                                        Padding="10,6"
+                                        Command="{Binding SetViewerDoubleClickTargetCommand}"
+                                        CommandParameter="Editor">Editor</Button>
+                            </StackPanel>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
                                 <TextBlock Text="Einpassen-Verhalten" FontSize="{DynamicResource FP.Font.Body}"/>
                                 <TextBlock Text="Gilt nur für den Viewer: nur verkleinern, wenn das Bild größer als die Anzeigefläche ist, oder immer auf die Fläche skalieren." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </StackPanel>
@@ -3251,6 +3270,10 @@
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
                                 <TextBlock Text="STRG+E oder E" Tag="Application" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                                 <TextBlock Grid.Column="1" Text="Radierer umschalten (im Zeichnen-Werkzeug)" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </Grid>
+                            <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
+                                <TextBlock Text="Beim Pinselzug: STRG / ALT / SHIFT" Tag="PrimaryShift" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Grid.Column="1" Text="STRG hält die Richtung des ersten kleinen Zuges; ALT malt horizontal, SHIFT vertikal. Gilt für Malen, Radierer, Masken- und Auswahlpinsel sowie Reparatur und Verwischen; beim Stempel nur STRG (ALT setzt dort die Quelle)." FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
                                 <TextBlock Text="Pfeiltasten" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>

@@ -8644,4 +8644,8 @@
   <data name="Belichtung_EV_ce98f40d" xml:space="preserve">
     <value>Eksponering (EV)</value>
   </data>
+  <data name="Beim_Doppelklick_auf_das_Bild_8c50523e" xml:space="preserve"><value>Ved dobbeltklik på billedet</value></data>
+  <data name="ffnet_bei_Doppelklick_auf_das_Bild_den_Editor_od_d7f39cca" xml:space="preserve"><value>Åbner editoren ved dobbeltklik på billedet eller vender tilbage til galleriet.</value></data>
+  <data name="Beim_Pinselzug_STRG_ALT_SHIFT_a2100fca" xml:space="preserve"><value>Under et penselstrøg: CTRL / ALT / SHIFT</value></data>
+  <data name="STRG_h_lt_die_Richtung_des_ersten_kleinen_Zuges__077c64f0" xml:space="preserve"><value>CTRL låser retningen efter det første korte strøg; ALT maler vandret, SHIFT lodret. Gælder maling, viskelæder, maske- og markeringspensler, reparation og udtværing; klonstempel understøtter kun CTRL (ALT vælger kilden).</value></data>
 </root>

@@ -8603,4 +8603,8 @@
   <data name="Belichtung_EV_ce98f40d" xml:space="preserve">
     <value>Exposição (EV)</value>
   </data>
+  <data name="Beim_Doppelklick_auf_das_Bild_8c50523e" xml:space="preserve"><value>Ao clicar duas vezes na imagem</value></data>
+  <data name="ffnet_bei_Doppelklick_auf_das_Bild_den_Editor_od_d7f39cca" xml:space="preserve"><value>Ao clicar duas vezes na imagem, abre o editor ou volta à galeria.</value></data>
+  <data name="Beim_Pinselzug_STRG_ALT_SHIFT_a2100fca" xml:space="preserve"><value>Durante uma pincelada: CTRL / ALT / SHIFT</value></data>
+  <data name="STRG_h_lt_die_Richtung_des_ersten_kleinen_Zuges__077c64f0" xml:space="preserve"><value>CTRL bloqueia a direção após o primeiro traço curto; ALT pinta na horizontal e SHIFT na vertical. Aplica-se a pintura, borracha, pincéis de máscara e seleção, reparação e desfoque; o carimbo de clonagem só suporta CTRL (ALT define a origem).</value></data>
 </root>

@@ -8604,4 +8604,8 @@
   <data name="Belichtung_EV_ce98f40d" xml:space="preserve">
     <value>Esposizione (EV)</value>
   </data>
+  <data name="Beim_Doppelklick_auf_das_Bild_8c50523e" xml:space="preserve"><value>Con doppio clic sull’immagine</value></data>
+  <data name="ffnet_bei_Doppelklick_auf_das_Bild_den_Editor_od_d7f39cca" xml:space="preserve"><value>Con doppio clic apre l’editor o torna alla galleria.</value></data>
+  <data name="Beim_Pinselzug_STRG_ALT_SHIFT_a2100fca" xml:space="preserve"><value>Durante una pennellata: CTRL / ALT / SHIFT</value></data>
+  <data name="STRG_h_lt_die_Richtung_des_ersten_kleinen_Zuges__077c64f0" xml:space="preserve"><value>CTRL blocca la direzione dopo il primo breve tratto; ALT dipinge orizzontalmente, SHIFT verticalmente. Vale per pennello, gomma, pennelli maschera e selezione, riparazione e sfocatura; il timbro clone supporta solo CTRL (ALT imposta la sorgente).</value></data>
 </root>

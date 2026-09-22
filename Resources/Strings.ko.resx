@@ -8648,4 +8648,8 @@
   <data name="Belichtung_EV_ce98f40d" xml:space="preserve">
     <value>노출 (EV)</value>
   </data>
+  <data name="Beim_Doppelklick_auf_das_Bild_8c50523e" xml:space="preserve"><value>이미지를 두 번 클릭할 때</value></data>
+  <data name="ffnet_bei_Doppelklick_auf_das_Bild_den_Editor_od_d7f39cca" xml:space="preserve"><value>이미지를 두 번 클릭하면 편집기를 열거나 갤러리로 돌아갑니다.</value></data>
+  <data name="Beim_Pinselzug_STRG_ALT_SHIFT_a2100fca" xml:space="preserve"><value>브러시 스트로크 중: CTRL / ALT / SHIFT</value></data>
+  <data name="STRG_h_lt_die_Richtung_des_ersten_kleinen_Zuges__077c64f0" xml:space="preserve"><value>CTRL은 첫 짧은 스트로크 뒤에 방향을 고정합니다. ALT는 가로로, SHIFT는 세로로 칠합니다. 그리기, 지우개, 마스크 및 선택 브러시, 복구와 흐리기에 적용됩니다. 복제 도장은 CTRL만 지원하며 ALT는 원본을 설정합니다.</value></data>
 </root>

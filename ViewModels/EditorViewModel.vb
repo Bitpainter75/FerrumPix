@@ -22851,7 +22851,15 @@ Namespace ViewModels
             If Not CanUsePixelTools Then Return
             If points Is Nothing Then Return
             Dim normalized = points.ToList()
-            If normalized.Count < 2 Then Return
+            If normalized.Count = 0 Then Return
+            ' Ein Klick ist ein echter Pinselabdruck, kein leerer Zug. Der Rasterweg speichert
+            ' Linien mit mindestens zwei Stützpunkten; ein praktisch deckungsgleicher zweiter
+            ' Punkt hält diese Repräsentation bei und ergibt dank runder Endkappen die Scheibe.
+            ' Dasselbe normalisierte Paar geht auch beim Malen auf einer Bild-Ebene weiter.
+            If normalized.Count = 1 Then
+                Dim dot = normalized(0)
+                normalized.Add(New Avalonia.Point(dot.X + 0.01, dot.Y))
+            End If
 
             ' RADIEREN AUF EINER EBENE MIT BILD GEHT IN IHRE BILDPUNKTE, genau wie Pinsel und
             ' Retusche: gemerkt wird das Ergebnis, nicht der Zug. Früher ging der Radierer auf jeder

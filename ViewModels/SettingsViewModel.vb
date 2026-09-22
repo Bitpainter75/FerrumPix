@@ -38,6 +38,7 @@ Namespace ViewModels
         Private _developRawInBatch As Boolean = True
         Private _thumbnailCacheEnabled As Boolean = True
         Private _viewerOpenFitToWindow As Boolean = True
+        Private _viewerDoubleClickTarget As String = "Editor"
         Private _viewerFitBehavior As String = "Always"
         Private _editorFitBehavior As String = "Always"
         Private _editorFitMargin As Integer = 0
@@ -170,6 +171,7 @@ Namespace ViewModels
         Private _savedAccentColor As String = "#F08A1A"
         Private _savedAccentStrength As Integer = 100
         Private _savedViewerOpenFitToWindow As Boolean = True
+        Private _savedViewerDoubleClickTarget As String = "Editor"
         Private _savedViewerFitBehavior As String = "Always"
         Private _savedEditorFitBehavior As String = "Always"
         Private _savedEditorFitMargin As Integer = 0
@@ -827,29 +829,6 @@ Namespace ViewModels
         End Property
         Private _rawDemosaicAlgorithm As String = AppSettingsService.RawDemosaicDefault
 
-        ''' <summary>Liest der Decode die Lichter unbeschnitten aus den Sensordaten? Ab Werk ja; das
-        ''' ist der Weg, auf dem die Lichterrettung ueberhaupt etwas zu arbeiten hat. Ausgeschaltet
-        ''' entwickelt FerrumPix sie beschnitten - der Rueckweg, falls eine Kamera damit zu hell
-        ''' geraet. Der Stand steht in den Zwischenspeicher-Schluesseln des Decodes und im Namen der
-        ''' Kachel, das Umlegen wirkt also und laesst nichts Altes stehen.
-        '''
-        ''' <para>OHNE BEDIENELEMENT: die Zeile in den Einstellungen ist ausgebaut, weil der
-        ''' Feldbericht, fuer den sie gedacht war, an einer DNG-Datei haengt - und die lief bis
-        ''' 0.9.48 als fertiges RGB an der Basisstufe vorbei (RawDecodeService.IsFinishedRgb). Der
-        ''' Schalter aendert dort nichts. Die Eigenschaft bleibt, damit die Diagnose sie messen kann
-        ''' und die Zeile zurueckkommen kann, ohne neu gebaut zu werden.</para></summary>
-        Public Property RawHighlightUnclip As Boolean
-            Get
-                Return _rawHighlightUnclip
-            End Get
-            Set(value As Boolean)
-                If _rawHighlightUnclip = value Then Return
-                Me.RaiseAndSetIfChanged(_rawHighlightUnclip, value)
-                AppSettingsService.Update(Sub(s) s.RawHighlightUnclip = value)
-            End Set
-        End Property
-        Private _rawHighlightUnclip As Boolean = True
-
         ''' <summary>Was das gewaehlte Verfahren ausmacht - die Zeile unter der Auswahl. Die Angaben
         ''' sind gemessen, nicht aus der Literatur uebernommen.</summary>
         Public ReadOnly Property RawDemosaicDescription As String
@@ -925,6 +904,34 @@ Namespace ViewModels
                 Me.RaiseAndSetIfChanged(_viewerOpenFitToWindow, value)
                 SaveLayoutSettings()
             End Set
+        End Property
+
+        ''' <summary>Legt fest, ob der Doppelklick im Viewer wie bisher in den Editor wechselt
+        ''' oder zum aktuell geöffneten Bild in die Galerie zurückkehrt.</summary>
+        Public Property ViewerDoubleClickTarget As String
+            Get
+                Return _viewerDoubleClickTarget
+            End Get
+            Set(value As String)
+                value = AppSettingsService.NormalizeViewerDoubleClickTarget(value)
+                If _viewerDoubleClickTarget = value Then Return
+                Me.RaiseAndSetIfChanged(_viewerDoubleClickTarget, value)
+                Me.RaisePropertyChanged(NameOf(IsViewerDoubleClickEditor))
+                Me.RaisePropertyChanged(NameOf(IsViewerDoubleClickGallery))
+                SaveLayoutSettings()
+            End Set
+        End Property
+
+        Public ReadOnly Property IsViewerDoubleClickEditor As Boolean
+            Get
+                Return _viewerDoubleClickTarget = "Editor"
+            End Get
+        End Property
+
+        Public ReadOnly Property IsViewerDoubleClickGallery As Boolean
+            Get
+                Return _viewerDoubleClickTarget = "Gallery"
+            End Get
         End Property
 
         ''' <summary>"Always" (immer einpassen) oder "OnlyWhenLarger" (nur einpassen, wenn das Bild
@@ -3216,6 +3223,7 @@ Namespace ViewModels
         Public ReadOnly Property SetGalleryTimelineModeCommand As ICommand
         Public ReadOnly Property SetGalleryStartupFolderModeCommand As ICommand
         Public ReadOnly Property SetViewerFitBehaviorCommand As ICommand
+        Public ReadOnly Property SetViewerDoubleClickTargetCommand As ICommand
         Public ReadOnly Property SetEditorFitBehaviorCommand As ICommand
         Public ReadOnly Property SetDefaultSaveFormatCommand As ICommand
         Public ReadOnly Property SetEditorStartupToolCommand As ICommand
@@ -3713,7 +3721,6 @@ Namespace ViewModels
             _useCameraBaselineTable = _appSettings.UseCameraBaselineTable
             _lensCorrectionEnabled = _appSettings.LensCorrectionEnabled
             _rawDemosaicAlgorithm = AppSettingsService.NormalizeRawDemosaicAlgorithm(_appSettings.RawDemosaicAlgorithm)
-            _rawHighlightUnclip = _appSettings.RawHighlightUnclip
             _windowColorSpaceMethod = MacWindowColorSpaceService.NormalizeMethod(_appSettings.MacWindowColorSpaceMethod)
             _macRenderingMode = AppSettingsService.NormalizeMacRenderingMode(_appSettings.MacRenderingMode)
             _thumbnailCacheEnabled = _appSettings.ThumbnailCacheEnabled
@@ -3746,6 +3753,7 @@ Namespace ViewModels
             _editorShowFooter = _appSettings.EditorShowFooter
             _viewerSlideshowIntervalSeconds = _appSettings.ViewerSlideshowIntervalSeconds
             _viewerOpenFitToWindow = _appSettings.ViewerOpenFitToWindow
+            _viewerDoubleClickTarget = AppSettingsService.NormalizeViewerDoubleClickTarget(_appSettings.ViewerDoubleClickTarget)
             _viewerFitBehavior = AppSettingsService.NormalizeViewerFitBehavior(_appSettings.ViewerFitBehavior)
             _editorFitBehavior = AppSettingsService.NormalizeViewerFitBehavior(_appSettings.EditorFitBehavior)
             _editorFitMargin = AppSettingsService.NormalizeEditorFitMargin(_appSettings.EditorFitMargin)
@@ -3864,6 +3872,7 @@ Namespace ViewModels
             SetGalleryStartupFolderModeCommand = ReactiveCommand.Create(Of String)(Sub(m) GalleryStartupFolderMode = m)
             SetGalleryTimelineModeCommand = ReactiveCommand.Create(Of String)(Sub(m) GalleryTimelineMode = m)
             SetViewerFitBehaviorCommand = ReactiveCommand.Create(Of String)(Sub(m) ViewerFitBehavior = m)
+            SetViewerDoubleClickTargetCommand = ReactiveCommand.Create(Of String)(Sub(m) ViewerDoubleClickTarget = m)
             SetEditorFitBehaviorCommand = ReactiveCommand.Create(Of String)(Sub(m) EditorFitBehavior = m)
             SetDefaultSaveFormatCommand = ReactiveCommand.Create(Of String)(Sub(m) DefaultSaveFormat = m)
             SetEditorStartupToolCommand = ReactiveCommand.Create(Of String)(Sub(m) EditorStartupTool = m)
@@ -4055,6 +4064,7 @@ Namespace ViewModels
             _savedAccentColor = _accentColor
             _savedAccentStrength = _accentStrength
             _savedViewerOpenFitToWindow = _viewerOpenFitToWindow
+            _savedViewerDoubleClickTarget = _viewerDoubleClickTarget
             _savedViewerFitBehavior = _viewerFitBehavior
             _savedEditorFitBehavior = _editorFitBehavior
             _savedEditorFitMargin = _editorFitMargin
@@ -4159,6 +4169,7 @@ Namespace ViewModels
             ' genauso zuruecknehmen wie die Farbe selbst.
             AccentStrength = _savedAccentStrength
             ViewerOpenFitToWindow = _savedViewerOpenFitToWindow
+            ViewerDoubleClickTarget = _savedViewerDoubleClickTarget
             ViewerFitBehavior = _savedViewerFitBehavior
             EditorFitBehavior = _savedEditorFitBehavior
             EditorFitMargin = _savedEditorFitMargin
@@ -4290,6 +4301,7 @@ Namespace ViewModels
             WindowButtonsSide = WindowButtonSideService.SideSystem
             AccentColor = "#F08A1A"
             ViewerOpenFitToWindow = True
+            ViewerDoubleClickTarget = "Editor"
             ViewerFitBehavior = "Always"
             EditorFitBehavior = "Always"
             EditorFitMargin = 0
@@ -4620,6 +4632,7 @@ Namespace ViewModels
                                           s.EditorShowFooter = _editorShowFooter
                                           s.ViewerSlideshowIntervalSeconds = _viewerSlideshowIntervalSeconds
                                           s.ViewerOpenFitToWindow = _viewerOpenFitToWindow
+                                          s.ViewerDoubleClickTarget = _viewerDoubleClickTarget
                                           s.ViewerFitBehavior = _viewerFitBehavior
                                           s.EditorFitBehavior = _editorFitBehavior
                                           s.EditorFitMargin = _editorFitMargin

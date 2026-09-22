@@ -709,7 +709,15 @@ Namespace Views
             If position.X < 0 OrElse position.Y < 0 OrElse
                position.X > image.Bounds.Width OrElse position.Y > image.Bounds.Height Then Return
             EndPanning()
-            vm.EditCommand.Execute(Nothing)
+            ' Die Vorgabe bleibt der Editor. "Galerie" geht absichtlich über denselben Befehl wie
+            ' die Zurück-Schaltfläche: so bleibt das aktuelle Bild ausgewählt, aktive Filter bleiben
+            ' erhalten und eventuelle ungespeicherte Viewer-Änderungen werden nicht still verworfen.
+            Dim mainVm = TryCast(TopLevel.GetTopLevel(Me)?.DataContext, MainWindowViewModel)
+            If String.Equals(mainVm?.Settings?.ViewerDoubleClickTarget, "Gallery", StringComparison.OrdinalIgnoreCase) Then
+                vm.BackToGalleryCommand.Execute(Nothing)
+            Else
+                vm.EditCommand.Execute(Nothing)
+            End If
             e.Handled = True
         End Sub
 

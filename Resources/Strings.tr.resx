@@ -8648,4 +8648,8 @@
   <data name="Belichtung_EV_ce98f40d" xml:space="preserve">
     <value>Pozlama (EV)</value>
   </data>
+  <data name="Beim_Doppelklick_auf_das_Bild_8c50523e" xml:space="preserve"><value>Resme çift tıklandığında</value></data>
+  <data name="ffnet_bei_Doppelklick_auf_das_Bild_den_Editor_od_d7f39cca" xml:space="preserve"><value>Resme çift tıklamak düzenleyiciyi açar veya galeriye döner.</value></data>
+  <data name="Beim_Pinselzug_STRG_ALT_SHIFT_a2100fca" xml:space="preserve"><value>Fırça darbesi sırasında: CTRL / ALT / SHIFT</value></data>
+  <data name="STRG_h_lt_die_Richtung_des_ersten_kleinen_Zuges__077c64f0" xml:space="preserve"><value>CTRL ilk kısa darbeden sonra yönü kilitler; ALT yatay, SHIFT dikey boyar. Boyama, silgi, maske ve seçim fırçaları, onarım ve bulanıklaştırma için geçerlidir; klon damgası yalnızca CTRL'yi destekler (ALT kaynağı ayarlar).</value></data>
 </root>

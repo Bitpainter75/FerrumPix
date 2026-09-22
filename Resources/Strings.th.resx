@@ -8648,4 +8648,8 @@
   <data name="Belichtung_EV_ce98f40d" xml:space="preserve">
     <value>การรับแสง (EV)</value>
   </data>
+  <data name="Beim_Doppelklick_auf_das_Bild_8c50523e" xml:space="preserve"><value>เมื่อดับเบิลคลิกที่ภาพ</value></data>
+  <data name="ffnet_bei_Doppelklick_auf_das_Bild_den_Editor_od_d7f39cca" xml:space="preserve"><value>การดับเบิลคลิกที่ภาพจะเปิดตัวแก้ไขหรือกลับไปยังแกลเลอรี</value></data>
+  <data name="Beim_Pinselzug_STRG_ALT_SHIFT_a2100fca" xml:space="preserve"><value>ขณะลากพู่กัน: CTRL / ALT / SHIFT</value></data>
+  <data name="STRG_h_lt_die_Richtung_des_ersten_kleinen_Zuges__077c64f0" xml:space="preserve"><value>CTRL ล็อกทิศทางหลังจากการลากสั้นครั้งแรก; ALT วาดแนวนอน และ SHIFT วาดแนวตั้ง ใช้กับการวาด ยางลบ แปรงมาสก์และการเลือก การซ่อมแซมและการเบลอ; ตราประทับโคลนรองรับเฉพาะ CTRL (ALT ตั้งค่าแหล่งที่มา)</value></data>
 </root>

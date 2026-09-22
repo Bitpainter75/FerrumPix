@@ -8644,4 +8644,8 @@
   <data name="Belichtung_EV_ce98f40d" xml:space="preserve">
     <value>露出 (EV)</value>
   </data>
+  <data name="Beim_Doppelklick_auf_das_Bild_8c50523e" xml:space="preserve"><value>画像をダブルクリックしたとき</value></data>
+  <data name="ffnet_bei_Doppelklick_auf_das_Bild_den_Editor_od_d7f39cca" xml:space="preserve"><value>画像をダブルクリックすると、エディターを開くかギャラリーに戻ります。</value></data>
+  <data name="Beim_Pinselzug_STRG_ALT_SHIFT_a2100fca" xml:space="preserve"><value>ブラシストローク中: CTRL / ALT / SHIFT</value></data>
+  <data name="STRG_h_lt_die_Richtung_des_ersten_kleinen_Zuges__077c64f0" xml:space="preserve"><value>CTRL は最初の短いストローク後に方向を固定します。ALT は水平、SHIFT は垂直に描画します。描画、消しゴム、マスク・選択ブラシ、修復、ぼかしに適用されます。クローンスタンプは CTRL のみ対応し、ALT はソースを設定します。</value></data>
 </root>
