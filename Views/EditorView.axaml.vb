@@ -60,6 +60,9 @@ Namespace Views
         ' Pan state
         Private _panX As Double = 0
         Private _panY As Double = 0
+        ' Wo der Zeiger zuletzt ueber der Buehne stand, in Koordinaten der Leinwand. Nothing, sobald
+        ' er sie verlassen hat. Die Taste Z springt dort auf 100 Prozent.
+        Private _lastCanvasPointer As Avalonia.Point?
         Private _isPanMode As Boolean = False
         Private _spacePanActive As Boolean = False
         Private _isPanDragging As Boolean = False
@@ -450,6 +453,45 @@ Namespace Views
             _panY = 0
             SetZoom(ZoomToSlider(100.0))
         End Sub
+
+        ''' <summary>Die Taste Z: zwischen 100 Prozent und Einpassen. Steht der Zeiger über der
+        ''' Bühne, landet die Stelle unter ihm auf 100 Prozent - wer schärfen oder entrauschen will,
+        ''' zeigt auf die Stelle und drückt Z, statt danach erst hinzuschieben. Ohne Zeiger auf der
+        ''' Bühne wie der Knopf: die Bildmitte.</summary>
+        Private Sub ToggleActualZoom(vm As EditorViewModel)
+            If vm.IsZoomActualActive Then
+                OnZoomFitClick(Me, New RoutedEventArgs())
+                Return
+            End If
+            Dim anchor = _lastCanvasPointer
+            If anchor.HasValue Then
+                vm.ActiveZoomPreset = ZoomPresetMode.Actual
+                SetZoomAtCanvasPoint(ZoomToSlider(100.0), anchor.Value)
+            Else
+                OnZoomActualClick(Me, New RoutedEventArgs())
+            End If
+        End Sub
+
+        ''' <summary>Ein Achtel der Bühne je Druck, wie im Betrachter. Begrenzt wird in
+        ''' UpdateSliderLayout: eingepasst bleibt der Druck folgenlos.</summary>
+        Private Const KeyPanStepFraction As Double = 0.125
+
+        Private Sub PanByKeys(direction As Avalonia.Vector)
+            Dim canvas = Me.FindControl(Of Canvas)("PreviewCanvas")
+            If canvas Is Nothing Then Return
+            ' Die Richtung meint den Blick: PFEIL RECHTS zeigt mehr von rechts, das Bild wandert
+            ' also nach links.
+            _panX -= direction.X * canvas.Bounds.Width * KeyPanStepFraction
+            _panY -= direction.Y * canvas.Bounds.Height * KeyPanStepFraction
+            UpdateSliderLayout()
+        End Sub
+
+        ''' <summary>Ob SHIFT+Pfeil den Ausschnitt verschieben darf. Nicht, sobald die Pfeile einem
+        ''' Objekt oder einem laufenden Vorgang gehören.</summary>
+        Private Shared Function CanPanWithKeys(vm As EditorViewModel) As Boolean
+            If vm.HasSelectedAnnotation OrElse vm.HasPathDraft OrElse vm.HasOpenWarpTransaction Then Return False
+            Return vm.CurrentTool <> EditorTool.Transform AndAlso vm.CurrentTool <> EditorTool.Warp
+        End Function
 
         ''' <summary>Liest die Editor-Einstellung "Einpassen-Verhalten" - "OnlyWhenLarger" verkleinert
         ''' größere Bilder auf die Fläche, skaliert kleinere Bilder aber nicht hoch (100%). Der
@@ -2773,6 +2815,8 @@ Namespace Views
         End Sub
 
         Private Sub OnSliderPointerMoved(sender As Object, e As PointerEventArgs)
+            Dim pointerCanvas = TryCast(sender, Canvas)
+            If pointerCanvas IsNot Nothing Then _lastCanvasPointer = e.GetPosition(pointerCanvas)
             ' EIN ZUG ENDET NICHT IMMER MIT EINEM LOSLASSEN. Beim Zeichenstift bleibt dieses Ereignis
             ' aus, wenn der Stift vom Tablett abgehoben wird und dessen Naehe verlaesst; der Fang
             ' bleibt dabei bestehen, ein Fangverlust rettet also nichts. Ohne die Pruefung hier malte
@@ -3970,6 +4014,7 @@ Namespace Views
         End Sub
 
         Private Sub OnPreviewCanvasPointerExited(sender As Object, e As PointerEventArgs)
+            _lastCanvasPointer = Nothing
             Dim vm = TryCast(DataContext, EditorViewModel)
             If vm IsNot Nothing Then vm.MousePositionText = ""
             ' Das Gummiband gehoert zum Zeiger. Bleibt es stehen, zeigt es auf eine Stelle, an der
@@ -7255,8 +7300,32 @@ Namespace Views
                             vm.IsEraserMode = Not vm.IsEraserMode
                             e.Handled = True
                         End If
+                    ' Z und F wie im Betrachter, und nur als BLANKE Taste: STRG+Z ist Rueckgaengig.
+                    Case Key.Z
+                        If e.KeyModifiers = KeyModifiers.None Then
+                            ToggleActualZoom(vm)
+                            e.Handled = True
+                        End If
+                    Case Key.F
+                        If e.KeyModifiers = KeyModifiers.None Then
+                            OnZoomFitClick(Me, New RoutedEventArgs())
+                            e.Handled = True
+                        End If
                 End Select
                 If e.Handled Then Return
+            End If
+
+            ' SHIFT+PFEIL verschiebt den Ausschnitt, wie im Betrachter - aber nur, wenn nichts
+            ' anderes die Pfeile braucht. Ein markiertes Objekt schiebt SHIFT+Pfeil um zehn Pixel
+            ' (weiter unten), und dabei bleibt es; ebenso bei Pfad-Entwurf, offener Verzerrung,
+            ' Zuschnitt und in Eingabefeldern.
+            If e.KeyModifiers = KeyModifiers.Shift AndAlso Not isInputControlFocused AndAlso CanPanWithKeys(vm) Then
+                Dim panDirection = ViewerView.PanDirection(e.Key, e.KeyModifiers)
+                If panDirection.HasValue Then
+                    PanByKeys(panDirection.Value)
+                    e.Handled = True
+                    Return
+                End If
             End If
 
             ' Ein nicht behandeltes Command/Control-Kürzel darf nicht zusätzlich

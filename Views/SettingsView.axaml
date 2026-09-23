@@ -123,6 +123,15 @@
                         <TextBlock Text="Modelle"/>
                     </StackPanel>
                 </Button>
+                <Button Classes="ghost" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
+                        Padding="14,10"
+                        Tag="MapSection"
+                        Click="OnSectionNavClick">
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/map.svg" Width="16" Height="16"/>
+                        <TextBlock Text="Kartenansicht"/>
+                    </StackPanel>
+                </Button>
                 <!-- Nur mit vorhandener Laufzeit fuer die Modelle, NICHT mit eingeschalteter
                      Erkennung: im Abschnitt steht der Schalter selbst, und der muss auch dann
                      erreichbar sein, wenn die Erkennung aus ist. Ohne die Laufzeit dagegen laesst
@@ -2249,12 +2258,11 @@
 
                         <Grid ColumnDefinitions="*,Auto">
                             <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
-                                <!-- Ein Kartenbild gibt es (noch) nicht, und der Text hat eines
-                                     versprochen. Was die Ortstabelle wirklich leistet, sind NAMEN
-                                     aus Koordinaten - und die entstehen ohne jede Verbindung nach
-                                     außen. -->
+                                <!-- Was die Ortstabelle leistet, sind NAMEN aus Koordinaten - und
+                                     die entstehen ohne jede Verbindung nach außen. Die Karte darunter
+                                     ist ein eigener Schalter, weil sie das nicht kann. -->
                                 <TextBlock Text="Aufnahmeorte benennen" FontSize="{DynamicResource FP.Font.Body}"/>
-                                <TextBlock Text="Macht aus den Koordinaten im Foto einen Ort und ein Land: sie erscheinen in der Info-Leiste, im Ortsfilter über der Galerie und in der Suche. Die Zuordnung kommt aus einer Ortstabelle auf diesem Gerät - es wird nichts abgefragt und nichts gesendet. Eine Karte zeigt FerrumPix nicht." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Text="Macht aus den Koordinaten im Foto einen Ort und ein Land: sie erscheinen in der Info-Leiste, im Ortsfilter über der Galerie und in der Suche. Die Zuordnung kommt aus einer Ortstabelle auf diesem Gerät - es wird nichts abgefragt und nichts gesendet." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </StackPanel>
                             <ToggleSwitch Grid.Column="1"
                                           IsChecked="{Binding PhotoMapEnabled}"
@@ -2262,6 +2270,66 @@
                                           OffContent=""
                                           VerticalAlignment="Center"/>
                         </Grid>
+                    </StackPanel>
+                </Border>
+
+                <!-- KARTENANSICHT. Ein eigener Abschnitt und nicht bei den Modellen: der ist ohne
+                     Modell-Laufzeit ausgeblendet, die Karte braucht keine. Einschalten geht nur über
+                     die Rückfrage im ViewModel (MapViewEnabled), denn die Kacheln kommen aus dem
+                     Netz. Die Adresse ist änderbar, weil die Kachelrichtlinie der OSM-Stiftung das
+                     verlangt; sie wird erst beim Verlassen des Feldes übernommen. Der Speicher
+                     bleibt auch bei ausgeschalteter Karte sichtbar, damit er sich leeren lässt. -->
+                <Border x:Name="MapSection" Classes="section">
+                    <StackPanel Spacing="14">
+                        <StackPanel Spacing="2">
+                            <TextBlock Text="Kartenansicht" FontSize="{DynamicResource FP.Font.Title}" FontWeight="SemiBold"/>
+                            <TextBlock Text="Zeigt die Fotos in der Galerie auf einer Karte. Die Kartenkacheln kommen aus dem Internet, ab Werk von OpenStreetMap; der Server erfährt dabei, welchen Ausschnitt Sie ansehen. Einmal geladene Kacheln bleiben auf diesem Gerät gespeichert." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap" MaxWidth="660" HorizontalAlignment="Left"/>
+                        </StackPanel>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <TextBlock Text="Einschalten" FontSize="{DynamicResource FP.Font.Body}" VerticalAlignment="Center"/>
+                            <ToggleSwitch Grid.Column="1"
+                                          IsChecked="{Binding MapViewEnabled}"
+                                          OnContent=""
+                                          OffContent=""
+                                          VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <StackPanel Spacing="8" IsVisible="{Binding MapViewEnabled}">
+                            <TextBlock Text="Kachelserver" FontSize="{DynamicResource FP.Font.Body}"/>
+                            <Grid ColumnDefinitions="*,Auto">
+                                <TextBox Classes="no-translate"
+                                         Text="{Binding MapTileUrl, UpdateSourceTrigger=LostFocus}"
+                                         MaxWidth="660"
+                                         HorizontalAlignment="Stretch"
+                                         FontSize="{DynamicResource FP.Font.Body}"/>
+                                <Button Grid.Column="1" Classes="ghost" Padding="12,7" Margin="8,0,0,0"
+                                        Command="{Binding ResetMapTileUrlCommand}">Zurücksetzen</Button>
+                            </Grid>
+                            <TextBlock Classes="no-translate"
+                                       Text="{Binding MapTileUrlError}"
+                                       IsVisible="{Binding MapTileUrlError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                                       Foreground="{DynamicResource FP.Accent}"
+                                       FontSize="{DynamicResource FP.Font.Body}"
+                                       TextWrapping="Wrap"/>
+                        </StackPanel>
+
+                        <StackPanel Spacing="8">
+                            <TextBlock Text="Kartenspeicher" FontSize="{DynamicResource FP.Font.Body}"/>
+                            <SelectableTextBlock Classes="no-translate"
+                                                 Text="{Binding MapCacheFolder}"
+                                                 Foreground="{DynamicResource FP.Text.Secondary}"
+                                                 FontSize="{DynamicResource FP.Font.Body}"
+                                                 TextWrapping="Wrap"/>
+                            <StackPanel Orientation="Horizontal" Spacing="10">
+                                <Button Classes="ghost" Padding="12,7" Command="{Binding ClearMapCacheCommand}">Cache leeren</Button>
+                                <TextBlock Classes="no-translate"
+                                           Text="{Binding MapCacheMessage}"
+                                           VerticalAlignment="Center"
+                                           Foreground="{DynamicResource FP.Text.Secondary}"
+                                           FontSize="{DynamicResource FP.Font.Body}"/>
+                            </StackPanel>
+                        </StackPanel>
                     </StackPanel>
                 </Border>
 
@@ -3089,6 +3157,36 @@
                             </Grid>
                         </StackPanel>
 
+                        <!-- Die Karte der Galerie. Dieselben Tasten wie in Betrachter und Editor; Z
+                             hat dort kein 100 Prozent und wechselt deshalb zur Nahansicht. -->
+                        <TextBlock Text="Kartenansicht" FontWeight="SemiBold" FontSize="{DynamicResource FP.Font.Body}" Margin="0,6,0,0"/>
+                        <StackPanel Spacing="6">
+                            <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
+                                <TextBlock Text="Plus" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Grid.Column="1" Text="Vergrößern" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </Grid>
+                            <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
+                                <TextBlock Text="Minus" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Grid.Column="1" Text="Verkleinern" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </Grid>
+                            <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
+                                <TextBlock Text="F" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Grid.Column="1" Text="Alle Bilder mit Aufnahmeort einpassen" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </Grid>
+                            <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
+                                <TextBlock Text="Z" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Grid.Column="1" Text="Zwischen allen Bildern und der Nahansicht an der Stelle unter dem Mauszeiger wechseln" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </Grid>
+                            <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
+                                <TextBlock Text="Pfeiltasten" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Grid.Column="1" Text="Karte verschieben" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </Grid>
+                            <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
+                                <TextBlock Text="SHIFT+PFEILTASTEN" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Grid.Column="1" Text="Karte verschieben" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </Grid>
+                        </StackPanel>
+
                         <TextBlock Text="Viewer" FontWeight="SemiBold" FontSize="{DynamicResource FP.Font.Body}" Margin="0,6,0,0"/>
                         <StackPanel Spacing="6">
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
@@ -3278,6 +3376,18 @@
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
                                 <TextBlock Text="Pfeiltasten" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                                 <TextBlock Grid.Column="1" Text="Objekt verschieben (SHIFT: größere Schritte)" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </Grid>
+                            <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
+                                <TextBlock Text="SHIFT+PFEILTASTEN" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Grid.Column="1" Text="Bildausschnitt verschieben, solange kein Objekt markiert ist" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </Grid>
+                            <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
+                                <TextBlock Text="Z" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Grid.Column="1" Text="Zwischen 100 Prozent an der Stelle unter dem Mauszeiger und Einpassen wechseln" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </Grid>
+                            <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
+                                <TextBlock Text="F" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Grid.Column="1" Text="Bild einpassen" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
                                 <TextBlock Text="ALT (beim Ziehen von Objekten)" Tag="MacOption" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>

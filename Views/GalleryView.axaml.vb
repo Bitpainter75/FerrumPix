@@ -620,6 +620,9 @@ Namespace Views
                 ' ScrollViewer - der Stand muss jetzt bewusst mitgenommen werden.
                 RestoreTileScrollOffset()
                 QueueViewportThumbnailRefresh()
+                ' Über der Karte hat die Zeitleiste nichts zu suchen, beim Zurückwechseln muss sie
+                ' wiederkommen.
+                RebuildTimelineSegments()
                 Return
             End If
 
@@ -729,6 +732,7 @@ Namespace Views
         ''' Einstellung "Zeitleiste am rechten Rand": nur noch an oder aus. Die frueheren Werte nach
         ''' Bildherkunft sind entfallen (siehe AppSettingsService.NormalizeGalleryTimelineMode).
         Private Function TimelineAllowedForCurrentView(vm As GalleryViewModel) As Boolean
+            If vm.IsMapView Then Return False
             Return Not String.Equals(
                 AppSettingsService.NormalizeGalleryTimelineMode(AppSettingsService.Load().GalleryTimelineMode),
                 "Off", StringComparison.Ordinal)
@@ -2879,6 +2883,17 @@ Namespace Views
             If vm Is Nothing Then Return
             If PlatformShortcutService.IsInputFieldSource(e.Source) Then Return
 
+            ' IN DER KARTENANSICHT gehoeren Plus, Minus, F, Z und die Pfeile der Karte, auch wenn
+            ' der Fokus gerade woanders steht (etwa auf dem Knopf, mit dem sie geoeffnet wurde).
+            ' Die Pfeile liefen sonst durch eine Auswahl, die man gar nicht sieht.
+            If vm.IsMapView Then
+                Dim map = Me.FindControl(Of PhotoMapControl)("GalleryMap")
+                If map IsNot Nothing AndAlso map.HandleKey(e.Key, e.KeyModifiers) Then
+                    e.Handled = True
+                    Return
+                End If
+            End If
+
             If PlatformShortcutService.HasPrimaryModifier(e.KeyModifiers) Then
                 Select Case e.Key
                 Case Key.A
@@ -3331,8 +3346,14 @@ Namespace Views
         Private Sub ScrollToExtreme(toEnd As Boolean)
             Dim vm = GetVm()
             If vm Is Nothing OrElse vm.Items Is Nothing OrElse vm.Items.Count = 0 Then Return
+            ' Die Karte hat keinen Rollbereich.
+            If vm.IsMapView Then Return
 
-            If vm.IsGroupView Then
+            ' GRUPPEN UND FOTOWAND gehen denselben Weg: beide rechnen ihre Gesamthoehe aus einer
+            ' Tabelle und melden sie von Anfang an endgueltig. Die Fotowand fiel hier frueher in den
+            ' Listenzweig und rollte den unsichtbaren Listen-ScrollViewer - POS1 und ENDE taten
+            ' nichts (Nutzerbefund).
+            If vm.IsGroupView OrElse vm.IsWallView Then
                 Dim scrollViewer = TileScrollViewer()
                 If scrollViewer Is Nothing OrElse scrollViewer.Bounds.Height <= 0 Then Return
 

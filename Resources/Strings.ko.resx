@@ -5784,8 +5784,59 @@
   <data name="Aufnahmeorte_benennen_9f084a61" xml:space="preserve">
     <value>사진을 찍은 곳의 이름</value>
   </data>
-  <data name="Macht_aus_den_Koordinaten_im_Foto_einen_Ort_und__ab9c05cb" xml:space="preserve">
-    <value>사진 속 좌표를 장소와 나라로 바꿉니다. 정보 사이드바, 갤러리 위의 장소 필터, 검색에 나타납니다. 이름은 이 컴퓨터의 지명 표에서 나오며, 아무것도 조회하지 않고 아무것도 보내지 않습니다. FerrumPix는 지도를 보여주지 않습니다.</value>
+  <data name="Macht_aus_den_Koordinaten_im_Foto_einen_Ort_und__e3ff7a6e" xml:space="preserve">
+    <value>사진 속 좌표를 장소와 나라로 바꿉니다. 정보 사이드바, 갤러리 위의 장소 필터, 검색에 나타납니다. 이름은 이 컴퓨터의 지명 표에서 나오며, 아무것도 조회하지 않고 아무것도 보내지 않습니다.</value>
+  </data>
+  <data name="Kartenansicht_f4c17dc2" xml:space="preserve">
+    <value>지도 보기</value>
+  </data>
+  <data name="Kachelserver_68967a54" xml:space="preserve">
+    <value>타일 서버</value>
+  </data>
+  <data name="Zeigt_die_Fotos_in_der_Galerie_auf_einer_Karte_D_1e8278f6" xml:space="preserve">
+    <value>갤러리의 사진을 지도 위에 보여 줍니다. 지도 타일은 인터넷에서 받아 오며 기본값은 OpenStreetMap입니다. 이때 서버는 사용자가 어느 지역을 보고 있는지 알게 됩니다. 한 번 받은 타일은 이 컴퓨터에 저장됩니다.</value>
+  </data>
+  <data name="Kartenansicht_einschalten_f68124fa" xml:space="preserve">
+    <value>지도 보기를 켤까요?</value>
+  </data>
+  <data name="Die_Karte_l_dt_ihre_Kacheln_von_einem_Kachelserv_e5e66a84" xml:space="preserve">
+    <value>지도는 인터넷의 타일 서버에서 타일을 받아 오며 기본값은 OpenStreetMap입니다. 이때 서버는 사용자가 보고 있는 지역, 즉 사진을 찍은 장소와 IP 주소를 알게 됩니다. 사진 자체와 좌표는 이 컴퓨터를 떠나지 않습니다.</value>
+  </data>
+  <data name="Einmal_geladene_Kacheln_bleiben_auf_diesem_Ger_t_23f7cf86" xml:space="preserve">
+    <value>한 번 받은 타일은 지도 캐시를 비울 때까지 이 컴퓨터에 저장됩니다.</value>
+  </data>
+  <data name="Einschalten_c3fafa0b" xml:space="preserve">
+    <value>켜기</value>
+  </data>
+  <data name="Die_Adresse_muss_mit_http_oder_https_beginnen_un_d674b4cf" xml:space="preserve">
+    <value>주소는 http:// 또는 https://로 시작하고 {z}, {x}, {y}를 포함해야 합니다.</value>
+  </data>
+  <data name="Kein_Bild_in_dieser_Ansicht_hat_einen_Aufnahmeor_af87657e" xml:space="preserve">
+    <value>이 보기에는 촬영 장소가 있는 이미지가 없습니다.</value>
+  </data>
+  <data name="0_von_1_Bildern_haben_einen_Aufnahmeort_326c090e" xml:space="preserve">
+    <value>이미지 {1}개 중 {0}개에 촬영 장소가 있습니다</value>
+  </data>
+  <data name="Kartenspeicher_572b413c" xml:space="preserve">
+    <value>지도 캐시</value>
+  </data>
+  <data name="Bildausschnitt_verschieben_solange_kein_Objekt_m_74604ce0" xml:space="preserve">
+    <value>선택된 개체가 없을 때 보이는 영역 이동</value>
+  </data>
+  <data name="Zwischen_100_Prozent_an_der_Stelle_unter_dem_Mau_c01a97f9" xml:space="preserve">
+    <value>마우스 포인터 위치의 100%와 맞춤 사이 전환</value>
+  </data>
+  <data name="Alle_Bilder_mit_Aufnahmeort_einpassen_353f7322" xml:space="preserve">
+    <value>촬영 장소가 있는 모든 이미지 맞춤</value>
+  </data>
+  <data name="Zwischen_allen_Bildern_und_der_Nahansicht_an_der_d227ea95" xml:space="preserve">
+    <value>모든 이미지와 마우스 포인터 위치의 근접 보기 사이 전환</value>
+  </data>
+  <data name="Karte_verschieben_27616973" xml:space="preserve">
+    <value>지도 이동</value>
+  </data>
+  <data name="Kartenkacheln_konnten_nicht_geladen_werden_1e5b70b6" xml:space="preserve">
+    <value>지도 타일을 불러오지 못했습니다.</value>
   </data>
   <data name="ArcFace_ResNet100_13907a88" xml:space="preserve">
     <value>ArcFace ResNet100</value>

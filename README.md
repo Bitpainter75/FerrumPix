@@ -41,6 +41,8 @@ Folder tree, grid, list and group view, fast thumbnails, file operations, rating
 
 The group view puts a heading above each block of pictures, following whatever you sort by: one block per day when sorting by date, or by month or year, and by name, camera, file type or rating just as well. A circle in front of the heading selects a whole block at once.
 
+A map view shows the pictures by where they were taken. It is off until you switch it on in Settings, because the map itself comes from a tile server on the internet, which learns which area you are looking at. The photos themselves never leave your machine, and map tiles you have seen are kept there until you clear them.
+
 Ratings, colour labels and keywords are read from the sidecars Lightroom, darktable or digiKam write, so a collection you tagged elsewhere arrives with its work intact. Keywords stored inside the picture itself, in its IPTC or XMP data, are picked up as well and can be searched like any other keyword.
 
 Name the folders your photos live in and FerrumPix reads them in the background, subfolders included, so search and filters cover your whole collection instead of only the folders you happened to open. It runs shortly after startup if you want it to, and it can be stopped at any time. Later runs only look at what has changed, and nothing is ever written next to your photos. Renaming or moving a folder in FerrumPix takes its ratings, labels, keywords, people and thumbnails along; if you moved it outside FerrumPix, you can point the settings at its new location.
@@ -165,7 +167,7 @@ FerrumPix signs in with your user name and an app password, which you create in 
 
 ## Settings
 
-Theme, accent colour, which side the window buttons sit on, language, interface and font scale, thumbnail and export quality, metadata handling, video support, cache cleanup and the connection to an Immich or Nextcloud server.
+Theme, accent colour, which side the window buttons sit on, language, interface and font scale, thumbnail and export quality, metadata handling, video support, the map view, cache cleanup and the connection to an Immich or Nextcloud server.
 
 The interface speaks German, English, Dutch, Swedish, Danish, Norwegian, Finnish, Spanish, French, Italian, Portuguese, Polish, Czech, Russian, Chinese and Japanese. By default it follows your system; anything else it does not know falls back to English.
 

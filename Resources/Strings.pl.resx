@@ -5787,8 +5787,59 @@
   <data name="Aufnahmeorte_benennen_9f084a61" xml:space="preserve">
     <value>Nazywaj miejsca wykonania</value>
   </data>
-  <data name="Macht_aus_den_Koordinaten_im_Foto_einen_Ort_und__ab9c05cb" xml:space="preserve">
-    <value>Zamienia współrzędne ze zdjęcia na miejsce i kraj: pojawiają się one w panelu informacji, w filtrze miejsc nad galerią i w wyszukiwaniu. Przypisanie pochodzi z tabeli miejsc na tym urządzeniu; nic nie jest odpytywane i nic wysyłane. Mapy FerrumPix nie pokazuje.</value>
+  <data name="Macht_aus_den_Koordinaten_im_Foto_einen_Ort_und__e3ff7a6e" xml:space="preserve">
+    <value>Zamienia współrzędne ze zdjęcia na miejsce i kraj: pojawiają się one w panelu informacji, w filtrze miejsc nad galerią i w wyszukiwaniu. Przypisanie pochodzi z tabeli miejsc na tym urządzeniu; nic nie jest odpytywane i nic wysyłane.</value>
+  </data>
+  <data name="Kartenansicht_f4c17dc2" xml:space="preserve">
+    <value>Widok mapy</value>
+  </data>
+  <data name="Kachelserver_68967a54" xml:space="preserve">
+    <value>Serwer kafelków</value>
+  </data>
+  <data name="Zeigt_die_Fotos_in_der_Galerie_auf_einer_Karte_D_1e8278f6" xml:space="preserve">
+    <value>Pokazuje zdjęcia z galerii na mapie. Kafelki mapy pochodzą z internetu, domyślnie z OpenStreetMap; serwer dowiaduje się przy tym, jaki obszar oglądasz. Raz pobrane kafelki pozostają zapisane na tym urządzeniu.</value>
+  </data>
+  <data name="Kartenansicht_einschalten_f68124fa" xml:space="preserve">
+    <value>Włączyć widok mapy?</value>
+  </data>
+  <data name="Die_Karte_l_dt_ihre_Kacheln_von_einem_Kachelserv_e5e66a84" xml:space="preserve">
+    <value>Mapa pobiera kafelki z serwera w internecie, domyślnie z OpenStreetMap. Serwer dowiaduje się przy tym, jaki obszar oglądasz, a więc gdzie powstały Twoje zdjęcia, oraz poznaje Twój adres IP. Same zdjęcia i ich współrzędne nie opuszczają urządzenia.</value>
+  </data>
+  <data name="Einmal_geladene_Kacheln_bleiben_auf_diesem_Ger_t_23f7cf86" xml:space="preserve">
+    <value>Raz pobrane kafelki pozostają zapisane na tym urządzeniu, dopóki nie wyczyścisz pamięci podręcznej mapy.</value>
+  </data>
+  <data name="Einschalten_c3fafa0b" xml:space="preserve">
+    <value>Włącz</value>
+  </data>
+  <data name="Die_Adresse_muss_mit_http_oder_https_beginnen_un_d674b4cf" xml:space="preserve">
+    <value>Adres musi zaczynać się od http:// lub https:// i zawierać {z}, {x} i {y}.</value>
+  </data>
+  <data name="Kein_Bild_in_dieser_Ansicht_hat_einen_Aufnahmeor_af87657e" xml:space="preserve">
+    <value>Żadne zdjęcie w tym widoku nie ma miejsca wykonania.</value>
+  </data>
+  <data name="0_von_1_Bildern_haben_einen_Aufnahmeort_326c090e" xml:space="preserve">
+    <value>{0} z {1} zdjęć ma miejsce wykonania</value>
+  </data>
+  <data name="Kartenspeicher_572b413c" xml:space="preserve">
+    <value>Pamięć podręczna mapy</value>
+  </data>
+  <data name="Bildausschnitt_verschieben_solange_kein_Objekt_m_74604ce0" xml:space="preserve">
+    <value>Przesuwanie widocznego obszaru, gdy nie zaznaczono żadnego obiektu</value>
+  </data>
+  <data name="Zwischen_100_Prozent_an_der_Stelle_unter_dem_Mau_c01a97f9" xml:space="preserve">
+    <value>Przełączanie między 100 procentami w miejscu pod wskaźnikiem myszy a dopasowaniem</value>
+  </data>
+  <data name="Alle_Bilder_mit_Aufnahmeort_einpassen_353f7322" xml:space="preserve">
+    <value>Dopasuj wszystkie zdjęcia z miejscem wykonania</value>
+  </data>
+  <data name="Zwischen_allen_Bildern_und_der_Nahansicht_an_der_d227ea95" xml:space="preserve">
+    <value>Przełączanie między wszystkimi zdjęciami a zbliżeniem w miejscu pod wskaźnikiem myszy</value>
+  </data>
+  <data name="Karte_verschieben_27616973" xml:space="preserve">
+    <value>Przesuń mapę</value>
+  </data>
+  <data name="Kartenkacheln_konnten_nicht_geladen_werden_1e5b70b6" xml:space="preserve">
+    <value>Nie udało się wczytać kafelków mapy.</value>
   </data>
   <data name="ArcFace_ResNet100_13907a88" xml:space="preserve">
     <value>ArcFace ResNet100</value>

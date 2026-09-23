@@ -5789,8 +5789,59 @@
   <data name="Aufnahmeorte_benennen_9f084a61" xml:space="preserve">
     <value>Nombrar los lugares de captura</value>
   </data>
-  <data name="Macht_aus_den_Koordinaten_im_Foto_einen_Ort_und__ab9c05cb" xml:space="preserve">
-    <value>Convierte las coordenadas de la foto en un lugar y un país: aparecen en el panel de información, en el filtro de lugares sobre la galería y en la búsqueda. Los nombres provienen de una tabla de lugares en este equipo: no se consulta ni se envía nada. FerrumPix no muestra ningún mapa.</value>
+  <data name="Macht_aus_den_Koordinaten_im_Foto_einen_Ort_und__e3ff7a6e" xml:space="preserve">
+    <value>Convierte las coordenadas de la foto en un lugar y un país: aparecen en el panel de información, en el filtro de lugares sobre la galería y en la búsqueda. Los nombres provienen de una tabla de lugares en este equipo: no se consulta ni se envía nada.</value>
+  </data>
+  <data name="Kartenansicht_f4c17dc2" xml:space="preserve">
+    <value>Vista de mapa</value>
+  </data>
+  <data name="Kachelserver_68967a54" xml:space="preserve">
+    <value>Servidor de teselas</value>
+  </data>
+  <data name="Zeigt_die_Fotos_in_der_Galerie_auf_einer_Karte_D_1e8278f6" xml:space="preserve">
+    <value>Muestra las fotos de la galería en un mapa. Las teselas del mapa vienen de internet, de forma predeterminada de OpenStreetMap; el servidor sabe así qué zona está mirando. Las teselas cargadas una vez se guardan en este equipo.</value>
+  </data>
+  <data name="Kartenansicht_einschalten_f68124fa" xml:space="preserve">
+    <value>¿Activar la vista de mapa?</value>
+  </data>
+  <data name="Die_Karte_l_dt_ihre_Kacheln_von_einem_Kachelserv_e5e66a84" xml:space="preserve">
+    <value>El mapa carga sus teselas desde un servidor en internet, de forma predeterminada de OpenStreetMap. El servidor sabe así qué zona está mirando y, con ello, dónde se tomaron sus fotos, además de su dirección IP. Las fotos y sus coordenadas no salen del equipo.</value>
+  </data>
+  <data name="Einmal_geladene_Kacheln_bleiben_auf_diesem_Ger_t_23f7cf86" xml:space="preserve">
+    <value>Las teselas cargadas una vez se quedan guardadas en este equipo hasta que vacíe la caché del mapa.</value>
+  </data>
+  <data name="Einschalten_c3fafa0b" xml:space="preserve">
+    <value>Activar</value>
+  </data>
+  <data name="Die_Adresse_muss_mit_http_oder_https_beginnen_un_d674b4cf" xml:space="preserve">
+    <value>La dirección debe empezar por http:// o https:// y contener {z}, {x} y {y}.</value>
+  </data>
+  <data name="Kein_Bild_in_dieser_Ansicht_hat_einen_Aufnahmeor_af87657e" xml:space="preserve">
+    <value>Ninguna imagen de esta vista tiene lugar de captura.</value>
+  </data>
+  <data name="0_von_1_Bildern_haben_einen_Aufnahmeort_326c090e" xml:space="preserve">
+    <value>{0} de {1} imágenes tienen lugar de captura</value>
+  </data>
+  <data name="Kartenspeicher_572b413c" xml:space="preserve">
+    <value>Caché del mapa</value>
+  </data>
+  <data name="Bildausschnitt_verschieben_solange_kein_Objekt_m_74604ce0" xml:space="preserve">
+    <value>Desplazar la zona visible mientras no haya ningún objeto seleccionado</value>
+  </data>
+  <data name="Zwischen_100_Prozent_an_der_Stelle_unter_dem_Mau_c01a97f9" xml:space="preserve">
+    <value>Alternar entre 100 por ciento en el punto bajo el puntero del ratón y ajustar</value>
+  </data>
+  <data name="Alle_Bilder_mit_Aufnahmeort_einpassen_353f7322" xml:space="preserve">
+    <value>Ajustar todas las imágenes con lugar de captura</value>
+  </data>
+  <data name="Zwischen_allen_Bildern_und_der_Nahansicht_an_der_d227ea95" xml:space="preserve">
+    <value>Alternar entre todas las imágenes y una vista cercana en el punto bajo el puntero del ratón</value>
+  </data>
+  <data name="Karte_verschieben_27616973" xml:space="preserve">
+    <value>Desplazar el mapa</value>
+  </data>
+  <data name="Kartenkacheln_konnten_nicht_geladen_werden_1e5b70b6" xml:space="preserve">
+    <value>No se pudieron cargar las teselas del mapa.</value>
   </data>
   <data name="ArcFace_ResNet100_13907a88" xml:space="preserve">
     <value>ArcFace ResNet100</value>

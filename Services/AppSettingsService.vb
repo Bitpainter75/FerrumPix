@@ -549,13 +549,22 @@ Namespace Services
         ''' wirkungslos; das entscheidet <c>AiModelService</c>.</summary>
         Public Property FaceRecognitionEnabled As Boolean = False
 
-        ''' <summary>Aufnahmeorte auf einer Karte zeigen. AB WERK AUS.
-        '''
-        ''' Ebenfalls eine bewusste Entscheidung: die Koordinaten liegen zwar längst in der
-        ''' Bibliothek, aber ein Kartenbild kommt von einem fremden Dienst, und jede Anfrage verrät
-        ''' ihm, WO fotografiert wurde. Bei einer Anwendung, die sonst nichts nach draußen gibt,
-        ''' darf das niemand ungefragt bekommen.</summary>
+        ''' <summary>Aufnahmeorte BENENNEN: Ort und Land aus der Ortstabelle auf diesem Gerät. AB
+        ''' WERK AUS. Der Name ist älter als die Funktion und bleibt, weil er in den gespeicherten
+        ''' Einstellungen steht; mit der Kartenansicht hat der Schalter nichts zu tun, die hat
+        ''' ihren eigenen (MapViewEnabled).</summary>
         Public Property PhotoMapEnabled As Boolean = False
+
+        ''' <summary>Kartenansicht in der Galerie. AB WERK AUS, und eingeschaltet wird sie nur nach
+        ''' einer Rückfrage: die Kacheln kommen von einem Server im Netz, und der abgerufene
+        ''' Ausschnitt verrät ihm, wo fotografiert wurde. Bei einer Anwendung, die sonst nichts
+        ''' nach draußen gibt, darf das niemand ungefragt bekommen.</summary>
+        Public Property MapViewEnabled As Boolean = False
+
+        ''' <summary>Die Kacheladresse mit {z}, {x} und {y}. Die Richtlinie der OSM-Stiftung
+        ''' verlangt, dass sie sich ohne neue Programmfassung ändern lässt; darüber erreicht auch
+        ''' ein eigener Server die Anwendung.</summary>
+        Public Property MapTileUrl As String = MapTileService.DefaultTileUrl
 
         ''' <summary>Wie gross ein Gesicht mindestens sein muss, um ueberhaupt aufgenommen zu werden -
         ''' in Prozent der KUERZEREN Bildkante.
@@ -881,6 +890,7 @@ Namespace Services
 
                 settings.GalleryThumbnailSize = NormalizeThumbnailSize(settings.GalleryThumbnailSize)
                 settings.GalleryViewMode = NormalizeGalleryViewMode(settings.GalleryViewMode)
+                settings.MapTileUrl = MapTileService.NormalizeTemplate(settings.MapTileUrl)
                 settings.ScopeMode = NormalizeScopeMode(settings.ScopeMode)
                 settings.ScopePanelMode = NormalizeScopeMode(settings.ScopePanelMode)
                 settings.ScopePanelToolModes = NormalizeScopePanelToolModes(settings.ScopePanelToolModes)
@@ -1124,6 +1134,7 @@ Namespace Services
                 Directory.CreateDirectory(SettingsDirectory)
                 settings.GalleryThumbnailSize = NormalizeThumbnailSize(settings.GalleryThumbnailSize)
                 settings.GalleryViewMode = NormalizeGalleryViewMode(settings.GalleryViewMode)
+                settings.MapTileUrl = MapTileService.NormalizeTemplate(settings.MapTileUrl)
                 settings.ScopeMode = NormalizeScopeMode(settings.ScopeMode)
                 settings.ScopePanelMode = NormalizeScopeMode(settings.ScopePanelMode)
                 settings.ScopePanelToolModes = NormalizeScopePanelToolModes(settings.ScopePanelToolModes)

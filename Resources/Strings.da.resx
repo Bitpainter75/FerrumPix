@@ -5787,8 +5787,59 @@
   <data name="Aufnahmeorte_benennen_9f084a61" xml:space="preserve">
     <value>Navngiv optagelsessteder</value>
   </data>
-  <data name="Macht_aus_den_Koordinaten_im_Foto_einen_Ort_und__ab9c05cb" xml:space="preserve">
-    <value>Gør koordinaterne i fotoet til et sted og et land: de vises i infopanelet, i stedfilteret over galleriet og i søgningen. Tildelingen kommer fra en stedtabel på denne enhed; der forespørges intet, og der sendes intet. Et kort viser FerrumPix ikke.</value>
+  <data name="Macht_aus_den_Koordinaten_im_Foto_einen_Ort_und__e3ff7a6e" xml:space="preserve">
+    <value>Gør koordinaterne i fotoet til et sted og et land: de vises i infopanelet, i stedfilteret over galleriet og i søgningen. Tildelingen kommer fra en stedtabel på denne enhed; der forespørges intet, og der sendes intet.</value>
+  </data>
+  <data name="Kartenansicht_f4c17dc2" xml:space="preserve">
+    <value>Kortvisning</value>
+  </data>
+  <data name="Kachelserver_68967a54" xml:space="preserve">
+    <value>Kortfliseserver</value>
+  </data>
+  <data name="Zeigt_die_Fotos_in_der_Galerie_auf_einer_Karte_D_1e8278f6" xml:space="preserve">
+    <value>Viser fotoene i galleriet på et kort. Kortfliserne hentes fra internettet, som standard fra OpenStreetMap; serveren får dermed at vide, hvilket område du ser på. Fliser, der er hentet én gang, bliver gemt på denne enhed.</value>
+  </data>
+  <data name="Kartenansicht_einschalten_f68124fa" xml:space="preserve">
+    <value>Slå kortvisning til?</value>
+  </data>
+  <data name="Die_Karte_l_dt_ihre_Kacheln_von_einem_Kachelserv_e5e66a84" xml:space="preserve">
+    <value>Kortet henter sine fliser fra en server på internettet, som standard fra OpenStreetMap. Serveren får dermed at vide, hvilket område du ser på, og dermed hvor dine fotos er taget, samt din IP-adresse. Selve fotoene og deres koordinater forlader ikke enheden.</value>
+  </data>
+  <data name="Einmal_geladene_Kacheln_bleiben_auf_diesem_Ger_t_23f7cf86" xml:space="preserve">
+    <value>Fliser, der er hentet én gang, bliver gemt på denne enhed, indtil du tømmer kortcachen.</value>
+  </data>
+  <data name="Einschalten_c3fafa0b" xml:space="preserve">
+    <value>Slå til</value>
+  </data>
+  <data name="Die_Adresse_muss_mit_http_oder_https_beginnen_un_d674b4cf" xml:space="preserve">
+    <value>Adressen skal begynde med http:// eller https:// og indeholde {z}, {x} og {y}.</value>
+  </data>
+  <data name="Kein_Bild_in_dieser_Ansicht_hat_einen_Aufnahmeor_af87657e" xml:space="preserve">
+    <value>Intet billede i denne visning har et optagelsessted.</value>
+  </data>
+  <data name="0_von_1_Bildern_haben_einen_Aufnahmeort_326c090e" xml:space="preserve">
+    <value>{0} af {1} billeder har et optagelsessted</value>
+  </data>
+  <data name="Kartenspeicher_572b413c" xml:space="preserve">
+    <value>Kortcache</value>
+  </data>
+  <data name="Bildausschnitt_verschieben_solange_kein_Objekt_m_74604ce0" xml:space="preserve">
+    <value>Flyt billedudsnittet, så længe intet objekt er markeret</value>
+  </data>
+  <data name="Zwischen_100_Prozent_an_der_Stelle_unter_dem_Mau_c01a97f9" xml:space="preserve">
+    <value>Skift mellem 100 procent ved stedet under musemarkøren og tilpas</value>
+  </data>
+  <data name="Alle_Bilder_mit_Aufnahmeort_einpassen_353f7322" xml:space="preserve">
+    <value>Tilpas alle billeder med optagelsessted</value>
+  </data>
+  <data name="Zwischen_allen_Bildern_und_der_Nahansicht_an_der_d227ea95" xml:space="preserve">
+    <value>Skift mellem alle billeder og et nærbillede ved stedet under musemarkøren</value>
+  </data>
+  <data name="Karte_verschieben_27616973" xml:space="preserve">
+    <value>Flyt kortet</value>
+  </data>
+  <data name="Kartenkacheln_konnten_nicht_geladen_werden_1e5b70b6" xml:space="preserve">
+    <value>Kortfliserne kunne ikke hentes.</value>
   </data>
   <data name="ArcFace_ResNet100_13907a88" xml:space="preserve">
     <value>ArcFace ResNet100</value>

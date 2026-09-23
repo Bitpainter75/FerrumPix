@@ -2603,9 +2603,8 @@ Namespace ViewModels
             End Get
         End Property
 
-        ''' Aufnahmeorte auf einer Karte zeigen. AB WERK AUS - die Koordinaten liegen zwar laengst in
-        ''' der Bibliothek, aber ein Kartenbild kommt von einem fremden Dienst, und jede Anfrage
-        ''' verraet ihm, WO fotografiert wurde.
+        ''' Aufnahmeorte BENENNEN, aus der Ortstabelle auf diesem Geraet. AB WERK AUS. Mit der
+        ''' Kartenansicht hat der Schalter trotz seines Namens nichts zu tun, siehe MapViewEnabled.
         Public Property PhotoMapEnabled As Boolean
             Get
                 Return _photoMapEnabled
@@ -3785,6 +3784,7 @@ Namespace ViewModels
             _gpuAccelerationDevice = If(_appSettings.GpuAccelerationDevice, "")
             _faceRecognitionEnabled = _appSettings.FaceRecognitionEnabled
             _photoMapEnabled = _appSettings.PhotoMapEnabled
+            LoadMapSettings(_appSettings)
             _faceMinimumSizePercent = _appSettings.FaceMinimumSizePercent
             _transparencyBackgroundMode = AppSettingsService.NormalizeTransparencyBackgroundMode(_appSettings.TransparencyBackgroundMode)
             _transparencyBackgroundColor = AppSettingsService.NormalizeHexColor(_appSettings.TransparencyBackgroundColor, "#FFFFFFFF")
@@ -4059,6 +4059,7 @@ Namespace ViewModels
             _savedFaceRecognitionEnabled = _faceRecognitionEnabled
             _savedFaceMinimumSizePercent = _faceMinimumSizePercent
             _savedPhotoMapEnabled = _photoMapEnabled
+            SnapshotMapSettings()
             _savedThemeMode = _themeMode
             _savedWindowButtonsSide = _windowButtonsSide
             _savedAccentColor = _accentColor
@@ -4160,6 +4161,7 @@ Namespace ViewModels
             FaceRecognitionEnabled = _savedFaceRecognitionEnabled
             FaceMinimumSizePercent = _savedFaceMinimumSizePercent
             PhotoMapEnabled = _savedPhotoMapEnabled
+            RestoreMapSettings()
             ThemeMode = _savedThemeMode
             ' Die Seite der Fensterknoepfe wirkt sofort beim Antippen, genau wie das Thema - ein
             ' Abbrechen muss sie deshalb ebenso zuruecknehmen.
@@ -4379,6 +4381,7 @@ Namespace ViewModels
             FaceRecognitionEnabled = False
             FaceMinimumSizePercent = 3
             PhotoMapEnabled = False
+            ResetMapSettings()
             TransparencyBackgroundMode = "Checkerboard"
             TransparencyBackgroundColor = "#FFFFFFFF"
             FontSizeOffset = 0

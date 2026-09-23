@@ -5789,8 +5789,59 @@
   <data name="Aufnahmeorte_benennen_9f084a61" xml:space="preserve">
     <value>Assegnare un nome ai luoghi di scatto</value>
   </data>
-  <data name="Macht_aus_den_Koordinaten_im_Foto_einen_Ort_und__ab9c05cb" xml:space="preserve">
-    <value>Trasforma le coordinate della foto in un luogo e un paese: compaiono nel pannello informazioni, nel filtro dei luoghi sopra la galleria e nella ricerca. I nomi provengono da una tabella dei luoghi su questo dispositivo: non viene interrogato né inviato nulla. FerrumPix non mostra alcuna mappa.</value>
+  <data name="Macht_aus_den_Koordinaten_im_Foto_einen_Ort_und__e3ff7a6e" xml:space="preserve">
+    <value>Trasforma le coordinate della foto in un luogo e un paese: compaiono nel pannello informazioni, nel filtro dei luoghi sopra la galleria e nella ricerca. I nomi provengono da una tabella dei luoghi su questo dispositivo: non viene interrogato né inviato nulla.</value>
+  </data>
+  <data name="Kartenansicht_f4c17dc2" xml:space="preserve">
+    <value>Vista mappa</value>
+  </data>
+  <data name="Kachelserver_68967a54" xml:space="preserve">
+    <value>Server delle tessere</value>
+  </data>
+  <data name="Zeigt_die_Fotos_in_der_Galerie_auf_einer_Karte_D_1e8278f6" xml:space="preserve">
+    <value>Mostra le foto della galleria su una mappa. Le tessere della mappa arrivano da Internet, per impostazione predefinita da OpenStreetMap; il server viene così a sapere quale zona sta guardando. Le tessere caricate una volta restano salvate su questo dispositivo.</value>
+  </data>
+  <data name="Kartenansicht_einschalten_f68124fa" xml:space="preserve">
+    <value>Attivare la vista mappa?</value>
+  </data>
+  <data name="Die_Karte_l_dt_ihre_Kacheln_von_einem_Kachelserv_e5e66a84" xml:space="preserve">
+    <value>La mappa carica le sue tessere da un server su Internet, per impostazione predefinita da OpenStreetMap. Il server viene così a sapere quale zona sta guardando, e quindi dove sono state scattate le sue foto, oltre al suo indirizzo IP. Le foto stesse e le loro coordinate non lasciano il dispositivo.</value>
+  </data>
+  <data name="Einmal_geladene_Kacheln_bleiben_auf_diesem_Ger_t_23f7cf86" xml:space="preserve">
+    <value>Le tessere caricate una volta restano salvate su questo dispositivo finché non svuota la cache della mappa.</value>
+  </data>
+  <data name="Einschalten_c3fafa0b" xml:space="preserve">
+    <value>Attiva</value>
+  </data>
+  <data name="Die_Adresse_muss_mit_http_oder_https_beginnen_un_d674b4cf" xml:space="preserve">
+    <value>L'indirizzo deve iniziare con http:// o https:// e contenere {z}, {x} e {y}.</value>
+  </data>
+  <data name="Kein_Bild_in_dieser_Ansicht_hat_einen_Aufnahmeor_af87657e" xml:space="preserve">
+    <value>Nessuna immagine in questa vista ha un luogo di scatto.</value>
+  </data>
+  <data name="0_von_1_Bildern_haben_einen_Aufnahmeort_326c090e" xml:space="preserve">
+    <value>{0} immagini su {1} hanno un luogo di scatto</value>
+  </data>
+  <data name="Kartenspeicher_572b413c" xml:space="preserve">
+    <value>Cache della mappa</value>
+  </data>
+  <data name="Bildausschnitt_verschieben_solange_kein_Objekt_m_74604ce0" xml:space="preserve">
+    <value>Spostare l'area visibile finché nessun oggetto è selezionato</value>
+  </data>
+  <data name="Zwischen_100_Prozent_an_der_Stelle_unter_dem_Mau_c01a97f9" xml:space="preserve">
+    <value>Passare da 100 percento nel punto sotto il puntatore del mouse all'adattamento e viceversa</value>
+  </data>
+  <data name="Alle_Bilder_mit_Aufnahmeort_einpassen_353f7322" xml:space="preserve">
+    <value>Adattare tutte le immagini con un luogo di scatto</value>
+  </data>
+  <data name="Zwischen_allen_Bildern_und_der_Nahansicht_an_der_d227ea95" xml:space="preserve">
+    <value>Passare da tutte le immagini a una vista ravvicinata nel punto sotto il puntatore del mouse e viceversa</value>
+  </data>
+  <data name="Karte_verschieben_27616973" xml:space="preserve">
+    <value>Spostare la mappa</value>
+  </data>
+  <data name="Kartenkacheln_konnten_nicht_geladen_werden_1e5b70b6" xml:space="preserve">
+    <value>Impossibile caricare le tessere della mappa.</value>
   </data>
   <data name="ArcFace_ResNet100_13907a88" xml:space="preserve">
     <value>ArcFace ResNet100</value>

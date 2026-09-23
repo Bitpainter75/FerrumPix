@@ -1240,9 +1240,15 @@ Namespace ViewModels
                 Return _viewMode
             End Get
             Set(value As String)
-                value = AppSettingsService.NormalizeGalleryViewMode(value)
+                ' Die Karte ist keine gespeicherte Ansicht: sie gibt es nur, solange sie in den
+                ' Einstellungen freigegeben ist, und nach einem Neustart steht wieder die letzte
+                ' Kachelansicht da.
+                Dim isMap = String.Equals(value, MapViewMode, StringComparison.Ordinal) AndAlso IsMapViewAvailable
+                If Not isMap Then value = AppSettingsService.NormalizeGalleryViewMode(value)
                 If _viewMode = value Then Return
+                If isMap Then _viewModeBeforeMap = _viewMode
                 Me.RaiseAndSetIfChanged(_viewMode, value)
+                Me.RaisePropertyChanged(NameOf(IsMapView))
                 Me.RaisePropertyChanged(NameOf(IsGridView))
                 Me.RaisePropertyChanged(NameOf(IsListView))
                 Me.RaisePropertyChanged(NameOf(IsGroupView))
@@ -1259,8 +1265,13 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(TileMargin))
                 Me.RaisePropertyChanged(NameOf(TileImageCornerRadius))
                 InvalidateWallLayout()
-                AppSettingsService.SaveGalleryViewMode(value)
-                _mainVm?.Settings?.SyncGalleryViewMode(value)
+                If isMap Then
+                    RefreshMapPoints()
+                Else
+                    AppSettingsService.SaveGalleryViewMode(value)
+                    _mainVm?.Settings?.SyncGalleryViewMode(value)
+                    CloseMapSelection()
+                End If
                 ' Die Eintragsliste der Gruppenansicht gehoert nur ihr. Beim Hineinwechseln wird sie
                 ' gebaut, beim Hinauswechseln geleert - sonst haelt sie den ganzen Bestand ein zweites
                 ' Mal fest, ohne dass jemand hinsieht.
@@ -1825,6 +1836,7 @@ Namespace ViewModels
                     ' Die Fotowand rechnet ihre Tabelle aus DERSELBEN Liste; jede Aenderung daran
                     ' verschiebt jede Kachel dahinter.
                     InvalidateWallLayout()
+                    ScheduleMapRefresh()
                 End Sub
             DisplayItems = New BulkObservableCollection(Of ImageItem)()
             GroupEntries = New BulkObservableCollection(Of ImageItem)()

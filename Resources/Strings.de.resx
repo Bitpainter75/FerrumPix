@@ -5786,8 +5786,59 @@
   <data name="Aufnahmeorte_benennen_9f084a61" xml:space="preserve">
     <value>Aufnahmeorte benennen</value>
   </data>
-  <data name="Macht_aus_den_Koordinaten_im_Foto_einen_Ort_und__ab9c05cb" xml:space="preserve">
-    <value>Macht aus den Koordinaten im Foto einen Ort und ein Land: sie erscheinen in der Info-Leiste, im Ortsfilter über der Galerie und in der Suche. Die Zuordnung kommt aus einer Ortstabelle auf diesem Gerät - es wird nichts abgefragt und nichts gesendet. Eine Karte zeigt FerrumPix nicht.</value>
+  <data name="Macht_aus_den_Koordinaten_im_Foto_einen_Ort_und__e3ff7a6e" xml:space="preserve">
+    <value>Macht aus den Koordinaten im Foto einen Ort und ein Land: sie erscheinen in der Info-Leiste, im Ortsfilter über der Galerie und in der Suche. Die Zuordnung kommt aus einer Ortstabelle auf diesem Gerät - es wird nichts abgefragt und nichts gesendet.</value>
+  </data>
+  <data name="Kartenansicht_f4c17dc2" xml:space="preserve">
+    <value>Kartenansicht</value>
+  </data>
+  <data name="Kachelserver_68967a54" xml:space="preserve">
+    <value>Kachelserver</value>
+  </data>
+  <data name="Zeigt_die_Fotos_in_der_Galerie_auf_einer_Karte_D_1e8278f6" xml:space="preserve">
+    <value>Zeigt die Fotos in der Galerie auf einer Karte. Die Kartenkacheln kommen aus dem Internet, ab Werk von OpenStreetMap; der Server erfährt dabei, welchen Ausschnitt Sie ansehen. Einmal geladene Kacheln bleiben auf diesem Gerät gespeichert.</value>
+  </data>
+  <data name="Kartenansicht_einschalten_f68124fa" xml:space="preserve">
+    <value>Kartenansicht einschalten?</value>
+  </data>
+  <data name="Die_Karte_l_dt_ihre_Kacheln_von_einem_Kachelserv_e5e66a84" xml:space="preserve">
+    <value>Die Karte lädt ihre Kacheln von einem Kachelserver im Internet, ab Werk von OpenStreetMap. Dabei erfährt der Server, welchen Ausschnitt Sie ansehen, und damit, wo Ihre Fotos entstanden sind, dazu Ihre IP-Adresse. Die Fotos selbst und ihre Koordinaten verlassen das Gerät nicht.</value>
+  </data>
+  <data name="Einmal_geladene_Kacheln_bleiben_auf_diesem_Ger_t_23f7cf86" xml:space="preserve">
+    <value>Einmal geladene Kacheln bleiben auf diesem Gerät gespeichert, bis Sie den Kartenspeicher leeren.</value>
+  </data>
+  <data name="Einschalten_c3fafa0b" xml:space="preserve">
+    <value>Einschalten</value>
+  </data>
+  <data name="Die_Adresse_muss_mit_http_oder_https_beginnen_un_d674b4cf" xml:space="preserve">
+    <value>Die Adresse muss mit http:// oder https:// beginnen und {z}, {x} und {y} enthalten.</value>
+  </data>
+  <data name="Kein_Bild_in_dieser_Ansicht_hat_einen_Aufnahmeor_af87657e" xml:space="preserve">
+    <value>Kein Bild in dieser Ansicht hat einen Aufnahmeort.</value>
+  </data>
+  <data name="0_von_1_Bildern_haben_einen_Aufnahmeort_326c090e" xml:space="preserve">
+    <value>{0} von {1} Bildern haben einen Aufnahmeort</value>
+  </data>
+  <data name="Kartenspeicher_572b413c" xml:space="preserve">
+    <value>Kartenspeicher</value>
+  </data>
+  <data name="Bildausschnitt_verschieben_solange_kein_Objekt_m_74604ce0" xml:space="preserve">
+    <value>Bildausschnitt verschieben, solange kein Objekt markiert ist</value>
+  </data>
+  <data name="Zwischen_100_Prozent_an_der_Stelle_unter_dem_Mau_c01a97f9" xml:space="preserve">
+    <value>Zwischen 100 Prozent an der Stelle unter dem Mauszeiger und Einpassen wechseln</value>
+  </data>
+  <data name="Alle_Bilder_mit_Aufnahmeort_einpassen_353f7322" xml:space="preserve">
+    <value>Alle Bilder mit Aufnahmeort einpassen</value>
+  </data>
+  <data name="Zwischen_allen_Bildern_und_der_Nahansicht_an_der_d227ea95" xml:space="preserve">
+    <value>Zwischen allen Bildern und der Nahansicht an der Stelle unter dem Mauszeiger wechseln</value>
+  </data>
+  <data name="Karte_verschieben_27616973" xml:space="preserve">
+    <value>Karte verschieben</value>
+  </data>
+  <data name="Kartenkacheln_konnten_nicht_geladen_werden_1e5b70b6" xml:space="preserve">
+    <value>Kartenkacheln konnten nicht geladen werden.</value>
   </data>
   <data name="ArcFace_ResNet100_13907a88" xml:space="preserve">
     <value>ArcFace ResNet100</value>

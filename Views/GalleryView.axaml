@@ -1145,6 +1145,16 @@
                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/layout-board.svg"
                                    Width="20" Height="20"/>
                         </Button>
+                        <!-- Die Karte gibt es nur, wenn sie in den Einstellungen freigegeben ist:
+                             ihre Kacheln kommen aus dem Netz. -->
+                        <Button Classes="icon-btn" Width="34" Height="34"
+                                IsVisible="{Binding IsMapViewAvailable}"
+                                Classes.active="{Binding IsMapView}"
+                                Command="{Binding SetViewModeCommand}" CommandParameter="Map"
+                                ToolTip.Tip="Kartenansicht">
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/map.svg"
+                                   Width="20" Height="20"/>
+                        </Button>
                         <Button Classes="icon-btn" Width="34" Height="34"
                                 Classes.active="{Binding IsInfoSidebarVisible}"
                                 Command="{Binding ToggleInfoSidebarCommand}"
@@ -2677,6 +2687,87 @@
                     </StackPanel>
                 </ScrollViewer>
 
+                <!-- KARTE. Dieselben Bilder wie in den anderen Ansichten, nach Aufnahmeort. Ein
+                     Klick auf ein Häufchen legt seine Bilder in den Streifen darunter, ein Klick
+                     auf ein Bild dort öffnet es im Betrachter. Die Kacheln holt MapTileService,
+                     siehe dort für die Regeln der Kachelrichtlinie. -->
+                <Grid IsVisible="{Binding IsMapView}"
+                      RowDefinitions="*,Auto"
+                      Margin="12,12,18,12">
+                    <Border CornerRadius="6" ClipToBounds="True">
+                        <icons:PhotoMapControl x:Name="GalleryMap"
+                                               Points="{Binding MapPoints}"
+                                               ZoomLevel="{Binding MapZoom}"
+                                               TileUrl="{Binding MapTileUrl}"
+                                               ClusterCommand="{Binding ShowMapClusterCommand}"
+                                               FailureText="{Binding MapFailureText}"
+                                               Background="{DynamicResource FP.Bg.Input}"
+                                               AccentBrush="{DynamicResource FP.Accent}"/>
+                    </Border>
+                    <Border HorizontalAlignment="Left"
+                            VerticalAlignment="Top"
+                            Margin="10"
+                            Padding="8,4"
+                            CornerRadius="4"
+                            Background="{DynamicResource FP.Bg.Panel}"
+                            Opacity="0.92"
+                            IsHitTestVisible="False"
+                            IsVisible="{Binding MapSummaryText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                        <TextBlock Classes="no-translate"
+                                   Text="{Binding MapSummaryText}"
+                                   FontSize="{DynamicResource FP.Font.Body}"/>
+                    </Border>
+
+                    <Border Grid.Row="1"
+                            Margin="0,10,0,0"
+                            Padding="10,8"
+                            CornerRadius="6"
+                            Background="{DynamicResource FP.Bg.Panel}"
+                            IsVisible="{Binding HasMapSelection}">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <ScrollViewer HorizontalScrollBarVisibility="Auto"
+                                          VerticalScrollBarVisibility="Disabled">
+                                <ItemsControl ItemsSource="{Binding MapSelection}">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <VirtualizingStackPanel Orientation="Horizontal"/>
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate DataType="{x:Type models:ImageItem}">
+                                            <Button Classes="ghost"
+                                                    Padding="0"
+                                                    Margin="0,0,8,0"
+                                                    Width="112" Height="84"
+                                                    ToolTip.Tip="{Binding DisplayFileName}"
+                                                    Command="{Binding DataContext.OpenMapItemCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                    CommandParameter="{Binding}">
+                                                <Border CornerRadius="4"
+                                                        ClipToBounds="True"
+                                                        Background="{DynamicResource FP.Bg.Input}">
+                                                    <Image Source="{Binding Thumbnail}"
+                                                           Stretch="UniformToFill"
+                                                           RenderOptions.BitmapInterpolationMode="MediumQuality"/>
+                                                </Border>
+                                            </Button>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </ScrollViewer>
+                            <Button Grid.Column="1"
+                                    Classes="icon-btn"
+                                    Width="30" Height="30"
+                                    Margin="8,0,0,0"
+                                    VerticalAlignment="Top"
+                                    Command="{Binding CloseMapSelectionCommand}"
+                                    ToolTip.Tip="Schließen">
+                                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/x.svg"
+                                               Width="18" Height="18"/>
+                            </Button>
+                        </Grid>
+                    </Border>
+                </Grid>
+
                 <!-- Zeitleiste am rechten Rand (wie Immich): Grob-Marker der aktuellen Sortierung
                      (Jahre bzw. Anfangsbuchstaben), Positions-Band und Sprechblase beim Ziehen.
                      Ein Control für beide Ansichten - Daten/Scroll-Zustand und Sichtbarkeit
@@ -2775,7 +2866,29 @@
                     </StackPanel>
                 </StackPanel>
 
-                <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center" HorizontalAlignment="Center">
+                <!-- In der Kartenansicht steht hier die Zoomstufe der Karte statt der Vorschaugröße:
+                     derselbe Platz, dieselbe Bedienung, und die Vorschaugröße hat dort keine
+                     Wirkung. -->
+                <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center" HorizontalAlignment="Center"
+                            IsVisible="{Binding IsMapView}">
+                    <Button Classes="ghost" Height="20" Padding="4,0,4,2" VerticalContentAlignment="Center" Focusable="False"
+                            Command="{Binding MapZoomOutCommand}" ToolTip.Tip="Verkleinern">
+                        <TextBlock Text="−" FontSize="{DynamicResource FP.Glyph.Large}" Foreground="{DynamicResource FP.Text.Secondary}" VerticalAlignment="Center"/>
+                    </Button>
+                    <icons:RoundSlider Width="200"
+                                       Minimum="1"
+                                       Maximum="19"
+                                       DefaultValue="2"
+                                       Value="{Binding MapZoom}"
+                                       VerticalAlignment="Center"/>
+                    <Button Classes="ghost" Height="20" Padding="4,0,4,2" VerticalContentAlignment="Center" Focusable="False"
+                            Command="{Binding MapZoomInCommand}" ToolTip.Tip="Vergrößern">
+                        <TextBlock Text="+" FontSize="{DynamicResource FP.Glyph.Large}" Foreground="{DynamicResource FP.Text.Secondary}" VerticalAlignment="Center"/>
+                    </Button>
+                </StackPanel>
+
+                <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center" HorizontalAlignment="Center"
+                            IsVisible="{Binding !IsMapView}">
                     <Button Classes="ghost" Height="20" Padding="4,0,4,2" VerticalContentAlignment="Center" Focusable="False"
                             Command="{Binding DecreaseThumbnailSizeCommand}" ToolTip.Tip="Verkleinern">
                         <TextBlock Text="−" FontSize="{DynamicResource FP.Glyph.Large}" Foreground="{DynamicResource FP.Text.Secondary}" VerticalAlignment="Center"/>
