@@ -374,12 +374,14 @@ jobs:
           & $env:MAKEAPPX pack /o /d nutzlast /p FerrumPix-win-x64.msix
           Get-Item FerrumPix-win-x64.msix | Format-List Name, Length
 
-      # Von hier aus geht es von Hand ins Partner Center.
+      # Von hier aus geht es von Hand ins Partner Center, innerhalb von drei Tagen: laenger
+      # braucht Patrick kein Artefakt (ohne Angabe blieben es 90 Tage).
       - uses: actions/upload-artifact@v7
         with:
           name: FerrumPix-msix
           path: FerrumPix-win-x64.msix
           if-no-files-found: error
+          retention-days: 3
 
   veroeffentlichen:
     name: Ins Release
