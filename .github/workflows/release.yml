@@ -31,7 +31,12 @@
 # Benoetigte Secrets im oeffentlichen Repo:
 #   PACKAGING_DEPLOY_KEY  privater SSH-Schluessel, oeffentlicher Teil als Deploy-Key im
 #                         privaten packaging-Repo. Lesen genuegt.
-# KEIN eigener Release-Token noetig: GitHub stellt jedem Job einen bereit (secrets.GITHUB_TOKEN).
+#   RELEASE_TOKEN         Fine-grained Token NUR fuer dieses Repo, Rechte "Contents" und
+#                         "Workflows" auf Lesen und Schreiben. Ohne ihn nimmt der Lauf den
+#                         eingebauten GITHUB_TOKEN, und der darf keinen Tag auf einen Commit
+#                         setzen, dessen Workflow-Dateien vom Stand auf main abweichen. Genau das
+#                         tun Archivieren und Umhaengen von "latest", sobald sich zwischen zwei
+#                         Versionen ein Workflow geaendert hat (0.9.50: 403 beim Archivieren).
 #
 # Fuer die MSIX als Repository-Variablen (keine Secrets, die Werte stehen in jedem Paket), alle
 # aus dem Partner Center, aus der Identitaet der Anwendung:
@@ -434,4 +439,4 @@ jobs:
             packaging/publish-github-release.sh --only-packages --partial
           fi
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN || secrets.GITHUB_TOKEN }}

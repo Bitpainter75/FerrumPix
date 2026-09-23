@@ -48,7 +48,7 @@ jobs:
       - name: AUR-ZIP ins Release
         run: packaging/publish-github-release.sh --only-aur
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
 
       - name: AUR-Repo klonen
         run: |
