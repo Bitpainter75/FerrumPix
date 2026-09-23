@@ -100,7 +100,39 @@ Namespace Views
             ' Das Control gehört dieser View-Instanz - kein Abmelden nötig, sie sterben gemeinsam.
             Dim scrubber = Me.FindControl(Of GalleryTimelineScrubber)("GalleryTimelineScrubber")
             If scrubber IsNot Nothing Then AddHandler scrubber.ScrubRequested, AddressOf OnTimelineScrubRequested
+
+            ' Der Streifen unter der Karte ist der Filmstreifen von Betrachter und Editor: dasselbe
+            ' Nachladen der Vorschaubilder fuer sein Sichtfenster, dasselbe Blaettern mit dem Rad.
+            _mapStripController = New FilmstripInteractionController(Me, New ViewportThumbnailTracker(),
+                Function() GetVm()?.MapSelection,
+                Function() If(GetVm() Is Nothing, -1, GetVm().MapStripIndex),
+                listBoxName:="MapFilmstripListBox")
+            Dim mapStrip = Me.FindControl(Of ListBox)("MapFilmstripListBox")
+            If mapStrip IsNot Nothing Then
+                _mapStripController.AttachTo(mapStrip)
+                ' Tunnel wie im Editor: sonst verbraucht der ScrollViewer der Liste das Rad, bevor
+                ' es hier ankommt.
+                mapStrip.AddHandler(InputElement.PointerWheelChangedEvent, AddressOf OnMapStripWheelChanged, RoutingStrategies.Tunnel)
+            End If
         End Sub
+
+        Private ReadOnly _mapStripController As FilmstripInteractionController
+
+        Private Sub OnMapStripWheelChanged(sender As Object, e As PointerWheelEventArgs)
+            Dim vm = GetVm()
+            If vm Is Nothing OrElse vm.MapSelection.Count = 0 Then Return
+            vm.NavigateMapStripByWheel(e.Delta.Y)
+            e.Handled = True
+        End Sub
+
+        ''' <summary>Liegt das Element im Streifen unter der Karte? Dort meint ein Doppelklick das
+        ''' Haeufchen und nicht die ganze Galerie.</summary>
+        Private Function IsInMapStrip(control As Object) As Boolean
+            Dim visual = TryCast(control, Avalonia.Visual)
+            Dim strip = Me.FindControl(Of ListBox)("MapFilmstripListBox")
+            If visual Is Nothing OrElse strip Is Nothing Then Return False
+            Return visual.GetVisualAncestors().Contains(strip)
+        End Function
 
         ''' <summary>Die Stichwortliste vor dem Aufklappen neu einlesen. Sie kommt aus dem Katalog
         ''' und aendert sich, sobald irgendwo ein Stichwort vergeben oder entfernt wird - eine
@@ -592,6 +624,18 @@ Namespace Views
         End Sub
 
         Private Sub OnViewModelPropertyChanged(sender As Object, e As PropertyChangedEventArgs)
+            ' Der Streifen unter der Karte folgt der Auswahl wie der Filmstreifen dem aktuellen
+            ' Bild. Ein neues Haeufchen beginnt mit neuem Sichtfenster.
+            If e.PropertyName = NameOf(GalleryViewModel.HasMapSelection) Then
+                _mapStripController.Reset()
+                _mapStripController.QueueThumbnailRefresh()
+                Dispatcher.UIThread.Post(Sub() _mapStripController.RefreshThumbnails(), DispatcherPriority.Background)
+            End If
+            If e.PropertyName = NameOf(GalleryViewModel.MapStripIndex) Then
+                _mapStripController.ScrollToCurrent()
+                _mapStripController.QueueThumbnailRefresh()
+                Return
+            End If
             If e.PropertyName = NameOf(GalleryViewModel.CurrentFolder) Then
                 ' Das Laden ist asynchron. Den Ordner merken, damit OnDisplayItemsCollectionChanged
                 ' den Scrollversatz nochmals setzt, sobald die neue virtuelle Liste Inhalt hat.
@@ -2027,7 +2071,12 @@ Namespace Views
             If item IsNot Nothing Then
                 vm.SelectedItem = item
                 _selectionAnchor = item
-                OpenGalleryItem(item)
+                ' Im Streifen unter der Karte blaettert der Betrachter durch das Haeufchen.
+                If IsInMapStrip(sender) Then
+                    vm.OpenMapItem(item)
+                Else
+                    OpenGalleryItem(item)
+                End If
             End If
         End Sub
 
@@ -2471,7 +2520,12 @@ Namespace Views
             ' Unterscheidung unten (Kachel oder Zeile) bleibt davon unberuehrt.
             Dim grid = TileScrollViewer()
             Dim rows = Me.FindControl(Of ScrollViewer)("GalleryListScrollViewer")
-            Dim hit = ContextTarget.UnderPointer(e, grid)
+            ' Der Streifen unter der Karte traegt Kacheln derselben Galerie: dasselbe Menue wie auf
+            ' einer Kachel des Rasters. In der Kartenansicht NUR er; das Raster liegt dann
+            ' unsichtbar darunter und darf keinen Treffer liefern.
+            Dim hit = If(vm.IsMapView,
+                         ContextTarget.UnderPointer(e, Me.FindControl(Of ListBox)("MapFilmstripListBox")),
+                         ContextTarget.UnderPointer(e, grid))
             Dim fromGrid = hit IsNot Nothing
             If hit Is Nothing Then hit = ContextTarget.UnderPointer(e, rows)
 

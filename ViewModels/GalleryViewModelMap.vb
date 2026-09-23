@@ -35,16 +35,73 @@ Namespace ViewModels
         Private _mapRefreshTimer As DispatcherTimer
         Private _mapZoom As Double = 2
 
+        ''' <summary>Die Bilder des angeklickten Haeufchens, im Streifen unter der Karte. Es sind
+        ''' dieselben Elemente wie in der Galerie: Auswahl, Infopanel, Kontextmenue und Ziehen
+        ''' laufen deshalb ueber die Wege der Kacheln.</summary>
         Public ReadOnly Property MapSelection As New BulkObservableCollection(Of ImageItem)()
+
+        Private _mapStripNavDebouncer As FilmstripNavigationDebouncer
+
+        ''' <summary>Das ausgewaehlte Bild im Streifen, -1 wenn keines darin liegt. Der Streifen
+        ''' markiert es und rollt es ins Bild, wie der Filmstreifen das aktuelle Bild.</summary>
+        Public ReadOnly Property MapStripIndex As Integer
+            Get
+                If _selectedItem Is Nothing Then Return -1
+                Return MapSelection.IndexOf(_selectedItem)
+            End Get
+        End Property
+
+        ''' <summary>Das Mausrad ueber dem Streifen blaettert wie im Filmstreifen von Betrachter und
+        ''' Editor: es waehlt das naechste oder vorige Bild aus, und das Infopanel folgt.</summary>
+        Public Sub NavigateMapStripByWheel(deltaY As Double)
+            If MapSelection.Count = 0 OrElse deltaY = 0 Then Return
+            ' Anders als im Betrachter gibt es hier nicht immer ein aktuelles Bild. Dann beginnt
+            ' das Rad am Anfang (nach unten) oder am Ende (nach oben), statt eines zu ueberspringen.
+            If MapStripIndex < 0 Then
+                SelectOnly(If(deltaY < 0, MapSelection(0), MapSelection(MapSelection.Count - 1)))
+                Return
+            End If
+            If _mapStripNavDebouncer Is Nothing Then
+                _mapStripNavDebouncer = New FilmstripNavigationDebouncer(
+                    wrapAround:=True,
+                    getCurrentIndex:=Function() MapStripIndex,
+                    getCount:=Function() MapSelection.Count,
+                    commit:=Function(idx)
+                                If idx >= 0 AndAlso idx < MapSelection.Count Then SelectOnly(MapSelection(idx))
+                                Return Task.CompletedTask
+                            End Function)
+            End If
+            _mapStripNavDebouncer.QueueWheelDelta(deltaY)
+        End Sub
+
+        ' Dasselbe Aussehen wie der Filmstreifen in Betrachter und Editor, aus denselben
+        ' Einstellungen. MainWindowViewModel meldet sie bei einer Aenderung neu.
+
+        Public ReadOnly Property ShowFilmstripItemBadges As Boolean
+            Get
+                Return _mainVm IsNot Nothing AndAlso _mainVm.Settings IsNot Nothing AndAlso
+                       _mainVm.Settings.FilmstripItemBadgesVisible
+            End Get
+        End Property
+
+        Public ReadOnly Property FilmstripTilesAreFlat As Boolean
+            Get
+                Return _mainVm IsNot Nothing AndAlso _mainVm.Settings IsNot Nothing AndAlso
+                       Not _mainVm.Settings.FilmstripTileFrame
+            End Get
+        End Property
+
+        Public ReadOnly Property FilmstripImageCornerRadius As Avalonia.CornerRadius
+            Get
+                Return If(FilmstripTilesAreFlat, New Avalonia.CornerRadius(0), New Avalonia.CornerRadius(6))
+            End Get
+        End Property
 
         Public ReadOnly Property ShowMapClusterCommand As ICommand =
             ReactiveCommand.Create(Of IReadOnlyList(Of ImageItem))(AddressOf ShowMapCluster)
 
         Public ReadOnly Property CloseMapSelectionCommand As ICommand =
             ReactiveCommand.Create(AddressOf CloseMapSelection)
-
-        Public ReadOnly Property OpenMapItemCommand As ICommand =
-            ReactiveCommand.Create(Of ImageItem)(AddressOf OpenMapItem)
 
         ''' <summary>Die Zoomstufe der Karte, gebunden an die Karte und an den Regler in der
         ''' Fußleiste, der in der Kartenansicht an die Stelle der Vorschaugröße tritt.</summary>
@@ -190,21 +247,21 @@ Namespace ViewModels
             If items Is Nothing OrElse items.Count = 0 Then Return
             MapSelection.ReplaceAll(items)
             Me.RaisePropertyChanged(NameOf(HasMapSelection))
-            ' Die Galerie fragt Vorschaubilder nur für ihr eigenes Sichtfenster an; der Streifen
-            ' ist keines davon.
-            ImageItem.SetViewportThumbnailRequests(items.Take(40))
-            ImageItem.QueueBackgroundThumbnails(items)
+            Me.RaisePropertyChanged(NameOf(MapStripIndex))
+            ' Die Vorschaubilder fragt der Streifen selbst fuer sein Sichtfenster an, ueber
+            ' denselben Weg wie der Filmstreifen (FilmstripInteractionController).
         End Sub
 
         Private Sub CloseMapSelection()
             If MapSelection.Count = 0 Then Return
             MapSelection.ReplaceAll(Array.Empty(Of ImageItem)())
             Me.RaisePropertyChanged(NameOf(HasMapSelection))
+            Me.RaisePropertyChanged(NameOf(MapStripIndex))
         End Sub
 
         ''' <summary>Öffnet das Bild im Betrachter; geblättert wird durch die Bilder des
-        ''' angeklickten Häufchens.</summary>
-        Private Sub OpenMapItem(item As ImageItem)
+        ''' angeklickten Häufchens. Der Doppelklick im Streifen kommt hier an.</summary>
+        Public Sub OpenMapItem(item As ImageItem)
             If item Is Nothing OrElse String.IsNullOrEmpty(item.FilePath) Then Return
             Dim paths = MapSelection.Select(Function(i) i.FilePath).ToList()
             If Not paths.Contains(item.FilePath) Then paths.Insert(0, item.FilePath)

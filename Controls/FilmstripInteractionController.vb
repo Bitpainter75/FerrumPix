@@ -27,15 +27,20 @@ Namespace Controls
         Private ReadOnly _tracker As ViewportThumbnailTracker
         Private ReadOnly _getItems As Func(Of IReadOnlyList(Of ImageItem))
         Private ReadOnly _getCurrentIndex As Func(Of Integer)
+        ''' <summary>Name der Liste im owner. Betrachter und Editor heissen "FilmstripListBox"; die
+        ''' Kartenansicht der Galerie hat ihren eigenen Streifen neben den Kacheln.</summary>
+        Private ReadOnly _listBoxName As String
         Private _filmstripScrollViewer As ScrollViewer
         Private _thumbnailRefreshQueued As Boolean = False
 
         Public Sub New(owner As Control, tracker As ViewportThumbnailTracker,
-                       getItems As Func(Of IReadOnlyList(Of ImageItem)), getCurrentIndex As Func(Of Integer))
+                       getItems As Func(Of IReadOnlyList(Of ImageItem)), getCurrentIndex As Func(Of Integer),
+                       Optional listBoxName As String = "FilmstripListBox")
             _owner = owner
             _tracker = tracker
             _getItems = getItems
             _getCurrentIndex = getCurrentIndex
+            _listBoxName = listBoxName
         End Sub
 
         ''' Beim DataContext-Wechsel (anderes Bild/anderer Ordner) aufzurufen, damit Sichtbereichs-
@@ -58,7 +63,7 @@ Namespace Controls
                                           Dim items = _getItems()
                                           Dim idx = _getCurrentIndex()
                                           If idx < 0 OrElse items Is Nothing OrElse idx >= items.Count Then Return
-                                          Dim listBox = _owner.FindControl(Of ListBox)("FilmstripListBox")
+                                          Dim listBox = _owner.FindControl(Of ListBox)(_listBoxName)
                                           If listBox Is Nothing Then Return
                                           listBox.SelectedIndex = idx
                                           listBox.ScrollIntoView(items(idx))
@@ -92,7 +97,7 @@ Namespace Controls
 
         Private Function GetFilmstripScrollViewer() As ScrollViewer
             If _filmstripScrollViewer IsNot Nothing Then Return _filmstripScrollViewer
-            Dim listBox = _owner.FindControl(Of ListBox)("FilmstripListBox")
+            Dim listBox = _owner.FindControl(Of ListBox)(_listBoxName)
             If listBox Is Nothing Then Return Nothing
             _filmstripScrollViewer = listBox.GetVisualDescendants().OfType(Of ScrollViewer)().FirstOrDefault()
             If _filmstripScrollViewer IsNot Nothing Then

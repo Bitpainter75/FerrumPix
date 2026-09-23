@@ -243,6 +243,7 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(HasSelectedImage))
                 Me.RaisePropertyChanged(NameOf(HasSelection))
                 Me.RaisePropertyChanged(NameOf(SelectedIsFavorite))
+                Me.RaisePropertyChanged(NameOf(MapStripIndex))
                 UpdateInfoPanelTarget()
             End Set
         End Property

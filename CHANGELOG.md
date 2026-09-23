@@ -3,7 +3,10 @@
 ### What's new
 
 - **Your photos on a map.** The gallery can show the current pictures by where they were taken,
-  grouped into circles with a count; clicking one lists its pictures below the map. The map is off
+  grouped into circles with a count; clicking one lists its pictures in a filmstrip below the map.
+  It works like the filmstrip in the viewer and editor: a click selects a picture and shows it in
+  the info panel, the mouse wheel steps through them, and the right-click menu, quick preview and
+  dragging work as in the gallery. A double click opens the picture in the viewer. The map is off
   until you turn it on in the new Map view section of the settings, because its tiles come from a
   server on the internet, which learns which area you look at. Tiles you have seen stay on your
   device until you clear them, and the tile server address can be changed. The zoom slider at the
