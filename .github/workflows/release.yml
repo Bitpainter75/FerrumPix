@@ -4,17 +4,15 @@
 # frei, fuer private werden sie gegen das Monatskontingent gerechnet. Ein voller Lauf ueber alle
 # Plattformen ist nicht kurz.
 #
-# EIN LAUF FUER ALLES AUSSER DER AUR. Flatpak und MSIX hatten eigene Laeufe; seit es nur noch ein
-# Release gibt (siehe publish-github-release.sh), gehoeren sie hierher: eine neue Version wird
-# dort als Entwurf mit ALLEN Dateien aufgebaut und auf einmal veroeffentlicht, und dafuer muessen
-# alle Pakete im selben Lauf fertig werden.
+# EIN LAUF FUER ALLES, DIE AUR EINGESCHLOSSEN. Eine neue Version wird als Entwurf mit ALLEN
+# Dateien aufgebaut und auf einmal veroeffentlicht (siehe publish-github-release.sh), und dafuer
+# muessen alle Pakete im selben Lauf fertig werden.
 #
-# DIE AUR KOMMT VORHER, mit aur-only.yml: ihr ZIP geht in das noch aktuelle Release, laesst sich
-# pruefen, und dieser Lauf nimmt es beim Wechsel auf die neue Version byte-gleich mit.
-#
-# DER AUFBAU: je ein Job baut (Pakete, Flatpak, MSIX), legt seine Dateien als Artefakt ab, und
-# ein letzter Job sammelt sie ein und veroeffentlicht in einem Zug. Faellt ein Bau-Job aus, laeuft
-# der letzte nicht - ein halber Satz Pakete darf nie ins Release.
+# DER AUFBAU: je ein Job baut (Pakete, Flatpak, MSIX), legt seine Dateien als Artefakt ab, ein
+# Job sammelt sie ein und veroeffentlicht in einem Zug, und ZULETZT geht der PKGBUILD in die AUR.
+# Die AUR nimmt das normale Linux-ZIP aus dem veroeffentlichten Release, eine eigene AUR-Fassung
+# gibt es nicht mehr. Faellt ein Bau-Job aus, laeuft nichts danach - ein halber Satz Pakete darf
+# nie ins Release. Ein Hotfix nur fuer die AUR ist ein Lauf mit "zip".
 #
 # DIE MSIX GEHT NICHT INS RELEASE. Ein Store-Paket wird unsigniert eingereicht, der Store signiert
 # selbst - und unsigniert laesst Windows es nicht installieren. Es steht als Artefakt am Lauf, von
@@ -53,7 +51,7 @@ on:
   workflow_dispatch:
     inputs:
       pakete:
-        description: "Welche Pakete? 'alle' baut alles ausser der AUR; sonst genau eines"
+        description: "Welche Pakete? 'alle' baut alles und aktualisiert die AUR; 'zip' ebenfalls die AUR; sonst genau eines"
         type: choice
         default: alle
         options:
@@ -148,9 +146,6 @@ jobs:
       #
       # DIE REIHENFOLGE IST NACH WICHTIGKEIT: Linux-ZIP und AppImage zuerst, dann deb und rpm,
       # dann Windows, dann macOS, und ganz zuletzt ARM.
-      #
-      # DAS AUR-ZIP BAUT DIESER LAUF NICHT. Es entsteht vorher im AUR-Lauf und liegt schon im
-      # Release; beim Wechsel auf eine neue Version nimmt das Skript es byte-gleich mit.
       - name: Paket - Linux-ZIP
         if: ${{ env.PAKETE == 'alle' || env.PAKETE == 'zip' }}
         run: packaging/package.sh zip
@@ -434,9 +429,50 @@ jobs:
       - name: Veroeffentlichen
         run: |
           if [ "$PAKETE" = "alle" ]; then
-            packaging/publish-github-release.sh --only-packages
+            packaging/publish-github-release.sh
           else
-            packaging/publish-github-release.sh --only-packages --partial
+            packaging/publish-github-release.sh --partial
           fi
         env:
           GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
+
+  aur:
+    name: AUR
+    runs-on: ubuntu-latest
+    container: archlinux:base-devel
+    needs: veroeffentlichen
+    # ZULETZT: der PKGBUILD laedt das Linux-ZIP aus dem veroeffentlichten Release und haelt seine
+    # Pruefsumme fest. Nur, wenn das Linux-ZIP in diesem Lauf mitkam.
+    if: ${{ needs.veroeffentlichen.result == 'success' && (inputs.pakete == 'alle' || inputs.pakete == 'zip') }}
+
+    steps:
+      - name: Werkzeuge
+        run: pacman -Sy --noconfirm --needed git openssh jq curl python
+
+      - uses: actions/checkout@v7
+
+      - uses: actions/checkout@v7
+        with:
+          repository: Bitpainter75/FerrumPix-Build
+          path: packaging
+          ssh-key: ${{ secrets.PACKAGING_DEPLOY_KEY }}
+
+      - name: AUR-Repo klonen
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.AUR_SSH_KEY }}" > ~/.ssh/aur
+          chmod 600 ~/.ssh/aur
+          ssh-keyscan aur.archlinux.org >> ~/.ssh/known_hosts 2>/dev/null || true
+          export GIT_SSH_COMMAND="ssh -i ~/.ssh/aur -o StrictHostKeyChecking=accept-new"
+          git clone ssh://aur@aur.archlinux.org/ferrumpix-bin.git packaging/AUR
+
+      # makepkg laeuft nicht als root; die Identitaet entspricht der manuellen Veroeffentlichung.
+      - name: AUR veroeffentlichen
+        run: |
+          useradd -m builder
+          chown -R builder:builder .
+          cp -r ~/.ssh /home/builder/.ssh
+          chown -R builder:builder /home/builder/.ssh
+          su builder -c "git config --global user.name 'Bitpainter75'"
+          su builder -c "git config --global user.email 'patrick@bitpainter.de'"
+          su builder -c "GIT_SSH_COMMAND='ssh -i ~/.ssh/aur -o StrictHostKeyChecking=accept-new' packaging/publish-aur.sh"
