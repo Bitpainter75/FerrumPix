@@ -153,6 +153,13 @@ Namespace ViewModels
         ''' auf der Karte sucht.</summary>
         Public ReadOnly Property MapSummaryText As String
             Get
+                ' Solange der Metadatenlauf arbeitet, stehen die Aufnahmeorte noch nicht im Katalog.
+                ' Ohne diesen Satz sah man lange eine leere Weltkarte und wusste nicht, dass gerade
+                ' eingelesen wird.
+                If _mapIndexTotal > 0 Then
+                    Return String.Format(LocalizationService.T("Aufnahmeorte werden eingelesen: {0} von {1} Bildern, {2} bisher auf der Karte"),
+                                         _mapIndexDone, _mapIndexTotal, _mapPoints.Count)
+                End If
                 If _mapCandidateCount = 0 Then Return ""
                 If _mapPoints.Count = 0 Then Return LocalizationService.T("Kein Bild in dieser Ansicht hat einen Aufnahmeort.")
                 Return String.Format(LocalizationService.T("{0} von {1} Bildern haben einen Aufnahmeort"),
@@ -188,6 +195,54 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(MapTileUrl))
             End If
             If Not available AndAlso IsMapView Then ViewMode = _viewModeBeforeMap
+        End Sub
+
+        ' Der Fortschritt des Metadatenlaufs, wie ihn die Karte zuletzt gesehen hat.
+        Private _mapIndexTotal As Integer
+        Private _mapIndexDone As Integer
+        Private _mapIndexRefreshAt As DateTime = DateTime.MinValue
+
+        ''' <summary>Wie oft die Karte neu rechnet, solange eingelesen wird. Jede Runde fragt den
+        ''' Katalog nach allen Bildern der Liste; oefter als das waere Last ohne sichtbaren Gewinn.</summary>
+        Private Shared ReadOnly MapIndexRefreshInterval As TimeSpan = TimeSpan.FromSeconds(3)
+
+        ''' <summary>Vom Zeitgeber der Fusszeile gerufen, mit dem Stand des Metadatenlaufs. Die
+        ''' Karte liest ihre Koordinaten aus dem Katalog, und der fuellt sich erst durch diesen Lauf.
+        ''' Neu gerechnet wurde vorher nur, wenn sich die Bilderliste aenderte, also meist erst am
+        ''' Ende: die Punkte kamen spaet und auf einen Schlag. Jetzt kommen sie in Abstaenden nach,
+        ''' und am Ende einmal vollstaendig.</summary>
+        Private Sub UpdateMapIndexProgress(total As Integer, done As Integer)
+            Dim wasRunning = _mapIndexTotal > 0
+            If total = _mapIndexTotal AndAlso done = _mapIndexDone Then Return
+            _mapIndexTotal = total
+            _mapIndexDone = done
+            Me.RaisePropertyChanged(NameOf(MapSummaryText))
+            If Not IsMapView Then Return
+            If total = 0 Then
+                If wasRunning Then RefreshMapPoints()
+                Return
+            End If
+            Dim now = DateTime.UtcNow
+            If now - _mapIndexRefreshAt < MapIndexRefreshInterval Then Return
+            _mapIndexRefreshAt = now
+            RefreshMapPoints()
+        End Sub
+
+        ''' <summary>Der Streifen haelt Bilder der Galerie. Aendert sich deren Liste, fliegt
+        ''' heraus, was nicht mehr darin steht; nach einem Ordnerwechsel ist das alles, und der
+        ''' Streifen schliesst sich. Vorher blieben die Bilder des vorigen Ordners als leere Kacheln
+        ''' stehen.</summary>
+        Private Sub PruneMapSelection()
+            If MapSelection.Count = 0 Then Return
+            Dim present As New HashSet(Of ImageItem)(Items.Where(Function(i) i IsNot Nothing))
+            Dim keep = MapSelection.Where(Function(i) present.Contains(i)).ToList()
+            If keep.Count = MapSelection.Count Then Return
+            If keep.Count = 0 Then
+                CloseMapSelection()
+                Return
+            End If
+            MapSelection.ReplaceAll(keep)
+            Me.RaisePropertyChanged(NameOf(MapStripIndex))
         End Sub
 
         Private Sub ScheduleMapRefresh()

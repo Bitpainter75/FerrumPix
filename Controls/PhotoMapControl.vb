@@ -155,6 +155,11 @@ Namespace Controls
         Private _originX As Double
         Private _originY As Double
         Private _needsFit As Boolean = True
+        ''' <summary>Der Nutzer hat die Ansicht seit dem letzten Einpassen selbst verstellt
+        ''' (geschwenkt oder gezoomt). Dann bleibt sie stehen, wenn zu derselben Liste nur Punkte
+        ''' dazukommen: waehrend des Einlesens rechnet die Galerie alle paar Sekunden neu, und ein
+        ''' Einpassen jedes Mal risse ihm die Ansicht weg.</summary>
+        Private _userMoved As Boolean
 
         Private ReadOnly _tiles As New Dictionary(Of String, LinkedListNode(Of TileEntry))(StringComparer.Ordinal)
         Private ReadOnly _tileOrder As New LinkedList(Of TileEntry)()
@@ -218,7 +223,12 @@ Namespace Controls
             If change.Property Is PointsProperty Then
                 _clusters = Nothing
                 _hoverCluster = Nothing
-                _needsFit = True
+                ' Eingepasst wird bei einer NEUEN Liste (kein Bild der alten mehr dabei, etwa nach
+                ' einem Ordnerwechsel) und immer, solange der Nutzer nichts verstellt hat.
+                If Not _userMoved OrElse Not SharesItems(TryCast(change.OldValue, IReadOnlyList(Of MapPhotoPoint)),
+                                                         TryCast(change.NewValue, IReadOnlyList(Of MapPhotoPoint))) Then
+                    _needsFit = True
+                End If
                 InvalidateVisual()
             ElseIf change.Property Is ZoomLevelProperty Then
                 If _publishingZoom OrElse _needsFit Then Return
@@ -257,7 +267,15 @@ Namespace Controls
 
         ''' <summary>Stellt die Karte so, dass alle Bilder zu sehen sind. Ohne Bilder zeigt sie die
         ''' Welt; bei einem einzelnen Ort nicht näher als eine Stadtansicht.</summary>
+        Private Shared Function SharesItems(oldPoints As IReadOnlyList(Of MapPhotoPoint),
+                                            newPoints As IReadOnlyList(Of MapPhotoPoint)) As Boolean
+            If oldPoints Is Nothing OrElse newPoints Is Nothing OrElse oldPoints.Count = 0 OrElse newPoints.Count = 0 Then Return False
+            Dim oldItems As New HashSet(Of ImageItem)(oldPoints.Select(Function(p) p.Item))
+            Return newPoints.Any(Function(p) oldItems.Contains(p.Item))
+        End Function
+
         Private Sub FitToPoints(size As Size)
+            _userMoved = False
             Dim points = Me.Points
             If points Is Nothing OrElse points.Count = 0 Then
                 _zoom = 2
@@ -306,6 +324,7 @@ Namespace Controls
         Private Sub ZoomAt(anchor As Point, steps As Integer, Optional publish As Boolean = True)
             Dim target = Math.Max(MinZoom, Math.Min(MapTileService.MaxZoom, _zoom + steps))
             If target = _zoom Then Return
+            _userMoved = True
             Dim factor = Math.Pow(2, target - _zoom)
             _originX = (_originX + anchor.X) * factor - anchor.X
             _originY = (_originY + anchor.Y) * factor - anchor.Y
@@ -695,6 +714,7 @@ Namespace Controls
                 Dim dy = position.Y - _dragStart.Y
                 If Not _moved AndAlso Math.Abs(dx) + Math.Abs(dy) < DragThreshold Then Return
                 _moved = True
+                _userMoved = True
                 _originX = _dragOriginX - dx
                 _originY = _dragOriginY - dy
                 ClampOrigin(Bounds.Size)
@@ -767,6 +787,7 @@ Namespace Controls
         End Sub
 
         Private Sub Pan(dx As Double, dy As Double)
+            _userMoved = True
             _originX += dx
             _originY += dy
             ClampOrigin(Bounds.Size)

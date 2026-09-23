@@ -502,6 +502,8 @@ Namespace ViewModels
                         Sub()
                             Me.RaisePropertyChanged(NameOf(IsDialogUpscaleAvailable))
                             Me.RaisePropertyChanged(NameOf(DialogUpscaleModelOptions))
+                            ' Gesichtsmodell und Ortstabelle entscheiden ueber zwei Filterknoepfe.
+                            Gallery?.RefreshModelFeatures()
                         End Sub)
                 End Sub
 

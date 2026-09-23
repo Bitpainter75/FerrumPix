@@ -5817,6 +5817,9 @@
   <data name="0_von_1_Bildern_haben_einen_Aufnahmeort_326c090e" xml:space="preserve">
     <value>{0} dari {1} gambar memiliki lokasi pengambilan</value>
   </data>
+  <data name="Aufnahmeorte_werden_eingelesen_0_von_1_Bildern_2_33aa54d3" xml:space="preserve">
+    <value>Membaca lokasi: {0} dari {1} gambar, sejauh ini {2} di peta</value>
+  </data>
   <data name="Kartenspeicher_572b413c" xml:space="preserve">
     <value>Cache peta</value>
   </data>

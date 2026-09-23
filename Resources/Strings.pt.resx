@@ -5821,6 +5821,9 @@
   <data name="0_von_1_Bildern_haben_einen_Aufnahmeort_326c090e" xml:space="preserve">
     <value>{0} de {1} imagens têm local de captura</value>
   </data>
+  <data name="Aufnahmeorte_werden_eingelesen_0_von_1_Bildern_2_33aa54d3" xml:space="preserve">
+    <value>A ler locais: {0} de {1} imagens, {2} no mapa até agora</value>
+  </data>
   <data name="Kartenspeicher_572b413c" xml:space="preserve">
     <value>Cache do mapa</value>
   </data>

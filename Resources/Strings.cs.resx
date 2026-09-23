@@ -5820,6 +5820,9 @@
   <data name="0_von_1_Bildern_haben_einen_Aufnahmeort_326c090e" xml:space="preserve">
     <value>{0} z {1} obrázků má místo pořízení</value>
   </data>
+  <data name="Aufnahmeorte_werden_eingelesen_0_von_1_Bildern_2_33aa54d3" xml:space="preserve">
+    <value>Načítají se místa pořízení: {0} z {1} obrázků, zatím {2} na mapě</value>
+  </data>
   <data name="Kartenspeicher_572b413c" xml:space="preserve">
     <value>Mezipaměť mapy</value>
   </data>

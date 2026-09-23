@@ -5820,6 +5820,9 @@
   <data name="0_von_1_Bildern_haben_einen_Aufnahmeort_326c090e" xml:space="preserve">
     <value>{0} z {1} zdjęć ma miejsce wykonania</value>
   </data>
+  <data name="Aufnahmeorte_werden_eingelesen_0_von_1_Bildern_2_33aa54d3" xml:space="preserve">
+    <value>Wczytywanie miejsc wykonania: {0} z {1} obrazów, na mapie na razie {2}</value>
+  </data>
   <data name="Kartenspeicher_572b413c" xml:space="preserve">
     <value>Pamięć podręczna mapy</value>
   </data>

@@ -4432,11 +4432,18 @@ Namespace ViewModels
             ' Der ALTE Stand wird vor dem Schreiben gebraucht (siehe unten: das Ausschalten wirft die
             ' Merkmale weg) - deshalb erst lesen, dann schreiben.
             Dim faceWasOn = AppSettingsService.Load().FaceRecognitionEnabled
+            Dim placesWereOn = AppSettingsService.Load().PhotoMapEnabled
             AppSettingsService.Update(Sub(s)
                                           s.FaceRecognitionEnabled = _faceRecognitionEnabled
                                           s.PhotoMapEnabled = _photoMapEnabled
                                           s.FaceMinimumSizePercent = _faceMinimumSizePercent
                                       End Sub)
+            ' Die Filterknoepfe der Galerie haengen an den beiden Schaltern. NUR bei einer
+            ' Aenderung: derselbe Weg laeuft bei jedem Schritt des Reglers fuer die Mindestgroesse,
+            ' und die Auffrischung fragt den Katalog ab.
+            If faceWasOn <> _faceRecognitionEnabled OrElse placesWereOn <> _photoMapEnabled Then
+                _mainVm?.Gallery?.RefreshModelFeatures()
+            End If
 
             ' AUSSCHALTEN WIRFT DIE MERKMALE WEG - aber erst nach einer Rueckfrage. Biometrische
             ' Merkmale entstehen nur auf ausdrueckliche Ansage, und sie sollen auch nur solange

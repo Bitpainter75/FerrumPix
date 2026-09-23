@@ -5817,6 +5817,9 @@
   <data name="0_von_1_Bildern_haben_einen_Aufnahmeort_326c090e" xml:space="preserve">
     <value>이미지 {1}개 중 {0}개에 촬영 장소가 있습니다</value>
   </data>
+  <data name="Aufnahmeorte_werden_eingelesen_0_von_1_Bildern_2_33aa54d3" xml:space="preserve">
+    <value>촬영 위치를 읽는 중: {1}개 중 {0}개, 지금까지 지도에 {2}개</value>
+  </data>
   <data name="Kartenspeicher_572b413c" xml:space="preserve">
     <value>지도 캐시</value>
   </data>

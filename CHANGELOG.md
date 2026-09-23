@@ -1,3 +1,17 @@
+## FerrumPix 0.9.51
+
+### Fixes
+
+- The places and people filters appear as soon as you turn them on in the settings, without
+  restarting FerrumPix, and place names for older pictures are filled in right away.
+
+- While FerrumPix still reads where the pictures of a folder were taken, the map says so and shows
+  them as they come in, instead of an empty world map. Pictures that arrive later no longer move
+  the map away from where you are looking.
+
+- After switching folders, the strip below the map no longer shows empty tiles from the previous
+  folder.
+
 ## FerrumPix 0.9.50
 
 ### What's new

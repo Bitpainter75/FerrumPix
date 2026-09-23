@@ -1837,6 +1837,7 @@ Namespace ViewModels
                     ' Die Fotowand rechnet ihre Tabelle aus DERSELBEN Liste; jede Aenderung daran
                     ' verschiebt jede Kachel dahinter.
                     InvalidateWallLayout()
+                    PruneMapSelection()
                     ScheduleMapRefresh()
                 End Sub
             DisplayItems = New BulkObservableCollection(Of ImageItem)()
@@ -5369,6 +5370,9 @@ Namespace ViewModels
         ''' Benutzers. Steht nichts mehr aus, kostet der Lauf eine Abfrage.</summary>
         Private Sub FillMissingPlacesInBackground()
             If Not PlaceLookupService.Enabled Then Return
+            ' Nie zwei Laeufe nebeneinander: seit die Ortstabelle auch mitten in der Sitzung
+            ' eingeschaltet werden kann, gibt es einen zweiten Anlass neben dem Start.
+            If Threading.Interlocked.Exchange(_placeFillRunning, 1) = 1 Then Return
             Task.Run(Sub()
                          Try
                              Dim filled = LibraryService.Instance.FillMissingPlaces()
@@ -5376,8 +5380,30 @@ Namespace ViewModels
                              Dispatcher.UIThread.Post(Sub() RefreshPlaceFilterOptions())
                          Catch ex As Exception
                              DiagnosticLogService.LogException("Gallery.FillMissingPlaces", ex)
+                         Finally
+                             Threading.Interlocked.Exchange(_placeFillRunning, 0)
                          End Try
                      End Sub)
+        End Sub
+
+        Private _placeFillRunning As Integer
+
+        ''' <summary>Nach einer Aenderung an den Modellfunktionen: Personenerkennung oder Ortsnamen
+        ''' in den Einstellungen umgeschaltet, Gesichtsmodell oder Ortstabelle geladen oder
+        ''' entfernt. Die beiden Filterknoepfe fragen ihren Zustand sonst nur beim Einlesen eines
+        ''' Ordners ab; wer die Ortstabelle geladen und dann eingeschaltet hatte, sah den Knopf
+        ''' erst nach einem Neustart.
+        '''
+        ''' Ist eine Funktion danach aus, faellt ihr Filter weg. Sonst bliebe die Galerie nach
+        ''' einem Filter gefiltert, dessen Knopf nicht mehr zu sehen ist.</summary>
+        Public Sub RefreshModelFeatures()
+            RefreshPersonFilterOptions()
+            RefreshPlaceFilterOptions()
+            If Not HasPersonFeature Then ClearPersonFilter()
+            If Not HasPlaceFeature Then ClearPlaceFilter()
+            ' Die Ortsnamen aelterer Eintraege: der Lauf beim Start fand die Tabelle aus oder
+            ' noch nicht geladen vor.
+            FillMissingPlacesInBackground()
         End Sub
 
         ''' <summary>Sucht Gesichter in dem, was gerade zu sehen ist.
@@ -8332,11 +8358,13 @@ Namespace ViewModels
             If thumbs > 0 Then teile.Add($"{thumbs:N0} {LocalizationService.T("Vorschaubilder")}")
 
             Dim total = Threading.Volatile.Read(_metaRefreshTotal)
+            Dim done = If(total > 0, Math.Min(total, Threading.Volatile.Read(_metaRefreshDone)), 0)
             If total > 0 Then
-                Dim done = Math.Min(total, Threading.Volatile.Read(_metaRefreshDone))
                 teile.Add(String.Format(LocalizationService.T("Metadaten {0} von {1}"),
                                         done.ToString("N0"), total.ToString("N0")))
             End If
+            ' Die Karte haengt an demselben Lauf, siehe dort.
+            UpdateMapIndexProgress(total, done)
 
             Dim text = If(teile.Count = 0, "", String.Join("  ·  ", teile))
             If String.Equals(text, _backgroundWorkText, StringComparison.Ordinal) Then Return

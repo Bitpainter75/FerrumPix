@@ -183,18 +183,18 @@ Your version is at the top, with a link to the download page when a different on
 
 ## Installation
 
-All packages are in the [latest release](https://github.com/Bitpainter75/FerrumPix/releases/tag/latest). Every file name carries the build number, for example FerrumPix-0.9.50-2-x86_64.AppImage; the table says which ending belongs to which package. The [homepage](https://ferrumpix.app/) links each package directly.
+All packages are in the [latest release](https://github.com/Bitpainter75/FerrumPix/releases/tag/latest). Every file name carries the build number, for example FerrumPix-0.9.50-2-x86_64.AppImage; the tables say which ending belongs to which package.
 
 ### Linux
 
 | Package | For | File ends in |
 |---|---|---|
-| AppImage | Any distribution, runs without installing | [-x86_64.AppImage](https://github.com/Bitpainter75/FerrumPix/releases/tag/latest) |
-| Flatpak | Any distribution with Flatpak, sandboxed | [.flatpak](https://github.com/Bitpainter75/FerrumPix/releases/tag/latest) |
-| DEB | Debian, Ubuntu, Mint (amd64) | [-amd64.deb](https://github.com/Bitpainter75/FerrumPix/releases/tag/latest) |
-| RPM | Fedora, openSUSE (x86_64) | [-x86_64.rpm](https://github.com/Bitpainter75/FerrumPix/releases/tag/latest) |
-| ZIP | Portable, unpack and run (x64) | [-linux-x64.zip](https://github.com/Bitpainter75/FerrumPix/releases/tag/latest) |
-| ZIP | Portable, unpack and run (ARM64) | [-linux-arm64.zip](https://github.com/Bitpainter75/FerrumPix/releases/tag/latest) |
+| AppImage | Any distribution, runs without installing | -x86_64.AppImage |
+| Flatpak | Any distribution with Flatpak, sandboxed | .flatpak |
+| DEB | Debian, Ubuntu, Mint (amd64) | -amd64.deb |
+| RPM | Fedora, openSUSE (x86_64) | -x86_64.rpm |
+| ZIP | Portable, unpack and run (x64) | -linux-x64.zip |
+| ZIP | Portable, unpack and run (ARM64) | -linux-arm64.zip |
 
 On Arch and its derivatives there is [ferrumpix-bin](https://aur.archlinux.org/packages/ferrumpix-bin) in the AUR.
 
@@ -205,16 +205,16 @@ The AppImage carries update information, so tools that manage AppImages find new
 | Package | For | File ends in |
 |---|---|---|
 | Microsoft Store | Installs and updates through Windows (x64) | [FerrumPix in the Microsoft Store](https://apps.microsoft.com/detail/9phllcbtmdfg) |
-| Setup | Installs with start menu entry and file types (x64) | [-win-x64-Setup.exe](https://github.com/Bitpainter75/FerrumPix/releases/tag/latest) |
-| ZIP | Portable, unpack and run (x64) | [-win-x64.zip](https://github.com/Bitpainter75/FerrumPix/releases/tag/latest) |
-| ZIP | Portable, unpack and run (ARM64) | [-win-arm64.zip](https://github.com/Bitpainter75/FerrumPix/releases/tag/latest) |
+| Setup | Installs with start menu entry and file types (x64) | -win-x64-Setup.exe |
+| ZIP | Portable, unpack and run (x64) | -win-x64.zip |
+| ZIP | Portable, unpack and run (ARM64) | -win-arm64.zip |
 
 ### macOS
 
 | Package | For | File ends in |
 |---|---|---|
-| App bundle | Intel Macs | [-osx-x64-unsigned.app.zip](https://github.com/Bitpainter75/FerrumPix/releases/tag/latest) |
-| App bundle | Apple Silicon | [-osx-arm64-unsigned.app.zip](https://github.com/Bitpainter75/FerrumPix/releases/tag/latest) |
+| App bundle | Intel Macs | -osx-x64-unsigned.app.zip |
+| App bundle | Apple Silicon | -osx-arm64-unsigned.app.zip |
 
 ### Experimental
 
