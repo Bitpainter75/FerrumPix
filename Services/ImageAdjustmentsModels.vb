@@ -900,9 +900,9 @@ Namespace Services
         ''' Aufrufer gar nicht erst hierher, und der gespeicherte Wert bleibt der, der er war.
         ''' Ohne Pfad bleibt es bei den blossen Startwerten.</para></summary>
         Public Shared Function ForUneditedRaw(Optional path As String = Nothing) As ImageAdjustments
-            Dim werte = New ImageAdjustments With {.FarbrauschGrob = UneditedRawCoarseColorNoise}
+            Dim values = New ImageAdjustments With {.FarbrauschGrob = UneditedRawCoarseColorNoise}
             Dim stops = RawDecodeService.BaselineExposureStops(path)
-            If stops <> 0.0 Then werte.Exposure = CSng(stops * ExposurePointsPerStop)
+            If stops <> 0.0 Then values.Exposure = CSng(stops * ExposurePointsPerStop)
             ' Die Kamera-Farbkalibrierung ist dieselbe sichtbare Reglergruppe wie im Editor.
             ' Sie bleibt eine optionale Vorgabe und wird nie in ein vorhandenes Rezept gemischt.
             If Not String.IsNullOrWhiteSpace(path) AndAlso AppSettingsService.Load().UseCameraBaselineTable Then
@@ -913,15 +913,15 @@ Namespace Services
                         ifd0.GetDescription(MetadataExtractor.Formats.Exif.ExifDirectoryBase.TagMake),
                         ifd0.GetDescription(MetadataExtractor.Formats.Exif.ExifDirectoryBase.TagModel)))
                     If calibration IsNot Nothing Then
-                        werte.CalibrationRedHue = calibration.RedHue : werte.CalibrationRedSaturation = calibration.RedSaturation
-                        werte.CalibrationGreenHue = calibration.GreenHue : werte.CalibrationGreenSaturation = calibration.GreenSaturation
-                        werte.CalibrationBlueHue = calibration.BlueHue : werte.CalibrationBlueSaturation = calibration.BlueSaturation
-                        werte.CalibrationShadowTint = calibration.ShadowTint
+                        values.CalibrationRedHue = calibration.RedHue : values.CalibrationRedSaturation = calibration.RedSaturation
+                        values.CalibrationGreenHue = calibration.GreenHue : values.CalibrationGreenSaturation = calibration.GreenSaturation
+                        values.CalibrationBlueHue = calibration.BlueHue : values.CalibrationBlueSaturation = calibration.BlueSaturation
+                        values.CalibrationShadowTint = calibration.ShadowTint
                     End If
                 Catch
                 End Try
             End If
-            Return werte
+            Return values
         End Function
 
         Private Shared _pixelProperties As Reflection.PropertyInfo() = Nothing

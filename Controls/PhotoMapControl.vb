@@ -159,7 +159,17 @@ Namespace Controls
         Private ReadOnly _tiles As New Dictionary(Of String, LinkedListNode(Of TileEntry))(StringComparer.Ordinal)
         Private ReadOnly _tileOrder As New LinkedList(Of TileEntry)()
         Private ReadOnly _pending As New HashSet(Of String)(StringComparer.Ordinal)
-        Private ReadOnly _failed As New HashSet(Of String)(StringComparer.Ordinal)
+        ''' <summary>Fehlgeschlagene Kacheln mit dem Zeitpunkt des Fehlschlags. Eine Sperre fuer
+        ''' immer machte aus einer kurzen Netz- oder Serverstoerung ein Loch in der Karte, das bis
+        ''' zum naechsten Zoom stehen blieb. Nach <see cref="FailedTileRetryDelay"/> wird die
+        ''' Kachel deshalb wieder angefragt, und zwar nur, wenn sie dann noch zu sehen ist.</summary>
+        Private ReadOnly _failed As New Dictionary(Of String, DateTime)(StringComparer.Ordinal)
+        ''' <summary>Lang genug, um einen Server nicht mit Wiederholungen zu belasten; kurz genug,
+        ''' dass die Karte nach einer Stoerung ohne Zutun wieder vollstaendig wird.</summary>
+        Public Shared ReadOnly FailedTileRetryDelay As TimeSpan = TimeSpan.FromSeconds(30)
+        ''' <summary>Fuer die Pruefung: die Uhr, an der die Wartezeit gemessen wird.</summary>
+        Public Property Clock As Func(Of DateTime) = Function() DateTime.UtcNow
+        Private _retryScheduled As Boolean
         Private _loadCancellation As New CancellationTokenSource()
 
         Private _clusters As List(Of MapCluster)
@@ -197,6 +207,8 @@ Namespace Controls
             _loadCancellation.Cancel()
             _loadCancellation = New CancellationTokenSource()
             _pending.Clear()
+            ' Wer die Ansicht verlaesst und wiederkommt, erwartet einen neuen Versuch.
+            _failed.Clear()
             ClearTiles()
             MyBase.OnDetachedFromVisualTree(e)
         End Sub
@@ -576,7 +588,12 @@ Namespace Controls
 
         Private Sub RequestTile(zoom As Integer, x As Integer, y As Integer)
             Dim key = TileKey(zoom, x, y)
-            If _pending.Contains(key) OrElse _failed.Contains(key) Then Return
+            If _pending.Contains(key) Then Return
+            Dim failedAt As DateTime
+            If _failed.TryGetValue(key, failedAt) Then
+                If Clock.Invoke() - failedAt < FailedTileRetryDelay Then Return
+                _failed.Remove(key)
+            End If
             _pending.Add(key)
             Dim ignored = LoadTileAsync(TileUrl, zoom, x, y, key, _loadCancellation.Token)
         End Sub
@@ -611,7 +628,17 @@ Namespace Controls
                     bitmap.Dispose()
                 End If
             ElseIf failed AndAlso stillWanted Then
-                _failed.Add(key)
+                _failed(key) = Clock.Invoke()
+                ' Ohne neues Zeichnen fragte niemand die Kachel wieder an, solange die Karte still
+                ' steht. Nach der Wartezeit einmal neu zeichnen; das stoesst den Versuch an.
+                ' Ein Zeitgeber fuer alle: faellt das Netz aus, scheitert gleich eine ganze Seite.
+                If Not _retryScheduled Then
+                    _retryScheduled = True
+                    DispatcherTimer.RunOnce(Sub()
+                                                _retryScheduled = False
+                                                InvalidateVisual()
+                                            End Sub, FailedTileRetryDelay + TimeSpan.FromSeconds(1))
+                End If
             End If
             If stillWanted AndAlso zoom = _zoom Then InvalidateVisual()
         End Function

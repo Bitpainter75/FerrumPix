@@ -445,9 +445,9 @@ Namespace Services
         ''' an einer Nikon zu. Ohne eine Fremdmarke in der Aufnahmeangabe darf daher nur ein Profil
         ''' des Kameraherstellers gewinnen. Nennt die Aufnahme Sigma, Tamron usw., bleibt deren
         ''' Abgleich wie bisher zulaessig.</summary>
-        Private Shared Function HerstellerPasstBeiUnvollstaendigemNamen(gesucht As String,
-                                                                          kandidat As LensEntry,
-                                                                          camera As CameraEntry) As Boolean
+        Private Shared Function MakerMatchesForIncompleteName(gesucht As String,
+                                                                kandidat As LensEntry,
+                                                                camera As CameraEntry) As Boolean
             If kandidat Is Nothing OrElse camera Is Nothing Then Return True
             Dim gesuchtTokens = New HashSet(Of String)(NormalizedForName(gesucht).Split(" "c), StringComparer.OrdinalIgnoreCase)
             Dim kameraTokens = NormalizedForName(camera.Maker).Split(" "c).Where(Function(token) token.Length > 0).ToArray()
@@ -838,7 +838,7 @@ Namespace Services
 
             For Each o In _objektive
                 If Not PasstAnschluss(o, camera) Then Continue For
-                If Not HerstellerPasstBeiUnvollstaendigemNamen(objektivName, o, camera) Then Continue For
+                If Not MakerMatchesForIncompleteName(objektivName, o, camera) Then Continue For
                 Dim g As Double = 0
                 For Each n In o.Namen
                     If Not FremdherstellerPasst(objektivName, n, camera) Then Continue For

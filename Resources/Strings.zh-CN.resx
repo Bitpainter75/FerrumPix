@@ -5838,6 +5838,18 @@
   <data name="Karte_verschieben_27616973" xml:space="preserve">
     <value>移动地图</value>
   </data>
+  <data name="OpenStreetMap_fa78a333" xml:space="preserve">
+    <value>OpenStreetMap</value>
+  </data>
+  <data name="ODbL_1_0_2af43b38" xml:space="preserve">
+    <value>ODbL-1.0</value>
+  </data>
+  <data name="Kartenkacheln_der_Kartenansicht_erst_nach_dem_Ei_3d04b521" xml:space="preserve">
+    <value>地图视图的地图瓦片，仅在开启后使用</value>
+  </data>
+  <data name="Die_Kartenansicht_zeichnet_FerrumPix_selbst_die__c3467d40" xml:space="preserve">
+    <value>地图视图由 FerrumPix 自行绘制；地图瓦片默认来自 OpenStreetMap。地图数据采用 Open Database License 授权，署名：OpenStreetMap contributors。瓦片按照 OpenStreetMap Foundation 的瓦片使用政策获取，使用自己的标识，并缓存在本设备上。</value>
+  </data>
   <data name="Kartenkacheln_konnten_nicht_geladen_werden_1e5b70b6" xml:space="preserve">
     <value>无法加载地图瓦片。</value>
   </data>

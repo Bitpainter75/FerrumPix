@@ -94,6 +94,9 @@ Namespace Services
         Private ReadOnly _sizeLock As New Object()
         Private _knownSizeBytes As Long = -1
         Private _trimRunning As Integer
+        ' Zaehlt jedes Leeren. Eine Anfrage schreibt nur in der Generation, in der sie begann.
+        Private _generation As Integer
+        Private ReadOnly _clearLock As New Object()
 
         ''' <summary>Die Uhr, an der die Fristen gemessen werden. Der Prüfstand stellt sie vor.</summary>
         Public Property Clock As Func(Of DateTime) = Function() DateTime.UtcNow
@@ -250,6 +253,9 @@ Namespace Services
                                           meta As TileMeta, cancellationToken As CancellationToken) As Task(Of FetchOutcome)
             Dim tilePath = TilePathOf(template, zoom, x, y)
             Dim metaPath = MetaPathOf(tilePath)
+            ' Die Generation beim Start. Wird der Speicher geleert, waehrend diese Anfrage laeuft,
+            ' darf ihr Ergebnis nicht mehr hinein (siehe WriteIfCurrent).
+            Dim generation = Volatile.Read(_generation)
             Await _downloadGate.WaitAsync(cancellationToken).ConfigureAwait(False)
             Try
                 Using request = New HttpRequestMessage(HttpMethod.Get, BuildUrl(template, zoom, x, y))
@@ -262,7 +268,7 @@ Namespace Services
                         If response.StatusCode = HttpStatusCode.NotModified AndAlso meta IsNot Nothing Then
                             meta.ExpiresUtc = ExpiryOf(response)
                             If response.Headers.ETag IsNot Nothing Then meta.ETag = response.Headers.ETag.ToString()
-                            WriteMeta(metaPath, meta)
+                            WriteIfCurrent(generation, Sub() WriteMeta(metaPath, meta))
                             Return New FetchOutcome With {.Status = FetchStatus.NotModified}
                         End If
 
@@ -280,7 +286,7 @@ Namespace Services
                             .LastModified = If(lastModified.HasValue, lastModified.Value.ToString("R", CultureInfo.InvariantCulture), ""),
                             .ExpiresUtc = ExpiryOf(response)
                         }
-                        StoreTile(tilePath, metaPath, bytes, fresh)
+                        WriteIfCurrent(generation, Sub() StoreTile(tilePath, metaPath, bytes, fresh))
                         Return New FetchOutcome With {.Status = FetchStatus.Replaced, .Bytes = bytes}
                     End Using
                 End Using
@@ -384,6 +390,17 @@ Namespace Services
             File.Move(temporary, targetPath, overwrite:=True)
         End Sub
 
+        ''' <summary>Schreibt nur, wenn der Speicher seit dem Start der Anfrage nicht geleert wurde.
+        ''' Pruefen und Schreiben stehen unter derselben Sperre wie das Leeren: sonst raeumte
+        ''' ClearCache den Ordner, und eine Anfrage, die gerade noch lief, legte gleich danach wieder
+        ''' eine Kachel hinein - "geleert" gemeldet, und der Speicher wuechse sofort wieder.</summary>
+        Private Sub WriteIfCurrent(generation As Integer, write As Action)
+            SyncLock _clearLock
+                If generation <> _generation Then Return
+                write()
+            End SyncLock
+        End Sub
+
         Private Sub StoreTile(tilePath As String, metaPath As String, bytes As Byte(), meta As TileMeta)
             Dim previous = 0L
             Try
@@ -483,15 +500,21 @@ Namespace Services
         ''' <summary>Leert den ganzen Speicher, über alle Server. Gibt die Zahl der entfernten
         ''' Kacheln zurück. Danach wird jedes Gebiet beim nächsten Ansehen neu geholt.</summary>
         Public Function ClearCache() As Integer
-            Dim count = EnumerateTiles().Count()
-            Try
-                If Directory.Exists(_root) Then Directory.Delete(_root, recursive:=True)
-            Catch ex As Exception When TypeOf ex Is IOException OrElse TypeOf ex Is UnauthorizedAccessException
-                DiagnosticLogService.LogException("MapTile.ClearCache", ex)
-            End Try
-            _revalidated.Clear()
-            SyncLock _sizeLock
-                _knownSizeBytes = 0
+            Dim count As Integer
+            SyncLock _clearLock
+                ' ZUERST die Generation: jede Anfrage, die jetzt noch laeuft, gehoert zum alten
+                ' Stand und schreibt nicht mehr (WriteIfCurrent).
+                Interlocked.Increment(_generation)
+                count = EnumerateTiles().Count()
+                Try
+                    If Directory.Exists(_root) Then Directory.Delete(_root, recursive:=True)
+                Catch ex As Exception When TypeOf ex Is IOException OrElse TypeOf ex Is UnauthorizedAccessException
+                    DiagnosticLogService.LogException("MapTile.ClearCache", ex)
+                End Try
+                _revalidated.Clear()
+                SyncLock _sizeLock
+                    _knownSizeBytes = 0
+                End SyncLock
             End SyncLock
             Return count
         End Function

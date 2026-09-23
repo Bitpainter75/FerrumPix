@@ -5839,6 +5839,18 @@
   <data name="Karte_verschieben_27616973" xml:space="preserve">
     <value>Deslocar o mapa</value>
   </data>
+  <data name="OpenStreetMap_fa78a333" xml:space="preserve">
+    <value>OpenStreetMap</value>
+  </data>
+  <data name="ODbL_1_0_2af43b38" xml:space="preserve">
+    <value>ODbL-1.0</value>
+  </data>
+  <data name="Kartenkacheln_der_Kartenansicht_erst_nach_dem_Ei_3d04b521" xml:space="preserve">
+    <value>Mosaicos da vista de mapa, só depois de ativada</value>
+  </data>
+  <data name="Die_Kartenansicht_zeichnet_FerrumPix_selbst_die__c3467d40" xml:space="preserve">
+    <value>O FerrumPix desenha a vista de mapa por si próprio; por predefinição, os mosaicos vêm do OpenStreetMap. Os dados do mapa estão sob a Open Database License, atribuição: OpenStreetMap contributors. Os mosaicos são obtidos segundo a política de utilização de mosaicos da OpenStreetMap Foundation, com identificação própria e uma cache neste dispositivo.</value>
+  </data>
   <data name="Kartenkacheln_konnten_nicht_geladen_werden_1e5b70b6" xml:space="preserve">
     <value>Não foi possível carregar os mosaicos do mapa.</value>
   </data>

@@ -5835,6 +5835,18 @@
   <data name="Karte_verschieben_27616973" xml:space="preserve">
     <value>지도 이동</value>
   </data>
+  <data name="OpenStreetMap_fa78a333" xml:space="preserve">
+    <value>OpenStreetMap</value>
+  </data>
+  <data name="ODbL_1_0_2af43b38" xml:space="preserve">
+    <value>ODbL-1.0</value>
+  </data>
+  <data name="Kartenkacheln_der_Kartenansicht_erst_nach_dem_Ei_3d04b521" xml:space="preserve">
+    <value>지도 보기용 지도 타일, 켠 후에만 사용</value>
+  </data>
+  <data name="Die_Kartenansicht_zeichnet_FerrumPix_selbst_die__c3467d40" xml:space="preserve">
+    <value>지도 보기는 FerrumPix가 직접 그립니다. 지도 타일은 기본적으로 OpenStreetMap에서 받아 옵니다. 지도 데이터는 Open Database License를 따르며, 저작자 표시는 OpenStreetMap contributors입니다. 타일은 OpenStreetMap Foundation의 타일 사용 정책에 따라 자체 식별 정보와 이 컴퓨터의 캐시를 사용해 받아 옵니다.</value>
+  </data>
   <data name="Kartenkacheln_konnten_nicht_geladen_werden_1e5b70b6" xml:space="preserve">
     <value>지도 타일을 불러오지 못했습니다.</value>
   </data>

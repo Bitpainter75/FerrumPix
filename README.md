@@ -27,7 +27,7 @@ It runs on Windows, Linux and macOS, stays fast and local-first, and is built fo
 - Run batch work over a whole selection: rename, convert, resize, watermark, filters, metadata, export.
 - Open JPEG, PNG, WEBP, JPEG XL, TIFF, BMP, GIF and RAW, plus HEIC/HEIF/AVIF read-only, and Photoshop files with their layers.
 - Hand a picture to another program with *Open with*, and pass it through G'MIC from the editor if you have it installed.
-- Find the people in your photos and search by them, and search by where a photo was taken - both entirely on your own machine.
+- Find the people in your photos and search by them, and search by where a photo was taken - both entirely on your own machine. If you switch it on, a map shows where your photos were taken.
 - Connect to your own Immich or Nextcloud server for browsing, upload, download, editing and metadata sync.
 - Work in your own language: twenty-one are built in, and the symbol search finds shapes by their name in each of them.
 
@@ -37,9 +37,11 @@ Your originals are never changed behind your back, and nothing at all is written
 
 <img src="Screenshots/Gallery.jpg" />
 
-Folder tree, grid, list and group view, fast thumbnails, file operations, ratings, favourites, keywords and saved searches. Search combines plain text with metadata such as camera, ISO, aperture, focal length, date taken and image size.
+Folder tree, grid, list, group view, photo wall and map view, fast thumbnails, file operations, ratings, favourites, keywords and saved searches. Search combines plain text with metadata such as camera, ISO, aperture, focal length, date taken and image size.
 
 The group view puts a heading above each block of pictures, following whatever you sort by: one block per day when sorting by date, or by month or year, and by name, camera, file type or rating just as well. A circle in front of the heading selects a whole block at once.
+
+The photo wall lays the pictures out edge to edge in their own proportions, without captions; its gap is adjustable, and rounded corners and frames can be turned off.
 
 A map view shows the pictures by where they were taken. It is off until you switch it on in Settings, because the map itself comes from a tile server on the internet, which learns which area you are looking at. The photos themselves never leave your machine, and map tiles you have seen are kept there until you clear them.
 
@@ -104,6 +106,8 @@ Two of them can find their own setting. *Level to the horizon* looks for the str
 ### RAW and other formats
 
 RAW files are developed from the actual sensor data: a photo keeps the exposure it was taken with, colours land close to what other raw developers show, and coloured speckle is cleaned up along the way.
+
+The compare button in the editor can also show the JPEG the camera stored inside the raw file, so you see where the development differs from the camera's own look of the same shot.
 
 Lens defects are corrected from measured data covering more than 1500 lenses on over 1000 camera bodies: distortion, coloured fringes and the darkening towards the edges. Lens and camera are recognised from the shot data, and where there is nothing for your lens, nothing is changed.
 
@@ -179,16 +183,18 @@ Your version is at the top, with a link to the download page when a different on
 
 ## Installation
 
+All packages are in the [latest release](https://github.com/Bitpainter75/FerrumPix/releases/tag/latest). Every file name carries the build number, for example FerrumPix-0.9.50-2-x86_64.AppImage; the table says which ending belongs to which package. The [homepage](https://ferrumpix.app/) links each package directly.
+
 ### Linux
 
-| Package | For | Download |
+| Package | For | File ends in |
 |---|---|---|
-| AppImage | Any distribution, runs without installing | [FerrumPix-x86_64.AppImage](https://github.com/Bitpainter75/FerrumPix/releases/download/latest/FerrumPix-x86_64.AppImage) |
-| Flatpak | Any distribution with Flatpak, sandboxed | [FerrumPix.flatpak](https://github.com/Bitpainter75/FerrumPix/releases/download/latest/FerrumPix.flatpak) |
-| DEB | Debian, Ubuntu, Mint (amd64) | [FerrumPix-amd64.deb](https://github.com/Bitpainter75/FerrumPix/releases/download/latest/FerrumPix-amd64.deb) |
-| RPM | Fedora, openSUSE (x86_64) | [FerrumPix-x86_64.rpm](https://github.com/Bitpainter75/FerrumPix/releases/download/latest/FerrumPix-x86_64.rpm) |
-| ZIP | Portable, unpack and run (x64) | [FerrumPix-linux-x64.zip](https://github.com/Bitpainter75/FerrumPix/releases/download/latest/FerrumPix-linux-x64.zip) |
-| ZIP | Portable, unpack and run (ARM64) | [FerrumPix-linux-arm64.zip](https://github.com/Bitpainter75/FerrumPix/releases/download/latest/FerrumPix-linux-arm64.zip) |
+| AppImage | Any distribution, runs without installing | [-x86_64.AppImage](https://github.com/Bitpainter75/FerrumPix/releases/tag/latest) |
+| Flatpak | Any distribution with Flatpak, sandboxed | [.flatpak](https://github.com/Bitpainter75/FerrumPix/releases/tag/latest) |
+| DEB | Debian, Ubuntu, Mint (amd64) | [-amd64.deb](https://github.com/Bitpainter75/FerrumPix/releases/tag/latest) |
+| RPM | Fedora, openSUSE (x86_64) | [-x86_64.rpm](https://github.com/Bitpainter75/FerrumPix/releases/tag/latest) |
+| ZIP | Portable, unpack and run (x64) | [-linux-x64.zip](https://github.com/Bitpainter75/FerrumPix/releases/tag/latest) |
+| ZIP | Portable, unpack and run (ARM64) | [-linux-arm64.zip](https://github.com/Bitpainter75/FerrumPix/releases/tag/latest) |
 
 On Arch and its derivatives there is [ferrumpix-bin](https://aur.archlinux.org/packages/ferrumpix-bin) in the AUR.
 
@@ -196,19 +202,19 @@ The AppImage carries update information, so tools that manage AppImages find new
 
 ### Windows
 
-| Package | For | Download |
+| Package | For | File ends in |
 |---|---|---|
 | Microsoft Store | Installs and updates through Windows (x64) | [FerrumPix in the Microsoft Store](https://apps.microsoft.com/detail/9phllcbtmdfg) |
-| Setup | Installs with start menu entry and file types (x64) | [FerrumPix-win-x64-Setup.exe](https://github.com/Bitpainter75/FerrumPix/releases/download/latest/FerrumPix-win-x64-Setup.exe) |
-| ZIP | Portable, unpack and run (x64) | [FerrumPix-win-x64.zip](https://github.com/Bitpainter75/FerrumPix/releases/download/latest/FerrumPix-win-x64.zip) |
-| ZIP | Portable, unpack and run (ARM64) | [FerrumPix-win-arm64.zip](https://github.com/Bitpainter75/FerrumPix/releases/download/latest/FerrumPix-win-arm64.zip) |
+| Setup | Installs with start menu entry and file types (x64) | [-win-x64-Setup.exe](https://github.com/Bitpainter75/FerrumPix/releases/tag/latest) |
+| ZIP | Portable, unpack and run (x64) | [-win-x64.zip](https://github.com/Bitpainter75/FerrumPix/releases/tag/latest) |
+| ZIP | Portable, unpack and run (ARM64) | [-win-arm64.zip](https://github.com/Bitpainter75/FerrumPix/releases/tag/latest) |
 
 ### macOS
 
-| Package | For | Download |
+| Package | For | File ends in |
 |---|---|---|
-| App bundle | Intel Macs | [FerrumPix-osx-x64-unsigned.app.zip](https://github.com/Bitpainter75/FerrumPix/releases/download/latest/FerrumPix-osx-x64-unsigned.app.zip) |
-| App bundle | Apple Silicon | [FerrumPix-osx-arm64-unsigned.app.zip](https://github.com/Bitpainter75/FerrumPix/releases/download/latest/FerrumPix-osx-arm64-unsigned.app.zip) |
+| App bundle | Intel Macs | [-osx-x64-unsigned.app.zip](https://github.com/Bitpainter75/FerrumPix/releases/tag/latest) |
+| App bundle | Apple Silicon | [-osx-arm64-unsigned.app.zip](https://github.com/Bitpainter75/FerrumPix/releases/tag/latest) |
 
 ### Experimental
 
@@ -269,7 +275,7 @@ dotnet run --project FerrumPix.vbproj
 
 ## Licence
 
-FerrumPix is [GPL-3.0-only](LICENSE). Every package carries that licence text and a `THIRD-PARTY-NOTICES.txt` naming each component and the licence it is used under: Avalonia UI, .NET, ReactiveUI, SkiaSharp, Svg.Skia, Microsoft.Data.Sqlite with SQLitePCLRaw, MetadataExtractor with XmpCore, QRCoder, BitMiracle.LibTiff.NET and ONNX Runtime (MIT, Apache-2.0 or BSD-3-Clause), the [Lensfun](https://github.com/lensfun/lensfun) lens database (CC-BY-SA 3.0), [Tabler Icons](https://github.com/tabler/tabler-icons) (MIT), and the bundled [LibRaw](https://www.libraw.org/) (LGPL-2.1) with [zlib](https://zlib.net/) (zlib licence) and [libjpeg](https://www.ijg.org/) (IJG licence), [libmpv](https://mpv.io/) (GPL-2.0-or-later) and [libheif](https://github.com/strukturag/libheif) with [libde265](https://github.com/strukturag/libde265) (both LGPL-3.0). For the GPL and LGPL libraries the packages also name the matching source: version, commit and build recipe.
+FerrumPix is [GPL-3.0-only](LICENSE). Every package carries that licence text and a `THIRD-PARTY-NOTICES.txt` naming each component and the licence it is used under: Avalonia UI, .NET, ReactiveUI, SkiaSharp, Svg.Skia, Microsoft.Data.Sqlite with SQLitePCLRaw, MetadataExtractor with XmpCore, QRCoder, BitMiracle.LibTiff.NET and ONNX Runtime (MIT, Apache-2.0 or BSD-3-Clause), the [Lensfun](https://github.com/lensfun/lensfun) lens database (CC-BY-SA 3.0), [Tabler Icons](https://github.com/tabler/tabler-icons) (MIT), and the bundled [LibRaw](https://www.libraw.org/) (LGPL-2.1) with [zlib](https://zlib.net/) (zlib licence) and [libjpeg](https://www.ijg.org/) (IJG licence), [libmpv](https://mpv.io/) (GPL-2.0-or-later) and [libheif](https://github.com/strukturag/libheif) with [libde265](https://github.com/strukturag/libde265) (both LGPL-3.0). For the GPL and LGPL libraries the packages also name the matching source: version, commit and build recipe. The map view, once switched on, shows tiles from [OpenStreetMap](https://www.openstreetmap.org/copyright); the map data is © OpenStreetMap contributors under the [Open Database License](https://opendatacommons.org/licenses/odbl/1-0/).
 
 Project website: [FerrumPix.app](https://ferrumpix.app/)
 

@@ -29,6 +29,11 @@ Namespace Services
         Public ReadOnly Property Rect As SKRectI
         Friend Property Pixels As SKBitmap
         Public Property IsAlive As Boolean = True
+        ''' <summary>True, solange der Zug im Arbeitsbild steht; Rueckgaengig und Wiederholen
+        ''' schalten es um. Daraus ergibt sich, ob noch etwas eingebacken ist.</summary>
+        Friend Property IsApplied As Boolean = True
+        ''' <summary>Der Zug steht zugleich als Vermerk im Rezept (Entrauschen, Objektentfernen).</summary>
+        Friend Property RecordedInRecipe As Boolean
 
         Friend ReadOnly Property SizeBytes As Long
             Get
@@ -63,7 +68,16 @@ Namespace Services
         ''' meinte (Bildwechsel dazwischen), erkennt das am veränderten Stempel und verfällt.
         Private _initStamp As Long
         Private _hasBakedContent As Boolean
+        ''' <summary>Meldet, wenn <see cref="HasBakedContent"/> kippt. Kann aus der
+        ''' Hintergrund-Queue kommen; der Empfaenger wechselt selbst auf den UI-Thread.</summary>
+        Public Event BakedContentChanged As EventHandler
         Private _hasUnrecordedBakedContent As Boolean
+        ''' <summary>Was NICHT an einem lebenden Patch haengt und deshalb kein Rueckgaengig mehr
+        ''' zuruecknehmen kann: eine geladene retouch.png und Zuege, deren Vorher-Pixel verworfen
+        ''' wurden (Speicherdeckel, geleerter Verlauf). Die beiden Flags oben ergeben sich aus
+        ''' diesen und den gerade angewendeten Patches, siehe RecomputeBakedLocked.</summary>
+        Private _permanentBaked As Boolean
+        Private _permanentUnrecorded As Boolean
         Private _hasAlphaHoles As Boolean
         ''' Einfüge-Reihenfolge = Alter; vorne der älteste (Budget-Verdrängungskandidat).
         Private ReadOnly _patches As New List(Of WorkingImagePatch)()
@@ -132,6 +146,7 @@ Namespace Services
                     Return Nothing
                 End If
             End If
+            Dim bakedChanged As Boolean
             SyncLock _lock
                 For Each p In _patches
                     p.Kill()
@@ -144,12 +159,14 @@ Namespace Services
                 _initStamp += 1
                 ' hasBakedContent=True beim Laden einer .fpx, deren retouch.png bereits das fertige
                 ' Arbeitsbild ist (Striche/Retusche eingebacken); hasAlphaHoles aus dem Rezept-Flag.
-                _hasBakedContent = hasBakedContent
+                _permanentBaked = hasBakedContent
                 ' Was aus einer retouch.png kommt, sind PIXEL und kein Rezept - es liesse sich aus
                 ' einer Begleitdatei nicht wiederherstellen.
-                _hasUnrecordedBakedContent = hasBakedContent
+                _permanentUnrecorded = hasBakedContent
+                bakedChanged = RecomputeBakedLocked()
                 _hasAlphaHoles = hasAlphaHoles
             End SyncLock
+            If bakedChanged Then RaiseEvent BakedContentChanged(Me, EventArgs.Empty)
             Return preview
         End Function
 
@@ -325,6 +342,8 @@ Namespace Services
                                      Optional punchesAlpha As Boolean = False,
                                      Optional recordedInRecipe As Boolean = False) As WorkingImagePatch
             If draw Is Nothing Then Return Nothing
+            Dim becameBaked As Boolean
+            Dim patch As WorkingImagePatch
             SyncLock _lock
                 If _full Is Nothing Then Return Nothing
                 Dim clamped = ClampToFullLocked(rect)
@@ -352,15 +371,16 @@ Namespace Services
 
                 UpdatePreviewRegionLocked(clamped)
                 _version += 1
-                _hasBakedContent = True
-                If Not recordedInRecipe Then _hasUnrecordedBakedContent = True
                 If punchesAlpha Then _hasAlphaHoles = True
 
-                Dim patch As New WorkingImagePatch(clamped, before)
+                patch = New WorkingImagePatch(clamped, before) With {.RecordedInRecipe = recordedInRecipe}
                 _patches.Add(patch)
                 EnforcePatchBudgetLocked()
-                Return patch
+                becameBaked = RecomputeBakedLocked()
             End SyncLock
+            ' Ausserhalb der Sperre: der Empfaenger fragt den Zustand gleich wieder ab.
+            If becameBaked Then RaiseEvent BakedContentChanged(Me, EventArgs.Empty)
+            Return patch
         End Function
 
         ''' <summary>Rückgängig: tauscht den gespeicherten Regioninhalt mit dem aktuellen Stand
@@ -378,6 +398,7 @@ Namespace Services
 
         Private Function SwapPatch(patch As WorkingImagePatch) As Boolean
             If patch Is Nothing Then Return False
+            Dim bakedChanged As Boolean
             SyncLock _lock
                 If _full Is Nothing OrElse Not patch.IsAlive OrElse patch.Pixels Is Nothing Then Return False
                 Dim current = ExtractRegionLocked(patch.Rect)
@@ -390,10 +411,16 @@ Namespace Services
                 End Using
                 patch.Pixels.Dispose()
                 patch.Pixels = current
+                ' Ein zurueckgenommener Pinselstrich ist nicht mehr eingebacken. Ohne das blieb ein
+                ' RAW nach Retusche und Rueckgaengig fuer immer "fertig", obwohl seine Pixel wieder
+                ' dem RAW-Stand entsprachen.
+                patch.IsApplied = Not patch.IsApplied
                 UpdatePreviewRegionLocked(patch.Rect)
                 _version += 1
-                Return True
+                bakedChanged = RecomputeBakedLocked()
             End SyncLock
+            If bakedChanged Then RaiseEvent BakedContentChanged(Me, EventArgs.Empty)
+            Return True
         End Function
 
         ''' <summary>Entsorgt einen Patch endgültig (z.B. wenn der Redo-Stapel nach einer neuen
@@ -401,10 +428,34 @@ Namespace Services
         Public Sub DiscardPatch(patch As WorkingImagePatch)
             If patch Is Nothing Then Return
             SyncLock _lock
-                _patches.Remove(patch)
+                If _patches.Remove(patch) Then MakePermanentLocked(patch)
                 patch.Kill()
             End SyncLock
         End Sub
+
+        ''' <summary>Ein Patch verschwindet. Stand sein Zug im Bild, ist er ab jetzt
+        ''' unwiderruflich eingebacken; ein zurueckgenommener hinterlaesst nichts.</summary>
+        Private Sub MakePermanentLocked(patch As WorkingImagePatch)
+            If Not patch.IsApplied Then Return
+            _permanentBaked = True
+            If Not patch.RecordedInRecipe Then _permanentUnrecorded = True
+        End Sub
+
+        ''' <summary>Leitet die beiden Flags aus dem Dauerhaften und den angewendeten Patches ab.
+        ''' True, wenn <see cref="HasBakedContent"/> dabei gekippt ist.</summary>
+        Private Function RecomputeBakedLocked() As Boolean
+            Dim baked = _permanentBaked
+            Dim unrecorded = _permanentUnrecorded
+            For Each p In _patches
+                If Not p.IsAlive OrElse Not p.IsApplied Then Continue For
+                baked = True
+                If Not p.RecordedInRecipe Then unrecorded = True
+            Next
+            Dim changed = baked <> _hasBakedContent
+            _hasBakedContent = baked
+            _hasUnrecordedBakedContent = unrecorded
+            Return changed
+        End Function
 
         Private Sub EnforcePatchBudgetLocked()
             Dim total As Long = 0
@@ -415,6 +466,7 @@ Namespace Services
                 Dim oldest = _patches(0)
                 _patches.RemoveAt(0)
                 total -= oldest.SizeBytes
+                MakePermanentLocked(oldest)
                 oldest.Kill()
             End While
         End Sub
@@ -482,6 +534,7 @@ Namespace Services
         ''' Vorschau-Referenz (deren Besitz liegt beim EditorViewModel). Beim Bildwechsel und
         ''' Editor-Verlassen aufrufen.</summary>
         Public Sub Clear()
+            Dim bakedChanged As Boolean
             SyncLock _lock
                 For Each p In _patches
                     p.Kill()
@@ -491,10 +544,12 @@ Namespace Services
                 _full = Nothing
                 _preview = Nothing
                 _initStamp += 1
-                _hasBakedContent = False
-                _hasUnrecordedBakedContent = False
+                _permanentBaked = False
+                _permanentUnrecorded = False
+                bakedChanged = RecomputeBakedLocked()
                 _hasAlphaHoles = False
             End SyncLock
+            If bakedChanged Then RaiseEvent BakedContentChanged(Me, EventArgs.Empty)
         End Sub
 
         Public Sub Dispose() Implements IDisposable.Dispose

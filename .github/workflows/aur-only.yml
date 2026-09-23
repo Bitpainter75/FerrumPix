@@ -1,10 +1,10 @@
-# Veroeffentlicht ausschliesslich das AUR-Paket. Dieser Lauf ist absichtlich vom allgemeinen
-# Release getrennt: dessen Auswahl "alle" umfasst weder AUR noch Flatpak.
+# Veroeffentlicht ausschliesslich das AUR-Paket. Er laeuft VOR dem Release-Lauf: das ZIP einer
+# neuen Version geht in das noch aktuelle Release "latest", neben die Pakete der vorigen
+# Version, der PKGBUILD laedt es von dort, und es laesst sich pruefen, bevor der Rest gebaut
+# wird. Der Release-Lauf nimmt genau diese Datei beim Wechsel auf die neue Version mit.
 #
-# HIER STEHT ABSICHTLICH KEINE REIHENFOLGE-PRUEFUNG. Ein Hotfix geht nur ins AUR und laeuft
-# nicht durch den allgemeinen Release - eine solche Pruefung wuerde genau diesen Fall abweisen.
-# Sie waere ausserdem gegenstandslos: der Schritt "AUR-ZIP ins Versionsrelease" legt das
-# Quell-ZIP, auf das der PKGBUILD zeigt, selbst dorthin.
+# Ein Hotfix nur fuer die AUR (neuer pkgrel derselben Version) geht ebenso allein: das neue ZIP
+# ersetzt das alte im selben Release.
 #
 # WAS DIESER LAUF SEHR WOHL PRUEFT, steht in publish-aur.sh: dieselbe Version mit demselben
 # pkgrel geht nicht noch einmal in die AUR. paru und yay entscheiden ueber pkgver-pkgrel, ob es
@@ -44,9 +44,9 @@ jobs:
         env:
           FERRUMPIX_BUILD_BOX: ""
 
-      # Das Versionsrelease braucht das Quell-ZIP, auf das der PKGBUILD mit seiner Pruefsumme zeigt.
-      - name: AUR-ZIP ins Versionsrelease
-        run: packaging/publish-github-release.sh --only-version
+      # Das Release braucht das Quell-ZIP, auf das der PKGBUILD mit seiner Pruefsumme zeigt.
+      - name: AUR-ZIP ins Release
+        run: packaging/publish-github-release.sh --only-aur
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

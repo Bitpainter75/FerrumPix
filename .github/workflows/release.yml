@@ -4,31 +4,43 @@
 # frei, fuer private werden sie gegen das Monatskontingent gerechnet. Ein voller Lauf ueber alle
 # Plattformen ist nicht kurz.
 #
-# AUR und Flatpak haben eigene Veroeffentlichungslaeufe. "alle" baut hier deshalb nur die
-# uebrigen Release-Pakete.
+# EIN LAUF FUER ALLES AUSSER DER AUR. Flatpak und MSIX hatten eigene Laeufe; seit es nur noch ein
+# Release gibt (siehe publish-github-release.sh), gehoeren sie hierher: eine neue Version wird
+# dort als Entwurf mit ALLEN Dateien aufgebaut und auf einmal veroeffentlicht, und dafuer muessen
+# alle Pakete im selben Lauf fertig werden.
+#
+# DIE AUR KOMMT VORHER, mit aur-only.yml: ihr ZIP geht in das noch aktuelle Release, laesst sich
+# pruefen, und dieser Lauf nimmt es beim Wechsel auf die neue Version byte-gleich mit.
+#
+# DER AUFBAU: je ein Job baut (Pakete, Flatpak, MSIX), legt seine Dateien als Artefakt ab, und
+# ein letzter Job sammelt sie ein und veroeffentlicht in einem Zug. Faellt ein Bau-Job aus, laeuft
+# der letzte nicht - ein halber Satz Pakete darf nie ins Release.
+#
+# DIE MSIX GEHT NICHT INS RELEASE. Ein Store-Paket wird unsigniert eingereicht, der Store signiert
+# selbst - und unsigniert laesst Windows es nicht installieren. Es steht als Artefakt am Lauf, von
+# wo aus es ins Partner Center hochgeladen wird. Gebaut wird sie nur mit einer Paketversion.
 #
 # SICHERHEIT: Ein oeffentliches Repo kann jeder per Pull Request anstossen. GitHub gibt
 # Fork-Pull-Requests keine Secrets - das ist die schuetzende Regel, und sie faellt, sobald
-# irgendwo `pull_request_target` steht. Das kommt hier deshalb nicht vor, und der Ausloeser
-# bleibt auf Tag-Push und Handstart beschraenkt.
+# irgendwo `pull_request_target` steht. Das kommt hier deshalb nicht vor.
 #
-# Benoetigte Secrets im oeffentlichen Repo - ZWEI, nicht drei:
+# KEIN AUSLOESER PER TAG MEHR, nur der Handstart. Das Veroeffentlichen legt beim Archivieren einer
+# Version selbst einen Tag an (etwa 0.9.50-3); ein Tag-Ausloeser startete daraufhin einen Lauf fuer
+# die ALTE Version, sobald das Skript von Hand mit einem persoenlichen Token laeuft.
+#
+# Benoetigte Secrets im oeffentlichen Repo:
 #   PACKAGING_DEPLOY_KEY  privater SSH-Schluessel, oeffentlicher Teil als Deploy-Key im
-#                         privaten packaging-Repo. Lesen genuegt: der Lauf schreibt nichts
-#                         mehr dorthin zurueck.
+#                         privaten packaging-Repo. Lesen genuegt.
+# KEIN eigener Release-Token noetig: GitHub stellt jedem Job einen bereit (secrets.GITHUB_TOKEN).
 #
-# KEIN eigener Release-Token noetig. Der Lauf schreibt nur in DIESES Repo, und dafuer stellt
-# GitHub jedem Job automatisch einen bereit (secrets.GITHUB_TOKEN). Er ist auf dieses Repo
-# begrenzt, verfaellt am Ende des Jobs und muss von niemandem verwaltet oder erneuert werden -
-# anders als ein persoenlicher Token, der nach spaetestens einem Jahr ablaeuft und die Pipeline
-# dann ohne erkennbaren Grund stehen laesst.
-#
-# Dafuer muss die Berechtigung ausdruecklich erteilt werden, siehe "permissions" unten:
-# Voreingestellt ist der Token nur lesend.
+# Fuer die MSIX als Repository-Variablen (keine Secrets, die Werte stehen in jedem Paket), alle
+# aus dem Partner Center, aus der Identitaet der Anwendung:
+#   MSIX_IDENTITY_NAME           z.B. 12345Bitpainter75.FerrumPix
+#   MSIX_PUBLISHER               z.B. CN=ABCDEF12-3456-7890-ABCD-EF1234567890
+#   MSIX_PUBLISHER_DISPLAY_NAME  der Name, den der Store anzeigt
 #
 # Die Fassungen der Actions gehoeren aktuell gehalten: laeuft eine auf einer abgekuendigten
-# Node-Fassung, warnt GitHub erst und zwingt sie spaeter auf eine neue - was dann bricht, faellt
-# mitten in einem Release auf.
+# Node-Fassung, warnt GitHub erst und zwingt sie spaeter auf eine neue.
 
 name: Release
 
@@ -36,7 +48,7 @@ on:
   workflow_dispatch:
     inputs:
       pakete:
-        description: "Welche Pakete? 'alle' baut alles ausser AUR und Flatpak; sonst genau eines"
+        description: "Welche Pakete? 'alle' baut alles ausser der AUR; sonst genau eines"
         type: choice
         default: alle
         options:
@@ -49,27 +61,28 @@ on:
           - winsetup
           - maczip
           - armzip
-  push:
-    tags: ['[0-9]+.[0-9]+.[0-9]+*']
+          - flatpak
+          - msix
+      paketversion:
+        description: "MSIX-Paketversion, vier Zahlen, die letzte 0 (z.B. 1.0.0.0). Pflicht bei msix; bei alle bedeutet leer: keine MSIX"
+        type: string
+        required: false
+        default: ""
 
 # Releases anlegen und Assets hochladen faellt unter "contents". Ohne diese Zeile darf der
 # eingebaute Token nur lesen, und der erste Upload scheitert mit 403.
 permissions:
   contents: write
 
-# EINZELNE PAKETE: der Handstart bietet neben "alle" jedes Paket fuer sich an. Gebaut und
-# hochgeladen wird dann nur dieses eine; die uebrigen Dateien des Latest-Release bleiben, wo sie
-# sind.
-#
-# Ein Tag-Push hat keine Eingaben; der Ausdruck faellt dort auf "alle" zurueck.
 env:
-  PAKETE: ${{ (github.event_name == 'workflow_dispatch' && inputs.pakete) || 'alle' }}
+  PAKETE: ${{ inputs.pakete || 'alle' }}
 
 jobs:
 
-  rest:
-    name: Alle Packages
+  pakete:
+    name: Pakete
     runs-on: ubuntu-latest
+    if: ${{ inputs.pakete != 'flatpak' && inputs.pakete != 'msix' }}
 
     steps:
       - uses: actions/checkout@v7
@@ -81,9 +94,7 @@ jobs:
           ssh-key: ${{ secrets.PACKAGING_DEPLOY_KEY }}
 
       # NICHT auf das vorinstallierte .NET des Runners verlassen: das Projekt steht auf net10.0,
-      # und welche SDKs ein Runner-Abbild mitbringt, aendert sich ohne Vorwarnung. Ein fehlendes
-      # SDK faellt sonst erst im dritten Bauschritt auf, nach zwanzig Minuten Laufzeit.
-      # Im Arch-Container oben braucht es das nicht - dort kommt dotnet-sdk aus pacman.
+      # und welche SDKs ein Runner-Abbild mitbringt, aendert sich ohne Vorwarnung.
       - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: '10.0.x'
@@ -118,41 +129,23 @@ jobs:
           printf 'Acquire::Retries "2";\nAcquire::http::Timeout "20";\nAcquire::https::Timeout "20";\nAcquire::ForceIPv4 "true";\n' \
             | sudo tee /etc/apt/apt.conf.d/99-release-timeouts >/dev/null
           sudo apt-get update
-          sudo apt-get install -y nsis xz-utils jq rpm zsync desktop-file-utils
-
-      # FLATPAK IST HIER RAUS und hat einen eigenen Lauf: flatpak-only.yml. Er war mit gut vier
-      # Minuten der teuerste Schritt, brauchte flatpak-builder samt Laufzeitumgebung von Flathub,
-      # und sein Bauordner mit Symlinks hat dem Windows-Bau schon einmal die Aufloesung von
-      # `**/*.axaml` zerschossen. Fuer ein Paket, das keinen der anderen Schritte braucht.
-      #
-      # WAS MAN DAFUER IM AUGE BEHALTEN MUSS: der Upload ersetzt nur, was im Bauordner liegt.
-      # Ohne den Flatpak-Lauf bleibt die ALTE FerrumPix.flatpak im Latest-Release stehen und geht
-      # stillschweigend als aktuell durch - ein fehlendes Paket faellt auf, ein veraltetes nicht.
-      # Bei einer neuen Version mit pkgrel 1 ist es umgekehrt: das Latest-Release wird geloescht
-      # und neu angelegt, dann fehlt der Flatpak ganz. In beiden Faellen gehoert flatpak-only.yml
-      # NACH diesem Lauf gestartet, mit veroeffentlichen=true.
+          sudo apt-get install -y nsis xz-utils jq rpm zsync desktop-file-utils zip
 
       - name: Fremdbinaerdateien bereitlegen
         run: packaging/ci/ensure-binaries.sh
 
       # EIN SCHRITT JE PAKET statt einem einzigen "all". Faellt eines aus, steht es in der
-      # Uebersicht des Laufs mit Namen da, statt dass man ein Protokoll ueber tausende Zeilen
-      # durchsucht - und man sieht auf einen Blick, welches Paket wie lange braucht.
+      # Uebersicht des Laufs mit Namen da, und man sieht, welches Paket wie lange braucht.
       #
-      # DER PREIS, und er ist bezahlbar: package.sh ruft `publish` einmal VOR der Modus-Auswahl
-      # auf, und AppImage, ZIP, deb und rpm teilen sich dieses eine Ergebnis. Getrennte Aufrufe
-      # bauen es je neu - gemessen rund 27 Sekunden je Durchgang, macht ein paar Minuten ueber
-      # den ganzen Lauf. Windows, macOS und ARM bauen ohnehin schon jeweils eigene.
+      # DER PREIS: package.sh ruft `publish` einmal VOR der Modus-Auswahl auf, und AppImage, ZIP,
+      # deb und rpm teilen sich dieses eine Ergebnis. Getrennte Aufrufe bauen es je neu - gemessen
+      # rund 27 Sekunden je Durchgang.
       #
-      # DIE REIHENFOLGE IST NACH WICHTIGKEIT, nicht nach Bequemlichkeit: Linux-ZIP und
-      # AppImage zuerst, dann deb und rpm, dann Windows, dann macOS, und ganz zuletzt ARM.
-      # Bricht es spaet ab, weiss man dadurch trotzdem, dass die wichtigen Pakete bauen.
+      # DIE REIHENFOLGE IST NACH WICHTIGKEIT: Linux-ZIP und AppImage zuerst, dann deb und rpm,
+      # dann Windows, dann macOS, und ganz zuletzt ARM.
       #
-      # Nicht trennbar sind macOS (x64 und arm64 in einem Modus) und ARM (linux-arm64 und
-      # win-arm64 in einem) - das ginge nur, indem man package.sh aendert.
-      #
-      # Bricht ein Schritt ab, endet der Job VOR dem Hochladen - ein halber Satz Pakete darf nie
-      # ins Release, sonst steht Neues neben Altem und niemand sieht es.
+      # DAS AUR-ZIP BAUT DIESER LAUF NICHT. Es entsteht vorher im AUR-Lauf und liegt schon im
+      # Release; beim Wechsel auf eine neue Version nimmt das Skript es byte-gleich mit.
       - name: Paket - Linux-ZIP
         if: ${{ env.PAKETE == 'alle' || env.PAKETE == 'zip' }}
         run: packaging/package.sh zip
@@ -201,10 +194,244 @@ jobs:
         env:
           FERRUMPIX_BUILD_BOX: ""
 
-      # Ein Einzellauf bringt genau ein Paket mit, und mehr ersetzt das Skript auch nicht: es legt
-      # jede Datei, die es ueberschreibt, zuerst unter ".vorherige" zur Seite und wirft sie erst
-      # weg, wenn die neue oben ist. Das Latest-Release selbst wird nie geloescht.
-      - name: Ins Latest-Release
-        run: packaging/publish-github-release.sh --only-latest
+      # Nur die Dateien dieses Builds: sie tragen alle die Buildnummer, dazu die zsync unter dem
+      # alten Namen. Das Hochladen macht erst der letzte Job.
+      - uses: actions/upload-artifact@v7
+        with:
+          name: pakete
+          path: packaging/build/FerrumPix*
+          if-no-files-found: error
+          retention-days: 3
+
+  flatpak:
+    name: Flatpak
+    runs-on: ubuntu-latest
+    if: ${{ inputs.pakete == 'alle' || inputs.pakete == 'flatpak' }}
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/checkout@v7
+        with:
+          repository: Bitpainter75/FerrumPix-Build
+          path: packaging
+          ssh-key: ${{ secrets.PACKAGING_DEPLOY_KEY }}
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Werkzeuge
+        timeout-minutes: 10
+        run: |
+          printf 'Acquire::Retries "2";\nAcquire::http::Timeout "20";\nAcquire::https::Timeout "20";\nAcquire::ForceIPv4 "true";\n' \
+            | sudo tee /etc/apt/apt.conf.d/99-release-timeouts >/dev/null
+          sudo apt-get update
+          sudo apt-get install -y xz-utils jq desktop-file-utils flatpak flatpak-builder
+
+      # Version und Name muessen mit dem Manifest uebereinstimmen (runtime-version 24.08). Die
+      # SDK-Erweiterung bringt das .NET-SDK mit, mit dem der Bau in der Sandbox uebersetzt.
+      - name: Flatpak-Laufzeitumgebung
+        run: |
+          sudo flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+          sudo flatpak install -y --noninteractive flathub \
+            org.freedesktop.Platform//24.08 org.freedesktop.Sdk//24.08 \
+            org.freedesktop.Sdk.Extension.dotnet10//24.08
+
+      # Er laedt rund 843 MB NuGet-Pakete und uebersetzt danach in der Sandbox. Die Zeitschranke
+      # ist grosszuegig und trotzdem ein Riegel gegen GitHubs Sechs-Stunden-Grenze.
+      - name: Paket - Flatpak
+        timeout-minutes: 60
+        run: packaging/package.sh flatpak
+        env:
+          FERRUMPIX_BUILD_BOX: ""
+
+      # Der Beweis, nicht die Absicht: das gebaute Bundle wird installiert und nach seinen
+      # Rechten gefragt. Was im Manifest steht, ist eine Behauptung - was hier steht, gilt.
+      - name: Berechtigungen des Bundles zeigen
+        run: |
+          bundle=$(ls packaging/build/*.flatpak | head -1)
+          echo "Bundle: $bundle"
+          sudo flatpak install -y --noninteractive "$bundle"
+          flatpak info --show-permissions io.github.Bitpainter75.FerrumPix
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: flatpak
+          path: packaging/build/*.flatpak
+          if-no-files-found: error
+          retention-days: 3
+
+  msix-nutzlast:
+    name: MSIX - Nutzlast (Linux)
+    runs-on: ubuntu-latest
+    # Bei "msix" laeuft der Job IMMER, auch ohne Paketversion: sonst wurde er still
+    # uebersprungen, der Windows-Job hinter ihm ebenso, und der Lauf endete gruen, ohne etwas
+    # gebaut zu haben. Der erste Schritt meldet die fehlende Angabe als Fehler.
+    if: ${{ inputs.pakete == 'msix' || (inputs.pakete == 'alle' && inputs.paketversion != '') }}
+
+    steps:
+      - name: Paketversion angegeben?
+        env:
+          PAKETVERSION: ${{ inputs.paketversion }}
+        run: |
+          if [ -z "$PAKETVERSION" ]; then
+            echo "::error::Fuer msix ist die Paketversion Pflicht (vier Zahlen, die letzte 0, z.B. 1.0.0.0)."
+            exit 1
+          fi
+
+      # ZUERST, noch vor dem Auschecken: fehlen die Angaben, steht das Scheitern schon fest.
+      # Die Werte gehen ueber env hinein und nicht direkt in den Skripttext.
+      - name: Angaben aus dem Partner Center vorhanden?
+        env:
+          IDENTITY: ${{ vars.MSIX_IDENTITY_NAME }}
+          HERAUSGEBER: ${{ vars.MSIX_PUBLISHER }}
+          ANZEIGENAME: ${{ vars.MSIX_PUBLISHER_DISPLAY_NAME }}
+        run: |
+          fehlt=""
+          [ -n "$IDENTITY" ]    || fehlt="$fehlt MSIX_IDENTITY_NAME"
+          [ -n "$HERAUSGEBER" ] || fehlt="$fehlt MSIX_PUBLISHER"
+          [ -n "$ANZEIGENAME" ] || fehlt="$fehlt MSIX_PUBLISHER_DISPLAY_NAME"
+          if [ -n "$fehlt" ]; then
+            echo "::error::Es fehlen die Repository-Variablen:$fehlt - einzutragen unter Settings > Secrets and variables > Actions > Variables."
+            exit 1
+          fi
+          echo "Identitaet:  $IDENTITY"
+          echo "Herausgeber: $HERAUSGEBER"
+
+      - uses: actions/checkout@v7
+
+      - uses: actions/checkout@v7
+        with:
+          repository: Bitpainter75/FerrumPix-Build
+          path: packaging
+          ssh-key: ${{ secrets.PACKAGING_DEPLOY_KEY }}
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '10.0.x'
+
+      # ImageMagick verkleinert das Anwendungssymbol auf die vier Groessen, die der Store verlangt.
+      - name: Werkzeuge
+        timeout-minutes: 10
+        run: |
+          printf 'Acquire::Retries "2";\nAcquire::http::Timeout "20";\nAcquire::https::Timeout "20";\nAcquire::ForceIPv4 "true";\n' \
+            | sudo tee /etc/apt/apt.conf.d/99-release-timeouts >/dev/null
+          sudo apt-get update
+          sudo apt-get install -y imagemagick xz-utils
+
+      - name: Fremdbinaerdateien bereitlegen
+        run: packaging/ci/ensure-binaries.sh
+
+      - name: Nutzlast anlegen
+        run: packaging/package.sh msix
+        env:
+          FERRUMPIX_BUILD_BOX: ""
+          MSIX_IDENTITY_NAME: ${{ vars.MSIX_IDENTITY_NAME }}
+          MSIX_PUBLISHER: ${{ vars.MSIX_PUBLISHER }}
+          MSIX_PUBLISHER_DISPLAY_NAME: ${{ vars.MSIX_PUBLISHER_DISPLAY_NAME }}
+          MSIX_VERSION: ${{ inputs.paketversion }}
+
+      # include-hidden-files, weil die Voreinstellung Punktdateien stillschweigend weglaesst.
+      - uses: actions/upload-artifact@v7
+        with:
+          name: msix-nutzlast
+          path: packaging/work/msix/win-x64
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 1
+
+  msix-paket:
+    name: MSIX - Packen (Windows)
+    runs-on: windows-latest
+    needs: msix-nutzlast
+
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: msix-nutzlast
+          path: nutzlast
+
+      # NICHT aus dem Windows Kits des Laeufers: dessen Pfad traegt die SDK-Fassung, und die
+      # aendert sich ohne Vorwarnung. Das NuGet-Paket ist festgenagelt; check-updates.sh meldet,
+      # wenn es eine neuere gibt.
+      - name: makeappx bereitlegen
+        shell: pwsh
+        run: |
+          $fassung = "10.0.28000.2705"
+          $adresse = "https://api.nuget.org/v3-flatcontainer/microsoft.windows.sdk.buildtools/$fassung/microsoft.windows.sdk.buildtools.$fassung.nupkg"
+          Invoke-WebRequest -Uri $adresse -OutFile sdk.zip
+          Expand-Archive -Path sdk.zip -DestinationPath sdk
+          $exe = Get-ChildItem -Path sdk\bin\*\x64\makeappx.exe | Select-Object -First 1
+          if (-not $exe) { throw "makeappx.exe steckt nicht im Paket $fassung" }
+          "MAKEAPPX=$($exe.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+
+      # /o ueberschreibt ohne Rueckfrage; makeappx prueft dabei das AppxManifest.xml gegen das
+      # Schema.
+      - name: Packen
+        shell: pwsh
+        run: |
+          & $env:MAKEAPPX pack /o /d nutzlast /p FerrumPix-win-x64.msix
+          Get-Item FerrumPix-win-x64.msix | Format-List Name, Length
+
+      # Von hier aus geht es von Hand ins Partner Center.
+      - uses: actions/upload-artifact@v7
+        with:
+          name: FerrumPix-msix
+          path: FerrumPix-win-x64.msix
+          if-no-files-found: error
+
+  veroeffentlichen:
+    name: Ins Release
+    runs-on: ubuntu-latest
+    needs: [pakete, flatpak]
+    # Laeuft, wenn mindestens einer der Bau-Jobs gebaut hat und KEINER gescheitert ist. Ein
+    # uebersprungener Job (etwa der Flatpak bei einem Einzellauf) zaehlt nicht als Fehler.
+    if: >-
+      ${{ always()
+          && !contains(needs.*.result, 'failure')
+          && !contains(needs.*.result, 'cancelled')
+          && contains(needs.*.result, 'success') }}
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/checkout@v7
+        with:
+          repository: Bitpainter75/FerrumPix-Build
+          path: packaging
+          ssh-key: ${{ secrets.PACKAGING_DEPLOY_KEY }}
+
+      - name: Werkzeuge
+        run: sudo apt-get install -y jq
+
+      # Die Artefakte der Pakete und des Flatpak in den Bauordner, wo das Skript sie erwartet. Je
+      # ein Schritt mit genau einem Namen: die MSIX-Artefakte duerfen nie mit hinein. Ein Muster
+      # ohne Treffer laedt nichts und ist kein Fehler - so geht es auch beim Einzellauf.
+      - uses: actions/download-artifact@v8
+        with:
+          path: packaging/build
+          pattern: pakete
+          merge-multiple: true
+
+      - uses: actions/download-artifact@v8
+        with:
+          path: packaging/build
+          pattern: flatpak
+          merge-multiple: true
+
+      - name: Dateien
+        run: ls -la packaging/build
+
+      # "alle" veroeffentlicht vollstaendig und darf eine neue Version anfangen. Ein Einzellauf
+      # traegt --partial: er ersetzt nur seine Dateien im bestehenden Release derselben Version
+      # und bricht ab, wenn die Version neu ist.
+      - name: Veroeffentlichen
+        run: |
+          if [ "$PAKETE" = "alle" ]; then
+            packaging/publish-github-release.sh --only-packages
+          else
+            packaging/publish-github-release.sh --only-packages --partial
+          fi
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

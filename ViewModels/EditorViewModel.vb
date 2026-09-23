@@ -6213,9 +6213,9 @@ Namespace ViewModels
         Public ReadOnly Property LensCorrectionSupported As Boolean
             Get
                 ' Genau der Pfad, den PreparePreviewSource dekodiert - sonst richtete sich die
-                ' Anzeige nach einer anderen Datei als die Wirkung.
-                Return RawPreviewService.IsSupportedRaw(_currentImagePath) AndAlso
-                       RawDecodeService.IsAvailable
+                ' Anzeige nach einer anderen Datei als die Wirkung. Bei einer .fpx ist das die
+                ' entpackte Basis, nicht das Buendel.
+                Return IsRawSourceEditable AndAlso RawDecodeService.IsAvailable
             End Get
         End Property
 
@@ -6567,11 +6567,22 @@ Namespace ViewModels
                 _hasChanges = True
                 Me.RaisePropertyChanged(NameOf(HasUnsavedChanges))
             End If
+            ' Mit gebackenem Inhalt ist das Bild kein RAW mehr (IsRawSourceEditable): ein
+            ' Neuaufbau aus der Datei verwarf ihn ohne Nachfrage. Die Einstellung bleibt im Rezept,
+            ' wirkt aber nicht. Erreichbar ist das nur noch ueber Rueckgaengig oder ein geladenes
+            ' Rezept, die Schalter selbst sind dann ausgeblendet.
+            If _workingImage.HasBakedContent Then
+                SchedulePreviewUpdate()
+                Return
+            End If
             ' Die Anzeigeeinstellung ueberlebt den Neuaufbau: sie gehoert zur ANSICHT, nicht zum
             ' Bild. Ohne das sprang die Anzeige von "Einpassen" auf einen festen Prozentwert -
             ' bei voller Sensoraufloesung auf einstellige Prozente.
             Dim warEingepasst = _activeZoomPreset = ZoomPresetMode.Fit
-            PreparePreviewSource(_currentImagePath)
+            ' RenderSourcePath, nicht der Dokumentpfad: bei einer .fpx waere das das ZIP-Buendel,
+            ' das kein Decoder lesen kann. Der Neuaufbau warf dann den RAW-Zwischenspeicher weg
+            ' und liess das Arbeitsbild leer, bis ein spaeterer Render zufaellig neu entwickelte.
+            PreparePreviewSource(RenderSourcePath)
             If warEingepasst Then ActiveZoomPreset = ZoomPresetMode.Fit
         End Sub
 
@@ -6583,16 +6594,19 @@ Namespace ViewModels
             _objektivKamera = ("", "")
             _objektivKorrektur = Nothing
             Try
-                If Not String.IsNullOrEmpty(_currentImagePath) AndAlso File.Exists(_currentImagePath) Then
-                    Dim data = ExifService.ReadExif(_currentImagePath)
+                ' Die Aufnahmedaten stehen in der Datei, die entwickelt wird - bei einer .fpx in
+                ' der entpackten Basis, nicht im Buendel.
+                Dim sourcePath = RenderSourcePath
+                If Not String.IsNullOrEmpty(sourcePath) AndAlso File.Exists(sourcePath) Then
+                    Dim data = ExifService.ReadExif(sourcePath)
                     _objektivExifName = If(data?.Lens, "")
                     _objektivKamera = ("", If(data?.Camera, ""))
-                    _objektivKorrektur = LensDataService.FindCorrectionForFile(_currentImagePath, _lensModel)
+                    _objektivKorrektur = LensDataService.FindCorrectionForFile(sourcePath, _lensModel)
                     If _objektivKorrektur Is Nothing Then
-                        _objektivErkannterName = LensDataService.ResolveLensNameForFile(_currentImagePath, _lensModel)
+                        _objektivErkannterName = LensDataService.ResolveLensNameForFile(sourcePath, _lensModel)
                     End If
                     DiagnosticLogService.LogAlways("Editor.LensCorrection",
-                        $"file={_currentImagePath}; exif={_objektivExifName}; recipe={_lensModel}; " &
+                        $"file={sourcePath}; exif={_objektivExifName}; recipe={_lensModel}; " &
                         $"assignment={LensDataService.ZuordnungFuer(_objektivExifName)}; " &
                         $"correction={If(_objektivKorrektur?.LensName, "<none>")}; " &
                         $"resolved={If(_objektivErkannterName, "<none>")}")
@@ -13723,15 +13737,37 @@ Namespace ViewModels
         ''' Vorschau bearbeitet werden.</summary>
         Public ReadOnly Property IsRawDeveloped As Boolean
             Get
-                Return RawPreviewService.IsSupportedRaw(RenderSourcePath) AndAlso
+                Return IsRawSourceEditable AndAlso
                        RawDecodeService.IsAvailable AndAlso
                        RawDecodeService.TryGetCachedSize(RenderSourcePath).Width > 0
             End Get
         End Property
 
+        ''' <summary>True, solange das Arbeitsbild ein RAW ist, auf das die RAW-Einstellungen noch
+        ''' wirken. Die Datei allein entscheidet das nicht: sobald etwas eingebacken ist
+        ''' (Retusche, Striche, gerasterte Ebenen, Entrauschen, oder eine .fpx mit retouch.png),
+        ''' sind es fertige Pixel und kein RAW mehr. Objektivkorrektur und Lichterrettung sitzen im
+        ''' Decode und kaemen nur durch einen Neuaufbau aus der Datei an, der das Gebackene
+        ''' verwerfen wuerde. Das Bild verhaelt sich deshalb von da an wie jedes andere.</summary>
+        Private ReadOnly Property IsRawSourceEditable As Boolean
+            Get
+                Return RawPreviewService.IsSupportedRaw(RenderSourcePath) AndAlso
+                       Not _workingImage.HasBakedContent
+            End Get
+        End Property
+
+        ''' <summary>Meldet alles neu, was an <see cref="IsRawSourceEditable"/> haengt. Gerufen,
+        ''' wenn das Arbeitsbild gebackenen Inhalt bekommt oder verliert.</summary>
+        Private Sub RaiseRawStateChanged()
+            Me.RaisePropertyChanged(NameOf(IsRawDeveloped))
+            Me.RaisePropertyChanged(NameOf(RawFooterTooltip))
+            Me.RaisePropertyChanged(NameOf(LensCorrectionSupported))
+            _mainVm?.RefreshWindowTitle()
+        End Sub
+
         Public ReadOnly Property RawFooterTooltip As String
             Get
-                If Not RawPreviewService.IsSupportedRaw(RenderSourcePath) Then Return Nothing
+                If Not IsRawSourceEditable Then Return Nothing
                 If IsRawDeveloped Then Return LocalizationService.T("RAW entwickelt")
                 ' Der Tooltip hat Platz fuer den ganzen Grund, die Statuszeile nur fuer den Merksatz.
                 If Not RawDecodeService.IsAvailable Then
@@ -14155,7 +14191,7 @@ Namespace ViewModels
         ''' Unabhängig davon gilt: die RAW-Datei ist nie Speicherziel - Export schreibt in eine neue
         ''' Datei, Reglerstände gehen in das .fpxmp-Sidecar.</summary>
         Private Function RawStatusSuffix() As String
-            If Not RawPreviewService.IsSupportedRaw(RenderSourcePath) Then Return ""
+            If Not IsRawSourceEditable Then Return ""
             ' Fehlt LibRaw ganz, ist "RAW-Vorschau" die halbe Auskunft: sie sagt, WAS angezeigt wird,
             ' aber nicht, dass sich das beheben laesst. Genau daran scheiterte ein Mac-Nutzer.
             If Not RawDecodeService.IsAvailable Then
@@ -15027,6 +15063,16 @@ Namespace ViewModels
             HistorySteps = New ObservableCollection(Of HistoryStep)()
             RebuildHistorySteps()
             SetUpInfoPanel()
+            ' Gebackener Inhalt macht aus einem RAW ein gewoehnliches Bild (siehe
+            ' IsRawSourceEditable). Der Commit kann aus der Hintergrund-Queue kommen.
+            AddHandler _workingImage.BakedContentChanged,
+                Sub(s, e)
+                    If Avalonia.Threading.Dispatcher.UIThread.CheckAccess() Then
+                        RaiseRawStateChanged()
+                    Else
+                        Avalonia.Threading.Dispatcher.UIThread.Post(AddressOf RaiseRawStateChanged)
+                    End If
+                End Sub
             ' Ebenen-Panel-Anzeige (umgekehrte Reihenfolge) an den Objektstapel koppeln. Wer die
             ' Liste in einem Rutsch umbaut, klammert das mit SuspendLayerRowRebuild - sonst baut
             ' JEDE einzelne Aenderung das ganze Panel neu auf.
@@ -16317,6 +16363,10 @@ Namespace ViewModels
             ' (der Personen-Reiter, siehe LoadPeople).
             ClearSelection(captureUndo:=False)   ' pixelbasierte Auswahlmaske gilt nur fürs alte Bild
             ResetAdjustmentsInternal(resetEditorUi:=True)
+            ' Wie beim Oeffnen: das Objektiv DIESES Bildes. Ohne den Aufruf nannte die Gruppe beim
+            ' Blaettern das Objektiv des vorigen, solange das Rezept die Objektivfelder nicht
+            ' aenderte.
+            RefreshLensCorrection()
             ClearUndoHistory()
             Dim previousSuppressPreviewDirty = _suppressPreviewDirty
             _suppressPreviewDirty = True
@@ -21240,6 +21290,17 @@ Namespace ViewModels
             ' Rezept (Sidecar, Undo/Redo) darf deshalb nicht bloss die Eigenschaft umstellen und
             ' das schon entwickelte Arbeitsbild weiterzeigen.
             Dim rawHighlightRecoveryChanged = _rawHighlightRecovery <> adj.RawHighlightRecovery
+            ' DIE OBJEKTIVKORREKTUR GEHOERT GENAUSO DAZU. Sie stand im Rezept und wirkte in Kachel und
+            ' Export, der Editor holte sie beim Oeffnen aber nicht zurueck: die Schalter standen
+            ' wieder auf "wie in den Einstellungen", und wer danach speicherte, hatte sie auch aus
+            ' der Datei verloren (Nutzerbefund 0.9.49-4). Wie die Lichterrettung sitzt sie im Decode.
+            Dim lensChanged = Not Nullable.Equals(_lensDistortion, adj.LensDistortion) OrElse
+                              Not Nullable.Equals(_lensTca, adj.LensTca) OrElse
+                              Not Nullable.Equals(_lensVignetting, adj.LensVignetting) OrElse
+                              _lensDistortionAmount <> adj.LensDistortionAmount OrElse
+                              _lensTcaAmount <> adj.LensTcaAmount OrElse
+                              _lensVignettingAmount <> adj.LensVignettingAmount OrElse
+                              Not String.Equals(_lensModel, If(adj.LensModel, ""), StringComparison.Ordinal)
             ' Die Objektliste wird hier geleert und Objekt fuer Objekt neu gefuellt. Ohne diese
             ' Klammer baut das Ebenenpanel bei JEDEM einzelnen Objekt komplett neu auf - bei 32
             ' Objekten also 33 Mal statt einmal.
@@ -21263,6 +21324,13 @@ Namespace ViewModels
             _temperature = adj.Temperature
             _tint = adj.Tint
             _rawHighlightRecovery = adj.RawHighlightRecovery
+            _lensDistortion = adj.LensDistortion
+            _lensTca = adj.LensTca
+            _lensVignetting = adj.LensVignetting
+            _lensDistortionAmount = adj.LensDistortionAmount
+            _lensTcaAmount = adj.LensTcaAmount
+            _lensVignettingAmount = adj.LensVignettingAmount
+            _lensModel = If(adj.LensModel, "")
             _whiteBalanceModel = adj.WhiteBalanceModel
             _whiteBalanceAnchorX = adj.WhiteBalanceAnchorX
             _whiteBalanceAnchorY = adj.WhiteBalanceAnchorY
@@ -21593,7 +21661,8 @@ Namespace ViewModels
             ' der Anzeige und im Infopanel auf dem Stand VOR dem Rueckgaengig stehen. Gemeldet am
             ' Hochskalieren, gilt aber fuer jeden Geometrieschritt.
             RaiseDisplayImageGeometryProperties()
-            If rawHighlightRecoveryChanged Then
+            If lensChanged Then RefreshLensCorrection()
+            If rawHighlightRecoveryChanged OrElse lensChanged Then
                 RebuildWorkingImageForLens()
             ElseIf scheduleRender Then
                 SchedulePreviewUpdate()
@@ -21732,8 +21801,8 @@ Namespace ViewModels
             ' Belichtung, und die haengt an der DATEI. Ohne den Pfad spraenge eine DNG, die eine halbe
             ' Stufe weniger verlangt, beim Zuruecksetzen genau um diese Stufe heller - derselbe
             ' Fehler, gegen den der Startwert gebaut ist.
-            If RawPreviewService.IsSupportedRaw(_currentImagePath) Then
-                Dim startwerte = ImageAdjustments.ForUneditedRaw(_currentImagePath)
+            If RawPreviewService.IsSupportedRaw(RenderSourcePath) Then
+                Dim startwerte = ImageAdjustments.ForUneditedRaw(RenderSourcePath)
                 _farbrauschGrob = startwerte.FarbrauschGrob
                 _exposure = startwerte.Exposure
                 Me.RaisePropertyChanged(NameOf(FarbrauschGrob))
@@ -25395,7 +25464,7 @@ Namespace ViewModels
             ' genau wie beim Zuruecksetzen aller Bearbeitungen. Stuende hier stur die Null, machte
             ' ausgerechnet der kleine Knopf das Bild kaputt, das der grosse richtig stellt.
             _exposure = ImageAdjustments.ForUneditedRaw(
-                If(RawPreviewService.IsSupportedRaw(_currentImagePath), _currentImagePath, Nothing)).Exposure
+                If(RawPreviewService.IsSupportedRaw(RenderSourcePath), RenderSourcePath, Nothing)).Exposure
             _rawHighlightRecovery = False
             RaiseLightPropertiesChanged()
             Me.RaisePropertyChanged(NameOf(RawHighlightRecoveryEnabled))

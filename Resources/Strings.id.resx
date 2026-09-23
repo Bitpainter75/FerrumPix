@@ -5835,6 +5835,18 @@
   <data name="Karte_verschieben_27616973" xml:space="preserve">
     <value>Geser peta</value>
   </data>
+  <data name="OpenStreetMap_fa78a333" xml:space="preserve">
+    <value>OpenStreetMap</value>
+  </data>
+  <data name="ODbL_1_0_2af43b38" xml:space="preserve">
+    <value>ODbL-1.0</value>
+  </data>
+  <data name="Kartenkacheln_der_Kartenansicht_erst_nach_dem_Ei_3d04b521" xml:space="preserve">
+    <value>Ubin peta untuk tampilan peta, hanya setelah dinyalakan</value>
+  </data>
+  <data name="Die_Kartenansicht_zeichnet_FerrumPix_selbst_die__c3467d40" xml:space="preserve">
+    <value>FerrumPix menggambar tampilan peta sendiri; ubin peta secara bawaan berasal dari OpenStreetMap. Data peta berlisensi Open Database License, atribusi: OpenStreetMap contributors. Ubin diambil sesuai kebijakan penggunaan ubin OpenStreetMap Foundation, dengan identitas sendiri dan cache di perangkat ini.</value>
+  </data>
   <data name="Kartenkacheln_konnten_nicht_geladen_werden_1e5b70b6" xml:space="preserve">
     <value>Ubin peta tidak dapat dimuat.</value>
   </data>

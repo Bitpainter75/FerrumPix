@@ -1364,6 +1364,9 @@ Namespace Services
         Private Shared Function ApplyHaze(source As SKBitmap, amount As Single) As SKBitmap
             Dim strength = Clamp(amount, -1, 1)
             If Math.Abs(strength) <= 0.001F Then Return source
+            ' DUNST ENTFERNEN (negativ) ist eine eigene, oertliche Stufe - siehe ApplyDehaze. Hier
+            ' bleibt nur das Hinzufuegen: ein Anheben zum Weiss hin.
+            If strength < 0 Then Return ApplyDehaze(source, -strength)
             Dim result = New SKBitmap(source.Width, source.Height, source.ColorType, source.AlphaType)
 
             Dim srcBuf As Byte() = Nothing
@@ -1383,19 +1386,10 @@ Namespace Services
                         Dim o = rowOffset + x * 4
                         Dim cr As Integer, cg As Integer, cb As Integer, a As Integer
                         ReadUnpremultiplied(srcBuf, o, ri, gi, bi, ai, cr, cg, cb, a)
-                        Dim nr As Byte, ng As Byte, nb As Byte
-                        If strength > 0 Then
-                            Dim sv = strength * 0.45F
-                            nr = ClampToByte(cr + (255 - cr) * sv)
-                            ng = ClampToByte(cg + (255 - cg) * sv)
-                            nb = ClampToByte(cb + (255 - cb) * sv)
-                        Else
-                            Dim sv = -strength
-                            Dim contrast = 1.0F + sv * 0.55F
-                            nr = ClampToByte((cr - 128) * contrast + 128 - sv * 10)
-                            ng = ClampToByte((cg - 128) * contrast + 128 - sv * 10)
-                            nb = ClampToByte((cb - 128) * contrast + 128 - sv * 10)
-                        End If
+                        Dim sv = strength * 0.45F
+                        Dim nr = ClampToByte(cr + (255 - cr) * sv)
+                        Dim ng = ClampToByte(cg + (255 - cg) * sv)
+                        Dim nb = ClampToByte(cb + (255 - cb) * sv)
                         WritePremultiplied(dstBuf, o, ri, gi, bi, ai, nr, ng, nb, a)
                     Next
                 End Sub)
@@ -1406,6 +1400,265 @@ Namespace Services
                 ReturnPooledBuffer(srcBuf)
                 ReturnPooledBuffer(dstBuf)
             End Try
+        End Function
+
+        ' ── Dunst entfernen ────────────────────────────────────────────────────────────────────
+        '
+        ' BIS 0.9.49 war das eine GLOBALE Kontrastspreizung um Mittelgrau mit festem Abzug: bei
+        ' vollem Regler landete alles unter rund 47 von 255 auf Schwarz, die Tiefen soffen ab, ob im
+        ' Bild Dunst lag oder nicht (Nutzerbefund). Dunst ist aber OERTLICH: ein Schleier aus dem
+        ' Licht der Atmosphaere, der mit der Entfernung zunimmt. Ein klarer, dunkler Vordergrund
+        ' traegt keinen und darf nichts abbekommen.
+        '
+        ' Das Verfahren: in jedem Bereich zeigt der dunkelste Wert (ueber die drei Kanaele und eine
+        ' kleine Umgebung), wie viel Schleier darauf liegt - ohne Dunst hat fast jede Umgebung
+        ' irgendwo einen sehr dunklen Kanal. Daraus die Durchlaessigkeit t je Bereich, dazu das
+        ' Licht des Dunstes A aus den dunstigsten Stellen, und zurueckgerechnet wird
+        ' J = (I - A) / t + A. Wo kein Dunst ist, ist t = 1 und J = I.
+        '
+        ' GESCHAETZT wird auf einer Kopie mit hoechstens DehazeWorkMaxDimension Punkten Kante,
+        ' angewandt auf voller Aufloesung. Die Reichweite ist ein ANTEIL der Bildkante, damit die
+        ' verkleinerte Vorschau beim Ziehen dasselbe zeigt wie der Export. Die Durchlaessigkeit wird
+        ' mit einem kantenerhaltenden Filter geglaettet (am Grauwert des Bildes gefuehrt), sonst
+        ' saesse an jeder Horizontlinie ein Saum.
+        '
+        ' Die TIEFEN laufen weich aus statt hart auf Schwarz: was die Rechnung unter DehazeToe
+        ' draengt, wird exponentiell gegen null gefuehrt. Und t hat eine Untergrenze - bei dichtem
+        ' Dunst wuerde das 8-Bit-Bild sonst bis zur Stufenbildung gespreizt.
+        Private Const DehazeWorkMaxDimension As Integer = 512
+        Private Const DehazePatchFraction As Double = 0.015
+        Private Const DehazeGuideFraction As Double = 0.04
+        Private Const DehazeGuideEpsilon As Double = 0.001
+        Private Const DehazeMaxOmega As Double = 0.95
+        Private Const DehazeMinTransmission As Double = 0.2
+        Private Const DehazeToe As Double = 0.04
+        Private Const DehazeBrightestFraction As Double = 0.001
+        ' Unterhalb dieser Helligkeit (Anteil 0 bis 1) laeuft die Wirkung weich aus, siehe ApplyDehaze.
+        Private Const DehazeShadowProtection As Double = 0.4
+        ' Kein Punkt wird dunkler als dieser Anteil seines Ausgangswerts, bei vollem Regler; bei
+        ' halbem Regler entsprechend die Haelfte des Abstands zu 1. Eine gleichmaessig graue Flaeche
+        ' ohne wirklich dunkle Stelle sieht fuer die Schaetzung wie Dunst aus - das ist die bekannte
+        ' Schwaeche des Verfahrens, und ohne diese Grenze fiele genau sie in die Tiefen.
+        Private Const DehazeDarkeningFloor As Double = 0.6
+
+        Private Shared Function ApplyDehaze(source As SKBitmap, amount As Single) As SKBitmap
+            Dim strength = Math.Max(0.0, Math.Min(1.0, CDbl(amount)))
+            If strength <= 0.001 Then Return source
+            Dim width = source.Width, height = source.Height
+            Dim result = New SKBitmap(width, height, source.ColorType, source.AlphaType)
+            If width <= 0 OrElse height <= 0 Then Return result
+
+            Dim srcBuf As Byte() = Nothing
+            Dim dstBuf As Byte() = Nothing
+            Dim stride, ri, gi, bi, ai As Integer
+            Dim sLen = 0
+            Try
+                If Not TryRentRgbaLikeBuffer(source, srcBuf, sLen, stride, ri, gi, bi, ai) Then Return result
+                dstBuf = ArrayPool(Of Byte).Shared.Rent(sLen)
+                If stride <> width * 4 Then Array.Clear(dstBuf, 0, sLen)
+
+                ' 1. Verkleinerte Kopie als Flaechenmittel, Werte 0 bis 1.
+                Dim scale = Math.Min(1.0, DehazeWorkMaxDimension / CDbl(Math.Max(width, height)))
+                Dim lw = Math.Max(1, CInt(Math.Round(width * scale)))
+                Dim lh = Math.Max(1, CInt(Math.Round(height * scale)))
+                Dim count = lw * lh
+                Dim lowR(count - 1) As Double, lowG(count - 1) As Double, lowB(count - 1) As Double
+                Dim localBuf = srcBuf, localStride = stride
+                ForEachRow(lw, lh,
+                    Sub(ly)
+                        Dim y0 = CInt(CLng(ly) * height \ lh)
+                        Dim y1 = Math.Max(y0 + 1, CInt(CLng(ly + 1) * height \ lh))
+                        For lx = 0 To lw - 1
+                            Dim x0 = CInt(CLng(lx) * width \ lw)
+                            Dim x1 = Math.Max(x0 + 1, CInt(CLng(lx + 1) * width \ lw))
+                            Dim sr = 0L, sg = 0L, sb = 0L, n = 0L
+                            For y = y0 To y1 - 1
+                                Dim rowOffset = y * localStride
+                                For x = x0 To x1 - 1
+                                    Dim cr, cg, cb, a As Integer
+                                    ReadUnpremultiplied(localBuf, rowOffset + x * 4, ri, gi, bi, ai, cr, cg, cb, a)
+                                    sr += cr : sg += cg : sb += cb : n += 1
+                                Next
+                            Next
+                            Dim i = ly * lw + lx
+                            lowR(i) = sr / (255.0 * n) : lowG(i) = sg / (255.0 * n) : lowB(i) = sb / (255.0 * n)
+                        Next
+                    End Sub)
+
+                ' 2. Dunkelster Kanal, in einer Umgebung erodiert.
+                Dim patch = Math.Max(1, CInt(Math.Round(Math.Min(lw, lh) * DehazePatchFraction)))
+                Dim minChannel(count - 1) As Double
+                For i = 0 To count - 1
+                    minChannel(i) = Math.Min(lowR(i), Math.Min(lowG(i), lowB(i)))
+                Next
+                Dim dark = MinFilter(minChannel, lw, lh, patch)
+
+                ' 3. Das Licht des Dunstes: Mittel der Farben an den dunstigsten Stellen.
+                Dim brightest = Math.Max(1, CInt(Math.Ceiling(count * DehazeBrightestFraction)))
+                Dim order = Enumerable.Range(0, count).OrderByDescending(Function(i) dark(i)).Take(brightest).ToArray()
+                Dim atmR = Math.Max(0.05, order.Average(Function(i) lowR(i)))
+                Dim atmG = Math.Max(0.05, order.Average(Function(i) lowG(i)))
+                Dim atmB = Math.Max(0.05, order.Average(Function(i) lowB(i)))
+
+                ' 4. Durchlaessigkeit aus dem dunkelsten Kanal relativ zum Dunstlicht.
+                Dim omega = DehazeMaxOmega * strength
+                Dim normalized(count - 1) As Double
+                For i = 0 To count - 1
+                    normalized(i) = Math.Min(lowR(i) / atmR, Math.Min(lowG(i) / atmG, lowB(i) / atmB))
+                Next
+                Dim darkNormalized = MinFilter(normalized, lw, lh, patch)
+                Dim raw(count - 1) As Double
+                Dim guide(count - 1) As Double
+                For i = 0 To count - 1
+                    raw(i) = 1.0 - omega * Math.Min(1.0, darkNormalized(i))
+                    guide(i) = (lowR(i) + lowG(i) + lowB(i)) / 3.0
+                Next
+
+                ' 5. Kantenerhaltend glaetten, am Grauwert gefuehrt.
+                Dim guideRadius = Math.Max(1, CInt(Math.Round(Math.Min(lw, lh) * DehazeGuideFraction)))
+                Dim transmission = GuidedFilter(guide, raw, lw, lh, guideRadius, DehazeGuideEpsilon)
+
+                ' 6. Auf voller Aufloesung zurueckrechnen, t bilinear aus der Kopie.
+                Dim localDst = dstBuf
+                Dim floor = 1.0 - (1.0 - DehazeDarkeningFloor) * strength
+                ForEachRow(width, height,
+                    Sub(y)
+                        Dim fy = Math.Max(0.0, Math.Min(lh - 1.0, (y + 0.5) * lh / height - 0.5))
+                        Dim y0 = CInt(Math.Floor(fy)), y1 = Math.Min(lh - 1, y0 + 1)
+                        Dim wy = fy - y0
+                        Dim rowOffset = y * localStride
+                        For x = 0 To width - 1
+                            Dim fx = Math.Max(0.0, Math.Min(lw - 1.0, (x + 0.5) * lw / width - 0.5))
+                            Dim x0 = CInt(Math.Floor(fx)), x1 = Math.Min(lw - 1, x0 + 1)
+                            Dim wx = fx - x0
+                            Dim t = (transmission(y0 * lw + x0) * (1 - wx) + transmission(y0 * lw + x1) * wx) * (1 - wy) +
+                                    (transmission(y1 * lw + x0) * (1 - wx) + transmission(y1 * lw + x1) * wx) * wy
+                            t = Math.Max(DehazeMinTransmission, Math.Min(1.0, t))
+                            Dim o = rowOffset + x * 4
+                            Dim cr, cg, cb, a As Integer
+                            ReadUnpremultiplied(localBuf, o, ri, gi, bi, ai, cr, cg, cb, a)
+                            ' TIEFENSCHUTZ: Dunst hellt auf, ein sehr dunkler Punkt traegt praktisch
+                            ' keinen. Die Rechnung zieht ihn trotzdem vom hellen Dunstlicht weg - aus 20
+                            ' wurde schon bei wenig Schleier 7. Die Wirkung laeuft deshalb unterhalb
+                            ' von DehazeShadowProtection weich aus, gewichtet nach der eigenen Helligkeit.
+                            Dim luminance = (0.2126 * cr + 0.7152 * cg + 0.0722 * cb) / 255.0
+                            Dim u = Math.Min(1.0, luminance / DehazeShadowProtection)
+                            Dim weight = u * u * (3.0 - 2.0 * u)
+                            WritePremultiplied(localDst, o, ri, gi, bi, ai,
+                                               DehazeChannel(cr, atmR, t, weight, floor), DehazeChannel(cg, atmG, t, weight, floor),
+                                               DehazeChannel(cb, atmB, t, weight, floor), a)
+                        Next
+                    End Sub)
+
+                Runtime.InteropServices.Marshal.Copy(dstBuf, 0, result.GetPixels(), sLen)
+                Return result
+            Finally
+                ReturnPooledBuffer(srcBuf)
+                ReturnPooledBuffer(dstBuf)
+            End Try
+        End Function
+
+        ''' <summary>Ein Kanal zurueckgerechnet, mit weichem Auslauf unter <see cref="DehazeToe"/>
+        ''' statt eines harten Schnitts bei null.</summary>
+        Private Shared Function DehazeChannel(value As Integer, atmosphere As Double, t As Double, weight As Double,
+                                              floor As Double) As Byte
+            Dim c = value / 255.0
+            Dim j = (c - atmosphere) / t + atmosphere
+            If j < DehazeToe Then j = DehazeToe * Math.Exp((j - DehazeToe) / DehazeToe)
+            j = c + (j - c) * weight
+            ' Die Untergrenze gilt nur, soweit der Tiefenschutz greift: ueber seiner Schwelle ist
+            ' weight = 1, und ein dunkler Streifen im Dunst DARF deutlich dunkler werden.
+            j = Math.Max(j, c * floor * (1.0 - weight))
+            Return ClampToByte(j * 255.0)
+        End Function
+
+        ''' <summary>Minimum in einem Quadrat mit Radius <paramref name="radius"/>, getrennt nach
+        ''' Zeilen und Spalten. Am Rand schrumpft das Fenster.</summary>
+        Private Shared Function MinFilter(values As Double(), width As Integer, height As Integer, radius As Integer) As Double()
+            Dim horizontal(values.Length - 1) As Double
+            For y = 0 To height - 1
+                Dim row = y * width
+                For x = 0 To width - 1
+                    Dim m = Double.MaxValue
+                    For k = Math.Max(0, x - radius) To Math.Min(width - 1, x + radius)
+                        If values(row + k) < m Then m = values(row + k)
+                    Next
+                    horizontal(row + x) = m
+                Next
+            Next
+            Dim result(values.Length - 1) As Double
+            For y = 0 To height - 1
+                For x = 0 To width - 1
+                    Dim m = Double.MaxValue
+                    For k = Math.Max(0, y - radius) To Math.Min(height - 1, y + radius)
+                        Dim v = horizontal(k * width + x)
+                        If v < m Then m = v
+                    Next
+                    result(y * width + x) = m
+                Next
+            Next
+            Return result
+        End Function
+
+        ''' <summary>Mittel in einem Quadrat mit Radius <paramref name="radius"/>, getrennt nach
+        ''' Zeilen und Spalten ueber laufende Summen. Am Rand schrumpft das Fenster.</summary>
+        Private Shared Function BoxMean(values As Double(), width As Integer, height As Integer, radius As Integer) As Double()
+            Dim horizontal(values.Length - 1) As Double
+            For y = 0 To height - 1
+                Dim row = y * width
+                Dim prefix(width) As Double
+                For x = 0 To width - 1
+                    prefix(x + 1) = prefix(x) + values(row + x)
+                Next
+                For x = 0 To width - 1
+                    Dim a = Math.Max(0, x - radius), b = Math.Min(width - 1, x + radius)
+                    horizontal(row + x) = (prefix(b + 1) - prefix(a)) / (b - a + 1)
+                Next
+            Next
+            Dim result(values.Length - 1) As Double
+            Dim column(height) As Double
+            For x = 0 To width - 1
+                column(0) = 0
+                For y = 0 To height - 1
+                    column(y + 1) = column(y) + horizontal(y * width + x)
+                Next
+                For y = 0 To height - 1
+                    Dim a = Math.Max(0, y - radius), b = Math.Min(height - 1, y + radius)
+                    result(y * width + x) = (column(b + 1) - column(a)) / (b - a + 1)
+                Next
+            Next
+            Return result
+        End Function
+
+        ''' <summary>Kantenerhaltendes Glaetten von <paramref name="input"/>, gefuehrt von
+        ''' <paramref name="guide"/>: innerhalb einer Flaeche wird geglaettet, an einer Kante des
+        ''' Fuehrungsbildes folgt das Ergebnis der Kante.</summary>
+        Private Shared Function GuidedFilter(guide As Double(), input As Double(), width As Integer, height As Integer,
+                                             radius As Integer, epsilon As Double) As Double()
+            Dim n = guide.Length
+            Dim guideSquared(n - 1) As Double, guideInput(n - 1) As Double
+            For i = 0 To n - 1
+                guideSquared(i) = guide(i) * guide(i)
+                guideInput(i) = guide(i) * input(i)
+            Next
+            Dim meanGuide = BoxMean(guide, width, height, radius)
+            Dim meanInput = BoxMean(input, width, height, radius)
+            Dim meanGuideSquared = BoxMean(guideSquared, width, height, radius)
+            Dim meanGuideInput = BoxMean(guideInput, width, height, radius)
+            Dim slope(n - 1) As Double, offset(n - 1) As Double
+            For i = 0 To n - 1
+                Dim variance = meanGuideSquared(i) - meanGuide(i) * meanGuide(i)
+                Dim covariance = meanGuideInput(i) - meanGuide(i) * meanInput(i)
+                slope(i) = covariance / (variance + epsilon)
+                offset(i) = meanInput(i) - slope(i) * meanGuide(i)
+            Next
+            Dim meanSlope = BoxMean(slope, width, height, radius)
+            Dim meanOffset = BoxMean(offset, width, height, radius)
+            Dim result(n - 1) As Double
+            For i = 0 To n - 1
+                result(i) = meanSlope(i) * guide(i) + meanOffset(i)
+            Next
+            Return result
         End Function
 
         ''' <summary>Leuchten. Wie ApplyHaze von GetPixel/SetPixel auf Puffer umgestellt

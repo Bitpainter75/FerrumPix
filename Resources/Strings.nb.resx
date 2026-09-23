@@ -5838,6 +5838,18 @@
   <data name="Karte_verschieben_27616973" xml:space="preserve">
     <value>Flytt kartet</value>
   </data>
+  <data name="OpenStreetMap_fa78a333" xml:space="preserve">
+    <value>OpenStreetMap</value>
+  </data>
+  <data name="ODbL_1_0_2af43b38" xml:space="preserve">
+    <value>ODbL-1.0</value>
+  </data>
+  <data name="Kartenkacheln_der_Kartenansicht_erst_nach_dem_Ei_3d04b521" xml:space="preserve">
+    <value>Kartfliser for kartvisningen, først etter at den er slått på</value>
+  </data>
+  <data name="Die_Kartenansicht_zeichnet_FerrumPix_selbst_die__c3467d40" xml:space="preserve">
+    <value>FerrumPix tegner kartvisningen selv; kartflisene kommer som standard fra OpenStreetMap. Kartdataene er lisensiert under Open Database License, kreditering: OpenStreetMap contributors. Flisene hentes etter OpenStreetMap Foundations retningslinjer for fliser, med egen identifikasjon og en buffer på denne enheten.</value>
+  </data>
   <data name="Kartenkacheln_konnten_nicht_geladen_werden_1e5b70b6" xml:space="preserve">
     <value>Kartflisene kunne ikke lastes inn.</value>
   </data>

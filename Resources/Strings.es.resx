@@ -5840,6 +5840,18 @@
   <data name="Karte_verschieben_27616973" xml:space="preserve">
     <value>Desplazar el mapa</value>
   </data>
+  <data name="OpenStreetMap_fa78a333" xml:space="preserve">
+    <value>OpenStreetMap</value>
+  </data>
+  <data name="ODbL_1_0_2af43b38" xml:space="preserve">
+    <value>ODbL-1.0</value>
+  </data>
+  <data name="Kartenkacheln_der_Kartenansicht_erst_nach_dem_Ei_3d04b521" xml:space="preserve">
+    <value>Teselas de la vista de mapa, solo tras activarla</value>
+  </data>
+  <data name="Die_Kartenansicht_zeichnet_FerrumPix_selbst_die__c3467d40" xml:space="preserve">
+    <value>FerrumPix dibuja la vista de mapa por sí mismo; de forma predeterminada las teselas vienen de OpenStreetMap. Los datos del mapa están bajo la Open Database License, atribución: OpenStreetMap contributors. Las teselas se obtienen según la política de uso de teselas de la OpenStreetMap Foundation, con identificación propia y una caché en este equipo.</value>
+  </data>
   <data name="Kartenkacheln_konnten_nicht_geladen_werden_1e5b70b6" xml:space="preserve">
     <value>No se pudieron cargar las teselas del mapa.</value>
   </data>

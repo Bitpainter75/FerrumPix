@@ -5838,6 +5838,18 @@
   <data name="Karte_verschieben_27616973" xml:space="preserve">
     <value>Przesuń mapę</value>
   </data>
+  <data name="OpenStreetMap_fa78a333" xml:space="preserve">
+    <value>OpenStreetMap</value>
+  </data>
+  <data name="ODbL_1_0_2af43b38" xml:space="preserve">
+    <value>ODbL-1.0</value>
+  </data>
+  <data name="Kartenkacheln_der_Kartenansicht_erst_nach_dem_Ei_3d04b521" xml:space="preserve">
+    <value>Kafelki widoku mapy, dopiero po włączeniu</value>
+  </data>
+  <data name="Die_Kartenansicht_zeichnet_FerrumPix_selbst_die__c3467d40" xml:space="preserve">
+    <value>FerrumPix sam rysuje widok mapy; kafelki mapy pochodzą domyślnie z OpenStreetMap. Dane mapy są objęte licencją Open Database License, uznanie autorstwa: OpenStreetMap contributors. Kafelki są pobierane zgodnie z zasadami korzystania z kafelków OpenStreetMap Foundation, z własnym identyfikatorem i pamięcią podręczną na tym urządzeniu.</value>
+  </data>
   <data name="Kartenkacheln_konnten_nicht_geladen_werden_1e5b70b6" xml:space="preserve">
     <value>Nie udało się wczytać kafelków mapy.</value>
   </data>

@@ -5838,6 +5838,18 @@
   <data name="Karte_verschieben_27616973" xml:space="preserve">
     <value>Сдвинуть карту</value>
   </data>
+  <data name="OpenStreetMap_fa78a333" xml:space="preserve">
+    <value>OpenStreetMap</value>
+  </data>
+  <data name="ODbL_1_0_2af43b38" xml:space="preserve">
+    <value>ODbL-1.0</value>
+  </data>
+  <data name="Kartenkacheln_der_Kartenansicht_erst_nach_dem_Ei_3d04b521" xml:space="preserve">
+    <value>Тайлы для вида карты, только после включения</value>
+  </data>
+  <data name="Die_Kartenansicht_zeichnet_FerrumPix_selbst_die__c3467d40" xml:space="preserve">
+    <value>Вид карты FerrumPix рисует сам; тайлы карты по умолчанию загружаются с OpenStreetMap. Картографические данные распространяются по лицензии Open Database License, указание авторства: OpenStreetMap contributors. Тайлы загружаются по правилам использования тайлов OpenStreetMap Foundation, с собственной идентификацией и кэшем на этом устройстве.</value>
+  </data>
   <data name="Kartenkacheln_konnten_nicht_geladen_werden_1e5b70b6" xml:space="preserve">
     <value>Не удалось загрузить тайлы карты.</value>
   </data>

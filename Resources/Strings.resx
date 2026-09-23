@@ -5838,6 +5838,18 @@
   <data name="Karte_verschieben_27616973" xml:space="preserve">
     <value>Move the map</value>
   </data>
+  <data name="OpenStreetMap_fa78a333" xml:space="preserve">
+    <value>OpenStreetMap</value>
+  </data>
+  <data name="ODbL_1_0_2af43b38" xml:space="preserve">
+    <value>ODbL-1.0</value>
+  </data>
+  <data name="Kartenkacheln_der_Kartenansicht_erst_nach_dem_Ei_3d04b521" xml:space="preserve">
+    <value>Map tiles for the map view, only once it is turned on</value>
+  </data>
+  <data name="Die_Kartenansicht_zeichnet_FerrumPix_selbst_die__c3467d40" xml:space="preserve">
+    <value>FerrumPix draws the map view itself; by default the map tiles come from OpenStreetMap. The map data is licensed under the Open Database License, attribution: OpenStreetMap contributors. Tiles are fetched following the tile usage policy of the OpenStreetMap Foundation, with FerrumPix's own identification and a cache on this device.</value>
+  </data>
   <data name="Kartenkacheln_konnten_nicht_geladen_werden_1e5b70b6" xml:space="preserve">
     <value>Map tiles could not be loaded.</value>
   </data>

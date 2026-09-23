@@ -1,4 +1,4 @@
-## Unreleased
+## FerrumPix 0.9.50
 
 ### What's new
 
@@ -29,5 +29,19 @@
 - Some third-party lenses on Nikon cameras that only identify themselves by a coded ID are now
   named correctly, among them the Sigma 18-35mm f/1.8 Art and the Tamron SP 70-300mm VC.
 
+- Removing haze now works where the haze is, instead of raising the contrast of the whole picture.
+  Clear shadows stay as they are rather than turning black, and hazy distances gain much more
+  depth.
+
+- Lens correction is kept with the rest of your edits. Reopening a picture in the editor used to
+  switch it back to the default, and saving again then dropped it from the file.
+
+- A project file built on a raw photo behaves like the raw photo itself. It offers lens correction,
+  keeps being developed when you switch lens correction or highlight recovery, and shows its name
+  in the accent color like any other developed raw file. Once retouching, brush strokes or
+  denoising are baked into a raw photo, it counts as a finished picture instead: lens correction and
+  highlight recovery are hidden, because switching them used to throw the baked work away.
+
 - Home and End in the photo wall jump to the first and last picture again.
+
 

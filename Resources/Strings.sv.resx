@@ -5838,6 +5838,18 @@
   <data name="Karte_verschieben_27616973" xml:space="preserve">
     <value>Flytta kartan</value>
   </data>
+  <data name="OpenStreetMap_fa78a333" xml:space="preserve">
+    <value>OpenStreetMap</value>
+  </data>
+  <data name="ODbL_1_0_2af43b38" xml:space="preserve">
+    <value>ODbL-1.0</value>
+  </data>
+  <data name="Kartenkacheln_der_Kartenansicht_erst_nach_dem_Ei_3d04b521" xml:space="preserve">
+    <value>Kartplattor för kartvyn, först efter att den aktiverats</value>
+  </data>
+  <data name="Die_Kartenansicht_zeichnet_FerrumPix_selbst_die__c3467d40" xml:space="preserve">
+    <value>FerrumPix ritar kartvyn själv; kartplattorna kommer som standard från OpenStreetMap. Kartdata omfattas av Open Database License, erkännande: OpenStreetMap contributors. Plattorna hämtas enligt OpenStreetMap Foundations riktlinjer för kartplattor, med en egen identifiering och en cache på den här enheten.</value>
+  </data>
   <data name="Kartenkacheln_konnten_nicht_geladen_werden_1e5b70b6" xml:space="preserve">
     <value>Kartplattorna kunde inte laddas.</value>
   </data>

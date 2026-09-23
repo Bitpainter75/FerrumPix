@@ -5835,6 +5835,18 @@
   <data name="Karte_verschieben_27616973" xml:space="preserve">
     <value>เลื่อนแผนที่</value>
   </data>
+  <data name="OpenStreetMap_fa78a333" xml:space="preserve">
+    <value>OpenStreetMap</value>
+  </data>
+  <data name="ODbL_1_0_2af43b38" xml:space="preserve">
+    <value>ODbL-1.0</value>
+  </data>
+  <data name="Kartenkacheln_der_Kartenansicht_erst_nach_dem_Ei_3d04b521" xml:space="preserve">
+    <value>ไทล์แผนที่สำหรับมุมมองแผนที่ ใช้หลังจากเปิดแล้วเท่านั้น</value>
+  </data>
+  <data name="Die_Kartenansicht_zeichnet_FerrumPix_selbst_die__c3467d40" xml:space="preserve">
+    <value>FerrumPix วาดมุมมองแผนที่เอง ไทล์แผนที่มาจาก OpenStreetMap เป็นค่าเริ่มต้น ข้อมูลแผนที่อยู่ภายใต้สัญญาอนุญาต Open Database License การระบุที่มา: OpenStreetMap contributors ไทล์จะถูกดึงตามนโยบายการใช้ไทล์ของ OpenStreetMap Foundation โดยใช้การระบุตัวตนของตัวเองและแคชบนเครื่องนี้</value>
+  </data>
   <data name="Kartenkacheln_konnten_nicht_geladen_werden_1e5b70b6" xml:space="preserve">
     <value>โหลดไทล์แผนที่ไม่ได้</value>
   </data>

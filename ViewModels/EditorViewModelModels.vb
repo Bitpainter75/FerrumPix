@@ -856,8 +856,8 @@ Namespace ViewModels
             Dim edge = _subjectEdgePixels, umfang = _subjectExtentPixels, koernung = _motivKoernung
             Dim objekte = _motivObjekte.ToList()
 
-            Dim gesamt As SKBitmap = Nothing
-            Dim gesamtRect As SKRectI = SKRectI.Empty
+            Dim combined As SKBitmap = Nothing
+            Dim combinedRect As SKRectI = SKRectI.Empty
             ' ZWEI ZUSTAENDE, die man leicht in einen wirft: "es gibt noch keinen Stand" und "der
             ' Stand ist leer". Ohne diesen Merker galt ein leer gewordener Stand als Anfang, und ein
             ' folgendes Abziehen oder Schneiden baute daraus wieder eine Auswahl auf - obwohl beide
@@ -866,8 +866,8 @@ Namespace ViewModels
             Dim letzterHatEtwas = False
             Try
                 For i = 0 To objekte.Count - 1
-                    Dim punkte = objekte(i).Points.ToList()
-                    Dim mask = Await Task.Run(Function() SubjectMaskService.MaskFor(einbettung, punkte, edge, umfang, koernung))
+                    Dim points = objekte(i).Points.ToList()
+                    Dim mask = Await Task.Run(Function() SubjectMaskService.MaskFor(einbettung, points, edge, umfang, koernung))
                     If mask Is Nothing Then Continue For
                     Using mask
                         Dim rect = MaskRect(mask)
@@ -881,38 +881,38 @@ Namespace ViewModels
                             If ausschnitt Is Nothing Then Continue For
                             Dim modus = objekte(i).CombineMode
                             If Not hatStand OrElse String.Equals(modus, "New", StringComparison.Ordinal) Then
-                                gesamt?.Dispose()
-                                gesamt = ausschnitt.Copy()
-                                gesamtRect = rect
+                                combined?.Dispose()
+                                combined = ausschnitt.Copy()
+                                combinedRect = rect
                                 hatStand = True
                                 Continue For
                             End If
 
-                            If gesamt Is Nothing Then
+                            If combined Is Nothing Then
                                 ' Der Stand ist LEER. Hinzufuegen macht daraus den Gegenstand,
                                 ' abziehen und schneiden aendern an nichts nichts.
                                 If String.Equals(modus, "Add", StringComparison.Ordinal) Then
-                                    gesamt = ausschnitt.Copy()
-                                    gesamtRect = rect
+                                    combined = ausschnitt.Copy()
+                                    combinedRect = rect
                                 End If
                                 Continue For
                             End If
 
-                            Dim zielRect = CombinedSubjectRect(gesamtRect, rect, modus)
-                            If zielRect.Width <= 0 OrElse zielRect.Height <= 0 Then
+                            Dim targetRect = CombinedSubjectRect(combinedRect, rect, modus)
+                            If targetRect.Width <= 0 OrElse targetRect.Height <= 0 Then
                                 ' Eine leere Schnittmenge ist ein Ergebnis, kein Fehler. Der Stand
                                 ' bleibt bestehen, er ist nur leer.
-                                gesamt.Dispose()
-                                gesamt = Nothing
-                                gesamtRect = SKRectI.Empty
+                                combined.Dispose()
+                                combined = Nothing
+                                combinedRect = SKRectI.Empty
                                 Continue For
                             End If
                             ' DERSELBE Rechner wie im Auswahlwerkzeug - es gibt keinen zweiten.
-                            Dim verrechnet = CombineSelectionMasks(gesamt, gesamtRect, ausschnitt, rect,
-                                                                   zielRect, objekte(i).CombineMode)
-                            gesamt.Dispose()
-                            gesamt = verrechnet
-                            gesamtRect = If(verrechnet Is Nothing, SKRectI.Empty, zielRect)
+                            Dim verrechnet = CombineSelectionMasks(combined, combinedRect, ausschnitt, rect,
+                                                                   targetRect, objekte(i).CombineMode)
+                            combined.Dispose()
+                            combined = verrechnet
+                            combinedRect = If(verrechnet Is Nothing, SKRectI.Empty, targetRect)
                         End Using
                     End Using
                 Next
@@ -922,16 +922,16 @@ Namespace ViewModels
                 ' Schritt hinterlassen.
                 If undoLabel IsNot Nothing AndAlso letzterHatEtwas Then PushUndo(undoLabel)
 
-                If gesamt Is Nothing OrElse Not MaskHasVisiblePixels(gesamt) Then
+                If combined Is Nothing OrElse Not MaskHasVisiblePixels(combined) Then
                     ' Alles wieder weggenommen: dann gibt es auch keine Auswahl mehr.
                     If letzterHatEtwas AndAlso _hasActiveSelection Then ClearSelection(captureUndo:=False)
                     Return letzterHatEtwas
                 End If
-                ApplySelectionCandidate(gesamt, gesamtRect, "MagicWand", Nothing, Nothing,
+                ApplySelectionCandidate(combined, combinedRect, "MagicWand", Nothing, Nothing,
                                         isMask:=isMask, forceNew:=True)
                 Return letzterHatEtwas
             Finally
-                gesamt?.Dispose()
+                combined?.Dispose()
             End Try
         End Function
 
@@ -1020,10 +1020,10 @@ Namespace ViewModels
                 End If
                 If String.Equals(modus, "New", StringComparison.Ordinal) Then _motivObjekte.Clear()
 
-                Dim neuerGegenstand As New SubjectSelectionObject With {.CombineMode = modus}
-                neuerGegenstand.Points.Add(New SubjectMaskService.Point(
+                Dim newSubject As New SubjectSelectionObject With {.CombineMode = modus}
+                newSubject.Points.Add(New SubjectMaskService.Point(
                     bw * xPercent / 100.0, bh * yPercent / 100.0, True))
-                _motivObjekte.Add(neuerGegenstand)
+                _motivObjekte.Add(newSubject)
                 _subjectAsMask = isMask
                 RememberSamplePoint(xPercent, yPercent)
 
@@ -1034,7 +1034,7 @@ Namespace ViewModels
                 Else
                     ' An dieser Stelle war nichts. Der Gegenstand kommt wieder weg, der Stand davor
                     ' steht ohnehin schon - er hat zur Auswahl nichts beigetragen.
-                    _motivObjekte.Remove(neuerGegenstand)
+                    _motivObjekte.Remove(newSubject)
                     StatusText = LocalizationService.T("An dieser Stelle wurde kein Objekt gefunden")
                 End If
             Finally
