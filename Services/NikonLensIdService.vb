@@ -8,8 +8,14 @@ Imports MetadataExtractor.Formats.Exif.Makernotes
 Namespace Services
 
     ''' <summary>Loest Nikons verschluesselte Lens-ID auf, wenn ein NEF keinen EXIF-LensModel-Tag
-    ''' schreibt. Der normale Herstellername hat weiterhin Vorrang; diese kleine Tabelle ist nur
-    ''' fuer die sonst nicht unterscheidbaren Fremdobjektive da.</summary>
+    ''' schreibt. Diese kleine Tabelle ist nur fuer die sonst nicht unterscheidbaren
+    ''' Fremdobjektive da.
+    '''
+    ''' <para>REIHENFOLGE, und die ist Absicht: Ein vorhandenes EXIF-LensModel schlaegt die
+    ''' Tabelle, eine getroffene ID schlaegt dagegen Nikons eigenen Lens-Tag. Denn genau bei
+    ''' Fremdobjektiven traegt der nur Brennweite und Blende ("18-35mm f/1.8") und nennt den
+    ''' Hersteller gar nicht - ihm den Vorrang zu lassen hiesse, die Aufloesung wegzuwerfen, fuer
+    ''' die es diese Klasse gibt. Eine unbekannte ID faellt auf den Nikon-Tag zurueck.</para></summary>
     Public NotInheritable Class NikonLensIdService
 
         Private Sub New()

@@ -8648,4 +8648,16 @@
   <data name="ffnet_bei_Doppelklick_auf_das_Bild_den_Editor_od_d7f39cca" xml:space="preserve"><value>Dwukrotne kliknięcie otwiera edytor lub powoduje powrót do galerii.</value></data>
   <data name="Beim_Pinselzug_STRG_ALT_SHIFT_a2100fca" xml:space="preserve"><value>Podczas pociągnięcia pędzlem: CTRL / ALT / SHIFT</value></data>
   <data name="STRG_h_lt_die_Richtung_des_ersten_kleinen_Zuges__077c64f0" xml:space="preserve"><value>CTRL blokuje kierunek po pierwszym krótkim pociągnięciu; ALT maluje poziomo, SHIFT pionowo. Dotyczy malowania, gumki, pędzli maski i zaznaczenia, naprawy oraz rozmazywania; stempel klonowania obsługuje tylko CTRL (ALT ustawia źródło).</value></data>
+  <data name="Kamerabild_49086c1e" xml:space="preserve">
+    <value>Obraz z aparatu</value>
+  </data>
+  <data name="Eigene_Entwicklung_e2c7efdc" xml:space="preserve">
+    <value>Własna obróbka</value>
+  </data>
+  <data name="Womit_die_Vorher_Seite_gef_llt_wird_058399e7" xml:space="preserve">
+    <value>Czym wypełniona jest strona przed</value>
+  </data>
+  <data name="Das_JPEG_das_die_Kamera_selbst_in_die_RAW_Datei__cb08eb2f" xml:space="preserve">
+    <value>Plik JPEG, który aparat sam zapisał w pliku RAW. Niesie styl obrazu producenta i jest jego interpretacją tego samego ujęcia, a nie neutralną</value>
+  </data>
 </root>

@@ -952,6 +952,37 @@ Namespace Views
             UpdateSliderLayout()
         End Sub
 
+        ''' <summary>Ein Flyout entsteht erst beim Oeffnen aus seinem Template und ist beim
+        ''' einmaligen Durchlauf ueber das Fenster noch nicht da. Ohne diesen Einstieg bliebe sein
+        ''' Inhalt in der Ausgangssprache stehen, waehrend die uebrige Oberflaeche umgeschaltet
+        ''' hat.</summary>
+        Private Sub OnLocalizedFlyoutOpened(sender As Object, e As EventArgs)
+            Dim content = TryCast(TryCast(sender, Flyout)?.Content, Avalonia.LogicalTree.ILogical)
+            If content IsNot Nothing Then LocalizationService.ApplyTo(content)
+        End Sub
+
+        ''' <summary>Quelle der Vorher-Seite: der eigene Decode. Kein UpdateSliderLayout - der
+        ''' Teiler steht, wo er steht, es wechselt nur, was links davon gezeigt wird.</summary>
+        Public Sub OnCompareSourceOwnClick(sender As Object, e As RoutedEventArgs)
+            SetCompareSource(sender, e, cameraJpeg:=False)
+        End Sub
+
+        ''' <summary>Quelle der Vorher-Seite: das von der Kamera eingebettete JPEG.</summary>
+        Public Sub OnCompareSourceCameraClick(sender As Object, e As RoutedEventArgs)
+            SetCompareSource(sender, e, cameraJpeg:=True)
+        End Sub
+
+        Private Sub SetCompareSource(sender As Object, e As RoutedEventArgs, cameraJpeg As Boolean)
+            Dim button = TryCast(sender, Button)
+            Dim vm = TryCast(DataContext, EditorViewModel)
+            If button Is Nothing OrElse vm Is Nothing Then Return
+            If Not cameraJpeg OrElse vm.CanCompareWithCameraJpeg Then vm.CompareWithCameraJpeg = cameraJpeg
+            ' Der Aufklapper bliebe sonst offen stehen und verdeckte genau das Bild, dessen
+            ' Vorher-Seite gerade gewechselt hat.
+            FlyoutHelpers.CloseContainingFlyout(button)
+            e.Handled = True
+        End Sub
+
         Public Sub OnCanvasWheelZoom(sender As Object, e As PointerWheelEventArgs)
             Dim canvas = TryCast(sender, Canvas)
             If canvas Is Nothing Then Return

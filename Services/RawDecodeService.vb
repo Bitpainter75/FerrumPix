@@ -2347,10 +2347,58 @@ Namespace Services
         ''' LibRaws eigene Gammaausgabe, genau wie bisher. Das ist eine bewusste Vorsicht und
         ''' keine Erkenntnis: ein echtes lineares DNG waere damit ebenfalls zu flau entwickelt,
         ''' und um die beiden zu trennen fehlt eine Datei, an der man es zeigen koennte.</para></summary>
+        ''' <summary>Stammt diese DNG von CHDK, der freien Zusatzfirmware fuer Canon-Kompaktkameras?
+        ''' Erkannt am TIFF-Feld Software, das dort mit "CHDK" beginnt.
+        '''
+        ''' <para>GEMESSEN an acht Dateien aus sechs Kameras: alle tragen es, als "CHDK ver. 1.3.0"
+        ''' oder in einem fremdsprachigen Bau als "CHDK_DE ver. 1.6.1". Keine der uebrigen DNGs des
+        ''' Bestands traegt dort etwas mit CHDK. Das Feld schlaegt auch den Dateinamen: eine Datei
+        ''' namens RAW_CANON_POWERSHOT_SX510HS.DNG heisst nicht nach CHDK und ist eine.</para></summary>
+        Private Shared Function IsChdkDng(directories As IEnumerable(Of MetadataExtractor.Directory)) As Boolean
+            If directories Is Nothing Then Return False
+            For Each d In directories.OfType(Of MetadataExtractor.Formats.Exif.ExifIfd0Directory)()
+                Dim software = d.GetDescription(MetadataExtractor.Formats.Exif.ExifDirectoryBase.TagSoftware)
+                If Not String.IsNullOrEmpty(software) AndAlso
+                   software.TrimStart().StartsWith("CHDK", StringComparison.OrdinalIgnoreCase) Then Return True
+            Next
+            Return False
+        End Function
+
         Private Shared Function IsFinishedRgb(path As String) As Boolean
             Try
+                ' DIESE ZEILE TRAEGT DIE RICHTIGKEIT, sie ist keine Abkuerzung zum Zeitsparen.
+                '
+                ' Die Frage unten ist NUR fuer DNG sinnvoll. Gemessen ueber den Bestand melden 60
+                ' von 60 Canon CR2 als Vollbild "RGB (2)" - in einer CR2 liegt in IFD0 eine
+                ' grosse RGB-Vorschau, und die Sensordaten stehen in einem Verzeichnis, das
+                ' MetadataExtractor hier gar nicht als solches anbietet. Ohne diese Zeile gaelte
+                ' also JEDE Canon-Datei als fertiges Bild und liefe an der Basisstufe vorbei.
+                ' Dasselbe bei Olympus ORF (Graustufen 1), Sony SRF, Kodak KDC und Leaf MOS.
+                ' Nur bei DNG steht im Vollbild verlaesslich, was es ist.
                 If Not path.EndsWith(".dng", StringComparison.OrdinalIgnoreCase) Then Return False
                 Dim directories = MetadataExtractor.ImageMetadataReader.ReadMetadata(path)
+
+                ' AUSNAHME FUER CHDK, und zwar eine bewusst enge.
+                '
+                ' Bis 0.9.47 lief JEDE DNG an der Basisstufe vorbei: die Erkennung unten sah damals
+                ' jedes Verzeichnis an, und der 128x96-Anhang, den eine DNG immer mitbringt, steht
+                ' auf RGB. Seit 0.9.48 zaehlt nur noch das Hauptbild, und das ist hier ein
+                ' Sensormuster - die Basisstufe laeuft also, und das ist fuer alle anderen Kameras
+                ' richtig so.
+                '
+                ' Fuer CHDK ist es das nicht. Die Firmware schreibt die DNG selbst, nicht die
+                ' Kamera, und ihre Pegel passen nicht zu einer Grundentwicklung, die an
+                ' Herstellerdateien geeicht ist: gemessen entwickelt die Basisstufe diese Dateien
+                ' rund eine halbe Blendenstufe zu hell (Mittelwert 110 auf 130 bei CRW_2101).
+                ' Gemeldet aus dem Feld, mit Beispieldateien belegt.
+                '
+                ' Sie bekommen deshalb den Weg von 0.9.47 zurueck - und NUR sie. Der Rest bleibt
+                ' bei der heutigen Entwicklung.
+                If IsChdkDng(directories) Then
+                    DiagnosticLogService.LogAlways("RawDecodeService.IsFinishedRgb",
+                        $"{IO.Path.GetFileName(path)}: CHDK-DNG, laeuft wie bis 0.9.47 an der Basisstufe vorbei")
+                    Return True
+                End If
 
                 Dim mainArea As Long = -1
                 Dim mainInterpretation = -1
@@ -2469,6 +2517,17 @@ Namespace Services
             Dim stops As Double = 0.0
             Try
                 Dim verzeichnisse = MetadataExtractor.ImageMetadataReader.ReadMetadata(path)
+                ' DIE NOTIZ GILT DER ENTWICKLUNG. Eine Datei, die an der Basisstufe vorbeilaeuft
+                ' (siehe IsFinishedRgb), traegt bereits ein tonwertkorrigiertes Bild; die
+                ' Grundbelichtung der Datei ein zweites Mal daraufzulegen macht sie schlicht
+                ' dunkler, als die Kamera sie gemeint hat. Gemessen an CRW_2101: ohne diese Regel
+                ' 92,9 statt der 110,0, die bis 0.9.47 herauskamen.
+                If IsFinishedRgb(path) Then
+                    SyncLock BaselineExposuresLock
+                        BaselineExposures(path) = 0.0
+                    End SyncLock
+                    Return 0.0
+                End If
                 Dim ifd0 = verzeichnisse.OfType(Of MetadataExtractor.Formats.Exif.ExifIfd0Directory)().FirstOrDefault()
                 Dim gelesen As Single
                 If ifd0 IsNot Nothing AndAlso

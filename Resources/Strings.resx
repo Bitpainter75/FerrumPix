@@ -8627,4 +8627,16 @@
   </data>
   <data name="Beim_Pinselzug_STRG_ALT_SHIFT_a2100fca" xml:space="preserve"><value>During a brush stroke: CTRL / ALT / SHIFT</value></data>
   <data name="STRG_h_lt_die_Richtung_des_ersten_kleinen_Zuges__077c64f0" xml:space="preserve"><value>CTRL locks the direction after the initial short stroke; ALT paints horizontally, SHIFT vertically. Applies to painting, eraser, mask and selection brushes, repair and smudge; clone stamp supports CTRL only (ALT sets its source).</value></data>
+  <data name="Kamerabild_49086c1e" xml:space="preserve">
+    <value>Camera image</value>
+  </data>
+  <data name="Eigene_Entwicklung_e2c7efdc" xml:space="preserve">
+    <value>Own development</value>
+  </data>
+  <data name="Womit_die_Vorher_Seite_gef_llt_wird_058399e7" xml:space="preserve">
+    <value>What fills the before side</value>
+  </data>
+  <data name="Das_JPEG_das_die_Kamera_selbst_in_die_RAW_Datei__cb08eb2f" xml:space="preserve">
+    <value>The JPEG the camera itself placed in the raw file. It carries the manufacturer's picture style and is their reading of the same shot, not a neutral one</value>
+  </data>
 </root>

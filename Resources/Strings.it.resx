@@ -8608,4 +8608,16 @@
   <data name="ffnet_bei_Doppelklick_auf_das_Bild_den_Editor_od_d7f39cca" xml:space="preserve"><value>Con doppio clic apre l’editor o torna alla galleria.</value></data>
   <data name="Beim_Pinselzug_STRG_ALT_SHIFT_a2100fca" xml:space="preserve"><value>Durante una pennellata: CTRL / ALT / SHIFT</value></data>
   <data name="STRG_h_lt_die_Richtung_des_ersten_kleinen_Zuges__077c64f0" xml:space="preserve"><value>CTRL blocca la direzione dopo il primo breve tratto; ALT dipinge orizzontalmente, SHIFT verticalmente. Vale per pennello, gomma, pennelli maschera e selezione, riparazione e sfocatura; il timbro clone supporta solo CTRL (ALT imposta la sorgente).</value></data>
+  <data name="Kamerabild_49086c1e" xml:space="preserve">
+    <value>Immagine della fotocamera</value>
+  </data>
+  <data name="Eigene_Entwicklung_e2c7efdc" xml:space="preserve">
+    <value>Sviluppo proprio</value>
+  </data>
+  <data name="Womit_die_Vorher_Seite_gef_llt_wird_058399e7" xml:space="preserve">
+    <value>Che cosa riempie il lato prima</value>
+  </data>
+  <data name="Das_JPEG_das_die_Kamera_selbst_in_die_RAW_Datei__cb08eb2f" xml:space="preserve">
+    <value>Il JPEG che la fotocamera stessa ha inserito nel file raw. Porta con sé lo stile immagine del produttore ed è la sua interpretazione dello stesso scatto, non una neutrale</value>
+  </data>
 </root>

@@ -8652,4 +8652,16 @@
   <data name="ffnet_bei_Doppelklick_auf_das_Bild_den_Editor_od_d7f39cca" xml:space="preserve"><value>이미지를 두 번 클릭하면 편집기를 열거나 갤러리로 돌아갑니다.</value></data>
   <data name="Beim_Pinselzug_STRG_ALT_SHIFT_a2100fca" xml:space="preserve"><value>브러시 스트로크 중: CTRL / ALT / SHIFT</value></data>
   <data name="STRG_h_lt_die_Richtung_des_ersten_kleinen_Zuges__077c64f0" xml:space="preserve"><value>CTRL은 첫 짧은 스트로크 뒤에 방향을 고정합니다. ALT는 가로로, SHIFT는 세로로 칠합니다. 그리기, 지우개, 마스크 및 선택 브러시, 복구와 흐리기에 적용됩니다. 복제 도장은 CTRL만 지원하며 ALT는 원본을 설정합니다.</value></data>
+  <data name="Kamerabild_49086c1e" xml:space="preserve">
+    <value>카메라 이미지</value>
+  </data>
+  <data name="Eigene_Entwicklung_e2c7efdc" xml:space="preserve">
+    <value>자체 현상</value>
+  </data>
+  <data name="Womit_die_Vorher_Seite_gef_llt_wird_058399e7" xml:space="preserve">
+    <value>이전 쪽에 표시할 내용</value>
+  </data>
+  <data name="Das_JPEG_das_die_Kamera_selbst_in_die_RAW_Datei__cb08eb2f" xml:space="preserve">
+    <value>카메라가 RAW 파일에 직접 넣은 JPEG입니다. 제조사의 사진 스타일이 적용되어 있어 같은 장면에 대한 제조사의 해석이며 중립적인 것이 아닙니다</value>
+  </data>
 </root>

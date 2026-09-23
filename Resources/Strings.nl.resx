@@ -8648,4 +8648,16 @@
   <data name="ffnet_bei_Doppelklick_auf_das_Bild_den_Editor_od_d7f39cca" xml:space="preserve"><value>Opent bij dubbelklikken de editor of keert terug naar de galerij.</value></data>
   <data name="Beim_Pinselzug_STRG_ALT_SHIFT_a2100fca" xml:space="preserve"><value>Tijdens een penseelstreek: CTRL / ALT / SHIFT</value></data>
   <data name="STRG_h_lt_die_Richtung_des_ersten_kleinen_Zuges__077c64f0" xml:space="preserve"><value>CTRL vergrendelt de richting na de eerste korte streek; ALT schildert horizontaal, SHIFT verticaal. Geldt voor schilderen, gum, masker- en selectiepenselen, reparatie en vervagen; de kloonstempel ondersteunt alleen CTRL (ALT stelt de bron in).</value></data>
+  <data name="Kamerabild_49086c1e" xml:space="preserve">
+    <value>Camerabeeld</value>
+  </data>
+  <data name="Eigene_Entwicklung_e2c7efdc" xml:space="preserve">
+    <value>Eigen ontwikkeling</value>
+  </data>
+  <data name="Womit_die_Vorher_Seite_gef_llt_wird_058399e7" xml:space="preserve">
+    <value>Waarmee de vorige zijde wordt gevuld</value>
+  </data>
+  <data name="Das_JPEG_das_die_Kamera_selbst_in_die_RAW_Datei__cb08eb2f" xml:space="preserve">
+    <value>Het JPEG dat de camera zelf in het RAW-bestand heeft gezet. Het draagt de beeldstijl van de fabrikant en is diens lezing van dezelfde opname, geen neutrale</value>
+  </data>
 </root>

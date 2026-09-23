@@ -8648,4 +8648,16 @@
   <data name="ffnet_bei_Doppelklick_auf_das_Bild_den_Editor_od_d7f39cca" xml:space="preserve"><value>Kaksoisnapsautus avaa editorin tai palaa galleriaan.</value></data>
   <data name="Beim_Pinselzug_STRG_ALT_SHIFT_a2100fca" xml:space="preserve"><value>Siveltimen vedon aikana: CTRL / ALT / SHIFT</value></data>
   <data name="STRG_h_lt_die_Richtung_des_ersten_kleinen_Zuges__077c64f0" xml:space="preserve"><value>CTRL lukitsee suunnan ensimmäisen lyhyen vedon jälkeen; ALT maalaa vaakasuoraan, SHIFT pystysuoraan. Koskee maalausta, pyyhekumia, maski- ja valintasiveltimiä, korjausta ja häivytystä; kloonausleima tukee vain CTRL:ää (ALT asettaa lähteen).</value></data>
+  <data name="Kamerabild_49086c1e" xml:space="preserve">
+    <value>Kameran kuva</value>
+  </data>
+  <data name="Eigene_Entwicklung_e2c7efdc" xml:space="preserve">
+    <value>Oma kehitys</value>
+  </data>
+  <data name="Womit_die_Vorher_Seite_gef_llt_wird_058399e7" xml:space="preserve">
+    <value>Mikä täyttää ennen-puolen</value>
+  </data>
+  <data name="Das_JPEG_das_die_Kamera_selbst_in_die_RAW_Datei__cb08eb2f" xml:space="preserve">
+    <value>JPEG, jonka kamera itse tallensi raw-tiedostoon. Siinä on valmistajan kuvatyyli, ja se on valmistajan tulkinta samasta otoksesta, ei neutraali</value>
+  </data>
 </root>

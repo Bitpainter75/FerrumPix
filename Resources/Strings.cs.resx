@@ -8648,4 +8648,16 @@
   <data name="ffnet_bei_Doppelklick_auf_das_Bild_den_Editor_od_d7f39cca" xml:space="preserve"><value>Dvojitým kliknutím otevřete editor nebo se vrátíte do galerie.</value></data>
   <data name="Beim_Pinselzug_STRG_ALT_SHIFT_a2100fca" xml:space="preserve"><value>Během tahu štětcem: CTRL / ALT / SHIFT</value></data>
   <data name="STRG_h_lt_die_Richtung_des_ersten_kleinen_Zuges__077c64f0" xml:space="preserve"><value>CTRL uzamkne směr po krátkém počátečním tahu; ALT maluje vodorovně, SHIFT svisle. Platí pro malování, gumu, maskovací a výběrový štětec, opravu a rozmazání; klonovací razítko podporuje jen CTRL (ALT nastaví zdroj).</value></data>
+  <data name="Kamerabild_49086c1e" xml:space="preserve">
+    <value>Snímek z fotoaparátu</value>
+  </data>
+  <data name="Eigene_Entwicklung_e2c7efdc" xml:space="preserve">
+    <value>Vlastní vyvolání</value>
+  </data>
+  <data name="Womit_die_Vorher_Seite_gef_llt_wird_058399e7" xml:space="preserve">
+    <value>Čím se naplní strana před</value>
+  </data>
+  <data name="Das_JPEG_das_die_Kamera_selbst_in_die_RAW_Datei__cb08eb2f" xml:space="preserve">
+    <value>JPEG, který do souboru RAW uložil sám fotoaparát. Nese obrazový styl výrobce a je jeho výkladem téhož snímku, nikoli neutrálním</value>
+  </data>
 </root>

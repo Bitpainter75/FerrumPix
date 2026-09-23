@@ -8652,4 +8652,16 @@
   <data name="ffnet_bei_Doppelklick_auf_das_Bild_den_Editor_od_d7f39cca" xml:space="preserve"><value>चित्र पर डबल-क्लिक करने पर संपादक खुलता है या गैलरी पर वापस जाता है।</value></data>
   <data name="Beim_Pinselzug_STRG_ALT_SHIFT_a2100fca" xml:space="preserve"><value>ब्रश स्ट्रोक के दौरान: CTRL / ALT / SHIFT</value></data>
   <data name="STRG_h_lt_die_Richtung_des_ersten_kleinen_Zuges__077c64f0" xml:space="preserve"><value>CTRL शुरुआती छोटे स्ट्रोक के बाद दिशा लॉक करता है; ALT क्षैतिज और SHIFT लंबवत पेंट करता है। यह पेंटिंग, इरेज़र, मास्क व चयन ब्रश, रिपेयर और स्मज पर लागू है; क्लोन स्टैम्प केवल CTRL का समर्थन करता है (ALT स्रोत सेट करता है)।</value></data>
+  <data name="Kamerabild_49086c1e" xml:space="preserve">
+    <value>कैमरा छवि</value>
+  </data>
+  <data name="Eigene_Entwicklung_e2c7efdc" xml:space="preserve">
+    <value>अपना विकास</value>
+  </data>
+  <data name="Womit_die_Vorher_Seite_gef_llt_wird_058399e7" xml:space="preserve">
+    <value>पहले वाले पक्ष में क्या दिखे</value>
+  </data>
+  <data name="Das_JPEG_das_die_Kamera_selbst_in_die_RAW_Datei__cb08eb2f" xml:space="preserve">
+    <value>वह JPEG जिसे कैमरे ने स्वयं RAW फ़ाइल में रखा है। इसमें निर्माता की चित्र शैली होती है और यह उसी शॉट की उनकी व्याख्या है, तटस्थ नहीं</value>
+  </data>
 </root>

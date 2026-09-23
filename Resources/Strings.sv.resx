@@ -8648,4 +8648,16 @@
   <data name="ffnet_bei_Doppelklick_auf_das_Bild_den_Editor_od_d7f39cca" xml:space="preserve"><value>Dubbelklick öppnar redigeraren eller återgår till galleriet.</value></data>
   <data name="Beim_Pinselzug_STRG_ALT_SHIFT_a2100fca" xml:space="preserve"><value>Under ett penseldrag: CTRL / ALT / SHIFT</value></data>
   <data name="STRG_h_lt_die_Richtung_des_ersten_kleinen_Zuges__077c64f0" xml:space="preserve"><value>CTRL låser riktningen efter det första korta draget; ALT målar horisontellt, SHIFT vertikalt. Gäller målning, suddgummi, mask- och markeringspenslar, reparation och oskärpa; klonstämpeln stöder bara CTRL (ALT anger källan).</value></data>
+  <data name="Kamerabild_49086c1e" xml:space="preserve">
+    <value>Kamerabild</value>
+  </data>
+  <data name="Eigene_Entwicklung_e2c7efdc" xml:space="preserve">
+    <value>Egen framkallning</value>
+  </data>
+  <data name="Womit_die_Vorher_Seite_gef_llt_wird_058399e7" xml:space="preserve">
+    <value>Vad före-sidan fylls med</value>
+  </data>
+  <data name="Das_JPEG_das_die_Kamera_selbst_in_die_RAW_Datei__cb08eb2f" xml:space="preserve">
+    <value>Den JPEG som kameran själv lade i råfilen. Den bär tillverkarens bildstil och är tillverkarens tolkning av samma tagning, inte en neutral</value>
+  </data>
 </root>

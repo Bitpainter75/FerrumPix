@@ -292,6 +292,47 @@
                     <TextBlock Text="Vergleich" IsVisible="{Binding AreToolbarLabelsVisible}" />
                 </StackPanel>
             </Button>
+
+            <!-- Der Aufklapper zur QUELLE der Vorher-Seite. Er haengt am Vergleich statt daneben
+                 zu stehen: er betrifft nur dessen linke Haelfte und waere als eigener Knopf in der
+                 Leiste zu breit fuer das, was er tut. Er erscheint nur, wenn die Datei eine
+                 brauchbare eingebettete Vorschau mitbringt - bei jedem JPEG und bei RAWs mit
+                 blossem Miniaturbild gaebe es nichts zu waehlen, und dann nimmt er auch keinen
+                 Platz weg. Bedienbar nur bei eingeschaltetem Vergleich. -->
+            <Button Classes="ghost"
+                    Height="34"
+                    Padding="2,0"
+                    Margin="-4,0,0,0"
+                    IsVisible="{Binding CanCompareWithCameraJpeg}"
+                    IsEnabled="{Binding ShowBeforeImage}"
+                    Classes.active="{Binding CompareWithCameraJpeg}"
+                    ToolTip.Tip="Womit die Vorher-Seite gefüllt wird">
+                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/caret-down.svg"
+                               Width="14" Height="14" />
+                <Button.Flyout>
+                    <Flyout Opened="OnLocalizedFlyoutOpened" Placement="BottomEdgeAlignedLeft" VerticalOffset="2">
+                        <StackPanel>
+                            <Button Classes="dropdown-item" Click="OnCompareSourceOwnClick">
+                                <Grid ColumnDefinitions="*,20">
+                                    <TextBlock Text="Eigene Entwicklung" />
+                                    <icons:SvgIcon Grid.Column="1" Width="14" Height="14"
+                                                   Source="avares://FerrumPix/Assets/Icons/outline/check.svg"
+                                                   IsVisible="{Binding !CompareWithCameraJpeg}" />
+                                </Grid>
+                            </Button>
+                            <Button Classes="dropdown-item" Click="OnCompareSourceCameraClick"
+                                    ToolTip.Tip="Das JPEG, das die Kamera selbst in die RAW-Datei gelegt hat. Es trägt den Bildstil des Herstellers und ist dessen Auslegung derselben Aufnahme, keine neutrale">
+                                <Grid ColumnDefinitions="*,20">
+                                    <TextBlock Text="Kamerabild" />
+                                    <icons:SvgIcon Grid.Column="1" Width="14" Height="14"
+                                                   Source="avares://FerrumPix/Assets/Icons/outline/check.svg"
+                                                   IsVisible="{Binding CompareWithCameraJpeg}" />
+                                </Grid>
+                            </Button>
+                        </StackPanel>
+                    </Flyout>
+                </Button.Flyout>
+            </Button>
         </StackPanel>
 
         <!-- GESPERRT, solange ein langer Vorgang laeuft - genau wie die Regler rechts. Ein

@@ -8607,4 +8607,16 @@
   <data name="ffnet_bei_Doppelklick_auf_das_Bild_den_Editor_od_d7f39cca" xml:space="preserve"><value>Ao clicar duas vezes na imagem, abre o editor ou volta à galeria.</value></data>
   <data name="Beim_Pinselzug_STRG_ALT_SHIFT_a2100fca" xml:space="preserve"><value>Durante uma pincelada: CTRL / ALT / SHIFT</value></data>
   <data name="STRG_h_lt_die_Richtung_des_ersten_kleinen_Zuges__077c64f0" xml:space="preserve"><value>CTRL bloqueia a direção após o primeiro traço curto; ALT pinta na horizontal e SHIFT na vertical. Aplica-se a pintura, borracha, pincéis de máscara e seleção, reparação e desfoque; o carimbo de clonagem só suporta CTRL (ALT define a origem).</value></data>
+  <data name="Kamerabild_49086c1e" xml:space="preserve">
+    <value>Imagem da câmara</value>
+  </data>
+  <data name="Eigene_Entwicklung_e2c7efdc" xml:space="preserve">
+    <value>Revelação própria</value>
+  </data>
+  <data name="Womit_die_Vorher_Seite_gef_llt_wird_058399e7" xml:space="preserve">
+    <value>O que preenche o lado anterior</value>
+  </data>
+  <data name="Das_JPEG_das_die_Kamera_selbst_in_die_RAW_Datei__cb08eb2f" xml:space="preserve">
+    <value>O JPEG que a própria câmara colocou no ficheiro RAW. Traz o estilo de imagem do fabricante e é a interpretação deste da mesma fotografia, não uma neutra</value>
+  </data>
 </root>

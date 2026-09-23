@@ -8648,4 +8648,16 @@
   <data name="ffnet_bei_Doppelklick_auf_das_Bild_den_Editor_od_d7f39cca" xml:space="preserve"><value>Двойной щелчок открывает редактор или возвращает в галерею.</value></data>
   <data name="Beim_Pinselzug_STRG_ALT_SHIFT_a2100fca" xml:space="preserve"><value>Во время мазка кистью: CTRL / ALT / SHIFT</value></data>
   <data name="STRG_h_lt_die_Richtung_des_ersten_kleinen_Zuges__077c64f0" xml:space="preserve"><value>CTRL фиксирует направление после первого короткого мазка; ALT рисует горизонтально, SHIFT вертикально. Работает для рисования, ластика, кистей маски и выделения, восстановления и размытия; штамп клонирования поддерживает только CTRL (ALT задаёт источник).</value></data>
+  <data name="Kamerabild_49086c1e" xml:space="preserve">
+    <value>Снимок камеры</value>
+  </data>
+  <data name="Eigene_Entwicklung_e2c7efdc" xml:space="preserve">
+    <value>Собственная обработка</value>
+  </data>
+  <data name="Womit_die_Vorher_Seite_gef_llt_wird_058399e7" xml:space="preserve">
+    <value>Чем заполнена сторона до</value>
+  </data>
+  <data name="Das_JPEG_das_die_Kamera_selbst_in_die_RAW_Datei__cb08eb2f" xml:space="preserve">
+    <value>JPEG, который камера сама записала в RAW-файл. Он несёт стиль изображения производителя и является его прочтением того же кадра, а не нейтральным</value>
+  </data>
 </root>

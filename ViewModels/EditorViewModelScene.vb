@@ -750,6 +750,22 @@ Namespace ViewModels
             If _zoomDetailWanted Then RestartZoomDetailTimer()
         End Sub
 
+        ''' <summary>Die QUELLENWAHL des Vergleichs hat sich geaendert. Der Schluessel des
+        ''' Vorher-DECODES allein genuegt hier nicht: die daraus gerenderte Vorher-Szene
+        ''' (_zoomDetailBeforeSk) haengt an keinem Schluessel und saehe weiter gueltig aus. Ohne
+        ''' dieses Wegwerfen zeigte das Detail die alte Seite weiter, waehrend die Buehne darueber
+        ''' schon die neue zeigt - und genau nebeneinander faellt das auf.</summary>
+        Private Sub InvalidateZoomDetailBefore()
+            If Not _zoomDetailRendering Then
+                _zoomDetailBeforeSk?.Dispose()
+                _zoomDetailBeforeSk = Nothing
+                SetZoomDetailBeforeImage(Nothing)
+            End If
+            ' Laeuft gerade ein Render, bleibt sein Ergebnis noch der alte Stand; der neue Anstoss
+            ' hier holt ihn ein. Nie unter einem laufenden Hintergrund-Render wegdisposen.
+            If _zoomDetailWanted Then RestartZoomDetailTimer()
+        End Sub
+
         ''' <summary>Zoom verlassen/Bildwechsel: Overlay aus, Caches freigeben. Laeuft gerade ein
         ''' Render, wird das Dispose deferred (Radiergummi-Lektion: nie unter einem laufenden
         ''' Hintergrund-Render wegdisposen).</summary>
@@ -776,6 +792,24 @@ Namespace ViewModels
             _zoomDetailBeforeSource = Nothing
             _zoomDetailBeforeSourcePath = Nothing
         End Sub
+
+        ''' <summary>Schluessel des zwischengespeicherten Vorher-Decodes: Pfad UND Quellenwahl.
+        ''' Ein Schluessel aus dem blossen Pfad wuerde beim Umschalten still passen.</summary>
+        Private Function ComparisonBeforeCacheKey(path As String) As String
+            If String.IsNullOrEmpty(path) Then Return ""
+            Return If(_compareWithCameraJpeg, path & "|kamera", path)
+        End Function
+
+        ''' <summary>Die Vorher-Quelle des Zoom-Details. In der Kamera-Wahl die eingebettete
+        ''' Vorschau auf die Masse von <paramref name="reference"/> gebracht; bringt die Datei keine
+        ''' brauchbare mit, der gewohnte Datei-Decode.</summary>
+        Private Function LoadZoomDetailBeforeSource(path As String, detailTarget As Integer, reference As SKBitmap) As SKBitmap
+            If _compareWithCameraJpeg AndAlso reference IsNot Nothing Then
+                Dim cameraJpeg = CameraJpegService.TryLoadMatching(path, reference.Width, reference.Height)
+                If cameraJpeg IsNot Nothing Then Return cameraJpeg
+            End If
+            Return ImageProcessor.LoadPreviewSource(path, detailTarget)
+        End Function
 
         Private Sub SetZoomDetailImage(value As Bitmap)
             If Object.ReferenceEquals(_zoomDetailImage, value) Then Return
@@ -840,7 +874,11 @@ Namespace ViewModels
             ' Vorher-Seite (Vergleich sichtbar): hochaufgeloester ORIGINAL-Decode, nur pfadabhaengig
             ' (das Original aendert sich durch Commits nicht).
             Dim wantBefore = _zoomDetailWantBefore
-            Dim cachedBeforeSource = If(String.Equals(_zoomDetailBeforeSourcePath, path, StringComparison.Ordinal),
+            ' Der Schluessel traegt die QUELLENWAHL mit, nicht nur den Pfad: sonst bliebe beim
+            ' Umschalten zwischen eigenem Decode und Kamera-Vorschau die alte Seite im Detail
+            ' stehen, waehrend die Buehne darueber bereits die neue zeigt.
+            Dim beforeKey = ComparisonBeforeCacheKey(path)
+            Dim cachedBeforeSource = If(String.Equals(_zoomDetailBeforeSourcePath, beforeKey, StringComparison.Ordinal),
                                         _zoomDetailBeforeSource, Nothing)
 
             Dim sw = Diagnostics.Stopwatch.StartNew()
@@ -859,8 +897,12 @@ Namespace ViewModels
                                    If source Is Nothing Then Return
                                    rendered = ImageProcessor.RenderPreviewSkBitmap(source, adj)
                                    If wantBefore Then
+                                       ' Die Kamera-Vorschau wird auf die Masse der Gegenseite gebracht - und
+                                       ' das ist hier `source`, das gerade gerenderte Nachher. Es hat dieselben
+                                       ' Masse wie der Datei-Decode auf detailTarget, spart aber genau diesen
+                                       ' Decode, der bei einer RAW das Teuerste am ganzen Detail waere.
                                        beforeSource = If(cachedBeforeSource,
-                                                         ImageProcessor.LoadPreviewSource(path, detailTarget))
+                                                         LoadZoomDetailBeforeSource(path, detailTarget, source))
                                        If beforeSource IsNot Nothing Then
                                            beforeRendered = ImageProcessor.ApplyGeometryAdjustmentsSk(beforeSource, adj)
                                        End If
@@ -893,7 +935,7 @@ Namespace ViewModels
             If beforeSource IsNot Nothing AndAlso Not Object.ReferenceEquals(beforeSource, _zoomDetailBeforeSource) Then
                 _zoomDetailBeforeSource?.Dispose()
                 _zoomDetailBeforeSource = beforeSource
-                _zoomDetailBeforeSourcePath = path
+                _zoomDetailBeforeSourcePath = beforeKey
             End If
             If rendered Is Nothing Then Return
 

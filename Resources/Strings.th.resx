@@ -8652,4 +8652,16 @@
   <data name="ffnet_bei_Doppelklick_auf_das_Bild_den_Editor_od_d7f39cca" xml:space="preserve"><value>การดับเบิลคลิกที่ภาพจะเปิดตัวแก้ไขหรือกลับไปยังแกลเลอรี</value></data>
   <data name="Beim_Pinselzug_STRG_ALT_SHIFT_a2100fca" xml:space="preserve"><value>ขณะลากพู่กัน: CTRL / ALT / SHIFT</value></data>
   <data name="STRG_h_lt_die_Richtung_des_ersten_kleinen_Zuges__077c64f0" xml:space="preserve"><value>CTRL ล็อกทิศทางหลังจากการลากสั้นครั้งแรก; ALT วาดแนวนอน และ SHIFT วาดแนวตั้ง ใช้กับการวาด ยางลบ แปรงมาสก์และการเลือก การซ่อมแซมและการเบลอ; ตราประทับโคลนรองรับเฉพาะ CTRL (ALT ตั้งค่าแหล่งที่มา)</value></data>
+  <data name="Kamerabild_49086c1e" xml:space="preserve">
+    <value>ภาพจากกล้อง</value>
+  </data>
+  <data name="Eigene_Entwicklung_e2c7efdc" xml:space="preserve">
+    <value>การล้างภาพของเราเอง</value>
+  </data>
+  <data name="Womit_die_Vorher_Seite_gef_llt_wird_058399e7" xml:space="preserve">
+    <value>สิ่งที่แสดงในด้านก่อน</value>
+  </data>
+  <data name="Das_JPEG_das_die_Kamera_selbst_in_die_RAW_Datei__cb08eb2f" xml:space="preserve">
+    <value>ไฟล์ JPEG ที่กล้องใส่ไว้ในไฟล์ RAW เอง ไฟล์นี้มีสไตล์ภาพของผู้ผลิตและเป็นการตีความภาพเดียวกันของผู้ผลิต ไม่ใช่แบบเป็นกลาง</value>
+  </data>
 </root>

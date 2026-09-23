@@ -1104,6 +1104,12 @@ Namespace ViewModels
         ''' aktiv ist), entsorgt über die Stale-Liste (in-flight-Renders!) bei Bildwechsel/Regler-aus.
         Private _comparisonOriginalSource As SKBitmap
         Private _comparisonOriginalPath As String
+        ''' Die von der Kamera eingebettete JPEG-Vorschau als WAHLWEISE Vorher-Seite, bereits auf
+        ''' die Maße des Datei-Decodes gebracht. Eigene Felder statt eines gemeinsamen Speichers:
+        ''' so bleiben beim Hin- und Herschalten beide Seiten warm, statt sich gegenseitig zu
+        ''' verdrängen - und der Schlüssel kann nicht versehentlich zur falschen Quelle passen.
+        Private _cameraJpegSource As SKBitmap
+        Private _cameraJpegPath As String
         Private _previewSource As SKBitmap
         ' Kleine Quelle nur fuer den aktiven Reglerzug. Die Abmessungen entstehen über eine
         ' maximale Kantenlänge, nie über ein festes Rechteck - das Seitenverhältnis bleibt exakt.
@@ -1174,6 +1180,11 @@ Namespace ViewModels
         ' Zuletzt vom Nutzer gewählter Vergleichs-Zustand; kommt aus den Einstellungen und wird dort beim
         ' Umschalten wieder hinterlegt (SetComparisonVisibleFromUser).
         Private _comparisonAutoEnabled As Boolean = AppSettingsService.Load().EditorShowComparison
+        ' Womit die Vorher-Seite bei einer RAW gefüllt wird. ANDERS als die Sichtbarkeit des
+        ' Vergleichs wird das NICHT gemerkt: jedes Bild fängt bei der eigenen Entwicklung an. Die
+        ' Wahl gilt einem einzelnen Bild - wer sie mitnähme, bekäme beim Durchblättern eine
+        ' Vorher-Seite, die je nach Datei aus einer anderen Quelle stammt, ohne es zu sehen.
+        Private _compareWithCameraJpeg As Boolean = False
         Private _folderPaths As New List(Of String)()
         ''' <summary>Bindet einen NACHGEREICHTEN Filmstreifen an das Bild, für das er gesucht wurde -
         ''' siehe LoadFilmstripContext. Gleiche Bauart wie im Betrachter.</summary>
@@ -4631,6 +4642,50 @@ Namespace ViewModels
             If _comparisonAutoEnabled <> value Then AppSettingsService.SaveEditorShowComparison(value)
             _comparisonAutoEnabled = value
             ShowBeforeImage = value
+        End Sub
+
+        ''' <summary>Womit die Vorher-Seite gefüllt wird: der eigene Decode der Datei (False, das
+        ''' Gewohnte) oder die von der Kamera eingebettete JPEG-Vorschau (True).
+        '''
+        ''' <para>Das Nachher bleibt unberührt - verglichen wird dasselbe Ergebnis, nur gegen eine
+        ''' andere Bezugsgröße. Anders als die Sichtbarkeit des Vergleichs wird die Wahl NICHT
+        ''' gemerkt: jedes Bild beginnt bei der eigenen Entwicklung.</para></summary>
+        Public Property CompareWithCameraJpeg As Boolean
+            Get
+                Return _compareWithCameraJpeg
+            End Get
+            Set(value As Boolean)
+                If value AndAlso Not CanCompareWithCameraJpeg Then value = False
+                If _compareWithCameraJpeg = value Then Return
+                Me.RaiseAndSetIfChanged(_compareWithCameraJpeg, value)
+                ' Die Vorher-Seite ist gerechnet, nicht bloss eingeblendet - ohne neuen Render
+                ' bliebe die alte stehen. markDirty:=False: eine Anzeigewahl ist keine Bearbeitung,
+                ' sonst fragte der Verlassen-Dialog nach Änderungen, die es nicht gibt.
+                If _showBeforeImage Then SchedulePreviewUpdate(markDirty:=False)
+                InvalidateZoomDetailBefore()
+            End Set
+        End Property
+
+        ''' <summary>Ob es für dieses Bild überhaupt etwas zu wählen gibt: nur bei einer RAW, die
+        ''' eine brauchbar große Vorschau mitbringt. Bei allem anderen bleibt der Knopf weg, statt
+        ''' eine Wahl anzubieten, die dann still nichts täte.</summary>
+        Public ReadOnly Property CanCompareWithCameraJpeg As Boolean
+            Get
+                Return CameraJpegService.IsAvailable(RenderSourcePath)
+            End Get
+        End Property
+
+        ''' <summary>Nach einem Bildwechsel: JEDES Bild beginnt bei der eigenen Entwicklung, und ob
+        ''' es überhaupt etwas zu wählen gibt, hängt an der Datei.
+        '''
+        ''' <para>Das Zurücksetzen ist der Punkt. Die Wahl gilt einem einzelnen Bild; nähme man sie
+        ''' mit, zeigte die Vorher-Seite beim Durchblättern je nach Datei eine andere Quelle - mal
+        ''' das Kamerabild, beim nächsten JPEG stillschweigend wieder die eigene Entwicklung -, und
+        ''' der Vergleich sagte von Bild zu Bild etwas anderes, ohne dass man es sieht.</para></summary>
+        Private Sub RefreshCameraJpegComparisonState()
+            _compareWithCameraJpeg = False
+            Me.RaisePropertyChanged(NameOf(CanCompareWithCameraJpeg))
+            Me.RaisePropertyChanged(NameOf(CompareWithCameraJpeg))
         End Sub
 
         ''' Der Vergleichsregler liegt über der Leinwand und fängt Klicks ab. Werkzeuge, die auf der
@@ -16267,6 +16322,7 @@ Namespace ViewModels
             _suppressPreviewDirty = True
             Try
                 ShowBeforeImage = _comparisonAutoEnabled AndAlso CanShowBeforeAfter
+                RefreshCameraJpegComparisonState()
                 ' Geleert wurde schon oben, vor dem Setzen des Pfades - siehe dort.
                 If Not String.IsNullOrEmpty(_currentFpxPath) Then PreviewImage = LoadFpxCompositePreview(_currentFpxPath)
                 InfoPanel.ExifInfo = Nothing
@@ -16623,6 +16679,7 @@ Namespace ViewModels
             _suppressPreviewDirty = True
             Try
                 ShowBeforeImage = _comparisonAutoEnabled AndAlso CanShowBeforeAfter
+                RefreshCameraJpegComparisonState()
                 PreviewImage = Nothing
                 ComparisonImage = Nothing
                 CurrentImage = Nothing
@@ -18490,12 +18547,58 @@ Namespace ViewModels
             Return decoded
         End Function
 
+        ''' <summary>Die Vorher-Seite des Vergleichs, je nach Wahl. Alles andere am Vergleich bleibt
+        ''' gleich: derselbe Geometrieschritt, dieselbe Anzeige, derselbe Regler.
+        '''
+        ''' <para>BEWUSST NICHT <see cref="GetComparisonOriginalSource"/> selbst umgestellt: die
+        ''' liefert auch das ungebackene Basisbild, wenn die Pixel-Ebene ausgeblendet ist, und dort
+        ''' MUSS es der Datei-Decode bleiben. Die Maße dieser Quelle tragen dort Dirty-Rects und
+        ''' Objektgeometrie; die eingebettete Vorschau hat andere.</para></summary>
+        Private Function GetComparisonBeforeSource() As SKBitmap
+            Dim original = GetComparisonOriginalSource()
+            If Not _compareWithCameraJpeg Then Return original
+            ' Ohne Gegenseite gibt es keine Maße, auf die sich die Vorschau bringen ließe.
+            If original Is Nothing Then Return Nothing
+            Return If(GetCameraJpegSource(original.Width, original.Height), original)
+        End Function
+
+        ''' <summary>Liefert (und cached) die eingebettete Kamera-Vorschau in den Maßen der
+        ''' Gegenseite. Nothing, wenn die Datei keine brauchbare mitbringt - der Aufrufer fällt dann
+        ''' auf den Datei-Decode zurück, statt die Vorher-Seite leer zu lassen.</summary>
+        Private Function GetCameraJpegSource(targetWidth As Integer, targetHeight As Integer) As SKBitmap
+            Dim path = RenderSourcePath
+            If String.IsNullOrWhiteSpace(path) Then Return Nothing
+            SyncLock _previewSync
+                If _cameraJpegSource IsNot Nothing AndAlso
+                   String.Equals(_cameraJpegPath, path, StringComparison.Ordinal) AndAlso
+                   _cameraJpegSource.Width = targetWidth AndAlso _cameraJpegSource.Height = targetHeight Then
+                    Return _cameraJpegSource
+                End If
+            End SyncLock
+            Dim loaded = CameraJpegService.TryLoadMatching(path, targetWidth, targetHeight)
+            If loaded Is Nothing Then Return Nothing
+            SyncLock _previewSync
+                If _cameraJpegSource IsNot Nothing Then _stalePreviewSources.Add(_cameraJpegSource)
+                _cameraJpegSource = loaded
+                _cameraJpegPath = path
+            End SyncLock
+            Return loaded
+        End Function
+
+        ''' <summary>Gibt BEIDE Vorher-Quellen frei. Bewusst zusammen: sie haben dieselbe
+        ''' Lebensdauer (Bildwechsel, Vergleich aus), und ein getrennter Weg wäre genau die Stelle,
+        ''' an der beim nächsten Umbau eine der beiden vergessen wird.</summary>
         Private Sub ReleaseComparisonOriginalSource()
             SyncLock _previewSync
                 If _comparisonOriginalSource IsNot Nothing Then
                     _stalePreviewSources.Add(_comparisonOriginalSource)
                     _comparisonOriginalSource = Nothing
                     _comparisonOriginalPath = Nothing
+                End If
+                If _cameraJpegSource IsNot Nothing Then
+                    _stalePreviewSources.Add(_cameraJpegSource)
+                    _cameraJpegSource = Nothing
+                    _cameraJpegPath = Nothing
                 End If
             End SyncLock
         End Sub
@@ -18955,7 +19058,8 @@ Namespace ViewModels
                                                     If needsComparison Then
                                                         ' „Vorher" = ORIGINAL-Datei (eigener Decode), nicht die Arbeitsbild-
                                                         ' Vorschau - die enthält ab Stufe D gebackene Retusche/Striche.
-                                                        Dim comparisonSource = GetComparisonOriginalSource()
+                                                        ' Wahlweise stattdessen die eingebettete Kamera-Vorschau.
+                                                        Dim comparisonSource = GetComparisonBeforeSource()
                                                         comparisonBmp = ImageProcessor.ApplyGeometryAdjustments(If(comparisonSource, previewSource), adj)
                                                     End If
                                                     ' Anzeige laeuft ueber die persistente WriteableBitmap (Region-Blit
