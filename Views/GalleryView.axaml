@@ -10,6 +10,7 @@
              FocusAdorner="{x:Null}"
              KeyDown="OnKeyDown"
              KeyUp="HandleKeyUp"
+             PointerMoved="OnCustomInternalPointerMoved"
              PointerReleased="OnGlobalPointerReleased">
 
     <UserControl.Resources>
@@ -1886,6 +1887,7 @@
                                         DoubleTapped="OnThumbnailDoubleTapped"
                                         DragDrop.AllowDrop="True"
                                         DragDrop.DragOver="OnItemDragOver"
+                                        DragDrop.DragLeave="OnItemDragLeave"
                                         DragDrop.Drop="OnItemDrop">
                                     <!-- Beschriftungszeile: AUTO, damit der Streifen exakt so hoch ist wie sein Inhalt.
                                          Eine feste Höhe hinterließ unter dem Text einen sichtbaren Leerstreifen und
@@ -2383,6 +2385,7 @@
                                         DoubleTapped="OnThumbnailDoubleTapped"
                                         DragDrop.AllowDrop="True"
                                         DragDrop.DragOver="OnItemDragOver"
+                                        DragDrop.DragLeave="OnItemDragLeave"
                                         DragDrop.Drop="OnItemDrop">
                                     <Grid ColumnDefinitions="76,*,150,90,90,Auto,Auto,28" Height="72">
                                         <Border Grid.Column="0"
@@ -3016,6 +3019,34 @@
                                         Grid.Column="0"
                                         Grid.ColumnSpan="4"
                                         ZIndex="180"/>
+
+        <!-- Eigene Rueckmeldung waehrend anwendungsinterner Zuege. X11/Avalonia zeigt bei
+             solchen Drag-Quellen trotz akzeptiertem Move-Effekt oft den Verbotszeiger; dieser
+             Hinweis folgt deshalb dem Zeiger, waehrend Baumzeile oder Ordnerkachel aufleuchten. -->
+        <Canvas x:Name="InternalDropFeedbackCanvas"
+                Grid.Row="0" Grid.RowSpan="3" Grid.Column="0" Grid.ColumnSpan="4"
+                IsVisible="False"
+                IsHitTestVisible="False"
+                ZIndex="190">
+            <Border x:Name="InternalDropFeedbackBadge"
+                    Width="152" Height="38"
+                    Padding="12,0"
+                    CornerRadius="19"
+                    Background="{DynamicResource FP.Accent}"
+                    BoxShadow="0 3 12 #88000000">
+                <Grid ColumnDefinitions="20,*" ColumnSpacing="7" VerticalAlignment="Center">
+                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/folder-check.svg"
+                                   Width="18" Height="18"
+                                   VerticalAlignment="Center"
+                                   IconBrush="#FFFFFFFF"/>
+                    <TextBlock Grid.Column="1"
+                               Text="Hier ablegen"
+                               Foreground="#FFFFFFFF"
+                               FontWeight="SemiBold"
+                               VerticalAlignment="Center"/>
+                </Grid>
+            </Border>
+        </Canvas>
 
         <!-- Schnellvorschau-Overlay (Mausrad-Klick). ColumnSpan 4: die Info-Leiste in Spalte 3
              gehoert mit abgedeckt. -->

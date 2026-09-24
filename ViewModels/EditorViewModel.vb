@@ -18958,13 +18958,29 @@ Namespace ViewModels
             Dim longest = Math.Max(preview.PixelSize.Width, preview.PixelSize.Height)
             If maxDimension > 0 AndAlso longest > maxDimension Then
                 Dim ratio = maxDimension / CDbl(longest)
-                Dim target = New PixelSize(Math.Max(1, CInt(Math.Round(preview.PixelSize.Width * ratio))),
-                                           Math.Max(1, CInt(Math.Round(preview.PixelSize.Height * ratio))))
-                Using scaled = preview.CreateScaledBitmap(target, BitmapInterpolationMode.HighQuality)
-                    Dim reduced As New IO.MemoryStream()
-                    scaled.Save(reduced, PngBitmapEncoderOptions.Default)
-                    reduced.Position = 0
-                    Return reduced
+                Dim width = Math.Max(1, CInt(Math.Round(preview.PixelSize.Width * ratio)))
+                Dim height = Math.Max(1, CInt(Math.Round(preview.PixelSize.Height * ratio)))
+                ' PreviewImage kann von ToAvaloniaBitmapFast stammen. Auf Linux ist dessen
+                ' Avalonia-Bitmap zwar speicherbar, wird von PlatformRenderInterface.ResizeBitmap
+                ' aber mit "Invalid source bitmap type" abgelehnt. Über PNG in ein gewöhnliches
+                ' Skia-Bitmap dekodieren und dort skalieren; so bleibt auch die FPX-Vorschau gedeckelt.
+                Using encoded As New IO.MemoryStream()
+                    preview.Save(encoded, PngBitmapEncoderOptions.Default)
+                    encoded.Position = 0
+                    Using source = SKBitmap.Decode(encoded)
+                        If source Is Nothing Then Return Nothing
+                        Using scaled = source.Resize(New SKImageInfo(width, height, SKColorType.Bgra8888, SKAlphaType.Premul),
+                                                     ImageProcessor.SamplingHigh)
+                            If scaled Is Nothing Then Return Nothing
+                            Using image = SKImage.FromBitmap(scaled), data = image.Encode(SKEncodedImageFormat.Png, 100)
+                                If data Is Nothing Then Return Nothing
+                                Dim reduced As New IO.MemoryStream()
+                                data.SaveTo(reduced)
+                                reduced.Position = 0
+                                Return reduced
+                            End Using
+                        End Using
+                    End Using
                 End Using
             End If
             Dim ms As New IO.MemoryStream()
@@ -19897,7 +19913,9 @@ Namespace ViewModels
                         ' dem Speichern stand - einschliesslich seiner ungesicherten Aenderungen:
                         ' geschrieben wurde ja die andere Datei. Ohne das Zurueckholen liesse es sich
                         ' danach ohne Nachfrage schliessen, und die Arbeit am Original waere weg.
-                        If wasDirtyBeforeSave Then MarkDocumentDirtyAfterSaveAs()
+                        If ShouldRestoreDirtyAfterSave(wasDirtyBeforeSave, targetIsOtherFile) Then
+                            MarkDocumentDirtyAfterSaveAs()
+                        End If
                         ClearPreviewSource()
                         Return True
                     End If
@@ -20729,6 +20747,14 @@ Namespace ViewModels
             If savedAsPdf Then Return False
             If Not targetIsOtherFile Then Return savedPixelsIntoFile
             Return saveAsOpensTarget
+        End Function
+
+        ''' <summary>Nur wenn beim Speichern unter eine ANDERE Datei geschrieben und das
+        ''' Ausgangsbild beibehalten wird, muss dessen vorheriger Dirty-Zustand zurückkehren.
+        ''' Ein in-place gespeichertes .fpx bleibt geöffnet und bereits gespeichert.</summary>
+        Public Shared Function ShouldRestoreDirtyAfterSave(wasDirtyBeforeSave As Boolean,
+                                                            targetIsOtherFile As Boolean) As Boolean
+            Return wasDirtyBeforeSave AndAlso targetIsOtherFile
         End Function
 
         Private Function ShouldOpenSavedTarget(savedAsPdf As Boolean, savedPixelsIntoFile As Boolean,

@@ -31,9 +31,10 @@ Namespace Views
         Private _initialSelectionDone As Boolean = False
         Private _dragStartPoint As Avalonia.Point
         Private _dragStartItem As ImageItem
-        ' DoDragDropAsync verlangt genau das Press-Ereignis, das die Geste ausgelöst hat - das
-        ' PointerMoved-Argument taugt dafür nicht.
-        Private _dragStartArgs As PointerPressedEventArgs
+        Private _customInternalDragActive As Boolean
+        Private _customDragPaths As List(Of String)
+        Private _customDropFolder As String
+        Private _customDropNode As VirtualNavigationNode
         Private _selectionAnchor As ImageItem
         Private _observedVm As GalleryViewModel
         Private _spaceOverviewActive As Boolean = False
@@ -418,6 +419,9 @@ Namespace Views
             ' neu gebaut. Ohne Abmelden bliebe sie samt Item-Baum an den drei Abos hängen - DataContextChanged,
             ' wo sie sonst gelöst werden, feuert beim Verwerfen der View nicht.
             _isAttached = False
+            If _customInternalDragActive Then
+                Dim ignored = FinishCustomInternalDragAsync(Nothing, drop:=False)
+            End If
             UnsubscribeViewModel()
 
             If Not _scrollHandlersAttached Then Return
@@ -1404,6 +1408,8 @@ Namespace Views
         Private _lastDropSource As Control = Nothing
         Private _lastDropNode As VirtualNavigationNode = Nothing
         Private _lastDropRow As Control = Nothing
+        Private _internalDropFeedbackCanvas As Canvas
+        Private _internalDropFeedbackBadge As Border
 
         Private Sub ResolveDropSource(e As DragEventArgs)
             Dim source = TryCast(e.Source, Control)
@@ -1417,7 +1423,9 @@ Namespace Views
             ' Arbeit an derselben Kette.
             Dim current = source
             Dim depth = 0
+            Dim visited As New HashSet(Of Control)()
             While current IsNot Nothing
+                If Not visited.Add(current) Then Exit While
                 If _lastDropNode Is Nothing Then
                     Dim node = TryCast(current.DataContext, VirtualNavigationNode)
                     If node IsNot Nothing Then _lastDropNode = node
@@ -1437,9 +1445,8 @@ Namespace Views
                     DiagnosticLogService.LogAlways("Drag", "Elternpfad tiefer als 64 Stufen - abgebrochen (Ring?)")
                     Exit While
                 End If
-                Dim logicalParent = TryCast(current.Parent, Control)
-                Dim nextParent = If(logicalParent, current.GetVisualParent(Of Control)())
-                If Object.ReferenceEquals(nextParent, current) Then Exit While
+                Dim nextParent = NextDropParent(current, visited)
+                If nextParent Is Nothing Then Exit While
                 current = nextParent
             End While
         End Sub
@@ -1488,16 +1495,18 @@ Namespace Views
         ''' ankommt, entscheidet der Drop.</summary>
         Public Sub OnImmichTreeDragOver(sender As Object, e As DragEventArgs)
             Dim node = GetImmichDropNode(e)
-            DragTrace.Over(If(node?.Kind, "kein Knoten"))
             Dim nimmtAn = node IsNot Nothing AndAlso Not node.IsTrashNode AndAlso
                           (node.IsImmichNode OrElse node.IsNextcloudNode)
             e.DragEffects = If(nimmtAn, DragDropEffects.Copy, DragDropEffects.None)
+            DragTrace.Over($"{If(node?.Kind, "kein Knoten")} effekt={e.DragEffects}")
             HighlightDropRow(e, nimmtAn)
+            UpdateInternalDropFeedback(e, nimmtAn)
             e.Handled = True
         End Sub
 
         Public Sub OnImmichTreeDrop(sender As Object, e As DragEventArgs)
             ClearDropHighlight()
+            UpdateInternalDropFeedback(e, False)
             Dim drop = ResolveImmichDrop(e, requireExistingFiles:=True)
             DiagnosticLogService.LogAlways("Drag", $"drop ziel={If(drop.Node?.Kind, "-")} lokal={drop.LocalPaths.Count} server={drop.RemotePaths.Count}")
             If drop.Node Is Nothing Then Return
@@ -1740,7 +1749,6 @@ Namespace Views
                    vm.SelectedItems.Contains(item) Then
                     _dragStartItem = item
                     _dragStartPoint = e.GetPosition(Me)
-                    _dragStartArgs = e
                     Me.Focus()
                     e.Handled = True
                     Return
@@ -1748,7 +1756,6 @@ Namespace Views
                 ApplyPointerSelection(vm, item, e.KeyModifiers)
                 _dragStartItem = item
                 _dragStartPoint = e.GetPosition(Me)
-                _dragStartArgs = e
                 Me.Focus()
                 e.Handled = True
             End If
@@ -1944,11 +1951,8 @@ Namespace Views
             End If
         End Sub
 
-        Public Async Sub OnThumbnailPointerMoved(sender As Object, e As PointerEventArgs)
-            ' Kein zweiter Zug, solange einer laeuft. Die Ziehquelle des Fenstersystems ist ein
-            ' EINZELNER Haken am Ereignisverteiler und ein einzelner Zeigergriff; ein zweiter Zug
-            ' daneben nimmt dem ersten die Ereignisse weg, und beide warten dann auf etwas, das
-            ' nicht mehr kommt.
+        Public Sub OnThumbnailPointerMoved(sender As Object, e As PointerEventArgs)
+            ' Kein zweiter Zug, solange die anwendungsinterne Pointer-Geste laeuft.
             If _isDragging Then Return
             If _dragStartItem Is Nothing OrElse Not e.GetCurrentPoint(Nothing).Properties.IsLeftButtonPressed Then Return
             Dim delta = e.GetPosition(Me) - _dragStartPoint
@@ -1957,14 +1961,12 @@ Namespace Views
             Dim vm = GetVm()
             If vm Is Nothing Then Return
             Dim dragItem = _dragStartItem
-            Dim pressedArgs = _dragStartArgs
-            If dragItem Is Nothing OrElse pressedArgs Is Nothing Then Return
+            If dragItem Is Nothing Then Return
             Dim useSelection = vm.SelectedItems IsNot Nothing AndAlso vm.SelectedItems.Contains(dragItem)
             Dim dragItems = If(useSelection,
                                vm.SelectedItems.ToList(),
                                New List(Of ImageItem) From {dragItem})
             _dragStartItem = Nothing
-            _dragStartArgs = Nothing
 
             ' SERVERBILDER ZIEHEN IHREN PSEUDO-PFAD, keine Datei.
             '
@@ -1992,50 +1994,23 @@ Namespace Views
             Next
             If paths.Count = 0 Then Return
 
-            ' Die Ziehlast trägt das anwendungseigene Format, an dem der interne Drop erkennt, was
-            ' gemeint ist. Die Dateien selbst kommen nur dazu, wenn es welche GIBT - ein fremdes Ziel
-            ' sieht sonst nichts und lehnt den Drop ab, aber einen Pseudo-Pfad als Datei anzubieten
-            ' wäre ein Versprechen, das niemand einlösen kann.
-            Dim data As DataTransfer = Nothing
-            If Not hatServerbilder Then
-                Dim storageProvider = TopLevel.GetTopLevel(Me)?.StorageProvider
-                data = Await ClipboardPathService.BuildFileTransferAsync(storageProvider, paths,
-                    Sub(firstItem) firstItem.Set(FerrumPixPathsFormat, String.Join(ControlChars.Lf, paths)))
-            End If
-            If data Is Nothing OrElse data.Items.Count = 0 Then
-                data = New DataTransfer()
-                data.Add(DataTransferItem.Create(FerrumPixPathsFormat, String.Join(ControlChars.Lf, paths)))
-            End If
-
-            If Not _isAttached OrElse TopLevel.GetTopLevel(Me) Is Nothing Then Return
-
-            ' RoutedEventArgs.Source ist nach dem Ende der PointerPressed-Route nicht garantiert
-            ' erhalten. Der X11-Drag-Backend ermittelt daraus aber unmittelbar das Quellfenster und
-            ' wirft bei Nothing/einem inzwischen virtualisierten Thumbnail "Invalid drag source".
-            ' Die weiterhin sichtbare GalleryView ist derselben TopLevel zugeordnet und damit die
-            ' stabile, plattformuebergreifende Quelle fuer die bereits validierte Press-Geste.
-            pressedArgs.Source = Me
-
+            ' Interne Zuege bleiben im Avalonia-Eingabebaum: das native DnD uebergibt X11 die
+            ' Kontrolle ueber den Mauszeiger und zeigt bei internen Zielen trotz erlaubtem Move
+            ' gelegentlich den Verbotszeiger. Ein eigener Pointer-Zug behaelt den normalen Cursor;
+            ' externe Zuege IN die App laufen weiterhin ueber die nativen Drop-Handler.
+            _dragStartItem = Nothing
+            _customDragPaths = paths
+            _customDropFolder = Nothing
+            _customDropNode = Nothing
+            _customInternalDragActive = True
             _isDragging = True
-            ' Die Pfade IM PROZESS merken, bevor der Zug beginnt: alles, was waehrend des Ziehens
-            ' wissen will, was gezogen wird, liest sie von dort statt ueber das Fenstersystem.
             DragPayloadCache.BeginDrag(paths)
-            DragTrace.Begin(If(hatServerbilder, "Server", "lokal"), paths.Count, data.Items.Count > 1)
-            Try
-                Await DragDrop.DoDragDropAsync(pressedArgs, data, DragDropEffects.Move Or DragDropEffects.Copy)
-            Catch ex As ArgumentOutOfRangeException When String.Equals(ex.ParamName, "triggerEvent", StringComparison.Ordinal)
-                ' Ein gleichzeitig stattfindender View-/Fensterwechsel darf eine asynchrone
-                ' Drag-Geste abbrechen, aber niemals als Async-Sub-Ausnahme die App beenden.
-                DiagnosticLogService.LogException("Gallery.DragDrop.InvalidSource", ex)
-            Catch ex As Exception
-                DiagnosticLogService.LogException("Gallery.DragDrop", ex)
-            Finally
-                ' IMMER zuruecknehmen: bliebe der Stand liegen, hielte die Anwendung einen fremden
-                ' Zug spaeter fuer den eigenen und zoege die falschen Pfade heran.
-                DragTrace.Finish("Geste beendet")
-                DragPayloadCache.EndDrag()
-                _isDragging = False
-            End Try
+            DragTrace.Begin(If(hatServerbilder, "Server", "lokal"), paths.Count, False)
+            e.Pointer.Capture(Me)
+            UpdateCustomInternalDropFeedback(e.GetPosition(Me))
+            e.Handled = True
+            Return
+
         End Sub
 
         Public Sub OnItemsSelectionChanged(sender As Object, e As SelectionChangedEventArgs)
@@ -2060,7 +2035,137 @@ Namespace Views
                                Me.FindControl(Of Avalonia.Controls.Image)("PreviewImage"))
         End Sub
 
-        Public Sub OnGlobalPointerReleased(sender As Object, e As PointerReleasedEventArgs)
+        Public Sub OnCustomInternalPointerMoved(sender As Object, e As PointerEventArgs)
+            If Not _customInternalDragActive Then Return
+            UpdateCustomInternalDropFeedback(e.GetPosition(Me))
+            e.Handled = True
+        End Sub
+
+        Private Sub UpdateCustomInternalDropFeedback(point As Avalonia.Point)
+            Dim canvas = Me.FindControl(Of Canvas)("InternalDropFeedbackCanvas")
+            Dim badge = Me.FindControl(Of Border)("InternalDropFeedbackBadge")
+            If canvas Is Nothing OrElse badge Is Nothing Then Return
+            If Not Object.ReferenceEquals(_internalDropFeedbackCanvas, canvas) Then
+                _internalDropFeedbackCanvas = canvas
+                _internalDropFeedbackBadge = badge
+            End If
+
+            _customDropFolder = Nothing
+            _customDropNode = Nothing
+            Dim hit = TryCast(Me.InputHitTest(point), Control)
+            Dim current = hit
+            Dim visited As New HashSet(Of Control)()
+            Dim folder As String = Nothing
+            Dim node As VirtualNavigationNode = Nothing
+            Dim row As Control = Nothing
+            Dim card As Border = Nothing
+            Dim depth = 0
+            While current IsNot Nothing AndAlso visited.Add(current)
+                depth += 1
+                If depth > 64 Then Exit While
+                If row Is Nothing AndAlso TypeOf current Is TreeViewItem Then row = current
+                Dim folderNode = TryCast(current.DataContext, FolderNode)
+                If folder Is Nothing AndAlso folderNode IsNot Nothing Then folder = folderNode.FullPath
+
+                Dim imageItem = TryCast(current.DataContext, ImageItem)
+                If imageItem IsNot Nothing AndAlso imageItem.IsFolder Then
+                    If folder Is Nothing Then folder = imageItem.FilePath
+                    If card Is Nothing AndAlso TypeOf current Is Border AndAlso current.Classes.Contains("thumb-card") Then
+                        card = TryCast(current, Border)
+                    End If
+                End If
+
+                Dim virtualNode = TryCast(current.DataContext, VirtualNavigationNode)
+                If node Is Nothing AndAlso virtualNode IsNot Nothing AndAlso Not virtualNode.IsTrashNode AndAlso
+                   (virtualNode.IsImmichNode OrElse virtualNode.IsNextcloudNode) Then
+                    node = virtualNode
+                End If
+                current = NextDropParent(current, visited)
+            End While
+
+            Dim paths = If(_customDragPaths, New List(Of String)())
+            If folder IsNot Nothing AndAlso paths.Count > 0 Then
+                If PayloadHasServerAsset((paths, True)) Then
+                    If GetVm()?.CanPasteIntoFolder(folder) Then
+                        _customDropFolder = folder
+                    End If
+                ElseIf GetVm()?.CanMovePathsToFolder(paths, folder) Then
+                    _customDropFolder = folder
+                End If
+            End If
+            If _customDropFolder Is Nothing AndAlso node IsNot Nothing Then _customDropNode = node
+
+            Dim allowed = _customDropFolder IsNot Nothing OrElse _customDropNode IsNot Nothing
+            Dim targetRow = If(allowed AndAlso _customDropNode IsNot Nothing, row,
+                               If(allowed AndAlso _customDropFolder IsNot Nothing AndAlso row IsNot Nothing, row, Nothing))
+            If Not Object.ReferenceEquals(_dropHighlightRow, targetRow) Then
+                _dropHighlightRow?.Classes.Remove("drop-target")
+                _dropHighlightRow = targetRow
+                _dropHighlightRow?.Classes.Add("drop-target")
+            End If
+            SetDropHighlightCard(If(allowed AndAlso _customDropFolder IsNot Nothing, card, Nothing), allowed)
+
+            If Not allowed Then
+                canvas.IsVisible = False
+                Return
+            End If
+            Dim maxLeft = Math.Max(4, canvas.Bounds.Width - badge.Width - 4)
+            Dim maxTop = Math.Max(4, canvas.Bounds.Height - badge.Height - 4)
+            Canvas.SetLeft(badge, Math.Min(Math.Max(4, point.X + 18), maxLeft))
+            Canvas.SetTop(badge, Math.Min(Math.Max(4, point.Y + 18), maxTop))
+            canvas.IsVisible = True
+        End Sub
+
+        Private Async Function FinishCustomInternalDragAsync(pointer As IPointer,
+                                                              Optional drop As Boolean = True) As Task
+            If Not _customInternalDragActive Then Return
+            Dim targetFolder = _customDropFolder
+            Dim targetNode = _customDropNode
+            Dim paths = If(_customDragPaths, New List(Of String)()).ToList()
+            _customInternalDragActive = False
+            _customDragPaths = Nothing
+            _customDropFolder = Nothing
+            _customDropNode = Nothing
+            _isDragging = False
+            pointer?.Capture(Nothing)
+            DragTrace.Finish(If(drop, "interner Drop", "Geste abgebrochen"))
+            DragPayloadCache.EndDrag()
+            ClearDropHighlight()
+            If Not drop OrElse paths.Count = 0 Then Return
+
+            If targetFolder IsNot Nothing Then
+                Await ApplyDropAsync((paths, True), targetFolder)
+            ElseIf targetNode IsNot Nothing Then
+                Await ApplyInternalVirtualDropAsync(targetNode, paths)
+            End If
+        End Function
+
+        Private Async Function ApplyInternalVirtualDropAsync(node As VirtualNavigationNode,
+                                                              paths As List(Of String)) As Task
+            Dim vm = GetVm()
+            If vm Is Nothing OrElse node Is Nothing OrElse node.IsTrashNode Then Return
+            Dim remotePaths = paths.Where(Function(path) If(node.IsImmichNode,
+                ImmichService.IsImmichPseudoPath(path),
+                node.IsNextcloudNode AndAlso NextcloudService.IsNextcloudPseudoPath(path))).ToList()
+            If remotePaths.Count > 0 Then Await vm.AddRemotePathsToAlbumAsync(node, remotePaths)
+
+            Dim localPaths = paths.Where(Function(path) Not ImmichService.IsImmichPseudoPath(path) AndAlso
+                                                               Not NextcloudService.IsNextcloudPseudoPath(path) AndAlso
+                                                               IO.File.Exists(path)).ToList()
+            If localPaths.Count = 0 Then Return
+            If node.IsImmichNode Then
+                vm.UploadToImmich(node, localPaths)
+            ElseIf node.IsNextcloudNode Then
+                vm.UploadToNextcloud(node, localPaths)
+            End If
+        End Function
+
+        Public Async Sub OnGlobalPointerReleased(sender As Object, e As PointerReleasedEventArgs)
+            If _customInternalDragActive AndAlso e.InitialPressMouseButton = MouseButton.Left Then
+                e.Handled = True
+                Await FinishCustomInternalDragAsync(e.Pointer)
+                Return
+            End If
             If e.InitialPressMouseButton = MouseButton.Middle Then HideQuickPreview()
         End Sub
 
@@ -2725,7 +2830,6 @@ Namespace Views
 
         Public Sub OnFolderTreeDragOver(sender As Object, e As DragEventArgs)
             Dim target = GetDropFolder(e)
-            DragTrace.Over(If(target?.Name, "kein Ordner"))
             Dim payload = GetDragPayload(e)
             ' Wie im Serverbaum: liest sich die Last waehrend der Bewegung leer (X11 reicht sie erst
             ' beim Ablegen heraus), entscheidet der ZIELORDNER. Sonst stuende ueber jedem Ordner das
@@ -2735,7 +2839,9 @@ Namespace Views
             Else
                 e.DragEffects = GetDropEffects(payload, target?.FullPath)
             End If
+            DragTrace.Over($"{If(target?.Name, "kein Ordner")} effekt={e.DragEffects}")
             HighlightDropRow(e, e.DragEffects <> DragDropEffects.None)
+            UpdateInternalDropFeedback(e, e.DragEffects <> DragDropEffects.None)
             e.Handled = True
         End Sub
 
@@ -2745,6 +2851,7 @@ Namespace Views
         ''' Satz), der Zeiger zeigte trotzdem durchgehend "verboten", auch mit AllowDrop direkt am
         ''' getroffenen Element. Diese Rueckmeldung liegt dafuer vollstaendig in unserer Hand.</summary>
         Private _dropHighlightRow As Control
+        Private _dropHighlightCard As Border
 
         Private Sub HighlightDropRow(e As DragEventArgs, erlaubt As Boolean)
             ' Die Zeile kommt aus DERSELBEN Suche wie der Knoten (siehe ResolveDropSource) und wird
@@ -2761,6 +2868,28 @@ Namespace Views
         Private Sub ClearDropHighlight()
             _dropHighlightRow?.Classes.Remove("drop-target")
             _dropHighlightRow = Nothing
+            _dropHighlightCard?.Classes.Remove("drop-target")
+            _dropHighlightCard = Nothing
+            If _internalDropFeedbackCanvas IsNot Nothing Then _internalDropFeedbackCanvas.IsVisible = False
+        End Sub
+
+        Private Sub UpdateInternalDropFeedback(e As DragEventArgs, allowed As Boolean)
+            If Not allowed OrElse Not DragPayloadCache.IsDragging Then
+                If _internalDropFeedbackCanvas IsNot Nothing Then _internalDropFeedbackCanvas.IsVisible = False
+                Return
+            End If
+            If _internalDropFeedbackCanvas Is Nothing Then
+                _internalDropFeedbackCanvas = Me.FindControl(Of Canvas)("InternalDropFeedbackCanvas")
+                _internalDropFeedbackBadge = Me.FindControl(Of Border)("InternalDropFeedbackBadge")
+            End If
+            If _internalDropFeedbackCanvas Is Nothing OrElse _internalDropFeedbackBadge Is Nothing Then Return
+
+            Dim point = e.GetPosition(_internalDropFeedbackCanvas)
+            Dim maxLeft = Math.Max(4, _internalDropFeedbackCanvas.Bounds.Width - _internalDropFeedbackBadge.Width - 4)
+            Dim maxTop = Math.Max(4, _internalDropFeedbackCanvas.Bounds.Height - _internalDropFeedbackBadge.Height - 4)
+            Canvas.SetLeft(_internalDropFeedbackBadge, Math.Min(Math.Max(4, point.X + 18), maxLeft))
+            Canvas.SetTop(_internalDropFeedbackBadge, Math.Min(Math.Max(4, point.Y + 18), maxTop))
+            _internalDropFeedbackCanvas.IsVisible = True
         End Sub
 
         Public Sub OnTreeDragLeave(sender As Object, e As RoutedEventArgs)
@@ -2782,15 +2911,26 @@ Namespace Views
         End Sub
 
         Public Sub OnItemDragOver(sender As Object, e As DragEventArgs)
-            Dim item = TryCast(TryCast(sender, Border)?.DataContext, ImageItem)
-            DragTrace.Over("Kachel")
+            Dim card = TryCast(sender, Border)
+            Dim item = TryCast(card?.DataContext, ImageItem)
             Dim targetFolder = If(item IsNot Nothing AndAlso item.IsFolder, item.FilePath, Nothing)
-            e.DragEffects = GetDropEffects(GetDragPayload(e), targetFolder)
+            Dim payload = GetDragPayload(e)
+            e.DragEffects = GetDropEffects(payload, targetFolder)
+            DragTrace.Over($"Kachel ordner={item IsNot Nothing AndAlso item.IsFolder} effekt={e.DragEffects}")
+            SetDropHighlightCard(card, e.DragEffects <> DragDropEffects.None AndAlso Not String.IsNullOrEmpty(targetFolder))
+            UpdateInternalDropFeedback(e, e.DragEffects <> DragDropEffects.None)
             e.Handled = True
+        End Sub
+
+        Public Sub OnItemDragLeave(sender As Object, e As RoutedEventArgs)
+            SetDropHighlightCard(Nothing, False)
+            UpdateInternalDropFeedback(Nothing, False)
         End Sub
 
         Public Async Sub OnItemDrop(sender As Object, e As DragEventArgs)
             Try
+                SetDropHighlightCard(Nothing, False)
+                UpdateInternalDropFeedback(e, False)
                 Dim item = TryCast(TryCast(sender, Border)?.DataContext, ImageItem)
                 If item Is Nothing OrElse Not item.IsFolder Then Return
                 Await ApplyDropAsync(GetDragPayload(e), item.FilePath)
@@ -2802,10 +2942,17 @@ Namespace Views
             End Try
         End Sub
 
+        Private Sub SetDropHighlightCard(card As Border, allowed As Boolean)
+            Dim target = If(allowed, card, Nothing)
+            If Object.ReferenceEquals(target, _dropHighlightCard) Then Return
+            _dropHighlightCard?.Classes.Remove("drop-target")
+            _dropHighlightCard = target
+            _dropHighlightCard?.Classes.Add("drop-target")
+        End Sub
+
         ''' Ablegen auf der freien Fläche der Galerie: fremde Dateien landen im gerade angezeigten Ordner.
         ''' Für eine Ziehgeste aus der Galerie selbst ergibt das nichts - die Dateien liegen schon dort.
         Public Sub OnGalleryAreaDragOver(sender As Object, e As DragEventArgs)
-            DragTrace.Over("Galeriefläche")
             Dim payload = GetDragPayload(e)
             Dim vm = GetVm()
             ' Steht gerade eine Immich-Ansicht (Album oder „Alle Fotos") offen, landen fremde Dateien
@@ -2818,6 +2965,8 @@ Namespace Views
             Else
                 e.DragEffects = GetDropEffects(payload, vm?.CurrentFolder)
             End If
+            DragTrace.Over($"Galeriefläche effekt={e.DragEffects}")
+            UpdateInternalDropFeedback(e, e.DragEffects <> DragDropEffects.None)
             e.Handled = True
         End Sub
 
@@ -2855,7 +3004,9 @@ Namespace Views
         Private Function GetDropFolder(e As DragEventArgs) As FolderNode
             Dim current = TryCast(e.Source, Control)
             Dim depth = 0
+            Dim visited As New HashSet(Of Control)()
             While current IsNot Nothing
+                If Not visited.Add(current) Then Exit While
                 Dim node = TryCast(current.DataContext, FolderNode)
                 If node IsNot Nothing Then Return node
                 ' Dieselbe harte Grenze wie in ResolveDropSource: die Mischung aus logischer und
@@ -2865,12 +3016,22 @@ Namespace Views
                     DiagnosticLogService.LogAlways("Drag", "Ordner-Elternpfad tiefer als 64 Stufen - abgebrochen (Ring?)")
                     Exit While
                 End If
-                Dim logicalParent = TryCast(current.Parent, Control)
-                Dim nextParent = If(logicalParent, current.GetVisualParent(Of Control)())
-                If Object.ReferenceEquals(nextParent, current) Then Exit While
+                Dim nextParent = NextDropParent(current, visited)
+                If nextParent Is Nothing Then Exit While
                 current = nextParent
             End While
             Return GetVm()?.SelectedFolderNode
+        End Function
+
+        ''' <summary>Logical and visual parents can point back to one another for realized tree
+        ''' template content. Follow whichever edge has not been visited so the walk still reaches
+        ''' the TreeViewItem instead of exhausting its depth limit in a loop.</summary>
+        Private Shared Function NextDropParent(current As Control, visited As HashSet(Of Control)) As Control
+            Dim logicalParent = TryCast(current.Parent, Control)
+            If logicalParent IsNot Nothing AndAlso Not visited.Contains(logicalParent) Then Return logicalParent
+            Dim visualParent = current.GetVisualParent(Of Control)()
+            If visualParent IsNot Nothing AndAlso Not visited.Contains(visualParent) Then Return visualParent
+            Return Nothing
         End Function
 
         ''' Die Ziehlast kommt entweder aus der Galerie selbst (dann verschieben wir) oder aus einem fremden

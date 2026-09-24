@@ -1499,6 +1499,15 @@
         <Setter Property="BorderBrush" Value="{DynamicResource FP.Accent}"/>
         <Setter Property="BorderThickness" Value="2"/>
     </Style>
+    <!-- Eigene Drop-Rueckmeldung fuer Ordnerkacheln. Nur Farben aendern: eine andere
+         Rahmenstaerke wuerde das Kachel-Layout waehrend des Ziehens neu vermessen. -->
+    <Style Selector="Border.thumb-card.drop-target">
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Accent}"/>
+        <Setter Property="Background" Value="{DynamicResource FP.Accent.Dim}"/>
+    </Style>
+    <Style Selector="Border.thumb-card.drop-target:pointerover">
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Accent}"/>
+    </Style>
     <Style Selector="StackPanel.gallery-hover-actions">
         <Setter Property="Opacity" Value="0"/>
         <Setter Property="IsHitTestVisible" Value="False"/>
