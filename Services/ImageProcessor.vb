@@ -1758,7 +1758,14 @@ Namespace Services
             Dim shadowPad = If(renderAnnotation.ShadowEnabled, objSize * Clamp(renderAnnotation.ShadowBlur, 0, 100) / 100.0F * ShadowBlurSigmaFactor * 3.0F + shadowGrow, 0.0F)
             Dim offsetX = If(renderAnnotation.ShadowEnabled, objSize * renderAnnotation.ShadowOffsetXPercent / 100.0F, 0.0F)
             Dim offsetY = If(renderAnnotation.ShadowEnabled, objSize * renderAnnotation.ShadowOffsetYPercent / 100.0F, 0.0F)
-            Dim effectPad = Math.Max(glowPad, shadowPad)
+            ' Die Kontur wird mittig auf der Objektkante gezeichnet und ragt daher um ihre halbe
+            ' Breite aus dem Rechteck. Dieser Rand gehoert auch ohne Schatten/Gluehen in das
+            ' Overlay: das selektierte Objekt kommt aus dieser Bitmap, waehrend die Auswahlbox
+            ' nur seine eigentliche Objektgroesse beschreibt. Ohne den Rand schnitt eine dicke
+            ' Kontur an der Bitmapkante ab; ein aktivierter Schatten verdeckte den Fehler nur,
+            ' weil sein Effekt-Rand zufaellig gross genug war.
+            Dim strokePad = Math.Max(0.0F, renderAnnotation.StrokeWidth) / 2.0F
+            Dim effectPad = Math.Max(strokePad, Math.Max(glowPad, shadowPad))
             If Not String.IsNullOrWhiteSpace(renderAnnotation.TextPathKind) Then
                 effectPad = Math.Max(effectPad, renderAnnotation.FontSizePixels * ComputeTextPathFitRatio(renderAnnotation) * 1.2F)
             End If
