@@ -387,7 +387,7 @@ Namespace ViewModels
             If displayWidth <= 0 OrElse displayHeight <= 0 Then Return Nothing
             Dim buffer As SKBitmap = Nothing
             Try
-                Using decoded = SKBitmap.Decode(sourcePath)
+                Using decoded = ObjectImageMemory.DecodeOrCopy(sourcePath)
                     If decoded Is Nothing OrElse decoded.Width <= 0 OrElse decoded.Height <= 0 Then Return Nothing
                     buffer = New SKBitmap(bufferWidth, bufferHeight, SKColorType.Bgra8888, SKAlphaType.Premul)
                     Using canvas = New SKCanvas(buffer)
@@ -516,7 +516,7 @@ Namespace ViewModels
                                                          spots As List(Of RetouchSpot),
                                                          imageWidth As Integer, imageHeight As Integer,
                                                          lockTransparent As Boolean) As Boolean
-            Using decoded = SKBitmap.Decode(sourcePath)
+            Using decoded = ObjectImageMemory.DecodeOrCopy(sourcePath)
                 If decoded Is Nothing OrElse decoded.Width <= 0 OrElse decoded.Height <= 0 Then Return False
                 Using copy = New SKBitmap(decoded.Width, decoded.Height, SKColorType.Bgra8888, SKAlphaType.Premul)
                     Using canvas = New SKCanvas(copy)
@@ -640,7 +640,7 @@ Namespace ViewModels
                                                             lockTransparent As Boolean,
                                                             cancel As Threading.CancellationToken) As Boolean
             If coverage Is Nothing Then Return False
-            Using decoded = SKBitmap.Decode(sourcePath)
+            Using decoded = ObjectImageMemory.DecodeOrCopy(sourcePath)
                 If decoded Is Nothing OrElse decoded.Width <= 0 OrElse decoded.Height <= 0 Then Return False
                 Dim clamped = ClampRectToBitmap(region, decoded.Width, decoded.Height)
                 If clamped.Width <= 0 OrElse clamped.Height <= 0 Then Return False

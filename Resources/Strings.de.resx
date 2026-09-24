@@ -8707,4 +8707,100 @@
   <data name="Clipping_Warnung_ein_aus_in_den_Werkzeugen_mit_R_4cef1555" xml:space="preserve">
     <value>Clipping-Warnung ein/aus, in den Werkzeugen mit Reglern</value>
   </data>
+  <data name="Stiftdruck_steuert_die_Pinselgr_e_e52788ad" xml:space="preserve">
+    <value>Stiftdruck steuert die Pinselgröße</value>
+  </data>
+  <data name="Leichter_Druck_malt_schmaler_voller_Druck_in_der_428c9511" xml:space="preserve">
+    <value>Leichter Druck malt schmaler, voller Druck in der eingestellten Größe. Gilt für Pinsel, Radierer und Maskenpinsel, und nur mit einem Stift; die Maus malt immer in voller Größe.</value>
+  </data>
+  <data name="Gl_tten_d9301a0e" xml:space="preserve">
+    <value>Glätten</value>
+  </data>
+  <data name="Zieht_den_Strich_ruhiger_hinter_dem_Zeiger_her_u_93109ffc" xml:space="preserve">
+    <value>Zieht den Strich ruhiger hinter dem Zeiger her und nimmt kleine Zitterer heraus. 0 folgt dem Zeiger genau</value>
+  </data>
+  <data name="Eine_Maske_aus_mehreren_Bestandteilen_l_sst_sich_32c0b252" xml:space="preserve">
+    <value>Eine Maske aus mehreren Bestandteilen lässt sich so nicht verändern</value>
+  </data>
+  <data name="Auswahl_vergr_ert_6f2e0332" xml:space="preserve">
+    <value>Auswahl vergrößert</value>
+  </data>
+  <data name="Auswahl_verkleinert_f56a0eb6" xml:space="preserve">
+    <value>Auswahl verkleinert</value>
+  </data>
+  <data name="Auswahl_gegl_ttet_3b7e67b2" xml:space="preserve">
+    <value>Auswahl geglättet</value>
+  </data>
+  <data name="Auswahlrand_gebildet_1c1ccfb0" xml:space="preserve">
+    <value>Auswahlrand gebildet</value>
+  </data>
+  <data name="Ver_ndern_um_259e91a8" xml:space="preserve">
+    <value>Verändern um</value>
+  </data>
+  <data name="Um_wie_viele_Bildpunkte_die_vier_Kn_pfe_darunter_f3f8fd19" xml:space="preserve">
+    <value>Um wie viele Bildpunkte die vier Knöpfe darunter die Auswahl verändern</value>
+  </data>
+  <data name="Die_Auswahl_rundherum_um_den_Betrag_vergr_ern_610649f0" xml:space="preserve">
+    <value>Die Auswahl rundherum um den Betrag vergrößern</value>
+  </data>
+  <data name="Die_Auswahl_rundherum_um_den_Betrag_verkleinern__037b2032" xml:space="preserve">
+    <value>Die Auswahl rundherum um den Betrag verkleinern; am Bildrand bleibt sie stehen</value>
+  </data>
+  <data name="Zacken_und_kleine_L_cher_bis_zur_Gr_e_des_Betrag_807c2320" xml:space="preserve">
+    <value>Zacken und kleine Löcher bis zur Größe des Betrags entfernen und Ecken runden</value>
+  </data>
+  <data name="Aus_der_Auswahl_ein_Band_entlang_ihrer_Kante_mac_571757ef" xml:space="preserve">
+    <value>Aus der Auswahl ein Band entlang ihrer Kante machen, so breit wie der Betrag</value>
+  </data>
+  <data name="Rote_Augen_lassen_sich_nur_im_Foto_entfernen_nic_5f247714" xml:space="preserve">
+    <value>Rote Augen lassen sich nur im Foto entfernen, nicht auf einer Ebene</value>
+  </data>
+  <data name="Im_Pinselkreis_ist_kein_rotes_Auge_zu_finden_5f4498d8" xml:space="preserve">
+    <value>Im Pinselkreis ist kein rotes Auge zu finden</value>
+  </data>
+  <data name="Rote_Augen_entfernt_a3907783" xml:space="preserve">
+    <value>Rote Augen entfernt</value>
+  </data>
+  <data name="Rote_Augen_entfernen_fehlgeschlagen_2f91768f" xml:space="preserve">
+    <value>Rote Augen entfernen fehlgeschlagen</value>
+  </data>
+  <data name="Solange_eingeschaltet_entfernt_jeder_Klick_ins_B_cc00c082" xml:space="preserve">
+    <value>Solange eingeschaltet, entfernt jeder Klick ins Bild rote Augen im Pinselkreis</value>
+  </data>
+  <data name="Rote_Augen_entfernen_ed756d76" xml:space="preserve">
+    <value>Rote Augen entfernen</value>
+  </data>
+  <data name="Mit_dem_Pinselkreis_auf_die_Pupille_klicken_Er_s_f5b54aec" xml:space="preserve">
+    <value>Mit dem Pinselkreis auf die Pupille klicken. Er sollte das Rot ganz umfassen, aber nicht viel mehr: stark gerötete Haut im Kreis würde mit entfärbt.</value>
+  </data>
+  <data name="Erweitern_ee9937c7" xml:space="preserve">
+    <value>Erweitern</value>
+  </data>
+  <data name="Reduzieren_a9eb23c0" xml:space="preserve">
+    <value>Reduzieren</value>
+  </data>
+  <data name="Text_einf_gen_dea18d16" xml:space="preserve">
+    <value>Text einfügen</value>
+  </data>
+  <data name="QR_Code_einf_gen_f880f8d5" xml:space="preserve">
+    <value>QR-Code einfügen</value>
+  </data>
+  <data name="Ein_neues_Textobjekt_in_die_Bildmitte_setzen_ohn_47312e5f" xml:space="preserve">
+    <value>Ein neues Textobjekt in die Bildmitte setzen, ohne ins Bild zu klicken</value>
+  </data>
+  <data name="Einen_neuen_QR_Code_in_die_Bildmitte_setzen_ohne_13db2d8f" xml:space="preserve">
+    <value>Einen neuen QR-Code in die Bildmitte setzen, ohne ins Bild zu klicken</value>
+  </data>
+  <data name="Form_einf_gen_d0e821e1" xml:space="preserve">
+    <value>Form einfügen</value>
+  </data>
+  <data name="Symbol_einf_gen_d2d7d51d" xml:space="preserve">
+    <value>Symbol einfügen</value>
+  </data>
+  <data name="Die_gew_hlte_Form_in_die_Bildmitte_setzen_ohne_i_982c9c62" xml:space="preserve">
+    <value>Die gewählte Form in die Bildmitte setzen, ohne ins Bild zu klicken</value>
+  </data>
+  <data name="Das_gew_hlte_Symbol_in_die_Bildmitte_setzen_ohne_707d5a38" xml:space="preserve">
+    <value>Das gewählte Symbol in die Bildmitte setzen, ohne ins Bild zu klicken</value>
+  </data>
 </root>

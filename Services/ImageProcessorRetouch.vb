@@ -2196,6 +2196,70 @@ Namespace Services
             Return New SKColor(CByte(sr \ count), CByte(sg \ count), CByte(sb \ count), CByte(sa \ count))
         End Function
 
+        ''' <summary>ROTE AUGEN im Kreis um (<paramref name="cx"/>, <paramref name="cy"/>) mit
+        ''' <paramref name="radius"/>, in Bildpunkten der Bitmap. Rückgabe: wie viele Bildpunkte
+        ''' geändert wurden.
+        '''
+        ''' Als rot gilt ein Punkt, dessen Rot deutlich über dem Mittel aus Grün und Blau liegt
+        ''' (Verhältnis ab 1,5) und der hell genug ist, dass es ein Blitzreflex sein kann. Sein Rot
+        ''' wird auf dieses Mittel gesenkt; Grün und Blau bleiben. Übrig bleibt die Helligkeit der
+        ''' Pupille ohne ihre Farbe - dunkel, wie sie ohne Blitz wäre, und der weiße Glanzpunkt, der
+        ''' kein Rot trägt, bleibt stehen.
+        '''
+        ''' Zwei Übergänge verhindern eine harte Kante: die Wirkung steigt mit der Röte an (von 1,5
+        ''' bis 2,4), und sie läuft im äußeren Fünftel des Kreises aus. Haut rund ums Auge ist zwar
+        ''' rötlich, liegt aber unter der Schwelle und wird nicht angefasst.
+        '''
+        ''' Premultipliziert oder nicht, ist hier gleich: Rot wird auf das Mittel zweier Kanäle
+        ''' desselben Punktes gesetzt, und das skaliert mit Alpha genauso wie sie.</summary>
+        Public Shared Function RemoveRedEyeInPlace(bitmap As SKBitmap, cx As Single, cy As Single, radius As Single,
+                                                   Optional countOnly As Boolean = False) As Integer
+            If bitmap Is Nothing OrElse radius < 1.0F Then Return 0
+            Dim ct = bitmap.ColorType
+            If ct <> SKColorType.Bgra8888 AndAlso ct <> SKColorType.Rgba8888 Then Return 0
+            Dim ri = If(ct = SKColorType.Bgra8888, 2, 0)
+            Dim bi = If(ct = SKColorType.Bgra8888, 0, 2)
+            Dim left = Math.Max(0, CInt(Math.Floor(cx - radius)))
+            Dim top = Math.Max(0, CInt(Math.Floor(cy - radius)))
+            Dim right = Math.Min(bitmap.Width - 1, CInt(Math.Ceiling(cx + radius)))
+            Dim bottom = Math.Min(bitmap.Height - 1, CInt(Math.Ceiling(cy + radius)))
+            If right < left OrElse bottom < top Then Return 0
+
+            Dim changed = 0
+            Dim rowBytes = bitmap.RowBytes
+            Dim row(rowBytes - 1) As Byte
+            Dim pixels = bitmap.GetPixels()
+            Dim fadeStart = radius * 0.8F
+            For y As Integer = top To bottom
+                Dim rowPtr = IntPtr.Add(pixels, y * rowBytes)
+                Marshal.Copy(rowPtr, row, 0, rowBytes)
+                Dim rowChanged = False
+                For x As Integer = left To right
+                    Dim dx = x + 0.5F - cx, dy = y + 0.5F - cy
+                    Dim distance = CSng(Math.Sqrt(dx * dx + dy * dy))
+                    If distance > radius Then Continue For
+                    Dim o = x * 4
+                    Dim r = CInt(row(o + ri)), g = CInt(row(o + 1)), b = CInt(row(o + bi))
+                    If r < 50 Then Continue For
+                    Dim greenBlue = (g + b) / 2.0
+                    Dim ratio = r / Math.Max(1.0, greenBlue)
+                    If ratio < 1.5 Then Continue For
+                    Dim weight = Math.Min(1.0, (ratio - 1.5) / 0.9)
+                    If distance > fadeStart Then weight *= Math.Max(0.0, (radius - distance) / (radius - fadeStart))
+                    If weight <= 0.0 Then Continue For
+                    Dim newRed = CInt(Math.Round(r + (greenBlue - r) * weight))
+                    If newRed = r Then Continue For
+                    changed += 1
+                    ' Nur zählen: die Vorprüfung, ob im Kreis überhaupt etwas Rotes liegt.
+                    If countOnly Then Continue For
+                    row(o + ri) = CByte(Math.Max(0, Math.Min(255, newRed)))
+                    rowChanged = True
+                Next
+                If rowChanged Then Marshal.Copy(row, 0, rowPtr, rowBytes)
+            Next
+            Return changed
+        End Function
+
     End Class
 
 End Namespace

@@ -954,7 +954,7 @@ Namespace Views
                 ' geschieht das staendig: der Reglerbereich sperrt sich, solange gerechnet wird,
                 ' Panels wechseln mit dem Werkzeug, Aufklappmenues schliessen nach dem Klick. Ab
                 ' dann ging jede Taste nur noch an das Fenster, und die Kuerzel der Ansicht - J,
-                ' ESC, Z, F - waren tot, bis man irgendwo hinklickte (Nutzerbefund 2026-09-24).
+                ' ESC, Z, F - waren tot, bis man irgendwo hinklickte (Nutzerbefund).
                 ' Weitergereicht wird ueber RaiseEvent an der Ansicht: der Weg fuehrt wieder
                 ' durch diesen Tunnel, jetzt mit Fokus, und alles Weitere hier gilt wie sonst.
                 If FocusManager?.GetFocusedElement() Is Nothing AndAlso e.Source Is Me Then

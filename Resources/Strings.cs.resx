@@ -8729,4 +8729,100 @@
   <data name="Clipping_Warnung_ein_aus_in_den_Werkzeugen_mit_R_4cef1555" xml:space="preserve">
     <value>Zapnout nebo vypnout upozornění na ořez, v nástrojích s posuvníky</value>
   </data>
+  <data name="Stiftdruck_steuert_die_Pinselgr_e_e52788ad" xml:space="preserve">
+    <value>Přítlak pera řídí velikost štětce</value>
+  </data>
+  <data name="Leichter_Druck_malt_schmaler_voller_Druck_in_der_428c9511" xml:space="preserve">
+    <value>Slabý přítlak maluje tenčeji, plný přítlak v nastavené velikosti. Platí pro štětec, gumu a štětec masky, a jen s perem; myš maluje vždy v plné velikosti.</value>
+  </data>
+  <data name="Gl_tten_d9301a0e" xml:space="preserve">
+    <value>Vyhlazení</value>
+  </data>
+  <data name="Zieht_den_Strich_ruhiger_hinter_dem_Zeiger_her_u_93109ffc" xml:space="preserve">
+    <value>Táhne tah klidněji za ukazatelem a odstraňuje drobné třesy. 0 sleduje ukazatel přesně</value>
+  </data>
+  <data name="Eine_Maske_aus_mehreren_Bestandteilen_l_sst_sich_32c0b252" xml:space="preserve">
+    <value>Masku složenou z více částí nelze takto změnit</value>
+  </data>
+  <data name="Auswahl_vergr_ert_6f2e0332" xml:space="preserve">
+    <value>Výběr rozšířen</value>
+  </data>
+  <data name="Auswahl_verkleinert_f56a0eb6" xml:space="preserve">
+    <value>Výběr zmenšen</value>
+  </data>
+  <data name="Auswahl_gegl_ttet_3b7e67b2" xml:space="preserve">
+    <value>Výběr vyhlazen</value>
+  </data>
+  <data name="Auswahlrand_gebildet_1c1ccfb0" xml:space="preserve">
+    <value>Vytvořen okraj výběru</value>
+  </data>
+  <data name="Ver_ndern_um_259e91a8" xml:space="preserve">
+    <value>Změnit o</value>
+  </data>
+  <data name="Um_wie_viele_Bildpunkte_die_vier_Kn_pfe_darunter_f3f8fd19" xml:space="preserve">
+    <value>O kolik pixelů čtyři tlačítka níže změní výběr</value>
+  </data>
+  <data name="Die_Auswahl_rundherum_um_den_Betrag_vergr_ern_610649f0" xml:space="preserve">
+    <value>Rozšířit výběr po celém obvodu o zadanou hodnotu</value>
+  </data>
+  <data name="Die_Auswahl_rundherum_um_den_Betrag_verkleinern__037b2032" xml:space="preserve">
+    <value>Zmenšit výběr po celém obvodu o zadanou hodnotu; u okraje obrázku zůstane na místě</value>
+  </data>
+  <data name="Zacken_und_kleine_L_cher_bis_zur_Gr_e_des_Betrag_807c2320" xml:space="preserve">
+    <value>Odstranit zuby a malé díry do velikosti hodnoty a zaoblit rohy</value>
+  </data>
+  <data name="Aus_der_Auswahl_ein_Band_entlang_ihrer_Kante_mac_571757ef" xml:space="preserve">
+    <value>Udělat z výběru pás podél jeho okraje, široký jako zadaná hodnota</value>
+  </data>
+  <data name="Rote_Augen_lassen_sich_nur_im_Foto_entfernen_nic_5f247714" xml:space="preserve">
+    <value>Červené oči lze odstranit jen ve fotce, ne na vrstvě</value>
+  </data>
+  <data name="Im_Pinselkreis_ist_kein_rotes_Auge_zu_finden_5f4498d8" xml:space="preserve">
+    <value>V kruhu štětce není žádné červené oko</value>
+  </data>
+  <data name="Rote_Augen_entfernt_a3907783" xml:space="preserve">
+    <value>Červené oči odstraněny</value>
+  </data>
+  <data name="Rote_Augen_entfernen_fehlgeschlagen_2f91768f" xml:space="preserve">
+    <value>Odstranění červených očí selhalo</value>
+  </data>
+  <data name="Solange_eingeschaltet_entfernt_jeder_Klick_ins_B_cc00c082" xml:space="preserve">
+    <value>Dokud je zapnuto, každé kliknutí do obrázku odstraní červené oči v kruhu štětce</value>
+  </data>
+  <data name="Rote_Augen_entfernen_ed756d76" xml:space="preserve">
+    <value>Odstranit červené oči</value>
+  </data>
+  <data name="Mit_dem_Pinselkreis_auf_die_Pupille_klicken_Er_s_f5b54aec" xml:space="preserve">
+    <value>Klikněte kruhem štětce na zorničku. Měl by obsáhnout celé červené místo, ale ne o moc víc: silně zarudlá kůže v kruhu by také ztratila barvu.</value>
+  </data>
+  <data name="Erweitern_ee9937c7" xml:space="preserve">
+    <value>Rozšířit</value>
+  </data>
+  <data name="Reduzieren_a9eb23c0" xml:space="preserve">
+    <value>Zmenšit</value>
+  </data>
+  <data name="Text_einf_gen_dea18d16" xml:space="preserve">
+    <value>Vložit text</value>
+  </data>
+  <data name="QR_Code_einf_gen_f880f8d5" xml:space="preserve">
+    <value>Vložit QR kód</value>
+  </data>
+  <data name="Ein_neues_Textobjekt_in_die_Bildmitte_setzen_ohn_47312e5f" xml:space="preserve">
+    <value>Umístit nový textový objekt doprostřed obrázku bez kliknutí do obrázku</value>
+  </data>
+  <data name="Einen_neuen_QR_Code_in_die_Bildmitte_setzen_ohne_13db2d8f" xml:space="preserve">
+    <value>Umístit nový QR kód doprostřed obrázku bez kliknutí do obrázku</value>
+  </data>
+  <data name="Form_einf_gen_d0e821e1" xml:space="preserve">
+    <value>Vložit tvar</value>
+  </data>
+  <data name="Symbol_einf_gen_d2d7d51d" xml:space="preserve">
+    <value>Vložit symbol</value>
+  </data>
+  <data name="Die_gew_hlte_Form_in_die_Bildmitte_setzen_ohne_i_982c9c62" xml:space="preserve">
+    <value>Umístit zvolený tvar doprostřed obrázku bez kliknutí do obrázku</value>
+  </data>
+  <data name="Das_gew_hlte_Symbol_in_die_Bildmitte_setzen_ohne_707d5a38" xml:space="preserve">
+    <value>Umístit zvolený symbol doprostřed obrázku bez kliknutí do obrázku</value>
+  </data>
 </root>

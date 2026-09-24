@@ -2648,6 +2648,8 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(IsBrushPaintMode))
                 Me.RaisePropertyChanged(NameOf(IsEraserPaintMode))
                 Me.RaisePropertyChanged(NameOf(SelectedPaintMode))
+                ' Ob ein Pinselstrich markiert ist, entscheidet, woher die Pinselfarbe kommt.
+                RaiseBrushColorChanged()
                 Me.RaisePropertyChanged(NameOf(SelectedAnnotationText))
             Me.RaisePropertyChanged(NameOf(ShowAnnotationAspectLock))
                 Me.RaisePropertyChanged(NameOf(ShowAnnotationProperties))
@@ -3592,6 +3594,100 @@ Namespace ViewModels
         End Function
 
         Private _pendingInsertKind As String = ""
+        Private _armedInsertKind As String = ""
+
+        ''' <summary>DIE BEIM WERKZEUG GEWÄHLTE OBJEKTART ("Text", "QR" ...), getrennt von
+        ''' <see cref="PendingInsertKind"/>. Die zieht eine Markierung auf die Art der markierten
+        ''' Ebene nach; ein Klick ins Bild, der eine Ebene trifft (etwa das bildfüllende Ergebnis
+        ''' des Zusammenlegens), nahm dem Werkzeug damit seine Art. Diese hier bleibt, bis das
+        ''' Werkzeug gewechselt wird, und an ihr hängen die Knöpfe "Text einfügen" und "QR-Code
+        ''' einfügen".</summary>
+        Public Property ArmedInsertKind As String
+            Get
+                Return _armedInsertKind
+            End Get
+            Private Set(value As String)
+                Dim v = If(value, "")
+                If v = _armedInsertKind Then Return
+                _armedInsertKind = v
+                Me.RaisePropertyChanged(NameOf(ArmedInsertKind))
+                Me.RaisePropertyChanged(NameOf(ShowInsertTextButton))
+                Me.RaisePropertyChanged(NameOf(ShowInsertQrButton))
+                Me.RaisePropertyChanged(NameOf(ShowInsertShapeButton))
+                Me.RaisePropertyChanged(NameOf(ShowInsertSymbolButton))
+            End Set
+        End Property
+
+        ''' <summary>Die Werkzeuge, in denen eine gewählte Objektart gilt: Text (Text, QR-Code,
+        ''' Bild, Wasserzeichen), Einfügen und Formen (Formen und Symbole).</summary>
+        Private Shared Function IsArmedInsertTool(tool As EditorTool) As Boolean
+            Return tool = EditorTool.Text OrElse tool = EditorTool.Insert OrElse tool = EditorTool.Geometry
+        End Function
+
+        Private ReadOnly Property ArmedInsertKindNormalized As String
+            Get
+                If Not IsArmedInsertTool(_currentTool) Then Return ""
+                Return NormalizeAnnotationKind(_armedInsertKind)
+            End Get
+        End Property
+
+        Public ReadOnly Property ShowInsertTextButton As Boolean
+            Get
+                Return ArmedInsertKindNormalized = "Text"
+            End Get
+        End Property
+
+        Public ReadOnly Property ShowInsertQrButton As Boolean
+            Get
+                Return ArmedInsertKindNormalized = "QR"
+            End Get
+        End Property
+
+        ''' <summary>Eine Form aus der Formenliste. Bild und Wasserzeichen haben eigene Wege (Datei
+        ''' wählen bzw. Vorlage), Text, QR-Code und Symbol eigene Knöpfe.</summary>
+        Public ReadOnly Property ShowInsertShapeButton As Boolean
+            Get
+                Select Case ArmedInsertKindNormalized
+                    Case "", "Text", "QR", "Image", "Watermark", "Symbol", "Svg", "SelectionImage", "SelectionFill"
+                        Return False
+                    Case Else
+                        Return True
+                End Select
+            End Get
+        End Property
+
+        Public ReadOnly Property ShowInsertSymbolButton As Boolean
+            Get
+                Dim k = ArmedInsertKindNormalized
+                Return k = "Symbol" OrElse k = "Svg"
+            End Get
+        End Property
+
+        Private _insertArmedAnnotationCommand As ICommand
+
+        Public ReadOnly Property InsertArmedAnnotationCommand As ICommand
+            Get
+                If _insertArmedAnnotationCommand Is Nothing Then
+                    _insertArmedAnnotationCommand = New DelegateCommand(Sub() InsertArmedAnnotationAtCenter())
+                End If
+                Return _insertArmedAnnotationCommand
+            End Get
+        End Property
+
+        ''' <summary>"TEXT EINFÜGEN" und "QR-CODE EINFÜGEN": das Objekt in die Bildmitte setzen, ohne
+        ''' Klick ins Bild. Den brauchte es, weil der Klick ins Bild zuerst eine getroffene Ebene
+        ''' nimmt - liegt eine bildfüllende Ebene obenauf, war ein Text gar nicht mehr zu setzen
+        ''' (Nutzerbefund). Vorher wird die Markierung aufgehoben und die Art wieder scharf
+        ''' gestellt, damit das neue Objekt mit den Vorgaben seiner Art startet und nicht mit den
+        ''' Werten der eben markierten Ebene.</summary>
+        Public Sub InsertArmedAnnotationAtCenter()
+            If Not (ShowInsertTextButton OrElse ShowInsertQrButton OrElse ShowInsertShapeButton OrElse ShowInsertSymbolButton) Then Return
+            Dim kind = _armedInsertKind
+            SelectedAnnotationIndex = -1
+            PendingInsertKind = kind
+            AddAnnotationAt(kind, 50, 50, centerOnPoint:=True)
+        End Sub
+
         Public Property PendingInsertKind As String
             Get
                 Return _pendingInsertKind
@@ -3661,6 +3757,13 @@ Namespace ViewModels
         Public ReadOnly Property ShowAnnotationProperties As Boolean
             Get
                 If IsFrameAnnotationSelected Then Return False
+                ' IM ZEICHNEN-WERKZEUG ist eine markierte Ebene nur das ZIEL des Pinsels. Ihre
+                ' Eigenschaften und ihr Schatten und Glühen standen dort unter denen des Pinsels - mit
+                ' dem Werkzeugnamen als Überschrift, also als zweiter Block "Pinsel", und mit einem
+                ' zweiten Schatten und Glühen, bei dem nicht zu erkennen war, ob es den Pinsel oder die
+                ' Ebene meint (Nutzerbefund). Die Eigenschaften der Ebene bleiben in den
+                ' Objekt-Werkzeugen, wo man sie auch bearbeiten will.
+                If _currentTool = EditorTool.Draw Then Return False
                 Return HasAnnotationPropertyTarget
             End Get
         End Property
@@ -4810,6 +4913,16 @@ Namespace ViewModels
                     ' sehen. Ausserhalb davon lagen die Markierungen ueber einem Bild, an dem man
                     ' ganz anders arbeitet, und der Schalter dafuer war nicht mehr zu sehen.
                     If Not IsClippingWarningAvailable Then ShowClippingWarning = False
+                    ' Rote Augen gehören zur Retusche. Blieben sie scharf, entfernte der erste Klick
+                    ' nach der Rückkehr rote Augen statt einen Zug zu beginnen - ohne dass man den
+                    ' Schalter zuletzt gesehen hätte.
+                    If value <> EditorTool.Retouch Then IsRedEyeArmed = False
+                    ' Die beim Werkzeug gewählte Objektart gilt nur in den Werkzeugen, die Objekte setzen.
+                    If Not IsArmedInsertTool(value) Then ArmedInsertKind = ""
+                    Me.RaisePropertyChanged(NameOf(ShowInsertTextButton))
+                    Me.RaisePropertyChanged(NameOf(ShowInsertQrButton))
+                    Me.RaisePropertyChanged(NameOf(ShowInsertShapeButton))
+                    Me.RaisePropertyChanged(NameOf(ShowInsertSymbolButton))
                 End If
                 ' Die Ausnahmen zum Abwählen stehen in ToolKeepsSelectedAnnotationOnEnter - EINE
                 ' Stelle für diesen Weg UND für SetToolCommand, das schon vorher abwählt.
@@ -8048,6 +8161,25 @@ Namespace ViewModels
             End Set
         End Property
 
+        Private _brushSmoothing As Double = Math.Max(0, Math.Min(100, AppSettingsService.Load().BrushSmoothing))
+
+        ''' <summary>WIE STARK EIN ZUG GEGLÄTTET WIRD, 0 bis 100, für Pinsel, Radierer und
+        ''' Maskenpinsel. Anders als Größe und Härte gilt der Wert über Sitzungen hinweg: er gehört
+        ''' zur Hand und zum Gerät, nicht zum Bild. Das Glätten selbst geschieht in der Ansicht,
+        ''' beim Aufnehmen der Punkte (EditorView.SmoothBrushPosition) - dort, wo auch die Vorschau
+        ''' ihre Punkte her hat, damit beide dieselbe Linie zeigen.</summary>
+        Public Property BrushSmoothing As Double
+            Get
+                Return _brushSmoothing
+            End Get
+            Set(value As Double)
+                Dim clamped = CDbl(CInt(Math.Round(Math.Max(0, Math.Min(100, value)))))
+                If _brushSmoothing = clamped Then Return
+                Me.RaiseAndSetIfChanged(_brushSmoothing, clamped)
+                AppSettingsService.Update(Sub(s) s.BrushSmoothing = CInt(clamped))
+            End Set
+        End Property
+
         Public Property BrushHardness As Double
             Get
                 Return _brushHardness
@@ -8618,9 +8750,61 @@ Namespace ViewModels
                 Me.RaiseAndSetIfChanged(_annotationStrokeColor, NormalizeAvaloniaColor(value, "#FF000000"))
                 Me.RaisePropertyChanged(NameOf(AnnotationStrokeColorValue))
                 Me.RaisePropertyChanged(NameOf(AnnotationStrokeBrush))
+                ' Bei einem markierten Pinselstrich IST das die Pinselfarbe (siehe BrushColor).
+                If IsSelectedBrushAnnotation() Then RaiseBrushColorChanged()
                 SyncSelectedAnnotation()
             End Set
         End Property
+
+        Private _brushColor As String = "#FF000000"
+
+        ''' <summary>DIE FARBE DES PINSELS, getrennt von der Konturfarbe der Objekte.
+        '''
+        ''' Beides war eine Eigenschaft (AnnotationStrokeColor). Wer eine Ebene markierte, lud deren
+        ''' Kontur hinein - und malte danach mit ihr: eine Malebene machte den Pinsel schwarz, das
+        ''' Ergebnis des Zusammenlegens (Kontur durchsichtig) machte ihn unsichtbar (Nutzerbefund
+        ''' "der Stift war auf einmal transparent"). Umgekehrt gab eine im Zeichnen-Werkzeug gewählte
+        ''' Pinselfarbe der markierten Ebene eine Kontur.
+        '''
+        ''' Eine Ausnahme bleibt: ist ein PINSELSTRICH als Objekt markiert, ist seine Konturfarbe
+        ''' seine Farbe. Dann reicht diese Eigenschaft dorthin durch, damit das Zeichnen-Panel ihn
+        ''' weiter umfärben kann.</summary>
+        Public Property BrushColor As String
+            Get
+                Return If(IsSelectedBrushAnnotation(), _annotationStrokeColor, _brushColor)
+            End Get
+            Set(value As String)
+                If IsSelectedBrushAnnotation() Then
+                    AnnotationStrokeColor = value
+                Else
+                    Dim normalized = NormalizeAvaloniaColor(value, "#FF000000")
+                    If String.Equals(_brushColor, normalized, StringComparison.Ordinal) Then Return
+                    _brushColor = normalized
+                End If
+                RaiseBrushColorChanged()
+            End Set
+        End Property
+
+        Public Property BrushColorValue As Avalonia.Media.Color
+            Get
+                Return ParseAvaloniaColorOrDefault(BrushColor, Avalonia.Media.Colors.Black)
+            End Get
+            Set(value As Avalonia.Media.Color)
+                BrushColor = value.ToString()
+            End Set
+        End Property
+
+        Public ReadOnly Property BrushColorBrush As Avalonia.Media.IBrush
+            Get
+                Return New Avalonia.Media.SolidColorBrush(BrushColorValue)
+            End Get
+        End Property
+
+        Private Sub RaiseBrushColorChanged()
+            Me.RaisePropertyChanged(NameOf(BrushColor))
+            Me.RaisePropertyChanged(NameOf(BrushColorValue))
+            Me.RaisePropertyChanged(NameOf(BrushColorBrush))
+        End Sub
 
         Public Property AnnotationFillColorValue As Avalonia.Media.Color
             Get
@@ -11281,6 +11465,17 @@ Namespace ViewModels
         Public Sub CompleteColorPick(color As Avalonia.Media.Color,
                                      Optional xPercent As Double = 0.5,
                                      Optional yPercent As Double = 0.5)
+            ' IM ZEICHNEN-WERKZEUG, WENN DER PINSEL AUFS FOTO MALT, zählt die Farbe VOR den Reglern.
+            ' Die Ansicht liefert die angezeigte Farbe, also die NACH den Reglern; der Pinsel malt
+            ' aber ins Arbeitsbild darunter, und die Regler wirken danach ein zweites Mal. Bei
+            ' Belichtung +40 kam eine aufgenommene Farbe 63 Stufen heller heraus (Prüfung "Pipette:
+            ' eine aufgenommene Farbe kommt beim Malen aufs Foto so heraus, wie sie aussah"). Aus
+            ' derselben Schicht gelesen, in die gemalt wird, geht die gemalte Stelle durch dieselben
+            ' Regler wie die aufgenommene und sieht aus wie sie. Das Farbfeld zeigt dann die Farbe vor
+            ' den Reglern - das ist der Preis, und er ist bewusst gewählt.
+            ' Auf einer Bild-Ebene bleibt es bei der Anzeige: Ebenen liegen über den Reglern.
+            Dim fromPhoto = SampleWorkingImageForPaintPick(xPercent, yPercent)
+            If fromPhoto.HasValue Then color = fromPhoto.Value
             Dim callback = _pendingColorPickCallback
             _pendingColorPickCallback = Nothing
             _colorPickSampleRadius = 0
@@ -11288,6 +11483,31 @@ Namespace ViewModels
             IsPickingColorFromImage = False
             callback?.Invoke(color, xPercent, yPercent)
         End Sub
+
+        ''' <summary>Die Farbe des Arbeitsbilds an der Stelle der Pipette (Anteile 0 bis 1 der
+        ''' Anzeige), wenn gerade aufs Foto gemalt wird - sonst Nothing, und die Pipette nimmt die
+        ''' angezeigte Farbe wie bisher. Die Pipette mit Mittelung (Weißabgleich) ist ausgenommen,
+        ''' sie gehört nicht zum Malen.
+        '''
+        ''' Gelesen wird unter der Sperre des Arbeitsbilds. Läuft gerade ein Festschreiben, wartet der
+        ''' Klick bis zu dessen Ende; im Zeichnen-Werkzeug sind das die Striche davor, also kurz.</summary>
+        Private Function SampleWorkingImageForPaintPick(xFraction As Double, yFraction As Double) As Avalonia.Media.Color?
+            If _currentTool <> EditorTool.Draw OrElse _colorPickSampleRadius > 0 Then Return Nothing
+            If Not _workingImage.IsInitialized OrElse Not CanUsePixelTools Then Return Nothing
+            If FindStrokeTargetImageAnnotation() IsNot Nothing Then Return Nothing
+            Dim wip = DisplayPercentToWorkingImagePercent(xFraction * 100.0, yFraction * 100.0)
+            If Double.IsNaN(wip.X) OrElse Double.IsNaN(wip.Y) Then Return Nothing
+            Dim px = CInt(Math.Floor(PercentXToPixels(wip.X)))
+            Dim py = CInt(Math.Floor(PercentYToPixels(wip.Y)))
+            Dim sampled = _workingImage.WithFull(Function(full) As SKColor?
+                                                     If full Is Nothing OrElse px < 0 OrElse py < 0 OrElse
+                                                        px >= full.Width OrElse py >= full.Height Then Return Nothing
+                                                     Return full.GetPixel(px, py)
+                                                 End Function)
+            If Not sampled.HasValue Then Return Nothing
+            Dim c = sampled.Value
+            Return Avalonia.Media.Color.FromArgb(255, c.Red, c.Green, c.Blue)
+        End Function
 
         Public Sub CancelColorPick()
             _pendingColorPickCallback = Nothing
@@ -15178,6 +15398,7 @@ Namespace ViewModels
                                                                                SelectedAnnotationIndex = -1
                                                                                CurrentTool = EditorTool.Text
                                                                                PendingInsertKind = NormalizeAnnotationKind(toolName)
+                                                                               ArmedInsertKind = PendingInsertKind
                                                                                ShowToolTabUnlessHistoryOpen()
                                                                            Finally
                                                                                _overlayNotifySuppressDepth -= 1
@@ -15212,9 +15433,11 @@ Namespace ViewModels
                                                                                 If String.IsNullOrEmpty(kind) Then Return
                                                                                 If PendingInsertKind = kind Then
                                                                                     PendingInsertKind = ""
+                                                                                    ArmedInsertKind = ""
                                                                                 Else
                                                                                     SelectedAnnotationIndex = -1
                                                                                     PendingInsertKind = kind
+                                                                                    ArmedInsertKind = kind
                                                                                 End If
                                                                             End Sub)
             ClearShapeIconSearchCommand = ReactiveCommand.Create(Sub() ShapeIconSearchText = "")
@@ -18210,8 +18433,10 @@ Namespace ViewModels
             _selectionAssetTempDir = ""
             _selectionClipboardPath = Nothing
             _selectionClipboardPasteCount = 0
-            ' Die Zwischenstände des Objekt-Malens liegen im selben Ordner und gehen mit ihm.
+            ' Die Zwischenstände des Objekt-Malens liegen im selben Ordner und gehen mit ihm - und
+            ' mit ihnen ihre Kopien im Speicher.
             _objectPaintFiles.Clear()
+            ObjectImageMemory.Clear()
             If String.IsNullOrWhiteSpace(tempDir) Then Return
 
             Try
@@ -22144,6 +22369,7 @@ Namespace ViewModels
             _annotationText = "Text"
             _annotationFillColor = "#00FFFFFF"
             _annotationStrokeColor = "#FF000000"
+            _brushColor = "#FF000000"
             _annotationStrokeWidth = 0
             _annotationFontSize = 48
             _annotationFontFamily = "Arial"
@@ -22674,7 +22900,11 @@ Namespace ViewModels
             AddAnnotationAt(kind, _annotationXPercent, _annotationYPercent)
         End Sub
 
-        Public Sub AddAnnotationAt(kind As String, xPercent As Double, yPercent As Double)
+        ''' <param name="centerOnPoint">Die Stelle ist die MITTE des neuen Objekts statt seiner linken
+        ''' oberen Ecke. Für die Knöpfe "Text einfügen" und "QR-Code einfügen", die in die Bildmitte
+        ''' setzen: die Größe steht erst hier fest, also kann auch erst hier zentriert werden.</param>
+        Public Sub AddAnnotationAt(kind As String, xPercent As Double, yPercent As Double,
+                                   Optional centerOnPoint As Boolean = False)
             PushUndo(AddHistoryLabel(kind))
             Dim normalizedKind = NormalizeAnnotationKind(kind)
             Dim defaultSize = GetDefaultAnnotationSizePercent(normalizedKind, kind)
@@ -22696,6 +22926,10 @@ Namespace ViewModels
                 Dim textSize = EstimateTextAnnotationSizePercent(_annotationText, _annotationFontSize, _annotationFontFamily)
                 width = textSize.WidthPercent
                 height = textSize.HeightPercent
+            End If
+            If centerOnPoint Then
+                xPercent -= width / 2.0
+                yPercent -= height / 2.0
             End If
             Dim x = If(normalizedKind = "Watermark",
                        ClampAnnotationOffsetPercent(_annotationXPercent),
@@ -23051,6 +23285,32 @@ Namespace ViewModels
         ''' Foto (siehe EditorViewModelObjectPaint.vb) - wie in üblichen Bildbearbeitungen, wo die
         ''' markierte Ebene das Ziel ist.
         Public Sub AddBrushStroke(points As IEnumerable(Of Avalonia.Point), Optional isEraser As Boolean = False)
+            AddBrushStroke(points, isEraser, Nothing)
+        End Sub
+
+        ''' <summary>Der Stiftdruck des Zuges, der gerade durch AddBrushStroke läuft,
+        ''' je Punkt und in derselben Reihenfolge wie die Punkte. Nothing heißt voller Druck
+        ''' überall. Ein Feld statt eines Parameters, weil der Zug von hier aus drei Wege nehmen
+        ''' kann (Foto, Bild einer Ebene, Maske einer Ebene) und alle drei ihn brauchen; es gilt
+        ''' nur für die Dauer des Aufrufs.</summary>
+        Private _brushStrokePressures As Single()
+
+        ''' <summary>Ein Pinselzug mit Stiftdruck. <paramref name="pressures"/> gehört Punkt für
+        ''' Punkt zu <paramref name="points"/>; passt die Anzahl nicht, gilt voller Druck.</summary>
+        Public Sub AddBrushStroke(points As IEnumerable(Of Avalonia.Point), isEraser As Boolean,
+                                  pressures As IReadOnlyList(Of Single))
+            Dim pointList = If(points Is Nothing, Nothing, points.ToList())
+            _brushStrokePressures = If(pressures IsNot Nothing AndAlso pointList IsNot Nothing AndAlso
+                                       pressures.Count = pointList.Count AndAlso pointList.Count > 0,
+                                       pressures.ToArray(), Nothing)
+            Try
+                AddBrushStrokeCore(pointList, isEraser)
+            Finally
+                _brushStrokePressures = Nothing
+            End Try
+        End Sub
+
+        Private Sub AddBrushStrokeCore(points As List(Of Avalonia.Point), isEraser As Boolean)
             If Not CanUsePixelTools Then Return
             If points Is Nothing Then Return
             Dim normalized = points.ToList()
@@ -23062,6 +23322,10 @@ Namespace ViewModels
             If normalized.Count = 1 Then
                 Dim dot = normalized(0)
                 normalized.Add(New Avalonia.Point(dot.X + 0.01, dot.Y))
+                ' Der zweite Punkt bekommt den Druck des ersten, sonst passte die Reihe nicht mehr.
+                If _brushStrokePressures IsNot Nothing Then
+                    _brushStrokePressures = {_brushStrokePressures(0), _brushStrokePressures(0)}
+                End If
             End If
 
             ' RADIEREN AUF EINER EBENE MIT BILD GEHT IN IHRE BILDPUNKTE, genau wie Pinsel und
@@ -23110,14 +23374,20 @@ Namespace ViewModels
             ' Arbeitsbild vollständig zurückrechnen (0°/keine Geometrie = unverändert). NaN-Punkte
             ' liegen außerhalb des Bildinhalts (Canvas-Rand) und werden übersprungen - dort gibt es
             ' keinen Source-Pixel, in den sich backen ließe.
-            Dim pixelPoints = normalized.Select(Function(p)
-                                                    Dim w = DisplayPercentToWorkingImagePercent(p.X, p.Y)
-                                                    Return New Avalonia.Point(PercentXToPixels(w.X), PercentYToPixels(w.Y))
-                                                End Function).
-                                         Where(Function(p) Not (Double.IsNaN(p.X) OrElse Double.IsNaN(p.Y))).ToList()
+            ' Der Druck geht Punkt für Punkt mit: gefiltert wird über das PAAR, sonst verrutschte er
+            ' hinter jedem übersprungenen Punkt auf den falschen.
+            Dim mapped = normalized.Select(Function(p, i)
+                                               Dim w = DisplayPercentToWorkingImagePercent(p.X, p.Y)
+                                               Return (Point:=New Avalonia.Point(PercentXToPixels(w.X), PercentYToPixels(w.Y)),
+                                                       Pressure:=If(_brushStrokePressures Is Nothing, 1.0F, _brushStrokePressures(i)))
+                                           End Function).
+                                    Where(Function(m) Not (Double.IsNaN(m.Point.X) OrElse Double.IsNaN(m.Point.Y))).ToList()
+            Dim pixelPoints = mapped.Select(Function(m) m.Point).ToList()
+            Dim pixelPressures = If(_brushStrokePressures Is Nothing, Nothing, mapped.Select(Function(m) m.Pressure).ToList())
             If pixelPoints.Count < 2 Then Return
             Dim dirtyFull As SKRectI
-            Dim stroke = PixelEditLayer.CreateTransientStroke(pixelPoints, BuildPixelPaintOptions(isEraser), baseW, baseH, dirtyFull)
+            Dim stroke = PixelEditLayer.CreateTransientStroke(pixelPoints, BuildPixelPaintOptions(isEraser), baseW, baseH, dirtyFull,
+                                                              pixelPressures)
             If stroke Is Nothing OrElse dirtyFull.Width <= 0 OrElse dirtyFull.Height <= 0 Then Return
             dirtyFull = ClampRectToBitmap(dirtyFull, baseW, baseH)
             If dirtyFull.Width <= 0 OrElse dirtyFull.Height <= 0 Then Return
@@ -23265,7 +23535,7 @@ Namespace ViewModels
         Private Function BuildPixelPaintOptions(isEraser As Boolean) As PixelPaintOptions
             Return New PixelPaintOptions With {
                 .Kind = If(isEraser, "Eraser", "Brush"),
-                .StrokeColor = _annotationStrokeColor,
+                .StrokeColor = BrushColor,
                 .EraserFillColor = If(isEraser, _eraserFillColor, ""),
                 .StrokeWidth = CSng(_brushSize),
                 .Opacity = CSng(_brushOpacity),
@@ -26300,7 +26570,7 @@ Namespace ViewModels
 
             Select Case paintMode
                 Case "Brush"
-                    state.StrokeColor = _annotationStrokeColor
+                    state.StrokeColor = _brushColor
                     state.Size = _brushSize
                     state.Hardness = _brushHardness
                     state.Opacity = _brushOpacity
@@ -26330,7 +26600,9 @@ Namespace ViewModels
             Try
             Select Case paintMode
                 Case "Brush"
-                    AnnotationStrokeColor = state.StrokeColor
+                    ' Die Pinselfarbe, nicht die Kontur des markierten Objekts (siehe BrushColor).
+                    _brushColor = NormalizeAvaloniaColor(state.StrokeColor, "#FF000000")
+                    RaiseBrushColorChanged()
                     BrushSize = state.Size
                     BrushHardness = state.Hardness
                     BrushOpacity = state.Opacity

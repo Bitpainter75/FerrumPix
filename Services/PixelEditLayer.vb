@@ -177,14 +177,18 @@ Namespace Services
         Public Shared Function CreateTransientStroke(pixelPoints As IReadOnlyList(Of Point),
                                                      options As PixelPaintOptions,
                                                      sourceWidth As Integer, sourceHeight As Integer,
-                                                     ByRef dirtyRect As SKRectI) As PixelPaintStroke
+                                                     ByRef dirtyRect As SKRectI,
+                                                     Optional pressures As IReadOnlyList(Of Single) = Nothing) As PixelPaintStroke
             dirtyRect = SKRectI.Empty
             If pixelPoints Is Nothing OrElse pixelPoints.Count < 2 OrElse options Is Nothing Then Return Nothing
             Dim minX = Math.Max(0, pixelPoints.Min(Function(p) p.X))
             Dim minY = Math.Max(0, pixelPoints.Min(Function(p) p.Y))
             Dim maxX = Math.Min(sourceWidth, pixelPoints.Max(Function(p) p.X))
             Dim maxY = Math.Min(sourceHeight, pixelPoints.Max(Function(p) p.Y))
-            Dim newStroke = New BrushStroke(pixelPoints.Select(Function(p) New StrokePoint(CSng(p.X), CSng(p.Y))).ToList())
+            ' Der Druck macht den Strich nur schmaler, nie breiter als eingestellt - der geänderte
+            ' Bereich unten bleibt deshalb derselbe wie ohne Druck.
+            Dim newStroke = New BrushStroke(pixelPoints.Select(Function(p) New StrokePoint(CSng(p.X), CSng(p.Y))).ToList(),
+                                            pressures)
             Dim expectedKind = If(String.Equals(options.Kind, "Eraser", StringComparison.OrdinalIgnoreCase), "Eraser", "Brush")
             Dim isEraser = String.Equals(expectedKind, "Eraser", StringComparison.Ordinal)
             Dim entry = CreateStrokeEntry(options, expectedKind, isEraser, newStroke, minX, minY, maxX, maxY)

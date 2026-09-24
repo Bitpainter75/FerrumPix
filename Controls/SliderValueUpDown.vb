@@ -147,7 +147,7 @@ Namespace Controls
                     RestoreTextFromValue(force:=DeferTextCommit)
                     ' UND VERLAESST DAS FELD. Blieb die Tastatur hier, schluckte jedes weitere ESC
                     ' das Feld, und auch die blanken Kuerzel der Ansicht galten nicht mehr - im
-                    ' Editor etwa J und ESC (Nutzerbefund 2026-09-24). Das erste ESC gehoert also
+                    ' Editor etwa J und ESC (Nutzerbefund). Das erste ESC gehoert also
                     ' dem Feld, das naechste wieder der Ansicht.
                     ReleaseKeyboardToView()
                     e.Handled = True

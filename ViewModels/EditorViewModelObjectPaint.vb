@@ -363,7 +363,8 @@ Namespace ViewModels
             If rectPx.Width <= 0 OrElse rectPx.Height <= 0 Then Return True
 
             Dim strokeMask As ImageMask
-            Using stamp = ImageProcessor.BuildSoftBrushStampMask(pts, radius, softness, rectPx)
+            Using stamp = ImageProcessor.BuildSoftBrushStampMask(pts, radius, softness, rectPx,
+                                                                 pressures:=_brushStrokePressures)
                 If stamp Is Nothing Then Return True
                 strokeMask = BuildSourceMaskFromDisplayStamp(stamp, rectPx)
             End Using
@@ -718,7 +719,7 @@ Namespace ViewModels
                             canvas.DrawRect(placement.FitRect, paint)
                         End Using
                     Else
-                        Using decoded = SKBitmap.Decode(plan.ImagePath)
+                        Using decoded = ObjectImageMemory.DecodeOrCopy(plan.ImagePath)
                             If decoded Is Nothing Then
                                 mask.Dispose()
                                 Return Nothing
@@ -773,7 +774,8 @@ Namespace ViewModels
 
             Dim dirty As SKRectI
             Dim stroke = PixelEditLayer.CreateTransientStroke(imagePoints, options,
-                                                             _objectPaintSize.Width, _objectPaintSize.Height, dirty)
+                                                             _objectPaintSize.Width, _objectPaintSize.Height, dirty,
+                                                             _brushStrokePressures)
             If stroke Is Nothing Then Return True
             dirty = ClampRectToBitmap(dirty, _objectPaintSize.Width, _objectPaintSize.Height)
             If dirty.Width <= 0 OrElse dirty.Height <= 0 Then Return True
@@ -993,7 +995,7 @@ Namespace ViewModels
                                                  renderAnnotation As ImageAnnotation,
                                                  dirty As SKRectI, coverage As SKBitmap,
                                                  lockTransparent As Boolean) As Boolean
-            Using decoded = SKBitmap.Decode(sourcePath)
+            Using decoded = ObjectImageMemory.DecodeOrCopy(sourcePath)
                 If decoded Is Nothing OrElse decoded.Width <= 0 OrElse decoded.Height <= 0 Then Return False
                 Dim clamped = ClampRectToBitmap(dirty, decoded.Width, decoded.Height)
                 If clamped.Width <> dirty.Width OrElse clamped.Height <> dirty.Height Then Return False
@@ -1009,7 +1011,7 @@ Namespace ViewModels
         Private Function EraseCoverageToFile(sourcePath As String, targetPath As String,
                                              dirty As SKRectI, coverage As SKBitmap) As Boolean
             If coverage Is Nothing Then Return False
-            Using decoded = SKBitmap.Decode(sourcePath)
+            Using decoded = ObjectImageMemory.DecodeOrCopy(sourcePath)
                 If decoded Is Nothing OrElse decoded.Width <= 0 OrElse decoded.Height <= 0 Then Return False
                 Dim clamped = ClampRectToBitmap(dirty, decoded.Width, decoded.Height)
                 If clamped.Width <> dirty.Width OrElse clamped.Height <> dirty.Height Then Return False
@@ -1143,20 +1145,28 @@ Namespace ViewModels
         ''' er wird beim Dokumentwechsel geräumt und beim .fpx-Speichern eingebettet.
         '''
         ''' Läuft im HINTERGRUND und fasst deshalb nichts an, was dem UI-Faden gehört: den Pfad legt
-        ''' der Aufrufer vorher fest, und beim Deckel meldet sich der Zug erst beim Übernehmen an.</summary>
+        ''' der Aufrufer vorher fest, und beim Deckel meldet sich der Zug erst beim Übernehmen an.
+        '''
+        ''' Der Stand geht zugleich in den Speicher (ObjectImageMemory), aus dem der nächste Strich
+        ''' und die Anzeige ihn holen, statt die Datei wieder zu dekodieren.
+        '''
+        ''' DIE PNG-EINSTELLUNG IST GEMESSEN, nicht geschätzt ("MESSUNG Malebene", 24 MP): Skias
+        ''' Vorgabe (alle Filter, zlib 6) brauchte 447 ms, zlib 1 mit allen Filtern noch 344 ms,
+        ''' zlib 1 mit dem Filter "Sub" 65 ms. Den Preis zahlt die Datei: sie wird größer (bei einer
+        ''' fast leeren Ebene 427 statt 94 KB). Sie lebt ohnehin nur bis zum Schließen des
+        ''' Dokuments, und PNG bleibt verlustfrei.</summary>
         Private Shared Function WriteObjectPaintFile(bitmap As SKBitmap, path As String) As Boolean
             If bitmap Is Nothing OrElse String.IsNullOrWhiteSpace(path) Then Return False
-            Using image = SKImage.FromBitmap(bitmap)
-                If image Is Nothing Then Return False
-                ' Schnelle Kompressionsstufe: PNG ist verlustfrei, die Stufe kostet nur Zeit, und
-                ' die Datei lebt ohnehin nur bis zum Schließen des Dokuments.
-                Using data = image.Encode(SKEncodedImageFormat.Png, 60)
+            Using pixmap = bitmap.PeekPixels()
+                If pixmap Is Nothing Then Return False
+                Using data = pixmap.Encode(New SKPngEncoderOptions(SKPngEncoderFilterFlags.Sub, 1))
                     If data Is Nothing Then Return False
                     Using fs = File.Create(path)
                         data.SaveTo(fs)
                     End Using
                 End Using
             End Using
+            ObjectImageMemory.Put(path, ObjectImageMemory.FastCopy(bitmap))
             Return True
         End Function
 
@@ -1182,6 +1192,9 @@ Namespace ViewModels
                 Dim oldest = _objectPaintFiles(0)
                 _objectPaintFiles.RemoveAt(0)
                 total -= oldest.Bytes
+                ' Auch aus dem Speicher: ein Stand, dessen Datei weg ist, darf dort nicht als
+                ' einzige Kopie weiterleben und von der Anzeige noch gefunden werden.
+                ObjectImageMemory.Remove(oldest.Path)
                 Try
                     If File.Exists(oldest.Path) Then File.Delete(oldest.Path)
                 Catch ex As Exception

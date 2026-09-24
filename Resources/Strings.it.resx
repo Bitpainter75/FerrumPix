@@ -8689,4 +8689,100 @@
   <data name="Clipping_Warnung_ein_aus_in_den_Werkzeugen_mit_R_4cef1555" xml:space="preserve">
     <value>Attiva o disattiva l’avviso di clipping, negli strumenti con cursori</value>
   </data>
+  <data name="Stiftdruck_steuert_die_Pinselgr_e_e52788ad" xml:space="preserve">
+    <value>La pressione della penna regola la dimensione del pennello</value>
+  </data>
+  <data name="Leichter_Druck_malt_schmaler_voller_Druck_in_der_428c9511" xml:space="preserve">
+    <value>Una pressione leggera dipinge più sottile, quella piena alla dimensione impostata. Vale per pennello, gomma e pennello maschera, e solo con una penna; il mouse dipinge sempre a dimensione piena.</value>
+  </data>
+  <data name="Gl_tten_d9301a0e" xml:space="preserve">
+    <value>Levigatura</value>
+  </data>
+  <data name="Zieht_den_Strich_ruhiger_hinter_dem_Zeiger_her_u_93109ffc" xml:space="preserve">
+    <value>Trascina il tratto più calmo dietro al puntatore e toglie i piccoli tremolii. 0 segue il puntatore esattamente</value>
+  </data>
+  <data name="Eine_Maske_aus_mehreren_Bestandteilen_l_sst_sich_32c0b252" xml:space="preserve">
+    <value>Una maschera composta da più parti non si può modificare così</value>
+  </data>
+  <data name="Auswahl_vergr_ert_6f2e0332" xml:space="preserve">
+    <value>Selezione espansa</value>
+  </data>
+  <data name="Auswahl_verkleinert_f56a0eb6" xml:space="preserve">
+    <value>Selezione contratta</value>
+  </data>
+  <data name="Auswahl_gegl_ttet_3b7e67b2" xml:space="preserve">
+    <value>Selezione levigata</value>
+  </data>
+  <data name="Auswahlrand_gebildet_1c1ccfb0" xml:space="preserve">
+    <value>Bordo della selezione creato</value>
+  </data>
+  <data name="Ver_ndern_um_259e91a8" xml:space="preserve">
+    <value>Modifica di</value>
+  </data>
+  <data name="Um_wie_viele_Bildpunkte_die_vier_Kn_pfe_darunter_f3f8fd19" xml:space="preserve">
+    <value>Di quanti pixel i quattro pulsanti sotto modificano la selezione</value>
+  </data>
+  <data name="Die_Auswahl_rundherum_um_den_Betrag_vergr_ern_610649f0" xml:space="preserve">
+    <value>Espandere la selezione tutto intorno del valore indicato</value>
+  </data>
+  <data name="Die_Auswahl_rundherum_um_den_Betrag_verkleinern__037b2032" xml:space="preserve">
+    <value>Contrarre la selezione tutto intorno del valore indicato; sul bordo dell’immagine resta ferma</value>
+  </data>
+  <data name="Zacken_und_kleine_L_cher_bis_zur_Gr_e_des_Betrag_807c2320" xml:space="preserve">
+    <value>Rimuovere dentellature e piccoli buchi fino alla dimensione indicata e arrotondare gli angoli</value>
+  </data>
+  <data name="Aus_der_Auswahl_ein_Band_entlang_ihrer_Kante_mac_571757ef" xml:space="preserve">
+    <value>Trasformare la selezione in una fascia lungo il bordo, larga quanto il valore</value>
+  </data>
+  <data name="Rote_Augen_lassen_sich_nur_im_Foto_entfernen_nic_5f247714" xml:space="preserve">
+    <value>Gli occhi rossi si possono rimuovere solo nella foto, non su un livello</value>
+  </data>
+  <data name="Im_Pinselkreis_ist_kein_rotes_Auge_zu_finden_5f4498d8" xml:space="preserve">
+    <value>Nessun occhio rosso nel cerchio del pennello</value>
+  </data>
+  <data name="Rote_Augen_entfernt_a3907783" xml:space="preserve">
+    <value>Occhi rossi rimossi</value>
+  </data>
+  <data name="Rote_Augen_entfernen_fehlgeschlagen_2f91768f" xml:space="preserve">
+    <value>Rimozione degli occhi rossi non riuscita</value>
+  </data>
+  <data name="Solange_eingeschaltet_entfernt_jeder_Klick_ins_B_cc00c082" xml:space="preserve">
+    <value>Finché è attivo, ogni clic nell’immagine rimuove gli occhi rossi nel cerchio del pennello</value>
+  </data>
+  <data name="Rote_Augen_entfernen_ed756d76" xml:space="preserve">
+    <value>Rimuovi occhi rossi</value>
+  </data>
+  <data name="Mit_dem_Pinselkreis_auf_die_Pupille_klicken_Er_s_f5b54aec" xml:space="preserve">
+    <value>Fai clic sulla pupilla con il cerchio del pennello. Deve racchiudere tutto il rosso ma non molto di più: la pelle molto arrossata nel cerchio verrebbe scolorita anch’essa.</value>
+  </data>
+  <data name="Erweitern_ee9937c7" xml:space="preserve">
+    <value>Espandi</value>
+  </data>
+  <data name="Reduzieren_a9eb23c0" xml:space="preserve">
+    <value>Contrai</value>
+  </data>
+  <data name="Text_einf_gen_dea18d16" xml:space="preserve">
+    <value>Inserisci testo</value>
+  </data>
+  <data name="QR_Code_einf_gen_f880f8d5" xml:space="preserve">
+    <value>Inserisci codice QR</value>
+  </data>
+  <data name="Ein_neues_Textobjekt_in_die_Bildmitte_setzen_ohn_47312e5f" xml:space="preserve">
+    <value>Posiziona un nuovo oggetto di testo al centro dell’immagine senza cliccarci</value>
+  </data>
+  <data name="Einen_neuen_QR_Code_in_die_Bildmitte_setzen_ohne_13db2d8f" xml:space="preserve">
+    <value>Posiziona un nuovo codice QR al centro dell’immagine senza cliccarci</value>
+  </data>
+  <data name="Form_einf_gen_d0e821e1" xml:space="preserve">
+    <value>Inserisci forma</value>
+  </data>
+  <data name="Symbol_einf_gen_d2d7d51d" xml:space="preserve">
+    <value>Inserisci simbolo</value>
+  </data>
+  <data name="Die_gew_hlte_Form_in_die_Bildmitte_setzen_ohne_i_982c9c62" xml:space="preserve">
+    <value>Posiziona la forma scelta al centro dell’immagine senza cliccarci</value>
+  </data>
+  <data name="Das_gew_hlte_Symbol_in_die_Bildmitte_setzen_ohne_707d5a38" xml:space="preserve">
+    <value>Posiziona il simbolo scelto al centro dell’immagine senza cliccarci</value>
+  </data>
 </root>

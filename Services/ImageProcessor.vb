@@ -1524,6 +1524,28 @@ Namespace Services
                     End If
                 End If
             End If
+            ' TEXT, DER ÜBER SEINEN RAHMEN RAGT, gehört ebenfalls in den Bereich - dieselbe Rechnung wie
+            ' beim Zwischenspeicher der Anzeige (MeasureAnnotationTextExtent). Ohne sie schnitt das
+            ' Zusammenlegen mit einem kleineren Objekt den Überstand ab (gemessen: gut 8 Prozent eines
+            ' Wasserzeichens fehlten danach), und ein Auffrischen nur des Rahmens ließ ihn stehen.
+            Dim textForExtent = ""
+            If kind = "watermark" Then
+                If String.IsNullOrWhiteSpace(annotation.ImagePath) Then
+                    textForExtent = If(String.IsNullOrWhiteSpace(annotation.Text), "FerrumPix", annotation.Text)
+                End If
+            ElseIf kind = "text" Then
+                textForExtent = If(annotation.Text, "")
+            End If
+            If textForExtent.Length > 0 AndAlso String.IsNullOrWhiteSpace(annotation.TextPathKind) Then
+                Dim textExtent = MeasureAnnotationTextExtent(textForExtent, annotation.FontFamily,
+                                                             Math.Max(8.0F, annotation.FontSizePixels),
+                                                             annotation.LetterSpacingPercent,
+                                                             annotation.Bold, annotation.Italic, annotation.StrokeWidth)
+                If Not textExtent.IsEmpty Then
+                    textExtent.Offset(rect.Left, rect.Top)
+                    rect.Union(textExtent)
+                End If
+            End If
             rect = RotationBounds(rect, annotation.RotationDegrees)
 
             Dim extent = Math.Max(rect.Width, rect.Height)
@@ -1741,6 +1763,34 @@ Namespace Services
             Dim rightPad = CInt(Math.Ceiling(4.0F + effectPad + Math.Max(0.0F, offsetX)))
             Dim topPad = CInt(Math.Ceiling(4.0F + effectPad + Math.Max(0.0F, -offsetY)))
             Dim bottomPad = CInt(Math.Ceiling(4.0F + effectPad + Math.Max(0.0F, offsetY)))
+
+            ' TEXT, DER ÜBER DEN RAHMEN HINAUSRAGT, braucht ebenfalls Rand. Ein langes Wort oder ein
+            ' Wasserzeichen mit großer Schrift reicht über seinen Rahmen, und der gebackene Weg zeichnet
+            ' es ganz - hier wurde es an der Bitmapkante abgeschnitten. Die Anzeige zeigte den Text
+            ' dadurch woanders, als er im Ergebnis steht, und beim Zusammenlegen schien er zu springen
+            ' (Nutzerbefund). Auf dem Textpfad deckt effectPad das schon ab.
+            Dim overlayKind = If(renderAnnotation.Kind, "Text").Trim().ToLowerInvariant()
+            Dim drawnText = ""
+            If overlayKind = "watermark" Then
+                If String.IsNullOrWhiteSpace(renderAnnotation.ImagePath) Then
+                    drawnText = If(String.IsNullOrWhiteSpace(renderAnnotation.Text), "FerrumPix", renderAnnotation.Text)
+                End If
+            ElseIf overlayKind = "text" OrElse overlayKind = "" Then
+                drawnText = If(renderAnnotation.Text, "")
+            End If
+            If drawnText.Length > 0 AndAlso String.IsNullOrWhiteSpace(renderAnnotation.TextPathKind) Then
+                Dim extent = MeasureAnnotationTextExtent(drawnText, renderAnnotation.FontFamily,
+                                                         Math.Max(8.0F, renderAnnotation.FontSizePixels),
+                                                         renderAnnotation.LetterSpacingPercent,
+                                                         renderAnnotation.Bold, renderAnnotation.Italic,
+                                                         renderAnnotation.StrokeWidth)
+                If Not extent.IsEmpty Then
+                    leftPad += CInt(Math.Ceiling(Math.Max(0.0F, -extent.Left)))
+                    topPad += CInt(Math.Ceiling(Math.Max(0.0F, -extent.Top)))
+                    rightPad += CInt(Math.Ceiling(Math.Max(0.0F, extent.Right - objW)))
+                    bottomPad += CInt(Math.Ceiling(Math.Max(0.0F, extent.Bottom - objH)))
+                End If
+            End If
 
             ' Das Bitmap um die Effekt-Ränder VERGRÖSSERN (nicht das Objekt hineinschrumpfen): so wird
             ' der Schatten/Glow nie an der Bitmap-Kante abgeschnitten - im Gegensatz zum gebackenen Bild,
@@ -4834,7 +4884,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             result.RotationDegrees = CSng(NormalizeObjectRotation(result.RotationDegrees + degrees))
             If IsPaintKind(kind) AndAlso result.Strokes IsNot Nothing Then
                 result.Strokes = result.Strokes.Where(Function(stroke) stroke IsNot Nothing).Select(
-                    Function(stroke) New BrushStroke(stroke.Points.Select(
+                    Function(stroke) stroke.WithPoints(stroke.Points.Select(
                         Function(p)
                             Dim moved = MapPoint(p.X, p.Y)
                             Return New StrokePoint(CSng(moved.X), CSng(moved.Y))
@@ -4874,7 +4924,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             If IsPaintKind(kind) AndAlso croppedAnnotation.Strokes IsNot Nothing AndAlso
                (crop.Left <> 0 OrElse crop.Top <> 0) Then
                 croppedAnnotation.Strokes = croppedAnnotation.Strokes.Where(Function(stroke) stroke IsNot Nothing).Select(
-                    Function(stroke) New BrushStroke(stroke.Points.Select(
+                    Function(stroke) stroke.WithPoints(stroke.Points.Select(
                         Function(p) New StrokePoint(p.X - crop.Left, p.Y - crop.Top)).ToList())).ToList()
             End If
 
@@ -5062,7 +5112,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             moved.YPixels += offsetY
             If IsPaintKind(kind) AndAlso moved.Strokes IsNot Nothing Then
                 moved.Strokes = moved.Strokes.Where(Function(stroke) stroke IsNot Nothing).Select(
-                    Function(stroke) New BrushStroke(stroke.Points.Select(
+                    Function(stroke) stroke.WithPoints(stroke.Points.Select(
                         Function(p) New StrokePoint(p.X + offsetX, p.Y + offsetY)).ToList())).ToList()
             End If
             Return moved
@@ -5131,7 +5181,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                 Dim mapped = m.MapPoint(New SKPoint(CSng(p.X), CSng(p.Y)))
                 points.Add(New StrokePoint(mapped.X, mapped.Y))
             Next
-            Return New BrushStroke(points)
+            Return stroke.WithPoints(points)
         End Function
 
         ''' <summary>Unschaerfemaske mit Kreuz-Kern (5 Taps):

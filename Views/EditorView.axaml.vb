@@ -92,6 +92,18 @@ Namespace Views
         Private _isBrushDrawing As Boolean = False
         Private _hideBrushPreviewAfterBake As Boolean = False
         Private ReadOnly _brushPoints As New List(Of Avalonia.Point)()
+        ''' <summary>Stiftdruck je Punkt, parallel zu <see cref="_brushPoints"/> und
+        ''' <see cref="_maskBrushPoints"/>. Wird mit jedem Punkt geführt, auch bei der Maus (dann 1),
+        ''' damit beide Reihen immer gleich lang sind; ob der Druck gilt, entscheidet erst
+        ''' <see cref="PressuresOrNothing"/> beim Weiterreichen.</summary>
+        Private ReadOnly _brushPressures As New List(Of Single)()
+        Private ReadOnly _maskBrushPressures As New List(Of Single)()
+        ''' <summary>Gilt für den laufenden Zug Druck? Einmal beim Aufsetzen entschieden: Stift und
+        ''' Einstellung an. Mitten im Zug umzuschalten ergäbe einen Strich aus zwei Regeln.</summary>
+        Private _strokeReadsPressure As Boolean
+        ''' <summary>Die geglättete Stelle des laufenden Zuges in Bühnenpunkten, Nothing vor dem
+        ''' ersten Punkt.</summary>
+        Private _smoothedBrushPosition As Avalonia.Point?
         ' Gemeinsamer Ursprung für die temporären Linienhilfen aller Pinselzüge. Die Richtung für
         ' Strg wird erst nach einem kleinen freien Anfangszug festgelegt, damit sie nicht auf eine
         ' zufällige Einpixelbewegung springt.
@@ -2589,8 +2601,13 @@ Namespace Views
                     Case "Brush"
                         ' Masken-Pinsel: Strich in Display-Prozent sammeln, Live-Rot zeigen, auf Release committen.
                         _maskBrushPoints.Clear()
+                        _maskBrushPressures.Clear()
+                        BeginBrushInput(e)
+                        ' Der erste Punkt ist der Zeiger selbst; das Glätten setzt hier nur an.
+                        SmoothBrushPosition(rawPos, vm)
                         _maskBrushPoints.Add(New Avalonia.Point((pos.X - imageRect.Left) / imageRect.Width * 100.0,
                                                                 (pos.Y - imageRect.Top) / imageRect.Height * 100.0))
+                        _maskBrushPressures.Add(ReadBrushPressure(e, canvas))
                         _maskBrushLastScreenPoint = pos
                         BeginBrushLineConstraint(rawPos)
                         _isMaskBrushDrawing = True
@@ -2628,6 +2645,14 @@ Namespace Views
                     Return
                 End If
 
+                ' ROTE AUGEN: ein Klick ist ein fertiger Schritt, kein Zug. Kein Fang, kein
+                ' Loslassen - der Pinselkreis sagt, wie weit er wirkt.
+                If vm.IsRedEyeArmed Then
+                    vm.RemoveRedEyeAt(xPct, yPct)
+                    e.Handled = True
+                    Return
+                End If
+
                 vm.AddRetouchSpot(xPct, yPct)
                 _lastRetouchPoint = New Avalonia.Point(xPct, yPct)
                 BeginBrushLineConstraint(pos)
@@ -2642,9 +2667,11 @@ Namespace Views
                 If imageRect.Width <= 0 OrElse imageRect.Height <= 0 Then Return
                 _hideBrushPreviewAfterBake = False
                 _brushPoints.Clear()
-                Dim brushStart = e.GetPosition(canvas)
+                _brushPressures.Clear()
+                BeginBrushInput(e)
+                Dim brushStart = SmoothBrushPosition(e.GetPosition(canvas), vm)
                 BeginBrushLineConstraint(brushStart)
-                AddBrushPoint(brushStart, imageRect)
+                AddBrushPoint(brushStart, imageRect, ReadBrushPressure(e, canvas))
                 _isBrushDrawing = True
                 ShowBrushPreviewLine(True)
                 UpdateBrushPreviewLine(imageRect, vm)
@@ -2940,7 +2967,8 @@ Namespace Views
                 Dim vm = TryCast(DataContext, EditorViewModel)
                 If canvas Is Nothing OrElse vm Is Nothing Then Return
                 Dim imageRect = GetDisplayedImageRect(canvas, vm)
-                AddBrushPoint(ConstrainBrushLinePoint(e.GetPosition(canvas), e.KeyModifiers), imageRect)
+                AddBrushPoint(ConstrainBrushLinePoint(SmoothBrushPosition(e.GetPosition(canvas), vm), e.KeyModifiers),
+                              imageRect, ReadBrushPressure(e, canvas))
                 UpdateBrushPreviewLine(imageRect, vm)
                 e.Handled = True
                 Return
@@ -2990,8 +3018,10 @@ Namespace Views
                 If canvas Is Nothing OrElse vm Is Nothing Then Return
                 Dim imageRect = GetDisplayedImageRect(canvas, vm)
                 If imageRect.Width <= 0 OrElse imageRect.Height <= 0 Then Return
-                Dim point = ClampPointToRect(ConstrainBrushLinePoint(e.GetPosition(canvas), e.KeyModifiers), imageRect)
-                UpdateBrushCursorPreview(point, imageRect, vm)
+                Dim raw = e.GetPosition(canvas)
+                ' Der Ring bleibt am Zeiger, der Strich folgt geglättet - so sieht man, wohin er zieht.
+                UpdateBrushCursorPreview(ClampPointToRect(ConstrainBrushLinePoint(raw, e.KeyModifiers), imageRect), imageRect, vm)
+                Dim point = ClampPointToRect(ConstrainBrushLinePoint(SmoothBrushPosition(raw, vm), e.KeyModifiers), imageRect)
                 ' Abstands-Gate: Punkte erst ab ~1/4 Pinseldurchmesser auf dem Schirm sammeln (wie Retusche).
                 Dim spacing = Math.Max(2.0, BrushDiameterOnScreen(imageRect, vm) * 0.25)
                 Dim dxb = point.X - _maskBrushLastScreenPoint.X
@@ -3003,9 +3033,12 @@ Namespace Views
                 _maskBrushLastScreenPoint = point
                 _maskBrushPoints.Add(New Avalonia.Point((point.X - imageRect.Left) / imageRect.Width * 100.0,
                                                         (point.Y - imageRect.Top) / imageRect.Height * 100.0))
+                _maskBrushPressures.Add(ReadBrushPressure(e, canvas))
                 If _maskBrushPoints.Count >= 12000 Then
+                    ' Beide Reihen im selben Takt ausdünnen, sonst gehörte der Druck zum falschen Punkt.
                     For i = _maskBrushPoints.Count - 2 To 1 Step -2
                         _maskBrushPoints.RemoveAt(i)
+                        _maskBrushPressures.RemoveAt(i)
                     Next
                 End If
                 RefreshMaskBrushLive(vm)
@@ -3292,6 +3325,7 @@ Namespace Views
             If _isMaskBrushDrawing Then
                 CommitMaskBrushStroke()
                 _maskBrushPoints.Clear()
+                _maskBrushPressures.Clear()
             End If
             If _isMaskMoveDragging Then
                 TryCast(DataContext, EditorViewModel)?.EndMaskMove()
@@ -3346,8 +3380,9 @@ Namespace Views
             If _isBrushDrawing Then
                 Dim vm = TryCast(DataContext, EditorViewModel)
                 Dim shouldWaitForBakedPreview = vm IsNot Nothing AndAlso _brushPoints.Count >= 2
-                If vm IsNot Nothing Then vm.AddBrushStroke(_brushPoints, vm.IsEraserMode)
+                If vm IsNot Nothing Then vm.AddBrushStroke(_brushPoints, vm.IsEraserMode, PressuresOrNothing(_brushPressures))
                 _brushPoints.Clear()
+                _brushPressures.Clear()
                 _hideBrushPreviewAfterBake = shouldWaitForBakedPreview
                 If Not _hideBrushPreviewAfterBake Then ShowBrushPreviewLine(False)
             End If
@@ -3373,7 +3408,55 @@ Namespace Views
             End If
         End Sub
 
-        Private Sub AddBrushPoint(position As Avalonia.Point, imageRect As Avalonia.Rect)
+        ''' <summary>Beginnt die Eingabe eines Pinsel- oder Maskenzuges: Glätten von vorn, und die
+        ''' Entscheidung, ob der Druck gilt.</summary>
+        Private Sub BeginBrushInput(e As PointerEventArgs)
+            _smoothedBrushPosition = Nothing
+            _strokeReadsPressure = e IsNot Nothing AndAlso e.Pointer.Type = PointerType.Pen AndAlso
+                                   AppSettingsService.Load().PenPressureSize
+        End Sub
+
+        ''' <summary>Der Druck an dieser Stelle des Zuges, 0 bis 1; ohne Stift oder bei
+        ''' abgeschalteter Einstellung immer 1.</summary>
+        Private Function ReadBrushPressure(e As PointerEventArgs, relativeTo As Visual) As Single
+            If Not _strokeReadsPressure OrElse e Is Nothing Then Return 1.0F
+            Return Math.Max(0.0F, Math.Min(1.0F, e.GetCurrentPoint(relativeTo).Properties.Pressure))
+        End Function
+
+        ''' <summary>GLÄTTEN WIE AN EINER SCHNUR. Der gezeichnete Punkt folgt dem Zeiger nur um einen
+        ''' Anteil des Abstands nach; kleine Zitterer heben sich dabei auf, und eine Kurve wird
+        ''' runder. Bei 0 ist der Anteil 1, der Punkt IST der Zeiger - genau das Verhalten von
+        ''' vorher. Bei 100 folgt er mit einem Zehntel, das ist stark, aber noch zu führen.
+        '''
+        ''' Gerechnet wird in BÜHNENPUNKTEN, also vor dem Umrechnen ins Bild: das Zittern der Hand ist
+        ''' auf dem Schirm gleich groß, egal wie weit hineingezoomt ist. Und VOR den Linienhilfen
+        ''' (STRG, ALT, SHIFT), damit eine gerade Linie gerade bleibt.</summary>
+        Private Function SmoothBrushPosition(raw As Avalonia.Point, vm As EditorViewModel) As Avalonia.Point
+            Dim strength = If(vm Is Nothing, 0.0, Math.Max(0.0, Math.Min(100.0, vm.BrushSmoothing)) / 100.0)
+            If strength <= 0.0 OrElse Not _smoothedBrushPosition.HasValue Then
+                _smoothedBrushPosition = raw
+                Return raw
+            End If
+            Dim follow = 1.0 - 0.9 * strength
+            Dim previous = _smoothedBrushPosition.Value
+            Dim smoothed = New Avalonia.Point(previous.X + (raw.X - previous.X) * follow,
+                                              previous.Y + (raw.Y - previous.Y) * follow)
+            _smoothedBrushPosition = smoothed
+            Return smoothed
+        End Function
+
+        ''' <summary>Die Druckreihe zum Weiterreichen, oder Nothing, wenn sie nichts sagt: ohne Stift,
+        ''' bei abgeschalteter Einstellung, und wenn das Gerät gar keinen Druck meldet (alles
+        ''' praktisch 0). Im letzten Fall wäre der Strich sonst durchgehend auf die kleinste Breite
+        ''' geschrumpft - ein Stift ohne Drucksensor malte dann nur noch dünne Linien.</summary>
+        Private Function PressuresOrNothing(pressures As List(Of Single)) As IReadOnlyList(Of Single)
+            If Not _strokeReadsPressure OrElse pressures.Count = 0 Then Return Nothing
+            If pressures.Max() < 0.01F Then Return Nothing
+            Return pressures.ToArray()
+        End Function
+
+        Private Sub AddBrushPoint(position As Avalonia.Point, imageRect As Avalonia.Rect,
+                                  Optional pressure As Single = 1.0F)
             If imageRect.Width <= 0 OrElse imageRect.Height <= 0 Then Return
             ' Wie bei der Retusche: bis zu einem Pinselradius ausserhalb zulassen, damit am Bildrand
             ' der sichtbare Teilkreis wirkt statt eines auf den Rand gezogenen Vollkreises.
@@ -3386,6 +3469,7 @@ Namespace Views
                 If Math.Abs(last.X - xPct) < 0.15 AndAlso Math.Abs(last.Y - yPct) < 0.15 Then Return
             End If
             _brushPoints.Add(New Avalonia.Point(xPct, yPct))
+            _brushPressures.Add(pressure)
         End Sub
 
         ''' <summary>Beginnt die gemeinsame Linienhilfe eines Pinselzugs. Der Ursprung liegt im
@@ -3458,7 +3542,59 @@ Namespace Views
                 outline.IsVisible = False
                 If Not visible Then outline.Points = New Avalonia.Collections.AvaloniaList(Of Avalonia.Point)()
             End If
+            Dim pressurePath = Me.FindControl(Of Avalonia.Controls.Shapes.Path)("BrushPreviewPressurePath")
+            If pressurePath IsNot Nothing AndAlso Not visible Then
+                pressurePath.IsVisible = False
+                pressurePath.Data = Nothing
+            End If
         End Sub
+
+        ''' <summary>Der Umriss eines Zuges mit Stiftdruck als Avalonia-Geometrie, in Bühnenpunkten.
+        ''' Dieselbe Form wie ImageProcessor.BuildVariableWidthStrokePath: je Punkt ein Kreis, dazwischen
+        ''' ein Viereck, alle gleich herum gedreht und mit der Windungsregel gefüllt. Die Kreise sind
+        ''' hier Vielecke, weil eine Ellipsengeometrie ihre Drehrichtung nicht verrät - und eine falsch
+        ''' herum laufende Teilform stanzte in einen sich kreuzenden Strich ein Loch.</summary>
+        Private Shared Function BuildPressurePreviewGeometry(points As IReadOnlyList(Of Avalonia.Point),
+                                                             radii As IReadOnlyList(Of Double)) As Geometry
+            Dim geometry = New StreamGeometry()
+            Using ctx = geometry.Open()
+                ctx.SetFillRule(FillRule.NonZero)
+                Const segments As Integer = 20
+                For i As Integer = 0 To points.Count - 1
+                    Dim c = points(i), r = radii(i)
+                    If r > 0.05 Then
+                        ctx.BeginFigure(New Avalonia.Point(c.X + r, c.Y), True)
+                        For k As Integer = 1 To segments - 1
+                            Dim angle = 2.0 * Math.PI * k / segments
+                            ctx.LineTo(New Avalonia.Point(c.X + r * Math.Cos(angle), c.Y + r * Math.Sin(angle)))
+                        Next
+                        ctx.EndFigure(True)
+                    End If
+                    If i = 0 Then Continue For
+                    Dim a = points(i - 1), b = points(i)
+                    Dim dx = b.X - a.X, dy = b.Y - a.Y
+                    Dim length = Math.Sqrt(dx * dx + dy * dy)
+                    If length < 0.001 Then Continue For
+                    Dim nx = -dy / length, ny = dx / length
+                    Dim quad = {New Avalonia.Point(a.X + nx * radii(i - 1), a.Y + ny * radii(i - 1)),
+                                New Avalonia.Point(b.X + nx * radii(i), b.Y + ny * radii(i)),
+                                New Avalonia.Point(b.X - nx * radii(i), b.Y - ny * radii(i)),
+                                New Avalonia.Point(a.X - nx * radii(i - 1), a.Y - ny * radii(i - 1))}
+                    Dim twiceArea = 0.0
+                    For k As Integer = 0 To 3
+                        Dim p = quad(k), q = quad((k + 1) Mod 4)
+                        twiceArea += p.X * q.Y - q.X * p.Y
+                    Next
+                    If twiceArea < 0 Then Array.Reverse(quad)
+                    ctx.BeginFigure(quad(0), True)
+                    ctx.LineTo(quad(1))
+                    ctx.LineTo(quad(2))
+                    ctx.LineTo(quad(3))
+                    ctx.EndFigure(True)
+                Next
+            End Using
+            Return geometry
+        End Function
 
         Private Sub HideBrushPreviewLineAfterBake()
             If Not _hideBrushPreviewAfterBake Then Return
@@ -3518,11 +3654,31 @@ Namespace Views
                     outline.Opacity = 0.72
                 End If
             Else
-                line.Stroke = vm.AnnotationStrokeBrush
+                line.Stroke = vm.BrushColorBrush
                 line.StrokeDashArray = Nothing
                 line.Opacity = Math.Max(0.15, (vm.BrushOpacity / 100.0) * (vm.BrushFlow / 100.0))
                 If outline IsNot Nothing Then outline.IsVisible = False
             End If
+
+            ' MIT STIFTDRUCK zeigt der Umriss den Strich, nicht die Linie: sie hätte überall die
+            ' volle Dicke, und das Ergebnis wäre beim Loslassen schmaler als die Vorschau. Farbe und
+            ' Deckung übernimmt er von der Linie, damit Pinsel und Radierer so aussehen wie ohne Druck.
+            Dim pressurePath = Me.FindControl(Of Avalonia.Controls.Shapes.Path)("BrushPreviewPressurePath")
+            If pressurePath Is Nothing Then Return
+            Dim pressures = PressuresOrNothing(_brushPressures)
+            If pressures Is Nothing OrElse pressures.Count <> _brushPoints.Count Then
+                pressurePath.IsVisible = False
+                Return
+            End If
+            Dim screenPoints = _brushPoints.Select(Function(p) New Avalonia.Point(imageRect.Left + p.X / 100.0 * imageRect.Width,
+                                                                                 imageRect.Top + p.Y / 100.0 * imageRect.Height)).ToList()
+            Dim radii = pressures.Select(Function(p) strokeThickness / 2.0 * ImageProcessor.PressureWidthFactor(p)).ToList()
+            pressurePath.Data = BuildPressurePreviewGeometry(screenPoints, radii)
+            pressurePath.Fill = line.Stroke
+            pressurePath.Opacity = line.Opacity
+            pressurePath.IsVisible = True
+            line.IsVisible = False
+            If outline IsNot Nothing Then outline.IsVisible = False
         End Sub
 
         Private Shared Function BuildTransparentEraserPreviewBrush() As IBrush
@@ -3618,7 +3774,7 @@ Namespace Views
             If vm Is Nothing OrElse _maskBrushPoints.Count = 0 Then Return
             Dim xs As Double() = Nothing, ys As Double() = Nothing
             MaskBrushPercentArrays(xs, ys)
-            vm.RefreshMaskBrushLivePreview(xs, ys)
+            vm.RefreshMaskBrushLivePreview(xs, ys, PressuresOrNothing(_maskBrushPressures))
         End Sub
 
         ''' <summary>Reine View-Vorschau für den Auswahlpinsel. Die echte Auswahl wird erst beim
@@ -3803,7 +3959,7 @@ Namespace Views
             If vm Is Nothing OrElse _maskBrushPoints.Count = 0 Then Return
             Dim xs As Double() = Nothing, ys As Double() = Nothing
             MaskBrushPercentArrays(xs, ys)
-            vm.CommitMaskBrushStroke(xs, ys)
+            vm.CommitMaskBrushStroke(xs, ys, PressuresOrNothing(_maskBrushPressures))
         End Sub
 
         ''' Zeichnet den gestrichelten Ring an der Stelle, aus der gerade kopiert wird. Vor dem ersten
@@ -6945,7 +7101,7 @@ Namespace Views
         ''' Editor) - bei Stift und Beruehrung aber erst beim ABHEBEN (FocusManager.CanPointerFocus).
         ''' Kommt das Abheben nicht an, wie bei manchen Zeichentabletts, blieb die Tastatur im
         ''' Zahlenfeld, und dort galten die Editorkuerzel nicht: blanke Buchstaben wie J gehoeren
-        ''' einem Eingabefeld, und ESC verwarf nur dessen Eingabe (Nutzerbefund 2026-09-24). Das
+        ''' einem Eingabefeld, und ESC verwarf nur dessen Eingabe (Nutzerbefund). Das
         ''' Feld uebernimmt seinen Wert dabei wie bei jedem Verlassen.
         '''
         ''' Nicht, wenn der Klick selbst einem Eingabefeld gilt (auch der aufgeklappten Liste einer

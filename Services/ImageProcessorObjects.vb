@@ -1904,7 +1904,9 @@ Namespace Services
         Private Shared Sub DrawImageAnnotation(canvas As SKCanvas, imagePath As String, rect As SKRect, opacity As Single, stroke As SKColor, strokeWidth As Single, Optional stretchToFill As Boolean = False)
             If String.IsNullOrWhiteSpace(imagePath) OrElse Not File.Exists(imagePath) Then Return
 
-            Using bitmap = SKBitmap.Decode(imagePath)
+            ' Ein eben gemalter Stand einer Ebene liegt noch im Speicher - dann nicht die Datei
+            ' dekodieren, die gerade erst aus genau diesem Raster geschrieben wurde.
+            Using bitmap = ObjectImageMemory.DecodeOrCopy(imagePath)
                 If bitmap Is Nothing OrElse bitmap.Width <= 0 OrElse bitmap.Height <= 0 Then Return
 
                 Dim fitRect = If(stretchToFill, rect, FitRectKeepingAspectRatio(rect, bitmap.Width, bitmap.Height))
@@ -2579,6 +2581,40 @@ Namespace Services
         ''' ueber echte Zeilenumbrueche im Text (Strg+Enter in den Eingabefeldern).
         ''' <paramref name="maxWidth"/> bleibt in der Signatur, weil die Aufrufer sie fuer Formen
         ''' weiterreichen - fuer Text ist sie bewusst ohne Wirkung.</summary>
+        ''' <summary>WO DER TEXT EINES OBJEKTS LANDET, relativ zur linken oberen Ecke seines
+        ''' Rahmens - nach genau der Anordnung von <see cref="DrawWrappedText"/>: erste Grundlinie
+        ''' bei Schriftgröße, Zeilen nur an Zeilenenden, kein Umbruch am Rahmen. Ein langes Wort
+        ''' ragt deshalb über den Rahmen hinaus, und das darf es auch; der gebackene Weg zeichnet es
+        ''' vollständig.
+        '''
+        ''' Gebraucht vom Zwischenspeicher der Anzeige (RenderAnnotationOverlaySk): dessen Bitmap
+        ''' hatte nur die Größe des Rahmens, und was darüber hinausragte, fehlte in der Anzeige. Ein
+        ''' Wasserzeichen stand im Editor dadurch sichtbar woanders als im Ergebnis, und beim
+        ''' Zusammenlegen schien es zu springen (Nutzerbefund).
+        '''
+        ''' Großzügig gerechnet: ein halbes Geviert für Überhänge (Kursive, Unterlängen einzelner
+        ''' Schnitte) plus die halbe Kontur. Zu viel Rand kostet ein paar leere Bildpunkte, zu wenig
+        ''' schneidet wieder ab.</summary>
+        Friend Shared Function MeasureAnnotationTextExtent(text As String, fontFamily As String, fontSize As Single,
+                                                           letterSpacingPercent As Single, bold As Boolean, italic As Boolean,
+                                                           strokeWidth As Single) As SKRect
+            If String.IsNullOrEmpty(text) OrElse fontSize <= 0 Then Return SKRect.Empty
+            Using font = CreateTextFont(fontFamily, fontSize, text, bold, italic)
+                Dim spacing = font.Size * letterSpacingPercent / 100.0F
+                Dim metrics = font.Metrics
+                Dim lineHeight = GetLineHeight(metrics)
+                Dim lines = text.Replace(vbCrLf, vbLf).Replace(vbCr, vbLf).Split(ControlChars.Lf)
+                Dim widest = 0.0F
+                For Each line In lines
+                    widest = Math.Max(widest, MeasureTextSpaced(font, line, spacing))
+                Next
+                Dim margin = fontSize * 0.5F + Math.Max(0.0F, strokeWidth) / 2.0F
+                Dim top = fontSize + metrics.Ascent
+                Dim bottom = fontSize + (lines.Length - 1) * lineHeight + metrics.Descent
+                Return New SKRect(-margin, top - margin, widest + margin, bottom + margin)
+            End Using
+        End Function
+
         Private Shared Sub DrawWrappedText(canvas As SKCanvas, text As String, x As Single, y As Single, maxWidth As Single, fontSize As Single, font As SKFont, paint As SKPaint, Optional spacing As Single = 0)
             If String.IsNullOrEmpty(text) Then Return
             Dim lineHeight = GetLineHeight(font.Metrics)

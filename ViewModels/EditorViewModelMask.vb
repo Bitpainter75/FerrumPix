@@ -830,7 +830,8 @@ Namespace ViewModels
                         Next
                         Dim r = CSng(Math.Max(0.5, MaskBrushRadiusDisplay() * ovScale))
                         Dim soft = CSng(MaskBrushStrokeSoftness() * ovScale)
-                        ImageProcessor.DrawSoftMaskStroke(canvas, scaled, r, soft, MaskBrushStrokeOverlayColor(redColor), eraseMode)
+                        ImageProcessor.DrawSoftMaskStroke(canvas, scaled, r, soft, MaskBrushStrokeOverlayColor(redColor), eraseMode,
+                                                          _maskBrushPressures)
                     End If
                 End Using
                 Return ImageProcessor.ToAvaloniaBitmap(overlay)
@@ -970,8 +971,21 @@ Namespace ViewModels
             If value Then PublishSelectionRedOverlay() Else SetSelectionMaskPreviewImage(Nothing)
         End Sub
 
+        ''' <summary>Der Stiftdruck des LAUFENDEN Maskenstrichs, je Punkt, oder Nothing (Maus, oder
+        ''' Druck in den Einstellungen abgeschaltet). Ein Feld statt eines Parameters, weil der Strich
+        ''' an drei Stellen gezeichnet wird - Vorschau der gemalten Maske, Vorschau eines Verlaufs,
+        ''' Ergebnis - und alle drei denselben Druck brauchen. Gilt nur, solange der Zug läuft.</summary>
+        Private _maskBrushPressures As Single()
+
+        Private Sub SetMaskBrushPressures(pressures As IReadOnlyList(Of Single), pointCount As Integer)
+            _maskBrushPressures = If(pressures IsNot Nothing AndAlso pressures.Count = pointCount,
+                                     pressures.ToArray(), Nothing)
+        End Sub
+
         ''' Live-Vorschau während des Strichs: committete Maske + laufender Strich in Rot.
-        Public Sub RefreshMaskBrushLivePreview(xsPercent As Double(), ysPercent As Double())
+        Public Sub RefreshMaskBrushLivePreview(xsPercent As Double(), ysPercent As Double(),
+                                               Optional pressures As IReadOnlyList(Of Single) = Nothing)
+            SetMaskBrushPressures(pressures, If(xsPercent Is Nothing, 0, xsPercent.Length))
             If xsPercent Is Nothing OrElse ysPercent Is Nothing OrElse xsPercent.Length = 0 OrElse xsPercent.Length <> ysPercent.Length Then
                 PublishMaskBrushOverlay()
                 Return
@@ -1031,6 +1045,7 @@ Namespace ViewModels
 
         ''' Live-Vorschau verwerfen (Strich abgebrochen): zurück auf die committete Maske.
         Public Sub CancelMaskBrushStroke()
+            _maskBrushPressures = Nothing
             PublishMaskBrushOverlay()
         End Sub
 
@@ -1038,6 +1053,25 @@ Namespace ViewModels
         ''' Alpha8-Stempel bauen und über ApplySelectionCandidate mit dem aktuellen Kombiniermodus verrechnen
         ''' (erster Strich ohne aktive Auswahl = "New"). Danach ist die Maske weich-gebacken.</summary>
         Public Sub CommitMaskBrushStroke(xsPercent As Double(), ysPercent As Double())
+            CommitMaskBrushStroke(xsPercent, ysPercent, Nothing)
+        End Sub
+
+        ''' <summary>Dasselbe mit Stiftdruck je Punkt. Eine eigene Überladung statt eines optionalen
+        ''' Parameters, damit die Fassung mit zwei Reihen bleibt, was sie war - auch für Aufrufer,
+        ''' die sie über ihre Parametertypen suchen.</summary>
+        Public Sub CommitMaskBrushStroke(xsPercent As Double(), ysPercent As Double(),
+                                         pressures As IReadOnlyList(Of Single))
+            SetMaskBrushPressures(pressures, If(xsPercent Is Nothing, 0, xsPercent.Length))
+            Try
+                CommitMaskBrushStrokeCore(xsPercent, ysPercent)
+            Finally
+                ' Der Zug ist zu Ende: das Overlay, das danach gezeichnet wird, zeigt die fertige
+                ' Maske, und ein spaeterer Aufruf ohne Druck darf den alten nicht erben.
+                _maskBrushPressures = Nothing
+            End Try
+        End Sub
+
+        Private Sub CommitMaskBrushStrokeCore(xsPercent As Double(), ysPercent As Double())
             If xsPercent Is Nothing OrElse ysPercent Is Nothing OrElse xsPercent.Length = 0 OrElse xsPercent.Length <> ysPercent.Length Then
                 PublishMaskBrushOverlay()
                 Return
@@ -1068,7 +1102,8 @@ Namespace ViewModels
             ' entstanden ist. Der Unterschied ist jetzt eine einzige Verzweigung: WOHIN der Strich
             ' geht. Alles davor und danach ist gemeinsam.
             PushUndo(LocalizationService.T("Maske gemalt"))
-            Using stamp = ImageProcessor.BuildSoftBrushStampMask(pts, radius, softness, rectPx, MaskBrushStrokeAlpha())
+            Using stamp = ImageProcessor.BuildSoftBrushStampMask(pts, radius, softness, rectPx, MaskBrushStrokeAlpha(),
+                                                                 _maskBrushPressures)
                 If stamp IsNot Nothing Then
                     Dim gradient = SelectedGradientMask
                     ' MEHRTEILIGE Maske: der Strich geht DIREKT in den ANGEFASSTEN Bestandteil (die
@@ -1642,6 +1677,123 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(IsMaskDisabled))
             Me.RaisePropertyChanged(NameOf(CanCopyMask))
             Me.RaisePropertyChanged(NameOf(CanPasteMask))
+        End Sub
+
+        ' ── Auswahl veraendern: vergroessern, verkleinern, glaetten, Rand ─────────
+
+        Private _selectionModifyAmount As Double = 10
+
+        ''' <summary>Um wie viele Bildpunkte "Auswahl verändern" wirkt. Eine Einstellung der
+        ''' Sitzung wie die Größe des Pinsels; Obergrenze siehe
+        ''' ImageProcessor.SelectionModifyMaxPixels.</summary>
+        Public Property SelectionModifyAmount As Double
+            Get
+                Return _selectionModifyAmount
+            End Get
+            Set(value As Double)
+                Dim clamped = CDbl(CInt(Math.Round(Math.Max(1, Math.Min(ImageProcessor.SelectionModifyMaxPixels, value)))))
+                Me.RaiseAndSetIfChanged(_selectionModifyAmount, clamped)
+            End Set
+        End Property
+
+        Private _modifySelectionCommand As ICommand
+
+        Public ReadOnly Property ModifySelectionCommand As ICommand
+            Get
+                If _modifySelectionCommand Is Nothing Then
+                    _modifySelectionCommand = New DelegateCommand(Sub(parameter) ModifySelection(TryCast(parameter, String)))
+                End If
+                Return _modifySelectionCommand
+            End Get
+        End Property
+
+        ''' <summary>DIE AUSWAHL VERÄNDERN: "Expand", "Contract", "Smooth" oder "Border", um
+        ''' <see cref="SelectionModifyAmount"/> Bildpunkte. Die Rechnung steht in
+        ''' ImageProcessor.ModifySelectionMask; hier nur der Rahmen, derselbe wie beim Umkehren:
+        ''' ein Rückgängig-Punkt, die neue Maske als Rastermaske, und bei einer geöffneten
+        ''' Ebenenmaske das Zurückschreiben in die Ebene.
+        '''
+        ''' Die Art der Auswahl bleibt, was sie war: eine Maske (rot) bleibt eine Maske, Laufameisen
+        ''' bleiben Laufameisen. Die weiche Kante ebenso - sie wird weiter aus der neuen harten Form
+        ''' abgeleitet.
+        '''
+        ''' NICHT bei einer Maske aus mehreren Bestandteilen: dort trägt die Auswahl die SUMME, und
+        ''' zurückgeschrieben werden kann nur in einen Bestandteil. Das wäre eine andere Maske als die,
+        ''' die man verändert hat. Die Fußzeile sagt es, statt still etwas anderes zu tun.</summary>
+        Private _selectionModifyRunning As Boolean
+
+        ''' <remarks>GERECHNET WIRD IM HINTERGRUND. Bei einer bildgroßen Auswahl auf 24 MP dauert
+        ''' die Rechnung eine halbe bis gut eine Sekunde (gemessen in "MESSUNG Auswahl verändern");
+        ''' so lange stünde die Oberfläche. Die Maske ist eine Kopie, die Rechnung eine reine
+        ''' Funktion. Beim Eintreffen muss die Auswahl noch DIESELBE sein - dieselbe Maske und
+        ''' dasselbe Rechteck -, sonst wird das Ergebnis verworfen: es gehörte zu einer Auswahl, die
+        ''' es nicht mehr gibt. Solange eine Rechnung läuft, nimmt der Befehl keinen weiteren Klick
+        ''' an; zwei Rechnungen auf demselben Stand ergäben nicht zweimal die Wirkung, sondern einmal.</remarks>
+        Public Async Sub ModifySelection(kind As String)
+            If Not _hasActiveSelection OrElse _selectionModifyRunning Then Return
+            If kind <> "Expand" AndAlso kind <> "Contract" AndAlso kind <> "Smooth" AndAlso kind <> "Border" Then Return
+            If _editingLayerMaskId <> "" Then
+                Dim edited = EditedLayerMask()
+                If edited IsNot Nothing AndAlso edited.ComponentCount > 1 Then
+                    StatusText = LocalizationService.T("Eine Maske aus mehreren Bestandteilen lässt sich so nicht verändern")
+                    Return
+                End If
+            End If
+            Dim size = GetAnnotationDisplayPixelSize()
+            If size.Width <= 0 OrElse size.Height <= 0 Then Return
+
+            Dim existingMask = BuildCurrentSelectionMask()
+            Dim existingRect = SelectionRectPixels()
+            If existingMask Is Nothing OrElse existingRect.Width <= 0 OrElse existingRect.Height <= 0 Then
+                existingMask?.Dispose()
+                Return
+            End If
+            Dim stampMask = _selectionMask
+            Dim amount = CInt(_selectionModifyAmount)
+            Dim changed As (Mask As SKBitmap, Rect As SKRectI)?
+            _selectionModifyRunning = True
+            Try
+                changed = Await Task.Run(Function() ImageProcessor.ModifySelectionMask(existingMask, existingRect,
+                                                                                        size.Width, size.Height, kind, amount))
+            Finally
+                existingMask.Dispose()
+                _selectionModifyRunning = False
+            End Try
+            If Not _hasActiveSelection OrElse Not Object.ReferenceEquals(_selectionMask, stampMask) OrElse
+               SelectionRectPixels() <> existingRect Then
+                ' Die Auswahl hat sich unterwegs geändert: das Ergebnis gehört zu einer alten.
+                If changed.HasValue Then changed.Value.Mask.Dispose()
+                Return
+            End If
+
+            InvalidateSelectionLayerLink()
+            ' Jeder Text als eigenes T("…"): ein T mit einer Variablen sieht die Sprachprüfung nicht.
+            Dim label As String
+            Select Case kind
+                Case "Expand" : label = LocalizationService.T("Auswahl vergrößert")
+                Case "Contract" : label = LocalizationService.T("Auswahl verkleinert")
+                Case "Smooth" : label = LocalizationService.T("Auswahl geglättet")
+                Case Else : label = LocalizationService.T("Auswahlrand gebildet")
+            End Select
+            PushUndo(label)
+            If Not changed.HasValue Then
+                ' Verkleinert bis nichts mehr übrig ist: dann ist auch keine Auswahl mehr da.
+                ClearSelection(captureUndo:=False)
+                Return
+            End If
+
+            ClearSelectionMask()
+            SetSelectionBoundsFromPixels(changed.Value.Rect)
+            SetSelectionShape("MagicWand", Nothing, Nothing)
+            SetSelectionMaskData(changed.Value.Mask, changed.Value.Rect)
+            HasActiveSelection = True
+
+            If _editingLayerMaskId <> "" Then
+                WriteSelectionMaskBackToLayer()
+                PublishMaskBrushOverlay()
+                _hasChanges = True
+                SchedulePreviewUpdate()
+            End If
         End Sub
 
         ' ── Umkehren und Verwerfen fuer JEDE Masken-Art ─────────────────────────
@@ -2468,7 +2620,8 @@ Namespace ViewModels
                         ImageProcessor.DrawSoftMaskStroke(canvas, scaled,
                                                           CSng(Math.Max(0.5, MaskBrushRadiusDisplay() * ovScale)),
                                                           CSng(Math.Max(0.0, _selectionFeather) * ovScale),
-                                                          MaskBrushStrokeOverlayColor(New SKColor(255, 0, 0, 128)), eraseMode)
+                                                          MaskBrushStrokeOverlayColor(New SKColor(255, 0, 0, 128)), eraseMode,
+                                                          _maskBrushPressures)
                     End Using
                 End If
                 Return ImageProcessor.ToAvaloniaBitmap(overlay)

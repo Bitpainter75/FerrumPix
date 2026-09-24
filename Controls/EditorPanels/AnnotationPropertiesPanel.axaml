@@ -15,6 +15,49 @@
             </DataTemplate>
         </Expander.HeaderTemplate>
         <StackPanel Spacing="10" Margin="0,8,0,0">
+            <!-- EINFÜGEN OHNE KLICK INS BILD, in die Mitte (EditorViewModel.InsertArmedAnnotationAtCenter).
+                 Der Klick ins Bild nimmt zuerst eine getroffene Ebene; liegt eine bildfüllende obenauf,
+                 war Text oder QR-Code sonst gar nicht zu setzen. -->
+            <Button Classes="ghost" HorizontalAlignment="Stretch" Padding="10,6"
+                    IsVisible="{Binding ShowInsertTextButton}"
+                    Command="{Binding InsertArmedAnnotationCommand}"
+                    ToolTip.Tip="Ein neues Textobjekt in die Bildmitte setzen, ohne ins Bild zu klicken">
+                <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/typography.svg"
+                                   Width="16" Height="16" />
+                    <TextBlock Text="Text einfügen" />
+                </StackPanel>
+            </Button>
+            <Button Classes="ghost" HorizontalAlignment="Stretch" Padding="10,6"
+                    IsVisible="{Binding ShowInsertQrButton}"
+                    Command="{Binding InsertArmedAnnotationCommand}"
+                    ToolTip.Tip="Einen neuen QR-Code in die Bildmitte setzen, ohne ins Bild zu klicken">
+                <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/qrcode.svg"
+                                   Width="16" Height="16" />
+                    <TextBlock Text="QR-Code einfügen" />
+                </StackPanel>
+            </Button>
+            <Button Classes="ghost" HorizontalAlignment="Stretch" Padding="10,6"
+                    IsVisible="{Binding ShowInsertShapeButton}"
+                    Command="{Binding InsertArmedAnnotationCommand}"
+                    ToolTip.Tip="Die gewählte Form in die Bildmitte setzen, ohne ins Bild zu klicken">
+                <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/shape.svg"
+                                   Width="16" Height="16" />
+                    <TextBlock Text="Form einfügen" />
+                </StackPanel>
+            </Button>
+            <Button Classes="ghost" HorizontalAlignment="Stretch" Padding="10,6"
+                    IsVisible="{Binding ShowInsertSymbolButton}"
+                    Command="{Binding InsertArmedAnnotationCommand}"
+                    ToolTip.Tip="Das gewählte Symbol in die Bildmitte setzen, ohne ins Bild zu klicken">
+                <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/icons.svg"
+                                   Width="16" Height="16" />
+                    <TextBlock Text="Symbol einfügen" />
+                </StackPanel>
+            </Button>
             <StackPanel Spacing="6" IsVisible="{Binding ShowWatermarkPresetControls}">
             <Grid ColumnDefinitions="92,*" VerticalAlignment="Center">
                 <TextBlock Text="Vorlage" Foreground="{DynamicResource FP.Text.Secondary}"
@@ -75,21 +118,18 @@
             </Grid>
         </StackPanel>
 
-        <!-- Bild-Werkzeug: derselbe Weg wie beim Wasserzeichen - Datei wählen, Objekt erscheint. -->
-        <Grid ColumnDefinitions="92,*" VerticalAlignment="Center"
-              IsVisible="{Binding ShowImageSourceControls}">
-            <TextBlock Text="Quelle" Foreground="{DynamicResource FP.Text.Secondary}"
-                       VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
-            <Button Grid.Column="1" Margin="6,0,0,0" Classes="ghost" Padding="8,4"
-                    HorizontalAlignment="Left"
-                    Click="OnInsertImageClick">
-                <StackPanel Orientation="Horizontal" Spacing="6">
-                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/photo-plus.svg"
-                                   Width="14" Height="14" />
-                    <TextBlock Text="Bild einfügen" FontSize="{DynamicResource FP.Font.Small}" />
-                </StackPanel>
-            </Button>
-        </Grid>
+        <!-- Bild-Werkzeug: derselbe Weg wie beim Wasserzeichen - Datei wählen, Objekt erscheint.
+             So breit wie "Text einfügen" und "QR-Code einfügen" darüber: dieselbe Handlung, derselbe
+             Knopf. -->
+        <Button Classes="ghost" HorizontalAlignment="Stretch" Padding="10,6"
+                IsVisible="{Binding ShowImageSourceControls}"
+                Click="OnInsertImageClick">
+            <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/photo-plus.svg"
+                               Width="16" Height="16" />
+                <TextBlock Text="Bild einfügen" />
+            </StackPanel>
+        </Button>
         <!-- Neue Zeile NUR über Strg+Enter: ein Tunnel-Handler im Code-Behind schluckt Enter
              allein und fügt bei Strg+Enter selbst um (feuert VOR der TextBox-Interna - ein
              Bubble-Handler kam dort nie an). AcceptsReturn bleibt an, damit mehrzeiliger Text

@@ -8729,4 +8729,100 @@
   <data name="Clipping_Warnung_ein_aus_in_den_Werkzeugen_mit_R_4cef1555" xml:space="preserve">
     <value>Klippeadvarsel til/fra, i værktøjerne med skydeknapper</value>
   </data>
+  <data name="Stiftdruck_steuert_die_Pinselgr_e_e52788ad" xml:space="preserve">
+    <value>Pennetryk styrer penselstørrelsen</value>
+  </data>
+  <data name="Leichter_Druck_malt_schmaler_voller_Druck_in_der_428c9511" xml:space="preserve">
+    <value>Let tryk maler smallere, fuldt tryk i den indstillede størrelse. Gælder pensel, viskelæder og maskepensel, og kun med en pen; musen maler altid i fuld størrelse.</value>
+  </data>
+  <data name="Gl_tten_d9301a0e" xml:space="preserve">
+    <value>Udjævning</value>
+  </data>
+  <data name="Zieht_den_Strich_ruhiger_hinter_dem_Zeiger_her_u_93109ffc" xml:space="preserve">
+    <value>Trækker strøget roligere efter markøren og fjerner små rystelser. 0 følger markøren præcist</value>
+  </data>
+  <data name="Eine_Maske_aus_mehreren_Bestandteilen_l_sst_sich_32c0b252" xml:space="preserve">
+    <value>En maske af flere dele kan ikke ændres på denne måde</value>
+  </data>
+  <data name="Auswahl_vergr_ert_6f2e0332" xml:space="preserve">
+    <value>Markering udvidet</value>
+  </data>
+  <data name="Auswahl_verkleinert_f56a0eb6" xml:space="preserve">
+    <value>Markering formindsket</value>
+  </data>
+  <data name="Auswahl_gegl_ttet_3b7e67b2" xml:space="preserve">
+    <value>Markering udjævnet</value>
+  </data>
+  <data name="Auswahlrand_gebildet_1c1ccfb0" xml:space="preserve">
+    <value>Markeringskant oprettet</value>
+  </data>
+  <data name="Ver_ndern_um_259e91a8" xml:space="preserve">
+    <value>Ændr med</value>
+  </data>
+  <data name="Um_wie_viele_Bildpunkte_die_vier_Kn_pfe_darunter_f3f8fd19" xml:space="preserve">
+    <value>Hvor mange pixel de fire knapper nedenfor ændrer markeringen med</value>
+  </data>
+  <data name="Die_Auswahl_rundherum_um_den_Betrag_vergr_ern_610649f0" xml:space="preserve">
+    <value>Udvid markeringen hele vejen rundt med værdien</value>
+  </data>
+  <data name="Die_Auswahl_rundherum_um_den_Betrag_verkleinern__037b2032" xml:space="preserve">
+    <value>Formindsk markeringen hele vejen rundt med værdien; ved billedkanten bliver den stående</value>
+  </data>
+  <data name="Zacken_und_kleine_L_cher_bis_zur_Gr_e_des_Betrag_807c2320" xml:space="preserve">
+    <value>Fjern takker og små huller op til værdiens størrelse og afrund hjørnerne</value>
+  </data>
+  <data name="Aus_der_Auswahl_ein_Band_entlang_ihrer_Kante_mac_571757ef" xml:space="preserve">
+    <value>Gør markeringen til et bånd langs kanten, så bredt som værdien</value>
+  </data>
+  <data name="Rote_Augen_lassen_sich_nur_im_Foto_entfernen_nic_5f247714" xml:space="preserve">
+    <value>Røde øjne kan kun fjernes i fotoet, ikke på et lag</value>
+  </data>
+  <data name="Im_Pinselkreis_ist_kein_rotes_Auge_zu_finden_5f4498d8" xml:space="preserve">
+    <value>Intet rødt øje fundet i penselcirklen</value>
+  </data>
+  <data name="Rote_Augen_entfernt_a3907783" xml:space="preserve">
+    <value>Røde øjne fjernet</value>
+  </data>
+  <data name="Rote_Augen_entfernen_fehlgeschlagen_2f91768f" xml:space="preserve">
+    <value>Fjernelse af røde øjne mislykkedes</value>
+  </data>
+  <data name="Solange_eingeschaltet_entfernt_jeder_Klick_ins_B_cc00c082" xml:space="preserve">
+    <value>Så længe det er slået til, fjerner hvert klik i billedet røde øjne i penselcirklen</value>
+  </data>
+  <data name="Rote_Augen_entfernen_ed756d76" xml:space="preserve">
+    <value>Fjern røde øjne</value>
+  </data>
+  <data name="Mit_dem_Pinselkreis_auf_die_Pupille_klicken_Er_s_f5b54aec" xml:space="preserve">
+    <value>Klik på pupillen med penselcirklen. Den skal omfatte alt det røde, men ikke meget mere: stærkt rødmet hud i cirklen ville også blive affarvet.</value>
+  </data>
+  <data name="Erweitern_ee9937c7" xml:space="preserve">
+    <value>Udvid</value>
+  </data>
+  <data name="Reduzieren_a9eb23c0" xml:space="preserve">
+    <value>Formindsk</value>
+  </data>
+  <data name="Text_einf_gen_dea18d16" xml:space="preserve">
+    <value>Indsæt tekst</value>
+  </data>
+  <data name="QR_Code_einf_gen_f880f8d5" xml:space="preserve">
+    <value>Indsæt QR-kode</value>
+  </data>
+  <data name="Ein_neues_Textobjekt_in_die_Bildmitte_setzen_ohn_47312e5f" xml:space="preserve">
+    <value>Placer et nyt tekstobjekt midt i billedet uden at klikke i billedet</value>
+  </data>
+  <data name="Einen_neuen_QR_Code_in_die_Bildmitte_setzen_ohne_13db2d8f" xml:space="preserve">
+    <value>Placer en ny QR-kode midt i billedet uden at klikke i billedet</value>
+  </data>
+  <data name="Form_einf_gen_d0e821e1" xml:space="preserve">
+    <value>Indsæt form</value>
+  </data>
+  <data name="Symbol_einf_gen_d2d7d51d" xml:space="preserve">
+    <value>Indsæt symbol</value>
+  </data>
+  <data name="Die_gew_hlte_Form_in_die_Bildmitte_setzen_ohne_i_982c9c62" xml:space="preserve">
+    <value>Placer den valgte form midt i billedet uden at klikke i billedet</value>
+  </data>
+  <data name="Das_gew_hlte_Symbol_in_die_Bildmitte_setzen_ohne_707d5a38" xml:space="preserve">
+    <value>Placer det valgte symbol midt i billedet uden at klikke i billedet</value>
+  </data>
 </root>

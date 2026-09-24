@@ -621,6 +621,13 @@ Namespace Services
         ''' Zeichentablett: alles loest beim Druecken aus statt beim Loslassen. Warum es das gibt und
         ''' was es kostet, steht in TabletInputService.
         Public Property TabletMode As Boolean = False
+        ''' Stiftdruck steuert die Größe von Pinsel, Radierer und Maskenpinsel. Wirkt nur, wenn das
+        ''' Gerät einen Stift meldet; die Maus malt immer in voller Größe.
+        Public Property PenPressureSize As Boolean = True
+        ''' Wie stark ein Pinselzug geglättet wird, 0 bis 100. 0 folgt dem Zeiger genau; höhere Werte
+        ''' ziehen den Strich wie an einer Schnur hinterher. Ab Werk 100: beim Malen ist ein ruhiger
+        ''' Strich der Normalfall, wer ihn genau am Zeiger will, stellt ab.
+        Public Property BrushSmoothing As Integer = 100
         ''' Eigene Gestenbelegung für Trackpads; standardmäßig aus, damit Mauswege unverändert bleiben.
         Public Property TrackpadMode As Boolean = False
         Public Property WatermarkPresets As New List(Of WatermarkPresetSettings)()

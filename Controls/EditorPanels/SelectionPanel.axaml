@@ -334,6 +334,47 @@
                                          Minimum="0" Maximum="200" Increment="1"
                                          FormatString="F0" />
             </Grid>
+            <!-- AUSWAHL VERÄNDERN: anders als die weiche Kante ändern diese vier die FORM der Auswahl
+                 selbst, und jeder Klick ist ein eigener Rückgängig-Schritt. Der Betrag gilt für alle
+                 vier, in Bildpunkten (EditorViewModel.ModifySelection). -->
+            <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
+                <TextBlock Text="Verändern um" Foreground="{DynamicResource FP.Text.Secondary}"
+                           VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}"
+                           ToolTip.Tip="Um wie viele Bildpunkte die vier Knöpfe darunter die Auswahl verändern" />
+                <icons:RoundSlider Grid.Column="1" Minimum="1" Maximum="200"
+                                   DefaultValue="10"
+                                   Value="{Binding SelectionModifyAmount}" Margin="0,0" />
+                <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                         Value="{Binding SelectionModifyAmount, Mode=TwoWay}"
+                                         Minimum="1" Maximum="200" Increment="1"
+                                         FormatString="F0" />
+            </Grid>
+            <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" ColumnSpacing="4" RowSpacing="4">
+                <Button Grid.Row="0" Grid.Column="0" Classes="ghost" HorizontalAlignment="Stretch"
+                        HorizontalContentAlignment="Center" Padding="6,4"
+                        IsEnabled="{Binding HasActiveSelection}"
+                        Command="{Binding ModifySelectionCommand}" CommandParameter="Expand"
+                        Content="Erweitern"
+                        ToolTip.Tip="Die Auswahl rundherum um den Betrag vergrößern" />
+                <Button Grid.Row="0" Grid.Column="1" Classes="ghost" HorizontalAlignment="Stretch"
+                        HorizontalContentAlignment="Center" Padding="6,4"
+                        IsEnabled="{Binding HasActiveSelection}"
+                        Command="{Binding ModifySelectionCommand}" CommandParameter="Contract"
+                        Content="Reduzieren"
+                        ToolTip.Tip="Die Auswahl rundherum um den Betrag verkleinern; am Bildrand bleibt sie stehen" />
+                <Button Grid.Row="1" Grid.Column="0" Classes="ghost" HorizontalAlignment="Stretch"
+                        HorizontalContentAlignment="Center" Padding="6,4"
+                        IsEnabled="{Binding HasActiveSelection}"
+                        Command="{Binding ModifySelectionCommand}" CommandParameter="Smooth"
+                        Content="Glätten"
+                        ToolTip.Tip="Zacken und kleine Löcher bis zur Größe des Betrags entfernen und Ecken runden" />
+                <Button Grid.Row="1" Grid.Column="1" Classes="ghost" HorizontalAlignment="Stretch"
+                        HorizontalContentAlignment="Center" Padding="6,4"
+                        IsEnabled="{Binding HasActiveSelection}"
+                        Command="{Binding ModifySelectionCommand}" CommandParameter="Border"
+                        Content="Rand"
+                        ToolTip.Tip="Aus der Auswahl ein Band entlang ihrer Kante machen, so breit wie der Betrag" />
+            </Grid>
             <Button Classes="ghost"
                     HorizontalAlignment="Stretch"
                     Padding="10,6"

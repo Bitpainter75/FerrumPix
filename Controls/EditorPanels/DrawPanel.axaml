@@ -8,7 +8,7 @@
 
         <!-- FARBE (nur Pinsel) - Farbrad kopflos, wie der Farbmischer beim Text-Objekt. -->
         <Border Classes="adjustment-group" Margin="0,7,0,0" IsVisible="{Binding IsBrushPaintMode}">
-            <icons:ColorMixer StrokeColor="{Binding AnnotationStrokeColorValue, Mode=TwoWay}"
+            <icons:ColorMixer StrokeColor="{Binding BrushColorValue, Mode=TwoWay}"
                               StrokeLabel="Farbe"
                               ShowFill="False"
                               ShowSecondaryFill="False" />
@@ -109,12 +109,27 @@
                                                  Minimum="0" Maximum="100" Increment="1"
                                                  FormatString="F0" />
                     </Grid>
+                    <!-- Glätten gilt für Pinsel, Radierer und Maskenpinsel gemeinsam und bleibt über
+                         Sitzungen gemerkt (EditorViewModel.BrushSmoothing). -->
+                    <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
+                        <TextBlock Text="Glätten"
+                                   Foreground="{DynamicResource FP.Text.Secondary}"
+                                   VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}"
+                                   ToolTip.Tip="Zieht den Strich ruhiger hinter dem Zeiger her und nimmt kleine Zitterer heraus. 0 folgt dem Zeiger genau" />
+                        <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
+                                           DefaultValue="100"
+                                           Value="{Binding BrushSmoothing}" Margin="0,0" />
+                        <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                                 Value="{Binding BrushSmoothing, Mode=TwoWay}"
+                                                 Minimum="0" Maximum="100" Increment="1"
+                                                 FormatString="F0" />
+                    </Grid>
                     <!-- Kompakter Farb-Button mit Hex, Pipette und zuletzt genutzten Farben. -->
                     <Grid ColumnDefinitions="92,*" VerticalAlignment="Top">
                         <TextBlock Text="Farbe" Foreground="{DynamicResource FP.Text.Secondary}"
                                    VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                         <icons:ColorPickerButton Grid.Column="1"
-                                                 SelectedColor="{Binding AnnotationStrokeColorValue, Mode=TwoWay}" />
+                                                 SelectedColor="{Binding BrushColorValue, Mode=TwoWay}" />
                     </Grid>
                 </StackPanel>
             </Expander>
@@ -176,6 +191,19 @@
                                            Value="{Binding BrushFlow}" Margin="0,0" />
                         <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
                                                  Value="{Binding BrushFlow, Mode=TwoWay}"
+                                                 Minimum="0" Maximum="100" Increment="1"
+                                                 FormatString="F0" />
+                    </Grid>
+                    <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
+                        <TextBlock Text="Glätten"
+                                   Foreground="{DynamicResource FP.Text.Secondary}"
+                                   VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}"
+                                   ToolTip.Tip="Zieht den Strich ruhiger hinter dem Zeiger her und nimmt kleine Zitterer heraus. 0 folgt dem Zeiger genau" />
+                        <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
+                                           DefaultValue="100"
+                                           Value="{Binding BrushSmoothing}" Margin="0,0" />
+                        <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                                 Value="{Binding BrushSmoothing, Mode=TwoWay}"
                                                  Minimum="0" Maximum="100" Increment="1"
                                                  FormatString="F0" />
                     </Grid>
@@ -276,6 +304,24 @@
                             <TextBlock Text="Quelle lösen" FontSize="{DynamicResource FP.Font.Caption}" />
                         </Button>
                     </Grid>
+                    <!-- ROTE AUGEN: ein Schalter, keine vierte Retusche-Art (EditorViewModel.IsRedEyeArmed).
+                         Ist er an, ist jeder Klick ins Bild ein fertiger Schritt im Pinselkreis. -->
+                    <Button Classes="ghost" Classes.accent="{Binding IsRedEyeArmed}"
+                            HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                            Padding="10,6" Margin="0,6,0,0"
+                            Command="{Binding ToggleRedEyeCommand}"
+                            ToolTip.Tip="Solange eingeschaltet, entfernt jeder Klick ins Bild rote Augen im Pinselkreis">
+                        <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/eye.svg"
+                                           Width="16" Height="16" />
+                            <TextBlock Text="Rote Augen entfernen" />
+                        </StackPanel>
+                    </Button>
+                    <TextBlock Text="Mit dem Pinselkreis auf die Pupille klicken. Er sollte das Rot ganz umfassen, aber nicht viel mehr: stark gerötete Haut im Kreis würde mit entfärbt."
+                               IsVisible="{Binding IsRedEyeArmed}"
+                               Foreground="{DynamicResource FP.Text.Muted}"
+                               FontSize="{DynamicResource FP.Font.Caption}"
+                               TextWrapping="Wrap" />
                 </StackPanel>
             </Expander>
         </Border>

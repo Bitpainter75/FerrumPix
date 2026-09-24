@@ -122,6 +122,7 @@ Namespace ViewModels
         Private _transparencyBackgroundColor As String = "#FFFFFFFF"
         Private _enableDiagnosticLogging As Boolean = False
         Private _tabletMode As Boolean = False
+        Private _penPressureSize As Boolean = True
         Private _trackpadMode As Boolean = False
         Private _isThumbnailCacheRefreshing As Boolean = False
         Private _isThumbnailCacheRefreshQueued As Boolean = False
@@ -3790,6 +3791,7 @@ Namespace ViewModels
             _transparencyBackgroundColor = AppSettingsService.NormalizeHexColor(_appSettings.TransparencyBackgroundColor, "#FFFFFFFF")
             _enableDiagnosticLogging = _appSettings.EnableDiagnosticLogging
             _tabletMode = _appSettings.TabletMode
+            _penPressureSize = _appSettings.PenPressureSize
             _trackpadMode = _appSettings.TrackpadMode
             _immichEnabled = _appSettings.ImmichEnabled
             _immichServerUrl = _appSettings.ImmichServerUrl
@@ -4557,6 +4559,19 @@ Namespace ViewModels
                 Me.RaiseAndSetIfChanged(_tabletMode, value)
                 AppSettingsService.Update(Sub(s) s.TabletMode = value)
                 TabletInputService.Apply(value)
+            End Set
+        End Property
+
+        ''' <summary>Stiftdruck steuert die Pinselgröße. Gelesen wird die Einstellung bei jedem
+        ''' neuen Zug, sie wirkt also sofort, auch mitten in einer Sitzung.</summary>
+        Public Property PenPressureSize As Boolean
+            Get
+                Return _penPressureSize
+            End Get
+            Set(value As Boolean)
+                If _penPressureSize = value Then Return
+                Me.RaiseAndSetIfChanged(_penPressureSize, value)
+                AppSettingsService.Update(Sub(s) s.PenPressureSize = value)
             End Set
         End Property
 

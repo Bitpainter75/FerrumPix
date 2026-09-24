@@ -33,6 +33,62 @@ Namespace Services
         Friend Shared ReadOnly BrushPresetKeys As String() = {"soft", "marker", "acrylic", "sandpaper", "pencil", "smear", "spatter",
                                                              "charcoal", "crayon", "airbrush", "calligraphy", "stipple", "watercolor"}
 
+        ''' <summary>Wie schmal der Pinsel bei leichtestem Druck wird, als Anteil der eingestellten
+        ''' Größe. Voller Druck ist genau die eingestellte Größe, nie mehr: so bleibt der Bereich,
+        ''' den ein Strich höchstens trifft, derselbe wie ohne Druck, und jede Rechnung über den
+        ''' geänderten Bereich gilt unverändert weiter.</summary>
+        Friend Const PressureMinWidthFactor As Single = 0.15F
+
+        Friend Shared Function PressureWidthFactor(pressure As Single) As Single
+            Return PressureMinWidthFactor + (1.0F - PressureMinWidthFactor) * Clamp(pressure, 0.0F, 1.0F)
+        End Function
+
+        ''' <summary>DER UMRISS EINES STRICHS MIT WECHSELNDER BREITE, als FÜLLPFAD. Ein Skia-Strich
+        ''' hat eine einzige Breite; für den Stiftdruck entsteht die Form deshalb selbst: je Punkt
+        ''' ein Kreis mit seinem Radius, zwischen zwei Punkten ein Viereck, das die beiden Kreise
+        ''' verbindet. Gefüllt wird mit der Windungsregel, und dafür laufen ALLE Teilformen gleich
+        ''' herum - sonst höben sich überlappende Stücke gegenseitig auf, und ein Strich, der sich
+        ''' selbst kreuzt, bekäme Löcher. Die Vierecke werden deshalb bei Bedarf umgedreht, damit
+        ''' sie so laufen wie die Kreise (im Uhrzeigersinn auf dem Schirm, positive Fläche).
+        '''
+        ''' Das Viereck steht senkrecht zur Strecke statt an den echten Tangenten; bei ungleichen
+        ''' Radien ist es damit eine Spur zu schmal. Weil die Punkte eines Zuges dicht liegen und
+        ''' der Druck sich zwischen zwei Punkten kaum ändert, deckt der Kreis das ab.</summary>
+        Friend Shared Function BuildVariableWidthStrokePath(pts As IReadOnlyList(Of SKPoint),
+                                                            radii As IReadOnlyList(Of Single)) As SKPath
+            Dim path = New SKPath With {.FillType = SKPathFillType.Winding}
+            If pts Is Nothing OrElse radii Is Nothing OrElse pts.Count = 0 OrElse radii.Count <> pts.Count Then Return path
+            For i As Integer = 0 To pts.Count - 1
+                If radii(i) > 0.01F Then path.AddCircle(pts(i).X, pts(i).Y, radii(i), SKPathDirection.Clockwise)
+                If i = 0 Then Continue For
+                Dim a = pts(i - 1), b = pts(i)
+                Dim dx = b.X - a.X, dy = b.Y - a.Y
+                Dim length = CSng(Math.Sqrt(dx * dx + dy * dy))
+                If length < 0.001F Then Continue For
+                Dim nx = -dy / length, ny = dx / length
+                Dim ra = radii(i - 1), rb = radii(i)
+                Dim quad = {New SKPoint(a.X + nx * ra, a.Y + ny * ra), New SKPoint(b.X + nx * rb, b.Y + ny * rb),
+                            New SKPoint(b.X - nx * rb, b.Y - ny * rb), New SKPoint(a.X - nx * ra, a.Y - ny * ra)}
+                Dim twiceArea = 0.0F
+                For k As Integer = 0 To 3
+                    Dim p = quad(k), q = quad((k + 1) Mod 4)
+                    twiceArea += p.X * q.Y - q.X * p.Y
+                Next
+                If twiceArea < 0.0F Then Array.Reverse(quad)
+                path.AddPoly(quad, True)
+            Next
+            Return path
+        End Function
+
+        ''' <summary>Die Radien eines Strichs mit Druck: halbe Breite mal Druckfaktor je Punkt.</summary>
+        Friend Shared Function PressureRadii(stroke As BrushStroke, strokeWidth As Single) As Single()
+            Dim radii(stroke.Points.Count - 1) As Single
+            For i As Integer = 0 To radii.Length - 1
+                radii(i) = strokeWidth * 0.5F * PressureWidthFactor(stroke.Pressures(i))
+            Next
+            Return radii
+        End Function
+
         Private Shared Function NormalizeBrushPreset(preset As String) As String
             If String.IsNullOrWhiteSpace(preset) Then Return "soft"
             Dim key = preset.Trim().ToLowerInvariant()
@@ -93,6 +149,19 @@ Namespace Services
 
                 For Each brushStroke In strokes
                     If brushStroke Is Nothing OrElse brushStroke.Points.Count < 2 Then Continue For
+
+                    ' MIT STIFTDRUCK: derselbe Farbton, dieselbe Weichzeichnung, aber als gefüllter
+                    ' Umriss mit wechselnder Breite. Der Marker verliert dabei seine eckige Kappe -
+                    ' ein Strich, der unter dem Stift dünner wird, hat keine gerade Kante mehr.
+                    If brushStroke.HasPressure Then
+                        Dim pts = brushStroke.Points.Select(Function(p) New SKPoint(Clamp(p.X, 0, width), Clamp(p.Y, 0, height))).ToList()
+                        Using outline = BuildVariableWidthStrokePath(pts, PressureRadii(brushStroke, resolvedStrokeWidth))
+                            paint.Style = SKPaintStyle.Fill
+                            canvas.DrawPath(outline, paint)
+                            paint.Style = SKPaintStyle.Stroke
+                        End Using
+                        Continue For
+                    End If
 
                     Using path = New SKPath()
                         For i As Integer = 0 To brushStroke.Points.Count - 1
@@ -280,6 +349,16 @@ Namespace Services
                         If blurSigma > 0.05F Then shapePaint.MaskFilter = SKMaskFilter.CreateBlur(SKBlurStyle.Normal, blurSigma)
                         For Each brushStroke In strokes
                             If brushStroke Is Nothing OrElse brushStroke.Points.Count < 2 Then Continue For
+                            ' Stiftdruck: dieselbe Form wie beim weichen Pinsel, das Korn kommt danach.
+                            If brushStroke.HasPressure Then
+                                Dim pts = brushStroke.Points.Select(Function(p) New SKPoint(Clamp(p.X, 0, width), Clamp(p.Y, 0, height))).ToList()
+                                Using outline = BuildVariableWidthStrokePath(pts, PressureRadii(brushStroke, strokeWidth))
+                                    shapePaint.Style = SKPaintStyle.Fill
+                                    lc.DrawPath(outline, shapePaint)
+                                    shapePaint.Style = SKPaintStyle.Stroke
+                                End Using
+                                Continue For
+                            End If
                             Using path = New SKPath()
                                 For i As Integer = 0 To brushStroke.Points.Count - 1
                                     Dim p = brushStroke.Points(i)

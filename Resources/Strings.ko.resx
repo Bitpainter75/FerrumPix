@@ -8733,4 +8733,100 @@
   <data name="Clipping_Warnung_ein_aus_in_den_Werkzeugen_mit_R_4cef1555" xml:space="preserve">
     <value>클리핑 경고 켜기/끄기(슬라이더가 있는 도구에서)</value>
   </data>
+  <data name="Stiftdruck_steuert_die_Pinselgr_e_e52788ad" xml:space="preserve">
+    <value>펜 압력으로 브러시 크기 조절</value>
+  </data>
+  <data name="Leichter_Druck_malt_schmaler_voller_Druck_in_der_428c9511" xml:space="preserve">
+    <value>약하게 누르면 가늘게, 끝까지 누르면 설정한 크기로 칠합니다. 브러시, 지우개, 마스크 브러시에 적용되며 펜에서만 동작합니다. 마우스는 항상 설정한 크기로 칠합니다.</value>
+  </data>
+  <data name="Gl_tten_d9301a0e" xml:space="preserve">
+    <value>보정</value>
+  </data>
+  <data name="Zieht_den_Strich_ruhiger_hinter_dem_Zeiger_her_u_93109ffc" xml:space="preserve">
+    <value>획이 포인터 뒤를 더 차분하게 따라가며 작은 떨림을 없앱니다. 0이면 포인터를 정확히 따라갑니다</value>
+  </data>
+  <data name="Eine_Maske_aus_mehreren_Bestandteilen_l_sst_sich_32c0b252" xml:space="preserve">
+    <value>여러 부분으로 된 마스크는 이렇게 바꿀 수 없습니다</value>
+  </data>
+  <data name="Auswahl_vergr_ert_6f2e0332" xml:space="preserve">
+    <value>선택 영역 확장됨</value>
+  </data>
+  <data name="Auswahl_verkleinert_f56a0eb6" xml:space="preserve">
+    <value>선택 영역 축소됨</value>
+  </data>
+  <data name="Auswahl_gegl_ttet_3b7e67b2" xml:space="preserve">
+    <value>선택 영역 매끄럽게 함</value>
+  </data>
+  <data name="Auswahlrand_gebildet_1c1ccfb0" xml:space="preserve">
+    <value>선택 영역 테두리 만듦</value>
+  </data>
+  <data name="Ver_ndern_um_259e91a8" xml:space="preserve">
+    <value>변경 폭</value>
+  </data>
+  <data name="Um_wie_viele_Bildpunkte_die_vier_Kn_pfe_darunter_f3f8fd19" xml:space="preserve">
+    <value>아래 네 버튼이 선택 영역을 바꾸는 픽셀 수</value>
+  </data>
+  <data name="Die_Auswahl_rundherum_um_den_Betrag_vergr_ern_610649f0" xml:space="preserve">
+    <value>선택 영역을 사방으로 지정한 만큼 확장합니다</value>
+  </data>
+  <data name="Die_Auswahl_rundherum_um_den_Betrag_verkleinern__037b2032" xml:space="preserve">
+    <value>선택 영역을 사방에서 지정한 만큼 줄입니다. 이미지 가장자리에서는 그대로 유지됩니다</value>
+  </data>
+  <data name="Zacken_und_kleine_L_cher_bis_zur_Gr_e_des_Betrag_807c2320" xml:space="preserve">
+    <value>지정한 크기까지의 톱니와 작은 구멍을 없애고 모서리를 둥글게 합니다</value>
+  </data>
+  <data name="Aus_der_Auswahl_ein_Band_entlang_ihrer_Kante_mac_571757ef" xml:space="preserve">
+    <value>선택 영역을 가장자리를 따라 지정한 폭의 띠로 만듭니다</value>
+  </data>
+  <data name="Rote_Augen_lassen_sich_nur_im_Foto_entfernen_nic_5f247714" xml:space="preserve">
+    <value>적목은 사진에서만 제거할 수 있으며 레이어에서는 할 수 없습니다</value>
+  </data>
+  <data name="Im_Pinselkreis_ist_kein_rotes_Auge_zu_finden_5f4498d8" xml:space="preserve">
+    <value>브러시 원 안에서 적목을 찾지 못했습니다</value>
+  </data>
+  <data name="Rote_Augen_entfernt_a3907783" xml:space="preserve">
+    <value>적목 제거됨</value>
+  </data>
+  <data name="Rote_Augen_entfernen_fehlgeschlagen_2f91768f" xml:space="preserve">
+    <value>적목 제거 실패</value>
+  </data>
+  <data name="Solange_eingeschaltet_entfernt_jeder_Klick_ins_B_cc00c082" xml:space="preserve">
+    <value>켜져 있는 동안 이미지를 클릭할 때마다 브러시 원 안의 적목을 제거합니다</value>
+  </data>
+  <data name="Rote_Augen_entfernen_ed756d76" xml:space="preserve">
+    <value>적목 제거</value>
+  </data>
+  <data name="Mit_dem_Pinselkreis_auf_die_Pupille_klicken_Er_s_f5b54aec" xml:space="preserve">
+    <value>브러시 원으로 동공을 클릭하세요. 원은 빨간 부분을 모두 감싸되 그보다 훨씬 크지 않아야 합니다. 원 안의 심하게 붉어진 피부도 색이 빠집니다.</value>
+  </data>
+  <data name="Erweitern_ee9937c7" xml:space="preserve">
+    <value>확장</value>
+  </data>
+  <data name="Reduzieren_a9eb23c0" xml:space="preserve">
+    <value>축소</value>
+  </data>
+  <data name="Text_einf_gen_dea18d16" xml:space="preserve">
+    <value>텍스트 삽입</value>
+  </data>
+  <data name="QR_Code_einf_gen_f880f8d5" xml:space="preserve">
+    <value>QR 코드 삽입</value>
+  </data>
+  <data name="Ein_neues_Textobjekt_in_die_Bildmitte_setzen_ohn_47312e5f" xml:space="preserve">
+    <value>이미지를 클릭하지 않고 새 텍스트 객체를 이미지 가운데에 놓습니다</value>
+  </data>
+  <data name="Einen_neuen_QR_Code_in_die_Bildmitte_setzen_ohne_13db2d8f" xml:space="preserve">
+    <value>이미지를 클릭하지 않고 새 QR 코드를 이미지 가운데에 놓습니다</value>
+  </data>
+  <data name="Form_einf_gen_d0e821e1" xml:space="preserve">
+    <value>도형 삽입</value>
+  </data>
+  <data name="Symbol_einf_gen_d2d7d51d" xml:space="preserve">
+    <value>기호 삽입</value>
+  </data>
+  <data name="Die_gew_hlte_Form_in_die_Bildmitte_setzen_ohne_i_982c9c62" xml:space="preserve">
+    <value>이미지를 클릭하지 않고 선택한 도형을 이미지 가운데에 놓습니다</value>
+  </data>
+  <data name="Das_gew_hlte_Symbol_in_die_Bildmitte_setzen_ohne_707d5a38" xml:space="preserve">
+    <value>이미지를 클릭하지 않고 선택한 기호를 이미지 가운데에 놓습니다</value>
+  </data>
 </root>

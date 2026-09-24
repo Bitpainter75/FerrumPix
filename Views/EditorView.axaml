@@ -1075,6 +1075,12 @@
                                   IsHitTestVisible="False"
                                   StrokeLineCap="Round"
                                   StrokeJoin="Round" />
+                        <!-- Die Vorschau eines Zuges MIT STIFTDRUCK: eine Linie hat nur eine Dicke,
+                             dieser Pfad ist der Umriss mit wechselnder Breite, nach derselben
+                             Rechnung wie das Ergebnis (BuildVariableWidthStrokePath). -->
+                        <Path x:Name="BrushPreviewPressurePath"
+                              IsVisible="False"
+                              IsHitTestVisible="False" />
                         <Ellipse x:Name="BrushCursorPreview"
                                  IsVisible="False"
                                  IsHitTestVisible="False"

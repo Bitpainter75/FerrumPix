@@ -3398,10 +3398,27 @@ Namespace Services
         ''' DrawCircle, NICHT DrawBitmap - dort wäre er wirkungslos).</summary>
         Public Shared Sub DrawSoftMaskStroke(canvas As SKCanvas, pts As IReadOnlyList(Of SKPoint),
                                              radius As Single, softnessPx As Single, color As SKColor,
-                                             Optional eraseMode As Boolean = False)
+                                             Optional eraseMode As Boolean = False,
+                                             Optional pressures As IReadOnlyList(Of Single) = Nothing)
             If canvas Is Nothing OrElse pts Is Nothing OrElse pts.Count = 0 OrElse radius <= 0 Then Return
             Dim blend = If(eraseMode, SKBlendMode.DstOut, SKBlendMode.SrcOver)
             Dim sigma = If(softnessPx > 0.05F, softnessPx * 0.5F, 0.0F)
+            ' STIFTDRUCK: derselbe Umriss wie beim Pinsel (BuildVariableWidthStrokePath), damit
+            ' Maske, Vorschau und gemalter Strich unter demselben Druck gleich breit werden.
+            If pressures IsNot Nothing AndAlso pressures.Count = pts.Count AndAlso
+               pressures.Any(Function(p) p < 0.999F) Then
+                Dim radii(pts.Count - 1) As Single
+                For i = 0 To pts.Count - 1
+                    radii(i) = radius * PressureWidthFactor(pressures(i))
+                Next
+                Using paint = New SKPaint With {.Color = color, .Style = SKPaintStyle.Fill, .IsAntialias = True, .BlendMode = blend}
+                    If sigma > 0.0F Then paint.MaskFilter = SKMaskFilter.CreateBlur(SKBlurStyle.Normal, sigma)
+                    Using outline = BuildVariableWidthStrokePath(pts, radii)
+                        canvas.DrawPath(outline, paint)
+                    End Using
+                End Using
+                Return
+            End If
             If pts.Count = 1 Then
                 Using paint = New SKPaint With {.Color = color, .Style = SKPaintStyle.Fill, .IsAntialias = True, .BlendMode = blend}
                     If sigma > 0.0F Then paint.MaskFilter = SKMaskFilter.CreateBlur(SKBlurStyle.Normal, sigma)
@@ -3983,9 +4000,245 @@ RasterTeil:
         ''' gibt einen schwächeren Strich. Er begrenzt den HÖCHSTWERT des Stempels, er dämpft ihn nicht
         ''' nachträglich - der ganze Strich wird EINMAL als ein Pfad gezeichnet, also wird eine Stelle,
         ''' an der der Strich sich selbst überkreuzt, nicht dunkler als der Rest.</summary>
+        ''' <summary>Wie weit eine Auswahl höchstens vergrößert, verkleinert, geglättet oder gerandet
+        ''' wird, in Bildpunkten. Die Grenze kommt aus dem Speicher: die Abstände liegen als 16-Bit-
+        ''' Quadrate vor, und (200 + 2)² passt dort noch hinein.</summary>
+        Public Const SelectionModifyMaxPixels As Integer = 200
+
+        ''' <summary>AUSWAHL VERÄNDERN: vergrößern ("Expand"), verkleinern ("Contract"), glätten
+        ''' ("Smooth") oder zum Rand machen ("Border"), um <paramref name="amount"/> Bildpunkte.
+        '''
+        ''' Vergrößern und Verkleinern laufen über den EUKLIDISCHEN Abstand (Felzenszwalb, in zwei
+        ''' Durchgängen), nicht über ein Quadrat als Filterkern: ein Quadrat machte aus jeder runden
+        ''' Kante beim Vergrößern eine eckige, und aus einem Kreis ein abgerundetes Viereck. Die Kante
+        ''' bekommt dabei einen Bildpunkt Übergang, wie eine gewöhnliche Auswahl mit Kantenglättung.
+        '''
+        ''' Verkleinert wird nur gegen das, was im BILD außerhalb liegt. Eine Auswahl, die an den
+        ''' Bildrand stößt, weicht von ihm nicht zurück - dort ist nichts, von dem sie Abstand halten
+        ''' müsste, und ein schmaler leerer Streifen am Rand wäre nur eine Falle beim Füllen.
+        '''
+        ''' Rückgabe Nothing, wenn danach nichts mehr ausgewählt ist.</summary>
+        Public Shared Function ModifySelectionMask(mask As SKBitmap, rect As SKRectI,
+                                                   imageWidth As Integer, imageHeight As Integer,
+                                                   kind As String, amount As Integer) As (Mask As SKBitmap, Rect As SKRectI)?
+            If mask Is Nothing OrElse rect.Width <= 0 OrElse rect.Height <= 0 OrElse imageWidth <= 0 OrElse imageHeight <= 0 Then Return Nothing
+            amount = Math.Max(1, Math.Min(SelectionModifyMaxPixels, amount))
+            Dim pad = amount + 2
+            Dim area = New SKRectI(Math.Max(0, rect.Left - pad), Math.Max(0, rect.Top - pad),
+                                   Math.Min(imageWidth, rect.Right + pad), Math.Min(imageHeight, rect.Bottom + pad))
+            Dim w = area.Width, h = area.Height
+            If w <= 0 OrElse h <= 0 Then Return Nothing
+
+            ' Die Quelle als Bytes im Rechteck der Rechnung; außerhalb der Auswahl ist sie 0.
+            Dim source(w * h - 1) As Byte
+            Dim rowBuffer(mask.RowBytes - 1) As Byte
+            Dim pixels = mask.GetPixels()
+            For y As Integer = 0 To mask.Height - 1
+                Dim ay = rect.Top + y - area.Top
+                If ay < 0 OrElse ay >= h Then Continue For
+                Marshal.Copy(IntPtr.Add(pixels, y * mask.RowBytes), rowBuffer, 0, mask.RowBytes)
+                Dim ax0 = rect.Left - area.Left
+                For x As Integer = 0 To Math.Min(mask.Width, rect.Width) - 1
+                    Dim ax = ax0 + x
+                    If ax >= 0 AndAlso ax < w Then source(ay * w + ax) = rowBuffer(x)
+                Next
+            Next
+
+            Dim result(w * h - 1) As Byte
+            Dim touches = (area.Left = 0, area.Top = 0, area.Right = imageWidth, area.Bottom = imageHeight)
+            Select Case kind
+                Case "Expand"
+                    Dim d = SquaredDistanceToFeature(source, w, h, amount + 2, featureInside:=True)
+                    RampFromOutsideDistance(d, result, amount)
+                Case "Contract"
+                    Dim d = SquaredDistanceToFeature(source, w, h, amount + 2, featureInside:=False,
+                                                     areaTouchesImage:=touches)
+                    RampFromInsideDistance(d, result, amount)
+                Case "Border"
+                    ' Ein Band der Breite AMOUNT, das zur Hälfte außen und zur Hälfte innen liegt.
+                    Dim outer(w * h - 1) As Byte, inner(w * h - 1) As Byte
+                    Dim outerAmount = (amount + 1) \ 2, innerAmount = Math.Max(1, amount \ 2)
+                    RampFromOutsideDistance(SquaredDistanceToFeature(source, w, h, outerAmount + 2, True), outer, outerAmount)
+                    RampFromInsideDistance(SquaredDistanceToFeature(source, w, h, innerAmount + 2, False, touches), inner, innerAmount)
+                    For i As Integer = 0 To result.Length - 1
+                        result(i) = CByte(outer(i) * (255 - inner(i)) \ 255)
+                    Next
+                Case "Smooth"
+                    ' Weichzeichnen und wieder auf eine Kante bringen: kleine Zacken und Löcher unter
+                    ' der Größe des Radius verschwinden, Ecken werden rund. Die Schwelle bei der Hälfte
+                    ' hält die Fläche im Mittel an ihrem Platz.
+                    Using blurSource = New SKBitmap(w, h, SKColorType.Alpha8, SKAlphaType.Premul)
+                        Using blurred = New SKBitmap(w, h, SKColorType.Alpha8, SKAlphaType.Premul)
+                            CopyBytesToAlpha8(source, blurSource)
+                            Using canvas = New SKCanvas(blurred)
+                                canvas.Clear(SKColors.Transparent)
+                                Using paint = New SKPaint With {.ImageFilter = SKImageFilter.CreateBlur(amount / 2.0F, amount / 2.0F)}
+                                    canvas.DrawBitmap(blurSource, 0, 0, paint)
+                                End Using
+                            End Using
+                            Dim soft = CopyAlpha8ToBytes(blurred)
+                            For i As Integer = 0 To result.Length - 1
+                                result(i) = CByte(Math.Max(0, Math.Min(255, (CInt(soft(i)) - 128) * 4 + 128)))
+                            Next
+                        End Using
+                    End Using
+                Case Else
+                    Return Nothing
+            End Select
+
+            ' Auf das belegte Rechteck zuschneiden; nichts belegt heißt keine Auswahl mehr.
+            Dim minX = w, minY = h, maxX = -1, maxY = -1
+            For y As Integer = 0 To h - 1
+                Dim row = y * w
+                For x As Integer = 0 To w - 1
+                    If result(row + x) = 0 Then Continue For
+                    If x < minX Then minX = x
+                    If x > maxX Then maxX = x
+                    If y < minY Then minY = y
+                    If y > maxY Then maxY = y
+                Next
+            Next
+            If maxX < 0 Then Return Nothing
+            Dim outW = maxX - minX + 1, outH = maxY - minY + 1
+            Dim outMask = New SKBitmap(outW, outH, SKColorType.Alpha8, SKAlphaType.Premul)
+            Dim outRow(outMask.RowBytes - 1) As Byte
+            Dim outPixels = outMask.GetPixels()
+            For y As Integer = 0 To outH - 1
+                Array.Clear(outRow, 0, outRow.Length)
+                Array.Copy(result, (minY + y) * w + minX, outRow, 0, outW)
+                Marshal.Copy(outRow, 0, IntPtr.Add(outPixels, y * outMask.RowBytes), outMask.RowBytes)
+            Next
+            Return (outMask, New SKRectI(area.Left + minX, area.Top + minY, area.Left + maxX + 1, area.Top + maxY + 1))
+        End Function
+
+        ''' <summary>Quadrierter euklidischer Abstand jedes Punktes zum nächsten MERKMALSPUNKT,
+        ''' gedeckelt bei <paramref name="cap"/>² (darüber interessiert der Wert nicht, und so passt er
+        ''' in 16 Bit). Merkmal ist mit <paramref name="featureInside"/> ein Punkt der Auswahl (Alpha ab
+        ''' der Hälfte), sonst einer außerhalb. Zwei Durchgänge nach Felzenszwalb und Huttenlocher:
+        ''' erst senkrecht je Spalte, dann die untere Hülle der Parabeln je Zeile.
+        '''
+        ''' <paramref name="areaTouchesImage"/> sagt, an welchen Seiten das Rechteck am Bildrand liegt.
+        ''' Wird nach Punkten AUSSERHALB gesucht, gilt eine Seite, die NICHT am Bildrand liegt, als
+        ''' außen: dort geht das Bild weiter, und es ist nicht ausgewählt.</summary>
+        Private Shared Function SquaredDistanceToFeature(source As Byte(), w As Integer, h As Integer, cap As Integer,
+                                                         featureInside As Boolean,
+                                                         Optional areaTouchesImage As (Left As Boolean, Top As Boolean, Right As Boolean, Bottom As Boolean) = Nothing) As UShort()
+            Dim capSq = CInt(Math.Min(65535, cap * cap))
+            Dim g(w * h - 1) As UShort
+            Dim column(h - 1) As Integer
+            ' Senkrecht: Abstand zum nächsten Merkmal in derselben Spalte.
+            For x As Integer = 0 To w - 1
+                Dim last = Integer.MinValue \ 2
+                If Not featureInside AndAlso Not areaTouchesImage.Top Then last = -1
+                For y As Integer = 0 To h - 1
+                    Dim isFeature = (source(y * w + x) >= 128) = featureInside
+                    If isFeature Then last = y
+                    column(y) = If(last = Integer.MinValue \ 2, Integer.MaxValue, y - last)
+                Next
+                last = Integer.MaxValue \ 2
+                If Not featureInside AndAlso Not areaTouchesImage.Bottom Then last = h
+                For y As Integer = h - 1 To 0 Step -1
+                    Dim isFeature = (source(y * w + x) >= 128) = featureInside
+                    If isFeature Then last = y
+                    If last <> Integer.MaxValue \ 2 Then column(y) = Math.Min(column(y), last - y)
+                Next
+                For y As Integer = 0 To h - 1
+                    Dim d = column(y)
+                    g(y * w + x) = CUShort(If(d >= cap, capSq, Math.Min(capSq, d * d)))
+                Next
+            Next
+            ' Waagerecht: untere Hülle der Parabeln f(q) + (x - q)² je Zeile.
+            Dim result(w * h - 1) As UShort
+            Dim f(w + 1) As Double
+            Dim v(w + 1) As Integer
+            Dim z(w + 2) As Double
+            Dim offLeft = Not featureInside AndAlso Not areaTouchesImage.Left
+            Dim offRight = Not featureInside AndAlso Not areaTouchesImage.Right
+            For y As Integer = 0 To h - 1
+                ' Liegt die Seite nicht am Bildrand, steht dort ein gedachter Punkt außerhalb, eine
+                ' Spalte vor bzw. hinter dem Rechteck. Er wird als eigene Parabel mitgeführt.
+                Dim n = 0
+                Dim positions(w + 1) As Integer
+                If offLeft Then f(n) = 0 : positions(n) = -1 : n += 1
+                For x As Integer = 0 To w - 1
+                    f(n) = g(y * w + x) : positions(n) = x : n += 1
+                Next
+                If offRight Then f(n) = 0 : positions(n) = w : n += 1
+                Dim k = 0
+                v(0) = 0 : z(0) = Double.NegativeInfinity : z(1) = Double.PositiveInfinity
+                For q As Integer = 1 To n - 1
+                    Dim s As Double
+                    Do
+                        Dim pq = positions(q), pv = positions(v(k))
+                        s = ((f(q) + CDbl(pq) * pq) - (f(v(k)) + CDbl(pv) * pv)) / (2.0 * (pq - pv))
+                        If s <= z(k) AndAlso k > 0 Then k -= 1 Else Exit Do
+                    Loop
+                    If s <= z(k) Then
+                        ' k = 0 und die neue Parabel liegt überall darunter: sie ersetzt die erste.
+                        v(0) = q : z(0) = Double.NegativeInfinity : z(1) = Double.PositiveInfinity
+                        Continue For
+                    End If
+                    k += 1
+                    v(k) = q : z(k) = s : z(k + 1) = Double.PositiveInfinity
+                Next
+                k = 0
+                For x As Integer = 0 To w - 1
+                    While z(k + 1) < x
+                        k += 1
+                    End While
+                    Dim dx = x - positions(v(k))
+                    Dim value = f(v(k)) + CDbl(dx) * dx
+                    result(y * w + x) = CUShort(Math.Min(capSq, value))
+                Next
+            Next
+            Return result
+        End Function
+
+        ''' <summary>Vergrößern: ausgewählt bleibt, was drin war; außen kommt dazu, was höchstens
+        ''' AMOUNT entfernt liegt, mit einem Bildpunkt Übergang.</summary>
+        Private Shared Sub RampFromOutsideDistance(squared As UShort(), result As Byte(), amount As Integer)
+            For i As Integer = 0 To result.Length - 1
+                Dim d = Math.Sqrt(squared(i))
+                result(i) = CByte(Math.Max(0, Math.Min(255, Math.Round((amount + 1.0 - d) * 255.0))))
+            Next
+        End Sub
+
+        ''' <summary>Verkleinern: ausgewählt bleibt, was mehr als AMOUNT vom nächsten Punkt außerhalb
+        ''' entfernt liegt, mit einem Bildpunkt Übergang.</summary>
+        Private Shared Sub RampFromInsideDistance(squared As UShort(), result As Byte(), amount As Integer)
+            For i As Integer = 0 To result.Length - 1
+                Dim d = Math.Sqrt(squared(i))
+                result(i) = CByte(Math.Max(0, Math.Min(255, Math.Round((d - amount) * 255.0))))
+            Next
+        End Sub
+
+        Private Shared Sub CopyBytesToAlpha8(source As Byte(), target As SKBitmap)
+            Dim w = target.Width
+            Dim row(target.RowBytes - 1) As Byte
+            Dim pixels = target.GetPixels()
+            For y As Integer = 0 To target.Height - 1
+                Array.Clear(row, 0, row.Length)
+                Array.Copy(source, y * w, row, 0, w)
+                Marshal.Copy(row, 0, IntPtr.Add(pixels, y * target.RowBytes), target.RowBytes)
+            Next
+        End Sub
+
+        Private Shared Function CopyAlpha8ToBytes(source As SKBitmap) As Byte()
+            Dim w = source.Width
+            Dim result(w * source.Height - 1) As Byte
+            Dim row(source.RowBytes - 1) As Byte
+            Dim pixels = source.GetPixels()
+            For y As Integer = 0 To source.Height - 1
+                Marshal.Copy(IntPtr.Add(pixels, y * source.RowBytes), row, 0, source.RowBytes)
+                Array.Copy(row, 0, result, y * w, w)
+            Next
+            Return result
+        End Function
+
         Public Shared Function BuildSoftBrushStampMask(pts As IReadOnlyList(Of SKPoint), radius As Single,
                                                        softnessPx As Single, rect As SKRectI,
-                                                       Optional alpha As Byte = 255) As SKBitmap
+                                                       Optional alpha As Byte = 255,
+                                                       Optional pressures As IReadOnlyList(Of Single) = Nothing) As SKBitmap
             If pts Is Nothing OrElse pts.Count = 0 OrElse rect.Width <= 0 OrElse rect.Height <= 0 Then Return Nothing
             Dim local As New List(Of SKPoint)(pts.Count)
             For Each p In pts
@@ -3994,7 +4247,8 @@ RasterTeil:
             Using rgba = New SKBitmap(rect.Width, rect.Height, SKColorType.Bgra8888, SKAlphaType.Unpremul)
                 Using canvas = New SKCanvas(rgba)
                     canvas.Clear(SKColors.Transparent)
-                    DrawSoftMaskStroke(canvas, local, radius, softnessPx, New SKColor(255, 255, 255, alpha))
+                    DrawSoftMaskStroke(canvas, local, radius, softnessPx, New SKColor(255, 255, 255, alpha),
+                                       pressures:=pressures)
                 End Using
                 Return AlphaMaskFrom(rgba)
             End Using

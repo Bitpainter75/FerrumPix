@@ -43,12 +43,20 @@ Namespace Services
     ''' </summary>
     Public NotInheritable Class BrushStroke
         Private ReadOnly _points As StrokePoint()
+        Private ReadOnly _pressures As Single()
 
         ' Parametername und -typ müssen exakt zur Points-Eigenschaft passen, damit System.Text.Json den
         ' Zug konstruktorbasiert wiederherstellen kann (VB kann keine JsonConverter schreiben, siehe FpxService).
         <JsonConstructor>
-        Public Sub New(points As IReadOnlyList(Of StrokePoint))
+        Public Sub New(points As IReadOnlyList(Of StrokePoint),
+                       Optional pressures As IReadOnlyList(Of Single) = Nothing)
             _points = If(points, CType(Array.Empty(Of StrokePoint)(), IReadOnlyList(Of StrokePoint))).ToArray()
+            ' Nur eine Reihe, die zu den Punkten passt UND irgendwo unter vollem Druck liegt, ist eine.
+            ' Alles andere zeichnet wie ein Strich ohne Druck - mit genau dem Weg, den es vorher gab.
+            If pressures IsNot Nothing AndAlso pressures.Count = _points.Length AndAlso
+               pressures.Any(Function(p) p < 0.999F) Then
+                _pressures = pressures.Select(Function(p) Math.Max(0.0F, Math.Min(1.0F, p))).ToArray()
+            End If
         End Sub
 
         Public ReadOnly Property Points As IReadOnlyList(Of StrokePoint)
@@ -57,8 +65,32 @@ Namespace Services
             End Get
         End Property
 
+        ''' <summary>Der STIFTDRUCK je Punkt, 0 bis 1, oder Nothing. Nothing heißt: überall voller
+        ''' Druck - so kommt jeder Strich der Maus an, und so steht er in der Datei (das Feld fehlt).
+        ''' Eine eigene Reihe und kein Feld an <see cref="StrokePoint"/>: dort stünde der Wert bei
+        ''' jedem Punkt jedes gespeicherten Strichs, auch bei der Maus.</summary>
+        <JsonIgnore(Condition:=JsonIgnoreCondition.WhenWritingNull)>
+        Public ReadOnly Property Pressures As IReadOnlyList(Of Single)
+            Get
+                Return _pressures
+            End Get
+        End Property
+
+        Public ReadOnly Property HasPressure As Boolean
+            Get
+                Return _pressures IsNot Nothing
+            End Get
+        End Property
+
+        ''' <summary>Derselbe Zug an anderen Punkten, der Druck geht mit. Für alles, was Striche
+        ''' verschiebt, dreht oder beschneidet: ein neuer BrushStroke nur aus den Punkten verlöre ihn
+        ''' still, und der Strich würde nach dem Zuschneiden plötzlich überall gleich breit.</summary>
+        Public Function WithPoints(points As IReadOnlyList(Of StrokePoint)) As BrushStroke
+            Return New BrushStroke(points, _pressures)
+        End Function
+
         Public Function Scale(scaleX As Single, scaleY As Single) As BrushStroke
-            Return New BrushStroke(_points.Select(Function(p) New StrokePoint(p.X * scaleX, p.Y * scaleY)).ToList())
+            Return WithPoints(_points.Select(Function(p) New StrokePoint(p.X * scaleX, p.Y * scaleY)).ToList())
         End Function
     End Class
 

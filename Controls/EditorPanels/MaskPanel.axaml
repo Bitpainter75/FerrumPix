@@ -420,6 +420,20 @@
                                              Minimum="1" Maximum="100" Increment="1"
                                              FormatString="F0" />
                 </Grid>
+                <!-- Derselbe Wert wie beim Pinsel im Zeichnen-Werkzeug: das Glätten gehört zur Hand,
+                     nicht zum Werkzeug. -->
+                <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
+                    <TextBlock Text="Glätten" Foreground="{DynamicResource FP.Text.Secondary}"
+                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}"
+                               ToolTip.Tip="Zieht den Strich ruhiger hinter dem Zeiger her und nimmt kleine Zitterer heraus. 0 folgt dem Zeiger genau" />
+                    <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
+                                       DefaultValue="100"
+                                       Value="{Binding BrushSmoothing}" Margin="0,0" />
+                    <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                             Value="{Binding BrushSmoothing, Mode=TwoWay}"
+                                             Minimum="0" Maximum="100" Increment="1"
+                                             FormatString="F0" />
+                </Grid>
                 <Button Classes="ghost" HorizontalAlignment="Stretch" Padding="10,6"
                         IsEnabled="{Binding HasActiveSelection}"
                         Command="{Binding CreateAdjustmentLayerFromSelectionCommand}"

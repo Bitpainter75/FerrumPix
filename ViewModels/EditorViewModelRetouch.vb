@@ -41,6 +41,93 @@ Namespace ViewModels
             Return (-100000.0, -100000.0)
         End Function
 
+        ' ── Rote Augen ──────────────────────────────────────────────────────────
+
+        Private _isRedEyeArmed As Boolean
+
+        ''' <summary>Ist ROTE AUGEN scharf? Dann entfernt jeder Klick ins Bild im Retusche-Werkzeug
+        ''' rote Augen im Pinselkreis, statt einen Retuschezug zu beginnen. Bewusst ein Schalter und
+        ''' keine vierte Art neben Verwischen, Reparatur und Stempel: die drei hängen an Live-Puffern
+        ''' und gemerkten Werkzeugständen, ein Klick mit fester Wirkung braucht nichts davon. Er
+        ''' bleibt an, bis man ihn ausschaltet oder das Werkzeug verlässt, damit sich zwei Augen
+        ''' nacheinander anklicken lassen.</summary>
+        Public Property IsRedEyeArmed As Boolean
+            Get
+                Return _isRedEyeArmed
+            End Get
+            Set(value As Boolean)
+                Me.RaiseAndSetIfChanged(_isRedEyeArmed, value)
+            End Set
+        End Property
+
+        Private _toggleRedEyeCommand As ICommand
+
+        Public ReadOnly Property ToggleRedEyeCommand As ICommand
+            Get
+                If _toggleRedEyeCommand Is Nothing Then
+                    _toggleRedEyeCommand = New DelegateCommand(Sub() IsRedEyeArmed = Not IsRedEyeArmed)
+                End If
+                Return _toggleRedEyeCommand
+            End Get
+        End Property
+
+        ''' <summary>Entfernt rote Augen im Pinselkreis um die angeklickte Stelle, im Arbeitsbild
+        ''' und in dessen Bildpunkten (Radius wie bei der Retusche). Ein Schritt mit eigenem
+        ''' Rückgängig. Die Rechnung steht in ImageProcessor.RemoveRedEyeInPlace.
+        '''
+        ''' Liegt im Kreis nichts Rotes, geschieht nichts und die Fußzeile sagt es - vorher geprüft,
+        ''' damit kein leerer Rückgängig-Schritt entsteht. Geprüft wird nur, wenn keine Änderung am
+        ''' Arbeitsbild mehr in der Warteschlange steht: sonst wartete die Oberfläche an dessen
+        ''' Sperre, womöglich hinter einem minutenlangen Entrauschen.
+        '''
+        ''' Auf einer markierten Bild-Ebene gibt es das nicht. Der Klick fiele dann aufs Foto, und
+        ''' das ist genau der Rückfall, den der Pinsel ausdrücklich nicht macht: sieht im Bild gleich
+        ''' aus, sitzt aber in den falschen Pixeln.</summary>
+        Public Sub RemoveRedEyeAt(xPercent As Double, yPercent As Double)
+            If Not CanUsePixelTools OrElse Not _workingImage.IsInitialized Then Return
+            If FindStrokeTargetImageAnnotation() IsNot Nothing Then
+                StatusText = LocalizationService.T("Rote Augen lassen sich nur im Foto entfernen, nicht auf einer Ebene")
+                Return
+            End If
+            Dim wip = DisplayPercentToWorkingImagePercent(xPercent, yPercent)
+            If Double.IsNaN(wip.X) OrElse Double.IsNaN(wip.Y) Then Return
+            Dim cx = CSng(PercentXToPixels(wip.X))
+            Dim cy = CSng(PercentYToPixels(wip.Y))
+            Dim radius = CSng(Math.Max(1.0, _retouchRadius))
+            Dim rect = New SKRectI(CInt(Math.Floor(cx - radius)) - 1, CInt(Math.Floor(cy - radius)) - 1,
+                                   CInt(Math.Ceiling(cx + radius)) + 2, CInt(Math.Ceiling(cy + radius)) + 2)
+            rect = ClampRectToBitmap(rect, _workingImage.FullWidth, _workingImage.FullHeight)
+            If rect.Width <= 0 OrElse rect.Height <= 0 Then Return
+
+            If _pendingWorkingCommits = 0 Then
+                Dim found = _workingImage.WithFull(Function(full) ImageProcessor.RemoveRedEyeInPlace(full, cx, cy, radius, countOnly:=True))
+                If found = 0 Then
+                    StatusText = LocalizationService.T("Im Pinselkreis ist kein rotes Auge zu finden")
+                    Return
+                End If
+            End If
+
+            PushUndo(LocalizationService.T("Rote Augen entfernt"))
+            Dim undoEntry = _lastPushedUndoEntry
+            _hasChanges = True
+            RaiseResetButtonStateChanged()
+            EnqueueWorkingCommit(
+                Function()
+                    Return _workingImage.CommitRegion(rect,
+                        Sub(full) ImageProcessor.RemoveRedEyeInPlace(full, cx, cy, radius))
+                End Function,
+                Sub(patch)
+                    If patch Is Nothing Then
+                        StatusText = LocalizationService.T("Rote Augen entfernen fehlgeschlagen")
+                        SchedulePreviewUpdate()
+                        Return
+                    End If
+                    If undoEntry IsNot Nothing Then undoEntry.Patch = patch
+                    StatusText = LocalizationService.T("Rote Augen entfernt")
+                    SchedulePreviewUpdate()
+                End Sub)
+        End Sub
+
         Public Sub AddRetouchSpot(xPercent As Double, yPercent As Double, Optional captureUndo As Boolean = True)
             If Not CanUsePixelTools Then Return
             ' Ist eine Bild-Ebene markiert, geht der Zug in DEREN Bild - dieselbe Regel wie beim
