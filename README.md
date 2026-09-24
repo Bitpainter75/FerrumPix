@@ -71,7 +71,7 @@ Fullscreen viewing with zoom, pan, slideshow, filmstrip navigation, rating, tagg
 
 A RAW file opens from the preview the camera put inside it, which is why it appears at once. Two settings change that: one develops a RAW you have already edited, the other develops every RAW, edited or not, in the viewer and in fullscreen. You then see your own development instead of the camera's rendering, and wait a little longer for it.
 
-The info panel reads a picture in three ways: the histogram, a waveform that keeps the left-to-right position so you can see whether one side burns out while the other still holds detail, and an RGB parade that puts the three channels side by side to show a colour cast and which channel carries it. A click opens the diagram large, and in the editor it follows your edits.
+The info panel reads a picture in three ways: the histogram, with all colour channels at once or one channel or the luminance alone, a waveform that keeps the left-to-right position so you can see whether one side burns out while the other still holds detail, and an RGB parade that puts the three channels side by side to show a colour cast and which channel carries it. A click opens the diagram large, and in the editor it follows your edits.
 
 Two photos can be put side by side for comparison, sharing one zoom so you always see the same part of both. Pin one of them and page through the rest against it, rating and deleting as you go, which is the quick way to cull a series. RAW files are developed here rather than shown as the camera's embedded preview.
 

@@ -279,6 +279,30 @@
                                         Content="RGB-Parade"
                                         Command="{Binding Scope.SetModeCommand}" CommandParameter="Parade"/>
                             </Grid>
+                            <!-- Beim Histogramm ein Kanal allein, wie im Analysepanel des Editors
+                                 und in derselben Reihenfolge wie an der Tonwertkurve. -->
+                            <StackPanel Orientation="Horizontal" Spacing="14" IsVisible="{Binding Scope.IsHistogram}">
+                                <Button Classes="info-tab channel-tab" Command="{Binding Scope.SetHistogramChannelCommand}"
+                                        CommandParameter="Rgb" Classes.active="{Binding Scope.IsHistogramRgb}">
+                                    <TextBlock Text="RGB" FontSize="{DynamicResource FP.Font.Small}" />
+                                </Button>
+                                <Button Classes="info-tab channel-tab" Command="{Binding Scope.SetHistogramChannelCommand}"
+                                        CommandParameter="Red" Classes.active="{Binding Scope.IsHistogramRed}">
+                                    <TextBlock Text="R" FontSize="{DynamicResource FP.Font.Small}" />
+                                </Button>
+                                <Button Classes="info-tab channel-tab" Command="{Binding Scope.SetHistogramChannelCommand}"
+                                        CommandParameter="Green" Classes.active="{Binding Scope.IsHistogramGreen}">
+                                    <TextBlock Text="G" FontSize="{DynamicResource FP.Font.Small}" />
+                                </Button>
+                                <Button Classes="info-tab channel-tab" Command="{Binding Scope.SetHistogramChannelCommand}"
+                                        CommandParameter="Blue" Classes.active="{Binding Scope.IsHistogramBlue}">
+                                    <TextBlock Text="B" FontSize="{DynamicResource FP.Font.Small}" />
+                                </Button>
+                                <Button Classes="info-tab channel-tab" Command="{Binding Scope.SetHistogramChannelCommand}"
+                                        CommandParameter="Luminance" Classes.active="{Binding Scope.IsHistogramLuminance}">
+                                    <TextBlock Text="L" FontSize="{DynamicResource FP.Font.Small}" />
+                                </Button>
+                            </StackPanel>
                             <!-- Solange nichts da ist, steht der Hinweis im leeren Kasten: bei einem
                                  RAW dauert der Volldecode spuerbar, und ein leerer Rahmen sieht in der
                                  Zeit aus wie ein Fehler statt wie Arbeit. -->

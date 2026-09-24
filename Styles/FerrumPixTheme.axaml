@@ -374,6 +374,13 @@
         <Setter Property="Foreground" Value="{DynamicResource FP.Accent}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource FP.Accent}"/>
     </Style>
+    <!-- Die Kanalwahl an Tonwertkurve und Histogramm: ohne Unterstrich und ohne dessen Abstand.
+         Sie sitzt direkt ueber einem Diagramm, und jeder Punkt Hoehe fehlt dort. Die Wahl zeigt
+         sich an Akzentfarbe und Schriftstaerke, das genuegt bei fuenf kurzen Zeichen. -->
+    <Style Selector="Button.info-tab.channel-tab">
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Padding" Value="0"/>
+    </Style>
     <Style Selector="Button.info-tab.active TextBlock">
         <Setter Property="Foreground" Value="{DynamicResource FP.Accent}"/>
         <Setter Property="FontWeight" Value="SemiBold"/>

@@ -8726,4 +8726,7 @@
   <data name="Das_JPEG_das_die_Kamera_selbst_in_die_RAW_Datei__cb08eb2f" xml:space="preserve">
     <value>JPEG, jonka kamera itse tallensi raw-tiedostoon. Siinä on valmistajan kuvatyyli, ja se on valmistajan tulkinta samasta otoksesta, ei neutraali</value>
   </data>
+  <data name="Clipping_Warnung_ein_aus_in_den_Werkzeugen_mit_R_4cef1555" xml:space="preserve">
+    <value>Leikkausvaroitus päälle/pois liukusäätimiä sisältävissä työkaluissa</value>
+  </data>
 </root>

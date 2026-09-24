@@ -14,17 +14,34 @@
                             Width="14" Height="14" />
                         <TextBlock Text="{Binding}" FontWeight="SemiBold" />
                     </StackPanel>
-                    <Button Grid.Column="1"
-                            Classes="icon-btn group-reset"
-                            Width="28"
-                            Height="28"
-                            Padding="0"
-                            Command="{Binding DataContext.ResetLightCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                            ToolTip.Tip="Licht zurücksetzen">
-                        <icons:SvgIcon
-                            Source="avares://FerrumPix/Assets/Icons/outline/rotate-clockwise.svg"
-                            Width="14" Height="14" />
-                    </Button>
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="2">
+                        <!-- Die Clipping-Warnung hat ihren Knopf im Analysepanel. Wer das nicht
+                             zeigt (ab Werk aus), findet denselben Knopf hier, bei den Reglern, mit
+                             denen man auf sie reagiert. Nie beide Knoepfe zugleich; der Haken
+                             unten im Panel steht unabhaengig davon immer da. -->
+                        <Button Classes="icon-btn group-action"
+                                Classes.active="{Binding DataContext.ShowClippingWarning, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                IsVisible="{Binding !DataContext.IsScopeInAdjustmentPanelsVisible, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                Width="28"
+                                Height="28"
+                                Padding="0"
+                                Command="{Binding DataContext.ToggleClippingWarningCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                ToolTip.Tip="Ausgefressene Lichter rot und zugelaufene Tiefen blau markieren">
+                            <icons:SvgIcon
+                                Source="avares://FerrumPix/Assets/Icons/outline/alert-triangle.svg"
+                                Width="14" Height="14" />
+                        </Button>
+                        <Button Classes="icon-btn group-reset"
+                                Width="28"
+                                Height="28"
+                                Padding="0"
+                                Command="{Binding DataContext.ResetLightCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                ToolTip.Tip="Licht zurücksetzen">
+                            <icons:SvgIcon
+                                Source="avares://FerrumPix/Assets/Icons/outline/rotate-clockwise.svg"
+                                Width="14" Height="14" />
+                        </Button>
+                    </StackPanel>
                 </Grid>
             </DataTemplate>
         </Expander.HeaderTemplate>
@@ -115,7 +132,9 @@
                       ToolTip.Tip="Holt Zeichnung zurück, die über Weiss liegt und heute abgeschnitten wird. Wirkt nur dort, wo ein Kanal ausgefressen ist und ein anderer nicht. Das Umschalten entwickelt die Datei neu und dauert deshalb einen Moment."/>
             <!-- Die Warnung steht bei den Reglern, mit denen man auf sie reagiert: Lichter,
                  Tiefen, Weiß und Schwarz sitzen direkt darüber. Sie ist reine Ansicht und geht
-                 in kein Rezept und keine Datei. -->
+                 in kein Rezept und keine Datei. Der Haken bleibt auch neben dem Symbolknopf im
+                 Analysepanel stehen: das Panel ist ab Werk aus, und dann ist er der einzige
+                 sichtbare Schalter. -->
             <CheckBox Content="Clipping-Warnung anzeigen" IsChecked="{Binding ShowClippingWarning}"
                       Margin="0,6,0,0"
                       ToolTip.Tip="Ausgefressene Lichter rot und zugelaufene Tiefen blau markieren" />

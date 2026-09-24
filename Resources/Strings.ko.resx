@@ -8730,4 +8730,7 @@
   <data name="Das_JPEG_das_die_Kamera_selbst_in_die_RAW_Datei__cb08eb2f" xml:space="preserve">
     <value>카메라가 RAW 파일에 직접 넣은 JPEG입니다. 제조사의 사진 스타일이 적용되어 있어 같은 장면에 대한 제조사의 해석이며 중립적인 것이 아닙니다</value>
   </data>
+  <data name="Clipping_Warnung_ein_aus_in_den_Werkzeugen_mit_R_4cef1555" xml:space="preserve">
+    <value>클리핑 경고 켜기/끄기(슬라이더가 있는 도구에서)</value>
+  </data>
 </root>

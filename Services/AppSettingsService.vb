@@ -1632,13 +1632,21 @@ Namespace Services
         End Function
 
         ''' <summary>Welches Analysebild im Infopanel steht: Histogramm, Waveform oder Parade.
-        ''' Unbekanntes faellt auf das Histogramm zurueck, das es immer schon gab.</summary>
+        ''' Unbekanntes faellt auf das Histogramm zurueck, das es immer schon gab.
+        '''
+        ''' Das Histogramm kann EINEN Kanal allein zeigen; der steht als Anhang im selben Wert
+        ''' ("HistogramRed" und so fort, "Histogram" allein sind alle drei Farbkanaele). Ein eigener
+        ''' Schalter daneben haette jeden Weg verdoppelt, den die Darstellung schon nimmt: das
+        ''' Merken je Werkzeug, den Schluessel des Zwischenspeichers und die Generationen, an denen
+        ''' ein Hintergrundlauf sein Ergebnis verwirft.</summary>
         Public Shared Function NormalizeScopeMode(value As String) As String
             Select Case If(value, "").Trim()
                 Case "Waveform"
                     Return "Waveform"
                 Case "Parade"
                     Return "Parade"
+                Case "HistogramRed", "HistogramGreen", "HistogramBlue", "HistogramLuminance"
+                    Return value.Trim()
                 Case Else
                     Return "Histogram"
             End Select

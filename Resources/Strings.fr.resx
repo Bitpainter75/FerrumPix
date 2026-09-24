@@ -8686,4 +8686,7 @@
   <data name="Das_JPEG_das_die_Kamera_selbst_in_die_RAW_Datei__cb08eb2f" xml:space="preserve">
     <value>Le JPEG que l'appareil a lui-même placé dans le fichier brut. Il porte le style d'image du fabricant et constitue son interprétation de la même prise de vue, pas une interprétation neutre</value>
   </data>
+  <data name="Clipping_Warnung_ein_aus_in_den_Werkzeugen_mit_R_4cef1555" xml:space="preserve">
+    <value>Activer ou désactiver l’avertissement d’écrêtage, dans les outils à curseurs</value>
+  </data>
 </root>

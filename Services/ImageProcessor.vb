@@ -1939,7 +1939,9 @@ Namespace Services
                                             Optional scopeMode As String = Nothing) As SKBitmap
             Dim mode = If(String.IsNullOrEmpty(scopeMode), CurrentScopeMode(),
                           AppSettingsService.NormalizeScopeMode(scopeMode))
-            If mode = "Histogram" Then Return RenderHistogram(source, width, height)
+            If mode.StartsWith("Histogram", StringComparison.Ordinal) Then
+                Return RenderHistogram(source, width, height, mode.Substring("Histogram".Length))
+            End If
             Try
                 Return RenderWaveform(source, width, height, mode = "Parade")
             Catch ex As Exception
@@ -5730,11 +5732,35 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             Return p
         End Function
 
-        Private Shared Function RenderHistogram(source As SKBitmap, width As Integer, height As Integer) As SKBitmap
+        ''' <summary>Das Histogramm, alle drei Farbkanaele uebereinander oder EIN Kanal allein
+        ''' (<paramref name="channel"/>: "Red", "Green", "Blue", "Luminance", leer fuer alle drei).
+        '''
+        ''' Die Hoehe richtet sich nach dem hoechsten Fach der GEZEIGTEN Kanaele. Nach allen dreien
+        ''' bemessen, druckte ein Blauhimmel den Rotkanal allein flach an den Boden - genau dann,
+        ''' wenn man ihn gezielt ansehen will.</summary>
+        Private Shared Function RenderHistogram(source As SKBitmap, width As Integer, height As Integer,
+                                                Optional channel As String = "") As SKBitmap
             width = Math.Max(120, width)
             height = Math.Max(70, height)
             Dim counts = BuildChannelHistogramCounts(source)
-            Dim maxBin = Math.Max(1, Math.Max(counts.R.Max(), Math.Max(counts.G.Max(), counts.B.Max())))
+            Dim red = New SKColor(255, 70, 70, 165)
+            Dim green = New SKColor(70, 220, 90, 165)
+            Dim blue = New SKColor(70, 130, 255, 165)
+            Dim shown As (Bins As Integer(), Color As SKColor)()
+            Select Case channel
+                Case "Red"
+                    shown = {(counts.R, red)}
+                Case "Green"
+                    shown = {(counts.G, green)}
+                Case "Blue"
+                    shown = {(counts.B, blue)}
+                Case "Luminance"
+                    ' Das Hellgrau der Waveform: beide zeigen dieselbe gewichtete Helligkeit.
+                    shown = {(counts.L, New SKColor(226, 236, 240, 190))}
+                Case Else
+                    shown = {(counts.R, red), (counts.G, green), (counts.B, blue)}
+            End Select
+            Dim maxBin = Math.Max(1, shown.Max(Function(s) s.Bins.Max()))
 
             Dim result = New SKBitmap(width, height, SKColorType.Bgra8888, SKAlphaType.Premul)
             Using canvas = New SKCanvas(result)
@@ -5746,9 +5772,9 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                     Next
                 End Using
 
-                DrawHistogramChannel(canvas, counts.R, maxBin, width, height, New SKColor(255, 70, 70, 165))
-                DrawHistogramChannel(canvas, counts.G, maxBin, width, height, New SKColor(70, 220, 90, 165))
-                DrawHistogramChannel(canvas, counts.B, maxBin, width, height, New SKColor(70, 130, 255, 165))
+                For Each s In shown
+                    DrawHistogramChannel(canvas, s.Bins, maxBin, width, height, s.Color)
+                Next
             End Using
             Return result
         End Function

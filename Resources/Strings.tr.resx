@@ -8730,4 +8730,7 @@
   <data name="Das_JPEG_das_die_Kamera_selbst_in_die_RAW_Datei__cb08eb2f" xml:space="preserve">
     <value>Ham dosyaya fotoğraf makinesinin kendi yerleştirdiği JPEG. Üreticinin resim stilini taşır ve aynı çekimin üretici yorumudur, tarafsız bir yorum değildir</value>
   </data>
+  <data name="Clipping_Warnung_ein_aus_in_den_Werkzeugen_mit_R_4cef1555" xml:space="preserve">
+    <value>Kırpılma uyarısını aç/kapat, kaydırıcılı araçlarda</value>
+  </data>
 </root>

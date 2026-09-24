@@ -1103,6 +1103,8 @@ Namespace Views
             ' behandelt. Der Zoom-Regler ist reine Ansicht und bleibt davon ausgeschlossen.
             Me.AddHandler(InputElement.PointerPressedEvent, AddressOf OnRoundSliderPreviewPressed,
                           RoutingStrategies.Tunnel, handledEventsToo:=True)
+            Me.AddHandler(InputElement.PointerPressedEvent, AddressOf OnPointerPressedReleaseInputFocus,
+                          RoutingStrategies.Tunnel, handledEventsToo:=True)
             Me.AddHandler(InputElement.PointerReleasedEvent, AddressOf OnRoundSliderPreviewReleased,
                           RoutingStrategies.Tunnel, handledEventsToo:=True)
             Me.AddHandler(InputElement.PointerCaptureLostEvent, AddressOf OnRoundSliderPreviewCaptureLost,
@@ -6937,6 +6939,29 @@ Namespace Views
             e.Handled = True
         End Sub
 
+        ''' <summary>EIN DRUCK NEBEN EIN EINGABEFELD NIMMT IHM DIE TASTATUR, AUCH MIT DEM STIFT.
+        ''' Die runden Regler und die Bildflaeche nehmen selbst keinen Fokus an. Bei der Maus holt
+        ''' Avalonia ihn schon beim Druecken zur naechsten Ansicht, die ihn annimmt (hier der
+        ''' Editor) - bei Stift und Beruehrung aber erst beim ABHEBEN (FocusManager.CanPointerFocus).
+        ''' Kommt das Abheben nicht an, wie bei manchen Zeichentabletts, blieb die Tastatur im
+        ''' Zahlenfeld, und dort galten die Editorkuerzel nicht: blanke Buchstaben wie J gehoeren
+        ''' einem Eingabefeld, und ESC verwarf nur dessen Eingabe (Nutzerbefund 2026-09-24). Das
+        ''' Feld uebernimmt seinen Wert dabei wie bei jedem Verlassen.
+        '''
+        ''' Nicht, wenn der Klick selbst einem Eingabefeld gilt (auch der aufgeklappten Liste einer
+        ''' Auswahl), und nicht fuer das Textfeld auf der Buehne: das holt sich seinen Fokus selbst
+        ''' und entscheidet ueber sein Ende an anderer Stelle.</summary>
+        Private Sub OnPointerPressedReleaseInputFocus(sender As Object, e As PointerPressedEventArgs)
+            Dim focused = TryCast(TopLevel.GetTopLevel(Me)?.FocusManager?.GetFocusedElement(), Control)
+            If focused Is Nothing OrElse Not IsEditorInputControl(focused) Then Return
+            If IsEditorInputControl(TryCast(e.Source, Control)) Then Return
+            Dim overlayEditor = Me.FindControl(Of TextBox)("TextOverlayEditor")
+            If overlayEditor IsNot Nothing AndAlso
+               (Object.ReferenceEquals(focused, overlayEditor) OrElse
+                Object.ReferenceEquals(TryCast(e.Source, Control), overlayEditor)) Then Return
+            Me.Focus()
+        End Sub
+
         Private Function IsEditorInputControlFocused(source As Object) As Boolean
             Return IsEditorInputControl(TryCast(source, Control)) OrElse
                    IsEditorInputControl(TryCast(TopLevel.GetTopLevel(Me)?.FocusManager?.GetFocusedElement(), Control))
@@ -7309,6 +7334,15 @@ Namespace Views
                     Case Key.F
                         If e.KeyModifiers = KeyModifiers.None Then
                             OnZoomFitClick(Me, New RoutedEventArgs())
+                            e.Handled = True
+                        End If
+                    ' J schaltet die Clipping-Warnung, wie man es aus anderen Entwicklern kennt -
+                    ' aber nur dort, wo auch ihr Schalter zu sehen ist (siehe
+                    ' IsClippingWarningAvailable). Sonst ginge sie an, ohne dass man sieht, womit
+                    ' man sie wieder los wird.
+                    Case Key.J
+                        If e.KeyModifiers = KeyModifiers.None AndAlso vm.IsClippingWarningAvailable Then
+                            vm.ShowClippingWarning = Not vm.ShowClippingWarning
                             e.Handled = True
                         End If
                 End Select

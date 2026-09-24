@@ -3,6 +3,7 @@ Imports Avalonia.Controls
 Imports Avalonia.Input
 Imports Avalonia.Interactivity
 Imports Avalonia.Styling
+Imports Avalonia.VisualTree
 
 Namespace Controls
 
@@ -136,12 +137,34 @@ Namespace Controls
                     e.Handled = True
                 Case Key.Enter, Key.Return
                     RestoreTextFromValue()
+                    ' Die Eingabe ist uebernommen (sonst haette die Basisklasse die Taste als
+                    ' behandelt markiert und wir staenden nicht hier): das Feld ist fertig und gibt
+                    ' die Tastatur ab, aus demselben Grund wie bei ESC unten.
+                    ReleaseKeyboardToView()
                 Case Key.Escape
                     ' Bei verzögerter Übernahme steht im Feld etwas, das noch nicht gilt - ESC
                     ' verwirft es und holt den geltenden Wert zurück.
                     RestoreTextFromValue(force:=DeferTextCommit)
+                    ' UND VERLAESST DAS FELD. Blieb die Tastatur hier, schluckte jedes weitere ESC
+                    ' das Feld, und auch die blanken Kuerzel der Ansicht galten nicht mehr - im
+                    ' Editor etwa J und ESC (Nutzerbefund 2026-09-24). Das erste ESC gehoert also
+                    ' dem Feld, das naechste wieder der Ansicht.
+                    ReleaseKeyboardToView()
                     e.Handled = True
             End Select
+        End Sub
+
+        ''' Gibt die Tastatur an die naechste Ansicht darueber ab, die sie annimmt (Editor,
+        ''' Einstellungen, ein Dialog). Findet sich keine, bleibt sie, wo sie ist: ein Fokus im
+        ''' Nichts waere schlechter, dann kaeme die Taste bei gar keiner Ansicht mehr an.
+        Private Sub ReleaseKeyboardToView()
+            For Each ancestor In Me.GetVisualAncestors()
+                Dim view = TryCast(ancestor, UserControl)
+                If view IsNot Nothing AndAlso view.Focusable AndAlso view.IsEffectivelyVisible Then
+                    view.Focus()
+                    Return
+                End If
+            Next
         End Sub
 
         ''' Läuft gerade das Zurückholen? Dann muss der geschriebene Text auch bei verzögerter

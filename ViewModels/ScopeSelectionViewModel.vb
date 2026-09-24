@@ -35,6 +35,12 @@ Namespace ViewModels
         Private Shared _panelMode As String =
             AppSettingsService.NormalizeScopeMode(AppSettingsService.Load().ScopePanelMode)
 
+        ''' <summary>Der zuletzt gezeigte Histogramm-Kanal je Ort. Wer auf Rot schaltet, kurz zur
+        ''' Waveform geht und mit "Histogramm" zurueckkommt, findet sein Rot wieder und nicht alle
+        ''' drei Kanaele.</summary>
+        Private Shared _lastSidebarHistogram As String = HistogramOrDefault(_sharedMode)
+        Private Shared _lastPanelHistogram As String = HistogramOrDefault(_panelMode)
+
         ''' <summary>Zu WELCHEM Anpassungswerkzeug die Wahl des Panels gerade gehoert.
         '''
         ''' Das Panel steht bei fuenf Werkzeugen (Licht, Farbe, Details, Effekte, Filter), und die
@@ -97,11 +103,40 @@ Namespace ViewModels
         Public Sub New(onChanged As Action, Optional channel As ScopeChannel = ScopeChannel.InfoSidebar)
             _onChanged = onChanged
             _channel = channel
-            SetModeCommand = New DelegateCommand(Sub(parameter) Mode = TryCast(parameter, String))
+            SetModeCommand = New DelegateCommand(Sub(parameter) SelectMode(TryCast(parameter, String)))
+            SetHistogramChannelCommand = New DelegateCommand(
+                Sub(parameter) Mode = HistogramModeFor(TryCast(parameter, String)))
             AddHandler SharedModeChanged, AddressOf OnSharedModeChanged
         End Sub
 
-        ''' <summary>"Histogram", "Waveform" oder "Parade" - die Wahl DIESES Ortes.</summary>
+        ''' <summary>Der Knopf "Histogramm" meint die Darstellung, nicht den Kanal: steht schon ein
+        ''' Histogramm da, bleibt es, und von Waveform oder Parade aus kommt der zuletzt gezeigte
+        ''' Kanal zurueck.</summary>
+        Private Sub SelectMode(value As String)
+            If String.Equals(value, "Histogram", StringComparison.Ordinal) Then
+                If IsHistogram Then Return
+                value = If(_channel = ScopeChannel.AdjustmentPanel, _lastPanelHistogram, _lastSidebarHistogram)
+            End If
+            Mode = value
+        End Sub
+
+        ''' <summary>"Rgb" (alle drei Farbkanaele), "Red", "Green", "Blue" oder "Luminance" als
+        ''' Darstellungswert, siehe <see cref="AppSettingsService.NormalizeScopeMode"/>.</summary>
+        Private Shared Function HistogramModeFor(channelName As String) As String
+            Select Case channelName
+                Case "Red", "Green", "Blue", "Luminance"
+                    Return "Histogram" & channelName
+                Case Else
+                    Return "Histogram"
+            End Select
+        End Function
+
+        Private Shared Function HistogramOrDefault(mode As String) As String
+            Return If(mode.StartsWith("Histogram", StringComparison.Ordinal), mode, "Histogram")
+        End Function
+
+        ''' <summary>"Histogram" (mit Kanal-Anhang), "Waveform" oder "Parade" - die Wahl DIESES
+        ''' Ortes.</summary>
         Public Property Mode As String
             Get
                 Return If(_channel = ScopeChannel.AdjustmentPanel, _panelMode, _sharedMode)
@@ -109,6 +144,12 @@ Namespace ViewModels
             Set(value As String)
                 Dim normalized = AppSettingsService.NormalizeScopeMode(value)
                 If String.Equals(Mode, normalized, StringComparison.Ordinal) Then Return
+                Dim isHistogramMode = normalized.StartsWith("Histogram", StringComparison.Ordinal)
+                If _channel = ScopeChannel.AdjustmentPanel Then
+                    If isHistogramMode Then _lastPanelHistogram = normalized
+                Else
+                    If isHistogramMode Then _lastSidebarHistogram = normalized
+                End If
                 If _channel = ScopeChannel.AdjustmentPanel Then
                     _panelMode = normalized
                     ' Beim Werkzeug gemerkt UND als allgemeine Vorgabe geschrieben: die Vorgabe gilt
@@ -159,6 +200,7 @@ Namespace ViewModels
             Dim wanted = AppSettingsService.ScopePanelModeForTool(normalizedTool)
             If String.Equals(_panelMode, wanted, StringComparison.Ordinal) Then Return False
             _panelMode = wanted
+            If wanted.StartsWith("Histogram", StringComparison.Ordinal) Then _lastPanelHistogram = wanted
             Threading.Interlocked.Increment(_panelGeneration)
             RaiseEvent SharedModeChanged(ScopeChannel.AdjustmentPanel)
             Return True
@@ -177,14 +219,52 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(IsHistogram))
             Me.RaisePropertyChanged(NameOf(IsWaveform))
             Me.RaisePropertyChanged(NameOf(IsParade))
+            Me.RaisePropertyChanged(NameOf(IsHistogramRgb))
+            Me.RaisePropertyChanged(NameOf(IsHistogramRed))
+            Me.RaisePropertyChanged(NameOf(IsHistogramGreen))
+            Me.RaisePropertyChanged(NameOf(IsHistogramBlue))
+            Me.RaisePropertyChanged(NameOf(IsHistogramLuminance))
             _onChanged?.Invoke()
         End Sub
 
+        ''' <summary>Irgendein Histogramm, gleich welcher Kanal.</summary>
         Public ReadOnly Property IsHistogram As Boolean
+            Get
+                Return Mode.StartsWith("Histogram", StringComparison.Ordinal)
+            End Get
+        End Property
+
+        Public ReadOnly Property IsHistogramRgb As Boolean
             Get
                 Return Mode = "Histogram"
             End Get
         End Property
+
+        Public ReadOnly Property IsHistogramRed As Boolean
+            Get
+                Return Mode = "HistogramRed"
+            End Get
+        End Property
+
+        Public ReadOnly Property IsHistogramGreen As Boolean
+            Get
+                Return Mode = "HistogramGreen"
+            End Get
+        End Property
+
+        Public ReadOnly Property IsHistogramBlue As Boolean
+            Get
+                Return Mode = "HistogramBlue"
+            End Get
+        End Property
+
+        Public ReadOnly Property IsHistogramLuminance As Boolean
+            Get
+                Return Mode = "HistogramLuminance"
+            End Get
+        End Property
+
+        Public ReadOnly Property SetHistogramChannelCommand As ICommand
 
         Public ReadOnly Property IsWaveform As Boolean
             Get

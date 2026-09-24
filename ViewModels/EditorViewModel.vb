@@ -4635,6 +4635,19 @@ Namespace ViewModels
             End Set
         End Property
 
+        Private _toggleClippingWarningCommand As ICommand
+
+        ''' <summary>Der Symbolknopf im Analysepanel und in der Kopfzeile von Licht. Ein Befehl und kein
+        ''' Click-Handler, weil der Knopf im Kopf-Template des Panels steht.</summary>
+        Public ReadOnly Property ToggleClippingWarningCommand As ICommand
+            Get
+                If _toggleClippingWarningCommand Is Nothing Then
+                    _toggleClippingWarningCommand = New DelegateCommand(Sub() ShowClippingWarning = Not ShowClippingWarning)
+                End If
+                Return _toggleClippingWarningCommand
+            End Get
+        End Property
+
         ''' <summary>Der Vergleich ist ein Bedienzustand, den der Nutzer setzt - und der über Bildwechsel
         ''' UND Programmstarts hinweg stehen bleiben soll (gemerkt in den Einstellungen, wie die Info-Leiste;
         ''' kein Schalter im Einstellungsdialog).</summary>
@@ -4791,11 +4804,12 @@ Namespace ViewModels
                     ' Objekt-, Retusche-, Pinsel- und Transformwerkzeuge verdecken mit dem roten
                     ' Overlay genau das, woran man arbeitet - dort verschwindet es sofort.
                     If CoversMaskOverlay(value) Then HideMaskOverlay()
-                    ' Die Clipping-Warnung gehoert zum Anpassen-Werkzeug: ihr Haken steht bei den
-                    ' Reglern, mit denen man auf sie reagiert. Blieb sie beim Wechsel an, lagen die
-                    ' Markierungen ueber einem Bild, an dem man ganz anders arbeitet - und der
-                    ' Schalter dafuer war nicht mehr zu sehen.
-                    ShowClippingWarning = False
+                    ' Die Clipping-Warnung gehoert zu den Werkzeugen mit Reglern: ihr Schalter steht
+                    ' im Analysepanel, das alle fuenf zeigen. Zwischen ihnen bleibt sie an - wer an
+                    ' den Lichtern arbeitet und zur Kurve wechselt, will dieselbe Antwort weiter
+                    ' sehen. Ausserhalb davon lagen die Markierungen ueber einem Bild, an dem man
+                    ' ganz anders arbeitet, und der Schalter dafuer war nicht mehr zu sehen.
+                    If Not IsClippingWarningAvailable Then ShowClippingWarning = False
                 End If
                 ' Die Ausnahmen zum Abwählen stehen in ToolKeepsSelectedAnnotationOnEnter - EINE
                 ' Stelle für diesen Weg UND für SetToolCommand, das schon vorher abwählt.
@@ -5128,6 +5142,18 @@ Namespace ViewModels
                     Case Else
                         Return ""
                 End Select
+            End Get
+        End Property
+
+        ''' <summary>Steht ein Schalter der Clipping-Warnung gerade auf dem Schirm? Der Symbolknopf
+        ''' sitzt im Analysepanel, bei allen fuenf Werkzeugen mit Reglern; ist das Analysepanel aus
+        ''' (ab Werk), sitzt er stattdessen in der Kopfzeile von Licht. Dazu kommt der Haken im
+        ''' Licht-Panel. Ohne Analysepanel gibt es sie also nur im Anpassen-Werkzeug. Die Taste J und der Werkzeugwechsel fragen genau das: eine
+        ''' Warnung, deren Schalter man nicht sieht, soll weder angehen noch stehen bleiben.</summary>
+        Public ReadOnly Property IsClippingWarningAvailable As Boolean
+            Get
+                If ScopePanelToolKey.Length = 0 Then Return False
+                Return IsScopeInAdjustmentPanelsVisible OrElse _currentTool = EditorTool.Adjust
             End Get
         End Property
 
@@ -22086,6 +22112,10 @@ Namespace ViewModels
             ' Gemessene Werte gehören zu GENAU DIESEM Bild - beim Bildwechsel gilt keine Automatik mehr.
             ClearAutoAdjustState()
             If resetTool Then _currentTool = EditorTool.Transform
+            ' Die Tonwertkurve beginnt jedes Bild im RGB-Kanal. Blieb der Kanal des vorigen Bildes
+            ' stehen, oeffnete ein neues Bild etwa im Rotkanal, und wer dann an der Kurve zog,
+            ' faerbte ungewollt ein, statt die Helligkeit zu formen.
+            SelectedCurveChannel = CurveChannel.Rgb
             _pendingInsertKind = ""
             _selectedWatermarkPresetName = ""
             _watermarkPresetNameDraft = ""

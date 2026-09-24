@@ -8730,4 +8730,7 @@
   <data name="Das_JPEG_das_die_Kamera_selbst_in_die_RAW_Datei__cb08eb2f" xml:space="preserve">
     <value>वह JPEG जिसे कैमरे ने स्वयं RAW फ़ाइल में रखा है। इसमें निर्माता की चित्र शैली होती है और यह उसी शॉट की उनकी व्याख्या है, तटस्थ नहीं</value>
   </data>
+  <data name="Clipping_Warnung_ein_aus_in_den_Werkzeugen_mit_R_4cef1555" xml:space="preserve">
+    <value>क्लिपिंग चेतावनी चालू/बंद करें, स्लाइडर वाले टूल में</value>
+  </data>
 </root>

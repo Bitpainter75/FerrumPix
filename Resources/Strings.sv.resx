@@ -8726,4 +8726,7 @@
   <data name="Das_JPEG_das_die_Kamera_selbst_in_die_RAW_Datei__cb08eb2f" xml:space="preserve">
     <value>Den JPEG som kameran själv lade i råfilen. Den bär tillverkarens bildstil och är tillverkarens tolkning av samma tagning, inte en neutral</value>
   </data>
+  <data name="Clipping_Warnung_ein_aus_in_den_Werkzeugen_mit_R_4cef1555" xml:space="preserve">
+    <value>Klippningsvarning på/av, i verktygen med reglage</value>
+  </data>
 </root>

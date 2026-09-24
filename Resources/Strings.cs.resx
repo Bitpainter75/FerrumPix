@@ -8726,4 +8726,7 @@
   <data name="Das_JPEG_das_die_Kamera_selbst_in_die_RAW_Datei__cb08eb2f" xml:space="preserve">
     <value>JPEG, který do souboru RAW uložil sám fotoaparát. Nese obrazový styl výrobce a je jeho výkladem téhož snímku, nikoli neutrálním</value>
   </data>
+  <data name="Clipping_Warnung_ein_aus_in_den_Werkzeugen_mit_R_4cef1555" xml:space="preserve">
+    <value>Zapnout nebo vypnout upozornění na ořez, v nástrojích s posuvníky</value>
+  </data>
 </root>

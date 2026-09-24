@@ -8730,4 +8730,7 @@
   <data name="Das_JPEG_das_die_Kamera_selbst_in_die_RAW_Datei__cb08eb2f" xml:space="preserve">
     <value>ไฟล์ JPEG ที่กล้องใส่ไว้ในไฟล์ RAW เอง ไฟล์นี้มีสไตล์ภาพของผู้ผลิตและเป็นการตีความภาพเดียวกันของผู้ผลิต ไม่ใช่แบบเป็นกลาง</value>
   </data>
+  <data name="Clipping_Warnung_ein_aus_in_den_Werkzeugen_mit_R_4cef1555" xml:space="preserve">
+    <value>เปิด/ปิดคำเตือนเรื่องส่วนที่ตัน ในเครื่องมือที่มีแถบเลื่อน</value>
+  </data>
 </root>

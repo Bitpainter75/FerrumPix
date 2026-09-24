@@ -20,12 +20,31 @@
     <Expander Header="Analyse" icons:ExpanderState.Key="scope">
         <Expander.HeaderTemplate>
             <DataTemplate>
-                <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                    <icons:SvgIcon
-                        Source="avares://FerrumPix/Assets/Icons/outline/chart-histogram.svg"
-                        Width="14" Height="14" />
-                    <TextBlock Text="{Binding}" FontWeight="SemiBold" />
-                </StackPanel>
+                <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
+                    <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                        <icons:SvgIcon
+                            Source="avares://FerrumPix/Assets/Icons/outline/chart-histogram.svg"
+                            Width="14" Height="14" />
+                        <TextBlock Text="{Binding}" FontWeight="SemiBold" />
+                    </StackPanel>
+                    <!-- Die Clipping-Warnung steht HIER und nicht beim Licht: das Analysepanel
+                         zeigen alle fuenf Werkzeuge mit Reglern, und die Frage "frisst etwas
+                         aus?" stellt sich an der Kurve oder bei den Farben genauso. In der
+                         Kopfzeile bleibt der Schalter auch bei zugeklapptem Panel greifbar.
+                         group-action, sonst blendet die Gruppenregel den Symbolknopf aus. -->
+                    <Button Grid.Column="1"
+                            Classes="icon-btn group-action"
+                            Classes.active="{Binding DataContext.ShowClippingWarning, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                            Width="28"
+                            Height="28"
+                            Padding="0"
+                            Command="{Binding DataContext.ToggleClippingWarningCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                            ToolTip.Tip="Ausgefressene Lichter rot und zugelaufene Tiefen blau markieren">
+                        <icons:SvgIcon
+                            Source="avares://FerrumPix/Assets/Icons/outline/alert-triangle.svg"
+                            Width="14" Height="14" />
+                    </Button>
+                </Grid>
             </DataTemplate>
         </Expander.HeaderTemplate>
         <StackPanel Spacing="8" Margin="0,8,0,0">
@@ -48,6 +67,30 @@
                         Content="RGB-Parade"
                         Command="{Binding PanelScope.SetModeCommand}" CommandParameter="Parade"/>
             </Grid>
+            <!-- Beim Histogramm ein Kanal allein: dieselben Reiter und dieselbe Reihenfolge wie
+                 an der Tonwertkurve, damit beide dasselbe meinen. -->
+            <StackPanel Orientation="Horizontal" Spacing="14" IsVisible="{Binding PanelScope.IsHistogram}">
+                <Button Classes="info-tab channel-tab" Command="{Binding PanelScope.SetHistogramChannelCommand}"
+                        CommandParameter="Rgb" Classes.active="{Binding PanelScope.IsHistogramRgb}">
+                    <TextBlock Text="RGB" FontSize="{DynamicResource FP.Font.Small}" />
+                </Button>
+                <Button Classes="info-tab channel-tab" Command="{Binding PanelScope.SetHistogramChannelCommand}"
+                        CommandParameter="Red" Classes.active="{Binding PanelScope.IsHistogramRed}">
+                    <TextBlock Text="R" FontSize="{DynamicResource FP.Font.Small}" />
+                </Button>
+                <Button Classes="info-tab channel-tab" Command="{Binding PanelScope.SetHistogramChannelCommand}"
+                        CommandParameter="Green" Classes.active="{Binding PanelScope.IsHistogramGreen}">
+                    <TextBlock Text="G" FontSize="{DynamicResource FP.Font.Small}" />
+                </Button>
+                <Button Classes="info-tab channel-tab" Command="{Binding PanelScope.SetHistogramChannelCommand}"
+                        CommandParameter="Blue" Classes.active="{Binding PanelScope.IsHistogramBlue}">
+                    <TextBlock Text="B" FontSize="{DynamicResource FP.Font.Small}" />
+                </Button>
+                <Button Classes="info-tab channel-tab" Command="{Binding PanelScope.SetHistogramChannelCommand}"
+                        CommandParameter="Luminance" Classes.active="{Binding PanelScope.IsHistogramLuminance}">
+                    <TextBlock Text="L" FontSize="{DynamicResource FP.Font.Small}" />
+                </Button>
+            </StackPanel>
             <!-- 150 Punkt hoch wie in der Leiste: senkrecht liegen 256 Helligkeitsstufen, und bei
                  Waveform und Parade ist genau das die tragende Achse. -->
             <Panel Height="150">

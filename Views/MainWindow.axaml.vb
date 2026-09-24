@@ -947,6 +947,34 @@ Namespace Views
                     Return
                 End If
 
+                ' NIEMAND HAT DEN FOKUS: dann faengt die sichtbare Ansicht ihn auf, und die Taste
+                ' geht an sie. Avalonia setzt den Fokus auf niemanden, sobald das fokussierte
+                ' Element ausgeblendet, gesperrt oder entfernt wird (InputElement, IsVisible und
+                ' IsEffectivelyEnabled; FocusManager.ClearFocusOnElementRemoved). Im Editor
+                ' geschieht das staendig: der Reglerbereich sperrt sich, solange gerechnet wird,
+                ' Panels wechseln mit dem Werkzeug, Aufklappmenues schliessen nach dem Klick. Ab
+                ' dann ging jede Taste nur noch an das Fenster, und die Kuerzel der Ansicht - J,
+                ' ESC, Z, F - waren tot, bis man irgendwo hinklickte (Nutzerbefund 2026-09-24).
+                ' Weitergereicht wird ueber RaiseEvent an der Ansicht: der Weg fuehrt wieder
+                ' durch diesen Tunnel, jetzt mit Fokus, und alles Weitere hier gilt wie sonst.
+                If FocusManager?.GetFocusedElement() Is Nothing AndAlso e.Source Is Me Then
+                    Dim host = Me.FindControl(Of Panel)("MainContentHost")
+                    Dim view = host?.Children.OfType(Of Control)().FirstOrDefault(Function(c) c.IsVisible)
+                    If view IsNot Nothing AndAlso view.Focusable AndAlso view.Focus() Then
+                        Dim forwarded = New KeyEventArgs With {
+                            .RoutedEvent = InputElement.KeyDownEvent,
+                            .Source = view,
+                            .Key = e.Key,
+                            .KeyModifiers = e.KeyModifiers,
+                            .PhysicalKey = e.PhysicalKey,
+                            .KeySymbol = e.KeySymbol,
+                            .KeyDeviceType = e.KeyDeviceType}
+                        view.RaiseEvent(forwarded)
+                        e.Handled = True
+                        Return
+                    End If
+                End If
+
                 ' macOS-Standardbefehle, die bei einem handgeschriebenen KeyDown
                 ' nicht automatisch aus einem nativen Menü entstehen. Close() läuft
                 ' weiterhin vollständig durch HandleWindowClosing.

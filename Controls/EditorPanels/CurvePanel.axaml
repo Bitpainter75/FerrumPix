@@ -29,7 +29,7 @@
         </Expander.HeaderTemplate>
         <StackPanel Spacing="8" Margin="0,8,0,0">
             <StackPanel Orientation="Horizontal" Spacing="14">
-                <Button Classes="info-tab" Command="{Binding SetCurveChannelCommand}"
+                <Button Classes="info-tab channel-tab" Command="{Binding SetCurveChannelCommand}"
                         CommandParameter="Rgb" Classes.active="{Binding IsCurveChannelRgb}">
                     <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
                         <TextBlock Text="RGB" FontSize="{DynamicResource FP.Font.Small}" VerticalAlignment="Center" />
@@ -40,7 +40,7 @@
                                  IsVisible="{Binding IsCurveRgbEdited}" />
                     </StackPanel>
                 </Button>
-                <Button Classes="info-tab" Command="{Binding SetCurveChannelCommand}"
+                <Button Classes="info-tab channel-tab" Command="{Binding SetCurveChannelCommand}"
                         CommandParameter="Red" Classes.active="{Binding IsCurveChannelRed}">
                     <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
                         <TextBlock Text="R" FontSize="{DynamicResource FP.Font.Small}" VerticalAlignment="Center" />
@@ -51,7 +51,7 @@
                                  IsVisible="{Binding IsCurveRedEdited}" />
                     </StackPanel>
                 </Button>
-                <Button Classes="info-tab" Command="{Binding SetCurveChannelCommand}"
+                <Button Classes="info-tab channel-tab" Command="{Binding SetCurveChannelCommand}"
                         CommandParameter="Green"
                         Classes.active="{Binding IsCurveChannelGreen}">
                     <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
@@ -63,7 +63,7 @@
                                  IsVisible="{Binding IsCurveGreenEdited}" />
                     </StackPanel>
                 </Button>
-                <Button Classes="info-tab" Command="{Binding SetCurveChannelCommand}"
+                <Button Classes="info-tab channel-tab" Command="{Binding SetCurveChannelCommand}"
                         CommandParameter="Blue"
                         Classes.active="{Binding IsCurveChannelBlue}">
                     <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
@@ -75,7 +75,7 @@
                                  IsVisible="{Binding IsCurveBlueEdited}" />
                     </StackPanel>
                 </Button>
-                <Button Classes="info-tab" Command="{Binding SetCurveChannelCommand}"
+                <Button Classes="info-tab channel-tab" Command="{Binding SetCurveChannelCommand}"
                         CommandParameter="Luminance"
                         Classes.active="{Binding IsCurveChannelLuminance}">
                     <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">

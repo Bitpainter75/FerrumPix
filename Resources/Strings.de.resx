@@ -8704,4 +8704,7 @@
   <data name="Das_JPEG_das_die_Kamera_selbst_in_die_RAW_Datei__cb08eb2f" xml:space="preserve">
     <value>Das JPEG, das die Kamera selbst in die RAW-Datei gelegt hat. Es trägt den Bildstil des Herstellers und ist dessen Auslegung derselben Aufnahme, keine neutrale</value>
   </data>
+  <data name="Clipping_Warnung_ein_aus_in_den_Werkzeugen_mit_R_4cef1555" xml:space="preserve">
+    <value>Clipping-Warnung ein/aus, in den Werkzeugen mit Reglern</value>
+  </data>
 </root>

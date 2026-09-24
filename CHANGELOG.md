@@ -1,6 +1,26 @@
 ## FerrumPix 0.9.51
 
+### What's new
+
+- **One channel at a time in the histogram.** Below the histogram you can pick RGB, red, green,
+  blue or luminance, in the info panel as well as in the editor. Each adjustment tool remembers
+  its choice.
+
+- **Clipping warning from anywhere with sliders.** Besides its checkbox under Light, the clipping
+  warning now has a small button in the analysis panel. With that panel shown, it is at hand in
+  all adjustment tools, from light to the tone curve, and stays on while you move between them.
+  J switches it on and off.
+
 ### Fixes
+
+- The tone curve starts every picture in the RGB channel instead of the channel you last used on
+  another picture.
+
+- Keyboard shortcuts no longer stop working after a button, panel or menu you just used goes
+  away or is briefly disabled. This affected the gallery, the viewer and the editor alike.
+
+- After typing into a number field in the editor, ESC and ENTER leave the field, so the editor's
+  keys work again right away. The same happens when you touch a slider with a pen.
 
 - The places and people filters appear as soon as you turn them on in the settings, without
   restarting FerrumPix, and place names for older pictures are filled in right away.

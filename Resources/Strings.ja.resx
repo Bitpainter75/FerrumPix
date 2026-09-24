@@ -8726,4 +8726,7 @@
   <data name="Das_JPEG_das_die_Kamera_selbst_in_die_RAW_Datei__cb08eb2f" xml:space="preserve">
     <value>カメラ自身が RAW ファイルに埋め込んだ JPEG です。メーカーのピクチャースタイルを帯びており、同じ撮影に対するメーカーの解釈であって、中立なものではありません</value>
   </data>
+  <data name="Clipping_Warnung_ein_aus_in_den_Werkzeugen_mit_R_4cef1555" xml:space="preserve">
+    <value>クリッピング警告のオン/オフ（スライダーのあるツールで）</value>
+  </data>
 </root>

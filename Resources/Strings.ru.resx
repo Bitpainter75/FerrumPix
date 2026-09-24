@@ -8726,4 +8726,7 @@
   <data name="Das_JPEG_das_die_Kamera_selbst_in_die_RAW_Datei__cb08eb2f" xml:space="preserve">
     <value>JPEG, который камера сама записала в RAW-файл. Он несёт стиль изображения производителя и является его прочтением того же кадра, а не нейтральным</value>
   </data>
+  <data name="Clipping_Warnung_ein_aus_in_den_Werkzeugen_mit_R_4cef1555" xml:space="preserve">
+    <value>Включить или выключить предупреждение об отсечении (в инструментах с ползунками)</value>
+  </data>
 </root>

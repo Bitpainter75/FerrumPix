@@ -8684,4 +8684,7 @@
   <data name="Das_JPEG_das_die_Kamera_selbst_in_die_RAW_Datei__cb08eb2f" xml:space="preserve">
     <value>相机自己放入 RAW 文件的 JPEG。它带有厂商的照片风格，是厂商对同一次拍摄的诠释，并非中性结果</value>
   </data>
+  <data name="Clipping_Warnung_ein_aus_in_den_Werkzeugen_mit_R_4cef1555" xml:space="preserve">
+    <value>开关剪裁警告（在带滑块的工具中）</value>
+  </data>
 </root>
