@@ -8829,4 +8829,8 @@
   <data name="Das_gew_hlte_Symbol_in_die_Bildmitte_setzen_ohne_707d5a38" xml:space="preserve">
     <value>이미지를 클릭하지 않고 선택한 기호를 이미지 가운데에 놓습니다</value>
   </data>
+  <data name="Linksb_ndig_93a662e5" xml:space="preserve"><value>왼쪽 맞춤</value></data>
+  <data name="Zentriert_c4625afe" xml:space="preserve"><value>가운데 맞춤</value></data>
+  <data name="Rechtsb_ndig_d3e568b4" xml:space="preserve"><value>오른쪽 맞춤</value></data>
+  <data name="Blocksatz_df32263a" xml:space="preserve"><value>양쪽 맞춤</value></data>
 </root>

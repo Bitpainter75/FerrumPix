@@ -8785,4 +8785,8 @@
   <data name="Das_gew_hlte_Symbol_in_die_Bildmitte_setzen_ohne_707d5a38" xml:space="preserve">
     <value>Posiziona il simbolo scelto al centro dell’immagine senza cliccarci</value>
   </data>
+  <data name="Linksb_ndig_93a662e5" xml:space="preserve"><value>Allineato a sinistra</value></data>
+  <data name="Zentriert_c4625afe" xml:space="preserve"><value>Centrato</value></data>
+  <data name="Rechtsb_ndig_d3e568b4" xml:space="preserve"><value>Allineato a destra</value></data>
+  <data name="Blocksatz_df32263a" xml:space="preserve"><value>Giustificato</value></data>
 </root>

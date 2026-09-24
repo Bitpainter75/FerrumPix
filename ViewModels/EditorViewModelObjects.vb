@@ -324,6 +324,28 @@ Namespace ViewModels
             End Set
         End Property
 
+        ''' <summary>Ausrichtung der expliziten Textzeilen. Pfadtext bleibt beim linken Grundwert,
+        ''' weil eine Kurve keine gemeinsame rechte Satzkante besitzt.</summary>
+        Public Property AnnotationTextAlignment As String
+            Get
+                Return _annotationTextAlignment
+            End Get
+            Set(value As String)
+                Dim normalized = If(value, "Left").Trim()
+                If Not String.Equals(normalized, "Center", StringComparison.OrdinalIgnoreCase) AndAlso
+                   Not String.Equals(normalized, "Right", StringComparison.OrdinalIgnoreCase) AndAlso
+                   Not String.Equals(normalized, "Justify", StringComparison.OrdinalIgnoreCase) Then normalized = "Left"
+                Me.RaiseAndSetIfChanged(_annotationTextAlignment, normalized)
+                SyncSelectedAnnotation()
+            End Set
+        End Property
+
+        Public ReadOnly Property IsTextAlignmentLeft As Boolean
+            Get
+                Return String.Equals(_annotationTextAlignment, "Left", StringComparison.OrdinalIgnoreCase)
+            End Get
+        End Property
+
         ''' <summary>Zeichenabstand in Prozent der Schriftgroesse. Prozent statt Pixel, damit der
         ''' Abstand beim Skalieren des Objekts mitwaechst.</summary>
         Public Property AnnotationLetterSpacingPercent As Double
@@ -332,6 +354,8 @@ Namespace ViewModels
             End Get
             Set(value As Double)
                 Me.RaiseAndSetIfChanged(_annotationLetterSpacingPercent, Math.Max(-20, Math.Min(200, value)))
+                ' Der Rahmen sitzt an den Glyphen - er muss dem Abstand folgen.
+                UpdatePendingTextAnnotationSize()
                 SyncSelectedAnnotation()
             End Set
         End Property
@@ -344,6 +368,7 @@ Namespace ViewModels
             End Get
             Set(value As Boolean)
                 Me.RaiseAndSetIfChanged(_annotationBold, value)
+                UpdatePendingTextAnnotationSize()
                 SyncSelectedAnnotation()
             End Set
         End Property
@@ -354,6 +379,7 @@ Namespace ViewModels
             End Get
             Set(value As Boolean)
                 Me.RaiseAndSetIfChanged(_annotationItalic, value)
+                UpdatePendingTextAnnotationSize()
                 SyncSelectedAnnotation()
             End Set
         End Property

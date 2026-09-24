@@ -1561,7 +1561,12 @@ Namespace Services
                 Dim shadowBlurPx = objSize * Clamp(annotation.ShadowBlur, 0, 100) / 100.0F * ShadowBlurSigmaFactor
                 Dim shadowOffset = Math.Max(Math.Abs(objSize * annotation.ShadowOffsetXPercent / 100.0F),
                                             Math.Abs(objSize * annotation.ShadowOffsetYPercent / 100.0F))
-                Dim shadowGrow = Math.Max(0.0F, Clamp(annotation.ShadowSizePercent, 10, 400) / 100.0F - 1.0F) * objSize * 0.5F
+                ' Der Weichzeichner und der Versatz folgen bewusst der kleineren Kante. Das
+                ' Skalieren geschieht aber um die Mitte des ganzen Rechtecks: bei einer breiten,
+                ' flachen Textzeile kann ein grosser Schatten deshalb seitlich um ein Vielfaches
+                ' der Texthöhe wachsen. Die grössere Kante ist hier absichtlich konservativ,
+                ' damit ein Regions-Patch beim Verschieben auch den alten Schatten wegzeichnet.
+                Dim shadowGrow = Math.Max(0.0F, Clamp(annotation.ShadowSizePercent, 10, 400) / 100.0F - 1.0F) * Math.Max(rect.Width, rect.Height) * 0.5F
                 effectPad = Math.Max(effectPad, shadowBlurPx * 3.0F + shadowOffset + shadowGrow + 4.0F)
             End If
             If annotation.GlowEnabled Then

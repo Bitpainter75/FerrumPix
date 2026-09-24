@@ -41,11 +41,12 @@
                                VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                     <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100"
                                        DefaultValue="4"
+                                       WheelIncrement="0.1" DragIncrement="0.1"
                                        Value="{Binding AnnotationShadowOffsetX}" Margin="0,0" />
                     <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
                                              Value="{Binding AnnotationShadowOffsetX, Mode=TwoWay}"
-                                             Minimum="-100" Maximum="100" Increment="1"
-                                             FormatString="F0" />
+                                             Minimum="-100" Maximum="100" Increment="0.1" CoarseIncrement="1"
+                                             FormatString="F1" />
                 </Grid>
                 <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
                     <TextBlock Text="Versatz Y"
@@ -53,11 +54,12 @@
                                VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                     <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100"
                                        DefaultValue="4"
+                                       WheelIncrement="0.1" DragIncrement="0.1"
                                        Value="{Binding AnnotationShadowOffsetY}" Margin="0,0" />
                     <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
                                              Value="{Binding AnnotationShadowOffsetY, Mode=TwoWay}"
-                                             Minimum="-100" Maximum="100" Increment="1"
-                                             FormatString="F0" />
+                                             Minimum="-100" Maximum="100" Increment="0.1" CoarseIncrement="1"
+                                             FormatString="F1" />
                 </Grid>
                 <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
                     <TextBlock Text="Weichzeichnen"

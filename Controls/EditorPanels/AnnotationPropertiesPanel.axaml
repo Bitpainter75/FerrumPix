@@ -190,6 +190,39 @@
                 </ToggleButton>
             </WrapPanel>
         </Grid>
+        <!-- Mehrzeilige Texte haben explizite Zeilenumbrüche. Ihre gemeinsame Satzbreite ist die
+             längste Zeile; daran richten Mitte, Rechts und Blocksatz die übrigen Zeilen aus. -->
+        <Grid ColumnDefinitions="92,*" VerticalAlignment="Center"
+              IsVisible="{Binding ShowFontControls}">
+            <TextBlock Text="Ausrichtung" Foreground="{DynamicResource FP.Text.Secondary}"
+                       VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap" />
+            <WrapPanel Grid.Column="1" Orientation="Horizontal" Margin="6,0,0,0">
+                <Button Classes="ghost" Padding="8,4" Margin="0,0,5,4"
+                        Command="{Binding SetAnnotationTextAlignmentCommand}" CommandParameter="Left"
+                        Classes.active="{Binding AnnotationTextAlignment, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Left}"
+                        ToolTip.Tip="Linksbündig">
+                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/align-left.svg" Width="15" Height="15" />
+                </Button>
+                <Button Classes="ghost" Padding="8,4" Margin="0,0,5,4"
+                        Command="{Binding SetAnnotationTextAlignmentCommand}" CommandParameter="Center"
+                        Classes.active="{Binding AnnotationTextAlignment, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Center}"
+                        ToolTip.Tip="Zentriert">
+                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/align-center.svg" Width="15" Height="15" />
+                </Button>
+                <Button Classes="ghost" Padding="8,4" Margin="0,0,5,4"
+                        Command="{Binding SetAnnotationTextAlignmentCommand}" CommandParameter="Right"
+                        Classes.active="{Binding AnnotationTextAlignment, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Right}"
+                        ToolTip.Tip="Rechtsbündig">
+                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/align-right.svg" Width="15" Height="15" />
+                </Button>
+                <Button Classes="ghost" Padding="8,4" Margin="0,0,5,4"
+                        Command="{Binding SetAnnotationTextAlignmentCommand}" CommandParameter="Justify"
+                        Classes.active="{Binding AnnotationTextAlignment, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Justify}"
+                        ToolTip.Tip="Blocksatz">
+                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/align-justified.svg" Width="15" Height="15" />
+                </Button>
+            </WrapPanel>
+        </Grid>
         <!-- Zeichenabstand in Prozent der Schriftgroesse: waechst dadurch beim Skalieren mit.
              Gilt auch fuer Text auf Pfaden - dort werden die Zeichen einzeln gesetzt. -->
         <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center"

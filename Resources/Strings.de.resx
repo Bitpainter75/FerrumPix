@@ -8803,4 +8803,8 @@
   <data name="Das_gew_hlte_Symbol_in_die_Bildmitte_setzen_ohne_707d5a38" xml:space="preserve">
     <value>Das gewählte Symbol in die Bildmitte setzen, ohne ins Bild zu klicken</value>
   </data>
+  <data name="Linksb_ndig_93a662e5" xml:space="preserve"><value>Linksbündig</value></data>
+  <data name="Zentriert_c4625afe" xml:space="preserve"><value>Zentriert</value></data>
+  <data name="Rechtsb_ndig_d3e568b4" xml:space="preserve"><value>Rechtsbündig</value></data>
+  <data name="Blocksatz_df32263a" xml:space="preserve"><value>Blocksatz</value></data>
 </root>

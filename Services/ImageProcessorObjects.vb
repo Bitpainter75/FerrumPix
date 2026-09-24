@@ -1195,12 +1195,12 @@ Namespace Services
                         ' Ein Text-Wasserzeichen verwendet dieselbe Deckkraft wie jedes andere
                         ' Textobjekt. Die frühere Sonderregel begrenzte eine volle Füllfarbe hier
                         ' auf Alpha 130 (ca. 51 %) – unabhängig von der Deckkraft-Einstellung.
-                        DrawAnnotationText(canvas, watermark, x, y, maxWidth, fontSize, fill, stroke, annotation.StrokeWidth, annotation.FontFamily, rect, annotation.FillKind, fill2, annotation.GradientAngleDegrees, annotation.GradientInverted, annotation.TextPathKind, annotation.TextPathInverted, annotation.TextPathBend, annotation.TextPathStartOffset, annotation.LetterSpacingPercent, annotation.Bold, annotation.Italic, annotation.PathPoints, annotation.PathClosed)
+                        DrawAnnotationText(canvas, watermark, x, y, maxWidth, fontSize, fill, stroke, annotation.StrokeWidth, annotation.FontFamily, rect, annotation.FillKind, fill2, annotation.GradientAngleDegrees, annotation.GradientInverted, annotation.TextPathKind, annotation.TextPathInverted, annotation.TextPathBend, annotation.TextPathStartOffset, annotation.LetterSpacingPercent, annotation.Bold, annotation.Italic, annotation.TextAlignment, annotation.PathPoints, annotation.PathClosed)
                     End If
                 Case Else
                     If Not String.IsNullOrWhiteSpace(annotation.Text) Then
                         Dim fill2 = ApplyAlpha(ParseColor(annotation.FillColor2, SKColors.White), alphaFactor)
-                        DrawAnnotationText(canvas, annotation.Text, x, y, maxWidth, fontSize, fill, stroke, annotation.StrokeWidth, annotation.FontFamily, rect, annotation.FillKind, fill2, annotation.GradientAngleDegrees, annotation.GradientInverted, annotation.TextPathKind, annotation.TextPathInverted, annotation.TextPathBend, annotation.TextPathStartOffset, annotation.LetterSpacingPercent, annotation.Bold, annotation.Italic, annotation.PathPoints, annotation.PathClosed)
+                        DrawAnnotationText(canvas, annotation.Text, x, y, maxWidth, fontSize, fill, stroke, annotation.StrokeWidth, annotation.FontFamily, rect, annotation.FillKind, fill2, annotation.GradientAngleDegrees, annotation.GradientInverted, annotation.TextPathKind, annotation.TextPathInverted, annotation.TextPathBend, annotation.TextPathStartOffset, annotation.LetterSpacingPercent, annotation.Bold, annotation.Italic, annotation.TextAlignment, annotation.PathPoints, annotation.PathClosed)
                     End If
             End Select
         End Sub
@@ -1542,7 +1542,7 @@ Namespace Services
             Return ""
         End Function
 
-        Private Shared Sub DrawAnnotationText(canvas As SKCanvas, text As String, x As Single, y As Single, maxWidth As Single, fontSize As Single, fill As SKColor, stroke As SKColor, strokeWidth As Single, fontFamily As String, bounds As SKRect, Optional fillKind As String = "Solid", Optional fill2 As SKColor = Nothing, Optional gradientAngleDegrees As Single = 0, Optional gradientInverted As Boolean = False, Optional textPathKind As String = "", Optional textPathInverted As Boolean = False, Optional textPathBend As Single = 0, Optional textPathStartOffset As Single = 0, Optional letterSpacingPercent As Single = 0, Optional bold As Boolean = False, Optional italic As Boolean = False, Optional pathPoints As String = "", Optional pathClosed As Boolean = False)
+        Private Shared Sub DrawAnnotationText(canvas As SKCanvas, text As String, x As Single, y As Single, maxWidth As Single, fontSize As Single, fill As SKColor, stroke As SKColor, strokeWidth As Single, fontFamily As String, bounds As SKRect, Optional fillKind As String = "Solid", Optional fill2 As SKColor = Nothing, Optional gradientAngleDegrees As Single = 0, Optional gradientInverted As Boolean = False, Optional textPathKind As String = "", Optional textPathInverted As Boolean = False, Optional textPathBend As Single = 0, Optional textPathStartOffset As Single = 0, Optional letterSpacingPercent As Single = 0, Optional bold As Boolean = False, Optional italic As Boolean = False, Optional textAlignment As String = "Left", Optional pathPoints As String = "", Optional pathClosed As Boolean = False)
             ' Text an Pfad: EIN Zweig fuer Kontur und Fuellung, damit beide exakt dieselben
             ' Glyphenpositionen bekommen (und damit auch die Effekt-Maske, die ueber dieselbe
             ' Routine laeuft - Regel "Objektinhalt nur aus GENAU EINEM Renderpfad").
@@ -1629,7 +1629,7 @@ Namespace Services
                             If path IsNot Nothing Then
                                 DrawTextOnPathSpaced(canvas, pathText, path, font, strokePaint, spacing)
                             Else
-                                DrawWrappedText(canvas, text, x, y, maxWidth, fontSize, font, strokePaint, spacing)
+                                DrawWrappedText(canvas, text, x, y, maxWidth, fontSize, font, strokePaint, spacing, textAlignment)
                             End If
                         End Using
                     End If
@@ -1646,7 +1646,7 @@ Namespace Services
                         If path IsNot Nothing Then
                             DrawTextOnPathSpaced(canvas, pathText, path, font, fillPaint, spacing)
                         Else
-                            DrawWrappedText(canvas, text, x, y, maxWidth, fontSize, font, fillPaint, spacing)
+                            DrawWrappedText(canvas, text, x, y, maxWidth, fontSize, font, fillPaint, spacing, textAlignment)
                         End If
                     End Using
                 End Using
@@ -2615,18 +2615,199 @@ Namespace Services
             End Using
         End Function
 
-        Private Shared Sub DrawWrappedText(canvas As SKCanvas, text As String, x As Single, y As Single, maxWidth As Single, fontSize As Single, font As SKFont, paint As SKPaint, Optional spacing As Single = 0)
+        ''' <summary>DIE SICHTBAREN GLYPHENKANTEN eines Textobjekts, relativ zur linken oberen Ecke
+        ''' seines Rahmens - nach genau der Anordnung von <see cref="DrawWrappedText"/> und
+        ''' <see cref="DrawTextSpaced"/>, mit derselben Schrift (Schnitt und Ersatzschrift aus
+        ''' CreateTextFont) und der halben Kontur. Anders als MeasureAnnotationTextExtent ohne
+        ''' Sicherheitsrand: daraus entsteht der Rahmen selbst (gleiche Ränder gegenüber) und die
+        ''' Kanten, an denen ein Text einrastet. Leer, wenn keine Zeile eine sichtbare Glyphe hat.</summary>
+        Friend Shared Function MeasureAnnotationTextInk(text As String, fontFamily As String, fontSize As Single,
+                                                        letterSpacingPercent As Single, bold As Boolean, italic As Boolean,
+                                                        strokeWidth As Single, Optional alignment As String = "Left",
+                                                        Optional lineWidth As Single = 0.0F) As SKRect
+            If String.IsNullOrEmpty(text) OrElse fontSize <= 0 Then Return SKRect.Empty
+            Using font = CreateTextFont(fontFamily, fontSize, text, bold, italic)
+                Dim spacing = font.Size * letterSpacingPercent / 100.0F
+                Dim lineHeight = GetLineHeight(font.Metrics)
+                Dim ink = SKRect.Empty
+                Dim baseline = fontSize
+                Dim lines = text.Replace(vbCrLf, vbLf).Replace(vbCr, vbLf).Split(ControlChars.Lf)
+                Dim widest As Single = 0
+                For Each line In lines
+                    widest = Math.Max(widest, MeasureTextSpaced(font, line, spacing))
+                Next
+                ' Ohne vorhandene Box definiert die breiteste Zeile die Satzbreite. Bei einem
+                ' gespeicherten Objekt muss die Messung exakt dessen maxWidth verwenden, auch
+                ' wenn eine Zeile darüber hinausläuft; der Renderer tut das ebenfalls.
+                Dim targetWidth = If(lineWidth > 0.0F, lineWidth, widest)
+                Dim normalized = If(alignment, "Left").Trim()
+                For lineIndex = 0 To lines.Length - 1
+                    Dim line = lines(lineIndex)
+                    Dim currentWidth = MeasureTextSpaced(font, line, spacing)
+                    Dim lineX As Single = 0
+                    If String.Equals(normalized, "Center", StringComparison.OrdinalIgnoreCase) Then
+                        lineX = Math.Max(0.0F, (targetWidth - currentWidth) / 2.0F)
+                    ElseIf String.Equals(normalized, "Right", StringComparison.OrdinalIgnoreCase) Then
+                        lineX = Math.Max(0.0F, targetWidth - currentWidth)
+                    End If
+                    If line.Length > 0 Then
+                        If String.Equals(normalized, "Justify", StringComparison.OrdinalIgnoreCase) AndAlso
+                            lineIndex < lines.Length - 1 AndAlso line.Contains(" "c) AndAlso targetWidth > currentWidth Then
+                            For Each span In GetJustifiedTextSpans(line, lineX, targetWidth, font, spacing)
+                                AddTextSpanInk(ink, span.Text, span.X, baseline, font, spacing)
+                            Next
+                        ElseIf spacing = 0.0F Then
+                            Dim bounds As SKRect
+                            font.MeasureText(line, bounds)
+                            If Not bounds.IsEmpty Then
+                                bounds.Offset(lineX, baseline)
+                                If ink.IsEmpty Then ink = bounds Else ink.Union(bounds)
+                            End If
+                        Else
+                            Dim cx = lineX
+                            For Each ch In line
+                                Dim einzeln = ch.ToString()
+                                Dim bounds As SKRect
+                                Dim advance = font.MeasureText(einzeln, bounds)
+                                If Not bounds.IsEmpty Then
+                                    bounds.Offset(cx, baseline)
+                                    If ink.IsEmpty Then ink = bounds Else ink.Union(bounds)
+                                End If
+                                cx += advance + spacing
+                            Next
+                        End If
+                    End If
+                    baseline += lineHeight
+                Next
+                If Not ink.IsEmpty AndAlso strokeWidth > 0 Then
+                    ' Die Kontur zeichnet DrawAnnotationText mit mindestens einem Pixel.
+                    Dim half = Math.Max(1.0F, strokeWidth) / 2.0F
+                    ink.Inflate(half, half)
+                End If
+                Return ink
+            End Using
+        End Function
+
+        Private Shared Sub DrawWrappedText(canvas As SKCanvas, text As String, x As Single, y As Single, maxWidth As Single, fontSize As Single, font As SKFont, paint As SKPaint, Optional spacing As Single = 0, Optional alignment As String = "Left")
             If String.IsNullOrEmpty(text) Then Return
             Dim lineHeight = GetLineHeight(font.Metrics)
             Dim baseline = y + fontSize
 
-            For Each line In text.Replace(vbCrLf, vbLf).Replace(vbCr, vbLf).Split(ControlChars.Lf)
+            Dim lines = text.Replace(vbCrLf, vbLf).Replace(vbCr, vbLf).Split(ControlChars.Lf)
+            Dim normalized = If(alignment, "Left").Trim()
+            For lineIndex = 0 To lines.Length - 1
+                Dim line = lines(lineIndex)
                 If line.Length > 0 Then
-                    DrawTextSpaced(canvas, line, x, baseline, font, paint, spacing)
+                    Dim lineWidth = MeasureTextSpaced(font, line, spacing)
+                    Dim lineX = x
+                    If String.Equals(normalized, "Center", StringComparison.OrdinalIgnoreCase) Then
+                        lineX += Math.Max(0.0F, (maxWidth - lineWidth) / 2.0F)
+                    ElseIf String.Equals(normalized, "Right", StringComparison.OrdinalIgnoreCase) Then
+                        lineX += Math.Max(0.0F, maxWidth - lineWidth)
+                    End If
+                    If String.Equals(normalized, "Justify", StringComparison.OrdinalIgnoreCase) AndAlso
+                       lineIndex < lines.Length - 1 AndAlso line.Contains(" "c) AndAlso maxWidth > lineWidth Then
+                        DrawJustifiedText(canvas, line, lineX, baseline, maxWidth, font, paint, spacing)
+                    Else
+                        DrawTextSpaced(canvas, line, lineX, baseline, font, paint, spacing)
+                    End If
                 End If
                 baseline += lineHeight
             Next
         End Sub
+
+        Private Shared Sub DrawJustifiedText(canvas As SKCanvas, line As String, x As Single, baseline As Single,
+                                             width As Single, font As SKFont, paint As SKPaint, spacing As Single)
+            Dim spans = GetJustifiedTextSpans(line, x, width, font, spacing)
+            If spans.Count <= 1 Then
+                DrawTextSpaced(canvas, line, x, baseline, font, paint, spacing)
+                Return
+            End If
+            For Each span In spans
+                DrawTextSpaced(canvas, span.Text, span.X, baseline, font, paint, spacing)
+            Next
+        End Sub
+
+        Private Structure JustifiedTextSpan
+            Public Text As String
+            Public X As Single
+        End Structure
+
+        Private Shared Sub AddTextSpanInk(ByRef ink As SKRect, text As String, x As Single, baseline As Single,
+                                          font As SKFont, spacing As Single)
+            If spacing = 0.0F Then
+                Dim bounds As SKRect
+                font.MeasureText(text, bounds)
+                If Not bounds.IsEmpty Then
+                    bounds.Offset(x, baseline)
+                    If ink.IsEmpty Then ink = bounds Else ink.Union(bounds)
+                End If
+                Return
+            End If
+            Dim position = x
+            For Each ch In text
+                Dim glyph = ch.ToString()
+                Dim bounds As SKRect
+                Dim advance = font.MeasureText(glyph, bounds)
+                If Not bounds.IsEmpty Then
+                    bounds.Offset(position, baseline)
+                    If ink.IsEmpty Then ink = bounds Else ink.Union(bounds)
+                End If
+                position += advance + spacing
+            Next
+        End Sub
+
+        ''' <summary>Erhält alle Leerzeichen der Originalzeile. Der zusätzliche Blocksatzraum wird
+        ''' gleichmäßig auf die Wortzwischenräume verteilt; führende und mehrfache Leerzeichen bleiben
+        ''' mit ihrer ursprünglichen Breite erhalten.</summary>
+        Private Shared Function GetJustifiedTextSpans(line As String, x As Single, width As Single,
+                                                       font As SKFont, spacing As Single) As List(Of JustifiedTextSpan)
+            Dim spans As New List(Of JustifiedTextSpan)()
+            Dim words As New List(Of String)()
+            Dim gaps As New List(Of String)()
+            Dim cursor As Integer = 0
+            While cursor < line.Length
+                Dim start = cursor
+                While cursor < line.Length AndAlso line(cursor) = " "c
+                    cursor += 1
+                End While
+                If cursor > start Then gaps.Add(line.Substring(start, cursor - start))
+                If cursor >= line.Length Then Exit While
+                start = cursor
+                While cursor < line.Length AndAlso line(cursor) <> " "c
+                    cursor += 1
+                End While
+                words.Add(line.Substring(start, cursor - start))
+            End While
+            If words.Count = 0 Then Return spans
+
+            Dim leading = If(line.Length > 0 AndAlso line(0) = " "c, gaps(0), "")
+            Dim gapIndex = If(leading.Length > 0, 1, 0)
+            Dim contentWidth As Single = 0
+            For Each word In words
+                contentWidth += MeasureTextSpaced(font, word, spacing)
+            Next
+            Dim stretchableGaps = Math.Max(0, words.Count - 1)
+            Dim originalGapWidth As Single = 0
+            For i = 0 To stretchableGaps - 1
+                If gapIndex + i < gaps.Count Then originalGapWidth += MeasureTextSpaced(font, gaps(gapIndex + i), spacing)
+            Next
+            Dim leadingWidth = If(leading.Length > 0, MeasureTextSpaced(font, leading, spacing), 0.0F)
+            Dim extra = If(stretchableGaps > 0, Math.Max(0.0F, width - leadingWidth - contentWidth - originalGapWidth), 0.0F)
+            Dim extraPerGap = If(stretchableGaps > 0, extra / stretchableGaps, 0.0F)
+            Dim position = x
+            position += leadingWidth
+            For wordIndex = 0 To words.Count - 1
+                spans.Add(New JustifiedTextSpan With {.Text = words(wordIndex), .X = position})
+                position += MeasureTextSpaced(font, words(wordIndex), spacing)
+                If wordIndex < words.Count - 1 Then
+                    Dim gap = If(gapIndex < gaps.Count, gaps(gapIndex), " ")
+                    position += MeasureTextSpaced(font, gap, spacing) + extraPerGap
+                    gapIndex += 1
+                End If
+            Next
+            Return spans
+        End Function
 
         Private Shared Function ParseColor(value As String, fallback As SKColor) As SKColor
             If String.IsNullOrWhiteSpace(value) Then Return fallback

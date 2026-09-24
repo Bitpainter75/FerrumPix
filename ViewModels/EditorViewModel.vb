@@ -467,7 +467,11 @@ Namespace ViewModels
         Private _isUpdatingCanvas As Boolean
         Private _annotationText As String = "Text"
         Private _annotationFillColor As String = "#00FFFFFF"
+        ' Startfarbe für einen neuen Text: nur solange der Nutzer keine Farbe gewählt hat, darf
+        ' sie sich aus dem Dokumenthintergrund ableiten.
+        Private _annotationFillColorIsAutomaticDefault As Boolean = True
         Private _annotationStrokeColor As String = "#FF000000"
+        Private _annotationStrokeColorIsAutomaticDefault As Boolean = True
         Private _annotationFontSize As Double = 48
         Private _annotationStrokeWidth As Double = 0
         Private _annotationFontFamily As String = "Arial"
@@ -504,6 +508,7 @@ Namespace ViewModels
         Private _annotationTextPathInverted As Boolean = False
         Private _annotationTextPathBend As Double = 50
         Private _annotationTextPathStartOffset As Double = 0
+        Private _annotationTextAlignment As String = "Left"
         Private _calibrationRedHue As Double = 0
         Private _calibrationRedSaturation As Double = 0
         Private _calibrationGreenHue As Double = 0
@@ -3941,9 +3946,15 @@ Namespace ViewModels
         Private Sub SeedAnnotationDefaultsForKind(rawKind As String)
             Dim normalizedKind = NormalizeAnnotationKind(rawKind)
             Dim isShape = IsCustomShapeKind(normalizedKind)
+            Dim useAutomaticOutline = normalizedKind = "Rectangle" OrElse normalizedKind = "Ellipse" OrElse
+                                      normalizedKind = "Line" OrElse normalizedKind = "Arrow" OrElse
+                                      normalizedKind = "Symbol" OrElse isShape
             AnnotationFillColor = If(normalizedKind = "Image", "#00FFFFFF",
-                                   If(normalizedKind = "Rectangle" OrElse normalizedKind = "Ellipse" OrElse isShape, "#33FFFFFF", "#FFFFFFFF"))
-            AnnotationStrokeColor = "#FF000000"
+                                   If(normalizedKind = "Text", AutomaticInkColorForDocumentBackground(),
+                                      If(normalizedKind = "Rectangle" OrElse normalizedKind = "Ellipse" OrElse isShape, "#33FFFFFF", "#FFFFFFFF")))
+            _annotationFillColorIsAutomaticDefault = normalizedKind = "Text"
+            AnnotationStrokeColor = If(useAutomaticOutline, AutomaticInkColorForDocumentBackground(), "#FF000000")
+            _annotationStrokeColorIsAutomaticDefault = useAutomaticOutline
             AnnotationStrokeWidth = If(normalizedKind = "Text" OrElse normalizedKind = "Watermark" OrElse normalizedKind = "QR" OrElse normalizedKind = "Image",
                                        0,
                                        If(normalizedKind = "Arrow" OrElse normalizedKind = "Line", 5, 2))
@@ -3993,6 +4004,7 @@ Namespace ViewModels
             AnnotationTextPathInverted = False
             AnnotationTextPathBend = 50
             AnnotationTextPathStartOffset = 0
+            AnnotationTextAlignment = "Left"
             AnnotationLetterSpacingPercent = 0
             AnnotationBold = False
             AnnotationItalic = False
@@ -8735,6 +8747,7 @@ Namespace ViewModels
             End Get
             Set(value As String)
                 Me.RaiseAndSetIfChanged(_annotationFillColor, NormalizeAvaloniaColor(value, "#FFFFFFFF"))
+                _annotationFillColorIsAutomaticDefault = False
                 Me.RaisePropertyChanged(NameOf(AnnotationFillColorValue))
                 Me.RaisePropertyChanged(NameOf(AnnotationFillBrush))
                 Me.RaisePropertyChanged(NameOf(SelectionFillPreviewBrush))
@@ -8748,6 +8761,7 @@ Namespace ViewModels
             End Get
             Set(value As String)
                 Me.RaiseAndSetIfChanged(_annotationStrokeColor, NormalizeAvaloniaColor(value, "#FF000000"))
+                _annotationStrokeColorIsAutomaticDefault = False
                 Me.RaisePropertyChanged(NameOf(AnnotationStrokeColorValue))
                 Me.RaisePropertyChanged(NameOf(AnnotationStrokeBrush))
                 ' Bei einem markierten Pinselstrich IST das die Pinselfarbe (siehe BrushColor).
@@ -8757,6 +8771,7 @@ Namespace ViewModels
         End Property
 
         Private _brushColor As String = "#FF000000"
+        Private _brushColorIsAutomaticDefault As Boolean = True
 
         ''' <summary>DIE FARBE DES PINSELS, getrennt von der Konturfarbe der Objekte.
         '''
@@ -8778,6 +8793,9 @@ Namespace ViewModels
                     AnnotationStrokeColor = value
                 Else
                     Dim normalized = NormalizeAvaloniaColor(value, "#FF000000")
+                    ' Auch ein Klick auf die bereits sichtbare Farbe ist eine bewusste Wahl und
+                    ' schaltet die automatische Kontrastvorgabe für folgende Striche aus.
+                    _brushColorIsAutomaticDefault = False
                     If String.Equals(_brushColor, normalized, StringComparison.Ordinal) Then Return
                     _brushColor = normalized
                 End If
@@ -8938,6 +8956,8 @@ Namespace ViewModels
                 ' In BILDPUNKTEN, wie der Schriftgrad. Der Deckel lag bei 100 - auf einem grossen
                 ' Bild war damit kein dicker Rahmen moeglich.
                 Me.RaiseAndSetIfChanged(_annotationStrokeWidth, Math.Max(0, Math.Min(MaxAnnotationStrokeWidth, value)))
+                ' Die Kontur gehört zum sichtbaren Text, der Rahmen eines Textes wächst mit ihr.
+                UpdatePendingTextAnnotationSize()
                 SyncSelectedAnnotation()
             End Set
         End Property
@@ -12357,7 +12377,14 @@ Namespace ViewModels
                 If Not String.IsNullOrEmpty(a.Anchor) Then Continue For
                 Dim rect = StoredAnnotationRectToDisplayPercent(a)
                 If rect.Width <= 0 OrElse rect.Height <= 0 Then Continue For
-                result.Add(New Avalonia.Rect(rect.X, rect.Y, rect.Width, rect.Height))
+                ' Ein Text bietet seine Glyphenkanten an, nicht seinen Rahmen - sonst richtete sich
+                ' ein zweiter Text an der Luft neben dem ersten aus.
+                Dim ink = GetStoredTextInkPercent(a)
+                If ink.HasValue Then
+                    result.Add(New Avalonia.Rect(rect.X + ink.Value.X, rect.Y + ink.Value.Y, ink.Value.Width, ink.Value.Height))
+                Else
+                    result.Add(New Avalonia.Rect(rect.X, rect.Y, rect.Width, rect.Height))
+                End If
             Next
             Return result
         End Function
@@ -15233,6 +15260,7 @@ Namespace ViewModels
         Public ReadOnly Property SetMaskModeCommand As ICommand
         Public ReadOnly Property SetSelectionCombineModeCommand As ICommand
         Public ReadOnly Property SetAnnotationTextPathKindCommand As ICommand
+        Public ReadOnly Property SetAnnotationTextAlignmentCommand As ICommand
         Public ReadOnly Property SetFrameFillKindCommand As ICommand
         Public ReadOnly Property SetAnnotationFillKindCommand As ICommand
         Public ReadOnly Property SetAnnotationAnchorCommand As ICommand
@@ -15715,6 +15743,7 @@ Namespace ViewModels
             SetAnnotationFillKindCommand = ReactiveCommand.Create(Of String)(Sub(kind) SetAnnotationFillKind(kind))
             SetFrameFillKindCommand = ReactiveCommand.Create(Of String)(Sub(kind) FrameFillKind = kind)
             SetAnnotationTextPathKindCommand = ReactiveCommand.Create(Of String)(Sub(kind) SetAnnotationTextPathKind(kind))
+            SetAnnotationTextAlignmentCommand = ReactiveCommand.Create(Of String)(Sub(alignment) AnnotationTextAlignment = alignment)
             ' Der Zuruecksetzer der Gruppe "Drehen". Sein Eintrag hiess bis zur Trennung noch
             ' "Drehen und Verzerren" - das Verzerren hat seit dem ein eigenes Werkzeug mit eigenem
             ' Zuruecksetzer, und dieser hier ruehrt es nicht an.
@@ -21124,6 +21153,7 @@ Namespace ViewModels
                 Case NameOf(AnnotationBold) : Return LocalizationService.T("Fett")
                 Case NameOf(AnnotationItalic) : Return LocalizationService.T("Kursiv")
                 Case NameOf(AnnotationLetterSpacingPercent) : Return LocalizationService.T("Zeichenabstand")
+                Case NameOf(AnnotationTextAlignment) : Return LocalizationService.T("Ausrichtung")
                 Case NameOf(AnnotationTextPathKind), NameOf(SetAnnotationTextPathKind)
                     Return LocalizationService.T("Pfad")
                 Case NameOf(AnnotationTextPathBend) : Return LocalizationService.T("Krümmung")
@@ -21407,6 +21437,8 @@ Namespace ViewModels
             ResetUndoCapture()
             _lastPushedUndoEntry = Nothing
             _historyStepNamed = True
+            Dim selectedTextId = SelectedStraightTextAnnotationId()
+            Dim selectedTextIndex = SelectedStraightTextAnnotationIndex()
             Dim entry = _undoStack.Pop()
             ' Der Patch wandert in den Redo-Eintrag: RevertPatch tauscht die Region und hält
             ' danach die Wiederholen-Pixel im selben Objekt (Tausch-Schema im Service).
@@ -21430,6 +21462,7 @@ Namespace ViewModels
             ' deshalb hier zurueck - sonst verbrauchte Strg+Z waehrend einer Verzerrung einen
             ' Schritt, ohne sichtbar etwas zu tun.
             RestoreWarpSession(entry.WarpSession)
+            RestoreSelectedStraightTextAnnotation(selectedTextId, selectedTextIndex)
             RefreshSelectionAdjustMode()
             If entry.Patch IsNot Nothing AndAlso _workingImage.RevertPatch(entry.Patch) Then
                 OnWorkingImageRegionChanged(entry.Patch.Rect)
@@ -21453,6 +21486,68 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(CanUndo))
             Me.RaisePropertyChanged(NameOf(CanRedo))
         End Sub
+
+        ''' <summary>Die gerade bearbeitete Textbox kann nach einem Undo/Redo weiter offen bleiben:
+        ''' ihr Rahmen ist abgeleitet und muss deshalb aus dem wiederhergestellten Objekt neu geladen
+        ''' werden. Pfadtext hat eine freie Box und bleibt bewusst ausserhalb.</summary>
+        Private Function SelectedStraightTextAnnotationId() As String
+            Dim index = SelectedStraightTextAnnotationIndex()
+            If index < 0 Then Return ""
+            Dim annotation = _annotations(index)
+            Return If(annotation.Id, "")
+        End Function
+
+        Private Function SelectedStraightTextAnnotationIndex() As Integer
+            If _selectedAnnotationIndex < 0 OrElse _selectedAnnotationIndex >= _annotations.Count Then Return -1
+            Dim annotation = _annotations(_selectedAnnotationIndex)
+            If annotation Is Nothing OrElse Not IsTextualAnnotationKind(NormalizeAnnotationKind(annotation.Kind)) Then Return -1
+            If String.Equals(NormalizeAnnotationKind(annotation.Kind), "Watermark", StringComparison.OrdinalIgnoreCase) AndAlso
+               Not String.IsNullOrWhiteSpace(annotation.ImagePath) Then Return -1
+            If Not String.IsNullOrWhiteSpace(annotation.TextPathKind) Then Return -1
+            Return _selectedAnnotationIndex
+        End Function
+
+        Private Sub RestoreSelectedStraightTextAnnotation(annotationId As String, fallbackIndex As Integer)
+            If Not String.IsNullOrWhiteSpace(annotationId) Then
+                For index = 0 To _annotations.Count - 1
+                    Dim annotation = _annotations(index)
+                    If annotation IsNot Nothing AndAlso String.Equals(annotation.Id, annotationId, StringComparison.Ordinal) Then
+                        ReloadRestoredStraightTextAnnotation(index)
+                        Return
+                    End If
+                Next
+            End If
+            ' Ein Rezeptimport kann alte, noch ID-lose Objekte enthalten. Bei einem reinen
+            ' Schriftzug bleibt die Reihenfolge unveraendert; der Index ist dort die sichere
+            ' Rueckfalladresse, auch wenn eine beim Lesen nachgezogene ID nicht zum Snapshot passt.
+            If fallbackIndex >= 0 AndAlso fallbackIndex < _annotations.Count AndAlso
+               IsStraightTextAnnotation(_annotations(fallbackIndex)) Then
+                ReloadRestoredStraightTextAnnotation(fallbackIndex)
+            End If
+        End Sub
+
+        ''' <summary>Nach Undo/Redo kann der wiederhergestellte Text noch denselben Listenindex
+        ''' haben. Der Selektions-Setter darf bei gleichem Index zu Recht nichts tun - seine Puffer
+        ''' gehören dann aber zum VORHERIGEN Snapshot. Für den abgeleiteten Text-Rahmen müssen sie
+        ''' aus dem neuen Objekt trotzdem erneut geladen und gemeldet werden.</summary>
+        Private Sub ReloadRestoredStraightTextAnnotation(index As Integer)
+            If index <> _selectedAnnotationIndex Then
+                SelectedAnnotationIndex = index
+                Return
+            End If
+            LoadSelectedAnnotationIntoEditor()
+            Me.RaisePropertyChanged(NameOf(SelectedAnnotationIndex))
+            Me.RaisePropertyChanged(NameOf(SelectedAnnotationKind))
+            Me.RaisePropertyChanged(NameOf(HasSelectedAnnotation))
+            RaiseLayerPanelSelectionChanged()
+        End Sub
+
+        Private Function IsStraightTextAnnotation(annotation As ImageAnnotation) As Boolean
+            If annotation Is Nothing OrElse Not IsTextualAnnotationKind(NormalizeAnnotationKind(annotation.Kind)) Then Return False
+            If String.Equals(NormalizeAnnotationKind(annotation.Kind), "Watermark", StringComparison.OrdinalIgnoreCase) AndAlso
+               Not String.IsNullOrWhiteSpace(annotation.ImagePath) Then Return False
+            Return String.IsNullOrWhiteSpace(annotation.TextPathKind)
+        End Function
 
         ''' <summary>Nach einem Schritt in der Historie: die angeklickten Gegenstaende der
         ''' Objektauswahl vergessen.
@@ -21479,6 +21574,8 @@ Namespace ViewModels
             ResetUndoCapture()
             _lastPushedUndoEntry = Nothing
             _historyStepNamed = True
+            Dim selectedTextId = SelectedStraightTextAnnotationId()
+            Dim selectedTextIndex = SelectedStraightTextAnnotationIndex()
             Dim entry = _redoStack.Pop()
             ' Spiegelbildlich zum Rueckgaengig: das Arbeitsbild von jetzt geht in den
             ' Rueckgaengig-Eintrag, das des Schritts wird uebernommen.
@@ -21495,6 +21592,7 @@ Namespace ViewModels
                 _suppressUndoCapture = False
             End Try
             RestoreWarpSession(entry.WarpSession)
+            RestoreSelectedStraightTextAnnotation(selectedTextId, selectedTextIndex)
             RefreshSelectionAdjustMode()
             If entry.Patch IsNot Nothing AndAlso _workingImage.ReapplyPatch(entry.Patch) Then
                 OnWorkingImageRegionChanged(entry.Patch.Rect)
@@ -22368,8 +22466,11 @@ Namespace ViewModels
 
             _annotationText = "Text"
             _annotationFillColor = "#00FFFFFF"
+            _annotationFillColorIsAutomaticDefault = True
             _annotationStrokeColor = "#FF000000"
+            _annotationStrokeColorIsAutomaticDefault = True
             _brushColor = "#FF000000"
+            _brushColorIsAutomaticDefault = True
             _annotationStrokeWidth = 0
             _annotationFontSize = 48
             _annotationFontFamily = "Arial"
@@ -22395,6 +22496,7 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(AnnotationTextPathBend))
             Me.RaisePropertyChanged(NameOf(AnnotationTextPathStartOffset))
             Me.RaisePropertyChanged(NameOf(AnnotationLetterSpacingPercent))
+            Me.RaisePropertyChanged(NameOf(AnnotationTextAlignment))
             Me.RaisePropertyChanged(NameOf(AnnotationBold))
             Me.RaisePropertyChanged(NameOf(AnnotationItalic))
             Me.RaisePropertyChanged(NameOf(ShowTextPathControls))
@@ -22603,10 +22705,28 @@ Namespace ViewModels
             Dim baseHeight = displaySize.Height
             If baseWidth <= 0 OrElse baseHeight <= 0 Then Return (_annotationWidthPercent, _annotationHeightPercent)
 
+            Dim fontSizePx = Math.Max(8.0, fontSizePixels)
+
+            ' GLEICHE RÄNDER GEGENÜBER, gemessen an den sichtbaren Glyphen. Gezeichnet wird weiter
+            ' ab der linken oberen Ecke (erste Grundlinie auf Oberkante + Schriftgrad, siehe
+            ' DrawWrappedText); der Rand links und oben ergibt sich daraus von selbst (Seitenvorbreite
+            ' der ersten Glyphe, Luft über der Oberlänge). Rechts und unten bekommt der Rahmen genau
+            ' denselben Rand. Vorher war es die Vorschubbreite plus ein festes Polster und unten die
+            ' Unterlänge plus Polster: rechts und unten stand deutlich mehr Luft als links und oben,
+            ' Rahmenmitte und Rahmenkante lagen neben Textmitte und Textkante, und ein Text rastete
+            ' sichtbar schief an einer Hilfslinie ein (Nutzerbefund). Gemessen wird mit dem Schnitt,
+            ' der Ersatzschrift, dem Zeichenabstand und der Kontur, mit denen auch gezeichnet wird.
+            Dim ink = MeasureTextInk(text, fontSizePx, fontFamily)
+            If Not ink.IsEmpty Then
+                Dim inkWidthPercent = Math.Max(1.0, ink.Right + ink.Left) / baseWidth * 100.0
+                Dim inkHeightPercent = Math.Max(1.0, ink.Bottom + ink.Top) / baseHeight * 100.0
+                Return (Math.Max(MinTextAnnotationWidthPercent, Math.Min(100.0, inkWidthPercent)),
+                        Math.Max(MinTextAnnotationHeightPercent, Math.Min(100.0, inkHeightPercent)))
+            End If
+
+            ' Keine sichtbare Glyphe (nur Leerzeichen): Vorschubbreite und Zeilenhöhe wie früher.
             Dim content = If(text, "").Trim()
             If content.Length = 0 Then content = "Text"
-
-            Dim fontSizePx = Math.Max(8.0, fontSizePixels)
             ' Seit SkiaSharp 3 trägt SKFont die Schrift, SKPaint nur noch Farbe/Kantenglättung.
             ' LinearMetrics=True wie im internen Ersatz-Font von SKPaint, sonst weichen die Textbreiten ab.
             Using font = New SKFont(SKTypeface.FromFamilyName(If(String.IsNullOrWhiteSpace(fontFamily), "Arial", fontFamily)), CSng(fontSizePx)) With {.LinearMetrics = True}
@@ -22646,6 +22766,91 @@ Namespace ViewModels
                         Math.Max(MinTextAnnotationHeightPercent, Math.Min(100.0, heightPercent)))
                 End Using
             End Using
+        End Function
+
+        ''' <summary>Glyphenkanten des Textes aus den Eingabefeldern, in Anzeige-Bildpunkten relativ zur
+        ''' linken oberen Ecke des Rahmens.</summary>
+        Private Function MeasureTextInk(text As String, fontSizePixels As Double, fontFamily As String) As SKRect
+            Return MeasureTextInk(text, fontSizePixels, fontFamily, _annotationLetterSpacingPercent,
+                                  _annotationBold, _annotationItalic, _annotationStrokeWidth)
+        End Function
+
+        Private Shared Function MeasureTextInk(text As String, fontSizePixels As Double, fontFamily As String,
+                                               letterSpacingPercent As Double, bold As Boolean, italic As Boolean,
+                                               strokeWidth As Double, Optional alignment As String = "Left",
+                                               Optional lineWidthPixels As Double = 0.0) As SKRect
+            ' Dieselbe Ersatzfüllung wie die Rahmenschätzung: ein leeres Textfeld hat den Rahmen von "Text".
+            Dim content = If(String.IsNullOrWhiteSpace(text), "Text", text)
+            Return ImageProcessor.MeasureAnnotationTextInk(content,
+                                                           If(String.IsNullOrWhiteSpace(fontFamily), "Arial", fontFamily),
+                                                           CSng(Math.Max(8.0, fontSizePixels)), CSng(letterSpacingPercent),
+                                                           bold, italic, CSng(Math.Max(0.0, strokeWidth)), alignment,
+                                                           CSng(Math.Max(0.0, lineWidthPixels)))
+        End Function
+
+        ''' <summary>Wo im Rahmen des markierten Objekts die sichtbaren Glyphen stehen, in Prozent der
+        ''' Anzeige und relativ zur linken oberen Ecke des Rahmens - oder Nothing, wenn das Objekt
+        ''' kein gerader Text ist. Daran rastet ein Text beim Ziehen ein statt an seinem Rahmen: so
+        ''' landet der sichtbare Buchstabe auf der Hilfslinie, nicht die Luft davor.
+        ''' Nur ungedreht und ohne Textpfad: gedreht stehen die Glyphenkanten schräg zur Achse, und
+        ''' auf einem Pfad beschreibt der Rahmen den Pfad, nicht den Text.</summary>
+        Public Function GetSelectedTextInkPercent() As Avalonia.Rect?
+            ' Bei mehreren markierten Objekten ist der Rahmen die gemeinsame Box, nicht der Text.
+            If HasMultiAnnotationSelection Then Return Nothing
+            If Not IsTextualAnnotationKind(EffectiveAnnotationKind) OrElse IsWatermarkImageSource Then Return Nothing
+            If _selectedAnnotationIndex < 0 OrElse _selectedAnnotationIndex >= _annotations.Count Then Return Nothing
+            ' Nicht aus den Editorpuffern messen: Lage und Box liegen dort zwar schon im
+            ' Anzeigeraum, Schriftgrad und Kontur aber noch im gespeicherten Quellraum. Nach einer
+            ' Bildgroessen-Aenderung waere die sichtbare Schrift damit kleiner als ihre
+            ' Einrastkanten. Der gespeicherte Weg bildet alles gemeinsam in die Anzeige ab.
+            Return GetStoredTextInkPercent(_annotations(_selectedAnnotationIndex))
+        End Function
+
+        ''' <summary>Dasselbe für ein gespeichertes Objekt, in dessen Anzeige-Geometrie.</summary>
+        Private Function GetStoredTextInkPercent(annotation As ImageAnnotation) As Avalonia.Rect?
+            If annotation Is Nothing OrElse Not String.IsNullOrWhiteSpace(annotation.TextPathKind) Then Return Nothing
+            Dim kind = NormalizeAnnotationKind(annotation.Kind)
+            Dim text As String
+            If kind = "Text" Then
+                text = annotation.Text
+            ElseIf kind = "Watermark" AndAlso String.IsNullOrWhiteSpace(annotation.ImagePath) Then
+                text = If(String.IsNullOrWhiteSpace(annotation.Text), "FerrumPix", annotation.Text)
+            Else
+                Return Nothing
+            End If
+            Dim displaySize = GetAnnotationDisplayPixelSize()
+            If displaySize.Width <= 0 OrElse displaySize.Height <= 0 Then Return Nothing
+            Dim renderAnnotation = TransformAnnotationToDisplayGeometry(annotation, displaySize.Width, displaySize.Height)
+            If renderAnnotation Is Nothing OrElse Not IsAxisAlignedRotation(renderAnnotation.RotationDegrees) Then Return Nothing
+            Dim box = StoredAnnotationRectToDisplayPercent(annotation)
+            Dim ink = MeasureTextInk(text, renderAnnotation.FontSizePixels, renderAnnotation.FontFamily,
+                                     renderAnnotation.LetterSpacingPercent, renderAnnotation.Bold,
+                                     renderAnnotation.Italic, renderAnnotation.StrokeWidth, renderAnnotation.TextAlignment,
+                                     box.Width / 100.0 * displaySize.Width)
+            If ink.IsEmpty Then Return Nothing
+            Return MirrorInkInBox(InkPixelsToPercent(ink, displaySize.Width, displaySize.Height),
+                                  box.Width, box.Height, renderAnnotation.FlipHorizontal, renderAnnotation.FlipVertical)
+        End Function
+
+        ''' <summary>Ein gespiegeltes Objekt trägt seine Glyphen auf der anderen Seite des Rahmens:
+        ''' der Rand, der ungespiegelt links liegt, liegt dann rechts.</summary>
+        Private Shared Function MirrorInkInBox(ink As Avalonia.Rect, boxWidth As Double, boxHeight As Double,
+                                               flipH As Boolean, flipV As Boolean) As Avalonia.Rect
+            Dim x = If(flipH, boxWidth - ink.Right, ink.X)
+            Dim y = If(flipV, boxHeight - ink.Bottom, ink.Y)
+            Return New Avalonia.Rect(x, y, ink.Width, ink.Height)
+        End Function
+
+        Private Shared Function InkPixelsToPercent(ink As SKRect, displayWidth As Integer, displayHeight As Integer) As Avalonia.Rect
+            Return New Avalonia.Rect(ink.Left / CDbl(displayWidth) * 100.0,
+                                     ink.Top / CDbl(displayHeight) * 100.0,
+                                     ink.Width / CDbl(displayWidth) * 100.0,
+                                     ink.Height / CDbl(displayHeight) * 100.0)
+        End Function
+
+        Private Shared Function IsAxisAlignedRotation(degrees As Double) As Boolean
+            Dim rest = degrees Mod 360.0
+            Return Math.Abs(rest) < 0.01 OrElse Math.Abs(Math.Abs(rest) - 360.0) < 0.01
         End Function
 
         Private Sub UpdatePendingTextAnnotationSize()
@@ -22961,7 +23166,15 @@ Namespace ViewModels
             ' mit passenden Startwerten belegt und können im Eigenschaften-Panel vor dem Platzieren
             ' angepasst worden sein - diese aktuellen Werte werden 1:1 übernommen.
             Dim fill = _annotationFillColor
+            If normalizedKind = "Text" AndAlso _annotationFillColorIsAutomaticDefault Then
+                fill = AutomaticInkColorForDocumentBackground()
+                _annotationFillColor = fill
+            End If
             Dim stroke = _annotationStrokeColor
+            If _annotationStrokeColorIsAutomaticDefault Then
+                stroke = AutomaticInkColorForDocumentBackground()
+                _annotationStrokeColor = stroke
+            End If
             Dim strokeWidth = _annotationStrokeWidth
             ' Der Anker entscheidet mit, ob Drehung und Spiegelung des BILDES aus den Anzeigewerten
             ' herausgerechnet werden - er muss deshalb vor dem Initialisierer feststehen und darf
@@ -23315,6 +23528,13 @@ Namespace ViewModels
             If points Is Nothing Then Return
             Dim normalized = points.ToList()
             If normalized.Count = 0 Then Return
+            ' Die automatische Startfarbe folgt der DEFINIERTEN Dokument-Leinwand, nicht einem
+            ' wechselnden Motivpixel unter dem Zug. Eine bewusst im Panel gewählte Pinselfarbe
+            ' bleibt erhalten.
+            If Not isEraser AndAlso _brushColorIsAutomaticDefault Then
+                _brushColor = AutomaticInkColorForDocumentBackground()
+                RaiseBrushColorChanged()
+            End If
             ' Ein Klick ist ein echter Pinselabdruck, kein leerer Zug. Der Rasterweg speichert
             ' Linien mit mindestens zwei Stützpunkten; ein praktisch deckungsgleicher zweiter
             ' Punkt hält diese Repräsentation bei und ergibt dank runder Endkappen die Scheibe.
@@ -23497,6 +23717,24 @@ Namespace ViewModels
             Dim parsed As SKColor
             If Not SKColor.TryParse(If(_eraserFillColor, ""), parsed) Then Return False
             Return parsed.Alpha > 0
+        End Function
+
+        ''' <summary>Schwarz oder Weiß mit dem größeren Kontrast zur festgelegten
+        ''' Dokument-Leinwand. Transparenz hat keine eigene Farbe; dafür bleibt Schwarz der
+        ''' verlässliche Startwert des Werkzeugs.</summary>
+        Private Function AutomaticInkColorForDocumentBackground() As String
+            Dim background As SKColor
+            If Not SKColor.TryParse(If(_canvasBackgroundColor, ""), background) OrElse background.Alpha = 0 Then Return "#FF000000"
+
+            Dim ToLinear = Function(channel As Byte) As Double
+                               Dim srgb = channel / 255.0
+                               Return If(srgb <= 0.04045, srgb / 12.92, Math.Pow((srgb + 0.055) / 1.055, 2.4))
+                           End Function
+            Dim luminance = 0.2126 * ToLinear(background.Red) +
+                            0.7152 * ToLinear(background.Green) +
+                            0.0722 * ToLinear(background.Blue)
+            ' WCAG-Kontrast von Schwarz und Weiß ist bei etwa 0,179 gleich groß.
+            Return If(luminance > 0.179, "#FF000000", "#FFFFFFFF")
         End Function
 
         ''' Zeichnet den frischen Strich synchron in die persistente Szene (Vorschau-Auflösung)
@@ -25199,6 +25437,7 @@ Namespace ViewModels
                     AnnotationTextPathInverted = a.TextPathInverted OrElse legacyPathInverted
                     AnnotationTextPathBend = a.TextPathBend
                     AnnotationTextPathStartOffset = a.TextPathStartOffset
+                    AnnotationTextAlignment = a.TextAlignment
                     AnnotationLetterSpacingPercent = a.LetterSpacingPercent
                     AnnotationBold = a.Bold
                     AnnotationItalic = a.Italic
@@ -25386,6 +25625,7 @@ Namespace ViewModels
             a.TextPathInverted = _annotationTextPathInverted
             a.TextPathBend = CSng(_annotationTextPathBend)
             a.TextPathStartOffset = CSng(_annotationTextPathStartOffset)
+            a.TextAlignment = _annotationTextAlignment
             a.LetterSpacingPercent = CSng(_annotationLetterSpacingPercent)
             a.Bold = _annotationBold
             a.Italic = _annotationItalic

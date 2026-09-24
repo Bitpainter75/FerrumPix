@@ -86,6 +86,13 @@ Namespace Views
         ' Schriftgrad beim Griff der Maus: der Ziehvorgang skaliert IHN, nicht den zuletzt gesetzten -
         ' sonst multiplizierte sich die Skalierung Frame für Frame in sich selbst hinein.
         Private _textDragInitialFontSize As Double = 0
+        ' Rand zwischen Rahmen und sichtbaren Glyphen je Seite, als Anteil der Rahmengröße beim
+        ' Griff der Maus - 0 für alles, was kein gerader Text ist. Ein Anteil statt fester Punkte,
+        ' weil beim Skalieren der Schriftgrad und damit der Rand mitwächst.
+        Private _textDragInkLeft As Double = 0
+        Private _textDragInkTop As Double = 0
+        Private _textDragInkRight As Double = 0
+        Private _textDragInkBottom As Double = 0
         Private _textRotateStartAngle As Double
         Private _textRotateStartRotation As Double
         Private _textRotateCenter As Avalonia.Point
@@ -1678,6 +1685,7 @@ Namespace Views
                      NameOf(EditorViewModel.AnnotationStrokeColor),
                      NameOf(EditorViewModel.AnnotationFontSize),
                      NameOf(EditorViewModel.AnnotationFontFamily),
+                     NameOf(EditorViewModel.AnnotationTextAlignment),
                      NameOf(EditorViewModel.AnnotationOpacity),
                      NameOf(EditorViewModel.AnnotationRotation),
                      NameOf(EditorViewModel.AnnotationDisplayFlipHorizontal),
@@ -5827,6 +5835,18 @@ Namespace Views
             Dim rectPercent = If(vm.HasMultiAnnotationSelection,
                                  vm.GetSelectionBoxDisplayRectPercent(),
                                  vm.GetSelectedAnnotationDisplayRectPercent())
+            ' Das gespeicherte Rechteck eines geraden Textes beginnt am Zeichnungsursprung. Zwischen
+            ' ihm und den sichtbaren Glyphen liegen Oberlänge und Seitenvorbreite; der sichtbare
+            ' Auswahlrahmen soll aber den Text selbst fassen, nicht diese Schriftmetrik-Luft.
+            ' Beim Zurückschreiben eines Zuges wird der Glyphenrahmen in UpdateTextPixels wieder in
+            ' den gespeicherten Zeichnungsursprung zurückgerechnet.
+            If Not vm.HasMultiAnnotationSelection AndAlso IsSelectedAnnotationTextLayer(vm) Then
+                Dim ink = vm.GetSelectedTextInkPercent()
+                If ink.HasValue Then
+                    rectPercent = (rectPercent.X + ink.Value.X, rectPercent.Y + ink.Value.Y,
+                                   ink.Value.Width, ink.Value.Height)
+                End If
+            End If
             Dim width = iw * rectPercent.Width / 100.0
             Dim height = ih * rectPercent.Height / 100.0
             Dim left = ix + iw * rectPercent.X / 100.0
@@ -5886,6 +5906,10 @@ Namespace Views
                     New FontFeature With {.Tag = "liga", .Value = 0}
                 }
                 editor.FontFamily = New FontFamily(vm.AnnotationFontFamily)
+                editor.TextAlignment = If(String.Equals(vm.AnnotationTextAlignment, "Center", StringComparison.OrdinalIgnoreCase), TextAlignment.Center,
+                                      If(String.Equals(vm.AnnotationTextAlignment, "Right", StringComparison.OrdinalIgnoreCase), TextAlignment.Right,
+                                      If(String.Equals(vm.AnnotationTextAlignment, "Justify", StringComparison.OrdinalIgnoreCase), TextAlignment.Justify,
+                                         TextAlignment.Left)))
                 ' Kontur und Verlaufsfüllung kann die TextBox nicht: solche Objekte zeichnet das
                 ' Overlay darunter vollständig, die Textbox bleibt nur noch für Eingabe und Schreibmarke da.
                 Dim textColor = ParseAvaloniaColor(vm.AnnotationFillColor, Colors.White)
@@ -6053,6 +6077,7 @@ Namespace Views
             If mode <> TextDragMode.Rotate Then
                 _snapMarginPercent = Math.Max(0, Math.Min(20, AppSettingsService.Load().EditorSnapMarginPercent))
                 CollectObjectSnapTargets(vm, canvas)
+                CaptureTextDragInk(vm, canvas, rect)
             Else
                 _objectSnapTargetsX.Clear()
                 _objectSnapTargetsY.Clear()
@@ -6329,8 +6354,14 @@ Namespace Views
                     ' aus Kompatibilitätsgründen derselbe alternative Freihand-Modifikator.
                     HideTextSnapGuides()
                 Else
-                    left = ApplyTextSnap(left, width, imageRect.Left, imageRect.Width, True)
-                    top = ApplyTextSnap(top, height, imageRect.Top, imageRect.Height, False)
+                    ' Eingerastet werden Kanten und Mitte der sichtbaren Glyphen (bei allem anderen
+                    ' sind die Ränder 0, es bleibt also der Rahmen).
+                    Dim inkLeft = _textDragInkLeft * width
+                    Dim inkTop = _textDragInkTop * height
+                    Dim inkWidth = width * (1.0 - _textDragInkLeft - _textDragInkRight)
+                    Dim inkHeight = height * (1.0 - _textDragInkTop - _textDragInkBottom)
+                    left = ApplyTextSnap(left + inkLeft, inkWidth, imageRect.Left, imageRect.Width, True) - inkLeft
+                    top = ApplyTextSnap(top + inkTop, inkHeight, imageRect.Top, imageRect.Height, False) - inkTop
                 End If
                 left = ClampOverlayOriginToReachable(left, width, imageRect.Left, imageRect.Width)
                 top = ClampOverlayOriginToReachable(top, height, imageRect.Top, imageRect.Height)
@@ -6476,16 +6507,20 @@ Namespace Views
 
             Select Case _textDragMode
                 Case TextDragMode.Left, TextDragMode.TopLeft, TextDragMode.BottomLeft
-                    snappedX = ApplyTextResizeSnapAxis(left, right, True, imageRect.Left, imageRect.Width, True, minSize)
+                    snappedX = ApplyTextResizeSnapAxis(left, right, True, imageRect.Left, imageRect.Width, True, minSize,
+                                                       _textDragInkLeft, _textDragInkRight)
                 Case TextDragMode.Right, TextDragMode.TopRight, TextDragMode.BottomRight
-                    snappedX = ApplyTextResizeSnapAxis(right, left, False, imageRect.Left, imageRect.Width, True, minSize)
+                    snappedX = ApplyTextResizeSnapAxis(right, left, False, imageRect.Left, imageRect.Width, True, minSize,
+                                                       _textDragInkLeft, _textDragInkRight)
             End Select
 
             Select Case _textDragMode
                 Case TextDragMode.Top, TextDragMode.TopLeft, TextDragMode.TopRight
-                    snappedY = ApplyTextResizeSnapAxis(top, bottom, True, imageRect.Top, imageRect.Height, False, minSize)
+                    snappedY = ApplyTextResizeSnapAxis(top, bottom, True, imageRect.Top, imageRect.Height, False, minSize,
+                                                       _textDragInkTop, _textDragInkBottom)
                 Case TextDragMode.Bottom, TextDragMode.BottomLeft, TextDragMode.BottomRight
-                    snappedY = ApplyTextResizeSnapAxis(bottom, top, False, imageRect.Top, imageRect.Height, False, minSize)
+                    snappedY = ApplyTextResizeSnapAxis(bottom, top, False, imageRect.Top, imageRect.Height, False, minSize,
+                                                       _textDragInkTop, _textDragInkBottom)
             End Select
 
             If Not snappedX Then HideTextSnapGuide(True)
@@ -6498,8 +6533,21 @@ Namespace Views
                                                  axisStart As Double,
                                                  axisLength As Double,
                                                  isVerticalLine As Boolean,
-                                                 minSize As Double) As Boolean
+                                                 minSize As Double,
+                                                 Optional inkStart As Double = 0,
+                                                 Optional inkEnd As Double = 0) As Boolean
             Const tolerance As Double = 7.0
+            ' Die Glyphen wachsen mit dem Rahmen: ihre Kante und ihre Mitte liegen je bei einem
+            ' festen Anteil zwischen fester und gezogener Kante, Lage = gezogen*a + fest*(1-a).
+            ' Ohne Glyphenrand (alles außer geradem Text) ist a an der Kante 1 und in der Mitte 0,5 -
+            ' genau das bisherige Einrasten am Rahmen.
+            Dim edgeShare = If(draggedIsStart, 1.0 - inkStart, 1.0 - inkEnd)
+            Dim inkCenterFromStart = (1.0 + inkStart - inkEnd) / 2.0
+            Dim centerShare = If(draggedIsStart, 1.0 - inkCenterFromStart, inkCenterFromStart)
+            If edgeShare < 0.05 OrElse centerShare < 0.05 Then
+                edgeShare = 1.0
+                centerShare = 0.5
+            End If
             ' Die HILFSLINIE zeigt an, WO ausgerichtet würde - sie hängt deshalb an der Nähe, nicht am
             ' Erfolg des Einrastens. Vorher blieb sie weg, sobald der Kandidat verworfen wurde
             ' (Mindestgröße, gleich danach die Seitenverhältnis-Sperre) - beim Skalieren also fast
@@ -6508,8 +6556,9 @@ Namespace Views
             Dim guideTarget As Double = 0
             Dim guideFound = False
             For Each target In GetSnapTargets(axisStart, axisLength, isVerticalLine)
-                Dim center = (draggedEdge + fixedEdge) / 2.0
-                Dim nearEdge = Math.Abs(draggedEdge - target) <= tolerance
+                Dim edge = draggedEdge * edgeShare + fixedEdge * (1.0 - edgeShare)
+                Dim center = draggedEdge * centerShare + fixedEdge * (1.0 - centerShare)
+                Dim nearEdge = Math.Abs(edge - target) <= tolerance
                 Dim nearCenter = Math.Abs(center - target) <= tolerance
                 If Not nearEdge AndAlso Not nearCenter Then Continue For
 
@@ -6518,13 +6567,16 @@ Namespace Views
                     guideFound = True
                 End If
 
-                If nearEdge AndAlso IsValidResizeEdge(target, fixedEdge, draggedIsStart, minSize) Then
-                    draggedEdge = target
-                    ShowTextSnapGuide(target, isVerticalLine)
-                    Return True
+                If nearEdge Then
+                    Dim edgeCandidate = (target - fixedEdge * (1.0 - edgeShare)) / edgeShare
+                    If IsValidResizeEdge(edgeCandidate, fixedEdge, draggedIsStart, minSize) Then
+                        draggedEdge = edgeCandidate
+                        ShowTextSnapGuide(target, isVerticalLine)
+                        Return True
+                    End If
                 End If
                 If nearCenter Then
-                    Dim candidate = target * 2.0 - fixedEdge
+                    Dim candidate = (target - fixedEdge * (1.0 - centerShare)) / centerShare
                     If IsValidResizeEdge(candidate, fixedEdge, draggedIsStart, minSize) Then
                         draggedEdge = candidate
                         ShowTextSnapGuide(target, isVerticalLine)
@@ -6606,6 +6658,30 @@ Namespace Views
                 _objectSnapTargetsY.Add(top + height / 2.0)
                 _objectSnapTargetsY.Add(top + height)
             Next
+        End Sub
+
+        ''' Merkt sich beim Zug-Start, wie weit die sichtbaren Glyphen des markierten Textes vom
+        ''' Rahmen entfernt stehen. Eingerastet wird dann an den Glyphen: die Luft zwischen Rahmen
+        ''' und Buchstabe gehört zur Schrift, nicht zum Text, der auf der Linie stehen soll.
+        Private Sub CaptureTextDragInk(vm As EditorViewModel, canvas As Canvas, rect As Avalonia.Rect)
+            _textDragInkLeft = 0 : _textDragInkTop = 0 : _textDragInkRight = 0 : _textDragInkBottom = 0
+            If vm Is Nothing OrElse canvas Is Nothing OrElse rect.Width <= 0 OrElse rect.Height <= 0 Then Return
+            ' Der sichtbare Text-Rahmen liegt bereits auf den Glyphenkanten (siehe
+            ' PositionTextOverlayFromViewModel); für das Einrasten gibt es daher keine
+            ' Schriftmetrik-Luft mehr abzuziehen.
+            If IsSelectedAnnotationTextLayer(vm) Then Return
+            Dim ink = vm.GetSelectedTextInkPercent()
+            If Not ink.HasValue Then Return
+            Dim imageRect = GetDisplayedImageRect(canvas, vm)
+            If imageRect.Width <= 0 OrElse imageRect.Height <= 0 Then Return
+            Dim inkLeft = imageRect.Width * ink.Value.X / 100.0
+            Dim inkTop = imageRect.Height * ink.Value.Y / 100.0
+            Dim inkWidth = imageRect.Width * ink.Value.Width / 100.0
+            Dim inkHeight = imageRect.Height * ink.Value.Height / 100.0
+            _textDragInkLeft = inkLeft / rect.Width
+            _textDragInkTop = inkTop / rect.Height
+            _textDragInkRight = (rect.Width - inkLeft - inkWidth) / rect.Width
+            _textDragInkBottom = (rect.Height - inkTop - inkHeight) / rect.Height
         End Sub
 
         Private Sub ShowTextSnapGuide(position As Double, isVerticalLine As Boolean)
@@ -6779,6 +6855,23 @@ Namespace Views
             ' sondern der gemessene Textkasten - das ViewModel setzt es aus der Schrift neu. Beim
             ' Verschieben bleibt die Schrift unangetastet (siehe ScaleSelectedTextFontFromDrag).
             If Not vm.HasMultiAnnotationSelection AndAlso IsSelectedAnnotationTextLayer(vm) Then ScaleSelectedTextFontFromDrag(textRect, vm)
+
+            ' Der sichtbare Rahmen eines Textes umschließt die Glyphen, das Modellrechteck beginnt
+            ' dagegen am Zeichnungsursprung. Nach einer Größenänderung erst den neuen Schriftgrad
+            ' schreiben (oben), dann dessen frische Metrik abziehen. Ohne diese Gegenrichtung wird
+            ' die Luft über der Oberlänge als Objektlage gespeichert: nach Undo oder beim nächsten
+            ' Griffzug laufen Text und Rahmen zwangsläufig auseinander.
+            If Not vm.HasMultiAnnotationSelection AndAlso IsSelectedAnnotationTextLayer(vm) Then
+                Dim ink = vm.GetSelectedTextInkPercent()
+                Dim rawX = (textRect.Left - imageRect.Left) / imageRect.Width * 100.0
+                Dim rawY = (textRect.Top - imageRect.Top) / imageRect.Height * 100.0
+                If ink.HasValue Then
+                    rawX -= ink.Value.X
+                    rawY -= ink.Value.Y
+                End If
+                vm.SetSelectedAnnotationRect(rawX, rawY, vm.AnnotationWidthPercent, vm.AnnotationHeightPercent)
+                Return
+            End If
 
             ' Verschieben und Drehen aendern die GROESSE nicht - dann die Werte des ViewModels
             ' unveraendert durchreichen, statt sie aus dem Bildschirm-Rechteck zurueckzurechnen. Jede

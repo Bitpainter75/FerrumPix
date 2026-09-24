@@ -385,6 +385,7 @@ Namespace Services
         Private _textPathInverted As Boolean
         Private _textPathBend As Single = 50
         Private _textPathStartOffset As Single
+        Private _textAlignment As String = "Left"
         Private _letterSpacingPercent As Single
         Private _bold As Boolean
         Private _italic As Boolean = False
@@ -1140,6 +1141,21 @@ Namespace Services
             End Set
         End Property
 
+        ''' <summary>Ausrichtung gerader, mehrzeiliger Texte: Left, Center, Right oder Justify.
+        ''' Pfadtext bleibt davon bewusst unberührt, weil dort keine gemeinsame Zeilenkante existiert.</summary>
+        Public Property TextAlignment As String
+            Get
+                Return _textAlignment
+            End Get
+            Set(value As String)
+                Dim normalized = If(value, "Left").Trim()
+                If Not String.Equals(normalized, "Center", StringComparison.OrdinalIgnoreCase) AndAlso
+                   Not String.Equals(normalized, "Right", StringComparison.OrdinalIgnoreCase) AndAlso
+                   Not String.Equals(normalized, "Justify", StringComparison.OrdinalIgnoreCase) Then normalized = "Left"
+                SetField(_textAlignment, normalized)
+            End Set
+        End Property
+
         ''' <summary>Zeichenabstand in PROZENT DER SCHRIFTGROESSE (-20 bis 200). Prozent statt
         ''' Pixel, damit der Abstand beim Skalieren des Objekts mitwaechst - sonst risse der Text
         ''' bei grosser Schrift auseinander und klebte bei kleiner zusammen.
@@ -1378,6 +1394,7 @@ Namespace Services
                 .TextPathInverted = TextPathInverted,
                 .TextPathBend = TextPathBend,
                 .TextPathStartOffset = TextPathStartOffset,
+                .TextAlignment = TextAlignment,
                 .LetterSpacingPercent = LetterSpacingPercent,
                 .Bold = Bold,
                 .Italic = Italic,

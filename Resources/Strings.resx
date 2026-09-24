@@ -8804,4 +8804,8 @@
   <data name="Das_gew_hlte_Symbol_in_die_Bildmitte_setzen_ohne_707d5a38" xml:space="preserve">
     <value>Place the chosen symbol in the middle of the picture without clicking into it</value>
   </data>
+  <data name="Linksb_ndig_93a662e5" xml:space="preserve"><value>Left aligned</value></data>
+  <data name="Zentriert_c4625afe" xml:space="preserve"><value>Centered</value></data>
+  <data name="Rechtsb_ndig_d3e568b4" xml:space="preserve"><value>Right aligned</value></data>
+  <data name="Blocksatz_df32263a" xml:space="preserve"><value>Justified</value></data>
 </root>
