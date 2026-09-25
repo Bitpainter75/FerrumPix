@@ -6024,6 +6024,12 @@ Namespace ViewModels
             Dim foundCount = 0
             Dim scannedCount = 0
             Dim foundThisRun As New List(Of String)()
+            ' Welche Treffer es am ENDE des Laufs noch gibt, gefragt im Hintergrund. Die Bereinigung
+            ' laeuft auf dem Anzeigefaden und fragte dort selbst jede Datei: auf einer Netzfreigabe
+            ' waren das 7545 Gaenge zum Server in einem Stueck, gut zwei Sekunden Stillstand. Bewusst
+            ' NICHT aus dem Ordnerdurchlauf abgeleitet: was dort gesehen wurde, kann bis zum Ende
+            ' gelöscht worden sein, und die gemerkte Liste truege den Pfad dann weiter.
+            Dim stillExisting As HashSet(Of String) = Nothing
 
             IsLoading = True
             Dim runRow = BeginSearchRun()
@@ -6045,6 +6051,23 @@ Namespace ViewModels
                                    ' laengst nicht mehr erfuellt, ungeprueft stehen. Genau diese
                                    ' Nachpruefung war bisher die Aufgabe von Stufe zwei.
                                    Dim restored As New HashSet(Of String)(PathIdentity.Comparer)
+
+                                   ' Gemerkte Treffer OHNE Katalogzeile zeigt Stufe eins nur bei
+                                   ' einer Suche ueber einen Ordner: ohne Startordner geht Stufe zwei
+                                   ' ueber den Katalog und faende so eine Datei nie, sie fiele am Ende
+                                   ' ohnehin heraus.
+                                   Dim restoresUncatalogued = Not String.IsNullOrWhiteSpace(rootFolder) AndAlso
+                                                              (node.Conditions Is Nothing OrElse node.Conditions.Count = 0)
+                                   Dim uncatalogued As New HashSet(Of String)(PathIdentity.Comparer)
+                                   ' Ihre Elemente: sie stehen zuerst ohne Dateidaten da.
+                                   Dim undated As New List(Of ImageItem)()
+                                   ' Bei Bedingungen auf Aufnahmedaten: jede gemerkte Zeile mit dem
+                                   ' Urteil, das Stufe eins allein aus dem Katalog gefaellt hat. Nach
+                                   ' der Anzeige wird nachgelesen, was veraltet ist oder wo ein Feld
+                                   ' fehlt, und das Urteil gegebenenfalls korrigiert - in BEIDE
+                                   ' Richtungen, denn Stufe zwei sieht diese Pfade nicht mehr an.
+                                   Dim hasConditions = node.Conditions IsNot Nothing AndAlso node.Conditions.Count > 0
+                                   Dim toVerify As New List(Of (Meta As LibraryImageMeta, Matched As Boolean))()
 
                                    ' Erste Stufe: die zuletzt gefundenen KATALOG-Treffer sofort
                                    ' wiederherstellen. File.Exists gehört bewusst NICHT hierher:
@@ -6068,22 +6091,47 @@ Namespace ViewModels
                                            If valid.Count = 0 Then Continue For
 
                                            Dim metaByPath = LibraryService.Instance.GetMetaForPaths(valid)
-                                           Dim catalogPaths = valid.Where(Function(path) metaByPath.ContainsKey(path)).ToList()
+                                           Dim handled As New List(Of String)()
                                            Dim matched As New List(Of LibraryImageMeta)()
                                            For Each path In valid
                                                token.ThrowIfCancellationRequested()
                                                Dim m As LibraryImageMeta = Nothing
-                                               ' Ohne Katalogzeile gibt es absichtlich keinen
-                                               ' Ersatz-Lookup auf der Platte. Der zweite Suchlauf
-                                               ' findet diese Datei später und ergänzt sie normal.
-                                               If Not metaByPath.TryGetValue(path, m) OrElse m Is Nothing Then Continue For
-                                               If Not Await MatchesSavedSearchAsync(node, m, textQuery, favoriteMode, ratingMin, selectedRatings) Then Continue For
+                                               If Not metaByPath.TryGetValue(path, m) OrElse m Is Nothing Then
+                                                   ' OHNE KATALOGZEILE: dieselbe leere Zeile, die auch
+                                                   ' Stufe zwei fuer so eine Datei baut - nur ohne den
+                                                   ' Blick auf die Platte, die Dateidaten kommen nach
+                                                   ' der Anzeige (siehe undated unten). Vorher liess
+                                                   ' Stufe eins diese Treffer ganz aus; bei einer Suche
+                                                   ' ueber eine nie eingelesene Freigabe war das fast
+                                                   ' alles, und die Liste baute sich jedes Mal erst im
+                                                   ' Takt des Ordnerdurchlaufs auf (gemessen: 1 von 7545
+                                                   ' gemerkten Treffern sofort da).
+                                                   ' Nicht bei Bedingungen auf Aufnahmedaten: die
+                                                   ' braeuchten die Datei, und das bleibt Stufe zwei.
+                                                   If Not restoresUncatalogued Then Continue For
+                                                   m = New LibraryImageMeta With {
+                                                       .FilePath = path,
+                                                       .IsFavorite = False,
+                                                       .Rating = 0,
+                                                       .Tags = New List(Of String)()
+                                                   }
+                                                   uncatalogued.Add(path)
+                                               End If
+                                               handled.Add(path)
+                                               ' Bedingungen auf Aufnahmedaten NUR gegen die Zeile: ob sie
+                                               ' veraltet ist, fragt erst der Durchgang nach der Anzeige
+                                               ' (siehe toVerify unten). Vorher stand hier je Treffer ein
+                                               ' Blick auf die Platte, und die Liste erschien erst danach.
+                                               Dim passt = Await MatchesSavedSearchAsync(node, m, textQuery, favoriteMode, ratingMin, selectedRatings,
+                                                                                         catalogOnly:=hasConditions)
+                                               If hasConditions AndAlso Not uncatalogued.Contains(path) Then toVerify.Add((m, passt))
+                                               If Not passt Then Continue For
                                                matched.Add(m)
                                            Next
 
                                            ' ERLEDIGT ist auch, was durchgefallen ist: Stufe zwei kaeme
                                            ' ueber dieselbe Zeile zum selben Urteil.
-                                           For Each path In catalogPaths
+                                           For Each path In handled
                                                restored.Add(path)
                                            Next
                                            If matched.Count = 0 Then Continue For
@@ -6101,6 +6149,7 @@ Namespace ViewModels
                                                           ' auf "Ohne Datum" und die Sortierung nach Erstellungs- oder
                                                           ' Aenderungsdatum sortierte nach nichts.
                                                           item.ApplyCatalogFileDates(m.FileCreatedAt, m.ScannedSourceModifiedAt)
+                                                          If uncatalogued.Contains(m.FilePath) Then undated.Add(item)
                                                           Return item
                                                       End Function).ToList()
 
@@ -6124,6 +6173,79 @@ Namespace ViewModels
                                                    localPublished.ToString("N0"))
                                            End Sub, DispatcherPriority.Background)
                                        Next
+                                   End If
+
+                                   ' Die Dateidaten der Treffer ohne Katalogzeile, NACH der Anzeige.
+                                   ' Ohne sie stuende die Zeitleiste auf "Ohne Datum" und die
+                                   ' Sortierung nach Datum sortierte nach nichts. Stufe zwei laesst
+                                   ' diese Treffer aus, holt ihre Daten also nicht mehr.
+                                   If undated.Count > 0 Then
+                                       For Each batch In undated.Chunk(500)
+                                           token.ThrowIfCancellationRequested()
+                                           Dim dates = batch.Select(Function(item)
+                                                                        Try
+                                                                            Dim info As New FileInfo(item.FilePath)
+                                                                            If Not info.Exists Then Return (item, "", "")
+                                                                            Return (item, info.CreationTime.ToString("o"), info.LastWriteTime.ToString("o"))
+                                                                        Catch
+                                                                            Return (item, "", "")
+                                                                        End Try
+                                                                    End Function).ToList()
+                                           Await Dispatcher.UIThread.InvokeAsync(Sub()
+                                               If Not SearchMayPublish(node, token) Then Return
+                                               For Each d In dates
+                                                   d.item.ApplyCatalogFileDates(d.Item2, d.Item3)
+                                               Next
+                                           End Sub, DispatcherPriority.Background)
+                                       Next
+                                       Await Dispatcher.UIThread.InvokeAsync(Sub()
+                                           If Not SearchMayPublish(node, token) Then Return
+                                           FilterAndSort()
+                                       End Sub, DispatcherPriority.Background)
+                                   End If
+
+                                   ' Nachpruefen, was Stufe eins bei Bedingungen auf Aufnahmedaten nur
+                                   ' gegen den Katalog entschieden hat. Nachgelesen wird nur, wo ein
+                                   ' Feld fehlt oder die Datei sich geaendert hat; die Beistelldateien
+                                   ' dafuer je Ordner aus einer Auflistung statt aus drei Proben je Bild.
+                                   ' Ein Treffer, der nicht mehr passt, verschwindet, einer, der jetzt
+                                   ' passt, kommt dazu.
+                                   If toVerify.Count > 0 Then
+                                       Dim addNow As New List(Of LibraryImageMeta)()
+                                       Dim removeNow As New List(Of String)()
+                                       Dim flush = Async Function() As Task
+                                                       If addNow.Count = 0 AndAlso removeNow.Count = 0 Then Return
+                                                       Dim adds = addNow.ToList()
+                                                       Dim removes = removeNow.ToList()
+                                                       addNow.Clear()
+                                                       removeNow.Clear()
+                                                       Dim gone As New HashSet(Of String)(removes, PathIdentity.Comparer)
+                                                       foundThisRun.RemoveAll(Function(p) gone.Contains(p))
+                                                       foundThisRun.AddRange(adds.Select(Function(m) m.FilePath))
+                                                       foundCount += adds.Count - removes.Count
+                                                       Await Dispatcher.UIThread.InvokeAsync(Sub()
+                                                           If Not SearchMayPublish(node, token) Then Return
+                                                           RemoveItemsFromVirtualFolder(removes)
+                                                           AddMetasToVirtualFolder(adds, thumbnailToken, cacheScopeId, cacheScopeName)
+                                                           AppendSearchListResults(node, adds.Select(Function(m) m.FilePath))
+                                                       End Sub)
+                                                   End Function
+                                       For Each folderGroup In toVerify.GroupBy(Function(v) If(IO.Path.GetDirectoryName(v.Meta.FilePath), ""), PathIdentity.Comparer)
+                                           token.ThrowIfCancellationRequested()
+                                           Dim sidecars = FolderSidecarStamps.Read(folderGroup.Key)
+                                           For Each entry In folderGroup
+                                               token.ThrowIfCancellationRequested()
+                                               Dim meta = entry.Meta
+                                               If Not NeedsMetaResolve(meta, node.Conditions, sidecars) Then Continue For
+                                               ResolveMissingMetaFields(meta)
+                                               Dim passtJetzt = Await MatchesSavedSearchAsync(node, meta, textQuery, favoriteMode, ratingMin, selectedRatings,
+                                                                                              catalogOnly:=True)
+                                               If passtJetzt = entry.Matched Then Continue For
+                                               If passtJetzt Then addNow.Add(meta) Else removeNow.Add(meta.FilePath)
+                                               If addNow.Count + removeNow.Count >= 120 Then Await flush()
+                                           Next
+                                       Next
+                                       Await flush()
                                    End If
 
                                    If Not String.IsNullOrWhiteSpace(rootFolder) Then
@@ -6245,10 +6367,19 @@ Namespace ViewModels
                                            End If
                                        End If
                                    End If
+
+                                   ' Zum Schluss, noch im Hintergrund: welche Treffer es jetzt noch
+                                   ' gibt (siehe stillExisting).
+                                   Dim existing As New HashSet(Of String)(PathIdentity.Comparer)
+                                   For Each path In foundThisRun
+                                       token.ThrowIfCancellationRequested()
+                                       If File.Exists(path) Then existing.Add(path)
+                                   Next
+                                   stillExisting = existing
                                End Function, token)
 
                 If SearchMayPublish(node, token) Then
-                    CleanupSearchListResults(node, foundThisRun)
+                    CleanupSearchListResults(node, foundThisRun, stillExisting)
                     StatusText = $"{foundCount:N0} {LocalizationService.T("Bilder")}  •  {CurrentFolderName}"
                 End If
             Catch ex As OperationCanceledException
@@ -6448,7 +6579,8 @@ Namespace ViewModels
                                                        favoriteMode As String,
                                                        ratingMin As Integer,
                                                        selectedRatings As HashSet(Of Integer),
-                                                       Optional skipPersonQuery As Boolean = False) As Task(Of Boolean)
+                                                       Optional skipPersonQuery As Boolean = False,
+                                                       Optional catalogOnly As Boolean = False) As Task(Of Boolean)
             If meta Is Nothing Then Return False
             If Not MatchesSavedSearchText(meta.FilePath, meta.Tags, textQuery) Then Return False
             If Not MatchesTagQuery(meta.FilePath, meta.Tags, node.TagQueries) Then Return False
@@ -6462,7 +6594,7 @@ Namespace ViewModels
                 If ratingMin = 0 AndAlso meta.Rating <> 0 Then Return False
                 If ratingMin > 0 AndAlso meta.Rating < ratingMin Then Return False
             End If
-            Return Await EvaluateConditionsAsync(meta, node.Conditions, node.ConditionCombinator)
+            Return Await EvaluateConditionsAsync(meta, node.Conditions, node.ConditionCombinator, catalogOnly)
         End Function
 
         ''' <summary>Die Asset-IDs, die fuer einen Personenfilter gelten - aus BEIDEN Quellen.
@@ -6652,10 +6784,14 @@ Namespace ViewModels
         ''' referenzierte Werte noch in der DB (Bild wurde nie im Viewer/Editor geöffnet), werden sie
         ''' hier einmalig live nachgeladen (EXIF lesen + Bildmaße per Header) und zurückgeschrieben,
         ''' damit der nächste Suchlauf über dieselben Bilder schnell ist.
-        Private Async Function EvaluateConditionsAsync(meta As LibraryImageMeta, conditions As List(Of SearchCondition), combinator As String) As Task(Of Boolean)
+        ''' <param name="catalogOnly">Nur mit dem, was die Zeile traegt - kein Blick auf die Platte.
+        ''' Fuer die Wiederherstellung einer Suchliste, die vor der Anzeige nichts von der Platte
+        ''' lesen darf; das Nachlesen holt dort <see cref="NeedsMetaResolve"/> danach nach.</param>
+        Private Async Function EvaluateConditionsAsync(meta As LibraryImageMeta, conditions As List(Of SearchCondition), combinator As String,
+                                                       Optional catalogOnly As Boolean = False) As Task(Of Boolean)
             If conditions Is Nothing OrElse conditions.Count = 0 Then Return True
 
-            If conditions.Any(Function(c) Not MetaHasField(meta, c.Field)) OrElse IsMetaStale(meta) Then
+            If Not catalogOnly AndAlso NeedsMetaResolve(meta, conditions) Then
                 Await Task.Run(Sub() ResolveMissingMetaFields(meta))
             End If
 
@@ -6699,13 +6835,24 @@ Namespace ViewModels
         ''' <summary>Snapshot-Vergleich: Der SQLite-Katalog invalidiert sich sonst nie automatisch bei
         ''' Dateiänderungen (weder der FileSystemWatcher noch MetaHasField erkennen das) - ohne diesen
         ''' Check würden nach dem ersten erfolgreichen Lesen dauerhaft veraltete EXIF-Werte geliefert.</summary>
-        Private Shared Function IsMetaStale(meta As LibraryImageMeta) As Boolean
+        ''' <param name="sidecars">Die Auflistung der Beistelldateien des Ordners, falls der Aufrufer
+        ''' sie hat. Sonst wird je Bild geprobt.</param>
+        Private Shared Function IsMetaStale(meta As LibraryImageMeta, Optional sidecars As FolderSidecarStamps = Nothing) As Boolean
             Try
+                Dim sidecarStamp = If(sidecars IsNot Nothing, sidecars.StampFor(meta.FilePath), LibraryService.SidecarStamp(meta.FilePath))
                 Return Not IsScannedSnapshotFresh(meta.ScannedSourceModifiedAt, File.GetLastWriteTime(meta.FilePath),
-                                                  meta.ScannedSidecarModifiedAt, LibraryService.SidecarStamp(meta.FilePath))
+                                                  meta.ScannedSidecarModifiedAt, sidecarStamp)
             Catch
                 Return True
             End Try
+        End Function
+
+        ''' <summary>Muss die Zeile fuer diese Bedingungen erst von der Platte nachgelesen werden -
+        ''' weil ein Feld fehlt oder die Datei sich seit dem letzten Lesen geaendert hat?</summary>
+        Private Shared Function NeedsMetaResolve(meta As LibraryImageMeta, conditions As List(Of SearchCondition),
+                                                 Optional sidecars As FolderSidecarStamps = Nothing) As Boolean
+            If conditions Is Nothing OrElse conditions.Count = 0 Then Return False
+            Return conditions.Any(Function(c) Not MetaHasField(meta, c.Field)) OrElse IsMetaStale(meta, sidecars)
         End Function
 
         ''' <summary>Übernimmt Bewertung, Farbetikett und Stichworte aus einer XMP-Beistelldatei (und
@@ -6957,6 +7104,15 @@ Namespace ViewModels
             End Select
         End Function
 
+        ''' Wie Directory.EnumerateFiles ohne Optionen: nichts nach Attributen auslassen (versteckte
+        ''' Ordner filtert der Durchlauf selbst ueber den Namen) und einen nicht lesbaren Ordner als
+        ''' Fehler melden statt still als leer.
+        Private Shared ReadOnly SearchWalkOptions As New EnumerationOptions With {
+            .RecurseSubdirectories = False,
+            .IgnoreInaccessible = False,
+            .AttributesToSkip = 0
+        }
+
         Private Iterator Function EnumerateSearchFilesLazy(rootFolder As String, includeSubfolders As Boolean, textQuery As String, token As CancellationToken) As IEnumerable(Of String)
             If String.IsNullOrWhiteSpace(rootFolder) OrElse Not Directory.Exists(rootFolder) Then Return
             ' Der Startordner SELBST, nicht nur die Unterordner: gefiltert wurde bisher erst beim
@@ -6970,41 +7126,59 @@ Namespace ViewModels
                 token.ThrowIfCancellationRequested()
                 Dim folder = pendingFolders.Pop()
 
-                If filePatterns.Count = 0 Then
-                    Dim files As IEnumerable(Of String) = Enumerable.Empty(Of String)()
-                    Try
-                        files = Directory.EnumerateFiles(folder)
-                    Catch ex As UnauthorizedAccessException
-                    Catch ex As IOException
-                    End Try
+                ' EIN DURCHGANG JE ORDNER fuer Dateien UND Unterordner. Vorher wurde der Ordner je
+                ' Suchmuster einmal aufgelistet - und aus "*.jpg" wurden alle acht Schreibweisen der
+                ' Endung, weil das Muster unter Linux Gross und Klein unterscheidet -, dazu noch einmal
+                ' fuer die Unterordner. Auf einer Netzfreigabe ist jede Auflistung ein Weg zum Server:
+                ' gemessen ueber 9215 Ordner einer SMB-Freigabe 79 s gegen 9 s, dieselben Treffer.
+                ' Das Muster ist nur eine Vorauswahl; ob ein Treffer passt, entscheidet danach
+                ' MatchesSavedSearchText. Deshalb darf es hier ohne Ruecksicht auf Gross und Klein
+                ' vergleichen.
+                '
+                ' Die Eintraege werden WAEHREND der Auflistung weitergereicht, nicht erst gepuffert:
+                ' ein grosser Ordner auf einer langsamen Freigabe liefert so seine ersten Treffer, und
+                ' ein Abbruch greift nach dem naechsten Eintrag. Von Hand weitergeschaltet, weil die
+                ' Aufzaehlung ihren Fehler erst beim Weiterschalten wirft (nicht lesbarer Ordner, Ordner
+                ' mittendrin verschwunden) - und ein Yield darf nicht in einem Catch stehen. Nur die
+                ' Unterordner werden gesammelt; sie kommen nach den Dateien an die Reihe, wie vorher.
+                Dim children As New List(Of String)()
+                Dim listing As IEnumerator(Of FileSystemInfo) = Nothing
+                Try
+                    listing = New DirectoryInfo(folder).EnumerateFileSystemInfos("*", SearchWalkOptions).GetEnumerator()
+                Catch ex As UnauthorizedAccessException
+                    Continue While
+                Catch ex As IOException
+                    Continue While
+                End Try
 
-                    For Each file In files
+                Using listing
+                    Do
                         token.ThrowIfCancellationRequested()
-                        If _imageExtensions.Contains(IO.Path.GetExtension(file).ToLowerInvariant()) Then Yield file
-                    Next
-                Else
-                    For Each pattern In filePatterns
-                        Dim files As IEnumerable(Of String) = Enumerable.Empty(Of String)()
+                        Dim entry As FileSystemInfo
                         Try
-                            files = Directory.EnumerateFiles(folder, pattern)
+                            If Not listing.MoveNext() Then Exit Do
+                            entry = listing.Current
                         Catch ex As UnauthorizedAccessException
+                            Exit Do
                         Catch ex As IOException
+                            Exit Do
                         End Try
 
-                        For Each file In files
-                            token.ThrowIfCancellationRequested()
-                            If _imageExtensions.Contains(IO.Path.GetExtension(file).ToLowerInvariant()) Then Yield file
-                        Next
-                    Next
-                End If
+                        If TypeOf entry Is DirectoryInfo Then
+                            If includeSubfolders Then children.Add(entry.FullName)
+                            Continue Do
+                        End If
+                        Dim file = entry.FullName
+                        If Not _imageExtensions.Contains(IO.Path.GetExtension(file).ToLowerInvariant()) Then Continue Do
+                        If filePatterns.Count > 0 AndAlso
+                           Not filePatterns.Any(Function(pattern) IO.Enumeration.FileSystemName.MatchesSimpleExpression(pattern, entry.Name, ignoreCase:=True)) Then
+                            Continue Do
+                        End If
+                        Yield file
+                    Loop
+                End Using
 
                 If includeSubfolders Then
-                    Dim children As IEnumerable(Of String) = Enumerable.Empty(Of String)()
-                    Try
-                        children = Directory.EnumerateDirectories(folder)
-                    Catch ex As UnauthorizedAccessException
-                    Catch ex As IOException
-                    End Try
                     For Each child In children
                         ' VERSTECKTE ORDNER wie im Ordnerbaum und in der Ordneransicht: sie zeigt
                         ' nur, wer sie eingeschaltet hat. Der Suchlauf war die einzige Stelle ohne
@@ -7375,6 +7549,17 @@ Namespace ViewModels
         ''' Nimmt fertig gebaute Elemente - im Hintergrund erzeugt - in den virtuellen Ordner auf,
         ''' ohne einen einzigen Dateizugriff. Hier wird nur auf Dubletten geprueft und die Liste
         ''' geaendert.
+        ''' <summary>Nimmt Treffer wieder aus einer Suchansicht - wenn sich beim Nachpruefen zeigt,
+        ''' dass sie nicht mehr passen. Aus der Pfadmenge ebenfalls, sonst kaeme derselbe Pfad nie
+        ''' wieder herein.</summary>
+        Private Sub RemoveItemsFromVirtualFolder(paths As IEnumerable(Of String))
+            If Not _isVirtualFolder Then Return
+            Dim gone As New HashSet(Of String)(If(paths, Enumerable.Empty(Of String)()), StringComparer.OrdinalIgnoreCase)
+            If gone.Count = 0 Then Return
+            _virtualPathSet.ExceptWith(gone)
+            If _allItems.RemoveAll(Function(i) i IsNot Nothing AndAlso gone.Contains(i.FilePath)) > 0 Then FilterAndSort()
+        End Sub
+
         Private Sub AddPrebuiltItemsToVirtualFolder(items As List(Of ImageItem), Optional sortNow As Boolean = True)
             ' Siehe AddMetasToVirtualFolder: Zielpruefung, kein Vertrauen auf den Aufrufer.
             If Not _isVirtualFolder Then Return
@@ -7415,9 +7600,12 @@ Namespace ViewModels
             If target Is Nothing Then Return
             If target.Results Is Nothing Then target.Results = New List(Of String)()
             Dim changed = False
+            ' Als Menge, nicht je Pfad ueber die ganze Liste: das waren bei 7500 Treffern und
+            ' Bloecken zu 120 fast eine Million Vergleiche je Block, auf dem Anzeigefaden.
+            Dim known As New HashSet(Of String)(target.Results, StringComparer.OrdinalIgnoreCase)
             For Each path In paths
                 If String.IsNullOrWhiteSpace(path) Then Continue For
-                If target.Results.Any(Function(p) String.Equals(p, path, StringComparison.OrdinalIgnoreCase)) Then Continue For
+                If Not known.Add(path) Then Continue For
                 target.Results.Add(path)
                 changed = True
             Next
@@ -7432,7 +7620,11 @@ Namespace ViewModels
             End If
         End Sub
 
-        Private Sub CleanupSearchListResults(node As VirtualNavigationNode, Optional currentRunResults As IEnumerable(Of String) = Nothing)
+        ''' <param name="existing">Die Pfade, die es am Ende des Laufs noch gibt, im Hintergrund
+        ''' gefragt. Dann entfaellt hier das File.Exists auf dem Anzeigefaden; wer die Menge nicht
+        ''' hat, uebergibt nichts, und jeder Pfad wird einzeln gefragt.</param>
+        Private Sub CleanupSearchListResults(node As VirtualNavigationNode, Optional currentRunResults As IEnumerable(Of String) = Nothing,
+                                             Optional existing As ISet(Of String) = Nothing)
             If node Is Nothing Then Return
             Dim target = _savedSearches.FirstOrDefault(Function(s) String.Equals(s.Id, node.Id, StringComparison.OrdinalIgnoreCase))
             If target Is Nothing OrElse target.Results Is Nothing Then Return
@@ -7443,7 +7635,8 @@ Namespace ViewModels
             ' Bild ist ja noch da.
             Dim cleaned = source.
                 Where(Function(p) Not String.IsNullOrWhiteSpace(p) AndAlso
-                                  Not IsTrashedLocalPath(p) AndAlso File.Exists(p)).
+                                  Not IsTrashedLocalPath(p) AndAlso
+                                  If(existing IsNot Nothing, existing.Contains(p), File.Exists(p))).
                 Distinct(PathIdentity.Comparer).
                 ToList()
             Dim changed = cleaned.Count <> target.Results.Count

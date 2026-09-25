@@ -33,3 +33,6 @@
 
 - Watched folders on a network share are checked several times faster at startup when nothing
   has changed.
+
+- Saved searches show their pictures right away, even from folders you have never opened in the
+  gallery, and look for new pictures on network shares much faster.
