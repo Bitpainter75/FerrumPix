@@ -215,9 +215,38 @@ Namespace ViewModels
             If cut.Right < source.Right Then target.Add(New SKRectI(cut.Right, middleTop, source.Right, middleBottom))
         End Sub
 
+        ''' <summary>Mehr aufgeschobene Rechtecke als diese werden zu einem einzigen zusammengefasst.</summary>
+        Private Const DeferredSceneRegionLimit As Integer = 32
+
+        ''' <summary>Der EINZIGE Weg in die Liste der aufgeschobenen Szenenregionen. Ein Rechteck,
+        ''' das ein vorgemerktes überlappt, wird mit ihm vereinigt; wer lange schwenkt, ohne dass ein
+        ''' Vollrender dazwischenkommt, sammelt sonst Streifen ohne Ende an. Über der Obergrenze
+        ''' bleibt nur noch die gemeinsame Hülle. Das rendert beim Nachreichen mehr als nötig, aber
+        ''' nie zu wenig: die Hülle deckt alles ab, was vorgemerkt war, und beim Erreichen des
+        ''' Sichtfensters zerfällt sie wieder in höchstens vier Streifen.</summary>
         Private Sub QueueDeferredSceneRegion(rect As SKRectI)
             If rect.IsEmpty Then Return
-            _deferredSceneRegionRects.Add(rect)
+            Dim merged = rect
+            Dim i = _deferredSceneRegionRects.Count - 1
+            While i >= 0
+                Dim existing = _deferredSceneRegionRects(i)
+                If existing.IntersectsWith(merged) Then
+                    merged = ImageProcessor.UnionRects(merged, existing)
+                    _deferredSceneRegionRects.RemoveAt(i)
+                    ' Die gewachsene Hülle kann jetzt auch schon geprüfte Rechtecke treffen.
+                    i = _deferredSceneRegionRects.Count - 1
+                Else
+                    i -= 1
+                End If
+            End While
+            _deferredSceneRegionRects.Add(merged)
+            If _deferredSceneRegionRects.Count <= DeferredSceneRegionLimit Then Return
+            Dim hull = SKRectI.Empty
+            For Each deferredRect In _deferredSceneRegionRects
+                hull = ImageProcessor.UnionRects(hull, deferredRect)
+            Next
+            _deferredSceneRegionRects.Clear()
+            _deferredSceneRegionRects.Add(hull)
         End Sub
 
         ''' <summary>Holt beim Schwenken ausschließlich die jetzt sichtbaren Teile bereits
@@ -237,7 +266,9 @@ Namespace ViewModels
                 End If
             Next
             _deferredSceneRegionRects.Clear()
-            _deferredSceneRegionRects.AddRange(remaining)
+            For Each remainingRect In remaining
+                QueueDeferredSceneRegion(remainingRect)
+            Next
             If Not _sceneRegionPendingRect.IsEmpty AndAlso Not _sceneRegionWorkerBusy Then RunSceneRegionWorker()
         End Sub
 
@@ -498,7 +529,11 @@ Namespace ViewModels
                 Return
             End If
             _sceneRegionPendingRect = ImageProcessor.UnionRects(_sceneRegionPendingRect, visible)
-            AddRectDifference(dirtyRect, visible, _deferredSceneRegionRects)
+            Dim outside As New List(Of SKRectI)()
+            AddRectDifference(dirtyRect, visible, outside)
+            For Each outsideRect In outside
+                QueueDeferredSceneRegion(outsideRect)
+            Next
             If _sceneRegionWorkerBusy Then Return
             RunSceneRegionWorker()
         End Sub

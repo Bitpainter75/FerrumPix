@@ -353,6 +353,8 @@ Namespace Services
             ' Prozent-Faktoren mit vergleichbarer Semantik. Kein Rueckweg betroffen: HueAdjustment*
             ' wird nirgends exportiert (nur gelesen).
             Const HueImportScale As Double = 0.3
+            ' Im Kanalkurven-Look bleibt der Farbmischer bewusst AUS: ohne ihn trifft ein solches
+            ' Preset den Referenz-Export besser als mit ihm.
             If Not useChannelCurveColorLook Then
             If TryGetXmpDouble(values, "HueAdjustmentRed", d) Then adj.RedHue = Clamp100(d * HueImportScale)
             If TryGetXmpDouble(values, "SaturationAdjustmentRed", d) Then adj.RedSaturation = Clamp100(d)

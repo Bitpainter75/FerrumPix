@@ -8695,6 +8695,8 @@ Namespace ViewModels
                 Next
                 Me.RaisePropertyChanged(NameOf(CanvasBackgroundColorValue))
                 Me.RaisePropertyChanged(NameOf(CanvasBackgroundBrush))
+                ' Die automatische Pinselfarbe hängt an der Leinwand (siehe BrushColor).
+                RaiseBrushColorChanged()
                 SchedulePreviewUpdate()
             End Set
         End Property
@@ -8786,7 +8788,12 @@ Namespace ViewModels
         ''' weiter umfärben kann.</summary>
         Public Property BrushColor As String
             Get
-                Return If(IsSelectedBrushAnnotation(), _annotationStrokeColor, _brushColor)
+                If IsSelectedBrushAnnotation() Then Return _annotationStrokeColor
+                ' Solange niemand eine Farbe gewählt hat, gilt die Kontrastfarbe zur Leinwand -
+                ' schon beim LESEN, damit Live-Linie, Farbfeld und fertiger Strich dieselbe Farbe
+                ' zeigen. Beim Einbacken erst umzuschalten malte den ersten Zug schwarz und legte
+                ' ihn beim Loslassen weiß ab.
+                Return If(_brushColorIsAutomaticDefault, AutomaticInkColorForDocumentBackground(), _brushColor)
             End Get
             Set(value As String)
                 If IsSelectedBrushAnnotation() Then
@@ -8794,9 +8801,12 @@ Namespace ViewModels
                 Else
                     Dim normalized = NormalizeAvaloniaColor(value, "#FF000000")
                     ' Auch ein Klick auf die bereits sichtbare Farbe ist eine bewusste Wahl und
-                    ' schaltet die automatische Kontrastvorgabe für folgende Striche aus.
+                    ' schaltet die automatische Kontrastvorgabe für folgende Striche aus. Die
+                    ' Meldung muss dann trotzdem raus: gezeigt wurde bis eben die Kontrastfarbe,
+                    ' nicht das Feld.
+                    Dim wasAutomatic = _brushColorIsAutomaticDefault
                     _brushColorIsAutomaticDefault = False
-                    If String.Equals(_brushColor, normalized, StringComparison.Ordinal) Then Return
+                    If Not wasAutomatic AndAlso String.Equals(_brushColor, normalized, StringComparison.Ordinal) Then Return
                     _brushColor = normalized
                 End If
                 RaiseBrushColorChanged()
@@ -18653,6 +18663,7 @@ Namespace ViewModels
                            NameOf(IsDocumentBackgroundTransparent)}
                 Me.RaisePropertyChanged(n)
             Next
+            RaiseBrushColorChanged()
         End Sub
 
         Private Shared Function ParseNewDocColor(backgroundMode As String, backgroundColor As String) As SKColor
@@ -22010,6 +22021,7 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(CanvasBackgroundColor))
             Me.RaisePropertyChanged(NameOf(CanvasBackgroundColorValue))
             Me.RaisePropertyChanged(NameOf(CanvasBackgroundBrush))
+            RaiseBrushColorChanged()
             RaiseDisplayImageGeometryProperties()
             Me.RaisePropertyChanged(NameOf(FilterPreset))
             Me.RaisePropertyChanged(NameOf(FilterStrength))
@@ -22439,6 +22451,7 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(CanvasBackgroundColor))
             Me.RaisePropertyChanged(NameOf(CanvasBackgroundColorValue))
             Me.RaisePropertyChanged(NameOf(CanvasBackgroundBrush))
+            RaiseBrushColorChanged()
             Me.RaisePropertyChanged(NameOf(FilterPreset))
             Me.RaisePropertyChanged(NameOf(FilterStrength))
             Me.RaisePropertyChanged(NameOf(LutPath))
@@ -23554,13 +23567,6 @@ Namespace ViewModels
             If points Is Nothing Then Return
             Dim normalized = points.ToList()
             If normalized.Count = 0 Then Return
-            ' Die automatische Startfarbe folgt der DEFINIERTEN Dokument-Leinwand, nicht einem
-            ' wechselnden Motivpixel unter dem Zug. Eine bewusst im Panel gewählte Pinselfarbe
-            ' bleibt erhalten.
-            If Not isEraser AndAlso _brushColorIsAutomaticDefault Then
-                _brushColor = AutomaticInkColorForDocumentBackground()
-                RaiseBrushColorChanged()
-            End If
             ' Ein Klick ist ein echter Pinselabdruck, kein leerer Zug. Der Rasterweg speichert
             ' Linien mit mindestens zwei Stützpunkten; ein praktisch deckungsgleicher zweiter
             ' Punkt hält diese Repräsentation bei und ergibt dank runder Endkappen die Scheibe.

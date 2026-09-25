@@ -340,12 +340,6 @@ Namespace ViewModels
             End Set
         End Property
 
-        Public ReadOnly Property IsTextAlignmentLeft As Boolean
-            Get
-                Return String.Equals(_annotationTextAlignment, "Left", StringComparison.OrdinalIgnoreCase)
-            End Get
-        End Property
-
         ''' <summary>Zeichenabstand in Prozent der Schriftgroesse. Prozent statt Pixel, damit der
         ''' Abstand beim Skalieren des Objekts mitwaechst.</summary>
         Public Property AnnotationLetterSpacingPercent As Double

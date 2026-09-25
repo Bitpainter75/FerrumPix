@@ -94,6 +94,10 @@ Namespace Views
             AddHandler AttachedToVisualTree, AddressOf OnGalleryAttachedToVisualTree
             AddHandler DetachedFromVisualTree, AddressOf OnGalleryDetachedFromVisualTree
             Me.AddHandler(InputElement.GotFocusEvent, AddressOf OnDescendantGotFocus, RoutingStrategies.Bubble)
+            ' Tunnel: ESC bricht einen laufenden Galeriezug ab, bevor ein Kind die Taste verbraucht
+            ' oder OnKeyDown daraus "Auswahl aufheben" macht.
+            Me.AddHandler(InputElement.KeyDownEvent, AddressOf OnCustomInternalDragKeyDown, RoutingStrategies.Tunnel)
+            AddHandler PointerCaptureLost, AddressOf OnCustomInternalPointerCaptureLost
             Dim tree = Me.FindControl(Of TreeView)("FolderTreeView")
             If tree IsNot Nothing Then
                 tree.AddHandler(InputElement.PointerPressedEvent, AddressOf OnFolderTreePointerPressedTunnel, RoutingStrategies.Tunnel)
@@ -420,7 +424,7 @@ Namespace Views
             ' wo sie sonst gelöst werden, feuert beim Verwerfen der View nicht.
             _isAttached = False
             If _customInternalDragActive Then
-                Dim ignored = FinishCustomInternalDragAsync(Nothing, drop:=False)
+                CancelCustomInternalDrag(Nothing)
             End If
             UnsubscribeViewModel()
 
@@ -2037,8 +2041,34 @@ Namespace Views
 
         Public Sub OnCustomInternalPointerMoved(sender As Object, e As PointerEventArgs)
             If Not _customInternalDragActive Then Return
+            ' Ohne gedrückte Taste gibt es keinen Zug mehr: das Loslassen ist woanders
+            ' angekommen (Fensterwechsel, Dialog). Bliebe der Zug stehen, legte der nächste
+            ' gewöhnliche Klick auf eine Ordnerkachel die alte Auswahl dort ab.
+            If Not e.GetCurrentPoint(Me).Properties.IsLeftButtonPressed Then
+                CancelCustomInternalDrag(e.Pointer)
+                Return
+            End If
             UpdateCustomInternalDropFeedback(e.GetPosition(Me))
             e.Handled = True
+        End Sub
+
+        Private Sub OnCustomInternalDragKeyDown(sender As Object, e As KeyEventArgs)
+            If Not _customInternalDragActive OrElse e.Key <> Key.Escape Then Return
+            CancelCustomInternalDrag(Nothing)
+            e.Handled = True
+        End Sub
+
+        ''' <summary>Verliert die Galerie den Zeigergriff, ist der Zug vorbei, ohne abzulegen.
+        ''' Das eigene Freigeben in FinishCustomInternalDragAsync landet ebenfalls hier, dann ist
+        ''' der Zug aber schon beendet.</summary>
+        Private Sub OnCustomInternalPointerCaptureLost(sender As Object, e As PointerCaptureLostEventArgs)
+            If Not _customInternalDragActive Then Return
+            CancelCustomInternalDrag(Nothing)
+        End Sub
+
+        Private Sub CancelCustomInternalDrag(pointer As IPointer)
+            ' Ohne Ablegen wartet FinishCustomInternalDragAsync auf nichts und endet synchron.
+            Dim ignored = FinishCustomInternalDragAsync(pointer, drop:=False)
         End Sub
 
         Private Sub UpdateCustomInternalDropFeedback(point As Avalonia.Point)
@@ -2163,7 +2193,13 @@ Namespace Views
         Public Async Sub OnGlobalPointerReleased(sender As Object, e As PointerReleasedEventArgs)
             If _customInternalDragActive AndAlso e.InitialPressMouseButton = MouseButton.Left Then
                 e.Handled = True
-                Await FinishCustomInternalDragAsync(e.Pointer)
+                ' Async Sub: eine Ausnahme aus Verschieben, Zuordnen oder Hochladen beendete
+                ' sonst die Anwendung. Derselbe Fang wie beim nativen Ablegen in OnItemDrop.
+                Try
+                    Await FinishCustomInternalDragAsync(e.Pointer)
+                Catch ex As Exception
+                    DiagnosticLogService.LogException("GalleryView.InternalDrop", ex)
+                End Try
                 Return
             End If
             If e.InitialPressMouseButton = MouseButton.Middle Then HideQuickPreview()

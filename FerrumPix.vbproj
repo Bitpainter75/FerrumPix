@@ -5,10 +5,10 @@
     <TargetFramework>net10.0</TargetFramework>
     <RootNamespace>FerrumPix</RootNamespace>
     <AssemblyName>FerrumPix</AssemblyName>
-    <Version>0.9.51</Version>
-    <AssemblyVersion>0.9.51.0</AssemblyVersion>
-    <FileVersion>0.9.51.0</FileVersion>
-    <InformationalVersion>0.9.51-1</InformationalVersion>
+    <Version>0.9.52</Version>
+    <AssemblyVersion>0.9.52.0</AssemblyVersion>
+    <FileVersion>0.9.52.0</FileVersion>
+    <InformationalVersion>0.9.52-1</InformationalVersion>
     <Nullable>enable</Nullable>
     <PublishTrimmed>false</PublishTrimmed>
     <PublishSingleFile>true</PublishSingleFile>
@@ -29,19 +29,19 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Avalonia" Version="12.1.2" />
-    <PackageReference Include="Avalonia.Desktop" Version="12.1.2" />
-    <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.2" />
-    <PackageReference Include="Avalonia.Controls.ColorPicker" Version="12.1.2" />
+    <PackageReference Include="Avalonia" Version="12.1.3" />
+    <PackageReference Include="Avalonia.Desktop" Version="12.1.3" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.3" />
+    <PackageReference Include="Avalonia.Controls.ColorPicker" Version="12.1.3" />
     <PackageReference Include="Avalonia.Controls.ItemsRepeater" Version="12.0.0" />
-    <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.29.0" />
+    <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.30.0" />
     <!-- Die Grafikbeschleunigung fuer die gelernten Modelle: EINE Bibliothek je System, die
          darunter Vulkan, Direct3D oder Metal nimmt. Es gibt sie fuer win-x64, win-arm64,
-         linux-x64 und osx-arm64; die uebrigen Bauformen bekommen sie nicht mitgeliefert und
-         rechnen weiter auf dem Prozessor - GpuAccelerationService faengt das ab. Kostet rund
+         linux-x64, linux-arm64 und osx-arm64; osx-x64 bekommt sie nicht mitgeliefert und
+         rechnet weiter auf dem Prozessor - GpuAccelerationService faengt das ab. Kostet rund
          zehn Megabyte im Paket. -->
-    <PackageReference Include="Microsoft.ML.OnnxRuntime.EP.WebGpu" Version="0.3.0" />
-    <PackageReference Include="ReactiveUI.Avalonia" Version="12.1.1" />
+    <PackageReference Include="Microsoft.ML.OnnxRuntime.EP.WebGpu" Version="0.4.0" />
+    <PackageReference Include="ReactiveUI.Avalonia" Version="12.1.2" />
     <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.12" />
     <PackageReference Include="QRCoder" Version="1.8.0" />
     <PackageReference Include="SkiaSharp" Version="3.119.4" />
