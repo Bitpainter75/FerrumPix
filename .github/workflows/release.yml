@@ -16,7 +16,8 @@
 #
 # DIE MSIX GEHT NICHT INS RELEASE. Ein Store-Paket wird unsigniert eingereicht, der Store signiert
 # selbst - und unsigniert laesst Windows es nicht installieren. Es steht als Artefakt am Lauf, von
-# wo aus es ins Partner Center hochgeladen wird. Gebaut wird sie nur mit einer Paketversion.
+# wo aus es ins Partner Center hochgeladen wird. Ein Lauf mit "msix" baut sie immer, die
+# Paketversion bildet package.sh dann aus VERSION; ein Lauf mit "alle" nur mit Paketversion.
 #
 # SICHERHEIT: Ein oeffentliches Repo kann jeder per Pull Request anstossen. GitHub gibt
 # Fork-Pull-Requests keine Secrets - das ist die schuetzende Regel, und sie faellt, sobald
@@ -41,6 +42,11 @@
 #   MSIX_IDENTITY_NAME           z.B. 12345Bitpainter75.FerrumPix
 #   MSIX_PUBLISHER               z.B. CN=ABCDEF12-3456-7890-ABCD-EF1234567890
 #   MSIX_PUBLISHER_DISPLAY_NAME  der Name, den der Store anzeigt
+#   MSSTORE_PRODUCT_ID           die Store-ID der Anwendung (9N...), nur fuer store_entwurf
+#
+# Fuer store_entwurf als Secrets, aus der App-Registrierung in Microsoft Entra ID, die im Partner
+# Center mit der Rolle Manager eingetragen ist:
+#   MSSTORE_TENANT_ID  MSSTORE_SELLER_ID  MSSTORE_CLIENT_ID  MSSTORE_CLIENT_SECRET
 #
 # Die Fassungen der Actions gehoeren aktuell gehalten: laeuft eine auf einer abgekuendigten
 # Node-Fassung, warnt GitHub erst und zwingt sie spaeter auf eine neue.
@@ -67,10 +73,14 @@ on:
           - flatpak
           - msix
       paketversion:
-        description: "MSIX-Paketversion, vier Zahlen, die letzte 0 (z.B. 1.0.0.0). Pflicht bei msix; bei alle bedeutet leer: keine MSIX"
+        description: "MSIX-Paketversion, vier Zahlen, die letzte 0 (z.B. 1.0.9523.0). Bei msix bedeutet leer: aus VERSION gebildet; bei alle bedeutet leer: keine MSIX"
         type: string
         required: false
         default: ""
+      store_entwurf:
+        description: "MSIX als Entwurf ins Partner Center hochladen (nicht abschicken). Bricht ab, wenn dort schon eine offene Einreichung liegt"
+        type: boolean
+        default: false
 
 # Releases anlegen und Assets hochladen faellt unter "contents". Ohne diese Zeile darf der
 # eingebaute Token nur lesen, und der erste Upload scheitert mit 403.
@@ -265,21 +275,11 @@ jobs:
   msix-nutzlast:
     name: MSIX - Nutzlast (Linux)
     runs-on: ubuntu-latest
-    # Bei "msix" laeuft der Job IMMER, auch ohne Paketversion: sonst wurde er still
-    # uebersprungen, der Windows-Job hinter ihm ebenso, und der Lauf endete gruen, ohne etwas
-    # gebaut zu haben. Der erste Schritt meldet die fehlende Angabe als Fehler.
+    # Bei "msix" laeuft der Job IMMER; ohne Paketversion bildet package.sh sie aus VERSION
+    # (0.9.52-3 ergibt 1.0.9523.0).
     if: ${{ inputs.pakete == 'msix' || (inputs.pakete == 'alle' && inputs.paketversion != '') }}
 
     steps:
-      - name: Paketversion angegeben?
-        env:
-          PAKETVERSION: ${{ inputs.paketversion }}
-        run: |
-          if [ -z "$PAKETVERSION" ]; then
-            echo "::error::Fuer msix ist die Paketversion Pflicht (vier Zahlen, die letzte 0, z.B. 1.0.0.0)."
-            exit 1
-          fi
-
       # ZUERST, noch vor dem Auschecken: fehlen die Angaben, steht das Scheitern schon fest.
       # Die Werte gehen ueber env hinein und nicht direkt in den Skripttext.
       - name: Angaben aus dem Partner Center vorhanden?
@@ -382,6 +382,101 @@ jobs:
           path: FerrumPix-win-x64.msix
           if-no-files-found: error
           retention-days: 3
+
+  # Laedt die MSIX als ENTWURF ins Partner Center: msstore legt eine neue Einreichung als Kopie
+  # der zuletzt veroeffentlichten an, ersetzt darin das alte Paket durch das neue und schickt
+  # NICHT ab (--noCommit). Texte, Screenshots und Hinweise macht Patrick dort selbst, und erst
+  # sein Abschicken startet die Zertifizierung.
+  #
+  # msstore publish LOESCHT eine offene Einreichung ohne Rueckfrage, samt allem, was darin schon
+  # geaendert war. Der Job fragt deshalb vorher selbst bei der Submission API nach und bricht ab,
+  # wenn eine da ist - ob Entwurf oder schon in der Zertifizierung. Die erste Einreichung kann
+  # die API nicht anlegen; auch das faengt die Abfrage ab.
+  store-entwurf:
+    name: MSIX - Entwurf im Partner Center
+    runs-on: windows-latest
+    needs: msix-paket
+    if: ${{ inputs.store_entwurf }}
+
+    steps:
+      # Die Werte gehen ueber env hinein und nicht direkt in den Skripttext.
+      - name: Zugangsdaten vorhanden?
+        shell: pwsh
+        env:
+          PRODUKT: ${{ vars.MSSTORE_PRODUCT_ID }}
+          TENANT: ${{ secrets.MSSTORE_TENANT_ID }}
+          SELLER: ${{ secrets.MSSTORE_SELLER_ID }}
+          CLIENT: ${{ secrets.MSSTORE_CLIENT_ID }}
+          GEHEIMNIS: ${{ secrets.MSSTORE_CLIENT_SECRET }}
+        run: |
+          $fehlt = @()
+          if (-not $env:PRODUKT)   { $fehlt += "MSSTORE_PRODUCT_ID (Variable)" }
+          if (-not $env:TENANT)    { $fehlt += "MSSTORE_TENANT_ID" }
+          if (-not $env:SELLER)    { $fehlt += "MSSTORE_SELLER_ID" }
+          if (-not $env:CLIENT)    { $fehlt += "MSSTORE_CLIENT_ID" }
+          if (-not $env:GEHEIMNIS) { $fehlt += "MSSTORE_CLIENT_SECRET" }
+          if ($fehlt.Count -gt 0) {
+            Write-Output "::error::Es fehlen: $($fehlt -join ', ') - einzutragen unter Settings > Secrets and variables > Actions."
+            exit 1
+          }
+
+      # Direkt an der Submission API und nicht ueber die Ausgabe von msstore: die ist fuer
+      # Menschen gemacht, und ein Fehler beim Lesen darf nie als "kein Entwurf da" durchgehen.
+      - name: Keine offene Einreichung im Partner Center?
+        shell: pwsh
+        env:
+          PRODUKT: ${{ vars.MSSTORE_PRODUCT_ID }}
+          TENANT: ${{ secrets.MSSTORE_TENANT_ID }}
+          CLIENT: ${{ secrets.MSSTORE_CLIENT_ID }}
+          GEHEIMNIS: ${{ secrets.MSSTORE_CLIENT_SECRET }}
+        run: |
+          $ErrorActionPreference = "Stop"
+          $token = Invoke-RestMethod -Method Post `
+            -Uri "https://login.microsoftonline.com/$env:TENANT/oauth2/token" `
+            -Body @{
+              grant_type    = "client_credentials"
+              client_id     = $env:CLIENT
+              client_secret = $env:GEHEIMNIS
+              resource      = "https://manage.devcenter.microsoft.com"
+            }
+          $app = Invoke-RestMethod -Method Get `
+            -Uri "https://manage.devcenter.microsoft.com/v1.0/my/applications/$env:PRODUKT" `
+            -Headers @{ Authorization = "Bearer $($token.access_token)" }
+          if (-not $app.lastPublishedApplicationSubmission) {
+            Write-Output "::error::Die Anwendung hat noch keine veroeffentlichte Einreichung. Die erste geht von Hand ins Partner Center."
+            exit 1
+          }
+          if ($app.pendingApplicationSubmission) {
+            Write-Output "::error::Im Partner Center liegt schon eine offene Einreichung ($($app.pendingApplicationSubmission.id)). msstore wuerde sie loeschen. Erst dort abschicken oder verwerfen, dann neu starten."
+            exit 1
+          }
+          Write-Output "Keine offene Einreichung, letzte veroeffentlichte: $($app.lastPublishedApplicationSubmission.id)"
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: FerrumPix-msix
+
+      # Die Fassung der CLI ist festgenagelt wie makeappx; check-updates.sh meldet neuere.
+      - uses: microsoft/microsoft-store-apppublisher@v1.4
+        with:
+          version: 'v0.4.3'
+
+      - name: Als Entwurf hochladen
+        shell: pwsh
+        env:
+          PRODUKT: ${{ vars.MSSTORE_PRODUCT_ID }}
+          TENANT: ${{ secrets.MSSTORE_TENANT_ID }}
+          SELLER: ${{ secrets.MSSTORE_SELLER_ID }}
+          CLIENT: ${{ secrets.MSSTORE_CLIENT_ID }}
+          GEHEIMNIS: ${{ secrets.MSSTORE_CLIENT_SECRET }}
+        run: |
+          msstore settings --enableTelemetry false
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          msstore reconfigure --tenantId $env:TENANT --sellerId $env:SELLER --clientId $env:CLIENT --clientSecret $env:GEHEIMNIS
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          msstore publish FerrumPix-win-x64.msix --appId $env:PRODUKT --noCommit
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          Write-Output "Der Entwurf liegt im Partner Center. Abgeschickt ist er NICHT."
 
   veroeffentlichen:
     name: Ins Release
