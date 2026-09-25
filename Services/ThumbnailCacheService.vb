@@ -360,13 +360,21 @@ Namespace Services
         '''
         ''' Es wird auch NICHT auf DecodeDirect ausgewichen, wenn kein Cache entsteht: ein Bild
         ''' vollstaendig zu dekodieren und dann wegzuwerfen ist genau das, was der Index nicht tun
-        ''' soll.</summary>
+        ''' soll.
+        '''
+        ''' NUR DAS SCHREIBEN geht durch die Decode-Schleuse, das Nachsehen nicht. Bei einem
+        ''' unveraenderten Bestand liegt fast jede Kachel schon da; hielte schon der Blick danach
+        ''' die Schleuse, stuende das Bild im Betrachter bei jedem Start hinter Tausenden solcher
+        ''' Blicke an.</summary>
         Public Shared Function EnsureCached(filePath As String,
                                             lastWriteTime As DateTime,
                                             fileSize As Long,
                                             Optional cancellationToken As CancellationToken = Nothing) As ThumbnailCacheOutcome
             cancellationToken.ThrowIfCancellationRequested()
-            If String.IsNullOrEmpty(filePath) OrElse Not File.Exists(filePath) Then Return ThumbnailCacheOutcome.Skipped
+            ' Ob es die Quelle gibt, fragt erst der Schreibweg unten: Aenderungszeit und Groesse hat
+            ' der Aufrufer gerade gelesen, und sie stecken im Namen der Kachel. Ein zweiter Blick auf
+            ' die Quelle waere auf einer Netzfreigabe je Bild ein weiterer Weg zum Server.
+            If String.IsNullOrEmpty(filePath) Then Return ThumbnailCacheOutcome.Skipped
             If ShouldSkipCache(filePath) Then Return ThumbnailCacheOutcome.Skipped
 
             Dim enabled As Boolean
@@ -386,13 +394,14 @@ Namespace Services
                 ' hat - dort liegt fast alles schon da, und ein Dateisystem-Blick kostet nichts
                 ' gegen einen Decode.
                 If File.Exists(cachePath) Then Return ThumbnailCacheOutcome.AlreadyThere
+                If Not File.Exists(filePath) Then Return ThumbnailCacheOutcome.Skipped
 
                 Directory.CreateDirectory(folderCachePath)
                 EnsureFolderRegistered(folderId, folderDisplayPath)
                 DeleteStaleCacheFiles(folderId, folderCachePath, imageHash, cacheFileName)
                 cancellationToken.ThrowIfCancellationRequested()
 
-                If TryWriteCacheFile(filePath, cachePath, quality) AndAlso File.Exists(cachePath) Then
+                If DecodeGate.Run(Function() TryWriteCacheFile(filePath, cachePath, quality)) AndAlso File.Exists(cachePath) Then
                     GetFolderFileIndex(folderId).Add(folderCachePath, imageHash, cacheFileName)
                     Return ThumbnailCacheOutcome.Written
                 End If

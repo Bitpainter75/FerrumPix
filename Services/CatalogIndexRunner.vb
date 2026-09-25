@@ -303,6 +303,15 @@ Namespace Services
                 Next
             End If
 
+            ' Die Stempel der Bildverschlagwortung ebenso je Wurzel, aber erst beim ersten Bedarf:
+            ' ist sie aus, braucht der Lauf sie gar nicht.
+            Dim aiStamps As New AiScanStamps(roots)
+
+            ' Die Beistelldateien je ORDNER aus einer Auflistung, nicht je Bild aus drei Proben (siehe
+            ' FolderSidecarStamps). Die Dateien eines Ordners stehen in der Liste beieinander, also
+            ' genuegt die jeweils letzte Auflistung.
+            Dim sidecars As FolderSidecarStamps = Nothing
+
             Dim summaryFormat = ExifService.CurrentSummaryFormat
             Dim lastFolder = ""
             Dim done = 0
@@ -338,17 +347,18 @@ Namespace Services
                     ' UNVERAENDERT? Dann gar nicht erst lesen. Genau die drei Angaben, die auch
                     ' SyncExifData vergleicht - nur eben VOR dem teuren Teil. Ohne das liefe ein
                     ' zweiter Lauf ueber denselben Bestand genauso lange wie der erste.
-                    If Not force AndAlso IsUnchanged(stamps, filePath, info, summaryFormat) Then
+                    If Not force AndAlso IsUnchanged(stamps, filePath, info, summaryFormat,
+                                                     SidecarsOf(lastFolder, sidecars)) Then
                         result.Unchanged += 1
                         ' Das Vorschaubild trotzdem sicherstellen: der Katalogeintrag kann von einem
                         ' frueheren Lauf stammen, waehrend die Kachel nie gebraucht wurde.
                         If EnsureThumbnail(filePath, info, token) Then result.ThumbnailsCreated += 1
-                        TagIfNeeded(filePath, info, result, token)
+                        TagIfNeeded(filePath, info, result, aiStamps, token)
                         Continue For
                     End If
 
                     IndexOne(filePath, result, token)
-                    TagIfNeeded(filePath, info, result, token)
+                    TagIfNeeded(filePath, info, result, aiStamps, token)
                 Catch ex As OperationCanceledException
                     result.Cancelled = True
                     Return Nothing
@@ -405,21 +415,23 @@ Namespace Services
         ''' eigenen Stempel ab - erst so wird ein bereits vorhandener Bestand nach Aktivierung der
         ''' Einstellung einmal vollständig ergänzt.</summary>
         Private Shared Sub TagIfNeeded(filePath As String, info As FileInfo, result As CatalogIndexResult,
-                                       token As CancellationToken)
-            If token.IsCancellationRequested OrElse Not ImageTaggingService.NeedsAnalysis(filePath, info.LastWriteTime) Then Return
+                                       aiStamps As AiScanStamps, token As CancellationToken)
+            If token.IsCancellationRequested OrElse Not ImageTaggingService.Enabled Then Return
+            If Not ImageTaggingService.NeedsAnalysis(filePath, info.LastWriteTime, aiStamps.Load()) Then Return
             ' NOTHING heisst "gar nicht gelaufen" (siehe ImageTaggingService.TagFile). Das mitzu-
             ' zaehlen meldete am Ende Bilder als verschlagwortet, an denen nichts geschehen ist.
             If ImageTaggingService.TagFile(filePath, token) IsNot Nothing Then result.AiTagged += 1
         End Sub
 
-        ''' <summary>Die Kachel bereitlegen. DURCH DIE DECODE-SCHLEUSE: es laeuft immer nur einer in
-        ''' der ganzen Anwendung, sonst stuende hier ein Decode neben dem Bild im Betrachter und
-        ''' neben den Kacheln der Galerie (siehe <see cref="DecodeGate"/>).</summary>
+        ''' <summary>Die Kachel bereitlegen. Das Schreiben geht DURCH DIE DECODE-SCHLEUSE: es laeuft
+        ''' immer nur einer in der ganzen Anwendung, sonst stuende hier ein Decode neben dem Bild im
+        ''' Betrachter (siehe <see cref="DecodeGate"/>). Die Schleuse nimmt
+        ''' <see cref="ThumbnailCacheService.EnsureCached"/> selbst, und zwar erst, wenn die Kachel
+        ''' fehlt.</summary>
         ''' <returns>True, wenn eine neue Kachel entstanden ist.</returns>
         Private Shared Function EnsureThumbnail(filePath As String, info As FileInfo, token As CancellationToken) As Boolean
             Try
-                Dim outcome = DecodeGate.Run(Function() ThumbnailCacheService.EnsureCached(
-                                                 filePath, info.LastWriteTime, info.Length, token))
+                Dim outcome = ThumbnailCacheService.EnsureCached(filePath, info.LastWriteTime, info.Length, token)
                 Return outcome = ThumbnailCacheService.ThumbnailCacheOutcome.Written
             Catch ex As OperationCanceledException
                 Throw
@@ -429,17 +441,58 @@ Namespace Services
             End Try
         End Function
 
+        ''' <summary>Die Stempel der Bildverschlagwortung fuer die Wurzeln EINES Laufs, geholt beim
+        ''' ersten Bedarf. Nicht schon beim Start des Laufs: wird die Verschlagwortung erst mitten im
+        ''' Lauf eingeschaltet, fehlten sonst alle Stempel, und jedes laengst analysierte Bild gaelte
+        ''' als neu.</summary>
+        Private NotInheritable Class AiScanStamps
+            Private ReadOnly _roots As IReadOnlyList(Of String)
+            Private _loaded As Boolean
+            Private _stamps As Dictionary(Of String, AiTagScanStamp)
+
+            Public Sub New(roots As IReadOnlyList(Of String))
+                _roots = roots
+            End Sub
+
+            ''' <returns>Nothing, wenn eine Wurzel nicht zu lesen war; dann fragt der Lauf je Datei
+            ''' einzeln nach, wie zuvor.</returns>
+            Public Function Load() As Dictionary(Of String, AiTagScanStamp)
+                If _loaded Then Return _stamps
+                _loaded = True
+                Dim all As New Dictionary(Of String, AiTagScanStamp)(PathIdentity.Comparer)
+                For Each root In _roots
+                    Dim part = LibraryService.Instance.GetAiTagScanStamps(root)
+                    If part Is Nothing Then Return Nothing
+                    For Each entry In part
+                        all(entry.Key) = entry.Value
+                    Next
+                Next
+                _stamps = all
+                Return _stamps
+            End Function
+        End Class
+
         ''' <summary>Hat sich seit dem letzten Lauf nichts geaendert? Verglichen werden Bilddatei,
         ''' Beistelldateien und das Format der gespeicherten Zusammenfassungen - Letzteres, weil ein
         ''' Eintrag aus einer aelteren Fassung oder einer anderen Anzeigesprache stammen kann.</summary>
         Private Shared Function IsUnchanged(stamps As Dictionary(Of String, CatalogIndexStamp),
                                             filePath As String, info As FileInfo,
-                                            summaryFormat As String) As Boolean
+                                            summaryFormat As String,
+                                            sidecars As FolderSidecarStamps) As Boolean
             Dim stamp As CatalogIndexStamp = Nothing
             If Not stamps.TryGetValue(filePath, stamp) Then Return False
             If Not String.Equals(stamp.SummaryFormat, If(summaryFormat, ""), StringComparison.Ordinal) Then Return False
             If Not String.Equals(stamp.SourceModifiedAt, info.LastWriteTime.ToString("o"), StringComparison.Ordinal) Then Return False
-            Return String.Equals(stamp.SidecarModifiedAt, LibraryService.SidecarStamp(filePath), StringComparison.Ordinal)
+            Return String.Equals(stamp.SidecarModifiedAt, sidecars.StampFor(filePath), StringComparison.Ordinal)
+        End Function
+
+        ''' <summary>Die Auflistung der Beistelldateien fuer diesen Ordner: die vorhandene, wenn sie
+        ''' schon fuer ihn gilt, sonst eine neue.</summary>
+        Private Shared Function SidecarsOf(folder As String, ByRef current As FolderSidecarStamps) As FolderSidecarStamps
+            If current Is Nothing OrElse Not PathIdentity.Comparer.Equals(current.FolderPath, folder) Then
+                current = FolderSidecarStamps.Read(folder)
+            End If
+            Return current
         End Function
 
         ''' <summary>Sammelt die Bilddateien eines Ordners und aller Unterordner.

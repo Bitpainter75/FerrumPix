@@ -8682,35 +8682,6 @@ Namespace ViewModels
         ''' <summary>Erzeugt die ImageItem-Objekte für eine Dateiliste und übernimmt die im Katalog
         ''' gespeicherten Metadaten. Trägt Elemente, deren Katalogeintrag fehlt oder veraltet ist, in
         ''' <paramref name="itemsNeedingMetaRefresh"/> ein.</summary>
-        ''' Schlägt beide Namensformen in der einmalig eingelesenen Ordnerliste nach - "foto.cr2.xmp"
-        ''' (angehängt) und "foto.xmp" (ersetzt). Leer, wenn es keine Beistelldatei gibt.
-        Private Shared Function LookupSidecarStamp(stamps As Dictionary(Of String, String),
-                                                   eigeneRezepte As Dictionary(Of String, String),
-                                                   imagePath As String) As String
-            Dim xmpStamp = ""
-            For Each candidate In XmpSidecarService.SidecarCandidates(imagePath)
-                Dim stamp As String = Nothing
-                If stamps.TryGetValue(candidate, stamp) Then
-                    xmpStamp = stamp
-                    Exit For
-                End If
-            Next
-            Dim fpxmpStamp = ""
-            eigeneRezepte.TryGetValue(RawSidecarService.SidecarPathFor(imagePath), fpxmpStamp)
-            If String.IsNullOrEmpty(xmpStamp) AndAlso String.IsNullOrEmpty(fpxmpStamp) Then Return ""
-            ' Muss zeichengleich zu LibraryService.SidecarStamp sein - das ist die Gegenseite
-            ' desselben Vergleichs, und ein Auseinanderlaufen liesse den Ordner bei JEDEM
-            ' Wechsel komplett neu einlesen, ohne dass etwas darauf hindeutet.
-            Return xmpStamp & If(String.IsNullOrEmpty(fpxmpStamp), "|-", "|fpxmp:" & fpxmpStamp)
-        End Function
-
-        ''' Nur der Ordner selbst, und case-insensitiv: unter Linux matcht das Suchmuster sonst
-        ''' case-sensitiv, ".XMP" käme nicht vor (kommt bei Exporten aus Windows-Programmen aber vor).
-        Private Shared ReadOnly SidecarSearchOptions As New EnumerationOptions With {
-            .RecurseSubdirectories = False,
-            .MatchCasing = MatchCasing.CaseInsensitive
-        }
-
         ''' <param name="vorhandeneKatalogzeilen">Bereits geholte Katalogzeilen derselben Ordner-Ebene.
         ''' Der Ordnerwechsel gibt hier den Sofortbestand weiter; alle anderen Aufrufer lassen den
         ''' Wert offen und fragen selbst.</param>
@@ -8741,26 +8712,8 @@ Namespace ViewModels
             ''' die Frische-Erkennung unten braucht das Änderungsdatum der Sidecar, und zwei zusätzliche
             ''' Dateisystem-Zugriffe pro Bild summieren sich bei großen Ordnern und auf Netzwerkfreigaben
             ''' spürbar. Ein Verzeichnis-Listing kostet dagegen einmalig.
-            Dim sidecarStamps As New Dictionary(Of String, String)(PathIdentity.Comparer)
-            Dim eigeneRezepte As New Dictionary(Of String, String)(PathIdentity.Comparer)
-            PerformanceTraceService.Measure("Ordner: Beistelldateien auflisten",
-                Sub()
-                    Try
-                        For Each sidecar In Directory.EnumerateFiles(folderPath, "*.xmp", SidecarSearchOptions)
-                            ' ".fpxmp" endet nicht auf ".xmp" und faellt hier nicht mit hinein - der Vergleich
-                            ' steht trotzdem da, weil ein Treffer den Stempel still verfaelschen wuerde.
-                            If sidecar.EndsWith(RawSidecarService.Extension, StringComparison.OrdinalIgnoreCase) Then Continue For
-                            sidecarStamps(sidecar) = File.GetLastWriteTime(sidecar).ToString("o")
-                        Next
-                        ' Zweites Listing fuer die eigenen Rezepte: Vorhandensein UND Aenderungszeit gehoeren
-                        ' in den Stempel. So werden extern geaenderte Katalogwerte aus .fpxmp ebenso erkannt
-                        ' wie das Loeschen einer Sidecar.
-                        For Each rezept In Directory.EnumerateFiles(folderPath, "*" & RawSidecarService.Extension, SidecarSearchOptions)
-                            eigeneRezepte(rezept) = File.GetLastWriteTime(rezept).ToString("o")
-                        Next
-                    Catch
-                    End Try
-                End Sub)
+            Dim sidecarStamps = PerformanceTraceService.Measure("Ordner: Beistelldateien auflisten",
+                Function() FolderSidecarStamps.Read(folderPath))
 
                 ''' Die FileInfo-Objekte kommen fertig befüllt aus DirectoryInfo.EnumerateFiles (siehe
                 ''' ImageItem.FromFileInfo) - der frühere Weg über New ImageItem(pfad) stieß je Datei einen
@@ -8813,7 +8766,7 @@ Namespace ViewModels
                             If m.ImageWidth.HasValue AndAlso m.ImageHeight.HasValue AndAlso
                                IsScannedSnapshotFresh(m.ScannedSourceModifiedAt, item.DateModified,
                                                       m.ScannedSidecarModifiedAt,
-                                                      LookupSidecarStamp(sidecarStamps, eigeneRezepte, file)) Then
+                                                      sidecarStamps.StampFor(file)) Then
                                 Dim needsMetadataFlagBackfill =
                                     Not m.HasExifMetadata AndAlso
                                     Not m.HasIptcMetadata AndAlso

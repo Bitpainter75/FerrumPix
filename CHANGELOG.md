@@ -30,3 +30,6 @@
 
 - Saving an edited FPX file works again, and saving it in place no longer asks to save once more
   when you go back to the gallery.
+
+- Watched folders on a network share are checked several times faster at startup when nothing
+  has changed.

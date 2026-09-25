@@ -29,6 +29,21 @@ Namespace Services
         End Property
     End Class
 
+    ''' <summary>Woran die Bildverschlagwortung erkennt, ob ein Bild erneut durch das Modell muss:
+    ''' Aenderungszeit der Datei, Modell und Fassung der Auswahlregeln beim letzten Lauf.</summary>
+    Public Structure AiTagScanStamp
+        Public Property SourceModifiedAt As String
+        Public Property ModelKey As String
+        Public Property ModelVersion As String
+
+        ''' <summary>Weicht der gemerkte Stand vom heutigen ab?</summary>
+        Public Function Differs(sourceModifiedAt As String, modelKey As String, modelVersion As String) As Boolean
+            Return Not String.Equals(If(Me.SourceModifiedAt, ""), If(sourceModifiedAt, ""), StringComparison.Ordinal) OrElse
+                   Not String.Equals(If(Me.ModelKey, ""), If(modelKey, ""), StringComparison.Ordinal) OrElse
+                   Not String.Equals(If(Me.ModelVersion, ""), If(modelVersion, ""), StringComparison.Ordinal)
+        End Function
+    End Structure
+
     Partial Public Class LibraryService
 
         ''' <summary>Gibt es ueberhaupt erkannte Stichwoerter? Gemerkt, weil zwei heisse Pfade sonst
@@ -458,15 +473,55 @@ Namespace Services
                         cmd.Parameters.AddWithValue("$p", filePath)
                         Using reader = cmd.ExecuteReader()
                             If Not reader.Read() Then Return True
-                            Return Not String.Equals(reader.GetString(0), If(sourceModifiedAt, ""), StringComparison.Ordinal) OrElse
-                                   Not String.Equals(reader.GetString(1), If(modelKey, ""), StringComparison.Ordinal) OrElse
-                                   Not String.Equals(reader.GetString(2), If(modelVersion, ""), StringComparison.Ordinal)
+                            Dim stamp As New AiTagScanStamp With {
+                                .SourceModifiedAt = reader.GetString(0),
+                                .ModelKey = reader.GetString(1),
+                                .ModelVersion = reader.GetString(2)
+                            }
+                            Return stamp.Differs(sourceModifiedAt, modelKey, modelVersion)
                         End Using
                     End Using
                 End Using
             Catch
                 Return True
             End Try
+        End Function
+
+        ''' <summary>Die Stempel der Bildverschlagwortung fuer den Ordner UND alles darunter, in EINER
+        ''' Abfrage - das Gegenstueck zu <see cref="GetIndexStamps"/>. Der Katalogindex fragte sonst
+        ''' je Datei einzeln nach, bei eingeschalteter Verschlagwortung also eine Verbindung und eine
+        ''' Abfrage fuer jedes Foto eines laengst analysierten Bestands, bei jedem Start.</summary>
+        ''' <returns>Nothing, wenn die Abfrage scheitert. Eine LEERE Liste hiesse "nichts analysiert"
+        ''' und liesse den ganzen Bestand erneut durch das Modell laufen.</returns>
+        Public Function GetAiTagScanStamps(folderPath As String) As Dictionary(Of String, AiTagScanStamp)
+            Dim result As New Dictionary(Of String, AiTagScanStamp)(PathIdentity.Comparer)
+            If String.IsNullOrWhiteSpace(folderPath) Then Return result
+            Dim prefix = folderPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) & Path.DirectorySeparatorChar
+            Try
+                Using conn = New SqliteConnection(_connectionString)
+                    conn.Open()
+                    Using cmd = conn.CreateCommand()
+                        ' Maskiert wie ueberall sonst: ein Unterstrich im Ordnernamen holte sonst auch
+                        ' die Nachbarordner herein - siehe EscapeLikeValue.
+                        cmd.CommandText = "SELECT FilePath,SourceModifiedAt,ModelKey,ModelVersion " &
+                                          "FROM AiTagScan WHERE FilePath LIKE $prefix" & LikeEscapeClause
+                        cmd.Parameters.AddWithValue("$prefix", EscapeLikeValue(prefix) & "%")
+                        Using reader = cmd.ExecuteReader()
+                            While reader.Read()
+                                result(reader.GetString(0)) = New AiTagScanStamp With {
+                                    .SourceModifiedAt = reader.GetString(1),
+                                    .ModelKey = reader.GetString(2),
+                                    .ModelVersion = reader.GetString(3)
+                                }
+                            End While
+                        End Using
+                    End Using
+                End Using
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Bibliothek.KIStempel", ex)
+                Return Nothing
+            End Try
+            Return result
         End Function
 
     End Class

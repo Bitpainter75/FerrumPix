@@ -164,9 +164,19 @@ Namespace Services
             End Using
         End Function
 
-        Public Shared Function NeedsAnalysis(filePath As String, lastWriteTime As DateTime) As Boolean
+        ''' <param name="stamps">Die vorab geholten Stempel (siehe
+        ''' <see cref="LibraryService.GetAiTagScanStamps"/>). Fehlt die Datei darin, war sie nie
+        ''' beim Modell. Nothing heisst "nicht vorab geholt", dann wird einzeln nachgefragt.</param>
+        Public Shared Function NeedsAnalysis(filePath As String, lastWriteTime As DateTime,
+                                             Optional stamps As IReadOnlyDictionary(Of String, AiTagScanStamp) = Nothing) As Boolean
             If Not Enabled Then Return False
-            Return LibraryService.Instance.AiTagsNeedRefresh(filePath, lastWriteTime.ToString("o"), ModelKey, AnalysisVersion)
+            Dim sourceModifiedAt = lastWriteTime.ToString("o")
+            If stamps Is Nothing Then
+                Return LibraryService.Instance.AiTagsNeedRefresh(filePath, sourceModifiedAt, ModelKey, AnalysisVersion)
+            End If
+            Dim stamp As AiTagScanStamp = Nothing
+            If Not stamps.TryGetValue(filePath, stamp) Then Return True
+            Return stamp.Differs(sourceModifiedAt, ModelKey, AnalysisVersion)
         End Function
 
         ''' <summary>Räumt Arbeitskopien eines zuvor abgebrochenen Serverlaufs auf. Erfolgreiche
