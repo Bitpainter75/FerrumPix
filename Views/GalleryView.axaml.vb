@@ -31,7 +31,15 @@ Namespace Views
         Private _initialSelectionDone As Boolean = False
         Private _dragStartPoint As Avalonia.Point
         Private _dragStartItem As ImageItem
+        ' Der Druck, der den Zug begonnen hat. DoDragDropAsync verlangt ein Druck-Ereignis, und
+        ' der Wechsel an den nativen Zug beim Verlassen des Fensters kommt erst mitten in der Geste.
+        Private _dragStartArgs As PointerPressedEventArgs
         Private _customInternalDragActive As Boolean
+        Private _customDragPressArgs As PointerPressedEventArgs
+        Private _customDragHasServerAssets As Boolean
+        ' Der Zeiger steht gerade ausserhalb des Fensters; die Uebergabe an den nativen Zug laeuft.
+        Private _customDragOutside As Boolean
+        Private _externalHandoverPending As Boolean
         Private _customDragPaths As List(Of String)
         Private _customDropFolder As String
         Private _customDropNode As VirtualNavigationNode
@@ -1753,6 +1761,7 @@ Namespace Views
                    vm.SelectedItems.Contains(item) Then
                     _dragStartItem = item
                     _dragStartPoint = e.GetPosition(Me)
+                    _dragStartArgs = e
                     Me.Focus()
                     e.Handled = True
                     Return
@@ -1760,6 +1769,7 @@ Namespace Views
                 ApplyPointerSelection(vm, item, e.KeyModifiers)
                 _dragStartItem = item
                 _dragStartPoint = e.GetPosition(Me)
+                _dragStartArgs = e
                 Me.Focus()
                 e.Handled = True
             End If
@@ -2006,6 +2016,10 @@ Namespace Views
             _customDragPaths = paths
             _customDropFolder = Nothing
             _customDropNode = Nothing
+            _customDragPressArgs = _dragStartArgs
+            _dragStartArgs = Nothing
+            _customDragHasServerAssets = hatServerbilder
+            _customDragOutside = False
             _customInternalDragActive = True
             _isDragging = True
             DragPayloadCache.BeginDrag(paths)
@@ -2048,8 +2062,77 @@ Namespace Views
                 CancelCustomInternalDrag(e.Pointer)
                 Return
             End If
+            ' Ausserhalb des Fensters gibt es keine eigenen Ziele mehr. Dort uebernimmt ein
+            ' nativer Zug mit der Dateiliste, damit ein Dateimanager oder ein anderes Programm die
+            ' Bilder annehmen kann. Innerhalb des Fensters bleibt alles beim eigenen Zug.
+            _customDragOutside = IsOutsideWindow(e)
+            If _customDragOutside AndAlso Not _customDragHasServerAssets Then
+                UpdateCustomInternalDropFeedback(e.GetPosition(Me))
+                HandOverToNativeDrag()
+                e.Handled = True
+                Return
+            End If
             UpdateCustomInternalDropFeedback(e.GetPosition(Me))
             e.Handled = True
+        End Sub
+
+        Private Function IsOutsideWindow(e As PointerEventArgs) As Boolean
+            Dim top = TopLevel.GetTopLevel(Me)
+            If top Is Nothing Then Return False
+            Dim p = e.GetPosition(top)
+            Return p.X < 0 OrElse p.Y < 0 OrElse p.X >= top.Bounds.Width OrElse p.Y >= top.Bounds.Height
+        End Function
+
+        ''' <summary>Übergibt den eigenen Zug an einen nativen, sobald der Zeiger das Fenster verlässt.
+        ''' Die Ziehlast ist dieselbe wie früher beim nativen Zug aus der Galerie: die Dateien für
+        ''' fremde Ziele und das eigene Pfadformat für den Fall, dass der Zug zurückkommt; dann laufen
+        ''' die nativen Ablegewege der Galerie. Serverbilder werden nicht übergeben, es gibt keine
+        ''' Datei, die ein fremdes Programm bekommen könnte.
+        ''' Unter X11 braucht der native Zug nur das Fenster aus dem Druck-Ereignis und übernimmt den
+        ''' Zeigergriff, der seit dem Druck besteht; er lässt sich deshalb mitten in der Geste
+        ''' beginnen, solange die Taste noch unten ist.</summary>
+        Private Async Sub HandOverToNativeDrag()
+            If _externalHandoverPending Then Return
+            Dim pressedArgs = _customDragPressArgs
+            Dim paths = If(_customDragPaths, New List(Of String)()).ToList()
+            Dim storageProvider = TopLevel.GetTopLevel(Me)?.StorageProvider
+            If pressedArgs Is Nothing OrElse paths.Count = 0 OrElse storageProvider Is Nothing Then Return
+            _externalHandoverPending = True
+            Try
+                Dim data = Await ClipboardPathService.BuildFileTransferAsync(storageProvider, paths,
+                    Sub(firstItem) firstItem.Set(FerrumPixPathsFormat, String.Join(ControlChars.Lf, paths)))
+                If data Is Nothing OrElse data.Items.Count = 0 Then Return
+                ' Während die Dateiliste entstand, kann der Zug geendet haben oder der Zeiger ins
+                ' Fenster zurückgekehrt sein. Dann bleibt es beim eigenen Zug; das nächste Verlassen
+                ' versucht es erneut.
+                If Not _customInternalDragActive OrElse Not _customDragOutside OrElse
+                   Not _isAttached OrElse TopLevel.GetTopLevel(Me) Is Nothing Then
+                    DirectCast(data, IDisposable).Dispose()
+                    Return
+                End If
+
+                Await FinishCustomInternalDragAsync(pressedArgs.Pointer, drop:=False)
+                ' Wie früher beim nativen Zug: die Quelle ist die Galerie selbst, denn das
+                ' angeklickte Vorschaubild kann inzwischen virtualisiert sein.
+                pressedArgs.Source = Me
+                _isDragging = True
+                DragPayloadCache.BeginDrag(paths)
+                DragTrace.Begin("lokal, aus dem Fenster", paths.Count, True)
+                Try
+                    Await DragDrop.DoDragDropAsync(pressedArgs, data, DragDropEffects.Move Or DragDropEffects.Copy)
+                Catch ex As ArgumentOutOfRangeException When String.Equals(ex.ParamName, "triggerEvent", StringComparison.Ordinal)
+                    DiagnosticLogService.LogException("Gallery.DragDrop.InvalidSource", ex)
+                Finally
+                    DragTrace.Finish("Geste beendet")
+                    DragPayloadCache.EndDrag()
+                    _isDragging = False
+                End Try
+            Catch ex As Exception
+                ' Async Sub: eine Ausnahme beendete sonst die Anwendung.
+                DiagnosticLogService.LogException("Gallery.DragDrop.Handover", ex)
+            Finally
+                _externalHandoverPending = False
+            End Try
         End Sub
 
         Private Sub OnCustomInternalDragKeyDown(sender As Object, e As KeyEventArgs)

@@ -25,7 +25,8 @@
 
 - Moving pictures between folders inside the gallery keeps the normal pointer and shows clearly
   which folder will receive them. ESC cancels a move, and a move interrupted by switching windows
-  no longer drops the pictures on the next folder you click.
+  no longer drops the pictures on the next folder you click. Pictures can be dragged out of the
+  gallery into a file manager or another program again.
 
 - Saving an edited FPX file works again, and saving it in place no longer asks to save once more
   when you go back to the gallery.
