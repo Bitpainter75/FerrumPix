@@ -3226,6 +3226,26 @@ Namespace ViewModels
             End If
         End Sub
 
+        ''' <summary>Gibt einem Favoriten einen eigenen Namen in der Liste, etwa um zwei Ordner
+        ''' gleichen Namens auseinanderzuhalten. Das Ziel dahinter bleibt, wie es ist.</summary>
+        Public Async Sub RenameFavorite(node As VirtualNavigationNode)
+            Try
+                If node Is Nothing OrElse String.IsNullOrWhiteSpace(node.FavoriteKey) Then Return
+                Dim name = Await _mainVm.ShowInputAsync(AppDialogKind.Rename, LocalizationService.T("Favorit umbenennen"),
+                                                        LocalizationService.T("Neuer Name:"), node.Name)
+                If String.IsNullOrWhiteSpace(name) OrElse String.Equals(name.Trim(), node.Name, StringComparison.Ordinal) Then Return
+                If FavoritesService.Rename(node.FavoriteKey, name) Then
+                    RefreshFavorites()
+                    StatusText = String.Format(LocalizationService.T("Favorit umbenannt: {0}"), name.Trim())
+                End If
+            Catch ex As Exception
+                ' Absicherung: eine Ausnahme in einem Async Sub landet sonst beim Dispatcher
+                ' und beendet den Prozess.
+                DiagnosticLogService.LogException("GalleryViewModel.RenameFavorite", ex)
+                StatusText = LocalizationService.T("Aktion fehlgeschlagen")
+            End Try
+        End Sub
+
 
         ''' <summary>Gibt False zurück, wenn "Neue Suche" per Dialog-Abbruch verworfen wurde - der
         ''' Aufrufer (GalleryView) nutzt das, um die sichtbare Baumauswahl in dem Fall wieder auf

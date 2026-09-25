@@ -8830,4 +8830,6 @@
   <data name="Rechtsb_ndig_d3e568b4" xml:space="preserve"><value>Højrestillet</value></data>
   <data name="Blocksatz_df32263a" xml:space="preserve"><value>Justeret</value></data>
   <data name="Hier_ablegen_b24b49c1" xml:space="preserve"><value>Slip her</value></data>
+  <data name="Favorit_umbenennen_d1dab6c9" xml:space="preserve"><value>Omdøb favorit</value></data>
+  <data name="Favorit_umbenannt_0_bca7f7e5" xml:space="preserve"><value>Favorit omdøbt: {0}</value></data>
 </root>

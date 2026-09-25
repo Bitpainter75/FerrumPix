@@ -1642,27 +1642,27 @@
                                     <Grid ColumnDefinitions="Auto,*,Auto" VerticalAlignment="Center" HorizontalAlignment="Stretch"
                                                 Classes="baumzeile"
                                           Background="Transparent">
-                                        <!-- Die Favoriten fuehren die Kontextmenues ihrer Ziele mit: je nach
-                                             Art des Favoriten erscheinen die Ordner-, Immich- oder Such-Eintraege
-                                            . Sie rufen dieselben Handler wie in den
-                                             Herkunftsbaeumen - "Aus Favoriten entfernen" steht bewusst getrennt
-                                             darunter, damit es nicht mit "Loeschen" verwechselt wird. -->
+                                        <!-- Die Favoriten fuehren Teile der Kontextmenues ihrer Ziele mit: je
+                                             nach Art des Favoriten erscheinen Such-, Immich- oder Nextcloud-
+                                             Eintraege mit denselben Handlern wie in den Herkunftsbaeumen. Was
+                                             den Favoriten selbst betrifft, steht getrennt darunter.
+                                             KEINE Befehle, die das Ziel umbenennen oder entfernen oder am
+                                             Ordner auf der Platte etwas aendern: beim Ordner weder Neuer
+                                             Ordner, Umbenennen, Kopieren, Ausschneiden noch Loeschen, bei
+                                             Immich und Nextcloud weder Album umbenennen noch
+                                             Album loeschen. In einer Favoritenliste liest man "Umbenennen"
+                                             und "Loeschen" als Befehle an den FAVORITEN - "Umbenennen"
+                                             benannte aber den Ordner um (Forumsbefund), und "Loeschen"
+                                             haette ihn geloescht. Dafuer gibt es die Herkunftsbaeume.
+                                             Einfuegen (in den Ordner wie auf einen Server) und Hochladen
+                                             bleiben: sie fuegen nur hinzu. "Favorit umbenennen" aendert nur
+                                             den Namen in der Liste. -->
                                         <Grid.ContextMenu>
                                             <ContextMenu Opened="OnLocalizedMenuOpened">
-                                                <MenuItem Header="Neuer Ordner" IsVisible="{Binding IsFolderFavorite}"
-                                                          Click="OnFavoriteCreateFolderClick"/>
-                                                <MenuItem Header="Umbenennen" IsVisible="{Binding IsFolderFavorite}"
-                                                          Click="OnFavoriteRenameFolderClick"/>
-                                                <MenuItem Header="Kopieren" IsVisible="{Binding IsFolderFavorite}"
-                                                          Click="OnFavoriteCopyFolderClick"/>
-                                                <MenuItem Header="Ausschneiden" IsVisible="{Binding IsFolderFavorite}"
-                                                          Click="OnFavoriteCutFolderClick"/>
                                                 <MenuItem Header="Einfügen" IsVisible="{Binding IsFolderFavorite}"
                                                           Click="OnFavoritePasteFolderClick"/>
                                                 <MenuItem Header="Pfad kopieren" IsVisible="{Binding IsFolderFavorite}"
                                                           Click="OnFavoriteCopyFolderPathClick"/>
-                                                <MenuItem Header="Löschen" IsVisible="{Binding IsFolderFavorite}"
-                                                          Click="OnFavoriteDeleteFolderClick"/>
 
                                                 <MenuItem Header="Bearbeiten" IsVisible="{Binding IsSavedSearchNode}"
                                                           Click="OnEditVirtualSearchClick"/>
@@ -1673,10 +1673,6 @@
                                                           Click="OnImmichUploadClick"/>
                                                 <MenuItem Header="Einfügen (nach Immich)" IsVisible="{Binding IsImmichNode}"
                                                           Click="OnImmichPasteClick"/>
-                                                <MenuItem Header="Album umbenennen" IsVisible="{Binding IsImmichAlbumNode}"
-                                                          Click="OnImmichRenameAlbumClick"/>
-                                                <MenuItem Header="Album löschen" IsVisible="{Binding CanDeleteImmichAlbum}"
-                                                          Click="OnImmichDeleteAlbumClick"/>
 
                                                 <!-- Dieselben Einträge für die zweite Serverquelle. Sie hängen
                                                      an ihren eigenen Bedingungen, ein Favorit zeigt also immer
@@ -1685,12 +1681,9 @@
                                                           Click="OnNextcloudUploadClick"/>
                                                 <MenuItem Header="Einfügen" IsVisible="{Binding IsNextcloudNode}"
                                                           Click="OnNextcloudPasteClick"/>
-                                                <MenuItem Header="Album umbenennen" IsVisible="{Binding IsNextcloudAlbumNode}"
-                                                          Click="OnNextcloudRenameAlbumClick"/>
-                                                <MenuItem Header="Album löschen" IsVisible="{Binding IsNextcloudAlbumNode}"
-                                                          Click="OnNextcloudDeleteAlbumClick"/>
 
                                                 <Separator/>
+                                                <MenuItem Header="Favorit umbenennen" Click="OnRenameFavoriteClick"/>
                                                 <MenuItem Header="Aus Favoriten entfernen" Click="OnRemoveFavoriteClick"/>
                                             </ContextMenu>
                                         </Grid.ContextMenu>

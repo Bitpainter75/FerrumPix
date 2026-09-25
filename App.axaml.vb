@@ -80,6 +80,31 @@ Public Class App
         ' schriebe jede Ausnahme doppelt ins Protokoll.
     End Sub
 
+    ''' <summary>Ein Zug mit dem ZEICHENSTIFT bleibt bei dem Steuerelement, das ihn angenommen hat.
+    '''
+    ''' <para>Avalonias Scroll-Geste im ScrollViewer reagiert auf Touch UND Stift, nicht auf die
+    ''' Maus (ScrollGestureRecognizer.PointerPressed prueft PointerType Touch oder Pen). Und sie
+    ''' bekommt die Ereignisse auch dann, wenn ein Steuerelement darunter sie schon behandelt hat.
+    ''' Wer mit dem Stift einen Kurvenpunkt, ein Farbrad oder einen Regler in einem Panel zog,
+    ''' scrollte nach wenigen Pixeln das ganze Panel mit, und der Punkt rutschte dabei unter dem
+    ''' Stift weg (Forumsbefund, Wacom unter Xubuntu; mit der Maus ging alles).</para>
+    '''
+    ''' <para>Die Regel: hat ein Steuerelement den Druck des Stifts fuer sich genommen (Handled),
+    ''' darf keine Geste weiter oben den Zug uebernehmen. Die Markierung haelt, solange der Zeiger
+    ''' gefangen ist, also bis zum Loslassen. Ein Druck auf freie Panelflaeche bleibt unbehandelt
+    ''' und scrollt mit dem Stift weiter wie bisher - ein Stift hat kein Mausrad.</para>
+    '''
+    ''' <para>Nach dem eigenen Handler des Steuerelements, deshalb Bubble und auch fuer bereits
+    ''' behandelte Ereignisse; die Geste sitzt weiter oben im Weg und kommt danach.</para></summary>
+    Private Shared Sub KeepPenDragsOnTheirControl()
+        Avalonia.Input.InputElement.PointerPressedEvent.AddClassHandler(Of Avalonia.Input.InputElement)(
+            Sub(element, e)
+                If e.Handled AndAlso e.Pointer.Type = Avalonia.Input.PointerType.Pen Then e.PreventGestureRecognition()
+            End Sub,
+            Avalonia.Interactivity.RoutingStrategies.Direct Or Avalonia.Interactivity.RoutingStrategies.Bubble,
+            handledEventsToo:=True)
+    End Sub
+
     ''' <summary>Zwei Bauformen, deren Inhalt der Durchlauf ueber das Fenster nie zu sehen bekommt.
     ''' Je EIN Klassen-Handler fuer die ganze Anwendung, statt eines Ereignisses je Stelle.</summary>
     Private Shared Sub LocalizeLateContent()
@@ -112,6 +137,7 @@ Public Class App
 
     Public Overrides Sub OnFrameworkInitializationCompleted()
         LocalizeLateContent()
+        KeepPenDragsOnTheirControl()
         If TypeOf ApplicationLifetime Is IClassicDesktopStyleApplicationLifetime Then
             Dim desktop = CType(ApplicationLifetime, IClassicDesktopStyleApplicationLifetime)
 

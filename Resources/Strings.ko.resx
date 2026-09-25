@@ -8834,4 +8834,6 @@
   <data name="Rechtsb_ndig_d3e568b4" xml:space="preserve"><value>오른쪽 맞춤</value></data>
   <data name="Blocksatz_df32263a" xml:space="preserve"><value>양쪽 맞춤</value></data>
   <data name="Hier_ablegen_b24b49c1" xml:space="preserve"><value>여기에 놓기</value></data>
+  <data name="Favorit_umbenennen_d1dab6c9" xml:space="preserve"><value>즐겨찾기 이름 바꾸기</value></data>
+  <data name="Favorit_umbenannt_0_bca7f7e5" xml:space="preserve"><value>즐겨찾기 이름을 바꿨습니다: {0}</value></data>
 </root>

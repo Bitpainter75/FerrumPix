@@ -8790,4 +8790,6 @@
   <data name="Rechtsb_ndig_d3e568b4" xml:space="preserve"><value>Alineado a la derecha</value></data>
   <data name="Blocksatz_df32263a" xml:space="preserve"><value>Justificado</value></data>
   <data name="Hier_ablegen_b24b49c1" xml:space="preserve"><value>Soltar aquí</value></data>
+  <data name="Favorit_umbenennen_d1dab6c9" xml:space="preserve"><value>Cambiar nombre del favorito</value></data>
+  <data name="Favorit_umbenannt_0_bca7f7e5" xml:space="preserve"><value>Favorito renombrado: {0}</value></data>
 </root>

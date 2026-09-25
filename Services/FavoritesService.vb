@@ -151,6 +151,21 @@ Namespace Services
             Return True
         End Function
 
+        ''' <summary>Aendert den Anzeigenamen eines Favoriten. Nur den Eintrag in der Liste - das Ziel
+        ''' dahinter (Ordner, Album, Suche) bleibt unberuehrt.</summary>
+        Public Shared Function Rename(key As String, name As String) As Boolean
+            If String.IsNullOrWhiteSpace(key) OrElse String.IsNullOrWhiteSpace(name) Then Return False
+            Dim entries As List(Of FavoriteEntry) = Nothing
+            If Not TryLoad(entries) Then Return False
+            Dim target = entries.FirstOrDefault(Function(f) String.Equals(f.Key, key, StringComparison.Ordinal))
+            If target Is Nothing Then Return False
+            Dim trimmed = name.Trim()
+            If String.Equals(target.Name, trimmed, StringComparison.Ordinal) Then Return False
+            target.Name = trimmed
+            Save(entries)
+            Return True
+        End Function
+
         Public Shared Function Contains(key As String) As Boolean
             If String.IsNullOrWhiteSpace(key) Then Return False
             Return Load().Any(Function(f) String.Equals(f.Key, key, StringComparison.Ordinal))

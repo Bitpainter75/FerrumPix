@@ -8830,4 +8830,6 @@
   <data name="Rechtsb_ndig_d3e568b4" xml:space="preserve"><value>Høyrejustert</value></data>
   <data name="Blocksatz_df32263a" xml:space="preserve"><value>Blokkjustert</value></data>
   <data name="Hier_ablegen_b24b49c1" xml:space="preserve"><value>Slipp her</value></data>
+  <data name="Favorit_umbenennen_d1dab6c9" xml:space="preserve"><value>Gi favoritten nytt navn</value></data>
+  <data name="Favorit_umbenannt_0_bca7f7e5" xml:space="preserve"><value>Favoritten fikk nytt navn: {0}</value></data>
 </root>

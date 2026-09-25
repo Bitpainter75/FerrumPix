@@ -36,3 +36,9 @@
 
 - Saved searches show their pictures right away, even from folders you have never opened in the
   gallery, and look for new pictures on network shares much faster.
+
+- Dragging a curve point, colour wheel or slider with a graphics tablet pen no longer scrolls the
+  whole panel along with it.
+
+- Favourites can be given their own name in the list without renaming the folder, album or search
+  behind them. Their menu no longer offers to rename or delete the folder or album itself.

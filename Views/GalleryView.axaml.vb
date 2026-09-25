@@ -2560,9 +2560,7 @@ Namespace Views
             GetVm()?.AddFolderFavorite(node.FullPath)
         End Sub
 
-        ''' <summary>Ordnerpfad eines Ordner-Favoriten aus dem angeklickten Menuepunkt. Die
-        ''' Ordner-Aktionen arbeiten alle mit PFADEN, nicht mit FolderNode-Objekten - der Favorit
-        ''' braucht deshalb keinen Umweg ueber den (womoeglich noch gar nicht geladenen) Ordnerbaum.</summary>
+        ''' <summary>Ordnerpfad eines Ordner-Favoriten aus dem angeklickten Menuepunkt.</summary>
         Private Function GetFavoriteFolderPath(sender As Object) As String
             Dim node = GetVirtualNodeFromSender(sender)
             If node Is Nothing OrElse Not node.IsFolderFavorite Then Return Nothing
@@ -2570,34 +2568,16 @@ Namespace Views
             Return If(String.IsNullOrWhiteSpace(path), Nothing, path)
         End Function
 
-        Public Sub OnFavoriteCreateFolderClick(sender As Object, e As RoutedEventArgs)
-            Dim path = GetFavoriteFolderPath(sender)
-            If path Is Nothing Then Return
-            GetVm()?.CreateFolderIn(path)
+        ''' <summary>Aendert NUR den Namen, unter dem der Favorit in der Liste steht. Der Ordner, das
+        ''' Album oder die Suche dahinter bleiben, wie sie sind.</summary>
+        Public Sub OnRenameFavoriteClick(sender As Object, e As RoutedEventArgs)
+            Dim node = GetVirtualNodeFromSender(sender)
+            If node Is Nothing Then Return
+            GetVm()?.RenameFavorite(node)
         End Sub
 
-        Public Sub OnFavoriteRenameFolderClick(sender As Object, e As RoutedEventArgs)
-            Dim path = GetFavoriteFolderPath(sender)
-            If path Is Nothing Then Return
-            GetVm()?.RenamePath(path)
-        End Sub
-
-        Public Sub OnFavoriteCopyFolderClick(sender As Object, e As RoutedEventArgs)
-            Dim vm = GetVm()
-            Dim path = GetFavoriteFolderPath(sender)
-            If vm Is Nothing OrElse path Is Nothing Then Return
-            vm.StoreClipboardPaths({path}, False)
-            CopyPathsToClipboard(New List(Of String) From {path}, False)
-        End Sub
-
-        Public Sub OnFavoriteCutFolderClick(sender As Object, e As RoutedEventArgs)
-            Dim vm = GetVm()
-            Dim path = GetFavoriteFolderPath(sender)
-            If vm Is Nothing OrElse path Is Nothing Then Return
-            vm.StoreClipboardPaths({path}, True)
-            CopyPathsToClipboard(New List(Of String) From {path}, True)
-        End Sub
-
+        ''' <summary>Einfuegen in den Ordner eines Favoriten. Bleibt im Menue, weil es nur hinzufuegt;
+        ''' was den Ordner selbst veraendert, steht dort nicht mehr (siehe GalleryView.axaml).</summary>
         Public Async Sub OnFavoritePasteFolderClick(sender As Object, e As RoutedEventArgs)
             Try
                 Dim path = GetFavoriteFolderPath(sender)
@@ -2620,14 +2600,6 @@ Namespace Views
                 ' und beendet den Prozess.
                 DiagnosticLogService.LogException("GalleryView.OnFavoriteCopyFolderPathClick", ex)
             End Try
-        End Sub
-
-        ''' <summary>Loescht den ORDNER (nicht nur den Favoriten) - wie im Ordnerbaum. Der Favorit
-        ''' bleibt danach als "fehlt"-Eintrag stehen, bis er entfernt wird.</summary>
-        Public Sub OnFavoriteDeleteFolderClick(sender As Object, e As RoutedEventArgs)
-            Dim path = GetFavoriteFolderPath(sender)
-            If path Is Nothing Then Return
-            GetVm()?.DeletePaths({path})
         End Sub
 
         ''' <summary>"Als Favorit" im Immich- oder Suchbaum.</summary>
