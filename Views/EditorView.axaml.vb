@@ -7296,9 +7296,9 @@ Namespace Views
             If feedback IsNot Nothing Then feedback.IsVisible = False
             pointer?.Capture(Nothing)
             DragTrace.Finish(If(drop AndAlso allowed, "abgelegt", "Geste beendet"))
-            ' Die Liste hat beim Druck ihre eigene Markierung gesetzt, das bearbeitete Bild hat
-            ' sich aber nicht geaendert - Markierung zurueck auf das aktuelle Bild.
-            _filmstripController.ScrollToCurrent()
+            ' Die Auswahl der Liste BLEIBT auf dem gezogenen Bild. Frueher sprang sie auf das
+            ' geoeffnete zurueck; seit der Streifen nur auswaehlt, ist das gezogene Bild das, bei
+            ' dem man weiterblaettern oder das man ein zweites Mal ziehen will.
             If Not drop OrElse Not allowed OrElse releaseArgs Is Nothing OrElse String.IsNullOrEmpty(path) Then Return
 
             Dim vm = TryCast(DataContext, EditorViewModel)
@@ -7366,7 +7366,6 @@ Namespace Views
                     DragTrace.Finish("Geste beendet")
                     DragPayloadCache.EndDrag()
                     _filmstripDragActive = False
-                    _filmstripController.ScrollToCurrent()
                 End Try
             Catch ex As Exception
                 ' Async Sub: eine Ausnahme beendete sonst die Anwendung.

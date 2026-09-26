@@ -1,0 +1,132 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:icons="clr-namespace:FerrumPix.Controls"
+             x:Class="FerrumPix.Views.DenoiseFormView">
+    <!-- ENTRAUSCHEN MIT MODELL im Stapel: aus, feste Staerke oder je Bild gemessen, dazu das
+         Modell. Eingebettet in "Filter anwenden" und als eigene Gruppe in "Exportieren nach", wie
+         FilterFormView und ResizeFormView - beide binden dieselben DialogBatchDenoise*-Eigenschaften
+         des MainWindowViewModel, damit die Optionen nicht auseinanderlaufen. Den Knopf "Aus" gibt es
+         nur in "Filter anwenden"; im Export schaltet der Haken der Gruppe.
+         Dieselbe Beschriftungsspalte wie die anderen Formulare, damit die Regler buendig stehen. -->
+    <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto" ColumnSpacing="14" RowSpacing="12">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto" SharedSizeGroup="DialogLabelColumn"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <TextBlock Text="Entrauschen"
+                   VerticalAlignment="Center"
+                   Foreground="{DynamicResource FP.Text.Secondary}"/>
+        <WrapPanel Grid.Column="1" IsVisible="{Binding IsDialogBatchDenoiseAvailable}">
+            <Button Classes="segmented" Margin="0,0,8,6"
+                    Classes.active="{Binding IsDialogBatchDenoiseOff}"
+                    IsVisible="{Binding IsDialogBatchDenoiseOffVisible}"
+                    Click="OnDenoiseModeClick"
+                    Tag="Off">Aus</Button>
+            <Button Classes="segmented" Margin="0,0,8,6"
+                    Classes.active="{Binding IsDialogBatchDenoiseFixed}"
+                    Click="OnDenoiseModeClick"
+                    ToolTip.Tip="Jedes Bild wird mit derselben Stärke entrauscht."
+                    Tag="Fixed">Feste Stärke</Button>
+            <Button Classes="segmented" Margin="0,0,8,6"
+                    Classes.active="{Binding IsDialogBatchDenoiseAuto}"
+                    Click="OnDenoiseModeClick"
+                    ToolTip.Tip="Jedes Bild wird vorher gemessen und bekommt die Stärke, die sein Rauschen braucht. Bilder, die schon sauber sind, bleiben unverändert."
+                    Tag="Auto">Automatisch</Button>
+        </WrapPanel>
+        <TextBlock Grid.Column="1"
+                   IsVisible="{Binding !IsDialogBatchDenoiseAvailable}"
+                   Text="{Binding DialogBatchDenoiseMissingHint}"
+                   TextWrapping="Wrap"
+                   VerticalAlignment="Center"
+                   Foreground="{DynamicResource FP.Text.Secondary}"
+                   FontSize="{DynamicResource FP.Font.Small}"/>
+
+        <TextBlock Grid.Row="1"
+                   Text="Modell"
+                   VerticalAlignment="Center"
+                   IsVisible="{Binding IsDialogBatchDenoiseModelVisible}"
+                   Foreground="{DynamicResource FP.Text.Secondary}"/>
+        <WrapPanel Grid.Row="1" Grid.Column="1" IsVisible="{Binding IsDialogBatchDenoiseModelVisible}">
+            <Button Classes="segmented" Margin="0,0,8,6"
+                    Classes.active="{Binding IsDialogBatchDenoiseQuality}"
+                    IsEnabled="{Binding IsDialogBatchDenoiseQualityAvailable}"
+                    ToolTip.ShowOnDisabled="True"
+                    Click="OnDenoiseModelClick"
+                    ToolTip.Tip="Hält mehr feine Zeichnung, braucht aber ein Vielfaches der Zeit."
+                    Tag="quality">Gründlich</Button>
+            <Button Classes="segmented" Margin="0,0,8,6"
+                    Classes.active="{Binding IsDialogBatchDenoiseFast}"
+                    IsEnabled="{Binding IsDialogBatchDenoiseFastAvailable}"
+                    ToolTip.ShowOnDisabled="True"
+                    Click="OnDenoiseModelClick"
+                    ToolTip.Tip="In einem Sechstel der Zeit, dafür etwas glatter. Für lange Serien."
+                    Tag="fast">Zügig</Button>
+        </WrapPanel>
+
+        <TextBlock Grid.Row="2"
+                   Text="Stärke"
+                   VerticalAlignment="Center"
+                   IsVisible="{Binding IsDialogBatchDenoiseFixed}"
+                   Foreground="{DynamicResource FP.Text.Secondary}"/>
+        <Grid Grid.Row="2" Grid.Column="1"
+              ColumnDefinitions="*,Auto"
+              ColumnSpacing="12"
+              IsVisible="{Binding IsDialogBatchDenoiseFixed}">
+            <icons:RoundSlider Minimum="0"
+                               Maximum="100"
+                               Value="{Binding DialogBatchDenoiseStrength, Mode=TwoWay}"
+                               VerticalAlignment="Center"
+                               HorizontalAlignment="Stretch"
+                               Height="28"
+                               MinHeight="0"/>
+            <TextBlock Grid.Column="1"
+                       Text="{Binding DialogBatchDenoiseStrength, StringFormat={}{0}%}"
+                       MinWidth="42"
+                       TextAlignment="Right"
+                       VerticalAlignment="Center"
+                       Foreground="{DynamicResource FP.Text.Secondary}"/>
+        </Grid>
+
+        <!-- Kein Staerkeregler bei der Automatik, sondern das Ziel: wie viel Korn am Ende
+             stehen bleiben soll. Die Staerke selbst ist bei jedem Bild eine andere. -->
+        <TextBlock Grid.Row="3"
+                   Text="Restkorn"
+                   VerticalAlignment="Center"
+                   IsVisible="{Binding IsDialogBatchDenoiseAuto}"
+                   ToolTip.Tip="Wie viel feines Korn nach dem Entrauschen stehen bleibt. In der Mitte so viel wie bei einer sauberen Aufnahme mit niedrigem ISO."
+                   Foreground="{DynamicResource FP.Text.Secondary}"/>
+        <Grid Grid.Row="3" Grid.Column="1"
+              ColumnDefinitions="*,Auto"
+              ColumnSpacing="12"
+              IsVisible="{Binding IsDialogBatchDenoiseAuto}">
+            <icons:RoundSlider Minimum="0"
+                               Maximum="100"
+                               DefaultValue="50"
+                               Value="{Binding DialogBatchDenoiseGrain, Mode=TwoWay}"
+                               VerticalAlignment="Center"
+                               HorizontalAlignment="Stretch"
+                               Height="28"
+                               MinHeight="0"/>
+            <TextBlock Grid.Column="1"
+                       Text="{Binding DialogBatchDenoiseGrain}"
+                       MinWidth="42"
+                       TextAlignment="Right"
+                       VerticalAlignment="Center"
+                       Foreground="{DynamicResource FP.Text.Secondary}"/>
+        </Grid>
+
+        <TextBlock Grid.Row="4" Grid.Column="1"
+                   Text="Ohne Filter bleibt nur das Entrauschen. Schalte es hier ein, sonst gibt es nichts zu tun."
+                   IsVisible="{Binding IsDialogFilterNoneHintVisible}"
+                   TextWrapping="Wrap"
+                   Foreground="{DynamicResource FP.Text.Secondary}"
+                   FontSize="{DynamicResource FP.Font.Small}"/>
+        <TextBlock Grid.Row="4" Grid.Column="1"
+                   Text="Braucht je entrauschtem Bild mehrere Minuten. Bilder, die im Editor schon entrauscht wurden, werden nicht ein zweites Mal entrauscht."
+                   IsVisible="{Binding IsDialogBatchDenoiseModelVisible}"
+                   TextWrapping="Wrap"
+                   Foreground="{DynamicResource FP.Text.Secondary}"
+                   FontSize="{DynamicResource FP.Font.Small}"/>
+    </Grid>
+</UserControl>

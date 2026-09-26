@@ -12669,7 +12669,8 @@ Namespace ViewModels
                                                              developRaw:=BatchDevelopsRaw(source),
                                                              applyPendingBaked:=applyPendingBaked,
                                                              copyrightText:=result.Copyright,
-                                                             cancel:=cancel)
+                                                             cancel:=cancel,
+                                                             denoise:=result.Denoise)
                          End Function
             Dim nameBuilder = CreateNameBuilder(result.NamePattern)
 

@@ -98,6 +98,10 @@ Namespace ViewModels
         ''' Gehoert zum Bildgroessen-Teil des Dialogs und gilt nur, wenn der eingeschaltet ist.</summary>
         Public Property UpscaleModel As String = ""
 
+        ''' <summary>Entrauschen mit Modell; Nothing heisst: die Gruppe ist aus. Gerechnet wird im
+        ''' Speicherweg vor der Reglerkette, wie in "Filter anwenden".</summary>
+        Public Property Denoise As Services.DenoiseModelService.DenoiseRequest = Nothing
+
         ''' <summary>EXIF/XMP der Quelle in die Zieldatei übernehmen.</summary>
         Public Property PreserveMetadata As Boolean = True
         ''' <summary>Urheberrechtshinweis fuer die geschriebenen Dateien. LEER heisst: das

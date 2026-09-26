@@ -8852,4 +8852,10 @@
   <data name="Als_Ebene_einf_gen_7459c9bb" xml:space="preserve">
     <value>Insérer comme calque</value>
   </data>
+  <data name="Die_ausgew_hlten_Bilder_exportieren_Look_Wasserz_467f6d92" xml:space="preserve">
+    <value>Exporter les images sélectionnées : rendu, filigrane, taille, débruitage et format en une seule passe</value>
+  </data>
+  <data name="Entrauscht_jedes_Bild_mit_einem_gelernten_Modell_e33ced3e" xml:space="preserve">
+    <value>Débruite chaque image avec un modèle entraîné, à intensité fixe ou mesurée pour chaque image. Prend plusieurs minutes par image.</value>
+  </data>
 </root>

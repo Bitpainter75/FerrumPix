@@ -5,12 +5,15 @@
 - **Denoise strength from the picture.** The AI denoiser in the editor can measure how noisy a
   photo is and set a matching strength. Applying a filter to a selection can now denoise as well,
   with a fixed strength or measured for each picture, and pictures that are already clean are left
-  as they are. Choose *No filter* there to only denoise.
+  as they are. Choose *No filter* there to only denoise. *Export to* has its own denoise section.
 
 - **Browse the filmstrip in the editor.** Clicking a picture in the filmstrip below the editor
   only selects it, so you can scroll and look around freely. Double-click, ENTER or the context
   menu opens it; the context menu can also insert it as a layer. Dragging a picture onto the photo
   now shows where it will land.
+
+- **Export button in the gallery.** With pictures selected, an *Export* button appears next to the
+  menu at the bottom of the gallery.
 
 ### Fixes
 

@@ -478,9 +478,14 @@ Namespace Services
                 ' NICHT BEI EINEM PROJEKTBUENDEL. Dessen Bild ist hier schon die fertige Szene samt
                 ' Reglerkette, Texten und Objekten (RenderFpxFullResolution): gemessen wuerde die
                 ' bearbeitete Fassung, und das Modell weichte die Schrift mit auf.
-                If decoded IsNot Nothing AndAlso denoise IsNot Nothing AndAlso workingFull Is Nothing AndAlso isFpxSource Then
+                '
+                ' Auch nicht bei einem Projektbuendel als ZIEL: das speichert Original und Rezept,
+                ' nicht die gerechneten Pixel. Minuten Rechenzeit kaemen dort nicht an.
+                Dim fpxTarget = String.Equals(IO.Path.GetExtension(targetPath), ".fpx", StringComparison.OrdinalIgnoreCase)
+                If decoded IsNot Nothing AndAlso denoise IsNot Nothing AndAlso workingFull Is Nothing AndAlso
+                   (isFpxSource OrElse fpxTarget) Then
                     DiagnosticLogService.LogAlways("Entrauschen",
-                        $"{IO.Path.GetFileName(sourcePath)}: Projektbuendel - im Stapel nicht entrauscht")
+                        $"{IO.Path.GetFileName(sourcePath)}: Projektbuendel als Quelle oder Ziel - im Stapel nicht entrauscht")
                 ElseIf decoded IsNot Nothing AndAlso denoise IsNot Nothing AndAlso workingFull Is Nothing Then
                     Dim hasDenoiseNote = adj.BakedOperations IsNot Nothing AndAlso
                         adj.BakedOperations.Any(Function(o) o IsNot Nothing AndAlso

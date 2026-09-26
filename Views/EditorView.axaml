@@ -1964,10 +1964,11 @@
                 IsVisible="False"
                 IsHitTestVisible="False"
                 ZIndex="190">
+            <!-- NUR DER RAHMEN, keine Fuellung: man zielt auf eine Stelle im Bild und muss das
+                 Bild dafuer sehen. -->
             <Border x:Name="FilmstripDropTargetFrame"
                     BorderBrush="{DynamicResource FP.Accent}"
-                    BorderThickness="2"
-                    Background="{DynamicResource FP.Accent.Dim}" />
+                    BorderThickness="2" />
             <Border x:Name="FilmstripDropBadge"
                     Height="38"
                     Padding="12,0"

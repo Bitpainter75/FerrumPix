@@ -8851,4 +8851,10 @@
   <data name="Als_Ebene_einf_gen_7459c9bb" xml:space="preserve">
     <value>Inserir como camada</value>
   </data>
+  <data name="Die_ausgew_hlten_Bilder_exportieren_Look_Wasserz_467f6d92" xml:space="preserve">
+    <value>Exportar as imagens selecionadas: estilo, marca de água, tamanho, redução de ruído e formato de uma só vez</value>
+  </data>
+  <data name="Entrauscht_jedes_Bild_mit_einem_gelernten_Modell_e33ced3e" xml:space="preserve">
+    <value>Reduz o ruído de cada imagem com um modelo treinado, com intensidade fixa ou medida por imagem. Demora vários minutos por imagem.</value>
+  </data>
 </root>

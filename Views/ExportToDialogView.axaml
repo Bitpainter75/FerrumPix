@@ -47,6 +47,22 @@
             </StackPanel>
         </Border>
 
+        <!-- Entrauschen mit Modell als eigene Gruppe. Der Haken startet bei jedem Oeffnen aus: ein
+             Lauf kostet Minuten je Bild, und ein vergessener Haken macht aus einem schnellen Export
+             einen stundenlangen. Ohne Modell ist er gesperrt, der Hinweis sagt warum. -->
+        <Border Classes="adjustment-group">
+            <StackPanel Spacing="10">
+                <CheckBox Content="Entrauschen"
+                          IsChecked="{Binding DialogExportUseDenoise, Mode=TwoWay}"
+                          IsEnabled="{Binding IsDialogBatchDenoiseAvailable}"
+                          ToolTip.Tip="{Binding DialogExportDenoiseHint}"
+                          ToolTip.ShowOnDisabled="True"/>
+                <Border Classes="adjustment-group" IsVisible="{Binding DialogExportUseDenoise}">
+                    <local:DenoiseFormView/>
+                </Border>
+            </StackPanel>
+        </Border>
+
         <!-- Nur da, wenn in der Auswahl wirklich etwas offen ist (siehe
              MainWindowViewModel.PreparePendingBakedOptionAsync). -->
         <Border Classes="adjustment-group" IsVisible="{Binding IsDialogPendingBakedAvailable}">

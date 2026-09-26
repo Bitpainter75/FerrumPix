@@ -2865,6 +2865,22 @@
                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/menu-2.svg"
                                        Width="18" Height="18"/>
                     </Button>
+                    <!-- Der haeufigste Weg aus der Galerie hinaus, deshalb neben dem Menue und mit
+                         Akzentrahmen. Nur da, solange Bilder ausgewaehlt sind: ohne Auswahl gaebe es
+                         nichts zu exportieren. Derselbe Befehl wie "Exportieren nach" im Menue. -->
+                    <Button Classes="accent-outline" Height="28" Padding="10,0"
+                            Margin="6,0,6,0"
+                            VerticalContentAlignment="Center"
+                            IsVisible="{Binding HasSelectedImage}"
+                            Command="{Binding ExportSelectedCommand}"
+                            ToolTip.Tip="Die ausgewählten Bilder exportieren: Look, Wasserzeichen, Größe, Entrauschen und Format in einem Durchgang">
+                        <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/upload.svg"
+                                           Width="16" Height="16"/>
+                            <TextBlock Text="Exportieren" VerticalAlignment="Center"
+                                       FontSize="{DynamicResource FP.Font.Small}"/>
+                        </StackPanel>
+                    </Button>
                     <Button Classes="icon-btn" Width="28" Height="28"
                             Command="{Binding SelectAllCommand}"
                             ToolTip.Tip="Alle auswählen">

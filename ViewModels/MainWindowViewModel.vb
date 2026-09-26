@@ -1898,6 +1898,10 @@ Namespace ViewModels
             ' denselben Bausteinen wiederholt.
             _dialogBatchOverwriteAvailable = True
             ResetDialogUpscaleModel()
+            ' Entrauschen: Gruppe aus, und ohne den Knopf "Aus" - im Export schaltet der Haken.
+            ResetDialogBatchDenoise()
+            _dialogDenoiseOffAllowed = False
+            RaiseDialogBatchDenoiseChanged()
             DialogExportUseFilter = settings.ExportToUseFilter
             DialogExportUseWatermark = settings.ExportToUseWatermark
             DialogExportUseResize = settings.ExportToUseResize
@@ -1999,6 +2003,7 @@ Namespace ViewModels
                 .NoUpscale = _dialogBatchResizeNoUpscale,
                 .ResizeInterpolation = _dialogBatchResizeInterpolation,
                 .UpscaleModel = upscaleModel,
+                .Denoise = If(_dialogExportUseDenoise, TakeDialogBatchDenoiseRequest(), Nothing),
                 .PreserveMetadata = _dialogSaveAsPreserveExif,
                 .Copyright = _dialogCopyright,
                 .NamePattern = If(_dialogTargetNamePattern, "").Trim(),
@@ -2084,6 +2089,41 @@ Namespace ViewModels
             DialogBatchDenoiseMode = mode
         End Sub
 
+        ''' <summary>Den Knopf "Aus" gibt es nur in "Filter anwenden". Im Export ist das
+        ''' Entrauschen eine zuschaltbare Gruppe; dort schaltet ihr Haken.</summary>
+        Private _dialogDenoiseOffAllowed As Boolean = True
+
+        Public ReadOnly Property IsDialogBatchDenoiseOffVisible As Boolean
+            Get
+                Return _dialogDenoiseOffAllowed
+            End Get
+        End Property
+
+        Private _dialogExportUseDenoise As Boolean = False
+
+        ''' <summary>Die Gruppe "Entrauschen" in "Exportieren nach". Eingeschaltet steht die
+        ''' Stellung nie auf aus - sonst waere die Gruppe an und taete nichts; ausgeschaltet wirkt
+        ''' sie nicht, egal was darin steht.</summary>
+        Public Property DialogExportUseDenoise As Boolean
+            Get
+                Return _dialogExportUseDenoise
+            End Get
+            Set(value As Boolean)
+                Dim v = value AndAlso IsDialogBatchDenoiseAvailable
+                If _dialogExportUseDenoise = v Then Return
+                _dialogExportUseDenoise = v
+                If v AndAlso _dialogBatchDenoiseMode = BatchDenoiseOff Then DialogBatchDenoiseMode = BatchDenoiseAuto
+                Me.RaisePropertyChanged(NameOf(DialogExportUseDenoise))
+            End Set
+        End Property
+
+        Public ReadOnly Property DialogExportDenoiseHint As String
+            Get
+                If Not IsDialogBatchDenoiseAvailable Then Return EditorViewModel.MissingModelHint
+                Return LocalizationService.T("Entrauscht jedes Bild mit einem gelernten Modell, mit fester Stärke oder je Bild gemessen. Braucht mehrere Minuten je Bild.")
+            End Get
+        End Property
+
         Public ReadOnly Property IsDialogBatchDenoiseOff As Boolean
             Get
                 Return _dialogBatchDenoiseMode = BatchDenoiseOff
@@ -2158,7 +2198,9 @@ Namespace ViewModels
                               NameOf(IsDialogBatchDenoiseQuality), NameOf(IsDialogBatchDenoiseAvailable),
                               NameOf(IsDialogBatchDenoiseQualityAvailable), NameOf(IsDialogBatchDenoiseFastAvailable),
                               NameOf(DialogBatchDenoiseStrength), NameOf(DialogBatchDenoiseGrain),
-                              NameOf(IsDialogFilterNoneHintVisible), NameOf(IsDialogPrimaryEnabled)}
+                              NameOf(IsDialogFilterNoneHintVisible), NameOf(IsDialogPrimaryEnabled),
+                              NameOf(IsDialogBatchDenoiseOffVisible), NameOf(DialogExportUseDenoise),
+                              NameOf(DialogExportDenoiseHint)}
                 Me.RaisePropertyChanged(name)
             Next
         End Sub
@@ -2168,6 +2210,8 @@ Namespace ViewModels
         Private Sub ResetDialogBatchDenoise()
             Dim settings = AppSettingsService.Load()
             _dialogBatchDenoiseMode = BatchDenoiseOff
+            _dialogDenoiseOffAllowed = True
+            _dialogExportUseDenoise = False
             _dialogBatchDenoiseFast = String.Equals(settings.BatchDenoiseModel, "fast", StringComparison.OrdinalIgnoreCase)
             If _dialogBatchDenoiseFast AndAlso Not DenoiseModelService.FastAvailable Then _dialogBatchDenoiseFast = False
             If Not _dialogBatchDenoiseFast AndAlso Not DenoiseModelService.Available AndAlso

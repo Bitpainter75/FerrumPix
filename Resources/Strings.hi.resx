@@ -8896,4 +8896,10 @@
   <data name="Als_Ebene_einf_gen_7459c9bb" xml:space="preserve">
     <value>परत के रूप में जोड़ें</value>
   </data>
+  <data name="Die_ausgew_hlten_Bilder_exportieren_Look_Wasserz_467f6d92" xml:space="preserve">
+    <value>चुनी हुई छवियाँ निर्यात करें: लुक, वॉटरमार्क, आकार, शोर हटाना और फ़ॉर्मेट एक ही बार में</value>
+  </data>
+  <data name="Entrauscht_jedes_Bild_mit_einem_gelernten_Modell_e33ced3e" xml:space="preserve">
+    <value>हर छवि से एक प्रशिक्षित मॉडल से शोर हटाता है, स्थिर तीव्रता से या हर छवि के लिए मापकर। हर छवि में कई मिनट लगते हैं।</value>
+  </data>
 </root>

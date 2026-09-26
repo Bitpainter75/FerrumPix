@@ -8892,4 +8892,10 @@
   <data name="Als_Ebene_einf_gen_7459c9bb" xml:space="preserve">
     <value>Invoegen als laag</value>
   </data>
+  <data name="Die_ausgew_hlten_Bilder_exportieren_Look_Wasserz_467f6d92" xml:space="preserve">
+    <value>De geselecteerde foto's exporteren: look, watermerk, grootte, ontruisen en formaat in één keer</value>
+  </data>
+  <data name="Entrauscht_jedes_Bild_mit_einem_gelernten_Modell_e33ced3e" xml:space="preserve">
+    <value>Ontruist elke foto met een getraind model, met een vaste sterkte of per foto gemeten. Kost enkele minuten per foto.</value>
+  </data>
 </root>
