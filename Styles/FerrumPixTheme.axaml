@@ -1704,6 +1704,42 @@
     <Style Selector="Button.video-play-badge:pressed /template/ ContentPresenter">
         <Setter Property="Background" Value="{DynamicResource FP.Accent.Dark}"/>
     </Style>
+    <!-- Der Auswahlkreis auf der KACHEL: ein durchsichtiger, groesserer Knopf als Trefferflaeche,
+         darin der sichtbare Kreis. Aussehen wie Button.selection-badge, nur am inneren Border. -->
+    <Style Selector="Button.selection-badge-hit">
+        <Setter Property="Padding" Value="0"/>
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="CornerRadius" Value="14"/>
+    </Style>
+    <Style Selector="Button.selection-badge-hit /template/ ContentPresenter">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderBrush" Value="Transparent"/>
+    </Style>
+    <Style Selector="Button.selection-badge-hit:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderBrush" Value="Transparent"/>
+    </Style>
+    <Style Selector="Border.selection-badge-dot">
+        <Setter Property="CornerRadius" Value="8"/>
+        <Setter Property="Background" Value="#CC10161B"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Border.Strong}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+    </Style>
+    <Style Selector="Button.selection-badge-hit:pointerover Border.selection-badge-dot">
+        <Setter Property="Background" Value="{DynamicResource FP.Bg.Hover}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Accent}"/>
+    </Style>
+    <Style Selector="Border.selection-badge-dot.active">
+        <Setter Property="Background" Value="{DynamicResource FP.Accent}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Accent}"/>
+    </Style>
+    <Style Selector="Border.selection-badge-dot icons|SvgIcon.badge-glyph">
+        <Setter Property="IconBrush" Value="{DynamicResource FP.Text.Secondary}"/>
+    </Style>
+    <Style Selector="Border.selection-badge-dot.active icons|SvgIcon.badge-glyph">
+        <Setter Property="IconBrush" Value="White"/>
+    </Style>
     <Style Selector="Button.selection-badge.compact">
         <Setter Property="Width" Value="14"/>
         <Setter Property="Height" Value="14"/>

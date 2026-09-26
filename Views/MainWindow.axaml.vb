@@ -581,6 +581,14 @@ Namespace Views
             Dim titleBar = Me.FindControl(Of Grid)("TitleBar")
             If titleBar IsNot Nothing Then
                 AddHandler titleBar.PointerPressed, AddressOf TitleBarPointerPressed
+                ' Der Fensterzug beginnt erst nach ein paar Punkten Weg (siehe PendingMoveDrag).
+                ' Bewegung und Loslassen auch dann, wenn ein Steuerelement sie schon behandelt hat.
+                titleBar.AddHandler(InputElement.PointerMovedEvent, AddressOf TitleBarPointerMoved,
+                                    Avalonia.Interactivity.RoutingStrategies.Tunnel Or Avalonia.Interactivity.RoutingStrategies.Bubble,
+                                    handledEventsToo:=True)
+                titleBar.AddHandler(InputElement.PointerReleasedEvent, AddressOf TitleBarPointerReleased,
+                                    Avalonia.Interactivity.RoutingStrategies.Tunnel Or Avalonia.Interactivity.RoutingStrategies.Bubble,
+                                    handledEventsToo:=True)
             End If
 
             ApplyWindowButtonsSide()
@@ -686,7 +694,43 @@ Namespace Views
                 Return
             End If
 
-            BeginMoveDrag(e)
+            ' ERST NACH EIN PAAR PUNKTEN WEG, nicht beim Druecken. Unter X11 uebernimmt der
+            ' Fenstermanager mit BeginMoveDrag den Zeiger, auch bei einem blossen Klick ohne
+            ' Bewegung - und gibt ihn so spaet zurueck, dass auch der naechste Klick verloren geht.
+            ' In der Fusszeile der Galerie liegt das dicht neben kleinen Knoepfen: wer knapp daneben
+            ' oder auf einen gerade GESPERRTEN Knopf druckte (ein gesperrter Knopf ist nicht
+            ' treffbar, der Druck landet auf der Leiste), verlor damit den Klick und oft den
+            ' naechsten dazu (Nutzerbefund: Sterne, Herz, Exportieren, Alle an/abwaehlen).
+            ' BeginMoveDrag nimmt unter X11 die AKTUELLE Zeigerposition und braucht den Druck nur, um
+            ' den eigenen Griff zu loesen (Avalonia.X11 12.1.3, X11Window.BeginMoveResize); unter
+            ' Windows und macOS laeuft der Zug ebenso aus der gedrueckten Taste heraus.
+            _pendingMoveDrag = e
+            _pendingMoveDragStart = e.GetPosition(Me)
+        End Sub
+
+        ''' <summary>Der Druck in einem Ziehbereich, der noch zum Fensterzug werden kann. Nothing,
+        ''' solange keiner ansteht.</summary>
+        Private _pendingMoveDrag As PointerPressedEventArgs
+        Private _pendingMoveDragStart As Point
+
+        ''' <summary>So weit muss der Zeiger wandern, bis aus dem Druck ein Fensterzug wird.</summary>
+        Private Const MoveDragThreshold As Double = 4.0
+
+        Private Sub TitleBarPointerMoved(sender As Object, e As PointerEventArgs)
+            Dim pending = _pendingMoveDrag
+            If pending Is Nothing Then Return
+            If Not e.GetCurrentPoint(Me).Properties.IsLeftButtonPressed Then
+                _pendingMoveDrag = Nothing
+                Return
+            End If
+            Dim delta = e.GetPosition(Me) - _pendingMoveDragStart
+            If Math.Abs(delta.X) < MoveDragThreshold AndAlso Math.Abs(delta.Y) < MoveDragThreshold Then Return
+            _pendingMoveDrag = Nothing
+            BeginMoveDrag(pending)
+        End Sub
+
+        Private Sub TitleBarPointerReleased(sender As Object, e As PointerReleasedEventArgs)
+            _pendingMoveDrag = Nothing
         End Sub
 
         Private Function IsInTopWindowDragArea(source As Control) As Boolean

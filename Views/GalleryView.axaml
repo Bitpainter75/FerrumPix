@@ -1959,22 +1959,35 @@
                                                                    VerticalAlignment="Center"
                                                                    IconBrush="White"/>
                                                 </Button>
-                                                <Button Classes="selection-badge"
-                                                        Width="16"
-                                                        Height="16"
+                                                <!-- DIE TREFFERFLAECHE IST GROESSER ALS DER KREIS.
+                                                     Sichtbar bleibt der 16er-Kreis an derselben
+                                                     Stelle (Mitte 16 Punkte von den Kanten), der
+                                                     Knopf darum ist 28 Punkte gross und
+                                                     durchsichtig. Ein Kreis von 16 Punkten war zu
+                                                     knapp zu treffen (Nutzerbefund). -->
+                                                <Button Classes="selection-badge-hit"
+                                                        Width="28"
+                                                        Height="28"
                                                         IsVisible="{Binding IsSelectableEntry}"
-                                                        Classes.active="{Binding IsSelected}"
                                                         HorizontalAlignment="Right"
                                                         VerticalAlignment="Top"
-                                                        Margin="8"
+                                                        Margin="2"
                                                         Click="OnSelectionBadgeClick"
                                                         ToolTip.Tip="Auswählen">
-                                                    <!-- Ohne den Kreis aus circle-check: der Knopf selbst ist schon rund. -->
-                                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/check.svg"
-                                                                   Width="14"
-                                                                   Height="14"
-                                                                   Classes="badge-glyph"
-                                                                   IsVisible="{Binding IsSelected}"/>
+                                                    <Border Classes="selection-badge-dot"
+                                                            Classes.active="{Binding IsSelected}"
+                                                            Width="16" Height="16"
+                                                            HorizontalAlignment="Center"
+                                                            VerticalAlignment="Center">
+                                                        <!-- Ohne den Kreis aus circle-check: der Kreis selbst ist schon rund. -->
+                                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/check.svg"
+                                                                       Width="14"
+                                                                       Height="14"
+                                                                       HorizontalAlignment="Center"
+                                                                       VerticalAlignment="Center"
+                                                                       Classes="badge-glyph"
+                                                                       IsVisible="{Binding IsSelected}"/>
+                                                    </Border>
                                                 </Button>
                                                 <!-- DIE AUFSAETZE DER KACHEL stehen bewusst FEST in
                                                      der Vorlage und werden ueber Opacity versteckt.
@@ -1994,7 +2007,7 @@
                                                             VerticalAlignment="Top"
                                                             Margin="8"
                                                             Spacing="5">
-                                                    <Button Classes="gallery-overlay-btn"
+                                                    <Button Classes="gallery-overlay-btn tile-action-hit"
                                                             Width="30"
                                                             Height="30"
                                                             Padding="0"
@@ -2006,7 +2019,7 @@
                                                                        Height="17"
                                                                        IconBrush="White"/>
                                                     </Button>
-                                                    <Button Classes="gallery-overlay-btn"
+                                                    <Button Classes="gallery-overlay-btn tile-action-hit"
                                                             Width="30"
                                                             Height="30"
                                                             Padding="0"
@@ -2018,7 +2031,7 @@
                                                                        Height="17"
                                                                        IconBrush="White"/>
                                                     </Button>
-                                                    <Button Classes="gallery-overlay-btn danger"
+                                                    <Button Classes="gallery-overlay-btn danger tile-action-hit"
                                                             Width="30"
                                                             Height="30"
                                                             Padding="0"
@@ -2039,7 +2052,7 @@
                                                             Margin="8,0,0,8"
                                                             Spacing="1"
                                                             IsVisible="{Binding IsImage}">
-                                                    <Button Classes="star-btn compact" Background="Transparent" BorderThickness="0" Padding="0"
+                                                    <Button Classes="star-btn compact tile-action-hit" Background="Transparent" BorderThickness="0" Padding="0" Width="28" Height="28"
                                                             Classes.active="{Binding Rating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=1}"
                                                             Tag="1"
                                                             Click="OnHoverSetRatingClick">
@@ -2047,7 +2060,7 @@
                                                                        Classes="rating-star"
                                                                        Width="16" Height="16" />
                                                     </Button>
-                                                    <Button Classes="star-btn compact" Background="Transparent" BorderThickness="0" Padding="0"
+                                                    <Button Classes="star-btn compact tile-action-hit" Background="Transparent" BorderThickness="0" Padding="0" Width="28" Height="28"
                                                             Classes.active="{Binding Rating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=2}"
                                                             Tag="2"
                                                             Click="OnHoverSetRatingClick">
@@ -2055,7 +2068,7 @@
                                                                        Classes="rating-star"
                                                                        Width="16" Height="16" />
                                                     </Button>
-                                                    <Button Classes="star-btn compact" Background="Transparent" BorderThickness="0" Padding="0"
+                                                    <Button Classes="star-btn compact tile-action-hit" Background="Transparent" BorderThickness="0" Padding="0" Width="28" Height="28"
                                                             Classes.active="{Binding Rating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=3}"
                                                             Tag="3"
                                                             Click="OnHoverSetRatingClick">
@@ -2063,7 +2076,7 @@
                                                                        Classes="rating-star"
                                                                        Width="16" Height="16" />
                                                     </Button>
-                                                    <Button Classes="star-btn compact" Background="Transparent" BorderThickness="0" Padding="0"
+                                                    <Button Classes="star-btn compact tile-action-hit" Background="Transparent" BorderThickness="0" Padding="0" Width="28" Height="28"
                                                             Classes.active="{Binding Rating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=4}"
                                                             Tag="4"
                                                             Click="OnHoverSetRatingClick">
@@ -2071,7 +2084,7 @@
                                                                        Classes="rating-star"
                                                                        Width="16" Height="16" />
                                                     </Button>
-                                                    <Button Classes="star-btn compact" Background="Transparent" BorderThickness="0" Padding="0"
+                                                    <Button Classes="star-btn compact tile-action-hit" Background="Transparent" BorderThickness="0" Padding="0" Width="28" Height="28"
                                                             Classes.active="{Binding Rating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=5}"
                                                             Tag="5"
                                                             Click="OnHoverSetRatingClick">
@@ -2184,10 +2197,10 @@
                                                             </icons:SvgIcon>
                                                         </Border>
                                                     </StackPanel>
-                                                    <Button Classes="favorite-btn image-favorite-btn gallery-toggle-badge"
+                                                    <Button Classes="favorite-btn image-favorite-btn gallery-toggle-badge tile-action-hit"
                                                         Classes.badge-always="{Binding DataContext.FavoriteBadgeAlwaysVisible, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                                        Width="26"
-                                                        Height="26"
+                                                        Width="28"
+                                                        Height="28"
                                                         Padding="0"
                                                         HorizontalAlignment="Right"
                                                         VerticalAlignment="Bottom"
@@ -2922,7 +2935,7 @@
                      Wirkung. -->
                 <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center" HorizontalAlignment="Center"
                             IsVisible="{Binding IsMapView}">
-                    <Button Classes="ghost" Height="20" Padding="4,0,4,2" VerticalContentAlignment="Center" Focusable="False"
+                    <Button Classes="ghost" Height="28" MinWidth="24" Padding="6,0,6,2" VerticalContentAlignment="Center" Focusable="False"
                             Command="{Binding MapZoomOutCommand}" ToolTip.Tip="Verkleinern">
                         <TextBlock Text="−" FontSize="{DynamicResource FP.Glyph.Large}" Foreground="{DynamicResource FP.Text.Secondary}" VerticalAlignment="Center"/>
                     </Button>
@@ -2932,7 +2945,7 @@
                                        DefaultValue="2"
                                        Value="{Binding MapZoom}"
                                        VerticalAlignment="Center"/>
-                    <Button Classes="ghost" Height="20" Padding="4,0,4,2" VerticalContentAlignment="Center" Focusable="False"
+                    <Button Classes="ghost" Height="28" MinWidth="24" Padding="6,0,6,2" VerticalContentAlignment="Center" Focusable="False"
                             Command="{Binding MapZoomInCommand}" ToolTip.Tip="Vergrößern">
                         <TextBlock Text="+" FontSize="{DynamicResource FP.Glyph.Large}" Foreground="{DynamicResource FP.Text.Secondary}" VerticalAlignment="Center"/>
                     </Button>
@@ -2940,7 +2953,7 @@
 
                 <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center" HorizontalAlignment="Center"
                             IsVisible="{Binding !IsMapView}">
-                    <Button Classes="ghost" Height="20" Padding="4,0,4,2" VerticalContentAlignment="Center" Focusable="False"
+                    <Button Classes="ghost" Height="28" MinWidth="24" Padding="6,0,6,2" VerticalContentAlignment="Center" Focusable="False"
                             Command="{Binding DecreaseThumbnailSizeCommand}" ToolTip.Tip="Verkleinern">
                         <TextBlock Text="−" FontSize="{DynamicResource FP.Glyph.Large}" Foreground="{DynamicResource FP.Text.Secondary}" VerticalAlignment="Center"/>
                     </Button>
@@ -2951,7 +2964,7 @@
                                        Value="{Binding ThumbnailSize}"
                                        DragIncrement="2"
                                        VerticalAlignment="Center"/>
-                    <Button Classes="ghost" Height="20" Padding="4,0,4,2" VerticalContentAlignment="Center" Focusable="False"
+                    <Button Classes="ghost" Height="28" MinWidth="24" Padding="6,0,6,2" VerticalContentAlignment="Center" Focusable="False"
                             Command="{Binding IncreaseThumbnailSizeCommand}" ToolTip.Tip="Vergrößern">
                         <TextBlock Text="+" FontSize="{DynamicResource FP.Glyph.Large}" Foreground="{DynamicResource FP.Text.Secondary}" VerticalAlignment="Center"/>
                     </Button>
@@ -2968,35 +2981,35 @@
                            VerticalAlignment="Center"/>
                     <StackPanel  Orientation="Horizontal" Spacing="1" VerticalAlignment="Center"
                                  IsVisible="{Binding HasSelectedImage}">
-                        <Button Classes="star-btn" Background="Transparent" BorderThickness="0" Padding="1"
+                        <Button Classes="star-btn" Background="Transparent" BorderThickness="0" Padding="1" Width="22" Height="28"
                                 Classes.active="{Binding SelectedRating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=1}"
                                 Command="{Binding SetSelectedRatingCommand}" CommandParameter="1">
                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/star.svg"
                                            Classes="rating-star"
                                            Width="18" Height="18"/>
                         </Button>
-                        <Button Classes="star-btn" Background="Transparent" BorderThickness="0" Padding="1"
+                        <Button Classes="star-btn" Background="Transparent" BorderThickness="0" Padding="1" Width="22" Height="28"
                                 Classes.active="{Binding SelectedRating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=2}"
                                 Command="{Binding SetSelectedRatingCommand}" CommandParameter="2">
                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/star.svg"
                                            Classes="rating-star"
                                            Width="18" Height="18"/>
                         </Button>
-                        <Button Classes="star-btn" Background="Transparent" BorderThickness="0" Padding="1"
+                        <Button Classes="star-btn" Background="Transparent" BorderThickness="0" Padding="1" Width="22" Height="28"
                                 Classes.active="{Binding SelectedRating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=3}"
                                 Command="{Binding SetSelectedRatingCommand}" CommandParameter="3">
                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/star.svg"
                                            Classes="rating-star"
                                            Width="18" Height="18"/>
                         </Button>
-                        <Button Classes="star-btn" Background="Transparent" BorderThickness="0" Padding="1"
+                        <Button Classes="star-btn" Background="Transparent" BorderThickness="0" Padding="1" Width="22" Height="28"
                                 Classes.active="{Binding SelectedRating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=4}"
                                 Command="{Binding SetSelectedRatingCommand}" CommandParameter="4">
                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/star.svg"
                                            Classes="rating-star"
                                            Width="18" Height="18"/>
                         </Button>
-                        <Button Classes="star-btn" Background="Transparent" BorderThickness="0" Padding="1"
+                        <Button Classes="star-btn" Background="Transparent" BorderThickness="0" Padding="1" Width="22" Height="28"
                                 Classes.active="{Binding SelectedRating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=5}"
                                 Command="{Binding SetSelectedRatingCommand}" CommandParameter="5">
                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/star.svg"
@@ -3004,7 +3017,7 @@
                                            Width="18" Height="18"/>
                         </Button>
                         <Button Classes="icon-btn"
-                                Width="24" Height="24" VerticalAlignment="Center" Margin="6,0,0,0"
+                                Width="28" Height="28" VerticalAlignment="Center" Margin="4,0,0,0"
                                 Command="{Binding ToggleSelectedFavoriteCommand}"
                                 ToolTip.Tip="Favorit">
                             <Grid Width="20" Height="20">

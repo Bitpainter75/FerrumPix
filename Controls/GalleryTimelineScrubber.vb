@@ -3,6 +3,7 @@ Imports Avalonia
 Imports Avalonia.Controls
 Imports Avalonia.Input
 Imports Avalonia.Media
+Imports Avalonia.Rendering
 
 Namespace Controls
 
@@ -23,6 +24,22 @@ Namespace Controls
     ''' Das Control hält keinerlei ViewModel-Bezug: die View füttert es über SetData/SetScrollState.</summary>
     Public Class GalleryTimelineScrubber
         Inherits Control
+        Implements ICustomHitTest
+
+        ''' <summary>So breit ist die Flaeche am rechten Rand, die Klicks und Zeigen annimmt.
+        '''
+        ''' NICHT DIE GANZE LEISTE. Sie ist 64 Punkte breit und liegt UEBER den Kacheln, und
+        ''' vorher nahm sie ueberall Klicks an: der Auswahlkreis der rechten Spalte lag darunter und
+        ''' liess sich nicht mehr treffen, ein Bild dort war nicht abzuwaehlen (Nutzerbefund). Die
+        ''' Beschriftung links davon bleibt zu sehen, laesst Klicks aber zu den Kacheln durch.
+        ''' Angenommen werden sie nur auf dem Streifen mit Strichen und Positionsband; waehrend des
+        ''' Ziehens ueberall, sonst risse der Zug ab, sobald der Zeiger etwas nach links wandert.</summary>
+        Private Const HitStripWidth As Double = 24.0
+
+        Public Function HitTest(point As Point) As Boolean Implements ICustomHitTest.HitTest
+            If Not New Rect(Bounds.Size).Contains(point) Then Return False
+            Return _isDragging OrElse point.X >= Bounds.Width - HitStripWidth
+        End Function
 
         Public Shared ReadOnly LabelBrushProperty As StyledProperty(Of IBrush) =
             AvaloniaProperty.Register(Of GalleryTimelineScrubber, IBrush)(NameOf(LabelBrush), Brushes.Gray)
