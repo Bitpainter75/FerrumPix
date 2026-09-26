@@ -61,6 +61,14 @@ Namespace ViewModels
         ' Bewertung, Favorit und Etikett stehen NICHT hier: sie sind keine Beschriftungen mit
         ' Symbol, sondern eigene Zeilen aus Sternen, Herz und Farbkreisen. Siehe MenuWidgets.
 
+        Public Shared Function OpenInEditor(c As ICommand) As AppAction
+            Return Build("Im Editor öffnen", "photo-edit", c)
+        End Function
+
+        Public Shared Function InsertAsLayer(c As ICommand) As AppAction
+            Return Build("Als Ebene einfügen", "photo-plus", c)
+        End Function
+
         Public Shared Function ShowImage(c As ICommand) As AppAction
             Return Build("Anzeigen", "eye", c)
         End Function

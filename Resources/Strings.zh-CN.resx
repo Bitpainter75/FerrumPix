@@ -8790,4 +8790,64 @@
   <data name="Hier_ablegen_b24b49c1" xml:space="preserve"><value>拖放到此处</value></data>
   <data name="Favorit_umbenennen_d1dab6c9" xml:space="preserve"><value>重命名收藏</value></data>
   <data name="Favorit_umbenannt_0_bca7f7e5" xml:space="preserve"><value>已重命名收藏：{0}</value></data>
+  <data name="St_rke_aus_dem_Bild_messen_752b2b27" xml:space="preserve">
+    <value>根据图像测量强度</value>
+  </data>
+  <data name="Misst_das_Rauschen_im_Bild_und_stellt_die_St_rke_4738612a" xml:space="preserve">
+    <value>测量图像中的杂色，并设置强度，使保留的颗粒大致与低 ISO 的干净照片相当。降噪只有点击下方的某个按钮后才开始。</value>
+  </data>
+  <data name="Feste_St_rke_f186f29f" xml:space="preserve">
+    <value>固定强度</value>
+  </data>
+  <data name="Jedes_Bild_wird_mit_derselben_St_rke_entrauscht_f2a7aaf8" xml:space="preserve">
+    <value>每张图像都以相同强度降噪。</value>
+  </data>
+  <data name="Jedes_Bild_wird_vorher_gemessen_und_bekommt_die__d87ead4c" xml:space="preserve">
+    <value>每张图像都会先测量，并获得其杂色所需的强度。已经干净的图像保持不变。</value>
+  </data>
+  <data name="H_lt_mehr_feine_Zeichnung_braucht_aber_ein_Vielf_d27295d5" xml:space="preserve">
+    <value>保留更多细节，但耗时多出数倍。</value>
+  </data>
+  <data name="Gr_ndlich_fb7d073f" xml:space="preserve">
+    <value>细致</value>
+  </data>
+  <data name="In_einem_Sechstel_der_Zeit_daf_r_etwas_glatter_F_a8885661" xml:space="preserve">
+    <value>只需六分之一的时间，但效果稍显平滑。适合长系列。</value>
+  </data>
+  <data name="Z_gig_193d53f6" xml:space="preserve">
+    <value>快速</value>
+  </data>
+  <data name="Restkorn_17ea498e" xml:space="preserve">
+    <value>保留颗粒</value>
+  </data>
+  <data name="Wie_viel_feines_Korn_nach_dem_Entrauschen_stehen_8c3a67d3" xml:space="preserve">
+    <value>降噪后保留多少细颗粒。居中时与低 ISO 的干净照片相当。</value>
+  </data>
+  <data name="Braucht_je_entrauschtem_Bild_mehrere_Minuten_Bil_ec60b5b2" xml:space="preserve">
+    <value>每张降噪图像需要数分钟。已在编辑器中降噪的图像不会再次降噪。</value>
+  </data>
+  <data name="An_diesem_Bild_l_sst_sich_das_Rauschen_nicht_mes_a2b892a5" xml:space="preserve">
+    <value>无法测量此图像的杂色。</value>
+  </data>
+  <data name="Rauschen_gemessen_0_Die_St_rke_steht_auf_1_8eeae66d" xml:space="preserve">
+    <value>测得杂色：{0}。强度已设为 {1}。</value>
+  </data>
+  <data name="Rauschen_gemessen_0_Das_Bild_ist_schon_sauber_En_078f8deb" xml:space="preserve">
+    <value>测得杂色：{0}。图像已经很干净，这里几乎不值得降噪。</value>
+  </data>
+  <data name="Ohne_Filter_384e7a5b" xml:space="preserve">
+    <value>不使用滤镜</value>
+  </data>
+  <data name="Entrauscht_8dbd8e34" xml:space="preserve">
+    <value>已降噪</value>
+  </data>
+  <data name="Kein_Look_die_Bilder_werden_nur_entrauscht_Das_E_843bf648" xml:space="preserve">
+    <value>不套用风格，只对图像降噪。降噪在下方设置。</value>
+  </data>
+  <data name="Ohne_Filter_bleibt_nur_das_Entrauschen_Schalte_e_0ade8bd6" xml:space="preserve">
+    <value>不使用滤镜时只剩降噪。请在这里开启，否则没有可做的事。</value>
+  </data>
+  <data name="Als_Ebene_einf_gen_7459c9bb" xml:space="preserve">
+    <value>作为图层插入</value>
+  </data>
 </root>

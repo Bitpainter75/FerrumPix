@@ -1687,15 +1687,29 @@
                 <!-- Bewegen und Loslassen haengen an der LISTE, nicht am einzelnen Vorschaubild:
                      der Zug auf die Leinwand beginnt sonst nicht, wenn der Zeiger das Bild in
                      einem Sprung verlaesst, und ein Loslassen zwischen zwei Bildern taete nichts.
-                     Gedrueckt wird weiterhin am Bild - nur dort steht, welches gemeint ist. -->
+                     Gedrueckt wird weiterhin am Bild - nur dort steht, welches gemeint ist.
+
+                     AUSWAEHLEN IST NICHT OEFFNEN. Ein Klick und die Pfeiltasten waehlen nur aus,
+                     so laesst sich frei blaettern, um ein Bild zu finden, das man auf das offene
+                     zieht. Geoeffnet wird mit Doppelklick, EINGABE oder dem Kontextmenue. Deshalb
+                     haengt die Auswahl der Liste NICHT mehr am geoeffneten Bild: das traegt seinen
+                     eigenen Akzentrahmen (IsSelected am Element), die Auswahl einen hellen. -->
+                <!-- Die Auswahl zum Blaettern. Nur die Randfarbe: dieselbe Staerke wie der
+                     Rahmen des geoeffneten Bildes, sonst verschoebe sich die Kachel. -->
+                <Grid.Styles>
+                    <Style Selector="ListBox.filmstrip-list ListBoxItem:selected Border.thumb-card:not(.selected)">
+                        <Setter Property="BorderBrush" Value="{DynamicResource FP.Text.Primary}"/>
+                        <Setter Property="BorderThickness" Value="2"/>
+                    </Style>
+                </Grid.Styles>
                 <ListBox Name="FilmstripListBox"
                          Classes="filmstrip-list"
                          Height="110"
                          PointerMoved="OnFilmstripPointerMoved"
                          PointerReleased="OnFilmstripPointerReleased"
+                         KeyDown="OnFilmstripKeyDown"
                          IsVisible="{Binding ShowFilmstrip}"
                          ItemsSource="{Binding FilmstripItems}"
-                         SelectedIndex="{Binding CurrentFilmstripIndex, Mode=OneWay}"
                          SelectionMode="Single"
                          ScrollViewer.HorizontalScrollBarVisibility="Auto"
                          ScrollViewer.VerticalScrollBarVisibility="Disabled">
@@ -1711,7 +1725,8 @@
                                     Classes.flat="{Binding DataContext.FilmstripTilesAreFlat, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                     Classes.selected="{Binding IsSelected}"
                                     ClipToBounds="True"
-                                    PointerPressed="OnFilmstripItemPressed">
+                                    PointerPressed="OnFilmstripItemPressed"
+                                    DoubleTapped="OnFilmstripItemDoubleTapped">
                                 <Border CornerRadius="{Binding DataContext.FilmstripImageCornerRadius, RelativeSource={RelativeSource AncestorType=UserControl}}" ClipToBounds="True">
                                     <Grid>
                                         <Image Source="{Binding Thumbnail}" Stretch="UniformToFill"
@@ -1938,6 +1953,39 @@
                    VerticalAlignment="Center"
                    Margin="60" />
         </Panel>
+
+        <!-- ZIEHEN AUS DEM FILMSTREIFEN, wie in der Galerie: ein eigener Zug statt des nativen
+             Drag and Drop, und eine eigene Rueckmeldung. Unter X11 zeigt der native Zug bei einem
+             Ziel in der eigenen Anwendung oft den Verbotszeiger, und wo abgelegt wird, war nicht zu
+             sehen. Der Rahmen liegt ueber dem angezeigten Bild, das Abzeichen folgt dem Zeiger.
+             Beides nur, solange der Zeiger ueber dem Bild steht. -->
+        <Canvas x:Name="FilmstripDropFeedbackCanvas"
+                Grid.RowSpan="3" Grid.ColumnSpan="5"
+                IsVisible="False"
+                IsHitTestVisible="False"
+                ZIndex="190">
+            <Border x:Name="FilmstripDropTargetFrame"
+                    BorderBrush="{DynamicResource FP.Accent}"
+                    BorderThickness="2"
+                    Background="{DynamicResource FP.Accent.Dim}" />
+            <Border x:Name="FilmstripDropBadge"
+                    Height="38"
+                    Padding="12,0"
+                    CornerRadius="19"
+                    Background="{DynamicResource FP.Accent}"
+                    BoxShadow="0 3 12 #88000000">
+                <StackPanel Orientation="Horizontal" Spacing="7" VerticalAlignment="Center">
+                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/photo-plus.svg"
+                                   Width="18" Height="18"
+                                   VerticalAlignment="Center"
+                                   IconBrush="#FFFFFFFF"/>
+                    <TextBlock Text="Als Ebene einfügen"
+                               Foreground="#FFFFFFFF"
+                               FontWeight="SemiBold"
+                               VerticalAlignment="Center"/>
+                </StackPanel>
+            </Border>
+        </Canvas>
 
     </Grid>
 </UserControl>

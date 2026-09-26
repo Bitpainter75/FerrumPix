@@ -454,6 +454,14 @@ Namespace Services
         ''' „Originale überschreiben" im Filter-anwenden-Dialog - bleibt über Sitzungen erhalten
         '''.
         Public Property BatchFilterOverwriteOriginals As Boolean = False
+        ''' <summary>Entrauschen im Filter-anwenden-Dialog: welches Modell ("quality" oder "fast",
+        ''' wie im Rezept), die feste Staerke und das Restkorn der Automatik. Gemerkt wird nur WIE,
+        ''' nicht OB: das Entrauschen selbst steht bei jedem Oeffnen auf aus, weil es Minuten je
+        ''' Bild kostet und ein vergessener Haken aus einem schnellen Stapel einen stundenlangen
+        ''' macht.</summary>
+        Public Property BatchDenoiseModel As String = "quality"
+        Public Property BatchDenoiseStrength As Double = 70
+        Public Property BatchDenoiseGrain As Double = 50
         ''' „Originale überschreiben" im Wasserzeichen-anwenden-Dialog - bleibt über Sitzungen erhalten
         ''' (analog zu Filter anwenden).
         Public Property BatchWatermarkOverwriteOriginals As Boolean = True
@@ -2318,6 +2326,14 @@ Namespace Services
 
         Public Shared Sub SaveBatchFilterOverwriteOriginals(value As Boolean)
             Update(Sub(s) s.BatchFilterOverwriteOriginals = value)
+        End Sub
+
+        Public Shared Sub SaveBatchDenoise(model As String, strength As Double, grain As Double)
+            Update(Sub(s)
+                       s.BatchDenoiseModel = model
+                       s.BatchDenoiseStrength = strength
+                       s.BatchDenoiseGrain = grain
+                   End Sub)
         End Sub
 
         Public Shared Sub SaveBatchWatermarkOverwriteOriginals(value As Boolean)

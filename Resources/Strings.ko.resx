@@ -8836,4 +8836,64 @@
   <data name="Hier_ablegen_b24b49c1" xml:space="preserve"><value>여기에 놓기</value></data>
   <data name="Favorit_umbenennen_d1dab6c9" xml:space="preserve"><value>즐겨찾기 이름 바꾸기</value></data>
   <data name="Favorit_umbenannt_0_bca7f7e5" xml:space="preserve"><value>즐겨찾기 이름을 바꿨습니다: {0}</value></data>
+  <data name="St_rke_aus_dem_Bild_messen_752b2b27" xml:space="preserve">
+    <value>이미지에서 강도 측정</value>
+  </data>
+  <data name="Misst_das_Rauschen_im_Bild_und_stellt_die_St_rke_4738612a" xml:space="preserve">
+    <value>이미지의 노이즈를 측정하여 낮은 ISO의 깨끗한 사진 정도의 입자가 남도록 강도를 설정합니다. 노이즈 제거는 아래 버튼 중 하나를 눌러야 시작됩니다.</value>
+  </data>
+  <data name="Feste_St_rke_f186f29f" xml:space="preserve">
+    <value>고정 강도</value>
+  </data>
+  <data name="Jedes_Bild_wird_mit_derselben_St_rke_entrauscht_f2a7aaf8" xml:space="preserve">
+    <value>모든 이미지에 같은 강도로 노이즈 제거를 적용합니다.</value>
+  </data>
+  <data name="Jedes_Bild_wird_vorher_gemessen_und_bekommt_die__d87ead4c" xml:space="preserve">
+    <value>각 이미지를 먼저 측정해 노이즈에 필요한 강도를 적용합니다. 이미 깨끗한 이미지는 그대로 둡니다.</value>
+  </data>
+  <data name="H_lt_mehr_feine_Zeichnung_braucht_aber_ein_Vielf_d27295d5" xml:space="preserve">
+    <value>미세한 디테일을 더 살리지만 시간이 몇 배 더 걸립니다.</value>
+  </data>
+  <data name="Gr_ndlich_fb7d073f" xml:space="preserve">
+    <value>꼼꼼하게</value>
+  </data>
+  <data name="In_einem_Sechstel_der_Zeit_daf_r_etwas_glatter_F_a8885661" xml:space="preserve">
+    <value>6분의 1의 시간이면 되지만 조금 더 매끈해집니다. 긴 연작에 알맞습니다.</value>
+  </data>
+  <data name="Z_gig_193d53f6" xml:space="preserve">
+    <value>빠르게</value>
+  </data>
+  <data name="Restkorn_17ea498e" xml:space="preserve">
+    <value>남길 입자</value>
+  </data>
+  <data name="Wie_viel_feines_Korn_nach_dem_Entrauschen_stehen_8c3a67d3" xml:space="preserve">
+    <value>노이즈 제거 후 남길 미세한 입자의 양입니다. 가운데 값은 낮은 ISO의 깨끗한 사진 정도입니다.</value>
+  </data>
+  <data name="Braucht_je_entrauschtem_Bild_mehrere_Minuten_Bil_ec60b5b2" xml:space="preserve">
+    <value>이미지 한 장마다 몇 분이 걸립니다. 편집기에서 이미 노이즈를 제거한 이미지는 다시 처리하지 않습니다.</value>
+  </data>
+  <data name="An_diesem_Bild_l_sst_sich_das_Rauschen_nicht_mes_a2b892a5" xml:space="preserve">
+    <value>이 이미지의 노이즈는 측정할 수 없습니다.</value>
+  </data>
+  <data name="Rauschen_gemessen_0_Die_St_rke_steht_auf_1_8eeae66d" xml:space="preserve">
+    <value>측정된 노이즈: {0}. 강도는 {1}(으)로 설정되었습니다.</value>
+  </data>
+  <data name="Rauschen_gemessen_0_Das_Bild_ist_schon_sauber_En_078f8deb" xml:space="preserve">
+    <value>측정된 노이즈: {0}. 이미 깨끗한 이미지라 노이즈 제거의 효과가 거의 없습니다.</value>
+  </data>
+  <data name="Ohne_Filter_384e7a5b" xml:space="preserve">
+    <value>필터 없음</value>
+  </data>
+  <data name="Entrauscht_8dbd8e34" xml:space="preserve">
+    <value>노이즈 제거됨</value>
+  </data>
+  <data name="Kein_Look_die_Bilder_werden_nur_entrauscht_Das_E_843bf648" xml:space="preserve">
+    <value>룩 없이 이미지의 노이즈만 제거합니다. 노이즈 제거는 아래에서 설정합니다.</value>
+  </data>
+  <data name="Ohne_Filter_bleibt_nur_das_Entrauschen_Schalte_e_0ade8bd6" xml:space="preserve">
+    <value>필터가 없으면 노이즈 제거만 남습니다. 여기서 켜지 않으면 할 일이 없습니다.</value>
+  </data>
+  <data name="Als_Ebene_einf_gen_7459c9bb" xml:space="preserve">
+    <value>레이어로 삽입</value>
+  </data>
 </root>

@@ -98,6 +98,26 @@
                     <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
                                              Value="{Binding DenoiseStrength, Mode=TwoWay}" Minimum="0" Maximum="100" />
                 </Grid>
+                <!-- Misst das Rauschen und stellt nur den Regler darueber ein. Gerechnet wird
+                     erst mit einem der beiden Knoepfe darunter: so steht der Vorschlag da, bevor
+                     die Minuten laufen, und laesst sich noch aendern. -->
+                <Button Classes="ghost" HorizontalAlignment="Stretch" Padding="10,6"
+                        IsEnabled="{Binding CanDenoiseWithAnyModel}"
+                        Command="{Binding MeasureDenoiseStrengthCommand}"
+                        ToolTip.ShowOnDisabled="True"
+                        ToolTip.Tip="Misst das Rauschen im Bild und stellt die Stärke so ein, dass etwa so viel Korn bleibt wie bei einer sauberen Aufnahme mit niedrigem ISO. Entrauscht wird erst mit einem der Knöpfe darunter.">
+                    <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/wand.svg"
+                                       Width="16" Height="16" />
+                        <TextBlock Text="Stärke aus dem Bild messen" FontSize="{DynamicResource FP.Font.Small}" />
+                    </StackPanel>
+                </Button>
+                <TextBlock IsVisible="{Binding HasDenoiseMeasurement}"
+                           Text="{Binding DenoiseMeasurementText}"
+                           Margin="2,0,2,4" TextWrapping="Wrap"
+                           Foreground="{DynamicResource FP.Text.Secondary}"
+                           FontSize="{DynamicResource FP.Font.Small}"
+                           Classes="no-translate" />
                 <Button Classes="ghost" HorizontalAlignment="Stretch" Padding="10,6"
                         IsEnabled="{Binding CanDenoiseWithModel}"
                         Command="{Binding DenoiseWithModelCommand}"

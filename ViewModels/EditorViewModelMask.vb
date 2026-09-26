@@ -1729,7 +1729,19 @@ Namespace ViewModels
         ''' dasselbe Rechteck -, sonst wird das Ergebnis verworfen: es gehörte zu einer Auswahl, die
         ''' es nicht mehr gibt. Solange eine Rechnung läuft, nimmt der Befehl keinen weiteren Klick
         ''' an; zwei Rechnungen auf demselben Stand ergäben nicht zweimal die Wirkung, sondern einmal.</remarks>
+        ''' <summary>Mantel um den Ablauf: ein Async Sub, der eine Ausnahme durchlaesst, beendet die
+        ''' Anwendung. Erweitern oder Umranden einer grossen Auswahl legt mehrere Felder in Bildgroesse
+        ''' an, und ein Speicherfehler dort darf nur den Schritt kosten.</summary>
         Public Async Sub ModifySelection(kind As String)
+            Try
+                Await ModifySelectionAsync(kind)
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Editor.ModifySelection", ex)
+                StatusText = LocalizationService.T("Aktion fehlgeschlagen")
+            End Try
+        End Sub
+
+        Private Async Function ModifySelectionAsync(kind As String) As Task
             If Not _hasActiveSelection OrElse _selectionModifyRunning Then Return
             If kind <> "Expand" AndAlso kind <> "Contract" AndAlso kind <> "Smooth" AndAlso kind <> "Border" Then Return
             If _editingLayerMaskId <> "" Then
@@ -1794,7 +1806,7 @@ Namespace ViewModels
                 _hasChanges = True
                 SchedulePreviewUpdate()
             End If
-        End Sub
+        End Function
 
         ' ── Umkehren und Verwerfen fuer JEDE Masken-Art ─────────────────────────
         '

@@ -130,7 +130,10 @@ Namespace ViewModels
         Private ReadOnly _backgroundWorkTimer As DispatcherTimer
         Private _thumbnailLoadCts As New CancellationTokenSource()
         Private _activeSearchCts As CancellationTokenSource
-        Private ReadOnly _virtualPathSet As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
+        ''' <summary>Die Pfade einer Suchansicht. Verglichen wie das Dateisystem (PathIdentity): unter
+        ''' Linux sind IMG.jpg und img.JPG zwei Dateien, und ohne Unterschied kam die zweite nie in
+        ''' die Liste.</summary>
+        Private ReadOnly _virtualPathSet As New HashSet(Of String)(PathIdentity.Comparer)
         Private ReadOnly _savedSearches As New List(Of SearchListEntry)()
         ' Kanonische Liste, siehe RawPreviewService.SupportedExtensions.
         Private ReadOnly _rawExtensions As String() = RawPreviewService.SupportedExtensions
@@ -7574,7 +7577,9 @@ Namespace ViewModels
         ''' wieder herein.</summary>
         Private Sub RemoveItemsFromVirtualFolder(paths As IEnumerable(Of String))
             If Not _isVirtualFolder Then Return
-            Dim gone As New HashSet(Of String)(If(paths, Enumerable.Empty(Of String)()), StringComparer.OrdinalIgnoreCase)
+            ' Derselbe Vergleich wie _virtualPathSet, sonst naehme das Nachpruefen unter Linux mit
+            ' einer Datei auch ihre Namensschwester in anderer Schreibung aus der Ansicht.
+            Dim gone As New HashSet(Of String)(If(paths, Enumerable.Empty(Of String)()), PathIdentity.Comparer)
             If gone.Count = 0 Then Return
             _virtualPathSet.ExceptWith(gone)
             If _allItems.RemoveAll(Function(i) i IsNot Nothing AndAlso gone.Contains(i.FilePath)) > 0 Then FilterAndSort()
@@ -11573,11 +11578,14 @@ Namespace ViewModels
                              Dim adj = BatchBaseAdjustments(source)
                              adj.MergeNonDefaultPixelAdjustmentsFrom(adjustmentsTemplate)
                              If isAutoEnhance Then ImageProcessor.ApplyAutoAdjustmentsTo(adj, source)
+                             ' Das Entrauschen misst bei der Automatik JE BILD, und zwar erst im
+                             ' Speicherweg am frisch entwickelten Bild - hier gibt es noch keine Pixel.
                              Return ImageProcessor.SaveImage(source, target, adj, result.JpgQuality, preserveMetadata,
                                                              developRaw:=BatchDevelopsRaw(source),
                                                              applyPendingBaked:=applyPendingBaked,
                                                              copyrightText:=result.Copyright,
-                                                             cancel:=cancel)
+                                                             cancel:=cancel,
+                                                             denoise:=result.Denoise)
                          End Function
 
             ' LOKAL heisst "hat eine Datei auf dieser Platte" - nicht "ist kein Immich". Ein
@@ -11671,6 +11679,12 @@ Namespace ViewModels
                         .LutPath = result.PresetPath,
                         .LutStrength = result.Strength
                     }
+
+                Case BatchFilterDialogResult.SourceNone
+                    ' Kein Look: das Rezept des Bildes bleibt, wie es ist, und der Lauf besteht aus
+                    ' dem Entrauschen im Speicherweg. NICHT in den Zweig darunter fallen lassen - dort
+                    ' landete der Anzeigename als Filtername in den Anpassungen.
+                    Return New ImageAdjustments()
 
                 Case BatchFilterDialogResult.SourceAuto
                     ' Neutraler Startzustand: die eigentlichen Reglerwerte misst der Writer PRO BILD

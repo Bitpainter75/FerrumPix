@@ -8832,4 +8832,64 @@
   <data name="Hier_ablegen_b24b49c1" xml:space="preserve"><value>ここにドロップ</value></data>
   <data name="Favorit_umbenennen_d1dab6c9" xml:space="preserve"><value>お気に入りの名前を変更</value></data>
   <data name="Favorit_umbenannt_0_bca7f7e5" xml:space="preserve"><value>お気に入りの名前を変更しました: {0}</value></data>
+  <data name="St_rke_aus_dem_Bild_messen_752b2b27" xml:space="preserve">
+    <value>画像から強さを測定</value>
+  </data>
+  <data name="Misst_das_Rauschen_im_Bild_und_stellt_die_St_rke_4738612a" xml:space="preserve">
+    <value>画像のノイズを測定し、低ISOのきれいな写真と同じくらいの粒子が残るように強さを設定します。ノイズ除去は下のボタンのいずれかで開始します。</value>
+  </data>
+  <data name="Feste_St_rke_f186f29f" xml:space="preserve">
+    <value>固定の強さ</value>
+  </data>
+  <data name="Jedes_Bild_wird_mit_derselben_St_rke_entrauscht_f2a7aaf8" xml:space="preserve">
+    <value>すべての画像を同じ強さでノイズ除去します。</value>
+  </data>
+  <data name="Jedes_Bild_wird_vorher_gemessen_und_bekommt_die__d87ead4c" xml:space="preserve">
+    <value>各画像を先に測定し、そのノイズに必要な強さを適用します。すでにきれいな画像は変更されません。</value>
+  </data>
+  <data name="H_lt_mehr_feine_Zeichnung_braucht_aber_ein_Vielf_d27295d5" xml:space="preserve">
+    <value>細部をより多く残しますが、何倍も時間がかかります。</value>
+  </data>
+  <data name="Gr_ndlich_fb7d073f" xml:space="preserve">
+    <value>高品質</value>
+  </data>
+  <data name="In_einem_Sechstel_der_Zeit_daf_r_etwas_glatter_F_a8885661" xml:space="preserve">
+    <value>6分の1の時間で済みますが、やや滑らかになります。長いシリーズ向けです。</value>
+  </data>
+  <data name="Z_gig_193d53f6" xml:space="preserve">
+    <value>高速</value>
+  </data>
+  <data name="Restkorn_17ea498e" xml:space="preserve">
+    <value>残す粒子</value>
+  </data>
+  <data name="Wie_viel_feines_Korn_nach_dem_Entrauschen_stehen_8c3a67d3" xml:space="preserve">
+    <value>ノイズ除去後に残す細かな粒子の量です。中央では、低ISOのきれいな写真と同じくらい残ります。</value>
+  </data>
+  <data name="Braucht_je_entrauschtem_Bild_mehrere_Minuten_Bil_ec60b5b2" xml:space="preserve">
+    <value>1枚あたり数分かかります。エディターですでにノイズ除去した画像は、二度目の処理を行いません。</value>
+  </data>
+  <data name="An_diesem_Bild_l_sst_sich_das_Rauschen_nicht_mes_a2b892a5" xml:space="preserve">
+    <value>この画像のノイズは測定できません。</value>
+  </data>
+  <data name="Rauschen_gemessen_0_Die_St_rke_steht_auf_1_8eeae66d" xml:space="preserve">
+    <value>測定したノイズ: {0}。強さは {1} に設定されています。</value>
+  </data>
+  <data name="Rauschen_gemessen_0_Das_Bild_ist_schon_sauber_En_078f8deb" xml:space="preserve">
+    <value>測定したノイズ: {0}。画像はすでにきれいなので、ノイズ除去の効果はほとんどありません。</value>
+  </data>
+  <data name="Ohne_Filter_384e7a5b" xml:space="preserve">
+    <value>フィルターなし</value>
+  </data>
+  <data name="Entrauscht_8dbd8e34" xml:space="preserve">
+    <value>ノイズ除去済み</value>
+  </data>
+  <data name="Kein_Look_die_Bilder_werden_nur_entrauscht_Das_E_843bf648" xml:space="preserve">
+    <value>ルックなしで、画像のノイズ除去だけを行います。ノイズ除去は下で設定します。</value>
+  </data>
+  <data name="Ohne_Filter_bleibt_nur_das_Entrauschen_Schalte_e_0ade8bd6" xml:space="preserve">
+    <value>フィルターなしではノイズ除去だけが残ります。ここでオンにしないと、何も処理されません。</value>
+  </data>
+  <data name="Als_Ebene_einf_gen_7459c9bb" xml:space="preserve">
+    <value>レイヤーとして挿入</value>
+  </data>
 </root>

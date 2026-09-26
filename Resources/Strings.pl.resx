@@ -8832,4 +8832,64 @@
   <data name="Hier_ablegen_b24b49c1" xml:space="preserve"><value>Upuść tutaj</value></data>
   <data name="Favorit_umbenennen_d1dab6c9" xml:space="preserve"><value>Zmień nazwę ulubionego</value></data>
   <data name="Favorit_umbenannt_0_bca7f7e5" xml:space="preserve"><value>Zmieniono nazwę ulubionego: {0}</value></data>
+  <data name="St_rke_aus_dem_Bild_messen_752b2b27" xml:space="preserve">
+    <value>Zmierz siłę na podstawie zdjęcia</value>
+  </data>
+  <data name="Misst_das_Rauschen_im_Bild_und_stellt_die_St_rke_4738612a" xml:space="preserve">
+    <value>Mierzy szum na zdjęciu i ustawia siłę tak, aby zostało mniej więcej tyle ziarna, co na czystym zdjęciu z niskim ISO. Samo odszumianie zaczyna się dopiero po kliknięciu jednego z przycisków poniżej.</value>
+  </data>
+  <data name="Feste_St_rke_f186f29f" xml:space="preserve">
+    <value>Stała siła</value>
+  </data>
+  <data name="Jedes_Bild_wird_mit_derselben_St_rke_entrauscht_f2a7aaf8" xml:space="preserve">
+    <value>Każde zdjęcie jest odszumiane z tą samą siłą.</value>
+  </data>
+  <data name="Jedes_Bild_wird_vorher_gemessen_und_bekommt_die__d87ead4c" xml:space="preserve">
+    <value>Każde zdjęcie jest najpierw mierzone i dostaje siłę, której wymaga jego szum. Zdjęcia, które są już czyste, pozostają bez zmian.</value>
+  </data>
+  <data name="H_lt_mehr_feine_Zeichnung_braucht_aber_ein_Vielf_d27295d5" xml:space="preserve">
+    <value>Zachowuje więcej drobnych szczegółów, ale trwa wielokrotnie dłużej.</value>
+  </data>
+  <data name="Gr_ndlich_fb7d073f" xml:space="preserve">
+    <value>Dokładnie</value>
+  </data>
+  <data name="In_einem_Sechstel_der_Zeit_daf_r_etwas_glatter_F_a8885661" xml:space="preserve">
+    <value>W jednej szóstej czasu, za to nieco gładziej. Do długich serii.</value>
+  </data>
+  <data name="Z_gig_193d53f6" xml:space="preserve">
+    <value>Szybko</value>
+  </data>
+  <data name="Restkorn_17ea498e" xml:space="preserve">
+    <value>Pozostałe ziarno</value>
+  </data>
+  <data name="Wie_viel_feines_Korn_nach_dem_Entrauschen_stehen_8c3a67d3" xml:space="preserve">
+    <value>Ile drobnego ziarna zostaje po odszumianiu. Pośrodku tyle, co na czystym zdjęciu z niskim ISO.</value>
+  </data>
+  <data name="Braucht_je_entrauschtem_Bild_mehrere_Minuten_Bil_ec60b5b2" xml:space="preserve">
+    <value>Zajmuje kilka minut na każde odszumiane zdjęcie. Zdjęcia odszumione już w edytorze nie są odszumiane drugi raz.</value>
+  </data>
+  <data name="An_diesem_Bild_l_sst_sich_das_Rauschen_nicht_mes_a2b892a5" xml:space="preserve">
+    <value>Nie da się zmierzyć szumu na tym zdjęciu.</value>
+  </data>
+  <data name="Rauschen_gemessen_0_Die_St_rke_steht_auf_1_8eeae66d" xml:space="preserve">
+    <value>Zmierzony szum: {0}. Siła jest ustawiona na {1}.</value>
+  </data>
+  <data name="Rauschen_gemessen_0_Das_Bild_ist_schon_sauber_En_078f8deb" xml:space="preserve">
+    <value>Zmierzony szum: {0}. Zdjęcie jest już czyste, odszumianie niewiele tu da.</value>
+  </data>
+  <data name="Ohne_Filter_384e7a5b" xml:space="preserve">
+    <value>Bez filtra</value>
+  </data>
+  <data name="Entrauscht_8dbd8e34" xml:space="preserve">
+    <value>Odszumione</value>
+  </data>
+  <data name="Kein_Look_die_Bilder_werden_nur_entrauscht_Das_E_843bf648" xml:space="preserve">
+    <value>Bez stylu, zdjęcia są tylko odszumiane. Odszumianie ustawia się poniżej.</value>
+  </data>
+  <data name="Ohne_Filter_bleibt_nur_das_Entrauschen_Schalte_e_0ade8bd6" xml:space="preserve">
+    <value>Bez filtra zostaje tylko odszumianie. Włącz je tutaj, inaczej nie ma nic do zrobienia.</value>
+  </data>
+  <data name="Als_Ebene_einf_gen_7459c9bb" xml:space="preserve">
+    <value>Wstaw jako warstwę</value>
+  </data>
 </root>

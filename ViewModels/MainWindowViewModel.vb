@@ -1430,12 +1430,41 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(IsDialogFilterSourceXmpPreset))
                 Me.RaisePropertyChanged(NameOf(IsDialogFilterSourceLut))
                 Me.RaisePropertyChanged(NameOf(IsDialogFilterSourceAuto))
+                Me.RaisePropertyChanged(NameOf(IsDialogFilterSourceNone))
+                Me.RaisePropertyChanged(NameOf(IsDialogFilterNoneHintVisible))
                 Me.RaisePropertyChanged(NameOf(IsDialogFilterFileVisible))
                 Me.RaisePropertyChanged(NameOf(IsDialogFilterStrengthVisible))
                 Me.RaisePropertyChanged(NameOf(IsDialogFilterChoiceVisible))
                 ' Die neue Quelle bringt ihre eigene Liste mit - und die kann leer sein.
                 Me.RaisePropertyChanged(NameOf(IsDialogPrimaryEnabled))
             End Set
+        End Property
+
+        ''' <summary>Darf "Ohne Filter" angeboten werden? Nur in "Filter anwenden": dort steht das
+        ''' Entrauschen darunter, und es ist dann der ganze Lauf. "Exportieren nach" hat keinen
+        ''' Entrausch-Bereich und fuer den Look ohnehin einen eigenen Schalter.</summary>
+        Private _dialogFilterNoneAllowed As Boolean = False
+
+        ''' <summary>Der Knopf "Ohne Filter" steht nur da, wo er etwas bewirken kann: in "Filter
+        ''' anwenden" und mit wenigstens einem Entrausch-Modell.</summary>
+        Public ReadOnly Property IsDialogFilterSourceNoneVisible As Boolean
+            Get
+                Return _dialogFilterNoneAllowed AndAlso IsDialogBatchDenoiseAvailable
+            End Get
+        End Property
+
+        Public ReadOnly Property IsDialogFilterSourceNone As Boolean
+            Get
+                Return String.Equals(_dialogFilterSourceKind, BatchFilterDialogResult.SourceNone, StringComparison.OrdinalIgnoreCase)
+            End Get
+        End Property
+
+        ''' <summary>Ohne Filter UND ohne Entrauschen gaebe es nichts zu tun; dann sagt eine Zeile,
+        ''' warum der Knopf gesperrt ist.</summary>
+        Public ReadOnly Property IsDialogFilterNoneHintVisible As Boolean
+            Get
+                Return IsDialogFilterSourceNone AndAlso IsDialogBatchDenoiseOff
+            End Get
         End Property
 
         Public Sub SetDialogFilterSourceKind(kind As String)
@@ -1496,7 +1525,8 @@ Namespace ViewModels
         ''' Bei der automatischen Bildverbesserung gibt es keine Vorgabenliste - die Zeile entfällt.
         Public ReadOnly Property IsDialogFilterChoiceVisible As Boolean
             Get
-                Return Not IsDialogFilterSourceAuto
+                ' Ohne Filter gibt es ebenso wenig etwas zu waehlen.
+                Return Not IsDialogFilterSourceAuto AndAlso Not IsDialogFilterSourceNone
             End Get
         End Property
 
@@ -1693,6 +1723,10 @@ Namespace ViewModels
                 For Each name In ImageAdjustments.FilterPresetNames.Where(Function(n) Not String.Equals(n, "Keine", StringComparison.OrdinalIgnoreCase))
                     DialogFilterChoices.Add(name)
                 Next
+            ElseIf IsDialogFilterSourceNone Then
+                ' Wie bei der Automatik ein fester Eintrag, damit die Auswahl nicht leer ist. Ob der
+                ' Knopf frei ist, entscheidet hier das Entrauschen (BatchFilterHasNothingToDo).
+                DialogFilterChoices.Add(LocalizationService.T("Ohne Filter"))
             ElseIf IsDialogFilterSourceAuto Then
                 ' Genau ein fester Eintrag: er hält die Auswahl nicht-leer, damit
                 ' IsDialogPrimaryEnabled den Knopf freigibt. Sichtbar ist die Zeile hier ohnehin
@@ -1804,6 +1838,7 @@ Namespace ViewModels
         ''' wie die Einzeldialoge, also muessen deren Listen/Startwerte hier genauso gefuellt werden.</summary>
         Private Sub PrepareDialogExportForms(settings As AppSettings, samplePath As String)
             ' Filter-Formular (Quelle/Vorgabe/Staerke)
+            _dialogFilterNoneAllowed = False
             _dialogFilterSourceKind = BatchFilterDialogResult.SourceFilter
             _dialogFilterStrength = 100
             RebuildDialogFilterChoices()
@@ -1991,6 +2026,174 @@ Namespace ViewModels
             DialogSelectedFilterChoice = label
         End Sub
 
+        ' ── Entrauschen im Stapel ──────────────────────────────────────────────────────────────
+        '
+        ' Zusaetzlich zum Look und unabhaengig von dessen Quelle. Drei Stellungen: aus, eine feste
+        ' Staerke fuer alle Bilder, oder je Bild gemessen (DenoiseModelService.SuggestFor). Die
+        ' Stellung steht bei jedem Oeffnen auf aus, Modell, Staerke und Restkorn werden gemerkt -
+        ' Begruendung bei AppSettings.BatchDenoiseModel.
+
+        Public Const BatchDenoiseOff As String = "Off"
+        Public Const BatchDenoiseFixed As String = "Fixed"
+        Public Const BatchDenoiseAuto As String = "Auto"
+
+        Private _dialogBatchDenoiseMode As String = BatchDenoiseOff
+        Private _dialogBatchDenoiseFast As Boolean = False
+        Private _dialogBatchDenoiseStrength As Integer = 70
+        Private _dialogBatchDenoiseGrain As Integer = 50
+
+        ''' <summary>Gibt es ueberhaupt ein Modell? Sonst steht statt der Knoepfe ein Hinweis da.</summary>
+        Public ReadOnly Property IsDialogBatchDenoiseAvailable As Boolean
+            Get
+                Return DenoiseModelService.Available OrElse DenoiseModelService.FastAvailable
+            End Get
+        End Property
+
+        Public ReadOnly Property DialogBatchDenoiseMissingHint As String
+            Get
+                Return EditorViewModel.MissingModelHint
+            End Get
+        End Property
+
+        Public ReadOnly Property IsDialogBatchDenoiseQualityAvailable As Boolean
+            Get
+                Return DenoiseModelService.Available
+            End Get
+        End Property
+
+        Public ReadOnly Property IsDialogBatchDenoiseFastAvailable As Boolean
+            Get
+                Return DenoiseModelService.FastAvailable
+            End Get
+        End Property
+
+        Public Property DialogBatchDenoiseMode As String
+            Get
+                Return _dialogBatchDenoiseMode
+            End Get
+            Set(value As String)
+                Dim normalized = If(value, "")
+                If Not {BatchDenoiseOff, BatchDenoiseFixed, BatchDenoiseAuto}.Contains(normalized) Then normalized = BatchDenoiseOff
+                If String.Equals(_dialogBatchDenoiseMode, normalized, StringComparison.Ordinal) Then Return
+                _dialogBatchDenoiseMode = normalized
+                RaiseDialogBatchDenoiseChanged()
+            End Set
+        End Property
+
+        Public Sub SetDialogBatchDenoiseMode(mode As String)
+            DialogBatchDenoiseMode = mode
+        End Sub
+
+        Public ReadOnly Property IsDialogBatchDenoiseOff As Boolean
+            Get
+                Return _dialogBatchDenoiseMode = BatchDenoiseOff
+            End Get
+        End Property
+
+        Public ReadOnly Property IsDialogBatchDenoiseFixed As Boolean
+            Get
+                Return _dialogBatchDenoiseMode = BatchDenoiseFixed
+            End Get
+        End Property
+
+        Public ReadOnly Property IsDialogBatchDenoiseAuto As Boolean
+            Get
+                Return _dialogBatchDenoiseMode = BatchDenoiseAuto
+            End Get
+        End Property
+
+        ''' <summary>Modellwahl, Staerke und Restkorn stehen nur da, wenn entrauscht wird.</summary>
+        Public ReadOnly Property IsDialogBatchDenoiseModelVisible As Boolean
+            Get
+                Return _dialogBatchDenoiseMode <> BatchDenoiseOff AndAlso IsDialogBatchDenoiseAvailable
+            End Get
+        End Property
+
+        Public ReadOnly Property IsDialogBatchDenoiseFast As Boolean
+            Get
+                Return _dialogBatchDenoiseFast
+            End Get
+        End Property
+
+        Public ReadOnly Property IsDialogBatchDenoiseQuality As Boolean
+            Get
+                Return Not _dialogBatchDenoiseFast
+            End Get
+        End Property
+
+        ''' <summary>"quality" oder "fast", wie im Rezept. Ein Modell, das fehlt, laesst sich nicht
+        ''' waehlen; dann bleibt das andere stehen.</summary>
+        Public Sub SetDialogBatchDenoiseModel(model As String)
+            Dim fast = String.Equals(model, "fast", StringComparison.OrdinalIgnoreCase)
+            If fast AndAlso Not DenoiseModelService.FastAvailable Then Return
+            If Not fast AndAlso Not DenoiseModelService.Available Then Return
+            _dialogBatchDenoiseFast = fast
+            RaiseDialogBatchDenoiseChanged()
+        End Sub
+
+        Public Property DialogBatchDenoiseStrength As Integer
+            Get
+                Return _dialogBatchDenoiseStrength
+            End Get
+            Set(value As Integer)
+                Me.RaiseAndSetIfChanged(_dialogBatchDenoiseStrength, Math.Max(0, Math.Min(100, value)))
+            End Set
+        End Property
+
+        ''' <summary>Restkorn der Automatik: 50 laesst so viel Korn wie eine saubere Aufnahme mit
+        ''' niedrigem ISO, jede 50 Schritte halbieren oder verdoppeln es.</summary>
+        Public Property DialogBatchDenoiseGrain As Integer
+            Get
+                Return _dialogBatchDenoiseGrain
+            End Get
+            Set(value As Integer)
+                Me.RaiseAndSetIfChanged(_dialogBatchDenoiseGrain, Math.Max(0, Math.Min(100, value)))
+            End Set
+        End Property
+
+        Private Sub RaiseDialogBatchDenoiseChanged()
+            For Each name In {NameOf(DialogBatchDenoiseMode), NameOf(IsDialogBatchDenoiseOff),
+                              NameOf(IsDialogBatchDenoiseFixed), NameOf(IsDialogBatchDenoiseAuto),
+                              NameOf(IsDialogBatchDenoiseModelVisible), NameOf(IsDialogBatchDenoiseFast),
+                              NameOf(IsDialogBatchDenoiseQuality), NameOf(IsDialogBatchDenoiseAvailable),
+                              NameOf(IsDialogBatchDenoiseQualityAvailable), NameOf(IsDialogBatchDenoiseFastAvailable),
+                              NameOf(DialogBatchDenoiseStrength), NameOf(DialogBatchDenoiseGrain),
+                              NameOf(IsDialogFilterNoneHintVisible), NameOf(IsDialogPrimaryEnabled)}
+                Me.RaisePropertyChanged(name)
+            Next
+        End Sub
+
+        ''' <summary>Vor dem Oeffnen: Stellung aus, der Rest aus den Einstellungen. Fehlt das
+        ''' gemerkte Modell inzwischen, steht das andere da.</summary>
+        Private Sub ResetDialogBatchDenoise()
+            Dim settings = AppSettingsService.Load()
+            _dialogBatchDenoiseMode = BatchDenoiseOff
+            _dialogBatchDenoiseFast = String.Equals(settings.BatchDenoiseModel, "fast", StringComparison.OrdinalIgnoreCase)
+            If _dialogBatchDenoiseFast AndAlso Not DenoiseModelService.FastAvailable Then _dialogBatchDenoiseFast = False
+            If Not _dialogBatchDenoiseFast AndAlso Not DenoiseModelService.Available AndAlso
+               DenoiseModelService.FastAvailable Then _dialogBatchDenoiseFast = True
+            _dialogBatchDenoiseStrength = CInt(Math.Round(EditorViewModel.ClampDenoiseStrength(settings.BatchDenoiseStrength)))
+            _dialogBatchDenoiseGrain = CInt(Math.Round(Math.Max(0.0, Math.Min(100.0,
+                If(Double.IsNaN(settings.BatchDenoiseGrain), 50.0, settings.BatchDenoiseGrain)))))
+            RaiseDialogBatchDenoiseChanged()
+        End Sub
+
+        ''' <summary>Der Auftrag aus der Dialogstellung, Nothing bei aus. Die Stellung wird dabei
+        ''' gemerkt - nur, wenn wirklich entrauscht wird: wer den Dialog mit aus bestaetigt, hat an
+        ''' Modell und Staerke nichts gemeint.</summary>
+        Private Function TakeDialogBatchDenoiseRequest() As DenoiseModelService.DenoiseRequest
+            If _dialogBatchDenoiseMode = BatchDenoiseOff OrElse Not IsDialogBatchDenoiseAvailable Then Return Nothing
+            Dim kind = If(_dialogBatchDenoiseFast, DenoiseModelService.DenoiseKind.Fast, DenoiseModelService.DenoiseKind.Quality)
+            AppSettingsService.SaveBatchDenoise(DenoiseModelService.RecipeNameFor(kind),
+                                                _dialogBatchDenoiseStrength, _dialogBatchDenoiseGrain)
+            Return New DenoiseModelService.DenoiseRequest With {
+                .Kind = kind,
+                .Automatic = _dialogBatchDenoiseMode = BatchDenoiseAuto,
+                .Strength = _dialogBatchDenoiseStrength,
+                .Grain = _dialogBatchDenoiseGrain
+            }
+        End Function
+
         ''' <param name="currentFolder">Der Ordner, in dem die Galerie gerade steht. Er ist die naheliegende
         ''' Vorgabe für neue Dateien - anders als beim Konvertieren, wo der zuletzt gewählte Exportordner
         ''' gemeint ist. Leer (z.B. in einer Suchliste oder in Immich) fällt es auf diesen zurück.</param>
@@ -1998,10 +2201,12 @@ Namespace ViewModels
                                                    Optional allowOverwrite As Boolean = True,
                                                    Optional sourcesIncludeJpg As Boolean = False) As Task(Of BatchFilterDialogResult)
             _dialogFilterSourceKind = BatchFilterDialogResult.SourceFilter
+            _dialogFilterNoneAllowed = True
             _dialogBatchOverwriteAvailable = allowOverwrite
             _dialogBatchFilterOverwrite = allowOverwrite AndAlso AppSettingsService.Load().BatchFilterOverwriteOriginals
             _dialogBatchSourcesIncludeJpg = sourcesIncludeJpg
             _dialogBatchFilterAppendName = True
+            ResetDialogBatchDenoise()
             ResetDialogSaveAsMetaOptions()
             DialogTargetNamePattern = AppSettingsService.Load().LastTargetNamePattern
             DialogSelectedFormat = NormalizeSaveAsFormat(DefaultSaveFormat())
@@ -2018,6 +2223,8 @@ Namespace ViewModels
                               NameOf(IsDialogFilterSourceAdjustmentPreset),
                               NameOf(IsDialogFilterSourceXmpPreset), NameOf(IsDialogFilterSourceLut),
                               NameOf(IsDialogFilterSourceAuto), NameOf(IsDialogFilterChoiceVisible),
+                              NameOf(IsDialogFilterSourceNone), NameOf(IsDialogFilterSourceNoneVisible),
+                              NameOf(IsDialogFilterNoneHintVisible),
                               NameOf(IsDialogFilterFileVisible), NameOf(IsDialogFilterStrengthVisible),
                               NameOf(DialogBatchFilterOverwrite), NameOf(DialogBatchFilterAppendName),
                               NameOf(IsDialogFilterAppendNameVisible), NameOf(DialogShowsSaveAsOptions),
@@ -2045,7 +2252,8 @@ Namespace ViewModels
             _dialogFilterChoicePaths.TryGetValue(_dialogSelectedFilterChoice, path)
             Return New BatchFilterDialogResult With {
                 .SourceKind = _dialogFilterSourceKind,
-                .DisplayName = If(IsDialogFilterSourceAuto, "Auto", _dialogSelectedFilterChoice),
+                .DisplayName = If(IsDialogFilterSourceAuto, "Auto",
+                                  If(IsDialogFilterSourceNone, LocalizationService.T("Entrauscht"), _dialogSelectedFilterChoice)),
                 .PresetPath = If(path, ""),
                 .Strength = _dialogFilterStrength,
                 .Overwrite = _dialogBatchFilterOverwrite,
@@ -2060,7 +2268,8 @@ Namespace ViewModels
                 .CopyKeywords = _dialogSaveAsCopyKeywords,
                 .NamePattern = If(_dialogTargetNamePattern, "").Trim(),
                 .PreserveMetadata = _dialogSaveAsPreserveExif,
-                .Copyright = _dialogCopyright
+                .Copyright = _dialogCopyright,
+                .Denoise = TakeDialogBatchDenoiseRequest()
             }
         End Function
 
@@ -2802,6 +3011,7 @@ Namespace ViewModels
                 ' Kein Treffer, nichts zu setzen: der Knopf bliebe sonst offen und taete nichts.
                 If _dialogKind = AppDialogKind.GpxTrack Then Return HasDialogGpxMatch
                 If _dialogKind = AppDialogKind.CaptureDate Then Return HasDialogCaptureDate
+                If BatchFilterHasNothingToDo() Then Return False
                 If NeedsFilterChoice() Then Return Not String.IsNullOrWhiteSpace(_dialogSelectedFilterChoice)
                 Return True
             End Get
@@ -2859,6 +3069,14 @@ Namespace ViewModels
             If _dialogKind <> AppDialogKind.BatchFilter AndAlso _dialogKind <> AppDialogKind.ExportTo Then Return False
             If _dialogKind = AppDialogKind.ExportTo AndAlso Not _dialogExportUseFilter Then Return False
             Return IsDialogFilterChoiceVisible
+        End Function
+
+        ''' <summary>Ohne Filter besteht der Lauf allein aus dem Entrauschen. Steht das auf aus, gibt es
+        ''' nichts zu tun: der Knopf bleibt dann gesperrt, statt die Bilder unveraendert neu zu
+        ''' schreiben.</summary>
+        Private Function BatchFilterHasNothingToDo() As Boolean
+            Return _dialogKind = AppDialogKind.BatchFilter AndAlso IsDialogFilterSourceNone AndAlso
+                   (IsDialogBatchDenoiseOff OrElse Not IsDialogBatchDenoiseAvailable)
         End Function
 
         Private _dialogPlaceQuery As String = ""

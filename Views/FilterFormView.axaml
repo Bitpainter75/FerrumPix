@@ -17,6 +17,14 @@
             <!-- WrapPanel statt einer Zeile: "Automatische Bildverbesserung" ist lang, in einer
                  festen Zeile waere das letzte Segment aus dem Dialog gelaufen. -->
             <WrapPanel Grid.Column="1">
+                <!-- Nur in "Filter anwenden" und nur mit einem Entrausch-Modell: dann besteht der
+                     Lauf allein aus dem Entrauschen darunter. -->
+                <Button Classes="segmented" Margin="0,0,8,6"
+                        Classes.active="{Binding IsDialogFilterSourceNone}"
+                        IsVisible="{Binding IsDialogFilterSourceNoneVisible}"
+                        Click="OnFilterSourceClick"
+                        ToolTip.Tip="Kein Look, die Bilder werden nur entrauscht. Das Entrauschen wird unten eingestellt."
+                        Tag="None">Ohne Filter</Button>
                 <Button Classes="segmented" Margin="0,0,8,6"
                         Classes.active="{Binding IsDialogFilterSourceFilter}"
                         Click="OnFilterSourceClick"

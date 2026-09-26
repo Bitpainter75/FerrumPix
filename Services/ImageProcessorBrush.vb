@@ -113,8 +113,7 @@ Namespace Services
             End If
 
             ' Schmieren/Farbkleckse werden entlang des Pfades gestempelt (richtungsabhängig bzw. gestreut).
-            If key = "smear" OrElse key = "spatter" OrElse key = "airbrush" OrElse
-               key = "calligraphy" OrElse key = "stipple" OrElse key = "watercolor" Then
+            If IsStampBrushPreset(key) Then
                 DrawStampBrushStroke(canvas, strokes, width, height, stroke, resolvedStrokeWidth, blurSigma, flow, key)
                 Return
             End If
@@ -388,6 +387,16 @@ Namespace Services
         ''' zufällig gestreute Tropfen neben der Linie (viele kleine, wenige große - "zu viel Farbe").
         ''' Alle Zufallswerte stammen deterministisch aus dem Stempelindex, damit Vorschau, gebackenes
         ''' Bild und Re-Renders identisch bleiben.</summary>
+        ''' <summary>Wird diese Pinselart gestempelt? Diese Arten kennen KEINEN Stiftdruck: ihre
+        ''' Formen (Borsten, Tropfen, Federabdruecke, Lasuren) sind auf eine feste Breite abgestimmt.
+        ''' Die Vorschau fragt hier nach, damit sie nicht einen schmaler werdenden Strich zeigt, der
+        ''' beim Loslassen in voller Breite ankommt.</summary>
+        Friend Shared Function IsStampBrushPreset(preset As String) As Boolean
+            Dim key = NormalizeBrushPreset(preset)
+            Return key = "smear" OrElse key = "spatter" OrElse key = "airbrush" OrElse
+                   key = "calligraphy" OrElse key = "stipple" OrElse key = "watercolor"
+        End Function
+
         Private Shared Sub DrawStampBrushStroke(canvas As SKCanvas, strokes As IEnumerable(Of BrushStroke), width As Integer, height As Integer, color As SKColor, strokeWidth As Single, blurSigma As Single, flow As Single, key As String)
             Dim minX = Single.MaxValue, minY = Single.MaxValue
             Dim maxX = Single.MinValue, maxY = Single.MinValue

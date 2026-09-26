@@ -8792,4 +8792,64 @@
   <data name="Hier_ablegen_b24b49c1" xml:space="preserve"><value>Soltar aquí</value></data>
   <data name="Favorit_umbenennen_d1dab6c9" xml:space="preserve"><value>Cambiar nombre del favorito</value></data>
   <data name="Favorit_umbenannt_0_bca7f7e5" xml:space="preserve"><value>Favorito renombrado: {0}</value></data>
+  <data name="St_rke_aus_dem_Bild_messen_752b2b27" xml:space="preserve">
+    <value>Medir la intensidad en la imagen</value>
+  </data>
+  <data name="Misst_das_Rauschen_im_Bild_und_stellt_die_St_rke_4738612a" xml:space="preserve">
+    <value>Mide el ruido de la imagen y ajusta la intensidad para que quede más o menos tanto grano como en una toma limpia con ISO bajo. La reducción de ruido solo empieza con uno de los botones de abajo.</value>
+  </data>
+  <data name="Feste_St_rke_f186f29f" xml:space="preserve">
+    <value>Intensidad fija</value>
+  </data>
+  <data name="Jedes_Bild_wird_mit_derselben_St_rke_entrauscht_f2a7aaf8" xml:space="preserve">
+    <value>A todas las imágenes se les reduce el ruido con la misma intensidad.</value>
+  </data>
+  <data name="Jedes_Bild_wird_vorher_gemessen_und_bekommt_die__d87ead4c" xml:space="preserve">
+    <value>Cada imagen se mide antes y recibe la intensidad que necesita su ruido. Las imágenes que ya están limpias no cambian.</value>
+  </data>
+  <data name="H_lt_mehr_feine_Zeichnung_braucht_aber_ein_Vielf_d27295d5" xml:space="preserve">
+    <value>Conserva más detalle fino, pero tarda varias veces más.</value>
+  </data>
+  <data name="Gr_ndlich_fb7d073f" xml:space="preserve">
+    <value>A fondo</value>
+  </data>
+  <data name="In_einem_Sechstel_der_Zeit_daf_r_etwas_glatter_F_a8885661" xml:space="preserve">
+    <value>En una sexta parte del tiempo, a cambio algo más liso. Para series largas.</value>
+  </data>
+  <data name="Z_gig_193d53f6" xml:space="preserve">
+    <value>Rápido</value>
+  </data>
+  <data name="Restkorn_17ea498e" xml:space="preserve">
+    <value>Grano restante</value>
+  </data>
+  <data name="Wie_viel_feines_Korn_nach_dem_Entrauschen_stehen_8c3a67d3" xml:space="preserve">
+    <value>Cuánto grano fino queda tras la reducción de ruido. En el centro, tanto como en una toma limpia con ISO bajo.</value>
+  </data>
+  <data name="Braucht_je_entrauschtem_Bild_mehrere_Minuten_Bil_ec60b5b2" xml:space="preserve">
+    <value>Tarda varios minutos por imagen tratada. A las imágenes a las que ya se redujo el ruido en el editor no se les reduce una segunda vez.</value>
+  </data>
+  <data name="An_diesem_Bild_l_sst_sich_das_Rauschen_nicht_mes_a2b892a5" xml:space="preserve">
+    <value>El ruido de esta imagen no se puede medir.</value>
+  </data>
+  <data name="Rauschen_gemessen_0_Die_St_rke_steht_auf_1_8eeae66d" xml:space="preserve">
+    <value>Ruido medido: {0}. La intensidad está en {1}.</value>
+  </data>
+  <data name="Rauschen_gemessen_0_Das_Bild_ist_schon_sauber_En_078f8deb" xml:space="preserve">
+    <value>Ruido medido: {0}. La imagen ya está limpia, aquí apenas merece la pena reducir el ruido.</value>
+  </data>
+  <data name="Ohne_Filter_384e7a5b" xml:space="preserve">
+    <value>Sin filtro</value>
+  </data>
+  <data name="Entrauscht_8dbd8e34" xml:space="preserve">
+    <value>Sin ruido</value>
+  </data>
+  <data name="Kein_Look_die_Bilder_werden_nur_entrauscht_Das_E_843bf648" xml:space="preserve">
+    <value>Sin estilo, solo se reduce el ruido de las imágenes. La reducción de ruido se ajusta más abajo.</value>
+  </data>
+  <data name="Ohne_Filter_bleibt_nur_das_Entrauschen_Schalte_e_0ade8bd6" xml:space="preserve">
+    <value>Sin filtro solo queda la reducción de ruido. Actívala aquí; si no, no hay nada que hacer.</value>
+  </data>
+  <data name="Als_Ebene_einf_gen_7459c9bb" xml:space="preserve">
+    <value>Insertar como capa</value>
+  </data>
 </root>

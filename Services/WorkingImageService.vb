@@ -71,6 +71,11 @@ Namespace Services
         ''' <summary>Meldet, wenn <see cref="HasBakedContent"/> kippt. Kann aus der
         ''' Hintergrund-Queue kommen; der Empfaenger wechselt selbst auf den UI-Thread.</summary>
         Public Event BakedContentChanged As EventHandler
+        ''' <summary>Meldet JEDE Aenderung von <see cref="Version"/> oder <see cref="InitStamp"/>:
+        ''' neues Bild, Zug, Rueckgaengig, Leeren. Wer eine Aussage an einen Stand des Arbeitsbilds
+        ''' bindet (die Rauschmessung im Editor), erfaehrt so, dass sie nicht mehr gilt. Kann aus der
+        ''' Hintergrund-Queue kommen; der Empfaenger wechselt selbst auf den UI-Thread.</summary>
+        Public Event ContentChanged As EventHandler
         Private _hasUnrecordedBakedContent As Boolean
         ''' <summary>Was NICHT an einem lebenden Patch haengt und deshalb kein Rueckgaengig mehr
         ''' zuruecknehmen kann: eine geladene retouch.png und Zuege, deren Vorher-Pixel verworfen
@@ -167,6 +172,7 @@ Namespace Services
                 _hasAlphaHoles = hasAlphaHoles
             End SyncLock
             If bakedChanged Then RaiseEvent BakedContentChanged(Me, EventArgs.Empty)
+            RaiseEvent ContentChanged(Me, EventArgs.Empty)
             Return preview
         End Function
 
@@ -380,6 +386,7 @@ Namespace Services
             End SyncLock
             ' Ausserhalb der Sperre: der Empfaenger fragt den Zustand gleich wieder ab.
             If becameBaked Then RaiseEvent BakedContentChanged(Me, EventArgs.Empty)
+            RaiseEvent ContentChanged(Me, EventArgs.Empty)
             Return patch
         End Function
 
@@ -420,6 +427,7 @@ Namespace Services
                 bakedChanged = RecomputeBakedLocked()
             End SyncLock
             If bakedChanged Then RaiseEvent BakedContentChanged(Me, EventArgs.Empty)
+            RaiseEvent ContentChanged(Me, EventArgs.Empty)
             Return True
         End Function
 
@@ -550,6 +558,7 @@ Namespace Services
                 _hasAlphaHoles = False
             End SyncLock
             If bakedChanged Then RaiseEvent BakedContentChanged(Me, EventArgs.Empty)
+            RaiseEvent ContentChanged(Me, EventArgs.Empty)
         End Sub
 
         Public Sub Dispose() Implements IDisposable.Dispose

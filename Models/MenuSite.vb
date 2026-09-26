@@ -33,6 +33,11 @@ Namespace Models
         EditorFilmstrip
         ''' Fusszeile des Editors - gemeint ist das geoeffnete Bild.
         EditorFooter
+        ''' <summary>Eine Kachel des Filmstreifens im Editor, die NICHT geoeffnet ist. Der Streifen
+        ''' laedt seit dem 2026-09-26 erst auf Doppelklick; bis dahin ist die Kachel nur ausgewaehlt.
+        ''' Die Befehle des Editors arbeiten aber alle am geoeffneten Bild - hier gibt es deshalb nur,
+        ''' was diese Kachel selbst meint: oeffnen und als Ebene einsetzen.</summary>
+        EditorFilmstripOther
     End Enum
 
     Public Module MenuSiteExtensions
@@ -48,7 +53,8 @@ Namespace Models
         Public Function IsEditor(site As MenuSite) As Boolean
             Return site = MenuSite.EditorStage OrElse
                    site = MenuSite.EditorFilmstrip OrElse
-                   site = MenuSite.EditorFooter
+                   site = MenuSite.EditorFooter OrElse
+                   site = MenuSite.EditorFilmstripOther
         End Function
 
         ''' <summary>Auf der Buehne des Editors ist "Anpassen" sinnlos, wir sind bereits dort.

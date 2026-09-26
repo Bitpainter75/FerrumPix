@@ -8832,4 +8832,64 @@
   <data name="Hier_ablegen_b24b49c1" xml:space="preserve"><value>Hier neerzetten</value></data>
   <data name="Favorit_umbenennen_d1dab6c9" xml:space="preserve"><value>Favoriet hernoemen</value></data>
   <data name="Favorit_umbenannt_0_bca7f7e5" xml:space="preserve"><value>Favoriet hernoemd: {0}</value></data>
+  <data name="St_rke_aus_dem_Bild_messen_752b2b27" xml:space="preserve">
+    <value>Sterkte uit de foto meten</value>
+  </data>
+  <data name="Misst_das_Rauschen_im_Bild_und_stellt_die_St_rke_4738612a" xml:space="preserve">
+    <value>Meet de ruis in de foto en stelt de sterkte zo in dat er ongeveer evenveel korrel overblijft als bij een schone opname met lage ISO. Het ontruisen begint pas met een van de knoppen eronder.</value>
+  </data>
+  <data name="Feste_St_rke_f186f29f" xml:space="preserve">
+    <value>Vaste sterkte</value>
+  </data>
+  <data name="Jedes_Bild_wird_mit_derselben_St_rke_entrauscht_f2a7aaf8" xml:space="preserve">
+    <value>Elke foto wordt met dezelfde sterkte ontruist.</value>
+  </data>
+  <data name="Jedes_Bild_wird_vorher_gemessen_und_bekommt_die__d87ead4c" xml:space="preserve">
+    <value>Elke foto wordt eerst gemeten en krijgt de sterkte die zijn ruis nodig heeft. Foto's die al schoon zijn, blijven ongewijzigd.</value>
+  </data>
+  <data name="H_lt_mehr_feine_Zeichnung_braucht_aber_ein_Vielf_d27295d5" xml:space="preserve">
+    <value>Behoudt meer fijn detail, maar kost een veelvoud van de tijd.</value>
+  </data>
+  <data name="Gr_ndlich_fb7d073f" xml:space="preserve">
+    <value>Grondig</value>
+  </data>
+  <data name="In_einem_Sechstel_der_Zeit_daf_r_etwas_glatter_F_a8885661" xml:space="preserve">
+    <value>In een zesde van de tijd, maar iets gladder. Voor lange reeksen.</value>
+  </data>
+  <data name="Z_gig_193d53f6" xml:space="preserve">
+    <value>Vlot</value>
+  </data>
+  <data name="Restkorn_17ea498e" xml:space="preserve">
+    <value>Restkorrel</value>
+  </data>
+  <data name="Wie_viel_feines_Korn_nach_dem_Entrauschen_stehen_8c3a67d3" xml:space="preserve">
+    <value>Hoeveel fijne korrel er na het ontruisen overblijft. In het midden evenveel als bij een schone opname met lage ISO.</value>
+  </data>
+  <data name="Braucht_je_entrauschtem_Bild_mehrere_Minuten_Bil_ec60b5b2" xml:space="preserve">
+    <value>Kost per ontruiste foto enkele minuten. Foto's die in de editor al ontruist zijn, worden niet nog een keer ontruist.</value>
+  </data>
+  <data name="An_diesem_Bild_l_sst_sich_das_Rauschen_nicht_mes_a2b892a5" xml:space="preserve">
+    <value>De ruis in deze foto kan niet worden gemeten.</value>
+  </data>
+  <data name="Rauschen_gemessen_0_Die_St_rke_steht_auf_1_8eeae66d" xml:space="preserve">
+    <value>Gemeten ruis: {0}. De sterkte staat op {1}.</value>
+  </data>
+  <data name="Rauschen_gemessen_0_Das_Bild_ist_schon_sauber_En_078f8deb" xml:space="preserve">
+    <value>Gemeten ruis: {0}. De foto is al schoon, ontruisen loont hier nauwelijks.</value>
+  </data>
+  <data name="Ohne_Filter_384e7a5b" xml:space="preserve">
+    <value>Zonder filter</value>
+  </data>
+  <data name="Entrauscht_8dbd8e34" xml:space="preserve">
+    <value>Ontruist</value>
+  </data>
+  <data name="Kein_Look_die_Bilder_werden_nur_entrauscht_Das_E_843bf648" xml:space="preserve">
+    <value>Geen look, de foto's worden alleen ontruist. Het ontruisen stel je hieronder in.</value>
+  </data>
+  <data name="Ohne_Filter_bleibt_nur_das_Entrauschen_Schalte_e_0ade8bd6" xml:space="preserve">
+    <value>Zonder filter blijft alleen het ontruisen over. Zet het hier aan, anders is er niets te doen.</value>
+  </data>
+  <data name="Als_Ebene_einf_gen_7459c9bb" xml:space="preserve">
+    <value>Invoegen als laag</value>
+  </data>
 </root>

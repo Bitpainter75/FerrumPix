@@ -445,6 +445,155 @@ Namespace Services
             Return table
         End Function
 
+        ''' <summary>Varianzanteil, den Kamerarauschen beim Mitteln ueber 2x2 Bildpunkte BEHAELT.
+        ''' Nach dem Demosaic ist das Rauschen grob und fleckig und mittelt sich deshalb kaum weg:
+        ''' gemessen an Aufnahmen mit ISO 800 bis 25600 lag die halbe Groesse beim 0,77- bis
+        ''' 0,97-Fachen der Streuung, also bei 0,6 bis 0,94 der Varianz. Weisses Rauschen behielte
+        ''' nur ein Viertel.</summary>
+        Private Const NoiseVarianceKeptAtHalfScale As Double = 0.8
+
+        ''' <summary>Um so viel waechst die Varianz von STRUKTUR, wenn derselbe Block ueber die
+        ''' doppelte Kantenlaenge reicht. Gemessen an Aufnahmen mit Laub, Gras und Fassaden bei ISO
+        ''' 80 bis 200: das 2,0- bis 3,0-Fache. Genommen ist das untere Ende: ein kleinerer Wert
+        ''' schreibt mehr der Struktur zu, und ein Irrtum soll in Richtung "weniger entrauschen"
+        ''' gehen.</summary>
+        Private Const TextureVarianceGainAtHalfScale As Double = 2.0
+
+        ''' <summary>Wie stark das GANZE Bild rauscht, als eine Zahl: Standardabweichung der
+        ''' Helligkeit in Grauwerten, oder NaN, wenn sich nichts schaetzen laesst (zu klein, kein
+        ''' Bildpunkt voll deckend, unbekannter Farbtyp). Grundlage der automatischen Staerke beim
+        ''' Entrauschen mit Modell.
+        '''
+        ''' STRUKTUR IST HERAUSGERECHNET. Die Schaetzung darunter nimmt die glattesten Bloecke als
+        ''' Rauschen. In einem Bild voller Laub gibt es aber keine glatten Bloecke, und gemessen wird
+        ''' dann die Struktur: an Testbildern mit ISO 100 bis 200 bis zu 8 Grauwerte, so viel wie bei
+        ''' ISO 12800. Die beiden unterscheiden sich darin, wie sie sich ueber die Groesse verhalten:
+        ''' misst man dieselbe Stelle mit Bloecken doppelter Kantenlaenge, bleibt das Rauschen fast
+        ''' gleich, die Struktur waechst. Aus beiden Messungen zusammen ergibt sich der Anteil des
+        ''' Rauschens:
+        '''
+        '''   voll^2 = Rauschen^2 + Struktur^2
+        '''   halb^2 = Behalten * Rauschen^2 + Zuwachs * Struktur^2
+        '''
+        ''' aufgeloest nach dem Rauschen. Mehr als die volle Messung kann es nicht sein; dort wird
+        ''' begrenzt, weil das Behalten je Kamera etwas anders ausfaellt.</summary>
+        Friend Shared Function EstimateNoiseLevel(bitmap As SKBitmap) As Single
+            Dim full = EstimateBlockNoiseLevel(bitmap, halfScale:=False)
+            If Single.IsNaN(full) Then Return Single.NaN
+            Dim half = EstimateBlockNoiseLevel(bitmap, halfScale:=True)
+            ' Zu klein fuer die halbe Groesse: dann bleibt es bei der einfachen Messung.
+            If Single.IsNaN(half) Then Return full
+            Dim fullVariance = CDbl(full) * full
+            Dim noiseVariance = (TextureVarianceGainAtHalfScale * fullVariance - CDbl(half) * half) /
+                                (TextureVarianceGainAtHalfScale - NoiseVarianceKeptAtHalfScale)
+            Return CSng(Math.Sqrt(Math.Max(0.0, Math.Min(fullVariance, noiseVariance))))
+        End Function
+
+        ''' <summary>Die Schaetzung aus <see cref="EstimateNoiseProfile"/> als eine Zahl, auf der
+        ''' vollen oder der halben Groesse; NaN, wenn nichts zu schaetzen ist. Die beiden
+        ''' Bestandteile von <see cref="EstimateNoiseLevel"/>.
+        '''
+        ''' VERDICHTET: je Block gilt der Wert des Profils bei seiner Helligkeit, und gemittelt wird
+        ''' ueber alle Bloecke. Eine Helligkeit zaehlt also so viel, wie sie Flaeche im Bild hat -
+        ''' ein verrauschter Himmel wiegt mehr als ein verrauschter Schattenzipfel.
+        '''
+        ''' KEINE KOPIE DES BILDES. Gebraucht wird es fuer das Entrauschen mit Modell, und das faengt
+        ''' bei Arbeitsbildern von 45 Megapixeln an. Die Schaetzung wertet aber ohnehin nur hoechstens
+        ''' <see cref="NoiseProfileMaxBlocks"/> Bloecke aus; genau die werden hier nebeneinander in
+        ''' ein schmales Band gelegt, und das Profil laeuft auf dem Band. Weil jeder Block nur aus
+        ''' sich selbst gerechnet wird, ist das Ergebnis dasselbe wie auf dem ganzen Bild. Die halbe
+        ''' Groesse entsteht dabei gleich mit: je vier Bildpunkte werden beim Kopieren gemittelt.
+        '''
+        ''' NUR VOLL DECKENDE BLOECKE. Ein Arbeitsbild kann durchsichtige Stellen haben (entferntes
+        ''' Objekt, erweiterte Leinwand); dort steht Schwarz ohne Streuung, und das wuerde die
+        ''' dunkelste Stufe als rauschfrei eintragen.</summary>
+        Friend Shared Function EstimateBlockNoiseLevel(bitmap As SKBitmap, halfScale As Boolean) As Single
+            If bitmap Is Nothing Then Return Single.NaN
+            Dim ri, gi, bi, ai As Integer
+            Select Case bitmap.ColorType
+                Case SKColorType.Bgra8888
+                    ri = 2 : gi = 1 : bi = 0 : ai = 3
+                Case SKColorType.Rgba8888
+                    ri = 0 : gi = 1 : bi = 2 : ai = 3
+                Case Else
+                    Return Single.NaN
+            End Select
+            ' Ein Block der halben Groesse deckt doppelt so viele Bildpunkte je Kante.
+            Dim scale = If(halfScale, 2, 1)
+            Dim sourceBlock = NoiseProfileBlock * scale
+            Dim blocksX = bitmap.Width \ sourceBlock
+            Dim blocksY = bitmap.Height \ sourceBlock
+            If blocksX < 1 OrElse blocksY < 1 Then Return Single.NaN
+            Dim stepSize = Math.Max(1, CInt(Math.Ceiling(Math.Sqrt(CDbl(blocksX) * blocksY / NoiseProfileMaxBlocks))))
+            Dim usedX = (blocksX + stepSize - 1) \ stepSize
+            Dim usedY = (blocksY + stepSize - 1) \ stepSize
+
+            ' Das Band: EINE Blockzeile hoch, so viele Bloecke breit, wie es gibt. Freie Plaetze am
+            ' Ende bleiben ungenutzt - die Breite wird erst gesetzt, wenn feststeht, wie viele
+            ' Bloecke deckend waren.
+            Dim blockBytes = NoiseProfileBlock * 4
+            Dim bandStride = usedX * usedY * blockBytes
+            Dim band = New Byte(bandStride * NoiseProfileBlock - 1) {}
+            Dim means = New List(Of Integer)(usedX * usedY)
+            Dim sourceStride = bitmap.RowBytes
+            Dim pixels = bitmap.GetPixels()
+            Dim rows = New Byte(sourceBlock * sourceStride - 1) {}
+            Dim block = New Byte(NoiseProfileBlock * blockBytes - 1) {}
+            Dim samples = scale * scale
+            Dim used = 0
+            For blockRow = 0 To usedY - 1
+                Dim top = blockRow * stepSize * sourceBlock
+                ' Die Bildzeilen dieser Blockreihe am Stueck. Der Versatz in 64 Bit, wie bei
+                ' DenoiseModelService.RowStart: Zeile mal Zeilenlaenge laeuft bei sehr grossen Bildern
+                ' ueber 32 Bit, und VB wirft dann, statt umzulaufen.
+                Marshal.Copy(New IntPtr(pixels.ToInt64() + CLng(top) * CLng(sourceStride)), rows, 0, rows.Length)
+                For column = 0 To usedX - 1
+                    Dim left = column * stepSize * sourceBlock * 4
+                    Dim opaque = True
+                    Dim sum = 0.0
+                    For y = 0 To NoiseProfileBlock - 1
+                        For x = 0 To NoiseProfileBlock - 1
+                            ' Je Bildpunkt des Blocks der Mittelwert ueber scale mal scale Quellpunkte;
+                            ' auf der vollen Groesse ist das der Quellpunkt selbst.
+                            Dim r = 0, g = 0, b = 0
+                            For dy = 0 To scale - 1
+                                Dim o = (y * scale + dy) * sourceStride + left + x * scale * 4
+                                For dx = 0 To scale - 1
+                                    Dim p = o + dx * 4
+                                    If rows(p + ai) <> 255 Then opaque = False : Exit For
+                                    r += rows(p + ri) : g += rows(p + gi) : b += rows(p + bi)
+                                Next
+                                If Not opaque Then Exit For
+                            Next
+                            If Not opaque Then Exit For
+                            Dim q = (y * NoiseProfileBlock + x) * 4
+                            block(q + ri) = CByte((r + samples \ 2) \ samples)
+                            block(q + gi) = CByte((g + samples \ 2) \ samples)
+                            block(q + bi) = CByte((b + samples \ 2) \ samples)
+                            block(q + ai) = 255
+                            sum += 0.299 * block(q + ri) + 0.587 * block(q + gi) + 0.114 * block(q + bi)
+                        Next
+                        If Not opaque Then Exit For
+                    Next
+                    If Not opaque Then Continue For
+                    For y = 0 To NoiseProfileBlock - 1
+                        Buffer.BlockCopy(block, y * blockBytes, band, y * bandStride + used * blockBytes, blockBytes)
+                    Next
+                    means.Add(Math.Min(255, CInt(Math.Floor(sum / (NoiseProfileBlock * NoiseProfileBlock)))))
+                    used += 1
+                Next
+            Next
+            If used = 0 Then Return Single.NaN
+
+            Dim profile = EstimateNoiseProfile(band, bandStride, ri, gi, bi, ai, used * NoiseProfileBlock, NoiseProfileBlock)
+            If profile Is Nothing Then Return Single.NaN
+            Dim total = 0.0
+            For Each level In means
+                total += profile(level)
+            Next
+            Return CSng(total / used)
+        End Function
+
         ''' <summary>Die Schwelle je Helligkeitswert fuer das angepasste Verfahren, als Varianz.
         '''
         ''' Der Regler ist hier ein VIELFACHES DES RAUSCHENS und kein fester Grauwert: bei 100 gilt als

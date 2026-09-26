@@ -1,3 +1,27 @@
+## Unreleased
+
+### What's new
+
+- **Denoise strength from the picture.** The AI denoiser in the editor can measure how noisy a
+  photo is and set a matching strength. Applying a filter to a selection can now denoise as well,
+  with a fixed strength or measured for each picture, and pictures that are already clean are left
+  as they are. Choose *No filter* there to only denoise.
+
+- **Browse the filmstrip in the editor.** Clicking a picture in the filmstrip below the editor
+  only selects it, so you can scroll and look around freely. Double-click, ENTER or the context
+  menu opens it; the context menu can also insert it as a layer. Dragging a picture onto the photo
+  now shows where it will land.
+
+### Fixes
+
+- Smoothed brush and mask strokes now end where you lift the pen or mouse instead of stopping
+  short. A pen without a pressure sensor paints at the full brush size again, and the brush preview
+  no longer shows pressure for brush types that do not use it.
+
+- Undo and redo no longer select a different text when the selected one was removed, changing a
+  large selection can no longer close the app, and saved searches keep files whose names differ
+  only in upper and lower case apart.
+
 ## FerrumPix 0.9.52
 
 ### What's new

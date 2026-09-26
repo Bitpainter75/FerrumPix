@@ -384,7 +384,10 @@ Namespace Services
                                          Optional developRaw As Boolean = True,
                                          Optional applyPendingBaked As Boolean = False,
                                          Optional copyrightText As String = "",
-                                         Optional cancel As Threading.CancellationToken = Nothing) As Boolean
+                                         Optional cancel As Threading.CancellationToken = Nothing,
+                                         Optional denoise As DenoiseModelService.DenoiseRequest = Nothing) As Boolean
+            ' <denoise>: Entrauschen mit Modell aus dem Stapel, siehe weiter unten beim Anwenden.
+            '
             ' Zentraler Schutz: Bearbeitung einer RAW-Quelle wirkt nur auf deren eingebettete
             ' JPEG-Vorschau (siehe OpenSourceStream/DecodeOriented) - ein Speichern-in-place würde
             ' hier fälschlich die RAW-Rohdaten JPEG-kodiert über die Original-RAW-Datei schreiben.
@@ -449,11 +452,50 @@ Namespace Services
                 ' Vorgaenge schon, und ein zweites Entrauschen sieht man erst, wenn man die Bilder
                 ' nebeneinanderlegt. Und VOR der Reglerkette, weil sie zum Bild gehoeren und nicht
                 ' zu den Reglern.
+                ' Ob ein vermerktes Entrauschen dabei WIRKLICH nachgezogen wurde. Der Haken allein sagt
+                ' das nicht: fehlt das Modell oder scheitert der Lauf, kommt Nothing zurueck, oder ein
+                ' Bild, das nur Retusche und Striche traegt.
+                Dim pendingDenoiseApplied = False
                 If workingFull Is Nothing AndAlso applyPendingBaked AndAlso decoded IsNot Nothing Then
                     Dim reapplied = ApplyPendingBakedOperations(decoded, adj, cancel)
                     If reapplied IsNot Nothing Then
                         decoded.Dispose()
                         decoded = reapplied
+                        pendingDenoiseApplied = HasRunnableDenoiseOperation(adj)
+                    End If
+                End If
+
+                ' ENTRAUSCHEN AUS DEM STAPEL, nach den vermerkten Vorgaengen und vor der Reglerkette:
+                ' es gehoert zum Bild wie ein im Editor gerechnetes Entrauschen, und die Automatik
+                ' soll das Rauschen messen, das der Sensor geliefert hat, nicht das, was Belichtung
+                ' und Kurve daraus machen.
+                '
+                ' NIE ZWEIMAL. Steckt ein im Editor gerechnetes Entrauschen schon in diesen Pixeln,
+                ' laesst die feste Staerke das Bild aus - ein zweiter Lauf nimmt die Zeichnung mit,
+                ' die der erste stehen gelassen hat. Die Automatik braucht die Regel nicht: sie misst
+                ' das bereits entrauschte Bild als sauber und laesst es von selbst aus.
+                '
+                ' NICHT BEI EINEM PROJEKTBUENDEL. Dessen Bild ist hier schon die fertige Szene samt
+                ' Reglerkette, Texten und Objekten (RenderFpxFullResolution): gemessen wuerde die
+                ' bearbeitete Fassung, und das Modell weichte die Schrift mit auf.
+                If decoded IsNot Nothing AndAlso denoise IsNot Nothing AndAlso workingFull Is Nothing AndAlso isFpxSource Then
+                    DiagnosticLogService.LogAlways("Entrauschen",
+                        $"{IO.Path.GetFileName(sourcePath)}: Projektbuendel - im Stapel nicht entrauscht")
+                ElseIf decoded IsNot Nothing AndAlso denoise IsNot Nothing AndAlso workingFull Is Nothing Then
+                    Dim hasDenoiseNote = adj.BakedOperations IsNot Nothing AndAlso
+                        adj.BakedOperations.Any(Function(o) o IsNot Nothing AndAlso
+                            String.Equals(o.Kind, BakedOperation.KindDenoise, StringComparison.OrdinalIgnoreCase))
+                    Dim alreadyDenoised = Not denoise.Automatic AndAlso hasDenoiseNote AndAlso
+                        (adj.BakedOperationsApplied OrElse pendingDenoiseApplied)
+                    If alreadyDenoised Then
+                        DiagnosticLogService.LogAlways("Entrauschen",
+                            $"{IO.Path.GetFileName(sourcePath)}: schon im Editor entrauscht - ausgelassen")
+                    Else
+                        Dim denoised = DenoiseModelService.ApplyRequest(decoded, denoise, IO.Path.GetFileName(sourcePath), cancel)
+                        If denoised IsNot Nothing Then
+                            decoded.Dispose()
+                            decoded = denoised
+                        End If
                     End If
                 End If
 

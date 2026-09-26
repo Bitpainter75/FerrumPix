@@ -8836,4 +8836,64 @@
   <data name="Hier_ablegen_b24b49c1" xml:space="preserve"><value>Letakkan di sini</value></data>
   <data name="Favorit_umbenennen_d1dab6c9" xml:space="preserve"><value>Ganti nama favorit</value></data>
   <data name="Favorit_umbenannt_0_bca7f7e5" xml:space="preserve"><value>Favorit diganti nama: {0}</value></data>
+  <data name="St_rke_aus_dem_Bild_messen_752b2b27" xml:space="preserve">
+    <value>Ukur kekuatan dari gambar</value>
+  </data>
+  <data name="Misst_das_Rauschen_im_Bild_und_stellt_die_St_rke_4738612a" xml:space="preserve">
+    <value>Mengukur derau pada gambar dan mengatur kekuatan agar butiran yang tersisa kira-kira sebanyak pada foto bersih dengan ISO rendah. Penghilangan derau baru dimulai dengan salah satu tombol di bawah.</value>
+  </data>
+  <data name="Feste_St_rke_f186f29f" xml:space="preserve">
+    <value>Kekuatan tetap</value>
+  </data>
+  <data name="Jedes_Bild_wird_mit_derselben_St_rke_entrauscht_f2a7aaf8" xml:space="preserve">
+    <value>Setiap gambar dihilangkan deraunya dengan kekuatan yang sama.</value>
+  </data>
+  <data name="Jedes_Bild_wird_vorher_gemessen_und_bekommt_die__d87ead4c" xml:space="preserve">
+    <value>Setiap gambar diukur lebih dulu dan mendapat kekuatan sesuai kebutuhan deraunya. Gambar yang sudah bersih tidak diubah.</value>
+  </data>
+  <data name="H_lt_mehr_feine_Zeichnung_braucht_aber_ein_Vielf_d27295d5" xml:space="preserve">
+    <value>Mempertahankan lebih banyak detail halus, tetapi butuh waktu berkali lipat.</value>
+  </data>
+  <data name="Gr_ndlich_fb7d073f" xml:space="preserve">
+    <value>Teliti</value>
+  </data>
+  <data name="In_einem_Sechstel_der_Zeit_daf_r_etwas_glatter_F_a8885661" xml:space="preserve">
+    <value>Dalam seperenam waktu, tetapi sedikit lebih halus. Untuk seri panjang.</value>
+  </data>
+  <data name="Z_gig_193d53f6" xml:space="preserve">
+    <value>Cepat</value>
+  </data>
+  <data name="Restkorn_17ea498e" xml:space="preserve">
+    <value>Sisa butiran</value>
+  </data>
+  <data name="Wie_viel_feines_Korn_nach_dem_Entrauschen_stehen_8c3a67d3" xml:space="preserve">
+    <value>Seberapa banyak butiran halus yang tersisa setelah derau dihilangkan. Di tengah, sebanyak pada foto bersih dengan ISO rendah.</value>
+  </data>
+  <data name="Braucht_je_entrauschtem_Bild_mehrere_Minuten_Bil_ec60b5b2" xml:space="preserve">
+    <value>Butuh beberapa menit per gambar. Gambar yang deraunya sudah dihilangkan di editor tidak diproses untuk kedua kalinya.</value>
+  </data>
+  <data name="An_diesem_Bild_l_sst_sich_das_Rauschen_nicht_mes_a2b892a5" xml:space="preserve">
+    <value>Derau pada gambar ini tidak dapat diukur.</value>
+  </data>
+  <data name="Rauschen_gemessen_0_Die_St_rke_steht_auf_1_8eeae66d" xml:space="preserve">
+    <value>Derau terukur: {0}. Kekuatan diatur ke {1}.</value>
+  </data>
+  <data name="Rauschen_gemessen_0_Das_Bild_ist_schon_sauber_En_078f8deb" xml:space="preserve">
+    <value>Derau terukur: {0}. Gambar sudah bersih, menghilangkan derau hampir tidak ada gunanya di sini.</value>
+  </data>
+  <data name="Ohne_Filter_384e7a5b" xml:space="preserve">
+    <value>Tanpa filter</value>
+  </data>
+  <data name="Entrauscht_8dbd8e34" xml:space="preserve">
+    <value>Tanpa derau</value>
+  </data>
+  <data name="Kein_Look_die_Bilder_werden_nur_entrauscht_Das_E_843bf648" xml:space="preserve">
+    <value>Tanpa tampilan, gambar hanya dihilangkan deraunya. Penghilangan derau diatur di bawah.</value>
+  </data>
+  <data name="Ohne_Filter_bleibt_nur_das_Entrauschen_Schalte_e_0ade8bd6" xml:space="preserve">
+    <value>Tanpa filter, yang tersisa hanya penghilangan derau. Aktifkan di sini, jika tidak tidak ada yang dikerjakan.</value>
+  </data>
+  <data name="Als_Ebene_einf_gen_7459c9bb" xml:space="preserve">
+    <value>Sisipkan sebagai lapisan</value>
+  </data>
 </root>

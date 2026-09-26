@@ -212,6 +212,139 @@ Namespace Services
             End Get
         End Property
 
+        ' ── Staerke aus dem Bild ─────────────────────────────────────────────────────────────
+        '
+        ' Eine feste Staerke bedeutet bei jedem Bild etwas anderes: 70 nimmt einem Bild mit ISO 100
+        ' die letzte feine Zeichnung und laesst bei ISO 12800 sichtbar Korn stehen. Die Automatik
+        ' fragt deshalb nicht "wie stark", sondern "wie viel Rauschen soll uebrig bleiben", und
+        ' rechnet die Staerke daraus.
+        '
+        ' DAS GEHT, WEIL DIE STAERKE EINE MISCHUNG IST (DenoiseTile): die Helligkeit des Ergebnisses
+        ' liegt zwischen der des Modells und der des Originals, bei Staerke s bleibt also (1 - s) des
+        ' Rauschens stehen. Dazu kommt, was das Modell selbst uebrig laesst - beides zusammen ist
+        ' das Restrauschen:
+        '
+        '   Rest^2 = Modellrest^2 + (Aufschlag * (1 - s) * Rauschen)^2
+        '
+        ' Den Aufschlag und den Modellrest hat die Messung geliefert (Entrauschmessung, Aufruf
+        ' "automatik"); beide stehen unten mit ihren Zahlen.
+        '
+        ' Gemessen wird mit ImageProcessor.EstimateNoiseLevel, derselben Schaetzung wie beim
+        ' angepassten Rauschregler. Sie kostet auf 24 Megapixeln rund 20 Millisekunden - neben
+        ' Minuten fuer das Modell faellt sie nicht ins Gewicht.
+
+        ''' <summary>So viel Helligkeitsrauschen soll nach der Automatik uebrig bleiben, als
+        ''' Streuung in Grauwerten.
+        '''
+        ''' AM BILD BEURTEILT, nicht nur gemessen. Zuerst stand hier 1,5, die Hoehe einer sauberen
+        ''' Aufnahme mit ISO 100 bis 200 (an den Testbildern 0,75 bis 2,2). Im Bild wirkte das
+        ''' weichgezeichnet: an einer Aufnahme, fuer die die Automatik 85 vorschlug, war 75 besser.
+        ''' Weil die Staerke 1 - erlaubt / Rauschen ist, heisst das zwei Drittel mehr erlaubtes
+        ''' Restrauschen, und zwar bei jedem Bild gleich. Daraus die 2,4. Folge: ein Bild, das unter
+        ''' rund 2,7 misst, gilt als sauber (Staerke unter 25) und wird im Stapel ausgelassen.</summary>
+        Public Const AutoTargetNoise As Single = 2.4F
+
+        ''' <summary>Was das Modell bei voller Staerke selbst an Streuung stehen laesst, in
+        ''' Grauwerten. Gemessen am schnellen Modell an mittigen Ausschnitten von neun Aufnahmen
+        ''' zwischen ISO 100 und 25600: 0,3 bis 0,9 an Bildern ohne feine Textur. Wo mehr stehen
+        ''' blieb (bis 2,2), war es Zeichnung, die das Modell zu Recht behaelt und die Schaetzung
+        ''' nicht vom Rauschen trennen kann.</summary>
+        Friend Const ModelResidualNoise As Single = 0.5F
+
+        ''' <summary>Um so viel liegt das Restrauschen einer Mischung ueber der Rechnung
+        ''' (1 - Staerke) mal Rauschen. Dieselben Messungen bei Staerke 50 und 75 ergaben das 1,0- bis
+        ''' 1,4-Fache, meist 1,1 bis 1,2: die Schaetzung nimmt ein Perzentil der Blockstreuungen, und
+        ''' das waechst nicht linear mit der Beimischung. Ohne den Faktor bliebe gut ein Siebtel mehr
+        ''' Korn stehen als verlangt.</summary>
+        Friend Const MixResidualFactor As Single = 1.15F
+
+        ''' <summary>Unterhalb dieser Staerke lohnt der Lauf nicht: er kostet Minuten und nimmt
+        ''' weniger als ein Viertel des Rauschens. Der Stapel laesst solche Bilder aus, der Editor
+        ''' sagt es dazu.</summary>
+        Public Const AutoMinimumStrength As Double = 25.0
+
+        ''' <summary>Was die Automatik fuer ein Bild vorschlaegt.</summary>
+        Public NotInheritable Class DenoiseSuggestion
+            ''' <summary>Gemessenes Helligkeitsrauschen in Grauwerten; NaN, wenn nichts zu messen war.</summary>
+            Public Property NoiseLevel As Single = Single.NaN
+            ''' <summary>Die Staerke, 0 bis 100.</summary>
+            Public Property Strength As Double
+            ''' <summary>Lohnt der Lauf? Falsch heisst: das Bild ist schon so sauber, dass das Modell
+            ''' kaum etwas zu tun haette.</summary>
+            Public Property Worthwhile As Boolean
+        End Class
+
+        ''' <summary>Das Rauschziel fuer einen Restkorn-Wert von 0 bis 100. Bei 50 gilt
+        ''' <see cref="AutoTargetNoise"/>, jede 50 Schritte halbieren oder verdoppeln es: das Auge
+        ''' sieht Rauschen im Verhaeltnis, nicht im Abstand.</summary>
+        Public Shared Function TargetNoiseFor(grain As Double) As Single
+            Dim g = If(Double.IsNaN(grain), 50.0, Math.Max(0.0, Math.Min(100.0, grain)))
+            Return CSng(AutoTargetNoise * Math.Pow(2.0, (g - 50.0) / 50.0))
+        End Function
+
+        ''' <summary>Die Staerke fuer ein gemessenes Rauschen. Reine Rechnung, damit sie sich ohne
+        ''' Bild pruefen laesst.</summary>
+        Public Shared Function SuggestFor(noiseLevel As Single, Optional grain As Double = 50.0) As DenoiseSuggestion
+            Dim suggestion As New DenoiseSuggestion With {.NoiseLevel = noiseLevel}
+            If Single.IsNaN(noiseLevel) OrElse noiseLevel <= 0 Then Return suggestion
+            Dim target = TargetNoiseFor(grain)
+            ' Was vom Original stehen bleiben darf, nachdem der Modellrest abgezogen ist. Liegt das
+            ' Ziel unter dem Modellrest, gibt es nichts mehr abzuziehen: volle Staerke.
+            Dim allowed = Math.Sqrt(Math.Max(0.0, CDbl(target) * target - CDbl(ModelResidualNoise) * ModelResidualNoise)) /
+                          MixResidualFactor
+            Dim strength = 1.0 - allowed / noiseLevel
+            suggestion.Strength = Math.Round(Math.Max(0.0, Math.Min(1.0, strength)) * 100.0)
+            suggestion.Worthwhile = suggestion.Strength >= AutoMinimumStrength
+            Return suggestion
+        End Function
+
+        ''' <summary>Das Bild messen und die Staerke vorschlagen. Das Bild wird nur gelesen.</summary>
+        Public Shared Function Suggest(image As SKBitmap, Optional grain As Double = 50.0) As DenoiseSuggestion
+            Return SuggestFor(ImageProcessor.EstimateNoiseLevel(image), grain)
+        End Function
+
+        ''' <summary>Ein Entrausch-Auftrag fuer den Stapel: welches Modell und wie die Staerke
+        ''' entsteht. Er geht an <see cref="ImageProcessor.SaveImage"/> und wird dort auf das frisch
+        ''' entwickelte Bild angewandt, vor der Reglerkette - an derselben Stelle wie das
+        ''' Hochskalieren und aus demselben Grund.</summary>
+        Public NotInheritable Class DenoiseRequest
+            Public Property Kind As DenoiseKind = DenoiseKind.Quality
+            ''' <summary>Wahr: die Staerke wird je Bild gemessen, <see cref="Grain"/> gilt.
+            ''' Falsch: <see cref="Strength"/> gilt fuer jedes Bild.</summary>
+            Public Property Automatic As Boolean = True
+            ''' <summary>Feste Staerke, 0 bis 100.</summary>
+            Public Property Strength As Double = 70.0
+            ''' <summary>Restkorn der Automatik, 0 bis 100; siehe <see cref="TargetNoiseFor"/>.</summary>
+            Public Property Grain As Double = 50.0
+        End Class
+
+        ''' <summary>Einen Auftrag auf ein Bild anwenden. Zurueck kommt ein NEUES Bitmap, oder
+        ''' Nothing, wenn das Bild so bleibt: Modell fehlt, die Automatik haelt den Lauf fuer
+        ''' unnoetig, abgebrochen oder fehlgeschlagen. Was davon, sagt das Protokoll; ob
+        ''' abgebrochen wurde, fragt der Aufrufer an seiner Marke nach.</summary>
+        Friend Shared Function ApplyRequest(image As SKBitmap, request As DenoiseRequest, sourceName As String,
+                                            cancel As Threading.CancellationToken) As SKBitmap
+            If image Is Nothing OrElse request Is Nothing Then Return Nothing
+            If request.Kind = DenoiseKind.Fast Then
+                If Not FastAvailable Then Return Nothing
+            ElseIf Not Available Then
+                Return Nothing
+            End If
+            Dim strength = Math.Max(0.0, Math.Min(100.0, request.Strength))
+            If request.Automatic Then
+                Dim suggestion = Suggest(image, request.Grain)
+                If Not suggestion.Worthwhile Then
+                    DiagnosticLogService.LogAlways("Entrauschen",
+                        $"{sourceName}: Rauschen {suggestion.NoiseLevel:F2}, Staerke waere {suggestion.Strength:F0} - ausgelassen")
+                    Return Nothing
+                End If
+                strength = suggestion.Strength
+                DiagnosticLogService.LogAlways("Entrauschen",
+                    $"{sourceName}: Rauschen {suggestion.NoiseLevel:F2}, Staerke {strength:F0}")
+            End If
+            Return Denoise(image, request.Kind, CSng(strength / 100.0), cancel)
+        End Function
+
 
         ''' <summary>Das Bild entrauschen. Zurueck kommt eine KOPIE, oder Nothing bei jedem
         ''' Fehlschlag.

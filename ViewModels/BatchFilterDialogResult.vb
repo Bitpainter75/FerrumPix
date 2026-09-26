@@ -21,6 +21,10 @@ Namespace ViewModels
         ''' <summary>Automatische Bildverbesserung: keine Vorgabe-Datei, sondern die Messung des
         ''' Editors ("Auto") - die Reglerwerte werden PRO BILD gemessen, nicht aus einer Vorlage.</summary>
         Public Const SourceAuto As String = "Auto"
+        ''' <summary>Kein Look: der Lauf besteht allein aus dem Entrauschen darunter. Nur in
+        ''' "Filter anwenden" und nur mit einem Entrausch-Modell - ohne beides waere ein Lauf, der
+        ''' die Bilder unveraendert neu schreibt.</summary>
+        Public Const SourceNone As String = "None"
 
         ''' <summary>Woher der Look kommt: eingebauter Filter, Anpassungsvorlage, XMP-Preset (.xmp)
         ''' oder LUT (.cube).</summary>
@@ -37,6 +41,10 @@ Namespace ViewModels
         ''' Anpassungsvorlage sind Sammlungen einzelner Regler und kennen keinen gemeinsamen
         ''' Mischregler.</summary>
         Public Property Strength As Integer = 100
+
+        ''' <summary>Entrauschen mit Modell, zusaetzlich zum Look; Nothing heisst aus. Es gilt
+        ''' unabhaengig von der Quelle oben und wird vor dem Look gerechnet.</summary>
+        Public Property Denoise As Services.DenoiseModelService.DenoiseRequest = Nothing
 
         ''' <summary>True: Originale werden überschrieben (Format, Ziel und Namenszusatz entfallen).</summary>
         Public Property Overwrite As Boolean = False

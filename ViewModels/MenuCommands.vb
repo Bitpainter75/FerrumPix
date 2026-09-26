@@ -23,6 +23,11 @@ Namespace ViewModels
         Public Property Compare As ICommand
         Public Property PinImage As ICommand
 
+        ''' <summary>Nur im Filmstreifen des Editors, auf einer Kachel, die nicht geoeffnet ist
+        ''' (MenuSite.EditorFilmstripOther): diese Kachel oeffnen bzw. als Ebene einsetzen.</summary>
+        Public Property OpenInEditor As ICommand
+        Public Property InsertAsLayer As ICommand
+
         ' Speichern (nur Editor)
         Public Property Save As ICommand
         Public Property SaveAs As ICommand

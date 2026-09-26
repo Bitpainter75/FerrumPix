@@ -8188,9 +8188,19 @@ Namespace ViewModels
                 Dim clamped = CDbl(CInt(Math.Round(Math.Max(0, Math.Min(100, value)))))
                 If _brushSmoothing = clamped Then Return
                 Me.RaiseAndSetIfChanged(_brushSmoothing, clamped)
-                AppSettingsService.Update(Sub(s) s.BrushSmoothing = CInt(clamped))
             End Set
         End Property
+
+        ''' <summary>Merkt die Glaettung fuer die naechste Sitzung. BEIM BEGINN EINES ZUGS und nicht
+        ''' im Setter, wie bei der Staerke des Entrauschens: der Setter laeuft bei jedem Schritt des
+        ''' Reglers, und ein Zug darueber waeren bis zu hundert Schreibvorgaenge der
+        ''' Einstellungsdatei. Wer den Regler zieht und nicht malt, hat nichts eingestellt, was
+        ''' zaehlt.</summary>
+        Public Sub RememberBrushSmoothing()
+            Dim value = CInt(_brushSmoothing)
+            If AppSettingsService.Load().BrushSmoothing = value Then Return
+            AppSettingsService.Update(Sub(s) s.BrushSmoothing = value)
+        End Sub
 
         Public Property BrushHardness As Double
             Get
@@ -8265,6 +8275,16 @@ Namespace ViewModels
             Next
             Return items
         End Function
+
+        ''' <summary>Wirkt der Stiftdruck bei der gewaehlten Pinselart? Die gestempelten Arten kennen
+        ''' keinen (ImageProcessor.IsStampBrushPreset); der Radierer ist immer der weiche Rundpinsel
+        ''' und kennt ihn. Die Vorschau zeigt den schmaler werdenden Strich nur, wenn das Ergebnis
+        ''' ihn auch hat.</summary>
+        Public ReadOnly Property BrushPresetUsesPressure As Boolean
+            Get
+                Return IsEraserMode OrElse Not ImageProcessor.IsStampBrushPreset(_brushPreset)
+            End Get
+        End Property
 
         Private Sub SelectBrushPreset(key As String)
             Dim normalized = If(String.IsNullOrWhiteSpace(key), "soft", key.Trim().ToLowerInvariant())
@@ -10155,7 +10175,96 @@ Namespace ViewModels
         Private Sub RaiseStoredDenoiseChanged()
             Me.RaisePropertyChanged(NameOf(HasStoredDenoise))
             Me.RaisePropertyChanged(NameOf(StoredDenoiseText))
+            Me.RaisePropertyChanged(NameOf(HasDenoiseMeasurement))
+            Me.RaisePropertyChanged(NameOf(DenoiseMeasurementText))
         End Sub
+
+        ' ── Staerke aus dem Bild ─────────────────────────────────────────────────────────────
+        '
+        ' Der Knopf misst das Rauschen im Arbeitsbild und stellt den Staerke-Regler darauf ein. Er
+        ' RECHNET NICHTS: das Entrauschen startet weiter erst mit einem der beiden Knoepfe darunter.
+        ' So sieht man den Vorschlag, bevor die Minuten laufen, und kann ihn noch aendern. Die
+        ' Rechnung dahinter steht bei DenoiseModelService.SuggestFor und ist dieselbe wie im Stapel.
+
+        Private _denoiseMeasurementText As String = ""
+
+        ''' <summary>Zu welchem Arbeitsbild die Messung gehoert: Identitaet und Stand. Aendert sich
+        ''' eines davon, ist das Bild ein anderes oder schon entrauscht, und die Zeile wuerde etwas
+        ''' ueber ein Bild sagen, das nicht mehr dasteht.</summary>
+        Private _denoiseMeasurementStamp As (Init As Long, Version As Long) = (-1, -1)
+
+        ''' <summary>Meldet die Messzeile neu. Gehoert sie nicht mehr zum Arbeitsbild, wird sie dabei
+        ''' geleert, damit spaetere Aenderungen nicht jedes Mal nachfragen.</summary>
+        Private Sub RaiseDenoiseMeasurementChanged()
+            If _denoiseMeasurementText.Length > 0 AndAlso DenoiseMeasurementText.Length = 0 Then
+                _denoiseMeasurementText = ""
+            End If
+            Me.RaisePropertyChanged(NameOf(HasDenoiseMeasurement))
+            Me.RaisePropertyChanged(NameOf(DenoiseMeasurementText))
+        End Sub
+
+        Public ReadOnly Property HasDenoiseMeasurement As Boolean
+            Get
+                Return DenoiseMeasurementText.Length > 0
+            End Get
+        End Property
+
+        ''' <summary>Was die letzte Messung ergeben hat, in Worten; leer, wenn sie nicht zum
+        ''' aktuellen Arbeitsbild gehoert.</summary>
+        Public ReadOnly Property DenoiseMeasurementText As String
+            Get
+                If _workingImage Is Nothing OrElse Not _workingImage.IsInitialized Then Return ""
+                If _denoiseMeasurementStamp.Init <> _workingImage.InitStamp OrElse
+                   _denoiseMeasurementStamp.Version <> _workingImage.Version Then Return ""
+                Return _denoiseMeasurementText
+            End Get
+        End Property
+
+        ''' <summary>Das Arbeitsbild messen und die Staerke einstellen. Die Messung kostet auf
+        ''' 24 Megapixeln rund 20 Millisekunden und laeuft trotzdem im Hintergrund: sie liest das
+        ''' Arbeitsbild unter dessen Sperre, und die soll der Oberflaechenfaden nicht halten.
+        '''
+        ''' KEIN RIEGEL AM MODELL hier, nur am Knopf (IsEnabled im NoisePanel): die Messung selbst
+        ''' braucht keines, und so bleibt sie auch dort pruefbar, wo keine Modelldatei liegt.</summary>
+        Public Async Function MeasureDenoiseStrengthAsync() As Task
+            If _workingImage Is Nothing OrElse Not _workingImage.IsInitialized Then Return
+            ' Waehrend eine RAW entwickelt wird, haelt das Arbeitsbild noch das VORIGE Bild, und
+            ' gemessen wuerde dessen Rauschen.
+            If _workingImagePending Then
+                StatusText = LocalizationService.T("RAW wird entwickelt …")
+                Return
+            End If
+            Try
+                Dim result = Await Task.Run(
+                    Function()
+                        Return _workingImage.WithFull(
+                            Function(full) (Suggestion:=DenoiseModelService.Suggest(full),
+                                            Stamp:=(Init:=_workingImage.InitStamp, Version:=_workingImage.Version)))
+                    End Function)
+                If result.Suggestion Is Nothing Then Return
+                ' Inzwischen ein anderes Bild? Dann gehoert der Vorschlag nicht mehr hierher.
+                If result.Stamp.Init <> _workingImage.InitStamp OrElse _workingImagePending Then Return
+
+                Dim suggestion = result.Suggestion
+                If Single.IsNaN(suggestion.NoiseLevel) Then
+                    _denoiseMeasurementText = LocalizationService.T("An diesem Bild lässt sich das Rauschen nicht messen.")
+                Else
+                    DenoiseStrength = suggestion.Strength
+                    Dim level = suggestion.NoiseLevel.ToString("F1", Globalization.CultureInfo.CurrentCulture)
+                    _denoiseMeasurementText = If(suggestion.Worthwhile,
+                        String.Format(LocalizationService.T("Rauschen gemessen: {0}. Die Stärke steht auf {1}."),
+                                      level, CInt(suggestion.Strength)),
+                        String.Format(LocalizationService.T("Rauschen gemessen: {0}. Das Bild ist schon sauber, Entrauschen lohnt hier kaum."),
+                                      level))
+                End If
+                _denoiseMeasurementStamp = result.Stamp
+                StatusText = _denoiseMeasurementText
+                Me.RaisePropertyChanged(NameOf(HasDenoiseMeasurement))
+                Me.RaisePropertyChanged(NameOf(DenoiseMeasurementText))
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Editor.DenoiseMeasurement", ex)
+            End Try
+        End Function
 
         ''' <summary>Die Maske einer Auswahl als Bild in QUELLgroesse. Die Auswahl liegt im
         ''' Anzeigeraum; ueber CreateSourceMaskFromSelection wird sie zurueckgelegt, und zwar ueber
@@ -15244,6 +15353,11 @@ Namespace ViewModels
         Public ReadOnly Property CancelBusyCommand As ICommand
         Public ReadOnly Property DenoiseWithModelCommand As ICommand
         Public ReadOnly Property DenoiseFastCommand As ICommand
+        Public ReadOnly Property MeasureDenoiseStrengthCommand As ICommand
+        ''' <summary>Aus dem Kontextmenue einer NICHT geoeffneten Kachel des Filmstreifens
+        ''' (MenuSite.EditorFilmstripOther): sie oeffnen bzw. als Ebene in die Mitte setzen.</summary>
+        Public ReadOnly Property OpenContextItemCommand As ICommand
+        Public ReadOnly Property InsertContextItemAsLayerCommand As ICommand
         Public ReadOnly Property SetBokehApertureCommand As ICommand
         Public ReadOnly Property SetSubjectGrainCommand As ICommand
         Public ReadOnly Property SetWarpModeCommand As ICommand
@@ -15355,6 +15469,18 @@ Namespace ViewModels
                         RaiseRawStateChanged()
                     Else
                         Avalonia.Threading.Dispatcher.UIThread.Post(AddressOf RaiseRawStateChanged)
+                    End If
+                End Sub
+            ' Die Rauschmessung gilt fuer EINEN Stand des Arbeitsbilds. Nach einem Zug, einer
+            ' Retusche oder einem anderen Bild muss ihre Zeile verschwinden - der Getter weiss das,
+            ' aber ohne Meldung fragt ihn niemand.
+            AddHandler _workingImage.ContentChanged,
+                Sub(s, e)
+                    If _denoiseMeasurementText.Length = 0 Then Return
+                    If Avalonia.Threading.Dispatcher.UIThread.CheckAccess() Then
+                        RaiseDenoiseMeasurementChanged()
+                    Else
+                        Avalonia.Threading.Dispatcher.UIThread.Post(AddressOf RaiseDenoiseMeasurementChanged)
                     End If
                 End Sub
             ' Ebenen-Panel-Anzeige (umgekehrte Reihenfolge) an den Objektstapel koppeln. Wer die
@@ -15701,6 +15827,18 @@ Namespace ViewModels
             DenoiseWithModelCommand = ReactiveCommand.Create(Sub() ApplyModelDenoise())
             DenoiseFastCommand = ReactiveCommand.Create(
                 Sub() ApplyModelDenoise(DenoiseModelService.DenoiseKind.Fast))
+            MeasureDenoiseStrengthCommand = ReactiveCommand.CreateFromTask(Function() MeasureDenoiseStrengthAsync())
+            OpenContextItemCommand = ReactiveCommand.Create(
+                Sub()
+                    Dim item = ContextItems?.FirstOrDefault()
+                    If item IsNot Nothing Then NavigateToFilmstripItem(item)
+                End Sub)
+            InsertContextItemAsLayerCommand = ReactiveCommand.Create(
+                Sub()
+                    Dim item = ContextItems?.FirstOrDefault()
+                    If item Is Nothing OrElse item.IsRemoteAsset OrElse Not IsInsertableImagePath(item.FilePath) Then Return
+                    AddImageAnnotationAt(item.FilePath, 50.0, 50.0)
+                End Sub)
             SetBokehApertureCommand = ReactiveCommand.Create(Of String)(
                 Sub(wert)
                     Dim n As Integer
@@ -16130,6 +16268,8 @@ Namespace ViewModels
                                                 isVirtual:=False, canPaste:=False,
                                                 commands:=New MenuCommands With {
                                                     .NewImage = ShowNewDocumentDialogCommand,
+                                                    .OpenInEditor = OpenContextItemCommand,
+                                                    .InsertAsLayer = InsertContextItemAsLayerCommand,
                                                     .Fullscreen = ToggleFullscreenCommand,
                                                     .Save = SaveCommand,
                                                     .SaveAs = SaveAsCommand,
@@ -21476,6 +21616,7 @@ Namespace ViewModels
             _historyStepNamed = True
             Dim selectedTextId = SelectedStraightTextAnnotationId()
             Dim selectedTextIndex = SelectedStraightTextAnnotationIndex()
+            Dim idsBeforeStep = CurrentAnnotationIds()
             Dim entry = _undoStack.Pop()
             ' Der Patch wandert in den Redo-Eintrag: RevertPatch tauscht die Region und hält
             ' danach die Wiederholen-Pixel im selben Objekt (Tausch-Schema im Service).
@@ -21499,7 +21640,7 @@ Namespace ViewModels
             ' deshalb hier zurueck - sonst verbrauchte Strg+Z waehrend einer Verzerrung einen
             ' Schritt, ohne sichtbar etwas zu tun.
             RestoreWarpSession(entry.WarpSession)
-            RestoreSelectedStraightTextAnnotation(selectedTextId, selectedTextIndex)
+            RestoreSelectedStraightTextAnnotation(selectedTextId, selectedTextIndex, idsBeforeStep)
             RefreshSelectionAdjustMode()
             If entry.Patch IsNot Nothing AndAlso _workingImage.RevertPatch(entry.Patch) Then
                 OnWorkingImageRegionChanged(entry.Patch.Rect)
@@ -21544,7 +21685,18 @@ Namespace ViewModels
             Return _selectedAnnotationIndex
         End Function
 
-        Private Sub RestoreSelectedStraightTextAnnotation(annotationId As String, fallbackIndex As Integer)
+        ''' <summary>Die Kennungen aller Objekte, wie sie VOR einem Rueckgaengig oder Wiederholen
+        ''' stehen. Nur fuer die Rueckfallregel darunter.</summary>
+        Private Function CurrentAnnotationIds() As HashSet(Of String)
+            Dim ids As New HashSet(Of String)(StringComparer.Ordinal)
+            For Each annotation In _annotations
+                If annotation IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(annotation.Id) Then ids.Add(annotation.Id)
+            Next
+            Return ids
+        End Function
+
+        Private Sub RestoreSelectedStraightTextAnnotation(annotationId As String, fallbackIndex As Integer,
+                                                          idsBeforeStep As HashSet(Of String))
             If Not String.IsNullOrWhiteSpace(annotationId) Then
                 For index = 0 To _annotations.Count - 1
                     Dim annotation = _annotations(index)
@@ -21557,9 +21709,18 @@ Namespace ViewModels
             ' Ein Rezeptimport kann alte, noch ID-lose Objekte enthalten. Bei einem reinen
             ' Schriftzug bleibt die Reihenfolge unveraendert; der Index ist dort die sichere
             ' Rueckfalladresse, auch wenn eine beim Lesen nachgezogene ID nicht zum Snapshot passt.
+            '
+            ' ABER NUR, wenn dort nicht ein ANDERER Text nachgerueckt ist. Hatte das Objekt an dieser
+            ' Stelle seine Kennung schon vor dem Schritt, ist es nicht das gesuchte: der gesuchte ist
+            ' geloescht, und ein fremder Text wuerde markiert und in die Felder geladen. Eine beim
+            ' Lesen nachgezogene Kennung ist dagegen neu und stand vorher nicht in der Liste.
             If fallbackIndex >= 0 AndAlso fallbackIndex < _annotations.Count AndAlso
                IsStraightTextAnnotation(_annotations(fallbackIndex)) Then
-                ReloadRestoredStraightTextAnnotation(fallbackIndex)
+                Dim candidateId = _annotations(fallbackIndex).Id
+                Dim movedUp = Not String.IsNullOrWhiteSpace(annotationId) AndAlso
+                              Not String.IsNullOrWhiteSpace(candidateId) AndAlso
+                              idsBeforeStep IsNot Nothing AndAlso idsBeforeStep.Contains(candidateId)
+                If Not movedUp Then ReloadRestoredStraightTextAnnotation(fallbackIndex)
             End If
         End Sub
 
@@ -21613,6 +21774,7 @@ Namespace ViewModels
             _historyStepNamed = True
             Dim selectedTextId = SelectedStraightTextAnnotationId()
             Dim selectedTextIndex = SelectedStraightTextAnnotationIndex()
+            Dim idsBeforeStep = CurrentAnnotationIds()
             Dim entry = _redoStack.Pop()
             ' Spiegelbildlich zum Rueckgaengig: das Arbeitsbild von jetzt geht in den
             ' Rueckgaengig-Eintrag, das des Schritts wird uebernommen.
@@ -21629,7 +21791,7 @@ Namespace ViewModels
                 _suppressUndoCapture = False
             End Try
             RestoreWarpSession(entry.WarpSession)
-            RestoreSelectedStraightTextAnnotation(selectedTextId, selectedTextIndex)
+            RestoreSelectedStraightTextAnnotation(selectedTextId, selectedTextIndex, idsBeforeStep)
             RefreshSelectionAdjustMode()
             If entry.Patch IsNot Nothing AndAlso _workingImage.ReapplyPatch(entry.Patch) Then
                 OnWorkingImageRegionChanged(entry.Patch.Rect)
@@ -23336,6 +23498,22 @@ Namespace ViewModels
             Dim heightPixels = Math.Max(1.0, shortSide * Math.Max(5.0, heightPercentOfShortSide) / 100.0)
             Return (Math.Max(1.0, widthPixels / displaySize.Width * 100.0),
                     Math.Max(1.0, heightPixels / displaySize.Height * 100.0))
+        End Function
+
+        ''' Endungen, die DrawImageAnnotation wirklich zeichnen kann (SKBitmap.Decode). EINE Quelle
+        ''' fuer den Dateidialog, das Ablegen per Drag&amp;Drop und das Kontextmenue des
+        ''' Filmstreifens, damit die Leinwand nicht annimmt, was der Dialog gar nicht erst anbietet
+        ''' (PSD/RAW zeichnen als Objekt nicht).
+        Public Shared ReadOnly InsertableImageExtensions As String() =
+            {".png", ".jpg", ".jpeg", ".bmp", ".gif", ".webp", ".tif", ".tiff", ".avif", ".ico"}
+
+        ''' <summary>Laesst sich diese Datei als Bild-Ebene einsetzen? Die Datei muss es GEBEN: der
+        ''' Pseudo-Pfad eines Serverbildes endet ebenfalls auf .jpg, DrawImageAnnotation findet
+        ''' dahinter aber nichts und zeichnete eine leere Ebene.</summary>
+        Public Shared Function IsInsertableImagePath(path As String) As Boolean
+            If String.IsNullOrWhiteSpace(path) Then Return False
+            If Not InsertableImageExtensions.Contains(IO.Path.GetExtension(path).ToLowerInvariant()) Then Return False
+            Return IO.File.Exists(path)
         End Function
 
         ''' Für den Weg über den Knopf im Eigenschaften-Panel: platziert das Bild an der zuletzt

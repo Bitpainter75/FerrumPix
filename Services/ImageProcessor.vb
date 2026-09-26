@@ -484,6 +484,25 @@ Namespace Services
             End Try
         End Function
 
+        ''' <summary>Traegt das Rezept ein Entrauschen, das <see cref="ApplyPendingBakedOperations"/>
+        ''' auch nachziehen KANN - bekannte Modellart und Modelldatei vorhanden? Dieselben Bedingungen
+        ''' wie in <see cref="RunBakedDenoise"/>; der Stapel fragt danach, ob ein Entrauschen schon in
+        ''' den Pixeln steckt.</summary>
+        Friend Shared Function HasRunnableDenoiseOperation(adj As ImageAdjustments) As Boolean
+            If adj Is Nothing OrElse adj.BakedOperations Is Nothing Then Return False
+            For Each op In adj.BakedOperations
+                If op Is Nothing OrElse Not String.Equals(op.Kind, BakedOperation.KindDenoise, StringComparison.OrdinalIgnoreCase) Then Continue For
+                Dim known = DenoiseModelService.KindFromRecipeName(op.DenoiseModel)
+                If Not known.HasValue Then Continue For
+                If known.Value = DenoiseModelService.DenoiseKind.Fast Then
+                    If DenoiseModelService.FastAvailable Then Return True
+                ElseIf DenoiseModelService.Available Then
+                    Return True
+                End If
+            Next
+            Return False
+        End Function
+
         Private Shared Function RunBakedDenoise(source As SKBitmap, op As BakedOperation,
                                                 cancel As Threading.CancellationToken) As SKBitmap
             Dim known = DenoiseModelService.KindFromRecipeName(op.DenoiseModel)

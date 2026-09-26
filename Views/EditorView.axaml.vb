@@ -336,13 +336,14 @@ Namespace Views
             End If
 
             ' Ein Rechtsklick im Filmstreifen meint DIESES Bild. Die Kommandos des Editors
-            ' arbeiten aber alle auf dem geladenen Bild - es reicht also nicht, das getroffene
-            ' Element zu kennen, es muss auch das geladene werden.
-            If Not Object.ReferenceEquals(hit, StageItem(vm)) Then
-                vm.NavigateToFilmstripItem(hit)
-            End If
+            ' arbeiten aber alle auf dem geladenen Bild. Frueher wurde die Kachel deshalb beim
+            ' Rechtsklick geladen; seit der Streifen nur noch auswaehlt, bekommt eine NICHT
+            ' geladene Kachel ein eigenes Menue mit dem, was sie selbst meint: oeffnen und als
+            ' Ebene einsetzen (MenuSite.EditorFilmstripOther).
+            Dim isStage = Object.ReferenceEquals(hit, StageItem(vm))
+            If filmstrip IsNot Nothing Then filmstrip.SelectedItem = hit
 
-            vm.ContextSite = MenuSite.EditorFilmstrip
+            vm.ContextSite = If(isStage, MenuSite.EditorFilmstrip, MenuSite.EditorFilmstripOther)
             vm.ContextItems = ContextTarget.Affected(hit, Nothing, StageItem(vm))
 
             ' NICHT selbst oeffnen und NICHT als behandelt melden: das Menue haengt am selben
@@ -536,15 +537,15 @@ Namespace Views
         ''' Endungen, die DrawImageAnnotation wirklich zeichnen kann (SKBitmap.Decode). EINE Quelle
         ''' fuer den Dateidialog und fuer das Ablegen per Drag&amp;Drop, damit die Leinwand nicht
         ''' annimmt, was der Dialog gar nicht erst anbietet (PSD/RAW zeichnen als Objekt nicht).
-        Private Shared ReadOnly InsertableImageExtensions As String() =
-            {".png", ".jpg", ".jpeg", ".bmp", ".gif", ".webp", ".tif", ".tiff", ".avif", ".ico"}
+        ''' Die Liste selbst steht im ViewModel: das Kontextmenue des Filmstreifens fragt dieselbe.
+        Private Shared ReadOnly Property InsertableImageExtensions As String()
+            Get
+                Return EditorViewModel.InsertableImageExtensions
+            End Get
+        End Property
 
-        ''' <summary>Die Datei muss es GEBEN: der Pseudo-Pfad eines Serverbildes endet ebenfalls auf
-        ''' .jpg, DrawImageAnnotation findet dahinter aber nichts und zeichnete eine leere Ebene.</summary>
         Private Shared Function IsInsertableImagePath(path As String) As Boolean
-            If String.IsNullOrWhiteSpace(path) Then Return False
-            If Not InsertableImageExtensions.Contains(IO.Path.GetExtension(path).ToLowerInvariant()) Then Return False
-            Return IO.File.Exists(path)
+            Return EditorViewModel.IsInsertableImagePath(path)
         End Function
 
         ''' <paramref name="includeReadOnlyFormats"/>: PSD/PSB nur beim OEFFNEN eines Dokuments
@@ -820,7 +821,16 @@ Namespace Views
             Dim paths = GetDroppedImagePaths(e)
             If paths.Count = 0 Then Return
 
-            Dim pos = ClampPointToRect(e.GetPosition(canvas), imageRect)
+            InsertImagesAt(vm, e.GetPosition(canvas), imageRect, paths)
+            e.DragEffects = DragDropEffects.Copy
+            e.Handled = True
+        End Sub
+
+        ''' <summary>Bilder als Ebenen an einer Stelle der Leinwand einsetzen. EIN Weg fuer die Datei
+        ''' aus einem fremden Programm und das Bild aus dem Filmstreifen.</summary>
+        Private Sub InsertImagesAt(vm As EditorViewModel, canvasPoint As Avalonia.Point,
+                                          imageRect As Avalonia.Rect, paths As IList(Of String))
+            Dim pos = ClampPointToRect(canvasPoint, imageRect)
             Dim xPct = (pos.X - imageRect.Left) / imageRect.Width * 100.0
             Dim yPct = (pos.Y - imageRect.Top) / imageRect.Height * 100.0
 
@@ -829,9 +839,6 @@ Namespace Views
             For i = 0 To paths.Count - 1
                 vm.AddImageAnnotationAt(paths(i), xPct + i * cascadePercent, yPct + i * cascadePercent)
             Next
-
-            e.DragEffects = DragDropEffects.Copy
-            e.Handled = True
         End Sub
 
         Public Async Sub OnWatermarkChooseImageClick(sender As Object, e As RoutedEventArgs)
@@ -1118,6 +1125,14 @@ Namespace Views
             AddHandler DataContextChanged, AddressOf HandleDataContextChanged
             ContextMenuAttachment.Attach(Me.FindControl(Of Grid)("EditorRootGrid"), AddressOf OnContextRequested)
             Me.AddHandler(InputElement.KeyDownEvent, AddressOf OnEditorKeyDownTunnel, RoutingStrategies.Tunnel)
+            ' Der eigene Zug aus dem Filmstreifen: die Ansicht haelt den Zeigergriff, also kommen
+            ' Bewegung, Griffverlust und ESC hier an.
+            Me.AddHandler(InputElement.PointerMovedEvent, AddressOf OnFilmstripCustomDragMoved,
+                          RoutingStrategies.Bubble, handledEventsToo:=True)
+            Me.AddHandler(InputElement.PointerCaptureLostEvent, AddressOf OnFilmstripCustomDragCaptureLost,
+                          RoutingStrategies.Bubble, handledEventsToo:=True)
+            Me.AddHandler(InputElement.KeyDownEvent, AddressOf OnFilmstripCustomDragKeyDown,
+                          RoutingStrategies.Tunnel, handledEventsToo:=True)
             ' Der Tunnel sieht Pointer auch dann, wenn RoundSlider sie fuer seinen eigenen Zug
             ' behandelt. Der Zoom-Regler ist reine Ansicht und bleibt davon ausgeschlossen.
             Me.AddHandler(InputElement.PointerPressedEvent, AddressOf OnRoundSliderPreviewPressed,
@@ -3331,6 +3346,7 @@ Namespace Views
                 _lassoPoints.Clear()
             End If
             If _isMaskBrushDrawing Then
+                CatchUpSmoothedStroke(e, TryCast(DataContext, EditorViewModel))
                 CommitMaskBrushStroke()
                 _maskBrushPoints.Clear()
                 _maskBrushPressures.Clear()
@@ -3387,6 +3403,7 @@ Namespace Views
             If wasSelectionDragging OrElse wasLassoDrawing OrElse wasMaskBrushDrawing Then UpdateSelectionOverlayVisibility()
             If _isBrushDrawing Then
                 Dim vm = TryCast(DataContext, EditorViewModel)
+                CatchUpSmoothedStroke(e, vm)
                 Dim shouldWaitForBakedPreview = vm IsNot Nothing AndAlso _brushPoints.Count >= 2
                 If vm IsNot Nothing Then vm.AddBrushStroke(_brushPoints, vm.IsEraserMode, PressuresOrNothing(_brushPressures))
                 _brushPoints.Clear()
@@ -3420,6 +3437,8 @@ Namespace Views
         ''' Entscheidung, ob der Druck gilt.</summary>
         Private Sub BeginBrushInput(e As PointerEventArgs)
             _smoothedBrushPosition = Nothing
+            ' Hier und nicht am Regler: siehe RememberBrushSmoothing.
+            TryCast(DataContext, EditorViewModel)?.RememberBrushSmoothing()
             _strokeReadsPressure = e IsNot Nothing AndAlso e.Pointer.Type = PointerType.Pen AndAlso
                                    AppSettingsService.Load().PenPressureSize
         End Sub
@@ -3439,6 +3458,38 @@ Namespace Views
         ''' Gerechnet wird in BÜHNENPUNKTEN, also vor dem Umrechnen ins Bild: das Zittern der Hand ist
         ''' auf dem Schirm gleich groß, egal wie weit hineingezoomt ist. Und VOR den Linienhilfen
         ''' (STRG, ALT, SHIFT), damit eine gerade Linie gerade bleibt.</summary>
+        ''' <summary>Beim Loslassen den Strich bis an den Zeiger fuehren. Der geglaettete Punkt haengt
+        ''' dem Zeiger nach (bei der Vorgabe 100 ruckt er je Bewegung nur ein Zehntel auf), und ohne
+        ''' diesen letzten Punkt endet jeder Zug sichtbar vor der Stelle, an der man abgesetzt hat -
+        ''' bei einem schnellen Zug um ein Drittel der Strecke.
+        '''
+        ''' NUR beim echten Loslassen: ein verlorener Fang meldet eine Position, an der niemand
+        ''' abgesetzt hat. Die Linienhilfen (SHIFT, STRG) gelten auch fuer diesen Punkt, damit eine
+        ''' gerade Linie gerade endet. Der Druck ist der letzte gemessene: beim Abheben meldet der
+        ''' Stift oft 0, und der Strich liefe sonst in eine Spitze aus.</summary>
+        Private Sub CatchUpSmoothedStroke(e As PointerEventArgs, vm As EditorViewModel)
+            If vm Is Nothing OrElse TryCast(e, PointerReleasedEventArgs) Is Nothing Then Return
+            If Not _smoothedBrushPosition.HasValue Then Return
+            Dim canvas = Me.FindControl(Of Canvas)("PreviewCanvas")
+            If canvas Is Nothing Then Return
+            Dim imageRect = GetDisplayedImageRect(canvas, vm)
+            If imageRect.Width <= 0 OrElse imageRect.Height <= 0 Then Return
+            Dim target = ConstrainBrushLinePoint(e.GetPosition(canvas), e.KeyModifiers)
+            If _isBrushDrawing Then
+                Dim pressure = If(_brushPressures.Count > 0, _brushPressures(_brushPressures.Count - 1), 1.0F)
+                AddBrushPoint(target, imageRect, pressure)
+            ElseIf _isMaskBrushDrawing Then
+                Dim point = ClampPointToRect(target, imageRect)
+                Dim dx = point.X - _maskBrushLastScreenPoint.X
+                Dim dy = point.Y - _maskBrushLastScreenPoint.Y
+                If dx * dx + dy * dy < 1.0 Then Return
+                Dim pressure = If(_maskBrushPressures.Count > 0, _maskBrushPressures(_maskBrushPressures.Count - 1), 1.0F)
+                _maskBrushPoints.Add(New Avalonia.Point((point.X - imageRect.Left) / imageRect.Width * 100.0,
+                                                        (point.Y - imageRect.Top) / imageRect.Height * 100.0))
+                _maskBrushPressures.Add(pressure)
+            End If
+        End Sub
+
         Private Function SmoothBrushPosition(raw As Avalonia.Point, vm As EditorViewModel) As Avalonia.Point
             Dim strength = If(vm Is Nothing, 0.0, Math.Max(0.0, Math.Min(100.0, vm.BrushSmoothing)) / 100.0)
             If strength <= 0.0 OrElse Not _smoothedBrushPosition.HasValue Then
@@ -3454,12 +3505,16 @@ Namespace Views
         End Function
 
         ''' <summary>Die Druckreihe zum Weiterreichen, oder Nothing, wenn sie nichts sagt: ohne Stift,
-        ''' bei abgeschalteter Einstellung, und wenn das Gerät gar keinen Druck meldet (alles
-        ''' praktisch 0). Im letzten Fall wäre der Strich sonst durchgehend auf die kleinste Breite
-        ''' geschrumpft - ein Stift ohne Drucksensor malte dann nur noch dünne Linien.</summary>
+        ''' bei abgeschalteter Einstellung, und wenn das Gerät gar keinen Druck meldet.
+        '''
+        ''' "KEIN DRUCK" HEISST: DIE REIHE STEHT. Ein Stift ohne Drucksensor meldet je nach Treiber
+        ''' durchgehend 0 oder durchgehend 0,5 - den zweiten Wert setzt Avalonia selbst ein, wenn das
+        ''' Geraet keinen liefert. Beides gaebe einen Strich, der fest auf eine kleinere Breite
+        ''' geschrumpft ist (bei 0,5 auf 57 Prozent), ohne dass man es abstellen koennte. Eine echte
+        ''' Hand haelt den Druck nie ueber einen ganzen Zug auf ein Tausendstel genau.</summary>
         Private Function PressuresOrNothing(pressures As List(Of Single)) As IReadOnlyList(Of Single)
             If Not _strokeReadsPressure OrElse pressures.Count = 0 Then Return Nothing
-            If pressures.Max() < 0.01F Then Return Nothing
+            If pressures.Max() - pressures.Min() < 0.001F Then Return Nothing
             Return pressures.ToArray()
         End Function
 
@@ -3673,7 +3728,9 @@ Namespace Views
             ' Deckung übernimmt er von der Linie, damit Pinsel und Radierer so aussehen wie ohne Druck.
             Dim pressurePath = Me.FindControl(Of Avalonia.Controls.Shapes.Path)("BrushPreviewPressurePath")
             If pressurePath Is Nothing Then Return
-            Dim pressures = PressuresOrNothing(_brushPressures)
+            ' Die gestempelten Pinselarten zeichnen in fester Breite; dort zeigt die Vorschau die
+            ' gewoehnliche Linie, sonst waere das Ergebnis beim Loslassen breiter als der Strich davor.
+            Dim pressures = If(vm.BrushPresetUsesPressure, PressuresOrNothing(_brushPressures), Nothing)
             If pressures Is Nothing OrElse pressures.Count <> _brushPoints.Count Then
                 pressurePath.IsVisible = False
                 Return
@@ -7033,10 +7090,19 @@ Namespace Views
             UpdateSliderLayout()
         End Sub
 
+        ''' <summary>Das Rad ROLLT den Streifen, es wechselt nicht mehr das Bild: der Streifen dient
+        ''' zum Blaettern und Suchen, geoeffnet wird mit Doppelklick. Eine Rastung schiebt um eine
+        ''' Kachel; ein seitlicher Zug auf dem Touchpad rollt entsprechend.</summary>
         Private Sub OnFilmstripWheelChanged(sender As Object, e As PointerWheelEventArgs)
-            Dim vm = TryCast(DataContext, EditorViewModel)
-            If vm Is Nothing Then Return
-            vm.NavigateByWheel(e.Delta.Y)
+            Dim list = TryCast(sender, ListBox)
+            Dim viewer = list?.GetVisualDescendants().OfType(Of ScrollViewer)().FirstOrDefault()
+            If viewer Is Nothing Then Return
+            Const tileStep As Double = 156.0
+            Dim delta = If(Math.Abs(e.Delta.X) > Math.Abs(e.Delta.Y), e.Delta.X, e.Delta.Y)
+            If delta = 0 Then Return
+            Dim maxX = Math.Max(0.0, viewer.Extent.Width - viewer.Viewport.Width)
+            Dim x = Math.Max(0.0, Math.Min(maxX, viewer.Offset.X - delta * tileStep))
+            viewer.Offset = New Avalonia.Vector(x, viewer.Offset.Y)
             e.Handled = True
         End Sub
 
@@ -7063,46 +7129,61 @@ Namespace Views
                 Return
             End If
             If Not e.GetCurrentPoint(Nothing).Properties.IsLeftButtonPressed Then Return
-            ' NICHT sofort wechseln: derselbe Druck kann der Anfang eines Zuges auf die Leinwand
-            ' sein. Wuerde hier schon geladen, laege das gezogene Bild anschliessend als Ebene auf
-            ' sich selbst. Der Wechsel steht deshalb in OnFilmstripPointerReleased.
+            ' Der Druck merkt sich das Bild fuer einen moeglichen Zug auf die Leinwand. Geoeffnet
+            ' wird hier nichts mehr: ein Klick waehlt nur aus (das macht die Liste selbst), geoeffnet
+            ' wird mit Doppelklick, EINGABE oder dem Kontextmenue.
             _filmstripDragItem = item
             _filmstripDragStart = e.GetPosition(Me)
             _filmstripDragArgs = e
-            Me.Focus()
+            ' Der Fokus geht an die LISTE, nicht an die Ansicht: nur dann blaettern die Pfeiltasten
+            ' im Streifen, statt ein markiertes Objekt auf dem Bild zu verschieben.
+            Dim list = Me.FindControl(Of ListBox)("FilmstripListBox")
+            If list IsNot Nothing Then list.Focus() Else Me.Focus()
         End Sub
 
-        ''' <summary>Der Klick auf ein Bild des Filmstreifens wirkt erst hier: ohne Zug dazwischen
-        ''' ist es ein gewoehnlicher Klick und wechselt das bearbeitete Bild. Gemeint ist immer das
-        ''' GEDRUECKTE Bild, nicht das unter dem Zeiger - losgelassen wird auch mal daneben.</summary>
+        ''' <summary>Loslassen im Streifen: der gemerkte Druck ist verbraucht. Geoeffnet wird beim
+        ''' Loslassen nichts mehr, siehe OnFilmstripItemPressed.</summary>
         Public Sub OnFilmstripPointerReleased(sender As Object, e As PointerReleasedEventArgs)
-            Dim item = _filmstripDragItem
             _filmstripDragItem = Nothing
             _filmstripDragArgs = Nothing
-            If item Is Nothing OrElse _filmstripDragActive Then Return
-            If e.InitialPressMouseButton <> MouseButton.Left Then Return
-            ' Wer den Streifen mit dem Finger gerollt hat, wollte kein Bild oeffnen. Nur beim
-            ' Finger: mit der Maus haette ein Zug sich laengst gemeldet, und ein Bild, das sich
-            ' nicht ziehen laesst (RAW, Serverbild), soll sich trotzdem mit einem Klick oeffnen
-            ' lassen, auch wenn der Zeiger dabei ein paar Punkte gewandert ist.
-            If e.Pointer.Type = PointerType.Touch Then
-                Dim delta = e.GetPosition(Me) - _filmstripDragStart
-                If Math.Abs(delta.X) >= FilmstripDragThreshold OrElse Math.Abs(delta.Y) >= FilmstripDragThreshold Then Return
-            End If
-            Dim vm = TryCast(DataContext, EditorViewModel)
-            If vm Is Nothing Then Return
-            vm.NavigateToFilmstripItem(item)
         End Sub
 
-        ''' <summary>Zieht ein Bild des Filmstreifens auf die Leinwand. Abgelegt wird es dort von
-        ''' OnPreviewCanvasDrop, also auf demselben Weg wie eine Datei aus dem Dateimanager.
+        ''' <summary>Doppelklick oeffnet das Bild im Editor.</summary>
+        Public Sub OnFilmstripItemDoubleTapped(sender As Object, e As TappedEventArgs)
+            Dim item = TryCast(TryCast(sender, Control)?.DataContext, ImageItem)
+            Dim vm = TryCast(DataContext, EditorViewModel)
+            If item Is Nothing OrElse vm Is Nothing Then Return
+            vm.NavigateToFilmstripItem(item)
+            e.Handled = True
+        End Sub
+
+        ''' <summary>EINGABE oeffnet das ausgewaehlte Bild - der Weg mit der Tastatur zum
+        ''' Doppelklick. Die Pfeiltasten blaettern (das macht die Liste selbst).</summary>
+        Public Sub OnFilmstripKeyDown(sender As Object, e As KeyEventArgs)
+            If e.Key <> Key.Enter Then Return
+            Dim list = TryCast(sender, ListBox)
+            Dim item = TryCast(list?.SelectedItem, ImageItem)
+            Dim vm = TryCast(DataContext, EditorViewModel)
+            If item Is Nothing OrElse vm Is Nothing Then Return
+            vm.NavigateToFilmstripItem(item)
+            e.Handled = True
+        End Sub
+
+        ''' <summary>Zieht ein Bild des Filmstreifens auf die Leinwand und legt es dort als Ebene ab.
+        '''
+        ''' EIN EIGENER ZUG WIE IN DER GALERIE, nicht das native Drag and Drop. Unter X11 zeigt der
+        ''' native Zug bei einem Ziel in der eigenen Anwendung oft den Verbotszeiger, und ob und wo
+        ''' abgelegt wird, war nicht zu erkennen. Der eigene Zug behaelt den normalen Zeiger; ueber
+        ''' dem Bild bekommt es einen Rahmen, und am Zeiger haengt "Als Ebene einfuegen". Verlaesst
+        ''' der Zeiger das Fenster, uebernimmt der native Zug, damit das Bild auch in ein anderes
+        ''' Programm gezogen werden kann (HandOverFilmstripDragToNative).
         '''
         ''' Gezogen wird nur, was DrawImageAnnotation auch zeichnen kann: eine oertliche Datei in
         ''' einem der einfuegbaren Formate. Ein Serverbild traegt statt eines Dateipfades seine
         ''' Kennung, ein RAW dekodiert SKBitmap nicht - beides waere eine leere Ebene.</summary>
-        Public Async Sub OnFilmstripPointerMoved(sender As Object, e As PointerEventArgs)
+        Public Sub OnFilmstripPointerMoved(sender As Object, e As PointerEventArgs)
             ' Kein zweiter Zug, solange einer laeuft (Begruendung in DragPayloadCache).
-            If _filmstripDragActive Then Return
+            If _filmstripDragActive OrElse _filmstripCustomDragActive Then Return
             If _filmstripDragItem Is Nothing OrElse Not e.GetCurrentPoint(Nothing).Properties.IsLeftButtonPressed Then Return
             ' Mit dem Finger geschoben wird der Streifen GEROLLT. Ein Zug daraus naehme dem Rollen
             ' die Berichte, und der Streifen liesse sich am Bildschirm nicht mehr bewegen.
@@ -7119,49 +7200,195 @@ Namespace Views
             Dim path = item.FilePath
             If Not IsInsertableImagePath(path) Then Return
 
-            Dim windowRoot As TopLevel = TopLevel.GetTopLevel(Me)
-            If windowRoot Is Nothing Then Return
-            ' Vor dem eigentlichen Zug abgesichert: eine Ausnahme aus einem Async Sub landet sonst
-            ' beim Dispatcher und beendet den Prozess.
-            Dim data As DataTransfer = Nothing
-            Try
-                data = Await ClipboardPathService.BuildFileTransferAsync(windowRoot.StorageProvider, New String() {path})
-            Catch ex As Exception
-                DiagnosticLogService.LogException("Editor.Filmstrip.DragPayload", ex)
+            _filmstripCustomDragPath = path
+            _filmstripCustomDragPressArgs = pressedArgs
+            _filmstripCustomDragOutside = False
+            _filmstripCustomDragActive = True
+            DragTrace.Begin("Filmstreifen", 1, False)
+            ' Der Griff geht an die ganze Ansicht: so kommen alle weiteren Bewegungen hier an, und
+            ' die Werkzeuge auf der Leinwand bekommen von dem Zug nichts mit.
+            e.Pointer.Capture(Me)
+            UpdateFilmstripDropFeedback(e)
+            e.Handled = True
+        End Sub
+
+        ' ── Eigener Zug aus dem Filmstreifen ────────────────────────────────────────────────
+
+        Private _filmstripCustomDragActive As Boolean = False
+        Private _filmstripCustomDragPath As String = Nothing
+        Private _filmstripCustomDragPressArgs As PointerPressedEventArgs = Nothing
+        Private _filmstripCustomDragOutside As Boolean = False
+        Private _filmstripDropAllowed As Boolean = False
+        Private _filmstripNativeHandoverPending As Boolean = False
+
+        ''' <summary>Jede Bewegung waehrend des eigenen Zugs. Registriert auf der Ansicht selbst, die
+        ''' den Griff haelt (siehe New).</summary>
+        Private Sub OnFilmstripCustomDragMoved(sender As Object, e As PointerEventArgs)
+            If Not _filmstripCustomDragActive Then Return
+            ' Ohne gedrueckte Taste ist der Zug vorbei: das Loslassen kam woanders an.
+            If Not e.GetCurrentPoint(Me).Properties.IsLeftButtonPressed Then
+                FinishFilmstripCustomDrag(e.Pointer, Nothing, drop:=False)
                 Return
-            End Try
-            If data Is Nothing OrElse data.Items.Count = 0 Then Return
-            If TopLevel.GetTopLevel(Me) Is Nothing Then Return
+            End If
+            _filmstripCustomDragOutside = IsPointerOutsideWindow(e)
+            UpdateFilmstripDropFeedback(e)
+            If _filmstripCustomDragOutside Then HandOverFilmstripDragToNative()
+            e.Handled = True
+        End Sub
 
-            ' RoutedEventArgs.Source ueberlebt das Ende der Druck-Route nicht zuverlaessig, der
-            ' X11-Ruecken ermittelt daraus aber das Quellfenster und wirft sonst "Invalid drag
-            ' source". Die Ansicht selbst ist die stabile Quelle (wie in der Galerie).
-            pressedArgs.Source = Me
+        Private Function IsPointerOutsideWindow(e As PointerEventArgs) As Boolean
+            Dim top = TopLevel.GetTopLevel(Me)
+            If top Is Nothing Then Return False
+            Dim p = e.GetPosition(top)
+            Return p.X < 0 OrElse p.Y < 0 OrElse p.X >= top.Bounds.Width OrElse p.Y >= top.Bounds.Height
+        End Function
 
-            _filmstripDragActive = True
-            ' Die Ziehlast IM PROZESS merken: der Drop auf der Leinwand liest sie von dort, statt
-            ' das Fenstersystem nach den eigenen Daten zu fragen.
-            DragPayloadCache.BeginDrag(New String() {path})
-            DragTrace.Begin("Filmstreifen", 1, True)
+        ''' <summary>Rahmen und Abzeichen nachfuehren. Erlaubt ist das Ablegen nur ueber dem
+        ''' angezeigten Bild; daneben verschwindet beides, und ein Loslassen tut nichts.</summary>
+        Private Sub UpdateFilmstripDropFeedback(e As PointerEventArgs)
+            Dim feedback = Me.FindControl(Of Canvas)("FilmstripDropFeedbackCanvas")
+            Dim frame = Me.FindControl(Of Border)("FilmstripDropTargetFrame")
+            Dim badge = Me.FindControl(Of Border)("FilmstripDropBadge")
+            Dim preview = Me.FindControl(Of Canvas)("PreviewCanvas")
+            Dim vm = TryCast(DataContext, EditorViewModel)
+            _filmstripDropAllowed = False
+            If feedback Is Nothing OrElse frame Is Nothing OrElse badge Is Nothing OrElse preview Is Nothing OrElse vm Is Nothing Then Return
+
+            Dim imageRect = GetDisplayedImageRect(preview, vm)
+            ' Nur der sichtbare Teil des Bildes: hineingezoomt reicht es ueber die Leinwand hinaus.
+            Dim visible = imageRect.Intersect(New Avalonia.Rect(preview.Bounds.Size))
+            Dim onPreview = e.GetPosition(preview)
+            _filmstripDropAllowed = Not _filmstripCustomDragOutside AndAlso
+                                    visible.Width > 0 AndAlso visible.Height > 0 AndAlso visible.Contains(onPreview)
+            If Not _filmstripDropAllowed Then
+                feedback.IsVisible = False
+                Return
+            End If
+
+            Dim topLeft = preview.TranslatePoint(visible.TopLeft, feedback)
+            If topLeft.HasValue Then
+                Canvas.SetLeft(frame, topLeft.Value.X)
+                Canvas.SetTop(frame, topLeft.Value.Y)
+                frame.Width = visible.Width
+                frame.Height = visible.Height
+            End If
+            Dim point = e.GetPosition(feedback)
+            Dim badgeWidth = If(badge.Bounds.Width > 0, badge.Bounds.Width, 190.0)
+            Dim maxLeft = Math.Max(4, feedback.Bounds.Width - badgeWidth - 4)
+            Dim maxTop = Math.Max(4, feedback.Bounds.Height - badge.Height - 4)
+            Canvas.SetLeft(badge, Math.Min(Math.Max(4, point.X + 18), maxLeft))
+            Canvas.SetTop(badge, Math.Min(Math.Max(4, point.Y + 18), maxTop))
+            feedback.IsVisible = True
+        End Sub
+
+        ''' <summary>Ende des eigenen Zugs. Mit <paramref name="drop"/> und erlaubtem Ziel wird das
+        ''' Bild dort als Ebene eingesetzt, wo losgelassen wurde.</summary>
+        Private Sub FinishFilmstripCustomDrag(pointer As IPointer, releaseArgs As PointerEventArgs, drop As Boolean)
+            If Not _filmstripCustomDragActive Then Return
+            Dim path = _filmstripCustomDragPath
+            Dim allowed = _filmstripDropAllowed
+            _filmstripCustomDragActive = False
+            _filmstripCustomDragPath = Nothing
+            _filmstripCustomDragPressArgs = Nothing
+            _filmstripCustomDragOutside = False
+            _filmstripDropAllowed = False
+            Dim feedback = Me.FindControl(Of Canvas)("FilmstripDropFeedbackCanvas")
+            If feedback IsNot Nothing Then feedback.IsVisible = False
+            pointer?.Capture(Nothing)
+            DragTrace.Finish(If(drop AndAlso allowed, "abgelegt", "Geste beendet"))
+            ' Die Liste hat beim Druck ihre eigene Markierung gesetzt, das bearbeitete Bild hat
+            ' sich aber nicht geaendert - Markierung zurueck auf das aktuelle Bild.
+            _filmstripController.ScrollToCurrent()
+            If Not drop OrElse Not allowed OrElse releaseArgs Is Nothing OrElse String.IsNullOrEmpty(path) Then Return
+
+            Dim vm = TryCast(DataContext, EditorViewModel)
+            Dim preview = Me.FindControl(Of Canvas)("PreviewCanvas")
+            If vm Is Nothing OrElse preview Is Nothing Then Return
+            Dim imageRect = GetDisplayedImageRect(preview, vm)
+            If imageRect.Width <= 0 OrElse imageRect.Height <= 0 Then Return
+            InsertImagesAt(vm, releaseArgs.GetPosition(preview), imageRect, New List(Of String) From {path})
+        End Sub
+
+        Private Sub OnFilmstripCustomDragCaptureLost(sender As Object, e As PointerCaptureLostEventArgs)
+            ' Das eigene Freigeben in FinishFilmstripCustomDrag landet ebenfalls hier; dann ist der
+            ' Zug schon beendet und es passiert nichts.
+            If Not _filmstripCustomDragActive OrElse _filmstripNativeHandoverPending Then Return
+            ' Nur der Griff der ANSICHT zaehlt. Beim Uebernehmen verliert das gedrueckte Element des
+            ' Streifens seinen Griff, und das Ereignis laeuft bis hierher hoch - ohne diese Frage
+            ' braeche der Zug im selben Augenblick ab, in dem er beginnt.
+            If Not Object.ReferenceEquals(e.Source, Me) Then Return
+            FinishFilmstripCustomDrag(Nothing, Nothing, drop:=False)
+        End Sub
+
+        Private Sub OnFilmstripCustomDragKeyDown(sender As Object, e As KeyEventArgs)
+            If Not _filmstripCustomDragActive OrElse e.Key <> Key.Escape Then Return
+            FinishFilmstripCustomDrag(Nothing, Nothing, drop:=False)
+            e.Handled = True
+        End Sub
+
+        ''' <summary>Uebergibt den eigenen Zug an einen nativen, sobald der Zeiger das Fenster
+        ''' verlaesst - wie in der Galerie. Draussen gibt es keine eigenen Ziele; ein Dateimanager
+        ''' oder ein anderes Programm braucht die Datei. Kommt der Zug zurueck, legt ihn
+        ''' OnPreviewCanvasDrop ab.</summary>
+        Private Async Sub HandOverFilmstripDragToNative()
+            If _filmstripNativeHandoverPending Then Return
+            Dim pressedArgs = _filmstripCustomDragPressArgs
+            Dim path = _filmstripCustomDragPath
+            Dim storageProvider = TopLevel.GetTopLevel(Me)?.StorageProvider
+            If pressedArgs Is Nothing OrElse String.IsNullOrEmpty(path) OrElse storageProvider Is Nothing Then Return
+            _filmstripNativeHandoverPending = True
             Try
-                Await DragDrop.DoDragDropAsync(pressedArgs, data, DragDropEffects.Copy)
-            Catch ex As ArgumentOutOfRangeException When String.Equals(ex.ParamName, "triggerEvent", StringComparison.Ordinal)
-                ' Ein Ansichtswechsel waehrend der Geste darf den Zug abbrechen, aber nicht als
-                ' Ausnahme aus einem Async Sub die Anwendung beenden.
-                DiagnosticLogService.LogException("Editor.Filmstrip.DragDrop.InvalidSource", ex)
+                Dim data = Await ClipboardPathService.BuildFileTransferAsync(storageProvider, New String() {path})
+                If data Is Nothing OrElse data.Items.Count = 0 Then Return
+                ' Waehrend die Dateiliste entstand, kann der Zug geendet haben oder der Zeiger ins
+                ' Fenster zurueckgekehrt sein. Dann bleibt es beim eigenen Zug.
+                If Not _filmstripCustomDragActive OrElse Not _filmstripCustomDragOutside OrElse
+                   TopLevel.GetTopLevel(Me) Is Nothing Then
+                    DirectCast(data, IDisposable).Dispose()
+                    Return
+                End If
+
+                FinishFilmstripCustomDrag(pressedArgs.Pointer, Nothing, drop:=False)
+                ' RoutedEventArgs.Source ueberlebt das Ende der Druck-Route nicht zuverlaessig, der
+                ' X11-Ruecken ermittelt daraus aber das Quellfenster und wirft sonst "Invalid drag
+                ' source". Die Ansicht selbst ist die stabile Quelle (wie in der Galerie).
+                pressedArgs.Source = Me
+                _filmstripDragActive = True
+                ' Die Ziehlast IM PROZESS merken: kommt der Zug zurueck, liest der Drop auf der
+                ' Leinwand sie von dort, statt das Fenstersystem nach den eigenen Daten zu fragen.
+                DragPayloadCache.BeginDrag(New String() {path})
+                DragTrace.Begin("Filmstreifen, aus dem Fenster", 1, True)
+                Try
+                    Await DragDrop.DoDragDropAsync(pressedArgs, data, DragDropEffects.Copy)
+                Catch ex As ArgumentOutOfRangeException When String.Equals(ex.ParamName, "triggerEvent", StringComparison.Ordinal)
+                    DiagnosticLogService.LogException("Editor.Filmstrip.DragDrop.InvalidSource", ex)
+                Finally
+                    DragTrace.Finish("Geste beendet")
+                    DragPayloadCache.EndDrag()
+                    _filmstripDragActive = False
+                    _filmstripController.ScrollToCurrent()
+                End Try
             Catch ex As Exception
-                DiagnosticLogService.LogException("Editor.Filmstrip.DragDrop", ex)
+                ' Async Sub: eine Ausnahme beendete sonst die Anwendung.
+                DiagnosticLogService.LogException("Editor.Filmstrip.DragDrop.Handover", ex)
             Finally
-                DragTrace.Finish("Geste beendet")
-                DragPayloadCache.EndDrag()
-                _filmstripDragActive = False
-                ' Die Liste hat beim Druck ihre eigene Markierung gesetzt, das bearbeitete Bild hat
-                ' sich aber nicht geaendert - Markierung zurueck auf das aktuelle Bild.
-                _filmstripController.ScrollToCurrent()
+                _filmstripNativeHandoverPending = False
             End Try
         End Sub
 
         Public Sub OnGlobalPointerReleased(sender As Object, e As PointerReleasedEventArgs)
+            If _filmstripCustomDragActive AndAlso e.InitialPressMouseButton = MouseButton.Left Then
+                ' Async-frei: das Einsetzen der Ebene ist ein gewoehnlicher Aufruf am ViewModel.
+                Try
+                    FinishFilmstripCustomDrag(e.Pointer, e, drop:=True)
+                Catch ex As Exception
+                    DiagnosticLogService.LogException("Editor.Filmstrip.Drop", ex)
+                End Try
+                e.Handled = True
+                _filmstripDragItem = Nothing
+                _filmstripDragArgs = Nothing
+                Return
+            End If
             If e.InitialPressMouseButton = MouseButton.Middle Then
                 _filmstripController.HidePreview()
             End If

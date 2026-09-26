@@ -8792,4 +8792,64 @@
   <data name="Hier_ablegen_b24b49c1" xml:space="preserve"><value>Rilascia qui</value></data>
   <data name="Favorit_umbenennen_d1dab6c9" xml:space="preserve"><value>Rinomina preferito</value></data>
   <data name="Favorit_umbenannt_0_bca7f7e5" xml:space="preserve"><value>Preferito rinominato: {0}</value></data>
+  <data name="St_rke_aus_dem_Bild_messen_752b2b27" xml:space="preserve">
+    <value>Misura l'intensità dall'immagine</value>
+  </data>
+  <data name="Misst_das_Rauschen_im_Bild_und_stellt_die_St_rke_4738612a" xml:space="preserve">
+    <value>Misura il rumore nell'immagine e imposta l'intensità in modo che resti più o meno tanta grana quanta in uno scatto pulito a ISO basso. La riduzione del rumore parte solo con uno dei pulsanti sotto.</value>
+  </data>
+  <data name="Feste_St_rke_f186f29f" xml:space="preserve">
+    <value>Intensità fissa</value>
+  </data>
+  <data name="Jedes_Bild_wird_mit_derselben_St_rke_entrauscht_f2a7aaf8" xml:space="preserve">
+    <value>Ogni immagine viene ripulita dal rumore con la stessa intensità.</value>
+  </data>
+  <data name="Jedes_Bild_wird_vorher_gemessen_und_bekommt_die__d87ead4c" xml:space="preserve">
+    <value>Ogni immagine viene prima misurata e riceve l'intensità di cui ha bisogno il suo rumore. Le immagini già pulite restano invariate.</value>
+  </data>
+  <data name="H_lt_mehr_feine_Zeichnung_braucht_aber_ein_Vielf_d27295d5" xml:space="preserve">
+    <value>Conserva più dettagli fini, ma richiede molto più tempo.</value>
+  </data>
+  <data name="Gr_ndlich_fb7d073f" xml:space="preserve">
+    <value>Accurata</value>
+  </data>
+  <data name="In_einem_Sechstel_der_Zeit_daf_r_etwas_glatter_F_a8885661" xml:space="preserve">
+    <value>In un sesto del tempo, ma un po' più liscia. Per serie lunghe.</value>
+  </data>
+  <data name="Z_gig_193d53f6" xml:space="preserve">
+    <value>Rapida</value>
+  </data>
+  <data name="Restkorn_17ea498e" xml:space="preserve">
+    <value>Grana residua</value>
+  </data>
+  <data name="Wie_viel_feines_Korn_nach_dem_Entrauschen_stehen_8c3a67d3" xml:space="preserve">
+    <value>Quanta grana fine resta dopo la riduzione del rumore. Al centro, quanta in uno scatto pulito a ISO basso.</value>
+  </data>
+  <data name="Braucht_je_entrauschtem_Bild_mehrere_Minuten_Bil_ec60b5b2" xml:space="preserve">
+    <value>Richiede diversi minuti per ogni immagine. Le immagini già ripulite dal rumore nell'editor non vengono trattate una seconda volta.</value>
+  </data>
+  <data name="An_diesem_Bild_l_sst_sich_das_Rauschen_nicht_mes_a2b892a5" xml:space="preserve">
+    <value>Il rumore di questa immagine non si può misurare.</value>
+  </data>
+  <data name="Rauschen_gemessen_0_Die_St_rke_steht_auf_1_8eeae66d" xml:space="preserve">
+    <value>Rumore misurato: {0}. L'intensità è impostata su {1}.</value>
+  </data>
+  <data name="Rauschen_gemessen_0_Das_Bild_ist_schon_sauber_En_078f8deb" xml:space="preserve">
+    <value>Rumore misurato: {0}. L'immagine è già pulita, qui la riduzione del rumore serve a poco.</value>
+  </data>
+  <data name="Ohne_Filter_384e7a5b" xml:space="preserve">
+    <value>Senza filtro</value>
+  </data>
+  <data name="Entrauscht_8dbd8e34" xml:space="preserve">
+    <value>Senza rumore</value>
+  </data>
+  <data name="Kein_Look_die_Bilder_werden_nur_entrauscht_Das_E_843bf648" xml:space="preserve">
+    <value>Nessun look, alle immagini viene solo ridotto il rumore. La riduzione del rumore si imposta qui sotto.</value>
+  </data>
+  <data name="Ohne_Filter_bleibt_nur_das_Entrauschen_Schalte_e_0ade8bd6" xml:space="preserve">
+    <value>Senza filtro resta solo la riduzione del rumore. Attivala qui, altrimenti non c'è nulla da fare.</value>
+  </data>
+  <data name="Als_Ebene_einf_gen_7459c9bb" xml:space="preserve">
+    <value>Inserisci come livello</value>
+  </data>
 </root>

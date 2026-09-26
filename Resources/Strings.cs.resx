@@ -8832,4 +8832,64 @@
   <data name="Hier_ablegen_b24b49c1" xml:space="preserve"><value>Pustit sem</value></data>
   <data name="Favorit_umbenennen_d1dab6c9" xml:space="preserve"><value>Přejmenovat oblíbenou položku</value></data>
   <data name="Favorit_umbenannt_0_bca7f7e5" xml:space="preserve"><value>Oblíbená položka přejmenována: {0}</value></data>
+  <data name="St_rke_aus_dem_Bild_messen_752b2b27" xml:space="preserve">
+    <value>Změřit sílu z obrázku</value>
+  </data>
+  <data name="Misst_das_Rauschen_im_Bild_und_stellt_die_St_rke_4738612a" xml:space="preserve">
+    <value>Změří šum v obrázku a nastaví sílu tak, aby zůstalo přibližně tolik zrna jako u čistého snímku s nízkým ISO. Samotné potlačení šumu se spustí až jedním z tlačítek níže.</value>
+  </data>
+  <data name="Feste_St_rke_f186f29f" xml:space="preserve">
+    <value>Pevná síla</value>
+  </data>
+  <data name="Jedes_Bild_wird_mit_derselben_St_rke_entrauscht_f2a7aaf8" xml:space="preserve">
+    <value>Šum se u každého obrázku potlačí stejnou silou.</value>
+  </data>
+  <data name="Jedes_Bild_wird_vorher_gemessen_und_bekommt_die__d87ead4c" xml:space="preserve">
+    <value>Každý obrázek se nejprve změří a dostane sílu, kterou jeho šum potřebuje. Obrázky, které už jsou čisté, zůstanou beze změny.</value>
+  </data>
+  <data name="H_lt_mehr_feine_Zeichnung_braucht_aber_ein_Vielf_d27295d5" xml:space="preserve">
+    <value>Zachová více jemné kresby, ale trvá mnohonásobně déle.</value>
+  </data>
+  <data name="Gr_ndlich_fb7d073f" xml:space="preserve">
+    <value>Důkladně</value>
+  </data>
+  <data name="In_einem_Sechstel_der_Zeit_daf_r_etwas_glatter_F_a8885661" xml:space="preserve">
+    <value>Za šestinu času, zato o něco hladší. Pro dlouhé série.</value>
+  </data>
+  <data name="Z_gig_193d53f6" xml:space="preserve">
+    <value>Rychle</value>
+  </data>
+  <data name="Restkorn_17ea498e" xml:space="preserve">
+    <value>Zbylé zrno</value>
+  </data>
+  <data name="Wie_viel_feines_Korn_nach_dem_Entrauschen_stehen_8c3a67d3" xml:space="preserve">
+    <value>Kolik jemného zrna po potlačení šumu zůstane. Uprostřed tolik jako u čistého snímku s nízkým ISO.</value>
+  </data>
+  <data name="Braucht_je_entrauschtem_Bild_mehrere_Minuten_Bil_ec60b5b2" xml:space="preserve">
+    <value>U každého odšuměného obrázku trvá několik minut. Obrázky, u kterých už byl šum potlačen v editoru, se podruhé neodšumují.</value>
+  </data>
+  <data name="An_diesem_Bild_l_sst_sich_das_Rauschen_nicht_mes_a2b892a5" xml:space="preserve">
+    <value>Šum v tomto obrázku nelze změřit.</value>
+  </data>
+  <data name="Rauschen_gemessen_0_Die_St_rke_steht_auf_1_8eeae66d" xml:space="preserve">
+    <value>Naměřený šum: {0}. Síla je nastavena na {1}.</value>
+  </data>
+  <data name="Rauschen_gemessen_0_Das_Bild_ist_schon_sauber_En_078f8deb" xml:space="preserve">
+    <value>Naměřený šum: {0}. Obrázek je už čistý, potlačení šumu se tu téměř nevyplatí.</value>
+  </data>
+  <data name="Ohne_Filter_384e7a5b" xml:space="preserve">
+    <value>Bez filtru</value>
+  </data>
+  <data name="Entrauscht_8dbd8e34" xml:space="preserve">
+    <value>Odšuměno</value>
+  </data>
+  <data name="Kein_Look_die_Bilder_werden_nur_entrauscht_Das_E_843bf648" xml:space="preserve">
+    <value>Žádný vzhled, u obrázků se jen potlačí šum. Potlačení šumu se nastavuje níže.</value>
+  </data>
+  <data name="Ohne_Filter_bleibt_nur_das_Entrauschen_Schalte_e_0ade8bd6" xml:space="preserve">
+    <value>Bez filtru zbývá jen potlačení šumu. Zapni ho tady, jinak není co dělat.</value>
+  </data>
+  <data name="Als_Ebene_einf_gen_7459c9bb" xml:space="preserve">
+    <value>Vložit jako vrstvu</value>
+  </data>
 </root>
