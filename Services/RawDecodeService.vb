@@ -1096,6 +1096,9 @@ Namespace Services
             If fromFile.Model.Length = 0 AndAlso fromLibRaw.Model.Length = 0 Then Return Nothing
             If MatchesKnownCamera(known, fromFile.Maker, fromFile.Model) Then Return True
             If MatchesKnownCamera(known, fromLibRaw.Maker, fromLibRaw.Model) Then Return True
+            ' Fehlt sie in LibRaws Liste, setzt FerrumPix aber Schwarz- und Weisspunkt selbst
+            ' (LevelOverrides), wird sie richtig entwickelt, und der Hinweis waere falsch.
+            If LevelOverrides.ContainsKey(If(facts.NormalizedMake, "").Trim() & "|" & If(facts.NormalizedModel, "").Trim()) Then Return True
             Return False
         End Function
 
@@ -1612,15 +1615,115 @@ Namespace Services
         Private Const OutputColorOffset As Integer = 160
         Private Const OutputBpsOffset As Integer = 200
         Private Const DemosaicOffset As Integer = 216
+        Private Const UserBlackOffset As Integer = 220
+        Private Const UserCblackOffset As Integer = 224
+        Private Const UserSatOffset As Integer = 240
         Private Const ParamsSearchStart As Integer = 4096
         Private Const ParamsSearchEnd As Integer = 8192
 
         ''' <summary>Setzt params.half_size nur, wenn die params-Basis im nativen Handle eindeutig
-        ''' belegt ist. Die drei Werte werden ausschliesslich vor dcraw_process als Landmarken
-        ''' gesetzt und danach sofort auf die normalen FerrumPix-Werte zurueckgestellt. Jede
-        ''' unbekannte LibRaw-Struktur bleibt damit beim sicheren Voll-Decode.</summary>
+        ''' belegt ist. Jede unbekannte LibRaw-Struktur bleibt damit beim sicheren Voll-Decode.</summary>
         Private Shared Function TryEnableHalfSize(handle As IntPtr) As Boolean
-            If handle = IntPtr.Zero OrElse _setDemosaic Is Nothing Then Return False
+            Dim foundBase = FindParamsBase(handle)
+            If foundBase < 0 Then Return False
+            ' Ein frisch erzeugter LibRaw-Kontext hat half_size = 0. Das ist eine vierte,
+            ' passive Plausibilitaetspruefung gegen zufaellige Treffermuster im Handle.
+            If Marshal.ReadInt32(handle, foundBase + HalfSizeOffset) <> 0 Then Return False
+            Marshal.WriteInt32(handle, foundBase + HalfSizeOffset, 1)
+            Return True
+        End Function
+
+        ''' <summary>Schwarz- und Weisspunkt fuer Kameras, bei denen LibRaw sie FALSCH liest.
+        '''
+        ''' DER FALL: die Canon EOS R6 Mark III (Issue #36). LibRaw 0.22.2 erkennt die Kamera, liest
+        ''' aber Schwarzpunkt 0 und Kanalwerte 0/36/119/81, waehrend ihre Rohdaten auf einem Sockel
+        ''' von 2048 stehen (abgedeckter Sensorrand: Median 2048). Jeder Bildpunkt behaelt den
+        ''' Sockel, der Weissabgleich multipliziert ihn mit: das Bild kam flau und magenta heraus.
+        '''
+        ''' Die zweite Gruppe sind Canon-Weisspunkte je ISO: Canon legt den Weisspunkt je Datei ab,
+        ''' und LibRaws Wert liegt bei einzelnen Modellen und ISO-Stufen daneben, zu tief (Lichter
+        ''' brennen zu frueh aus) oder zu hoch (Ausgefressenes wird grau).
+        '''
+        ''' DIE WERTE STEHEN IN Resources/CameraBaselineTable.json, Abschnitt levelOverrides, je
+        ''' Eintrag mit LibRaws eigenem Wert und der Herkunft daneben; die Messung dazu steht in
+        ''' Audits/RAW_UND_FARBE.md. Hier liegt nur der Verweis, damit der Decode sie wie bisher
+        ''' unter diesem Namen findet.
+        '''
+        ''' DER ZWEITE WERT IST DER TONUMFANG UEBER DEM SCHWARZPUNKT, nicht der rohe Weisspunkt.
+        ''' LibRaw setzt params.user_sat erst NACH dem Abziehen des Schwarzpunkts als maximum ein
+        ''' (dcraw_process.cpp); ein roher Weisspunkt laege um genau den Schwarzpunkt zu hoch, und
+        ''' das Bild kaeme um diesen Anteil zu dunkel, die Lichter grau.
+        '''
+        ''' Schluessel sind Marke und Modell, wie LibRaw sie vereinheitlicht (normalized_make und
+        ''' normalized_model), wahlweise mit der ISO dahinter; der Eintrag mit ISO geht vor. Ein
+        ''' Eintrag mit ISO gilt NUR dort: an den uebrigen Stufen ist nichts gemessen, und dort
+        ''' bleibt es bei LibRaw - ein geratener Wert waere schlimmer als ein gelegentlich falscher.
+        ''' Schwarzpunkt -1 heisst: bei LibRaw lassen. Kennt LibRaw eine Kamera eines Tages
+        ''' richtig, gehoert der Eintrag wieder heraus.</summary>
+        Friend Shared ReadOnly LevelOverrides As Dictionary(Of String, (Black As Integer, Range As Integer)) = CameraBaselineTable.LevelOverrides
+
+        ''' <summary>Setzt Schwarz- und Weisspunkt aus <see cref="LevelOverrides"/>, falls die Kamera
+        ''' dort steht. Muss nach open_file und vor dcraw_process laufen.
+        '''
+        ''' EINE C-SCHNITTSTELLE DAFUER GIBT ES NICHT, geschrieben wird in params.user_black,
+        ''' user_cblack und user_sat. Die Basis findet <see cref="FindParamsBase"/> ueber drei
+        ''' Landmarken; zusaetzlich muessen alle sechs Zielfelder noch LibRaws Vorgabe tragen
+        ''' (user_black -1, user_cblack viermal -1000001, user_sat -1). Stimmt davon eines nicht,
+        ''' passt der Aufbau nicht zu dieser Fassung, und es wird NICHTS geschrieben: dann
+        ''' entwickelt LibRaw wie ohne Eintrag. Ein verschobener Aufbau kann so keinen falschen Wert
+        ''' still ins Bild schreiben.</summary>
+        Private Shared Function TryApplyLevelOverride(handle As IntPtr) As Boolean
+            If handle = IntPtr.Zero OrElse _getIparams Is Nothing Then Return False
+            Dim iparams = _getIparams(handle)
+            If iparams = IntPtr.Zero Then Return False
+            Dim make = FixedText(iparams, IparamsNormalizedMakeOffset)
+            Dim model = FixedText(iparams, IparamsNormalizedModelOffset)
+            If Not IsPlausibleText(make) OrElse Not IsPlausibleText(model) Then Return False
+            Dim camera = make.Trim() & "|" & model.Trim()
+            Dim iso = 0.0
+            If _getImgOther IsNot Nothing Then
+                Dim other = _getImgOther(handle)
+                If other <> IntPtr.Zero Then iso = InRange(ReadSingle(other, ImgOtherIsoOffset), 1.0, 10000000.0)
+            End If
+            Dim levels As (Black As Integer, Range As Integer)
+            Dim found = iso > 0 AndAlso LevelOverrides.TryGetValue(camera & "|" & CInt(Math.Round(iso)).ToString(Globalization.CultureInfo.InvariantCulture), levels)
+            If Not found AndAlso Not LevelOverrides.TryGetValue(camera, levels) Then Return False
+
+            Dim base = FindParamsBase(handle)
+            If base < 0 Then
+                DiagnosticLogService.LogAlways("RawDecodeService.LevelOverride",
+                    $"{make} {model}: Parameterstruktur nicht eindeutig gefunden - Schwarzpunkt bleibt bei LibRaw")
+                Return False
+            End If
+            Const unsetCblack As Integer = -1000001
+            If Marshal.ReadInt32(handle, base + UserBlackOffset) <> -1 OrElse
+               Marshal.ReadInt32(handle, base + UserSatOffset) <> -1 Then Return False
+            For i = 0 To 3
+                If Marshal.ReadInt32(handle, base + UserCblackOffset + 4 * i) <> unsetCblack Then Return False
+            Next
+
+            If levels.Black >= 0 Then
+                Marshal.WriteInt32(handle, base + UserBlackOffset, levels.Black)
+                For i = 0 To 3
+                    Marshal.WriteInt32(handle, base + UserCblackOffset + 4 * i, 0)
+                Next
+            End If
+            ' Der Tonumfang ueber dem Schwarzpunkt, siehe LevelOverrides.
+            Marshal.WriteInt32(handle, base + UserSatOffset, levels.Range)
+            DiagnosticLogService.LogAlways("RawDecodeService.LevelOverride",
+                $"{make} {model}, ISO {iso:F0}: " &
+                If(levels.Black >= 0, $"Schwarzpunkt {levels.Black}, ", "") &
+                $"Tonumfang {levels.Range} gesetzt (LibRaw liest ihn falsch)")
+            Return True
+        End Function
+
+        ''' <summary>Die Basis von libraw_output_params_t im nativen Handle, oder -1, wenn sie sich
+        ''' nicht EINDEUTIG finden laesst. Drei Werte werden dafuer ueber die Setter als Landmarken
+        ''' gesetzt, gesucht, und danach sofort auf die normalen FerrumPix-Werte zurueckgestellt. Wer
+        ''' danach an der Basis schreibt, prueft vorher selbst, dass sein Feld den erwarteten
+        ''' Vorgabewert traegt.</summary>
+        Private Shared Function FindParamsBase(handle As IntPtr) As Integer
+            If handle = IntPtr.Zero OrElse _setDemosaic Is Nothing Then Return -1
 
             Const markerOutputColor As Integer = 5
             Const markerOutputBps As Integer = 13
@@ -1635,19 +1738,12 @@ Namespace Services
                     If Marshal.ReadInt32(handle, candidate + OutputColorOffset) <> markerOutputColor Then Continue For
                     If Marshal.ReadInt32(handle, candidate + OutputBpsOffset) <> markerOutputBps Then Continue For
                     If Marshal.ReadInt32(handle, candidate + DemosaicOffset) <> markerDemosaic Then Continue For
-
-                    ' Ein frisch erzeugter LibRaw-Kontext hat half_size = 0. Das ist eine vierte,
-                    ' passive Plausibilitaetspruefung gegen zufaellige Treffermuster im Handle.
-                    If Marshal.ReadInt32(handle, candidate + HalfSizeOffset) <> 0 Then Continue For
-                    If foundBase >= 0 Then Return False ' nicht eindeutig: nichts schreiben
+                    If foundBase >= 0 Then Return -1 ' nicht eindeutig: nichts schreiben
                     foundBase = candidate
                 Next
-
-                If foundBase < 0 Then Return False
-                Marshal.WriteInt32(handle, foundBase + HalfSizeOffset, 1)
-                Return True
+                Return foundBase
             Catch
-                Return False
+                Return -1
             Finally
                 ' DecodeCore setzt Bittiefe/Farbraum anschliessend ohnehin verbindlich. user_qual
                 ' muss hier dagegen selbst zurueckgestellt werden, und zwar auf das EINGESTELLTE
@@ -1715,6 +1811,8 @@ Namespace Services
                 ' erst anhand dreier Setter-Landmarken und faellt bei jeder Unsicherheit auf den
                 ' unveraenderten Voll-Decode zurueck.
                 If useHalfSize Then TryEnableHalfSize(handle)
+                ' Kameras, deren Schwarz- und Weisspunkt LibRaw falsch liest (LevelOverrides).
+                TryApplyLevelOverride(handle)
 
                 _setOutputBps(handle, DecodeOutputBits)
                 _setOutputColor(handle, 1) ' sRGB
@@ -2465,6 +2563,15 @@ Namespace Services
         Private Shared Function BaseExposureForFile(path As String) As Double
             Try
                 If Not AppSettingsService.Load().UseCameraBaselineTable Then Return BaseExposureEv
+                ' ZUERST LIBRAWS NAMEN: die Tabelle ist nach ihnen geschluesselt, und nur sie reichen
+                ' an alle Formate heran. Bei Canon CRW, Minolta MRW, Panasonic RAW und Leaf findet der
+                ' Metadatenleser Marke und Modell gar nicht (36 Modelle im Pruefbestand); die Tabelle
+                ' griffe dort nie. Die EXIF-Angaben bleiben der zweite Anlauf fuer aeltere Eintraege.
+                Dim facts = ReadFileMetadata(path)
+                If facts IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(facts.NormalizedModel) Then
+                    Dim viaLibRaw = CameraBaselineTable.BaseExposureFor(facts.NormalizedMake, facts.NormalizedModel, BaseExposureEv)
+                    If viaLibRaw <> BaseExposureEv Then Return viaLibRaw
+                End If
                 Dim verzeichnisse = MetadataExtractor.ImageMetadataReader.ReadMetadata(path)
                 Dim ifd0 = verzeichnisse.OfType(Of MetadataExtractor.Formats.Exif.ExifIfd0Directory)().FirstOrDefault()
                 If ifd0 Is Nothing Then Return BaseExposureEv

@@ -13,26 +13,29 @@ Namespace Services
     '''
     ''' WOZU: Unsere Basisstufe traegt eine feste Grundbelichtung (RawDecodeService.BaseExposureEv).
     ''' Adobe hinterlegt den entsprechenden Wert JE KAMERA - unserer ist an genau einer Kamera
-    ''' gefittet. Auf anderen Modellen entwickelt er systematisch zu hell, gemessen bis knapp eine
-    ''' Blendenstufe. Diese Tabelle gleicht die Modelle UNTEREINANDER an.
+    ''' gefittet (EOS R6). Auf den meisten anderen Modellen entwickelt er zu hell, gegen Lightroom im
+    ''' Median um 0,7 Blendenstufen. Diese Tabelle gleicht die Modelle UNTEREINANDER an.
     '''
-    ''' WIE GEMESSEN: je Modell der Tonwert-Versatz unserer Basisstufe zur kamerainternen
-    ''' JPEG-Vorschau (Median der Luminanz, Vorschau nach ihrem Orientierungs-Tag gedreht), ueber
-    ''' 235 Aufnahmen aus 217 Modellen und 14 Marken (5 Modelle verworfen, deren Vorschau
-    ''' unbrauchbar war - jenseits von 1,2 EV ist das keine Grundbelichtung mehr, sondern ein Messfehler). Der Versatz ist weit ueberwiegend eine
-    ''' Kameraeigenschaft: Streuung innerhalb eines Modells 0,07 EV, zwischen den Modellen 0,44 EV.
+    ''' WIE GEMESSEN (2026-09-27, Diagnostics/Grundbelichtung): Bezug ist Adobes eigene Entwicklung.
+    ''' Adobes DNG-Konverter legt eine Vorschau in voller Groesse in die DNG, gerechnet mit Adobes
+    ''' Entwicklung in der Grundeinstellung; an der R6 deckt sie sich mit dem echten
+    ''' Lightroom-Export ohne Preset. Je Modell wurde die Grundbelichtung ueber diese Tabelle
+    ''' verschoben, bis unsere Entwicklung im Mittel von fuenf Perzentilen auf Adobes traf. Der
+    ''' Eintrag ist das Mittel aus dieser Messung (ueber alle belastbaren Bilder des Modells) und
+    ''' Adobes BaselineExposure. Beide Quellen stimmen eng ueberein (Korrelation 0,94); das Mittel
+    ''' trifft das Mittel der uebrigen Bilder eines Modells auf 0,07 EV. Ausgelassen sind Kameras,
+    ''' die selbst DNG schreiben, und Fujis SuperCCD und EXR. Modelle ohne neue Messung behalten den
+    ''' frueheren Wert aus dem Abgleich mit der Kameravorschau.
     '''
-    ''' WAS DIE TABELLE NICHT KANN: Die kamerainterne Vorschau traegt den BILDSTIL des Herstellers.
-    ''' Die Streuung innerhalb einer Marke ist klein, die Mediane zwischen den Marken unterscheiden
-    ''' sich aber deutlich - ein Teil des Versatzes ist also Stil, nicht Sensoreigenschaft. Getrennt
-    ''' werden koennte das nur mit Referenzexporten mehrerer Kameras. Deshalb ist die Tabelle eine
-    ''' EINSTELLUNG und nicht das Standardverhalten.
+    ''' WAS DIE TABELLE NICHT KANN: bei einzelnen Modellen haengt Adobes Wert an der Aufnahme
+    ''' (Canons Tonwert-Prioritaet, Nikons Bittiefe), eine Zahl je Modell bildet das nicht ab. Und
+    ''' sie wirkt auf JEDE Entwicklung, auch auf Bilder, deren Regler auf der festen
+    ''' Grundbelichtung eingestellt wurden. Deshalb ist sie eine EINSTELLUNG und nicht das
+    ''' Standardverhalten.
     '''
     ''' VERANKERUNG: Alle Werte sind RELATIV zu verstehen. Angewendet wird die Differenz zur
     ''' Referenzkamera, an der die Grundbelichtung gefittet wurde - die behaelt damit exakt ihr
-    ''' bisheriges Ergebnis. Die Referenzkamera ist selbst untypisch (1,5 Streuungen unter dem
-    ''' Median); sobald ein zweiter echter Referenzexport vorliegt, gehoert referenceOffsetEv
-    ''' nachgezogen und die Verankerung geprueft.
+    ''' bisheriges Ergebnis.
     '''
     ''' WO DIE ZAHLEN STEHEN: in Resources/CameraBaselineTable.json, als eingebettete Ressource.
     ''' Diese Klasse liest sie EINMAL und faellt bei einem Lesefehler geschlossen auf leere
@@ -48,14 +51,15 @@ Namespace Services
         ''' Ressource bringt sie mit; dieser Wert ist der Notbehelf, wenn sie nicht lesbar ist.</summary>
         Private Const DefaultReferenceOffsetEv As Double = -0.26
 
-        ''' <summary>Aeusserste Grenze der Verschiebung. Ein einzelner Tabellenwert kann durch eine
-        ''' unbrauchbare Vorschau danebenliegen; ohne Deckel wuerde daraus ein unbrauchbares Bild.</summary>
+        ''' <summary>Aeusserste Grenze der Verschiebung, als Notbehelf; die Ressource bringt ihren
+        ''' eigenen Deckel mit (2 EV, weil gemessene Versaetze bis rund 1,6 EV reichen). Ein einzelner
+        ''' Tabellenwert kann danebenliegen; ohne Deckel wuerde daraus ein unbrauchbares Bild.</summary>
         Private Const DefaultMaxShiftEv As Double = 1.0
 
         Private Const ResourceFileName As String = "CameraBaselineTable.json"
 
-        ''' <summary>Der EINE gelesene Stand der Ressource. Anker, Deckel, Versatztabelle und
-        ''' Farbkalibrierung stehen in derselben Datei und entstehen deshalb in einem Zug: zwei
+        ''' <summary>Der EINE gelesene Stand der Ressource. Anker, Deckel, Versatztabelle,
+        ''' Farbkalibrierung und Pegelkorrekturen stehen in derselben Datei und entstehen deshalb in einem Zug: zwei
         ''' getrennte Ladewege haetten sie zweimal geparst und koennten bei einem Lesefehler
         ''' unterschiedlich weit gekommen sein.</summary>
         Private NotInheritable Class BaselineResource
@@ -63,14 +67,17 @@ Namespace Services
             Public ReadOnly MaxShiftEv As Double
             Public ReadOnly Offsets As Dictionary(Of String, Double)
             Public ReadOnly ColorCalibrations As Dictionary(Of String, ColorCalibration)
+            Public ReadOnly LevelOverrides As Dictionary(Of String, (Black As Integer, Range As Integer))
 
             Public Sub New(referenceOffsetEv As Double, maxShiftEv As Double,
                            offsets As Dictionary(Of String, Double),
-                           colorCalibrations As Dictionary(Of String, ColorCalibration))
+                           colorCalibrations As Dictionary(Of String, ColorCalibration),
+                           levelOverrides As Dictionary(Of String, (Black As Integer, Range As Integer)))
                 Me.ReferenceOffsetEv = referenceOffsetEv
                 Me.MaxShiftEv = maxShiftEv
                 Me.Offsets = offsets
                 Me.ColorCalibrations = colorCalibrations
+                Me.LevelOverrides = levelOverrides
             End Sub
         End Class
 
@@ -91,6 +98,7 @@ Namespace Services
         Private Shared Function LoadResource() As BaselineResource
             Dim offsets As New Dictionary(Of String, Double)(StringComparer.Ordinal)
             Dim calibrations As New Dictionary(Of String, ColorCalibration)(StringComparer.Ordinal)
+            Dim levels As New Dictionary(Of String, (Black As Integer, Range As Integer))(StringComparer.OrdinalIgnoreCase)
             ' Anker und Deckel werden erst zugewiesen, wenn die ganze Datei gelesen ist. Sonst
             ' stuende nach einem Abbruch zwischen beiden der eine Wert aus der Datei neben dem
             ' anderen aus dem Notbehelf - eine Mischung, die es nirgends geben darf.
@@ -117,6 +125,16 @@ Namespace Services
                                 calibrations(entry.Name) = ReadColorCalibration(entry.Value)
                             Next
                         End If
+                        ' Schwarzpunkt und Tonumfang fuer Kameras, die LibRaw falsch liest; siehe
+                        ' RawDecodeService.LevelOverrides. Die LibRaw-Werte und die Quelle daneben
+                        ' sind Nachweis und werden nicht gelesen.
+                        Dim levelEntries As JsonElement
+                        If root.TryGetProperty("levelOverrides", levelEntries) Then
+                            For Each entry In levelEntries.EnumerateObject()
+                                levels(entry.Name) = (entry.Value.GetProperty("black").GetInt32(),
+                                                      entry.Value.GetProperty("range").GetInt32())
+                            Next
+                        End If
                         referenceOffsetEv = readReferenceOffsetEv
                         maxShiftEv = readMaxShiftEv
                     End Using
@@ -125,11 +143,12 @@ Namespace Services
                 DiagnosticLogService.LogException("CameraBaselineTable.LoadResource", ex)
                 offsets.Clear()
                 calibrations.Clear()
+                levels.Clear()
                 referenceOffsetEv = DefaultReferenceOffsetEv
                 maxShiftEv = DefaultMaxShiftEv
             End Try
 
-            Return New BaselineResource(referenceOffsetEv, maxShiftEv, offsets, calibrations)
+            Return New BaselineResource(referenceOffsetEv, maxShiftEv, offsets, calibrations, levels)
         End Function
 
         Private Shared Function ReadColorCalibration(item As JsonElement) As ColorCalibration
@@ -160,6 +179,16 @@ Namespace Services
         End Function
 
         ''' <summary>Anzahl der hinterlegten Modelle - fuer die Diagnose und die Einstellungsseite.</summary>
+        ''' <summary>Schwarzpunkt und Tonumfang ueber Schwarz fuer Kameras, die LibRaw falsch liest,
+        ''' aus dem Abschnitt levelOverrides der Ressource. Anders als die Versaetze gilt diese
+        ''' Tabelle IMMER, nicht nur mit der Einstellung: sie behebt Fehler, sie verschiebt keine
+        ''' Wiedergabe. Angewandt wird sie in RawDecodeService.TryApplyLevelOverride.</summary>
+        Friend Shared ReadOnly Property LevelOverrides As Dictionary(Of String, (Black As Integer, Range As Integer))
+            Get
+                Return Resource.LevelOverrides
+            End Get
+        End Property
+
         Public Shared ReadOnly Property ModelCount As Integer
             Get
                 Return Resource.Offsets.Count
