@@ -1014,7 +1014,7 @@ Namespace ViewModels
         Public ReadOnly Property ShowDimensionsRow As Boolean
             Get
                 Return InfoPanelRowSettings.IsVisible(InfoPanelRow.Dimensions) AndAlso
-                       HasText(_exifInfo.ImageWidth) AndAlso HasText(_exifInfo.ImageHeight)
+                       HasText(_exifInfo.DimensionsText)
             End Get
         End Property
 

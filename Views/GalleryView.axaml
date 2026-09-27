@@ -2235,32 +2235,30 @@
                                                                FontWeight="SemiBold"
                                                                TextTrimming="CharacterEllipsis"/>
                                                 </Grid>
-                                                <!-- Datum und Maße stehen zusammen LINKS in einer Zeile,
-                                                     die Dateigröße rechts. Als drei feste Grid-Spalten
-                                                     hing die Bildgröße an der Dateigröße, sobald das
-                                                     Datum auf schmalen Kacheln wegfiel. -->
-                                                <Grid ColumnDefinitions="*,Auto">
-                                                    <StackPanel Orientation="Horizontal" Spacing="8"
-                                                                VerticalAlignment="Center">
-                                                        <TextBlock Text="{Binding DateText}"
-                                                                   IsVisible="{Binding DataContext.TileHasRoomForDetails, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                                                   Foreground="{DynamicResource FP.Text.Secondary}"
-                                                                   FontSize="{DynamicResource FP.Font.Body}"
-                                                                   VerticalAlignment="Center"
-                                                                   TextTrimming="CharacterEllipsis"/>
-                                                        <TextBlock Text="{Binding DimensionsText}"
-                                                                   IsVisible="{Binding DimensionsText, Converter={x:Static conv:StringConverters.IsNotNullOrEmpty}}"
-                                                                   Foreground="{DynamicResource FP.Text.Secondary}"
-                                                                   FontSize="{DynamicResource FP.Font.Body}"
-                                                                   VerticalAlignment="Center"
-                                                                   TextTrimming="CharacterEllipsis"/>
-                                                    </StackPanel>
-                                                    <TextBlock Grid.Column="1"
-                                                               Text="{Binding FileSizeText}"
+                                                <!-- Datum und Maße links, die Dateigröße rechts. Reicht
+                                                     die Breite nicht, fällt eine Angabe ganz weg statt
+                                                     sich unter die nächste zu schieben (CaptionRowPanel):
+                                                     zuerst das Datum, dann die Maße. Die Reihenfolge der
+                                                     Kinder ist die Rangfolge. -->
+                                                <icons:CaptionRowPanel Spacing="8">
+                                                    <TextBlock Text="{Binding DateText}"
                                                                Foreground="{DynamicResource FP.Text.Secondary}"
                                                                FontSize="{DynamicResource FP.Font.Body}"
-                                                               VerticalAlignment="Center"/>
-                                                </Grid>
+                                                               VerticalAlignment="Center"
+                                                               TextTrimming="CharacterEllipsis"/>
+                                                    <TextBlock Text="{Binding DimensionsText}"
+                                                               IsVisible="{Binding DimensionsText, Converter={x:Static conv:StringConverters.IsNotNullOrEmpty}}"
+                                                               Foreground="{DynamicResource FP.Text.Secondary}"
+                                                               FontSize="{DynamicResource FP.Font.Body}"
+                                                               VerticalAlignment="Center"
+                                                               TextTrimming="CharacterEllipsis"/>
+                                                    <TextBlock Text="{Binding FileSizeText}"
+                                                               HorizontalAlignment="Right"
+                                                               Foreground="{DynamicResource FP.Text.Secondary}"
+                                                               FontSize="{DynamicResource FP.Font.Body}"
+                                                               VerticalAlignment="Center"
+                                                               TextTrimming="CharacterEllipsis"/>
+                                                </icons:CaptionRowPanel>
                                             </StackPanel>
                                         </Border>
                                     </Grid>

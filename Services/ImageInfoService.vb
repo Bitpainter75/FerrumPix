@@ -32,8 +32,13 @@ Namespace Services
             End If
 
             If effectiveWidth > 0 AndAlso effectiveHeight > 0 Then
-                If String.IsNullOrWhiteSpace(data.ImageWidth) Then data.ImageWidth = effectiveWidth.ToString()
-                If String.IsNullOrWhiteSpace(data.ImageHeight) Then data.ImageHeight = effectiveHeight.ToString()
+                ' DIE ECHTEN MASSE GEWINNEN, nicht die Angabe aus den Metadaten. Die trug bei einer
+                ' NEF den ganzen Sensorrahmen samt abgedecktem Rand (4992 x 3280 statt 4928 x 3264,
+                ' Nutzerbefund), und nach einem Zuschnitt ohne EXIF-Pflege die Masse von vorher.
+                ' Megapixel und Seitenverhaeltnis darunter rechnen ohnehin mit diesen Werten; die
+                ' Zeile darueber sagte also etwas anderes als die zwei unter ihr.
+                data.ImageWidth = effectiveWidth.ToString(Globalization.CultureInfo.InvariantCulture)
+                data.ImageHeight = effectiveHeight.ToString(Globalization.CultureInfo.InvariantCulture)
 
                 Dim mp = effectiveWidth * effectiveHeight / 1_000_000.0
                 data.Megapixels = $"{mp:F1} MP"
@@ -103,6 +108,32 @@ Namespace Services
                     .FileName = IO.Path.GetFileName(If(imagePath, ""))
                 }
             End Try
+        End Function
+
+        ''' <summary>Der Kameraname fuer die Info-Leiste, ohne doppelte Marke.
+        '''
+        ''' Die Zeile setzt sich aus Hersteller und Modell zusammen, und viele Hersteller
+        ''' wiederholen ihren Namen im Modell: "Canon" + "Canon EOS M50", "NIKON CORPORATION" +
+        ''' "NIKON D7000". Das ergab "Canon Canon EOS M50" und "NIKON CORPORATION NIKON D7000", und
+        ''' in einer schmalen Leiste drei Zeilen fuer eine Kamera. Kommt das erste Wort im Rest
+        ''' noch einmal vor, beginnt der Name dort; sonst fallen Firmenzusaetze direkt nach dem
+        ''' ersten Wort weg ("OLYMPUS IMAGING CORP. E-M10" wird "OLYMPUS E-M10").
+        '''
+        ''' NUR FUER DIE ANZEIGE. Katalog, Suche und Filter behalten die Schreibweise der Datei;
+        ''' eine geaenderte stuende dort neben der alten, bis jede Datei neu gelesen ist.</summary>
+        Public Shared Function DisplayCameraName(camera As String) As String
+            Dim words = If(camera, "").Split(" "c, StringSplitOptions.RemoveEmptyEntries)
+            If words.Length < 2 Then Return If(camera, "").Trim()
+            For i = 1 To words.Length - 1
+                If String.Equals(words(i), words(0), StringComparison.OrdinalIgnoreCase) Then
+                    Return String.Join(" ", words.Skip(i))
+                End If
+            Next
+            Dim suffixes = {"CORPORATION", "CORP.", "CORP", "IMAGING", "COMPANY", "COMPANY,", "CO.,", "CO.", "LTD.", "LTD", "INC.", "INC"}
+            Dim rest = words.Skip(1).SkipWhile(Function(w) suffixes.Contains(w.ToUpperInvariant())).ToArray()
+            ' Bleibt nach den Zusaetzen nichts uebrig, war der Zusatz das Modell - dann alles zeigen.
+            If rest.Length = 0 Then Return String.Join(" ", words)
+            Return words(0) & " " & String.Join(" ", rest)
         End Function
 
         ''' <summary>Das Seitenverhaeltnis gekuerzt, etwa 3:2. Stand vorher zweimal im Quelltext,

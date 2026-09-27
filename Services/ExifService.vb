@@ -86,6 +86,13 @@ Namespace Services
         Public Property DateTaken As String = ""
         Public Property DateModifiedExif As String = ""
         Public Property Camera As String = ""
+        ''' <summary>Der Kameraname fuer die Anzeige, ohne doppelte Marke; siehe
+        ''' ImageInfoService.DisplayCameraName. Camera selbst bleibt die Schreibweise der Datei.</summary>
+        Public ReadOnly Property DisplayCamera As String
+            Get
+                Return ImageInfoService.DisplayCameraName(Camera)
+            End Get
+        End Property
         Public Property Lens As String = ""
         Public Property FocalLength As String = ""
         ''' Kleinbild-Äquivalent (EXIF-Tag "FocalLengthIn35mmFilm"). Bei Handykameras ist die echte
@@ -99,6 +106,27 @@ Namespace Services
         Public Property ExposureCompensation As String = ""
         Public Property ImageWidth As String = ""
         Public Property ImageHeight As String = ""
+        ''' <summary>Die Masse als EIN Text fuer die Info-Leiste, "4928 x 3264". Nur die Zahlen: der
+        ''' Metadatenleser liefert Breite und Hoehe mancher Formate als "6000 pixels", und
+        ''' "6000 pixels x 4000 pixels" war doppelt so breit wie noetig.</summary>
+        Public ReadOnly Property DimensionsText As String
+            Get
+                Dim width = LeadingNumber(ImageWidth)
+                Dim height = LeadingNumber(ImageHeight)
+                If width.Length = 0 OrElse height.Length = 0 Then Return ""
+                Return width & " x " & height
+            End Get
+        End Property
+
+        Private Shared Function LeadingNumber(text As String) As String
+            Dim value = If(text, "").Trim()
+            Dim length = 0
+            While length < value.Length AndAlso Char.IsDigit(value(length))
+                length += 1
+            End While
+            Return value.Substring(0, length)
+        End Function
+
         Public Property Megapixels As String = ""
         Public Property AspectRatio As String = ""
         Public Property ColorSpace As String = ""

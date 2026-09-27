@@ -9,6 +9,13 @@
   HOME and END move through its pictures instead of switching to another folder. The same goes
   after a right-click menu or a middle-click preview in the gallery.
 
+- The details under gallery tiles no longer run into each other on small tiles; a detail that
+  does not fit is left out instead.
+
+- The info panel keeps labels and values tidy in a narrow panel: values stay right-aligned, long
+  names break between words, and the camera name no longer repeats the brand. Dimensions show the
+  real size of the picture, for raw files without the hidden sensor border.
+
 - RAW files from the Canon EOS R6 Mark III are developed correctly instead of coming out flat
   and with a magenta cast.
 
