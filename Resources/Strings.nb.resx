@@ -4629,8 +4629,8 @@
   <data name="Grundhelligkeit_an_das_Kameramodell_anpassen_ef28e2b5" xml:space="preserve">
     <value>Tilpass grunnlysstyrken til kameramodellen</value>
   </data>
-  <data name="RAW_Dateien_verschiedener_Kameras_kommen_untersc_073cc824" xml:space="preserve">
-    <value>RAW-filer fra ulike kameraer kommer ulikt lyse ut av sensoren. Slått på jevner FerrumPix det ut ved hjelp av referanseverdier for over 200 kameramodeller, slik at det samme motivet framkalles like lyst uansett kamera.</value>
+  <data name="RAW_Dateien_verschiedener_Kameras_kommen_untersc_1a927ddd" xml:space="preserve">
+    <value>RAW-filer fra ulike kameraer kommer ulikt lyse ut av sensoren. Slått på jevner FerrumPix det ut ved hjelp av referanseverdier for hver kameramodell, slik at det samme motivet framkalles like lyst uansett kamera.</value>
   </data>
   <data name="Vergleichen_fbdbcbc0" xml:space="preserve">
     <value>Sammenlign</value>
@@ -8897,5 +8897,11 @@
   </data>
   <data name="Entrauscht_jedes_Bild_mit_einem_gelernten_Modell_e33ced3e" xml:space="preserve">
     <value>Støyreduserer hvert bilde med en trent modell, med fast styrke eller målt for hvert bilde. Tar flere minutter per bilde.</value>
+  </data>
+  <data name="Farben_an_das_Kameramodell_anpassen_668b27ec" xml:space="preserve">
+    <value>Tilpass farger til kameramodellen</value>
+  </data>
+  <data name="RAW_Dateien_verschiedener_Kameras_geben_Farben_u_da32f01c" xml:space="preserve">
+    <value>Raw-filer fra ulike kameraer gjengir farger forskjellig. Når det er slått på, stiller FerrumPix inn glidebryterne under Kalibrering når en uredigert raw-fil åpnes, slik at fargene kommer nær en utbredt raw-fremkalling, for noen kameramodeller særskilt avstemt. Verdiene vises i glidebryterne og kan endres der; bilder som allerede er redigert, forblir uendret.</value>
   </data>
 </root>

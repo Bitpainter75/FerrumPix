@@ -1736,10 +1736,24 @@
                         <Grid ColumnDefinitions="*,Auto" Margin="0,12,0,0">
                             <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
                                 <TextBlock Text="Grundhelligkeit an das Kameramodell anpassen" FontSize="{DynamicResource FP.Font.Body}"/>
-                                <TextBlock Text="RAW-Dateien verschiedener Kameras kommen unterschiedlich hell aus dem Sensor. Eingeschaltet gleicht FerrumPix das anhand von Referenzwerten für über 200 Kameramodelle an, damit dieselbe Aufnahme mit verschiedenen Kameras gleich hell entwickelt wird." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Text="RAW-Dateien verschiedener Kameras kommen unterschiedlich hell aus dem Sensor. Eingeschaltet gleicht FerrumPix das anhand von Referenzwerten je Kameramodell an, damit dieselbe Aufnahme mit verschiedenen Kameras gleich hell entwickelt wird." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </StackPanel>
                             <ToggleSwitch Grid.Column="1"
                                           IsChecked="{Binding UseCameraBaselineTable}"
+                                          OnContent=""
+                                          OffContent=""
+                                          VerticalAlignment="Center"/>
+                        </Grid>
+                        <!-- Die Farbe hat einen EIGENEN Schalter neben der Helligkeit: wer gleich
+                             helle Kameras will, will nicht zwingend eine andere Farbwiedergabe.
+                             Der Bezug der Werte bleibt in der Beschreibung ohne Namen. -->
+                        <Grid ColumnDefinitions="*,Auto" Margin="0,12,0,0">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Farben an das Kameramodell anpassen" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="RAW-Dateien verschiedener Kameras geben Farben unterschiedlich wieder. Eingeschaltet stellt FerrumPix beim Öffnen einer unbearbeiteten RAW die Regler unter Kalibrierung so ein, dass die Farben einer verbreiteten RAW-Entwicklung nahekommen, für einige Kameramodelle eigens abgestimmt. Die Werte stehen sichtbar in den Reglern und lassen sich dort ändern; bereits bearbeitete Bilder bleiben unverändert." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1"
+                                          IsChecked="{Binding UseCameraColorTable}"
                                           OnContent=""
                                           OffContent=""
                                           VerticalAlignment="Center"/>

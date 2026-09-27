@@ -1677,7 +1677,7 @@ Namespace Services
         ''' passt der Aufbau nicht zu dieser Fassung, und es wird NICHTS geschrieben: dann
         ''' entwickelt LibRaw wie ohne Eintrag. Ein verschobener Aufbau kann so keinen falschen Wert
         ''' still ins Bild schreiben.</summary>
-        Private Shared Function TryApplyLevelOverride(handle As IntPtr) As Boolean
+        Private Shared Function TryApplyLevelOverride(handle As IntPtr, path As String) As Boolean
             If handle = IntPtr.Zero OrElse _getIparams Is Nothing Then Return False
             Dim iparams = _getIparams(handle)
             If iparams = IntPtr.Zero Then Return False
@@ -1691,8 +1691,24 @@ Namespace Services
                 If other <> IntPtr.Zero Then iso = InRange(ReadSingle(other, ImgOtherIsoOffset), 1.0, 10000000.0)
             End If
             Dim levels As (Black As Integer, Range As Integer, White As Integer)
-            Dim found = iso > 0 AndAlso LevelOverrides.TryGetValue(camera & "|" & CInt(Math.Round(iso)).ToString(Globalization.CultureInfo.InvariantCulture), levels)
-            If Not found AndAlso Not LevelOverrides.TryGetValue(camera, levels) Then Return False
+            Dim entryKey = camera & "|" & CInt(Math.Round(iso)).ToString(Globalization.CultureInfo.InvariantCulture)
+            Dim found = iso > 0 AndAlso LevelOverrides.TryGetValue(entryKey, levels)
+            Dim fromCanonLayout = False
+            If Not found Then
+                entryKey = camera
+                If Not LevelOverrides.TryGetValue(camera, levels) Then
+                    ' JEDE ANDERE CANON: Schwarz- und Weisspunkt aus Canons ColorData der Datei, wenn
+                    ' die Fassung bekannt ist. LibRaw nimmt bei fast allen neueren Canons einen zu
+                    ' hohen Weisspunkt (meist 16383 statt Canons SpecularWhiteLevel, den auch Adobe
+                    ' uebernimmt): das Bild kam bis zu 0,8 Blendenstufen zu dunkel, und
+                    ' Ausgefressenes wurde nie weiss. Gemessen an 96 Dateien von 40 Modellen, siehe
+                    ' Audits/RAW_UND_FARBE.md. Unbekannte Fassung: es bleibt bei LibRaw.
+                    Dim canonLevels = CanonLevelsFromFile(handle, make, path)
+                    If Not canonLevels.HasValue Then Return False
+                    levels = (canonLevels.Value.Black, -1, canonLevels.Value.White)
+                    fromCanonLayout = True
+                End If
+            End If
 
             Dim base = FindParamsBase(handle)
             If base < 0 Then
@@ -1707,8 +1723,29 @@ Namespace Services
                 If Marshal.ReadInt32(handle, base + UserCblackOffset + 4 * i) <> unsetCblack Then Return False
             Next
 
-            ' Der Schwarzpunkt: fest aus dem Eintrag, oder je Datei aus dem abgedeckten Rand gemessen.
+            ' Der Schwarzpunkt: fest aus dem Eintrag, aus Canons ColorData der Datei, oder je Datei
+            ' aus dem abgedeckten Rand gemessen.
             Dim black = levels.Black
+            Dim fromColorData = fromCanonLayout
+            If black = ColorDataBlackMarker Then
+                Dim layout As (Version As Integer, BlackWord As Integer, WhiteWord As Integer)
+                Dim read As (Black As Integer, White As Integer)? = Nothing
+                If CameraBaselineTable.LevelColorData.TryGetValue(entryKey, layout) Then
+                    read = CanonColorData.TryReadLevels(path, layout.Version, layout.BlackWord, layout.WhiteWord)
+                End If
+                If read.HasValue Then
+                    black = read.Value.Black
+                    levels = (read.Value.Black, -1, read.Value.White)
+                    fromColorData = True
+                Else
+                    ' Rueckfall: der Block ist nicht lesbar oder hat eine andere Fassung. Der Rand
+                    ' liefert wenigstens den Sockel; der Weisspunkt bleibt dann bei LibRaw.
+                    DiagnosticLogService.LogAlways("RawDecodeService.LevelOverride",
+                        $"{make} {model}, ISO {iso:F0}: ColorData nicht lesbar - Sockel aus dem Rand")
+                    black = MeasuredBlackMarker
+                    levels = (MeasuredBlackMarker, -1, -1)
+                End If
+            End If
             If black = MeasuredBlackMarker Then
                 black = MeasureMaskedBlack(handle)
                 If black < 0 Then
@@ -1736,7 +1773,7 @@ Namespace Services
             If range > 0 Then Marshal.WriteInt32(handle, base + UserSatOffset, range)
             DiagnosticLogService.LogAlways("RawDecodeService.LevelOverride",
                 $"{make} {model}, ISO {iso:F0}: " &
-                If(black >= 0, $"Schwarzpunkt {black}{If(levels.Black = MeasuredBlackMarker, " (gemessen)", "")}, ", "") &
+                If(black >= 0, $"Schwarzpunkt {black}{If(fromColorData, " (aus ColorData)", If(levels.Black = MeasuredBlackMarker, " (gemessen)", ""))}, ", "") &
                 If(range > 0, $"Tonumfang {range} ", "") & "gesetzt (LibRaw liest ihn falsch)")
             Return True
         End Function
@@ -1750,6 +1787,14 @@ Namespace Services
         ''' entwickelte sie fast schwarz. Der abgedeckte Rand misst den Sockel der Datei selbst,
         ''' gleich woher er kommt.</summary>
         Public Const MeasuredBlackMarker As Integer = -2
+
+        ''' <summary>Schwarzpunkt im Eintrag: Schwarz- und Weisspunkt aus Canons ColorData der Datei
+        ''' lesen (CanonColorData), an der Stelle, die der Eintrag unter colorData nennt. Das sind
+        ''' Canons eigene Werte je Aufnahme, also fuer jede ISO-Stufe richtig. Die R6 Mark III
+        ''' schreibt bei ISO 100 Sockel 512 und SpecularWhiteLevel 13995, bei ISO 1000 2048 und
+        ''' 14351 (Adobe: 14351). Ist der Block nicht lesbar, faellt der Weg auf die Randmessung
+        ''' zurueck, der Weisspunkt bleibt dann bei LibRaw.</summary>
+        Public Const ColorDataBlackMarker As Integer = -3
 
         ' Aufbau des Anfangs von libraw_data_t (libraw_types.h): ein Zeiger, danach
         ' libraw_image_sizes_t. Diese Felder stehen vor jedem long der Struktur und liegen deshalb
@@ -1833,6 +1878,23 @@ Namespace Services
             Catch
                 Return -1
             End Try
+        End Function
+
+        ''' <summary>Schwarz- und Weisspunkt einer Canon aus ihrer ColorData, oder Nothing.
+        '''
+        ''' Nur fuer Rohdaten mit Farbfilter: sRAW und mRAW tragen dieselbe ColorData, ihre Daten sind
+        ''' aber schon Farbwerte (LibRaw legt sie in einen Farbpuffer statt in raw_image), und ein
+        ''' Sockel dort abgezogen verfaelschte sie. FindRawImage verlangt genau das - Rohdaten und
+        ''' leere Farbpuffer - und dient hier deshalb als Pruefung.</summary>
+        Private Shared Function CanonLevelsFromFile(handle As IntPtr, make As String, path As String) As (Black As Integer, White As Integer)?
+            If Not String.Equals(make.Trim(), "Canon", StringComparison.OrdinalIgnoreCase) Then Return Nothing
+            Dim words = CanonColorData.ReadColorData(path)
+            If words Is Nothing OrElse words.Length = 0 Then Return Nothing
+            Dim blackWord As Integer
+            Dim layoutKey = words(0).ToString(Globalization.CultureInfo.InvariantCulture) & "|" & words.Length.ToString(Globalization.CultureInfo.InvariantCulture)
+            If Not CameraBaselineTable.CanonColorDataLayouts.TryGetValue(layoutKey, blackWord) Then Return Nothing
+            If FindRawImage(handle) = IntPtr.Zero Then Return Nothing
+            Return CanonColorData.LevelsFromWords(words, blackWord, blackWord + 5)
         End Function
 
         ''' <summary>rawdata.raw_image, gefunden ueber die Kopie von iparams dahinter; siehe
@@ -1968,7 +2030,7 @@ Namespace Services
                 ' unveraenderten Voll-Decode zurueck.
                 If useHalfSize Then TryEnableHalfSize(handle)
                 ' Kameras, deren Schwarz- und Weisspunkt LibRaw falsch liest (LevelOverrides).
-                TryApplyLevelOverride(handle)
+                TryApplyLevelOverride(handle, path)
 
                 _setOutputBps(handle, DecodeOutputBits)
                 _setOutputColor(handle, 1) ' sRGB
@@ -2737,6 +2799,28 @@ Namespace Services
                     BaseExposureEv)
             Catch
                 Return BaseExposureEv
+            End Try
+        End Function
+
+        ''' <summary>Die Farbkalibrierung fuer DIESE Datei: der Eintrag ihres Kameramodells, sonst
+        ''' der Standard der Kameratabelle, sonst Nothing. Die Eintraege sind nach LibRaws Namen
+        ''' gebildet (Diagnostics/Farbmessung); kennt LibRaw die Kamera, entscheidet deshalb dieser
+        ''' Name allein, und der volle Metadatenlauf entfaellt. Nur ohne ihn sind die EXIF-Angaben
+        ''' der zweite Anlauf. Die Einstellung prueft der Aufrufer.</summary>
+        Public Shared Function ColorCalibrationForFile(path As String) As CameraBaselineTable.ColorCalibration
+            Try
+                Dim facts = ReadFileMetadata(path)
+                If facts IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(facts.NormalizedModel) Then
+                    Return CameraBaselineTable.ColorCalibrationFor(facts.NormalizedMake, facts.NormalizedModel)
+                End If
+                Dim verzeichnisse = MetadataExtractor.ImageMetadataReader.ReadMetadata(path)
+                Dim ifd0 = verzeichnisse.OfType(Of MetadataExtractor.Formats.Exif.ExifIfd0Directory)().FirstOrDefault()
+                If ifd0 Is Nothing Then Return CameraBaselineTable.DefaultColorCalibration
+                Return CameraBaselineTable.ColorCalibrationFor(
+                    ifd0.GetDescription(MetadataExtractor.Formats.Exif.ExifDirectoryBase.TagMake),
+                    ifd0.GetDescription(MetadataExtractor.Formats.Exif.ExifDirectoryBase.TagModel))
+            Catch
+                Return CameraBaselineTable.DefaultColorCalibration
             End Try
         End Function
 

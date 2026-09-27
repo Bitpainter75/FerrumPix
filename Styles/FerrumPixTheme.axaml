@@ -218,25 +218,31 @@
     <Style Selector="Button:disabled /template/ ContentPresenter">
         <Setter Property="Opacity" Value="0.35"/>
     </Style>
+    <!-- HERVORGEHOBENER KNOPF OHNE FUELLUNG: Rahmen und Schrift in der Akzentfarbe, beim
+         Ueberfahren derselbe graue Grund und graue Rahmen wie bei einem aktiven Ghost-Knopf
+         ("Speichern unter"), damit alle hervorgehobenen Knoepfe gleich reagieren. Frueher war er voll orange mit weisser Schrift;
+         das ergab nur etwa 2,5:1 Kontrast und war fuer einen Anwender schlecht lesbar. Doppelt
+         (Button UND ContentPresenter) aus demselben Grund wie beim Filterknopf: der
+         :pointerover-Zustand setzt Hintergrund und Rahmen direkt am ContentPresenter. -->
     <Style Selector="Button.accent">
-        <Setter Property="Background" Value="{DynamicResource FP.Accent}"/>
-        <Setter Property="Foreground" Value="White"/>
-        <Setter Property="BorderBrush" Value="Transparent"/>
-        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Foreground" Value="{DynamicResource FP.Accent}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Accent}"/>
+        <Setter Property="BorderThickness" Value="1.5"/>
         <Setter Property="FontWeight" Value="SemiBold"/>
     </Style>
     <Style Selector="Button.accent /template/ ContentPresenter">
-        <Setter Property="Background" Value="{DynamicResource FP.Accent}"/>
-        <Setter Property="BorderBrush" Value="Transparent"/>
-        <Setter Property="TextElement.Foreground" Value="White"/>
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Accent}"/>
+        <Setter Property="TextElement.Foreground" Value="{DynamicResource FP.Accent}"/>
     </Style>
     <Style Selector="Button.accent:pointerover /template/ ContentPresenter">
-        <Setter Property="Background" Value="{DynamicResource FP.Accent}"/>
-        <Setter Property="BorderBrush" Value="Transparent"/>
-        <Setter Property="TextElement.Foreground" Value="White"/>
+        <Setter Property="Background" Value="{DynamicResource FP.Bg.Elevated}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Border.Strong}"/>
+        <Setter Property="TextElement.Foreground" Value="{DynamicResource FP.Accent}"/>
     </Style>
     <Style Selector="Button.accent icons|SvgIcon">
-        <Setter Property="IconBrush" Value="White"/>
+        <Setter Property="IconBrush" Value="{DynamicResource FP.Accent}"/>
     </Style>
     <!-- Filter-Knopf der Galerie: traegt die Akzentfarbe, solange ein Filter greift (Favoriten,
          Bewertung, Farbetikett oder Dateityp). Ohne das war ein aktiver Filter nur an einem
@@ -296,25 +302,25 @@
     </Style>
     <!-- SPEICHERN MIT UNGESICHERTER ARBEIT. Dieselben Setter wie Button.accent, aber HINTER
          Button.ghost: der Knopf traegt beide Klassen, und bei gleicher Spezifitaet gewinnt in
-         Avalonia die spaeter stehende Regel - stuende dies weiter oben, malte Ghost den Akzent
-         wieder zu. Doppelt (Button UND ContentPresenter) aus demselben Grund wie beim Filterknopf:
+         Avalonia die spaeter stehende Regel - stuende dies weiter oben, malte Ghost den Rahmen
+         wieder grau. Doppelt (Button UND ContentPresenter) aus demselben Grund wie beim Filterknopf:
          der :pointerover-Zustand setzt Hintergrund und Rahmen direkt am ContentPresenter. -->
     <Style Selector="Button.save-dirty">
-        <Setter Property="Background" Value="{DynamicResource FP.Accent}"/>
-        <Setter Property="Foreground" Value="White"/>
-        <Setter Property="BorderBrush" Value="Transparent"/>
-        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Foreground" Value="{DynamicResource FP.Accent}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Accent}"/>
+        <Setter Property="BorderThickness" Value="1.5"/>
         <Setter Property="FontWeight" Value="SemiBold"/>
     </Style>
     <Style Selector="Button.save-dirty /template/ ContentPresenter">
-        <Setter Property="Background" Value="{DynamicResource FP.Accent}"/>
-        <Setter Property="BorderBrush" Value="Transparent"/>
-        <Setter Property="TextElement.Foreground" Value="White"/>
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Accent}"/>
+        <Setter Property="TextElement.Foreground" Value="{DynamicResource FP.Accent}"/>
     </Style>
     <Style Selector="Button.save-dirty:pointerover /template/ ContentPresenter">
-        <Setter Property="Background" Value="{DynamicResource FP.Accent}"/>
-        <Setter Property="BorderBrush" Value="Transparent"/>
-        <Setter Property="TextElement.Foreground" Value="White"/>
+        <Setter Property="Background" Value="{DynamicResource FP.Bg.Elevated}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Border.Strong}"/>
+        <Setter Property="TextElement.Foreground" Value="{DynamicResource FP.Accent}"/>
     </Style>
     <!-- AKZENTRAHMEN: ein Knopf, der auffallen soll, ohne gefuellt zu sein (Exportieren in der
          Fusszeile der Galerie). Doppelt (Button UND ContentPresenter) aus demselben Grund wie
@@ -335,7 +341,7 @@
         <Setter Property="BorderBrush" Value="{DynamicResource FP.Accent}"/>
     </Style>
     <Style Selector="Button.save-dirty icons|SvgIcon">
-        <Setter Property="IconBrush" Value="White"/>
+        <Setter Property="IconBrush" Value="{DynamicResource FP.Accent}"/>
     </Style>
 
     <Style Selector="Button.insert-option-btn">
@@ -499,6 +505,13 @@
     <Style Selector="Border.toolbar Button.ghost.framed">
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="BorderBrush" Value="{DynamicResource FP.Border.Normal}"/>
+    </Style>
+    <!-- Speichern bei ungesicherter Arbeit steht in der Werkzeugleiste: die Regel oben nimmt ihm
+         als Ghost-Knopf den Rahmen, und sie ist spezifischer als Button.save-dirty allein. Ohne
+         Fuellung ist der Akzentrahmen aber das Einzige, was ihn als Knopf abgrenzt. -->
+    <Style Selector="Border.toolbar Button.ghost.save-dirty">
+        <Setter Property="BorderThickness" Value="1.5"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Accent}"/>
     </Style>
     <Style Selector="Button.ghost.active">
         <Setter Property="Foreground" Value="{DynamicResource FP.Accent}"/>

@@ -396,6 +396,12 @@ Namespace Services
         ''' untypisch. Bis ein zweiter Referenzexport vorliegt, ist das eine Wahl des Nutzers und
         ''' keine Vorgabe. Siehe OFFENE_PUNKTE.md.</summary>
         Public Property UseCameraBaselineTable As Boolean = False
+        ''' <summary>Die Farbkalibrierung aus der Kameratabelle als Startwert der Kalibrierungsregler
+        ''' einer unbearbeiteten RAW (CameraBaselineTable.ColorCalibrationFor). Getrennt von der
+        ''' Grundhelligkeit, weil es ein anderer Wunsch ist: wer gleich helle Kameras will, will
+        ''' nicht zwingend eine andere Farbwiedergabe. Standard AUS: die Nutzer sind mit den Farben
+        ''' zufrieden, und die Werte bilden eine fremde Entwicklung nach, keine richtigere.</summary>
+        Public Property UseCameraColorTable As Boolean = False
         Public Property EditorInfoSidebarExpanded As Boolean = True
         ''' Ob das Ebenen-Panel im Editor zuletzt eingeblendet war - gemerkter Bedienzustand (wie die
         ''' Info-Leiste), kein Schalter in den Einstellungen. Standard aus: es ist ein Profi-Werkzeug.

@@ -1,5 +1,12 @@
 ## Unreleased
 
+### What's new
+
+- **Colors matched to the camera model.** A new optional setting starts unedited raw files with
+  calibration values that bring their colors close to a widely used raw development, tuned
+  separately for many camera models. The values show up in the Calibration sliders and can be
+  changed there; pictures you have already edited stay as they are. It is off by default.
+
 ### Fixes
 
 - The fast AI denoiser no longer turns very dark, smooth areas such as a night sky or a black
@@ -24,7 +31,11 @@
   follows right away instead of waiting for the mouse to move.
 
 - RAW files from the Canon EOS R6 Mark III are developed correctly instead of coming out flat
-  and with a magenta cast.
+  and with a magenta cast, at every ISO setting.
+
+- RAW files from most Canon cameras since about 2010 use the black and white levels the camera
+  writes into each file. Blown highlights now turn white instead of gray, and pictures are no
+  longer developed too dark.
 
 - The optional setting that adapts the base brightness to the camera model now matches Lightroom
   much more closely and covers more cameras, including older raw formats. It stays off by

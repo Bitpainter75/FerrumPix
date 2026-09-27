@@ -4629,8 +4629,8 @@
   <data name="Grundhelligkeit_an_das_Kameramodell_anpassen_ef28e2b5" xml:space="preserve">
     <value>Temel parlaklığı fotoğraf makinesi modeline uydur</value>
   </data>
-  <data name="RAW_Dateien_verschiedener_Kameras_kommen_untersc_073cc824" xml:space="preserve">
-    <value>Farklı fotoğraf makinelerinin RAW dosyaları algılayıcıdan farklı parlaklıkta çıkar. Açıkken FerrumPix bunu 200'den fazla makine modeli için referans değerlerle dengeler, böylece aynı sahne hangi makineyle çekilirse çekilsin aynı parlaklıkta gelişir.</value>
+  <data name="RAW_Dateien_verschiedener_Kameras_kommen_untersc_1a927ddd" xml:space="preserve">
+    <value>Farklı fotoğraf makinelerinin RAW dosyaları algılayıcıdan farklı parlaklıkta çıkar. Açıkken FerrumPix bunu her makine modeli için referans değerlerle dengeler, böylece aynı sahne hangi makineyle çekilirse çekilsin aynı parlaklıkta gelişir.</value>
   </data>
   <data name="Vergleichen_fbdbcbc0" xml:space="preserve">
     <value>Karşılaştır</value>
@@ -8901,5 +8901,11 @@
   </data>
   <data name="Entrauscht_jedes_Bild_mit_einem_gelernten_Modell_e33ced3e" xml:space="preserve">
     <value>Her görüntünün gürültüsünü eğitilmiş bir modelle giderir, sabit güçle ya da her görüntü için ölçülerek. Görüntü başına birkaç dakika sürer.</value>
+  </data>
+  <data name="Farben_an_das_Kameramodell_anpassen_668b27ec" xml:space="preserve">
+    <value>Renkleri kamera modeline uyarla</value>
+  </data>
+  <data name="RAW_Dateien_verschiedener_Kameras_geben_Farben_u_da32f01c" xml:space="preserve">
+    <value>Farklı kameraların RAW dosyaları renkleri farklı yansıtır. Açıkken FerrumPix, düzenlenmemiş bir RAW açıldığında Kalibrasyon altındaki kaydırıcıları renkler yaygın bir RAW banyosuna yaklaşacak şekilde ayarlar; bazı kamera modelleri için ayrıca ince ayar yapılmıştır. Değerler kaydırıcılarda görünür ve orada değiştirilebilir; önceden düzenlenmiş resimler olduğu gibi kalır.</value>
   </data>
 </root>

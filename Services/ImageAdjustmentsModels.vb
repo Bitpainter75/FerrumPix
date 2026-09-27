@@ -914,13 +914,11 @@ Namespace Services
             If stops <> 0.0 Then values.Exposure = CSng(stops * ExposurePointsPerStop)
             ' Die Kamera-Farbkalibrierung ist dieselbe sichtbare Reglergruppe wie im Editor.
             ' Sie bleibt eine optionale Vorgabe und wird nie in ein vorhandenes Rezept gemischt.
-            If Not String.IsNullOrWhiteSpace(path) AndAlso AppSettingsService.Load().UseCameraBaselineTable Then
+            ' Sie haengt an einer EIGENEN Einstellung, nicht an der Grundhelligkeit: gleich helle
+            ' Kameras und eine andere Farbwiedergabe sind zwei verschiedene Wuensche.
+            If Not String.IsNullOrWhiteSpace(path) AndAlso AppSettingsService.Load().UseCameraColorTable Then
                 Try
-                    Dim directories = MetadataExtractor.ImageMetadataReader.ReadMetadata(path)
-                    Dim ifd0 = directories.OfType(Of MetadataExtractor.Formats.Exif.ExifIfd0Directory)().FirstOrDefault()
-                    Dim calibration = If(ifd0 Is Nothing, Nothing, CameraBaselineTable.ColorCalibrationFor(
-                        ifd0.GetDescription(MetadataExtractor.Formats.Exif.ExifDirectoryBase.TagMake),
-                        ifd0.GetDescription(MetadataExtractor.Formats.Exif.ExifDirectoryBase.TagModel)))
+                    Dim calibration = RawDecodeService.ColorCalibrationForFile(path)
                     If calibration IsNot Nothing Then
                         values.CalibrationRedHue = calibration.RedHue : values.CalibrationRedSaturation = calibration.RedSaturation
                         values.CalibrationGreenHue = calibration.GreenHue : values.CalibrationGreenSaturation = calibration.GreenSaturation

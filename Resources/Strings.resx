@@ -4632,8 +4632,8 @@
   <data name="Grundhelligkeit_an_das_Kameramodell_anpassen_ef28e2b5" xml:space="preserve">
     <value>Match base brightness to the camera model</value>
   </data>
-  <data name="RAW_Dateien_verschiedener_Kameras_kommen_untersc_073cc824" xml:space="preserve">
-    <value>RAW files from different cameras leave the sensor at different brightness. Switched on, FerrumPix evens this out using reference values for over 200 camera models, so the same scene develops equally bright whichever camera took it.</value>
+  <data name="RAW_Dateien_verschiedener_Kameras_kommen_untersc_1a927ddd" xml:space="preserve">
+    <value>RAW files from different cameras leave the sensor at different brightness. Switched on, FerrumPix evens this out using reference values per camera model, so the same scene develops equally bright whichever camera took it.</value>
   </data>
   <data name="Vergleichen_fbdbcbc0" xml:space="preserve">
     <value>Compare</value>
@@ -8876,5 +8876,11 @@
   </data>
   <data name="Entrauscht_jedes_Bild_mit_einem_gelernten_Modell_e33ced3e" xml:space="preserve">
     <value>Denoises every picture with a trained model, at a fixed strength or measured per picture. Takes several minutes per picture.</value>
+  </data>
+  <data name="Farben_an_das_Kameramodell_anpassen_668b27ec" xml:space="preserve">
+    <value>Match colors to the camera model</value>
+  </data>
+  <data name="RAW_Dateien_verschiedener_Kameras_geben_Farben_u_da32f01c" xml:space="preserve">
+    <value>Raw files from different cameras render colors differently. When on, FerrumPix sets the sliders under Calibration of an unedited raw file so that its colors come close to a widely used raw development, tuned separately for some camera models. The values are visible in the sliders and can be changed there; pictures you have already edited stay as they are.</value>
   </data>
 </root>

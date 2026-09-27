@@ -4629,8 +4629,8 @@
   <data name="Grundhelligkeit_an_das_Kameramodell_anpassen_ef28e2b5" xml:space="preserve">
     <value>基準の明るさをカメラの機種に合わせる</value>
   </data>
-  <data name="RAW_Dateien_verschiedener_Kameras_kommen_untersc_073cc824" xml:space="preserve">
-    <value>RAW ファイルの明るさはカメラによって異なります。オンにすると、FerrumPix が 200 機種を超えるカメラの基準値を使って明るさを揃え、同じ場面をどのカメラで撮っても同じ明るさに現像されます。</value>
+  <data name="RAW_Dateien_verschiedener_Kameras_kommen_untersc_1a927ddd" xml:space="preserve">
+    <value>RAW ファイルの明るさはカメラによって異なります。オンにすると、FerrumPix が カメラ機種ごとの基準値を使って明るさを揃え、同じ場面をどのカメラで撮っても同じ明るさに現像されます。</value>
   </data>
   <data name="Vergleichen_fbdbcbc0" xml:space="preserve">
     <value>比較</value>
@@ -8897,5 +8897,11 @@
   </data>
   <data name="Entrauscht_jedes_Bild_mit_einem_gelernten_Modell_e33ced3e" xml:space="preserve">
     <value>学習済みモデルで各画像のノイズを除去します。強さは固定、または画像ごとに測定します。1枚あたり数分かかります。</value>
+  </data>
+  <data name="Farben_an_das_Kameramodell_anpassen_668b27ec" xml:space="preserve">
+    <value>色をカメラ機種に合わせる</value>
+  </data>
+  <data name="RAW_Dateien_verschiedener_Kameras_geben_Farben_u_da32f01c" xml:space="preserve">
+    <value>カメラによって RAW ファイルの色の再現は異なります。オンにすると、未編集の RAW を開くときに FerrumPix が「キャリブレーション」のスライダーを設定し、広く使われている RAW 現像に近い色にします。一部のカメラ機種には個別に調整した値を使います。値はスライダーに表示され、そこで変更できます。編集済みの写真は変わりません。</value>
   </data>
 </root>

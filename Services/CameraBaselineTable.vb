@@ -67,24 +67,32 @@ Namespace Services
             Public ReadOnly MaxShiftEv As Double
             Public ReadOnly Offsets As Dictionary(Of String, Double)
             Public ReadOnly ColorCalibrations As Dictionary(Of String, ColorCalibration)
+            Public ReadOnly DefaultColorCalibration As ColorCalibration
             Public ReadOnly LevelOverrides As Dictionary(Of String, (Black As Integer, Range As Integer, White As Integer))
+            ''' Wo Canons ColorData einer Kamera ihre Pegel hat, je Pegeleintrag mit black = -3.
+            Public ReadOnly LevelColorData As New Dictionary(Of String, (Version As Integer, BlackWord As Integer, WhiteWord As Integer))(StringComparer.OrdinalIgnoreCase)
+            ''' Wo Canons ColorData ihre Pegel hat, je Fassung und Laenge ("66|3778"): Wort des
+            ''' ersten Schwarzwerts; SpecularWhiteLevel steht fuenf Worte dahinter.
+            Public ReadOnly CanonColorDataLayouts As New Dictionary(Of String, Integer)(StringComparer.Ordinal)
 
             Public Sub New(referenceOffsetEv As Double, maxShiftEv As Double,
                            offsets As Dictionary(Of String, Double),
                            colorCalibrations As Dictionary(Of String, ColorCalibration),
+                           defaultColorCalibration As ColorCalibration,
                            levelOverrides As Dictionary(Of String, (Black As Integer, Range As Integer, White As Integer)))
                 Me.ReferenceOffsetEv = referenceOffsetEv
                 Me.MaxShiftEv = maxShiftEv
                 Me.Offsets = offsets
                 Me.ColorCalibrations = colorCalibrations
+                Me.DefaultColorCalibration = defaultColorCalibration
                 Me.LevelOverrides = levelOverrides
             End Sub
         End Class
 
         Private Shared ReadOnly Resource As BaselineResource = LoadResource()
 
-        ''' <summary>Die vorhandenen Regler der Kamerakalibrierung als kamerafeste Vorgabe. Sie
-        ''' werden nur bei aktivierter optionaler Kameratabelle auf uneditierte RAWs gesetzt.</summary>
+        ''' <summary>Die vorhandenen Regler der Kamerakalibrierung als Vorgabe. Sie werden nur mit
+        ''' der Einstellung "Farben an das Kameramodell anpassen" auf unbearbeitete RAWs gesetzt.</summary>
         Public NotInheritable Class ColorCalibration
             Public Property RedHue As Single
             Public Property RedSaturation As Single
@@ -99,6 +107,9 @@ Namespace Services
             Dim offsets As New Dictionary(Of String, Double)(StringComparer.Ordinal)
             Dim calibrations As New Dictionary(Of String, ColorCalibration)(StringComparer.Ordinal)
             Dim levels As New Dictionary(Of String, (Black As Integer, Range As Integer, White As Integer))(StringComparer.OrdinalIgnoreCase)
+            Dim levelColorData As New Dictionary(Of String, (Version As Integer, BlackWord As Integer, WhiteWord As Integer))(StringComparer.OrdinalIgnoreCase)
+            Dim canonLayouts As New Dictionary(Of String, Integer)(StringComparer.Ordinal)
+            Dim defaultCalibration As ColorCalibration = Nothing
             ' Anker und Deckel werden erst zugewiesen, wenn die ganze Datei gelesen ist. Sonst
             ' stuende nach einem Abbruch zwischen beiden der eine Wert aus der Datei neben dem
             ' anderen aus dem Notbehelf - eine Mischung, die es nirgends geben darf.
@@ -125,6 +136,14 @@ Namespace Services
                                 calibrations(entry.Name) = ReadColorCalibration(entry.Value)
                             Next
                         End If
+                        ' Der Standard fuer jede Kamera ohne eigenen Eintrag: Adobes Bildstil ist zum
+                        ' groessten Teil fuer alle Kameras derselbe (gemessen an rund 400 Aufnahmen,
+                        ' Audits/RAW_UND_FARBE.md). Ein Modelleintrag ersetzt ihn ganz, er ist also
+                        ' vollstaendig und keine Abweichung davon.
+                        Dim defaultEntry As JsonElement
+                        If root.TryGetProperty("colorCalibrationDefault", defaultEntry) Then
+                            defaultCalibration = ReadColorCalibration(defaultEntry)
+                        End If
                         ' Schwarzpunkt und Tonumfang fuer Kameras, die LibRaw falsch liest; siehe
                         ' RawDecodeService.LevelOverrides. Die LibRaw-Werte und die Quelle daneben
                         ' sind Nachweis und werden nicht gelesen.
@@ -135,10 +154,25 @@ Namespace Services
                                 ' Tonumfang, wenn der Schwarzpunkt feststeht, der rohe Weisspunkt,
                                 ' wenn er je Datei gemessen wird (black = -2, siehe
                                 ' RawDecodeService.MeasuredBlackMarker).
-                                Dim rangeValue, whiteValue As JsonElement
+                                Dim rangeValue, whiteValue, colorDataValue As JsonElement
                                 levels(entry.Name) = (entry.Value.GetProperty("black").GetInt32(),
                                                       If(entry.Value.TryGetProperty("range", rangeValue), rangeValue.GetInt32(), -1),
                                                       If(entry.Value.TryGetProperty("white", whiteValue), whiteValue.GetInt32(), -1))
+                                ' black = -3: Schwarz- und Weisspunkt aus Canons ColorData der Datei;
+                                ' dazu gehoert, wo sie in welcher Fassung stehen (CanonColorData).
+                                If entry.Value.TryGetProperty("colorData", colorDataValue) Then
+                                    levelColorData(entry.Name) = (colorDataValue.GetProperty("version").GetInt32(),
+                                                                  colorDataValue.GetProperty("black").GetInt32(),
+                                                                  colorDataValue.GetProperty("white").GetInt32())
+                                End If
+                            Next
+                        End If
+                        ' Die Lage der Pegel in Canons ColorData je Fassung, fuer alle Canons ohne
+                        ' eigenen Pegeleintrag (RawDecodeService.TryApplyLevelOverride).
+                        Dim layoutEntries As JsonElement
+                        If root.TryGetProperty("canonColorDataLayouts", layoutEntries) Then
+                            For Each entry In layoutEntries.EnumerateObject()
+                                canonLayouts(entry.Name) = entry.Value.GetInt32()
                             Next
                         End If
                         referenceOffsetEv = readReferenceOffsetEv
@@ -149,12 +183,22 @@ Namespace Services
                 DiagnosticLogService.LogException("CameraBaselineTable.LoadResource", ex)
                 offsets.Clear()
                 calibrations.Clear()
+                defaultCalibration = Nothing
                 levels.Clear()
+                levelColorData.Clear()
+                canonLayouts.Clear()
                 referenceOffsetEv = DefaultReferenceOffsetEv
                 maxShiftEv = DefaultMaxShiftEv
             End Try
 
-            Return New BaselineResource(referenceOffsetEv, maxShiftEv, offsets, calibrations, levels)
+            Dim result = New BaselineResource(referenceOffsetEv, maxShiftEv, offsets, calibrations, defaultCalibration, levels)
+            For Each pair In levelColorData
+                result.LevelColorData(pair.Key) = pair.Value
+            Next
+            For Each pair In canonLayouts
+                result.CanonColorDataLayouts(pair.Key) = pair.Value
+            Next
+            Return result
         End Function
 
         Private Shared Function ReadColorCalibration(item As JsonElement) As ColorCalibration
@@ -194,6 +238,23 @@ Namespace Services
             End Get
         End Property
 
+        ''' <summary>Wo Canons ColorData ihre Pegel hat, je Pegeleintrag mit black = -3; siehe
+        ''' CanonColorData und RawDecodeService.ColorDataBlackMarker.</summary>
+        Friend Shared ReadOnly Property LevelColorData As Dictionary(Of String, (Version As Integer, BlackWord As Integer, WhiteWord As Integer))
+            Get
+                Return Resource.LevelColorData
+            End Get
+        End Property
+
+        ''' <summary>Wo Canons ColorData ihre Pegel hat, je Fassung und Laenge ("66|3778"): Wort des
+        ''' ersten Schwarzwerts. Gilt fuer JEDE Canon ohne eigenen Pegeleintrag; siehe
+        ''' RawDecodeService.TryApplyLevelOverride.</summary>
+        Friend Shared ReadOnly Property CanonColorDataLayouts As Dictionary(Of String, Integer)
+            Get
+                Return Resource.CanonColorDataLayouts
+            End Get
+        End Property
+
         ''' <summary>Anzahl der hinterlegten Modelle - fuer die Diagnose und die Einstellungsseite.</summary>
         Public Shared ReadOnly Property ModelCount As Integer
             Get
@@ -201,10 +262,8 @@ Namespace Services
             End Get
         End Property
 
-        ''' <summary>Anzahl der Modelle mit hinterlegter Farbkalibrierung. Sie ist heute null: die
-        ''' Mechanik steht, die Werte brauchen je Kamera mehrere farblich belastbare Referenzen.
-        ''' Fuer die Diagnose, und damit die Aufrufer den Weg ueberspringen koennen, solange nichts
-        ''' zu finden ist.</summary>
+        ''' <summary>Anzahl der Modelle mit EIGENER Farbkalibrierung, ohne den Standard. Fuer die
+        ''' Diagnose.</summary>
         Public Shared ReadOnly Property ColorCalibrationCount As Integer
             Get
                 Return Resource.ColorCalibrations.Count
@@ -226,11 +285,28 @@ Namespace Services
             Return standardEv - delta
         End Function
 
-        ''' <summary>Die kamerafesten Kalibrierungsregler fuer dieses Modell, oder Nothing.</summary>
+        ''' <summary>Der Standard der Farbkalibrierung fuer Kameras ohne eigenen Eintrag, oder
+        ''' Nothing, wenn die Ressource keinen traegt.</summary>
+        Public Shared ReadOnly Property DefaultColorCalibration As ColorCalibration
+            Get
+                Return Resource.DefaultColorCalibration
+            End Get
+        End Property
+
+        ''' <summary>Hat dieses Modell einen EIGENEN Eintrag (und nicht nur den Standard)?</summary>
+        Public Shared Function HasOwnColorCalibration(maker As String, model As String) As Boolean
+            Dim k = Key(maker, model)
+            Return k.Length > 0 AndAlso Resource.ColorCalibrations.ContainsKey(k)
+        End Function
+
+        ''' <summary>Die Kalibrierungsregler fuer dieses Modell: sein eigener Eintrag, sonst der
+        ''' Standard, sonst Nothing. Ohne Kameranamen gibt es ebenfalls den Standard, denn er haengt
+        ''' an keiner Kamera.</summary>
         Public Shared Function ColorCalibrationFor(maker As String, model As String) As ColorCalibration
-            If Resource.ColorCalibrations.Count = 0 Then Return Nothing
             Dim result As ColorCalibration = Nothing
-            Return If(Resource.ColorCalibrations.TryGetValue(Key(maker, model), result), result, Nothing)
+            Dim k = Key(maker, model)
+            If k.Length > 0 AndAlso Resource.ColorCalibrations.TryGetValue(k, result) Then Return result
+            Return Resource.DefaultColorCalibration
         End Function
 
     End Class

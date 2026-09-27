@@ -4629,8 +4629,8 @@
   <data name="Grundhelligkeit_an_das_Kameramodell_anpassen_ef28e2b5" xml:space="preserve">
     <value>根据相机型号匹配基础亮度</value>
   </data>
-  <data name="RAW_Dateien_verschiedener_Kameras_kommen_untersc_073cc824" xml:space="preserve">
-    <value>不同相机生成的 RAW 原始亮度有所不同。启用后，FerrumPix 会使用 200 多款相机型号的参考值进行校正，使同一场景无论由哪台相机拍摄，处理后都呈现相近亮度。</value>
+  <data name="RAW_Dateien_verschiedener_Kameras_kommen_untersc_1a927ddd" xml:space="preserve">
+    <value>不同相机生成的 RAW 原始亮度有所不同。启用后，FerrumPix 会使用 各相机型号的参考值进行校正，使同一场景无论由哪台相机拍摄，处理后都呈现相近亮度。</value>
   </data>
   <data name="Vergleichen_fbdbcbc0" xml:space="preserve">
     <value>比较</value>
@@ -8855,5 +8855,11 @@
   </data>
   <data name="Entrauscht_jedes_Bild_mit_einem_gelernten_Modell_e33ced3e" xml:space="preserve">
     <value>用训练好的模型为每张图像降噪，强度固定或按每张图像测量。每张图像需要数分钟。</value>
+  </data>
+  <data name="Farben_an_das_Kameramodell_anpassen_668b27ec" xml:space="preserve">
+    <value>根据相机型号调整颜色</value>
+  </data>
+  <data name="RAW_Dateien_verschiedener_Kameras_geben_Farben_u_da32f01c" xml:space="preserve">
+    <value>不同相机的 RAW 文件还原颜色的方式不同。开启后，FerrumPix 在打开未编辑的 RAW 时会设置“校准”下的滑块，使颜色接近一种常用的 RAW 显影效果，并为部分相机型号单独调校。这些数值显示在滑块中，可在那里修改；已编辑的图片保持不变。</value>
   </data>
 </root>

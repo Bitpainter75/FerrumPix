@@ -4629,8 +4629,8 @@
   <data name="Grundhelligkeit_an_das_Kameramodell_anpassen_ef28e2b5" xml:space="preserve">
     <value>Basishelderheid aan het cameramodel aanpassen</value>
   </data>
-  <data name="RAW_Dateien_verschiedener_Kameras_kommen_untersc_073cc824" xml:space="preserve">
-    <value>RAW-bestanden van verschillende camera's komen verschillend helder van de sensor. Ingeschakeld vereffent FerrumPix dat aan de hand van referentiewaarden voor meer dan 200 cameramodellen, zodat dezelfde opname met verschillende camera's even helder wordt ontwikkeld.</value>
+  <data name="RAW_Dateien_verschiedener_Kameras_kommen_untersc_1a927ddd" xml:space="preserve">
+    <value>RAW-bestanden van verschillende camera's komen verschillend helder van de sensor. Ingeschakeld vereffent FerrumPix dat aan de hand van referentiewaarden per cameramodel, zodat dezelfde opname met verschillende camera's even helder wordt ontwikkeld.</value>
   </data>
   <data name="Vergleichen_fbdbcbc0" xml:space="preserve">
     <value>Vergelijken</value>
@@ -8897,5 +8897,11 @@
   </data>
   <data name="Entrauscht_jedes_Bild_mit_einem_gelernten_Modell_e33ced3e" xml:space="preserve">
     <value>Ontruist elke foto met een getraind model, met een vaste sterkte of per foto gemeten. Kost enkele minuten per foto.</value>
+  </data>
+  <data name="Farben_an_das_Kameramodell_anpassen_668b27ec" xml:space="preserve">
+    <value>Kleuren aanpassen aan het cameramodel</value>
+  </data>
+  <data name="RAW_Dateien_verschiedener_Kameras_geben_Farben_u_da32f01c" xml:space="preserve">
+    <value>Raw-bestanden van verschillende camera's geven kleuren verschillend weer. Ingeschakeld zet FerrumPix bij het openen van een onbewerkt raw-bestand de schuifregelaars onder Kalibratie zo, dat de kleuren een veelgebruikte raw-ontwikkeling benaderen, voor sommige cameramodellen apart afgestemd. De waarden staan zichtbaar in de schuifregelaars en zijn daar aan te passen; al bewerkte foto's blijven ongewijzigd.</value>
   </data>
 </root>

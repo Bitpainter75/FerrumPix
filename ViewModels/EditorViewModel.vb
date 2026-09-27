@@ -16001,13 +16001,14 @@ Namespace ViewModels
 
             ResetCalibrationCommand = ReactiveCommand.Create(Sub()
                                                                  PushUndo(ResetHistoryLabel("Kalibrierung"))
-                                                                 CalibrationRedHue = 0
-                                                                 CalibrationRedSaturation = 0
-                                                                 CalibrationGreenHue = 0
-                                                                 CalibrationGreenSaturation = 0
-                                                                 CalibrationBlueHue = 0
-                                                                 CalibrationBlueSaturation = 0
-                                                                 CalibrationShadowTint = 0
+                                                                 Dim start = CalibrationStartValues()
+                                                                 CalibrationRedHue = start.CalibrationRedHue
+                                                                 CalibrationRedSaturation = start.CalibrationRedSaturation
+                                                                 CalibrationGreenHue = start.CalibrationGreenHue
+                                                                 CalibrationGreenSaturation = start.CalibrationGreenSaturation
+                                                                 CalibrationBlueHue = start.CalibrationBlueHue
+                                                                 CalibrationBlueSaturation = start.CalibrationBlueSaturation
+                                                                 CalibrationShadowTint = start.CalibrationShadowTint
                                                              End Sub)
 
             ToggleInfoSidebarCommand = ReactiveCommand.Create(Sub()
@@ -22362,9 +22363,25 @@ Namespace ViewModels
                 Dim startwerte = ImageAdjustments.ForUneditedRaw(RenderSourcePath)
                 _farbrauschGrob = startwerte.FarbrauschGrob
                 _exposure = startwerte.Exposure
+                ' Die Kamera-Farbkalibrierung gehoert genauso zum Startwert: ohne diese Zeilen
+                ' verloere eine RAW beim Zuruecksetzen ihre modellabhaengige Farbe.
+                _calibrationRedHue = startwerte.CalibrationRedHue
+                _calibrationRedSaturation = startwerte.CalibrationRedSaturation
+                _calibrationGreenHue = startwerte.CalibrationGreenHue
+                _calibrationGreenSaturation = startwerte.CalibrationGreenSaturation
+                _calibrationBlueHue = startwerte.CalibrationBlueHue
+                _calibrationBlueSaturation = startwerte.CalibrationBlueSaturation
+                _calibrationShadowTint = startwerte.CalibrationShadowTint
                 Me.RaisePropertyChanged(NameOf(FarbrauschGrob))
                 Me.RaisePropertyChanged(NameOf(HasColorBlotches))
                 Me.RaisePropertyChanged(NameOf(Exposure))
+                Me.RaisePropertyChanged(NameOf(CalibrationRedHue))
+                Me.RaisePropertyChanged(NameOf(CalibrationRedSaturation))
+                Me.RaisePropertyChanged(NameOf(CalibrationGreenHue))
+                Me.RaisePropertyChanged(NameOf(CalibrationGreenSaturation))
+                Me.RaisePropertyChanged(NameOf(CalibrationBlueHue))
+                Me.RaisePropertyChanged(NameOf(CalibrationBlueSaturation))
+                Me.RaisePropertyChanged(NameOf(CalibrationShadowTint))
             End If
             _hasChanges = True
             Me.RaisePropertyChanged(NameOf(HasUnsavedChanges))
@@ -22453,7 +22470,8 @@ Namespace ViewModels
             ' (OpenImageAsync/LoadImageContent) laufen NUR ueber diese Funktion; ApplyAdjustments
             ' (das einige davon setzt) laeuft nur fuer .fpx/.fpxmp. Defaults identisch zu den
             ' Gruppen-Zuruecksetzern (ResetDetailGroupInternal/ResetEffectsInternal/
-            ' ResetColorInternal/ResetCalibrationCommand/ResetFrameInternal).
+            ' ResetColorInternal/ResetCalibrationCommand/ResetFrameInternal); nur Belichtung und
+            ' Kalibrierung einer RAW gehen dort auf ihre Startwerte statt auf Null.
             _dustScratches = 0
             _haze = 0
             _addNoise = 0
@@ -26258,17 +26276,29 @@ Namespace ViewModels
             SchedulePreviewUpdate()
         End Sub
 
+        ''' <summary>Wohin die Kalibrierung zurueckgeht. Fuer das Foto einer RAW sind das ihre
+        ''' Startwerte (ForUneditedRaw, mit dem Schalter fuer die Kamerafarben also die Werte des
+        ''' Modells), genau wie beim Zuruecksetzen aller Bearbeitungen. Zeigen die Regler auf ein
+        ''' Objekt oder eine Korrekturebene, ist es Null: die Kamerawerte gehoeren zur Datei, nicht zu
+        ''' einem Objekt oder einer Maske.</summary>
+        Private Function CalibrationStartValues() As ImageAdjustments
+            If IsObjectAdjustModeActive() OrElse IsSelectionAdjustModeActive() Then Return New ImageAdjustments()
+            If Not RawPreviewService.IsSupportedRaw(RenderSourcePath) Then Return New ImageAdjustments()
+            Return ImageAdjustments.ForUneditedRaw(RenderSourcePath)
+        End Function
+
         ''' <summary>Setzt die Kamerakalibrierung (die 7 Calibration*-Regler) zurück. Presets setzen sie über
         ''' ApplyLookAdjustments - ohne diesen Reset blieb sie beim Neutralisieren eines Presets/Looks stehen
         ''' (eine der "nicht zurückgenommenen Einstellungen").</summary>
         Private Sub ResetCalibrationInternal()
-            _calibrationRedHue = 0
-            _calibrationRedSaturation = 0
-            _calibrationGreenHue = 0
-            _calibrationGreenSaturation = 0
-            _calibrationBlueHue = 0
-            _calibrationBlueSaturation = 0
-            _calibrationShadowTint = 0
+            Dim start = CalibrationStartValues()
+            _calibrationRedHue = start.CalibrationRedHue
+            _calibrationRedSaturation = start.CalibrationRedSaturation
+            _calibrationGreenHue = start.CalibrationGreenHue
+            _calibrationGreenSaturation = start.CalibrationGreenSaturation
+            _calibrationBlueHue = start.CalibrationBlueHue
+            _calibrationBlueSaturation = start.CalibrationBlueSaturation
+            _calibrationShadowTint = start.CalibrationShadowTint
             Me.RaisePropertyChanged(NameOf(CalibrationRedHue))
             Me.RaisePropertyChanged(NameOf(CalibrationRedSaturation))
             Me.RaisePropertyChanged(NameOf(CalibrationGreenHue))

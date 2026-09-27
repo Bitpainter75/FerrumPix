@@ -4631,8 +4631,8 @@
   <data name="Grundhelligkeit_an_das_Kameramodell_anpassen_ef28e2b5" xml:space="preserve">
     <value>Ajustar el brillo base al modelo de cámara</value>
   </data>
-  <data name="RAW_Dateien_verschiedener_Kameras_kommen_untersc_073cc824" xml:space="preserve">
-    <value>Los archivos RAW de distintas cámaras salen del sensor con brillos diferentes. Activado, FerrumPix lo iguala con valores de referencia de más de 200 modelos, de modo que la misma escena se revela igual de clara con cualquier cámara.</value>
+  <data name="RAW_Dateien_verschiedener_Kameras_kommen_untersc_1a927ddd" xml:space="preserve">
+    <value>Los archivos RAW de distintas cámaras salen del sensor con brillos diferentes. Activado, FerrumPix lo iguala con valores de referencia para cada modelo de cámara, de modo que la misma escena se revela igual de clara con cualquier cámara.</value>
   </data>
   <data name="Vergleichen_fbdbcbc0" xml:space="preserve">
     <value>Comparar</value>
@@ -8857,5 +8857,11 @@
   </data>
   <data name="Entrauscht_jedes_Bild_mit_einem_gelernten_Modell_e33ced3e" xml:space="preserve">
     <value>Reduce el ruido de cada imagen con un modelo entrenado, con intensidad fija o medida en cada imagen. Tarda varios minutos por imagen.</value>
+  </data>
+  <data name="Farben_an_das_Kameramodell_anpassen_668b27ec" xml:space="preserve">
+    <value>Ajustar los colores al modelo de cámara</value>
+  </data>
+  <data name="RAW_Dateien_verschiedener_Kameras_geben_Farben_u_da32f01c" xml:space="preserve">
+    <value>Los archivos RAW de distintas cámaras reproducen los colores de forma diferente. Activado, FerrumPix ajusta al abrir un RAW sin editar los controles de Calibración para que los colores se acerquen a un revelado RAW muy extendido, con un ajuste propio para algunos modelos de cámara. Los valores se ven en los controles y se pueden cambiar allí; las imágenes ya editadas no cambian.</value>
   </data>
 </root>

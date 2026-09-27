@@ -636,6 +636,20 @@ Namespace ViewModels
         End Property
         Private _useCameraBaselineTable As Boolean
 
+        ''' <summary>Kamerakalibrierung aus der Kameratabelle als Startwert unbearbeiteter RAWs.
+        ''' Wirkt beim naechsten Oeffnen; ein Bild mit Rezept behaelt seine Regler.</summary>
+        Public Property UseCameraColorTable As Boolean
+            Get
+                Return _useCameraColorTable
+            End Get
+            Set(value As Boolean)
+                If _useCameraColorTable = value Then Return
+                Me.RaiseAndSetIfChanged(_useCameraColorTable, value)
+                AppSettingsService.Update(Sub(s) s.UseCameraColorTable = value)
+            End Set
+        End Property
+        Private _useCameraColorTable As Boolean
+
         ''' <summary>Objektivkorrektur als VORGABE. Wirkt wie die Kamera-Referenzwerte beim
         ''' naechsten Oeffnen; pro Bild ist sie im Werkzeug uebersteuerbar.</summary>
         Public Property LensCorrectionEnabled As Boolean
@@ -3719,6 +3733,7 @@ Namespace ViewModels
             _developRawInViewerWithoutRecipe = _appSettings.DevelopRawInViewerWithoutRecipe
             _developRawInBatch = _appSettings.DevelopRawInBatch
             _useCameraBaselineTable = _appSettings.UseCameraBaselineTable
+            _useCameraColorTable = _appSettings.UseCameraColorTable
             _lensCorrectionEnabled = _appSettings.LensCorrectionEnabled
             _rawDemosaicAlgorithm = AppSettingsService.NormalizeRawDemosaicAlgorithm(_appSettings.RawDemosaicAlgorithm)
             _windowColorSpaceMethod = MacWindowColorSpaceService.NormalizeMethod(_appSettings.MacWindowColorSpaceMethod)

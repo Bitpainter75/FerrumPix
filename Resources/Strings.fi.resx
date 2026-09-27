@@ -4629,8 +4629,8 @@
   <data name="Grundhelligkeit_an_das_Kameramodell_anpassen_ef28e2b5" xml:space="preserve">
     <value>Sovita peruskirkkaus kameran malliin</value>
   </data>
-  <data name="RAW_Dateien_verschiedener_Kameras_kommen_untersc_073cc824" xml:space="preserve">
-    <value>Eri kameroiden RAW-tiedostot tulevat kennolta eri kirkkaudella. Käytössä FerrumPix tasoittaa tämän yli 200 kameramallin vertailuarvojen avulla, jotta sama kuva kehittyy eri kameroilla yhtä kirkkaaksi.</value>
+  <data name="RAW_Dateien_verschiedener_Kameras_kommen_untersc_1a927ddd" xml:space="preserve">
+    <value>Eri kameroiden RAW-tiedostot tulevat kennolta eri kirkkaudella. Käytössä FerrumPix tasoittaa tämän kameramallikohtaisten vertailuarvojen avulla, jotta sama kuva kehittyy eri kameroilla yhtä kirkkaaksi.</value>
   </data>
   <data name="Vergleichen_fbdbcbc0" xml:space="preserve">
     <value>Vertaa</value>
@@ -8897,5 +8897,11 @@
   </data>
   <data name="Entrauscht_jedes_Bild_mit_einem_gelernten_Modell_e33ced3e" xml:space="preserve">
     <value>Poistaa kohinan jokaisesta kuvasta opetetulla mallilla, kiinteällä voimakkuudella tai kuvakohtaisesti mitattuna. Vie useita minuutteja kuvaa kohden.</value>
+  </data>
+  <data name="Farben_an_das_Kameramodell_anpassen_668b27ec" xml:space="preserve">
+    <value>Sovita värit kameramalliin</value>
+  </data>
+  <data name="RAW_Dateien_verschiedener_Kameras_geben_Farben_u_da32f01c" xml:space="preserve">
+    <value>Eri kameroiden raw-tiedostot toistavat värit eri tavoin. Kun asetus on päällä, FerrumPix säätää muokkaamattoman raw-tiedoston avautuessa Kalibrointi-kohdan liukusäätimet niin, että värit ovat lähellä yleistä raw-kehitystä, joillekin kameramalleille erikseen viritettynä. Arvot näkyvät liukusäätimissä ja niitä voi muuttaa siellä; jo muokatut kuvat pysyvät ennallaan.</value>
   </data>
 </root>

@@ -4631,8 +4631,8 @@
   <data name="Grundhelligkeit_an_das_Kameramodell_anpassen_ef28e2b5" xml:space="preserve">
     <value>Adapter la luminosité de base au modèle d’appareil</value>
   </data>
-  <data name="RAW_Dateien_verschiedener_Kameras_kommen_untersc_073cc824" xml:space="preserve">
-    <value>Les fichiers RAW de différents appareils sortent du capteur avec des luminosités différentes. Activé, FerrumPix harmonise cela grâce à des valeurs de référence pour plus de 200 modèles, afin que la même scène soit développée avec la même clarté quel que soit l’appareil.</value>
+  <data name="RAW_Dateien_verschiedener_Kameras_kommen_untersc_1a927ddd" xml:space="preserve">
+    <value>Les fichiers RAW de différents appareils sortent du capteur avec des luminosités différentes. Activé, FerrumPix harmonise cela grâce à des valeurs de référence propres à chaque modèle, afin que la même scène soit développée avec la même clarté quel que soit l’appareil.</value>
   </data>
   <data name="Vergleichen_fbdbcbc0" xml:space="preserve">
     <value>Comparer</value>
@@ -8857,5 +8857,11 @@
   </data>
   <data name="Entrauscht_jedes_Bild_mit_einem_gelernten_Modell_e33ced3e" xml:space="preserve">
     <value>Débruite chaque image avec un modèle entraîné, à intensité fixe ou mesurée pour chaque image. Prend plusieurs minutes par image.</value>
+  </data>
+  <data name="Farben_an_das_Kameramodell_anpassen_668b27ec" xml:space="preserve">
+    <value>Adapter les couleurs au modèle d'appareil</value>
+  </data>
+  <data name="RAW_Dateien_verschiedener_Kameras_geben_Farben_u_da32f01c" xml:space="preserve">
+    <value>Les fichiers RAW de différents appareils rendent les couleurs différemment. Activé, FerrumPix règle à l'ouverture d'un RAW non retouché les curseurs de Calibrage pour que les couleurs se rapprochent d'un développement RAW répandu, avec un réglage propre pour certains modèles d'appareil. Les valeurs sont visibles dans les curseurs et modifiables à cet endroit ; les images déjà retouchées restent inchangées.</value>
   </data>
 </root>
