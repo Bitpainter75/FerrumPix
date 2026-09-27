@@ -16,6 +16,13 @@
   names break between words, and the camera name no longer repeats the brand. Dimensions show the
   real size of the picture, for raw files without the hidden sensor border.
 
+- Masks: the lens correction of a raw file stays on when you switch from a mask to Adjust, Color,
+  Details, Effects or Filter, and Feather now works on a luminance or color range mask after you
+  go back to the mask tool.
+
+- The brush size changes in larger steps with [ and ] and the mouse wheel, and the brush circle
+  follows right away instead of waiting for the mouse to move.
+
 - RAW files from the Canon EOS R6 Mark III are developed correctly instead of coming out flat
   and with a magenta cast.
 

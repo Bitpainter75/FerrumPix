@@ -63,6 +63,9 @@ Namespace Views
         ' Wo der Zeiger zuletzt ueber der Buehne stand, in Koordinaten der Leinwand. Nothing, sobald
         ' er sie verlassen hat. Die Taste Z springt dort auf 100 Prozent.
         Private _lastCanvasPointer As Avalonia.Point?
+        ''' <summary>Letzte Zeigerposition ueber dem Bild, in Koordinaten von PreviewCanvas: dort
+        ''' zeichnet der Pinselkreis nach einer Groessenaenderung per Taste oder Rad hin.</summary>
+        Private _lastBrushCursorPosition As Avalonia.Point?
         Private _isPanMode As Boolean = False
         Private _spacePanActive As Boolean = False
         Private _isPanDragging As Boolean = False
@@ -2897,6 +2900,7 @@ Namespace Views
             Dim cursorCanvas = Me.FindControl(Of Canvas)("PreviewCanvas")
             Dim cursorVm = TryCast(DataContext, EditorViewModel)
             If cursorCanvas IsNot Nothing AndAlso cursorVm IsNot Nothing Then
+                _lastBrushCursorPosition = e.GetPosition(cursorCanvas)
                 UpdateBrushCursorPreview(e.GetPosition(cursorCanvas), GetDisplayedImageRect(cursorCanvas, cursorVm), cursorVm)
                 UpdateMousePositionText(e.GetPosition(cursorCanvas), GetDisplayedImageRect(cursorCanvas, cursorVm), cursorVm)
                 UpdateRulerMarkers(e.GetPosition(cursorCanvas))
@@ -7949,13 +7953,37 @@ Namespace Views
             End If
         End Sub
 
+        ''' <summary>Tasten [ und ] und das Mausrad ueber dem Bild: die Werkzeuggroesse einen Schritt
+        ''' groesser oder kleiner.
+        '''
+        ''' DER SCHRITT WAECHST MIT DER GROESSE, rund zehn Prozent. Mit einem festen Bildpunkt je
+        ''' Schritt brauchte der Weg von 20 auf 200 hundertachtzig Tastendruecke oder Rasten
+        ''' (Nutzerbefund 0.9.53-1). Unter 5 Bildpunkten bleibt der feine Schritt von 0,2.
+        '''
+        ''' DER KREIS UNTER DEM ZEIGER ZIEHT SOFORT NACH. Er wurde nur bei einer Mausbewegung neu
+        ''' bemessen; beim Tippen stand er still, und die Groesse schien sich nicht zu aendern.</summary>
         Private Sub AdjustActiveToolSize(vm As EditorViewModel, direction As Integer)
             If vm.CurrentTool = EditorTool.Draw OrElse IsMaskBrushActive(vm) Then
-                vm.BrushSize = vm.BrushSize + direction * If(vm.BrushSize >= 5, 1.0, 0.2)
+                vm.BrushSize = vm.BrushSize + direction * SizeStep(vm.BrushSize, direction)
             ElseIf vm.CurrentTool = EditorTool.Retouch Then
-                vm.RetouchRadius = vm.RetouchRadius + direction * If(vm.RetouchRadius >= 5, 1.0, 0.2)
+                vm.RetouchRadius = vm.RetouchRadius + direction * SizeStep(vm.RetouchRadius, direction)
+            Else
+                Return
+            End If
+            Dim cursorCanvas = Me.FindControl(Of Canvas)("PreviewCanvas")
+            If cursorCanvas IsNot Nothing AndAlso _lastBrushCursorPosition.HasValue Then
+                UpdateBrushCursorPreview(_lastBrushCursorPosition.Value, GetDisplayedImageRect(cursorCanvas, vm), vm)
             End If
         End Sub
+
+        ''' <summary>Schrittweite der Werkzeuggroesse: zehn Prozent, mindestens ein Bildpunkt, unter 5
+        ''' der feine Schritt. Beim Verkleinern zaehlt die Groesse NACH dem Schritt, sonst kaeme man
+        ''' auf einem anderen Weg zurueck, als man hinaufgegangen ist.</summary>
+        Friend Shared Function SizeStep(size As Double, direction As Integer) As Double
+            Dim basis = If(direction < 0, size / 1.1, size)
+            If basis < 5 Then Return 0.2
+            Return Math.Max(1.0, Math.Round(basis * 0.1))
+        End Function
 
     End Class
 

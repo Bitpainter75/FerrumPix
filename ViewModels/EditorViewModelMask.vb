@@ -457,6 +457,14 @@ Namespace ViewModels
                     ' Kante im Eigenschaften-Block, ohne irgendwo anzukommen.
                     Dim current = CurrentMaskForComponents()
                     If current IsNot Nothing Then current.FeatherPixels = CSng(clamped)
+                ElseIf _runningSelectionLayerId <> "" Then
+                    ' Die laufende Auswahl ist die Maske einer Ebene, die ein Anpassungswerkzeug aus
+                    ' ihr gemacht hat (etwa eine Luminanzmaske). Die weiche Kante gilt dann auch der
+                    ' Ebene, sonst wirkte der Regler zurueck im Maskenwerkzeug nicht.
+                    Dim layer = _maskedAdjustmentLayers.FirstOrDefault(Function(l) l IsNot Nothing AndAlso l.Id = _runningSelectionLayerId)
+                    Dim mask = If(layer Is Nothing, Nothing,
+                        _imageMasks.FirstOrDefault(Function(m) m IsNot Nothing AndAlso m.Id = layer.MaskId))
+                    If mask IsNot Nothing Then mask.FeatherPixels = CSng(clamped)
                 End If
                 SchedulePreviewUpdate()
             End Set
@@ -465,6 +473,7 @@ Namespace ViewModels
         Private Sub SetSelectionMaskData(mask As SKBitmap, rectPx As SKRectI)
             ' Eine geänderte Maske gehört nicht mehr sicher zu der Ebene, aus der sie geladen wurde.
             _selectionSourceAnnotationId = ""
+            _runningSelectionLayerId = ""
             If _selectionMask IsNot Nothing AndAlso Not Object.ReferenceEquals(_selectionMask, mask) Then _selectionMask.Dispose()
             _selectionMask = mask
             _selectionMaskRect = rectPx

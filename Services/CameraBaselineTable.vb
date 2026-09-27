@@ -67,12 +67,12 @@ Namespace Services
             Public ReadOnly MaxShiftEv As Double
             Public ReadOnly Offsets As Dictionary(Of String, Double)
             Public ReadOnly ColorCalibrations As Dictionary(Of String, ColorCalibration)
-            Public ReadOnly LevelOverrides As Dictionary(Of String, (Black As Integer, Range As Integer))
+            Public ReadOnly LevelOverrides As Dictionary(Of String, (Black As Integer, Range As Integer, White As Integer))
 
             Public Sub New(referenceOffsetEv As Double, maxShiftEv As Double,
                            offsets As Dictionary(Of String, Double),
                            colorCalibrations As Dictionary(Of String, ColorCalibration),
-                           levelOverrides As Dictionary(Of String, (Black As Integer, Range As Integer)))
+                           levelOverrides As Dictionary(Of String, (Black As Integer, Range As Integer, White As Integer)))
                 Me.ReferenceOffsetEv = referenceOffsetEv
                 Me.MaxShiftEv = maxShiftEv
                 Me.Offsets = offsets
@@ -98,7 +98,7 @@ Namespace Services
         Private Shared Function LoadResource() As BaselineResource
             Dim offsets As New Dictionary(Of String, Double)(StringComparer.Ordinal)
             Dim calibrations As New Dictionary(Of String, ColorCalibration)(StringComparer.Ordinal)
-            Dim levels As New Dictionary(Of String, (Black As Integer, Range As Integer))(StringComparer.OrdinalIgnoreCase)
+            Dim levels As New Dictionary(Of String, (Black As Integer, Range As Integer, White As Integer))(StringComparer.OrdinalIgnoreCase)
             ' Anker und Deckel werden erst zugewiesen, wenn die ganze Datei gelesen ist. Sonst
             ' stuende nach einem Abbruch zwischen beiden der eine Wert aus der Datei neben dem
             ' anderen aus dem Notbehelf - eine Mischung, die es nirgends geben darf.
@@ -131,8 +131,14 @@ Namespace Services
                         Dim levelEntries As JsonElement
                         If root.TryGetProperty("levelOverrides", levelEntries) Then
                             For Each entry In levelEntries.EnumerateObject()
+                                ' range und white sind beide wahlfrei (-1 = bei LibRaw lassen): der
+                                ' Tonumfang, wenn der Schwarzpunkt feststeht, der rohe Weisspunkt,
+                                ' wenn er je Datei gemessen wird (black = -2, siehe
+                                ' RawDecodeService.MeasuredBlackMarker).
+                                Dim rangeValue, whiteValue As JsonElement
                                 levels(entry.Name) = (entry.Value.GetProperty("black").GetInt32(),
-                                                      entry.Value.GetProperty("range").GetInt32())
+                                                      If(entry.Value.TryGetProperty("range", rangeValue), rangeValue.GetInt32(), -1),
+                                                      If(entry.Value.TryGetProperty("white", whiteValue), whiteValue.GetInt32(), -1))
                             Next
                         End If
                         referenceOffsetEv = readReferenceOffsetEv
@@ -178,17 +184,17 @@ Namespace Services
             Return sb.ToString()
         End Function
 
-        ''' <summary>Anzahl der hinterlegten Modelle - fuer die Diagnose und die Einstellungsseite.</summary>
         ''' <summary>Schwarzpunkt und Tonumfang ueber Schwarz fuer Kameras, die LibRaw falsch liest,
         ''' aus dem Abschnitt levelOverrides der Ressource. Anders als die Versaetze gilt diese
         ''' Tabelle IMMER, nicht nur mit der Einstellung: sie behebt Fehler, sie verschiebt keine
         ''' Wiedergabe. Angewandt wird sie in RawDecodeService.TryApplyLevelOverride.</summary>
-        Friend Shared ReadOnly Property LevelOverrides As Dictionary(Of String, (Black As Integer, Range As Integer))
+        Friend Shared ReadOnly Property LevelOverrides As Dictionary(Of String, (Black As Integer, Range As Integer, White As Integer))
             Get
                 Return Resource.LevelOverrides
             End Get
         End Property
 
+        ''' <summary>Anzahl der hinterlegten Modelle - fuer die Diagnose und die Einstellungsseite.</summary>
         Public Shared ReadOnly Property ModelCount As Integer
             Get
                 Return Resource.Offsets.Count

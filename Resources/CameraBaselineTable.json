@@ -341,35 +341,12 @@
   "referenceOffsetEv": -0.26,
   "colorCalibrations": {},
   "levelOverrides": {
-    "Canon|EOS R6 Mark III": {
-      "black": 2048,
-      "range": 12303,
-      "librawBlack": 59,
-      "librawRange": 16324,
-      "source": "Adobe DNG Converter 18.6: BlackLevel 2048, WhiteLevel 14351; black matches the masked sensor border (median 2048). LibRaw 0.22.2 reads black 0 with channel values 0/36/119/81."
-    },
-    "Canon|EOS 60D|800": {
-      "black": -1,
-      "range": 13256,
-      "librawBlack": 2048.5,
-      "librawRange": 10231,
-      "iso": 800,
-      "source": "white too low in LibRaw: saturation of blown highlights in the raw data minus the black level of the same file (Grundbelichtung/saettigung.c)"
-    },
     "Canon|EOS 1100D|3200": {
       "black": -1,
       "range": 13257,
       "librawBlack": 2046,
       "librawRange": 11538,
       "iso": 3200,
-      "source": "white too low in LibRaw: saturation of blown highlights in the raw data minus the black level of the same file (Grundbelichtung/saettigung.c)"
-    },
-    "Canon|EOS 450D|400": {
-      "black": -1,
-      "range": 15064,
-      "librawBlack": 1024,
-      "librawRange": 13581,
-      "iso": 400,
       "source": "white too low in LibRaw: saturation of blown highlights in the raw data minus the black level of the same file (Grundbelichtung/saettigung.c)"
     },
     "Canon|EOS 400D|1600": {
@@ -379,30 +356,6 @@
       "librawRange": 3468,
       "iso": 1600,
       "source": "white too low in LibRaw: saturation of blown highlights in the raw data minus the black level of the same file (Grundbelichtung/saettigung.c)"
-    },
-    "Canon|EOS-1Ds Mark III|100": {
-      "black": -1,
-      "range": 15359,
-      "librawBlack": 1024.5,
-      "librawRange": 14256,
-      "iso": 100,
-      "source": "white too low in LibRaw: saturation of blown highlights in the raw data minus the black level of the same file (Grundbelichtung/saettigung.c)"
-    },
-    "Canon|EOS 5D Mark III|25600": {
-      "black": -1,
-      "range": 14340,
-      "librawBlack": 2043.5,
-      "librawRange": 13445,
-      "iso": 25600,
-      "source": "white too low in LibRaw: saturation of blown highlights in the raw data minus the black level of the same file (Grundbelichtung/saettigung.c)"
-    },
-    "Canon|EOS 70D|100": {
-      "black": -1,
-      "range": 11535,
-      "librawBlack": 2048,
-      "librawRange": 13255,
-      "iso": 100,
-      "source": "white too high in LibRaw: saturation of blown highlights in the raw data minus the black level of the same file (Grundbelichtung/saettigung.c)"
     },
     "Canon|EOS 40D|100": {
       "black": -1,
@@ -419,7 +372,61 @@
       "librawRange": 15200,
       "iso": 200,
       "source": "white too high in LibRaw: saturation of blown highlights in the raw data minus the black level of the same file (Grundbelichtung/saettigung.c)"
+    },
+    "Canon|EOS 450D|400": {
+      "black": -1,
+      "range": 15064,
+      "librawBlack": 1024,
+      "librawRange": 13581,
+      "iso": 400,
+      "source": "white too low in LibRaw: saturation of blown highlights in the raw data minus the black level of the same file (Grundbelichtung/saettigung.c)"
+    },
+    "Canon|EOS 5D Mark III|25600": {
+      "black": -1,
+      "range": 14340,
+      "librawBlack": 2043.5,
+      "librawRange": 13445,
+      "iso": 25600,
+      "source": "white too low in LibRaw: saturation of blown highlights in the raw data minus the black level of the same file (Grundbelichtung/saettigung.c)"
+    },
+    "Canon|EOS 60D|800": {
+      "black": -1,
+      "range": 13256,
+      "librawBlack": 2048.5,
+      "librawRange": 10231,
+      "iso": 800,
+      "source": "white too low in LibRaw: saturation of blown highlights in the raw data minus the black level of the same file (Grundbelichtung/saettigung.c)"
+    },
+    "Canon|EOS 70D|100": {
+      "black": -1,
+      "range": 11535,
+      "librawBlack": 2048,
+      "librawRange": 13255,
+      "iso": 100,
+      "source": "white too high in LibRaw: saturation of blown highlights in the raw data minus the black level of the same file (Grundbelichtung/saettigung.c)"
+    },
+    "Canon|EOS R6 Mark III": {
+      "black": -2,
+      "librawBlack": 59,
+      "librawRange": 16324,
+      "source": "Black measured per file from the masked sensor border: the pedestal is not fixed (2048 in the ISO 1000 file of issue 36, 512 in three ISO 100 files from raw.pixls.us). White stays at LibRaw's 16383, where the ISO 100 files saturate. LibRaw 0.22.2 reads black 0 with channel values 0/36/119/81."
+    },
+    "Canon|EOS R6 Mark III|1000": {
+      "black": -2,
+      "white": 14351,
+      "iso": 1000,
+      "librawBlack": 59,
+      "librawRange": 16324,
+      "source": "Adobe DNG Converter 18.6: WhiteLevel 14351 for the ISO 1000 file of issue 36; black measured per file as above."
+    },
+    "Canon|EOS-1Ds Mark III|100": {
+      "black": -1,
+      "range": 15359,
+      "librawBlack": 1024.5,
+      "librawRange": 14256,
+      "iso": 100,
+      "source": "white too low in LibRaw: saturation of blown highlights in the raw data minus the black level of the same file (Grundbelichtung/saettigung.c)"
     }
   },
-  "levelOverridesDescription": "Black level and range above black for cameras LibRaw reads wrongly; always applied, independent of the base exposure setting. Key: normalized maker|model, optionally |ISO (the ISO entry wins and applies only at that ISO). black -1 keeps LibRaw's black level. range is passed to LibRaw as user_sat, which LibRaw applies after black subtraction. librawBlack and librawRange record what LibRaw reported for the measured file and are not read."
+  "levelOverridesDescription": "Black level and range above black for cameras LibRaw reads wrongly; always applied, independent of the base exposure setting. Key: normalized maker|model, optionally |ISO (the ISO entry wins and applies only at that ISO). black -1 keeps LibRaw's black level, black -2 measures it per file from the masked sensor border. range is passed to LibRaw as user_sat, which LibRaw applies after black subtraction; instead of range an entry may give the raw white level (white), and the range is then white minus black. librawBlack and librawRange record what LibRaw reported for the measured file and are not read."
 }

@@ -116,6 +116,9 @@ Namespace Services
         Private Shared _getIheight As IntFn
         Private Shared _getRawWidth As IntFn
         Private Shared _getRawHeight As IntFn
+        ''' LibRaws Weisspunkt (color.maximum); nur fuer den gemessenen Schwarzpunkt, siehe
+        ''' MeasureMaskedBlack. Optional wie die Getter darueber.
+        Private Shared _getColorMaximum As IntFn
         Private Shared _setUserMul As SetUserMulFn
         Private Shared _setNoAutoBright As SetIntFn
         Private Shared _setGamma As SetGammaFn
@@ -342,6 +345,7 @@ Namespace Services
                         _getIheight = GetExport(Of IntFn)(handle, "libraw_get_iheight")
                         _getRawWidth = GetExport(Of IntFn)(handle, "libraw_get_raw_width")
                         _getRawHeight = GetExport(Of IntFn)(handle, "libraw_get_raw_height")
+                        _getColorMaximum = GetExport(Of IntFn)(handle, "libraw_get_color_maximum")
                     Catch
                         _getIparams = Nothing
                         _getImgOther = Nothing
@@ -349,6 +353,7 @@ Namespace Services
                         _getIheight = Nothing
                         _getRawWidth = Nothing
                         _getRawHeight = Nothing
+                        _getColorMaximum = Nothing
                     End Try
                     ' OPTIONAL, eigenes Try wie oben: die Modellliste beantwortet EINE Frage, und
                     ' zwar die nach der Ursache eines kaputt aussehenden Bildes (siehe
@@ -370,7 +375,7 @@ Namespace Services
                     _getPreMul = Nothing : _getRgbCam = Nothing
                     _getIparams = Nothing : _getImgOther = Nothing
                     _getIwidth = Nothing : _getIheight = Nothing
-                    _getRawWidth = Nothing : _getRawHeight = Nothing
+                    _getRawWidth = Nothing : _getRawHeight = Nothing : _getColorMaximum = Nothing
                     _setHighlight = Nothing : _setAdjustMaximumThr = Nothing
                     _setNoAutoBright = Nothing : _setGamma = Nothing : _setFbdd = Nothing : _setDemosaic = Nothing
                     _process = Nothing : _makeMemImage = Nothing : _clearMem = Nothing : _close = Nothing
@@ -1660,7 +1665,7 @@ Namespace Services
         ''' bleibt es bei LibRaw - ein geratener Wert waere schlimmer als ein gelegentlich falscher.
         ''' Schwarzpunkt -1 heisst: bei LibRaw lassen. Kennt LibRaw eine Kamera eines Tages
         ''' richtig, gehoert der Eintrag wieder heraus.</summary>
-        Friend Shared ReadOnly LevelOverrides As Dictionary(Of String, (Black As Integer, Range As Integer)) = CameraBaselineTable.LevelOverrides
+        Friend Shared ReadOnly LevelOverrides As Dictionary(Of String, (Black As Integer, Range As Integer, White As Integer)) = CameraBaselineTable.LevelOverrides
 
         ''' <summary>Setzt Schwarz- und Weisspunkt aus <see cref="LevelOverrides"/>, falls die Kamera
         ''' dort steht. Muss nach open_file und vor dcraw_process laufen.
@@ -1685,7 +1690,7 @@ Namespace Services
                 Dim other = _getImgOther(handle)
                 If other <> IntPtr.Zero Then iso = InRange(ReadSingle(other, ImgOtherIsoOffset), 1.0, 10000000.0)
             End If
-            Dim levels As (Black As Integer, Range As Integer)
+            Dim levels As (Black As Integer, Range As Integer, White As Integer)
             Dim found = iso > 0 AndAlso LevelOverrides.TryGetValue(camera & "|" & CInt(Math.Round(iso)).ToString(Globalization.CultureInfo.InvariantCulture), levels)
             If Not found AndAlso Not LevelOverrides.TryGetValue(camera, levels) Then Return False
 
@@ -1702,19 +1707,170 @@ Namespace Services
                 If Marshal.ReadInt32(handle, base + UserCblackOffset + 4 * i) <> unsetCblack Then Return False
             Next
 
-            If levels.Black >= 0 Then
-                Marshal.WriteInt32(handle, base + UserBlackOffset, levels.Black)
+            ' Der Schwarzpunkt: fest aus dem Eintrag, oder je Datei aus dem abgedeckten Rand gemessen.
+            Dim black = levels.Black
+            If black = MeasuredBlackMarker Then
+                black = MeasureMaskedBlack(handle)
+                If black < 0 Then
+                    DiagnosticLogService.LogAlways("RawDecodeService.LevelOverride",
+                        $"{make} {model}, ISO {iso:F0}: abgedeckter Rand nicht messbar - es bleibt bei LibRaw")
+                    Return False
+                End If
+            End If
+            ' Der Tonumfang ueber dem Schwarzpunkt, siehe LevelOverrides. Steht im Eintrag statt
+            ' seiner der rohe Weisspunkt, ergibt er sich aus diesem, bei gemessenem Schwarzpunkt
+            ' notfalls aus LibRaws eigenem Weisspunkt.
+            Dim range = levels.Range
+            If range < 0 AndAlso black >= 0 Then
+                Dim white = levels.White
+                If white < 0 AndAlso levels.Black = MeasuredBlackMarker AndAlso _getColorMaximum IsNot Nothing Then white = _getColorMaximum(handle)
+                If white > black Then range = white - black
+            End If
+
+            If black >= 0 Then
+                Marshal.WriteInt32(handle, base + UserBlackOffset, black)
                 For i = 0 To 3
                     Marshal.WriteInt32(handle, base + UserCblackOffset + 4 * i, 0)
                 Next
             End If
-            ' Der Tonumfang ueber dem Schwarzpunkt, siehe LevelOverrides.
-            Marshal.WriteInt32(handle, base + UserSatOffset, levels.Range)
+            If range > 0 Then Marshal.WriteInt32(handle, base + UserSatOffset, range)
             DiagnosticLogService.LogAlways("RawDecodeService.LevelOverride",
                 $"{make} {model}, ISO {iso:F0}: " &
-                If(levels.Black >= 0, $"Schwarzpunkt {levels.Black}, ", "") &
-                $"Tonumfang {levels.Range} gesetzt (LibRaw liest ihn falsch)")
+                If(black >= 0, $"Schwarzpunkt {black}{If(levels.Black = MeasuredBlackMarker, " (gemessen)", "")}, ", "") &
+                If(range > 0, $"Tonumfang {range} ", "") & "gesetzt (LibRaw liest ihn falsch)")
             Return True
+        End Function
+
+        ''' <summary>Schwarzpunkt im Eintrag: je Datei aus dem abgedeckten Sensorrand messen.
+        '''
+        ''' WARUM. Die EOS R6 Mark III traegt ihren Sockel nicht fest: die Datei aus Issue #36 (ISO
+        ''' 1000) steht auf 2048, drei Dateien mit ISO 100 von raw.pixls.us auf 512. Ob das an der
+        ''' ISO haengt oder an der Firmware, sagen vier Dateien nicht. Ein fester Wert von 2048 zog
+        ''' bei den ISO-100-Dateien mehr ab, als ueberhaupt Licht darin war (Bildmitte um 800), und
+        ''' entwickelte sie fast schwarz. Der abgedeckte Rand misst den Sockel der Datei selbst,
+        ''' gleich woher er kommt.</summary>
+        Public Const MeasuredBlackMarker As Integer = -2
+
+        ' Aufbau des Anfangs von libraw_data_t (libraw_types.h): ein Zeiger, danach
+        ' libraw_image_sizes_t. Diese Felder stehen vor jedem long der Struktur und liegen deshalb
+        ' auf allen Plattformen gleich; geprueft wird trotzdem gegen die Getter.
+        Private Const SizesRawHeightOffset As Integer = 8
+        Private Const SizesRawWidthOffset As Integer = 10
+        Private Const SizesHeightOffset As Integer = 12
+        Private Const SizesWidthOffset As Integer = 14
+        Private Const SizesTopMarginOffset As Integer = 16
+        Private Const SizesLeftMarginOffset As Integer = 18
+        Private Const SizesRawPitchOffset As Integer = 24
+        ''' So weit wird nach libraw_rawdata_t gesucht. Unter Linux liegt es bei 193768, unter
+        ''' Windows weiter vorn, weil long dort vier Bytes hat.
+        Private Const RawdataSearchEnd As Integer = 400000
+
+        ''' <summary>Der Sockel der Datei: Median des abgedeckten Sensorrands, oder -1.
+        '''
+        ''' DER ZEIGER AUF DIE ROHDATEN hat keinen Getter. Er steht in libraw_rawdata_t, und dort
+        ''' direkt hinter neun Zeigern eine Kopie von libraw_iparams_t, die unpack anlegt. Gesucht
+        ''' wird genau diese Kopie (Kennung, Marke, Modell, byteweise gleich dem Original, das
+        ''' libraw_get_iparams liefert); sie muss EINDEUTIG sein, die Rohdaten muessen stehen und
+        ''' die Farbpuffer daneben leer sein (ein Sensor mit Farbfilter). Sonst -1, und nichts wird
+        ''' geschrieben.
+        '''
+        ''' GEMESSEN wird der Median ueber den oberen Rand (oder den linken, wenn oben keiner ist),
+        ''' mit Abstand zum Bild, jede vierte Zeile und dritte Spalte. Plausibel ist er nur mit
+        ''' genug Punkten, enger Streuung und weit unter dem Weisspunkt; ein Rand, der Licht
+        ''' abbekommt, faellt damit heraus.</summary>
+        Private Shared Function MeasureMaskedBlack(handle As IntPtr) As Integer
+            Try
+                If _getRawWidth Is Nothing OrElse _getRawHeight Is Nothing OrElse _getIparams Is Nothing Then Return -1
+                Dim rawWidth = _getRawWidth(handle)
+                Dim rawHeight = _getRawHeight(handle)
+                If rawWidth <= 0 OrElse rawHeight <= 0 Then Return -1
+                If (Marshal.ReadInt16(handle, SizesRawWidthOffset) And &HFFFF) <> rawWidth OrElse
+                   (Marshal.ReadInt16(handle, SizesRawHeightOffset) And &HFFFF) <> rawHeight Then Return -1
+                Dim height = Marshal.ReadInt16(handle, SizesHeightOffset) And &HFFFF
+                Dim width = Marshal.ReadInt16(handle, SizesWidthOffset) And &HFFFF
+                Dim top = Marshal.ReadInt16(handle, SizesTopMarginOffset) And &HFFFF
+                Dim left = Marshal.ReadInt16(handle, SizesLeftMarginOffset) And &HFFFF
+                Dim pitch = Marshal.ReadInt32(handle, SizesRawPitchOffset)
+                If pitch < rawWidth * 2 OrElse top + height > rawHeight OrElse left + width > rawWidth Then Return -1
+
+                Dim rawImage = FindRawImage(handle)
+                If rawImage = IntPtr.Zero Then Return -1
+
+                ' Oberer Rand, sonst linker, und davon nur die AEUSSERE HAELFTE. LibRaws Rand ist
+                ' nicht verlaesslich: bei der R6 Mark III setzt es 108 Zeilen an, Licht liegt aber
+                ' schon ab Zeile 94 (gemessen), und der Median ueber alle 108 streute bis 900.
+                Dim x0, x1, y0, y1 As Integer
+                If top > 8 Then
+                    x0 = left : x1 = left + width : y0 = 0 : y1 = top \ 2
+                ElseIf left > 8 Then
+                    x0 = 0 : x1 = left \ 2 : y0 = top : y1 = top + height
+                Else
+                    Return -1
+                End If
+                Dim histogram(65535) As Integer
+                Dim count = 0
+                Dim row(rawWidth - 1) As Short
+                For y = y0 To y1 - 1 Step 4
+                    Marshal.Copy(IntPtr.Add(rawImage, y * pitch), row, 0, rawWidth)
+                    For x = x0 To x1 - 1 Step 3
+                        histogram(row(x) And &HFFFF) += 1
+                        count += 1
+                    Next
+                Next
+                If count < 1000 Then Return -1
+                Dim Percentile = Function(q As Double) As Integer
+                                     Dim target = CInt(q * count), seen = 0
+                                     For v = 0 To 65535
+                                         seen += histogram(v)
+                                         If seen > target Then Return v
+                                     Next
+                                     Return 65535
+                                 End Function
+                Dim median = Percentile(0.5)
+                Dim spread = Percentile(0.95) - Percentile(0.05)
+                If spread > 256 OrElse median <= 0 OrElse median > 8192 Then Return -1
+                Return median
+            Catch
+                Return -1
+            End Try
+        End Function
+
+        ''' <summary>rawdata.raw_image, gefunden ueber die Kopie von iparams dahinter; siehe
+        ''' MeasureMaskedBlack. IntPtr.Zero, wenn nicht eindeutig.</summary>
+        Private Shared Function FindRawImage(handle As IntPtr) As IntPtr
+            Dim iparams = _getIparams(handle)
+            Dim iparamsOffset = CLng(iparams) - CLng(handle)
+            If iparamsOffset <= 0 OrElse iparamsOffset > 4096 Then Return IntPtr.Zero
+            ' Kennung (4), Marke (64), Modell (64) - der Teil von iparams, der sicher vor jedem
+            ' Feld mit plattformabhaengiger Breite liegt.
+            Const landmarkLength As Integer = 132
+            Dim landmark(landmarkLength - 1) As Byte
+            Marshal.Copy(iparams, landmark, 0, landmarkLength)
+            If landmark.Skip(4).Take(64).All(Function(b) b = 0) Then Return IntPtr.Zero
+            Dim memory(RawdataSearchEnd + landmarkLength - 1) As Byte
+            Marshal.Copy(handle, memory, 0, memory.Length)
+
+            Dim found As IntPtr = IntPtr.Zero
+            For offset = CInt(iparamsOffset) + 8 To RawdataSearchEnd Step 8
+                If memory(offset + 4) <> landmark(4) Then Continue For
+                Dim same = True
+                For i = 0 To landmarkLength - 1
+                    If memory(offset + i) <> landmark(i) Then same = False : Exit For
+                Next
+                If Not same Then Continue For
+                ' Davor neun Zeiger: raw_alloc, raw_image, dann sieben Farb- und Hilfspuffer.
+                Dim rawAlloc = BitConverter.ToInt64(memory, offset - 72)
+                Dim rawImage = BitConverter.ToInt64(memory, offset - 64)
+                If rawAlloc = 0 OrElse rawImage = 0 Then Continue For
+                Dim buffersEmpty = True
+                For k = 1 To 5
+                    If BitConverter.ToInt64(memory, offset - 64 + 8 * k) <> 0 Then buffersEmpty = False
+                Next
+                If Not buffersEmpty Then Continue For
+                If found <> IntPtr.Zero Then Return IntPtr.Zero ' nicht eindeutig
+                found = New IntPtr(rawImage)
+            Next
+            Return found
         End Function
 
         ''' <summary>Die Basis von libraw_output_params_t im nativen Handle, oder -1, wenn sie sich

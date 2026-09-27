@@ -598,6 +598,12 @@ Namespace ViewModels
         Private ReadOnly _imageMasks As New List(Of ImageMask)()
         Private ReadOnly _maskedAdjustmentLayers As New List(Of MaskedAdjustmentLayer)()
         Private _selectionAdjustLayerId As String = ""
+        ''' <summary>Die Ebene, deren Maske die laufende Auswahl gerade IST: gesetzt, wenn ein
+        ''' Anpassungswerkzeug aus der Auswahl eine Ebene gemacht hat und wieder verlassen wurde,
+        ''' die Auswahl aber stehen blieb. Leer, sobald sich die Auswahl aendert. Ohne diese Angabe
+        ''' traf die weiche Kante zurueck im Maskenwerkzeug nur die Auswahl und nie die Ebene
+        ''' (Nutzerbefund 0.9.53-1).</summary>
+        Private _runningSelectionLayerId As String = ""
         Private _selectionImagePixelAdjustments As ImageAdjustments = Nothing
         Private _selectionAdjustSwapInProgress As Boolean = False
         Private ReadOnly _annotations As New ObservableCollection(Of ImageAnnotation)()
@@ -25335,8 +25341,13 @@ Namespace ViewModels
                 Dim restored = BuildAdjustmentsFromFields()
                 restored.CopyPixelAdjustmentsFrom(_selectionImagePixelAdjustments)
                 _selectionImagePixelAdjustments = Nothing
+                Dim layerId = _selectionAdjustLayerId
                 _selectionAdjustLayerId = ""
                 ApplyAdjustments(restored)
+                ' Die Auswahl bleibt stehen, und sie IST jetzt die Maske dieser Ebene. Gemerkt, damit
+                ' die Maskeneigenschaften zurueck im Maskenwerkzeug die Ebene treffen; jede
+                ' Aenderung an der Auswahl hebt das wieder auf (SetSelectionMaskData).
+                _runningSelectionLayerId = If(_hasActiveSelection, layerId, "")
             Finally
                 _selectionAdjustSwapInProgress = False
             End Try

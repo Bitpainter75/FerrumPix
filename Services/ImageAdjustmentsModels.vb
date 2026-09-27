@@ -846,11 +846,20 @@ Namespace Services
         ''' „trägt dieses Rezept überhaupt eine Anpassung" läuft über die Pixel-Eigenschaften. Stünde
         ''' das Modell dort, hätte jede bloß geöffnete RAW-Datei als bearbeitet gezählt, und der
         ''' Sidecar-Import hätte neben jedes Foto eine Rezeptdatei ohne Inhalt gelegt. Die
-        ''' Reglerwerte selbst sind Teil des Looks und wandern mit.</remarks>
+        ''' Reglerwerte selbst sind Teil des Looks und wandern mit.
+        '''
+        ''' DIE OBJEKTIVKORREKTUR GEHOERT DEM BILD, wie die Lichterrettung: beide sitzen im Decode.
+        ''' Als Pixelregler gezaehlt, wanderte sie beim Umschalten der Regler auf eine Maskenebene
+        ''' mit deren Werten ins Bild, und das Bild wurde ohne Korrektur neu entwickelt
+        ''' (Nutzerbefund 0.9.53-1). Sie wird damit auch nicht mehr auf andere Fotos uebertragen;
+        ''' der Profilname eines Objektivs gehoerte dort ohnehin nicht hin. Clone fuehrt sie deshalb
+        ''' ausdruecklich mit.</remarks>
         Private Shared ReadOnly StructuralPropertyNames As New HashSet(Of String)(StringComparer.Ordinal) From {
             "SourceWidthPixels", "SourceHeightPixels", "RecipeCoordinateVersion",
             "WhiteBalanceAnchorX", "WhiteBalanceAnchorY", "WhiteBalanceModel",
             "RawHighlightRecovery",
+            "LensDistortion", "LensTca", "LensVignetting", "LensModel",
+            "LensDistortionAmount", "LensTcaAmount", "LensVignettingAmount",
             "WorkingImageVersion", "WorkingImageHasTransparency",
             "GeometryOperations",
             "BakedOperations", "BakedOperationsApplied",
@@ -1098,6 +1107,13 @@ Namespace Services
                 .WhiteBalanceKelvin = WhiteBalanceKelvin,
                 .WhiteBalanceKelvinTint = WhiteBalanceKelvinTint,
                 .RawHighlightRecovery = RawHighlightRecovery,
+                .LensDistortion = LensDistortion,
+                .LensTca = LensTca,
+                .LensVignetting = LensVignetting,
+                .LensModel = LensModel,
+                .LensDistortionAmount = LensDistortionAmount,
+                .LensTcaAmount = LensTcaAmount,
+                .LensVignettingAmount = LensVignettingAmount,
                 .WorkingImageVersion = WorkingImageVersion,
                 .WorkingImageHasTransparency = WorkingImageHasTransparency,
                 .BakedOperationsApplied = BakedOperationsApplied,
