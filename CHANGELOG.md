@@ -1,3 +1,14 @@
+## Unreleased
+
+### Fixes
+
+- The fast AI denoiser no longer turns very dark, smooth areas such as a night sky or a black
+  stage curtain into a colored pattern.
+
+- Measuring the denoise strength no longer mistakes fine detail in small or downsized pictures
+  for noise. Pictures under three megapixels are left alone by the automatic strength; they can
+  still be denoised with a strength you set yourself.
+
 ## 0.9.53
 
 ### What's new

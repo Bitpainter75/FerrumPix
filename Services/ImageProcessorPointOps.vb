@@ -736,8 +736,9 @@ Namespace Services
         ''' <summary>Geordnete 8x8-Bayer-Matrix, auf [-0.5, +0.5) normiert. Amplitude also genau
         ''' 1 LSB, Mittelwert 0 - der Rundungsfehler wird raeumlich verteilt statt aufaddiert.
         ''' Positionsbasiert und damit zeilenunabhaengig und deterministisch: Pflicht, weil die
-        ''' Kette unter Parallel.For laeuft und wiederholte Laeufe bitgleich sein muessen.</summary>
-        Private Shared ReadOnly DitherMatrix As Single() = BuildBayer8()
+        ''' Kette unter Parallel.For laeuft und wiederholte Laeufe bitgleich sein muessen.
+        ''' Friend, weil das Entrauschen mit Modell beim Zurueckschreiben dieselbe Matrix nimmt.</summary>
+        Friend Shared ReadOnly DitherMatrix As Single() = BuildBayer8()
 
         Private Shared Function BuildBayer8() As Single()
             ' Rekursive Bayer-Konstruktion: M(2n) = [4M(n), 4M(n)+2; 4M(n)+3, 4M(n)+1]

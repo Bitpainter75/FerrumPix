@@ -10246,6 +10246,8 @@ Namespace ViewModels
                 If result.Stamp.Init <> _workingImage.InitStamp OrElse _workingImagePending Then Return
 
                 Dim suggestion = result.Suggestion
+                ' Auch ein Bild unter DenoiseModelService.AutoMinimumPixels landet hier: an ihm laesst
+                ' sich Rauschen nicht von Zeichnung trennen, und der Regler bleibt, wo er steht.
                 If Single.IsNaN(suggestion.NoiseLevel) Then
                     _denoiseMeasurementText = LocalizationService.T("An diesem Bild lässt sich das Rauschen nicht messen.")
                 Else

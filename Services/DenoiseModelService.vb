@@ -263,6 +263,27 @@ Namespace Services
         ''' sagt es dazu.</summary>
         Public Const AutoMinimumStrength As Double = 25.0
 
+        ''' <summary>Unterhalb dieser Bildgroesse misst die Automatik nicht, in Bildpunkten (drei
+        ''' Megapixel).
+        '''
+        ''' DIE SCHAETZUNG TRENNT RAUSCHEN VON ZEICHNUNG DARUEBER, WIE BEIDE BEIM VERKLEINERN WACHSEN
+        ''' (EstimateNoiseLevel). Das setzt voraus, dass das Bild in der Aufloesung vorliegt, in der es
+        ''' aufgenommen wurde. Ein verkleinertes Bild hat die Zeichnung bereits auf den einzelnen
+        ''' Bildpunkt gedraengt, und dort ist sie von Rauschen nicht mehr zu unterscheiden. Gemessen
+        ''' an 29 JPEGs (Handy, Kamera, Exporte), jedes zusaetzlich auf 1600 und 800 Punkte lange Kante
+        ''' verkleinert: die Automatik schlug bei den Originalen 3-mal an, bei 1600 Punkten 11-mal, bei
+        ''' 800 Punkten 15-mal. Verkleinern mittelt Rauschen weg, jeder Anstieg war also ein
+        ''' Fehlalarm - am deutlichsten ein Bild, das im Original 0,0 mass und auf 800 Punkte 14,6
+        ''' und Staerke 86 bekam. Die Grenze liegt ueber allen verkleinerten Fassungen (hoechstens
+        ''' 2,6 Megapixel) und unter jedem Original einer heutigen Kamera oder eines Handys.
+        '''
+        ''' KEINE ISO-GRENZE DANEBEN. Sie laege nahe, traefe aber das Falsche: ein Handyfoto mit ISO
+        ''' 112 trug sichtbares Korn auf der Haut, weil ein kleiner Sensor bei derselben Zahl viel
+        ''' staerker rauscht als ein grosser.
+        '''
+        ''' Wer ein kleines Bild entrauschen will, stellt die Staerke von Hand ein.</summary>
+        Public Const AutoMinimumPixels As Long = 3000000
+
         ''' <summary>Was die Automatik fuer ein Bild vorschlaegt.</summary>
         Public NotInheritable Class DenoiseSuggestion
             ''' <summary>Gemessenes Helligkeitsrauschen in Grauwerten; NaN, wenn nichts zu messen war.</summary>
@@ -270,8 +291,12 @@ Namespace Services
             ''' <summary>Die Staerke, 0 bis 100.</summary>
             Public Property Strength As Double
             ''' <summary>Lohnt der Lauf? Falsch heisst: das Bild ist schon so sauber, dass das Modell
-            ''' kaum etwas zu tun haette.</summary>
+            ''' kaum etwas zu tun haette - oder, mit <see cref="TooSmall"/>, dass es sich nicht sagen
+            ''' laesst.</summary>
             Public Property Worthwhile As Boolean
+            ''' <summary>Das Bild liegt unter <see cref="AutoMinimumPixels"/>; gemessen wurde nicht,
+            ''' <see cref="NoiseLevel"/> ist NaN.</summary>
+            Public Property TooSmall As Boolean
         End Class
 
         ''' <summary>Das Rauschziel fuer einen Restkorn-Wert von 0 bis 100. Bei 50 gilt
@@ -298,8 +323,15 @@ Namespace Services
             Return suggestion
         End Function
 
-        ''' <summary>Das Bild messen und die Staerke vorschlagen. Das Bild wird nur gelesen.</summary>
+        ''' <summary>Das Bild messen und die Staerke vorschlagen. Das Bild wird nur gelesen. Ein Bild
+        ''' unter <see cref="AutoMinimumPixels"/> wird nicht gemessen: der Vorschlag lautet dann
+        ''' "keine Messung", genau wie bei einem Bild, an dem sich nichts schaetzen laesst.</summary>
         Public Shared Function Suggest(image As SKBitmap, Optional grain As Double = 50.0) As DenoiseSuggestion
+            If image IsNot Nothing AndAlso CLng(image.Width) * image.Height < AutoMinimumPixels Then
+                Dim tooSmall = SuggestFor(Single.NaN, grain)
+                tooSmall.TooSmall = True
+                Return tooSmall
+            End If
             Return SuggestFor(ImageProcessor.EstimateNoiseLevel(image), grain)
         End Function
 
@@ -333,6 +365,11 @@ Namespace Services
             Dim strength = Math.Max(0.0, Math.Min(100.0, request.Strength))
             If request.Automatic Then
                 Dim suggestion = Suggest(image, request.Grain)
+                If suggestion.TooSmall Then
+                    DiagnosticLogService.LogAlways("Entrauschen",
+                        $"{sourceName}: {image.Width}x{image.Height} ist zu klein, um Rauschen von Zeichnung zu trennen - ausgelassen")
+                    Return Nothing
+                End If
                 If Not suggestion.Worthwhile Then
                     DiagnosticLogService.LogAlways("Entrauschen",
                         $"{sourceName}: Rauschen {suggestion.NoiseLevel:F2}, Staerke waere {suggestion.Strength:F0} - ausgelassen")
@@ -500,7 +537,8 @@ Namespace Services
                         If r - l = edge AndAlso b - t = edge AndAlso
                            keepR > keepL AndAlso keepB > keepT Then
                             DenoiseTile(session, name, tiledSource, result,
-                                        New SKRectI(l, t, r, b), New SKRectI(keepL, keepT, keepR, keepB), amount)
+                                        New SKRectI(l, t, r, b), New SKRectI(keepL, keepT, keepR, keepB), amount,
+                                        kind = DenoiseKind.Fast)
                             done += 1
                             Progress?.Invoke(done, tileCount)
                         End If
@@ -572,10 +610,23 @@ Namespace Services
             Return converted
         End Function
 
+        ''' <summary>Unterhalb dieses mittleren Tonwerts wird eine Kachel fuer das schnelle Modell
+        ''' angehoben, siehe <see cref="DenoiseTile"/>.</summary>
+        Friend Const DarkTileLevel As Single = 48.0F
+
         ''' <summary>Eine Kachel durch das Modell und nur ihren INNEREN Teil zurueckschreiben.</summary>
+        ''' <param name="liftDark">DAS SCHNELLE MODELL ZERSTOERT SEHR DUNKLE KACHELN. Liegt der
+        ''' mittlere Tonwert einer Kachel unter rund 20 und traegt sie wenig Rauschen, gibt NAFNet ein
+        ''' buntes Gitter zurueck statt eines Bildes - am Konzertfoto im Pruefbestand ein ganzer
+        ''' Vorhang. SCUNet tut das nicht. Eine solche Kachel wird deshalb vor dem Modell um einen
+        ''' VERSATZ angehoben und danach um denselben Betrag abgesenkt. Ein Versatz und keine
+        ''' Verstaerkung, weil er das Rauschen unveraendert laesst: das Modell soll genau das Rauschen
+        ''' sehen, das im Bild steht. Beschnitten wird dabei nichts, der Eingang ist Fliesskomma und
+        ''' darf ueber 1 gehen.</param>
         Private Shared Sub DenoiseTile(session As InferenceSession, name As String,
                                        source As SKBitmap, target As SKBitmap,
-                                       window As SKRectI, keep As SKRectI, amount As Single)
+                                       window As SKRectI, keep As SKRectI, amount As Single,
+                                       liftDark As Boolean)
             Dim w = window.Width, h = window.Height
             Dim layer = w * h
             Dim tensor = New DenseTensor(Of Single)(New Integer() {1, 3, h, w})
@@ -586,6 +637,7 @@ Namespace Services
             Dim srcStride = source.RowBytes
             Dim row(srcStride - 1) As Byte
             Dim srcPixels = source.GetPixels()
+            Dim lumaSum = 0.0
             For yy = 0 To h - 1
                 Runtime.InteropServices.Marshal.Copy(
                     RowStart(srcPixels, window.Top + yy, srcStride), row, 0, srcStride)
@@ -597,8 +649,22 @@ Namespace Services
                     z(i) = row(p + 2) / 255.0F
                     z(layer + i) = row(p + 1) / 255.0F
                     z(layer * 2 + i) = row(p) / 255.0F
+                    lumaSum += 0.2126 * row(p + 2) + 0.7152 * row(p + 1) + 0.0722 * row(p)
                 Next
             Next
+
+            ' Der Versatz in Tonwerten; null fuer jede Kachel, die hell genug ist.
+            Dim lift = 0.0F
+            If liftDark Then
+                Dim mean = CSng(lumaSum / Math.Max(1, layer))
+                If mean < DarkTileLevel Then
+                    lift = DarkTileLevel - mean
+                    Dim offset = lift / 255.0F
+                    For i = 0 To layer * 3 - 1
+                        z(i) += offset
+                    Next
+                End If
+            End If
 
             Using run = session.Run(New List(Of NamedOnnxValue) From {
                     NamedOnnxValue.CreateFromTensor(name, tensor)})
@@ -622,9 +688,9 @@ Namespace Services
                         Dim sx = Math.Min(xx - window.Left, rw - 1)
                         Dim i = sy * rw + sx
                         Dim p = xx * 4
-                        Dim newRed = values(i) * 255.0F
-                        Dim newGreen = values(rLayer + i) * 255.0F
-                        Dim newBlue = values(rLayer * 2 + i) * 255.0F
+                        Dim newRed = values(i) * 255.0F - lift
+                        Dim newGreen = values(rLayer + i) * 255.0F - lift
+                        Dim newBlue = values(rLayer * 2 + i) * 255.0F - lift
                         ' Ein einzelner unsinniger Wert darf nicht den Bildpunkt verderben - dann
                         ' bleibt eben das Original stehen.
                         If Single.IsNaN(newRed) OrElse Single.IsNaN(newGreen) OrElse Single.IsNaN(newBlue) Then
@@ -645,9 +711,16 @@ Namespace Services
                         Dim oldLuma = 0.2126F * targetRow(p + 2) + 0.7152F * targetRow(p + 1) + 0.0722F * targetRow(p)
                         Dim newLuma = 0.2126F * newRed + 0.7152F * newGreen + 0.0722F * newBlue
                         Dim shift = (oldLuma - newLuma) * (1.0F - amount)
-                        targetRow(p) = ToByte(newBlue + shift)
-                        targetRow(p + 1) = ToByte(newGreen + shift)
-                        targetRow(p + 2) = ToByte(newRed + shift)
+                        ' MIT DITHER GERUNDET. Das Modell nimmt genau das Rauschen weg, das vorher
+                        ' selbst als Dither wirkte; hart gerundet kommt ein glatter dunkler Verlauf
+                        ' als Treppe zurueck, und das Anheben der Tiefen in der Reglerkette dahinter
+                        ' spreizt sie (gemessen: Treppe 0,39 statt 0,14 Tonwerte bei Tiefen +100).
+                        ' Dieselbe Schwelle fuer alle drei Kanaele, sonst faerbt sich Grau ein, und
+                        ' dieselbe Matrix wie die Punktoperationskette.
+                        Dim dither = ImageProcessor.DitherMatrix(((yy And 7) << 3) Or (xx And 7))
+                        targetRow(p) = ToByte(newBlue + shift + dither)
+                        targetRow(p + 1) = ToByte(newGreen + shift + dither)
+                        targetRow(p + 2) = ToByte(newRed + shift + dither)
                         ' VORMULTIPLIZIERT heisst: kein Kanal darf ueber der Deckung liegen. Das
                         ' Modell weiss davon nichts - es bekommt an einem halbdurchsichtigen Rand
                         ' die bereits gedaempften Werte und kann sie anheben. Ein Bildpunkt mit mehr
