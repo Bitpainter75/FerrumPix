@@ -50,6 +50,9 @@ Namespace Views
         Private _contextMenuItem As ImageItem
         Private _folderTreeContextNode As FolderNode
         Private _suppressFolderTreeSelectionChange As Boolean = False
+        ''' <summary>Der Ordner, auf dem die linke Taste im Baum gedrueckt wurde; siehe
+        ''' <see cref="OnFolderTreePointerReleased"/>.</summary>
+        Private _folderTreeClickNode As FolderNode
         Private _restoringFolderTreeSelection As Boolean = False
         Private _clearingNavigationSelection As Boolean = False
         Private _viewportThumbnailRefreshQueued As Boolean = False
@@ -109,7 +112,19 @@ Namespace Views
             Dim tree = Me.FindControl(Of TreeView)("FolderTreeView")
             If tree IsNot Nothing Then
                 tree.AddHandler(InputElement.PointerPressedEvent, AddressOf OnFolderTreePointerPressedTunnel, RoutingStrategies.Tunnel)
+                ' Bubble und auch fuer behandelte: laeuft NACH dem Fokus, den Avalonia beim
+                ' Loslassen auf den Eintrag setzt, siehe OnFolderTreePointerReleased.
+                tree.AddHandler(InputElement.PointerReleasedEvent, AddressOf OnFolderTreePointerReleased,
+                                RoutingStrategies.Bubble, handledEventsToo:=True)
             End If
+            ' Jeder Klick in den Bildbereich holt den Fokus zur Galerie, mit jeder Taste, siehe
+            ' OnGalleryContentPointerPressedTunnel. Tunnel und auch fuer behandelte Klicks, weil
+            ' Kacheln den Mittelklick selbst verbrauchen.
+            For Each contentName In {"GalleryGroupScrollViewer", "GalleryWallScrollViewer",
+                                     "GalleryGridScrollViewer", "GalleryListScrollViewer", "GalleryMap"}
+                Me.FindControl(Of Control)(contentName)?.AddHandler(InputElement.PointerPressedEvent,
+                    AddressOf OnGalleryContentPointerPressedTunnel, RoutingStrategies.Tunnel, handledEventsToo:=True)
+            Next
             ' Das Control gehört dieser View-Instanz - kein Abmelden nötig, sie sterben gemeinsam.
             Dim scrubber = Me.FindControl(Of GalleryTimelineScrubber)("GalleryTimelineScrubber")
             If scrubber IsNot Nothing Then AddHandler scrubber.ScrubRequested, AddressOf OnTimelineScrubRequested
@@ -1689,15 +1704,68 @@ Namespace Views
             Return Nothing
         End Function
 
+        ''' <summary>Ein Klick in den Bildbereich (Gruppen, Fotowand, Raster, Liste, Karte) holt den
+        ''' Fokus zur Galerie, mit jeder Taste.
+        '''
+        ''' DER ORDNERBAUM BEHAELT SEINEN FOKUS ABSICHTLICH (<see cref="OnDescendantGotFocus"/>
+        ''' laesst ihn aus): wer dort klickt, soll mit den Pfeilen durch die Ordner gehen. Einen
+        ''' LINKSklick in den Bildbereich faengt Avalonia selbst ab und fokussiert das naechste
+        ''' fokussierbare Element darueber, also die Galerie, auch wenn der Klick schon behandelt ist
+        ''' (FocusManager.OnPreviewPointerEventHandler, im Tunnel). Fuer die RECHTE und die MITTLERE
+        ''' Taste tut es das nicht: nach dem Kontextmenue einer Kachel oder der Schnellvorschau per
+        ''' Mittelklick lag der Fokus wieder beim Baum, und Pfeile, Bild auf und ab, Pos1 und Ende
+        ''' wechselten den Ordner, statt durch die Bilder zu gehen (Nutzerbefund).
+        '''
+        ''' Ausgenommen ist ein Eingabefeld im Bildbereich, etwa beim Umbenennen in der Kachel: dem
+        ''' darf ein Klick den Fokus nicht wegnehmen.</summary>
+        Private Sub OnGalleryContentPointerPressedTunnel(sender As Object, e As PointerPressedEventArgs)
+            If PlatformShortcutService.IsInputFieldSource(e.Source) Then Return
+            If Not Me.IsFocused Then Me.Focus()
+        End Sub
+
         Private Sub OnFolderTreePointerPressedTunnel(sender As Object, e As PointerPressedEventArgs)
             Dim properties = e.GetCurrentPoint(Nothing).Properties
+            _folderTreeClickNode = Nothing
             If properties.IsRightButtonPressed Then
                 _folderTreeContextNode = GetFolderNodeFromSource(e.Source)
                 _suppressFolderTreeSelectionChange = _folderTreeContextNode IsNot Nothing
             ElseIf properties.IsLeftButtonPressed Then
                 _folderTreeContextNode = Nothing
+                ' Der Pfeil zum Auf- und Zuklappen waehlt nichts aus; wer ihn klickt, arbeitet im Baum.
+                If Not IsWithinToggleButton(e.Source) Then _folderTreeClickNode = GetFolderNodeFromSource(e.Source)
             End If
         End Sub
+
+        ''' <summary>Ein Ordner, mit der Maus im Baum ausgewaehlt, gibt die Tasten an die Galerie.
+        '''
+        ''' Der Baum behaelt seinen Fokus sonst (<see cref="OnDescendantGotFocus"/>), damit er sich
+        ''' mit den Pfeilen bedienen laesst. Nach einem MAUSklick auf einen Ordner will man aber in
+        ''' dessen Bildern weiter: Pfeile, Bild auf und ab, Pos1 und Ende wechselten stattdessen den
+        ''' Ordner (Nutzerbefund). Wer den Baum mit der Tastatur bedient, bleibt dort, denn dort
+        ''' waehlt jede Pfeiltaste einen Ordner aus, und ein Sprung nach jedem Schritt machte den
+        ''' Baum unbedienbar.
+        '''
+        ''' BEIM LOSLASSEN und nicht bei der Auswahl: Avalonia setzt den Fokus auch beim Loslassen
+        ''' der linken Taste noch einmal auf den getroffenen Eintrag (FocusManager, im Tunnel).
+        ''' Dieser Handler haengt im Bubble-Weg und laeuft danach. Nur wenn Druecken und Loslassen
+        ''' denselben Ordner treffen: ein Ziehen auf einen anderen Ordner ist kein Auswaehlen.</summary>
+        Private Sub OnFolderTreePointerReleased(sender As Object, e As PointerReleasedEventArgs)
+            Dim pressed = _folderTreeClickNode
+            _folderTreeClickNode = Nothing
+            If pressed Is Nothing OrElse e.InitialPressMouseButton <> MouseButton.Left Then Return
+            If Not Object.ReferenceEquals(GetFolderNodeFromSource(e.Source), pressed) Then Return
+            Me.Focus()
+        End Sub
+
+        Private Shared Function IsWithinToggleButton(source As Object) As Boolean
+            Dim visual = TryCast(source, Visual)
+            While visual IsNot Nothing
+                If TypeOf visual Is Primitives.ToggleButton Then Return True
+                If TypeOf visual Is TreeViewItem Then Return False
+                visual = visual.GetVisualParent()
+            End While
+            Return False
+        End Function
 
         ' Der ContentControl in MainWindow baut die GalleryView bei jedem Moduswechsel neu auf (z.B.
         ' Galerie -> Einstellungen -> Galerie). Das ViewModel überlebt und kennt den Ordner weiterhin,
