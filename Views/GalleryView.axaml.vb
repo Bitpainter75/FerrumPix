@@ -82,6 +82,9 @@ Namespace Views
         Private _latchedSlotHeight As Double = 0
         Private _latchedSlotThumbnailSize As Double = -1
         Private _latchedSlotTileGap As Double = -1
+        ' Die Zahl der Angabenzeilen unter der Kachel ist waehlbar und aendert ihre Hoehe; eine
+        ' gemerkte Hoehe gilt nur fuer dieselbe Zahl.
+        Private _latchedSlotCaptionRows As Integer = -1
         ' Die Metriken werden im heissen Scrollpfad gebraucht. Das Durchlaufen des visuellen
         ' Baums ist nur nach einer Breiten-, Ansichts- oder Kachelgrössenänderung nötig.
         '
@@ -93,6 +96,7 @@ Namespace Views
         ' folgt ein falscher Rollbereich.
         Private _cachedMetricsThumbnailSize As Double = -1
         Private _cachedMetricsTileGap As Double = -1
+        Private _cachedMetricsCaptionRows As Integer = -1
         Private _cachedMetricsViewportWidth As Double = -1
         Private _cachedMetricsFontOffset As Integer = Integer.MinValue
         Private _cachedMetricsColumns As Integer
@@ -3542,6 +3546,7 @@ Namespace Views
             If _cachedMetricsColumns > 0 AndAlso
                _cachedMetricsThumbnailSize = vm.ThumbnailSize AndAlso
                _cachedMetricsTileGap = vm.TileGap AndAlso
+               _cachedMetricsCaptionRows = vm.TileCaptionRowCount AndAlso
                _cachedMetricsFontOffset = FontScaleService.CurrentOffset AndAlso
                Math.Abs(_cachedMetricsViewportWidth - viewportWidth) < 1.0 Then
                 columns = _cachedMetricsColumns
@@ -3577,6 +3582,7 @@ Namespace Views
                                            columns As Integer, itemSlotHeight As Double)
             _cachedMetricsThumbnailSize = vm.ThumbnailSize
             _cachedMetricsTileGap = vm.TileGap
+            _cachedMetricsCaptionRows = vm.TileCaptionRowCount
             _cachedMetricsViewportWidth = viewportWidth
             _cachedMetricsFontOffset = FontScaleService.CurrentOffset
             _cachedMetricsColumns = columns
@@ -3594,9 +3600,11 @@ Namespace Views
         ''' fehlgeschlagener Messversuch meldet 0 und aendert nichts.</summary>
         Private Function LatchSlotHeight(vm As GalleryViewModel, measuredSlotHeight As Double) As Double
             Dim estimate = Math.Max(1, vm.GridItemSlotHeight)
-            If _latchedSlotThumbnailSize <> vm.ThumbnailSize OrElse _latchedSlotTileGap <> vm.TileGap Then
+            If _latchedSlotThumbnailSize <> vm.ThumbnailSize OrElse _latchedSlotTileGap <> vm.TileGap OrElse
+               _latchedSlotCaptionRows <> vm.TileCaptionRowCount Then
                 _latchedSlotThumbnailSize = vm.ThumbnailSize
                 _latchedSlotTileGap = vm.TileGap
+                _latchedSlotCaptionRows = vm.TileCaptionRowCount
                 _latchedSlotHeight = 0
             End If
 

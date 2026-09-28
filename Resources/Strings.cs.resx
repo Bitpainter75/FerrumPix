@@ -8904,4 +8904,10 @@
   <data name="RAW_Dateien_verschiedener_Kameras_geben_Farben_u_da32f01c" xml:space="preserve">
     <value>Soubory RAW z různých fotoaparátů podávají barvy různě. Je-li zapnuto, nastaví FerrumPix při otevření neupraveného RAW posuvníky v části Kalibrace tak, aby se barvy blížily rozšířenému vyvolání RAW, u některých modelů fotoaparátů zvlášť vyladěno. Hodnoty jsou vidět na posuvnících a lze je tam změnit; již upravené snímky zůstávají beze změny.</value>
   </data>
+  <data name="Angaben_unter_den_Kacheln_350632fe" xml:space="preserve">
+    <value>Údaje pod dlaždicemi</value>
+  </data>
+  <data name="W_hlt_was_unter_dem_Dateinamen_steht_bis_zu_drei_1487b6bc" xml:space="preserve">
+    <value>Určuje, co se zobrazí pod názvem souboru: až tři řádky, každý s jedním údajem u levého a jedním u pravého okraje. Řádek bez údajů odpadá. Seznam ukazuje stejné údaje. Hodnoty pocházejí z katalogu; nemá-li snímek datum pořízení, zobrazí se datum změny souboru.</value>
+  </data>
 </root>

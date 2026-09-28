@@ -8904,4 +8904,10 @@
   <data name="RAW_Dateien_verschiedener_Kameras_geben_Farben_u_da32f01c" xml:space="preserve">
     <value>Pliki RAW z różnych aparatów oddają kolory w różny sposób. Po włączeniu FerrumPix przy otwieraniu nieedytowanego pliku RAW ustawia suwaki w sekcji Kalibracja tak, aby kolory były bliskie popularnemu wywoływaniu RAW, dla niektórych modeli aparatów dostrojone osobno. Wartości są widoczne na suwakach i można je tam zmienić; już edytowane zdjęcia pozostają bez zmian.</value>
   </data>
+  <data name="Angaben_unter_den_Kacheln_350632fe" xml:space="preserve">
+    <value>Informacje pod kafelkami</value>
+  </data>
+  <data name="W_hlt_was_unter_dem_Dateinamen_steht_bis_zu_drei_1487b6bc" xml:space="preserve">
+    <value>Określa, co jest widoczne pod nazwą pliku: do trzech wierszy, każdy z jedną informacją przy lewej i jedną przy prawej krawędzi. Wiersz bez informacji jest pomijany. Lista pokazuje te same informacje. Wartości pochodzą z katalogu; jeśli zdjęcie nie ma daty wykonania, wyświetlana jest data modyfikacji pliku.</value>
+  </data>
 </root>

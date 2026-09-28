@@ -8883,4 +8883,10 @@
   <data name="RAW_Dateien_verschiedener_Kameras_geben_Farben_u_da32f01c" xml:space="preserve">
     <value>Raw files from different cameras render colors differently. When on, FerrumPix sets the sliders under Calibration of an unedited raw file so that its colors come close to a widely used raw development, tuned separately for some camera models. The values are visible in the sliders and can be changed there; pictures you have already edited stay as they are.</value>
   </data>
+  <data name="Angaben_unter_den_Kacheln_350632fe" xml:space="preserve">
+    <value>Details below the tiles</value>
+  </data>
+  <data name="W_hlt_was_unter_dem_Dateinamen_steht_bis_zu_drei_1487b6bc" xml:space="preserve">
+    <value>Chooses what appears below the file name: up to three lines, each with one detail at the left edge and one at the right. A line without details is left out. The list shows the same details. The values come from the catalog; if a picture has no capture date, the modification date of the file is shown instead.</value>
+  </data>
 </root>

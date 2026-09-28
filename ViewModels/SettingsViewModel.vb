@@ -59,6 +59,8 @@ Namespace ViewModels
         Private _viewerShowFilmstrip As Boolean = True
         Private _filmstripItemBadgesVisible As Boolean = False
         Private _galleryTileFrame As Boolean = True
+        Private _galleryTileCaptionLeft As String = TileCaptionSettings.DefaultLeft
+        Private _galleryTileCaptionRight As String = TileCaptionSettings.DefaultRight
         Private _filmstripTileFrame As Boolean = True
         Private _galleryTileGap As Integer = 10
         Private _editorSaveAsOpensTarget As Boolean = False
@@ -212,6 +214,8 @@ Namespace ViewModels
         Private _savedViewerShowFilmstrip As Boolean = True
         Private _savedFilmstripItemBadgesVisible As Boolean = False
         Private _savedGalleryTileFrame As Boolean = True
+        Private _savedGalleryTileCaptionLeft As String = TileCaptionSettings.DefaultLeft
+        Private _savedGalleryTileCaptionRight As String = TileCaptionSettings.DefaultRight
         Private _savedFilmstripTileFrame As Boolean = True
         Private _savedGalleryTileGap As Integer = 10
         Private _savedEditorSaveAsOpensTarget As Boolean = False
@@ -1838,6 +1842,76 @@ Namespace ViewModels
                 SaveLayoutSettings()
             End Set
         End Property
+
+        ''' <summary>Die Auswahllisten fuer die Angaben unter einer Kachel: drei Zeilen, je eine
+        ''' Auswahl links und rechts, so angeordnet wie unter der Kachel.</summary>
+        Public ReadOnly Property TileCaptionRows As New ObservableCollection(Of TileCaptionRow)()
+
+        ''' <summary>Baut Auswahl und Zeilen neu auf, mit uebersetzten Namen. Die Namen stecken in
+        ''' DATEN; der Sprach-Baumlauf erreicht sie nicht, deshalb auch nach einem Sprachwechsel.</summary>
+        Private Sub BuildTileCaptionSlots()
+            Dim options = TileCaptionSettings.AllFields.
+                Select(Function(f) New TileCaptionOption With {.Field = f, .Name = TileCaptionFieldLabel(f)}).
+                ToList()
+            Dim left = TileCaptionSettings.Parse(_galleryTileCaptionLeft)
+            Dim right = TileCaptionSettings.Parse(_galleryTileCaptionRight)
+            TileCaptionRows.Clear()
+            For i = 0 To TileCaptionSettings.RowCount - 1
+                TileCaptionRows.Add(New TileCaptionRow With {
+                    .Left = New TileCaptionSlot(options, left(i), AddressOf ApplyTileCaptionSlots),
+                    .Right = New TileCaptionSlot(options, right(i), AddressOf ApplyTileCaptionSlots)})
+            Next
+        End Sub
+
+        Private Function ShownTileCaptionLeft() As String
+            Return TileCaptionSettings.Format(TileCaptionRows.Select(Function(r) r.Left.Field))
+        End Function
+
+        Private Function ShownTileCaptionRight() As String
+            Return TileCaptionSettings.Format(TileCaptionRows.Select(Function(r) r.Right.Field))
+        End Function
+
+        Private Sub ApplyTileCaptionSlots()
+            SetGalleryTileCaption(ShownTileCaptionLeft(), ShownTileCaptionRight())
+        End Sub
+
+        ''' <summary>Setzt beide Seiten, laesst die Kacheln neu zeichnen und speichert. Kommt der
+        ''' Wert nicht aus den Auswahllisten selbst (Abbrechen, Werkseinstellung), werden die neu
+        ''' aufgebaut, damit sie den Stand zeigen.</summary>
+        Private Sub SetGalleryTileCaption(left As String, right As String)
+            left = TileCaptionSettings.Format(TileCaptionSettings.Parse(left))
+            right = TileCaptionSettings.Format(TileCaptionSettings.Parse(right))
+            If left = _galleryTileCaptionLeft AndAlso right = _galleryTileCaptionRight Then Return
+            _galleryTileCaptionLeft = left
+            _galleryTileCaptionRight = right
+            If ShownTileCaptionLeft() <> left OrElse ShownTileCaptionRight() <> right Then BuildTileCaptionSlots()
+            TileCaptionSettings.Apply(left, right)
+            SaveFileBrowserSettings()
+        End Sub
+
+        ''' <summary>Die Namen der Angaben, wortgleich mit denen der Info-Leiste und der Sortierung,
+        ''' damit man im Dialog wiederfindet, was man dort sieht. "Erstellt (Datei)" und "Geaendert
+        ''' (Datei)" wie in der Sortierung: unter der Kachel steht kein Wort davor, das sie vom
+        ''' Aufnahmedatum unterschiede.</summary>
+        Private Shared Function TileCaptionFieldLabel(field As TileCaptionField) As String
+            Select Case field
+                Case TileCaptionField.DateTaken : Return LocalizationService.T("Aufnahmedatum")
+                Case TileCaptionField.FileModified : Return LocalizationService.T("Geändert (Datei)")
+                Case TileCaptionField.FileCreated : Return LocalizationService.T("Erstellt (Datei)")
+                Case TileCaptionField.Dimensions : Return LocalizationService.T("Abmessungen")
+                Case TileCaptionField.Megapixels : Return LocalizationService.T("Megapixel")
+                Case TileCaptionField.FileSize : Return LocalizationService.T("Dateigröße")
+                Case TileCaptionField.FileType : Return LocalizationService.T("Dateityp")
+                Case TileCaptionField.Camera : Return LocalizationService.T("Kamera")
+                Case TileCaptionField.Lens : Return LocalizationService.T("Objektiv")
+                Case TileCaptionField.FocalLength : Return LocalizationService.T("Brennweite")
+                Case TileCaptionField.Aperture : Return LocalizationService.T("Blende")
+                Case TileCaptionField.ShutterSpeed : Return LocalizationService.T("Belichtungszeit")
+                Case TileCaptionField.Iso : Return "ISO"
+                Case TileCaptionField.Place : Return LocalizationService.T("Ort")
+                Case Else : Return LocalizationService.T("Keine")
+            End Select
+        End Function
 
         ''' <summary>Ob „Speichern unter" die geschriebene Datei in den Editor holt. Ab Werk aus: die
         ''' Arbeit geht am Ausgangsbild weiter. Auf dieselbe Datei zu speichern laedt sie weiterhin
@@ -3760,6 +3834,8 @@ Namespace ViewModels
             _viewerShowFilmstrip = _appSettings.ViewerShowFilmstrip
             _filmstripItemBadgesVisible = _appSettings.FilmstripItemBadgesVisible
             _galleryTileFrame = _appSettings.GalleryTileFrame
+            _galleryTileCaptionLeft = TileCaptionSettings.Format(TileCaptionSettings.Parse(_appSettings.GalleryTileCaptionLeft))
+            _galleryTileCaptionRight = TileCaptionSettings.Format(TileCaptionSettings.Parse(_appSettings.GalleryTileCaptionRight))
             _filmstripTileFrame = _appSettings.FilmstripTileFrame
             _galleryTileGap = AppSettingsService.NormalizeGalleryTileGap(_appSettings.GalleryTileGap)
             _editorSaveAsOpensTarget = _appSettings.EditorSaveAsOpensTarget
@@ -3832,6 +3908,7 @@ Namespace ViewModels
             BuildModelGroups()
             BuildAdjustmentGroupItems()
             BuildInfoPanelRowItems()
+            BuildTileCaptionSlots()
             BuildLanguageOptions()
             BuildGpuDeviceOptions()
             FetchModelCommand = ReactiveCommand.Create(Of ModelGroup)(
@@ -4134,6 +4211,8 @@ Namespace ViewModels
             _savedViewerShowFilmstrip = _viewerShowFilmstrip
             _savedFilmstripItemBadgesVisible = _filmstripItemBadgesVisible
             _savedGalleryTileFrame = _galleryTileFrame
+            _savedGalleryTileCaptionLeft = _galleryTileCaptionLeft
+            _savedGalleryTileCaptionRight = _galleryTileCaptionRight
             _savedFilmstripTileFrame = _filmstripTileFrame
             _savedGalleryTileGap = _galleryTileGap
             _savedEditorSaveAsOpensTarget = _editorSaveAsOpensTarget
@@ -4242,6 +4321,7 @@ Namespace ViewModels
             ViewerShowFilmstrip = _savedViewerShowFilmstrip
             FilmstripItemBadgesVisible = _savedFilmstripItemBadgesVisible
             GalleryTileFrame = _savedGalleryTileFrame
+            SetGalleryTileCaption(_savedGalleryTileCaptionLeft, _savedGalleryTileCaptionRight)
             FilmstripTileFrame = _savedFilmstripTileFrame
             GalleryTileGap = _savedGalleryTileGap
             EditorSaveAsOpensTarget = _savedEditorSaveAsOpensTarget
@@ -4366,6 +4446,7 @@ Namespace ViewModels
             ViewerShowFilmstrip = True
             FilmstripItemBadgesVisible = False
             GalleryTileFrame = True
+            SetGalleryTileCaption(TileCaptionSettings.DefaultLeft, TileCaptionSettings.DefaultRight)
             FilmstripTileFrame = True
             GalleryTileGap = 10
             EditorSaveAsOpensTarget = False
@@ -4657,6 +4738,8 @@ Namespace ViewModels
                                           s.GalleryStartupFolderMode = _galleryStartupFolderMode
                                           s.GalleryStartupCustomFolder = _galleryStartupCustomFolder
                                           s.GalleryTimelineMode = _galleryTimelineMode
+                                          s.GalleryTileCaptionLeft = _galleryTileCaptionLeft
+                                          s.GalleryTileCaptionRight = _galleryTileCaptionRight
                                       End Sub)
         End Sub
 
@@ -5055,6 +5138,7 @@ Namespace ViewModels
         Public Sub RefreshLocalization()
             BuildAdjustmentGroupItems()
             BuildInfoPanelRowItems()
+            BuildTileCaptionSlots()
             BuildModelGroups()
             BuildLanguageOptions()
             BuildDateFormatOptions()
@@ -5627,6 +5711,59 @@ Namespace ViewModels
         Public Overrides Function ToString() As String
             Return Name
         End Function
+    End Class
+
+    ''' <summary>Ein Eintrag in der Auswahl einer Angabe unter der Kachel.</summary>
+    Public Class TileCaptionOption
+        Public Property Field As TileCaptionField
+        Public Property Name As String = ""
+        Public Overrides Function ToString() As String
+            Return Name
+        End Function
+    End Class
+
+    ''' <summary>Eine Zeile der Angaben unter der Kachel: die Auswahl am linken und am rechten Rand.</summary>
+    Public Class TileCaptionRow
+        Public Property Left As TileCaptionSlot
+        Public Property Right As TileCaptionSlot
+    End Class
+
+    ''' <summary>Eine Angabe unter der Kachel, als Auswahlliste im Dialog. Die
+    ''' Auswahl meldet sich ueber den Rueckruf beim Dialog, der beide Seiten zusammensetzt und
+    ''' speichert.</summary>
+    Public Class TileCaptionSlot
+        Inherits ReactiveObject
+
+        Private ReadOnly _changed As Action
+        Private _selected As TileCaptionOption
+
+        Public Sub New(options As IReadOnlyList(Of TileCaptionOption), field As TileCaptionField, changed As Action)
+            Me.Options = options
+            _changed = changed
+            _selected = options.FirstOrDefault(Function(o) o.Field = field)
+            If _selected Is Nothing Then _selected = options.First()
+        End Sub
+
+        Public ReadOnly Property Options As IReadOnlyList(Of TileCaptionOption)
+
+        Public ReadOnly Property Field As TileCaptionField
+            Get
+                Return _selected.Field
+            End Get
+        End Property
+
+        ''' Nothing kommt, wenn die Liste beim Neuaufbau ihre Eintraege verliert; das ist keine
+        ''' Wahl und wird uebergangen.
+        Public Property SelectedOption As TileCaptionOption
+            Get
+                Return _selected
+            End Get
+            Set(value As TileCaptionOption)
+                If value Is Nothing OrElse value Is _selected Then Return
+                Me.RaiseAndSetIfChanged(_selected, value)
+                _changed?.Invoke()
+            End Set
+        End Property
     End Class
 
     ''' <summary>Ein Eintrag in der Auswahl der Grafikkarten. Der leere Schlüssel ist die

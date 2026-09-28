@@ -1,4 +1,4 @@
-## Unreleased
+## 0.9.54
 
 ### What's new
 
@@ -6,6 +6,12 @@
   calibration values that bring their colors close to a widely used raw development, tuned
   separately for many camera models. The values show up in the Calibration sliders and can be
   changed there; pictures you have already edited stay as they are. It is off by default.
+
+- **Choose the details under gallery tiles.** Settings, Gallery lets you pick what appears below
+  the file name: up to three lines, each with one detail on the left and one on the right, such as
+  dates, size, file type, camera, lens, exposure or place. The list view shows the same details.
+  By default the tile now shows the date the picture was taken instead of the date the file was
+  last changed.
 
 ### Fixes
 
@@ -18,6 +24,9 @@
 
 - The details under gallery tiles no longer run into each other on small tiles; a detail that
   does not fit is left out instead.
+
+- The rating stars on gallery tiles sit closer together, and the heart now lights up under the
+  mouse like the stars do.
 
 - The info panel keeps labels and values tidy in a narrow panel: values stay right-aligned, long
   names break between words, and the camera name no longer repeats the brand. Dimensions show the

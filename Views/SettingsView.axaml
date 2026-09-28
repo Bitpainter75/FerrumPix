@@ -962,6 +962,60 @@
                                           VerticalAlignment="Center"/>
                         </Grid>
 
+                        <!-- Die Angaben unter dem Dateinamen einer Kachel und in der Liste: bis zu
+                             drei Zeilen, je eine Auswahl links und rechts, angeordnet wie unter der
+                             Kachel. Eine Zeile ohne Angabe gibt es dort nicht. -->
+                        <StackPanel Spacing="8">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660">
+                                <TextBlock Text="Angaben unter den Kacheln" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Wählt, was unter dem Dateinamen steht: bis zu drei Zeilen mit je einer Angabe am linken und am rechten Rand. Eine Zeile ohne Angabe entfällt. Dieselben Angaben stehen auch in der Liste. Die Werte kommen aus dem Katalog; hat ein Bild kein Aufnahmedatum, steht dort das Änderungsdatum der Datei." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <StackPanel Spacing="6" MaxWidth="480" HorizontalAlignment="Left">
+                                <Grid ColumnDefinitions="*,*">
+                                    <TextBlock Text="Links" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}"/>
+                                    <TextBlock Grid.Column="1" Text="Rechts" HorizontalAlignment="Right" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}"/>
+                                </Grid>
+                                <ItemsControl ItemsSource="{Binding TileCaptionRows}">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <StackPanel Spacing="6"/>
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+                                                <ComboBox DataContext="{Binding Left}"
+                                                          ItemsSource="{Binding Options}"
+                                                          SelectedItem="{Binding SelectedOption, Mode=TwoWay}"
+                                                          MinWidth="170"
+                                                          HorizontalAlignment="Left"
+                                                          FontSize="{DynamicResource FP.Font.Body}">
+                                                    <ComboBox.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <TextBlock Classes="no-translate" Text="{Binding Name}"/>
+                                                        </DataTemplate>
+                                                    </ComboBox.ItemTemplate>
+                                                </ComboBox>
+                                                <ComboBox Grid.Column="1"
+                                                          DataContext="{Binding Right}"
+                                                          ItemsSource="{Binding Options}"
+                                                          SelectedItem="{Binding SelectedOption, Mode=TwoWay}"
+                                                          MinWidth="170"
+                                                          HorizontalAlignment="Right"
+                                                          FontSize="{DynamicResource FP.Font.Body}">
+                                                    <ComboBox.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <TextBlock Classes="no-translate" Text="{Binding Name}"/>
+                                                        </DataTemplate>
+                                                    </ComboBox.ItemTemplate>
+                                                </ComboBox>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </StackPanel>
+
                         <Grid ColumnDefinitions="*,Auto">
                             <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
                                 <TextBlock Text="Zeitleiste am rechten Rand" FontSize="{DynamicResource FP.Font.Body}"/>

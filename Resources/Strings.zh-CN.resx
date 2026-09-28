@@ -8862,4 +8862,10 @@
   <data name="RAW_Dateien_verschiedener_Kameras_geben_Farben_u_da32f01c" xml:space="preserve">
     <value>不同相机的 RAW 文件还原颜色的方式不同。开启后，FerrumPix 在打开未编辑的 RAW 时会设置“校准”下的滑块，使颜色接近一种常用的 RAW 显影效果，并为部分相机型号单独调校。这些数值显示在滑块中，可在那里修改；已编辑的图片保持不变。</value>
   </data>
+  <data name="Angaben_unter_den_Kacheln_350632fe" xml:space="preserve">
+    <value>缩略图下方的信息</value>
+  </data>
+  <data name="W_hlt_was_unter_dem_Dateinamen_steht_bis_zu_drei_1487b6bc" xml:space="preserve">
+    <value>选择文件名下方显示的内容：最多三行，每行左侧和右侧各一项。没有内容的行不显示。列表显示相同的信息。数值来自目录；若照片没有拍摄日期，则显示文件的修改日期。</value>
+  </data>
 </root>

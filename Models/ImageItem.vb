@@ -19,7 +19,29 @@ Namespace Models
 
         Protected Sub RaisePropertyChanged(<CallerMemberName> Optional name As String = "")
             RaiseEvent PropertyChanged(Me, New PropertyChangedEventArgs(name))
+            ' Die Angabenzeile unter der Kachel setzt sich aus diesen Werten zusammen. An EINER
+            ' Stelle nachgezogen statt in jedem Setter: sonst fehlte die Meldung genau bei dem
+            ' Wert, an den beim Schreiben niemand gedacht hat.
+            If CaptionSources.Contains(name) Then RaiseCaptionChanged()
         End Sub
+
+        Private Shared ReadOnly CaptionSources As New HashSet(Of String)(StringComparer.Ordinal) From {
+            NameOf(DateText), NameOf(DateFileCreatedText), NameOf(DateExifTakenText),
+            NameOf(DimensionsText), NameOf(FileSizeText), NameOf(ExifCamera), NameOf(ExifLens),
+            NameOf(ExifFocalLength), NameOf(ExifAperture), NameOf(ExifShutterSpeed), NameOf(ExifIso),
+            NameOf(PlaceCity), NameOf(PlaceCountry), NameOf(CatalogPlace)}
+
+        ''' <summary>Laesst Kachel und Listenzeile ihre Angaben neu lesen - nach einer geaenderten
+        ''' Wahl in den Einstellungen oder einem neuen Datumsformat.</summary>
+        Public Sub RaiseCaptionChanged()
+            For Each captionName In CaptionNames
+                RaiseEvent PropertyChanged(Me, New PropertyChangedEventArgs(captionName))
+            Next
+        End Sub
+
+        Private Shared ReadOnly CaptionNames As String() = {
+            NameOf(CaptionRow1Left), NameOf(CaptionRow1Right), NameOf(CaptionRow2Left),
+            NameOf(CaptionRow2Right), NameOf(CaptionRow3Left), NameOf(CaptionRow3Right)}
 
         Private Const BackgroundThumbnailPriority As Integer = 0
         Private Const ViewportThumbnailPriority As Integer = 100
@@ -669,6 +691,10 @@ Namespace Models
             ExifCamera = scanned.ExifCamera
             ExifIso = scanned.ExifIso
             ExifAperture = scanned.ExifAperture
+            ExifLens = scanned.ExifLens
+            ExifFocalLength = scanned.ExifFocalLength
+            ExifShutterSpeed = scanned.ExifShutterSpeed
+            SetCatalogPlace(scanned._catalogCity, scanned._catalogCountry, scanned._catalogCountryCode)
             HasExifMetadata = scanned.HasExifMetadata
             HasIptcMetadata = scanned.HasIptcMetadata
             HasXmpMetadata = scanned.HasXmpMetadata
@@ -759,6 +785,72 @@ Namespace Models
                 RaisePropertyChanged()
             End Set
         End Property
+
+        ' Objektiv, Brennweite und Belichtungszeit braucht nur die Angabenzeile unter der Kachel;
+        ' sie kommen auf denselben Wegen aus dem Katalog wie Kamera, ISO und Blende.
+        Private _exifLens As String = ""
+        Public Property ExifLens As String
+            Get
+                Return _exifLens
+            End Get
+            Set(value As String)
+                value = If(value, "")
+                If _exifLens = value Then Return
+                _exifLens = value
+                RaisePropertyChanged()
+            End Set
+        End Property
+
+        Private _exifFocalLength As Double?
+        Public Property ExifFocalLength As Double?
+            Get
+                Return _exifFocalLength
+            End Get
+            Set(value As Double?)
+                If Nullable.Equals(_exifFocalLength, value) Then Return
+                _exifFocalLength = value
+                RaisePropertyChanged()
+            End Set
+        End Property
+
+        ''' Schon fertig formatiert ("1/250 s"), so wie der Katalog sie fuehrt.
+        Private _exifShutterSpeed As String = ""
+        Public Property ExifShutterSpeed As String
+            Get
+                Return _exifShutterSpeed
+            End Get
+            Set(value As String)
+                value = If(value, "")
+                If _exifShutterSpeed = value Then Return
+                _exifShutterSpeed = value
+                RaisePropertyChanged()
+            End Set
+        End Property
+
+        ''' <summary>Der Ort eines LOKALEN Bildes, so wie der Katalog ihn fuehrt. Getrennt von
+        ''' <see cref="PlaceCity"/>, das nur ein Immich-Asset traegt: an dessen Leere erkennt die
+        ''' Info-Leiste, dass sie den Katalog fragen muss. Der Landesname wird erst beim LESEN
+        ''' uebersetzt, damit ein Sprachwechsel ihn mitnimmt.</summary>
+        Public ReadOnly Property CatalogPlace As String
+            Get
+                Return PlacePanelService.Compose(_catalogCity,
+                    PlaceLookupService.LocalizedCountry(_catalogCountryCode, _catalogCountry))
+            End Get
+        End Property
+        Private _catalogCity As String = ""
+        Private _catalogCountry As String = ""
+        Private _catalogCountryCode As String = ""
+
+        Public Sub SetCatalogPlace(city As String, country As String, countryCode As String)
+            city = If(city, "").Trim()
+            country = If(country, "").Trim()
+            countryCode = If(countryCode, "").Trim()
+            If _catalogCity = city AndAlso _catalogCountry = country AndAlso _catalogCountryCode = countryCode Then Return
+            _catalogCity = city
+            _catalogCountry = country
+            _catalogCountryCode = countryCode
+            RaisePropertyChanged(NameOf(CatalogPlace))
+        End Sub
 
         ''' <summary>Aufnahmeort eines IMMICH-Assets, so wie ihn der Server benannt hat.
         '''
@@ -1218,6 +1310,9 @@ Namespace Models
             item.ExifCamera = asset.Camera
             item.ExifIso = asset.Iso
             item.ExifAperture = asset.Aperture
+            item.ExifLens = asset.Lens
+            item.ExifFocalLength = asset.FocalLengthMm
+            item.ExifShutterSpeed = asset.ShutterSpeed
             item.PlaceCity = If(asset.City, "")
             item.PlaceCountry = If(asset.Country, "")
             Dim created = If(asset.FileCreatedAt.HasValue, asset.FileCreatedAt.Value, DateTime.MinValue)
@@ -1325,6 +1420,9 @@ Namespace Models
             ExifCamera = asset.Camera
             ExifIso = asset.Iso
             ExifAperture = asset.Aperture
+            ExifLens = asset.Lens
+            ExifFocalLength = asset.FocalLengthMm
+            ExifShutterSpeed = asset.ShutterSpeed
             PlaceCity = If(asset.City, "")
             PlaceCountry = If(asset.Country, "")
             If replaceMissingDates OrElse asset.ExifDateTaken.HasValue Then ExifDateTaken = asset.ExifDateTaken
@@ -1424,6 +1522,118 @@ Namespace Models
                 Return LocalizationService.FormatDateTime(_exifDateModified.Value)
             End Get
         End Property
+
+        ' Die sechs Angaben unter der Kachel und in der Liste, drei Zeilen zu je links und rechts.
+        ' Welche Angabe wo steht, bestimmt die Wahl in den Einstellungen (TileCaptionSettings).
+        Public ReadOnly Property CaptionRow1Left As String
+            Get
+                Return CaptionText(TileCaptionSettings.LeftField(0))
+            End Get
+        End Property
+
+        Public ReadOnly Property CaptionRow1Right As String
+            Get
+                Return CaptionText(TileCaptionSettings.RightField(0))
+            End Get
+        End Property
+
+        Public ReadOnly Property CaptionRow2Left As String
+            Get
+                Return CaptionText(TileCaptionSettings.LeftField(1))
+            End Get
+        End Property
+
+        Public ReadOnly Property CaptionRow2Right As String
+            Get
+                Return CaptionText(TileCaptionSettings.RightField(1))
+            End Get
+        End Property
+
+        Public ReadOnly Property CaptionRow3Left As String
+            Get
+                Return CaptionText(TileCaptionSettings.LeftField(2))
+            End Get
+        End Property
+
+        Public ReadOnly Property CaptionRow3Right As String
+            Get
+                Return CaptionText(TileCaptionSettings.RightField(2))
+            End Get
+        End Property
+
+        ''' <summary>Der Text einer Angabe fuer die Zeilen unter der Kachel. Leer, wenn das Bild
+        ''' den Wert nicht hat; die Zeile selbst bleibt dann trotzdem stehen (siehe
+        ''' TileCaptionSettings, gleich hohe Kacheln).
+        '''
+        ''' <para>Das AUFNAHMEDATUM faellt auf das Aenderungsdatum der Datei zurueck, wenn es keines
+        ''' gibt (Bildschirmfotos, PNG, manche Videos). Sonst stuende bei solchen Bildern gar kein
+        ''' Datum unter der Kachel. Bis der Metadatenlauf ein Bild gelesen hat, steht deshalb
+        ''' kurz das Dateidatum da.</para>
+        '''
+        ''' <para>Ein ORDNER hat nur ein Datum und keine Aufnahmedaten: jede Datumsangabe zeigt sein
+        ''' Aenderungsdatum, die Dateigroesse das Wort "Ordner", alles andere bleibt leer.</para></summary>
+        Private Function CaptionText(field As TileCaptionField) As String
+            If IsFolder Then
+                Select Case field
+                    Case TileCaptionField.DateTaken, TileCaptionField.FileModified, TileCaptionField.FileCreated
+                        Return FileDateText(DateModified)
+                    Case TileCaptionField.FileSize
+                        Return FileSizeText
+                    Case Else
+                        Return ""
+                End Select
+            End If
+            Dim invariant = Globalization.CultureInfo.InvariantCulture
+            Select Case field
+                Case TileCaptionField.DateTaken
+                    If _exifDateTaken.HasValue Then Return LocalizationService.FormatDateTime(_exifDateTaken.Value)
+                    EnsureFileInfoLoaded()
+                    Return FileDateText(DateModified)
+                Case TileCaptionField.FileModified
+                    EnsureFileInfoLoaded()
+                    Return FileDateText(DateModified)
+                Case TileCaptionField.FileCreated
+                    EnsureFileInfoLoaded()
+                    Return FileDateText(_fileCreatedAt)
+                Case TileCaptionField.Dimensions
+                    Return DimensionsText
+                Case TileCaptionField.Megapixels
+                    If _imageWidth <= 0 OrElse _imageHeight <= 0 Then Return ""
+                    Return $"{_imageWidth * CDbl(_imageHeight) / 1_000_000.0:F1} MP"
+                Case TileCaptionField.FileSize
+                    Return FileSizeText
+                Case TileCaptionField.FileType
+                    ' Ueber den angezeigten Namen: ein Immich-Asset hat einen Pseudo-Pfad ohne Endung.
+                    Return IO.Path.GetExtension(DisplayFileName).TrimStart("."c).ToUpperInvariant()
+                Case TileCaptionField.Camera
+                    Return ImageInfoService.DisplayCameraName(_exifCamera)
+                Case TileCaptionField.Lens
+                    Return _exifLens
+                Case TileCaptionField.FocalLength
+                    If Not _exifFocalLength.HasValue Then Return ""
+                    Return _exifFocalLength.Value.ToString("0.#", invariant) & " mm"
+                Case TileCaptionField.Aperture
+                    If Not _exifAperture.HasValue Then Return ""
+                    Return "f/" & _exifAperture.Value.ToString("0.#", invariant)
+                Case TileCaptionField.ShutterSpeed
+                    Return _exifShutterSpeed
+                Case TileCaptionField.Iso
+                    If Not _exifIso.HasValue Then Return ""
+                    Return "ISO " & _exifIso.Value.ToString(invariant)
+                Case TileCaptionField.Place
+                    ' Ein Immich-Asset traegt den Ort des Servers, ein lokales Bild den des Katalogs.
+                    If _placeCity.Length > 0 OrElse _placeCountry.Length > 0 Then Return PlacePanelService.TextFor(Me)
+                    Return CatalogPlace
+                Case Else
+                    Return ""
+            End Select
+        End Function
+
+        ''' Ein Datum, das es nicht gibt (DateTime.MinValue), ist leer und nicht der 1. Januar 0001.
+        Private Shared Function FileDateText(value As DateTime) As String
+            If value = DateTime.MinValue Then Return ""
+            Return LocalizationService.FormatDateTime(value)
+        End Function
 
         Public ReadOnly Property Thumbnail As Bitmap
             Get

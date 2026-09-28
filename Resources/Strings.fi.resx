@@ -8904,4 +8904,10 @@
   <data name="RAW_Dateien_verschiedener_Kameras_geben_Farben_u_da32f01c" xml:space="preserve">
     <value>Eri kameroiden raw-tiedostot toistavat värit eri tavoin. Kun asetus on päällä, FerrumPix säätää muokkaamattoman raw-tiedoston avautuessa Kalibrointi-kohdan liukusäätimet niin, että värit ovat lähellä yleistä raw-kehitystä, joillekin kameramalleille erikseen viritettynä. Arvot näkyvät liukusäätimissä ja niitä voi muuttaa siellä; jo muokatut kuvat pysyvät ennallaan.</value>
   </data>
+  <data name="Angaben_unter_den_Kacheln_350632fe" xml:space="preserve">
+    <value>Tiedot ruutujen alla</value>
+  </data>
+  <data name="W_hlt_was_unter_dem_Dateinamen_steht_bis_zu_drei_1487b6bc" xml:space="preserve">
+    <value>Valitsee, mitä tiedostonimen alla näkyy: enintään kolme riviä, joilla kullakin yksi tieto vasemmassa ja yksi oikeassa reunassa. Rivi ilman tietoja jätetään pois. Luettelo näyttää samat tiedot. Arvot tulevat luettelosta; jos kuvalla ei ole kuvauspäivää, sen tilalla näkyy tiedoston muokkauspäivä.</value>
+  </data>
 </root>

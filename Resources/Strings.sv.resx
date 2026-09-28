@@ -8904,4 +8904,10 @@
   <data name="RAW_Dateien_verschiedener_Kameras_geben_Farben_u_da32f01c" xml:space="preserve">
     <value>Raw-filer från olika kameror återger färger olika. När det är på ställer FerrumPix in reglagen under Kalibrering när en oredigerad raw-fil öppnas, så att färgerna kommer nära en vanlig raw-framkallning, för vissa kameramodeller särskilt avstämt. Värdena syns i reglagen och kan ändras där; redan redigerade bilder förblir oförändrade.</value>
   </data>
+  <data name="Angaben_unter_den_Kacheln_350632fe" xml:space="preserve">
+    <value>Uppgifter under rutorna</value>
+  </data>
+  <data name="W_hlt_was_unter_dem_Dateinamen_steht_bis_zu_drei_1487b6bc" xml:space="preserve">
+    <value>Väljer vad som står under filnamnet: upp till tre rader med en uppgift vid vänster och en vid höger kant. En rad utan uppgifter visas inte. Listan visar samma uppgifter. Värdena kommer från katalogen; saknar en bild tagningsdatum visas filens ändringsdatum i stället.</value>
+  </data>
 </root>

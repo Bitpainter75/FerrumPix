@@ -8904,4 +8904,10 @@
   <data name="RAW_Dateien_verschiedener_Kameras_geben_Farben_u_da32f01c" xml:space="preserve">
     <value>Raw-bestanden van verschillende camera's geven kleuren verschillend weer. Ingeschakeld zet FerrumPix bij het openen van een onbewerkt raw-bestand de schuifregelaars onder Kalibratie zo, dat de kleuren een veelgebruikte raw-ontwikkeling benaderen, voor sommige cameramodellen apart afgestemd. De waarden staan zichtbaar in de schuifregelaars en zijn daar aan te passen; al bewerkte foto's blijven ongewijzigd.</value>
   </data>
+  <data name="Angaben_unter_den_Kacheln_350632fe" xml:space="preserve">
+    <value>Gegevens onder de tegels</value>
+  </data>
+  <data name="W_hlt_was_unter_dem_Dateinamen_steht_bis_zu_drei_1487b6bc" xml:space="preserve">
+    <value>Kiest wat onder de bestandsnaam staat: maximaal drie regels met elk een gegeven aan de linker- en een aan de rechterrand. Een regel zonder gegevens vervalt. De lijst toont dezelfde gegevens. De waarden komen uit de catalogus; heeft een foto geen opnamedatum, dan staat daar de wijzigingsdatum van het bestand.</value>
+  </data>
 </root>

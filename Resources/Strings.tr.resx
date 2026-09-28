@@ -8908,4 +8908,10 @@
   <data name="RAW_Dateien_verschiedener_Kameras_geben_Farben_u_da32f01c" xml:space="preserve">
     <value>Farklı kameraların RAW dosyaları renkleri farklı yansıtır. Açıkken FerrumPix, düzenlenmemiş bir RAW açıldığında Kalibrasyon altındaki kaydırıcıları renkler yaygın bir RAW banyosuna yaklaşacak şekilde ayarlar; bazı kamera modelleri için ayrıca ince ayar yapılmıştır. Değerler kaydırıcılarda görünür ve orada değiştirilebilir; önceden düzenlenmiş resimler olduğu gibi kalır.</value>
   </data>
+  <data name="Angaben_unter_den_Kacheln_350632fe" xml:space="preserve">
+    <value>Karoların altındaki bilgiler</value>
+  </data>
+  <data name="W_hlt_was_unter_dem_Dateinamen_steht_bis_zu_drei_1487b6bc" xml:space="preserve">
+    <value>Dosya adının altında ne görüneceğini seçer: her birinde sol ve sağ kenarda birer bilgi bulunan en fazla üç satır. Bilgi içermeyen satır gösterilmez. Liste aynı bilgileri gösterir. Değerler katalogdan gelir; fotoğrafın çekim tarihi yoksa dosyanın değiştirilme tarihi gösterilir.</value>
+  </data>
 </root>

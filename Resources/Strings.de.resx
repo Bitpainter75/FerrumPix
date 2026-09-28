@@ -8882,4 +8882,10 @@
   <data name="RAW_Dateien_verschiedener_Kameras_geben_Farben_u_da32f01c" xml:space="preserve">
     <value>RAW-Dateien verschiedener Kameras geben Farben unterschiedlich wieder. Eingeschaltet stellt FerrumPix beim Öffnen einer unbearbeiteten RAW die Regler unter Kalibrierung so ein, dass die Farben einer verbreiteten RAW-Entwicklung nahekommen, für einige Kameramodelle eigens abgestimmt. Die Werte stehen sichtbar in den Reglern und lassen sich dort ändern; bereits bearbeitete Bilder bleiben unverändert.</value>
   </data>
+  <data name="Angaben_unter_den_Kacheln_350632fe" xml:space="preserve">
+    <value>Angaben unter den Kacheln</value>
+  </data>
+  <data name="W_hlt_was_unter_dem_Dateinamen_steht_bis_zu_drei_1487b6bc" xml:space="preserve">
+    <value>Wählt, was unter dem Dateinamen steht: bis zu drei Zeilen mit je einer Angabe am linken und am rechten Rand. Eine Zeile ohne Angabe entfällt. Dieselben Angaben stehen auch in der Liste. Die Werte kommen aus dem Katalog; hat ein Bild kein Aufnahmedatum, steht dort das Änderungsdatum der Datei.</value>
+  </data>
 </root>

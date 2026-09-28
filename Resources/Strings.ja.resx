@@ -8904,4 +8904,10 @@
   <data name="RAW_Dateien_verschiedener_Kameras_geben_Farben_u_da32f01c" xml:space="preserve">
     <value>カメラによって RAW ファイルの色の再現は異なります。オンにすると、未編集の RAW を開くときに FerrumPix が「キャリブレーション」のスライダーを設定し、広く使われている RAW 現像に近い色にします。一部のカメラ機種には個別に調整した値を使います。値はスライダーに表示され、そこで変更できます。編集済みの写真は変わりません。</value>
   </data>
+  <data name="Angaben_unter_den_Kacheln_350632fe" xml:space="preserve">
+    <value>サムネイルの下に表示する情報</value>
+  </data>
+  <data name="W_hlt_was_unter_dem_Dateinamen_steht_bis_zu_drei_1487b6bc" xml:space="preserve">
+    <value>ファイル名の下に表示する内容を選びます。最大三行で、各行の左端と右端に一つずつ表示します。項目のない行は表示されません。リストにも同じ情報が表示されます。値はカタログから取得し、撮影日時がない写真ではファイルの更新日時を表示します。</value>
+  </data>
 </root>

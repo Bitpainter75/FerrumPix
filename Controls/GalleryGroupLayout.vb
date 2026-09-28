@@ -45,6 +45,10 @@ Namespace Controls
         ' Woran das gemessene Mass festgemacht ist: Kachelbreite und Schriftgrad. Siehe AdoptTileSize.
         Private _latchedWidth As Double = 0
         Private _latchedFontOffset As Integer = Integer.MinValue
+        ' Die Zahl der Angabenzeilen unter der Kachel ist waehlbar und aendert die Hoehe bei
+        ' GLEICHER Breite. Ohne sie im Schluessel blieb nach einer weiteren Zeile die alte Hoehe
+        ' stehen, und die neue Zeile war abgeschnitten.
+        Private _latchedCaptionRows As Integer = -1
 
         ' Was dieser Durchgang gebaut hat, mit der Lage, in die es gehoert. ArrangeOverride laeuft
         ' unmittelbar nach MeasureOverride und ordnet genau diese Elemente an.
@@ -162,8 +166,8 @@ Namespace Controls
         ''' Sichtfenster, und die ist beim Rollen jedes Mal eine andere. Duerfte jede von ihnen die
         ''' Zeilenhoehe neu setzen, geriete die Ansicht bei zwei nur minimal verschieden hohen Kacheln
         ''' in einen Kreislauf: neue Hoehe, neue Zeilentabelle, neue Messung. Der Wert wird deshalb an
-        ''' Kachelbreite und Schriftgrad festgemacht - die beiden Dinge, die ihn wirklich aendern - und
-        ''' nur bei deren Wechsel neu genommen. Dieselbe Regel galt schon fuer die gemessene
+        ''' Kachelbreite, Schriftgrad und die Zahl der Angabenzeilen festgemacht - die Dinge, die ihn
+        ''' wirklich aendern - und nur bei deren Wechsel neu genommen. Dieselbe Regel galt schon fuer die gemessene
         ''' Zeilenhoehe des Rasters, aus demselben Grund.</para></summary>
         Private Function AdoptTileSize(measured As Size) As Boolean
             Dim width = measured.Width
@@ -171,9 +175,12 @@ Namespace Controls
             If width <= 0 OrElse height <= 0 Then Return False
 
             Dim fontOffset = FontScaleService.CurrentOffset
-            If Math.Abs(width - _latchedWidth) < 0.5 AndAlso fontOffset = _latchedFontOffset Then Return False
+            Dim captionRows = TileCaptionSettings.UsedRowCount
+            If Math.Abs(width - _latchedWidth) < 0.5 AndAlso fontOffset = _latchedFontOffset AndAlso
+               captionRows = _latchedCaptionRows Then Return False
             _latchedWidth = width
             _latchedFontOffset = fontOffset
+            _latchedCaptionRows = captionRows
 
             If Math.Abs(width - _tileWidth) < 0.5 AndAlso Math.Abs(height - _tileHeight) < 0.5 Then Return False
             _tileWidth = width

@@ -251,6 +251,12 @@ Namespace Services
         ''' dicht, in der Galerie mit Abstand.
         Public Property GalleryTileFrame As Boolean = True
         Public Property FilmstripTileFrame As Boolean = True
+        ''' Die Angaben unter einer Galeriekachel und in der Liste: bis zu drei Zeilen, je Zeile
+        ''' eine Angabe links und eine rechts, hier je Seite die drei Zeilen (siehe
+        ''' Models.TileCaptionSettings). Ab Werk eine Zeile mit dem Aufnahmedatum links und der
+        ''' Dateigroesse rechts. Eine leere Zeichenkette heisst "nichts auf dieser Seite".
+        Public Property GalleryTileCaptionLeft As String = Models.TileCaptionSettings.DefaultLeft
+        Public Property GalleryTileCaptionRight As String = Models.TileCaptionSettings.DefaultRight
         ''' Ob "Speichern unter" das GESCHRIEBENE Bild in den Editor holt. AB WERK AUS: die Arbeit
         ''' geht am Ausgangsbild weiter, die neue Datei liegt nur auf der Platte. Eingeschaltet
         ''' wechselt der Editor auf die Zieldatei und arbeitet dort weiter.

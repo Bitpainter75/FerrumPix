@@ -397,6 +397,38 @@ Namespace ViewModels
         ' virtualisierte Scroll-Rechnung driftete mit der Scrolltiefe.
         Private Const GridItemLabelRowHeight As Double = 59
         Private Const GridItemCardBorderHeight As Double = 4
+        ' Jede weitere Angabenzeile unter dem Namen: 7 Abstand + eine Zeile FP.Font.Body (12) mal
+        ' 1,35. GridItemLabelRowHeight rechnet mit genau EINER Angabenzeile; ohne jede faellt sie
+        ' samt Abstand weg.
+        Private Const GridItemCaptionRowHeight As Double = 23
+
+        ''' <summary>Steht die erste, zweite, dritte Angabenzeile unter der Kachel bzw. in der
+        ''' Liste? Nur nach der Wahl, nie nach dem einzelnen Bild (siehe TileCaptionSettings).</summary>
+        Public ReadOnly Property IsTileCaptionRow1Visible As Boolean
+            Get
+                Return TileCaptionSettings.IsRowUsed(0)
+            End Get
+        End Property
+
+        Public ReadOnly Property IsTileCaptionRow2Visible As Boolean
+            Get
+                Return TileCaptionSettings.IsRowUsed(1)
+            End Get
+        End Property
+
+        Public ReadOnly Property IsTileCaptionRow3Visible As Boolean
+            Get
+                Return TileCaptionSettings.IsRowUsed(2)
+            End Get
+        End Property
+
+        ''' <summary>Wie viele Angabenzeilen stehen. Die Ansicht fuehrt es im Schluessel ihrer
+        ''' gemerkten Kachelhoehe, sonst bliebe die alte Hoehe nach einer neuen Wahl stehen.</summary>
+        Public ReadOnly Property TileCaptionRowCount As Integer
+            Get
+                Return TileCaptionSettings.UsedRowCount
+            End Get
+        End Property
 
         ''' <summary>Der Abstand zwischen zwei Kacheln, aus der Einstellung. Er steckt im AUSSENRAND
         ''' der Kachel (je Seite die Haelfte), und genau deshalb geht er hier ein: die Spaltenzahl
@@ -413,7 +445,8 @@ Namespace ViewModels
 
         Public ReadOnly Property GridItemSlotHeight As Double
             Get
-                Return ThumbnailImageHeight + GridItemLabelRowHeight + GridItemCardBorderHeight + TileGap
+                Dim labelHeight = GridItemLabelRowHeight + (TileCaptionRowCount - 1) * GridItemCaptionRowHeight
+                Return ThumbnailImageHeight + labelHeight + GridItemCardBorderHeight + TileGap
             End Get
         End Property
 
@@ -1830,6 +1863,9 @@ Namespace ViewModels
             _filterFavorite = settings.GalleryFilterFavorite
             _filterRatings.UnionWith(settings.GalleryFilterRatings)
             _filterFileType = settings.GalleryFilterFileType
+            ' Die Galerie lebt so lange wie das Fenster; die Anmeldung haelt sie also nicht
+            ' ungebuehrlich am Leben (siehe InfoPanelRowSettings, dasselbe Muster).
+            AddHandler TileCaptionSettings.Changed, AddressOf OnTileCaptionSettingsChanged
             Items = New BulkObservableCollection(Of ImageItem)()
             ' Die Gruppen haengen an Items. Statt an jedem der vielen Wege, die die Liste anfassen, einen
             ' Aufruf nachzutragen (einer wird immer vergessen), horcht die Gruppenansicht an der Sammlung
@@ -8365,6 +8401,10 @@ Namespace ViewModels
                 item.ExifCamera = meta.Camera
                 item.ExifIso = meta.Iso
                 item.ExifAperture = meta.Aperture
+                item.ExifLens = meta.Lens
+                item.ExifFocalLength = meta.FocalLengthMm
+                item.ExifShutterSpeed = meta.ShutterSpeed
+                item.SetCatalogPlace(meta.City, meta.Country, meta.CountryCode)
                 item.HasExifMetadata = meta.HasExifMetadata
                 item.HasIptcMetadata = meta.HasIptcMetadata
                 item.HasXmpMetadata = meta.HasXmpMetadata
@@ -8477,6 +8517,12 @@ Namespace ViewModels
                                                                Dim camera = fields.Camera
                                                                Dim iso = fields.Iso
                                                                Dim aperture = fields.Aperture
+                                                               Dim lens = fields.Lens
+                                                               Dim focalLength = fields.FocalLengthMm
+                                                               Dim shutterSpeed = fields.ShutterSpeed
+                                                               Dim city = fields.City
+                                                               Dim country = fields.Country
+                                                               Dim countryCode = fields.CountryCode
                                                                Await Dispatcher.UIThread.InvokeAsync(Sub()
                                                                                                           If cancellationToken.IsCancellationRequested Then Return
                                                                                                           item.ImageWidth = width
@@ -8492,6 +8538,10 @@ Namespace ViewModels
                                                                                                           item.ExifCamera = camera
                                                                                                           item.ExifIso = iso
                                                                                                           item.ExifAperture = aperture
+                                                                                                          item.ExifLens = lens
+                                                                                                          item.ExifFocalLength = focalLength
+                                                                                                          item.ExifShutterSpeed = shutterSpeed
+                                                                                                          item.SetCatalogPlace(city, country, countryCode)
                                                                                                           item.HasExifMetadata = hasExif
                                                                                                           item.HasIptcMetadata = hasIptc
                                                                                                           item.HasXmpMetadata = hasXmp
@@ -9019,6 +9069,10 @@ Namespace ViewModels
                                 item.ExifCamera = m.Camera
                                 item.ExifIso = m.Iso
                                 item.ExifAperture = m.Aperture
+                                item.ExifLens = m.Lens
+                                item.ExifFocalLength = m.FocalLengthMm
+                                item.ExifShutterSpeed = m.ShutterSpeed
+                                item.SetCatalogPlace(m.City, m.Country, m.CountryCode)
                                 item.HasExifMetadata = m.HasExifMetadata
                                 item.HasIptcMetadata = m.HasIptcMetadata
                                 item.HasXmpMetadata = m.HasXmpMetadata
@@ -12914,6 +12968,30 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(FooterStatusText))
             Me.RaisePropertyChanged(NameOf(CurrentFolderName))
             FilterAndSort()
+            ' Ein neues Datumsformat kommt ebenfalls hier an, und die Zeile unter der Kachel
+            ' zeigt Daten.
+            RefreshTileCaptions()
+        End Sub
+
+        ''' <summary>Laesst die angezeigten Kacheln ihre Angaben neu lesen. Nur die angezeigten:
+        ''' eine Kachel, die erst spaeter ins Bild kommt, liest beim Binden ohnehin den aktuellen
+        ''' Stand.</summary>
+        Private Sub RefreshTileCaptions()
+            For Each item In Items
+                item?.RaiseCaptionChanged()
+            Next
+        End Sub
+
+        ''' <summary>Eine neue Wahl kann Zeilen dazunehmen oder wegnehmen, und damit aendert sich
+        ''' die Hoehe jeder Kachel. Deshalb auch alles, was an der Hoehe haengt, wie beim
+        ''' Kachelabstand.</summary>
+        Private Sub OnTileCaptionSettingsChanged()
+            Me.RaisePropertyChanged(NameOf(IsTileCaptionRow1Visible))
+            Me.RaisePropertyChanged(NameOf(IsTileCaptionRow2Visible))
+            Me.RaisePropertyChanged(NameOf(IsTileCaptionRow3Visible))
+            Me.RaisePropertyChanged(NameOf(TileCaptionRowCount))
+            RefreshTileSpacing()
+            RefreshTileCaptions()
         End Sub
 
         Private Sub SaveFileBrowserSettings()

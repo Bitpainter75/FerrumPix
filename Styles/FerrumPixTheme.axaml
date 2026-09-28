@@ -1795,6 +1795,16 @@
         <Setter Property="Background" Value="Transparent"/>
         <Setter Property="BorderBrush" Value="Transparent"/>
     </Style>
+    <!-- Auf der Kachel stehen Herz und Sterne nebeneinander; die Sterne zeigen beim Ueberfahren den
+         Hintergrund des Standardknopfs, also das Herz auch. Sonst sah es aus, als liesse es sich
+         nicht anklicken. -->
+    <Style Selector="Button.image-favorite-btn.tile-action-hit">
+        <Setter Property="CornerRadius" Value="4"/>
+    </Style>
+    <Style Selector="Button.image-favorite-btn.tile-action-hit:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource FP.Bg.Hover}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Border.Strong}"/>
+    </Style>
     <Style Selector="icons|SvgIcon.fav-heart">
         <Setter Property="IconBrush" Value="{DynamicResource FP.Text.Secondary}"/>
     </Style>

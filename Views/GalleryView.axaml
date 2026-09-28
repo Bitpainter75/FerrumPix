@@ -81,6 +81,13 @@
             <Setter Property="Opacity" Value="0"/>
             <Setter Property="IsHitTestVisible" Value="False"/>
         </Style>
+        <!-- Die sechs Plaetze der Angabenzeile unter einer Kachel sehen gleich aus. -->
+        <Style Selector="TextBlock.tile-caption">
+            <Setter Property="Foreground" Value="{DynamicResource FP.Text.Secondary}"/>
+            <Setter Property="FontSize" Value="{DynamicResource FP.Font.Body}"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+        </Style>
     </UserControl.Styles>
 
     <!-- Die Fusszeile steht in einer Auto-Zeile statt in einer festen 40er: ausgeblendet faellt die
@@ -2050,9 +2057,13 @@
                                                             HorizontalAlignment="Left"
                                                             VerticalAlignment="Bottom"
                                                             Margin="8,0,0,8"
-                                                            Spacing="1"
+                                                            Spacing="0"
                                                             IsVisible="{Binding IsImage}">
-                                                    <Button Classes="star-btn compact tile-action-hit" Background="Transparent" BorderThickness="0" Padding="0" Width="28" Height="28"
+                                                    <!-- 22 breit wie die Sterne der Fusszeile, ohne Abstand: die
+                                                         Reihe bleibt lueckenlos treffbar, und die Sterne stehen
+                                                         nicht mehr so weit auseinander. 28 hoch wie jeder Knopf
+                                                         auf der Kachel. -->
+                                                    <Button Classes="star-btn compact tile-action-hit" Background="Transparent" BorderThickness="0" Padding="0" Width="22" Height="28"
                                                             Classes.active="{Binding Rating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=1}"
                                                             Tag="1"
                                                             Click="OnHoverSetRatingClick">
@@ -2060,7 +2071,7 @@
                                                                        Classes="rating-star"
                                                                        Width="16" Height="16" />
                                                     </Button>
-                                                    <Button Classes="star-btn compact tile-action-hit" Background="Transparent" BorderThickness="0" Padding="0" Width="28" Height="28"
+                                                    <Button Classes="star-btn compact tile-action-hit" Background="Transparent" BorderThickness="0" Padding="0" Width="22" Height="28"
                                                             Classes.active="{Binding Rating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=2}"
                                                             Tag="2"
                                                             Click="OnHoverSetRatingClick">
@@ -2068,7 +2079,7 @@
                                                                        Classes="rating-star"
                                                                        Width="16" Height="16" />
                                                     </Button>
-                                                    <Button Classes="star-btn compact tile-action-hit" Background="Transparent" BorderThickness="0" Padding="0" Width="28" Height="28"
+                                                    <Button Classes="star-btn compact tile-action-hit" Background="Transparent" BorderThickness="0" Padding="0" Width="22" Height="28"
                                                             Classes.active="{Binding Rating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=3}"
                                                             Tag="3"
                                                             Click="OnHoverSetRatingClick">
@@ -2076,7 +2087,7 @@
                                                                        Classes="rating-star"
                                                                        Width="16" Height="16" />
                                                     </Button>
-                                                    <Button Classes="star-btn compact tile-action-hit" Background="Transparent" BorderThickness="0" Padding="0" Width="28" Height="28"
+                                                    <Button Classes="star-btn compact tile-action-hit" Background="Transparent" BorderThickness="0" Padding="0" Width="22" Height="28"
                                                             Classes.active="{Binding Rating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=4}"
                                                             Tag="4"
                                                             Click="OnHoverSetRatingClick">
@@ -2084,7 +2095,7 @@
                                                                        Classes="rating-star"
                                                                        Width="16" Height="16" />
                                                     </Button>
-                                                    <Button Classes="star-btn compact tile-action-hit" Background="Transparent" BorderThickness="0" Padding="0" Width="28" Height="28"
+                                                    <Button Classes="star-btn compact tile-action-hit" Background="Transparent" BorderThickness="0" Padding="0" Width="22" Height="28"
                                                             Classes.active="{Binding Rating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=5}"
                                                             Tag="5"
                                                             Click="OnHoverSetRatingClick">
@@ -2235,29 +2246,29 @@
                                                                FontWeight="SemiBold"
                                                                TextTrimming="CharacterEllipsis"/>
                                                 </Grid>
-                                                <!-- Datum und Maße links, die Dateigröße rechts. Reicht
-                                                     die Breite nicht, fällt eine Angabe ganz weg statt
-                                                     sich unter die nächste zu schieben (CaptionRowPanel):
-                                                     zuerst das Datum, dann die Maße. Die Reihenfolge der
-                                                     Kinder ist die Rangfolge. -->
-                                                <icons:CaptionRowPanel Spacing="8">
-                                                    <TextBlock Text="{Binding DateText}"
-                                                               Foreground="{DynamicResource FP.Text.Secondary}"
-                                                               FontSize="{DynamicResource FP.Font.Body}"
-                                                               VerticalAlignment="Center"
-                                                               TextTrimming="CharacterEllipsis"/>
-                                                    <TextBlock Text="{Binding DimensionsText}"
-                                                               IsVisible="{Binding DimensionsText, Converter={x:Static conv:StringConverters.IsNotNullOrEmpty}}"
-                                                               Foreground="{DynamicResource FP.Text.Secondary}"
-                                                               FontSize="{DynamicResource FP.Font.Body}"
-                                                               VerticalAlignment="Center"
-                                                               TextTrimming="CharacterEllipsis"/>
-                                                    <TextBlock Text="{Binding FileSizeText}"
-                                                               HorizontalAlignment="Right"
-                                                               Foreground="{DynamicResource FP.Text.Secondary}"
-                                                               FontSize="{DynamicResource FP.Font.Body}"
-                                                               VerticalAlignment="Center"
-                                                               TextTrimming="CharacterEllipsis"/>
+                                                <!-- Bis zu drei Zeilen mit je einer Angabe links und
+                                                     rechts; was darauf steht, waehlt man in den
+                                                     Einstellungen (TileCaptionSettings). Ob eine Zeile
+                                                     steht, haengt NUR an der Wahl, nie am Bild: die
+                                                     Kacheln des Rasters muessen gleich hoch sein. Eine
+                                                     leere Angabe bleibt deshalb sichtbar und haelt die
+                                                     Zeilenhoehe. Reicht die Breite nicht, faellt die linke
+                                                     Angabe ganz weg statt sich unter die rechte zu
+                                                     schieben (CaptionRowPanel). -->
+                                                <icons:CaptionRowPanel Spacing="8"
+                                                                       IsVisible="{Binding DataContext.IsTileCaptionRow1Visible, RelativeSource={RelativeSource AncestorType=UserControl}}">
+                                                    <TextBlock Classes="no-translate tile-caption" Text="{Binding CaptionRow1Left}"/>
+                                                    <TextBlock Classes="no-translate tile-caption" Text="{Binding CaptionRow1Right}" HorizontalAlignment="Right"/>
+                                                </icons:CaptionRowPanel>
+                                                <icons:CaptionRowPanel Spacing="8"
+                                                                       IsVisible="{Binding DataContext.IsTileCaptionRow2Visible, RelativeSource={RelativeSource AncestorType=UserControl}}">
+                                                    <TextBlock Classes="no-translate tile-caption" Text="{Binding CaptionRow2Left}"/>
+                                                    <TextBlock Classes="no-translate tile-caption" Text="{Binding CaptionRow2Right}" HorizontalAlignment="Right"/>
+                                                </icons:CaptionRowPanel>
+                                                <icons:CaptionRowPanel Spacing="8"
+                                                                       IsVisible="{Binding DataContext.IsTileCaptionRow3Visible, RelativeSource={RelativeSource AncestorType=UserControl}}">
+                                                    <TextBlock Classes="no-translate tile-caption" Text="{Binding CaptionRow3Left}"/>
+                                                    <TextBlock Classes="no-translate tile-caption" Text="{Binding CaptionRow3Right}" HorizontalAlignment="Right"/>
                                                 </icons:CaptionRowPanel>
                                             </StackPanel>
                                         </Border>
@@ -2561,20 +2572,29 @@
                                                        FontSize="{DynamicResource FP.Font.Small}"
                                                        TextTrimming="CharacterEllipsis"/>
                                         </StackPanel>
-                                        <TextBlock Grid.Column="2"
-                                                   Text="{Binding DateText}"
-                                                   Foreground="{DynamicResource FP.Text.Secondary}"
-                                                   VerticalAlignment="Center"/>
-                                        <TextBlock Grid.Column="3"
-                                                   Text="{Binding DimensionsText}"
-                                                   Foreground="{DynamicResource FP.Text.Secondary}"
-                                                   VerticalAlignment="Center"/>
-                                        <TextBlock Grid.Column="4"
-                                                   Text="{Binding FileSizeText}"
-                                                   Foreground="{DynamicResource FP.Text.Secondary}"
-                                                   HorizontalAlignment="Right"
-                                                   VerticalAlignment="Center"
-                                                   Margin="0,0,14,0"/>
+                                        <!-- Dieselben Angaben wie unter der Kachel, dieselben
+                                             Zeilen uebereinander. Die Listenzeile hat eine feste
+                                             Hoehe, drei Zeilen passen hinein. -->
+                                        <StackPanel Grid.Column="2" Grid.ColumnSpan="3"
+                                                    VerticalAlignment="Center"
+                                                    Spacing="2"
+                                                    Margin="0,0,14,0">
+                                            <icons:CaptionRowPanel Spacing="8"
+                                                                   IsVisible="{Binding DataContext.IsTileCaptionRow1Visible, RelativeSource={RelativeSource AncestorType=UserControl}}">
+                                                <TextBlock Classes="no-translate tile-caption" Text="{Binding CaptionRow1Left}"/>
+                                                <TextBlock Classes="no-translate tile-caption" Text="{Binding CaptionRow1Right}" HorizontalAlignment="Right"/>
+                                            </icons:CaptionRowPanel>
+                                            <icons:CaptionRowPanel Spacing="8"
+                                                                   IsVisible="{Binding DataContext.IsTileCaptionRow2Visible, RelativeSource={RelativeSource AncestorType=UserControl}}">
+                                                <TextBlock Classes="no-translate tile-caption" Text="{Binding CaptionRow2Left}"/>
+                                                <TextBlock Classes="no-translate tile-caption" Text="{Binding CaptionRow2Right}" HorizontalAlignment="Right"/>
+                                            </icons:CaptionRowPanel>
+                                            <icons:CaptionRowPanel Spacing="8"
+                                                                   IsVisible="{Binding DataContext.IsTileCaptionRow3Visible, RelativeSource={RelativeSource AncestorType=UserControl}}">
+                                                <TextBlock Classes="no-translate tile-caption" Text="{Binding CaptionRow3Left}"/>
+                                                <TextBlock Classes="no-translate tile-caption" Text="{Binding CaptionRow3Right}" HorizontalAlignment="Right"/>
+                                            </icons:CaptionRowPanel>
+                                        </StackPanel>
                                         <StackPanel Grid.Column="5"
                                                     Classes="gallery-hover-actions"
                                                     Orientation="Horizontal"

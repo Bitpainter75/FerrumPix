@@ -70,7 +70,7 @@ Namespace Services
 
         ''' <summary>"Norden, Deutschland". Fehlt eines von beiden, faellt es samt Komma weg - eine
         ''' Zeile, die mit einem Komma beginnt, sieht nach einem Fehler aus.</summary>
-        Private Shared Function Compose(city As String, country As String) As String
+        Public Shared Function Compose(city As String, country As String) As String
             Dim town = If(city, "").Trim()
             Dim state = If(country, "").Trim()
             If town.Length > 0 AndAlso state.Length > 0 Then Return $"{town}, {state}"

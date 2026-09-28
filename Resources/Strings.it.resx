@@ -8864,4 +8864,10 @@
   <data name="RAW_Dateien_verschiedener_Kameras_geben_Farben_u_da32f01c" xml:space="preserve">
     <value>I file RAW di fotocamere diverse restituiscono i colori in modo diverso. Se attivo, FerrumPix imposta all'apertura di un RAW non modificato i cursori di Calibrazione in modo che i colori si avvicinino a uno sviluppo RAW diffuso, con una taratura propria per alcuni modelli di fotocamera. I valori sono visibili nei cursori e si possono modificare lì; le immagini già modificate restano invariate.</value>
   </data>
+  <data name="Angaben_unter_den_Kacheln_350632fe" xml:space="preserve">
+    <value>Informazioni sotto le miniature</value>
+  </data>
+  <data name="W_hlt_was_unter_dem_Dateinamen_steht_bis_zu_drei_1487b6bc" xml:space="preserve">
+    <value>Sceglie cosa compare sotto il nome del file: fino a tre righe, ciascuna con un'informazione al bordo sinistro e una al destro. Una riga senza informazioni viene omessa. L'elenco mostra le stesse informazioni. I valori provengono dal catalogo; se una foto non ha data di scatto, viene mostrata la data di modifica del file.</value>
+  </data>
 </root>
