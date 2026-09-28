@@ -588,7 +588,28 @@
                                     Classes.flat="{Binding DataContext.FilmstripTilesAreFlat, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                     Classes.selected="{Binding IsSelected}"
                                     ClipToBounds="True"
-                                    PointerPressed="OnFilmstripItemPressed">
+                                    PointerPressed="OnFilmstripItemPressed"
+                                    ToolTip.ToolTipOpening="OnFilmstripItemToolTipOpening">
+                                <!-- Nach kurzem Verweilen: der Name und dieselben Angaben wie unter
+                                     den Galeriekacheln, aus dem Katalog. Die Werte holt das Element
+                                     erst beim Oeffnen (EnsureCatalogCaptionLoaded). -->
+                                <ToolTip.Tip>
+                                    <StackPanel Spacing="3" MinWidth="180" MaxWidth="340">
+                                        <TextBlock Classes="no-translate" Text="{Binding DisplayFileName}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16" IsVisible="{Binding HasCaptionRow1}">
+                                            <TextBlock Classes="no-translate" Text="{Binding CaptionRow1Left}" TextTrimming="CharacterEllipsis"/>
+                                            <TextBlock Grid.Column="1" Classes="no-translate" Text="{Binding CaptionRow1Right}"/>
+                                        </Grid>
+                                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16" IsVisible="{Binding HasCaptionRow2}">
+                                            <TextBlock Classes="no-translate" Text="{Binding CaptionRow2Left}" TextTrimming="CharacterEllipsis"/>
+                                            <TextBlock Grid.Column="1" Classes="no-translate" Text="{Binding CaptionRow2Right}"/>
+                                        </Grid>
+                                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16" IsVisible="{Binding HasCaptionRow3}">
+                                            <TextBlock Classes="no-translate" Text="{Binding CaptionRow3Left}" TextTrimming="CharacterEllipsis"/>
+                                            <TextBlock Grid.Column="1" Classes="no-translate" Text="{Binding CaptionRow3Right}"/>
+                                        </Grid>
+                                    </StackPanel>
+                                </ToolTip.Tip>
                                 <Border CornerRadius="{Binding DataContext.FilmstripImageCornerRadius, RelativeSource={RelativeSource AncestorType=UserControl}}" ClipToBounds="True">
                                     <Grid>
                                         <Image Source="{Binding Thumbnail}"

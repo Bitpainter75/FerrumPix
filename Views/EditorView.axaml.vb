@@ -7122,6 +7122,12 @@ Namespace Views
                    displaySize.Height * scale > canvas.Bounds.Height + 1
         End Function
 
+        ''' <summary>Wie im Viewer: beim Oeffnen des Tooltips die Katalogwerte fuer genau dieses
+        ''' Bild holen.</summary>
+        Public Sub OnFilmstripItemToolTipOpening(sender As Object, e As CancelRoutedEventArgs)
+            TryCast(TryCast(sender, Control)?.DataContext, ImageItem)?.EnsureCatalogCaptionLoaded()
+        End Sub
+
         Public Sub OnFilmstripItemPressed(sender As Object, e As PointerPressedEventArgs)
             Dim border = TryCast(sender, Border)
             If border Is Nothing Then Return

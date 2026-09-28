@@ -41,7 +41,8 @@ Namespace Models
 
         Private Shared ReadOnly CaptionNames As String() = {
             NameOf(CaptionRow1Left), NameOf(CaptionRow1Right), NameOf(CaptionRow2Left),
-            NameOf(CaptionRow2Right), NameOf(CaptionRow3Left), NameOf(CaptionRow3Right)}
+            NameOf(CaptionRow2Right), NameOf(CaptionRow3Left), NameOf(CaptionRow3Right),
+            NameOf(HasCaptionRow1), NameOf(HasCaptionRow2), NameOf(HasCaptionRow3)}
 
         Private Const BackgroundThumbnailPriority As Integer = 0
         Private Const ViewportThumbnailPriority As Integer = 100
@@ -1628,6 +1629,64 @@ Namespace Models
                     Return ""
             End Select
         End Function
+
+        ' Ob eine Zeile im Tooltip des Filmstreifens etwas zeigt. Anders als unter der Kachel darf
+        ' eine Zeile hier je Bild wegfallen: ein Tooltip steht allein, es gibt keine Nachbarn, mit
+        ' denen er gleich hoch sein muesste.
+        Public ReadOnly Property HasCaptionRow1 As Boolean
+            Get
+                Return CaptionRowHasText(CaptionRow1Left, CaptionRow1Right)
+            End Get
+        End Property
+
+        Public ReadOnly Property HasCaptionRow2 As Boolean
+            Get
+                Return CaptionRowHasText(CaptionRow2Left, CaptionRow2Right)
+            End Get
+        End Property
+
+        Public ReadOnly Property HasCaptionRow3 As Boolean
+            Get
+                Return CaptionRowHasText(CaptionRow3Left, CaptionRow3Right)
+            End Get
+        End Property
+
+        Private Shared Function CaptionRowHasText(left As String, right As String) As Boolean
+            Return Not String.IsNullOrEmpty(left) OrElse Not String.IsNullOrEmpty(right)
+        End Function
+
+        Private _catalogCaptionLoaded As Boolean
+
+        ''' <summary>Holt die Katalogwerte, aus denen sich die Angaben zusammensetzen, fuer GENAU
+        ''' dieses Element. Gedacht fuer die schlanken Eintraege des Filmstreifens: sie bringen
+        ''' keine Katalogwerte mit, und sie alle beim Oeffnen eines Ordners nachzuladen hiesse eine
+        ''' Abfrage ueber den ganzen Ordner fuer einen Tooltip, den man vielleicht nie oeffnet. Der
+        ''' Tooltip ruft das beim Oeffnen, eine Zeile aus dem Katalog, einmal je Element.
+        '''
+        ''' Ein Serverbild hat keinen lokalen Katalogeintrag; dort bleibt es beim Namen und dem,
+        ''' was das Element ohnehin traegt.</summary>
+        Public Sub EnsureCatalogCaptionLoaded()
+            If _catalogCaptionLoaded OrElse IsFolder OrElse IsRemoteAsset OrElse String.IsNullOrEmpty(_filePath) Then Return
+            _catalogCaptionLoaded = True
+            Dim meta As LibraryImageMeta = Nothing
+            Try
+                If Not LibraryService.Instance.GetMetaForPaths({_filePath}).TryGetValue(_filePath, meta) Then Return
+            Catch
+                ' Katalog nicht erreichbar: dann steht im Tooltip nur, was das Element schon weiss.
+                Return
+            End Try
+            ImageWidth = meta.ImageWidth.GetValueOrDefault()
+            ImageHeight = meta.ImageHeight.GetValueOrDefault()
+            ExifDateTaken = ExifService.ParseExifDateTime(meta.DateTaken)
+            ExifDateModified = ExifService.ParseExifDateTime(meta.DateModifiedExif)
+            ExifCamera = meta.Camera
+            ExifIso = meta.Iso
+            ExifAperture = meta.Aperture
+            ExifLens = meta.Lens
+            ExifFocalLength = meta.FocalLengthMm
+            ExifShutterSpeed = meta.ShutterSpeed
+            SetCatalogPlace(meta.City, meta.Country, meta.CountryCode)
+        End Sub
 
         ''' Ein Datum, das es nicht gibt (DateTime.MinValue), ist leer und nicht der 1. Januar 0001.
         Private Shared Function FileDateText(value As DateTime) As String

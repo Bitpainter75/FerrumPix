@@ -9,7 +9,8 @@
 
 - **Choose the details under gallery tiles.** Settings, Gallery lets you pick what appears below
   the file name: up to three lines, each with one detail on the left and one on the right, such as
-  dates, size, file type, camera, lens, exposure or place. The list view shows the same details.
+  dates, size, file type, camera, lens, exposure or place. The list view shows the same details,
+  and resting the mouse on a picture in the filmstrip of viewer or editor shows its name with them.
   By default the tile now shows the date the picture was taken instead of the date the file was
   last changed.
 
