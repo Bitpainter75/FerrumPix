@@ -1448,6 +1448,19 @@
     <!-- Tooltip-Texte dürfen umbrechen: Texte über MaxWidth (260) wurden bisher bei JEDER
          Skalierung hart abgeschnitten (TextBlock ohne Wrapping, z.B. die langen Erklär-Tooltips
          im Transformieren-Panel). Mit Umbruch bestimmt die Messung die nötige Höhe gleich mit. -->
+    <!-- Der Tooltip eines Bildes im Filmstreifen sieht aus wie das Overlay der Metadaten-Plaketten
+         auf den Galeriekacheln (Border.gallery-metadata-overlay): dunkel, Rand in der Akzentfarbe,
+         Titel fett, darunter kleine weisse Schrift. Rechts wie beim allgemeinen Tooltip etwas mehr
+         Innenabstand gegen die Rundung bei krummer Skalierung. -->
+    <Style Selector="ToolTip.image-info">
+        <Setter Property="Background" Value="#D811161B"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Accent}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="6"/>
+        <Setter Property="Padding" Value="8,6,14,6"/>
+        <Setter Property="Foreground" Value="White"/>
+        <Setter Property="MaxWidth" Value="340"/>
+    </Style>
     <Style Selector="ToolTip TextBlock">
         <Setter Property="TextWrapping" Value="Wrap"/>
         <!-- Krumme Skalierung, Teil 4: Den Puffer gegen die Rundung liefert ein Leerzeichen, das

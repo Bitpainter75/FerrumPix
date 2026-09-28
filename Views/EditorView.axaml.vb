@@ -7128,6 +7128,12 @@ Namespace Views
             TryCast(TryCast(sender, Control)?.DataContext, ImageItem)?.EnsureCatalogCaptionLoaded()
         End Sub
 
+        ''' <summary>Wie im Viewer: verlaesst die Maus das Bild, geht sein Tooltip sofort zu.</summary>
+        Public Sub OnFilmstripItemPointerExited(sender As Object, e As PointerEventArgs)
+            Dim control = TryCast(sender, Control)
+            If control IsNot Nothing Then ToolTip.SetIsOpen(control, False)
+        End Sub
+
         Public Sub OnFilmstripItemPressed(sender As Object, e As PointerPressedEventArgs)
             Dim border = TryCast(sender, Border)
             If border Is Nothing Then Return
