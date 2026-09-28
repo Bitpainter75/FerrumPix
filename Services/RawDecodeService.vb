@@ -1650,8 +1650,8 @@ Namespace Services
         ''' brennen zu frueh aus) oder zu hoch (Ausgefressenes wird grau).
         '''
         ''' DIE WERTE STEHEN IN Resources/CameraBaselineTable.json, Abschnitt levelOverrides, je
-        ''' Eintrag mit LibRaws eigenem Wert und der Herkunft daneben; die Messung dazu steht in
-        ''' Audits/RAW_UND_FARBE.md. Hier liegt nur der Verweis, damit der Decode sie wie bisher
+        ''' Eintrag mit LibRaws eigenem Wert und der Herkunft daneben. Hier liegt nur der Verweis,
+        ''' damit der Decode sie wie bisher
         ''' unter diesem Namen findet.
         '''
         ''' DER ZWEITE WERT IST DER TONUMFANG UEBER DEM SCHWARZPUNKT, nicht der rohe Weisspunkt.
@@ -1701,8 +1701,8 @@ Namespace Services
                     ' die Fassung bekannt ist. LibRaw nimmt bei fast allen neueren Canons einen zu
                     ' hohen Weisspunkt (meist 16383 statt Canons SpecularWhiteLevel, den auch Adobe
                     ' uebernimmt): das Bild kam bis zu 0,8 Blendenstufen zu dunkel, und
-                    ' Ausgefressenes wurde nie weiss. Gemessen an 96 Dateien von 40 Modellen, siehe
-                    ' Audits/RAW_UND_FARBE.md. Unbekannte Fassung: es bleibt bei LibRaw.
+                    ' Ausgefressenes wurde nie weiss. Gemessen an 96 Dateien von 40 Modellen.
+                    ' Unbekannte Fassung: es bleibt bei LibRaw.
                     Dim canonLevels = CanonLevelsFromFile(handle, make, path)
                     If Not canonLevels.HasValue Then Return False
                     levels = (canonLevels.Value.Black, -1, canonLevels.Value.White)

@@ -137,8 +137,8 @@ Namespace Services
                             Next
                         End If
                         ' Der Standard fuer jede Kamera ohne eigenen Eintrag: Adobes Bildstil ist zum
-                        ' groessten Teil fuer alle Kameras derselbe (gemessen an rund 400 Aufnahmen,
-                        ' Audits/RAW_UND_FARBE.md). Ein Modelleintrag ersetzt ihn ganz, er ist also
+                        ' groessten Teil fuer alle Kameras derselbe (gemessen an rund 400 Aufnahmen).
+                        ' Ein Modelleintrag ersetzt ihn ganz, er ist also
                         ' vollstaendig und keine Abweichung davon.
                         Dim defaultEntry As JsonElement
                         If root.TryGetProperty("colorCalibrationDefault", defaultEntry) Then
