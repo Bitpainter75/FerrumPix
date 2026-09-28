@@ -2544,15 +2544,19 @@ Namespace Services
                         Dim rNorm = rPix * normScale
 
                         If korrigiertTca AndAlso rPix > 0.0 Then
-                            ' ACHTUNG Konvention: der Faktor sagt, WIE WEIT AUSSEN der Kanal
-                            ' abgetastet erscheint. Korrigiert wird mit dem KEHRWERT. Multiplizieren
-                            ' statt dividieren verdoppelt den Farbsaum, statt ihn zu entfernen -
-                            ' genau daran ist die erste Fassung gescheitert, und am echten Bild war
-                            ' der Unterschied zu klein, um es zu merken.
+                            ' ACHTUNG Konvention: der Faktor sagt, WIE WEIT AUSSEN der Kanal in der
+                            ' Aufnahme wirklich liegt (Rd = Ru * f, wie die Sammlung ihn definiert).
+                            ' Korrigiert wird deshalb, indem man ihn DORT abtastet, also mit dem
+                            ' Faktor MULTIPLIZIERT. Hier stand bis 0.9.54 das Teilen, mit dem
+                            ' Kommentar, Multiplizieren verdopple den Saum. Gemessen an echten Bildern
+                            ' ist es umgekehrt: an vier Objektiven mit deutlichem Querfehler im Profil
+                            ' (RF 24-240, AF-S DX 18-140, E 18-135, EF-S 18-55) wuchs der Rotversatz mit
+                            ' dem Teilen um den Profilwert und ging mit dem Multiplizieren fast auf null
+                            ' (Nutzerbefund Issue #66: "Farbsaeume korrigieren wirkt nicht").
                             Dim fr = LensDataService.ChromaticAberrationFactor(lens, rNorm, True)
                             Dim fb = LensDataService.ChromaticAberrationFactor(lens, rNorm, False)
-                            r = AbtastenBilinear(FetchRow, width, height, cx + dxPix / fr, cy + dyPix / fr, 0)
-                            b = AbtastenBilinear(FetchRow, width, height, cx + dxPix / fb, cy + dyPix / fb, 2)
+                            r = AbtastenBilinear(FetchRow, width, height, cx + dxPix * fr, cy + dyPix * fr, 0)
+                            b = AbtastenBilinear(FetchRow, width, height, cx + dxPix * fb, cy + dyPix * fb, 2)
                         Else
                             r = rowShorts(x * 3) And &HFFFF
                             b = rowShorts(x * 3 + 2) And &HFFFF

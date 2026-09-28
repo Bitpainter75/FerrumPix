@@ -1,3 +1,10 @@
+## Unreleased
+
+### Fixes
+
+- Lens correction: removing color fringes at the image corners made them stronger instead of
+  weaker. It now works in the right direction and takes most of the fringe away.
+
 ## 0.9.54
 
 ### What's new
