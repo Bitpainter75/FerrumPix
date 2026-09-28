@@ -118,6 +118,10 @@ Namespace Services
             Public Property TcaBb As Double
             Public Property TcaCb As Double
             Public Property TcaVb As Double = 1.0
+            ''' Die Feinkorrektur von Hand als Faktor, 1 = nichts; siehe FineChromaticAberrationFactor.
+            ''' Sie wird mit dem Faktor des Profils multipliziert.
+            Public Property TcaRedFine As Double = 1.0
+            Public Property TcaBlueFine As Double = 1.0
 
             ''' Staerke je Korrektur, 1,0 = wie kalibriert. Siehe ImageAdjustments.Lens*Amount.
             Public Property DistortionStrength As Double = 1.0
@@ -177,7 +181,8 @@ Namespace Services
             Dim c = If(rot, k.TcaCr, k.TcaCb)
             Dim v = If(rot, k.TcaVr, k.TcaVb)
             Dim f = b * ru * ru + c * ru + v
-            Return 1.0 + (f - 1.0) * k.ChromaticAberrationStrength
+            Dim fine = If(rot, k.TcaRedFine, k.TcaBlueFine)
+            Return (1.0 + (f - 1.0) * k.ChromaticAberrationStrength) * fine
         End Function
 
         ''' <summary>Vignettierung: der Helligkeitsabfall an diesem Radius (r = 1 in der ECKE).
@@ -638,6 +643,7 @@ Namespace Services
                 .HasChromaticAberration = k.HasChromaticAberration,
                 .TcaBr = k.TcaBr, .TcaCr = k.TcaCr, .TcaVr = k.TcaVr,
                 .TcaBb = k.TcaBb, .TcaCb = k.TcaCb, .TcaVb = k.TcaVb,
+                .TcaRedFine = k.TcaRedFine, .TcaBlueFine = k.TcaBlueFine,
                 .HasVignetting = k.HasVignetting, .Vk1 = k.Vk1, .Vk2 = k.Vk2, .Vk3 = k.Vk3,
                 .DistortionStrength = k.DistortionStrength,
                 .ChromaticAberrationStrength = k.ChromaticAberrationStrength,
@@ -674,7 +680,19 @@ Namespace Services
             ''' Von Hand gewaehltes Objektiv fuer GENAU dieses Bild - nur belegt, wenn die
             ''' Aufnahmedaten keines nennen.
             Public Property LensModel As String = ""
+            ''' Feinkorrektur des Farbquerfehlers je Kanal, -100 bis 100 (ImageAdjustments.LensTcaRed
+            ''' und LensTcaBlue). Wirkt zusaetzlich zum Profil und auch ohne eines.
+            Public Property ChromaticAberrationRed As Double
+            Public Property ChromaticAberrationBlue As Double
         End Class
+
+        ''' <summary>Der Faktor einer Feinkorrektur: 100 auf dem Regler heisst, der Kanal wird bei
+        ''' r * 1,002 abgetastet. Die Spanne deckt, was im Bestand gemessen wurde (bis rund 0,0015
+        ''' ohne Profil), mit Luft nach oben; fein genug ist sie, weil ein Schritt am Rand eines
+        ''' 24-Megapixel-Bildes eine Zehntelpixel-Verschiebung ist.</summary>
+        Public Shared Function FineChromaticAberrationFactor(sliderValue As Double) As Double
+            Return 1.0 + Math.Max(-100.0, Math.Min(100.0, sliderValue)) * 0.00002
+        End Function
 
         Private Shared Function Gilt(feld As Boolean?, vorgabe As Boolean) As Boolean
             Return If(feld.HasValue, feld.Value, vorgabe)
@@ -684,7 +702,15 @@ Namespace Services
         ''' Nothing, wenn danach nichts mehr uebrig ist - dann laeuft im Decode auch keine der
         ''' teuren Schleifen an.</summary>
         Public Shared Function Filtere(k As Korrektur, wahl As Wahl, vorgabe As Boolean) As Korrektur
-            If k Is Nothing Then Return Nothing
+            ' Die Feinkorrektur von Hand braucht kein Profil: ohne gefundenes Objektiv entsteht
+            ' eine Korrektur, die nur sie traegt.
+            Dim redFine = FineChromaticAberrationFactor(If(wahl Is Nothing, 0.0, wahl.ChromaticAberrationRed))
+            Dim blueFine = FineChromaticAberrationFactor(If(wahl Is Nothing, 0.0, wahl.ChromaticAberrationBlue))
+            Dim hasFine = redFine <> 1.0 OrElse blueFine <> 1.0
+            If k Is Nothing Then
+                If Not hasFine Then Return Nothing
+                k = New Korrektur()
+            End If
             Dim verz = vorgabe, tca = vorgabe, vign = vorgabe
             If wahl IsNot Nothing Then
                 verz = Gilt(wahl.Distortion, vorgabe)
@@ -703,6 +729,16 @@ Namespace Services
             If k.DistortionStrength = 0.0 Then k.HasDistortion = False
             If k.ChromaticAberrationStrength = 0.0 Then k.HasChromaticAberration = False
             If k.VignettingStrength = 0.0 Then k.HasVignetting = False
+            ' Ist das Profil fuer den Farbquerfehler aus (oder gibt es keines), traegt die Stufe
+            ' allein die Feinkorrektur: die Profilwerte werden neutral, damit sie nicht doch wirken.
+            If hasFine AndAlso Not k.HasChromaticAberration Then
+                k.TcaBr = 0 : k.TcaCr = 0 : k.TcaVr = 1.0
+                k.TcaBb = 0 : k.TcaCb = 0 : k.TcaVb = 1.0
+                k.ChromaticAberrationStrength = 1.0
+                k.HasChromaticAberration = True
+            End If
+            k.TcaRedFine = redFine
+            k.TcaBlueFine = blueFine
             Return If(k.HasAnything, k, Nothing)
         End Function
 

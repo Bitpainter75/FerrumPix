@@ -8914,4 +8914,19 @@
   <data name="W_hlt_was_unter_dem_Dateinamen_steht_bis_zu_drei_1487b6bc" xml:space="preserve">
     <value>Dosya adının altında ne görüneceğini seçer: her birinde sol ve sağ kenarda birer bilgi bulunan en fazla üç satır. Bilgi içermeyen satır gösterilmez. Liste aynı bilgileri gösterir. Değerler katalogdan gelir; fotoğrafın çekim tarihi yoksa dosyanın değiştirilme tarihi gösterilir.</value>
   </data>
+  <data name="Farbs_ume_von_Hand_050aec07" xml:space="preserve">
+    <value>Renk saçaklarını elle</value>
+  </data>
+  <data name="Rot_Cyan_bc1570a3" xml:space="preserve">
+    <value>Kırmızı/Camgöbeği</value>
+  </data>
+  <data name="Blau_Gelb_266ea097" xml:space="preserve">
+    <value>Mavi/Sarı</value>
+  </data>
+  <data name="Bleiben_an_kontrastreichen_Kanten_zum_Bildrand_h_0f173758" xml:space="preserve">
+    <value>Görüntü kenarına doğru kontrastlı kenarlarda kırmızı veya camgöbeği saçaklar kalırsa bu sürgü kırmızıyı yeşile göre kaydırır. Objektif profili olmadan da çalışır.</value>
+  </data>
+  <data name="Bleiben_an_kontrastreichen_Kanten_zum_Bildrand_h_a9e66200" xml:space="preserve">
+    <value>Görüntü kenarına doğru kontrastlı kenarlarda mavi, mor veya sarı saçaklar kalırsa bu sürgü maviyi yeşile göre kaydırır. Objektif profili olmadan da çalışır.</value>
+  </data>
 </root>

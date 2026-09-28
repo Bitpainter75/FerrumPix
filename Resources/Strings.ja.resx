@@ -8910,4 +8910,19 @@
   <data name="W_hlt_was_unter_dem_Dateinamen_steht_bis_zu_drei_1487b6bc" xml:space="preserve">
     <value>ファイル名の下に表示する内容を選びます。最大三行で、各行の左端と右端に一つずつ表示します。項目のない行は表示されません。リストにも同じ情報が表示されます。値はカタログから取得し、撮影日時がない写真ではファイルの更新日時を表示します。</value>
   </data>
+  <data name="Farbs_ume_von_Hand_050aec07" xml:space="preserve">
+    <value>色収差を手動で補正</value>
+  </data>
+  <data name="Rot_Cyan_bc1570a3" xml:space="preserve">
+    <value>赤/シアン</value>
+  </data>
+  <data name="Blau_Gelb_266ea097" xml:space="preserve">
+    <value>青/黄</value>
+  </data>
+  <data name="Bleiben_an_kontrastreichen_Kanten_zum_Bildrand_h_0f173758" xml:space="preserve">
+    <value>画像の端に近いコントラストの強い輪郭に赤やシアンの色にじみが残る場合、このスライダーで赤を緑に対して移動します。レンズプロファイルがなくても使えます。</value>
+  </data>
+  <data name="Bleiben_an_kontrastreichen_Kanten_zum_Bildrand_h_a9e66200" xml:space="preserve">
+    <value>画像の端に近いコントラストの強い輪郭に青、紫、黄の色にじみが残る場合、このスライダーで青を緑に対して移動します。レンズプロファイルがなくても使えます。</value>
+  </data>
 </root>

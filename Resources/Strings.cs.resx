@@ -8910,4 +8910,19 @@
   <data name="W_hlt_was_unter_dem_Dateinamen_steht_bis_zu_drei_1487b6bc" xml:space="preserve">
     <value>Určuje, co se zobrazí pod názvem souboru: až tři řádky, každý s jedním údajem u levého a jedním u pravého okraje. Řádek bez údajů odpadá. Seznam ukazuje stejné údaje. Hodnoty pocházejí z katalogu; nemá-li snímek datum pořízení, zobrazí se datum změny souboru.</value>
   </data>
+  <data name="Farbs_ume_von_Hand_050aec07" xml:space="preserve">
+    <value>Barevné lemy ručně</value>
+  </data>
+  <data name="Rot_Cyan_bc1570a3" xml:space="preserve">
+    <value>Červená/Azurová</value>
+  </data>
+  <data name="Blau_Gelb_266ea097" xml:space="preserve">
+    <value>Modrá/Žlutá</value>
+  </data>
+  <data name="Bleiben_an_kontrastreichen_Kanten_zum_Bildrand_h_0f173758" xml:space="preserve">
+    <value>Zůstanou-li na kontrastních hranách směrem k okraji snímku červené nebo azurové lemy, posune tento posuvník červenou vůči zelené. Funguje i bez profilu objektivu.</value>
+  </data>
+  <data name="Bleiben_an_kontrastreichen_Kanten_zum_Bildrand_h_a9e66200" xml:space="preserve">
+    <value>Zůstanou-li na kontrastních hranách směrem k okraji snímku modré, fialové nebo žluté lemy, posune tento posuvník modrou vůči zelené. Funguje i bez profilu objektivu.</value>
+  </data>
 </root>

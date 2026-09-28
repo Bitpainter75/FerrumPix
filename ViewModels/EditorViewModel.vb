@@ -6612,6 +6612,83 @@ Namespace ViewModels
             End Set
         End Property
 
+        ' Feinkorrektur des Farbquerfehlers von Hand, je Kanal -100 bis 100 (siehe
+        ' ImageAdjustments.LensTcaRed). Sie wirkt auch ohne Profil: gerade dort, wo die Sammlung das
+        ' Objektiv nicht kennt oder es an dieser Brennweite schlecht trifft, ist sie der einzige Weg.
+        Private _lensTcaRed As Double = 0
+        Private _lensTcaBlue As Double = 0
+
+        Public Property LensTcaRed As Double
+            Get
+                Return _lensTcaRed
+            End Get
+            Set(value As Double)
+                SetLensFineCorrection(_lensTcaRed, value, NameOf(LensTcaRed))
+            End Set
+        End Property
+
+        Public Property LensTcaBlue As Double
+            Get
+                Return _lensTcaBlue
+            End Get
+            Set(value As Double)
+                SetLensFineCorrection(_lensTcaBlue, value, NameOf(LensTcaBlue))
+            End Set
+        End Property
+
+        Private Sub SetLensFineCorrection(ByRef field As Double, value As Double, name As String)
+            Dim clamped = Math.Max(-100, Math.Min(100, value))
+            If Math.Abs(field - clamped) < 0.0001 Then Return
+            CaptureUndoState(name)
+            field = clamped
+            Me.RaisePropertyChanged(name)
+            RaiseResetButtonStateChanged()
+            RequestLensRebuild()
+        End Sub
+
+        ' Die Regler der Objektivkorrektur entwickeln das Bild NEU, und das kostet bei einer
+        ' 30-Megapixel-RAW eine halbe bis ganze Sekunde auf dem Oberflaechenfaden. Beim Ziehen kommen
+        ' Dutzende Werte hintereinander; jeder baute das Arbeitsbild neu, und der Regler war nicht zu
+        ' bedienen (Nutzerbefund an den Feinreglern Rot/Cyan und Blau/Gelb). Deshalb entwickelt erst
+        ' der Stillstand: 300 ms nach dem letzten Wert, einmal. Haken, Rueckgaengig und ein geladenes
+        ' Rezept gehen weiter sofort ueber RebuildWorkingImageForLens.
+        Private _lensRebuildTimer As DispatcherTimer
+        Private Const LensRebuildDebounceMs As Double = 300.0
+
+        Private Sub RequestLensRebuild()
+            ' SOFORT als geaendert markieren, nicht erst im Neuaufbau: wer den Editor innerhalb der
+            ' 300 ms schliesst oder verlaesst, bekaeme sonst keine Rueckfrage, und die Einstellung
+            ' ginge verloren.
+            If Not _suppressPreviewDirty Then
+                _hasChanges = True
+                Me.RaisePropertyChanged(NameOf(HasUnsavedChanges))
+            End If
+            If _lensRebuildTimer Is Nothing Then
+                _lensRebuildTimer = New DispatcherTimer With {.Interval = TimeSpan.FromMilliseconds(LensRebuildDebounceMs)}
+                AddHandler _lensRebuildTimer.Tick,
+                    Sub()
+                        _lensRebuildTimer.Stop()
+                        RebuildWorkingImageForLens()
+                    End Sub
+            End If
+            _lensRebuildTimer.Stop()
+            _lensRebuildTimer.Start()
+        End Sub
+
+        ''' <summary>Ein noch ausstehender Neuaufbau aus einem Regler gehoert zum Bild, an dem er
+        ''' gezogen wurde. Beim Wechsel auf ein anderes faellt er weg.</summary>
+        Private Sub CancelPendingLensRebuild()
+            _lensRebuildTimer?.Stop()
+        End Sub
+
+        ''' <summary>Einen noch ausstehenden Neuaufbau JETZT ausfuehren. Vor jedem Speichern: ein
+        ''' Weg, der vom Arbeitsbild ausgeht, schriebe sonst den Stand vor dem letzten Reglerwert.</summary>
+        Private Sub FlushPendingLensRebuild()
+            If _lensRebuildTimer Is Nothing OrElse Not _lensRebuildTimer.IsEnabled Then Return
+            _lensRebuildTimer.Stop()
+            RebuildWorkingImageForLens()
+        End Sub
+
         ''' <summary>Wie SetUndoableDouble, aber mit Neuaufbau des Arbeitsbilds statt eines
         ''' Nachrenderns: die Objektivkorrektur sitzt VOR der Reglerkette.</summary>
         Private Sub SetLensStrength(ByRef feld As Double, value As Double, name As String)
@@ -6621,7 +6698,7 @@ Namespace ViewModels
             feld = geklemmt
             Me.RaisePropertyChanged(name)
             RaiseResetButtonStateChanged()
-            RebuildWorkingImageForLens()
+            RequestLensRebuild()
         End Sub
 
         ''' <summary>Die Objektiv-Wahl aus den Editor-Feldern. Eigene Stelle, damit jeder Weg, der
@@ -6640,7 +6717,9 @@ Namespace ViewModels
                 .DistortionStrength = _lensDistortionAmount / 100.0,
                 .ChromaticAberrationStrength = _lensTcaAmount / 100.0,
                 .VignettingStrength = _lensVignettingAmount / 100.0,
-                .LensModel = _lensModel}
+                .LensModel = _lensModel,
+                .ChromaticAberrationRed = _lensTcaRed,
+                .ChromaticAberrationBlue = _lensTcaBlue}
         End Function
 
         Private Shared Function ReleaseLensSwitch(feld As Boolean?) As Boolean
@@ -6666,7 +6745,8 @@ Namespace ViewModels
         Public Sub ResetLensCorrection()
             Dim hatteZuordnung = Not String.IsNullOrWhiteSpace(LensAssignment)
             Dim hatteSchalter = _lensDistortion.HasValue OrElse _lensTca.HasValue OrElse _lensVignetting.HasValue OrElse
-                                _lensDistortionAmount <> 100 OrElse _lensTcaAmount <> 100 OrElse _lensVignettingAmount <> 100
+                                _lensDistortionAmount <> 100 OrElse _lensTcaAmount <> 100 OrElse _lensVignettingAmount <> 100 OrElse
+                                _lensTcaRed <> 0 OrElse _lensTcaBlue <> 0
             If Not hatteZuordnung AndAlso Not hatteSchalter Then Return
             CaptureUndoState("Objektivkorrektur")
             _lensDistortion = Nothing
@@ -6675,6 +6755,8 @@ Namespace ViewModels
             _lensDistortionAmount = 100
             _lensTcaAmount = 100
             _lensVignettingAmount = 100
+            _lensTcaRed = 0
+            _lensTcaBlue = 0
             _lensModel = ""
             If hatteZuordnung AndAlso Not String.IsNullOrWhiteSpace(_objektivExifName) Then
                 LensDataService.SetAssignment(_objektivExifName, "")
@@ -6780,7 +6862,7 @@ Namespace ViewModels
                            NameOf(LensAssignment), NameOf(LensDistortionEnabled),
                            NameOf(LensTcaEnabled), NameOf(LensVignettingEnabled),
                            NameOf(LensDistortionAmount), NameOf(LensTcaAmount),
-                           NameOf(LensVignettingAmount)}
+                           NameOf(LensVignettingAmount), NameOf(LensTcaRed), NameOf(LensTcaBlue)}
                 Me.RaisePropertyChanged(n)
             Next
         End Sub
@@ -19691,6 +19773,7 @@ Namespace ViewModels
         End Sub
 
         Private Async Function SaveImageAsync(saveAs As Boolean) As Task(Of Boolean)
+            FlushPendingLensRebuild()
             DiagnosticLogService.LogAlways("Editor.Save",
                 $"begin saveAs={saveAs} dirty={_hasChanges} tool={_currentTool} selected={_selectedAnnotationIndex} objectWarp={HasObjectWarp} openWarp={HasOpenWarpTransaction}")
             ' Vor dem Speichern gemerkt: bleibt das Ausgangsbild offen, gehoert der Merker zurueck -
@@ -20137,6 +20220,7 @@ Namespace ViewModels
         ''' der Editor holt sich danach die Temp-Kopie des ERGEBNISSES und arbeitet auf der weiter,
         ''' sonst zeigt er eine Datei an, die es auf dem Server so nicht mehr gibt.</summary>
         Private Async Function SaveBackToImmichAsync() As Task(Of Boolean)
+            FlushPendingLensRebuild()
             Dim assetId = CurrentImmichAssetId()
             If String.IsNullOrEmpty(assetId) Then Return False
 
@@ -20359,6 +20443,7 @@ Namespace ViewModels
         End Function
 
         Private Async Function SaveSidecarToNextcloudAsync() As Task(Of Boolean)
+            FlushPendingLensRebuild()
             If Not TrySaveSidecar() Then Return False
             Dim lokal = RawSidecarService.SidecarPathFor(RenderSourcePath)
             If Not File.Exists(lokal) Then
@@ -20524,6 +20609,8 @@ Namespace ViewModels
                 .LensModel = _lensModel,
                 .LensDistortionAmount = CSng(_lensDistortionAmount),
                 .LensTcaAmount = CSng(_lensTcaAmount),
+                .LensTcaRed = CSng(_lensTcaRed),
+                .LensTcaBlue = CSng(_lensTcaBlue),
                 .LensVignettingAmount = CSng(_lensVignettingAmount),
                 .Brightness = CSng(_brightness),
                 .Contrast = CSng(_contrast),
@@ -21856,6 +21943,7 @@ Namespace ViewModels
                               Not Nullable.Equals(_lensVignetting, adj.LensVignetting) OrElse
                               _lensDistortionAmount <> adj.LensDistortionAmount OrElse
                               _lensTcaAmount <> adj.LensTcaAmount OrElse
+                              _lensTcaRed <> adj.LensTcaRed OrElse _lensTcaBlue <> adj.LensTcaBlue OrElse
                               _lensVignettingAmount <> adj.LensVignettingAmount OrElse
                               Not String.Equals(_lensModel, If(adj.LensModel, ""), StringComparison.Ordinal)
             ' Die Objektliste wird hier geleert und Objekt fuer Objekt neu gefuellt. Ohne diese
@@ -21886,6 +21974,8 @@ Namespace ViewModels
             _lensVignetting = adj.LensVignetting
             _lensDistortionAmount = adj.LensDistortionAmount
             _lensTcaAmount = adj.LensTcaAmount
+            _lensTcaRed = adj.LensTcaRed
+            _lensTcaBlue = adj.LensTcaBlue
             _lensVignettingAmount = adj.LensVignettingAmount
             _lensModel = If(adj.LensModel, "")
             _whiteBalanceModel = adj.WhiteBalanceModel
@@ -22393,6 +22483,8 @@ Namespace ViewModels
 
         Private Sub ResetAdjustmentsInternal(Optional resetEditorUi As Boolean = False)
             ClearAutoAdjustState()
+            ' Ein noch ausstehender Neuaufbau aus einem Objektivregler gehoert zum alten Stand.
+            CancelPendingLensRebuild()
             ' ARBEITSBILD (Stufe D): Zurücksetzen entfernt auch gebackene Striche/Retusche -
             ' das Arbeitsbild wird frisch vom Original (bzw. .fpx-Basisbild) aufgebaut. Die
             ' Undo-Pixel-Patches sterben dabei (Init räumt sie ab): ein Undo nach dem
@@ -22489,6 +22581,8 @@ Namespace ViewModels
             _lensDistortionAmount = 100
             _lensTcaAmount = 100
             _lensVignettingAmount = 100
+            _lensTcaRed = 0
+            _lensTcaBlue = 0
             _lensModel = ""
             _lensFilter = ""
             _perspectiveHorizontal = 0
@@ -26470,6 +26564,8 @@ Namespace ViewModels
             _lensDistortionAmount = 100
             _lensTcaAmount = 100
             _lensVignettingAmount = 100
+            _lensTcaRed = 0
+            _lensTcaBlue = 0
             _lensModel = ""
             _vignette = 0
             _vignetteTransition = 55

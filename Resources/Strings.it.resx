@@ -8870,4 +8870,19 @@
   <data name="W_hlt_was_unter_dem_Dateinamen_steht_bis_zu_drei_1487b6bc" xml:space="preserve">
     <value>Sceglie cosa compare sotto il nome del file: fino a tre righe, ciascuna con un'informazione al bordo sinistro e una al destro. Una riga senza informazioni viene omessa. L'elenco mostra le stesse informazioni. I valori provengono dal catalogo; se una foto non ha data di scatto, viene mostrata la data di modifica del file.</value>
   </data>
+  <data name="Farbs_ume_von_Hand_050aec07" xml:space="preserve">
+    <value>Frange di colore a mano</value>
+  </data>
+  <data name="Rot_Cyan_bc1570a3" xml:space="preserve">
+    <value>Rosso/Ciano</value>
+  </data>
+  <data name="Blau_Gelb_266ea097" xml:space="preserve">
+    <value>Blu/Giallo</value>
+  </data>
+  <data name="Bleiben_an_kontrastreichen_Kanten_zum_Bildrand_h_0f173758" xml:space="preserve">
+    <value>Se ai bordi contrastati verso il margine dell'immagine restano frange rosse o ciano, questo cursore sposta il rosso rispetto al verde. Funziona anche senza profilo dell'obiettivo.</value>
+  </data>
+  <data name="Bleiben_an_kontrastreichen_Kanten_zum_Bildrand_h_a9e66200" xml:space="preserve">
+    <value>Se ai bordi contrastati verso il margine dell'immagine restano frange blu, viola o gialle, questo cursore sposta il blu rispetto al verde. Funziona anche senza profilo dell'obiettivo.</value>
+  </data>
 </root>

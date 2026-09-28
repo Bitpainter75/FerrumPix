@@ -107,6 +107,34 @@
                     </Grid>
                 </StackPanel>
 
+                <!-- Feinkorrektur des Farbquerfehlers von Hand. BEWUSST ausserhalb des Blocks
+                     darueber, der nur mit gefundenem Profil sichtbar ist: gerade wenn die Sammlung
+                     das Objektiv nicht kennt oder es an dieser Brennweite schlecht trifft (Issue
+                     #66), sind diese beiden Regler der einzige Weg. Sie wirken zusaetzlich zum
+                     Profil. Positiv holt den Kanal nach innen. -->
+                <StackPanel Spacing="4">
+                    <TextBlock Text="Farbsäume von Hand" Foreground="{DynamicResource FP.Text.Secondary}"
+                               FontSize="{DynamicResource FP.Font.Caption}" />
+                    <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center"
+                          ToolTip.Tip="Bleiben an kontrastreichen Kanten zum Bildrand hin rote oder cyanfarbene Säume, verschiebt dieser Regler Rot gegen Grün. Wirkt auch ohne Objektivprofil.">
+                        <TextBlock Text="Rot/Cyan" Foreground="{DynamicResource FP.Text.Secondary}"
+                                   VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                        <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100" DefaultValue="0"
+                                           Value="{Binding LensTcaRed}" Margin="0,0" />
+                        <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                                 Value="{Binding LensTcaRed, Mode=TwoWay}" Minimum="-100" Maximum="100" />
+                    </Grid>
+                    <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center"
+                          ToolTip.Tip="Bleiben an kontrastreichen Kanten zum Bildrand hin blaue, violette oder gelbe Säume, verschiebt dieser Regler Blau gegen Grün. Wirkt auch ohne Objektivprofil.">
+                        <TextBlock Text="Blau/Gelb" Foreground="{DynamicResource FP.Text.Secondary}"
+                                   VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                        <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100" DefaultValue="0"
+                                           Value="{Binding LensTcaBlue}" Margin="0,0" />
+                        <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                                 Value="{Binding LensTcaBlue, Mode=TwoWay}" Minimum="-100" Maximum="100" />
+                    </Grid>
+                </StackPanel>
+
             </StackPanel>
         </Expander>
     </StackPanel>

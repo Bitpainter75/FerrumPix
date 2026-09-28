@@ -8914,4 +8914,19 @@
   <data name="W_hlt_was_unter_dem_Dateinamen_steht_bis_zu_drei_1487b6bc" xml:space="preserve">
     <value>เลือกสิ่งที่แสดงใต้ชื่อไฟล์ ได้สูงสุดสามบรรทัด แต่ละบรรทัดมีข้อมูลหนึ่งรายการที่ขอบซ้ายและหนึ่งรายการที่ขอบขวา บรรทัดที่ไม่มีข้อมูลจะไม่แสดง รายการแบบลิสต์แสดงข้อมูลเดียวกัน ค่าต่างๆ มาจากแคตตาล็อก หากภาพไม่มีวันที่ถ่าย จะแสดงวันที่แก้ไขไฟล์แทน</value>
   </data>
+  <data name="Farbs_ume_von_Hand_050aec07" xml:space="preserve">
+    <value>แก้ขอบสีด้วยตนเอง</value>
+  </data>
+  <data name="Rot_Cyan_bc1570a3" xml:space="preserve">
+    <value>แดง/ฟ้าอมเขียว</value>
+  </data>
+  <data name="Blau_Gelb_266ea097" xml:space="preserve">
+    <value>น้ำเงิน/เหลือง</value>
+  </data>
+  <data name="Bleiben_an_kontrastreichen_Kanten_zum_Bildrand_h_0f173758" xml:space="preserve">
+    <value>หากยังมีขอบสีแดงหรือฟ้าอมเขียวที่ขอบที่มีความเปรียบต่างสูงใกล้ขอบภาพ แถบเลื่อนนี้จะเลื่อนสีแดงเทียบกับสีเขียว ใช้ได้แม้ไม่มีโปรไฟล์เลนส์</value>
+  </data>
+  <data name="Bleiben_an_kontrastreichen_Kanten_zum_Bildrand_h_a9e66200" xml:space="preserve">
+    <value>หากยังมีขอบสีน้ำเงิน ม่วง หรือเหลืองที่ขอบที่มีความเปรียบต่างสูงใกล้ขอบภาพ แถบเลื่อนนี้จะเลื่อนสีน้ำเงินเทียบกับสีเขียว ใช้ได้แม้ไม่มีโปรไฟล์เลนส์</value>
+  </data>
 </root>

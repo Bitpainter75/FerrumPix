@@ -8888,4 +8888,19 @@
   <data name="W_hlt_was_unter_dem_Dateinamen_steht_bis_zu_drei_1487b6bc" xml:space="preserve">
     <value>Wählt, was unter dem Dateinamen steht: bis zu drei Zeilen mit je einer Angabe am linken und am rechten Rand. Eine Zeile ohne Angabe entfällt. Dieselben Angaben stehen auch in der Liste. Die Werte kommen aus dem Katalog; hat ein Bild kein Aufnahmedatum, steht dort das Änderungsdatum der Datei.</value>
   </data>
+  <data name="Farbs_ume_von_Hand_050aec07" xml:space="preserve">
+    <value>Farbsäume von Hand</value>
+  </data>
+  <data name="Rot_Cyan_bc1570a3" xml:space="preserve">
+    <value>Rot/Cyan</value>
+  </data>
+  <data name="Blau_Gelb_266ea097" xml:space="preserve">
+    <value>Blau/Gelb</value>
+  </data>
+  <data name="Bleiben_an_kontrastreichen_Kanten_zum_Bildrand_h_0f173758" xml:space="preserve">
+    <value>Bleiben an kontrastreichen Kanten zum Bildrand hin rote oder cyanfarbene Säume, verschiebt dieser Regler Rot gegen Grün. Wirkt auch ohne Objektivprofil.</value>
+  </data>
+  <data name="Bleiben_an_kontrastreichen_Kanten_zum_Bildrand_h_a9e66200" xml:space="preserve">
+    <value>Bleiben an kontrastreichen Kanten zum Bildrand hin blaue, violette oder gelbe Säume, verschiebt dieser Regler Blau gegen Grün. Wirkt auch ohne Objektivprofil.</value>
+  </data>
 </root>

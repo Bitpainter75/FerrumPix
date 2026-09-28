@@ -8910,4 +8910,19 @@
   <data name="W_hlt_was_unter_dem_Dateinamen_steht_bis_zu_drei_1487b6bc" xml:space="preserve">
     <value>Vælger, hvad der står under filnavnet: op til tre linjer med hver én oplysning ved venstre og én ved højre kant. En linje uden oplysninger udelades. Listen viser de samme oplysninger. Værdierne kommer fra kataloget; har et billede ingen optagelsesdato, vises filens ændringsdato i stedet.</value>
   </data>
+  <data name="Farbs_ume_von_Hand_050aec07" xml:space="preserve">
+    <value>Farvekanter manuelt</value>
+  </data>
+  <data name="Rot_Cyan_bc1570a3" xml:space="preserve">
+    <value>Rød/Cyan</value>
+  </data>
+  <data name="Blau_Gelb_266ea097" xml:space="preserve">
+    <value>Blå/Gul</value>
+  </data>
+  <data name="Bleiben_an_kontrastreichen_Kanten_zum_Bildrand_h_0f173758" xml:space="preserve">
+    <value>Bliver der røde eller cyanfarvede kanter ved kontrastrige kanter mod billedkanten, flytter skyderen rød i forhold til grøn. Virker også uden objektivprofil.</value>
+  </data>
+  <data name="Bleiben_an_kontrastreichen_Kanten_zum_Bildrand_h_a9e66200" xml:space="preserve">
+    <value>Bliver der blå, lilla eller gule kanter ved kontrastrige kanter mod billedkanten, flytter skyderen blå i forhold til grøn. Virker også uden objektivprofil.</value>
+  </data>
 </root>

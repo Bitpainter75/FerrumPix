@@ -8870,4 +8870,19 @@
   <data name="W_hlt_was_unter_dem_Dateinamen_steht_bis_zu_drei_1487b6bc" xml:space="preserve">
     <value>Choisit ce qui s'affiche sous le nom du fichier : jusqu'à trois lignes, chacune avec une information au bord gauche et une au bord droit. Une ligne sans information est omise. La liste affiche les mêmes informations. Les valeurs proviennent du catalogue ; si une photo n'a pas de date de prise de vue, c'est la date de modification du fichier qui s'affiche.</value>
   </data>
+  <data name="Farbs_ume_von_Hand_050aec07" xml:space="preserve">
+    <value>Franges colorées à la main</value>
+  </data>
+  <data name="Rot_Cyan_bc1570a3" xml:space="preserve">
+    <value>Rouge/Cyan</value>
+  </data>
+  <data name="Blau_Gelb_266ea097" xml:space="preserve">
+    <value>Bleu/Jaune</value>
+  </data>
+  <data name="Bleiben_an_kontrastreichen_Kanten_zum_Bildrand_h_0f173758" xml:space="preserve">
+    <value>S'il reste des franges rouges ou cyan sur les bords contrastés vers le bord de l'image, ce curseur décale le rouge par rapport au vert. Fonctionne aussi sans profil d'objectif.</value>
+  </data>
+  <data name="Bleiben_an_kontrastreichen_Kanten_zum_Bildrand_h_a9e66200" xml:space="preserve">
+    <value>S'il reste des franges bleues, violettes ou jaunes sur les bords contrastés vers le bord de l'image, ce curseur décale le bleu par rapport au vert. Fonctionne aussi sans profil d'objectif.</value>
+  </data>
 </root>

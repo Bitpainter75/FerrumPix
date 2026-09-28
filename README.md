@@ -109,7 +109,7 @@ RAW files are developed from the actual sensor data: a photo keeps the exposure 
 
 The compare button in the editor can also show the JPEG the camera stored inside the raw file, so you see where the development differs from the camera's own look of the same shot.
 
-Lens defects are corrected from measured data covering more than 1500 lenses on over 1000 camera bodies: distortion, coloured fringes and the darkening towards the edges. Lens and camera are recognised from the shot data, and where there is nothing for your lens, nothing is changed.
+Lens defects are corrected from measured data covering more than 1500 lenses on over 1000 camera bodies: distortion, coloured fringes and the darkening towards the edges. Lens and camera are recognised from the shot data, and where there is nothing for your lens, nothing is changed. Coloured fringes the measured data leaves behind, or those of a lens without data, can be removed by hand.
 
 Save a RAW and your edits go into a small sidecar next to it; the RAW itself is never modified, and opening the photo again brings the edits back. Save it as a JPEG or a PNG instead and you get that one file, with the edits baked in and no sidecar. A Lightroom sidecar with develop settings is converted once, so a photo edited elsewhere opens the way you left it.
 

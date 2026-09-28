@@ -8889,4 +8889,19 @@
   <data name="W_hlt_was_unter_dem_Dateinamen_steht_bis_zu_drei_1487b6bc" xml:space="preserve">
     <value>Chooses what appears below the file name: up to three lines, each with one detail at the left edge and one at the right. A line without details is left out. The list shows the same details. The values come from the catalog; if a picture has no capture date, the modification date of the file is shown instead.</value>
   </data>
+  <data name="Farbs_ume_von_Hand_050aec07" xml:space="preserve">
+    <value>Color fringes by hand</value>
+  </data>
+  <data name="Rot_Cyan_bc1570a3" xml:space="preserve">
+    <value>Red/Cyan</value>
+  </data>
+  <data name="Blau_Gelb_266ea097" xml:space="preserve">
+    <value>Blue/Yellow</value>
+  </data>
+  <data name="Bleiben_an_kontrastreichen_Kanten_zum_Bildrand_h_0f173758" xml:space="preserve">
+    <value>If red or cyan fringes remain at high-contrast edges towards the image border, this slider shifts red against green. Works without a lens profile too.</value>
+  </data>
+  <data name="Bleiben_an_kontrastreichen_Kanten_zum_Bildrand_h_a9e66200" xml:space="preserve">
+    <value>If blue, purple or yellow fringes remain at high-contrast edges towards the image border, this slider shifts blue against green. Works without a lens profile too.</value>
+  </data>
 </root>

@@ -8914,4 +8914,19 @@
   <data name="W_hlt_was_unter_dem_Dateinamen_steht_bis_zu_drei_1487b6bc" xml:space="preserve">
     <value>파일 이름 아래에 표시할 내용을 고릅니다. 최대 세 줄이며, 각 줄의 왼쪽과 오른쪽 가장자리에 하나씩 표시됩니다. 항목이 없는 줄은 표시되지 않습니다. 목록에도 같은 정보가 표시됩니다. 값은 카탈로그에서 가져오며, 촬영 날짜가 없는 사진에는 파일 수정 날짜가 표시됩니다.</value>
   </data>
+  <data name="Farbs_ume_von_Hand_050aec07" xml:space="preserve">
+    <value>색수차 수동 보정</value>
+  </data>
+  <data name="Rot_Cyan_bc1570a3" xml:space="preserve">
+    <value>빨강/청록</value>
+  </data>
+  <data name="Blau_Gelb_266ea097" xml:space="preserve">
+    <value>파랑/노랑</value>
+  </data>
+  <data name="Bleiben_an_kontrastreichen_Kanten_zum_Bildrand_h_0f173758" xml:space="preserve">
+    <value>이미지 가장자리 쪽의 대비가 강한 경계에 빨간색이나 청록색 색번짐이 남으면 이 슬라이더가 빨강을 초록에 맞춰 이동합니다. 렌즈 프로필 없이도 작동합니다.</value>
+  </data>
+  <data name="Bleiben_an_kontrastreichen_Kanten_zum_Bildrand_h_a9e66200" xml:space="preserve">
+    <value>이미지 가장자리 쪽의 대비가 강한 경계에 파란색, 보라색 또는 노란색 색번짐이 남으면 이 슬라이더가 파랑을 초록에 맞춰 이동합니다. 렌즈 프로필 없이도 작동합니다.</value>
+  </data>
 </root>

@@ -898,7 +898,9 @@ Namespace Services
                 .DistortionStrength = adj.LensDistortionAmount / 100.0,
                 .ChromaticAberrationStrength = adj.LensTcaAmount / 100.0,
                 .VignettingStrength = adj.LensVignettingAmount / 100.0,
-                .LensModel = adj.LensModel}
+                .LensModel = adj.LensModel,
+                .ChromaticAberrationRed = adj.LensTcaRed,
+                .ChromaticAberrationBlue = adj.LensTcaBlue}
         End Function
 
         Public Shared Function ApplyAdjustments(source As SKBitmap, adj As ImageAdjustments) As Bitmap

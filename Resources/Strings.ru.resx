@@ -8910,4 +8910,19 @@
   <data name="W_hlt_was_unter_dem_Dateinamen_steht_bis_zu_drei_1487b6bc" xml:space="preserve">
     <value>Задает, что показывается под именем файла: до трех строк, в каждой одно значение у левого и одно у правого края. Строка без значений не показывается. Список показывает те же сведения. Значения берутся из каталога; если у снимка нет даты съемки, показывается дата изменения файла.</value>
   </data>
+  <data name="Farbs_ume_von_Hand_050aec07" xml:space="preserve">
+    <value>Цветная кайма вручную</value>
+  </data>
+  <data name="Rot_Cyan_bc1570a3" xml:space="preserve">
+    <value>Красный/Голубой</value>
+  </data>
+  <data name="Blau_Gelb_266ea097" xml:space="preserve">
+    <value>Синий/Жёлтый</value>
+  </data>
+  <data name="Bleiben_an_kontrastreichen_Kanten_zum_Bildrand_h_0f173758" xml:space="preserve">
+    <value>Если на контрастных краях ближе к краю кадра остаётся красная или голубая кайма, этот ползунок сдвигает красный относительно зелёного. Работает и без профиля объектива.</value>
+  </data>
+  <data name="Bleiben_an_kontrastreichen_Kanten_zum_Bildrand_h_a9e66200" xml:space="preserve">
+    <value>Если на контрастных краях ближе к краю кадра остаётся синяя, фиолетовая или жёлтая кайма, этот ползунок сдвигает синий относительно зелёного. Работает и без профиля объектива.</value>
+  </data>
 </root>

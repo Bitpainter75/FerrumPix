@@ -8910,4 +8910,19 @@
   <data name="W_hlt_was_unter_dem_Dateinamen_steht_bis_zu_drei_1487b6bc" xml:space="preserve">
     <value>Valitsee, mitä tiedostonimen alla näkyy: enintään kolme riviä, joilla kullakin yksi tieto vasemmassa ja yksi oikeassa reunassa. Rivi ilman tietoja jätetään pois. Luettelo näyttää samat tiedot. Arvot tulevat luettelosta; jos kuvalla ei ole kuvauspäivää, sen tilalla näkyy tiedoston muokkauspäivä.</value>
   </data>
+  <data name="Farbs_ume_von_Hand_050aec07" xml:space="preserve">
+    <value>Värireunat käsin</value>
+  </data>
+  <data name="Rot_Cyan_bc1570a3" xml:space="preserve">
+    <value>Punainen/Syaani</value>
+  </data>
+  <data name="Blau_Gelb_266ea097" xml:space="preserve">
+    <value>Sininen/Keltainen</value>
+  </data>
+  <data name="Bleiben_an_kontrastreichen_Kanten_zum_Bildrand_h_0f173758" xml:space="preserve">
+    <value>Jos kontrastikkaisiin reunoihin kuvan reunaa kohti jää punaisia tai syaaneja värireunoja, liukusäädin siirtää punaista vihreään nähden. Toimii myös ilman objektiiviprofiilia.</value>
+  </data>
+  <data name="Bleiben_an_kontrastreichen_Kanten_zum_Bildrand_h_a9e66200" xml:space="preserve">
+    <value>Jos kontrastikkaisiin reunoihin kuvan reunaa kohti jää sinisiä, violetteja tai keltaisia värireunoja, liukusäädin siirtää sinistä vihreään nähden. Toimii myös ilman objektiiviprofiilia.</value>
+  </data>
 </root>

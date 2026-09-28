@@ -8914,4 +8914,19 @@
   <data name="W_hlt_was_unter_dem_Dateinamen_steht_bis_zu_drei_1487b6bc" xml:space="preserve">
     <value>चुनता है कि फ़ाइल नाम के नीचे क्या दिखे: अधिकतम तीन पंक्तियाँ, हर पंक्ति में बाएँ और दाएँ किनारे पर एक-एक जानकारी। बिना जानकारी वाली पंक्ति नहीं दिखती। सूची में भी यही जानकारी दिखती है। मान कैटलॉग से आते हैं; यदि किसी फ़ोटो की खींचने की तारीख नहीं है, तो फ़ाइल के बदलने की तारीख दिखती है।</value>
   </data>
+  <data name="Farbs_ume_von_Hand_050aec07" xml:space="preserve">
+    <value>रंगीन किनारे हाथ से</value>
+  </data>
+  <data name="Rot_Cyan_bc1570a3" xml:space="preserve">
+    <value>लाल/सियान</value>
+  </data>
+  <data name="Blau_Gelb_266ea097" xml:space="preserve">
+    <value>नीला/पीला</value>
+  </data>
+  <data name="Bleiben_an_kontrastreichen_Kanten_zum_Bildrand_h_0f173758" xml:space="preserve">
+    <value>यदि छवि के किनारे की ओर उच्च कंट्रास्ट वाले किनारों पर लाल या सियान रंग के किनारे बचे रहें, तो यह स्लाइडर लाल को हरे के सापेक्ष खिसकाता है। लेंस प्रोफ़ाइल के बिना भी काम करता है।</value>
+  </data>
+  <data name="Bleiben_an_kontrastreichen_Kanten_zum_Bildrand_h_a9e66200" xml:space="preserve">
+    <value>यदि छवि के किनारे की ओर उच्च कंट्रास्ट वाले किनारों पर नीले, बैंगनी या पीले रंग के किनारे बचे रहें, तो यह स्लाइडर नीले को हरे के सापेक्ष खिसकाता है। लेंस प्रोफ़ाइल के बिना भी काम करता है।</value>
+  </data>
 </root>

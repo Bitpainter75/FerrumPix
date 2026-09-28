@@ -8914,4 +8914,19 @@
   <data name="W_hlt_was_unter_dem_Dateinamen_steht_bis_zu_drei_1487b6bc" xml:space="preserve">
     <value>Memilih apa yang tampil di bawah nama berkas: hingga tiga baris, masing-masing dengan satu keterangan di tepi kiri dan satu di tepi kanan. Baris tanpa keterangan tidak ditampilkan. Daftar menampilkan keterangan yang sama. Nilainya diambil dari katalog; jika foto tidak memiliki tanggal pengambilan, yang tampil adalah tanggal perubahan berkas.</value>
   </data>
+  <data name="Farbs_ume_von_Hand_050aec07" xml:space="preserve">
+    <value>Pinggiran warna secara manual</value>
+  </data>
+  <data name="Rot_Cyan_bc1570a3" xml:space="preserve">
+    <value>Merah/Sian</value>
+  </data>
+  <data name="Blau_Gelb_266ea097" xml:space="preserve">
+    <value>Biru/Kuning</value>
+  </data>
+  <data name="Bleiben_an_kontrastreichen_Kanten_zum_Bildrand_h_0f173758" xml:space="preserve">
+    <value>Jika pinggiran merah atau sian tersisa di tepi berkontras tinggi ke arah tepi gambar, penggeser ini menggeser merah terhadap hijau. Berfungsi juga tanpa profil lensa.</value>
+  </data>
+  <data name="Bleiben_an_kontrastreichen_Kanten_zum_Bildrand_h_a9e66200" xml:space="preserve">
+    <value>Jika pinggiran biru, ungu, atau kuning tersisa di tepi berkontras tinggi ke arah tepi gambar, penggeser ini menggeser biru terhadap hijau. Berfungsi juga tanpa profil lensa.</value>
+  </data>
 </root>

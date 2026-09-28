@@ -8910,4 +8910,19 @@
   <data name="W_hlt_was_unter_dem_Dateinamen_steht_bis_zu_drei_1487b6bc" xml:space="preserve">
     <value>Väljer vad som står under filnamnet: upp till tre rader med en uppgift vid vänster och en vid höger kant. En rad utan uppgifter visas inte. Listan visar samma uppgifter. Värdena kommer från katalogen; saknar en bild tagningsdatum visas filens ändringsdatum i stället.</value>
   </data>
+  <data name="Farbs_ume_von_Hand_050aec07" xml:space="preserve">
+    <value>Färgkanter manuellt</value>
+  </data>
+  <data name="Rot_Cyan_bc1570a3" xml:space="preserve">
+    <value>Röd/Cyan</value>
+  </data>
+  <data name="Blau_Gelb_266ea097" xml:space="preserve">
+    <value>Blå/Gul</value>
+  </data>
+  <data name="Bleiben_an_kontrastreichen_Kanten_zum_Bildrand_h_0f173758" xml:space="preserve">
+    <value>Om röda eller cyanfärgade kanter finns kvar vid kontrastrika kanter mot bildkanten flyttar reglaget rött mot grönt. Fungerar även utan objektivprofil.</value>
+  </data>
+  <data name="Bleiben_an_kontrastreichen_Kanten_zum_Bildrand_h_a9e66200" xml:space="preserve">
+    <value>Om blå, lila eller gula kanter finns kvar vid kontrastrika kanter mot bildkanten flyttar reglaget blått mot grönt. Fungerar även utan objektivprofil.</value>
+  </data>
 </root>

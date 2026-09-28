@@ -8868,4 +8868,19 @@
   <data name="W_hlt_was_unter_dem_Dateinamen_steht_bis_zu_drei_1487b6bc" xml:space="preserve">
     <value>选择文件名下方显示的内容：最多三行，每行左侧和右侧各一项。没有内容的行不显示。列表显示相同的信息。数值来自目录；若照片没有拍摄日期，则显示文件的修改日期。</value>
   </data>
+  <data name="Farbs_ume_von_Hand_050aec07" xml:space="preserve">
+    <value>手动校正色边</value>
+  </data>
+  <data name="Rot_Cyan_bc1570a3" xml:space="preserve">
+    <value>红/青</value>
+  </data>
+  <data name="Blau_Gelb_266ea097" xml:space="preserve">
+    <value>蓝/黄</value>
+  </data>
+  <data name="Bleiben_an_kontrastreichen_Kanten_zum_Bildrand_h_0f173758" xml:space="preserve">
+    <value>若靠近画面边缘的高对比度边缘仍有红色或青色色边，此滑块会相对绿色移动红色。无镜头配置文件时同样有效。</value>
+  </data>
+  <data name="Bleiben_an_kontrastreichen_Kanten_zum_Bildrand_h_a9e66200" xml:space="preserve">
+    <value>若靠近画面边缘的高对比度边缘仍有蓝色、紫色或黄色色边，此滑块会相对绿色移动蓝色。无镜头配置文件时同样有效。</value>
+  </data>
 </root>

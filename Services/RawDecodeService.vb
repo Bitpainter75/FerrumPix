@@ -659,11 +659,12 @@ Namespace Services
         Private Shared Function LensKey(k As LensDataService.Korrektur) As String
             If k Is Nothing Then Return ""
             Return String.Format(Globalization.CultureInfo.InvariantCulture,
-                "{0}|{1}|{2:R}|{3:R}|{4:R}|{5:R}|{6:R}|{7:R}|{8:R}|{9:R}|{10:R}|{11:R}",
+                "{0}|{1}|{2:R}|{3:R}|{4:R}|{5:R}|{6:R}|{7:R}|{8:R}|{9:R}|{10:R}|{11:R}|{12:R}|{13:R}",
                 k.HasChromaticAberration, k.HasVignetting,
                 k.TcaBr, k.TcaCr, k.TcaVr, k.TcaBb, k.TcaCb, k.TcaVb,
                 k.NormScale, k.Vk1 + k.Vk2 * 3 + k.Vk3 * 7,
-                k.ChromaticAberrationStrength, k.VignettingStrength)
+                k.ChromaticAberrationStrength, k.VignettingStrength,
+                k.TcaRedFine, k.TcaBlueFine)
         End Function
 
         ''' <summary>Die Kennlinien fuer diese Datei, sofern die Korrektur gilt. Die Verzeichnung
@@ -1357,15 +1358,14 @@ Namespace Services
                 End If
                 Dim targetStride = bitmap.RowBytes
                 Dim rowLength = width * 4
-                Dim row(rowLength - 1) As Byte
                 ' DIE RAMPE FOLGT DEM DATENBEREICH. Liegen dieselben Sensorwerte um den
                 ' Normierungsfaktor tiefer, muessen Weisspunkt und Schwarzpunkt mit: eine
                 ' Halbierung der Daten ist eine Blendenstufe auf der Grundbelichtung, und der
                 ' Schwarzabzug ist ein Anteil des Bereichs. Mit diesem Ausgleich allein bleibt das
                 ' Bild, was es war - die eigentliche Lichterrettung ist das Knie.
                 Dim ramp = ToneRampFor(baseEv, normalization)
-                Convert16Rows(data, width, height, row,
-                              Sub(y) Marshal.Copy(row, 0, IntPtr.Add(targetPtr, y * targetStride), rowLength),
+                Convert16Rows(data, width, height,
+                              Sub(y, row) Marshal.Copy(row, 0, IntPtr.Add(targetPtr, y * targetStride), rowLength),
                               lens, ramp.ExposureEv, ramp.BlackLevel, knee)
                 Return bitmap
             Catch
@@ -2453,9 +2453,8 @@ Namespace Services
                                      Optional blackLevel As Double = BlackSubtraction,
                                      Optional knee As Double = 1.0)
             Dim rowBytes = width * 4
-            Dim row(rowBytes - 1) As Byte
-            Convert16Rows(data, width, height, row,
-                          Sub(y) Array.Copy(row, 0, pixels, y * rowBytes, rowBytes),
+            Convert16Rows(data, width, height,
+                          Sub(y, row) Array.Copy(row, 0, pixels, y * rowBytes, rowBytes),
                           lens, exposureEv, blackLevel, knee)
         End Sub
 
@@ -2476,7 +2475,7 @@ Namespace Services
         ''' vollstaendig in die Bitmap kopiert wurde. Eine Zeile ist ein paar Kilobyte, wird
         ''' wiederverwendet und geht direkt an ihr Ziel.</summary>
         Private Shared Sub Convert16Rows(data As IntPtr, width As Integer, height As Integer,
-                                         rowBuffer As Byte(), onRow As Action(Of Integer),
+                                         onRow As Action(Of Integer, Byte()),
                                          Optional lens As LensDataService.Korrektur = Nothing,
                                          Optional exposureEv As Double = BaseExposureEv,
                                          Optional blackLevel As Double = BlackSubtraction,
@@ -2507,104 +2506,136 @@ Namespace Services
             ' Zeilenring: Gruen kommt aus der eigenen Zeile, Rot und Blau aus benachbarten. Die
             ' Verschiebung ist klein, deshalb reichen wenige Zeilen - und es bleibt bei EINER
             ' Kopie je Quellzeile statt einer je Zugriff.
-            Const RingSize = 8
-            Dim ring(RingSize - 1)() As Short
-            Dim ringRow(RingSize - 1) As Integer
-            For i = 0 To RingSize - 1
-                ReDim ring(i)(width * 3 - 1) : ringRow(i) = -1
-            Next
-            Dim FetchRow = Function(zy As Integer) As Short()
-                                Dim yy = Math.Min(Math.Max(zy, 0), height - 1)
-                                Dim slot = yy Mod RingSize
-                                If ringRow(slot) <> yy Then
-                                    ' Versatz in Integer, siehe HeifDecodeService: IntPtr addiert
-                                    ' nur Integer. Die Schranke des Aufrufers ist auf 6 Byte je
-                                    ' Pixel bemessen, also auf genau diese Schrittweite.
-                                    Marshal.Copy(data + yy * rowBytes, ring(slot), 0, width * 3)
-                                    ringRow(slot) = yy
-                                End If
-                                Return ring(slot)
-                            End Function
-
-            For y = 0 To height - 1
-                Dim rowShorts = FetchRow(y)
-                Dim d = 0
-                Dim ditherRow = (y And 7) << 3
-                Dim dyPix = y - cy
-                For x = 0 To width - 1
-                    ' And &HFFFF hebt die Short-Werte vorzeichenfrei nach Integer (VB hat kein
-                    ' UShort-Marshalling ueber Marshal.Copy).
-                    Dim g = rowShorts(x * 3 + 1) And &HFFFF
-                    Dim r As Integer, b As Integer
-                    If korrigiert Then
-                        Dim dxPix = x - cx
-                        ' EIN Radius fuer beide Korrekturen - die Wurzel ist der teuerste Anteil
-                        ' dieser Schleife und wird nicht zweimal gezogen.
-                        Dim rPix = Math.Sqrt(dxPix * dxPix + dyPix * dyPix)
-                        Dim rNorm = rPix * normScale
-
-                        If korrigiertTca AndAlso rPix > 0.0 Then
-                            ' ACHTUNG Konvention: der Faktor sagt, WIE WEIT AUSSEN der Kanal in der
-                            ' Aufnahme wirklich liegt (Rd = Ru * f, wie die Sammlung ihn definiert).
-                            ' Korrigiert wird deshalb, indem man ihn DORT abtastet, also mit dem
-                            ' Faktor MULTIPLIZIERT. Hier stand bis 0.9.54 das Teilen, mit dem
-                            ' Kommentar, Multiplizieren verdopple den Saum. Gemessen an echten Bildern
-                            ' ist es umgekehrt: an vier Objektiven mit deutlichem Querfehler im Profil
-                            ' (RF 24-240, AF-S DX 18-140, E 18-135, EF-S 18-55) wuchs der Rotversatz mit
-                            ' dem Teilen um den Profilwert und ging mit dem Multiplizieren fast auf null
-                            ' (Nutzerbefund Issue #66: "Farbsaeume korrigieren wirkt nicht").
-                            Dim fr = LensDataService.ChromaticAberrationFactor(lens, rNorm, True)
-                            Dim fb = LensDataService.ChromaticAberrationFactor(lens, rNorm, False)
-                            r = AbtastenBilinear(FetchRow, width, height, cx + dxPix * fr, cy + dyPix * fr, 0)
-                            b = AbtastenBilinear(FetchRow, width, height, cx + dxPix * fb, cy + dyPix * fb, 2)
-                        Else
-                            r = rowShorts(x * 3) And &HFFFF
-                            b = rowShorts(x * 3 + 2) And &HFFFF
-                        End If
-
-                        If korrigiertVignette Then
-                            ' Der gemessene Wert beschreibt den ABFALL, korrigiert wird durch
-                            ' Teilen. Und er rechnet mit r = 1 in der ECKE, nicht an der langen
-                            ' Kante wie der Farbquerfehler - daher die zweite Skala.
-                            Dim abfall = LensDataService.VignettingFactor(lens, rNorm * cornerScale)
-                            ' Sehr kleine Werte wuerden das Rauschen der Bildecke ins Unermessliche
-                            ' heben; drei Blendenstufen sind die Grenze des Sinnvollen.
-                            If abfall < 0.125 Then abfall = 0.125
-                            r = Math.Min(65535, CInt(r / abfall))
-                            g = Math.Min(65535, CInt(g / abfall))
-                            b = Math.Min(65535, CInt(b / abfall))
-                        End If
-                    Else
-                        r = rowShorts(x * 3) And &HFFFF
-                        b = rowShorts(x * 3 + 2) And &HFFFF
-                    End If
-                    ' DIESELBE Schwelle fuer alle drei Kanaele eines Pixels (wie in der
-                    ' Punktoperationskette): kanalweise verschiedene Schwellen faerben neutrale
-                    ' Flaechen ein. (v*255 + T) \ 65535 liegt fuer T < 65535 immer in 0..255,
-                    ' CByte kann nicht ueberlaufen.
-                    Dim high = Math.Max(r, Math.Max(g, b))
-                    Dim tief = Math.Min(r, Math.Min(g, b))
-                    Dim tHoch = ton(high)
-                    Dim tTief = ton(tief)
-                    Dim rr As Integer, gg As Integer, bb As Integer
-                    If high = tief Then
-                        rr = tHoch : gg = tHoch : bb = tHoch
-                    Else
-                        Dim span = high - tief
-                        Dim delta = tHoch - tTief
-                        rr = tTief + CInt(CLng(delta) * (r - tief) \ span)
-                        gg = tTief + CInt(CLng(delta) * (g - tief) \ span)
-                        bb = tTief + CInt(CLng(delta) * (b - tief) \ span)
-                    End If
-                    Dim t = thresholds(ditherRow Or (x And 7))
-                    rowBuffer(d) = CByte((gamma(bb) * 255 + t) \ 65535)
-                    rowBuffer(d + 1) = CByte((gamma(gg) * 255 + t) \ 65535)
-                    rowBuffer(d + 2) = CByte((gamma(rr) * 255 + t) \ 65535)
-                    rowBuffer(d + 3) = 255
-                    d += 4
+            '
+            ' WIE GROSS DER RING SEIN MUSS, folgt aus der groessten Verschiebung. Er stand fest auf
+            ' acht Zeilen; mit Profil und Feinkorrektur am Anschlag verschiebt sich Rot oder Blau am
+            ' Rand eines hohen Bildes aber um acht Zeilen und mehr. Dann faellt die gesuchte Zeile
+            ' auf denselben Platz wie die gerade bearbeitete und ueberschreibt sie mitten in der
+            ' Zeile. Der Ring muss also das ganze Fenster von der kleinsten bis zur groessten
+            ' benoetigten Zeile fassen, mit einer Zeile Luft fuer die bilineare Abtastung.
+            Dim ringSize = 8
+            If korrigiertTca Then
+                Dim maxShift = 0.0
+                Dim rMax = Math.Sqrt(cx * cx + cy * cy)
+                For stepIndex = 1 To 32
+                    Dim rPix = rMax * stepIndex / 32.0
+                    For Each isRed In {True, False}
+                        Dim f = LensDataService.ChromaticAberrationFactor(lens, rPix * normScale, isRed)
+                        maxShift = Math.Max(maxShift, Math.Abs(f - 1.0) * rPix)
+                    Next
                 Next
-                onRow(y)
-            Next
+                ringSize = Math.Max(ringSize, 2 * CInt(Math.Ceiling(maxShift)) + 4)
+            End If
+
+            ' IN BAENDERN AUF ALLEN KERNEN. Jede Ausgabezeile haengt nur von wenigen
+            ' Nachbarzeilen ab, und das Dither nur von der Lage: aufgeteilt kommt Bit fuer Bit
+            ' dasselbe Bild heraus. Vorher lief das auf einem Faden und kostete bei 32 Megapixeln
+            ' mit Farbquerfehler und Vignettierung rund zwei Sekunden, bei JEDER Bewegung eines
+            ' Reglers der Objektivkorrektur (Nutzerbefund). Jedes Band hat Ring und Zeilenpuffer
+            ' fuer sich; onRow bekommt den Puffer mit und darf nur die eigene Zeile beschreiben.
+            Const BandRows = 64
+            Dim bandCount = (height + BandRows - 1) \ BandRows
+            Parallel.For(0, bandCount,
+                Sub(band As Integer)
+                    Dim ring(ringSize - 1)() As Short
+                    Dim ringRow(ringSize - 1) As Integer
+                    For i = 0 To ringSize - 1
+                        ReDim ring(i)(width * 3 - 1) : ringRow(i) = -1
+                    Next
+                    Dim rowBuffer(width * 4 - 1) As Byte
+                    Dim FetchRow = Function(zy As Integer) As Short()
+                                       Dim yy = Math.Min(Math.Max(zy, 0), height - 1)
+                                       Dim slot = yy Mod ringSize
+                                       If ringRow(slot) <> yy Then
+                                           ' Versatz in Integer, siehe HeifDecodeService: IntPtr
+                                           ' addiert nur Integer. Die Schranke des Aufrufers ist auf
+                                           ' 6 Byte je Pixel bemessen, also auf genau diese Schrittweite.
+                                           Marshal.Copy(data + yy * rowBytes, ring(slot), 0, width * 3)
+                                           ringRow(slot) = yy
+                                       End If
+                                       Return ring(slot)
+                                   End Function
+
+                    For y = band * BandRows To Math.Min(height, (band + 1) * BandRows) - 1
+                        Dim rowShorts = FetchRow(y)
+                        Dim d = 0
+                        Dim ditherRow = (y And 7) << 3
+                        Dim dyPix = y - cy
+                        For x = 0 To width - 1
+                            ' And &HFFFF hebt die Short-Werte vorzeichenfrei nach Integer (VB hat kein
+                            ' UShort-Marshalling ueber Marshal.Copy).
+                            Dim g = rowShorts(x * 3 + 1) And &HFFFF
+                            Dim r As Integer, b As Integer
+                            If korrigiert Then
+                                Dim dxPix = x - cx
+                                ' EIN Radius fuer beide Korrekturen - die Wurzel ist der teuerste Anteil
+                                ' dieser Schleife und wird nicht zweimal gezogen.
+                                Dim rPix = Math.Sqrt(dxPix * dxPix + dyPix * dyPix)
+                                Dim rNorm = rPix * normScale
+
+                                If korrigiertTca AndAlso rPix > 0.0 Then
+                                    ' ACHTUNG Konvention: der Faktor sagt, WIE WEIT AUSSEN der Kanal in der
+                                    ' Aufnahme wirklich liegt (Rd = Ru * f, wie die Sammlung ihn definiert).
+                                    ' Korrigiert wird deshalb, indem man ihn DORT abtastet, also mit dem
+                                    ' Faktor MULTIPLIZIERT. Hier stand bis 0.9.54 das Teilen, mit dem
+                                    ' Kommentar, Multiplizieren verdopple den Saum. Gemessen an echten Bildern
+                                    ' ist es umgekehrt: an vier Objektiven mit deutlichem Querfehler im Profil
+                                    ' (RF 24-240, AF-S DX 18-140, E 18-135, EF-S 18-55) wuchs der Rotversatz mit
+                                    ' dem Teilen um den Profilwert und ging mit dem Multiplizieren fast auf null
+                                    ' (Nutzerbefund Issue #66: "Farbsaeume korrigieren wirkt nicht").
+                                    Dim fr = LensDataService.ChromaticAberrationFactor(lens, rNorm, True)
+                                    Dim fb = LensDataService.ChromaticAberrationFactor(lens, rNorm, False)
+                                    r = AbtastenBilinear(FetchRow, width, height, cx + dxPix * fr, cy + dyPix * fr, 0)
+                                    b = AbtastenBilinear(FetchRow, width, height, cx + dxPix * fb, cy + dyPix * fb, 2)
+                                Else
+                                    r = rowShorts(x * 3) And &HFFFF
+                                    b = rowShorts(x * 3 + 2) And &HFFFF
+                                End If
+
+                                If korrigiertVignette Then
+                                    ' Der gemessene Wert beschreibt den ABFALL, korrigiert wird durch
+                                    ' Teilen. Und er rechnet mit r = 1 in der ECKE, nicht an der langen
+                                    ' Kante wie der Farbquerfehler - daher die zweite Skala.
+                                    Dim abfall = LensDataService.VignettingFactor(lens, rNorm * cornerScale)
+                                    ' Sehr kleine Werte wuerden das Rauschen der Bildecke ins Unermessliche
+                                    ' heben; drei Blendenstufen sind die Grenze des Sinnvollen.
+                                    If abfall < 0.125 Then abfall = 0.125
+                                    r = Math.Min(65535, CInt(r / abfall))
+                                    g = Math.Min(65535, CInt(g / abfall))
+                                    b = Math.Min(65535, CInt(b / abfall))
+                                End If
+                            Else
+                                r = rowShorts(x * 3) And &HFFFF
+                                b = rowShorts(x * 3 + 2) And &HFFFF
+                            End If
+                            ' DIESELBE Schwelle fuer alle drei Kanaele eines Pixels (wie in der
+                            ' Punktoperationskette): kanalweise verschiedene Schwellen faerben neutrale
+                            ' Flaechen ein. (v*255 + T) \ 65535 liegt fuer T < 65535 immer in 0..255,
+                            ' CByte kann nicht ueberlaufen.
+                            Dim high = Math.Max(r, Math.Max(g, b))
+                            Dim tief = Math.Min(r, Math.Min(g, b))
+                            Dim tHoch = ton(high)
+                            Dim tTief = ton(tief)
+                            Dim rr As Integer, gg As Integer, bb As Integer
+                            If high = tief Then
+                                rr = tHoch : gg = tHoch : bb = tHoch
+                            Else
+                                Dim span = high - tief
+                                Dim delta = tHoch - tTief
+                                rr = tTief + CInt(CLng(delta) * (r - tief) \ span)
+                                gg = tTief + CInt(CLng(delta) * (g - tief) \ span)
+                                bb = tTief + CInt(CLng(delta) * (b - tief) \ span)
+                            End If
+                            Dim t = thresholds(ditherRow Or (x And 7))
+                            rowBuffer(d) = CByte((gamma(bb) * 255 + t) \ 65535)
+                            rowBuffer(d + 1) = CByte((gamma(gg) * 255 + t) \ 65535)
+                            rowBuffer(d + 2) = CByte((gamma(rr) * 255 + t) \ 65535)
+                            rowBuffer(d + 3) = 255
+                            d += 4
+                        Next
+                        onRow(y, rowBuffer)
+                    Next
+                End Sub)
         End Sub
 
         ''' <summary>Einen Kanal bilinear an einer beliebigen Stelle abtasten. Die Raender werden

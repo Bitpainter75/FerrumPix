@@ -433,6 +433,21 @@ Namespace Services
         Public Property LensTcaAmount As Single = 100
         Public Property LensVignettingAmount As Single = 100
 
+        ''' <summary>Feinkorrektur des Farbquerfehlers von Hand, je Kanal -100 bis 100, 0 = nichts.
+        ''' Sie wirkt ZUSAETZLICH zum Profil und auch ohne eines: das Profil beschreibt ein
+        ''' Objektivmodell, und an einem Exemplar oder einer Brennweite trifft es oft nicht ganz
+        ''' (Issue #66: beim RF 24-240 bei 24 mm gibt es im Blau praktisch nichts an, im Bild liegt
+        ''' Blau rund einen Pixel zu weit aussen). Positiv heisst, der Kanal liegt zu weit AUSSEN
+        ''' und wird nach innen geholt; 100 entspricht einem Faktor von 1,002 (siehe
+        ''' LensDataService.FineChromaticAberrationFactor).
+        '''
+        ''' Spanne und Aufteilung wie Adobes crs:ChromaticAberrationR (Rot/Cyan) und
+        ''' crs:ChromaticAberrationB (Blau/Gelb), damit ein Preset sich spaeter abbilden laesst. Die
+        ''' Richtung und Skala dort sind nicht nachgemessen; der Import uebernimmt die Zahlen deshalb
+        ''' noch nicht.</summary>
+        Public Property LensTcaRed As Single = 0
+        Public Property LensTcaBlue As Single = 0
+
         ''' <summary>Lichter aus den Rohdaten zurueckholen. Wie die Objektivkorrektur eine Angabe,
         ''' die den DECODE aendert und nicht die Reglerkette: LibRaw entklemmt dann die Lichter,
         ''' die Belichtungsrampe gleicht den Normierungsfaktor aus und rollt oben weich aus.
@@ -859,7 +874,7 @@ Namespace Services
             "WhiteBalanceAnchorX", "WhiteBalanceAnchorY", "WhiteBalanceModel",
             "RawHighlightRecovery",
             "LensDistortion", "LensTca", "LensVignetting", "LensModel",
-            "LensDistortionAmount", "LensTcaAmount", "LensVignettingAmount",
+            "LensDistortionAmount", "LensTcaAmount", "LensVignettingAmount", "LensTcaRed", "LensTcaBlue",
             "WorkingImageVersion", "WorkingImageHasTransparency",
             "GeometryOperations",
             "BakedOperations", "BakedOperationsApplied",
@@ -1112,6 +1127,8 @@ Namespace Services
                 .LensDistortionAmount = LensDistortionAmount,
                 .LensTcaAmount = LensTcaAmount,
                 .LensVignettingAmount = LensVignettingAmount,
+                .LensTcaRed = LensTcaRed,
+                .LensTcaBlue = LensTcaBlue,
                 .WorkingImageVersion = WorkingImageVersion,
                 .WorkingImageHasTransparency = WorkingImageHasTransparency,
                 .BakedOperationsApplied = BakedOperationsApplied,

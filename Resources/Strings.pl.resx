@@ -8910,4 +8910,19 @@
   <data name="W_hlt_was_unter_dem_Dateinamen_steht_bis_zu_drei_1487b6bc" xml:space="preserve">
     <value>Określa, co jest widoczne pod nazwą pliku: do trzech wierszy, każdy z jedną informacją przy lewej i jedną przy prawej krawędzi. Wiersz bez informacji jest pomijany. Lista pokazuje te same informacje. Wartości pochodzą z katalogu; jeśli zdjęcie nie ma daty wykonania, wyświetlana jest data modyfikacji pliku.</value>
   </data>
+  <data name="Farbs_ume_von_Hand_050aec07" xml:space="preserve">
+    <value>Obwódki barwne ręcznie</value>
+  </data>
+  <data name="Rot_Cyan_bc1570a3" xml:space="preserve">
+    <value>Czerwony/Cyjan</value>
+  </data>
+  <data name="Blau_Gelb_266ea097" xml:space="preserve">
+    <value>Niebieski/Żółty</value>
+  </data>
+  <data name="Bleiben_an_kontrastreichen_Kanten_zum_Bildrand_h_0f173758" xml:space="preserve">
+    <value>Jeśli przy kontrastowych krawędziach w stronę brzegu obrazu zostają czerwone lub cyjanowe obwódki, ten suwak przesuwa czerwień względem zieleni. Działa także bez profilu obiektywu.</value>
+  </data>
+  <data name="Bleiben_an_kontrastreichen_Kanten_zum_Bildrand_h_a9e66200" xml:space="preserve">
+    <value>Jeśli przy kontrastowych krawędziach w stronę brzegu obrazu zostają niebieskie, fioletowe lub żółte obwódki, ten suwak przesuwa błękit względem zieleni. Działa także bez profilu obiektywu.</value>
+  </data>
 </root>
