@@ -218,6 +218,14 @@ Namespace Services
                         littleEndian = True
                     ElseIf header(0) = &H4D AndAlso header(1) = &H4D Then
                         littleEndian = False
+                    ElseIf header(4) = &H66 AndAlso header(5) = &H74 AndAlso header(6) = &H79 AndAlso header(7) = &H70 Then
+                        ' "ftyp": ein ISO-Media-Container, so baut Canon die CR3. Er hat keinen
+                        ' TIFF-Kopf, die Drehung steht in einer eingebetteten EXIF-IFD0. Ohne diesen
+                        ' Zweig galt jede CR3 als ungedreht, und die quer liegende eingebettete
+                        ' Vorschau einer HOCHKANT aufgenommenen stand im Viewer quer (Nutzerbefund
+                        ' an einer R6 Mark III, Issue #66).
+                        fs.Close()
+                        Return ReadIsoMediaContainerInfo(path)
                     Else
                         Return result
                     End If
@@ -254,6 +262,29 @@ Namespace Services
                         End Select
                     Next
                 End Using
+            Catch
+                result.Origin = SKEncodedOrigin.TopLeft
+            End Try
+            Return result
+        End Function
+
+        ''' <summary>Drehung und Sensormasse aus der EXIF-IFD0 eines ISO-Media-RAW (CR3), ueber den
+        ''' Metadatenleser. Der kennt die Canon-Kisten, in denen sie steckt; selbst nachbauen hiesse,
+        ''' die Kistenstruktur zu parsen. Bei allem, was nicht aufgeht: TopLeft, wie bisher.</summary>
+        Private Shared Function ReadIsoMediaContainerInfo(path As String) As RawContainerInfo
+            Dim result As RawContainerInfo
+            result.Origin = SKEncodedOrigin.TopLeft
+            Try
+                For Each directory In MetadataExtractor.ImageMetadataReader.ReadMetadata(path).
+                                          OfType(Of MetadataExtractor.Formats.Exif.ExifIfd0Directory)()
+                    Dim orientation As Integer
+                    If Not MetadataExtractor.DirectoryExtensions.TryGetInt32(directory, &H112, orientation) Then Continue For
+                    result.Origin = ToEncodedOrigin(orientation)
+                    Dim value As Integer
+                    If MetadataExtractor.DirectoryExtensions.TryGetInt32(directory, &H100, value) Then result.SensorWidth = value
+                    If MetadataExtractor.DirectoryExtensions.TryGetInt32(directory, &H101, value) Then result.SensorHeight = value
+                    Exit For
+                Next
             Catch
                 result.Origin = SKEncodedOrigin.TopLeft
             End Try

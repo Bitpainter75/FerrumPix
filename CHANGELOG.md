@@ -13,3 +13,6 @@
 - Raw files develop noticeably faster, and the lens correction sliders no longer redevelop the
   picture at every step while you drag them.
 
+- Canon CR3 pictures taken in portrait orientation are shown upright in the viewer and on gallery
+  tiles again instead of lying on their side.
+
