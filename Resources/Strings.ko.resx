@@ -8947,4 +8947,28 @@
   <data name="Immer_4544f615" xml:space="preserve">
     <value>항상</value>
   </data>
+  <data name="Werkzeugwechsel_im_Anpassungspanel_5877bd68" xml:space="preserve">
+    <value>조정 패널의 도구 전환</value>
+  </data>
+  <data name="Zwei_Kn_pfe_am_unteren_Rand_des_Panels_springen__11e01c43" xml:space="preserve">
+    <value>패널 아래쪽의 두 버튼으로 이전 도구와 다음 도구로 이동합니다. 조정, 변형, 선택, 마스크을(를) 순환합니다. CTRL+TAB과 CTRL+SHIFT+TAB으로도 언제든 같은 동작을 할 수 있습니다.</value>
+  </data>
+  <data name="Zum_n_chsten_Werkzeug_Anpassungen_Transformieren_11446992" xml:space="preserve">
+    <value>다음 도구로: 조정, 변형, 선택, 마스크 순환</value>
+  </data>
+  <data name="Zum_vorigen_Werkzeug_im_selben_Kreis_ea3b448a" xml:space="preserve">
+    <value>같은 순환에서 이전 도구로</value>
+  </data>
+  <data name="Voriges_Werkzeug_STRG_SHIFT_TAB_7f04b03f" xml:space="preserve">
+    <value>이전 도구 (CTRL+SHIFT+TAB)</value>
+  </data>
+  <data name="N_chstes_Werkzeug_STRG_TAB_fe4cf715" xml:space="preserve">
+    <value>다음 도구 (CTRL+TAB)</value>
+  </data>
+  <data name="STRG_TAB_8f294773" xml:space="preserve">
+    <value>CTRL+TAB</value>
+  </data>
+  <data name="STRG_SHIFT_TAB_e6921751" xml:space="preserve">
+    <value>CTRL+SHIFT+TAB</value>
+  </data>
 </root>

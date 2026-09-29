@@ -8903,4 +8903,28 @@
   <data name="Immer_4544f615" xml:space="preserve">
     <value>Toujours</value>
   </data>
+  <data name="Werkzeugwechsel_im_Anpassungspanel_5877bd68" xml:space="preserve">
+    <value>Changement d'outil dans le panneau de réglages</value>
+  </data>
+  <data name="Zwei_Kn_pfe_am_unteren_Rand_des_Panels_springen__11e01c43" xml:space="preserve">
+    <value>Deux boutons en bas du panneau passent à l'outil précédent et au suivant, en boucle parmi Ajustements, Transformer, Sélection et Masque. La même chose fonctionne toujours avec CTRL+TAB et CTRL+MAJ+TAB.</value>
+  </data>
+  <data name="Zum_n_chsten_Werkzeug_Anpassungen_Transformieren_11446992" xml:space="preserve">
+    <value>Vers l'outil suivant : Ajustements, Transformer, Sélection et Masque, en boucle</value>
+  </data>
+  <data name="Zum_vorigen_Werkzeug_im_selben_Kreis_ea3b448a" xml:space="preserve">
+    <value>Vers l'outil précédent de la même boucle</value>
+  </data>
+  <data name="Voriges_Werkzeug_STRG_SHIFT_TAB_7f04b03f" xml:space="preserve">
+    <value>Outil précédent (CTRL+MAJ+TAB)</value>
+  </data>
+  <data name="N_chstes_Werkzeug_STRG_TAB_fe4cf715" xml:space="preserve">
+    <value>Outil suivant (CTRL+TAB)</value>
+  </data>
+  <data name="STRG_TAB_8f294773" xml:space="preserve">
+    <value>CTRL+TAB</value>
+  </data>
+  <data name="STRG_SHIFT_TAB_e6921751" xml:space="preserve">
+    <value>CTRL+MAJ+TAB</value>
+  </data>
 </root>

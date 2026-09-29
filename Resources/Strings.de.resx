@@ -8921,4 +8921,28 @@
   <data name="Immer_4544f615" xml:space="preserve">
     <value>Immer</value>
   </data>
+  <data name="Werkzeugwechsel_im_Anpassungspanel_5877bd68" xml:space="preserve">
+    <value>Werkzeugwechsel im Anpassungspanel</value>
+  </data>
+  <data name="Zwei_Kn_pfe_am_unteren_Rand_des_Panels_springen__11e01c43" xml:space="preserve">
+    <value>Zwei Knöpfe am unteren Rand des Panels springen zum vorigen und nächsten Werkzeug, im Kreis durch Anpassungen, Transformieren, Auswahl und Maske. Dasselbe geht jederzeit mit STRG+TAB und STRG+SHIFT+TAB.</value>
+  </data>
+  <data name="Zum_n_chsten_Werkzeug_Anpassungen_Transformieren_11446992" xml:space="preserve">
+    <value>Zum nächsten Werkzeug: Anpassungen, Transformieren, Auswahl und Maske, im Kreis</value>
+  </data>
+  <data name="Zum_vorigen_Werkzeug_im_selben_Kreis_ea3b448a" xml:space="preserve">
+    <value>Zum vorigen Werkzeug im selben Kreis</value>
+  </data>
+  <data name="Voriges_Werkzeug_STRG_SHIFT_TAB_7f04b03f" xml:space="preserve">
+    <value>Voriges Werkzeug (STRG+SHIFT+TAB)</value>
+  </data>
+  <data name="N_chstes_Werkzeug_STRG_TAB_fe4cf715" xml:space="preserve">
+    <value>Nächstes Werkzeug (STRG+TAB)</value>
+  </data>
+  <data name="STRG_TAB_8f294773" xml:space="preserve">
+    <value>STRG+TAB</value>
+  </data>
+  <data name="STRG_SHIFT_TAB_e6921751" xml:space="preserve">
+    <value>STRG+SHIFT+TAB</value>
+  </data>
 </root>

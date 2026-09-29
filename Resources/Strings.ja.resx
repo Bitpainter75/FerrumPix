@@ -8943,4 +8943,28 @@
   <data name="Immer_4544f615" xml:space="preserve">
     <value>常に</value>
   </data>
+  <data name="Werkzeugwechsel_im_Anpassungspanel_5877bd68" xml:space="preserve">
+    <value>調整パネルでのツール切り替え</value>
+  </data>
+  <data name="Zwei_Kn_pfe_am_unteren_Rand_des_Panels_springen__11e01c43" xml:space="preserve">
+    <value>パネル下部の 2 つのボタンで前後のツールに移動します。調整、変形、選択範囲、マスク を順に巡回します。CTRL+TAB と CTRL+SHIFT+TAB でもいつでも同じ操作ができます。</value>
+  </data>
+  <data name="Zum_n_chsten_Werkzeug_Anpassungen_Transformieren_11446992" xml:space="preserve">
+    <value>次のツールへ：調整、変形、選択範囲、マスク を巡回</value>
+  </data>
+  <data name="Zum_vorigen_Werkzeug_im_selben_Kreis_ea3b448a" xml:space="preserve">
+    <value>同じ巡回内の前のツールへ</value>
+  </data>
+  <data name="Voriges_Werkzeug_STRG_SHIFT_TAB_7f04b03f" xml:space="preserve">
+    <value>前のツール (CTRL+SHIFT+TAB)</value>
+  </data>
+  <data name="N_chstes_Werkzeug_STRG_TAB_fe4cf715" xml:space="preserve">
+    <value>次のツール (CTRL+TAB)</value>
+  </data>
+  <data name="STRG_TAB_8f294773" xml:space="preserve">
+    <value>CTRL+TAB</value>
+  </data>
+  <data name="STRG_SHIFT_TAB_e6921751" xml:space="preserve">
+    <value>CTRL+SHIFT+TAB</value>
+  </data>
 </root>

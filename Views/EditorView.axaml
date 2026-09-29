@@ -1186,7 +1186,7 @@
 
         <Border x:Name="AdjustmentsPanelBorder"
                 Grid.Row="1" Grid.Column="2" Classes="panel-right">
-            <Grid RowDefinitions="*">
+            <Grid RowDefinitions="*,Auto">
                 <Grid Grid.Row="0">
                     <ScrollViewer x:Name="AdjustmentsScrollViewer"
                                   HorizontalContentAlignment="Stretch"
@@ -1635,6 +1635,38 @@
                         </StackPanel>
                     </ScrollViewer>
                 </Grid>
+
+                <!-- WECHSELLEISTE: im Kreis durch die Werkzeuge von Anpassungen, Transformieren
+                     sowie Auswahl und Maske (EditorViewModel.SwitcherTools), ohne den Weg ueber die
+                     Werkzeugleiste. Unter dem Bildlaufbereich, nicht darin: sie soll am Ende jeder
+                     Gruppe an derselben Stelle stehen, gleich wie lang das Panel ist. Per Einstellung
+                     (Editor), ab Werk aus. Tasten: STRG+TAB und STRG+SHIFT+TAB. -->
+                <Border Grid.Row="1" Padding="10,8"
+                        BorderBrush="{DynamicResource FP.Border.Normal}" BorderThickness="0,1,0,0"
+                        IsVisible="{Binding ShowToolSwitcher}">
+                    <Grid ColumnDefinitions="*,8,*">
+                        <Button Grid.Column="0" Classes="ghost" HorizontalAlignment="Stretch"
+                                HorizontalContentAlignment="Left" Padding="8,6"
+                                Command="{Binding PreviousSwitcherToolCommand}"
+                                ToolTip.Tip="Voriges Werkzeug (STRG+SHIFT+TAB)">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/chevron-left.svg"
+                                               Width="16" Height="16" />
+                                <TextBlock Text="{Binding PreviousSwitcherToolLabel}" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+                        <Button Grid.Column="2" Classes="ghost" HorizontalAlignment="Stretch"
+                                HorizontalContentAlignment="Right" Padding="8,6"
+                                Command="{Binding NextSwitcherToolCommand}"
+                                ToolTip.Tip="Nächstes Werkzeug (STRG+TAB)">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <TextBlock Text="{Binding NextSwitcherToolLabel}" VerticalAlignment="Center" />
+                                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/chevron-right.svg"
+                                               Width="16" Height="16" />
+                            </StackPanel>
+                        </Button>
+                    </Grid>
+                </Border>
             </Grid>
         </Border>
 

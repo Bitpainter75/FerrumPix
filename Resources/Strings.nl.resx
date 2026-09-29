@@ -8943,4 +8943,28 @@
   <data name="Immer_4544f615" xml:space="preserve">
     <value>Altijd</value>
   </data>
+  <data name="Werkzeugwechsel_im_Anpassungspanel_5877bd68" xml:space="preserve">
+    <value>Gereedschapswissel in het aanpassingspaneel</value>
+  </data>
+  <data name="Zwei_Kn_pfe_am_unteren_Rand_des_Panels_springen__11e01c43" xml:space="preserve">
+    <value>Twee knoppen onder in het paneel springen naar het vorige en volgende gereedschap, in een kring door Aanpassingen, Transformeren, Selectie en Masker. Hetzelfde kan altijd met CTRL+TAB en CTRL+SHIFT+TAB.</value>
+  </data>
+  <data name="Zum_n_chsten_Werkzeug_Anpassungen_Transformieren_11446992" xml:space="preserve">
+    <value>Naar het volgende gereedschap: Aanpassingen, Transformeren, Selectie en Masker, in een kring</value>
+  </data>
+  <data name="Zum_vorigen_Werkzeug_im_selben_Kreis_ea3b448a" xml:space="preserve">
+    <value>Naar het vorige gereedschap in dezelfde kring</value>
+  </data>
+  <data name="Voriges_Werkzeug_STRG_SHIFT_TAB_7f04b03f" xml:space="preserve">
+    <value>Vorig gereedschap (CTRL+SHIFT+TAB)</value>
+  </data>
+  <data name="N_chstes_Werkzeug_STRG_TAB_fe4cf715" xml:space="preserve">
+    <value>Volgend gereedschap (CTRL+TAB)</value>
+  </data>
+  <data name="STRG_TAB_8f294773" xml:space="preserve">
+    <value>CTRL+TAB</value>
+  </data>
+  <data name="STRG_SHIFT_TAB_e6921751" xml:space="preserve">
+    <value>CTRL+SHIFT+TAB</value>
+  </data>
 </root>

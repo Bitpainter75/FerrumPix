@@ -8943,4 +8943,28 @@
   <data name="Immer_4544f615" xml:space="preserve">
     <value>Alltid</value>
   </data>
+  <data name="Werkzeugwechsel_im_Anpassungspanel_5877bd68" xml:space="preserve">
+    <value>Verktygsbyte i justeringspanelen</value>
+  </data>
+  <data name="Zwei_Kn_pfe_am_unteren_Rand_des_Panels_springen__11e01c43" xml:space="preserve">
+    <value>Två knappar längst ned i panelen hoppar till föregående och nästa verktyg, i en slinga genom Justeringar, Transformera, Markering och Mask. Samma sak går alltid med CTRL+TAB och CTRL+SHIFT+TAB.</value>
+  </data>
+  <data name="Zum_n_chsten_Werkzeug_Anpassungen_Transformieren_11446992" xml:space="preserve">
+    <value>Till nästa verktyg: Justeringar, Transformera, Markering och Mask, i en slinga</value>
+  </data>
+  <data name="Zum_vorigen_Werkzeug_im_selben_Kreis_ea3b448a" xml:space="preserve">
+    <value>Till föregående verktyg i samma slinga</value>
+  </data>
+  <data name="Voriges_Werkzeug_STRG_SHIFT_TAB_7f04b03f" xml:space="preserve">
+    <value>Föregående verktyg (CTRL+SHIFT+TAB)</value>
+  </data>
+  <data name="N_chstes_Werkzeug_STRG_TAB_fe4cf715" xml:space="preserve">
+    <value>Nästa verktyg (CTRL+TAB)</value>
+  </data>
+  <data name="STRG_TAB_8f294773" xml:space="preserve">
+    <value>CTRL+TAB</value>
+  </data>
+  <data name="STRG_SHIFT_TAB_e6921751" xml:space="preserve">
+    <value>CTRL+SHIFT+TAB</value>
+  </data>
 </root>

@@ -450,6 +450,10 @@ Namespace Services
         ''' bisher. Wer viel scrollt, sieht so immer, wo im Panel er steht, und trifft die Leiste
         ''' beim ersten Griff.</summary>
         Public Property EditorAdjustmentsScrollBarAlwaysVisible As Boolean = False
+        ''' <summary>Steht unten im Anpassungspanel eine Leiste, die zum vorigen und naechsten
+        ''' Anpassungswerkzeug wechselt? Ab Werk aus. Die Tasten STRG+TAB und STRG+SHIFT+TAB gelten
+        ''' unabhaengig davon immer.</summary>
+        Public Property EditorToolSwitcher As Boolean = False
         ''' Werkzeug, das beim Betreten des Editors aktiv ist: "Selection" (Auswahl) oder
         ''' "Adjust" (Anpassen). Ab Werk steht der Editor direkt bei den Anpassungen.
         Public Property EditorStartupTool As String = "Adjust"

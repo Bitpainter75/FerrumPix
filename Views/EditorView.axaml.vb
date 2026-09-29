@@ -1381,6 +1381,20 @@ Namespace Views
             If e.Handled Then Return
             Dim tunnelVm = TryCast(DataContext, EditorViewModel)
 
+            ' STRG+TAB und STRG+SHIFT+TAB: zum naechsten und vorigen Werkzeug im Kreis der
+            ' Wechselleiste (EditorViewModel.SwitcherTools), auch wenn die Leiste selbst aus ist.
+            ' IM TUNNEL, weil TAB sonst die Fokussteuerung von Avalonia bekommt, die den Fokus nur
+            ' zum naechsten Bedienelement schiebt. Ausserhalb des Kreises bleibt die Taste
+            ' unbehandelt. Auf dem Mac ebenfalls mit Control, wie die uebrigen Werkzeugkuerzel.
+            If tunnelVm IsNot Nothing AndAlso e.Key = Key.Tab AndAlso
+               PlatformShortcutService.HasApplicationModifier(e.KeyModifiers) AndAlso
+               Not e.KeyModifiers.HasFlag(KeyModifiers.Alt) Then
+                If tunnelVm.GoToNeighborSwitcherTool(If(e.KeyModifiers.HasFlag(KeyModifiers.Shift), -1, 1)) Then
+                    e.Handled = True
+                    Return
+                End If
+            End If
+
             ' EIN LAUFENDER PFAD-ENTWURF wird HIER abgeschlossen, nicht erst im Handler der Ansicht:
             ' die Eingabetaste gehoert sonst dem Steuerelement, das gerade den Fokus hat - nach einem
             ' Klick auf einen Knopf im Panel ist das der Knopf, und der schluckt sie. Genau daran

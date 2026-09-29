@@ -9,6 +9,10 @@
   crop frame in that shape while you drag it, typing a width or height adjusts the other, and
   Free lets it go again. The edge and size values now follow the frame while you drag.
 
+- **Switch tools without the tool bar.** CTRL+TAB and CTRL+SHIFT+TAB step through Adjust,
+  Color, Details, Effects, Filters, Transform, Image size, Distort, Selection and Mask in a loop.
+  An editor setting adds two buttons for the same at the bottom of the adjustment panel.
+
 - **Scroll bar of the adjustment panel.** A new editor setting keeps it always visible instead of
   showing it only when the pointer is over it. The settings window now always shows its scroll bar.
 

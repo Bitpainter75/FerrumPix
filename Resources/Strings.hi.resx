@@ -8947,4 +8947,28 @@
   <data name="Immer_4544f615" xml:space="preserve">
     <value>हमेशा</value>
   </data>
+  <data name="Werkzeugwechsel_im_Anpassungspanel_5877bd68" xml:space="preserve">
+    <value>समायोजन पैनल में टूल बदलना</value>
+  </data>
+  <data name="Zwei_Kn_pfe_am_unteren_Rand_des_Panels_springen__11e01c43" xml:space="preserve">
+    <value>पैनल के निचले किनारे पर दो बटन पिछले और अगले टूल पर ले जाते हैं, समायोजन, रूपांतरण, चयन और मास्क के बीच चक्र में। यही काम कभी भी CTRL+TAB और CTRL+SHIFT+TAB से होता है।</value>
+  </data>
+  <data name="Zum_n_chsten_Werkzeug_Anpassungen_Transformieren_11446992" xml:space="preserve">
+    <value>अगले टूल पर: समायोजन, रूपांतरण, चयन और मास्क, चक्र में</value>
+  </data>
+  <data name="Zum_vorigen_Werkzeug_im_selben_Kreis_ea3b448a" xml:space="preserve">
+    <value>उसी चक्र में पिछले टूल पर</value>
+  </data>
+  <data name="Voriges_Werkzeug_STRG_SHIFT_TAB_7f04b03f" xml:space="preserve">
+    <value>पिछला टूल (CTRL+SHIFT+TAB)</value>
+  </data>
+  <data name="N_chstes_Werkzeug_STRG_TAB_fe4cf715" xml:space="preserve">
+    <value>अगला टूल (CTRL+TAB)</value>
+  </data>
+  <data name="STRG_TAB_8f294773" xml:space="preserve">
+    <value>CTRL+TAB</value>
+  </data>
+  <data name="STRG_SHIFT_TAB_e6921751" xml:space="preserve">
+    <value>CTRL+SHIFT+TAB</value>
+  </data>
 </root>

@@ -1056,6 +1056,7 @@ Namespace ViewModels
             Editor?.RaisePropertyChanged(NameOf(EditorViewModel.IsAdjustmentsPanelOnLeft))
             Editor?.RaisePropertyChanged(NameOf(EditorViewModel.AdjustmentsVerticalScrollBarVisibility))
             Editor?.RaisePropertyChanged(NameOf(EditorViewModel.AdjustmentsScrollBarAutoHide))
+            Editor?.RaiseToolSwitcherChanged()
             ' Die Seite des Panels verschiebt die Mitte der Buehne und damit die Schwelle, ab der
             ' die Beschriftungen der Kopfleiste weichen. Ohne diese Zeile bliebe der alte Stand bis
             ' zur naechsten Groessenaenderung des Fensters stehen.

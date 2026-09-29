@@ -8947,4 +8947,28 @@
   <data name="Immer_4544f615" xml:space="preserve">
     <value>Her zaman</value>
   </data>
+  <data name="Werkzeugwechsel_im_Anpassungspanel_5877bd68" xml:space="preserve">
+    <value>Ayarlama panelinde araç değiştirme</value>
+  </data>
+  <data name="Zwei_Kn_pfe_am_unteren_Rand_des_Panels_springen__11e01c43" xml:space="preserve">
+    <value>Panelin altındaki iki düğme bir önceki ve bir sonraki araca geçer; Ayarlamalar, Dönüştür, Seçim ve Maske arasında döngü halinde. Aynısı her zaman CTRL+TAB ve CTRL+SHIFT+TAB ile de yapılabilir.</value>
+  </data>
+  <data name="Zum_n_chsten_Werkzeug_Anpassungen_Transformieren_11446992" xml:space="preserve">
+    <value>Sonraki araca: Ayarlamalar, Dönüştür, Seçim ve Maske, döngü halinde</value>
+  </data>
+  <data name="Zum_vorigen_Werkzeug_im_selben_Kreis_ea3b448a" xml:space="preserve">
+    <value>Aynı döngüde önceki araca</value>
+  </data>
+  <data name="Voriges_Werkzeug_STRG_SHIFT_TAB_7f04b03f" xml:space="preserve">
+    <value>Önceki araç (CTRL+SHIFT+TAB)</value>
+  </data>
+  <data name="N_chstes_Werkzeug_STRG_TAB_fe4cf715" xml:space="preserve">
+    <value>Sonraki araç (CTRL+TAB)</value>
+  </data>
+  <data name="STRG_TAB_8f294773" xml:space="preserve">
+    <value>CTRL+TAB</value>
+  </data>
+  <data name="STRG_SHIFT_TAB_e6921751" xml:space="preserve">
+    <value>CTRL+SHIFT+TAB</value>
+  </data>
 </root>

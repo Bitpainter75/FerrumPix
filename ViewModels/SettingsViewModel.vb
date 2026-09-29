@@ -97,6 +97,7 @@ Namespace ViewModels
         Private _savedPhotoMapEnabled As Boolean = False
         Private _editorAdjustmentsPanelOnLeft As Boolean = False
         Private _editorAdjustmentsScrollBarAlwaysVisible As Boolean = False
+        Private _editorToolSwitcher As Boolean = False
         Private _editorStartupTool As String = "Adjust"
         Private _psdTextImport As String = "Ask"
         Private _editorToolGroupOrder As String = "Adjust,Transform,Tools"
@@ -182,6 +183,7 @@ Namespace ViewModels
         Private _savedEditorStartupTool As String = "Adjust"
         Private _savedEditorAdjustmentsPanelOnLeft As Boolean = False
         Private _savedEditorAdjustmentsScrollBarAlwaysVisible As Boolean = False
+        Private _savedEditorToolSwitcher As Boolean = False
         Private _savedEditorToolGroupOrder As String = "Adjust,Transform,Tools"
         Private _savedDefaultSaveFormat As String = "JPG"
         Private _savedEditorSaveAsNamePattern As String = "{name}_fx"
@@ -2224,6 +2226,20 @@ Namespace ViewModels
             End Get
         End Property
 
+        ''' <summary>Wechselleiste unten im Anpassungspanel: zum vorigen und naechsten
+        ''' Anpassungswerkzeug. Ab Werk aus.</summary>
+        Public Property EditorToolSwitcher As Boolean
+            Get
+                Return _editorToolSwitcher
+            End Get
+            Set(value As Boolean)
+                If _editorToolSwitcher = value Then Return
+                Me.RaiseAndSetIfChanged(_editorToolSwitcher, value)
+                _mainVm?.RefreshLayoutBindings()
+                SaveLayoutSettings()
+            End Set
+        End Property
+
         ''' <summary>Werkzeug, das beim Betreten des Editors aktiv ist. Zur Wahl stehen die beiden
         ''' Einstiege, mit denen man tatsächlich anfängt: „Auswahl" (bisheriges Verhalten) und
         ''' „Anpassen".</summary>
@@ -3888,6 +3904,7 @@ Namespace ViewModels
             _editorDenoiseStrength = EditorViewModel.ClampDenoiseStrength(_appSettings.EditorDenoiseStrength)
             _editorAdjustmentsPanelOnLeft = _appSettings.EditorAdjustmentsPanelOnLeft
             _editorAdjustmentsScrollBarAlwaysVisible = _appSettings.EditorAdjustmentsScrollBarAlwaysVisible
+            _editorToolSwitcher = _appSettings.EditorToolSwitcher
             _editorStartupTool = AppSettingsService.NormalizeEditorStartupTool(_appSettings.EditorStartupTool)
             _psdTextImport = AppSettingsService.NormalizePsdTextImport(_appSettings.PsdTextImport)
             _editorToolGroupOrder = AppSettingsService.NormalizeEditorToolGroupOrder(_appSettings.EditorToolGroupOrder)
@@ -4194,6 +4211,7 @@ Namespace ViewModels
             _savedEditorStartupTool = _editorStartupTool
             _savedEditorAdjustmentsPanelOnLeft = _editorAdjustmentsPanelOnLeft
             _savedEditorAdjustmentsScrollBarAlwaysVisible = _editorAdjustmentsScrollBarAlwaysVisible
+            _savedEditorToolSwitcher = _editorToolSwitcher
             _savedEditorToolGroupOrder = _editorToolGroupOrder
             _savedDefaultSaveFormat = _defaultSaveFormat
             _savedEditorSaveAsNamePattern = _editorSaveAsNamePattern
@@ -4303,6 +4321,7 @@ Namespace ViewModels
             EditorStartupTool = _savedEditorStartupTool
             EditorAdjustmentsPanelOnLeft = _savedEditorAdjustmentsPanelOnLeft
             EditorAdjustmentsScrollBarAlwaysVisible = _savedEditorAdjustmentsScrollBarAlwaysVisible
+            EditorToolSwitcher = _savedEditorToolSwitcher
             EditorToolGroupOrder = _savedEditorToolGroupOrder
             DefaultSaveFormat = _savedDefaultSaveFormat
             EditorSaveAsNamePattern = _savedEditorSaveAsNamePattern
@@ -4437,6 +4456,7 @@ Namespace ViewModels
             EditorStartupTool = "Adjust"
             EditorAdjustmentsPanelOnLeft = False
             EditorAdjustmentsScrollBarAlwaysVisible = False
+            EditorToolSwitcher = False
             EditorToolGroupOrder = "Adjust,Transform,Tools"
             DefaultSaveFormat = "JPG"
             EditorSaveAsNamePattern = "{name}_fx"
@@ -4802,6 +4822,7 @@ Namespace ViewModels
                                           s.EditorDenoiseStrength = _editorDenoiseStrength
                                           s.EditorAdjustmentsPanelOnLeft = _editorAdjustmentsPanelOnLeft
                                           s.EditorAdjustmentsScrollBarAlwaysVisible = _editorAdjustmentsScrollBarAlwaysVisible
+                                          s.EditorToolSwitcher = _editorToolSwitcher
                                           s.EditorStartupTool = _editorStartupTool
                                           s.PsdTextImport = _psdTextImport
                                           s.EditorToolGroupOrder = _editorToolGroupOrder

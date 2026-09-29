@@ -4883,6 +4883,7 @@ Namespace ViewModels
                 Dim previousTool = _currentTool
                 Dim discarded As List(Of String) = Nothing
                 Me.RaiseAndSetIfChanged(_currentTool, value)
+                If previousTool <> value Then RaiseToolSwitcherChanged()
                 If previousTool <> value Then
                     ' Jede offene Transaktion hat beim Werkzeugwechsel denselben sichtbaren
                     ' Abschluss: sie wird entweder übernommen oder ihr Verwurf wird benannt.
@@ -15455,6 +15456,8 @@ Namespace ViewModels
         Public ReadOnly Property ApplyPerspectiveCommand As ICommand
         Public ReadOnly Property ResetCropCommand As ICommand
         Public ReadOnly Property SetCropPresetCommand As ICommand
+        Public ReadOnly Property PreviousSwitcherToolCommand As ICommand
+        Public ReadOnly Property NextSwitcherToolCommand As ICommand
         ''' Wird ausgelöst, wenn sich die Maße des angezeigten Bildes geändert haben (z.B. nach dem
         ''' Zuschneiden). Die View passt daraufhin Zoom und Schwenk neu ein - genauso wie beim Laden
         ''' eines anderen Bildes.
@@ -15860,6 +15863,8 @@ Namespace ViewModels
                                                           RaiseResetButtonStateChanged()
                                                           SchedulePreviewUpdate()
                                                       End Sub)
+            PreviousSwitcherToolCommand = ReactiveCommand.Create(Sub() GoToNeighborSwitcherTool(-1))
+            NextSwitcherToolCommand = ReactiveCommand.Create(Sub() GoToNeighborSwitcherTool(1))
             SetCropPresetCommand = ReactiveCommand.Create(Of String)(Sub(preset)
                                                                          ApplyCropPreset(preset)
                                                                      End Sub)
@@ -16755,12 +16760,116 @@ Namespace ViewModels
                (jetzt = EditorTool.Filters AndAlso Not ShowsToolFilter) Then
                 CurrentTool = EditorTool.Selection
             End If
+            RaiseToolSwitcherChanged()
+        End Sub
+
+        ''' <summary>Der Kreis der Wechselleiste (unten im Anpassungspanel) und von STRG+TAB: die
+        ''' Werkzeuge der Gruppen ANPASSUNGEN und TRANSFORMIEREN sowie Auswahl und Maske aus der
+        ''' Gruppe WERKZEUGE. Die Gruppen stehen in der Reihenfolge der Werkzeugleiste
+        ''' (EditorToolGroupOrder), innerhalb einer Gruppe wie dort untereinander. Ausgeblendete
+        ''' Anpassungswerkzeuge fehlen.
+        '''
+        ''' Die uebrigen Werkzeuge (Text, Objekte, Pinsel, Retusche und so weiter) gehoeren bewusst
+        ''' NICHT dazu: das sind Werkzeuge, zu denen man gezielt greift, keine Stationen, die man
+        ''' beim Entwickeln der Reihe nach durchgeht.</summary>
+        Private Function SwitcherTools() As List(Of EditorTool)
+            Dim groups As New Dictionary(Of String, EditorTool())(StringComparer.OrdinalIgnoreCase) From {
+                {"Adjust", {EditorTool.Adjust, EditorTool.Color, EditorTool.Details, EditorTool.Effects, EditorTool.Filters}},
+                {"Transform", {EditorTool.Transform, EditorTool.Resize, EditorTool.Warp}},
+                {"Tools", {EditorTool.Selection, EditorTool.Mask}}
+            }
+            Dim order = AppSettingsService.NormalizeEditorToolGroupOrder(
+                If(_mainVm?.Settings?.EditorToolGroupOrder, "")).Split(","c)
+            Dim tools As New List(Of EditorTool)
+            For Each key In order
+                Dim members As EditorTool() = Nothing
+                If Not groups.TryGetValue(key.Trim(), members) Then Continue For
+                For Each tool In members
+                    If IsSwitcherToolShown(tool) Then tools.Add(tool)
+                Next
+            Next
+            Return tools
+        End Function
+
+        Private Function IsSwitcherToolShown(tool As EditorTool) As Boolean
+            Select Case tool
+                Case EditorTool.Adjust : Return ShowsToolAdjust
+                Case EditorTool.Color : Return ShowsToolColor
+                Case EditorTool.Details : Return ShowsToolDetails
+                Case EditorTool.Effects : Return ShowsToolEffects
+                Case EditorTool.Filters : Return ShowsToolFilter
+                Case Else : Return True
+            End Select
+        End Function
+
+        ''' Das Nachbarwerkzeug im Kreis (-1 voriges, +1 naechstes): nach dem letzten kommt wieder
+        ''' das erste. None ausserhalb des Kreises oder wenn er nur ein Werkzeug hat.
+        Private Function NeighborSwitcherTool(direction As Integer) As EditorTool
+            Dim tools = SwitcherTools()
+            Dim index = tools.IndexOf(If(_currentTool = EditorTool.Frame, EditorTool.Effects, _currentTool))
+            If index < 0 OrElse tools.Count < 2 Then Return EditorTool.None
+            Return tools(((index + direction) Mod tools.Count + tools.Count) Mod tools.Count)
+        End Function
+
+        Private Shared Function SwitcherToolName(tool As EditorTool) As String
+            Select Case tool
+                Case EditorTool.Adjust : Return LocalizationService.T("Anpassen")
+                Case EditorTool.Color : Return LocalizationService.T("Farbe")
+                Case EditorTool.Details : Return LocalizationService.T("Details")
+                Case EditorTool.Effects : Return LocalizationService.T("Effekte")
+                Case EditorTool.Filters : Return LocalizationService.T("Filter")
+                Case EditorTool.Transform : Return LocalizationService.T("Transformieren")
+                Case EditorTool.Resize : Return LocalizationService.T("Bildgröße")
+                Case EditorTool.Warp : Return LocalizationService.T("Verzerren")
+                Case EditorTool.Selection : Return LocalizationService.T("Auswahl")
+                Case EditorTool.Mask : Return LocalizationService.T("Maske")
+                Case Else : Return ""
+            End Select
+        End Function
+
+        ''' <summary>Steht die Wechselleiste? Aus den Einstellungen (EditorToolSwitcher, ab Werk
+        ''' aus), und nur in einem Werkzeug des Kreises.</summary>
+        Public ReadOnly Property ShowToolSwitcher As Boolean
+            Get
+                Return _mainVm IsNot Nothing AndAlso _mainVm.Settings IsNot Nothing AndAlso
+                       _mainVm.Settings.EditorToolSwitcher AndAlso
+                       NeighborSwitcherTool(1) <> EditorTool.None
+            End Get
+        End Property
+
+        Public ReadOnly Property PreviousSwitcherToolLabel As String
+            Get
+                Return SwitcherToolName(NeighborSwitcherTool(-1))
+            End Get
+        End Property
+
+        Public ReadOnly Property NextSwitcherToolLabel As String
+            Get
+                Return SwitcherToolName(NeighborSwitcherTool(1))
+            End Get
+        End Property
+
+        ''' <summary>Zum Nachbarwerkzeug im Kreis wechseln, ueber denselben Weg wie die Knoepfe der
+        ''' Werkzeugleiste. False ausserhalb des Kreises (dann bleibt die Taste unbehandelt).</summary>
+        Public Function GoToNeighborSwitcherTool(direction As Integer) As Boolean
+            Dim tool = NeighborSwitcherTool(direction)
+            If tool = EditorTool.None Then Return False
+            SetToolCommand.Execute(tool.ToString())
+            Return True
+        End Function
+
+        Public Sub RaiseToolSwitcherChanged()
+            For Each n In {NameOf(ShowToolSwitcher), NameOf(PreviousSwitcherToolLabel), NameOf(NextSwitcherToolLabel)}
+                Me.RaisePropertyChanged(n)
+            Next
         End Sub
 
         Public Sub RefreshToolGroupOrder()
             Me.RaisePropertyChanged(NameOf(ToolGroupRowAdjust))
             Me.RaisePropertyChanged(NameOf(ToolGroupRowTransform))
             Me.RaisePropertyChanged(NameOf(ToolGroupRowTools))
+            ' Der Kreis der Wechselleiste folgt derselben Reihenfolge.
+            RaiseToolSwitcherChanged()
         End Sub
 
         Public Sub NavigateToFilmstripItem(item As ImageItem)
