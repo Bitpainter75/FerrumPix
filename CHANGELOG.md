@@ -6,6 +6,9 @@
   now follow the language of the app. A pasted selection was always called "Auswahl", and names
   kept the language they were created in.
 
+- Masks: the red overlay and the mask view now show the soft edge. Moving Feather on a color or
+  luminance range seemed to do nothing, because both views kept showing the hard outline.
+
 ## 0.9.55
 
 ### What's new

@@ -466,6 +466,12 @@ Namespace ViewModels
                         _imageMasks.FirstOrDefault(Function(m) m IsNot Nothing AndAlso m.Id = layer.MaskId))
                     If mask IsNot Nothing Then mask.FeatherPixels = CSng(clamped)
                 End If
+                ' Rotes Overlay und Graustufenblick zeigen die Kante mit (MaskViewFeatherPixels),
+                ' muessen dafuer aber neu gebaut werden. Solange die Maske noch als Auswahl laeuft,
+                ' ist das die einzige Stelle, an der der Regler ueberhaupt zu sehen ist. Nur ein
+                ' SICHTBARES Overlay: ein Anpassungswerkzeug blendet es nach dem ersten Reglerzug
+                ' aus (HideMaskOverlayAfterChange), und die weiche Kante holte es sonst zurueck.
+                If _selectionMaskPreviewImage IsNot Nothing Then PublishMaskBrushOverlay(nurWennSichtbar:=True)
                 SchedulePreviewUpdate()
             End Set
         End Property
@@ -819,9 +825,23 @@ Namespace ViewModels
                         ' Maskenrechtecks blieb eine dünne Reihe voll roter Pixel stehen ("ganz feiner roter
                         ' Rahmen"). Die weiche Kante der Maske kommt ohnehin aus
                         ' ihren Alpha-Werten (plus SamplingHigh), nicht aus der Kantenglättung des Rechtecks.
-                        Using maskPaint = New SKPaint With {.BlendMode = SKBlendMode.DstIn, .IsAntialias = False}
-                            ImageProcessor.DrawBitmapSampled(canvas, maskForOverlay, src, dst, ImageProcessor.SamplingHigh, maskPaint)
-                        End Using
+                        Dim feather = MaskViewFeatherPixels() * CSng(ovScale)
+                        If feather > 0.05F Then
+                            ' Die weiche Kante laeuft ueber das Maskenrechteck hinaus: Rot deshalb
+                            ' ueberall auslegen und auf die weichgezeichnete Deckung beschraenken.
+                            Using redPaint = New SKPaint With {.Color = redColor, .Style = SKPaintStyle.Fill}
+                                canvas.DrawRect(New SKRect(0, 0, ow, oh), redPaint)
+                            End Using
+                            Using coverage = BuildFeatheredOverlayCoverage(maskForOverlay, src, dst, ow, oh, feather)
+                                Using maskPaint = New SKPaint With {.BlendMode = SKBlendMode.DstIn, .IsAntialias = False}
+                                    canvas.DrawBitmap(coverage, 0, 0, maskPaint)
+                                End Using
+                            End Using
+                        Else
+                            Using maskPaint = New SKPaint With {.BlendMode = SKBlendMode.DstIn, .IsAntialias = False}
+                                ImageProcessor.DrawBitmapSampled(canvas, maskForOverlay, src, dst, ImageProcessor.SamplingHigh, maskPaint)
+                            End Using
+                        End If
                     End If
                     ' Basis fuer die naechsten Bewegungen desselben Strichs festhalten - VOR dem
                     ' Zeichnen des Strichs, sonst waere er beim naechsten Mal doppelt drin.
@@ -899,6 +919,43 @@ Namespace ViewModels
             End Set
         End Property
 
+        ''' <summary>Die weiche Kante in Bildpixeln, mit der die Maske beim Rendern auslaeuft, fuer die
+        ''' beiden Ansichten der Maske. Die Arbeitskopie (_selectionMask) ist hart, die Kante kommt
+        ''' erst beim Rendern dazu (SelectionFeatherPixels bzw. mask.FeatherPixels). Ohne sie zeigten
+        ''' rotes Overlay und Graustufenblick nie, was der Regler "Weiche Kante" tut (Nutzerbefund an
+        ''' Farb- und Helligkeitsbereich). Steckt die Kante schon in den Alpha-Werten (freier Pinsel),
+        ''' bleibt es bei 0, sonst erschiene sie doppelt.</summary>
+        Private Function MaskViewFeatherPixels() As Single
+            If _selectionMaskSoftBaked Then Return 0.0F
+            Return CSng(Math.Max(0.0, _selectionFeather))
+        End Function
+
+        ''' <summary>Die Maske als Deckung ueber das GANZE Overlay, weichgezeichnet wie beim Rendern
+        ''' (Sigma halber Radius, siehe BlurAlphaMask). Das ganze Overlay und nicht nur das
+        ''' Maskenrechteck, weil die Kante ueber dessen Rand hinaus auslaeuft. Der Radius ist schon in
+        ''' Overlay-Aufloesung umgerechnet; weichgezeichnet wird erst nach dem Verkleinern, bei 45 MP
+        ''' waere es sonst die volle Flaeche je Reglerschritt.</summary>
+        Private Shared Function BuildFeatheredOverlayCoverage(mask As SKBitmap, src As SKRect, dst As SKRect,
+                                                              ow As Integer, oh As Integer, radius As Single) As SKBitmap
+            Using hard = New SKBitmap(ow, oh, SKColorType.Alpha8, SKAlphaType.Premul)
+                Using c = New SKCanvas(hard)
+                    c.Clear(SKColors.Transparent)
+                    Using paint = New SKPaint With {.IsAntialias = False}
+                        ImageProcessor.DrawBitmapSampled(c, mask, src, dst, ImageProcessor.SamplingHigh, paint)
+                    End Using
+                End Using
+                Dim soft = New SKBitmap(ow, oh, SKColorType.Alpha8, SKAlphaType.Premul)
+                Using c = New SKCanvas(soft)
+                    c.Clear(SKColors.Transparent)
+                    Dim sigma = Math.Max(0.1F, radius * 0.5F)
+                    Using paint = New SKPaint With {.ImageFilter = SKImageFilter.CreateBlur(sigma, sigma), .Color = SKColors.White}
+                        c.DrawBitmap(hard, 0, 0, paint)
+                    End Using
+                End Using
+                Return soft
+            End Using
+        End Function
+
         ''' <summary>Die Maske als Graustufenbild ueber dem ganzen Bild: schwarzer Grund, die Deckung
         ''' in Weiss darauf. Deckend, damit vom Foto nichts durchscheint - genau das ist der Zweck.
         '''
@@ -920,6 +977,7 @@ Namespace ViewModels
             Dim shape = _selectionMask
             Dim shapeRect = _selectionMaskRect
             Dim ownsShape = False
+            Dim feather = MaskViewFeatherPixels()
             If shape Is Nothing Then
                 Dim current = CurrentMaskForComponents()
                 If current IsNot Nothing Then
@@ -927,8 +985,12 @@ Namespace ViewModels
                     shape = ImageProcessor.BuildSelectionMaskFromLayerMask(current, BuildAdjustmentsFromFields(), rect)
                     shapeRect = rect
                     ownsShape = shape IsNot Nothing
+                    ' Die Form aus der Ebene ist hart wie die Arbeitskopie, ihre Kante steht an der
+                    ' Ebene. Ein Verlauf ist bereits glatt, er hat keinen Weichzeichner dahinter.
+                    feather = If(current.IsGradient, 0.0F, Math.Max(0.0F, current.FeatherPixels))
                 End If
             End If
+            feather *= CSng(ovScale)
 
             Try
             Using overlay = New SKBitmap(ow, oh, SKColorType.Bgra8888, SKAlphaType.Premul)
@@ -944,10 +1006,16 @@ Namespace ViewModels
                         ' Schicht, und ohne sie fraesse es den schwarzen Grund gleich mit weg.
                         canvas.SaveLayer()
                         Using whitePaint = New SKPaint With {.Color = SKColors.White, .Style = SKPaintStyle.Fill}
-                            canvas.DrawRect(dst, whitePaint)
+                            canvas.DrawRect(If(feather > 0.05F, New SKRect(0, 0, ow, oh), dst), whitePaint)
                         End Using
                         Using maskPaint = New SKPaint With {.BlendMode = SKBlendMode.DstIn, .IsAntialias = False}
-                            ImageProcessor.DrawBitmapSampled(canvas, shape, src, dst, ImageProcessor.SamplingHigh, maskPaint)
+                            If feather > 0.05F Then
+                                Using coverage = BuildFeatheredOverlayCoverage(shape, src, dst, ow, oh, feather)
+                                    canvas.DrawBitmap(coverage, 0, 0, maskPaint)
+                                End Using
+                            Else
+                                ImageProcessor.DrawBitmapSampled(canvas, shape, src, dst, ImageProcessor.SamplingHigh, maskPaint)
+                            End If
                         End Using
                         canvas.Restore()
                     End If
