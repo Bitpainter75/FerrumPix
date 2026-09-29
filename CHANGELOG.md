@@ -20,6 +20,9 @@
 - Canon CR3 pictures taken in portrait orientation are shown upright in the viewer and on gallery
   tiles again instead of lying on their side.
 
+- Fujifilm raw files taken with an extended dynamic range setting (DR200, DR400) no longer open
+  too dark; the exposure starts where the camera meant it to be.
+
 - At 100 percent, moving a lens correction slider no longer jumps back to the middle of the
   picture, so you can watch the effect where you zoomed in.
 
