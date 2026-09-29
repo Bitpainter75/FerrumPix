@@ -8224,12 +8224,19 @@ Namespace ViewModels
             End Set
         End Property
 
+        ''' <summary>Groesste Pinsel- und Retuschegroesse in Bildpunkten, fuer alle Pinsel gleich
+        ''' (Malen, Radieren, Masken- und Auswahlpinsel, Retusche). Dieselbe Zahl steht als Maximum in
+        ''' den Reglern von DrawPanel, MaskPanel und SelectionPanel. Bis 0.9.55 war es 500: bei einem
+        ''' Bild mit 8000 Punkten Breite deckte der groesste Pinsel so nur gut sechs Prozent davon ab,
+        ''' zu wenig fuer weiches Auslaufen grosser Flaechen (Nutzerbefund).</summary>
+        Public Const MaxToolSize As Double = 2000
+
         Public Property RetouchRadius As Double
             Get
                 Return _retouchRadius
             End Get
             Set(value As Double)
-                Me.RaiseAndSetIfChanged(_retouchRadius, Math.Max(1, Math.Min(500, value)))
+                Me.RaiseAndSetIfChanged(_retouchRadius, Math.Max(1, Math.Min(MaxToolSize, value)))
                 RaiseResetButtonStateChanged()
                 ' KEIN SchedulePreviewUpdate (Log 23:16): Der Radius ist ein
                 ' WERKZEUG-Parameter fuer KUENFTIGE Punkte - am Bild aendert er nichts. Der
@@ -8305,7 +8312,7 @@ Namespace ViewModels
                 Return _brushSize
             End Get
             Set(value As Double)
-                Me.RaiseAndSetIfChanged(_brushSize, Math.Max(1, Math.Min(500, value)))
+                Me.RaiseAndSetIfChanged(_brushSize, Math.Max(1, Math.Min(MaxToolSize, value)))
                 SyncSelectedAnnotationIfStroke()
                 RaiseResetButtonStateChanged()
             End Set
@@ -11918,7 +11925,6 @@ Namespace ViewModels
         Private _selectionClipboardYPercent As Double = 0
         Private _selectionClipboardWidthPercent As Double = 0
         Private _selectionClipboardHeightPercent As Double = 0
-        Private _selectionClipboardPasteCount As Integer = 0
 
         ' Ebenen-Zwischenablage: Die Pixelauswahl hat weiterhin ihre eigene Datei-Zwischenablage
         ' darunter. Eine markierte Ebene meint bei Strg+C/V aber die EBENE selbst, nicht den gerade
@@ -12020,7 +12026,6 @@ Namespace ViewModels
             _selectionClipboardYPercent = p.Y
             _selectionClipboardWidthPercent = p.W
             _selectionClipboardHeightPercent = p.H
-            _selectionClipboardPasteCount = 0
             Return tempPath
         End Function
 
@@ -12059,9 +12064,17 @@ Namespace ViewModels
 
         Public Sub PasteSelectionClipboard()
             If String.IsNullOrWhiteSpace(_selectionClipboardPath) OrElse Not File.Exists(_selectionClipboardPath) Then Return
-            _selectionClipboardPasteCount += 1
-            Dim offset = 3.0 * _selectionClipboardPasteCount
-            AddSelectionImageAnnotationAt(_selectionClipboardPath, _selectionClipboardXPercent + offset, _selectionClipboardYPercent + offset, _selectionClipboardWidthPercent, _selectionClipboardHeightPercent)
+            ' AN DERSELBEN STELLE, ohne Versatz. Bis 0.9.55 rueckte jedes Einfuegen 3 Prozent weiter
+            ' nach rechts unten, schon das erste. Nach STRG+A ragte die Kopie damit ueber den Rand,
+            ' und wer eine Ebene zum Mischen dupliziert, musste sie erst wieder zurechtschieben
+            ' (Nutzerbefund). Uebereinanderliegende Kopien zeigt die Ebenenliste.
+            ' Ragt sie trotzdem hinaus (die Lage stammt etwa von vor einem Zuschnitt), rueckt sie
+            ' ins Bild, soweit sie kleiner ist als das Bild.
+            Dim x = _selectionClipboardXPercent, y = _selectionClipboardYPercent
+            Dim w = _selectionClipboardWidthPercent, h = _selectionClipboardHeightPercent
+            If w <= 100.0 Then x = Math.Max(0.0, Math.Min(100.0 - w, x))
+            If h <= 100.0 Then y = Math.Max(0.0, Math.Min(100.0 - h, y))
+            AddSelectionImageAnnotationAt(_selectionClipboardPath, x, y, w, h)
             NameHistoryStep(LocalizationService.T("Auswahl eingefügt"))
         End Sub
 
@@ -18920,7 +18933,6 @@ Namespace ViewModels
             Dim tempDir = _selectionAssetTempDir
             _selectionAssetTempDir = ""
             _selectionClipboardPath = Nothing
-            _selectionClipboardPasteCount = 0
             ' Die Zwischenstände des Objekt-Malens liegen im selben Ordner und gehen mit ihm - und
             ' mit ihnen ihre Kopien im Speicher.
             _objectPaintFiles.Clear()

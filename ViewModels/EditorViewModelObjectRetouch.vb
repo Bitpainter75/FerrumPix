@@ -494,7 +494,9 @@ Namespace ViewModels
             ' da ist - sie ist die Brücke über die Zeit, die Dekodieren und Rechnen kosten. Ohne sie
             ' sähe man dazwischen den alten Stand.
             Dim lockTransparent = target.LockTransparentPixels
-            EnqueueObjectImageEdit(target, targetPath, LocalizationService.T("Retusche fehlgeschlagen"),
+            EnqueueObjectImageEdit(target, targetPath,
+                                   LocalizationService.T(If(IsCloneMode, "Stempeln", If(IsRepairMode, "Reparatur", "Verwischen"))),
+                                   LocalizationService.T("Retusche fehlgeschlagen"),
                                    Function() RetouchObjectImageToFile(sourcePath, targetPath, spots, imageWidth, imageHeight, lockTransparent),
                                    Nothing,
                                    Sub()
@@ -604,7 +606,8 @@ Namespace ViewModels
             Dim lockTransparent = target.LockTransparentPixels
             Dim cancel = BeginCancellableLayerRun()
             SetBusyReason(LocalizationService.T("Objekt wird entfernt"))
-            EnqueueObjectImageEdit(target, targetPath, LocalizationService.T("Entfernen fehlgeschlagen"),
+            EnqueueObjectImageEdit(target, targetPath, LocalizationService.T("Objekt aus der Ebene entfernt"),
+                                   LocalizationService.T("Entfernen fehlgeschlagen"),
                                    Function() RemoveObjectFromImageToFile(sourcePath, targetPath, region, coverage, lockTransparent, cancel),
                                    Sub() coverage?.Dispose(),
                                    Sub()

@@ -801,7 +801,7 @@ Namespace ViewModels
             Dim renderAnn = stroke.ToRenderAnnotation()
             Dim targetPath = CreateSelectionAssetTempPath("paint")
             _objectPaintNextSource = targetPath
-            EnqueueObjectPaint(target, sourcePath, targetPath, renderAnn, dirty, coverage)
+            EnqueueObjectPaint(target, sourcePath, targetPath, renderAnn, dirty, coverage, isEraser)
             Return True
         End Function
 
@@ -871,13 +871,15 @@ Namespace ViewModels
         ''' STRENG NACHEINANDER - jeder baut auf der Datei des vorigen auf, und eine Verzahnung
         ''' verlöre den früheren Strich.</summary>
         Private Sub EnqueueObjectPaint(target As ImageAnnotation, sourcePath As String, targetPath As String,
-                                       renderAnnotation As ImageAnnotation, dirty As SKRectI, coverage As SKBitmap)
+                                       renderAnnotation As ImageAnnotation, dirty As SKRectI, coverage As SKBitmap,
+                                       isEraser As Boolean)
             ' Der Text wird HIER aufgelöst, nicht drinnen aus einer Variablen: T() liest den Schlüssel
             ' aus dem Literal, ein T(variable) fiele aus der Lokalisierung heraus.
             ' Die Sperre der transparenten Punkte wird HIER gelesen, auf dem UI-Faden: der Hintergrund
             ' darf die Ebene nicht anfassen, und wer sie mitten im Zug umlegt, meint den nächsten.
             Dim lockTransparent = target.LockTransparentPixels
-            EnqueueObjectImageEdit(target, targetPath, LocalizationService.T("Malen fehlgeschlagen"),
+            EnqueueObjectImageEdit(target, targetPath, LocalizationService.T(If(isEraser, "Radiert", "Gemalt")),
+                                   LocalizationService.T("Malen fehlgeschlagen"),
                                    Function() PaintObjectStrokeToFile(sourcePath, targetPath, renderAnnotation, dirty, coverage, lockTransparent),
                                    Sub() coverage?.Dispose())
         End Sub
@@ -886,7 +888,8 @@ Namespace ViewModels
         ''' auf derselben Ebene sich nicht überholen können.
         Private Sub EnqueueObjectErase(target As ImageAnnotation, sourcePath As String, targetPath As String,
                                        dirty As SKRectI, coverage As SKBitmap)
-            EnqueueObjectImageEdit(target, targetPath, LocalizationService.T("Löschen fehlgeschlagen"),
+            EnqueueObjectImageEdit(target, targetPath, LocalizationService.T("Auswahl gelöscht"),
+                                   LocalizationService.T("Löschen fehlgeschlagen"),
                                    Function() EraseCoverageToFile(sourcePath, targetPath, dirty, coverage),
                                    Sub() coverage?.Dispose())
         End Sub
@@ -900,6 +903,11 @@ Namespace ViewModels
         ''' übernommen ist - für alles, was so lange stehen bleiben muss, bis das neue Bild da ist.
         ''' Beides ist optional.
         '''
+        ''' <paramref name="historyLabel"/> ist der Name des Verlaufsschritts, beim EINREIHEN
+        ''' aufgelöst: beim Übernehmen können Werkzeug und Modus längst andere sein. Ein fester Name
+        ''' hier hatte jeden Pinselstrich und jedes Radieren auf einer Ebene als "Verwischen" in den
+        ''' Verlauf geschrieben.
+        '''
         ''' <paramref name="countsAsBusy"/> markiert einen MODELLLAUF: er sperrt die Oberfläche und
         ''' bekommt das X zum Abbrechen. Der Zähler wird hier geführt und nicht beim Aufrufer, weil
         ''' der Schritt an einer Stelle aussteigt, die der Aufrufer nicht sieht - nach einem
@@ -907,7 +915,7 @@ Namespace ViewModels
         ''' immer stehen. <paramref name="cancelledMessage"/> ist die Meldung für den gewollten
         ''' Abbruch; "fehlgeschlagen" wäre dort die falsche Auskunft.</summary>
         Private Sub EnqueueObjectImageEdit(target As ImageAnnotation, targetPath As String,
-                                           failureMessage As String,
+                                           historyLabel As String, failureMessage As String,
                                            work As Func(Of Boolean), cleanup As Action,
                                            Optional onUiDone As Action = Nothing,
                                            Optional countsAsBusy As Boolean = False,
@@ -937,7 +945,7 @@ Namespace ViewModels
                                 ' Abgebrochen heißt: kein Ergebnis, aber auch kein Fehler. Die Ebene
                                 ' zeigt weiter auf ihre bisherige Datei.
                                 Dim cancelled = countsAsBusy AndAlso LayerRunWasCancelled()
-                                ApplyObjectPaintResult(target, targetPath, ok,
+                                ApplyObjectPaintResult(target, targetPath, ok, historyLabel,
                                                        If(cancelled AndAlso cancelledMessage <> "",
                                                           cancelledMessage, failureMessage))
                                 If Not cancelled Then onUiDone?.Invoke()
@@ -956,7 +964,7 @@ Namespace ViewModels
         ''' in der die Züge gemalt wurden. Der Schnappschuss entsteht genau hier: er trägt den
         ''' vorigen Pfad, und der IST das Rückgängig.</summary>
         Private Sub ApplyObjectPaintResult(target As ImageAnnotation, newPath As String, ok As Boolean,
-                                           failureMessage As String)
+                                           historyLabel As String, failureMessage As String)
             If Not ok OrElse String.IsNullOrEmpty(newPath) Then
                 StatusText = failureMessage
                 ' Der nächste Zug darf nicht auf einer Datei aufbauen, die nie entstanden ist.
@@ -966,7 +974,7 @@ Namespace ViewModels
             If Not _annotations.Contains(target) Then Return
 
             RegisterObjectPaintFile(newPath)
-            PushUndo(LocalizationService.T(If(IsCloneMode, "Stempeln", If(IsRepairMode, "Reparatur", "Verwischen"))))
+            PushUndo(historyLabel)
             target.ImagePath = newPath
             _hasChanges = True
             RaiseResetButtonStateChanged()

@@ -1,3 +1,17 @@
+## Unreleased
+
+### Fixes
+
+- Pasting a copied selection puts it exactly where it was copied from. It used to land a little
+  further to the right and down with every paste, so after Select all part of it hung over the
+  edge of the picture.
+
+- Painting or erasing on a layer shows up in the history as painted or erased. Every stroke on a
+  layer used to be listed as a smudge.
+
+- Brushes and the retouch tools now go up to 2000 pixels instead of 500, for large, soft strokes
+  on high-resolution pictures.
+
 ## 0.9.55
 
 ### What's new
