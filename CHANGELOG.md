@@ -6,6 +6,16 @@
   now follow the language of the app. A pasted selection was always called "Auswahl", and names
   kept the language they were created in.
 
+- Copying the whole picture and pasting it back puts the copy exactly on top of the picture. It
+  used to land far off to the side, named after a temporary file.
+
+- Canon raw files taken with Highlight Tone Priority no longer open a stop too dark; the exposure
+  starts where the camera meant it to be. Unedited raw files from the EOS R3, R8, M10, R5 Mark II
+  and 60D also start at a better brightness.
+
+- EOS 1000D raw files at ISO 200 keep the detail in their brightest areas instead of cutting it
+  off too early.
+
 - Masks: the red overlay and the mask view now show the soft edge. Moving Feather on a color or
   luminance range seemed to do nothing, because both views kept showing the hard outline.
 

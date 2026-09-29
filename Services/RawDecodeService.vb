@@ -2873,12 +2873,13 @@ Namespace Services
         ''' <summary>Was die DATEI SELBST zu ihrer Grundhelligkeit sagt, in Blendenstufen. 0, wenn sie
         ''' nichts sagt - und das ist der Normalfall.
         '''
-        ''' <para>Zwei Quellen. Bei einer DNG das Feld BaselineExposure, eingetragen vom Schreiber der
+        ''' <para>Drei Quellen. Bei einer DNG das Feld BaselineExposure, eingetragen vom Schreiber der
         ''' Datei: der Kamera, dem Umwandler oder einer Firmware wie CHDK. Der Bestandslauf über 462
         ''' RAW-Dateien fand 21 DNGs, davon 17 mit dem Feld und 16 mit einem Wert ungleich null:
         ''' alle negativ zwischen -0,2 und -1,0 Stufen. Bei einer Fujifilm-RAF der DR-Modus der
-        ''' Kamera (siehe <see cref="FujiDynamicRangePercent"/>). Alle uebrigen Formate sagen
-        ''' nichts.</para>
+        ''' Kamera (siehe <see cref="FujiDynamicRangePercent"/>), bei einer Canon-CR2 oder -CR3 die
+        ''' Tonwertpriorität (siehe <see cref="CanonHighlightTonePriority"/>). Alle uebrigen
+        ''' Formate sagen nichts.</para>
         '''
         ''' <para>WOFUER ES GEBRAUCHT WIRD: unsere Basisstufe entwickelt mit einer FESTEN
         ''' Grundbelichtung, gefittet an einer Kamera. Eine Datei, die ausdruecklich eine halbe Stufe
@@ -2890,10 +2891,12 @@ Namespace Services
         ''' und ein Metadatenlauf ueber eine 30-MB-Datei ist zu teuer, um ihn zu wiederholen.</para></summary>
         Public Shared Function BaselineExposureStops(path As String) As Double
             If String.IsNullOrEmpty(path) Then Return 0.0
-            ' Nur DNG und RAF sagen etwas. Die Abkuerzung spart den Metadatenlauf fuer alle anderen
-            ' Formate, und das sind in der Praxis fast alle Dateien.
+            ' Nur DNG, RAF und Canons CR2/CR3 sagen etwas. Die Abkuerzung spart den Metadatenlauf
+            ' fuer alle anderen Formate.
             Dim isRaf = path.EndsWith(".raf", StringComparison.OrdinalIgnoreCase)
-            If Not isRaf AndAlso Not path.EndsWith(".dng", StringComparison.OrdinalIgnoreCase) Then Return 0.0
+            Dim isCanon = path.EndsWith(".cr2", StringComparison.OrdinalIgnoreCase) OrElse
+                          path.EndsWith(".cr3", StringComparison.OrdinalIgnoreCase)
+            If Not isRaf AndAlso Not isCanon AndAlso Not path.EndsWith(".dng", StringComparison.OrdinalIgnoreCase) Then Return 0.0
 
             SyncLock BaselineExposuresLock
                 Dim bekannt As Double
@@ -2908,6 +2911,16 @@ Namespace Services
                     Dim percent = FujiDynamicRangePercent(ifd0Raf?.GetDescription(MetadataExtractor.Formats.Exif.ExifDirectoryBase.TagModel),
                                                           FujiDynamicRangeTags(verzeichnisse))
                     stops = If(percent > 100, Math.Log(percent / 100.0, 2.0), 0.0)
+                    SyncLock BaselineExposuresLock
+                        BaselineExposures(path) = stops
+                    End SyncLock
+                    Return stops
+                End If
+                If isCanon Then
+                    Dim canon = verzeichnisse.OfType(Of MetadataExtractor.Formats.Exif.Makernotes.CanonMakernoteDirectory)().FirstOrDefault()
+                    Dim priority = CanonHighlightTonePriority(IntegerArray(canon?.GetObject(CanonLightingOptTag)),
+                                                              IntegerArray(canon?.GetObject(CanonCustomFunctions2Tag)))
+                    stops = If(priority = 1, 1.0, 0.0)
                     SyncLock BaselineExposuresLock
                         BaselineExposures(path) = stops
                     End SyncLock
@@ -3007,6 +3020,67 @@ Namespace Services
                     End Select
             End Select
             Return If(percent = 100 OrElse percent = 200 OrElse percent = 400, percent, 0)
+        End Function
+
+        ''' <summary>Canons LightingOpt (0x4018) und Custom Functions 2 (0x0099) im Herstellerblock.</summary>
+        Private Const CanonLightingOptTag As Integer = &H4018
+        Private Const CanonCustomFunctions2Tag As Integer = &H99
+
+        ''' <summary>Die Tonwertpriorität einer Canon-Aufnahme: 0 aus, 1 an, 2 verstärkt (D+2), -1,
+        ''' wenn die Datei nichts dazu sagt.
+        '''
+        ''' <para>WAS SIE TUT: Die Kamera belichtet die Rohdaten eine Stufe knapper, um die Lichter zu
+        ''' schonen, und hebt ihr eigenes JPEG wieder an. Adobe gleicht das je Datei im BaselineExposure
+        ''' der DNG aus, eine Stufe über den übrigen Aufnahmen des Modells: am Bestand +0,93 bis +1,00
+        ''' (R8, R5 Mark II), an der 60D +0,80 gegen einen Median, der dort auch ohne sie schwankt. Ohne
+        ''' den Ausgleich kam jede solche Aufnahme bei uns eine Stufe zu dunkel, und die Kameratabelle
+        ''' mittelte darüber: die R8 stand mit drei solchen Messbildern eine Stufe daneben.</para>
+        '''
+        ''' <para>WOHER DER WERT KOMMT: bei neueren Kameras Eintrag 3 von LightingOpt (Eintrag 0 ist die
+        ''' Länge in Byte), bei älteren, deren LightingOpt kürzer ist, Eintrag 0x0203 der Custom
+        ''' Functions 2. Die sind in Gruppen abgelegt: Länge, Gruppenzahl, dann je Gruppe Nummer, Länge
+        ''' und Zahl der Einträge, und je Eintrag Nummer, Wertzahl und die Werte. Die Stufe 2 kommt im
+        ''' Bestand nicht vor und wird deshalb nicht ausgeglichen, statt einen Wert zu raten.</para></summary>
+        Public Shared Function CanonHighlightTonePriority(lightingOpt As Long(), customFunctions2 As Long()) As Integer
+            If lightingOpt IsNot Nothing AndAlso lightingOpt.Length >= 4 AndAlso lightingOpt(3) >= 0 AndAlso lightingOpt(3) <= 2 Then
+                Return CInt(lightingOpt(3))
+            End If
+            If customFunctions2 Is Nothing OrElse customFunctions2.Length < 2 Then Return -1
+            Dim groups = customFunctions2(1)
+            Dim i = 2
+            For group = 0L To groups - 1
+                If i + 2 >= customFunctions2.Length Then Exit For
+                Dim count = customFunctions2(i + 2)
+                i += 3
+                For entry = 0L To count - 1
+                    If i + 1 >= customFunctions2.Length Then Return -1
+                    Dim tag = customFunctions2(i)
+                    Dim valueCount = customFunctions2(i + 1)
+                    If valueCount < 0 OrElse valueCount > customFunctions2.Length Then Return -1
+                    If tag = &H203 AndAlso valueCount >= 1 AndAlso i + 2 < customFunctions2.Length Then
+                        Dim value = customFunctions2(i + 2)
+                        Return If(value >= 0 AndAlso value <= 2, CInt(value), -1)
+                    End If
+                    i += 2 + CInt(valueCount)
+                Next
+            Next
+            Return -1
+        End Function
+
+        ''' <summary>Ein Zahlenfeld aus dem Herstellerblock als Long(), gleich welchen Zahlentyp
+        ''' MetadataExtractor dafür gewählt hat; Nothing, wenn es keines ist.</summary>
+        Private Shared Function IntegerArray(value As Object) As Long()
+            Dim items = TryCast(value, Array)
+            If items Is Nothing Then Return Nothing
+            Dim result(items.Length - 1) As Long
+            For index = 0 To items.Length - 1
+                Try
+                    result(index) = Convert.ToInt64(items.GetValue(index), Globalization.CultureInfo.InvariantCulture)
+                Catch
+                    Return Nothing
+                End Try
+            Next
+            Return result
         End Function
 
         Private Shared Function CheckedPixelCount(width As Integer, height As Integer) As Long

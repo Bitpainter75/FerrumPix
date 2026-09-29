@@ -12007,8 +12007,31 @@ Namespace ViewModels
                 Return Nothing
             End If
 
+            _fullImageClipboardPath = targetPath
             StatusText = LocalizationService.T("Bild kopiert")
             Return targetPath
+        End Function
+
+        Private _fullImageClipboardPath As String
+
+        ''' <summary>Ist dieser Pfad UNSERE eigene Kopie des ganzen Bildes? Sie kommt über die
+        ''' System-Zwischenablage als Datei zurück und wurde dort wie eine fremde behandelt: sie
+        ''' landete bei 30 Prozent versetzt und hieß nach ihrer Zwischendatei ("Bild: full-copy_…").
+        ''' Sie ist aber genau so groß wie das Bild und gehört deckungsgleich darauf (Nutzerbefund).</summary>
+        Public Function IsOwnFullImageClipboardFile(path As String) As Boolean
+            If String.IsNullOrWhiteSpace(path) OrElse String.IsNullOrWhiteSpace(_fullImageClipboardPath) Then Return False
+            Return String.Equals(IO.Path.GetFullPath(path), IO.Path.GetFullPath(_fullImageClipboardPath),
+                                 StringComparison.OrdinalIgnoreCase)
+        End Function
+
+        ''' <summary>Fügt die eigene Kopie des ganzen Bildes als neue Bild-Ebene ein, an Ort und
+        ''' Stelle und bildfüllend. Derselbe Weg wie die Auswahlkopie, nur ohne gemerkte Lage: die
+        ''' Kopie deckt das ganze Bild.</summary>
+        Public Function PasteFullImageClipboard(path As String) As Boolean
+            If Not IsOwnFullImageClipboardFile(path) OrElse Not File.Exists(path) Then Return False
+            AddSelectionImageAnnotationAt(path, 0, 0, 100, 100, GeneratedLayerNames.PastedImage)
+            NameHistoryStep(LocalizationService.T("Bild eingefügt"))
+            Return True
         End Function
 
         ''' Strg+C im Auswahl-Werkzeug: schneidet die Auswahl zu und merkt sie sich (samt Ursprungsposition
@@ -18938,6 +18961,7 @@ Namespace ViewModels
             Dim tempDir = _selectionAssetTempDir
             _selectionAssetTempDir = ""
             _selectionClipboardPath = Nothing
+            _fullImageClipboardPath = Nothing
             ' Die Zwischenstände des Objekt-Malens liegen im selben Ordner und gehen mit ihm - und
             ' mit ihnen ihre Kopien im Speicher.
             _objectPaintFiles.Clear()

@@ -7657,6 +7657,8 @@ Namespace Views
                     vm.PasteSelectionClipboardIfAny()
                     Return
                 End If
+                ' Ebenso die eigene Kopie des GANZEN Bildes: deckungsgleich statt versetzt.
+                If imagePaths.Count = 1 AndAlso vm.PasteFullImageClipboard(imagePaths(0)) Then Return
                 If imagePaths.Count > 0 Then
                     ' Ohne Zeigerposition ist die Bildmitte der verlässlichste Einfügeort. Mehrere
                     ' Dateien bleiben durch den kleinen Versatz einzeln greifbar.
