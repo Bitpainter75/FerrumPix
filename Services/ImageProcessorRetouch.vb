@@ -857,6 +857,7 @@ Namespace Services
             End If
 
             If repaired = 0 Then Return False
+            CorrectHealingDrift(work, maskAlpha, targetLeft, targetTop, width, height, patchRadius)
             BlendInpaintedBoundary(work, maskAlpha, targetLeft, targetTop, width, height)
             ' Schreibt deckende Punkte direkt, siehe PixelWriter.
             Dim resultWriter = New PixelWriter(result)
@@ -987,6 +988,278 @@ Namespace Services
                         BlendByte(current.Blue, blended.Blue, 0.45F),
                         BlendByte(current.Alpha, blended.Alpha, 0.45F)))
                 Next
+            Next
+        End Sub
+
+        ''' <summary>Groesster Grundton-Unterschied, den <see cref="CorrectHealingDrift"/> noch voll
+        ''' angleicht, und der, ab dem es gar nicht mehr eingreift. Die Drift der Flickenkette liegt
+        ''' bei wenigen Stufen; ein grosser Unterschied ist Motiv, kein Fehler.</summary>
+        Private Const HealingDriftFullBelow As Single = 6.0F
+        Private Const HealingDriftNoneAbove As Single = 16.0F
+        ''' <summary>Wie glatt die Umgebung sein muss: Restabweichung der geglaetteten Umgebung von
+        ''' einer Ebene, in Stufen. Himmel liegt deutlich unter der unteren Grenze, Wolken, Laub oder
+        ''' Fassaden darueber.</summary>
+        Private Const HealingDriftSmoothBelow As Double = 3.0
+        Private Const HealingDriftRoughAbove As Double = 6.0
+
+        ''' <summary>Gleicht den GRUNDTON der Reparatur an eine glatte Flaeche an, die aus der
+        ''' unberuehrten Umgebung eingespannt ist. Die Koernung bleibt, wie die Flicken sie gebracht
+        ''' haben; ersetzt wird nur, was die Kette der Flicken an Helligkeit verschleppt hat.
+        '''
+        ''' BEFUND, der dazu gefuehrt hat: auch mit dem Helligkeitsangleich je Flicken wanderte der
+        ''' Grundton auf einem glatten Verlauf ueber lange Kopierketten ab, am Ende eines Zuges um
+        ''' bis zu 6 Stufen. Jeder Flicken richtet sich an bereits gefuellten Nachbarn aus, und deren
+        ''' kleine Fehler summieren sich. Die Flaeche hier haengt dagegen nur an Punkten, die nie
+        ''' repariert wurden.
+        '''
+        ''' Eingegriffen wird nur, wo die Umgebung selbst glatt ist (Himmel, Wand, Studiohintergrund)
+        ''' und nur fuer kleine Unterschiede. Auf Wolken, Laub oder an einer Horizontlinie wuerde die
+        ''' glatte Flaeche echte Struktur plattmachen.</summary>
+        Private Shared Sub CorrectHealingDrift(work As SKBitmap, maskAlpha As Byte(),
+                                               targetLeft As Integer, targetTop As Integer,
+                                               width As Integer, height As Integer,
+                                               patchRadius As Integer)
+            If work Is Nothing OrElse maskAlpha Is Nothing OrElse width <= 0 OrElse height <= 0 Then Return
+
+            Dim blurRadius = Math.Max(6, patchRadius * 2)
+            Dim margin = blurRadius * 2 + 2
+            Dim buffer = RegionPixelBuffer.FromRegion(work, targetLeft - margin, targetTop - margin,
+                                                      targetLeft + width - 1 + margin, targetTop + height - 1 + margin)
+            If buffer Is Nothing Then Return
+            Dim ew = buffer.Width
+            Dim eh = buffer.Height
+            Dim n = ew * eh
+
+            Dim red(n - 1) As Single
+            Dim green(n - 1) As Single
+            Dim blue(n - 1) As Single
+            Dim inside(n - 1) As Boolean
+            Dim insideCount = 0
+            For y = 0 To eh - 1
+                Dim my = buffer.Top + y - targetTop
+                For x = 0 To ew - 1
+                    Dim i = y * ew + x
+                    Dim c = buffer.GetColor(buffer.Left + x, buffer.Top + y)
+                    red(i) = c.Red : green(i) = c.Green : blue(i) = c.Blue
+                    Dim mx = buffer.Left + x - targetLeft
+                    If mx >= 0 AndAlso my >= 0 AndAlso mx < width AndAlso my < height AndAlso
+                       maskAlpha(my * width + mx) > 8 Then
+                        inside(i) = True
+                        insideCount += 1
+                    End If
+                Next
+            Next
+            If insideCount = 0 OrElse insideCount = n Then Return
+
+            Dim lowRed = BoxBlurPlane(red, ew, eh, blurRadius)
+            Dim lowGreen = BoxBlurPlane(green, ew, eh, blurRadius)
+            Dim lowBlue = BoxBlurPlane(blue, ew, eh, blurRadius)
+
+            ' Glatte Umgebung? Ebene durch die geglaettete Helligkeit der unberuehrten Punkte legen
+            ' und die Restabweichung messen.
+            Dim roughness = HealingSurroundingRoughness(lowRed, lowGreen, lowBlue, inside, ew, eh)
+            If Double.IsNaN(roughness) OrElse roughness >= HealingDriftRoughAbove Then Return
+            Dim surroundingGate = CSng(Math.Min(1.0, (HealingDriftRoughAbove - roughness) /
+                                                     (HealingDriftRoughAbove - HealingDriftSmoothBelow)))
+
+            ' Die glatte Flaeche auf einem groben Raster: Zellen mit ueberwiegend unberuehrten Punkten
+            ' sind eingespannt, die uebrigen werden harmonisch dazwischen gerechnet.
+            Dim cell = Math.Max(2, blurRadius \ 2)
+            Dim cw = (ew + cell - 1) \ cell
+            Dim ch = (eh + cell - 1) \ cell
+            Dim cn = cw * ch
+            Dim cellRed(cn - 1) As Single
+            Dim cellGreen(cn - 1) As Single
+            Dim cellBlue(cn - 1) As Single
+            Dim cellFixed(cn - 1) As Boolean
+            Dim fixedRed = 0.0, fixedGreen = 0.0, fixedBlue = 0.0
+            Dim fixedCount = 0
+            For cy = 0 To ch - 1
+                For cx = 0 To cw - 1
+                    Dim sr = 0.0, sg = 0.0, sb = 0.0
+                    Dim knownCount = 0, total = 0
+                    For y = cy * cell To Math.Min(eh, (cy + 1) * cell) - 1
+                        For x = cx * cell To Math.Min(ew, (cx + 1) * cell) - 1
+                            Dim i = y * ew + x
+                            total += 1
+                            If inside(i) Then Continue For
+                            sr += red(i) : sg += green(i) : sb += blue(i)
+                            knownCount += 1
+                        Next
+                    Next
+                    Dim ci = cy * cw + cx
+                    If knownCount * 2 >= total AndAlso knownCount > 0 Then
+                        cellRed(ci) = CSng(sr / knownCount)
+                        cellGreen(ci) = CSng(sg / knownCount)
+                        cellBlue(ci) = CSng(sb / knownCount)
+                        cellFixed(ci) = True
+                        fixedRed += cellRed(ci) : fixedGreen += cellGreen(ci) : fixedBlue += cellBlue(ci)
+                        fixedCount += 1
+                    End If
+                Next
+            Next
+            If fixedCount = 0 Then Return
+            For ci = 0 To cn - 1
+                If cellFixed(ci) Then Continue For
+                cellRed(ci) = CSng(fixedRed / fixedCount)
+                cellGreen(ci) = CSng(fixedGreen / fixedCount)
+                cellBlue(ci) = CSng(fixedBlue / fixedCount)
+            Next
+            SolveHealingMembrane(cellRed, cellGreen, cellBlue, cellFixed, cw, ch)
+
+            Dim writer = New PixelWriter(work)
+            For y = 0 To eh - 1
+                Dim my = buffer.Top + y - targetTop
+                ' Zellmitten als Stuetzstellen, dazwischen bilinear.
+                Dim fy = (y + 0.5F) / cell - 0.5F
+                Dim cy0 = Math.Clamp(CInt(Math.Floor(fy)), 0, ch - 1)
+                Dim cy1 = Math.Min(ch - 1, cy0 + 1)
+                Dim ty = Math.Clamp(fy - cy0, 0.0F, 1.0F)
+                For x = 0 To ew - 1
+                    Dim i = y * ew + x
+                    If Not inside(i) Then Continue For
+                    Dim mx = buffer.Left + x - targetLeft
+                    Dim fx = (x + 0.5F) / cell - 0.5F
+                    Dim cx0 = Math.Clamp(CInt(Math.Floor(fx)), 0, cw - 1)
+                    Dim cx1 = Math.Min(cw - 1, cx0 + 1)
+                    Dim tx = Math.Clamp(fx - cx0, 0.0F, 1.0F)
+                    Dim i00 = cy0 * cw + cx0, i01 = cy0 * cw + cx1, i10 = cy1 * cw + cx0, i11 = cy1 * cw + cx1
+                    Dim dr = Bilinear(cellRed, i00, i01, i10, i11, tx, ty) - lowRed(i)
+                    Dim dg = Bilinear(cellGreen, i00, i01, i10, i11, tx, ty) - lowGreen(i)
+                    Dim db = Bilinear(cellBlue, i00, i01, i10, i11, tx, ty) - lowBlue(i)
+                    Dim largest = Math.Max(Math.Abs(dr), Math.Max(Math.Abs(dg), Math.Abs(db)))
+                    If largest >= HealingDriftNoneAbove Then Continue For
+                    Dim gate = Math.Min(1.0F, (HealingDriftNoneAbove - largest) / (HealingDriftNoneAbove - HealingDriftFullBelow))
+                    gate *= surroundingGate * maskAlpha(my * width + mx) / 255.0F
+                    If gate <= 0.001F Then Continue For
+
+                    Dim px = buffer.Left + x
+                    Dim py = buffer.Top + y
+                    Dim alpha = buffer.GetAlpha(px, py)
+                    If alpha = 0 Then Continue For
+                    writer.SetPixel(px, py, New SKColor(
+                        ClampByte(CInt(Math.Round(red(i) + dr * gate))),
+                        ClampByte(CInt(Math.Round(green(i) + dg * gate))),
+                        ClampByte(CInt(Math.Round(blue(i) + db * gate))),
+                        alpha))
+                Next
+            Next
+        End Sub
+
+        Private Shared Function Bilinear(values As Single(), i00 As Integer, i01 As Integer, i10 As Integer, i11 As Integer,
+                                         tx As Single, ty As Single) As Single
+            Dim top = values(i00) + (values(i01) - values(i00)) * tx
+            Dim bottom = values(i10) + (values(i11) - values(i10)) * tx
+            Return top + (bottom - top) * ty
+        End Function
+
+        ''' <summary>Kastenmittel mit festem Radius, getrennt nach Zeilen und Spalten, am Rand auf die
+        ''' vorhandenen Punkte verkuerzt.</summary>
+        Private Shared Function BoxBlurPlane(values As Single(), w As Integer, h As Integer, radius As Integer) As Single()
+            Dim temp(values.Length - 1) As Single
+            Dim output(values.Length - 1) As Single
+            For y = 0 To h - 1
+                Dim row = y * w
+                Dim sum = 0.0
+                Dim count = 0
+                For x = 0 To Math.Min(w - 1, radius)
+                    sum += values(row + x) : count += 1
+                Next
+                For x = 0 To w - 1
+                    temp(row + x) = CSng(sum / count)
+                    Dim addX = x + radius + 1
+                    If addX < w Then sum += values(row + addX) : count += 1
+                    Dim removeX = x - radius
+                    If removeX >= 0 Then sum -= values(row + removeX) : count -= 1
+                Next
+            Next
+            For x = 0 To w - 1
+                Dim sum = 0.0
+                Dim count = 0
+                For y = 0 To Math.Min(h - 1, radius)
+                    sum += temp(y * w + x) : count += 1
+                Next
+                For y = 0 To h - 1
+                    output(y * w + x) = CSng(sum / count)
+                    Dim addY = y + radius + 1
+                    If addY < h Then sum += temp(addY * w + x) : count += 1
+                    Dim removeY = y - radius
+                    If removeY >= 0 Then sum -= temp(removeY * w + x) : count -= 1
+                Next
+            Next
+            Return output
+        End Function
+
+        ''' <summary>Mittlere Abweichung der geglaetteten Helligkeit der unberuehrten Punkte von der
+        ''' besten Ebene durch sie. NaN, wenn zu wenige Punkte da sind.</summary>
+        Private Shared Function HealingSurroundingRoughness(lowRed As Single(), lowGreen As Single(), lowBlue As Single(),
+                                                            inside As Boolean(), w As Integer, h As Integer) As Double
+            ' Normalgleichungen fuer v = a*x + b*y + c, x und y auf die Mitte bezogen.
+            Dim sxx = 0.0, sxy = 0.0, syy = 0.0, sx = 0.0, sy = 0.0, s1 = 0.0
+            Dim sxv = 0.0, syv = 0.0, sv = 0.0
+            Dim cxm = w / 2.0, cym = h / 2.0
+            For y = 0 To h - 1 Step 2
+                For x = 0 To w - 1 Step 2
+                    Dim i = y * w + x
+                    If inside(i) Then Continue For
+                    Dim v = 0.299 * lowRed(i) + 0.587 * lowGreen(i) + 0.114 * lowBlue(i)
+                    Dim px = x - cxm, py = y - cym
+                    sxx += px * px : sxy += px * py : syy += py * py
+                    sx += px : sy += py : s1 += 1
+                    sxv += px * v : syv += py * v : sv += v
+                Next
+            Next
+            If s1 < 16 Then Return Double.NaN
+
+            Dim det = sxx * (syy * s1 - sy * sy) - sxy * (sxy * s1 - sy * sx) + sx * (sxy * sy - syy * sx)
+            Dim a, b, c As Double
+            If Math.Abs(det) < 0.000001 Then
+                a = 0 : b = 0 : c = sv / s1
+            Else
+                a = (sxv * (syy * s1 - sy * sy) - sxy * (syv * s1 - sy * sv) + sx * (syv * sy - syy * sv)) / det
+                b = (sxx * (syv * s1 - sv * sy) - sxv * (sxy * s1 - sy * sx) + sx * (sxy * sv - syv * sx)) / det
+                c = (sxx * (syy * sv - sy * syv) - sxy * (sxy * sv - syv * sx) + sxv * (sxy * sy - syy * sx)) / det
+            End If
+
+            Dim deviation = 0.0
+            For y = 0 To h - 1 Step 2
+                For x = 0 To w - 1 Step 2
+                    Dim i = y * w + x
+                    If inside(i) Then Continue For
+                    Dim v = 0.299 * lowRed(i) + 0.587 * lowGreen(i) + 0.114 * lowBlue(i)
+                    deviation += Math.Abs(v - (a * (x - cxm) + b * (y - cym) + c))
+                Next
+            Next
+            Return deviation / s1
+        End Function
+
+        ''' <summary>Harmonische Flaeche: freie Zellen werden Mittel ihrer Nachbarn, eingespannte
+        ''' bleiben. Ueberrelaxiert, damit auch ein breiter Zug in wenigen hundert Durchlaeufen steht.</summary>
+        Private Shared Sub SolveHealingMembrane(red As Single(), green As Single(), blue As Single(),
+                                                fixedCells As Boolean(), w As Integer, h As Integer)
+            Const Relaxation As Single = 1.85F
+            Const MaxIterations As Integer = 800
+            For iteration = 1 To MaxIterations
+                Dim largestChange = 0.0F
+                For y = 0 To h - 1
+                    For x = 0 To w - 1
+                        Dim i = y * w + x
+                        If fixedCells(i) Then Continue For
+                        Dim sr = 0.0F, sg = 0.0F, sb = 0.0F
+                        Dim count = 0
+                        If x > 0 Then sr += red(i - 1) : sg += green(i - 1) : sb += blue(i - 1) : count += 1
+                        If x < w - 1 Then sr += red(i + 1) : sg += green(i + 1) : sb += blue(i + 1) : count += 1
+                        If y > 0 Then sr += red(i - w) : sg += green(i - w) : sb += blue(i - w) : count += 1
+                        If y < h - 1 Then sr += red(i + w) : sg += green(i + w) : sb += blue(i + w) : count += 1
+                        If count = 0 Then Continue For
+                        Dim changeR = (sr / count - red(i)) * Relaxation
+                        Dim changeG = (sg / count - green(i)) * Relaxation
+                        Dim changeB = (sb / count - blue(i)) * Relaxation
+                        red(i) += changeR : green(i) += changeG : blue(i) += changeB
+                        largestChange = Math.Max(largestChange, Math.Max(Math.Abs(changeR), Math.Max(Math.Abs(changeG), Math.Abs(changeB))))
+                    Next
+                Next
+                If largestChange < 0.01F Then Exit For
             Next
         End Sub
 
@@ -1373,6 +1646,19 @@ Namespace Services
             ' je Flicken neu angelegt, kostete schon das Anlegen ein Fuenftel der Suche (Profil).
             If workWriter Is Nothing Then workWriter = New PixelWriter(work)
 
+            ' HELLIGKEITSANGLEICH: der Flicken kommt um den mittleren Unterschied zwischen dem
+            ' bekannten Teil des Zielfensters und denselben Punkten der Quelle verschoben an.
+            '
+            ' BEFUND, der dazu gefuehrt hat: auf einem glatten Himmel hinterliess die Reparatur einen
+            ' dunkleren Fleck mit gezackter Kante. In einem Verlauf traegt jeder Flicken, der etwas
+            ' hoeher oder tiefer herkommt, seine eigene Helligkeit mit; die Abweichung summiert sich
+            ' von Kopie zu Kopie, und wo die Front von der dunklen Seite auf die von der hellen trifft,
+            ' bleibt eine Stufe stehen. Gemessen an einem Verlauf mit Korn: im Mittel 3,6 und
+            ' hoechstens 8 Stufen daneben, die Kante 2,8 Stufen hoch. Die Struktur kommt weiter aus der
+            ' Quelle, nur ihr Grundton aus der Umgebung des Ziels.
+            Dim offset = HealingPatchOffset(work, known, targetX, targetY, mx, my, sx, sy,
+                                            width, height, patchRadius, pixels, workWidth, workHeight)
+
             For oy = -patchRadius To patchRadius
                 Dim oySq = oy * oy
                 Dim y = targetY + oy
@@ -1398,7 +1684,7 @@ Namespace Services
                             ' sonst bleibt dort eine sichtbare Knickkante stehen.
                             w = w * w * (3.0F - 2.0F * w)
                             Dim existing = work.GetPixel(x, y)
-                            Dim incoming = work.GetPixel(px, py)
+                            Dim incoming = ShiftHealingColor(work.GetPixel(px, py), offset)
                             Dim blended = New SKColor(
                                 BlendByte(existing.Red, incoming.Red, w),
                                 BlendByte(existing.Green, incoming.Green, w),
@@ -1410,7 +1696,7 @@ Namespace Services
                         Continue For
                     End If
 
-                    Dim sourceColor = work.GetPixel(px, py)
+                    Dim sourceColor = ShiftHealingColor(work.GetPixel(px, py), offset)
                     workWriter.SetPixel(x, y, sourceColor)
                     ' Puffer synchron halten - Scores im selben Pass sehen sonst den alten (defekten)
                     ' Inhalt unter frisch kopierten Pixeln.
@@ -1421,6 +1707,69 @@ Namespace Services
             Next
 
             Return copied
+        End Function
+
+        ''' <summary>Groesster Helligkeitsangleich je Kanal. Mehr braucht ein Verlauf nicht, denn die
+        ''' Quelle liegt hoechstens den Suchrand weit weg; eine groessere Verschiebung hiesse, dass
+        ''' der Flicken nicht passt, und dann soll er nicht noch umgefaerbt werden.</summary>
+        Private Const HealingPatchOffsetLimit As Integer = 24
+
+        ''' <summary>Mittlerer Unterschied Ziel minus Quelle ueber die bekannten Punkte des
+        ''' Zielfensters, je Kanal. Dieselben Punkte, die <see cref="HealingPatchScore"/> vergleicht.</summary>
+        Private Shared Function HealingPatchOffset(work As SKBitmap, known As Boolean(),
+                                                   targetX As Integer, targetY As Integer,
+                                                   mx As Integer, my As Integer,
+                                                   sx As Integer, sy As Integer,
+                                                   width As Integer, height As Integer,
+                                                   patchRadius As Integer,
+                                                   pixels As RegionPixelBuffer,
+                                                   workWidth As Integer, workHeight As Integer) As (R As Single, G As Single, B As Single)
+            Dim sr As Long = 0, sg As Long = 0, sb As Long = 0
+            Dim count = 0
+            For oy = -patchRadius To patchRadius
+                Dim oySq = oy * oy
+                Dim ty = targetY + oy
+                Dim py = sy + oy
+                If ty < 0 OrElse ty >= workHeight OrElse py < 0 OrElse py >= workHeight Then Continue For
+                For ox = -patchRadius To patchRadius
+                    If ox * ox + oySq > patchRadius * patchRadius Then Continue For
+                    Dim tx = targetX + ox
+                    Dim px = sx + ox
+                    If tx < 0 OrElse tx >= workWidth OrElse px < 0 OrElse px >= workWidth Then Continue For
+                    Dim lx = mx + ox
+                    Dim ly = my + oy
+                    If lx >= 0 AndAlso ly >= 0 AndAlso lx < width AndAlso ly < height AndAlso
+                       Not known(ly * width + lx) Then Continue For
+
+                    Dim t = If(pixels IsNot Nothing AndAlso pixels.Contains(tx, ty), pixels.GetColor(tx, ty), work.GetPixel(tx, ty))
+                    Dim s = If(pixels IsNot Nothing AndAlso pixels.Contains(px, py), pixels.GetColor(px, py), work.GetPixel(px, py))
+                    sr += CInt(t.Red) - CInt(s.Red)
+                    sg += CInt(t.Green) - CInt(s.Green)
+                    sb += CInt(t.Blue) - CInt(s.Blue)
+                    count += 1
+                Next
+            Next
+            If count < 8 Then Return (0.0F, 0.0F, 0.0F)
+            ' Nicht auf ganze Stufen runden: ein Versatz von 0,4 wuerde zu 0, und weil jede Kopie
+            ' an der vorigen ausgerichtet wird, koennte sich der Rest entlang der Kette summieren.
+            ' Gerundet wird je Bildpunkt. Am Messverlauf machte das kaum etwas aus; die Drift, die
+            ' trotzdem bleibt, nimmt CorrectHealingDrift heraus.
+            Dim limit = CSng(HealingPatchOffsetLimit)
+            Return (Clamp(CSng(sr / CDbl(count)), -limit, limit),
+                    Clamp(CSng(sg / CDbl(count)), -limit, limit),
+                    Clamp(CSng(sb / CDbl(count)), -limit, limit))
+        End Function
+
+        Private Shared Function ShiftHealingColor(color As SKColor, offset As (R As Single, G As Single, B As Single)) As SKColor
+            If offset.R = 0.0F AndAlso offset.G = 0.0F AndAlso offset.B = 0.0F Then Return color
+            Return New SKColor(ShiftHealingChannel(color.Red, offset.R),
+                               ShiftHealingChannel(color.Green, offset.G),
+                               ShiftHealingChannel(color.Blue, offset.B),
+                               color.Alpha)
+        End Function
+
+        Private Shared Function ShiftHealingChannel(value As Byte, offset As Single) As Byte
+            Return CByte(Math.Clamp(CInt(Math.Round(value + offset)), 0, 255))
         End Function
 
         Private Shared Function IsOriginalKnownPatch(maskAlpha As Byte(),
