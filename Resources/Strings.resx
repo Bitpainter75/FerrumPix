@@ -8904,4 +8904,13 @@
   <data name="Bleiben_an_kontrastreichen_Kanten_zum_Bildrand_h_a9e66200" xml:space="preserve">
     <value>If blue, purple or yellow fringes remain at high-contrast edges towards the image border, this slider shifts blue against green. Works without a lens profile too.</value>
   </data>
+  <data name="Objektivkorrektur_nicht_verf_gbar_Das_Bild_enth__6f665f75" xml:space="preserve">
+    <value>Lens correction not available: the picture contains edits computed into its pixels, such as denoising or retouching. It only works while the raw file is developed.</value>
+  </data>
+  <data name="Frei_308e7cd0" xml:space="preserve">
+    <value>Free</value>
+  </data>
+  <data name="Seitenverh_ltnis_frei_ziehen_d0b19439" xml:space="preserve">
+    <value>Drag the aspect ratio freely</value>
+  </data>
 </root>

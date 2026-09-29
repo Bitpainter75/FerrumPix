@@ -8929,4 +8929,13 @@
   <data name="Bleiben_an_kontrastreichen_Kanten_zum_Bildrand_h_a9e66200" xml:space="preserve">
     <value>Jika pinggiran biru, ungu, atau kuning tersisa di tepi berkontras tinggi ke arah tepi gambar, penggeser ini menggeser biru terhadap hijau. Berfungsi juga tanpa profil lensa.</value>
   </data>
+  <data name="Objektivkorrektur_nicht_verf_gbar_Das_Bild_enth__6f665f75" xml:space="preserve">
+    <value>Koreksi lensa tidak tersedia: gambar berisi suntingan yang sudah dihitung ke dalam piksel, seperti pengurangan derau atau retus. Koreksi ini hanya bekerja saat file RAW dikembangkan.</value>
+  </data>
+  <data name="Frei_308e7cd0" xml:space="preserve">
+    <value>Bebas</value>
+  </data>
+  <data name="Seitenverh_ltnis_frei_ziehen_d0b19439" xml:space="preserve">
+    <value>Seret dengan rasio aspek bebas</value>
+  </data>
 </root>

@@ -8929,4 +8929,13 @@
   <data name="Bleiben_an_kontrastreichen_Kanten_zum_Bildrand_h_a9e66200" xml:space="preserve">
     <value>หากยังมีขอบสีน้ำเงิน ม่วง หรือเหลืองที่ขอบที่มีความเปรียบต่างสูงใกล้ขอบภาพ แถบเลื่อนนี้จะเลื่อนสีน้ำเงินเทียบกับสีเขียว ใช้ได้แม้ไม่มีโปรไฟล์เลนส์</value>
   </data>
+  <data name="Objektivkorrektur_nicht_verf_gbar_Das_Bild_enth__6f665f75" xml:space="preserve">
+    <value>ไม่สามารถใช้การแก้ไขเลนส์ได้: ภาพมีการแก้ไขที่คำนวณลงในพิกเซลแล้ว เช่น การลดนอยส์หรือการรีทัช การแก้ไขเลนส์ทำงานเฉพาะตอนล้างไฟล์ RAW เท่านั้น</value>
+  </data>
+  <data name="Frei_308e7cd0" xml:space="preserve">
+    <value>อิสระ</value>
+  </data>
+  <data name="Seitenverh_ltnis_frei_ziehen_d0b19439" xml:space="preserve">
+    <value>ลากอัตราส่วนภาพได้อย่างอิสระ</value>
+  </data>
 </root>

@@ -4438,6 +4438,9 @@ Namespace ViewModels
             End Get
             Set(value As String)
                 Me.RaiseAndSetIfChanged(_currentImagePath, value)
+                ' Ein anderes Bild hat ein anderes Format; ein eingerastetes Verhaeltnis des vorigen
+                ' zoege den ersten Zug an dessen Rahmen sonst unvermittelt zurecht.
+                SetCropAspectPreset("")
                 Me.RaisePropertyChanged(NameOf(CurrentFileName))
                 _mainVm?.RefreshWindowTitle()
                 Me.RaisePropertyChanged(NameOf(IsRawDeveloped))
@@ -6376,6 +6379,18 @@ Namespace ViewModels
             End Get
         End Property
 
+        ''' <summary>Ein RAW, bei dem die Objektivkorrektur NUR deshalb fehlt, weil das Arbeitsbild
+        ''' gebackenen Inhalt traegt (Entrauschen, Retusche, eine angewendete gespeicherte
+        ''' Bearbeitung). An ihrer Stelle steht dann ein Satz, der das sagt. Ohne ihn verschwand die
+        ''' Gruppe nach "Gespeicherte Bearbeitung anwenden" wortlos und kam nach dem naechsten
+        ''' Oeffnen wieder (Nutzerbefund).</summary>
+        Public ReadOnly Property LensCorrectionBlockedByBakedContent As Boolean
+            Get
+                Return RawPreviewService.IsSupportedRaw(RenderSourcePath) AndAlso
+                       _workingImage.HasBakedContent AndAlso RawDecodeService.IsAvailable
+            End Get
+        End Property
+
         ''' <summary>Was in der Gruppe oben steht: das erkannte Objektiv, oder warum nichts gefunden
         ''' wurde. Ohne diese Zeile waere nicht unterscheidbar, ob die Korrektur nichts tut, weil
         ''' sie aus ist, weil das Objektiv fehlt oder weil es gar keine Aufnahmedaten gibt.</summary>
@@ -6856,7 +6871,7 @@ Namespace ViewModels
             _lensFilter = LensAssignment
             Me.RaisePropertyChanged(NameOf(LensFilter))
             For Each n In {NameOf(LensCorrectionAvailable), NameOf(LensCorrectionSupported),
-                           NameOf(LensCorrectionStatus),
+                           NameOf(LensCorrectionBlockedByBakedContent), NameOf(LensCorrectionStatus),
                            NameOf(HasLensDistortionData), NameOf(HasLensTcaData),
                            NameOf(HasLensVignettingData), NameOf(LensCandidates),
                            NameOf(LensAssignment), NameOf(LensDistortionEnabled),
@@ -8546,7 +8561,12 @@ Namespace ViewModels
 
         ''' <summary>Die Kantenregler des Zuschneiden-Panels arbeiten in Pixeln des angezeigten Bildes.
         ''' Intern bleibt der Beschnitt prozentual, weil Presets, das Ziehen im Overlay und die
-        ''' gespeicherten Adjustments auflösungsunabhängig sein müssen.</summary>
+        ''' gespeicherten Adjustments auflösungsunabhängig sein müssen.
+        '''
+        ''' EINE KANTE VON HAND LOEST DAS EINGERASTETE SEITENVERHAELTNIS (CropAspectPreset): wer eine
+        ''' einzelne Kante setzt, meint genau diese Kante. Der Knopf verliert dann seine
+        ''' Hervorhebung, sichtbar ist das also. Nur eine ECHTE Aenderung loest: die Zwei-Wege-
+        ''' Bindung schreibt denselben Wert gelegentlich zurueck, und das allein darf nichts loesen.</summary>
         Public Property CropLeftPixels As Integer
             Get
                 Return PercentToPixels(_cropLeft, EffectiveDisplayImageWidthPixels)
@@ -8554,6 +8574,7 @@ Namespace ViewModels
             Set(value As Integer)
                 Dim basePixels = EffectiveDisplayImageWidthPixels
                 If basePixels <= 0 Then Return
+                If value <> CropLeftPixels Then SetCropAspectPreset("")
                 CropLeft = PixelsToPercent(value, basePixels)
                 Me.RaisePropertyChanged(NameOf(CropLeftPixels))
             End Set
@@ -8566,6 +8587,7 @@ Namespace ViewModels
             Set(value As Integer)
                 Dim basePixels = EffectiveDisplayImageHeightPixels
                 If basePixels <= 0 Then Return
+                If value <> CropTopPixels Then SetCropAspectPreset("")
                 CropTop = PixelsToPercent(value, basePixels)
                 Me.RaisePropertyChanged(NameOf(CropTopPixels))
             End Set
@@ -8578,6 +8600,7 @@ Namespace ViewModels
             Set(value As Integer)
                 Dim basePixels = EffectiveDisplayImageWidthPixels
                 If basePixels <= 0 Then Return
+                If value <> CropRightPixels Then SetCropAspectPreset("")
                 CropRight = PixelsToPercent(value, basePixels)
                 Me.RaisePropertyChanged(NameOf(CropRightPixels))
             End Set
@@ -8590,6 +8613,7 @@ Namespace ViewModels
             Set(value As Integer)
                 Dim basePixels = EffectiveDisplayImageHeightPixels
                 If basePixels <= 0 Then Return
+                If value <> CropBottomPixels Then SetCropAspectPreset("")
                 CropBottom = PixelsToPercent(value, basePixels)
                 Me.RaisePropertyChanged(NameOf(CropBottomPixels))
             End Set
@@ -8614,7 +8638,16 @@ Namespace ViewModels
                 Return GetCroppedWidth()
             End Get
             Set(value As Integer)
-                SetCropSizePixels(value, GetCroppedHeight())
+                ' Mit eingerastetem Seitenverhaeltnis zieht die Hoehe nach - Breite und Hoehe
+                ' sind zusammen EIN Mass, anders als eine einzelne Kante.
+                Dim ratio = CropAspectRatio
+                If ratio > 0 Then
+                    ' Derselbe Wert zurueckgeschrieben (Zwei-Wege-Bindung) ist keine Eingabe.
+                    If value = GetCroppedWidth() Then Return
+                    SetLockedCropSizePixels(value, ratio, widthLeads:=True)
+                Else
+                    SetCropSizePixels(value, GetCroppedHeight())
+                End If
             End Set
         End Property
 
@@ -8623,9 +8656,40 @@ Namespace ViewModels
                 Return GetCroppedHeight()
             End Get
             Set(value As Integer)
-                SetCropSizePixels(GetCroppedWidth(), value)
+                Dim ratio = CropAspectRatio
+                If ratio > 0 Then
+                    If value = GetCroppedHeight() Then Return
+                    SetLockedCropSizePixels(value, ratio, widthLeads:=False)
+                Else
+                    SetCropSizePixels(GetCroppedWidth(), value)
+                End If
             End Set
         End Property
+
+        ''' Breite oder Hoehe eintippen, die andere folgt dem eingerasteten Verhaeltnis. Passt das
+        ''' Paar nicht in den Platz rechts und unterhalb der linken oberen Ecke, schrumpfen beide
+        ''' gemeinsam - einzeln geklemmt verloere der Rahmen sein Verhaeltnis wieder.
+        Private Sub SetLockedCropSizePixels(value As Integer, ratio As Double, widthLeads As Boolean)
+            Dim roomWidth = Math.Max(1, EffectiveDisplayImageWidthPixels - CropLeftPixels)
+            Dim roomHeight = Math.Max(1, EffectiveDisplayImageHeightPixels - CropTopPixels)
+            Dim width As Double, height As Double
+            If widthLeads Then
+                width = Math.Max(1, value)
+                height = width / ratio
+            Else
+                height = Math.Max(1, value)
+                width = height * ratio
+            End If
+            If width > roomWidth Then
+                width = roomWidth
+                height = width / ratio
+            End If
+            If height > roomHeight Then
+                height = roomHeight
+                width = height * ratio
+            End If
+            SetCropSizePixels(Math.Max(1, CInt(Math.Round(width))), Math.Max(1, CInt(Math.Round(height))))
+        End Sub
 
         Public ReadOnly Property ResizeInterpolationOptions As IReadOnlyList(Of String)
             Get
@@ -10534,8 +10598,9 @@ Namespace ViewModels
         ''' erst einmal minutenlang rechnet, ist keine Bildanzeige mehr. Und wer nur kurz nachsehen
         ''' will, wie das Foto aussah, braucht das Entrauschen dafuer nicht.
         '''
-        ''' WARUM NUR EINMAL JE BILD UND SITZUNG: beim Blaettern durch eine Serie kaeme die Frage
-        ''' sonst bei jedem Hin und Her erneut.</summary>
+        ''' WARUM EIN "SPAETER" NUR EINMAL JE BILD UND SITZUNG GILT: beim Blaettern durch eine Serie
+        ''' kaeme die Frage sonst bei jedem Hin und Her erneut. Ein "Anwenden" wird dagegen nicht
+        ''' gemerkt, siehe unten.</summary>
         Private Async Function AskAndApplyPendingBakedOperationsAsync() As Task
             Dim path = _currentImagePath
             If String.IsNullOrEmpty(path) Then Return
@@ -10561,6 +10626,10 @@ Namespace ViewModels
                 StatusText = LocalizationService.T("Gespeicherte Bearbeitung bleibt liegen")
                 Return
             End If
+            ' Gemerkt wird nur das "Spaeter". Wer anwendet und danach nicht speichert, bekommt beim
+            ' naechsten Oeffnen wieder die Frage: sonst stand das Bild dann still OHNE die
+            ' gespeicherte Bearbeitung da, und nichts wies darauf hin (Nutzerbefund).
+            _bakedOperationsAsked.Remove(path)
             ApplyPendingBakedOperations()
         End Function
 
@@ -14244,6 +14313,7 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(IsRawDeveloped))
             Me.RaisePropertyChanged(NameOf(RawFooterTooltip))
             Me.RaisePropertyChanged(NameOf(LensCorrectionSupported))
+            Me.RaisePropertyChanged(NameOf(LensCorrectionBlockedByBakedContent))
             _mainVm?.RefreshWindowTitle()
         End Sub
 
@@ -15750,6 +15820,7 @@ Namespace ViewModels
             ResetCropCommand = ReactiveCommand.Create(Sub()
                                                           PushUndo(ResetHistoryLabel("Zuschneiden"))
                                                           ResetCommittedCrop()
+                                                          SetCropAspectPreset("")
                                                           SetCropValues(0, 0, 0, 0)
                                                           _appliedCropLeft = 0
                                                           _appliedCropTop = 0
@@ -23335,11 +23406,79 @@ Namespace ViewModels
                           PixelsToPercent(bottomPx, baseHeight))
         End Sub
 
-        Private Sub ApplyCropPreset(preset As String)
-            If EffectiveDisplayImageWidthPixels <= 0 OrElse EffectiveDisplayImageHeightPixels <= 0 Then Return
+        ''' <summary>Das eingerastete Seitenverhaeltnis des Zuschneiderahmens: der Name des
+        ''' gewaehlten Knopfes ("16:9", "Original"), leer heisst frei.
+        '''
+        ''' EIN KNOPF RASTET EIN, statt den Rahmen nur einmal zu setzen. Vorher setzte "16:9" einen
+        ''' mittigen Rahmen, und der naechste Zug an einer Ecke verzog ihn wieder; nur mit SHIFT oder
+        ''' STRG blieb das Verhaeltnis. Gemeldet als "ich kann es anklicken, aber es wirkt nicht"
+        ''' (Nutzerbefund). Jetzt gilt das Verhaeltnis fuer jeden Zug, auch fuer einen neu
+        ''' aufgezogenen Rahmen, bis "Frei", das Zuruecksetzen oder ein anderes Bild es loest.
+        '''
+        ''' "Original" heisst das Seitenverhaeltnis des angezeigten Bildes. Vorher hiess es "kein
+        ''' Zuschnitt" und tat bei einem Bild ohne Rahmen scheinbar nichts; zurueck zum ganzen Bild
+        ''' fuehrt der Knopf im Kopf der Gruppe.</summary>
+        Public ReadOnly Property CropAspectPreset As String
+            Get
+                Return _cropAspectPreset
+            End Get
+        End Property
+        Private _cropAspectPreset As String = ""
 
-            Select Case If(preset, "").Trim()
-                Case "Original", "Frei"
+        ''' Fuer die Hervorhebung des Knopfes "Frei".
+        Public ReadOnly Property IsCropAspectFree As Boolean
+            Get
+                Return _cropAspectPreset.Length = 0
+            End Get
+        End Property
+
+        ''' <summary>Das eingerastete Verhaeltnis Breite zu Hoehe im ANGEZEIGTEN Bild, 0 fuer frei.
+        ''' Die Ansicht rechnet damit am Bildschirmrechteck; das ist gleichmaessig skaliert, das
+        ''' Verhaeltnis gilt dort also unveraendert.</summary>
+        Public ReadOnly Property CropAspectRatio As Double
+            Get
+                Select Case _cropAspectPreset
+                    Case "" : Return 0
+                    Case "Original"
+                        Dim width = EffectiveDisplayImageWidthPixels
+                        Dim height = EffectiveDisplayImageHeightPixels
+                        If width <= 0 OrElse height <= 0 Then Return 0
+                        Return width / CDbl(height)
+                End Select
+                Dim parts = _cropAspectPreset.Split(":"c)
+                Dim w, h As Double
+                If parts.Length = 2 AndAlso
+                   Double.TryParse(parts(0), Globalization.NumberStyles.Float, Globalization.CultureInfo.InvariantCulture, w) AndAlso
+                   Double.TryParse(parts(1), Globalization.NumberStyles.Float, Globalization.CultureInfo.InvariantCulture, h) AndAlso
+                   w > 0 AndAlso h > 0 Then
+                    Return w / h
+                End If
+                Return 0
+            End Get
+        End Property
+
+        Private Sub SetCropAspectPreset(preset As String)
+            Dim normalized = If(preset, "")
+            If String.Equals(_cropAspectPreset, normalized, StringComparison.Ordinal) Then Return
+            _cropAspectPreset = normalized
+            Me.RaisePropertyChanged(NameOf(CropAspectPreset))
+            Me.RaisePropertyChanged(NameOf(CropAspectRatio))
+            Me.RaisePropertyChanged(NameOf(IsCropAspectFree))
+        End Sub
+
+        Private Sub ApplyCropPreset(preset As String)
+            Dim name = If(preset, "").Trim()
+            ' "Frei" loest nur die Sperre und laesst den Rahmen, wo er ist.
+            If name = "Frei" Then
+                SetCropAspectPreset("")
+                Return
+            End If
+            If EffectiveDisplayImageWidthPixels <= 0 OrElse EffectiveDisplayImageHeightPixels <= 0 Then Return
+            SetCropAspectPreset(name)
+
+            Select Case name
+                Case "Original"
+                    ' Das groesste Rechteck im Verhaeltnis des Bildes ist das ganze Bild.
                     SetCropValues(0, 0, 0, 0)
                 Case "1:1"
                     ApplyCenteredAspectCrop(1.0)
@@ -26216,6 +26355,15 @@ Namespace ViewModels
         ''' Rahmen (Nutzerbefund).</summary>
         Public Sub SetCropPercentagesFromDisplay(left As Double, top As Double, right As Double, bottom As Double)
             SetCropPercentages(left, top, right, bottom)
+        End Sub
+
+        ''' <summary>Den Rahmen auf Werte zuruecksetzen, die vorher aus
+        ''' <see cref="GetPendingCropDisplayMargins"/> kamen - OHNE sie auf ganze Pixel zu runden wie
+        ''' <see cref="SetCropPercentages"/>. Fuer einen Zug, der zu klein endet und deshalb nicht
+        ''' gilt: gerundet waere ein unberuehrter Rahmen danach um Bruchteile verschoben und zaehlte
+        ''' als ungespeicherte Absicht (HasCropChanges).</summary>
+        Public Sub RestorePendingCropDisplayMargins(left As Double, top As Double, right As Double, bottom As Double)
+            SetCropValues(left, top, right, bottom)
         End Sub
 
         ''' <summary>Der offene Beschnitt als Anzeige-Ränder - daraus zeichnet die View das

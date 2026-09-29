@@ -99,49 +99,67 @@
                            Foreground="{DynamicResource FP.Text.Secondary}"
                            Margin="8,0,0,0" VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
             </Grid>
+            <!-- Ein Knopf RASTET das Seitenverhaeltnis ein (EditorViewModel.CropAspectPreset):
+                 es gilt fuer jeden Zug am Rahmen, bis Frei, das Zuruecksetzen oder ein anderes
+                 Bild es loest. Original heisst das Verhaeltnis des angezeigten Bildes. -->
             <WrapPanel>
                 <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6"
-                        Command="{Binding SetCropPresetCommand}"
-                        CommandParameter="Original">
+                        Command="{Binding SetCropPresetCommand}" CommandParameter="Frei"
+                        Classes.active="{Binding IsCropAspectFree}"
+                        ToolTip.Tip="Seitenverhältnis frei ziehen">
+                    <TextBlock Text="Frei" FontSize="{DynamicResource FP.Font.Small}" />
+                </Button>
+                <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6"
+                        Command="{Binding SetCropPresetCommand}" CommandParameter="Original"
+                        Classes.active="{Binding CropAspectPreset, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Original}">
                     <TextBlock Text="Original" FontSize="{DynamicResource FP.Font.Small}" />
                 </Button>
                 <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6"
-                        Command="{Binding SetCropPresetCommand}" CommandParameter="1:1">
+                        Command="{Binding SetCropPresetCommand}" CommandParameter="1:1"
+                        Classes.active="{Binding CropAspectPreset, Converter={StaticResource StringEqualsConverter}, ConverterParameter='1:1'}">
                     <TextBlock Text="1:1" FontSize="{DynamicResource FP.Font.Small}" />
                 </Button>
                 <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6"
-                        Command="{Binding SetCropPresetCommand}" CommandParameter="4:3">
+                        Command="{Binding SetCropPresetCommand}" CommandParameter="4:3"
+                        Classes.active="{Binding CropAspectPreset, Converter={StaticResource StringEqualsConverter}, ConverterParameter='4:3'}">
                     <TextBlock Text="4:3" FontSize="{DynamicResource FP.Font.Small}" />
                 </Button>
                 <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6"
-                        Command="{Binding SetCropPresetCommand}" CommandParameter="3:2">
+                        Command="{Binding SetCropPresetCommand}" CommandParameter="3:2"
+                        Classes.active="{Binding CropAspectPreset, Converter={StaticResource StringEqualsConverter}, ConverterParameter='3:2'}">
                     <TextBlock Text="3:2" FontSize="{DynamicResource FP.Font.Small}" />
                 </Button>
                 <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6"
-                        Command="{Binding SetCropPresetCommand}" CommandParameter="5:4">
+                        Command="{Binding SetCropPresetCommand}" CommandParameter="5:4"
+                        Classes.active="{Binding CropAspectPreset, Converter={StaticResource StringEqualsConverter}, ConverterParameter='5:4'}">
                     <TextBlock Text="5:4" FontSize="{DynamicResource FP.Font.Small}" />
                 </Button>
                 <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6"
-                        Command="{Binding SetCropPresetCommand}" CommandParameter="16:9">
+                        Command="{Binding SetCropPresetCommand}" CommandParameter="16:9"
+                        Classes.active="{Binding CropAspectPreset, Converter={StaticResource StringEqualsConverter}, ConverterParameter='16:9'}">
                     <TextBlock Text="16:9" FontSize="{DynamicResource FP.Font.Small}" />
                 </Button>
                 <!-- Und dieselben Formate hochkant. Sie sind nicht dasselbe wie ein gedrehtes
                      Bild: die Vorgabe rechnet im ANGEZEIGTEN Seitenverhaeltnis, ein Hochformat
                      braucht deshalb seinen eigenen Knopf. -->
                 <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6"
-                        Command="{Binding SetCropPresetCommand}" CommandParameter="3:4">
+                        Command="{Binding SetCropPresetCommand}" CommandParameter="3:4"
+                        Classes.active="{Binding CropAspectPreset, Converter={StaticResource StringEqualsConverter}, ConverterParameter='3:4'}">
                     <TextBlock Text="3:4" FontSize="{DynamicResource FP.Font.Small}" />
                 </Button>
                 <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6"
-                        Command="{Binding SetCropPresetCommand}" CommandParameter="2:3">
+                        Command="{Binding SetCropPresetCommand}" CommandParameter="2:3"
+                        Classes.active="{Binding CropAspectPreset, Converter={StaticResource StringEqualsConverter}, ConverterParameter='2:3'}">
                     <TextBlock Text="2:3" FontSize="{DynamicResource FP.Font.Small}" />
                 </Button>
                 <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6"
-                        Command="{Binding SetCropPresetCommand}" CommandParameter="4:5">
+                        Command="{Binding SetCropPresetCommand}" CommandParameter="4:5"
+                        Classes.active="{Binding CropAspectPreset, Converter={StaticResource StringEqualsConverter}, ConverterParameter='4:5'}">
                     <TextBlock Text="4:5" FontSize="{DynamicResource FP.Font.Small}" />
                 </Button>
                 <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6"
-                        Command="{Binding SetCropPresetCommand}" CommandParameter="9:16">
+                        Command="{Binding SetCropPresetCommand}" CommandParameter="9:16"
+                        Classes.active="{Binding CropAspectPreset, Converter={StaticResource StringEqualsConverter}, ConverterParameter='9:16'}">
                     <TextBlock Text="9:16" FontSize="{DynamicResource FP.Font.Small}" />
                 </Button>
             </WrapPanel>

@@ -8925,4 +8925,13 @@
   <data name="Bleiben_an_kontrastreichen_Kanten_zum_Bildrand_h_a9e66200" xml:space="preserve">
     <value>Blijven er aan contrastrijke randen naar de beeldrand toe blauwe, paarse of gele kleurranden over, dan verschuift deze schuifregelaar blauw ten opzichte van groen. Werkt ook zonder objectiefprofiel.</value>
   </data>
+  <data name="Objektivkorrektur_nicht_verf_gbar_Das_Bild_enth__6f665f75" xml:space="preserve">
+    <value>Lenscorrectie niet beschikbaar: de foto bevat bewerkingen die in de pixels zijn verwerkt, zoals ruisonderdrukking of retoucheren. Ze werkt alleen bij het ontwikkelen van het RAW-bestand.</value>
+  </data>
+  <data name="Frei_308e7cd0" xml:space="preserve">
+    <value>Vrij</value>
+  </data>
+  <data name="Seitenverh_ltnis_frei_ziehen_d0b19439" xml:space="preserve">
+    <value>Beeldverhouding vrij slepen</value>
+  </data>
 </root>

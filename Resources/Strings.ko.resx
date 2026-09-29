@@ -8929,4 +8929,13 @@
   <data name="Bleiben_an_kontrastreichen_Kanten_zum_Bildrand_h_a9e66200" xml:space="preserve">
     <value>이미지 가장자리 쪽의 대비가 강한 경계에 파란색, 보라색 또는 노란색 색번짐이 남으면 이 슬라이더가 파랑을 초록에 맞춰 이동합니다. 렌즈 프로필 없이도 작동합니다.</value>
   </data>
+  <data name="Objektivkorrektur_nicht_verf_gbar_Das_Bild_enth__6f665f75" xml:space="preserve">
+    <value>렌즈 보정을 사용할 수 없습니다: 이미지에 노이즈 제거나 리터칭처럼 픽셀에 반영된 편집이 포함되어 있습니다. 렌즈 보정은 RAW 파일을 현상할 때만 작동합니다.</value>
+  </data>
+  <data name="Frei_308e7cd0" xml:space="preserve">
+    <value>자유</value>
+  </data>
+  <data name="Seitenverh_ltnis_frei_ziehen_d0b19439" xml:space="preserve">
+    <value>가로세로 비율을 자유롭게 드래그</value>
+  </data>
 </root>

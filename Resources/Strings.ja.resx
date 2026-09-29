@@ -8925,4 +8925,13 @@
   <data name="Bleiben_an_kontrastreichen_Kanten_zum_Bildrand_h_a9e66200" xml:space="preserve">
     <value>画像の端に近いコントラストの強い輪郭に青、紫、黄の色にじみが残る場合、このスライダーで青を緑に対して移動します。レンズプロファイルがなくても使えます。</value>
   </data>
+  <data name="Objektivkorrektur_nicht_verf_gbar_Das_Bild_enth__6f665f75" xml:space="preserve">
+    <value>レンズ補正は使用できません：画像には、ノイズ除去やレタッチなど、ピクセルに書き込まれた編集が含まれています。レンズ補正は RAW ファイルの現像時にのみ機能します。</value>
+  </data>
+  <data name="Frei_308e7cd0" xml:space="preserve">
+    <value>フリー</value>
+  </data>
+  <data name="Seitenverh_ltnis_frei_ziehen_d0b19439" xml:space="preserve">
+    <value>縦横比を自由にドラッグ</value>
+  </data>
 </root>

@@ -8925,4 +8925,13 @@
   <data name="Bleiben_an_kontrastreichen_Kanten_zum_Bildrand_h_a9e66200" xml:space="preserve">
     <value>Jos kontrastikkaisiin reunoihin kuvan reunaa kohti jää sinisiä, violetteja tai keltaisia värireunoja, liukusäädin siirtää sinistä vihreään nähden. Toimii myös ilman objektiiviprofiilia.</value>
   </data>
+  <data name="Objektivkorrektur_nicht_verf_gbar_Das_Bild_enth__6f665f75" xml:space="preserve">
+    <value>Objektiivikorjaus ei ole käytettävissä: kuva sisältää kuvapisteisiin laskettuja muokkauksia, kuten kohinanpoiston tai retusoinnin. Se toimii vain RAW-tiedostoa kehitettäessä.</value>
+  </data>
+  <data name="Frei_308e7cd0" xml:space="preserve">
+    <value>Vapaa</value>
+  </data>
+  <data name="Seitenverh_ltnis_frei_ziehen_d0b19439" xml:space="preserve">
+    <value>Vedä kuvasuhde vapaasti</value>
+  </data>
 </root>

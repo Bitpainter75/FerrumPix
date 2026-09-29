@@ -8885,4 +8885,13 @@
   <data name="Bleiben_an_kontrastreichen_Kanten_zum_Bildrand_h_a9e66200" xml:space="preserve">
     <value>Se ai bordi contrastati verso il margine dell'immagine restano frange blu, viola o gialle, questo cursore sposta il blu rispetto al verde. Funziona anche senza profilo dell'obiettivo.</value>
   </data>
+  <data name="Objektivkorrektur_nicht_verf_gbar_Das_Bild_enth__6f665f75" xml:space="preserve">
+    <value>Correzione dell'obiettivo non disponibile: l'immagine contiene modifiche già calcolate nei pixel, come la riduzione del rumore o il ritocco. Funziona solo durante lo sviluppo del file RAW.</value>
+  </data>
+  <data name="Frei_308e7cd0" xml:space="preserve">
+    <value>Libero</value>
+  </data>
+  <data name="Seitenverh_ltnis_frei_ziehen_d0b19439" xml:space="preserve">
+    <value>Trascina con proporzioni libere</value>
+  </data>
 </root>

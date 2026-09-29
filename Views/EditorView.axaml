@@ -1551,6 +1551,23 @@
                                 <panels:LensCorrectionPanel />
                             </Border>
 
+                            <!-- Statt der Gruppe ein Satz, wenn sie nur wegen gebackener Pixel fehlt:
+                                 sonst verschwindet sie etwa nach dem Anwenden einer gespeicherten
+                                 Bearbeitung ohne jede Erklaerung. -->
+                            <Border Classes="adjustment-group" Margin="0,7,0,0" Padding="10,8">
+                                <Border.IsVisible>
+                                    <MultiBinding Converter="{StaticResource AllTrueConverter}">
+                                        <Binding Path="ShowLightAdjustments"/>
+                                        <Binding Path="LensCorrectionBlockedByBakedContent"/>
+                                        <Binding Path="HiddenAdjustmentGroups" Converter="{StaticResource NotInListConverter}" ConverterParameter="objektivkorrektur"/>
+                                    </MultiBinding>
+                                </Border.IsVisible>
+                                <TextBlock Text="Objektivkorrektur nicht verfügbar: Das Bild enthält eingerechnete Bearbeitungen wie Entrauschen oder Retusche. Sie wirkt nur beim Entwickeln des RAW."
+                                           TextWrapping="Wrap"
+                                           Foreground="{DynamicResource FP.Text.Muted}"
+                                           FontSize="{DynamicResource FP.Font.Small}" />
+                            </Border>
+
                             <!-- FILMNEGATIV (ausklappbar) - gehört zu "Anpassen": die Umkehr ist eine
                                  Dichteoperation, auf der Belichtung und Kurve erst aufsetzen. -->
                             <Border Classes="adjustment-group" Margin="0,7,0,0"

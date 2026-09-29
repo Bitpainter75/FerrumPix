@@ -8925,4 +8925,13 @@
   <data name="Bleiben_an_kontrastreichen_Kanten_zum_Bildrand_h_a9e66200" xml:space="preserve">
     <value>Jeśli przy kontrastowych krawędziach w stronę brzegu obrazu zostają niebieskie, fioletowe lub żółte obwódki, ten suwak przesuwa błękit względem zieleni. Działa także bez profilu obiektywu.</value>
   </data>
+  <data name="Objektivkorrektur_nicht_verf_gbar_Das_Bild_enth__6f665f75" xml:space="preserve">
+    <value>Korekcja obiektywu niedostępna: zdjęcie zawiera zmiany wliczone w piksele, takie jak odszumianie lub retusz. Działa tylko podczas wywoływania pliku RAW.</value>
+  </data>
+  <data name="Frei_308e7cd0" xml:space="preserve">
+    <value>Dowolne</value>
+  </data>
+  <data name="Seitenverh_ltnis_frei_ziehen_d0b19439" xml:space="preserve">
+    <value>Przeciągaj z dowolnymi proporcjami</value>
+  </data>
 </root>

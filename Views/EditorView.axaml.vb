@@ -60,6 +60,10 @@ Namespace Views
         ' Pan state
         Private _panX As Double = 0
         Private _panY As Double = 0
+        ' Masse des zuletzt angezeigten CurrentImage; Nothing nach einem Bildwechsel. Daran
+        ' erkennt die Ansicht, dass ein neues CurrentImage nur eine Neuentwicklung desselben
+        ' Bildes ist.
+        Private _lastCurrentImagePixelSize As PixelSize?
         ' Wo der Zeiger zuletzt ueber der Buehne stand, in Koordinaten der Leinwand. Nothing, sobald
         ' er sie verlassen hat. Die Taste Z springt dort auf 100 Prozent.
         Private _lastCanvasPointer As Avalonia.Point?
@@ -74,6 +78,11 @@ Namespace Views
         Private _panStartOffsetX As Double = 0
         Private _panStartOffsetY As Double = 0
         Private _isCropDragging As Boolean = False
+        ' Der Rahmen im ViewModel beim Beginn eines Zuges, und ob der Zug schon Werte dorthin
+        ' geschickt hat (PushCropDragToViewModel). Damit laesst sich ein Zug, der zu klein endet,
+        ' genau zuruecknehmen.
+        Private _cropDragStartMargins As (Left As Double, Top As Double, Right As Double, Bottom As Double)?
+        Private _cropDragPushedLive As Boolean = False
         Private _cropStart As Avalonia.Point
         Private _cropEnd As Avalonia.Point
         Private _cropDragMode As CropDragMode = CropDragMode.None
@@ -919,6 +928,19 @@ Namespace Views
             If btn IsNot Nothing Then
                 If _isPanMode Then btn.Classes.Add("active") Else btn.Classes.Remove("active")
             End If
+            ' Der Modus faengt JEDEN Klick auf der Buehne ab, und der hervorgehobene Knopf allein
+            ' sagte das nicht: ein Werkzeug, das nicht reagiert, sah wie ein Fehler aus
+            ' (Nutzerbefund). Deshalb Hand als Zeiger.
+            UpdatePanModeCursor()
+        End Sub
+
+        ''' Die Hand steht, solange der Modus gilt, ob per Knopf oder per LEERTASTE. Die
+        ''' Mausbewegung setzt den Zeiger ohnehin bei jedem Schritt; das hier gilt fuer den Moment
+        ''' des Umschaltens, in dem sich die Maus noch nicht bewegt hat.
+        Private Sub UpdatePanModeCursor()
+            Dim canvas = Me.FindControl(Of Canvas)("PreviewCanvas")
+            If canvas Is Nothing Then Return
+            canvas.Cursor = If(_isPanMode, New Cursor(StandardCursorType.Hand), Nothing)
         End Sub
 
         Public Sub OnRulerModeToggleClick(sender As Object, e As RoutedEventArgs)
@@ -1524,13 +1546,20 @@ Namespace Views
         ''' Beschnitt angewendet wurde. Der Zoom-Modus bleibt dabei erhalten (siehe ActiveZoomPreset):
         ''' bei Fit wird neu eingepasst, bei Actual auf 100% gesprungen, bei Manual bleiben Zoom und
         ''' Schwenk des Nutzers stehen.
-        Private Sub ResetZoomForNewGeometry(vm As EditorViewModel)
+        '''
+        ''' <paramref name="keepPan"/>: dasselbe Bild in denselben Massen, neu entwickelt (etwa nach
+        ''' einem Regler der Objektivkorrektur). Dann bleibt der Schwenk auch bei 100 Prozent stehen:
+        ''' wer eine Bildecke angefahren hat, um die Wirkung dort zu sehen, sah sonst nach jedem
+        ''' Loslassen die Bildmitte (Nutzerbefund).
+        Private Sub ResetZoomForNewGeometry(vm As EditorViewModel, Optional keepPan As Boolean = False)
             Select Case If(vm IsNot Nothing, vm.ActiveZoomPreset, ZoomPresetMode.Fit)
                 Case ZoomPresetMode.Fit
                     _zoomInitialized = False
                 Case ZoomPresetMode.Actual
-                    _panX = 0
-                    _panY = 0
+                    If Not keepPan Then
+                        _panX = 0
+                        _panY = 0
+                    End If
                     SetZoom(ZoomToSlider(100.0))
                 Case Else
                     ' Manual: _zoomSliderValue/_panX/_panY unverändert lassen
@@ -1592,11 +1621,19 @@ Namespace Views
                     _letzteEinpassHoehe = 0
                     _panX = 0
                     _panY = 0
+                    _lastCurrentImagePixelSize = Nothing
                     ' Ein ANDERES Bild: die Hilfslinien des vorigen bezeichnen dort nichts.
                     ClearGuides()
                 Case NameOf(EditorViewModel.CurrentImage)
-                    _sliderPosition = 0.5
-                    ResetZoomForNewGeometry(TryCast(sender, EditorViewModel))
+                    ' Gleiche Masse wie zuvor und kein Bildwechsel dazwischen: dasselbe Bild, nur
+                    ' neu entwickelt. Schwenk und Vergleichsteiler bleiben dann, wo sie waren.
+                    Dim imageVm = TryCast(sender, EditorViewModel)
+                    Dim newSize As PixelSize? = imageVm?.CurrentImage?.PixelSize
+                    Dim sameImage = newSize.HasValue AndAlso _lastCurrentImagePixelSize.HasValue AndAlso
+                                    newSize.Value = _lastCurrentImagePixelSize.Value
+                    _lastCurrentImagePixelSize = newSize
+                    If Not sameImage Then _sliderPosition = 0.5
+                    ResetZoomForNewGeometry(imageVm, keepPan:=sameImage)
                 Case NameOf(EditorViewModel.DisplayImage)
                     If _fitAfterNextDisplayImage Then
                         _fitAfterNextDisplayImage = False
@@ -1724,7 +1761,10 @@ Namespace Views
                      NameOf(EditorViewModel.CropBottom),
                      NameOf(EditorViewModel.CropWidthPixels),
                      NameOf(EditorViewModel.CropHeightPixels)
-                    UpdateSliderLayout()
+                    ' Waehrend eines Zuges kommen diese Meldungen bei jeder Mausbewegung, und zwar
+                    ' gleich sechsfach (PushCropDragToViewModel). Den Rahmen fuehrt dann die Ansicht
+                    ' selbst; das Loslassen legt ohnehin einmal neu an.
+                    If Not _isCropDragging Then UpdateSliderLayout()
                 ' HasPreview ist dabei: kommt oder geht eine Werkzeug-Vorschau, muss das Bild
                 ' darunter aus- bzw. wieder eingeblendet werden - das passiert im Layoutdurchlauf.
                 Case NameOf(EditorViewModel.WarpGridValues),
@@ -2341,6 +2381,8 @@ Namespace Views
                     _cropDragPointerStart = rawPos
                     RectToCropPoints(_cropDragInitialRect, _cropStart, _cropEnd)
                 End If
+                _cropDragStartMargins = vm.GetPendingCropDisplayMargins()
+                _cropDragPushedLive = False
                 _isCropDragging = True
                 e.Pointer.Capture(canvas)
                 UpdateCropOverlayFromDrag()
@@ -2932,6 +2974,9 @@ Namespace Views
                 Else
                     cursorVm.ColorPickPreview = Nothing
                 End If
+            ElseIf _isPanMode AndAlso cursorCanvas IsNot Nothing Then
+                ' Verschieben faengt jeden Klick ab (OnSliderPointerPressed) - der Zeiger sagt das.
+                cursorCanvas.Cursor = New Cursor(StandardCursorType.Hand)
             ElseIf _isGuideDragging AndAlso cursorCanvas IsNot Nothing Then
                 cursorCanvas.Cursor = If(_guideDragIsVertical, GuideCursorVertical, GuideCursorHorizontal)
             ElseIf guideHoverIndex >= 0 AndAlso cursorCanvas IsNot Nothing Then
@@ -2984,8 +3029,10 @@ Namespace Views
                 ' Sache, weil beide gelaeufig sind und keine davon hier sonst etwas tut.
                 UpdateCropDrag(e.GetPosition(canvas), imageRect,
                                e.KeyModifiers.HasFlag(KeyModifiers.Shift) OrElse
-                               e.KeyModifiers.HasFlag(KeyModifiers.Control))
+                               e.KeyModifiers.HasFlag(KeyModifiers.Control),
+                               vm.CropAspectRatio)
                 UpdateCropOverlayFromDrag()
+                PushCropDragToViewModel()
                 e.Handled = True
                 Return
             End If
@@ -5656,12 +5703,16 @@ Namespace Views
         ''' Passt das Ergebnis nicht mehr ins Bild, wird es um den festen Punkt herum verkleinert,
         ''' bis es passt - abschneiden wuerde das Seitenverhaeltnis wieder zerstoeren, und genau das
         ''' sollte die Taste ja verhindern.</summary>
+        ''' <param name="target">Das Verhaeltnis Breite zu Hoehe, das gelten soll. 0 heisst: das des
+        ''' Ausgangsrechtecks (SHIFT oder STRG ohne eingerastete Vorgabe).</param>
         Private Shared Sub HalteSeitenverhaeltnis(modus As CropDragMode, ausgang As Avalonia.Rect,
-                                                  imageRect As Avalonia.Rect,
+                                                  imageRect As Avalonia.Rect, target As Double,
                                                   ByRef left As Double, ByRef top As Double,
                                                   ByRef right As Double, ByRef bottom As Double)
-            If ausgang.Width <= 0 OrElse ausgang.Height <= 0 Then Return
-            Dim target = ausgang.Width / ausgang.Height
+            If target <= 0 Then
+                If ausgang.Width <= 0 OrElse ausgang.Height <= 0 Then Return
+                target = ausgang.Width / ausgang.Height
+            End If
             If target <= 0 Then Return
 
             Dim width = right - left, height = bottom - top
@@ -5746,10 +5797,30 @@ Namespace Views
             End If
         End Sub
 
+        ''' <param name="eingerastet">Das Verhaeltnis der gewaehlten Vorgabe im Panel
+        ''' (EditorViewModel.CropAspectRatio), 0 fuer frei. Es gilt fuer JEDEN Zug, auch ohne Taste
+        ''' und auch fuer einen neu aufgezogenen Rahmen.</param>
         Private Sub UpdateCropDrag(pointerPosition As Avalonia.Point, imageRect As Avalonia.Rect,
-                                   Optional seitenverhaeltnisHalten As Boolean = False)
+                                   Optional seitenverhaeltnisHalten As Boolean = False,
+                                   Optional eingerastet As Double = 0)
             If _cropDragMode = CropDragMode.NewSelection Then
                 _cropEnd = ClampPointToRect(pointerPosition, imageRect)
+                If eingerastet > 0 Then
+                    ' Der Startpunkt ist die feste Ecke; welche Ecke gezogen wird, sagt die Richtung.
+                    Dim nachRechts = _cropEnd.X >= _cropStart.X
+                    Dim nachUnten = _cropEnd.Y >= _cropStart.Y
+                    Dim modus = If(nachUnten,
+                                   If(nachRechts, CropDragMode.BottomRight, CropDragMode.BottomLeft),
+                                   If(nachRechts, CropDragMode.TopRight, CropDragMode.TopLeft))
+                    Dim newLeft = Math.Min(_cropStart.X, _cropEnd.X)
+                    Dim newTop = Math.Min(_cropStart.Y, _cropEnd.Y)
+                    Dim newRight = Math.Max(_cropStart.X, _cropEnd.X)
+                    Dim newBottom = Math.Max(_cropStart.Y, _cropEnd.Y)
+                    HalteSeitenverhaeltnis(modus, New Avalonia.Rect(_cropStart, _cropStart), imageRect, eingerastet,
+                                           newLeft, newTop, newRight, newBottom)
+                    _cropEnd = New Avalonia.Point(If(nachRechts, newRight, newLeft),
+                                                  If(nachUnten, newBottom, newTop))
+                End If
                 Return
             End If
 
@@ -5784,9 +5855,10 @@ Namespace Views
 
             ' Umschalt oder Strg: das Seitenverhaeltnis des Ausgangsrechtecks halten. Erst hier,
             ' nach dem gewoehnlichen Klemmen - so gilt die Bildkante weiter, nur eben ohne das
-            ' Verhaeltnis zu verziehen.
-            If seitenverhaeltnisHalten Then
-                HalteSeitenverhaeltnis(_cropDragMode, _cropDragInitialRect, imageRect,
+            ' Verhaeltnis zu verziehen. Eine eingerastete Vorgabe gilt auch ohne Taste und geht
+            ' vor dem Verhaeltnis des Ausgangsrechtecks.
+            If _cropDragMode <> CropDragMode.Move AndAlso (seitenverhaeltnisHalten OrElse eingerastet > 0) Then
+                HalteSeitenverhaeltnis(_cropDragMode, _cropDragInitialRect, imageRect, eingerastet,
                                        left, top, right, bottom)
             End If
 
@@ -5795,16 +5867,38 @@ Namespace Views
         End Sub
 
         Private Sub CommitCropDrag()
+            Dim vm = TryCast(DataContext, EditorViewModel)
+            If vm Is Nothing Then Return
+            If Not PushCropDragToViewModel() AndAlso _cropDragPushedLive AndAlso _cropDragStartMargins.HasValue Then
+                ' Zu klein geworden (etwa hin und wieder zurueck): der Zug gilt als nicht
+                ' geschehen. Die Werte waren aber schon unterwegs ins Panel gegangen - zurueck auf
+                ' den Stand vom Anfang, ungerundet, sonst galte ein unberuehrter Rahmen danach als
+                ' veraendert.
+                Dim m = _cropDragStartMargins.Value
+                vm.RestorePendingCropDisplayMargins(m.Left, m.Top, m.Right, m.Bottom)
+            End If
+            _cropDragPushedLive = False
+            _cropDragStartMargins = Nothing
+        End Sub
+
+        ''' <summary>Den gezogenen Rahmen ins ViewModel geben - bei jeder Bewegung, nicht erst beim
+        ''' Loslassen. Sonst liefen Links, Oben, Breite und Hoehe im Panel dem Rahmen hinterher und
+        ''' sprangen erst am Ende (Nutzerbefund). Den Rahmen selbst zeichnet waehrend des Zuges
+        ''' weiter die Ansicht (UpdateSliderLayout laesst ihn dann in Ruhe).
+        '''
+        ''' False, wenn der Rahmen zu klein ist, um als Zug zu gelten; dann bleibt das ViewModel,
+        ''' wie es ist.</summary>
+        Private Function PushCropDragToViewModel() As Boolean
             Dim canvas = Me.FindControl(Of Canvas)("PreviewCanvas")
             Dim vm = TryCast(DataContext, EditorViewModel)
-            If canvas Is Nothing OrElse vm Is Nothing Then Return
+            If canvas Is Nothing OrElse vm Is Nothing Then Return False
             Dim rect = GetDisplayedImageRect(canvas, vm)
-            If rect.Width <= 0 OrElse rect.Height <= 0 Then Return
+            If rect.Width <= 0 OrElse rect.Height <= 0 Then Return False
             Dim leftPx = Math.Min(_cropStart.X, _cropEnd.X)
             Dim topPx = Math.Min(_cropStart.Y, _cropEnd.Y)
             Dim rightPx = Math.Max(_cropStart.X, _cropEnd.X)
             Dim bottomPx = Math.Max(_cropStart.Y, _cropEnd.Y)
-            If Math.Abs(rightPx - leftPx) < 8 OrElse Math.Abs(bottomPx - topPx) < 8 Then Return
+            If Math.Abs(rightPx - leftPx) < 8 OrElse Math.Abs(bottomPx - topPx) < 8 Then Return False
 
             Dim left = (leftPx - rect.Left) / rect.Width * 100.0
             Dim top = (topPx - rect.Top) / rect.Height * 100.0
@@ -5814,7 +5908,9 @@ Namespace Views
             ' den Source-Raum der Pipeline. Vorher gingen die Anzeige-Prozente ungemappt in die
             ' Source-Ränder, und auf gedrehten Bildern fiel die falsche Region.
             vm.SetCropPercentagesFromDisplay(left, top, right, bottom)
-        End Sub
+            _cropDragPushedLive = True
+            Return True
+        End Function
 
 
         ''' <summary>Neue Zeile NUR per Strg+Enter oder Umschalt+Enter (
@@ -7933,6 +8029,7 @@ Namespace Views
                             _spacePanActive = True
                             Dim btn = Me.FindControl(Of Button)("PanModeButton")
                             If btn IsNot Nothing Then btn.Classes.Add("active")
+                            UpdatePanModeCursor()
                             e.Handled = True
                         End If
                     Case Key.OemOpenBrackets
@@ -7961,6 +8058,7 @@ Namespace Views
                 _isPanMode = False
                 Dim btn = Me.FindControl(Of Button)("PanModeButton")
                 If btn IsNot Nothing Then btn.Classes.Remove("active")
+                UpdatePanModeCursor()
                 e.Handled = True
             End If
         End Sub

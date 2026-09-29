@@ -8885,4 +8885,13 @@
   <data name="Bleiben_an_kontrastreichen_Kanten_zum_Bildrand_h_a9e66200" xml:space="preserve">
     <value>S'il reste des franges bleues, violettes ou jaunes sur les bords contrastés vers le bord de l'image, ce curseur décale le bleu par rapport au vert. Fonctionne aussi sans profil d'objectif.</value>
   </data>
+  <data name="Objektivkorrektur_nicht_verf_gbar_Das_Bild_enth__6f665f75" xml:space="preserve">
+    <value>Correction d'objectif indisponible : l'image contient des retouches intégrées à ses pixels, comme la réduction du bruit ou la retouche. Elle n'agit que lors du développement du fichier RAW.</value>
+  </data>
+  <data name="Frei_308e7cd0" xml:space="preserve">
+    <value>Libre</value>
+  </data>
+  <data name="Seitenverh_ltnis_frei_ziehen_d0b19439" xml:space="preserve">
+    <value>Faire glisser avec un format libre</value>
+  </data>
 </root>

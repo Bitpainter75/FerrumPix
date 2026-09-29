@@ -8929,4 +8929,13 @@
   <data name="Bleiben_an_kontrastreichen_Kanten_zum_Bildrand_h_a9e66200" xml:space="preserve">
     <value>यदि छवि के किनारे की ओर उच्च कंट्रास्ट वाले किनारों पर नीले, बैंगनी या पीले रंग के किनारे बचे रहें, तो यह स्लाइडर नीले को हरे के सापेक्ष खिसकाता है। लेंस प्रोफ़ाइल के बिना भी काम करता है।</value>
   </data>
+  <data name="Objektivkorrektur_nicht_verf_gbar_Das_Bild_enth__6f665f75" xml:space="preserve">
+    <value>लेंस सुधार उपलब्ध नहीं है: चित्र में पिक्सेल में जोड़े गए संपादन हैं, जैसे शोर कम करना या रीटच। यह केवल RAW फ़ाइल डेवलप करते समय काम करता है।</value>
+  </data>
+  <data name="Frei_308e7cd0" xml:space="preserve">
+    <value>मुक्त</value>
+  </data>
+  <data name="Seitenverh_ltnis_frei_ziehen_d0b19439" xml:space="preserve">
+    <value>पक्षानुपात को मुक्त रूप से खींचें</value>
+  </data>
 </root>

@@ -8884,4 +8884,13 @@
   <data name="Bleiben_an_kontrastreichen_Kanten_zum_Bildrand_h_a9e66200" xml:space="preserve">
     <value>Se restarem franjas azuis, roxas ou amarelas em bordas de alto contraste em direção à margem da imagem, este controle desloca o azul em relação ao verde. Funciona também sem perfil de objetiva.</value>
   </data>
+  <data name="Objektivkorrektur_nicht_verf_gbar_Das_Bild_enth__6f665f75" xml:space="preserve">
+    <value>Correção da lente indisponível: a imagem contém edições já calculadas nos píxeis, como redução de ruído ou retoque. Só funciona ao revelar o ficheiro RAW.</value>
+  </data>
+  <data name="Frei_308e7cd0" xml:space="preserve">
+    <value>Livre</value>
+  </data>
+  <data name="Seitenverh_ltnis_frei_ziehen_d0b19439" xml:space="preserve">
+    <value>Arrastar com proporção livre</value>
+  </data>
 </root>

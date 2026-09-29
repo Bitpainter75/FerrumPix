@@ -8925,4 +8925,13 @@
   <data name="Bleiben_an_kontrastreichen_Kanten_zum_Bildrand_h_a9e66200" xml:space="preserve">
     <value>Если на контрастных краях ближе к краю кадра остаётся синяя, фиолетовая или жёлтая кайма, этот ползунок сдвигает синий относительно зелёного. Работает и без профиля объектива.</value>
   </data>
+  <data name="Objektivkorrektur_nicht_verf_gbar_Das_Bild_enth__6f665f75" xml:space="preserve">
+    <value>Коррекция объектива недоступна: изображение содержит правки, уже внесённые в пиксели, например шумоподавление или ретушь. Она работает только при проявке RAW-файла.</value>
+  </data>
+  <data name="Frei_308e7cd0" xml:space="preserve">
+    <value>Свободно</value>
+  </data>
+  <data name="Seitenverh_ltnis_frei_ziehen_d0b19439" xml:space="preserve">
+    <value>Перетаскивать со свободными пропорциями</value>
+  </data>
 </root>

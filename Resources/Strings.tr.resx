@@ -8929,4 +8929,13 @@
   <data name="Bleiben_an_kontrastreichen_Kanten_zum_Bildrand_h_a9e66200" xml:space="preserve">
     <value>Görüntü kenarına doğru kontrastlı kenarlarda mavi, mor veya sarı saçaklar kalırsa bu sürgü maviyi yeşile göre kaydırır. Objektif profili olmadan da çalışır.</value>
   </data>
+  <data name="Objektivkorrektur_nicht_verf_gbar_Das_Bild_enth__6f665f75" xml:space="preserve">
+    <value>Objektif düzeltmesi kullanılamıyor: görüntü, gürültü giderme veya rötuş gibi piksellere işlenmiş düzenlemeler içeriyor. Yalnızca RAW dosyası banyo edilirken çalışır.</value>
+  </data>
+  <data name="Frei_308e7cd0" xml:space="preserve">
+    <value>Serbest</value>
+  </data>
+  <data name="Seitenverh_ltnis_frei_ziehen_d0b19439" xml:space="preserve">
+    <value>En boy oranını serbestçe sürükle</value>
+  </data>
 </root>

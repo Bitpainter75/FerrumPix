@@ -8903,4 +8903,13 @@
   <data name="Bleiben_an_kontrastreichen_Kanten_zum_Bildrand_h_a9e66200" xml:space="preserve">
     <value>Bleiben an kontrastreichen Kanten zum Bildrand hin blaue, violette oder gelbe Säume, verschiebt dieser Regler Blau gegen Grün. Wirkt auch ohne Objektivprofil.</value>
   </data>
+  <data name="Objektivkorrektur_nicht_verf_gbar_Das_Bild_enth__6f665f75" xml:space="preserve">
+    <value>Objektivkorrektur nicht verfügbar: Das Bild enthält eingerechnete Bearbeitungen wie Entrauschen oder Retusche. Sie wirkt nur beim Entwickeln des RAW.</value>
+  </data>
+  <data name="Frei_308e7cd0" xml:space="preserve">
+    <value>Frei</value>
+  </data>
+  <data name="Seitenverh_ltnis_frei_ziehen_d0b19439" xml:space="preserve">
+    <value>Seitenverhältnis frei ziehen</value>
+  </data>
 </root>

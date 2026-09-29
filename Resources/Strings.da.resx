@@ -8925,4 +8925,13 @@
   <data name="Bleiben_an_kontrastreichen_Kanten_zum_Bildrand_h_a9e66200" xml:space="preserve">
     <value>Bliver der blå, lilla eller gule kanter ved kontrastrige kanter mod billedkanten, flytter skyderen blå i forhold til grøn. Virker også uden objektivprofil.</value>
   </data>
+  <data name="Objektivkorrektur_nicht_verf_gbar_Das_Bild_enth__6f665f75" xml:space="preserve">
+    <value>Objektivkorrektion er ikke tilgængelig: billedet indeholder redigeringer, der er regnet ind i pixelne, f.eks. støjreduktion eller retouchering. Den virker kun, når RAW-filen fremkaldes.</value>
+  </data>
+  <data name="Frei_308e7cd0" xml:space="preserve">
+    <value>Fri</value>
+  </data>
+  <data name="Seitenverh_ltnis_frei_ziehen_d0b19439" xml:space="preserve">
+    <value>Træk billedformatet frit</value>
+  </data>
 </root>

@@ -8885,4 +8885,13 @@
   <data name="Bleiben_an_kontrastreichen_Kanten_zum_Bildrand_h_a9e66200" xml:space="preserve">
     <value>Si quedan halos azules, violetas o amarillos en bordes de alto contraste hacia el borde de la imagen, este control desplaza el azul respecto al verde. Funciona también sin perfil de objetivo.</value>
   </data>
+  <data name="Objektivkorrektur_nicht_verf_gbar_Das_Bild_enth__6f665f75" xml:space="preserve">
+    <value>Corrección de objetivo no disponible: la imagen contiene ediciones ya calculadas en sus píxeles, como la reducción de ruido o el retoque. Solo funciona al revelar el archivo RAW.</value>
+  </data>
+  <data name="Frei_308e7cd0" xml:space="preserve">
+    <value>Libre</value>
+  </data>
+  <data name="Seitenverh_ltnis_frei_ziehen_d0b19439" xml:space="preserve">
+    <value>Arrastrar con proporción libre</value>
+  </data>
 </root>

@@ -8925,4 +8925,13 @@
   <data name="Bleiben_an_kontrastreichen_Kanten_zum_Bildrand_h_a9e66200" xml:space="preserve">
     <value>Zůstanou-li na kontrastních hranách směrem k okraji snímku modré, fialové nebo žluté lemy, posune tento posuvník modrou vůči zelené. Funguje i bez profilu objektivu.</value>
   </data>
+  <data name="Objektivkorrektur_nicht_verf_gbar_Das_Bild_enth__6f665f75" xml:space="preserve">
+    <value>Korekce objektivu není k dispozici: obrázek obsahuje úpravy započítané do pixelů, například odšumění nebo retuš. Funguje jen při vyvolávání souboru RAW.</value>
+  </data>
+  <data name="Frei_308e7cd0" xml:space="preserve">
+    <value>Volné</value>
+  </data>
+  <data name="Seitenverh_ltnis_frei_ziehen_d0b19439" xml:space="preserve">
+    <value>Táhnout s volným poměrem stran</value>
+  </data>
 </root>

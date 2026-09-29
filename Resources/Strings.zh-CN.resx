@@ -8883,4 +8883,13 @@
   <data name="Bleiben_an_kontrastreichen_Kanten_zum_Bildrand_h_a9e66200" xml:space="preserve">
     <value>若靠近画面边缘的高对比度边缘仍有蓝色、紫色或黄色色边，此滑块会相对绿色移动蓝色。无镜头配置文件时同样有效。</value>
   </data>
+  <data name="Objektivkorrektur_nicht_verf_gbar_Das_Bild_enth__6f665f75" xml:space="preserve">
+    <value>镜头校正不可用：图像包含已计算到像素中的编辑，例如降噪或修饰。它只在冲洗 RAW 文件时起作用。</value>
+  </data>
+  <data name="Frei_308e7cd0" xml:space="preserve">
+    <value>自由</value>
+  </data>
+  <data name="Seitenverh_ltnis_frei_ziehen_d0b19439" xml:space="preserve">
+    <value>自由拖动宽高比</value>
+  </data>
 </root>
