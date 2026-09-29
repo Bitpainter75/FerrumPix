@@ -13,6 +13,9 @@
   starts where the camera meant it to be. Unedited raw files from the EOS R3, R8, M10, R5 Mark II
   and 60D also start at a better brightness.
 
+- Image size with the aspect ratio unlocked: changing only the width or only the height now
+  stretches or squeezes the picture as asked. The other side used to follow the old ratio anyway.
+
 - EOS 1000D raw files at ISO 200 keep the detail in their brightest areas instead of cutting it
   off too early.
 
