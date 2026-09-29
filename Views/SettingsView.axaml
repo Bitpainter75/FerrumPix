@@ -189,10 +189,14 @@
         </Border>
 
         <Grid Grid.Column="1" RowDefinitions="*,66">
+        <!-- Die Leiste steht DAUERHAFT in voller Breite: die Seite ist lang, und man soll ohne
+             Zeigerbewegung sehen, wo man in ihr steht. Automatisch zog sie sich zur schmalen Linie
+             zusammen. -->
         <ScrollViewer x:Name="SettingsScrollViewer" Grid.Row="0" Padding="28,26,24,32"
                       Margin="0,0,8,0"
                       HorizontalScrollBarVisibility="Disabled"
-                      VerticalScrollBarVisibility="Auto">
+                      VerticalScrollBarVisibility="Visible"
+                      AllowAutoHide="False">
             <StackPanel Spacing="18" MaxWidth="960" Margin="0,0,0,0">
 
                 <Border x:Name="GeneralSection" Classes="section">

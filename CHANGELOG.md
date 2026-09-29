@@ -10,7 +10,7 @@
   Free lets it go again. The edge and size values now follow the frame while you drag.
 
 - **Scroll bar of the adjustment panel.** A new editor setting keeps it always visible instead of
-  showing it only when the pointer is over it.
+  showing it only when the pointer is over it. The settings window now always shows its scroll bar.
 
 ### Fixes
 
