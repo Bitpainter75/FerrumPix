@@ -26510,31 +26510,33 @@ Namespace ViewModels
             End If
         End Sub
 
-        ''' Gerechnet wird gegen <see cref="ResizeBaseSize"/> und NICHT gegen die angezeigte Groesse:
-        ''' in der steckt die offene Bildgroesse schon drin, und damit maesse die Kopplung ihr
-        ''' eigenes Ergebnis.
-        ''' <summary>OHNE SCHLOSS: die Kante, die niemand angefasst hat, bleibt, wie sie im Feld steht.
-        ''' Unberührt steht sie intern auf 0, und das Feld zeigt dann nur die aktuelle Größe an.
-        ''' Beim Anwenden rechnet ApplyResize eine fehlende Kante aber nach dem Seitenverhältnis aus;
-        ''' wer ohne Schloss nur die Breite änderte, bekam das Bild deshalb proportional verkleinert
-        ''' statt gestaucht (Nutzerbefund). Festgehalten wird sie hier, sobald die andere einen Wert
-        ''' bekommt, und zwar auf genau den angezeigten.</summary>
+        ''' <summary>OHNE SCHLOSS: die Kante, die niemand angefasst hat, bleibt auf der Größe vor der
+        ''' Bildgröße. Unberührt steht sie intern auf 0. Beim Anwenden rechnet ApplyResize eine
+        ''' fehlende Kante aber nach dem Seitenverhältnis aus, und das Feld zeigte sie ebenso an, weil
+        ''' seine Ersatzanzeige die offene Bildgröße schon mitrechnet: wer ohne Schloss nur die Breite
+        ''' änderte, bekam das Bild proportional verkleinert statt gestaucht. Dasselbe, wenn man in
+        ''' ein Feld den Wert tippte, der schon darin stand - dann kommt gar kein neuer Wert an
+        ''' (Nutzerbefund). Festgehalten wird sie hier, sobald die andere einen Wert bekommt, auf
+        ''' <see cref="ResizeBaseSize"/>, derselben Größe, gegen die auch die Kopplung rechnet.</summary>
         Private Sub PinOtherResizeEdge(heightIsOther As Boolean)
             If heightIsOther Then
                 If _resizeWidth <= 0 OrElse _resizeHeight > 0 Then Return
-                Dim shown = GetCroppedHeight()
+                Dim shown = ResizeBaseSize().Height
                 If shown <= 0 Then Return
                 _resizeHeight = shown
                 Me.RaisePropertyChanged(NameOf(ResizeHeight))
             Else
                 If _resizeHeight <= 0 OrElse _resizeWidth > 0 Then Return
-                Dim shown = GetCroppedWidth()
+                Dim shown = ResizeBaseSize().Width
                 If shown <= 0 Then Return
                 _resizeWidth = shown
                 Me.RaisePropertyChanged(NameOf(ResizeWidth))
             End If
         End Sub
 
+        ''' Gerechnet wird gegen <see cref="ResizeBaseSize"/> und NICHT gegen die angezeigte Groesse:
+        ''' in der steckt die offene Bildgroesse schon drin, und damit maesse die Kopplung ihr
+        ''' eigenes Ergebnis.
         Private Sub SyncResizeHeightFromWidth()
             Dim source = ResizeBaseSize()
             Dim sourceWidth = source.Width
