@@ -175,7 +175,7 @@ Theme, accent colour, which side the window buttons sit on, language, interface 
 
 The interface speaks German, English, Dutch, Swedish, Danish, Norwegian, Finnish, Spanish, French, Italian, Portuguese, Polish, Czech, Russian, Chinese and Japanese. By default it follows your system; anything else it does not know falls back to English.
 
-Gallery and editor can be set up to match how you work: what a double-click opens, which details appear under a gallery tile, which tool the editor starts with, the order of the tool bar, which side the adjustment panel sits on, whether the bottom bar is shown in gallery, viewer and editor, a default format for saving, and which adjustment groups you want to see at all. RAW development has its own settings: the base brightness per camera model, the lens correction, and which method turns the sensor data into a full picture (AHD, DCB or PPG).
+Gallery and editor can be set up to match how you work: what a double-click opens, which details appear under a gallery tile, which tool the editor starts with, the order of the tool bar, which side the adjustment panel sits on and whether its scroll bar is always shown, whether the bottom bar is shown in gallery, viewer and editor, a default format for saving, and which adjustment groups you want to see at all. RAW development has its own settings: the base brightness per camera model, the lens correction, and which method turns the sensor data into a full picture (AHD, DCB or PPG).
 
 A drawing tablet setting makes buttons and menu entries act the moment the pen touches down instead of when it lifts, for pens that can drag a slider but press nothing.
 

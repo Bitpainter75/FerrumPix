@@ -8938,4 +8938,13 @@
   <data name="Seitenverh_ltnis_frei_ziehen_d0b19439" xml:space="preserve">
     <value>가로세로 비율을 자유롭게 드래그</value>
   </data>
+  <data name="Bildlaufleiste_des_Anpassungspanels_5d954218" xml:space="preserve">
+    <value>조정 패널의 스크롤 막대</value>
+  </data>
+  <data name="Automatisch_zieht_sich_die_Leiste_zu_einer_schma_d901fb41" xml:space="preserve">
+    <value>자동은 포인터가 올라갈 때까지 막대를 가는 선으로 줄이고, 모든 내용이 패널에 들어가면 완전히 숨깁니다. 항상은 막대를 전체 너비로 유지합니다.</value>
+  </data>
+  <data name="Immer_4544f615" xml:space="preserve">
+    <value>항상</value>
+  </data>
 </root>

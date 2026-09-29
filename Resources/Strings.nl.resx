@@ -8934,4 +8934,13 @@
   <data name="Seitenverh_ltnis_frei_ziehen_d0b19439" xml:space="preserve">
     <value>Beeldverhouding vrij slepen</value>
   </data>
+  <data name="Bildlaufleiste_des_Anpassungspanels_5d954218" xml:space="preserve">
+    <value>Schuifbalk van het aanpassingspaneel</value>
+  </data>
+  <data name="Automatisch_zieht_sich_die_Leiste_zu_einer_schma_d901fb41" xml:space="preserve">
+    <value>Automatisch krimpt de balk tot een dunne lijn totdat de aanwijzer erboven staat, en verbergt hem helemaal als alles in het paneel past. Altijd laat hem op volle breedte staan.</value>
+  </data>
+  <data name="Immer_4544f615" xml:space="preserve">
+    <value>Altijd</value>
+  </data>
 </root>

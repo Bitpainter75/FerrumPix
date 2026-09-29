@@ -9,6 +9,9 @@
   crop frame in that shape while you drag it, typing a width or height adjusts the other, and
   Free lets it go again. The edge and size values now follow the frame while you drag.
 
+- **Scroll bar of the adjustment panel.** A new editor setting keeps it always visible instead of
+  showing it only when the pointer is over it.
+
 ### Fixes
 
 - Lens correction: removing color fringes at the image corners made them stronger instead of

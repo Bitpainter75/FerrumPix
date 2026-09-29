@@ -8894,4 +8894,13 @@
   <data name="Seitenverh_ltnis_frei_ziehen_d0b19439" xml:space="preserve">
     <value>Faire glisser avec un format libre</value>
   </data>
+  <data name="Bildlaufleiste_des_Anpassungspanels_5d954218" xml:space="preserve">
+    <value>Barre de défilement du panneau de réglages</value>
+  </data>
+  <data name="Automatisch_zieht_sich_die_Leiste_zu_einer_schma_d901fb41" xml:space="preserve">
+    <value>Automatique réduit la barre à une fine ligne tant que le pointeur n'est pas dessus, et la masque entièrement quand tout tient dans le panneau. Toujours la laisse en pleine largeur.</value>
+  </data>
+  <data name="Immer_4544f615" xml:space="preserve">
+    <value>Toujours</value>
+  </data>
 </root>

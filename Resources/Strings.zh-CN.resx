@@ -8892,4 +8892,13 @@
   <data name="Seitenverh_ltnis_frei_ziehen_d0b19439" xml:space="preserve">
     <value>自由拖动宽高比</value>
   </data>
+  <data name="Bildlaufleiste_des_Anpassungspanels_5d954218" xml:space="preserve">
+    <value>调整面板的滚动条</value>
+  </data>
+  <data name="Automatisch_zieht_sich_die_Leiste_zu_einer_schma_d901fb41" xml:space="preserve">
+    <value>“自动”会把滚动条缩成细线，直到指针移到上面；内容全部放得下时则完全隐藏。“始终”让它保持完整宽度。</value>
+  </data>
+  <data name="Immer_4544f615" xml:space="preserve">
+    <value>始终</value>
+  </data>
 </root>

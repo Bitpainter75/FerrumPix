@@ -4419,6 +4419,33 @@ Namespace ViewModels
             End Get
         End Property
 
+        ''' <summary>Die senkrechte Bildlaufleiste des Anpassungspanels: aus den Einstellungen
+        ''' (EditorAdjustmentsScrollBarAlwaysVisible) immer da, sonst wie ab Werk automatisch.
+        '''
+        ''' "Immer" heisst BEIDES: sichtbar auch dann, wenn der Inhalt hineinpasst (sonst sprang die
+        ''' Breite des Panels, sobald eine Gruppe auf- oder zuklappte), und nicht zur schmalen Linie
+        ''' eingezogen, solange der Zeiger woanders steht.</summary>
+        Public ReadOnly Property AdjustmentsScrollBarAlwaysVisible As Boolean
+            Get
+                Return _mainVm IsNot Nothing AndAlso _mainVm.Settings IsNot Nothing AndAlso
+                       _mainVm.Settings.EditorAdjustmentsScrollBarAlwaysVisible
+            End Get
+        End Property
+
+        Public ReadOnly Property AdjustmentsVerticalScrollBarVisibility As Avalonia.Controls.Primitives.ScrollBarVisibility
+            Get
+                Return If(AdjustmentsScrollBarAlwaysVisible,
+                          Avalonia.Controls.Primitives.ScrollBarVisibility.Visible,
+                          Avalonia.Controls.Primitives.ScrollBarVisibility.Auto)
+            End Get
+        End Property
+
+        Public ReadOnly Property AdjustmentsScrollBarAutoHide As Boolean
+            Get
+                Return Not AdjustmentsScrollBarAlwaysVisible
+            End Get
+        End Property
+
         ''' <summary>Breite der linken Werkzeugleiste: eingeklappt bleibt genau Platz für die Symbole
         ''' samt Knopf-Innenabstand (Leisten-Padding 8+8, Knopf-Padding 10, Symbol 18).</summary>
         ''' <summary>Breite der Werkzeugleiste. Ausgeklappt waechst sie mit der Schriftgroesse mit:

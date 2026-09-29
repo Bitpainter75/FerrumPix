@@ -8934,4 +8934,13 @@
   <data name="Seitenverh_ltnis_frei_ziehen_d0b19439" xml:space="preserve">
     <value>Перетаскивать со свободными пропорциями</value>
   </data>
+  <data name="Bildlaufleiste_des_Anpassungspanels_5d954218" xml:space="preserve">
+    <value>Полоса прокрутки панели настроек</value>
+  </data>
+  <data name="Automatisch_zieht_sich_die_Leiste_zu_einer_schma_d901fb41" xml:space="preserve">
+    <value>«Автоматически» сжимает полосу до тонкой линии, пока над ней нет указателя, и полностью скрывает её, когда всё помещается в панель. «Всегда» оставляет её во всю ширину.</value>
+  </data>
+  <data name="Immer_4544f615" xml:space="preserve">
+    <value>Всегда</value>
+  </data>
 </root>

@@ -8934,4 +8934,13 @@
   <data name="Seitenverh_ltnis_frei_ziehen_d0b19439" xml:space="preserve">
     <value>Táhnout s volným poměrem stran</value>
   </data>
+  <data name="Bildlaufleiste_des_Anpassungspanels_5d954218" xml:space="preserve">
+    <value>Posuvník panelu úprav</value>
+  </data>
+  <data name="Automatisch_zieht_sich_die_Leiste_zu_einer_schma_d901fb41" xml:space="preserve">
+    <value>Automaticky zúží lištu na tenkou čáru, dokud nad ní není ukazatel, a zcela ji skryje, když se vše vejde do panelu. Vždy ji nechá v plné šířce.</value>
+  </data>
+  <data name="Immer_4544f615" xml:space="preserve">
+    <value>Vždy</value>
+  </data>
 </root>

@@ -8894,4 +8894,13 @@
   <data name="Seitenverh_ltnis_frei_ziehen_d0b19439" xml:space="preserve">
     <value>Arrastrar con proporción libre</value>
   </data>
+  <data name="Bildlaufleiste_des_Anpassungspanels_5d954218" xml:space="preserve">
+    <value>Barra de desplazamiento del panel de ajustes</value>
+  </data>
+  <data name="Automatisch_zieht_sich_die_Leiste_zu_einer_schma_d901fb41" xml:space="preserve">
+    <value>Automático reduce la barra a una línea fina hasta que el puntero está encima y la oculta del todo cuando todo cabe en el panel. Siempre la deja a su anchura completa.</value>
+  </data>
+  <data name="Immer_4544f615" xml:space="preserve">
+    <value>Siempre</value>
+  </data>
 </root>

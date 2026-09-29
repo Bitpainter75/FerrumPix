@@ -96,6 +96,7 @@ Namespace ViewModels
         Private _savedFaceMinimumSizePercent As Double = 0
         Private _savedPhotoMapEnabled As Boolean = False
         Private _editorAdjustmentsPanelOnLeft As Boolean = False
+        Private _editorAdjustmentsScrollBarAlwaysVisible As Boolean = False
         Private _editorStartupTool As String = "Adjust"
         Private _psdTextImport As String = "Ask"
         Private _editorToolGroupOrder As String = "Adjust,Transform,Tools"
@@ -180,6 +181,7 @@ Namespace ViewModels
         Private _savedEditorFitMargin As Integer = 0
         Private _savedEditorStartupTool As String = "Adjust"
         Private _savedEditorAdjustmentsPanelOnLeft As Boolean = False
+        Private _savedEditorAdjustmentsScrollBarAlwaysVisible As Boolean = False
         Private _savedEditorToolGroupOrder As String = "Adjust,Transform,Tools"
         Private _savedDefaultSaveFormat As String = "JPG"
         Private _savedEditorSaveAsNamePattern As String = "{name}_fx"
@@ -2201,6 +2203,27 @@ Namespace ViewModels
             End Get
         End Property
 
+        ''' <summary>Senkrechte Bildlaufleiste des Anpassungspanels immer eingeblendet statt
+        ''' automatisch. Ab Werk automatisch.</summary>
+        Public Property EditorAdjustmentsScrollBarAlwaysVisible As Boolean
+            Get
+                Return _editorAdjustmentsScrollBarAlwaysVisible
+            End Get
+            Set(value As Boolean)
+                If _editorAdjustmentsScrollBarAlwaysVisible = value Then Return
+                Me.RaiseAndSetIfChanged(_editorAdjustmentsScrollBarAlwaysVisible, value)
+                Me.RaisePropertyChanged(NameOf(IsEditorAdjustmentsScrollBarAuto))
+                _mainVm?.RefreshLayoutBindings()
+                SaveLayoutSettings()
+            End Set
+        End Property
+
+        Public ReadOnly Property IsEditorAdjustmentsScrollBarAuto As Boolean
+            Get
+                Return Not _editorAdjustmentsScrollBarAlwaysVisible
+            End Get
+        End Property
+
         ''' <summary>Werkzeug, das beim Betreten des Editors aktiv ist. Zur Wahl stehen die beiden
         ''' Einstiege, mit denen man tatsächlich anfängt: „Auswahl" (bisheriges Verhalten) und
         ''' „Anpassen".</summary>
@@ -3316,6 +3339,7 @@ Namespace ViewModels
         Public ReadOnly Property SetDefaultSaveFormatCommand As ICommand
         Public ReadOnly Property SetEditorStartupToolCommand As ICommand
         Public ReadOnly Property SetEditorAdjustmentsPanelSideCommand As ICommand
+        Public ReadOnly Property SetEditorAdjustmentsScrollBarCommand As ICommand
         Public ReadOnly Property SetPsdTextImportCommand As ICommand
         Public ReadOnly Property MoveEditorToolGroupUpCommand As ICommand
         Public ReadOnly Property MoveEditorToolGroupDownCommand As ICommand
@@ -3863,6 +3887,7 @@ Namespace ViewModels
             _editorAdjustmentsPanelWidth = EditorViewModel.ClampAdjustmentsPanelWidth(_appSettings.EditorAdjustmentsPanelWidth)
             _editorDenoiseStrength = EditorViewModel.ClampDenoiseStrength(_appSettings.EditorDenoiseStrength)
             _editorAdjustmentsPanelOnLeft = _appSettings.EditorAdjustmentsPanelOnLeft
+            _editorAdjustmentsScrollBarAlwaysVisible = _appSettings.EditorAdjustmentsScrollBarAlwaysVisible
             _editorStartupTool = AppSettingsService.NormalizeEditorStartupTool(_appSettings.EditorStartupTool)
             _psdTextImport = AppSettingsService.NormalizePsdTextImport(_appSettings.PsdTextImport)
             _editorToolGroupOrder = AppSettingsService.NormalizeEditorToolGroupOrder(_appSettings.EditorToolGroupOrder)
@@ -3974,6 +3999,9 @@ Namespace ViewModels
             ' bedeutet rechts, damit ein unbekannter Parameter nicht auf der linken Seite landet.
             SetEditorAdjustmentsPanelSideCommand = ReactiveCommand.Create(Of String)(
                 Sub(m) EditorAdjustmentsPanelOnLeft = String.Equals(m, "Left", StringComparison.OrdinalIgnoreCase))
+            ' Nur "Always" blendet dauerhaft ein; alles andere ist automatisch, wie ab Werk.
+            SetEditorAdjustmentsScrollBarCommand = ReactiveCommand.Create(Of String)(
+                Sub(m) EditorAdjustmentsScrollBarAlwaysVisible = String.Equals(m, "Always", StringComparison.OrdinalIgnoreCase))
             SetPsdTextImportCommand = ReactiveCommand.Create(Of String)(Sub(m) PsdTextImport = m)
             MoveEditorToolGroupUpCommand = ReactiveCommand.Create(Of String)(Sub(k) MoveEditorToolGroup(k, -1))
             MoveEditorToolGroupDownCommand = ReactiveCommand.Create(Of String)(Sub(k) MoveEditorToolGroup(k, 1))
@@ -4165,6 +4193,7 @@ Namespace ViewModels
             _savedEditorFitMargin = _editorFitMargin
             _savedEditorStartupTool = _editorStartupTool
             _savedEditorAdjustmentsPanelOnLeft = _editorAdjustmentsPanelOnLeft
+            _savedEditorAdjustmentsScrollBarAlwaysVisible = _editorAdjustmentsScrollBarAlwaysVisible
             _savedEditorToolGroupOrder = _editorToolGroupOrder
             _savedDefaultSaveFormat = _defaultSaveFormat
             _savedEditorSaveAsNamePattern = _editorSaveAsNamePattern
@@ -4273,6 +4302,7 @@ Namespace ViewModels
             EditorFitMargin = _savedEditorFitMargin
             EditorStartupTool = _savedEditorStartupTool
             EditorAdjustmentsPanelOnLeft = _savedEditorAdjustmentsPanelOnLeft
+            EditorAdjustmentsScrollBarAlwaysVisible = _savedEditorAdjustmentsScrollBarAlwaysVisible
             EditorToolGroupOrder = _savedEditorToolGroupOrder
             DefaultSaveFormat = _savedDefaultSaveFormat
             EditorSaveAsNamePattern = _savedEditorSaveAsNamePattern
@@ -4406,6 +4436,7 @@ Namespace ViewModels
             EditorFitMargin = 0
             EditorStartupTool = "Adjust"
             EditorAdjustmentsPanelOnLeft = False
+            EditorAdjustmentsScrollBarAlwaysVisible = False
             EditorToolGroupOrder = "Adjust,Transform,Tools"
             DefaultSaveFormat = "JPG"
             EditorSaveAsNamePattern = "{name}_fx"
@@ -4770,6 +4801,7 @@ Namespace ViewModels
                                           s.EditorAdjustmentsPanelWidth = _editorAdjustmentsPanelWidth
                                           s.EditorDenoiseStrength = _editorDenoiseStrength
                                           s.EditorAdjustmentsPanelOnLeft = _editorAdjustmentsPanelOnLeft
+                                          s.EditorAdjustmentsScrollBarAlwaysVisible = _editorAdjustmentsScrollBarAlwaysVisible
                                           s.EditorStartupTool = _editorStartupTool
                                           s.PsdTextImport = _psdTextImport
                                           s.EditorToolGroupOrder = _editorToolGroupOrder

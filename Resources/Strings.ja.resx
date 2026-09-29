@@ -8934,4 +8934,13 @@
   <data name="Seitenverh_ltnis_frei_ziehen_d0b19439" xml:space="preserve">
     <value>縦横比を自由にドラッグ</value>
   </data>
+  <data name="Bildlaufleiste_des_Anpassungspanels_5d954218" xml:space="preserve">
+    <value>調整パネルのスクロールバー</value>
+  </data>
+  <data name="Automatisch_zieht_sich_die_Leiste_zu_einer_schma_d901fb41" xml:space="preserve">
+    <value>「自動」では、ポインターが重なるまでバーが細い線になり、すべてがパネルに収まるときは完全に隠れます。「常に」では常に全幅で表示されます。</value>
+  </data>
+  <data name="Immer_4544f615" xml:space="preserve">
+    <value>常に</value>
+  </data>
 </root>
