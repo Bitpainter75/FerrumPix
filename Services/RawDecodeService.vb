@@ -1230,6 +1230,49 @@ Namespace Services
             End Try
         End Function
 
+        ''' <summary>Schwarzpunkt und Tonumfang, die FerrumPix beim Entwickeln dieser Datei STATT
+        ''' LibRaws Werten setzt (<see cref="TryApplyLevelOverride"/>: Eintrag in levelOverrides,
+        ''' Canons ColorData, gemessener Rand). Nothing, wenn nichts gesetzt wird, dann gelten LibRaws
+        ''' eigene Werte. -1 in einem Feld heißt ebenso: dieses bleibt bei LibRaw. Der Tonumfang
+        ''' zählt ÜBER dem Schwarzpunkt, der rohe Weißpunkt ist also Schwarz plus Umfang.
+        '''
+        ''' FÜR DEN PEGELABGLEICH gegen Adobe (Diagnostics/Grundbelichtung). Der verglich LibRaw mit
+        ''' Adobe und meldete deshalb bei jeder Canon mit erfasster ColorData Abweichungen, die
+        ''' FerrumPix gar nicht hat. Gelesen wird zurück, was der Decode-Weg selbst geschrieben hat,
+        ''' nicht nachgerechnet: eine zweite Fassung der Regel liefe irgendwann auseinander.</summary>
+        Public Shared Function AppliedLevelOverride(path As String) As (Black As Integer, Range As Integer)?
+            If String.IsNullOrWhiteSpace(path) OrElse Not IsAvailable Then Return Nothing
+            Return DecodeGate.Run(Function()
+                                      If Not _reentrant Then
+                                          SyncLock _nativeLock
+                                              Return AppliedLevelOverrideCore(path)
+                                          End SyncLock
+                                      End If
+                                      Return AppliedLevelOverrideCore(path)
+                                  End Function)
+        End Function
+
+        Private Shared Function AppliedLevelOverrideCore(path As String) As (Black As Integer, Range As Integer)?
+            Dim handle = _init(0UI)
+            If handle = IntPtr.Zero Then Return Nothing
+            Dim pathPtr As IntPtr = IntPtr.Zero
+            Try
+                pathPtr = StringToUtf8(path)
+                If _openFile(handle, pathPtr) <> 0 Then Return Nothing
+                If _unpack(handle) <> 0 Then Return Nothing
+                If Not TryApplyLevelOverride(handle, path) Then Return Nothing
+                Dim base = FindParamsBase(handle)
+                If base < 0 Then Return Nothing
+                Return (Marshal.ReadInt32(handle, base + UserBlackOffset), Marshal.ReadInt32(handle, base + UserSatOffset))
+            Catch ex As Exception
+                DiagnosticLogService.LogException("RawDecodeService.AppliedLevelOverride", ex)
+                Return Nothing
+            Finally
+                _close(handle)
+                If pathPtr <> IntPtr.Zero Then Marshal.FreeCoTaskMem(pathPtr)
+            End Try
+        End Function
+
         ''' <summary>Die drei Größen am offenen Handle abgreifen. Eigene Funktion, weil der
         ''' Rückfall sie ein zweites Mal liest.</summary>
         Private Shared Function ReadColorFactsFromHandle(handle As IntPtr) As CameraColorFacts
