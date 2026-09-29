@@ -918,7 +918,8 @@ Namespace Services
         ''' dieselbe Datei im Editor anders aus als im Betrachter.
         '''
         ''' <para><paramref name="path"/> ist die Datei, um die es geht. Sagt sie selbst etwas zu ihrer
-        ''' Grundhelligkeit - das DNG-Feld BaselineExposure -, steht das als Startwert im Regler
+        ''' Grundhelligkeit - das DNG-Feld BaselineExposure oder der DR-Modus einer Fujifilm-RAF
+        ''' (RawDecodeService.BaselineExposureStops) -, steht das als Startwert im Regler
         ''' Belichtung. NUR HIER, und das ist der Punkt: dieser Weg laeuft ausschliesslich fuer eine
         ''' RAW OHNE Rezept. Liegt eine Beistelldatei mit eigener Belichtung daneben, kommen die
         ''' Aufrufer gar nicht erst hierher, und der gespeicherte Wert bleibt der, der er war.

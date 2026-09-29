@@ -2871,11 +2871,12 @@ Namespace Services
         ''' <summary>Was die DATEI SELBST zu ihrer Grundhelligkeit sagt, in Blendenstufen. 0, wenn sie
         ''' nichts sagt - und das ist der Normalfall.
         '''
-        ''' <para>Das Feld gibt es nur im DNG-Format, und dort traegt es der Schreiber der Datei ein:
-        ''' die Kamera, der Umwandler oder eine Firmware wie CHDK. Der Bestandslauf über 462
+        ''' <para>Zwei Quellen. Bei einer DNG das Feld BaselineExposure, eingetragen vom Schreiber der
+        ''' Datei: der Kamera, dem Umwandler oder einer Firmware wie CHDK. Der Bestandslauf über 462
         ''' RAW-Dateien fand 21 DNGs, davon 17 mit dem Feld und 16 mit einem Wert ungleich null:
-        ''' alle negativ zwischen -0,2 und -1,0 Stufen. Kein einziges CR2, NEF, ARW, RW2, ORF oder
-        ''' RAF liefert hier einen Wert.</para>
+        ''' alle negativ zwischen -0,2 und -1,0 Stufen. Bei einer Fujifilm-RAF der DR-Modus der
+        ''' Kamera (siehe <see cref="FujiDynamicRangePercent"/>). Alle uebrigen Formate sagen
+        ''' nichts.</para>
         '''
         ''' <para>WOFUER ES GEBRAUCHT WIRD: unsere Basisstufe entwickelt mit einer FESTEN
         ''' Grundbelichtung, gefittet an einer Kamera. Eine Datei, die ausdruecklich eine halbe Stufe
@@ -2887,9 +2888,10 @@ Namespace Services
         ''' und ein Metadatenlauf ueber eine 30-MB-Datei ist zu teuer, um ihn zu wiederholen.</para></summary>
         Public Shared Function BaselineExposureStops(path As String) As Double
             If String.IsNullOrEmpty(path) Then Return 0.0
-            ' Nur DNG traegt das Feld. Die Abkuerzung spart den Metadatenlauf fuer alle anderen
+            ' Nur DNG und RAF sagen etwas. Die Abkuerzung spart den Metadatenlauf fuer alle anderen
             ' Formate, und das sind in der Praxis fast alle Dateien.
-            If Not path.EndsWith(".dng", StringComparison.OrdinalIgnoreCase) Then Return 0.0
+            Dim isRaf = path.EndsWith(".raf", StringComparison.OrdinalIgnoreCase)
+            If Not isRaf AndAlso Not path.EndsWith(".dng", StringComparison.OrdinalIgnoreCase) Then Return 0.0
 
             SyncLock BaselineExposuresLock
                 Dim bekannt As Double
@@ -2899,6 +2901,16 @@ Namespace Services
             Dim stops As Double = 0.0
             Try
                 Dim verzeichnisse = MetadataExtractor.ImageMetadataReader.ReadMetadata(path)
+                If isRaf Then
+                    Dim ifd0Raf = verzeichnisse.OfType(Of MetadataExtractor.Formats.Exif.ExifIfd0Directory)().FirstOrDefault()
+                    Dim percent = FujiDynamicRangePercent(ifd0Raf?.GetDescription(MetadataExtractor.Formats.Exif.ExifDirectoryBase.TagModel),
+                                                          FujiDynamicRangeTags(verzeichnisse))
+                    stops = If(percent > 100, Math.Log(percent / 100.0, 2.0), 0.0)
+                    SyncLock BaselineExposuresLock
+                        BaselineExposures(path) = stops
+                    End SyncLock
+                    Return stops
+                End If
                 ' DIE NOTIZ GILT DER ENTWICKLUNG. Eine Datei, die an der Basisstufe vorbeilaeuft
                 ' (siehe IsFinishedRgb), traegt bereits ein tonwertkorrigiertes Bild; die
                 ' Grundbelichtung der Datei ein zweites Mal daraufzulegen macht sie schlicht
@@ -2926,6 +2938,73 @@ Namespace Services
                 BaselineExposures(path) = stops
             End SyncLock
             Return stops
+        End Function
+
+        ''' <summary>Die Felder aus Fujifilms Herstellerblock, nach denen
+        ''' <see cref="FujiDynamicRangePercent"/> entscheidet: DynamicRange (0x1400),
+        ''' DynamicRangeSetting (0x1402), DevelopmentDynamicRange (0x1403), AutoDynamicRange (0x140B),
+        ''' DRangePriority (0x1443), die Stufe bei fester Wahl (0x1444) und bei automatischer (0x1445).
+        ''' Die Nummern der beiden Stufen sind an den Dateien abgelesen (X-E5 fest: 0x1444, X-H2S
+        ''' automatisch: 0x1445), nicht aus den Namen, die Werkzeuge ihnen geben.</summary>
+        Public Shared ReadOnly FujiDynamicRangeTagIds As Integer() =
+            {&H1400, &H1402, &H1403, &H140B, &H1443, &H1444, &H1445}
+
+        ''' <summary>Die DR-Felder einer RAF, soweit vorhanden.</summary>
+        Private Shared Function FujiDynamicRangeTags(verzeichnisse As IEnumerable(Of MetadataExtractor.Directory)) As Dictionary(Of Integer, Integer)
+            Dim tags As New Dictionary(Of Integer, Integer)
+            Dim maker = verzeichnisse.OfType(Of MetadataExtractor.Formats.Exif.Makernotes.FujifilmMakernoteDirectory)().FirstOrDefault()
+            If maker Is Nothing Then Return tags
+            For Each id In FujiDynamicRangeTagIds
+                Dim value As Integer
+                If MetadataExtractor.DirectoryExtensions.TryGetInt32(maker, id, value) Then tags(id) = value
+            Next
+            Return tags
+        End Function
+
+        ''' <summary>Der DR-Modus einer Fujifilm-Aufnahme in Prozent (100, 200 oder 400), 0, wenn die
+        ''' Datei nichts Belastbares sagt.
+        '''
+        ''' <para>WAS DER MODUS TUT: Bei DR200 belichtet die Kamera die Rohdaten eine Stufe knapper,
+        ''' bei DR400 zwei, und hebt ihr eigenes JPEG entsprechend an. Adobe gleicht das je Datei im
+        ''' BaselineExposure der DNG aus: Modellanteil plus log2(DR/100), an 149 RAFs von 80 Modellen
+        ''' ohne Ausnahme (X-T5 0,02 / 1,02 / 2,02, X-E3 0,15 / 1,15 / 2,15). Ohne den Ausgleich kam
+        ''' eine DR400-Aufnahme bei uns zwei Stufen zu dunkel, und die Kameratabelle, die nur einen
+        ''' Wert je Modell kennt, mittelte ueber zufaellig gemischte Einstellungen.</para>
+        '''
+        ''' <para>WOHER DER WERT KOMMT: Bei DynamicRangeSetting 1 (von Hand) aus
+        ''' DevelopmentDynamicRange, bei 0 (automatisch) aus AutoDynamicRange. Neuere Kameras (X-E5,
+        ''' X-H2S) schreiben statt dessen D-Range Priority; dort ist nur die Stufe SCHWACH belegt, ob
+        ''' von Hand oder automatisch, und Adobe setzt sie DR200 gleich. Fuer die Stufe STARK gibt es
+        ''' im Bestand keine Aufnahme; sie bleibt deshalb bei 0, statt einen Wert zu raten. Eine X-S10
+        ''' mit Fixed 3 behandelt Adobe wie DR100.</para>
+        '''
+        ''' <para>AUSGENOMMEN: SuperCCD (DynamicRange ungleich 1, S3 Pro, S5 Pro) und die EXR-Modelle.
+        ''' Beide erweitern den Umfang ueber eigene Sensorpixel statt ueber knappere Belichtung; Adobes
+        ''' Werte folgen dort keiner Regel (S200EXR bei DR400 0,0, F600EXR 3,0).</para>
+        '''
+        ''' <para><paramref name="tags"/> traegt die Felder aus <see cref="FujiDynamicRangeTagIds"/>;
+        ''' ein fehlendes Feld fehlt einfach.</para></summary>
+        Public Shared Function FujiDynamicRangePercent(model As String, tags As IReadOnlyDictionary(Of Integer, Integer)) As Integer
+            If tags Is Nothing Then Return 0
+            If model IsNot Nothing AndAlso model.IndexOf("EXR", StringComparison.OrdinalIgnoreCase) >= 0 Then Return 0
+            Dim number = Function(id As Integer) As Integer
+                             Dim value As Integer
+                             Return If(tags.TryGetValue(id, value), value, -1)
+                         End Function
+            If number(&H1400) <> 1 Then Return 0
+            Dim percent As Integer
+            Select Case number(&H1402)
+                Case 0 : percent = number(&H140B)
+                Case 1 : percent = number(&H1403)
+                Case Else
+                    ' Ohne DynamicRangeSetting: D-Range Priority, nur die belegte Stufe SCHWACH.
+                    Select Case number(&H1443)
+                        Case 0 : percent = If(number(&H1445) = 1, 200, 0)
+                        Case 1 : percent = If(number(&H1444) = 1, 200, 0)
+                        Case Else : percent = 0
+                    End Select
+            End Select
+            Return If(percent = 100 OrElse percent = 200 OrElse percent = 400, percent, 0)
         End Function
 
         Private Shared Function CheckedPixelCount(width As Integer, height As Integer) As Long
