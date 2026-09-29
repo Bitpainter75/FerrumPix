@@ -650,7 +650,8 @@ Namespace Services
                 Dim isSelectionKind = _kind IsNot Nothing AndAlso
                     (_kind.Equals("SelectionFill", StringComparison.OrdinalIgnoreCase) OrElse _kind.Equals("SelectionImage", StringComparison.OrdinalIgnoreCase))
                 If isSelectionKind Then
-                    Return If(String.IsNullOrWhiteSpace(_text), baseLabel, _text)
+                    ' "Auswahl 3" und "Eingefügtes Bild" stehen im Grundwortlaut im Text.
+                    Return If(String.IsNullOrWhiteSpace(_text), baseLabel, GeneratedLayerNames.Display(_text))
                 End If
                 Dim isTextual = _kind IsNot Nothing AndAlso
                     (_kind.Equals("Text", StringComparison.OrdinalIgnoreCase) OrElse _kind.Equals("Watermark", StringComparison.OrdinalIgnoreCase))

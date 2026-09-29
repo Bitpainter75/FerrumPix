@@ -692,7 +692,7 @@ Namespace Services
     ''' Maskenebene, Auswahlebene, Ebene mit Maske und Bestandteil, mehr nicht.</summary>
     Public Class MaskedAdjustmentLayer
         Public Property Id As String = Guid.NewGuid().ToString("N")
-        Public Property Name As String = LocalizationService.T("Maskenebene")
+        Public Property Name As String = GeneratedLayerNames.MaskLayer
         Public Property MaskId As String = ""
         Public Property IsVisible As Boolean = True
         ''' <summary>GESPERRT - siehe ImageAnnotation.IsLocked. Bei einer Korrekturebene heißt das:

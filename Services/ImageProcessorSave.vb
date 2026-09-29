@@ -246,7 +246,7 @@ Namespace Services
                 Dim groupMask = BuildMaskRaster(adj, group.MaskId, sourceWidth, sourceHeight,
                                                 0, 0, sourceWidth, sourceHeight)
                 layers.Add(New PsdWriterService.PsdLayerInput With {
-                    .Name = group.Name,
+                    .Name = GeneratedLayerNames.Display(group.Name),
                     .SectionType = If(group.IsCollapsed, 2, 1),
                     .OpacityPercent = CSng(group.Opacity),
                     .BlendMode = group.BlendMode,

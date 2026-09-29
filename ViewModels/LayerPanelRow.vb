@@ -83,11 +83,13 @@ Namespace ViewModels
 
         Public ReadOnly Property LayerLabel As String
             Get
+                ' Namen, die FerrumPix selbst vergibt, stehen im Grundwortlaut im Rezept und werden erst hier
+                ' uebersetzt (GeneratedLayerNames).
                 If Group IsNot Nothing Then
-                    Return If(String.IsNullOrWhiteSpace(Group.Name), LocalizationService.T("Gruppe"), Group.Name)
+                    Return If(String.IsNullOrWhiteSpace(Group.Name), LocalizationService.T("Gruppe"), GeneratedLayerNames.Display(Group.Name))
                 End If
                 If AdjustmentLayer IsNot Nothing Then
-                    If Not String.IsNullOrWhiteSpace(AdjustmentLayer.Name) Then Return AdjustmentLayer.Name
+                    If Not String.IsNullOrWhiteSpace(AdjustmentLayer.Name) Then Return GeneratedLayerNames.Display(AdjustmentLayer.Name)
                     Return If(AdjustmentLayer.IsMaskLayer, LocalizationService.T("Maskenebene"), LocalizationService.T("Auswahlebene"))
                 End If
                 Return If(Annotation Is Nothing, LocalizationService.T("Ebene"), Annotation.LayerLabel)
@@ -96,15 +98,18 @@ Namespace ViewModels
 
         Public Property EditableName As String
             Get
-                If Group IsNot Nothing Then Return If(Group.Name, "")
-                If AdjustmentLayer IsNot Nothing Then Return If(AdjustmentLayer.Name, "")
+                ' Das Eingabefeld zeigt den Namen, wie er angezeigt wird. Bleibt er beim Umbenennen
+                ' unveraendert, bleibt auch der Grundwortlaut stehen - sonst waere der Name ab da in
+                ' der Sprache dieses Moments festgeschrieben.
+                If Group IsNot Nothing Then Return GeneratedLayerNames.Display(Group.Name)
+                If AdjustmentLayer IsNot Nothing Then Return GeneratedLayerNames.Display(AdjustmentLayer.Name)
                 Return If(Annotation Is Nothing, "", Annotation.EditableName)
             End Get
             Set(value As String)
                 If Group IsNot Nothing Then
-                    Group.Name = If(value, "")
+                    If Not String.Equals(value, GeneratedLayerNames.Display(Group.Name), StringComparison.Ordinal) Then Group.Name = If(value, "")
                 ElseIf AdjustmentLayer IsNot Nothing Then
-                    AdjustmentLayer.Name = If(value, "")
+                    If Not String.Equals(value, GeneratedLayerNames.Display(AdjustmentLayer.Name), StringComparison.Ordinal) Then AdjustmentLayer.Name = If(value, "")
                 ElseIf Annotation IsNot Nothing Then
                     Annotation.EditableName = value
                 End If

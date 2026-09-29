@@ -1,3 +1,11 @@
+## 0.9.56
+
+### Fixes
+
+- Layer names that FerrumPix gives on its own, such as groups, pasted selections and mask layers,
+  now follow the language of the app. A pasted selection was always called "Auswahl", and names
+  kept the language they were created in.
+
 ## 0.9.55
 
 ### What's new

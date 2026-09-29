@@ -3595,13 +3595,17 @@ Namespace ViewModels
 
         ''' <summary>„Gruppe 1", „Gruppe 2", … - die kleinste noch freie Nummer, damit nach dem Löschen
         ''' einer Gruppe keine Lücke im Namen bleibt.</summary>
+        ''' Gespeichert im Grundwortlaut; verglichen wird die ANZEIGE, damit eine in einer anderen
+        ''' Sprache gespeicherte "Group 1" die Nummer ebenfalls belegt.
         Private Function NextAnnotationGroupName() As String
-            Dim prefix = LocalizationService.T("Gruppe")
             Dim number = 1
-            While _annotationGroups.Any(Function(g) g IsNot Nothing AndAlso String.Equals(g.Name, prefix & " " & number.ToString(), StringComparison.Ordinal))
+            While _annotationGroups.Any(Function(g) g IsNot Nothing AndAlso
+                    String.Equals(GeneratedLayerNames.Display(g.Name),
+                                  GeneratedLayerNames.Display(GeneratedLayerNames.Numbered(GeneratedLayerNames.Group, number)),
+                                  StringComparison.Ordinal))
                 number += 1
             End While
-            Return prefix & " " & number.ToString()
+            Return GeneratedLayerNames.Numbered(GeneratedLayerNames.Group, number)
         End Function
 
         Private _pendingInsertKind As String = ""
@@ -5094,7 +5098,7 @@ Namespace ViewModels
                 ' sind. Eine Gruppe nennt sich beim Namen.
                 If HasMultiAnnotationSelection Then
                     Dim grp = SelectedAnnotationsGroup()
-                    If grp IsNot Nothing Then Return If(String.IsNullOrWhiteSpace(grp.Name), LocalizationService.T("Gruppe"), grp.Name)
+                    If grp IsNot Nothing Then Return If(String.IsNullOrWhiteSpace(grp.Name), LocalizationService.T("Gruppe"), GeneratedLayerNames.Display(grp.Name))
                     Return LocalizationService.T("Mehrfachauswahl")
                 End If
                 Select Case _currentTool
@@ -5136,7 +5140,7 @@ Namespace ViewModels
                 ' sie in die Mehrfachauswahl darunter und stuende dort wie eine beliebige Menge von
                 ' Ebenen da, obwohl genau eine Zeile markiert ist.
                 If IsGroupRowSelected Then
-                    Dim groupName = If(_selectedLayerRow?.Group?.Name, "")
+                    Dim groupName = GeneratedLayerNames.Display(If(_selectedLayerRow?.Group?.Name, ""))
                     If String.IsNullOrWhiteSpace(groupName) Then Return LocalizationService.T("Gruppe")
                     Return LocalizationService.T("Gruppe") & ": " & groupName
                 End If
@@ -5153,7 +5157,7 @@ Namespace ViewModels
                 If adjustment IsNot Nothing Then
                     ' Der NAME zuerst, wie im Panel: eine Maskenebene traegt ab Werk "Maskenebene",
                     ' und wer sie "Himmel" nennt, will das hier lesen und nicht wieder ihre Art.
-                    If Not String.IsNullOrWhiteSpace(adjustment.Name) Then Return adjustment.Name
+                    If Not String.IsNullOrWhiteSpace(adjustment.Name) Then Return GeneratedLayerNames.Display(adjustment.Name)
                     Return If(adjustment.IsMaskLayer, LocalizationService.T("Maskenebene"),
                                                       LocalizationService.T("Auswahlebene"))
                 End If
@@ -9753,8 +9757,8 @@ Namespace ViewModels
                     Function(l) l IsNot Nothing AndAlso l.Id = _selectionPromotedLayerId)
                 If layer IsNot Nothing Then
                     layer.IsMaskLayer = zuMaske
-                    layer.Name = If(zuMaske, LocalizationService.T("Maskenebene"),
-                                             LocalizationService.T("Auswahlebene")) &
+                    layer.Name = If(zuMaske, GeneratedLayerNames.MaskLayer,
+                                             GeneratedLayerNames.SelectionLayer) &
                                  layer.Name.Substring(Math.Max(0, layer.Name.LastIndexOf(" "c)))
                     RebuildLayerRows()
                     SchedulePreviewUpdate()
@@ -11673,7 +11677,8 @@ Namespace ViewModels
         ''' aus dem Auswahl-Werkzeug) - zählt NUR hoch, wird beim Löschen eines Objekts nicht wieder
         ''' freigegeben, damit Nummern nicht doppelt vergeben werden.
         Private Function NextSelectionObjectLabel() As String
-            Dim label = "Auswahl " & _nextSelectionObjectNumber.ToString()
+            ' Im Grundwortlaut, übersetzt wird beim Anzeigen (GeneratedLayerNames).
+            Dim label = GeneratedLayerNames.Numbered(GeneratedLayerNames.Selection, _nextSelectionObjectNumber)
             _nextSelectionObjectNumber += 1
             Return label
         End Function
@@ -12057,7 +12062,7 @@ Namespace ViewModels
             Dim widthPercent = pixelWidth * scale * 100.0 / documentWidth
             Dim heightPercent = pixelHeight * scale * 100.0 / documentHeight
             AddSelectionImageAnnotationAt(path, (100.0 - widthPercent) / 2.0, (100.0 - heightPercent) / 2.0,
-                                          widthPercent, heightPercent, LocalizationService.T("Eingefügtes Bild"))
+                                          widthPercent, heightPercent, GeneratedLayerNames.PastedImage)
             NameHistoryStep(LocalizationService.T("Bild eingefügt"))
             Return True
         End Function
@@ -25269,8 +25274,7 @@ Namespace ViewModels
             PushUndo(LocalizationService.T("Ebene dupliziert"))
             Dim source = _maskedAdjustmentLayers(index)
             Dim copy = DuplicateAdjustmentLayer(source,
-                If(String.IsNullOrWhiteSpace(source.Name), LocalizationService.T("Auswahlebene"), source.Name) &
-                " " & LocalizationService.T("Kopie"))
+                GeneratedLayerNames.CopyOf(If(String.IsNullOrWhiteSpace(source.Name), GeneratedLayerNames.SelectionLayer, source.Name)))
             If copy Is Nothing Then Return
             _selectedMaskedAdjustmentLayerId = copy.Id
             RebuildLayerRows()
@@ -25844,7 +25848,7 @@ Namespace ViewModels
                 If layer Is Nothing Then
                     _imageMasks.Add(mask)
                     layer = New MaskedAdjustmentLayer With {
-                        .Name = If(_activeSelectionIsMask, LocalizationService.T("Maskenebene"), LocalizationService.T("Auswahlebene")) & " " & (_maskedAdjustmentLayers.Count + 1).ToString(),
+                        .Name = GeneratedLayerNames.Numbered(If(_activeSelectionIsMask, GeneratedLayerNames.MaskLayer, GeneratedLayerNames.SelectionLayer), _maskedAdjustmentLayers.Count + 1),
                         .MaskId = mask.Id,
                         .Adjustments = New ImageAdjustments(),
                         .IsMaskLayer = _activeSelectionIsMask
@@ -27677,7 +27681,7 @@ Namespace ViewModels
                 Return
             End If
             For Each spec In specs
-                Dim maskName = LocalizationService.T("Maskenebene") & " " & (_maskedAdjustmentLayers.Count + 1).ToString()
+                Dim maskName = GeneratedLayerNames.Numbered(GeneratedLayerNames.MaskLayer, _maskedAdjustmentLayers.Count + 1)
                 Dim mask As ImageMask
                 If String.Equals(spec.MaskType, "CircularGradient", StringComparison.Ordinal) Then
                     mask = ImageProcessor.BuildRadialGradientMask(srcW, srcH, spec.Top, spec.Left, spec.Bottom, spec.Right,

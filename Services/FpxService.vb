@@ -160,7 +160,7 @@ Namespace Services
                     If adj.MaskedAdjustmentLayers Is Nothing Then adj.MaskedAdjustmentLayers = New List(Of MaskedAdjustmentLayer)()
                     adj.Masks.Add(mask)
                     adj.MaskedAdjustmentLayers.Add(New MaskedAdjustmentLayer With {
-                        .Name = LocalizationService.T("Übernommene Maskenebene"),
+                        .Name = GeneratedLayerNames.MigratedMaskLayer,
                         .MaskId = mask.Id,
                         .Adjustments = adj.ExtractPixelAdjustments()
                     })

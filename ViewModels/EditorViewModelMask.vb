@@ -1292,7 +1292,7 @@ Namespace ViewModels
             If _hasActiveSelection Then ClearSelection(captureUndo:=False)
             Dim kind = If(IsMaskRadialMode, "Radial", "Linear")
             Dim mask As New ImageMask With {
-                .Name = LocalizationService.T(If(kind = "Radial", "Radialer Verlauf", "Linearer Verlauf")) & " " & (_imageMasks.Count + 1).ToString(),
+                .Name = GeneratedLayerNames.Numbered(If(kind = "Radial", GeneratedLayerNames.RadialGradient, GeneratedLayerNames.LinearGradient), _imageMasks.Count + 1),
                 .Kind = kind,
                 .SourceWidthPixels = baseWidth,
                 .SourceHeightPixels = baseHeight,
@@ -4750,8 +4750,8 @@ Namespace ViewModels
             ' vorhandene Ebene. Der ausdrueckliche Neu-Befehl bedeutet dort jedoch: eine zweite,
             ' unabhaengige Ebene mit derselben Maskenform.
             If _maskedAdjustmentLayers.Count = countBefore Then
-                Dim name = If(layer.IsMaskLayer, LocalizationService.T("Maskenebene"), LocalizationService.T("Auswahlebene")) &
-                           " " & (_maskedAdjustmentLayers.Count + 1).ToString()
+                Dim name = GeneratedLayerNames.Numbered(If(layer.IsMaskLayer, GeneratedLayerNames.MaskLayer, GeneratedLayerNames.SelectionLayer),
+                                                        _maskedAdjustmentLayers.Count + 1)
                 Dim copy = DuplicateAdjustmentLayer(layer, name)
                 If copy Is Nothing Then Return Nothing
                 TraceMask(Function() $"Kopie angelegt: aus Ebene={Kurz(layer.Id)} ({MaskTrace(layer.MaskId)})" &
@@ -4929,7 +4929,7 @@ Namespace ViewModels
                 _imageMasks.Add(mask)
                 ApplyPendingRangeMetadata(mask)
                 layer = New MaskedAdjustmentLayer With {
-                    .Name = If(_activeSelectionIsMask, LocalizationService.T("Maskenebene"), LocalizationService.T("Auswahlebene")) & " " & (_maskedAdjustmentLayers.Count + 1).ToString(),
+                    .Name = GeneratedLayerNames.Numbered(If(_activeSelectionIsMask, GeneratedLayerNames.MaskLayer, GeneratedLayerNames.SelectionLayer), _maskedAdjustmentLayers.Count + 1),
                     .MaskId = mask.Id,
                     .Adjustments = New ImageAdjustments(),
                     .IsMaskLayer = _activeSelectionIsMask
