@@ -8967,4 +8967,16 @@
   <data name="STRG_SHIFT_TAB_e6921751" xml:space="preserve">
     <value>CTRL+SHIFT+TAB</value>
   </data>
+  <data name="Farbrauschen_bei_unbearbeiteten_RAWs_0f8c070b" xml:space="preserve">
+    <value>Värikohina muokkaamattomille RAW-tiedostoille</value>
+  </data>
+  <data name="Farbflecken_bei_unbearbeiteten_RAWs_9c08c37c" xml:space="preserve">
+    <value>Väriläiskät muokkaamattomille RAW-tiedostoille</value>
+  </data>
+  <data name="Startwert_des_Reglers_Farbrauschen_wenn_ein_RAW__3af7cb22" xml:space="preserve">
+    <value>Liukusäätimen Värikohina alkuarvo, kun muokkaamaton RAW-tiedosto avataan. Tasoittaa hienoa värirakeisuutta etenkin suurella ISO-arvolla, mutta vie puhtaista kuvista myös hienoa väriä ja vaatii laskenta-aikaa jokaisella kuvanvaihdolla. 0 kytkee sen pois.</value>
+  </data>
+  <data name="Startwert_des_Reglers_Farbflecken_wenn_ein_RAW_o_2d470b89" xml:space="preserve">
+    <value>Liukusäätimen Väriläiskät alkuarvo, kun muokkaamaton RAW-tiedosto avataan. Poistaa karkeat väriläiskät, puhtaista kuvista kuitenkin myös hienoa väriä, ja vaatii huomattavasti laskenta-aikaa jokaisella kuvanvaihdolla. 0 kytkee sen pois.</value>
+  </data>
 </root>

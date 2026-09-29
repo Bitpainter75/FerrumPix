@@ -8967,4 +8967,16 @@
   <data name="STRG_SHIFT_TAB_e6921751" xml:space="preserve">
     <value>CTRL+SHIFT+TAB</value>
   </data>
+  <data name="Farbrauschen_bei_unbearbeiteten_RAWs_0f8c070b" xml:space="preserve">
+    <value>Szum kolorowy w nieedytowanych plikach RAW</value>
+  </data>
+  <data name="Farbflecken_bei_unbearbeiteten_RAWs_9c08c37c" xml:space="preserve">
+    <value>Plamy barwne w nieedytowanych plikach RAW</value>
+  </data>
+  <data name="Startwert_des_Reglers_Farbrauschen_wenn_ein_RAW__3af7cb22" xml:space="preserve">
+    <value>Wartość początkowa suwaka Szum kolorowy przy otwieraniu pliku RAW bez edycji. Wygładza drobne ziarno barwne, zwłaszcza przy wysokim ISO, ale na czystych zdjęciach zabiera też drobny kolor i przy każdej zmianie zdjęcia wymaga czasu obliczeń. 0 go wyłącza.</value>
+  </data>
+  <data name="Startwert_des_Reglers_Farbflecken_wenn_ein_RAW_o_2d470b89" xml:space="preserve">
+    <value>Wartość początkowa suwaka Plamy barwne przy otwieraniu pliku RAW bez edycji. Usuwa grube plamy barwne, na czystych zdjęciach jednak także drobny kolor, i przy każdej zmianie zdjęcia wymaga odczuwalnie dużo czasu obliczeń. 0 go wyłącza.</value>
+  </data>
 </root>

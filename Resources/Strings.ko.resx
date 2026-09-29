@@ -8971,4 +8971,16 @@
   <data name="STRG_SHIFT_TAB_e6921751" xml:space="preserve">
     <value>CTRL+SHIFT+TAB</value>
   </data>
+  <data name="Farbrauschen_bei_unbearbeiteten_RAWs_0f8c070b" xml:space="preserve">
+    <value>편집하지 않은 RAW의 컬러 노이즈</value>
+  </data>
+  <data name="Farbflecken_bei_unbearbeiteten_RAWs_9c08c37c" xml:space="preserve">
+    <value>편집하지 않은 RAW의 색 얼룩</value>
+  </data>
+  <data name="Startwert_des_Reglers_Farbrauschen_wenn_ein_RAW__3af7cb22" xml:space="preserve">
+    <value>편집하지 않은 RAW를 열 때 컬러 노이즈 슬라이더의 시작 값입니다. 특히 높은 ISO에서 미세한 색 입자를 부드럽게 하지만, 깨끗한 사진에서는 미세한 색도 사라지고 사진을 바꿀 때마다 계산 시간이 듭니다. 0이면 꺼집니다.</value>
+  </data>
+  <data name="Startwert_des_Reglers_Farbflecken_wenn_ein_RAW_o_2d470b89" xml:space="preserve">
+    <value>편집하지 않은 RAW를 열 때 색 얼룩 슬라이더의 시작 값입니다. 거친 색 얼룩을 없애지만 깨끗한 사진에서는 미세한 색도 사라지며, 사진을 바꿀 때마다 눈에 띄게 시간이 걸립니다. 0이면 꺼집니다.</value>
+  </data>
 </root>

@@ -8945,4 +8945,16 @@
   <data name="STRG_SHIFT_TAB_e6921751" xml:space="preserve">
     <value>STRG+SHIFT+TAB</value>
   </data>
+  <data name="Farbrauschen_bei_unbearbeiteten_RAWs_0f8c070b" xml:space="preserve">
+    <value>Farbrauschen bei unbearbeiteten RAWs</value>
+  </data>
+  <data name="Farbflecken_bei_unbearbeiteten_RAWs_9c08c37c" xml:space="preserve">
+    <value>Farbflecken bei unbearbeiteten RAWs</value>
+  </data>
+  <data name="Startwert_des_Reglers_Farbrauschen_wenn_ein_RAW__3af7cb22" xml:space="preserve">
+    <value>Startwert des Reglers Farbrauschen, wenn ein RAW ohne Bearbeitung geöffnet wird. Glättet feines Farbkorn, vor allem bei hoher ISO, nimmt bei sauberen Aufnahmen aber auch feine Farbe mit und braucht bei jedem Bildwechsel Rechenzeit. 0 schaltet ihn ab.</value>
+  </data>
+  <data name="Startwert_des_Reglers_Farbflecken_wenn_ein_RAW_o_2d470b89" xml:space="preserve">
+    <value>Startwert des Reglers Farbflecken, wenn ein RAW ohne Bearbeitung geöffnet wird. Nimmt grobe Farbflecken, bei sauberen Aufnahmen aber auch feine Farbe, und braucht bei jedem Bildwechsel spürbar Rechenzeit. 0 schaltet ihn ab.</value>
+  </data>
 </root>

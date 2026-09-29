@@ -8946,4 +8946,16 @@
   <data name="STRG_SHIFT_TAB_e6921751" xml:space="preserve">
     <value>CTRL+SHIFT+TAB</value>
   </data>
+  <data name="Farbrauschen_bei_unbearbeiteten_RAWs_0f8c070b" xml:space="preserve">
+    <value>Color noise for unedited raw files</value>
+  </data>
+  <data name="Farbflecken_bei_unbearbeiteten_RAWs_9c08c37c" xml:space="preserve">
+    <value>Colour blotches for unedited raw files</value>
+  </data>
+  <data name="Startwert_des_Reglers_Farbrauschen_wenn_ein_RAW__3af7cb22" xml:space="preserve">
+    <value>Starting value of the Color noise slider when a raw file without edits is opened. Smooths fine color grain, above all at high ISO, but also takes away fine color on clean shots and needs computing time at every change of picture. 0 turns it off.</value>
+  </data>
+  <data name="Startwert_des_Reglers_Farbflecken_wenn_ein_RAW_o_2d470b89" xml:space="preserve">
+    <value>Starting value of the Colour blotches slider when a raw file without edits is opened. Removes coarse color blotches, but on clean shots also fine color, and needs noticeable computing time at every change of picture. 0 turns it off.</value>
+  </data>
 </root>

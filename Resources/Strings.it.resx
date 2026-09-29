@@ -8927,4 +8927,16 @@
   <data name="STRG_SHIFT_TAB_e6921751" xml:space="preserve">
     <value>CTRL+MAIUSC+TAB</value>
   </data>
+  <data name="Farbrauschen_bei_unbearbeiteten_RAWs_0f8c070b" xml:space="preserve">
+    <value>Rumore cromatico per RAW non modificati</value>
+  </data>
+  <data name="Farbflecken_bei_unbearbeiteten_RAWs_9c08c37c" xml:space="preserve">
+    <value>Macchie di colore per RAW non modificati</value>
+  </data>
+  <data name="Startwert_des_Reglers_Farbrauschen_wenn_ein_RAW__3af7cb22" xml:space="preserve">
+    <value>Valore iniziale del cursore Rumore cromatico quando si apre un RAW senza modifiche. Leviga la grana di colore fine, soprattutto a ISO alti, ma negli scatti puliti toglie anche colore fine e richiede tempo di calcolo a ogni cambio di immagine. 0 lo disattiva.</value>
+  </data>
+  <data name="Startwert_des_Reglers_Farbflecken_wenn_ein_RAW_o_2d470b89" xml:space="preserve">
+    <value>Valore iniziale del cursore Macchie di colore quando si apre un RAW senza modifiche. Rimuove le macchie di colore grossolane, negli scatti puliti però anche colore fine, e richiede un tempo di calcolo percepibile a ogni cambio di immagine. 0 lo disattiva.</value>
+  </data>
 </root>

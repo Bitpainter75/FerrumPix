@@ -8967,4 +8967,16 @@
   <data name="STRG_SHIFT_TAB_e6921751" xml:space="preserve">
     <value>CTRL+SHIFT+TAB</value>
   </data>
+  <data name="Farbrauschen_bei_unbearbeiteten_RAWs_0f8c070b" xml:space="preserve">
+    <value>Kleurruis bij onbewerkte RAW's</value>
+  </data>
+  <data name="Farbflecken_bei_unbearbeiteten_RAWs_9c08c37c" xml:space="preserve">
+    <value>Kleurvlekken bij onbewerkte RAW's</value>
+  </data>
+  <data name="Startwert_des_Reglers_Farbrauschen_wenn_ein_RAW__3af7cb22" xml:space="preserve">
+    <value>Beginwaarde van de schuifregelaar Kleurruis wanneer een RAW zonder bewerking wordt geopend. Maakt fijne kleurkorrel glad, vooral bij hoge ISO, maar neemt bij schone opnamen ook fijne kleur mee en kost bij elke fotowissel rekentijd. 0 zet hem uit.</value>
+  </data>
+  <data name="Startwert_des_Reglers_Farbflecken_wenn_ein_RAW_o_2d470b89" xml:space="preserve">
+    <value>Beginwaarde van de schuifregelaar Kleurvlekken wanneer een RAW zonder bewerking wordt geopend. Verwijdert grove kleurvlekken, bij schone opnamen echter ook fijne kleur, en kost bij elke fotowissel merkbaar rekentijd. 0 zet hem uit.</value>
+  </data>
 </root>

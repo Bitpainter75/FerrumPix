@@ -8971,4 +8971,16 @@
   <data name="STRG_SHIFT_TAB_e6921751" xml:space="preserve">
     <value>CTRL+SHIFT+TAB</value>
   </data>
+  <data name="Farbrauschen_bei_unbearbeiteten_RAWs_0f8c070b" xml:space="preserve">
+    <value>बिना संपादित RAW में रंग शोर</value>
+  </data>
+  <data name="Farbflecken_bei_unbearbeiteten_RAWs_9c08c37c" xml:space="preserve">
+    <value>बिना संपादित RAW में रंग के धब्बे</value>
+  </data>
+  <data name="Startwert_des_Reglers_Farbrauschen_wenn_ein_RAW__3af7cb22" xml:space="preserve">
+    <value>बिना संपादन वाला RAW खोलने पर रंग शोर स्लाइडर का आरंभिक मान। खासकर ऊँचे ISO पर बारीक रंग-दानों को चिकना करता है, पर साफ़ तस्वीरों में बारीक रंग भी हटा देता है और हर चित्र बदलने पर गणना का समय लेता है। 0 इसे बंद करता है।</value>
+  </data>
+  <data name="Startwert_des_Reglers_Farbflecken_wenn_ein_RAW_o_2d470b89" xml:space="preserve">
+    <value>बिना संपादन वाला RAW खोलने पर रंग के धब्बे स्लाइडर का आरंभिक मान। मोटे रंग के धब्बे हटाता है, पर साफ़ तस्वीरों में बारीक रंग भी, और हर चित्र बदलने पर साफ़ तौर पर गणना का समय लेता है। 0 इसे बंद करता है।</value>
+  </data>
 </root>

@@ -8967,4 +8967,16 @@
   <data name="STRG_SHIFT_TAB_e6921751" xml:space="preserve">
     <value>CTRL+SHIFT+TAB</value>
   </data>
+  <data name="Farbrauschen_bei_unbearbeiteten_RAWs_0f8c070b" xml:space="preserve">
+    <value>Färgbrus för oredigerade RAW-filer</value>
+  </data>
+  <data name="Farbflecken_bei_unbearbeiteten_RAWs_9c08c37c" xml:space="preserve">
+    <value>Färgfläckar för oredigerade RAW-filer</value>
+  </data>
+  <data name="Startwert_des_Reglers_Farbrauschen_wenn_ein_RAW__3af7cb22" xml:space="preserve">
+    <value>Startvärde för reglaget Färgbrus när en RAW-fil utan redigering öppnas. Jämnar ut fint färgkorn, framför allt vid hög ISO, men tar vid rena bilder även bort fin färg och kräver beräkningstid vid varje bildbyte. 0 stänger av det.</value>
+  </data>
+  <data name="Startwert_des_Reglers_Farbflecken_wenn_ein_RAW_o_2d470b89" xml:space="preserve">
+    <value>Startvärde för reglaget Färgfläckar när en RAW-fil utan redigering öppnas. Tar bort grova färgfläckar, vid rena bilder dock även fin färg, och kräver märkbar beräkningstid vid varje bildbyte. 0 stänger av det.</value>
+  </data>
 </root>

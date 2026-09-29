@@ -895,14 +895,20 @@ Namespace Services
             "SelectionMaskPngBase64", "SelectionMaskRaster", "HasSelectionMaskData", "SelectionFeatherPixels", "SelectionMaskSoftBaked", "GlobalAdjustmentsHidden", "BackgroundHidden", "PixelLayerHidden"
         }
 
-        ''' <summary>Startwert des Reglers fuer grobe Farbflecken bei einer RAW-Datei ohne Rezept.
+        ''' <summary>Startwert des Reglers fuer grobe Farbflecken bei einer RAW-Datei ohne Rezept: AUS.
         '''
-        ''' Eine entwickelte RAW traegt Farbrauschen, das die Kamera in ihrer eingebetteten Vorschau
-        ''' schon weggerechnet hatte; ohne Startwert sieht die eigene Entwicklung neben der Vorschau
-        ''' fleckig aus. Gemessen am M50-Portraet, der Regler allein: 10 nimmt 14 Prozent des
-        ''' Farbrauschens, 20 nimmt 37, 30 nimmt 59, 50 nimmt 81 - die Kantensteilheit bleibt bis 30 bei
-        ''' 99 Prozent. 30 wirkt also deutlich und laesst Luft nach oben.</summary>
-        Public Const UneditedRawCoarseColorNoise As Single = 30
+        ''' Bis 0.9.54 stand hier 30, begruendet am M50-Portraet (30 nahm dort 59 Prozent des
+        ''' Farbrauschens). Nachgemessen am 2026-09-29 an sechs RAWs von ISO 125 bis 12800, gegen Adobes
+        ''' Vorschau derselben Dateien (Pruefstand "MESSUNG Farbrausch-Startwert gegen Adobe"):
+        ''' - bei hoher ISO nahm 30 nur 10 bis 13 Prozent des Farbrauschens (M50 ISO 12800, A7R IV
+        '''   ISO 2500), also gerade dort am wenigsten, wofuer die Vorgabe gedacht war;
+        ''' - bei niedriger ISO gibt es kaum Farbrauschen (A7 III ISO 125: wie Adobe), aber die Stufe
+        '''   nahm drei Viertel der echten Farbzeichnung mit, die Adobe behaelt;
+        ''' - und sie kostete bei jedem Bildwechsel 0,5 bis 0,8 s, bei 61 MP ganze Sekunden.
+        ''' Die einstufige Farbrauschminderung ist bei hoher ISO wirksamer, aber nicht billiger und hat
+        ''' denselben Verlust bei niedriger ISO. Deshalb steht ab Werk keine von beiden; wer Flecken
+        ''' sieht, zieht den Regler im Editor fuer dieses Bild hoch.</summary>
+        Public Const UneditedRawCoarseColorNoise As Single = 0
 
         ''' <summary>Punkte des Reglers <see cref="Exposure"/> je Blendenstufe.
         '''
@@ -925,14 +931,22 @@ Namespace Services
         ''' Aufrufer gar nicht erst hierher, und der gespeicherte Wert bleibt der, der er war.
         ''' Ohne Pfad bleibt es bei den blossen Startwerten.</para></summary>
         Public Shared Function ForUneditedRaw(Optional path As String = Nothing) As ImageAdjustments
-            Dim values = New ImageAdjustments With {.FarbrauschGrob = UneditedRawCoarseColorNoise}
+            ' Die beiden Farbrausch-Startwerte kommen aus den Einstellungen (RAW-Entwicklung), 0 heisst
+            ' aus. Die grobe Stufe ist die teuerste der Pixelkette und laeuft bei jedem Bildwechsel;
+            ' wer auf einem langsamen Rechner arbeitet, soll sie abstellen oder durch die billigere
+            ' einstufige ersetzen koennen. Ab Werk bleibt es beim bisherigen Bild.
+            Dim settings = AppSettingsService.Load()
+            Dim values = New ImageAdjustments With {
+                .FarbrauschGrob = Math.Max(0, Math.Min(100, settings.UneditedRawCoarseColorNoise)),
+                .ColorNoiseReduction = Math.Max(0, Math.Min(100, settings.UneditedRawColorNoise))
+            }
             Dim stops = RawDecodeService.BaselineExposureStops(path)
             If stops <> 0.0 Then values.Exposure = CSng(stops * ExposurePointsPerStop)
             ' Die Kamera-Farbkalibrierung ist dieselbe sichtbare Reglergruppe wie im Editor.
             ' Sie bleibt eine optionale Vorgabe und wird nie in ein vorhandenes Rezept gemischt.
             ' Sie haengt an einer EIGENEN Einstellung, nicht an der Grundhelligkeit: gleich helle
             ' Kameras und eine andere Farbwiedergabe sind zwei verschiedene Wuensche.
-            If Not String.IsNullOrWhiteSpace(path) AndAlso AppSettingsService.Load().UseCameraColorTable Then
+            If Not String.IsNullOrWhiteSpace(path) AndAlso settings.UseCameraColorTable Then
                 Try
                     Dim calibration = RawDecodeService.ColorCalibrationForFile(path)
                     If calibration IsNot Nothing Then

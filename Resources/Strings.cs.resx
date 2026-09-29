@@ -8967,4 +8967,16 @@
   <data name="STRG_SHIFT_TAB_e6921751" xml:space="preserve">
     <value>CTRL+SHIFT+TAB</value>
   </data>
+  <data name="Farbrauschen_bei_unbearbeiteten_RAWs_0f8c070b" xml:space="preserve">
+    <value>Barevný šum u neupravených RAW</value>
+  </data>
+  <data name="Farbflecken_bei_unbearbeiteten_RAWs_9c08c37c" xml:space="preserve">
+    <value>Barevné skvrny u neupravených RAW</value>
+  </data>
+  <data name="Startwert_des_Reglers_Farbrauschen_wenn_ein_RAW__3af7cb22" xml:space="preserve">
+    <value>Počáteční hodnota posuvníku Barevný šum při otevření RAW bez úprav. Vyhlazuje jemné barevné zrno, hlavně při vysokém ISO, u čistých snímků ale bere i jemnou barvu a při každé změně obrázku potřebuje čas na výpočet. 0 ho vypne.</value>
+  </data>
+  <data name="Startwert_des_Reglers_Farbflecken_wenn_ein_RAW_o_2d470b89" xml:space="preserve">
+    <value>Počáteční hodnota posuvníku Barevné skvrny při otevření RAW bez úprav. Odstraňuje hrubé barevné skvrny, u čistých snímků ale i jemnou barvu, a při každé změně obrázku znatelně zdržuje. 0 ho vypne.</value>
+  </data>
 </root>

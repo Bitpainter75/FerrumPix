@@ -73,14 +73,13 @@ Namespace ViewModels
 
         Private Shared Sub TryLoadImageInfo(info As FileConflictInfo, path As String)
             Try
-                Dim bitmap As Bitmap = Nothing
-                If RawPreviewService.IsSupportedRaw(path) Then
-                    Using preview = RawPreviewService.ExtractPreviewWithFallback(path)
-                        If preview IsNot Nothing Then bitmap = ImageOrientationService.LoadOrientedAvaloniaBitmap(preview)
-                    End Using
-                Else
-                    bitmap = ImageOrientationService.LoadOrientedAvaloniaBitmapAuto(path)
-                End If
+                ' EIN Weg fuer alle Formate, auch fuer RAW. Der eigene RAW-Zweig hier richtete die
+                ' eingebettete Vorschau nur nach ihren EIGENEN Angaben aus. Eine CR3-Vorschau
+                ' traegt keine, die Lage steht im Container: ein Hochformat lag dadurch im
+                ' Dialog auf der Seite (Nutzerbefund), waehrend Betrachter und Galerie es laengst
+                ' aufrecht zeigten. LoadOrientedAvaloniaBitmapAuto liest den Container mit
+                ' (RawPreviewOrigin) und legt die Drehung aus der Beistelldatei darauf.
+                Dim bitmap = ImageOrientationService.LoadOrientedAvaloniaBitmapAuto(path)
 
                 If bitmap IsNot Nothing Then
                     info.Preview = bitmap

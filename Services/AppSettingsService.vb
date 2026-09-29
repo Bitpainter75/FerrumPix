@@ -676,6 +676,15 @@ Namespace Services
         ''' jeweiligen Objektivs, und ohne Messwerte passiert ohnehin nichts. Pro Bild ist
         ''' sie im Werkzeug uebersteuerbar.</summary>
         Public Property LensCorrectionEnabled As Boolean = True
+        ''' <summary>Startwert der einstufigen Farbrauschminderung (Regler "Farbrauschen", Adobes
+        ''' crs:ColorNoiseReduction) fuer eine RAW ohne Rezept, 0 bis 100. 0 heisst aus, und das ist
+        ''' die Vorgabe, wie bisher.</summary>
+        Public Property UneditedRawColorNoise As Integer = 0
+        ''' <summary>Startwert der groben, mehrskaligen Farbrauschminderung (Regler "Farbflecken")
+        ''' fuer eine RAW ohne Rezept, 0 bis 100. 0 heisst aus, und das ist die Vorgabe
+        ''' (ImageAdjustments.UneditedRawCoarseColorNoise, dort die Messung dazu). Bis 0.9.54 stand
+        ''' fest 30 ein.</summary>
+        Public Property UneditedRawCoarseColorNoise As Integer = CInt(ImageAdjustments.UneditedRawCoarseColorNoise)
         Public Property LensAssignments As New List(Of LensAssignment)()
 
         ''' <summary>Nur macOS: der Zeichenflaeche des Fensters den Farbraum sRGB aufpraegen.

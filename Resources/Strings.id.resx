@@ -8971,4 +8971,16 @@
   <data name="STRG_SHIFT_TAB_e6921751" xml:space="preserve">
     <value>CTRL+SHIFT+TAB</value>
   </data>
+  <data name="Farbrauschen_bei_unbearbeiteten_RAWs_0f8c070b" xml:space="preserve">
+    <value>Derau warna untuk RAW yang belum disunting</value>
+  </data>
+  <data name="Farbflecken_bei_unbearbeiteten_RAWs_9c08c37c" xml:space="preserve">
+    <value>Bercak warna untuk RAW yang belum disunting</value>
+  </data>
+  <data name="Startwert_des_Reglers_Farbrauschen_wenn_ein_RAW__3af7cb22" xml:space="preserve">
+    <value>Nilai awal penggeser Derau warna saat RAW tanpa suntingan dibuka. Menghaluskan butir warna halus, terutama pada ISO tinggi, tetapi pada foto yang bersih juga menghilangkan warna halus dan butuh waktu hitung di setiap pergantian gambar. 0 mematikannya.</value>
+  </data>
+  <data name="Startwert_des_Reglers_Farbflecken_wenn_ein_RAW_o_2d470b89" xml:space="preserve">
+    <value>Nilai awal penggeser Bercak warna saat RAW tanpa suntingan dibuka. Menghapus bercak warna kasar, tetapi pada foto yang bersih juga warna halus, dan butuh waktu hitung yang terasa di setiap pergantian gambar. 0 mematikannya.</value>
+  </data>
 </root>

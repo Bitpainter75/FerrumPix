@@ -8925,4 +8925,16 @@
   <data name="STRG_SHIFT_TAB_e6921751" xml:space="preserve">
     <value>CTRL+SHIFT+TAB</value>
   </data>
+  <data name="Farbrauschen_bei_unbearbeiteten_RAWs_0f8c070b" xml:space="preserve">
+    <value>未编辑 RAW 的彩色杂色</value>
+  </data>
+  <data name="Farbflecken_bei_unbearbeiteten_RAWs_9c08c37c" xml:space="preserve">
+    <value>未编辑 RAW 的色斑</value>
+  </data>
+  <data name="Startwert_des_Reglers_Farbrauschen_wenn_ein_RAW__3af7cb22" xml:space="preserve">
+    <value>打开未编辑的 RAW 时“彩色杂色”滑块的起始值。可平滑细小的彩色颗粒，尤其在高 ISO 时，但在干净的照片上也会去掉细微的颜色，并且每次切换图片都需要计算时间。0 表示关闭。</value>
+  </data>
+  <data name="Startwert_des_Reglers_Farbflecken_wenn_ein_RAW_o_2d470b89" xml:space="preserve">
+    <value>打开未编辑的 RAW 时“色斑”滑块的起始值。去除粗大的色斑，但在干净的照片上也会去掉细微的颜色，并且每次切换图片都会明显耗时。0 表示关闭。</value>
+  </data>
 </root>

@@ -8967,4 +8967,16 @@
   <data name="STRG_SHIFT_TAB_e6921751" xml:space="preserve">
     <value>CTRL+SHIFT+TAB</value>
   </data>
+  <data name="Farbrauschen_bei_unbearbeiteten_RAWs_0f8c070b" xml:space="preserve">
+    <value>Farvestøj ved uredigerede RAW-filer</value>
+  </data>
+  <data name="Farbflecken_bei_unbearbeiteten_RAWs_9c08c37c" xml:space="preserve">
+    <value>Farvepletter ved uredigerede RAW-filer</value>
+  </data>
+  <data name="Startwert_des_Reglers_Farbrauschen_wenn_ein_RAW__3af7cb22" xml:space="preserve">
+    <value>Startværdi for skyderen Farvestøj, når en RAW-fil uden redigering åbnes. Udglatter fin farvekorn, især ved høj ISO, men fjerner ved rene optagelser også fin farve og kræver regnetid ved hvert billedskift. 0 slår den fra.</value>
+  </data>
+  <data name="Startwert_des_Reglers_Farbflecken_wenn_ein_RAW_o_2d470b89" xml:space="preserve">
+    <value>Startværdi for skyderen Farvepletter, når en RAW-fil uden redigering åbnes. Fjerner grove farvepletter, ved rene optagelser dog også fin farve, og kræver mærkbar regnetid ved hvert billedskift. 0 slår den fra.</value>
+  </data>
 </root>

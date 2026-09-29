@@ -1052,6 +1052,111 @@ Namespace ViewModels
         ''' Dutzende Auftraege, und jeder rechnet einen VOLLEN Renderlauf - ohne diese Nummer stehen
         ''' sie alle in der Schlange und werden auch nach dem Loslassen noch abgearbeitet.</summary>
         Private _rangeMaskGeneration As Integer
+
+        ''' <summary>Das Bild, aus dem die Bereichsmaske gebildet wird, und wofuer es gilt.
+        '''
+        ''' WARUM ES DEN ZWISCHENSPEICHER GIBT: jeder Klick und jeder Reglerzug rechnete das ganze
+        ''' Bild in voller Aufloesung neu, samt Klonen des Arbeitsbilds - gemessen an einem 24-MP-RAW
+        ''' rund 550 ms, die Maske selbst nur 50 bis 100 ms (Prüfstand, "MESSUNG Bereichsmaske").
+        ''' Toleranz, Uebergang und die Helligkeitsgrenzen aendern aber nur die Maske, nicht das Bild.
+        '''
+        ''' DIE BEARBEITETE EBENE GEHT NICHT MIT EIN (RangeSampleAdjustments): ihre Maske wird nach
+        ''' jedem Zug in sie geschrieben, das Bild haette sich also mit jedem Zug geaendert, und der
+        ''' Speicher haette nie getroffen. Vor allem aber mass die Maske sonst die Farben, die ihre
+        ''' eigene Korrektur eben erst veraendert hatte - der naechste Zug sah ein anderes Bild als
+        ''' der vorige. Gemessen wird jetzt das Bild UNTER der Ebene.
+        '''
+        ''' Zugriff nur unter _rangeMaskGate; freigegeben beim Bild- und Werkzeugwechsel.</summary>
+        Private _rangeSampleImage As SKBitmap
+        Private _rangeSampleKey As String = ""
+
+        ''' <summary>Das Rezept fuer das Messbild: ohne die Korrekturebene(n), deren Maske gerade
+        ''' bearbeitet wird, und ohne diese Maske. Wird keine Ebenenmaske bearbeitet (frische Auswahl),
+        ''' bleibt es das Rezept selbst.</summary>
+        Private Function RangeSampleAdjustments(adjustments As ImageAdjustments) As ImageAdjustments
+            Dim maskId = _editingLayerMaskId
+            If String.IsNullOrEmpty(maskId) OrElse adjustments?.MaskedAdjustmentLayers Is Nothing OrElse
+               Not adjustments.MaskedAdjustmentLayers.Any(Function(l) l IsNot Nothing AndAlso l.MaskId = maskId) Then
+                Return adjustments
+            End If
+            Dim copy = adjustments.Clone()
+            copy.MaskedAdjustmentLayers.RemoveAll(Function(l) l IsNot Nothing AndAlso l.MaskId = maskId)
+            copy.Masks?.RemoveAll(Function(m) m IsNot Nothing AndAlso m.Id = maskId)
+            Return copy
+        End Function
+
+        ''' <summary>Schluessel des Messbilds: Quelle, Stand des Arbeitsbilds und Rezept. Die Masken
+        ''' ueber ihren eigenen Fingerabdruck, weil ihre Pixel auch nur im Speicher stehen koennen
+        ''' und dann im serialisierten Rezept fehlen.</summary>
+        Private Function RangeSampleKey(sourcePath As String, sampleAdjustments As ImageAdjustments) As String
+            Try
+                Dim withoutMasks = sampleAdjustments.Clone()
+                withoutMasks.Masks = New List(Of ImageMask)()
+                ' DIE AUSWAHL IST HIER BEDIENZUSTAND: auf die Pixel wirkt sie nur mit dem alten
+                ' SelectionScopeEnabled (siehe ImageProcessor.ComputeBaseKeyCore). Und sie ist genau
+                ' das, was jeder Zug der Bereichsmaske neu setzt - im Schluessel liesse sie den
+                ' Speicher nie treffen.
+                If Not withoutMasks.SelectionScopeEnabled Then
+                    withoutMasks.HasActiveSelection = False
+                    withoutMasks.ActiveSelectionIsMask = False
+                    withoutMasks.SelectionXPercent = 0 : withoutMasks.SelectionYPercent = 0
+                    withoutMasks.SelectionWidthPercent = 0 : withoutMasks.SelectionHeightPercent = 0
+                    withoutMasks.SelectionShapeMode = ""
+                    withoutMasks.SelectionShapePointsX = Nothing : withoutMasks.SelectionShapePointsY = Nothing
+                    withoutMasks.SelectionMaskLeft = 0 : withoutMasks.SelectionMaskTop = 0
+                    withoutMasks.SelectionMaskRight = 0 : withoutMasks.SelectionMaskBottom = 0
+                    withoutMasks.SelectionMaskPngBase64 = Nothing
+                    withoutMasks.SelectionMaskRaster = Nothing
+                    withoutMasks.SelectionFeatherPixels = 0
+                    withoutMasks.SelectionMaskSoftBaked = False
+                End If
+                Dim material = FpxService.SerializeAdjustments(withoutMasks) & "|" &
+                           String.Join(";", If(sampleAdjustments.Masks, New List(Of ImageMask)()).
+                                                Where(Function(m) m IsNot Nothing).
+                                                Select(AddressOf ImageProcessor.MaskFingerprint))
+                Using sha = System.Security.Cryptography.SHA256.Create()
+                    Dim hash = Convert.ToHexString(sha.ComputeHash(System.Text.Encoding.UTF8.GetBytes(material)))
+                    Return $"{sourcePath}|{_workingImage.Version}|{hash}"
+                End Using
+            Catch ex As Exception
+                ' Nicht zu fassen: dann nie treffen, also jedes Mal neu rechnen wie bisher.
+                Return Guid.NewGuid().ToString("N")
+            End Try
+        End Function
+
+        ''' <summary>Das Messbild holen, aus dem Speicher oder neu gerechnet. Nur unter
+        ''' _rangeMaskGate aufrufen; das Ergebnis gehoert dem Speicher und wird NICHT freigegeben.</summary>
+        Private Async Function GetRangeSampleImageAsync(sourcePath As String, adjustments As ImageAdjustments) As Task(Of SKBitmap)
+            Dim sampleAdjustments = RangeSampleAdjustments(adjustments)
+            Dim key = RangeSampleKey(sourcePath, sampleAdjustments)
+            If _rangeSampleImage IsNot Nothing AndAlso key = _rangeSampleKey Then
+                PerformanceTraceService.Record("Bereichsmaske: Bild aus dem Speicher", 0)
+                Return _rangeSampleImage
+            End If
+            ' Das Arbeitsbild erst hier klonen: bei einem Treffer kostet es nichts.
+            Dim working = CloneWorkingFullForRender()
+            Dim rendered = Await Task.Run(Function() PerformanceTraceService.Measure("Bereichsmaske: Bild rechnen",
+                                                     Function() ImageProcessor.RenderDisplayImage(sourcePath, sampleAdjustments, working)))
+            _rangeSampleImage?.Dispose()
+            _rangeSampleImage = rendered
+            _rangeSampleKey = If(rendered Is Nothing, "", key)
+            Return rendered
+        End Function
+
+        ''' <summary>Das Messbild freigeben (Bild- oder Werkzeugwechsel): bei 24 MP rund 100 MB, die
+        ''' sonst bis zur naechsten Bereichsmaske liegen blieben. Wartet auf einen laufenden Auftrag,
+        ''' der das Bild gerade liest.</summary>
+        Private Async Sub ReleaseRangeSampleImage()
+            If _rangeSampleImage Is Nothing Then Return
+            Await _rangeMaskGate.WaitAsync()
+            Try
+                _rangeSampleImage?.Dispose()
+                _rangeSampleImage = Nothing
+                _rangeSampleKey = ""
+            Finally
+                _rangeMaskGate.Release()
+            End Try
+        End Sub
         ' Beim Oeffnen einer gespeicherten Bereichsmaske werden nur Modus und Regler angezeigt.
         ' Der gespeicherte Raster ist bereits die verbindliche Form und darf nicht durch einen
         ' nebenlaeufig gestarteten Neuaufbau ersetzt werden.
@@ -1306,11 +1411,13 @@ Namespace ViewModels
                 Dim x = Math.Max(0, Math.Min(size.Width - 1, CInt(Math.Round(xPercent / 100.0 * size.Width))))
                 Dim y = Math.Max(0, Math.Min(size.Height - 1, CInt(Math.Round(yPercent / 100.0 * size.Height))))
                 RememberSamplePoint(xPercent, yPercent)
-                Dim sourcePath = RenderSourcePath, adjustments = GetCurrentAdjustments(), working = CloneWorkingFullForRender()
                 Dim tolerance = _colorRangeTolerance, feather = _colorRangeFeather, contiguous = _colorRangeContiguous
                 Dim editingMaskId = _editingLayerMaskId
+                ' Das Messbild kommt aus dem Speicher, solange sich Quelle, Arbeitsbild und Rezept
+                ' (ohne die bearbeitete Ebene) nicht geaendert haben, siehe _rangeSampleImage. Es
+                ' gehoert dem Speicher und wird hier nicht freigegeben.
+                Dim rendered = Await GetRangeSampleImageAsync(RenderSourcePath, GetCurrentAdjustments())
                 Dim result = Await Task.Run(Function()
-                                                Using rendered = ImageProcessor.RenderDisplayImage(sourcePath, adjustments, working)
                                                     If rendered Is Nothing Then Return (Mask:=DirectCast(Nothing, SKBitmap), Bounds:=SKRectI.Empty)
                                                     Dim bounds As SKRectI
                                                     ' EIN Rechenweg fuer beide Faelle. Frueher lief
@@ -1322,10 +1429,11 @@ Namespace ViewModels
                                                     ' die Farbe nur in EINEM Kanal abwich, und der
                                                     ' Uebergang blieb dort ganz wirkungslos
                                                     ' (Nutzerbefund).
+                                                    Dim uhr = Diagnostics.Stopwatch.StartNew()
                                                     Dim mask = ImageProcessor.BuildColorRangeMask(
                                                         rendered, x, y, tolerance, feather, bounds, contiguous)
+                                                    PerformanceTraceService.Record("Bereichsmaske: Farbe bilden", uhr.Elapsed.TotalMilliseconds)
                                                     Return (Mask:=mask, Bounds:=bounds)
-                                                End Using
                                             End Function)
                 If generation <> Volatile.Read(_rangeMaskGeneration) OrElse
                    Not String.Equals(requestedDocument, _currentImagePath, StringComparison.OrdinalIgnoreCase) OrElse
@@ -1369,16 +1477,17 @@ Namespace ViewModels
                    Not String.Equals(requestedDocument, _currentImagePath, StringComparison.OrdinalIgnoreCase) OrElse
                    Not IsExpectedRangeMaskMode("Luminance", isMask) Then Return
 
-                Dim sourcePath = RenderSourcePath, adjustments = GetCurrentAdjustments(), working = CloneWorkingFullForRender()
                 Dim from = _luminanceRangeFrom, [to] = _luminanceRangeTo, feather = _luminanceRangeFeather
                 Dim editingMaskId = _editingLayerMaskId
+                ' Wie beim Farbbereich: das Messbild aus dem Speicher, siehe _rangeSampleImage.
+                Dim rendered = Await GetRangeSampleImageAsync(RenderSourcePath, GetCurrentAdjustments())
                 Dim result = Await Task.Run(Function()
-                                                Using rendered = ImageProcessor.RenderDisplayImage(sourcePath, adjustments, working)
                                                     If rendered Is Nothing Then Return (Mask:=DirectCast(Nothing, SKBitmap), Bounds:=SKRectI.Empty)
                                                     Dim bounds As SKRectI
+                                                    Dim uhr = Diagnostics.Stopwatch.StartNew()
                                                     Dim mask = ImageProcessor.BuildLuminanceRangeMask(rendered, from, [to], feather, bounds)
+                                                    PerformanceTraceService.Record("Bereichsmaske: Helligkeit bilden", uhr.Elapsed.TotalMilliseconds)
                                                     Return (Mask:=mask, Bounds:=bounds)
-                                                End Using
                                             End Function)
                 If generation <> Volatile.Read(_rangeMaskGeneration) OrElse
                    Not String.Equals(requestedDocument, _currentImagePath, StringComparison.OrdinalIgnoreCase) OrElse

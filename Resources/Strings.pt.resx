@@ -8926,4 +8926,16 @@
   <data name="STRG_SHIFT_TAB_e6921751" xml:space="preserve">
     <value>CTRL+SHIFT+TAB</value>
   </data>
+  <data name="Farbrauschen_bei_unbearbeiteten_RAWs_0f8c070b" xml:space="preserve">
+    <value>Ruído de cor em RAW não editados</value>
+  </data>
+  <data name="Farbflecken_bei_unbearbeiteten_RAWs_9c08c37c" xml:space="preserve">
+    <value>Manchas de cor em RAW não editados</value>
+  </data>
+  <data name="Startwert_des_Reglers_Farbrauschen_wenn_ein_RAW__3af7cb22" xml:space="preserve">
+    <value>Valor inicial do controlo Ruído de cor ao abrir um RAW sem edições. Suaviza o grão fino de cor, sobretudo com ISO alto, mas em fotografias limpas também remove cor fina e precisa de tempo de cálculo a cada mudança de imagem. 0 desliga-o.</value>
+  </data>
+  <data name="Startwert_des_Reglers_Farbflecken_wenn_ein_RAW_o_2d470b89" xml:space="preserve">
+    <value>Valor inicial do controlo Manchas de cor ao abrir um RAW sem edições. Remove manchas de cor grosseiras, mas em fotografias limpas também cor fina, e precisa de um tempo de cálculo notório a cada mudança de imagem. 0 desliga-o.</value>
+  </data>
 </root>

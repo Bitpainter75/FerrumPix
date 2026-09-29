@@ -398,6 +398,9 @@ Namespace Views
                     SaveWindowStateOnExit()
                     ' Einstellungen werden entprellt geschrieben; beim Schließen darf nichts ausstehen.
                     AppSettingsService.Flush()
+                    ' Dasselbe fuer die gesammelten Messungen des Diagnoseprotokolls: sie gehen nur
+                    ' alle zwei Sekunden hinaus, der letzte Schritt vor dem Beenden fehlte sonst.
+                    PerformanceTraceService.Flush()
                     Return
                 End If
 
@@ -436,6 +439,7 @@ Namespace Views
                 End If
                 SaveWindowStateOnExit()
                 AppSettingsService.Flush()
+                PerformanceTraceService.Flush()
             Catch ex As Exception
                 ' Absicherung: eine Ausnahme in einem Async Sub landet sonst beim Dispatcher
                 ' und beendet den Prozess.

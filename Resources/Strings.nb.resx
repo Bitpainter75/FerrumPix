@@ -8967,4 +8967,16 @@
   <data name="STRG_SHIFT_TAB_e6921751" xml:space="preserve">
     <value>CTRL+SHIFT+TAB</value>
   </data>
+  <data name="Farbrauschen_bei_unbearbeiteten_RAWs_0f8c070b" xml:space="preserve">
+    <value>Fargestøy for uredigerte RAW-filer</value>
+  </data>
+  <data name="Farbflecken_bei_unbearbeiteten_RAWs_9c08c37c" xml:space="preserve">
+    <value>Fargeflekker for uredigerte RAW-filer</value>
+  </data>
+  <data name="Startwert_des_Reglers_Farbrauschen_wenn_ein_RAW__3af7cb22" xml:space="preserve">
+    <value>Startverdi for glidebryteren Fargestøy når en RAW-fil uten redigering åpnes. Glatter ut fint fargekorn, særlig ved høy ISO, men tar ved rene opptak også bort fin farge og krever regnetid ved hvert bildebytte. 0 slår den av.</value>
+  </data>
+  <data name="Startwert_des_Reglers_Farbflecken_wenn_ein_RAW_o_2d470b89" xml:space="preserve">
+    <value>Startverdi for glidebryteren Fargeflekker når en RAW-fil uten redigering åpnes. Fjerner grove fargeflekker, ved rene opptak likevel også fin farge, og krever merkbar regnetid ved hvert bildebytte. 0 slår den av.</value>
+  </data>
 </root>

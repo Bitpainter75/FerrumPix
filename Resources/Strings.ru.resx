@@ -8967,4 +8967,16 @@
   <data name="STRG_SHIFT_TAB_e6921751" xml:space="preserve">
     <value>CTRL+SHIFT+TAB</value>
   </data>
+  <data name="Farbrauschen_bei_unbearbeiteten_RAWs_0f8c070b" xml:space="preserve">
+    <value>Цветовой шум для необработанных RAW</value>
+  </data>
+  <data name="Farbflecken_bei_unbearbeiteten_RAWs_9c08c37c" xml:space="preserve">
+    <value>Цветные пятна для необработанных RAW</value>
+  </data>
+  <data name="Startwert_des_Reglers_Farbrauschen_wenn_ein_RAW__3af7cb22" xml:space="preserve">
+    <value>Начальное значение ползунка «Цветовой шум» при открытии RAW без обработки. Сглаживает мелкое цветовое зерно, особенно при высоком ISO, но на чистых снимках убирает и тонкий цвет и требует времени на расчёт при каждой смене снимка. 0 отключает его.</value>
+  </data>
+  <data name="Startwert_des_Reglers_Farbflecken_wenn_ein_RAW_o_2d470b89" xml:space="preserve">
+    <value>Начальное значение ползунка «Цветные пятна» при открытии RAW без обработки. Убирает крупные цветные пятна, но на чистых снимках и тонкий цвет, и заметно замедляет каждую смену снимка. 0 отключает его.</value>
+  </data>
 </root>

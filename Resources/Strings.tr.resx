@@ -8971,4 +8971,16 @@
   <data name="STRG_SHIFT_TAB_e6921751" xml:space="preserve">
     <value>CTRL+SHIFT+TAB</value>
   </data>
+  <data name="Farbrauschen_bei_unbearbeiteten_RAWs_0f8c070b" xml:space="preserve">
+    <value>Düzenlenmemiş RAW'larda Renk gürültüsü</value>
+  </data>
+  <data name="Farbflecken_bei_unbearbeiteten_RAWs_9c08c37c" xml:space="preserve">
+    <value>Düzenlenmemiş RAW'larda Renk lekeleri</value>
+  </data>
+  <data name="Startwert_des_Reglers_Farbrauschen_wenn_ein_RAW__3af7cb22" xml:space="preserve">
+    <value>Düzenlenmemiş bir RAW açıldığında Renk gürültüsü kaydırıcısının başlangıç değeri. Özellikle yüksek ISO'da ince renk grenini yumuşatır, ancak temiz çekimlerde ince rengi de alır ve her görüntü değişiminde hesaplama zamanı gerektirir. 0 onu kapatır.</value>
+  </data>
+  <data name="Startwert_des_Reglers_Farbflecken_wenn_ein_RAW_o_2d470b89" xml:space="preserve">
+    <value>Düzenlenmemiş bir RAW açıldığında Renk lekeleri kaydırıcısının başlangıç değeri. Kaba renk lekelerini giderir, ancak temiz çekimlerde ince rengi de alır ve her görüntü değişiminde belirgin hesaplama zamanı gerektirir. 0 onu kapatır.</value>
+  </data>
 </root>

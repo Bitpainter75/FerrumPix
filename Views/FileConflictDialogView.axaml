@@ -14,8 +14,10 @@
             <StackPanel Spacing="10">
                 <TextBlock Text="{Binding DialogExistingFile.Headline}" FontWeight="SemiBold"/>
                 <TextBlock Text="{Binding DialogExistingFile.Subtitle}" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}"/>
+                <!-- Uniform, nicht UniformToFill: ein Hochformat im breiten Kasten war sonst bis auf
+                     einen Streifen beschnitten. Der Vergleich braucht das ganze Motiv. -->
                 <Border Height="150" Background="{DynamicResource FP.Bg.Input}" CornerRadius="6" ClipToBounds="True">
-                    <Image Source="{Binding DialogExistingFile.Preview}" Stretch="UniformToFill"/>
+                    <Image Source="{Binding DialogExistingFile.Preview}" Stretch="Uniform"/>
                 </Border>
                 <Grid ColumnDefinitions="120,*" RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="8">
                     <TextBlock Text="Dateiname" Foreground="{DynamicResource FP.Text.Secondary}"/>
@@ -39,7 +41,7 @@
                 <TextBlock Text="{Binding DialogIncomingFile.Headline}" FontWeight="SemiBold"/>
                 <TextBlock Text="{Binding DialogIncomingFile.Subtitle}" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}"/>
                 <Border Height="150" Background="{DynamicResource FP.Bg.Input}" CornerRadius="6" ClipToBounds="True">
-                    <Image Source="{Binding DialogIncomingFile.Preview}" Stretch="UniformToFill"/>
+                    <Image Source="{Binding DialogIncomingFile.Preview}" Stretch="Uniform"/>
                 </Border>
                 <Grid ColumnDefinitions="120,*" RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="8">
                     <TextBlock Text="Dateiname" Foreground="{DynamicResource FP.Text.Secondary}"/>

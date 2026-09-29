@@ -2021,7 +2021,9 @@ Namespace Services
                 ' im ANSI-Marshalling der C-API - dort greift dann der Vorschau-Rückfall.
                 pathPtr = StringToUtf8(path)
                 If _openFile(handle, pathPtr) <> 0 Then Return Nothing
-                If _unpack(handle) <> 0 Then Return Nothing
+                ' Gemessen nur mit eingeschaltetem Diagnoseprotokoll: Auspacken und Entwickeln in
+                ' LibRaw sind die beiden Schritte, deren Dauer an der Einzelkernleistung haengt.
+                If PerformanceTraceService.Measure("RAW: auspacken", Function() _unpack(handle)) <> 0 Then Return Nothing
 
                 ' Fuer eine Kachel reichen die 2x2-Bayer-Zellen von half_size. Einen C-API-Setter
                 ' gibt es dafuer nicht. Der Zugriff ueber params ist von LibRaw vorgesehen, seine
@@ -2125,7 +2127,7 @@ Namespace Services
                 ' Die motivabhaengige Weisspunkt-Nachfuehrung aus, siehe AdjustMaximumThreshold.
                 If _setAdjustMaximumThr IsNot Nothing Then _setAdjustMaximumThr(handle, AdjustMaximumThreshold)
 
-                If _process(handle) <> 0 Then Return Nothing
+                If PerformanceTraceService.Measure("RAW: entwickeln (LibRaw)", Function() _process(handle)) <> 0 Then Return Nothing
                 Dim errc = 0
                 image = _makeMemImage(handle, errc)
                 If image = IntPtr.Zero OrElse errc <> 0 Then Return Nothing

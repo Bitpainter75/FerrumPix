@@ -8927,4 +8927,16 @@
   <data name="STRG_SHIFT_TAB_e6921751" xml:space="preserve">
     <value>CTRL+MAJ+TAB</value>
   </data>
+  <data name="Farbrauschen_bei_unbearbeiteten_RAWs_0f8c070b" xml:space="preserve">
+    <value>Bruit de couleur pour les RAW non retouchés</value>
+  </data>
+  <data name="Farbflecken_bei_unbearbeiteten_RAWs_9c08c37c" xml:space="preserve">
+    <value>Taches de couleur pour les RAW non retouchés</value>
+  </data>
+  <data name="Startwert_des_Reglers_Farbrauschen_wenn_ein_RAW__3af7cb22" xml:space="preserve">
+    <value>Valeur de départ du curseur Bruit de couleur à l'ouverture d'un RAW sans retouche. Lisse le grain de couleur fin, surtout en ISO élevé, mais enlève aussi de la couleur fine sur les prises propres et demande du temps de calcul à chaque changement d'image. 0 le désactive.</value>
+  </data>
+  <data name="Startwert_des_Reglers_Farbflecken_wenn_ein_RAW_o_2d470b89" xml:space="preserve">
+    <value>Valeur de départ du curseur Taches de couleur à l'ouverture d'un RAW sans retouche. Supprime les grosses taches de couleur, mais aussi de la couleur fine sur les prises propres, et demande un temps de calcul sensible à chaque changement d'image. 0 le désactive.</value>
+  </data>
 </root>

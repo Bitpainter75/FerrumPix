@@ -1855,6 +1855,49 @@
                                           OffContent=""
                                           VerticalAlignment="Center"/>
                         </Grid>
+
+                        <!-- Die beiden Farbrausch-Startwerte fuer eine RAW ohne Rezept (ImageAdjustments.ForUneditedRaw).
+                             Namen wie im Rauschen-Panel des Editors, 0 = aus. Ab Werk beide 0 (Messung in
+                             FALLEN_UND_ENTSCHEIDUNGEN.md, "Kein Farbrausch-Startwert fuer RAW ohne Rezept"). -->
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Farbrauschen bei unbearbeiteten RAWs" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Startwert des Reglers Farbrauschen, wenn ein RAW ohne Bearbeitung geöffnet wird. Glättet feines Farbkorn, vor allem bei hoher ISO, nimmt bei sauberen Aufnahmen aber auch feine Farbe mit und braucht bei jedem Bildwechsel Rechenzeit. 0 schaltet ihn ab." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                                <icons:RoundSlider Width="150"
+                                                   Minimum="0"
+                                                   Maximum="100"
+                                                   DefaultValue="0"
+                                                   Value="{Binding UneditedRawColorNoise}"/>
+                                <TextBlock Text="{Binding UneditedRawColorNoise}"
+                                           Foreground="{DynamicResource FP.Text.Secondary}"
+                                           FontSize="{DynamicResource FP.Font.Body}"
+                                           Width="52"
+                                           TextAlignment="Right"
+                                           VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Farbflecken bei unbearbeiteten RAWs" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Startwert des Reglers Farbflecken, wenn ein RAW ohne Bearbeitung geöffnet wird. Nimmt grobe Farbflecken, bei sauberen Aufnahmen aber auch feine Farbe, und braucht bei jedem Bildwechsel spürbar Rechenzeit. 0 schaltet ihn ab." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                                <icons:RoundSlider Width="150"
+                                                   Minimum="0"
+                                                   Maximum="100"
+                                                   DefaultValue="0"
+                                                   Value="{Binding UneditedRawCoarseColorNoise}"/>
+                                <TextBlock Text="{Binding UneditedRawCoarseColorNoise}"
+                                           Foreground="{DynamicResource FP.Text.Secondary}"
+                                           FontSize="{DynamicResource FP.Font.Body}"
+                                           Width="52"
+                                           TextAlignment="Right"
+                                           VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Grid>
                         <!-- DER SCHALTER "Lichter unbeschnitten aus den Sensordaten lesen" IST
                              HIER AUSGEBAUT, die Einstellung RawHighlightUnclip steht weiter auf
                              ihrer Vorgabe True. Er war der Rueckweg fuer einen Feldbericht ueber zu

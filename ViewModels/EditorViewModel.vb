@@ -4468,6 +4468,9 @@ Namespace ViewModels
                 ' Ein anderes Bild hat ein anderes Format; ein eingerastetes Verhaeltnis des vorigen
                 ' zoege den ersten Zug an dessen Rahmen sonst unvermittelt zurecht.
                 SetCropAspectPreset("")
+                ' Das Messbild der Bereichsmaske gehoert zum vorigen Bild; sein Schluessel traefe zwar
+                ' nicht mehr, aber es hielte bis zur naechsten Maske seinen Speicher.
+                ReleaseRangeSampleImage()
                 Me.RaisePropertyChanged(NameOf(CurrentFileName))
                 _mainVm?.RefreshWindowTitle()
                 Me.RaisePropertyChanged(NameOf(IsRawDeveloped))
@@ -4883,7 +4886,11 @@ Namespace ViewModels
                 Dim previousTool = _currentTool
                 Dim discarded As List(Of String) = Nothing
                 Me.RaiseAndSetIfChanged(_currentTool, value)
-                If previousTool <> value Then RaiseToolSwitcherChanged()
+                If previousTool <> value Then
+                    RaiseToolSwitcherChanged()
+                    ' Das Messbild der Bereichsmaske (rund 100 MB bei 24 MP) gehoert zum Maskenwerkzeug.
+                    ReleaseRangeSampleImage()
+                End If
                 If previousTool <> value Then
                     ' Jede offene Transaktion hat beim Werkzeugwechsel denselben sichtbaren
                     ' Abschluss: sie wird entweder übernommen oder ihr Verwurf wird benannt.
@@ -16949,10 +16956,14 @@ Namespace ViewModels
 
         Private Async Function LoadImageContent(path As String) As Task
             BeginDocumentLoad()
+            ' Die ganze Strecke eines Bildwechsels im Editor, fuers Diagnoseprotokoll. Zusammen mit
+            ' "RAW: entwickeln (LibRaw)" zeigt sie, wie viel davon die Entwicklung selbst ist.
+            Dim uhr = Diagnostics.Stopwatch.StartNew()
             Try
                 Await LoadImageContentCore(path)
             Finally
                 EndDocumentLoad()
+                PerformanceTraceService.Record("Editor: Bild oeffnen", uhr.Elapsed.TotalMilliseconds)
             End Try
         End Function
 
@@ -22659,6 +22670,9 @@ Namespace ViewModels
             If RawPreviewService.IsSupportedRaw(RenderSourcePath) Then
                 Dim startwerte = ImageAdjustments.ForUneditedRaw(RenderSourcePath)
                 _farbrauschGrob = startwerte.FarbrauschGrob
+                ' Beide Farbrausch-Startwerte kommen aus den Einstellungen; ohne diese Zeile fiele
+                ' "Farbrauschen" beim Zuruecksetzen auf null statt auf seinen Startwert.
+                _colorNoiseReduction = startwerte.ColorNoiseReduction
                 _exposure = startwerte.Exposure
                 ' Die Kamera-Farbkalibrierung gehoert genauso zum Startwert: ohne diese Zeilen
                 ' verloere eine RAW beim Zuruecksetzen ihre modellabhaengige Farbe.
@@ -22671,6 +22685,7 @@ Namespace ViewModels
                 _calibrationShadowTint = startwerte.CalibrationShadowTint
                 Me.RaisePropertyChanged(NameOf(FarbrauschGrob))
                 Me.RaisePropertyChanged(NameOf(HasColorBlotches))
+                Me.RaisePropertyChanged(NameOf(ColorNoiseReduction))
                 Me.RaisePropertyChanged(NameOf(Exposure))
                 Me.RaisePropertyChanged(NameOf(CalibrationRedHue))
                 Me.RaisePropertyChanged(NameOf(CalibrationRedSaturation))

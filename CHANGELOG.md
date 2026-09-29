@@ -1,4 +1,4 @@
-## Unreleased
+## 0.9.55
 
 ### What's new
 
@@ -24,14 +24,24 @@
 - Raw files develop noticeably faster, and the lens correction sliders no longer redevelop the
   picture at every step while you drag them.
 
-- Canon CR3 pictures taken in portrait orientation are shown upright in the viewer and on gallery
-  tiles again instead of lying on their side.
+- Canon CR3 pictures taken in portrait orientation are shown upright in the viewer, on gallery
+  tiles and in the "overwrite file" dialog again instead of lying on their side. That dialog now
+  shows both pictures whole instead of cropped.
 
 - Fujifilm raw files taken with an extended dynamic range setting (DR200, DR400) no longer open
   too dark; the exposure starts where the camera meant it to be.
 
 - At 100 percent, moving a lens correction slider no longer jumps back to the middle of the
   picture, so you can watch the effect where you zoomed in.
+
+- Raw files without edits no longer get a color blotch reduction by default. It hardly helped on
+  noisy pictures, took away fine color on clean ones and slowed down every change of picture. The
+  Color blotches slider in the editor is still there for pictures that need it, and Settings, Raw
+  development lets you choose starting values for color noise and color blotches.
+
+- Color and luminance range masks follow their sliders much faster, because the picture is no
+  longer recalculated at every step. While you refine the mask of an existing adjustment, it now
+  looks at the picture below that adjustment, so the mask no longer shifts with its own effect.
 
 - While Move is switched on in the editor, the pointer shows a hand, so it is clear why the tools
   do not respond to clicks.

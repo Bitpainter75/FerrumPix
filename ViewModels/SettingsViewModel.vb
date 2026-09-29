@@ -672,6 +672,36 @@ Namespace ViewModels
         End Property
         Private _lensCorrectionEnabled As Boolean
 
+        ''' <summary>Startwert "Farbrauschen" fuer eine RAW ohne Rezept, 0 bis 100, 0 = aus. Wirkt
+        ''' beim naechsten Oeffnen eines unbearbeiteten RAWs, nicht auf schon bearbeitete.</summary>
+        Public Property UneditedRawColorNoise As Integer
+            Get
+                Return _uneditedRawColorNoise
+            End Get
+            Set(value As Integer)
+                value = Math.Max(0, Math.Min(100, value))
+                If _uneditedRawColorNoise = value Then Return
+                Me.RaiseAndSetIfChanged(_uneditedRawColorNoise, value)
+                AppSettingsService.Update(Sub(s) s.UneditedRawColorNoise = value)
+            End Set
+        End Property
+        Private _uneditedRawColorNoise As Integer
+
+        ''' <summary>Startwert "Farbflecken" (grobe Farbrauschminderung) fuer eine RAW ohne Rezept,
+        ''' 0 bis 100, 0 = aus, und das ist die Vorgabe.</summary>
+        Public Property UneditedRawCoarseColorNoise As Integer
+            Get
+                Return _uneditedRawCoarseColorNoise
+            End Get
+            Set(value As Integer)
+                value = Math.Max(0, Math.Min(100, value))
+                If _uneditedRawCoarseColorNoise = value Then Return
+                Me.RaiseAndSetIfChanged(_uneditedRawCoarseColorNoise, value)
+                AppSettingsService.Update(Sub(s) s.UneditedRawCoarseColorNoise = value)
+            End Set
+        End Property
+        Private _uneditedRawCoarseColorNoise As Integer = CInt(ImageAdjustments.UneditedRawCoarseColorNoise)
+
         ''' <summary>Nur unter macOS sichtbar, und der Grund ist NICHT, dass es das Problem
         ''' anderswo nicht gäbe.
         '''
@@ -3849,6 +3879,8 @@ Namespace ViewModels
             _useCameraBaselineTable = _appSettings.UseCameraBaselineTable
             _useCameraColorTable = _appSettings.UseCameraColorTable
             _lensCorrectionEnabled = _appSettings.LensCorrectionEnabled
+            _uneditedRawColorNoise = Math.Max(0, Math.Min(100, _appSettings.UneditedRawColorNoise))
+            _uneditedRawCoarseColorNoise = Math.Max(0, Math.Min(100, _appSettings.UneditedRawCoarseColorNoise))
             _rawDemosaicAlgorithm = AppSettingsService.NormalizeRawDemosaicAlgorithm(_appSettings.RawDemosaicAlgorithm)
             _windowColorSpaceMethod = MacWindowColorSpaceService.NormalizeMethod(_appSettings.MacWindowColorSpaceMethod)
             _macRenderingMode = AppSettingsService.NormalizeMacRenderingMode(_appSettings.MacRenderingMode)
