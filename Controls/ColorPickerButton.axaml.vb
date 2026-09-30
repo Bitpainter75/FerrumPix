@@ -25,10 +25,16 @@ Namespace Controls
         Private Sub OnLocalizedFlyoutOpened(sender As Object, e As EventArgs)
             Dim content = TryCast(TryCast(sender, Flyout)?.Content, Avalonia.LogicalTree.ILogical)
             If content IsNot Nothing Then LocalizationService.ApplyTo(content)
+            Me.FindControl(Of ColorEditor)("Editor")?.MarkOriginal()
         End Sub
 
         Public Shared ReadOnly SelectedColorProperty As StyledProperty(Of Color) =
             AvaloniaProperty.Register(Of ColorPickerButton, Color)(NameOf(SelectedColor), Colors.White, defaultBindingMode:=BindingMode.TwoWay)
+
+        ''' <summary>Die Pipette nimmt aus dem Bild im Editor auf. Ausserhalb davon (Einstellungen,
+        ''' Dialoge ohne Bild) gibt es nichts aufzunehmen, dort wird sie ausgeblendet.</summary>
+        Public Shared ReadOnly ShowEyedropperProperty As StyledProperty(Of Boolean) =
+            AvaloniaProperty.Register(Of ColorPickerButton, Boolean)(NameOf(ShowEyedropper), True)
 
         ' Zuletzt verwendete Farben werden STATISCH (über alle Instanzen hinweg) geteilt, damit die
         ' Pipette/Farbrad-Auswahl in einem Panel auch im Flyout eines anderen Farbfelds auftaucht -
@@ -44,18 +50,8 @@ Namespace Controls
         Public Sub New()
             AvaloniaXamlLoader.Load(Me)
 
-            Dim recentList = Me.FindControl(Of ItemsControl)("RecentColorsList")
-            If recentList IsNot Nothing Then recentList.ItemsSource = SharedRecentColors
-
-            Dim colorPicker = Me.FindControl(Of ColorPicker)("InnerColorPicker")
-            If colorPicker IsNot Nothing Then
-                AddHandler colorPicker.ColorChanged, AddressOf OnInnerColorPickerChanged
-            End If
-
-            Dim hexBox = Me.FindControl(Of TextBox)("HexTextBox")
-            If hexBox IsNot Nothing Then
-                AddHandler hexBox.LostFocus, AddressOf OnHexTextBoxLostFocus
-            End If
+            Dim editor = Me.FindControl(Of ColorEditor)("Editor")
+            If editor IsNot Nothing Then AddHandler editor.PropertyChanged, AddressOf OnEditorPropertyChanged
 
             UpdateVisuals()
 
@@ -126,10 +122,22 @@ Namespace Controls
             End Set
         End Property
 
+        Public Property ShowEyedropper As Boolean
+            Get
+                Return GetValue(ShowEyedropperProperty)
+            End Get
+            Set(value As Boolean)
+                SetValue(ShowEyedropperProperty, value)
+            End Set
+        End Property
+
         Protected Overrides Sub OnPropertyChanged(change As AvaloniaPropertyChangedEventArgs)
             MyBase.OnPropertyChanged(change)
             If change.Property = SelectedColorProperty Then
                 UpdateVisuals()
+            ElseIf change.Property = ShowEyedropperProperty Then
+                Dim eyedropperButton = Me.FindControl(Of Button)("EyedropperButton")
+                If eyedropperButton IsNot Nothing Then eyedropperButton.IsVisible = ShowEyedropper
             End If
         End Sub
 
@@ -137,17 +145,14 @@ Namespace Controls
             Dim swatch = Me.FindControl(Of Border)("SwatchBorder")
             If swatch IsNot Nothing Then swatch.Background = New SolidColorBrush(SelectedColor)
 
-            Dim hex = FormatHex(SelectedColor)
             Dim hexText = Me.FindControl(Of TextBlock)("HexTextBlock")
-            If hexText IsNot Nothing Then hexText.Text = hex
+            If hexText IsNot Nothing Then hexText.Text = FormatHex(SelectedColor)
 
             If _suppressSync Then Return
             _suppressSync = True
             Try
-                Dim colorPicker = Me.FindControl(Of ColorPicker)("InnerColorPicker")
-                If colorPicker IsNot Nothing AndAlso colorPicker.Color <> SelectedColor Then colorPicker.Color = SelectedColor
-                Dim hexBox = Me.FindControl(Of TextBox)("HexTextBox")
-                If hexBox IsNot Nothing AndAlso Not String.Equals(hexBox.Text, hex, StringComparison.OrdinalIgnoreCase) Then hexBox.Text = hex
+                Dim editor = Me.FindControl(Of ColorEditor)("Editor")
+                If editor IsNot Nothing AndAlso editor.Color <> SelectedColor Then editor.Color = SelectedColor
             Finally
                 _suppressSync = False
             End Try
@@ -157,33 +162,15 @@ Namespace Controls
             Return $"#{c.A:X2}{c.R:X2}{c.G:X2}{c.B:X2}"
         End Function
 
-        Private Sub OnInnerColorPickerChanged(sender As Object, e As ColorChangedEventArgs)
-            If _suppressSync Then Return
-            SelectedColor = e.NewColor
-            RegisterRecent(e.NewColor)
+        Private Sub OnEditorPropertyChanged(sender As Object, e As AvaloniaPropertyChangedEventArgs)
+            If _suppressSync OrElse e.Property IsNot ColorEditor.ColorProperty Then Return
+            Dim editor = TryCast(sender, ColorEditor)
+            If editor Is Nothing Then Return
+            SelectedColor = editor.Color
         End Sub
 
-        Private Sub OnHexTextBoxLostFocus(sender As Object, e As RoutedEventArgs)
-            If _suppressSync Then Return
-            Dim hexBox = TryCast(sender, TextBox)
-            If hexBox Is Nothing OrElse String.IsNullOrWhiteSpace(hexBox.Text) Then Return
-            Try
-                Dim parsed = Color.Parse(hexBox.Text.Trim())
-                SelectedColor = parsed
-                RegisterRecent(parsed)
-            Catch
-                ' Ungültige Eingabe wird beim nächsten UpdateVisuals wieder auf den echten Wert zurückgesetzt.
-                UpdateVisuals()
-            End Try
-        End Sub
-
-        Private Sub OnRecentColorClick(sender As Object, e As RoutedEventArgs)
-            Dim btn = TryCast(sender, Button)
-            If btn Is Nothing OrElse Not TypeOf btn.Tag Is Color Then Return
-            SelectedColor = CType(btn.Tag, Color)
-        End Sub
-
-        Private Shared Sub RegisterRecent(c As Color)
+        ''' Geteilt mit ColorEditor: Rad, Hex-Feld und Pipette tragen hier ein.
+        Friend Shared Sub RegisterRecent(c As Color)
             SharedRecentColors.Remove(c)
             SharedRecentColors.Insert(0, c)
             While SharedRecentColors.Count > 10

@@ -605,39 +605,10 @@
                                     <TextBlock Text="Hintergrundfarbe" FontSize="{DynamicResource FP.Font.Body}"/>
                                     <TextBlock Text="Volltonfarbe hinter transparenten Bereichen." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                                 </StackPanel>
-                                <Button Grid.Column="1" Classes="ghost" Height="34" Padding="6,4" Width="140" ToolTip.Tip="Hintergrundfarbe wählen">
-                                    <Grid ColumnDefinitions="28,*" ColumnSpacing="8">
-                                        <Border Width="26"
-                                                Height="22"
-                                                Background="{Binding TransparencyBackgroundColorBrush}"
-                                                BorderBrush="{DynamicResource FP.Border.Strong}"
-                                                BorderThickness="1"
-                                                CornerRadius="4"/>
-                                        <TextBlock Grid.Column="1"
-                                                   Text="{Binding TransparencyBackgroundColor}"
-                                                   Foreground="{DynamicResource FP.Text.Secondary}"
-                                                   FontSize="{DynamicResource FP.Font.Body}"
-                                                   VerticalAlignment="Center"/>
-                                    </Grid>
-                                    <Button.Flyout>
-                                        <Flyout Opened="OnLocalizedFlyoutOpened" Placement="Bottom">
-                                            <Border Background="{DynamicResource FP.Bg.Panel}"
-                                                    BorderBrush="{DynamicResource FP.Border.Normal}"
-                                                    BorderThickness="1"
-                                                    CornerRadius="6"
-                                                    Padding="10">
-                                                <StackPanel Spacing="2" Width="230">
-                                                    <ColorPicker Color="{Binding TransparencyBackgroundColorValue, Mode=TwoWay}"
-                                                                 ColorModel="Rgba"
-                                                                 HorizontalAlignment="Stretch"/>
-                                                    <TextBox Text="{Binding TransparencyBackgroundColor, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
-                                                             PlaceholderText="#AARRGGBB"
-                                                             FontSize="{DynamicResource FP.Font.Body}"/>
-                                                </StackPanel>
-                                            </Border>
-                                        </Flyout>
-                                    </Button.Flyout>
-                                </Button>
+                                <icons:ColorPickerButton Grid.Column="1"
+                                                         VerticalAlignment="Center"
+                                                         ShowEyedropper="False"
+                                                         SelectedColor="{Binding TransparencyBackgroundColorValue, Mode=TwoWay}"/>
                             </Grid>
                         </StackPanel>
 

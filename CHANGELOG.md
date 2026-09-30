@@ -15,7 +15,7 @@
   into the photo, trimmed to its content right away. A layer that already is an image no longer
   offers the option.
 
-- The new "Merge into background" in the layer's context menu bakes the selected layers, or a
+- The new "Flatten image" in the layer's context menu bakes the selected layers, or a
   whole group, into the photo.
 
 - Image and paint layers can be trimmed from the layer's context menu: the fully transparent
@@ -38,6 +38,10 @@
 - RAW files that carry no usable preview of their own, such as DNGs written by CHDK, now show up
   in the viewer and the gallery more than ten times faster.
 
+- Every color field now opens the same color wheel as the drawing and object tools, with
+  opacity, hex value and the recently used colors. The previous color stays next to the new one
+  and brings it back with a click.
+
 ### Fixes
 
 - Merging or rasterizing layers while one of the adjustment tools was open could leave the
@@ -50,3 +54,6 @@
 
 - The favorite heart now has the same shadow as the rating stars, so it no longer gets lost on
   bright parts of a thumbnail.
+
+- Text and number fields in drop-down panels no longer show a lighter ring around the text, and
+  their highlighted frame keeps its rounded corners.

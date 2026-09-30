@@ -1,0 +1,56 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:icons="clr-namespace:FerrumPix.Controls"
+             x:Class="FerrumPix.Controls.ColorEditor">
+    <StackPanel Spacing="6">
+
+        <icons:ColorWheel Name="Wheel"
+                          Width="200" Height="200"
+                          HorizontalAlignment="Center" />
+
+        <!-- Dieselbe Deckkraft-Zeile wie im Farbmischer: das Rad laesst den Alphawert in Ruhe. -->
+        <Grid ColumnDefinitions="60,*,44" VerticalAlignment="Center">
+            <TextBlock Text="Deckkraft" Foreground="{DynamicResource FP.Text.Secondary}"
+                       VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+            <icons:RoundSlider Grid.Column="1" Name="AlphaSlider"
+                               Minimum="0" Maximum="100"
+                               DefaultValue="100"
+                               DragIncrement="1" WheelIncrement="1" />
+            <icons:SliderValueUpDown Grid.Column="2" Name="AlphaValue" Classes="slider-value"
+                                     Minimum="0" Maximum="100" Increment="1"
+                                     FormatString="F0" />
+        </Grid>
+
+        <!-- Links die Farbe beim Oeffnen, rechts die aktuelle; ein Klick auf die linke Haelfte
+             nimmt die Aenderung zurueck. Daneben der Hex-Wert. -->
+        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+            <Border Width="56" Height="26" CornerRadius="4" ClipToBounds="True"
+                    BorderBrush="{DynamicResource FP.Border.Strong}" BorderThickness="1">
+                <Grid ColumnDefinitions="*,*">
+                    <Border Name="OriginalSwatch" Cursor="Hand" PointerPressed="OnOriginalSwatchPressed" />
+                    <Border Grid.Column="1" Name="CurrentSwatch" />
+                </Grid>
+            </Border>
+            <TextBox Grid.Column="1" Name="HexTextBox" PlaceholderText="#AARRGGBB"
+                     FontSize="{DynamicResource FP.Font.Small}" />
+        </Grid>
+
+        <ItemsControl Name="RecentColorsList">
+            <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <WrapPanel/>
+                </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                    <Button Width="20" Height="20" Padding="0" Margin="0,0,4,4" CornerRadius="4"
+                            Background="{Binding Converter={StaticResource ColorToBrushConverter}}"
+                            BorderBrush="{DynamicResource FP.Border.Strong}" BorderThickness="1"
+                            Click="OnRecentColorClick"
+                            Tag="{Binding}"/>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+
+    </StackPanel>
+</UserControl>

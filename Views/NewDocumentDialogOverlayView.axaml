@@ -215,46 +215,13 @@
                                     Click="OnBackgroundClick" Tag="Color">Farbe</Button>
                         </StackPanel>
 
-                        <!-- Farbfeld + Hex-Wert auf dem Knopf, Farbwähler im Flyout - dasselbe Muster
-                             wie beim Collage-Hintergrund und beim Transparenz-Hintergrund. -->
-                        <Button Grid.Row="6" Grid.Column="1"
-                                Classes="ghost"
-                                Padding="10,6"
-                                MinHeight="34"
-                                HorizontalAlignment="Left"
-                                HorizontalContentAlignment="Left"
-                                IsVisible="{Binding IsNewDocBackgroundColor}">
-                            <Grid ColumnDefinitions="28,*" ColumnSpacing="8" MinWidth="150">
-                                <Border Width="24"
-                                        Height="20"
-                                        Background="{Binding NewDocBackgroundBrush}"
-                                        BorderBrush="{DynamicResource FP.Border.Strong}"
-                                        BorderThickness="1"
-                                        CornerRadius="4"/>
-                                <TextBlock Grid.Column="1"
-                                           Text="{Binding NewDocBackgroundColor}"
-                                           Foreground="{DynamicResource FP.Text.Secondary}"
-                                           VerticalAlignment="Center"/>
-                            </Grid>
-                            <Button.Flyout>
-                                <Flyout Opened="OnLocalizedFlyoutOpened" Placement="Bottom">
-                                    <Border Background="{DynamicResource FP.Bg.Panel}"
-                                            BorderBrush="{DynamicResource FP.Border.Normal}"
-                                            BorderThickness="1"
-                                            CornerRadius="6"
-                                            Padding="10">
-                                        <StackPanel Spacing="6" Width="230">
-                                            <ColorPicker Color="{Binding NewDocBackgroundColorValue, Mode=TwoWay}"
-                                                         ColorModel="Rgba"
-                                                         HorizontalAlignment="Stretch"/>
-                                            <TextBox Text="{Binding NewDocBackgroundColor, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
-                                                     PlaceholderText="#AARRGGBB"
-                                                     FontSize="{DynamicResource FP.Font.Body}"/>
-                                        </StackPanel>
-                                    </Border>
-                                </Flyout>
-                            </Button.Flyout>
-                        </Button>
+                        <!-- Derselbe Farbknopf wie in den Editorpanels, ohne Pipette: das neue
+                             Dokument hat noch kein Bild, aus dem sie aufnehmen koennte. -->
+                        <icons:ColorPickerButton Grid.Row="6" Grid.Column="1"
+                                                 HorizontalAlignment="Left"
+                                                 ShowEyedropper="False"
+                                                 IsVisible="{Binding IsNewDocBackgroundColor}"
+                                                 SelectedColor="{Binding NewDocBackgroundColorValue, Mode=TwoWay}"/>
                     </Grid>
                 </Grid>
 

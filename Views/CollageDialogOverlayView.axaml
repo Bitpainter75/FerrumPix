@@ -252,45 +252,11 @@
                                    Text="Hintergrund"
                                    Foreground="{DynamicResource FP.Text.Secondary}"
                                    VerticalAlignment="Center"/>
-                        <Button Grid.Row="10"
-                                Grid.Column="1"
-                                Classes="ghost"
-                                MinHeight="34"
-                                Padding="10,6"
-                                HorizontalAlignment="Stretch"
-                                HorizontalContentAlignment="Left"
-                                ToolTip.Tip="Hintergrundfarbe der Collage wählen">
-                            <Grid ColumnDefinitions="28,*" ColumnSpacing="8">
-                                <Border Width="24"
-                                        Height="20"
-                                        Background="{Binding CollageBackgroundBrush}"
-                                        BorderBrush="{DynamicResource FP.Border.Strong}"
-                                        BorderThickness="1"
-                                        CornerRadius="4"/>
-                                <TextBlock Grid.Column="1"
-                                           Text="{Binding CollageBackgroundColor}"
-                                           Foreground="{DynamicResource FP.Text.Secondary}"
-                                           VerticalAlignment="Center"/>
-                            </Grid>
-                            <Button.Flyout>
-                                <Flyout Opened="OnLocalizedFlyoutOpened" Placement="Bottom">
-                                    <Border Background="{DynamicResource FP.Bg.Panel}"
-                                            BorderBrush="{DynamicResource FP.Border.Normal}"
-                                            BorderThickness="1"
-                                            CornerRadius="6"
-                                            Padding="10">
-                                        <StackPanel Spacing="6" Width="230">
-                                            <ColorPicker Color="{Binding CollageBackgroundColorValue, Mode=TwoWay}"
-                                                         ColorModel="Rgba"
-                                                         HorizontalAlignment="Stretch"/>
-                                            <TextBox Text="{Binding CollageBackgroundColor, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
-                                                     PlaceholderText="#AARRGGBB"
-                                                     FontSize="{DynamicResource FP.Font.Body}"/>
-                                        </StackPanel>
-                                    </Border>
-                                </Flyout>
-                            </Button.Flyout>
-                        </Button>
+                        <icons:ColorPickerButton Grid.Row="10"
+                                                 Grid.Column="1"
+                                                 HorizontalAlignment="Left"
+                                                 ShowEyedropper="False"
+                                                 SelectedColor="{Binding CollageBackgroundColorValue, Mode=TwoWay}"/>
 
                         <TextBlock Grid.Row="11"
                                    Text="Qualität"

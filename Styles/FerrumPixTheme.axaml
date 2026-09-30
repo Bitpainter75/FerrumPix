@@ -2092,6 +2092,17 @@
         <Setter Property="Background" Value="{DynamicResource FP.Bg.Elevated}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource FP.Border.Normal}"/>
     </Style>
+    <!-- DIE REGEL DARUEBER GREIFT AUCH IN DIE VORLAGEN. In einem Textfeld liegt ueber dem runden
+         PART_BorderElement ein zweiter, unbenannter und RECHTECKIGER Border (eine Rahmenbreite
+         eingerueckt). Im Hauptfenster malt er nichts, im Aufklapper bekam er von "Popup Border"
+         die Menuefarbe: um die Textflaeche lag ein hellerer Ring, und seine Ecken deckten die
+         runden Ecken des Akzentrahmens ab (Nutzerbefund am Hex-Feld des Farbknopfs; das
+         Zahlenfeld der Deckkraft zeigte denselben Block). Durchsichtig statt leer: ein Element
+         ohne Hintergrund loescht in einem Aufklapper den Grund darunter, siehe Rollbereich. -->
+    <Style Selector="Popup TextBox /template/ Border:not(#PART_BorderElement)">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderBrush" Value="Transparent"/>
+    </Style>
 
     <Style Selector="Expander">
         <Setter Property="Background" Value="{DynamicResource FP.Bg.Content}"/>
