@@ -67,5 +67,7 @@
     <EmbeddedResource Include="Assets\Objektivdaten\objektivdaten.zip" />
     <!-- Versionierte, pruefbare Referenzwerte fuer die kameraabhaengige RAW-Grundbelichtung. -->
     <EmbeddedResource Include="Resources\CameraBaselineTable.json" />
+    <!-- Eigene Farbmatrizen fuer Kameras, die die geladene LibRaw noch nicht kennt. -->
+    <EmbeddedResource Include="Resources\CameraColorMatrices.json" />
   </ItemGroup>
 </Project>

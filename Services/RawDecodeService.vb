@@ -1104,7 +1104,11 @@ Namespace Services
             If MatchesKnownCamera(known, fromLibRaw.Maker, fromLibRaw.Model) Then Return True
             ' Fehlt sie in LibRaws Liste, setzt FerrumPix aber Schwarz- und Weisspunkt selbst
             ' (LevelOverrides), wird sie richtig entwickelt, und der Hinweis waere falsch.
-            If LevelOverrides.ContainsKey(If(facts.NormalizedMake, "").Trim() & "|" & If(facts.NormalizedModel, "").Trim()) Then Return True
+            Dim camera = If(facts.NormalizedMake, "").Trim() & "|" & If(facts.NormalizedModel, "").Trim()
+            If LevelOverrides.ContainsKey(camera) Then Return True
+            ' Dasselbe fuer die Farbmatrix: steht die Kamera in der eigenen Tabelle, kommt sie nicht
+            ' mehr flau heraus (OwnCameraMatrix).
+            If CameraColorMatrixTable.Matrices.ContainsKey(camera) Then Return True
             Return False
         End Function
 
@@ -1216,7 +1220,7 @@ Namespace Services
                     _setOutputBps(handle, DecodeOutputBits)
                     _setOutputColor(handle, 1) ' sRGB
                     If unpacked OrElse _unpack(handle) = 0 Then
-                        If _process(handle) = 0 Then facts.RgbCamAfterProcess = ReadRgbCamMatrix(handle)
+                        If _process(handle) = 0 Then facts.RgbCamAfterProcess = If(OwnCameraMatrix(handle)?.RgbFromCamera, ReadRgbCamMatrix(handle))
                     End If
                 End If
 
@@ -1274,13 +1278,94 @@ Namespace Services
         End Function
 
         ''' <summary>Die drei Größen am offenen Handle abgreifen. Eigene Funktion, weil der
-        ''' Rückfall sie ein zweites Mal liest.</summary>
+        ''' Rückfall sie ein zweites Mal liest.
+        '''
+        ''' Hat LibRaw keine Matrix für die Kamera, aber die eigene Tabelle eine
+        ''' (<see cref="OwnCameraMatrix"/>), kommen Matrix UND Tageslicht-Multiplikatoren von dort:
+        ''' LibRaw bildet pre_mul aus derselben fehlenden Matrix und meldet dann 1/1/1. Mit nur
+        ''' einem der beiden ersetzt wäre die Farbtemperatur falsch statt fehlend.</summary>
         Private Shared Function ReadColorFactsFromHandle(handle As IntPtr) As CameraColorFacts
+            Dim own = OwnCameraMatrix(handle)
             Return New CameraColorFacts With {
                 .CamMul = ReadFourMultipliers(_getCamMul, handle),
-                .PreMul = ReadFourMultipliers(_getPreMul, handle),
-                .RgbCam = ReadRgbCamMatrix(handle)
+                .PreMul = If(own?.DaylightMultipliers, ReadFourMultipliers(_getPreMul, handle)),
+                .RgbCam = If(own?.RgbFromCamera, ReadRgbCamMatrix(handle))
             }
+        End Function
+
+        ''' <summary>Die eigene Farbmatrix für die Kamera dieses Handles, oder Nothing.
+        '''
+        ''' NUR WENN LIBRAW KEINE EIGENE HAT, also rgb_cam die Einheitsmatrix ist. Das ist die
+        ''' Absicherung dafür, dass die Tabelle nie gegen LibRaw arbeitet: lernt eine spätere
+        ''' Fassung die Kamera, meldet sie eine echte Matrix, und der Eintrag schweigt. Eine DNG
+        ''' derselben Kamera bringt ihre Matrix selbst mit und bleibt aus demselben Grund
+        ''' unberührt. Fehlt der Leser für rgb_cam, lässt sich das nicht prüfen, und es bleibt bei
+        ''' LibRaw.
+        '''
+        ''' Gültig nach open_file; LibRaw füllt rgb_cam beim Erkennen der Datei (siehe
+        ''' ReadCameraColorFactsCore).</summary>
+        Private Shared Function OwnCameraMatrix(handle As IntPtr) As CameraColorMatrixTable.CameraMatrix
+            If handle = IntPtr.Zero OrElse _getIparams Is Nothing OrElse _getRgbCam Is Nothing Then Return Nothing
+            If CameraColorMatrixTable.Matrices.Count = 0 Then Return Nothing
+            Dim iparams = _getIparams(handle)
+            If iparams = IntPtr.Zero Then Return Nothing
+            Dim make = FixedText(iparams, IparamsNormalizedMakeOffset)
+            Dim model = FixedText(iparams, IparamsNormalizedModelOffset)
+            If Not IsPlausibleText(make) OrElse Not IsPlausibleText(model) Then Return Nothing
+            Dim matrix As CameraColorMatrixTable.CameraMatrix = Nothing
+            If Not CameraColorMatrixTable.Matrices.TryGetValue(make.Trim() & "|" & model.Trim(), matrix) Then Return Nothing
+            Dim libRaw = ReadRgbCamMatrix(handle)
+            For i = 0 To 8
+                Dim expected = If(i Mod 4 = 0, 1.0F, 0.0F)
+                If Math.Abs(libRaw(i) - expected) > 0.000001F Then Return Nothing
+            Next
+            Return matrix
+        End Function
+
+        ''' <summary>Wendet rgb_cam auf LibRaws lineare 16-Bit-Ausgabe an, an Ort und Stelle.
+        '''
+        ''' WARUM DAS DASSELBE IST WIE BEI LIBRAW. Mit der Einheitsmatrix und sRGB als Ausgabe
+        ''' rechnet LibRaws convert_to_rgb nichts um; heraus kommt das Kamera-RGB mit angewandtem
+        ''' Weißabgleich, bei Gamma 1/1 und ohne Aufhellung also genau die Werte, auf die LibRaw
+        ''' seine Matrix angewandt hätte. Beschnitten wird wie dort auf 0 bis 65535.
+        '''
+        ''' Nur für den linearen 16-Bit-Weg. Die 8-Bit-Ausgabe ist gamma-kodiert, eine lineare
+        ''' Matrix darauf wäre falsch gerechnet; sie entsteht nur ohne die Schalter für lineare
+        ''' Ausgabe oder bei einer fertig gerenderten RGB-Datei, und die braucht keine.</summary>
+        Public Shared Sub ApplyCameraMatrix(data As IntPtr, width As Integer, height As Integer, rgbFromCamera As Single())
+            Dim m = rgbFromCamera
+            Dim rowValues = width * 3
+            ' Versatz in Integer, siehe Convert16Rows: die Schranke des Aufrufers ist auf 6 Byte je
+            ' Pixel bemessen, also auf genau diese Schrittweite.
+            Dim rowBytes = width * 6
+            Const BandRows = 64
+            Dim bandCount = (height + BandRows - 1) \ BandRows
+            Parallel.For(0, bandCount,
+                Sub(band As Integer)
+                    Dim row(rowValues - 1) As Short
+                    Dim lastRow = Math.Min(height, (band + 1) * BandRows) - 1
+                    For y = band * BandRows To lastRow
+                        Dim rowPtr = data + y * rowBytes
+                        Marshal.Copy(rowPtr, row, 0, rowValues)
+                        For x = 0 To rowValues - 1 Step 3
+                            Dim r = CInt(row(x)) And &HFFFF
+                            Dim g = CInt(row(x + 1)) And &HFFFF
+                            Dim b = CInt(row(x + 2)) And &HFFFF
+                            row(x) = ToUInt16Bits(m(0) * r + m(1) * g + m(2) * b)
+                            row(x + 1) = ToUInt16Bits(m(3) * r + m(4) * g + m(5) * b)
+                            row(x + 2) = ToUInt16Bits(m(6) * r + m(7) * g + m(8) * b)
+                        Next
+                        Marshal.Copy(row, 0, rowPtr, rowValues)
+                    Next
+                End Sub)
+        End Sub
+
+        ''' <summary>Ein Wert von 0 bis 65535, gerundet und beschnitten, als Bitmuster in einem
+        ''' Short. Marshal.Copy kennt kein UShort, und CShort wirft oberhalb von 32767.</summary>
+        Private Shared Function ToUInt16Bits(value As Single) As Short
+            Dim v = CInt(Math.Floor(Math.Min(65535.0F, Math.Max(0.0F, value)) + 0.5F))
+            If v > 65535 Then v = 65535
+            Return CShort(If(v > 32767, v - 65536, v))
         End Function
 
         ''' <summary>Tragen die gelesenen Multiplikatoren überhaupt eine Aussage? Nur die ersten
@@ -2076,6 +2161,9 @@ Namespace Services
                 If useHalfSize Then TryEnableHalfSize(handle)
                 ' Kameras, deren Schwarz- und Weisspunkt LibRaw falsch liest (LevelOverrides).
                 TryApplyLevelOverride(handle, path)
+                ' Kameras, fuer die LibRaw keine Farbmatrix hat (CameraColorMatrixTable). Angewandt
+                ' wird sie nach dem Entwickeln auf die linearen Daten, siehe ApplyCameraMatrix.
+                Dim ownMatrix = OwnCameraMatrix(handle)
 
                 _setOutputBps(handle, DecodeOutputBits)
                 _setOutputColor(handle, 1) ' sRGB
@@ -2131,6 +2219,15 @@ Namespace Services
                 Dim camMul = ReadFourMultipliers(_getCamMul, handle)
                 Dim usingCamMul = AreUsableMultipliers(camMul)
                 If usingCamMul Then
+                    For i = 0 To 3
+                        _setUserMul(handle, i, camMul(i))
+                    Next
+                ElseIf ownMatrix IsNot Nothing Then
+                    ' Ohne Aufnahme-Weissabgleich nimmt dcraw pre_mul, und das stuende bei einer
+                    ' Kamera ohne LibRaw-Matrix auf 1/1/1: das Bild kaeme gruen. Die eigene Tabelle
+                    ' liefert Tageslicht wie fuer eine bekannte Kamera.
+                    camMul = ownMatrix.DaylightMultipliers
+                    usingCamMul = True
                     For i = 0 To 3
                         _setUserMul(handle, i, camMul(i))
                     Next
@@ -2202,6 +2299,13 @@ Namespace Services
                 ' bis 45 Prozent (siehe RAW_UND_FARBE.md); damit lohnt die Stelle, an der die
                 ' Korrektur sitzt, obwohl sie hinter dem Demosaic liegt.
                 If bits = 16 Then
+                    ' Die eigene Farbmatrix VOR dem Sichern: der Zwischenspeicher haelt dann schon
+                    ' das richtige Bild, und das Umschalten der Lichterrettung braucht sie nicht
+                    ' noch einmal.
+                    If ownMatrix IsNot Nothing Then
+                        ApplyCameraMatrix(image + 16, width, height, ownMatrix.RgbFromCamera)
+                        DiagnosticLogService.LogAlways("RawDecodeService.CameraMatrix", "eigene Farbmatrix angewandt (LibRaw kennt die Kamera nicht)")
+                    End If
                     ' DIE LINEAREN DATEN ZUERST SICHERN, dann daraus umsetzen. Der Umweg ueber
                     ' den eigenen Puffer kostet eine Kopie (bei 24 Megapixeln rund 145 MB) und
                     ' spart dafuer jeden weiteren LibRaw-Lauf, solange dieselbe Datei offen ist.

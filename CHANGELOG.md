@@ -24,3 +24,10 @@
 
 - The healing brush no longer leaves a darker or lighter patch with a visible edge on smooth
   areas such as a clear sky. The repair now takes on the brightness of its surroundings.
+
+- Raw files from several newer cameras no longer come out with pale, washed out colors: OM System
+  OM-3, Nikon Z50II, Z5II and COOLPIX P1100, Fujifilm X-E5 and GFX100RF, Panasonic DC-TZ95D, Canon
+  PowerShot V1 and Samsung GX-1L. The notice about an unknown camera no longer shows for them.
+
+- CTRL+V after copying a layer and then a selection or the whole picture pastes what was copied
+  last. It used to duplicate the old layer.

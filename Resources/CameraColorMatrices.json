@@ -1,0 +1,42 @@
+{
+  "formatVersion": 1,
+  "description": "Color matrices for cameras the loaded LibRaw has no matrix for. Without one LibRaw develops with the identity matrix and the image comes out flat. Each entry is the XYZ to camera matrix for D65, row by row, in the convention of LibRaw's own table and the DNG tag ColorMatrix2. FerrumPix turns it into rgb_cam and the daylight multipliers exactly as LibRaw does and applies it only while LibRaw still reports the identity matrix for the camera, so an entry goes quiet by itself once LibRaw learns the camera. Keys are LibRaw's normalized make and model. Values were read from the ColorMatrix2 tag of the Adobe DNG Converter output for a raw file of the same camera (Diagnostics/Farbmatrix/dngmatrix.py); source names the file and notes a sensor twin where the matrix is identical.",
+  "matrices": {
+    "Canon|PowerShot V1": {
+      "xyzToCamera": [1.26, -0.4747, -0.2027, -0.611, 1.5868, -0.0029, 0.011, 0.0479, 0.6011],
+      "source": "ColorMatrix2 (D65) of powershot-v1_20250817_133821.dng"
+    },
+    "Fujifilm|GFX100RF": {
+      "xyzToCamera": [1.2806, -0.5779, -0.111, -0.3546, 1.1507, 0.2318, -0.0177, 0.0996, 0.5715],
+      "source": "ColorMatrix2 (D65) of gfx100rf_20250611_134804.dng"
+    },
+    "Fujifilm|X-E5": {
+      "xyzToCamera": [1.1809, -0.5358, -0.1141, -0.4248, 1.2164, 0.2343, -0.0514, 0.1097, 0.5848],
+      "source": "ColorMatrix2 (D65) of x-e5_20250820_102039.dng"
+    },
+    "Nikon|COOLPIX P1100": {
+      "xyzToCamera": [1.4294, -0.6116, -0.1333, -0.1628, 1.0219, 0.1637, -0.0014, 0.1158, 0.5022],
+      "source": "ColorMatrix2 (D65) of coolpix-p1100_20260525_180637.dng"
+    },
+    "Nikon|Z50_2": {
+      "xyzToCamera": [1.164, -0.4829, -0.1079, -0.5107, 1.3006, 0.2325, -0.0972, 0.1711, 0.738],
+      "source": "ColorMatrix2 (D65) of z50-2_20241208_165327.dng"
+    },
+    "Nikon|Z5_2": {
+      "xyzToCamera": [1.3133, -0.5542, -0.128, -0.4325, 1.2543, 0.1972, 0.0034, 0.0792, 0.7662],
+      "source": "ColorMatrix2 (D65) of z5-2_20250427_175650.dng"
+    },
+    "Olympus|OM-3": {
+      "xyzToCamera": [0.909, -0.3591, -0.0756, -0.3252, 1.1396, 0.2109, -0.0318, 0.1059, 0.5606],
+      "source": "ColorMatrix2 (D65) of om-3_20250504_083650.dng, identical to the OM-1 Mark II"
+    },
+    "Panasonic|DC-TZ95D": {
+      "xyzToCamera": [1.2194, -0.534, -0.1329, -0.3035, 1.1394, 0.1858, -0.005, 0.1418, 0.5219],
+      "source": "ColorMatrix2 (D65) of dc-tz95d_20240128_135634.dng, the converter files it as DC-ZS80"
+    },
+    "Samsung|GX-1L": {
+      "xyzToCamera": [1.0504, -0.2439, -0.1189, -0.8603, 1.6208, 0.2531, -0.1022, 0.0863, 1.2242],
+      "source": "ColorMatrix2 (D65) of gx-1l_20250615_121124.dng"
+    }
+  }
+}
