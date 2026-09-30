@@ -457,6 +457,20 @@ Namespace ViewModels
             End Get
         End Property
 
+        ''' <summary>Der Hinweis neben dem Logo. Kein eigener Zustand: das Ergebnis der einen
+        ''' Abfrage beim Start liegt im SettingsViewModel und wird hier nur weitergereicht.</summary>
+        Public ReadOnly Property IsUpdateAvailable As Boolean
+            Get
+                Return Settings IsNot Nothing AndAlso Settings.IsUpdateAvailable
+            End Get
+        End Property
+
+        Public ReadOnly Property AvailableVersion As String
+            Get
+                Return If(Settings?.AvailableVersion, "")
+            End Get
+        End Property
+
         Public ReadOnly Property CurrentContent As ViewModelBase
             Get
                 Select Case _currentMode
@@ -484,6 +498,14 @@ Namespace ViewModels
 
         Public Sub New(Optional initialImagePath As String = Nothing, Optional initialFolderPath As String = Nothing)
             Settings = New SettingsViewModel(Me)
+            AddHandler Settings.PropertyChanged,
+                Sub(s, e)
+                    If e.PropertyName = NameOf(SettingsViewModel.IsUpdateAvailable) Then
+                        Me.RaisePropertyChanged(NameOf(IsUpdateAvailable))
+                    ElseIf e.PropertyName = NameOf(SettingsViewModel.AvailableVersion) Then
+                        Me.RaisePropertyChanged(NameOf(AvailableVersion))
+                    End If
+                End Sub
             People = New PeopleViewModel(Me)
             Gallery = New GalleryViewModel(Me)
             Viewer = New ViewerViewModel(Me)
@@ -685,9 +707,8 @@ Namespace ViewModels
                     Settings?.BeginEditSession()
                 End If
                 Settings?.RefreshThumbnailCacheFolders()
-                ' Die Frage nach einer neueren Fassung stellt sich nur hier - der Hinweis steht
-                ' neben der Versionsangabe, und woanders wird nichts abgefragt.
-                Settings?.BeginUpdateCheck()
+                ' Keine Abfrage nach einer neueren Fassung: die lief beim Start (siehe
+                ' SettingsViewModel.BeginUpdateCheck), die Einstellungen zeigen deren Ergebnis.
                 CurrentMode = AppMode.Settings
             Catch ex As Exception
                 ' Absicherung: eine Ausnahme in einem Async Sub landet sonst beim Dispatcher

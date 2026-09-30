@@ -165,6 +165,9 @@ Public Class App
             Dim win = New MainWindow()
             win.DataContext = vm
             desktop.MainWindow = win
+            ' Die eine Abfrage nach einer neueren Fassung je Sitzung. Hier und nicht im ViewModel:
+            ' der Pruefstand baut das ViewModel dutzendfach und soll dabei nichts abrufen.
+            vm.Settings?.BeginUpdateCheck()
 
             desktop.ShutdownMode = ShutdownMode.OnMainWindowClose
             BuildApplicationMenu(vm)

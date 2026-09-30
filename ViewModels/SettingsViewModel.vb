@@ -362,20 +362,22 @@ Namespace ViewModels
             End Get
         End Property
 
-        ''' <summary>Fragt beim Öffnen der Einstellungen einmal nach, welche Fassung veröffentlicht
-        ''' ist. Weicht sie von der laufenden ab, erscheint der Hinweis neben der Versionsangabe.
+        ''' <summary>Fragt beim Start der Anwendung einmal nach, welche Fassung veröffentlicht ist
+        ''' (Aufruf in App.OnFrameworkInitializationCompleted). Weicht sie von der laufenden ab,
+        ''' erscheint der Hinweis neben dem Logo in der Fensterleiste und neben der Versionsangabe
+        ''' der Einstellungen; beide lesen dasselbe Ergebnis.
         '''
-        ''' Einmal je Sitzung, und nur nach einer Antwort, die ankam: scheitert der Abruf, bleibt
-        ''' die Sperre offen, damit ein späteres Öffnen es noch einmal versuchen kann. Gescheitert
-        ''' wird still - es gibt nichts anzuzeigen und nichts zu melden.</summary>
+        ''' Genau EIN Versuch je Sitzung, auch wenn er scheitert: das Öffnen der Einstellungen fragt
+        ''' nicht noch einmal nach. Gescheitert wird still - es gibt nichts anzuzeigen und nichts zu
+        ''' melden.</summary>
         Public Async Sub BeginUpdateCheck()
             If _updateCheckDone OrElse _updateCheckRunning Then Return
             _updateCheckRunning = True
+            _updateCheckDone = True
             Try
                 Dim published = Await UpdateCheckService.FetchLatestVersionAsync()
-                ' Leer heißt: keine brauchbare Antwort. Dann bleibt die Sperre offen.
+                ' Leer heißt: keine brauchbare Antwort. Dann bleibt der Hinweis aus.
                 If published.Length = 0 Then Return
-                _updateCheckDone = True
                 Dim other = If(UpdateCheckService.IsDifferent(published, DisplayVersion), published, "")
                 If String.Equals(other, _availableVersion, StringComparison.Ordinal) Then Return
                 _availableVersion = other

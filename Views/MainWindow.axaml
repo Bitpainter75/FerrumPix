@@ -45,17 +45,42 @@
                                     Orientation="Horizontal"
                                     VerticalAlignment="Center"
                                     Margin="16,0,0,0"
-                                    IsHitTestVisible="False">
+                                    Spacing="12">
+                            <!-- Die Logos sind nicht treffbar, damit der Druck darauf beim
+                                 Ziehbereich landet; nur der Hinweis daneben ist ein Knopf. -->
                             <Image Source="avares://FerrumPix/Assets/FerrumPix_TopBarDark_small.png"
                                    Height="22"
                                    VerticalAlignment="Center"
                                    Stretch="Uniform"
+                                   IsHitTestVisible="False"
                                    IsVisible="{Binding IsDarkLogoVisible}"/>
                             <Image Source="avares://FerrumPix/Assets/FerrumPix_TopBarLight_small.png"
                                    Height="22"
                                    VerticalAlignment="Center"
                                    Stretch="Uniform"
+                                   IsHitTestVisible="False"
                                    IsVisible="{Binding IsLightLogoVisible}"/>
+                            <!-- Derselbe Hinweis wie neben der Versionsangabe der Einstellungen,
+                                 aus derselben einen Abfrage beim Start. Die Hoehe bleibt unter den
+                                 32 der Leiste. -->
+                            <Button x:Name="UpdateNoticeButton"
+                                    Classes="ghost"
+                                    Padding="8,2"
+                                    MinHeight="0"
+                                    VerticalAlignment="Center"
+                                    IsVisible="{Binding IsUpdateAvailable}"
+                                    Click="OnUpdateNoticeClick"
+                                    ToolTip.Tip="Veröffentlichte Fassung herunterladen">
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/external-link.svg" Width="12" Height="12"
+                                                   VerticalAlignment="Center"
+                                                   IconBrush="{DynamicResource FP.Accent}"/>
+                                    <TextBlock Text="Aktualisierung verfügbar:" FontSize="{DynamicResource FP.Font.Small}"
+                                               VerticalAlignment="Center" Foreground="{DynamicResource FP.Accent}"/>
+                                    <TextBlock Text="{Binding AvailableVersion}" FontSize="{DynamicResource FP.Font.Small}"
+                                               VerticalAlignment="Center" Foreground="{DynamicResource FP.Accent}"/>
+                                </StackPanel>
+                            </Button>
                         </StackPanel>
 
                         <!-- Dateiname und Farbetikett des offenen Bildes als Fenstertitel. Sie

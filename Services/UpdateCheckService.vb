@@ -17,8 +17,8 @@ Namespace Services
     ''' auseinanderlaufen könnte.
     '''
     ''' Der Abruf holt eine kurze Textdatei und schickt nichts mit, was über die Anwendung hinaus
-    ''' etwas verrät: kein Rechnername, keine Kennung, keine Zählung. Er läuft nur beim Öffnen der
-    ''' Einstellungen, und wenn er scheitert, bleibt es still - eine fehlende Verbindung ist kein
+    ''' etwas verrät: kein Rechnername, keine Kennung, keine Zählung. Er läuft einmal beim Start der
+    ''' Anwendung, und wenn er scheitert, bleibt es still - eine fehlende Verbindung ist kein
     ''' Fehler, den der Nutzer wegklicken müsste.</summary>
     Public NotInheritable Class UpdateCheckService
 

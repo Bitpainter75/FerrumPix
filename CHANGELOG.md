@@ -21,6 +21,9 @@
 - Image and paint layers can be trimmed from the layer's context menu: the fully transparent
   border is cut away, and the picture on the layer stays exactly where it was.
 
+- A new version is now pointed out right next to the logo in the title bar, not only in the
+  settings. FerrumPix looks once at startup.
+
 ### Fixes
 
 - Merging or rasterizing layers while one of the adjustment tools was open could leave the

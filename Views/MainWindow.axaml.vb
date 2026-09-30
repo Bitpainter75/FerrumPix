@@ -104,6 +104,7 @@ Namespace Views
                 Grid.SetColumn(logo, 2)
                 logo.HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Right
                 logo.Margin = New Thickness(0, 0, 18, 0)
+                PlaceUpdateNotice(logo, onRight:=True)
             End If
 
             ' Der Host hat absichtlich keine IsVisible-Bindung. Die Bindung des inneren
@@ -648,6 +649,21 @@ Namespace Views
                 logo.HorizontalAlignment = If(left, Avalonia.Layout.HorizontalAlignment.Right,
                                                     Avalonia.Layout.HorizontalAlignment.Left)
                 logo.Margin = If(left, New Thickness(0, 0, 16, 0), New Thickness(16, 0, 0, 0))
+                PlaceUpdateNotice(logo, onRight:=left)
+            End If
+        End Sub
+
+        ''' <summary>Der Aktualisierungshinweis steht immer auf der Seite des Logos, die zur
+        ''' Fenstermitte zeigt: links vom Logo, wenn es rechts sitzt, sonst rechts davon. Ohne das
+        ''' Umhaengen stuende er rechts aussen an der Fensterkante und das Logo daneben.</summary>
+        Private Sub PlaceUpdateNotice(logo As StackPanel, onRight As Boolean)
+            Dim notice = Me.FindControl(Of Button)("UpdateNoticeButton")
+            If notice Is Nothing OrElse Not logo.Children.Contains(notice) Then Return
+            logo.Children.Remove(notice)
+            If onRight Then
+                logo.Children.Insert(0, notice)
+            Else
+                logo.Children.Add(notice)
             End If
         End Sub
 
@@ -762,6 +778,13 @@ Namespace Views
             End While
             Return False
         End Function
+
+        ''' <summary>Der Hinweis neben dem Logo führt wie der in den Einstellungen zur zuletzt
+        ''' veröffentlichten Fassung; die Adresse steht im Dienst.</summary>
+        Public Sub OnUpdateNoticeClick(sender As Object, e As RoutedEventArgs)
+            ShellOpenService.Open(UpdateCheckService.ReleasesAddress, "MainWindow.OpenReleasePage")
+            e.Handled = True
+        End Sub
 
         Private Sub OnMinimizeClick(sender As Object, e As RoutedEventArgs)
             WindowState = WindowState.Minimized
