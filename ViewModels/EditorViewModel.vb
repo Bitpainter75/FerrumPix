@@ -11997,7 +11997,6 @@ Namespace ViewModels
         ''' Umgekehrt braucht es das nicht: eine frisch gemerkte Ebene gewinnt ohnehin, und die
         ''' Auswahldatei muss bleiben, weil sie noch in der System-Zwischenablage liegen kann.</summary>
         Private Sub ForgetLayerClipboard()
-            Return
             _layerClipboardAnnotationId = ""
             _layerClipboardAdjustmentLayerId = ""
         End Sub
