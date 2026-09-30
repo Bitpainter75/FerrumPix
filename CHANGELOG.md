@@ -1,3 +1,17 @@
+## 0.9.57
+
+### Fixes
+
+- Copying a selection in the editor no longer freezes the window. With a large raw file,
+  CTRL+C, CTRL+X and the Copy button used to hold everything for several seconds; the copy is now
+  prepared in the background, and pasting it as a new layer is quicker too.
+
+- Pasting a picture as a new layer now ends the selection it came from. It used to stay, and
+  switching to an adjustment tool afterwards turned it into an extra adjustment layer.
+
+- The map loads every tile it still needs. When one view stopped waiting for a tile, other places
+  showing the same tile could be left without it.
+
 ## 0.9.56
 
 ### What's new

@@ -11124,6 +11124,20 @@ Namespace ViewModels
             If _hasActiveSelection OrElse _selectionMask IsNot Nothing Then ClearSelection(captureUndo:=False)
         End Sub
 
+        ''' <summary>Verwirft die Auswahl, wenn eine neue Bild-Ebene eingefügt wird: Strg+V, der Knopf
+        ''' "Kopieren" im Auswahl-Werkzeug, eine Datei aus der Zwischenablage oder per Ziehen.
+        '''
+        ''' BEFUND: Die alte Auswahl blieb nach dem Einfügen stehen, die neue Ebene war markiert. Beim
+        ''' Wechsel in ein Anpassungswerkzeug wird die Ebene abgewählt (SetToolCommand), dann stand
+        ''' nur noch die Auswahl da, und RefreshSelectionAdjustMode machte aus ihr zusätzlich eine
+        ''' Anpassungsebene, die niemand wollte. Mit dem Einfügen ist die Auswahl erledigt.
+        '''
+        ''' Ohne eigenen Schritt, wie bei der Geometrie: der Aufrufer hat gerade PushUndo gerufen, und
+        ''' das Rezept darin trägt die Auswahl. Rückgängig holt Ebene und Auswahl zusammen zurück.</summary>
+        Private Sub ClearSelectionForNewLayer()
+            If _hasActiveSelection OrElse _selectionMask IsNot Nothing Then ClearSelection(captureUndo:=False)
+        End Sub
+
         ' ── Auswahlform ablegen und wieder einsetzen ────────────────────────────
         '
         ' Dasselbe wie "Maske kopieren/einfuegen" im Maskenwerkzeug, nur fuer die FORM einer
@@ -11773,6 +11787,7 @@ Namespace ViewModels
                                                   Optional label As String = Nothing)
             If String.IsNullOrWhiteSpace(imagePath) Then Return
             PushUndo()
+            ClearSelectionForNewLayer()
             ' Eine Auswahl-Kopie ist ein reiner Pixelausschnitt: sie entsteht nie ueber ein scharfgestelltes
             ' Werkzeug, darf also keine Kontur/keinen Mischmodus aus den Puffern eines anderen Objekts erben.
             ResetAnnotationBuffersToImageDefaults()
@@ -24149,6 +24164,7 @@ Namespace ViewModels
         Public Sub AddImageAnnotationAt(imagePath As String, xPercent As Double, yPercent As Double)
             If String.IsNullOrWhiteSpace(imagePath) Then Return
             PushUndo(AddHistoryLabel("Image"))
+            ClearSelectionForNewLayer()
             ' Ohne scharfgestelltes Bild-Werkzeug (Drag&Drop aus dem Dateimanager) beschreiben die Puffer
             ' noch das selektierte Objekt - sonst erbt das Bild dessen Kontur/Mischmodus/Deckkraft.
             If Not BuffersDescribePendingInsert("Image") Then ResetAnnotationBuffersToImageDefaults()
