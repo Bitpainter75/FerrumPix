@@ -9044,4 +9044,10 @@
   <data name="Auf_Hintergrundebene_reduziert_2d0164fc" xml:space="preserve">
     <value>Auf Hintergrundebene reduziert</value>
   </data>
+  <data name="RAWs_im_Vergleich_in_voller_Aufl_sung_entwickeln_73750ed6" xml:space="preserve">
+    <value>RAWs im Vergleich in voller Auflösung entwickeln</value>
+  </data>
+  <data name="Ausgeschaltet_entwickelt_der_Bildvergleich_RAWs__6dbdc337" xml:space="preserve">
+    <value>Ausgeschaltet entwickelt der Bildvergleich RAWs in halber Auflösung. Das geht um ein Vielfaches schneller und reicht für die Ansicht im Fenster. Eingeschaltet bleibt beim Hineinzoomen die volle Schärfe erhalten, dafür dauert jedes Bild deutlich länger.</value>
+  </data>
 </root>

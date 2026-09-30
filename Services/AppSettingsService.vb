@@ -390,6 +390,11 @@ Namespace Services
         ''' Entwicklung statt der Kamera-Vorschau sehen will, schaltet diesen hier ein - er wirkt
         ''' unabhaengig vom Rezept-Schalter und kostet je Bild einen vollen Decode.
         Public Property DevelopRawInViewerWithoutRecipe As Boolean = False
+        ''' RAWs im Bildvergleich in voller Sensoraufloesung entwickeln (Standard AUS). Ausgeschaltet
+        ''' entwickelt der Vergleich ueber half_size: halbe Kantenlaenge, rund siebenmal schneller,
+        ''' und fuer eine Flaeche von halber Fensterbreite genug. Erst beim Hineinzoomen fehlt
+        ''' Feinzeichnung - wer im Vergleich die Schaerfe beurteilt, schaltet das hier ein.
+        Public Property CompareRawFullResolution As Boolean = False
         ''' RAWs OHNE .fpxmp-Rezept auch in den Stapelfunktionen voll entwickeln (Demosaic in
         ''' Sensoraufloesung) statt ihre eingebettete JPEG-Vorschau zu nehmen. Mit Rezept wird
         ''' IMMER entwickelt - dort waere die Vorschau schlicht das falsche Bild.

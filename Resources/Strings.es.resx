@@ -9026,4 +9026,10 @@
   <data name="Auf_Hintergrundebene_reduziert_2d0164fc" xml:space="preserve">
     <value>Imagen acoplada</value>
   </data>
+  <data name="RAWs_im_Vergleich_in_voller_Aufl_sung_entwickeln_73750ed6" xml:space="preserve">
+    <value>Revelar RAW a resolución completa en la comparación</value>
+  </data>
+  <data name="Ausgeschaltet_entwickelt_der_Bildvergleich_RAWs__6dbdc337" xml:space="preserve">
+    <value>Desactivado, la comparación de imágenes revela los RAW a media resolución. Es mucho más rápido y basta para verlos en la ventana. Activado, se conserva toda la nitidez al ampliar, pero cada imagen tarda bastante más.</value>
+  </data>
 </root>

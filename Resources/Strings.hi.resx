@@ -9070,4 +9070,10 @@
   <data name="Auf_Hintergrundebene_reduziert_2d0164fc" xml:space="preserve">
     <value>पृष्ठभूमि में समतल किया गया</value>
   </data>
+  <data name="RAWs_im_Vergleich_in_voller_Aufl_sung_entwickeln_73750ed6" xml:space="preserve">
+    <value>तुलना में RAW को पूरे रिज़ॉल्यूशन पर डेवलप करें</value>
+  </data>
+  <data name="Ausgeschaltet_entwickelt_der_Bildvergleich_RAWs__6dbdc337" xml:space="preserve">
+    <value>बंद होने पर छवि तुलना RAW को आधे रिज़ॉल्यूशन पर डेवलप करती है। यह कई गुना तेज़ है और विंडो में देखने के लिए पर्याप्त है। चालू होने पर ज़ूम करने पर पूरी शार्पनेस बनी रहती है, लेकिन हर छवि में काफ़ी अधिक समय लगता है।</value>
+  </data>
 </root>

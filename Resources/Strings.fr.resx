@@ -9026,4 +9026,10 @@
   <data name="Auf_Hintergrundebene_reduziert_2d0164fc" xml:space="preserve">
     <value>Image aplatie</value>
   </data>
+  <data name="RAWs_im_Vergleich_in_voller_Aufl_sung_entwickeln_73750ed6" xml:space="preserve">
+    <value>Développer les RAW en pleine résolution dans la comparaison</value>
+  </data>
+  <data name="Ausgeschaltet_entwickelt_der_Bildvergleich_RAWs__6dbdc337" xml:space="preserve">
+    <value>Désactivé, la comparaison d'images développe les RAW en demi-résolution. C'est bien plus rapide et suffit pour l'affichage dans la fenêtre. Activé, le zoom conserve toute la netteté, mais chaque image prend nettement plus de temps.</value>
+  </data>
 </root>

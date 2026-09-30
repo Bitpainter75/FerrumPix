@@ -9045,4 +9045,10 @@
   <data name="Auf_Hintergrundebene_reduziert_2d0164fc" xml:space="preserve">
     <value>Image flattened</value>
   </data>
+  <data name="RAWs_im_Vergleich_in_voller_Aufl_sung_entwickeln_73750ed6" xml:space="preserve">
+    <value>Develop RAWs at full resolution in the comparison</value>
+  </data>
+  <data name="Ausgeschaltet_entwickelt_der_Bildvergleich_RAWs__6dbdc337" xml:space="preserve">
+    <value>When off, the image comparison develops RAWs at half resolution. That is many times faster and enough for viewing in the window. When on, zooming in keeps full sharpness, but each image takes noticeably longer.</value>
+  </data>
 </root>

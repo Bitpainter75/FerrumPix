@@ -73,12 +73,12 @@ Namespace Services
             End If
 
             ' Letzte Stufe: manche Dateien betten GAR KEINE brauchbare Vorschau ein - dann bleibt nur
-            ' das echte Entwickeln. Teuer (Demosaic), aber die Alternative ist ein winziges Bild auf
+            ' das echte Entwickeln. Kostet einen Decode (halb, siehe TryRenderPreviewJpeg), aber die Alternative ist ein winziges Bild auf
             ' Bildschirmgroesse gezogen. Die Leica M8 legt als einzige Vorschau ein 320x240-TIFF ab
             ' (kein JPEG, der Scanner findet also nichts); LibRaws Thumb-API lieferte genau dieses
             ' Miniaturbild, und WEIL sie etwas lieferte, wurde nie entwickelt - der Betrachter zeigte
             ' 320x240 formatfuellend hochskaliert.
-            Dim developed = RawDecodeService.TryRenderPreviewPng(filePath)
+            Dim developed = RawDecodeService.TryRenderPreviewJpeg(filePath)
             If developed IsNot Nothing AndAlso developed.Length > 0 Then
                 scanned?.Dispose()
                 thumb?.Dispose()

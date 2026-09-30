@@ -9066,4 +9066,10 @@
   <data name="Auf_Hintergrundebene_reduziert_2d0164fc" xml:space="preserve">
     <value>Gjord till en nivå</value>
   </data>
+  <data name="RAWs_im_Vergleich_in_voller_Aufl_sung_entwickeln_73750ed6" xml:space="preserve">
+    <value>Framkalla RAW i jämförelsen med full upplösning</value>
+  </data>
+  <data name="Ausgeschaltet_entwickelt_der_Bildvergleich_RAWs__6dbdc337" xml:space="preserve">
+    <value>Avstängt framkallar bildjämförelsen RAW med halv upplösning. Det går många gånger snabbare och räcker för visning i fönstret. Påslaget behålls full skärpa när du zoomar in, men varje bild tar märkbart längre tid.</value>
+  </data>
 </root>

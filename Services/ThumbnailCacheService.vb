@@ -779,9 +779,9 @@ Namespace Services
 
             ' Stufe 3: wirklich entwickeln. Fuer Dateien ohne jede eingebettete Vorschau (Leica
             ' Digilux 2) und fuer zu kleine Vorschauen (Leica M8 fuehrt nur 320x240, was auf einer
-            ' 480er Kachel sichtbar matschig waere; der Decode kostet dort 345 ms). Einmalig -
+            ' 480er Kachel sichtbar matschig waere). Der Decode laeuft ueber half_size. Einmalig -
             ' danach liegt die Kachel im Thumbnail-Cache.
-            Dim developed = RawDecodeService.TryRenderPreviewPng(filePath)
+            Dim developed = RawDecodeService.TryRenderPreviewJpeg(filePath)
             If developed IsNot Nothing AndAlso developed.Length > 0 Then Return developed
             developed?.Dispose()
 

@@ -35,6 +35,7 @@ Namespace ViewModels
         Private _developRawThumbnails As Boolean = False
         Private _developRawInViewer As Boolean = False
         Private _developRawInViewerWithoutRecipe As Boolean = False
+        Private _compareRawFullResolution As Boolean = False
         Private _developRawInBatch As Boolean = True
         Private _thumbnailCacheEnabled As Boolean = True
         Private _viewerOpenFitToWindow As Boolean = True
@@ -202,6 +203,7 @@ Namespace ViewModels
         Private _savedDevelopRawThumbnails As Boolean = False
         Private _savedDevelopRawInViewer As Boolean = False
         Private _savedDevelopRawInViewerWithoutRecipe As Boolean = False
+        Private _savedCompareRawFullResolution As Boolean = False
         Private _savedThumbnailCacheEnabled As Boolean = True
         Private _savedShowHiddenFolders As Boolean = False
         Private _savedFollowLinkedFolders As Boolean = False
@@ -619,6 +621,20 @@ Namespace ViewModels
             Set(value As Boolean)
                 If _developRawInViewerWithoutRecipe = value Then Return
                 Me.RaiseAndSetIfChanged(_developRawInViewerWithoutRecipe, value)
+                SavePerformanceSettings()
+            End Set
+        End Property
+
+        ''' <summary>RAWs im Bildvergleich in voller Sensoraufloesung entwickeln (Standard AUS, dann
+        ''' half_size). Wirkt beim naechsten Laden einer Vergleichsflaeche; ein schon gezeigtes Bild
+        ''' bleibt stehen.</summary>
+        Public Property CompareRawFullResolution As Boolean
+            Get
+                Return _compareRawFullResolution
+            End Get
+            Set(value As Boolean)
+                If _compareRawFullResolution = value Then Return
+                Me.RaiseAndSetIfChanged(_compareRawFullResolution, value)
                 SavePerformanceSettings()
             End Set
         End Property
@@ -3998,6 +4014,7 @@ Namespace ViewModels
             _developRawThumbnails = _appSettings.DevelopRawThumbnails
             _developRawInViewer = _appSettings.DevelopRawInViewer
             _developRawInViewerWithoutRecipe = _appSettings.DevelopRawInViewerWithoutRecipe
+            _compareRawFullResolution = _appSettings.CompareRawFullResolution
             _developRawInBatch = _appSettings.DevelopRawInBatch
             _useCameraBaselineTable = _appSettings.UseCameraBaselineTable
             _useCameraColorTable = _appSettings.UseCameraColorTable
@@ -4392,6 +4409,7 @@ Namespace ViewModels
             _savedDevelopRawThumbnails = _developRawThumbnails
             _savedDevelopRawInViewer = _developRawInViewer
             _savedDevelopRawInViewerWithoutRecipe = _developRawInViewerWithoutRecipe
+            _savedCompareRawFullResolution = _compareRawFullResolution
             _savedThumbnailCacheEnabled = _thumbnailCacheEnabled
             _savedImmichEnabled = _immichEnabled
             _savedImmichServerUrl = _immichServerUrl
@@ -4505,6 +4523,7 @@ Namespace ViewModels
             DevelopRawThumbnails = _savedDevelopRawThumbnails
             DevelopRawInViewer = _savedDevelopRawInViewer
             DevelopRawInViewerWithoutRecipe = _savedDevelopRawInViewerWithoutRecipe
+            CompareRawFullResolution = _savedCompareRawFullResolution
             ThumbnailCacheEnabled = _savedThumbnailCacheEnabled
             ImmichServerUrl = _savedImmichServerUrl
             ImmichApiKey = _savedImmichApiKey
@@ -4642,6 +4661,7 @@ Namespace ViewModels
             DevelopRawThumbnails = False
             DevelopRawInViewer = False
             DevelopRawInViewerWithoutRecipe = False
+            CompareRawFullResolution = False
             ThumbnailCacheEnabled = True
             ThumbnailQuality = 82
             ' NICHT die Zahl hier pflegen: der Werkswert steht in AppSettings, und eine zweite
@@ -5023,6 +5043,7 @@ Namespace ViewModels
                                           s.DevelopRawThumbnails = _developRawThumbnails
                                           s.DevelopRawInViewer = _developRawInViewer
                                           s.DevelopRawInViewerWithoutRecipe = _developRawInViewerWithoutRecipe
+                                          s.CompareRawFullResolution = _compareRawFullResolution
                                       End Sub)
         End Sub
 

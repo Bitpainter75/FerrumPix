@@ -9070,4 +9070,10 @@
   <data name="Auf_Hintergrundebene_reduziert_2d0164fc" xml:space="preserve">
     <value>Gambar diratakan</value>
   </data>
+  <data name="RAWs_im_Vergleich_in_voller_Aufl_sung_entwickeln_73750ed6" xml:space="preserve">
+    <value>Proses RAW dalam resolusi penuh saat perbandingan</value>
+  </data>
+  <data name="Ausgeschaltet_entwickelt_der_Bildvergleich_RAWs__6dbdc337" xml:space="preserve">
+    <value>Jika nonaktif, perbandingan gambar memproses RAW dalam setengah resolusi. Itu jauh lebih cepat dan cukup untuk tampilan di jendela. Jika aktif, ketajaman penuh tetap terjaga saat memperbesar, tetapi setiap gambar butuh waktu jauh lebih lama.</value>
+  </data>
 </root>

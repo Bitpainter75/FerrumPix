@@ -481,15 +481,33 @@ Namespace Services
             End Using
         End Function
 
-        ''' <summary>Letzter Ausweg fuer Dateien OHNE eingebettete Vorschau (z.B. Leica Digilux 2
-        ''' .RAW): entwickelt das Bild wirklich und gibt es als PNG heraus. Teuer - nur aufrufen,
-        ''' wenn Scanner UND Thumbnail-API nichts geliefert haben. Nutzt den MRU-Cache mit, ein
-        ''' direkt folgendes Oeffnen im Editor ist dadurch umsonst.</summary>
-        Public Shared Function TryRenderPreviewPng(path As String) As MemoryStream
-            Using developed = TryDecode(path)
+        ''' <summary>Kleinste Kantenlaenge, ab der die halbe Entwicklung als Anzeige-Vorschau
+        ''' taugt. Dieselbe Grenze wie fuer eine eingebettete Vorschau (RawPreviewService); darunter
+        ''' wird voll entwickelt, sonst zoege der Betrachter ein kleines Bild auf Fenstergroesse.</summary>
+        Private Const MinReducedPreviewEdge As Integer = 1024
+
+        ''' <summary>Letzter Ausweg fuer Dateien OHNE brauchbare eingebettete Vorschau (Leica
+        ''' Digilux 2, CHDK-DNGs mit 128x96): entwickelt das Bild und gibt es als JPEG heraus, also
+        ''' in derselben Form wie eine eingebettete Vorschau. Nur aufrufen, wenn Scanner UND
+        ''' Thumbnail-API nichts geliefert haben.
+        '''
+        ''' Entwickelt wird ueber half_size. Voll aufgeloest mit PNG kostete das an einer 20-MP-DNG
+        ''' rund drei Sekunden, zwei davon allein im PNG-Kodieren (Skia kennt dort keine schnellere
+        ''' Stufe); halb mit JPEG 95 sind es rund 250 ms. Voll wird nur noch entwickelt, wenn die
+        ''' halbe Fassung unter MinReducedPreviewEdge bleibt (Sensoren mit wenigen Megapixeln).
+        ''' Der halbe Weg beruehrt den MRU-Cache des Editors nicht; ein Oeffnen im Editor
+        ''' dekodiert also selbst.</summary>
+        Public Shared Function TryRenderPreviewJpeg(path As String) As MemoryStream
+            Dim developed = TryDecodeThumbnail(path)
+            If developed IsNot Nothing AndAlso Math.Max(developed.Width, developed.Height) < MinReducedPreviewEdge Then
+                developed.Dispose()
+                developed = Nothing
+            End If
+            If developed Is Nothing Then developed = TryDecode(path)
+            Using developed
                 If developed Is Nothing Then Return Nothing
                 Using image = SKImage.FromBitmap(developed)
-                    Using data = image.Encode(SKEncodedImageFormat.Png, 100)
+                    Using data = image.Encode(SKEncodedImageFormat.Jpeg, 95)
                         If data Is Nothing Then Return Nothing
                         Dim ms As New MemoryStream()
                         data.SaveTo(ms)

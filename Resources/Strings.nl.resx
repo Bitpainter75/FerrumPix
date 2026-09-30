@@ -9066,4 +9066,10 @@
   <data name="Auf_Hintergrundebene_reduziert_2d0164fc" xml:space="preserve">
     <value>Afbeelding samengevoegd</value>
   </data>
+  <data name="RAWs_im_Vergleich_in_voller_Aufl_sung_entwickeln_73750ed6" xml:space="preserve">
+    <value>RAW's in de vergelijking op volledige resolutie ontwikkelen</value>
+  </data>
+  <data name="Ausgeschaltet_entwickelt_der_Bildvergleich_RAWs__6dbdc337" xml:space="preserve">
+    <value>Uitgeschakeld ontwikkelt de beeldvergelijking RAW's op halve resolutie. Dat is vele malen sneller en volstaat voor de weergave in het venster. Ingeschakeld blijft bij inzoomen de volledige scherpte behouden, maar elke foto duurt merkbaar langer.</value>
+  </data>
 </root>

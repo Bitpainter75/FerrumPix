@@ -9026,4 +9026,10 @@
   <data name="Auf_Hintergrundebene_reduziert_2d0164fc" xml:space="preserve">
     <value>Livelli uniti</value>
   </data>
+  <data name="RAWs_im_Vergleich_in_voller_Aufl_sung_entwickeln_73750ed6" xml:space="preserve">
+    <value>Sviluppa i RAW a piena risoluzione nel confronto</value>
+  </data>
+  <data name="Ausgeschaltet_entwickelt_der_Bildvergleich_RAWs__6dbdc337" xml:space="preserve">
+    <value>Disattivato, il confronto immagini sviluppa i RAW a metà risoluzione. È molto più veloce e basta per la visualizzazione nella finestra. Attivato, lo zoom mantiene la piena nitidezza, ma ogni immagine richiede molto più tempo.</value>
+  </data>
 </root>

@@ -9066,4 +9066,10 @@
   <data name="Auf_Hintergrundebene_reduziert_2d0164fc" xml:space="preserve">
     <value>Сведение выполнено</value>
   </data>
+  <data name="RAWs_im_Vergleich_in_voller_Aufl_sung_entwickeln_73750ed6" xml:space="preserve">
+    <value>Проявлять RAW при сравнении в полном разрешении</value>
+  </data>
+  <data name="Ausgeschaltet_entwickelt_der_Bildvergleich_RAWs__6dbdc337" xml:space="preserve">
+    <value>Если выключено, сравнение изображений проявляет RAW в половинном разрешении. Это в разы быстрее и достаточно для просмотра в окне. Если включено, при увеличении сохраняется полная резкость, но каждое изображение обрабатывается заметно дольше.</value>
+  </data>
 </root>

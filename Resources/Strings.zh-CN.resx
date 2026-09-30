@@ -9024,4 +9024,10 @@
   <data name="Auf_Hintergrundebene_reduziert_2d0164fc" xml:space="preserve">
     <value>已拼合图像</value>
   </data>
+  <data name="RAWs_im_Vergleich_in_voller_Aufl_sung_entwickeln_73750ed6" xml:space="preserve">
+    <value>在对比中以全分辨率冲印 RAW</value>
+  </data>
+  <data name="Ausgeschaltet_entwickelt_der_Bildvergleich_RAWs__6dbdc337" xml:space="preserve">
+    <value>关闭时，图像对比以一半分辨率冲印 RAW。这样快很多倍，足以在窗口中查看。开启时，放大后仍保持完整清晰度，但每张图像耗时明显更长。</value>
+  </data>
 </root>

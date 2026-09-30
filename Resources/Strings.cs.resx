@@ -9066,4 +9066,10 @@
   <data name="Auf_Hintergrundebene_reduziert_2d0164fc" xml:space="preserve">
     <value>Sloučeno do pozadí</value>
   </data>
+  <data name="RAWs_im_Vergleich_in_voller_Aufl_sung_entwickeln_73750ed6" xml:space="preserve">
+    <value>Vyvolávat RAW v porovnání v plném rozlišení</value>
+  </data>
+  <data name="Ausgeschaltet_entwickelt_der_Bildvergleich_RAWs__6dbdc337" xml:space="preserve">
+    <value>Vypnuto: porovnání snímků vyvolává RAW v polovičním rozlišení. Je to mnohonásobně rychlejší a stačí to pro zobrazení v okně. Zapnuto: při přiblížení zůstane plná ostrost, každý snímek ale trvá znatelně déle.</value>
+  </data>
 </root>

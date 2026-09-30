@@ -9070,4 +9070,10 @@
   <data name="Auf_Hintergrundebene_reduziert_2d0164fc" xml:space="preserve">
     <value>รวมเป็นพื้นหลังแล้ว</value>
   </data>
+  <data name="RAWs_im_Vergleich_in_voller_Aufl_sung_entwickeln_73750ed6" xml:space="preserve">
+    <value>ล้าง RAW ด้วยความละเอียดเต็มในการเปรียบเทียบ</value>
+  </data>
+  <data name="Ausgeschaltet_entwickelt_der_Bildvergleich_RAWs__6dbdc337" xml:space="preserve">
+    <value>เมื่อปิด การเปรียบเทียบภาพจะล้าง RAW ที่ความละเอียดครึ่งหนึ่ง ซึ่งเร็วกว่าหลายเท่าและเพียงพอสำหรับการดูในหน้าต่าง เมื่อเปิด การซูมเข้าจะคงความคมชัดเต็มที่ แต่แต่ละภาพจะใช้เวลานานขึ้นอย่างเห็นได้ชัด</value>
+  </data>
 </root>

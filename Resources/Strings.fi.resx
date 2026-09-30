@@ -9066,4 +9066,10 @@
   <data name="Auf_Hintergrundebene_reduziert_2d0164fc" xml:space="preserve">
     <value>Yhdistetty taustaan</value>
   </data>
+  <data name="RAWs_im_Vergleich_in_voller_Aufl_sung_entwickeln_73750ed6" xml:space="preserve">
+    <value>Kehitä RAW-kuvat vertailussa täydellä resoluutiolla</value>
+  </data>
+  <data name="Ausgeschaltet_entwickelt_der_Bildvergleich_RAWs__6dbdc337" xml:space="preserve">
+    <value>Pois päältä kuvavertailu kehittää RAW-kuvat puolella resoluutiolla. Se on moninkertaisesti nopeampaa ja riittää ikkunassa katseluun. Päällä täysi terävyys säilyy lähennettäessä, mutta jokainen kuva vie huomattavasti kauemmin.</value>
+  </data>
 </root>

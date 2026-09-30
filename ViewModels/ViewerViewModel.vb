@@ -2037,6 +2037,8 @@ Namespace ViewModels
             _vergleichLadeZaehler += 1
             Dim token = _vergleichLadeZaehler
             Dim left = _compareLeftPath, right = _compareRightPath
+            ' Bei jedem Laden neu gelesen, damit ein umgelegter Schalter beim naechsten Bild wirkt.
+            Dim reduced = Not AppSettingsService.Load().CompareRawFullResolution
             Try
                 ' "nurRechts" heisst: das festgehaltene linke Bild NICHT neu laden - es ist die
                 ' Referenz und ein zweiter Decode waere bei RAW Sekunden. Es heisst aber nicht
@@ -2044,7 +2046,7 @@ Namespace ViewModels
                 ' ueberholt diese Anforderung den noch laufenden ersten Ladevorgang, dessen Ergebnis
                 ' dann verworfen wird - die linke Flaeche blieb dauerhaft leer.
                 If Not nurRechts OrElse _compareLeftImage Is Nothing Then
-                    Dim a = Await Task.Run(Function() DecodeViewerBitmap(left, alwaysDevelop:=True))
+                    Dim a = Await Task.Run(Function() DecodeViewerBitmap(left, alwaysDevelop:=True, reducedRawDecode:=reduced))
                     If Not _isCompareMode OrElse token <> _vergleichLadeZaehler Then
                         a?.Dispose()
                         Return
@@ -2052,7 +2054,7 @@ Namespace ViewModels
                     CompareLeftImage = a
                     If _isFitToWindow Then UpdateFitZoom()
                 End If
-                Dim b = Await Task.Run(Function() DecodeViewerBitmap(right, alwaysDevelop:=True))
+                Dim b = Await Task.Run(Function() DecodeViewerBitmap(right, alwaysDevelop:=True, reducedRawDecode:=reduced))
                 If Not _isCompareMode OrElse token <> _vergleichLadeZaehler Then
                     b?.Dispose()
                     Return
@@ -2305,7 +2307,11 @@ Namespace ViewModels
         ''' Entwicklung, und ein RAW neben einem JPEG vergliche zwei verschiedene Pipelines. Kostet
         ''' den vollen Decode je Bild; das linke Bild bleibt deshalb stehen und wird beim
         ''' Weiterblaettern nicht neu geladen (siehe LadeVergleichsbilder).</param>
-        Friend Shared Function DecodeViewerBitmap(path As String, Optional alwaysDevelop As Boolean = False) As Bitmap
+        ''' <param name="reducedRawDecode">Das RAW ueber half_size entwickeln: rund siebenmal
+        ''' schneller, halbe Kantenlaenge. Der Vergleich setzt es, solange die Einstellung fuer volle
+        ''' Aufloesung aus ist; eine Flaeche ist ohnehin nur halb so breit wie das Fenster.</param>
+        Friend Shared Function DecodeViewerBitmap(path As String, Optional alwaysDevelop As Boolean = False,
+                                                  Optional reducedRawDecode As Boolean = False) As Bitmap
             If RawPreviewService.IsSupportedRaw(path) Then
                 ' Entwickelte Vorschau statt der schnellen eingebetteten: im Vergleich immer, sonst
                 ' bei aktiver Einstellung und vorhandener .fpxmp - oder bei der zweiten Einstellung
@@ -2322,7 +2328,7 @@ Namespace ViewModels
                     Dim adj = If(RawSidecarService.Exists(path), RawSidecarService.TryRead(path), Nothing)
                     If adj Is Nothing Then adj = ImageAdjustments.ForUneditedRaw(path)
                     Try
-                        Dim developed = ImageProcessor.ApplyAdjustments(path, adj)
+                        Dim developed = ImageProcessor.ApplyAdjustments(path, adj, preferReducedRawDecode:=reducedRawDecode)
                         If developed IsNot Nothing Then Return developed
                     Catch
                         ' Faellt die Entwicklung aus (fehlendes LibRaw, defekte Datei), lieber die

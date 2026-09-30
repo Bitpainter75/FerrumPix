@@ -773,8 +773,17 @@ Namespace Services
             End Try
         End Sub
 
-        Public Shared Function ApplyAdjustments(sourcePath As String, adj As ImageAdjustments) As Bitmap
-            Using original = DecodeForAdjustments(sourcePath, adj)
+        ''' <param name="preferReducedRawDecode">Nur fuer den Bildvergleich: ein RAW ueber half_size
+        ''' statt voll aufgeloest dekodieren. Derselbe Weg wie bei den Kacheln (TryDecodeThumbnail),
+        ''' er beruehrt den MRU-Cache des Editors also nicht. Andere Formate und ein RAW, das LibRaw
+        ''' nicht halb dekodieren kann, laufen ueber den gewohnten Decode.</param>
+        Public Shared Function ApplyAdjustments(sourcePath As String, adj As ImageAdjustments,
+                                                Optional preferReducedRawDecode As Boolean = False) As Bitmap
+            Dim reduced As SKBitmap = Nothing
+            If preferReducedRawDecode AndAlso RawPreviewService.IsSupportedRaw(sourcePath) Then
+                reduced = RawDecodeService.TryDecodeThumbnail(sourcePath, LensChoiceFrom(adj), adj IsNot Nothing AndAlso adj.RawHighlightRecovery)
+            End If
+            Using original = If(reduced, DecodeForAdjustments(sourcePath, adj))
                 If original Is Nothing Then Return Nothing
 
                 Using processed = ProcessBitmap(original, adj)

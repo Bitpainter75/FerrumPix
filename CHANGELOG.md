@@ -24,6 +24,13 @@
 - A new version is now pointed out right next to the logo in the title bar, not only in the
   settings. FerrumPix looks once at startup.
 
+- The image comparison develops RAWs at half resolution, which makes stepping through them many
+  times faster. For judging sharpness up close, full resolution can be switched back on in the
+  settings.
+
+- RAW files that carry no usable preview of their own, such as DNGs written by CHDK, now show up
+  in the viewer and the gallery more than ten times faster.
+
 ### Fixes
 
 - Merging or rasterizing layers while one of the adjustment tools was open could leave the

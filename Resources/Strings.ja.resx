@@ -9066,4 +9066,10 @@
   <data name="Auf_Hintergrundebene_reduziert_2d0164fc" xml:space="preserve">
     <value>画像を統合しました</value>
   </data>
+  <data name="RAWs_im_Vergleich_in_voller_Aufl_sung_entwickeln_73750ed6" xml:space="preserve">
+    <value>比較で RAW をフル解像度で現像</value>
+  </data>
+  <data name="Ausgeschaltet_entwickelt_der_Bildvergleich_RAWs__6dbdc337" xml:space="preserve">
+    <value>オフの場合、画像比較は RAW を半分の解像度で現像します。何倍も速く、ウィンドウでの表示には十分です。オンの場合、拡大しても完全なシャープネスが保たれますが、1 枚ごとに明らかに時間がかかります。</value>
+  </data>
 </root>

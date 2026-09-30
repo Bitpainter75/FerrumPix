@@ -9025,4 +9025,10 @@
   <data name="Auf_Hintergrundebene_reduziert_2d0164fc" xml:space="preserve">
     <value>Imagem achatada</value>
   </data>
+  <data name="RAWs_im_Vergleich_in_voller_Aufl_sung_entwickeln_73750ed6" xml:space="preserve">
+    <value>Revelar RAW em resolução total na comparação</value>
+  </data>
+  <data name="Ausgeschaltet_entwickelt_der_Bildvergleich_RAWs__6dbdc337" xml:space="preserve">
+    <value>Desativado, a comparação de imagens revela os RAW em meia resolução. É muito mais rápido e basta para a visualização na janela. Ativado, a nitidez total é mantida ao ampliar, mas cada imagem demora bem mais.</value>
+  </data>
 </root>

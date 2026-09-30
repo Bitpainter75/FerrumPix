@@ -9066,4 +9066,10 @@
   <data name="Auf_Hintergrundebene_reduziert_2d0164fc" xml:space="preserve">
     <value>Billedet er fladet ud</value>
   </data>
+  <data name="RAWs_im_Vergleich_in_voller_Aufl_sung_entwickeln_73750ed6" xml:space="preserve">
+    <value>Fremkald RAW i sammenligningen i fuld opløsning</value>
+  </data>
+  <data name="Ausgeschaltet_entwickelt_der_Bildvergleich_RAWs__6dbdc337" xml:space="preserve">
+    <value>Slået fra fremkalder billedsammenligningen RAW i halv opløsning. Det går mange gange hurtigere og rækker til visning i vinduet. Slået til bevares den fulde skarphed, når du zoomer ind, men hvert billede tager mærkbart længere tid.</value>
+  </data>
 </root>
