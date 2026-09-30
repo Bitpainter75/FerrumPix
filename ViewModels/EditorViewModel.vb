@@ -11550,21 +11550,57 @@ Namespace ViewModels
             _selectionMoveStartMaskRect = SKRectI.Empty
         End Sub
 
-        ''' Schneidet den aktuell verarbeiteten Bildinhalt (alle Anpassungen/Objekte gebacken) auf
-        ''' das Auswahlrechteck zu, sichert ihn als temporäre PNG (Muster wie VideoPreviewService)
-        ''' und legt ihn per AddImageAnnotationAt als neues, frei verschiebbares Bild-Objekt an.
-        ''' Schneidet den aktuell verarbeiteten Bildinhalt (alle Anpassungen/Objekte gebacken) auf
-        ''' das Auswahlrechteck zu und sichert ihn als temporäre PNG (Muster wie VideoPreviewService) -
-        ''' gemeinsame Grundlage für den direkten "Kopieren"-Button und für Strg+C/Strg+V.
-        Private Function CropSelectionToTempFile() As String
-            Dim placement As SKRectI
-            Return CropSelectionToTempFile(placement)
-        End Function
+        ' ── Auswahl kopieren ─────────────────────────────────────────────────────
+        '
+        ' Eine Kopie ist hier KEINE Speicherkopie. Das Bild in voller Aufloesung liegt nur als
+        ' Arbeitsbild vor, und das steht VOR der ganzen Kette: keine Regler, keine
+        ' Objektivkorrektur, kein Beschnitt. Die Szene hat alles, aber nur in Vorschaugroesse. Also
+        ' wird der Ausschnitt einmal ganz gerechnet, wie beim Export.
+        '
+        ' Eine Ebene mit dem Arbeitsbild und dem Rezept als eigenen Anpassungen waere schneller,
+        ' traegt aber nicht: eine Ebene bekommt nur die Pixel-Anpassungen
+        ' (ExtractPixelAdjustments), Geometrie, Objektivkorrektur und lokale Korrekturen fehlten,
+        ' und bei einer Teilauswahl saessen Vignette und Verlaeufe in den Massen der Ebene statt des
+        ' Bildes. Die Kopie laege sichtbar neben dem Foto.
+        '
+        ' BEFUND (bei einer RAW): Strg+C stand mehrere Sekunden, die Oberflaeche reagierte nicht,
+        ' und die CPU lief hoch. Alles lief auf dem UI-Faden: die ganze Kette, ein PNG mit zlib 6
+        ' ueber das volle Bild, und danach zweimal Dekodieren derselben Datei, fuer die
+        ' Zwischenablage und fuer die Ebene. Jetzt wird auf dem UI-Faden nur festgehalten, WAS
+        ' kopiert wird (SelectionCropJob); Rechnen und Schreiben laufen im Hintergrund, das Ergebnis
+        ' liegt danach im Ebenenspeicher, und die Datei wird schnell geschrieben.
 
-        ''' <param name="placementPx">Das Rechteck, an dem das Ergebnis im Bild sitzt. Mit weicher Kante ist
-        ''' es GRÖSSER als die Auswahl - die Kante läuft nach außen aus, und der Ausschnitt muss den Platz
-        ''' dafür mitbringen, sonst wäre die weiche Kante an der Auswahlgrenze abgeschnitten.</param>
-        Private Function CropSelectionToTempFile(ByRef placementPx As SKRectI) As String
+        ''' <summary>Alles, was ein Ausschnitt braucht, festgehalten im Moment des Kopierens. Die
+        ''' Arbeitsbild-Kopie MUSS hier entstehen und nicht erst im Hintergrund: Ausschneiden loescht
+        ''' gleich danach, und ein spaeter gezogenes Arbeitsbild zeigte schon das Loch.</summary>
+        Private NotInheritable Class SelectionCropJob
+            Implements IDisposable
+
+            Public SourcePath As String
+            Public Adjustments As ImageAdjustments
+            Public Placement As SKRectI
+            ''' <summary>Alpha8 in der Groesse von Placement, oder Nothing fuer ein Rechteck. Gehoert dem Auftrag.</summary>
+            Public Mask As SKBitmap
+            ''' <summary>Gehoert dem Auftrag, bis <see cref="TakeWorkingFull"/> es herausgibt.</summary>
+            Public WorkingFull As SKBitmap
+            Public TargetPath As String
+
+            Public Function TakeWorkingFull() As SKBitmap
+                Dim taken = WorkingFull
+                WorkingFull = Nothing
+                Return taken
+            End Function
+
+            Public Sub Dispose() Implements IDisposable.Dispose
+                Mask?.Dispose()
+                Mask = Nothing
+                WorkingFull?.Dispose()
+                WorkingFull = Nothing
+            End Sub
+        End Class
+
+        ''' <summary>Haelt auf dem UI-Faden fest, was kopiert wird. Nothing: nichts zu kopieren.</summary>
+        Private Function PrepareSelectionCrop() As SelectionCropJob
             If Not _hasActiveSelection OrElse String.IsNullOrWhiteSpace(_currentImagePath) Then Return Nothing
             Dim selectionSize = GetAnnotationDisplayPixelSize()
             Dim baseWidth = selectionSize.Width
@@ -11576,33 +11612,73 @@ Namespace ViewModels
             Dim width = CInt(Math.Round(baseWidth * _selectionWidthPercent / 100.0))
             Dim height = CInt(Math.Round(baseHeight * _selectionHeightPercent / 100.0))
             If width <= 0 OrElse height <= 0 Then Return Nothing
-            placementPx = New SKRectI(left, top, left + width, top + height)
 
-            Dim tempPath = CreateSelectionAssetTempPath("selection")
-            Dim adj = AdjustmentsForSelectionPixels()
+            Dim job = New SelectionCropJob With {
+                .SourcePath = RenderSourcePath,
+                .Adjustments = AdjustmentsForSelectionPixels(),
+                .Placement = New SKRectI(left, top, left + width, top + height)
+            }
             If _selectionMask IsNot Nothing OrElse _selectionFeather > 0.05 Then
                 ' Maskierte Auswahl: unregelmäßige Auswahl immer, Rechtecke sobald eine weiche Kante aktiv ist.
                 Dim ownsMask As Boolean
                 Dim maskRect As SKRectI
                 Dim mask = GetSelectionMaskForOutput(maskRect, ownsMask)
-                Dim ownsCutMask = False
-                Dim cutMask As SKBitmap = Nothing
-                Try
-                    If mask Is Nothing Then Return Nothing
-                    placementPx = maskRect
+                If mask Is Nothing Then Return Nothing
+                ' Mit weicher Kante ist das Rechteck GRÖSSER als die Auswahl - die Kante läuft nach
+                ' außen aus, und der Ausschnitt muss den Platz dafür mitbringen.
+                job.Placement = maskRect
+                If ownsMask Then
+                    job.Mask = mask
+                Else
+                    ' Die gespeicherte Maske gehoert der Auswahl; der Auftrag bekommt eine eigene.
                     ' Eine weiche Kante bleibt weich: nur die unveränderte, gespeicherte Form wird hart.
-                    cutMask = If(ownsMask, mask, SelectionMaskForPixelSource(mask, ownsCutMask))
-                    If Not ImageProcessor.ExtractRegionToFileMasked(RenderSourcePath, adj, maskRect, cutMask, tempPath,
-                                                                    workingFull:=CloneWorkingFullForRender()) Then Return Nothing
-                Finally
-                    If ownsCutMask Then cutMask.Dispose()
-                    If ownsMask Then mask.Dispose()
-                End Try
-            Else
-                If Not ImageProcessor.ExtractRegionToFile(RenderSourcePath, adj, placementPx, tempPath,
-                                                          workingFull:=CloneWorkingFullForRender()) Then Return Nothing
+                    Dim ownsCutMask = False
+                    Dim cutMask = SelectionMaskForPixelSource(mask, ownsCutMask)
+                    job.Mask = If(ownsCutMask, cutMask, cutMask.Copy())
+                End If
             End If
-            Return tempPath
+            job.WorkingFull = CloneWorkingFullForRender()
+            job.TargetPath = CreateSelectionAssetTempPath("selection")
+            Return job
+        End Function
+
+        ''' <summary>Rechnet den Ausschnitt, schreibt ihn und legt ihn in den Ebenenspeicher. Auf
+        ''' jedem Faden; fasst keinen Zustand des Editors an. Der Auftrag wird dabei verbraucht.</summary>
+        Private Shared Function RenderSelectionCrop(job As SelectionCropJob) As Boolean
+            If job Is Nothing Then Return False
+            Using job
+                Try
+                    Using bitmap = ImageProcessor.ExtractRegionBitmap(job.SourcePath, job.Adjustments, job.Placement,
+                                                                      job.Mask, job.TakeWorkingFull())
+                        If bitmap Is Nothing Then Return False
+                        ' Derselbe schnelle Schreibweg wie beim Malen auf einer Ebene: PNG mit zlib 1
+                        ' und dem Filter Sub, dazu eine Kopie im Ebenenspeicher. Die Ebene zeichnet
+                        ' dann aus dem Speicher, statt die Datei zu dekodieren.
+                        Return WriteObjectPaintFile(bitmap, job.TargetPath)
+                    End Using
+                Catch ex As Exception
+                    ' Etwa ein Dokumentwechsel mittendrin: der Zwischenordner ist dann schon weg.
+                    DiagnosticLogService.LogException("Editor.SelectionCopy", ex)
+                    Return False
+                End Try
+            End Using
+        End Function
+
+        Private Function CropSelectionToTempFile() As String
+            Dim placement As SKRectI
+            Return CropSelectionToTempFile(placement)
+        End Function
+
+        ''' <summary>Schneidet den aktuell verarbeiteten Bildinhalt (alle Anpassungen gebacken) auf die
+        ''' Auswahl zu und sichert ihn als temporäre PNG. BLOCKIERT, bis er fertig ist; die Oberfläche
+        ''' nimmt <see cref="CopySelectionToClipboardAsync"/>.</summary>
+        ''' <param name="placementPx">Das Rechteck, an dem das Ergebnis im Bild sitzt.</param>
+        Private Function CropSelectionToTempFile(ByRef placementPx As SKRectI) As String
+            Dim job = PrepareSelectionCrop()
+            If job Is Nothing Then Return Nothing
+            placementPx = job.Placement
+            Dim targetPath = job.TargetPath
+            Return If(RenderSelectionCrop(job), targetPath, Nothing)
         End Function
 
         ''' <summary>Die Maske, mit der ausgeschnitten oder gefüllt wird: ohne weiche Kante die gespeicherte
@@ -11730,16 +11806,29 @@ Namespace ViewModels
             RefreshPreviewImmediately()
         End Sub
 
-        Public Sub CopySelectionToNewObject()
-            Dim placement As SKRectI
-            Dim tempPath = CropSelectionToTempFile(placement)
-            If tempPath Is Nothing Then Return
+        ''' <summary>Der Knopf "Kopieren" im Auswahl-Werkzeug: der Ausschnitt wird gleich eine Ebene.
+        ''' Gerechnet wird im Hintergrund, wie bei Strg+C (siehe SelectionCropJob).</summary>
+        Public Async Function CopySelectionToNewObjectAsync() As Task
+            Dim job = PrepareSelectionCrop()
+            If job Is Nothing Then Return
+            Dim placement = job.Placement
+            Dim targetPath = job.TargetPath
+            Dim document = _currentImagePath
+            StatusText = LocalizationService.T("Auswahl wird kopiert...")
+            Dim ok = Await Task.Run(Function() RenderSelectionCrop(job))
+            ' Inzwischen ein anderes Bild: der Ausschnitt gehoert nicht dorthin.
+            If Not String.Equals(document, _currentImagePath, StringComparison.Ordinal) Then Return
+            If Not ok Then
+                StatusText = LocalizationService.T("Auswahl kopieren fehlgeschlagen")
+                Return
+            End If
             ' Das Objekt sitzt am AUSGESCHNITTENEN Rechteck - mit weicher Kante ist das größer als die
             ' Auswahl. An den Auswahlwerten platziert, würde der Ausschnitt gestaucht.
             Dim p = PixelRectToPercent(placement)
-            AddSelectionImageAnnotationAt(tempPath, p.X, p.Y, p.W, p.H)
+            AddSelectionImageAnnotationAt(targetPath, p.X, p.Y, p.W, p.H)
             NameHistoryStep(LocalizationService.T("Auswahl kopiert"))
-        End Sub
+            StatusText = LocalizationService.T("Auswahl kopiert")
+        End Function
 
         ''' Die Pipette reicht neben der Farbe auch die STELLE durch, in Anteilen der Bildbreite
         ''' und -höhe (0 bis 1). Die Malfarbe braucht sie nicht, der Weissabgleich schon: er misst
@@ -12071,6 +12160,71 @@ Namespace ViewModels
             _selectionClipboardHeightPercent = p.H
             ForgetLayerClipboard()
             Return tempPath
+        End Function
+
+        ''' <summary>Die gerade laufende Kopie; Strg+V wartet auf sie (<see cref="WaitForSelectionCopyAsync"/>).</summary>
+        Private _selectionCopyPending As Task(Of String) = Nothing
+        ''' <summary>Zaehlt jede Kopie und jeden Dokumentwechsel. Eine Kopie, die fertig wird, nachdem
+        ''' schon die naechste begonnen hat oder das Bild gewechselt wurde, bleibt folgenlos.</summary>
+        Private _selectionCopyGeneration As Integer = 0
+
+        ''' <summary>Strg+C der Oberfläche: wie <see cref="CopySelectionToClipboardFile"/>, aber
+        ''' gerechnet wird im Hintergrund. Zurück kommt der Pfad der fertigen Datei, oder Nothing, wenn
+        ''' es nichts zu kopieren gab, es scheiterte oder eine neuere Kopie sie abgelöst hat.</summary>
+        Public Function CopySelectionToClipboardAsync() As Task(Of String)
+            Dim job = PrepareSelectionCrop()
+            If job Is Nothing Then Return Task.FromResult(Of String)(Nothing)
+            Return StartSelectionCopy(job)
+        End Function
+
+        ''' <summary>Strg+X der Oberfläche. Gelöscht wird SOFORT, gerechnet im Hintergrund: der Auftrag
+        ''' hält seine eigene Kopie des Arbeitsbilds, das Löschen trifft sie nicht. Scheitert das
+        ''' Rechnen, ist die Lücke trotzdem da; Rückgängig holt sie zurück. Dafür wartet die
+        ''' Oberfläche nicht auf eine Rechnung, deren Ausgang so gut wie sicher ist.</summary>
+        Public Function CutSelectionToClipboardAsync() As Task(Of String)
+            If Not HasPixelSelectionScope Then Return Task.FromResult(Of String)(Nothing)
+            Dim job = PrepareSelectionCrop()
+            If job Is Nothing Then Return Task.FromResult(Of String)(Nothing)
+            Dim copy = StartSelectionCopy(job)
+            EraseSelection()
+            NameHistoryStep(LocalizationService.T("Auswahl ausgeschnitten"))
+            Return copy
+        End Function
+
+        Private Function StartSelectionCopy(job As SelectionCropJob) As Task(Of String)
+            ' Ab hier meint Strg+V diesen Ausschnitt, auch solange er noch gerechnet wird.
+            ForgetLayerClipboard()
+            Dim generation = Interlocked.Increment(_selectionCopyGeneration)
+            Dim pending = FinishSelectionCopyAsync(job, generation)
+            _selectionCopyPending = pending
+            Return pending
+        End Function
+
+        Private Async Function FinishSelectionCopyAsync(job As SelectionCropJob, generation As Integer) As Task(Of String)
+            StatusText = LocalizationService.T("Auswahl wird kopiert...")
+            Dim placement = job.Placement
+            Dim targetPath = job.TargetPath
+            Dim ok = Await Task.Run(Function() RenderSelectionCrop(job))
+            If generation <> Volatile.Read(_selectionCopyGeneration) Then Return Nothing
+            If Not ok Then
+                StatusText = LocalizationService.T("Auswahl kopieren fehlgeschlagen")
+                Return Nothing
+            End If
+            Dim p = PixelRectToPercent(placement)
+            _selectionClipboardPath = targetPath
+            _selectionClipboardXPercent = p.X
+            _selectionClipboardYPercent = p.Y
+            _selectionClipboardWidthPercent = p.W
+            _selectionClipboardHeightPercent = p.H
+            StatusText = LocalizationService.T("Auswahl kopiert")
+            Return targetPath
+        End Function
+
+        ''' <summary>Wartet auf eine laufende Kopie, damit Strg+V nicht den Stand davor einfügt.</summary>
+        Public Async Function WaitForSelectionCopyAsync() As Task
+            Dim pending = _selectionCopyPending
+            If pending Is Nothing Then Return
+            Await pending
         End Function
 
         ''' <summary>Fügt BILDDATEN aus der System-Zwischenablage als neue Bild-Ebene ein - das, was
@@ -16129,7 +16283,7 @@ Namespace ViewModels
             InvertSelectionCommand = ReactiveCommand.Create(Sub() InvertSelection())
             CopySelectionShapeCommand = ReactiveCommand.Create(Sub() CopySelectionShape())
             PasteSelectionShapeCommand = ReactiveCommand.Create(Sub() PasteSelectionShape())
-            CopySelectionCommand = ReactiveCommand.Create(Sub() CopySelectionToNewObject())
+            CopySelectionCommand = ReactiveCommand.CreateFromTask(Function() CopySelectionToNewObjectAsync())
             AddPaintLayerCommand = ReactiveCommand.Create(Sub() AddPaintLayer())
             ToggleTransparencyLockCommand = ReactiveCommand.Create(
                 Sub() LayerTransparencyLocked = Not LayerTransparencyLocked)
@@ -18977,6 +19131,9 @@ Namespace ViewModels
             Dim tempDir = _selectionAssetTempDir
             _selectionAssetTempDir = ""
             _selectionClipboardPath = Nothing
+            ' Eine Kopie, die noch rechnet, gehoert zum alten Dokument und bleibt folgenlos.
+            Interlocked.Increment(_selectionCopyGeneration)
+            _selectionCopyPending = Nothing
             _fullImageClipboardPath = Nothing
             ' Die Zwischenstände des Objekt-Malens liegen im selben Ordner und gehen mit ihm - und
             ' mit ihnen ihre Kopien im Speicher.

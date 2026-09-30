@@ -8989,4 +8989,10 @@
   <data name="Beim_berschreiben_bekommen_RAW_und_Photoshop_Dat_93364658" xml:space="preserve">
     <value>ओवरराइट करते समय RAW और Photoshop फ़ाइलों को केवल नए समायोजन मिलते हैं, जबकि शोर हटाने के लिए नया छवि डेटा चाहिए। शोर हटाने के लिए नई फ़ाइलें लिखवाएँ।</value>
   </data>
+  <data name="Auswahl_wird_kopiert_5acd3b33" xml:space="preserve">
+    <value>चयन कॉपी हो रहा है...</value>
+  </data>
+  <data name="Auswahl_kopieren_fehlgeschlagen_5a63d8ac" xml:space="preserve">
+    <value>चयन कॉपी नहीं हो सका</value>
+  </data>
 </root>

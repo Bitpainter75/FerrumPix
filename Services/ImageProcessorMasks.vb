@@ -3290,6 +3290,62 @@ Namespace Services
             Return True
         End Function
 
+        ''' <summary>Der gerechnete Ausschnitt als BITMAP statt als Datei: dieselbe Kette wie
+        ''' <see cref="ExtractRegionToFile"/> und <see cref="ExtractRegionToFileMasked"/>, mit Maske
+        ''' freigestellt, ohne sie leer gelassen.
+        '''
+        ''' Für das Kopieren im Editor. Dort ging der Ausschnitt bisher als PNG auf die Platte und
+        ''' wurde danach zweimal wieder dekodiert, einmal für die Zwischenablage, einmal für die
+        ''' Ebene. Wer das Bitmap hat, kann es gleich in den Ebenenspeicher legen und die Datei
+        ''' schnell schreiben (EditorViewModel.WriteObjectPaintFile).
+        '''
+        ''' Das Ergebnis ist IMMER Bgra8888 vormultipliziert, das Format, in dem ein PNG wieder
+        ''' dekodiert wird. Speicher und Datei müssen dasselbe Bild sein (ObjectImageMemory).
+        ''' Läuft auf jedem Faden: es liest nur, was ihm übergeben wird.</summary>
+        ''' <param name="mask">Alpha8 in der Größe des geklemmten Rechtecks, oder Nothing für ein
+        ''' Rechteck. Bleibt beim Aufrufer.</param>
+        ''' <param name="workingFull">Arbeitsbild statt Datei-Decode; Besitz wechselt hierher.</param>
+        Public Shared Function ExtractRegionBitmap(sourcePath As String, adj As ImageAdjustments,
+                                                   pixelRect As SKRectI, mask As SKBitmap,
+                                                   Optional workingFull As SKBitmap = Nothing) As SKBitmap
+            Try
+                Using original = If(workingFull, DecodeForAdjustments(sourcePath, adj))
+                    If original Is Nothing Then Return Nothing
+                    Using processed = ProcessBitmap(original, adj)
+                        Dim left = Math.Max(0, pixelRect.Left)
+                        Dim top = Math.Max(0, pixelRect.Top)
+                        Dim right = Math.Min(processed.Width, pixelRect.Right)
+                        Dim bottom = Math.Min(processed.Height, pixelRect.Bottom)
+                        Dim width = right - left, height = bottom - top
+                        If width <= 0 OrElse height <= 0 Then Return Nothing
+
+                        Dim cropped = New SKBitmap(width, height, SKColorType.Bgra8888, SKAlphaType.Premul)
+                        Using canvas = New SKCanvas(cropped)
+                            canvas.DrawBitmap(processed, New SKRect(left, top, right, bottom), New SKRect(0, 0, width, height))
+                        End Using
+                        If mask Is Nothing Then Return cropped
+                        Try
+                            ' Der Maskenschnitt liefert NICHT vormultipliziert; zurueck ins Format
+                            ' oben, sonst unterschieden sich Speicher und dekodierte Datei.
+                            Using cutout = ApplyMaskCutout(cropped, mask)
+                                Dim premul = New SKBitmap(width, height, SKColorType.Bgra8888, SKAlphaType.Premul)
+                                Using canvas = New SKCanvas(premul)
+                                    canvas.Clear(SKColors.Transparent)
+                                    canvas.DrawBitmap(cutout, 0, 0)
+                                End Using
+                                Return premul
+                            End Using
+                        Finally
+                            cropped.Dispose()
+                        End Try
+                    End Using
+                End Using
+            Catch ex As Exception
+                DiagnosticLogService.LogException("ImageProcessor.ExtractRegionBitmap", ex)
+                Return Nothing
+            End Try
+        End Function
+
         ''' <summary>Wie <see cref="ExtractRegionToFile"/>, aber schneidet den Ausschnitt zusätzlich mit einer
         ''' Maske frei (unregelmäßige Auswahl). Die Maske muss die Größe des (geklemmten) Rechtecks haben.</summary>
         ''' <paramref name="workingFull"/>: Arbeitsbild statt Datei-Decode (siehe SaveImage; Besitz wechselt hierher).

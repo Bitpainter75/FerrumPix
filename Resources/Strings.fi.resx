@@ -8985,4 +8985,10 @@
   <data name="Beim_berschreiben_bekommen_RAW_und_Photoshop_Dat_93364658" xml:space="preserve">
     <value>Korvattaessa RAW- ja Photoshop-tiedostot saavat vain uudet säädöt, mutta kohinanpoisto tarvitsee uutta kuvadataa. Kohinanpoistoa varten anna kirjoittaa uudet tiedostot.</value>
   </data>
+  <data name="Auswahl_wird_kopiert_5acd3b33" xml:space="preserve">
+    <value>Kopioidaan valintaa...</value>
+  </data>
+  <data name="Auswahl_kopieren_fehlgeschlagen_5a63d8ac" xml:space="preserve">
+    <value>Valinnan kopiointi epäonnistui</value>
+  </data>
 </root>

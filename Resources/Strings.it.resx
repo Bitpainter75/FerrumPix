@@ -8945,4 +8945,10 @@
   <data name="Beim_berschreiben_bekommen_RAW_und_Photoshop_Dat_93364658" xml:space="preserve">
     <value>Sovrascrivendo, i file RAW e Photoshop ricevono solo nuove regolazioni, mentre la riduzione del rumore richiede nuovi dati immagine. Per ridurre il rumore, fai scrivere nuovi file.</value>
   </data>
+  <data name="Auswahl_wird_kopiert_5acd3b33" xml:space="preserve">
+    <value>Copia della selezione...</value>
+  </data>
+  <data name="Auswahl_kopieren_fehlgeschlagen_5a63d8ac" xml:space="preserve">
+    <value>Copia della selezione non riuscita</value>
+  </data>
 </root>

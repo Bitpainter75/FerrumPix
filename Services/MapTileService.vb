@@ -88,7 +88,7 @@ Namespace Services
         Private ReadOnly _client As HttpClient
         Private ReadOnly _limitBytes As Long
         Private ReadOnly _downloadGate As New SemaphoreSlim(MaxParallelDownloads)
-        Private ReadOnly _inFlight As New ConcurrentDictionary(Of String, Lazy(Of Task(Of Byte())))(StringComparer.Ordinal)
+        Private ReadOnly _inFlight As New ConcurrentDictionary(Of String, Lazy(Of SharedTileLoad))(StringComparer.Ordinal)
         Private ReadOnly _revalidated As New ConcurrentDictionary(Of String, Byte)(StringComparer.Ordinal)
         Private ReadOnly _loggedFailures As New ConcurrentDictionary(Of String, Byte)(StringComparer.Ordinal)
         Private ReadOnly _sizeLock As New Object()
@@ -168,27 +168,108 @@ Namespace Services
 
         ''' <summary>Die Bilddaten einer Kachel, aus dem Speicher oder vom Server. Nothing, wenn es
         ''' sie weder hier noch dort gibt. Gleichzeitige Anfragen nach derselben Kachel teilen sich
-        ''' einen Weg.</summary>
+        ''' einen Weg.
+        '''
+        ''' <paramref name="cancellationToken"/> bricht nur das WARTEN dieses Aufrufers ab. Der
+        ''' geteilte Weg hat ein eigenes Token und endet erst, wenn niemand mehr auf ihn wartet
+        ''' (<see cref="SharedTileLoad"/>). Vorher lief er mit dem Token des ERSTEN Aufrufers: brach
+        ''' der ab, etwa weil seine Ansicht weggeschoben wurde, bekam jeder andere, der dieselbe
+        ''' Kachel noch brauchte, ebenfalls einen Abbruch, obwohl sein Token gueltig war.</summary>
         Public Function GetTileAsync(template As String, zoom As Integer, x As Integer, y As Integer,
                                      cancellationToken As CancellationToken) As Task(Of Byte())
-            Dim key = TileKey(template, zoom, x, y)
-            Dim created = New Lazy(Of Task(Of Byte()))(
-                Function() LoadAsync(template, zoom, x, y, cancellationToken))
-            Dim entry = _inFlight.GetOrAdd(key, created)
-            ' Ein FERTIGER Eintrag wird ersetzt, nicht geteilt. Er fliegt erst kurz nach seinem Ende
-            ' aus der Liste; wer in dieser Lücke fragt, bekaeme sonst das alte Ergebnis, und die
-            ' Pruefung auf Ablauf fiele aus.
-            If entry IsNot created AndAlso entry.IsValueCreated AndAlso entry.Value.IsCompleted AndAlso
-               _inFlight.TryUpdate(key, created, entry) Then
-                entry = created
-            End If
-            Dim task = entry.Value
-            If entry Is created Then
-                task.ContinueWith(Sub(t) _inFlight.TryRemove(New KeyValuePair(Of String, Lazy(Of Task(Of Byte())))(key, created)),
-                                  TaskScheduler.Default)
-            End If
-            Return task
+            Dim load = JoinLoad(template, zoom, x, y)
+            Return WaitForLoadAsync(load, cancellationToken)
         End Function
+
+        ''' <summary>Hängt sich an den laufenden Weg dieser Kachel oder beginnt einen neuen.</summary>
+        Private Function JoinLoad(template As String, zoom As Integer, x As Integer, y As Integer) As SharedTileLoad
+            Dim key = TileKey(template, zoom, x, y)
+            Do
+                Dim created = New Lazy(Of SharedTileLoad)(
+                    Function()
+                        Dim fresh = New SharedTileLoad()
+                        ' Task.Run und nicht direkt: bis zum ersten echten Await liefe der Weg sonst
+                        ' auf dem Faden des ERSTEN Aufrufers, bei der Karte dem UI-Faden (Dateiprobe,
+                        ' Metadaten lesen), und jeder weitere Aufrufer derselben Kachel stuende so
+                        ' lange in diesem Lazy, ohne dass sein Token wirken koennte.
+                        Dim token = fresh.Cancellation.Token
+                        fresh.Task = Task.Run(Function() LoadAsync(template, zoom, x, y, token), token)
+                        Return fresh
+                    End Function)
+                Dim entry = _inFlight.GetOrAdd(key, created)
+                ' Ein FERTIGER Eintrag wird ersetzt, nicht geteilt. Er fliegt erst kurz nach seinem Ende
+                ' aus der Liste; wer in dieser Lücke fragt, bekaeme sonst das alte Ergebnis, und die
+                ' Pruefung auf Ablauf fiele aus. Ebenso ein AUFGEGEBENER: auf den wartet niemand mehr,
+                ' und er endet gleich mit einem Abbruch.
+                If entry IsNot created AndAlso entry.IsValueCreated AndAlso
+                   (entry.Value.Task.IsCompleted OrElse entry.Value.IsAbandoned) AndAlso
+                   _inFlight.TryUpdate(key, created, entry) Then
+                    entry = created
+                End If
+                Dim load = entry.Value
+                If entry Is created Then
+                    load.Task.ContinueWith(Sub(t) _inFlight.TryRemove(New KeyValuePair(Of String, Lazy(Of SharedTileLoad))(key, created)),
+                                           TaskScheduler.Default)
+                End If
+                ' Zwischen Nachsehen und Anhaengen kann der letzte Wartende gegangen sein. Dann
+                ' noch einmal: der aufgegebene Eintrag wird oben ersetzt.
+                If load.TryJoin() Then Return load
+            Loop
+        End Function
+
+        Private Shared Async Function WaitForLoadAsync(load As SharedTileLoad, cancellationToken As CancellationToken) As Task(Of Byte())
+            Try
+                Return Await load.Task.WaitAsync(cancellationToken).ConfigureAwait(False)
+            Finally
+                load.Leave()
+            End Try
+        End Function
+
+        ''' <summary>Ein Weg zu einer Kachel, geteilt von allen, die sie gerade brauchen. Er hat ein
+        ''' EIGENES Token, und das wird erst gezogen, wenn der letzte Wartende gegangen ist, ohne
+        ''' dass die Kachel da ist. Nur ohne Wartende abbrechen und nicht gar nicht: beim schnellen
+        ''' Verschieben der Karte stauten sich sonst Downloads, die niemand mehr sehen will, vor den
+        ''' zwei Plaetzen (MaxParallelDownloads), und die sichtbaren Kacheln kaemen spaeter. Die
+        ''' Kachelrichtlinie will ausserdem kein Laden auf Vorrat.</summary>
+        Private NotInheritable Class SharedTileLoad
+            Private ReadOnly _gate As New Object()
+            Private _waiters As Integer
+            Private _abandoned As Boolean
+
+            Public ReadOnly Cancellation As New CancellationTokenSource()
+            Public Task As Task(Of Byte())
+
+            Public ReadOnly Property IsAbandoned As Boolean
+                Get
+                    SyncLock _gate
+                        Return _abandoned
+                    End SyncLock
+                End Get
+            End Property
+
+            ''' <summary>False, wenn der Weg schon aufgegeben ist; dann braucht es einen neuen.</summary>
+            Public Function TryJoin() As Boolean
+                SyncLock _gate
+                    If _abandoned Then Return False
+                    _waiters += 1
+                    Return True
+                End SyncLock
+            End Function
+
+            ''' <summary>Ein Wartender ist fertig, mit Kachel oder abgebrochen. War er der letzte und
+            ''' ist die Kachel noch nicht da, wird der Weg abgebrochen.</summary>
+            Public Sub Leave()
+                SyncLock _gate
+                    _waiters -= 1
+                    If _waiters > 0 OrElse _abandoned Then Return
+                    If Task IsNot Nothing AndAlso Task.IsCompleted Then Return
+                    _abandoned = True
+                End SyncLock
+                ' Ausserhalb der Sperre: Cancel ruft die angemeldeten Rueckrufe (HttpClient,
+                ' Dateizugriff) gleich hier auf.
+                Cancellation.Cancel()
+            End Sub
+        End Class
 
         Private Async Function LoadAsync(template As String, zoom As Integer, x As Integer, y As Integer,
                                          cancellationToken As CancellationToken) As Task(Of Byte())

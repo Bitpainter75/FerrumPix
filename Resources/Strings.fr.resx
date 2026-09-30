@@ -8945,4 +8945,10 @@
   <data name="Beim_berschreiben_bekommen_RAW_und_Photoshop_Dat_93364658" xml:space="preserve">
     <value>Lors de l'écrasement, les fichiers RAW et Photoshop ne reçoivent que de nouveaux réglages, alors que le débruitage a besoin de nouvelles données d'image. Pour débruiter, faites écrire de nouveaux fichiers.</value>
   </data>
+  <data name="Auswahl_wird_kopiert_5acd3b33" xml:space="preserve">
+    <value>Copie de la sélection...</value>
+  </data>
+  <data name="Auswahl_kopieren_fehlgeschlagen_5a63d8ac" xml:space="preserve">
+    <value>La copie de la sélection a échoué</value>
+  </data>
 </root>

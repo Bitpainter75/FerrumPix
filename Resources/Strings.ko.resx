@@ -8989,4 +8989,10 @@
   <data name="Beim_berschreiben_bekommen_RAW_und_Photoshop_Dat_93364658" xml:space="preserve">
     <value>덮어쓸 때 RAW와 Photoshop 파일은 새 조정만 받지만, 노이즈 제거에는 새 이미지 데이터가 필요합니다. 노이즈를 제거하려면 새 파일을 쓰도록 하세요.</value>
   </data>
+  <data name="Auswahl_wird_kopiert_5acd3b33" xml:space="preserve">
+    <value>선택 영역을 복사하는 중...</value>
+  </data>
+  <data name="Auswahl_kopieren_fehlgeschlagen_5a63d8ac" xml:space="preserve">
+    <value>선택 영역을 복사하지 못했습니다</value>
+  </data>
 </root>

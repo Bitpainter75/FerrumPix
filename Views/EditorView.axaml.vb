@@ -7588,49 +7588,46 @@ Namespace Views
             e.Handled = True
         End Sub
 
-        Private Async Sub CopySelectionToSystemClipboardAsync(vm As EditorViewModel)
+        ''' <summary>Das laufende Schreiben in die System-Zwischenablage. Kopieren rechnet im
+        ''' Hintergrund und legt erst danach etwas ab; ein schnelles Strg+V laese bis dahin noch den
+        ''' Inhalt von VORHER, etwa Pfade aus dem Dateimanager, und fuegte das Falsche ein. Deshalb
+        ''' wartet das Einfuegen hierauf. Der Auftrag scheitert nie nach aussen (siehe
+        ''' PublishClipboardCopyAsync), das Warten also auch nicht.</summary>
+        Private _clipboardWritePending As Task = Task.CompletedTask
+
+        Private Sub CopySelectionToSystemClipboardAsync(vm As EditorViewModel)
             If vm Is Nothing Then Return
-            Dim tempPath = vm.CopySelectionToClipboardFile()
-            If String.IsNullOrWhiteSpace(tempPath) Then Return
-            Try
-                Dim owner = TopLevel.GetTopLevel(Me)
-                Await ClipboardPathService.CopyPathsAsync(owner?.Clipboard, owner?.StorageProvider, {tempPath}, cut:=False,
-                                                          includeImage:=True)
-            Catch
-            End Try
+            _clipboardWritePending = PublishClipboardCopyAsync(vm.CopySelectionToClipboardAsync(), "EditorView.CopySelection")
         End Sub
 
         ''' <summary>Schneidet die Auswahl aus dem Bild und legt sie in die System-Zwischenablage -
         ''' dieselbe Datei, die auch die eigene Auswahl-Ablage merkt. Die Reihenfolge macht das
-        ''' ViewModel: erst kopieren, dann löschen.</summary>
-        Private Async Sub CutSelectionToSystemClipboardAsync(vm As EditorViewModel)
+        ''' ViewModel: erst festhalten, dann löschen, dann im Hintergrund rechnen.</summary>
+        Private Sub CutSelectionToSystemClipboardAsync(vm As EditorViewModel)
             If vm Is Nothing Then Return
-            Dim tempPath = vm.CutSelectionToClipboardFile()
-            If String.IsNullOrWhiteSpace(tempPath) Then Return
-            Try
-                Dim owner = TopLevel.GetTopLevel(Me)
-                Await ClipboardPathService.CopyPathsAsync(owner?.Clipboard, owner?.StorageProvider, {tempPath}, cut:=False,
-                                                          includeImage:=True)
-            Catch ex As Exception
-                DiagnosticLogService.LogException("EditorView.CutSelection", ex)
-            End Try
+            _clipboardWritePending = PublishClipboardCopyAsync(vm.CutSelectionToClipboardAsync(), "EditorView.CutSelection")
         End Sub
 
         ''' <summary>Kopiert das zusammengesetzte Dokument, nicht die gezoomte Bildschirmansicht.
         ''' Die View stellt lediglich die Datei in die System-Zwischenablage; der ViewModel-Renderweg
         ''' erzeugt sie vorher in der vollen Quellauflösung.</summary>
-        Private Async Sub CopyCurrentImageToSystemClipboardAsync(vm As EditorViewModel)
+        Private Sub CopyCurrentImageToSystemClipboardAsync(vm As EditorViewModel)
             If vm Is Nothing Then Return
-            Dim tempPath = Await vm.CopyCurrentImageToClipboardFileAsync()
-            If String.IsNullOrWhiteSpace(tempPath) Then Return
+            _clipboardWritePending = PublishClipboardCopyAsync(vm.CopyCurrentImageToClipboardFileAsync(), "EditorView.CopyCurrentImage")
+        End Sub
+
+        ''' <summary>Wartet auf die fertige Datei und legt sie samt Bilddaten in die System-Zwischenablage.</summary>
+        Private Async Function PublishClipboardCopyAsync(copy As Task(Of String), logName As String) As Task
             Try
+                Dim tempPath = Await copy
+                If String.IsNullOrWhiteSpace(tempPath) Then Return
                 Dim owner = TopLevel.GetTopLevel(Me)
                 Await ClipboardPathService.CopyPathsAsync(owner?.Clipboard, owner?.StorageProvider, {tempPath}, cut:=False,
                                                           includeImage:=True)
             Catch ex As Exception
-                DiagnosticLogService.LogException("EditorView.CopyCurrentImage", ex)
+                DiagnosticLogService.LogException(logName, ex)
             End Try
-        End Sub
+        End Function
 
         ''' <summary>Fügt fremden Zwischenablageinhalt als OBJEKT ein. Ein Dateimanager liefert
         ''' Bildpfade, ein Textprogramm Text. Das unterscheidet sich bewusst von der internen
@@ -7638,6 +7635,8 @@ Namespace Views
         ''' freier Text wird nur im Textwerkzeug zu einem neuen Textobjekt.</summary>
         Private Async Function PasteExternalClipboardAsync(vm As EditorViewModel) As Task
             If vm Is Nothing Then Return
+            ' Erst fertig kopieren, dann einfuegen (siehe _clipboardWritePending).
+            Await _clipboardWritePending
             Try
                 Dim owner = TopLevel.GetTopLevel(Me)
                 Dim clipboard = owner?.Clipboard

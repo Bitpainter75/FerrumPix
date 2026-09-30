@@ -8985,4 +8985,10 @@
   <data name="Beim_berschreiben_bekommen_RAW_und_Photoshop_Dat_93364658" xml:space="preserve">
     <value>上書きでは RAW と Photoshop のファイルには新しい調整だけが入りますが、ノイズ除去には新しい画像データが必要です。ノイズ除去するには新しいファイルを書き出してください。</value>
   </data>
+  <data name="Auswahl_wird_kopiert_5acd3b33" xml:space="preserve">
+    <value>選択範囲をコピーしています...</value>
+  </data>
+  <data name="Auswahl_kopieren_fehlgeschlagen_5a63d8ac" xml:space="preserve">
+    <value>選択範囲をコピーできませんでした</value>
+  </data>
 </root>

@@ -8944,4 +8944,10 @@
   <data name="Beim_berschreiben_bekommen_RAW_und_Photoshop_Dat_93364658" xml:space="preserve">
     <value>Ao sobrescrever, os arquivos RAW e do Photoshop recebem apenas novos ajustes, mas a redução de ruído precisa de novos dados de imagem. Para reduzir o ruído, deixe gravar novos arquivos.</value>
   </data>
+  <data name="Auswahl_wird_kopiert_5acd3b33" xml:space="preserve">
+    <value>Copiando a seleção...</value>
+  </data>
+  <data name="Auswahl_kopieren_fehlgeschlagen_5a63d8ac" xml:space="preserve">
+    <value>Falha ao copiar a seleção</value>
+  </data>
 </root>

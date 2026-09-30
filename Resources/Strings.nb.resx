@@ -8985,4 +8985,10 @@
   <data name="Beim_berschreiben_bekommen_RAW_und_Photoshop_Dat_93364658" xml:space="preserve">
     <value>Ved overskriving får RAW- og Photoshop-filer bare nye justeringer, mens støyreduksjon trenger nye bildedata. La nye filer bli skrevet for å redusere støy.</value>
   </data>
+  <data name="Auswahl_wird_kopiert_5acd3b33" xml:space="preserve">
+    <value>Kopierer utvalg...</value>
+  </data>
+  <data name="Auswahl_kopieren_fehlgeschlagen_5a63d8ac" xml:space="preserve">
+    <value>Kopiering av utvalget mislyktes</value>
+  </data>
 </root>

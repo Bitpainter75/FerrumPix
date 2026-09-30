@@ -31,6 +31,24 @@ Namespace Services
         ''' Wird beim internen Lesen zuerst geprüft, damit Kopieren/Einfügen von Immich-Items round-trippt.
         Private Shared ReadOnly InternalPathsFormat As DataFormat(Of String) = DataFormat.CreateStringApplicationFormat("FerrumPixInternalPaths")
 
+        ''' <summary>Die Bilddaten einer Datei für die Zwischenablage. Liegt dasselbe Bild im
+        ''' Ebenenspeicher (der Editor legt eine kopierte Auswahl dort ab), wird es als Speicherkopie
+        ''' übernommen statt die eben geschriebene Datei wieder zu dekodieren. Auf jedem Faden.</summary>
+        Private Shared Function LoadClipboardBitmap(path As String) As Avalonia.Media.Imaging.Bitmap
+            Using fromMemory = ObjectImageMemory.TryGetCopy(path)
+                If fromMemory IsNot Nothing AndAlso fromMemory.ColorType = SkiaSharp.SKColorType.Bgra8888 AndAlso
+                   fromMemory.AlphaType = SkiaSharp.SKAlphaType.Premul Then
+                    Return New Avalonia.Media.Imaging.Bitmap(Avalonia.Platform.PixelFormat.Bgra8888,
+                                                             Avalonia.Platform.AlphaFormat.Premul,
+                                                             fromMemory.GetPixels(),
+                                                             New Avalonia.PixelSize(fromMemory.Width, fromMemory.Height),
+                                                             New Avalonia.Vector(96, 96),
+                                                             fromMemory.RowBytes)
+                End If
+            End Using
+            Return New Avalonia.Media.Imaging.Bitmap(path)
+        End Function
+
         ''' <param name="includeImage">Legt zu EINER Bilddatei auch ihre Bilddaten in die
         ''' Zwischenablage. Für die Zwischendateien des Editors (kopierte Auswahl, kopiertes Bild):
         ''' sie verschwinden beim Bildwechsel und beim Beenden, und ein Verlauf der Zwischenablage
@@ -51,20 +69,26 @@ Namespace Services
             Dim localPaths = validPaths.Where(Function(p) IO.File.Exists(p) OrElse IO.Directory.Exists(p)).ToList()
             Dim uriList = String.Join(ControlChars.Lf, localPaths.Select(Function(p) New Uri(IO.Path.GetFullPath(p)).AbsoluteUri))
 
+            ' Die Bilddaten VORHER und im Hintergrund: bei einem vollen Foto ist das ein Bild mit
+            ' Dutzenden Megapixeln, und das Dekodieren stand bisher auf dem UI-Faden.
+            Dim imageData As Avalonia.Media.Imaging.Bitmap = Nothing
+            If includeImage AndAlso localPaths.Count = 1 AndAlso IO.File.Exists(localPaths(0)) Then
+                Dim imagePath = localPaths(0)
+                Try
+                    imageData = Await Task.Run(Function() LoadClipboardBitmap(imagePath))
+                Catch ex As Exception
+                    DiagnosticLogService.LogException("Clipboard.CopyImage", ex)
+                End Try
+            End If
+
             Dim transfer = Await BuildFileTransferAsync(storageProvider, localPaths,
                 Sub(firstItem)
                     firstItem.SetText(uriList)
                     firstItem.Set(CutFormat, If(cut, "1", "0"))
                     firstItem.Set(InternalPathsFormat, rawList)
-                    If includeImage AndAlso localPaths.Count = 1 Then
-                        Try
-                            ' NICHT freigeben: die Zwischenablage liest die Daten erst, wenn ein
-                            ' Programm sie anfragt.
-                            firstItem.Set(DataFormat.Bitmap, New Avalonia.Media.Imaging.Bitmap(localPaths(0)))
-                        Catch ex As Exception
-                            DiagnosticLogService.LogException("Clipboard.CopyImage", ex)
-                        End Try
-                    End If
+                    ' NICHT freigeben: die Zwischenablage liest die Daten erst, wenn ein
+                    ' Programm sie anfragt.
+                    If imageData IsNot Nothing Then firstItem.Set(DataFormat.Bitmap, imageData)
                 End Sub)
 
             If transfer.Items.Count = 0 Then

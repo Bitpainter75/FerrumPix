@@ -8989,4 +8989,10 @@
   <data name="Beim_berschreiben_bekommen_RAW_und_Photoshop_Dat_93364658" xml:space="preserve">
     <value>Üzerine yazarken RAW ve Photoshop dosyaları yalnızca yeni ayarlamalar alır, gürültü giderme ise yeni görüntü verisi gerektirir. Gürültü gidermek için yeni dosyalar yazdırın.</value>
   </data>
+  <data name="Auswahl_wird_kopiert_5acd3b33" xml:space="preserve">
+    <value>Seçim kopyalanıyor...</value>
+  </data>
+  <data name="Auswahl_kopieren_fehlgeschlagen_5a63d8ac" xml:space="preserve">
+    <value>Seçim kopyalanamadı</value>
+  </data>
 </root>

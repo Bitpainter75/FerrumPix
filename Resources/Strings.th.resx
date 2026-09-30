@@ -8989,4 +8989,10 @@
   <data name="Beim_berschreiben_bekommen_RAW_und_Photoshop_Dat_93364658" xml:space="preserve">
     <value>เมื่อเขียนทับ ไฟล์ RAW และ Photoshop จะได้เพียงการปรับแต่งใหม่ แต่การลดสัญญาณรบกวนต้องใช้ข้อมูลภาพใหม่ หากต้องการลดสัญญาณรบกวน ให้เขียนเป็นไฟล์ใหม่</value>
   </data>
+  <data name="Auswahl_wird_kopiert_5acd3b33" xml:space="preserve">
+    <value>กำลังคัดลอกการเลือก...</value>
+  </data>
+  <data name="Auswahl_kopieren_fehlgeschlagen_5a63d8ac" xml:space="preserve">
+    <value>คัดลอกการเลือกไม่สำเร็จ</value>
+  </data>
 </root>

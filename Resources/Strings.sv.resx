@@ -8985,4 +8985,10 @@
   <data name="Beim_berschreiben_bekommen_RAW_und_Photoshop_Dat_93364658" xml:space="preserve">
     <value>Vid överskrivning får RAW- och Photoshop-filer bara nya justeringar, medan brusreducering behöver nya bilddata. Låt nya filer skrivas för att reducera brus.</value>
   </data>
+  <data name="Auswahl_wird_kopiert_5acd3b33" xml:space="preserve">
+    <value>Kopierar markering...</value>
+  </data>
+  <data name="Auswahl_kopieren_fehlgeschlagen_5a63d8ac" xml:space="preserve">
+    <value>Det gick inte att kopiera markeringen</value>
+  </data>
 </root>

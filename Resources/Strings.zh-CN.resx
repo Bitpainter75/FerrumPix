@@ -8943,4 +8943,10 @@
   <data name="Beim_berschreiben_bekommen_RAW_und_Photoshop_Dat_93364658" xml:space="preserve">
     <value>覆盖时，RAW 和 Photoshop 文件只会得到新的调整，而降噪需要新的图像数据。如需降噪，请改为写入新文件。</value>
   </data>
+  <data name="Auswahl_wird_kopiert_5acd3b33" xml:space="preserve">
+    <value>正在复制选区...</value>
+  </data>
+  <data name="Auswahl_kopieren_fehlgeschlagen_5a63d8ac" xml:space="preserve">
+    <value>复制选区失败</value>
+  </data>
 </root>
