@@ -5175,9 +5175,6 @@
   <data name="Sichtbare_Anpassungsgruppen_a9670287" xml:space="preserve">
     <value>กลุ่มการปรับแต่งที่มองเห็น</value>
   </data>
-  <data name="Legt_fest_welche_Gruppen_im_Anpassungsbereich_de_36bcd804" xml:space="preserve">
-    <value>กำหนดว่ากลุ่มใดจะปรากฏในพื้นที่ปรับแต่งของตัวแก้ไข การซ่อนกลุ่มหนึ่งเปลี่ยนแค่การแสดงผล ค่าที่คุณตั้งไว้ยังคงอยู่และยังทำงานต่อ</value>
-  </data>
   <data name="Wird_berechnet_a96029ae" xml:space="preserve">
     <value>กำลังคำนวณ…</value>
   </data>
@@ -9009,5 +9006,23 @@
   </data>
   <data name="Gilt_im_kompakten_Anpassungsmodus_Ist_der_Schalt_bbea7fa1" xml:space="preserve">
     <value>ใช้ในโหมดการปรับแต่งแบบกะทัดรัด เมื่อปิดสวิตช์ กลุ่มจะเปิดหรือปิดเฉพาะเมื่อคลิก และเครื่องมือจะจำว่ากลุ่มใดเปิดอยู่ครั้งล่าสุด</value>
+  </data>
+  <data name="Reihenfolge_im_kompakten_Anpassungsmodus_ca372525" xml:space="preserve">
+    <value>ลำดับในโหมดการปรับแต่งแบบกะทัดรัด</value>
+  </data>
+  <data name="Legt_fest_in_welcher_Reihenfolge_die_Gruppen_im__56c09549" xml:space="preserve">
+    <value>กำหนดลำดับของกลุ่มในเครื่องมือ „การปรับแต่ง“ เครื่องมือแต่ละตัวยังคงลำดับเดิม</value>
+  </data>
+  <data name="Legt_fest_welche_Gruppen_im_Anpassungsbereich_de_bc3b2409" xml:space="preserve">
+    <value>กำหนดว่ากลุ่มใดแสดงในพื้นที่การปรับแต่งของตัวแก้ไข ทั้งในเครื่องมือแต่ละตัวและในโหมดการปรับแต่งแบบกะทัดรัด การซ่อนเปลี่ยนเพียงการแสดงผล ค่าที่ตั้งไว้ยังคงอยู่และยังมีผล</value>
+  </data>
+  <data name="Im_Editor_zeigen_oder_ausblenden_45aac246" xml:space="preserve">
+    <value>แสดงหรือซ่อนในตัวแก้ไข</value>
+  </data>
+  <data name="Anpassungspanel_0906dd72" xml:space="preserve">
+    <value>แผงการปรับแต่ง</value>
+  </data>
+  <data name="Leisten_fd5d2d79" xml:space="preserve">
+    <value>แถบ</value>
   </data>
 </root>

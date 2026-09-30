@@ -5175,9 +5175,6 @@
   <data name="Sichtbare_Anpassungsgruppen_a9670287" xml:space="preserve">
     <value>보이는 조정 그룹</value>
   </data>
-  <data name="Legt_fest_welche_Gruppen_im_Anpassungsbereich_de_36bcd804" xml:space="preserve">
-    <value>편집기의 조정 영역에 어떤 그룹이 나타날지 정합니다. 하나를 숨겨도 표시만 바뀝니다. 설정한 값은 유지되고 계속 작동합니다.</value>
-  </data>
   <data name="Wird_berechnet_a96029ae" xml:space="preserve">
     <value>계산하는 중…</value>
   </data>
@@ -9009,5 +9006,23 @@
   </data>
   <data name="Gilt_im_kompakten_Anpassungsmodus_Ist_der_Schalt_bbea7fa1" xml:space="preserve">
     <value>간결한 조정 모드에 적용됩니다. 스위치를 끄면 그룹은 클릭할 때만 열리거나 닫히고, 도구는 마지막에 어떤 그룹이 열려 있었는지 기억합니다.</value>
+  </data>
+  <data name="Reihenfolge_im_kompakten_Anpassungsmodus_ca372525" xml:space="preserve">
+    <value>간결한 조정 모드의 순서</value>
+  </data>
+  <data name="Legt_fest_in_welcher_Reihenfolge_die_Gruppen_im__56c09549" xml:space="preserve">
+    <value>„조정“ 도구에서 그룹의 순서를 정합니다. 개별 도구는 순서를 그대로 유지합니다.</value>
+  </data>
+  <data name="Legt_fest_welche_Gruppen_im_Anpassungsbereich_de_bc3b2409" xml:space="preserve">
+    <value>편집기 조정 영역에 어떤 그룹을 표시할지 정합니다. 개별 도구와 간결한 조정 모드 모두에 적용됩니다. 숨기면 표시만 바뀌며, 설정한 값은 그대로 남아 계속 적용됩니다.</value>
+  </data>
+  <data name="Im_Editor_zeigen_oder_ausblenden_45aac246" xml:space="preserve">
+    <value>편집기에서 표시하거나 숨기기</value>
+  </data>
+  <data name="Anpassungspanel_0906dd72" xml:space="preserve">
+    <value>조정 패널</value>
+  </data>
+  <data name="Leisten_fd5d2d79" xml:space="preserve">
+    <value>막대</value>
   </data>
 </root>

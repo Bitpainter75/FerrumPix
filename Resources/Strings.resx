@@ -5178,9 +5178,6 @@
   <data name="Sichtbare_Anpassungsgruppen_a9670287" xml:space="preserve">
     <value>Visible adjustment groups</value>
   </data>
-  <data name="Legt_fest_welche_Gruppen_im_Anpassungsbereich_de_36bcd804" xml:space="preserve">
-    <value>Decides which groups appear in the editor's adjustment area. Hiding one only changes the display: values you set are kept and keep working.</value>
-  </data>
   <data name="Wird_berechnet_a96029ae" xml:space="preserve">
     <value>Computing…</value>
   </data>
@@ -8984,5 +8981,23 @@
   </data>
   <data name="Gilt_im_kompakten_Anpassungsmodus_Ist_der_Schalt_bbea7fa1" xml:space="preserve">
     <value>Applies in the compact adjustments mode. With the switch off, a group only opens or closes when you click it, and the tool remembers which groups were open last.</value>
+  </data>
+  <data name="Reihenfolge_im_kompakten_Anpassungsmodus_ca372525" xml:space="preserve">
+    <value>Order in the compact adjustments mode</value>
+  </data>
+  <data name="Legt_fest_in_welcher_Reihenfolge_die_Gruppen_im__56c09549" xml:space="preserve">
+    <value>Sets the order of the groups in the “Adjustments” tool. The single tools keep their order.</value>
+  </data>
+  <data name="Legt_fest_welche_Gruppen_im_Anpassungsbereich_de_bc3b2409" xml:space="preserve">
+    <value>Sets which groups appear in the editor's adjustment area, in the single tools as well as in the compact adjustments mode. Hiding only changes the display: set values are kept and still take effect.</value>
+  </data>
+  <data name="Im_Editor_zeigen_oder_ausblenden_45aac246" xml:space="preserve">
+    <value>Show or hide in the editor</value>
+  </data>
+  <data name="Anpassungspanel_0906dd72" xml:space="preserve">
+    <value>Adjustment panel</value>
+  </data>
+  <data name="Leisten_fd5d2d79" xml:space="preserve">
+    <value>Bars</value>
   </data>
 </root>

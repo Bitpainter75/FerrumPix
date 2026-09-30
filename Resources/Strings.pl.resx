@@ -5175,9 +5175,6 @@
   <data name="Sichtbare_Anpassungsgruppen_a9670287" xml:space="preserve">
     <value>Widoczne grupy korekt</value>
   </data>
-  <data name="Legt_fest_welche_Gruppen_im_Anpassungsbereich_de_36bcd804" xml:space="preserve">
-    <value>Określa, które grupy pojawiają się w obszarze korekt edytora. Ukrycie zmienia tylko wyświetlanie: ustawione wartości zostają zachowane i nadal działają.</value>
-  </data>
   <data name="Wird_berechnet_a96029ae" xml:space="preserve">
     <value>Trwa obliczanie…</value>
   </data>
@@ -9005,5 +9002,23 @@
   </data>
   <data name="Gilt_im_kompakten_Anpassungsmodus_Ist_der_Schalt_bbea7fa1" xml:space="preserve">
     <value>Dotyczy kompaktowego trybu korekt. Gdy przełącznik jest wyłączony, grupa otwiera się lub zamyka tylko po kliknięciu, a narzędzie pamięta, które grupy były ostatnio otwarte.</value>
+  </data>
+  <data name="Reihenfolge_im_kompakten_Anpassungsmodus_ca372525" xml:space="preserve">
+    <value>Kolejność w kompaktowym trybie korekt</value>
+  </data>
+  <data name="Legt_fest_in_welcher_Reihenfolge_die_Gruppen_im__56c09549" xml:space="preserve">
+    <value>Określa kolejność grup w narzędziu „Korekty”. Poszczególne narzędzia zachowują swoją kolejność.</value>
+  </data>
+  <data name="Legt_fest_welche_Gruppen_im_Anpassungsbereich_de_bc3b2409" xml:space="preserve">
+    <value>Określa, które grupy pojawiają się w obszarze korekt edytora, zarówno w poszczególnych narzędziach, jak i w kompaktowym trybie korekt. Ukrycie zmienia tylko widok: ustawione wartości zostają i nadal działają.</value>
+  </data>
+  <data name="Im_Editor_zeigen_oder_ausblenden_45aac246" xml:space="preserve">
+    <value>Pokaż lub ukryj w edytorze</value>
+  </data>
+  <data name="Anpassungspanel_0906dd72" xml:space="preserve">
+    <value>Panel korekt</value>
+  </data>
+  <data name="Leisten_fd5d2d79" xml:space="preserve">
+    <value>Paski</value>
   </data>
 </root>

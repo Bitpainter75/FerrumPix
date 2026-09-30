@@ -4327,6 +4327,64 @@ Namespace Views
                 Where(Function(x) CompactGroupKeys.Contains(If(ExpanderState.GetKey(x), ""))).ToList()
         End Function
 
+        ''' <summary>Die Reihenfolge der Kinder von AdjustmentsStackPanel, wie das XAML sie anlegt.
+        ''' Beim ersten Umsortieren gemerkt; die Einzelwerkzeuge bekommen sie beim Verlassen des
+        ''' Kompaktwerkzeugs zurueck.</summary>
+        Private _originalAdjustmentOrder As List(Of Control)
+
+        ''' <summary>Zu welchem Block (AppSettingsService.CompactGroupBlocks) gehoert dieses Kind des
+        ''' Panels? Kennung des Blocks oder leer: die erste Gruppe darin, sonst sein Tag (der Hinweis
+        ''' zur Objektivkorrektur hat keine eigene).</summary>
+        Private Shared Function CompactBlockOf(child As Control) As String
+            Dim blocks = AppSettingsService.CompactGroupBlocks
+            Dim expanders = If(TypeOf child Is Expander, {DirectCast(child, Expander)}.AsEnumerable(),
+                               child.GetLogicalDescendants().OfType(Of Expander)())
+            For Each candidate In expanders
+                Dim key = If(ExpanderState.GetKey(candidate), "")
+                Dim block = blocks.FirstOrDefault(Function(b) b.Contains(key))
+                If block IsNot Nothing Then Return block(0)
+            Next
+            Dim tag = TryCast(child.Tag, String)
+            If tag IsNot Nothing AndAlso blocks.Any(Function(b) b(0) = tag) Then Return tag
+            Return ""
+        End Function
+
+        ''' <summary>Im Kompaktwerkzeug die Bloecke nach der Einstellung EditorCompactGroupOrder
+        ''' ordnen, sonst die Reihenfolge des XAML. Die Bloecke tauschen nur ihre Plaetze
+        ''' untereinander; alles andere im Panel (Analysebild, Werkzeugfelder, Objekteigenschaften)
+        ''' bleibt, wo es ist.</summary>
+        Private Sub ApplyCompactGroupOrder(active As Boolean)
+            Dim stack = Me.FindControl(Of Panel)("AdjustmentsStackPanel")
+            If stack Is Nothing Then Return
+            If _originalAdjustmentOrder Is Nothing Then
+                If Not active Then Return
+                _originalAdjustmentOrder = stack.Children.ToList()
+            End If
+            Dim target = New List(Of Control)(_originalAdjustmentOrder)
+            If active Then
+                Dim order = AppSettingsService.NormalizeEditorCompactGroupOrder(
+                    AppSettingsService.Load().EditorCompactGroupOrder).Split(","c).ToList()
+                Dim slots = New List(Of Integer)()
+                Dim members = New Dictionary(Of String, List(Of Control))()
+                For i = 0 To _originalAdjustmentOrder.Count - 1
+                    Dim id = CompactBlockOf(_originalAdjustmentOrder(i))
+                    If id.Length = 0 Then Continue For
+                    slots.Add(i)
+                    If Not members.ContainsKey(id) Then members(id) = New List(Of Control)()
+                    members(id).Add(_originalAdjustmentOrder(i))
+                Next
+                Dim sorted = order.Where(Function(id) members.ContainsKey(id)).SelectMany(Function(id) members(id)).ToList()
+                For i = 0 To slots.Count - 1
+                    target(slots(i)) = sorted(i)
+                Next
+            End If
+            ' Nur verschieben, was nicht schon an seinem Platz steht.
+            For i = 0 To target.Count - 1
+                Dim current = stack.Children.IndexOf(target(i))
+                If current >= 0 AndAlso current <> i Then stack.Children.Move(current, i)
+            Next
+        End Sub
+
         ''' <summary>Beim Werkzeugwechsel: ins Kompaktwerkzeug hinein dessen Stand, heraus wieder der
         ''' der Einzelwerkzeuge.</summary>
         ''' <param name="force">Auch ohne Wechsel neu anwenden: beim Laden der Ansicht, falls die
@@ -4337,6 +4395,7 @@ Namespace Views
             Dim active = vm IsNot Nothing AndAlso vm.CurrentTool = EditorTool.AllAdjustments
             If active = _compactGroupsActive AndAlso Not force Then Return
             _compactGroupsActive = active
+            ApplyCompactGroupOrder(active)
             If active Then
                 Dim settings = AppSettingsService.Load()
                 _compactOpenKey = If(settings.EditorCompactOpenGroup, "")

@@ -5175,9 +5175,6 @@
   <data name="Sichtbare_Anpassungsgruppen_a9670287" xml:space="preserve">
     <value>Görünen ayarlama grupları</value>
   </data>
-  <data name="Legt_fest_welche_Gruppen_im_Anpassungsbereich_de_36bcd804" xml:space="preserve">
-    <value>Düzenleyicinin ayarlama alanında hangi grupların görüneceğine karar verir. Birini gizlemek yalnızca görüntüyü değiştirir: ayarladığınız değerler korunur ve çalışmaya devam eder.</value>
-  </data>
   <data name="Wird_berechnet_a96029ae" xml:space="preserve">
     <value>Hesaplanıyor…</value>
   </data>
@@ -9009,5 +9006,23 @@
   </data>
   <data name="Gilt_im_kompakten_Anpassungsmodus_Ist_der_Schalt_bbea7fa1" xml:space="preserve">
     <value>Kompakt ayarlama modunda geçerlidir. Anahtar kapalıyken bir grup yalnızca tıklandığında açılır veya kapanır ve araç en son hangi grupların açık olduğunu hatırlar.</value>
+  </data>
+  <data name="Reihenfolge_im_kompakten_Anpassungsmodus_ca372525" xml:space="preserve">
+    <value>Kompakt ayarlama modunda sıra</value>
+  </data>
+  <data name="Legt_fest_in_welcher_Reihenfolge_die_Gruppen_im__56c09549" xml:space="preserve">
+    <value>„Ayarlamalar“ aracındaki grupların sırasını belirler. Tek tek araçlar kendi sıralarını korur.</value>
+  </data>
+  <data name="Legt_fest_welche_Gruppen_im_Anpassungsbereich_de_bc3b2409" xml:space="preserve">
+    <value>Düzenleyicinin ayarlama alanında hangi grupların görüneceğini belirler; tek tek araçlarda da kompakt ayarlama modunda da. Gizlemek yalnızca görünümü değiştirir: ayarlanan değerler korunur ve etkisini sürdürür.</value>
+  </data>
+  <data name="Im_Editor_zeigen_oder_ausblenden_45aac246" xml:space="preserve">
+    <value>Düzenleyicide göster veya gizle</value>
+  </data>
+  <data name="Anpassungspanel_0906dd72" xml:space="preserve">
+    <value>Ayarlama paneli</value>
+  </data>
+  <data name="Leisten_fd5d2d79" xml:space="preserve">
+    <value>Çubuklar</value>
   </data>
 </root>

@@ -5175,9 +5175,6 @@
   <data name="Sichtbare_Anpassungsgruppen_a9670287" xml:space="preserve">
     <value>Synliga justeringsgrupper</value>
   </data>
-  <data name="Legt_fest_welche_Gruppen_im_Anpassungsbereich_de_36bcd804" xml:space="preserve">
-    <value>Bestämmer vilka grupper som visas i redigerarens justeringsområde. Att dölja ändrar bara visningen: inställda värden behålls och fortsätter att verka.</value>
-  </data>
   <data name="Wird_berechnet_a96029ae" xml:space="preserve">
     <value>Beräknas…</value>
   </data>
@@ -9005,5 +9002,23 @@
   </data>
   <data name="Gilt_im_kompakten_Anpassungsmodus_Ist_der_Schalt_bbea7fa1" xml:space="preserve">
     <value>Gäller i det kompakta justeringsläget. Är reglaget av öppnas eller stängs en grupp bara när man klickar på den, och verktyget kommer ihåg vilka grupper som senast var öppna.</value>
+  </data>
+  <data name="Reihenfolge_im_kompakten_Anpassungsmodus_ca372525" xml:space="preserve">
+    <value>Ordning i det kompakta justeringsläget</value>
+  </data>
+  <data name="Legt_fest_in_welcher_Reihenfolge_die_Gruppen_im__56c09549" xml:space="preserve">
+    <value>Bestämmer i vilken ordning grupperna står i verktyget ”Justeringar”. De enskilda verktygen behåller sin ordning.</value>
+  </data>
+  <data name="Legt_fest_welche_Gruppen_im_Anpassungsbereich_de_bc3b2409" xml:space="preserve">
+    <value>Bestämmer vilka grupper som visas i redigerarens justeringsområde, i de enskilda verktygen och i det kompakta justeringsläget. Att dölja ändrar bara visningen: inställda värden finns kvar och verkar fortfarande.</value>
+  </data>
+  <data name="Im_Editor_zeigen_oder_ausblenden_45aac246" xml:space="preserve">
+    <value>Visa eller dölj i redigeraren</value>
+  </data>
+  <data name="Anpassungspanel_0906dd72" xml:space="preserve">
+    <value>Justeringspanel</value>
+  </data>
+  <data name="Leisten_fd5d2d79" xml:space="preserve">
+    <value>Fält</value>
   </data>
 </root>

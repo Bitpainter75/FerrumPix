@@ -100,6 +100,7 @@ Namespace ViewModels
         Private _editorToolSwitcher As Boolean = False
         Private _editorCompactAdjustments As Boolean = False
         Private _editorCompactAutoCollapse As Boolean = True
+        Private _editorCompactGroupOrder As String = ""
         Private _editorStartupTool As String = "Adjust"
         Private _psdTextImport As String = "Ask"
         Private _editorToolGroupOrder As String = "Adjust,Transform,Tools"
@@ -188,6 +189,7 @@ Namespace ViewModels
         Private _savedEditorToolSwitcher As Boolean = False
         Private _savedEditorCompactAdjustments As Boolean = False
         Private _savedEditorCompactAutoCollapse As Boolean = True
+        Private _savedEditorCompactGroupOrder As String = ""
         Private _savedEditorToolGroupOrder As String = "Adjust,Transform,Tools"
         Private _savedDefaultSaveFormat As String = "JPG"
         Private _savedEditorSaveAsNamePattern As String = "{name}_fx"
@@ -2305,6 +2307,85 @@ Namespace ViewModels
             End Set
         End Property
 
+        ''' <summary>Reihenfolge der Bloecke im Kompaktwerkzeug (AppSettingsService.CompactGroupBlocks).
+        ''' Immer vollstaendig; leer gesetzt heisst: wie im Panel. Gilt sofort, auch bei offenem
+        ''' Werkzeug.</summary>
+        Public Property EditorCompactGroupOrder As String
+            Get
+                Return _editorCompactGroupOrder
+            End Get
+            Set(value As String)
+                value = AppSettingsService.NormalizeEditorCompactGroupOrder(value)
+                If _editorCompactGroupOrder = value Then Return
+                Me.RaiseAndSetIfChanged(_editorCompactGroupOrder, value)
+                RebuildCompactGroupOrderItems()
+                ' Erst speichern, dann umstellen: die Ansicht liest die Reihenfolge aus den Einstellungen.
+                SaveLayoutSettings()
+                _mainVm?.Editor?.RefreshCompactAdjustments()
+            End Set
+        End Property
+
+        Public ReadOnly Property CompactGroupOrderItems As New ObservableCollection(Of CompactGroupItem)()
+
+        ''' <summary>Die Anzeigeliste neu aufbauen, mit uebersetzten Beschriftungen (siehe
+        ''' RebuildEditorToolGroupItems). Ein Block mit zwei Gruppen nennt beide.</summary>
+        Private Sub RebuildCompactGroupOrderItems()
+            CompactGroupOrderItems.Clear()
+            Dim labels = AppSettingsService.HideableAdjustmentGroups.ToDictionary(Function(g) g.Key, Function(g) g.Bezeichnung)
+            For Each id In AppSettingsService.NormalizeEditorCompactGroupOrder(_editorCompactGroupOrder).Split(","c)
+                Dim block = AppSettingsService.CompactGroupBlocks.First(Function(b) b(0) = id)
+                Dim label = String.Join(", ", block.Select(Function(k) LocalizationService.T(If(labels.ContainsKey(k), labels(k), k))))
+                CompactGroupOrderItems.Add(New CompactGroupItem With {.Key = id, .Label = label, .IsShown = IsCompactBlockShown(block)})
+            Next
+        End Sub
+
+        ''' <summary>Sichtbar, solange wenigstens eine Gruppe des Blocks nicht ausgeblendet ist.</summary>
+        Private Function IsCompactBlockShown(block As String()) As Boolean
+            Dim hidden = HiddenAdjustmentGroups.Split(","c).Select(Function(k) k.Trim()).ToList()
+            Return block.Any(Function(k) Not hidden.Contains(k, StringComparer.OrdinalIgnoreCase))
+        End Function
+
+        ''' <summary>Das Auge einer Zeile: alle Gruppen des Blocks aus- oder einblenden, ueber dieselbe
+        ''' Einstellung wie die Haken darunter. Die Haken werden nachgezogen.</summary>
+        Private Sub ToggleCompactGroupVisibility(id As String)
+            Dim block = AppSettingsService.CompactGroupBlocks.FirstOrDefault(Function(b) b(0) = id)
+            If block Is Nothing Then Return
+            Dim hidden = HiddenAdjustmentGroups.Split(","c).Select(Function(k) k.Trim()).Where(Function(k) k.Length > 0).ToList()
+            If IsCompactBlockShown(block) Then
+                For Each k In block
+                    If Not hidden.Contains(k, StringComparer.OrdinalIgnoreCase) Then hidden.Add(k)
+                Next
+            Else
+                hidden.RemoveAll(Function(k) block.Contains(k, StringComparer.OrdinalIgnoreCase))
+            End If
+            HiddenAdjustmentGroups = String.Join(",", hidden)
+            For Each item In AdjustmentGroupItems
+                item.SetVisible(Not hidden.Contains(item.Key, StringComparer.OrdinalIgnoreCase))
+            Next
+        End Sub
+
+        ''' <summary>Die Augen der Kompakt-Liste nach der Einstellung stellen, etwa nachdem ein Haken
+        ''' unter "Sichtbare Anpassungsgruppen" umgelegt wurde.</summary>
+        Private Sub RefreshCompactGroupVisibility()
+            For Each item In CompactGroupOrderItems
+                Dim block = AppSettingsService.CompactGroupBlocks.FirstOrDefault(Function(b) b(0) = item.Key)
+                If block IsNot Nothing Then item.IsShown = IsCompactBlockShown(block)
+            Next
+        End Sub
+
+        ''' <param name="direction">-1 = nach oben, +1 = nach unten.</param>
+        Private Sub MoveCompactGroup(id As String, direction As Integer)
+            Dim ids = AppSettingsService.NormalizeEditorCompactGroupOrder(_editorCompactGroupOrder).Split(","c).ToList()
+            Dim index = ids.IndexOf(id)
+            If index < 0 Then Return
+            Dim target = index + direction
+            If target < 0 OrElse target >= ids.Count Then Return
+            Dim moved = ids(index)
+            ids(index) = ids(target)
+            ids(target) = moved
+            EditorCompactGroupOrder = String.Join(",", ids)
+        End Sub
+
         ''' <summary>Werkzeug, das beim Betreten des Editors aktiv ist. Zur Wahl stehen die beiden
         ''' Einstiege, mit denen man tatsächlich anfängt: „Auswahl" (bisheriges Verhalten) und
         ''' „Anpassen".</summary>
@@ -2401,6 +2482,7 @@ Namespace ViewModels
                 Me.RaiseAndSetIfChanged(_versteckteAnpassungsgruppen, value)
                 SaveLayoutSettings()
                 _mainVm?.Editor?.RefreshHiddenAdjustmentGroups()
+                RefreshCompactGroupVisibility()
             End Set
         End Property
 
@@ -3424,6 +3506,10 @@ Namespace ViewModels
         Public ReadOnly Property SetPsdTextImportCommand As ICommand
         Public ReadOnly Property MoveEditorToolGroupUpCommand As ICommand
         Public ReadOnly Property MoveEditorToolGroupDownCommand As ICommand
+        Public ReadOnly Property MoveCompactGroupUpCommand As ICommand
+        Public ReadOnly Property MoveCompactGroupDownCommand As ICommand
+        Public ReadOnly Property ResetCompactGroupOrderCommand As ICommand
+        Public ReadOnly Property ToggleCompactGroupVisibilityCommand As ICommand
         Public ReadOnly Property SetLanguageModeCommand As ICommand
         Public ReadOnly Property SetTransparencyBackgroundModeCommand As ICommand
         Public ReadOnly Property CheckGpuAccelerationCommand As ICommand
@@ -3974,10 +4060,14 @@ Namespace ViewModels
             _editorToolSwitcher = _appSettings.EditorToolSwitcher
             _editorCompactAdjustments = _appSettings.EditorCompactAdjustments
             _editorCompactAutoCollapse = _appSettings.EditorCompactAutoCollapse
+            _editorCompactGroupOrder = AppSettingsService.NormalizeEditorCompactGroupOrder(_appSettings.EditorCompactGroupOrder)
+            RebuildCompactGroupOrderItems()
             _editorStartupTool = AppSettingsService.NormalizeEditorStartupTool(_appSettings.EditorStartupTool)
             _psdTextImport = AppSettingsService.NormalizePsdTextImport(_appSettings.PsdTextImport)
             _editorToolGroupOrder = AppSettingsService.NormalizeEditorToolGroupOrder(_appSettings.EditorToolGroupOrder)
             _versteckteAnpassungsgruppen = AppSettingsService.NormalizeHiddenAdjustmentGroups(_appSettings.HiddenAdjustmentGroups)
+            ' Die Kompakt-Liste steht schon, ihre Augen kennen die Sichtbarkeit erst ab hier.
+            RefreshCompactGroupVisibility()
             RebuildEditorToolGroupItems()
             _editorSnapMarginPercent = Math.Max(0, Math.Min(20, _appSettings.EditorSnapMarginPercent))
             _viewerInfoSidebarExpanded = _appSettings.ViewerInfoSidebarExpanded
@@ -4091,6 +4181,10 @@ Namespace ViewModels
             SetPsdTextImportCommand = ReactiveCommand.Create(Of String)(Sub(m) PsdTextImport = m)
             MoveEditorToolGroupUpCommand = ReactiveCommand.Create(Of String)(Sub(k) MoveEditorToolGroup(k, -1))
             MoveEditorToolGroupDownCommand = ReactiveCommand.Create(Of String)(Sub(k) MoveEditorToolGroup(k, 1))
+            MoveCompactGroupUpCommand = ReactiveCommand.Create(Of String)(Sub(k) MoveCompactGroup(k, -1))
+            MoveCompactGroupDownCommand = ReactiveCommand.Create(Of String)(Sub(k) MoveCompactGroup(k, 1))
+            ResetCompactGroupOrderCommand = ReactiveCommand.Create(Sub() EditorCompactGroupOrder = "")
+            ToggleCompactGroupVisibilityCommand = ReactiveCommand.Create(Of String)(Sub(k) ToggleCompactGroupVisibility(k))
             SetLanguageModeCommand = ReactiveCommand.Create(Of String)(Sub(m) LanguageMode = m)
             SetTransparencyBackgroundModeCommand = ReactiveCommand.Create(Of String)(Sub(m) TransparencyBackgroundMode = m)
             ' Das Aufraeumen ist ein Hintergrundlauf mit Anzeige (siehe CatalogCleanupViewModel):
@@ -4283,6 +4377,7 @@ Namespace ViewModels
             _savedEditorToolSwitcher = _editorToolSwitcher
             _savedEditorCompactAdjustments = _editorCompactAdjustments
             _savedEditorCompactAutoCollapse = _editorCompactAutoCollapse
+            _savedEditorCompactGroupOrder = _editorCompactGroupOrder
             _savedEditorToolGroupOrder = _editorToolGroupOrder
             _savedDefaultSaveFormat = _defaultSaveFormat
             _savedEditorSaveAsNamePattern = _editorSaveAsNamePattern
@@ -4395,6 +4490,7 @@ Namespace ViewModels
             EditorToolSwitcher = _savedEditorToolSwitcher
             EditorCompactAdjustments = _savedEditorCompactAdjustments
             EditorCompactAutoCollapse = _savedEditorCompactAutoCollapse
+            EditorCompactGroupOrder = _savedEditorCompactGroupOrder
             EditorToolGroupOrder = _savedEditorToolGroupOrder
             DefaultSaveFormat = _savedDefaultSaveFormat
             EditorSaveAsNamePattern = _savedEditorSaveAsNamePattern
@@ -4532,6 +4628,7 @@ Namespace ViewModels
             EditorToolSwitcher = False
             EditorCompactAdjustments = False
             EditorCompactAutoCollapse = True
+            EditorCompactGroupOrder = ""
             EditorToolGroupOrder = "Adjust,Transform,Tools"
             DefaultSaveFormat = "JPG"
             EditorSaveAsNamePattern = "{name}_fx"
@@ -4900,6 +4997,7 @@ Namespace ViewModels
                                           s.EditorToolSwitcher = _editorToolSwitcher
                                           s.EditorCompactAdjustments = _editorCompactAdjustments
                                           s.EditorCompactAutoCollapse = _editorCompactAutoCollapse
+                                          s.EditorCompactGroupOrder = _editorCompactGroupOrder
                                           s.EditorStartupTool = _editorStartupTool
                                           s.PsdTextImport = _psdTextImport
                                           s.EditorToolGroupOrder = _editorToolGroupOrder
@@ -5987,6 +6085,26 @@ Namespace ViewModels
         Public Property Key As String = ""
         Public Property Label As String = ""
 
+    End Class
+
+    ''' <summary>Ein Block der Kompakt-Reihenfolge: Beschriftung, Pfeile und das Auge. Das Auge
+    ''' schaltet dieselbe Sichtbarkeit wie "Sichtbare Anpassungsgruppen" (HiddenAdjustmentGroups),
+    ''' fuer alle Gruppen des Blocks zusammen.</summary>
+    Public Class CompactGroupItem
+        Inherits ReactiveObject
+
+        Public Property Key As String = ""
+        Public Property Label As String = ""
+
+        Private _isShown As Boolean = True
+        Public Property IsShown As Boolean
+            Get
+                Return _isShown
+            End Get
+            Set(value As Boolean)
+                Me.RaiseAndSetIfChanged(_isShown, value)
+            End Set
+        End Property
     End Class
 
     ''' <summary>Eine Anpassungsgruppe im Einstellungsdialog: Beschriftung und Haken.</summary>

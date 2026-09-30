@@ -1483,8 +1483,10 @@
 
                             <!-- Statt der Gruppe ein Satz, wenn sie nur wegen gebackener Pixel fehlt:
                                  sonst verschwindet sie etwa nach dem Anwenden einer gespeicherten
-                                 Bearbeitung ohne jede Erklaerung. -->
-                            <Border Classes="adjustment-group" Margin="0,7,0,0" Padding="10,8">
+                                 Bearbeitung ohne jede Erklaerung. Das Tag bindet ihn im Kompaktmodus
+                                 an den Block der Objektivkorrektur (CompactBlockOf), er wandert
+                                 beim Sortieren mit. -->
+                            <Border Classes="adjustment-group" Margin="0,7,0,0" Padding="10,8" Tag="objektivkorrektur">
                                 <Border.IsVisible>
                                     <MultiBinding Converter="{StaticResource AllTrueConverter}">
                                         <Binding Path="ShowLightAdjustments"/>

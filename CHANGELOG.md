@@ -5,7 +5,11 @@
 - A compact adjustments mode in the editor settings puts Adjust, Color, Details, Effects and
   Filter into one tool. It shows all groups one below the other, and by default only one of them
   is open at a time: opening a group closes the previous one. A second setting turns that off; the
-  tool then keeps open what you opened and remembers it.
+  tool then keeps open what you opened and remembers it. The order of the groups in this tool can
+  be changed in the settings, and an eye next to each group shows or hides it.
+
+- The editor settings are grouped by topic: view, tools, adjustment panel, compact mode, bars and
+  files.
 
 ### Fixes
 

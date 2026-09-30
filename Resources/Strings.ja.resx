@@ -5175,9 +5175,6 @@
   <data name="Sichtbare_Anpassungsgruppen_a9670287" xml:space="preserve">
     <value>表示する調整グループ</value>
   </data>
-  <data name="Legt_fest_welche_Gruppen_im_Anpassungsbereich_de_36bcd804" xml:space="preserve">
-    <value>エディターの調整欄にどのグループを表示するかを決めます。非表示にしても見え方が変わるだけで、設定した値はそのまま残り、効き続けます。</value>
-  </data>
   <data name="Wird_berechnet_a96029ae" xml:space="preserve">
     <value>計算しています…</value>
   </data>
@@ -9005,5 +9002,23 @@
   </data>
   <data name="Gilt_im_kompakten_Anpassungsmodus_Ist_der_Schalt_bbea7fa1" xml:space="preserve">
     <value>コンパクト調整モードで有効です。スイッチをオフにすると、グループはクリックしたときだけ開閉し、最後にどのグループが開いていたかをツールが覚えています。</value>
+  </data>
+  <data name="Reihenfolge_im_kompakten_Anpassungsmodus_ca372525" xml:space="preserve">
+    <value>コンパクト調整モードでの順序</value>
+  </data>
+  <data name="Legt_fest_in_welcher_Reihenfolge_die_Gruppen_im__56c09549" xml:space="preserve">
+    <value>「調整」ツール内のグループの順序を決めます。個々のツールの順序は変わりません。</value>
+  </data>
+  <data name="Legt_fest_welche_Gruppen_im_Anpassungsbereich_de_bc3b2409" xml:space="preserve">
+    <value>エディターの調整エリアにどのグループを表示するかを決めます。個々のツールでもコンパクト調整モードでも同じです。非表示にしても表示が変わるだけで、設定した値は残り、効果も続きます。</value>
+  </data>
+  <data name="Im_Editor_zeigen_oder_ausblenden_45aac246" xml:space="preserve">
+    <value>エディターで表示または非表示</value>
+  </data>
+  <data name="Anpassungspanel_0906dd72" xml:space="preserve">
+    <value>調整パネル</value>
+  </data>
+  <data name="Leisten_fd5d2d79" xml:space="preserve">
+    <value>バー</value>
   </data>
 </root>

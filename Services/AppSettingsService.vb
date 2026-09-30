@@ -472,6 +472,10 @@ Namespace Services
         ''' Gruppen, aber zwei Ansichten, und jede behaelt ihren Stand. Fehlt ein Eintrag, ist offen,
         ''' was mit automatischem Zuklappen zuletzt offen war.</summary>
         Public Property EditorCompactExpanderStates As New Dictionary(Of String, Boolean)()
+        ''' <summary>Reihenfolge der Bloecke im Kompaktwerkzeug, als Kennungen aus
+        ''' <see cref="AppSettingsService.CompactGroupBlocks"/> (erster Schluessel eines Blocks).
+        ''' Leer heisst: wie im Panel. Die Einzelwerkzeuge behalten ihre Reihenfolge.</summary>
+        Public Property EditorCompactGroupOrder As String = ""
         ''' Werkzeug, das beim Betreten des Editors aktiv ist: "Selection" (Auswahl) oder
         ''' "Adjust" (Anpassen). Ab Werk steht der Editor direkt bei den Anpassungen.
         Public Property EditorStartupTool As String = "Adjust"
@@ -991,6 +995,7 @@ Namespace Services
                 settings.EditorFitMargin = NormalizeEditorFitMargin(settings.EditorFitMargin)
                 settings.EditorStartupTool = NormalizeEditorStartupTool(settings.EditorStartupTool)
                 settings.EditorToolGroupOrder = NormalizeEditorToolGroupOrder(settings.EditorToolGroupOrder)
+                settings.EditorCompactGroupOrder = NormalizeEditorCompactGroupOrder(settings.EditorCompactGroupOrder)
                 settings.HiddenAdjustmentGroups = NormalizeHiddenAdjustmentGroups(settings.HiddenAdjustmentGroups)
                 settings.MainWindowWidth = NormalizeWindowDimension(settings.MainWindowWidth, 1536)
                 settings.MainWindowHeight = NormalizeWindowDimension(settings.MainWindowHeight, 1024)
@@ -1235,6 +1240,7 @@ Namespace Services
                 settings.EditorFitMargin = NormalizeEditorFitMargin(settings.EditorFitMargin)
                 settings.EditorStartupTool = NormalizeEditorStartupTool(settings.EditorStartupTool)
                 settings.EditorToolGroupOrder = NormalizeEditorToolGroupOrder(settings.EditorToolGroupOrder)
+                settings.EditorCompactGroupOrder = NormalizeEditorCompactGroupOrder(settings.EditorCompactGroupOrder)
                 settings.HiddenAdjustmentGroups = NormalizeHiddenAdjustmentGroups(settings.HiddenAdjustmentGroups)
                 settings.MainWindowWidth = NormalizeWindowDimension(settings.MainWindowWidth, 1536)
                 settings.MainWindowHeight = NormalizeWindowDimension(settings.MainWindowHeight, 1024)
@@ -1555,6 +1561,40 @@ Namespace Services
                 If treffer.Key IsNot Nothing AndAlso Not result.Contains(treffer.Key) Then
                     result.Add(treffer.Key)
                 End If
+            Next
+            Return String.Join(",", result)
+        End Function
+
+        ''' <summary>Die Bloecke des Kompaktwerkzeugs, die sich sortieren lassen, in der Reihenfolge
+        ''' des Panels. Ein Block ist ein direktes Kind von AdjustmentsStackPanel in EditorView.axaml
+        ''' und traegt eine oder mehrere Gruppen: Schaerfe und Weichzeichnen stehen in EINEM Panel,
+        ''' Vignette und Koernung ebenso, und wandern deshalb zusammen. Seine Kennung ist der erste
+        ''' Schluessel. Muss zum XAML passen; ein Waechter im Pruefstand vergleicht beides.</summary>
+        Public Shared ReadOnly Property CompactGroupBlocks As String()()
+            Get
+                Return New String()() {
+                    New String() {"adjust-presets"}, New String() {"light"}, New String() {"curve"},
+                    New String() {"objektivkorrektur"}, New String() {"film-negative"},
+                    New String() {"color"}, New String() {"hsl"}, New String() {"color-grading"}, New String() {"calibration"},
+                    New String() {"details"}, New String() {"rauschen"}, New String() {"sharpen", "soften"}, New String() {"bokeh"},
+                    New String() {"vignette", "grain"}, New String() {"frame"},
+                    New String() {"filter"}, New String() {"xmp-preset"}, New String() {"lut"}}
+            End Get
+        End Property
+
+        ''' <summary>Wie <see cref="NormalizeEditorToolGroupOrder"/>, fuer die Bloecke des
+        ''' Kompaktwerkzeugs: immer eine vollstaendige Liste aller Kennungen, Unbekanntes und Doppeltes
+        ''' fliegt raus, Fehlendes kommt in der Reihenfolge des Panels hinten dran. Ein Block, der
+        ''' spaeter dazukommt, erscheint so am Ende, statt zu fehlen.</summary>
+        Public Shared Function NormalizeEditorCompactGroupOrder(value As String) As String
+            Dim ids = CompactGroupBlocks.Select(Function(b) b(0)).ToList()
+            Dim result As New List(Of String)()
+            For Each part In If(value, "").Split(","c)
+                Dim id = part.Trim()
+                If ids.Contains(id) AndAlso Not result.Contains(id) Then result.Add(id)
+            Next
+            For Each id In ids
+                If Not result.Contains(id) Then result.Add(id)
             Next
             Return String.Join(",", result)
         End Function

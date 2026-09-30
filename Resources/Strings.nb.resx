@@ -5175,9 +5175,6 @@
   <data name="Sichtbare_Anpassungsgruppen_a9670287" xml:space="preserve">
     <value>Synlige justeringsgrupper</value>
   </data>
-  <data name="Legt_fest_welche_Gruppen_im_Anpassungsbereich_de_36bcd804" xml:space="preserve">
-    <value>Bestemmer hvilke grupper som vises i redigeringens justeringsområde. Å skjule endrer bare visningen: innstilte verdier beholdes og virker fortsatt.</value>
-  </data>
   <data name="Wird_berechnet_a96029ae" xml:space="preserve">
     <value>Beregnes…</value>
   </data>
@@ -9005,5 +9002,23 @@
   </data>
   <data name="Gilt_im_kompakten_Anpassungsmodus_Ist_der_Schalt_bbea7fa1" xml:space="preserve">
     <value>Gjelder i den kompakte justeringsmodusen. Er bryteren av, åpnes eller lukkes en gruppe bare når du klikker på den, og verktøyet husker hvilke grupper som sist var åpne.</value>
+  </data>
+  <data name="Reihenfolge_im_kompakten_Anpassungsmodus_ca372525" xml:space="preserve">
+    <value>Rekkefølge i den kompakte justeringsmodusen</value>
+  </data>
+  <data name="Legt_fest_in_welcher_Reihenfolge_die_Gruppen_im__56c09549" xml:space="preserve">
+    <value>Bestemmer rekkefølgen på gruppene i verktøyet «Justeringer». De enkelte verktøyene beholder sin rekkefølge.</value>
+  </data>
+  <data name="Legt_fest_welche_Gruppen_im_Anpassungsbereich_de_bc3b2409" xml:space="preserve">
+    <value>Bestemmer hvilke grupper som vises i redigeringsprogrammets justeringsområde, i de enkelte verktøyene og i den kompakte justeringsmodusen. Skjuling endrer bare visningen: innstilte verdier beholdes og virker fortsatt.</value>
+  </data>
+  <data name="Im_Editor_zeigen_oder_ausblenden_45aac246" xml:space="preserve">
+    <value>Vis eller skjul i redigeringsprogrammet</value>
+  </data>
+  <data name="Anpassungspanel_0906dd72" xml:space="preserve">
+    <value>Justeringspanel</value>
+  </data>
+  <data name="Leisten_fd5d2d79" xml:space="preserve">
+    <value>Linjer</value>
   </data>
 </root>

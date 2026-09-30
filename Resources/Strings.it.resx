@@ -5177,9 +5177,6 @@
   <data name="Sichtbare_Anpassungsgruppen_a9670287" xml:space="preserve">
     <value>Gruppi di regolazione visibili</value>
   </data>
-  <data name="Legt_fest_welche_Gruppen_im_Anpassungsbereich_de_36bcd804" xml:space="preserve">
-    <value>Stabilisce quali gruppi compaiono nell'area di regolazione dell'editor. Nasconderli cambia solo la vista: i valori impostati restano e continuano ad agire.</value>
-  </data>
   <data name="Wird_berechnet_a96029ae" xml:space="preserve">
     <value>Calcolo in corso…</value>
   </data>
@@ -8965,5 +8962,23 @@
   </data>
   <data name="Gilt_im_kompakten_Anpassungsmodus_Ist_der_Schalt_bbea7fa1" xml:space="preserve">
     <value>Vale nella modalità regolazioni compatta. Con l'interruttore spento, un gruppo si apre o si chiude solo quando lo si clicca, e lo strumento ricorda quali gruppi erano aperti l'ultima volta.</value>
+  </data>
+  <data name="Reihenfolge_im_kompakten_Anpassungsmodus_ca372525" xml:space="preserve">
+    <value>Ordine nella modalità regolazioni compatta</value>
+  </data>
+  <data name="Legt_fest_in_welcher_Reihenfolge_die_Gruppen_im__56c09549" xml:space="preserve">
+    <value>Stabilisce l'ordine dei gruppi nello strumento «Regolazioni». I singoli strumenti mantengono il loro ordine.</value>
+  </data>
+  <data name="Legt_fest_welche_Gruppen_im_Anpassungsbereich_de_bc3b2409" xml:space="preserve">
+    <value>Stabilisce quali gruppi compaiono nell'area regolazioni dell'editor, sia nei singoli strumenti sia nella modalità regolazioni compatta. Nascondere cambia solo la visualizzazione: i valori impostati restano e continuano ad agire.</value>
+  </data>
+  <data name="Im_Editor_zeigen_oder_ausblenden_45aac246" xml:space="preserve">
+    <value>Mostra o nascondi nell'editor</value>
+  </data>
+  <data name="Anpassungspanel_0906dd72" xml:space="preserve">
+    <value>Pannello regolazioni</value>
+  </data>
+  <data name="Leisten_fd5d2d79" xml:space="preserve">
+    <value>Barre</value>
   </data>
 </root>

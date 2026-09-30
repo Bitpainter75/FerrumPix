@@ -5175,9 +5175,6 @@
   <data name="Sichtbare_Anpassungsgruppen_a9670287" xml:space="preserve">
     <value>Viditelné skupiny úprav</value>
   </data>
-  <data name="Legt_fest_welche_Gruppen_im_Anpassungsbereich_de_36bcd804" xml:space="preserve">
-    <value>Určuje, které skupiny se objeví v oblasti úprav editoru. Skrytí mění pouze zobrazení: nastavené hodnoty zůstávají zachovány a dál působí.</value>
-  </data>
   <data name="Wird_berechnet_a96029ae" xml:space="preserve">
     <value>Probíhá výpočet…</value>
   </data>
@@ -9005,5 +9002,23 @@
   </data>
   <data name="Gilt_im_kompakten_Anpassungsmodus_Ist_der_Schalt_bbea7fa1" xml:space="preserve">
     <value>Platí v kompaktním režimu úprav. Když je přepínač vypnutý, skupina se otevře nebo zavře jen po kliknutí a nástroj si pamatuje, které skupiny byly naposledy otevřené.</value>
+  </data>
+  <data name="Reihenfolge_im_kompakten_Anpassungsmodus_ca372525" xml:space="preserve">
+    <value>Pořadí v kompaktním režimu úprav</value>
+  </data>
+  <data name="Legt_fest_in_welcher_Reihenfolge_die_Gruppen_im__56c09549" xml:space="preserve">
+    <value>Určuje, v jakém pořadí stojí skupiny v nástroji „Úpravy“. Jednotlivé nástroje si své pořadí ponechají.</value>
+  </data>
+  <data name="Legt_fest_welche_Gruppen_im_Anpassungsbereich_de_bc3b2409" xml:space="preserve">
+    <value>Určuje, které skupiny se zobrazí v oblasti úprav editoru, v jednotlivých nástrojích i v kompaktním režimu úprav. Skrytí mění jen zobrazení: nastavené hodnoty zůstanou a dál působí.</value>
+  </data>
+  <data name="Im_Editor_zeigen_oder_ausblenden_45aac246" xml:space="preserve">
+    <value>Zobrazit nebo skrýt v editoru</value>
+  </data>
+  <data name="Anpassungspanel_0906dd72" xml:space="preserve">
+    <value>Panel úprav</value>
+  </data>
+  <data name="Leisten_fd5d2d79" xml:space="preserve">
+    <value>Lišty</value>
   </data>
 </root>
