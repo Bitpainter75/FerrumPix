@@ -2678,9 +2678,6 @@
   <data name="Filter_anwenden_95b83a9f" xml:space="preserve">
     <value>Appliquer un filtre...</value>
   </data>
-  <data name="Filter_anwenden_573991ed" xml:space="preserve">
-    <value>Appliquer un filtre</value>
-  </data>
   <data name="Dateien_a41c619e" xml:space="preserve">
     <value>fichiers</value>
   </data>
@@ -2711,17 +2708,11 @@
   <data name="Originale_berschreiben_6aaed5f4" xml:space="preserve">
     <value>Écraser les originaux</value>
   </data>
-  <data name="Schreibt_den_Filter_direkt_in_die_Bilddateien_Oh_7668ae3a" xml:space="preserve">
-    <value>Écrit le filtre directement dans les fichiers image. Sans la case cochée, de nouveaux fichiers sont créés et les originaux restent intacts.</value>
-  </data>
   <data name="Namen_der_Vorgabe_an_den_Dateinamen_anh_ngen_a24135a3" xml:space="preserve">
     <value>Ajouter le nom du préréglage au nom du fichier</value>
   </data>
   <data name="foto_jpg_wird_zu_foto_Vintage_jpg_461041f6" xml:space="preserve">
     <value>photo.jpg devient photo_Vintage.jpg</value>
-  </data>
-  <data name="Wende_Filter_an_892a3854" xml:space="preserve">
-    <value>Application du filtre...</value>
   </data>
   <data name="Die_gew_hlte_Vorgabe_konnte_nicht_gelesen_werden_119d34d3" xml:space="preserve">
     <value>Le préréglage sélectionné n'a pas pu être lu.</value>
@@ -5485,9 +5476,6 @@
   </data>
   <data name="0_von_1_Datei_en_ge_ndert_bfb7cddb" xml:space="preserve">
     <value>{0} fichier(s) sur {1} modifié(s)</value>
-  </data>
-  <data name="0_von_1_Datei_en_gefiltert_47a53883" xml:space="preserve">
-    <value>{0} fichier(s) sur {1} filtré(s)</value>
   </data>
   <data name="0_von_1_Datei_en_bereinigt_111cda26" xml:space="preserve">
     <value>{0} fichier(s) sur {1} nettoyé(s)</value>
@@ -8938,5 +8926,23 @@
   </data>
   <data name="Startwert_des_Reglers_Farbflecken_wenn_ein_RAW_o_2d470b89" xml:space="preserve">
     <value>Valeur de départ du curseur Taches de couleur à l'ouverture d'un RAW sans retouche. Supprime les grosses taches de couleur, mais aussi de la couleur fine sur les prises propres, et demande un temps de calcul sensible à chaque changement d'image. 0 le désactive.</value>
+  </data>
+  <data name="Anpassungen_anwenden_ab535739" xml:space="preserve">
+    <value>Appliquer des réglages</value>
+  </data>
+  <data name="Wende_Anpassungen_an_50a43c67" xml:space="preserve">
+    <value>Application des réglages...</value>
+  </data>
+  <data name="0_von_1_Datei_en_angepasst_50cfdffd" xml:space="preserve">
+    <value>{0} fichier(s) sur {1} ajusté(s)</value>
+  </data>
+  <data name="Schreibt_die_Anpassungen_direkt_in_die_Bilddatei_cb435a8c" xml:space="preserve">
+    <value>Écrit les réglages directement dans les fichiers image, et pour les fichiers RAW et Photoshop dans leur fichier annexe. Sans la case cochée, de nouveaux fichiers sont créés et les originaux restent intacts.</value>
+  </data>
+  <data name="RAW_und_Photoshop_Dateien_bleiben_unver_ndert_Ih_5a6a43fd" xml:space="preserve">
+    <value>Les fichiers RAW et Photoshop restent inchangés. Leurs réglages vont dans le fichier annexe à côté, et la galerie affiche désormais ces images développées.</value>
+  </data>
+  <data name="Beim_berschreiben_bekommen_RAW_und_Photoshop_Dat_93364658" xml:space="preserve">
+    <value>Lors de l'écrasement, les fichiers RAW et Photoshop ne reçoivent que de nouveaux réglages, alors que le débruitage a besoin de nouvelles données d'image. Pour débruiter, faites écrire de nouveaux fichiers.</value>
   </data>
 </root>

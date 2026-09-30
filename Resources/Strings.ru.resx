@@ -2676,9 +2676,6 @@
   <data name="Filter_anwenden_95b83a9f" xml:space="preserve">
     <value>Применить фильтр...</value>
   </data>
-  <data name="Filter_anwenden_573991ed" xml:space="preserve">
-    <value>Применить фильтр</value>
-  </data>
   <data name="Dateien_a41c619e" xml:space="preserve">
     <value>файлов</value>
   </data>
@@ -2709,17 +2706,11 @@
   <data name="Originale_berschreiben_6aaed5f4" xml:space="preserve">
     <value>Заменять оригиналы</value>
   </data>
-  <data name="Schreibt_den_Filter_direkt_in_die_Bilddateien_Oh_7668ae3a" xml:space="preserve">
-    <value>Записывает фильтр прямо в файлы изображений. Без галочки создаются новые файлы, а оригиналы остаются нетронутыми.</value>
-  </data>
   <data name="Namen_der_Vorgabe_an_den_Dateinamen_anh_ngen_a24135a3" xml:space="preserve">
     <value>Добавлять имя пресета к имени файла</value>
   </data>
   <data name="foto_jpg_wird_zu_foto_Vintage_jpg_461041f6" xml:space="preserve">
     <value>foto.jpg станет foto_Vintage.jpg</value>
-  </data>
-  <data name="Wende_Filter_an_892a3854" xml:space="preserve">
-    <value>Применение фильтра...</value>
   </data>
   <data name="Die_gew_hlte_Vorgabe_konnte_nicht_gelesen_werden_119d34d3" xml:space="preserve">
     <value>Не удалось прочитать выбранный пресет.</value>
@@ -5483,9 +5474,6 @@
   </data>
   <data name="0_von_1_Datei_en_ge_ndert_bfb7cddb" xml:space="preserve">
     <value>Изменено файлов: {0} из {1}</value>
-  </data>
-  <data name="0_von_1_Datei_en_gefiltert_47a53883" xml:space="preserve">
-    <value>Отфильтровано файлов: {0} из {1}</value>
   </data>
   <data name="0_von_1_Datei_en_bereinigt_111cda26" xml:space="preserve">
     <value>Очищено файлов: {0} из {1}</value>
@@ -8978,5 +8966,23 @@
   </data>
   <data name="Startwert_des_Reglers_Farbflecken_wenn_ein_RAW_o_2d470b89" xml:space="preserve">
     <value>Начальное значение ползунка «Цветные пятна» при открытии RAW без обработки. Убирает крупные цветные пятна, но на чистых снимках и тонкий цвет, и заметно замедляет каждую смену снимка. 0 отключает его.</value>
+  </data>
+  <data name="Anpassungen_anwenden_ab535739" xml:space="preserve">
+    <value>Применить коррекции</value>
+  </data>
+  <data name="Wende_Anpassungen_an_50a43c67" xml:space="preserve">
+    <value>Применение коррекций...</value>
+  </data>
+  <data name="0_von_1_Datei_en_angepasst_50cfdffd" xml:space="preserve">
+    <value>Скорректировано файлов: {0} из {1}</value>
+  </data>
+  <data name="Schreibt_die_Anpassungen_direkt_in_die_Bilddatei_cb435a8c" xml:space="preserve">
+    <value>Записывает коррекции прямо в файлы изображений, а для файлов RAW и Photoshop в их сопроводительный файл. Без галочки создаются новые файлы, а оригиналы остаются нетронутыми.</value>
+  </data>
+  <data name="RAW_und_Photoshop_Dateien_bleiben_unver_ndert_Ih_5a6a43fd" xml:space="preserve">
+    <value>Файлы RAW и Photoshop остаются без изменений. Их коррекции попадают в сопроводительный файл рядом, и с этого момента галерея показывает эти снимки проявленными.</value>
+  </data>
+  <data name="Beim_berschreiben_bekommen_RAW_und_Photoshop_Dat_93364658" xml:space="preserve">
+    <value>При перезаписи файлы RAW и Photoshop получают только новые коррекции, а шумоподавлению нужны новые данные изображения. Чтобы убрать шум, запишите новые файлы.</value>
   </data>
 </root>

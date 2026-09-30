@@ -76,7 +76,12 @@ Namespace Services
 
         ''' <summary>Schreibt das Rezept neben die RAW-Datei (atomar via Temp+Move). False bei Fehler -
         ''' der Aufrufer behaelt dann sein normales "ungespeicherte Aenderungen"-Verhalten.</summary>
-        Public Shared Function TryWrite(rawPath As String, adjustments As ImageAdjustments) As Boolean
+        ''' <param name="developedThumbnail">Der Vermerk, dass die Kachel dieser Datei entwickelt
+        ''' gezeigt wird, auch wenn die Einstellung dafuer aus ist (siehe
+        ''' <see cref="ReadDevelopedThumbnail"/>). Nothing laesst einen vorhandenen Vermerk stehen:
+        ''' der Editor und jeder andere Schreiber sollen ihn nicht still verlieren.</param>
+        Public Shared Function TryWrite(rawPath As String, adjustments As ImageAdjustments,
+                                        Optional developedThumbnail As Boolean? = Nothing) As Boolean
             If String.IsNullOrWhiteSpace(rawPath) OrElse adjustments Is Nothing Then Return False
             Try
                 Dim catalog = New RawSidecarCatalogData With {
@@ -86,7 +91,7 @@ Namespace Services
                     .Keywords = NormalizeKeywords(LibraryService.Instance.GetTags(rawPath)),
                     .HasKeywords = True
                 }
-                Return TryWriteCore(rawPath, adjustments, catalog)
+                Return TryWriteCore(rawPath, adjustments, catalog, developedThumbnail)
             Catch
                 Return False
             End Try
@@ -106,14 +111,17 @@ Namespace Services
                 .Keywords = NormalizeKeywords(keywords),
                 .HasKeywords = True
             }
-            Return TryWriteCore(rawPath, adjustments, catalog)
+            Return TryWriteCore(rawPath, adjustments, catalog, Nothing)
         End Function
 
         Private Shared Function TryWriteCore(rawPath As String, adjustments As ImageAdjustments,
-                                             catalog As RawSidecarCatalogData) As Boolean
+                                             catalog As RawSidecarCatalogData,
+                                             developedThumbnail As Boolean?) As Boolean
             If String.IsNullOrWhiteSpace(rawPath) OrElse adjustments Is Nothing Then Return False
             SyncLock _writeLock
                 Try
+                    Dim keepDevelopedThumbnail = If(developedThumbnail.HasValue, developedThumbnail.Value,
+                                                    ReadDevelopedThumbnail(rawPath))
                     ' HIER wird entschieden, was der Vermerk ueber gebackene Vorgaenge BEDEUTET.
                     ' Neben dieser Datei liegt kein einziges Pixel: die Quelle bleibt unangetastet,
                     ' und beim naechsten Oeffnen wird sie neu entwickelt. Also sind Entrauschen,
@@ -139,6 +147,7 @@ Namespace Services
                         New XElement(Ns + "recipe",
                             New XAttribute("version", FormatVersion),
                             New XAttribute("generator", "FerrumPix"),
+                            If(keepDevelopedThumbnail, New XAttribute(DevelopedThumbnailAttribute, "true"), Nothing),
                             New XElement(Ns + "source",
                                 New XAttribute("fileName", Path.GetFileName(rawPath))),
                             New XElement(Ns + "savedUtc", DateTime.UtcNow.ToString("O")),
@@ -156,8 +165,8 @@ Namespace Services
                     ' Den gemerkten Drehwinkel verwerfen, statt auf einen geaenderten Zeitstempel zu
                     ' hoffen: zwei Schreibvorgaenge kurz hintereinander koennen auf grob aufloesenden
                     ' Dateisystemen dieselbe mtime tragen.
-                    Dim ignored As CachedRotation = Nothing
-                    _rotationCache.TryRemove(target, ignored)
+                    Dim ignored As CachedDisplayFacts = Nothing
+                    _displayFactsCache.TryRemove(target, ignored)
                     Return True
                 Catch
                     Return False
@@ -218,20 +227,41 @@ Namespace Services
         ''' Ergebnisse werden je Sidecar-Zeitstempel gemerkt: der Aufruf sitzt im Thumbnail-Pfad und
         ''' liefe sonst pro Kachel durch einen XML-Parse.</summary>
         Public Shared Function ReadRotationDegrees(rawPath As String) As Integer
-            If String.IsNullOrWhiteSpace(rawPath) Then Return 0
+            Return If(ReadDisplayFacts(rawPath)?.Degrees, 0)
+        End Function
+
+        ''' <summary>Soll die Kachel dieser Datei ENTWICKELT gezeigt werden, auch wenn die Einstellung
+        ''' "Entwickelte RAW-Vorschau" aus ist? Der Vermerk steht als Attribut in der .fpxmp und wird
+        ''' gesetzt, wenn der Stapel "Anpassungen anwenden" ein Rezept schreibt: sonst saehe man in
+        ''' der Galerie nichts von dem, was man gerade ueber eine Serie gelegt hat.
+        '''
+        ''' EINMAL GESETZT, BLEIBT ER. Jeder spaetere Schreiber (Editor, Katalog, naechster Stapel)
+        ''' uebernimmt ihn, siehe TryWriteCore. Sonst fiele die Kachel nach dem ersten Nachbessern im
+        ''' Editor auf das Kamerabild zurueck, obwohl gerade dort mehr Bearbeitung drinsteckt.
+        '''
+        ''' In der .fpxmp und nicht im Kachelspeicher, weil er mit der Datei wandern muss (Verschieben,
+        ''' Umbenennen, Leeren des Caches) und weil die .fpxmp je Kachel ohnehin schon gelesen wird,
+        ''' fuer die Drehung. Beide Werte kommen deshalb aus demselben gemerkten Lesevorgang.</summary>
+        Public Shared Function ReadDevelopedThumbnail(rawPath As String) As Boolean
+            Return If(ReadDisplayFacts(rawPath)?.DevelopedThumbnail, False)
+        End Function
+
+        Private Shared Function ReadDisplayFacts(rawPath As String) As CachedDisplayFacts
+            If String.IsNullOrWhiteSpace(rawPath) Then Return Nothing
             Dim sidecar = SidecarPathFor(rawPath)
             Dim stampTicks As Long
             Try
-                If Not File.Exists(sidecar) Then Return 0
+                If Not File.Exists(sidecar) Then Return Nothing
                 stampTicks = File.GetLastWriteTimeUtc(sidecar).Ticks
             Catch
-                Return 0
+                Return Nothing
             End Try
 
-            Dim cached As CachedRotation = Nothing
-            If _rotationCache.TryGetValue(sidecar, cached) AndAlso cached.StampTicks = stampTicks Then Return cached.Degrees
+            Dim cached As CachedDisplayFacts = Nothing
+            If _displayFactsCache.TryGetValue(sidecar, cached) AndAlso cached.StampTicks = stampTicks Then Return cached
 
-            Dim adjustments = TryRead(rawPath)
+            Dim developedThumbnail As Boolean
+            Dim adjustments = TryReadCore(rawPath, developedThumbnail)
             Dim degrees As Integer = 0
             If adjustments IsNot Nothing Then
                 ' DIESELBE REGEL WIE IM EDITOR (EditorViewModel.AppliedTransformState): Drehung und
@@ -255,20 +285,25 @@ Namespace Services
                 End If
                 degrees = ImageOrientationService.NormalizeQuarterTurn(degrees)
             End If
-            _rotationCache(sidecar) = New CachedRotation(stampTicks, degrees)
-            Return degrees
+            Dim facts = New CachedDisplayFacts(stampTicks, degrees, developedThumbnail)
+            _displayFactsCache(sidecar) = facts
+            Return facts
         End Function
 
-        Private NotInheritable Class CachedRotation
+        Private NotInheritable Class CachedDisplayFacts
             Public ReadOnly StampTicks As Long
             Public ReadOnly Degrees As Integer
-            Public Sub New(stampTicks As Long, degrees As Integer)
+            Public ReadOnly DevelopedThumbnail As Boolean
+            Public Sub New(stampTicks As Long, degrees As Integer, developedThumbnail As Boolean)
                 Me.StampTicks = stampTicks
                 Me.Degrees = degrees
+                Me.DevelopedThumbnail = developedThumbnail
             End Sub
         End Class
 
-        Private Shared ReadOnly _rotationCache As New ConcurrentDictionary(Of String, CachedRotation)(PathIdentity.Comparer)
+        Private Shared ReadOnly _displayFactsCache As New ConcurrentDictionary(Of String, CachedDisplayFacts)(PathIdentity.Comparer)
+
+        Private Const DevelopedThumbnailAttribute As String = "developedThumbnail"
 
         ''' <summary>Übernimmt die Entwicklungseinstellungen aus einer XMP-Sidecar
         ''' ("foto.cr2.xmp" oder "foto.xmp") in eine neue .fpxmp - EINMALIG, solange es noch keine gibt.
@@ -313,12 +348,20 @@ Namespace Services
         ''' <summary>Liest das Rezept aus dem Sidecar. Nothing, wenn keiner da ist, die Version
         ''' unbekannt oder die Datei defekt ist - der Editor startet dann wie ohne Sidecar.</summary>
         Public Shared Function TryRead(rawPath As String) As ImageAdjustments
+            Dim developedThumbnail As Boolean
+            Return TryReadCore(rawPath, developedThumbnail)
+        End Function
+
+        Private Shared Function TryReadCore(rawPath As String, ByRef developedThumbnail As Boolean) As ImageAdjustments
+            developedThumbnail = False
             Try
                 Dim sidecar = SidecarPathFor(rawPath)
                 If Not File.Exists(sidecar) Then Return Nothing
                 Dim doc = XDocument.Load(sidecar)
                 Dim root = doc.Root
                 If root Is Nothing OrElse root.Name <> Ns + "recipe" Then Return Nothing
+                developedThumbnail = String.Equals(root.Attribute(DevelopedThumbnailAttribute)?.Value, "true",
+                                                   StringComparison.OrdinalIgnoreCase)
                 Dim version = CInt(root.Attribute("version")?.Value)
                 If version < 1 OrElse version > FormatVersion Then Return Nothing
                 Dim adjustmentsNode = root.Element(Ns + "adjustments")

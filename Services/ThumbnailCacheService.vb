@@ -227,13 +227,22 @@ Namespace Services
             Return _cachedDevelopRawThumbnails
         End Function
 
+        ''' <summary>Wird die Kachel DIESER Datei entwickelt? Ja, wenn die Einstellung an ist, oder
+        ''' wenn die .fpxmp den Vermerk dafuer traegt (RawSidecarService.ReadDevelopedThumbnail):
+        ''' dann hat der Stapel "Anpassungen anwenden" ein Rezept geschrieben, und das soll in der
+        ''' Galerie zu sehen sein. Dieselbe Frage fuer Schluessel und Schreibweg, sonst suchte der
+        ''' Leser eine Kachel, die der Schreiber nie anlegt.</summary>
+        Private Shared Function DevelopsThumbnail(filePath As String) As Boolean
+            Return DevelopRawThumbnailsActive() OrElse RawSidecarService.ReadDevelopedThumbnail(filePath)
+        End Function
+
         ''' <summary>Teil des Cache-Dateinamens für die ENTWICKELTE RAW-Vorschau: leer, solange die Option
         ''' aus ist oder keine .fpxmp existiert (dann gilt der eingebettete-JPG-Schlüssel unverändert).
         ''' Sonst der Zeitstempel der .fpxmp - so baut jede Bearbeitung (die die .fpxmp neu schreibt) die
         ''' Kachel neu, ohne alte Kacheln zu entwerten.</summary>
         Private Shared Function DevelopedThumbnailSuffix(filePath As String) As String
-            If Not DevelopRawThumbnailsActive() Then Return ""
             If Not RawPreviewService.IsSupportedRaw(filePath) OrElse Not RawSidecarService.Exists(filePath) Then Return ""
+            If Not DevelopsThumbnail(filePath) Then Return ""
             Try
                 Return "_dev" & File.GetLastWriteTimeUtc(RawSidecarService.SidecarPathFor(filePath)).Ticks.ToString(Globalization.CultureInfo.InvariantCulture)
             Catch
@@ -246,8 +255,8 @@ Namespace Services
         ''' dann gilt der eingebettete-JPG-Weg. Das Ergebnis ist bereits voll orientiert und trägt die
         ''' Rezept-Geometrie; es darf NICHT über DecodeCorrectedAndResize erneut gedreht werden.</summary>
         Private Shared Function TryRenderDevelopedRawSource(filePath As String) As MemoryStream
-            If Not DevelopRawThumbnailsActive() Then Return Nothing
             If Not RawPreviewService.IsSupportedRaw(filePath) OrElse Not RawDecodeService.IsAvailable Then Return Nothing
+            If Not DevelopsThumbnail(filePath) Then Return Nothing
             Dim adj = RawSidecarService.TryRead(filePath)
             If adj Is Nothing Then Return Nothing
             Try

@@ -1,5 +1,15 @@
 ## 0.9.56
 
+### What's new
+
+- "Apply filter" is now called "Apply adjustments", since it takes presets, LUTs and your own
+  saved adjustments as well as filters.
+
+- Apply adjustments can now overwrite raw and Photoshop files too. The files themselves stay as
+  they are; the adjustments go into their edits, on top of what is already there, and a mixed
+  selection with JPEGs is handled in one go. The gallery then shows these pictures developed, even
+  when developed raw thumbnails are switched off.
+
 ### Fixes
 
 - Layer names that FerrumPix gives on its own, such as groups, pasted selections and mask layers,

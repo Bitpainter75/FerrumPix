@@ -99,7 +99,7 @@ Two of them can find their own setting. *Level to the horizon* looks for the str
 
 <img src="Screenshots/Editor_Light.jpg" />
 
-**Filters and presets.** Filters, LUT files (`.cube`) and XMP presets as written by Lightroom and Camera Raw. All of them, and the slider sets you saved yourself, can also be applied to a whole selection at once. With [G'MIC](https://gmic.eu) installed, the footer menu hands the picture to its filter window, and the result comes back as a layer.
+**Filters and presets.** Filters, LUT files (`.cube`) and XMP presets as written by Lightroom and Camera Raw. All of them, and the slider sets you saved yourself, can also be applied to a whole selection at once; on raw files that simply updates their edits instead of writing new files. With [G'MIC](https://gmic.eu) installed, the footer menu hands the picture to its filter window, and the result comes back as a layer.
 
 **Saving.** Save as JPEG, PNG, WEBP, JPEG XL, TIFF or PDF, as a Photoshop file with the layer stack intact, or as an `.fpx` project that keeps adjustments and layers editable when you open it again. `CTRL+P` prints what you see, edits included.
 

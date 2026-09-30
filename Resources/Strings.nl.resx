@@ -2676,9 +2676,6 @@
   <data name="Filter_anwenden_95b83a9f" xml:space="preserve">
     <value>Filter toepassen...</value>
   </data>
-  <data name="Filter_anwenden_573991ed" xml:space="preserve">
-    <value>Filter toepassen</value>
-  </data>
   <data name="Dateien_a41c619e" xml:space="preserve">
     <value>bestanden</value>
   </data>
@@ -2709,17 +2706,11 @@
   <data name="Originale_berschreiben_6aaed5f4" xml:space="preserve">
     <value>Originelen overschrijven</value>
   </data>
-  <data name="Schreibt_den_Filter_direkt_in_die_Bilddateien_Oh_7668ae3a" xml:space="preserve">
-    <value>Schrijft het filter rechtstreeks in de afbeeldingsbestanden. Zonder vinkje ontstaan er nieuwe bestanden en blijven de originelen onaangeroerd.</value>
-  </data>
   <data name="Namen_der_Vorgabe_an_den_Dateinamen_anh_ngen_a24135a3" xml:space="preserve">
     <value>Naam van de voorinstelling aan de bestandsnaam toevoegen</value>
   </data>
   <data name="foto_jpg_wird_zu_foto_Vintage_jpg_461041f6" xml:space="preserve">
     <value>foto.jpg wordt foto_Vintage.jpg</value>
-  </data>
-  <data name="Wende_Filter_an_892a3854" xml:space="preserve">
-    <value>Filter wordt toegepast...</value>
   </data>
   <data name="Die_gew_hlte_Vorgabe_konnte_nicht_gelesen_werden_119d34d3" xml:space="preserve">
     <value>De gekozen voorinstelling kon niet worden gelezen.</value>
@@ -5483,9 +5474,6 @@
   </data>
   <data name="0_von_1_Datei_en_ge_ndert_bfb7cddb" xml:space="preserve">
     <value>{0} van {1} bestand(en) gewijzigd</value>
-  </data>
-  <data name="0_von_1_Datei_en_gefiltert_47a53883" xml:space="preserve">
-    <value>{0} van {1} bestand(en) gefilterd</value>
   </data>
   <data name="0_von_1_Datei_en_bereinigt_111cda26" xml:space="preserve">
     <value>{0} van {1} bestand(en) opgeschoond</value>
@@ -8978,5 +8966,23 @@
   </data>
   <data name="Startwert_des_Reglers_Farbflecken_wenn_ein_RAW_o_2d470b89" xml:space="preserve">
     <value>Beginwaarde van de schuifregelaar Kleurvlekken wanneer een RAW zonder bewerking wordt geopend. Verwijdert grove kleurvlekken, bij schone opnamen echter ook fijne kleur, en kost bij elke fotowissel merkbaar rekentijd. 0 zet hem uit.</value>
+  </data>
+  <data name="Anpassungen_anwenden_ab535739" xml:space="preserve">
+    <value>Aanpassingen toepassen</value>
+  </data>
+  <data name="Wende_Anpassungen_an_50a43c67" xml:space="preserve">
+    <value>Aanpassingen worden toegepast...</value>
+  </data>
+  <data name="0_von_1_Datei_en_angepasst_50cfdffd" xml:space="preserve">
+    <value>{0} van {1} bestand(en) aangepast</value>
+  </data>
+  <data name="Schreibt_die_Anpassungen_direkt_in_die_Bilddatei_cb435a8c" xml:space="preserve">
+    <value>Schrijft de aanpassingen rechtstreeks in de afbeeldingsbestanden, bij RAW- en Photoshop-bestanden in hun sidecar-bestand. Zonder vinkje ontstaan er nieuwe bestanden en blijven de originelen onaangeroerd.</value>
+  </data>
+  <data name="RAW_und_Photoshop_Dateien_bleiben_unver_ndert_Ih_5a6a43fd" xml:space="preserve">
+    <value>RAW- en Photoshop-bestanden blijven ongewijzigd. Hun aanpassingen komen in het sidecar-bestand ernaast, en de galerij toont deze foto's vanaf dan ontwikkeld.</value>
+  </data>
+  <data name="Beim_berschreiben_bekommen_RAW_und_Photoshop_Dat_93364658" xml:space="preserve">
+    <value>Bij overschrijven krijgen RAW- en Photoshop-bestanden alleen nieuwe aanpassingen, terwijl ontruisen nieuwe beeldgegevens nodig heeft. Laat nieuwe bestanden schrijven om te ontruisen.</value>
   </data>
 </root>

@@ -2676,9 +2676,6 @@
   <data name="Filter_anwenden_95b83a9f" xml:space="preserve">
     <value>ใช้ฟิลเตอร์...</value>
   </data>
-  <data name="Filter_anwenden_573991ed" xml:space="preserve">
-    <value>ใช้ฟิลเตอร์</value>
-  </data>
   <data name="Dateien_a41c619e" xml:space="preserve">
     <value>ไฟล์</value>
   </data>
@@ -2709,17 +2706,11 @@
   <data name="Originale_berschreiben_6aaed5f4" xml:space="preserve">
     <value>เขียนทับต้นฉบับ</value>
   </data>
-  <data name="Schreibt_den_Filter_direkt_in_die_Bilddateien_Oh_7668ae3a" xml:space="preserve">
-    <value>เขียนฟิลเตอร์ลงในไฟล์ภาพโดยตรง หากไม่ติ๊ก จะสร้างไฟล์ใหม่และต้นฉบับยังคงเดิม</value>
-  </data>
   <data name="Namen_der_Vorgabe_an_den_Dateinamen_anh_ngen_a24135a3" xml:space="preserve">
     <value>ต่อท้ายชื่อไฟล์ด้วยชื่อพรีเซ็ต</value>
   </data>
   <data name="foto_jpg_wird_zu_foto_Vintage_jpg_461041f6" xml:space="preserve">
     <value>photo.jpg จะกลายเป็น photo_Vintage.jpg</value>
-  </data>
-  <data name="Wende_Filter_an_892a3854" xml:space="preserve">
-    <value>กำลังใช้ฟิลเตอร์...</value>
   </data>
   <data name="Die_gew_hlte_Vorgabe_konnte_nicht_gelesen_werden_119d34d3" xml:space="preserve">
     <value>อ่านพรีเซ็ตที่เลือกไม่ได้</value>
@@ -5480,9 +5471,6 @@
   </data>
   <data name="0_von_1_Datei_en_ge_ndert_bfb7cddb" xml:space="preserve">
     <value>เปลี่ยนไฟล์แล้ว {0} จาก {1} ไฟล์</value>
-  </data>
-  <data name="0_von_1_Datei_en_gefiltert_47a53883" xml:space="preserve">
-    <value>ใช้ฟิลเตอร์แล้ว {0} จาก {1} ไฟล์</value>
   </data>
   <data name="0_von_1_Datei_en_bereinigt_111cda26" xml:space="preserve">
     <value>ล้างไฟล์แล้ว {0} จาก {1} ไฟล์</value>
@@ -8982,5 +8970,23 @@
   </data>
   <data name="Startwert_des_Reglers_Farbflecken_wenn_ein_RAW_o_2d470b89" xml:space="preserve">
     <value>ค่าเริ่มต้นของแถบเลื่อน รอยด่างสี เมื่อเปิด RAW ที่ยังไม่แก้ไข ลบรอยด่างสีหยาบ แต่กับภาพที่สะอาดจะลบสีละเอียดไปด้วย และใช้เวลาคำนวณอย่างเห็นได้ชัดทุกครั้งที่เปลี่ยนภาพ 0 คือปิด</value>
+  </data>
+  <data name="Anpassungen_anwenden_ab535739" xml:space="preserve">
+    <value>ใช้การปรับแต่ง</value>
+  </data>
+  <data name="Wende_Anpassungen_an_50a43c67" xml:space="preserve">
+    <value>กำลังใช้การปรับแต่ง...</value>
+  </data>
+  <data name="0_von_1_Datei_en_angepasst_50cfdffd" xml:space="preserve">
+    <value>ปรับแต่งแล้ว {0} จาก {1} ไฟล์</value>
+  </data>
+  <data name="Schreibt_die_Anpassungen_direkt_in_die_Bilddatei_cb435a8c" xml:space="preserve">
+    <value>เขียนการปรับแต่งลงในไฟล์ภาพโดยตรง ส่วนไฟล์ RAW และ Photoshop จะเขียนลงในไฟล์ข้างของมัน หากไม่ติ๊ก จะสร้างไฟล์ใหม่และต้นฉบับยังคงเดิม</value>
+  </data>
+  <data name="RAW_und_Photoshop_Dateien_bleiben_unver_ndert_Ih_5a6a43fd" xml:space="preserve">
+    <value>ไฟล์ RAW และ Photoshop จะไม่ถูกเปลี่ยนแปลง การปรับแต่งจะถูกเก็บไว้ในไฟล์ข้างที่อยู่ข้างกัน และนับจากนั้นแกลเลอรีจะแสดงภาพเหล่านี้แบบล้างแล้ว</value>
+  </data>
+  <data name="Beim_berschreiben_bekommen_RAW_und_Photoshop_Dat_93364658" xml:space="preserve">
+    <value>เมื่อเขียนทับ ไฟล์ RAW และ Photoshop จะได้เพียงการปรับแต่งใหม่ แต่การลดสัญญาณรบกวนต้องใช้ข้อมูลภาพใหม่ หากต้องการลดสัญญาณรบกวน ให้เขียนเป็นไฟล์ใหม่</value>
   </data>
 </root>

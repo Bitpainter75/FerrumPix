@@ -17,7 +17,14 @@
         <CheckBox Content="Originale überschreiben"
                   IsVisible="{Binding IsDialogBatchOverwriteAvailable}"
                   IsChecked="{Binding DialogBatchFilterOverwrite, Mode=TwoWay}"
-                  ToolTip.Tip="Schreibt den Filter direkt in die Bilddateien. Ohne Haken entstehen neue Dateien und die Originale bleiben unangetastet."/>
+                  ToolTip.Tip="Schreibt die Anpassungen direkt in die Bilddateien, bei RAW- und Photoshop-Dateien in ihre Beistelldatei. Ohne Haken entstehen neue Dateien und die Originale bleiben unangetastet."/>
+        <!-- Nur beim Ueberschreiben mit RAW- oder Photoshop-Dateien in der Auswahl: dort wird keine
+             Bilddatei geschrieben, sondern das Rezept daneben (IsDialogBatchDenoiseLockedByRecipes). -->
+        <TextBlock Text="RAW- und Photoshop-Dateien bleiben unverändert. Ihre Anpassungen kommen in die Beistelldatei daneben, und die Galerie zeigt diese Bilder ab dann entwickelt."
+                   IsVisible="{Binding IsDialogBatchRecipeHintVisible}"
+                   Foreground="{DynamicResource FP.Text.Secondary}"
+                   FontSize="{DynamicResource FP.Font.Small}"
+                   TextWrapping="Wrap"/>
 
         <CheckBox Content="Namen der Vorgabe an den Dateinamen anhängen"
                   IsChecked="{Binding DialogBatchFilterAppendName, Mode=TwoWay}"

@@ -20,7 +20,7 @@
 
         <Border Classes="adjustment-group">
             <StackPanel Spacing="10">
-                <CheckBox Content="Filter anwenden"
+                <CheckBox Content="Anpassungen anwenden"
                           IsChecked="{Binding DialogExportUseFilter, Mode=TwoWay}"/>
                 <Border Classes="adjustment-group" IsVisible="{Binding DialogExportUseFilter}">
                     <local:FilterFormView/>

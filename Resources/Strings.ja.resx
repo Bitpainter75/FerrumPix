@@ -2676,9 +2676,6 @@
   <data name="Filter_anwenden_95b83a9f" xml:space="preserve">
     <value>フィルターを適用しています...</value>
   </data>
-  <data name="Filter_anwenden_573991ed" xml:space="preserve">
-    <value>フィルターを適用</value>
-  </data>
   <data name="Dateien_a41c619e" xml:space="preserve">
     <value>個のファイル</value>
   </data>
@@ -2709,17 +2706,11 @@
   <data name="Originale_berschreiben_6aaed5f4" xml:space="preserve">
     <value>元のファイルを上書きする</value>
   </data>
-  <data name="Schreibt_den_Filter_direkt_in_die_Bilddateien_Oh_7668ae3a" xml:space="preserve">
-    <value>フィルターを画像ファイルに直接書き込みます。チェックを外すと新しいファイルが作られ、元のファイルはそのまま残ります。</value>
-  </data>
   <data name="Namen_der_Vorgabe_an_den_Dateinamen_anh_ngen_a24135a3" xml:space="preserve">
     <value>プリセット名をファイル名に付け足す</value>
   </data>
   <data name="foto_jpg_wird_zu_foto_Vintage_jpg_461041f6" xml:space="preserve">
     <value>foto.jpg は foto_Vintage.jpg になります</value>
-  </data>
-  <data name="Wende_Filter_an_892a3854" xml:space="preserve">
-    <value>フィルターを適用しています...</value>
   </data>
   <data name="Die_gew_hlte_Vorgabe_konnte_nicht_gelesen_werden_119d34d3" xml:space="preserve">
     <value>選んだプリセットを読み込めませんでした。</value>
@@ -5483,9 +5474,6 @@
   </data>
   <data name="0_von_1_Datei_en_ge_ndert_bfb7cddb" xml:space="preserve">
     <value>{1} 個中 {0} 個のファイルを変更しました</value>
-  </data>
-  <data name="0_von_1_Datei_en_gefiltert_47a53883" xml:space="preserve">
-    <value>{1} 個中 {0} 個のファイルにフィルターを適用しました</value>
   </data>
   <data name="0_von_1_Datei_en_bereinigt_111cda26" xml:space="preserve">
     <value>{1} 個中 {0} 個のファイルを整理しました</value>
@@ -8978,5 +8966,23 @@
   </data>
   <data name="Startwert_des_Reglers_Farbflecken_wenn_ein_RAW_o_2d470b89" xml:space="preserve">
     <value>編集されていない RAW を開いたときの「色のむら」スライダーの初期値です。粗い色のむらを取り除きますが、きれいな写真では細かな色も失われ、画像を切り替えるたびに目に見えて時間がかかります。0 でオフになります。</value>
+  </data>
+  <data name="Anpassungen_anwenden_ab535739" xml:space="preserve">
+    <value>調整を適用</value>
+  </data>
+  <data name="Wende_Anpassungen_an_50a43c67" xml:space="preserve">
+    <value>調整を適用しています...</value>
+  </data>
+  <data name="0_von_1_Datei_en_angepasst_50cfdffd" xml:space="preserve">
+    <value>{1} 個中 {0} 個のファイルに調整を適用しました</value>
+  </data>
+  <data name="Schreibt_die_Anpassungen_direkt_in_die_Bilddatei_cb435a8c" xml:space="preserve">
+    <value>調整を画像ファイルに直接書き込みます。RAW と Photoshop のファイルでは、隣のサイドカーファイルに書き込みます。チェックを外すと新しいファイルが作られ、元のファイルはそのまま残ります。</value>
+  </data>
+  <data name="RAW_und_Photoshop_Dateien_bleiben_unver_ndert_Ih_5a6a43fd" xml:space="preserve">
+    <value>RAW と Photoshop のファイルは変更されません。調整は隣のサイドカーファイルに入り、以後ギャラリーではこれらの画像が現像された状態で表示されます。</value>
+  </data>
+  <data name="Beim_berschreiben_bekommen_RAW_und_Photoshop_Dat_93364658" xml:space="preserve">
+    <value>上書きでは RAW と Photoshop のファイルには新しい調整だけが入りますが、ノイズ除去には新しい画像データが必要です。ノイズ除去するには新しいファイルを書き出してください。</value>
   </data>
 </root>

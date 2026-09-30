@@ -118,7 +118,7 @@ Namespace ViewModels
         End Function
 
         Public Shared Function ApplyFilter(c As ICommand) As AppAction
-            Return Build("Filter anwenden", "filter", c)
+            Return Build("Anpassungen anwenden", "filter", c)
         End Function
 
         Public Shared Function ConvertTo(c As ICommand) As AppAction

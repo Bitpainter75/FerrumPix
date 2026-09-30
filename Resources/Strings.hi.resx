@@ -2676,9 +2676,6 @@
   <data name="Filter_anwenden_95b83a9f" xml:space="preserve">
     <value>फ़िल्टर लागू करें...</value>
   </data>
-  <data name="Filter_anwenden_573991ed" xml:space="preserve">
-    <value>फ़िल्टर लागू करें</value>
-  </data>
   <data name="Dateien_a41c619e" xml:space="preserve">
     <value>फ़ाइलें</value>
   </data>
@@ -2709,17 +2706,11 @@
   <data name="Originale_berschreiben_6aaed5f4" xml:space="preserve">
     <value>मूल फ़ाइलों के ऊपर लिखें</value>
   </data>
-  <data name="Schreibt_den_Filter_direkt_in_die_Bilddateien_Oh_7668ae3a" xml:space="preserve">
-    <value>फ़िल्टर सीधे छवि फ़ाइलों में लिख देता है। निशान न लगाने पर नई फ़ाइलें बनती हैं और मूल अछूते रहते हैं।</value>
-  </data>
   <data name="Namen_der_Vorgabe_an_den_Dateinamen_anh_ngen_a24135a3" xml:space="preserve">
     <value>फ़ाइल नाम के आगे प्रीसेट का नाम जोड़ें</value>
   </data>
   <data name="foto_jpg_wird_zu_foto_Vintage_jpg_461041f6" xml:space="preserve">
     <value>photo.jpg बनता है photo_Vintage.jpg</value>
-  </data>
-  <data name="Wende_Filter_an_892a3854" xml:space="preserve">
-    <value>फ़िल्टर लागू किया जा रहा है...</value>
   </data>
   <data name="Die_gew_hlte_Vorgabe_konnte_nicht_gelesen_werden_119d34d3" xml:space="preserve">
     <value>चुना गया प्रीसेट पढ़ा नहीं जा सका।</value>
@@ -5480,9 +5471,6 @@
   </data>
   <data name="0_von_1_Datei_en_ge_ndert_bfb7cddb" xml:space="preserve">
     <value>{1} में से {0} फ़ाइलें बदली गईं</value>
-  </data>
-  <data name="0_von_1_Datei_en_gefiltert_47a53883" xml:space="preserve">
-    <value>{1} में से {0} फ़ाइलों पर फ़िल्टर लगा</value>
   </data>
   <data name="0_von_1_Datei_en_bereinigt_111cda26" xml:space="preserve">
     <value>{1} में से {0} फ़ाइलें साफ़ की गईं</value>
@@ -8982,5 +8970,23 @@
   </data>
   <data name="Startwert_des_Reglers_Farbflecken_wenn_ein_RAW_o_2d470b89" xml:space="preserve">
     <value>बिना संपादन वाला RAW खोलने पर रंग के धब्बे स्लाइडर का आरंभिक मान। मोटे रंग के धब्बे हटाता है, पर साफ़ तस्वीरों में बारीक रंग भी, और हर चित्र बदलने पर साफ़ तौर पर गणना का समय लेता है। 0 इसे बंद करता है।</value>
+  </data>
+  <data name="Anpassungen_anwenden_ab535739" xml:space="preserve">
+    <value>समायोजन लागू करें</value>
+  </data>
+  <data name="Wende_Anpassungen_an_50a43c67" xml:space="preserve">
+    <value>समायोजन लागू हो रहे हैं...</value>
+  </data>
+  <data name="0_von_1_Datei_en_angepasst_50cfdffd" xml:space="preserve">
+    <value>{1} में से {0} फ़ाइलों पर समायोजन लगा</value>
+  </data>
+  <data name="Schreibt_die_Anpassungen_direkt_in_die_Bilddatei_cb435a8c" xml:space="preserve">
+    <value>समायोजन सीधे छवि फ़ाइलों में लिख देता है, RAW और Photoshop फ़ाइलों के लिए उनकी साइडकार फ़ाइल में। निशान न लगाने पर नई फ़ाइलें बनती हैं और मूल अछूते रहते हैं।</value>
+  </data>
+  <data name="RAW_und_Photoshop_Dateien_bleiben_unver_ndert_Ih_5a6a43fd" xml:space="preserve">
+    <value>RAW और Photoshop फ़ाइलें बिना बदले रहती हैं। उनके समायोजन बगल की साइडकार फ़ाइल में जाते हैं, और तब से गैलरी इन चित्रों को डेवलप करके दिखाती है।</value>
+  </data>
+  <data name="Beim_berschreiben_bekommen_RAW_und_Photoshop_Dat_93364658" xml:space="preserve">
+    <value>ओवरराइट करते समय RAW और Photoshop फ़ाइलों को केवल नए समायोजन मिलते हैं, जबकि शोर हटाने के लिए नया छवि डेटा चाहिए। शोर हटाने के लिए नई फ़ाइलें लिखवाएँ।</value>
   </data>
 </root>

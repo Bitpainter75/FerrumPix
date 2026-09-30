@@ -2676,9 +2676,6 @@
   <data name="Filter_anwenden_95b83a9f" xml:space="preserve">
     <value>Använd filter...</value>
   </data>
-  <data name="Filter_anwenden_573991ed" xml:space="preserve">
-    <value>Använd filter</value>
-  </data>
   <data name="Dateien_a41c619e" xml:space="preserve">
     <value>filer</value>
   </data>
@@ -2709,17 +2706,11 @@
   <data name="Originale_berschreiben_6aaed5f4" xml:space="preserve">
     <value>Skriv över originalen</value>
   </data>
-  <data name="Schreibt_den_Filter_direkt_in_die_Bilddateien_Oh_7668ae3a" xml:space="preserve">
-    <value>Skriver filtret direkt in i bildfilerna. Utan bock skapas nya filer och originalen lämnas orörda.</value>
-  </data>
   <data name="Namen_der_Vorgabe_an_den_Dateinamen_anh_ngen_a24135a3" xml:space="preserve">
     <value>Lägg till förinställningens namn i filnamnet</value>
   </data>
   <data name="foto_jpg_wird_zu_foto_Vintage_jpg_461041f6" xml:space="preserve">
     <value>foto.jpg blir foto_Vintage.jpg</value>
-  </data>
-  <data name="Wende_Filter_an_892a3854" xml:space="preserve">
-    <value>Använder filter...</value>
   </data>
   <data name="Die_gew_hlte_Vorgabe_konnte_nicht_gelesen_werden_119d34d3" xml:space="preserve">
     <value>Den valda förinställningen kunde inte läsas.</value>
@@ -5483,9 +5474,6 @@
   </data>
   <data name="0_von_1_Datei_en_ge_ndert_bfb7cddb" xml:space="preserve">
     <value>{0} av {1} filer ändrade</value>
-  </data>
-  <data name="0_von_1_Datei_en_gefiltert_47a53883" xml:space="preserve">
-    <value>{0} av {1} filer filtrerade</value>
   </data>
   <data name="0_von_1_Datei_en_bereinigt_111cda26" xml:space="preserve">
     <value>{0} av {1} filer rensade</value>
@@ -8978,5 +8966,23 @@
   </data>
   <data name="Startwert_des_Reglers_Farbflecken_wenn_ein_RAW_o_2d470b89" xml:space="preserve">
     <value>Startvärde för reglaget Färgfläckar när en RAW-fil utan redigering öppnas. Tar bort grova färgfläckar, vid rena bilder dock även fin färg, och kräver märkbar beräkningstid vid varje bildbyte. 0 stänger av det.</value>
+  </data>
+  <data name="Anpassungen_anwenden_ab535739" xml:space="preserve">
+    <value>Använd justeringar</value>
+  </data>
+  <data name="Wende_Anpassungen_an_50a43c67" xml:space="preserve">
+    <value>Använder justeringar...</value>
+  </data>
+  <data name="0_von_1_Datei_en_angepasst_50cfdffd" xml:space="preserve">
+    <value>{0} av {1} filer justerade</value>
+  </data>
+  <data name="Schreibt_die_Anpassungen_direkt_in_die_Bilddatei_cb435a8c" xml:space="preserve">
+    <value>Skriver justeringarna direkt in i bildfilerna, för RAW- och Photoshop-filer in i deras följefil. Utan bock skapas nya filer och originalen lämnas orörda.</value>
+  </data>
+  <data name="RAW_und_Photoshop_Dateien_bleiben_unver_ndert_Ih_5a6a43fd" xml:space="preserve">
+    <value>RAW- och Photoshop-filer lämnas oförändrade. Deras justeringar hamnar i följefilen bredvid, och galleriet visar sedan dessa bilder framkallade.</value>
+  </data>
+  <data name="Beim_berschreiben_bekommen_RAW_und_Photoshop_Dat_93364658" xml:space="preserve">
+    <value>Vid överskrivning får RAW- och Photoshop-filer bara nya justeringar, medan brusreducering behöver nya bilddata. Låt nya filer skrivas för att reducera brus.</value>
   </data>
 </root>

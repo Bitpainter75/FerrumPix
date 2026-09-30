@@ -2677,9 +2677,6 @@
   <data name="Filter_anwenden_95b83a9f" xml:space="preserve">
     <value>Aplicar filtro...</value>
   </data>
-  <data name="Filter_anwenden_573991ed" xml:space="preserve">
-    <value>Aplicar filtro</value>
-  </data>
   <data name="Dateien_a41c619e" xml:space="preserve">
     <value>arquivos</value>
   </data>
@@ -2710,17 +2707,11 @@
   <data name="Originale_berschreiben_6aaed5f4" xml:space="preserve">
     <value>Substituir os originais</value>
   </data>
-  <data name="Schreibt_den_Filter_direkt_in_die_Bilddateien_Oh_7668ae3a" xml:space="preserve">
-    <value>Grava o filtro diretamente nos arquivos de imagem. Se desmarcado, novos arquivos são criados e os originais permanecem intactos.</value>
-  </data>
   <data name="Namen_der_Vorgabe_an_den_Dateinamen_anh_ngen_a24135a3" xml:space="preserve">
     <value>Acrescentar o nome da predefinição ao nome do arquivo</value>
   </data>
   <data name="foto_jpg_wird_zu_foto_Vintage_jpg_461041f6" xml:space="preserve">
     <value>foto.jpg vira foto_Vintage.jpg</value>
-  </data>
-  <data name="Wende_Filter_an_892a3854" xml:space="preserve">
-    <value>Aplicando o filtro...</value>
   </data>
   <data name="Die_gew_hlte_Vorgabe_konnte_nicht_gelesen_werden_119d34d3" xml:space="preserve">
     <value>Não foi possível ler a predefinição selecionada.</value>
@@ -5484,9 +5475,6 @@
   </data>
   <data name="0_von_1_Datei_en_ge_ndert_bfb7cddb" xml:space="preserve">
     <value>{0} de {1} ficheiro(s) alterado(s)</value>
-  </data>
-  <data name="0_von_1_Datei_en_gefiltert_47a53883" xml:space="preserve">
-    <value>{0} de {1} ficheiro(s) filtrado(s)</value>
   </data>
   <data name="0_von_1_Datei_en_bereinigt_111cda26" xml:space="preserve">
     <value>{0} de {1} ficheiro(s) limpo(s)</value>
@@ -8937,5 +8925,23 @@
   </data>
   <data name="Startwert_des_Reglers_Farbflecken_wenn_ein_RAW_o_2d470b89" xml:space="preserve">
     <value>Valor inicial do controlo Manchas de cor ao abrir um RAW sem edições. Remove manchas de cor grosseiras, mas em fotografias limpas também cor fina, e precisa de um tempo de cálculo notório a cada mudança de imagem. 0 desliga-o.</value>
+  </data>
+  <data name="Anpassungen_anwenden_ab535739" xml:space="preserve">
+    <value>Aplicar ajustes</value>
+  </data>
+  <data name="Wende_Anpassungen_an_50a43c67" xml:space="preserve">
+    <value>Aplicando ajustes...</value>
+  </data>
+  <data name="0_von_1_Datei_en_angepasst_50cfdffd" xml:space="preserve">
+    <value>{0} de {1} arquivo(s) ajustado(s)</value>
+  </data>
+  <data name="Schreibt_die_Anpassungen_direkt_in_die_Bilddatei_cb435a8c" xml:space="preserve">
+    <value>Grava os ajustes diretamente nos arquivos de imagem e, nos arquivos RAW e do Photoshop, no seu arquivo lateral. Se desmarcado, novos arquivos são criados e os originais permanecem intactos.</value>
+  </data>
+  <data name="RAW_und_Photoshop_Dateien_bleiben_unver_ndert_Ih_5a6a43fd" xml:space="preserve">
+    <value>Os arquivos RAW e do Photoshop permanecem inalterados. Os ajustes vão para o arquivo lateral ao lado, e a partir daí a galeria mostra estas imagens reveladas.</value>
+  </data>
+  <data name="Beim_berschreiben_bekommen_RAW_und_Photoshop_Dat_93364658" xml:space="preserve">
+    <value>Ao sobrescrever, os arquivos RAW e do Photoshop recebem apenas novos ajustes, mas a redução de ruído precisa de novos dados de imagem. Para reduzir o ruído, deixe gravar novos arquivos.</value>
   </data>
 </root>

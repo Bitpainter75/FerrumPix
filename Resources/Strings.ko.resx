@@ -2676,9 +2676,6 @@
   <data name="Filter_anwenden_95b83a9f" xml:space="preserve">
     <value>필터 적용...</value>
   </data>
-  <data name="Filter_anwenden_573991ed" xml:space="preserve">
-    <value>필터 적용</value>
-  </data>
   <data name="Dateien_a41c619e" xml:space="preserve">
     <value>파일</value>
   </data>
@@ -2709,17 +2706,11 @@
   <data name="Originale_berschreiben_6aaed5f4" xml:space="preserve">
     <value>원본 덮어쓰기</value>
   </data>
-  <data name="Schreibt_den_Filter_direkt_in_die_Bilddateien_Oh_7668ae3a" xml:space="preserve">
-    <value>필터를 이미지 파일에 바로 씁니다. 체크하지 않으면 새 파일이 만들어지고 원본은 그대로 남습니다.</value>
-  </data>
   <data name="Namen_der_Vorgabe_an_den_Dateinamen_anh_ngen_a24135a3" xml:space="preserve">
     <value>파일 이름에 프리셋 이름 붙이기</value>
   </data>
   <data name="foto_jpg_wird_zu_foto_Vintage_jpg_461041f6" xml:space="preserve">
     <value>photo.jpg는 photo_Vintage.jpg가 됩니다</value>
-  </data>
-  <data name="Wende_Filter_an_892a3854" xml:space="preserve">
-    <value>필터를 적용하는 중...</value>
   </data>
   <data name="Die_gew_hlte_Vorgabe_konnte_nicht_gelesen_werden_119d34d3" xml:space="preserve">
     <value>고른 프리셋을 읽지 못했습니다.</value>
@@ -5480,9 +5471,6 @@
   </data>
   <data name="0_von_1_Datei_en_ge_ndert_bfb7cddb" xml:space="preserve">
     <value>파일 {1}개 중 {0}개를 바꿨습니다</value>
-  </data>
-  <data name="0_von_1_Datei_en_gefiltert_47a53883" xml:space="preserve">
-    <value>파일 {1}개 중 {0}개에 필터를 적용했습니다</value>
   </data>
   <data name="0_von_1_Datei_en_bereinigt_111cda26" xml:space="preserve">
     <value>파일 {1}개 중 {0}개를 정리했습니다</value>
@@ -8982,5 +8970,23 @@
   </data>
   <data name="Startwert_des_Reglers_Farbflecken_wenn_ein_RAW_o_2d470b89" xml:space="preserve">
     <value>편집하지 않은 RAW를 열 때 색 얼룩 슬라이더의 시작 값입니다. 거친 색 얼룩을 없애지만 깨끗한 사진에서는 미세한 색도 사라지며, 사진을 바꿀 때마다 눈에 띄게 시간이 걸립니다. 0이면 꺼집니다.</value>
+  </data>
+  <data name="Anpassungen_anwenden_ab535739" xml:space="preserve">
+    <value>조정 적용</value>
+  </data>
+  <data name="Wende_Anpassungen_an_50a43c67" xml:space="preserve">
+    <value>조정을 적용하는 중...</value>
+  </data>
+  <data name="0_von_1_Datei_en_angepasst_50cfdffd" xml:space="preserve">
+    <value>파일 {1}개 중 {0}개에 조정을 적용했습니다</value>
+  </data>
+  <data name="Schreibt_die_Anpassungen_direkt_in_die_Bilddatei_cb435a8c" xml:space="preserve">
+    <value>조정을 이미지 파일에 바로 쓰고, RAW와 Photoshop 파일은 옆의 사이드카 파일에 씁니다. 체크하지 않으면 새 파일이 만들어지고 원본은 그대로 남습니다.</value>
+  </data>
+  <data name="RAW_und_Photoshop_Dateien_bleiben_unver_ndert_Ih_5a6a43fd" xml:space="preserve">
+    <value>RAW와 Photoshop 파일은 바뀌지 않습니다. 조정은 옆의 사이드카 파일에 들어가고, 그 뒤로 갤러리는 이 사진들을 현상된 상태로 보여 줍니다.</value>
+  </data>
+  <data name="Beim_berschreiben_bekommen_RAW_und_Photoshop_Dat_93364658" xml:space="preserve">
+    <value>덮어쓸 때 RAW와 Photoshop 파일은 새 조정만 받지만, 노이즈 제거에는 새 이미지 데이터가 필요합니다. 노이즈를 제거하려면 새 파일을 쓰도록 하세요.</value>
   </data>
 </root>

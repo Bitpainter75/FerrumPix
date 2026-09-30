@@ -1403,7 +1403,7 @@ Namespace ViewModels
             End Get
         End Property
 
-#Region "Dialog: Filter anwenden (Stapel)"
+#Region "Dialog: Anpassungen anwenden (Stapel)"
 
         Private _dialogFilterSourceKind As String = BatchFilterDialogResult.SourceFilter
         Private _dialogSelectedFilterChoice As String = ""
@@ -1584,6 +1584,12 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(IsDialogJpgQualityVisible))
                 Me.RaisePropertyChanged(NameOf(IsDialogOverwriteJpgQualityVisible))
                 Me.RaisePropertyChanged(NameOf(IsDialogFilterAppendNameVisible))
+                ' Trifft das Ueberschreiben RAW- oder Photoshop-Dateien, faellt das Entrauschen weg
+                ' und mit ihm "Ohne Filter", das allein aus dem Entrauschen besteht.
+                If IsDialogBatchDenoiseLockedByRecipes AndAlso IsDialogFilterSourceNone Then
+                    DialogFilterSourceKind = BatchFilterDialogResult.SourceFilter
+                End If
+                RaiseDialogBatchDenoiseChanged()
             End Set
         End Property
 
@@ -2050,16 +2056,47 @@ Namespace ViewModels
         Private _dialogBatchDenoiseStrength As Integer = 70
         Private _dialogBatchDenoiseGrain As Integer = 50
 
-        ''' <summary>Gibt es ueberhaupt ein Modell? Sonst steht statt der Knoepfe ein Hinweis da.</summary>
+        ''' <summary>Gibt es ueberhaupt ein Modell? Sonst steht statt der Knoepfe ein Hinweis da.
+        ''' Ebenso, wenn das Ueberschreiben RAW- oder Photoshop-Dateien trifft (siehe
+        ''' <see cref="IsDialogBatchDenoiseLockedByRecipes"/>).</summary>
         Public ReadOnly Property IsDialogBatchDenoiseAvailable As Boolean
             Get
+                If IsDialogBatchDenoiseLockedByRecipes Then Return False
                 Return DenoiseModelService.Available OrElse DenoiseModelService.FastAvailable
             End Get
         End Property
 
         Public ReadOnly Property DialogBatchDenoiseMissingHint As String
             Get
+                If IsDialogBatchDenoiseLockedByRecipes Then
+                    Return LocalizationService.T("Beim Überschreiben bekommen RAW- und Photoshop-Dateien nur neue Anpassungen, Entrauschen braucht neue Bilddaten. Zum Entrauschen neue Dateien schreiben lassen.")
+                End If
                 Return EditorViewModel.MissingModelHint
+            End Get
+        End Property
+
+        ''' <summary>Wie viele Dateien der Auswahl beim Ueberschreiben ihr Rezept in die .fpxmp
+        ''' bekommen statt neuer Bilddaten (RAW und PSD, siehe GalleryViewModel.IsBatchRecipeWritable).
+        ''' Gesetzt von "Anpassungen anwenden", zurueckgesetzt von jedem Dialog mit Entrauschen, damit
+        ''' ein stehengebliebener Wert den Export nicht sperrt.</summary>
+        Private _dialogBatchRecipeCount As Integer = 0
+
+        ''' <summary>Entrauschen mit Modell ist GEBACKEN: es rechnet neue Bilddaten, und die haben in
+        ''' einem Rezept keinen Platz. Trifft das Ueberschreiben RAW- oder Photoshop-Dateien, gibt es
+        ''' deshalb kein Entrauschen, auch nicht fuer die JPEGs daneben: ein Lauf, der die Haelfte der
+        ''' Auswahl entrauscht und die andere nicht, waere nicht zu erklaeren. Die automatische
+        ''' Bildverbesserung dagegen setzt nur Reglerwerte und laeuft mit.</summary>
+        Public ReadOnly Property IsDialogBatchDenoiseLockedByRecipes As Boolean
+            Get
+                Return _dialogBatchFilterOverwrite AndAlso _dialogBatchRecipeCount > 0
+            End Get
+        End Property
+
+        ''' <summary>Was beim Ueberschreiben mit RAW- und Photoshop-Dateien geschieht. Ohne den Satz
+        ''' fragt man sich, wie eine RAW-Datei ueberschrieben werden soll.</summary>
+        Public ReadOnly Property IsDialogBatchRecipeHintVisible As Boolean
+            Get
+                Return IsDialogBatchDenoiseLockedByRecipes
             End Get
         End Property
 
@@ -2203,7 +2240,9 @@ Namespace ViewModels
                               NameOf(DialogBatchDenoiseStrength), NameOf(DialogBatchDenoiseGrain),
                               NameOf(IsDialogFilterNoneHintVisible), NameOf(IsDialogPrimaryEnabled),
                               NameOf(IsDialogBatchDenoiseOffVisible), NameOf(DialogExportUseDenoise),
-                              NameOf(DialogExportDenoiseHint)}
+                              NameOf(DialogExportDenoiseHint), NameOf(DialogBatchDenoiseMissingHint),
+                              NameOf(IsDialogBatchDenoiseLockedByRecipes), NameOf(IsDialogBatchRecipeHintVisible),
+                              NameOf(IsDialogFilterSourceNoneVisible)}
                 Me.RaisePropertyChanged(name)
             Next
         End Sub
@@ -2213,6 +2252,7 @@ Namespace ViewModels
         Private Sub ResetDialogBatchDenoise()
             Dim settings = AppSettingsService.Load()
             _dialogBatchDenoiseMode = BatchDenoiseOff
+            _dialogBatchRecipeCount = 0
             _dialogDenoiseOffAllowed = True
             _dialogExportUseDenoise = False
             _dialogBatchDenoiseFast = String.Equals(settings.BatchDenoiseModel, "fast", StringComparison.OrdinalIgnoreCase)
@@ -2246,7 +2286,8 @@ Namespace ViewModels
         ''' gemeint ist. Leer (z.B. in einer Suchliste oder in Immich) fällt es auf diesen zurück.</param>
         Public Async Function ShowBatchFilterAsync(fileCount As Integer, Optional currentFolder As String = "",
                                                    Optional allowOverwrite As Boolean = True,
-                                                   Optional sourcesIncludeJpg As Boolean = False) As Task(Of BatchFilterDialogResult)
+                                                   Optional sourcesIncludeJpg As Boolean = False,
+                                                   Optional recipeCount As Integer = 0) As Task(Of BatchFilterDialogResult)
             _dialogFilterSourceKind = BatchFilterDialogResult.SourceFilter
             _dialogFilterNoneAllowed = True
             _dialogBatchOverwriteAvailable = allowOverwrite
@@ -2254,6 +2295,9 @@ Namespace ViewModels
             _dialogBatchSourcesIncludeJpg = sourcesIncludeJpg
             _dialogBatchFilterAppendName = True
             ResetDialogBatchDenoise()
+            ' NACH dem Zuruecksetzen: das raeumt den Wert fuer alle anderen Dialoge weg.
+            _dialogBatchRecipeCount = Math.Max(0, recipeCount)
+            RaiseDialogBatchDenoiseChanged()
             ResetDialogSaveAsMetaOptions()
             DialogTargetNamePattern = AppSettingsService.Load().LastTargetNamePattern
             DialogSelectedFormat = NormalizeSaveAsFormat(DefaultSaveFormat())
@@ -2282,7 +2326,7 @@ Namespace ViewModels
 
             ' Titel vorab zusammensetzen: ShowDialogAsync übersetzt ihn zwar, aber ein interpolierter Text
             ' mit der Dateizahl darin hätte in keiner Sprache einen Schlüssel (siehe LocalizationService).
-            Dim title = $"{LocalizationService.T("Filter anwenden")} ({fileCount} {LocalizationService.T("Dateien")})"
+            Dim title = $"{LocalizationService.T("Anpassungen anwenden")} ({fileCount} {LocalizationService.T("Dateien")})"
             Dim result = Await ShowDialogAsync(AppDialogKind.BatchFilter,
                                                title,
                                                "Wähle den Look und wohin die Bilder geschrieben werden.",

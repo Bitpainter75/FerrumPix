@@ -3302,7 +3302,7 @@ Namespace Views
                         End Try
                         Return
                     Case Key.F
-                        ' Strg+F bleibt die Suche; „Filter anwenden" liegt auf Strg+W
+                        ' Strg+F bleibt die Suche; „Anpassungen anwenden" liegt auf Strg+W
                         ' (Strg+F war schon belegt).
                         FocusSearchBox()
                         e.Handled = True

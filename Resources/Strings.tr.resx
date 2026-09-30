@@ -2676,9 +2676,6 @@
   <data name="Filter_anwenden_95b83a9f" xml:space="preserve">
     <value>Filtre uygula...</value>
   </data>
-  <data name="Filter_anwenden_573991ed" xml:space="preserve">
-    <value>Filtreyi uygula</value>
-  </data>
   <data name="Dateien_a41c619e" xml:space="preserve">
     <value>dosya</value>
   </data>
@@ -2709,17 +2706,11 @@
   <data name="Originale_berschreiben_6aaed5f4" xml:space="preserve">
     <value>Özgün dosyaların üzerine yaz</value>
   </data>
-  <data name="Schreibt_den_Filter_direkt_in_die_Bilddateien_Oh_7668ae3a" xml:space="preserve">
-    <value>Filtreyi doğrudan görüntü dosyalarına yazar. İşaretli değilken yeni dosyalar oluşturulur ve özgün dosyalara dokunulmaz.</value>
-  </data>
   <data name="Namen_der_Vorgabe_an_den_Dateinamen_anh_ngen_a24135a3" xml:space="preserve">
     <value>Hazır ayar adını dosya adına ekle</value>
   </data>
   <data name="foto_jpg_wird_zu_foto_Vintage_jpg_461041f6" xml:space="preserve">
     <value>photo.jpg şu olur: photo_Vintage.jpg</value>
-  </data>
-  <data name="Wende_Filter_an_892a3854" xml:space="preserve">
-    <value>Filtre uygulanıyor...</value>
   </data>
   <data name="Die_gew_hlte_Vorgabe_konnte_nicht_gelesen_werden_119d34d3" xml:space="preserve">
     <value>Seçilen hazır ayar okunamadı.</value>
@@ -5480,9 +5471,6 @@
   </data>
   <data name="0_von_1_Datei_en_ge_ndert_bfb7cddb" xml:space="preserve">
     <value>{1} dosyanın {0} tanesi değiştirildi</value>
-  </data>
-  <data name="0_von_1_Datei_en_gefiltert_47a53883" xml:space="preserve">
-    <value>{1} dosyanın {0} tanesine filtre uygulandı</value>
   </data>
   <data name="0_von_1_Datei_en_bereinigt_111cda26" xml:space="preserve">
     <value>{1} dosyanın {0} tanesi temizlendi</value>
@@ -8982,5 +8970,23 @@
   </data>
   <data name="Startwert_des_Reglers_Farbflecken_wenn_ein_RAW_o_2d470b89" xml:space="preserve">
     <value>Düzenlenmemiş bir RAW açıldığında Renk lekeleri kaydırıcısının başlangıç değeri. Kaba renk lekelerini giderir, ancak temiz çekimlerde ince rengi de alır ve her görüntü değişiminde belirgin hesaplama zamanı gerektirir. 0 onu kapatır.</value>
+  </data>
+  <data name="Anpassungen_anwenden_ab535739" xml:space="preserve">
+    <value>Ayarlamaları uygula</value>
+  </data>
+  <data name="Wende_Anpassungen_an_50a43c67" xml:space="preserve">
+    <value>Ayarlamalar uygulanıyor...</value>
+  </data>
+  <data name="0_von_1_Datei_en_angepasst_50cfdffd" xml:space="preserve">
+    <value>{1} dosyanın {0} tanesine ayarlama uygulandı</value>
+  </data>
+  <data name="Schreibt_die_Anpassungen_direkt_in_die_Bilddatei_cb435a8c" xml:space="preserve">
+    <value>Ayarlamaları doğrudan görüntü dosyalarına, RAW ve Photoshop dosyalarında ise yan dosyalarına yazar. İşaretli değilken yeni dosyalar oluşturulur ve özgün dosyalara dokunulmaz.</value>
+  </data>
+  <data name="RAW_und_Photoshop_Dateien_bleiben_unver_ndert_Ih_5a6a43fd" xml:space="preserve">
+    <value>RAW ve Photoshop dosyaları değişmeden kalır. Ayarlamaları yanlarındaki yan dosyaya yazılır ve galeri bu fotoğrafları o andan itibaren banyo edilmiş olarak gösterir.</value>
+  </data>
+  <data name="Beim_berschreiben_bekommen_RAW_und_Photoshop_Dat_93364658" xml:space="preserve">
+    <value>Üzerine yazarken RAW ve Photoshop dosyaları yalnızca yeni ayarlamalar alır, gürültü giderme ise yeni görüntü verisi gerektirir. Gürültü gidermek için yeni dosyalar yazdırın.</value>
   </data>
 </root>

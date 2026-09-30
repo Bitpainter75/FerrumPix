@@ -11337,6 +11337,76 @@ Namespace ViewModels
             Return BatchImageEditWritableExtensions.Contains(IO.Path.GetExtension(path).ToLowerInvariant())
         End Function
 
+        ''' <summary>Bekommt dieses Element beim Ueberschreiben in "Anpassungen anwenden" sein REZEPT
+        ''' statt neuer Bilddaten? RAW und PSD lassen sich nicht schreiben, ihre Bearbeitung steht in
+        ''' der .fpxmp daneben (RawSidecarService.IsSidecarFormat). Nur lokal: ein Serverelement hat
+        ''' keine Beistelldatei, beim Ueberschreiben entsteht dort ein neues Asset, und eine RAW
+        ''' laesst sich als solches nicht rechnen.</summary>
+        Public Shared Function IsBatchRecipeWritable(item As ImageItem) As Boolean
+            If item Is Nothing OrElse item.IsRemoteAsset Then Return False
+            Return RawSidecarService.IsSidecarFormat(item.FilePath)
+        End Function
+
+        ''' <summary>Das Rezept, auf das der Stapel beim Ueberschreiben einer RAW- oder PSD-Datei
+        ''' aufsetzt. Nothing heisst: diese Datei auslassen.
+        '''
+        ''' Anders als <see cref="BatchBaseAdjustments"/>, das fuer das RECHNEN neuer Dateien gedacht
+        ''' ist: dort haengt der Startwert einer RAW ohne Rezept daran, ob der Stapel sie ueberhaupt
+        ''' entwickelt. Hier wird das Rezept GESCHRIEBEN, und es muss mit denselben Startwerten
+        ''' beginnen wie im Editor, sonst oeffnet der Editor die Datei danach anders als ohne Stapel.
+        '''
+        ''' Eine Beistelldatei, die sich nicht lesen laesst, fuehrt zum Auslassen und nicht zu einem
+        ''' frischen Rezept: das wuerde die Bearbeitung darin still ersetzen.
+        '''
+        ''' Eine Lightroom-.xmp ohne eigene .fpxmp wird VORHER uebernommen, auf demselben Weg wie
+        ''' beim Ordnerscan. Sonst saesse der Stapel auf neutralen Werten auf, und die neue .fpxmp
+        ''' verdeckte die Entwicklung aus Lightroom von da an.</summary>
+        Private Shared Function RecipeBaseAdjustments(sourcePath As String) As ImageAdjustments
+            RawSidecarService.TryImportFromXmpSidecar(sourcePath)
+            If RawSidecarService.Exists(sourcePath) Then Return RawSidecarService.TryRead(sourcePath)
+            If RawPreviewService.IsSupportedRaw(sourcePath) Then Return ImageAdjustments.ForUneditedRaw(sourcePath)
+            Return New ImageAdjustments()
+        End Function
+
+        ''' <summary>"Anpassungen anwenden" mit Ueberschreiben fuer RAW und PSD: die Vorlage kommt
+        ''' ins Rezept, es entsteht keine Bilddatei. Gemischt wird wie beim Rechnen neuer Dateien:
+        ''' nur die Regler, die die Vorlage wirklich setzt (MergeNonDefaultPixelAdjustmentsFrom);
+        ''' Beschnitt, Masken, Objekte und vermerkte Retusche bleiben, wie sie sind.
+        '''
+        ''' Die Beistelldatei bekommt den Vermerk fuer die entwickelte Kachel
+        ''' (RawSidecarService.ReadDevelopedThumbnail): die Aenderung soll in der Galerie zu sehen
+        ''' sein, auch wenn "Entwickelte RAW-Vorschau" aus ist.
+        '''
+        ''' Nacheinander und im Hintergrund: die automatische Bildverbesserung dekodiert jedes Bild,
+        ''' und es gibt nur einen Decode gleichzeitig.</summary>
+        Private Async Function WriteRecipesInPlaceAsync(targets As List(Of String), template As ImageAdjustments,
+                                                        isAutoEnhance As Boolean) As Task(Of Integer)
+            If targets Is Nothing OrElse targets.Count = 0 Then Return 0
+            Dim changedCount = 0
+            Dim errorMessage As String = Nothing
+            Try
+                _mainVm.BeginBusyOverlay(BatchProgressText())
+                Await Task.Run(Sub()
+                    For Each source In targets
+                        If BatchWasCancelled() Then Exit For
+                        Dim adj = RecipeBaseAdjustments(source)
+                        If adj IsNot Nothing Then
+                            adj.MergeNonDefaultPixelAdjustmentsFrom(template)
+                            If isAutoEnhance Then ImageProcessor.ApplyAutoAdjustmentsTo(adj, source)
+                            If RawSidecarService.TryWrite(source, adj, developedThumbnail:=True) Then changedCount += 1
+                        End If
+                        ReportBatchFileDone()
+                    Next
+                End Sub)
+            Catch ex As Exception
+                errorMessage = ex.Message
+            Finally
+                _mainVm.EndBusyOverlay()
+            End Try
+            If errorMessage IsNot Nothing Then Await _mainVm.ShowMessageAsync(LocalizationService.T("Bildverarbeitung fehlgeschlagen"), errorMessage)
+            Return changedCount
+        End Function
+
         ''' <summary>Kann "Exportieren nach"/"Konvertieren nach" diese Datei lesen? (Videos und SVG
         ''' nicht - deren Eintraege blieben sonst wirkungslos sichtbar.)</summary>
         Public Shared Function IsBatchExportable(path As String) As Boolean
@@ -11603,20 +11673,23 @@ Namespace ViewModels
             If targetItems.Count = 0 Then Return
 
             Dim folderHint = BatchFolderHint(targetItems)
-            Dim ueberschreibbar = targetItems.All(Function(i) IsBatchImageEditWritable(i.FilePath))
+            ' RAW und PSD sind ueberschreibbar, indem sie ihr Rezept bekommen (IsBatchRecipeWritable).
+            Dim ueberschreibbar = targetItems.All(Function(i) IsBatchImageEditWritable(i.FilePath) OrElse IsBatchRecipeWritable(i))
+            Dim recipeCount = targetItems.Where(Function(i) IsBatchRecipeWritable(i)).Count()
             Await _mainVm.PreparePendingBakedOptionAsync(targetItems.Select(Function(i) i.FilePath))
             Dim result = Await _mainVm.ShowBatchFilterAsync(targetItems.Count, folderHint, ueberschreibbar,
-                                                            sourcesIncludeJpg:=BatchIncludesJpg(targetItems))
+                                                            sourcesIncludeJpg:=BatchIncludesJpg(targetItems),
+                                                            recipeCount:=recipeCount)
             If result Is Nothing Then Return
             Dim applyPendingBaked = _mainVm.DialogApplyPendingBaked
 
             Dim adjustmentsTemplate = BuildBatchFilterAdjustments(result)
             If adjustmentsTemplate Is Nothing Then
-                Await _mainVm.ShowMessageAsync(LocalizationService.T("Filter anwenden"), LocalizationService.T("Die gewählte Vorgabe konnte nicht gelesen werden."))
+                Await _mainVm.ShowMessageAsync(LocalizationService.T("Anpassungen anwenden"), LocalizationService.T("Die gewählte Vorgabe konnte nicht gelesen werden."))
                 Return
             End If
 
-            StatusText = LocalizationService.T("Wende Filter an...")
+            StatusText = LocalizationService.T("Wende Anpassungen an...")
             ' Der Knopf "EXIF" im Uebernehmen-Bereich des Dialogs entscheidet je Lauf; die
             ' Einstellung ist nur noch die Vorbelegung.
             Dim preserveMetadata = result.PreserveMetadata
@@ -11655,13 +11728,17 @@ Namespace ViewModels
 
             If result.Overwrite Then
                 Dim localPaths = localItems.Where(Function(i) File.Exists(i.FilePath)).Select(Function(i) i.FilePath).ToList()
-                changedCount = Await RewriteImagesInPlaceAsync(localPaths, writer)
+                ' RAW und PSD bekommen ihr Rezept, alle anderen neue Bilddaten - in einem Lauf.
+                Dim recipePaths = localPaths.Where(AddressOf RawSidecarService.IsSidecarFormat).ToList()
+                Dim pixelPaths = localPaths.Where(Function(p) Not RawSidecarService.IsSidecarFormat(p)).ToList()
+                changedCount = Await RewriteImagesInPlaceAsync(pixelPaths, writer)
+                changedCount += Await WriteRecipesInPlaceAsync(recipePaths, adjustmentsTemplate, isAutoEnhance)
                 ' In Immich gibt es kein Überschreiben an Ort und Stelle - dort entsteht wie bei den
                 ' übrigen Stapelaktionen ein neues Asset.
                 uploadedCount = Await ProcessImmichBatchItemsAsync(immichItems, writer,
                                                                    Function(source) IO.Path.GetExtension(source),
                                                                    uploadedAssetIds).ConfigureAwait(True)
-                StatusText = BatchResultText(LocalizationService.T("{0} von {1} Datei(en) gefiltert"), changedCount + uploadedCount, targetItems.Count)
+                StatusText = BatchResultText(LocalizationService.T("{0} von {1} Datei(en) angepasst"), changedCount + uploadedCount, targetItems.Count)
                 RefreshAfterBatchFileRewrite(localPaths)
                 If uploadedCount > 0 Then Await RefreshAfterImmichBatchUploadAsync(uploadedAssetIds)
                 Return
@@ -11675,14 +11752,14 @@ Namespace ViewModels
                 uploadedCount = Await ProcessImmichBatchItemsAsync(immichItems, writer,
                                                                    Function(source) result.Extension,
                                                                    uploadedAssetIds, suffix).ConfigureAwait(True)
-                StatusText = BatchResultText(LocalizationService.T("{0} von {1} Datei(en) gefiltert"), changedCount + uploadedCount, targetItems.Count)
+                StatusText = BatchResultText(LocalizationService.T("{0} von {1} Datei(en) angepasst"), changedCount + uploadedCount, targetItems.Count)
                 If uploadedAssetIds.Count > 0 Then Await RefreshAfterImmichBatchUploadAsync(uploadedAssetIds)
                 Return
             End If
 
             Dim targetFolder = If(result.TargetFolder, "").Trim()
             If String.IsNullOrWhiteSpace(targetFolder) Then
-                Await _mainVm.ShowMessageAsync(LocalizationService.T("Filter anwenden"), LocalizationService.T("Kein Zielordner angegeben."))
+                Await _mainVm.ShowMessageAsync(LocalizationService.T("Anpassungen anwenden"), LocalizationService.T("Kein Zielordner angegeben."))
                 Return
             End If
             Dim createFolderError As String = Nothing
@@ -11692,7 +11769,7 @@ Namespace ViewModels
                 createFolderError = ex.Message
             End Try
             If createFolderError IsNot Nothing Then
-                Await _mainVm.ShowMessageAsync(LocalizationService.T("Filter anwenden"), createFolderError)
+                Await _mainVm.ShowMessageAsync(LocalizationService.T("Anpassungen anwenden"), createFolderError)
                 Return
             End If
 
@@ -11706,7 +11783,7 @@ Namespace ViewModels
                                                                        Function(source) result.Extension,
                                                                        suffix, nameBuilder).ConfigureAwait(True)
 
-            StatusText = BatchResultText(LocalizationService.T("{0} von {1} Datei(en) gefiltert"), changedCount + uploadedCount, targetItems.Count)
+            StatusText = BatchResultText(LocalizationService.T("{0} von {1} Datei(en) angepasst"), changedCount + uploadedCount, targetItems.Count)
             If Not _isVirtualFolder AndAlso Not String.IsNullOrEmpty(_currentFolder) Then SyncFolderItems()
         End Function
 
