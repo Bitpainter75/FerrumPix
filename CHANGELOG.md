@@ -6,8 +6,17 @@
   shapes and the layer's own adjustments are rasterized on the way, and the result comes back as
   a new layer right above. The editor's footer and stage menus still send the whole picture.
 
-- CTRL+E merges the selected layer with the visible layer below it; the bottom layer is merged
-  into the photo. The eraser in the drawing tool stays on E.
+- CTRL+E merges the selected layer with the visible layer below it. The eraser in the drawing
+  tool stays on E.
+
+- Merged layers are trimmed to their content right away.
+
+- Rasterizing a layer now turns it into an image layer in the same place instead of merging it
+  into the photo, trimmed to its content right away. A layer that already is an image no longer
+  offers the option.
+
+- The new "Merge into background" in the layer's context menu bakes the selected layers, or a
+  whole group, into the photo.
 
 - Image and paint layers can be trimmed from the layer's context menu: the fully transparent
   border is cut away, and the picture on the layer stays exactly where it was.

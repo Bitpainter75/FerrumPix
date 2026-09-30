@@ -9014,4 +9014,16 @@
   <data name="Maskenebenen_lassen_sich_nicht_zusammenlegen_55f1017c" xml:space="preserve">
     <value>I livelli maschera non possono essere uniti</value>
   </data>
+  <data name="Auf_Hintergrundebene_reduzieren_3ab23ba6" xml:space="preserve">
+    <value>Unisci livelli</value>
+  </data>
+  <data name="Wird_auf_die_Hintergrundebene_reduziert_d4bc7500" xml:space="preserve">
+    <value>Unione dei livelli in corso</value>
+  </data>
+  <data name="Reduzieren_fehlgeschlagen_9c089be9" xml:space="preserve">
+    <value>Unione non riuscita</value>
+  </data>
+  <data name="Auf_Hintergrundebene_reduziert_2d0164fc" xml:space="preserve">
+    <value>Livelli uniti</value>
+  </data>
 </root>

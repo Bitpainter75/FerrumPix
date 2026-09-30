@@ -9339,13 +9339,26 @@ Namespace ViewModels
             End Get
         End Property
 
-        ''' <summary>Rastern backt ins Arbeitsbild - bei ausgeblendeter Pixel-Ebene gesperrt.</summary>
+        ''' <summary>Rastern macht aus einer Ebene eine Bildebene. Angeboten wird es nur, solange
+        ''' unter den markierten Ebenen eine ist, die noch kein Bild ist - eine Bildebene zu rastern
+        ''' taete nichts. Das Arbeitsbild bleibt dabei unberuehrt, die Sperre der ausgeblendeten
+        ''' Pixel-Ebene gilt deshalb nicht.</summary>
         Public ReadOnly Property CanRasterizeSelectedAnnotation As Boolean
             Get
-                ' Gilt auch für eine Gruppe/Mehrfachauswahl - die wird als Ganzes eingebacken.
-                Return (HasSelectedAnnotation OrElse SelectedAnnotationCount > 0) AndAlso CanUsePixelTools
+                Return SelectedAnnotations.Any(Function(a) a IsNot Nothing AndAlso Not IsRasterLayer(a))
             End Get
         End Property
+
+        ''' <summary>Ist die Ebene schon ein Bild? Eingefuegte Bilder, Malebenen und alles, was aus
+        ''' Rastern, Zusammenlegen oder G'MIC kommt.</summary>
+        Private Shared Function IsRasterLayer(annotation As ImageAnnotation) As Boolean
+            Select Case NormalizeAnnotationKind(annotation.Kind)
+                Case "Image", "SelectionImage"
+                    Return True
+                Case Else
+                    Return False
+            End Select
+        End Function
 
         Public ReadOnly Property PixelToolsLockedHint As String
             Get
@@ -15747,6 +15760,7 @@ Namespace ViewModels
         Public ReadOnly Property PasteMaskCommand As ICommand
         Public ReadOnly Property LoadMaskAsSelectionCommand As ICommand
         Public ReadOnly Property RasterizeSelectedAnnotationCommand As ICommand
+        Public ReadOnly Property FlattenToBackgroundCommand As ICommand
         Public ReadOnly Property MoveSelectedAnnotationUpCommand As ICommand
         Public ReadOnly Property MoveSelectedAnnotationDownCommand As ICommand
         Public ReadOnly Property TogglePixelLayerVisibilityCommand As ICommand
@@ -16179,6 +16193,7 @@ Namespace ViewModels
             RasterizeSelectedAnnotationCommand = ReactiveCommand.Create(Sub()
                                                                             RasterizeSelectedAnnotation()
                                                                         End Sub)
+            FlattenToBackgroundCommand = ReactiveCommand.Create(AddressOf FlattenToBackground)
             MoveSelectedAnnotationUpCommand = ReactiveCommand.Create(Sub()
                                                                          MoveSelectedAnnotation(1)
                                                                      End Sub)
@@ -25324,8 +25339,8 @@ Namespace ViewModels
 
         ' ── Ebenen zusammenlegen ────────────────────────────────────────────────
         '
-        ' Der Unterschied zum RASTERN: das Rastern backt ins Arbeitsbild, das Objekt verlaesst den
-        ' Stapel und liegt danach unter allen Reglern. Zusammenlegen bleibt IM Stapel - aus mehreren
+        ' Der Unterschied zum RASTERN: das Rastern macht aus JEDER markierten Ebene fuer sich eine
+        ' Bildebene an derselben Stelle. Zusammenlegen bleibt ebenfalls IM Stapel - aus mehreren
         ' Objekten wird EINES, und das behaelt Lage, Sichtbarkeit, Deckkraft und seine Stelle in der
         ' Z-Reihenfolge. Genau das braucht man, wenn eine Anordnung fertig ist und nur noch als
         ' Ganzes bewegt werden soll.
@@ -25389,31 +25404,66 @@ Namespace ViewModels
         ''' Maske, Beschraenkung, Mischmethode, Deckkraft, Drehung und eigene Anpassungen stecken
         ''' danach in den Pixeln, Text und Formen sind gerastert. Auf jedem Faden.</summary>
         Private Shared Function DrawAnnotationRenderToPng(job As AnnotationRenderJob, targetPath As String) As Boolean
-            Dim rect = job.Rect
-            Using merged = New SKBitmap(rect.Width, rect.Height, SKColorType.Rgba8888, SKAlphaType.Premul)
-                Using canvas = New SKCanvas(merged)
-                    canvas.Clear(SKColors.Transparent)
-                    ' Versatz statt Clip: der Aufrufer-Ursprung ist die linke obere Ecke des
-                    ' gemeinsamen Rechtecks, und die Objekte rechnen selbst in Bildkoordinaten.
-                    ImageProcessor.DrawAnnotationsOnCanvas(canvas, job.Recipe, job.BaseWidth, job.BaseHeight,
-                                                           rect.Left, rect.Top, rect.Width, rect.Height,
-                                                           job.Targets)
-                End Using
-                Using image = SKImage.FromBitmap(merged)
-                    Using data = image.Encode(SKEncodedImageFormat.Png, 100)
-                        Using stream = IO.File.OpenWrite(targetPath)
-                            data.SaveTo(stream)
-                        End Using
-                    End Using
-                End Using
+            Using merged = RenderAnnotationJob(job)
+                WriteRenderPng(merged, targetPath)
             End Using
             Return True
         End Function
 
+        ''' <summary>Wie <see cref="DrawAnnotationRenderToPng"/>, aber gleich getrimmt: durchgehend
+        ''' durchsichtige Zeilen und Spalten am Rand fallen weg, wie bei "Ebene trimmen". Das Raster
+        ''' steht hier 1:1 in Bildpunkten und ungedreht, der Beschnitt ist also nur ein Versatz des
+        ''' Rechtecks. Zurueck kommt das Rechteck, das die Ebene danach bekommt. Ist alles
+        ''' durchsichtig, bleibt das volle Rechteck - eine leere Ebene verschwindet nicht still.</summary>
+        Private Shared Function DrawTrimmedAnnotationRenderToPng(job As AnnotationRenderJob, targetPath As String) As SKRectI
+            Dim rect = job.Rect
+            Using merged = RenderAnnotationJob(job)
+                Dim bounds = FindOpaqueBounds(merged)
+                If bounds.IsEmpty OrElse (bounds.Width = merged.Width AndAlso bounds.Height = merged.Height) Then
+                    WriteRenderPng(merged, targetPath)
+                    Return rect
+                End If
+                Using cropped = New SKBitmap()
+                    If Not merged.ExtractSubset(cropped, bounds) Then
+                        WriteRenderPng(merged, targetPath)
+                        Return rect
+                    End If
+                    WriteRenderPng(cropped, targetPath)
+                End Using
+                Return New SKRectI(rect.Left + bounds.Left, rect.Top + bounds.Top,
+                                   rect.Left + bounds.Right, rect.Top + bounds.Bottom)
+            End Using
+        End Function
+
+        ''' <summary>Die Ebenen des Auftrags allein auf durchsichtigem Grund, in ihrem Rechteck.</summary>
+        Private Shared Function RenderAnnotationJob(job As AnnotationRenderJob) As SKBitmap
+            Dim rect = job.Rect
+            Dim merged = New SKBitmap(rect.Width, rect.Height, SKColorType.Rgba8888, SKAlphaType.Premul)
+            Using canvas = New SKCanvas(merged)
+                canvas.Clear(SKColors.Transparent)
+                ' Versatz statt Clip: der Aufrufer-Ursprung ist die linke obere Ecke des
+                ' gemeinsamen Rechtecks, und die Objekte rechnen selbst in Bildkoordinaten.
+                ImageProcessor.DrawAnnotationsOnCanvas(canvas, job.Recipe, job.BaseWidth, job.BaseHeight,
+                                                       rect.Left, rect.Top, rect.Width, rect.Height,
+                                                       job.Targets)
+            End Using
+            Return merged
+        End Function
+
+        Private Shared Sub WriteRenderPng(bitmap As SKBitmap, targetPath As String)
+            Using image = SKImage.FromBitmap(bitmap)
+                Using data = image.Encode(SKEncodedImageFormat.Png, 100)
+                    Using stream = IO.File.OpenWrite(targetPath)
+                        data.SaveTo(stream)
+                    End Using
+                End Using
+            End Using
+        End Sub
+
         ''' <summary>STRG+E: die markierte Ebene mit der darunter zusammenlegen. Darunter heisst die
         ''' naechste SICHTBARE Ebene im Stapel; Korrekturebenen stehen in einer eigenen Liste und
         ''' zaehlen nicht mit, eine unsichtbare waere im Ergebnis still verschwunden. Liegt darunter
-        ''' keine mehr, wird die Ebene ins Foto gerastert, wie mit "Ebene rastern". Sind schon mehrere
+        ''' keine mehr, geschieht nichts: ins Foto geht eine Ebene nie. Sind schon mehrere
         ''' markiert, werden eben diese zusammengelegt. Eine mitmarkierte Korrekturebene sperrt den
         ''' Vorgang wie im Kontextmenue (CanMergeSelectedAnnotations): sie traegt keine Pixel, und still
         ''' uebergangen wirkte sie danach auf etwas anderes als vorher.</summary>
@@ -25440,11 +25490,7 @@ Namespace ViewModels
                 End If
             Next
             If below Is Nothing Then
-                If CanRasterizeSelectedAnnotation Then
-                    RasterizeSelectedAnnotation()
-                Else
-                    StatusText = LocalizationService.T("Unter dieser Ebene liegt keine weitere")
-                End If
+                StatusText = LocalizationService.T("Unter dieser Ebene liegt keine weitere")
                 Return
             End If
             ' Beide markieren und denselben Weg gehen wie "Ebenen zusammenlegen".
@@ -25469,8 +25515,10 @@ Namespace ViewModels
             If targets.Any(Function(a) Not String.Equals(a.GroupId, groupId, StringComparison.Ordinal)) Then groupId = ""
 
             Dim assetPath = CreateSelectionAssetTempPath("merged")
+            ' Gleich getrimmt, wie beim Rastern: das gemeinsame Rechteck schliesst Kontur, Effekte und
+            ' gedrehte Ecken ein, und der durchsichtige Rand stuende sonst im Auswahlrahmen.
             Try
-                DrawAnnotationRenderToPng(job, assetPath)
+                rect = DrawTrimmedAnnotationRenderToPng(job, assetPath)
             Catch ex As Exception
                 DiagnosticLogService.LogException("Editor.MergeAnnotations", ex)
                 StatusText = LocalizationService.T("Zusammenlegen fehlgeschlagen")
@@ -25513,7 +25561,9 @@ Namespace ViewModels
             Dim insertAt = Math.Max(0, Math.Min(_annotations.Count, topIndex - targets.Count + 1))
             _annotations.Insert(insertAt, result)
             DropOrphanedAnnotationGroups()
-            _extraSelectedAnnotations.Clear()
+            ' Erst abwaehlen: landet das Ergebnis auf dem Index der bisher markierten Ebene, kehrte der
+            ' Setter sofort zurueck, und der Auswahlrahmen blieb auf deren altem Rechteck stehen.
+            SelectedAnnotationIndex = -1
             SelectedAnnotationIndex = _annotations.IndexOf(result)
             RaiseMultiSelectionChanged()
             RebuildLayerRows()
@@ -25524,31 +25574,173 @@ Namespace ViewModels
             RefreshOverlayAfterAnnotationChange(ImageProcessor.UnionRects(dirty, ComputeSceneDirtyRectFor(result)))
         End Sub
 
-        ''' Läuft gerade ein Raster-Commit? Sperrt den Befehl gegen Doppelklick.
-        Private _rasterizeInFlight As Boolean = False
-
-        ''' „Ebene rastern" (Stufe F): das Objekt wird in das ARBEITSBILD eingebacken, verlässt
-        ''' den Ebenenstapel und ist nur noch per Undo (Anpassungs-Snapshot + Pixel-Patch)
-        ''' zurückholbar; Retusche/Pinsel können danach direkt darauf arbeiten. Semantik:
-        ''' gerasterter Inhalt rückt UNTER die Farb-Regler und unter alle verbliebenen Objekte;
-        ''' Mischmodi rechnen ab jetzt gegen das unangepasste Arbeitsbild - der Look kann beim
-        ''' Rastern mit aktiven Anpassungen leicht umspringen (bewusst, siehe Rendering-Notizen).
+        ''' <summary>„Ebene rastern": jede markierte Ebene, die noch kein Bild ist, wird an ihrer
+        ''' Stelle im Stapel durch eine Bildebene ersetzt. Sie bleibt eine EIGENE Ebene - nichts geht
+        ''' ins Foto, und mehrere markierte werden einzeln gerastert, nicht zusammengelegt (dafuer
+        ''' gibt es "Ebenen zusammenlegen"). Bildebenen unter den markierten bleiben, wie sie sind.
+        '''
+        ''' In die Pixel gehen Text, Form, Kontur, Effekte, Drehung, Spiegelung, Ebenenmaske,
+        ''' Schnittmaske und eigene Anpassungen. Deckkraft und Mischmethode bleiben Eigenschaften der
+        ''' neuen Ebene: eingebacken rechnete eine Mischmethode gegen durchsichtigen Grund und waere
+        ''' danach verloren. Name, Gruppe, Sichtbarkeit und Sperre wandern mit, eingehaengte
+        ''' Korrekturebenen haengen danach an der neuen Ebene. EIN Undo-Schritt fuer alles.
+        '''
+        ''' Das Ergebnis ist gleich getrimmt (<see cref="DrawTrimmedAnnotationRenderToPng"/>), und die
+        ''' Markierung wird neu gesetzt, damit der Auswahlrahmen das neue Rechteck zeigt.</summary>
         Private Sub RasterizeSelectedAnnotation()
-            If Not CanUsePixelTools Then Return
-            If _rasterizeInFlight Then Return
-            ' Eine GRUPPE bzw. Mehrfachauswahl wird als Ganzes gebacken - in EINEM Region-Commit und
-            ' EINEM Undo-Schritt, in Z-Reihenfolge von hinten nach vorn.
-            Dim targets = SelectedAnnotations.Where(Function(a) a IsNot Nothing).
+            Dim targets = SelectedAnnotations.Where(Function(a) a IsNot Nothing AndAlso Not IsRasterLayer(a)).
                 OrderBy(Function(a) _annotations.IndexOf(a)).ToList()
             If targets.Count = 0 Then Return
-
             Dim baseW = GetBaseWidth()
             Dim baseH = GetBaseHeight()
-            If baseW <= 0 OrElse baseH <= 0 OrElse Not _workingImage.IsInitialized Then Return
+            If baseW <= 0 OrElse baseH <= 0 Then Return
             ' Nach dem Uebernehmen stehen Kopien in der Liste, siehe CommitObjectAdjustModeAndRefresh.
             targets = CommitObjectAdjustModeAndRefresh(targets)
             If targets.Count = 0 Then Return
+
+            ' Erst alles zeichnen, dann den Stapel anfassen: schlaegt eine Ebene fehl, bleibt alles,
+            ' wie es war.
+            Dim results As New List(Of (Source As ImageAnnotation, Result As ImageAnnotation))()
+            For Each source In targets
+                Dim rect = ComputeAnnotationUnionRect({source}, baseW, baseH)
+                If rect.Width <= 0 OrElse rect.Height <= 0 Then Continue For
+                Dim recipe = BuildAnnotationDrawRecipe({source}, baseW, baseH)
+                If recipe.Targets.Count = 0 Then Continue For
+                Dim clone = recipe.Targets(0)
+                ' Sichtbar machen heisst auch die GRUPPENKETTE: der Renderer verundet das eigene Auge
+                ' mit dem jeder Gruppe darueber. Im Rezept stehen nur Kopien, das Dokument bleibt, wie
+                ' es ist. Ohne das kam aus einer ausgeblendeten Gruppe eine leere Bildebene, und das
+                ' Original war beim Einblenden weg.
+                clone.IsVisible = True
+                For Each g In recipe.Recipe.GroupChainOf(clone.GroupId)
+                    g.IsVisible = True
+                Next
+                ' Wer trotzdem nicht gezeichnet wuerde, bleibt, wie er ist, statt leer ersetzt zu werden.
+                If Not recipe.Recipe.IsAnnotationRenderVisible(clone) Then Continue For
+                clone.Opacity = 100
+                clone.BlendMode = "Normal"
+                Dim job = New AnnotationRenderJob With {.Rect = rect, .BaseWidth = baseW, .BaseHeight = baseH,
+                                                        .Recipe = recipe.Recipe, .Targets = recipe.Targets}
+                Dim assetPath = CreateSelectionAssetTempPath("rasterized")
+                ' Gleich getrimmt: Schatten, Schein und Drehung weiten das Rechteck, und der
+                ' durchsichtige Rand stuende sonst im Auswahlrahmen und beim Verschieben im Weg.
+                Try
+                    rect = DrawTrimmedAnnotationRenderToPng(job, assetPath)
+                Catch ex As Exception
+                    DiagnosticLogService.LogException("Editor.RasterizeAnnotation", ex)
+                    StatusText = LocalizationService.T("Rastern fehlgeschlagen")
+                    Return
+                End Try
+                results.Add((source, New ImageAnnotation With {
+                    .Kind = "SelectionImage",
+                    .Text = source.LayerLabel,
+                    .CustomName = source.CustomName,
+                    .ImagePath = assetPath,
+                    .XPixels = rect.Left,
+                    .YPixels = rect.Top,
+                    .WidthPixels = rect.Width,
+                    .HeightPixels = rect.Height,
+                    .FillColor = "#00FFFFFF",
+                    .StrokeColor = "#00000000",
+                    .StrokeWidth = 0,
+                    .Opacity = source.Opacity,
+                    .BlendMode = source.BlendMode,
+                    .GroupId = source.GroupId,
+                    .IsVisible = source.IsVisible,
+                    .IsLocked = source.IsLocked
+                }))
+            Next
+            If results.Count = 0 Then Return
+
+            ' Die Ebenen werden an ihrer Stelle ersetzt, die Indizes der Markierung bleiben also gueltig.
+            Dim anchorIndex = _selectedAnnotationIndex
+            Dim selectedIndices = SelectedAnnotationIndices()
+            PushUndo()
+            Dim dirty = SKRectI.Empty
+            For Each pair In results
+                Dim index = _annotations.IndexOf(pair.Source)
+                If index < 0 Then Continue For
+                dirty = ImageProcessor.UnionRects(dirty, ComputeSceneDirtyRectFor(pair.Source))
+                _annotations(index) = pair.Result
+                For Each layer In _maskedAdjustmentLayers
+                    If layer IsNot Nothing AndAlso String.Equals(layer.StackAboveAnnotationId, pair.Source.Id, StringComparison.Ordinal) Then
+                        layer.StackAboveAnnotationId = pair.Result.Id
+                    End If
+                Next
+                dirty = ImageProcessor.UnionRects(dirty, ComputeSceneDirtyRectFor(pair.Result))
+            Next
+            ' Die Maske steckt jetzt in den Pixeln - ihre Daten braucht niemand mehr.
+            For Each pair In results
+                RemoveMaskIfUnreferenced(pair.Source.MaskId)
+            Next
+            ' Die Version zaehlt hoch, sonst haelt der Region-Worker einen Patch mit der alten Lage
+            ' fuer aktuell (wie beim Trimmen).
+            _annotationModelVersion += 1
+
+            ' Erst abwaehlen: mit demselben Index kehrte der Setter sofort zurueck, und das Panel
+            ' zeigte weiter die Werkzeuge der alten Ebenenart.
+            If anchorIndex < 0 AndAlso selectedIndices.Count > 0 Then anchorIndex = selectedIndices(0)
+            SelectedAnnotationIndex = -1
+            SelectedAnnotationIndex = anchorIndex
+            AddExtraSelectedAnnotationsByIndex(selectedIndices)
+            RaiseMultiSelectionChanged()
+            RebuildLayerRows()
+            _hasChanges = True
+            RaiseResetButtonStateChanged()
+            Dim label = If(results.Count > 1, LocalizationService.T("Ebenen gerastert"), LocalizationService.T("Ebene gerastert"))
+            NameHistoryStep(label)
+            StatusText = label
+            RefreshOverlayAfterAnnotationChange(dirty)
+        End Sub
+
+        ''' Läuft gerade das Reduzieren? Sperrt den Befehl gegen Doppelklick.
+        Private _flattenInFlight As Boolean = False
+
+        ''' <summary>Ist unter den markierten Ebenen eine sichtbare, die sich auf die Hintergrundebene
+        ''' reduzieren liesse? Gebacken wird ins Arbeitsbild - bei ausgeblendeter Pixel-Ebene oder
+        ''' noch laufender RAW-Entwicklung deshalb gesperrt.</summary>
+        Public ReadOnly Property CanFlattenToBackground As Boolean
+            Get
+                ' Sichtbar wie im Renderer, also samt Gruppenkette: sonst stand der Eintrag bei einer
+                ' nur ueber die Gruppe ausgeblendeten Ebene im Menue und tat nichts.
+                Return CanUsePixelTools AndAlso SelectedAnnotations.Any(AddressOf IsAnnotationRenderVisibleLive)
+            End Get
+        End Property
+
+        ''' <summary>„Auf Hintergrundebene reduzieren": die MARKIERTEN Ebenen werden ins ARBEITSBILD
+        ''' eingebacken und verlassen den Stapel, eine Gruppe als Ganzes. Zurueck geht es nur per
+        ''' Undo (Anpassungs-Snapshot und Pixel-Patch in EINEM Schritt). Anders als "Ebene rastern",
+        ''' das eine Bildebene im Stapel macht.
+        '''
+        ''' Eine ausgeblendete Ebene (auch ueber ihre Gruppe) bleibt stehen: eingebacken wuerde
+        ''' von ihr nichts, und entfernt waere sie still verloren. Korrekturebenen tragen keine
+        ''' Pixel und bleiben ebenfalls.
+        '''
+        ''' Semantik: der eingebackene Inhalt rueckt UNTER die Farbregler. Belichtung, Farbe und
+        ''' Filter wirken danach auch auf ihn, und Mischmethoden rechnen gegen das unangepasste
+        ''' Arbeitsbild - mit verstellten Reglern springt das Aussehen deshalb (bewusst, die Regler
+        ''' sind in FerrumPix keine Ebenen).</summary>
+        Private Sub FlattenToBackground()
+            If Not CanUsePixelTools Then Return
+            If _flattenInFlight Then Return
+            Dim baseW = GetBaseWidth()
+            Dim baseH = GetBaseHeight()
+            If baseW <= 0 OrElse baseH <= 0 OrElse Not _workingImage.IsInitialized Then Return
+            Dim selected = SelectedAnnotations.Where(Function(a) a IsNot Nothing).
+                OrderBy(Function(a) _annotations.IndexOf(a)).ToList()
+            ' Nach dem Uebernehmen stehen Kopien in der Liste, siehe CommitObjectAdjustModeAndRefresh.
+            selected = CommitObjectAdjustModeAndRefresh(selected)
+            If selected.Count = 0 Then Return
+
+            ' Sichtbar heisst hier dasselbe wie beim Zeichnen: eigenes Auge UND das der Gruppenkette.
+            Dim probe = BuildAnnotationDrawRecipe(selected, baseW, baseH)
+            Dim targets As New List(Of ImageAnnotation)()
+            For i = 0 To Math.Min(selected.Count, probe.Targets.Count) - 1
+                If probe.Recipe.IsAnnotationRenderVisible(probe.Targets(i)) Then targets.Add(selected(i))
+            Next
+            If targets.Count = 0 Then Return
             Dim rect = ComputeAnnotationUnionRect(targets, baseW, baseH)
+            rect = SKRectI.Intersect(rect, New SKRectI(0, 0, baseW, baseH))
             If rect.Width <= 0 OrElse rect.Height <= 0 Then Return
 
             ' Snapshot enthält die Objekte noch: Undo stellt Ebenen UND Pixel wieder her.
@@ -25557,35 +25749,46 @@ Namespace ViewModels
             Dim recipe = BuildAnnotationDrawRecipe(targets, baseW, baseH)
             Dim adjDrawShared = recipe.Recipe
             Dim annClones = recipe.Targets
-            _rasterizeInFlight = True
-            StatusText = LocalizationService.T("Ebene wird gerastert…")
+            _flattenInFlight = True
+            StatusText = LocalizationService.T("Wird auf die Hintergrundebene reduziert")
 
             EnqueueWorkingCommit(
                 Function()
                     Return _workingImage.CommitRegion(rect,
                         Sub(full)
-                            Using canvas = New SKCanvas(full)
-                                canvas.ClipRect(SKRect.Create(rect.Left, rect.Top, rect.Width, rect.Height))
-                                ImageProcessor.DrawAnnotationsOnCanvas(canvas, adjDrawShared, full.Width, full.Height,
-                                                                       0, 0, full.Width, full.Height, annClones)
+                            ' Ueber den GRUPPENWEG, nicht direkt: Deckkraft, Mischmethode und Maske
+                            ' einer Gruppe entstehen nur dort. Gerechnet wird auf einem Ausschnitt
+                            ' des Arbeitsbilds - die Mischmethoden brauchen den Grund darunter -, und
+                            ' der geht danach Punkt fuer Punkt zurueck. So bleibt jede Zeichnung
+                            ' im Rechteck, das der Undo-Patch abdeckt.
+                            Using region = New SKBitmap(rect.Width, rect.Height, SKColorType.Bgra8888, SKAlphaType.Premul)
+                                Using paint = New SKPaint With {.BlendMode = SKBlendMode.Src}
+                                    Using canvas = New SKCanvas(region)
+                                        canvas.Clear(SKColors.Transparent)
+                                        canvas.DrawBitmap(full, -rect.Left, -rect.Top, paint)
+                                    End Using
+                                    ImageProcessor.DrawAnnotationSubsetWithGroups(region, rect.Left, rect.Top, adjDrawShared, full,
+                                                                                  New HashSet(Of ImageAnnotation)(annClones))
+                                    Using canvas = New SKCanvas(full)
+                                        canvas.DrawBitmap(region, rect.Left, rect.Top, paint)
+                                    End Using
+                                End Using
                             End Using
                         End Sub)
                 End Function,
                 Sub(patch)
-                    _rasterizeInFlight = False
+                    _flattenInFlight = False
                     If patch Is Nothing Then
-                        StatusText = LocalizationService.T("Rastern fehlgeschlagen")
+                        StatusText = LocalizationService.T("Reduzieren fehlgeschlagen")
                         Return
                     End If
                     If undoEntry IsNot Nothing Then undoEntry.Patch = patch
-                    ' Objekt aus dem Stapel nehmen - OHNE eigenen Undo-Push (der kam oben) - und
-                    ' die Anzeige in EINEM Schritt auf den gebackenen Stand ziehen.
                     ' Eingehängte Korrekturen vorher umhängen, sonst zeigen sie ins Leere.
                     ReanchorStackedCorrectionsBeforeRemoval(targets)
                     For Each a In targets
                         _annotations.Remove(a)
                     Next
-                    ' Die Maske ist in die Pixel eingebacken - ihre Daten braucht niemand mehr.
+                    ' Die Masken sind in die Pixel eingebacken - ihre Daten braucht niemand mehr.
                     For Each a In targets
                         RemoveMaskIfUnreferenced(a.MaskId)
                     Next
@@ -25594,7 +25797,7 @@ Namespace ViewModels
                     RebuildLayerRows()
                     _hasChanges = True
                     RaiseResetButtonStateChanged()
-                    Dim label = If(targets.Count > 1, LocalizationService.T("Ebenen gerastert"), LocalizationService.T("Ebene gerastert"))
+                    Dim label = LocalizationService.T("Auf Hintergrundebene reduziert")
                     NameHistoryStep(label)
                     StatusText = label
                     SchedulePreviewUpdate()

@@ -9054,4 +9054,16 @@
   <data name="Maskenebenen_lassen_sich_nicht_zusammenlegen_55f1017c" xml:space="preserve">
     <value>Maskitasoja ei voi yhdistää</value>
   </data>
+  <data name="Auf_Hintergrundebene_reduzieren_3ab23ba6" xml:space="preserve">
+    <value>Yhdistä taustaan</value>
+  </data>
+  <data name="Wird_auf_die_Hintergrundebene_reduziert_d4bc7500" xml:space="preserve">
+    <value>Yhdistetään taustaan</value>
+  </data>
+  <data name="Reduzieren_fehlgeschlagen_9c089be9" xml:space="preserve">
+    <value>Yhdistäminen epäonnistui</value>
+  </data>
+  <data name="Auf_Hintergrundebene_reduziert_2d0164fc" xml:space="preserve">
+    <value>Yhdistetty taustaan</value>
+  </data>
 </root>

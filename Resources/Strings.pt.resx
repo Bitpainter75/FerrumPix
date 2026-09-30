@@ -9013,4 +9013,16 @@
   <data name="Maskenebenen_lassen_sich_nicht_zusammenlegen_55f1017c" xml:space="preserve">
     <value>Camadas de máscara não podem ser mescladas</value>
   </data>
+  <data name="Auf_Hintergrundebene_reduzieren_3ab23ba6" xml:space="preserve">
+    <value>Achatar imagem</value>
+  </data>
+  <data name="Wird_auf_die_Hintergrundebene_reduziert_d4bc7500" xml:space="preserve">
+    <value>A achatar imagem</value>
+  </data>
+  <data name="Reduzieren_fehlgeschlagen_9c089be9" xml:space="preserve">
+    <value>Falha ao achatar</value>
+  </data>
+  <data name="Auf_Hintergrundebene_reduziert_2d0164fc" xml:space="preserve">
+    <value>Imagem achatada</value>
+  </data>
 </root>

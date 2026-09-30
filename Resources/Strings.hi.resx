@@ -9058,4 +9058,16 @@
   <data name="Maskenebenen_lassen_sich_nicht_zusammenlegen_55f1017c" xml:space="preserve">
     <value>मास्क लेयर मर्ज नहीं की जा सकतीं</value>
   </data>
+  <data name="Auf_Hintergrundebene_reduzieren_3ab23ba6" xml:space="preserve">
+    <value>पृष्ठभूमि में समतल करें</value>
+  </data>
+  <data name="Wird_auf_die_Hintergrundebene_reduziert_d4bc7500" xml:space="preserve">
+    <value>पृष्ठभूमि में समतल किया जा रहा है</value>
+  </data>
+  <data name="Reduzieren_fehlgeschlagen_9c089be9" xml:space="preserve">
+    <value>समतल करना विफल रहा</value>
+  </data>
+  <data name="Auf_Hintergrundebene_reduziert_2d0164fc" xml:space="preserve">
+    <value>पृष्ठभूमि में समतल किया गया</value>
+  </data>
 </root>

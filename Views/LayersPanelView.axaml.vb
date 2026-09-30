@@ -360,6 +360,10 @@ Namespace Views
             If vm.CanRasterizeSelectedAnnotation Then
                 items.Add(MakeLayerMenuItem(LocalizationService.T("Ebene rastern"), "layers-union", vm.RasterizeSelectedAnnotationCommand))
             End If
+            ' Die markierten Ebenen gehen ins Foto - anders als Rastern, das im Stapel bleibt.
+            If vm.CanFlattenToBackground Then
+                items.Add(MakeLayerMenuItem(LocalizationService.T("Auf Hintergrundebene reduzieren"), "layers-selected-bottom", vm.FlattenToBackgroundCommand))
+            End If
             ' Den durchsichtigen Rand einer Bild- oder Malebene abschneiden; der Inhalt bleibt liegen.
             If vm.CanTrimSelectedLayer Then
                 items.Add(MakeLayerMenuItem(LocalizationService.T("Ebene trimmen"), "crop", vm.TrimSelectedLayerCommand))

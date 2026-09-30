@@ -204,14 +204,24 @@ Namespace Services
         Private Shared Function DrawGroupRun(adj As ImageAdjustments, source As SKBitmap,
                                              stacked As List(Of MaskedAdjustmentLayer),
                                              group As AnnotationGroup, ByRef index As Integer,
-                                             ByRef originX As Integer, ByRef originY As Integer) As SKBitmap
+                                             ByRef originX As Integer, ByRef originY As Integer,
+                                             Optional subset As ICollection(Of ImageAnnotation) = Nothing) As SKBitmap
             ' WIE GROSS MUSS DIE EBENE SEIN? Ein Vorlauf ohne zu zeichnen beantwortet das: er geht
             ' denselben Weg wie die Schleife darunter und sammelt die Rechtecke ein.
             '
             ' DAS IST KEINE FEINHEIT. Eine Gruppenebene in voller Bildgroesse kostet bei 45
             ' Megapixeln rund 180 MiB, und verschachtelte Gruppen legen je Stufe eine weitere an.
             ' Gezeichnet wird darauf aber nur die Flaeche der Mitglieder.
-            Dim bounds = ComputeGroupRunBounds(adj, source, stacked, group, index)
+            Dim bounds = ComputeGroupRunBounds(adj, source, stacked, group, index, subset)
+            ' Mit einer TEILMENGE kann ein Lauf ganz ohne Ziel sein: dann nur ueberspringen, statt
+            ' eine leere Ebene in voller Bildgroesse anzulegen.
+            If subset IsNot Nothing AndAlso bounds.Rect.IsEmpty Then
+                While index < adj.Annotations.Count AndAlso
+                      RenderStepChainFor(adj, adj.Annotations(index)).Any(Function(g) Object.ReferenceEquals(g, group))
+                    index += 1
+                End While
+                Return Nothing
+            End If
             ' MIT EINER EINGEHAENGTEN KORREKTUR BLEIBT ES BEI VOLLER GROESSE: die Korrekturebenen
             ' rechnen in Bildkoordinaten und kennen keinen Versatz - auf einem zugeschnittenen
             ' Traeger saesse ihre Maske falsch. Der Regelfall ohne Korrektur bekommt den Zuschnitt.
@@ -235,12 +245,15 @@ Namespace Services
                 If position < 0 Then Exit While
 
                 If position = chain.Count - 1 Then
-                    ' Unmittelbares Mitglied: auf diese Ebene zeichnen.
-                    Using layerCanvas = New SKCanvas(layer)
-                        DrawAnnotationsOnCanvas(layerCanvas, adj, source.Width, source.Height,
-                                                originX, originY, layer.Width, layer.Height,
-                                                New System.Collections.Generic.List(Of ImageAnnotation) From {current})
-                    End Using
+                    ' Unmittelbares Mitglied: auf diese Ebene zeichnen - mit einer Teilmenge nur,
+                    ' wenn es dazugehoert.
+                    If subset Is Nothing OrElse subset.Contains(current) Then
+                        Using layerCanvas = New SKCanvas(layer)
+                            DrawAnnotationsOnCanvas(layerCanvas, adj, source.Width, source.Height,
+                                                    originX, originY, layer.Width, layer.Height,
+                                                    New System.Collections.Generic.List(Of ImageAnnotation) From {current})
+                        End Using
+                    End If
                     ' EINE KORREKTUR IN DER GRUPPE BLEIBT IN DER GRUPPE. Genau das ist der zweite
                     ' Teil des Renderschritts: sie sieht nur, was die Gruppe bisher gezeichnet hat,
                     ' und nicht das Bild darunter.
@@ -253,7 +266,7 @@ Namespace Services
                     ' Es liegt tiefer: die nächste Gruppe der Kette bekommt eine eigene Ebene.
                     Dim child = chain(position + 1)
                     Dim childX = 0, childY = 0
-                    Dim childLayer = DrawGroupRun(adj, source, stacked, child, index, childX, childY)
+                    Dim childLayer = DrawGroupRun(adj, source, stacked, child, index, childX, childY, subset)
                     If childLayer IsNot Nothing Then
                         Try
                             CompositeGroupLayer(layer, originX, originY, childLayer, childX, childY,
@@ -275,7 +288,8 @@ Namespace Services
         ''' landen ja in dieser. <paramref name="startIndex"/> wird nicht veraendert.</summary>
         Private Shared Function ComputeGroupRunBounds(adj As ImageAdjustments, source As SKBitmap,
                                                       stacked As List(Of MaskedAdjustmentLayer),
-                                                      group As AnnotationGroup, startIndex As Integer) _
+                                                      group As AnnotationGroup, startIndex As Integer,
+                                                      Optional subset As ICollection(Of ImageAnnotation) = Nothing) _
                                                       As (Rect As SKRectI, HasStackedAdjustment As Boolean)
             Dim union = SKRectI.Empty
             Dim hasStacked = False
@@ -286,7 +300,7 @@ Namespace Services
                 ' Nur was wirklich gezeichnet wird, spannt die Ebene auf. Die Sichtbarkeit geht
                 ' ueber denselben Chokepoint wie beim Zeichnen, sonst spannte ein ausgeblendetes
                 ' Objekt die Ebene weiter auf, als sie sein muss.
-                If adj.IsAnnotationRenderVisible(current) Then
+                If adj.IsAnnotationRenderVisible(current) AndAlso (subset Is Nothing OrElse subset.Contains(current)) Then
                     Dim rendered = TransformAnnotationForGeometry(current, adj, source.Width, source.Height)
                     If rendered IsNot Nothing Then
                         Dim rect = ComputeAnnotationDirtyRectCore(source.Width, source.Height, rendered)
@@ -338,6 +352,52 @@ Namespace Services
                     canvas.DrawBitmap(groupLayer, layerX - targetX, layerY - targetY, paint)
                 End Using
             End Using
+        End Sub
+
+        ''' <summary>Zeichnet NUR die Objekte aus <paramref name="subset"/> auf das Ziel, aber mit
+        ''' allem, was der volle Renderweg ihnen mitgibt: Gruppen-Deckkraft, Gruppen-Mischmethode und
+        ''' Gruppenmaske, auch verschachtelt (<see cref="DrawGroupRun"/>), dazu Schnittmasken gegen
+        ''' den GANZEN Stapel von <paramref name="adj"/>. Wer die Objekte nur ueber
+        ''' <see cref="DrawAnnotationsOnCanvas"/> zeichnet, verliert die Gruppenwirkung - sie
+        ''' entsteht ausschliesslich im Gruppenweg.
+        '''
+        ''' Eingehaengte Korrekturebenen wirken hier NICHT: sie bleiben Ebenen und werden nicht mit
+        ''' eingebacken. Gedacht fuer "Auf Hintergrundebene reduzieren".</summary>
+        ''' <param name="target">Bgra8888, Premul; ein Ausschnitt des Bildes ab
+        ''' <paramref name="targetX"/>/<paramref name="targetY"/>.</param>
+        ''' <param name="sizeSource">Ein Bild in Quellgroesse; gebraucht wird nur seine Groesse.</param>
+        Friend Shared Sub DrawAnnotationSubsetWithGroups(target As SKBitmap, targetX As Integer, targetY As Integer,
+                                                         adj As ImageAdjustments, sizeSource As SKBitmap,
+                                                         subset As ICollection(Of ImageAnnotation))
+            If target Is Nothing OrElse adj Is Nothing OrElse adj.Annotations Is Nothing OrElse
+               sizeSource Is Nothing OrElse subset Is Nothing OrElse subset.Count = 0 Then Return
+            Dim noCorrections As New System.Collections.Generic.List(Of MaskedAdjustmentLayer)()
+            Dim index = 0
+            While index < adj.Annotations.Count
+                Dim annotation = adj.Annotations(index)
+                Dim chain = RenderStepChainFor(adj, annotation)
+                If chain.Count = 0 Then
+                    If subset.Contains(annotation) Then
+                        Using canvas = New SKCanvas(target)
+                            DrawAnnotationsOnCanvas(canvas, adj, sizeSource.Width, sizeSource.Height,
+                                                    targetX, targetY, target.Width, target.Height,
+                                                    New System.Collections.Generic.List(Of ImageAnnotation) From {annotation})
+                        End Using
+                    End If
+                    index += 1
+                    Continue While
+                End If
+                Dim groupX = 0, groupY = 0
+                Dim groupLayer = DrawGroupRun(adj, sizeSource, noCorrections, chain(0), index, groupX, groupY, subset)
+                If groupLayer IsNot Nothing Then
+                    Try
+                        CompositeGroupLayer(target, targetX, targetY, groupLayer, groupX, groupY, chain(0), adj,
+                                            sizeSource.Width, sizeSource.Height)
+                    Finally
+                        groupLayer.Dispose()
+                    End Try
+                End If
+            End While
         End Sub
 
         ''' <summary>Gibt es ueberhaupt ein Objekt in einer wirksamen Gruppe? Die Frage entscheidet,
