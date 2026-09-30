@@ -8991,4 +8991,19 @@
   <data name="Auswahl_kopieren_fehlgeschlagen_5a63d8ac" xml:space="preserve">
     <value>Kopiering af markeringen mislykkedes</value>
   </data>
+  <data name="Kompakter_Anpassungsmodus_fcb06e9f" xml:space="preserve">
+    <value>Kompakt justeringstilstand</value>
+  </data>
+  <data name="Statt_Anpassen_Farbe_Details_Effekte_und_Filter__581ed9bb" xml:space="preserve">
+    <value>I stedet for Juster, Farve, Detaljer, Effekter og Filter står der ét værktøj, »Justeringer«, i bjælken. Det viser alle grupper under hinanden, og som standard er kun én af dem åben ad gangen: åbner man én, lukkes den forrige.</value>
+  </data>
+  <data name="Alle_Anpassungen_in_einem_Panel_9a49d22b" xml:space="preserve">
+    <value>Alle justeringer i ét panel</value>
+  </data>
+  <data name="Andere_Gruppen_automatisch_zuklappen_6d44aeb1" xml:space="preserve">
+    <value>Fold andre grupper sammen automatisk</value>
+  </data>
+  <data name="Gilt_im_kompakten_Anpassungsmodus_Ist_der_Schalt_bbea7fa1" xml:space="preserve">
+    <value>Gælder i den kompakte justeringstilstand. Er kontakten slået fra, åbner eller lukker en gruppe kun, når man klikker på den, og værktøjet husker, hvilke grupper der sidst var åbne.</value>
+  </data>
 </root>

@@ -8950,4 +8950,19 @@
   <data name="Auswahl_kopieren_fehlgeschlagen_5a63d8ac" xml:space="preserve">
     <value>Falha ao copiar a seleção</value>
   </data>
+  <data name="Kompakter_Anpassungsmodus_fcb06e9f" xml:space="preserve">
+    <value>Modo compacto de ajustes</value>
+  </data>
+  <data name="Statt_Anpassen_Farbe_Details_Effekte_und_Filter__581ed9bb" xml:space="preserve">
+    <value>Em vez de Ajustar, Cor, Detalhes, Efeitos e Filtro, a barra mostra uma única ferramenta, «Ajustes». Ela mostra todos os grupos uns por baixo dos outros, e por predefinição só um deles fica aberto de cada vez: abrir um fecha o anterior.</value>
+  </data>
+  <data name="Alle_Anpassungen_in_einem_Panel_9a49d22b" xml:space="preserve">
+    <value>Todos os ajustes num painel</value>
+  </data>
+  <data name="Andere_Gruppen_automatisch_zuklappen_6d44aeb1" xml:space="preserve">
+    <value>Recolher os outros grupos automaticamente</value>
+  </data>
+  <data name="Gilt_im_kompakten_Anpassungsmodus_Ist_der_Schalt_bbea7fa1" xml:space="preserve">
+    <value>Aplica-se ao modo compacto de ajustes. Com o interruptor desligado, um grupo só abre ou fecha quando se clica nele, e a ferramenta memoriza quais grupos estavam abertos da última vez.</value>
+  </data>
 </root>

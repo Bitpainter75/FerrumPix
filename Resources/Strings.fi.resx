@@ -8991,4 +8991,19 @@
   <data name="Auswahl_kopieren_fehlgeschlagen_5a63d8ac" xml:space="preserve">
     <value>Valinnan kopiointi epäonnistui</value>
   </data>
+  <data name="Kompakter_Anpassungsmodus_fcb06e9f" xml:space="preserve">
+    <value>Tiivis säätötila</value>
+  </data>
+  <data name="Statt_Anpassen_Farbe_Details_Effekte_und_Filter__581ed9bb" xml:space="preserve">
+    <value>Säädöt-, Väri-, Yksityiskohdat-, Tehosteet- ja Suodatin-työkalujen sijaan palkissa on yksi työkalu, ”Säädöt”. Se näyttää kaikki ryhmät allekkain, ja oletuksena niistä on kerrallaan auki vain yksi: yhden avaaminen sulkee edellisen.</value>
+  </data>
+  <data name="Alle_Anpassungen_in_einem_Panel_9a49d22b" xml:space="preserve">
+    <value>Kaikki säädöt yhdessä paneelissa</value>
+  </data>
+  <data name="Andere_Gruppen_automatisch_zuklappen_6d44aeb1" xml:space="preserve">
+    <value>Sulje muut ryhmät automaattisesti</value>
+  </data>
+  <data name="Gilt_im_kompakten_Anpassungsmodus_Ist_der_Schalt_bbea7fa1" xml:space="preserve">
+    <value>Koskee tiivistä säätötilaa. Kun kytkin on pois päältä, ryhmä avautuu tai sulkeutuu vain napsautettaessa, ja työkalu muistaa, mitkä ryhmät olivat viimeksi auki.</value>
+  </data>
 </root>

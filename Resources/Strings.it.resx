@@ -8951,4 +8951,19 @@
   <data name="Auswahl_kopieren_fehlgeschlagen_5a63d8ac" xml:space="preserve">
     <value>Copia della selezione non riuscita</value>
   </data>
+  <data name="Kompakter_Anpassungsmodus_fcb06e9f" xml:space="preserve">
+    <value>Modalità regolazioni compatta</value>
+  </data>
+  <data name="Statt_Anpassen_Farbe_Details_Effekte_und_Filter__581ed9bb" xml:space="preserve">
+    <value>Al posto di Regola, Colore, Dettagli, Effetti e Filtro, nella barra c'è un solo strumento, «Regolazioni». Mostra tutti i gruppi uno sotto l'altro, e di norma ne è aperto uno solo alla volta: aprendone uno si chiude il precedente.</value>
+  </data>
+  <data name="Alle_Anpassungen_in_einem_Panel_9a49d22b" xml:space="preserve">
+    <value>Tutte le regolazioni in un pannello</value>
+  </data>
+  <data name="Andere_Gruppen_automatisch_zuklappen_6d44aeb1" xml:space="preserve">
+    <value>Chiudi automaticamente gli altri gruppi</value>
+  </data>
+  <data name="Gilt_im_kompakten_Anpassungsmodus_Ist_der_Schalt_bbea7fa1" xml:space="preserve">
+    <value>Vale nella modalità regolazioni compatta. Con l'interruttore spento, un gruppo si apre o si chiude solo quando lo si clicca, e lo strumento ricorda quali gruppi erano aperti l'ultima volta.</value>
+  </data>
 </root>

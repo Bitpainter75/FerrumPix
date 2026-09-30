@@ -1467,6 +1467,22 @@
 
                         <Grid ColumnDefinitions="*,Auto">
                             <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Kompakter Anpassungsmodus" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Statt Anpassen, Farbe, Details, Effekte und Filter steht ein einziges Werkzeug „Anpassungen“ in der Leiste. Es zeigt alle Gruppen untereinander, und ab Werk ist immer nur eine davon aufgeklappt: wer eine öffnet, schließt die vorige." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1" IsChecked="{Binding EditorCompactAdjustments}" OnContent="" OffContent="" VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto" IsEnabled="{Binding EditorCompactAdjustments}">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Andere Gruppen automatisch zuklappen" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Gilt im kompakten Anpassungsmodus. Ist der Schalter aus, klappt eine Gruppe nur auf oder zu, wenn man sie anklickt, und das Werkzeug merkt sich, welche Gruppen zuletzt offen waren." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1" IsChecked="{Binding EditorCompactAutoCollapse}" OnContent="" OffContent="" VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
                                 <TextBlock Text="Textebenen aus Photoshop-Dateien" FontSize="{DynamicResource FP.Font.Body}"/>
                                 <TextBlock Text="Beim Öffnen einer Photoshop-Datei mit Textebenen: als Text übernehmen (der Wortlaut bleibt tippbar, das Aussehen kann abweichen), als Bild übernehmen (jeder Bildpunkt stimmt, der Text ist fest) oder jedes Mal nachfragen." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </StackPanel>

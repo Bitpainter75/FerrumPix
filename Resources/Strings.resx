@@ -8970,4 +8970,19 @@
   <data name="Auswahl_kopieren_fehlgeschlagen_5a63d8ac" xml:space="preserve">
     <value>Copying the selection failed</value>
   </data>
+  <data name="Kompakter_Anpassungsmodus_fcb06e9f" xml:space="preserve">
+    <value>Compact adjustments mode</value>
+  </data>
+  <data name="Statt_Anpassen_Farbe_Details_Effekte_und_Filter__581ed9bb" xml:space="preserve">
+    <value>Instead of Adjust, Color, Details, Effects and Filter, the bar shows a single tool, “Adjustments”. It shows all groups one below the other, and by default only one of them is open at a time: opening one closes the previous.</value>
+  </data>
+  <data name="Alle_Anpassungen_in_einem_Panel_9a49d22b" xml:space="preserve">
+    <value>All adjustments in one panel</value>
+  </data>
+  <data name="Andere_Gruppen_automatisch_zuklappen_6d44aeb1" xml:space="preserve">
+    <value>Collapse other groups automatically</value>
+  </data>
+  <data name="Gilt_im_kompakten_Anpassungsmodus_Ist_der_Schalt_bbea7fa1" xml:space="preserve">
+    <value>Applies in the compact adjustments mode. With the switch off, a group only opens or closes when you click it, and the tool remembers which groups were open last.</value>
+  </data>
 </root>

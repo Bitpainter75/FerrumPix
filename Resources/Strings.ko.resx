@@ -8995,4 +8995,19 @@
   <data name="Auswahl_kopieren_fehlgeschlagen_5a63d8ac" xml:space="preserve">
     <value>선택 영역을 복사하지 못했습니다</value>
   </data>
+  <data name="Kompakter_Anpassungsmodus_fcb06e9f" xml:space="preserve">
+    <value>간결한 조정 모드</value>
+  </data>
+  <data name="Statt_Anpassen_Farbe_Details_Effekte_und_Filter__581ed9bb" xml:space="preserve">
+    <value>조정, 색, 세부 정보, 효과, 필터 대신 막대에는 „조정“ 도구 하나만 있습니다. 모든 그룹을 위아래로 보여 주며, 기본적으로 한 번에 하나만 열립니다. 하나를 열면 이전 그룹이 닫힙니다.</value>
+  </data>
+  <data name="Alle_Anpassungen_in_einem_Panel_9a49d22b" xml:space="preserve">
+    <value>모든 조정을 한 패널에</value>
+  </data>
+  <data name="Andere_Gruppen_automatisch_zuklappen_6d44aeb1" xml:space="preserve">
+    <value>다른 그룹 자동으로 접기</value>
+  </data>
+  <data name="Gilt_im_kompakten_Anpassungsmodus_Ist_der_Schalt_bbea7fa1" xml:space="preserve">
+    <value>간결한 조정 모드에 적용됩니다. 스위치를 끄면 그룹은 클릭할 때만 열리거나 닫히고, 도구는 마지막에 어떤 그룹이 열려 있었는지 기억합니다.</value>
+  </data>
 </root>

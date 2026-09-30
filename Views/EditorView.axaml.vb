@@ -13,6 +13,7 @@ Imports Avalonia.Platform.Storage
 Imports Avalonia.Threading
 Imports Avalonia.Vector
 Imports Avalonia.VisualTree
+Imports Avalonia.LogicalTree
 Imports FerrumPix.Controls
 Imports FerrumPix.Controls.EditorPanels
 Imports FerrumPix.Models
@@ -1150,6 +1151,9 @@ Namespace Views
             AddHandler DataContextChanged, AddressOf HandleDataContextChanged
             ContextMenuAttachment.Attach(Me.FindControl(Of Grid)("EditorRootGrid"), AddressOf OnContextRequested)
             Me.AddHandler(InputElement.KeyDownEvent, AddressOf OnEditorKeyDownTunnel, RoutingStrategies.Tunnel)
+            ' Kompaktmodus: die Gruppen der Anpassungen klappen einzeln auf (OnCompactGroupExpanding).
+            Me.AddHandler(Expander.ExpandingEvent, AddressOf OnCompactGroupExpanding, RoutingStrategies.Bubble)
+            Me.AddHandler(Expander.CollapsingEvent, AddressOf OnCompactGroupCollapsing, RoutingStrategies.Bubble)
             ' Der eigene Zug aus dem Filmstreifen: die Ansicht haelt den Zeigergriff, also kommen
             ' Bewegung, Griffverlust und ESC hier an.
             Me.AddHandler(InputElement.PointerMovedEvent, AddressOf OnFilmstripCustomDragMoved,
@@ -1187,6 +1191,7 @@ Namespace Views
                 UpdateInfoSidebarLayoutState()
                 UpdateLayersPanelLayout()
                 UpdateAdjustmentsPanelSide()
+                UpdateCompactGroups(force:=True)
                 Dim filmstrip = Me.FindControl(Of ListBox)("FilmstripListBox")
                 _filmstripController.AttachTo(filmstrip)
                 If filmstrip IsNot Nothing Then
@@ -1488,6 +1493,10 @@ Namespace Views
                 AddHandler _currentVm.SceneInvalidated, AddressOf OnSceneInvalidated
             End If
             _filmstripController.Reset()
+            ' Steht das Werkzeug schon beim Anhaengen auf dem Kompaktwerkzeug (erster Aufruf des
+            ' Editors mit Starttool "Anpassen"), kam kein Werkzeugwechsel mehr an, und alle Gruppen
+            ' blieben offen (Nutzerbefund). Deshalb hier abgleichen, nicht nur beim Wechsel.
+            UpdateCompactGroups()
         End Sub
 
         ''' STUFE 2: Region-Blits schreiben in DIESELBE WriteableBitmap-Instanz - fuer das Binding
@@ -1695,7 +1704,12 @@ Namespace Views
                     UpdateSelectionOverlayVisibility()
                     _hideBrushPreviewAfterBake = False
                     ShowBrushPreviewLine(False)
+                    UpdateCompactGroups()
                     ScrollAdjustmentsToTop()
+                Case NameOf(EditorViewModel.IsCompactAdjustments)
+                    ' Einer der beiden Schalter des Kompaktmodus wurde umgelegt, vielleicht waehrend
+                    ' sein Werkzeug offen ist: dann gilt sofort die neue Regel.
+                    UpdateCompactGroups(force:=True)
                 Case NameOf(EditorViewModel.HidesSelectionFrameForPath)
                     ' Entwurf beginnt oder endet, Punkte werden greifbar oder nicht: der Rahmen
                     ' muss sofort mitziehen, sonst schluckt er den naechsten Klick.
@@ -4272,19 +4286,113 @@ Namespace Views
             Grid.SetColumn(target, column)
         End Sub
 
-        Public Sub OnAdjustmentExpanderExpanded(sender As Object, e As RoutedEventArgs)
-            Dim expanded = TryCast(sender, Expander)
-            If expanded Is Nothing Then Return
+        ' ── Kompaktmodus der Anpassungen ──────────────────────────────────────────
+        '
+        ' Im Werkzeug "Anpassungen" (EditorTool.AllAdjustments) klappt das Oeffnen einer Gruppe die
+        ' anderen zu, solange die Einstellung EditorCompactAutoCollapse an ist (ab Werk). Ist sie
+        ' aus, klappt jede Gruppe nur auf Klick, und ihr Stand geht in EditorCompactExpanderStates.
+        ' Die Gruppen sind dieselben Expander wie in den fuenf Einzelwerkzeugen. Damit deren Zustand
+        ' nicht leidet, schreibt ExpanderState sie waehrend des Kompaktwerkzeugs nicht in den Stand
+        ' der Einzelwerkzeuge (SuspendedKeys), sondern fragt den Modus (CompactStateOf,
+        ' CompactSave), und beim Verlassen kommt der Stand der Einzelwerkzeuge zurueck.
 
+        ''' <summary>Die Schluessel der Gruppen, die der Kompaktmodus verwaltet: alle Gruppen der fuenf
+        ''' Anpassungswerkzeuge (AppSettingsService.ToolGroups). Das Analysebild darueber gehoert
+        ''' nicht dazu, es behaelt seinen eigenen Zustand.</summary>
+        Private Shared ReadOnly CompactGroupKeys As HashSet(Of String) = New HashSet(Of String)(
+            AppSettingsService.ToolGroups.SelectMany(Function(w) w.Gruppen), StringComparer.Ordinal)
+
+        Private _compactGroupsActive As Boolean
+        ''' <summary>Mit automatischem Zuklappen: die eine offene Gruppe.</summary>
+        Private _compactOpenKey As String = ""
+        ''' <summary>Klappt das Oeffnen einer Gruppe die anderen zu? Beim Betreten gelesen.</summary>
+        Private _compactAutoCollapse As Boolean = True
+
+        ''' <summary>Der Stand einer Gruppe im Kompaktwerkzeug. Mit automatischem Zuklappen offen,
+        ''' wenn sie die eine offene ist; ohne der gemerkte Stand, und wo es keinen gibt, dieselbe
+        ''' Regel.</summary>
+        Private Function CompactStateOf(key As String) As Boolean
+            Dim isOpenKey = String.Equals(key, _compactOpenKey, StringComparison.Ordinal)
+            If _compactAutoCollapse Then Return isOpenKey
+            Dim states = AppSettingsService.Load().EditorCompactExpanderStates
+            Dim saved As Boolean
+            If states IsNot Nothing AndAlso states.TryGetValue(key, saved) Then Return saved
+            Return isOpenKey
+        End Function
+
+        Private Function CompactGroupExpanders() As List(Of Expander)
             Dim stack = Me.FindControl(Of Panel)("AdjustmentsStackPanel")
-            If stack Is Nothing Then Return
+            If stack Is Nothing Then Return New List(Of Expander)()
+            Return stack.GetLogicalDescendants().OfType(Of Expander)().
+                Where(Function(x) CompactGroupKeys.Contains(If(ExpanderState.GetKey(x), ""))).ToList()
+        End Function
 
-            For Each child In stack.Children
-                Dim other = TryCast(child, Expander)
-                If other IsNot Nothing AndAlso Not Object.ReferenceEquals(other, expanded) Then
-                    other.IsExpanded = False
-                End If
+        ''' <summary>Beim Werkzeugwechsel: ins Kompaktwerkzeug hinein dessen Stand, heraus wieder der
+        ''' der Einzelwerkzeuge.</summary>
+        ''' <param name="force">Auch ohne Wechsel neu anwenden: beim Laden der Ansicht, falls die
+        ''' Gruppen beim Anhaengen des ViewModels noch nicht zu finden waren, und wenn eine der beiden
+        ''' Einstellungen umgeschaltet wird, waehrend das Werkzeug offen ist.</param>
+        Private Sub UpdateCompactGroups(Optional force As Boolean = False)
+            Dim vm = TryCast(DataContext, EditorViewModel)
+            Dim active = vm IsNot Nothing AndAlso vm.CurrentTool = EditorTool.AllAdjustments
+            If active = _compactGroupsActive AndAlso Not force Then Return
+            _compactGroupsActive = active
+            If active Then
+                Dim settings = AppSettingsService.Load()
+                _compactOpenKey = If(settings.EditorCompactOpenGroup, "")
+                _compactAutoCollapse = settings.EditorCompactAutoCollapse
+                ExpanderState.CompactStateOf = AddressOf CompactStateOf
+                ' Mit automatischem Zuklappen merkt sich der Modus die eine Gruppe selbst
+                ' (OnCompactGroupExpanding), ohne geht jeder Klick in seinen eigenen Stand.
+                ExpanderState.CompactSave = If(_compactAutoCollapse, Nothing,
+                                               New Action(Of String, Boolean)(AddressOf AppSettingsService.SaveEditorCompactExpanderState))
+                ExpanderState.SuspendedKeys.UnionWith(CompactGroupKeys)
+                Dim groups = CompactGroupExpanders()
+                ' Mit automatischem Zuklappen hoechstens eine offen, auch wenn der gemerkte Stand
+                ' ohne es mehrere offen hatte.
+                For Each group In groups
+                    ExpanderState.ApplyWithoutSaving(group, CompactStateOf(ExpanderState.GetKey(group)))
+                Next
+            Else
+                ExpanderState.SuspendedKeys.ExceptWith(CompactGroupKeys)
+                ExpanderState.CompactStateOf = Nothing
+                ExpanderState.CompactSave = Nothing
+                For Each group In CompactGroupExpanders()
+                    ExpanderState.RestoreSaved(group)
+                Next
+            End If
+        End Sub
+
+        ''' <summary>Der Nutzer klappt im Kompaktwerkzeug eine Gruppe auf: mit automatischem
+        ''' Zuklappen gehen die anderen zu, und die neue rueckt ins Bild. Expanding und nicht
+        ''' Expanded: Expanded kommt erst spaeter ueber den Dispatcher, auch bei Aenderungen aus dem
+        ''' Code, und liesse sich vom Klick nicht mehr unterscheiden.</summary>
+        Private Sub OnCompactGroupExpanding(sender As Object, e As CancelRoutedEventArgs)
+            If Not _compactGroupsActive OrElse ExpanderState.IsApplying Then Return
+            Dim opened = TryCast(e.Source, Expander)
+            Dim key = If(opened Is Nothing, "", If(ExpanderState.GetKey(opened), ""))
+            If Not CompactGroupKeys.Contains(key) Then Return
+            ' Ohne automatisches Zuklappen tut der Klick nur das Seine; gespeichert wird ueber
+            ' ExpanderState.CompactSave.
+            If Not _compactAutoCollapse Then Return
+            For Each group In CompactGroupExpanders()
+                If Not Object.ReferenceEquals(group, opened) Then ExpanderState.ApplyWithoutSaving(group, False)
             Next
+            _compactOpenKey = key
+            AppSettingsService.SaveEditorCompactOpenGroup(key)
+            ' Nach dem Zuklappen der anderen verschiebt sich alles; erst danach ins Bild holen.
+            Dispatcher.UIThread.Post(Sub() opened.BringIntoView(), DispatcherPriority.Background)
+        End Sub
+
+        ''' <summary>Klappt der Nutzer mit automatischem Zuklappen die offene Gruppe zu, ist keine
+        ''' mehr offen, und so wird es auch gemerkt.</summary>
+        Private Sub OnCompactGroupCollapsing(sender As Object, e As CancelRoutedEventArgs)
+            If Not _compactGroupsActive OrElse ExpanderState.IsApplying OrElse Not _compactAutoCollapse Then Return
+            Dim closed = TryCast(e.Source, Expander)
+            Dim key = If(closed Is Nothing, "", If(ExpanderState.GetKey(closed), ""))
+            If Not String.Equals(key, _compactOpenKey, StringComparison.Ordinal) Then Return
+            _compactOpenKey = ""
+            AppSettingsService.SaveEditorCompactOpenGroup("")
         End Sub
 
         ''' <summary>Rechnet die Canvas-Zeigerposition in eine Bildpixel-Koordinate um (für die

@@ -8995,4 +8995,19 @@
   <data name="Auswahl_kopieren_fehlgeschlagen_5a63d8ac" xml:space="preserve">
     <value>Gagal menyalin seleksi</value>
   </data>
+  <data name="Kompakter_Anpassungsmodus_fcb06e9f" xml:space="preserve">
+    <value>Mode penyesuaian ringkas</value>
+  </data>
+  <data name="Statt_Anpassen_Farbe_Details_Effekte_und_Filter__581ed9bb" xml:space="preserve">
+    <value>Alih-alih Sesuaikan, Warna, Rincian, Efek, dan Filter, bilah menampilkan satu alat saja, “Penyesuaian”. Alat ini menampilkan semua grup bersusun, dan secara bawaan hanya satu yang terbuka sekaligus: membuka satu grup menutup grup sebelumnya.</value>
+  </data>
+  <data name="Alle_Anpassungen_in_einem_Panel_9a49d22b" xml:space="preserve">
+    <value>Semua penyesuaian dalam satu panel</value>
+  </data>
+  <data name="Andere_Gruppen_automatisch_zuklappen_6d44aeb1" xml:space="preserve">
+    <value>Ciutkan grup lain secara otomatis</value>
+  </data>
+  <data name="Gilt_im_kompakten_Anpassungsmodus_Ist_der_Schalt_bbea7fa1" xml:space="preserve">
+    <value>Berlaku dalam mode penyesuaian ringkas. Jika sakelar mati, grup hanya terbuka atau tertutup saat diklik, dan alat mengingat grup mana yang terakhir terbuka.</value>
+  </data>
 </root>

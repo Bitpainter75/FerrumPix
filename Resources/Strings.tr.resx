@@ -8995,4 +8995,19 @@
   <data name="Auswahl_kopieren_fehlgeschlagen_5a63d8ac" xml:space="preserve">
     <value>Seçim kopyalanamadı</value>
   </data>
+  <data name="Kompakter_Anpassungsmodus_fcb06e9f" xml:space="preserve">
+    <value>Kompakt ayarlama modu</value>
+  </data>
+  <data name="Statt_Anpassen_Farbe_Details_Effekte_und_Filter__581ed9bb" xml:space="preserve">
+    <value>Ayarla, Renk, Ayrıntılar, Etkiler ve Filtre yerine çubukta tek bir araç, „Ayarlamalar“ bulunur. Tüm grupları alt alta gösterir ve varsayılan olarak aynı anda yalnızca biri açıktır: birini açmak öncekini kapatır.</value>
+  </data>
+  <data name="Alle_Anpassungen_in_einem_Panel_9a49d22b" xml:space="preserve">
+    <value>Tüm ayarlamalar tek panelde</value>
+  </data>
+  <data name="Andere_Gruppen_automatisch_zuklappen_6d44aeb1" xml:space="preserve">
+    <value>Diğer grupları otomatik daralt</value>
+  </data>
+  <data name="Gilt_im_kompakten_Anpassungsmodus_Ist_der_Schalt_bbea7fa1" xml:space="preserve">
+    <value>Kompakt ayarlama modunda geçerlidir. Anahtar kapalıyken bir grup yalnızca tıklandığında açılır veya kapanır ve araç en son hangi grupların açık olduğunu hatırlar.</value>
+  </data>
 </root>

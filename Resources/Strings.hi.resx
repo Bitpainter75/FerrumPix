@@ -8995,4 +8995,19 @@
   <data name="Auswahl_kopieren_fehlgeschlagen_5a63d8ac" xml:space="preserve">
     <value>चयन कॉपी नहीं हो सका</value>
   </data>
+  <data name="Kompakter_Anpassungsmodus_fcb06e9f" xml:space="preserve">
+    <value>संक्षिप्त समायोजन मोड</value>
+  </data>
+  <data name="Statt_Anpassen_Farbe_Details_Effekte_und_Filter__581ed9bb" xml:space="preserve">
+    <value>समायोजित करें, रंग, विवरण, प्रभाव और फ़िल्टर की जगह पट्टी में एक ही टूल „समायोजन“ रहता है। यह सभी समूहों को एक के नीचे एक दिखाता है, और डिफ़ॉल्ट रूप से एक समय में उनमें से केवल एक खुला रहता है: एक खोलने पर पिछला बंद हो जाता है।</value>
+  </data>
+  <data name="Alle_Anpassungen_in_einem_Panel_9a49d22b" xml:space="preserve">
+    <value>सभी समायोजन एक पैनल में</value>
+  </data>
+  <data name="Andere_Gruppen_automatisch_zuklappen_6d44aeb1" xml:space="preserve">
+    <value>अन्य समूह अपने आप बंद करें</value>
+  </data>
+  <data name="Gilt_im_kompakten_Anpassungsmodus_Ist_der_Schalt_bbea7fa1" xml:space="preserve">
+    <value>संक्षिप्त समायोजन मोड में लागू होता है। स्विच बंद होने पर कोई समूह केवल क्लिक करने पर खुलता या बंद होता है, और टूल याद रखता है कि पिछली बार कौन से समूह खुले थे।</value>
+  </data>
 </root>

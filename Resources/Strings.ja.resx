@@ -8991,4 +8991,19 @@
   <data name="Auswahl_kopieren_fehlgeschlagen_5a63d8ac" xml:space="preserve">
     <value>選択範囲をコピーできませんでした</value>
   </data>
+  <data name="Kompakter_Anpassungsmodus_fcb06e9f" xml:space="preserve">
+    <value>コンパクト調整モード</value>
+  </data>
+  <data name="Statt_Anpassen_Farbe_Details_Effekte_und_Filter__581ed9bb" xml:space="preserve">
+    <value>調整、色、ディテール、効果、フィルターの代わりに、バーには「調整」という 1 つのツールだけが表示されます。すべてのグループが縦に並び、初期設定では開いているのは常に 1 つだけです。1 つを開くと前のものが閉じます。</value>
+  </data>
+  <data name="Alle_Anpassungen_in_einem_Panel_9a49d22b" xml:space="preserve">
+    <value>すべての調整を 1 つのパネルに</value>
+  </data>
+  <data name="Andere_Gruppen_automatisch_zuklappen_6d44aeb1" xml:space="preserve">
+    <value>ほかのグループを自動的に閉じる</value>
+  </data>
+  <data name="Gilt_im_kompakten_Anpassungsmodus_Ist_der_Schalt_bbea7fa1" xml:space="preserve">
+    <value>コンパクト調整モードで有効です。スイッチをオフにすると、グループはクリックしたときだけ開閉し、最後にどのグループが開いていたかをツールが覚えています。</value>
+  </data>
 </root>

@@ -2089,6 +2089,10 @@
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="CornerRadius" Value="8"/>
         <Setter Property="Padding" Value="14,5,10,2"/>
+        <!-- Das Grundthema setzt eine Mindesthoehe von 48 (ExpanderMinHeight), die eigene Vorlage
+             unten braucht sie nicht. Zugeklappt stand unter der 28 hohen Kopfzeile deshalb ein
+             leerer Streifen von 20 (Nutzerbefund: zugeklappt recht hoch). -->
+        <Setter Property="MinHeight" Value="0"/>
         <Setter Property="HorizontalAlignment" Value="Stretch"/>
         <Setter Property="FontSize" Value="{DynamicResource FP.Font.Body}"/>
         <Setter Property="Foreground" Value="{DynamicResource FP.Text.Primary}"/>

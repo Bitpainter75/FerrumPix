@@ -5110,6 +5110,7 @@ Namespace ViewModels
                     Case EditorTool.Details : Return LocalizationService.T("Details")
                     Case EditorTool.Effects, EditorTool.Frame : Return LocalizationService.T("Effekte")
                     Case EditorTool.Filters : Return LocalizationService.T("Filter")
+                    Case EditorTool.AllAdjustments : Return LocalizationService.T("Anpassungen")
                     Case EditorTool.Move : Return LocalizationService.T("Verschieben")
                     Case EditorTool.Selection : Return LocalizationService.T("Auswahl")
                     Case EditorTool.Mask : Return LocalizationService.T("Maske")
@@ -5260,28 +5261,29 @@ Namespace ViewModels
             End Get
         End Property
 
+        ' Das Kompaktwerkzeug "Anpassungen" (EditorTool.AllAdjustments) zeigt die Gruppen aller fuenf.
         Public ReadOnly Property ShowLightAdjustments As Boolean
             Get
-                Return _currentTool = EditorTool.Adjust
+                Return _currentTool = EditorTool.Adjust OrElse _currentTool = EditorTool.AllAdjustments
             End Get
         End Property
 
         Public ReadOnly Property ShowColorAdjustments As Boolean
             Get
-                Return _currentTool = EditorTool.Color
+                Return _currentTool = EditorTool.Color OrElse _currentTool = EditorTool.AllAdjustments
             End Get
         End Property
 
         Public ReadOnly Property ShowDetailAdjustments As Boolean
             Get
-                Return _currentTool = EditorTool.Details
+                Return _currentTool = EditorTool.Details OrElse _currentTool = EditorTool.AllAdjustments
             End Get
         End Property
 
         ''' <summary>Die hinzufuegenden Gruppen: Vignette, Koernung, Rahmen.</summary>
         Public ReadOnly Property ShowEffectsAdjustments As Boolean
             Get
-                Return _currentTool = EditorTool.Effects
+                Return _currentTool = EditorTool.Effects OrElse _currentTool = EditorTool.AllAdjustments
             End Get
         End Property
 
@@ -5293,7 +5295,7 @@ Namespace ViewModels
 
         Public ReadOnly Property ShowFilterAdjustments As Boolean
             Get
-                Return _currentTool = EditorTool.Filters
+                Return _currentTool = EditorTool.Filters OrElse _currentTool = EditorTool.AllAdjustments
             End Get
         End Property
 
@@ -5310,7 +5312,7 @@ Namespace ViewModels
             Get
                 Select Case _currentTool
                     Case EditorTool.Adjust, EditorTool.Color, EditorTool.Details,
-                         EditorTool.Effects, EditorTool.Filters
+                         EditorTool.Effects, EditorTool.Filters, EditorTool.AllAdjustments
                         Return _currentTool.ToString()
                     Case Else
                         Return ""
@@ -5326,7 +5328,8 @@ Namespace ViewModels
         Public ReadOnly Property IsClippingWarningAvailable As Boolean
             Get
                 If ScopePanelToolKey.Length = 0 Then Return False
-                Return IsScopeInAdjustmentPanelsVisible OrElse _currentTool = EditorTool.Adjust
+                Return IsScopeInAdjustmentPanelsVisible OrElse _currentTool = EditorTool.Adjust OrElse
+                       _currentTool = EditorTool.AllAdjustments
             End Get
         End Property
 
@@ -10979,7 +10982,8 @@ Namespace ViewModels
         Public Shared Function IsSelectionScopeTool(tool As EditorTool) As Boolean
             Select Case tool
                 Case EditorTool.Selection, EditorTool.Mask, EditorTool.Adjust, EditorTool.Color,
-                     EditorTool.Filters, EditorTool.Details, EditorTool.Effects, EditorTool.Draw
+                     EditorTool.Filters, EditorTool.Details, EditorTool.Effects, EditorTool.Draw,
+                     EditorTool.AllAdjustments
                     Return True
                 Case Else
                     Return False
@@ -16859,7 +16863,7 @@ Namespace ViewModels
             Try
                 If String.Equals(AppSettingsService.NormalizeEditorStartupTool(_mainVm?.Settings?.EditorStartupTool),
                                  "Adjust", StringComparison.OrdinalIgnoreCase) Then
-                    startTool = EditorTool.Adjust
+                    startTool = If(IsCompactAdjustments, EditorTool.AllAdjustments, EditorTool.Adjust)
                 End If
             Catch ex As Exception
                 DiagnosticLogService.LogException("Editor.ModeEntry.Startwerkzeug", ex)
@@ -16946,33 +16950,51 @@ Namespace ViewModels
             Return entry.Gruppen.Any(Function(g) Not hidden.Contains(g, StringComparer.OrdinalIgnoreCase))
         End Function
 
+        ''' <summary>Ist der Kompaktmodus der Anpassungen an (AppSettings.EditorCompactAdjustments)? Dann
+        ''' stehen die fuenf Einzelwerkzeuge nicht in der Leiste, sondern das eine "Anpassungen".</summary>
+        Public ReadOnly Property IsCompactAdjustments As Boolean
+            Get
+                Return _mainVm IsNot Nothing AndAlso _mainVm.Settings IsNot Nothing AndAlso
+                       _mainVm.Settings.EditorCompactAdjustments
+            End Get
+        End Property
+
         Public ReadOnly Property ShowsToolAdjust As Boolean
             Get
-                Return HasVisibleGroups("Adjust")
+                Return Not IsCompactAdjustments AndAlso HasVisibleGroups("Adjust")
             End Get
         End Property
 
         Public ReadOnly Property ShowsToolColor As Boolean
             Get
-                Return HasVisibleGroups("Color")
+                Return Not IsCompactAdjustments AndAlso HasVisibleGroups("Color")
             End Get
         End Property
 
         Public ReadOnly Property ShowsToolDetails As Boolean
             Get
-                Return HasVisibleGroups("Details")
+                Return Not IsCompactAdjustments AndAlso HasVisibleGroups("Details")
             End Get
         End Property
 
         Public ReadOnly Property ShowsToolEffects As Boolean
             Get
-                Return HasVisibleGroups("Effects")
+                Return Not IsCompactAdjustments AndAlso HasVisibleGroups("Effects")
             End Get
         End Property
 
         Public ReadOnly Property ShowsToolFilter As Boolean
             Get
-                Return HasVisibleGroups("Filters")
+                Return Not IsCompactAdjustments AndAlso HasVisibleGroups("Filters")
+            End Get
+        End Property
+
+        ''' <summary>Das Kompaktwerkzeug steht in der Leiste, wenn der Modus an ist und von den fuenf
+        ''' Werkzeugen ueberhaupt noch eine Gruppe uebrig ist.</summary>
+        Public ReadOnly Property ShowsToolAllAdjustments As Boolean
+            Get
+                Return IsCompactAdjustments AndAlso
+                       {"Adjust", "Color", "Details", "Effects", "Filters"}.Any(Function(w) HasVisibleGroups(w))
             End Get
         End Property
 
@@ -16980,20 +17002,35 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(HiddenAdjustmentGroups))
             For Each n In {NameOf(ShowsToolAdjust), NameOf(ShowsToolColor),
                            NameOf(ShowsToolDetails), NameOf(ShowsToolEffects),
-                           NameOf(ShowsToolFilter)}
+                           NameOf(ShowsToolFilter), NameOf(ShowsToolAllAdjustments),
+                           NameOf(IsCompactAdjustments)}
                 Me.RaisePropertyChanged(n)
             Next
             ' Steht man gerade IN einem Werkzeug, das eben verschwunden ist, muss man da raus -
             ' sonst blickt man auf ein leeres Panel und kommt ueber die Leiste nicht zurueck.
+            ' Mit dem Kompaktmodus verschwinden die fuenf Einzelwerkzeuge; wer in einem davon steht,
+            ' kommt ins Kompaktwerkzeug. Umgekehrt geht es vom Kompaktwerkzeug nach "Anpassen".
             Dim jetzt = _currentTool
-            If (jetzt = EditorTool.Adjust AndAlso Not ShowsToolAdjust) OrElse
+            If IsCompactAdjustments AndAlso IsObjectAdjustTool(jetzt) AndAlso jetzt <> EditorTool.AllAdjustments AndAlso
+               ShowsToolAllAdjustments Then
+                CurrentTool = EditorTool.AllAdjustments
+            ElseIf jetzt = EditorTool.AllAdjustments AndAlso Not IsCompactAdjustments AndAlso ShowsToolAdjust Then
+                CurrentTool = EditorTool.Adjust
+            ElseIf (jetzt = EditorTool.Adjust AndAlso Not ShowsToolAdjust) OrElse
                (jetzt = EditorTool.Color AndAlso Not ShowsToolColor) OrElse
                (jetzt = EditorTool.Details AndAlso Not ShowsToolDetails) OrElse
                (jetzt = EditorTool.Effects AndAlso Not ShowsToolEffects) OrElse
-               (jetzt = EditorTool.Filters AndAlso Not ShowsToolFilter) Then
+               (jetzt = EditorTool.Filters AndAlso Not ShowsToolFilter) OrElse
+               (jetzt = EditorTool.AllAdjustments AndAlso Not ShowsToolAllAdjustments) Then
                 CurrentTool = EditorTool.Selection
             End If
             RaiseToolSwitcherChanged()
+        End Sub
+
+        ''' <summary>Der Kompaktmodus wurde in den Einstellungen umgeschaltet: Leiste, Werkzeug und
+        ''' Wechselkreis folgen sofort. Dieselbe Regel wie beim Ausblenden von Gruppen.</summary>
+        Public Sub RefreshCompactAdjustments()
+            RefreshHiddenAdjustmentGroups()
         End Sub
 
         ''' <summary>Der Kreis der Wechselleiste (unten im Anpassungspanel) und von STRG+TAB: die
@@ -17006,8 +17043,12 @@ Namespace ViewModels
         ''' NICHT dazu: das sind Werkzeuge, zu denen man gezielt greift, keine Stationen, die man
         ''' beim Entwickeln der Reihe nach durchgeht.</summary>
         Private Function SwitcherTools() As List(Of EditorTool)
+            ' Im Kompaktmodus steht fuer die Anpassungen nur das eine Werkzeug im Kreis.
+            Dim adjustTools = If(IsCompactAdjustments,
+                                 {EditorTool.AllAdjustments},
+                                 {EditorTool.Adjust, EditorTool.Color, EditorTool.Details, EditorTool.Effects, EditorTool.Filters})
             Dim groups As New Dictionary(Of String, EditorTool())(StringComparer.OrdinalIgnoreCase) From {
-                {"Adjust", {EditorTool.Adjust, EditorTool.Color, EditorTool.Details, EditorTool.Effects, EditorTool.Filters}},
+                {"Adjust", adjustTools},
                 {"Transform", {EditorTool.Transform, EditorTool.Resize, EditorTool.Warp}},
                 {"Tools", {EditorTool.Selection, EditorTool.Mask}}
             }
@@ -17031,6 +17072,7 @@ Namespace ViewModels
                 Case EditorTool.Details : Return ShowsToolDetails
                 Case EditorTool.Effects : Return ShowsToolEffects
                 Case EditorTool.Filters : Return ShowsToolFilter
+                Case EditorTool.AllAdjustments : Return ShowsToolAllAdjustments
                 Case Else : Return True
             End Select
         End Function
@@ -17051,6 +17093,7 @@ Namespace ViewModels
                 Case EditorTool.Details : Return LocalizationService.T("Details")
                 Case EditorTool.Effects : Return LocalizationService.T("Effekte")
                 Case EditorTool.Filters : Return LocalizationService.T("Filter")
+                Case EditorTool.AllAdjustments : Return LocalizationService.T("Anpassungen")
                 Case EditorTool.Transform : Return LocalizationService.T("Transformieren")
                 Case EditorTool.Resize : Return LocalizationService.T("Bildgröße")
                 Case EditorTool.Warp : Return LocalizationService.T("Verzerren")
@@ -17064,8 +17107,12 @@ Namespace ViewModels
         ''' aus), und nur in einem Werkzeug des Kreises.</summary>
         Public ReadOnly Property ShowToolSwitcher As Boolean
             Get
+                ' Nicht im Kompaktwerkzeug: dort steht alles in einem Panel, und das Wechseln zwischen
+                ' den Anpassungswerkzeugen, fuer das die Leiste da ist, gibt es nicht. STRG+TAB
+                ' geht weiter.
                 Return _mainVm IsNot Nothing AndAlso _mainVm.Settings IsNot Nothing AndAlso
                        _mainVm.Settings.EditorToolSwitcher AndAlso
+                       _currentTool <> EditorTool.AllAdjustments AndAlso
                        NeighborSwitcherTool(1) <> EditorTool.None
             End Get
         End Property
@@ -22049,6 +22096,7 @@ Namespace ViewModels
                 Case EditorTool.Details : Return outline & "adjustments.svg"
                 Case EditorTool.Effects, EditorTool.Frame : Return outline & "sparkles.svg"
                 Case EditorTool.Filters : Return outline & "palette.svg"
+                Case EditorTool.AllAdjustments : Return outline & "adjustments-alt.svg"
                 Case EditorTool.Move : Return outline & "pointer.svg"
                 Case EditorTool.Selection : Return outline & "marquee.svg"
                 Case EditorTool.Mask : Return outline & "mask.svg"
@@ -25848,7 +25896,7 @@ Namespace ViewModels
         Public Shared Function IsObjectAdjustTool(tool As EditorTool) As Boolean
             Return tool = EditorTool.Adjust OrElse tool = EditorTool.Color OrElse
                    tool = EditorTool.Details OrElse tool = EditorTool.Effects OrElse
-                   tool = EditorTool.Filters
+                   tool = EditorTool.Filters OrElse tool = EditorTool.AllAdjustments
         End Function
 
         ''' <summary>Werkzeuge, in denen ein markiertes Objekt das Ziel ist (drehen/spiegeln oder anpassen).
@@ -27075,6 +27123,20 @@ Namespace ViewModels
                     ResetEffectsInternal()
                 Case EditorTool.Filters
                     ResetFilterInternal()
+                Case EditorTool.AllAdjustments
+                    ' Dasselbe wie die fuenf Einzelwerkzeuge zusammen, nicht das Zuruecksetzen des
+                    ' ganzen Bildes (Case Else): Geometrie, Retusche und Ebenen bleiben.
+                    ResetLightInternal()
+                    ResetCurvePoints()
+                    ResetNegativeInternal()
+                    ResetColorInternal()
+                    ResetHslInternal()
+                    ResetColorGradingInternal()
+                    ResetDetailInternal()
+                    ResetEffectsInternal()
+                    ResetFilterInternal()
+                    RaiseResetButtonStateChanged()
+                    SchedulePreviewUpdate()
                 Case EditorTool.Retouch
                     ResetRetouchInternal()
                 Case Else
@@ -28506,6 +28568,11 @@ Namespace ViewModels
         ''' andere Form zieht man auf, der Pfad wird Punkt fuer Punkt gesetzt und bleibt danach an
         ''' seinen Punkten aenderbar.</summary>
         Path
+        ''' <summary>ANPASSUNGEN, das Werkzeug des Kompaktmodus (AppSettings.EditorCompactAdjustments):
+        ''' alle Gruppen von Anpassen, Farbe, Details, Effekte und Filter untereinander, und immer nur
+        ''' eine davon offen. Ohne den Modus steht es nirgends in der Leiste. Am Ende der Liste, damit
+        ''' sich die Zahlen der uebrigen Werkzeuge nicht verschieben.</summary>
+        AllAdjustments
     End Enum
 
     Public Enum LayersPanelTab

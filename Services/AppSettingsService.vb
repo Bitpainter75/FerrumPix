@@ -454,6 +454,24 @@ Namespace Services
         ''' Anpassungswerkzeug wechselt? Ab Werk aus. Die Tasten STRG+TAB und STRG+SHIFT+TAB gelten
         ''' unabhaengig davon immer.</summary>
         Public Property EditorToolSwitcher As Boolean = False
+        ''' <summary>KOMPAKTMODUS der Anpassungen: statt der fuenf Werkzeuge Anpassen, Farbe, Details,
+        ''' Effekte und Filter steht in der Werkzeugleiste EINES, "Anpassungen", das alle ihre
+        ''' Gruppen untereinander zeigt, und darin ist immer nur eine Gruppe aufgeklappt. Ab Werk aus.</summary>
+        Public Property EditorCompactAdjustments As Boolean = False
+        ''' <summary>Die Gruppe, die im Kompaktwerkzeug offen ist (Schluessel wie ExpanderState.Key),
+        ''' leer heisst: alle zu. EIGENS gemerkt und nicht in EditorExpanderStates: die Gruppen sind
+        ''' dieselben wie in den Einzelwerkzeugen, und das Zuklappen im Kompaktmodus soll dort nichts
+        ''' zuklappen.</summary>
+        Public Property EditorCompactOpenGroup As String = "light"
+        ''' <summary>Klappt das Aufklappen einer Gruppe im Kompaktwerkzeug die anderen zu (ab Werk)? Aus:
+        ''' die Gruppen klappen nur, wenn man sie anklickt, und ihr Zustand steht in
+        ''' <see cref="EditorCompactExpanderStates"/>.</summary>
+        Public Property EditorCompactAutoCollapse As Boolean = True
+        ''' <summary>Auf- und Zu-Zustand der Gruppen im Kompaktwerkzeug ohne automatisches Zuklappen.
+        ''' Getrennt von EditorExpanderStates, das den fuenf Einzelwerkzeugen gehoert: dieselben
+        ''' Gruppen, aber zwei Ansichten, und jede behaelt ihren Stand. Fehlt ein Eintrag, ist offen,
+        ''' was mit automatischem Zuklappen zuletzt offen war.</summary>
+        Public Property EditorCompactExpanderStates As New Dictionary(Of String, Boolean)()
         ''' Werkzeug, das beim Betreten des Editors aktiv ist: "Selection" (Auswahl) oder
         ''' "Adjust" (Anpassen). Ab Werk steht der Editor direkt bei den Anpassungen.
         Public Property EditorStartupTool As String = "Adjust"
@@ -2410,6 +2428,18 @@ Namespace Services
             Update(Sub(s)
                        If s.EditorExpanderStates Is Nothing Then s.EditorExpanderStates = New Dictionary(Of String, Boolean)()
                        s.EditorExpanderStates(key) = expanded
+                   End Sub)
+        End Sub
+
+        Public Shared Sub SaveEditorCompactOpenGroup(key As String)
+            Update(Sub(s) s.EditorCompactOpenGroup = If(key, ""))
+        End Sub
+
+        Public Shared Sub SaveEditorCompactExpanderState(key As String, expanded As Boolean)
+            If String.IsNullOrEmpty(key) Then Return
+            Update(Sub(s)
+                       If s.EditorCompactExpanderStates Is Nothing Then s.EditorCompactExpanderStates = New Dictionary(Of String, Boolean)()
+                       s.EditorCompactExpanderStates(key) = expanded
                    End Sub)
         End Sub
 

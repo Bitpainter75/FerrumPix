@@ -8991,4 +8991,19 @@
   <data name="Auswahl_kopieren_fehlgeschlagen_5a63d8ac" xml:space="preserve">
     <value>Не удалось скопировать выделение</value>
   </data>
+  <data name="Kompakter_Anpassungsmodus_fcb06e9f" xml:space="preserve">
+    <value>Компактный режим коррекций</value>
+  </data>
+  <data name="Statt_Anpassen_Farbe_Details_Effekte_und_Filter__581ed9bb" xml:space="preserve">
+    <value>Вместо инструментов «Коррекция», «Цвет», «Детали», «Эффекты» и «Фильтр» на панели стоит один инструмент «Коррекции». Он показывает все группы друг под другом, и по умолчанию открыта только одна из них: открытие одной закрывает предыдущую.</value>
+  </data>
+  <data name="Alle_Anpassungen_in_einem_Panel_9a49d22b" xml:space="preserve">
+    <value>Все коррекции в одной панели</value>
+  </data>
+  <data name="Andere_Gruppen_automatisch_zuklappen_6d44aeb1" xml:space="preserve">
+    <value>Автоматически сворачивать другие группы</value>
+  </data>
+  <data name="Gilt_im_kompakten_Anpassungsmodus_Ist_der_Schalt_bbea7fa1" xml:space="preserve">
+    <value>Действует в компактном режиме коррекций. Если переключатель выключен, группа открывается или закрывается только по щелчку, а инструмент запоминает, какие группы были открыты в последний раз.</value>
+  </data>
 </root>

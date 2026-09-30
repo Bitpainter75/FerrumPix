@@ -8969,4 +8969,19 @@
   <data name="Auswahl_kopieren_fehlgeschlagen_5a63d8ac" xml:space="preserve">
     <value>Auswahl kopieren fehlgeschlagen</value>
   </data>
+  <data name="Kompakter_Anpassungsmodus_fcb06e9f" xml:space="preserve">
+    <value>Kompakter Anpassungsmodus</value>
+  </data>
+  <data name="Statt_Anpassen_Farbe_Details_Effekte_und_Filter__581ed9bb" xml:space="preserve">
+    <value>Statt Anpassen, Farbe, Details, Effekte und Filter steht ein einziges Werkzeug „Anpassungen“ in der Leiste. Es zeigt alle Gruppen untereinander, und ab Werk ist immer nur eine davon aufgeklappt: wer eine öffnet, schließt die vorige.</value>
+  </data>
+  <data name="Alle_Anpassungen_in_einem_Panel_9a49d22b" xml:space="preserve">
+    <value>Alle Anpassungen in einem Panel</value>
+  </data>
+  <data name="Andere_Gruppen_automatisch_zuklappen_6d44aeb1" xml:space="preserve">
+    <value>Andere Gruppen automatisch zuklappen</value>
+  </data>
+  <data name="Gilt_im_kompakten_Anpassungsmodus_Ist_der_Schalt_bbea7fa1" xml:space="preserve">
+    <value>Gilt im kompakten Anpassungsmodus. Ist der Schalter aus, klappt eine Gruppe nur auf oder zu, wenn man sie anklickt, und das Werkzeug merkt sich, welche Gruppen zuletzt offen waren.</value>
+  </data>
 </root>

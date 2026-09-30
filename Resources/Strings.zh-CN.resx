@@ -8949,4 +8949,19 @@
   <data name="Auswahl_kopieren_fehlgeschlagen_5a63d8ac" xml:space="preserve">
     <value>复制选区失败</value>
   </data>
+  <data name="Kompakter_Anpassungsmodus_fcb06e9f" xml:space="preserve">
+    <value>紧凑调整模式</value>
+  </data>
+  <data name="Statt_Anpassen_Farbe_Details_Effekte_und_Filter__581ed9bb" xml:space="preserve">
+    <value>工具栏中不再是调整、颜色、细节、效果和筛选，而是只有一个工具「调整项」。它把所有分组上下排列，默认每次只展开其中一个：展开一个就会收起上一个。</value>
+  </data>
+  <data name="Alle_Anpassungen_in_einem_Panel_9a49d22b" xml:space="preserve">
+    <value>所有调整集中在一个面板中</value>
+  </data>
+  <data name="Andere_Gruppen_automatisch_zuklappen_6d44aeb1" xml:space="preserve">
+    <value>自动收起其他分组</value>
+  </data>
+  <data name="Gilt_im_kompakten_Anpassungsmodus_Ist_der_Schalt_bbea7fa1" xml:space="preserve">
+    <value>适用于紧凑调整模式。关闭此开关后，分组只有在点击时才会展开或收起，工具会记住上次哪些分组是展开的。</value>
+  </data>
 </root>

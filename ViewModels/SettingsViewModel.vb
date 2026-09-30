@@ -98,6 +98,8 @@ Namespace ViewModels
         Private _editorAdjustmentsPanelOnLeft As Boolean = False
         Private _editorAdjustmentsScrollBarAlwaysVisible As Boolean = False
         Private _editorToolSwitcher As Boolean = False
+        Private _editorCompactAdjustments As Boolean = False
+        Private _editorCompactAutoCollapse As Boolean = True
         Private _editorStartupTool As String = "Adjust"
         Private _psdTextImport As String = "Ask"
         Private _editorToolGroupOrder As String = "Adjust,Transform,Tools"
@@ -184,6 +186,8 @@ Namespace ViewModels
         Private _savedEditorAdjustmentsPanelOnLeft As Boolean = False
         Private _savedEditorAdjustmentsScrollBarAlwaysVisible As Boolean = False
         Private _savedEditorToolSwitcher As Boolean = False
+        Private _savedEditorCompactAdjustments As Boolean = False
+        Private _savedEditorCompactAutoCollapse As Boolean = True
         Private _savedEditorToolGroupOrder As String = "Adjust,Transform,Tools"
         Private _savedDefaultSaveFormat As String = "JPG"
         Private _savedEditorSaveAsNamePattern As String = "{name}_fx"
@@ -2270,6 +2274,37 @@ Namespace ViewModels
             End Set
         End Property
 
+        ''' <summary>Kompaktmodus der Anpassungen: ein Werkzeug "Anpassungen" statt der fuenf. Ab Werk
+        ''' aus. Der Editor stellt Leiste und Werkzeug sofort um
+        ''' (EditorViewModel.RefreshCompactAdjustments).</summary>
+        Public Property EditorCompactAdjustments As Boolean
+            Get
+                Return _editorCompactAdjustments
+            End Get
+            Set(value As Boolean)
+                If _editorCompactAdjustments = value Then Return
+                Me.RaiseAndSetIfChanged(_editorCompactAdjustments, value)
+                _mainVm?.Editor?.RefreshCompactAdjustments()
+                SaveLayoutSettings()
+            End Set
+        End Property
+
+        ''' <summary>Klappt das Oeffnen einer Gruppe im Kompaktwerkzeug die anderen zu? Ab Werk an.
+        ''' Aus: jede Gruppe klappt nur auf Klick, und das Kompaktwerkzeug merkt sich ihren Stand.
+        ''' Gilt sofort, auch wenn das Werkzeug gerade offen ist.</summary>
+        Public Property EditorCompactAutoCollapse As Boolean
+            Get
+                Return _editorCompactAutoCollapse
+            End Get
+            Set(value As Boolean)
+                If _editorCompactAutoCollapse = value Then Return
+                Me.RaiseAndSetIfChanged(_editorCompactAutoCollapse, value)
+                ' Erst speichern, dann umstellen: die Ansicht liest die Regel aus den Einstellungen.
+                SaveLayoutSettings()
+                _mainVm?.Editor?.RefreshCompactAdjustments()
+            End Set
+        End Property
+
         ''' <summary>Werkzeug, das beim Betreten des Editors aktiv ist. Zur Wahl stehen die beiden
         ''' Einstiege, mit denen man tatsächlich anfängt: „Auswahl" (bisheriges Verhalten) und
         ''' „Anpassen".</summary>
@@ -3937,6 +3972,8 @@ Namespace ViewModels
             _editorAdjustmentsPanelOnLeft = _appSettings.EditorAdjustmentsPanelOnLeft
             _editorAdjustmentsScrollBarAlwaysVisible = _appSettings.EditorAdjustmentsScrollBarAlwaysVisible
             _editorToolSwitcher = _appSettings.EditorToolSwitcher
+            _editorCompactAdjustments = _appSettings.EditorCompactAdjustments
+            _editorCompactAutoCollapse = _appSettings.EditorCompactAutoCollapse
             _editorStartupTool = AppSettingsService.NormalizeEditorStartupTool(_appSettings.EditorStartupTool)
             _psdTextImport = AppSettingsService.NormalizePsdTextImport(_appSettings.PsdTextImport)
             _editorToolGroupOrder = AppSettingsService.NormalizeEditorToolGroupOrder(_appSettings.EditorToolGroupOrder)
@@ -4244,6 +4281,8 @@ Namespace ViewModels
             _savedEditorAdjustmentsPanelOnLeft = _editorAdjustmentsPanelOnLeft
             _savedEditorAdjustmentsScrollBarAlwaysVisible = _editorAdjustmentsScrollBarAlwaysVisible
             _savedEditorToolSwitcher = _editorToolSwitcher
+            _savedEditorCompactAdjustments = _editorCompactAdjustments
+            _savedEditorCompactAutoCollapse = _editorCompactAutoCollapse
             _savedEditorToolGroupOrder = _editorToolGroupOrder
             _savedDefaultSaveFormat = _defaultSaveFormat
             _savedEditorSaveAsNamePattern = _editorSaveAsNamePattern
@@ -4354,6 +4393,8 @@ Namespace ViewModels
             EditorAdjustmentsPanelOnLeft = _savedEditorAdjustmentsPanelOnLeft
             EditorAdjustmentsScrollBarAlwaysVisible = _savedEditorAdjustmentsScrollBarAlwaysVisible
             EditorToolSwitcher = _savedEditorToolSwitcher
+            EditorCompactAdjustments = _savedEditorCompactAdjustments
+            EditorCompactAutoCollapse = _savedEditorCompactAutoCollapse
             EditorToolGroupOrder = _savedEditorToolGroupOrder
             DefaultSaveFormat = _savedDefaultSaveFormat
             EditorSaveAsNamePattern = _savedEditorSaveAsNamePattern
@@ -4489,6 +4530,8 @@ Namespace ViewModels
             EditorAdjustmentsPanelOnLeft = False
             EditorAdjustmentsScrollBarAlwaysVisible = False
             EditorToolSwitcher = False
+            EditorCompactAdjustments = False
+            EditorCompactAutoCollapse = True
             EditorToolGroupOrder = "Adjust,Transform,Tools"
             DefaultSaveFormat = "JPG"
             EditorSaveAsNamePattern = "{name}_fx"
@@ -4855,6 +4898,8 @@ Namespace ViewModels
                                           s.EditorAdjustmentsPanelOnLeft = _editorAdjustmentsPanelOnLeft
                                           s.EditorAdjustmentsScrollBarAlwaysVisible = _editorAdjustmentsScrollBarAlwaysVisible
                                           s.EditorToolSwitcher = _editorToolSwitcher
+                                          s.EditorCompactAdjustments = _editorCompactAdjustments
+                                          s.EditorCompactAutoCollapse = _editorCompactAutoCollapse
                                           s.EditorStartupTool = _editorStartupTool
                                           s.PsdTextImport = _psdTextImport
                                           s.EditorToolGroupOrder = _editorToolGroupOrder
