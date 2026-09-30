@@ -9076,4 +9076,13 @@
   <data name="Ausgeschaltet_entwickelt_der_Bildvergleich_RAWs__6dbdc337" xml:space="preserve">
     <value>끄면 이미지 비교에서 RAW를 절반 해상도로 현상합니다. 몇 배 더 빠르고 창에서 보기에는 충분합니다. 켜면 확대해도 완전한 선명도가 유지되지만 이미지마다 눈에 띄게 오래 걸립니다.</value>
   </data>
+  <data name="RAWs_im_Viewer_in_voller_Aufl_sung_entwickeln_93fe0530" xml:space="preserve">
+    <value>뷰어에서 RAW를 전체 해상도로 현상</value>
+  </data>
+  <data name="Gilt_wenn_der_Viewer_RAWs_selbst_entwickelt_Ausg_2f3b92ee" xml:space="preserve">
+    <value>뷰어가 RAW를 직접 현상할 때 적용됩니다. 끄면 절반 해상도로 현상하며, 몇 배 더 빠르고 창에서 보기에는 충분합니다. 켜면 확대해도 완전한 선명도가 유지되고, 이후 편집기가 다시 현상하지 않고 이미지를 엽니다.</value>
+  </data>
+  <data name="Malebene_anlegen_1c3d1496" xml:space="preserve">
+    <value>페인트 레이어 추가</value>
+  </data>
 </root>

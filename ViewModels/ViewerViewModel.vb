@@ -2250,7 +2250,9 @@ Namespace ViewModels
         Private Async Sub RunBitmapLoad(path As String, token As Integer, isFpx As Boolean)
             Dim bmp As Bitmap = Nothing
             Try
-                bmp = Await Task.Run(Function() DecodeViewerBitmap(path))
+                ' Bei jedem Laden neu gelesen, damit ein umgelegter Schalter beim naechsten Bild wirkt.
+                Dim reduced = Not AppSettingsService.Load().ViewerRawFullResolution
+                bmp = Await Task.Run(Function() DecodeViewerBitmap(path, reducedRawDecode:=reduced))
             Catch
                 bmp = Nothing
             End Try
@@ -2308,8 +2310,8 @@ Namespace ViewModels
         ''' den vollen Decode je Bild; das linke Bild bleibt deshalb stehen und wird beim
         ''' Weiterblaettern nicht neu geladen (siehe LadeVergleichsbilder).</param>
         ''' <param name="reducedRawDecode">Das RAW ueber half_size entwickeln: rund siebenmal
-        ''' schneller, halbe Kantenlaenge. Der Vergleich setzt es, solange die Einstellung fuer volle
-        ''' Aufloesung aus ist; eine Flaeche ist ohnehin nur halb so breit wie das Fenster.</param>
+        ''' schneller, halbe Kantenlaenge. Vergleich und Betrachter setzen es, solange ihre
+        ''' Einstellung fuer volle Aufloesung aus ist; die Schnellvorschau setzt es immer.</param>
         Friend Shared Function DecodeViewerBitmap(path As String, Optional alwaysDevelop As Boolean = False,
                                                   Optional reducedRawDecode As Boolean = False) As Bitmap
             If RawPreviewService.IsSupportedRaw(path) Then

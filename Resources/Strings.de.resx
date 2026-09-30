@@ -9050,4 +9050,13 @@
   <data name="Ausgeschaltet_entwickelt_der_Bildvergleich_RAWs__6dbdc337" xml:space="preserve">
     <value>Ausgeschaltet entwickelt der Bildvergleich RAWs in halber Auflösung. Das geht um ein Vielfaches schneller und reicht für die Ansicht im Fenster. Eingeschaltet bleibt beim Hineinzoomen die volle Schärfe erhalten, dafür dauert jedes Bild deutlich länger.</value>
   </data>
+  <data name="RAWs_im_Viewer_in_voller_Aufl_sung_entwickeln_93fe0530" xml:space="preserve">
+    <value>RAWs im Viewer in voller Auflösung entwickeln</value>
+  </data>
+  <data name="Gilt_wenn_der_Viewer_RAWs_selbst_entwickelt_Ausg_2f3b92ee" xml:space="preserve">
+    <value>Gilt, wenn der Viewer RAWs selbst entwickelt. Ausgeschaltet geschieht das in halber Auflösung, um ein Vielfaches schneller und für die Ansicht im Fenster ausreichend. Eingeschaltet bleibt beim Hineinzoomen die volle Schärfe erhalten, und der Editor öffnet das Bild danach ohne erneutes Entwickeln.</value>
+  </data>
+  <data name="Malebene_anlegen_1c3d1496" xml:space="preserve">
+    <value>Malebene anlegen</value>
+  </data>
 </root>

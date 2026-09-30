@@ -9072,4 +9072,13 @@
   <data name="Ausgeschaltet_entwickelt_der_Bildvergleich_RAWs__6dbdc337" xml:space="preserve">
     <value>Pois päältä kuvavertailu kehittää RAW-kuvat puolella resoluutiolla. Se on moninkertaisesti nopeampaa ja riittää ikkunassa katseluun. Päällä täysi terävyys säilyy lähennettäessä, mutta jokainen kuva vie huomattavasti kauemmin.</value>
   </data>
+  <data name="RAWs_im_Viewer_in_voller_Aufl_sung_entwickeln_93fe0530" xml:space="preserve">
+    <value>Kehitä RAW-tiedostot katselimessa täydellä resoluutiolla</value>
+  </data>
+  <data name="Gilt_wenn_der_Viewer_RAWs_selbst_entwickelt_Ausg_2f3b92ee" xml:space="preserve">
+    <value>Koskee tilannetta, jossa katselin kehittää RAW-tiedostot itse. Pois päältä se tehdään puolella resoluutiolla, moninkertaisesti nopeammin ja riittävästi ikkunassa katseluun. Päällä täysi terävyys säilyy lähennettäessä, ja muokkain avaa kuvan sen jälkeen kehittämättä sitä uudelleen.</value>
+  </data>
+  <data name="Malebene_anlegen_1c3d1496" xml:space="preserve">
+    <value>Lisää maalaustaso</value>
+  </data>
 </root>

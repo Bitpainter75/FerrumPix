@@ -9025,9 +9025,18 @@
     <value>已拼合图像</value>
   </data>
   <data name="RAWs_im_Vergleich_in_voller_Aufl_sung_entwickeln_73750ed6" xml:space="preserve">
-    <value>在对比中以全分辨率冲印 RAW</value>
+    <value>在对比中以全分辨率冲洗 RAW</value>
   </data>
   <data name="Ausgeschaltet_entwickelt_der_Bildvergleich_RAWs__6dbdc337" xml:space="preserve">
-    <value>关闭时，图像对比以一半分辨率冲印 RAW。这样快很多倍，足以在窗口中查看。开启时，放大后仍保持完整清晰度，但每张图像耗时明显更长。</value>
+    <value>关闭时，图像对比以一半分辨率冲洗 RAW。这样快很多倍，足以在窗口中查看。开启时，放大后仍保持完整清晰度，但每张图像耗时明显更长。</value>
+  </data>
+  <data name="RAWs_im_Viewer_in_voller_Aufl_sung_entwickeln_93fe0530" xml:space="preserve">
+    <value>在查看器中以全分辨率冲洗 RAW</value>
+  </data>
+  <data name="Gilt_wenn_der_Viewer_RAWs_selbst_entwickelt_Ausg_2f3b92ee" xml:space="preserve">
+    <value>适用于查看器自行冲洗 RAW 的情况。关闭时以一半分辨率进行，快很多倍，足以在窗口中查看。开启时，放大后仍保持完整清晰度，之后编辑器打开该图像时无需重新冲洗。</value>
+  </data>
+  <data name="Malebene_anlegen_1c3d1496" xml:space="preserve">
+    <value>添加绘画图层</value>
   </data>
 </root>

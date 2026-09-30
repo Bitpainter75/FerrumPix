@@ -93,10 +93,13 @@ Namespace Controls
                 ' eingebettete Vorschau. Ein eigener Zweig stand hier schon einmal und verlor dabei
                 ' die Drehung aus der Beistelldatei und die Orientierung des Containers; der Weg des
                 ' Betrachters traegt beides mit.
+                '
+                ' Entwickelt wird dabei IMMER halb: die Schnellvorschau zoomt nicht, und auf
+                ' Fenstergroesse ist der Unterschied nicht zu sehen.
                 Dim decodePath = path
                 bmp = Await Task.Run(Function()
                                          If RawPreviewService.IsSupportedRaw(decodePath) Then
-                                             Return FerrumPix.ViewModels.ViewerViewModel.DecodeViewerBitmap(decodePath)
+                                             Return FerrumPix.ViewModels.ViewerViewModel.DecodeViewerBitmap(decodePath, reducedRawDecode:=True)
                                          End If
                                          Return ImageOrientationService.LoadOrientedAvaloniaBitmapAuto(decodePath)
                                      End Function)

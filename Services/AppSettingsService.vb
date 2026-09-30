@@ -395,6 +395,11 @@ Namespace Services
         ''' und fuer eine Flaeche von halber Fensterbreite genug. Erst beim Hineinzoomen fehlt
         ''' Feinzeichnung - wer im Vergleich die Schaerfe beurteilt, schaltet das hier ein.
         Public Property CompareRawFullResolution As Boolean = False
+        ''' Dasselbe fuer Betrachter und Vollbild (Standard AUS, dann half_size). Wirkt nur, wo der
+        ''' Betrachter ueberhaupt entwickelt, also mit einem der beiden Schalter darueber; sonst zeigt
+        ''' er die eingebettete Vorschau. Die Schnellvorschau entwickelt unabhaengig davon immer
+        ''' halb, sie zoomt nicht.
+        Public Property ViewerRawFullResolution As Boolean = False
         ''' RAWs OHNE .fpxmp-Rezept auch in den Stapelfunktionen voll entwickeln (Demosaic in
         ''' Sensoraufloesung) statt ihre eingebettete JPEG-Vorschau zu nehmen. Mit Rezept wird
         ''' IMMER entwickelt - dort waere die Vorschau schlicht das falsche Bild.

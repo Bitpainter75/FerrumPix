@@ -9072,4 +9072,13 @@
   <data name="Ausgeschaltet_entwickelt_der_Bildvergleich_RAWs__6dbdc337" xml:space="preserve">
     <value>Slått av fremkaller bildesammenligningen RAW med halv oppløsning. Det går mange ganger raskere og holder for visning i vinduet. Slått på beholdes full skarphet når du zoomer inn, men hvert bilde tar merkbart lengre tid.</value>
   </data>
+  <data name="RAWs_im_Viewer_in_voller_Aufl_sung_entwickeln_93fe0530" xml:space="preserve">
+    <value>Fremkall RAW-filer i visningen med full oppløsning</value>
+  </data>
+  <data name="Gilt_wenn_der_Viewer_RAWs_selbst_entwickelt_Ausg_2f3b92ee" xml:space="preserve">
+    <value>Gjelder når visningen selv fremkaller RAW-filer. Slått av skjer det med halv oppløsning, mange ganger raskere og nok for visning i vinduet. Slått på beholdes full skarphet når du zoomer inn, og redigeringsprogrammet åpner deretter bildet uten å fremkalle det på nytt.</value>
+  </data>
+  <data name="Malebene_anlegen_1c3d1496" xml:space="preserve">
+    <value>Legg til malelag</value>
+  </data>
 </root>

@@ -27,6 +27,19 @@
                     </DataTemplate>
                 </Expander.HeaderTemplate>
                 <StackPanel Spacing="2" Margin="0,8,0,0">
+                    <!-- MALEBENE ANLEGEN wie "Text einfuegen" beim Text-Objekt: derselbe Weg wie der
+                         Knopf im Ebenenpanel (EditorViewModel.AddPaintLayer). Die neue Ebene ist
+                         danach markiert und der Pinsel bleibt scharf, man malt also sofort darauf. -->
+                    <Button Classes="ghost" HorizontalAlignment="Stretch" Padding="10,6"
+                            Margin="0,0,0,8"
+                            Command="{Binding AddPaintLayerCommand}"
+                            ToolTip.Tip="Neue Malebene: eine leere Ebene zum Bemalen anlegen">
+                        <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/pencil-plus.svg"
+                                           Width="16" Height="16" />
+                            <TextBlock Text="Malebene anlegen" />
+                        </StackPanel>
+                    </Button>
                     <!-- Visueller Pinsel-Picker: gerenderte Beispielstriche je Variante.
                          Auf sechs Zeilen begrenzt, der Rest ist scrollbar - sonst schiebt die
                          wachsende Pinselliste Größe/Härte/Deckkraft aus dem sichtbaren Bereich.

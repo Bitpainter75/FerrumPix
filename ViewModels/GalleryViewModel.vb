@@ -4491,6 +4491,33 @@ Namespace ViewModels
             If SelectedItem IsNot Nothing Then RaiseEvent RequestScrollToItem(Me, EventArgs.Empty)
         End Function
 
+        ''' <summary>Sterne, Favorit, Etikett und Stichwoerter der LOKALEN Kacheln aus dem Katalog
+        ''' nachziehen. Betrachter und Editor schreiben ueber eigene, leichte Elemente in den Katalog;
+        ''' die Kacheln hier sind andere Objekte und bekamen davon nichts mit, bis der Ordner neu
+        ''' geladen wurde. Eine gebuendelte Abfrage ueber die Pfade der Ansicht, gesetzt wird nur, was
+        ''' sich unterscheidet. Serverelemente bleiben aussen vor: ihre Sterne und Favoriten kommen
+        ''' vom Server und stuenden im lokalen Katalog gar nicht.</summary>
+        Public Sub RefreshCatalogStateFromLibrary()
+            Try
+                Dim locals = Items.Where(Function(i) i IsNot Nothing AndAlso i.IsImage AndAlso Not i.IsRemoteAsset AndAlso
+                                                     Not String.IsNullOrEmpty(i.FilePath)).ToList()
+                If locals.Count = 0 Then Return
+                Dim metaByPath = LibraryService.Instance.GetMetaForPaths(locals.Select(Function(i) i.FilePath))
+                For Each item In locals
+                    Dim meta As LibraryImageMeta = Nothing
+                    If Not metaByPath.TryGetValue(item.FilePath, meta) Then Continue For
+                    If item.Rating <> meta.Rating Then item.Rating = meta.Rating
+                    If item.IsFavorite <> meta.IsFavorite Then item.IsFavorite = meta.IsFavorite
+                    Dim label = If(meta.ColorLabel, "")
+                    If Not String.Equals(If(item.ColorLabel, ""), label, StringComparison.OrdinalIgnoreCase) Then item.ColorLabel = label
+                    Dim tags = If(meta.Tags, New List(Of String)())
+                    If Not If(item.Tags, New List(Of String)()).SequenceEqual(tags) Then item.Tags = New List(Of String)(tags)
+                Next
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Gallery.RefreshCatalogStateFromLibrary", ex)
+            End Try
+        End Sub
+
         Public Function SelectImageInCurrentView(imagePath As String) As Boolean
             If String.IsNullOrEmpty(imagePath) Then Return False
             ' Aus dem Viewer/Editor kommt bei BEIDEN Servern der Temp-Pfad der geholten Kopie zurück,

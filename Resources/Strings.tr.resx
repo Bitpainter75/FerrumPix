@@ -9076,4 +9076,13 @@
   <data name="Ausgeschaltet_entwickelt_der_Bildvergleich_RAWs__6dbdc337" xml:space="preserve">
     <value>Kapalıyken görüntü karşılaştırması RAW dosyalarını yarım çözünürlükte işler. Bu kat kat daha hızlıdır ve pencerede görüntülemek için yeterlidir. Açıkken yakınlaştırmada tam netlik korunur, ancak her görüntü belirgin şekilde daha uzun sürer.</value>
   </data>
+  <data name="RAWs_im_Viewer_in_voller_Aufl_sung_entwickeln_93fe0530" xml:space="preserve">
+    <value>RAW dosyalarını görüntüleyicide tam çözünürlükte işle</value>
+  </data>
+  <data name="Gilt_wenn_der_Viewer_RAWs_selbst_entwickelt_Ausg_2f3b92ee" xml:space="preserve">
+    <value>Görüntüleyici RAW dosyalarını kendisi işlediğinde geçerlidir. Kapalıyken bu yarım çözünürlükte, kat kat daha hızlı ve pencerede görüntülemeye yetecek şekilde yapılır. Açıkken yakınlaştırmada tam netlik korunur ve düzenleyici görüntüyü sonra yeniden işlemeden açar.</value>
+  </data>
+  <data name="Malebene_anlegen_1c3d1496" xml:space="preserve">
+    <value>Boya katmanı ekle</value>
+  </data>
 </root>

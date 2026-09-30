@@ -314,6 +314,14 @@ Namespace ViewModels
                     ReloadEditorDocumentAfterSettings()
                 End If
 
+                ' Zurueck in die Galerie: Sterne, Herz, Etikett und Stichwoerter, die Betrachter oder
+                ' Editor gesetzt haben, stehen im Katalog, aber nicht an den Kacheln - die Galerie
+                ' haelt ihre Elemente im Speicher. Hier und nicht in BackToGallery, weil jeder
+                ' Rueckweg (Taste, Knopf, Filmstreifen) hier vorbeikommt.
+                If (previousMode = AppMode.Viewer OrElse previousMode = AppMode.Editor) AndAlso value = AppMode.Gallery Then
+                    Gallery?.RefreshCatalogStateFromLibrary()
+                End If
+
                 UpdateInfoPanelActivation()
             End Set
         End Property

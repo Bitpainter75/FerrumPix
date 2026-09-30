@@ -9072,4 +9072,13 @@
   <data name="Ausgeschaltet_entwickelt_der_Bildvergleich_RAWs__6dbdc337" xml:space="preserve">
     <value>Po wyłączeniu porównanie zdjęć wywołuje pliki RAW w połowie rozdzielczości. To wielokrotnie szybsze i wystarcza do oglądania w oknie. Po włączeniu przy powiększaniu zachowana jest pełna ostrość, ale każde zdjęcie trwa wyraźnie dłużej.</value>
   </data>
+  <data name="RAWs_im_Viewer_in_voller_Aufl_sung_entwickeln_93fe0530" xml:space="preserve">
+    <value>Wywołuj pliki RAW w przeglądarce w pełnej rozdzielczości</value>
+  </data>
+  <data name="Gilt_wenn_der_Viewer_RAWs_selbst_entwickelt_Ausg_2f3b92ee" xml:space="preserve">
+    <value>Dotyczy sytuacji, gdy przeglądarka sama wywołuje pliki RAW. Po wyłączeniu dzieje się to w połowie rozdzielczości, wielokrotnie szybciej i wystarczająco do oglądania w oknie. Po włączeniu przy powiększaniu zachowana jest pełna ostrość, a edytor otwiera potem zdjęcie bez ponownego wywoływania.</value>
+  </data>
+  <data name="Malebene_anlegen_1c3d1496" xml:space="preserve">
+    <value>Dodaj warstwę malowania</value>
+  </data>
 </root>

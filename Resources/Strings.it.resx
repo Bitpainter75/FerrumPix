@@ -9032,4 +9032,13 @@
   <data name="Ausgeschaltet_entwickelt_der_Bildvergleich_RAWs__6dbdc337" xml:space="preserve">
     <value>Disattivato, il confronto immagini sviluppa i RAW a metà risoluzione. È molto più veloce e basta per la visualizzazione nella finestra. Attivato, lo zoom mantiene la piena nitidezza, ma ogni immagine richiede molto più tempo.</value>
   </data>
+  <data name="RAWs_im_Viewer_in_voller_Aufl_sung_entwickeln_93fe0530" xml:space="preserve">
+    <value>Sviluppa i RAW a piena risoluzione nel visualizzatore</value>
+  </data>
+  <data name="Gilt_wenn_der_Viewer_RAWs_selbst_entwickelt_Ausg_2f3b92ee" xml:space="preserve">
+    <value>Vale quando il visualizzatore sviluppa da sé i RAW. Disattivato, lo fa a metà risoluzione, molto più velocemente e a sufficienza per la visualizzazione nella finestra. Attivato, lo zoom mantiene la piena nitidezza, e l'editor apre poi l'immagine senza svilupparla di nuovo.</value>
+  </data>
+  <data name="Malebene_anlegen_1c3d1496" xml:space="preserve">
+    <value>Aggiungi livello di pittura</value>
+  </data>
 </root>

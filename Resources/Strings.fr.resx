@@ -9032,4 +9032,13 @@
   <data name="Ausgeschaltet_entwickelt_der_Bildvergleich_RAWs__6dbdc337" xml:space="preserve">
     <value>Désactivé, la comparaison d'images développe les RAW en demi-résolution. C'est bien plus rapide et suffit pour l'affichage dans la fenêtre. Activé, le zoom conserve toute la netteté, mais chaque image prend nettement plus de temps.</value>
   </data>
+  <data name="RAWs_im_Viewer_in_voller_Aufl_sung_entwickeln_93fe0530" xml:space="preserve">
+    <value>Développer les RAW en pleine résolution dans la visionneuse</value>
+  </data>
+  <data name="Gilt_wenn_der_Viewer_RAWs_selbst_entwickelt_Ausg_2f3b92ee" xml:space="preserve">
+    <value>S'applique lorsque la visionneuse développe elle-même les RAW. Désactivé, cela se fait en demi-résolution, bien plus rapidement et suffisamment pour l'affichage dans la fenêtre. Activé, le zoom conserve toute la netteté, et l'éditeur ouvre ensuite l'image sans la redévelopper.</value>
+  </data>
+  <data name="Malebene_anlegen_1c3d1496" xml:space="preserve">
+    <value>Ajouter un calque de peinture</value>
+  </data>
 </root>

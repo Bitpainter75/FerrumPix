@@ -95,10 +95,10 @@ Namespace Controls.EditorPanels
             End Try
         End Sub
 
-        Public Sub OnWatermarkClearImageClick(sender As Object, e As RoutedEventArgs)
+        Public Sub OnWatermarkInsertTextClick(sender As Object, e As RoutedEventArgs)
             Dim vm = TryCast(DataContext, EditorViewModel)
             If vm Is Nothing Then Return
-            vm.ClearWatermarkImagePath()
+            vm.InsertTextWatermark()
         End Sub
 
         Public Sub OnWatermarkSavePresetClick(sender As Object, e As RoutedEventArgs)

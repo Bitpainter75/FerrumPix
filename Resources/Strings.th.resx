@@ -9076,4 +9076,13 @@
   <data name="Ausgeschaltet_entwickelt_der_Bildvergleich_RAWs__6dbdc337" xml:space="preserve">
     <value>เมื่อปิด การเปรียบเทียบภาพจะล้าง RAW ที่ความละเอียดครึ่งหนึ่ง ซึ่งเร็วกว่าหลายเท่าและเพียงพอสำหรับการดูในหน้าต่าง เมื่อเปิด การซูมเข้าจะคงความคมชัดเต็มที่ แต่แต่ละภาพจะใช้เวลานานขึ้นอย่างเห็นได้ชัด</value>
   </data>
+  <data name="RAWs_im_Viewer_in_voller_Aufl_sung_entwickeln_93fe0530" xml:space="preserve">
+    <value>ล้าง RAW ด้วยความละเอียดเต็มในโปรแกรมดูภาพ</value>
+  </data>
+  <data name="Gilt_wenn_der_Viewer_RAWs_selbst_entwickelt_Ausg_2f3b92ee" xml:space="preserve">
+    <value>ใช้เมื่อโปรแกรมดูภาพล้าง RAW เอง เมื่อปิด จะล้างที่ความละเอียดครึ่งหนึ่ง เร็วกว่าหลายเท่าและเพียงพอสำหรับการดูในหน้าต่าง เมื่อเปิด การซูมเข้าจะคงความคมชัดเต็มที่ และโปรแกรมแก้ไขจะเปิดภาพได้โดยไม่ต้องล้างใหม่</value>
+  </data>
+  <data name="Malebene_anlegen_1c3d1496" xml:space="preserve">
+    <value>เพิ่มเลเยอร์ระบายสี</value>
+  </data>
 </root>

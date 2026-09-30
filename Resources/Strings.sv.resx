@@ -9072,4 +9072,13 @@
   <data name="Ausgeschaltet_entwickelt_der_Bildvergleich_RAWs__6dbdc337" xml:space="preserve">
     <value>Avstängt framkallar bildjämförelsen RAW med halv upplösning. Det går många gånger snabbare och räcker för visning i fönstret. Påslaget behålls full skärpa när du zoomar in, men varje bild tar märkbart längre tid.</value>
   </data>
+  <data name="RAWs_im_Viewer_in_voller_Aufl_sung_entwickeln_93fe0530" xml:space="preserve">
+    <value>Framkalla RAW-filer i visaren med full upplösning</value>
+  </data>
+  <data name="Gilt_wenn_der_Viewer_RAWs_selbst_entwickelt_Ausg_2f3b92ee" xml:space="preserve">
+    <value>Gäller när visaren själv framkallar RAW-filer. Avstängt sker det med halv upplösning, många gånger snabbare och tillräckligt för visning i fönstret. Påslaget behålls full skärpa när du zoomar in, och redigeraren öppnar sedan bilden utan att framkalla den igen.</value>
+  </data>
+  <data name="Malebene_anlegen_1c3d1496" xml:space="preserve">
+    <value>Lägg till målarlager</value>
+  </data>
 </root>

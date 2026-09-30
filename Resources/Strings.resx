@@ -9051,4 +9051,13 @@
   <data name="Ausgeschaltet_entwickelt_der_Bildvergleich_RAWs__6dbdc337" xml:space="preserve">
     <value>When off, the image comparison develops RAWs at half resolution. That is many times faster and enough for viewing in the window. When on, zooming in keeps full sharpness, but each image takes noticeably longer.</value>
   </data>
+  <data name="RAWs_im_Viewer_in_voller_Aufl_sung_entwickeln_93fe0530" xml:space="preserve">
+    <value>Develop RAWs at full resolution in the viewer</value>
+  </data>
+  <data name="Gilt_wenn_der_Viewer_RAWs_selbst_entwickelt_Ausg_2f3b92ee" xml:space="preserve">
+    <value>Applies when the viewer develops RAWs itself. When off, this happens at half resolution, many times faster and enough for viewing in the window. When on, zooming in keeps full sharpness, and the editor then opens the image without developing it again.</value>
+  </data>
+  <data name="Malebene_anlegen_1c3d1496" xml:space="preserve">
+    <value>Add paint layer</value>
+  </data>
 </root>

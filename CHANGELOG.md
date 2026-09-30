@@ -24,9 +24,16 @@
 - A new version is now pointed out right next to the logo in the title bar, not only in the
   settings. FerrumPix looks once at startup.
 
-- The image comparison develops RAWs at half resolution, which makes stepping through them many
-  times faster. For judging sharpness up close, full resolution can be switched back on in the
-  settings.
+- The image comparison, the quick preview and the viewer (when it develops RAWs itself) now do
+  so at half resolution, which makes stepping through them many times faster. For judging
+  sharpness up close, full resolution can be switched back on in the settings, separately for
+  the viewer and the comparison.
+
+- The brush panel has an "Add paint layer" button. The new layer is selected right away, so
+  you can start painting on it.
+
+- The watermark tool offers "Insert image" and "Insert text" side by side at the top of its
+  panel. Both place a watermark right away, or switch the selected one over.
 
 - RAW files that carry no usable preview of their own, such as DNGs written by CHDK, now show up
   in the viewer and the gallery more than ten times faster.
@@ -35,3 +42,11 @@
 
 - Merging or rasterizing layers while one of the adjustment tools was open could leave the
   layers untouched.
+
+- Stars, favorite, color label and keywords set in the editor or the viewer now show up on the
+  gallery thumbnails right away when you go back, and names given to people show up in the
+  gallery's info panel. They were saved all along, but the gallery only showed them after
+  reloading the folder.
+
+- The favorite heart now has the same shadow as the rating stars, so it no longer gets lost on
+  bright parts of a thumbnail.

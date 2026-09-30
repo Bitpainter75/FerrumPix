@@ -677,8 +677,14 @@ Namespace ViewModels
                 BuildSummary()
                 Return
             End If
-            If OwnerLoadsDetails Then Return
             If String.IsNullOrEmpty(_path) Then Return
+            ' Personen und, wo das Panel sie selbst laedt, Sterne, Herz, Etikett und Stichwoerter
+            ' kommen hier ebenfalls neu. ShowItem kehrt fuer dasselbe Bild sofort zurueck; wer im
+            ' Editor eine Person benannte und in die Galerie zurueckging, sah dort sonst den Stand
+            ' von vorher. Beides liest nur den Katalog.
+            LoadPeople()
+            If OwnerLoadsDetails Then Return
+            LoadBaseData()
             LoadInBackground(Interlocked.Increment(_loadToken), _path, _item)
         End Sub
 

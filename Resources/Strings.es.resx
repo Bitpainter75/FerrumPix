@@ -9032,4 +9032,13 @@
   <data name="Ausgeschaltet_entwickelt_der_Bildvergleich_RAWs__6dbdc337" xml:space="preserve">
     <value>Desactivado, la comparación de imágenes revela los RAW a media resolución. Es mucho más rápido y basta para verlos en la ventana. Activado, se conserva toda la nitidez al ampliar, pero cada imagen tarda bastante más.</value>
   </data>
+  <data name="RAWs_im_Viewer_in_voller_Aufl_sung_entwickeln_93fe0530" xml:space="preserve">
+    <value>Revelar los RAW a resolución completa en el visor</value>
+  </data>
+  <data name="Gilt_wenn_der_Viewer_RAWs_selbst_entwickelt_Ausg_2f3b92ee" xml:space="preserve">
+    <value>Se aplica cuando el visor revela los RAW por sí mismo. Desactivado, lo hace a media resolución, mucho más rápido y suficiente para verlos en la ventana. Activado, se conserva toda la nitidez al ampliar, y el editor abre después la imagen sin volver a revelarla.</value>
+  </data>
+  <data name="Malebene_anlegen_1c3d1496" xml:space="preserve">
+    <value>Añadir capa de pintura</value>
+  </data>
 </root>

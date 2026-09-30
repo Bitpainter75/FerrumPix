@@ -1824,6 +1824,16 @@
     <Style Selector="icons|SvgIcon.fav-heart.active">
         <Setter Property="IconBrush" Value="{DynamicResource FP.Accent}"/>
     </Style>
+    <!-- Derselbe Schatten wie bei den Sternen darunter: das Herz steht ueberall neben ihnen, auf
+         der Kachel auch ueber hellen Bildstellen, und ging dort ohne Kante unter. -->
+    <Style Selector="Button.favorite-btn icons|SvgIcon.fav-heart">
+        <Setter Property="Effect">
+            <DropShadowEffect BlurRadius="0"
+                              OffsetX="1"
+                              OffsetY="1"
+                              Color="#B0000000"/>
+        </Setter>
+    </Style>
     <!-- Bewertungssterne: SVG-basiert, aktiv in Akzentfarbe -->
     <Style Selector="Button.star-btn icons|SvgIcon.rating-star">
         <Setter Property="IconBrush" Value="#EAEFF5"/>

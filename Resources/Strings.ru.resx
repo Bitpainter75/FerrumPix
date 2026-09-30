@@ -9072,4 +9072,13 @@
   <data name="Ausgeschaltet_entwickelt_der_Bildvergleich_RAWs__6dbdc337" xml:space="preserve">
     <value>Если выключено, сравнение изображений проявляет RAW в половинном разрешении. Это в разы быстрее и достаточно для просмотра в окне. Если включено, при увеличении сохраняется полная резкость, но каждое изображение обрабатывается заметно дольше.</value>
   </data>
+  <data name="RAWs_im_Viewer_in_voller_Aufl_sung_entwickeln_93fe0530" xml:space="preserve">
+    <value>Проявлять RAW в просмотрщике в полном разрешении</value>
+  </data>
+  <data name="Gilt_wenn_der_Viewer_RAWs_selbst_entwickelt_Ausg_2f3b92ee" xml:space="preserve">
+    <value>Действует, когда просмотрщик сам проявляет RAW. Если выключено, это происходит в половинном разрешении, в разы быстрее и достаточно для просмотра в окне. Если включено, при увеличении сохраняется полная резкость, а редактор затем открывает изображение без повторного проявления.</value>
+  </data>
+  <data name="Malebene_anlegen_1c3d1496" xml:space="preserve">
+    <value>Добавить слой рисования</value>
+  </data>
 </root>

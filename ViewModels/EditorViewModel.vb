@@ -2303,6 +2303,15 @@ Namespace ViewModels
             SetWatermarkImagePath("")
         End Sub
 
+        ''' <summary>"TEXT EINFÜGEN" beim Wasserzeichen, das Gegenstück zu "Bild einfügen": ein
+        ''' markiertes Wasserzeichen wird auf Text umgestellt, ohne Markierung erscheint ein neues
+        ''' Text-Wasserzeichen sofort, statt auf einen Klick ins Bild zu warten. Das Bild tut
+        ''' dasselbe über SetWatermarkImagePath.</summary>
+        Public Sub InsertTextWatermark()
+            ClearWatermarkImagePath()
+            PlacePendingWatermark()
+        End Sub
+
         Public Sub SaveCurrentWatermarkPreset()
             Dim name = If(_watermarkPresetNameDraft, "").Trim()
             If String.IsNullOrWhiteSpace(name) Then Return

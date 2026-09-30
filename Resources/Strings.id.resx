@@ -9076,4 +9076,13 @@
   <data name="Ausgeschaltet_entwickelt_der_Bildvergleich_RAWs__6dbdc337" xml:space="preserve">
     <value>Jika nonaktif, perbandingan gambar memproses RAW dalam setengah resolusi. Itu jauh lebih cepat dan cukup untuk tampilan di jendela. Jika aktif, ketajaman penuh tetap terjaga saat memperbesar, tetapi setiap gambar butuh waktu jauh lebih lama.</value>
   </data>
+  <data name="RAWs_im_Viewer_in_voller_Aufl_sung_entwickeln_93fe0530" xml:space="preserve">
+    <value>Kembangkan RAW dalam resolusi penuh di penampil</value>
+  </data>
+  <data name="Gilt_wenn_der_Viewer_RAWs_selbst_entwickelt_Ausg_2f3b92ee" xml:space="preserve">
+    <value>Berlaku jika penampil mengembangkan RAW sendiri. Jika nonaktif, hal itu dilakukan dalam setengah resolusi, jauh lebih cepat dan cukup untuk tampilan di jendela. Jika aktif, ketajaman penuh tetap terjaga saat memperbesar, dan editor kemudian membuka gambar tanpa mengembangkannya lagi.</value>
+  </data>
+  <data name="Malebene_anlegen_1c3d1496" xml:space="preserve">
+    <value>Tambah lapisan lukis</value>
+  </data>
 </root>

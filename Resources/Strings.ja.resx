@@ -9072,4 +9072,13 @@
   <data name="Ausgeschaltet_entwickelt_der_Bildvergleich_RAWs__6dbdc337" xml:space="preserve">
     <value>オフの場合、画像比較は RAW を半分の解像度で現像します。何倍も速く、ウィンドウでの表示には十分です。オンの場合、拡大しても完全なシャープネスが保たれますが、1 枚ごとに明らかに時間がかかります。</value>
   </data>
+  <data name="RAWs_im_Viewer_in_voller_Aufl_sung_entwickeln_93fe0530" xml:space="preserve">
+    <value>ビューアーで RAW をフル解像度で現像する</value>
+  </data>
+  <data name="Gilt_wenn_der_Viewer_RAWs_selbst_entwickelt_Ausg_2f3b92ee" xml:space="preserve">
+    <value>ビューアーが RAW を自ら現像する場合に適用されます。オフの場合は半分の解像度で行われ、何倍も速く、ウィンドウでの表示には十分です。オンの場合は拡大しても完全なシャープネスが保たれ、その後エディターは再現像せずに画像を開きます。</value>
+  </data>
+  <data name="Malebene_anlegen_1c3d1496" xml:space="preserve">
+    <value>ペイントレイヤーを追加</value>
+  </data>
 </root>

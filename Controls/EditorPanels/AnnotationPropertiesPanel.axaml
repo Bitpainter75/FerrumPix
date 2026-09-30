@@ -58,6 +58,27 @@
                     <TextBlock Text="Symbol einfügen" />
                 </StackPanel>
             </Button>
+            <!-- WASSERZEICHEN: Bild oder Text, an derselben Stelle wie "Text einfügen" beim
+                 Text-Werkzeug und die Breite geteilt. Ohne Markierung setzt jeder Knopf ein neues
+                 Wasserzeichen, mit Markierung stellt er dessen Quelle um. -->
+            <Grid ColumnDefinitions="*,6,*" IsVisible="{Binding ShowWatermarkPresetControls}">
+                <Button Grid.Column="0" Classes="ghost" HorizontalAlignment="Stretch" Padding="10,6"
+                        Click="OnWatermarkChooseImageClick">
+                    <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/photo-plus.svg"
+                                       Width="16" Height="16" />
+                        <TextBlock Text="Bild einfügen" TextTrimming="CharacterEllipsis" />
+                    </StackPanel>
+                </Button>
+                <Button Grid.Column="2" Classes="ghost" HorizontalAlignment="Stretch" Padding="10,6"
+                        Click="OnWatermarkInsertTextClick">
+                    <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/typography.svg"
+                                       Width="16" Height="16" />
+                        <TextBlock Text="Text einfügen" TextTrimming="CharacterEllipsis" />
+                    </StackPanel>
+                </Button>
+            </Grid>
             <StackPanel Spacing="6" IsVisible="{Binding ShowWatermarkPresetControls}">
             <Grid ColumnDefinitions="92,*" VerticalAlignment="Center">
                 <TextBlock Text="Vorlage" Foreground="{DynamicResource FP.Text.Secondary}"
@@ -92,26 +113,6 @@
                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/trash.svg"
                                            Width="14" Height="14" />
                             <TextBlock Text="Löschen" FontSize="{DynamicResource FP.Font.Small}" />
-                        </StackPanel>
-                    </Button>
-                </StackPanel>
-            </Grid>
-            <Grid ColumnDefinitions="92,*" VerticalAlignment="Center">
-                <TextBlock Text="Quelle" Foreground="{DynamicResource FP.Text.Secondary}"
-                           VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
-                <StackPanel Grid.Column="1" Margin="6,0,0,0" Orientation="Horizontal" Spacing="6">
-                    <Button Classes="ghost" Padding="8,4" Click="OnWatermarkChooseImageClick">
-                        <StackPanel Orientation="Horizontal" Spacing="6">
-                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/photo-plus.svg"
-                                           Width="14" Height="14" />
-                            <TextBlock Text="Bild einfügen" FontSize="{DynamicResource FP.Font.Small}" />
-                        </StackPanel>
-                    </Button>
-                    <Button Classes="ghost" Padding="8,4" Click="OnWatermarkClearImageClick">
-                        <StackPanel Orientation="Horizontal" Spacing="6">
-                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/typography.svg"
-                                           Width="14" Height="14" />
-                            <TextBlock Text="Text" FontSize="{DynamicResource FP.Font.Small}" />
                         </StackPanel>
                     </Button>
                 </StackPanel>

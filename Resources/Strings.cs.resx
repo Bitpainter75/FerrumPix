@@ -9072,4 +9072,13 @@
   <data name="Ausgeschaltet_entwickelt_der_Bildvergleich_RAWs__6dbdc337" xml:space="preserve">
     <value>Vypnuto: porovnání snímků vyvolává RAW v polovičním rozlišení. Je to mnohonásobně rychlejší a stačí to pro zobrazení v okně. Zapnuto: při přiblížení zůstane plná ostrost, každý snímek ale trvá znatelně déle.</value>
   </data>
+  <data name="RAWs_im_Viewer_in_voller_Aufl_sung_entwickeln_93fe0530" xml:space="preserve">
+    <value>Vyvolávat RAW v prohlížeči v plném rozlišení</value>
+  </data>
+  <data name="Gilt_wenn_der_Viewer_RAWs_selbst_entwickelt_Ausg_2f3b92ee" xml:space="preserve">
+    <value>Platí, když prohlížeč vyvolává soubory RAW sám. Vypnuto: děje se to v polovičním rozlišení, mnohonásobně rychleji a pro zobrazení v okně to stačí. Zapnuto: při přiblížení zůstane plná ostrost a editor pak snímek otevře bez nového vyvolání.</value>
+  </data>
+  <data name="Malebene_anlegen_1c3d1496" xml:space="preserve">
+    <value>Přidat malovací vrstvu</value>
+  </data>
 </root>

@@ -9072,4 +9072,13 @@
   <data name="Ausgeschaltet_entwickelt_der_Bildvergleich_RAWs__6dbdc337" xml:space="preserve">
     <value>Uitgeschakeld ontwikkelt de beeldvergelijking RAW's op halve resolutie. Dat is vele malen sneller en volstaat voor de weergave in het venster. Ingeschakeld blijft bij inzoomen de volledige scherpte behouden, maar elke foto duurt merkbaar langer.</value>
   </data>
+  <data name="RAWs_im_Viewer_in_voller_Aufl_sung_entwickeln_93fe0530" xml:space="preserve">
+    <value>RAW-bestanden in de viewer op volledige resolutie ontwikkelen</value>
+  </data>
+  <data name="Gilt_wenn_der_Viewer_RAWs_selbst_entwickelt_Ausg_2f3b92ee" xml:space="preserve">
+    <value>Geldt wanneer de viewer RAW-bestanden zelf ontwikkelt. Uitgeschakeld gebeurt dat op halve resolutie, vele malen sneller en voldoende voor de weergave in het venster. Ingeschakeld blijft bij inzoomen de volledige scherpte behouden, en de editor opent de foto daarna zonder opnieuw te ontwikkelen.</value>
+  </data>
+  <data name="Malebene_anlegen_1c3d1496" xml:space="preserve">
+    <value>Schilderlaag toevoegen</value>
+  </data>
 </root>

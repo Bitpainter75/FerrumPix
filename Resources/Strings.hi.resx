@@ -9071,9 +9071,18 @@
     <value>पृष्ठभूमि में समतल किया गया</value>
   </data>
   <data name="RAWs_im_Vergleich_in_voller_Aufl_sung_entwickeln_73750ed6" xml:space="preserve">
-    <value>तुलना में RAW को पूरे रिज़ॉल्यूशन पर डेवलप करें</value>
+    <value>तुलना में RAW को पूरे रिज़ॉल्यूशन पर विकसित करें</value>
   </data>
   <data name="Ausgeschaltet_entwickelt_der_Bildvergleich_RAWs__6dbdc337" xml:space="preserve">
-    <value>बंद होने पर छवि तुलना RAW को आधे रिज़ॉल्यूशन पर डेवलप करती है। यह कई गुना तेज़ है और विंडो में देखने के लिए पर्याप्त है। चालू होने पर ज़ूम करने पर पूरी शार्पनेस बनी रहती है, लेकिन हर छवि में काफ़ी अधिक समय लगता है।</value>
+    <value>बंद होने पर छवि तुलना RAW को आधे रिज़ॉल्यूशन पर विकसित करती है। यह कई गुना तेज़ है और विंडो में देखने के लिए पर्याप्त है। चालू होने पर ज़ूम करने पर पूरी शार्पनेस बनी रहती है, लेकिन हर छवि में काफ़ी अधिक समय लगता है।</value>
+  </data>
+  <data name="RAWs_im_Viewer_in_voller_Aufl_sung_entwickeln_93fe0530" xml:space="preserve">
+    <value>व्यूअर में RAW को पूरे रिज़ॉल्यूशन पर विकसित करें</value>
+  </data>
+  <data name="Gilt_wenn_der_Viewer_RAWs_selbst_entwickelt_Ausg_2f3b92ee" xml:space="preserve">
+    <value>तब लागू होता है जब व्यूअर RAW को स्वयं विकसित करता है। बंद होने पर यह आधे रिज़ॉल्यूशन पर होता है, कई गुना तेज़ और विंडो में देखने के लिए पर्याप्त। चालू होने पर ज़ूम करने पर पूरी शार्पनेस बनी रहती है, और एडिटर बाद में छवि को दोबारा विकसित किए बिना खोलता है।</value>
+  </data>
+  <data name="Malebene_anlegen_1c3d1496" xml:space="preserve">
+    <value>रंग लेयर जोड़ें</value>
   </data>
 </root>
