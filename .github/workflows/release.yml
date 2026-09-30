@@ -16,8 +16,9 @@
 #
 # DIE MSIX GEHT NICHT INS RELEASE. Ein Store-Paket wird unsigniert eingereicht, der Store signiert
 # selbst - und unsigniert laesst Windows es nicht installieren. Es steht als Artefakt am Lauf, von
-# wo aus es ins Partner Center hochgeladen wird. Ein Lauf mit "msix" baut sie immer, die
-# Paketversion bildet package.sh dann aus VERSION; ein Lauf mit "alle" nur mit Paketversion.
+# wo aus es ins Partner Center hochgeladen wird. Ein Lauf mit "msix" oder "alle" baut sie immer,
+# und ohne eingetragene Paketversion bildet package.sh sie aus VERSION (0.9.56-2 ergibt
+# 1.0.9562.0). Scheitert sie, haelt das kein Release auf: "veroeffentlichen" haengt nicht an ihr.
 #
 # SICHERHEIT: Ein oeffentliches Repo kann jeder per Pull Request anstossen. GitHub gibt
 # Fork-Pull-Requests keine Secrets - das ist die schuetzende Regel, und sie faellt, sobald
@@ -73,7 +74,7 @@ on:
           - flatpak
           - msix
       paketversion:
-        description: "MSIX-Paketversion, vier Zahlen, die letzte 0 (z.B. 1.0.9523.0). Bei msix bedeutet leer: aus VERSION gebildet; bei alle bedeutet leer: keine MSIX"
+        description: "MSIX-Paketversion, nur zum Ueberschreiben. Leer: aus VERSION gebildet (0.9.56-2 ergibt 1.0.9562.0). Sonst vier Zahlen, die letzte 0"
         type: string
         required: false
         default: ""
@@ -275,9 +276,10 @@ jobs:
   msix-nutzlast:
     name: MSIX - Nutzlast (Linux)
     runs-on: ubuntu-latest
-    # Bei "msix" laeuft der Job IMMER; ohne Paketversion bildet package.sh sie aus VERSION
-    # (0.9.52-3 ergibt 1.0.9523.0).
-    if: ${{ inputs.pakete == 'msix' || (inputs.pakete == 'alle' && inputs.paketversion != '') }}
+    # Bei "msix" und "alle" laeuft der Job IMMER; ohne Paketversion bildet package.sh sie aus
+    # VERSION (0.9.56-2 ergibt 1.0.9562.0). Frueher baute "alle" sie nur mit eingetragener Nummer,
+    # und die musste man bei jedem Lauf von Hand ausrechnen.
+    if: ${{ inputs.pakete == 'msix' || inputs.pakete == 'alle' }}
 
     steps:
       # ZUERST, noch vor dem Auschecken: fehlen die Angaben, steht das Scheitern schon fest.
