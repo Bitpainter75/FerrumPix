@@ -9021,4 +9021,37 @@
   <data name="Leisten_fd5d2d79" xml:space="preserve">
     <value>Paski</value>
   </data>
+  <data name="Ebene_in_G_MIC_bearbeiten_346bb34c" xml:space="preserve">
+    <value>Edytuj warstwę w G'MIC</value>
+  </data>
+  <data name="Ebenen_in_G_MIC_bearbeiten_33e0dc43" xml:space="preserve">
+    <value>Edytuj warstwy w G'MIC</value>
+  </data>
+  <data name="Das_G_MIC_Ergebnis_liegt_als_Ebene_ber_der_Ebene_ecda342a" xml:space="preserve">
+    <value>Wynik G'MIC leży jako warstwa nad warstwą</value>
+  </data>
+  <data name="Unter_dieser_Ebene_liegt_keine_weitere_3b973250" xml:space="preserve">
+    <value>Pod tą warstwą nie ma już żadnej innej</value>
+  </data>
+  <data name="Mit_der_Ebene_darunter_zusammenlegen_ganz_unten__39b927a2" xml:space="preserve">
+    <value>Scal z warstwą poniżej, na samym dole rasteryzuj do zdjęcia</value>
+  </data>
+  <data name="Ebene_trimmen_6c18b8a7" xml:space="preserve">
+    <value>Przytnij warstwę</value>
+  </data>
+  <data name="Ebene_getrimmt_e2ffa492" xml:space="preserve">
+    <value>Warstwa przycięta</value>
+  </data>
+  <data name="Trimmen_fehlgeschlagen_b46d8522" xml:space="preserve">
+    <value>Przycinanie nie powiodło się</value>
+  </data>
+  <data name="Die_Ebene_ist_ganz_durchsichtig_6f397b41" xml:space="preserve">
+    <value>Warstwa jest całkowicie przezroczysta</value>
+  </data>
+  <data name="Die_Ebene_hat_keinen_durchsichtigen_Rand_dee9876c" xml:space="preserve">
+    <value>Warstwa nie ma przezroczystej krawędzi</value>
+  </data>
+  <data name="Maskenebenen_lassen_sich_nicht_zusammenlegen_55f1017c" xml:space="preserve">
+    <value>Warstw maski nie można scalić</value>
+  </data>
 </root>

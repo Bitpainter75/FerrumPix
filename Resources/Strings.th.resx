@@ -9025,4 +9025,37 @@
   <data name="Leisten_fd5d2d79" xml:space="preserve">
     <value>แถบ</value>
   </data>
+  <data name="Ebene_in_G_MIC_bearbeiten_346bb34c" xml:space="preserve">
+    <value>แก้ไขเลเยอร์ใน G'MIC</value>
+  </data>
+  <data name="Ebenen_in_G_MIC_bearbeiten_33e0dc43" xml:space="preserve">
+    <value>แก้ไขเลเยอร์หลายชั้นใน G'MIC</value>
+  </data>
+  <data name="Das_G_MIC_Ergebnis_liegt_als_Ebene_ber_der_Ebene_ecda342a" xml:space="preserve">
+    <value>ผลลัพธ์ของ G'MIC วางอยู่เป็นเลเยอร์เหนือเลเยอร์</value>
+  </data>
+  <data name="Unter_dieser_Ebene_liegt_keine_weitere_3b973250" xml:space="preserve">
+    <value>ไม่มีเลเยอร์อื่นอยู่ใต้เลเยอร์นี้</value>
+  </data>
+  <data name="Mit_der_Ebene_darunter_zusammenlegen_ganz_unten__39b927a2" xml:space="preserve">
+    <value>รวมกับเลเยอร์ด้านล่าง ถ้าอยู่ล่างสุดให้แรสเตอร์ลงในภาพถ่าย</value>
+  </data>
+  <data name="Ebene_trimmen_6c18b8a7" xml:space="preserve">
+    <value>ตัดขอบเลเยอร์</value>
+  </data>
+  <data name="Ebene_getrimmt_e2ffa492" xml:space="preserve">
+    <value>ตัดขอบเลเยอร์แล้ว</value>
+  </data>
+  <data name="Trimmen_fehlgeschlagen_b46d8522" xml:space="preserve">
+    <value>ตัดขอบไม่สำเร็จ</value>
+  </data>
+  <data name="Die_Ebene_ist_ganz_durchsichtig_6f397b41" xml:space="preserve">
+    <value>เลเยอร์โปร่งใสทั้งหมด</value>
+  </data>
+  <data name="Die_Ebene_hat_keinen_durchsichtigen_Rand_dee9876c" xml:space="preserve">
+    <value>เลเยอร์ไม่มีขอบโปร่งใส</value>
+  </data>
+  <data name="Maskenebenen_lassen_sich_nicht_zusammenlegen_55f1017c" xml:space="preserve">
+    <value>ไม่สามารถรวมเลเยอร์มาสก์ได้</value>
+  </data>
 </root>

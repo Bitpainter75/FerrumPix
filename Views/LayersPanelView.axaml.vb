@@ -360,6 +360,17 @@ Namespace Views
             If vm.CanRasterizeSelectedAnnotation Then
                 items.Add(MakeLayerMenuItem(LocalizationService.T("Ebene rastern"), "layers-union", vm.RasterizeSelectedAnnotationCommand))
             End If
+            ' Den durchsichtigen Rand einer Bild- oder Malebene abschneiden; der Inhalt bleibt liegen.
+            If vm.CanTrimSelectedLayer Then
+                items.Add(MakeLayerMenuItem(LocalizationService.T("Ebene trimmen"), "crop", vm.TrimSelectedLayerCommand))
+            End If
+            ' Die markierten Ebenen allein an G'MIC, das Ergebnis als neue Ebene darueber. Das
+            ' Kontextmenue der Buehne schickt dagegen immer das ganze Bild.
+            If vm.CanEditLayersWithGmic Then
+                items.Add(MakeLayerMenuItem(If(mehrere, LocalizationService.T("Ebenen in G'MIC bearbeiten"),
+                                               LocalizationService.T("Ebene in G'MIC bearbeiten")),
+                                            "color-filter", vm.EditLayersWithGmicCommand))
+            End If
             ' Sperren gilt für alles Markierte - bei einer Gruppen-Kopfzeile also für die ganze Gruppe.
             Dim lockEntry = MakeLayerMenuItem(vm.SelectionLockLabel,
                                                  If(vm.IsSelectionGeometryLocked, "lock-open", "lock"), Nothing)

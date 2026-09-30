@@ -25340,17 +25340,127 @@ Namespace ViewModels
             End Get
         End Property
 
+        ''' <summary>Was es braucht, um Ebenen ALLEIN in ein Bild zu rechnen: ihr gemeinsames Rechteck
+        ''' und eine Vorlage aus Kopien. Auf dem UI-Faden; das Zeichnen selbst
+        ''' (<see cref="DrawAnnotationRenderToPng"/>) fasst danach nichts mehr an und darf in den
+        ''' Hintergrund. Nothing, wenn es nichts zu zeichnen gibt.</summary>
+        ''' <param name="targets">Wird auf die AKTUELLEN Objekte der Liste umgestellt, siehe
+        ''' <see cref="CommitObjectAdjustModeAndRefresh"/>.</param>
+        Private Function PrepareAnnotationRender(ByRef targets As List(Of ImageAnnotation)) As AnnotationRenderJob
+            Dim baseW = GetBaseWidth()
+            Dim baseH = GetBaseHeight()
+            If baseW <= 0 OrElse baseH <= 0 Then Return Nothing
+            targets = CommitObjectAdjustModeAndRefresh(targets)
+            If targets.Count = 0 Then Return Nothing
+            Dim rect = ComputeAnnotationUnionRect(targets, baseW, baseH)
+            If rect.Width <= 0 OrElse rect.Height <= 0 Then Return Nothing
+            Dim recipe = BuildAnnotationDrawRecipe(targets, baseW, baseH)
+            Return New AnnotationRenderJob With {.Rect = rect, .BaseWidth = baseW, .BaseHeight = baseH,
+                                                 .Recipe = recipe.Recipe, .Targets = recipe.Targets}
+        End Function
+
+        ''' <summary>Uebernimmt die Regler einer markierten Ebene in ihr Modell und gibt die Ziele als
+        ''' die Objekte zurueck, die DANACH in der Liste stehen.
+        '''
+        ''' BEFUND (Nutzer: "in G'MIC sehe ich nur eine transparente Flaeche"): im Anpassungswerkzeug
+        ''' bedienen die Regler die eigenen Anpassungen der markierten Ebene, und das Uebernehmen
+        ''' laeuft durch ApplyAdjustments; danach stehen in _annotations KLONE. Wer seine Ziele vorher
+        ''' geholt hatte, zeichnete und entfernte danach Objekte, die es in der Liste nicht mehr gab:
+        ''' die Zeichenvorlage fand sie nicht (BuildAnnotationDrawRecipe sucht ueber den Index), und
+        ''' heraus kam ein leeres Rechteck. Betroffen waren G'MIC mit Ebenen, Zusammenlegen und
+        ''' Rastern. Reihenfolge und Anzahl bleiben beim Neuaufbau erhalten, der Index traegt also.</summary>
+        Private Function CommitObjectAdjustModeAndRefresh(targets As IEnumerable(Of ImageAnnotation)) As List(Of ImageAnnotation)
+            Dim indices = targets.Where(Function(a) a IsNot Nothing).
+                Select(Function(a) _annotations.IndexOf(a)).Where(Function(i) i >= 0).ToList()
+            CommitObjectAdjustModeToModel()
+            Return indices.Where(Function(i) i < _annotations.Count).
+                Select(Function(i) _annotations(i)).Where(Function(a) a IsNot Nothing).ToList()
+        End Function
+
+        Private NotInheritable Class AnnotationRenderJob
+            Public Rect As SKRectI
+            Public BaseWidth As Integer
+            Public BaseHeight As Integer
+            Public Recipe As ImageAdjustments
+            Public Targets As List(Of ImageAnnotation)
+        End Class
+
+        ''' <summary>Zeichnet die Ebenen auf durchsichtigen Grund in ihr Rechteck und schreibt ein PNG.
+        ''' Maske, Beschraenkung, Mischmethode, Deckkraft, Drehung und eigene Anpassungen stecken
+        ''' danach in den Pixeln, Text und Formen sind gerastert. Auf jedem Faden.</summary>
+        Private Shared Function DrawAnnotationRenderToPng(job As AnnotationRenderJob, targetPath As String) As Boolean
+            Dim rect = job.Rect
+            Using merged = New SKBitmap(rect.Width, rect.Height, SKColorType.Rgba8888, SKAlphaType.Premul)
+                Using canvas = New SKCanvas(merged)
+                    canvas.Clear(SKColors.Transparent)
+                    ' Versatz statt Clip: der Aufrufer-Ursprung ist die linke obere Ecke des
+                    ' gemeinsamen Rechtecks, und die Objekte rechnen selbst in Bildkoordinaten.
+                    ImageProcessor.DrawAnnotationsOnCanvas(canvas, job.Recipe, job.BaseWidth, job.BaseHeight,
+                                                           rect.Left, rect.Top, rect.Width, rect.Height,
+                                                           job.Targets)
+                End Using
+                Using image = SKImage.FromBitmap(merged)
+                    Using data = image.Encode(SKEncodedImageFormat.Png, 100)
+                        Using stream = IO.File.OpenWrite(targetPath)
+                            data.SaveTo(stream)
+                        End Using
+                    End Using
+                End Using
+            End Using
+            Return True
+        End Function
+
+        ''' <summary>STRG+E: die markierte Ebene mit der darunter zusammenlegen. Darunter heisst die
+        ''' naechste SICHTBARE Ebene im Stapel; Korrekturebenen stehen in einer eigenen Liste und
+        ''' zaehlen nicht mit, eine unsichtbare waere im Ergebnis still verschwunden. Liegt darunter
+        ''' keine mehr, wird die Ebene ins Foto gerastert, wie mit "Ebene rastern". Sind schon mehrere
+        ''' markiert, werden eben diese zusammengelegt. Eine mitmarkierte Korrekturebene sperrt den
+        ''' Vorgang wie im Kontextmenue (CanMergeSelectedAnnotations): sie traegt keine Pixel, und still
+        ''' uebergangen wirkte sie danach auf etwas anderes als vorher.</summary>
+        Public Sub MergeWithLayerBelow()
+            If SelectedAdjustmentLayers.Count > 0 Then
+                StatusText = LocalizationService.T("Maskenebenen lassen sich nicht zusammenlegen")
+                Return
+            End If
+            Dim selected = SelectedAnnotations.Where(Function(a) a IsNot Nothing).ToList()
+            If selected.Count = 0 Then Return
+            If selected.Count > 1 Then
+                MergeSelectedAnnotations()
+                Return
+            End If
+            Dim top = selected(0)
+            Dim index = _annotations.IndexOf(top)
+            If index < 0 Then Return
+            Dim below As ImageAnnotation = Nothing
+            For i = index - 1 To 0 Step -1
+                Dim candidate = _annotations(i)
+                If candidate IsNot Nothing AndAlso candidate.IsVisible Then
+                    below = candidate
+                    Exit For
+                End If
+            Next
+            If below Is Nothing Then
+                If CanRasterizeSelectedAnnotation Then
+                    RasterizeSelectedAnnotation()
+                Else
+                    StatusText = LocalizationService.T("Unter dieser Ebene liegt keine weitere")
+                End If
+                Return
+            End If
+            ' Beide markieren und denselben Weg gehen wie "Ebenen zusammenlegen".
+            _extraSelectedAnnotations.Clear()
+            _extraSelectedAnnotations.Add(below.Id)
+            RaiseMultiSelectionChanged()
+            MergeSelectedAnnotations()
+        End Sub
+
         Public Sub MergeSelectedAnnotations()
             Dim targets = SelectedAnnotations.Where(Function(a) a IsNot Nothing).
                 OrderBy(Function(a) _annotations.IndexOf(a)).ToList()
             If targets.Count < 2 Then Return
-            Dim baseW = GetBaseWidth()
-            Dim baseH = GetBaseHeight()
-            If baseW <= 0 OrElse baseH <= 0 Then Return
-            CommitObjectAdjustModeToModel()
-
-            Dim rect = ComputeAnnotationUnionRect(targets, baseW, baseH)
-            If rect.Width <= 0 OrElse rect.Height <= 0 Then Return
+            Dim job = PrepareAnnotationRender(targets)
+            If job Is Nothing Then Return
+            Dim rect = job.Rect
 
             ' Die oberste Stelle merken, BEVOR etwas entfernt wird: dort landet das Ergebnis, damit
             ' der Stapel darueber unveraendert bleibt.
@@ -25358,26 +25468,9 @@ Namespace ViewModels
             Dim groupId = targets(0).GroupId
             If targets.Any(Function(a) Not String.Equals(a.GroupId, groupId, StringComparison.Ordinal)) Then groupId = ""
 
-            Dim recipe = BuildAnnotationDrawRecipe(targets, baseW, baseH)
             Dim assetPath = CreateSelectionAssetTempPath("merged")
             Try
-                Using merged = New SKBitmap(rect.Width, rect.Height, SKColorType.Rgba8888, SKAlphaType.Premul)
-                    Using canvas = New SKCanvas(merged)
-                        canvas.Clear(SKColors.Transparent)
-                        ' Versatz statt Clip: der Aufrufer-Ursprung ist die linke obere Ecke des
-                        ' gemeinsamen Rechtecks, und die Objekte rechnen selbst in Bildkoordinaten.
-                        ImageProcessor.DrawAnnotationsOnCanvas(canvas, recipe.Recipe, baseW, baseH,
-                                                               rect.Left, rect.Top, rect.Width, rect.Height,
-                                                               recipe.Targets)
-                    End Using
-                    Using image = SKImage.FromBitmap(merged)
-                        Using data = image.Encode(SKEncodedImageFormat.Png, 100)
-                            Using stream = IO.File.OpenWrite(assetPath)
-                                data.SaveTo(stream)
-                            End Using
-                        End Using
-                    End Using
-                End Using
+                DrawAnnotationRenderToPng(job, assetPath)
             Catch ex As Exception
                 DiagnosticLogService.LogException("Editor.MergeAnnotations", ex)
                 StatusText = LocalizationService.T("Zusammenlegen fehlgeschlagen")
@@ -25452,7 +25545,9 @@ Namespace ViewModels
             Dim baseW = GetBaseWidth()
             Dim baseH = GetBaseHeight()
             If baseW <= 0 OrElse baseH <= 0 OrElse Not _workingImage.IsInitialized Then Return
-            CommitObjectAdjustModeToModel()
+            ' Nach dem Uebernehmen stehen Kopien in der Liste, siehe CommitObjectAdjustModeAndRefresh.
+            targets = CommitObjectAdjustModeAndRefresh(targets)
+            If targets.Count = 0 Then Return
             Dim rect = ComputeAnnotationUnionRect(targets, baseW, baseH)
             If rect.Width <= 0 OrElse rect.Height <= 0 Then Return
 

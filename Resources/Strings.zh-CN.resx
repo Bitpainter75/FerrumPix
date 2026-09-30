@@ -8979,4 +8979,37 @@
   <data name="Leisten_fd5d2d79" xml:space="preserve">
     <value>栏</value>
   </data>
+  <data name="Ebene_in_G_MIC_bearbeiten_346bb34c" xml:space="preserve">
+    <value>在 G'MIC 中编辑图层</value>
+  </data>
+  <data name="Ebenen_in_G_MIC_bearbeiten_33e0dc43" xml:space="preserve">
+    <value>在 G'MIC 中编辑多个图层</value>
+  </data>
+  <data name="Das_G_MIC_Ergebnis_liegt_als_Ebene_ber_der_Ebene_ecda342a" xml:space="preserve">
+    <value>G'MIC 结果作为图层位于该图层上方</value>
+  </data>
+  <data name="Unter_dieser_Ebene_liegt_keine_weitere_3b973250" xml:space="preserve">
+    <value>此图层下方没有其他图层</value>
+  </data>
+  <data name="Mit_der_Ebene_darunter_zusammenlegen_ganz_unten__39b927a2" xml:space="preserve">
+    <value>与下方图层合并，位于最底层时栅格化到照片中</value>
+  </data>
+  <data name="Ebene_trimmen_6c18b8a7" xml:space="preserve">
+    <value>修剪图层</value>
+  </data>
+  <data name="Ebene_getrimmt_e2ffa492" xml:space="preserve">
+    <value>图层已修剪</value>
+  </data>
+  <data name="Trimmen_fehlgeschlagen_b46d8522" xml:space="preserve">
+    <value>修剪失败</value>
+  </data>
+  <data name="Die_Ebene_ist_ganz_durchsichtig_6f397b41" xml:space="preserve">
+    <value>图层完全透明</value>
+  </data>
+  <data name="Die_Ebene_hat_keinen_durchsichtigen_Rand_dee9876c" xml:space="preserve">
+    <value>图层没有透明边缘</value>
+  </data>
+  <data name="Maskenebenen_lassen_sich_nicht_zusammenlegen_55f1017c" xml:space="preserve">
+    <value>蒙版图层无法合并</value>
+  </data>
 </root>

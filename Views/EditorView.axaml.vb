@@ -8036,6 +8036,14 @@ Namespace Views
                     Case Key.Right
                         vm.RotateRightCommand.Execute(Nothing)
                         e.Handled = True
+                    Case Key.E
+                        ' STRG+E: mit der Ebene darunter zusammenlegen, in jedem Werkzeug. Der
+                        ' Radierer im Zeichnen-Werkzeug bleibt auf dem blanken E.
+                        If Not e.KeyModifiers.HasFlag(KeyModifiers.Shift) AndAlso
+                           Not e.KeyModifiers.HasFlag(KeyModifiers.Alt) Then
+                            vm.MergeWithLayerBelow()
+                            e.Handled = True
+                        End If
                 End Select
                 If e.Handled Then Return
             End If

@@ -8980,4 +8980,37 @@
   <data name="Leisten_fd5d2d79" xml:space="preserve">
     <value>Barras</value>
   </data>
+  <data name="Ebene_in_G_MIC_bearbeiten_346bb34c" xml:space="preserve">
+    <value>Editar camada no G'MIC</value>
+  </data>
+  <data name="Ebenen_in_G_MIC_bearbeiten_33e0dc43" xml:space="preserve">
+    <value>Editar camadas no G'MIC</value>
+  </data>
+  <data name="Das_G_MIC_Ergebnis_liegt_als_Ebene_ber_der_Ebene_ecda342a" xml:space="preserve">
+    <value>O resultado do G'MIC está como camada sobre a camada</value>
+  </data>
+  <data name="Unter_dieser_Ebene_liegt_keine_weitere_3b973250" xml:space="preserve">
+    <value>Não há outra camada abaixo desta</value>
+  </data>
+  <data name="Mit_der_Ebene_darunter_zusammenlegen_ganz_unten__39b927a2" xml:space="preserve">
+    <value>Mesclar com a camada de baixo; na última, rasterizar na foto</value>
+  </data>
+  <data name="Ebene_trimmen_6c18b8a7" xml:space="preserve">
+    <value>Aparar camada</value>
+  </data>
+  <data name="Ebene_getrimmt_e2ffa492" xml:space="preserve">
+    <value>Camada aparada</value>
+  </data>
+  <data name="Trimmen_fehlgeschlagen_b46d8522" xml:space="preserve">
+    <value>Falha ao aparar</value>
+  </data>
+  <data name="Die_Ebene_ist_ganz_durchsichtig_6f397b41" xml:space="preserve">
+    <value>A camada é totalmente transparente</value>
+  </data>
+  <data name="Die_Ebene_hat_keinen_durchsichtigen_Rand_dee9876c" xml:space="preserve">
+    <value>A camada não tem borda transparente</value>
+  </data>
+  <data name="Maskenebenen_lassen_sich_nicht_zusammenlegen_55f1017c" xml:space="preserve">
+    <value>Camadas de máscara não podem ser mescladas</value>
+  </data>
 </root>

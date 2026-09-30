@@ -9021,4 +9021,37 @@
   <data name="Leisten_fd5d2d79" xml:space="preserve">
     <value>Linjer</value>
   </data>
+  <data name="Ebene_in_G_MIC_bearbeiten_346bb34c" xml:space="preserve">
+    <value>Rediger laget i G'MIC</value>
+  </data>
+  <data name="Ebenen_in_G_MIC_bearbeiten_33e0dc43" xml:space="preserve">
+    <value>Rediger lagene i G'MIC</value>
+  </data>
+  <data name="Das_G_MIC_Ergebnis_liegt_als_Ebene_ber_der_Ebene_ecda342a" xml:space="preserve">
+    <value>G'MIC-resultatet ligger som et lag over laget</value>
+  </data>
+  <data name="Unter_dieser_Ebene_liegt_keine_weitere_3b973250" xml:space="preserve">
+    <value>Det ligger ingen flere lag under dette</value>
+  </data>
+  <data name="Mit_der_Ebene_darunter_zusammenlegen_ganz_unten__39b927a2" xml:space="preserve">
+    <value>Slå sammen med laget under, helt nederst raster inn i bildet</value>
+  </data>
+  <data name="Ebene_trimmen_6c18b8a7" xml:space="preserve">
+    <value>Beskjær lag</value>
+  </data>
+  <data name="Ebene_getrimmt_e2ffa492" xml:space="preserve">
+    <value>Lag beskåret</value>
+  </data>
+  <data name="Trimmen_fehlgeschlagen_b46d8522" xml:space="preserve">
+    <value>Beskjæring mislyktes</value>
+  </data>
+  <data name="Die_Ebene_ist_ganz_durchsichtig_6f397b41" xml:space="preserve">
+    <value>Laget er helt gjennomsiktig</value>
+  </data>
+  <data name="Die_Ebene_hat_keinen_durchsichtigen_Rand_dee9876c" xml:space="preserve">
+    <value>Laget har ingen gjennomsiktig kant</value>
+  </data>
+  <data name="Maskenebenen_lassen_sich_nicht_zusammenlegen_55f1017c" xml:space="preserve">
+    <value>Maskelag kan ikke slås sammen</value>
+  </data>
 </root>

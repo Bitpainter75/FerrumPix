@@ -4,6 +4,7 @@ Imports System.IO
 Imports System.Linq
 Imports System.Runtime.InteropServices
 Imports System.Threading.Tasks
+Imports System.Windows.Input
 Imports ReactiveUI
 Imports SkiaSharp
 Imports FerrumPix.Services
@@ -1382,6 +1383,258 @@ Namespace ViewModels
             Dim bottom = Math.Min(height, rect.Bottom)
             If right <= left OrElse bottom <= top Then Return SKRectI.Empty
             Return New SKRectI(left, top, right, bottom)
+        End Function
+
+        Private _trimSelectedLayerCommand As ICommand
+
+        ''' <summary>Kontextmenue der Ebene: den durchsichtigen Rand abschneiden, siehe
+        ''' <see cref="TrimSelectedLayerAsync"/>.</summary>
+        Public ReadOnly Property TrimSelectedLayerCommand As ICommand
+            Get
+                If _trimSelectedLayerCommand Is Nothing Then
+                    _trimSelectedLayerCommand = New DelegateCommand(Sub()
+                                                                        Dim ignored = TrimSelectedLayerAsync()
+                                                                    End Sub)
+                End If
+                Return _trimSelectedLayerCommand
+            End Get
+        End Property
+
+        ''' <summary>Laesst sich die markierte Ebene trimmen? Genau EINE Bild- oder Malebene.
+        '''
+        ''' Das Wasserzeichen bleibt aussen vor: seine Lage kann an einem Anker haengen, und ein
+        ''' neues Rechteck saesse dann nicht mehr dort, wo der Inhalt war. Ebenso eine Ebene mit
+        ''' EIGENER Verzerrung: die steht in Prozent des Objektrechtecks und verschoebe sich mit dem
+        ''' Beschnitt.</summary>
+        Public ReadOnly Property CanTrimSelectedLayer As Boolean
+            Get
+                If SelectedAdjustmentLayers.Count > 0 Then Return False
+                Dim selected = SelectedAnnotations.Where(Function(a) a IsNot Nothing).ToList()
+                If selected.Count <> 1 Then Return False
+                Dim target = selected(0)
+                Select Case NormalizeAnnotationKind(target.Kind)
+                    Case "Image", "SelectionImage"
+                    Case Else
+                        Return False
+                End Select
+                If target.OwnWarp IsNot Nothing Then Return False
+                Return IsPaintableImageAnnotation(target)
+            End Get
+        End Property
+
+        ''' <summary>Ebene trimmen: alle Zeilen und Spalten am Rand, die DURCHGEHEND durchsichtig sind,
+        ''' fallen weg. Ein einziger Punkt mit Deckung ueber null haelt seine Zeile und Spalte.
+        '''
+        ''' Der Inhalt bleibt dabei genau an seiner Stelle im Bild: das Rechteck der Ebene wird auf den
+        ''' Inhalt gesetzt, Drehung und Spiegelung eingerechnet (<see cref="ComputeTrimmedPlacement"/>).
+        ''' Die Ebenenmaske steht in Bildkoordinaten und bleibt deshalb, wie sie ist. Schatten und
+        ''' Schein rechnen in Anteilen der kurzen Objektkante; Versatz und Weichheit werden
+        ''' umgerechnet, damit sie gleich weit reichen wie vorher.
+        '''
+        ''' Das Raster wird im Hintergrund gelesen und geschrieben, bei einer Malebene in voller
+        ''' Bildgroesse waere das auf dem UI-Faden ein spuerbarer Haenger. Vorher wartet der Weg auf
+        ''' noch laufende Pinselzuege derselben Warteschlange, sonst schnitte er einen Stand zu, den
+        ''' der naechste Zug gleich wieder ersetzt.</summary>
+        Friend Async Function TrimSelectedLayerAsync() As Task
+            If Not CanTrimSelectedLayer Then Return
+            Dim targets = CommitObjectAdjustModeAndRefresh(SelectedAnnotations.Where(Function(a) a IsNot Nothing).ToList())
+            If targets.Count <> 1 Then Return
+            Dim target = targets(0)
+
+            Await _objectPaintChain
+            If Not _annotations.Contains(target) OrElse Not IsPaintableImageAnnotation(target) Then Return
+            Dim sourcePath = target.ImagePath
+            Dim targetPath = CreateSelectionAssetTempPath("layer")
+            Dim documentStamp = _selectionAssetTempDir
+
+            Dim result As (Bounds As SKRectI, Width As Integer, Height As Integer, Written As Boolean)
+            Try
+                result = Await Task.Run(Function() TrimLayerFile(sourcePath, targetPath))
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Editor.TrimLayer", ex)
+                StatusText = LocalizationService.T("Trimmen fehlgeschlagen")
+                Return
+            End Try
+
+            If Not String.Equals(documentStamp, _selectionAssetTempDir, StringComparison.Ordinal) Then Return
+            ' In der Zwischenzeit weggenommen oder neu bemalt: der Beschnitt passt nicht mehr.
+            If Not _annotations.Contains(target) OrElse
+               Not String.Equals(target.ImagePath, sourcePath, StringComparison.Ordinal) Then Return
+            If result.Width <= 0 OrElse result.Height <= 0 Then
+                StatusText = LocalizationService.T("Trimmen fehlgeschlagen")
+                Return
+            End If
+            If result.Bounds.IsEmpty Then
+                StatusText = LocalizationService.T("Die Ebene ist ganz durchsichtig")
+                Return
+            End If
+            If Not result.Written Then
+                StatusText = LocalizationService.T("Die Ebene hat keinen durchsichtigen Rand")
+                Return
+            End If
+
+            Dim placement = ComputeTrimmedPlacement(target, result.Width, result.Height, result.Bounds)
+            If placement.Width <= 0 OrElse placement.Height <= 0 Then
+                StatusText = LocalizationService.T("Trimmen fehlgeschlagen")
+                Return
+            End If
+            Dim dirtyBefore = ComputeSceneDirtyRectFor(target)
+            Dim oldEdge = Math.Max(1.0F, Math.Min(target.WidthPixels, target.HeightPixels))
+            Dim newEdge = Math.Max(1.0F, Math.Min(placement.Width, placement.Height))
+            Dim factor = oldEdge / newEdge
+
+            RegisterObjectPaintFile(targetPath)
+            Dim label = LocalizationService.T("Ebene getrimmt")
+            PushUndo(label)
+            target.ImagePath = targetPath
+            target.XPixels = placement.X
+            target.YPixels = placement.Y
+            target.WidthPixels = placement.Width
+            target.HeightPixels = placement.Height
+            target.ShadowOffsetXPercent *= factor
+            target.ShadowOffsetYPercent *= factor
+            target.ShadowBlur = Math.Min(100.0F, target.ShadowBlur * factor)
+            target.GlowBlur = Math.Min(100.0F, target.GlowBlur * factor)
+            ' Direkt ins Modell geschrieben, wie bei den Gruppen-Transformationen: die Version zaehlt
+            ' hoch, sonst haelt der Region-Worker einen Patch mit der alten Lage fuer aktuell. Und die
+            ' Editor-Puffer, aus denen der Auswahlrahmen gezeichnet wird, kommen neu aus dem Modell;
+            ' ohne das blieb der Rahmen auf dem alten, grossen Rechteck stehen (Nutzerbefund).
+            _annotationModelVersion += 1
+            If Object.ReferenceEquals(SelectedLayer, target) Then
+                _isLoadingAnnotation = True
+                Try
+                    LoadSelectedAnnotationIntoEditor()
+                Finally
+                    _isLoadingAnnotation = False
+                End Try
+            End If
+            _hasChanges = True
+            RaiseResetButtonStateChanged()
+            RebuildLayerRows()
+            StatusText = label
+            Dim dirtyAfter = ComputeSceneDirtyRectFor(target)
+            RefreshOverlayAfterAnnotationChange(If(dirtyBefore.IsEmpty OrElse dirtyAfter.IsEmpty, SKRectI.Empty,
+                                                   SKRectI.Union(dirtyBefore, dirtyAfter)))
+        End Function
+
+        ''' <summary>Der schwere Teil des Trimmens, im Hintergrund: Raster lesen, Rand suchen und,
+        ''' wenn es einen gibt, den Inhalt in eine neue Datei schreiben. Leere Grenzen heissen: kein
+        ''' einziger Punkt mit Deckung. Written ist False, wenn nichts abzuschneiden war.</summary>
+        Private Shared Function TrimLayerFile(sourcePath As String, targetPath As String) As (Bounds As SKRectI, Width As Integer, Height As Integer, Written As Boolean)
+            Using decoded = ObjectImageMemory.DecodeOrCopy(sourcePath)
+                If decoded Is Nothing OrElse decoded.Width <= 0 OrElse decoded.Height <= 0 Then
+                    Return (SKRectI.Empty, 0, 0, False)
+                End If
+                Dim width = decoded.Width
+                Dim height = decoded.Height
+                Dim bounds = FindOpaqueBounds(decoded)
+                If bounds.IsEmpty Then Return (bounds, width, height, False)
+                If bounds.Left = 0 AndAlso bounds.Top = 0 AndAlso bounds.Right = width AndAlso bounds.Bottom = height Then
+                    Return (bounds, width, height, False)
+                End If
+                Using cropped = New SKBitmap(New SKImageInfo(bounds.Width, bounds.Height, decoded.ColorType, decoded.AlphaType))
+                    Using canvas = New SKCanvas(cropped)
+                        canvas.Clear(SKColors.Transparent)
+                        ' Quelle verbatim: ohne Skalierung und ohne Mischen, Punkt fuer Punkt.
+                        Using paint = New SKPaint With {.BlendMode = SKBlendMode.Src}
+                            canvas.DrawBitmap(decoded, SKRect.Create(bounds.Left, bounds.Top, bounds.Width, bounds.Height),
+                                              SKRect.Create(0, 0, bounds.Width, bounds.Height), paint)
+                        End Using
+                    End Using
+                    Return (bounds, width, height, WriteObjectPaintFile(cropped, targetPath))
+                End Using
+            End Using
+        End Function
+
+        ''' <summary>Das kleinste Rechteck um alle Punkte mit Deckung ueber null, in Rasterpunkten.
+        ''' Leer, wenn das ganze Raster durchsichtig ist.</summary>
+        Friend Shared Function FindOpaqueBounds(bitmap As SKBitmap) As SKRectI
+            If bitmap Is Nothing OrElse bitmap.Width <= 0 OrElse bitmap.Height <= 0 Then Return SKRectI.Empty
+            If bitmap.ColorType <> SKColorType.Rgba8888 AndAlso bitmap.ColorType <> SKColorType.Bgra8888 Then
+                Using converted = bitmap.Copy(SKColorType.Rgba8888)
+                    If converted Is Nothing Then Return SKRectI.Empty
+                    Return FindOpaqueBounds(converted)
+                End Using
+            End If
+            ' Ohne Alphakanal ist jeder Punkt deckend.
+            If bitmap.AlphaType = SKAlphaType.Opaque Then Return New SKRectI(0, 0, bitmap.Width, bitmap.Height)
+
+            Dim width = bitmap.Width
+            Dim height = bitmap.Height
+            Dim rowBytes = bitmap.RowBytes
+            Dim basePtr = bitmap.GetPixels()
+            If basePtr = IntPtr.Zero Then Return SKRectI.Empty
+            ' Zeilenweise kopieren: das ganze Raster einer Malebene waeren knapp hundert Megabyte.
+            Dim pixels(width * 4 - 1) As Byte
+            Dim left = width, top = height, right = -1, bottom = -1
+            For y = 0 To height - 1
+                Marshal.Copy(IntPtr.Add(basePtr, y * rowBytes), pixels, 0, pixels.Length)
+                Dim first = -1
+                For x = 0 To width - 1
+                    If pixels(x * 4 + 3) <> 0 Then
+                        first = x
+                        Exit For
+                    End If
+                Next
+                If first < 0 Then Continue For
+                ' Von rechts nur bis zur rechten Grenze, die schon feststeht: weiter innen aendert
+                ' nichts mehr.
+                Dim last = first
+                For x = width - 1 To Math.Max(first, right + 1) Step -1
+                    If pixels(x * 4 + 3) <> 0 Then
+                        last = x
+                        Exit For
+                    End If
+                Next
+                If first < left Then left = first
+                If last > right Then right = last
+                If y < top Then top = y
+                bottom = y
+            Next
+            If right < 0 Then Return SKRectI.Empty
+            Return New SKRectI(left, top, right + 1, bottom + 1)
+        End Function
+
+        ''' <summary>Das Rechteck, an dem der beschnittene Inhalt genau dort liegt, wo er vorher lag.
+        '''
+        ''' Der Renderer passt das Raster ins Objektrechteck ein (gestreckt oder, bei gesperrtem
+        ''' Seitenverhaeltnis, mittig eingepasst), spiegelt um die Mitte des Rechtecks und dreht danach
+        ''' um dieselbe Mitte (<c>DrawAnnotationOnCanvas</c>). Der Inhalt bekommt deshalb seine Groesse
+        ''' aus der Einpassung, und seine Mitte wird denselben Weg geschickt: gespiegelt, dann gedreht.
+        ''' Das neue Rechteck bekommt diese Mitte. Weil es dieselbe Drehung und Spiegelung behaelt,
+        ''' zeichnet der Renderer den Inhalt danach Punkt fuer Punkt deckungsgleich.
+        '''
+        ''' Gerechnet wird in den GESPEICHERTEN Koordinaten der Ebene. Die Bildgeometrie (gedrehtes
+        ''' oder gespiegeltes Foto) wirkt auf das alte und das neue Rechteck gleich und faellt heraus.</summary>
+        Friend Shared Function ComputeTrimmedPlacement(annotation As ImageAnnotation, rasterWidth As Integer, rasterHeight As Integer,
+                                                       bounds As SKRectI) As (X As Single, Y As Single, Width As Single, Height As Single)
+            If annotation Is Nothing OrElse rasterWidth <= 0 OrElse rasterHeight <= 0 OrElse bounds.IsEmpty Then Return (0, 0, 0, 0)
+            Dim objectRect = SKRect.Create(annotation.XPixels, annotation.YPixels, annotation.WidthPixels, annotation.HeightPixels)
+            ' Dieselbe Entscheidung wie im Renderer (DrawAnnotationShape).
+            Dim stretchToFill = NormalizeAnnotationKind(annotation.Kind) = "SelectionImage" OrElse Not annotation.LockAspect
+            Dim fit = If(stretchToFill, objectRect,
+                         ImageProcessor.FitRectKeepingAspectRatio(objectRect, rasterWidth, rasterHeight))
+            If fit.Width <= 0 OrElse fit.Height <= 0 Then Return (0, 0, 0, 0)
+
+            Dim scaleX = fit.Width / CDbl(rasterWidth)
+            Dim scaleY = fit.Height / CDbl(rasterHeight)
+            Dim newWidth = bounds.Width * scaleX
+            Dim newHeight = bounds.Height * scaleY
+            Dim centerX = fit.Left + (bounds.Left + bounds.Width / 2.0) * scaleX
+            Dim centerY = fit.Top + (bounds.Top + bounds.Height / 2.0) * scaleY
+
+            Dim pivotX = CDbl(objectRect.MidX)
+            Dim pivotY = CDbl(objectRect.MidY)
+            If annotation.FlipHorizontal Then centerX = 2.0 * pivotX - centerX
+            If annotation.FlipVertical Then centerY = 2.0 * pivotY - centerY
+            If Math.Abs(annotation.RotationDegrees) > 0.01F Then
+                Dim radians = annotation.RotationDegrees * Math.PI / 180.0
+                Dim dx = centerX - pivotX
+                Dim dy = centerY - pivotY
+                centerX = pivotX + dx * Math.Cos(radians) - dy * Math.Sin(radians)
+                centerY = pivotY + dx * Math.Sin(radians) + dy * Math.Cos(radians)
+            End If
+            Return (CSng(centerX - newWidth / 2.0), CSng(centerY - newHeight / 2.0), CSng(newWidth), CSng(newHeight))
         End Function
 
     End Class
