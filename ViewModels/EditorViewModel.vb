@@ -11991,6 +11991,17 @@ Namespace ViewModels
             Return False
         End Function
 
+        ''' <summary>Vergisst die gemerkte Ebene, sobald etwas ANDERES kopiert wird: eine Auswahl oder
+        ''' das ganze Bild. Strg+V fragt die Ebene zuerst; blieb sie gemerkt, duplizierte Strg+V nach
+        ''' Ebene kopieren, Auswahl kopieren die alte Ebene statt den neuen Ausschnitt einzufügen.
+        ''' Umgekehrt braucht es das nicht: eine frisch gemerkte Ebene gewinnt ohnehin, und die
+        ''' Auswahldatei muss bleiben, weil sie noch in der System-Zwischenablage liegen kann.</summary>
+        Private Sub ForgetLayerClipboard()
+            Return
+            _layerClipboardAnnotationId = ""
+            _layerClipboardAdjustmentLayerId = ""
+        End Sub
+
         ''' <summary>Rendert das gesamte aktuelle Dokument in seiner Quellauflösung als PNG für
         ''' die System-Zwischenablage. Anders als eine Bildschirmkopie enthält die Datei alle
         ''' bestätigten Anpassungen, Masken und Objekte, bleibt aber unabhängig vom Zoom.</summary>
@@ -12012,6 +12023,7 @@ Namespace ViewModels
             End If
 
             _fullImageClipboardPath = targetPath
+            ForgetLayerClipboard()
             StatusText = LocalizationService.T("Bild kopiert")
             Return targetPath
         End Function
@@ -12058,6 +12070,7 @@ Namespace ViewModels
             _selectionClipboardYPercent = p.Y
             _selectionClipboardWidthPercent = p.W
             _selectionClipboardHeightPercent = p.H
+            ForgetLayerClipboard()
             Return tempPath
         End Function
 
