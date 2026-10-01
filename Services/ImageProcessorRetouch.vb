@@ -69,6 +69,25 @@ Namespace Services
         Private Const HealingSearchMargin As Integer = HealingSearchBaseMargin + HealingPatchRadiusMax + 8
         Private Const HealingMaxNativeExtent As Integer = 1200
 
+        ''' <summary>Die Analyse vor der Reparatur (<see cref="AnalyzeHealingSurroundings"/>). Der Ring
+        ''' ist der Streifen bekannter Punkte unmittelbar an der Stelle - nur er sagt, was an die Stelle
+        ''' grenzt; was weiter weg liegt, gehört nicht zu ihr. Als KANTE zählt ein Punkt, der stärker
+        ''' von seinem 3x3-Mittel abweicht als ein Vielfaches des Korns im Ring, mindestens aber
+        ''' <c>HealingEdgeFloor</c> Stufen. Eine RUHIGE Stelle hat höchstens
+        ''' <c>HealingCalmRingEdgeShare</c> Kantenpunkte im Ring. Ein Quellflicken darf dann nicht
+        ''' unruhiger sein als der Ring selbst: höchstens das <c>HealingPatchEdgeRingFactor</c>-fache
+        ''' seines Kantenanteils plus <c>HealingCalmPatchEdgeShare</c> als Spielraum für Korn. Eine
+        ''' FESTE Grenze bügelte auf einem Foto mit feiner Textur alles glatt: der Ring galt als ruhig,
+        ''' aber nur glatte Flicken durften herein (Abstand zum Umfeld gemessen 6,7 gegen 22,1).</summary>
+        Private Const HealingRingWidthMin As Integer = 2
+        Private Const HealingRingWidthMax As Integer = 6
+        Private Const HealingEdgeFloor As Integer = 12
+        Private Const HealingEdgeNoiseFactor As Integer = 5
+        Private Const HealingCalmRingEdgeShare As Double = 0.004
+        Private Const HealingCalmPatchEdgeShare As Double = 0.01
+        Private Const HealingPatchEdgeRingFactor As Double = 2.0
+        Private Const HealingSurfaceMinCandidates As Integer = 24
+
         ''' <summary>Patch-Radius zur Bildkante, in der gerechnet wird.</summary>
         Private Shared Function HealingPatchRadiusFor(resolutionLongEdge As Integer) As Integer
             Return CInt(Clamp(CSng(resolutionLongEdge) / HealingPatchRadiusDivisor,
@@ -797,8 +816,29 @@ Namespace Services
 
             ' BEFUND: gueltige Quell-Patches EINMAL vorberechnen (Praefixsumme + Bucket-Grid);
             ' die Suche pro Randpixel zieht daraus nur noch die naechsten echten Kandidaten.
-            Dim candidates = New HealSourceCandidates(maskAlpha, targetLeft, targetTop, width, height,
+            ' ERST DIE STELLE ANSEHEN, DANN REPARIEREN. Liegt sie auf einer ruhigen Fläche, ist die
+            ' Absicht, diese Fläche fortzusetzen, und als Quelle taugen nur Flicken ohne Kante.
+            ' Sonst nimmt die Suche, was am Rand am besten passt - bei einer weggepinselten
+            ' Textzeile ist das der Zeilenabstand darüber, und dessen Flicken bringen die nächste
+            ' Zeile mit in die Lücke (Nutzerbefund 2026-10-01). Siehe AnalyzeHealingSurroundings.
+            Dim surface = AnalyzeHealingSurroundings(work, maskAlpha, targetLeft, targetTop, width, height, patchRadius)
+            Dim candidates As HealSourceCandidates = Nothing
+            If surface IsNot Nothing Then
+                candidates = New HealSourceCandidates(maskAlpha, targetLeft, targetTop, width, height,
+                                                      patchRadius, searchMargin, work.Width, work.Height,
+                                                      AddressOf surface.IsCalmPatch)
+                ' Zu wenig ruhige Quelle in Reichweite: dann lieber der bisherige Weg als ein Flicken
+                ' immer wieder aus demselben Fleck.
+                If candidates.Count < HealingSurfaceMinCandidates Then
+                    candidates = Nothing
+                    surface = Nothing
+                End If
+            End If
+            Dim offsetOutlierLimit = If(surface Is Nothing, 0, surface.OffsetOutlierLimit)
+            If candidates Is Nothing Then
+                candidates = New HealSourceCandidates(maskAlpha, targetLeft, targetTop, width, height,
                                                       patchRadius, searchMargin, work.Width, work.Height)
+            End If
             Dim candidateScratch As New List(Of (X As Integer, Y As Integer))(256)
             If candidates.Count = 0 Then Return False
 
@@ -838,7 +878,7 @@ Namespace Services
 
                     changedThisPass += CopyHealingPatch(work, maskAlpha, known, targetLeft, targetTop,
                                                         width, height, mx, maskY, sourcePatch.X, sourcePatch.Y, patchRadius, pixels,
-                                                        workWriter)
+                                                        workWriter, offsetOutlierLimit)
                     patchCopiesThisPass += 1
                     If patchCopiesThisPass >= maxPatchCopiesPerPass Then Exit For
                 Next
@@ -886,6 +926,143 @@ Namespace Services
 
             Return True
         End Function
+
+        ''' <summary>Was um die Stelle liegt: eine ruhige Fläche oder Struktur. Das Ergebnis für eine
+        ''' Fläche, sonst Nothing - dann repariert der Pinsel wie bisher.
+        '''
+        ''' <para>WARUM DER RING UND NICHT DAS FENSTER DES FLICKENS. Der Flicken sieht alles in seinem
+        ''' Radius, bei einer Textzeile also auch die Zeile darüber, und sucht danach eine Quelle, die
+        ''' dazu passt. Die Absicht steht aber im schmalen Streifen direkt an der Stelle: ist er ruhig,
+        ''' grenzt die Stelle an Fläche, und Fläche ist es, was dort fehlt.</para>
+        '''
+        ''' <para>WARUM DIE SCHWELLE AM KORN HÄNGT. Eine körnige Wand und ein glatter Himmel sind
+        ''' beide ruhig, nur auf verschiedener Höhe. Gemessen am Median des Rings ist eine Kante, was
+        ''' sich deutlich über das Korn erhebt - Schrift, Linien, Ränder.</para>
+        '''
+        ''' <para>Ein Verlauf zählt als ruhig: verglichen wird mit dem 3x3-Mittel, und ein gleichmäßiger
+        ''' Anstieg weicht davon nicht ab.</para></summary>
+        Private Shared Function AnalyzeHealingSurroundings(work As SKBitmap, maskAlpha As Byte(),
+                                                           targetLeft As Integer, targetTop As Integer,
+                                                           width As Integer, height As Integer,
+                                                           patchRadius As Integer) As HealingSurfaceAnalysis
+            If work Is Nothing OrElse maskAlpha Is Nothing Then Return Nothing
+            If work.ColorType <> SKColorType.Bgra8888 AndAlso work.ColorType <> SKColorType.Rgba8888 Then Return Nothing
+            Dim ww = work.Width, wh = work.Height
+            If ww < 3 OrElse wh < 3 Then Return Nothing
+            Dim stride = work.RowBytes
+            Dim raw = New Byte(stride * wh - 1) {}
+            Marshal.Copy(work.GetPixels(), raw, 0, raw.Length)
+
+            ' Helligkeit als Summe der drei Farbkanäle: in Bgra wie in Rgba liegen sie auf 0..2.
+            Dim luma = New Integer(ww * wh - 1) {}
+            For y = 0 To wh - 1
+                Dim row = y * stride
+                For x = 0 To ww - 1
+                    Dim p = row + x * 4
+                    luma(y * ww + x) = CInt(raw(p)) + raw(p + 1) + raw(p + 2)
+                Next
+            Next
+
+            ' Rauigkeit: Abstand zum 3x3-Mittel, in Stufen eines Kanals (also durch 3).
+            Dim rough = New Integer(ww * wh - 1) {}
+            For y = 1 To wh - 2
+                For x = 1 To ww - 2
+                    Dim i = y * ww + x
+                    Dim sum = luma(i - ww - 1) + luma(i - ww) + luma(i - ww + 1) +
+                              luma(i - 1) + luma(i) + luma(i + 1) +
+                              luma(i + ww - 1) + luma(i + ww) + luma(i + ww + 1)
+                    rough(i) = Math.Abs(luma(i) * 9 - sum) \ 27
+                Next
+            Next
+
+            ' Der Ring: bekannte Punkte im Abstand bis ringWidth von einem maskierten.
+            Dim ringWidth = Math.Max(HealingRingWidthMin, Math.Min(HealingRingWidthMax, patchRadius \ 3))
+            Dim masked = Function(x As Integer, y As Integer) As Boolean
+                             Dim localX = x - targetLeft, localY = y - targetTop
+                             If localX < 0 OrElse localY < 0 OrElse localX >= width OrElse localY >= height Then Return False
+                             Return maskAlpha(localY * width + localX) > 8
+                         End Function
+            Dim inRing = New Boolean(ww * wh - 1) {}
+            For maskY = 0 To height - 1
+                For mx = 0 To width - 1
+                    If maskAlpha(maskY * width + mx) <= 8 Then Continue For
+                    ' Nur Randpunkte der Maske tragen zum Ring bei - das Innere liegt weiter weg.
+                    Dim x = targetLeft + mx, y = targetTop + maskY
+                    If masked(x - 1, y) AndAlso masked(x + 1, y) AndAlso masked(x, y - 1) AndAlso masked(x, y + 1) Then Continue For
+                    For oy = -ringWidth To ringWidth
+                        Dim ry = y + oy
+                        If ry < 1 OrElse ry >= wh - 1 Then Continue For
+                        For ox = -ringWidth To ringWidth
+                            Dim rx = x + ox
+                            If rx < 1 OrElse rx >= ww - 1 Then Continue For
+                            If Not masked(rx, ry) Then inRing(ry * ww + rx) = True
+                        Next
+                    Next
+                Next
+            Next
+
+            Dim ringValues As New List(Of Integer)()
+            For i = 0 To inRing.Length - 1
+                If inRing(i) Then ringValues.Add(rough(i))
+            Next
+            If ringValues.Count < 16 Then Return Nothing
+            ringValues.Sort()
+            Dim grain = ringValues(ringValues.Count \ 2)
+            Dim edgeThreshold = Math.Max(HealingEdgeFloor, grain * HealingEdgeNoiseFactor)
+            Dim ringEdges = ringValues.Count - ringValues.FindIndex(Function(v) v > edgeThreshold)
+            If ringValues(ringValues.Count - 1) <= edgeThreshold Then ringEdges = 0
+            If ringEdges > ringValues.Count * HealingCalmRingEdgeShare Then Return Nothing
+
+            ' Kantenpunkte als Präfixsumme, damit jeder Quellflicken in O(1) gefragt werden kann.
+            Dim integral = New Integer((ww + 1) * (wh + 1) - 1) {}
+            For y = 0 To wh - 1
+                Dim rowSum = 0
+                For x = 0 To ww - 1
+                    If rough(y * ww + x) > edgeThreshold Then rowSum += 1
+                    integral((y + 1) * (ww + 1) + x + 1) = integral(y * (ww + 1) + x + 1) + rowSum
+                Next
+            Next
+            Dim side = patchRadius * 2 + 1
+            Dim ringEdgeShare = ringEdges / CDbl(ringValues.Count)
+            Dim patchEdgeShare = ringEdgeShare * HealingPatchEdgeRingFactor + HealingCalmPatchEdgeShare
+            Return New HealingSurfaceAnalysis(integral, ww, wh, patchRadius,
+                                              CInt(Math.Floor(side * side * patchEdgeShare)), edgeThreshold)
+        End Function
+
+        ''' <summary>Das Ergebnis der Analyse für eine ruhige Stelle: welcher Quellflicken selbst ruhig
+        ''' ist.</summary>
+        Private NotInheritable Class HealingSurfaceAnalysis
+            Private ReadOnly _edgeIntegral As Integer()
+            Private ReadOnly _width As Integer
+            Private ReadOnly _height As Integer
+            Private ReadOnly _patchRadius As Integer
+            Private ReadOnly _maxEdges As Integer
+            ''' Ab welchem Abstand (Stufen je Kanal) ein Punkt des Zielfensters beim Tonausgleich
+            ''' eines Flickens nicht mitzaehlt, siehe HealingPatchOffset.
+            Public ReadOnly OffsetOutlierLimit As Integer
+
+            Public Sub New(edgeIntegral As Integer(), width As Integer, height As Integer,
+                           patchRadius As Integer, maxEdges As Integer, edgeThreshold As Integer)
+                _edgeIntegral = edgeIntegral
+                OffsetOutlierLimit = edgeThreshold * 2
+                _width = width
+                _height = height
+                _patchRadius = patchRadius
+                _maxEdges = maxEdges
+            End Sub
+
+            ''' <summary>Trägt der Flicken um (x,y) höchstens so viele Kantenpunkte, wie ein Korn
+            ''' zufällig hergibt? Schrift, Linien und Ränder fallen damit heraus.</summary>
+            Public Function IsCalmPatch(x As Integer, y As Integer) As Boolean
+                Dim x0 = Math.Max(0, x - _patchRadius), y0 = Math.Max(0, y - _patchRadius)
+                Dim x1 = Math.Min(_width - 1, x + _patchRadius), y1 = Math.Min(_height - 1, y + _patchRadius)
+                If x1 < x0 OrElse y1 < y0 Then Return False
+                Dim s = _width + 1
+                Dim edges = _edgeIntegral((y1 + 1) * s + x1 + 1) - _edgeIntegral(y0 * s + x1 + 1) -
+                            _edgeIntegral((y1 + 1) * s + x0) + _edgeIntegral(y0 * s + x0)
+                Return edges <= _maxEdges
+            End Function
+        End Class
 
         Private Shared Function FillRemainingInpaintedPixels(work As SKBitmap, maskAlpha As Byte(), known As Boolean(),
                                                              targetLeft As Integer, targetTop As Integer,
@@ -1370,11 +1547,16 @@ Namespace Services
             Private ReadOnly _winTop As Integer
             Private ReadOnly _winWidth As Integer
             Private ReadOnly _winHeight As Integer
+            Private ReadOnly _accept As Func(Of Integer, Integer, Boolean)
             Public ReadOnly Count As Integer
 
+            ''' <param name="accept">Zusätzliche Bedingung an einen Quellflicken (Mitte in Koordinaten
+            ''' des Arbeitsbilds), etwa „trägt keine Kante". Nothing heißt: jeder freie Flicken.</param>
             Public Sub New(maskAlpha As Byte(), targetLeft As Integer, targetTop As Integer,
                            width As Integer, height As Integer, patchRadius As Integer,
-                           margin As Integer, bitmapWidth As Integer, bitmapHeight As Integer)
+                           margin As Integer, bitmapWidth As Integer, bitmapHeight As Integer,
+                           Optional accept As Func(Of Integer, Integer, Boolean) = Nothing)
+                _accept = accept
                 _winLeft = Math.Max(0, targetLeft - margin)
                 _winTop = Math.Max(0, targetTop - margin)
                 Dim winRight = Math.Min(bitmapWidth - 1, targetLeft + width - 1 + margin)
@@ -1416,6 +1598,7 @@ Namespace Services
                         If absX < patchRadius OrElse absY < patchRadius OrElse
                            absX >= bitmapWidth - patchRadius OrElse absY >= bitmapHeight - patchRadius Then Continue For
                         If Not IsPatchClear(absX, absY, patchRadius) Then Continue For
+                        If accept IsNot Nothing AndAlso Not accept(absX, absY) Then Continue For
                         Dim key = BucketKey(absX, absY)
                         Dim list As List(Of (X As Integer, Y As Integer)) = Nothing
                         If Not _buckets.TryGetValue(key, list) Then
@@ -1448,6 +1631,15 @@ Namespace Services
                              _integral((y1 + 1) * stride + x0) +
                              _integral(y0 * stride + x0)
                 Return masked = 0
+            End Function
+
+            ''' Darf der Flicken um (x,y) Quelle sein? Frei von der Maske UND die Zusatzbedingung
+            ''' erfüllt. Die Verfeinerung um den besten Treffer fragt hier, nicht nur nach der Maske:
+            ''' sonst rückt sie den Flicken zwei Punkte weiter genau an die Kante, die die Bedingung
+            ''' gerade ausgeschlossen hat.
+            Public Function IsUsableSource(x As Integer, y As Integer, patchRadius As Integer) As Boolean
+                If Not IsPatchClear(x, y, patchRadius) Then Return False
+                Return _accept Is Nothing OrElse _accept(x, y)
             End Function
 
             ''' Sammelt bis zu maxCount Kandidaten in ringförmig wachsenden Bucket-Schalen um das
@@ -1527,7 +1719,7 @@ Namespace Services
                     For sx = Math.Max(patchRadius, bestX - 2) To Math.Min(workWidth - patchRadius - 1, bestX + 2)
                         If sx = bestX AndAlso sy = bestY Then Continue For
                         If Math.Abs(sx - targetX) <= patchRadius AndAlso Math.Abs(sy - targetY) <= patchRadius Then Continue For
-                        If Not candidates.IsPatchClear(sx, sy, patchRadius) Then Continue For
+                        If Not candidates.IsUsableSource(sx, sy, patchRadius) Then Continue For
                         searchBudget -= 1
                         Dim score = HealingPatchScore(work, maskAlpha, known, targetLeft, targetTop,
                                                       width, height, mx, my, sx, sy, patchRadius, pixels,
@@ -1624,7 +1816,8 @@ Namespace Services
                                                  sx As Integer, sy As Integer,
                                                  patchRadius As Integer,
                                                  Optional pixels As RegionPixelBuffer = Nothing,
-                                                 Optional workWriter As PixelWriter = Nothing) As Integer
+                                                 Optional workWriter As PixelWriter = Nothing,
+                                                 Optional offsetOutlierLimit As Integer = 0) As Integer
             Dim copied = 0
             Dim targetX = targetLeft + mx
             Dim targetY = targetTop + my
@@ -1657,7 +1850,8 @@ Namespace Services
             ' hoechstens 8 Stufen daneben, die Kante 2,8 Stufen hoch. Die Struktur kommt weiter aus der
             ' Quelle, nur ihr Grundton aus der Umgebung des Ziels.
             Dim offset = HealingPatchOffset(work, known, targetX, targetY, mx, my, sx, sy,
-                                            width, height, patchRadius, pixels, workWidth, workHeight)
+                                            width, height, patchRadius, pixels, workWidth, workHeight,
+                                            offsetOutlierLimit)
 
             For oy = -patchRadius To patchRadius
                 Dim oySq = oy * oy
@@ -1723,7 +1917,8 @@ Namespace Services
                                                    width As Integer, height As Integer,
                                                    patchRadius As Integer,
                                                    pixels As RegionPixelBuffer,
-                                                   workWidth As Integer, workHeight As Integer) As (R As Single, G As Single, B As Single)
+                                                   workWidth As Integer, workHeight As Integer,
+                                                   Optional outlierLimit As Integer = 0) As (R As Single, G As Single, B As Single)
             Dim sr As Long = 0, sg As Long = 0, sb As Long = 0
             Dim count = 0
             For oy = -patchRadius To patchRadius
@@ -1743,6 +1938,11 @@ Namespace Services
 
                     Dim t = If(pixels IsNot Nothing AndAlso pixels.Contains(tx, ty), pixels.GetColor(tx, ty), work.GetPixel(tx, ty))
                     Dim s = If(pixels IsNot Nothing AndAlso pixels.Contains(px, py), pixels.GetColor(px, py), work.GetPixel(px, py))
+                    ' Auf einer ruhigen Flaeche zaehlt ein Punkt, der weit vom Flicken abweicht,
+                    ' nicht mit: er gehoert zu einer Struktur NEBEN der Stelle (die Schrift einer
+                    ' Zeile darueber) und zoege den Grundton des Flickens zu ihr hin.
+                    If outlierLimit > 0 AndAlso
+                       Math.Abs((CInt(t.Red) + t.Green + t.Blue) - (CInt(s.Red) + s.Green + s.Blue)) > outlierLimit * 3 Then Continue For
                     sr += CInt(t.Red) - CInt(s.Red)
                     sg += CInt(t.Green) - CInt(s.Green)
                     sb += CInt(t.Blue) - CInt(s.Blue)
