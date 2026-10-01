@@ -1170,9 +1170,17 @@
                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/info-circle.svg"
                                    Width="20" Height="20"/>
                         </Button>
+                        <!-- Dieselbe Stelle wie im Betrachter: zwischen Info und Vollbild. Der
+                             Eintrag unten in der Seitenleiste bleibt daneben bestehen. -->
+                        <Button Classes="icon-btn" Width="34" Height="34"
+                                Click="OnSettingsClick"
+                                ToolTip.Tip="Einstellungen">
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/settings.svg"
+                                   Width="20" Height="20"/>
+                        </Button>
                         <!-- Ein Punkt näher - dieselbe gemessene Ursache wie in Betrachter und
                              Editor: das Vollbild-Zeichen lässt in seinem 24er-Raster 3 Einheiten
-                             Luft je Seite, das Info-Zeichen davor nur 2. -->
+                             Luft je Seite, das Zahnrad davor nur 2. -->
                         <Button Classes="icon-btn" Width="34" Height="34"
                                 Margin="-1,0,0,0"
                                 Click="OnFullscreenClick"

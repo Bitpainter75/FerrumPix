@@ -1,4 +1,4 @@
-## Unreleased
+## 0.9.58
 
 ### What's new
 
@@ -13,6 +13,9 @@
 
 - **Adjustable filmstrip spacing.** The space between filmstrip tiles can now be set in the
   settings, just like in the gallery. Both now start a little tighter.
+
+- **Settings from the gallery toolbar.** The gallery now has the settings button in its toolbar,
+  in the same place as in the viewer.
 
 ### Fixes
 
