@@ -11,6 +11,9 @@
   the layer, nothing shows through or gets changed. Selections made on a layer with a mask stay
   within its visible part as well.
 
+- An adjustment limited to a layer that is itself limited to the layer below now only affects
+  what is actually visible of it.
+
 ## 0.9.57
 
 ### What's new

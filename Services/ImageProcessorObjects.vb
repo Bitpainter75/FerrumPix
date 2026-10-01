@@ -488,6 +488,24 @@ Namespace Services
                         coverage(i) = CByte(CInt(coverage(i)) * CInt(mask(i)) \ 255)
                     Next
                 End If
+                ' IST DIE BASIS SELBST BESCHRÄNKT, gehört auch das dazu: sichtbar ist sie nur, wo IHRE
+                ' Basis deckt. Ein beschränktes Objekt kommt hier nie an (FindClipBase überspringt
+                ' beschränkte), wohl aber eine Korrektur - sie nimmt ihren Anker direkt. Ohne das
+                ' wirkte sie dort, wo der Anker wegen seiner Schnittmaske unsichtbar ist (Befund
+                ' 2026-10-01). Die Basis der Basis ist nach FindClipBase nie beschränkt, tiefer geht es
+                ' also nicht. Ohne Basis bleibt die Beschränkung des Ankers wirkungslos, wie im Renderer.
+                If baseAnnotation.ClipToLayerBelow Then
+                    Dim baseOfBase = FindClipBase(adj, adj.Annotations, baseAnnotation)
+                    If baseOfBase IsNot Nothing AndAlso Not baseOfBase.ClipToLayerBelow Then
+                        Dim clip = BuildClipBaseCoverage(adj, baseOfBase, sourceWidth, sourceHeight,
+                                                         offsetX, offsetY, layerWidth, layerHeight)
+                        If clip IsNot Nothing Then
+                            For i = 0 To coverage.Length - 1
+                                coverage(i) = CByte(CInt(coverage(i)) * CInt(clip(i)) \ 255)
+                            Next
+                        End If
+                    End If
+                End If
                 Return coverage
             Finally
                 layer.Dispose()

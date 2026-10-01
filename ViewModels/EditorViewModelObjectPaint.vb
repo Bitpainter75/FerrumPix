@@ -273,6 +273,10 @@ Namespace ViewModels
             Public MaskGeometry As ImageAdjustments
             Public DisplayWidth As Integer
             Public DisplayHeight As Integer
+            ''' Ist die Ebene auf die Ebene darunter beschränkt: der Bauplan dieser Basis. Sichtbar
+            ''' ist die Ebene nur, wo die Basis deckt. Nothing heißt: keine Beschränkung, oder sie
+            ''' bleibt mangels Basis wirkungslos.
+            Public ClipBase As AnnotationConfinePlan
         End Class
 
         ''' <summary>Der Bauplan für die markierte Ebene, oder Nothing, wenn es nichts zu begrenzen
@@ -338,7 +342,32 @@ Namespace ViewModels
                     plan.MaskGeometry = BuildAdjustmentsFromFields()
                 End If
             End If
+            ' Und was ihre eigene Schnittmaske verbirgt, ebenso.
+            If target.ClipToLayerBelow Then
+                Dim clipBase = FindConfineClipBase(target)
+                If clipBase IsNot Nothing Then plan.ClipBase = BuildAnnotationConfinePlan(clipBase)
+            End If
             Return plan
+        End Function
+
+        ''' <summary>Die Basis der Schnittmaske einer Ebene, nach derselben Regel wie im Renderer
+        ''' (<c>ImageProcessor.FindClipBase</c>): die nächste SICHTBARE Ebene darunter, die nicht selbst
+        ''' beschränkt ist. Pinsel und Radierer taugen dort nicht als Basis und lassen die
+        ''' Beschränkung wirkungslos - hier also auch. Weil die Basis nie beschränkt ist, endet die
+        ''' Kette nach einem Schritt.</summary>
+        Private Function FindConfineClipBase(target As ImageAnnotation) As ImageAnnotation
+            Dim index = _annotations.IndexOf(target)
+            If index <= 0 Then Return Nothing
+            Dim visibility = BuildAdjustmentsFromFields()
+            For i = index - 1 To 0 Step -1
+                Dim candidate = _annotations(i)
+                If candidate Is Nothing OrElse Not visibility.IsAnnotationRenderVisible(candidate) Then Continue For
+                If candidate.ClipToLayerBelow Then Continue For
+                Dim kind = If(candidate.Kind, "").Trim().ToLowerInvariant()
+                If kind = "brush" OrElse kind = "eraser" Then Return Nothing
+                Return candidate
+            Next
+            Return Nothing
         End Function
 
         ''' <summary>RADIEREN AUF EINER EBENE OHNE RASTER geht in ihre Ebenenmaske. True heißt: hier
@@ -735,6 +764,35 @@ Namespace ViewModels
             Next
         End Sub
 
+        ''' <summary>Verrechnet die Basis einer beschränkten Ebene: außerhalb ihrer Deckung fällt die
+        ''' Grenze weg. Lässt sich die Basis nicht zeichnen, bleibt die Beschränkung wirkungslos -
+        ''' dieselbe Entscheidung wie im Renderer, wo eine fehlende Basis den Schalter verpuffen
+        ''' lässt. Läuft im Worker.</summary>
+        Private Shared Sub ApplyClipBaseToConfine(mask As SKBitmap, plan As AnnotationConfinePlan)
+            If mask Is Nothing OrElse plan Is Nothing OrElse plan.ClipBase Is Nothing Then Return
+            Using baseMask = BuildAnnotationConfineMask(plan.ClipBase)
+                If baseMask Is Nothing Then Return
+                Dim baseRect = plan.ClipBase.Rect
+                Dim baseStride = baseMask.RowBytes
+                Dim baseBytes = New Byte(baseStride * baseMask.Height - 1) {}
+                Marshal.Copy(baseMask.GetPixels(), baseBytes, 0, baseBytes.Length)
+                Dim stride = mask.RowBytes
+                Dim row = New Byte(stride - 1) {}
+                For y = 0 To mask.Height - 1
+                    Dim by = plan.Rect.Top + y - baseRect.Top
+                    Marshal.Copy(IntPtr.Add(mask.GetPixels(), y * stride), row, 0, stride)
+                    For x = 0 To mask.Width - 1
+                        If row(x) = 0 Then Continue For
+                        Dim bx = plan.Rect.Left + x - baseRect.Left
+                        Dim b = If(bx < 0 OrElse by < 0 OrElse bx >= baseMask.Width OrElse by >= baseMask.Height,
+                                   0, CInt(baseBytes(by * baseStride + bx)))
+                        row(x) = CByte(CInt(row(x)) * b \ 255)
+                    Next
+                    Marshal.Copy(row, 0, IntPtr.Add(mask.GetPixels(), y * stride), stride)
+                Next
+            End Using
+        End Sub
+
         Private Shared Function BuildAnnotationConfineMask(plan As AnnotationConfinePlan) As SKBitmap
             If plan Is Nothing OrElse plan.Placement Is Nothing Then Return Nothing
             If plan.Rect.Width <= 0 OrElse plan.Rect.Height <= 0 Then Return Nothing
@@ -782,6 +840,7 @@ Namespace ViewModels
                     End If
                 End Using
                 ApplyLayerMaskToConfine(mask, plan)
+                ApplyClipBaseToConfine(mask, plan)
                 Return mask
             Catch ex As Exception
                 DiagnosticLogService.LogException("Editor.AnnotationConfine", ex)
