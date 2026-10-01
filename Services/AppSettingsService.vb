@@ -94,6 +94,18 @@ Namespace Services
     ''' <summary>Welche Darstellung des Analysebildes zu EINEM Anpassungswerkzeug gehoert. Eine
     ''' Liste und keine Eigenschaft je Werkzeug: kommt ein Werkzeug dazu, ist hier nichts zu tun,
     ''' und ein Werkzeug, das es nicht mehr gibt, faellt beim Lesen einfach weg.</summary>
+    ''' <summary>Was sich EIN Malwerkzeug ueber Bildwechsel und Neustart merkt: Groesse und Haerte,
+    ''' bei Verwischen, Reparaturpinsel und Stempel dazu die Haerte der Kante. Deckkraft, Fluss
+    ''' und Farbe gehoeren nicht dazu, sie beginnen je Bild neu.</summary>
+    Public Class PaintToolMemory
+        ''' "Brush", "Eraser", "Blur", "Repair" oder "Clone".
+        Public Property Mode As String = ""
+        Public Property Size As Double = 24
+        ''' Beim Pinsel und Radiergummi die Haerte, bei den Retusche-Werkzeugen die Staerke.
+        Public Property Hardness As Double = 100
+        Public Property EdgeHardness As Double = 55
+    End Class
+
     Public Class ScopePanelToolMode
         ''' Der Name des Werkzeugs (EditorTool), unuebersetzt.
         Public Property Tool As String = ""
@@ -185,6 +197,9 @@ Namespace Services
         ''' Was hier nicht steht, faellt auf <see cref="ScopePanelMode"/> zurueck; die Liste
         ''' entsteht also erst, wenn jemand in einem Werkzeug wirklich umschaltet.</summary>
         Public Property ScopePanelToolModes As New List(Of ScopePanelToolMode)()
+        ''' Groesse und Haerte je Malwerkzeug, siehe PaintToolMemory. Ein Werkzeug, das hier fehlt,
+        ''' beginnt mit den Werkswerten.
+        Public Property PaintToolMemories As New List(Of PaintToolMemory)()
 
         ' ── Welche Zeilen der Reiter "Allgemein" im Infopanel zeigt ──────────────
         '
@@ -1793,6 +1808,37 @@ Namespace Services
         Public Shared Sub SaveScopePanelMode(value As String)
             Update(Sub(s) s.ScopePanelMode = NormalizeScopeMode(value))
         End Sub
+
+        ''' <summary>Merkt Groesse und Haerte eines Malwerkzeugs. Schreibt nur, wenn sich etwas
+        ''' geaendert hat - der Aufruf kommt aus jedem Reglerschritt.</summary>
+        Public Shared Sub SavePaintToolMemory(mode As String, size As Double, hardness As Double, edgeHardness As Double)
+            If String.IsNullOrWhiteSpace(mode) Then Return
+            Dim stored = PaintToolMemoryFor(mode)
+            If stored IsNot Nothing AndAlso Math.Abs(stored.Size - size) < 0.001 AndAlso
+               Math.Abs(stored.Hardness - hardness) < 0.001 AndAlso Math.Abs(stored.EdgeHardness - edgeHardness) < 0.001 Then Return
+            Update(Sub(s)
+                       Dim list = If(s.PaintToolMemories, New List(Of PaintToolMemory)())
+                       Dim entry = list.FirstOrDefault(Function(e) e IsNot Nothing AndAlso
+                           String.Equals(e.Mode, mode, StringComparison.OrdinalIgnoreCase))
+                       If entry Is Nothing Then
+                           entry = New PaintToolMemory With {.Mode = mode}
+                           list.Add(entry)
+                       End If
+                       entry.Size = size
+                       entry.Hardness = hardness
+                       entry.EdgeHardness = edgeHardness
+                       s.PaintToolMemories = list
+                   End Sub)
+        End Sub
+
+        ''' <summary>Der gemerkte Stand eines Malwerkzeugs, oder Nothing.</summary>
+        Public Shared Function PaintToolMemoryFor(mode As String) As PaintToolMemory
+            If String.IsNullOrWhiteSpace(mode) Then Return Nothing
+            Dim list = Load().PaintToolMemories
+            If list Is Nothing Then Return Nothing
+            Return list.FirstOrDefault(Function(e) e IsNot Nothing AndAlso
+                                           String.Equals(e.Mode, mode, StringComparison.OrdinalIgnoreCase))
+        End Function
 
         ''' <summary>Die Darstellung fuer EIN Anpassungswerkzeug festhalten. Der letzte gewaehlte
         ''' Wert bleibt zusaetzlich in <see cref="AppSettings.ScopePanelMode"/> stehen: er ist die

@@ -1117,13 +1117,22 @@ Namespace Views
 
             ' Die Breite aller Beschriftungen samt ihrem Abstand zum Symbol, gemessen an einer
             ' Abschrift - eine ausgeblendete Beschriftung misst sich selbst mit null.
+            ' Eine SICHTBARE Beschriftung misst sich selbst - die Abschrift erbt Stil und Schrift
+            ' nicht vollstaendig und lag dort deutlich daneben (160 gegen 118 Punkt fuer dieselbe
+            ' Gruppe). Nur eine ausgeblendete braucht die Abschrift.
             Dim labelsWidth = 0.0
             For Each label In middle.GetVisualDescendants().OfType(Of TextBlock)().
                                      Where(Function(t) t.Classes.Contains("stage-header-label"))
-                Dim probe As New TextBlock With {.Text = label.Text, .FontSize = label.FontSize,
-                                                 .FontFamily = label.FontFamily, .FontWeight = label.FontWeight}
-                probe.Measure(Size.Infinity)
-                labelsWidth += probe.DesiredSize.Width + If(TryCast(label.Parent, StackPanel)?.Spacing, 0.0)
+                Dim labelWidth As Double
+                If label.IsVisible AndAlso label.Bounds.Width > 0 Then
+                    labelWidth = label.Bounds.Width
+                Else
+                    Dim probe As New TextBlock With {.Text = label.Text, .FontSize = label.FontSize,
+                                                     .FontFamily = label.FontFamily, .FontWeight = label.FontWeight}
+                    probe.Measure(Size.Infinity)
+                    labelWidth = probe.DesiredSize.Width
+                End If
+                labelsWidth += labelWidth + If(TryCast(label.Parent, StackPanel)?.Spacing, 0.0)
             Next
             Dim labelsShown = middle.GetVisualDescendants().OfType(Of TextBlock)().
                                      Any(Function(t) t.Classes.Contains("stage-header-label") AndAlso t.IsVisible)

@@ -278,6 +278,19 @@
                                                  Minimum="0" Maximum="100" Increment="1"
                                                  FormatString="F0" />
                     </Grid>
+                    <!-- HAERTE DER KANTE, getrennt von der Staerke darueber: die meint die Wirkung des
+                         ganzen Tupfers. Ab Werk 55, das ist die fruehere feste Kante. -->
+                    <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
+                        <TextBlock Text="Härte" Foreground="{DynamicResource FP.Text.Secondary}"
+                                   VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                        <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
+                                           DefaultValue="55"
+                                           Value="{Binding RetouchEdgeHardness}" Margin="0,0" />
+                        <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                                 Value="{Binding RetouchEdgeHardness, Mode=TwoWay}"
+                                                 Minimum="0" Maximum="100" Increment="1"
+                                                 FormatString="F0" />
+                    </Grid>
                     <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
                         <TextBlock Text="Deckkraft" Foreground="{DynamicResource FP.Text.Secondary}"
                                    VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />

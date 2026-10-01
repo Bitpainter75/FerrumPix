@@ -275,6 +275,10 @@ Namespace ViewModels
         Private _retouchRadius As Double = 24.0
         Private _brushSize As Double = 24.0
         Private _brushHardness As Double = 100
+        ' Kantenhaerte von Verwischen, Reparaturpinsel und Stempel. Eigenes Feld, weil der Regler
+        ' "Staerke" dieser Werkzeuge schon auf _brushHardness liegt und dort die Wirkung des ganzen
+        ' Tupfers meint, nicht seine Kante.
+        Private _retouchEdgeHardness As Double = ImageProcessor.DefaultRetouchHardnessPercent
         Private _brushOpacity As Double = 100
         Private _brushFlow As Double = 100
         Private _brushPreset As String = "soft"
@@ -290,6 +294,7 @@ Namespace ViewModels
         Private NotInheritable Class PaintToolState
             Public Property Size As Double = 24.0
             Public Property Hardness As Double = 100
+            Public Property EdgeHardness As Double = ImageProcessor.DefaultRetouchHardnessPercent
             Public Property Opacity As Double = 100
             Public Property Flow As Double = 100
             Public Property StrokeColor As String = "#FF000000"
@@ -369,15 +374,28 @@ Namespace ViewModels
             }
 
         Private _paintToolStates As Dictionary(Of String, PaintToolState) = NewPaintToolStates()
+        ' Sperrt RememberPaintToolSettings, solange ApplyPaintToolState einen Stand uebernimmt.
+        Private _applyingPaintToolState As Boolean = False
 
+        ''' <summary>Der Stand der fuenf Malwerkzeuge, vorbelegt mit dem, was sich jedes ueber
+        ''' Bildwechsel und Neustart gemerkt hat (Groesse und Haerte, AppSettings.PaintToolMemories).
+        ''' Ein Werkzeug ohne gemerkten Stand beginnt mit den Werkswerten.</summary>
         Private Shared Function NewPaintToolStates() As Dictionary(Of String, PaintToolState)
-            Return New Dictionary(Of String, PaintToolState)(StringComparer.Ordinal) From {
+            Dim states = New Dictionary(Of String, PaintToolState)(StringComparer.Ordinal) From {
                 {"Brush", New PaintToolState()},
                 {"Eraser", New PaintToolState()},
                 {"Blur", New PaintToolState()},
                 {"Repair", New PaintToolState()},
                 {"Clone", New PaintToolState()}
             }
+            For Each entry In states
+                Dim memory = AppSettingsService.PaintToolMemoryFor(entry.Key)
+                If memory Is Nothing Then Continue For
+                entry.Value.Size = Math.Max(1, Math.Min(MaxToolSize, memory.Size))
+                entry.Value.Hardness = Math.Max(0, Math.Min(100, memory.Hardness))
+                entry.Value.EdgeHardness = Math.Max(0, Math.Min(100, memory.EdgeHardness))
+            Next
+            Return states
         End Function
 
         Private Shared Function NormalizeAnnotationBlendMode(value As String) As String
@@ -8273,6 +8291,7 @@ Namespace ViewModels
             End Get
             Set(value As Double)
                 Me.RaiseAndSetIfChanged(_retouchRadius, Math.Max(1, Math.Min(MaxToolSize, value)))
+                RememberPaintToolSettings()
                 RaiseResetButtonStateChanged()
                 ' KEIN SchedulePreviewUpdate (Log 23:16): Der Radius ist ein
                 ' WERKZEUG-Parameter fuer KUENFTIGE Punkte - am Bild aendert er nichts. Der
@@ -8350,6 +8369,7 @@ Namespace ViewModels
             Set(value As Double)
                 Me.RaiseAndSetIfChanged(_brushSize, Math.Max(1, Math.Min(MaxToolSize, value)))
                 SyncSelectedAnnotationIfStroke()
+                RememberPaintToolSettings()
                 RaiseResetButtonStateChanged()
             End Set
         End Property
@@ -8357,7 +8377,7 @@ Namespace ViewModels
         Private _brushSmoothing As Double = Math.Max(0, Math.Min(100, AppSettingsService.Load().BrushSmoothing))
 
         ''' <summary>WIE STARK EIN ZUG GEGLÄTTET WIRD, 0 bis 100, für Pinsel, Radierer und
-        ''' Maskenpinsel. Anders als Größe und Härte gilt der Wert über Sitzungen hinweg: er gehört
+        ''' Maskenpinsel. Wie Größe und Härte gilt der Wert über Sitzungen hinweg: er gehört
         ''' zur Hand und zum Gerät, nicht zum Bild. Das Glätten selbst geschieht in der Ansicht,
         ''' beim Aufnehmen der Punkte (EditorView.SmoothBrushPosition) - dort, wo auch die Vorschau
         ''' ihre Punkte her hat, damit beide dieselbe Linie zeigen.</summary>
@@ -8390,9 +8410,42 @@ Namespace ViewModels
             Set(value As Double)
                 Me.RaiseAndSetIfChanged(_brushHardness, Math.Max(0, Math.Min(100, value)))
                 SyncSelectedAnnotationIfStroke()
+                RememberPaintToolSettings()
                 RaiseResetButtonStateChanged()
             End Set
         End Property
+
+        ''' <summary>Haerte der Kante bei Verwischen, Reparaturpinsel und Stempel: 0 laeuft vom
+        ''' Mittelpunkt an weich aus, 100 ist fast eine harte Kante. Ab Werk 55, die fruehere feste
+        ''' Kante.</summary>
+        Public Property RetouchEdgeHardness As Double
+            Get
+                Return _retouchEdgeHardness
+            End Get
+            Set(value As Double)
+                Me.RaiseAndSetIfChanged(_retouchEdgeHardness, Math.Max(0, Math.Min(100, value)))
+                RememberPaintToolSettings()
+            End Set
+        End Property
+
+        ''' <summary>Schreibt Groesse und Haerte des AKTIVEN Malwerkzeugs in seinen Stand und in die
+        ''' Einstellungen. Bei jeder Aenderung, nicht erst beim Werkzeugwechsel: der Stand wurde
+        ''' vorher nur beim Wechsel zwischen zwei Malwerkzeugen gesichert, und wer ueber ein anderes
+        ''' Werkzeug zurueckkam, bekam den alten Stand zurueck - die zuletzt gewaehlte Groesse war weg.
+        ''' Ohne aktives Malwerkzeug (SelectedPaintMode leer) gibt es nichts zu merken.</summary>
+        Private Sub RememberPaintToolSettings()
+            ' Waehrend ein gesicherter Stand uebernommen wird, stehen die Felder kurz halb auf dem
+            ' alten, halb auf dem neuen Werkzeug - gemerkt wuerde ein Gemisch aus beiden.
+            If _applyingPaintToolState Then Return
+            Dim mode = SelectedPaintMode
+            Dim state As PaintToolState = Nothing
+            If String.IsNullOrEmpty(mode) OrElse Not _paintToolStates.TryGetValue(mode, state) Then Return
+            Dim isRetouch = IsRetouchPaintMode(mode)
+            state.Size = If(isRetouch, _retouchRadius, _brushSize)
+            state.Hardness = _brushHardness
+            If isRetouch Then state.EdgeHardness = _retouchEdgeHardness
+            AppSettingsService.SavePaintToolMemory(mode, state.Size, state.Hardness, state.EdgeHardness)
+        End Sub
 
         Public Property BrushOpacity As Double
             Get
@@ -23730,12 +23783,29 @@ Namespace ViewModels
             _eraserFillColor = "#00FFFFFF"
             _isCloneMode = False
             _isRepairMode = False
-            _retouchRadius = 24.0
-            _brushSize = 24.0
-            _brushHardness = 100
+            ' Groesse und Haerte kommen aus dem gemerkten Stand der Werkzeuge, nicht mehr fest von
+            ' den Werkswerten: sie gehoeren zur Hand und zur Arbeit, nicht zum Bild. Deckkraft und
+            ' Fluss beginnen je Bild neu.
+            _paintToolStates = NewPaintToolStates()
             _brushOpacity = 100
             _brushFlow = 100
-            _paintToolStates = NewPaintToolStates()
+            Dim brushState = _paintToolStates("Brush")
+            _brushSize = brushState.Size
+            _brushHardness = brushState.Hardness
+            Dim blurState = _paintToolStates("Blur")
+            _retouchRadius = blurState.Size
+            _retouchEdgeHardness = blurState.EdgeHardness
+            Dim currentMode = SelectedPaintMode
+            Dim currentState As PaintToolState = Nothing
+            If Not String.IsNullOrEmpty(currentMode) AndAlso _paintToolStates.TryGetValue(currentMode, currentState) Then
+                If IsRetouchPaintMode(currentMode) Then
+                    _retouchRadius = currentState.Size
+                    _retouchEdgeHardness = currentState.EdgeHardness
+                Else
+                    _brushSize = currentState.Size
+                End If
+                _brushHardness = currentState.Hardness
+            End If
 
             _annotationText = "Text"
             _annotationFillColor = "#00FFFFFF"
@@ -23840,6 +23910,7 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(RetouchRadius))
             Me.RaisePropertyChanged(NameOf(BrushSize))
             Me.RaisePropertyChanged(NameOf(BrushHardness))
+            Me.RaisePropertyChanged(NameOf(RetouchEdgeHardness))
             Me.RaisePropertyChanged(NameOf(BrushOpacity))
             Me.RaisePropertyChanged(NameOf(BrushFlow))
             Me.RaisePropertyChanged(NameOf(IsEraserMode))
@@ -28523,6 +28594,7 @@ Namespace ViewModels
                 Case "Blur", "Repair", "Clone"
                     state.Size = _retouchRadius
                     state.Hardness = _brushHardness
+                    state.EdgeHardness = _retouchEdgeHardness
                     state.Opacity = _brushOpacity
                     state.Flow = _brushFlow
             End Select
@@ -28536,6 +28608,7 @@ Namespace ViewModels
             ' schreibt - bei markierter Mal- oder Radierebene landet er sonst als vier Schritte in
             ' der Historie.
             BeginObjectHistoryGroup()
+            _applyingPaintToolState = True
             Try
             Select Case paintMode
                 Case "Brush"
@@ -28555,10 +28628,12 @@ Namespace ViewModels
                 Case "Blur", "Repair", "Clone"
                     RetouchRadius = state.Size
                     BrushHardness = state.Hardness
+                    RetouchEdgeHardness = state.EdgeHardness
                     BrushOpacity = state.Opacity
                     BrushFlow = state.Flow
             End Select
             Finally
+                _applyingPaintToolState = False
                 EndObjectHistoryGroup()
             End Try
         End Sub

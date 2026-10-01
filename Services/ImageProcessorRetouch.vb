@@ -16,7 +16,7 @@ Imports System.Runtime.InteropServices
 Imports QRCoder
 
 ' Retusche, Reparaturpinsel, Klonstempel und das gerechnete Auffuellen einer Luecke.
-' Eigener Zustand: RetouchFeatherStops (die weiche Kante der Retusche-Scheibe).
+' Eigener Zustand: keiner. Die Kante der Retusche-Scheibe kommt je Tupfer aus seiner Haerte.
 ' Herausgeloest am 2026-08-06 aus ImageProcessor.vb, Zeile fuer Zeile unveraendert.
 ' Hier liegt der letzte zusammenhaengende Bereich, der noch pixelweise ueber GetPixel und
 ' SetPixel arbeitet - die Umstellung auf Rohpuffer wird damit eine lokale Arbeit.
@@ -24,9 +24,16 @@ Namespace Services
 
     Partial Public Class ImageProcessor
 
-        ' Weiche Kante der Retusche-Scheibe: bis 55% des Radius voll deckend, danach linear auslaufend.
-        ' Entspricht der früheren Formel edge = (radius - d) / (radius * 0.45).
-        Private Shared ReadOnly RetouchFeatherStops As Single() = {0.0F, 0.55F, 1.0F}
+        ' Kante der Retusche-Scheibe: bis zur HAERTE voll deckend, danach linear bis zum Radius
+        ' auslaufend. Ab Werk 55 - das ist die fruehere feste Kante (edge = (radius - d) / (radius *
+        ' 0.45)), vorhandene Retuschen sehen damit unveraendert aus. Gedeckelt bei 98 %: ganz ohne
+        ' Auslauf faellt die Antialias-Kante weg und der Rand wird treppig.
+        Public Const DefaultRetouchHardnessPercent As Single = 55
+
+        Private Shared Function RetouchFeatherStops(hardnessPercent As Single) As Single()
+            Dim inner = Clamp(hardnessPercent, 0, 98) / 100.0F
+            Return {0.0F, inner, 1.0F}
+        End Function
         ''' <summary>Radius der Patches, mit denen die Reparatur fuellt - MIT DER AUFLOESUNG
         ''' SKALIERT, nicht mehr fest. Er war fest 6 und damit auf allem oberhalb einer Web-Groesse
         ''' zu klein: ein Patch muss ungefaehr EINE STRUKTURPERIODE ueberspannen, sonst kann die
@@ -179,14 +186,14 @@ Namespace Services
                 ' Der Stempel soll denselben bereits bearbeiteten Stand sehen wie Reparatur und
                 ' Verwischen. Sonst kopiert er nach nachfolgenden Retuschen wieder Textur aus einem
                 ' älteren, retuschefreien Zwischenstand zurück.
-                DrawCloneStamp(canvas, result, cx, cy, sx, sy, radius, alphaFactor)
+                DrawCloneStamp(canvas, result, cx, cy, sx, sy, radius, alphaFactor, spot.HardnessPercent)
             Else
                 ' Verwischen soll auf dem bereits retuschierten Ergebnis aufbauen, damit nach einer
                 ' Reparatur nicht wieder Textur aus dem Ursprungsbild "hineingewischt" wird.
                 ' BEFUND: KEINE Umgebungsfarb-Scheibe mehr darueber - beim Ziehen ueberlappen
                 ' dutzende Spots, und die 28-%-Scheiben konvergierten gegen eine flache Fremdfarbe
                 ' (brauner Schmier). Die Scheibe war Fleckentferner-Logik, kein Verwischen.
-                DrawBlurSpot(result, canvas, cx, cy, radius, alphaFactor)
+                DrawBlurSpot(result, canvas, cx, cy, radius, alphaFactor, spot.HardnessPercent)
             End If
         End Sub
 
@@ -198,7 +205,8 @@ Namespace Services
         ''' Kopiert eine weich auslaufende Scheibe von (sx, sy) nach (cx, cy). Der Bitmap-Shader wird
         ''' um den Versatz verschoben, ein Radial-Verlauf liefert per DstIn die Kantenmaske.
         Private Shared Sub DrawCloneStamp(canvas As SKCanvas, source As SKBitmap,
-                                          cx As Single, cy As Single, sx As Single, sy As Single, radius As Single, flow As Single)
+                                          cx As Single, cy As Single, sx As Single, sy As Single, radius As Single, flow As Single,
+                                          hardnessPercent As Single)
             ' NUR DEN QUELLKREIS KOPIEREN. Aus einer veraenderbaren Bitmap legt Skia fuer den Shader
             ' eine Kopie an - aus der ganzen Bitmap waren das bei 50 MP je Punkt 200 MB, und ein Zug
             ' mit 208 Punkten brauchte 7 s zum Einrechnen (Befund, Profil: 85 % in CreateBitmap).
@@ -218,17 +226,18 @@ Namespace Services
             If subsetRight <= subsetLeft OrElse subsetBottom <= subsetTop Then Return
             Using subset = New SKBitmap()
                 If Not source.ExtractSubset(subset, New SKRectI(subsetLeft, subsetTop, subsetRight, subsetBottom)) Then Return
-                DrawCloneStampFrom(canvas, subset, subsetLeft, subsetTop, cx, cy, sx, sy, radius, flow)
+                DrawCloneStampFrom(canvas, subset, subsetLeft, subsetTop, cx, cy, sx, sy, radius, flow, hardnessPercent)
             End Using
         End Sub
 
         Private Shared Sub DrawCloneStampFrom(canvas As SKCanvas, source As SKBitmap, sourceLeft As Integer, sourceTop As Integer,
-                                              cx As Single, cy As Single, sx As Single, sy As Single, radius As Single, flow As Single)
+                                              cx As Single, cy As Single, sx As Single, sy As Single, radius As Single, flow As Single,
+                                              hardnessPercent As Single)
             Dim offset = SKMatrix.CreateTranslation(cx - sx + sourceLeft, cy - sy + sourceTop)
             Using bitmapShader = SKShader.CreateBitmap(source, SKShaderTileMode.Clamp, SKShaderTileMode.Clamp, offset)
                 Using mask = SKShader.CreateRadialGradient(New SKPoint(cx, cy), radius,
                                                            {SKColors.White.WithAlpha(CByte(255 * flow)), SKColors.White.WithAlpha(CByte(255 * flow)), SKColors.Transparent},
-                                                           RetouchFeatherStops, SKShaderTileMode.Clamp)
+                                                           RetouchFeatherStops(hardnessPercent), SKShaderTileMode.Clamp)
                     Using masked = SKShader.CreateCompose(bitmapShader, mask, SKBlendMode.DstIn)
                         Using paint = New SKPaint With {.Shader = masked, .IsAntialias = True}
                             canvas.DrawCircle(cx, cy, radius, paint)
@@ -238,11 +247,12 @@ Namespace Services
             End Using
         End Sub
 
-        Private Shared Sub DrawSoftDisc(canvas As SKCanvas, cx As Single, cy As Single, radius As Single, fill As SKColor, flow As Single)
+        Private Shared Sub DrawSoftDisc(canvas As SKCanvas, cx As Single, cy As Single, radius As Single, fill As SKColor, flow As Single,
+                                        hardnessPercent As Single)
             Dim alphaFill = fill.WithAlpha(CByte(fill.Alpha * flow))
             Using shader = SKShader.CreateRadialGradient(New SKPoint(cx, cy), radius,
                                                          {alphaFill, alphaFill, fill.WithAlpha(0)},
-                                                         RetouchFeatherStops, SKShaderTileMode.Clamp)
+                                                         RetouchFeatherStops(hardnessPercent), SKShaderTileMode.Clamp)
                 Using paint = New SKPaint With {.Shader = shader, .IsAntialias = True}
                     canvas.DrawCircle(cx, cy, radius, paint)
                 End Using
@@ -250,7 +260,8 @@ Namespace Services
         End Sub
 
         Private Shared Sub DrawBlurSpot(result As SKBitmap, canvas As SKCanvas,
-                                        cx As Single, cy As Single, radius As Single, flow As Single)
+                                        cx As Single, cy As Single, radius As Single, flow As Single,
+                                        hardnessPercent As Single)
             If result Is Nothing OrElse canvas Is Nothing Then Return
             flow = Clamp(flow, 0.0F, 1.0F)
             If radius <= 0.5F OrElse flow <= 0.001F Then Return
@@ -279,7 +290,7 @@ Namespace Services
                                                            {SKColors.White.WithAlpha(CByte(255 * flow)),
                                                             SKColors.White.WithAlpha(CByte(255 * flow)),
                                                             SKColors.Transparent},
-                                                           RetouchFeatherStops, SKShaderTileMode.Clamp)
+                                                           RetouchFeatherStops(hardnessPercent), SKShaderTileMode.Clamp)
                     Using maskPaint = New SKPaint With {.Shader = mask, .IsAntialias = True, .BlendMode = SKBlendMode.DstIn}
                         ' BEFUND (der 4x-Schmier): DstIn wirkt nur, wo auch GEZEICHNET
                         ' wird. DrawCircle liess den Layer AUSSERHALB des Kreises unangetastet -
@@ -440,7 +451,7 @@ Namespace Services
             End If
             Dim radiusScale = CSng(Math.Sqrt(Math.Max(0.0001F, scaleX * scaleY)))
 
-            Dim scaled As New List(Of (X As Single, Y As Single, Radius As Single, Flow As Single, EffectCeiling As Single))()
+            Dim scaled As New List(Of (X As Single, Y As Single, Radius As Single, Flow As Single, EffectCeiling As Single, Hardness As Single))()
             Dim left = source.Width
             Dim top = source.Height
             Dim right = 0
@@ -455,7 +466,7 @@ Namespace Services
                 Dim effectCeiling = Clamp(spot.OpacityPercent, 0, 100) / 100.0F *
                                     Clamp(spot.StrengthPercent, 0, 100) / 100.0F
                 If flow <= 0.001F OrElse effectCeiling <= 0.001F Then Continue For
-                scaled.Add((cx, cy, radius, flow, effectCeiling))
+                scaled.Add((cx, cy, radius, flow, effectCeiling, spot.HardnessPercent))
                 maxRadius = Math.Max(maxRadius, radius)
                 left = Math.Min(left, CInt(Math.Floor(cx - radius - 2)))
                 top = Math.Min(top, CInt(Math.Floor(cy - radius - 2)))
@@ -488,7 +499,7 @@ Namespace Services
                             For Each s In scaled
                                 Using defectShader = SKShader.CreateRadialGradient(New SKPoint(s.X, s.Y), s.Radius,
                                                                                    {SKColors.White, SKColors.White, SKColors.Transparent},
-                                                                                   RetouchFeatherStops, SKShaderTileMode.Clamp)
+                                                                                   RetouchFeatherStops(s.Hardness), SKShaderTileMode.Clamp)
                                     Using defectPaint = New SKPaint With {.Shader = defectShader, .IsAntialias = True, .BlendMode = SKBlendMode.SrcOver}
                                         defectCanvas.DrawCircle(s.X, s.Y, s.Radius, defectPaint)
                                     End Using
@@ -497,7 +508,7 @@ Namespace Services
                                                                                   {SKColors.White.WithAlpha(CByte(255 * s.Flow)),
                                                                                    SKColors.White.WithAlpha(CByte(255 * s.Flow)),
                                                                                    SKColors.Transparent},
-                                                                                  RetouchFeatherStops, SKShaderTileMode.Clamp)
+                                                                                  RetouchFeatherStops(s.Hardness), SKShaderTileMode.Clamp)
                                     Using blendPaint = New SKPaint With {.Shader = blendShader, .IsAntialias = True, .BlendMode = SKBlendMode.SrcOver}
                                         blendCanvas.DrawCircle(s.X, s.Y, s.Radius, blendPaint)
                                     End Using
@@ -524,7 +535,7 @@ Namespace Services
                         For Each s In scaled
                             Dim visibleFlow = s.Flow * s.EffectCeiling
                             Dim fill = AverageSurroundingColor(source, s.X, s.Y, s.Radius)
-                            If fill.HasValue Then DrawSoftDisc(canvas, s.X, s.Y, s.Radius, fill.Value, visibleFlow)
+                            If fill.HasValue Then DrawSoftDisc(canvas, s.X, s.Y, s.Radius, fill.Value, visibleFlow, s.Hardness)
                         Next
                         Return
                     End If
@@ -532,7 +543,7 @@ Namespace Services
                     Dim sample = FindHealingRegionPatch(source, defectMask, left, top, width, height, maxRadius, targetAverage.Value)
                     If Not sample.Found Then
                         For Each s In scaled
-                            DrawSoftDisc(canvas, s.X, s.Y, s.Radius, targetAverage.Value, s.Flow * s.EffectCeiling)
+                            DrawSoftDisc(canvas, s.X, s.Y, s.Radius, targetAverage.Value, s.Flow * s.EffectCeiling, s.Hardness)
                         Next
                         Return
                     End If

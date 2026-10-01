@@ -190,6 +190,7 @@ Namespace ViewModels
                 .YPixels = CSng(targetY),
                 .RadiusPixels = CSng(_retouchRadius),
                 .StrengthPercent = CSng(_brushHardness),
+                .HardnessPercent = CSng(_retouchEdgeHardness),
                 .OpacityPercent = CSng(_brushOpacity),
                 .FlowPercent = CSng(_brushFlow),
                 .Mode = If(_isRepairMode AndAlso Not _isCloneMode, "Heal", "Blur"),

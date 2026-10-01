@@ -101,6 +101,9 @@ Namespace Services
         Public Property StrengthPercent As Single = 100
         Public Property OpacityPercent As Single = 100
         Public Property FlowPercent As Single = 100
+        ' Haerte der Kante: bis hierhin (Prozent des Radius) voll deckend, danach auslaufend. 55
+        ' ist die fruehere feste Kante (ImageProcessor.DefaultRetouchHardnessPercent).
+        Public Property HardnessPercent As Single = 55
         Public Property Mode As String = "Blur"
         Public Property StrokeId As Integer = 0
 
@@ -120,7 +123,7 @@ Namespace Services
             Return New RetouchSpot With {
                 .XPixels = XPixels, .YPixels = YPixels, .RadiusPixels = RadiusPixels,
                 .StrengthPercent = StrengthPercent, .OpacityPercent = OpacityPercent,
-                .FlowPercent = FlowPercent,
+                .FlowPercent = FlowPercent, .HardnessPercent = HardnessPercent,
                 .Mode = If(String.IsNullOrWhiteSpace(Mode), "Blur", Mode),
                 .StrokeId = StrokeId,
                 .SourceXPixels = SourceXPixels, .SourceYPixels = SourceYPixels

@@ -1,3 +1,14 @@
+## Unreleased
+
+### What's new
+
+- **Hardness for the clone stamp, healing brush and smudge.** A new hardness slider sets how soft
+  or hard the edge of these tools is, just like for the paint brush. It starts where the edge has
+  always been, so nothing changes until you move it.
+
+- **Brush sizes are remembered.** The brush, eraser, smudge, healing brush and clone stamp each
+  keep their size and hardness when you switch tools, open another picture or restart the app.
+
 ## 0.9.58
 
 ### What's new
