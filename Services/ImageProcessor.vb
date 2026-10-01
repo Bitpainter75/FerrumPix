@@ -2108,11 +2108,18 @@ Namespace Services
         Public Shared Function GetOrientedImageSize(path As String) As (Width As Integer, Height As Integer)
             Try
                 ' RAW mit warmem Entwicklungs-Cache: dessen Maße sind die des echten Decodes.
-                ' Kalter Cache -> weiter unten die eingebettete Vorschau (kein Demosaic nur für
-                ' eine Größenabfrage; die Maße stimmen bei modernen Kameras überein).
+                ' Kalter Cache -> die Maße, die LibRaw beim Öffnen meldet, gedreht wie der Decode.
+                ' Erst wenn die nicht zu haben sind, die eingebettete Vorschau. Die war vorher der
+                ' einzige Weg und ist bei vielen Kameras kleiner (ARW: 1616 x 1080): beim schnellen
+                ' Blättern stand im Infopanel mal die eine, mal die andere Größe, je nachdem, ob
+                ' der Decode des Bildes schon fertig war.
                 If RawPreviewService.IsSupportedRaw(path) AndAlso RawDecodeService.IsAvailable Then
                     Dim cached = RawDecodeService.TryGetCachedSize(path)
                     If cached.Width > 0 Then Return cached
+                    Dim facts = RawDecodeService.ReadFileMetadata(path)
+                    If facts IsNot Nothing AndAlso facts.OrientedWidth > 0 Then
+                        Return (facts.OrientedWidth, facts.OrientedHeight)
+                    End If
                 End If
                 Dim data As SKData
                 If FpxService.IsFpx(path) Then

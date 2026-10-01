@@ -58,6 +58,20 @@ Namespace Services
                    String.Equals(ext, ".psb", StringComparison.OrdinalIgnoreCase)
         End Function
 
+        ''' <summary>Maße aus dem Dateikopf, ohne die Bilddaten zu lesen. (0, 0), wenn der Kopf nicht
+        ''' lesbar ist oder die Datei über der Grenze des Composite-Lesers liegt.</summary>
+        Public Shared Function TryGetSize(filePath As String) As (Width As Integer, Height As Integer)
+            Try
+                Using fs = File.OpenRead(filePath)
+                    Dim header As PsdHeader
+                    If Not TryReadHeader(fs, header) Then Return (0, 0)
+                    Return (header.Width, header.Height)
+                End Using
+            Catch
+                Return (0, 0)
+            End Try
+        End Function
+
         ''' Liefert einen MemoryStream mit PNG-Daten (Position 0) oder Nothing bei Fehler.
         Public Shared Function ExtractPreview(filePath As String) As MemoryStream
             Try

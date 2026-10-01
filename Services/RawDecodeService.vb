@@ -847,6 +847,11 @@ Namespace Services
             ''' als Vorschau ausgegebene Sensoraufnahme zu erkennen (siehe RawPreviewService).
             Public Property RawFrameWidth As Integer
             Public Property RawFrameHeight As Integer
+            ''' Die Masse des fertig entwickelten Bildes: sichtbares Bild, gedreht nach dem
+            ''' Kamera-Flip und gestreckt nach dem Seitenverhaeltnis der Bildpunkte, so wie der
+            ''' Decode es ausgibt. 0, wenn sich der Aufbau der Struktur nicht bestaetigen liess.
+            Public Property OrientedWidth As Integer
+            Public Property OrientedHeight As Integer
         End Class
 
         ' Der Aufbau der beiden Strukturen, gegen libraw_types.h. Gelesen wird an festen Versaetzen,
@@ -954,6 +959,9 @@ Namespace Services
                         result.RawFrameHeight = frameHeight
                     End If
                 End If
+                Dim oriented = ReadOrientedSize(handle, result)
+                result.OrientedWidth = oriented.Width
+                result.OrientedHeight = oriented.Height
 
                 Return result
             Catch ex As Exception
@@ -963,6 +971,49 @@ Namespace Services
                 _close(handle)
                 If pathPtr <> IntPtr.Zero Then Marshal.FreeCoTaskMem(pathPtr)
             End Try
+        End Function
+
+        ''' <summary>Die Masse, die der Decode ausgeben wird, ohne ihn laufen zu lassen.
+        '''
+        ''' WOFUER: Infopanel und Betrachter brauchen die Masse eines RAWs sofort. Ohne fertigen
+        ''' Decode kamen sie aus der eingebetteten Vorschau, und die ist bei vielen Kameras kleiner
+        ''' (ARW: 1616 x 1080). Beim schnellen Blaettern stand deshalb mal die eine, mal die andere
+        ''' Groesse im Panel, und der Betrachter schrieb sie in den Katalog.
+        '''
+        ''' Drehung und Streckung stehen nur in der Struktur, die C-Schnittstelle hat keinen Getter
+        ''' dafuer. Gelesen wird an festen Versaetzen, aber erst, nachdem vier Felder desselben
+        ''' Blocks mit den Gettern der Bibliothek uebereinstimmen. Passt das nicht, kommt (0, 0) und
+        ''' der Aufrufer bleibt bei seinem bisherigen Weg - keine falsche Groesse, sondern keine.</summary>
+        Private Shared Function ReadOrientedSize(handle As IntPtr, facts As FileMetadata) As (Width As Integer, Height As Integer)
+            If facts.Width <= 1 OrElse facts.Height <= 1 OrElse facts.RawFrameWidth <= 1 Then Return (0, 0)
+            ' Fujis SuperCCD liegt um 45 Grad gedreht auf dem Sensor; der Decode dreht ihn zurueck,
+            ' und die Masse dafuer stehen nur in LibRaws Innerem (fuji_width). Erkennbar ist er am
+            ' fast quadratischen Rahmen (S5000: 2500 x 2499, entwickelt 2012 x 1521). Dort keine
+            ' Angabe statt einer falschen.
+            If facts.Make.StartsWith("FUJI", StringComparison.OrdinalIgnoreCase) AndAlso
+               Math.Abs(facts.Width - facts.Height) < Math.Max(facts.Width, facts.Height) \ 10 Then
+                Return (0, 0)
+            End If
+            If (Marshal.ReadInt16(handle, SizesIwidthOffset) And &HFFFF) <> facts.Width OrElse
+               (Marshal.ReadInt16(handle, SizesIheightOffset) And &HFFFF) <> facts.Height OrElse
+               (Marshal.ReadInt16(handle, SizesRawWidthOffset) And &HFFFF) <> facts.RawFrameWidth OrElse
+               (Marshal.ReadInt16(handle, SizesRawHeightOffset) And &HFFFF) <> facts.RawFrameHeight Then
+                Return (0, 0)
+            End If
+
+            Dim width As Double = facts.Width
+            Dim height As Double = facts.Height
+            ' Dieselbe Streckung wie LibRaws stretch(): unter 1 wird die Hoehe groesser, sonst die Breite.
+            Dim aspect = BitConverter.Int64BitsToDouble(Marshal.ReadInt64(handle, SizesPixelAspectOffset))
+            If Double.IsNaN(aspect) OrElse aspect < 0.25 OrElse aspect > 4.0 Then Return (0, 0)
+            If Math.Abs(aspect - 1.0) > 0.000001 Then
+                If aspect < 1.0 Then height = Math.Floor(height / aspect + 0.5) Else width = Math.Floor(width * aspect + 0.5)
+            End If
+            Dim flip = Marshal.ReadInt32(handle, SizesFlipOffset)
+            If flip < 0 OrElse flip > 7 Then Return (0, 0)
+            ' Bit 4 ist das Vertauschen der Achsen: 5 und 6 sind die Hochkant-Drehungen.
+            If (flip And 4) <> 0 Then Return (CInt(height), CInt(width))
+            Return (CInt(width), CInt(height))
         End Function
 
         ''' <summary>Ein Textfeld fester Laenge aus einer nativen Struktur. Gelesen wird bis zum
@@ -1952,6 +2003,12 @@ Namespace Services
         Private Const SizesTopMarginOffset As Integer = 16
         Private Const SizesLeftMarginOffset As Integer = 18
         Private Const SizesRawPitchOffset As Integer = 24
+        ' Dahinter, fuer die Masse ohne Decode (ReadOrientedSize): iheight und iwidth, das
+        ' Seitenverhaeltnis der Bildpunkte (double, auf acht Bytes ausgerichtet) und der Flip.
+        Private Const SizesIheightOffset As Integer = 20
+        Private Const SizesIwidthOffset As Integer = 22
+        Private Const SizesPixelAspectOffset As Integer = 32
+        Private Const SizesFlipOffset As Integer = 40
         ''' So weit wird nach libraw_rawdata_t gesucht. Unter Linux liegt es bei 193768, unter
         ''' Windows weiter vorn, weil long dort vier Bytes hat.
         Private Const RawdataSearchEnd As Integer = 400000

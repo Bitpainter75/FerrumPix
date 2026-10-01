@@ -19,3 +19,11 @@
 - An adjustment limited to a layer that is itself limited to the layer below now only affects
   what is actually visible of it.
 
+- Shutter speeds like 1/20, 1/50 and 1/100 now show as fractions in the gallery and the info
+  panel, instead of as decimals like 0,05.
+
+- The info panel now always shows the real dimensions of a RAW photo, also when quickly
+  switching between photos. Before, it sometimes showed the smaller size of the preview embedded
+  in the file, and that could end up in the catalog as well. Portrait photos are now also stored
+  upright in the catalog, so sorting and filtering by width work as you see the photos.
+

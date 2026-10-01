@@ -378,7 +378,7 @@ Namespace Services
                 data.FocalLength = GetTagDescAcross(Of ExifSubIfdDirectory)(captureDirectories, ExifSubIfdDirectory.TagFocalLength)
                 data.FocalLength35mm = GetTagDescAcross(Of ExifSubIfdDirectory)(captureDirectories, ExifSubIfdDirectory.Tag35MMFilmEquivFocalLength)
                 data.Aperture = GetTagDescAcross(Of ExifSubIfdDirectory)(captureDirectories, ExifSubIfdDirectory.TagFNumber)
-                data.ShutterSpeed = GetTagDescAcross(Of ExifSubIfdDirectory)(captureDirectories, ExifSubIfdDirectory.TagExposureTime)
+                data.ShutterSpeed = GetShutterAcross(captureDirectories)
                 data.ISO = GetTagDescAcross(Of ExifSubIfdDirectory)(captureDirectories, ExifSubIfdDirectory.TagIsoEquivalent)
                 data.ExposureCompensation = GetTagDescAcross(Of ExifSubIfdDirectory)(captureDirectories, ExifSubIfdDirectory.TagExposureBias)
                 ' Abmessungen und Farbraum gehoeren zum Composite, nicht zum Ursprungsbild.
@@ -503,11 +503,33 @@ Namespace Services
         End Sub
 
         ''' <summary>Belichtungszeit wie im EXIF gelesen: unter einer Sekunde als Stammbruch, darueber
-        ''' als Dezimalzahl.</summary>
-        Private Shared Function FormatShutter(seconds As Double) As String
-            If seconds <= 0 Then Return ""
+        ''' als Dezimalzahl. Eine Zeit unter einer Sekunde, die kein Stammbruch ist (0.3 oder 0.8 sec),
+        ''' bleibt dezimal; auf 1/3 gerundet staende dort eine Zeit, die die Kamera nicht belichtet hat.</summary>
+        Friend Shared Function FormatShutter(seconds As Double) As String
+            If seconds <= 0 OrElse Double.IsNaN(seconds) OrElse Double.IsInfinity(seconds) Then Return ""
             If seconds >= 1.0 Then Return seconds.ToString("0.#", CultureInfo.InvariantCulture) & " sec"
-            Return "1/" & Math.Round(1.0 / seconds).ToString("0", CultureInfo.InvariantCulture) & " sec"
+            Dim reciprocal = 1.0 / seconds
+            Dim whole = Math.Round(reciprocal)
+            If Math.Abs(reciprocal - whole) > whole * 0.02 Then
+                Return seconds.ToString("0.0##", CultureInfo.InvariantCulture) & " sec"
+            End If
+            Return "1/" & whole.ToString("0", CultureInfo.InvariantCulture) & " sec"
+        End Function
+
+        ''' <summary>Belichtungszeit aus dem rationalen EXIF-Wert, nicht aus der Beschreibung von
+        ''' MetadataExtractor: die kuerzt jeden Bruch, dessen Dezimalform hoechstens vier Zeichen hat,
+        ''' zur Dezimalzahl in der Kultur des Rechners. Aus 1/20, 1/50 und 1/100 wurden so "0,05",
+        ''' "0,02" und "0,01 sec", waehrend 1/60 ein Bruch blieb. Steht der Wert nicht als Zahl da,
+        ''' bleibt die Beschreibung.</summary>
+        Private Shared Function GetShutterAcross(metaDirectories As IEnumerable(Of MetadataExtractor.Directory)) As String
+            For Each metaDir In metaDirectories.OfType(Of ExifSubIfdDirectory)()
+                Dim value As Rational
+                If metaDir.TryGetRational(ExifSubIfdDirectory.TagExposureTime, value) AndAlso value.Denominator <> 0 Then
+                    Dim formatted = FormatShutter(value.ToDouble())
+                    If formatted.Length > 0 Then Return formatted
+                End If
+            Next
+            Return GetTagDescAcross(Of ExifSubIfdDirectory)(metaDirectories, ExifSubIfdDirectory.TagExposureTime)
         End Function
 
         ''' <summary>Liest die Metadaten direkt aus base.* im FPX-Buendel. Der Eintrag wird nicht in
@@ -719,7 +741,12 @@ Namespace Services
         ' .raw, MOS - siehe FillGapsFromRawFile). Dasselbe Muster wie bei den Stichwoertern: die
         ' Dateien liegen laengst im Katalog, ihre Zeit- und Kameraspalten sind leer, und ohne die
         ' Erhoehung blieben sie es. Gemessen an einem Bestand von 464 RAW-Dateien betrifft das 71.
-        Public Const SummaryFormatVersion As Integer = 5
+        ' Version 6 schreibt die Belichtungszeit neu: 1/20, 1/50 und 1/100 standen als "0,05",
+        ' "0,02" und "0,01 sec" im Katalog (siehe GetShutterAcross). Und sie holt die Masse der RAWs
+        ' nach: dort stand die Angabe der Aufnahmedaten, bei manchen Kameras der ganze Sensorrahmen,
+        ' oder was der Betrachter zuletzt aus der eingebetteten Vorschau gemessen hatte. Dazu stehen
+        ' die Masse aller Formate jetzt GEDREHT wie angezeigt (siehe ReadImageDimensions).
+        Public Const SummaryFormatVersion As Integer = 6
 
         Public Shared ReadOnly Property CurrentSummaryFormat As String
             Get
@@ -908,16 +935,46 @@ Namespace Services
         Public Shared Function ReadImageDimensions(imagePath As String) As (Width As Integer?, Height As Integer?)
             Try
                 If Not System.IO.File.Exists(imagePath) Then Return (Nothing, Nothing)
-                ' JPEG XL kennt SKCodec nicht; dort antworten die Kopfdaten ueber libjxl.
-                If JxlDecodeService.IsSupportedJxl(imagePath) Then
-                    Dim size = JxlDecodeService.TryGetSize(imagePath)
-                    If size.Width <= 0 Then Return (Nothing, Nothing)
-                    Return (size.Width, size.Height)
+                ' Ein RAW kann SKCodec nicht oeffnen; ohne diesen Weg kam die Angabe aus den
+                ' Aufnahmedaten, und die traegt bei manchen Kameras den ganzen Sensorrahmen. LibRaw
+                ' nennt die Masse, die der Decode ausgibt, ohne ihn laufen zu lassen - dieselben, die
+                ' Infopanel und Betrachter zeigen (siehe ImageProcessor.GetOrientedImageSize).
+                If RawPreviewService.IsSupportedRaw(imagePath) Then
+                    Dim facts = RawDecodeService.ReadFileMetadata(imagePath)
+                    If facts Is Nothing OrElse facts.OrientedWidth <= 0 Then Return (Nothing, Nothing)
+                    Return (facts.OrientedWidth, facts.OrientedHeight)
                 End If
-                Using codec = SkiaSharp.SKCodec.Create(imagePath)
-                    If codec Is Nothing Then Return (Nothing, Nothing)
-                    Return (codec.Info.Width, codec.Info.Height)
-                End Using
+                ' Auch die anderen Formate, die SKCodec nicht kennt, fragen ihren eigenen Kopf.
+                ' Ohne das kam die Angabe aus den Aufnahmedaten, und die ist ungedreht.
+                Dim header As (Width As Integer, Height As Integer) = (0, 0)
+                If JxlDecodeService.IsSupportedJxl(imagePath) Then
+                    header = JxlDecodeService.TryGetSize(imagePath)
+                ElseIf HeifDecodeService.IsSupportedHeif(imagePath) Then
+                    ' libheif nennt die Masse nach Drehung und Spiegelung, wie der Decode sie ausgibt.
+                    header = HeifDecodeService.TryGetSize(imagePath)
+                ElseIf TiffPreviewService.IsSupportedTiff(imagePath) Then
+                    ' Der TIFF-Decode dreht nicht (nur Spiegeln ueber ReadRGBAImageOriented); die
+                    ' Kopfmasse sind also die angezeigten.
+                    header = TiffPreviewService.TryGetSize(imagePath)
+                ElseIf PsdPreviewService.IsSupportedPsd(imagePath) Then
+                    header = PsdPreviewService.TryGetSize(imagePath)
+                Else
+                    Using codec = SkiaSharp.SKCodec.Create(imagePath)
+                        If codec Is Nothing Then Return (Nothing, Nothing)
+                        ' GEDREHT wie angezeigt: ein Hochformat vom Handy liegt als Querformat in
+                        ' der Datei und steht nur ueber das EXIF-Feld aufrecht. Der Katalog trug es
+                        ' sonst als Querformat ein, waehrend RAWs gedreht drinstehen.
+                        Select Case codec.EncodedOrigin
+                            Case SkiaSharp.SKEncodedOrigin.LeftTop, SkiaSharp.SKEncodedOrigin.RightTop,
+                                 SkiaSharp.SKEncodedOrigin.RightBottom, SkiaSharp.SKEncodedOrigin.LeftBottom
+                                Return (codec.Info.Height, codec.Info.Width)
+                            Case Else
+                                Return (codec.Info.Width, codec.Info.Height)
+                        End Select
+                    End Using
+                End If
+                If header.Width <= 0 OrElse header.Height <= 0 Then Return (Nothing, Nothing)
+                Return (header.Width, header.Height)
             Catch
                 Return (Nothing, Nothing)
             End Try
