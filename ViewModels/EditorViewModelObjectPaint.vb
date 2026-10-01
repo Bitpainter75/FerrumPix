@@ -267,6 +267,12 @@ Namespace ViewModels
             ''' ist ihr RECHTECK die Grenze.
             Public ImagePath As String = ""
             Public Placement As AnnotationImagePlacement
+            ''' Die EBENENMASKE der Ebene als Abschrift, samt dem Rezept für ihre Geometrie und der
+            ''' Größe des Anzeige-Rasters. Nothing heißt: keine Ebenenmaske.
+            Public LayerMask As ImageMask
+            Public MaskGeometry As ImageAdjustments
+            Public DisplayWidth As Integer
+            Public DisplayHeight As Integer
         End Class
 
         ''' <summary>Der Bauplan für die markierte Ebene, oder Nothing, wenn es nichts zu begrenzen
@@ -320,7 +326,19 @@ Namespace ViewModels
 
             Dim hull = ComputeConfineHull(placement, displaySize.Width, displaySize.Height)
             If hull.Width <= 0 OrElse hull.Height <= 0 Then Return Nothing
-            Return New AnnotationConfinePlan With {.Rect = hull, .ImagePath = imagePath, .Placement = placement}
+            Dim plan = New AnnotationConfinePlan With {.Rect = hull, .ImagePath = imagePath, .Placement = placement,
+                                                       .DisplayWidth = displaySize.Width, .DisplayHeight = displaySize.Height}
+            ' Was die Ebenenmaske verbirgt, ist nicht sichtbar und gehört nicht zur Ebene. Abschrift
+            ' und Rezept hier auf dem UI-Faden, gerastert wird im Worker.
+            If Not String.IsNullOrEmpty(target.MaskId) Then
+                Dim layerMask = _imageMasks.FirstOrDefault(Function(m) m IsNot Nothing AndAlso
+                                                               String.Equals(m.Id, target.MaskId, StringComparison.Ordinal))
+                If layerMask IsNot Nothing Then
+                    plan.LayerMask = layerMask.Clone()
+                    plan.MaskGeometry = BuildAdjustmentsFromFields()
+                End If
+            End If
+            Return plan
         End Function
 
         ''' <summary>RADIEREN AUF EINER EBENE OHNE RASTER geht in ihre Ebenenmaske. True heißt: hier
@@ -691,6 +709,32 @@ Namespace ViewModels
         '''
         ''' Läuft im HINTERGRUND (hier steht der Decode) und fasst deshalb nichts am ViewModel an.
         ''' Nothing heißt „nicht begrenzen".</summary>
+        ''' <summary>Verrechnet die Ebenenmaske des Bauplans in die gezeichnete Deckung: was sie
+        ''' verbirgt, fällt heraus. Dieselbe Deckung, mit der der Renderer die Ebene zeichnet
+        ''' (<c>ImageProcessor.AnnotationLayerMaskCoverage</c>). Liefert die Maske nichts, bleibt die
+        ''' Deckung, wie sie ist - auch im Renderer wirkt eine leere oder beschädigte Ebenenmaske
+        ''' nicht. Läuft im Worker.</summary>
+        Private Shared Sub ApplyLayerMaskToConfine(mask As SKBitmap, plan As AnnotationConfinePlan)
+            If mask Is Nothing OrElse plan Is Nothing OrElse plan.LayerMask Is Nothing OrElse plan.MaskGeometry Is Nothing Then Return
+            Dim dw = plan.DisplayWidth, dh = plan.DisplayHeight
+            If dw <= 0 OrElse dh <= 0 Then Return
+            Dim coverage = ImageProcessor.AnnotationLayerMaskCoverage(plan.LayerMask, plan.MaskGeometry, dw, dh)
+            If coverage Is Nothing OrElse coverage.Length <> dw * dh Then Return
+            Dim stride = mask.RowBytes
+            Dim row = New Byte(stride - 1) {}
+            For y = 0 To mask.Height - 1
+                Dim gy = plan.Rect.Top + y
+                Marshal.Copy(IntPtr.Add(mask.GetPixels(), y * stride), row, 0, stride)
+                For x = 0 To mask.Width - 1
+                    If row(x) = 0 Then Continue For
+                    Dim gx = plan.Rect.Left + x
+                    Dim m = If(gx < 0 OrElse gy < 0 OrElse gx >= dw OrElse gy >= dh, 0, CInt(coverage(gy * dw + gx)))
+                    row(x) = CByte(CInt(row(x)) * m \ 255)
+                Next
+                Marshal.Copy(row, 0, IntPtr.Add(mask.GetPixels(), y * stride), stride)
+            Next
+        End Sub
+
         Private Shared Function BuildAnnotationConfineMask(plan As AnnotationConfinePlan) As SKBitmap
             If plan Is Nothing OrElse plan.Placement Is Nothing Then Return Nothing
             If plan.Rect.Width <= 0 OrElse plan.Rect.Height <= 0 Then Return Nothing
@@ -722,16 +766,22 @@ Namespace ViewModels
                     Else
                         Using decoded = ObjectImageMemory.DecodeOrCopy(plan.ImagePath)
                             If decoded Is Nothing Then
-                                mask.Dispose()
-                                Return Nothing
+                                ' Bild nicht lesbar: dann ist sein Rechteck die Grenze, wie bei
+                                ' einer Ebene ohne Bild. Gezeichnet statt Nothing, damit die
+                                ' Ebenenmaske darunter trotzdem noch greift.
+                                Using paint As New SKPaint With {.Color = SKColors.White, .IsAntialias = False}
+                                    canvas.DrawRect(placement.FitRect, paint)
+                                End Using
+                            Else
+                                Using image = SKImage.FromBitmap(decoded)
+                                    canvas.DrawImage(image, placement.FitRect,
+                                                     New SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.None), Nothing)
+                                End Using
                             End If
-                            Using image = SKImage.FromBitmap(decoded)
-                                canvas.DrawImage(image, placement.FitRect,
-                                                 New SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.None), Nothing)
-                            End Using
                         End Using
                     End If
                 End Using
+                ApplyLayerMaskToConfine(mask, plan)
                 Return mask
             Catch ex As Exception
                 DiagnosticLogService.LogException("Editor.AnnotationConfine", ex)

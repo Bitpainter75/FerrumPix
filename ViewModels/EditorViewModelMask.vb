@@ -1379,7 +1379,7 @@ Namespace ViewModels
                 .Adjustments = New ImageAdjustments(),
                 .IsMaskLayer = True
             }
-            PlaceNewCorrectionLayerInBaseImage(layer)
+            PlaceNewCorrectionLayer(layer)
             _maskedAdjustmentLayers.Add(layer)
             _selectedMaskedAdjustmentLayerId = layer.Id
             _gradientDragMaskId = mask.Id
@@ -5002,7 +5002,7 @@ Namespace ViewModels
                     .Adjustments = New ImageAdjustments(),
                     .IsMaskLayer = _activeSelectionIsMask
                 }
-                PlaceNewCorrectionLayerInBaseImage(layer)
+                PlaceNewCorrectionLayer(layer)
                 _maskedAdjustmentLayers.Add(layer)
             End If
             ' KEINE Dauerbindung von _editingLayerMaskId mehr setzen: die verhinderte zwar Dubletten beim

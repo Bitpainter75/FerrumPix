@@ -1284,6 +1284,15 @@ Namespace Services
         ''' Zeilenlänge = <paramref name="targetW"/>.
         '''
         ''' Das zurückgegebene Feld gehört dem Speicher und wird geteilt: NUR LESEN.</summary>
+        ''' <summary>Die Deckung der Ebenenmaske eines Objekts im Raster <paramref name="targetW"/>
+        ''' mal <paramref name="targetH"/>, DIESELBE, mit der der Renderer das Objekt zeichnet. Für
+        ''' die Auswahlgrenze im Editor: was die Ebenenmaske verbirgt, gehört nicht zur Ebene.
+        ''' Das Feld gehört dem Zwischenspeicher und wird nur gelesen.</summary>
+        Public Shared Function AnnotationLayerMaskCoverage(maskData As ImageMask, geometry As ImageAdjustments,
+                                                           targetW As Integer, targetH As Integer) As Byte()
+            Return GetAnnotationMaskCoverage(maskData, geometry, targetW, targetH)
+        End Function
+
         Private Shared Function GetAnnotationMaskCoverage(maskData As ImageMask, geometry As ImageAdjustments,
                                                           targetW As Integer, targetH As Integer) As Byte()
             If maskData Is Nothing OrElse geometry Is Nothing OrElse targetW <= 0 OrElse targetH <= 0 Then Return Nothing
@@ -2857,10 +2866,14 @@ Namespace Services
         ''' <param name="contiguous">Nur die zusammenhaengende Flaeche am Klickpunkt. Gerechnet wird
         ''' mit DERSELBEN Aehnlichkeit wie sonst, begrenzt wird erst danach - der Regler bedeutet in
         ''' beiden Faellen dasselbe, und der Uebergang wirkt auch hier.</param>
+        ''' <param name="confineRect">Huelle der markierten Ebene; leer heisst unbegrenzt. Wie beim
+        ''' Zauberstab: der Klick muss auf der Ebene liegen, und nur was auf ihr liegt, zaehlt.</param>
         Public Shared Function BuildColorRangeMask(image As SKBitmap, seedX As Integer, seedY As Integer,
                                                    tolerancePct As Double, featherPct As Double,
                                                    ByRef bounds As SKRectI,
-                                                   Optional contiguous As Boolean = False) As SKBitmap
+                                                   Optional contiguous As Boolean = False,
+                                                   Optional confineRect As SKRectI = Nothing,
+                                                   Optional confine As SKBitmap = Nothing) As SKBitmap
             bounds = SKRectI.Empty
             If image Is Nothing OrElse seedX < 0 OrElse seedY < 0 OrElse seedX >= image.Width OrElse seedY >= image.Height Then Return Nothing
             Dim rIdx, gIdx, bIdx As Integer
@@ -2929,6 +2942,18 @@ Namespace Services
                 If y > maxY Then maxY = y
             Next
             If maxX < minX Then output.Dispose() : Return Nothing
+
+            If confineRect.Width > 0 AndAlso confineRect.Height > 0 Then
+                ' Der Klickpunkt hat immer volle Deckung (Abstand null). Ist er nach dem Begrenzen
+                ' weg, lag er neben der Ebene - dann findet der Klick nichts, wie beim Zauberstab.
+                Dim confined As SKRectI
+                If Not ConfineMaskBytes(data, outStride, image.Width, image.Height, confineRect, confine, confined) OrElse
+                   data(seedY * outStride + seedX) = 0 Then
+                    output.Dispose()
+                    Return Nothing
+                End If
+                minX = confined.Left : minY = confined.Top : maxX = confined.Right - 1 : maxY = confined.Bottom - 1
+            End If
 
             If contiguous Then
                 ' Flutfuellung ueber alles, was ueberhaupt Deckung hat - vom Klickpunkt aus, vier
@@ -3036,6 +3061,71 @@ Namespace Services
             Marshal.Copy(data, 0, output.GetPixels(), data.Length)
             bounds = New SKRectI(minX, minY, maxX + 1, maxY + 1)
             Return output
+        End Function
+
+        ''' <summary>Begrenzt eine bildgroße Alpha8-Maske auf die markierte Ebene: was nicht auf ihr
+        ''' liegt, wird null, und <paramref name="bounds"/> ist danach die Hülle des Rests. False
+        ''' heißt: auf der Ebene bleibt nichts übrig.
+        '''
+        ''' Für die Auswahlwege, die das ganze Bild auf einmal bewerten (Farbbereich, Helligkeit,
+        ''' Tiefe, Objektauswahl). Der Zauberstab begrenzt schon beim Fluten und braucht das nicht.
+        ''' Dieselbe Regel wie dort: ein halb durchsichtiger Rand der Ebene zählt dazu.</summary>
+        Public Shared Function ConfineMaskToCoverage(mask As SKBitmap, confineRect As SKRectI, confine As SKBitmap,
+                                                     ByRef bounds As SKRectI) As Boolean
+            bounds = SKRectI.Empty
+            If mask Is Nothing OrElse mask.ColorType <> SKColorType.Alpha8 Then Return False
+            Dim stride As Integer
+            Dim data = ReadMaskBytes(mask, stride)
+            If Not ConfineMaskBytes(data, stride, mask.Width, mask.Height, confineRect, confine, bounds) Then Return False
+            Marshal.Copy(data, 0, mask.GetPixels(), data.Length)
+            Return True
+        End Function
+
+        ''' <summary>Der Kern von <see cref="ConfineMaskToCoverage"/> auf dem verwalteten Feld, damit
+        ''' der Farbbereich VOR seiner Flutfüllung begrenzen kann: sonst liefe die zusammenhängende
+        ''' Fläche außen um die Ebene herum und käme an anderer Stelle wieder auf sie zurück.</summary>
+        Private Shared Function ConfineMaskBytes(data As Byte(), stride As Integer, width As Integer, height As Integer,
+                                                 confineRect As SKRectI, confine As SKBitmap,
+                                                 ByRef bounds As SKRectI) As Boolean
+            bounds = SKRectI.Empty
+            If confineRect.Width <= 0 OrElse confineRect.Height <= 0 Then Return False
+            Dim confineBuf As Byte() = Nothing
+            Dim confineStride = 0
+            If confine IsNot Nothing Then
+                If confine.ColorType <> SKColorType.Alpha8 OrElse confine.GetPixels() = IntPtr.Zero Then Return False
+                confineBuf = ReadMaskBytes(confine, confineStride)
+            End If
+            Dim confineWidth = If(confine Is Nothing, 0, confine.Width)
+            Dim confineHeight = If(confine Is Nothing, 0, confine.Height)
+            Dim left = Math.Max(0, Math.Min(width, confineRect.Left))
+            Dim right = Math.Max(left, Math.Min(width, confineRect.Right))
+            Dim minX = width, minY = height, maxX = -1, maxY = -1
+            For y = 0 To height - 1
+                Dim row = y * stride
+                If y < confineRect.Top OrElse y >= confineRect.Bottom Then
+                    Array.Clear(data, row, width)
+                    Continue For
+                End If
+                ' Links und rechts der Hülle liegt sicher nichts von der Ebene; nur dazwischen muss
+                ' die Deckung gefragt werden.
+                Array.Clear(data, row, left)
+                Array.Clear(data, row + right, width - right)
+                For x = left To right - 1
+                    If data(row + x) = 0 Then Continue For
+                    If Not PointIsInsideConfine(x, y, confineRect, confineBuf, confineStride,
+                                                confineWidth, confineHeight) Then
+                        data(row + x) = 0
+                        Continue For
+                    End If
+                    If x < minX Then minX = x
+                    If x > maxX Then maxX = x
+                    If y < minY Then minY = y
+                    If y > maxY Then maxY = y
+                Next
+            Next
+            If maxX < minX Then Return False
+            bounds = New SKRectI(minX, minY, maxX + 1, maxY + 1)
+            Return True
         End Function
 
         ''' <summary>Liegt dieser Bildpunkt auf der Ebene, auf die begrenzt wird? Ohne Deckung

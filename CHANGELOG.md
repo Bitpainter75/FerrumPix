@@ -1,3 +1,16 @@
+## Unreleased
+
+### Fixes
+
+- With a layer selected, color range, luminance range, depth and subject selection now stay
+  within that layer instead of picking matching areas across the whole photo. Filling such a
+  selection, or turning it into a mask or selection layer, now lands right above that layer and
+  only affects it, instead of ending up hidden in the photo underneath.
+
+- A layer limited to the layer below now also respects that layer's mask: where the mask hides
+  the layer, nothing shows through or gets changed. Selections made on a layer with a mask stay
+  within its visible part as well.
+
 ## 0.9.57
 
 ### What's new

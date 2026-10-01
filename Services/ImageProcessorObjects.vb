@@ -477,10 +477,52 @@ Namespace Services
                         coverage(rowOut + tx) = raw(rowIn + x * 4 + 3)
                     Next
                 Next
+                ' DIE EBENENMASKE DER BASIS GEHÖRT ZU IHRER DECKUNG. Was sie verbirgt, ist nicht
+                ' sichtbar, und darauf darf weder ein beschränktes Objekt noch eine beschränkte
+                ' Korrektur wirken. Ohne das veränderte eine Korrektur über einer halb maskierten
+                ' Ebene das Foto hinter der verborgenen Hälfte (Befund 2026-10-01).
+                Dim mask = LayerMaskCoverage(adj, baseAnnotation, sourceWidth, sourceHeight,
+                                             offsetX, offsetY, layerWidth, layerHeight)
+                If mask IsNot Nothing Then
+                    For i = 0 To coverage.Length - 1
+                        coverage(i) = CByte(CInt(coverage(i)) * CInt(mask(i)) \ 255)
+                    Next
+                End If
                 Return coverage
             Finally
                 layer.Dispose()
             End Try
+        End Function
+
+        ''' <summary>Die EBENENMASKE eines Objekts im Gitter des Aufrufers, ein Byte je Pixel, oder
+        ''' Nothing, wenn es keine trägt. Im Vollrender kommt das Raster des Maskenspeichers selbst
+        ''' zurück: es wird nur GELESEN, wer es verändern will, braucht eine eigene Abschrift.</summary>
+        Private Shared Function LayerMaskCoverage(adj As ImageAdjustments, annotation As ImageAnnotation,
+                                                  sourceWidth As Integer, sourceHeight As Integer,
+                                                  offsetX As Integer, offsetY As Integer,
+                                                  layerWidth As Integer, layerHeight As Integer) As Byte()
+            If String.IsNullOrEmpty(annotation.MaskId) OrElse adj.Masks Is Nothing Then Return Nothing
+            Dim maskData = adj.Masks.FirstOrDefault(Function(m) m IsNot Nothing AndAlso
+                                                        String.Equals(m.Id, annotation.MaskId, StringComparison.Ordinal))
+            ' Waehrend eines Zuges FOLGT die Maske der Ebene live - siehe MaskAnchor.
+            Dim follow As SKMatrix
+            Dim full = If(TryMaskFollowMatrix(annotation, adj, sourceWidth, sourceHeight, follow),
+                          GetFollowedMaskCoverage(maskData, adj, sourceWidth, sourceHeight, follow),
+                          GetAnnotationMaskCoverage(maskData, adj, sourceWidth, sourceHeight))
+            If full Is Nothing Then Return Nothing
+            ' Vollrender: das Raster passt schon.
+            If offsetX = 0 AndAlso offsetY = 0 AndAlso layerWidth = sourceWidth AndAlso layerHeight = sourceHeight Then Return full
+            Dim result = New Byte(layerWidth * layerHeight - 1) {}
+            For y = 0 To layerHeight - 1
+                Dim sy = offsetY + y
+                If sy < 0 OrElse sy >= sourceHeight Then Continue For
+                Dim copyLeft = Math.Max(0, -offsetX)
+                Dim copyCount = Math.Min(layerWidth - copyLeft, sourceWidth - (offsetX + copyLeft))
+                If copyCount <= 0 Then Continue For
+                Array.Copy(full, sy * sourceWidth + offsetX + copyLeft,
+                           result, y * layerWidth + copyLeft, copyCount)
+            Next
+            Return result
         End Function
 
         ''' <summary>Die Deckung, mit der ein Objekt gezeichnet wird: seine Ebenenmaske, seine
@@ -494,34 +536,8 @@ Namespace Services
                                                         clipCache As Dictionary(Of String, Byte())) As Byte()
             If Not UsesLayerCoverage(annotation) Then Return Nothing
 
-            Dim result As Byte() = Nothing
-
-            If Not String.IsNullOrEmpty(annotation.MaskId) AndAlso adj.Masks IsNot Nothing Then
-                Dim maskData = adj.Masks.FirstOrDefault(Function(m) m IsNot Nothing AndAlso
-                                                            String.Equals(m.Id, annotation.MaskId, StringComparison.Ordinal))
-                ' Waehrend eines Zuges FOLGT die Maske der Ebene live - siehe MaskAnchor.
-                Dim follow As SKMatrix
-                Dim full = If(TryMaskFollowMatrix(annotation, adj, sourceWidth, sourceHeight, follow),
-                              GetFollowedMaskCoverage(maskData, adj, sourceWidth, sourceHeight, follow),
-                              GetAnnotationMaskCoverage(maskData, adj, sourceWidth, sourceHeight))
-                If full IsNot Nothing Then
-                    If offsetX = 0 AndAlso offsetY = 0 AndAlso layerWidth = sourceWidth AndAlso layerHeight = sourceHeight Then
-                        ' Vollrender: das Raster passt schon, es wird nur GELESEN.
-                        result = full
-                    Else
-                        result = New Byte(layerWidth * layerHeight - 1) {}
-                        For y = 0 To layerHeight - 1
-                            Dim sy = offsetY + y
-                            If sy < 0 OrElse sy >= sourceHeight Then Continue For
-                            Dim copyLeft = Math.Max(0, -offsetX)
-                            Dim copyCount = Math.Min(layerWidth - copyLeft, sourceWidth - (offsetX + copyLeft))
-                            If copyCount <= 0 Then Continue For
-                            Array.Copy(full, sy * sourceWidth + offsetX + copyLeft,
-                                       result, y * layerWidth + copyLeft, copyCount)
-                        Next
-                    End If
-                End If
-            End If
+            Dim result = LayerMaskCoverage(adj, annotation, sourceWidth, sourceHeight,
+                                           offsetX, offsetY, layerWidth, layerHeight)
 
             If annotation.ClipToLayerBelow Then
                 Dim baseAnnotation = FindClipBase(adj, annotations, annotation)

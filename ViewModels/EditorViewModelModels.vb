@@ -407,6 +407,18 @@ Namespace ViewModels
         ''' liefe darum herum, statt es zu treffen. In der Vorschau kommt hinzu: die Objekte werden
         ''' beim Anwenden ohnehin nicht mitgerechnet, und scharf ueber einem verwischten Hintergrund
         ''' zeigten sie etwas, das nachher anders aussieht.</summary>
+        ''' <summary>Begrenzt eine bildgroße Maske auf die Ebene des Bauplans. Ohne Bauplan bleibt sie
+        ''' unverändert und True; False heißt, auf der Ebene bleibt nichts. Läuft im Worker (hier
+        ''' wird das Ebenenbild dekodiert), <paramref name="bounds"/> ist danach die neue Hülle.</summary>
+        Private Shared Function ConfineToPlan(mask As SKBitmap, plan As AnnotationConfinePlan,
+                                              ByRef bounds As SKRectI) As Boolean
+            If mask Is Nothing Then Return False
+            If plan Is Nothing Then Return True
+            Using confine = BuildAnnotationConfineMask(plan)
+                Return ImageProcessor.ConfineMaskToCoverage(mask, plan.Rect, confine, bounds)
+            End Using
+        End Function
+
         Private Function RecipeWithoutObjects() As ImageAdjustments
             Dim rezept = GetCurrentAdjustments()
             If rezept Is Nothing Then Return Nothing
@@ -655,10 +667,18 @@ Namespace ViewModels
                 ' DASSELBE Rezept wie die Vorschau: ohne Objekte. Zwei verschiedene Vorlagen unter
                 ' einem Schluessel waeren zwei verschiedene Tiefenkarten, je nachdem wer zuerst
                 ' gerechnet hat.
-                Dim rezept = RecipeWithoutObjects()
+                ' AUSNAHME: ist genau EINE Ebene markiert, ist SIE das Ziel. Dann zaehlt die Szene
+                ' mit den Objekten - die Tiefe des Fotos UNTER der Ebene sagte ueber ihren Inhalt
+                ' nichts -, und die Maske wird auf die Ebene begrenzt. Der Schluessel traegt das
+                ' als eigene Vorlage, und die Unschaerfe-Vorschau rechnet danach ihre eigene Karte.
+                Dim confinePlan = BuildSelectedAnnotationConfinePlan()
+                Dim rezept = If(confinePlan Is Nothing, RecipeWithoutObjects(), GetCurrentAdjustments())
                 If rezept Is Nothing Then Return
                 Dim key = String.Join("|", _currentImagePath, size.Width, size.Height,
                                              ImageProcessor.ComputeBaseKey(rezept))
+                If confinePlan IsNot Nothing Then
+                    key &= "|scene|" & FpxService.SerializeAdjustments(rezept).GetHashCode().ToString(Globalization.CultureInfo.InvariantCulture)
+                End If
                 If _depthMap Is Nothing OrElse Not String.Equals(_depthKey, key, StringComparison.Ordinal) Then
                     _depthRunning = True
                     Me.RaisePropertyChanged(NameOf(IsDepthMaskRunning))
@@ -693,8 +713,19 @@ Namespace ViewModels
                 Dim map = _depthMap
                 Dim from = _depthFrom, bis = _depthTo, weich = _depthFeather
                 Dim editingMaskId = _editingLayerMaskId
-                Dim mask = Await Task.Run(Function() DepthMapService.MaskFromDepth(map, from, bis, weich))
-                If mask Is Nothing Then Return
+                Dim mask = Await Task.Run(Function()
+                                              Dim depthMask = DepthMapService.MaskFromDepth(map, from, bis, weich)
+                                              Dim ignored As SKRectI
+                                              If depthMask IsNot Nothing AndAlso Not ConfineToPlan(depthMask, confinePlan, ignored) Then
+                                                  depthMask.Dispose()
+                                                  Return Nothing
+                                              End If
+                                              Return depthMask
+                                          End Function)
+                If mask Is Nothing Then
+                    If confinePlan IsNot Nothing Then StatusText = LocalizationService.T("In diesem Tiefenbereich liegt nichts")
+                    Return
+                End If
                 Using mask
                     Dim rect = MaskRect(mask)
                     If rect.Width <= 0 OrElse rect.Height <= 0 Then
@@ -855,6 +886,17 @@ Namespace ViewModels
             If einbettung Is Nothing OrElse _motivObjekte.Count = 0 Then Return False
             Dim edge = _subjectEdgePixels, umfang = _subjectExtentPixels, koernung = _motivKoernung
             Dim objekte = _motivObjekte.ToList()
+            ' Mit genau einer markierten Ebene zaehlt nur, was auf ihr liegt: das Modell sieht die
+            ' ganze Szene, die Auswahl entsteht aber auf der Ebene, wie beim Zauberstab. Ein Klick
+            ' daneben findet dann nichts.
+            Dim confinePlan = BuildSelectedAnnotationConfinePlan()
+            Dim confine As SKBitmap = Nothing
+            If confinePlan IsNot Nothing Then
+                ' Ist das Ebenenbild nicht lesbar, bleibt confine leer und die HUELLE der Ebene die
+                ' Grenze - derselbe Rueckfall wie bei den Bereichsmasken. Den Bauplan deshalb zu
+                ' verwerfen hiesse, die Auswahl ueber die ganze Szene laufen zu lassen.
+                confine = Await Task.Run(Function() BuildAnnotationConfineMask(confinePlan))
+            End If
 
             Dim combined As SKBitmap = Nothing
             Dim combinedRect As SKRectI = SKRectI.Empty
@@ -867,7 +909,16 @@ Namespace ViewModels
             Try
                 For i = 0 To objekte.Count - 1
                     Dim points = objekte(i).Points.ToList()
-                    Dim mask = Await Task.Run(Function() SubjectMaskService.MaskFor(einbettung, points, edge, umfang, koernung))
+                    Dim mask = Await Task.Run(Function()
+                                                  Dim subjectMask = SubjectMaskService.MaskFor(einbettung, points, edge, umfang, koernung)
+                                                  If subjectMask Is Nothing OrElse confinePlan Is Nothing Then Return subjectMask
+                                                  Dim ignored As SKRectI
+                                                  If Not ImageProcessor.ConfineMaskToCoverage(subjectMask, confinePlan.Rect, confine, ignored) Then
+                                                      subjectMask.Dispose()
+                                                      Return Nothing
+                                                  End If
+                                                  Return subjectMask
+                                              End Function)
                     If mask Is Nothing Then Continue For
                     Using mask
                         Dim rect = MaskRect(mask)
@@ -932,6 +983,7 @@ Namespace ViewModels
                 Return letzterHatEtwas
             Finally
                 combined?.Dispose()
+                confine?.Dispose()
             End Try
         End Function
 
@@ -1417,6 +1469,11 @@ Namespace ViewModels
                 ' (ohne die bearbeitete Ebene) nicht geaendert haben, siehe _rangeSampleImage. Es
                 ' gehoert dem Speicher und wird hier nicht freigegeben.
                 Dim rendered = Await GetRangeSampleImageAsync(RenderSourcePath, GetCurrentAdjustments())
+                ' Ist genau EINE Ebene markiert, entsteht die Auswahl nur auf ihr, wie beim
+                ' Zauberstab. Gemessen wird weiter die fertige Szene - das ist die Farbe, die man
+                ' anklickt.
+                Dim confinePlan = BuildSelectedAnnotationConfinePlan()
+                Dim confineRect = If(confinePlan Is Nothing, SKRectI.Empty, confinePlan.Rect)
                 Dim result = Await Task.Run(Function()
                                                     If rendered Is Nothing Then Return (Mask:=DirectCast(Nothing, SKBitmap), Bounds:=SKRectI.Empty)
                                                     Dim bounds As SKRectI
@@ -1430,10 +1487,13 @@ Namespace ViewModels
                                                     ' Uebergang blieb dort ganz wirkungslos
                                                     ' (Nutzerbefund).
                                                     Dim uhr = Diagnostics.Stopwatch.StartNew()
-                                                    Dim mask = ImageProcessor.BuildColorRangeMask(
-                                                        rendered, x, y, tolerance, feather, bounds, contiguous)
-                                                    PerformanceTraceService.Record("Bereichsmaske: Farbe bilden", uhr.Elapsed.TotalMilliseconds)
-                                                    Return (Mask:=mask, Bounds:=bounds)
+                                                    Using confine = BuildAnnotationConfineMask(confinePlan)
+                                                        Dim mask = ImageProcessor.BuildColorRangeMask(
+                                                            rendered, x, y, tolerance, feather, bounds, contiguous,
+                                                            confineRect:=confineRect, confine:=confine)
+                                                        PerformanceTraceService.Record("Bereichsmaske: Farbe bilden", uhr.Elapsed.TotalMilliseconds)
+                                                        Return (Mask:=mask, Bounds:=bounds)
+                                                    End Using
                                             End Function)
                 If generation <> Volatile.Read(_rangeMaskGeneration) OrElse
                    Not String.Equals(requestedDocument, _currentImagePath, StringComparison.OrdinalIgnoreCase) OrElse
@@ -1481,12 +1541,18 @@ Namespace ViewModels
                 Dim editingMaskId = _editingLayerMaskId
                 ' Wie beim Farbbereich: das Messbild aus dem Speicher, siehe _rangeSampleImage.
                 Dim rendered = Await GetRangeSampleImageAsync(RenderSourcePath, GetCurrentAdjustments())
+                ' Wie beim Farbbereich: mit genau einer markierten Ebene nur auf ihr.
+                Dim confinePlan = BuildSelectedAnnotationConfinePlan()
                 Dim result = Await Task.Run(Function()
                                                     If rendered Is Nothing Then Return (Mask:=DirectCast(Nothing, SKBitmap), Bounds:=SKRectI.Empty)
                                                     Dim bounds As SKRectI
                                                     Dim uhr = Diagnostics.Stopwatch.StartNew()
                                                     Dim mask = ImageProcessor.BuildLuminanceRangeMask(rendered, from, [to], feather, bounds)
                                                     PerformanceTraceService.Record("Bereichsmaske: Helligkeit bilden", uhr.Elapsed.TotalMilliseconds)
+                                                    If Not ConfineToPlan(mask, confinePlan, bounds) Then
+                                                        mask?.Dispose()
+                                                        Return (Mask:=DirectCast(Nothing, SKBitmap), Bounds:=SKRectI.Empty)
+                                                    End If
                                                     Return (Mask:=mask, Bounds:=bounds)
                                             End Function)
                 If generation <> Volatile.Read(_rangeMaskGeneration) OrElse

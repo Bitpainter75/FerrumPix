@@ -18495,31 +18495,51 @@ Namespace ViewModels
         End Sub
 
 
-        ''' <summary>Liegt eine Korrekturebene IM Objektstapel, ist der Basis-Cache für die Region-
-        ''' Patches nicht mehr die Wahrheit (die Korrektur wirkt auf das Komposit). Dann muss voll
-        ''' gerendert werden - das ist der bewusst in Kauf genommene Preis dieser Einsortierung.</summary>
-        ''' <summary>
-        ''' Legt eine NEUE Korrekturebene im Basisbild an, also unter allen Objekten (Ende der
-        ''' Ebenenliste).
-        '''
-        ''' Sie wurde zwischenzeitlich ganz OBEN einsortiert, damit sie sofort auch auf die Objekte
-        ''' wirkt. Der Preis dafür steht in RequiresFullRenderForStackedCorrections: sobald auch nur
-        ''' EINE Korrektur im Objektstapel liegt, ist der Basis-Cache nicht mehr die Wahrheit, und
-        ''' JEDE Objektänderung braucht einen Vollrender statt eines Region-Patches - dauerhaft, für
-        ''' das ganze Dokument. Der Normalfall ist aber die Korrektur am Bild, nicht über den
-        ''' Objekten. Deshalb: unten anlegen (schneller Weg bleibt erhalten), und wer sie über ein
-        ''' Objekt legen will, zieht sie im Ebenenpanel dorthin und zahlt den Vollrender bewusst
-        '''.
-        ''' </summary>
         ''' <summary>Hängt irgendeine Korrektur IM Objektstapel?</summary>
         Private Function HasStackedCorrections() As Boolean
             Return _maskedAdjustmentLayers.Any(Function(l) l IsNot Nothing AndAlso Not String.IsNullOrEmpty(l.StackAboveAnnotationId))
         End Function
 
-        Private Sub PlaceNewCorrectionLayerInBaseImage(layer As MaskedAdjustmentLayer)
+        ''' <summary>
+        ''' Wohin eine NEUE Korrekturebene kommt: über die Ebene, auf der gearbeitet wird, und auf
+        ''' sie beschränkt - sonst ins Basisbild unter alle Objekte (Ende der Ebenenliste).
+        '''
+        ''' Wer eine Ebene markiert und darauf eine Auswahl füllt oder eine Masken-/Auswahlebene
+        ''' anlegt, meint DIESE Ebene. Im Basisbild landete die Füllung unter ihr und war bei einer
+        ''' deckenden Ebene gar nicht zu sehen, eine Anpassung wirkte nur auf das Foto darunter
+        ''' (Nutzerbefund). Ohne markierte Ebene bleibt es beim Basisbild, dem Normalfall.
+        '''
+        ''' Der Preis einer Korrektur im Objektstapel ist begrenzt: RequiresFullRenderForStackedCorrections
+        ''' rendert nur dort voll, wo ihre Maske liegt, nicht mehr im ganzen Dokument.
+        ''' </summary>
+        Private Sub PlaceNewCorrectionLayer(layer As MaskedAdjustmentLayer)
             If layer Is Nothing Then Return
-            layer.StackAboveAnnotationId = ""
+            Dim anchor = CorrectionAnchorAnnotation()
+            If anchor Is Nothing Then
+                layer.StackAboveAnnotationId = ""
+                Return
+            End If
+            ' Wie beim Ablegen im Ebenenpanel über dieser Ebene: ihre Gruppe gilt mit.
+            layer.StackAboveAnnotationId = anchor.Id
+            layer.GroupId = If(anchor.GroupId, "")
+            layer.ClipToLayerBelow = True
         End Sub
+
+        ''' <summary>Die Ebene, auf der eine neue Korrektur aufsetzt: genau EINE markierte, sichtbare
+        ''' Ebene (bei mehreren wäre nicht gesagt, welche gemeint ist; der Rahmen deckt ohnehin das
+        ''' ganze Bild), sonst die Bildebene, aus der die aktive Auswahl geladen wurde - das Laden
+        ''' wählt sie ab. Nothing heißt Basisbild.</summary>
+        Private Function CorrectionAnchorAnnotation() As ImageAnnotation
+            Dim selected = SelectedAnnotations
+            If selected IsNot Nothing AndAlso selected.Count = 1 Then
+                Dim marked = selected(0)
+                If marked Is Nothing OrElse Not marked.IsVisible OrElse
+                   String.Equals(NormalizeAnnotationKind(marked.Kind), "Frame", StringComparison.Ordinal) Then Return Nothing
+                Return marked
+            End If
+            If selected IsNot Nothing AndAlso selected.Count > 1 Then Return Nothing
+            Return SelectionPixelSourceAnnotation()
+        End Function
 
         ''' <summary>
         ''' Muss für diese Region voll gerendert werden, weil eine Korrektur IM Objektstapel hängt?
@@ -26421,7 +26441,7 @@ Namespace ViewModels
                         .Adjustments = New ImageAdjustments(),
                         .IsMaskLayer = _activeSelectionIsMask
                     }
-                    PlaceNewCorrectionLayerInBaseImage(layer)
+                    PlaceNewCorrectionLayer(layer)
                     _maskedAdjustmentLayers.Add(layer)
                 End If
                 _selectionAdjustLayerId = layer.Id
