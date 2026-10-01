@@ -69,7 +69,7 @@ Batch work runs over a whole selection: rename, convert, resize, watermark, filt
 
 Fullscreen viewing with zoom, pan, slideshow, filmstrip navigation, rating, tagging and deleting, and an info panel with EXIF, IPTC, XMP, ICC and a live histogram. Videos play inline.
 
-A RAW file opens from the preview the camera put inside it, which is why it appears at once. Two settings change that: one develops a RAW you have already edited, the other develops every RAW, edited or not, in the viewer and in fullscreen. You then see your own development instead of the camera's rendering, and wait a little longer for it.
+A RAW file opens from the preview the camera put inside it, which is why it appears at once. Two settings change that: one develops a RAW you have already edited, the other develops every RAW, edited or not, in the viewer and in fullscreen. You then see your own development instead of the camera's rendering, and wait a little longer for it. The viewer, the quick preview and the comparison develop at half resolution so you can step through quickly; full resolution can be switched back on in the settings.
 
 The info panel reads a picture in three ways: the histogram, with all colour channels at once or one channel or the luminance alone, a waveform that keeps the left-to-right position so you can see whether one side burns out while the other still holds detail, and an RGB parade that puts the three channels side by side to show a colour cast and which channel carries it. A click opens the diagram large, and in the editor it follows your edits.
 
@@ -81,9 +81,9 @@ Two photos can be put side by side for comparison, sharing one zoom so you alway
 
 **Geometry.** Crop, resize, rotate, flip and canvas size, plus four ways to distort a picture: perspective, a line you lay on an edge and drag, a grid, and a frame whose edges you bend. None of them is computed into the pixels, so they can be adjusted or taken off at any time, and with an object selected they distort that object instead.
 
-Two of them can find their own setting. *Level to the horizon* looks for the straight edges in the picture - the horizon, the edge of a house, a row of windows - and turns the photo until they sit level; *Correct perspective automatically* finds the verticals of a building shot that lean together and pulls them upright. Both put their result on the ordinary sliders, to be nudged afterwards like a value you set yourself, and both say so when the picture already stands right.
+Two of them can find their own setting. *Level to the horizon* looks for the straight edges in the picture - the horizon, the edge of a house, a row of windows - and turns the photo until they sit level; *Correct perspective automatically* finds the verticals of a building shot that lean together and pulls them upright. Both put their result on the ordinary sliders, to be nudged afterwards like a value you set yourself, and both say so when the picture already stands right. Straightening can trim the empty corners away on its own.
 
-**Light and colour.** Exposure, contrast, highlights, shadows, black and white point, white balance, tone curves, HSL, vibrance and saturation, colour grading with four colour wheels, and camera calibration. *Auto* sets a sensible starting point, and a set of slider values can be saved and put on any other photo.
+**Light and colour.** Exposure, contrast, highlights, shadows, black and white point, white balance, tone curves, HSL, vibrance and saturation, colour grading with four colour wheels, and camera calibration. On RAW files, exposure reads in stops and white balance in Kelvin, with an eyedropper for a neutral spot. A clipping warning shows where highlights or shadows run out. *Auto* sets a sensible starting point, and a set of slider values can be saved and put on any other photo.
 
 **Details and effects.** Clarity, structure, dust and scratches, sharpening, softening and four kinds of noise reduction. Sharpening can reverse the blur instead of drawing halos along the edges, and noise reduction smooths each part of the picture by how noisy it really is. *Depth blur* takes its strength from how far away each point is, so lights in the background open into bright discs. Vignette, grain and frame sit in a separate *Effects* tool, where the grain can also be coloured: a slider lets the three colour channels drift apart, from plain grey grain to the coloured speckles of a fast film.
 
@@ -95,7 +95,7 @@ Two of them can find their own setting. *Level to the horizon* looks for the str
 
 **Retouching and painting.** Brush, eraser, blur and smudge, clone stamp and repair brush, with thirteen brush variants, pen pressure, stroke smoothing and red eye removal. A selection keeps them inside it, and with a picture layer selected they work on that layer instead of on the photo. An empty layer to paint on is one click away in the layers panel, its transparent pixels can be locked so strokes stay inside what is already there, and CTRL-clicking a layer thumbnail loads its shape as a selection.
 
-**Objects and layers.** Text, shapes, symbols, images, QR codes and watermarks, each with opacity, blend mode, shadow, glow and transform, text set left, centred, right or justified, and text that follows an arc, a circle or a wave. Any of them can carry a mask or be clipped to the layer below, and an adjustment placed above an object can be held to that object the same way. A picture comes in as a layer by dragging it onto the photo, either from the filmstrip below the editor, which you can browse freely without leaving the picture you are working on, or from your file manager. The layers panel holds the whole stack with visibility, order, grouping, merging, rasterizing and trimming away a transparent border, and layers can be copied and pasted, also from and to other programs. A group counts as one layer, with its own opacity, blend mode and mask, and groups can go inside groups. The panel has a second tab with the history of the picture: every step by name, from the original onwards, and clicking one takes the picture back to it. The list belongs to the session at hand; close the picture and what you saved comes back, but not the road you took to it.
+**Objects and layers.** Text, shapes, symbols, images, QR codes and watermarks, each with opacity, blend mode, shadow, glow and transform, text set left, centred, right or justified, and text that follows an arc, a circle or a wave. Any of them can carry a mask or be clipped to the layer below, and an adjustment placed above an object can be held to that object the same way. A picture comes in as a layer by dragging it onto the photo, either from the filmstrip below the editor, which you can browse freely without leaving the picture you are working on, or from your file manager, or by pasting it from the clipboard. The layers panel holds the whole stack with visibility, order, grouping, merging, rasterizing, flattening into the photo and trimming away a transparent border, and layers can be copied and pasted, also from and to other programs. A group counts as one layer, with its own opacity, blend mode and mask, and groups can go inside groups. The panel has a second tab with the history of the picture: every step by name, from the original onwards, and clicking one takes the picture back to it. The list belongs to the session at hand; close the picture and what you saved comes back, but not the road you took to it.
 
 <img src="Screenshots/Editor_Light.jpg" />
 
@@ -105,7 +105,7 @@ Two of them can find their own setting. *Level to the horizon* looks for the str
 
 ### RAW and other formats
 
-RAW files are developed from the actual sensor data: a photo keeps the exposure it was taken with, colours land close to what other raw developers show, and coloured speckle is cleaned up along the way.
+RAW files are developed from the actual sensor data: a photo keeps the exposure it was taken with, colours land close to what other raw developers show, and coloured speckle is cleaned up along the way. A blown sky can get its detail back from the raw data, and a setting starts unedited RAW files with colours matched to the camera model.
 
 The compare button in the editor can also show the JPEG the camera stored inside the raw file, so you see where the development differs from the camera's own look of the same shot.
 
@@ -113,7 +113,7 @@ Lens defects are corrected from measured data covering more than 1500 lenses on 
 
 Save a RAW and your edits go into a small sidecar next to it; the RAW itself is never modified, and opening the photo again brings the edits back. Save it as a JPEG or a PNG instead and you get that one file, with the edits baked in and no sidecar. A Lightroom sidecar with develop settings is converted once, so a photo edited elsewhere opens the way you left it.
 
-A picture that carries its own colour profile, such as Adobe RGB or Display P3, is converted when it is opened, so it looks the way it was meant to instead of flat and shifted. That covers JPEG, PNG, WEBP, TIFF, Photoshop files, HEIC and JPEG XL. Pictures without a profile are left exactly as they are, and what you save is sRGB and says so.
+A picture that carries its own colour profile, such as Adobe RGB or Display P3, is converted when it is opened, so it looks the way it was meant to instead of flat and shifted. That covers JPEG, PNG, WEBP, TIFF, Photoshop files, HEIC and JPEG XL. Pictures without a profile are left exactly as they are, and what you save is sRGB and says so. On macOS, the colours are also matched to the screen you are using.
 
 Pictures from a phone or a scanner open too, and your edit is saved as a new file next to them. A Photoshop file keeps its layers, masks and groups, so a picture can go back to Photoshop, Affinity or GIMP and still be worked on there, and text stays text you can keep typing on. Photoshop files that FerrumPix cannot take apart open as one finished picture.
 
@@ -123,7 +123,7 @@ Pictures from a phone or a scanner open too, and your edit is saved as a new fil
 
 Eight features use an extra file: selecting an object by clicking it, working by distance, removing an object, denoising, enlarging with a model, finding the people in your photos, automatically tagging image contents, and turning coordinates into a place name. The settings have a *Models* section that fetches each file on request; where one is missing, the matching controls are simply not there. Finding people, automatic image tagging and naming places have to be switched on there as well.
 
-Enlarging offers five models, from twice to four times, thorough or quick, one that keeps the grain and one for drawings. A switch in the same section lets the graphics card do the work, which finishes several times sooner with the same result.
+Enlarging offers five models, from twice to four times, thorough or quick, one that keeps the grain and one for drawings, right in the image size tool of the editor. A switch in the same section lets the graphics card do the work, which finishes several times sooner with the same result.
 
 Everything runs on your own machine - nothing is sent anywhere. The files come from [MobileSAM](https://github.com/ChaoningZhang/MobileSAM) (Apache-2.0), [MiDaS](https://github.com/isl-org/MiDaS) (MIT), [LaMa](https://github.com/advimman/lama) (Apache-2.0), [SCUNet](https://github.com/cszn/SCUNet) (Apache-2.0), [NAFNet](https://github.com/megvii-research/NAFNet) (MIT), [Real-ESRGAN](https://github.com/xinntao/Real-ESRGAN) (BSD-3-Clause), the [OpenCV Model Zoo](https://github.com/opencv/opencv_zoo) (MIT and Apache-2.0) and [GeoNames](https://www.geonames.org/) (CC BY 4.0), collected with their licences at [FerrumPix-Models](https://github.com/Bitpainter75/FerrumPix-Models). Automatic image tags use [RAM++](https://github.com/xinyu1205/recognize-anything) (Apache-2.0), fetched straight from [its publisher](https://huggingface.co/anakhiu/ram-plus-onnx-int8). It is the largest of the files, so give it a moment. The one that compares faces is fetched straight from its publisher, the [ONNX Model Zoo](https://huggingface.co/onnxmodelzoo/arcfaceresnet100-8): its weights come from [InsightFace](https://github.com/deepinsight/insightface), which limits them to non-commercial research, so it is not passed on with the others.
 
@@ -171,15 +171,15 @@ FerrumPix signs in with your user name and an app password, which you create in 
 
 ## Settings
 
-Theme, accent colour, which side the window buttons sit on, language, interface and font scale, thumbnail and export quality, metadata handling, video support, the map view, cache cleanup and the connection to an Immich or Nextcloud server.
+Theme, accent colour, which side the window buttons sit on, language, date format, interface and font scale (on Linux per display), thumbnail and export quality, metadata handling, video support, the map view, cache cleanup and the connection to an Immich or Nextcloud server.
 
-The interface speaks German, English, Dutch, Swedish, Danish, Norwegian, Finnish, Spanish, French, Italian, Portuguese, Polish, Czech, Russian, Chinese and Japanese. By default it follows your system; anything else it does not know falls back to English.
+The interface speaks German, English, Dutch, Swedish, Danish, Norwegian, Finnish, Spanish, French, Italian, Portuguese, Polish, Czech, Russian, Turkish, Hindi, Thai, Indonesian, Chinese, Japanese and Korean. By default it follows your system; anything else it does not know falls back to English.
 
-Gallery and editor can be set up to match how you work: what a double-click opens, which details appear under a gallery tile, which tool the editor starts with, the order of the tool bar, which side the adjustment panel sits on, whether its scroll bar is always shown and whether it offers buttons to step to the next tool, whether the bottom bar is shown in gallery, viewer and editor, a default format for saving, and which adjustment groups you want to see at all. RAW development has its own settings: the base brightness per camera model, the lens correction, and which method turns the sensor data into a full picture (AHD, DCB or PPG).
+Gallery and editor can be set up to match how you work: what a double-click opens, which details appear under a gallery tile, which tool the editor starts with, the order of the tool bar, which side the adjustment panel sits on, whether its scroll bar is always shown and whether it offers buttons to step to the next tool, whether the bottom bar is shown in gallery, viewer and editor, a default format for saving, which adjustment groups you want to see at all, and a compact mode that puts all adjustments into one panel. RAW development has its own settings: the base brightness per camera model, the lens correction, and which method turns the sensor data into a full picture (AHD, DCB or PPG).
 
 A drawing tablet setting makes buttons and menu entries act the moment the pen touches down instead of when it lifts, for pens that can drag a slider but press nothing.
 
-Your version is at the top, with a link to the download page when a different one has been published. The last two sections are reference: all keyboard and mouse shortcuts, and everything FerrumPix is built on with a link to each licence.
+Your version is at the top, with a link to the download page when a different one has been published; a newer version is also pointed out next to the logo. The last two sections are reference: all keyboard and mouse shortcuts, and everything FerrumPix is built on with a link to each licence.
 
 ## Installation
 
@@ -279,6 +279,6 @@ FerrumPix is [GPL-3.0-only](LICENSE). Every package carries that licence text an
 
 Project website: [FerrumPix.app](https://ferrumpix.app/)
 
-FerrumPix is in active development. The gallery, viewer, editor, settings and Immich integration are already usable. Current work focuses on stability, performance, workflow polish and cleanup.
+FerrumPix is in active development. The gallery, viewer, editor, settings and the Immich and Nextcloud integration are already usable. Current work focuses on stability, performance, workflow polish and cleanup.
 
 [Share your FerrumPix experience](https://github.com/Bitpainter75/FerrumPix/discussions/29)

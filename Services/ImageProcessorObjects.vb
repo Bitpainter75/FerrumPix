@@ -480,7 +480,7 @@ Namespace Services
                 ' DIE EBENENMASKE DER BASIS GEHÖRT ZU IHRER DECKUNG. Was sie verbirgt, ist nicht
                 ' sichtbar, und darauf darf weder ein beschränktes Objekt noch eine beschränkte
                 ' Korrektur wirken. Ohne das veränderte eine Korrektur über einer halb maskierten
-                ' Ebene das Foto hinter der verborgenen Hälfte (Befund 2026-10-01).
+                ' Ebene das Foto hinter der verborgenen Hälfte.
                 Dim mask = LayerMaskCoverage(adj, baseAnnotation, sourceWidth, sourceHeight,
                                              offsetX, offsetY, layerWidth, layerHeight)
                 If mask IsNot Nothing Then
@@ -491,8 +491,8 @@ Namespace Services
                 ' IST DIE BASIS SELBST BESCHRÄNKT, gehört auch das dazu: sichtbar ist sie nur, wo IHRE
                 ' Basis deckt. Ein beschränktes Objekt kommt hier nie an (FindClipBase überspringt
                 ' beschränkte), wohl aber eine Korrektur - sie nimmt ihren Anker direkt. Ohne das
-                ' wirkte sie dort, wo der Anker wegen seiner Schnittmaske unsichtbar ist (Befund
-                ' 2026-10-01). Die Basis der Basis ist nach FindClipBase nie beschränkt, tiefer geht es
+                ' wirkte sie dort, wo der Anker wegen seiner Schnittmaske unsichtbar ist. Die Basis
+                ' der Basis ist nach FindClipBase nie beschränkt, tiefer geht es
                 ' also nicht. Ohne Basis bleibt die Beschränkung des Ankers wirkungslos, wie im Renderer.
                 If baseAnnotation.ClipToLayerBelow Then
                     Dim baseOfBase = FindClipBase(adj, adj.Annotations, baseAnnotation)

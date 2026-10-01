@@ -820,7 +820,7 @@ Namespace Services
             ' Absicht, diese Fläche fortzusetzen, und als Quelle taugen nur Flicken ohne Kante.
             ' Sonst nimmt die Suche, was am Rand am besten passt - bei einer weggepinselten
             ' Textzeile ist das der Zeilenabstand darüber, und dessen Flicken bringen die nächste
-            ' Zeile mit in die Lücke (Nutzerbefund 2026-10-01). Siehe AnalyzeHealingSurroundings.
+            ' Zeile mit in die Lücke (Nutzerbefund). Siehe AnalyzeHealingSurroundings.
             Dim surface = AnalyzeHealingSurroundings(work, maskAlpha, targetLeft, targetTop, width, height, patchRadius)
             Dim candidates As HealSourceCandidates = Nothing
             If surface IsNot Nothing Then
