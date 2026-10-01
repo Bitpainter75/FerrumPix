@@ -9103,4 +9103,37 @@
   <data name="Gilt_f_r_Viewer_Editor_und_den_Streifen_der_Kart_5f7f293b" xml:space="preserve">
     <value>व्यूअर, एडिटर और नक्शे की पट्टी पर लागू होता है। शून्य पर टाइलें एक दूसरे से सटी रहती हैं।</value>
   </data>
+  <data name="Verteilen_91413cad" xml:space="preserve">
+    <value>बाँटें</value>
+  </data>
+  <data name="Links_ausrichten_3669661c" xml:space="preserve">
+    <value>बाएँ संरेखित करें</value>
+  </data>
+  <data name="Horizontal_zentrieren_15523981" xml:space="preserve">
+    <value>क्षैतिज रूप से बीच में</value>
+  </data>
+  <data name="Rechts_ausrichten_735b910f" xml:space="preserve">
+    <value>दाएँ संरेखित करें</value>
+  </data>
+  <data name="Oben_ausrichten_a9b1a410" xml:space="preserve">
+    <value>ऊपर संरेखित करें</value>
+  </data>
+  <data name="Vertikal_zentrieren_4fa98bae" xml:space="preserve">
+    <value>लंबवत रूप से बीच में</value>
+  </data>
+  <data name="Unten_ausrichten_f889160d" xml:space="preserve">
+    <value>नीचे संरेखित करें</value>
+  </data>
+  <data name="Horizontal_verteilen_a7586d3b" xml:space="preserve">
+    <value>क्षैतिज रूप से बाँटें</value>
+  </data>
+  <data name="Vertikal_verteilen_33159403" xml:space="preserve">
+    <value>लंबवत रूप से बाँटें</value>
+  </data>
+  <data name="Ausrichten_am_Bild_Ein_Klick_richtet_stattdessen_3476356f" xml:space="preserve">
+    <value>चित्र के साथ संरेखित। चयन के साथ संरेखित करने के लिए क्लिक करें</value>
+  </data>
+  <data name="Ausrichten_an_der_Auswahl_Ein_Klick_richtet_stat_20d83c94" xml:space="preserve">
+    <value>चयन के साथ संरेखित। चित्र के साथ संरेखित करने के लिए क्लिक करें</value>
+  </data>
 </root>

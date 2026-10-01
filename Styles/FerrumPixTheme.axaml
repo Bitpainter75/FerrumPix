@@ -1295,7 +1295,7 @@
         <Setter Property="Background" Value="{DynamicResource FP.Sel.Hover}"/>
     </Style>
     <!-- Kein eigener Abstand am Eintrag: den ganzen Abstand traegt der Rand der Kachel
-         (FilmstripTileMargin, einstellbar, ab Werk 8). -->
+         (FilmstripTileMargin, einstellbar, ab Werk 10). -->
     <Style Selector="ListBox.filmstrip-list ListBoxItem">
         <Setter Property="Padding" Value="0"/>
         <Setter Property="Margin" Value="0"/>

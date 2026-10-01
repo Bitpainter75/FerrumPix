@@ -252,7 +252,7 @@ Namespace Services
         Public Property GalleryTileFrame As Boolean = True
         Public Property FilmstripTileFrame As Boolean = True
         ''' Kacheln des Filmstreifens im Seitenverhaeltnis des Bildes statt alle gleich breit. Ab
-        ''' Werk aus, das ist das bisherige Aussehen.
+        ''' Werk aus.
         Public Property FilmstripTilesKeepAspect As Boolean = False
         ''' In der FOTOWAND alle Aufsaetze der Kachel (Sterne, Herz, Metadaten, Auswahlkreis,
         ''' Abspielknopf) erst beim Ueberfahren zeigen, auch die auf "immer anzeigen" gestellten.
@@ -272,16 +272,15 @@ Namespace Services
         ''' legte das naechste Speichern denselben Zuschnitt ein zweites Mal darauf.
         Public Property EditorSaveAsOpensTarget As Boolean = False
         ''' Abstand zwischen zwei Kacheln der Galerie in Bildpunkten, in ALLEN Kachelansichten. Ab
-        ''' Werk 8 (Vorgabe Patrick 2026-10-01; vorher 10, der Aussenrand der Kachel). Die Zahl geht
+        ''' Werk 10, der Aussenrand der Kachel (zweimal 5). Die Zahl geht
         ''' NICHT nur in die Optik: aus ihr und dem Kachelmass rechnen Spaltenzahl, Zeilenhoehe und
         ''' damit der ganze Rollbereich - siehe GalleryViewModel.GridColumnPitch.
         ''' Die Liste bleibt aussen vor, eine Zeile ist keine Kachel.
-        Public Property GalleryTileGap As Integer = 8
+        Public Property GalleryTileGap As Integer = 10
         ''' Abstand zwischen zwei Kacheln des Filmstreifens (Betrachter, Editor, Streifen der Karte),
-        ''' in Bildpunkten. Ab Werk 8 wie die Galerie (Vorgabe Patrick); vorher standen fest 18 (zweimal 5
-        ''' Aussenrand der Kachel und 8 am Listeneintrag). Nur waagerecht; die Hoehe des Streifens
-        ''' steht fest.
-        Public Property FilmstripTileGap As Integer = 8
+        ''' in Bildpunkten, ab Werk 10 wie die Galerie. Nur waagerecht; die Hoehe des Streifens steht
+        ''' fest.
+        Public Property FilmstripTileGap As Integer = 10
         ''' Fusszeile am unteren Rand, je Bereich getrennt. AB WERK AN: sie traegt nicht nur Angaben
         ''' zum Bild, sondern auch Bedienelemente (Menue, Zoom, Bewertung, im Betrachter und im Editor
         ''' zusaetzlich den Filmstreifen). Wer die Bildflaeche maximal will, schaltet sie dort ab, wo

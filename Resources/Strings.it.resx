@@ -9059,4 +9059,37 @@
   <data name="Gilt_f_r_Viewer_Editor_und_den_Streifen_der_Kart_5f7f293b" xml:space="preserve">
     <value>Vale per visualizzatore, editor e striscia della mappa. A zero le miniature sono una accanto all'altra.</value>
   </data>
+  <data name="Verteilen_91413cad" xml:space="preserve">
+    <value>Distribuisci</value>
+  </data>
+  <data name="Links_ausrichten_3669661c" xml:space="preserve">
+    <value>Allinea a sinistra</value>
+  </data>
+  <data name="Horizontal_zentrieren_15523981" xml:space="preserve">
+    <value>Centra orizzontalmente</value>
+  </data>
+  <data name="Rechts_ausrichten_735b910f" xml:space="preserve">
+    <value>Allinea a destra</value>
+  </data>
+  <data name="Oben_ausrichten_a9b1a410" xml:space="preserve">
+    <value>Allinea in alto</value>
+  </data>
+  <data name="Vertikal_zentrieren_4fa98bae" xml:space="preserve">
+    <value>Centra verticalmente</value>
+  </data>
+  <data name="Unten_ausrichten_f889160d" xml:space="preserve">
+    <value>Allinea in basso</value>
+  </data>
+  <data name="Horizontal_verteilen_a7586d3b" xml:space="preserve">
+    <value>Distribuisci orizzontalmente</value>
+  </data>
+  <data name="Vertikal_verteilen_33159403" xml:space="preserve">
+    <value>Distribuisci verticalmente</value>
+  </data>
+  <data name="Ausrichten_am_Bild_Ein_Klick_richtet_stattdessen_3476356f" xml:space="preserve">
+    <value>Allineamento all'immagine. Fai clic per allineare alla selezione</value>
+  </data>
+  <data name="Ausrichten_an_der_Auswahl_Ein_Klick_richtet_stat_20d83c94" xml:space="preserve">
+    <value>Allineamento alla selezione. Fai clic per allineare all'immagine</value>
+  </data>
 </root>

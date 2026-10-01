@@ -9099,4 +9099,37 @@
   <data name="Gilt_f_r_Viewer_Editor_und_den_Streifen_der_Kart_5f7f293b" xml:space="preserve">
     <value>Действует в просмотрщике, редакторе и на ленте карты. При нуле плитки стоят вплотную.</value>
   </data>
+  <data name="Verteilen_91413cad" xml:space="preserve">
+    <value>Распределить</value>
+  </data>
+  <data name="Links_ausrichten_3669661c" xml:space="preserve">
+    <value>Выровнять по левому краю</value>
+  </data>
+  <data name="Horizontal_zentrieren_15523981" xml:space="preserve">
+    <value>Центрировать по горизонтали</value>
+  </data>
+  <data name="Rechts_ausrichten_735b910f" xml:space="preserve">
+    <value>Выровнять по правому краю</value>
+  </data>
+  <data name="Oben_ausrichten_a9b1a410" xml:space="preserve">
+    <value>Выровнять по верху</value>
+  </data>
+  <data name="Vertikal_zentrieren_4fa98bae" xml:space="preserve">
+    <value>Центрировать по вертикали</value>
+  </data>
+  <data name="Unten_ausrichten_f889160d" xml:space="preserve">
+    <value>Выровнять по низу</value>
+  </data>
+  <data name="Horizontal_verteilen_a7586d3b" xml:space="preserve">
+    <value>Распределить по горизонтали</value>
+  </data>
+  <data name="Vertikal_verteilen_33159403" xml:space="preserve">
+    <value>Распределить по вертикали</value>
+  </data>
+  <data name="Ausrichten_am_Bild_Ein_Klick_richtet_stattdessen_3476356f" xml:space="preserve">
+    <value>Выравнивание по изображению. Щёлкните, чтобы выравнивать по выделению</value>
+  </data>
+  <data name="Ausrichten_an_der_Auswahl_Ein_Klick_richtet_stat_20d83c94" xml:space="preserve">
+    <value>Выравнивание по выделению. Щёлкните, чтобы выравнивать по изображению</value>
+  </data>
 </root>

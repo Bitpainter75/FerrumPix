@@ -9058,4 +9058,37 @@
   <data name="Gilt_f_r_Viewer_Editor_und_den_Streifen_der_Kart_5f7f293b" xml:space="preserve">
     <value>Aplica-se ao visualizador, ao editor e à tira do mapa. Com zero, as miniaturas ficam encostadas.</value>
   </data>
+  <data name="Verteilen_91413cad" xml:space="preserve">
+    <value>Distribuir</value>
+  </data>
+  <data name="Links_ausrichten_3669661c" xml:space="preserve">
+    <value>Alinhar à esquerda</value>
+  </data>
+  <data name="Horizontal_zentrieren_15523981" xml:space="preserve">
+    <value>Centrar horizontalmente</value>
+  </data>
+  <data name="Rechts_ausrichten_735b910f" xml:space="preserve">
+    <value>Alinhar à direita</value>
+  </data>
+  <data name="Oben_ausrichten_a9b1a410" xml:space="preserve">
+    <value>Alinhar em cima</value>
+  </data>
+  <data name="Vertikal_zentrieren_4fa98bae" xml:space="preserve">
+    <value>Centrar verticalmente</value>
+  </data>
+  <data name="Unten_ausrichten_f889160d" xml:space="preserve">
+    <value>Alinhar em baixo</value>
+  </data>
+  <data name="Horizontal_verteilen_a7586d3b" xml:space="preserve">
+    <value>Distribuir horizontalmente</value>
+  </data>
+  <data name="Vertikal_verteilen_33159403" xml:space="preserve">
+    <value>Distribuir verticalmente</value>
+  </data>
+  <data name="Ausrichten_am_Bild_Ein_Klick_richtet_stattdessen_3476356f" xml:space="preserve">
+    <value>A alinhar com a imagem. Clique para alinhar com a seleção</value>
+  </data>
+  <data name="Ausrichten_an_der_Auswahl_Ein_Klick_richtet_stat_20d83c94" xml:space="preserve">
+    <value>A alinhar com a seleção. Clique para alinhar com a imagem</value>
+  </data>
 </root>

@@ -9099,4 +9099,37 @@
   <data name="Gilt_f_r_Viewer_Editor_und_den_Streifen_der_Kart_5f7f293b" xml:space="preserve">
     <value>Platí pro prohlížeč, editor a pás mapy. Při nule stojí dlaždice těsně vedle sebe.</value>
   </data>
+  <data name="Verteilen_91413cad" xml:space="preserve">
+    <value>Rozmístit</value>
+  </data>
+  <data name="Links_ausrichten_3669661c" xml:space="preserve">
+    <value>Zarovnat vlevo</value>
+  </data>
+  <data name="Horizontal_zentrieren_15523981" xml:space="preserve">
+    <value>Vystředit vodorovně</value>
+  </data>
+  <data name="Rechts_ausrichten_735b910f" xml:space="preserve">
+    <value>Zarovnat vpravo</value>
+  </data>
+  <data name="Oben_ausrichten_a9b1a410" xml:space="preserve">
+    <value>Zarovnat nahoru</value>
+  </data>
+  <data name="Vertikal_zentrieren_4fa98bae" xml:space="preserve">
+    <value>Vystředit svisle</value>
+  </data>
+  <data name="Unten_ausrichten_f889160d" xml:space="preserve">
+    <value>Zarovnat dolů</value>
+  </data>
+  <data name="Horizontal_verteilen_a7586d3b" xml:space="preserve">
+    <value>Rozmístit vodorovně</value>
+  </data>
+  <data name="Vertikal_verteilen_33159403" xml:space="preserve">
+    <value>Rozmístit svisle</value>
+  </data>
+  <data name="Ausrichten_am_Bild_Ein_Klick_richtet_stattdessen_3476356f" xml:space="preserve">
+    <value>Zarovnání k obrázku. Kliknutím zarovnáte k výběru</value>
+  </data>
+  <data name="Ausrichten_an_der_Auswahl_Ein_Klick_richtet_stat_20d83c94" xml:space="preserve">
+    <value>Zarovnání k výběru. Kliknutím zarovnáte k obrázku</value>
+  </data>
 </root>

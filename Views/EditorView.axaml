@@ -81,7 +81,7 @@
                  mittig - und weil die Leiste ueber die ganze Fensterbreite geht, auch mittig zum
                  Fenster. -->
             <Grid VerticalAlignment="Center">
-                <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Left">
+                <StackPanel x:Name="ToolbarLeftButtons" Orientation="Horizontal" Spacing="8" HorizontalAlignment="Left">
                     <Button Classes="icon-btn" Width="34" Height="34"
                             Command="{Binding BackToViewerCommand}"
                             ToolTip.Tip="Zurück">
@@ -112,6 +112,74 @@
                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/printer.svg"
                                        Width="20" Height="20" />
                     </Button>
+                    <!-- AUSRICHTEN, nur solange eine Ebene markiert ist, und in jedem Werkzeug. Bei
+                         einer Ebene ist das Bild der Bezug, ab zwei die gemeinsame Box der Auswahl
+                         oder auf Wunsch das Bild (Umschalter am Ende). Verteilen und Umschalter gibt
+                         es erst ab zwei markierten Ebenen. Die mittlere Gruppe weicht dafuer nach
+                         rechts aus und gibt erst danach ihre Beschriftungen ab
+                         (UpdateStageHeaderLabelsFit). -->
+                    <StackPanel x:Name="ArrangeButtons" Orientation="Horizontal" Spacing="2"
+                                Margin="6,0,0,0"
+                                IsVisible="{Binding HasSelectedAnnotation}">
+                        <Button Classes="icon-btn" Width="34" Height="34"
+                                Command="{Binding AlignSelectionCommand}" CommandParameter="Left"
+                                ToolTip.Tip="Links ausrichten">
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/layout-align-left.svg" Width="20" Height="20" />
+                        </Button>
+                        <Button Classes="icon-btn" Width="34" Height="34"
+                                Command="{Binding AlignSelectionCommand}" CommandParameter="CenterH"
+                                ToolTip.Tip="Horizontal zentrieren">
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/layout-align-center.svg" Width="20" Height="20" />
+                        </Button>
+                        <Button Classes="icon-btn" Width="34" Height="34"
+                                Command="{Binding AlignSelectionCommand}" CommandParameter="Right"
+                                ToolTip.Tip="Rechts ausrichten">
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/layout-align-right.svg" Width="20" Height="20" />
+                        </Button>
+                        <Button Classes="icon-btn" Width="34" Height="34"
+                                Command="{Binding AlignSelectionCommand}" CommandParameter="Top"
+                                ToolTip.Tip="Oben ausrichten">
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/layout-align-top.svg" Width="20" Height="20" />
+                        </Button>
+                        <Button Classes="icon-btn" Width="34" Height="34"
+                                Command="{Binding AlignSelectionCommand}" CommandParameter="CenterV"
+                                ToolTip.Tip="Vertikal zentrieren">
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/layout-align-middle.svg" Width="20" Height="20" />
+                        </Button>
+                        <Button Classes="icon-btn" Width="34" Height="34"
+                                Command="{Binding AlignSelectionCommand}" CommandParameter="Bottom"
+                                ToolTip.Tip="Unten ausrichten">
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/layout-align-bottom.svg" Width="20" Height="20" />
+                        </Button>
+                        <Button Classes="icon-btn" Width="34" Height="34"
+                                IsVisible="{Binding HasMultiAnnotationSelection}"
+                                IsEnabled="{Binding CanDistributeSelection}"
+                                Command="{Binding DistributeSelectionCommand}" CommandParameter="Horizontal"
+                                ToolTip.Tip="Horizontal verteilen" ToolTip.ShowOnDisabled="True">
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/layout-distribute-vertical.svg" Width="20" Height="20" />
+                        </Button>
+                        <Button Classes="icon-btn" Width="34" Height="34"
+                                IsVisible="{Binding HasMultiAnnotationSelection}"
+                                IsEnabled="{Binding CanDistributeSelection}"
+                                Command="{Binding DistributeSelectionCommand}" CommandParameter="Vertical"
+                                ToolTip.Tip="Vertikal verteilen" ToolTip.ShowOnDisabled="True">
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/layout-distribute-horizontal.svg" Width="20" Height="20" />
+                        </Button>
+                        <!-- EIN Umschalter fuer den Bezug: gestrichelter Rahmen = an der Auswahl,
+                             Foto = am Bild. Der Hinweis sagt, was gerade gilt und was ein Klick
+                             daraus macht. -->
+                        <Button Classes="icon-btn" Width="34" Height="34"
+                                IsVisible="{Binding HasMultiAnnotationSelection}"
+                                Command="{Binding ToggleAlignTargetCommand}"
+                                ToolTip.Tip="{Binding AlignTargetHint}">
+                            <Grid>
+                                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/marquee-2.svg" Width="20" Height="20"
+                                               IsVisible="{Binding AlignToSelection}" />
+                                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/photo.svg" Width="20" Height="20"
+                                               IsVisible="{Binding AlignToImage}" />
+                            </Grid>
+                        </Button>
+                    </StackPanel>
                 </StackPanel>
 
                 <!-- Die mittlere Gruppe steht NICHT hier, sondern als eigenes Kind des
@@ -120,7 +188,7 @@
                      aufhoert, weiss nur das Wurzelraster: links die Werkzeugspalte, rechts bis zu
                      drei Panels, die sich zu- und abschalten. -->
 
-                <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center" HorizontalAlignment="Right">
+                <StackPanel x:Name="ToolbarRightButtons" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center" HorizontalAlignment="Right">
                     <!-- Links neben Rückgängig: der Weg zurück zum Original steht bei den Knöpfen,
                          die Bearbeitungsschritte zurücknehmen. -->
                     <Button Classes="icon-btn"
@@ -252,7 +320,14 @@
                 <StackPanel Orientation="Horizontal" Spacing="6">
                     <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/pinned.svg"
                                    Width="20" Height="20" />
-                    <TextBlock Text="Verschieben" IsVisible="{Binding AreToolbarLabelsVisible}" />
+                    <TextBlock Classes="stage-header-label" Text="Verschieben">
+                        <TextBlock.IsVisible>
+                            <MultiBinding Converter="{StaticResource AllTrueConverter}">
+                                <Binding Path="AreToolbarLabelsVisible"/>
+                                <Binding Path="StageHeaderLabelsFit"/>
+                            </MultiBinding>
+                        </TextBlock.IsVisible>
+                    </TextBlock>
                 </StackPanel>
             </Button>
 
@@ -263,7 +338,14 @@
                 <StackPanel Orientation="Horizontal" Spacing="6">
                     <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/ruler-2.svg"
                                    Width="20" Height="20" />
-                    <TextBlock Text="Lineale" IsVisible="{Binding AreToolbarLabelsVisible}" />
+                    <TextBlock Classes="stage-header-label" Text="Lineale">
+                        <TextBlock.IsVisible>
+                            <MultiBinding Converter="{StaticResource AllTrueConverter}">
+                                <Binding Path="AreToolbarLabelsVisible"/>
+                                <Binding Path="StageHeaderLabelsFit"/>
+                            </MultiBinding>
+                        </TextBlock.IsVisible>
+                    </TextBlock>
                 </StackPanel>
             </Button>
 
@@ -274,7 +356,14 @@
                 <StackPanel Orientation="Horizontal" Spacing="6">
                     <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/grid-pattern.svg"
                                    Width="20" Height="20" />
-                    <TextBlock Text="Raster" IsVisible="{Binding AreToolbarLabelsVisible}" />
+                    <TextBlock Classes="stage-header-label" Text="Raster">
+                        <TextBlock.IsVisible>
+                            <MultiBinding Converter="{StaticResource AllTrueConverter}">
+                                <Binding Path="AreToolbarLabelsVisible"/>
+                                <Binding Path="StageHeaderLabelsFit"/>
+                            </MultiBinding>
+                        </TextBlock.IsVisible>
+                    </TextBlock>
                 </StackPanel>
             </Button>
 
@@ -289,7 +378,14 @@
                 <StackPanel Orientation="Horizontal" Spacing="6">
                     <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/eye.svg"
                                    Width="20" Height="20" />
-                    <TextBlock Text="Vergleich" IsVisible="{Binding AreToolbarLabelsVisible}" />
+                    <TextBlock Classes="stage-header-label" Text="Vergleich">
+                        <TextBlock.IsVisible>
+                            <MultiBinding Converter="{StaticResource AllTrueConverter}">
+                                <Binding Path="AreToolbarLabelsVisible"/>
+                                <Binding Path="StageHeaderLabelsFit"/>
+                            </MultiBinding>
+                        </TextBlock.IsVisible>
+                    </TextBlock>
                 </StackPanel>
             </Button>
 

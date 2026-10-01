@@ -12,12 +12,22 @@
   aspect ratio, so portrait photos stand narrow and landscape photos wide.
 
 - **Adjustable filmstrip spacing.** The space between filmstrip tiles can now be set in the
-  settings, just like in the gallery. Both now start a little tighter.
+  settings, just like in the gallery, and starts a little tighter than before.
+
+- **Align and distribute layers.** In the editor, SHIFT+click adds more layers to the selection
+  right on the photo. Buttons in the top bar then line them up left, right, top, bottom or
+  centred, against each other or against the picture, and spread three or more out evenly.
 
 - **Settings from the gallery toolbar.** The gallery now has the settings button in its toolbar,
   in the same place as in the viewer.
 
 ### Fixes
+
+- Undo and redo in the editor now keep the selected layers selected, also when several were
+  selected together. Before, nothing was selected afterwards.
+
+- Resizing several selected layers at once now keeps the frame around them in shape. Before, the
+  frame could jump to a far too tall or wide size as soon as you pulled a handle.
 
 - With a layer selected, color range, luminance range, depth and subject selection now stay
   within that layer instead of picking matching areas across the whole photo. Filling such a

@@ -66,8 +66,8 @@ Namespace ViewModels
         Private _galleryTileCaptionRight As String = TileCaptionSettings.DefaultRight
         Private _filmstripTileFrame As Boolean = True
         Private _filmstripTilesKeepAspect As Boolean = False
-        Private _galleryTileGap As Integer = 8
-        Private _filmstripTileGap As Integer = 8
+        Private _galleryTileGap As Integer = 10
+        Private _filmstripTileGap As Integer = 10
         Private _editorSaveAsOpensTarget As Boolean = False
         Private _galleryShowFooter As Boolean = True
         Private _viewerShowFooter As Boolean = True
@@ -236,8 +236,8 @@ Namespace ViewModels
         Private _savedGalleryTileCaptionRight As String = TileCaptionSettings.DefaultRight
         Private _savedFilmstripTileFrame As Boolean = True
         Private _savedFilmstripTilesKeepAspect As Boolean = False
-        Private _savedGalleryTileGap As Integer = 8
-        Private _savedFilmstripTileGap As Integer = 8
+        Private _savedGalleryTileGap As Integer = 10
+        Private _savedFilmstripTileGap As Integer = 10
         Private _savedEditorSaveAsOpensTarget As Boolean = False
         Private _savedGalleryShowFooter As Boolean = True
         Private _savedViewerShowFooter As Boolean = True
@@ -4776,8 +4776,8 @@ Namespace ViewModels
             SetGalleryTileCaption(TileCaptionSettings.DefaultLeft, TileCaptionSettings.DefaultRight)
             FilmstripTileFrame = True
             FilmstripTilesKeepAspect = False
-            GalleryTileGap = 8
-            FilmstripTileGap = 8
+            GalleryTileGap = 10
+            FilmstripTileGap = 10
             EditorSaveAsOpensTarget = False
             GalleryShowFooter = True
             ViewerShowFooter = True

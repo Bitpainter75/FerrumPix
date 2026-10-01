@@ -9099,4 +9099,37 @@
   <data name="Gilt_f_r_Viewer_Editor_und_den_Streifen_der_Kart_5f7f293b" xml:space="preserve">
     <value>Geldt voor viewer, editor en de strook van de kaart. Bij nul staan de tegels direct naast elkaar.</value>
   </data>
+  <data name="Verteilen_91413cad" xml:space="preserve">
+    <value>Verdelen</value>
+  </data>
+  <data name="Links_ausrichten_3669661c" xml:space="preserve">
+    <value>Links uitlijnen</value>
+  </data>
+  <data name="Horizontal_zentrieren_15523981" xml:space="preserve">
+    <value>Horizontaal centreren</value>
+  </data>
+  <data name="Rechts_ausrichten_735b910f" xml:space="preserve">
+    <value>Rechts uitlijnen</value>
+  </data>
+  <data name="Oben_ausrichten_a9b1a410" xml:space="preserve">
+    <value>Boven uitlijnen</value>
+  </data>
+  <data name="Vertikal_zentrieren_4fa98bae" xml:space="preserve">
+    <value>Verticaal centreren</value>
+  </data>
+  <data name="Unten_ausrichten_f889160d" xml:space="preserve">
+    <value>Onder uitlijnen</value>
+  </data>
+  <data name="Horizontal_verteilen_a7586d3b" xml:space="preserve">
+    <value>Horizontaal verdelen</value>
+  </data>
+  <data name="Vertikal_verteilen_33159403" xml:space="preserve">
+    <value>Verticaal verdelen</value>
+  </data>
+  <data name="Ausrichten_am_Bild_Ein_Klick_richtet_stattdessen_3476356f" xml:space="preserve">
+    <value>Uitlijnen op de afbeelding. Klik om in plaats daarvan op de selectie uit te lijnen</value>
+  </data>
+  <data name="Ausrichten_an_der_Auswahl_Ein_Klick_richtet_stat_20d83c94" xml:space="preserve">
+    <value>Uitlijnen op de selectie. Klik om in plaats daarvan op de afbeelding uit te lijnen</value>
+  </data>
 </root>

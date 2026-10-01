@@ -630,7 +630,7 @@ Namespace ViewModels
         Public ReadOnly Property FilmstripTileMargin As Avalonia.Thickness
             Get
                 Dim gap = If(_mainVm IsNot Nothing AndAlso _mainVm.Settings IsNot Nothing,
-                             _mainVm.Settings.FilmstripTileGap, 8)
+                             _mainVm.Settings.FilmstripTileGap, 10)
                 Return New Avalonia.Thickness(gap / 2.0, 5, gap / 2.0, 5)
             End Get
         End Property

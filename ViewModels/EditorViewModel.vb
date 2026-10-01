@@ -2878,6 +2878,7 @@ Namespace ViewModels
             End If
             Me.RaisePropertyChanged(NameOf(SelectedAnnotationCount))
             Me.RaisePropertyChanged(NameOf(HasMultiAnnotationSelection))
+            Me.RaisePropertyChanged(NameOf(CanDistributeSelection))
             Me.RaisePropertyChanged(NameOf(CanGroupSelectedAnnotations))
             ' Zwei markierte Pfade lassen sich verbinden - der Knopf haengt an genau dieser Menge.
             Me.RaisePropertyChanged(NameOf(CanJoinPaths))
@@ -4178,7 +4179,7 @@ Namespace ViewModels
         Public ReadOnly Property FilmstripTileMargin As Avalonia.Thickness
             Get
                 Dim gap = If(_mainVm IsNot Nothing AndAlso _mainVm.Settings IsNot Nothing,
-                             _mainVm.Settings.FilmstripTileGap, 8)
+                             _mainVm.Settings.FilmstripTileGap, 10)
                 Return New Avalonia.Thickness(gap / 2.0, 5, gap / 2.0, 5)
             End Get
         End Property
@@ -12847,6 +12848,228 @@ Namespace ViewModels
             AfterGroupTransform(beforeRect:=before)
         End Sub
 
+        ' ===================== Ausrichten und Verteilen =====================
+        '
+        ' Gerechnet wird je EINHEIT: eine Gruppe, deren freie Mitglieder alle markiert sind, bleibt
+        ' ein Block und wandert als Ganzes - sonst zerfiele ihre Anordnung beim Ausrichten. Alles
+        ' andere zaehlt einzeln. Die Masse sind dieselben ungedrehten Rechtecke wie bei der
+        ' gemeinsamen Box (GetSelectionBoxDisplayRectPercent), damit Rahmen und Ergebnis
+        ' uebereinstimmen.
+
+        Private _alignToImage As Boolean = False
+        Private _stageHeaderLabelsFit As Boolean = True
+
+        ''' <summary>Passt die mittlere Knopfgruppe der oberen Leiste MIT Beschriftungen zwischen die
+        ''' linke und die rechte Gruppe? Gemessen und gesetzt von der Ansicht
+        ''' (EditorView.UpdateStageHeaderLabelsFit). Die Fensterbreite allein reicht hier nicht: die
+        ''' Mitte sitzt ueber der Buehne, deren Breite an den Panels haengt, und links waechst die
+        ''' Leiste um die Ausrichten-Knoepfe, sobald eine Ebene markiert ist.</summary>
+        Public Property StageHeaderLabelsFit As Boolean
+            Get
+                Return _stageHeaderLabelsFit
+            End Get
+            Set(value As Boolean)
+                Me.RaiseAndSetIfChanged(_stageHeaderLabelsFit, value)
+            End Set
+        End Property
+
+        ''' <summary>Bezug beim Ausrichten: das Bild statt der gemeinsamen Box der Auswahl. Bei nur
+        ''' EINER Einheit gilt immer das Bild - an sich selbst auszurichten taete nichts.</summary>
+        Public Property AlignToImage As Boolean
+            Get
+                Return _alignToImage
+            End Get
+            Set(value As Boolean)
+                If _alignToImage = value Then Return
+                Me.RaiseAndSetIfChanged(_alignToImage, value)
+                Me.RaisePropertyChanged(NameOf(AlignToSelection))
+                Me.RaisePropertyChanged(NameOf(AlignTargetHint))
+            End Set
+        End Property
+
+        ''' <summary>Der Hinweis am Umschalter: was gerade gilt und was ein Klick daraus macht.</summary>
+        Public ReadOnly Property AlignTargetHint As String
+            Get
+                Return If(_alignToImage,
+                          LocalizationService.T("Ausrichten am Bild. Ein Klick richtet stattdessen an der Auswahl aus"),
+                          LocalizationService.T("Ausrichten an der Auswahl. Ein Klick richtet stattdessen am Bild aus"))
+            End Get
+        End Property
+
+        Public ReadOnly Property AlignToSelection As Boolean
+            Get
+                Return Not _alignToImage
+            End Get
+        End Property
+
+        ''' <summary>Verteilen braucht drei Einheiten: die beiden aeussersten bleiben stehen, die
+        ''' dazwischen ruecken auf gleiche Abstaende.</summary>
+        Public ReadOnly Property CanDistributeSelection As Boolean
+            Get
+                Return ArrangeUnits().Count >= 3
+            End Get
+        End Property
+
+        ''' <summary>Muss eine der markierten Ebenen ihr Seitenverhaeltnis halten? Ein QR-Code, ein
+        ''' Bild oder Wasserzeichen-Bild mit Sperre, ein Text auf einem Kreis. Dann skaliert der Rahmen
+        ''' einer Mehrfachauswahl nur proportional - mit dem Verhaeltnis der BOX, denn die Box einer
+        ''' Reihe von QR-Codes ist nicht quadratisch.</summary>
+        Public ReadOnly Property SelectionNeedsProportionalScale As Boolean
+            Get
+                For Each a In SelectedAnnotations
+                    If a Is Nothing Then Continue For
+                    Dim kind = NormalizeAnnotationKind(a.Kind)
+                    If String.Equals(kind, "QR", StringComparison.OrdinalIgnoreCase) Then Return True
+                    If IsCircleTextPath(a.TextPathKind) Then Return True
+                    Dim isImage = String.Equals(kind, "Image", StringComparison.OrdinalIgnoreCase) OrElse
+                                  (String.Equals(kind, "Watermark", StringComparison.OrdinalIgnoreCase) AndAlso
+                                   Not String.IsNullOrWhiteSpace(a.ImagePath))
+                    If isImage AndAlso a.LockAspect Then Return True
+                Next
+                Return False
+            End Get
+        End Property
+
+        Private Function ArrangeUnits() As List(Of List(Of ImageAnnotation))
+            Dim units As New List(Of List(Of ImageAnnotation))()
+            Dim selected = SelectedAnnotations.Where(AddressOf ParticipatesInGroupTransform).ToList()
+            Dim byGroup As New Dictionary(Of String, List(Of ImageAnnotation))(StringComparer.Ordinal)
+            For Each a In selected
+                If Not String.IsNullOrEmpty(a.GroupId) Then
+                    Dim members As List(Of ImageAnnotation) = Nothing
+                    If byGroup.TryGetValue(a.GroupId, members) Then
+                        members.Add(a)
+                        Continue For
+                    End If
+                    Dim groupId = a.GroupId
+                    Dim freeMembers = _annotations.Where(Function(o) o IsNot Nothing AndAlso
+                                                             String.Equals(o.GroupId, groupId, StringComparison.Ordinal) AndAlso
+                                                             ParticipatesInGroupTransform(o)).ToList()
+                    If freeMembers.All(Function(o) selected.Contains(o)) Then
+                        members = New List(Of ImageAnnotation) From {a}
+                        byGroup(groupId) = members
+                        units.Add(members)
+                        Continue For
+                    End If
+                End If
+                units.Add(New List(Of ImageAnnotation) From {a})
+            Next
+            Return units
+        End Function
+
+        Private Function ArrangeUnitRect(unit As List(Of ImageAnnotation)) As (X As Double, Y As Double, Width As Double, Height As Double)
+            Dim left = Double.MaxValue, top = Double.MaxValue
+            Dim right = Double.MinValue, bottom = Double.MinValue
+            For Each a In unit
+                Dim r = StoredAnnotationRectToDisplayPercent(a)
+                If r.Width <= 0 OrElse r.Height <= 0 Then Continue For
+                left = Math.Min(left, r.X)
+                top = Math.Min(top, r.Y)
+                right = Math.Max(right, r.X + r.Width)
+                bottom = Math.Max(bottom, r.Y + r.Height)
+            Next
+            If left > right OrElse top > bottom Then Return (0, 0, 0, 0)
+            Return (left, top, right - left, bottom - top)
+        End Function
+
+        ''' <summary>Richtet die markierten Einheiten aus. <paramref name="mode"/> ist Left, CenterH,
+        ''' Right, Top, CenterV oder Bottom.</summary>
+        Public Sub AlignSelection(mode As String)
+            Dim units = ArrangeUnits()
+            If units.Count = 0 Then Return
+            Dim rects = units.Select(Function(u) ArrangeUnitRect(u)).ToList()
+            If rects.All(Function(r) r.Width <= 0 OrElse r.Height <= 0) Then Return
+
+            Dim reference As (X As Double, Y As Double, Width As Double, Height As Double)
+            If _alignToImage OrElse units.Count = 1 Then
+                reference = (0, 0, 100, 100)
+            Else
+                Dim valid = rects.Where(Function(r) r.Width > 0 AndAlso r.Height > 0).ToList()
+                Dim left = valid.Min(Function(r) r.X)
+                Dim top = valid.Min(Function(r) r.Y)
+                reference = (left, top,
+                             valid.Max(Function(r) r.X + r.Width) - left,
+                             valid.Max(Function(r) r.Y + r.Height) - top)
+            End If
+
+            Dim moves As New List(Of (Unit As List(Of ImageAnnotation), Dx As Double, Dy As Double))()
+            For i = 0 To units.Count - 1
+                Dim r = rects(i)
+                If r.Width <= 0 OrElse r.Height <= 0 Then Continue For
+                Dim dx = 0.0, dy = 0.0
+                Select Case mode
+                    Case "Left" : dx = reference.X - r.X
+                    Case "CenterH" : dx = (reference.X + reference.Width / 2.0) - (r.X + r.Width / 2.0)
+                    Case "Right" : dx = (reference.X + reference.Width) - (r.X + r.Width)
+                    Case "Top" : dy = reference.Y - r.Y
+                    Case "CenterV" : dy = (reference.Y + reference.Height / 2.0) - (r.Y + r.Height / 2.0)
+                    Case "Bottom" : dy = (reference.Y + reference.Height) - (r.Y + r.Height)
+                    Case Else : Return
+                End Select
+                moves.Add((units(i), dx, dy))
+            Next
+            ApplyArrangeMoves(moves, "AnnotationAlign")
+        End Sub
+
+        ''' <summary>Verteilt die markierten Einheiten mit gleichen ABSTAENDEN zwischen ihren Kanten.
+        ''' Die beiden aeussersten bleiben stehen; sortiert wird nach der Mitte.</summary>
+        Public Sub DistributeSelection(horizontal As Boolean)
+            Dim units = ArrangeUnits()
+            Dim items = units.Select(Function(u) (Unit:=u, Rect:=ArrangeUnitRect(u))).
+                              Where(Function(t) t.Rect.Width > 0 AndAlso t.Rect.Height > 0).ToList()
+            If items.Count < 3 Then Return
+            If horizontal Then
+                items = items.OrderBy(Function(t) t.Rect.X + t.Rect.Width / 2.0).ToList()
+            Else
+                items = items.OrderBy(Function(t) t.Rect.Y + t.Rect.Height / 2.0).ToList()
+            End If
+            Dim first = items(0).Rect
+            Dim last = items(items.Count - 1).Rect
+            Dim span = If(horizontal, (last.X + last.Width) - first.X, (last.Y + last.Height) - first.Y)
+            Dim occupied = items.Sum(Function(t) If(horizontal, t.Rect.Width, t.Rect.Height))
+            Dim gap = (span - occupied) / (items.Count - 1)
+
+            Dim moves As New List(Of (Unit As List(Of ImageAnnotation), Dx As Double, Dy As Double))()
+            Dim position = If(horizontal, first.X + first.Width, first.Y + first.Height) + gap
+            For i = 1 To items.Count - 2
+                Dim r = items(i).Rect
+                If horizontal Then
+                    moves.Add((items(i).Unit, position - r.X, 0.0))
+                    position += r.Width + gap
+                Else
+                    moves.Add((items(i).Unit, 0.0, position - r.Y))
+                    position += r.Height + gap
+                End If
+            Next
+            ApplyArrangeMoves(moves, "AnnotationDistribute")
+        End Sub
+
+        ''' <summary>Verschiebt jede Einheit um ihren eigenen Betrag, als EIN Schritt im Verlauf. Die
+        ''' Ebenenmaske eines Objekts wandert mit, wie bei jeder anderen Verschiebung.</summary>
+        Private Sub ApplyArrangeMoves(moves As List(Of (Unit As List(Of ImageAnnotation), Dx As Double, Dy As Double)),
+                                      undoName As String)
+            Const epsilon As Double = 0.0001
+            Dim effective = moves.Where(Function(m) Math.Abs(m.Dx) > epsilon OrElse Math.Abs(m.Dy) > epsilon).ToList()
+            If effective.Count = 0 Then Return
+
+            Dim before = SelectionDirtyRect()
+            CaptureUndoState(undoName)
+            For Each move In effective
+                For Each a In move.Unit
+                    Dim r = StoredAnnotationRectToDisplayPercent(a)
+                    If r.Width <= 0 OrElse r.Height <= 0 Then Continue For
+                    Dim mask = ExclusiveMaskOfObject(a)
+                    If mask IsNot Nothing Then
+                        ImageProcessor.TransformMaskRegion(mask, 1.0, 1.0, 0, 0,
+                                                           PercentXToPixels(r.X + move.Dx) - PercentXToPixels(r.X),
+                                                           PercentYToPixels(r.Y + move.Dy) - PercentYToPixels(r.Y))
+                    End If
+                    SetAnnotationDisplayRect(a, r.X + move.Dx, r.Y + move.Dy, r.Width, r.Height)
+                Next
+            Next
+            AfterGroupTransform(beforeRect:=before)
+        End Sub
+
         ''' <summary>Nachbereitung jeder Gruppen-Transformation: Anker zurück in die Editor-Puffer (das
         ''' Eigenschaften-Panel zeigt weiter den Anker), Szene nachziehen. Das Dirty-Rect ist die
         ''' Vereinigung aus ALTER und NEUER Lage aller Mitglieder - die alte Lage steckt bereits in
@@ -15850,6 +16073,9 @@ Namespace ViewModels
         Public ReadOnly Property CreateAdjustmentLayerFromSelectionCommand As ICommand
         Public ReadOnly Property FillSelectionCommand As ICommand
         Public ReadOnly Property SetSelectionModeCommand As ICommand
+        Public ReadOnly Property AlignSelectionCommand As ICommand
+        Public ReadOnly Property DistributeSelectionCommand As ICommand
+        Public ReadOnly Property ToggleAlignTargetCommand As ICommand
         Public ReadOnly Property SetMaskModeCommand As ICommand
         Public ReadOnly Property SetSelectionCombineModeCommand As ICommand
         Public ReadOnly Property SetAnnotationTextPathKindCommand As ICommand
@@ -16358,6 +16584,10 @@ Namespace ViewModels
                 Function() CreateAdjustmentLayerFromSelectionAsync())
             FillSelectionCommand = ReactiveCommand.Create(Sub() FillSelection())
             SetSelectionModeCommand = ReactiveCommand.Create(Of String)(Sub(mode) SetSelectionMode(mode))
+            AlignSelectionCommand = ReactiveCommand.Create(Of String)(Sub(mode) AlignSelection(mode))
+            DistributeSelectionCommand = ReactiveCommand.Create(Of String)(
+                Sub(direction) DistributeSelection(String.Equals(direction, "Horizontal", StringComparison.Ordinal)))
+            ToggleAlignTargetCommand = ReactiveCommand.Create(Sub() AlignToImage = Not AlignToImage)
             SetMaskModeCommand = ReactiveCommand.Create(Of String)(Sub(mode) MaskMode = mode)
             SetSelectionCombineModeCommand = ReactiveCommand.Create(Of String)(Sub(mode) SetSelectionCombineMode(mode))
             SetAnnotationAnchorCommand = ReactiveCommand.Create(Of String)(Sub(anchor) AnnotationAnchor = anchor)
@@ -21806,6 +22036,9 @@ Namespace ViewModels
             If Not String.IsNullOrEmpty(objectLabel) Then Return objectLabel
 
             Select Case propertyName
+                ' Wortgleich mit den Ueberschriften im Auswahlwerkzeug.
+                Case "AnnotationAlign" : Return LocalizationService.T("Ausrichten")
+                Case "AnnotationDistribute" : Return LocalizationService.T("Verteilen")
                 Case NameOf(Exposure) : Return LocalizationService.T("Belichtung")
                 Case NameOf(Brightness) : Return LocalizationService.T("Helligkeit")
                 Case NameOf(Contrast) : Return LocalizationService.T("Kontrast")
@@ -22271,6 +22504,7 @@ Namespace ViewModels
             Dim selectedTextId = SelectedStraightTextAnnotationId()
             Dim selectedTextIndex = SelectedStraightTextAnnotationIndex()
             Dim idsBeforeStep = CurrentAnnotationIds()
+            Dim selectionBeforeStep = CaptureObjectSelectionForHistoryStep()
             Dim entry = _undoStack.Pop()
             ' Der Patch wandert in den Redo-Eintrag: RevertPatch tauscht die Region und hält
             ' danach die Wiederholen-Pixel im selben Objekt (Tausch-Schema im Service).
@@ -22295,6 +22529,7 @@ Namespace ViewModels
             ' Schritt, ohne sichtbar etwas zu tun.
             RestoreWarpSession(entry.WarpSession)
             RestoreSelectedStraightTextAnnotation(selectedTextId, selectedTextIndex, idsBeforeStep)
+            RestoreObjectSelectionAfterHistoryStep(selectionBeforeStep)
             RefreshSelectionAdjustMode()
             If entry.Patch IsNot Nothing AndAlso _workingImage.RevertPatch(entry.Patch) Then
                 OnWorkingImageRegionChanged(entry.Patch.Rect)
@@ -22378,6 +22613,79 @@ Namespace ViewModels
             End If
         End Sub
 
+        ''' <summary>Die Objektauswahl vor einem Schritt in der Historie, als Kennungen: Anker und
+        ''' Zusatzmenge. ApplyAdjustments ersetzt die Objekte durch Klone und raeumt beides ab.</summary>
+        Private Function CaptureObjectSelectionForHistoryStep() As (AnchorId As String, ExtraIds As List(Of String), LayerId As String, LayerExtraIds As List(Of String))
+            Dim anchorId = ""
+            If _selectedAnnotationIndex >= 0 AndAlso _selectedAnnotationIndex < _annotations.Count Then
+                anchorId = If(_annotations(_selectedAnnotationIndex)?.Id, "")
+            End If
+            Return (anchorId, _extraSelectedAnnotations.ToList(),
+                    _selectedMaskedAdjustmentLayerId, _extraSelectedAdjustmentLayers.ToList())
+        End Function
+
+        ''' <summary>Stellt die Objektauswahl nach einem Rueckgaengig oder Wiederholen wieder her,
+        ''' soweit ihre Ebenen im neuen Stand noch existieren. Fehlt der Anker (der Schritt hat ihn
+        ''' angelegt oder geloescht), uebernimmt die erste verbliebene Ebene der Menge.
+        '''
+        ''' <para>Ohne das war nach jedem Rueckgaengig nichts mehr markiert, bei einer
+        ''' Mehrfachauswahl musste man alle Ebenen erneut zusammenklicken. Nur ein einzelner Text
+        ''' kam zurueck (RestoreSelectedStraightTextAnnotation, laeuft davor und bleibt fuer seine
+        ''' Rueckfallregel ueber den Index zustaendig).</para>
+        '''
+        ''' <para>Das Setzen des Ankers raeumt die mitmarkierten Korrekturebenen ab, die das
+        ''' Rueckgaengig selbst ueberleben. Sie werden deshalb vorher gesichert und danach wieder
+        ''' gesetzt - sonst verloere eine gemischte Auswahl (Gruppe mit Korrektur) ihre Haelfte.</para></summary>
+        Private Sub RestoreObjectSelectionAfterHistoryStep(snapshot As (AnchorId As String, ExtraIds As List(Of String), LayerId As String, LayerExtraIds As List(Of String)))
+            Dim wanted As New List(Of String)()
+            If Not String.IsNullOrWhiteSpace(snapshot.AnchorId) Then wanted.Add(snapshot.AnchorId)
+            If snapshot.ExtraIds IsNot Nothing Then wanted.AddRange(snapshot.ExtraIds.Where(Function(id) Not String.IsNullOrWhiteSpace(id)))
+            Dim present = wanted.Where(Function(id) _annotations.Any(Function(a) a IsNot Nothing AndAlso a.Id = id)).
+                                 Distinct(StringComparer.Ordinal).ToList()
+            If present.Count = 0 Then Return
+
+            ' Die Korrekturebenen aus der Sicherung VOR dem Schritt: die Text-Wiederherstellung
+            ' davor kann sie bereits abgeraeumt haben.
+            Dim layerId = snapshot.LayerId
+            Dim layerExtras = If(snapshot.LayerExtraIds, New List(Of String)())
+
+            If _selectedAnnotationIndex < 0 Then
+                Dim anchorIndex = -1
+                For i = 0 To _annotations.Count - 1
+                    If _annotations(i) IsNot Nothing AndAlso _annotations(i).Id = present(0) Then
+                        anchorIndex = i
+                        Exit For
+                    End If
+                Next
+                If anchorIndex < 0 Then Return
+                SelectedAnnotationIndex = anchorIndex
+            End If
+            Dim anchorNowId = If(_selectedAnnotationIndex >= 0 AndAlso _selectedAnnotationIndex < _annotations.Count,
+                                 _annotations(_selectedAnnotationIndex)?.Id, Nothing)
+            Dim added = False
+            For Each id In present
+                If String.Equals(id, anchorNowId, StringComparison.Ordinal) OrElse _extraSelectedAnnotations.Contains(id) Then Continue For
+                _extraSelectedAnnotations.Add(id)
+                added = True
+            Next
+            Dim layersRestored = False
+            If Not String.IsNullOrWhiteSpace(layerId) AndAlso
+               _maskedAdjustmentLayers.Any(Function(l) l IsNot Nothing AndAlso l.Id = layerId) Then
+                _selectedMaskedAdjustmentLayerId = layerId
+                layersRestored = True
+            End If
+            For Each id In layerExtras
+                If _extraSelectedAdjustmentLayers.Contains(id) Then Continue For
+                If Not _maskedAdjustmentLayers.Any(Function(l) l IsNot Nothing AndAlso l.Id = id) Then Continue For
+                _extraSelectedAdjustmentLayers.Add(id)
+                layersRestored = True
+            Next
+            If added OrElse layersRestored Then
+                RaiseMultiSelectionChanged()
+                RequestOverlayStateNotify()
+            End If
+        End Sub
+
         ''' <summary>Nach Undo/Redo kann der wiederhergestellte Text noch denselben Listenindex
         ''' haben. Der Selektions-Setter darf bei gleichem Index zu Recht nichts tun - seine Puffer
         ''' gehören dann aber zum VORHERIGEN Snapshot. Für den abgeleiteten Text-Rahmen müssen sie
@@ -22429,6 +22737,7 @@ Namespace ViewModels
             Dim selectedTextId = SelectedStraightTextAnnotationId()
             Dim selectedTextIndex = SelectedStraightTextAnnotationIndex()
             Dim idsBeforeStep = CurrentAnnotationIds()
+            Dim selectionBeforeStep = CaptureObjectSelectionForHistoryStep()
             Dim entry = _redoStack.Pop()
             ' Spiegelbildlich zum Rueckgaengig: das Arbeitsbild von jetzt geht in den
             ' Rueckgaengig-Eintrag, das des Schritts wird uebernommen.
@@ -22446,6 +22755,7 @@ Namespace ViewModels
             End Try
             RestoreWarpSession(entry.WarpSession)
             RestoreSelectedStraightTextAnnotation(selectedTextId, selectedTextIndex, idsBeforeStep)
+            RestoreObjectSelectionAfterHistoryStep(selectionBeforeStep)
             RefreshSelectionAdjustMode()
             If entry.Patch IsNot Nothing AndAlso _workingImage.ReapplyPatch(entry.Patch) Then
                 OnWorkingImageRegionChanged(entry.Patch.Rect)

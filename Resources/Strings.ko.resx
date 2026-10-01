@@ -9103,4 +9103,37 @@
   <data name="Gilt_f_r_Viewer_Editor_und_den_Streifen_der_Kart_5f7f293b" xml:space="preserve">
     <value>뷰어, 편집기, 지도 스트립에 적용됩니다. 0이면 타일이 바로 붙어 있습니다.</value>
   </data>
+  <data name="Verteilen_91413cad" xml:space="preserve">
+    <value>분배</value>
+  </data>
+  <data name="Links_ausrichten_3669661c" xml:space="preserve">
+    <value>왼쪽 정렬</value>
+  </data>
+  <data name="Horizontal_zentrieren_15523981" xml:space="preserve">
+    <value>가로 가운데 정렬</value>
+  </data>
+  <data name="Rechts_ausrichten_735b910f" xml:space="preserve">
+    <value>오른쪽 정렬</value>
+  </data>
+  <data name="Oben_ausrichten_a9b1a410" xml:space="preserve">
+    <value>위쪽 정렬</value>
+  </data>
+  <data name="Vertikal_zentrieren_4fa98bae" xml:space="preserve">
+    <value>세로 가운데 정렬</value>
+  </data>
+  <data name="Unten_ausrichten_f889160d" xml:space="preserve">
+    <value>아래쪽 정렬</value>
+  </data>
+  <data name="Horizontal_verteilen_a7586d3b" xml:space="preserve">
+    <value>가로로 분배</value>
+  </data>
+  <data name="Vertikal_verteilen_33159403" xml:space="preserve">
+    <value>세로로 분배</value>
+  </data>
+  <data name="Ausrichten_am_Bild_Ein_Klick_richtet_stattdessen_3476356f" xml:space="preserve">
+    <value>이미지에 맞춰 정렬합니다. 클릭하면 선택 영역에 맞춰 정렬합니다</value>
+  </data>
+  <data name="Ausrichten_an_der_Auswahl_Ein_Klick_richtet_stat_20d83c94" xml:space="preserve">
+    <value>선택 영역에 맞춰 정렬합니다. 클릭하면 이미지에 맞춰 정렬합니다</value>
+  </data>
 </root>

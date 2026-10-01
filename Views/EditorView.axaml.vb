@@ -769,7 +769,7 @@ Namespace Views
                 rect.Height / imageRect.Height * 100.0)
         End Sub
 
-        ''' <summary>Objektauswahl per Klick auf die Leinwand. Strg nimmt das Objekt zur bestehenden
+        ''' <summary>Objektauswahl per Klick auf die Leinwand. Strg oder SHIFT nimmt das Objekt zur bestehenden
         ''' Auswahl hinzu bzw. heraus; ohne Strg wird neu ausgewählt - und trifft der Klick ein
         ''' GRUPPEN-Mitglied, wird die ganze Gruppe markiert.</summary>
         ''' <summary>Startet derselbe Druck, der ein Objekt auswählt, auch schon den Zieh-Vorgang?
@@ -788,9 +788,28 @@ Namespace Views
             Return True
         End Function
 
+        ''' <summary>STRG wie SHIFT nehmen eine Ebene zur Auswahl hinzu bzw. wieder heraus. SHIFT
+        ''' zusaetzlich, weil das in Programmen dieser Art der gewohnte Griff ist; im Ebenenpanel
+        ''' bleibt SHIFT dagegen der Bereich von Zeilen, wie in jeder Liste.</summary>
+        Private Shared Function IsAddToSelectionClick(modifiers As KeyModifiers) As Boolean
+            Return PlatformShortcutService.HasSelectionModifier(modifiers) OrElse modifiers.HasFlag(KeyModifiers.Shift)
+        End Function
+
+        ''' <summary>Trifft ein Druck an dieser Stelle eine Ebene? Dieselbe Fangzone wie die
+        ''' Klickpfade auf der Leinwand.</summary>
+        Private Function PressHitsAnnotation(vm As EditorViewModel, canvas As Canvas, pos As Avalonia.Point) As Boolean
+            Dim imageRect = GetDisplayedImageRect(canvas, vm)
+            If imageRect.Width <= 0 OrElse imageRect.Height <= 0 Then Return False
+            Const hitSlopPixels As Double = 10.0
+            Return vm.HitTestAnnotation((pos.X - imageRect.Left) / imageRect.Width * 100.0,
+                                        (pos.Y - imageRect.Top) / imageRect.Height * 100.0,
+                                        hitSlopPixels / imageRect.Width * 100.0,
+                                        hitSlopPixels / imageRect.Height * 100.0) >= 0
+        End Function
+
         Private Shared Sub SelectAnnotationFromCanvas(vm As EditorViewModel, hitIndex As Integer, modifiers As KeyModifiers)
             If vm Is Nothing Then Return
-            If PlatformShortcutService.HasSelectionModifier(modifiers) Then
+            If IsAddToSelectionClick(modifiers) Then
                 vm.ToggleAnnotationInSelection(hitIndex)
             Else
                 vm.SelectAnnotationWithGroup(hitIndex)
@@ -1057,6 +1076,79 @@ Namespace Views
 
         ''' <summary>Quelle der Vorher-Seite: der eigene Decode. Kein UpdateSliderLayout - der
         ''' Teiler steht, wo er steht, es wechselt nur, was links davon gezeigt wird.</summary>
+        Private _stageHeaderFitQueued As Boolean = False
+
+        ''' <summary>Gesammelt nach dem Layoutdurchgang: die Groessenmeldungen kommen mitten aus ihm,
+        ''' und eine Sichtbarkeitsaenderung dort loeste den naechsten aus.</summary>
+        Private Sub QueueStageHeaderLabelsFit()
+            If _stageHeaderFitQueued Then Return
+            _stageHeaderFitQueued = True
+            Dispatcher.UIThread.Post(Sub()
+                                         _stageHeaderFitQueued = False
+                                         UpdateStageHeaderLabelsFit()
+                                     End Sub, DispatcherPriority.Background)
+        End Sub
+
+        ''' <summary>Setzt die mittlere Gruppe der Leiste so, dass sie die linke und die rechte nie
+        ''' ueberdeckt. Der Reihe nach: mittig ueber der Buehne, wenn es dort passt; sonst nach rechts
+        ''' geschoben, solange rechts noch Platz ist; und erst wenn auch das nicht reicht, ohne
+        ''' Beschriftungen. Links waechst die Leiste um die Ausrichten-Knoepfe, sobald eine Ebene
+        ''' markiert ist, und rechts steht meist reichlich Luft - die Beschriftungen gleich
+        ''' wegzunehmen hiesse, Platz zu verschenken.
+        '''
+        ''' <para>Gerechnet wird mit BEIDEN Breiten, mit und ohne Beschriftungen, unabhaengig davon,
+        ''' was gerade gezeigt wird: aus der gezeigten Breite allein schaltete es hin und her - ohne
+        ''' Text passt es, also Text an, mit Text passt es nicht, also wieder aus.</para>
+        '''
+        ''' <para>Verschoben wird ueber eine RenderTransform. Sie aendert das Layout nicht und kann
+        ''' deshalb keinen neuen Durchgang ausloesen, der wieder hierher fuehrt. Die Mitte liegt als
+        ''' eigenes Element ueber der Leiste; verglichen wird in Koordinaten der Ansicht.</para></summary>
+        Private Sub UpdateStageHeaderLabelsFit()
+            Dim vm = TryCast(DataContext, EditorViewModel)
+            Dim left = Me.FindControl(Of Control)("ToolbarLeftButtons")
+            Dim right = Me.FindControl(Of Control)("ToolbarRightButtons")
+            Dim middle = Me.FindControl(Of StackPanel)("StageHeaderButtons")
+            If vm Is Nothing OrElse left Is Nothing OrElse right Is Nothing OrElse middle Is Nothing Then Return
+            If middle.Bounds.Width <= 0 Then Return
+            Dim leftOrigin = Avalonia.VisualExtensions.TranslatePoint(left, New Avalonia.Point(0, 0), Me)
+            Dim rightOrigin = Avalonia.VisualExtensions.TranslatePoint(right, New Avalonia.Point(0, 0), Me)
+            Dim middleOrigin = Avalonia.VisualExtensions.TranslatePoint(middle, New Avalonia.Point(0, 0), Me)
+            If Not leftOrigin.HasValue OrElse Not rightOrigin.HasValue OrElse Not middleOrigin.HasValue Then Return
+
+            ' Die Breite aller Beschriftungen samt ihrem Abstand zum Symbol, gemessen an einer
+            ' Abschrift - eine ausgeblendete Beschriftung misst sich selbst mit null.
+            Dim labelsWidth = 0.0
+            For Each label In middle.GetVisualDescendants().OfType(Of TextBlock)().
+                                     Where(Function(t) t.Classes.Contains("stage-header-label"))
+                Dim probe As New TextBlock With {.Text = label.Text, .FontSize = label.FontSize,
+                                                 .FontFamily = label.FontFamily, .FontWeight = label.FontWeight}
+                probe.Measure(Size.Infinity)
+                labelsWidth += probe.DesiredSize.Width + If(TryCast(label.Parent, StackPanel)?.Spacing, 0.0)
+            Next
+            Dim labelsShown = middle.GetVisualDescendants().OfType(Of TextBlock)().
+                                     Any(Function(t) t.Classes.Contains("stage-header-label") AndAlso t.IsVisible)
+            Dim compactWidth = If(labelsShown, middle.Bounds.Width - labelsWidth, middle.Bounds.Width)
+            Dim fullWidth = compactWidth + labelsWidth
+
+            Const gap As Double = 12
+            ' Die Mitte OHNE die eigene Verschiebung: TranslatePoint rechnet sie mit ein.
+            Dim center = middleOrigin.Value.X - _stageHeaderOffset + middle.Bounds.Width / 2.0
+            Dim leftEdge = leftOrigin.Value.X + left.Bounds.Width + gap
+            Dim rightEdge = rightOrigin.Value.X - gap
+
+            Dim withLabels = vm.AreToolbarLabelsVisible AndAlso rightEdge - leftEdge >= fullWidth
+            vm.StageHeaderLabelsFit = withLabels
+            Dim width = If(withLabels, fullWidth, compactWidth)
+            Dim naturalLeft = center - width / 2.0
+            Dim placedLeft = Math.Max(leftEdge, Math.Min(naturalLeft, rightEdge - width))
+            Dim offset = placedLeft - naturalLeft
+            If Math.Abs(offset - _stageHeaderOffset) < 0.5 Then Return
+            _stageHeaderOffset = offset
+            middle.RenderTransform = If(Math.Abs(offset) < 0.5, Nothing, New TranslateTransform(offset, 0))
+        End Sub
+
+        Private _stageHeaderOffset As Double = 0
+
         Public Sub OnCompareSourceOwnClick(sender As Object, e As RoutedEventArgs)
             SetCompareSource(sender, e, cameraJpeg:=False)
         End Sub
@@ -1192,6 +1284,14 @@ Namespace Views
                 UpdateLayersPanelLayout()
                 UpdateAdjustmentsPanelSide()
                 UpdateCompactGroups(force:=True)
+                ' Die mittlere Gruppe der Leiste muss neu pruefen, ob ihre Beschriftungen passen,
+                ' sobald sich eine der drei Gruppen oder die Ansicht selbst in der Breite aendert.
+                For Each groupName In {"ToolbarLeftButtons", "ToolbarRightButtons", "StageHeaderButtons", "PreviewCanvas"}
+                    Dim group = Me.FindControl(Of Control)(groupName)
+                    If group IsNot Nothing Then AddHandler group.SizeChanged, Sub(sender, args) QueueStageHeaderLabelsFit()
+                Next
+                AddHandler Me.SizeChanged, Sub(sender, args) QueueStageHeaderLabelsFit()
+                QueueStageHeaderLabelsFit()
                 Dim filmstrip = Me.FindControl(Of ListBox)("FilmstripListBox")
                 _filmstripController.AttachTo(filmstrip)
                 If filmstrip IsNot Nothing Then
@@ -4278,6 +4378,8 @@ Namespace Views
             SetGridColumn(Me.FindControl(Of Border)("EditorStageBorder"), stageColumn)
             SetGridColumn(Me.FindControl(Of StackPanel)("StageHeaderButtons"), stageColumn)
             SetGridColumn(Me.FindControl(Of StackPanel)("StageFooterButtons"), stageColumn)
+            ' Die Mitte der Buehne liegt jetzt woanders, ohne dass sich eine Groesse aendert.
+            QueueStageHeaderLabelsFit()
         End Sub
 
         ' Grid.SetColumn wirft bei Nothing; gefunden wird hier aber ueber Namen.
@@ -6389,6 +6491,12 @@ Namespace Views
             Dim rect = GetTextOverlayRect()
             Dim mode = NoHandlesWhileWarping(vm, If(SelectionAcceptsDrag(vm), GetTextDragMode(pos, rect, OverlayHitRotation(vm)), TextDragMode.None))
             If mode = TextDragMode.None Then Return
+            ' Fuenfter Fall: STRG oder SHIFT auf einer Ebene INNERHALB des Rahmens meint die Auswahl,
+            ' nicht das Verschieben. Sonst liesse sich eine Ebene, die im Rahmen der bisherigen
+            ' Auswahl liegt, nie dazunehmen. Nur im Inneren: an den Anfassern haelt SHIFT weiter das
+            ' Seitenverhaeltnis. Durchlassen, der Canvas-Zweig waehlt dann aus.
+            If mode = TextDragMode.Move AndAlso IsAddToSelectionClick(e.KeyModifiers) AndAlso
+               PressHitsAnnotation(vm, canvas, pos) Then Return
 
             ' Doppelklick auf den Drehgriff stellt die Lage wieder gerade.
             ' Muss VOR dem Zug-Start stehen: sonst begänne der zweite Druck einen neuen Rotier-Zug,
@@ -6706,10 +6814,17 @@ Namespace Views
                 right = left + width
                 bottom = top + height
             Else
+                ' EINE MEHRFACHAUSWAHL IST EIN GERADES RECHTECK. Ihre Box ist die achsenparallele Huelle
+                ' der Mitglieder (GetSelectionBoxDisplayRectPercent) und kennt weder Drehung noch die
+                ' Sonderregeln der fuehrenden Ebene. Galten die hier, wurde die Box einer Reihe von
+                ' QR-Codes beim ersten Ziehen auf 1:1 gezwungen und damit viel zu hoch, und die
+                ' Drehung der fuehrenden Ebene verzog die Zugrichtung (Nutzerbefund).
+                Dim multi = vm.HasMultiAnnotationSelection
+                Dim rotation = If(multi, 0.0, vm.AnnotationRotation)
                 ' Die Kanten des Rechtecks liegen im ungedrehten Raum, die Zeigerbewegung kommt aus dem
                 ' Canvas. Ohne Rückdrehung schöbe das Ziehen am rechten Rand eines gekippten Objekts
                 ' dessen Kante schräg - siehe GetTextDragMode.
-                Dim localDelta = RotatePoint(New Avalonia.Point(dx, dy), New Avalonia.Point(0, 0), -vm.AnnotationRotation)
+                Dim localDelta = RotatePoint(New Avalonia.Point(dx, dy), New Avalonia.Point(0, 0), -rotation)
                 Select Case _textDragMode
                     Case TextDragMode.Left, TextDragMode.TopLeft, TextDragMode.BottomLeft
                         left = Math.Min(right - minSize, left + localDelta.X)
@@ -6730,16 +6845,19 @@ Namespace Views
                     ApplyTextResizeSnap(left, top, right, bottom, imageRect, minSize)
                 End If
 
-                Dim isQr = String.Equals(vm.EffectiveAnnotationKind, "QR", StringComparison.OrdinalIgnoreCase)
+                Dim isQr = Not multi AndAlso String.Equals(vm.EffectiveAnnotationKind, "QR", StringComparison.OrdinalIgnoreCase)
                 ' "Seitenverhältnis beibehalten": pro Objekt schaltbar (Checkbox im Panel) fuer
                 ' Bild-Objekte und Wasserzeichen-Bilder - frueher war es fuer Bilder hart verdrahtet
                 ' und Wasserzeichen-Bilder fehlten ganz. Shift erzwingt weiterhin, QR bleibt hart 1:1.
-                Dim isAspectLockedKind = (String.Equals(vm.EffectiveAnnotationKind, "Image", StringComparison.OrdinalIgnoreCase) OrElse
-                                          vm.IsWatermarkImageSource) AndAlso vm.AnnotationLockAspect
+                ' Bei einer Mehrfachauswahl: gesperrt, sobald EINE markierte Ebene ihr Verhaeltnis
+                ' halten muss - und dann mit dem Verhaeltnis der Box, nie mit 1:1.
+                Dim isAspectLockedKind = If(multi, vm.SelectionNeedsProportionalScale,
+                                            (String.Equals(vm.EffectiveAnnotationKind, "Image", StringComparison.OrdinalIgnoreCase) OrElse
+                                             vm.IsWatermarkImageSource) AndAlso vm.AnnotationLockAspect)
                 ' Text auf einem KREISPFAD verhaelt sich wie QR: hart 1:1. Der Kreisradius ist
                 ' min(Breite, Hoehe) - eine nicht-quadratische Box liesse den Selektionsrahmen weit
                 ' um den Text herum stehen.
-                Dim isCircleText = EditorViewModel.IsCircleTextPath(vm.AnnotationTextPathKind)
+                Dim isCircleText = Not multi AndAlso EditorViewModel.IsCircleTextPath(vm.AnnotationTextPathKind)
                 Dim keepAspect = (e.KeyModifiers.HasFlag(KeyModifiers.Shift) OrElse
                                   isAspectLockedKind OrElse
                                   isQr OrElse isCircleText) AndAlso
@@ -6789,11 +6907,11 @@ Namespace Views
                 ' Kante an einer neuen Stelle auf dem Bild. Das Rechteck wird deshalb um genau den
                 ' Betrag nachgeschoben, den diese Mittelpunktsverschiebung durch die Drehung erzeugt:
                 ' t = (C_alt - C_neu) - Rot(C_alt - C_neu). Bei Rotation 0 ist t null.
-                If vm.AnnotationRotation <> 0 Then
+                If rotation <> 0 Then
                     Dim oldCenter = _textDragInitialRect.Center
                     Dim shift = New Avalonia.Point(oldCenter.X - (left + right) / 2.0,
                                                    oldCenter.Y - (top + bottom) / 2.0)
-                    Dim rotatedShift = RotatePoint(shift, New Avalonia.Point(0, 0), vm.AnnotationRotation)
+                    Dim rotatedShift = RotatePoint(shift, New Avalonia.Point(0, 0), rotation)
                     left += shift.X - rotatedShift.X
                     right += shift.X - rotatedShift.X
                     top += shift.Y - rotatedShift.Y
@@ -7004,6 +7122,9 @@ Namespace Views
         Private Sub CaptureTextDragInk(vm As EditorViewModel, canvas As Canvas, rect As Avalonia.Rect)
             _textDragInkLeft = 0 : _textDragInkTop = 0 : _textDragInkRight = 0 : _textDragInkBottom = 0
             If vm Is Nothing OrElse canvas Is Nothing OrElse rect.Width <= 0 OrElse rect.Height <= 0 Then Return
+            ' Die Box einer Mehrfachauswahl hat keine Schriftmetrik - die der fuehrenden Ebene darauf
+            ' anzuwenden, verschoebe ihre Einrastkanten.
+            If vm.HasMultiAnnotationSelection Then Return
             ' Der sichtbare Text-Rahmen liegt bereits auf den Glyphenkanten (siehe
             ' PositionTextOverlayFromViewModel); für das Einrasten gibt es daher keine
             ' Schriftmetrik-Luft mehr abzuziehen.

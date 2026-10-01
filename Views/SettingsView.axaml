@@ -922,7 +922,7 @@
                                 <icons:RoundSlider Width="150"
                                                    Minimum="4"
                                                    Maximum="24"
-                                                   DefaultValue="8"
+                                                   DefaultValue="10"
                                                    Value="{Binding GalleryTileGap}"/>
                                 <TextBlock Text="{Binding GalleryTileGap, StringFormat={}{0} px}"
                                            Foreground="{DynamicResource FP.Text.Secondary}"
@@ -1173,7 +1173,7 @@
                                 <icons:RoundSlider Width="150"
                                                    Minimum="0"
                                                    Maximum="24"
-                                                   DefaultValue="8"
+                                                   DefaultValue="10"
                                                    Value="{Binding FilmstripTileGap}"/>
                                 <TextBlock Text="{Binding FilmstripTileGap, StringFormat={}{0} px}"
                                            Foreground="{DynamicResource FP.Text.Secondary}"

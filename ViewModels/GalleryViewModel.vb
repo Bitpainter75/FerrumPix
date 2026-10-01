@@ -438,7 +438,7 @@ Namespace ViewModels
         ''' GridItemLabelRowHeight).</summary>
         Public ReadOnly Property TileGap As Double
             Get
-                If _mainVm Is Nothing OrElse _mainVm.Settings Is Nothing Then Return 8
+                If _mainVm Is Nothing OrElse _mainVm.Settings Is Nothing Then Return 10
                 Return AppSettingsService.NormalizeGalleryTileGap(_mainVm.Settings.GalleryTileGap)
             End Get
         End Property
