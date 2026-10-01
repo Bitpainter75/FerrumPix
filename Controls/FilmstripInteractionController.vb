@@ -114,6 +114,17 @@ Namespace Controls
             Dim viewWidth = If(sv IsNot Nothing, sv.Viewport.Width, 0.0)
             Dim firstVisible = Math.Max(0, CInt(Math.Floor(scrollX / ItemWidth)) - 1)
             Dim lastVisible = Math.Min(items.Count - 1, CInt(Math.Ceiling((scrollX + Math.Max(viewWidth, ItemWidth)) / ItemWidth)) + 1)
+            ' DIE SCHAETZUNG OBEN STIMMT NUR BEI GLEICH BREITEN KACHELN. Stehen sie im
+            ' Seitenverhaeltnis des Bildes (Einstellung), passen mehr Hochkant-Kacheln in den
+            ' Streifen als geschaetzt, und die hinteren bekaemen kein Vorschaubild. Der wahre Bereich
+            ' kommt deshalb aus den gebauten Kacheln; die Schaetzung bleibt fuer den Fall, dass noch
+            ' keine steht.
+            Dim measuredFirst As Integer
+            Dim measuredLast As Integer
+            If sv IsNot Nothing AndAlso TryGetVisibleRange(sv, items.Count, measuredFirst, measuredLast) Then
+                firstVisible = Math.Max(0, measuredFirst - 1)
+                lastVisible = Math.Min(items.Count - 1, measuredLast + 1)
+            End If
             Dim currentIndex = _getCurrentIndex()
             If currentIndex >= 0 AndAlso currentIndex < items.Count Then
                 Dim currentBuffer = Math.Max(8, CInt(Math.Ceiling(Math.Max(viewWidth, ItemWidth * 6) / ItemWidth)))
@@ -122,6 +133,28 @@ Namespace Controls
             End If
             _tracker.RequestRange(items, firstVisible, lastVisible)
         End Sub
+
+        ''' <summary>Erste und letzte Kachel, die im Sichtfenster des Streifens liegen, gemessen an den
+        ''' gebauten Kacheln der Liste. Falsch, wenn keine gebaut ist oder keine im Fenster liegt.</summary>
+        Private Function TryGetVisibleRange(sv As ScrollViewer, itemCount As Integer,
+                                            ByRef first As Integer, ByRef last As Integer) As Boolean
+            first = Integer.MaxValue
+            last = -1
+            Dim listBox = _owner.FindControl(Of ListBox)(_listBoxName)
+            If listBox Is Nothing Then Return False
+            Dim viewWidth = sv.Viewport.Width
+            For Each container In listBox.GetRealizedContainers()
+                Dim index = listBox.IndexFromContainer(container)
+                If index < 0 OrElse index >= itemCount Then Continue For
+                Dim origin = Avalonia.VisualExtensions.TranslatePoint(container, New Avalonia.Point(0, 0), sv)
+                If Not origin.HasValue Then Continue For
+                Dim left = origin.Value.X
+                If left + container.Bounds.Width < 0 OrElse left > viewWidth Then Continue For
+                first = Math.Min(first, index)
+                last = Math.Max(last, index)
+            Next
+            Return last >= 0
+        End Function
 
         ''' <summary>Die Schnellvorschau selbst liegt in <see cref="QuickPreviewController"/> - sie
         ''' arbeitet hier genauso wie in der Galerie, und zwei Umsetzungen daneben sind zweimal

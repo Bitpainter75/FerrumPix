@@ -9085,4 +9085,22 @@
   <data name="Malebene_anlegen_1c3d1496" xml:space="preserve">
     <value>Tambah lapisan lukis</value>
   </data>
+  <data name="Symbole_der_Fotowand_nur_beim_berfahren_24eca313" xml:space="preserve">
+    <value>Ikon dinding foto hanya saat kursor di atasnya</value>
+  </data>
+  <data name="Blendet_in_der_Fotowand_Sterne_Herz_Metadaten_Sy_c5974ceb" xml:space="preserve">
+    <value>Menyembunyikan bintang, hati, ikon metadata, lingkaran pilihan, dan tombol putar di dinding foto sampai mouse berada di atas ubin. Juga berlaku untuk ikon yang di atas diatur agar selalu tampil.</value>
+  </data>
+  <data name="Kacheln_im_Filmstrip_im_Seitenverh_ltnis_des_Bil_888e68f8" xml:space="preserve">
+    <value>Ubin filmstrip sesuai rasio aspek gambar</value>
+  </data>
+  <data name="Hochformate_stehen_schmal_Querformate_breit_alle_346e8cf8" xml:space="preserve">
+    <value>Gambar potret tampil sempit, lanskap lebar, semuanya dengan tinggi yang sama. Jika dimatikan, semua ubin sama lebar dan gambar dipotong. Berlaku untuk penampil, editor, dan strip peta.</value>
+  </data>
+  <data name="Abstand_zwischen_den_Kacheln_im_Filmstrip_ce7e05e8" xml:space="preserve">
+    <value>Jarak antar ubin filmstrip</value>
+  </data>
+  <data name="Gilt_f_r_Viewer_Editor_und_den_Streifen_der_Kart_5f7f293b" xml:space="preserve">
+    <value>Berlaku untuk penampil, editor, dan strip peta. Pada nol, ubin saling berdempetan.</value>
+  </data>
 </root>

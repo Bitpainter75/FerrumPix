@@ -9081,4 +9081,22 @@
   <data name="Malebene_anlegen_1c3d1496" xml:space="preserve">
     <value>ペイントレイヤーを追加</value>
   </data>
+  <data name="Symbole_der_Fotowand_nur_beim_berfahren_24eca313" xml:space="preserve">
+    <value>フォトウォールのアイコンをホバー時のみ表示</value>
+  </data>
+  <data name="Blendet_in_der_Fotowand_Sterne_Herz_Metadaten_Sy_c5974ceb" xml:space="preserve">
+    <value>フォトウォールでは、マウスがタイルの上に来るまで星、ハート、メタデータのアイコン、選択サークル、再生ボタンを隠します。上で常に表示に設定したアイコンにも適用されます。</value>
+  </data>
+  <data name="Kacheln_im_Filmstrip_im_Seitenverh_ltnis_des_Bil_888e68f8" xml:space="preserve">
+    <value>フィルムストリップのタイルを画像の縦横比で表示</value>
+  </data>
+  <data name="Hochformate_stehen_schmal_Querformate_breit_alle_346e8cf8" xml:space="preserve">
+    <value>縦向きの画像は細く、横向きの画像は広く、すべて同じ高さで表示します。オフにするとすべてのタイルが同じ幅になり、画像はトリミングされます。ビューア、エディター、地図のストリップに適用されます。</value>
+  </data>
+  <data name="Abstand_zwischen_den_Kacheln_im_Filmstrip_ce7e05e8" xml:space="preserve">
+    <value>フィルムストリップのタイル間隔</value>
+  </data>
+  <data name="Gilt_f_r_Viewer_Editor_und_den_Streifen_der_Kart_5f7f293b" xml:space="preserve">
+    <value>ビューア、エディター、地図のストリップに適用されます。0 にするとタイルが隙間なく並びます。</value>
+  </data>
 </root>

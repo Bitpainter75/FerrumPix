@@ -583,7 +583,8 @@
                     </ListBox.ItemsPanel>
                     <ListBox.ItemTemplate>
                         <DataTemplate DataType="{x:Type models:ImageItem}">
-                            <Border Width="148" Height="100"
+                            <Border Height="100"
+                                    Margin="{Binding DataContext.FilmstripTileMargin, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                     Classes="thumb-card"
                                     Classes.flat="{Binding DataContext.FilmstripTilesAreFlat, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                     Classes.selected="{Binding IsSelected}"
@@ -594,6 +595,15 @@
                                     ToolTip.Placement="Top"
                                     ToolTip.VerticalOffset="-6"
                                     PointerExited="OnFilmstripItemPointerExited">
+                                <!-- Breite nach dem Seitenverhaeltnis des Bildes, wenn in den Einstellungen
+                                     so gewaehlt; sonst die festen 148 (FilmstripTileWidthConverter). -->
+                                <Border.Width>
+                                    <MultiBinding Converter="{StaticResource FilmstripTileWidthConverter}">
+                                        <Binding Path="DisplayAspectRatio"/>
+                                        <Binding Path="DataContext.FilmstripTilesKeepAspect"
+                                                 RelativeSource="{RelativeSource AncestorType=UserControl}"/>
+                                    </MultiBinding>
+                                </Border.Width>
                                 <!-- Nach einem Moment Verweilen, nicht schon beim Ueberfahren: der
                                      Name und dieselben Angaben wie unter den Galeriekacheln, aus dem
                                      Katalog, im Stil des Overlays der Metadaten-Plaketten

@@ -9085,4 +9085,22 @@
   <data name="Malebene_anlegen_1c3d1496" xml:space="preserve">
     <value>रंग लेयर जोड़ें</value>
   </data>
+  <data name="Symbole_der_Fotowand_nur_beim_berfahren_24eca313" xml:space="preserve">
+    <value>फ़ोटो दीवार के आइकन केवल माउस ले जाने पर</value>
+  </data>
+  <data name="Blendet_in_der_Fotowand_Sterne_Herz_Metadaten_Sy_c5974ceb" xml:space="preserve">
+    <value>फ़ोटो दीवार में तारे, दिल, मेटाडेटा आइकन, चयन वृत्त और चलाएँ बटन तब तक छिपाता है जब तक माउस टाइल के ऊपर न हो। ऊपर हमेशा दिखाएँ पर सेट आइकनों पर भी लागू होता है।</value>
+  </data>
+  <data name="Kacheln_im_Filmstrip_im_Seitenverh_ltnis_des_Bil_888e68f8" xml:space="preserve">
+    <value>फ़िल्मस्ट्रिप की टाइलें चित्र के पक्षानुपात में</value>
+  </data>
+  <data name="Hochformate_stehen_schmal_Querformate_breit_alle_346e8cf8" xml:space="preserve">
+    <value>खड़ी तस्वीरें संकरी और आड़ी तस्वीरें चौड़ी दिखती हैं, सभी एक ही ऊँचाई में। बंद होने पर सभी टाइलें एक जैसी चौड़ी होती हैं और चित्र काटा जाता है। व्यूअर, एडिटर और नक्शे की पट्टी पर लागू होता है।</value>
+  </data>
+  <data name="Abstand_zwischen_den_Kacheln_im_Filmstrip_ce7e05e8" xml:space="preserve">
+    <value>फ़िल्मस्ट्रिप की टाइलों के बीच दूरी</value>
+  </data>
+  <data name="Gilt_f_r_Viewer_Editor_und_den_Streifen_der_Kart_5f7f293b" xml:space="preserve">
+    <value>व्यूअर, एडिटर और नक्शे की पट्टी पर लागू होता है। शून्य पर टाइलें एक दूसरे से सटी रहती हैं।</value>
+  </data>
 </root>

@@ -625,6 +625,25 @@ Namespace ViewModels
             End Get
         End Property
 
+        ''' <summary>Aussenrand einer Filmstreifen-Kachel: der halbe eingestellte Abstand links und
+        ''' rechts, oben und unten fest 5 wie im Stil der thumb-card (die Hoehe des Streifens steht).</summary>
+        Public ReadOnly Property FilmstripTileMargin As Avalonia.Thickness
+            Get
+                Dim gap = If(_mainVm IsNot Nothing AndAlso _mainVm.Settings IsNot Nothing,
+                             _mainVm.Settings.FilmstripTileGap, 8)
+                Return New Avalonia.Thickness(gap / 2.0, 5, gap / 2.0, 5)
+            End Get
+        End Property
+
+        ''' <summary>Schalter aus den Einstellungen: Breite der Filmstreifen-Kachel nach dem
+        ''' Seitenverhaeltnis des Bildes (FilmstripTileWidthConverter).</summary>
+        Public ReadOnly Property FilmstripTilesKeepAspect As Boolean
+            Get
+                Return _mainVm IsNot Nothing AndAlso _mainVm.Settings IsNot Nothing AndAlso
+                       _mainVm.Settings.FilmstripTilesKeepAspect
+            End Get
+        End Property
+
         ''' <summary>Kachel des Filmstreifens ohne runde Ecken und ohne ruhenden Rahmen
         ''' (Einstellung). Der Akzentrahmen der Auswahl bleibt und wird nur eckig - im Filmstreifen
         ''' ist er sogar wichtiger als in der Galerie, weil er das AKTUELLE Bild zeigt.</summary>

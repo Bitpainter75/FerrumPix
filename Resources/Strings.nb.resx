@@ -9081,4 +9081,22 @@
   <data name="Malebene_anlegen_1c3d1496" xml:space="preserve">
     <value>Legg til malelag</value>
   </data>
+  <data name="Symbole_der_Fotowand_nur_beim_berfahren_24eca313" xml:space="preserve">
+    <value>Vis fotoveggens symboler bare ved peking</value>
+  </data>
+  <data name="Blendet_in_der_Fotowand_Sterne_Herz_Metadaten_Sy_c5974ceb" xml:space="preserve">
+    <value>Skjuler stjerner, hjerte, metadatasymboler, markeringssirkel og avspillingsknapp i fotoveggen til musen er over flisen. Gjelder også symboler som ovenfor er satt til alltid å vises.</value>
+  </data>
+  <data name="Kacheln_im_Filmstrip_im_Seitenverh_ltnis_des_Bil_888e68f8" xml:space="preserve">
+    <value>Fliser i filmstripen i bildets sideforhold</value>
+  </data>
+  <data name="Hochformate_stehen_schmal_Querformate_breit_alle_346e8cf8" xml:space="preserve">
+    <value>Stående bilder blir smale, liggende brede, alle med samme høyde. Slått av er alle fliser like brede, og bildet beskjæres. Gjelder visningen, redigeringen og kartets stripe.</value>
+  </data>
+  <data name="Abstand_zwischen_den_Kacheln_im_Filmstrip_ce7e05e8" xml:space="preserve">
+    <value>Avstand mellom flisene i filmstripen</value>
+  </data>
+  <data name="Gilt_f_r_Viewer_Editor_und_den_Streifen_der_Kart_5f7f293b" xml:space="preserve">
+    <value>Gjelder visningen, redigeringen og kartets stripe. Ved null står flisene tett inntil hverandre.</value>
+  </data>
 </root>

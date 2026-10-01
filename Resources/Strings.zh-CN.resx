@@ -9039,4 +9039,22 @@
   <data name="Malebene_anlegen_1c3d1496" xml:space="preserve">
     <value>添加绘画图层</value>
   </data>
+  <data name="Symbole_der_Fotowand_nur_beim_berfahren_24eca313" xml:space="preserve">
+    <value>照片墙图标仅在悬停时显示</value>
+  </data>
+  <data name="Blendet_in_der_Fotowand_Sterne_Herz_Metadaten_Sy_c5974ceb" xml:space="preserve">
+    <value>在照片墙中隐藏星级、爱心、元数据图标、选择圆圈和播放按钮，直到鼠标移到缩略图上。也适用于上方设为始终显示的图标。</value>
+  </data>
+  <data name="Kacheln_im_Filmstrip_im_Seitenverh_ltnis_des_Bil_888e68f8" xml:space="preserve">
+    <value>胶片条缩略图按图像宽高比显示</value>
+  </data>
+  <data name="Hochformate_stehen_schmal_Querformate_breit_alle_346e8cf8" xml:space="preserve">
+    <value>竖图窄、横图宽，高度相同。关闭时所有缩略图宽度相同，图像会被裁切。适用于查看器、编辑器和地图条。</value>
+  </data>
+  <data name="Abstand_zwischen_den_Kacheln_im_Filmstrip_ce7e05e8" xml:space="preserve">
+    <value>胶片条缩略图间距</value>
+  </data>
+  <data name="Gilt_f_r_Viewer_Editor_und_den_Streifen_der_Kart_5f7f293b" xml:space="preserve">
+    <value>适用于查看器、编辑器和地图条。为零时缩略图紧挨在一起。</value>
+  </data>
 </root>

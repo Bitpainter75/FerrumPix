@@ -251,6 +251,13 @@ Namespace Services
         ''' dicht, in der Galerie mit Abstand.
         Public Property GalleryTileFrame As Boolean = True
         Public Property FilmstripTileFrame As Boolean = True
+        ''' Kacheln des Filmstreifens im Seitenverhaeltnis des Bildes statt alle gleich breit. Ab
+        ''' Werk aus, das ist das bisherige Aussehen.
+        Public Property FilmstripTilesKeepAspect As Boolean = False
+        ''' In der FOTOWAND alle Aufsaetze der Kachel (Sterne, Herz, Metadaten, Auswahlkreis,
+        ''' Abspielknopf) erst beim Ueberfahren zeigen, auch die auf "immer anzeigen" gestellten.
+        ''' AB WERK AN: die Fotowand soll Bild zeigen, nicht Bedienelemente.
+        Public Property GalleryWallBadgesOnHover As Boolean = True
         ''' Die Angaben unter einer Galeriekachel und in der Liste: bis zu drei Zeilen, je Zeile
         ''' eine Angabe links und eine rechts, hier je Seite die drei Zeilen (siehe
         ''' Models.TileCaptionSettings). Ab Werk eine Zeile mit dem Aufnahmedatum links und der
@@ -264,12 +271,17 @@ Namespace Services
         ''' immer neu geladen: dabei wandern die Regler in die Bildpunkte, und ohne das Neuladen
         ''' legte das naechste Speichern denselben Zuschnitt ein zweites Mal darauf.
         Public Property EditorSaveAsOpensTarget As Boolean = False
-        ''' Abstand zwischen zwei Kacheln der Galerie in Bildpunkten, in ALLEN Kachelansichten. 10
-        ''' ist der bisherige Wert und kommt vom Aussenrand der Kachel (zweimal 5). Die Zahl geht
+        ''' Abstand zwischen zwei Kacheln der Galerie in Bildpunkten, in ALLEN Kachelansichten. Ab
+        ''' Werk 8 (Vorgabe Patrick 2026-10-01; vorher 10, der Aussenrand der Kachel). Die Zahl geht
         ''' NICHT nur in die Optik: aus ihr und dem Kachelmass rechnen Spaltenzahl, Zeilenhoehe und
         ''' damit der ganze Rollbereich - siehe GalleryViewModel.GridColumnPitch.
         ''' Die Liste bleibt aussen vor, eine Zeile ist keine Kachel.
-        Public Property GalleryTileGap As Integer = 10
+        Public Property GalleryTileGap As Integer = 8
+        ''' Abstand zwischen zwei Kacheln des Filmstreifens (Betrachter, Editor, Streifen der Karte),
+        ''' in Bildpunkten. Ab Werk 8 wie die Galerie (Vorgabe Patrick); vorher standen fest 18 (zweimal 5
+        ''' Aussenrand der Kachel und 8 am Listeneintrag). Nur waagerecht; die Hoehe des Streifens
+        ''' steht fest.
+        Public Property FilmstripTileGap As Integer = 8
         ''' Fusszeile am unteren Rand, je Bereich getrennt. AB WERK AN: sie traegt nicht nur Angaben
         ''' zum Bild, sondern auch Bedienelemente (Menue, Zoom, Bewertung, im Betrachter und im Editor
         ''' zusaetzlich den Filmstreifen). Wer die Bildflaeche maximal will, schaltet sie dort ab, wo
@@ -1728,6 +1740,15 @@ Namespace Services
         Public Shared Function NormalizeGalleryTileGap(value As Integer) As Integer
             If value < GalleryTileGapMinimum Then Return GalleryTileGapMinimum
             If value > GalleryTileGapMaximum Then Return GalleryTileGapMaximum
+            Return value
+        End Function
+
+        Public Const FilmstripTileGapMinimum As Integer = 0
+        Public Const FilmstripTileGapMaximum As Integer = 24
+
+        Public Shared Function NormalizeFilmstripTileGap(value As Integer) As Integer
+            If value < FilmstripTileGapMinimum Then Return FilmstripTileGapMinimum
+            If value > FilmstripTileGapMaximum Then Return FilmstripTileGapMaximum
             Return value
         End Function
 

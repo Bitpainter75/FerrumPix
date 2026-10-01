@@ -5,6 +5,15 @@
 - The healing brush now looks at the spot before repairing it. On an even surface it only fills
   from even areas, so removing one line of text no longer drags in pieces of the lines above.
 
+- **Calmer photo wall.** Stars, heart and the other icons on a photo wall tile now only show
+  while the mouse is over it. A new setting turns this off again.
+
+- **Filmstrip in the photo's shape.** A new setting lets the filmstrip tiles follow each photo's
+  aspect ratio, so portrait photos stand narrow and landscape photos wide.
+
+- **Adjustable filmstrip spacing.** The space between filmstrip tiles can now be set in the
+  settings, just like in the gallery. Both now start a little tighter.
+
 ### Fixes
 
 - With a layer selected, color range, luminance range, depth and subject selection now stay

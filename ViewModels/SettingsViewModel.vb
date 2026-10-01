@@ -61,10 +61,13 @@ Namespace ViewModels
         Private _viewerShowFilmstrip As Boolean = True
         Private _filmstripItemBadgesVisible As Boolean = False
         Private _galleryTileFrame As Boolean = True
+        Private _galleryWallBadgesOnHover As Boolean = True
         Private _galleryTileCaptionLeft As String = TileCaptionSettings.DefaultLeft
         Private _galleryTileCaptionRight As String = TileCaptionSettings.DefaultRight
         Private _filmstripTileFrame As Boolean = True
-        Private _galleryTileGap As Integer = 10
+        Private _filmstripTilesKeepAspect As Boolean = False
+        Private _galleryTileGap As Integer = 8
+        Private _filmstripTileGap As Integer = 8
         Private _editorSaveAsOpensTarget As Boolean = False
         Private _galleryShowFooter As Boolean = True
         Private _viewerShowFooter As Boolean = True
@@ -228,10 +231,13 @@ Namespace ViewModels
         Private _savedViewerShowFilmstrip As Boolean = True
         Private _savedFilmstripItemBadgesVisible As Boolean = False
         Private _savedGalleryTileFrame As Boolean = True
+        Private _savedGalleryWallBadgesOnHover As Boolean = True
         Private _savedGalleryTileCaptionLeft As String = TileCaptionSettings.DefaultLeft
         Private _savedGalleryTileCaptionRight As String = TileCaptionSettings.DefaultRight
         Private _savedFilmstripTileFrame As Boolean = True
-        Private _savedGalleryTileGap As Integer = 10
+        Private _savedFilmstripTilesKeepAspect As Boolean = False
+        Private _savedGalleryTileGap As Integer = 8
+        Private _savedFilmstripTileGap As Integer = 8
         Private _savedEditorSaveAsOpensTarget As Boolean = False
         Private _savedGalleryShowFooter As Boolean = True
         Private _savedViewerShowFooter As Boolean = True
@@ -1917,6 +1923,21 @@ Namespace ViewModels
             End Set
         End Property
 
+        ''' <summary>In der Fotowand alle Aufsaetze der Kachel erst beim Ueberfahren zeigen, auch
+        ''' die, die fuer die Galerie auf "immer anzeigen" stehen. Raster, Liste und Gruppen
+        ''' bleiben davon unberuehrt.</summary>
+        Public Property GalleryWallBadgesOnHover As Boolean
+            Get
+                Return _galleryWallBadgesOnHover
+            End Get
+            Set(value As Boolean)
+                If _galleryWallBadgesOnHover = value Then Return
+                Me.RaiseAndSetIfChanged(_galleryWallBadgesOnHover, value)
+                _mainVm?.RefreshLayoutBindings()
+                SaveLayoutSettings()
+            End Set
+        End Property
+
         ''' <summary>Die Auswahllisten fuer die Angaben unter einer Kachel: drei Zeilen, je eine
         ''' Auswahl links und rechts, so angeordnet wie unter der Kachel.</summary>
         Public ReadOnly Property TileCaptionRows As New ObservableCollection(Of TileCaptionRow)()
@@ -2028,6 +2049,37 @@ Namespace ViewModels
             Set(value As Boolean)
                 If _filmstripTileFrame = value Then Return
                 Me.RaiseAndSetIfChanged(_filmstripTileFrame, value)
+                _mainVm?.RefreshLayoutBindings()
+                SaveLayoutSettings()
+            End Set
+        End Property
+
+        ''' <summary>Abstand zwischen zwei Kacheln des Filmstreifens, wie GalleryTileGap fuer die
+        ''' Galerie. Geht ueber RefreshLayoutBindings: anders als in der Fotowand haengt hier keine
+        ''' Tabelle daran, die neu gebaut werden muesste.</summary>
+        Public Property FilmstripTileGap As Integer
+            Get
+                Return _filmstripTileGap
+            End Get
+            Set(value As Integer)
+                value = AppSettingsService.NormalizeFilmstripTileGap(value)
+                If _filmstripTileGap = value Then Return
+                Me.RaiseAndSetIfChanged(_filmstripTileGap, value)
+                _mainVm?.RefreshLayoutBindings()
+                SaveLayoutSettings()
+            End Set
+        End Property
+
+        ''' <summary>Kacheln des Filmstreifens im Seitenverhaeltnis des Bildes: gleiche Hoehe,
+        ''' hochkant schmal, quer breit. Aus stehen alle gleich breit und werden zugeschnitten.
+        ''' Die Breite rechnet Converters.FilmstripTileWidthConverter.</summary>
+        Public Property FilmstripTilesKeepAspect As Boolean
+            Get
+                Return _filmstripTilesKeepAspect
+            End Get
+            Set(value As Boolean)
+                If _filmstripTilesKeepAspect = value Then Return
+                Me.RaiseAndSetIfChanged(_filmstripTilesKeepAspect, value)
                 _mainVm?.RefreshLayoutBindings()
                 SaveLayoutSettings()
             End Set
@@ -4063,10 +4115,13 @@ Namespace ViewModels
             _viewerShowFilmstrip = _appSettings.ViewerShowFilmstrip
             _filmstripItemBadgesVisible = _appSettings.FilmstripItemBadgesVisible
             _galleryTileFrame = _appSettings.GalleryTileFrame
+            _galleryWallBadgesOnHover = _appSettings.GalleryWallBadgesOnHover
             _galleryTileCaptionLeft = TileCaptionSettings.Format(TileCaptionSettings.Parse(_appSettings.GalleryTileCaptionLeft))
             _galleryTileCaptionRight = TileCaptionSettings.Format(TileCaptionSettings.Parse(_appSettings.GalleryTileCaptionRight))
             _filmstripTileFrame = _appSettings.FilmstripTileFrame
+            _filmstripTilesKeepAspect = _appSettings.FilmstripTilesKeepAspect
             _galleryTileGap = AppSettingsService.NormalizeGalleryTileGap(_appSettings.GalleryTileGap)
+            _filmstripTileGap = AppSettingsService.NormalizeFilmstripTileGap(_appSettings.FilmstripTileGap)
             _editorSaveAsOpensTarget = _appSettings.EditorSaveAsOpensTarget
             _galleryShowFooter = _appSettings.GalleryShowFooter
             _viewerShowFooter = _appSettings.ViewerShowFooter
@@ -4462,10 +4517,13 @@ Namespace ViewModels
             _savedViewerShowFilmstrip = _viewerShowFilmstrip
             _savedFilmstripItemBadgesVisible = _filmstripItemBadgesVisible
             _savedGalleryTileFrame = _galleryTileFrame
+            _savedGalleryWallBadgesOnHover = _galleryWallBadgesOnHover
             _savedGalleryTileCaptionLeft = _galleryTileCaptionLeft
             _savedGalleryTileCaptionRight = _galleryTileCaptionRight
             _savedFilmstripTileFrame = _filmstripTileFrame
+            _savedFilmstripTilesKeepAspect = _filmstripTilesKeepAspect
             _savedGalleryTileGap = _galleryTileGap
+            _savedFilmstripTileGap = _filmstripTileGap
             _savedEditorSaveAsOpensTarget = _editorSaveAsOpensTarget
             _savedGalleryShowFooter = _galleryShowFooter
             _savedViewerShowFooter = _viewerShowFooter
@@ -4579,9 +4637,12 @@ Namespace ViewModels
             ViewerShowFilmstrip = _savedViewerShowFilmstrip
             FilmstripItemBadgesVisible = _savedFilmstripItemBadgesVisible
             GalleryTileFrame = _savedGalleryTileFrame
+            GalleryWallBadgesOnHover = _savedGalleryWallBadgesOnHover
             SetGalleryTileCaption(_savedGalleryTileCaptionLeft, _savedGalleryTileCaptionRight)
             FilmstripTileFrame = _savedFilmstripTileFrame
+            FilmstripTilesKeepAspect = _savedFilmstripTilesKeepAspect
             GalleryTileGap = _savedGalleryTileGap
+            FilmstripTileGap = _savedFilmstripTileGap
             EditorSaveAsOpensTarget = _savedEditorSaveAsOpensTarget
             GalleryShowFooter = _savedGalleryShowFooter
             ViewerShowFooter = _savedViewerShowFooter
@@ -4711,9 +4772,12 @@ Namespace ViewModels
             ViewerShowFilmstrip = True
             FilmstripItemBadgesVisible = False
             GalleryTileFrame = True
+            GalleryWallBadgesOnHover = True
             SetGalleryTileCaption(TileCaptionSettings.DefaultLeft, TileCaptionSettings.DefaultRight)
             FilmstripTileFrame = True
-            GalleryTileGap = 10
+            FilmstripTilesKeepAspect = False
+            GalleryTileGap = 8
+            FilmstripTileGap = 8
             EditorSaveAsOpensTarget = False
             GalleryShowFooter = True
             ViewerShowFooter = True
@@ -5013,8 +5077,11 @@ Namespace ViewModels
                                           s.ViewerShowFilmstrip = _viewerShowFilmstrip
                                           s.FilmstripItemBadgesVisible = _filmstripItemBadgesVisible
                                           s.GalleryTileFrame = _galleryTileFrame
+                                          s.GalleryWallBadgesOnHover = _galleryWallBadgesOnHover
                                           s.FilmstripTileFrame = _filmstripTileFrame
+                                          s.FilmstripTilesKeepAspect = _filmstripTilesKeepAspect
                                           s.GalleryTileGap = _galleryTileGap
+                                          s.FilmstripTileGap = _filmstripTileGap
                                           s.GalleryShowFooter = _galleryShowFooter
                                           s.ViewerShowFooter = _viewerShowFooter
                                           s.EditorShowFooter = _editorShowFooter

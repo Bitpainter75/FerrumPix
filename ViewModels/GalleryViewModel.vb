@@ -438,7 +438,7 @@ Namespace ViewModels
         ''' GridItemLabelRowHeight).</summary>
         Public ReadOnly Property TileGap As Double
             Get
-                If _mainVm Is Nothing OrElse _mainVm.Settings Is Nothing Then Return 10
+                If _mainVm Is Nothing OrElse _mainVm.Settings Is Nothing Then Return 8
                 Return AppSettingsService.NormalizeGalleryTileGap(_mainVm.Settings.GalleryTileGap)
             End Get
         End Property
@@ -1301,6 +1301,7 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(TileImageStretch))
                 Me.RaisePropertyChanged(NameOf(TileMargin))
                 Me.RaisePropertyChanged(NameOf(TileImageCornerRadius))
+                Me.RaisePropertyChanged(NameOf(TileBadgesOnHover))
                 InvalidateWallLayout()
                 If isMap Then
                     RefreshMapPoints()
@@ -1456,6 +1457,17 @@ Namespace ViewModels
             Get
                 Return _mainVm IsNot Nothing AndAlso _mainVm.Settings IsNot Nothing AndAlso
                        Not _mainVm.Settings.GalleryTileFrame
+            End Get
+        End Property
+
+        ''' <summary>Alle Aufsaetze der Kachel nur beim Ueberfahren, auch die auf "immer anzeigen"
+        ''' gestellten (Einstellung, gilt NUR fuer die Fotowand). Umgesetzt ueber die Stilklasse
+        ''' <c>badges-on-hover</c> an der Kachel, siehe FerrumPixTheme. Der Akzentrahmen der Auswahl
+        ''' bleibt; er ist kein Aufsatz.</summary>
+        Public ReadOnly Property TileBadgesOnHover As Boolean
+            Get
+                Return IsWallView AndAlso _mainVm IsNot Nothing AndAlso _mainVm.Settings IsNot Nothing AndAlso
+                       _mainVm.Settings.GalleryWallBadgesOnHover
             End Get
         End Property
 

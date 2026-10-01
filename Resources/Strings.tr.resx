@@ -9085,4 +9085,22 @@
   <data name="Malebene_anlegen_1c3d1496" xml:space="preserve">
     <value>Boya katmanı ekle</value>
   </data>
+  <data name="Symbole_der_Fotowand_nur_beim_berfahren_24eca313" xml:space="preserve">
+    <value>Fotoğraf duvarı simgeleri yalnızca üzerine gelince</value>
+  </data>
+  <data name="Blendet_in_der_Fotowand_Sterne_Herz_Metadaten_Sy_c5974ceb" xml:space="preserve">
+    <value>Fotoğraf duvarında yıldızları, kalbi, meta veri simgelerini, seçim dairesini ve oynat düğmesini fare kutucuğun üzerine gelene kadar gizler. Yukarıda her zaman göster olarak ayarlanan simgeler için de geçerlidir.</value>
+  </data>
+  <data name="Kacheln_im_Filmstrip_im_Seitenverh_ltnis_des_Bil_888e68f8" xml:space="preserve">
+    <value>Film şeridi kutucukları görüntünün en boy oranında</value>
+  </data>
+  <data name="Hochformate_stehen_schmal_Querformate_breit_alle_346e8cf8" xml:space="preserve">
+    <value>Dikey fotoğraflar dar, yatay fotoğraflar geniş, hepsi aynı yükseklikte durur. Kapalıyken tüm kutucuklar aynı genişlikte olur ve görüntü kırpılır. Görüntüleyici, düzenleyici ve harita şeridi için geçerlidir.</value>
+  </data>
+  <data name="Abstand_zwischen_den_Kacheln_im_Filmstrip_ce7e05e8" xml:space="preserve">
+    <value>Film şeridi kutucukları arasındaki boşluk</value>
+  </data>
+  <data name="Gilt_f_r_Viewer_Editor_und_den_Streifen_der_Kart_5f7f293b" xml:space="preserve">
+    <value>Görüntüleyici, düzenleyici ve harita şeridi için geçerlidir. Sıfırda kutucuklar yan yana bitişik durur.</value>
+  </data>
 </root>

@@ -1294,9 +1294,11 @@
     <Style Selector="ListBoxItem:selected:pressed /template/ Border">
         <Setter Property="Background" Value="{DynamicResource FP.Sel.Hover}"/>
     </Style>
+    <!-- Kein eigener Abstand am Eintrag: den ganzen Abstand traegt der Rand der Kachel
+         (FilmstripTileMargin, einstellbar, ab Werk 8). -->
     <Style Selector="ListBox.filmstrip-list ListBoxItem">
         <Setter Property="Padding" Value="0"/>
-        <Setter Property="Margin" Value="0,0,8,0"/>
+        <Setter Property="Margin" Value="0"/>
         <Setter Property="CornerRadius" Value="0"/>
     </Style>
     <Style Selector="ListBox.filmstrip-list ListBoxItem:pointerover /template/ ContentPresenter">
@@ -1571,6 +1573,19 @@
         <Setter Property="IsHitTestVisible" Value="True"/>
     </Style>
     <Style Selector=":is(Control).gallery-toggle-badge.badge-always">
+        <Setter Property="Opacity" Value="1"/>
+        <Setter Property="IsHitTestVisible" Value="True"/>
+    </Style>
+    <!-- EINSTELLUNG "Fotowand: Symbole nur beim Ueberfahren" (Klasse badges-on-hover an der Kachel,
+         nur in der Fotowand gesetzt). Versteckt ALLE Aufsaetze, auch die auf badge-always gestellten,
+         dazu Auswahlkreis und Abspielknopf. DIE REIHENFOLGE TRAEGT: das Verstecken steht hinter
+         badge-always und gewinnt damit, das Zeigen beim Ueberfahren steht dahinter und gewinnt
+         wiederum gegen das Verstecken. -->
+    <Style Selector="Border.thumb-card.badges-on-hover :is(Control).gallery-toggle-badge.badge-always, Border.thumb-card.badges-on-hover Button.selection-badge-hit, Border.thumb-card.badges-on-hover Button.video-play-badge">
+        <Setter Property="Opacity" Value="0"/>
+        <Setter Property="IsHitTestVisible" Value="False"/>
+    </Style>
+    <Style Selector="Border.thumb-card.badges-on-hover:pointerover :is(Control).gallery-toggle-badge, Border.thumb-card.badges-on-hover:pointerover Button.selection-badge-hit, Border.thumb-card.badges-on-hover:pointerover Button.video-play-badge">
         <Setter Property="Opacity" Value="1"/>
         <Setter Property="IsHitTestVisible" Value="True"/>
     </Style>

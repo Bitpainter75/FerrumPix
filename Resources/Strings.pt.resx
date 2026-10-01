@@ -9040,4 +9040,22 @@
   <data name="Malebene_anlegen_1c3d1496" xml:space="preserve">
     <value>Adicionar camada de pintura</value>
   </data>
+  <data name="Symbole_der_Fotowand_nur_beim_berfahren_24eca313" xml:space="preserve">
+    <value>Ícones do mural de fotos só ao passar o rato</value>
+  </data>
+  <data name="Blendet_in_der_Fotowand_Sterne_Herz_Metadaten_Sy_c5974ceb" xml:space="preserve">
+    <value>Oculta no mural de fotos as estrelas, o coração, os ícones de metadados, o círculo de seleção e o botão de reprodução até o rato estar sobre a miniatura. Também se aplica aos ícones definidos acima para estarem sempre visíveis.</value>
+  </data>
+  <data name="Kacheln_im_Filmstrip_im_Seitenverh_ltnis_des_Bil_888e68f8" xml:space="preserve">
+    <value>Miniaturas da tira de filme na proporção da imagem</value>
+  </data>
+  <data name="Hochformate_stehen_schmal_Querformate_breit_alle_346e8cf8" xml:space="preserve">
+    <value>As fotos ao alto ficam estreitas e as horizontais largas, todas com a mesma altura. Desativado, todas as miniaturas têm a mesma largura e a imagem é recortada. Aplica-se ao visualizador, ao editor e à tira do mapa.</value>
+  </data>
+  <data name="Abstand_zwischen_den_Kacheln_im_Filmstrip_ce7e05e8" xml:space="preserve">
+    <value>Espaço entre as miniaturas da tira de filme</value>
+  </data>
+  <data name="Gilt_f_r_Viewer_Editor_und_den_Streifen_der_Kart_5f7f293b" xml:space="preserve">
+    <value>Aplica-se ao visualizador, ao editor e à tira do mapa. Com zero, as miniaturas ficam encostadas.</value>
+  </data>
 </root>

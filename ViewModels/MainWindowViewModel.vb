@@ -1055,9 +1055,16 @@ Namespace ViewModels
             ' Bei einem grossen Ordner waere das jedes Mal ein Neuaufbau fuer nichts. Den Abstand
             ' meldet allein sein eigener Setter (SettingsViewModel.GalleryTileGap).
             Gallery?.RaisePropertyChanged(NameOf(GalleryViewModel.TilesAreFlat))
+            Gallery?.RaisePropertyChanged(NameOf(GalleryViewModel.TileBadgesOnHover))
             Gallery?.RaisePropertyChanged(NameOf(GalleryViewModel.TileImageCornerRadius))
             Gallery?.RaisePropertyChanged(NameOf(GalleryViewModel.TileListImageCornerRadius))
             Gallery?.RaisePropertyChanged(NameOf(GalleryViewModel.FilmstripTilesAreFlat))
+            Gallery?.RaisePropertyChanged(NameOf(GalleryViewModel.FilmstripTilesKeepAspect))
+            Viewer?.RaisePropertyChanged(NameOf(ViewerViewModel.FilmstripTilesKeepAspect))
+            Editor?.RaisePropertyChanged(NameOf(EditorViewModel.FilmstripTilesKeepAspect))
+            Gallery?.RaisePropertyChanged(NameOf(GalleryViewModel.FilmstripTileMargin))
+            Viewer?.RaisePropertyChanged(NameOf(ViewerViewModel.FilmstripTileMargin))
+            Editor?.RaisePropertyChanged(NameOf(EditorViewModel.FilmstripTileMargin))
             Gallery?.RaisePropertyChanged(NameOf(GalleryViewModel.FilmstripImageCornerRadius))
             Gallery?.RaisePropertyChanged(NameOf(GalleryViewModel.ShowFilmstripItemBadges))
             Viewer?.RaisePropertyChanged(NameOf(ViewerViewModel.FilmstripTilesAreFlat))

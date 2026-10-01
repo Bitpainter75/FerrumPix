@@ -23,6 +23,11 @@ Namespace Models
             ' Stelle nachgezogen statt in jedem Setter: sonst fehlte die Meldung genau bei dem
             ' Wert, an den beim Schreiben niemand gedacht hat.
             If CaptionSources.Contains(name) Then RaiseCaptionChanged()
+            ' Das Seitenverhaeltnis ist abgeleitet; gebunden wird es von den Filmstreifen, deren
+            ' Kachelbreite ihm folgen kann.
+            If name = NameOf(Thumbnail) OrElse name = NameOf(ImageWidth) OrElse name = NameOf(ImageHeight) Then
+                RaiseEvent PropertyChanged(Me, New PropertyChangedEventArgs(NameOf(DisplayAspectRatio)))
+            End If
         End Sub
 
         Private Shared ReadOnly CaptionSources As New HashSet(Of String)(StringComparer.Ordinal) From {
@@ -1059,6 +1064,8 @@ Namespace Models
         End Property
 
         Private _thumbnail As Bitmap
+        ' Seitenverhaeltnis des zuletzt geladenen Vorschaubildes, siehe DisplayAspectRatio.
+        Private _thumbnailAspectRatio As Double = 0
         Private _thumbState As Integer = 0       ' 0=unloaded, 1=queued/loading, 2=done
         ' Zählt jedes ausdrückliche Verwerfen (ClearThumbnail). Ein Worker merkt sich den Stand beim
         ' Ausreihen und darf sein Ergebnis nur einhängen, wenn er unverändert ist. Ohne das konnte
@@ -1718,14 +1725,21 @@ Namespace Models
         ''' sofort, und fuer die allermeisten Bilder stimmt es.</para>
         '''
         ''' <para>Fuer einen Ordner gibt es keines von beidem, er bekommt in der Wand ein festes
-        ''' Mass.</para></summary>
+        ''' Mass.</para>
+        '''
+        ''' <para>DAS ZULETZT GEMESSENE VORSCHAUBILD GILT WEITER, wenn es aus dem Speicher faellt
+        ''' (siehe DisposeEvictedThumbnails). Ohne das sprang eine Hochkant-Kachel beim
+        ''' Zurueckrollen auf das ungedrehte Katalogmass und erst mit dem neuen Vorschaubild
+        ''' wieder zurueck.</para></summary>
         Public ReadOnly Property DisplayAspectRatio As Double
             Get
                 If IsFolder Then Return 0
                 Dim thumb = _thumbnail
                 If thumb IsNot Nothing AndAlso thumb.PixelSize.Width > 0 AndAlso thumb.PixelSize.Height > 0 Then
-                    Return thumb.PixelSize.Width / CDbl(thumb.PixelSize.Height)
+                    _thumbnailAspectRatio = thumb.PixelSize.Width / CDbl(thumb.PixelSize.Height)
+                    Return _thumbnailAspectRatio
                 End If
+                If _thumbnailAspectRatio > 0 Then Return _thumbnailAspectRatio
                 If _imageWidth > 0 AndAlso _imageHeight > 0 Then Return _imageWidth / CDbl(_imageHeight)
                 Return 0
             End Get
@@ -2255,6 +2269,9 @@ Namespace Models
             SyncLock _thumbnailQueueLock
                 bmp = _thumbnail
                 _thumbnail = Nothing
+                ' Ausdruecklich verworfen heisst: das Bild hat sich geaendert (gedreht, beschnitten).
+                ' Das alte Verhaeltnis gilt dann nicht mehr.
+                _thumbnailAspectRatio = 0
                 If _inViewportQueue Then _viewportQueue.Remove(Me)
                 If _inBackgroundQueue Then _backgroundQueue.Remove(Me)
                 _inViewportQueue = False

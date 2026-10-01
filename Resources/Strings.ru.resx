@@ -9081,4 +9081,22 @@
   <data name="Malebene_anlegen_1c3d1496" xml:space="preserve">
     <value>Добавить слой рисования</value>
   </data>
+  <data name="Symbole_der_Fotowand_nur_beim_berfahren_24eca313" xml:space="preserve">
+    <value>Значки фотостены только при наведении</value>
+  </data>
+  <data name="Blendet_in_der_Fotowand_Sterne_Herz_Metadaten_Sy_c5974ceb" xml:space="preserve">
+    <value>Скрывает на фотостене звёзды, сердце, значки метаданных, кружок выбора и кнопку воспроизведения, пока указатель мыши не окажется над плиткой. Действует и для значков, которые выше настроены на постоянный показ.</value>
+  </data>
+  <data name="Kacheln_im_Filmstrip_im_Seitenverh_ltnis_des_Bil_888e68f8" xml:space="preserve">
+    <value>Плитки киноленты в пропорциях снимка</value>
+  </data>
+  <data name="Hochformate_stehen_schmal_Querformate_breit_alle_346e8cf8" xml:space="preserve">
+    <value>Вертикальные снимки узкие, горизонтальные широкие, все одной высоты. Если выключено, все плитки одинаковой ширины, а снимок обрезается. Действует в просмотрщике, редакторе и на ленте карты.</value>
+  </data>
+  <data name="Abstand_zwischen_den_Kacheln_im_Filmstrip_ce7e05e8" xml:space="preserve">
+    <value>Расстояние между плитками киноленты</value>
+  </data>
+  <data name="Gilt_f_r_Viewer_Editor_und_den_Streifen_der_Kart_5f7f293b" xml:space="preserve">
+    <value>Действует в просмотрщике, редакторе и на ленте карты. При нуле плитки стоят вплотную.</value>
+  </data>
 </root>

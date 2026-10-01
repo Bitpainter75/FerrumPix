@@ -132,6 +132,39 @@ Namespace Converters
         End Function
     End Class
 
+    ''' <summary>Die Breite einer Kachel im Filmstreifen. Gebunden werden das Seitenverhaeltnis des
+    ''' Bildes und der Schalter aus den Einstellungen.
+    '''
+    ''' Aus steht die Kachel wie immer bei 148 x 100. An behaelt sie die Hoehe, und die Breite folgt
+    ''' dem Bild: 96 Punkte Bildhoehe (100 abzueglich des Rahmens von zwei mal zwei) mal Verhaeltnis,
+    ''' plus der Rahmen. Bei 3:2 kommt dabei genau die alte Breite heraus. Gekappt zwischen 1:2 und
+    ''' 5:2: ein Panorama soll den Streifen nicht allein fuellen, ein Streifen von einem Bild nicht
+    ''' zu schmal zum Treffen werden. Was darueber hinausgeht, wird wie bisher zugeschnitten.
+    ''' Unbekanntes Verhaeltnis (Ordner, noch nichts geladen) bekommt die alte Breite.</summary>
+    Public Class FilmstripTileWidthConverter
+        Implements IMultiValueConverter
+
+        Public Const DefaultWidth As Double = 148
+        Private Const ImageHeight As Double = 96
+        Private Const FrameWidth As Double = 4
+        Private Const MinAspect As Double = 0.5
+        Private Const MaxAspect As Double = 2.5
+
+        Public Function Convert(values As IList(Of Object), targetType As Type, parameter As Object,
+                                culture As Globalization.CultureInfo) As Object Implements IMultiValueConverter.Convert
+            If values Is Nothing OrElse values.Count < 2 Then Return DefaultWidth
+            If Not TypeOf values(1) Is Boolean OrElse Not CBool(values(1)) Then Return DefaultWidth
+            If Not TypeOf values(0) Is Double Then Return DefaultWidth
+            Return WidthFor(CDbl(values(0)))
+        End Function
+
+        Public Shared Function WidthFor(aspect As Double) As Double
+            If Double.IsNaN(aspect) OrElse aspect <= 0 Then Return DefaultWidth
+            Dim clamped = Math.Clamp(aspect, MinAspect, MaxAspect)
+            Return Math.Round(ImageHeight * clamped) + FrameWidth
+        End Function
+    End Class
+
     ''' <summary>Wahr, wenn der Parameter NICHT in der gebundenen Komma-Liste steht.
     '''
     ''' Fuer das Ausblenden von Anpassungsgruppen: gebunden wird die Liste der versteckten

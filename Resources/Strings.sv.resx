@@ -9081,4 +9081,22 @@
   <data name="Malebene_anlegen_1c3d1496" xml:space="preserve">
     <value>Lägg till målarlager</value>
   </data>
+  <data name="Symbole_der_Fotowand_nur_beim_berfahren_24eca313" xml:space="preserve">
+    <value>Visa fotoväggens symboler bara vid hovring</value>
+  </data>
+  <data name="Blendet_in_der_Fotowand_Sterne_Herz_Metadaten_Sy_c5974ceb" xml:space="preserve">
+    <value>Döljer stjärnor, hjärta, metadatasymboler, markeringscirkel och uppspelningsknapp i fotoväggen tills musen är över rutan. Gäller även symboler som ovan är inställda på att alltid visas.</value>
+  </data>
+  <data name="Kacheln_im_Filmstrip_im_Seitenverh_ltnis_des_Bil_888e68f8" xml:space="preserve">
+    <value>Rutor i filmremsan i bildens bildformat</value>
+  </data>
+  <data name="Hochformate_stehen_schmal_Querformate_breit_alle_346e8cf8" xml:space="preserve">
+    <value>Stående bilder blir smala, liggande breda, alla med samma höjd. Avstängt är alla rutor lika breda och bilden beskärs. Gäller visaren, redigeraren och kartans remsa.</value>
+  </data>
+  <data name="Abstand_zwischen_den_Kacheln_im_Filmstrip_ce7e05e8" xml:space="preserve">
+    <value>Avstånd mellan rutorna i filmremsan</value>
+  </data>
+  <data name="Gilt_f_r_Viewer_Editor_und_den_Streifen_der_Kart_5f7f293b" xml:space="preserve">
+    <value>Gäller visaren, redigeraren och kartans remsa. Vid noll står rutorna tätt intill varandra.</value>
+  </data>
 </root>

@@ -878,6 +878,14 @@
 
                         <Grid ColumnDefinitions="*,Auto">
                             <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Symbole der Fotowand nur beim Überfahren" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Blendet in der Fotowand Sterne, Herz, Metadaten-Symbole, Auswahlkreis und Abspielknopf aus, bis die Maus über der Kachel steht. Gilt auch für Symbole, die oben auf immer anzeigen stehen." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1" IsChecked="{Binding GalleryWallBadgesOnHover}" OnContent="" OffContent="" VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
                                 <TextBlock Text="Ansicht" FontSize="{DynamicResource FP.Font.Body}"/>
                                 <TextBlock Text="Legt fest, ob die Galerie als Raster, als Liste, in Gruppen oder als Fotowand angezeigt wird. Die Fotowand zeigt jedes Bild in seinem eigenen Seitenverhältnis, ohne Beschriftung und mit schmalem Abstand." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </StackPanel>
@@ -914,7 +922,7 @@
                                 <icons:RoundSlider Width="150"
                                                    Minimum="4"
                                                    Maximum="24"
-                                                   DefaultValue="10"
+                                                   DefaultValue="8"
                                                    Value="{Binding GalleryTileGap}"/>
                                 <TextBlock Text="{Binding GalleryTileGap, StringFormat={}{0} px}"
                                            Foreground="{DynamicResource FP.Text.Secondary}"
@@ -1142,6 +1150,38 @@
                                           OnContent=""
                                           OffContent=""
                                           VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Kacheln im Filmstrip im Seitenverhältnis des Bildes" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Hochformate stehen schmal, Querformate breit, alle in derselben Höhe. Ausgeschaltet sind alle Kacheln gleich breit und das Bild wird zugeschnitten. Gilt für Viewer, Editor und den Streifen der Karte." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1"
+                                          IsChecked="{Binding FilmstripTilesKeepAspect}"
+                                          OnContent=""
+                                          OffContent=""
+                                          VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Abstand zwischen den Kacheln im Filmstrip" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Gilt für Viewer, Editor und den Streifen der Karte. Bei null stehen die Kacheln dicht an dicht." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                                <icons:RoundSlider Width="150"
+                                                   Minimum="0"
+                                                   Maximum="24"
+                                                   DefaultValue="8"
+                                                   Value="{Binding FilmstripTileGap}"/>
+                                <TextBlock Text="{Binding FilmstripTileGap, StringFormat={}{0} px}"
+                                           Foreground="{DynamicResource FP.Text.Secondary}"
+                                           FontSize="{DynamicResource FP.Font.Body}"
+                                           Width="44"
+                                           TextAlignment="Right"
+                                           VerticalAlignment="Center"/>
+                            </StackPanel>
                         </Grid>
 
                         <Grid ColumnDefinitions="*,Auto">
