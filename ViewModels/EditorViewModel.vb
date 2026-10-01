@@ -12930,37 +12930,57 @@ Namespace ViewModels
             End Get
         End Property
 
-        Private Function ArrangeUnits() As List(Of List(Of ImageAnnotation))
-            Dim units As New List(Of List(Of ImageAnnotation))()
+        ''' <summary>Eine Einheit beim Ausrichten: die Objekte, die zusammen wandern, und die Gruppe,
+        ''' fuer die sie stehen (leer bei einem einzelnen Objekt).</summary>
+        Private NotInheritable Class ArrangeUnit
+            Public ReadOnly Members As New List(Of ImageAnnotation)()
+            Public GroupId As String = ""
+        End Class
+
+        ''' <summary>Die Einheiten der Auswahl. Ein Objekt gehoert zur AEUSSERSTEN Gruppe seiner Kette,
+        ''' deren freie Mitglieder - samt denen der Untergruppen - alle markiert sind. Nur nach der
+        ''' direkten Gruppe zu fassen, zerlegte eine markierte Gruppe mit Untergruppen in mehrere
+        ''' Bloecke, und ihre Anordnung ginge beim Ausrichten verloren.</summary>
+        Private Function ArrangeUnits() As List(Of ArrangeUnit)
+            Dim units As New List(Of ArrangeUnit)()
             Dim selected = SelectedAnnotations.Where(AddressOf ParticipatesInGroupTransform).ToList()
-            Dim byGroup As New Dictionary(Of String, List(Of ImageAnnotation))(StringComparer.Ordinal)
+            Dim byGroup As New Dictionary(Of String, ArrangeUnit)(StringComparer.Ordinal)
+            Dim fullySelected As New Dictionary(Of String, Boolean)(StringComparer.Ordinal)
             For Each a In selected
-                If Not String.IsNullOrEmpty(a.GroupId) Then
-                    Dim members As List(Of ImageAnnotation) = Nothing
-                    If byGroup.TryGetValue(a.GroupId, members) Then
-                        members.Add(a)
-                        Continue For
+                Dim rootId = ""
+                For Each grp In AnnotationGroupChain(a.GroupId)
+                    Dim isFull As Boolean
+                    If Not fullySelected.TryGetValue(grp.Id, isFull) Then
+                        isFull = AnnotationsInGroupTree(grp.Id).Where(AddressOf ParticipatesInGroupTransform).
+                                                                All(Function(o) selected.Contains(o))
+                        fullySelected(grp.Id) = isFull
                     End If
-                    Dim groupId = a.GroupId
-                    Dim freeMembers = _annotations.Where(Function(o) o IsNot Nothing AndAlso
-                                                             String.Equals(o.GroupId, groupId, StringComparison.Ordinal) AndAlso
-                                                             ParticipatesInGroupTransform(o)).ToList()
-                    If freeMembers.All(Function(o) selected.Contains(o)) Then
-                        members = New List(Of ImageAnnotation) From {a}
-                        byGroup(groupId) = members
-                        units.Add(members)
-                        Continue For
+                    If isFull Then
+                        rootId = grp.Id
+                        Exit For
                     End If
+                Next
+                If rootId = "" Then
+                    Dim loneUnit As New ArrangeUnit()
+                    loneUnit.Members.Add(a)
+                    units.Add(loneUnit)
+                    Continue For
                 End If
-                units.Add(New List(Of ImageAnnotation) From {a})
+                Dim unit As ArrangeUnit = Nothing
+                If Not byGroup.TryGetValue(rootId, unit) Then
+                    unit = New ArrangeUnit With {.GroupId = rootId}
+                    byGroup(rootId) = unit
+                    units.Add(unit)
+                End If
+                unit.Members.Add(a)
             Next
             Return units
         End Function
 
-        Private Function ArrangeUnitRect(unit As List(Of ImageAnnotation)) As (X As Double, Y As Double, Width As Double, Height As Double)
+        Private Function ArrangeUnitRect(unit As ArrangeUnit) As (X As Double, Y As Double, Width As Double, Height As Double)
             Dim left = Double.MaxValue, top = Double.MaxValue
             Dim right = Double.MinValue, bottom = Double.MinValue
-            For Each a In unit
+            For Each a In unit.Members
                 Dim r = StoredAnnotationRectToDisplayPercent(a)
                 If r.Width <= 0 OrElse r.Height <= 0 Then Continue For
                 left = Math.Min(left, r.X)
@@ -12992,7 +13012,7 @@ Namespace ViewModels
                              valid.Max(Function(r) r.Y + r.Height) - top)
             End If
 
-            Dim moves As New List(Of (Unit As List(Of ImageAnnotation), Dx As Double, Dy As Double))()
+            Dim moves As New List(Of (Unit As ArrangeUnit, Dx As Double, Dy As Double))()
             For i = 0 To units.Count - 1
                 Dim r = rects(i)
                 If r.Width <= 0 OrElse r.Height <= 0 Then Continue For
@@ -13029,7 +13049,7 @@ Namespace ViewModels
             Dim occupied = items.Sum(Function(t) If(horizontal, t.Rect.Width, t.Rect.Height))
             Dim gap = (span - occupied) / (items.Count - 1)
 
-            Dim moves As New List(Of (Unit As List(Of ImageAnnotation), Dx As Double, Dy As Double))()
+            Dim moves As New List(Of (Unit As ArrangeUnit, Dx As Double, Dy As Double))()
             Dim position = If(horizontal, first.X + first.Width, first.Y + first.Height) + gap
             For i = 1 To items.Count - 2
                 Dim r = items(i).Rect
@@ -13044,28 +13064,68 @@ Namespace ViewModels
             ApplyArrangeMoves(moves, "AnnotationDistribute")
         End Sub
 
-        ''' <summary>Verschiebt jede Einheit um ihren eigenen Betrag, als EIN Schritt im Verlauf. Die
-        ''' Ebenenmaske eines Objekts wandert mit, wie bei jeder anderen Verschiebung.</summary>
-        Private Sub ApplyArrangeMoves(moves As List(Of (Unit As List(Of ImageAnnotation), Dx As Double, Dy As Double)),
+        ''' <summary>Gehoert diese Korrekturebene zu der Einheit? Ja, wenn sie in deren Gruppe liegt
+        ''' oder ueber einem ihrer Objekte haengt (StackAboveAnnotationId) - dann ist sie fuer diese
+        ''' Objekte gemacht und muss mit ihnen wandern.</summary>
+        Private Function CorrectionBelongsToUnit(layer As MaskedAdjustmentLayer, unit As ArrangeUnit) As Boolean
+            If layer Is Nothing OrElse unit Is Nothing Then Return False
+            If Not String.IsNullOrEmpty(unit.GroupId) AndAlso IsGroupInside(layer.GroupId, unit.GroupId) Then Return True
+            If String.IsNullOrEmpty(layer.StackAboveAnnotationId) Then Return False
+            Return unit.Members.Any(Function(a) String.Equals(a.Id, layer.StackAboveAnnotationId, StringComparison.Ordinal))
+        End Function
+
+        ''' <summary>Verschiebt jede Einheit um ihren eigenen Betrag, als EIN Schritt im Verlauf.
+        '''
+        ''' <para>Die Masken ziehen mit wie bei jeder anderen Gruppen-Transformation
+        ''' (TransformSelectedMasks), nur je Einheit mit deren eigenem Versatz: die Ebenenmaske jedes
+        ''' Objekts und die Masken der markierten Korrekturebenen, die zu einer Einheit gehoeren.
+        ''' Sonst wirkte die Korrektur einer ausgerichteten Gruppe danach an der alten Bildstelle.
+        ''' Welche Korrekturmasken ueberhaupt wandern duerfen (nicht gesperrt, nicht mit einer
+        ''' fremden Ebene geteilt), sagt MasksOfSelectedCorrections - dieselbe Regel wie dort. Eine
+        ''' markierte Korrektur, die zu keiner Einheit gehoert, bleibt liegen: sie hat keinen
+        ''' Versatz, dem sie folgen koennte. Eine Maske mehrerer Korrekturen wandert nur, wenn alle
+        ''' denselben Versatz haben (siehe unten).</para></summary>
+        Private Sub ApplyArrangeMoves(moves As List(Of (Unit As ArrangeUnit, Dx As Double, Dy As Double)),
                                       undoName As String)
             Const epsilon As Double = 0.0001
             Dim effective = moves.Where(Function(m) Math.Abs(m.Dx) > epsilon OrElse Math.Abs(m.Dy) > epsilon).ToList()
             If effective.Count = 0 Then Return
 
+            Dim correctionMasks = MasksOfSelectedCorrections()
+            Dim selectedLayers = SelectedAdjustmentLayers
             Dim before = SelectionDirtyRect()
             CaptureUndoState(undoName)
             For Each move In effective
-                For Each a In move.Unit
+                Dim offsetX = PercentXToPixels(move.Dx) - PercentXToPixels(0)
+                Dim offsetY = PercentYToPixels(move.Dy) - PercentYToPixels(0)
+                For Each a In move.Unit.Members
                     Dim r = StoredAnnotationRectToDisplayPercent(a)
                     If r.Width <= 0 OrElse r.Height <= 0 Then Continue For
                     Dim mask = ExclusiveMaskOfObject(a)
-                    If mask IsNot Nothing Then
-                        ImageProcessor.TransformMaskRegion(mask, 1.0, 1.0, 0, 0,
-                                                           PercentXToPixels(r.X + move.Dx) - PercentXToPixels(r.X),
-                                                           PercentYToPixels(r.Y + move.Dy) - PercentYToPixels(r.Y))
-                    End If
+                    If mask IsNot Nothing Then ImageProcessor.TransformMaskRegion(mask, 1.0, 1.0, 0, 0, offsetX, offsetY)
                     SetAnnotationDisplayRect(a, r.X + move.Dx, r.Y + move.Dy, r.Width, r.Height)
                 Next
+            Next
+            ' Die Masken der Korrekturebenen, jede genau einmal. EINE MASKE KANN MEHREREN markierten
+            ' Korrekturen gehoeren, und die koennen zu verschiedenen Einheiten mit verschiedenem
+            ' Versatz gehoeren. Dann gibt es keine richtige Lage fuer sie, und sie bleibt liegen. Sie
+            ' wandert nur, wenn ALLE ihre markierten Besitzer denselben Versatz haben; ein Besitzer
+            ' ohne Einheit oder in einer stehenden Einheit zaehlt dabei als Versatz null.
+            For Each mask In correctionMasks
+                Dim owners = selectedLayers.Where(Function(l) l IsNot Nothing AndAlso
+                                                       String.Equals(l.MaskId, mask.Id, StringComparison.Ordinal)).ToList()
+                If owners.Count = 0 Then Continue For
+                Dim offsets = owners.Select(
+                    Function(l)
+                        Dim hit = effective.FirstOrDefault(Function(m) CorrectionBelongsToUnit(l, m.Unit))
+                        Return If(hit.Unit Is Nothing, (Dx:=0.0, Dy:=0.0), (Dx:=hit.Dx, Dy:=hit.Dy))
+                    End Function).ToList()
+                Dim firstOffset = offsets(0)
+                If offsets.Any(Function(o) Math.Abs(o.Dx - firstOffset.Dx) > epsilon OrElse Math.Abs(o.Dy - firstOffset.Dy) > epsilon) Then Continue For
+                If Math.Abs(firstOffset.Dx) <= epsilon AndAlso Math.Abs(firstOffset.Dy) <= epsilon Then Continue For
+                ImageProcessor.TransformMaskRegion(mask, 1.0, 1.0, 0, 0,
+                                                   PercentXToPixels(firstOffset.Dx) - PercentXToPixels(0),
+                                                   PercentYToPixels(firstOffset.Dy) - PercentYToPixels(0))
             Next
             AfterGroupTransform(beforeRect:=before)
         End Sub
@@ -22637,17 +22697,30 @@ Namespace ViewModels
         ''' Rueckgaengig selbst ueberleben. Sie werden deshalb vorher gesichert und danach wieder
         ''' gesetzt - sonst verloere eine gemischte Auswahl (Gruppe mit Korrektur) ihre Haelfte.</para></summary>
         Private Sub RestoreObjectSelectionAfterHistoryStep(snapshot As (AnchorId As String, ExtraIds As List(Of String), LayerId As String, LayerExtraIds As List(Of String)))
+            ' ZWEI UNABHAENGIGE TEILE. Die Korrekturebenen duerfen nicht an den Objekten haengen:
+            ' eine reine Auswahl von Korrekturebenen hat gar keine Objekte, und in einer gemischten
+            ' kann die Objektseite im Zielzustand fehlen. Stand der Ausstieg der Objekte davor, kam
+            ' in beiden Faellen auch von den Korrekturebenen nichts zurueck.
+            Dim objectsRestored = RestoreObjectPartOfSelection(snapshot.AnchorId, snapshot.ExtraIds)
+            ' Die Korrekturebenen aus der Sicherung VOR dem Schritt: die Text-Wiederherstellung und
+            ' das Setzen des Objekt-Ankers oben raeumen sie ab.
+            Dim layersRestored = RestoreAdjustmentLayerPartOfSelection(snapshot.LayerId, snapshot.LayerExtraIds)
+            If objectsRestored OrElse layersRestored Then
+                RaiseLayerPanelSelectionChanged()
+                RaiseMultiSelectionChanged()
+                RequestOverlayStateNotify()
+            End If
+        End Sub
+
+        ''' <summary>Der Objektteil: Anker und Zusatzmenge, soweit ihre Ebenen noch existieren. Fehlt
+        ''' der Anker, uebernimmt die erste verbliebene Ebene der Menge.</summary>
+        Private Function RestoreObjectPartOfSelection(anchorId As String, extraIds As List(Of String)) As Boolean
             Dim wanted As New List(Of String)()
-            If Not String.IsNullOrWhiteSpace(snapshot.AnchorId) Then wanted.Add(snapshot.AnchorId)
-            If snapshot.ExtraIds IsNot Nothing Then wanted.AddRange(snapshot.ExtraIds.Where(Function(id) Not String.IsNullOrWhiteSpace(id)))
+            If Not String.IsNullOrWhiteSpace(anchorId) Then wanted.Add(anchorId)
+            If extraIds IsNot Nothing Then wanted.AddRange(extraIds.Where(Function(id) Not String.IsNullOrWhiteSpace(id)))
             Dim present = wanted.Where(Function(id) _annotations.Any(Function(a) a IsNot Nothing AndAlso a.Id = id)).
                                  Distinct(StringComparer.Ordinal).ToList()
-            If present.Count = 0 Then Return
-
-            ' Die Korrekturebenen aus der Sicherung VOR dem Schritt: die Text-Wiederherstellung
-            ' davor kann sie bereits abgeraeumt haben.
-            Dim layerId = snapshot.LayerId
-            Dim layerExtras = If(snapshot.LayerExtraIds, New List(Of String)())
+            If present.Count = 0 Then Return False
 
             If _selectedAnnotationIndex < 0 Then
                 Dim anchorIndex = -1
@@ -22657,34 +22730,41 @@ Namespace ViewModels
                         Exit For
                     End If
                 Next
-                If anchorIndex < 0 Then Return
+                If anchorIndex < 0 Then Return False
                 SelectedAnnotationIndex = anchorIndex
             End If
             Dim anchorNowId = If(_selectedAnnotationIndex >= 0 AndAlso _selectedAnnotationIndex < _annotations.Count,
                                  _annotations(_selectedAnnotationIndex)?.Id, Nothing)
-            Dim added = False
             For Each id In present
                 If String.Equals(id, anchorNowId, StringComparison.Ordinal) OrElse _extraSelectedAnnotations.Contains(id) Then Continue For
                 _extraSelectedAnnotations.Add(id)
-                added = True
             Next
-            Dim layersRestored = False
-            If Not String.IsNullOrWhiteSpace(layerId) AndAlso
-               _maskedAdjustmentLayers.Any(Function(l) l IsNot Nothing AndAlso l.Id = layerId) Then
-                _selectedMaskedAdjustmentLayerId = layerId
-                layersRestored = True
-            End If
-            For Each id In layerExtras
-                If _extraSelectedAdjustmentLayers.Contains(id) Then Continue For
-                If Not _maskedAdjustmentLayers.Any(Function(l) l IsNot Nothing AndAlso l.Id = id) Then Continue For
+            Return True
+        End Function
+
+        ''' <summary>Der Teil der Korrekturebenen: die fuehrende und die Zusatzmenge, soweit sie noch
+        ''' existieren. Fehlt die fuehrende, uebernimmt die erste verbliebene. Ist keine Objektebene
+        ''' fuehrend, zeigt die Panelzeile auf die fuehrende Korrekturebene - derselbe Stand wie nach
+        ''' ToggleAdjustmentLayerInSelection.</summary>
+        Private Function RestoreAdjustmentLayerPartOfSelection(layerId As String, layerExtraIds As List(Of String)) As Boolean
+            Dim wanted As New List(Of String)()
+            If Not String.IsNullOrWhiteSpace(layerId) Then wanted.Add(layerId)
+            If layerExtraIds IsNot Nothing Then wanted.AddRange(layerExtraIds.Where(Function(id) Not String.IsNullOrWhiteSpace(id)))
+            Dim present = wanted.Where(Function(id) _maskedAdjustmentLayers.Any(Function(l) l IsNot Nothing AndAlso l.Id = id)).
+                                 Distinct(StringComparer.Ordinal).ToList()
+            If present.Count = 0 Then Return False
+
+            _selectedMaskedAdjustmentLayerId = present(0)
+            _extraSelectedAdjustmentLayers.Clear()
+            For Each id In present.Skip(1)
                 _extraSelectedAdjustmentLayers.Add(id)
-                layersRestored = True
             Next
-            If added OrElse layersRestored Then
-                RaiseMultiSelectionChanged()
-                RequestOverlayStateNotify()
+            If _selectedAnnotationIndex < 0 Then
+                _selectedLayerRow = _layerRows.FirstOrDefault(Function(r) r.AdjustmentLayer IsNot Nothing AndAlso
+                                                                   r.AdjustmentLayer.Id = _selectedMaskedAdjustmentLayerId)
             End If
-        End Sub
+            Return True
+        End Function
 
         ''' <summary>Nach Undo/Redo kann der wiederhergestellte Text noch denselben Listenindex
         ''' haben. Der Selektions-Setter darf bei gleichem Index zu Recht nichts tun - seine Puffer
