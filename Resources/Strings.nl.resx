@@ -9132,4 +9132,16 @@
   <data name="Ausrichten_an_der_Auswahl_Ein_Klick_richtet_stat_20d83c94" xml:space="preserve">
     <value>Uitlijnen op de selectie. Klik om in plaats daarvan op de afbeelding uit te lijnen</value>
   </data>
+  <data name="Bild_wird_vermessen_c55189ad" xml:space="preserve">
+    <value>Afbeelding wordt opgemeten</value>
+  </data>
+  <data name="Mit_Linie_ausgerichtet_2a9dfc43" xml:space="preserve">
+    <value>Rechtgezet langs een lijn</value>
+  </data>
+  <data name="Linie_ziehen_7adb255a" xml:space="preserve">
+    <value>Lijn trekken</value>
+  </data>
+  <data name="Danach_auf_dem_Bild_eine_Linie_entlang_einer_Kan_c143c99c" xml:space="preserve">
+    <value>Trek daarna op de afbeelding een lijn langs een rand die waterpas of loodrecht moet staan</value>
+  </data>
 </root>

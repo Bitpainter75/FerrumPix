@@ -9132,4 +9132,16 @@
   <data name="Ausrichten_an_der_Auswahl_Ein_Klick_richtet_stat_20d83c94" xml:space="preserve">
     <value>Wyrównanie do zaznaczenia. Kliknij, aby wyrównywać do obrazu</value>
   </data>
+  <data name="Bild_wird_vermessen_c55189ad" xml:space="preserve">
+    <value>Pomiar obrazu</value>
+  </data>
+  <data name="Mit_Linie_ausgerichtet_2a9dfc43" xml:space="preserve">
+    <value>Wyprostowano według linii</value>
+  </data>
+  <data name="Linie_ziehen_7adb255a" xml:space="preserve">
+    <value>Narysuj linię</value>
+  </data>
+  <data name="Danach_auf_dem_Bild_eine_Linie_entlang_einer_Kan_c143c99c" xml:space="preserve">
+    <value>Następnie narysuj na obrazie linię wzdłuż krawędzi, która ma być pozioma lub pionowa</value>
+  </data>
 </root>

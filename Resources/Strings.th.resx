@@ -9136,4 +9136,16 @@
   <data name="Ausrichten_an_der_Auswahl_Ein_Klick_richtet_stat_20d83c94" xml:space="preserve">
     <value>จัดแนวกับส่วนที่เลือก คลิกเพื่อจัดแนวกับภาพแทน</value>
   </data>
+  <data name="Bild_wird_vermessen_c55189ad" xml:space="preserve">
+    <value>กำลังวัดภาพ</value>
+  </data>
+  <data name="Mit_Linie_ausgerichtet_2a9dfc43" xml:space="preserve">
+    <value>ปรับให้ตรงตามเส้นแล้ว</value>
+  </data>
+  <data name="Linie_ziehen_7adb255a" xml:space="preserve">
+    <value>ลากเส้น</value>
+  </data>
+  <data name="Danach_auf_dem_Bild_eine_Linie_entlang_einer_Kan_c143c99c" xml:space="preserve">
+    <value>จากนั้นลากเส้นบนภาพตามขอบที่ควรอยู่ในแนวนอนหรือแนวตั้ง</value>
+  </data>
 </root>

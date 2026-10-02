@@ -9092,4 +9092,16 @@
   <data name="Ausrichten_an_der_Auswahl_Ein_Klick_richtet_stat_20d83c94" xml:space="preserve">
     <value>Alignement sur la sélection. Cliquez pour aligner sur l'image</value>
   </data>
+  <data name="Bild_wird_vermessen_c55189ad" xml:space="preserve">
+    <value>Mesure de l'image</value>
+  </data>
+  <data name="Mit_Linie_ausgerichtet_2a9dfc43" xml:space="preserve">
+    <value>Redressée selon une ligne</value>
+  </data>
+  <data name="Linie_ziehen_7adb255a" xml:space="preserve">
+    <value>Tracer une ligne</value>
+  </data>
+  <data name="Danach_auf_dem_Bild_eine_Linie_entlang_einer_Kan_c143c99c" xml:space="preserve">
+    <value>Tracez ensuite sur l'image une ligne le long d'un bord qui doit être horizontal ou vertical</value>
+  </data>
 </root>

@@ -688,7 +688,8 @@ Namespace ViewModels
             Get
                 Return _pendingWorkingCommits > 0 OrElse _depthRunning OrElse _subjectRunning OrElse
                        _creatingAdjustmentLayer OrElse
-                       _pendingLayerModelRuns > 0 OrElse _saving OrElse _fullImageModelRunning
+                       _pendingLayerModelRuns > 0 OrElse _saving OrElse _fullImageModelRunning OrElse
+                       _autoGeometryRunning
             End Get
         End Property
 
@@ -4939,6 +4940,8 @@ Namespace ViewModels
                 Me.RaiseAndSetIfChanged(_currentTool, value)
                 If previousTool <> value Then
                     RaiseToolSwitcherChanged()
+                    ' Das Linienziehen gehoert zum Transformieren und endet mit ihm.
+                    IsStraightenLineActive = False
                     ' Das Messbild der Bereichsmaske (rund 100 MB bei 24 MP) gehoert zum Maskenwerkzeug.
                     ReleaseRangeSampleImage()
                 End If
@@ -16730,8 +16733,8 @@ Namespace ViewModels
                                                                           ApplyExclusiveFilterPreset(preset)
                                                                       End Sub)
             AutoAdjustCommand = ReactiveCommand.Create(AddressOf ApplyAutoAdjustments)
-            AutoStraightenCommand = ReactiveCommand.Create(AddressOf ApplyAutoStraighten)
-            AutoPerspectiveCommand = ReactiveCommand.Create(AddressOf ApplyAutoPerspective)
+            AutoStraightenCommand = ReactiveCommand.CreateFromTask(AddressOf ApplyAutoStraightenAsync)
+            AutoPerspectiveCommand = ReactiveCommand.CreateFromTask(AddressOf ApplyAutoPerspectiveAsync)
             ' Gruppen-Zurücksetzer: nur die Filter-Regler - er nimmt den gewählten Filter und „Auto"
             ' heraus, lässt die übrigen Gruppen aber stehen. Seit der Knopf „Keine" aus der Liste
             ' raus ist, ist er der sichtbare Weg zurück auf „kein Filter"; das WEITE Neutralisieren

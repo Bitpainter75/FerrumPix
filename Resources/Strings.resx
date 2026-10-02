@@ -9111,4 +9111,16 @@
   <data name="Ausrichten_an_der_Auswahl_Ein_Klick_richtet_stat_20d83c94" xml:space="preserve">
     <value>Aligning to the selection. Click to align to the picture instead</value>
   </data>
+  <data name="Bild_wird_vermessen_c55189ad" xml:space="preserve">
+    <value>Measuring the picture</value>
+  </data>
+  <data name="Mit_Linie_ausgerichtet_2a9dfc43" xml:space="preserve">
+    <value>Straightened along a line</value>
+  </data>
+  <data name="Linie_ziehen_7adb255a" xml:space="preserve">
+    <value>Draw a line</value>
+  </data>
+  <data name="Danach_auf_dem_Bild_eine_Linie_entlang_einer_Kan_c143c99c" xml:space="preserve">
+    <value>Then draw a line on the picture along an edge that should be level or upright</value>
+  </data>
 </root>

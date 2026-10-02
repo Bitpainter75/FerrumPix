@@ -1175,6 +1175,13 @@
                               StrokeThickness="1" StrokeDashArray="4,3" />
                         <Line x:Name="SnapGuideH" IsVisible="False" IsHitTestVisible="False" Stroke="#FFFF3B8D"
                               StrokeThickness="1" StrokeDashArray="4,3" />
+                        <!-- Die Linie zum Ausrichten (Knopf "Linie ziehen" im Panel Drehen). Zwei
+                             Striche uebereinander, hell auf dunkel, damit sie auf jedem Bild zu
+                             sehen ist. -->
+                        <Line x:Name="StraightenLineShadow" IsVisible="False" IsHitTestVisible="False"
+                              Stroke="#99000000" StrokeThickness="3" />
+                        <Line x:Name="StraightenLine" IsVisible="False" IsHitTestVisible="False"
+                              Stroke="{DynamicResource FP.Accent}" StrokeThickness="1.5" />
                         <Polyline x:Name="BrushPreviewOutlineLine"
                                   IsVisible="False"
                                   IsHitTestVisible="False"

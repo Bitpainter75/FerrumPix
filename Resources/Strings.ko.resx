@@ -9136,4 +9136,16 @@
   <data name="Ausrichten_an_der_Auswahl_Ein_Klick_richtet_stat_20d83c94" xml:space="preserve">
     <value>선택 영역에 맞춰 정렬합니다. 클릭하면 이미지에 맞춰 정렬합니다</value>
   </data>
+  <data name="Bild_wird_vermessen_c55189ad" xml:space="preserve">
+    <value>사진을 측정하는 중</value>
+  </data>
+  <data name="Mit_Linie_ausgerichtet_2a9dfc43" xml:space="preserve">
+    <value>선에 맞춰 수평을 맞췄습니다</value>
+  </data>
+  <data name="Linie_ziehen_7adb255a" xml:space="preserve">
+    <value>선 그리기</value>
+  </data>
+  <data name="Danach_auf_dem_Bild_eine_Linie_entlang_einer_Kan_c143c99c" xml:space="preserve">
+    <value>그다음 수평이나 수직이어야 할 가장자리를 따라 사진 위에 선을 그립니다</value>
+  </data>
 </root>

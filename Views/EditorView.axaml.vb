@@ -1283,6 +1283,9 @@ Namespace Views
                           RoutingStrategies.Tunnel, handledEventsToo:=True)
             ' Tunnel direkt auf dem Text-Overlay-Editor: siehe OnTextOverlayEditorKeyDown.
             Me.FindControl(Of TextBox)("TextOverlayEditor")?.AddHandler(InputElement.KeyDownEvent, AddressOf OnTextOverlayEditorKeyDown, RoutingStrategies.Tunnel)
+            ' Ausrichten mit Linie: auf dem HINWEG, damit der Zuschnittrahmen, der im selben Canvas
+            ' liegt und jeden Klick fuer sich nimmt, den Zug nicht zuerst bekommt.
+            Me.FindControl(Of Canvas)("PreviewCanvas")?.AddHandler(InputElement.PointerPressedEvent, AddressOf OnStraightenLinePointerPressed, RoutingStrategies.Tunnel)
             AddHandler Loaded, Sub(s, e)
                 ' Die Symbolgalerie ("Formen und Symbole") enthält mehrere tausend SVGs. Sie werden hier
                 ' einmalig im Hintergrund geparst, damit das Aufklappen später nicht ruckelt.
@@ -2238,6 +2241,41 @@ Namespace Views
                                                                   visibleBottom - visibleTop))
         End Sub
 
+        ' ── Ausrichten mit einer gezogenen Linie (Panel Drehen, Issue #80) ─────────
+
+        Private _isStraightenLineDragging As Boolean
+        Private _straightenLineStart As Avalonia.Point
+
+        Private Sub OnStraightenLinePointerPressed(sender As Object, e As PointerPressedEventArgs)
+            Dim vm = TryCast(DataContext, EditorViewModel)
+            Dim canvas = TryCast(sender, Canvas)
+            If vm Is Nothing OrElse canvas Is Nothing OrElse Not vm.IsStraightenLineActive Then Return
+            If vm.CurrentTool <> EditorTool.Transform Then Return
+            If Not e.GetCurrentPoint(canvas).Properties.IsLeftButtonPressed Then Return
+            _straightenLineStart = e.GetPosition(canvas)
+            _isStraightenLineDragging = True
+            ShowStraightenLine(_straightenLineStart, _straightenLineStart)
+            e.Pointer.Capture(canvas)
+            e.Handled = True
+        End Sub
+
+        Private Sub ShowStraightenLine(startPoint As Avalonia.Point, endPoint As Avalonia.Point)
+            For Each lineName In {"StraightenLineShadow", "StraightenLine"}
+                Dim line = Me.FindControl(Of Line)(lineName)
+                If line Is Nothing Then Continue For
+                line.StartPoint = startPoint
+                line.EndPoint = endPoint
+                line.IsVisible = True
+            Next
+        End Sub
+
+        Private Sub HideStraightenLine()
+            For Each lineName In {"StraightenLineShadow", "StraightenLine"}
+                Dim line = Me.FindControl(Of Line)(lineName)
+                If line IsNot Nothing Then line.IsVisible = False
+            Next
+        End Sub
+
         Private Sub OnSliderPointerPressed(sender As Object, e As PointerPressedEventArgs)
             Dim canvas = Me.FindControl(Of Canvas)("PreviewCanvas")
             If canvas Is Nothing Then Return
@@ -3051,6 +3089,17 @@ Namespace Views
         Private Sub OnSliderPointerMoved(sender As Object, e As PointerEventArgs)
             Dim pointerCanvas = TryCast(sender, Canvas)
             If pointerCanvas IsNot Nothing Then _lastCanvasPointer = e.GetPosition(pointerCanvas)
+            If _isStraightenLineDragging AndAlso pointerCanvas IsNot Nothing Then
+                ' Wie bei den anderen Zuegen: ohne gedrueckte Taste ist die Geste vorbei (Stift
+                ' abgehoben, Loslassen verloren).
+                If Not e.GetCurrentPoint(pointerCanvas).Properties.IsLeftButtonPressed Then
+                    FinishStraightenLine(e.GetPosition(pointerCanvas), e.Pointer)
+                Else
+                    ShowStraightenLine(_straightenLineStart, e.GetPosition(pointerCanvas))
+                End If
+                e.Handled = True
+                Return
+            End If
             ' EIN ZUG ENDET NICHT IMMER MIT EINEM LOSLASSEN. Beim Zeichenstift bleibt dieses Ereignis
             ' aus, wenn der Stift vom Tablett abgehoben wird und dessen Naehe verlaesst; der Fang
             ' bleibt dabei bestehen, ein Fangverlust rettet also nichts. Ohne die Pruefung hier malte
@@ -3442,7 +3491,23 @@ Namespace Views
         End Sub
 
         Private Sub OnSliderPointerReleased(sender As Object, e As PointerReleasedEventArgs)
+            Dim releaseCanvas = TryCast(sender, Canvas)
+            If _isStraightenLineDragging AndAlso releaseCanvas IsNot Nothing Then
+                FinishStraightenLine(e.GetPosition(releaseCanvas), e.Pointer)
+                e.Handled = True
+                Return
+            End If
             FinishPointerGesture(e)
+        End Sub
+
+        ''' <summary>Schliesst den Linienzug ab: die Strecke geht in Bildschirmpunkten ans ViewModel,
+        ''' das daraus den Winkel rechnet (EditorViewModel.ApplyStraightenFromLine).</summary>
+        Private Sub FinishStraightenLine(endPoint As Avalonia.Point, pointer As IPointer)
+            _isStraightenLineDragging = False
+            HideStraightenLine()
+            pointer?.Capture(Nothing)
+            Dim vm = TryCast(DataContext, EditorViewModel)
+            vm?.ApplyStraightenFromLine(endPoint.X - _straightenLineStart.X, endPoint.Y - _straightenLineStart.Y)
         End Sub
 
         ''' <summary>Ob auf der Buehne gerade eine Geste laeuft, die mit gedrueckter Taste begonnen

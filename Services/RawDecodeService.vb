@@ -439,9 +439,17 @@ Namespace Services
                     Case 1 ' LIBRAW_IMAGE_JPEG: die Nutzlast IST eine JPEG-Datei
                         Return New MemoryStream(payload)
                     Case 2 ' LIBRAW_IMAGE_BITMAP: rohe RGB-Pixel -> als PNG herausgeben
-                        If colors <> 3 OrElse bits <> 8 Then Return Nothing
+                        ' Auch EIN Kanal (Graustufen-Vorschau eines Schwarzweiss-Scans, VueScan).
+                        If (colors <> 3 AndAlso colors <> 1) OrElse bits <> 8 Then Return Nothing
                         Dim pixelCount = CheckedPixelCount(width, height)
-                        If pixelCount <= 0 OrElse dataSize < pixelCount * 3L Then Return Nothing
+                        If pixelCount <= 0 OrElse dataSize < pixelCount * colors Then Return Nothing
+                        If colors = 1 Then
+                            Dim rgb(CInt(pixelCount * 3L - 1)) As Byte
+                            For i = 0 To CInt(pixelCount - 1)
+                                rgb(i * 3) = payload(i) : rgb(i * 3 + 1) = payload(i) : rgb(i * 3 + 2) = payload(i)
+                            Next
+                            payload = rgb
+                        End If
                         Return EncodeRgbToPng(payload, width, height)
                     Case Else
                         ' JPEG-XL/H265-Vorschauen (neuere Canon) kann SkiaSharp nicht dekodieren -
@@ -2211,6 +2219,8 @@ Namespace Services
             If handle = IntPtr.Zero Then Return Nothing
             Dim pathPtr As IntPtr = IntPtr.Zero
             Dim image As IntPtr = IntPtr.Zero
+            ' Bei einem einkanaligen Bild die auf drei Kanaele aufgefaecherte Kopie (siehe unten).
+            Dim expanded As IntPtr = IntPtr.Zero
             Try
                 ' UTF-8-Pfad: korrekt auf Linux/macOS; unter Windows scheitern Nicht-ASCII-Pfade
                 ' im ANSI-Marshalling der C-API - dort greift dann der Vorschau-Rückfall.
@@ -2348,7 +2358,12 @@ Namespace Services
                 Dim dataSize = Marshal.ReadInt32(image, 12)
                 ' 2 = Bitmap. Erwartet werden 16 Bit (output_bps oben); eine exotische libraw,
                 ' die trotzdem 8 Bit liefert, wird unveraendert umgepackt.
-                If imageType <> 2 OrElse colors <> 3 OrElse (bits <> 8 AndAlso bits <> 16) Then Return Nothing
+                ' EIN KANAL ist ebenfalls gueltig: ein Schwarzweiss-Scan aus VueScan ("Linear Raw"
+                ' mit einem Wert je Punkt, gesehen am Nikon LS-50) kommt so aus LibRaw. Vorher
+                ' verwarf diese Zeile ihn, und die Datei tauchte in FerrumPix gar nicht auf
+                ' (Forumsbefund). Er wird unten auf Grau in drei Kanaelen aufgefaechert; danach
+                ' laeuft alles wie bei einem Farbbild.
+                If imageType <> 2 OrElse (colors <> 3 AndAlso colors <> 1) OrElse (bits <> 8 AndAlso bits <> 16) Then Return Nothing
                 Dim pixelCount = CheckedPixelCount(width, height)
                 ' Die Schranke muss den GROESSTEN Schritt abdecken, der weiter unten gerechnet
                 ' wird, nicht nur den des Zielpuffers. Der ist 4 Byte je Pixel, die 16-Bit-Quelle
@@ -2357,7 +2372,13 @@ Namespace Services
                 ' der Ueberlaufpunkt INNERHALB des Erlaubten statt dahinter.
                 Dim maxBytesProPixel = Math.Max(4, 3 * (bits \ 8))
                 If pixelCount <= 0 OrElse pixelCount > Integer.MaxValue \ maxBytesProPixel Then Return Nothing
-                If dataSize < pixelCount * 3L * (bits \ 8) Then Return Nothing
+                If dataSize < pixelCount * colors * (bits \ 8) Then Return Nothing
+                Dim pixels = image + 16
+                If colors = 1 Then
+                    expanded = ExpandGrayToRgb(pixels, pixelCount, bits \ 8)
+                    If expanded = IntPtr.Zero Then Return Nothing
+                    pixels = expanded
+                End If
 
                 ' Objektivkorrektur: Farbquerfehler und Vignettierung kommen aus der
                 ' mitgelieferten Sammlung von Messwerten. Die frueher hier stehende eigene
@@ -2370,7 +2391,7 @@ Namespace Services
                     ' das richtige Bild, und das Umschalten der Lichterrettung braucht sie nicht
                     ' noch einmal.
                     If ownMatrix IsNot Nothing Then
-                        ApplyCameraMatrix(image + 16, width, height, ownMatrix.RgbFromCamera)
+                        ApplyCameraMatrix(pixels, width, height, ownMatrix.RgbFromCamera)
                         DiagnosticLogService.LogAlways("RawDecodeService.CameraMatrix", "eigene Farbmatrix angewandt (LibRaw kennt die Kamera nicht)")
                     End If
                     ' DIE LINEAREN DATEN ZUERST SICHERN, dann daraus umsetzen. Der Umweg ueber
@@ -2380,7 +2401,7 @@ Namespace Services
                     If Not useHalfSize Then
                         Try
                             Dim keep(CInt(pixelCount * 3L * 2L) - 1) As Byte
-                            Marshal.Copy(image + 16, keep, 0, keep.Length)
+                            Marshal.Copy(pixels, keep, 0, keep.Length)
                             SyncLock _cacheLock
                                 _cachedRawBytes = keep
                                 _cachedRawWidth = width
@@ -2401,7 +2422,7 @@ Namespace Services
                             End SyncLock
                         End Try
                     End If
-                    Return BuildFrom16Bit(image + 16, width, height, lens, baseEv, normalization, wantedKnee)
+                    Return BuildFrom16Bit(pixels, width, height, lens, baseEv, normalization, wantedKnee)
                 End If
 
                 Dim bitmap = New SKBitmap(New SKImageInfo(width, height, SKColorType.Bgra8888, SKAlphaType.Opaque))
@@ -2421,7 +2442,7 @@ Namespace Services
                     Dim sourceStride = width * 3
                     Dim rgb(sourceStride - 1) As Byte
                     For y = 0 To height - 1
-                        Marshal.Copy(image + 16 + y * sourceStride, rgb, 0, sourceStride)
+                        Marshal.Copy(pixels + y * sourceStride, rgb, 0, sourceStride)
                         Dim d = 0
                         For x = 0 To width - 1
                             row(d) = rgb(x * 3 + 2)      ' B
@@ -2447,10 +2468,43 @@ Namespace Services
             Catch
                 Return Nothing
             Finally
+                If expanded <> IntPtr.Zero Then Marshal.FreeHGlobal(expanded)
                 If image <> IntPtr.Zero Then _clearMem(image)
                 _close(handle)
                 If pathPtr <> IntPtr.Zero Then Marshal.FreeCoTaskMem(pathPtr)
             End Try
+        End Function
+
+        ''' <summary>Faechert ein einkanaliges Bild (Graustufen, 1 oder 2 Byte je Wert) auf drei
+        ''' gleiche Kanaele auf, in einen neuen nativen Puffer (Freigabe mit FreeHGlobal beim
+        ''' Aufrufer), oder IntPtr.Zero. Grau bleibt so grau: jeder weitere Schritt rechnet mit drei
+        ''' gleichen Werten und behandelt sie gleich. Zeilenweise ueber ein verwaltetes Feld, weil
+        ''' VB keine Zeiger kennt.</summary>
+        Private Shared Function ExpandGrayToRgb(source As IntPtr, pixelCount As Long, bytesPerSample As Integer) As IntPtr
+            Dim total = pixelCount * 3L * bytesPerSample
+            If total > Integer.MaxValue Then Return IntPtr.Zero
+            Dim target = Marshal.AllocHGlobal(CInt(total))
+            Const chunk As Integer = 65536
+            Dim inBuf(chunk * bytesPerSample - 1) As Byte
+            Dim outBuf(chunk * 3 * bytesPerSample - 1) As Byte
+            Dim done As Long = 0
+            While done < pixelCount
+                Dim n = CInt(Math.Min(chunk, pixelCount - done))
+                Marshal.Copy(source + CInt(done * bytesPerSample), inBuf, 0, n * bytesPerSample)
+                Dim o = 0
+                For i = 0 To n - 1
+                    Dim s = i * bytesPerSample
+                    For c = 0 To 2
+                        For b = 0 To bytesPerSample - 1
+                            outBuf(o) = inBuf(s + b)
+                            o += 1
+                        Next
+                    Next
+                Next
+                Marshal.Copy(outBuf, 0, target + CInt(done * 3L * bytesPerSample), o)
+                done += n
+            End While
+            Return target
         End Function
 
 

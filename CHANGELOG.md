@@ -13,10 +13,17 @@
   describe the picture as it is displayed, for RAW files including your edits, the way Lightroom
   does. They also appear much sooner, because the file no longer has to be read a second time.
 
+- **Straighten with a line.** In the Rotate group, press "Draw a line" and drag along an edge in
+  the picture that should be level or upright; the picture turns to match. The straighten slider
+  now covers ±45 degrees, which makes it much finer to use, and automatic straightening shows
+  that it is working instead of seeming to do nothing.
+
 - **Phone photos in HEIC show up in the gallery right away.** Each tile first shows the small
   preview stored in the file and turns sharp a moment later.
 
 ### Fixes
+
+- Black and white film scans saved as DNG by VueScan now open. Before, they did not show up at all.
 
 - A copy made with Save As in the same folder now shows up right away when browsing with the
   arrow keys in the viewer, without a detour through the gallery.

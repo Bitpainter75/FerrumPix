@@ -20,8 +20,8 @@ Namespace ViewModels
     Partial Public Class EditorViewModel
 
         ''' <summary>Dreht das Bild so, dass seine Kanten waagerecht und senkrecht stehen.</summary>
-        Public Sub ApplyAutoStraighten()
-            Dim measured = MeasureAutoGeometry()
+        Public Async Function ApplyAutoStraightenAsync() As Task
+            Dim measured = Await MeasureAutoGeometryAsync()
             If measured Is Nothing Then Return
 
             If Not measured.HasHorizon Then
@@ -46,12 +46,12 @@ Namespace ViewModels
 
             StatusText = String.Format(LocalizationService.T("Ausgerichtet um {0} Grad"),
                                        measured.StraightenDegrees.ToString("F1"))
-        End Sub
+        End Function
 
         ''' <summary>Zieht stuerzende Linien gerade: setzt die beiden Perspektivregler auf die Werte,
         ''' die zu den gemessenen Fluchtpunkten gehoeren.</summary>
-        Public Sub ApplyAutoPerspective()
-            Dim measured = MeasureAutoGeometry()
+        Public Async Function ApplyAutoPerspectiveAsync() As Task
+            Dim measured = Await MeasureAutoGeometryAsync()
             If measured Is Nothing Then Return
 
             If Not measured.HasPerspective Then
@@ -84,7 +84,7 @@ Namespace ViewModels
             End Try
 
             StatusText = LocalizationService.T("Perspektive korrigiert")
-        End Sub
+        End Function
 
         ''' <summary>Rechnet die gemessenen Fluchtpunkte auf die Achsen um, die die VERZERRUNGSSTUFE
         ''' sieht, und macht daraus die beiden Reglerwerte.
@@ -165,10 +165,97 @@ Namespace ViewModels
             Return New SKPoint(CSng(px), CSng(py))
         End Function
 
-        ''' <summary>Misst das Bild, oder sagt in der Fusszeile, warum es nicht ging.</summary>
-        Private Function MeasureAutoGeometry() As ImageProcessor.AutoGeometryResult
+        ' ── Ausrichten mit einer gezogenen Linie ──────────────────────────────────
+        '
+        ' Issue #80: man legt eine Linie auf eine Kante, die waagerecht oder senkrecht sein soll -
+        ' Horizont, Hauskante, Fensterreihe -, und das Bild dreht sich so, dass sie es ist. Der
+        ' Regler allein war dafuer zu grob, und die Automatik findet nicht jede Kante.
+
+        Private _isStraightenLineActive As Boolean
+
+        ''' <summary>Der naechste Zug auf dem Bild legt eine Linie, statt etwas anderes zu tun. Der
+        ''' Knopf im Panel "Drehen" schaltet es ein; nach einer Linie, einem Werkzeugwechsel oder
+        ''' einem zweiten Klick auf den Knopf ist es wieder aus.</summary>
+        Public Property IsStraightenLineActive As Boolean
+            Get
+                Return _isStraightenLineActive
+            End Get
+            Set(value As Boolean)
+                Me.RaiseAndSetIfChanged(_isStraightenLineActive, value)
+            End Set
+        End Property
+
+        ''' <summary>Dreht das Bild so, dass die gezogene Linie waagerecht steht - oder senkrecht,
+        ''' wenn sie steiler als 45 Grad liegt. <paramref name="dx"/> und <paramref name="dy"/> sind
+        ''' die Strecke von Anfang zu Ende in BILDSCHIRMPUNKTEN (y nach unten); fuer den Winkel zaehlt
+        ''' nur ihr Verhaeltnis, eine Umrechnung in Bildpunkte braucht es also nicht.
+        '''
+        ''' DIE LINIE LIEGT AUF DEM ANGEZEIGTEN BILD, also hinter der bisherigen Begradigung. Die
+        ''' Kette dreht im Schritt "transform" erst um Viertel und spiegelt, DANN begradigt sie
+        ''' (ApplyGeometryTransforms, ApplyStraighten) - eine weitere Drehung um den Schraegstand
+        ''' addiert sich also schlicht, auch bei gespiegeltem Bild. Positiv dreht im Uhrzeigersinn;
+        ''' eine Linie, die nach rechts abfaellt (positiver Winkel), braucht deshalb eine Drehung
+        ''' gegen den Uhrzeigersinn. Gemessen an der Pruefung "Ausrichten mit Linie".</summary>
+        Public Sub ApplyStraightenFromLine(dx As Double, dy As Double)
+            IsStraightenLineActive = False
+            ' Ein Klick ohne Zug ist keine Linie.
+            If Math.Sqrt(dx * dx + dy * dy) < 8 Then Return
+            Dim angle = Math.Atan2(dy, dx) * 180.0 / Math.PI
+            ' Zur naechsten Achse: flacher als 45 Grad wird waagerecht, steiler senkrecht.
+            Dim tilt = angle - Math.Round(angle / 90.0) * 90.0
+            If Math.Abs(tilt) < 0.05 Then
+                StatusText = LocalizationService.T("Das Bild steht bereits gerade")
+                Return
+            End If
+            Dim target = _straightenDegrees - tilt
+            ' Im Bereich -180..180 halten, wie der Regler ihn kennt.
+            target = ((target + 180.0) Mod 360.0 + 360.0) Mod 360.0 - 180.0
+            target = Math.Round(target, 2)
+
+            PushUndo(LocalizationService.T("Mit Linie ausgerichtet"))
+            _suppressUndoCapture = True
+            Try
+                ' UEBER DEN BILDWEG, wie die Automatik: mit markiertem Objekt drehte die Eigenschaft
+                ' das Objekt, gemeint ist aber das Bild.
+                SetImageStraightenDegrees(target)
+            Finally
+                _suppressUndoCapture = False
+            End Try
+            StatusText = String.Format(LocalizationService.T("Ausgerichtet um {0} Grad"), target.ToString("F1"))
+        End Sub
+
+        ' Laeuft gerade eine Messung? Zaehlt in IsBusy, damit die Beschaeftigt-Anzeige kommt.
+        Private _autoGeometryRunning As Boolean
+
+        ''' <summary>Misst das Bild, oder sagt in der Fusszeile, warum es nicht ging.
+        '''
+        ''' IM HINTERGRUND, mit der Beschaeftigt-Anzeige ("Bild wird vermessen"). Vorher lief die
+        ''' Messung auf dem UI-Faden: die Oberflaeche stand still, und man wusste nicht, ob gerechnet
+        ''' wird oder ob der Klick nicht ankam (Issue #80). Gemessen wird an einer KOPIE der
+        ''' Vorschauquelle: das Original gibt der Editor beim naechsten Render frei. Hat inzwischen
+        ''' ein anderes Bild den Platz eingenommen, wird das Ergebnis verworfen; ein zweiter Klick
+        ''' waehrend der Messung tut nichts.</summary>
+        Private Async Function MeasureAutoGeometryAsync() As Task(Of ImageProcessor.AutoGeometryResult)
+            If _autoGeometryRunning Then Return Nothing
             Dim source = GetPreviewSource()
-            Dim measured = If(source Is Nothing, Nothing, ImageProcessor.AnalyzeAutoGeometry(source))
+            If source Is Nothing Then
+                StatusText = LocalizationService.T("Das Bild konnte nicht analysiert werden")
+                Return Nothing
+            End If
+            Dim imagePath = _currentImagePath
+            Dim copy = source.Copy()
+            Dim measured As ImageProcessor.AutoGeometryResult = Nothing
+            _autoGeometryRunning = True
+            SetBusyReason(LocalizationService.T("Bild wird vermessen"))
+            RefreshBusyState()
+            Try
+                measured = Await Task.Run(Function() If(copy Is Nothing, Nothing, ImageProcessor.AnalyzeAutoGeometry(copy)))
+            Finally
+                copy?.Dispose()
+                _autoGeometryRunning = False
+                RefreshBusyState()
+            End Try
+            If Not String.Equals(imagePath, _currentImagePath, StringComparison.Ordinal) Then Return Nothing
             If measured Is Nothing OrElse Not measured.HasMeasurement Then
                 StatusText = LocalizationService.T("Das Bild konnte nicht analysiert werden")
                 Return Nothing

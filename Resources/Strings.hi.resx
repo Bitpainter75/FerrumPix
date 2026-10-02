@@ -9136,4 +9136,16 @@
   <data name="Ausrichten_an_der_Auswahl_Ein_Klick_richtet_stat_20d83c94" xml:space="preserve">
     <value>चयन के साथ संरेखित। चित्र के साथ संरेखित करने के लिए क्लिक करें</value>
   </data>
+  <data name="Bild_wird_vermessen_c55189ad" xml:space="preserve">
+    <value>तस्वीर मापी जा रही है</value>
+  </data>
+  <data name="Mit_Linie_ausgerichtet_2a9dfc43" xml:space="preserve">
+    <value>रेखा के अनुसार सीधा किया</value>
+  </data>
+  <data name="Linie_ziehen_7adb255a" xml:space="preserve">
+    <value>रेखा खींचें</value>
+  </data>
+  <data name="Danach_auf_dem_Bild_eine_Linie_entlang_einer_Kan_c143c99c" xml:space="preserve">
+    <value>फिर तस्वीर पर किसी ऐसे किनारे के साथ रेखा खींचें जो क्षैतिज या लंबवत होना चाहिए</value>
+  </data>
 </root>

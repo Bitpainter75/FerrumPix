@@ -64,7 +64,12 @@
                     <TextBlock Text="Ausrichten"
                                Foreground="{DynamicResource FP.Text.Secondary}"
                                VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
-                    <icons:RoundSlider Grid.Column="1" Minimum="-180" Maximum="180"
+                    <!-- ±45 GRAD, nicht ±180 (Issue #80): auf dem schmalen Panel war ein Pixel
+                         Mausweg sonst ein grober Winkel. Vierteldrehungen machen die Knoepfe
+                         darueber, groessere Winkel gehen weiter ueber das Zahlenfeld. Ein Wert
+                         jenseits des Bereichs wird NICHT zurueckgeschrieben: der Regler klemmt nur
+                         beim eigenen Ziehen und zeigt ihn sonst am Rand (RoundSlider). -->
+                    <icons:RoundSlider Grid.Column="1" Minimum="-45" Maximum="45"
                                        DefaultValue="0"
                                        Value="{Binding StraightenDegrees}"
                                        WheelIncrement="0.1"
@@ -99,6 +104,28 @@
                                    VerticalAlignment="Center" />
                     </StackPanel>
                 </Button>
+                <!-- VON HAND MIT EINER LINIE: einschalten, dann auf dem Bild eine Linie entlang
+                     einer Kante ziehen, die gerade sein soll. Flacher als 45 Grad wird sie
+                     waagerecht, steiler senkrecht; der Winkel landet im Regler darueber und laesst
+                     sich dort nachziehen. Nach einer Linie schaltet der Knopf sich wieder aus. -->
+                <ToggleButton Classes="ghost"
+                              HorizontalAlignment="Stretch"
+                              HorizontalContentAlignment="Center"
+                              Padding="8,6"
+                              IsChecked="{Binding IsStraightenLineActive, Mode=TwoWay}"
+                              ToolTip.Tip="Danach auf dem Bild eine Linie entlang einer Kante ziehen, die waagerecht oder senkrecht stehen soll">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <icons:SvgIcon
+                            Source="avares://FerrumPix/Assets/Icons/outline/line.svg"
+                            Width="14" Height="14"
+                            VerticalAlignment="Center" />
+                        <TextBlock Text="Linie ziehen"
+                                   FontSize="{DynamicResource FP.Font.Small}"
+                                   TextWrapping="Wrap"
+                                   TextAlignment="Center"
+                                   VerticalAlignment="Center" />
+                    </StackPanel>
+                </ToggleButton>
                 <!-- DIE ZWEI HAKEN SIND GEGENTEILE und schliessen sich im ViewModel gegenseitig
                      aus: der eine behaelt die gekippten Ecken, der andere nimmt sie weg. Beide
                      aus heisst, die Leinwand bleibt wie sie ist und die Ecken bleiben leer. -->
