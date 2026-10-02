@@ -749,8 +749,11 @@
         <Setter Property="Background" Value="Transparent"/>
         <Setter Property="BorderBrush" Value="Transparent"/>
     </Style>
+    <!-- Die Schalter einer Ebenenzeile (Auge, Schloss, Korrekturen) kennen zwei Farben: die
+         normale Schriftfarbe fuer aus und den Akzent fuer an. Aus stand vorher in FP.Text.Muted
+         und war auf dunklem Grund kaum zu erkennen (Nutzerbefund aus dem Forum). -->
     <Style Selector="ToggleButton.layer-eye icons|SvgIcon">
-        <Setter Property="IconBrush" Value="{DynamicResource FP.Text.Muted}"/>
+        <Setter Property="IconBrush" Value="{DynamicResource FP.Text.Primary}"/>
     </Style>
     <Style Selector="ToggleButton.layer-eye:checked icons|SvgIcon">
         <Setter Property="IconBrush" Value="{DynamicResource FP.Accent}"/>
@@ -1259,6 +1262,23 @@
         <Setter Property="IconBrush" Value="#FFFFFFFF"/>
     </Style>
 
+    <!-- Typsymbol und Merkzeichen einer Ebene: normale Schriftfarbe, wie die Symbole der Historie.
+         Das Typsymbol sitzt in seinem dunklen Kasten und traegt auf der ausgewaehlten Zeile den
+         Akzent; die Merkzeichen (Maske, Schnittmaske) stehen direkt auf der Zeile und bleiben dort
+         in der Schriftfarbe, auf der orangefarbenen Flaeche waere der Akzent unsichtbar. -->
+    <Style Selector="Border.layers-panel-row icons|SvgIcon.layer-kind-icon">
+        <Setter Property="IconBrush" Value="{DynamicResource FP.Text.Primary}"/>
+    </Style>
+    <Style Selector="ListBox.layers-panel-list ListBoxItem:selected Border.layers-panel-row icons|SvgIcon.layer-kind-icon">
+        <Setter Property="IconBrush" Value="{DynamicResource FP.Accent}"/>
+    </Style>
+    <Style Selector="Border.layers-panel-row.multi-selected icons|SvgIcon.layer-kind-icon">
+        <Setter Property="IconBrush" Value="{DynamicResource FP.Accent}"/>
+    </Style>
+    <Style Selector="Border.layers-panel-row icons|SvgIcon.layer-marker">
+        <Setter Property="IconBrush" Value="{DynamicResource FP.Text.Primary}"/>
+    </Style>
+
     <!-- MEHRFACHauswahl: die ListBox markiert nur EINE Zeile. Alle weiteren markierten Ebenen sehen
          deshalb über diese Klasse genauso aus wie die ausgewählte - sonst wirkte eine funktionierende
          Mehrfachauswahl, als hätte sie nicht gegriffen. -->
@@ -1312,13 +1332,16 @@
     <Style Selector="Border.history-row.undone TextBlock.history-step">
         <Setter Property="Foreground" Value="{DynamicResource FP.Text.Muted}"/>
     </Style>
-    <Style Selector="Border.history-row.undone icons|SvgIcon">
-        <Setter Property="Opacity" Value="0.45"/>
+    <!-- DIE SYMBOLE KENNEN NUR ZWEI FARBEN, wie im Ebenenstapel: die normale Schriftfarbe, und
+         den Akzent fuer den aktuellen Stand. Vorher waren es vier (Grau, verblasstes Grau fuer
+         zurueckgenommene Schritte, Weiss auf der Auswahl). Das Symbol sitzt in seinem dunklen
+         Kasten, der Akzent steht deshalb auch auf der orangefarbenen Zeile sichtbar da.
+         Zurueckgenommene Schritte erkennt man an der blassen Beschriftung. -->
+    <Style Selector="Border.history-row icons|SvgIcon">
+        <Setter Property="IconBrush" Value="{DynamicResource FP.Text.Primary}"/>
     </Style>
-    <!-- Auf der ausgewaehlten (orangefarbenen) Zeile gilt dieselbe Sprache wie im Ebenenstapel:
-         Symbol und Nummer werden weiss, sonst verschwinden sie in der Flaeche. -->
     <Style Selector="ListBox.layers-panel-list ListBoxItem:selected Border.history-row icons|SvgIcon">
-        <Setter Property="IconBrush" Value="#FFFFFFFF"/>
+        <Setter Property="IconBrush" Value="{DynamicResource FP.Accent}"/>
     </Style>
     <Style Selector="ListBox.layers-panel-list ListBoxItem:selected Border.history-row TextBlock.history-number">
         <Setter Property="Foreground" Value="#CCFFFFFF"/>

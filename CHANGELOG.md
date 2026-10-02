@@ -54,6 +54,9 @@
 
 - Going back from the editor to the viewer without saving no longer reads the picture again.
 
+- The symbols in the layers and history panels are easier to see. Show, hide, lock and the
+  layer's own adjustments use the normal text color when off and the accent color when on.
+
 - The first switch to the editor after starting no longer stutters for a few seconds, and
   opening a photo in the editor no longer freezes the window for a moment.
 

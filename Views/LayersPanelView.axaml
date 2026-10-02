@@ -152,9 +152,9 @@
                                      ein; das Ende zeigt auf die folgende Basiszeile. -->
                                 <icons:SvgIcon Grid.Column="0"
                                                Source="{Binding ClipLinkIconSource}"
+                                               Classes="layer-marker"
                                                Width="14" Height="14"
                                                HorizontalAlignment="Center" VerticalAlignment="Center"
-                                               Opacity="0.75"
                                                IsVisible="{Binding IsClipped}"
                                                ToolTip.Tip="Schnittmaske: wirkt nur innerhalb der Deckung der Ebene direkt darunter" />
                                 <!-- Miniatur der Ebene, sonst das Typsymbol. Die Miniatur sagt, WAS
@@ -182,6 +182,7 @@
                                                Stretch="Uniform" Margin="2"
                                                IsVisible="{Binding HasThumbnail}" />
                                         <icons:SvgIcon Source="{Binding IconSource}"
+                                                       Classes="layer-kind-icon"
                                                        Width="18" Height="18"
                                                        IsVisible="{Binding !HasThumbnail}"
                                                        HorizontalAlignment="Center" VerticalAlignment="Center" />
@@ -234,12 +235,14 @@
                                                 <Image Source="{Binding MaskThumbnail}" Stretch="Uniform" />
                                             </Border>
                                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/mask.svg"
-                                                           Width="13" Height="13" Opacity="0.65"
+                                                           Classes="layer-marker"
+                                                           Width="13" Height="13"
                                                            IsVisible="{Binding !HasMaskThumbnail}" />
                                         </Panel>
                                     </Button>
                                     <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/layers-intersect.svg"
-                                                   Width="13" Height="13" Opacity="0.65"
+                                                   Classes="layer-marker"
+                                                   Width="13" Height="13"
                                                    IsVisible="{Binding IsClipped}"
                                                    ToolTip.Tip="Auf die Ebene darunter beschränkt" />
                                     <!-- Eigene Anpassungen der Ebene: das Symbol steht nur da, wenn
