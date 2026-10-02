@@ -6257,6 +6257,38 @@ Namespace Views
             Return New RotateTransform(rotationDegrees)
         End Function
 
+        ''' <summary>Wie weit die linke obere Ecke des Auswahlrahmens eines Textes von der des
+        ''' gespeicherten Kastens entfernt liegt, beides ungedreht und in Bildschirmpunkten.
+        '''
+        ''' Der Rahmen fasst nur die Glyphen (ink, relativ zum Kasten), der Kasten traegt dazu Ober-
+        ''' und Unterlaenge der Schrift. Gezeichnet wird der Text um die Mitte des KASTENS gedreht
+        ''' (OverlaySceneRenderer), der Rahmen aber um seine eigene Mitte. Liegen die Glyphen nicht
+        ''' mittig im Kasten, muss die Rahmenmitte deshalb mit um die Kastenmitte gedreht werden,
+        ''' sonst stuende der gedrehte Rahmen neben dem gedrehten Text. Ungedreht ist das Ergebnis
+        ''' einfach die Lage der Glyphen im Kasten.</summary>
+        Private Shared Function TextFrameOffset(boxWidth As Double, boxHeight As Double, ink As Avalonia.Rect,
+                                                rotationDegrees As Double) As Avalonia.Point
+            Dim fromBoxCenter = New Avalonia.Point(ink.X + ink.Width / 2.0 - boxWidth / 2.0,
+                                                   ink.Y + ink.Height / 2.0 - boxHeight / 2.0)
+            Dim rotated = RotatePoint(fromBoxCenter, New Avalonia.Point(0, 0), rotationDegrees)
+            Return New Avalonia.Point(boxWidth / 2.0 + rotated.X - ink.Width / 2.0,
+                                      boxHeight / 2.0 + rotated.Y - ink.Height / 2.0)
+        End Function
+
+        Private Shared Function InkPercentToPixels(ink As Avalonia.Rect, imageWidth As Double, imageHeight As Double) As Avalonia.Rect
+            Return New Avalonia.Rect(imageWidth * ink.X / 100.0, imageHeight * ink.Y / 100.0,
+                                     imageWidth * ink.Width / 100.0, imageHeight * ink.Height / 100.0)
+        End Function
+
+        ''' <summary>Der Punkt, um den das markierte Objekt gedreht wird: die Mitte seines
+        ''' gespeicherten Kastens, in Canvas-Punkten. Beim Text ist das NICHT die Mitte des
+        ''' Auswahlrahmens (siehe TextFrameOffset).</summary>
+        Private Function SelectedAnnotationPivot(vm As EditorViewModel, imageRect As Avalonia.Rect) As Avalonia.Point
+            Dim box = vm.GetSelectedAnnotationDisplayRectPercent()
+            Return New Avalonia.Point(imageRect.Left + imageRect.Width * (box.X + box.Width / 2.0) / 100.0,
+                                      imageRect.Top + imageRect.Height * (box.Y + box.Height / 2.0) / 100.0)
+        End Function
+
         Private Sub PositionTextOverlayFromViewModel(ix As Double, iy As Double, iw As Double, ih As Double, scale As Double)
             Dim overlay = Me.FindControl(Of Border)("TextOverlay")
             Dim editor = Me.FindControl(Of TextBox)("TextOverlayEditor")
@@ -6289,17 +6321,21 @@ Namespace Views
             ' Auswahlrahmen soll aber den Text selbst fassen, nicht diese Schriftmetrik-Luft.
             ' Beim Zurückschreiben eines Zuges wird der Glyphenrahmen in UpdateTextPixels wieder in
             ' den gespeicherten Zeichnungsursprung zurückgerechnet.
-            If Not vm.HasMultiAnnotationSelection AndAlso IsSelectedAnnotationTextLayer(vm) Then
-                Dim ink = vm.GetSelectedTextInkPercent()
-                If ink.HasValue Then
-                    rectPercent = (rectPercent.X + ink.Value.X, rectPercent.Y + ink.Value.Y,
-                                   ink.Value.Width, ink.Value.Height)
-                End If
-            End If
             Dim width = iw * rectPercent.Width / 100.0
             Dim height = ih * rectPercent.Height / 100.0
             Dim left = ix + iw * rectPercent.X / 100.0
             Dim top = iy + ih * rectPercent.Y / 100.0
+            If Not vm.HasMultiAnnotationSelection AndAlso IsSelectedAnnotationTextLayer(vm) Then
+                Dim ink = vm.GetSelectedTextInkPercent()
+                If ink.HasValue Then
+                    Dim inkPixels = InkPercentToPixels(ink.Value, iw, ih)
+                    Dim offset = TextFrameOffset(width, height, inkPixels, vm.AnnotationRotation)
+                    left += offset.X
+                    top += offset.Y
+                    width = inkPixels.Width
+                    height = inkPixels.Height
+                End If
+            End If
 
             Avalonia.Controls.Canvas.SetLeft(overlay, left)
             Avalonia.Controls.Canvas.SetTop(overlay, top)
@@ -6540,6 +6576,13 @@ Namespace Views
             e.Pointer.Capture(overlay)
             If mode = TextDragMode.Rotate Then
                 _textRotateCenter = New Avalonia.Point(rect.Left + rect.Width / 2.0, rect.Top + rect.Height / 2.0)
+                ' Ein Text dreht um die Mitte seines Kastens, nicht um die seines Glyphenrahmens.
+                If Not vm.HasMultiAnnotationSelection Then
+                    Dim pivotImageRect = GetDisplayedImageRect(canvas, vm)
+                    If pivotImageRect.Width > 0 AndAlso pivotImageRect.Height > 0 Then
+                        _textRotateCenter = SelectedAnnotationPivot(vm, pivotImageRect)
+                    End If
+                End If
                 _textRotateStartAngle = Math.Atan2(pos.Y - _textRotateCenter.Y, pos.X - _textRotateCenter.X) * 180.0 / Math.PI
                 _textRotateStartRotation = vm.AnnotationRotation
                 _textRotateLastAngle = vm.AnnotationRotation
@@ -6777,6 +6820,20 @@ Namespace Views
                     Return
                 End If
                 vm.AnnotationRotation = newRotation
+                ' Der Glyphenrahmen eines Textes kreist um die Kastenmitte (siehe TextFrameOffset);
+                ' ohne Nachfuehren stuende er waehrend des Drehens neben dem Text und spraenge beim
+                ' Loslassen an seinen Platz.
+                If IsSelectedAnnotationTextLayer(vm) Then
+                    Dim ink = vm.GetSelectedTextInkPercent()
+                    If ink.HasValue Then
+                        Dim box = vm.GetSelectedAnnotationDisplayRectPercent()
+                        Dim inkPixels = InkPercentToPixels(ink.Value, imageRect.Width, imageRect.Height)
+                        Dim offset = TextFrameOffset(imageRect.Width * box.Width / 100.0, imageRect.Height * box.Height / 100.0,
+                                                     inkPixels, newRotation)
+                        Avalonia.Controls.Canvas.SetLeft(overlay, imageRect.Left + imageRect.Width * box.X / 100.0 + offset.X)
+                        Avalonia.Controls.Canvas.SetTop(overlay, imageRect.Top + imageRect.Height * box.Y / 100.0 + offset.Y)
+                    End If
+                End If
                 overlay.RenderTransformOrigin = New RelativePoint(0.5, 0.5, RelativeUnit.Relative)
                 ' Dieselbe Lage wie im Layoutdurchlauf - sonst verloere der Rahmen waehrend des
                 ' Drehens seine Spiegelung und bekaeme sie beim Loslassen wieder.
@@ -7330,13 +7387,21 @@ Namespace Views
             ' die Luft über der Oberlänge als Objektlage gespeichert: nach Undo oder beim nächsten
             ' Griffzug laufen Text und Rahmen zwangsläufig auseinander.
             If Not vm.HasMultiAnnotationSelection AndAlso IsSelectedAnnotationTextLayer(vm) Then
+                ' Gedreht liegt der Rahmen nicht einfach um die Glyphenlage versetzt, sondern um die
+                ' Kastenmitte mitgedreht - dieselbe Rechnung wie beim Anlegen (TextFrameOffset).
                 Dim ink = vm.GetSelectedTextInkPercent()
-                Dim rawX = (textRect.Left - imageRect.Left) / imageRect.Width * 100.0
-                Dim rawY = (textRect.Top - imageRect.Top) / imageRect.Height * 100.0
+                Dim frameLeft = textRect.Left
+                Dim frameTop = textRect.Top
                 If ink.HasValue Then
-                    rawX -= ink.Value.X
-                    rawY -= ink.Value.Y
+                    Dim offset = TextFrameOffset(imageRect.Width * vm.AnnotationWidthPercent / 100.0,
+                                                 imageRect.Height * vm.AnnotationHeightPercent / 100.0,
+                                                 InkPercentToPixels(ink.Value, imageRect.Width, imageRect.Height),
+                                                 vm.AnnotationRotation)
+                    frameLeft -= offset.X
+                    frameTop -= offset.Y
                 End If
+                Dim rawX = (frameLeft - imageRect.Left) / imageRect.Width * 100.0
+                Dim rawY = (frameTop - imageRect.Top) / imageRect.Height * 100.0
                 vm.SetSelectedAnnotationRect(rawX, rawY, vm.AnnotationWidthPercent, vm.AnnotationHeightPercent)
                 Return
             End If

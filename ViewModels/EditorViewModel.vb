@@ -24169,11 +24169,14 @@ Namespace ViewModels
         End Function
 
         ''' <summary>Wo im Rahmen des markierten Objekts die sichtbaren Glyphen stehen, in Prozent der
-        ''' Anzeige und relativ zur linken oberen Ecke des Rahmens - oder Nothing, wenn das Objekt
-        ''' kein gerader Text ist. Daran rastet ein Text beim Ziehen ein statt an seinem Rahmen: so
-        ''' landet der sichtbare Buchstabe auf der Hilfslinie, nicht die Luft davor.
-        ''' Nur ungedreht und ohne Textpfad: gedreht stehen die Glyphenkanten schräg zur Achse, und
-        ''' auf einem Pfad beschreibt der Rahmen den Pfad, nicht den Text.</summary>
+        ''' Anzeige und relativ zur linken oberen Ecke des UNGEDREHTEN Rahmens - oder Nothing, wenn
+        ''' das Objekt kein Text ist oder auf einem Pfad steht (dort beschreibt der Rahmen den Pfad,
+        ''' nicht den Text). Daraus legt die Ansicht den Auswahlrahmen um die Glyphen.
+        '''
+        ''' AUCH GEDREHT: der Auswahlrahmen dreht mit und soll dann ebenso am Text sitzen. Lieferte
+        ''' diese Funktion gedreht Nothing, fiel der Rahmen auf den gespeicherten Kasten samt Ober-
+        ''' und Unterlänge der Schrift zurück und stand oben und unten weit über (Nutzerbefund).
+        ''' Die Einrastziele ANDERER Texte bleiben ungedreht (GetStoredTextInkPercent).</summary>
         Public Function GetSelectedTextInkPercent() As Avalonia.Rect?
             ' Bei mehreren markierten Objekten ist der Rahmen die gemeinsame Box, nicht der Text.
             If HasMultiAnnotationSelection Then Return Nothing
@@ -24183,11 +24186,16 @@ Namespace ViewModels
             ' Anzeigeraum, Schriftgrad und Kontur aber noch im gespeicherten Quellraum. Nach einer
             ' Bildgroessen-Aenderung waere die sichtbare Schrift damit kleiner als ihre
             ' Einrastkanten. Der gespeicherte Weg bildet alles gemeinsam in die Anzeige ab.
-            Return GetStoredTextInkPercent(_annotations(_selectedAnnotationIndex))
+            Return MeasureStoredTextInkPercent(_annotations(_selectedAnnotationIndex), allowRotated:=True)
         End Function
 
-        ''' <summary>Dasselbe für ein gespeichertes Objekt, in dessen Anzeige-Geometrie.</summary>
+        ''' <summary>Dasselbe für ein gespeichertes Objekt, in dessen Anzeige-Geometrie - als
+        ''' Einrastziel und deshalb nur ungedreht: gedreht stehen die Glyphenkanten schräg zur Achse.</summary>
         Private Function GetStoredTextInkPercent(annotation As ImageAnnotation) As Avalonia.Rect?
+            Return MeasureStoredTextInkPercent(annotation, allowRotated:=False)
+        End Function
+
+        Private Function MeasureStoredTextInkPercent(annotation As ImageAnnotation, allowRotated As Boolean) As Avalonia.Rect?
             If annotation Is Nothing OrElse Not String.IsNullOrWhiteSpace(annotation.TextPathKind) Then Return Nothing
             Dim kind = NormalizeAnnotationKind(annotation.Kind)
             Dim text As String
@@ -24201,7 +24209,8 @@ Namespace ViewModels
             Dim displaySize = GetAnnotationDisplayPixelSize()
             If displaySize.Width <= 0 OrElse displaySize.Height <= 0 Then Return Nothing
             Dim renderAnnotation = TransformAnnotationToDisplayGeometry(annotation, displaySize.Width, displaySize.Height)
-            If renderAnnotation Is Nothing OrElse Not IsAxisAlignedRotation(renderAnnotation.RotationDegrees) Then Return Nothing
+            If renderAnnotation Is Nothing Then Return Nothing
+            If Not allowRotated AndAlso Not IsAxisAlignedRotation(renderAnnotation.RotationDegrees) Then Return Nothing
             Dim box = StoredAnnotationRectToDisplayPercent(annotation)
             Dim ink = MeasureTextInk(text, renderAnnotation.FontSizePixels, renderAnnotation.FontFamily,
                                      renderAnnotation.LetterSpacingPercent, renderAnnotation.Bold,
