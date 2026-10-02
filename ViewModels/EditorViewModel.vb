@@ -18475,6 +18475,32 @@ Namespace ViewModels
             Dispatcher.UIThread.Post(Sub() ImageItem.QueueBackgroundThumbnails(itemsSnapshot), DispatcherPriority.Background)
         End Sub
 
+        ''' <summary>Nimmt eine per „Speichern unter" neu geschriebene Datei in den Filmstreifen auf,
+        ''' direkt hinter dem Bild, aus dem sie entstand.
+        '''
+        ''' Die Liste stammt vom Öffnen des Editors und kannte die Datei nicht. Sie wandert beim
+        ''' Zurückgehen in den Betrachter (BackToViewerAsync), und dort fehlte die neue Datei beim
+        ''' Blättern, bis man über die Galerie neu einstieg (Nutzerbefund). Aufgenommen wird nur, was
+        ''' im selben Ordner wie das Ausgangsbild liegt: genau das zeigt auch die Galerie. Eine Datei
+        ''' in einem anderen Ordner gehört nicht in die Nachbarschaft dieses Bildes.</summary>
+        Private Sub AddSavedFileToFilmstrip(savedPath As String)
+            If String.IsNullOrEmpty(savedPath) OrElse String.IsNullOrEmpty(_currentImagePath) Then Return
+            If Not CanParticipateInEditorFilmstrip(savedPath) Then Return
+            If Not String.Equals(IO.Path.GetDirectoryName(savedPath), IO.Path.GetDirectoryName(_currentImagePath),
+                                 StringComparison.OrdinalIgnoreCase) Then Return
+            If _folderPaths.Any(Function(p) String.Equals(p, savedPath, StringComparison.OrdinalIgnoreCase)) Then Return
+            Dim sourceIndex = _folderPaths.FindIndex(Function(p) String.Equals(p, _currentImagePath, StringComparison.OrdinalIgnoreCase))
+            Dim insertAt = If(sourceIndex < 0, _folderPaths.Count, sourceIndex + 1)
+            _folderPaths.Insert(insertAt, savedPath)
+            Dim item = ImageItem.CreateLightweight(savedPath, Nothing, _thumbCacheScopeId, _thumbCacheScopeName)
+            FilmstripItems.Insert(Math.Min(insertAt, FilmstripItems.Count), item)
+            RefreshFilmstripItemBadges()
+            If sourceIndex >= 0 Then _currentIndex = sourceIndex
+            Me.RaisePropertyChanged(NameOf(CurrentFilmstripIndex))
+            MarkCurrentFilmstripItem()
+            Dispatcher.UIThread.Post(Sub() ImageItem.QueueBackgroundThumbnails({item}.ToList()), DispatcherPriority.Background)
+        End Sub
+
         ''' <summary>Der Editor-Filmstrip verwendet ebenfalls schlanke Kacheln. Sobald seine
         ''' Markierungen eingeschaltet sind, werden die drei Katalogwerte gesammelt nachgereicht.</summary>
         Public Sub RefreshFilmstripItemBadges()
@@ -21047,6 +21073,7 @@ Namespace ViewModels
                     ' unangetastet - dort ist ein zweites Speichern folgenlos).
                     Dim savedPixelsIntoFile = Not savedAsPdf AndAlso Not isFpxSave
                     Dim targetIsOtherFile = Not String.Equals(targetPath, _currentImagePath, StringComparison.OrdinalIgnoreCase)
+                    If targetIsOtherFile Then AddSavedFileToFilmstrip(targetPath)
                     ' EINE ANDERE DATEI IST EINE ANDERE DATEI: das Ausgangsbild auf der Platte hat
                     ' sich nicht geaendert, der Editor kann also darauf weiterarbeiten. Ob er das
                     ' tut, sagt die Einstellung (ab Werk ja: das alte Bild bleibt). Die Regel steht
@@ -21070,7 +21097,16 @@ Namespace ViewModels
                     ' Beschaeftigt-Anzeige - beide zugleich waeren zwei Schleier uebereinander.
                     SetSavingBusy(False)
                     If targetIsOtherFile Then
-                        Await OpenImageAsync(targetPath, showLoadingState:=True)
+                        ' Steht die neue Datei schon im Streifen (selber Ordner, siehe
+                        ' AddSavedFileToFilmstrip), bleibt die bisherige Nachbarschaft erhalten - auch
+                        ' eine Such- oder Auswahlliste. Sonst wie bisher der Ordner der neuen Datei.
+                        Dim keepsFilmstrip = _folderPaths.Any(Function(p) String.Equals(p, targetPath, StringComparison.OrdinalIgnoreCase))
+                        If keepsFilmstrip Then
+                            Await OpenImageAsync(targetPath, New List(Of String)(_folderPaths), _thumbCacheScopeId, _thumbCacheScopeName,
+                                                 showLoadingState:=True)
+                        Else
+                            Await OpenImageAsync(targetPath, showLoadingState:=True)
+                        End If
                     Else
                         ' Derselbe Pfad: die Filmstreifen-Liste muss erhalten bleiben. Ohne sie
                         ' faellt eine Such- oder Auswahlliste auf den blossen Ordnerinhalt zurueck,

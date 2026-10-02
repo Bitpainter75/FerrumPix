@@ -9,6 +9,11 @@
 - **Brush sizes are remembered.** The brush, eraser, smudge, healing brush and clone stamp each
   keep their size and hardness when you switch tools, open another picture or restart the app.
 
+### Fixes
+
+- A copy made with Save As in the same folder now shows up right away when browsing with the
+  arrow keys in the viewer, without a detour through the gallery.
+
 ## 0.9.58
 
 ### What's new
