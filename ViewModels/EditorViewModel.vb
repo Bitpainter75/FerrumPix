@@ -19429,6 +19429,10 @@ Namespace ViewModels
                     End If
                 End If
             End If
+            ' Das Bild, das der Betrachter gerade gezeigt hat, falls er es uebergeben hat und es voll
+            ' aufgeloest zu dieser Datei passt (DecodedImageHandoff). Nur ohne Buendel-Arbeitsbild:
+            ' das hat oben schon Vorrang.
+            If fullDecode Is Nothing AndAlso Not bakedFromFpx Then fullDecode = DecodedImageHandoff.TryTake(imagePath)
             If fullDecode Is Nothing Then fullDecode = ImageProcessor.DecodeWorkingImage(imagePath, lensChoice, recoverHighlights)
             Return (fullDecode, bakedFromFpx)
         End Function

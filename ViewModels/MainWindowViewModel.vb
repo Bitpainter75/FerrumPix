@@ -686,11 +686,21 @@ Namespace ViewModels
                 ' Erst NACH den Rueckfragen: solange ein Dialog offen steht, wird nichts geoeffnet,
                 ' und eine Warteanzeige hinter der Frage waere schlicht falsch.
                 BeginDocumentOpenIndicator()
+                ' Kommt das Bild aus dem Betrachter, hat der es schon dekodiert: das Bild geht an den
+                ' Editor, statt dass er die Datei ein zweites Mal liest. Nur voll aufgeloest und nie
+                ' bei RAW (siehe DecodedImageHandoff); passt etwas nicht, dekodiert der Editor selbst.
+                If CurrentMode = AppMode.Viewer AndAlso Viewer IsNot Nothing Then
+                    Dim handed = Viewer.TakeFullSizeSourceForEditor(path)
+                    If handed.Bitmap IsNot Nothing Then DecodedImageHandoff.Offer(path, handed.WriteTimeUtc, handed.Bitmap)
+                End If
                 Dim opened = Await Editor.OpenImageAsync(path, allPaths, cacheScopeId, cacheScopeName, forceSaveAsOnly, immichAlbumId, nextcloudSource,
                                                         displayFileName:=displayFileName)
                 If Not opened Then Return
                 CurrentMode = AppMode.Editor
             Finally
+                ' Nicht genommen (der Editor lehnte das Oeffnen ab oder las das Bild woanders her):
+                ' nichts davon bleibt liegen.
+                DecodedImageHandoff.Clear()
                 _documentOpenInFlight = False
                 EndDocumentOpenIndicator()
             End Try

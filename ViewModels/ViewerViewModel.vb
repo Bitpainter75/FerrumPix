@@ -2268,6 +2268,13 @@ Namespace ViewModels
 
         Private Async Sub RunBitmapLoad(path As String, token As Integer, isFpx As Boolean)
             Dim bmp As Bitmap = Nothing
+            ' Die Aenderungszeit VOR dem Decode: aendert sich die Datei waehrenddessen, passt das Bild
+            ' nicht mehr zu ihr, und die Uebergabe an den Editor verwirft es.
+            Dim writeTime = DateTime.MinValue
+            Try
+                writeTime = File.GetLastWriteTimeUtc(path)
+            Catch
+            End Try
             Try
                 ' Bei jedem Laden neu gelesen, damit ein umgelegter Schalter beim naechsten Bild wirkt.
                 Dim reduced = Not AppSettingsService.Load().ViewerRawFullResolution
@@ -2277,11 +2284,54 @@ Namespace ViewModels
             End Try
 
             If Not ApplyLoadedBitmap(token, bmp) Then Return
+            _editorHandoffSource = If(QualifiesForEditorHandoff(path), bmp, Nothing)
+            _editorHandoffPath = path
+            _editorHandoffWriteTimeUtc = writeTime
             SetBitmapLoading(False)
             ' FPX: das schnelle Komposit steht - die volle, nun identische Szenenfassung zieht mit
             ' demselben Token nach.
             If isFpx AndAlso bmp IsNot Nothing Then LoadFpxFullResolutionBitmapAsync(path, token)
         End Sub
+
+        ' Das zuletzt geladene Bild, wenn es sich zur Uebergabe an den Editor eignet (siehe
+        ' TakeFullSizeSourceForEditor). Nur eine Referenz auf CurrentImage, keine Kopie.
+        Private _editorHandoffSource As Bitmap
+        Private _editorHandoffPath As String
+        Private _editorHandoffWriteTimeUtc As DateTime
+
+        ''' <summary>Ist das Bild, das der Betrachter fuer diese Datei dekodiert, dasselbe, das der
+        ''' Editor selbst dekodieren wuerde, und zwar in voller Groesse?
+        '''
+        ''' NEIN fuer RAW: dort zeigt der Betrachter die eingebettete Vorschau oder das fertig
+        ''' entwickelte Bild samt Rezept, je nach Einstellung auch halb so gross (half_size); seine
+        ''' volle Entwicklung erreicht den Editor ohnehin ueber den Zwischenspeicher von
+        ''' RawDecodeService. NEIN fuer ein Buendel (gezeigt wird das Komposit), fuer SVG (gerendert
+        ''' in Anzeigegroesse) und fuer eine PSD mit Drehung in der Beistelldatei (die steckt im
+        ''' Betrachter in den Pixeln, im Editor im Rezept). Alles andere dekodiert der Betrachter
+        ''' voll, ohne Rezept und ohne Verkleinerung.</summary>
+        Friend Shared Function QualifiesForEditorHandoff(path As String) As Boolean
+            If String.IsNullOrEmpty(path) Then Return False
+            If RawPreviewService.IsSupportedRaw(path) OrElse FpxService.IsFpx(path) OrElse
+               SvgPreviewService.IsSupportedSvg(path) OrElse VideoPreviewService.IsSupportedVideo(path) Then Return False
+            If RawSidecarService.IsSidecarFormat(path) AndAlso RawSidecarService.ReadRotationDegrees(path) <> 0 Then Return False
+            Return True
+        End Function
+
+        ''' <summary>Das gerade gezeigte Bild als Skia-Bitmap fuer den Editor (Besitz beim Aufrufer),
+        ''' wenn es zu <paramref name="path"/> gehoert und sich eignet, sonst Nothing. Die Pixel
+        ''' werden kopiert (ImageOrientationService.ToSkBitmap); der Betrachter behaelt sein Bild.
+        ''' Ob es wirklich voll aufgeloest ist, prueft der Uebergabeplatz noch einmal am Dateikopf
+        ''' (DecodedImageHandoff).</summary>
+        Friend Function TakeFullSizeSourceForEditor(path As String) As (Bitmap As SkiaSharp.SKBitmap, WriteTimeUtc As DateTime)
+            Dim source = _editorHandoffSource
+            If source Is Nothing OrElse Not Object.ReferenceEquals(source, CurrentImage) Then Return (Nothing, DateTime.MinValue)
+            If Not String.Equals(path, _editorHandoffPath, StringComparison.Ordinal) Then Return (Nothing, DateTime.MinValue)
+            Try
+                Return (ImageOrientationService.ToSkBitmap(source), _editorHandoffWriteTimeUtc)
+            Catch
+                Return (Nothing, DateTime.MinValue)
+            End Try
+        End Function
 
         ''' <summary>Uebernimmt ein fertig dekodiertes Bitmap, WENN der Token noch aktuell ist -
         ''' sonst wird es verworfen (False). Zieht Fit-Zoom und Status nach.</summary>

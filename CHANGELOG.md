@@ -30,3 +30,7 @@
 - No more pause in the editor on the first click with the color picker, when starting a warp
   preview, when opening the full screen view or when pasting a picture from the clipboard.
 
+- Opening a photo from the viewer in the editor reuses the picture the viewer already loaded
+  instead of reading the file again. This is most noticeable with HEIC photos from phones. The
+  editor always works on the full resolution, also for RAW files.
+
