@@ -12356,9 +12356,18 @@ Namespace ViewModels
             Dim pixelWidth = bitmap.PixelSize.Width, pixelHeight = bitmap.PixelSize.Height
             If documentWidth <= 0 OrElse documentHeight <= 0 OrElse pixelWidth <= 0 OrElse pixelHeight <= 0 Then Return False
 
+            ' Die Datei der neuen Ebene: Pixel direkt holen, mit geradlinigem Alpha, wie PNG es
+            ' speichert, und mit der Packstufe aller Ebenen-Dateien schreiben (PngEncoder).
             Dim path = CreateSelectionAssetTempPath("clipboard")
             Try
-                bitmap.Save(path, Avalonia.Media.Imaging.PngBitmapEncoderOptions.Default)
+                Using pixels = ImageOrientationService.ToSkBitmap(bitmap, straightAlpha:=True)
+                    Using data = PngEncoder.Encode(pixels, PngPurpose.Stored)
+                        If data Is Nothing Then Throw New InvalidOperationException("Zwischenablage-Bild nicht kodierbar")
+                        Using fs = File.Create(path)
+                            data.SaveTo(fs)
+                        End Using
+                    End Using
+                End Using
             Catch ex As Exception
                 DiagnosticLogService.LogException("Editor.PasteClipboardBitmap", ex)
                 StatusText = LocalizationService.T("Einfügen fehlgeschlagen")
@@ -20121,46 +20130,39 @@ Namespace ViewModels
         Private Function SaveCurrentPreviewImageToPngStream(Optional maxDimension As Integer = 0) As IO.MemoryStream
             Dim preview = PreviewImage
             If preview Is Nothing Then Return Nothing
-            Dim longest = Math.Max(preview.PixelSize.Width, preview.PixelSize.Height)
-            If maxDimension > 0 AndAlso longest > maxDimension Then
+            ' PreviewImage kann von ToAvaloniaBitmapFast stammen. Auf Linux ist dessen Avalonia-Bitmap
+            ' zwar speicherbar, wird von PlatformRenderInterface.ResizeBitmap aber mit "Invalid
+            ' source bitmap type" abgelehnt. Deshalb in ein gewöhnliches Skia-Bitmap holen und dort
+            ' skalieren; so bleibt auch die FPX-Vorschau gedeckelt. Geholt wird über die Pixel
+            ' (ToSkBitmap), nicht mehr über einen PNG-Strom.
+            Using source = ImageOrientationService.ToSkBitmap(preview)
+                If source Is Nothing Then Return Nothing
+                Dim longest = Math.Max(source.Width, source.Height)
+                If maxDimension <= 0 OrElse longest <= maxDimension Then
+                    Return PngEncoder.EncodeToStream(source, PngPurpose.Stored)
+                End If
                 Dim ratio = maxDimension / CDbl(longest)
-                Dim width = Math.Max(1, CInt(Math.Round(preview.PixelSize.Width * ratio)))
-                Dim height = Math.Max(1, CInt(Math.Round(preview.PixelSize.Height * ratio)))
-                ' PreviewImage kann von ToAvaloniaBitmapFast stammen. Auf Linux ist dessen
-                ' Avalonia-Bitmap zwar speicherbar, wird von PlatformRenderInterface.ResizeBitmap
-                ' aber mit "Invalid source bitmap type" abgelehnt. Über PNG in ein gewöhnliches
-                ' Skia-Bitmap dekodieren und dort skalieren; so bleibt auch die FPX-Vorschau gedeckelt.
-                Using encoded As New IO.MemoryStream()
-                    preview.Save(encoded, PngBitmapEncoderOptions.Default)
-                    encoded.Position = 0
-                    Using source = SKBitmap.Decode(encoded)
-                        If source Is Nothing Then Return Nothing
-                        Using scaled = source.Resize(New SKImageInfo(width, height, SKColorType.Bgra8888, SKAlphaType.Premul),
-                                                     ImageProcessor.SamplingHigh)
-                            If scaled Is Nothing Then Return Nothing
-                            Return PngEncoder.EncodeToStream(scaled, PngPurpose.Stored)
-                        End Using
-                    End Using
+                Dim width = Math.Max(1, CInt(Math.Round(source.Width * ratio)))
+                Dim height = Math.Max(1, CInt(Math.Round(source.Height * ratio)))
+                Using scaled = source.Resize(New SKImageInfo(width, height, SKColorType.Bgra8888, SKAlphaType.Premul),
+                                             ImageProcessor.SamplingHigh)
+                    If scaled Is Nothing Then Return Nothing
+                    Return PngEncoder.EncodeToStream(scaled, PngPurpose.Stored)
                 End Using
-            End If
-            Dim ms As New IO.MemoryStream()
-            preview.Save(ms, PngBitmapEncoderOptions.Default)
-            ms.Position = 0
-            Return ms
+            End Using
         End Function
 
         ''' <summary>Erzeugt eine unabhängige Momentaufnahme der aktuell im Editor gezeigten
         ''' Bildszene. Der Vollbild-Betrachter darf niemals DisplayImage selbst übernehmen: der
         ''' Editor ersetzt und disposed diese Bitmap bei jeder weiteren Vorschau-Aktualisierung.
-        ''' Die PNG-Runde trennt deshalb Besitz und Lebensdauer sauber voneinander.</summary>
+        ''' Die Kopie der Pixel trennt deshalb Besitz und Lebensdauer sauber voneinander; früher lief
+        ''' sie über einen PNG-Strom, jetzt direkt (ToSkBitmap, ToAvaloniaBitmapFast).</summary>
         Public Function CreateFullscreenPreviewSnapshot() As Bitmap
             Dim display = DisplayImage
             If display Is Nothing Then Return Nothing
             Try
-                Using stream As New IO.MemoryStream()
-                    display.Save(stream, PngBitmapEncoderOptions.Default)
-                    stream.Position = 0
-                    Return New Bitmap(stream)
+                Using pixels = ImageOrientationService.ToSkBitmap(display)
+                    Return If(pixels Is Nothing, Nothing, ImageOrientationService.ToAvaloniaBitmapFast(pixels))
                 End Using
             Catch ex As Exception
                 DiagnosticLogService.LogException("EditorViewModel.CreateFullscreenPreviewSnapshot", ex)

@@ -474,6 +474,105 @@ Namespace Services
             End Using
             Return wb
         End Function
+
+        ''' <summary>Die Gegenrichtung: die Pixel einer Avalonia-Bitmap als Skia-Bitmap, Bgra8888
+        ''' vormultipliziert mit Farbraum sRGB (Besitz beim Aufrufer), oder Nothing.
+        '''
+        ''' Frueher holten sich Pipette, Verzerren-Vorschau, Vollbild-Momentaufnahme, Anzeigebild im
+        ''' Buendel und Einfuegen die Pixel, indem sie die Bitmap als PNG speicherten und mit Skia
+        ''' wieder lasen - mit Avalonias voller Packstufe. Jetzt schreibt Avalonia direkt in das
+        ''' Skia-Bitmap (Bitmap.CopyPixels mit einem Zielpuffer). Diese Fassung wandelt das
+        ''' Pixelformat selbst um und zeichnet eine nicht lesbare Bitmap ueber ein Render-Ziel, deckt
+        ''' also auch die Bitmaps ab, an denen unter Linux schon das Skalieren scheitert. Hat die
+        ''' Quelle breitere Zeilen als der Puffer, wirft sie, statt falsch zu schreiben (dekompiliert
+        ''' an 12.1: Bitmap.CopyPixelsCore prueft die Puffergroesse) - dann der alte Weg.
+        '''
+        ''' Das Ergebnis ist Byte fuer Byte dasselbe wie ueber PNG, auch bei halbtransparenten
+        ''' Punkten (Pruefung "Avalonia-Bitmap zu Skia"). An einem Anzeigebild von 3072 x 2050
+        ''' kostete der PNG-Weg rund 1,5 s, bei jeder der Stellen oben.
+        '''
+        ''' <paramref name="straightAlpha"/>: geradliniges statt vormultipliziertes Alpha, fuer ein
+        ''' Bild, das gleich als PNG in eine Datei geht (PNG speichert geradlinig). Sonst ginge bei
+        ''' fast durchsichtigen Punkten Farbe verloren, die die Quelle noch hatte.</summary>
+        Friend Shared Function ToSkBitmap(source As Bitmap, Optional straightAlpha As Boolean = False) As SKBitmap
+            If source Is Nothing Then Return Nothing
+            Dim size = source.PixelSize
+            If size.Width <= 0 OrElse size.Height <= 0 Then Return Nothing
+            Dim result = New SKBitmap(New SKImageInfo(size.Width, size.Height, SKColorType.Bgra8888,
+                                                      If(straightAlpha, SKAlphaType.Unpremul, SKAlphaType.Premul),
+                                                      SKColorSpace.CreateSrgb()))
+            Try
+                source.CopyPixels(New SkiaFramebuffer(result, source.Dpi, straightAlpha))
+                Return result
+            Catch ex As Exception
+                result.Dispose()
+                DiagnosticLogService.LogAlways("ToSkBitmap", $"CopyPixels abgelehnt ({ex.GetType().Name}), Rueckfall ueber PNG")
+            End Try
+            Try
+                Using ms As New MemoryStream()
+                    source.Save(ms, PngBitmapEncoderOptions.Default)
+                    ms.Position = 0
+                    Return SKBitmap.Decode(ms)
+                End Using
+            Catch
+                Return Nothing
+            End Try
+        End Function
+
+        ''' <summary>Ein Skia-Bitmap als Zielpuffer fuer Bitmap.CopyPixels. Gesperrt werden muss
+        ''' nichts: das Bitmap gehoert dem Aufrufer, und niemand sonst schreibt hinein.</summary>
+        Private NotInheritable Class SkiaFramebuffer
+            Implements ILockedFramebuffer
+
+            Private ReadOnly _bitmap As SKBitmap
+            Private ReadOnly _dpi As Vector
+            Private ReadOnly _straightAlpha As Boolean
+
+            Public Sub New(bitmap As SKBitmap, dpi As Vector, straightAlpha As Boolean)
+                _bitmap = bitmap
+                _dpi = dpi
+                _straightAlpha = straightAlpha
+            End Sub
+
+            Public ReadOnly Property Address As IntPtr Implements ILockedFramebuffer.Address
+                Get
+                    Return _bitmap.GetPixels()
+                End Get
+            End Property
+
+            Public ReadOnly Property Size As PixelSize Implements ILockedFramebuffer.Size
+                Get
+                    Return New PixelSize(_bitmap.Width, _bitmap.Height)
+                End Get
+            End Property
+
+            Public ReadOnly Property RowBytes As Integer Implements ILockedFramebuffer.RowBytes
+                Get
+                    Return _bitmap.RowBytes
+                End Get
+            End Property
+
+            Public ReadOnly Property Dpi As Vector Implements ILockedFramebuffer.Dpi
+                Get
+                    Return _dpi
+                End Get
+            End Property
+
+            Public ReadOnly Property Format As PixelFormat Implements ILockedFramebuffer.Format
+                Get
+                    Return PixelFormat.Bgra8888
+                End Get
+            End Property
+
+            Public ReadOnly Property AlphaFormat As AlphaFormat Implements ILockedFramebuffer.AlphaFormat
+                Get
+                    Return If(_straightAlpha, AlphaFormat.Unpremul, AlphaFormat.Premul)
+                End Get
+            End Property
+
+            Public Sub Dispose() Implements IDisposable.Dispose
+            End Sub
+        End Class
     End Class
 
 End Namespace

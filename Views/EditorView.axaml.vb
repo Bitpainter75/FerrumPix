@@ -5038,11 +5038,7 @@ Namespace Views
             If _pickSampleBitmap IsNot Nothing AndAlso _pickSampleSource Is bitmap Then Return _pickSampleBitmap
             ReleasePickSampleBitmap()
             Try
-                Using ms = New MemoryStream()
-                    bitmap.Save(ms, PngBitmapEncoderOptions.Default)
-                    ms.Seek(0, SeekOrigin.Begin)
-                    _pickSampleBitmap = SKBitmap.Decode(ms)
-                End Using
+                _pickSampleBitmap = ImageOrientationService.ToSkBitmap(bitmap)
             Catch
                 _pickSampleBitmap = Nothing
             End Try

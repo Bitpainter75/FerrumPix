@@ -27,3 +27,6 @@
 - Faster in the editor: saving a project, turning a selection into a layer, filling, rasterizing
   and merging layers now take about half the time or less, with the same lossless quality.
 
+- No more pause in the editor on the first click with the color picker, when starting a warp
+  preview, when opening the full screen view or when pasting a picture from the clipboard.
+

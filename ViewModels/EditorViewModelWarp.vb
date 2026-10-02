@@ -668,15 +668,10 @@ Namespace ViewModels
             If source Is Nothing Then Return
 
             Try
-                ' Das Anzeigebild als SKBitmap in Anzeigegroesse. Ueber den PNG-Umweg, weil eine
-                ' Avalonia-Bitmap ihre Pixel nicht direkt herausgibt.
-                Using strom = New IO.MemoryStream()
-                    source.Save(strom, PngBitmapEncoderOptions.Default)
-                    strom.Position = 0
-                    Dim roh = NormalizePreviewBase(SKBitmap.Decode(strom))
-                    If roh Is Nothing Then Return
-                    _gridPreviewBase = roh
-                End Using
+                ' Das Anzeigebild als SKBitmap in Anzeigegroesse, direkt ueber seine Pixel.
+                Dim roh = NormalizePreviewBase(ImageOrientationService.ToSkBitmap(source))
+                If roh Is Nothing Then Return
+                _gridPreviewBase = roh
             Catch
                 DisposeGridPreview()
                 Return
@@ -1342,11 +1337,7 @@ Namespace ViewModels
             Dim source = TryCast(DisplayImage, Bitmap)
             If source Is Nothing Then Return
             Try
-                Using strom = New IO.MemoryStream()
-                    source.Save(strom, PngBitmapEncoderOptions.Default)
-                    strom.Position = 0
-                    _linienVorschauBasis = SKBitmap.Decode(strom)
-                End Using
+                _linienVorschauBasis = ImageOrientationService.ToSkBitmap(source)
             Catch
                 DisposeLinePreview()
                 Return
