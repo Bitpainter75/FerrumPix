@@ -2287,11 +2287,19 @@ Namespace ViewModels
             _editorHandoffSource = If(QualifiesForEditorHandoff(path), bmp, Nothing)
             _editorHandoffPath = path
             _editorHandoffWriteTimeUtc = writeTime
+            _shownBitmapPath = path
             SetBitmapLoading(False)
+            ' Das Analysebild entsteht aus dem Bild, das jetzt angezeigt wird (siehe
+            ' EnsureHistogramLoaded) - es wartet also auf genau diesen Moment.
+            EnsureHistogramLoaded()
             ' FPX: das schnelle Komposit steht - die volle, nun identische Szenenfassung zieht mit
             ' demselben Token nach.
             If isFpx AndAlso bmp IsNot Nothing Then LoadFpxFullResolutionBitmapAsync(path, token)
         End Sub
+
+        ' Zu welcher Datei das angezeigte Bild gehoert. Waehrend des Ladens steht hier noch die
+        ' vorige; das Analysebild wartet deshalb, bis beide uebereinstimmen.
+        Private _shownBitmapPath As String
 
         ' Das zuletzt geladene Bild, wenn es sich zur Uebergabe an den Editor eignet (siehe
         ' TakeFullSizeSourceForEditor). Nur eine Referenz auf CurrentImage, keine Kopie.
@@ -2315,6 +2323,33 @@ Namespace ViewModels
                SvgPreviewService.IsSupportedSvg(path) OrElse VideoPreviewService.IsSupportedVideo(path) Then Return False
             If RawSidecarService.IsSidecarFormat(path) AndAlso RawSidecarService.ReadRotationDegrees(path) <> 0 Then Return False
             Return True
+        End Function
+
+        ''' <summary>Das Analysebild zu einer Datei, die gerade NICHT angezeigt wird (Galerie): aus
+        ''' dem Bild, das der Betrachter fuer sie zeigen wuerde, also bei einem RAW mit Rezept und
+        ''' in der Groesse seiner Einstellung (siehe EnsureHistogramLoaded). Wo der Betrachter nichts
+        ''' anderes zeigt als den Decode der Datei (QualifiesForEditorHandoff), wird direkt dekodiert;
+        ''' das ist nachweislich dasselbe Bild. Frueher war die Quelle hier immer der volle Decode
+        ''' ohne Rezept, bei einem RAW also die volle Entwicklung.</summary>
+        Friend Shared Function BuildScopeImageAsShown(path As String, width As Integer, height As Integer) As Bitmap
+            Dim settings = AppSettingsService.Load()
+            Dim reduced = Not settings.ViewerRawFullResolution
+            Dim sidecarTicks = 0L
+            Try
+                Dim sidecar = RawSidecarService.SidecarPathFor(path)
+                If Not String.IsNullOrEmpty(sidecar) AndAlso File.Exists(sidecar) Then sidecarTicks = File.GetLastWriteTimeUtc(sidecar).Ticks
+            Catch
+            End Try
+            ' Alles, was das gezeigte Bild veraendert: Datei, Rezept, Groesse der RAW-Entwicklung und
+            ' ob ueberhaupt entwickelt wird.
+            Dim key = $"shownfile:{ScopeImageCache.FileSourceKey(path)}|{sidecarTicks}|{reduced}|{settings.DevelopRawInViewer}|{settings.DevelopRawInViewerWithoutRecipe}"
+            Return ImageProcessor.BuildScopeImage(key,
+                Function() As SkiaSharp.SKBitmap
+                    If QualifiesForEditorHandoff(path) Then Return ImageProcessor.DecodeWorkingImage(path)
+                    Using shown = DecodeViewerBitmap(path, reducedRawDecode:=reduced)
+                        Return If(shown Is Nothing, Nothing, ImageOrientationService.ToSkBitmap(shown))
+                    End Using
+                End Function, width, height)
         End Function
 
         ''' <summary>Das gerade gezeigte Bild als Skia-Bitmap fuer den Editor (Besitz beim Aufrufer),
@@ -2946,19 +2981,11 @@ Namespace ViewModels
                          LibraryService.Instance.SyncExifData(imagePath, exifForSearch, ExifService.BuildCatalogSummary(info, exifForSearch))
 
                          If loadHistogram Then
-                             ' Die Darstellung kann sich waehrend des Laufs geaendert haben; der
-                             ' Bildwechsel-Merker allein faengt das nicht (siehe
-                             ' ScopeSelectionViewModel.Generation).
-                             Dim scopeGeneration = ScopeSelectionViewModel.Generation
-                             Dim histogram = ImageProcessor.BuildScopeImage(imagePath, 600, 300)
+                             ' Das Analysebild kommt aus dem angezeigten Bild, nicht mehr aus einem
+                             ' eigenen Decode der Datei (siehe EnsureHistogramLoaded). Steht das
+                             ' Bild noch nicht, holt das Ende des Ladens es nach.
                              Dispatcher.UIThread.Post(Sub()
-                                                           If token <> _infoPanelLoadToken OrElse
-                                                              scopeGeneration <> ScopeSelectionViewModel.Generation Then
-                                                               histogram?.Dispose()
-                                                               Return
-                                                           End If
-                                                           InfoPanel.ScopeImage = histogram
-                                                           _histogramLoadedForPath = imagePath
+                                                           If token = _infoPanelLoadToken Then EnsureHistogramLoaded()
                                                        End Sub)
                          End If
                      End Sub)
@@ -3008,9 +3035,16 @@ Namespace ViewModels
         ''' beim letzten LoadInfoPanelData-Aufruf ausgeblendet oder der Betrachter im Hintergrund
         ''' war) noch nicht berechnet wurde - aufgerufen beim Einblenden der Leiste, beim Wechsel in
         ''' den Betrachter und nach einem Wechsel der Darstellung.
+        '''
+        ''' AUS DEM ANGEZEIGTEN BILD, wie in Lightroom: das Analysebild beschreibt, was man sieht.
+        ''' Bei einem RAW also die Entwicklung samt Rezept (oder die Kamera-Vorschau, wenn der
+        ''' Betrachter nicht entwickelt), bei allen anderen Formaten genau das dekodierte Bild. Frueher
+        ''' dekodierte dieser Weg die Datei ein zweites Mal - bei einem RAW die volle Entwicklung ohne
+        ''' Rezept, 0,7 bis 1,8 s, waehrend Kacheln und Anzeige am selben Decode-Tor warteten. Jetzt
+        ''' kostet er das Kopieren der Pixel (ToSkBitmap, auf dem UI-Faden, weil das angezeigte Bild
+        ''' beim Weiterblaettern freigegeben wird) und das Zeichnen im Hintergrund.
         Private Sub EnsureHistogramLoaded()
-            ' Sieht es niemand, wird auch nichts gerechnet: der Weg kostet einen vollen Decode, und
-            ' der belegt die Decode-Schleuse, auf die Kacheln und Anzeige ebenfalls warten.
+            ' Sieht es niemand, wird auch nichts gerechnet.
             If Not IsScopeLive Then Return
             If String.IsNullOrEmpty(_currentImagePath) Then Return
             ' Fuer ein Video gibt es keines - auch nicht beim nachtraeglichen Einblenden der Leiste.
@@ -3026,8 +3060,26 @@ Namespace ViewModels
             ' bekommt sonst das Ergebnis des ersten Laufs zu sehen, und der Merker unten sperrt
             ' jeden weiteren Versuch (siehe ScopeSelectionViewModel.Generation).
             Dim scopeGeneration = ScopeSelectionViewModel.Generation
+            ' Das angezeigte Bild muss zu dieser Datei gehoeren; waehrend des Ladens steht noch das
+            ' vorige da, dann holt RunBitmapLoad den Aufruf nach.
+            Dim shown = CurrentImage
+            If shown Is Nothing OrElse Not String.Equals(_shownBitmapPath, imagePath, StringComparison.Ordinal) Then Return
+            Dim pixels As SkiaSharp.SKBitmap
+            Try
+                pixels = ImageOrientationService.ToSkBitmap(shown)
+            Catch
+                Return
+            End Try
+            If pixels Is Nothing Then Return
+            ' Der Schluessel ist das angezeigte Bild selbst: jedes neu geladene ist ein neues Objekt,
+            ' und das Umschalten zwischen Histogramm, Waveform und Parade an DEMSELBEN trifft den
+            ' Zwischenspeicher.
+            Dim scopeKey = $"shown:{imagePath}|{Runtime.CompilerServices.RuntimeHelpers.GetHashCode(shown)}"
             Task.Run(Sub()
-                         Dim histogram = ImageProcessor.BuildScopeImage(imagePath, 600, 300)
+                         Dim histogram As Bitmap
+                         Using pixels
+                             histogram = ImageProcessor.BuildScopeImage(pixels, 600, 300, scopeKey)
+                         End Using
                          Dispatcher.UIThread.Post(Sub()
                                                        If Not String.Equals(_currentImagePath, imagePath, StringComparison.OrdinalIgnoreCase) OrElse
                                                           Not String.Equals(_infoPanelShownForPath, imagePath, StringComparison.OrdinalIgnoreCase) OrElse

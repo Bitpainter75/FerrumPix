@@ -1,4 +1,4 @@
-## Unreleased
+## 0.9.59
 
 ### What's new
 
@@ -8,6 +8,13 @@
 
 - **Brush sizes are remembered.** The brush, eraser, smudge, healing brush and clone stamp each
   keep their size and hardness when you switch tools, open another picture or restart the app.
+
+- **Histogram, waveform and RGB parade show what you see.** In the gallery and viewer they now
+  describe the picture as it is displayed, for RAW files including your edits, the way Lightroom
+  does. They also appear much sooner, because the file no longer has to be read a second time.
+
+- **Phone photos in HEIC show up in the gallery right away.** Each tile first shows the small
+  preview stored in the file and turns sharp a moment later.
 
 ### Fixes
 

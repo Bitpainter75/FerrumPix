@@ -862,6 +862,28 @@ Namespace Services
 
         ' Dekodiert per SKCodec, korrigiert die EXIF-Orientierung und skaliert auf maxWidth.
         ' Fällt bei jedem SKCodec-Fehler auf das bisherige Bitmap.DecodeToWidth zurück.
+        ''' <summary>Ein schneller PLATZHALTER fuer die Kachel, solange das scharfe Bild noch nicht
+        ''' im Zwischenspeicher liegt: das eingebettete Vorschaubild einer HEIC, oder Nothing. Es ist
+        ''' kleiner als eine Kachel (gesehen 240x320 und 384x512) und wird deshalb weder abgelegt
+        ''' noch behalten; ImageItem tauscht es gegen das scharfe Bild, sobald die
+        ''' Hintergrund-Schlange dazu kommt. HEIF fuehrt keine Beistelldatei, eine Drehung kommt also
+        ''' nicht dazu; die aus dem Container legt libheif selbst auf.</summary>
+        Public Shared Function TryLoadEmbeddedPreview(filePath As String) As Bitmap
+            If String.IsNullOrEmpty(filePath) OrElse Not HeifDecodeService.IsSupportedHeif(filePath) OrElse
+               Not HeifDecodeService.IsAvailable Then Return Nothing
+            Try
+                Using raw = HeifDecodeService.TryDecodeEmbeddedThumbnail(filePath)
+                    If raw Is Nothing Then Return Nothing
+                    Using shaped = ForeignImageDecoder.ToDecodedForm(raw)
+                        If shaped Is Nothing Then Return Nothing
+                        Return ImageOrientationService.ToAvaloniaBitmapFast(shaped)
+                    End Using
+                End Using
+            Catch
+                Return Nothing
+            End Try
+        End Function
+
         ''' <summary>Ein schon dekodiertes Bild als Kachel: drehen, auf die Kachelbreite verkleinern
         ''' (nie vergroessern), anzeigen. Derselbe Weg wie der gedrehte Zweig von
         ''' DecodeCorrectedAndResize; Farbe und Orientierung hat der Leser schon erledigt.</summary>

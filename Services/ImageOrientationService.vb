@@ -462,6 +462,15 @@ Namespace Services
             Dim height = skBitmap.Height
             Dim wb = New WriteableBitmap(New PixelSize(width, height), New Vector(96, 96), PixelFormat.Bgra8888, AlphaFormat.Premul)
             Using fb = wb.Lock()
+                ' Skia kopiert direkt in den Puffer, ohne Umweg ueber ein verwaltetes Feld. Ziel
+                ' ist dasselbe Format wie die Quelle (Farbtyp, Alpha-Art, Farbraum), damit Skia
+                ' nichts rechnet, sondern nur kopiert - genau wie die Schleife darunter.
+                If skBitmap.ColorType = SKColorType.Bgra8888 Then
+                    Using source = skBitmap.PeekPixels()
+                        Dim target = New SKImageInfo(width, height, SKColorType.Bgra8888, skBitmap.AlphaType, skBitmap.ColorSpace)
+                        If source IsNot Nothing AndAlso source.ReadPixels(target, fb.Address, fb.RowBytes) Then Return wb
+                    End Using
+                End If
                 Dim srcStride = skBitmap.RowBytes
                 Dim dstStride = fb.RowBytes
                 Dim rowBytes = Math.Min(srcStride, dstStride)

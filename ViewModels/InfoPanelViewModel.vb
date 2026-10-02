@@ -834,8 +834,8 @@ Namespace ViewModels
 
                          ' Erst warten, dann pruefen, DANN rechnen - in genau dieser Reihenfolge.
                          '
-                         ' Das Histogramm kostet einen vollen Decode; bei einem RAW sind das
-                         ' Sekunden. Wer mit den Pfeiltasten durch einen Ordner geht oder eine
+                         ' Das Histogramm kostet einen Decode; bei einem RAW eine Entwicklung, je
+                         ' nach Einstellung halb oder voll. Wer mit den Pfeiltasten durch einen Ordner geht oder eine
                          ' Mehrfachauswahl aufbaut, loeste vorher fuer JEDES beruehrte Bild einen
                          ' Lauf aus, und alle liefen gleichzeitig weiter - der Rechner stand auf
                          ' Anschlag. Die Pruefung des Merkmals stand damals erst NACH dem Decode
@@ -855,7 +855,9 @@ Namespace ViewModels
                          ' abgeschaltet hat, bekaeme sonst doch noch ein Bild - und mit ihm den
                          ' Speicher dafuer.
                          Dim scopeGeneration = ScopeSelectionViewModel.Generation
-                         Dim histogram = ImageProcessor.BuildScopeImage(path, 600, 300)
+                         ' Das Bild, das der Betrachter zeigen wuerde - bei RAW mit Rezept, wie in
+                         ' Lightroom (siehe ViewerViewModel.BuildScopeImageAsShown).
+                         Dim histogram = ViewerViewModel.BuildScopeImageAsShown(path, 600, 300)
                          Dispatcher.UIThread.Post(Sub()
                                                       If token <> _loadToken OrElse
                                                          scopeGeneration <> ScopeSelectionViewModel.Generation Then

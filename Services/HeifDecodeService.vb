@@ -75,6 +75,9 @@ Namespace Services
         Private Delegate Function GetRawProfileFn(handle As IntPtr, outData As IntPtr) As HeifError
         Private Delegate Function GetNclxProfileFn(handle As IntPtr, ByRef outProfile As IntPtr) As HeifError
         Private Delegate Sub FreeNclxProfileFn(profile As IntPtr)
+        ''' Die eingebetteten Vorschaubilder. heif_item_id ist uint32, deshalb UInteger.
+        Private Delegate Function GetThumbnailIdsFn(handle As IntPtr, ids As UInteger(), count As Integer) As Integer
+        Private Delegate Function GetThumbnailFn(handle As IntPtr, id As UInteger, ByRef thumbnail As IntPtr) As HeifError
 
         ''' <summary>Die Farbangabe eines HEIF als ZAHLEN statt als Profildatei.
         '''
@@ -150,6 +153,10 @@ Namespace Services
         Private Shared _rawProfile As GetRawProfileFn
         Private Shared _nclxProfile As GetNclxProfileFn
         Private Shared _freeNclx As FreeNclxProfileFn
+        ''' Ebenfalls OPTIONAL: ohne sie gibt es keine schnelle Kachel, sonst aendert sich nichts.
+        Private Shared _thumbnailCount As HandleIntFn
+        Private Shared _thumbnailIds As GetThumbnailIdsFn
+        Private Shared _thumbnail As GetThumbnailFn
 
         Private Shared Sub NoteFallbackToLibheif(what As String)
             If Threading.Interlocked.Exchange(_fallbackLogged, 1) = 0 Then
@@ -311,6 +318,16 @@ Namespace Services
                         _nclxProfile = Nothing
                         _freeNclx = Nothing
                     End Try
+                    Try
+                        _thumbnailCount = GetExport(Of HandleIntFn)(handle, "heif_image_handle_get_number_of_thumbnails")
+                        _thumbnailIds = GetExport(Of GetThumbnailIdsFn)(handle, "heif_image_handle_get_list_of_thumbnail_IDs")
+                        _thumbnail = GetExport(Of GetThumbnailFn)(handle, "heif_image_handle_get_thumbnail")
+                    Catch
+                        ' Optional: ohne sie wird jede Kachel aus dem vollen Bild gerechnet.
+                        _thumbnailCount = Nothing
+                        _thumbnailIds = Nothing
+                        _thumbnail = Nothing
+                    End Try
                 Catch
                     ' Ein fehlender Export = Bibliothek unbrauchbar; alles auf Anfang.
                     _contextAlloc = Nothing : _contextFree = Nothing : _readFromFile = Nothing
@@ -320,6 +337,7 @@ Namespace Services
                     _handleRelease = Nothing : _imageRelease = Nothing
                     _profileSize = Nothing : _rawProfile = Nothing
                     _nclxProfile = Nothing : _freeNclx = Nothing
+                    _thumbnailCount = Nothing : _thumbnailIds = Nothing : _thumbnail = Nothing
                     NativeLibrary.Free(handle)
                     _library = IntPtr.Zero
                     _loadedLibrary = Nothing
@@ -388,7 +406,6 @@ Namespace Services
         Private Shared Function DecodeCore(path As String) As SKBitmap
             Dim ctx As IntPtr = IntPtr.Zero
             Dim handle As IntPtr = IntPtr.Zero
-            Dim img As IntPtr = IntPtr.Zero
             Dim pathPtr As IntPtr = IntPtr.Zero
             Try
                 ctx = _contextAlloc()
@@ -397,7 +414,67 @@ Namespace Services
                 pathPtr = StringToUtf8(path)
                 If _readFromFile(ctx, pathPtr, IntPtr.Zero).Code <> 0 Then Return Nothing
                 If _getPrimaryHandle(ctx, handle).Code <> 0 OrElse handle = IntPtr.Zero Then Return Nothing
+                Return DecodeHandle(handle, handle)
+            Catch
+                Return Nothing
+            Finally
+                If handle <> IntPtr.Zero Then _handleRelease(handle)
+                If ctx <> IntPtr.Zero Then _contextFree(ctx)
+                If pathPtr <> IntPtr.Zero Then Marshal.FreeCoTaskMem(pathPtr)
+            End Try
+        End Function
 
+        ''' <summary>Das eingebettete Vorschaubild der Hauptaufnahme (Bgra8888, Besitz beim
+        ''' Aufrufer), oder Nothing, wenn die Datei keines traegt oder libheif die Abfrage nicht
+        ''' kennt. Fuer die schnelle Kachel: ein Telefon-HEIC von 12 MP kostete voll dekodiert 130 bis
+        ''' 460 ms, sein Vorschaubild (gesehen: 240x320 und 384x512) einige Millisekunden. Es ist
+        ''' KLEINER als eine Kachel und deshalb nur ein Platzhalter, bis das scharfe Bild da ist
+        ''' (siehe ImageItem). Gedreht wie das Hauptbild, mit dessen Farbprofil, wenn es kein
+        ''' eigenes traegt.</summary>
+        Public Shared Function TryDecodeEmbeddedThumbnail(path As String) As SKBitmap
+            If String.IsNullOrWhiteSpace(path) OrElse Not IsAvailable Then Return Nothing
+            Return DecodeGate.Run(Function()
+                                      SyncLock _nativeLock
+                                          If Not LibheifReady OrElse _thumbnailCount Is Nothing Then Return Nothing
+                                          Return DecodeThumbnailCore(path)
+                                      End SyncLock
+                                  End Function)
+        End Function
+
+        Private Shared Function DecodeThumbnailCore(path As String) As SKBitmap
+            Dim ctx As IntPtr = IntPtr.Zero
+            Dim handle As IntPtr = IntPtr.Zero
+            Dim thumb As IntPtr = IntPtr.Zero
+            Dim pathPtr As IntPtr = IntPtr.Zero
+            Try
+                ctx = _contextAlloc()
+                If ctx = IntPtr.Zero Then Return Nothing
+                pathPtr = StringToUtf8(path)
+                If _readFromFile(ctx, pathPtr, IntPtr.Zero).Code <> 0 Then Return Nothing
+                If _getPrimaryHandle(ctx, handle).Code <> 0 OrElse handle = IntPtr.Zero Then Return Nothing
+                Dim count = _thumbnailCount(handle)
+                If count <= 0 Then Return Nothing
+                Dim ids(count - 1) As UInteger
+                If _thumbnailIds(handle, ids, count) <= 0 Then Return Nothing
+                If _thumbnail(handle, ids(0), thumb).Code <> 0 OrElse thumb = IntPtr.Zero Then Return Nothing
+                ' Ein Vorschaubild ohne eigenes Profil teilt das der Hauptaufnahme.
+                Dim hasOwnProfile = (_profileSize IsNot Nothing AndAlso _profileSize(thumb) <> IntPtr.Zero)
+                Return DecodeHandle(thumb, If(hasOwnProfile, thumb, handle))
+            Catch
+                Return Nothing
+            Finally
+                If thumb <> IntPtr.Zero Then _handleRelease(thumb)
+                If handle <> IntPtr.Zero Then _handleRelease(handle)
+                If ctx <> IntPtr.Zero Then _contextFree(ctx)
+                If pathPtr <> IntPtr.Zero Then Marshal.FreeCoTaskMem(pathPtr)
+            End Try
+        End Function
+
+        ''' <summary>Ein Bild aus einem libheif-Handle als Bgra8888 in sRGB. Das Farbprofil kommt
+        ''' von <paramref name="profileHandle"/> (beim Vorschaubild ggf. das der Hauptaufnahme).</summary>
+        Private Shared Function DecodeHandle(handle As IntPtr, profileHandle As IntPtr) As SKBitmap
+            Dim img As IntPtr = IntPtr.Zero
+            Try
                 ' IMMER mit Alphakanal dekodieren: das kostet bei undurchsichtigen Bildern nur den
                 ' vierten Kanal, erspart aber einen zweiten Zweig - und HEIC kann Transparenz.
                 If _decodeImage(handle, img, ColorspaceRgb, ChromaInterleavedRgba, IntPtr.Zero).Code <> 0 OrElse img = IntPtr.Zero Then Return Nothing
@@ -439,7 +516,7 @@ Namespace Services
                     ' blass aus (siehe ColorManagementService). Das Profil wird danach freigegeben:
                     ' es ist ein eigens erzeugtes natives Objekt, und ein Kachellauf ueber einen
                     ' Ordner voller HEIC erzeugt eines je Datei.
-                    Using profile = ReadColorProfile(handle)
+                    Using profile = ReadColorProfile(profileHandle)
                         Dim managed = ColorManagementService.ToSrgb(bitmap, profile)
                         If Not Object.ReferenceEquals(managed, bitmap) Then bitmap.Dispose()
                         Return managed
@@ -451,10 +528,8 @@ Namespace Services
             Catch
                 Return Nothing
             Finally
+                ' Nur das eigene Bild: Handle und Kontext gehoeren dem Aufrufer.
                 If img <> IntPtr.Zero Then _imageRelease(img)
-                If handle <> IntPtr.Zero Then _handleRelease(handle)
-                If ctx <> IntPtr.Zero Then _contextFree(ctx)
-                If pathPtr <> IntPtr.Zero Then Marshal.FreeCoTaskMem(pathPtr)
             End Try
         End Function
 

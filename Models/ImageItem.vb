@@ -1076,6 +1076,11 @@ Namespace Models
         Private _inViewportQueue As Boolean = False
         Private _inBackgroundQueue As Boolean = False
         Private _isThumbnailLoading As Boolean = False
+        ' Die Kachel zeigt einen Platzhalter (das eingebettete Vorschaubild einer HEIC) und steht
+        ' fuer das scharfe Bild in der HINTERGRUND-Schlange. Sie wird beim Scrollen bewusst nicht
+        ' in die sichtbare hochgestuft: sie hat ja schon ein Bild, und die sichtbaren ohne Bild
+        ' sollen zuerst drankommen (siehe LoadThumbnailAsync).
+        Private _needsSharpThumbnail As Boolean = False
         Private _evictThumbnailAfterLoad As Boolean = False
         Private _thumbnailCancellationToken As CancellationToken = CancellationToken.None
         Private _thumbnailCacheScopeId As String = Nothing
@@ -1793,8 +1798,10 @@ Namespace Models
                         _inBackgroundQueue = True
                         _backgroundQueue.Add(Me)
                     End If
-                ElseIf _thumbState = 1 AndAlso priority >= ViewportThumbnailPriority AndAlso _inBackgroundQueue Then
-                    ' Aus der Hintergrundschlange in die sichtbare hochstufen.
+                ElseIf _thumbState = 1 AndAlso priority >= ViewportThumbnailPriority AndAlso _inBackgroundQueue AndAlso
+                       Not (_needsSharpThumbnail AndAlso _thumbnail IsNot Nothing) Then
+                    ' Aus der Hintergrundschlange in die sichtbare hochstufen. Nicht eine Kachel mit
+                    ' Platzhalter: die hat schon ein Bild.
                     _backgroundQueue.Remove(Me)
                     _inViewportQueue = True
                     _inBackgroundQueue = False
@@ -1835,6 +1842,8 @@ Namespace Models
                 For Each item In requested
                     item._evictThumbnailAfterLoad = False
                     If item._thumbState = 2 OrElse item._isThumbnailLoading Then Continue For
+                    ' Mit Platzhalter bleibt sie in der Hintergrund-Schlange (siehe _needsSharpThumbnail).
+                    If item._needsSharpThumbnail AndAlso item._thumbnail IsNot Nothing Then Continue For
 
                     If item._inBackgroundQueue Then
                         _backgroundQueue.Remove(item)
@@ -1965,6 +1974,28 @@ Namespace Models
             Return True
         End Function
 
+        ''' <summary>Reiht eine Kachel, die gerade einen Platzhalter bekommen hat, fuer ihr scharfes
+        ''' Bild in die Hintergrund-Schlange ein. Der Platzhalter bleibt so lange stehen. Gilt nur
+        ''' fuer dieselbe Generation: wurde die Kachel inzwischen verworfen, faengt sie ohnehin neu
+        ''' an.</summary>
+        Private Sub QueueSharpThumbnail(generation As Integer)
+            SyncLock _thumbnailQueueLock
+                If _thumbnailGeneration <> generation Then Return
+                _needsSharpThumbnail = True
+                If _thumbState <> 2 Then Return
+                _thumbState = 1
+                If _inViewportQueue Then
+                    _viewportQueue.Remove(Me)
+                    _inViewportQueue = False
+                End If
+                If Not _inBackgroundQueue Then
+                    _inBackgroundQueue = True
+                    _backgroundQueue.Add(Me)
+                End If
+                StartThumbnailWorkersLocked()
+            End SyncLock
+        End Sub
+
         ''' <summary>Setzt den Ladezustand der Abbruch- und Fehlerwege - wie CommitThumbnail unter
         ''' Lock und mit Generationspruefung, damit ein abgebrochener Worker nicht den Zustand einer
         ''' bereits laufenden Neuanforderung zurueckdreht (das wuerde einen dritten Worker
@@ -2017,12 +2048,23 @@ Namespace Models
             Try
                 Dim bmp As Bitmap = Nothing
                 Dim cachedWasExact As Boolean = False
+                Dim isPlaceholder As Boolean = False
                 Try
                     If token.IsCancellationRequested Then Return
                     EnsureFileInfoLoaded()
                     Dim isExact As Boolean = False
                     bmp = ThumbnailCacheService.LoadCached(FilePath, DateModified, FileSize, True, isExact, token, _thumbnailCacheScopeId, _thumbnailCacheScopeName)
                     cachedWasExact = isExact
+                    ' Noch nichts im Speicher, und die Datei traegt ein eigenes Vorschaubild (HEIC
+                    ' vom Telefon): das sofort als Platzhalter, das scharfe Bild spaeter im
+                    ' Hintergrund. Ein voller Decode kostete dort 130 bis 460 ms, das Vorschaubild
+                    ' einige Millisekunden - und die sichtbaren Kacheln warteten sonst alle
+                    ' nacheinander am Decode-Tor. Beim zweiten Durchlauf (_needsSharpThumbnail)
+                    ' geht es direkt zum scharfen Bild.
+                    If bmp Is Nothing AndAlso Not _needsSharpThumbnail Then
+                        bmp = ThumbnailCacheService.TryLoadEmbeddedPreview(FilePath)
+                        isPlaceholder = bmp IsNot Nothing
+                    End If
                     If bmp Is Nothing Then
                         bmp = ThumbnailCacheService.CreateOrUpdate(FilePath, DateModified, FileSize, token, _thumbnailCacheScopeId, _thumbnailCacheScopeName, AddressOf IsStillWantedForThumbnail)
                         cachedWasExact = True
@@ -2045,6 +2087,18 @@ Namespace Models
                 End If
                 Await NotifyThumbnailReadyAsync()
                 If Not Object.ReferenceEquals(abgeloest, bmp) Then abgeloest?.Dispose()
+
+                If isPlaceholder Then
+                    ' Das scharfe Bild NICHT hier, sondern ueber die Hintergrund-Schlange: dieser
+                    ' Lader ist damit sofort frei fuer die naechste sichtbare Kachel.
+                    QueueSharpThumbnail(generation)
+                    Return
+                End If
+                If _needsSharpThumbnail AndAlso cachedWasExact Then
+                    SyncLock _thumbnailQueueLock
+                        If _thumbnailGeneration = generation Then _needsSharpThumbnail = False
+                    End SyncLock
+                End If
 
                 If bmp IsNot Nothing AndAlso Not cachedWasExact Then
                     Dim replacement As Bitmap = Nothing
@@ -2279,6 +2333,7 @@ Namespace Models
                 _isThumbnailLoading = False
                 _evictThumbnailAfterLoad = False
                 _isPinnedVisible = False
+                _needsSharpThumbnail = False
                 _thumbState = 0
                 ' Meldet einen etwa noch laufenden Ladevorgang ab: dessen Commit prallt danach ab
                 ' und disposed sein Bitmap selbst. _isThumbnailLoading = False allein reicht nicht -

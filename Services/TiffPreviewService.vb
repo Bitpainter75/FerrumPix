@@ -99,6 +99,9 @@ Namespace Services
                     ' libtiff packt je Pixel R,G,B,A in ein Integer (Bit 0-7 = Rot). Auf
                     ' Little-Endian liegen die Bytes damit als R,G,B,A im Speicher - Skia erwartet
                     ' bei Bgra8888 aber B,G,R,A. Rot und Blau also tauschen, zeilenweise.
+                    ' Den Tausch Skia zu ueberlassen wie bei JPEG XL brachte hier nichts (74 gegen
+                    ' 77 ms bei 20 MP): die Zeit steckt im Lesen durch libtiff, und das Feld muesste
+                    ' dafuer einmal mehr kopiert werden.
                     Dim bitmap = New SKBitmap(New SKImageInfo(width, height, SKColorType.Bgra8888, SKAlphaType.Unpremul))
                     Try
                         Dim rowBytes = width * 4
@@ -117,10 +120,10 @@ Namespace Services
                             Marshal.Copy(row, 0, target + y * targetStride, rowBytes)
                         Next
 
-                        ' Farbmanagement muss HIER geschehen und nicht spaeter: der Weg nach draussen
-                        ' fuehrt ueber einen PNG-Strom (ExtractPreview), und dabei ginge ein Profil
-                        ' verloren, bevor ColorManagementService es sehen koennte. Ein TIFF in Adobe
-                        ' RGB waere sonst der eine Dateityp, der weiterhin unverwaltet ankaeme.
+                        ' Farbmanagement muss HIER geschehen und nicht spaeter: der Leser reicht ein
+                        ' Bitmap ohne Profil weiter (ForeignImageDecoder), und ColorManagementService
+                        ' bekaeme es danach nie zu sehen. Ein TIFF in Adobe RGB waere sonst der eine
+                        ' Dateityp, der weiterhin unverwaltet ankaeme.
                         '
                         ' Das Profil wird FREIGEGEBEN: es ist ein eigens erzeugtes natives Objekt,
                         ' und ueber einen Kachellauf mit tausend Bildern summiert sich das, bis der

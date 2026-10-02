@@ -108,11 +108,9 @@ Namespace Services
         End Function
 
         Private Shared Function HeaderSize(path As String) As (Width As Integer, Height As Integer)
-            If JxlDecodeService.IsSupportedJxl(path) Then Return JxlDecodeService.TryGetSize(path)
-            If HeifDecodeService.IsSupportedHeif(path) Then Return HeifDecodeService.TryGetSize(path)
-            If TiffPreviewService.IsSupportedTiff(path) Then Return TiffPreviewService.TryGetSize(path)
-            If PsdPreviewService.IsSupportedPsd(path) Then Return PsdPreviewService.TryGetSize(path)
-            If ForeignImageDecoder.CanDecode(path) Then Return (0, 0)
+            ' Bei den Formaten mit eigenem Leser nur der Kopf: ohne ihn waere es ein zweiter voller
+            ' Decode, und den soll die Uebergabe gerade sparen.
+            If ForeignImageDecoder.CanDecode(path) Then Return ImageProcessor.ForeignHeaderSize(path)
             Return ImageProcessor.GetOrientedImageSize(path)
         End Function
 

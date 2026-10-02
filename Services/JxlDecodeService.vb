@@ -493,20 +493,16 @@ Namespace Services
                 ' Farbprofil angewandt wird: danach ist es weg (siehe ColorManagementService).
                 Dim bgra = New SKBitmap(New SKImageInfo(width, height, SKColorType.Bgra8888, SKAlphaType.Unpremul))
                 Try
-                    Dim rowBytes = width * 4
-                    Dim row(rowBytes - 1) As Byte
-                    Dim source = bitmap.GetPixels()
-                    Dim target = bgra.GetPixels()
-                    Dim targetStride = bgra.RowBytes
-                    For y = 0 To height - 1
-                        Marshal.Copy(source + y * rowBytes, row, 0, rowBytes)
-                        For x = 0 To rowBytes - 4 Step 4
-                            Dim r = row(x)
-                            row(x) = row(x + 2)
-                            row(x + 2) = r
-                        Next
-                        Marshal.Copy(row, 0, target + y * targetStride, rowBytes)
-                    Next
+                    ' Rot und Blau tauscht Skia beim Umlesen, in einem nativen Schritt. Frueher stand
+                    ' hier eine verwaltete Schleife ueber jedes Byte. Beide Seiten unvormultipliziert
+                    ' und ohne Farbraum: es wird nur umsortiert, nichts gerechnet (gemessen
+                    ' bytegleich zur Schleife).
+                    Using sourcePixels = bitmap.PeekPixels(), targetPixels = bgra.PeekPixels()
+                        If Not sourcePixels.ReadPixels(targetPixels) Then
+                            bgra.Dispose()
+                            Return Nothing
+                        End If
+                    End Using
                     Dim managed = ColorManagementService.ToSrgb(bgra, profile)
                     If Not Object.ReferenceEquals(managed, bgra) Then bgra.Dispose()
                     Return managed

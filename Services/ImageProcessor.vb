@@ -2010,6 +2010,29 @@ Namespace Services
             End Try
         End Function
 
+        ''' <summary>Dasselbe mit eigener Quelle: erst der Zwischenspeicher unter
+        ''' <paramref name="sourceKey"/>, und nur wenn dort nichts liegt, wird <paramref name="decode"/>
+        ''' gerufen. Der Schluessel muss alles tragen, was das Bild der Quelle veraendert.</summary>
+        Public Shared Function BuildScopeImage(sourceKey As String, decode As Func(Of SKBitmap),
+                                               width As Integer, height As Integer,
+                                               Optional scopeMode As String = Nothing) As Bitmap
+            Try
+                Dim mode = If(String.IsNullOrEmpty(scopeMode), CurrentScopeMode(),
+                              AppSettingsService.NormalizeScopeMode(scopeMode))
+                If Not String.IsNullOrEmpty(sourceKey) Then
+                    Using cached = ScopeImageCache.TryGetCopy(sourceKey, mode, width, height)
+                        If cached IsNot Nothing Then Return ToAvaloniaBitmap(cached)
+                    End Using
+                End If
+                Using source = decode()
+                    If source Is Nothing Then Return Nothing
+                    Return BuildScopeImage(source, width, height, sourceKey, mode)
+                End Using
+            Catch
+                Return Nothing
+            End Try
+        End Function
+
         ''' <summary>Die eingestellte Darstellung, normiert. Steht im Schluessel des
         ''' Zwischenspeichers und entscheidet in RenderScope ueber den Weg.</summary>
         Private Shared Function CurrentScopeMode() As String
@@ -2113,9 +2136,15 @@ Namespace Services
                         Return (facts.OrientedWidth, facts.OrientedHeight)
                     End If
                 End If
-                ' Formate mit eigenem Leser: die Masse des Decodes selbst, ohne ihn erst als PNG zu
-                ' packen und dessen Kopf zu lesen. Gedreht hat der Leser schon.
+                ' Formate mit eigenem Leser: die Masse aus IHREM Dateikopf, gedreht wie ihr Decode.
+                ' Infopanel und Betrachter fragen das bei jedem Bildwechsel; ein voller Decode nur fuer
+                ' Breite und Hoehe kostete bei einem 20-MP-HEIC 875 ms und belegte solange das
+                ' Decode-Tor. Dass Kopf und Decode dieselben Masse nennen, haelt eine Pruefung an allen
+                ' Vorlagen fest ("Fremdformate: Masse aus dem Dateikopf ...").
                 If ForeignImageDecoder.CanDecode(path) Then
+                    Dim header = ForeignHeaderSize(path)
+                    If header.Width > 0 AndAlso header.Height > 0 Then Return header
+                    ' Kein Kopf zu haben (ICO, beschaedigte Datei): dann doch der Decode.
                     Using foreign = ForeignImageDecoder.TryDecode(path)
                         If foreign IsNot Nothing Then Return (foreign.Width, foreign.Height)
                     End Using
@@ -2187,6 +2216,16 @@ Namespace Services
                 End Using
             End Using
             Return result
+        End Function
+
+        ''' <summary>Die Masse eines Formats mit eigenem Leser aus seinem Dateikopf, oder (0,0).
+        ''' Jeder Leser nennt sie so, wie sein Decode sie liefert (JPEG XL und HEIF gedreht).</summary>
+        Friend Shared Function ForeignHeaderSize(path As String) As (Width As Integer, Height As Integer)
+            If JxlDecodeService.IsSupportedJxl(path) Then Return JxlDecodeService.TryGetSize(path)
+            If HeifDecodeService.IsSupportedHeif(path) Then Return HeifDecodeService.TryGetSize(path)
+            If TiffPreviewService.IsSupportedTiff(path) Then Return TiffPreviewService.TryGetSize(path)
+            If PsdPreviewService.IsSupportedPsd(path) Then Return PsdPreviewService.TryGetSize(path)
+            Return (0, 0)
         End Function
 
         ''' <summary>Bildabmessungen aus den Kopfdaten, ohne vollstaendiges Dekodieren. (0,0), wenn
