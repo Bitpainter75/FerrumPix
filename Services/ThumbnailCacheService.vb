@@ -275,12 +275,23 @@ Namespace Services
             Using bmp = SKBitmap.Decode(pngStream)
                 If bmp Is Nothing Then Return False
                 If isStillWanted IsNot Nothing AndAlso Not isStillWanted() Then Return False
-                Dim targetWidth = Math.Min(CacheWidth, bmp.Width)
-                Dim scale = targetWidth / CDbl(bmp.Width)
-                Dim targetHeight = Math.Max(1, CInt(Math.Round(bmp.Height * scale)))
-                Using resized = bmp.Resize(New SKImageInfo(targetWidth, targetHeight, SKColorType.Bgra8888, SKAlphaType.Premul), SamplingMedium)
-                    If resized Is Nothing Then Return False
-                    Using image = SKImage.FromBitmap(resized)
+                Return WriteCacheBitmap(bmp, Nothing, cachePath, quality)
+            End Using
+        End Function
+
+        ''' <summary>Verkleinert ein schon aufrechtes Bild auf Kachelbreite und legt es als JPEG ab.
+        ''' Mit <paramref name="sourceProfile"/> wird die Kachel nach sRGB gewandelt (Nothing: das
+        ''' Bild ist schon sRGB, die Wandlung entfaellt).</summary>
+        Private Shared Function WriteCacheBitmap(bmp As SKBitmap, sourceProfile As SKColorSpace, cachePath As String, quality As Integer) As Boolean
+            Dim targetWidth = Math.Min(CacheWidth, bmp.Width)
+            Dim scale = targetWidth / CDbl(bmp.Width)
+            Dim targetHeight = Math.Max(1, CInt(Math.Round(bmp.Height * scale)))
+            Using resized = bmp.Resize(New SKImageInfo(targetWidth, targetHeight, SKColorType.Bgra8888, SKAlphaType.Premul), SamplingMedium)
+                If resized Is Nothing Then Return False
+                ' Die verkleinerte Fassung traegt kein Profil mehr, deshalb wird es mitgegeben.
+                Dim managed = ColorManagementService.ToSrgb(resized, sourceProfile)
+                Try
+                    Using image = SKImage.FromBitmap(managed)
                         Using data = image.Encode(SKEncodedImageFormat.Jpeg, quality)
                             If data Is Nothing Then Return False
                             Using output = File.Open(cachePath, FileMode.Create, FileAccess.Write, FileShare.None)
@@ -288,7 +299,9 @@ Namespace Services
                             End Using
                         End Using
                     End Using
-                End Using
+                Finally
+                    If Not Object.ReferenceEquals(managed, resized) Then managed.Dispose()
+                End Try
             End Using
             Return True
         End Function
@@ -663,6 +676,22 @@ Namespace Services
             If developed IsNot Nothing Then
                 Using developed
                     Return WriteDevelopedCacheFile(developed, cachePath, quality, isStillWanted)
+                End Using
+            End If
+
+            ' Formate mit eigenem Leser: das Bild direkt, ohne PNG-Strom dazwischen. Die Leser
+            ' liefern es schon aufrecht; dazu kommt nur die Drehung aus der Beistelldatei (PSD).
+            If ForeignImageDecoder.CanDecode(filePath) Then
+                Dim foreign = ForeignImageDecoder.TryDecode(filePath)
+                If foreign Is Nothing Then Return False
+                Using foreign
+                    If isStillWanted IsNot Nothing AndAlso Not isStillWanted() Then Return False
+                    Dim turned = ImageOrientationService.ApplyQuarterRotation(foreign, SidecarRotationFor(filePath))
+                    Try
+                        Return WriteCacheBitmap(turned, foreign.ColorSpace, cachePath, quality)
+                    Finally
+                        If Not Object.ReferenceEquals(turned, foreign) Then turned.Dispose()
+                    End Try
                 End Using
             End If
 

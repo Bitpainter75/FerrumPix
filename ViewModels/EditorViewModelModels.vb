@@ -303,26 +303,29 @@ Namespace ViewModels
                 Dim corners = _bokehBlende, lichter = _bokehLichter
 
                 SetPreviewBusy(True)
-                Dim data As Byte()
+                Dim vorschau As Bitmap
                 Try
-                    data = Await Task.Run(
-                    Function() As Byte()
-                        Using unscharf = DepthMapService.DepthBlur(basis, map, from, bis,
-                                                                            strength, uebergang, corners, lichter)
-                            If unscharf Is Nothing Then Return Nothing
-                            ' Nur die Vorschau, sie wird gleich wieder gelesen.
-                            Return PngEncoder.EncodeToBytes(unscharf, PngPurpose.Transient)
+                    vorschau = Await Task.Run(
+                    Function() As Bitmap
+                        Dim unscharf = DepthMapService.DepthBlur(basis, map, from, bis,
+                                                                 strength, uebergang, corners, lichter)
+                        If unscharf Is Nothing Then Return Nothing
+                        ' Nur die Vorschau: direkte Zeilenkopie statt PNG-Rundlauf.
+                        Using norm = NormalizePreviewBase(unscharf)
+                            Return ImageOrientationService.ToAvaloniaBitmapFast(norm)
                         End Using
                     End Function)
                 Finally
                     SetPreviewBusy(False)
                 End Try
 
-                If data Is Nothing OrElse pass <> _bokehVorschauLauf Then Return
-                Using strom = New IO.MemoryStream(data)
-                    ToolPreviewImage = New Bitmap(strom)
-                    _vorschauQuelle = "Bokeh"
-                End Using
+                If vorschau Is Nothing Then Return
+                If pass <> _bokehVorschauLauf Then
+                    vorschau.Dispose()
+                    Return
+                End If
+                ToolPreviewImage = vorschau
+                _vorschauQuelle = "Bokeh"
             Catch ex As Exception
                 DiagnosticLogService.LogAlways("BokehVorschau", ex.Message)
                 DisposeBokehPreview()

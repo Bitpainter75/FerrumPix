@@ -153,6 +153,9 @@ Namespace Services
         ''' das Bild gilt danach als erledigt. Dieselbe Falle wie bei der Gesichtssuche (siehe
         ''' <see cref="FaceScanRunner"/>).</summary>
         Private Shared Function DecodeUpright(filePath As String) As SKBitmap
+            ' Formate mit eigenem Leser (JPEG XL, HEIF, TIFF, PSD, ICO): das Bild direkt, ohne
+            ' PNG-Strom dazwischen. Die Leser liefern es schon aufrecht.
+            If ForeignImageDecoder.CanDecode(filePath) Then Return ForeignImageDecoder.TryDecode(filePath)
             Using stream = ThumbnailCacheService.OpenThumbnailSource(filePath)
                 If stream Is Nothing Then Return Nothing
                 ' Ein einziger Codec fuer Drehung UND Bildpunkte: ein getrenntes Auslesen muesste

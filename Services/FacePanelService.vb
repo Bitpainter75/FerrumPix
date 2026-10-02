@@ -403,9 +403,7 @@ Namespace Services
                                                          New SkiaSharp.SKRect(0, 0, CropEdge, CropEdge),
                                                          ImageProcessor.SamplingMedium, Nothing)
                     End Using
-                    Using stream = PngEncoder.EncodeToStream(target, PngPurpose.Transient)
-                        Return New Bitmap(stream)
-                    End Using
+                    Return ImageOrientationService.ToAvaloniaBitmapFast(target)
                 End Using
             Catch ex As Exception
                 DiagnosticLogService.LogException("FacePanel.CropFace", ex)

@@ -5021,8 +5021,9 @@ Namespace Views
                     Dim offsetX = (canvasSize - bounds.Width * scale) / 2.0F - bounds.Left * scale
                     Dim offsetY = (canvasSize - bounds.Height * scale) / 2.0F - bounds.Top * scale
 
-                    Using surface = SKSurface.Create(New SKImageInfo(canvasSize, canvasSize, SKColorType.Bgra8888, SKAlphaType.Premul))
-                        Dim canvas = surface.Canvas
+                    ' Gezeichnet wird in ein SKBitmap, das ohne PNG-Rundlauf zum Avalonia-Bild wird.
+                    Using target = New SKBitmap(New SKImageInfo(canvasSize, canvasSize, SKColorType.Bgra8888, SKAlphaType.Premul)),
+                          canvas = New SKCanvas(target)
                         canvas.Clear(SKColors.Transparent)
 
                         ' Die Kontur-Icons bestehen aus dünnen dunklen Linien und verschwinden als Mauszeiger
@@ -5045,13 +5046,7 @@ Namespace Views
                         canvas.DrawPicture(picture)
                         canvas.Flush()
 
-                        Using image = surface.Snapshot(), pixels = image.PeekPixels(),
-                              data = PngEncoder.Encode(pixels, PngPurpose.Transient)
-                            Using bitmapStream As New MemoryStream(data.ToArray())
-                                Dim bitmap = New Bitmap(bitmapStream)
-                                Return New Cursor(bitmap, hotspot)
-                            End Using
-                        End Using
+                        Return New Cursor(ImageOrientationService.ToAvaloniaBitmapFast(target), hotspot)
                     End Using
                 End Using
             End Using
