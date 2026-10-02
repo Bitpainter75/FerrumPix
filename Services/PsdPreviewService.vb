@@ -89,19 +89,9 @@ Namespace Services
                 If bitmap Is Nothing Then Return Nothing
 
                 Using bitmap
-                    ' Encode über das Pixmap, nicht über SKImage.FromBitmap: Raster-SKImages
-                    ' verlangen Premul/Opaque, das Composite mit Alpha liegt aber bewusst als
-                    ' Unpremul vor (PNG speichert geradliniges Alpha - so bleibt es verlustfrei).
-                    Using pixmap = bitmap.PeekPixels()
-                        If pixmap Is Nothing Then Return Nothing
-                        Using encoded = pixmap.Encode(SKEncodedImageFormat.Png, 100)
-                            If encoded Is Nothing Then Return Nothing
-                            Dim ms As New MemoryStream()
-                            encoded.SaveTo(ms)
-                            ms.Position = 0
-                            Return ms
-                        End Using
-                    End Using
+                    ' Das Composite mit Alpha liegt bewusst als Unpremul vor; der Kodierer geht
+                    ' deshalb ueber das Pixmap (siehe PreviewStreamEncoder).
+                    Return PreviewStreamEncoder.Encode(bitmap)
                 End Using
             Catch
                 Return Nothing

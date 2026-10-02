@@ -571,17 +571,7 @@ Namespace Services
                 If Not LibheifReady Then Return Nothing
 
                 Using bmp = DecodeCore(path)
-                    If bmp Is Nothing Then Return Nothing
-                    Using image = SKImage.FromBitmap(bmp)
-                        If image Is Nothing Then Return Nothing
-                        Using data = image.Encode(SKEncodedImageFormat.Png, 100)
-                            If data Is Nothing Then Return Nothing
-                            Dim ms As New MemoryStream()
-                            data.SaveTo(ms)
-                            ms.Position = 0
-                            Return ms
-                        End Using
-                    End Using
+                    Return PreviewStreamEncoder.Encode(bmp)
                 End Using
             End SyncLock
         End Function

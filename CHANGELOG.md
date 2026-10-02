@@ -17,3 +17,7 @@
 - The selection frame of a rotated text now stays tight around the letters. Before, it grew
   taller while rotating and stood off the text at the top and bottom.
 
+- JPEG XL, HEIC, AVIF, TIFF and PSD files open several times faster, in the viewer as well as in
+  thumbnails and the editor. A folder full of JPEG XL photos could keep the viewer waiting for
+  over a minute.
+

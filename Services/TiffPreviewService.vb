@@ -163,17 +163,7 @@ Namespace Services
         ''' Thumbnail-Erzeugung erwarten (gleiches Muster wie PSD/ICO/HEIC).</summary>
         Public Shared Function ExtractPreview(path As String) As MemoryStream
             Using bmp = TryDecode(path)
-                If bmp Is Nothing Then Return Nothing
-                Using image = SKImage.FromBitmap(bmp)
-                    If image Is Nothing Then Return Nothing
-                    Using data = image.Encode(SKEncodedImageFormat.Png, 100)
-                        If data Is Nothing Then Return Nothing
-                        Dim ms As New MemoryStream()
-                        data.SaveTo(ms)
-                        ms.Position = 0
-                        Return ms
-                    End Using
-                End Using
+                Return PreviewStreamEncoder.Encode(bmp)
             End Using
         End Function
 

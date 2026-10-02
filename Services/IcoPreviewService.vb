@@ -38,15 +38,7 @@ Namespace Services
                 If bitmap Is Nothing Then Return Nothing
 
                 Using bitmap
-                    Using image = SKImage.FromBitmap(bitmap)
-                        Using encoded = image.Encode(SKEncodedImageFormat.Png, 100)
-                            If encoded Is Nothing Then Return Nothing
-                            Dim ms As New MemoryStream()
-                            encoded.SaveTo(ms)
-                            ms.Position = 0
-                            Return ms
-                        End Using
-                    End Using
+                    Return PreviewStreamEncoder.Encode(bitmap)
                 End Using
             Catch
                 Return Nothing

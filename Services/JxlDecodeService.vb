@@ -399,24 +399,10 @@ Namespace Services
             Return DecodeGate.Run(Function()
                                       SyncLock _nativeLock
                                           Using bmp = DecodeCore(path)
-                                              Return EncodePng(bmp)
+                                              Return PreviewStreamEncoder.Encode(bmp)
                                           End Using
                                       End SyncLock
                                   End Function)
-        End Function
-
-        Private Shared Function EncodePng(bmp As SKBitmap) As MemoryStream
-            If bmp Is Nothing Then Return Nothing
-            Using image = SKImage.FromBitmap(bmp)
-                If image Is Nothing Then Return Nothing
-                Using data = image.Encode(SKEncodedImageFormat.Png, 100)
-                    If data Is Nothing Then Return Nothing
-                    Dim ms As New MemoryStream()
-                    data.SaveTo(ms)
-                    ms.Position = 0
-                    Return ms
-                End Using
-            End Using
         End Function
 
         Private Shared Function DecodeCore(path As String) As SKBitmap
