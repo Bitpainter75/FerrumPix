@@ -32,14 +32,15 @@ Namespace Services
 
         ''' Liefert einen MemoryStream mit PNG-Daten (Position 0) oder Nothing bei Fehler.
         Public Shared Function ExtractPreview(filePath As String) As MemoryStream
-            Try
-                Dim data = File.ReadAllBytes(filePath)
-                Dim bitmap = DecodeLargestEntry(data)
-                If bitmap Is Nothing Then Return Nothing
+            Using bitmap = TryDecode(filePath)
+                Return PngEncoder.EncodeToStream(bitmap, PngPurpose.Transient)
+            End Using
+        End Function
 
-                Using bitmap
-                    Return PngEncoder.EncodeToStream(bitmap, PngPurpose.Transient)
-                End Using
+        ''' <summary>Der groesste Eintrag der Datei (Besitz beim Aufrufer), oder Nothing.</summary>
+        Public Shared Function TryDecode(filePath As String) As SKBitmap
+            Try
+                Return DecodeLargestEntry(File.ReadAllBytes(filePath))
             Catch
                 Return Nothing
             End Try

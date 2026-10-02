@@ -647,6 +647,14 @@ Namespace Services
                 ' Anderes Hauptbild -> der ~180-MB-Entwicklungs-Cache ist stale und kann weg.
                 RawDecodeService.ClearCache()
             End If
+            ' Formate mit eigenem Leser: das Bitmap direkt, ohne PNG dazwischen. Es ist dasselbe Bild,
+            ' das der Weg unten aus dem PNG-Strom laese, mit Farbraum sRGB (siehe
+            ' ForeignImageDecoder); eine Wandlung waere also keine. Liefert der Leser nichts, bleibt
+            ' es beim alten Weg und damit bei dessen Rueckfall auf die Datei selbst.
+            If ForeignImageDecoder.CanDecode(path) Then
+                Dim foreign = ForeignImageDecoder.TryDecode(path)
+                If foreign IsNot Nothing Then Return foreign
+            End If
             ' SKCodec.Create(Stream) übernimmt den Stream, und manche Codecs (insbesondere WebP) schließen
             ' ihn dabei sofort. Ein späteres stream.Seek für den Fallback-Decode wirft dann
             ' ObjectDisposedException - WebP-Quellen ließen sich deshalb weder öffnen noch konvertieren.
@@ -2104,6 +2112,13 @@ Namespace Services
                     If facts IsNot Nothing AndAlso facts.OrientedWidth > 0 Then
                         Return (facts.OrientedWidth, facts.OrientedHeight)
                     End If
+                End If
+                ' Formate mit eigenem Leser: die Masse des Decodes selbst, ohne ihn erst als PNG zu
+                ' packen und dessen Kopf zu lesen. Gedreht hat der Leser schon.
+                If ForeignImageDecoder.CanDecode(path) Then
+                    Using foreign = ForeignImageDecoder.TryDecode(path)
+                        If foreign IsNot Nothing Then Return (foreign.Width, foreign.Height)
+                    End Using
                 End If
                 Dim data As SKData
                 If FpxService.IsFpx(path) Then

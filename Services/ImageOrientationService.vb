@@ -416,50 +416,42 @@ Namespace Services
                 End Using
             End If
             If PsdPreviewService.IsSupportedPsd(filePath) Then
-                Using stream = PsdPreviewService.ExtractPreview(filePath)
-                    If stream Is Nothing Then Return Nothing
-                    Dim psdRotation = If(applySidecarRotation, RawSidecarService.ReadRotationDegrees(filePath), 0)
-                    Return LoadOrientedAvaloniaBitmap(stream, psdRotation)
-                End Using
+                ' PSD fuehrt als einziges dieser Formate eine Beistelldatei mit Drehung.
+                Dim psdRotation = If(applySidecarRotation, RawSidecarService.ReadRotationDegrees(filePath), 0)
+                Return ForeignToAvaloniaBitmap(filePath, psdRotation)
             End If
-            If HeifDecodeService.IsSupportedHeif(filePath) Then
-                ' Ohne diesen Zweig landete HEIC/AVIF beim Skia-Rueckfall unten, der das Format
-                ' nicht kann - im Filmstreifen und im Editor blieb die Flaeche deshalb leer,
-                ' obwohl Miniaturen und Renderpipeline HEIF laengst lesen konnten.
-                ' Kein LoadOrientedAvaloniaBitmap: der Dekoder legt die Drehung aus dem Container
-                ' schon auf. Und kein applySidecarRotation, weil HEIF kein Sidecar-Format ist
-                ' (RawSidecarService.IsSidecarFormat kennt nur RAW und PSD).
-                Using stream = HeifDecodeService.ExtractPreview(filePath)
-                    Return If(stream IsNot Nothing, New Bitmap(stream), Nothing)
-                End Using
-            End If
-            If JxlDecodeService.IsSupportedJxl(filePath) Then
-                ' Wie HEIF: Skia kennt das Format nicht, und libjxl liefert schon gedreht.
-                Using stream = JxlDecodeService.ExtractPreview(filePath)
-                    Return If(stream IsNot Nothing, New Bitmap(stream), Nothing)
-                End Using
-            End If
-            If TiffPreviewService.IsSupportedTiff(filePath) Then
-                ' Auch TIFF kennt Skia nicht. Dieser Weg traegt die Schnellvorschau der Galerie
-                ' (Leertaste), die Vorschau im Konfliktdialog und den Rueckfall des Editors - dort
-                ' blieb die Flaeche bei einem TIFF leer, waehrend die Kachel daneben eines zeigte.
-                ' LibTiff legt das Orientierungs-Tag selbst auf, und TIFF fuehrt keine Beistelldatei
-                ' (RawSidecarService.IsSidecarFormat kennt nur RAW und PSD).
-                Using stream = TiffPreviewService.ExtractPreview(filePath)
-                    Return If(stream IsNot Nothing, New Bitmap(stream), Nothing)
-                End Using
+            ' HEIC/AVIF, JPEG XL, TIFF und ICO kennt Skia nicht. Ohne diese Zweige landeten sie beim
+            ' Skia-Rueckfall unten - im Filmstreifen, in der Schnellvorschau der Galerie (Leertaste),
+            ' im Konfliktdialog und im Editor blieb die Flaeche leer, waehrend die Kachel daneben
+            ' ein Bild zeigte. Die Leser legen die Drehung aus der Datei selbst auf, und keines der
+            ' Formate fuehrt eine Beistelldatei (RawSidecarService.IsSidecarFormat kennt nur RAW und
+            ' PSD); also keine weitere Drehung.
+            If HeifDecodeService.IsSupportedHeif(filePath) OrElse JxlDecodeService.IsSupportedJxl(filePath) OrElse
+               TiffPreviewService.IsSupportedTiff(filePath) OrElse IcoPreviewService.IsSupportedIco(filePath) Then
+                Return ForeignToAvaloniaBitmap(filePath, 0)
             End If
             If SvgPreviewService.IsSupportedSvg(filePath) Then
                 Using stream = SvgPreviewService.ExtractPreview(filePath)
                     Return If(stream IsNot Nothing, New Bitmap(stream), Nothing)
                 End Using
             End If
-            If IcoPreviewService.IsSupportedIco(filePath) Then
-                Using stream = IcoPreviewService.ExtractPreview(filePath)
-                    Return If(stream IsNot Nothing, New Bitmap(stream), Nothing)
-                End Using
-            End If
             Return LoadOrientedAvaloniaBitmap(filePath)
+        End Function
+
+        ''' <summary>Ein Format mit eigenem Leser als Anzeigebild, direkt aus dem Bitmap statt ueber
+        ''' einen PNG-Strom (siehe ForeignImageDecoder). Dieselben Pixel wie vorher: das Bitmap hat
+        ''' genau die Form, die ToAvaloniaBitmapFast erwartet. Nothing, wenn der Leser nichts
+        ''' liefert.</summary>
+        Friend Shared Function ForeignToAvaloniaBitmap(filePath As String, extraRotationDegrees As Integer) As Bitmap
+            Using decoded = ForeignImageDecoder.TryDecode(filePath)
+                If decoded Is Nothing Then Return Nothing
+                Dim rotated = ApplyQuarterRotation(decoded, extraRotationDegrees)
+                Try
+                    Return ToAvaloniaBitmapFast(rotated)
+                Finally
+                    If Not Object.ReferenceEquals(rotated, decoded) Then rotated.Dispose()
+                End Try
+            End Using
         End Function
 
         ' Kopiert die dekodierten Pixel direkt in eine WriteableBitmap (Bgra8888/Premul passt

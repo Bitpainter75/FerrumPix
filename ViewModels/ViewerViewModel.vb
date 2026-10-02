@@ -2369,42 +2369,18 @@ Namespace ViewModels
                     Return If(preview IsNot Nothing, New Bitmap(preview), Nothing)
                 End Using
             End If
-            If IcoPreviewService.IsSupportedIco(path) Then
-                Using preview = IcoPreviewService.ExtractPreview(path)
-                    Return If(preview IsNot Nothing, New Bitmap(preview), Nothing)
-                End Using
-            End If
             If PsdPreviewService.IsSupportedPsd(path) Then
-                Using preview = PsdPreviewService.ExtractPreview(path)
-                    ' Wie RAW: eine gedrehte PSD traegt ihre Drehung im Sidecar, nicht in den Pixeln.
-                    Return If(preview IsNot Nothing,
-                              ImageOrientationService.LoadOrientedAvaloniaBitmap(preview, RawSidecarService.ReadRotationDegrees(path)),
-                              Nothing)
-                End Using
+                ' Wie RAW: eine gedrehte PSD traegt ihre Drehung im Sidecar, nicht in den Pixeln.
+                Return ImageOrientationService.ForeignToAvaloniaBitmap(path, RawSidecarService.ReadRotationDegrees(path))
             End If
-            If TiffPreviewService.IsSupportedTiff(path) Then
-                ' TIFF fehlte hier, genau wie HEIF vorher: SkiaSharp kennt das Format gar nicht, und
-                ' der Rueckfall unten lieferte deshalb nichts. In der Galerie war die Kachel da und
-                ' im Editor ging die Datei auf - nur der Betrachter blieb leer (Nutzermeldung).
-                ' LibTiff wendet das Orientierungs-Tag selbst an, also keine zweite Korrektur; eine
-                ' Beistelldatei fuehrt TIFF nicht (RawSidecarService.IsSidecarFormat).
-                Using preview = TiffPreviewService.ExtractPreview(path)
-                    Return If(preview IsNot Nothing, New Bitmap(preview), Nothing)
-                End Using
-            End If
-            If HeifDecodeService.IsSupportedHeif(path) Then
-                ' HEIF fehlte hier bisher ganz: der Viewer fiel unten auf Skia zurueck, das HEIC
-                ' und AVIF nicht dekodiert. IsRenderableImagePath fuehrt die Formate laengst, und
-                ' Miniaturen wie Renderpipeline konnten sie auch - nur das grosse Bild blieb leer.
-                ' Der Dekoder liefert bereits gedreht, deshalb keine Orientierungskorrektur.
-                Using preview = HeifDecodeService.ExtractPreview(path)
-                    Return If(preview IsNot Nothing, New Bitmap(preview), Nothing)
-                End Using
-            End If
-            If JxlDecodeService.IsSupportedJxl(path) Then
-                Using preview = JxlDecodeService.ExtractPreview(path)
-                    Return If(preview IsNot Nothing, New Bitmap(preview), Nothing)
-                End Using
+            ' ICO, TIFF, HEIF und JPEG XL kennt SkiaSharp nicht; der Rueckfall unten lieferte deshalb
+            ' nichts, und der Betrachter blieb leer, waehrend Galerie und Editor das Bild zeigten
+            ' (Nutzermeldung zu TIFF, vorher genauso bei HEIF). Die Leser legen die Drehung aus der
+            ' Datei selbst auf, und keines der Formate fuehrt eine Beistelldatei - keine zweite
+            ' Korrektur. Direkt aus dem Bitmap, ohne PNG dazwischen (ForeignImageDecoder).
+            If IcoPreviewService.IsSupportedIco(path) OrElse TiffPreviewService.IsSupportedTiff(path) OrElse
+               HeifDecodeService.IsSupportedHeif(path) OrElse JxlDecodeService.IsSupportedJxl(path) Then
+                Return ImageOrientationService.ForeignToAvaloniaBitmap(path, 0)
             End If
             If FpxService.IsFpx(path) Then
                 Using preview = FpxService.ExtractComposite(path)

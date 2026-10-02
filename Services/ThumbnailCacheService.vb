@@ -862,6 +862,25 @@ Namespace Services
 
         ' Dekodiert per SKCodec, korrigiert die EXIF-Orientierung und skaliert auf maxWidth.
         ' Fällt bei jedem SKCodec-Fehler auf das bisherige Bitmap.DecodeToWidth zurück.
+        ''' <summary>Ein schon dekodiertes Bild als Kachel: drehen, auf die Kachelbreite verkleinern
+        ''' (nie vergroessern), anzeigen. Derselbe Weg wie der gedrehte Zweig von
+        ''' DecodeCorrectedAndResize; Farbe und Orientierung hat der Leser schon erledigt.</summary>
+        Private Shared Function ResizeDecodedForTile(decoded As SKBitmap, maxWidth As Integer,
+                                                     extraRotationDegrees As Integer) As Bitmap
+            Dim oriented = ImageOrientationService.ApplyQuarterRotation(decoded, extraRotationDegrees)
+            Try
+                Dim targetWidth = Math.Min(maxWidth, oriented.Width)
+                Dim scale = targetWidth / CDbl(oriented.Width)
+                Dim targetHeight = Math.Max(1, CInt(Math.Round(oriented.Height * scale)))
+                If targetWidth = oriented.Width Then Return ImageOrientationService.ToAvaloniaBitmapFast(oriented)
+                Using resized = oriented.Resize(New SKImageInfo(targetWidth, targetHeight, oriented.ColorType, oriented.AlphaType), SamplingMedium)
+                    Return ImageOrientationService.ToAvaloniaBitmapFast(If(resized, oriented))
+                End Using
+            Finally
+                If Not Object.ReferenceEquals(oriented, decoded) Then oriented.Dispose()
+            End Try
+        End Function
+
         Private Shared Function DecodeCorrectedAndResize(stream As Stream, maxWidth As Integer,
                                                         Optional extraRotationDegrees As Integer = 0,
                                                         Optional rawContainerPath As String = Nothing) As Bitmap
@@ -986,34 +1005,13 @@ Namespace Services
                         cancellationToken.ThrowIfCancellationRequested()
                         If preview IsNot Nothing Then Return Bitmap.DecodeToWidth(preview, CacheWidth)
                     End Using
-                ElseIf IcoPreviewService.IsSupportedIco(filePath) Then
-                    Using preview = IcoPreviewService.ExtractPreview(filePath)
+                ElseIf ForeignImageDecoder.CanDecode(filePath) Then
+                    ' ICO, PSD, TIFF, HEIF und JPEG XL: der Leser dreht selbst (Orientierungs-Tag,
+                    ' Container), keine zweite Korrektur - nur die Drehung aus der Beistelldatei,
+                    ' die allein PSD kennt. Das Bitmap direkt, ohne PNG dazwischen.
+                    Using decoded = ForeignImageDecoder.TryDecode(filePath)
                         cancellationToken.ThrowIfCancellationRequested()
-                        If preview IsNot Nothing Then Return Bitmap.DecodeToWidth(preview, CacheWidth)
-                    End Using
-                ElseIf PsdPreviewService.IsSupportedPsd(filePath) Then
-                    Using preview = PsdPreviewService.ExtractPreview(filePath)
-                        cancellationToken.ThrowIfCancellationRequested()
-                        If preview IsNot Nothing Then Return DecodeCorrectedAndResize(preview, CacheWidth, SidecarRotationFor(filePath))
-                    End Using
-                ElseIf TiffPreviewService.IsSupportedTiff(filePath) Then
-                    ' LibTiff wendet das Orientierungs-Tag selbst an - keine zweite Korrektur.
-                    Using preview = TiffPreviewService.ExtractPreview(filePath)
-                        cancellationToken.ThrowIfCancellationRequested()
-                        If preview IsNot Nothing Then Return DecodeCorrectedAndResize(preview, CacheWidth, SidecarRotationFor(filePath))
-                    End Using
-                ElseIf HeifDecodeService.IsSupportedHeif(filePath) AndAlso HeifDecodeService.IsAvailable Then
-                    ' libheif wendet die Drehung aus dem Container selbst an - hier also KEINE
-                    ' zusaetzliche Korrektur, sonst waere sie doppelt.
-                    Using preview = HeifDecodeService.ExtractPreview(filePath)
-                        cancellationToken.ThrowIfCancellationRequested()
-                        If preview IsNot Nothing Then Return DecodeCorrectedAndResize(preview, CacheWidth, SidecarRotationFor(filePath))
-                    End Using
-                ElseIf JxlDecodeService.IsSupportedJxl(filePath) AndAlso JxlDecodeService.IsAvailable Then
-                    ' Wie HEIF: libjxl dreht selbst, keine zusaetzliche Korrektur.
-                    Using preview = JxlDecodeService.ExtractPreview(filePath)
-                        cancellationToken.ThrowIfCancellationRequested()
-                        If preview IsNot Nothing Then Return DecodeCorrectedAndResize(preview, CacheWidth, SidecarRotationFor(filePath))
+                        If decoded IsNot Nothing Then Return ResizeDecodedForTile(decoded, CacheWidth, SidecarRotationFor(filePath))
                     End Using
                 ElseIf FpxService.IsFpx(filePath) Then
                     Using preview = FpxService.ExtractComposite(filePath)

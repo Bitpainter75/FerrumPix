@@ -74,6 +74,17 @@ Namespace Services
 
         ''' Liefert einen MemoryStream mit PNG-Daten (Position 0) oder Nothing bei Fehler.
         Public Shared Function ExtractPreview(filePath As String) As MemoryStream
+            ' Das Composite mit Alpha liegt bewusst als Unpremul vor; der Kodierer geht deshalb
+            ' ueber das Pixmap (siehe PngEncoder).
+            Using bitmap = TryDecode(filePath)
+                Return PngEncoder.EncodeToStream(bitmap, PngPurpose.Transient)
+            End Using
+        End Function
+
+        ''' <summary>Das Gesamtbild als Bgra8888 mit geradlinigem Alpha (Besitz beim Aufrufer), oder
+        ''' Nothing. Fehlt die Bilddaten-Sektion oder ist sie zu gross, das eingebettete
+        ''' Vorschaubild.</summary>
+        Public Shared Function TryDecode(filePath As String) As SKBitmap
             Try
                 Dim bitmap As SKBitmap = Nothing
                 Using fs = File.OpenRead(filePath)
@@ -86,13 +97,7 @@ Namespace Services
                         bitmap = DecodeThumbnailResource(fs)
                     End Using
                 End If
-                If bitmap Is Nothing Then Return Nothing
-
-                Using bitmap
-                    ' Das Composite mit Alpha liegt bewusst als Unpremul vor; der Kodierer geht
-                    ' deshalb ueber das Pixmap (siehe PngEncoder).
-                    Return PngEncoder.EncodeToStream(bitmap, PngPurpose.Transient)
-                End Using
+                Return bitmap
             Catch
                 Return Nothing
             End Try
