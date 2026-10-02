@@ -14503,8 +14503,9 @@ Namespace ViewModels
         ''' das Bild gemessen, nicht das Objekt. Ueber die Eigenschaft gesetzt haette sie bei
         ''' markiertem Objekt stillschweigend dieses gedreht.</para></summary>
         Private Sub SetImageStraightenDegrees(value As Double)
-            ' Nur 1 Nachkommastelle - siehe AnnotationRotation.
-            Dim clamped = Math.Round(Math.Max(-180, Math.Min(180, value)), 1)
+            ' Zwei Nachkommastellen: ein Zehntelgrad ist an einer langen Kante noch sichtbar schief.
+            ' Objekte bleiben bei einer (AnnotationRotation).
+            Dim clamped = Math.Round(Math.Max(-180, Math.Min(180, value)), 2)
             If Math.Abs(_straightenDegrees - clamped) < 0.0001 Then Return
             CaptureUndoState(NameOf(StraightenDegrees))
             Me.RaiseAndSetIfChanged(_straightenDegrees, clamped, NameOf(StraightenDegrees))
@@ -18031,6 +18032,15 @@ Namespace ViewModels
             ' gelesen war - beim TIFF lange genug, um aufzufallen (Nutzerbefund).
             Dim publishAtomically = ImageProcessor.IsSlowToOpen(imagePath) OrElse showLoadingState
             If publishAtomically Then SetDocumentLoading(True)
+            ' Wo die Zeit beim Oeffnen bleibt, im Protokoll unter "Editor oeffnen" (nur bei
+            ' eingeschalteter Diagnose, siehe PerformanceTraceService). Anlass: mit Uebergabe aus dem
+            ' Betrachter stand die Ladeanzeige trotzdem spuerbar lange (Nutzerbefund HEIC).
+            Dim openClock = Diagnostics.Stopwatch.StartNew()
+            Dim openLap = 0L
+            Dim recordOpenLap = Sub(name As String)
+                                    PerformanceTraceService.Record("Editor oeffnen: " & name, openClock.ElapsedMilliseconds - openLap)
+                                    openLap = openClock.ElapsedMilliseconds
+                                End Sub
             BeginDocumentLoad()
             Try
             ' .fpx-Projektdatei: Bündel entpacken; ab hier ist das entpackte Basisbild die Arbeitsquelle, und
@@ -18144,9 +18154,11 @@ Namespace ViewModels
                 If Not String.IsNullOrEmpty(_currentFpxPath) Then PreviewImage = LoadFpxCompositePreview(_currentFpxPath)
                 InfoPanel.ExifInfo = Nothing
                 ClearHistogramData()
+                recordOpenLap("bis zum Arbeitsbild")
                 Await PreparePreviewSourceAsync(RenderSourcePath,
                                                 scheduleInitialRender:=Not publishAtomically,
                                                 showRawQuickPreview:=Not publishAtomically)
+                recordOpenLap("Arbeitsbild")
                 ' Gespeicherten Bearbeitungszustand aus der .fpx wiederherstellen (Regler, Ebenenstapel, Auswahl …)
                 ' und als "keine ungespeicherten Änderungen" markieren - es ist ja gerade der gespeicherte Stand.
                 If fpxAdjustments IsNot Nothing Then
@@ -18176,6 +18188,7 @@ Namespace ViewModels
             ElseIf fpxAdjustments IsNot Nothing Then
                 ScheduleToolPreviewUpdate()
             End If
+            recordOpenLap("Rezept und erste Szene")
             ' Scope nur bei expliziter Pfadliste (z.B. Suchliste) wirksam, sonst normaler Ordner-Cache.
             _thumbCacheScopeId = If(allPaths IsNot Nothing, cacheScopeId, Nothing)
             _thumbCacheScopeName = If(allPaths IsNot Nothing, cacheScopeName, Nothing)
@@ -18187,6 +18200,7 @@ Namespace ViewModels
             LoadLibraryMeta(imagePath)
             Dim immichAssetId = CurrentImmichAssetId()
             If immichAssetId IsNot Nothing Then Await LoadImmichMetaAsync(immichAssetId)
+            recordOpenLap("Filmstreifen und Katalog")
 
             Try
                 ' PreparePreviewSource leitet CurrentImage bereits aus dem Arbeitsbild ab - ein
@@ -18233,6 +18247,8 @@ Namespace ViewModels
             End Try
             Return True
             Finally
+                recordOpenLap("Infopanel und Abschluss")
+                PerformanceTraceService.Record("Editor oeffnen: gesamt", openClock.ElapsedMilliseconds)
                 If publishAtomically Then SetDocumentLoading(False)
                 EndDocumentLoad()
             End Try
@@ -19454,10 +19470,13 @@ Namespace ViewModels
             End If
             SetWorkingImagePending(False)
 
-            Return AdoptWorkingImage(decoded.Full,
-                                     hasBakedContent:=decoded.Baked,
-                                     hasAlphaHoles:=(decoded.Baked AndAlso _workingImageOverrideHasAlpha) OrElse _newDocTransparentBackground,
-                                     scheduleInitialRender:=scheduleInitialRender)
+            ' Laeuft auf dem Anzeigefaden und fasst das volle Bild an (Vorschauquelle, Anzeigebild):
+            ' mit Messpunkt, damit eine Stockung hier im Protokoll einen Namen hat.
+            Return PerformanceTraceService.Measure("Editor oeffnen: Arbeitsbild uebernehmen",
+                Function() AdoptWorkingImage(decoded.Full,
+                                             hasBakedContent:=decoded.Baked,
+                                             hasAlphaHoles:=(decoded.Baked AndAlso _workingImageOverrideHasAlpha) OrElse _newDocTransparentBackground,
+                                             scheduleInitialRender:=scheduleInitialRender))
         End Function
 
         ''' <summary>Ein fertiges Vollbild als Arbeitsbild uebernehmen: Anzeige, Vorschauquelle,

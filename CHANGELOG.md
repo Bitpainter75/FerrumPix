@@ -14,9 +14,13 @@
   does. They also appear much sooner, because the file no longer has to be read a second time.
 
 - **Straighten with a line.** In the Rotate group, press "Draw a line" and drag along an edge in
-  the picture that should be level or upright; the picture turns to match. The straighten slider
-  now covers ±45 degrees, which makes it much finer to use, and automatic straightening shows
-  that it is working instead of seeming to do nothing.
+  the picture that should be level or upright; the picture turns to match. The angle can now be
+  set to a hundredth of a degree in the number field, and automatic straightening shows that it
+  is working instead of seeming to do nothing.
+
+- **Search in the settings.** A search field above the list of sections finds a setting by any
+  word of its name, its description or its tooltip, in every language, instead of scrolling
+  through the whole page.
 
 - **Phone photos in HEIC show up in the gallery right away.** Each tile first shows the small
   preview stored in the file and turns sharp a moment later.
@@ -47,4 +51,8 @@
 - Opening a photo from the viewer in the editor reuses the picture the viewer already loaded
   instead of reading the file again. This is most noticeable with HEIC photos from phones. The
   editor always works on the full resolution, also for RAW files.
+
+- Going back from the editor to the viewer without saving no longer reads the picture again.
+
+- The first switch to the editor after starting no longer stutters for a few seconds.
 

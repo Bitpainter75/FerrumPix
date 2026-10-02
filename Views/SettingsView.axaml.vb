@@ -56,6 +56,52 @@ Namespace Views
             AddHandler Loaded, AddressOf HandleLoaded
         End Sub
 
+        Private ReadOnly _search As New SettingsSearch()
+
+        ''' <summary>Die Ansicht wird nur ein- und ausgeblendet, nicht neu gebaut. Eine Suche vom
+        ''' letzten Mal stuende sonst beim naechsten Oeffnen noch da, und die Seite saehe halb leer
+        ''' aus, ohne dass man wuesste, warum.</summary>
+        Protected Overrides Sub OnPropertyChanged(change As Avalonia.AvaloniaPropertyChangedEventArgs)
+            MyBase.OnPropertyChanged(change)
+            If change.Property Is IsVisibleProperty AndAlso IsVisible Then
+                Dim box = Me.FindControl(Of TextBox)("SettingsSearchBox")
+                If box IsNot Nothing AndAlso Not String.IsNullOrEmpty(box.Text) Then box.Text = ""
+            End If
+        End Sub
+
+        ''' <summary>Das X im Suchfeld: leert es und gibt den Fokus zurueck, damit gleich neu
+        ''' getippt werden kann.</summary>
+        Public Sub OnSettingsSearchClearClick(sender As Object, e As RoutedEventArgs)
+            Dim box = Me.FindControl(Of TextBox)("SettingsSearchBox")
+            If box Is Nothing Then Return
+            box.Text = ""
+            box.Focus()
+            e.Handled = True
+        End Sub
+
+        Public Sub OnSettingsSearchChanged(sender As Object, e As TextChangedEventArgs)
+            ApplySettingsSearch(TryCast(sender, TextBox)?.Text)
+        End Sub
+
+        ''' <summary>Filtert die Seite (siehe <see cref="SettingsSearch"/>) und rollt nach oben,
+        ''' damit der erste Treffer zu sehen ist.</summary>
+        Private Sub ApplySettingsSearch(query As String)
+            Dim sectionsPanel = Me.FindControl(Of StackPanel)("SettingsSectionsPanel")
+            Dim navPanel = Me.FindControl(Of StackPanel)("SettingsNavPanel")
+            If sectionsPanel Is Nothing Then Return
+            Dim sections = sectionsPanel.Children.OfType(Of Border)().Where(Function(b) b.Classes.Contains("section")).ToList()
+            Dim navigation = Function(section As Border) As Control
+                                 If navPanel Is Nothing Then Return Nothing
+                                 Return navPanel.Children.OfType(Of Button)().FirstOrDefault(
+                                     Function(b) String.Equals(TryCast(b.Tag, String), section.Name, StringComparison.Ordinal))
+                             End Function
+            Dim shown = _search.Apply(sections, navigation, query)
+            Dim empty = Me.FindControl(Of TextBlock)("SettingsSearchEmpty")
+            If empty IsNot Nothing Then empty.IsVisible = (shown = 0)
+            Dim sv = Me.FindControl(Of ScrollViewer)("SettingsScrollViewer")
+            If sv IsNot Nothing Then sv.Offset = New Avalonia.Vector(sv.Offset.X, 0)
+        End Sub
+
         Private Sub HandleLoaded(sender As Object, e As RoutedEventArgs)
             Dim vm = TryCast(DataContext, SettingsViewModel)
             Dim topLevel As TopLevel = TopLevel.GetTopLevel(Me)
@@ -259,6 +305,13 @@ Namespace Views
 
         Public Shadows Sub OnKeyDown(sender As Object, e As KeyEventArgs)
             If e.Key = Key.Escape Then
+                ' Erst die Suche leeren, erst der zweite ESC schliesst die Einstellungen.
+                Dim box = Me.FindControl(Of TextBox)("SettingsSearchBox")
+                If box IsNot Nothing AndAlso Not String.IsNullOrEmpty(box.Text) Then
+                    box.Text = ""
+                    e.Handled = True
+                    Return
+                End If
                 Dim vm = TryCast(DataContext, SettingsViewModel)
                 vm?.CancelCommand.Execute(Nothing)
                 e.Handled = True

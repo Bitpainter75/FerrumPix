@@ -2130,7 +2130,7 @@ Namespace ViewModels
                 LoadFolderContext(folder, imagePath)
             End If
 
-            LoadBitmap()
+            If Not IsShowingUnchanged(imagePath) Then LoadBitmap()
             If _isFitToWindow Then UpdateFitZoom()
             UpdateStatus()
             LoadInfoPanelData(imagePath)
@@ -2306,6 +2306,28 @@ Namespace ViewModels
         Private _editorHandoffSource As Bitmap
         Private _editorHandoffPath As String
         Private _editorHandoffWriteTimeUtc As DateTime
+
+        ''' <summary>Zeigt der Betrachter dieses Bild schon, und ist die Datei seitdem unveraendert?
+        ''' Dann braucht ein erneutes Oeffnen nicht neu zu dekodieren. Der Fall ist die Rueckkehr
+        ''' aus dem Editor ohne Speichern: vorher las der Betrachter die Datei dann noch einmal, bei
+        ''' einer HEIC eine halbe Sekunde (Nutzerbefund).
+        '''
+        ''' Nur fuer Bilder, die der Betrachter ohne Rezept zeigt (<see cref="QualifiesForEditorHandoff"/>):
+        ''' bei einem RAW, einem Buendel oder einer gedrehten PSD haengt das gezeigte Bild an der
+        ''' Beistelldatei, und die kann der Editor geaendert haben, ohne die Datei selbst anzufassen.
+        ''' Hat er gespeichert, ist die Aenderungszeit eine andere, und es wird neu geladen.</summary>
+        Private Function IsShowingUnchanged(path As String) As Boolean
+            If CurrentImage Is Nothing OrElse _isBitmapLoading Then Return False
+            If Not Object.ReferenceEquals(CurrentImage, _editorHandoffSource) Then Return False
+            If Not String.Equals(path, _shownBitmapPath, StringComparison.Ordinal) OrElse
+               Not String.Equals(path, _editorHandoffPath, StringComparison.Ordinal) Then Return False
+            If Not QualifiesForEditorHandoff(path) Then Return False
+            Try
+                Return File.GetLastWriteTimeUtc(path) = _editorHandoffWriteTimeUtc
+            Catch
+                Return False
+            End Try
+        End Function
 
         ''' <summary>Ist das Bild, das der Betrachter fuer diese Datei dekodiert, dasselbe, das der
         ''' Editor selbst dekodieren wuerde, und zwar in voller Groesse?

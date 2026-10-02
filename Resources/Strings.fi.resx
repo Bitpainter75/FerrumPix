@@ -627,10 +627,10 @@
   <data name="File_type_7072340b" xml:space="preserve">
     <value>Tiedostotyyppi</value>
   </data>
-  <data name="Filmstrip_im_Editor_anzeigen_69698114" xml:space="preserve">
+  <data name="Filmstreifen_im_Editor_anzeigen_e3aab18d" xml:space="preserve">
     <value>Näytä filminauha muokkaimessa</value>
   </data>
-  <data name="Filmstrip_im_Viewer_anzeigen_c541ebf7" xml:space="preserve">
+  <data name="Filmstreifen_im_Viewer_anzeigen_9ef8feb8" xml:space="preserve">
     <value>Näytä filminauha katselimessa</value>
   </data>
   <data name="Filter_d7decf1a" xml:space="preserve">
@@ -7398,13 +7398,13 @@
   <data name="Fu_zeile_im_Viewer_da805e0e" xml:space="preserve">
     <value>Alapalkki katselimessa</value>
   </data>
-  <data name="Zeigt_unten_die_Leiste_mit_Bildangaben_Zoom_und__c60f14e1" xml:space="preserve">
+  <data name="Zeigt_unten_die_Leiste_mit_Bildangaben_Zoom_und__048effa9" xml:space="preserve">
     <value>Näyttää alareunan palkin, jossa ovat kuvan tiedot, zoomaus ja arvio. Pois päältä kuvalle jää enemmän tilaa; selaus ja zoomaus tapahtuvat silloin näppäimistöllä, hiiren rullalla ja hiiren oikean painikkeen valikosta. Filminauhalla on oma valintansa, ja se jää näkyviin.</value>
   </data>
   <data name="Fu_zeile_im_Editor_c4dbedfc" xml:space="preserve">
     <value>Alapalkki muokkaimessa</value>
   </data>
-  <data name="Zeigt_unten_die_Leiste_mit_Bildangaben_und_Zoom__1b8e8007" xml:space="preserve">
+  <data name="Zeigt_unten_die_Leiste_mit_Bildangaben_und_Zoom__c46de088" xml:space="preserve">
     <value>Näyttää alareunan palkin, jossa ovat kuvan tiedot ja zoomaus. Pois päältä työalueelle jää enemmän korkeutta. Filminauhalla on oma valintansa, ja se jää näkyviin.</value>
   </data>
   <data name="Waveform_200f14b1" xml:space="preserve">
@@ -7938,10 +7938,10 @@
   <data name="Zur_ck_zur_Galerie_im_Vollbild_Vollbild_verlasse_dc1ff308" xml:space="preserve">
     <value>Takaisin galleriaan (koko näytössä: poistu koko näytöstä; myös välilyönnillä)</value>
   </data>
-  <data name="Markierungen_im_Filmstrip_anzeigen_4861434e" xml:space="preserve">
+  <data name="Markierungen_im_Filmstreifen_anzeigen_ec895448" xml:space="preserve">
     <value>Näytä merkinnät filminauhassa</value>
   </data>
-  <data name="Zeigt_Sternbewertung_Favorit_und_Farbetikett_auf_b1426eb1" xml:space="preserve">
+  <data name="Zeigt_Sternbewertung_Favorit_und_Farbetikett_auf_9b2b2dc8" xml:space="preserve">
     <value>Näyttää tähtiluokituksen, suosikin ja värimerkinnän katselimen ja muokkaimen filminauhan ruuduissa.</value>
   </data>
   <data name="Soll_0_1_aus_der_Liste_entfernt_werden_Die_Datei_1869746d" xml:space="preserve">
@@ -8668,10 +8668,10 @@
   <data name="Ausgeschaltet_stehen_die_Kacheln_in_allen_Ansich_a91ca397" xml:space="preserve">
     <value>Pois päältä ruudut ovat kaikissa gallerian näkymissä suorakulmaisia ja ilman näkyvää kehystä. Valittujen kuvien kehys säilyy, siitä tulee vain suorakulmainen.</value>
   </data>
-  <data name="Runde_Ecken_und_Rahmen_im_Filmstrip_2eea3bd2" xml:space="preserve">
+  <data name="Runde_Ecken_und_Rahmen_im_Filmstreifen_6f041022" xml:space="preserve">
     <value>Pyöristetyt kulmat ja kehykset filminauhassa</value>
   </data>
-  <data name="Ausgeschaltet_stehen_die_Kacheln_des_Filmstrips__2f06229e" xml:space="preserve">
+  <data name="Ausgeschaltet_stehen_die_Kacheln_des_Filmstreife_6a3be064" xml:space="preserve">
     <value>Pois päältä filminauhan ruudut ovat suorakulmaisia ja kehyksettömiä. Nykyisen kuvan kehys säilyy, siitä tulee vain suorakulmainen.</value>
   </data>
   <data name="Abstand_zwischen_den_Kacheln_b0f73be2" xml:space="preserve">
@@ -9087,13 +9087,13 @@
   <data name="Blendet_in_der_Fotowand_Sterne_Herz_Metadaten_Sy_c5974ceb" xml:space="preserve">
     <value>Piilottaa kuvaseinällä tähdet, sydämen, metatietosymbolit, valintaympyrän ja toistopainikkeen, kunnes hiiri on ruudun päällä. Koskee myös symboleja, jotka on yllä asetettu näkymään aina.</value>
   </data>
-  <data name="Kacheln_im_Filmstrip_im_Seitenverh_ltnis_des_Bil_888e68f8" xml:space="preserve">
+  <data name="Kacheln_im_Filmstreifen_im_Seitenverh_ltnis_des__377fdfa9" xml:space="preserve">
     <value>Filminauhan ruudut kuvan kuvasuhteessa</value>
   </data>
   <data name="Hochformate_stehen_schmal_Querformate_breit_alle_346e8cf8" xml:space="preserve">
     <value>Pystykuvat ovat kapeita, vaakakuvat leveitä, kaikki samankorkuisia. Pois päältä kaikki ruudut ovat yhtä leveitä ja kuva rajataan. Koskee katselinta, editoria ja kartan nauhaa.</value>
   </data>
-  <data name="Abstand_zwischen_den_Kacheln_im_Filmstrip_ce7e05e8" xml:space="preserve">
+  <data name="Abstand_zwischen_den_Kacheln_im_Filmstreifen_fec14d7b" xml:space="preserve">
     <value>Ruutujen väli filminauhassa</value>
   </data>
   <data name="Gilt_f_r_Viewer_Editor_und_den_Streifen_der_Kart_5f7f293b" xml:space="preserve">
@@ -9143,5 +9143,11 @@
   </data>
   <data name="Danach_auf_dem_Bild_eine_Linie_entlang_einer_Kan_c143c99c" xml:space="preserve">
     <value>Piirrä sitten kuvaan viiva sellaisen reunan mukaan, jonka pitää olla vaakasuora tai pystysuora</value>
+  </data>
+  <data name="Einstellungen_durchsuchen_05a177da" xml:space="preserve">
+    <value>Hae asetuksista</value>
+  </data>
+  <data name="Keine_Einstellung_gefunden_a346579b" xml:space="preserve">
+    <value>Asetusta ei löytynyt</value>
   </data>
 </root>

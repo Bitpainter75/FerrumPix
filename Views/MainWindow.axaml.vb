@@ -176,6 +176,16 @@ Namespace Views
                 existing.IsVisible = existing Is view
             Next
             If freshlyBuilt Then host.Children.Add(view)
+            ' Das erste Vermessen, Anordnen und Zeichnen der eingeblendeten Ansicht: keine Zeile
+            ' unseres Codes, deshalb meldete der Waechter die Stockung beim Wechsel in den Editor
+            ' "ohne Messpunkt". Gemessen bis zum ersten Durchlauf nach dem Zeichnen.
+            If PerformanceTraceService.IsActive Then
+                Dim layoutClock = System.Diagnostics.Stopwatch.StartNew()
+                Dim viewName = view.GetType().Name
+                Avalonia.Threading.Dispatcher.UIThread.Post(
+                    Sub() PerformanceTraceService.Record("Moduswechsel: erstes Bild " & viewName, layoutClock.ElapsedMilliseconds),
+                    Avalonia.Threading.DispatcherPriority.Background)
+            End If
 
             If freshlyBuilt Then
                 ' Der Uebersetzungsdurchlauf des Fensters lief, bevor es diese Ansicht gab.

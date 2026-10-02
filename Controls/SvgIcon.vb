@@ -182,7 +182,14 @@ Namespace Controls
         ''' Geometry-Objekte MUSS auf dem UI-Faden laufen: Geometry erbt von AvaloniaObject und ist an
         ''' den Faden gebunden, der es angelegt hat.
         ''' Läuft je Programmlauf genau einmal; weitere Aufrufe kehren sofort zurück.</summary>
+        ''' <summary>Ob das Vorladen ueberhaupt laeuft. Der Pruefstand schaltet es ab: er baut die
+        ''' Editoransicht in vielen Pruefungen, und jedes Mal liefe sonst das Einlesen aller
+        ''' Symbole an, das dort niemand braucht und das nur Zeit kostet. Ein Symbol, das trotzdem
+        ''' gezeichnet wird, entsteht wie immer beim ersten Zeichnen (GetIcon).</summary>
+        Public Shared Property PreloadEnabled As Boolean = True
+
         Public Shared Function PreloadOutlineIconsAsync() As Task
+            If Not PreloadEnabled Then Return Task.CompletedTask
             If Interlocked.Exchange(_preloadStarted, 1) <> 0 Then Return Task.CompletedTask
 
             Return Task.Run(Sub()
@@ -198,22 +205,37 @@ Namespace Controls
                                 Catch
                                 End Try
 
-                                ' In Häppchen, damit die Oberfläche zwischendurch zeichnen kann.
-                                Const batchSize As Integer = 64
-                                For start = 0 To parsed.Count - 1 Step batchSize
-                                    Dim first = start
-                                    Dispatcher.UIThread.Post(
-                                        Sub()
-                                            For i = first To Math.Min(first + batchSize - 1, parsed.Count - 1)
-                                                Dim entry = parsed(i)
-                                                If Cache.ContainsKey(entry.Key) Then Continue For
-                                                Dim icon = BuildIcon(entry.Value)
-                                                If icon IsNot Nothing Then Cache(entry.Key) = icon
-                                            Next
-                                        End Sub, DispatcherPriority.Background)
-                                Next
+                                BuildOnUiThreadInSlices(parsed, 0)
                             End Sub)
         End Function
+
+        ''' <summary>Hoechstens so lange baut ein Durchlauf auf dem UI-Faden Geometrien, dann gibt er
+        ''' ihn wieder frei. Ein halbes Bild bei 60 Hz.</summary>
+        Private Const PreloadSliceMilliseconds As Integer = 8
+
+        ''' <summary>Baut die Geometrien in ZEITSCHEIBEN statt in festen Paketen. Vorher waren es
+        ''' Pakete zu 64 Symbolen, rund 66 Stueck fuer den ganzen Bestand, und jedes hielt die
+        ''' Oberflaeche spuerbar an - direkt nach dem ersten Wechsel in den Editor, weil dort das
+        ''' Vorladen beginnt (Nutzerbefund "es hakt, bis man im Editor ist", nur beim ersten Mal).
+        ''' Jetzt arbeitet ein Durchlauf hoechstens <see cref="PreloadSliceMilliseconds"/> und stellt
+        ''' den Rest wieder hinten an, mit niedriger Prioritaet: Eingaben und Zeichnen gehen vor.</summary>
+        Private Shared Sub BuildOnUiThreadInSlices(parsed As List(Of KeyValuePair(Of String, SvgIconSource)), start As Integer)
+            If start >= parsed.Count Then Return
+            Dispatcher.UIThread.Post(
+                Sub()
+                    Dim clock = System.Diagnostics.Stopwatch.StartNew()
+                    Dim i = start
+                    While i < parsed.Count AndAlso clock.ElapsedMilliseconds < PreloadSliceMilliseconds
+                        Dim entry = parsed(i)
+                        If Not Cache.ContainsKey(entry.Key) Then
+                            Dim icon = BuildIcon(entry.Value)
+                            If icon IsNot Nothing Then Cache(entry.Key) = icon
+                        End If
+                        i += 1
+                    End While
+                    BuildOnUiThreadInSlices(parsed, i)
+                End Sub, DispatcherPriority.Background)
+        End Sub
 
         Private Shared Function GetIcon(source As String) As SvgIconData
             Dim resolvedSource = ResolveIconSource(source)

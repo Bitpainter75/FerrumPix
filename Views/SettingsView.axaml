@@ -20,8 +20,51 @@
             <DockPanel LastChildFill="True">
                 <TextBlock DockPanel.Dock="Top" Text="Einstellungen" FontSize="{DynamicResource FP.Font.Title}"
                            FontWeight="SemiBold" Margin="6,0,0,8"/>
+                <!-- SUCHE UEBER DEN ANGEZEIGTEN TEXT, also in jeder Sprache ohne eigene
+                     Stichwortliste: Bezeichnung, Erklaerung, Knopf- und Hakentexte und Tooltips
+                     einer Zeile. Was nicht trifft, klappt weg, auch Abschnitte und ihre Eintraege
+                     hier links. Die Mechanik steht in SettingsSearch. -->
+                <!-- Gebaut wie die Suchleiste der Galerie: Lupe, Feld, und ein X zum Leeren, das
+                     nur bei Text erscheint. -->
+                <Border DockPanel.Dock="Top"
+                        Background="{DynamicResource FP.Bg.Input}"
+                        BorderBrush="{DynamicResource FP.Border.Normal}"
+                        BorderThickness="1"
+                        CornerRadius="8"
+                        Padding="12,8"
+                        Height="34"
+                        Margin="0,0,0,12">
+                    <Grid ColumnDefinitions="Auto,*,Auto">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/search.svg"
+                                       Width="16" Height="16" VerticalAlignment="Center" Opacity="0.65"/>
+                        <TextBox x:Name="SettingsSearchBox" Grid.Column="1"
+                                 Classes="search-input"
+                                 BorderThickness="0"
+                                 Padding="0"
+                                 Height="20"
+                                 Margin="10,0,0,2"
+                                 PlaceholderText="Einstellungen durchsuchen"
+                                 VerticalContentAlignment="Center"
+                                 TextChanged="OnSettingsSearchChanged"/>
+                        <Button Grid.Column="2"
+                                Classes="ghost"
+                                Width="18"
+                                Height="18"
+                                Padding="0"
+                                Margin="4,0,0,0"
+                                VerticalAlignment="Center"
+                                Click="OnSettingsSearchClearClick"
+                                IsVisible="{Binding #SettingsSearchBox.Text, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                                ToolTip.Tip="Suche zurücksetzen">
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/x.svg"
+                                           Width="12" Height="12"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center"
+                                           Opacity="0.75"/>
+                        </Button>
+                    </Grid>
+                </Border>
                 <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
-            <StackPanel Spacing="10">
+            <StackPanel x:Name="SettingsNavPanel" Spacing="10">
 
                 <Button Classes="ghost" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
                         Padding="14,10"
@@ -197,7 +240,11 @@
                       HorizontalScrollBarVisibility="Disabled"
                       VerticalScrollBarVisibility="Visible"
                       AllowAutoHide="False">
-            <StackPanel Spacing="18" MaxWidth="960" Margin="0,0,0,0">
+            <StackPanel x:Name="SettingsSectionsPanel" Spacing="18" MaxWidth="960" Margin="0,0,0,0">
+                <TextBlock x:Name="SettingsSearchEmpty" IsVisible="False"
+                           Text="Keine Einstellung gefunden"
+                           Foreground="{DynamicResource FP.Text.Secondary}"
+                           FontSize="{DynamicResource FP.Font.Body}"/>
 
                 <Border x:Name="GeneralSection" Classes="section">
                     <StackPanel Spacing="16">
@@ -1118,7 +1165,7 @@
 
                         <Grid ColumnDefinitions="*,Auto">
                             <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
-                                <TextBlock Text="Filmstrip im Viewer anzeigen" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Filmstreifen im Viewer anzeigen" FontSize="{DynamicResource FP.Font.Body}"/>
                                 <TextBlock Text="Zeigt die Bildleiste am unteren Rand des Viewers an." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </StackPanel>
                             <ToggleSwitch Grid.Column="1"
@@ -1130,8 +1177,8 @@
 
                         <Grid ColumnDefinitions="*,Auto">
                             <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
-                                <TextBlock Text="Markierungen im Filmstrip anzeigen" FontSize="{DynamicResource FP.Font.Body}"/>
-                                <TextBlock Text="Zeigt Sternbewertung, Favorit und Farbetikett auf den Filmstrip-Kacheln im Viewer und Editor." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Text="Markierungen im Filmstreifen anzeigen" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Zeigt Sternbewertung, Favorit und Farbetikett auf den Filmstreifen-Kacheln im Viewer und Editor." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </StackPanel>
                             <ToggleSwitch Grid.Column="1"
                                           IsChecked="{Binding FilmstripItemBadgesVisible}"
@@ -1142,8 +1189,8 @@
 
                         <Grid ColumnDefinitions="*,Auto">
                             <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
-                                <TextBlock Text="Runde Ecken und Rahmen im Filmstrip" FontSize="{DynamicResource FP.Font.Body}"/>
-                                <TextBlock Text="Ausgeschaltet stehen die Kacheln des Filmstrips eckig und ohne Rahmen da. Der Rahmen um das aktuelle Bild bleibt, er wird nur eckig." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Text="Runde Ecken und Rahmen im Filmstreifen" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Ausgeschaltet stehen die Kacheln des Filmstreifens eckig und ohne Rahmen da. Der Rahmen um das aktuelle Bild bleibt, er wird nur eckig." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </StackPanel>
                             <ToggleSwitch Grid.Column="1"
                                           IsChecked="{Binding FilmstripTileFrame}"
@@ -1154,7 +1201,7 @@
 
                         <Grid ColumnDefinitions="*,Auto">
                             <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
-                                <TextBlock Text="Kacheln im Filmstrip im Seitenverhältnis des Bildes" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Kacheln im Filmstreifen im Seitenverhältnis des Bildes" FontSize="{DynamicResource FP.Font.Body}"/>
                                 <TextBlock Text="Hochformate stehen schmal, Querformate breit, alle in derselben Höhe. Ausgeschaltet sind alle Kacheln gleich breit und das Bild wird zugeschnitten. Gilt für Viewer, Editor und den Streifen der Karte." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </StackPanel>
                             <ToggleSwitch Grid.Column="1"
@@ -1166,7 +1213,7 @@
 
                         <Grid ColumnDefinitions="*,Auto">
                             <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
-                                <TextBlock Text="Abstand zwischen den Kacheln im Filmstrip" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Abstand zwischen den Kacheln im Filmstreifen" FontSize="{DynamicResource FP.Font.Body}"/>
                                 <TextBlock Text="Gilt für Viewer, Editor und den Streifen der Karte. Bei null stehen die Kacheln dicht an dicht." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </StackPanel>
                             <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
@@ -1187,7 +1234,7 @@
                         <Grid ColumnDefinitions="*,Auto">
                             <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
                                 <TextBlock Text="Fußzeile im Viewer" FontSize="{DynamicResource FP.Font.Body}"/>
-                                <TextBlock Text="Zeigt unten die Leiste mit Bildangaben, Zoom und Bewertung. Ausgeschaltet bleibt mehr Platz für das Bild; geblättert und gezoomt wird dann über Tastatur, Mausrad und das Menü mit der rechten Maustaste. Der Filmstrip hat einen eigenen Schalter und bleibt stehen." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Text="Zeigt unten die Leiste mit Bildangaben, Zoom und Bewertung. Ausgeschaltet bleibt mehr Platz für das Bild; geblättert und gezoomt wird dann über Tastatur, Mausrad und das Menü mit der rechten Maustaste. Der Filmstreifen hat einen eigenen Schalter und bleibt stehen." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </StackPanel>
                             <ToggleSwitch Grid.Column="1"
                                           IsChecked="{Binding ViewerShowFooter}"
@@ -1706,7 +1753,7 @@
 
                         <Grid ColumnDefinitions="*,Auto">
                             <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
-                                <TextBlock Text="Filmstrip im Editor anzeigen" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Filmstreifen im Editor anzeigen" FontSize="{DynamicResource FP.Font.Body}"/>
                                 <TextBlock Text="Zeigt die Bildleiste am unteren Rand des Editors an." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </StackPanel>
                             <ToggleSwitch Grid.Column="1"
@@ -1719,7 +1766,7 @@
                         <Grid ColumnDefinitions="*,Auto">
                             <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
                                 <TextBlock Text="Fußzeile im Editor" FontSize="{DynamicResource FP.Font.Body}"/>
-                                <TextBlock Text="Zeigt unten die Leiste mit Bildangaben und Zoom. Ausgeschaltet bleibt mehr Höhe für die Arbeitsfläche. Der Filmstrip hat einen eigenen Schalter und bleibt stehen." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Text="Zeigt unten die Leiste mit Bildangaben und Zoom. Ausgeschaltet bleibt mehr Höhe für die Arbeitsfläche. Der Filmstreifen hat einen eigenen Schalter und bleibt stehen." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </StackPanel>
                             <ToggleSwitch Grid.Column="1"
                                           IsChecked="{Binding EditorShowFooter}"

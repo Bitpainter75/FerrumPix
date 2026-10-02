@@ -1862,6 +1862,25 @@ Namespace Views
                         pickCanvas.Cursor = If(vmForPick.IsPickingColorFromImage, GetPipetteCursor(), Nothing)
                     End If
                     If vmForPick Is Nothing OrElse Not vmForPick.IsPickingColorFromImage Then ReleasePickSampleBitmap()
+                Case NameOf(EditorViewModel.IsStraightenLineActive)
+                    ' Sofort umschalten, nicht erst bei der naechsten Mausbewegung: der Knopf liegt
+                    ' im Panel, und nach einer Linie steht der Zeiger still auf dem Bild.
+                    Dim lineCanvas = Me.FindControl(Of Canvas)("PreviewCanvas")
+                    Dim vmForLine = TryCast(DataContext, EditorViewModel)
+                    If lineCanvas IsNot Nothing AndAlso vmForLine IsNot Nothing Then
+                        Dim lineActive = vmForLine.IsStraightenLineActive
+                        lineCanvas.Cursor = If(lineActive, New Cursor(StandardCursorType.Cross), Nothing)
+                        ' Ueber dem Bild liegen Zuschnitt- und Objektrahmen mit EIGENEM Zeiger
+                        ' (SizeAll), und der Zeiger des obersten Elements gewinnt: das Fadenkreuz
+                        ' erschien nur waehrend des Ziehens, wenn das Canvas den Zeiger gefangen
+                        ' hatte (Nutzerbefund). Solange die Linie aktiv ist, nehmen die Rahmen
+                        ' deshalb keine Treffer an; den Zug selbst faengt ohnehin das Canvas
+                        ' tunnelnd ab (OnStraightenLinePointerPressed).
+                        For Each overlayName In {"CropOverlay", "TextOverlay"}
+                            Dim overlay = Me.FindControl(Of Control)(overlayName)
+                            If overlay IsNot Nothing Then overlay.IsHitTestVisible = Not lineActive
+                        Next
+                    End If
                 Case NameOf(EditorViewModel.CurrentFilmstripIndex)
                     _filmstripController.ScrollToCurrent()
                 Case NameOf(EditorViewModel.IsInfoSidebarVisible)
@@ -3160,6 +3179,10 @@ Namespace Views
                 Else
                     cursorVm.ColorPickPreview = Nothing
                 End If
+            ElseIf cursorCanvas IsNot Nothing AndAlso cursorVm IsNot Nothing AndAlso cursorVm.IsStraightenLineActive Then
+                ' Linie ziehen: der naechste Zug legt eine Linie, das Fadenkreuz sagt das. Auch hier
+                ' vor dem Rueckfall unten, der den Zeiger sonst je Bewegung zuruecksetzte.
+                cursorCanvas.Cursor = New Cursor(StandardCursorType.Cross)
             ElseIf _isPanMode AndAlso cursorCanvas IsNot Nothing Then
                 ' Verschieben faengt jeden Klick ab (OnSliderPointerPressed) - der Zeiger sagt das.
                 cursorCanvas.Cursor = New Cursor(StandardCursorType.Hand)

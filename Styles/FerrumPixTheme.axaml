@@ -558,6 +558,47 @@
     <Style Selector="Button.ghost.active icons|SvgIcon">
         <Setter Property="IconBrush" Value="{DynamicResource FP.Accent}"/>
     </Style>
+    <!-- DERSELBE KNOPF ALS SCHALTER. Ohne diese Regeln galt "ghost" nur fuer Button, ein
+         ToggleButton mit der Klasse bekam die Fluent-Optik und eingeschaltet eine volle
+         Akzentflaeche ("Linie ziehen" im Panel Drehen, Fett und Kursiv beim Text). Aus sieht er
+         aus wie Button.ghost, ein sieht er aus wie Button.ghost.active. Die Zustaende malt Fluent
+         auf den ContentPresenter der Vorlage, deshalb muessen sie auch dort ueberschrieben werden. -->
+    <Style Selector="ToggleButton.ghost">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Border.Normal}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Padding" Value="11,6"/>
+        <Setter Property="Foreground" Value="{DynamicResource FP.Text.Secondary}"/>
+        <Setter Property="CornerRadius" Value="8"/>
+    </Style>
+    <Style Selector="ToggleButton.ghost:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource FP.Bg.Elevated}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Border.Normal}"/>
+        <Setter Property="Foreground" Value="{DynamicResource FP.Text.Secondary}"/>
+    </Style>
+    <Style Selector="ToggleButton.ghost:pressed /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource FP.Bg.Elevated}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Border.Normal}"/>
+        <Setter Property="Foreground" Value="{DynamicResource FP.Text.Secondary}"/>
+    </Style>
+    <Style Selector="ToggleButton.ghost:checked /template/ ContentPresenter">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Accent}"/>
+        <Setter Property="Foreground" Value="{DynamicResource FP.Accent}"/>
+    </Style>
+    <Style Selector="ToggleButton.ghost:checked:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource FP.Bg.Elevated}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Accent}"/>
+        <Setter Property="Foreground" Value="{DynamicResource FP.Accent}"/>
+    </Style>
+    <Style Selector="ToggleButton.ghost:checked:pressed /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource FP.Bg.Elevated}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Accent}"/>
+        <Setter Property="Foreground" Value="{DynamicResource FP.Accent}"/>
+    </Style>
+    <Style Selector="ToggleButton.ghost:checked icons|SvgIcon">
+        <Setter Property="IconBrush" Value="{DynamicResource FP.Accent}"/>
+    </Style>
     <!-- Kachel im visuellen Pinsel-Picker (DrawPanel): volle Breite, Akzentrahmen wenn aktiv -->
     <Style Selector="Button.brush-preset">
         <Setter Property="BorderThickness" Value="1"/>

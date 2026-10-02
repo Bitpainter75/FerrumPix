@@ -64,20 +64,22 @@
                     <TextBlock Text="Ausrichten"
                                Foreground="{DynamicResource FP.Text.Secondary}"
                                VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
-                    <!-- ±45 GRAD, nicht ±180 (Issue #80): auf dem schmalen Panel war ein Pixel
-                         Mausweg sonst ein grober Winkel. Vierteldrehungen machen die Knoepfe
-                         darueber, groessere Winkel gehen weiter ueber das Zahlenfeld. Ein Wert
-                         jenseits des Bereichs wird NICHT zurueckgeschrieben: der Regler klemmt nur
-                         beim eigenen Ziehen und zeigt ihn sonst am Rand (RoundSlider). -->
-                    <icons:RoundSlider Grid.Column="1" Minimum="-45" Maximum="45"
+                    <!-- VOLLER KREIS, -180 bis 180: mit markiertem Objekt dreht derselbe Regler
+                         das Objekt, und das muss ganz herum gehen. Ein Bereich von -45 bis 45 war
+                         kurz drin (Issue #80) und ist deshalb wieder heraus. Fein wird es ueber das
+                         Zahlenfeld in Hundertsteln und ueber das Mausrad. -->
+                    <icons:RoundSlider Grid.Column="1" Minimum="-180" Maximum="180"
                                        DefaultValue="0"
                                        Value="{Binding StraightenDegrees}"
                                        WheelIncrement="0.1"
                                        Margin="0,0" />
+                    <!-- ZWEI NACHKOMMASTELLEN: ein Zehntelgrad ist an einer langen Kante noch
+                         sichtbar schief. Das Zahlenfeld geht in Hundertsteln, mit SHIFT in
+                         Zehnteln; der Regler bleibt fuer den groben Griff. -->
                     <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
                                              Value="{Binding StraightenDegrees, Mode=TwoWay}"
-                                             Minimum="-180" Maximum="180" Increment="0.1"
-                                             FormatString="F1" />
+                                             Minimum="-180" Maximum="180" Increment="0.01"
+                                             CoarseIncrement="0.1" FormatString="F2" />
                 </Grid>
                 <!-- DER KNOPF STEHT BEIM REGLER, den er setzt: er misst die geraden Kanten des
                      Bildes und schreibt seinen Winkel in "Ausrichten". Danach laesst sich das
