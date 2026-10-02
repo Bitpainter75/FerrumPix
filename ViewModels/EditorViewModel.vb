@@ -17233,8 +17233,13 @@ Namespace ViewModels
                 Return
             End If
             If Not String.IsNullOrEmpty(_currentImagePath) Then
+                ' OpenImage laedt das Bild selbst neu, wenn die Datei sich geaendert hat, und
+                ' behaelt es, wenn nicht. Ein zusaetzliches ReloadCurrentImageFromDisk stand hier
+                ' frueher und las die Datei IMMER noch einmal, nach dem Speichern sogar doppelt
+                ' (Nutzerbefund HEIC). Nach einer Aenderung braucht es nur die neue Kachel.
+                Dim unchanged = _mainVm.Viewer.ShowsUnchanged(_currentImagePath)
                 _mainVm.Viewer.OpenImage(_currentImagePath, _folderPaths.ToList(), _thumbCacheScopeId, _thumbCacheScopeName)
-                _mainVm.Viewer.ReloadCurrentImageFromDisk()
+                If Not unchanged Then _mainVm.Viewer.RefreshCurrentFilmstripThumbnail()
                 _mainVm.CurrentMode = AppMode.Viewer
             Else
                 _mainVm.CurrentMode = AppMode.Viewer
@@ -19461,22 +19466,66 @@ Namespace ViewModels
         ''' Dekodierte verworfen statt über die neue Quelle geschrieben.</summary>
         Private Function CompletePreviewSourceSwap(decoded As (Full As SKBitmap, Baked As Boolean),
                                                    token As Long, scheduleInitialRender As Boolean) As Boolean
-            If token < 0 OrElse Threading.Interlocked.Read(_previewSourceSwapId) <> token Then
-                ' Veraltet: NICHT entsperren - der neue Wechsel hat seine eigene Sperre gesetzt und
-                ' ist noch unterwegs. Ein Entsperren hier gäbe die Werkzeuge frei, obwohl das
-                ' Arbeitsbild der NEUEN Quelle noch fehlt.
+            If IsSourceSwapStale(token) Then
                 decoded.Full?.Dispose()
+                Return False
+            End If
+            Return CompletePreparedSourceSwap(PrepareSource(decoded.Full, decoded.Baked, PreviewMaxDimension), token, scheduleInitialRender)
+        End Function
+
+        ''' <summary>Das Ergebnis des Hintergrundteils beim Oeffnen: das vorbereitete Arbeitsbild
+        ''' und schon das Anzeigebild dazu. Alles, was ueber das ganze Bild geht, ist damit erledigt,
+        ''' bevor der Anzeigefaden es bekommt.</summary>
+        Private Structure PreparedSource
+            Public Prepared As WorkingImageService.PreparedImage
+            Public Display As Bitmap
+            Public Baked As Boolean
+
+            Public Sub DisposeAll()
+                Prepared?.DisposeAll()
+                Display?.Dispose()
+            End Sub
+        End Structure
+
+        ''' <summary>Arbeitsbild vorbereiten und das Anzeigebild daraus ableiten. Faedenneutral: laeuft
+        ''' beim Oeffnen im Hintergrund direkt nach dem Decode. Vorher geschah beides auf dem
+        ''' Anzeigefaden und hielt ihn bei einem 12-MP-Bild rund 400 ms an (Nutzerbefund HEIC,
+        ''' Messpunkt "Editor oeffnen: Arbeitsbild uebernehmen").</summary>
+        Private Shared Function PrepareSource(full As SKBitmap, baked As Boolean, previewMaxDimension As Integer) As PreparedSource
+            Dim prepared = WorkingImageService.Prepare(full, previewMaxDimension)
+            Dim display As Bitmap = Nothing
+            If prepared IsNot Nothing Then
+                ' Dasselbe Bild, das frueher nach Init ueber WithFull entstand: das volle Arbeitsbild.
+                Try
+                    display = ImageProcessor.ToAvaloniaBitmap(prepared.Full)
+                Catch ex As Exception
+                    DiagnosticLogService.LogException("Editor.PrepareSource", ex)
+                End Try
+            End If
+            Return New PreparedSource With {.Prepared = prepared, .Display = display, .Baked = baked}
+        End Function
+
+        ''' <summary>Ist der Quellwechsel dieser Marke ueberholt? Dann NICHT entsperren: der neue
+        ''' Wechsel hat seine eigene Sperre gesetzt und ist noch unterwegs. Ein Entsperren gaebe die
+        ''' Werkzeuge frei, obwohl das Arbeitsbild der NEUEN Quelle noch fehlt.</summary>
+        Private Function IsSourceSwapStale(token As Long) As Boolean
+            Return token < 0 OrElse Threading.Interlocked.Read(_previewSourceSwapId) <> token
+        End Function
+
+        Private Function CompletePreparedSourceSwap(source As PreparedSource, token As Long, scheduleInitialRender As Boolean) As Boolean
+            If IsSourceSwapStale(token) Then
+                source.DisposeAll()
                 Return False
             End If
             SetWorkingImagePending(False)
 
-            ' Laeuft auf dem Anzeigefaden und fasst das volle Bild an (Vorschauquelle, Anzeigebild):
-            ' mit Messpunkt, damit eine Stockung hier im Protokoll einen Namen hat.
+            ' Laeuft auf dem Anzeigefaden; mit Messpunkt, damit eine Stockung hier im Protokoll einen
+            ' Namen hat.
             Return PerformanceTraceService.Measure("Editor oeffnen: Arbeitsbild uebernehmen",
-                Function() AdoptWorkingImage(decoded.Full,
-                                             hasBakedContent:=decoded.Baked,
-                                             hasAlphaHoles:=(decoded.Baked AndAlso _workingImageOverrideHasAlpha) OrElse _newDocTransparentBackground,
-                                             scheduleInitialRender:=scheduleInitialRender))
+                Function() AdoptPreparedWorkingImage(source.Prepared, source.Display,
+                                                     hasBakedContent:=source.Baked,
+                                                     hasAlphaHoles:=(source.Baked AndAlso _workingImageOverrideHasAlpha) OrElse _newDocTransparentBackground,
+                                                     scheduleInitialRender:=scheduleInitialRender))
         End Function
 
         ''' <summary>Ein fertiges Vollbild als Arbeitsbild uebernehmen: Anzeige, Vorschauquelle,
@@ -19491,12 +19540,21 @@ Namespace ViewModels
         ''' Das uebergebene Bitmap geht in den Besitz des Arbeitsbilds ueber.</summary>
         Private Function AdoptWorkingImage(full As SKBitmap, hasBakedContent As Boolean,
                                            hasAlphaHoles As Boolean, scheduleInitialRender As Boolean) As Boolean
-            Dim source = If(full IsNot Nothing,
-                            _workingImage.Init(full, PreviewMaxDimension,
-                                               hasBakedContent:=hasBakedContent,
-                                               hasAlphaHoles:=hasAlphaHoles),
-                            Nothing)
+            Return AdoptPreparedWorkingImage(WorkingImageService.Prepare(full, PreviewMaxDimension), Nothing,
+                                             hasBakedContent, hasAlphaHoles, scheduleInitialRender)
+        End Function
+
+        ''' <summary>Dasselbe mit schon vorbereitetem Arbeitsbild und, wenn vorhanden, schon
+        ''' abgeleitetem Anzeigebild (beides geht in den Besitz ueber). Der Weg beim Oeffnen: dort
+        ''' entsteht beides im Hintergrund, und hier bleibt nur noch das Einsetzen.</summary>
+        Private Function AdoptPreparedWorkingImage(prepared As WorkingImageService.PreparedImage, display As Bitmap,
+                                                   hasBakedContent As Boolean, hasAlphaHoles As Boolean,
+                                                   scheduleInitialRender As Boolean) As Boolean
+            Dim source = _workingImage.InitPrepared(prepared,
+                                                    hasBakedContent:=hasBakedContent,
+                                                    hasAlphaHoles:=hasAlphaHoles)
             If source Is Nothing Then
+                display?.Dispose()
                 ClearPreviewSource()
                 Return False
             End If
@@ -19507,8 +19565,9 @@ Namespace ViewModels
             ' kompletter zweiter Decode desselben Bildes, bei RAW ohne brauchbare eingebettete
             ' Vorschau sogar eine zweite volle Entwicklung.
             ' WithFull statt CloneFull: ToAvaloniaBitmap kopiert die Pixel ohnehin in ein
-            ' Avalonia-Bitmap, eine 180-MB-Zwischenkopie waere reine Verschwendung.
-            CurrentImage = _workingImage.WithFull(Function(f) ImageProcessor.ToAvaloniaBitmap(f))
+            ' Avalonia-Bitmap, eine 180-MB-Zwischenkopie waere reine Verschwendung. Beim Oeffnen
+            ' kommt es schon fertig aus dem Hintergrund (PrepareSource).
+            CurrentImage = If(display, _workingImage.WithFull(Function(f) ImageProcessor.ToAvaloniaBitmap(f)))
 
             Dim oldSource As SKBitmap = Nothing
             SyncLock _previewSync
@@ -19576,8 +19635,13 @@ Namespace ViewModels
             Dim overridePath = _workingImageOverridePath
             Dim wahl = LensChoiceFromFields()
             Dim recoverHighlights = _rawHighlightRecovery
-            Dim decoded = Await Task.Run(Function() DecodeForPreviewSource(imagePath, overridePath, wahl, recoverHighlights))
-            CompletePreviewSourceSwap(decoded, token, scheduleInitialRender)
+            Dim previewMax = PreviewMaxDimension
+            ' Decode UND Vorbereitung im Hintergrund: beides geht ueber das ganze Bild (PrepareSource).
+            Dim prepared = Await Task.Run(Function()
+                                              Dim decoded = DecodeForPreviewSource(imagePath, overridePath, wahl, recoverHighlights)
+                                              Return PrepareSource(decoded.Full, decoded.Baked, previewMax)
+                                          End Function)
+            CompletePreparedSourceSwap(prepared, token, scheduleInitialRender)
         End Function
 
         Private Sub ClearPreviewSource()

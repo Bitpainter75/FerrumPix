@@ -94,6 +94,30 @@ Namespace Services
         Public Function Init(fullBitmap As SKBitmap, previewMaxDimension As Integer,
                              Optional hasBakedContent As Boolean = False,
                              Optional hasAlphaHoles As Boolean = False) As SKBitmap
+            Return InitPrepared(Prepare(fullBitmap, previewMaxDimension), hasBakedContent, hasAlphaHoles)
+        End Function
+
+        ''' <summary>Ein vorbereitetes Arbeitsbild: das volle Bild in der Form, die das Arbeitsbild
+        ''' braucht, und seine Vorschau-Ableitung. Beide im Besitz dessen, der es haelt.</summary>
+        Public NotInheritable Class PreparedImage
+            Public Property Full As SKBitmap
+            Public Property Preview As SKBitmap
+
+            Public Sub DisposeAll()
+                Full?.Dispose()
+                Preview?.Dispose()
+                Full = Nothing
+                Preview = Nothing
+            End Sub
+        End Class
+
+        ''' <summary>Der TEURE Teil von <see cref="Init"/>, ohne den Zustand des Service anzufassen:
+        ''' auf vormultipliziert bringen und die Vorschau verkleinern. Beides geht ueber das ganze
+        ''' Bild und darf deshalb im Hintergrund laufen; auf dem Anzeigefaden kostete es bei einem
+        ''' 12-MP-Bild rund 400 ms Stillstand beim Oeffnen im Editor (Nutzerbefund, Messpunkt
+        ''' "Editor oeffnen: Arbeitsbild uebernehmen"). Uebernimmt den Besitz von
+        ''' <paramref name="fullBitmap"/>, auch im Fehlerfall; Nothing bei Fehler.</summary>
+        Public Shared Function Prepare(fullBitmap As SKBitmap, previewMaxDimension As Integer) As PreparedImage
             If fullBitmap Is Nothing Then Return Nothing
             ' JPEG & Co. dekodieren als AlphaType.Opaque. Der Radierer schreibt in so ein Bitmap
             ' zwar Alpha-Bytes (Anzeige und Composite-Render stimmen deshalb), aber der direkte
@@ -151,6 +175,21 @@ Namespace Services
                     Return Nothing
                 End If
             End If
+            Return New PreparedImage With {.Full = fullBitmap, .Preview = preview}
+        End Function
+
+        ''' <summary>Der billige Teil von <see cref="Init"/>: ein vorbereitetes Bild als Arbeitsbild
+        ''' einsetzen. Uebernimmt das volle Bild; die Vorschau geht als Rueckgabe an den Aufrufer
+        ''' (siehe Klassenkommentar). Nothing, wenn nichts vorbereitet ist.</summary>
+        Public Function InitPrepared(prepared As PreparedImage,
+                                     Optional hasBakedContent As Boolean = False,
+                                     Optional hasAlphaHoles As Boolean = False) As SKBitmap
+            If prepared Is Nothing OrElse prepared.Full Is Nothing OrElse prepared.Preview Is Nothing Then
+                prepared?.DisposeAll()
+                Return Nothing
+            End If
+            Dim fullBitmap = prepared.Full
+            Dim preview = prepared.Preview
             Dim bakedChanged As Boolean
             SyncLock _lock
                 For Each p In _patches

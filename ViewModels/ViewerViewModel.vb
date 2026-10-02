@@ -2145,15 +2145,25 @@ Namespace ViewModels
             CurrentIndex = _currentIndex
         End Sub
 
+        ''' <summary>Die Kachel des aktuellen Bildes im Filmstreifen neu holen, ohne das Bild selbst
+        ''' neu zu laden: nach dem Speichern im Editor zeigt sie sonst den alten Stand.</summary>
+        Friend Sub RefreshCurrentFilmstripThumbnail()
+            For Each filmItem In FilmstripItems.Where(Function(i) i IsNot Nothing AndAlso String.Equals(i.FilePath, _currentImagePath, StringComparison.OrdinalIgnoreCase))
+                filmItem.RefreshFileInfo()
+                filmItem.ClearThumbnail()
+            Next
+        End Sub
+
+        ''' <summary>Fuer den Rueckweg aus dem Editor: zeigt der Betrachter dieses Bild noch, und ist
+        ''' die Datei unveraendert? Siehe <see cref="IsShowingUnchanged"/>.</summary>
+        Friend Function ShowsUnchanged(path As String) As Boolean
+            Return IsShowingUnchanged(path)
+        End Function
+
         Public Sub ReloadCurrentImageFromDisk(Optional evictCurrentThumbnail As Boolean = True)
             If String.IsNullOrEmpty(_currentImagePath) OrElse Not File.Exists(_currentImagePath) Then Return
 
-            If evictCurrentThumbnail Then
-                For Each filmItem In FilmstripItems.Where(Function(i) i IsNot Nothing AndAlso String.Equals(i.FilePath, _currentImagePath, StringComparison.OrdinalIgnoreCase))
-                    filmItem.RefreshFileInfo()
-                    filmItem.ClearThumbnail()
-                Next
-            End If
+            If evictCurrentThumbnail Then RefreshCurrentFilmstripThumbnail()
 
             LoadBitmap()
             If _isFitToWindow Then UpdateFitZoom()

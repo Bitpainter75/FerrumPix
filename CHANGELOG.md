@@ -54,5 +54,6 @@
 
 - Going back from the editor to the viewer without saving no longer reads the picture again.
 
-- The first switch to the editor after starting no longer stutters for a few seconds.
+- The first switch to the editor after starting no longer stutters for a few seconds, and
+  opening a photo in the editor no longer freezes the window for a moment.
 
