@@ -148,14 +148,7 @@ Namespace Services
                     Dim height = Math.Max(1, CInt(Math.Round(source.Height * scale)))
                     Using resized = source.Resize(New SkiaSharp.SKImageInfo(width, height), SkiaSharp.SKSamplingOptions.Default)
                         If resized Is Nothing Then Return New MemoryStream(pngBytes)
-                        Dim outStream As New MemoryStream()
-                        Using img = SkiaSharp.SKImage.FromBitmap(resized)
-                            Using data = img.Encode(SkiaSharp.SKEncodedImageFormat.Png, 100)
-                                data.SaveTo(outStream)
-                            End Using
-                        End Using
-                        outStream.Position = 0
-                        Return outStream
+                        Return If(PngEncoder.EncodeToStream(resized, PngPurpose.Transient), New MemoryStream(pngBytes))
                     End Using
                 End Using
             Catch

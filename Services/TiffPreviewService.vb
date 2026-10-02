@@ -163,7 +163,7 @@ Namespace Services
         ''' Thumbnail-Erzeugung erwarten (gleiches Muster wie PSD/ICO/HEIC).</summary>
         Public Shared Function ExtractPreview(path As String) As MemoryStream
             Using bmp = TryDecode(path)
-                Return PreviewStreamEncoder.Encode(bmp)
+                Return PngEncoder.EncodeToStream(bmp, PngPurpose.Transient)
             End Using
         End Function
 

@@ -641,8 +641,12 @@ Namespace Services
                                 Dim exifForBox = jxlExif
                                 WriteFileAtomic(targetPath, Sub(fs) JxlEncodeService.Encode(toEncode, fs, quality, exifForBox, jxlXmp))
                             Else
+                                ' PNG ueber den gemeinsamen Kodierer: die Qualitaetszahl wirkt dort nicht,
+                                ' die Packstufe der Ausgabe steht in PngEncoder.
                                 Using image = SKImage.FromBitmap(toEncode)
-                                    Using data = image.Encode(fileFormat, quality)
+                                    Using data = If(fileFormat = SKEncodedImageFormat.Png,
+                                                    PngEncoder.Encode(toEncode, PngPurpose.Export),
+                                                    image.Encode(fileFormat, quality))
                                         ' Atomar: erst daneben schreiben, dann darüberbewegen - ein
                                         ' abgebrochener Encode darf das Original nicht zerstören.
                                         WriteFileAtomic(targetPath, Sub(fs) data.SaveTo(fs))

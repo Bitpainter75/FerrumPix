@@ -105,6 +105,25 @@ Public Class App
             handledEventsToo:=True)
     End Sub
 
+    ''' <summary>Ein Mausrad-Ereignis mit unplausiblem Delta (Messfehler des X11-Rads, siehe
+    ''' <see cref="Models.WheelDeltaGuard"/>) erreicht kein Element.
+    '''
+    ''' <para>Am Fenster, auf dem Hinweg (Tunnel): das Fenster ist das erste Glied des Weges, also
+    ''' sieht vor ihm niemand das Ereignis, auch kein eigener Tunnel-Handler weiter unten. Ein
+    ''' Klassen-Handler fuer jedes Fenster, nicht einer je Stelle: die Galerie sprang beim ersten
+    ''' Radschritt nach dem Start ans Listenende (Nutzerbefund), und jeder andere ScrollViewer haette
+    ''' dasselbe getan - die Begrenzung auf den Rollbereich verhindert den Sprung nicht.</para></summary>
+    Private Shared Sub DropImplausibleWheelEvents()
+        Avalonia.Input.InputElement.PointerWheelChangedEvent.AddClassHandler(Of Avalonia.Controls.TopLevel)(
+            Sub(topLevel, e)
+                If Models.WheelDeltaGuard.IsImplausible(e.Delta) Then
+                    Services.DiagnosticLogService.LogAlways("Input.Wheel", $"verworfen: Delta {e.Delta.X}/{e.Delta.Y}")
+                    e.Handled = True
+                End If
+            End Sub,
+            Avalonia.Interactivity.RoutingStrategies.Tunnel)
+    End Sub
+
     ''' <summary>Zwei Bauformen, deren Inhalt der Durchlauf ueber das Fenster nie zu sehen bekommt.
     ''' Je EIN Klassen-Handler fuer die ganze Anwendung, statt eines Ereignisses je Stelle.</summary>
     Private Shared Sub LocalizeLateContent()
@@ -138,6 +157,7 @@ Public Class App
     Public Overrides Sub OnFrameworkInitializationCompleted()
         LocalizeLateContent()
         KeepPenDragsOnTheirControl()
+        DropImplausibleWheelEvents()
         If TypeOf ApplicationLifetime Is IClassicDesktopStyleApplicationLifetime Then
             Dim desktop = CType(ApplicationLifetime, IClassicDesktopStyleApplicationLifetime)
 

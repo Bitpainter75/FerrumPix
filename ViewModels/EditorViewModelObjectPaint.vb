@@ -1270,18 +1270,15 @@ Namespace ViewModels
         '''
         ''' DIE PNG-EINSTELLUNG IST GEMESSEN, nicht geschätzt ("MESSUNG Malebene", 24 MP): Skias
         ''' Vorgabe (alle Filter, zlib 6) brauchte 447 ms, zlib 1 mit allen Filtern noch 344 ms,
-        ''' zlib 1 mit dem Filter "Sub" 65 ms. Den Preis zahlt die Datei: sie wird größer (bei einer
-        ''' fast leeren Ebene 427 statt 94 KB). Sie lebt ohnehin nur bis zum Schließen des
-        ''' Dokuments, und PNG bleibt verlustfrei.</summary>
+        ''' zlib 1 mit dem Filter "Sub" 65 ms. Diese Messung ist der Ursprung der Packstufe aller
+        ''' abgelegten Dateien (PngEncoder, Zweck Stored). Den Preis zahlt die Datei: sie wird
+        ''' größer (bei einer fast leeren Ebene 427 statt 94 KB), und PNG bleibt verlustfrei.</summary>
         Private Shared Function WriteObjectPaintFile(bitmap As SKBitmap, path As String) As Boolean
             If bitmap Is Nothing OrElse String.IsNullOrWhiteSpace(path) Then Return False
-            Using pixmap = bitmap.PeekPixels()
-                If pixmap Is Nothing Then Return False
-                Using data = pixmap.Encode(New SKPngEncoderOptions(SKPngEncoderFilterFlags.Sub, 1))
-                    If data Is Nothing Then Return False
-                    Using fs = File.Create(path)
-                        data.SaveTo(fs)
-                    End Using
+            Using data = PngEncoder.Encode(bitmap, PngPurpose.Stored)
+                If data Is Nothing Then Return False
+                Using fs = File.Create(path)
+                    data.SaveTo(fs)
                 End Using
             End Using
             ObjectImageMemory.Put(path, ObjectImageMemory.FastCopy(bitmap))

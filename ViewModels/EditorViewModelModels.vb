@@ -310,11 +310,8 @@ Namespace ViewModels
                         Using unscharf = DepthMapService.DepthBlur(basis, map, from, bis,
                                                                             strength, uebergang, corners, lichter)
                             If unscharf Is Nothing Then Return Nothing
-                            Using image = SKImage.FromBitmap(unscharf)
-                                Using roh = image.Encode(SKEncodedImageFormat.Png, 90)
-                                    Return roh.ToArray()
-                                End Using
-                            End Using
+                            ' Nur die Vorschau, sie wird gleich wieder gelesen.
+                            Return PngEncoder.EncodeToBytes(unscharf, PngPurpose.Transient)
                         End Using
                     End Function)
                 Finally

@@ -20,10 +20,6 @@ Namespace Services
     ''' unter den Fuessen wegzieht. Aus demselben Grund ist der Fingerabdruck ueber den Inhalt
     ''' bestimmt und danach fest.</summary>
     Public NotInheritable Class AlphaRaster
-        ''' <summary>Die Packstufe fuer PNG. Nur Zeit und Groesse haengen daran, nichts am Bild:
-        ''' PNG ist verlustlos. Sie steht hier, damit alle Wege dieselbe nehmen.</summary>
-        Public Const PngCompressionQuality As Integer = 60
-
         Private ReadOnly _pixels As Byte()
         Private _fingerprint As String
         Private Shared _packCount As Long
@@ -103,16 +99,13 @@ Namespace Services
             Return bitmap
         End Function
 
-        ''' <summary>Als PNG fuer die Datei. Nur hier wird gepackt.</summary>
+        ''' <summary>Als PNG fuer die Datei. Nur hier wird gepackt, mit der Packstufe aller
+        ''' abgelegten Dateien (PngEncoder, Zweck Stored).</summary>
         Public Function ToPngBase64() As String
             Interlocked.Increment(_packCount)
             Try
                 Using bitmap = ToBitmap()
-                    Using image = SKImage.FromBitmap(bitmap)
-                        Using data = image.Encode(SKEncodedImageFormat.Png, PngCompressionQuality)
-                            Return Convert.ToBase64String(data.ToArray())
-                        End Using
-                    End Using
+                    Return Convert.ToBase64String(PngEncoder.EncodeToBytes(bitmap, PngPurpose.Stored))
                 End Using
             Catch
                 Return ""

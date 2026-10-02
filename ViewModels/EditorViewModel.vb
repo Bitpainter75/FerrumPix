@@ -19751,11 +19751,9 @@ Namespace ViewModels
                                                canvas.Clear(ParseNewDocColor(backgroundMode, backgroundColor))
                                            End If
                                        End Using
-                                       Using image = SKImage.FromBitmap(bmp)
-                                           Using data = image.Encode(SKEncodedImageFormat.Png, 100)
-                                               Using fs = File.Create(tempPath)
-                                                   data.SaveTo(fs)
-                                               End Using
+                                       Using data = PngEncoder.Encode(bmp, PngPurpose.Stored)
+                                           Using fs = File.Create(tempPath)
+                                               data.SaveTo(fs)
                                            End Using
                                        End Using
                                    End Using
@@ -20140,13 +20138,7 @@ Namespace ViewModels
                         Using scaled = source.Resize(New SKImageInfo(width, height, SKColorType.Bgra8888, SKAlphaType.Premul),
                                                      ImageProcessor.SamplingHigh)
                             If scaled Is Nothing Then Return Nothing
-                            Using image = SKImage.FromBitmap(scaled), data = image.Encode(SKEncodedImageFormat.Png, 100)
-                                If data Is Nothing Then Return Nothing
-                                Dim reduced As New IO.MemoryStream()
-                                data.SaveTo(reduced)
-                                reduced.Position = 0
-                                Return reduced
-                            End Using
+                            Return PngEncoder.EncodeToStream(scaled, PngPurpose.Stored)
                         End Using
                     End Using
                 End Using
@@ -26004,12 +25996,11 @@ Namespace ViewModels
             Return merged
         End Function
 
+        ''' Die Datei der gerasterten oder zusammengelegten Ebene, siehe PngEncoder (Zweck Stored).
         Private Shared Sub WriteRenderPng(bitmap As SKBitmap, targetPath As String)
-            Using image = SKImage.FromBitmap(bitmap)
-                Using data = image.Encode(SKEncodedImageFormat.Png, 100)
-                    Using stream = IO.File.OpenWrite(targetPath)
-                        data.SaveTo(stream)
-                    End Using
+            Using data = PngEncoder.Encode(bitmap, PngPurpose.Stored)
+                Using stream = IO.File.OpenWrite(targetPath)
+                    data.SaveTo(stream)
                 End Using
             End Using
         End Sub

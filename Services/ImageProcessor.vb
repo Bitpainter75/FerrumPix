@@ -24,8 +24,6 @@ Namespace Services
     ' ImageAdjustmentsModels.vb (Rezept).
     Partial Public Class ImageProcessor
 
-        Private Const FastPngCompressionQuality As Integer = 60
-
         ''' SKPaint trug bis SkiaSharp 2 die Schrift selbst. Sein interner Ersatz-SKFont hat
         ''' LinearMetrics=True - ein frisch erzeugter SKFont dagegen False, was Textbreiten und das
         ''' Rendering messbar verändert (geprüft: identische Bytes erst mit LinearMetrics=True).
@@ -819,18 +817,8 @@ Namespace Services
                     If scaled IsNot Nothing Then source = scaled
                 End If
 
-                Dim stream = New MemoryStream()
-                Using image = SKImage.FromBitmap(source)
-                    Using data = image.Encode(SKEncodedImageFormat.Png, 100)
-                        If data Is Nothing Then
-                            stream.Dispose()
-                            Return Nothing
-                        End If
-                        data.SaveTo(stream)
-                    End Using
-                End Using
-                stream.Position = 0
-                Return stream
+                ' Alle Aufrufer legen das Ergebnis in ein Buendel.
+                Return PngEncoder.EncodeToStream(source, PngPurpose.Stored)
             Finally
                 scaled?.Dispose()
             End Try
@@ -882,18 +870,14 @@ Namespace Services
             End Using
         End Function
 
+        ''' Abgelegt, nicht durchgereicht: der Editor legt das Ergebnis als Anzeigebild ins Buendel.
+        ''' Die Miniaturen nehmen denselben Weg, sind aber klein genug, dass die Stufe dort nicht
+        ''' ins Gewicht faellt.
         Private Shared Function EncodePngStream(bitmap As SKBitmap, ByRef encodeMs As Long) As MemoryStream
             Dim sw = Diagnostics.Stopwatch.StartNew()
-            Using image = SKImage.FromBitmap(bitmap)
-                ' PNG bleibt verlustfrei; niedrigerer Quality-Wert reduziert hier die Encoder-Arbeit.
-                Using data = image.Encode(SKEncodedImageFormat.Png, FastPngCompressionQuality)
-                    Dim ms As New MemoryStream()
-                    data.SaveTo(ms)
-                    ms.Position = 0
-                    encodeMs = sw.ElapsedMilliseconds
-                    Return ms
-                End Using
-            End Using
+            Dim ms = PngEncoder.EncodeToStream(bitmap, PngPurpose.Stored)
+            encodeMs = sw.ElapsedMilliseconds
+            Return ms
         End Function
 
         ''' <summary>Die Objektiv-Wahl aus einem Rezept. Eigene Stelle, damit jeder Weg, der aus

@@ -90,8 +90,8 @@ Namespace Services
 
                 Using bitmap
                     ' Das Composite mit Alpha liegt bewusst als Unpremul vor; der Kodierer geht
-                    ' deshalb ueber das Pixmap (siehe PreviewStreamEncoder).
-                    Return PreviewStreamEncoder.Encode(bitmap)
+                    ' deshalb ueber das Pixmap (siehe PngEncoder).
+                    Return PngEncoder.EncodeToStream(bitmap, PngPurpose.Transient)
                 End Using
             Catch
                 Return Nothing

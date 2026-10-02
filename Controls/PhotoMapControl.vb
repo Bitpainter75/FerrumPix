@@ -756,9 +756,9 @@ Namespace Controls
         Protected Overrides Sub OnPointerWheelChanged(e As PointerWheelEventArgs)
             MyBase.OnPointerWheelChanged(e)
             ' Ein Tastfeld liefert Bruchteile; erst eine ganze Raste zoomt. Ein Delta jenseits von
-            ' zwanzig Rasten ist ein Messfehler des X11-Rads (siehe FilmstripNavigationDebouncer)
-            ' und kommt nicht in den Speicher: Unendlich liesse CInt werfen, NaN den Zoom stillstehen.
-            If Double.IsNaN(e.Delta.Y) OrElse Math.Abs(e.Delta.Y) > 20.0 Then
+            ' zwanzig Rasten ist ein Messfehler des X11-Rads (siehe WheelDeltaGuard) und kommt nicht
+            ' in den Speicher: Unendlich liesse CInt werfen, NaN den Zoom stillstehen.
+            If Models.WheelDeltaGuard.IsImplausible(e.Delta.Y) Then
                 e.Handled = True
                 Return
             End If

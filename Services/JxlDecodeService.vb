@@ -399,7 +399,7 @@ Namespace Services
             Return DecodeGate.Run(Function()
                                       SyncLock _nativeLock
                                           Using bmp = DecodeCore(path)
-                                              Return PreviewStreamEncoder.Encode(bmp)
+                                              Return PngEncoder.EncodeToStream(bmp, PngPurpose.Transient)
                                           End Using
                                       End SyncLock
                                   End Function)

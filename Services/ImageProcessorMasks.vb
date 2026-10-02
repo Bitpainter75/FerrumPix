@@ -2711,11 +2711,7 @@ Namespace Services
                             Using canvas = New SKCanvas(cropped)
                                 canvas.DrawBitmap(processed, New SKRect(left, top, right, bottom), New SKRect(0, 0, width, height))
                             End Using
-                            Using image = SKImage.FromBitmap(cropped)
-                                Using data = image.Encode(SKEncodedImageFormat.Png, 100)
-                                    WriteFileAtomic(targetPngPath, Sub(fs) data.SaveTo(fs))
-                                End Using
-                            End Using
+                            If Not SaveBitmapPng(cropped, targetPngPath) Then Return False
                         End Using
                     End Using
                 End Using
@@ -3371,11 +3367,11 @@ Namespace Services
             End Try
         End Function
 
+        ''' Die Datei einer Ebene: sie bleibt liegen und wandert beim Speichern ins Buendel.
         Private Shared Function SaveBitmapPng(bmp As SKBitmap, targetPngPath As String) As Boolean
-            Using image = SKImage.FromBitmap(bmp)
-                Using data = image.Encode(SKEncodedImageFormat.Png, 100)
-                    WriteFileAtomic(targetPngPath, Sub(fs) data.SaveTo(fs))
-                End Using
+            Using data = PngEncoder.Encode(bmp, PngPurpose.Stored)
+                If data Is Nothing Then Return False
+                WriteFileAtomic(targetPngPath, Sub(fs) data.SaveTo(fs))
             End Using
             Return True
         End Function

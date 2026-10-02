@@ -17,7 +17,13 @@
 - The selection frame of a rotated text now stays tight around the letters. Before, it grew
   taller while rotating and stood off the text at the top and bottom.
 
+- Right after starting, the first turn of the mouse wheel in the gallery no longer jumps straight
+  to the end of the list. The same could happen in other scrolling lists and panels.
+
 - JPEG XL, HEIC, AVIF, TIFF and PSD files open several times faster, in the viewer as well as in
   thumbnails and the editor. A folder full of JPEG XL photos could keep the viewer waiting for
   over a minute.
+
+- Faster in the editor: saving a project, turning a selection into a layer, filling, rasterizing
+  and merging layers now take about half the time or less, with the same lossless quality.
 

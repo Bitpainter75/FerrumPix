@@ -680,11 +680,8 @@ Namespace Services
                     "FerrumPix", "logs")
                 IO.Directory.CreateDirectory(folder)
 
-                Using image = SKImage.FromBitmap(small)
-                    Using data = image.Encode(SKEncodedImageFormat.Png, 92)
-                        IO.File.WriteAllBytes(IO.Path.Combine(folder, "entfernen-ausschnitt.png"), data.ToArray())
-                    End Using
-                End Using
+                IO.File.WriteAllBytes(IO.Path.Combine(folder, "entfernen-ausschnitt.png"),
+                                      PngEncoder.EncodeToBytes(small, PngPurpose.Stored))
 
                 ' Die Maske als Graustufenbild, damit man sie ueberhaupt sehen kann - ein
                 ' Alphakanal allein ist in jedem Betrachter unsichtbar.
@@ -697,11 +694,8 @@ Namespace Services
                             visible.SetPixel(x, y, New SKColor(v, v, v, 255))
                         Next
                     Next
-                    Using image = SKImage.FromBitmap(visible)
-                        Using data = image.Encode(SKEncodedImageFormat.Png, 92)
-                            IO.File.WriteAllBytes(IO.Path.Combine(folder, "entfernen-maske.png"), data.ToArray())
-                        End Using
-                    End Using
+                    IO.File.WriteAllBytes(IO.Path.Combine(folder, "entfernen-maske.png"),
+                                          PngEncoder.EncodeToBytes(visible, PngPurpose.Stored))
                 End Using
                 DiagnosticLogService.LogAlways("ObjektEntfernen",
                     "Ausschnitt und Maske abgelegt: entfernen-ausschnitt.png, entfernen-maske.png")

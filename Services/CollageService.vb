@@ -106,7 +106,9 @@ Namespace Services
                                    SKEncodedImageFormat.Webp,
                                    SKEncodedImageFormat.Jpeg))
                 Using image = SKImage.FromBitmap(surfaceBitmap)
-                    Using data = image.Encode(fileFormat, Math.Max(1, Math.Min(100, options.Quality)))
+                    Using data = If(fileFormat = SKEncodedImageFormat.Png,
+                                    PngEncoder.Encode(surfaceBitmap, PngPurpose.Export),
+                                    image.Encode(fileFormat, Math.Max(1, Math.Min(100, options.Quality))))
                         ' Atomar schreiben: eine bestehende Collage bleibt heil,
                         ' wenn das Schreiben abbricht.
                         ImageProcessor.WriteFileAtomic(options.OutputPath, Sub(fs) data.SaveTo(fs))

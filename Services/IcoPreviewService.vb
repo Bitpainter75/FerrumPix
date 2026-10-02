@@ -38,7 +38,7 @@ Namespace Services
                 If bitmap Is Nothing Then Return Nothing
 
                 Using bitmap
-                    Return PreviewStreamEncoder.Encode(bitmap)
+                    Return PngEncoder.EncodeToStream(bitmap, PngPurpose.Transient)
                 End Using
             Catch
                 Return Nothing

@@ -392,11 +392,9 @@ Namespace Services
                                               CSng(layer.MaskLeft - left), CSng(layer.MaskTop - top), paint)
                         End Using
                     End Using
-                    Using image = SKImage.FromPixels(canvasBitmap.PeekPixels())
-                        Using data = image.Encode(SKEncodedImageFormat.Png, 100)
-                            If data Is Nothing Then Return ""
-                            encoded = Convert.ToBase64String(data.ToArray())
-                        End Using
+                    Using data = PngEncoder.Encode(canvasBitmap, PngPurpose.Stored)
+                        If data Is Nothing Then Return ""
+                        encoded = Convert.ToBase64String(data.ToArray())
                     End Using
                 End Using
 
@@ -525,13 +523,11 @@ Namespace Services
 
         Private Shared Function WritePngCore(bmp As SKBitmap, targetPath As String) As Boolean
             If bmp Is Nothing Then Return False
-            Using pixmap = bmp.PeekPixels()
-                If pixmap Is Nothing Then Return False
-                Using encoded = pixmap.Encode(SKEncodedImageFormat.Png, 100)
-                    If encoded Is Nothing Then Return False
-                    Using fs = File.Create(targetPath)
-                        encoded.SaveTo(fs)
-                    End Using
+            ' Die Ebenen-Datei bleibt liegen und wandert beim Speichern ins Buendel.
+            Using encoded = PngEncoder.Encode(bmp, PngPurpose.Stored)
+                If encoded Is Nothing Then Return False
+                Using fs = File.Create(targetPath)
+                    encoded.SaveTo(fs)
                 End Using
             End Using
             Return True

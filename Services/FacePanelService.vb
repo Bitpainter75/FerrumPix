@@ -403,12 +403,8 @@ Namespace Services
                                                          New SkiaSharp.SKRect(0, 0, CropEdge, CropEdge),
                                                          ImageProcessor.SamplingMedium, Nothing)
                     End Using
-                    Using image = SkiaSharp.SKImage.FromBitmap(target)
-                        Using data = image.Encode(SkiaSharp.SKEncodedImageFormat.Png, 90)
-                            Using stream = New IO.MemoryStream(data.ToArray())
-                                Return New Bitmap(stream)
-                            End Using
-                        End Using
+                    Using stream = PngEncoder.EncodeToStream(target, PngPurpose.Transient)
+                        Return New Bitmap(stream)
                     End Using
                 End Using
             Catch ex As Exception

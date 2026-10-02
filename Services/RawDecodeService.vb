@@ -469,15 +469,7 @@ Namespace Services
                     pixels(i * 4 + 3) = 255
                 Next
                 Marshal.Copy(pixels, 0, bitmap.GetPixels(), pixels.Length)
-                Using image = SKImage.FromBitmap(bitmap)
-                    Using data = image.Encode(SKEncodedImageFormat.Png, 100)
-                        If data Is Nothing Then Return Nothing
-                        Dim ms As New MemoryStream()
-                        data.SaveTo(ms)
-                        ms.Position = 0
-                        Return ms
-                    End Using
-                End Using
+                Return PngEncoder.EncodeToStream(bitmap, PngPurpose.Transient)
             End Using
         End Function
 

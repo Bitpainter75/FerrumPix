@@ -186,18 +186,18 @@ Namespace Services
             End Get
         End Property
 
-        ''' <summary>PNG des vollen Arbeitsbilds (retouch.png der .fpx). Gleiches schnelles
-        ''' Encoding wie die Pipeline (verlustfrei, Kompressionsstufe 60). Nothing ohne Init.</summary>
+        ''' <summary>PNG des vollen Arbeitsbilds (retouch.png der .fpx), verlustfrei und schnell
+        ''' gepackt (PngEncoder, Zweck Stored). Nothing ohne Init.</summary>
         Public Function EncodeFullPng() As IO.MemoryStream
             Dim clone = CloneFull()
             If clone Is Nothing Then Return Nothing
             Try
-                ' Ungewoehnliche Farbtypen vor dem Encode auf 8 Bit bringen: SKImage.FromBitmap
-                ' liefert fuer manche (etwa Rgba16161616) Nothing, und der Encode lief danach in
-                ' eine NullReferenceException - das Sichern einer .fpx haette die gebackene
-                ' Retusche VERLOREN, ohne Fehlermeldung.
-                ' 8 Bit ist hier auch inhaltlich richtig: die retouch.png traegt Pinselstriche und
-                ' Retusche, keine Tonwertreserve.
+                ' Ungewoehnliche Farbtypen vor dem Encode auf 8 Bit bringen. Frueher lief der Weg
+                ' ueber SKImage.FromBitmap, das fuer manche (etwa Rgba16161616) Nothing lieferte -
+                ' das Sichern einer .fpx haette die gebackene Retusche VERLOREN, ohne Fehlermeldung.
+                ' Der Pixmap-Weg schriebe solche Bilder als 16-Bit-PNG; 8 Bit ist hier aber
+                ' inhaltlich richtig: die retouch.png traegt Pinselstriche und Retusche, keine
+                ' Tonwertreserve.
                 If clone.ColorType <> SKColorType.Bgra8888 AndAlso clone.ColorType <> SKColorType.Rgba8888 Then
                     Dim acht = New SKBitmap(New SKImageInfo(clone.Width, clone.Height,
                                                             SKColorType.Bgra8888, SKAlphaType.Premul))
@@ -209,16 +209,7 @@ Namespace Services
                     clone = acht
                 End If
 
-                Using image = SKImage.FromBitmap(clone)
-                    If image Is Nothing Then Return Nothing
-                    Using data = image.Encode(SKEncodedImageFormat.Png, 60)
-                        If data Is Nothing Then Return Nothing
-                        Dim ms As New IO.MemoryStream()
-                        data.SaveTo(ms)
-                        ms.Position = 0
-                        Return ms
-                    End Using
-                End Using
+                Return PngEncoder.EncodeToStream(clone, PngPurpose.Stored)
             Finally
                 clone.Dispose()
             End Try

@@ -52,15 +52,10 @@ Namespace Models
         Private Const WheelFreshGestureThresholdMs As Double = 200
         Private _lastWheelEventAt As DateTime = DateTime.MinValue
 
-        ' Obergrenze fuer das Delta EINES Wheel-Events, in Rastungen. Unter X11 rechnet Avalonia das
-        ' Delta als Differenz zweier absoluter Zaehlerstaende der Scroll-Achse (XI2-Valuator geteilt
-        ' durch dessen Increment). Springt der Zaehler, etwa nach einem Geraetewechsel oder mit
-        ' veraltetem Startwert, kommt ein einzelnes Event mit einem Delta in Milliardenhoehe an
-        ' (gemessen: -1,38e9). Die Schleife unten zog davon je Durchlauf nur 1,0 ab und hielt den
+        ' Ein Ausreisser des X11-Rads (WheelDeltaGuard) wird hier ZUSAETZLICH zum Filter am Fenster
+        ' verworfen: die Schleife in QueueWheelDelta zog davon je Durchlauf nur 1,0 ab und hielt den
         ' UI-Thread minutenlang fest; ab etwa 1e16 aendert das Abziehen den Wert gar nicht mehr, und
-        ' sie endet nie. Ein solches Event ist keine Geste, sondern ein Messfehler, und wird deshalb
-        ' ganz verworfen statt gekappt: gekappt liefe es als Sprung um die Grenze durch den Bestand.
-        Private Const MaxPlausibleWheelDelta As Double = 20.0
+        ' sie endet nie. Ein Aufrufer ohne Fenster davor (Pruefstand) soll das nicht ausloesen koennen.
 
         Public Sub New(wrapAround As Boolean, getCurrentIndex As Func(Of Integer), getCount As Func(Of Integer),
                        commit As Func(Of Integer, Task), Optional debounceMs As Integer = 90)
@@ -104,7 +99,7 @@ Namespace Models
         ''' Ruft für jede volle konsumierte Rastung das bestehende, unveränderte QueueDelta auf, kann
         ''' bei einer schnellen Geste also mehrfach hintereinander synchron aufgerufen werden.
         Public Sub QueueWheelDelta(deltaY As Double)
-            If deltaY = 0 OrElse Double.IsNaN(deltaY) OrElse Math.Abs(deltaY) > MaxPlausibleWheelDelta Then Return
+            If deltaY = 0 OrElse WheelDeltaGuard.IsImplausible(deltaY) Then Return
             Dim isFreshGesture = (DateTime.UtcNow - _lastWheelEventAt).TotalMilliseconds >= WheelFreshGestureThresholdMs
             _lastWheelEventAt = DateTime.UtcNow
             _wheelAccumulator += deltaY

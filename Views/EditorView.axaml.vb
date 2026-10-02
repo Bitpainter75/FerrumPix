@@ -4980,12 +4980,11 @@ Namespace Views
                         canvas.DrawPicture(picture)
                         canvas.Flush()
 
-                        Using image = surface.Snapshot()
-                            Using data = image.Encode(SKEncodedImageFormat.Png, 100)
-                                Using bitmapStream As New MemoryStream(data.ToArray())
-                                    Dim bitmap = New Bitmap(bitmapStream)
-                                    Return New Cursor(bitmap, hotspot)
-                                End Using
+                        Using image = surface.Snapshot(), pixels = image.PeekPixels(),
+                              data = PngEncoder.Encode(pixels, PngPurpose.Transient)
+                            Using bitmapStream As New MemoryStream(data.ToArray())
+                                Dim bitmap = New Bitmap(bitmapStream)
+                                Return New Cursor(bitmap, hotspot)
                             End Using
                         End Using
                     End Using
