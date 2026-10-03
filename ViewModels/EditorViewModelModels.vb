@@ -303,9 +303,9 @@ Namespace ViewModels
                 Dim corners = _bokehBlende, lichter = _bokehLichter
 
                 SetPreviewBusy(True)
-                Dim vorschau As Bitmap
+                Dim blurredPreview As Bitmap
                 Try
-                    vorschau = Await Task.Run(
+                    blurredPreview = Await Task.Run(
                     Function() As Bitmap
                         Dim unscharf = DepthMapService.DepthBlur(basis, map, from, bis,
                                                                  strength, uebergang, corners, lichter)
@@ -319,12 +319,12 @@ Namespace ViewModels
                     SetPreviewBusy(False)
                 End Try
 
-                If vorschau Is Nothing Then Return
+                If blurredPreview Is Nothing Then Return
                 If pass <> _bokehVorschauLauf Then
-                    vorschau.Dispose()
+                    blurredPreview.Dispose()
                     Return
                 End If
-                ToolPreviewImage = vorschau
+                ToolPreviewImage = blurredPreview
                 _vorschauQuelle = "Bokeh"
             Catch ex As Exception
                 DiagnosticLogService.LogAlways("BokehVorschau", ex.Message)
