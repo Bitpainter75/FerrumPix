@@ -328,6 +328,14 @@ Namespace Views
             ' Eine Bildschirmhöhe minus einer Zeile Überlappung, damit beim Blättern nichts überspringt.
             Dim page = Math.Max(40.0, sv.Viewport.Height - 40.0)
             Select Case e.Key
+                ' Die Pfeiltasten schieben zeilenweise. Der Fokus sitzt auf der Ansicht OBERHALB des
+                ' ScrollViewers, dessen eigene Tastenbehandlung erreicht ein Tastendruck also nie.
+                ' Ein Textfeld bleibt aussen vor: es markiert Hoch/Runter nur als behandelt, wenn
+                ' sich der Cursor bewegt, in einer einzeiligen Eingabe also nie - ohne die Ausnahme
+                ' liefe die Seite beim Tippen in der Suche davon.
+                Case Key.Down, Key.Up
+                    If TypeOf e.Source Is TextBox Then Return
+                    ScrollSettingsBy(sv, If(e.Key = Key.Down, 50.0, -50.0))
                 Case Key.PageDown
                     ScrollSettingsBy(sv, page)
                 Case Key.PageUp

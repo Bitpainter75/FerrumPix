@@ -28,5 +28,10 @@
   file could be stored twice, read in again and carry two different ratings. Existing catalogs are
   merged once on the first start.
 
+- The notice that a camera is not supported no longer appears for cameras that are, such as the
+  Nikon Z 6II, Z 7II, Z 8, Z 9 and Z f, the OM-1, the Panasonic S5II or phones that save DNG.
+
+- The arrow keys scroll the settings page, as Page Up and Page Down already did.
+
 - On smaller gallery tiles the EXIF, IPTC, XMP and ICC badges no longer sit under the rating stars.
   When there is not enough room for both, only the stars are shown; larger tiles show both.

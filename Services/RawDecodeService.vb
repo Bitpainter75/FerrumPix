@@ -1066,11 +1066,39 @@ Namespace Services
         ''' "NIKON CORPORATION" und "D90", die Liste "Nikon D90".</summary>
         Private Shared Function SplitCameraName(make As String, model As String) As (Maker As String, Model As String)
             Dim maker = AlphanumericUpper(If(make, "").Trim().Split(" "c)(0))
-            Dim m = AlphanumericUpper(model)
+            Dim m = CanonicalModel(model)
             If maker.Length > 0 AndAlso m.Length > maker.Length AndAlso m.StartsWith(maker, StringComparison.Ordinal) Then
                 m = m.Substring(maker.Length)
             End If
             Return (maker, m)
+        End Function
+
+        ''' <summary>Ein Modellname in einer Form, in der Datei und Liste dasselbe schreiben.
+        '''
+        ''' WOZU (Issue #81): die Z6II schreibt "NIKON Z 6_2", LibRaws Liste "Nikon Z 6 II"; die
+        ''' Datei der S5II "DC-S5M2", die Liste "DC-S5 MkII"; die K-3 II "K-3 II", die Liste
+        ''' "K-3 Mark II". Und die Liste haengt Erlaeuterungen in Klammern an ("Nikon Z 8 (HE/HE*
+        ''' formats are not supported yet)", "Sony ILCE-1 (A1)"). Ohne diese Form galten am Bestand
+        ''' 48 von 635 Kameras als unbekannt, und der Hinweis "LibRaw kennt die Kamera nicht" stand
+        ''' bei Bildern, die LibRaw einwandfrei entwickelt.
+        '''
+        ''' Die Generation wird zu "M" und einer Ziffer: "_2", "Mark II", "MkII", "M2" und ein
+        ''' nachgestelltes "II" ergeben alle "M2". Das gilt fuer beide Seiten gleich; ein Name, der
+        ''' dadurch einem anderen gleich wird, ist in der Richtung des Irrtums, die hier gewollt ist
+        ''' (lieber still als ein falscher Hinweis).</summary>
+        Friend Shared Function CanonicalModel(model As String) As String
+            Dim cleaned = If(model, "")
+            cleaned = System.Text.RegularExpressions.Regex.Replace(cleaned, "\([^)]*\)", " ")
+            cleaned = System.Text.RegularExpressions.Regex.Replace(cleaned, "_(\d)\b", "M$1")
+            Dim m = AlphanumericUpper(cleaned)
+            m = m.Replace("MARK", "M").Replace("MK", "M")
+            m = m.Replace("MIII", "M3").Replace("MII", "M2")
+            If m.EndsWith("III", StringComparison.Ordinal) Then
+                m = m.Substring(0, m.Length - 3) & "M3"
+            ElseIf m.EndsWith("II", StringComparison.Ordinal) Then
+                m = m.Substring(0, m.Length - 2) & "M2"
+            End If
+            Return m
         End Function
 
         ''' <summary>Die Modelle, die DIESE Fassung von LibRaw kennt: je Marke die Menge ihrer
@@ -1102,6 +1130,10 @@ Namespace Services
                     If entryPtr = IntPtr.Zero Then Continue For
                     Dim name = Marshal.PtrToStringUTF8(entryPtr)
                     If String.IsNullOrWhiteSpace(name) Then Continue For
+                    ' Klammern VOR dem Trennen weg: "Nikon Z 8 (HE/HE* formats are not supported
+                    ' yet)" traegt selbst einen Schraegstrich, und getrennt blieb vom Modell
+                    ' "Z 8 (HE" uebrig, das keiner Datei mehr glich.
+                    name = System.Text.RegularExpressions.Regex.Replace(name, "\([^)]*\)", " ")
                     Dim parts = name.Split("/"c)
                     Dim maker = AlphanumericUpper(parts(0).Trim().Split(" "c)(0))
                     If maker.Length = 0 Then Continue For
@@ -1131,9 +1163,26 @@ Namespace Services
         Private Shared Function MatchesKnownCamera(known As Dictionary(Of String, HashSet(Of String)),
                                                    maker As String, model As String) As Boolean
             If maker.Length = 0 OrElse model.Length = 0 Then Return False
+            ' Dieselbe Marke unter zwei Namen: fruehe OM-1 schreiben "OLYMPUS", die Liste fuehrt sie
+            ' unter "OM Digital Solutions"; Phase One heisst in der Datei "Phase One", in der Liste
+            ' "PhaseOne".
+            Dim alias_ As String = Nothing
+            If MakerAliases.TryGetValue(maker, alias_) AndAlso MatchesKnownCameraOfMaker(known, alias_, model) Then Return True
+            Return MatchesKnownCameraOfMaker(known, maker, model)
+        End Function
+
+        Private Shared ReadOnly MakerAliases As New Dictionary(Of String, String)(StringComparer.Ordinal) From {
+            {"OLYMPUS", "OM"}, {"OM", "OLYMPUS"}, {"PHASE", "PHASEONE"}, {"PHASEONE", "PHASE"}
+        }
+
+        Private Shared Function MatchesKnownCameraOfMaker(known As Dictionary(Of String, HashSet(Of String)),
+                                                          maker As String, model As String) As Boolean
             Dim models As HashSet(Of String) = Nothing
             If Not known.TryGetValue(maker, models) Then Return False
             If models.Contains(model) Then Return True
+            ' Die Liste kann den ganzen Firmennamen vor das Modell stellen ("OM Digital Solutions
+            ' OM-1"), die Marke ist dort nur das erste Wort; das Modell steht dann am ENDE.
+            If model.Length >= 3 AndAlso models.Any(Function(c) c.EndsWith(model, StringComparison.Ordinal)) Then Return True
             If model.Length < 5 Then Return False
             For Each candidate In models
                 If candidate.Length >= 5 AndAlso
@@ -1160,6 +1209,9 @@ Namespace Services
         ''' still) als einen Hinweis an jemanden, dessen Bild in Ordnung ist.</para></summary>
         Public Shared Function CameraIsKnown(path As String) As Boolean?
             If String.IsNullOrWhiteSpace(path) OrElse Not IsAvailable Then Return Nothing
+            ' Eine DNG bringt Farbmatrix und Pegel selbst mit, LibRaw entwickelt sie ohne Eintrag
+            ' in der Kameraliste. Am Bestand galten sonst alle Telefone als unbekannt.
+            If String.Equals(System.IO.Path.GetExtension(path), ".dng", StringComparison.OrdinalIgnoreCase) Then Return True
             Dim known = KnownCameras()
             If known Is Nothing Then Return Nothing
             Dim facts = ReadFileMetadata(path)
