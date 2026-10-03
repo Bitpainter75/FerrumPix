@@ -82,7 +82,9 @@ Namespace Services
             ' Nothing, die Messung waere fuer Projektdateien still ausgefallen.
             Using bmp = DecodeForOutput(sourcePath)
                 If bmp Is Nothing Then Return
-                Dim r = AnalyzeAutoAdjustments(bmp)
+                ' Ein .fpx kommt hier schon fertig gerendert an, samt Umkehr aus seinem Rezept; ein
+                ' zweites Umkehren gaebe wieder das Negativ.
+                Dim r = If(FpxService.IsFpx(sourcePath), AnalyzeAutoAdjustments(bmp), AnalyzeAutoAdjustments(bmp, adj))
                 If Not r.HasMeasurement OrElse r.IsNeutral() Then Return
                 ' Die Messung rechnet in Double, die Regler sind Single. Das Verengen stand
                 ' vorher unsichtbar im Compiler; ausgeschrieben ist es nachvollziehbar.
@@ -97,6 +99,53 @@ Namespace Services
                 adj.Tint = CSng(r.Tint)
             End Using
         End Sub
+
+        ''' <summary>Wie <see cref="AnalyzeAutoAdjustments(SKBitmap)"/>, aber bei einem Filmnegativ am
+        ''' UMGEKEHRTEN Bild gemessen.
+        '''
+        ''' BEFUND (Forum, C-41-Scan: "way too aggressive"): gemessen wurde die Quelle, also das
+        ''' Negativ, die Regler wirken aber nach der Umkehr. Die Automatik sah die orange Maske und
+        ''' setzte die Temperatur kaelter, sah ein helles Negativ und dunkelte ein dunkles Positiv
+        ''' weiter ab. Gemessen am Farb-Testnegativ: Temperatur -20 und Schwarz -45 statt +4 und 0.
+        '''
+        ''' Gemessen wird deshalb das Bild nach Geometrie und Umkehr, OHNE die uebrigen Regler: die
+        ''' Automatik liefert absolute Werte, ein Messen nach den Reglern rechnete deren Stand doppelt.
+        ''' Ohne Negativ bleibt alles wie bisher (die Quelle, ungeschnitten).</summary>
+        Public Shared Function AnalyzeAutoAdjustments(source As SKBitmap, adj As ImageAdjustments) As AutoAdjustResult
+            If source Is Nothing OrElse adj Is Nothing OrElse Not adj.NegativeEnabled Then Return AnalyzeAutoAdjustments(source)
+            Dim measure As New ImageAdjustments With {
+                .NegativeEnabled = True,
+                .NegativeMonochrome = adj.NegativeMonochrome,
+                .NegativeBaseColor = adj.NegativeBaseColor,
+                .NegativeDensityColor = adj.NegativeDensityColor,
+                .NegativeGamma = adj.NegativeGamma,
+                .RotationDegrees = adj.RotationDegrees,
+                .StraightenDegrees = adj.StraightenDegrees,
+                .StraightenExpandCanvas = adj.StraightenExpandCanvas,
+                .StraightenAutoCrop = adj.StraightenAutoCrop,
+                .FlipHorizontal = adj.FlipHorizontal,
+                .FlipVertical = adj.FlipVertical,
+                .CropLeftPercent = adj.CropLeftPercent,
+                .CropTopPercent = adj.CropTopPercent,
+                .CropRightPercent = adj.CropRightPercent,
+                .CropBottomPercent = adj.CropBottomPercent}
+            ' Nur die Schritte, die festlegen, WELCHER Bildteil bleibt. Groesse aendert das
+            ' Histogramm nicht, kostet aber auf einer Vorschau den Weg zur vollen Pixelzahl; eine
+            ' Leinwand legte ihre Randfarbe mit in die Messung. Die Kette fasst die Schritte nicht
+            ' an, eine Abschrift der Liste genuegt.
+            If adj.GeometryOperations IsNot Nothing Then
+                For Each op In adj.GeometryOperations
+                    Select Case If(op?.Kind, "").Trim().ToLowerInvariant()
+                        Case "crop", "transform", "perspective", "warp"
+                            measure.GeometryOperations.Add(op)
+                    End Select
+                Next
+            End If
+            Using inverted = ProcessBitmap(source, measure)
+                If inverted Is Nothing Then Return AnalyzeAutoAdjustments(source)
+                Return AnalyzeAutoAdjustments(inverted)
+            End Using
+        End Function
 
         ''' <summary>Misst ein Bild und liefert die Reglerwerte der automatischen Bildverbesserung.
         ''' Rein lesend, deterministisch und ohne Seiteneffekte - genau deshalb prüfbar.</summary>

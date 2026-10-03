@@ -2030,7 +2030,9 @@ Namespace ViewModels
 
         Public Sub ApplyAutoAdjustments()
             Dim source = GetPreviewSource()
-            Dim measured = If(source Is Nothing, Nothing, ImageProcessor.AnalyzeAutoAdjustments(source))
+            ' Mit den Anpassungen: bei einem Filmnegativ misst die Automatik das umgekehrte Bild,
+            ' auf das ihre Regler wirken, nicht das Negativ.
+            Dim measured = If(source Is Nothing, Nothing, ImageProcessor.AnalyzeAutoAdjustments(source, GetCurrentAdjustments()))
             If measured Is Nothing OrElse Not measured.HasMeasurement Then
                 StatusText = LocalizationService.T("Das Bild konnte nicht analysiert werden")
                 Return

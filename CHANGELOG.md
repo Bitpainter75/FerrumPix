@@ -38,6 +38,9 @@
   sprocket holes or the scanner holder that were cropped away afterwards still threw off the
   colors. A film base picked with the eyedropper is kept.
 
+- Automatic enhancement works on film negatives. Before, it looked at the negative instead of the
+  converted picture and pushed it the wrong way, often much too cold and too dark.
+
 - Saving a picture twice in a row with "Save as" keeps retouching, brush strokes, denoising and
   removed objects in the second file too. Before, they were missing there even though the editor
   still showed them. The same applied to saving a project a second time.
