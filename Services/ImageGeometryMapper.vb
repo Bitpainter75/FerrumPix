@@ -263,6 +263,68 @@ Namespace Services
             Return m
         End Function
 
+        ''' <summary>Der Wert fuer "Groesse", bei dem das verzerrte Bild den ganzen Rahmen deckt,
+        ''' also keine leere Ecke bleibt - fuer den Haken "Automatisch fuellen".
+        '''
+        ''' Gerechnet mit DERSELBEN Matrix wie der Renderer (WarpMatrix bei Groesse 0): "Groesse"
+        ''' wirkt dort als gleichmaessiger Faktor 1 + Groesse/200 um die Bildmitte, nach Kippung und
+        ''' Seitenverhaeltnis. Gesucht ist der kleinste Faktor, bei dem die vier Rahmenecken, um
+        ''' denselben Faktor zur Mitte gezogen, im verzerrten Viereck liegen. Das Viereck ist konvex,
+        ''' solange die Homographie gueltig ist; liegen die Ecken drin, liegt der ganze Rahmen drin.
+        '''
+        ''' 0, wenn schon nichts leer ist. 100 (der Anschlag des Reglers, Faktor 1,5), wenn selbst
+        ''' das nicht reicht - dann bleibt bei sehr starker Verzerrung etwas leer.</summary>
+        Public Shared Function PerspectiveFillSize(width As Double, height As Double,
+                                                   waagerecht As Double, senkrecht As Double,
+                                                   seitenverhaeltnis As Double,
+                                                   Optional cornerOffset As Double() = Nothing) As Double
+            If width <= 0 OrElse height <= 0 Then Return 0
+            Dim m = WarpMatrix(width, height, waagerecht, senkrecht, seitenverhaeltnis, 0, cornerOffset)
+            If m.IsIdentity Then Return 0
+            Dim quad = {New SKPoint(0, 0), New SKPoint(CSng(width), 0),
+                        New SKPoint(CSng(width), CSng(height)), New SKPoint(0, CSng(height))}.
+                Select(Function(p) m.MapPoint(p)).ToArray()
+            Dim cx = width / 2.0, cy = height / 2.0
+            Dim covers = Function(factor As Double) As Boolean
+                             For Each corner In {(0.0, 0.0), (width, 0.0), (width, height), (0.0, height)}
+                                 Dim px = cx + (corner.Item1 - cx) / factor
+                                 Dim py = cy + (corner.Item2 - cy) / factor
+                                 If Not InsideConvexQuad(quad, px, py) Then Return False
+                             Next
+                             Return True
+                         End Function
+            If covers(1.0) Then Return 0
+            If Not covers(1.5) Then Return 100
+            Dim lo = 1.0, hi = 1.5
+            For i = 1 To 40
+                Dim mid = (lo + hi) / 2.0
+                If covers(mid) Then hi = mid Else lo = mid
+            Next
+            ' Aufgerundet auf eine ganze Reglerstufe: abgerundet bliebe ein Haarstrich leer, und ein
+            ' Bruchteil kaeme ueber das Zahlenfeld des Reglers gerundet zurueck.
+            ' Die Suche naehert sich von oben; ein exakt ganzzahliger Wert kaeme sonst als 25,0000001
+            ' an und wuerde zu 26.
+            Return Math.Min(100.0, Math.Ceiling((hi - 1.0) * 200.0 - 0.001))
+        End Function
+
+        ''' <summary>Liegt der Punkt in einem konvexen Viereck (Ecken der Reihe nach, gleich in
+        ''' welchem Umlaufsinn)? Auf der Kante zaehlt als drin.</summary>
+        Private Shared Function InsideConvexQuad(quad As SKPoint(), x As Double, y As Double) As Boolean
+            Dim sign = 0
+            For i = 0 To 3
+                Dim a = quad(i), b = quad((i + 1) Mod 4)
+                Dim cross = (b.X - a.X) * (y - a.Y) - (b.Y - a.Y) * (x - a.X)
+                If Math.Abs(cross) < 0.000001 Then Continue For
+                Dim s = Math.Sign(cross)
+                If sign = 0 Then
+                    sign = s
+                ElseIf s <> sign Then
+                    Return False
+                End If
+            Next
+            Return True
+        End Function
+
         ' ── Gitterverzerrung ────────────────────────────────────────────────────
         '
         ' Freiform: ein Raster von Stuetzpunkten wird verschoben, das Bild folgt dazwischen weich.

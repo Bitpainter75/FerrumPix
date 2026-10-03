@@ -9113,4 +9113,10 @@
   <data name="Bild_wird_als_Ebene_geladen_28d3e64c" xml:space="preserve">
     <value>Cargando la imagen como capa</value>
   </data>
+  <data name="Automatisch_f_llen_83a711c9" xml:space="preserve">
+    <value>Rellenar automáticamente</value>
+  </data>
+  <data name="Stellt_die_Gr_e_bei_jeder_nderung_so_ein_dass_ke_9fe6042b" xml:space="preserve">
+    <value>Ajusta el tamaño en cada cambio para que no quede ninguna esquina vacía</value>
+  </data>
 </root>

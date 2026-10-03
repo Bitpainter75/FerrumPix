@@ -7,6 +7,9 @@
   file manager, through the insert tool or the filmstrip menu. A RAW comes in developed, with its
   edits if it has any, a PSD or project as its finished picture.
 
+- **Perspective fills the frame on its own.** A new "Fill automatically" option keeps the size
+  adjusted while you correct the perspective, so no empty corners are left.
+
 ### Fixes
 
 - Lens correction recognises Sigma and Tamron lenses on Canon, Sony and Fujifilm cameras. Before,

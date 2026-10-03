@@ -9112,4 +9112,10 @@
   <data name="Bild_wird_als_Ebene_geladen_28d3e64c" xml:space="preserve">
     <value>A carregar a imagem como camada</value>
   </data>
+  <data name="Automatisch_f_llen_83a711c9" xml:space="preserve">
+    <value>Preencher automaticamente</value>
+  </data>
+  <data name="Stellt_die_Gr_e_bei_jeder_nderung_so_ein_dass_ke_9fe6042b" xml:space="preserve">
+    <value>Ajusta o tamanho a cada alteração para que nenhum canto fique vazio</value>
+  </data>
 </root>

@@ -9157,4 +9157,10 @@
   <data name="Bild_wird_als_Ebene_geladen_28d3e64c" xml:space="preserve">
     <value>กำลังโหลดภาพเป็นเลเยอร์</value>
   </data>
+  <data name="Automatisch_f_llen_83a711c9" xml:space="preserve">
+    <value>เติมอัตโนมัติ</value>
+  </data>
+  <data name="Stellt_die_Gr_e_bei_jeder_nderung_so_ein_dass_ke_9fe6042b" xml:space="preserve">
+    <value>ปรับขนาดทุกครั้งที่มีการเปลี่ยนแปลง เพื่อไม่ให้มีมุมว่าง</value>
+  </data>
 </root>

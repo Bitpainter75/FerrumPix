@@ -580,6 +580,10 @@ Namespace Services
         ''' getrennt, weil "beide aus" ein eigener, gueltiger Stand ist.</summary>
         Public Property EditorStraightenExpandCanvas As Boolean = False
         Public Property EditorStraightenAutoCrop As Boolean = False
+        ''' Haken "Automatisch fuellen" der Perspektive: die Groesse folgt der Verzerrung, sodass
+        ''' keine leere Ecke bleibt. Eine Gewohnheit wie die beiden Haken des Begradigens, deshalb
+        ''' hier und nicht im Rezept - dort steht der fertige Wert der Groesse.
+        Public Property EditorPerspectiveAutoFill As Boolean = False
         Public Property ViewerInfoSidebarExpanded As Boolean = True
         ''' In der Galerie ist die Info-Leiste ab Werk ZU: dort stehen links schon Ordnerbaum und
         ''' Filter, und wer die Galerie oeffnet, sucht ein Bild und liest keine Metadaten.
@@ -2571,6 +2575,10 @@ Namespace Services
                        s.EditorStraightenExpandCanvas = expandCanvas
                        s.EditorStraightenAutoCrop = autoCrop
                    End Sub)
+        End Sub
+
+        Public Shared Sub SaveEditorPerspectiveAutoFill(value As Boolean)
+            Update(Sub(s) s.EditorPerspectiveAutoFill = value)
         End Sub
 
         Public Shared Sub SaveEditorShowRulers(value As Boolean)

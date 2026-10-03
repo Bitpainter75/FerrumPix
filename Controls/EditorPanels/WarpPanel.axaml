@@ -177,6 +177,12 @@
                         <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
                                                  Value="{Binding PerspectiveScale, Mode=TwoWay}" Minimum="-100" Maximum="100" />
                     </Grid>
+                    <!-- Der Haken stellt die Groesse darueber, er hat keinen eigenen Rezeptwert:
+                         siehe EditorViewModel.PerspectiveAutoFill. -->
+                    <CheckBox Content="Automatisch füllen"
+                              IsChecked="{Binding PerspectiveAutoFill}"
+                              FontSize="{DynamicResource FP.Font.Small}"
+                              ToolTip.Tip="Stellt die Größe bei jeder Änderung so ein, dass keine leere Ecke bleibt" />
                     <!-- DER KNOPF STEHT BEI DEN REGLERN, die er setzt: er misst, wohin die
                          senkrechten und waagerechten Kanten des Bildes fluchten, und schreibt die
                          beiden oberen Regler. Danach laesst sich das Ergebnis nachziehen wie ein

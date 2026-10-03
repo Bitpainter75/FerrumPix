@@ -9157,4 +9157,10 @@
   <data name="Bild_wird_als_Ebene_geladen_28d3e64c" xml:space="preserve">
     <value>Memuat gambar sebagai lapisan</value>
   </data>
+  <data name="Automatisch_f_llen_83a711c9" xml:space="preserve">
+    <value>Isi otomatis</value>
+  </data>
+  <data name="Stellt_die_Gr_e_bei_jeder_nderung_so_ein_dass_ke_9fe6042b" xml:space="preserve">
+    <value>Menyesuaikan ukuran pada setiap perubahan agar tidak ada sudut yang kosong</value>
+  </data>
 </root>

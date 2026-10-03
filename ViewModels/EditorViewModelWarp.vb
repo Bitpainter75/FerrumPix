@@ -48,6 +48,7 @@ Namespace ViewModels
             Set(value As Double)
                 SetUndoableDouble(_perspectiveHorizontal, Math.Max(-100, Math.Min(100, value)),
                                   NameOf(PerspectiveHorizontal))
+                ApplyPerspectiveAutoFill()
                 RaisePerspectiveStateChanged()
             End Set
         End Property
@@ -59,6 +60,7 @@ Namespace ViewModels
             Set(value As Double)
                 SetUndoableDouble(_perspectiveVertical, Math.Max(-100, Math.Min(100, value)),
                                   NameOf(PerspectiveVertical))
+                ApplyPerspectiveAutoFill()
                 RaisePerspectiveStateChanged()
             End Set
         End Property
@@ -70,6 +72,7 @@ Namespace ViewModels
             Set(value As Double)
                 SetUndoableDouble(_perspectiveAspect, Math.Max(-100, Math.Min(100, value)),
                                   NameOf(PerspectiveAspect))
+                ApplyPerspectiveAutoFill()
                 RaisePerspectiveStateChanged()
             End Set
         End Property
@@ -79,11 +82,61 @@ Namespace ViewModels
                 Return _perspectiveScale
             End Get
             Set(value As Double)
-                SetUndoableDouble(_perspectiveScale, Math.Max(-100, Math.Min(100, value)),
-                                  NameOf(PerspectiveScale))
+                Dim clamped = Math.Max(-100, Math.Min(100, value))
+                ' Wer die Groesse selbst zieht, uebernimmt sie: der Haken geht fuer dieses Bild aus,
+                ' sonst stellte die naechste Kippung den Wert wieder zurueck. Die Gewohnheit bleibt,
+                ' wie sie war. Ein Rueckschreiben desselben Wertes ueber die Bindung zaehlt nicht.
+                If _perspectiveAutoFill AndAlso Math.Abs(clamped - _perspectiveScale) >= 0.5 Then
+                    _perspectiveAutoFill = False
+                    Me.RaisePropertyChanged(NameOf(PerspectiveAutoFill))
+                End If
+                SetUndoableDouble(_perspectiveScale, clamped, NameOf(PerspectiveScale))
                 RaisePerspectiveStateChanged()
             End Set
         End Property
+
+        ' Ab Werk aus; der gemerkte Stand gilt fuer jedes neu geoeffnete Bild.
+        Private _perspectiveAutoFill As Boolean = AppSettingsService.Load().EditorPerspectiveAutoFill
+
+        ''' <summary>"Automatisch fuellen": die Groesse folgt jeder Aenderung an Kippung,
+        ''' Seitenverhaeltnis und Ecken, sodass keine leere Ecke bleibt
+        ''' (<see cref="ImageGeometryMapper.PerspectiveFillSize"/>).
+        '''
+        ''' Kein eigenes Rezeptfeld: das Ergebnis ist vollstaendig der Wert von "Groesse", und den
+        ''' kennen Renderer, Maskenweg, .fpx und XMP schon. Gemerkt wird der Haken als Gewohnheit,
+        ''' wie die beiden Haken des Begradigens, und nur aus diesem Setter. Ein geoeffnetes Bild
+        ''' wird dadurch nie still veraendert: gefuellt wird erst beim naechsten Griff.</summary>
+        Public Property PerspectiveAutoFill As Boolean
+            Get
+                Return _perspectiveAutoFill
+            End Get
+            Set(value As Boolean)
+                If _perspectiveAutoFill = value Then Return
+                If value Then CaptureUndoState("Verzerren")
+                Me.RaiseAndSetIfChanged(_perspectiveAutoFill, value)
+                AppSettingsService.SaveEditorPerspectiveAutoFill(value)
+                ApplyPerspectiveAutoFill()
+                RaisePerspectiveStateChanged()
+            End Set
+        End Property
+
+        ''' <summary>Stellt die Groesse auf den Fuellwert, wenn der Haken an ist. Ohne eigenen
+        ''' Rueckgaengig-Schritt: der Griff, der hierher fuehrt, hat den Stand davor schon
+        ''' festgehalten, und ein Rueckgaengig nimmt Kippung und Groesse zusammen zurueck.</summary>
+        Private Sub ApplyPerspectiveAutoFill()
+            If Not _perspectiveAutoFill Then Return
+            Dim stepSize = WarpStepSize()
+            If stepSize.Width <= 0 OrElse stepSize.Height <= 0 Then Return
+            Dim fill = ImageGeometryMapper.PerspectiveFillSize(stepSize.Width, stepSize.Height,
+                                                               _perspectiveHorizontal, _perspectiveVertical,
+                                                               _perspectiveAspect,
+                                                               CType(_perspectiveCorners.Clone(), Double()))
+            If Math.Abs(fill - _perspectiveScale) < 0.0001 Then Return
+            _perspectiveScale = fill
+            Me.RaisePropertyChanged(NameOf(PerspectiveScale))
+            RaiseCornersChanged()
+            SchedulePreviewUpdate()
+        End Sub
 
         ''' <summary>Was sich mitaendert, wenn einer der vier Perspektivregler wandert.
         '''
@@ -299,6 +352,7 @@ Namespace ViewModels
             If Math.Abs(_perspectiveCorners(index) - v) < 0.0001 Then Return
             CaptureUndoState("Verzerren")
             _perspectiveCorners(index) = v
+            ApplyPerspectiveAutoFill()
             RaiseCornersChanged()
             SchedulePreviewUpdate()
         End Sub
