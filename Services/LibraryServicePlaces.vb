@@ -100,7 +100,7 @@ Namespace Services
                     Dim longitude As Double? = Nothing
                     Using cmd = conn.CreateCommand()
                         cmd.CommandText = "SELECT City, Country, GpsLatitude, GpsLongitude, CountryCode FROM ImageMeta WHERE FilePath=$p"
-                        cmd.Parameters.AddWithValue("$p", filePath)
+                        cmd.Parameters.AddWithValue("$p", PathKey(filePath))
                         Using reader = cmd.ExecuteReader()
                             If Not reader.Read() Then Return ("", "", "")
                             city = If(reader.IsDBNull(0), "", reader.GetString(0))
@@ -272,7 +272,7 @@ Namespace Services
                     conn.Open()
                     Using cmd = conn.CreateCommand()
                         cmd.CommandText = "SELECT GpsLatitude, GpsLongitude FROM ImageMeta WHERE FilePath=$p"
-                        cmd.Parameters.AddWithValue("$p", filePath)
+                        cmd.Parameters.AddWithValue("$p", PathKey(filePath))
                         Using reader = cmd.ExecuteReader()
                             If Not reader.Read() Then Return (Nothing, Nothing)
                             If reader.IsDBNull(0) OrElse reader.IsDBNull(1) Then Return (Nothing, Nothing)
@@ -303,7 +303,7 @@ Namespace Services
                         Dim names As New List(Of String)()
                         For i = 0 To paths.Count - 1
                             names.Add("$p" & i)
-                            cmd.Parameters.AddWithValue("$p" & i, paths(i))
+                            cmd.Parameters.AddWithValue("$p" & i, PathKey(paths(i)))
                         Next
                         cmd.CommandText =
                             $"SELECT 1 FROM ImageMeta WHERE FilePath IN ({String.Join(",", names)}) " &
@@ -506,7 +506,7 @@ Namespace Services
                                 cmd.CommandText =
                                     "UPDATE ImageMeta SET GpsLatitude=NULL, GpsLongitude=NULL, " &
                                     "City='', Country='', CountryCode='' WHERE FilePath=$p"
-                                cmd.Parameters.AddWithValue("$p", path)
+                                cmd.Parameters.AddWithValue("$p", PathKey(path))
                                 cmd.ExecuteNonQuery()
                             End Using
                         Next
@@ -547,7 +547,7 @@ Namespace Services
                     "VALUES($p,$lat,$lon,'','','') " &
                     "ON CONFLICT(FilePath) DO UPDATE SET GpsLatitude=$lat, GpsLongitude=$lon, " &
                     "City='', Country='', CountryCode=''"
-                cmd.Parameters.AddWithValue("$p", filePath)
+                cmd.Parameters.AddWithValue("$p", PathKey(filePath))
                 cmd.Parameters.AddWithValue("$lat", latitude)
                 cmd.Parameters.AddWithValue("$lon", longitude)
                 cmd.ExecuteNonQuery()
@@ -570,7 +570,7 @@ Namespace Services
                 cmd.Parameters.AddWithValue("$c", If(city, ""))
                 cmd.Parameters.AddWithValue("$l", If(country, ""))
                 cmd.Parameters.AddWithValue("$k", If(countryCode, ""))
-                cmd.Parameters.AddWithValue("$p", filePath)
+                cmd.Parameters.AddWithValue("$p", PathKey(filePath))
                 cmd.ExecuteNonQuery()
             End Using
         End Sub

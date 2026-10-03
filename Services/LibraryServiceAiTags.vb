@@ -128,7 +128,7 @@ Namespace Services
                         Using remove = conn.CreateCommand()
                             remove.Transaction = tx
                             remove.CommandText = "DELETE FROM AiImageTag WHERE FilePath=$p"
-                            remove.Parameters.AddWithValue("$p", filePath)
+                            remove.Parameters.AddWithValue("$p", PathKey(filePath))
                             remove.ExecuteNonQuery()
                         End Using
                         For Each tag In clean
@@ -137,7 +137,7 @@ Namespace Services
                                 insert.CommandText =
                                     "INSERT INTO AiImageTag(FilePath,Canonical,Score,ModelKey,ModelVersion,SourceModifiedAt,GeneratedAt) " &
                                     "VALUES($p,$c,$s,$k,$v,$m,$g)"
-                                insert.Parameters.AddWithValue("$p", filePath)
+                                insert.Parameters.AddWithValue("$p", PathKey(filePath))
                                 insert.Parameters.AddWithValue("$c", tag.Canonical.Trim())
                                 insert.Parameters.AddWithValue("$s", tag.Score)
                                 insert.Parameters.AddWithValue("$k", If(modelKey, ""))
@@ -153,7 +153,7 @@ Namespace Services
                                 "INSERT INTO AiTagScan(FilePath,ModelKey,ModelVersion,SourceModifiedAt,GeneratedAt) " &
                                 "VALUES($p,$k,$v,$m,$g) ON CONFLICT(FilePath) DO UPDATE SET " &
                                 "ModelKey=$k,ModelVersion=$v,SourceModifiedAt=$m,GeneratedAt=$g"
-                            scan.Parameters.AddWithValue("$p", filePath)
+                            scan.Parameters.AddWithValue("$p", PathKey(filePath))
                             scan.Parameters.AddWithValue("$k", If(modelKey, ""))
                             scan.Parameters.AddWithValue("$v", If(modelVersion, ""))
                             scan.Parameters.AddWithValue("$m", If(sourceModifiedAt, ""))
@@ -258,7 +258,7 @@ Namespace Services
                         cmd.CommandText =
                             "SELECT Canonical,Score,ModelKey,ModelVersion FROM AiImageTag WHERE FilePath=$p " &
                             "ORDER BY Score DESC, Canonical COLLATE NOCASE"
-                        cmd.Parameters.AddWithValue("$p", filePath)
+                        cmd.Parameters.AddWithValue("$p", PathKey(filePath))
                         Using reader = cmd.ExecuteReader()
                             While reader.Read()
                                 result.Add(New AiImageTag With {
@@ -333,7 +333,7 @@ Namespace Services
                         Next
                         cmd.CommandText = "SELECT 1 FROM AiImageTag WHERE FilePath=$p AND Canonical IN (" &
                                           String.Join(",", slots) & ") LIMIT 1"
-                        cmd.Parameters.AddWithValue("$p", filePath)
+                        cmd.Parameters.AddWithValue("$p", PathKey(filePath))
                         Return cmd.ExecuteScalar() IsNot Nothing
                     End Using
                 End Using
@@ -395,7 +395,7 @@ Namespace Services
                     conn.Open()
                     Using cmd = conn.CreateCommand()
                         cmd.CommandText = "SELECT Canonical FROM AiImageTag WHERE FilePath=$p"
-                        cmd.Parameters.AddWithValue("$p", filePath)
+                        cmd.Parameters.AddWithValue("$p", PathKey(filePath))
                         Using reader = cmd.ExecuteReader()
                             While reader.Read()
                                 known.Add(reader.GetString(0))
@@ -470,7 +470,7 @@ Namespace Services
                     Using cmd = conn.CreateCommand()
                         cmd.CommandText =
                             "SELECT SourceModifiedAt,ModelKey,ModelVersion FROM AiTagScan WHERE FilePath=$p LIMIT 1"
-                        cmd.Parameters.AddWithValue("$p", filePath)
+                        cmd.Parameters.AddWithValue("$p", PathKey(filePath))
                         Using reader = cmd.ExecuteReader()
                             If Not reader.Read() Then Return True
                             Dim stamp As New AiTagScanStamp With {
@@ -496,7 +496,7 @@ Namespace Services
         Public Function GetAiTagScanStamps(folderPath As String) As Dictionary(Of String, AiTagScanStamp)
             Dim result As New Dictionary(Of String, AiTagScanStamp)(PathIdentity.Comparer)
             If String.IsNullOrWhiteSpace(folderPath) Then Return result
-            Dim prefix = folderPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) & Path.DirectorySeparatorChar
+            Dim prefix = PathKey(folderPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)) & Path.DirectorySeparatorChar
             Try
                 Using conn = New SqliteConnection(_connectionString)
                     conn.Open()

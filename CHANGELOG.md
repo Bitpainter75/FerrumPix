@@ -24,5 +24,9 @@
 - The lens search field also understands input like "Sigma 2.8/17-50", and when nothing matches it
   says so instead of staying silent.
 
+- On Windows the catalog keeps one entry per photo, however its path is spelled. Before, the same
+  file could be stored twice, read in again and carry two different ratings. Existing catalogs are
+  merged once on the first start.
+
 - On smaller gallery tiles the EXIF, IPTC, XMP and ICC badges no longer sit under the rating stars.
   When there is not enough room for both, only the stars are shown; larger tiles show both.

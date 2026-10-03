@@ -36,9 +36,16 @@ Namespace Services
         ''' <summary>True, wenn das Dateisystem der Plattform Gross-/Kleinschreibung ignoriert.</summary>
         Public Shared ReadOnly Property IgnoresCase As Boolean
             Get
+                If _ignoresCaseOverride.HasValue Then Return _ignoresCaseOverride.Value
                 Return OperatingSystem.IsWindows()
             End Get
         End Property
+
+        ''' <summary>NUR fuer den Pruefstand: spielt die Windows-Regel unter Linux durch. Ohne sie
+        ''' waere jeder Weg, der Pfade unter Windows vereinheitlicht, hier gar nicht pruefbar - eine
+        ''' vergessene Stelle fiele unter Linux nie auf, weil dort der Pfad sein eigener Schluessel
+        ''' ist. Die Anwendung setzt sie nirgends.</summary>
+        Private Shared _ignoresCaseOverride As Boolean?
 
         ''' <summary>Vergleicher fuer lokale Dateipfade - fuer Dictionary, HashSet, Distinct, Contains.</summary>
         Public Shared ReadOnly Property Comparer As StringComparer

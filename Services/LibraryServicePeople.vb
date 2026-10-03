@@ -60,7 +60,7 @@ Namespace Services
                 conn.Open()
                 Using cmd = conn.CreateCommand()
                     cmd.CommandText = "SELECT SourceModifiedAt FROM ScannedImage WHERE FilePath=$p"
-                    cmd.Parameters.AddWithValue("$p", filePath)
+                    cmd.Parameters.AddWithValue("$p", PathKey(filePath))
                     Dim r = cmd.ExecuteScalar()
                     If r Is Nothing OrElse TypeOf r Is DBNull Then Return True
                     Return Not String.Equals(CStr(r), If(sourceModifiedAt, ""), StringComparison.Ordinal)
@@ -110,7 +110,7 @@ Namespace Services
                     Using cmd = conn.CreateCommand()
                         cmd.Transaction = tx
                         cmd.CommandText = "SELECT X, Y, Width, Height FROM Face WHERE FilePath=$p AND IsManual=1"
-                        cmd.Parameters.AddWithValue("$p", filePath)
+                        cmd.Parameters.AddWithValue("$p", PathKey(filePath))
                         Using reader = cmd.ExecuteReader()
                             While reader.Read()
                                 manual.Add((reader.GetDouble(0), reader.GetDouble(1),
@@ -129,7 +129,7 @@ Namespace Services
                                           "JOIN Person p ON p.Id = f.PersonId " &
                                           "WHERE f.FilePath=$p AND f.IsManual=0 " &
                                           "AND f.Embedding IS NOT NULL AND p.IsUnknownBin=0"
-                        cmd.Parameters.AddWithValue("$p", filePath)
+                        cmd.Parameters.AddWithValue("$p", PathKey(filePath))
                         Using reader = cmd.ExecuteReader()
                             While reader.Read()
                                 removedFromCentroids.Add((reader.GetString(0),
@@ -141,7 +141,7 @@ Namespace Services
                     Using cmd = conn.CreateCommand()
                         cmd.Transaction = tx
                         cmd.CommandText = "DELETE FROM Face WHERE FilePath=$p AND IsManual=0"
-                        cmd.Parameters.AddWithValue("$p", filePath)
+                        cmd.Parameters.AddWithValue("$p", PathKey(filePath))
                         cmd.ExecuteNonQuery()
                     End Using
                     ' Der Speicher muss die Loeschung schon KENNEN, bevor das erste neue Gesicht
@@ -170,7 +170,7 @@ Namespace Services
                         cmd.CommandText = "SELECT f.PersonId FROM Face f " &
                                           "JOIN Person p ON p.Id = f.PersonId " &
                                           "WHERE f.FilePath=$p AND f.IsManual=1 AND p.IsUnknownBin=0"
-                        cmd.Parameters.AddWithValue("$p", filePath)
+                        cmd.Parameters.AddWithValue("$p", PathKey(filePath))
                         Using reader = cmd.ExecuteReader()
                             While reader.Read()
                                 usedOnThisImage.Add(reader.GetString(0))
@@ -197,7 +197,7 @@ Namespace Services
                                     "INSERT INTO Face(Id,FilePath,PersonId,X,Y,Width,Height,Score,Embedding,ScannedAt) " &
                                     "VALUES($id,$p,$person,$x,$y,$w,$h,$s,$e,$t)"
                                 cmd.Parameters.AddWithValue("$id", Guid.NewGuid().ToString("N"))
-                                cmd.Parameters.AddWithValue("$p", filePath)
+                                cmd.Parameters.AddWithValue("$p", PathKey(filePath))
                                 cmd.Parameters.AddWithValue("$person", If(personId, CObj(DBNull.Value)))
                                 cmd.Parameters.AddWithValue("$x", CDbl(face.X))
                                 cmd.Parameters.AddWithValue("$y", CDbl(face.Y))
@@ -224,7 +224,7 @@ Namespace Services
                             "VALUES($p,$m,$c,$t) " &
                             "ON CONFLICT(FilePath) DO UPDATE SET SourceModifiedAt=excluded.SourceModifiedAt, " &
                             "FaceCount=excluded.FaceCount, ScannedAt=excluded.ScannedAt"
-                        cmd.Parameters.AddWithValue("$p", filePath)
+                        cmd.Parameters.AddWithValue("$p", PathKey(filePath))
                         cmd.Parameters.AddWithValue("$m", If(sourceModifiedAt, ""))
                         cmd.Parameters.AddWithValue("$c", written)
                         cmd.Parameters.AddWithValue("$t", stamp)
@@ -692,7 +692,7 @@ Namespace Services
                         "SELECT DISTINCT p.Id, p.Name FROM Face f " &
                         "JOIN Person p ON p.Id = f.PersonId WHERE f.FilePath=$p " &
                         "ORDER BY p.Name = '', p.Name COLLATE NOCASE"
-                    cmd.Parameters.AddWithValue("$p", filePath)
+                    cmd.Parameters.AddWithValue("$p", PathKey(filePath))
                     Using reader = cmd.ExecuteReader()
                         While reader.Read()
                             result.Add(New PersonEntry With {.Id = reader.GetString(0), .Name = reader.GetString(1)})
@@ -805,7 +805,7 @@ Namespace Services
                         "SELECT f.Id, f.PersonId, COALESCE(p.Name,''), f.X, f.Y, f.Width, f.Height " &
                         "FROM Face f LEFT JOIN Person p ON p.Id = f.PersonId " &
                         "WHERE f.FilePath=$p ORDER BY f.X"
-                    cmd.Parameters.AddWithValue("$p", filePath)
+                    cmd.Parameters.AddWithValue("$p", PathKey(filePath))
                     Using reader = cmd.ExecuteReader()
                         While reader.Read()
                             If reader.IsDBNull(1) Then Continue While
@@ -1199,7 +1199,7 @@ Namespace Services
                     cmd.CommandText = "INSERT INTO Face(Id,FilePath,PersonId,X,Y,Width,Height,Score,IsManual,ScannedAt) " &
                                       "VALUES($id,$p,$person,$x,$y,$w,$h,1.0,1,$t)"
                     cmd.Parameters.AddWithValue("$id", Guid.NewGuid().ToString("N"))
-                    cmd.Parameters.AddWithValue("$p", imagePath)
+                    cmd.Parameters.AddWithValue("$p", PathKey(imagePath))
                     cmd.Parameters.AddWithValue("$person", personId)
                     cmd.Parameters.AddWithValue("$x", x)
                     cmd.Parameters.AddWithValue("$y", y)

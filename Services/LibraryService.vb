@@ -101,6 +101,265 @@ Namespace Services
             Dim dbPath = Path.Combine(dir, "library.db")
             _connectionString = $"Data Source={dbPath}"
             InitDb()
+            ' Nur unter Windows: dort kann dieselbe Datei in zwei Schreibweisen im Katalog stehen
+            ' (siehe FindCaseOnlyDuplicatePaths). Im Hintergrund, der Start wartet nicht darauf.
+            If PathIdentity.IgnoresCase Then
+                Threading.Tasks.Task.Run(Sub() LogCaseOnlyDuplicatePaths())
+            End If
+        End Sub
+
+        ''' <summary>Die Tabellen, deren Zeilen an einem Dateipfad haengen.</summary>
+        Friend Shared ReadOnly PathKeyedTables As String() = {"ImageMeta", "Face", "ScannedImage", "AiImageTag", "AiTagScan"}
+
+        ''' <summary>Die Form, in der ein Dateipfad im Katalog steht und nach der gefragt wird.
+        '''
+        ''' Unter Windows <see cref="PathIdentity.Normalize"/>, also einheitlich gross geschrieben:
+        ''' `FilePath` vergleicht byteweise, und ohne das stand dieselbe Datei in zwei Schreibweisen
+        ''' in zwei Zeilen, wurde doppelt eingelesen und trug zwei Bewertungen. Unter Linux der Pfad
+        ''' unveraendert, dort ist die Schreibweise Teil der Identitaet.
+        '''
+        ''' NUR fuer SQL-Parameter, nie fuer die Variable selbst: der Pfad wird in denselben Methoden
+        ''' auch zum Schreiben von Beistelldateien benutzt, und eine neu angelegte Datei truege sonst
+        ''' einen gross geschriebenen Namen. Pseudo-Pfade der Server bleiben, wie sie sind: ihre
+        ''' Kennungen unterscheiden Gross- und Kleinschreibung, und GetFullPath machte unter Windows
+        ''' aus "immich://" etwas anderes.</summary>
+        Friend Shared Function PathKey(path As String) As String
+            If String.IsNullOrEmpty(path) OrElse Not PathIdentity.IgnoresCase Then Return path
+            If path.Contains("://", StringComparison.Ordinal) Then Return path
+            Return PathIdentity.Normalize(path)
+        End Function
+
+        ''' <summary>Schreibt einen bestehenden Katalog einmalig auf <see cref="PathKey"/> um. Laeuft
+        ''' nur, wo PathKey etwas aendert (Windows), und merkt sich den Abschluss in
+        ''' `PRAGMA user_version`.
+        '''
+        ''' Stehen fuer dieselbe Datei mehrere Schreibweisen im Katalog, werden sie zu EINER Zeile:
+        ''' - ImageMeta: Bewertung und Favorit nehmen den hoeheren Wert, Stichwoerter werden
+        '''   vereinigt, ein leeres Feld kommt aus der anderen Zeile.
+        ''' - Face und ScannedImage: es bleibt der Stand EINER Schreibweise, und zwar der mit von Hand
+        '''   angefassten Gesichtern, sonst der mit den meisten, sonst der juengste Lauf. Beide
+        '''   zusammen behalten hiesse, dieselben Gesichter doppelt zu fuehren.
+        ''' - AiImageTag und AiTagScan: ebenso der Stand einer Schreibweise, der juengste Lauf.</summary>
+        Friend Sub NormalizeStoredPaths()
+            Using conn = New SqliteConnection(_connectionString)
+                conn.Open()
+                Using tx = conn.BeginTransaction()
+                    Dim metaRows = NormalizeImageMetaPaths(conn, tx)
+                    Dim faceRows = NormalizeGroupedPaths(conn, tx, {"Face", "ScannedImage"},
+                        "SELECT FilePath, SUM(IsManual), COUNT(*), '' FROM Face WHERE FilePath IN ({0}) GROUP BY FilePath " &
+                        "UNION ALL SELECT FilePath, 0, 0, ScannedAt FROM ScannedImage WHERE FilePath IN ({0})")
+                    Dim aiRows = NormalizeGroupedPaths(conn, tx, {"AiImageTag", "AiTagScan"},
+                        "SELECT FilePath, 0, COUNT(*), '' FROM AiImageTag WHERE FilePath IN ({0}) GROUP BY FilePath " &
+                        "UNION ALL SELECT FilePath, 0, 0, GeneratedAt FROM AiTagScan WHERE FilePath IN ({0})")
+                    Using cmd = conn.CreateCommand()
+                        cmd.Transaction = tx
+                        cmd.CommandText = "PRAGMA user_version = 1"
+                        cmd.ExecuteNonQuery()
+                    End Using
+                    tx.Commit()
+                    DiagnosticLogService.LogAlways("Library.NormalizeStoredPaths",
+                        $"Pfade vereinheitlicht: ImageMeta {metaRows}, Gesichter {faceRows}, KI-Stichwoerter {aiRows} Dateien")
+                End Using
+            End Using
+        End Sub
+
+        ''' <summary>Alle Pfade der Tabellen, deren Katalogform von der gespeicherten abweicht, nach
+        ''' dieser Form gruppiert. Eine Gruppe mit nur EINER Schreibweise, die schon die Katalogform
+        ''' ist, gibt es nicht: da ist nichts zu tun.</summary>
+        Private Shared Function ReadPathGroups(conn As SqliteConnection, tx As SqliteTransaction,
+                                               tables As IEnumerable(Of String)) As Dictionary(Of String, List(Of String))
+            Dim groups As New Dictionary(Of String, List(Of String))(StringComparer.Ordinal)
+            For Each table In tables
+                Using cmd = conn.CreateCommand()
+                    cmd.Transaction = tx
+                    cmd.CommandText = $"SELECT DISTINCT FilePath FROM {table}"
+                    Using reader = cmd.ExecuteReader()
+                        While reader.Read()
+                            If reader.IsDBNull(0) Then Continue While
+                            Dim path = reader.GetString(0)
+                            Dim key = PathKey(path)
+                            Dim spellings As List(Of String) = Nothing
+                            If Not groups.TryGetValue(key, spellings) Then
+                                spellings = New List(Of String)()
+                                groups(key) = spellings
+                            End If
+                            If Not spellings.Contains(path, StringComparer.Ordinal) Then spellings.Add(path)
+                        End While
+                    End Using
+                End Using
+            Next
+            For Each key In groups.Keys.ToList()
+                Dim spellings = groups(key)
+                If spellings.Count = 1 AndAlso String.Equals(spellings(0), key, StringComparison.Ordinal) Then groups.Remove(key)
+            Next
+            Return groups
+        End Function
+
+        Private Shared Function InList(cmd As SqliteCommand, spellings As List(Of String)) As String
+            Dim names As New List(Of String)()
+            For i = 0 To spellings.Count - 1
+                names.Add("$s" & i)
+                cmd.Parameters.AddWithValue("$s" & i, spellings(i))
+            Next
+            Return String.Join(",", names)
+        End Function
+
+        Private Shared Function NormalizeImageMetaPaths(conn As SqliteConnection, tx As SqliteTransaction) As Integer
+            Dim groups = ReadPathGroups(conn, tx, {"ImageMeta"})
+            For Each entry In groups
+                Dim key = entry.Key
+                Dim rows As New List(Of Dictionary(Of String, Object))()
+                Using cmd = conn.CreateCommand()
+                    cmd.Transaction = tx
+                    cmd.CommandText = $"SELECT * FROM ImageMeta WHERE FilePath IN ({InList(cmd, entry.Value)})"
+                    Using reader = cmd.ExecuteReader()
+                        While reader.Read()
+                            Dim row As New Dictionary(Of String, Object)(StringComparer.Ordinal)
+                            For c = 0 To reader.FieldCount - 1
+                                row(reader.GetName(c)) = reader.GetValue(c)
+                            Next
+                            rows.Add(row)
+                        End While
+                    End Using
+                End Using
+                If rows.Count = 0 Then Continue For
+
+                ' Die Zeile, die schon die Katalogform traegt, ist der Ausgangspunkt; sonst die erste.
+                Dim merged = If(rows.FirstOrDefault(Function(r) String.Equals(TryCast(r("FilePath"), String), key, StringComparison.Ordinal)), rows(0))
+                merged = New Dictionary(Of String, Object)(merged, StringComparer.Ordinal)
+                For Each other In rows
+                    For Each column In other.Keys
+                        Dim mine = merged(column)
+                        Dim theirs = other(column)
+                        Select Case column
+                            Case "FilePath"
+                            Case "Rating", "IsFavorite"
+                                merged(column) = Math.Max(Convert.ToInt64(If(TypeOf mine Is DBNull, 0L, mine), CultureInfo.InvariantCulture),
+                                                          Convert.ToInt64(If(TypeOf theirs Is DBNull, 0L, theirs), CultureInfo.InvariantCulture))
+                            Case "Tags"
+                                merged(column) = String.Join(",", ParseTags(TryCast(mine, String)).
+                                    Concat(ParseTags(TryCast(theirs, String))).Distinct(StringComparer.OrdinalIgnoreCase))
+                            Case Else
+                                If TypeOf mine Is DBNull OrElse (TypeOf mine Is String AndAlso CStr(mine).Length = 0) Then merged(column) = theirs
+                        End Select
+                    Next
+                Next
+                merged("FilePath") = key
+
+                Using del = conn.CreateCommand()
+                    del.Transaction = tx
+                    del.CommandText = $"DELETE FROM ImageMeta WHERE FilePath IN ({InList(del, entry.Value)})"
+                    del.ExecuteNonQuery()
+                End Using
+                Using ins = conn.CreateCommand()
+                    ins.Transaction = tx
+                    Dim columns = merged.Keys.ToList()
+                    ins.CommandText = $"INSERT INTO ImageMeta({String.Join(",", columns)}) VALUES({String.Join(",", columns.Select(Function(c, i) "$v" & i))})"
+                    For i = 0 To columns.Count - 1
+                        ins.Parameters.AddWithValue("$v" & i, merged(columns(i)))
+                    Next
+                    ins.ExecuteNonQuery()
+                End Using
+            Next
+            Return groups.Count
+        End Function
+
+        ''' <summary>Fuer zwei zusammengehoerige Tabellen (Gesichter mit ihrem Lauf, KI-Stichwoerter
+        ''' mit ihrem Lauf): je Datei bleibt der Stand EINER Schreibweise. Die Abfrage liefert je
+        ''' Schreibweise von Hand angefasste Zeilen, Zeilenzahl und Zeitpunkt des Laufs; gewonnen
+        ''' wird in dieser Reihenfolge.</summary>
+        Private Shared Function NormalizeGroupedPaths(conn As SqliteConnection, tx As SqliteTransaction,
+                                                      tables As String(), scoreQuery As String) As Integer
+            Dim groups = ReadPathGroups(conn, tx, tables)
+            For Each entry In groups
+                Dim key = entry.Key
+                Dim scores As New Dictionary(Of String, (Manual As Long, Count As Long, Stamp As String))(StringComparer.Ordinal)
+                Using cmd = conn.CreateCommand()
+                    cmd.Transaction = tx
+                    cmd.CommandText = String.Format(CultureInfo.InvariantCulture, scoreQuery, InList(cmd, entry.Value))
+                    Using reader = cmd.ExecuteReader()
+                        While reader.Read()
+                            Dim path = reader.GetString(0)
+                            Dim current As (Manual As Long, Count As Long, Stamp As String) = (0L, 0L, "")
+                            scores.TryGetValue(path, current)
+                            Dim stamp = If(reader.IsDBNull(3), "", reader.GetString(3))
+                            scores(path) = (current.Manual + If(reader.IsDBNull(1), 0L, reader.GetInt64(1)),
+                                            current.Count + If(reader.IsDBNull(2), 0L, reader.GetInt64(2)),
+                                            If(String.CompareOrdinal(stamp, current.Stamp) > 0, stamp, current.Stamp))
+                        End While
+                    End Using
+                End Using
+                If scores.Count = 0 Then Continue For
+                Dim chosen = scores.OrderByDescending(Function(s) s.Value.Manual).
+                    ThenByDescending(Function(s) s.Value.Count).
+                    ThenByDescending(Function(s) s.Value.Stamp, StringComparer.Ordinal).First().Key
+                Dim others = entry.Value.Where(Function(p) Not String.Equals(p, chosen, StringComparison.Ordinal)).ToList()
+                For Each table In tables
+                    If others.Count > 0 Then
+                        Using del = conn.CreateCommand()
+                            del.Transaction = tx
+                            del.CommandText = $"DELETE FROM {table} WHERE FilePath IN ({InList(del, others)})"
+                            del.ExecuteNonQuery()
+                        End Using
+                    End If
+                    Using upd = conn.CreateCommand()
+                        upd.Transaction = tx
+                        upd.CommandText = $"UPDATE {table} SET FilePath = $k WHERE FilePath = $c"
+                        upd.Parameters.AddWithValue("$k", key)
+                        upd.Parameters.AddWithValue("$c", chosen)
+                        upd.ExecuteNonQuery()
+                    End Using
+                Next
+            Next
+            Return groups.Count
+        End Function
+
+        ''' <summary>Pfade einer Tabelle, die sich NUR in der Gross- und Kleinschreibung
+        ''' unterscheiden, je Gruppe alle Schreibweisen.
+        '''
+        ''' WOFUER: `FilePath` vergleicht byteweise, geschrieben wird der Pfad aber in der Schreibweise
+        ''' des Aufrufers. Unter Windows meinen zwei solche Zeilen dieselbe Datei: sie wird doppelt
+        ''' eingelesen, der Ordner bleibt beim Sofortbestand leer, und jede Schreibweise traegt ihre
+        ''' eigene Bewertung. Ob das bei Nutzern vorkommt, ist nicht belegt; diese Zaehlung soll es
+        ''' zeigen, bevor der Katalog umgebaut wird. Unter Linux sind solche Pfade zwei Dateien und
+        ''' kein Befund, deshalb fragt nur der Windows-Start danach.</summary>
+        Friend Function FindCaseOnlyDuplicatePaths(table As String) As List(Of List(Of String))
+            Dim result As New List(Of List(Of String))()
+            If Not PathKeyedTables.Contains(table) Then Return result
+            Dim paths As New List(Of String)()
+            Using conn = New SqliteConnection(_connectionString)
+                conn.Open()
+                Using cmd = conn.CreateCommand()
+                    cmd.CommandText = $"SELECT DISTINCT FilePath FROM {table}"
+                    Using reader = cmd.ExecuteReader()
+                        While reader.Read()
+                            If Not reader.IsDBNull(0) Then paths.Add(reader.GetString(0))
+                        End While
+                    End Using
+                End Using
+            End Using
+            For Each group In paths.GroupBy(Function(p) p, StringComparer.OrdinalIgnoreCase)
+                Dim spellings = group.Distinct(StringComparer.Ordinal).ToList()
+                If spellings.Count > 1 Then result.Add(spellings)
+            Next
+            Return result
+        End Function
+
+        Private Sub LogCaseOnlyDuplicatePaths()
+            Try
+                Dim parts As New List(Of String)()
+                Dim example As String = Nothing
+                For Each table In PathKeyedTables
+                    Dim groups = FindCaseOnlyDuplicatePaths(table)
+                    parts.Add($"{table} {groups.Count}")
+                    If example Is Nothing AndAlso groups.Count > 0 Then example = String.Join(" | ", groups(0))
+                Next
+                DiagnosticLogService.LogAlways("Library.CaseOnlyDuplicates",
+                    "Pfade nur in anderer Schreibweise: " & String.Join(", ", parts) &
+                    If(example Is Nothing, "", $"; Beispiel: {example}"))
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Library.CaseOnlyDuplicates", ex)
+            End Try
         End Sub
 
         Private Sub InitDb()
@@ -127,7 +386,19 @@ Namespace Services
                 EnsurePeopleTables(conn)
                 EnsureFaceColumns(conn)
                 EnsureAiTagTables(conn)
+                If Not PathIdentity.IgnoresCase Then Return
+                Using cmd = conn.CreateCommand()
+                    cmd.CommandText = "PRAGMA user_version"
+                    If Convert.ToInt64(cmd.ExecuteScalar(), CultureInfo.InvariantCulture) >= 1 Then Return
+                End Using
             End Using
+            Try
+                NormalizeStoredPaths()
+            Catch ex As Exception
+                ' Kein Abbruch des Starts: der Katalog arbeitet weiter, nur die Altzeilen in fremder
+                ' Schreibweise bleiben stehen, und beim naechsten Start wird es erneut versucht.
+                DiagnosticLogService.LogException("Library.NormalizeStoredPaths", ex)
+            End Try
         End Sub
 
         ''' <summary>Die beiden Tabellen fuer Personen. Eigene Tabellen statt Spalten in ImageMeta:
@@ -285,7 +556,7 @@ Namespace Services
                 conn.Open()
                 Using cmd = conn.CreateCommand()
                     cmd.CommandText = "SELECT IsFavorite FROM ImageMeta WHERE FilePath=$p"
-                    cmd.Parameters.AddWithValue("$p", filePath)
+                    cmd.Parameters.AddWithValue("$p", PathKey(filePath))
                     Dim r = cmd.ExecuteScalar()
                     Return r IsNot Nothing AndAlso Not TypeOf r Is DBNull AndAlso CInt(r) <> 0
                 End Using
@@ -317,7 +588,7 @@ Namespace Services
                     cmd.CommandText =
                         "INSERT INTO ImageMeta(FilePath,IsFavorite) VALUES($p,$f) " &
                         "ON CONFLICT(FilePath) DO UPDATE SET IsFavorite=$f"
-                    cmd.Parameters.AddWithValue("$p", filePath)
+                    cmd.Parameters.AddWithValue("$p", PathKey(filePath))
                     cmd.Parameters.AddWithValue("$f", If(isFavorite, 1, 0))
                     cmd.ExecuteNonQuery()
                 End Using
@@ -330,7 +601,7 @@ Namespace Services
                 conn.Open()
                 Using cmd = conn.CreateCommand()
                     cmd.CommandText = "SELECT Rating FROM ImageMeta WHERE FilePath=$p"
-                    cmd.Parameters.AddWithValue("$p", filePath)
+                    cmd.Parameters.AddWithValue("$p", PathKey(filePath))
                     Dim r = cmd.ExecuteScalar()
                     If r Is Nothing OrElse TypeOf r Is DBNull Then Return 0
                     Return CInt(r)
@@ -344,7 +615,7 @@ Namespace Services
                 conn.Open()
                 Using cmd = conn.CreateCommand()
                     cmd.CommandText = "SELECT HasXmpMetadata FROM ImageMeta WHERE FilePath=$p"
-                    cmd.Parameters.AddWithValue("$p", filePath)
+                    cmd.Parameters.AddWithValue("$p", PathKey(filePath))
                     Dim r = cmd.ExecuteScalar()
                     Return r IsNot Nothing AndAlso Not TypeOf r Is DBNull AndAlso CInt(r) <> 0
                 End Using
@@ -359,7 +630,7 @@ Namespace Services
                     cmd.CommandText =
                         "INSERT INTO ImageMeta(FilePath,Rating) VALUES($p,$r) " &
                         "ON CONFLICT(FilePath) DO UPDATE SET Rating=$r"
-                    cmd.Parameters.AddWithValue("$p", filePath)
+                    cmd.Parameters.AddWithValue("$p", PathKey(filePath))
                     cmd.Parameters.AddWithValue("$r", rating)
                     cmd.ExecuteNonQuery()
                 End Using
@@ -376,7 +647,7 @@ Namespace Services
                 conn.Open()
                 Using cmd = conn.CreateCommand()
                     cmd.CommandText = "SELECT ColorLabel FROM ImageMeta WHERE FilePath=$p"
-                    cmd.Parameters.AddWithValue("$p", filePath)
+                    cmd.Parameters.AddWithValue("$p", PathKey(filePath))
                     Dim r = cmd.ExecuteScalar()
                     If r Is Nothing OrElse TypeOf r Is DBNull Then Return ""
                     Return CStr(r)
@@ -451,7 +722,7 @@ Namespace Services
                         Dim pParam = cmd.Parameters.Add("$p", SqliteType.Text)
                         Dim cParam = cmd.Parameters.Add("$c", SqliteType.Text)
                         For Each path In list
-                            pParam.Value = path
+                            pParam.Value = PathKey(path)
                             cParam.Value = value
                             cmd.ExecuteNonQuery()
                         Next
@@ -488,7 +759,7 @@ Namespace Services
                         Dim rParam = cmd.Parameters.Add("$r", SqliteType.Integer)
                         rParam.Value = rating
                         For Each path In list
-                            pParam.Value = path
+                            pParam.Value = PathKey(path)
                             cmd.ExecuteNonQuery()
                         Next
                     End Using
@@ -511,7 +782,7 @@ Namespace Services
                 conn.Open()
                 Using cmd = conn.CreateCommand()
                     cmd.CommandText = "SELECT Tags FROM ImageMeta WHERE FilePath=$p"
-                    cmd.Parameters.AddWithValue("$p", filePath)
+                    cmd.Parameters.AddWithValue("$p", PathKey(filePath))
                     Dim r = cmd.ExecuteScalar()
                     If r Is Nothing OrElse TypeOf r Is DBNull OrElse String.IsNullOrWhiteSpace(r.ToString()) Then
                         Return New List(Of String)()
@@ -639,7 +910,7 @@ Namespace Services
                     cmd.CommandText =
                         "INSERT INTO ImageMeta(FilePath,Tags) VALUES($p,$t) " &
                         "ON CONFLICT(FilePath) DO UPDATE SET Tags=$t"
-                    cmd.Parameters.AddWithValue("$p", filePath)
+                    cmd.Parameters.AddWithValue("$p", PathKey(filePath))
                     cmd.Parameters.AddWithValue("$t", String.Join(",", tags))
                     cmd.ExecuteNonQuery()
                 End Using
@@ -713,7 +984,7 @@ Namespace Services
                         cmd.CommandText =
                             "INSERT INTO ImageMeta(FilePath,Tags) VALUES($p,$t) " &
                             "ON CONFLICT(FilePath) DO UPDATE SET Tags=$t"
-                        cmd.Parameters.AddWithValue("$p", filePath)
+                        cmd.Parameters.AddWithValue("$p", PathKey(filePath))
                         cmd.Parameters.AddWithValue("$t", String.Join(",", merged))
                         cmd.ExecuteNonQuery()
                     End Using
@@ -755,7 +1026,7 @@ Namespace Services
                         cmd.CommandText =
                             "INSERT INTO ImageMeta(FilePath,Rating,IsFavorite,ColorLabel,Tags) VALUES($p,$r,$f,$c,$t) " &
                             "ON CONFLICT(FilePath) DO UPDATE SET Rating=$r,IsFavorite=$f,ColorLabel=$c,Tags=$t"
-                        cmd.Parameters.AddWithValue("$p", filePath)
+                        cmd.Parameters.AddWithValue("$p", PathKey(filePath))
                         cmd.Parameters.AddWithValue("$r", Math.Max(0, Math.Min(5, rating)))
                         cmd.Parameters.AddWithValue("$f", If(favorite, 1, 0))
                         cmd.Parameters.AddWithValue("$c", If(colorLabel, ""))
@@ -926,7 +1197,7 @@ Namespace Services
                         "IccSummary=excluded.IccSummary, SummaryFormat=excluded.SummaryFormat, " &
                         "HasIccProfile=excluded.HasIccProfile, City=excluded.City, Country=excluded.Country, " &
                         "CountryCode=excluded.CountryCode"
-                    cmd.Parameters.AddWithValue("$p", filePath)
+                    cmd.Parameters.AddWithValue("$p", PathKey(filePath))
                     cmd.Parameters.AddWithValue("$dateTaken", If(exif.DateTaken, ""))
                     cmd.Parameters.AddWithValue("$dateModifiedExif", If(exif.DateModifiedExif, ""))
                     cmd.Parameters.AddWithValue("$camera", If(exif.Camera, ""))
@@ -1011,7 +1282,7 @@ Namespace Services
         Public Function GetIndexStamps(folderPath As String) As Dictionary(Of String, CatalogIndexStamp)
             Dim result As New Dictionary(Of String, CatalogIndexStamp)(PathIdentity.Comparer)
             If String.IsNullOrWhiteSpace(folderPath) Then Return result
-            Dim prefix = folderPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) & Path.DirectorySeparatorChar
+            Dim prefix = PathKey(folderPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)) & Path.DirectorySeparatorChar
             Using conn = New SqliteConnection(_connectionString)
                 conn.Open()
                 Using cmd = conn.CreateCommand()
@@ -1059,12 +1330,18 @@ Namespace Services
                 conn.Open()
                 For i = 0 To list.Count - 1 Step 500
                     Dim chunk = list.Skip(i).Take(500).ToList()
+                    ' Unter Windows steht der Pfad in Katalogform (PathKey) in der Zeile. Der Aufrufer
+                    ' bekommt ihn in SEINER Schreibweise zurueck: er zeigt ihn an und legt daneben
+                    ' Beistelldateien an.
+                    Dim callerSpelling As New Dictionary(Of String, String)(StringComparer.Ordinal)
                     Using cmd = conn.CreateCommand()
                         Dim parameterNames As New List(Of String)()
                         For index = 0 To chunk.Count - 1
                             Dim parameterName = "$p" & index
                             parameterNames.Add(parameterName)
-                            cmd.Parameters.AddWithValue(parameterName, chunk(index))
+                            Dim key = PathKey(chunk(index))
+                            callerSpelling(key) = chunk(index)
+                            cmd.Parameters.AddWithValue(parameterName, key)
                         Next
                         cmd.CommandText =
                             $"SELECT {MetaColumnList} FROM ImageMeta WHERE FilePath IN (" &
@@ -1072,6 +1349,8 @@ Namespace Services
                         Using reader = cmd.ExecuteReader()
                             While reader.Read()
                                 Dim meta = ReadMetaRow(reader)
+                                Dim original As String = Nothing
+                                If callerSpelling.TryGetValue(meta.FilePath, original) Then meta.FilePath = original
                                 result(meta.FilePath) = meta
                             End While
                         End Using
@@ -1129,9 +1408,14 @@ Namespace Services
             Dim source = oldPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
             Dim target = newPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
             If source.Length = 0 OrElse target.Length = 0 Then Return 0
-            If String.Equals(source, target, StringComparison.Ordinal) Then Return 0
             ' Ein Serverbild hat keinen Ort auf der Platte - sein Pseudo-Pfad wird nie verschoben.
             If IsServerPseudoPath(source) OrElse IsServerPseudoPath(target) Then Return 0
+            ' In Katalogform, damit Bereich, substr und das neue Ziel dieselbe Schreibweise tragen
+            ' wie die Zeilen. Unter Windows ist ein Umbenennen nur der Schreibweise damit kein
+            ' Umzug: der Katalogschluessel bleibt derselbe.
+            source = PathKey(source)
+            target = PathKey(target)
+            If String.Equals(source, target, StringComparison.Ordinal) Then Return 0
 
             Dim prefix = source & Path.DirectorySeparatorChar
             Dim upperBound = source & ChrW(AscW(Path.DirectorySeparatorChar) + 1)
@@ -1294,7 +1578,6 @@ Namespace Services
         Public Function GetImagesInFolder(folderPath As String) As List(Of LibraryImageMeta)
             If String.IsNullOrWhiteSpace(folderPath) Then Return New List(Of LibraryImageMeta)()
             Dim normalizedFolder = folderPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
-            Dim prefix = normalizedFolder & Path.DirectorySeparatorChar
             ' Kein LIKE ... ESCAPE: damit verliert SQLite die Indexoptimierung und prüft den
             ' gesamten Katalog. Der halboffene Textbereich nutzt hingegen FilePath (PRIMARY KEY)
             ' direkt als Index; der anschließende Vergleich entfernt weiterhin Unterordner.
@@ -1305,34 +1588,52 @@ Namespace Services
             ' Datei mit einem Emoji im Namen aus dem Sofortbestand heraus. "/ordner/" bis
             ' "/ordner0" fasst dagegen genau die Kinder des Ordners und nichts sonst.
             '
-            ' DIESER BEREICH IST SCHREIBWEISENGENAU, und das ist eine Eigenschaft des KATALOGS,
-            ' nicht dieser Abfrage: FilePath ist TEXT PRIMARY KEY und traegt damit die
-            ' Standardkollation BINARY, und der Schreibweg legt den Pfad ab, wie der Aufrufer ihn
-            ' gerade hat - PathIdentity.Normalize wird dort NICHT angewandt. Unter Windows kann
-            ' die Schreibweise deshalb auseinanderlaufen, und dann findet auch GetMetaForPaths
-            ' ueber "FilePath IN (...)" nichts und ON CONFLICT(FilePath) legt eine zweite Zeile an.
-            ' Hier bliebe lediglich der Sofortbestand leer; der Dateisystemlauf traegt danach alles
-            ' nach. Ein NOCASE-Sonderweg nur an DIESER Stelle wuerde eine Vertraeglichkeit
-            ' vortaeuschen, die der Katalog nicht hat - siehe OFFENE_PUNKTE.md.
-            Dim upperBound = normalizedFolder & ChrW(AscW(Path.DirectorySeparatorChar) + 1)
+            ' Der Bereich laeuft in Katalogform (PathKey): unter Windows stehen die Pfade dort
+            ' einheitlich gross, und ein Bereich in der Schreibweise des Aufrufers faende nichts.
+            Dim keyFolder = PathKey(normalizedFolder)
+            Dim upperBound = keyFolder & ChrW(AscW(Path.DirectorySeparatorChar) + 1)
+            Dim rows As List(Of LibraryImageMeta)
             Using conn = New SqliteConnection(_connectionString)
                 conn.Open()
                 Using cmd = conn.CreateCommand()
                     cmd.CommandText = $"SELECT {MetaColumnList} FROM ImageMeta WHERE FilePath >= $prefix AND FilePath < $upper"
-                    cmd.Parameters.AddWithValue("$prefix", prefix)
+                    cmd.Parameters.AddWithValue("$prefix", keyFolder & Path.DirectorySeparatorChar)
                     cmd.Parameters.AddWithValue("$upper", upperBound)
                     ' Der Nachvergleich entfernt die Unterordner. Er nimmt die Vergleichsart der
                     ' PLATTFORM, nicht fest OrdinalIgnoreCase: auf Linux sind "/a/Foto" und
                     ' "/a/foto" zwei verschiedene Ordner, und was der Bereich oben schon nicht
                     ' hereinlaesst, soll hier auch nicht durchrutschen.
-                    Return ReadImageMeta(cmd).
+                    rows = ReadImageMeta(cmd).
                         Where(Function(meta) meta IsNot Nothing AndAlso
                                              String.Equals(Path.GetDirectoryName(meta.FilePath)?.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar),
-                                                           normalizedFolder, PathIdentity.Comparison)).
+                                                           keyFolder, PathIdentity.Comparison)).
                         ToList()
                 End Using
             End Using
+            RestoreFileSpelling(rows, normalizedFolder)
+            Return rows
         End Function
+
+        ''' <summary>Gibt Katalogzeilen eines Ordners die Schreibweise der Dateien auf der Platte
+        ''' zurueck. Nur dort, wo PathKey die Schreibweise aendert (Windows): die Kacheln des
+        ''' Sofortbestands zeigten sonst grosse Namen, und der Dateisystemlauf danach behaelt sie,
+        ''' weil er schreibweisenunabhaengig vergleicht. Eine reine Namensliste, ohne Dateidaten; ist
+        ''' der Ordner nicht lesbar, bleibt die gespeicherte Form stehen.</summary>
+        Private Shared Sub RestoreFileSpelling(rows As List(Of LibraryImageMeta), folderPath As String)
+            If rows.Count = 0 OrElse Not PathIdentity.IgnoresCase Then Return
+            Dim onDisk As New Dictionary(Of String, String)(StringComparer.Ordinal)
+            Try
+                For Each file In Directory.EnumerateFiles(folderPath)
+                    onDisk(PathKey(file)) = file
+                Next
+            Catch ex As Exception When TypeOf ex Is IOException OrElse TypeOf ex Is UnauthorizedAccessException
+                Return
+            End Try
+            For Each meta In rows
+                Dim real As String = Nothing
+                If onDisk.TryGetValue(meta.FilePath, real) Then meta.FilePath = real
+            Next
+        End Sub
 
         Public Function SearchImages(query As String) As List(Of LibraryImageMeta)
             query = If(query, "").Trim()
@@ -1608,7 +1909,7 @@ Namespace Services
         ''' Rumpf nicht um eine Ebene einrueckt - dieselbe Bauform wie bei PsdImportService.</summary>
         Private Function DeleteFolderCatalogDataLocked(folderPath As String) As Integer
             ' Maskiert, sonst raeumt "100_Fotos" auch bei "100aFotos" auf - siehe EscapeLikeValue.
-            Dim prefix = EscapeLikeValue(folderPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) &
+            Dim prefix = EscapeLikeValue(PathKey(folderPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)) &
                                          Path.DirectorySeparatorChar) & "%"
             Dim removed = 0
             Using conn = New SqliteConnection(_connectionString)
@@ -1739,7 +2040,7 @@ Namespace Services
                     If String.IsNullOrWhiteSpace(folder) Then Continue For
                     ' Maskiert und mit Trennzeichen, genau wie beim ordnerweisen Loeschen: sonst
                     ' zaehlte "100_Fotos" auch die Zeilen von "100aFotos" mit.
-                    Dim prefix = EscapeLikeValue(folder.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) &
+                    Dim prefix = EscapeLikeValue(PathKey(folder.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)) &
                                                  Path.DirectorySeparatorChar) & "%"
                     Using cmd = conn.CreateCommand()
                         ' Dieselben Tabellen wie beim Aufraeumen: ein Bild kann nur einen
