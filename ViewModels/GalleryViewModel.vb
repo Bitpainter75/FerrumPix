@@ -363,11 +363,16 @@ Namespace ViewModels
             End Set
         End Property
 
-        ''' <summary>Ab welcher Kachelbreite Metadaten-Abzeichen und Dateidatum noch sinnvoll
-        ''' hineinpassen. Darunter überlagern die 32-px-Abzeichen das halbe Bild und das Datum wird auf
-        ''' wenige Zeichen abgeschnitten - dann bleiben beide weg.
-        ''' Der Regler geht von 140 bis 640; 200 liegt knapp über den kleinsten Stufen.</summary>
-        Public Const TileDetailsMinWidth As Double = 200
+        ''' <summary>Ab welcher Kachelbreite die Metadaten-Abzeichen (EXIF, IPTC, XMP, ICC) neben der
+        ''' Sternreihe Platz haben. Beide stehen unten in der Kachel, die Sterne links, die Abzeichen
+        ''' rechts. Die Schwelle stand frueher bei 200 und rechnete die Sterne nicht mit: zwischen 200
+        ''' und gut 270 Punkten lagen die Sterne ueber dem EXIF-Abzeichen, und dessen Vorschau beim
+        ''' Ueberfahren war nicht mehr zu erreichen (Forumsbefund, 1920x1080). Darunter bleiben die
+        ''' Abzeichen weg, die Sterne bleiben.
+        '''
+        ''' Die Summe aus GalleryView.axaml: Sterne 8 Rand + 5 x 22, Abzeichen 4 x 32 + 20 Rand,
+        ''' dazwischen 8 Luft. Wer dort Breiten aendert, rechnet hier nach.</summary>
+        Public Const TileDetailsMinWidth As Double = 8 + 5 * 22 + 8 + 4 * 32 + 20
 
         Public ReadOnly Property TileHasRoomForDetails As Boolean
             Get

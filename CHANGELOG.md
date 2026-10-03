@@ -59,6 +59,9 @@
 
 - Going back from the editor to the viewer without saving no longer reads the picture again.
 
+- On smaller gallery tiles the EXIF, IPTC, XMP and ICC badges no longer sit under the rating stars.
+  When there is not enough room for both, only the stars are shown; larger tiles show both.
+
 - The symbols in the layers and history panels are easier to see. Show, hide, lock and the
   layer's own adjustments use the normal text color when off and the accent color when on.
 
