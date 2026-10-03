@@ -6488,6 +6488,9 @@ Namespace ViewModels
         ''' sie aus ist, weil das Objektiv fehlt oder weil es gar keine Aufnahmedaten gibt.</summary>
         Public ReadOnly Property LensCorrectionStatus As String
             Get
+                If Not String.IsNullOrWhiteSpace(_unmatchedLensInput) Then
+                    Return _unmatchedLensInput & " - " & LocalizationService.T("keine Messwerte vorhanden")
+                End If
                 If String.IsNullOrWhiteSpace(_objektivExifName) Then
                     If _objektivKorrektur IsNot Nothing Then
                         Return _objektivKorrektur.LensName & " - " &
@@ -6572,8 +6575,20 @@ Namespace ViewModels
             If alle.Count = 0 Then Return
 
             Dim treffer = SelectLens(text, alle)
-            If Not String.IsNullOrEmpty(treffer) Then LensAssignment = treffer
+            If Not String.IsNullOrEmpty(treffer) Then
+                LensAssignment = treffer
+                Return
+            End If
+            ' Kein Eintrag passt: das Objektiv steht nicht in der Sammlung. Die Zeile sagt das,
+            ' statt weiter "Keine Objektivangabe in den Aufnahmedaten" zu zeigen - so sah der Knopf
+            ' aus, als habe er die Eingabe nicht gelesen (Forumsbefund, Sigma 50mm Macro).
+            _unmatchedLensInput = text
+            Me.RaisePropertyChanged(NameOf(LensCorrectionStatus))
         End Sub
+
+        ''' <summary>Die letzte Eingabe im Suchfeld, auf die kein Eintrag passte. Gilt nur, bis
+        ''' weiter getippt, zugeordnet oder ein anderes Bild geoeffnet wird.</summary>
+        Private _unmatchedLensInput As String = ""
 
         ''' <summary>Welches Objektiv eine Eingabe meint. Als parameterlose Funktion, damit die Regel
         ''' pruefbar ist, ohne den Editor zu bauen.
@@ -6591,8 +6606,19 @@ Namespace ViewModels
             Dim genau = candidates.FirstOrDefault(Function(n) String.Equals(n, text, StringComparison.OrdinalIgnoreCase))
             If Not String.IsNullOrEmpty(genau) Then Return genau
             Dim worte = text.Split({" "c}, StringSplitOptions.RemoveEmptyEntries)
-            Return If(candidates.FirstOrDefault(Function(n) worte.All(
-                Function(w) n.IndexOf(w, StringComparison.OrdinalIgnoreCase) >= 0)), "")
+            Dim woertlich = candidates.FirstOrDefault(Function(n) worte.All(
+                Function(w) n.IndexOf(w, StringComparison.OrdinalIgnoreCase) >= 0))
+            If Not String.IsNullOrEmpty(woertlich) Then Return woertlich
+            ' Dann in der Vergleichsform des Abgleichs: "Sigma 2.8/50 Macro" oder "17-50" stehen so
+            ' in keinem Namen, wohl aber ihre Bestandteile ("sigma 50 mm f 2.8 ... macro"). Je
+            ' Bestandteil genuegt der Anfang eines Wortes, damit auch eine halb getippte Eingabe trifft.
+            Dim teile = LensDataService.NormalizedForName(text).Split({" "c}, StringSplitOptions.RemoveEmptyEntries)
+            If teile.Length = 0 Then Return ""
+            Return If(candidates.FirstOrDefault(Function(n)
+                                                    Dim nameTeile = LensDataService.NormalizedForName(n).Split(" "c)
+                                                    Return teile.All(Function(t) nameTeile.Any(
+                                                        Function(x) x.StartsWith(t, StringComparison.Ordinal)))
+                                                End Function), "")
         End Function
 
         ''' <summary>Sucheingabe fuer die Objektivliste. Die Sammlung fuehrt ueber 1500 Objektive -
@@ -6607,6 +6633,10 @@ Namespace ViewModels
                 If String.Equals(_lensFilter, newValue, StringComparison.Ordinal) Then Return
                 _lensFilter = newValue
                 Me.RaisePropertyChanged(NameOf(LensFilter))
+                If Not String.IsNullOrEmpty(_unmatchedLensInput) Then
+                    _unmatchedLensInput = ""
+                    Me.RaisePropertyChanged(NameOf(LensCorrectionStatus))
+                End If
             End Set
         End Property
 
@@ -6935,6 +6965,7 @@ Namespace ViewModels
         ''' <summary>Kamera, Objektiv und die gefundenen Kennlinien fuer das aktuelle Bild neu
         ''' ermitteln. Wird beim Oeffnen und nach einer Zuordnung gerufen.</summary>
         Private Sub RefreshLensCorrection()
+            _unmatchedLensInput = ""
             _objektivExifName = ""
             _objektivErkannterName = ""
             _objektivKamera = ("", "")

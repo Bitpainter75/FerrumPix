@@ -364,7 +364,7 @@ Namespace Services
         ''' <summary>Vergleichsform eines Namens: klein, ohne Satzzeichen, ohne Mehrfach-Leerzeichen.
         ''' Die EXIF-Angaben der Kameras sind uneinheitlich ("EF24-70mm f/2.8L II USM" gegen
         ''' "Canon EF 24-70mm f/2.8L II USM"), deshalb wird nicht auf Gleichheit verglichen.</summary>
-        Private Shared Function NormalizedForName(s As String) As String
+        Friend Shared Function NormalizedForName(s As String) As String
             If String.IsNullOrWhiteSpace(s) Then Return ""
             ' MetadataExtractor formatiert die Blende mit der Prozesskultur. Bei deutscher
             ' Oberfläche wird aus "f/1.8" daher "f/1,8", während Lensfun stets den Punkt
@@ -462,6 +462,107 @@ Namespace Services
 
             Dim kandidatMaker = NormalizedForName(kandidat.Maker).Split(" "c)
             Return kameraTokens.Any(Function(token) kandidatMaker.Contains(token))
+        End Function
+
+        ''' <summary>Namensbestandteile, an denen ein Fremdobjektiv auch OHNE Herstellernamen zu
+        ''' erkennen ist. Canon- und Sony-Gehaeuse schreiben bei Sigma-Glas nur die Bezeichnung des
+        ''' Objektivs ins EXIF ("24-70mm F2.8 DG OS HSM | Art 017"), Fujifilm ebenso bei Tamron
+        ''' ("17-70mm F/2.8 DiIII-A VC RXD B070X"). Ohne den Hersteller liessen die beiden Sperren
+        ''' oben nur Profile des Kameraherstellers zu, und gleiche Brennweite und Lichtstaerke
+        ''' hoben dann ein Canon EF 24-70mm f/2.8L ueber die Schwelle - eine fremde Kennlinie.
+        '''
+        ''' Aufgenommen ist nur, was in der Sammlung AUSSCHLIESSLICH beim jeweiligen Hersteller
+        ''' vorkommt (nachgezaehlt ueber alle Namen). "DC" fehlt deshalb (Nikons DC-Nikkor, Canon,
+        ''' Pentax), "DG" steht drin, gilt aber nicht neben "Leica" (Panasonics Leica DG).</summary>
+        Private Shared ReadOnly _makerSignatures As (Maker As String, Tokens As String())() = {
+            ("sigma", {"hsm", "dn", "dg", "art", "contemporary", "sports"}),
+            ("tamron", {"di", "diii", "diiii", "vc", "usd", "vxd", "rxd", "pzd"})}
+
+        ''' <summary>Namen von Marken, die neben einem Signaturmerkmal stehen duerfen, ohne dass es
+        ''' etwas ueber den Hersteller sagt: wer sie nennt, hat den Hersteller schon genannt.</summary>
+        Private Shared ReadOnly _brandTokens As String() =
+            {"canon", "nikon", "nikkor", "sony", "fujifilm", "fujinon", "olympus", "zuiko", "om",
+             "panasonic", "lumix", "leica", "pentax", "smc", "samsung", "hasselblad", "ricoh"}
+
+        ''' <summary>Der Suchname mit vorangestelltem Hersteller, wenn die Aufnahme keinen nennt,
+        ''' das Objektiv ihn aber an seiner Bezeichnung verraet. Sonst unveraendert.</summary>
+        Private Shared Function WithInferredMaker(name As String) As String
+            Dim tokens = NormalizedForName(name).Split(" "c)
+            If tokens.Any(Function(t) _fremdhersteller.Contains(t) OrElse _brandTokens.Contains(t)) Then Return name
+            For Each signature In _makerSignatures
+                If signature.Tokens.Any(Function(t) tokens.Contains(t)) Then Return signature.Maker & " " & name
+            Next
+            Return name
+        End Function
+
+        ''' <summary>Nennt der Suchname einen fremden Objektivhersteller, kommen NUR dessen Profile in
+        ''' Frage. Die Gegenrichtung von <see cref="FremdherstellerPasst"/>: dort darf ein Sigma-
+        ''' Profil nicht ein Canon-Objektiv bedienen, hier ein Canon-Profil kein Sigma-Objektiv. Ist
+        ''' das Sigma nicht in der Sammlung, gewann sonst das Canon mit gleicher Brennweite und
+        ''' Lichtstaerke. Der Hersteller zaehlt, wenn er im Herstellerfeld ODER im Namen steht: die
+        ''' neueren Sigma-Eintraege fuehren ihn nur im Herstellerfeld.</summary>
+        Private Shared Function NamedMakerMatches(gesucht As String, kandidat As LensEntry,
+                                                  camera As CameraEntry) As Boolean
+            Dim tg = NormalizedForName(gesucht).Split(" "c)
+            Dim kameraMarke = NormalizedForName(If(camera Is Nothing, "", camera.Maker))
+            For Each marke In _fremdhersteller
+                If Not tg.Contains(marke) OrElse marke = kameraMarke Then Continue For
+                If NormalizedForName(kandidat.Maker).Split(" "c).Contains(marke) Then Return True
+                Return kandidat.Namen.Any(Function(n) NormalizedForName(n).Split(" "c).Contains(marke))
+            Next
+            Return True
+        End Function
+
+        ''' <summary>Die Brennweite aus einem Objektivnamen: (10, 20) fuer "10-20mm", (50, 50) fuer
+        ''' "EF50mm". Nothing, wenn der Name keine Angabe in Millimetern traegt.</summary>
+        Private Shared Function FocalRange(name As String) As (Low As Double, High As Double)?
+            If String.IsNullOrWhiteSpace(name) Then Return Nothing
+            Dim m = Regex.Match(name.Replace(","c, "."c), "(\d+(?:\.\d+)?)(?:\s*-\s*(\d+(?:\.\d+)?))?\s*mm", RegexOptions.IgnoreCase)
+            If Not m.Success Then Return Nothing
+            Dim low = Double.Parse(m.Groups(1).Value, CultureInfo.InvariantCulture)
+            Dim high = If(m.Groups(2).Success, Double.Parse(m.Groups(2).Value, CultureInfo.InvariantCulture), low)
+            Return (low, high)
+        End Function
+
+        ''' <summary>Tragen beide Namen eine Brennweite, muss sie uebereinstimmen. Die Aehnlichkeit
+        ''' allein sieht das nicht: aus "10-20mm f/3.5" passen 20, mm, f und 3.5 auf ein
+        ''' "Nikkor 20mm f/3.5" und heben die Festbrennweite ueber die Schwelle, ebenso ein
+        ''' "28-70mm f/2.8" auf ein "Nikkor 28mm f/2.8" oder ein "18-200mm" auf ein "18-300mm".
+        ''' Ein Zoom ist nie eine Festbrennweite, und eine andere Brennweite nie dasselbe Objektiv.</summary>
+        Private Shared Function FocalRangeMatches(gesucht As (Low As Double, High As Double)?, kandidat As String) As Boolean
+            If Not gesucht.HasValue Then Return True
+            Dim k = FocalRange(kandidat)
+            If Not k.HasValue Then Return True
+            Return Math.Abs(gesucht.Value.Low - k.Value.Low) < 0.6 AndAlso
+                   Math.Abs(gesucht.Value.High - k.Value.High) < 0.6
+        End Function
+
+        ''' <summary>Die Lichtstaerke aus einem Objektivnamen: (3.5, 5.6) fuer "f/3.5-5.6", (2.8, 0)
+        ''' fuer "F2.8" oder "1:2.8". Das F darf direkt an "mm" haengen ("XF23mmF2.8"), sonst nicht
+        ''' an einem Buchstaben, damit "AF" oder "DF" nicht mitzaehlen.</summary>
+        Private Shared Function ApertureRange(name As String) As (Wide As Double, Narrow As Double)?
+            If String.IsNullOrWhiteSpace(name) Then Return Nothing
+            Dim m = Regex.Match(name.Replace(","c, "."c),
+                                "(?:(?:(?<![a-z])|(?<=mm))f\s*/?\s*|1\s*:\s*)(\d+(?:\.\d+)?)(?:\s*-\s*(\d+(?:\.\d+)?))?",
+                                RegexOptions.IgnoreCase)
+            If Not m.Success Then Return Nothing
+            Dim wide = Double.Parse(m.Groups(1).Value, CultureInfo.InvariantCulture)
+            Dim narrow = If(m.Groups(2).Success, Double.Parse(m.Groups(2).Value, CultureInfo.InvariantCulture), 0.0)
+            Return (wide, narrow)
+        End Function
+
+        ''' <summary>Wie <see cref="FocalRangeMatches"/> fuer die Lichtstaerke. Die Brennweite
+        ''' allein trennt zwei Objektive derselben Reihe nicht: ein "FE 28-70mm F2 GM" fand das
+        ''' "FE 28-70mm f/3.5-5.6 OSS", ein "XF23mmF2.8" das "XF23mmF2". Die groesste Oeffnung muss
+        ''' stimmen; die kleinste nur, wenn beide Namen eine nennen.</summary>
+        Private Shared Function ApertureMatches(gesucht As (Wide As Double, Narrow As Double)?, kandidat As String) As Boolean
+            If Not gesucht.HasValue Then Return True
+            Dim k = ApertureRange(kandidat)
+            If Not k.HasValue Then Return True
+            If Math.Abs(gesucht.Value.Wide - k.Value.Wide) > 0.05 Then Return False
+            If gesucht.Value.Narrow > 0 AndAlso k.Value.Narrow > 0 AndAlso
+               Math.Abs(gesucht.Value.Narrow - k.Value.Narrow) > 0.05 Then Return False
+            Return True
         End Function
 
         ''' <summary>Unterhalb dieser Aehnlichkeit gilt ein Objektiv als NICHT gefunden. Lieber gar
@@ -871,14 +972,20 @@ Namespace Services
             Dim bestCropDistance As Double = Double.MaxValue
             Dim bestExtent As Integer = -1
             Dim cameraCrop = If(camera IsNot Nothing, camera.CropFactor, 0.0)
+            Dim suchName = WithInferredMaker(objektivName)
+            Dim suchBrennweite = FocalRange(suchName)
+            Dim suchBlende = ApertureRange(suchName)
 
             For Each o In _objektive
                 If Not PasstAnschluss(o, camera) Then Continue For
-                If Not MakerMatchesForIncompleteName(objektivName, o, camera) Then Continue For
+                If Not MakerMatchesForIncompleteName(suchName, o, camera) Then Continue For
+                If Not NamedMakerMatches(suchName, o, camera) Then Continue For
                 Dim g As Double = 0
                 For Each n In o.Namen
-                    If Not FremdherstellerPasst(objektivName, n, camera) Then Continue For
-                    g = Math.Max(g, Similarity(objektivName, n))
+                    If Not FremdherstellerPasst(suchName, n, camera) Then Continue For
+                    If Not FocalRangeMatches(suchBrennweite, n) Then Continue For
+                    If Not ApertureMatches(suchBlende, n) Then Continue For
+                    g = Math.Max(g, Similarity(suchName, n))
                 Next
                 If g <= 0 Then Continue For
 
