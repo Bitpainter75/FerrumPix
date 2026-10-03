@@ -3,19 +3,20 @@ Imports System.Collections.Generic
 Imports System.Globalization
 Imports System.Linq
 Imports MetadataExtractor
+Imports MetadataExtractor.Formats.Exif
 Imports MetadataExtractor.Formats.Exif.Makernotes
 
 Namespace Services
 
-    ''' <summary>Loest Nikons verschluesselte Lens-ID auf, wenn ein NEF keinen EXIF-LensModel-Tag
-    ''' schreibt. Diese kleine Tabelle ist nur fuer die sonst nicht unterscheidbaren
-    ''' Fremdobjektive da.
+    ''' <summary>Loest Nikons verschluesselte Lens-ID auf. Diese kleine Tabelle ist nur fuer die
+    ''' sonst nicht unterscheidbaren Fremdobjektive da.
     '''
-    ''' <para>REIHENFOLGE, und die ist Absicht: Ein vorhandenes EXIF-LensModel schlaegt die
-    ''' Tabelle, eine getroffene ID schlaegt dagegen Nikons eigenen Lens-Tag. Denn genau bei
-    ''' Fremdobjektiven traegt der nur Brennweite und Blende ("18-35mm f/1.8") und nennt den
-    ''' Hersteller gar nicht - ihm den Vorrang zu lassen hiesse, die Aufloesung wegzuwerfen, fuer
-    ''' die es diese Klasse gibt. Eine unbekannte ID faellt auf den Nikon-Tag zurueck.</para></summary>
+    ''' <para>REIHENFOLGE, und die ist Absicht: Eine getroffene ID schlaegt das EXIF-LensModel,
+    ''' weil neuere Gehaeuse dort fuer ein Fremdobjektiv den Namen eines eigenen eintragen, und
+    ''' erst recht Nikons eigenen Lens-Tag. Der traegt bei Fremdobjektiven nur Brennweite und
+    ''' Blende ("18-35mm f/1.8") und nennt den Hersteller gar nicht - ihm den Vorrang zu lassen
+    ''' hiesse, die Aufloesung wegzuwerfen, fuer die es diese Klasse gibt. Eine unbekannte ID
+    ''' faellt auf LensModel und dann auf den Nikon-Tag zurueck.</para></summary>
     Public NotInheritable Class NikonLensIdService
 
         Private Sub New()
@@ -31,9 +32,31 @@ Namespace Services
 
         ' Nur eindeutig bestaetigte IDs aufnehmen. Eine unbekannte ID bleibt bei der lesbaren
         ' Nikon-Angabe, statt anhand Brennweite und Blende einen falschen Hersteller zu erfinden.
+        ' Jede ID ist an einer Datei des Bestands belegt; der Name ist, wo es eines gibt, der des
+        ' passenden Profils mit Nikon-F-Anschluss in den Objektivdaten.
         Private Shared ReadOnly _knownLenses As New Dictionary(Of String, String)(StringComparer.Ordinal) From {
+            {"A14119312C2C4B06", "Sigma 10-20mm f/3.5 EX DC HSM"},
+            {"8F482B5024244B0E", "Sigma 17-50mm f/2.8 EX DC OS HSM"},
+            {"8E3F2B5C24304B0E", "Sigma 17-70mm f/2.8-4 DC MACRO OS HSM Contemporary"},
+            {"8E482B5C24304B0E", "Sigma 17-70mm f/2.8-4 DC MACRO OS HSM Contemporary"},
+            {"26402D702B3C1C06", "Sigma 18-125mm f/3.5-5.6 DC"},
+            {"92352D882C404B0E", "Sigma 18-250mm f/3.5-6.3 DC OS Macro HSM"},
             {"8B4C2D4414144B06", "Sigma 18-35mm f/1.8 DC HSM Art"},
-            {"F1475C8E303CDF0E", "Tamron SP 70-300mm f/4-5.6 Di VC USD (A005)"}
+            {"7F482D5024241C06", "Sigma 18-50mm f/2.8 EX DC Macro"},
+            {"26402D502C3C1C06", "Sigma 18-50mm f/3.5-5.6 DC"},
+            {"915444440C0C4B06", "Sigma 35mm f/1.4 DG HSM | A"},
+            {"885450500C0C4B06", "Sigma 50mm f/1.4 DG HSM [A]"},
+            {"CE3476A038404B0E", "Sigma 150-500mm f/5-6.3 APO DG OS HSM"},
+            {"823476A638404B0E", "Sigma 150-600mm f/5-6.3 DG OS HSM | C"},
+            {"E6402D802C40DF0E", "Tamron 18-200mm f/3.5-6.3 Di II VC"},
+            {"00402D802C400006", "Tamron AF 18-200mm f/3.5-6.3 XR Di II LD Aspherical (IF) Macro"},
+            {"00402D882C406206", "Tamron AF 18-250mm f/3.5-6.3 Di II LD Aspherical (IF) Macro"},
+            {"FE48375C2424DF0E", "Tamron SP 24-70mm f/2.8 Di VC USD"},
+            {"FA543C5E2424DF06", "Tamron SP AF 28-75mm f/2.8 XR Di LD Aspherical (IF) Macro"},
+            {"E84C44441414DF0E", "Tamron SP 35mm f/1.8 Di VC USD F012"},
+            {"FE545C802424DF0E", "Tamron SP 70-200mm f/2.8 Di VC USD A009"},
+            {"F1475C8E303CDF0E", "Tamron SP 70-300mm f/4-5.6 Di VC USD (A005)"},
+            {"0040182B2C340006", "Tokina AT-X 107 AF DX Fisheye 10-17mm f/3.5-4.5"}
         }
 
         Public Shared Function TryGetLensName(metaDirectories As IEnumerable(Of Directory)) As String
@@ -49,28 +72,56 @@ Namespace Services
             Dim nikon = metaDirectories.OfType(Of NikonType2MakernoteDirectory)().FirstOrDefault()
             If nikon Is Nothing Then Return ""
             Dim raw = nikon.GetByteArray(NikonType2MakernoteDirectory.TagLensData)
-            If raw Is Nothing OrElse raw.Length < 20 OrElse raw(0) <> &H30 OrElse raw(1) <> &H32 Then Return ""
+            If raw Is Nothing OrElse raw.Length < 20 Then Return ""
 
-            Dim serialText = nikon.GetDescription(NikonType2MakernoteDirectory.TagCameraSerialNumber)
-            Dim serial As Long
-            If Not Long.TryParse(If(serialText, "").Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, serial) Then Return ""
-            Dim count As Long
-            Try
-                count = nikon.GetInt64(NikonType2MakernoteDirectory.TagExposureSequenceNumber)
-            Catch
-                Return ""
-            End Try
+            ' Wo die Kennbytes stehen und ob der Block verschluesselt ist, haengt an der Fassung in
+            ' den ersten vier Bytes. Am ganzen Nikon-Bestand nachgemessen: 0100 klar ab 6, 0101 klar
+            ' ab 11, 0201 bis 0203 verschluesselt ab 11, 0204 ab 12, 0800 bis 0802 ab 13. Eine fest
+            ' angenommene 12 traf nur 0204 und lieferte bei 0201 bis 0203 eine um ein Byte
+            ' verschobene ID, die nie in der Tabelle stand.
+            Dim version = System.Text.Encoding.ASCII.GetString(raw, 0, 4)
+            Dim offset As Integer
+            Dim encrypted As Boolean
+            Select Case version
+                Case "0100" : offset = 6 : encrypted = False
+                Case "0101" : offset = 11 : encrypted = False
+                Case "0201", "0202", "0203" : offset = 11 : encrypted = True
+                Case "0204" : offset = 12 : encrypted = True
+                Case "0800", "0801", "0802" : offset = 13 : encrypted = True
+                Case Else : Return ""
+            End Select
 
             Dim decoded = DirectCast(raw.Clone(), Byte())
-            Dim countKey As Integer = CInt((count Xor (count >> 8) Xor (count >> 16) Xor (count >> 24)) And &HFFL)
-            Dim ci As Integer = _serialTable(CInt(serial And &HFFL))
-            Dim cj As Integer = _countTable(countKey)
-            Dim ck As Integer = &H60
-            For i = 4 To decoded.Length - 1
-                cj = (cj + ci * ck) And &HFF
-                ck = (ck + 1) And &HFF
-                decoded(i) = CByte(decoded(i) Xor cj)
-            Next
+            If encrypted Then
+                ' Aeltere Kameras schreiben keine Seriennummer als Zahl; fuer sie nimmt Nikons
+                ' Verfahren einen festen Wert (0x22 bei der D50, sonst 0x60).
+                Dim serialText = nikon.GetDescription(NikonType2MakernoteDirectory.TagCameraSerialNumber)
+                Dim serial As Long
+                If Not Long.TryParse(If(serialText, "").Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, serial) Then
+                    Dim model = metaDirectories.OfType(Of ExifIfd0Directory)().FirstOrDefault()?.GetDescription(ExifDirectoryBase.TagModel)
+                    serial = If(If(model, "").Trim().EndsWith("D50", StringComparison.Ordinal), &H22L, &H60L)
+                End If
+                Dim count As Long
+                Try
+                    count = nikon.GetInt64(NikonType2MakernoteDirectory.TagExposureSequenceNumber)
+                Catch
+                    Return ""
+                End Try
+
+                Dim countKey As Integer = CInt((count Xor (count >> 8) Xor (count >> 16) Xor (count >> 24)) And &HFFL)
+                Dim ci As Integer = _serialTable(CInt(serial And &HFFL))
+                Dim cj As Integer = _countTable(countKey)
+                Dim ck As Integer = &H60
+                For i = 4 To decoded.Length - 1
+                    cj = (cj + ci * ck) And &HFF
+                    ck = (ck + 1) And &HFF
+                    decoded(i) = CByte(decoded(i) Xor cj)
+                Next
+            End If
+
+            ' Lauter Nullen heisst: kein Objektiv mit Kennung (ohne CPU oder ein Z-Objektiv, das
+            ' seinen Namen anders meldet).
+            If decoded.Skip(offset).Take(7).All(Function(b) b = 0) Then Return ""
 
             ' Die ersten sieben Kennbytes stehen im verschluesselten LensData-Block. LensType
             ' (D/G/VR-Bits) ist dagegen ein eigener, unverschluesselter Nikon-Tag und bildet
@@ -82,7 +133,7 @@ Namespace Services
                 Return ""
             End Try
             Dim idBytes(7) As Byte
-            Array.Copy(decoded, 12, idBytes, 0, 7)
+            Array.Copy(decoded, offset, idBytes, 0, 7)
             idBytes(7) = CByte(lensType And &HFF)
             Return Convert.ToHexString(idBytes)
         End Function

@@ -6599,24 +6599,24 @@ Namespace ViewModels
         ''' der erste genommen und NICHT geschwiegen: die Zeile darunter zeigt sofort, was gilt, und
         ''' das Zuruecksetzen im Kopf loest es wieder. Ein Knopf, der manchmal nichts tut, ist
         ''' schlimmer als eine sichtbare Vorauswahl.</summary>
-        Friend Shared Function SelectLens(eingabe As String, candidates As List(Of String)) As String
+        Friend Shared Function SelectLens(input As String, candidates As List(Of String)) As String
             If candidates Is Nothing OrElse candidates.Count = 0 Then Return ""
-            If String.IsNullOrWhiteSpace(eingabe) Then Return ""
-            Dim text = eingabe.Trim()
-            Dim genau = candidates.FirstOrDefault(Function(n) String.Equals(n, text, StringComparison.OrdinalIgnoreCase))
-            If Not String.IsNullOrEmpty(genau) Then Return genau
-            Dim worte = text.Split({" "c}, StringSplitOptions.RemoveEmptyEntries)
-            Dim woertlich = candidates.FirstOrDefault(Function(n) worte.All(
+            If String.IsNullOrWhiteSpace(input) Then Return ""
+            Dim text = input.Trim()
+            Dim exact = candidates.FirstOrDefault(Function(n) String.Equals(n, text, StringComparison.OrdinalIgnoreCase))
+            If Not String.IsNullOrEmpty(exact) Then Return exact
+            Dim words = text.Split({" "c}, StringSplitOptions.RemoveEmptyEntries)
+            Dim wordMatch = candidates.FirstOrDefault(Function(n) words.All(
                 Function(w) n.IndexOf(w, StringComparison.OrdinalIgnoreCase) >= 0))
-            If Not String.IsNullOrEmpty(woertlich) Then Return woertlich
+            If Not String.IsNullOrEmpty(wordMatch) Then Return wordMatch
             ' Dann in der Vergleichsform des Abgleichs: "Sigma 2.8/50 Macro" oder "17-50" stehen so
             ' in keinem Namen, wohl aber ihre Bestandteile ("sigma 50 mm f 2.8 ... macro"). Je
             ' Bestandteil genuegt der Anfang eines Wortes, damit auch eine halb getippte Eingabe trifft.
-            Dim teile = LensDataService.NormalizedForName(text).Split({" "c}, StringSplitOptions.RemoveEmptyEntries)
-            If teile.Length = 0 Then Return ""
+            Dim parts = LensDataService.NormalizedForName(text).Split({" "c}, StringSplitOptions.RemoveEmptyEntries)
+            If parts.Length = 0 Then Return ""
             Return If(candidates.FirstOrDefault(Function(n)
-                                                    Dim nameTeile = LensDataService.NormalizedForName(n).Split(" "c)
-                                                    Return teile.All(Function(t) nameTeile.Any(
+                                                    Dim nameParts = LensDataService.NormalizedForName(n).Split(" "c)
+                                                    Return parts.All(Function(t) nameParts.Any(
                                                         Function(x) x.StartsWith(t, StringComparison.Ordinal)))
                                                 End Function), "")
         End Function

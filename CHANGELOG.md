@@ -13,6 +13,11 @@
   it often picked a lens of the camera maker with similar numbers, and a Sigma 24-70 on a Canon
   was corrected like a Canon 24-70.
 
+- On Nikon cameras many more Sigma, Tamron and Tokina lenses are recognised by name, among them
+  the Sigma 17-50mm f/2.8, 35mm and 50mm Art and the Tamron SP 24-70mm, and older bodies such as
+  the D40, D200 or D300 now report them too. A Tamron 24-70 is no longer corrected like a Nikon
+  24-70.
+
 - Lens correction no longer mixes up lenses with a different focal length or brightness, such as a
   10-20mm zoom taken for a 20mm lens. When no matching lens is known, the photo is left as it is.
 

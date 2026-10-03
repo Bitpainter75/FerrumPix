@@ -1055,11 +1055,15 @@ Namespace Services
         ''' wird daher nur der lesbare <c>Lens</c>-Eintrag genutzt, statt eine eigene, unvollständige
         ''' Lens-ID-Tabelle zu pflegen.</summary>
         Friend Shared Function GetLensDescription(metaDirectories As IEnumerable(Of MetadataExtractor.Directory)) As String
-            Dim lens = GetTagDescAcross(Of ExifSubIfdDirectory)(metaDirectories, ExifSubIfdDirectory.TagLensModel)
-            If Not String.IsNullOrWhiteSpace(lens) Then Return lens
-
+            ' Eine bekannte Nikon-ID geht vor das EXIF-LensModel: neuere Nikon-Gehaeuse (D6, D780,
+            ' Z mit Adapter) schreiben dort fuer ein Fremdobjektiv den Namen eines eigenen, etwa
+            ' "50mm f/1.4G" fuer ein Sigma 50mm Art. Die Tabelle kennt nur Fremdobjektive, die an
+            ' einer Datei belegt sind; fuer alles andere bleibt es beim LensModel.
             Dim nikonLens = NikonLensIdService.TryGetLensName(metaDirectories)
             If Not String.IsNullOrWhiteSpace(nikonLens) Then Return nikonLens
+
+            Dim lens = GetTagDescAcross(Of ExifSubIfdDirectory)(metaDirectories, ExifSubIfdDirectory.TagLensModel)
+            If Not String.IsNullOrWhiteSpace(lens) Then Return lens
 
             Return GetTagDescAcross(Of NikonType2MakernoteDirectory)(metaDirectories,
                                                                        NikonType2MakernoteDirectory.TagLens)
