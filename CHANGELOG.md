@@ -34,6 +34,10 @@
 - The notice that a camera is not supported no longer appears for cameras that are, such as the
   Nikon Z 6II, Z 7II, Z 8, Z 9 and Z f, the OM-1, the Panasonic S5II or phones that save DNG.
 
+- Film negative conversion measures the picture again after cropping. Before, film edges,
+  sprocket holes or the scanner holder that were cropped away afterwards still threw off the
+  colors. A film base picked with the eyedropper is kept.
+
 - The arrow keys scroll the settings page, as Page Up and Page Down already did.
 
 - On smaller gallery tiles the EXIF, IPTC, XMP and ICC badges no longer sit under the rating stars.

@@ -235,6 +235,9 @@ Namespace ViewModels
         Private _negativeMonochrome As Boolean = False
         Private _negativeBaseColor As String = ""
         Private _negativeDensityColor As String = ""
+        ''' Die Filmbasis kam von der Pipette und nicht aus der Messung. Dann misst ein neuer
+        ''' Ausschnitt nur den Dichtepunkt nach; die angeklickte Basis bleibt, wie sie ist.
+        Private _negativeBasePicked As Boolean = False
         Private _negativeGamma As Double = 0
         ''' Solange die Pipette auf die Filmbasis wartet, muss die Umkehr aus der VORSCHAU heraus: die
         ''' Pipette liest die Farbe, die auf dem Schirm steht - im umgerechneten Positiv würde der Nutzer
@@ -12115,6 +12118,7 @@ Namespace ViewModels
                                _suppressNegativeForPick = False
                                PushUndo(CombineHistoryLabel("Filmnegativ", "Filmbasis"))
                                _negativeBaseColor = $"#FF{picked.R:X2}{picked.G:X2}{picked.B:X2}"
+                               _negativeBasePicked = True
                                ' Der Dichtepunkt (das andere Ende der Kurve) bleibt gemessen - von Hand
                                ' ist er nicht sinnvoll zu treffen, er liegt irgendwo im Motiv.
                                If String.IsNullOrWhiteSpace(_negativeDensityColor) Then MeasureFilmNegative(baseToo:=False)
@@ -12134,12 +12138,34 @@ Namespace ViewModels
         ''' Bewusst EINMAL im ViewModel statt bei jedem Rendern im Prozessor - die Vorschau ist kleiner
         ''' als das Original, eine erneute Messung beim Export würde sonst minimal andere Werte liefern
         ''' und das gespeicherte Bild anders aussehen lassen als die Vorschau.
-        Private Sub MeasureFilmNegative(Optional baseToo As Boolean = True)
+        '''
+        ''' <paramref name="committedGeometry"/> misst auf der BESTAETIGTEN Geometrie statt auf dem,
+        ''' was gerade auf dem Schirm steht. Das braucht der Aufruf nach dem Zuschneiden: bei einem
+        ''' Projekt zeigt das Zuschneide-Werkzeug das ganze Bild, gemessen werden soll aber der
+        ''' Ausschnitt, der stehen bleibt.
+        Private Sub MeasureFilmNegative(Optional baseToo As Boolean = True, Optional committedGeometry As Boolean = False)
             Dim source = GetPreviewSource()
             If source Is Nothing Then Return
-            Dim measured = ImageProcessor.AnalyzeFilmNegative(source, GetCurrentAdjustments(forPreview:=True))
-            If baseToo Then _negativeBaseColor = SkColorToHex(measured.BaseColor)
+            Dim measured = ImageProcessor.AnalyzeFilmNegative(source, GetCurrentAdjustments(forPreview:=Not committedGeometry))
+            If baseToo Then
+                _negativeBaseColor = SkColorToHex(measured.BaseColor)
+                _negativeBasePicked = False
+            End If
             _negativeDensityColor = SkColorToHex(measured.DensityColor)
+        End Sub
+
+        ''' <summary>Nach einem neuen Ausschnitt die Umkehr am Ausschnitt neu vermessen.
+        '''
+        ''' BEFUND (Forum, Farbnegativ vom Filmscanner): gemessen wurde nur beim Einschalten. Wer
+        ''' danach Filmrand, Perforation oder Halter wegschnitt, behielt Werte vom ganzen Scan: die
+        ''' Loecher der Perforation sind heller als der Traeger und verschieben die Basis, der
+        ''' schwarze Halter wird zum dichtesten Punkt. Die Umkehr stimmte erst nach einem Druck auf
+        ''' "Automatisch". Eine mit der Pipette gesetzte Basis bleibt stehen, der Dichtepunkt wird
+        ''' immer neu gemessen (er ist ohnehin nie von Hand gesetzt).</summary>
+        Private Sub RemeasureFilmNegativeAfterCrop()
+            If Not _negativeEnabled Then Return
+            MeasureFilmNegative(baseToo:=Not _negativeBasePicked, committedGeometry:=True)
+            RaiseNegativePropertiesChanged()
         End Sub
 
         Private Shared Function SkColorToHex(color As SKColor) As String
@@ -12159,6 +12185,7 @@ Namespace ViewModels
             _negativeMonochrome = False
             _negativeBaseColor = ""
             _negativeDensityColor = ""
+            _negativeBasePicked = False
             _negativeGamma = 0
             RaiseNegativePropertiesChanged()
             RaiseResetButtonStateChanged()
@@ -16518,6 +16545,7 @@ Namespace ViewModels
                                                           _appliedCropTop = 0
                                                           _appliedCropRight = 0
                                                           _appliedCropBottom = 0
+                                                          RemeasureFilmNegativeAfterCrop()
                                                           ' Ein Zuruecksetzen aendert das Rezept wie jeder andere Griff
                                                           ' auch - ohne diesen Merker liesse sich das Bild danach ohne
                                                           ' Nachfrage schliessen, und der Zuschnitt waere wieder da.
@@ -20511,6 +20539,7 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(EffectiveImageHeightPixels))
             RaiseCropPropertiesChanged()
             RaiseDisplayImageGeometryProperties()
+            RemeasureFilmNegativeAfterCrop()
 
             _hasChanges = True
             RaiseResetButtonStateChanged()
@@ -23175,6 +23204,14 @@ Namespace ViewModels
             _clarity = adj.Clarity
             _negativeEnabled = adj.NegativeEnabled
             _negativeMonochrome = adj.NegativeMonochrome
+            ' Ob eine gespeicherte Basis gemessen oder angeklickt war, steht nirgends. Im Zweifel
+            ' gilt sie als angeklickt: ein neuer Ausschnitt misst dann nur den Dichtepunkt nach und
+            ' ueberschreibt keine Farbe, die jemand bewusst gesetzt hat. "Automatisch" misst beides.
+            ' NUR BEI EINER ANDEREN FARBE: hier laeuft auch der Werkzeugwechsel durch, der dieselben
+            ' Anpassungen zurueckschreibt. Danach galt jede gemessene Basis als angeklickt.
+            If Not String.Equals(_negativeBaseColor, adj.NegativeBaseColor, StringComparison.Ordinal) Then
+                _negativeBasePicked = Not String.IsNullOrWhiteSpace(adj.NegativeBaseColor)
+            End If
             _negativeBaseColor = adj.NegativeBaseColor
             _negativeDensityColor = adj.NegativeDensityColor
             _negativeGamma = adj.NegativeGamma
@@ -23783,6 +23820,7 @@ Namespace ViewModels
             _negativeMonochrome = False
             _negativeBaseColor = ""
             _negativeDensityColor = ""
+            _negativeBasePicked = False
             _negativeGamma = 0
             ResetCurvePoints()
             ResetHslFields()
