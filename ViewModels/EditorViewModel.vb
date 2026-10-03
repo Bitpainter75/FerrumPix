@@ -21230,7 +21230,13 @@ Namespace ViewModels
                         If ShouldRestoreDirtyAfterSave(wasDirtyBeforeSave, targetIsOtherFile) Then
                             MarkDocumentDirtyAfterSaveAs()
                         End If
-                        ClearPreviewSource()
+                        ' KEIN ClearPreviewSource. Das stammt aus der Zeit, als jedes Speichern
+                        ' neu lud, und leert das Arbeitsbild - und darin steckt alles Gebackene:
+                        ' Retusche, Pinsel, Entrauschen, Entferntes. Die Anzeige blieb stehen, weil
+                        ' danach nichts neu zeichnete, das naechste Speichern schrieb aber das Bild
+                        ' ohne diese Schritte (Forumsbefund: Reparaturpinsel, zweimal "Speichern
+                        ' unter", in der zweiten Datei fehlte die Retusche). Die Quelle ist dieselbe
+                        ' geblieben, es gibt nichts zu verwerfen.
                         Return True
                     End If
                     ' nach „Speichern unter" arbeitet der Editor auf der

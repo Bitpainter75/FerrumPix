@@ -38,6 +38,10 @@
   sprocket holes or the scanner holder that were cropped away afterwards still threw off the
   colors. A film base picked with the eyedropper is kept.
 
+- Saving a picture twice in a row with "Save as" keeps retouching, brush strokes, denoising and
+  removed objects in the second file too. Before, they were missing there even though the editor
+  still showed them. The same applied to saving a project a second time.
+
 - The arrow keys scroll the settings page, as Page Up and Page Down already did.
 
 - On smaller gallery tiles the EXIF, IPTC, XMP and ICC badges no longer sit under the rating stars.
