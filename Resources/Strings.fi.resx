@@ -9150,4 +9150,7 @@
   <data name="Keine_Einstellung_gefunden_a346579b" xml:space="preserve">
     <value>Asetusta ei löytynyt</value>
   </data>
+  <data name="Bild_wird_als_Ebene_geladen_28d3e64c" xml:space="preserve">
+    <value>Kuvaa ladataan tasoksi</value>
+  </data>
 </root>

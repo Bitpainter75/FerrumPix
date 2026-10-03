@@ -9129,4 +9129,7 @@
   <data name="Keine_Einstellung_gefunden_a346579b" xml:space="preserve">
     <value>No setting found</value>
   </data>
+  <data name="Bild_wird_als_Ebene_geladen_28d3e64c" xml:space="preserve">
+    <value>Loading the picture as a layer</value>
+  </data>
 </root>

@@ -82,12 +82,12 @@ Namespace ViewModels
             ' --- Filmstreifen des Editors, nicht geoeffnete Kachel ------------------------------
             ' Alle uebrigen Befehle des Editors arbeiten am geoeffneten Bild und wuerden hier das
             ' falsche treffen. Angeboten wird deshalb nur, was diese Kachel selbst meint. Einsetzen
-            ' nur, was sich als Ebene zeichnen laesst (kein RAW, kein Serverbild).
+            ' jedes Bildformat (RAW, PSD und FPX als ihr Gesamtbild), nur kein Video und kein Serverbild.
             If site = MenuSite.EditorFilmstripOther Then
                 If singleItemActions Then
                     AddIfOffered(list, commands.OpenInEditor, FooterMenuCatalog.OpenInEditor(commands.OpenInEditor))
                     If first IsNot Nothing AndAlso Not first.IsRemoteAsset AndAlso
-                       EditorViewModel.IsInsertableImagePath(first.FilePath) Then
+                       EditorViewModel.CanInsertAsLayer(first.FilePath) Then
                         AddIfOffered(list, commands.InsertAsLayer, FooterMenuCatalog.InsertAsLayer(commands.InsertAsLayer))
                     End If
                 End If

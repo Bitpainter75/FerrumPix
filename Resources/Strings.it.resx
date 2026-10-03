@@ -9110,4 +9110,7 @@
   <data name="Keine_Einstellung_gefunden_a346579b" xml:space="preserve">
     <value>Nessuna impostazione trovata</value>
   </data>
+  <data name="Bild_wird_als_Ebene_geladen_28d3e64c" xml:space="preserve">
+    <value>Caricamento dell'immagine come livello</value>
+  </data>
 </root>

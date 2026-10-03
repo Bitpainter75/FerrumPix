@@ -18,6 +18,11 @@
   set to a hundredth of a degree in the number field, and automatic straightening shows that it
   is working instead of seeming to do nothing.
 
+- **Any picture can become a layer.** RAW files, PSD, FerrumPix projects, HEIC, JPEG XL and SVG
+  can now be added to a picture in the editor as a layer, by dragging them from the filmstrip or a
+  file manager, through the insert tool or the filmstrip menu. A RAW comes in developed, with its
+  edits if it has any, a PSD or project as its finished picture.
+
 - **Search in the settings.** A search field above the list of sections finds a setting by any
   word of its name, its description or its tooltip, in every language, instead of scrolling
   through the whole page.

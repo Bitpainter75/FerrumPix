@@ -9108,4 +9108,7 @@
   <data name="Keine_Einstellung_gefunden_a346579b" xml:space="preserve">
     <value>未找到设置</value>
   </data>
+  <data name="Bild_wird_als_Ebene_geladen_28d3e64c" xml:space="preserve">
+    <value>正在将图片作为图层载入</value>
+  </data>
 </root>

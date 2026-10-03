@@ -9109,4 +9109,7 @@
   <data name="Keine_Einstellung_gefunden_a346579b" xml:space="preserve">
     <value>Nenhuma definição encontrada</value>
   </data>
+  <data name="Bild_wird_als_Ebene_geladen_28d3e64c" xml:space="preserve">
+    <value>A carregar a imagem como camada</value>
+  </data>
 </root>

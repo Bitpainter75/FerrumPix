@@ -557,23 +557,26 @@ Namespace Views
             End Get
         End Property
 
+        ''' <summary>Laesst sich die Datei als Ebene einsetzen? Jedes Bildformat, das FerrumPix zeigt,
+        ''' ausser Videos (EditorViewModel.CanInsertAsLayer). Gilt fuer das Ablegen auf der Leinwand,
+        ''' das Ziehen aus dem Filmstreifen und Dateien aus der Zwischenablage.</summary>
         Private Shared Function IsInsertableImagePath(path As String) As Boolean
-            Return EditorViewModel.IsInsertableImagePath(path)
+            Return EditorViewModel.CanInsertAsLayer(path)
         End Function
 
-        ''' <paramref name="includeReadOnlyFormats"/>: PSD/PSB nur beim OEFFNEN eines Dokuments
-        ''' anbieten - als eingefuegtes Bildobjekt zeichnet DrawImageAnnotation sie nicht
-        ''' (SKBitmap.Decode kennt das Format nicht), die Auswahl waere dort ein stiller No-Op.
+        ''' <paramref name="allImageFormats"/>: jedes Bildformat, das FerrumPix zeigt (ohne Videos) -
+        ''' fuer das Oeffnen eines Dokuments und das Einsetzen als Ebene, das RAW, PSD, FPX und die
+        ''' uebrigen zu einem Bild rechnet. Ohne den Schalter nur, was sich ueber den Dateipfad
+        ''' zeichnen laesst (das Bild-Wasserzeichen); alles andere waere dort ein stiller No-Op.
         Private Async Function PickSingleImagePathAsync(title As String,
-                                                        Optional includeReadOnlyFormats As Boolean = False) As Task(Of String)
+                                                        Optional allImageFormats As Boolean = False) As Task(Of String)
             Try
                 Dim topLevel As TopLevel = TopLevel.GetTopLevel(Me)
                 If topLevel Is Nothing Then Return Nothing
-                Dim patterns = InsertableImageExtensions.Select(Function(ext) "*" & ext).ToList()
-                If includeReadOnlyFormats Then
-                    patterns.Add("*.psd")
-                    patterns.Add("*.psb")
-                End If
+                Dim extensions = If(allImageFormats,
+                                    MediaFileTypes.Displayable.Where(Function(ext) Not VideoPreviewService.IsSupportedVideo("x" & ext)),
+                                    InsertableImageExtensions.AsEnumerable())
+                Dim patterns = extensions.Select(Function(ext) "*" & ext).Distinct().ToList()
                 Dim files = Await topLevel.StorageProvider.OpenFilePickerAsync(New FilePickerOpenOptions With {
                     .Title = title,
                     .AllowMultiple = False,
@@ -595,7 +598,7 @@ Namespace Views
             Try
                 Dim mainVm = TryCast(TopLevel.GetTopLevel(Me)?.DataContext, MainWindowViewModel)
                 If mainVm Is Nothing Then Return
-                Dim path = Await PickSingleImagePathAsync(LocalizationService.T("Bild öffnen"), includeReadOnlyFormats:=True)
+                Dim path = Await PickSingleImagePathAsync(LocalizationService.T("Bild öffnen"), allImageFormats:=True)
                 If String.IsNullOrWhiteSpace(path) Then Return
                 Await mainVm.OpenImageInEditor(path)
             Catch ex As Exception
@@ -610,9 +613,9 @@ Namespace Views
             If vm Is Nothing Then Return
 
             Try
-                Dim path = Await PickSingleImagePathAsync(LocalizationService.T("Bild auswählen"))
+                Dim path = Await PickSingleImagePathAsync(LocalizationService.T("Bild auswählen"), allImageFormats:=True)
                 If Not String.IsNullOrWhiteSpace(path) Then
-                    vm.AddImageAnnotationAt(path, xPercent, yPercent)
+                    Await vm.InsertFileAsLayerAtAsync(path, xPercent, yPercent)
                 End If
             Catch
             End Try
@@ -860,17 +863,24 @@ Namespace Views
 
         ''' <summary>Bilder als Ebenen an einer Stelle der Leinwand einsetzen. EIN Weg fuer die Datei
         ''' aus einem fremden Programm und das Bild aus dem Filmstreifen.</summary>
-        Private Sub InsertImagesAt(vm As EditorViewModel, canvasPoint As Avalonia.Point,
+        Private Async Sub InsertImagesAt(vm As EditorViewModel, canvasPoint As Avalonia.Point,
                                           imageRect As Avalonia.Rect, paths As IList(Of String))
-            Dim pos = ClampPointToRect(canvasPoint, imageRect)
-            Dim xPct = (pos.X - imageRect.Left) / imageRect.Width * 100.0
-            Dim yPct = (pos.Y - imageRect.Top) / imageRect.Height * 100.0
+            Try
+                Dim pos = ClampPointToRect(canvasPoint, imageRect)
+                Dim xPct = (pos.X - imageRect.Left) / imageRect.Width * 100.0
+                Dim yPct = (pos.Y - imageRect.Top) / imageRect.Height * 100.0
 
-            ' Mehrere Dateien versetzt stapeln, sonst verdeckt das letzte Objekt alle davor.
-            Const cascadePercent As Double = 3.0
-            For i = 0 To paths.Count - 1
-                vm.AddImageAnnotationAt(paths(i), xPct + i * cascadePercent, yPct + i * cascadePercent)
-            Next
+                ' Mehrere Dateien versetzt stapeln, sonst verdeckt das letzte Objekt alle davor.
+                ' NACHEINANDER: eine RAW wird dabei entwickelt, und es laeuft nur ein Decode zur Zeit.
+                Const cascadePercent As Double = 3.0
+                For i = 0 To paths.Count - 1
+                    Await vm.InsertFileAsLayerAtAsync(paths(i), xPct + i * cascadePercent, yPct + i * cascadePercent)
+                Next
+            Catch ex As Exception
+                ' Absicherung: eine Ausnahme in einem Async Sub landet sonst beim Dispatcher und
+                ' beendet den Prozess.
+                DiagnosticLogService.LogException("EditorView.InsertImagesAt", ex)
+            End Try
         End Sub
 
         Public Async Sub OnWatermarkChooseImageClick(sender As Object, e As RoutedEventArgs)
@@ -8104,8 +8114,8 @@ Namespace Views
                     Const startPercent As Double = 30.0
                     Const cascadePercent As Double = 3.0
                     For i = 0 To imagePaths.Count - 1
-                        vm.AddImageAnnotationAt(imagePaths(i), startPercent + i * cascadePercent,
-                                                startPercent + i * cascadePercent)
+                        Await vm.InsertFileAsLayerAtAsync(imagePaths(i), startPercent + i * cascadePercent,
+                                                          startPercent + i * cascadePercent)
                     Next
                     Return
                 End If

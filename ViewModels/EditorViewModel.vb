@@ -689,7 +689,7 @@ Namespace ViewModels
                 Return _pendingWorkingCommits > 0 OrElse _depthRunning OrElse _subjectRunning OrElse
                        _creatingAdjustmentLayer OrElse
                        _pendingLayerModelRuns > 0 OrElse _saving OrElse _fullImageModelRunning OrElse
-                       _autoGeometryRunning
+                       _autoGeometryRunning OrElse _layerImportRunning
             End Get
         End Property
 
@@ -16658,12 +16658,12 @@ Namespace ViewModels
                     Dim item = ContextItems?.FirstOrDefault()
                     If item IsNot Nothing Then NavigateToFilmstripItem(item)
                 End Sub)
-            InsertContextItemAsLayerCommand = ReactiveCommand.Create(
-                Sub()
+            InsertContextItemAsLayerCommand = ReactiveCommand.CreateFromTask(
+                Async Function()
                     Dim item = ContextItems?.FirstOrDefault()
-                    If item Is Nothing OrElse item.IsRemoteAsset OrElse Not IsInsertableImagePath(item.FilePath) Then Return
-                    AddImageAnnotationAt(item.FilePath, 50.0, 50.0)
-                End Sub)
+                    If item Is Nothing OrElse item.IsRemoteAsset OrElse Not CanInsertAsLayer(item.FilePath) Then Return
+                    Await InsertFileAsLayerAtAsync(item.FilePath, 50.0, 50.0)
+                End Function)
             SetBokehApertureCommand = ReactiveCommand.Create(Of String)(
                 Sub(wert)
                     Dim n As Integer
@@ -24906,6 +24906,93 @@ Namespace ViewModels
             ' Pinselstriche komplett neu zeichnen (Sekunden), obwohl sich dort nichts geaendert hat.
             RefreshOverlayAfterAnnotationChange(ComputeSceneDirtyRectFor(annotation))
         End Sub
+
+        ''' <summary>Laesst sich diese Datei als Ebene einsetzen? JEDES Bildformat, das FerrumPix zeigt
+        ''' (<see cref="MediaFileTypes"/>), nur keine Videos: neben den Formaten, die eine Bild-Ebene
+        ''' direkt zeichnen kann (<see cref="IsInsertableImagePath"/>), auch RAW, PSD, FPX, SVG, HEIC,
+        ''' JPEG XL und die uebrigen. Die werden beim Einsetzen einmal zu einem Bild gerechnet (siehe
+        ''' <see cref="InsertFileAsLayerAtAsync"/>).</summary>
+        Public Shared Function CanInsertAsLayer(path As String) As Boolean
+            If String.IsNullOrWhiteSpace(path) OrElse Not IO.File.Exists(path) Then Return False
+            If VideoPreviewService.IsSupportedVideo(path) Then Return False
+            Return IsInsertableImagePath(path) OrElse MediaFileTypes.IsDisplayable(path)
+        End Function
+
+        Private _layerImportRunning As Boolean
+
+        ''' <summary>Eine Datei als Ebene an einer Stelle einsetzen, aus dem Filmstreifen, aus einem
+        ''' fremden Programm oder ueber das Kontextmenue.
+        '''
+        ''' Was eine Bild-Ebene direkt zeichnen kann (PNG, JPEG und Verwandte), bleibt eine Ebene mit
+        ''' dem Dateipfad wie bisher. ALLES ANDERE wird im Hintergrund zu dem Bild gerechnet, das der
+        ''' Betrachter davon zeigt, und als Pixel-Ebene eingesetzt, wie ein Bild aus der
+        ''' Zwischenablage: eine RAW entwickelt, mit ihrem Rezept, wenn sie eines hat; eine PSD und eine
+        ''' .fpx als ihr Gesamtbild; HEIC, JPEG XL, SVG und die uebrigen ueber ihre eigenen Leser. Die
+        ''' Ebene startet in der Aufloesung der Datei, wie jede eingesetzte Bild-Ebene.
+        '''
+        ''' Eine RAW zu entwickeln dauert Sekunden; solange zeigt die Buehne die Warteanzeige.
+        ''' Wechselt in der Zeit das Bild, wird das Ergebnis verworfen.</summary>
+        Public Async Function InsertFileAsLayerAtAsync(filePath As String, xPercent As Double, yPercent As Double) As Task
+            If Not CanInsertAsLayer(filePath) Then Return
+            If IsInsertableImagePath(filePath) Then
+                AddImageAnnotationAt(filePath, xPercent, yPercent)
+                Return
+            End If
+            If _layerImportRunning Then Return
+            Dim documentPath = _currentImagePath
+            Dim target = CreateSelectionAssetTempPath("layer")
+            Dim rendered As (Path As String, Width As Integer, Height As Integer)
+            _layerImportRunning = True
+            SetBusyReason(LocalizationService.T("Bild wird als Ebene geladen"))
+            RefreshBusyState()
+            Try
+                rendered = Await Task.Run(Function() RenderFileAsLayerImage(filePath, target))
+            Finally
+                _layerImportRunning = False
+                RefreshBusyState()
+            End Try
+            If Not String.Equals(documentPath, _currentImagePath, StringComparison.Ordinal) Then Return
+            Dim displaySize = GetAnnotationDisplayPixelSize()
+            If rendered.Path Is Nothing OrElse displaySize.Width <= 0 OrElse displaySize.Height <= 0 Then
+                StatusText = LocalizationService.T("Einfügen fehlgeschlagen")
+                Return
+            End If
+            Dim widthPercent = rendered.Width / CDbl(displaySize.Width) * 100.0
+            Dim heightPercent = rendered.Height / CDbl(displaySize.Height) * 100.0
+            Dim x = Math.Max(-widthPercent + 1, Math.Min(100 - 1, xPercent))
+            Dim y = Math.Max(-heightPercent + 1, Math.Min(100 - 1, yPercent))
+            AddSelectionImageAnnotationAt(rendered.Path, x, y, widthPercent, heightPercent,
+                                          IO.Path.GetFileNameWithoutExtension(filePath))
+            NameHistoryStep(LocalizationService.T("Bild eingefügt"))
+        End Function
+
+        ''' <summary>Das Bild, das der Betrachter von dieser Datei zeigt, in voller Aufloesung als
+        ''' PNG in <paramref name="target"/> (Ebenen-Datei, Packstufe wie alle, geradliniges Alpha).
+        ''' Faedenneutral, laeuft im Hintergrund. Nothing im Pfad, wenn sich nichts lesen liess.</summary>
+        Private Shared Function RenderFileAsLayerImage(filePath As String, target As String) As (Path As String, Width As Integer, Height As Integer)
+            Try
+                ' Eine .fpx in voller Aufloesung; der Weg des Betrachters liefert zuerst nur ihr
+                ' eingebettetes Komposit, das kleiner sein kann.
+                Dim shown As Bitmap = If(FpxService.IsFpx(filePath), ImageProcessor.RenderFpxFullResolutionBitmap(filePath), Nothing)
+                If shown Is Nothing Then shown = ViewerViewModel.DecodeViewerBitmap(filePath, alwaysDevelop:=True)
+                If shown Is Nothing Then Return (Nothing, 0, 0)
+                Using shown
+                    Using pixels = ImageOrientationService.ToSkBitmap(shown, straightAlpha:=True)
+                        If pixels Is Nothing Then Return (Nothing, 0, 0)
+                        Using data = PngEncoder.Encode(pixels, PngPurpose.Stored)
+                            If data Is Nothing Then Return (Nothing, 0, 0)
+                            Using fs = File.Create(target)
+                                data.SaveTo(fs)
+                            End Using
+                        End Using
+                        Return (target, pixels.Width, pixels.Height)
+                    End Using
+                End Using
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Editor.RenderFileAsLayerImage", ex)
+                Return (Nothing, 0, 0)
+            End Try
+        End Function
 
         ''' <summary>Ermittelt die Startgröße eines eingefügten Bildes im Bildraum. Die Quellpixel
         ''' werden bewusst 1:1 übernommen: Ein Bild aus dem Filmstreifen, über den Bild-Button oder
