@@ -19,6 +19,12 @@
   film grain and fine patterns into coarse stripes. This applies to resizing, exporting with a size,
   printing and collages.
 
+- Raw files from more camera models start out closer in brightness and color to what the camera
+  intended.
+
+- The status in the editor footer uses the free space up to the zoom buttons instead of cutting
+  messages short.
+
 - Exported PSD files carry an sRGB color profile. Before, programs that assume their own working
   space without one could show them too saturated. They also keep the resolution of the original
   and, when metadata is kept, its XMP data such as rating and keywords.

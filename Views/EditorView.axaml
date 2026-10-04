@@ -2058,8 +2058,8 @@
                         <!-- Dateiname und Farbetikett stehen jetzt als Fenstertitel oben in der Mitte. -->
                         <!-- KEIN StatusText hier: die Fußzeile ist die linke Spalte eines *,Auto,*-Rasters
                              und wächst mit dem Text, bis sie die mittig zentrierten Zoom-Bedienelemente
-                             überdeckt („Gespeichert als <langer Dateiname>"). Der Status steht ohnehin
-                             oben in der Werkzeugleiste. -->
+                             überdeckt („Gespeichert als <langer Dateiname>"). Er steht rechts vor den
+                             Sternen und reicht dort bis an die Zoom-Gruppe (UpdateFooterStatusFit). -->
                         <!-- Bildgröße wie im Betrachter; ein "Bild x von y" wäre hier belanglos,
                              bearbeitet wird immer genau eines. Der Wert folgt Zuschnitt, Bildgröße
                              und Leinwand - es ist die Größe, die ein Export ergäbe. -->
@@ -2083,7 +2083,10 @@
                             <!-- Ein Platz für zwei Angaben: über dem Bild die Mausposition, sonst der
                                  Status. Rechtsbündig, damit die Zahlen beim Fahren über das Bild nicht
                                  unter den Sternen hin- und herspringen. -->
-                            <TextBlock Text="{Binding FooterStatusText}"
+                            <!-- Die Hoechstbreite setzt UpdateFooterStatusFit: der Status darf bis an die
+                                 mittige Zoom-Gruppe heran. 320 gilt nur bis zum ersten Durchgang. -->
+                            <TextBlock x:Name="FooterStatusTextBlock"
+                                       Text="{Binding FooterStatusText}"
                                        Classes="status-text"
                                        Classes.failed="{Binding IsFooterStatusFailed}"
                                        IsVisible="{Binding FooterStatusText, Converter={x:Static conv:StringConverters.IsNotNullOrEmpty}}"
@@ -2094,7 +2097,8 @@
                                        MaxWidth="320"
                                        TextTrimming="CharacterEllipsis"
                                        Margin="0,0,20,0" />
-                            <Button Classes="star-btn" Background="Transparent" BorderThickness="0" Padding="2,0,2,2" VerticalAlignment="Center" 
+                            <Button x:Name="FooterFirstStarButton"
+                                    Classes="star-btn" Background="Transparent" BorderThickness="0" Padding="2,0,2,2" VerticalAlignment="Center"
                                     Classes.active="{Binding InfoPanel.Rating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=1}"
                                     Command="{Binding SetRatingCommand}" CommandParameter="1">
                                 <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/star.svg"

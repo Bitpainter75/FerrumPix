@@ -1095,7 +1095,36 @@ Namespace Views
             Dispatcher.UIThread.Post(Sub()
                                          _stageHeaderFitQueued = False
                                          UpdateStageHeaderLabelsFit()
+                                         UpdateFooterStatusFit()
                                      End Sub, DispatcherPriority.Background)
+        End Sub
+
+        ''' <summary>Der Status rechts in der Fusszeile darf bis an die mittige Zoom-Gruppe heran.
+        ''' Eine feste Hoechstbreite (320) schnitt "RAW entwickelt ..." ab, waehrend daneben reichlich
+        ''' Platz war; ohne Grenze liefe ein langer Status ("Gespeichert als ...") unter die Gruppe.
+        '''
+        ''' Gemessen wird am ersten Stern: der Status steht rechtsbuendig davor, seine rechte Kante
+        ''' liegt also fest, gleich wie lang er ist und ob er gerade gezeigt wird. Die Zoom-Gruppe
+        ''' liegt als eigenes Element ueber der Fusszeile, verglichen wird in Koordinaten der Ansicht.</summary>
+        Private Sub UpdateFooterStatusFit()
+            Dim status = Me.FindControl(Of TextBlock)("FooterStatusTextBlock")
+            Dim firstStar = Me.FindControl(Of Control)("FooterFirstStarButton")
+            Dim zoom = Me.FindControl(Of Control)("StageFooterButtons")
+            If status Is Nothing OrElse firstStar Is Nothing OrElse zoom Is Nothing Then Return
+            If firstStar.Bounds.Width <= 0 OrElse zoom.Bounds.Width <= 0 Then Return
+            Dim starOrigin = Avalonia.VisualExtensions.TranslatePoint(firstStar, New Avalonia.Point(0, 0), Me)
+            Dim zoomOrigin = Avalonia.VisualExtensions.TranslatePoint(zoom, New Avalonia.Point(0, 0), Me)
+            If Not starOrigin.HasValue OrElse Not zoomOrigin.HasValue Then Return
+
+            Const gap As Double = 16
+            Dim parentSpacing = If(TryCast(status.Parent, StackPanel)?.Spacing, 0.0)
+            Dim statusRight = starOrigin.Value.X - status.Margin.Right - parentSpacing
+            Dim zoomRight = zoomOrigin.Value.X + zoom.Bounds.Width
+            ' Liegt die Gruppe gar nicht links davon (Buehne rechts, schmales Fenster), bleibt ein
+            ' kleiner Rest statt nichts; der Text wird dann abgeschnitten wie bisher.
+            Dim available = Math.Max(80.0, statusRight - zoomRight - gap)
+            If Math.Abs(available - status.MaxWidth) < 1.0 Then Return
+            status.MaxWidth = available
         End Sub
 
         ''' <summary>Setzt die mittlere Gruppe der Leiste so, dass sie die linke und die rechte nie
@@ -1307,7 +1336,8 @@ Namespace Views
                 UpdateCompactGroups(force:=True)
                 ' Die mittlere Gruppe der Leiste muss neu pruefen, ob ihre Beschriftungen passen,
                 ' sobald sich eine der drei Gruppen oder die Ansicht selbst in der Breite aendert.
-                For Each groupName In {"ToolbarLeftButtons", "ToolbarRightButtons", "StageHeaderButtons", "PreviewCanvas"}
+                ' Dazu die Zoom-Gruppe der Fusszeile, an der der Status endet.
+                For Each groupName In {"ToolbarLeftButtons", "ToolbarRightButtons", "StageHeaderButtons", "PreviewCanvas", "StageFooterButtons"}
                     Dim group = Me.FindControl(Of Control)(groupName)
                     If group IsNot Nothing Then AddHandler group.SizeChanged, Sub(sender, args) QueueStageHeaderLabelsFit()
                 Next
