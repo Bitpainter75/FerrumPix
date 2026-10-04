@@ -1,4 +1,4 @@
-## Unreleased
+## 0.9.60
 
 ### What's new
 
@@ -15,9 +15,14 @@
   rows of a RAW that the sensor does not deliver cleanly and that can show up as colored stripes
   along the edge. It is off by default and offered for more than 300 camera models.
 
-- **Refine edge.** A new button in the selection tool makes the edge of a selection follow the
-  picture within a narrow band, so hair, fur and fine twigs are picked up instead of being cut off
-  hard. It needs no model.
+- **Image brush.** The eraser now shares one tool with four new brushes that change the picture
+  instead of painting on it: dodge and burn lighten or darken, aimed at the shadows, midtones or
+  highlights, the sponge takes color away or adds it, and replace color recolors while keeping
+  brightness and texture. They work on the photo and on a selected picture layer.
+
+- **Refine edge.** A new button in the selection tool and in the mask tool makes the edge of a
+  selection or mask follow the picture within a narrow band, so hair, fur and fine twigs are picked
+  up instead of being cut off hard. It needs no model.
 
 - **Refresh in the folder tree.** Right click a folder and choose "Refresh" to read its subfolders
   again, for example after changes in a file manager. Folders you had opened stay open.

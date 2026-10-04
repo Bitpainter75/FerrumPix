@@ -9152,4 +9152,70 @@
   <data name="Um_wie_viele_Bildpunkte_die_Kn_pfe_darunter_die__d9bce2a1" xml:space="preserve">
     <value>Um wie viele Bildpunkte die Knöpfe darunter die Auswahl verändern</value>
   </data>
+  <data name="Saum_9899abe4" xml:space="preserve">
+    <value>Saum</value>
+  </data>
+  <data name="Wie_breit_der_Streifen_entlang_der_Kante_ist_in__a1c39a5e" xml:space="preserve">
+    <value>Wie breit der Streifen entlang der Kante ist, in dem die Maske dem Bild folgt, in Bildpunkten</value>
+  </data>
+  <data name="Die_Kante_der_Maske_im_Saum_am_Bild_entlangf_hre_9ded6f70" xml:space="preserve">
+    <value>Die Kante der Maske im Saum am Bild entlangführen, für Haare, Fell und feine Zweige. Innen und außen bleibt die Maske, wie sie ist.</value>
+  </data>
+  <data name="Abwedeln_34de3584" xml:space="preserve">
+    <value>Abwedeln</value>
+  </data>
+  <data name="Nachbelichten_4e42c79a" xml:space="preserve">
+    <value>Nachbelichten</value>
+  </data>
+  <data name="Schwamm_26be8479" xml:space="preserve">
+    <value>Schwamm</value>
+  </data>
+  <data name="Farbe_ersetzen_f6a9d594" xml:space="preserve">
+    <value>Farbe ersetzen</value>
+  </data>
+  <data name="Radiergummi_nimmt_Bild_weg_oder_malt_die_Hinterg_8cd13de1" xml:space="preserve">
+    <value>Radiergummi: nimmt Bild weg oder malt die Hintergrundfarbe</value>
+  </data>
+  <data name="Abwedeln_hellt_unter_dem_Pinsel_auf_8c32d2e3" xml:space="preserve">
+    <value>Abwedeln: hellt unter dem Pinsel auf</value>
+  </data>
+  <data name="Nachbelichten_dunkelt_unter_dem_Pinsel_ab_9f832bdd" xml:space="preserve">
+    <value>Nachbelichten: dunkelt unter dem Pinsel ab</value>
+  </data>
+  <data name="Schwamm_nimmt_unter_dem_Pinsel_Farbe_weg_oder_ve_bb69c814" xml:space="preserve">
+    <value>Schwamm: nimmt unter dem Pinsel Farbe weg oder verstärkt sie</value>
+  </data>
+  <data name="Farbe_ersetzen_f_rbt_unter_dem_Pinsel_um_und_beh_a1ff8737" xml:space="preserve">
+    <value>Farbe ersetzen: färbt unter dem Pinsel um und behält Helligkeit und Struktur</value>
+  </data>
+  <data name="Wie_stark_ein_Zug_wirkt_Mehrere_Z_ge_bereinander_17a6771e" xml:space="preserve">
+    <value>Wie stark ein Zug wirkt. Mehrere Züge übereinander bauen die Wirkung auf</value>
+  </data>
+  <data name="Bereich_7a3ac9a3" xml:space="preserve">
+    <value>Bereich</value>
+  </data>
+  <data name="Wirkt_vor_allem_auf_die_dunklen_die_mittleren_od_fcc6832c" xml:space="preserve">
+    <value>Wirkt vor allem auf die dunklen, die mittleren oder die hellen Töne</value>
+  </data>
+  <data name="Wirkung_3038433f" xml:space="preserve">
+    <value>Wirkung</value>
+  </data>
+  <data name="Ents_ttigen_9ed874e3" xml:space="preserve">
+    <value>Entsättigen</value>
+  </data>
+  <data name="S_ttigen_2775f156" xml:space="preserve">
+    <value>Sättigen</value>
+  </data>
+  <data name="Neue_Farbe_fe5ca8ce" xml:space="preserve">
+    <value>Neue Farbe</value>
+  </data>
+  <data name="Farbton_und_S_ttigung_dieser_Farbe_ersetzen_die__61d75dd8" xml:space="preserve">
+    <value>Farbton und Sättigung dieser Farbe ersetzen die des Bildes; Helligkeit und Struktur bleiben</value>
+  </data>
+  <data name="Bildpinsel_3e6ee062" xml:space="preserve">
+    <value>Bildpinsel</value>
+  </data>
+  <data name="Bildpinsel_Radieren_Abwedeln_Nachbelichten_Schwa_3068b135" xml:space="preserve">
+    <value>Bildpinsel: Radieren, Abwedeln, Nachbelichten, Schwamm, Farbe ersetzen</value>
+  </data>
 </root>

@@ -9132,4 +9132,70 @@
   <data name="Um_wie_viele_Bildpunkte_die_Kn_pfe_darunter_die__d9bce2a1" xml:space="preserve">
     <value>下方按钮将选区改变多少像素</value>
   </data>
+  <data name="Saum_9899abe4" xml:space="preserve">
+    <value>条带</value>
+  </data>
+  <data name="Wie_breit_der_Streifen_entlang_der_Kante_ist_in__a1c39a5e" xml:space="preserve">
+    <value>沿边缘让蒙版跟随图像的条带有多宽，单位为像素</value>
+  </data>
+  <data name="Die_Kante_der_Maske_im_Saum_am_Bild_entlangf_hre_9ded6f70" xml:space="preserve">
+    <value>在条带内让蒙版边缘沿图像走，适用于头发、毛发和细枝。内部和外部的蒙版保持不变。</value>
+  </data>
+  <data name="Abwedeln_34de3584" xml:space="preserve">
+    <value>减淡</value>
+  </data>
+  <data name="Nachbelichten_4e42c79a" xml:space="preserve">
+    <value>加深</value>
+  </data>
+  <data name="Schwamm_26be8479" xml:space="preserve">
+    <value>海绵</value>
+  </data>
+  <data name="Farbe_ersetzen_f6a9d594" xml:space="preserve">
+    <value>替换颜色</value>
+  </data>
+  <data name="Radiergummi_nimmt_Bild_weg_oder_malt_die_Hinterg_8cd13de1" xml:space="preserve">
+    <value>橡皮擦：擦除图像或涂上背景色</value>
+  </data>
+  <data name="Abwedeln_hellt_unter_dem_Pinsel_auf_8c32d2e3" xml:space="preserve">
+    <value>减淡：提亮画笔下的区域</value>
+  </data>
+  <data name="Nachbelichten_dunkelt_unter_dem_Pinsel_ab_9f832bdd" xml:space="preserve">
+    <value>加深：压暗画笔下的区域</value>
+  </data>
+  <data name="Schwamm_nimmt_unter_dem_Pinsel_Farbe_weg_oder_ve_bb69c814" xml:space="preserve">
+    <value>海绵：去除或增强画笔下的颜色</value>
+  </data>
+  <data name="Farbe_ersetzen_f_rbt_unter_dem_Pinsel_um_und_beh_a1ff8737" xml:space="preserve">
+    <value>替换颜色：重新着色画笔下的区域，保留亮度和纹理</value>
+  </data>
+  <data name="Wie_stark_ein_Zug_wirkt_Mehrere_Z_ge_bereinander_17a6771e" xml:space="preserve">
+    <value>一笔的作用强度。多笔叠加会增强效果</value>
+  </data>
+  <data name="Bereich_7a3ac9a3" xml:space="preserve">
+    <value>范围</value>
+  </data>
+  <data name="Wirkt_vor_allem_auf_die_dunklen_die_mittleren_od_fcc6832c" xml:space="preserve">
+    <value>主要作用于暗部、中间调或亮部</value>
+  </data>
+  <data name="Wirkung_3038433f" xml:space="preserve">
+    <value>作用</value>
+  </data>
+  <data name="Ents_ttigen_9ed874e3" xml:space="preserve">
+    <value>降低饱和度</value>
+  </data>
+  <data name="S_ttigen_2775f156" xml:space="preserve">
+    <value>增加饱和度</value>
+  </data>
+  <data name="Neue_Farbe_fe5ca8ce" xml:space="preserve">
+    <value>新颜色</value>
+  </data>
+  <data name="Farbton_und_S_ttigung_dieser_Farbe_ersetzen_die__61d75dd8" xml:space="preserve">
+    <value>用此颜色的色相和饱和度替换图像的；亮度和纹理保持不变</value>
+  </data>
+  <data name="Bildpinsel_3e6ee062" xml:space="preserve">
+    <value>图像画笔</value>
+  </data>
+  <data name="Bildpinsel_Radieren_Abwedeln_Nachbelichten_Schwa_3068b135" xml:space="preserve">
+    <value>图像画笔：擦除、减淡、加深、海绵、替换颜色</value>
+  </data>
 </root>

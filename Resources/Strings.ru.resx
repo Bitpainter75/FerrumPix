@@ -9174,4 +9174,70 @@
   <data name="Um_wie_viele_Bildpunkte_die_Kn_pfe_darunter_die__d9bce2a1" xml:space="preserve">
     <value>На сколько пикселей кнопки ниже изменяют выделение</value>
   </data>
+  <data name="Saum_9899abe4" xml:space="preserve">
+    <value>Полоса</value>
+  </data>
+  <data name="Wie_breit_der_Streifen_entlang_der_Kante_ist_in__a1c39a5e" xml:space="preserve">
+    <value>Ширина полосы вдоль края, в которой маска следует за изображением, в пикселях</value>
+  </data>
+  <data name="Die_Kante_der_Maske_im_Saum_am_Bild_entlangf_hre_9ded6f70" xml:space="preserve">
+    <value>Ведёт край маски по изображению в пределах полосы, для волос, шерсти и тонких веточек. Внутри и снаружи маска остаётся как есть.</value>
+  </data>
+  <data name="Abwedeln_34de3584" xml:space="preserve">
+    <value>Осветлитель</value>
+  </data>
+  <data name="Nachbelichten_4e42c79a" xml:space="preserve">
+    <value>Затемнитель</value>
+  </data>
+  <data name="Schwamm_26be8479" xml:space="preserve">
+    <value>Губка</value>
+  </data>
+  <data name="Farbe_ersetzen_f6a9d594" xml:space="preserve">
+    <value>Замена цвета</value>
+  </data>
+  <data name="Radiergummi_nimmt_Bild_weg_oder_malt_die_Hinterg_8cd13de1" xml:space="preserve">
+    <value>Ластик: убирает изображение или рисует цвет фона</value>
+  </data>
+  <data name="Abwedeln_hellt_unter_dem_Pinsel_auf_8c32d2e3" xml:space="preserve">
+    <value>Осветлитель: осветляет под кистью</value>
+  </data>
+  <data name="Nachbelichten_dunkelt_unter_dem_Pinsel_ab_9f832bdd" xml:space="preserve">
+    <value>Затемнитель: затемняет под кистью</value>
+  </data>
+  <data name="Schwamm_nimmt_unter_dem_Pinsel_Farbe_weg_oder_ve_bb69c814" xml:space="preserve">
+    <value>Губка: убирает цвет под кистью или усиливает его</value>
+  </data>
+  <data name="Farbe_ersetzen_f_rbt_unter_dem_Pinsel_um_und_beh_a1ff8737" xml:space="preserve">
+    <value>Замена цвета: перекрашивает под кистью, сохраняя яркость и структуру</value>
+  </data>
+  <data name="Wie_stark_ein_Zug_wirkt_Mehrere_Z_ge_bereinander_17a6771e" xml:space="preserve">
+    <value>Насколько сильно действует один мазок. Несколько мазков друг на друге усиливают эффект</value>
+  </data>
+  <data name="Bereich_7a3ac9a3" xml:space="preserve">
+    <value>Диапазон</value>
+  </data>
+  <data name="Wirkt_vor_allem_auf_die_dunklen_die_mittleren_od_fcc6832c" xml:space="preserve">
+    <value>Действует в основном на тёмные, средние или светлые тона</value>
+  </data>
+  <data name="Wirkung_3038433f" xml:space="preserve">
+    <value>Действие</value>
+  </data>
+  <data name="Ents_ttigen_9ed874e3" xml:space="preserve">
+    <value>Обесцветить</value>
+  </data>
+  <data name="S_ttigen_2775f156" xml:space="preserve">
+    <value>Насытить</value>
+  </data>
+  <data name="Neue_Farbe_fe5ca8ce" xml:space="preserve">
+    <value>Новый цвет</value>
+  </data>
+  <data name="Farbton_und_S_ttigung_dieser_Farbe_ersetzen_die__61d75dd8" xml:space="preserve">
+    <value>Тон и насыщенность этого цвета заменяют цвета изображения; яркость и структура сохраняются</value>
+  </data>
+  <data name="Bildpinsel_3e6ee062" xml:space="preserve">
+    <value>Кисть изображения</value>
+  </data>
+  <data name="Bildpinsel_Radieren_Abwedeln_Nachbelichten_Schwa_3068b135" xml:space="preserve">
+    <value>Кисть изображения: ластик, осветлитель, затемнитель, губка, замена цвета</value>
+  </data>
 </root>

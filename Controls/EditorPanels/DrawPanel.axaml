@@ -148,8 +148,10 @@
             </Expander>
         </Border>
 
-        <!-- RADIERGUMMI - eigene Gruppe mit Parametern und Hintergrundfarbe. -->
-        <Border Classes="adjustment-group" Margin="0,7,0,0" IsVisible="{Binding IsEraserPaintMode}">
+        <!-- BILDPINSEL: Radierer, Abwedeln, Nachbelichten, Schwamm und Farbe ersetzen in EINER
+             Gruppe (EditorViewModelImageBrush.vb). Oben die Art, darunter die gemeinsamen Regler,
+             dann was nur zu einer Art gehoert. Der Kopf traegt den Namen der gewaehlten Art. -->
+        <Border Classes="adjustment-group" Margin="0,7,0,0" IsVisible="{Binding IsImageBrushMode}">
             <Expander Header="{Binding CurrentToolLabel}" icons:ExpanderState.Key="draw-2">
                 <Expander.HeaderTemplate>
                     <DataTemplate>
@@ -161,6 +163,38 @@
                     </DataTemplate>
                 </Expander.HeaderTemplate>
                 <StackPanel Spacing="2" Margin="0,8,0,0">
+                    <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,0,0,8">
+                        <Button Classes="ghost" Padding="8,6"
+                                Command="{Binding SetToolCommand}" CommandParameter="Eraser"
+                                Classes.active="{Binding ImageBrushMode, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Eraser}"
+                                ToolTip.Tip="Radiergummi: nimmt Bild weg oder malt die Hintergrundfarbe">
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/eraser.svg" Width="16" Height="16" />
+                        </Button>
+                        <Button Classes="ghost" Padding="8,6"
+                                Command="{Binding SetToolCommand}" CommandParameter="Dodge"
+                                Classes.active="{Binding ImageBrushMode, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Dodge}"
+                                ToolTip.Tip="Abwedeln: hellt unter dem Pinsel auf">
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/brightness-up.svg" Width="16" Height="16" />
+                        </Button>
+                        <Button Classes="ghost" Padding="8,6"
+                                Command="{Binding SetToolCommand}" CommandParameter="Burn"
+                                Classes.active="{Binding ImageBrushMode, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Burn}"
+                                ToolTip.Tip="Nachbelichten: dunkelt unter dem Pinsel ab">
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/brightness-down.svg" Width="16" Height="16" />
+                        </Button>
+                        <Button Classes="ghost" Padding="8,6"
+                                Command="{Binding SetToolCommand}" CommandParameter="Sponge"
+                                Classes.active="{Binding ImageBrushMode, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Sponge}"
+                                ToolTip.Tip="Schwamm: nimmt unter dem Pinsel Farbe weg oder verstärkt sie">
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/droplet-half.svg" Width="16" Height="16" />
+                        </Button>
+                        <Button Classes="ghost" Padding="8,6"
+                                Command="{Binding SetToolCommand}" CommandParameter="ReplaceColor"
+                                Classes.active="{Binding ImageBrushMode, Converter={StaticResource StringEqualsConverter}, ConverterParameter=ReplaceColor}"
+                                ToolTip.Tip="Farbe ersetzen: färbt unter dem Pinsel um und behält Helligkeit und Struktur">
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/replace.svg" Width="16" Height="16" />
+                        </Button>
+                    </StackPanel>
                     <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
                         <TextBlock Text="Größe" Foreground="{DynamicResource FP.Text.Secondary}"
                                    VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
@@ -183,10 +217,16 @@
                                                  Minimum="0" Maximum="100" Increment="1"
                                                  FormatString="F0" />
                     </Grid>
+                    <!-- Beim Radierer heisst der Regler Deckkraft, bei den vier uebrigen Arten Staerke:
+                         derselbe Wert (BrushOpacity), dort ist er aber die Wirkung, keine Deckung. -->
                     <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
-                        <TextBlock Text="Deckkraft"
+                        <TextBlock Text="Deckkraft" IsVisible="{Binding !IsToneBrushMode}"
                                    Foreground="{DynamicResource FP.Text.Secondary}"
                                    VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                        <TextBlock Text="Stärke" IsVisible="{Binding IsToneBrushMode}"
+                                   Foreground="{DynamicResource FP.Text.Secondary}"
+                                   VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}"
+                                   ToolTip.Tip="Wie stark ein Zug wirkt. Mehrere Züge übereinander bauen die Wirkung auf" />
                         <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
                                            DefaultValue="100"
                                            Value="{Binding BrushOpacity}" Margin="0,0" />
@@ -220,11 +260,44 @@
                                                  Minimum="0" Maximum="100" Increment="1"
                                                  FormatString="F0" />
                     </Grid>
-                    <Grid ColumnDefinitions="92,*" VerticalAlignment="Top">
+                    <Grid ColumnDefinitions="92,*" VerticalAlignment="Top" IsVisible="{Binding IsEraserPaintMode}">
                         <TextBlock Text="Hintergrundfarbe" Foreground="{DynamicResource FP.Text.Secondary}"
                                    VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                         <icons:ColorPickerButton Grid.Column="1"
                                                  SelectedColor="{Binding EraserFillColorValue, Mode=TwoWay}" />
+                    </Grid>
+                    <!-- Abwedeln und Nachbelichten: auf welchen Tonbereich sie vor allem wirken. -->
+                    <Grid ColumnDefinitions="92,*" VerticalAlignment="Center" IsVisible="{Binding IsDodgeBurnMode}">
+                        <TextBlock Text="Bereich" Foreground="{DynamicResource FP.Text.Secondary}"
+                                   VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}"
+                                   ToolTip.Tip="Wirkt vor allem auf die dunklen, die mittleren oder die hellen Töne" />
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                            <RadioButton GroupName="ToneRange" Content="Tiefen" IsChecked="{Binding ToneRangeShadows}"
+                                         FontSize="{DynamicResource FP.Font.Small}" />
+                            <RadioButton GroupName="ToneRange" Content="Mitten" IsChecked="{Binding ToneRangeMidtones}"
+                                         FontSize="{DynamicResource FP.Font.Small}" />
+                            <RadioButton GroupName="ToneRange" Content="Lichter" IsChecked="{Binding ToneRangeHighlights}"
+                                         FontSize="{DynamicResource FP.Font.Small}" />
+                        </StackPanel>
+                    </Grid>
+                    <!-- Schwamm: Farbe wegnehmen oder verstaerken. -->
+                    <Grid ColumnDefinitions="92,*" VerticalAlignment="Center" IsVisible="{Binding IsSpongeMode}">
+                        <TextBlock Text="Wirkung" Foreground="{DynamicResource FP.Text.Secondary}"
+                                   VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                            <RadioButton GroupName="SpongeMode" Content="Entsättigen" IsChecked="{Binding SpongeDesaturate}"
+                                         FontSize="{DynamicResource FP.Font.Small}" />
+                            <RadioButton GroupName="SpongeMode" Content="Sättigen" IsChecked="{Binding SpongeSaturate}"
+                                         FontSize="{DynamicResource FP.Font.Small}" />
+                        </StackPanel>
+                    </Grid>
+                    <!-- Farbe ersetzen: Farbton und Saettigung kommen von hier, die Helligkeit bleibt. -->
+                    <Grid ColumnDefinitions="92,*" VerticalAlignment="Top" IsVisible="{Binding IsReplaceColorMode}">
+                        <TextBlock Text="Neue Farbe" Foreground="{DynamicResource FP.Text.Secondary}"
+                                   VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}"
+                                   ToolTip.Tip="Farbton und Sättigung dieser Farbe ersetzen die des Bildes; Helligkeit und Struktur bleiben" />
+                        <icons:ColorPickerButton Grid.Column="1"
+                                                 SelectedColor="{Binding ReplaceColorValue, Mode=TwoWay}" />
                     </Grid>
                 </StackPanel>
             </Expander>

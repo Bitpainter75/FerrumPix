@@ -9134,4 +9134,70 @@
   <data name="Um_wie_viele_Bildpunkte_die_Kn_pfe_darunter_die__d9bce2a1" xml:space="preserve">
     <value>Di quanti pixel i pulsanti qui sotto modificano la selezione</value>
   </data>
+  <data name="Saum_9899abe4" xml:space="preserve">
+    <value>Fascia</value>
+  </data>
+  <data name="Wie_breit_der_Streifen_entlang_der_Kante_ist_in__a1c39a5e" xml:space="preserve">
+    <value>Quanto è larga la fascia lungo il bordo in cui la maschera segue l'immagine, in pixel</value>
+  </data>
+  <data name="Die_Kante_der_Maske_im_Saum_am_Bild_entlangf_hre_9ded6f70" xml:space="preserve">
+    <value>Fa seguire all'immagine il bordo della maschera nella fascia, per capelli, pelo e rametti sottili. Dentro e fuori la maschera resta com'è.</value>
+  </data>
+  <data name="Abwedeln_34de3584" xml:space="preserve">
+    <value>Scherma</value>
+  </data>
+  <data name="Nachbelichten_4e42c79a" xml:space="preserve">
+    <value>Brucia</value>
+  </data>
+  <data name="Schwamm_26be8479" xml:space="preserve">
+    <value>Spugna</value>
+  </data>
+  <data name="Farbe_ersetzen_f6a9d594" xml:space="preserve">
+    <value>Sostituisci colore</value>
+  </data>
+  <data name="Radiergummi_nimmt_Bild_weg_oder_malt_die_Hinterg_8cd13de1" xml:space="preserve">
+    <value>Gomma: toglie immagine o dipinge il colore di sfondo</value>
+  </data>
+  <data name="Abwedeln_hellt_unter_dem_Pinsel_auf_8c32d2e3" xml:space="preserve">
+    <value>Scherma: schiarisce sotto il pennello</value>
+  </data>
+  <data name="Nachbelichten_dunkelt_unter_dem_Pinsel_ab_9f832bdd" xml:space="preserve">
+    <value>Brucia: scurisce sotto il pennello</value>
+  </data>
+  <data name="Schwamm_nimmt_unter_dem_Pinsel_Farbe_weg_oder_ve_bb69c814" xml:space="preserve">
+    <value>Spugna: toglie colore sotto il pennello o lo intensifica</value>
+  </data>
+  <data name="Farbe_ersetzen_f_rbt_unter_dem_Pinsel_um_und_beh_a1ff8737" xml:space="preserve">
+    <value>Sostituisci colore: ricolora sotto il pennello mantenendo luminosità e struttura</value>
+  </data>
+  <data name="Wie_stark_ein_Zug_wirkt_Mehrere_Z_ge_bereinander_17a6771e" xml:space="preserve">
+    <value>Quanto agisce un singolo tratto. Più tratti sovrapposti accumulano l'effetto</value>
+  </data>
+  <data name="Bereich_7a3ac9a3" xml:space="preserve">
+    <value>Intervallo</value>
+  </data>
+  <data name="Wirkt_vor_allem_auf_die_dunklen_die_mittleren_od_fcc6832c" xml:space="preserve">
+    <value>Agisce soprattutto sui toni scuri, medi o chiari</value>
+  </data>
+  <data name="Wirkung_3038433f" xml:space="preserve">
+    <value>Effetto</value>
+  </data>
+  <data name="Ents_ttigen_9ed874e3" xml:space="preserve">
+    <value>Desatura</value>
+  </data>
+  <data name="S_ttigen_2775f156" xml:space="preserve">
+    <value>Satura</value>
+  </data>
+  <data name="Neue_Farbe_fe5ca8ce" xml:space="preserve">
+    <value>Nuovo colore</value>
+  </data>
+  <data name="Farbton_und_S_ttigung_dieser_Farbe_ersetzen_die__61d75dd8" xml:space="preserve">
+    <value>Tonalità e saturazione di questo colore sostituiscono quelle dell'immagine; luminosità e struttura restano</value>
+  </data>
+  <data name="Bildpinsel_3e6ee062" xml:space="preserve">
+    <value>Pennello immagine</value>
+  </data>
+  <data name="Bildpinsel_Radieren_Abwedeln_Nachbelichten_Schwa_3068b135" xml:space="preserve">
+    <value>Pennello immagine: cancella, scherma, brucia, spugna, sostituisci colore</value>
+  </data>
 </root>

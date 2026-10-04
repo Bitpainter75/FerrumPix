@@ -9178,4 +9178,70 @@
   <data name="Um_wie_viele_Bildpunkte_die_Kn_pfe_darunter_die__d9bce2a1" xml:space="preserve">
     <value>아래 버튼이 선택 영역을 몇 픽셀 바꾸는지</value>
   </data>
+  <data name="Saum_9899abe4" xml:space="preserve">
+    <value>띠</value>
+  </data>
+  <data name="Wie_breit_der_Streifen_entlang_der_Kante_ist_in__a1c39a5e" xml:space="preserve">
+    <value>마스크가 이미지를 따라가는 가장자리 띠의 너비(픽셀)</value>
+  </data>
+  <data name="Die_Kante_der_Maske_im_Saum_am_Bild_entlangf_hre_9ded6f70" xml:space="preserve">
+    <value>띠 안에서 마스크 가장자리가 이미지를 따라가게 합니다. 머리카락, 털, 가는 가지에 적합합니다. 안쪽과 바깥쪽 마스크는 그대로입니다.</value>
+  </data>
+  <data name="Abwedeln_34de3584" xml:space="preserve">
+    <value>닷지</value>
+  </data>
+  <data name="Nachbelichten_4e42c79a" xml:space="preserve">
+    <value>번</value>
+  </data>
+  <data name="Schwamm_26be8479" xml:space="preserve">
+    <value>스펀지</value>
+  </data>
+  <data name="Farbe_ersetzen_f6a9d594" xml:space="preserve">
+    <value>색상 바꾸기</value>
+  </data>
+  <data name="Radiergummi_nimmt_Bild_weg_oder_malt_die_Hinterg_8cd13de1" xml:space="preserve">
+    <value>지우개: 이미지를 지우거나 배경색을 칠합니다</value>
+  </data>
+  <data name="Abwedeln_hellt_unter_dem_Pinsel_auf_8c32d2e3" xml:space="preserve">
+    <value>닷지: 브러시 아래를 밝게 합니다</value>
+  </data>
+  <data name="Nachbelichten_dunkelt_unter_dem_Pinsel_ab_9f832bdd" xml:space="preserve">
+    <value>번: 브러시 아래를 어둡게 합니다</value>
+  </data>
+  <data name="Schwamm_nimmt_unter_dem_Pinsel_Farbe_weg_oder_ve_bb69c814" xml:space="preserve">
+    <value>스펀지: 브러시 아래의 색을 빼거나 강하게 합니다</value>
+  </data>
+  <data name="Farbe_ersetzen_f_rbt_unter_dem_Pinsel_um_und_beh_a1ff8737" xml:space="preserve">
+    <value>색상 바꾸기: 밝기와 질감은 유지하면서 브러시 아래를 다시 칠합니다</value>
+  </data>
+  <data name="Wie_stark_ein_Zug_wirkt_Mehrere_Z_ge_bereinander_17a6771e" xml:space="preserve">
+    <value>한 번의 획이 작용하는 강도. 여러 번 겹치면 효과가 쌓입니다</value>
+  </data>
+  <data name="Bereich_7a3ac9a3" xml:space="preserve">
+    <value>범위</value>
+  </data>
+  <data name="Wirkt_vor_allem_auf_die_dunklen_die_mittleren_od_fcc6832c" xml:space="preserve">
+    <value>주로 어두운, 중간 또는 밝은 톤에 작용합니다</value>
+  </data>
+  <data name="Wirkung_3038433f" xml:space="preserve">
+    <value>효과</value>
+  </data>
+  <data name="Ents_ttigen_9ed874e3" xml:space="preserve">
+    <value>채도 낮추기</value>
+  </data>
+  <data name="S_ttigen_2775f156" xml:space="preserve">
+    <value>채도 높이기</value>
+  </data>
+  <data name="Neue_Farbe_fe5ca8ce" xml:space="preserve">
+    <value>새 색상</value>
+  </data>
+  <data name="Farbton_und_S_ttigung_dieser_Farbe_ersetzen_die__61d75dd8" xml:space="preserve">
+    <value>이 색상의 색조와 채도가 이미지의 것을 대체합니다. 밝기와 질감은 유지됩니다</value>
+  </data>
+  <data name="Bildpinsel_3e6ee062" xml:space="preserve">
+    <value>이미지 브러시</value>
+  </data>
+  <data name="Bildpinsel_Radieren_Abwedeln_Nachbelichten_Schwa_3068b135" xml:space="preserve">
+    <value>이미지 브러시: 지우기, 닷지, 번, 스펀지, 색상 바꾸기</value>
+  </data>
 </root>

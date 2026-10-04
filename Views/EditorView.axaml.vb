@@ -193,7 +193,6 @@ Namespace Views
         Private Shared ReadOnly GuideBrush As IBrush = New SolidColorBrush(Color.Parse("#FF00C8FF"))
         Private Shared ReadOnly GuideCursorVertical As New Cursor(StandardCursorType.SizeWestEast)
         Private Shared ReadOnly GuideCursorHorizontal As New Cursor(StandardCursorType.SizeNorthSouth)
-        Private Shared ReadOnly TransparentEraserPreviewBrush As IBrush = BuildTransparentEraserPreviewBrush()
 
         Private ReadOnly _filmstripController As FilmstripInteractionController
 
@@ -3980,19 +3979,25 @@ Namespace Views
             End If
             Dim strokeThickness = Math.Max(1.0, vm.BrushSize * scale)
             line.StrokeThickness = strokeThickness
-            If isEraser Then
-                Dim eraserFill = vm.EraserFillColorValue
-                If eraserFill.A <= 0 Then
-                    ' DAS SCHACHBRETT IST EINE AUSSAGE ÜBER DAS ERGEBNIS - und sie stimmt nur im
-                    ' Foto: dort entsteht ein echtes Loch. Auf einer BILD-EBENE kommt unter dem Strich
-                    ' das zum Vorschein, was darunter liegt (Nutzerbefund: "im Live zeigt
-                    ' der Radierer dann das Schachbrett"). Was das ist, weiss die Ansicht nicht - die
-                    ' Szene ohne genau diese Ebene liegt ihr nicht vor. Also behauptet sie nichts
-                    ' mehr: die Kontur zeigt weiter, WO radiert wird, die Fläche bleibt frei.
-                    line.Stroke = If(vm.PaintsOnImageLayer, Nothing, TransparentEraserPreviewBrush)
-                Else
-                    line.Stroke = New SolidColorBrush(eraserFill)
+            If vm.IsToneBrushMode OrElse (isEraser AndAlso vm.EraserFillColorValue.A <= 0) Then
+                ' BILDPINSEL (Abwedeln, Nachbelichten, Schwamm, Farbe ersetzen, und der Radierer ohne
+                ' Hintergrundfarbe): es wird keine Farbe aufgetragen, das Ergebnis entsteht erst mit
+                ' dem Zug. Die Vorschau zeigt nur, WO er wirkt: ein heller Schleier mit dunklem Saum,
+                ' damit er auf hellem wie dunklem Grund sichtbar ist. Beim Radierer stand hier ein
+                ' Schachbrett; alle Arten zeigen sich jetzt gleich (Wunsch Patrick, 2026-10-04).
+                line.Stroke = New SolidColorBrush(Color.Parse("#FFFFFFFF"))
+                line.StrokeDashArray = Nothing
+                line.Opacity = 0.22
+                If outline IsNot Nothing Then
+                    outline.IsVisible = True
+                    outline.Stroke = New SolidColorBrush(Color.Parse("#CC1A1D24"))
+                    outline.StrokeThickness = strokeThickness + 2.0
+                    outline.StrokeDashArray = Nothing
+                    outline.Opacity = 0.35
                 End If
+            ElseIf isEraser Then
+                ' Radierer MIT Hintergrundfarbe: er malt diese Farbe, die Vorschau zeigt sie.
+                line.Stroke = New SolidColorBrush(vm.EraserFillColorValue)
                 line.StrokeDashArray = Nothing
                 line.Opacity = Math.Max(0.15, Math.Min(1.0, vm.BrushFlow / 100.0))
                 If outline IsNot Nothing Then
@@ -4031,29 +4036,6 @@ Namespace Views
             line.IsVisible = False
             If outline IsNot Nothing Then outline.IsVisible = False
         End Sub
-
-        Private Shared Function BuildTransparentEraserPreviewBrush() As IBrush
-            Const tileSize As Double = 12.0
-            Dim half = tileSize / 2.0
-            Dim group As New DrawingGroup()
-            group.Children.Add(New GeometryDrawing With {
-                .Brush = New SolidColorBrush(Color.FromRgb(224, 224, 224)),
-                .Geometry = New RectangleGeometry(New Avalonia.Rect(0, 0, tileSize, tileSize))
-            })
-            group.Children.Add(New GeometryDrawing With {
-                .Brush = New SolidColorBrush(Color.FromRgb(142, 142, 142)),
-                .Geometry = New RectangleGeometry(New Avalonia.Rect(0, 0, half, half))
-            })
-            group.Children.Add(New GeometryDrawing With {
-                .Brush = New SolidColorBrush(Color.FromRgb(142, 142, 142)),
-                .Geometry = New RectangleGeometry(New Avalonia.Rect(half, half, half, half))
-            })
-            Return New DrawingBrush(group) With {
-                .TileMode = TileMode.Tile,
-                .Stretch = Stretch.None,
-                .DestinationRect = New RelativeRect(New Avalonia.Rect(0, 0, tileSize, tileSize), RelativeUnit.Absolute)
-            }
-        End Function
 
         ''' <summary>Durchmesser des Pinsel-/Retuschekreises in BILDSCHIRM-Pixeln - dieselbe Rechnung,
         ''' die auch den angezeigten Cursorring bemisst, damit Ring und Wirkung nie auseinanderlaufen.

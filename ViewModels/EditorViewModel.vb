@@ -387,6 +387,10 @@ Namespace ViewModels
             Dim states = New Dictionary(Of String, PaintToolState)(StringComparer.Ordinal) From {
                 {"Brush", New PaintToolState()},
                 {"Eraser", New PaintToolState()},
+                {"Dodge", New PaintToolState With {.Hardness = 30, .Size = 80}},
+                {"Burn", New PaintToolState With {.Hardness = 30, .Size = 80}},
+                {"Sponge", New PaintToolState With {.Hardness = 30, .Size = 80}},
+                {"ReplaceColor", New PaintToolState With {.Hardness = 30, .Size = 80}},
                 {"Blur", New PaintToolState()},
                 {"Repair", New PaintToolState()},
                 {"Clone", New PaintToolState()}
@@ -4148,6 +4152,7 @@ Namespace ViewModels
                 If IsSelectedBrushAnnotation() Then Return "Brush"
                 If IsSelectedEraserAnnotation() Then Return "Eraser"
                 If _currentTool = EditorTool.Retouch Then Return If(_isCloneMode, "Clone", If(_isRepairMode, "Repair", "Blur"))
+                If _currentTool = EditorTool.Draw AndAlso _toneMode <> "" Then Return _toneMode
                 If _currentTool = EditorTool.Draw AndAlso _isEraserMode Then Return "Eraser"
                 If _currentTool = EditorTool.Draw Then Return "Brush"
                 Return ""
@@ -5171,7 +5176,7 @@ Namespace ViewModels
                     Case EditorTool.Selection : Return LocalizationService.T("Auswahl")
                     Case EditorTool.Mask : Return LocalizationService.T("Maske")
                     Case EditorTool.Retouch : Return If(_isCloneMode, LocalizationService.T("Stempel"), If(_isRepairMode, LocalizationService.T("Reparaturpinsel"), LocalizationService.T("Verwischen")))
-                    Case EditorTool.Draw : Return If(_isEraserMode, LocalizationService.T("Radiergummi"), LocalizationService.T("Pinsel"))
+                    Case EditorTool.Draw : Return If(_toneMode <> "", ToneModeLabel(), If(_isEraserMode, LocalizationService.T("Radiergummi"), LocalizationService.T("Pinsel")))
                     Case EditorTool.Geometry, EditorTool.Insert : Return LocalizationService.T("Formen und Symbole")
                     Case EditorTool.Text : Return InsertKindLabel()
                     Case Else : Return LocalizationService.T("Werkzeug")
@@ -5264,7 +5269,7 @@ Namespace ViewModels
                     Case EditorTool.Selection : Return base & "rectangle.svg"
                     Case EditorTool.Mask : Return base & "mask.svg"
                     Case EditorTool.Retouch : Return base & If(_isCloneMode, "rubber-stamp.svg", If(_isRepairMode, "bandage.svg", "blur.svg"))
-                    Case EditorTool.Draw : Return base & If(_isEraserMode, "eraser.svg", "brush.svg")
+                    Case EditorTool.Draw : Return base & If(_toneMode <> "", ToneModeIcon(), If(_isEraserMode, "eraser.svg", "brush.svg"))
                     Case EditorTool.Geometry, EditorTool.Insert : Return base & "shape.svg"
                     Case EditorTool.Text
                         Select Case NormalizeAnnotationKind(If(String.IsNullOrEmpty(_pendingInsertKind), SelectedAnnotationKind, _pendingInsertKind))
@@ -8613,6 +8618,15 @@ Namespace ViewModels
             End Get
             Set(value As Boolean)
                 Me.RaiseAndSetIfChanged(_isEraserMode, value)
+                ' Pinsel und Radierer schliessen die vier uebrigen Arten des Bildpinsels aus: wer zum
+                ' Radierer oder zurueck zum Pinsel schaltet (auch mit E), verlaesst sie.
+                If _toneMode <> "" Then
+                    _toneMode = ""
+                    RaiseImageBrushModeChanged()
+                End If
+                If value Then _lastImageBrushMode = "Eraser"
+                Me.RaisePropertyChanged(NameOf(ImageBrushMode))
+                Me.RaisePropertyChanged(NameOf(IsImageBrushMode))
                 ' Umschalten zwischen Pinsel und Radiergummi beendet die laufende Mal-Sitzung (siehe
                 ' AddBrushStroke) - der nächste Strich landet in einem neuen Raster-Paint-Eintrag.
                 _pixelEditLayer.ResetActiveStroke()
@@ -8629,7 +8643,8 @@ Namespace ViewModels
 
         Public ReadOnly Property IsBrushPaintMode As Boolean
             Get
-                Return IsSelectedBrushAnnotation() OrElse (_currentTool = EditorTool.Draw AndAlso Not _isEraserMode)
+                Return IsSelectedBrushAnnotation() OrElse
+                       (_currentTool = EditorTool.Draw AndAlso Not _isEraserMode AndAlso _toneMode = "")
             End Get
         End Property
 
@@ -16469,7 +16484,7 @@ Namespace ViewModels
                                                                    End If
 
                                                                    Select Case normalizedToolName
-                                                                       Case "brush", "pinsel", "eraser", "radiergummi", "blur", "verwischen", "repair", "reparatur", "reparaturpinsel", "heal", "heilen", "retusche", "clone", "stempel"
+                                                                       Case "brush", "pinsel", "eraser", "radiergummi", "imagebrush", "bildpinsel", "dodge", "burn", "sponge", "replacecolor", "blur", "verwischen", "repair", "reparatur", "reparaturpinsel", "heal", "heilen", "retusche", "clone", "stempel"
                                                                            SetPaintMode(toolName)
                                                                            Return
                                                                        Case "text", "image", "bild", "qr", "qrcode", "qr-code", "watermark", "wasserzeichen"
@@ -24162,6 +24177,12 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(ShowBrushStrokeAdjustments))
             Me.RaisePropertyChanged(NameOf(IsEraserPaintMode))
             Me.RaisePropertyChanged(NameOf(IsSmudgePaintMode))
+            Me.RaisePropertyChanged(NameOf(ImageBrushMode))
+            Me.RaisePropertyChanged(NameOf(IsImageBrushMode))
+            Me.RaisePropertyChanged(NameOf(IsToneBrushMode))
+            Me.RaisePropertyChanged(NameOf(IsDodgeBurnMode))
+            Me.RaisePropertyChanged(NameOf(IsSpongeMode))
+            Me.RaisePropertyChanged(NameOf(IsReplaceColorMode))
             Me.RaisePropertyChanged(NameOf(SelectedPaintMode))
             Me.RaisePropertyChanged(NameOf(IsPickingColorFromImage))
 
@@ -25305,6 +25326,13 @@ Namespace ViewModels
                 End If
             End If
 
+            ' Abwedeln, Nachbelichten, Schwamm und Farbe ersetzen (Bildpinsel) rechnen das Bild unter
+            ' dem Strich um, statt etwas aufzutragen; eigener Weg (EditorViewModelImageBrush.vb).
+            If IsToneBrushMode Then
+                AddToneStroke(normalized)
+                Return
+            End If
+
             ' RADIEREN AUF EINER EBENE MIT BILD GEHT IN IHRE BILDPUNKTE, genau wie Pinsel und
             ' Retusche: gemerkt wird das Ergebnis, nicht der Zug. Früher ging der Radierer auf jeder
             ' Ebene in eine Ebenenmaske; die Pixel blieben darunter stehen und blitzten beim
@@ -25347,20 +25375,9 @@ Namespace ViewModels
 
             Dim baseW = GetBaseWidth()
             Dim baseH = GetBaseHeight()
-            ' Die Punkte liegen im Anzeigebild (nach Crop/Drehung/Resize/Canvas) - vor dem Backen ins
-            ' Arbeitsbild vollständig zurückrechnen (0°/keine Geometrie = unverändert). NaN-Punkte
-            ' liegen außerhalb des Bildinhalts (Canvas-Rand) und werden übersprungen - dort gibt es
-            ' keinen Source-Pixel, in den sich backen ließe.
-            ' Der Druck geht Punkt für Punkt mit: gefiltert wird über das PAAR, sonst verrutschte er
-            ' hinter jedem übersprungenen Punkt auf den falschen.
-            Dim mapped = normalized.Select(Function(p, i)
-                                               Dim w = DisplayPercentToWorkingImagePercent(p.X, p.Y)
-                                               Return (Point:=New Avalonia.Point(PercentXToPixels(w.X), PercentYToPixels(w.Y)),
-                                                       Pressure:=If(_brushStrokePressures Is Nothing, 1.0F, _brushStrokePressures(i)))
-                                           End Function).
-                                    Where(Function(m) Not (Double.IsNaN(m.Point.X) OrElse Double.IsNaN(m.Point.Y))).ToList()
-            Dim pixelPoints = mapped.Select(Function(m) m.Point).ToList()
-            Dim pixelPressures = If(_brushStrokePressures Is Nothing, Nothing, mapped.Select(Function(m) m.Pressure).ToList())
+            Dim mappedStroke = MapStrokeToWorkingPixels(normalized)
+            Dim pixelPoints = mappedStroke.Points
+            Dim pixelPressures = mappedStroke.Pressures
             If pixelPoints.Count < 2 Then Return
             Dim dirtyFull As SKRectI
             Dim stroke = PixelEditLayer.CreateTransientStroke(pixelPoints, BuildPixelPaintOptions(isEraser), baseW, baseH, dirtyFull,
@@ -25449,6 +25466,26 @@ Namespace ViewModels
                     SchedulePreviewUpdate()
                 End Sub)
         End Sub
+
+        ''' <summary>Die Punkte eines Zugs vom Anzeigebild ins Arbeitsbild, samt Stiftdruck.
+        '''
+        ''' Die Punkte liegen im Anzeigebild (nach Crop/Drehung/Resize/Canvas) - vor dem Backen ins
+        ''' Arbeitsbild vollständig zurückrechnen (0°/keine Geometrie = unverändert). NaN-Punkte
+        ''' liegen außerhalb des Bildinhalts (Canvas-Rand) und werden übersprungen - dort gibt es
+        ''' keinen Source-Pixel, in den sich backen ließe.
+        ''' Der Druck geht Punkt für Punkt mit: gefiltert wird über das PAAR, sonst verrutschte er
+        ''' hinter jedem übersprungenen Punkt auf den falschen.</summary>
+        Private Function MapStrokeToWorkingPixels(normalized As List(Of Avalonia.Point)) As (Points As List(Of Avalonia.Point), Pressures As List(Of Single))
+            Dim mapped = normalized.Select(Function(p, i)
+                                               Dim w = DisplayPercentToWorkingImagePercent(p.X, p.Y)
+                                               Return (Point:=New Avalonia.Point(PercentXToPixels(w.X), PercentYToPixels(w.Y)),
+                                                       Pressure:=If(_brushStrokePressures Is Nothing, 1.0F, _brushStrokePressures(i)))
+                                           End Function).
+                                    Where(Function(m) Not (Double.IsNaN(m.Point.X) OrElse Double.IsNaN(m.Point.Y))).ToList()
+            Dim pixelPoints = mapped.Select(Function(m) m.Point).ToList()
+            Dim pixelPressures = If(_brushStrokePressures Is Nothing, Nothing, mapped.Select(Function(m) m.Pressure).ToList())
+            Return (pixelPoints, pixelPressures)
+        End Function
 
         ''' True, wenn neben Drehung/Flip weitere ANGEWENDETE Geometrie aktiv ist (Crop, freie
         ''' Begradigung, Resize, Canvas) - dann ist die Anzeige-Szene nicht mehr die skalierte
@@ -28815,6 +28852,12 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(EraserFillColorValue))
             Me.RaisePropertyChanged(NameOf(EraserFillBrush))
             Me.RaisePropertyChanged(NameOf(IsSmudgePaintMode))
+            Me.RaisePropertyChanged(NameOf(ImageBrushMode))
+            Me.RaisePropertyChanged(NameOf(IsImageBrushMode))
+            Me.RaisePropertyChanged(NameOf(IsToneBrushMode))
+            Me.RaisePropertyChanged(NameOf(IsDodgeBurnMode))
+            Me.RaisePropertyChanged(NameOf(IsSpongeMode))
+            Me.RaisePropertyChanged(NameOf(IsReplaceColorMode))
             Me.RaisePropertyChanged(NameOf(BrushFlow))
             Me.RaisePropertyChanged(NameOf(ShowLayerToolOptions))
             Me.RaisePropertyChanged(NameOf(ShowGeometryControls))
@@ -28827,6 +28870,8 @@ Namespace ViewModels
 
         Private Sub SetPaintMode(mode As String)
             Dim normalized = If(mode, "").Trim().ToLowerInvariant()
+            ' Der Knopf "Bildpinsel" in der Leiste fuehrt zur zuletzt benutzten Art zurueck.
+            If normalized = "imagebrush" OrElse normalized = "bildpinsel" Then normalized = _lastImageBrushMode.ToLowerInvariant()
             Dim previousPaintMode = SelectedPaintMode
             ' Eine markierte BILD-Ebene überlebt den Wechsel zu Pinsel, Radiergummi, Verwischen,
             ' Reparaturpinsel und Stempel: auf ihr soll ja gearbeitet werden (siehe AddBrushStroke
@@ -28847,6 +28892,11 @@ Namespace ViewModels
                     Case "eraser", "radiergummi"
                         CurrentTool = EditorTool.Draw
                         IsEraserMode = True
+                    Case "dodge", "burn", "sponge", "replacecolor"
+                        ' Die vier Arten des Bildpinsels, die das Bild umrechnen.
+                        CurrentTool = EditorTool.Draw
+                        IsEraserMode = False
+                        SetToneMode(ToneModes.First(Function(m) m.ToLowerInvariant() = normalized))
                     Case "blur", "verwischen"
                         _isCloneMode = False
                         _isRepairMode = False
@@ -28892,6 +28942,7 @@ Namespace ViewModels
         Private Shared Function KeepsImageLayerPaintMode(normalized As String) As Boolean
             Select Case normalized
                 Case "brush", "pinsel", "eraser", "radiergummi",
+                     "dodge", "burn", "sponge", "replacecolor", "imagebrush", "bildpinsel",
                      "blur", "verwischen",
                      "repair", "reparatur", "reparaturpinsel", "heal", "heilen", "retusche",
                      "clone", "stempel"
@@ -28938,6 +28989,11 @@ Namespace ViewModels
                     state.Opacity = _brushOpacity
                     state.Flow = _brushFlow
                     state.EraserFillColor = _eraserFillColor
+                Case "Dodge", "Burn", "Sponge", "ReplaceColor"
+                    state.Size = _brushSize
+                    state.Hardness = _brushHardness
+                    state.Opacity = _brushOpacity
+                    state.Flow = _brushFlow
                 Case "Blur", "Repair", "Clone"
                     state.Size = _retouchRadius
                     state.Hardness = _brushHardness
@@ -28972,6 +29028,11 @@ Namespace ViewModels
                     BrushOpacity = state.Opacity
                     BrushFlow = state.Flow
                     EraserFillColor = state.EraserFillColor
+                Case "Dodge", "Burn", "Sponge", "ReplaceColor"
+                    BrushSize = state.Size
+                    BrushHardness = state.Hardness
+                    BrushOpacity = state.Opacity
+                    BrushFlow = state.Flow
                 Case "Blur", "Repair", "Clone"
                     RetouchRadius = state.Size
                     BrushHardness = state.Hardness

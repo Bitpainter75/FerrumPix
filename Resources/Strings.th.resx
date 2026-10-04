@@ -9178,4 +9178,70 @@
   <data name="Um_wie_viele_Bildpunkte_die_Kn_pfe_darunter_die__d9bce2a1" xml:space="preserve">
     <value>ปุ่มด้านล่างเปลี่ยนส่วนที่เลือกกี่พิกเซล</value>
   </data>
+  <data name="Saum_9899abe4" xml:space="preserve">
+    <value>แถบ</value>
+  </data>
+  <data name="Wie_breit_der_Streifen_entlang_der_Kante_ist_in__a1c39a5e" xml:space="preserve">
+    <value>ความกว้างของแถบตามขอบที่มาสก์ไล่ตามภาพ หน่วยเป็นพิกเซล</value>
+  </data>
+  <data name="Die_Kante_der_Maske_im_Saum_am_Bild_entlangf_hre_9ded6f70" xml:space="preserve">
+    <value>ทำให้ขอบของมาสก์ไล่ตามภาพภายในแถบ สำหรับเส้นผม ขนสัตว์ และกิ่งไม้เล็ก ด้านในและด้านนอกมาสก์ยังคงเหมือนเดิม</value>
+  </data>
+  <data name="Abwedeln_34de3584" xml:space="preserve">
+    <value>เพิ่มแสง</value>
+  </data>
+  <data name="Nachbelichten_4e42c79a" xml:space="preserve">
+    <value>ลดแสง</value>
+  </data>
+  <data name="Schwamm_26be8479" xml:space="preserve">
+    <value>ฟองน้ำ</value>
+  </data>
+  <data name="Farbe_ersetzen_f6a9d594" xml:space="preserve">
+    <value>แทนที่สี</value>
+  </data>
+  <data name="Radiergummi_nimmt_Bild_weg_oder_malt_die_Hinterg_8cd13de1" xml:space="preserve">
+    <value>ยางลบ: ลบภาพหรือระบายสีพื้นหลัง</value>
+  </data>
+  <data name="Abwedeln_hellt_unter_dem_Pinsel_auf_8c32d2e3" xml:space="preserve">
+    <value>เพิ่มแสง: ทำให้สว่างขึ้นใต้แปรง</value>
+  </data>
+  <data name="Nachbelichten_dunkelt_unter_dem_Pinsel_ab_9f832bdd" xml:space="preserve">
+    <value>ลดแสง: ทำให้มืดลงใต้แปรง</value>
+  </data>
+  <data name="Schwamm_nimmt_unter_dem_Pinsel_Farbe_weg_oder_ve_bb69c814" xml:space="preserve">
+    <value>ฟองน้ำ: ลดหรือเพิ่มสีใต้แปรง</value>
+  </data>
+  <data name="Farbe_ersetzen_f_rbt_unter_dem_Pinsel_um_und_beh_a1ff8737" xml:space="preserve">
+    <value>แทนที่สี: เปลี่ยนสีใต้แปรงโดยคงความสว่างและพื้นผิวไว้</value>
+  </data>
+  <data name="Wie_stark_ein_Zug_wirkt_Mehrere_Z_ge_bereinander_17a6771e" xml:space="preserve">
+    <value>ความแรงของการลากหนึ่งครั้ง ลากซ้อนกันหลายครั้งจะเพิ่มผล</value>
+  </data>
+  <data name="Bereich_7a3ac9a3" xml:space="preserve">
+    <value>ช่วง</value>
+  </data>
+  <data name="Wirkt_vor_allem_auf_die_dunklen_die_mittleren_od_fcc6832c" xml:space="preserve">
+    <value>ทำงานกับโทนมืด กลาง หรือสว่างเป็นหลัก</value>
+  </data>
+  <data name="Wirkung_3038433f" xml:space="preserve">
+    <value>ผล</value>
+  </data>
+  <data name="Ents_ttigen_9ed874e3" xml:space="preserve">
+    <value>ลดความอิ่มตัว</value>
+  </data>
+  <data name="S_ttigen_2775f156" xml:space="preserve">
+    <value>เพิ่มความอิ่มตัว</value>
+  </data>
+  <data name="Neue_Farbe_fe5ca8ce" xml:space="preserve">
+    <value>สีใหม่</value>
+  </data>
+  <data name="Farbton_und_S_ttigung_dieser_Farbe_ersetzen_die__61d75dd8" xml:space="preserve">
+    <value>เฉดสีและความอิ่มตัวของสีนี้แทนที่ของภาพ ความสว่างและพื้นผิวยังคงอยู่</value>
+  </data>
+  <data name="Bildpinsel_3e6ee062" xml:space="preserve">
+    <value>แปรงภาพ</value>
+  </data>
+  <data name="Bildpinsel_Radieren_Abwedeln_Nachbelichten_Schwa_3068b135" xml:space="preserve">
+    <value>แปรงภาพ: ลบ เพิ่มแสง ลดแสง ฟองน้ำ แทนที่สี</value>
+  </data>
 </root>

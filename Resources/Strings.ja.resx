@@ -9174,4 +9174,70 @@
   <data name="Um_wie_viele_Bildpunkte_die_Kn_pfe_darunter_die__d9bce2a1" xml:space="preserve">
     <value>下のボタンで選択範囲を何ピクセル変えるか</value>
   </data>
+  <data name="Saum_9899abe4" xml:space="preserve">
+    <value>帯</value>
+  </data>
+  <data name="Wie_breit_der_Streifen_entlang_der_Kante_ist_in__a1c39a5e" xml:space="preserve">
+    <value>マスクが画像に沿う境界沿いの帯の幅（ピクセル）</value>
+  </data>
+  <data name="Die_Kante_der_Maske_im_Saum_am_Bild_entlangf_hre_9ded6f70" xml:space="preserve">
+    <value>帯の中でマスクの境界を画像に沿わせます。髪、毛並み、細い枝に向いています。内側と外側のマスクはそのままです。</value>
+  </data>
+  <data name="Abwedeln_34de3584" xml:space="preserve">
+    <value>覆い焼き</value>
+  </data>
+  <data name="Nachbelichten_4e42c79a" xml:space="preserve">
+    <value>焼き込み</value>
+  </data>
+  <data name="Schwamm_26be8479" xml:space="preserve">
+    <value>スポンジ</value>
+  </data>
+  <data name="Farbe_ersetzen_f6a9d594" xml:space="preserve">
+    <value>色の置き換え</value>
+  </data>
+  <data name="Radiergummi_nimmt_Bild_weg_oder_malt_die_Hinterg_8cd13de1" xml:space="preserve">
+    <value>消しゴム：画像を消すか背景色で塗ります</value>
+  </data>
+  <data name="Abwedeln_hellt_unter_dem_Pinsel_auf_8c32d2e3" xml:space="preserve">
+    <value>覆い焼き：ブラシの下を明るくします</value>
+  </data>
+  <data name="Nachbelichten_dunkelt_unter_dem_Pinsel_ab_9f832bdd" xml:space="preserve">
+    <value>焼き込み：ブラシの下を暗くします</value>
+  </data>
+  <data name="Schwamm_nimmt_unter_dem_Pinsel_Farbe_weg_oder_ve_bb69c814" xml:space="preserve">
+    <value>スポンジ：ブラシの下の色を抜くか強めます</value>
+  </data>
+  <data name="Farbe_ersetzen_f_rbt_unter_dem_Pinsel_um_und_beh_a1ff8737" xml:space="preserve">
+    <value>色の置き換え：明るさと質感を保ったままブラシの下の色を変えます</value>
+  </data>
+  <data name="Wie_stark_ein_Zug_wirkt_Mehrere_Z_ge_bereinander_17a6771e" xml:space="preserve">
+    <value>1回のストロークの強さ。重ねるほど効果が強まります</value>
+  </data>
+  <data name="Bereich_7a3ac9a3" xml:space="preserve">
+    <value>範囲</value>
+  </data>
+  <data name="Wirkt_vor_allem_auf_die_dunklen_die_mittleren_od_fcc6832c" xml:space="preserve">
+    <value>主に暗い、中間、明るいトーンに作用します</value>
+  </data>
+  <data name="Wirkung_3038433f" xml:space="preserve">
+    <value>効果</value>
+  </data>
+  <data name="Ents_ttigen_9ed874e3" xml:space="preserve">
+    <value>彩度を下げる</value>
+  </data>
+  <data name="S_ttigen_2775f156" xml:space="preserve">
+    <value>彩度を上げる</value>
+  </data>
+  <data name="Neue_Farbe_fe5ca8ce" xml:space="preserve">
+    <value>新しい色</value>
+  </data>
+  <data name="Farbton_und_S_ttigung_dieser_Farbe_ersetzen_die__61d75dd8" xml:space="preserve">
+    <value>この色の色相と彩度で画像のものを置き換えます。明るさと質感はそのままです</value>
+  </data>
+  <data name="Bildpinsel_3e6ee062" xml:space="preserve">
+    <value>イメージブラシ</value>
+  </data>
+  <data name="Bildpinsel_Radieren_Abwedeln_Nachbelichten_Schwa_3068b135" xml:space="preserve">
+    <value>イメージブラシ：消去、覆い焼き、焼き込み、スポンジ、色の置き換え</value>
+  </data>
 </root>

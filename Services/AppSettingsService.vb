@@ -98,7 +98,7 @@ Namespace Services
     ''' bei Verwischen, Reparaturpinsel und Stempel dazu die Haerte der Kante. Deckkraft, Fluss
     ''' und Farbe gehoeren nicht dazu, sie beginnen je Bild neu.</summary>
     Public Class PaintToolMemory
-        ''' "Brush", "Eraser", "Blur", "Repair" oder "Clone".
+        ''' "Brush", "Eraser", "Dodge", "Burn", "Sponge", "ReplaceColor", "Blur", "Repair" oder "Clone".
         Public Property Mode As String = ""
         Public Property Size As Double = 24
         ''' Beim Pinsel und Radiergummi die Haerte, bei den Retusche-Werkzeugen die Staerke.

@@ -9134,4 +9134,70 @@
   <data name="Um_wie_viele_Bildpunkte_die_Kn_pfe_darunter_die__d9bce2a1" xml:space="preserve">
     <value>Cuántos píxeles cambian la selección los botones de abajo</value>
   </data>
+  <data name="Saum_9899abe4" xml:space="preserve">
+    <value>Franja</value>
+  </data>
+  <data name="Wie_breit_der_Streifen_entlang_der_Kante_ist_in__a1c39a5e" xml:space="preserve">
+    <value>Qué tan ancha es la franja a lo largo del borde en la que la máscara sigue la imagen, en píxeles</value>
+  </data>
+  <data name="Die_Kante_der_Maske_im_Saum_am_Bild_entlangf_hre_9ded6f70" xml:space="preserve">
+    <value>Hace que el borde de la máscara siga la imagen dentro de la franja, para pelo, pelaje y ramitas finas. Por dentro y por fuera la máscara queda como está.</value>
+  </data>
+  <data name="Abwedeln_34de3584" xml:space="preserve">
+    <value>Sobreexponer</value>
+  </data>
+  <data name="Nachbelichten_4e42c79a" xml:space="preserve">
+    <value>Subexponer</value>
+  </data>
+  <data name="Schwamm_26be8479" xml:space="preserve">
+    <value>Esponja</value>
+  </data>
+  <data name="Farbe_ersetzen_f6a9d594" xml:space="preserve">
+    <value>Reemplazar color</value>
+  </data>
+  <data name="Radiergummi_nimmt_Bild_weg_oder_malt_die_Hinterg_8cd13de1" xml:space="preserve">
+    <value>Borrador: quita imagen o pinta el color de fondo</value>
+  </data>
+  <data name="Abwedeln_hellt_unter_dem_Pinsel_auf_8c32d2e3" xml:space="preserve">
+    <value>Sobreexponer: aclara bajo el pincel</value>
+  </data>
+  <data name="Nachbelichten_dunkelt_unter_dem_Pinsel_ab_9f832bdd" xml:space="preserve">
+    <value>Subexponer: oscurece bajo el pincel</value>
+  </data>
+  <data name="Schwamm_nimmt_unter_dem_Pinsel_Farbe_weg_oder_ve_bb69c814" xml:space="preserve">
+    <value>Esponja: quita color bajo el pincel o lo intensifica</value>
+  </data>
+  <data name="Farbe_ersetzen_f_rbt_unter_dem_Pinsel_um_und_beh_a1ff8737" xml:space="preserve">
+    <value>Reemplazar color: cambia el color bajo el pincel y conserva luminosidad y textura</value>
+  </data>
+  <data name="Wie_stark_ein_Zug_wirkt_Mehrere_Z_ge_bereinander_17a6771e" xml:space="preserve">
+    <value>Qué tan fuerte actúa un trazo. Varios trazos superpuestos acumulan el efecto</value>
+  </data>
+  <data name="Bereich_7a3ac9a3" xml:space="preserve">
+    <value>Rango</value>
+  </data>
+  <data name="Wirkt_vor_allem_auf_die_dunklen_die_mittleren_od_fcc6832c" xml:space="preserve">
+    <value>Actúa sobre todo en los tonos oscuros, medios o claros</value>
+  </data>
+  <data name="Wirkung_3038433f" xml:space="preserve">
+    <value>Efecto</value>
+  </data>
+  <data name="Ents_ttigen_9ed874e3" xml:space="preserve">
+    <value>Desaturar</value>
+  </data>
+  <data name="S_ttigen_2775f156" xml:space="preserve">
+    <value>Saturar</value>
+  </data>
+  <data name="Neue_Farbe_fe5ca8ce" xml:space="preserve">
+    <value>Nuevo color</value>
+  </data>
+  <data name="Farbton_und_S_ttigung_dieser_Farbe_ersetzen_die__61d75dd8" xml:space="preserve">
+    <value>El tono y la saturación de este color sustituyen a los de la imagen; la luminosidad y la textura se mantienen</value>
+  </data>
+  <data name="Bildpinsel_3e6ee062" xml:space="preserve">
+    <value>Pincel de imagen</value>
+  </data>
+  <data name="Bildpinsel_Radieren_Abwedeln_Nachbelichten_Schwa_3068b135" xml:space="preserve">
+    <value>Pincel de imagen: borrar, sobreexponer, subexponer, esponja, reemplazar color</value>
+  </data>
 </root>

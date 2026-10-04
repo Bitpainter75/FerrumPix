@@ -9174,4 +9174,70 @@
   <data name="Um_wie_viele_Bildpunkte_die_Kn_pfe_darunter_die__d9bce2a1" xml:space="preserve">
     <value>Met hoeveel pixels de knoppen hieronder de selectie veranderen</value>
   </data>
+  <data name="Saum_9899abe4" xml:space="preserve">
+    <value>Strook</value>
+  </data>
+  <data name="Wie_breit_der_Streifen_entlang_der_Kante_ist_in__a1c39a5e" xml:space="preserve">
+    <value>Hoe breed de strook langs de rand is waarin het masker het beeld volgt, in pixels</value>
+  </data>
+  <data name="Die_Kante_der_Maske_im_Saum_am_Bild_entlangf_hre_9ded6f70" xml:space="preserve">
+    <value>Laat de rand van het masker binnen de strook het beeld volgen, voor haar, vacht en fijne takjes. Binnen en buiten blijft het masker zoals het is.</value>
+  </data>
+  <data name="Abwedeln_34de3584" xml:space="preserve">
+    <value>Tegenhouden</value>
+  </data>
+  <data name="Nachbelichten_4e42c79a" xml:space="preserve">
+    <value>Doordrukken</value>
+  </data>
+  <data name="Schwamm_26be8479" xml:space="preserve">
+    <value>Spons</value>
+  </data>
+  <data name="Farbe_ersetzen_f6a9d594" xml:space="preserve">
+    <value>Kleur vervangen</value>
+  </data>
+  <data name="Radiergummi_nimmt_Bild_weg_oder_malt_die_Hinterg_8cd13de1" xml:space="preserve">
+    <value>Gum: haalt beeld weg of schildert de achtergrondkleur</value>
+  </data>
+  <data name="Abwedeln_hellt_unter_dem_Pinsel_auf_8c32d2e3" xml:space="preserve">
+    <value>Tegenhouden: maakt lichter onder het penseel</value>
+  </data>
+  <data name="Nachbelichten_dunkelt_unter_dem_Pinsel_ab_9f832bdd" xml:space="preserve">
+    <value>Doordrukken: maakt donkerder onder het penseel</value>
+  </data>
+  <data name="Schwamm_nimmt_unter_dem_Pinsel_Farbe_weg_oder_ve_bb69c814" xml:space="preserve">
+    <value>Spons: haalt kleur weg onder het penseel of versterkt die</value>
+  </data>
+  <data name="Farbe_ersetzen_f_rbt_unter_dem_Pinsel_um_und_beh_a1ff8737" xml:space="preserve">
+    <value>Kleur vervangen: kleurt om onder het penseel en behoudt helderheid en structuur</value>
+  </data>
+  <data name="Wie_stark_ein_Zug_wirkt_Mehrere_Z_ge_bereinander_17a6771e" xml:space="preserve">
+    <value>Hoe sterk één streek werkt. Meerdere streken over elkaar bouwen het effect op</value>
+  </data>
+  <data name="Bereich_7a3ac9a3" xml:space="preserve">
+    <value>Bereik</value>
+  </data>
+  <data name="Wirkt_vor_allem_auf_die_dunklen_die_mittleren_od_fcc6832c" xml:space="preserve">
+    <value>Werkt vooral op de donkere, de middelste of de lichte tonen</value>
+  </data>
+  <data name="Wirkung_3038433f" xml:space="preserve">
+    <value>Effect</value>
+  </data>
+  <data name="Ents_ttigen_9ed874e3" xml:space="preserve">
+    <value>Desatureren</value>
+  </data>
+  <data name="S_ttigen_2775f156" xml:space="preserve">
+    <value>Verzadigen</value>
+  </data>
+  <data name="Neue_Farbe_fe5ca8ce" xml:space="preserve">
+    <value>Nieuwe kleur</value>
+  </data>
+  <data name="Farbton_und_S_ttigung_dieser_Farbe_ersetzen_die__61d75dd8" xml:space="preserve">
+    <value>Tint en verzadiging van deze kleur vervangen die van het beeld; helderheid en structuur blijven</value>
+  </data>
+  <data name="Bildpinsel_3e6ee062" xml:space="preserve">
+    <value>Beeldpenseel</value>
+  </data>
+  <data name="Bildpinsel_Radieren_Abwedeln_Nachbelichten_Schwa_3068b135" xml:space="preserve">
+    <value>Beeldpenseel: gummen, tegenhouden, doordrukken, spons, kleur vervangen</value>
+  </data>
 </root>

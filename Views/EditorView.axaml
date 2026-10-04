@@ -685,16 +685,19 @@
                             <TextBlock Text="Pinsel" FontSize="{DynamicResource FP.Font.Body}" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
                         </StackPanel>
                     </Button>
+                    <!-- BILDPINSEL: Radierer, Abwedeln, Nachbelichten, Schwamm und Farbe ersetzen hinter
+                         EINEM Knopf (Entscheidung Patrick, 2026-10-04). Der Malpinsel darueber bleibt
+                         allein. Der Knopf fuehrt zur zuletzt benutzten Art; gewechselt wird im Panel. -->
                     <Button Classes="tool-btn-row"
-                            ToolTip.Tip="Radiergummi"
+                            ToolTip.Tip="Bildpinsel: Radieren, Abwedeln, Nachbelichten, Schwamm, Farbe ersetzen"
                             IsEnabled="{Binding CanUsePixelTools}"
                             Command="{Binding SetToolCommand}"
-                            CommandParameter="Eraser"
-                            Classes.active="{Binding SelectedPaintMode, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Eraser}"
+                            CommandParameter="ImageBrush"
+                            Classes.active="{Binding IsImageBrushMode}"
                             Classes.selected-kind="{Binding SelectedAnnotationToolbarKind, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Eraser}">
                         <StackPanel Orientation="Horizontal" Spacing="10">
                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/eraser.svg" Width="18" Height="18" />
-                            <TextBlock Text="Radiergummi" FontSize="{DynamicResource FP.Font.Body}" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
+                            <TextBlock Text="Bildpinsel" FontSize="{DynamicResource FP.Font.Body}" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
                         </StackPanel>
                     </Button>
                     <Button Classes="tool-btn-row"

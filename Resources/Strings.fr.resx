@@ -9134,4 +9134,70 @@
   <data name="Um_wie_viele_Bildpunkte_die_Kn_pfe_darunter_die__d9bce2a1" xml:space="preserve">
     <value>De combien de pixels les boutons ci-dessous modifient la sélection</value>
   </data>
+  <data name="Saum_9899abe4" xml:space="preserve">
+    <value>Bande</value>
+  </data>
+  <data name="Wie_breit_der_Streifen_entlang_der_Kante_ist_in__a1c39a5e" xml:space="preserve">
+    <value>Largeur de la bande le long du bord dans laquelle le masque suit l'image, en pixels</value>
+  </data>
+  <data name="Die_Kante_der_Maske_im_Saum_am_Bild_entlangf_hre_9ded6f70" xml:space="preserve">
+    <value>Fait suivre l'image au bord du masque dans la bande, pour les cheveux, la fourrure et les brindilles fines. À l'intérieur et à l'extérieur, le masque reste tel quel.</value>
+  </data>
+  <data name="Abwedeln_34de3584" xml:space="preserve">
+    <value>Densité -</value>
+  </data>
+  <data name="Nachbelichten_4e42c79a" xml:space="preserve">
+    <value>Densité +</value>
+  </data>
+  <data name="Schwamm_26be8479" xml:space="preserve">
+    <value>Éponge</value>
+  </data>
+  <data name="Farbe_ersetzen_f6a9d594" xml:space="preserve">
+    <value>Remplacement de couleur</value>
+  </data>
+  <data name="Radiergummi_nimmt_Bild_weg_oder_malt_die_Hinterg_8cd13de1" xml:space="preserve">
+    <value>Gomme : enlève de l'image ou peint la couleur de fond</value>
+  </data>
+  <data name="Abwedeln_hellt_unter_dem_Pinsel_auf_8c32d2e3" xml:space="preserve">
+    <value>Densité - : éclaircit sous le pinceau</value>
+  </data>
+  <data name="Nachbelichten_dunkelt_unter_dem_Pinsel_ab_9f832bdd" xml:space="preserve">
+    <value>Densité + : assombrit sous le pinceau</value>
+  </data>
+  <data name="Schwamm_nimmt_unter_dem_Pinsel_Farbe_weg_oder_ve_bb69c814" xml:space="preserve">
+    <value>Éponge : retire de la couleur sous le pinceau ou la renforce</value>
+  </data>
+  <data name="Farbe_ersetzen_f_rbt_unter_dem_Pinsel_um_und_beh_a1ff8737" xml:space="preserve">
+    <value>Remplacement de couleur : recolore sous le pinceau en gardant luminosité et texture</value>
+  </data>
+  <data name="Wie_stark_ein_Zug_wirkt_Mehrere_Z_ge_bereinander_17a6771e" xml:space="preserve">
+    <value>Force d'un trait. Plusieurs traits superposés accumulent l'effet</value>
+  </data>
+  <data name="Bereich_7a3ac9a3" xml:space="preserve">
+    <value>Plage</value>
+  </data>
+  <data name="Wirkt_vor_allem_auf_die_dunklen_die_mittleren_od_fcc6832c" xml:space="preserve">
+    <value>Agit surtout sur les tons sombres, moyens ou clairs</value>
+  </data>
+  <data name="Wirkung_3038433f" xml:space="preserve">
+    <value>Effet</value>
+  </data>
+  <data name="Ents_ttigen_9ed874e3" xml:space="preserve">
+    <value>Désaturer</value>
+  </data>
+  <data name="S_ttigen_2775f156" xml:space="preserve">
+    <value>Saturer</value>
+  </data>
+  <data name="Neue_Farbe_fe5ca8ce" xml:space="preserve">
+    <value>Nouvelle couleur</value>
+  </data>
+  <data name="Farbton_und_S_ttigung_dieser_Farbe_ersetzen_die__61d75dd8" xml:space="preserve">
+    <value>La teinte et la saturation de cette couleur remplacent celles de l'image ; luminosité et texture restent</value>
+  </data>
+  <data name="Bildpinsel_3e6ee062" xml:space="preserve">
+    <value>Pinceau d'image</value>
+  </data>
+  <data name="Bildpinsel_Radieren_Abwedeln_Nachbelichten_Schwa_3068b135" xml:space="preserve">
+    <value>Pinceau d'image : gommer, densité -, densité +, éponge, remplacement de couleur</value>
+  </data>
 </root>

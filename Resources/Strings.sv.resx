@@ -9174,4 +9174,70 @@
   <data name="Um_wie_viele_Bildpunkte_die_Kn_pfe_darunter_die__d9bce2a1" xml:space="preserve">
     <value>Med hur många pixlar knapparna nedan ändrar markeringen</value>
   </data>
+  <data name="Saum_9899abe4" xml:space="preserve">
+    <value>Band</value>
+  </data>
+  <data name="Wie_breit_der_Streifen_entlang_der_Kante_ist_in__a1c39a5e" xml:space="preserve">
+    <value>Hur brett bandet längs kanten är där masken följer bilden, i pixlar</value>
+  </data>
+  <data name="Die_Kante_der_Maske_im_Saum_am_Bild_entlangf_hre_9ded6f70" xml:space="preserve">
+    <value>Låt maskens kant följa bilden inom bandet, för hår, päls och fina kvistar. Innanför och utanför förblir masken som den är.</value>
+  </data>
+  <data name="Abwedeln_34de3584" xml:space="preserve">
+    <value>Skugga</value>
+  </data>
+  <data name="Nachbelichten_4e42c79a" xml:space="preserve">
+    <value>Efterbelys</value>
+  </data>
+  <data name="Schwamm_26be8479" xml:space="preserve">
+    <value>Svamp</value>
+  </data>
+  <data name="Farbe_ersetzen_f6a9d594" xml:space="preserve">
+    <value>Ersätt färg</value>
+  </data>
+  <data name="Radiergummi_nimmt_Bild_weg_oder_malt_die_Hinterg_8cd13de1" xml:space="preserve">
+    <value>Suddgummi: tar bort bild eller målar bakgrundsfärgen</value>
+  </data>
+  <data name="Abwedeln_hellt_unter_dem_Pinsel_auf_8c32d2e3" xml:space="preserve">
+    <value>Skugga: ljusar upp under penseln</value>
+  </data>
+  <data name="Nachbelichten_dunkelt_unter_dem_Pinsel_ab_9f832bdd" xml:space="preserve">
+    <value>Efterbelys: mörkar under penseln</value>
+  </data>
+  <data name="Schwamm_nimmt_unter_dem_Pinsel_Farbe_weg_oder_ve_bb69c814" xml:space="preserve">
+    <value>Svamp: tar bort färg under penseln eller förstärker den</value>
+  </data>
+  <data name="Farbe_ersetzen_f_rbt_unter_dem_Pinsel_um_und_beh_a1ff8737" xml:space="preserve">
+    <value>Ersätt färg: färgar om under penseln och behåller ljushet och struktur</value>
+  </data>
+  <data name="Wie_stark_ein_Zug_wirkt_Mehrere_Z_ge_bereinander_17a6771e" xml:space="preserve">
+    <value>Hur starkt ett drag verkar. Flera drag ovanpå varandra bygger upp effekten</value>
+  </data>
+  <data name="Bereich_7a3ac9a3" xml:space="preserve">
+    <value>Område</value>
+  </data>
+  <data name="Wirkt_vor_allem_auf_die_dunklen_die_mittleren_od_fcc6832c" xml:space="preserve">
+    <value>Verkar främst på de mörka, mellersta eller ljusa tonerna</value>
+  </data>
+  <data name="Wirkung_3038433f" xml:space="preserve">
+    <value>Verkan</value>
+  </data>
+  <data name="Ents_ttigen_9ed874e3" xml:space="preserve">
+    <value>Avmätta</value>
+  </data>
+  <data name="S_ttigen_2775f156" xml:space="preserve">
+    <value>Mätta</value>
+  </data>
+  <data name="Neue_Farbe_fe5ca8ce" xml:space="preserve">
+    <value>Ny färg</value>
+  </data>
+  <data name="Farbton_und_S_ttigung_dieser_Farbe_ersetzen_die__61d75dd8" xml:space="preserve">
+    <value>Nyans och mättnad från denna färg ersätter bildens; ljushet och struktur blir kvar</value>
+  </data>
+  <data name="Bildpinsel_3e6ee062" xml:space="preserve">
+    <value>Bildpensel</value>
+  </data>
+  <data name="Bildpinsel_Radieren_Abwedeln_Nachbelichten_Schwa_3068b135" xml:space="preserve">
+    <value>Bildpensel: sudda, skugga, efterbelys, svamp, ersätt färg</value>
+  </data>
 </root>

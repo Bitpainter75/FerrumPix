@@ -859,9 +859,14 @@ Namespace ViewModels
         ''' Zeichnen und Schreiben kosten bei einem eingefügten Foto in voller Auflösung leicht eine
         ''' Zehntelsekunde und mehr und laufen deshalb im Hintergrund; erst das Ergebnis kommt zurück
         ''' auf den UI-Faden.</summary>
+        ''' <param name="tone">Nur beim Bildpinsel (Abwedeln, Nachbelichten, Schwamm, Farbe ersetzen):
+        ''' dann wird der Strich nicht gezeichnet, sondern das Ebenenbild darunter umgerechnet.</param>
+        ''' <param name="toneLabel">Der Name des Verlaufsschritts dazu, schon uebersetzt.</param>
         Private Function TryPaintStrokeIntoImageAnnotation(target As ImageAnnotation,
                                                            displayPoints As IReadOnlyList(Of Avalonia.Point),
-                                                           isEraser As Boolean) As Boolean
+                                                           isEraser As Boolean,
+                                                           Optional tone As ToneBrushSettings = Nothing,
+                                                           Optional toneLabel As String = "") As Boolean
             If target Is Nothing OrElse displayPoints Is Nothing OrElse displayPoints.Count < 2 Then Return False
             Dim displaySize = GetAnnotationDisplayPixelSize()
             If displaySize.Width <= 0 OrElse displaySize.Height <= 0 Then Return False
@@ -881,6 +886,14 @@ Namespace ViewModels
             ' Die Pinselbreite steht in ANZEIGE-Punkten (so bemisst die Ansicht ihren Ring) - im Bild
             ' des Objekts ist ein Anzeigepunkt je nach Zoomstand mehr oder weniger als ein Bildpunkt.
             options.StrokeWidth = CSng(Math.Max(1.0, _brushSize * placement.ImagePixelsPerDisplayPixel))
+            If tone IsNot Nothing Then
+                ' Beim Bildpinsel zaehlt nur die Deckung des Strichs: deckendes Weiss, ohne Schatten
+                ' und Schein, wie im Foto (AddToneStroke).
+                options.StrokeColor = "#FFFFFFFF"
+                options.BrushPreset = "soft"
+                options.ShadowEnabled = False
+                options.GlowEnabled = False
+            End If
 
             Dim dirty As SKRectI
             Dim stroke = PixelEditLayer.CreateTransientStroke(imagePoints, options,
@@ -911,7 +924,7 @@ Namespace ViewModels
             Dim renderAnn = stroke.ToRenderAnnotation()
             Dim targetPath = CreateSelectionAssetTempPath("paint")
             _objectPaintNextSource = targetPath
-            EnqueueObjectPaint(target, sourcePath, targetPath, renderAnn, dirty, coverage, isEraser)
+            EnqueueObjectPaint(target, sourcePath, targetPath, renderAnn, dirty, coverage, isEraser, tone, toneLabel)
             Return True
         End Function
 
@@ -982,15 +995,19 @@ Namespace ViewModels
         ''' verlöre den früheren Strich.</summary>
         Private Sub EnqueueObjectPaint(target As ImageAnnotation, sourcePath As String, targetPath As String,
                                        renderAnnotation As ImageAnnotation, dirty As SKRectI, coverage As SKBitmap,
-                                       isEraser As Boolean)
+                                       isEraser As Boolean,
+                                       Optional tone As ToneBrushSettings = Nothing,
+                                       Optional toneLabel As String = "")
             ' Der Text wird HIER aufgelöst, nicht drinnen aus einer Variablen: T() liest den Schlüssel
-            ' aus dem Literal, ein T(variable) fiele aus der Lokalisierung heraus.
+            ' aus dem Literal, ein T(variable) fiele aus der Lokalisierung heraus. Der Name eines
+            ' Bildpinsel-Zugs kommt schon übersetzt herein (ToneModeLabel).
             ' Die Sperre der transparenten Punkte wird HIER gelesen, auf dem UI-Faden: der Hintergrund
             ' darf die Ebene nicht anfassen, und wer sie mitten im Zug umlegt, meint den nächsten.
             Dim lockTransparent = target.LockTransparentPixels
-            EnqueueObjectImageEdit(target, targetPath, LocalizationService.T(If(isEraser, "Radiert", "Gemalt")),
+            Dim label = If(tone IsNot Nothing, toneLabel, LocalizationService.T(If(isEraser, "Radiert", "Gemalt")))
+            EnqueueObjectImageEdit(target, targetPath, label,
                                    LocalizationService.T("Malen fehlgeschlagen"),
-                                   Function() PaintObjectStrokeToFile(sourcePath, targetPath, renderAnnotation, dirty, coverage, lockTransparent),
+                                   Function() PaintObjectStrokeToFile(sourcePath, targetPath, renderAnnotation, dirty, coverage, lockTransparent, tone),
                                    Sub() coverage?.Dispose())
         End Sub
 
@@ -1112,12 +1129,13 @@ Namespace ViewModels
         Private Function PaintObjectStrokeToFile(sourcePath As String, targetPath As String,
                                                  renderAnnotation As ImageAnnotation,
                                                  dirty As SKRectI, coverage As SKBitmap,
-                                                 lockTransparent As Boolean) As Boolean
+                                                 lockTransparent As Boolean,
+                                                 Optional tone As ToneBrushSettings = Nothing) As Boolean
             Using decoded = ObjectImageMemory.DecodeOrCopy(sourcePath)
                 If decoded Is Nothing OrElse decoded.Width <= 0 OrElse decoded.Height <= 0 Then Return False
                 Dim clamped = ClampRectToBitmap(dirty, decoded.Width, decoded.Height)
                 If clamped.Width <> dirty.Width OrElse clamped.Height <> dirty.Height Then Return False
-                Using painted = PaintStrokeOntoImageCopy(decoded, renderAnnotation, dirty, coverage, lockTransparent)
+                Using painted = PaintStrokeOntoImageCopy(decoded, renderAnnotation, dirty, coverage, lockTransparent, tone)
                     If painted Is Nothing Then Return False
                     Return WriteObjectPaintFile(painted, targetPath)
                 End Using
@@ -1214,7 +1232,8 @@ Namespace ViewModels
         ''' dieselbe Nachnahme wie im Foto, damit die Zeichenroutine nichts davon wissen muss.</summary>
         Private Shared Function PaintStrokeOntoImageCopy(source As SKBitmap, renderAnnotation As ImageAnnotation,
                                                          dirty As SKRectI, coverage As SKBitmap,
-                                                         Optional lockTransparent As Boolean = False) As SKBitmap
+                                                         Optional lockTransparent As Boolean = False,
+                                                         Optional tone As ToneBrushSettings = Nothing) As SKBitmap
             Dim copy = New SKBitmap(source.Width, source.Height, SKColorType.Bgra8888, SKAlphaType.Premul)
             Try
                 Using canvas = New SKCanvas(copy)
@@ -1227,14 +1246,26 @@ Namespace ViewModels
                 Dim before As SKBitmap = Nothing
                 If coverage IsNot Nothing OrElse lockTransparent Then before = ImageProcessor.CopyRegion(copy, dirty)
                 Try
-                    Using canvas = New SKCanvas(copy)
-                        canvas.ClipRect(SKRect.Create(dirty.Left, dirty.Top, dirty.Width, dirty.Height))
-                        Dim adjDraw As New ImageAdjustments With {
-                            .SourceWidthPixels = copy.Width, .SourceHeightPixels = copy.Height}
-                        ImageProcessor.DrawAnnotationsOnCanvas(canvas, adjDraw, copy.Width, copy.Height,
-                                                               0, 0, copy.Width, copy.Height,
-                                                               New List(Of ImageAnnotation) From {renderAnnotation})
-                    End Using
+                    If tone IsNot Nothing Then
+                        ' Bildpinsel: die Deckung des Strichs, und darunter wird umgerechnet - dieselbe
+                        ' Rechnung wie im Foto (ImageProcessor.ApplyToneBrush).
+                        Dim strokeCoverage = ImageProcessor.BuildStrokeCoverage(renderAnnotation, dirty, copy.Width, copy.Height)
+                        If strokeCoverage Is Nothing OrElse
+                           Not ImageProcessor.ApplyToneBrush(copy, dirty, strokeCoverage, tone.Kind, tone.Range,
+                                                             tone.Saturate, tone.Color) Then
+                            copy.Dispose()
+                            Return Nothing
+                        End If
+                    Else
+                        Using canvas = New SKCanvas(copy)
+                            canvas.ClipRect(SKRect.Create(dirty.Left, dirty.Top, dirty.Width, dirty.Height))
+                            Dim adjDraw As New ImageAdjustments With {
+                                .SourceWidthPixels = copy.Width, .SourceHeightPixels = copy.Height}
+                            ImageProcessor.DrawAnnotationsOnCanvas(canvas, adjDraw, copy.Width, copy.Height,
+                                                                   0, 0, copy.Width, copy.Height,
+                                                                   New List(Of ImageAnnotation) From {renderAnnotation})
+                        End Using
+                    End If
                     If coverage IsNot Nothing Then
                         If Not ImageProcessor.RestoreOutsideCoverage(copy, before, coverage, dirty) Then
                             copy.Dispose()

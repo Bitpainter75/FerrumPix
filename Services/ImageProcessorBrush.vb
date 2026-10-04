@@ -834,6 +834,136 @@ Namespace Services
             Return bmp
         End Function
 
+        ' ── Bildpinsel: Abwedeln, Nachbelichten, Schwamm, Farbe ersetzen ──────────
+        '
+        ' Diese Arten tragen keine Farbe auf, sie veraendern das Bild unter dem Strich. Der Strich
+        ' liefert nur die DECKUNG (BuildStrokeCoverage, mit Groesse, Haerte, Deckkraft und Fluss wie
+        ' beim Pinsel); je Bildpunkt wird dann gerechnet und mit dieser Deckung ueberblendet.
+
+        ''' <summary>Hoechste Wirkung eines Zugs bei voller Deckung: Abwedeln und Nachbelichten
+        ''' verschieben einen Wert um hoechstens die Haelfte des Wegs zu Weiss bzw. Schwarz, der
+        ''' Schwamm aendert die Saettigung um hoechstens die Haelfte. Wie Photoshops Vorgabe von 50
+        ''' Prozent Belichtung: ein Zug ist deutlich, mehrere bauen auf.</summary>
+        Private Const ToneBrushMaxEffect As Double = 0.5
+
+        ''' <summary>Die Deckung eines Strichs im Rechteck <paramref name="region"/>, 0 bis 255 je
+        ''' Bildpunkt. Gezeichnet wird der Strich in deckendem Weiss auf leerem Grund, mit genau dem
+        ''' Zeichenweg des Pinsels; seine Deckung ist dann der Alphawert.</summary>
+        Friend Shared Function BuildStrokeCoverage(stroke As ImageAnnotation, region As SKRectI,
+                                                   sourceWidth As Integer, sourceHeight As Integer) As Byte()
+            If stroke Is Nothing OrElse region.Width <= 0 OrElse region.Height <= 0 Then Return Nothing
+            Using layer = New SKBitmap(New SKImageInfo(region.Width, region.Height, SKColorType.Bgra8888, SKAlphaType.Premul))
+                layer.Erase(SKColors.Transparent)
+                Using canvas = New SKCanvas(layer)
+                    canvas.Translate(-region.Left, -region.Top)
+                    Dim adjDraw As New ImageAdjustments With {.SourceWidthPixels = sourceWidth, .SourceHeightPixels = sourceHeight}
+                    DrawAnnotationsOnCanvas(canvas, adjDraw, sourceWidth, sourceHeight, 0, 0, sourceWidth, sourceHeight,
+                                            New List(Of ImageAnnotation) From {stroke})
+                End Using
+                Dim coverage(region.Width * region.Height - 1) As Byte
+                Dim row(layer.RowBytes - 1) As Byte
+                Dim pixels = layer.GetPixels()
+                For y As Integer = 0 To region.Height - 1
+                    Marshal.Copy(IntPtr.Add(pixels, y * layer.RowBytes), row, 0, layer.RowBytes)
+                    For x As Integer = 0 To region.Width - 1
+                        coverage(y * region.Width + x) = row(x * 4 + 3)
+                    Next
+                Next
+                Return coverage
+            End Using
+        End Function
+
+        ''' <summary>Wendet eine Art des Bildpinsels im Rechteck <paramref name="region"/> an.
+        ''' <paramref name="coverage"/> hat die Groesse des Rechtecks.
+        '''
+        ''' - "Dodge" (Abwedeln) hellt auf: jeder Kanal ruckt um einen Anteil seines Wegs zu Weiss.
+        ''' - "Burn" (Nachbelichten) dunkelt ab: jeder Kanal ruckt um einen Anteil zu Schwarz.
+        '''   Beide wirken gewichtet nach <paramref name="toneRange"/> ("Shadows", "Midtones",
+        '''   "Highlights") auf die Helligkeit des Punktes, damit man etwa nur die Lichter abwedelt.
+        ''' - "Sponge" (Schwamm) saettigt oder entsaettigt um die Helligkeit des Punktes herum.
+        ''' - "ReplaceColor" (Farbe ersetzen) nimmt Farbton und Saettigung von
+        '''   <paramref name="color"/> und behaelt die Helligkeit des Punktes - Struktur und
+        '''   Schattierung bleiben, nur die Farbe wechselt.
+        '''
+        ''' Das Arbeitsbild ist vormultipliziert, Bgra8888 oder Rgba8888. Gerechnet wird an den
+        ''' geraden Farben; ein voll durchsichtiger Punkt bleibt, wie er ist.</summary>
+        Friend Shared Function ApplyToneBrush(full As SKBitmap, region As SKRectI, coverage As Byte(),
+                                              kind As String, toneRange As String, saturate As Boolean,
+                                              color As SKColor) As Boolean
+            If full Is Nothing OrElse coverage Is Nothing Then Return False
+            If full.ColorType <> SKColorType.Bgra8888 AndAlso full.ColorType <> SKColorType.Rgba8888 Then Return False
+            Dim rect = SKRectI.Intersect(region, New SKRectI(0, 0, full.Width, full.Height))
+            If rect.Width <= 0 OrElse rect.Height <= 0 Then Return False
+            If coverage.Length < region.Width * region.Height Then Return False
+            Dim redFirst = full.ColorType = SKColorType.Rgba8888
+            Dim premul = full.AlphaType = SKAlphaType.Premul
+
+            ' Farbton und Saettigung der Ersatzfarbe, einmal.
+            Dim targetHue = 0.0, targetSat = 0.0, targetLight = 0.0
+            If kind = "ReplaceColor" Then RgbToHslF(color.Red / 255.0, color.Green / 255.0, color.Blue / 255.0, targetHue, targetSat, targetLight)
+
+            Dim stride = full.RowBytes
+            Dim basePtr = full.GetPixels()
+            Dim row(rect.Width * 4 - 1) As Byte
+            For y As Integer = rect.Top To rect.Bottom - 1
+                Dim rowPtr = IntPtr.Add(basePtr, y * stride + rect.Left * 4)
+                Marshal.Copy(rowPtr, row, 0, row.Length)
+                Dim changed = False
+                Dim covRow = (y - region.Top) * region.Width
+                For x As Integer = 0 To rect.Width - 1
+                    Dim cov = coverage(covRow + rect.Left + x - region.Left)
+                    If cov = 0 Then Continue For
+                    Dim o = x * 4
+                    Dim a = CInt(row(o + 3))
+                    If a = 0 Then Continue For
+                    Dim ri = If(redFirst, o, o + 2), bi = If(redFirst, o + 2, o)
+                    Dim unpremul = If(premul AndAlso a < 255, 255.0 / a, 1.0)
+                    Dim r = Math.Min(1.0, row(ri) * unpremul / 255.0)
+                    Dim g = Math.Min(1.0, row(o + 1) * unpremul / 255.0)
+                    Dim b = Math.Min(1.0, row(bi) * unpremul / 255.0)
+                    Dim strength = cov / 255.0
+                    Dim nr = r, ng = g, nb = b
+                    Dim luma = 0.299 * r + 0.587 * g + 0.114 * b
+
+                    Select Case kind
+                        Case "Dodge", "Burn"
+                            Dim weight As Double
+                            Select Case toneRange
+                                Case "Shadows" : weight = (1.0 - luma) * (1.0 - luma)
+                                Case "Highlights" : weight = luma * luma
+                                Case Else : weight = 4.0 * luma * (1.0 - luma)
+                            End Select
+                            Dim amount = strength * ToneBrushMaxEffect * weight
+                            If kind = "Dodge" Then
+                                nr = r + (1.0 - r) * amount : ng = g + (1.0 - g) * amount : nb = b + (1.0 - b) * amount
+                            Else
+                                nr = r * (1.0 - amount) : ng = g * (1.0 - amount) : nb = b * (1.0 - amount)
+                            End If
+                        Case "Sponge"
+                            Dim factor = If(saturate, 1.0 + strength * ToneBrushMaxEffect * 2.0, 1.0 - strength * ToneBrushMaxEffect)
+                            nr = luma + (r - luma) * factor : ng = luma + (g - luma) * factor : nb = luma + (b - luma) * factor
+                        Case "ReplaceColor"
+                            Dim h = 0.0, s = 0.0, l = 0.0
+                            RgbToHslF(r, g, b, h, s, l)
+                            Dim tr = 0.0, tg = 0.0, tb = 0.0
+                            HslToRgbF(targetHue, targetSat, l, tr, tg, tb)
+                            nr = r + (tr - r) * strength : ng = g + (tg - g) * strength : nb = b + (tb - b) * strength
+                        Case Else
+                            Continue For
+                    End Select
+
+                    Dim back = If(premul, a / 255.0, 1.0)
+                    row(ri) = CByte(Math.Max(0.0, Math.Min(255.0, Math.Round(Math.Max(0.0, Math.Min(1.0, nr)) * 255.0 * back))))
+                    row(o + 1) = CByte(Math.Max(0.0, Math.Min(255.0, Math.Round(Math.Max(0.0, Math.Min(1.0, ng)) * 255.0 * back))))
+                    row(bi) = CByte(Math.Max(0.0, Math.Min(255.0, Math.Round(Math.Max(0.0, Math.Min(1.0, nb)) * 255.0 * back))))
+                    changed = True
+                Next
+                If changed Then Marshal.Copy(row, 0, rowPtr, row.Length)
+            Next
+            full.NotifyPixelsChanged()
+            Return True
+        End Function
+
     End Class
 
 End Namespace

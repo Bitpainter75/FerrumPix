@@ -9178,4 +9178,70 @@
   <data name="Um_wie_viele_Bildpunkte_die_Kn_pfe_darunter_die__d9bce2a1" xml:space="preserve">
     <value>Aşağıdaki düğmelerin seçimi kaç piksel değiştireceği</value>
   </data>
+  <data name="Saum_9899abe4" xml:space="preserve">
+    <value>Şerit</value>
+  </data>
+  <data name="Wie_breit_der_Streifen_entlang_der_Kante_ist_in__a1c39a5e" xml:space="preserve">
+    <value>Maskenin görüntüyü izlediği kenar boyunca şeridin genişliği, piksel olarak</value>
+  </data>
+  <data name="Die_Kante_der_Maske_im_Saum_am_Bild_entlangf_hre_9ded6f70" xml:space="preserve">
+    <value>Maskenin kenarını şerit içinde görüntüyü izleyecek şekilde yönlendirir; saç, kürk ve ince dallar için. İçeride ve dışarıda maske olduğu gibi kalır.</value>
+  </data>
+  <data name="Abwedeln_34de3584" xml:space="preserve">
+    <value>Soldur</value>
+  </data>
+  <data name="Nachbelichten_4e42c79a" xml:space="preserve">
+    <value>Yak</value>
+  </data>
+  <data name="Schwamm_26be8479" xml:space="preserve">
+    <value>Sünger</value>
+  </data>
+  <data name="Farbe_ersetzen_f6a9d594" xml:space="preserve">
+    <value>Rengi değiştir</value>
+  </data>
+  <data name="Radiergummi_nimmt_Bild_weg_oder_malt_die_Hinterg_8cd13de1" xml:space="preserve">
+    <value>Silgi: görüntüyü siler veya arka plan rengini boyar</value>
+  </data>
+  <data name="Abwedeln_hellt_unter_dem_Pinsel_auf_8c32d2e3" xml:space="preserve">
+    <value>Soldur: fırçanın altını aydınlatır</value>
+  </data>
+  <data name="Nachbelichten_dunkelt_unter_dem_Pinsel_ab_9f832bdd" xml:space="preserve">
+    <value>Yak: fırçanın altını koyulaştırır</value>
+  </data>
+  <data name="Schwamm_nimmt_unter_dem_Pinsel_Farbe_weg_oder_ve_bb69c814" xml:space="preserve">
+    <value>Sünger: fırçanın altındaki rengi azaltır veya güçlendirir</value>
+  </data>
+  <data name="Farbe_ersetzen_f_rbt_unter_dem_Pinsel_um_und_beh_a1ff8737" xml:space="preserve">
+    <value>Rengi değiştir: parlaklığı ve dokuyu koruyarak fırçanın altını yeniden renklendirir</value>
+  </data>
+  <data name="Wie_stark_ein_Zug_wirkt_Mehrere_Z_ge_bereinander_17a6771e" xml:space="preserve">
+    <value>Tek bir darbenin ne kadar güçlü etki ettiği. Üst üste birkaç darbe etkiyi artırır</value>
+  </data>
+  <data name="Bereich_7a3ac9a3" xml:space="preserve">
+    <value>Aralık</value>
+  </data>
+  <data name="Wirkt_vor_allem_auf_die_dunklen_die_mittleren_od_fcc6832c" xml:space="preserve">
+    <value>Esas olarak koyu, orta veya açık tonlara etki eder</value>
+  </data>
+  <data name="Wirkung_3038433f" xml:space="preserve">
+    <value>Etki</value>
+  </data>
+  <data name="Ents_ttigen_9ed874e3" xml:space="preserve">
+    <value>Doygunluğu azalt</value>
+  </data>
+  <data name="S_ttigen_2775f156" xml:space="preserve">
+    <value>Doygunluğu artır</value>
+  </data>
+  <data name="Neue_Farbe_fe5ca8ce" xml:space="preserve">
+    <value>Yeni renk</value>
+  </data>
+  <data name="Farbton_und_S_ttigung_dieser_Farbe_ersetzen_die__61d75dd8" xml:space="preserve">
+    <value>Bu rengin tonu ve doygunluğu görüntününkilerin yerini alır; parlaklık ve doku korunur</value>
+  </data>
+  <data name="Bildpinsel_3e6ee062" xml:space="preserve">
+    <value>Görüntü fırçası</value>
+  </data>
+  <data name="Bildpinsel_Radieren_Abwedeln_Nachbelichten_Schwa_3068b135" xml:space="preserve">
+    <value>Görüntü fırçası: sil, soldur, yak, sünger, rengi değiştir</value>
+  </data>
 </root>

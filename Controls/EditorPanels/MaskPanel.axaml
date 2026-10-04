@@ -488,6 +488,33 @@
                                              Minimum="0" Maximum="200" Increment="1"
                                              FormatString="F0" />
                 </Grid>
+                <!-- KANTE VERFEINERN, derselbe Befehl wie im Auswahl-Werkzeug (ModifySelection mit
+                     "Refine"): eine geoeffnete Maske ist hier eine laufende Auswahl, und das Ergebnis
+                     geht in die Ebenenmaske zurueck. Gerade hier lohnt es sich am meisten - wer mit
+                     der Objektauswahl ein Portraet maskiert, hat die Haare an der Kante. Sichtbar wie
+                     die weiche Kante: ein Verlauf hat keinen gemalten Rand, dem etwas folgen koennte.
+                     Der Betrag ist derselbe wie im Auswahl-Werkzeug. -->
+                <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center"
+                      IsVisible="{Binding ShowMaskFeather}">
+                    <TextBlock Text="Saum" Foreground="{DynamicResource FP.Text.Secondary}"
+                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}"
+                               ToolTip.Tip="Wie breit der Streifen entlang der Kante ist, in dem die Maske dem Bild folgt, in Bildpunkten" />
+                    <icons:RoundSlider Grid.Column="1" Minimum="1" Maximum="200"
+                                       DefaultValue="10"
+                                       Value="{Binding SelectionModifyAmount}" Margin="0,0" />
+                    <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                             Value="{Binding SelectionModifyAmount, Mode=TwoWay}"
+                                             Minimum="1" Maximum="200" Increment="1"
+                                             FormatString="F0" />
+                </Grid>
+                <Button Classes="ghost" HorizontalAlignment="Stretch"
+                        HorizontalContentAlignment="Center" Padding="6,4"
+                        IsVisible="{Binding ShowMaskFeather}"
+                        IsEnabled="{Binding HasActiveSelection}"
+                        Command="{Binding ModifySelectionCommand}" CommandParameter="Refine"
+                        Content="Kante verfeinern"
+                        ToolTip.Tip="Die Kante der Maske im Saum am Bild entlangführen, für Haare, Fell und feine Zweige. Innen und außen bleibt die Maske, wie sie ist." />
+
                 <!-- PRÜFEN. Zwei Anzeigezustände, die an der Maske selbst nichts ändern: der
                      Graustufenblick zeigt die Deckung als Grauwerte (am roten Schleier ist 90 von
                      100 Prozent nicht zu sehen), und "Maske aus" lässt sie überall decken, damit
