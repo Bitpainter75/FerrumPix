@@ -129,11 +129,34 @@ Namespace ViewModels
             End Set
         End Property
 
+        ''' <summary>Der Rueckfallwert der drei Anteilsregler (Doppelklick) haengt an der gezeigten
+        ''' Zeile: 100 auf dem eigenen Kanal, sonst 0, in der Grauzeile 40, 40 und 20.</summary>
+        Public ReadOnly Property ChannelMixerRedDefault As Double
+            Get
+                Return ChannelMixerNeutral(ChannelMixerRow * 4)
+            End Get
+        End Property
+
+        Public ReadOnly Property ChannelMixerGreenDefault As Double
+            Get
+                Return ChannelMixerNeutral(ChannelMixerRow * 4 + 1)
+            End Get
+        End Property
+
+        Public ReadOnly Property ChannelMixerBlueDefault As Double
+            Get
+                Return ChannelMixerNeutral(ChannelMixerRow * 4 + 2)
+            End Get
+        End Property
+
         Private Sub RaiseChannelMixerRowChanged()
             Me.RaisePropertyChanged(NameOf(ChannelMixerRed))
             Me.RaisePropertyChanged(NameOf(ChannelMixerGreen))
             Me.RaisePropertyChanged(NameOf(ChannelMixerBlue))
             Me.RaisePropertyChanged(NameOf(ChannelMixerConstant))
+            Me.RaisePropertyChanged(NameOf(ChannelMixerRedDefault))
+            Me.RaisePropertyChanged(NameOf(ChannelMixerGreenDefault))
+            Me.RaisePropertyChanged(NameOf(ChannelMixerBlueDefault))
         End Sub
 
         Public ReadOnly Property ResetChannelMixerCommand As ICommand

@@ -2976,6 +2976,7 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(IsFrameAnnotationSelected))
             Me.RaisePropertyChanged(NameOf(ShowAnnotationGeometryControls))
             Me.RaisePropertyChanged(NameOf(ShowAnnotationProperties))
+            Me.RaisePropertyChanged(NameOf(ShowSingleAnnotationEffects))
             Me.RaisePropertyChanged(NameOf(BorderSize))
             Me.RaisePropertyChanged(NameOf(BorderCornerRadius))
             Me.RaisePropertyChanged(NameOf(BorderEffect))
@@ -22477,6 +22478,11 @@ Namespace ViewModels
                     Return LocalizationService.T("Leinwandgröße")
                 Case NameOf(StraightenDegrees), NameOf(StraightenExpandCanvas), NameOf(StraightenAutoCrop)
                     Return LocalizationService.T("Gerade richten")
+                ' Wortgleich mit den Zeilen der Gruppe "Perspektive" im Werkzeug Verzerren.
+                Case NameOf(PerspectiveVertical) : Return CombineHistoryLabel("Perspektive", "Senkrecht")
+                Case NameOf(PerspectiveHorizontal) : Return CombineHistoryLabel("Perspektive", "Waagerecht")
+                Case NameOf(PerspectiveAspect) : Return CombineHistoryLabel("Perspektive", "Seitenverhältnis")
+                Case NameOf(PerspectiveScale) : Return CombineHistoryLabel("Perspektive", "Größe")
                 Case "Tonwertkurve"
                     Return LocalizationService.T("Tonwertkurve")
                 ' DER FARBMISCHER nennt Band UND Regler: "Farbmischer: Aqua Sättigung". Der blosse
@@ -22518,8 +22524,32 @@ Namespace ViewModels
                 ' Die folgenden Schluessel sind keine Eigenschaftsnamen, sondern Marken, die eine
                 ' Stelle im Quelltext selbst gesetzt hat (CaptureUndoState("Gitter") und so fort).
                 ' Ohne eigenen Fall hiessen alle diese Handgriffe "Anpassung".
-                Case "Verzerren", "Verformen"
+                Case "Verzerren", "Verformen", "Objektverzerrung"
                     Return LocalizationService.T("Verzerren")
+                Case "AdjustmentLayerOpacity"
+                    Return CombineHistoryLabel("Ebene", "Deckkraft")
+                Case "AdjustmentLayerVisibility"
+                    Return CombineHistoryLabel("Ebene", "Sichtbarkeit")
+                Case "AnnotationGroupVisibility"
+                    Return CombineHistoryLabel("Gruppe", "Sichtbarkeit")
+                Case "AnnotationGroupTransform"
+                    Return CombineHistoryLabel("Auswahl", "Transformieren")
+                Case "LayerNudge"
+                    Return CombineHistoryLabel("Ebene", "Verschieben")
+                ' Wortgleich mit den Bedienelementen im Maskenwerkzeug und im Auswahlwerkzeug.
+                Case "IsMaskDisabled"
+                    Return LocalizationService.T("Maske aus")
+                Case "MaskDensity"
+                    Return CombineHistoryLabel("Maske", "Dichte")
+                Case "SelectionFeather"
+                    Return CombineHistoryLabel("Auswahl", "Weiche Kante")
+                ' Der Knopf "keine Korrektur" in der Objektivkorrektur nimmt alles darin zurueck.
+                Case "Objektivkorrektur"
+                    Return ResetHistoryLabel("Objektivkorrektur")
+                ' Drehen und Spiegeln des ganzen Bildes. Der Schluessel ist der DEUTSCHE Text: frueher
+                ' kam er schon uebersetzt hier an, und kein Fall passte mehr.
+                Case "Drehen", "Horizontal spiegeln", "Vertikal spiegeln"
+                    Return LocalizationService.T(propertyName)
                 Case "Gitter"
                     Return CombineHistoryLabel("Verzerren", "Gitter")
                 Case "Linien"
@@ -22814,6 +22844,8 @@ Namespace ViewModels
                     Return outline & "aperture.svg"
                 Case NameOf(StraightenDegrees), NameOf(StraightenExpandCanvas), NameOf(StraightenAutoCrop)
                     Return outline & "rotate-2.svg"
+                Case NameOf(PerspectiveVertical), NameOf(PerspectiveHorizontal), NameOf(PerspectiveAspect), NameOf(PerspectiveScale)
+                    Return outline & "perspective.svg"
                 Case "Tonwertkurve"
                     Return outline & "chart-line.svg"
                 ' Alle 24 Baender des Farbmischers, also auch die HELLIGKEIT: sie tragen denselben
@@ -23620,7 +23652,7 @@ Namespace ViewModels
                 NameHistoryStep(LocalizationService.T(If(degrees < 0, "Objekt links gedreht", "Objekt rechts gedreht")))
                 Return
             End If
-            CaptureUndoState(LocalizationService.T("Drehen"))
+            CaptureUndoState("Drehen")
             _rotationDegrees = ((_rotationDegrees + degrees) Mod 360 + 360) Mod 360
             ' Ein Vierteldreh vertauscht Breite und Höhe des sichtbaren Bildes. Ein manueller
             ' Zoom würde dadurch denselben Maßstab/Ausschnitt auf die neue Geometrie übertragen
@@ -23658,7 +23690,7 @@ Namespace ViewModels
                 NameHistoryStep(LocalizationService.T("Objekt horizontal gespiegelt"))
                 Return
             End If
-            CaptureUndoState(LocalizationService.T("Horizontal spiegeln"))
+            CaptureUndoState("Horizontal spiegeln")
             _flipH = Not _flipH
             Me.RaisePropertyChanged(NameOf(HasRotateChanges))
             Me.RaisePropertyChanged(NameOf(HasTransformChanges))
@@ -23675,7 +23707,7 @@ Namespace ViewModels
                 NameHistoryStep(LocalizationService.T("Objekt vertikal gespiegelt"))
                 Return
             End If
-            CaptureUndoState(LocalizationService.T("Vertikal spiegeln"))
+            CaptureUndoState("Vertikal spiegeln")
             _flipV = Not _flipV
             Me.RaisePropertyChanged(NameOf(HasRotateChanges))
             Me.RaisePropertyChanged(NameOf(HasTransformChanges))
@@ -24149,6 +24181,7 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(PendingInsertKind))
             Me.RaisePropertyChanged(NameOf(HasPendingInsertKind))
             Me.RaisePropertyChanged(NameOf(ShowAnnotationProperties))
+            Me.RaisePropertyChanged(NameOf(ShowSingleAnnotationEffects))
             Me.RaisePropertyChanged(NameOf(EffectiveAnnotationKind))
             Me.RaisePropertyChanged(NameOf(ShowWatermarkPresetControls))
             Me.RaisePropertyChanged(NameOf(ShowImageSourceControls))
@@ -28836,6 +28869,11 @@ Namespace ViewModels
             ' Geht das Symbolfeld auf, wird die Liste jetzt gebraucht - und erst jetzt. Hier steht
             ' es richtig, weil genau diese Stelle die Sichtbarkeit der Werkzeugfelder neu bewertet.
             If ShowSymbolControls Then EnsureShapeIconsLoaded()
+            ' Beide haengen am Werkzeug (im Zeichnen-Werkzeug bleiben sie weg) und muessen deshalb
+            ' bei jedem Wechsel neu bewertet werden. Schatten und Glühen hingen sonst an einem
+            ' alten Stand und standen in jedem Werkzeug, auch ohne eine Ebene im Bild.
+            Me.RaisePropertyChanged(NameOf(ShowAnnotationProperties))
+            Me.RaisePropertyChanged(NameOf(ShowSingleAnnotationEffects))
             Me.RaisePropertyChanged(NameOf(ShowCropAdjustments))
             Me.RaisePropertyChanged(NameOf(ShowRotateAdjustments))
             Me.RaisePropertyChanged(NameOf(ShowResizeAdjustments))

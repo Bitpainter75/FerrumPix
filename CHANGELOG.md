@@ -19,6 +19,20 @@
   keep their layers, and nested groups that some versions write differently no longer fall apart
   into loose layers.
 
+- Lens correction no longer leaves colored streaks in the corners. Where the correction would
+  reach past the edge of the picture, it now enlarges the picture just enough to fill the frame,
+  in the editor and in the viewer.
+
+- Every step in the history carries its own name. Rotating and flipping the whole picture, the
+  perspective sliders, mask density, the feather of a selection, the opacity and visibility of
+  adjustment layers and groups, nudging a layer and resetting the lens correction showed up as
+  just "Adjustment" before.
+
+- Double-clicking a channel mixer slider returns it to its starting value, 100 on its own channel.
+
+- Shadow and glow no longer show up in every tool after opening a picture while a new object
+  was still armed for placing.
+
 - Color buttons in the editor panels sit at the right edge, like the number fields, so a longer
   label such as "Background color" no longer runs into them.
 

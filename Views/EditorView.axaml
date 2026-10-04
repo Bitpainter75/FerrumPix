@@ -686,8 +686,7 @@
                         </StackPanel>
                     </Button>
                     <!-- BILDPINSEL: Radierer, Abwedeln, Nachbelichten, Schwamm und Farbe ersetzen hinter
-                         EINEM Knopf (Entscheidung Patrick, 2026-10-04). Der Malpinsel darueber bleibt
-                         allein. Der Knopf fuehrt zur zuletzt benutzten Art; gewechselt wird im Panel. -->
+                         EINEM Knopf. Der Malpinsel darueber bleibt allein. Der Knopf fuehrt zur zuletzt benutzten Art; gewechselt wird im Panel. -->
                     <Button Classes="tool-btn-row"
                             ToolTip.Tip="Bildpinsel: Radieren, Abwedeln, Nachbelichten, Schwamm, Farbe ersetzen"
                             IsEnabled="{Binding CanUsePixelTools}"

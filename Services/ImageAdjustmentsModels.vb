@@ -412,9 +412,9 @@ Namespace Services
         ' ── Weitere Korrekturen (Farbe und Effekte) ─────────────────────────
         '
         ' Kanalmixer und Verlaufsumsetzung (Werkzeug Farbe), Tontrennung und Schwellenwert
-        ' (Werkzeug Effekte). Gewoehnliche Pixelregler: sie wirken
-        ' global UND auf jeder Korrekturebene mit Maske, ohne eigene Ebenenart (Entscheidung Patrick,
-        ' 2026-10-04). Keiner hat ein crs:-Gegenstueck; ein XMP-Preset laesst sie deshalb unberuehrt.
+        ' (Werkzeug Effekte). Gewoehnliche Pixelregler: sie wirken global UND auf jeder
+        ' Korrekturebene mit Maske, ohne eigene Ebenenart. Keiner hat ein crs:-Gegenstueck; ein
+        ' XMP-Preset laesst sie deshalb unberuehrt.
         ' Ab Werk neutral: jede Stufe tut erst etwas, wenn ein Wert vom Werkszustand abweicht.
         ' Gerechnet wird in der verschmolzenen Punktkette (ImageProcessorPointOps).
 

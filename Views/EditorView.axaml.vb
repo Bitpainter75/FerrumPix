@@ -3987,7 +3987,7 @@ Namespace Views
                 ' Hintergrundfarbe): es wird keine Farbe aufgetragen, das Ergebnis entsteht erst mit
                 ' dem Zug. Die Vorschau zeigt nur, WO er wirkt: ein heller Schleier mit dunklem Saum,
                 ' damit er auf hellem wie dunklem Grund sichtbar ist. Beim Radierer stand hier ein
-                ' Schachbrett; alle Arten zeigen sich jetzt gleich (Wunsch Patrick, 2026-10-04).
+                ' Schachbrett; alle Arten zeigen sich jetzt gleich.
                 line.Stroke = New SolidColorBrush(Color.Parse("#FFFFFFFF"))
                 line.StrokeDashArray = Nothing
                 line.Opacity = 0.22

@@ -9,8 +9,8 @@ Namespace ViewModels
 
     ''' <summary>Der BILDPINSEL: ein Werkzeug fuer alles, was mit dem Pinsel das vorhandene Bild
     ''' veraendert, statt Farbe aufzutragen - Radieren, Abwedeln, Nachbelichten, Schwamm und Farbe
-    ''' ersetzen. In der Werkzeugleiste EIN Knopf (Entscheidung Patrick, 2026-10-04): der Malpinsel
-    ''' bleibt allein, die uebrigen Arten stehen zusammen, statt je einen eigenen Platz zu belegen.
+    ''' ersetzen. In der Werkzeugleiste EIN Knopf: der Malpinsel bleibt allein, die uebrigen Arten
+    ''' stehen zusammen, statt je einen eigenen Platz zu belegen.
     '''
     ''' Intern ist es dasselbe Zeichenwerkzeug wie der Pinsel (EditorTool.Draw). Der Radierer
     ''' behaelt seinen eigenen Weg (_isEraserMode, AddBrushStrokeCore); die vier uebrigen Arten

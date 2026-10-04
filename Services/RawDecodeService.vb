@@ -815,8 +815,10 @@ Namespace Services
         ''' Alternative waere, auf den gueltigen Bereich zu beschneiden und damit die Bildmasse zu
         ''' aendern - dann muessten Beschnitt, Masken, Objekte und Rezepte mitwandern. Genau das
         ''' soll nicht passieren, weil die Korrektur eine Anfangs-Entscheidung ist und die
-        ''' Bearbeitung danach kommt. Am Rand entstehen dadurch schmale leere Streifen, die mit den
-        ''' Randpixeln gefuellt werden.</summary>
+        ''' Bearbeitung danach kommt. Wo die Korrektur ueber den Rand hinaus laese, wird das Bild
+        ''' stattdessen gerade so weit vergroessert, dass jede Abtastung im Bild liegt
+        ''' (<see cref="DistortionFillScale"/>); die Bildmasse bleiben dabei dieselben. Nur wenn eine
+        ''' Kennlinie mehr als das Doppelte verlangte, greift noch das Klemmen auf den Rand.</summary>
         Public Shared Function RemoveDistortion(source As SKBitmap,
                                                     k As LensDataService.Korrektur) As SKBitmap
             If source Is Nothing OrElse k Is Nothing OrElse Not k.HasDistortion Then Return Nothing
@@ -840,6 +842,11 @@ Namespace Services
             ' und jede Datei ohne Bildmasse in den Aufnahmedaten haetten dort einen Faktor daneben.
             Dim norm = LensDataService.NormScaleFor(k, width, height)
             If norm <= 0.0 Then Return Nothing
+            ' Wo die Korrektur ueber den Rand hinaus liest, gibt es keine Bildpunkte. Das Bild wird
+            ' deshalb gerade so weit vergroessert, dass jeder Punkt aus dem Bild kommt, wie bei den
+            ' ueblichen Entwicklern. Vorher wurde dort der Rand wiederholt, und an einem
+            ' kissenfoermig korrigierenden Objektiv lagen in den Ecken breite Streifen.
+            Dim zoom = DistortionFillScale(k, width, height, norm)
 
             ' ZEILENWEISE PARALLEL. Jede Zeile schreibt ausschliesslich in ihren eigenen Abschnitt
             ' der Ausgabe und liest nur aus der unveraenderlichen Quellkopie - die Zeilen sind
@@ -848,10 +855,10 @@ Namespace Services
             ' dass ein Objektivwechsel spuerbar stand.
             Parallel.For(0, height,
                 Sub(y)
-                    Dim dy = y - cy
+                    Dim dy = (y - cy) / zoom
                     Dim z = y * width * 4
                     For x = 0 To width - 1
-                        Dim dx = x - cx
+                        Dim dx = (x - cx) / zoom
                         Dim rPix = Math.Sqrt(dx * dx + dy * dy)
                         Dim sx = cx, sy = cy
                         If rPix > 0.0 Then
@@ -872,6 +879,56 @@ Namespace Services
             Return target
         End Function
 
+        ''' <summary>Der Faktor (mindestens 1), um den das entzerrte Bild vergroessert werden muss,
+        ''' damit keine Abtastung ausserhalb der Quelle landet.
+        '''
+        ''' Gemessen wird am Rand des Zielbilds, dort liegen die weitesten Abtastungen: je Kante 256
+        ''' Punkte, die Ecken eingeschlossen. Fuer einen Probefaktor wird jeder Randpunkt so
+        ''' zurueckgerechnet wie in der Umrechnung selbst; liegt einer ausserhalb, ist der Faktor zu
+        ''' klein. Die Abbildung ist entlang jedes Strahls monoton, also findet eine Halbierungssuche
+        ''' den kleinsten passenden Faktor. Eine tonnenfoermige Korrektur liest ohnehin innen und
+        ''' bleibt bei 1. Gedeckelt bei 2: mehr waere eine kaputte Kennlinie, kein Rand.</summary>
+        Friend Shared Function DistortionFillScale(k As LensDataService.Korrektur, width As Integer, height As Integer,
+                                                   norm As Double) As Double
+            Dim cx = (width - 1) / 2.0, cy = (height - 1) / 2.0
+            Dim inset = If(width > 4 * DistortionEdgeInset AndAlso height > 4 * DistortionEdgeInset, DistortionEdgeInset, 0)
+            Dim minX = CDbl(inset), maxX = width - 1.001 - inset
+            Dim minY = CDbl(inset), maxY = height - 1.001 - inset
+
+            Const Steps As Integer = 256
+            Dim border As New List(Of (X As Double, Y As Double))()
+            For i = 0 To Steps
+                Dim t = i / CDbl(Steps)
+                border.Add((t * (width - 1), 0.0))
+                border.Add((t * (width - 1), height - 1.0))
+                border.Add((0.0, t * (height - 1)))
+                border.Add((width - 1.0, t * (height - 1)))
+            Next
+
+            Dim fits = Function(zoom As Double) As Boolean
+                           For Each p In border
+                               Dim dx = (p.X - cx) / zoom, dy = (p.Y - cy) / zoom
+                               Dim rPix = Math.Sqrt(dx * dx + dy * dy)
+                               If rPix <= 0.0 Then Continue For
+                               Dim rNorm = rPix * norm
+                               Dim factor = LensDataService.DistortionRadius(k, rNorm) / rNorm
+                               Dim sx = cx + dx * factor, sy = cy + dy * factor
+                               If sx < minX OrElse sx > maxX OrElse sy < minY OrElse sy > maxY Then Return False
+                           Next
+                           Return True
+                       End Function
+
+            If fits(1.0) Then Return 1.0
+            Const MaxZoom As Double = 2.0
+            If Not fits(MaxZoom) Then Return 1.0
+            Dim lo = 1.0, hi = MaxZoom
+            For iteration = 1 To 40
+                Dim mid = (lo + hi) / 2.0
+                If fits(mid) Then hi = mid Else lo = mid
+            Next
+            Return hi
+        End Function
+
         ''' <summary>Wie weit innerhalb des Bildes die Abtastung der Verzeichnung spaetestens
         ''' haengen bleibt. Der AEUSSERSTE Ring eines entwickelten RAW ist unzuverlaessig: dort
         ''' fehlt dem Demosaic die Nachbarschaft, und libraw liefert am Bildeck einzelne
@@ -882,8 +939,9 @@ Namespace Services
         Private Const DistortionEdgeInset As Integer = 2
 
         ''' <summary>Ein Bgra-Pixel bilinear aus der Quelle ziehen. Ausserhalb wird auf den Rand
-        ''' geklemmt: die Korrektur zieht das Bild an den Ecken ueber den Rand hinaus, und ein
-        ''' geklemmter Streifen ist unauffaelliger als ein schwarzer.</summary>
+        ''' geklemmt. Das ist nur noch die Absicherung: DistortionFillScale vergroessert das Bild so,
+        ''' dass keine Abtastung mehr hinausgeht. Greift sie nicht (Kennlinie jenseits des Deckels),
+        ''' ist ein geklemmter Streifen unauffaelliger als ein schwarzer.</summary>
         Private Shared Sub SampleBilinear(source As Byte(), width As Integer, height As Integer,
                                           stride As Integer, sx As Double, sy As Double,
                                           target As Byte(), targetOffset As Integer)
