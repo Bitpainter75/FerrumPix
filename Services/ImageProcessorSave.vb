@@ -78,9 +78,15 @@ Namespace Services
         '''
         ''' Was dabei fest wird: Korrekturebenen, Text und Formen kommen als Bildpunkte heraus. In
         ''' der .fpx bleiben sie veränderbar, im PSD nicht - Photoshop legt sie je Art in einem
-        ''' eigenen, kaum dokumentierten Datensatz ab.</summary>
+        ''' eigenen, kaum dokumentierten Datensatz ab.
+        '''
+        ''' Aus <paramref name="sourcePath"/> kommen die Aufloesung (immer, sie ist eine Eigenschaft
+        ''' des Bilds) und mit <paramref name="preserveMetadata"/> das XMP-Paket, so wie die anderen
+        ''' Speicherwege die Aufnahmedaten uebernehmen.</summary>
         Public Shared Function ExportLayeredPsd(targetPath As String, composite As SKBitmap,
-                                                background As SKBitmap, adj As ImageAdjustments) As Boolean
+                                                background As SKBitmap, adj As ImageAdjustments,
+                                                Optional sourcePath As String = Nothing,
+                                                Optional preserveMetadata As Boolean = False) As Boolean
             If String.IsNullOrWhiteSpace(targetPath) OrElse composite Is Nothing Then Return False
 
             Dim layers As New List(Of PsdWriterService.PsdLayerInput)()
@@ -200,7 +206,9 @@ Namespace Services
                 ' Grundbild des Rezeptwegs IST diese unterste Ebene.
                 Dim roundtrip = BuildPsdRoundtripRecipe(adj)
                 Return PsdWriterService.Save(targetPath, composite, layers,
-                                             If(roundtrip Is Nothing, Nothing, PsdRecipeService.Build(roundtrip)))
+                                             If(roundtrip Is Nothing, Nothing, PsdRecipeService.Build(roundtrip)),
+                                             ReadSourceResolutionDpi(sourcePath),
+                                             If(preserveMetadata, ReadSourceXmpForPsd(sourcePath), Nothing))
             Finally
                 ' Nur die selbst erzeugten Objektebenen freigeben - Hintergrund und Gesamtbild
                 ' gehören dem Aufrufer und werden hier nur gelesen. Die Maskenraster entstehen
@@ -212,6 +220,74 @@ Namespace Services
                     layer.MaskPixels?.Dispose()
                 Next
             End Try
+        End Function
+
+        ''' <summary>Die Aufloesung der Quelle in Punkten je Zoll, oder 0, wenn sie keine nennt.
+        '''
+        ''' Gelesen aus Ressource 1005 einer PSD, sonst aus EXIF (Einheit Zoll oder Zentimeter),
+        ''' JFIF (dieselben Einheiten) oder dem PNG-Block pHYs (Punkte je Meter). EXIF geht vor, weil
+        ''' Kameras und Bearbeiter dort den gemeinten Wert eintragen und JFIF oft nur 1:1 ohne
+        ''' Einheit steht. Eine Angabe ohne Einheit ist ein Seitenverhaeltnis und keine Aufloesung.</summary>
+        Friend Shared Function ReadSourceResolutionDpi(sourcePath As String) As Double
+            If String.IsNullOrWhiteSpace(sourcePath) OrElse Not File.Exists(sourcePath) Then Return 0
+            Try
+                If PsdPreviewService.IsSupportedPsd(sourcePath) Then
+                    Dim info = PsdPreviewService.ReadResourceFromFile(sourcePath, 1005)
+                    If info Is Nothing OrElse info.Length < 16 Then Return 0
+                    Dim fixedValue = (CLng(info(0)) << 24) Or (CLng(info(1)) << 16) Or (CLng(info(2)) << 8) Or CLng(info(3))
+                    Dim unit = (CInt(info(4)) << 8) Or info(5)
+                    Dim value = fixedValue / 65536.0
+                    ' Einheit 2 heisst Punkte je Zentimeter.
+                    Return PlausibleDpi(If(unit = 2, value * 2.54, value))
+                End If
+
+                Dim directories = MetadataExtractor.ImageMetadataReader.ReadMetadata(sourcePath)
+                For Each exif In directories.OfType(Of MetadataExtractor.Formats.Exif.ExifIfd0Directory)()
+                    Dim resolution As MetadataExtractor.Rational
+                    If Not MetadataExtractor.DirectoryExtensions.TryGetRational(exif, MetadataExtractor.Formats.Exif.ExifDirectoryBase.TagXResolution, resolution) Then Continue For
+                    Dim unit As Integer
+                    If Not MetadataExtractor.DirectoryExtensions.TryGetInt32(exif, MetadataExtractor.Formats.Exif.ExifDirectoryBase.TagResolutionUnit, unit) Then unit = 2
+                    If unit = 1 Then Continue For
+                    Dim dpi = PlausibleDpi(If(unit = 3, resolution.ToDouble() * 2.54, resolution.ToDouble()))
+                    If dpi > 0 Then Return dpi
+                Next
+                For Each jfif In directories.OfType(Of MetadataExtractor.Formats.Jfif.JfifDirectory)()
+                    Dim unit, resX As Integer
+                    If Not MetadataExtractor.DirectoryExtensions.TryGetInt32(jfif, MetadataExtractor.Formats.Jfif.JfifDirectory.TagUnits, unit) OrElse unit = 0 Then Continue For
+                    If Not MetadataExtractor.DirectoryExtensions.TryGetInt32(jfif, MetadataExtractor.Formats.Jfif.JfifDirectory.TagResX, resX) Then Continue For
+                    Dim dpi = PlausibleDpi(If(unit = 2, resX * 2.54, resX))
+                    If dpi > 0 Then Return dpi
+                Next
+                For Each png In directories.OfType(Of MetadataExtractor.Formats.Png.PngDirectory)()
+                    Dim unit, perUnit As Integer
+                    If Not MetadataExtractor.DirectoryExtensions.TryGetInt32(png, MetadataExtractor.Formats.Png.PngDirectory.TagUnitSpecifier, unit) OrElse unit <> 1 Then Continue For
+                    If Not MetadataExtractor.DirectoryExtensions.TryGetInt32(png, MetadataExtractor.Formats.Png.PngDirectory.TagPixelsPerUnitX, perUnit) Then Continue For
+                    Dim dpi = PlausibleDpi(perUnit * 0.0254)
+                    If dpi > 0 Then Return dpi
+                Next
+            Catch ex As Exception
+                DiagnosticLogService.LogException("PsdExport.Resolution", ex)
+            End Try
+            Return 0
+        End Function
+
+        ''' <summary>Gerundet auf zwei Stellen (aus Zentimetern und Metern kommen krumme Werte wie
+        ''' 299,9994); alles ausserhalb 1 bis 30000 gilt als unbrauchbar.</summary>
+        Private Shared Function PlausibleDpi(value As Double) As Double
+            If Double.IsNaN(value) OrElse value < 1 OrElse value > 30000 Then Return 0
+            Return Math.Round(value, 2)
+        End Function
+
+        ''' <summary>Das XMP-Paket der Quelle fuer den PSD-Export, oder Nothing. Bei einer PSD aus
+        ''' Ressource 1060, sonst ueber denselben Weg wie die anderen Speicherformate. Die
+        ''' Farbangaben darin werden entfernt: das Ziel ist sRGB und traegt sein eigenes Profil.</summary>
+        Private Shared Function ReadSourceXmpForPsd(sourcePath As String) As Byte()
+            If String.IsNullOrWhiteSpace(sourcePath) OrElse Not File.Exists(sourcePath) Then Return Nothing
+            Dim xmp = If(PsdPreviewService.IsSupportedPsd(sourcePath),
+                         PsdPreviewService.ReadResourceFromFile(sourcePath, 1060),
+                         ExtractXmpBytes(sourcePath))
+            If xmp Is Nothing OrElse xmp.Length = 0 Then Return Nothing
+            Return If(StripXmpColorFields(xmp), xmp)
         End Function
 
         ''' <summary>Zieht die Gruppenklammern nach, bis die offene Kette der gewünschten entspricht.

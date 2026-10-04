@@ -21154,7 +21154,8 @@ Namespace ViewModels
                                                     Using composite = SKBitmap.Decode(compositeStream),
                                                           background = If(backgroundStream Is Nothing, Nothing, SKBitmap.Decode(backgroundStream))
                                                         If composite Is Nothing Then Return False
-                                                        Return ImageProcessor.ExportLayeredPsd(psdTarget, composite, background, adj)
+                                                        Return ImageProcessor.ExportLayeredPsd(psdTarget, composite, background, adj,
+                                                                                                       psdSourcePath, preserveMetadata)
                                                     End Using
                                                 End Using
                                             Finally

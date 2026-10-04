@@ -73,6 +73,22 @@ Namespace Services
             End Try
         End Function
 
+        ''' <summary>Die Daten einer Bildressource aus der Datei, ohne die Bilddaten zu lesen, oder
+        ''' Nothing. Fuer den Export, der Aufloesung (1005) und XMP (1060) einer PSD-Quelle
+        ''' weiterreicht.</summary>
+        Friend Shared Function ReadResourceFromFile(filePath As String, id As Integer) As Byte()
+            Try
+                Using fs = File.OpenRead(filePath)
+                    Dim header As PsdHeader
+                    If Not TryReadHeader(fs, header) Then Return Nothing
+                    If Not SkipBlock(fs, CLng(ReadU32(fs))) Then Return Nothing
+                    Return FindResource(ReadResourceSection(fs, ReadU32(fs)), id)
+                End Using
+            Catch
+                Return Nothing
+            End Try
+        End Function
+
         ''' Liefert einen MemoryStream mit PNG-Daten (Position 0) oder Nothing bei Fehler.
         Public Shared Function ExtractPreview(filePath As String) As MemoryStream
             ' Das Composite mit Alpha liegt bewusst als Unpremul vor; der Kodierer geht deshalb

@@ -14,7 +14,7 @@ Namespace Services
     ''' Aufbau der Datei, in dieser Reihenfolge:
     '''   Kopf (8BPS, Version 1, Kanaele, Hoehe, Breite, 8 Bit, Farbmodus RGB)
     '''   Farbmodus-Daten   - leer, RGB braucht keine Tabelle
-    '''   Bildressourcen    - leer
+    '''   Bildressourcen    - Aufloesung (1005), sRGB-Profil (1039), XMP (1060), eigener Rezeptblock
     '''   Ebenen-Sektion    - Ebenenverzeichnis und danach die Kanaldaten je Ebene
     '''   Bilddaten         - das fertige Gesamtbild, planar je Kanal
     '''
@@ -173,9 +173,14 @@ Namespace Services
         ''' <summary><paramref name="recipe"/> ist der eigene Zusatzblock aus PsdRecipeService: die
         ''' vollstaendige Bearbeitung, damit FerrumPix seine eigene Datei spaeter wieder mit Text als
         ''' Text oeffnen kann. Fremde Programme ueberspringen ihn. Nothing = keinen schreiben.</summary>
+        ''' <param name="resolutionDpi">Die Aufloesung in Punkten je Zoll, 0 = keine schreiben (dann
+        ''' nimmt jedes Programm seine Vorgabe, Photoshop 72).</param>
+        ''' <param name="xmp">Das XMP-Paket der Quelle, Nothing = keins schreiben.</param>
         Public Shared Function Save(filePath As String, composite As SKBitmap,
                                     layers As IList(Of PsdLayerInput),
-                                    Optional recipe As Byte() = Nothing) As Boolean
+                                    Optional recipe As Byte() = Nothing,
+                                    Optional resolutionDpi As Double = 0,
+                                    Optional xmp As Byte() = Nothing) As Boolean
             If String.IsNullOrWhiteSpace(filePath) OrElse composite Is Nothing Then Return False
             If composite.Width < 1 OrElse composite.Height < 1 Then Return False
             If composite.Width > MaxSide OrElse composite.Height > MaxSide Then Return False
@@ -207,7 +212,7 @@ Namespace Services
                 Using fs = File.Create(tempPath)
                     WriteHeader(fs, composite.Width, composite.Height)
                     WriteU32(fs, 0)  ' Farbmodus-Daten: keine
-                    WriteImageResources(fs, recipe)
+                    WriteImageResources(fs, recipe, resolutionDpi, xmp)
                     WriteLayerSection(fs, usable, HasTransparentPixels(compositePlanes))
                     WriteMergedImage(fs, composite.Width, composite.Height, compositePlanes)
                 End Using
@@ -240,7 +245,9 @@ Namespace Services
         End Sub
 
         ''' <summary>Kennung der Bildressource fuer das ICC-Farbprofil des Dokuments.</summary>
+        Private Const ResolutionResourceId As Integer = 1005
         Private Const IccProfileResourceId As Integer = 1039
+        Private Const XmpResourceId As Integer = 1060
 
         ''' <summary>Die Bildressourcen: IMMER das sRGB-Profil (1039), dazu der eigene Block, wenn es
         ''' einen gibt.
@@ -249,8 +256,12 @@ Namespace Services
         ''' sRGB gebracht. Ohne Profil nimmt Photoshop den eingestellten Arbeitsfarbraum an, und wer
         ''' dort Adobe RGB eingestellt hat, sah jede exportierte Datei zu kraeftig. Das Profil baut
         ''' SrgbIccProfile; FerrumPix erkennt es beim Wiederoeffnen als sRGB und rechnet nichts um.</summary>
-        Private Shared Sub WriteImageResources(fs As Stream, recipe As Byte())
-            Dim blocks As New List(Of (Id As Integer, Data As Byte()))() From {(IccProfileResourceId, SrgbIccProfile.Bytes())}
+        Private Shared Sub WriteImageResources(fs As Stream, recipe As Byte(), resolutionDpi As Double, xmp As Byte())
+            ' Aufsteigend nach Nummer, wie Photoshop selbst sie ablegt.
+            Dim blocks As New List(Of (Id As Integer, Data As Byte()))()
+            If resolutionDpi > 0 Then blocks.Add((ResolutionResourceId, BuildResolutionInfo(resolutionDpi)))
+            blocks.Add((IccProfileResourceId, SrgbIccProfile.Bytes()))
+            If xmp IsNot Nothing AndAlso xmp.Length > 0 Then blocks.Add((XmpResourceId, xmp))
             If recipe IsNot Nothing AndAlso recipe.Length > 0 Then blocks.Add((PsdRecipeService.ResourceId, recipe))
 
             ' Je Block: Signatur, Kennung, leerer Name (auf gerade Laenge gefuellt), Laenge, Daten.
@@ -270,6 +281,21 @@ Namespace Services
                 If (block.Data.Length And 1) <> 0 Then fs.WriteByte(0)
             Next
         End Sub
+
+        ''' <summary>Ressource 1005, 16 Byte: waagerecht die Aufloesung als Festkomma 16.16, ihre
+        ''' Einheit (1 = Punkte je Zoll) und die Einheit fuer die Breite (1 = Zoll), dann dasselbe
+        ''' senkrecht. Beide Richtungen gleich, die Quelle kennt hier ohnehin nur eine.</summary>
+        Friend Shared Function BuildResolutionInfo(dpi As Double) As Byte()
+            Dim fixedValue = CInt(Math.Round(Math.Min(Math.Max(dpi, 1.0), 30000.0) * 65536.0))
+            Using ms As New MemoryStream()
+                For direction = 0 To 1
+                    WriteU32(ms, fixedValue)
+                    WriteU16(ms, 1)
+                    WriteU16(ms, 1)
+                Next
+                Return ms.ToArray()
+            End Using
+        End Function
 
         ' ── Ebenen-Sektion ───────────────────────────────────────────────────────
 
