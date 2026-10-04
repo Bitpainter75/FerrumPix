@@ -2,10 +2,17 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:icons="clr-namespace:FerrumPix.Controls"
              x:Class="FerrumPix.Controls.EditorPanels.AnnotationGlowPanel">
-    <Expander Header="Glühen" icons:ExpanderState.Key="glow">
+    <!-- Zu, solange "Aktiv" aus ist, auf, sobald es an ist (ExpanderState.ExpandWhen), wie
+         Füllung, Kontur und Schatten. -->
+    <Expander Header="Glühen" icons:ExpanderState.Key="glow"
+              icons:ExpanderState.ExpandWhen="{Binding AnnotationGlowEnabled}">
         <Expander.HeaderTemplate>
             <DataTemplate>
                 <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                    <!-- "Aktiv" als Haken in der Kopfzeile, wie beim Schatten. -->
+                    <CheckBox VerticalAlignment="Center" MinWidth="0" Padding="0"
+                              ToolTip.Tip="{Binding $parent[Expander].DataContext.GroupActiveToolTip}"
+                              IsChecked="{Binding $parent[Expander].DataContext.AnnotationGlowEnabled}" />
                     <icons:SvgIcon
                         Source="avares://FerrumPix/Assets/Icons/outline/sparkles.svg"
                         Width="14" Height="14" />
@@ -14,8 +21,6 @@
             </DataTemplate>
         </Expander.HeaderTemplate>
         <StackPanel Spacing="2" Margin="0,8,0,0">
-            <CheckBox Content="Aktiv" IsChecked="{Binding AnnotationGlowEnabled}"
-                      FontSize="{DynamicResource FP.Font.Small}" />
             <StackPanel Spacing="2" IsVisible="{Binding AnnotationGlowEnabled}">
                 <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Top">
                     <TextBlock Text="Farbe" Foreground="{DynamicResource FP.Text.Secondary}"

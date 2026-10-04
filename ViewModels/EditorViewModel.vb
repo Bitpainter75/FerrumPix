@@ -503,6 +503,10 @@ Namespace ViewModels
         Private _annotationOpacity As Double = 100
         Private _annotationBlendMode As String = "Normal"
         Private _annotationBlendIncludesStroke As Boolean = True
+        ' Lage, Haerte und Ecken der Kontur, wie an der Auswahl (ImageAnnotation.StrokePosition usw.).
+        Private _annotationStrokePosition As String = ""
+        Private _annotationStrokeHardness As Double = 100
+        Private _annotationStrokeCorners As String = ""
         ' Hintergrund-Ebene (Basisbild) im Ebenen-Panel aus-/eingeblendet. Wirkt strukturell übers
         ' Compositing (siehe ImageProcessor.ApplyAnnotations), nicht als Pixel-Anpassung.
         Private _backgroundHidden As Boolean = False
@@ -2216,6 +2220,9 @@ Namespace ViewModels
             _annotationGradientInverted = preset.GradientInverted
             _annotationBlendMode = NormalizeAnnotationBlendMode(preset.BlendMode)
             _annotationBlendIncludesStroke = preset.BlendIncludesStroke
+            _annotationStrokePosition = If(preset.StrokePosition, "")
+            _annotationStrokeHardness = Math.Max(0, Math.Min(100, preset.StrokeHardness))
+            _annotationStrokeCorners = If(preset.StrokeCorners, "")
             _annotationBold = preset.Bold
             _annotationItalic = preset.Italic
             _annotationLetterSpacingPercent = preset.LetterSpacingPercent
@@ -2269,6 +2276,7 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(AnnotationBlendMode))
             Me.RaisePropertyChanged(NameOf(SelectedAnnotationBlendModeOption))
             Me.RaisePropertyChanged(NameOf(AnnotationBlendIncludesStroke))
+            RaiseAnnotationStrokeStyleChanged()
             Me.RaisePropertyChanged(NameOf(UsesAnnotationBlendMode))
             Me.RaisePropertyChanged(NameOf(AnnotationBold))
             Me.RaisePropertyChanged(NameOf(AnnotationItalic))
@@ -2372,6 +2380,9 @@ Namespace ViewModels
             existing.GradientInverted = _annotationGradientInverted
             existing.BlendMode = _annotationBlendMode
             existing.BlendIncludesStroke = _annotationBlendIncludesStroke
+            existing.StrokePosition = _annotationStrokePosition
+            existing.StrokeHardness = _annotationStrokeHardness
+            existing.StrokeCorners = _annotationStrokeCorners
             existing.Bold = _annotationBold
             existing.Italic = _annotationItalic
             existing.LetterSpacingPercent = _annotationLetterSpacingPercent
@@ -3396,6 +3407,59 @@ Namespace ViewModels
             End Get
         End Property
 
+        ''' <summary>Die Gruppe Füllung unter dem Objekt-Panel (dieselbe wie im Auswahl-Werkzeug).
+        ''' Nicht beim QR-Code, nicht bei Bildern, nicht bei Mehrfachauswahl (ShowFillColorControls).</summary>
+        Public ReadOnly Property ShowObjectFillGroup As Boolean
+            Get
+                Return ShowSingleAnnotationEffects AndAlso ShowFillColorControls
+            End Get
+        End Property
+
+        ''' <summary>Die Gruppe Kontur unter dem Objekt-Panel. Nicht beim QR-Code und beim Rahmen
+        ''' (ShowStrokeWidthControls).</summary>
+        Public ReadOnly Property ShowObjectStrokeGroup As Boolean
+            Get
+                Return ShowSingleAnnotationEffects AndAlso ShowStrokeWidthControls
+            End Get
+        End Property
+
+        ''' <summary>Lage, Härte und Ecken der Kontur. Nicht bei Linie, Pfeil und Spirale: dort IST
+        ''' die Kontur das Objekt (siehe ImageProcessor.StrokeStyleApplies).</summary>
+        Public ReadOnly Property ShowStrokeStyleControls As Boolean
+            Get
+                Select Case If(EffectiveAnnotationKind, "").Trim().ToLowerInvariant()
+                    Case "line", "arrow", "spiral", "brush", "eraser" : Return False
+                    Case Else : Return ShowStrokeWidthControls
+                End Select
+            End Get
+        End Property
+
+        ''' <summary>Beim QR-Code bleiben Vorder- und Hintergrund im Objekt-Panel stehen; die Gruppen
+        ''' Füllung und Kontur gelten für ihn nicht.</summary>
+        Public ReadOnly Property ShowQrColorControls As Boolean
+            Get
+                Return Not HasMultiAnnotationSelection AndAlso EffectiveAnnotationKind = "QR"
+            End Get
+        End Property
+
+        ''' <summary>Tooltip des Hakens "Aktiv" in den Kopfzeilen von Füllung, Kontur, Schatten und
+        ''' Glühen. Über eine Bindung statt als Text im XAML: die Kopfzeile ist eine Vorlage und
+        ''' entsteht erst, wenn die Gruppe zum ersten Mal sichtbar wird - nach dem Übersetzungsdurchlauf
+        ''' über das Fenster, und ein fester Text bliebe dort deutsch.</summary>
+        Public ReadOnly Property GroupActiveToolTip As String
+            Get
+                Return LocalizationService.T("Aktiv")
+            End Get
+        End Property
+
+        Private Sub RaiseObjectFillStrokeGroupsChanged()
+            Me.RaisePropertyChanged(NameOf(ShowObjectFillGroup))
+            Me.RaisePropertyChanged(NameOf(ShowObjectStrokeGroup))
+            Me.RaisePropertyChanged(NameOf(ShowStrokeStyleControls))
+            Me.RaisePropertyChanged(NameOf(ShowQrColorControls))
+            RaiseFillGroupActiveChanged()
+        End Sub
+
         Public ReadOnly Property CanGroupSelectedAnnotations As Boolean
             Get
                 ' Zwei Objekte, zwei Korrekturen - ODER GEMISCHT. Die Trennung nach Art stammt aus der
@@ -4015,6 +4079,9 @@ Namespace ViewModels
             AnnotationOpacity = 100
             AnnotationBlendMode = "Normal"
             AnnotationBlendIncludesStroke = True
+            AnnotationStrokePosition = ""
+            AnnotationStrokeHardness = 100
+            AnnotationStrokeCorners = ""
             AnnotationRotation = 0
             AnnotationFlipHorizontal = False
             AnnotationFlipVertical = False
@@ -9146,6 +9213,8 @@ Namespace ViewModels
             Set(value As String)
                 Me.RaiseAndSetIfChanged(_annotationFillColor, NormalizeAvaloniaColor(value, "#FFFFFFFF"))
                 _annotationFillColorIsAutomaticDefault = False
+                Me.RaisePropertyChanged(NameOf(AnnotationFillEnabled))
+                RaiseFillGroupActiveChanged()
                 Me.RaisePropertyChanged(NameOf(AnnotationFillColorValue))
                 Me.RaisePropertyChanged(NameOf(AnnotationFillBrush))
                 Me.RaisePropertyChanged(NameOf(SelectionFillPreviewBrush))
@@ -9362,10 +9431,85 @@ Namespace ViewModels
                 ' In BILDPUNKTEN, wie der Schriftgrad. Der Deckel lag bei 100 - auf einem grossen
                 ' Bild war damit kein dicker Rahmen moeglich.
                 Me.RaiseAndSetIfChanged(_annotationStrokeWidth, Math.Max(0, Math.Min(MaxAnnotationStrokeWidth, value)))
+                Me.RaisePropertyChanged(NameOf(AnnotationStrokeEnabled))
+                Me.RaisePropertyChanged(NameOf(ObjectStrokeGroupExpanded))
                 ' Die Kontur gehört zum sichtbaren Text, der Rahmen eines Textes wächst mit ihr.
                 UpdatePendingTextAnnotationSize()
                 SyncSelectedAnnotation()
             End Set
+        End Property
+
+        ''' <summary>Breite, die "Aktiv" der Kontur zurückholt. Gemerkt beim Ausschalten.</summary>
+        Private _lastAnnotationStrokeWidth As Double = 4
+
+        ''' <summary>Schalter "Aktiv" der Gruppe Kontur, wie bei Schatten und Glühen. Eine Kontur ist
+        ''' aktiv, wenn sie eine Breite hat; aus setzt die Breite auf null und merkt sie sich, an holt
+        ''' sie zurück.</summary>
+        Public Property AnnotationStrokeEnabled As Boolean
+            Get
+                Return _annotationStrokeWidth > 0
+            End Get
+            Set(value As Boolean)
+                If value = (_annotationStrokeWidth > 0) Then Return
+                If value Then
+                    AnnotationStrokeWidth = If(_lastAnnotationStrokeWidth > 0, _lastAnnotationStrokeWidth, 4)
+                Else
+                    _lastAnnotationStrokeWidth = _annotationStrokeWidth
+                    AnnotationStrokeWidth = 0
+                End If
+            End Set
+        End Property
+
+        ''' <summary>Farben, die "Aktiv" der Füllung zurückholt. Gemerkt beim Ausschalten.</summary>
+        Private _lastAnnotationFillColor As String = "#FFFFFFFF"
+        Private _lastAnnotationFillColor2 As String = "#FFFFFFFF"
+
+        ''' <summary>Schalter "Aktiv" der Gruppe Füllung. Eine Füllung ist aktiv, wenn ihre Farbe
+        ''' sichtbar ist; aus macht beide Farben durchsichtig und merkt sie sich, an holt sie zurück.
+        ''' Über die Deckung der Farbe und nicht über ein eigenes Feld: so sieht jedes vorhandene
+        ''' Objekt ohne Füllung (durchsichtig) schon richtig "aus" aus, ohne Umstellung der Datei.</summary>
+        Public Property AnnotationFillEnabled As Boolean
+            Get
+                Return ParseAvaloniaColorOrDefault(_annotationFillColor, Avalonia.Media.Colors.White).A > 0
+            End Get
+            Set(value As Boolean)
+                If value = AnnotationFillEnabled Then Return
+                If value Then
+                    AnnotationFillColor2 = _lastAnnotationFillColor2
+                    AnnotationFillColor = _lastAnnotationFillColor
+                Else
+                    _lastAnnotationFillColor = _annotationFillColor
+                    _lastAnnotationFillColor2 = _annotationFillColor2
+                    AnnotationFillColor2 = WithZeroAlpha(_annotationFillColor2)
+                    AnnotationFillColor = WithZeroAlpha(_annotationFillColor)
+                End If
+            End Set
+        End Property
+
+        Private Shared Function WithZeroAlpha(color As String) As String
+            Dim c = ParseAvaloniaColorOrDefault(color, Avalonia.Media.Colors.White)
+            Return $"#00{c.R:X2}{c.G:X2}{c.B:X2}"
+        End Function
+
+        ''' <summary>Ob die Gruppe Füllung aufgeklappt ist (ExpanderState.ExpandWhen): sie folgt dem
+        ''' Haken "Aktiv", am Objekt wie im Auswahl-Werkzeug.</summary>
+        Public ReadOnly Property ObjectFillGroupExpanded As Boolean?
+            Get
+                Return FillGroupActive
+            End Get
+        End Property
+
+        Public ReadOnly Property ObjectStrokeGroupExpanded As Boolean?
+            Get
+                Return AnnotationStrokeEnabled
+            End Get
+        End Property
+
+        ''' <summary>Der Inhalt der Gruppe Füllung, nur bei gesetztem Haken.</summary>
+        Public ReadOnly Property ShowFillGroupContent As Boolean
+            Get
+                Return FillGroupActive
+            End Get
         End Property
 
         Public Property AnnotationFontFamily As String
@@ -9444,6 +9588,73 @@ Namespace ViewModels
                 SyncSelectedAnnotation()
             End Set
         End Property
+
+        ''' <summary>Lage der Kontur am Objekt: "Inside", "Center" oder "Outside". Leer gilt als mittig
+        ''' (ImageProcessor.NormalizedStrokePosition); das Panel zeigt dann "Mitte" an.</summary>
+        Public Property AnnotationStrokePosition As String
+            Get
+                Return ImageProcessor.NormalizedStrokePosition(_annotationStrokePosition)
+            End Get
+            Set(value As String)
+                Dim normalized = If(String.IsNullOrWhiteSpace(value), "", ImageProcessor.NormalizedStrokePosition(value))
+                If String.Equals(_annotationStrokePosition, normalized, StringComparison.Ordinal) Then Return
+                _annotationStrokePosition = normalized
+                Me.RaisePropertyChanged(NameOf(AnnotationStrokePosition))
+                SyncSelectedAnnotation()
+            End Set
+        End Property
+
+        ''' <summary>Haerte der Kontur am Objekt, 0 bis 100.</summary>
+        Public Property AnnotationStrokeHardness As Double
+            Get
+                Return _annotationStrokeHardness
+            End Get
+            Set(value As Double)
+                Dim clamped = Math.Max(0.0, Math.Min(100.0, value))
+                If Math.Abs(_annotationStrokeHardness - clamped) < 0.0001 Then Return
+                _annotationStrokeHardness = clamped
+                Me.RaisePropertyChanged(NameOf(AnnotationStrokeHardness))
+                SyncSelectedAnnotation()
+            End Set
+        End Property
+
+        ''' <summary>Ecken der Kontur am Objekt: "Round", "Square" oder leer (wie die Objektart sie
+        ''' schon immer zeichnete).</summary>
+        Public Property AnnotationStrokeCorners As String
+            Get
+                Return _annotationStrokeCorners
+            End Get
+            Set(value As String)
+                Dim normalized = If(value, "")
+                If String.Equals(_annotationStrokeCorners, normalized, StringComparison.Ordinal) Then Return
+                _annotationStrokeCorners = normalized
+                Me.RaisePropertyChanged(NameOf(AnnotationStrokeCorners))
+                Me.RaisePropertyChanged(NameOf(AnnotationStrokeSquareCorners))
+                Me.RaisePropertyChanged(NameOf(AnnotationStrokeRoundCorners))
+                SyncSelectedAnnotation()
+            End Set
+        End Property
+
+        ''' <summary>Fuer die beiden Knoepfe Rund und Eckig. Leer zeigt keinen der beiden an.</summary>
+        Public ReadOnly Property AnnotationStrokeSquareCorners As Boolean
+            Get
+                Return String.Equals(_annotationStrokeCorners, "Square", StringComparison.Ordinal)
+            End Get
+        End Property
+
+        Public ReadOnly Property AnnotationStrokeRoundCorners As Boolean
+            Get
+                Return String.Equals(_annotationStrokeCorners, "Round", StringComparison.Ordinal)
+            End Get
+        End Property
+
+        Private Sub RaiseAnnotationStrokeStyleChanged()
+            Me.RaisePropertyChanged(NameOf(AnnotationStrokePosition))
+            Me.RaisePropertyChanged(NameOf(AnnotationStrokeHardness))
+            Me.RaisePropertyChanged(NameOf(AnnotationStrokeCorners))
+            Me.RaisePropertyChanged(NameOf(AnnotationStrokeSquareCorners))
+            Me.RaisePropertyChanged(NameOf(AnnotationStrokeRoundCorners))
+        End Sub
 
         Public Property SelectedAnnotationBlendModeOption As AnnotationBlendModeOption
             Get
@@ -11996,6 +12207,9 @@ Namespace ViewModels
                 .Opacity = CSng(_annotationOpacity),
                 .BlendMode = _annotationBlendMode,
                 .BlendIncludesStroke = _annotationBlendIncludesStroke,
+                .StrokePosition = _annotationStrokePosition,
+                .StrokeHardness = CSng(_annotationStrokeHardness),
+                .StrokeCorners = _annotationStrokeCorners,
                 .RotationDegrees = CSng(DisplayAnnotationRotationToStored("SelectionImage", "", 0)),
                 .FlipHorizontal = DisplayAnnotationFlipHorizontalToStored("SelectionImage", "", False),
                 .FlipVertical = DisplayAnnotationFlipVerticalToStored("SelectionImage", "", False),
@@ -12512,33 +12726,92 @@ Namespace ViewModels
             NameHistoryStep(LocalizationService.T("Auswahl eingefügt"))
         End Sub
 
-        ''' Füllt die aktive Auswahl mit Vollfarbe oder Verlauf, indem ein neues, randloses
-        ''' Rechteck-Objekt exakt in Größe/Position der Auswahl angelegt wird - so bleibt die Füllung
-        ''' wie jedes andere Objekt beweglich/löschbar/mit Opacity versehen (kein separater,
-        ''' nicht-destruktiver Fill-Pipeline-Mechanismus).
-        Public Sub FillSelection()
-            If Not _hasActiveSelection Then Return
+        ''' <summary>Schalter "Aktiv" der Füllung im Auswahl-Werkzeug. Wie die Kontur ohne Knopf: an
+        ''' füllt die Auswahl, jede Änderung an Füllart, Farben, Winkel und Umkehrung greift sofort
+        ''' (ApplySelectionFillLive), aus nimmt die Füllung wieder weg.</summary>
+        Private _selectionFillEnabled As Boolean = False
 
-            ' DEKLARATIVE Füllung: es entsteht KEINE Grafik / kein PNG-Objekt. Die Füll-Definition (Art,
-            ' Farben, Winkel) wird auf die KORREKTUR-EBENE geschrieben. AUSWAHL-Ebene → die Füllung wird
-            ' sichtbar in die Auswahl komponiert (Farbe/Verlauf). MASKEN-Ebene → die Luminanz der Füllung
-            ' stuft die Maske ab und bestimmt so, WIE STARK die Anpassung je Bereich wirkt. Der Render
-            ' zeichnet beides selbst - die Füllung bleibt nachträglich änderbar statt eingebrannt.
-            PushUndo()
-            Dim layer = EnsureCorrectionLayerForActiveSelection()
+        Public Property SelectionFillEnabled As Boolean
+            Get
+                Return _selectionFillEnabled
+            End Get
+            Set(value As Boolean)
+                If _selectionFillEnabled = value Then Return
+                _selectionFillEnabled = value
+                Me.RaisePropertyChanged(NameOf(SelectionFillEnabled))
+                RaiseFillGroupActiveChanged()
+                ApplySelectionFillLive()
+            End Set
+        End Property
+
+        ''' <summary>Laeuft, waehrend eine Auswahlebene ihre Fuellung und Kontur ins Panel laedt: die
+        ''' gesetzten Werte duerfen dann nicht gleich wieder an die Ebene zurueckgeschrieben werden.</summary>
+        Private _loadingSelectionStyle As Boolean
+
+        ''' <summary>Schreibt die Füllung aus dem Panel an die Auswahlebene und rendert neu.
+        '''
+        ''' DEKLARATIVE Füllung: es entsteht KEINE Grafik / kein PNG-Objekt. Die Füll-Definition (Art,
+        ''' Farben, Winkel) wird auf die KORREKTUR-EBENE geschrieben. AUSWAHL-Ebene → die Füllung wird
+        ''' sichtbar in die Auswahl komponiert (Farbe/Verlauf). MASKEN-Ebene → die Luminanz der Füllung
+        ''' stuft die Maske ab und bestimmt so, WIE STARK die Anpassung je Bereich wirkt. Der Render
+        ''' zeichnet beides selbst - die Füllung bleibt nachträglich änderbar statt eingebrannt.
+        ''' Ein Reglerzug wird über CaptureUndoState zu EINEM Schritt zusammengefasst.</summary>
+        Private Sub ApplySelectionFillLive()
+            If _loadingSelectionStyle OrElse Not _hasActiveSelection Then Return
+            Dim layer As MaskedAdjustmentLayer
+            Dim isNew = False
+            If _selectionFillEnabled Then
+                CaptureUndoState("SelectionFill")
+                Dim before = ExistingLayerForActiveSelection()
+                layer = EnsureCorrectionLayerForActiveSelection()
+                isNew = before Is Nothing OrElse Not Object.ReferenceEquals(before, layer)
+            Else
+                layer = ExistingLayerForActiveSelection()
+                If layer Is Nothing OrElse Not layer.HasFill() Then Return
+                CaptureUndoState("SelectionFill")
+            End If
             If layer Is Nothing Then Return
-            layer.FillKind = If(String.IsNullOrWhiteSpace(_annotationFillKind), "Solid", _annotationFillKind)
-            layer.FillColor = _annotationFillColor
-            layer.FillColor2 = _annotationFillColor2
-            layer.FillAngle = _annotationGradientAngle
-            layer.FillInverted = _annotationGradientInverted
-            _selectedMaskedAdjustmentLayerId = layer.Id
-            RebuildLayerRows()
+            If _selectionFillEnabled Then
+                layer.FillKind = If(String.IsNullOrWhiteSpace(_annotationFillKind), "Solid", _annotationFillKind)
+                layer.FillColor = _annotationFillColor
+                layer.FillColor2 = _annotationFillColor2
+                layer.FillAngle = _annotationGradientAngle
+                layer.FillInverted = _annotationGradientInverted
+            Else
+                layer.FillKind = ""
+            End If
+            _hasChanges = True
+            ' Die Ebenenliste nur, wenn eine Ebene neu entstanden ist - nicht bei jedem Reglerschritt.
+            If isNew Then
+                _selectedMaskedAdjustmentLayerId = layer.Id
+                RebuildLayerRows()
+            End If
             ' Rotes Overlay neu bauen: es zeigt jetzt die DECKUNG (Maske × Füll-Luminanz), also den
             ' Verlauf, mit dem die Anpassung dieser Ebene abgestuft wird.
             If _activeSelectionIsMask Then PublishSelectionRedOverlay()
-            NameHistoryStep(LocalizationService.T(If(layer.IsMaskLayer, "Maske gefüllt", "Auswahl gefüllt")))
             SchedulePreviewUpdate()
+        End Sub
+
+        ''' <summary>Der Haken "Aktiv" der Gruppe Füllung: am Objekt die sichtbare Füllfarbe, im
+        ''' Auswahl-Werkzeug die Füllung der Auswahl. EIN Panel, deshalb EINE Eigenschaft.</summary>
+        Public Property FillGroupActive As Boolean
+            Get
+                Return If(ShowSelectionAdjustments, _selectionFillEnabled, AnnotationFillEnabled)
+            End Get
+            Set(value As Boolean)
+                If ShowSelectionAdjustments Then
+                    SelectionFillEnabled = value
+                Else
+                    AnnotationFillEnabled = value
+                End If
+                RaiseFillGroupActiveChanged()
+            End Set
+        End Property
+
+        Private Sub RaiseFillGroupActiveChanged()
+            Me.RaisePropertyChanged(NameOf(FillGroupActive))
+            Me.RaisePropertyChanged(NameOf(ObjectFillGroupExpanded))
+            Me.RaisePropertyChanged(NameOf(ShowFillGroupContent))
         End Sub
 
         ' Setzt X/Y/Breite/Höhe in einem Rutsch (z.B. beim Ziehen/Skalieren im Canvas), damit
@@ -16308,9 +16581,10 @@ Namespace ViewModels
         Public ReadOnly Property ToggleLayerAdjustmentsCommand As ICommand
         Public ReadOnly Property ClearLayerAdjustmentsCommand As ICommand
         Public ReadOnly Property CreateAdjustmentLayerFromSelectionCommand As ICommand
-        Public ReadOnly Property FillSelectionCommand As ICommand
-        Public ReadOnly Property StrokeSelectionCommand As ICommand
         Public ReadOnly Property SetSelectionStrokePositionCommand As ICommand
+        Public ReadOnly Property SetSelectionStrokeSquareCornersCommand As ICommand
+        Public ReadOnly Property SetAnnotationStrokePositionCommand As ICommand
+        Public ReadOnly Property SetAnnotationStrokeCornersCommand As ICommand
         Public ReadOnly Property SetSelectionModeCommand As ICommand
         Public ReadOnly Property AlignSelectionCommand As ICommand
         Public ReadOnly Property DistributeSelectionCommand As ICommand
@@ -16493,7 +16767,14 @@ Namespace ViewModels
                                                                        Case "text", "image", "bild", "qr", "qrcode", "qr-code", "watermark", "wasserzeichen"
                                                                            _overlayNotifySuppressDepth += 1
                                                                            Try
-                                                                               SelectedAnnotationIndex = -1
+                                                                               ' Ist eine Ebene GENAU DIESER ART markiert (ein Text beim
+                                                                               ' Text-Werkzeug), bleibt sie markiert: wer in den Anpassungen
+                                                                               ' einen Text markiert und dann zum Text-Werkzeug greift, will
+                                                                               ' dessen Eigenschaften aendern, nicht einen neuen anlegen
+                                                                               ' (Nutzerbefund). Jede andere Markierung geht wie bisher weg.
+                                                                               If Not SelectedAnnotationMatchesInsertKind(NormalizeAnnotationKind(toolName)) Then
+                                                                                   SelectedAnnotationIndex = -1
+                                                                               End If
                                                                                CurrentTool = EditorTool.Text
                                                                                PendingInsertKind = NormalizeAnnotationKind(toolName)
                                                                                ArmedInsertKind = PendingInsertKind
@@ -16822,9 +17103,30 @@ Namespace ViewModels
             ClearLayerAdjustmentsCommand = ReactiveCommand.Create(Sub() ClearLayerAdjustments(Nothing))
             CreateAdjustmentLayerFromSelectionCommand = ReactiveCommand.CreateFromTask(
                 Function() CreateAdjustmentLayerFromSelectionAsync())
-            FillSelectionCommand = ReactiveCommand.Create(Sub() FillSelection())
-            StrokeSelectionCommand = ReactiveCommand.CreateFromTask(Function() StrokeSelectionAsync())
             SetSelectionStrokePositionCommand = ReactiveCommand.Create(Of String)(Sub(value) SelectionStrokePosition = value)
+            SetSelectionStrokeSquareCornersCommand = ReactiveCommand.Create(Of String)(
+                Sub(value) SelectionStrokeSquareCorners = String.Equals(value, "True", StringComparison.OrdinalIgnoreCase))
+            SetAnnotationStrokePositionCommand = ReactiveCommand.Create(Of String)(Sub(value) AnnotationStrokePosition = value)
+            SetAnnotationStrokeCornersCommand = ReactiveCommand.Create(Of String)(Sub(value) AnnotationStrokeCorners = value)
+            ' Die Gruppen Füllung und Kontur leiten ihre Sichtbarkeit aus vier Eigenschaften ab, die an
+            ' rund fünfzehn Stellen gemeldet werden. EINE Stelle hier statt fünfzehn Nachträge dort.
+            AddHandler Me.PropertyChanged,
+                Sub(sender, e)
+                    Select Case e.PropertyName
+                        Case NameOf(ShowSingleAnnotationEffects), NameOf(ShowFillColorControls),
+                             NameOf(ShowStrokeWidthControls), NameOf(EffectiveAnnotationKind),
+                             NameOf(ShowSelectionAdjustments)
+                            RaiseObjectFillStrokeGroupsChanged()
+                        Case NameOf(SelectedLayerRow)
+                            ' Eine markierte Auswahlebene bringt Füllung und Kontur ins Panel mit.
+                            Dim layer = SelectedLayerRow?.AdjustmentLayer
+                            If layer IsNot Nothing Then LoadSelectionStyleFromLayer(layer)
+                        Case NameOf(AnnotationFillKind), NameOf(AnnotationFillColor), NameOf(AnnotationFillColor2),
+                             NameOf(AnnotationGradientAngleDegrees), NameOf(AnnotationGradientInverted)
+                            ' Im Auswahl-Werkzeug ist die Füllung live: jede Änderung greift sofort.
+                            If ShowSelectionAdjustments AndAlso _selectionFillEnabled Then ApplySelectionFillLive()
+                    End Select
+                End Sub
             SetSelectionModeCommand = ReactiveCommand.Create(Of String)(Sub(mode) SetSelectionMode(mode))
             AlignSelectionCommand = ReactiveCommand.Create(Of String)(Sub(mode) AlignSelection(mode))
             DistributeSelectionCommand = ReactiveCommand.Create(Of String)(
@@ -19110,6 +19412,9 @@ Namespace ViewModels
                 ' Eine unsichtbare oder wirkungslose Ebene zeichnet nichts - sie zwingt zu nichts.
                 If Not adj.IsMaskedLayerRenderVisible(layer) Then Continue For
                 Dim wirkt = (layer.Adjustments IsNot Nothing AndAlso layer.Adjustments.HasPixelAdjustments()) OrElse layer.HasFill()
+                ' Eine Kontur reicht aussen ueber das Rechteck der Maske hinaus; ihre Reichweite hier
+                ' nachzurechnen lohnt nicht, sie zwingt einfach zum vollen Durchgang.
+                If layer.HasStroke() Then Return True
                 If Not wirkt Then Continue For
                 Dim mask = _imageMasks.FirstOrDefault(Function(m) m IsNot Nothing AndAlso m.Id = layer.MaskId)
                 If mask Is Nothing Then Return True
@@ -22532,6 +22837,10 @@ Namespace ViewModels
                     Return LocalizationService.T("Verzerren")
                 Case "AdjustmentLayerOpacity"
                     Return CombineHistoryLabel("Ebene", "Deckkraft")
+                Case "SelectionStroke"
+                    Return CombineHistoryLabel("Auswahl", "Kontur")
+                Case "SelectionFill"
+                    Return CombineHistoryLabel("Auswahl", "Füllung")
                 Case "AdjustmentLayerVisibility"
                     Return CombineHistoryLabel("Ebene", "Sichtbarkeit")
                 Case "AnnotationGroupVisibility"
@@ -22627,6 +22936,9 @@ Namespace ViewModels
                 Case NameOf(AnnotationGradientInverted) : Return LocalizationService.T("Verlauf invertieren")
                 Case NameOf(AnnotationStrokeWidth) : Return LocalizationService.T("Konturbreite")
                 Case NameOf(AnnotationBlendIncludesStroke) : Return LocalizationService.T("Kontur mitmischen")
+                Case NameOf(AnnotationStrokePosition) : Return LocalizationService.T("Lage der Kontur")
+                Case NameOf(AnnotationStrokeHardness) : Return LocalizationService.T("Härte der Kontur")
+                Case NameOf(AnnotationStrokeCorners) : Return LocalizationService.T("Ecken der Kontur")
                 Case NameOf(AnnotationOpacity) : Return LocalizationService.T("Deckkraft")
                 Case NameOf(AnnotationBlendMode) : Return LocalizationService.T("Mischen")
                 Case NameOf(AnnotationRotation) : Return LocalizationService.T("Drehung")
@@ -24122,6 +24434,9 @@ Namespace ViewModels
             _annotationOpacity = 100
             _annotationBlendMode = "Normal"
             _annotationBlendIncludesStroke = True
+            _annotationStrokePosition = ""
+            _annotationStrokeHardness = 100
+            _annotationStrokeCorners = ""
             _annotationRotation = 0
             _annotationFlipH = False
             _annotationFlipV = False
@@ -24926,6 +25241,9 @@ Namespace ViewModels
                 .Opacity = CSng(_annotationOpacity),
                 .BlendMode = _annotationBlendMode,
                 .BlendIncludesStroke = _annotationBlendIncludesStroke,
+                .StrokePosition = _annotationStrokePosition,
+                .StrokeHardness = CSng(_annotationStrokeHardness),
+                .StrokeCorners = _annotationStrokeCorners,
                 .RotationDegrees = CSng(DisplayAnnotationRotationToStored(normalizedKind, newAnchor, _annotationRotation)),
                 .FlipHorizontal = DisplayAnnotationFlipHorizontalToStored(normalizedKind, newAnchor, _annotationFlipH),
                 .FlipVertical = DisplayAnnotationFlipVerticalToStored(normalizedKind, newAnchor, _annotationFlipV),
@@ -24987,6 +25305,9 @@ Namespace ViewModels
             _annotationOpacity = 100
             _annotationBlendMode = "Normal"
             _annotationBlendIncludesStroke = True
+            _annotationStrokePosition = ""
+            _annotationStrokeHardness = 100
+            _annotationStrokeCorners = ""
             _annotationRotation = 0
             _annotationFlipH = False
             _annotationFlipV = False
@@ -25082,6 +25403,9 @@ Namespace ViewModels
                 .Opacity = CSng(_annotationOpacity),
                 .BlendMode = _annotationBlendMode,
                 .BlendIncludesStroke = _annotationBlendIncludesStroke,
+                .StrokePosition = _annotationStrokePosition,
+                .StrokeHardness = CSng(_annotationStrokeHardness),
+                .StrokeCorners = _annotationStrokeCorners,
                 .RotationDegrees = CSng(DisplayAnnotationRotationToStored("Image", "", 0)),
                 .FlipHorizontal = DisplayAnnotationFlipHorizontalToStored("Image", "", False),
                 .FlipVertical = DisplayAnnotationFlipVerticalToStored("Image", "", False),
@@ -27068,6 +27392,20 @@ Namespace ViewModels
         ''' Klick auf eine Ebene im Auswahl-Werkzeug dort stehen bleibt: hin und zurück müssen
         ''' dasselbe ergeben, sonst verliert der Wechsel aus Verschieben ins Auswahl-Werkzeug genau
         ''' die Ebene, für die man wechselt.</summary>
+        ''' <summary>Ist genau eine Ebene markiert, und ist sie von der Art, die das gewählte
+        ''' Einfüge-Werkzeug anlegt? Bild zählt auch für eine Auswahlkopie (SelectionImage), denn
+        ''' beide bearbeitet dasselbe Werkzeug.</summary>
+        Private Function SelectedAnnotationMatchesInsertKind(insertKind As String) As Boolean
+            If HasMultiAnnotationSelection Then Return False
+            If _selectedAnnotationIndex < 0 OrElse _selectedAnnotationIndex >= _annotations.Count Then Return False
+            Dim annotation = _annotations(_selectedAnnotationIndex)
+            If annotation Is Nothing Then Return False
+            Dim kind = NormalizeAnnotationKind(annotation.Kind)
+            If String.Equals(insertKind, "Image", StringComparison.Ordinal) AndAlso
+               String.Equals(kind, "SelectionImage", StringComparison.Ordinal) Then Return True
+            Return String.Equals(kind, insertKind, StringComparison.Ordinal)
+        End Function
+
         Private Function ToolKeepsSelectedAnnotationOnEnter(tool As EditorTool) As Boolean
             If _selectedAnnotationIndex < 0 OrElse _selectedAnnotationIndex >= _annotations.Count Then Return False
             Dim annotation = _annotations(_selectedAnnotationIndex)
@@ -27536,6 +27874,9 @@ Namespace ViewModels
                     AnnotationOpacity = a.Opacity
                     AnnotationBlendMode = a.BlendMode
                     AnnotationBlendIncludesStroke = a.BlendIncludesStroke
+                    AnnotationStrokePosition = a.StrokePosition
+                    AnnotationStrokeHardness = a.StrokeHardness
+                    AnnotationStrokeCorners = a.StrokeCorners
                     AnnotationRotation = StoredAnnotationRotationToDisplay(a)
                     AnnotationFlipHorizontal = a.FlipHorizontal
                     AnnotationFlipVertical = a.FlipVertical
@@ -27711,6 +28052,9 @@ Namespace ViewModels
                 AddressOf IsAnnotationInRenderStepGroupLive)
             a.BlendMode = _annotationBlendMode
             a.BlendIncludesStroke = _annotationBlendIncludesStroke
+            a.StrokePosition = _annotationStrokePosition
+            a.StrokeHardness = CSng(_annotationStrokeHardness)
+            a.StrokeCorners = _annotationStrokeCorners
             ' GESPERRT: Lage, Größe, Drehung und Spiegelung bleiben, wie sie sind. Alles andere
             ' (Farbe, Kontur, Effekte, Sichtbarkeit) darf weiter geändert werden.
             Dim geometrieFrei = Not IsAnnotationGeometryLocked(a)

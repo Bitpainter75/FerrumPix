@@ -1360,6 +1360,18 @@
                                 <panels:SelectionPanel />
                             </Border>
 
+                            <!-- Fuellen und Kontur als eigene Gruppen unter der Auswahl, wie Schatten
+                                 und Gluehen unter einem Objekt. -->
+                            <Border Classes="adjustment-group" Margin="0,7,0,0"
+                                    IsVisible="{Binding ShowSelectionAdjustments}">
+                                <panels:FillPanel />
+                            </Border>
+
+                            <Border Classes="adjustment-group" Margin="0,7,0,0"
+                                    IsVisible="{Binding ShowSelectionAdjustments}">
+                                <panels:SelectionStrokePanel />
+                            </Border>
+
                             <Border Classes="adjustment-group" Margin="0,7,0,0"
                                     IsVisible="{Binding ShowMaskAdjustments}">
                                 <panels:MaskPanel />
@@ -1792,6 +1804,19 @@
                             <Border Classes="adjustment-group" Margin="0,7,0,0"
                                     IsVisible="{Binding ShowAnnotationProperties}">
                                 <panels:AnnotationPropertiesPanel />
+                            </Border>
+
+                            <!-- Füllung und Kontur als eigene Gruppen, dieselben wie im Auswahl-Werkzeug.
+                                 Nicht beim QR-Code: seine zwei Farben sind Vorder- und Hintergrund und
+                                 stehen im Objekt-Panel. Bei Mehrfachauswahl weg wie Schatten und Glühen. -->
+                            <Border Classes="adjustment-group" Margin="0,7,0,0"
+                                    IsVisible="{Binding ShowObjectFillGroup}">
+                                <panels:FillPanel />
+                            </Border>
+
+                            <Border Classes="adjustment-group" Margin="0,7,0,0"
+                                    IsVisible="{Binding ShowObjectStrokeGroup}">
+                                <panels:ObjectStrokePanel />
                             </Border>
 
                             <!-- Schatten und Glühen sind objekt-eigen: bei einer Mehrfachauswahl

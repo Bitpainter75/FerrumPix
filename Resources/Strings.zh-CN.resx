@@ -9258,31 +9258,40 @@
   <data name="Au_en_1946cfea" xml:space="preserve">
     <value>外侧</value>
   </data>
-  <data name="Die_Linie_liegt_innerhalb_der_Auswahl_2679c403" xml:space="preserve">
-    <value>线条位于选区内侧</value>
-  </data>
-  <data name="Die_Linie_liegt_mittig_auf_der_Auswahlkante_54431beb" xml:space="preserve">
-    <value>线条居中于选区边缘</value>
-  </data>
-  <data name="Die_Linie_liegt_au_erhalb_der_Auswahl_52b6a5fd" xml:space="preserve">
-    <value>线条位于选区外侧</value>
-  </data>
   <data name="Konturfarbe_560f5fae" xml:space="preserve">
     <value>描边颜色</value>
   </data>
-  <data name="Eine_Linie_entlang_der_Auswahlkante_als_neue_Bil_2f217c8f" xml:space="preserve">
-    <value>沿选区边缘绘制一条线，作为新的图像图层</value>
+  <data name="Ecken_f3afeae8" xml:space="preserve">
+    <value>边角</value>
   </data>
-  <data name="Kontur_zeichnen_7d6fa55c" xml:space="preserve">
-    <value>绘制描边</value>
+  <data name="Eckig_e60f7583" xml:space="preserve">
+    <value>直角</value>
   </data>
-  <data name="Kontur_wird_gezeichnet_12310b58" xml:space="preserve">
-    <value>正在绘制描边...</value>
+  <data name="Die_Kontur_liegt_innen_af3f7778" xml:space="preserve">
+    <value>描边位于内侧</value>
   </data>
-  <data name="Kontur_zeichnen_fehlgeschlagen_d9644e5f" xml:space="preserve">
-    <value>绘制描边失败</value>
+  <data name="Die_Kontur_liegt_mittig_auf_der_Kante_216086bb" xml:space="preserve">
+    <value>描边居中于边缘</value>
   </data>
-  <data name="Kontur_gezeichnet_eb192d00" xml:space="preserve">
-    <value>已绘制描边</value>
+  <data name="Die_Kontur_liegt_au_en_499a4058" xml:space="preserve">
+    <value>描边位于外侧</value>
+  </data>
+  <data name="Die_Kontur_l_uft_au_en_im_Bogen_um_eine_Ecke_8b404ca3" xml:space="preserve">
+    <value>描边在外侧以圆弧绕过边角</value>
+  </data>
+  <data name="Die_Kontur_beh_lt_au_en_spitze_Ecken_88789197" xml:space="preserve">
+    <value>描边在外侧保持尖角</value>
+  </data>
+  <data name="Bei_100_eine_harte_Kontur_darunter_laufen_ihre_R_ddf76e00" xml:space="preserve">
+    <value>为 100 时描边清晰，低于此值时边缘柔和淡出</value>
+  </data>
+  <data name="Lage_der_Kontur_047c153c" xml:space="preserve">
+    <value>描边位置</value>
+  </data>
+  <data name="H_rte_der_Kontur_76abf9d5" xml:space="preserve">
+    <value>描边硬度</value>
+  </data>
+  <data name="Ecken_der_Kontur_44390a90" xml:space="preserve">
+    <value>描边边角</value>
   </data>
 </root>

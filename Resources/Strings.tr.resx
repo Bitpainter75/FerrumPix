@@ -9304,31 +9304,40 @@
   <data name="Au_en_1946cfea" xml:space="preserve">
     <value>Dışarıda</value>
   </data>
-  <data name="Die_Linie_liegt_innerhalb_der_Auswahl_2679c403" xml:space="preserve">
-    <value>Çizgi seçimin içinde kalır</value>
-  </data>
-  <data name="Die_Linie_liegt_mittig_auf_der_Auswahlkante_54431beb" xml:space="preserve">
-    <value>Çizgi seçim kenarının ortasında durur</value>
-  </data>
-  <data name="Die_Linie_liegt_au_erhalb_der_Auswahl_52b6a5fd" xml:space="preserve">
-    <value>Çizgi seçimin dışında kalır</value>
-  </data>
   <data name="Konturfarbe_560f5fae" xml:space="preserve">
     <value>Kontur rengi</value>
   </data>
-  <data name="Eine_Linie_entlang_der_Auswahlkante_als_neue_Bil_2f217c8f" xml:space="preserve">
-    <value>Seçim kenarı boyunca yeni bir resim katmanı olarak çizgi çiz</value>
+  <data name="Ecken_f3afeae8" xml:space="preserve">
+    <value>Köşeler</value>
   </data>
-  <data name="Kontur_zeichnen_7d6fa55c" xml:space="preserve">
-    <value>Kontur çiz</value>
+  <data name="Eckig_e60f7583" xml:space="preserve">
+    <value>Köşeli</value>
   </data>
-  <data name="Kontur_wird_gezeichnet_12310b58" xml:space="preserve">
-    <value>Kontur çiziliyor...</value>
+  <data name="Die_Kontur_liegt_innen_af3f7778" xml:space="preserve">
+    <value>Kontur içeride kalır</value>
   </data>
-  <data name="Kontur_zeichnen_fehlgeschlagen_d9644e5f" xml:space="preserve">
-    <value>Kontur çizilemedi</value>
+  <data name="Die_Kontur_liegt_mittig_auf_der_Kante_216086bb" xml:space="preserve">
+    <value>Kontur kenarın ortasında durur</value>
   </data>
-  <data name="Kontur_gezeichnet_eb192d00" xml:space="preserve">
-    <value>Kontur çizildi</value>
+  <data name="Die_Kontur_liegt_au_en_499a4058" xml:space="preserve">
+    <value>Kontur dışarıda kalır</value>
+  </data>
+  <data name="Die_Kontur_l_uft_au_en_im_Bogen_um_eine_Ecke_8b404ca3" xml:space="preserve">
+    <value>Kontur dış tarafta köşeyi yay çizerek döner</value>
+  </data>
+  <data name="Die_Kontur_beh_lt_au_en_spitze_Ecken_88789197" xml:space="preserve">
+    <value>Kontur dış tarafta sivri köşeleri korur</value>
+  </data>
+  <data name="Bei_100_eine_harte_Kontur_darunter_laufen_ihre_R_ddf76e00" xml:space="preserve">
+    <value>100'de sert bir kontur, altında kenarları yumuşakça kaybolur</value>
+  </data>
+  <data name="Lage_der_Kontur_047c153c" xml:space="preserve">
+    <value>Kontur konumu</value>
+  </data>
+  <data name="H_rte_der_Kontur_76abf9d5" xml:space="preserve">
+    <value>Kontur sertliği</value>
+  </data>
+  <data name="Ecken_der_Kontur_44390a90" xml:space="preserve">
+    <value>Kontur köşeleri</value>
   </data>
 </root>

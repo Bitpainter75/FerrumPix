@@ -4918,6 +4918,17 @@ Namespace ViewModels
         ''' Auswahl-/Maskenänderung laufen, damit eine NEUE Auswahl eine eigene Ebene bekommt.</summary>
         Private Sub InvalidateSelectionLayerLink()
             _selectionPromotedLayerId = ""
+            ' Die neue Auswahl hat noch keine Kontur. "Aktiv" geht aus, Breite, Farbe und die
+            ' uebrigen Werte bleiben als Vorgabe fuer sie stehen.
+            If _selectionStrokeEnabled Then
+                _selectionStrokeEnabled = False
+                Me.RaisePropertyChanged(NameOf(SelectionStrokeEnabled))
+            End If
+            If _selectionFillEnabled Then
+                _selectionFillEnabled = False
+                Me.RaisePropertyChanged(NameOf(SelectionFillEnabled))
+                RaiseFillGroupActiveChanged()
+            End If
         End Sub
 
         ''' <summary>Tragen zwei Masken DIESELBE FORM? Verglichen werden die Bildpunkte über ihren
@@ -5039,12 +5050,13 @@ Namespace ViewModels
 
         ' ===================== Kontur entlang der Auswahl =====================
         '
-        ' Eine Linie in Farbe und Breite entlang der Auswahlkante, innen, mittig oder aussen. Sie
-        ' entsteht als eigene Bildebene wie eine kopierte Auswahl: verschiebbar, mit Deckkraft und
-        ' Mischmodus, und mit Entf wieder weg. Eine deklarative Kontur auf der Korrekturebene (wie
-        ' das Fuellen) waere nachtraeglich in der Breite aenderbar, braeuchte aber einen eigenen
-        ' Zeichenweg in der Pixelkette, im Schluessel des Basis-Caches und in der Datei.
+        ' Eine Linie in Farbe und Breite entlang der Auswahlkante, innen, mittig oder aussen. Sie ist
+        ' DEKLARATIV wie die Fuellung: die Werte stehen an der Auswahlebene (MaskedAdjustmentLayer.
+        ' StrokeWidth usw.), und der Render zeichnet sie selbst. Ohne Knopf: "Aktiv" legt sie an,
+        ' jede Aenderung an Breite, Farbe, Lage, Haerte und Ecken greift sofort, "Aktiv" aus nimmt
+        ' sie weg. Ohne laufende Auswahl merkt sich das Panel die Werte fuer die naechste.
 
+        Private _selectionStrokeEnabled As Boolean = False
         Private _selectionStrokeColor As String = "#FF000000"
         Private _selectionStrokeWidth As Double = 4.0
         Private _selectionStrokePosition As String = "Center"
@@ -5060,17 +5072,64 @@ Namespace ViewModels
                 If String.Equals(text, _selectionStrokeColor, StringComparison.OrdinalIgnoreCase) Then Return
                 _selectionStrokeColor = text
                 Me.RaisePropertyChanged(NameOf(SelectionStrokeColorValue))
+                ApplySelectionStrokeLive()
             End Set
         End Property
 
-        ''' <summary>Breite der Linie in Bildpunkten des Dokuments, 1 bis 250. Die Obergrenze kommt
-        ''' aus der Abstandsrechnung: sie legt die Quadrate in 16 Bit ab (siehe SquaredDistanceToFeature).</summary>
+        ''' <summary>Schalter "Aktiv" der Kontur im Auswahl-Werkzeug.</summary>
+        Public Property SelectionStrokeEnabled As Boolean
+            Get
+                Return _selectionStrokeEnabled
+            End Get
+            Set(value As Boolean)
+                If _selectionStrokeEnabled = value Then Return
+                _selectionStrokeEnabled = value
+                Me.RaisePropertyChanged(NameOf(SelectionStrokeEnabled))
+                ApplySelectionStrokeLive()
+            End Set
+        End Property
+
+        ''' <summary>Breite der Linie in Bildpunkten des Dokuments, 1 bis 200 wie die Konturbreite der
+        ''' Objekte (die Abstandsrechnung selbst trueg bis 250, siehe SquaredDistanceToFeature).</summary>
         Public Property SelectionStrokeWidth As Double
             Get
                 Return _selectionStrokeWidth
             End Get
             Set(value As Double)
-                Me.RaiseAndSetIfChanged(_selectionStrokeWidth, Math.Max(1.0, Math.Min(250.0, value)))
+                Dim clamped = Math.Max(1.0, Math.Min(200.0, value))
+                If Math.Abs(_selectionStrokeWidth - clamped) < 0.0001 Then Return
+                Me.RaiseAndSetIfChanged(_selectionStrokeWidth, clamped)
+                ApplySelectionStrokeLive()
+            End Set
+        End Property
+
+        Private _selectionStrokeHardness As Double = 100.0
+        Private _selectionStrokeSquareCorners As Boolean = False
+
+        ''' <summary>0 bis 100. Bei 100 ein Punkt Uebergang, darunter laufen beide Raender der Linie
+        ''' weich aus, bei 0 bis zur Mitte (siehe ImageProcessor.BuildSelectionStroke).</summary>
+        Public Property SelectionStrokeHardness As Double
+            Get
+                Return _selectionStrokeHardness
+            End Get
+            Set(value As Double)
+                Dim clamped = Math.Max(0.0, Math.Min(100.0, value))
+                If Math.Abs(_selectionStrokeHardness - clamped) < 0.0001 Then Return
+                Me.RaiseAndSetIfChanged(_selectionStrokeHardness, clamped)
+                ApplySelectionStrokeLive()
+            End Set
+        End Property
+
+        ''' <summary>Eckig: die Linie behaelt aussen die Ecken der Auswahl (Schachbrettabstand).
+        ''' Rund: sie laeuft im Bogen darum (euklidischer Abstand).</summary>
+        Public Property SelectionStrokeSquareCorners As Boolean
+            Get
+                Return _selectionStrokeSquareCorners
+            End Get
+            Set(value As Boolean)
+                If _selectionStrokeSquareCorners = value Then Return
+                Me.RaiseAndSetIfChanged(_selectionStrokeSquareCorners, value)
+                ApplySelectionStrokeLive()
             End Set
         End Property
 
@@ -5081,71 +5140,88 @@ Namespace ViewModels
             End Get
             Set(value As String)
                 Dim normalized = If(value = "Inside" OrElse value = "Outside", value, "Center")
+                If String.Equals(_selectionStrokePosition, normalized, StringComparison.Ordinal) Then Return
                 Me.RaiseAndSetIfChanged(_selectionStrokePosition, normalized)
+                ApplySelectionStrokeLive()
             End Set
         End Property
 
-        Public Async Function StrokeSelectionAsync() As Task
-            If Not _hasActiveSelection OrElse String.IsNullOrWhiteSpace(_currentImagePath) Then Return
-            Dim documentSize = GetAnnotationDisplayPixelSize()
-            Dim documentWidth = documentSize.Width, documentHeight = documentSize.Height
-            If documentWidth <= 0 OrElse documentHeight <= 0 Then Return
-
-            ' Dieselbe Maske wie beim Kopieren und Fuellen: mit weicher Kante die weichgezeichnete,
-            ' sonst die gespeicherte, und fuer ein schlichtes Rechteck eine volle.
-            Dim maskRect As SKRectI
-            Dim mask As SKBitmap
-            If _selectionMask IsNot Nothing OrElse _selectionFeather > 0.05 Then
-                Dim ownsMask As Boolean
-                Dim outputMask = GetSelectionMaskForOutput(maskRect, ownsMask)
-                If outputMask Is Nothing Then Return
-                ' Die gespeicherte Maske gehoert der Auswahl; gerechnet wird im Hintergrund auf einer Kopie.
-                mask = If(ownsMask, outputMask, outputMask.Copy())
-            Else
-                maskRect = SelectionRectPixels()
-                If maskRect.Width <= 0 OrElse maskRect.Height <= 0 Then Return
-                mask = CreateSolidMask(maskRect.Width, maskRect.Height)
+        ''' <summary>Die Auswahlebene der laufenden Auswahl, ohne eine anzulegen; Nothing, wenn es
+        ''' noch keine gibt. Dieselbe Suche wie ActiveFillLayerForSelection.</summary>
+        Private Function ExistingLayerForActiveSelection() As MaskedAdjustmentLayer
+            Dim l As MaskedAdjustmentLayer = Nothing
+            If _selectionPromotedLayerId <> "" Then
+                l = _maskedAdjustmentLayers.FirstOrDefault(Function(x) x IsNot Nothing AndAlso x.Id = _selectionPromotedLayerId)
             End If
-
-            Dim color As SKColor
-            If Not SKColor.TryParse(_selectionStrokeColor, color) Then color = SKColors.Black
-            Dim width = CSng(_selectionStrokeWidth)
-            Dim position = If(_selectionStrokePosition = "Inside", ImageProcessor.SelectionStrokePosition.Inside,
-                              If(_selectionStrokePosition = "Outside", ImageProcessor.SelectionStrokePosition.Outside,
-                                 ImageProcessor.SelectionStrokePosition.Center))
-            Dim targetPath = CreateSelectionAssetTempPath("stroke")
-            Dim document = _currentImagePath
-
-            StatusText = LocalizationService.T("Kontur wird gezeichnet...")
-            Dim outcome = Await Task.Run(
-                Function()
-                    Dim placement As SKRectI
-                    Try
-                        Using mask
-                            Using stroke = ImageProcessor.BuildSelectionStroke(mask, maskRect, documentWidth, documentHeight,
-                                                                               width, position, color, placement)
-                                If stroke Is Nothing Then Return (Ok:=False, Placement:=placement)
-                                Return (Ok:=WriteObjectPaintFile(stroke, targetPath), Placement:=placement)
-                            End Using
-                        End Using
-                    Catch ex As Exception
-                        ' Etwa ein Dokumentwechsel mittendrin: der Zwischenordner ist dann schon weg.
-                        DiagnosticLogService.LogException("Editor.SelectionStroke", ex)
-                        Return (Ok:=False, Placement:=placement)
-                    End Try
-                End Function)
-
-            ' Inzwischen ein anderes Bild: die Linie gehoert nicht dorthin.
-            If Not String.Equals(document, _currentImagePath, StringComparison.Ordinal) Then Return
-            If Not outcome.Ok Then
-                StatusText = LocalizationService.T("Kontur zeichnen fehlgeschlagen")
-                Return
-            End If
-            Dim p = PixelRectToPercent(outcome.Placement)
-            AddSelectionImageAnnotationAt(targetPath, p.X, p.Y, p.W, p.H, GeneratedLayerNames.Stroke)
-            NameHistoryStep(LocalizationService.T("Kontur gezeichnet"))
-            StatusText = LocalizationService.T("Kontur gezeichnet")
+            If l Is Nothing Then l = LayerForEditedMask()
+            Return l
         End Function
+
+        ''' <summary>Schreibt die Kontur aus dem Panel an die Auswahlebene und rendert neu. Aktiv legt
+        ''' die Ebene bei Bedarf an (wie das Fuellen), aus setzt nur eine vorhandene auf Breite null.
+        ''' Ein Reglerzug wird ueber CaptureUndoState zu EINEM Schritt zusammengefasst.</summary>
+        Private Sub ApplySelectionStrokeLive()
+            If _loadingSelectionStyle OrElse Not _hasActiveSelection Then Return
+            Dim layer As MaskedAdjustmentLayer
+            If _selectionStrokeEnabled Then
+                CaptureUndoState("SelectionStroke")
+                layer = EnsureCorrectionLayerForActiveSelection()
+            Else
+                layer = ExistingLayerForActiveSelection()
+                If layer Is Nothing OrElse Not layer.HasStroke() Then Return
+                CaptureUndoState("SelectionStroke")
+            End If
+            If layer Is Nothing OrElse layer.IsMaskLayer Then Return
+            layer.StrokeWidth = If(_selectionStrokeEnabled, _selectionStrokeWidth, 0.0)
+            layer.StrokeColor = _selectionStrokeColor
+            layer.StrokePosition = _selectionStrokePosition
+            layer.StrokeHardness = _selectionStrokeHardness
+            layer.StrokeSquareCorners = _selectionStrokeSquareCorners
+            _hasChanges = True
+            SchedulePreviewUpdate()
+        End Sub
+
+        ''' <summary>Holt die Kontur einer vorhandenen Auswahlebene ins Panel, wenn deren Auswahl
+        ''' wieder aufgenommen wird - sonst zeigte das Panel die Werte der letzten Auswahl.</summary>
+        Private Sub LoadSelectionStyleFromLayer(layer As MaskedAdjustmentLayer)
+            If layer Is Nothing Then Return
+            _loadingSelectionStyle = True
+            Try
+                ' Die Füllung liegt in denselben Feldern wie die der Objekte; nur eine vorhandene
+                ' Füllung wird geladen, sonst blieben die Werte für das nächste Objekt stehen.
+                _selectionFillEnabled = layer.HasFill()
+                If layer.HasFill() Then
+                    AnnotationFillKind = layer.FillKind
+                    AnnotationFillColor2 = layer.FillColor2
+                    AnnotationFillColor = layer.FillColor
+                    AnnotationGradientAngleDegrees = layer.FillAngle
+                    AnnotationGradientInverted = layer.FillInverted
+                End If
+                Me.RaisePropertyChanged(NameOf(SelectionFillEnabled))
+                RaiseFillGroupActiveChanged()
+                If Not layer.IsMaskLayer Then LoadSelectionStrokeFromLayer(layer)
+            Finally
+                _loadingSelectionStyle = False
+            End Try
+        End Sub
+
+        Private Sub LoadSelectionStrokeFromLayer(layer As MaskedAdjustmentLayer)
+            If layer Is Nothing Then Return
+            Dim wasEnabled = layer.HasStroke()
+            _selectionStrokeEnabled = wasEnabled
+            If wasEnabled Then _selectionStrokeWidth = layer.StrokeWidth
+            _selectionStrokeColor = If(layer.StrokeColor, "#FF000000")
+            _selectionStrokePosition = ImageProcessor.NormalizedStrokePosition(layer.StrokePosition)
+            _selectionStrokeHardness = layer.StrokeHardness
+            _selectionStrokeSquareCorners = layer.StrokeSquareCorners
+            Me.RaisePropertyChanged(NameOf(SelectionStrokeEnabled))
+            Me.RaisePropertyChanged(NameOf(SelectionStrokeWidth))
+            Me.RaisePropertyChanged(NameOf(SelectionStrokeColorValue))
+            Me.RaisePropertyChanged(NameOf(SelectionStrokePosition))
+            Me.RaisePropertyChanged(NameOf(SelectionStrokeHardness))
+            Me.RaisePropertyChanged(NameOf(SelectionStrokeSquareCorners))
+        End Sub
+
     End Class
 
 End Namespace

@@ -978,6 +978,18 @@ Namespace Services
             End Set
         End Property
 
+        ''' <summary>Wo die Kontur zur Objektkante liegt: "Inside", "Center" oder "Outside". Leer heisst
+        ''' mittig, so wie jedes Objekt aus der Zeit vor dieser Einstellung (siehe
+        ''' ImageProcessor.DrawAnnotationShape).</summary>
+        Public Property StrokePosition As String = ""
+
+        ''' <summary>0 bis 100. Bei 100 eine harte Kontur wie bisher, darunter laufen ihre Raender weich aus.</summary>
+        Public Property StrokeHardness As Single = 100.0F
+
+        ''' <summary>"Round" oder "Square". Leer heisst: wie die Objektart es schon immer zeichnete
+        ''' (Rechteck spitz, Stern und Wolke rund) - alte Dokumente sehen damit unveraendert aus.</summary>
+        Public Property StrokeCorners As String = ""
+
         Public Property FlowPercent As Single
             Get
                 Return _flowPercent
@@ -1382,6 +1394,9 @@ Namespace Services
                 .Opacity = Opacity,
                 .BlendMode = BlendMode,
                 .BlendIncludesStroke = BlendIncludesStroke,
+                .StrokePosition = StrokePosition,
+                .StrokeHardness = StrokeHardness,
+                .StrokeCorners = StrokeCorners,
                 .FlowPercent = FlowPercent,
                 .RotationDegrees = RotationDegrees,
                 .FlipHorizontal = FlipHorizontal,

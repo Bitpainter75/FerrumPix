@@ -1,0 +1,105 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:icons="clr-namespace:FerrumPix.Controls"
+             x:Class="FerrumPix.Controls.EditorPanels.SelectionStrokePanel">
+    <!-- KONTUR DER AUSWAHL: eine Linie entlang der Auswahlkante, deklarativ an der Auswahlebene wie
+         die Fuellung (ApplySelectionStrokeLive). Ohne Knopf: "Aktiv" legt sie an, jede Aenderung
+         greift sofort. Aufbau und Reihenfolge wie die Kontur am Objekt (ObjectStrokePanel); zu,
+         solange "Aktiv" aus ist. Eigene Farbe statt "Farbe 1" der Fuellung: wer eine Flaeche
+         fuellt und umrandet, will fast immer zwei Farben. -->
+    <Expander Header="Kontur" icons:ExpanderState.Key="selection-stroke"
+              icons:ExpanderState.ExpandWhen="{Binding SelectionStrokeEnabled}">
+        <Expander.HeaderTemplate>
+            <DataTemplate>
+                <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                    <!-- "Aktiv" als Haken in der Kopfzeile wie bei Schatten und Gluehen. -->
+                    <CheckBox VerticalAlignment="Center" MinWidth="0" Padding="0"
+                              ToolTip.Tip="{Binding $parent[Expander].DataContext.GroupActiveToolTip}"
+                              IsChecked="{Binding $parent[Expander].DataContext.SelectionStrokeEnabled}" />
+                    <icons:SvgIcon
+                        Source="avares://FerrumPix/Assets/Icons/outline/border-outer.svg"
+                        Width="14" Height="14" />
+                    <TextBlock Text="{Binding}" FontWeight="SemiBold" />
+                </StackPanel>
+            </DataTemplate>
+        </Expander.HeaderTemplate>
+        <StackPanel Spacing="8" Margin="0,8,0,0">
+            <StackPanel Spacing="8" IsVisible="{Binding SelectionStrokeEnabled}">
+            <WrapPanel Orientation="Horizontal">
+                <Button Classes="ghost" Padding="8,4" Margin="0,0,6,4"
+                        Command="{Binding SetSelectionStrokePositionCommand}"
+                        CommandParameter="Inside"
+                        Classes.active="{Binding SelectionStrokePosition, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Inside}"
+                        ToolTip.Tip="Die Kontur liegt innen">
+                    <TextBlock Text="Innen" FontSize="{DynamicResource FP.Font.Small}" />
+                </Button>
+                <Button Classes="ghost" Padding="8,4" Margin="0,0,6,4"
+                        Command="{Binding SetSelectionStrokePositionCommand}"
+                        CommandParameter="Center"
+                        Classes.active="{Binding SelectionStrokePosition, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Center}"
+                        ToolTip.Tip="Die Kontur liegt mittig auf der Kante">
+                    <TextBlock Text="Mitte" FontSize="{DynamicResource FP.Font.Small}" />
+                </Button>
+                <Button Classes="ghost" Padding="8,4" Margin="0,0,6,4"
+                        Command="{Binding SetSelectionStrokePositionCommand}"
+                        CommandParameter="Outside"
+                        Classes.active="{Binding SelectionStrokePosition, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Outside}"
+                        ToolTip.Tip="Die Kontur liegt außen">
+                    <TextBlock Text="Außen" FontSize="{DynamicResource FP.Font.Small}" />
+                </Button>
+            </WrapPanel>
+            <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Top">
+                <TextBlock Text="Konturfarbe" Foreground="{DynamicResource FP.Text.Secondary}"
+                           VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                <icons:ColorPickerButton Grid.Column="1"
+                                         SelectedColor="{Binding SelectionStrokeColorValue, Mode=TwoWay}" />
+            </Grid>
+            <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
+                <TextBlock Text="Konturbreite" Foreground="{DynamicResource FP.Text.Secondary}"
+                           VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap" />
+                <icons:RoundSlider Grid.Column="1" Minimum="1" Maximum="100"
+                                   DefaultValue="4"
+                                   Value="{Binding SelectionStrokeWidth}"
+                                   Margin="0,0" />
+                <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                         Value="{Binding SelectionStrokeWidth, Mode=TwoWay}"
+                                         Minimum="1" Maximum="200" Increment="1"
+                                         FormatString="F0" />
+            </Grid>
+            <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center"
+                  ToolTip.Tip="Bei 100 eine harte Kontur, darunter laufen ihre Ränder weich aus">
+                <TextBlock Text="Härte" Foreground="{DynamicResource FP.Text.Secondary}"
+                           VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
+                                   DefaultValue="100"
+                                   Value="{Binding SelectionStrokeHardness}"
+                                   Margin="0,0" />
+                <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                         Value="{Binding SelectionStrokeHardness, Mode=TwoWay}"
+                                         Minimum="0" Maximum="100" Increment="1"
+                                         FormatString="F0" />
+            </Grid>
+            <Grid ColumnDefinitions="92,*" VerticalAlignment="Center">
+                <TextBlock Text="Ecken" Foreground="{DynamicResource FP.Text.Secondary}"
+                           VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                <WrapPanel Grid.Column="1" Orientation="Horizontal">
+                    <Button Classes="ghost" Padding="8,4" Margin="0,0,6,0"
+                            Command="{Binding SetSelectionStrokeSquareCornersCommand}"
+                            CommandParameter="False"
+                            Classes.active="{Binding !SelectionStrokeSquareCorners}"
+                            ToolTip.Tip="Die Kontur läuft außen im Bogen um eine Ecke">
+                        <TextBlock Text="Rund" FontSize="{DynamicResource FP.Font.Small}" />
+                    </Button>
+                    <Button Classes="ghost" Padding="8,4" Margin="0,0,6,0"
+                            Command="{Binding SetSelectionStrokeSquareCornersCommand}"
+                            CommandParameter="True"
+                            Classes.active="{Binding SelectionStrokeSquareCorners}"
+                            ToolTip.Tip="Die Kontur behält außen spitze Ecken">
+                        <TextBlock Text="Eckig" FontSize="{DynamicResource FP.Font.Small}" />
+                    </Button>
+                </WrapPanel>
+            </Grid>
+            </StackPanel>
+        </StackPanel>
+    </Expander>
+</UserControl>

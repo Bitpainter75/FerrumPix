@@ -1181,10 +1181,185 @@ Namespace Services
             End Select
         End Function
 
+        ' ===================== Lage, Haerte und Ecken der Kontur =====================
+        '
+        ' Jede Objektart zeichnet ihre Kontur selbst, in rund zwanzig Routinen mit eigenem Stift.
+        ' Statt jede um drei Schalter zu erweitern, holen sie ihren Konturstift aus EINER Fabrik
+        ' (ObjectStrokePaint), und die liest, was fuer das gerade gezeichnete Objekt gilt: Breite mal
+        ' Faktor, Linienverbindung und weiche Raender. Gesetzt wird das von DrawAnnotationShape fuer
+        ' die Dauer des Zeichnens, auf dem zeichnenden Faden. Ohne Einstellung (mittig, Haerte 100,
+        ' Ecken wie bisher) steht dort nichts, und jede Routine zeichnet genau wie vorher.
+        '
+        ' Innen und aussen entstehen aus der mittigen Kontur doppelter Breite und der Silhouette des
+        ' Objekts: innen bleibt, was in der Silhouette liegt (DstIn), aussen, was ausserhalb liegt
+        ' (DstOut). Dasselbe Muster wie beim Aufteilen fuer den Mischmodus (AnnotationFillOnly).
+
+        Private NotInheritable Class ObjectStrokeStyle
+            ''' <summary>Breite der Umrisskontur mal diesem Faktor (2 fuer innen und aussen).</summary>
+            Public WidthFactor As Single = 1.0F
+            ''' <summary>Umrisskontur gar nicht zeichnen (Fuellung und Silhouette).</summary>
+            Public SkipOutline As Boolean
+            ''' <summary>Linienverbindung statt der eigenen der Objektart; Nothing laesst sie.</summary>
+            Public Join As SKStrokeJoin?
+            ''' <summary>Weiche Raender: Gauss-Sigma in Bildpunkten, 0 fuer hart.</summary>
+            Public BlurSigma As Single
+        End Class
+
+        <ThreadStatic> Private Shared _objectStrokeStyle As ObjectStrokeStyle
+
+        ''' <summary>Der Konturstift fuer den UMRISS eines Objekts. <paramref name="legacyJoin"/> und
+        ''' <paramref name="cap"/> sind das, was die Objektart schon immer nahm.
+        ''' <paramref name="outline"/> False fuer Linien IM Objekt (die Mittellinie von Kegel und
+        ''' Pyramide): sie folgen weder Lage noch Breite, nur der Haerte.
+        ''' <paramref name="localUnitsPerPixel"/>: wird unter einer Skalierung gezeichnet (SVG), rechnet
+        ''' Skia auch den weichen Rand mit; er wird deshalb in lokale Einheiten umgerechnet.</summary>
+        Private Shared Function ObjectStrokePaint(color As SKColor, width As Single,
+                                                  Optional legacyJoin As SKStrokeJoin = SKStrokeJoin.Miter,
+                                                  Optional cap As SKStrokeCap = SKStrokeCap.Butt,
+                                                  Optional outline As Boolean = True,
+                                                  Optional localUnitsPerPixel As Single = 1.0F) As SKPaint
+            Dim paint = New SKPaint With {.Color = color, .Style = SKPaintStyle.Stroke, .StrokeWidth = width,
+                                          .IsAntialias = True, .StrokeJoin = legacyJoin, .StrokeCap = cap}
+            Dim style = _objectStrokeStyle
+            If style Is Nothing Then Return paint
+            If outline Then
+                If style.SkipOutline Then paint.Color = SKColors.Transparent
+                paint.StrokeWidth = width * style.WidthFactor
+                If style.Join.HasValue Then paint.StrokeJoin = style.Join.Value
+            End If
+            If style.BlurSigma > 0.05F Then paint.MaskFilter = SKMaskFilter.CreateBlur(SKBlurStyle.Normal, style.BlurSigma * localUnitsPerPixel)
+            Return paint
+        End Function
+
+        ''' <summary>"Inside", "Center" oder "Outside"; alles andere ist mittig.</summary>
+        Friend Shared Function NormalizedStrokePosition(value As String) As String
+            Select Case If(value, "").Trim().ToLowerInvariant()
+                Case "inside" : Return "Inside"
+                Case "outside" : Return "Outside"
+                Case Else : Return "Center"
+            End Select
+        End Function
+
+        ''' <summary>Ob Lage, Haerte und Ecken fuer diese Objektart gelten. Nicht fuer reine Linien
+        ''' (Linie, Pfeil, Spirale: dort IST die Kontur das Objekt, innen und aussen gibt es nicht),
+        ''' den QR-Code (keine Kontur, die Farbe sind die Module), Pinselstriche und den Rahmen, der
+        ''' seine Kontur in einem eigenen Durchgang zeichnet.</summary>
+        Private Shared Function StrokeStyleApplies(kind As String) As Boolean
+            Select Case kind
+                Case "line", "arrow", "spiral", "qr", "qrcode", "qr-code", "brush", "eraser", "frame"
+                    Return False
+                Case Else
+                    Return True
+            End Select
+        End Function
+
+        ''' <summary>Wie weit die Kontur ueber die Objektkante hinausreicht, in Bildpunkten: mittig die
+        ''' halbe Breite, aussen die ganze, innen nichts, dazu der weiche Rand. Fuer den Rand der
+        ''' Anzeige-Bitmap (RenderAnnotationOverlaySk).</summary>
+        Friend Shared Function ObjectStrokeReach(annotation As ImageAnnotation) As Single
+            If annotation Is Nothing OrElse annotation.StrokeWidth <= 0 Then Return 0.0F
+            Dim width = annotation.StrokeWidth
+            Dim kind = If(annotation.Kind, "").Trim().ToLowerInvariant()
+            If Not StrokeStyleApplies(kind) Then Return width / 2.0F
+            Dim reach As Single
+            Select Case NormalizedStrokePosition(annotation.StrokePosition)
+                Case "Outside" : reach = width
+                Case "Inside" : reach = 0.0F
+                Case Else : reach = width / 2.0F
+            End Select
+            Return reach + 3.0F * StrokeBlurSigma(annotation.StrokeHardness, width)
+        End Function
+
+        ''' <summary>Weiche Raender aus der Haerte: bei 100 hart, bei 0 ein Sigma von einem Viertel
+        ''' der Breite, sodass die Kontur zu beiden Raendern sichtbar auslaeuft.</summary>
+        Private Shared Function StrokeBlurSigma(hardness As Single, width As Single) As Single
+            Dim h = Math.Max(0.0F, Math.Min(100.0F, hardness)) / 100.0F
+            Return (1.0F - h) * width / 4.0F
+        End Function
+
         ' Zeichnet ein einzelnes Objekt anhand seiner Art (Kind) - wird sowohl für das normale
         ' Zeichnen als auch (auf einer separaten Offscreen-Maske) für Schatten/Glow in
         ' DrawAnnotationEffects wiederverwendet, damit beide Pfade exakt dieselbe Silhouette ergeben.
+        '
+        ' Hier sitzen Lage, Haerte und Ecken der Kontur (siehe oben); die Objektart selbst zeichnet
+        ' DrawAnnotationShapeCore.
         Private Shared Sub DrawAnnotationShape(canvas As SKCanvas, kind As String, annotation As ImageAnnotation, rect As SKRect, x As Single, y As Single, maxWidth As Single, fontSize As Single, fill As SKColor, stroke As SKColor, strokeWidth As Single, alphaFactor As Single)
+            Dim position = NormalizedStrokePosition(annotation.StrokePosition)
+            Dim corners = If(annotation.StrokeCorners, "").Trim().ToLowerInvariant()
+            Dim sigma = StrokeBlurSigma(annotation.StrokeHardness, Math.Max(1.0F, annotation.StrokeWidth))
+            Dim styled = annotation.StrokeWidth > 0 AndAlso stroke.Alpha > 0 AndAlso StrokeStyleApplies(kind) AndAlso
+                         (position <> "Center" OrElse sigma > 0.05F OrElse corners = "round" OrElse corners = "square")
+            If Not styled Then
+                DrawAnnotationShapeCore(canvas, kind, annotation, rect, x, y, maxWidth, fontSize, fill, stroke, strokeWidth, alphaFactor)
+                Return
+            End If
+
+            Dim join As SKStrokeJoin? = Nothing
+            If corners = "round" Then join = SKStrokeJoin.Round
+            If corners = "square" Then join = SKStrokeJoin.Miter
+            Dim previous = _objectStrokeStyle
+            Try
+                If position = "Center" Then
+                    _objectStrokeStyle = New ObjectStrokeStyle With {.Join = join, .BlurSigma = sigma}
+                    DrawAnnotationShapeCore(canvas, kind, annotation, rect, x, y, maxWidth, fontSize, fill, stroke, strokeWidth, alphaFactor)
+                    Return
+                End If
+
+                If position = "Outside" Then
+                    ' Erst Fuellung und innere Linien, ohne Umriss.
+                    _objectStrokeStyle = New ObjectStrokeStyle With {.SkipOutline = True}
+                    DrawAnnotationShapeCore(canvas, kind, annotation, rect, x, y, maxWidth, fontSize, fill, stroke, strokeWidth, alphaFactor)
+                End If
+
+                ' Die Kontur doppelter Breite in eine eigene Ebene, dann mit der Silhouette beschneiden:
+                ' innen samt Fuellung (die liegt ohnehin in der Silhouette), aussen nur der Ring.
+                ' Die Ebene nur so gross wie Objekt, Kontur und weicher Rand: beim Speichern ist die
+                ' Leinwand das ganze Bild. Text ragt ueber seinen Rahmen hinaus (lange Woerter, Pfad)
+                ' und bekommt deshalb keine Grenze.
+                Dim isText = kind = "text" OrElse kind = "" OrElse (kind = "watermark" AndAlso String.IsNullOrWhiteSpace(annotation.ImagePath))
+                If isText Then
+                    canvas.SaveLayer()
+                Else
+                    Dim margin = strokeWidth * 2.0F + 3.0F * sigma + 2.0F
+                    canvas.SaveLayer(SKRect.Inflate(rect, margin, margin), Nothing)
+                End If
+                _objectStrokeStyle = New ObjectStrokeStyle With {.WidthFactor = 2.0F, .Join = join, .BlurSigma = sigma}
+                If position = "Outside" Then
+                    DrawAnnotationShapeCore(canvas, kind, AnnotationStrokeOnly(annotation), rect, x, y, maxWidth, fontSize,
+                                            SKColors.Transparent, stroke, strokeWidth, alphaFactor)
+                Else
+                    DrawAnnotationShapeCore(canvas, kind, annotation, rect, x, y, maxWidth, fontSize, fill, stroke, strokeWidth, alphaFactor)
+                End If
+                Using clipPaint = New SKPaint With {.BlendMode = If(position = "Outside", SKBlendMode.DstOut, SKBlendMode.DstIn)}
+                    canvas.SaveLayer(clipPaint)
+                    DrawAnnotationSilhouette(canvas, kind, annotation, rect, x, y, maxWidth, fontSize, strokeWidth)
+                    canvas.Restore()
+                End Using
+                canvas.Restore()
+            Finally
+                _objectStrokeStyle = previous
+            End Try
+        End Sub
+
+        ''' <summary>Die Flaeche des Objekts ohne Umriss, deckend: Fuellung in Weiss, als Vollfarbe,
+        ''' bei voller Deckkraft. Ein Bild bringt seine eigene Deckung mit.</summary>
+        Private Shared Sub DrawAnnotationSilhouette(canvas As SKCanvas, kind As String, annotation As ImageAnnotation, rect As SKRect,
+                                                    x As Single, y As Single, maxWidth As Single, fontSize As Single, strokeWidth As Single)
+            Dim solid = annotation.Clone()
+            solid.FillKind = "Solid"
+            solid.FillColor = "#FFFFFFFF"
+            solid.FillColor2 = "#FFFFFFFF"
+            solid.Opacity = 100
+            Dim previous = _objectStrokeStyle
+            _objectStrokeStyle = New ObjectStrokeStyle With {.SkipOutline = True}
+            Try
+                DrawAnnotationShapeCore(canvas, kind, solid, rect, x, y, maxWidth, fontSize, SKColors.White, SKColors.Transparent, strokeWidth, 1.0F)
+            Finally
+                _objectStrokeStyle = previous
+            End Try
+        End Sub
+
+        Private Shared Sub DrawAnnotationShapeCore(canvas As SKCanvas, kind As String, annotation As ImageAnnotation, rect As SKRect, x As Single, y As Single, maxWidth As Single, fontSize As Single, fill As SKColor, stroke As SKColor, strokeWidth As Single, alphaFactor As Single)
             Select Case kind
                 Case "frame"
                     ' Der Rahmen sitzt am Rechteck des Objekts, und das ist beim Rahmen immer das
@@ -1714,12 +1889,7 @@ Namespace Services
                     End If
 
                     If strokeWidth > 0 Then
-                        Using strokePaint = New SKPaint With {
-                            .Color = stroke,
-                            .IsAntialias = True,
-                            .Style = SKPaintStyle.Stroke,
-                            .StrokeWidth = Math.Max(1.0F, strokeWidth)
-                        }
+                        Using strokePaint = ObjectStrokePaint(stroke, Math.Max(1.0F, strokeWidth))
                             If path IsNot Nothing Then
                                 DrawTextOnPathSpaced(canvas, pathText, path, font, strokePaint, spacing)
                             Else
@@ -2012,7 +2182,7 @@ Namespace Services
                 End Using
 
                 If strokeWidth > 0 Then
-                    Using strokePaint = New SKPaint With {.Color = stroke, .Style = SKPaintStyle.Stroke, .StrokeWidth = strokeWidth, .IsAntialias = True}
+                    Using strokePaint = ObjectStrokePaint(stroke, strokeWidth)
                         canvas.DrawRect(fitRect, strokePaint)
                     End Using
                 End If
@@ -2066,14 +2236,8 @@ Namespace Services
             End If
             If strokeWidth > 0 Then
                 Dim adjustedStroke = strokeWidth / Math.Max(0.0001F, Math.Min(scaleX, scaleY))
-                Using strokePaint = New SKPaint With {
-                    .Color = stroke,
-                    .Style = SKPaintStyle.Stroke,
-                    .StrokeWidth = adjustedStroke,
-                    .IsAntialias = True,
-                    .StrokeCap = SKStrokeCap.Round,
-                    .StrokeJoin = SKStrokeJoin.Round
-                }
+                Using strokePaint = ObjectStrokePaint(stroke, adjustedStroke, SKStrokeJoin.Round, SKStrokeCap.Round,
+                                                      localUnitsPerPixel:=adjustedStroke / strokeWidth)
                     canvas.DrawPath(shape.Path, strokePaint)
                 End Using
             End If
@@ -2233,7 +2397,7 @@ Namespace Services
                 End Using
             End If
 
-            Using strokePaint = New SKPaint With {.Color = stroke, .Style = SKPaintStyle.Stroke, .StrokeWidth = strokeWidth, .IsAntialias = True}
+            Using strokePaint = ObjectStrokePaint(stroke, strokeWidth)
                 If ellipse Then canvas.DrawOval(rect, strokePaint) Else canvas.DrawRect(rect, strokePaint)
             End Using
         End Sub
@@ -2273,7 +2437,7 @@ Namespace Services
                     canvas.DrawRoundRect(rect, radius, radius, fillPaint)
                 End Using
             End If
-            Using strokePaint = New SKPaint With {.Color = stroke, .Style = SKPaintStyle.Stroke, .StrokeWidth = strokeWidth, .IsAntialias = True}
+            Using strokePaint = ObjectStrokePaint(stroke, strokeWidth)
                 canvas.DrawRoundRect(rect, radius, radius, strokePaint)
             End Using
         End Sub
@@ -2314,7 +2478,7 @@ Namespace Services
                 path.Close()
                 DrawClosedPath(canvas, path, fill, stroke, strokeWidth)
             End Using
-            Using linePaint = New SKPaint With {.Color = stroke, .Style = SKPaintStyle.Stroke, .StrokeWidth = Math.Max(1.0F, strokeWidth * 0.7F), .IsAntialias = True, .StrokeCap = SKStrokeCap.Round}
+            Using linePaint = ObjectStrokePaint(stroke, Math.Max(1.0F, strokeWidth * 0.7F), cap:=SKStrokeCap.Round, outline:=False)
                 canvas.DrawLine(rect.MidX, rect.Top, rect.MidX, rect.Bottom - rect.Height * 0.18F, linePaint)
             End Using
         End Sub
@@ -2529,7 +2693,7 @@ Namespace Services
             ' Ohne Breite keine Kontur: eine Breite von null bedeutet ausdrücklich "keine", und Skia
             ' zeichnet bei null trotzdem eine Haarlinie.
             If strokeWidth <= 0.0F OrElse stroke.Alpha = 0 Then Return
-            Using strokePaint = New SKPaint With {.Color = stroke, .Style = SKPaintStyle.Stroke, .StrokeWidth = strokeWidth, .IsAntialias = True, .StrokeCap = SKStrokeCap.Round, .StrokeJoin = SKStrokeJoin.Round}
+            Using strokePaint = ObjectStrokePaint(stroke, strokeWidth, SKStrokeJoin.Round, SKStrokeCap.Round)
                 canvas.DrawPath(path, strokePaint)
             End Using
         End Sub
@@ -2563,15 +2727,23 @@ Namespace Services
                     font.MeasureText(text, bounds, paint)
                     Dim x = rect.MidX - bounds.MidX
                     Dim y = rect.MidY - bounds.MidY
-                    If strokeWidth > 0 Then
-                        paint.Style = SKPaintStyle.Stroke
-                        paint.StrokeWidth = strokeWidth
-                        paint.Color = stroke
-                        canvas.DrawText(text, x, y, font, paint)
+                    ' Ohne eigene Einstellung liegt die Kontur UNTER der Fuellung, wie schon immer -
+                    ' die Fuellung deckt ihre innere Haelfte. Mit Lage, Haerte oder Ecken liegt sie
+                    ' darueber, sonst bliebe eine Kontur innen unsichtbar.
+                    Dim strokeOnTop = _objectStrokeStyle IsNot Nothing
+                    If strokeWidth > 0 AndAlso Not strokeOnTop Then
+                        Using strokePaint = ObjectStrokePaint(stroke, strokeWidth)
+                            canvas.DrawText(text, x, y, font, strokePaint)
+                        End Using
                     End If
                     paint.Style = SKPaintStyle.Fill
                     paint.Color = fill
                     canvas.DrawText(text, x, y, font, paint)
+                    If strokeWidth > 0 AndAlso strokeOnTop Then
+                        Using strokePaint = ObjectStrokePaint(stroke, strokeWidth)
+                            canvas.DrawText(text, x, y, font, strokePaint)
+                        End Using
+                    End If
                 End Using
             End Using
         End Sub

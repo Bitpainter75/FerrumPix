@@ -4633,13 +4633,23 @@ RasterTeil:
         ''' vormultipliziert, so gross wie die Linie selbst, und in <paramref name="placement"/> das
         ''' Rechteck, an dem es im Dokument sitzt. Nothing, wenn keine Linie entsteht.
         '''
-        ''' Gerechnet ueber dieselbe Abstandskarte wie Erweitern und Reduzieren
-        ''' (SquaredDistanceToFeature, daher hoechstens 250 Punkte breit): jeder Punkt kennt seinen
-        ''' Abstand zur naechsten Stelle auf der anderen Seite
-        ''' der Kante. Die Linie deckt einen Punkt so weit, wie das Band [0, Breite] ihn ueberdeckt.
-        ''' Unmittelbar an der Kante wird zusaetzlich mit der Deckung der Maske gewichtet: innen mit
-        ''' ihr, aussen mit dem Rest. Eine weiche oder geglaettete Auswahlkante bleibt so weich, und
-        ''' innen plus aussen ergibt an der Kante genau eine volle Linie ohne Spalt.
+        ''' Gerechnet ueber einen Abstand MIT VORZEICHEN zur Auswahlkante: positiv innen, negativ
+        ''' aussen, in Bildpunkten bis zur Mitte des Punkts. Die Linie ist ein Band darin, innen
+        ''' [0, Breite], mittig [-Breite/2, Breite/2], aussen [-Breite, 0]; ein Punkt deckt so weit,
+        ''' wie er im Band liegt. Der Abstand kommt aus zwei Karten, innen zum naechsten Punkt aussen
+        ''' und umgekehrt. Fuer die Punkte unmittelbar an der Kante geht die Deckung der Maske als
+        ''' Bruchteil eines Punkts mit ein: eine weiche oder geglaettete Auswahlkante bleibt so weich,
+        ''' und innen plus aussen ergibt an der Kante genau eine volle Linie ohne Spalt.
+        '''
+        ''' <paramref name="hardness"/> (0 bis 1) bestimmt die weichen Raender der Linie: bei 1 ein
+        ''' Punkt Uebergang, darunter laufen beide Raender auf (1 - Haerte) mal halber Breite aus, bei 0
+        ''' bis zur Mitte.
+        '''
+        ''' <paramref name="squareCorners"/> waehlt den Abstand: rund ist der euklidische (dieselbe
+        ''' Karte wie Erweitern und Reduzieren, SquaredDistanceToFeature, daher hoechstens 250 Punkte
+        ''' breit), die Linie laeuft aussen um eine Ecke im Bogen. Eckig ist der Schachbrettabstand,
+        ''' die Ecke bleibt eine Ecke. Innen, also an einer einspringenden Ecke der Linie, sind beide
+        ''' spitz.
         '''
         ''' Ausserhalb der Maske gilt alles als "aussen", auch jenseits des Bildrands: eine Auswahl
         ''' ueber das ganze Bild bekommt innen ihre Linie am Rand. Was aussen ueber das Bild hinaus
@@ -4649,10 +4659,12 @@ RasterTeil:
         Friend Shared Function BuildSelectionStroke(mask As SKBitmap, maskRect As SKRectI,
                                                     documentWidth As Integer, documentHeight As Integer,
                                                     width As Single, position As SelectionStrokePosition,
+                                                    hardness As Single, squareCorners As Boolean,
                                                     color As SKColor, ByRef placement As SKRectI) As SKBitmap
             placement = SKRectI.Empty
             If mask Is Nothing OrElse mask.ColorType <> SKColorType.Alpha8 OrElse width <= 0.0F Then Return Nothing
             If documentWidth <= 0 OrElse documentHeight <= 0 Then Return Nothing
+            hardness = Clamp01(hardness)
 
             Dim innerWidth = If(position = SelectionStrokePosition.Center, width / 2.0F,
                                 If(position = SelectionStrokePosition.Inside, width, 0.0F))
@@ -4676,12 +4688,15 @@ RasterTeil:
                 Array.Copy(maskRow, 0, coverage, (y + margin) * gw + margin, Math.Min(mask.Width, maskRect.Width))
             Next
 
-            ' Abstand zum Quadrat, dieselbe Rechnung wie Erweitern und Reduzieren: innen zum naechsten
-            ' Punkt aussen, aussen zum naechsten Punkt innen. Gedeckelt knapp ueber der Breite, darueber
-            ' interessiert der Wert nicht. Das Raster hat rundum Rand, keine Seite liegt am Bildrand.
+            ' Innen zum naechsten Punkt aussen, aussen zum naechsten Punkt innen. Beide Karten auch
+            ' bei einer Linie nur auf einer Seite: der Abstand mit Vorzeichen braucht sie fuer die
+            ' Punkte an der Kante. Gedeckelt knapp ueber der Breite, darueber interessiert der Wert
+            ' nicht. Das Raster hat rundum Rand, keine Seite liegt am Bildrand.
             Dim cap = CInt(Math.Ceiling(Math.Max(innerWidth, outerWidth))) + 2
-            Dim toOutside = If(innerWidth > 0.0F, SquaredDistanceToFeature(coverage, gw, gh, cap, featureInside:=False), Nothing)
-            Dim toInside = If(outerWidth > 0.0F, SquaredDistanceToFeature(coverage, gw, gh, cap, featureInside:=True), Nothing)
+            Dim toOutside = DistanceToFeature(coverage, gw, gh, cap, featureInside:=False, squareCorners)
+            Dim toInside = DistanceToFeature(coverage, gw, gh, cap, featureInside:=True, squareCorners)
+            Dim bandLow = -outerWidth, bandHigh = innerWidth
+            Dim ramp = Math.Max(1.0F, (1.0F - hardness) * width / 2.0F)
 
             ' Nur der Teil im Dokument zaehlt.
             Dim left = Math.Max(0, gridLeft), top = Math.Max(0, gridTop)
@@ -4695,17 +4710,14 @@ RasterTeil:
                 For x = left To right - 1
                     Dim gi = gy * gw + (x - gridLeft)
                     Dim m = coverage(gi) / 255.0F
-                    Dim a = 0.0F
-                    If innerWidth > 0.0F Then
-                        Dim d = CSng(Math.Max(1.0, Math.Sqrt(toOutside(gi))))
-                        a += m * Clamp01(innerWidth + 1.0F - d)
-                    End If
-                    If outerWidth > 0.0F Then
-                        Dim d = CSng(Math.Max(1.0, Math.Sqrt(toInside(gi))))
-                        a += (1.0F - m) * Clamp01(outerWidth + 1.0F - d)
-                    End If
+                    ' Ein Punkt an der Kante mit Deckung m liegt um m - 0,5 innen; tiefer drinnen
+                    ' (m = 1) ist es der Abstand nach aussen minus einen halben Punkt, und
+                    ' entsprechend aussen.
+                    Dim signed = If(coverage(gi) >= 128, toOutside(gi) - 1.5F + m, -toInside(gi) + 0.5F + m)
+                    Dim depth = Math.Min(signed - bandLow, bandHigh - signed)
+                    Dim a = Clamp01((depth + 0.5F) / ramp)
                     If a <= 0.0F Then Continue For
-                    alpha((y - top) * (right - left) + (x - left)) = Math.Min(1.0F, a)
+                    alpha((y - top) * (right - left) + (x - left)) = a
                     If x < minX Then minX = x
                     If x > maxX Then maxX = x
                     If y < minY Then minY = y
@@ -4741,6 +4753,60 @@ RasterTeil:
             If value <= 0.0F Then Return 0.0F
             If value >= 1.0F Then Return 1.0F
             Return value
+        End Function
+
+        ''' <summary>Abstand jedes Punkts zum naechsten Merkmalspunkt in Bildpunkten, gedeckelt bei
+        ''' <paramref name="cap"/>. Rund: euklidisch ueber SquaredDistanceToFeature. Eckig: der
+        ''' Schachbrettabstand max(|dx|, |dy|), exakt in zwei Durchgaengen mit den acht Nachbarn.</summary>
+        Private Shared Function DistanceToFeature(source As Byte(), w As Integer, h As Integer, cap As Integer,
+                                                  featureInside As Boolean, squareCorners As Boolean) As Single()
+            Dim result(w * h - 1) As Single
+            If Not squareCorners Then
+                Dim squared = SquaredDistanceToFeature(source, w, h, cap, featureInside)
+                For i = 0 To result.Length - 1
+                    result(i) = CSng(Math.Sqrt(squared(i)))
+                Next
+                Return result
+            End If
+
+            Dim d(w * h - 1) As Integer
+            For i = 0 To d.Length - 1
+                d(i) = If((source(i) >= 128) = featureInside, 0, cap)
+            Next
+            ' Vorwaerts: links, links oben, oben, rechts oben.
+            For y = 0 To h - 1
+                For x = 0 To w - 1
+                    Dim i = y * w + x
+                    Dim v = d(i)
+                    If v = 0 Then Continue For
+                    If x > 0 Then v = Math.Min(v, d(i - 1) + 1)
+                    If y > 0 Then
+                        v = Math.Min(v, d(i - w) + 1)
+                        If x > 0 Then v = Math.Min(v, d(i - w - 1) + 1)
+                        If x < w - 1 Then v = Math.Min(v, d(i - w + 1) + 1)
+                    End If
+                    d(i) = v
+                Next
+            Next
+            ' Rueckwaerts: rechts, rechts unten, unten, links unten.
+            For y = h - 1 To 0 Step -1
+                For x = w - 1 To 0 Step -1
+                    Dim i = y * w + x
+                    Dim v = d(i)
+                    If v = 0 Then Continue For
+                    If x < w - 1 Then v = Math.Min(v, d(i + 1) + 1)
+                    If y < h - 1 Then
+                        v = Math.Min(v, d(i + w) + 1)
+                        If x < w - 1 Then v = Math.Min(v, d(i + w + 1) + 1)
+                        If x > 0 Then v = Math.Min(v, d(i + w - 1) + 1)
+                    End If
+                    d(i) = v
+                Next
+            Next
+            For i = 0 To result.Length - 1
+                result(i) = Math.Min(d(i), cap)
+            Next
+            Return result
         End Function
 
     End Class

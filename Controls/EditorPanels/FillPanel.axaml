@@ -1,0 +1,96 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:icons="clr-namespace:FerrumPix.Controls"
+             x:Class="FerrumPix.Controls.EditorPanels.FillPanel">
+    <!-- EINE Fuellung fuer Auswahl und Objekte, als eigene Gruppe wie Schatten und Gluehen. Beide
+         binden an dieselben Eigenschaften (AnnotationFillKind, AnnotationFillColorValue ...). Haken
+         "Aktiv" in der Kopfzeile (FillGroupActive): am Objekt die sichtbare Fuellfarbe, im
+         Auswahl-Werkzeug die Fuellung der Auswahl, dort live wie die Kontur, ohne Knopf. Zu,
+         solange er aus ist, auf, sobald er an ist (ExpanderState.ExpandWhen). -->
+    <Expander Header="Füllung" icons:ExpanderState.Key="fill"
+              icons:ExpanderState.ExpandWhen="{Binding ObjectFillGroupExpanded}">
+        <Expander.HeaderTemplate>
+            <DataTemplate>
+                <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                    <CheckBox VerticalAlignment="Center" MinWidth="0" Padding="0"
+                              ToolTip.Tip="{Binding $parent[Expander].DataContext.GroupActiveToolTip}"
+                              IsChecked="{Binding $parent[Expander].DataContext.FillGroupActive}" />
+                    <icons:SvgIcon
+                        Source="avares://FerrumPix/Assets/Icons/outline/bucket-droplet.svg"
+                        Width="14" Height="14" />
+                    <TextBlock Text="{Binding}" FontWeight="SemiBold" />
+                </StackPanel>
+            </DataTemplate>
+        </Expander.HeaderTemplate>
+        <StackPanel Spacing="8" Margin="0,8,0,0">
+            <StackPanel Spacing="8" IsVisible="{Binding ShowFillGroupContent}">
+            <!-- WrapPanel statt StackPanel: die Beschriftungen sprengen sonst die Spaltenbreite.
+                 In der laengsten Sprache summieren sich "Vollfarbe|Verlauf|Radial" auf 28 Zeichen -
+                 im Deutschen passt es knapp, anderswo nicht. Umbruch statt fester Aufteilung, damit
+                 es sich nach der tatsaechlichen Breite richtet.
+                 Abstaende ueber Margin je Knopf, weil WrapPanel kein Spacing kennt. -->
+            <WrapPanel Orientation="Horizontal">
+                <Button Classes="ghost" Padding="8,4" Margin="0,0,6,4"
+                        Command="{Binding SetAnnotationFillKindCommand}"
+                        CommandParameter="Solid"
+                        Classes.active="{Binding AnnotationFillKind, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Solid}">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/bucket-droplet.svg"
+                                       Width="14" Height="14" />
+                        <TextBlock Text="Vollfarbe" FontSize="{DynamicResource FP.Font.Small}" />
+                    </StackPanel>
+                </Button>
+                <Button Classes="ghost" Padding="8,4" Margin="0,0,6,4"
+                        Command="{Binding SetAnnotationFillKindCommand}"
+                        CommandParameter="LinearGradient"
+                        Classes.active="{Binding AnnotationFillKind, Converter={StaticResource StringEqualsConverter}, ConverterParameter=LinearGradient}">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/gradient-linear.svg"
+                                       Width="14" Height="14" />
+                        <TextBlock Text="Verlauf" FontSize="{DynamicResource FP.Font.Small}" />
+                    </StackPanel>
+                </Button>
+                <Button Classes="ghost" Padding="8,4" Margin="0,0,6,4"
+                        Command="{Binding SetAnnotationFillKindCommand}"
+                        CommandParameter="RadialGradient"
+                        Classes.active="{Binding AnnotationFillKind, Converter={StaticResource StringEqualsConverter}, ConverterParameter=RadialGradient}">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/gradient-radial.svg"
+                                       Width="14" Height="14" />
+                        <TextBlock Text="Radial" FontSize="{DynamicResource FP.Font.Small}" />
+                    </StackPanel>
+                </Button>
+            </WrapPanel>
+            <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Top">
+                <TextBlock Text="Farbe 1" Foreground="{DynamicResource FP.Text.Secondary}"
+                           VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                <icons:ColorPickerButton Grid.Column="1"
+                                         SelectedColor="{Binding AnnotationFillColorValue, Mode=TwoWay}" />
+            </Grid>
+            <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Top"
+                  IsVisible="{Binding ShowGradientFillControls}">
+                <TextBlock Text="Farbe 2" Foreground="{DynamicResource FP.Text.Secondary}"
+                           VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                <icons:ColorPickerButton Grid.Column="1"
+                                         SelectedColor="{Binding AnnotationFillColor2Value, Mode=TwoWay}" />
+            </Grid>
+            <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center"
+                  IsVisible="{Binding ShowLinearGradientAngleControl}">
+                <TextBlock Text="Winkel" Foreground="{DynamicResource FP.Text.Secondary}"
+                           VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="360"
+                                   DefaultValue="0"
+                                   Value="{Binding AnnotationGradientAngleDegrees}"
+                                   Margin="0,0" />
+                <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                         Value="{Binding AnnotationGradientAngleDegrees, Mode=TwoWay}"
+                                         Minimum="0" Maximum="360" Increment="1"
+                                         FormatString="F0" />
+            </Grid>
+            <CheckBox Content="Verlauf invertieren"
+                      IsChecked="{Binding AnnotationGradientInverted}" FontSize="{DynamicResource FP.Font.Small}"
+                      IsVisible="{Binding ShowRadialGradientControl}" />
+            </StackPanel>
+        </StackPanel>
+    </Expander>
+</UserControl>

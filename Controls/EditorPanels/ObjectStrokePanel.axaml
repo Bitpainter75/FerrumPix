@@ -1,0 +1,115 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:icons="clr-namespace:FerrumPix.Controls"
+             x:Class="FerrumPix.Controls.EditorPanels.ObjectStrokePanel">
+    <!-- KONTUR AM OBJEKT: dieselbe Gruppe und dieselbe Reihenfolge wie die Kontur der Auswahl
+         (SelectionStrokePanel), nur an die Eigenschaften des Objekts gebunden und mit "Kontur
+         mitmischen". Eigene Einstellungen statt der Auswahl-Kontur: ein Regler im Auswahl-Werkzeug
+         soll nicht die Kontur eines markierten Objekts verstellen. Lage, Haerte und Ecken fehlen bei
+         Linie, Pfeil und Spirale, dort IST die Kontur das Objekt (ShowStrokeStyleControls). -->
+    <Expander Header="Kontur" icons:ExpanderState.Key="object-stroke"
+              icons:ExpanderState.ExpandWhen="{Binding ObjectStrokeGroupExpanded}">
+        <Expander.HeaderTemplate>
+            <DataTemplate>
+                <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                    <!-- "Aktiv" als Haken in der Kopfzeile wie bei Schatten und Gluehen: aktiv heisst
+                         eine Breite ueber null (AnnotationStrokeEnabled). -->
+                    <CheckBox VerticalAlignment="Center" MinWidth="0" Padding="0"
+                              ToolTip.Tip="{Binding $parent[Expander].DataContext.GroupActiveToolTip}"
+                              IsChecked="{Binding $parent[Expander].DataContext.AnnotationStrokeEnabled}" />
+                    <icons:SvgIcon
+                        Source="avares://FerrumPix/Assets/Icons/outline/border-outer.svg"
+                        Width="14" Height="14" />
+                    <TextBlock Text="{Binding}" FontWeight="SemiBold" />
+                </StackPanel>
+            </DataTemplate>
+        </Expander.HeaderTemplate>
+        <StackPanel Spacing="8" Margin="0,8,0,0">
+            <StackPanel Spacing="8" IsVisible="{Binding AnnotationStrokeEnabled}">
+            <WrapPanel Orientation="Horizontal" IsVisible="{Binding ShowStrokeStyleControls}">
+                <Button Classes="ghost" Padding="8,4" Margin="0,0,6,4"
+                        Command="{Binding SetAnnotationStrokePositionCommand}"
+                        CommandParameter="Inside"
+                        Classes.active="{Binding AnnotationStrokePosition, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Inside}"
+                        ToolTip.Tip="Die Kontur liegt innen">
+                    <TextBlock Text="Innen" FontSize="{DynamicResource FP.Font.Small}" />
+                </Button>
+                <Button Classes="ghost" Padding="8,4" Margin="0,0,6,4"
+                        Command="{Binding SetAnnotationStrokePositionCommand}"
+                        CommandParameter="Center"
+                        Classes.active="{Binding AnnotationStrokePosition, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Center}"
+                        ToolTip.Tip="Die Kontur liegt mittig auf der Kante">
+                    <TextBlock Text="Mitte" FontSize="{DynamicResource FP.Font.Small}" />
+                </Button>
+                <Button Classes="ghost" Padding="8,4" Margin="0,0,6,4"
+                        Command="{Binding SetAnnotationStrokePositionCommand}"
+                        CommandParameter="Outside"
+                        Classes.active="{Binding AnnotationStrokePosition, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Outside}"
+                        ToolTip.Tip="Die Kontur liegt außen">
+                    <TextBlock Text="Außen" FontSize="{DynamicResource FP.Font.Small}" />
+                </Button>
+            </WrapPanel>
+            <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Top">
+                <TextBlock Text="Konturfarbe" Foreground="{DynamicResource FP.Text.Secondary}"
+                           VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                <icons:ColorPickerButton Grid.Column="1"
+                                         SelectedColor="{Binding AnnotationStrokeColorValue, Mode=TwoWay}" />
+            </Grid>
+            <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
+                <TextBlock Text="Konturbreite" Foreground="{DynamicResource FP.Text.Secondary}"
+                           VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap" />
+                <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="200"
+                                   DefaultValue="0"
+                                   Value="{Binding AnnotationStrokeWidth}" Margin="0,0" />
+                <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                         Value="{Binding AnnotationStrokeWidth, Mode=TwoWay}"
+                                         Minimum="0" Maximum="200" Increment="1"
+                                         FormatString="F0" />
+            </Grid>
+            <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center"
+                  IsVisible="{Binding ShowStrokeStyleControls}"
+                  ToolTip.Tip="Bei 100 eine harte Kontur, darunter laufen ihre Ränder weich aus">
+                <TextBlock Text="Härte" Foreground="{DynamicResource FP.Text.Secondary}"
+                           VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
+                                   DefaultValue="100"
+                                   Value="{Binding AnnotationStrokeHardness}"
+                                   Margin="0,0" />
+                <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                         Value="{Binding AnnotationStrokeHardness, Mode=TwoWay}"
+                                         Minimum="0" Maximum="100" Increment="1"
+                                         FormatString="F0" />
+            </Grid>
+            <Grid ColumnDefinitions="92,*" VerticalAlignment="Center"
+                  IsVisible="{Binding ShowStrokeStyleControls}">
+                <TextBlock Text="Ecken" Foreground="{DynamicResource FP.Text.Secondary}"
+                           VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                <WrapPanel Grid.Column="1" Orientation="Horizontal">
+                    <Button Classes="ghost" Padding="8,4" Margin="0,0,6,0"
+                            Command="{Binding SetAnnotationStrokeCornersCommand}"
+                            CommandParameter="Round"
+                            Classes.active="{Binding AnnotationStrokeRoundCorners}"
+                            ToolTip.Tip="Die Kontur läuft außen im Bogen um eine Ecke">
+                        <TextBlock Text="Rund" FontSize="{DynamicResource FP.Font.Small}" />
+                    </Button>
+                    <Button Classes="ghost" Padding="8,4" Margin="0,0,6,0"
+                            Command="{Binding SetAnnotationStrokeCornersCommand}"
+                            CommandParameter="Square"
+                            Classes.active="{Binding AnnotationStrokeSquareCorners}"
+                            ToolTip.Tip="Die Kontur behält außen spitze Ecken">
+                        <TextBlock Text="Eckig" FontSize="{DynamicResource FP.Font.Small}" />
+                    </Button>
+                </WrapPanel>
+            </Grid>
+            <!-- Aus: nur die Fuellung geht durch den Mischmodus, die Kontur bleibt normal darueber.
+                 Immer bedienbar, auch bei "Normal": der Mischmodus steht oben im Objekt-Panel, hier
+                 sah ein ausgegrauter Haken nur kaputt aus. Gemerkt wird er trotzdem und greift,
+                 sobald ein Mischmodus gewaehlt ist. -->
+            <CheckBox Content="Kontur mitmischen"
+                      IsChecked="{Binding AnnotationBlendIncludesStroke, Mode=TwoWay}"
+                      FontSize="{DynamicResource FP.Font.Small}"
+                      ToolTip.Tip="Aus: nur die Füllung wird gemischt, die Kontur bleibt unverändert darüber" />
+            </StackPanel>
+        </StackPanel>
+    </Expander>
+</UserControl>

@@ -9300,31 +9300,40 @@
   <data name="Au_en_1946cfea" xml:space="preserve">
     <value>Ulkopuolella</value>
   </data>
-  <data name="Die_Linie_liegt_innerhalb_der_Auswahl_2679c403" xml:space="preserve">
-    <value>Viiva on valinnan sisäpuolella</value>
-  </data>
-  <data name="Die_Linie_liegt_mittig_auf_der_Auswahlkante_54431beb" xml:space="preserve">
-    <value>Viiva on keskitetty valinnan reunalle</value>
-  </data>
-  <data name="Die_Linie_liegt_au_erhalb_der_Auswahl_52b6a5fd" xml:space="preserve">
-    <value>Viiva on valinnan ulkopuolella</value>
-  </data>
   <data name="Konturfarbe_560f5fae" xml:space="preserve">
     <value>Ääriviivan väri</value>
   </data>
-  <data name="Eine_Linie_entlang_der_Auswahlkante_als_neue_Bil_2f217c8f" xml:space="preserve">
-    <value>Piirrä viiva valinnan reunaa pitkin uudeksi kuvatasoksi</value>
+  <data name="Ecken_f3afeae8" xml:space="preserve">
+    <value>Kulmat</value>
   </data>
-  <data name="Kontur_zeichnen_7d6fa55c" xml:space="preserve">
-    <value>Piirrä ääriviiva</value>
+  <data name="Eckig_e60f7583" xml:space="preserve">
+    <value>Kulmikkaat</value>
   </data>
-  <data name="Kontur_wird_gezeichnet_12310b58" xml:space="preserve">
-    <value>Piirretään ääriviivaa...</value>
+  <data name="Die_Kontur_liegt_innen_af3f7778" xml:space="preserve">
+    <value>Ääriviiva on sisäpuolella</value>
   </data>
-  <data name="Kontur_zeichnen_fehlgeschlagen_d9644e5f" xml:space="preserve">
-    <value>Ääriviivan piirtäminen epäonnistui</value>
+  <data name="Die_Kontur_liegt_mittig_auf_der_Kante_216086bb" xml:space="preserve">
+    <value>Ääriviiva on keskitetty reunalle</value>
   </data>
-  <data name="Kontur_gezeichnet_eb192d00" xml:space="preserve">
-    <value>Ääriviiva piirretty</value>
+  <data name="Die_Kontur_liegt_au_en_499a4058" xml:space="preserve">
+    <value>Ääriviiva on ulkopuolella</value>
+  </data>
+  <data name="Die_Kontur_l_uft_au_en_im_Bogen_um_eine_Ecke_8b404ca3" xml:space="preserve">
+    <value>Ääriviiva kiertää kulman ulkopuolelta kaarena</value>
+  </data>
+  <data name="Die_Kontur_beh_lt_au_en_spitze_Ecken_88789197" xml:space="preserve">
+    <value>Ääriviiva säilyttää terävät kulmat ulkopuolella</value>
+  </data>
+  <data name="Bei_100_eine_harte_Kontur_darunter_laufen_ihre_R_ddf76e00" xml:space="preserve">
+    <value>Arvolla 100 terävä ääriviiva, sen alla reunat häivyttyvät pehmeästi</value>
+  </data>
+  <data name="Lage_der_Kontur_047c153c" xml:space="preserve">
+    <value>Ääriviivan sijainti</value>
+  </data>
+  <data name="H_rte_der_Kontur_76abf9d5" xml:space="preserve">
+    <value>Ääriviivan kovuus</value>
+  </data>
+  <data name="Ecken_der_Kontur_44390a90" xml:space="preserve">
+    <value>Ääriviivan kulmat</value>
   </data>
 </root>

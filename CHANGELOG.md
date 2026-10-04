@@ -10,8 +10,14 @@
   picture into pure black and white.
 
 - **Stroke a selection.** The selection tool draws a line along the edge of the selection, inside,
-  centered or outside, in a color and width of your choice. It lands on its own picture layer, so it
-  can be moved, faded or deleted like any other.
+  centered or outside, with its own color, width, hardness and round or sharp corners. Fill and
+  stroke of a selection are live: tick them on, every change shows at once, and they can be
+  switched off again.
+
+- **Fill and stroke work the same everywhere.** Text, watermarks, shapes, symbols and the selection
+  share the same fill and stroke groups. A stroke on any object can now sit inside, centered or
+  outside, fade out softly and have round or sharp corners. Fill, stroke, shadow and glow switch on
+  with a checkbox in their header and only open when they are in use.
 
 ### Fixes
 
@@ -24,6 +30,9 @@
 
 - The status in the editor footer uses the free space up to the zoom buttons instead of cutting
   messages short.
+
+- A text layer selected in another tool stays selected when you switch to the text tool to change
+  it, the same for watermarks, pictures and QR codes. "Blend the outline too" can be switched at any time.
 
 - Exported PSD files carry an sRGB color profile. Before, programs that assume their own working
   space without one could show them too saturated. They also keep the resolution of the original

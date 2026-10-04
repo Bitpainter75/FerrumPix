@@ -1787,7 +1787,9 @@ Namespace Services
             ' nur seine eigentliche Objektgroesse beschreibt. Ohne den Rand schnitt eine dicke
             ' Kontur an der Bitmapkante ab; ein aktivierter Schatten verdeckte den Fehler nur,
             ' weil sein Effekt-Rand zufaellig gross genug war.
-            Dim strokePad = Math.Max(0.0F, renderAnnotation.StrokeWidth) / 2.0F
+            ' Mit Lage und Haerte reicht sie weiter: aussen um die ganze Breite, dazu der weiche Rand
+            ' (ObjectStrokeReach).
+            Dim strokePad = ObjectStrokeReach(renderAnnotation)
             Dim effectPad = Math.Max(strokePad, Math.Max(glowPad, shadowPad))
             If Not String.IsNullOrWhiteSpace(renderAnnotation.TextPathKind) Then
                 effectPad = Math.Max(effectPad, renderAnnotation.FontSizePixels * ComputeTextPathFitRatio(renderAnnotation) * 1.2F)
@@ -2929,9 +2931,12 @@ Namespace Services
                 End If
                 Dim hasAdj = layer.Adjustments IsNot Nothing AndAlso layer.Adjustments.HasPixelAdjustments()
                 Dim hasFill = layer.HasFill()
-                ' Auch Ebenen OHNE Pixel-Anpassung verarbeiten, wenn sie eine deklarative Füllung tragen
-                ' (sichtbare Auswahl-Füllung bzw. Masken-Abstufung).
-                If Not hasAdj AndAlso Not hasFill Then Continue For
+                ' Eine Kontur gibt es nur an einer AUSWAHL-Ebene; an einer Maskenebene stuft das Weiss
+                ' der Maske die Anpassung ab und waere keine Linie.
+                Dim hasStroke = layer.HasStroke() AndAlso Not layer.IsMaskLayer
+                ' Auch Ebenen OHNE Pixel-Anpassung verarbeiten, wenn sie eine deklarative Füllung oder
+                ' Kontur tragen (sichtbare Auswahl-Füllung bzw. Masken-Abstufung, Linie an der Kante).
+                If Not hasAdj AndAlso Not hasFill AndAlso Not hasStroke Then Continue For
                 Dim maskData As ImageMask = Nothing
                 If Not masksById.TryGetValue(If(layer.MaskId, ""), maskData) Then Continue For
 
@@ -3010,9 +3015,58 @@ Namespace Services
                         Dim filled = CompositeVisibleFill(processed, mask, layer)
                         If filled IsNot Nothing Then processed = ReplaceBitmapOwned(processed, filled, owned)
                     End If
+                    ' Die Kontur liegt ueber Fuellung und Anpassung. Ihre Breite steht in Punkten der
+                    ' Quelle; die Vorschau rechnet auf einer verkleinerten Quelle (pipelineInput).
+                    If hasStroke Then
+                        Dim strokeScale = If(adj.SourceWidthPixels > 0, pipelineInputWidth / CSng(adj.SourceWidthPixels), 1.0F)
+                        If processed IsNot Nothing Then
+                            Dim stroked = CompositeVisibleStroke(processed, mask, layer, strokeScale)
+                            If stroked IsNot Nothing Then processed = ReplaceBitmapOwned(processed, stroked, owned)
+                        End If
+                    End If
                 End Using
             Next
             Return processed
+        End Function
+
+        ''' <summary>Zeichnet die deklarative Kontur einer AUSWAHL-Ebene: eine Linie entlang der Kante
+        ''' ihrer Maske, mit Lage, Härte und Ecken wie BuildSelectionStroke. Gerechnet nur im Rechteck
+        ''' der Maske samt Platz für die Linie. Nothing, wenn keine Linie entsteht.</summary>
+        Private Shared Function CompositeVisibleStroke(processed As SKBitmap, mask As SKBitmap, layer As MaskedAdjustmentLayer,
+                                                       scale As Single) As SKBitmap
+            If processed Is Nothing OrElse mask Is Nothing OrElse layer Is Nothing Then Return Nothing
+            Dim w = processed.Width, h = processed.Height
+            If mask.Width <> w OrElse mask.Height <> h OrElse mask.ColorType <> SKColorType.Alpha8 Then Return Nothing
+            Dim width = CSng(layer.StrokeWidth) * Math.Max(0.0001F, scale)
+            If width < 0.25F Then Return Nothing
+
+            Dim maskBytes = New Byte(mask.RowBytes * h - 1) {}
+            Marshal.Copy(mask.GetPixels(), maskBytes, 0, maskBytes.Length)
+            Dim rect = NonZeroBounds(maskBytes, mask.RowBytes, w, h)
+            If rect.IsEmpty Then Return Nothing
+            Using cropped = New SKBitmap()
+                If Not mask.ExtractSubset(cropped, rect) Then Return Nothing
+                Dim position = ToSelectionStrokePosition(layer.StrokePosition)
+                Dim placement As SKRectI
+                Using stroke = BuildSelectionStroke(cropped, rect, w, h, width, position,
+                                                    CSng(layer.StrokeHardness / 100.0), layer.StrokeSquareCorners,
+                                                    ParseColor(layer.StrokeColor, SKColors.Black), placement)
+                    If stroke Is Nothing Then Return Nothing
+                    Dim result = CloneBitmap(processed)
+                    Using canvas = New SKCanvas(result)
+                        canvas.DrawBitmap(stroke, placement.Left, placement.Top)
+                    End Using
+                    Return result
+                End Using
+            End Using
+        End Function
+
+        Private Shared Function ToSelectionStrokePosition(value As String) As SelectionStrokePosition
+            Select Case NormalizedStrokePosition(value)
+                Case "Inside" : Return SelectionStrokePosition.Inside
+                Case "Outside" : Return SelectionStrokePosition.Outside
+                Case Else : Return SelectionStrokePosition.Center
+            End Select
         End Function
 
         ''' <summary>Komponiert die deklarative Füllung einer AUSWAHL-Ebene SICHTBAR in ihre Auswahlregion:
@@ -3976,6 +4030,8 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                                               l.StackAboveAnnotationId,
                                               l.IsMaskLayer, l.FillKind, l.FillColor, l.FillColor2,
                                               KeyPart(l.FillAngle), l.FillInverted,
+                                              KeyPart(l.StrokeWidth), l.StrokeColor, l.StrokePosition,
+                                              KeyPart(l.StrokeHardness), l.StrokeSquareCorners,
                                               String.Join(",", pixelValues))
                        End Function)
             Return String.Join(";", masks) & "|" & String.Join(";", layers)

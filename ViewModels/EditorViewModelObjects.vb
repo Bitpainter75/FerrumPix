@@ -2313,6 +2313,9 @@ Namespace ViewModels
                 .Opacity = CSng(_annotationOpacity),
                 .BlendMode = _annotationBlendMode,
                 .BlendIncludesStroke = _annotationBlendIncludesStroke,
+                .StrokePosition = _annotationStrokePosition,
+                .StrokeHardness = CSng(_annotationStrokeHardness),
+                .StrokeCorners = _annotationStrokeCorners,
                 .IsVisible = True
             }
             _annotations.Add(annotation)

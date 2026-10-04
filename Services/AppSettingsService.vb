@@ -54,6 +54,10 @@ Namespace Services
         Public Property GradientInverted As Boolean = False
         Public Property BlendMode As String = "Normal"
         Public Property BlendIncludesStroke As Boolean = True
+        ' Lage, Haerte und Ecken der Kontur, wie am Objekt (ImageAnnotation.StrokePosition usw.).
+        Public Property StrokePosition As String = ""
+        Public Property StrokeHardness As Double = 100
+        Public Property StrokeCorners As String = ""
         Public Property Bold As Boolean = False
         Public Property Italic As Boolean = False
         Public Property LetterSpacingPercent As Double = 0
@@ -2203,6 +2207,9 @@ Namespace Services
                     .GradientInverted = preset.GradientInverted,
                     .BlendMode = NormalizeWatermarkBlendMode(preset.BlendMode),
                     .BlendIncludesStroke = preset.BlendIncludesStroke,
+                    .StrokePosition = If(preset.StrokePosition, ""),
+                    .StrokeHardness = Math.Max(0, Math.Min(100, preset.StrokeHardness)),
+                    .StrokeCorners = If(preset.StrokeCorners, ""),
                     .Bold = preset.Bold,
                     .Italic = preset.Italic,
                     .LetterSpacingPercent = Math.Max(-100, Math.Min(500, preset.LetterSpacingPercent)),

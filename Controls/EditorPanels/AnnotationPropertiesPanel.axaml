@@ -337,9 +337,12 @@
                                      Minimum="0" Maximum="100" Increment="1"
                                      FormatString="F0" />
         </Grid>
-        <!-- Beim QR-Code werden Hintergrund und Vordergrund über den Farbmischer gesetzt. -->
+        <!-- Füllung und Kontur stehen als eigene Gruppen darunter (FillPanel, ObjectStrokePanel),
+             dieselben wie im Auswahl-Werkzeug. Hier bleibt nur der QR-Code: seine zwei Farben sind
+             Hintergrund und Vordergrund (die Modulfarbe, siehe StrokeColorLabel), keine Füllung und
+             Kontur, und einen Verlauf kennt DrawQrCode nicht. -->
         <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Top"
-              IsVisible="{Binding ShowFillColorPicker}">
+              IsVisible="{Binding ShowQrColorControls}">
             <TextBlock Text="{Binding FillColorLabel}"
                        Foreground="{DynamicResource FP.Text.Secondary}"
                        VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
@@ -348,76 +351,8 @@
                     SelectedColor="{Binding AnnotationFillColorValue, Mode=TwoWay}" />
             </StackPanel>
         </Grid>
-        <Grid ColumnDefinitions="92,*" VerticalAlignment="Center"
-              IsVisible="{Binding ShowFillColorControls}">
-            <TextBlock Text="Füllart" Foreground="{DynamicResource FP.Text.Secondary}"
-                       VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
-            <!-- WrapPanel statt StackPanel: die Beschriftungen sprengen sonst die Spaltenbreite.
-                 In der laengsten Sprache summieren sich "Vollfarbe|Verlauf|Radial" auf 28 Zeichen -
-                 im Deutschen passt es knapp, anderswo nicht. Umbruch statt fester Aufteilung, damit
-                 es sich nach der tatsaechlichen Breite richtet.
-                 Abstaende ueber Margin je Knopf, weil WrapPanel kein Spacing kennt. -->
-            <WrapPanel Grid.Column="1" Orientation="Horizontal" Margin="6,0,0,0">
-                <Button Classes="ghost" Padding="8,4" Margin="0,0,6,4"
-                        Command="{Binding SetAnnotationFillKindCommand}"
-                        CommandParameter="Solid"
-                        Classes.active="{Binding AnnotationFillKind, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Solid}">
-                    <StackPanel Orientation="Horizontal" Spacing="6">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/bucket-droplet.svg"
-                                       Width="14" Height="14" />
-                        <TextBlock Text="Vollfarbe" FontSize="{DynamicResource FP.Font.Small}" />
-                    </StackPanel>
-                </Button>
-                <Button Classes="ghost" Padding="8,4" Margin="0,0,6,4"
-                        Command="{Binding SetAnnotationFillKindCommand}"
-                        CommandParameter="LinearGradient"
-                        Classes.active="{Binding AnnotationFillKind, Converter={StaticResource StringEqualsConverter}, ConverterParameter=LinearGradient}">
-                    <StackPanel Orientation="Horizontal" Spacing="6">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/gradient-linear.svg"
-                                       Width="14" Height="14" />
-                        <TextBlock Text="Verlauf" FontSize="{DynamicResource FP.Font.Small}" />
-                    </StackPanel>
-                </Button>
-                <Button Classes="ghost" Padding="8,4" Margin="0,0,6,4"
-                        Command="{Binding SetAnnotationFillKindCommand}"
-                        CommandParameter="RadialGradient"
-                        Classes.active="{Binding AnnotationFillKind, Converter={StaticResource StringEqualsConverter}, ConverterParameter=RadialGradient}">
-                    <StackPanel Orientation="Horizontal" Spacing="6">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/gradient-radial.svg"
-                                       Width="14" Height="14" />
-                        <TextBlock Text="Radial" FontSize="{DynamicResource FP.Font.Small}" />
-                    </StackPanel>
-                </Button>
-            </WrapPanel>
-        </Grid>
         <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Top"
-              IsVisible="{Binding ShowGradientFillControls}">
-            <TextBlock Text="Verlauf bis" Foreground="{DynamicResource FP.Text.Secondary}"
-                       VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
-            <StackPanel Grid.Column="1" Margin="6,0,0,0" Spacing="6">
-                <icons:ColorPickerButton
-                    SelectedColor="{Binding AnnotationFillColor2Value, Mode=TwoWay}" />
-            </StackPanel>
-        </Grid>
-        <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center"
-              IsVisible="{Binding ShowLinearGradientAngleControl}">
-            <TextBlock Text="Winkel" Foreground="{DynamicResource FP.Text.Secondary}"
-                       VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
-            <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="360"
-                               DefaultValue="0"
-                               Value="{Binding AnnotationGradientAngleDegrees}"
-                               Margin="0,0" />
-            <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
-                                     Value="{Binding AnnotationGradientAngleDegrees, Mode=TwoWay}"
-                                     Minimum="0" Maximum="360" Increment="1"
-                                     FormatString="F0" />
-        </Grid>
-        <CheckBox Content="Verlauf invertieren"
-                  IsChecked="{Binding AnnotationGradientInverted}" FontSize="{DynamicResource FP.Font.Small}"
-                  IsVisible="{Binding ShowRadialGradientControl}" />
-        <!-- Beim QR-Code ist das die Modulfarbe ("Vordergrund", siehe StrokeColorLabel). -->
-        <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Top"
-              IsVisible="{Binding ShowStrokeColorControls}">
+              IsVisible="{Binding ShowQrColorControls}">
             <TextBlock Text="{Binding StrokeColorLabel}"
                        Foreground="{DynamicResource FP.Text.Secondary}"
                        VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
@@ -426,27 +361,6 @@
                     SelectedColor="{Binding AnnotationStrokeColorValue, Mode=TwoWay}" />
             </StackPanel>
         </Grid>
-        <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center"
-              IsVisible="{Binding ShowStrokeWidthControls}">
-            <TextBlock Text="Konturbreite" Foreground="{DynamicResource FP.Text.Secondary}"
-                       VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap" />
-            <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="200"
-                               DefaultValue="0"
-                               Value="{Binding AnnotationStrokeWidth}" Margin="0,0" />
-            <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
-                                     Value="{Binding AnnotationStrokeWidth, Mode=TwoWay}"
-                                     Minimum="0" Maximum="200" Increment="1"
-                                     FormatString="F0" />
-        </Grid>
-        <!-- Aus: nur die Fuellung geht durch den Mischmodus, die Kontur bleibt normal darueber.
-             Ohne Mischmodus ("Normal") wirkungslos - deshalb dann ausgegraut. -->
-        <CheckBox Content="Kontur mitmischen"
-                  IsChecked="{Binding AnnotationBlendIncludesStroke, Mode=TwoWay}"
-                  IsVisible="{Binding ShowStrokeWidthControls}"
-                  IsEnabled="{Binding UsesAnnotationBlendMode}"
-                  Margin="98,0,0,0"
-                  FontSize="{DynamicResource FP.Font.Small}"
-                  ToolTip.Tip="Aus: nur die Füllung wird gemischt, die Kontur bleibt unverändert darüber" />
         <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
             <TextBlock Text="Deckkraft" Foreground="{DynamicResource FP.Text.Secondary}"
                        VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />

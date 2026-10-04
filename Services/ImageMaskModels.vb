@@ -744,6 +744,16 @@ Namespace Services
         Public Property FillAngle As Double = 0
         Public Property FillInverted As Boolean = False
 
+        ''' <summary>DEKLARATIVE Kontur einer AUSWAHL-Ebene, wie die Füllung: eine Linie entlang der
+        ''' Auswahlkante, vom Render selbst gezeichnet (ImageProcessor.CompositeVisibleStroke) und damit
+        ''' jederzeit änderbar. Breite 0 heißt keine Kontur. Die Breite steht in Bildpunkten der Quelle;
+        ''' die Vorschau rechnet sie auf ihren Maßstab um.</summary>
+        Public Property StrokeWidth As Double = 0
+        Public Property StrokeColor As String = "#FF000000"
+        Public Property StrokePosition As String = "Center"
+        Public Property StrokeHardness As Double = 100
+        Public Property StrokeSquareCorners As Boolean = False
+
         Public Function Clone() As MaskedAdjustmentLayer
             Return New MaskedAdjustmentLayer With {
                 .Id = Id, .Name = Name, .MaskId = MaskId,
@@ -753,6 +763,8 @@ Namespace Services
                 .ClipToLayerBelow = ClipToLayerBelow,
                 .FillKind = FillKind, .FillColor = FillColor, .FillColor2 = FillColor2,
                 .FillAngle = FillAngle, .FillInverted = FillInverted,
+                .StrokeWidth = StrokeWidth, .StrokeColor = StrokeColor, .StrokePosition = StrokePosition,
+                .StrokeHardness = StrokeHardness, .StrokeSquareCorners = StrokeSquareCorners,
                 .Adjustments = If(Adjustments Is Nothing, New ImageAdjustments(), Adjustments.Clone())
             }
         End Function
@@ -760,6 +772,11 @@ Namespace Services
         ''' <summary>True, wenn diese Ebene eine deklarative Füllung trägt.</summary>
         Public Function HasFill() As Boolean
             Return Not String.IsNullOrWhiteSpace(FillKind)
+        End Function
+
+        ''' <summary>True, wenn diese Ebene eine deklarative Kontur trägt.</summary>
+        Public Function HasStroke() As Boolean
+            Return StrokeWidth > 0
         End Function
     End Class
 
