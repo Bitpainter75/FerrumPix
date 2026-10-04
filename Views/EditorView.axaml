@@ -1360,16 +1360,28 @@
                                 <panels:SelectionPanel />
                             </Border>
 
-                            <!-- Fuellen und Kontur als eigene Gruppen unter der Auswahl, wie Schatten
-                                 und Gluehen unter einem Objekt. -->
+                            <!-- Füllung, Kontur, Schatten und Glühen der AUSWAHL, dieselben Gruppen wie
+                                 an einem Objekt, live an der Auswahlebene. Nicht, solange ein Objekt
+                                 markiert ist: das bringt diese Gruppen selbst mit, sie stuenden sonst
+                                 doppelt da (IsSelectionStyleContext). -->
                             <Border Classes="adjustment-group" Margin="0,7,0,0"
-                                    IsVisible="{Binding ShowSelectionAdjustments}">
+                                    IsVisible="{Binding IsSelectionStyleContext}">
                                 <panels:FillPanel />
                             </Border>
 
                             <Border Classes="adjustment-group" Margin="0,7,0,0"
-                                    IsVisible="{Binding ShowSelectionAdjustments}">
+                                    IsVisible="{Binding IsSelectionStyleContext}">
                                 <panels:SelectionStrokePanel />
+                            </Border>
+
+                            <Border Classes="adjustment-group" Margin="0,7,0,0"
+                                    IsVisible="{Binding IsSelectionStyleContext}">
+                                <panels:AnnotationShadowPanel />
+                            </Border>
+
+                            <Border Classes="adjustment-group" Margin="0,7,0,0"
+                                    IsVisible="{Binding IsSelectionStyleContext}">
+                                <panels:AnnotationGlowPanel />
                             </Border>
 
                             <Border Classes="adjustment-group" Margin="0,7,0,0"

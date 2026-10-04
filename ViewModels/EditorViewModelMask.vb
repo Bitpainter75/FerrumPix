@@ -4918,7 +4918,33 @@ Namespace ViewModels
         ''' Auswahl-/Maskenänderung laufen, damit eine NEUE Auswahl eine eigene Ebene bekommt.</summary>
         Private Sub InvalidateSelectionLayerLink()
             _selectionPromotedLayerId = ""
-            ' Die neue Auswahl hat noch keine Kontur. "Aktiv" geht aus, Breite, Farbe und die
+            ' Die Haken von Fuellung, Kontur, Schatten und Gluehen gleichen sich NACH diesem Vorgang
+            ' mit der Auswahlebene ab, nicht hier. Beim Markieren einer Ebenenzeile laedt das Panel
+            ' erst ihre Werte, dann wird ihre Maske zur laufenden Auswahl und landet hier; ein
+            ' sofortiges Ausschalten machte die gerade geladenen Haken wieder zunichte (Nutzerbefund:
+            ' "selektiere ich die Ebene erneut, sind alle deaktiviert").
+            QueueSelectionStyleSync()
+        End Sub
+
+        Private _selectionStyleSyncQueued As Boolean
+
+        ''' <summary>Einmal nach dem laufenden Vorgang: die Haken und Werte der Auswahl-Gruppen aus der
+        ''' Ebene der laufenden Auswahl, oder aus, wenn sie keine hat. Mehrere Anstoesse im selben
+        ''' Vorgang laufen zu einem zusammen.</summary>
+        Private Sub QueueSelectionStyleSync()
+            If _selectionStyleSyncQueued Then Return
+            _selectionStyleSyncQueued = True
+            Dispatcher.UIThread.Post(Sub() SyncSelectionStyleFromActiveLayer(), DispatcherPriority.Background)
+        End Sub
+
+        Private Sub SyncSelectionStyleFromActiveLayer()
+            _selectionStyleSyncQueued = False
+            Dim layer = If(_hasActiveSelection, ExistingLayerForActiveSelection(), Nothing)
+            If layer IsNot Nothing Then
+                LoadSelectionStyleFromLayer(layer)
+                Return
+            End If
+            ' Eine neue Auswahl hat noch nichts davon. Die Haken gehen aus; Breite, Farben und die
             ' uebrigen Werte bleiben als Vorgabe fuer sie stehen.
             If _selectionStrokeEnabled Then
                 _selectionStrokeEnabled = False
@@ -4929,6 +4955,9 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(SelectionFillEnabled))
                 RaiseFillGroupActiveChanged()
             End If
+            ' Schatten und Glühen teilen ihre Haken mit den Objekten; nur im Auswahl-Werkzeug
+            ' meinen sie die Auswahl, und nur dort gehen sie aus.
+            If IsSelectionStyleContext Then ResetSelectionEffectToggles()
         End Sub
 
         ''' <summary>Tragen zwei Masken DIESELBE FORM? Verglichen werden die Bildpunkte über ihren
@@ -5183,6 +5212,67 @@ Namespace ViewModels
 
         ''' <summary>Holt die Kontur einer vorhandenen Auswahlebene ins Panel, wenn deren Auswahl
         ''' wieder aufgenommen wird - sonst zeigte das Panel die Werte der letzten Auswahl.</summary>
+        ''' <summary>Schreibt Schatten und Glühen aus dem Panel an die Auswahlebene. Dieselben
+        ''' Eigenschaften wie am Objekt (AnnotationShadow*, AnnotationGlow*): im Auswahl-Werkzeug
+        ''' meinen sie die Auswahl, live wie Füllung und Kontur. Einer der beiden Haken legt die
+        ''' Ebene bei Bedarf an; ein Reglerzug ist ein Rückgängig-Schritt.</summary>
+        Private Sub ApplySelectionEffectsLive()
+            If _loadingSelectionStyle OrElse Not _hasActiveSelection Then Return
+            Dim wanted = _annotationShadowEnabled OrElse _annotationGlowEnabled
+            Dim layer As MaskedAdjustmentLayer
+            Dim isNew = False
+            If wanted Then
+                CaptureUndoState("SelectionEffects")
+                Dim before = ExistingLayerForActiveSelection()
+                layer = EnsureCorrectionLayerForActiveSelection()
+                isNew = before Is Nothing OrElse Not Object.ReferenceEquals(before, layer)
+            Else
+                layer = ExistingLayerForActiveSelection()
+                If layer Is Nothing OrElse Not layer.HasEffects() Then Return
+                CaptureUndoState("SelectionEffects")
+            End If
+            If layer Is Nothing OrElse layer.IsMaskLayer Then Return
+            layer.ShadowEnabled = _annotationShadowEnabled
+            layer.ShadowOffsetXPercent = CSng(_annotationShadowOffsetX)
+            layer.ShadowOffsetYPercent = CSng(_annotationShadowOffsetY)
+            layer.ShadowBlur = CSng(_annotationShadowBlur)
+            layer.ShadowStrength = CSng(_annotationShadowStrength)
+            layer.ShadowColor = ToHexColor(_annotationShadowColor, Avalonia.Media.Color.FromArgb(128, 0, 0, 0))
+            layer.ShadowSizePercent = CSng(_annotationShadowSize)
+            layer.ShadowRounded = _annotationShadowRounded
+            layer.ShadowCornerRadiusPercent = CSng(_annotationShadowCornerRadius)
+            layer.GlowEnabled = _annotationGlowEnabled
+            layer.GlowBlur = CSng(_annotationGlowBlur)
+            layer.GlowStrength = CSng(_annotationGlowStrength)
+            layer.GlowColor = ToHexColor(_annotationGlowColor, Avalonia.Media.Colors.Yellow)
+            _hasChanges = True
+            If isNew Then
+                _selectedMaskedAdjustmentLayerId = layer.Id
+                RebuildLayerRows()
+            End If
+            SchedulePreviewUpdate()
+        End Sub
+
+        ''' <summary>Eine Farbe als #AARRGGBB, wie der Renderer sie liest. Die Puffer koennen einen
+        ''' Farbnamen tragen (Color.ToString liefert "Black"), siehe OFFENE_PUNKTE.md.</summary>
+        Private Shared Function ToHexColor(value As String, fallback As Avalonia.Media.Color) As String
+            Dim c = ParseAvaloniaColorOrDefault(value, fallback)
+            Return $"#{c.A:X2}{c.R:X2}{c.G:X2}{c.B:X2}"
+        End Function
+
+        ''' <summary>Schatten und Glühen der Auswahl im Panel ausschalten, ohne etwas an eine Ebene zu
+        ''' schreiben: für eine neue Auswahl und beim Betreten des Werkzeugs ohne Auswahlebene.</summary>
+        Private Sub ResetSelectionEffectToggles()
+            Dim wasLoading = _loadingSelectionStyle
+            _loadingSelectionStyle = True
+            Try
+                If _annotationShadowEnabled Then AnnotationShadowEnabled = False
+                If _annotationGlowEnabled Then AnnotationGlowEnabled = False
+            Finally
+                _loadingSelectionStyle = wasLoading
+            End Try
+        End Sub
+
         Private Sub LoadSelectionStyleFromLayer(layer As MaskedAdjustmentLayer)
             If layer Is Nothing Then Return
             _loadingSelectionStyle = True
@@ -5200,6 +5290,30 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(SelectionFillEnabled))
                 RaiseFillGroupActiveChanged()
                 If Not layer.IsMaskLayer Then LoadSelectionStrokeFromLayer(layer)
+                ' Schatten und Glühen liegen in denselben Puffern wie am Objekt: nur, wenn die Gruppen
+                ' gerade die Auswahl meinen, sonst bekaeme ein markiertes Objekt die Werte der Ebene.
+                If Not layer.IsMaskLayer AndAlso IsSelectionStyleContext Then
+                    ' Geladen wird nur, was die Ebene traegt, sonst gehen die Haken aus.
+                    AnnotationShadowEnabled = layer.ShadowEnabled
+                    AnnotationGlowEnabled = layer.GlowEnabled
+                    If layer.ShadowEnabled Then
+                        AnnotationShadowOffsetX = layer.ShadowOffsetXPercent
+                        AnnotationShadowOffsetY = layer.ShadowOffsetYPercent
+                        _annotationShadowLightAngle = ComputeShadowLightAngle(_annotationShadowOffsetX, _annotationShadowOffsetY)
+                        Me.RaisePropertyChanged(NameOf(AnnotationShadowLightAngle))
+                        AnnotationShadowBlur = layer.ShadowBlur
+                        AnnotationShadowStrength = layer.ShadowStrength
+                        AnnotationShadowColor = layer.ShadowColor
+                        AnnotationShadowSize = layer.ShadowSizePercent
+                        AnnotationShadowRounded = layer.ShadowRounded
+                        AnnotationShadowCornerRadius = layer.ShadowCornerRadiusPercent
+                    End If
+                    If layer.GlowEnabled Then
+                        AnnotationGlowBlur = layer.GlowBlur
+                        AnnotationGlowStrength = layer.GlowStrength
+                        AnnotationGlowColor = layer.GlowColor
+                    End If
+                End If
             Finally
                 _loadingSelectionStyle = False
             End Try

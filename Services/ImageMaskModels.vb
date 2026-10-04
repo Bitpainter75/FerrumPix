@@ -754,6 +754,24 @@ Namespace Services
         Public Property StrokeHardness As Double = 100
         Public Property StrokeSquareCorners As Boolean = False
 
+        ''' <summary>DEKLARATIVER Schatten und DEKLARATIVES Glühen einer AUSWAHL-Ebene, mit denselben
+        ''' Werten und derselben Rechnung wie an einem Objekt (ImageAnnotation.Shadow*/Glow*,
+        ''' ImageProcessor.DrawSilhouetteEffects). Silhouette ist die Maske, die Objektgröße ihr
+        ''' Rechteck; alle Maße stehen in Prozent davon.</summary>
+        Public Property ShadowEnabled As Boolean = False
+        Public Property ShadowOffsetXPercent As Single = 4
+        Public Property ShadowOffsetYPercent As Single = 4
+        Public Property ShadowBlur As Single = 6
+        Public Property ShadowStrength As Single = 100
+        Public Property ShadowColor As String = "#80000000"
+        Public Property ShadowSizePercent As Single = 100
+        Public Property ShadowRounded As Boolean = False
+        Public Property ShadowCornerRadiusPercent As Single = 0
+        Public Property GlowEnabled As Boolean = False
+        Public Property GlowBlur As Single = 10
+        Public Property GlowStrength As Single = 100
+        Public Property GlowColor As String = "#FFFFFF00"
+
         Public Function Clone() As MaskedAdjustmentLayer
             Return New MaskedAdjustmentLayer With {
                 .Id = Id, .Name = Name, .MaskId = MaskId,
@@ -765,6 +783,13 @@ Namespace Services
                 .FillAngle = FillAngle, .FillInverted = FillInverted,
                 .StrokeWidth = StrokeWidth, .StrokeColor = StrokeColor, .StrokePosition = StrokePosition,
                 .StrokeHardness = StrokeHardness, .StrokeSquareCorners = StrokeSquareCorners,
+                .ShadowEnabled = ShadowEnabled, .ShadowOffsetXPercent = ShadowOffsetXPercent,
+                .ShadowOffsetYPercent = ShadowOffsetYPercent, .ShadowBlur = ShadowBlur,
+                .ShadowStrength = ShadowStrength, .ShadowColor = ShadowColor,
+                .ShadowSizePercent = ShadowSizePercent, .ShadowRounded = ShadowRounded,
+                .ShadowCornerRadiusPercent = ShadowCornerRadiusPercent,
+                .GlowEnabled = GlowEnabled, .GlowBlur = GlowBlur, .GlowStrength = GlowStrength,
+                .GlowColor = GlowColor,
                 .Adjustments = If(Adjustments Is Nothing, New ImageAdjustments(), Adjustments.Clone())
             }
         End Function
@@ -777,6 +802,21 @@ Namespace Services
         ''' <summary>True, wenn diese Ebene eine deklarative Kontur trägt.</summary>
         Public Function HasStroke() As Boolean
             Return StrokeWidth > 0
+        End Function
+
+        ''' <summary>True, wenn diese Ebene einen Schatten oder ein Glühen trägt.</summary>
+        Public Function HasEffects() As Boolean
+            Return ShadowEnabled OrElse GlowEnabled
+        End Function
+
+        ''' <summary>Alle Werte von Schatten und Glühen in einer Zeile, für den Schlüssel des
+        ''' Basis-Caches. EINE Stelle statt dreizehn Einträge dort.</summary>
+        Public Function EffectsKey() As String
+            Dim inv = Globalization.CultureInfo.InvariantCulture
+            Return String.Join(",", ShadowEnabled, ShadowOffsetXPercent.ToString("R", inv), ShadowOffsetYPercent.ToString("R", inv),
+                               ShadowBlur.ToString("R", inv), ShadowStrength.ToString("R", inv), ShadowColor,
+                               ShadowSizePercent.ToString("R", inv), ShadowRounded, ShadowCornerRadiusPercent.ToString("R", inv),
+                               GlowEnabled, GlowBlur.ToString("R", inv), GlowStrength.ToString("R", inv), GlowColor)
         End Function
     End Class
 

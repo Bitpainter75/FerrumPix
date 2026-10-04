@@ -12792,14 +12792,27 @@ Namespace ViewModels
             SchedulePreviewUpdate()
         End Sub
 
+        ''' <summary>Meinen Füllung, Kontur, Schatten und Glühen gerade die AUSWAHL? Im Auswahl-Werkzeug,
+        ''' solange kein Objekt markiert ist. Ist eines markiert, bringt es diese Gruppen selbst mit:
+        ''' die der Auswahl stuenden doppelt da (Nutzerbefund), und weil Schatten und Glühen ihre Werte
+        ''' mit dem Objekt teilen, landete sonst der Schatten des Objekts auf der Auswahl.</summary>
+        ''' <summary>Der zuletzt gemeldete Stand von IsSelectionStyleContext, um den Übergang zu erkennen.</summary>
+        Private _lastSelectionStyleContext As Boolean
+
+        Public ReadOnly Property IsSelectionStyleContext As Boolean
+            Get
+                Return ShowSelectionAdjustments AndAlso Not HasSelectedAnnotation
+            End Get
+        End Property
+
         ''' <summary>Der Haken "Aktiv" der Gruppe Füllung: am Objekt die sichtbare Füllfarbe, im
         ''' Auswahl-Werkzeug die Füllung der Auswahl. EIN Panel, deshalb EINE Eigenschaft.</summary>
         Public Property FillGroupActive As Boolean
             Get
-                Return If(ShowSelectionAdjustments, _selectionFillEnabled, AnnotationFillEnabled)
+                Return If(IsSelectionStyleContext, _selectionFillEnabled, AnnotationFillEnabled)
             End Get
             Set(value As Boolean)
-                If ShowSelectionAdjustments Then
+                If IsSelectionStyleContext Then
                     SelectionFillEnabled = value
                 Else
                     AnnotationFillEnabled = value
@@ -17114,17 +17127,33 @@ Namespace ViewModels
                 Sub(sender, e)
                     Select Case e.PropertyName
                         Case NameOf(ShowSingleAnnotationEffects), NameOf(ShowFillColorControls),
-                             NameOf(ShowStrokeWidthControls), NameOf(EffectiveAnnotationKind),
-                             NameOf(ShowSelectionAdjustments)
+                             NameOf(ShowStrokeWidthControls), NameOf(EffectiveAnnotationKind)
                             RaiseObjectFillStrokeGroupsChanged()
+                        Case NameOf(ShowSelectionAdjustments), NameOf(HasSelectedAnnotation)
+                            Dim wasSelectionContext = _lastSelectionStyleContext
+                            _lastSelectionStyleContext = IsSelectionStyleContext
+                            Me.RaisePropertyChanged(NameOf(IsSelectionStyleContext))
+                            RaiseObjectFillStrokeGroupsChanged()
+                            ' Wird die Auswahl wieder gemeint (Werkzeug betreten, Objekt abgewaehlt),
+                            ' zeigen die geteilten Haken von Schatten und Glühen ihren Stand an der
+                            ' Auswahlebene, ohne Ebene gehen sie aus.
+                            If _lastSelectionStyleContext AndAlso Not wasSelectionContext Then QueueSelectionStyleSync()
                         Case NameOf(SelectedLayerRow)
-                            ' Eine markierte Auswahlebene bringt Füllung und Kontur ins Panel mit.
-                            Dim layer = SelectedLayerRow?.AdjustmentLayer
-                            If layer IsNot Nothing Then LoadSelectionStyleFromLayer(layer)
+                            ' Eine markierte Auswahlebene bringt Füllung, Kontur, Schatten und Glühen
+                            ' ins Panel mit - abgeglichen nach dem Zeilenwechsel, der ihre Maske erst
+                            ' noch zur laufenden Auswahl macht.
+                            If SelectedLayerRow?.AdjustmentLayer IsNot Nothing Then QueueSelectionStyleSync()
                         Case NameOf(AnnotationFillKind), NameOf(AnnotationFillColor), NameOf(AnnotationFillColor2),
                              NameOf(AnnotationGradientAngleDegrees), NameOf(AnnotationGradientInverted)
                             ' Im Auswahl-Werkzeug ist die Füllung live: jede Änderung greift sofort.
-                            If ShowSelectionAdjustments AndAlso _selectionFillEnabled Then ApplySelectionFillLive()
+                            If IsSelectionStyleContext AndAlso _selectionFillEnabled Then ApplySelectionFillLive()
+                        Case NameOf(AnnotationShadowEnabled), NameOf(AnnotationShadowOffsetX), NameOf(AnnotationShadowOffsetY),
+                             NameOf(AnnotationShadowBlur), NameOf(AnnotationShadowStrength), NameOf(AnnotationShadowColor),
+                             NameOf(AnnotationShadowSize), NameOf(AnnotationShadowRounded), NameOf(AnnotationShadowCornerRadius),
+                             NameOf(AnnotationGlowEnabled), NameOf(AnnotationGlowBlur), NameOf(AnnotationGlowStrength),
+                             NameOf(AnnotationGlowColor)
+                            ' Ebenso Schatten und Glühen der Auswahl.
+                            If IsSelectionStyleContext Then ApplySelectionEffectsLive()
                     End Select
                 End Sub
             SetSelectionModeCommand = ReactiveCommand.Create(Of String)(Sub(mode) SetSelectionMode(mode))
@@ -19414,7 +19443,7 @@ Namespace ViewModels
                 Dim wirkt = (layer.Adjustments IsNot Nothing AndAlso layer.Adjustments.HasPixelAdjustments()) OrElse layer.HasFill()
                 ' Eine Kontur reicht aussen ueber das Rechteck der Maske hinaus; ihre Reichweite hier
                 ' nachzurechnen lohnt nicht, sie zwingt einfach zum vollen Durchgang.
-                If layer.HasStroke() Then Return True
+                If layer.HasStroke() OrElse layer.HasEffects() Then Return True
                 If Not wirkt Then Continue For
                 Dim mask = _imageMasks.FirstOrDefault(Function(m) m IsNot Nothing AndAlso m.Id = layer.MaskId)
                 If mask Is Nothing Then Return True
@@ -22841,6 +22870,8 @@ Namespace ViewModels
                     Return CombineHistoryLabel("Auswahl", "Kontur")
                 Case "SelectionFill"
                     Return CombineHistoryLabel("Auswahl", "Füllung")
+                Case "SelectionEffects"
+                    Return CombineHistoryLabel("Auswahl", "Effekte")
                 Case "AdjustmentLayerVisibility"
                     Return CombineHistoryLabel("Ebene", "Sichtbarkeit")
                 Case "AnnotationGroupVisibility"

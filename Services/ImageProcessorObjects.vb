@@ -1555,6 +1555,28 @@ Namespace Services
                     maskCanvas.Translate(-maskLeft, -maskTop)
                     DrawAnnotationShape(maskCanvas, kind, annotation, rect, x, y, maxWidth, fontSize, fill, stroke, strokeWidth, alphaFactor)
                 End Using
+                DrawSilhouetteEffects(canvas, mask, maskLeft, maskTop, maskWidth, maskHeight, rect, annotation, alphaFactor)
+            End Using
+        End Sub
+
+        ''' <summary>Glühen und Schatten aus einer fertigen Silhouette: <paramref name="mask"/> (RGBA,
+        ''' deckend wo das Objekt ist) liegt bei <paramref name="maskLeft"/>/<paramref name="maskTop"/>
+        ''' auf der Leinwand. Alle Maße in Prozent der kleineren Kante von <paramref name="rect"/>.
+        ''' Gebraucht vom Objekt (DrawAnnotationEffects) und von der Auswahlebene
+        ''' (CompositeLayerEffects) - EINE Rechnung für beide, damit Schatten und Glühen überall
+        ''' gleich aussehen. Die Werte kommen aus <paramref name="annotation"/>.</summary>
+        Friend Shared Sub DrawSilhouetteEffects(canvas As SKCanvas, mask As SKBitmap,
+                                                maskLeft As Integer, maskTop As Integer,
+                                                maskWidth As Integer, maskHeight As Integer,
+                                                rect As SKRect, annotation As ImageAnnotation, alphaFactor As Single)
+            ' Dieselben Formeln wie in DrawAnnotationEffects, das damit den Rand der Maske bemisst.
+            Dim objSize = Math.Max(1.0F, Math.Min(rect.Width, rect.Height))
+            Dim glowReach = objSize * Clamp(annotation.GlowBlur, 0, 100) / 100.0F * 1.5F
+            Dim glowDilate = Math.Max(0, CInt(Math.Round(glowReach * 0.5F)))
+            Dim glowSigma = Math.Max(0.1F, glowReach * 0.17F)
+            Dim shadowBlurPx = objSize * Clamp(annotation.ShadowBlur, 0, 100) / 100.0F * ShadowBlurSigmaFactor
+            Dim offsetX = objSize * annotation.ShadowOffsetXPercent / 100.0F
+            Dim offsetY = objSize * annotation.ShadowOffsetYPercent / 100.0F
 
                 If annotation.GlowEnabled Then
                     Dim glowColor = ApplyAlpha(ParseColor(annotation.GlowColor, SKColors.Yellow), alphaFactor * Clamp(annotation.GlowStrength, 0, 100) / 100.0F)
@@ -1670,7 +1692,6 @@ Namespace Services
                         roundedShadowMask?.Dispose()
                     End Try
                 End If
-            End Using
         End Sub
 
         ''' Harte Alpha-Schwelle bei halber Deckung: aus einer weichgezeichneten Maske wird wieder eine

@@ -2934,9 +2934,11 @@ Namespace Services
                 ' Eine Kontur gibt es nur an einer AUSWAHL-Ebene; an einer Maskenebene stuft das Weiss
                 ' der Maske die Anpassung ab und waere keine Linie.
                 Dim hasStroke = layer.HasStroke() AndAlso Not layer.IsMaskLayer
+                ' Schatten und Glühen ebenso nur an einer AUSWAHL-Ebene.
+                Dim hasEffects = layer.HasEffects() AndAlso Not layer.IsMaskLayer
                 ' Auch Ebenen OHNE Pixel-Anpassung verarbeiten, wenn sie eine deklarative Füllung oder
                 ' Kontur tragen (sichtbare Auswahl-Füllung bzw. Masken-Abstufung, Linie an der Kante).
-                If Not hasAdj AndAlso Not hasFill AndAlso Not hasStroke Then Continue For
+                If Not hasAdj AndAlso Not hasFill AndAlso Not hasStroke AndAlso Not hasEffects Then Continue For
                 Dim maskData As ImageMask = Nothing
                 If Not masksById.TryGetValue(If(layer.MaskId, ""), maskData) Then Continue For
 
@@ -3010,6 +3012,11 @@ Namespace Services
                             eigene?.Dispose()
                         End Try
                     End If
+                    ' Schatten und Glühen liegen UNTER Füllung und Kontur, wie an einem Objekt.
+                    If hasEffects AndAlso processed IsNot Nothing Then
+                        Dim withEffects = CompositeLayerEffects(processed, mask, layer)
+                        If withEffects IsNot Nothing Then processed = ReplaceBitmapOwned(processed, withEffects, owned)
+                    End If
                     ' Sichtbare Füllung nur, wenn die Füllung NICHT bereits eine Anpassung abstuft.
                     If hasFill AndAlso Not layer.IsMaskLayer AndAlso Not hasAdj Then
                         Dim filled = CompositeVisibleFill(processed, mask, layer)
@@ -3027,6 +3034,64 @@ Namespace Services
                 End Using
             Next
             Return processed
+        End Function
+
+        ''' <summary>Schatten und Glühen einer AUSWAHL-Ebene, mit derselben Rechnung wie an einem
+        ''' Objekt (DrawSilhouetteEffects): Silhouette ist die Maske, die Objektgröße ihr Rechteck.
+        '''
+        ''' INNERHALB der Auswahl bleibt das Bild unberührt, Schatten und Glühen wirken nur außen herum
+        ''' (wie "Ebene spart Schlagschatten aus"). Sonst läge der versetzte Schatten einer Auswahl ohne
+        ''' Füllung sichtbar auf dem Motiv selbst; mit Füllung deckt die ohnehin darüber.</summary>
+        Private Shared Function CompositeLayerEffects(processed As SKBitmap, mask As SKBitmap, layer As MaskedAdjustmentLayer) As SKBitmap
+            If processed Is Nothing OrElse mask Is Nothing OrElse layer Is Nothing Then Return Nothing
+            Dim w = processed.Width, h = processed.Height
+            If mask.Width <> w OrElse mask.Height <> h OrElse mask.ColorType <> SKColorType.Alpha8 Then Return Nothing
+            Dim maskBytes = New Byte(mask.RowBytes * h - 1) {}
+            Marshal.Copy(mask.GetPixels(), maskBytes, 0, maskBytes.Length)
+            Dim bounds = NonZeroBounds(maskBytes, mask.RowBytes, w, h)
+            If bounds.IsEmpty Then Return Nothing
+            Dim rect = New SKRect(bounds.Left, bounds.Top, bounds.Right, bounds.Bottom)
+
+            ' Ein Objekt mit denselben Werten: DrawSilhouetteEffects liest sie von dort.
+            Dim effects = New ImageAnnotation With {
+                .ShadowEnabled = layer.ShadowEnabled, .ShadowOffsetXPercent = layer.ShadowOffsetXPercent,
+                .ShadowOffsetYPercent = layer.ShadowOffsetYPercent, .ShadowBlur = layer.ShadowBlur,
+                .ShadowStrength = layer.ShadowStrength, .ShadowColor = layer.ShadowColor,
+                .ShadowSizePercent = layer.ShadowSizePercent, .ShadowRounded = layer.ShadowRounded,
+                .ShadowCornerRadiusPercent = layer.ShadowCornerRadiusPercent,
+                .GlowEnabled = layer.GlowEnabled, .GlowBlur = layer.GlowBlur, .GlowStrength = layer.GlowStrength,
+                .GlowColor = layer.GlowColor}
+
+            ' Die Silhouette als deckend weisses RGBA, wie DrawAnnotationEffects sie zeichnet. Ueber das
+            ' ganze Bild: Schatten und Glühen reichen über das Rechteck der Maske hinaus, und am
+            ' Bildrand werden sie ohnehin abgeschnitten.
+            Using silhouette = New SKBitmap(w, h, SKColorType.Rgba8888, SKAlphaType.Premul)
+                Dim stride = silhouette.RowBytes
+                Dim rgba = New Byte(stride * h - 1) {}
+                For y = bounds.Top To bounds.Bottom - 1
+                    Dim mRow = y * mask.RowBytes, sRow = y * stride
+                    For x = bounds.Left To bounds.Right - 1
+                        Dim a = maskBytes(mRow + x)
+                        If a = 0 Then Continue For
+                        Dim o = sRow + x * 4
+                        rgba(o) = a : rgba(o + 1) = a : rgba(o + 2) = a : rgba(o + 3) = a
+                    Next
+                Next
+                Marshal.Copy(rgba, 0, silhouette.GetPixels(), rgba.Length)
+                silhouette.NotifyPixelsChanged()
+
+                Dim result = CloneBitmap(processed)
+                Using canvas = New SKCanvas(result)
+                    canvas.SaveLayer()
+                    DrawSilhouetteEffects(canvas, silhouette, 0, 0, w, h, rect, effects, 1.0F)
+                    ' Innen ausstanzen: die Auswahl selbst bleibt, wie sie ist.
+                    Using knockOut = New SKPaint With {.BlendMode = SKBlendMode.DstOut}
+                        canvas.DrawBitmap(silhouette, 0, 0, knockOut)
+                    End Using
+                    canvas.Restore()
+                End Using
+                Return result
+            End Using
         End Function
 
         ''' <summary>Zeichnet die deklarative Kontur einer AUSWAHL-Ebene: eine Linie entlang der Kante
@@ -4032,6 +4097,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                                               KeyPart(l.FillAngle), l.FillInverted,
                                               KeyPart(l.StrokeWidth), l.StrokeColor, l.StrokePosition,
                                               KeyPart(l.StrokeHardness), l.StrokeSquareCorners,
+                                              l.EffectsKey(),
                                               String.Join(",", pixelValues))
                        End Function)
             Return String.Join(";", masks) & "|" & String.Join(";", layers)

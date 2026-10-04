@@ -10,9 +10,11 @@
   picture into pure black and white.
 
 - **Stroke a selection.** The selection tool draws a line along the edge of the selection, inside,
-  centered or outside, with its own color, width, hardness and round or sharp corners. Fill and
-  stroke of a selection are live: tick them on, every change shows at once, and they can be
-  switched off again.
+  centered or outside, with its own color, width, hardness and round or sharp corners. A selection
+  can also cast a shadow and glow, like an object, around the outside while the selected area
+  itself stays as it is. Fill, stroke, shadow and glow of a selection are live: tick them on,
+  every change shows at once, they come back when the selection layer is picked again, and they can
+  be switched off. While an object is selected, its own groups show instead.
 
 - **Fill and stroke work the same everywhere.** Text, watermarks, shapes, symbols and the selection
   share the same fill and stroke groups. A stroke on any object can now sit inside, centered or
