@@ -693,9 +693,17 @@ Namespace Services
                     DrawAnnotationViaLayer(canvas, annotation, AnnotationFillOnly(renderAnnotation), kind, rect,
                                            sourceWidth, sourceHeight, layerWidth, layerHeight, offsetX, offsetY,
                                            renderAnnotation.BlendMode, coverage, adj)
-                    DrawAnnotationViaLayer(canvas, annotation, AnnotationStrokeOnly(renderAnnotation), kind, rect,
-                                           sourceWidth, sourceHeight, layerWidth, layerHeight, offsetX, offsetY,
-                                           "Normal", coverage, adj)
+                    ' Ein Bild zeichnet sich unabhaengig von der Fuellfarbe: im Kontur-Durchgang wird
+                    ' sein Inhalt ausdruecklich weggelassen.
+                    Dim previousStyle = _objectStrokeStyle
+                    If IsImageContentKind(kind, renderAnnotation) Then _objectStrokeStyle = New ObjectStrokeStyle With {.HideContent = True}
+                    Try
+                        DrawAnnotationViaLayer(canvas, annotation, AnnotationStrokeOnly(renderAnnotation), kind, rect,
+                                               sourceWidth, sourceHeight, layerWidth, layerHeight, offsetX, offsetY,
+                                               "Normal", coverage, adj)
+                    Finally
+                        _objectStrokeStyle = previousStyle
+                    End Try
                 ElseIf HasObjectAdjustments(annotation) OrElse Not IsNormalAnnotationBlendMode(renderAnnotation.BlendMode) OrElse
                        HasWarp(annotation) OrElse coverage IsNot Nothing Then
                     DrawAnnotationViaLayer(canvas, annotation, renderAnnotation, kind, rect,
@@ -1108,12 +1116,24 @@ Namespace Services
             If IsNormalAnnotationBlendMode(renderAnnotation.BlendMode) Then Return False
             If renderAnnotation.StrokeWidth <= 0 Then Return False
             If ParseColor(renderAnnotation.StrokeColor, SKColors.Black).Alpha = 0 Then Return False
+            ' Bild, Auswahlkopie und Wasserzeichen teilen sich jetzt ebenfalls auf: ihr Inhalt laesst
+            ' sich im Kontur-Durchgang weglassen (ObjectStrokeStyle.HideContent, Nutzerbefund: der
+            ' Haken wirkte am Bildobjekt nicht).
             Select Case kind
-                Case "image", "selectionimage", "qr", "qrcode", "qr-code", "svg", "watermark",
+                Case "qr", "qrcode", "qr-code", "svg",
                      "line", "arrow", "spiral", "brush", "eraser"
                     Return False
                 Case Else
                     Return True
+            End Select
+        End Function
+
+        ''' <summary>Zeichnet diese Art ein Bild als Inhalt (Bild, Auswahlkopie, Wasserzeichen mit Bild)?</summary>
+        Private Shared Function IsImageContentKind(kind As String, annotation As ImageAnnotation) As Boolean
+            Select Case kind
+                Case "image", "selectionimage" : Return True
+                Case "watermark" : Return Not String.IsNullOrWhiteSpace(annotation?.ImagePath)
+                Case Else : Return False
             End Select
         End Function
 
@@ -1203,6 +1223,11 @@ Namespace Services
             Public Join As SKStrokeJoin?
             ''' <summary>Weiche Raender: Gauss-Sigma in Bildpunkten, 0 fuer hart.</summary>
             Public BlurSigma As Single
+            ''' <summary>Den INHALT eines Bildobjekts weglassen, nur seine Kontur zeichnen: der
+            ''' Kontur-Durchgang von "Kontur mitmischen" aus (SplitsStrokeFromBlend). Bei den uebrigen
+            ''' Arten genuegt dafuer die durchsichtige Fuellfarbe, ein Bild zeichnet sich aber
+            ''' unabhaengig von ihr und stuende sonst doppelt da.</summary>
+            Public HideContent As Boolean
         End Class
 
         <ThreadStatic> Private Shared _objectStrokeStyle As ObjectStrokeStyle
@@ -1229,6 +1254,17 @@ Namespace Services
             End If
             If style.BlurSigma > 0.05F Then paint.MaskFilter = SKMaskFilter.CreateBlur(SKBlurStyle.Normal, style.BlurSigma * localUnitsPerPixel)
             Return paint
+        End Function
+
+        ''' <summary>Liegt die Kontur ueber der Fuellung? Bei Text und Symbol lag sie schon immer
+        ''' DARUNTER (die Fuellung deckt ihre innere Haelfte). Sobald Lage, Haerte oder Ecken gelten,
+        ''' muss sie darueber: sonst deckte die Fuellung die Innenkontur ganz zu. Ein Stil, der nur den
+        ''' Inhalt eines Bildes weglaesst (HideContent), zaehlt nicht.</summary>
+        Private Shared Function StrokeDrawsOnTop() As Boolean
+            Dim style = _objectStrokeStyle
+            If style Is Nothing Then Return False
+            Return style.SkipOutline OrElse Math.Abs(style.WidthFactor - 1.0F) > 0.001F OrElse
+                   style.Join.HasValue OrElse style.BlurSigma > 0.05F
         End Function
 
         ''' <summary>"Inside", "Center" oder "Outside"; alles andere ist mittig.</summary>
@@ -1298,16 +1334,19 @@ Namespace Services
             If corners = "round" Then join = SKStrokeJoin.Round
             If corners = "square" Then join = SKStrokeJoin.Miter
             Dim previous = _objectStrokeStyle
+            ' Laeuft gerade der Kontur-Durchgang eines Bildes (HideContent), gilt das fuer jeden
+            ' Teil-Durchgang weiter - nur die Silhouette braucht das Bild und setzt es selbst zurueck.
+            Dim hideContent = previous IsNot Nothing AndAlso previous.HideContent
             Try
                 If position = "Center" Then
-                    _objectStrokeStyle = New ObjectStrokeStyle With {.Join = join, .BlurSigma = sigma}
+                    _objectStrokeStyle = New ObjectStrokeStyle With {.Join = join, .BlurSigma = sigma, .HideContent = hideContent}
                     DrawAnnotationShapeCore(canvas, kind, annotation, rect, x, y, maxWidth, fontSize, fill, stroke, strokeWidth, alphaFactor)
                     Return
                 End If
 
                 If position = "Outside" Then
                     ' Erst Fuellung und innere Linien, ohne Umriss.
-                    _objectStrokeStyle = New ObjectStrokeStyle With {.SkipOutline = True}
+                    _objectStrokeStyle = New ObjectStrokeStyle With {.SkipOutline = True, .HideContent = hideContent}
                     DrawAnnotationShapeCore(canvas, kind, annotation, rect, x, y, maxWidth, fontSize, fill, stroke, strokeWidth, alphaFactor)
                 End If
 
@@ -1323,7 +1362,7 @@ Namespace Services
                     Dim margin = strokeWidth * 2.0F + 3.0F * sigma + 2.0F
                     canvas.SaveLayer(SKRect.Inflate(rect, margin, margin), Nothing)
                 End If
-                _objectStrokeStyle = New ObjectStrokeStyle With {.WidthFactor = 2.0F, .Join = join, .BlurSigma = sigma}
+                _objectStrokeStyle = New ObjectStrokeStyle With {.WidthFactor = 2.0F, .Join = join, .BlurSigma = sigma, .HideContent = hideContent}
                 If position = "Outside" Then
                     DrawAnnotationShapeCore(canvas, kind, AnnotationStrokeOnly(annotation), rect, x, y, maxWidth, fontSize,
                                             SKColors.Transparent, stroke, strokeWidth, alphaFactor)
@@ -1909,7 +1948,12 @@ Namespace Services
                         End Using
                     End If
 
-                    If strokeWidth > 0 Then
+                    ' Ohne eigene Einstellung liegt die Kontur UNTER der Fuellung, wie schon immer. Mit
+                    ' Lage, Haerte oder Ecken darueber: die Innenkontur entsteht aus der doppelt breiten
+                    ' Kontur, beschnitten auf die Silhouette, und eine Fuellung darueber deckte genau
+                    ' diese innere Haelfte zu (Prueferbefund: Innenkontur am Text verschwand).
+                    Dim strokeOnTop = StrokeDrawsOnTop()
+                    If strokeWidth > 0 AndAlso Not strokeOnTop Then
                         Using strokePaint = ObjectStrokePaint(stroke, Math.Max(1.0F, strokeWidth))
                             If path IsNot Nothing Then
                                 DrawTextOnPathSpaced(canvas, pathText, path, font, strokePaint, spacing)
@@ -1934,6 +1978,16 @@ Namespace Services
                             DrawWrappedText(canvas, text, x, y, maxWidth, fontSize, font, fillPaint, spacing, textAlignment)
                         End If
                     End Using
+
+                    If strokeWidth > 0 AndAlso strokeOnTop Then
+                        Using strokePaint = ObjectStrokePaint(stroke, Math.Max(1.0F, strokeWidth))
+                            If path IsNot Nothing Then
+                                DrawTextOnPathSpaced(canvas, pathText, path, font, strokePaint, spacing)
+                            Else
+                                DrawWrappedText(canvas, text, x, y, maxWidth, fontSize, font, strokePaint, spacing, textAlignment)
+                            End If
+                        End Using
+                    End If
                 End Using
             Finally
                 path?.Dispose()
@@ -2195,12 +2249,16 @@ Namespace Services
                 If bitmap Is Nothing OrElse bitmap.Width <= 0 OrElse bitmap.Height <= 0 Then Return
 
                 Dim fitRect = If(stretchToFill, rect, FitRectKeepingAspectRatio(rect, bitmap.Width, bitmap.Height))
-                Using paint = New SKPaint With {
-                    .IsAntialias = True,
-                    .Color = New SKColor(255, 255, 255, CByte(Math.Max(0, Math.Min(255, 255 * Clamp(opacity, 0, 100) / 100.0F))))
-                }
-                    DrawBitmapSampled(canvas, bitmap, SKRect.Create(0, 0, bitmap.Width, bitmap.Height), fitRect, SamplingHigh, paint)
-                End Using
+                ' Im Kontur-Durchgang von "Kontur mitmischen" nur der Rahmen, das Bild selbst kam
+                ' schon im gemischten Durchgang (ObjectStrokeStyle.HideContent).
+                If _objectStrokeStyle Is Nothing OrElse Not _objectStrokeStyle.HideContent Then
+                    Using paint = New SKPaint With {
+                        .IsAntialias = True,
+                        .Color = New SKColor(255, 255, 255, CByte(Math.Max(0, Math.Min(255, 255 * Clamp(opacity, 0, 100) / 100.0F))))
+                    }
+                        DrawBitmapSampled(canvas, bitmap, SKRect.Create(0, 0, bitmap.Width, bitmap.Height), fitRect, SamplingHigh, paint)
+                    End Using
+                End If
 
                 If strokeWidth > 0 Then
                     Using strokePaint = ObjectStrokePaint(stroke, strokeWidth)
@@ -2751,7 +2809,7 @@ Namespace Services
                     ' Ohne eigene Einstellung liegt die Kontur UNTER der Fuellung, wie schon immer -
                     ' die Fuellung deckt ihre innere Haelfte. Mit Lage, Haerte oder Ecken liegt sie
                     ' darueber, sonst bliebe eine Kontur innen unsichtbar.
-                    Dim strokeOnTop = _objectStrokeStyle IsNot Nothing
+                    Dim strokeOnTop = StrokeDrawsOnTop()
                     If strokeWidth > 0 AndAlso Not strokeOnTop Then
                         Using strokePaint = ObjectStrokePaint(stroke, strokeWidth)
                             canvas.DrawText(text, x, y, font, strokePaint)

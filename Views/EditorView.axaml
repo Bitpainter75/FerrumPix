@@ -1360,27 +1360,26 @@
                                 <panels:SelectionPanel />
                             </Border>
 
-                            <!-- Füllung, Kontur, Schatten und Glühen der AUSWAHL, dieselben Gruppen wie
-                                 an einem Objekt, live an der Auswahlebene. Nicht, solange ein Objekt
-                                 markiert ist: das bringt diese Gruppen selbst mit, sie stuenden sonst
-                                 doppelt da (IsSelectionStyleContext). -->
+                            <!-- Die Füllung arbeitet auch auf einer Maskenebene: ihre Luminanz stuft
+                                 dort die Anpassung ab. Kontur, Schatten und Glühen gibt es dagegen nur
+                                 an einer sichtbaren Auswahlebene (ShowSelectionLineAndEffects). -->
                             <Border Classes="adjustment-group" Margin="0,7,0,0"
                                     IsVisible="{Binding IsSelectionStyleContext}">
                                 <panels:FillPanel />
                             </Border>
 
                             <Border Classes="adjustment-group" Margin="0,7,0,0"
-                                    IsVisible="{Binding IsSelectionStyleContext}">
+                                    IsVisible="{Binding ShowSelectionLineAndEffects}">
                                 <panels:SelectionStrokePanel />
                             </Border>
 
                             <Border Classes="adjustment-group" Margin="0,7,0,0"
-                                    IsVisible="{Binding IsSelectionStyleContext}">
+                                    IsVisible="{Binding ShowSelectionLineAndEffects}">
                                 <panels:AnnotationShadowPanel />
                             </Border>
 
                             <Border Classes="adjustment-group" Margin="0,7,0,0"
-                                    IsVisible="{Binding IsSelectionStyleContext}">
+                                    IsVisible="{Binding ShowSelectionLineAndEffects}">
                                 <panels:AnnotationGlowPanel />
                             </Border>
 

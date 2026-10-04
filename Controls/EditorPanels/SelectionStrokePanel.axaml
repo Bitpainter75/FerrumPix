@@ -57,7 +57,7 @@
             <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
                 <TextBlock Text="Konturbreite" Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap" />
-                <icons:RoundSlider Grid.Column="1" Minimum="1" Maximum="100"
+                <icons:RoundSlider Grid.Column="1" Minimum="1" Maximum="200"
                                    DefaultValue="4"
                                    Value="{Binding SelectionStrokeWidth}"
                                    Margin="0,0" />

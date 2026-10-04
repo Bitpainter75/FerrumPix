@@ -34,7 +34,8 @@
   messages short.
 
 - A text layer selected in another tool stays selected when you switch to the text tool to change
-  it, the same for watermarks, pictures and QR codes. "Blend the outline too" can be switched at any time.
+  it, the same for watermarks, pictures and QR codes. "Blend the outline too" can be switched at
+  any time and now works for image layers, copied selections and image watermarks as well.
 
 - Exported PSD files carry an sRGB color profile. Before, programs that assume their own working
   space without one could show them too saturated. They also keep the resolution of the original
@@ -60,4 +61,3 @@
 
 - Color buttons in the editor panels sit at the right edge, like the number fields, so a longer
   label such as "Background color" no longer runs into them.
-

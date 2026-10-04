@@ -9470,7 +9470,15 @@ Namespace ViewModels
         ''' Objekt ohne Füllung (durchsichtig) schon richtig "aus" aus, ohne Umstellung der Datei.</summary>
         Public Property AnnotationFillEnabled As Boolean
             Get
-                Return ParseAvaloniaColorOrDefault(_annotationFillColor, Avalonia.Media.Colors.White).A > 0
+                ' Bei einem Verlauf zaehlt auch Farbe 2: ist nur sie sichtbar, wird er gezeichnet,
+                ' und ein Haken auf "aus" klappte die Bedienung eines sichtbaren Verlaufs weg
+                ' (Prueferbefund).
+                If ParseAvaloniaColorOrDefault(_annotationFillColor, Avalonia.Media.Colors.White).A > 0 Then Return True
+                Dim kind = If(_annotationFillKind, "").Trim().ToLowerInvariant()
+                If kind = "lineargradient" OrElse kind = "radialgradient" Then
+                    Return ParseAvaloniaColorOrDefault(_annotationFillColor2, Avalonia.Media.Colors.White).A > 0
+                End If
+                Return False
             End Get
             Set(value As Boolean)
                 If value = AnnotationFillEnabled Then Return
@@ -12757,6 +12765,9 @@ Namespace ViewModels
         ''' zeichnet beides selbst - die Füllung bleibt nachträglich änderbar statt eingebrannt.
         ''' Ein Reglerzug wird über CaptureUndoState zu EINEM Schritt zusammengefasst.</summary>
         Private Sub ApplySelectionFillLive()
+            ' Eine Maskenebene nutzt dieselbe deklarative Füllung zur Luminanz-Abstufung ihrer
+            ' Anpassung. Sie bleibt deshalb hier bearbeitbar; nur Kontur, Schatten und Glühen
+            ' gelten ausschliesslich für eine sichtbare Auswahlebene.
             If _loadingSelectionStyle OrElse Not _hasActiveSelection Then Return
             Dim layer As MaskedAdjustmentLayer
             Dim isNew = False
@@ -12802,6 +12813,15 @@ Namespace ViewModels
         Public ReadOnly Property IsSelectionStyleContext As Boolean
             Get
                 Return ShowSelectionAdjustments AndAlso Not HasSelectedAnnotation
+            End Get
+        End Property
+
+        ''' <summary>Kontur, Schatten und Glühen der Auswahl: wie IsSelectionStyleContext, aber nicht
+        ''' bei einer MASKE. Diese drei gibt es nur an einer sichtbaren Auswahlebene; die Füllung
+        ''' bleibt bei einer Maske sichtbar, weil ihre Luminanz die Anpassung abstufen kann.</summary>
+        Public ReadOnly Property ShowSelectionLineAndEffects As Boolean
+            Get
+                Return IsSelectionStyleContext AndAlso Not _activeSelectionIsMask
             End Get
         End Property
 
@@ -17129,10 +17149,13 @@ Namespace ViewModels
                         Case NameOf(ShowSingleAnnotationEffects), NameOf(ShowFillColorControls),
                              NameOf(ShowStrokeWidthControls), NameOf(EffectiveAnnotationKind)
                             RaiseObjectFillStrokeGroupsChanged()
+                        Case NameOf(ActiveSelectionIsMask)
+                            Me.RaisePropertyChanged(NameOf(ShowSelectionLineAndEffects))
                         Case NameOf(ShowSelectionAdjustments), NameOf(HasSelectedAnnotation)
                             Dim wasSelectionContext = _lastSelectionStyleContext
                             _lastSelectionStyleContext = IsSelectionStyleContext
                             Me.RaisePropertyChanged(NameOf(IsSelectionStyleContext))
+                            Me.RaisePropertyChanged(NameOf(ShowSelectionLineAndEffects))
                             RaiseObjectFillStrokeGroupsChanged()
                             ' Wird die Auswahl wieder gemeint (Werkzeug betreten, Objekt abgewaehlt),
                             ' zeigen die geteilten Haken von Schatten und Glühen ihren Stand an der
@@ -17145,6 +17168,11 @@ Namespace ViewModels
                             If SelectedLayerRow?.AdjustmentLayer IsNot Nothing Then QueueSelectionStyleSync()
                         Case NameOf(AnnotationFillKind), NameOf(AnnotationFillColor), NameOf(AnnotationFillColor2),
                              NameOf(AnnotationGradientAngleDegrees), NameOf(AnnotationGradientInverted)
+                            ' Ob die Füllung "aktiv" ist, hängt beim Verlauf auch an Farbe 2 und an der Füllart.
+                            If e.PropertyName = NameOf(AnnotationFillKind) OrElse e.PropertyName = NameOf(AnnotationFillColor2) Then
+                                Me.RaisePropertyChanged(NameOf(AnnotationFillEnabled))
+                                RaiseFillGroupActiveChanged()
+                            End If
                             ' Im Auswahl-Werkzeug ist die Füllung live: jede Änderung greift sofort.
                             If IsSelectionStyleContext AndAlso _selectionFillEnabled Then ApplySelectionFillLive()
                         Case NameOf(AnnotationShadowEnabled), NameOf(AnnotationShadowOffsetX), NameOf(AnnotationShadowOffsetY),

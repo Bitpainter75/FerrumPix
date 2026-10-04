@@ -5190,11 +5190,17 @@ Namespace ViewModels
         ''' die Ebene bei Bedarf an (wie das Fuellen), aus setzt nur eine vorhandene auf Breite null.
         ''' Ein Reglerzug wird ueber CaptureUndoState zu EINEM Schritt zusammengefasst.</summary>
         Private Sub ApplySelectionStrokeLive()
-            If _loadingSelectionStyle OrElse Not _hasActiveSelection Then Return
+            ' Eine Kontur gibt es nur an einer AUSWAHL-Ebene. Bei einer Maske legte das Einschalten
+            ' sonst erst eine Maskenebene samt Rueckgaengig-Schritt an und braeche dann ohne
+            ' sichtbare Wirkung ab (Prueferbefund); die Gruppe ist dort ohnehin ausgeblendet.
+            If _loadingSelectionStyle OrElse Not _hasActiveSelection OrElse _activeSelectionIsMask Then Return
             Dim layer As MaskedAdjustmentLayer
+            Dim isNew = False
             If _selectionStrokeEnabled Then
                 CaptureUndoState("SelectionStroke")
+                Dim before = ExistingLayerForActiveSelection()
                 layer = EnsureCorrectionLayerForActiveSelection()
+                isNew = before Is Nothing OrElse Not Object.ReferenceEquals(before, layer)
             Else
                 layer = ExistingLayerForActiveSelection()
                 If layer Is Nothing OrElse Not layer.HasStroke() Then Return
@@ -5207,17 +5213,22 @@ Namespace ViewModels
             layer.StrokeHardness = _selectionStrokeHardness
             layer.StrokeSquareCorners = _selectionStrokeSquareCorners
             _hasChanges = True
+            ' Wie bei Füllung und Effekten: eine neu entstandene Ebene muss in der Liste erscheinen
+            ' (Prueferbefund: sie kam erst nach einem spaeteren Neuaufbau).
+            If isNew Then
+                _selectedMaskedAdjustmentLayerId = layer.Id
+                RebuildLayerRows()
+            End If
             SchedulePreviewUpdate()
         End Sub
 
-        ''' <summary>Holt die Kontur einer vorhandenen Auswahlebene ins Panel, wenn deren Auswahl
-        ''' wieder aufgenommen wird - sonst zeigte das Panel die Werte der letzten Auswahl.</summary>
         ''' <summary>Schreibt Schatten und Glühen aus dem Panel an die Auswahlebene. Dieselben
         ''' Eigenschaften wie am Objekt (AnnotationShadow*, AnnotationGlow*): im Auswahl-Werkzeug
         ''' meinen sie die Auswahl, live wie Füllung und Kontur. Einer der beiden Haken legt die
         ''' Ebene bei Bedarf an; ein Reglerzug ist ein Rückgängig-Schritt.</summary>
         Private Sub ApplySelectionEffectsLive()
-            If _loadingSelectionStyle OrElse Not _hasActiveSelection Then Return
+            ' Wie die Kontur nur an einer AUSWAHL-Ebene, nicht an einer Maske.
+            If _loadingSelectionStyle OrElse Not _hasActiveSelection OrElse _activeSelectionIsMask Then Return
             Dim wanted = _annotationShadowEnabled OrElse _annotationGlowEnabled
             Dim layer As MaskedAdjustmentLayer
             Dim isNew = False
@@ -5319,6 +5330,8 @@ Namespace ViewModels
             End Try
         End Sub
 
+        ''' <summary>Holt die Kontur einer vorhandenen Auswahlebene ins Panel, wenn deren Auswahl
+        ''' wieder aufgenommen wird - sonst zeigte das Panel die Werte der letzten Auswahl.</summary>
         Private Sub LoadSelectionStrokeFromLayer(layer As MaskedAdjustmentLayer)
             If layer Is Nothing Then Return
             Dim wasEnabled = layer.HasStroke()
