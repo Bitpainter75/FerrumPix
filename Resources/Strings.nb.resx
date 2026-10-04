@@ -9240,4 +9240,58 @@
   <data name="Bildpinsel_Radieren_Abwedeln_Nachbelichten_Schwa_3068b135" xml:space="preserve">
     <value>Bildepensel: viske ut, lysne, mørkne, svamp, erstatt farge</value>
   </data>
+  <data name="Kanalmixer_633685cc" xml:space="preserve">
+    <value>Kanalmikser</value>
+  </data>
+  <data name="Verlaufsumsetzung_b0e0a0b5" xml:space="preserve">
+    <value>Gradientkart</value>
+  </data>
+  <data name="Tontrennung_eae253d0" xml:space="preserve">
+    <value>Posterisering</value>
+  </data>
+  <data name="Schwellenwert_8165c9e0" xml:space="preserve">
+    <value>Terskel</value>
+  </data>
+  <data name="Kanalmixer_zur_cksetzen_d6a9bcb7" xml:space="preserve">
+    <value>Tilbakestill kanalmikser</value>
+  </data>
+  <data name="Verlaufsumsetzung_zur_cksetzen_3e220ef5" xml:space="preserve">
+    <value>Tilbakestill gradientkart</value>
+  </data>
+  <data name="Tontrennung_zur_cksetzen_0a9ebdd3" xml:space="preserve">
+    <value>Tilbakestill posterisering</value>
+  </data>
+  <data name="Schwellenwert_zur_cksetzen_5cb61a2c" xml:space="preserve">
+    <value>Tilbakestill terskel</value>
+  </data>
+  <data name="Monochrom_35519acc" xml:space="preserve">
+    <value>Monokrom</value>
+  </data>
+  <data name="Mischt_aus_den_drei_Kan_len_ein_Graubild_271b4873" xml:space="preserve">
+    <value>Blander et gråtonebilde av de tre kanalene</value>
+  </data>
+  <data name="Der_Kanal_dessen_Mischung_die_Regler_darunter_ze_178e4d5c" xml:space="preserve">
+    <value>Kanalen hvis blanding glidebryterne nedenfor viser</value>
+  </data>
+  <data name="Grau_c83daacc" xml:space="preserve">
+    <value>Grå</value>
+  </data>
+  <data name="Konstante_562622f8" xml:space="preserve">
+    <value>Konstant</value>
+  </data>
+  <data name="Hebt_oder_senkt_den_Kanal_gleichm_ig_unabh_ngig__bbb55366" xml:space="preserve">
+    <value>Hever eller senker kanalen jevnt, uavhengig av inndata</value>
+  </data>
+  <data name="Stufen_792958e4" xml:space="preserve">
+    <value>Nivåer</value>
+  </data>
+  <data name="Tonstufen_je_Farbkanal_0_schaltet_die_Tontrennun_ddf5b2d1" xml:space="preserve">
+    <value>Tonenivåer per fargekanal, 0 slår av posterisering</value>
+  </data>
+  <data name="Schwelle_f5095d0d" xml:space="preserve">
+    <value>Terskelverdi</value>
+  </data>
+  <data name="Ab_dieser_Helligkeit_wird_ein_Punkt_wei_darunter_978e32ff" xml:space="preserve">
+    <value>Fra denne lysstyrken blir en piksel hvit, under den svart. 0 slår av terskelen</value>
+  </data>
 </root>

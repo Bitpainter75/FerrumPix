@@ -239,24 +239,36 @@ Namespace Services
             WriteU16(fs, 3)          ' Farbmodus RGB
         End Sub
 
-        ''' <summary>Die Bildressourcen. Ohne eigenen Block bleibt die Sektion leer, wie bisher.</summary>
-        Private Shared Sub WriteImageResources(fs As Stream, recipe As Byte())
-            If recipe Is Nothing OrElse recipe.Length = 0 Then
-                WriteU32(fs, 0)
-                Return
-            End If
+        ''' <summary>Kennung der Bildressource fuer das ICC-Farbprofil des Dokuments.</summary>
+        Private Const IccProfileResourceId As Integer = 1039
 
-            ' Ein Block: Signatur, Kennung, leerer Name (auf gerade Laenge gefuellt), Laenge, Daten.
+        ''' <summary>Die Bildressourcen: IMMER das sRGB-Profil (1039), dazu der eigene Block, wenn es
+        ''' einen gibt.
+        '''
+        ''' DAS PROFIL, WEIL DIE PUNKTE sRGB SIND: alles, was hier geschrieben wird, ist vorher nach
+        ''' sRGB gebracht. Ohne Profil nimmt Photoshop den eingestellten Arbeitsfarbraum an, und wer
+        ''' dort Adobe RGB eingestellt hat, sah jede exportierte Datei zu kraeftig. Das Profil baut
+        ''' SrgbIccProfile; FerrumPix erkennt es beim Wiederoeffnen als sRGB und rechnet nichts um.</summary>
+        Private Shared Sub WriteImageResources(fs As Stream, recipe As Byte())
+            Dim blocks As New List(Of (Id As Integer, Data As Byte()))() From {(IccProfileResourceId, SrgbIccProfile.Bytes())}
+            If recipe IsNot Nothing AndAlso recipe.Length > 0 Then blocks.Add((PsdRecipeService.ResourceId, recipe))
+
+            ' Je Block: Signatur, Kennung, leerer Name (auf gerade Laenge gefuellt), Laenge, Daten.
             ' Die Daten selbst werden ebenfalls auf gerade Laenge aufgefuellt.
-            Dim padded = recipe.Length + (recipe.Length And 1)
-            WriteU32(fs, 4 + 2 + 2 + 4 + padded)
-            fs.Write(Encoding.ASCII.GetBytes("8BIM"), 0, 4)
-            WriteU16(fs, PsdRecipeService.ResourceId)
-            fs.WriteByte(0)  ' Namenslaenge 0 …
-            fs.WriteByte(0)  ' … und das Fuellbyte auf gerade Laenge
-            WriteU32(fs, recipe.Length)
-            fs.Write(recipe, 0, recipe.Length)
-            If padded <> recipe.Length Then fs.WriteByte(0)
+            Dim total = 0L
+            For Each block In blocks
+                total += 4 + 2 + 2 + 4 + block.Data.Length + (block.Data.Length And 1)
+            Next
+            WriteU32(fs, total)
+            For Each block In blocks
+                fs.Write(Encoding.ASCII.GetBytes("8BIM"), 0, 4)
+                WriteU16(fs, block.Id)
+                fs.WriteByte(0)  ' Namenslaenge 0 …
+                fs.WriteByte(0)  ' … und das Fuellbyte auf gerade Laenge
+                WriteU32(fs, block.Data.Length)
+                fs.Write(block.Data, 0, block.Data.Length)
+                If (block.Data.Length And 1) <> 0 Then fs.WriteByte(0)
+            Next
         End Sub
 
         ' ── Ebenen-Sektion ───────────────────────────────────────────────────────

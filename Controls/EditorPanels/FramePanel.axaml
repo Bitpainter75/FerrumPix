@@ -65,7 +65,7 @@
                         </ComboBox.ItemTemplate>
                       </ComboBox>
             </Grid>
-            <Grid ColumnDefinitions="92,*" VerticalAlignment="Top">
+            <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Top">
                 <TextBlock Text="Farbe" Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                 <StackPanel Grid.Column="1" Margin="6,0,0,0" Spacing="6">
@@ -104,7 +104,7 @@
                                              Value="{Binding FrameSymbolSpacing, Mode=TwoWay}"
                                              Minimum="0" Maximum="400" Increment="5" FormatString="F0" />
                 </Grid>
-                <Grid ColumnDefinitions="92,*" VerticalAlignment="Top">
+                <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Top">
                     <TextBlock Text="Kontur" Foreground="{DynamicResource FP.Text.Secondary}"
                                VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                     <StackPanel Grid.Column="1" Margin="6,0,0,0" Spacing="6">
@@ -176,7 +176,7 @@
                         </Button>
                     </WrapPanel>
                 </Grid>
-                <Grid ColumnDefinitions="92,*" VerticalAlignment="Top"
+                <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Top"
                       IsVisible="{Binding ShowFrameGradientControls}">
                     <TextBlock Text="Verlauf bis" Foreground="{DynamicResource FP.Text.Secondary}"
                                VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
@@ -243,7 +243,7 @@
                 <CheckBox Content="Schatten" IsChecked="{Binding FrameShadowEnabled}"
                           FontSize="{DynamicResource FP.Font.Small}" />
                 <StackPanel Spacing="2" IsVisible="{Binding FrameShadowEnabled}">
-                    <Grid ColumnDefinitions="92,*" VerticalAlignment="Top">
+                    <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Top">
                         <TextBlock Text="Farbe" Foreground="{DynamicResource FP.Text.Secondary}"
                                    VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                         <icons:ColorPickerButton Grid.Column="1"
@@ -320,7 +320,7 @@
                 <CheckBox Content="Glühen" IsChecked="{Binding FrameGlowEnabled}"
                           FontSize="{DynamicResource FP.Font.Small}" Margin="0,4,0,0" />
                 <StackPanel Spacing="2" IsVisible="{Binding FrameGlowEnabled}">
-                    <Grid ColumnDefinitions="92,*" VerticalAlignment="Top">
+                    <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Top">
                         <TextBlock Text="Farbe" Foreground="{DynamicResource FP.Text.Secondary}"
                                    VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                         <icons:ColorPickerButton Grid.Column="1"

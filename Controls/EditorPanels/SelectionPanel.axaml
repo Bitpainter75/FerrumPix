@@ -448,13 +448,13 @@
                     </StackPanel>
                 </Button>
             </WrapPanel>
-            <Grid ColumnDefinitions="92,*" VerticalAlignment="Top">
+            <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Top">
                 <TextBlock Text="Farbe 1" Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                 <icons:ColorPickerButton Grid.Column="1"
                                          SelectedColor="{Binding AnnotationFillColorValue, Mode=TwoWay}" />
             </Grid>
-            <Grid ColumnDefinitions="92,*" VerticalAlignment="Top"
+            <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Top"
                   IsVisible="{Binding ShowGradientFillControls}">
                 <TextBlock Text="Farbe 2" Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />

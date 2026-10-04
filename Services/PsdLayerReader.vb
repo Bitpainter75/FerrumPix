@@ -45,7 +45,10 @@ Namespace Services
         ''' Obergrenze für die Summe aller Ebenenflächen. Eine Photoshop-Datei mit hundert Ebenen in
         ''' voller Größe belegt sonst mehr Speicher, als sinnvoll zu halten ist.
         Private Const MaxTotalLayerPixels As Long = 400_000_000L
-        Private Const MaxLayers As Integer = 300
+        ''' Obergrenze der Ebenenzahl, wie Photoshop sie selbst setzt. Den Speicher schuetzt die
+        ''' Flaechengrenze darueber; hier stand frueher 300, und eine Datei mit vielen kleinen Ebenen
+        ''' (Gruppenmarken zaehlen mit) ging dadurch flach auf, obwohl sie kaum Platz brauchte.
+        Private Const MaxLayers As Integer = 8000
 
         Public Class PsdLayerInfo
             Public Property Name As String = ""
@@ -559,10 +562,12 @@ Namespace Services
                     ' Füllkraft 0, die nur über eine Kontur sichtbar sein soll, voll deckend.
                     Dim fill = fs.ReadByte()
                     If fill >= 0 Then rec.FillOpacity = fill
-                ElseIf bk = "lsct" AndAlso blockLen >= 4 Then
+                ElseIf (bk = "lsct" OrElse bk = "lsdk") AndAlso blockLen >= 4 Then
                     ' Abschnittsmarke: 1 und 2 sind die Gruppenzeile selbst, 3 ist ihr unteres Ende.
                     ' Solche Datensätze tragen keine Bildpunkte, werden aber weitergereicht - aus
-                    ' ihnen baut der Import die Gruppen nach.
+                    ' ihnen baut der Import die Gruppen nach. "lsdk" ist derselbe Block unter
+                    ' anderem Namen, wie ihn manche Fassungen bei verschachtelten Gruppen schreiben;
+                    ' übergangen zerfielen diese Gruppen in lose Ebenen.
                     Dim sectionType = ReadU32(fs)
                     If sectionType >= 1 AndAlso sectionType <= 3 Then
                         rec.HasPixels = False

@@ -21918,6 +21918,9 @@ Namespace ViewModels
                 Next
             End If
 
+            ' Kanalmixer, Verlaufsumsetzung, Tontrennung und Schwellenwert (EditorViewModelCorrections.vb).
+            WriteCorrectionsInto(adj)
+
             Return adj
         End Function
 
@@ -22388,6 +22391,9 @@ Namespace ViewModels
             ' hiessen alle Handgriffe an allen Objekten gleich.
             Dim objectLabel = ObjectHistoryLabel(propertyName)
             If Not String.IsNullOrEmpty(objectLabel) Then Return objectLabel
+            ' Die weiteren Korrekturen benennt ihre Teildatei (EditorViewModelCorrections.vb).
+            Dim correctionLabel = CorrectionHistoryLabel(propertyName)
+            If correctionLabel IsNot Nothing Then Return correctionLabel
 
             Select Case propertyName
                 ' Wortgleich mit den Ueberschriften im Auswahlwerkzeug.
@@ -22777,6 +22783,8 @@ Namespace ViewModels
                     Return annotation.IconSource
                 End If
             End If
+            Dim correctionIcon = CorrectionHistoryIcon(propertyName)
+            If correctionIcon IsNot Nothing Then Return correctionIcon
             Select Case propertyName
                 Case NameOf(CropLeft), NameOf(CropTop), NameOf(CropRight), NameOf(CropBottom)
                     Return outline & "crop.svg"
@@ -23206,6 +23214,7 @@ Namespace ViewModels
             _calibrationBlueHue = adj.CalibrationBlueHue
             _calibrationBlueSaturation = adj.CalibrationBlueSaturation
             _calibrationShadowTint = adj.CalibrationShadowTint
+            ReadCorrectionsFrom(adj)
             _highlights = adj.Highlights
             _shadowsLevel = adj.ShadowsLevel
             _whites = adj.Whites
@@ -23862,6 +23871,8 @@ Namespace ViewModels
             _calibrationBlueHue = 0
             _calibrationBlueSaturation = 0
             _calibrationShadowTint = 0
+            ResetColorCorrectionsInternal()
+            ResetEffectCorrectionsInternal()
             _vignetteTransition = 55
             _vignetteRoundness = 0
             _vignetteFeather = 70
@@ -28236,8 +28247,10 @@ Namespace ViewModels
             ResetHslInternal()
             ResetColorGradingInternal()
             ResetCalibrationInternal()
+            ResetColorCorrectionsInternal()
             ResetDetailInternal()
             ResetEffectsInternal()
+            ResetEffectCorrectionsInternal()
             ResetFilterInternal()
             RaiseResetButtonStateChanged()
             SchedulePreviewUpdate()
@@ -28295,10 +28308,15 @@ Namespace ViewModels
                     ResetColorInternal()
                     ResetHslInternal()
                     ResetColorGradingInternal()
+                    ResetColorCorrectionsInternal()
+                    RaiseResetButtonStateChanged()
+                    SchedulePreviewUpdate()
                 Case EditorTool.Details
                     ResetDetailInternal()
                 Case EditorTool.Effects, EditorTool.Frame
                     ResetEffectsInternal()
+                    ResetEffectCorrectionsInternal()
+                    SchedulePreviewUpdate()
                 Case EditorTool.Filters
                     ResetFilterInternal()
                 Case EditorTool.AllAdjustments
@@ -28310,8 +28328,10 @@ Namespace ViewModels
                     ResetColorInternal()
                     ResetHslInternal()
                     ResetColorGradingInternal()
+                    ResetColorCorrectionsInternal()
                     ResetDetailInternal()
                     ResetEffectsInternal()
+                    ResetEffectCorrectionsInternal()
                     ResetFilterInternal()
                     RaiseResetButtonStateChanged()
                     SchedulePreviewUpdate()
@@ -28588,6 +28608,8 @@ Namespace ViewModels
             ResetHslInternal()
             ResetColorGradingInternal()
             ResetCalibrationInternal()
+            ResetColorCorrectionsInternal()
+            ResetEffectCorrectionsInternal()
             ResetCurvePoints()
             ' Ein Preset kann lokale Korrekturen (Radial-/Verlaufsmasken) als Ebenen mitbringen. Beim
             ' Neutralisieren des Looks müssen die ebenfalls weg - sonst blieben z. B. eine radiale

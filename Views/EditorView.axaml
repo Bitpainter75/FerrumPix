@@ -1653,6 +1653,30 @@
                                 <panels:ColorGradingPanel />
                             </Border>
 
+                            <!-- Die weiteren Farbkorrekturen (EditorViewModelCorrections.vb), in der
+                                 Reihenfolge, in der die Punktkette sie rechnet. -->
+                            <Border Classes="adjustment-group" Margin="0,7,0,0"
+                                    >
+                                <Border.IsVisible>
+                                    <MultiBinding Converter="{StaticResource AllTrueConverter}">
+                                        <Binding Path="ShowColorAdjustments"/>
+                                        <Binding Path="HiddenAdjustmentGroups" Converter="{StaticResource NotInListConverter}" ConverterParameter="channel-mixer"/>
+                                    </MultiBinding>
+                                </Border.IsVisible>
+                                <panels:ChannelMixerPanel />
+                            </Border>
+
+                            <Border Classes="adjustment-group" Margin="0,7,0,0"
+                                    >
+                                <Border.IsVisible>
+                                    <MultiBinding Converter="{StaticResource AllTrueConverter}">
+                                        <Binding Path="ShowColorAdjustments"/>
+                                        <Binding Path="HiddenAdjustmentGroups" Converter="{StaticResource NotInListConverter}" ConverterParameter="gradient-map"/>
+                                    </MultiBinding>
+                                </Border.IsVisible>
+                                <panels:GradientMapPanel />
+                            </Border>
+
                             <Border Classes="adjustment-group" Margin="0,7,0,0"
                                     >
                                 <Border.IsVisible>
@@ -1696,6 +1720,30 @@
                             <!-- VIGNETTE + KÖRNUNG (je eigene Karte im Panel) -->
                             <panels:EffectsPanel Margin="0,7,0,0"
                                                  IsVisible="{Binding ShowEffectsAdjustments}" />
+
+                            <!-- Tontrennung und Schwellenwert: Pixelregler wie die Farbkorrekturen
+                                 (EditorViewModelCorrections.vb), gerechnet am Ende der Punktkette. -->
+                            <Border Classes="adjustment-group" Margin="0,7,0,0"
+                                    >
+                                <Border.IsVisible>
+                                    <MultiBinding Converter="{StaticResource AllTrueConverter}">
+                                        <Binding Path="ShowEffectsAdjustments"/>
+                                        <Binding Path="HiddenAdjustmentGroups" Converter="{StaticResource NotInListConverter}" ConverterParameter="posterize"/>
+                                    </MultiBinding>
+                                </Border.IsVisible>
+                                <panels:PosterizePanel />
+                            </Border>
+
+                            <Border Classes="adjustment-group" Margin="0,7,0,0"
+                                    >
+                                <Border.IsVisible>
+                                    <MultiBinding Converter="{StaticResource AllTrueConverter}">
+                                        <Binding Path="ShowEffectsAdjustments"/>
+                                        <Binding Path="HiddenAdjustmentGroups" Converter="{StaticResource NotInListConverter}" ConverterParameter="threshold"/>
+                                    </MultiBinding>
+                                </Border.IsVisible>
+                                <panels:ThresholdPanel />
+                            </Border>
 
                             <Border Classes="adjustment-group" Margin="0,7,0,0"
                                     >

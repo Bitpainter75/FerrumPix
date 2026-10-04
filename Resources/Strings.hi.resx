@@ -9244,4 +9244,58 @@
   <data name="Bildpinsel_Radieren_Abwedeln_Nachbelichten_Schwa_3068b135" xml:space="preserve">
     <value>इमेज ब्रश: मिटाएँ, डॉज, बर्न, स्पंज, रंग बदलें</value>
   </data>
+  <data name="Kanalmixer_633685cc" xml:space="preserve">
+    <value>चैनल मिक्सर</value>
+  </data>
+  <data name="Verlaufsumsetzung_b0e0a0b5" xml:space="preserve">
+    <value>ग्रेडिएंट मैप</value>
+  </data>
+  <data name="Tontrennung_eae253d0" xml:space="preserve">
+    <value>पोस्टराइज़</value>
+  </data>
+  <data name="Schwellenwert_8165c9e0" xml:space="preserve">
+    <value>थ्रेशोल्ड</value>
+  </data>
+  <data name="Kanalmixer_zur_cksetzen_d6a9bcb7" xml:space="preserve">
+    <value>चैनल मिक्सर रीसेट करें</value>
+  </data>
+  <data name="Verlaufsumsetzung_zur_cksetzen_3e220ef5" xml:space="preserve">
+    <value>ग्रेडिएंट मैप रीसेट करें</value>
+  </data>
+  <data name="Tontrennung_zur_cksetzen_0a9ebdd3" xml:space="preserve">
+    <value>पोस्टराइज़ रीसेट करें</value>
+  </data>
+  <data name="Schwellenwert_zur_cksetzen_5cb61a2c" xml:space="preserve">
+    <value>थ्रेशोल्ड रीसेट करें</value>
+  </data>
+  <data name="Monochrom_35519acc" xml:space="preserve">
+    <value>एकरंगी</value>
+  </data>
+  <data name="Mischt_aus_den_drei_Kan_len_ein_Graubild_271b4873" xml:space="preserve">
+    <value>तीनों चैनलों से एक ग्रेस्केल चित्र मिलाता है</value>
+  </data>
+  <data name="Der_Kanal_dessen_Mischung_die_Regler_darunter_ze_178e4d5c" xml:space="preserve">
+    <value>वह चैनल जिसका मिश्रण नीचे के स्लाइडर दिखाते हैं</value>
+  </data>
+  <data name="Grau_c83daacc" xml:space="preserve">
+    <value>धूसर</value>
+  </data>
+  <data name="Konstante_562622f8" xml:space="preserve">
+    <value>स्थिरांक</value>
+  </data>
+  <data name="Hebt_oder_senkt_den_Kanal_gleichm_ig_unabh_ngig__bbb55366" xml:space="preserve">
+    <value>इनपुट से स्वतंत्र, चैनल को समान रूप से बढ़ाता या घटाता है</value>
+  </data>
+  <data name="Stufen_792958e4" xml:space="preserve">
+    <value>स्तर</value>
+  </data>
+  <data name="Tonstufen_je_Farbkanal_0_schaltet_die_Tontrennun_ddf5b2d1" xml:space="preserve">
+    <value>प्रति रंग चैनल टोन स्तर, 0 पोस्टराइज़ बंद करता है</value>
+  </data>
+  <data name="Schwelle_f5095d0d" xml:space="preserve">
+    <value>स्तर</value>
+  </data>
+  <data name="Ab_dieser_Helligkeit_wird_ein_Punkt_wei_darunter_978e32ff" xml:space="preserve">
+    <value>इस चमक से पिक्सेल सफ़ेद, उससे नीचे काला हो जाता है। 0 थ्रेशोल्ड बंद करता है</value>
+  </data>
 </root>

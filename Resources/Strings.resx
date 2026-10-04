@@ -9219,4 +9219,58 @@
   <data name="Bildpinsel_Radieren_Abwedeln_Nachbelichten_Schwa_3068b135" xml:space="preserve">
     <value>Image brush: erase, dodge, burn, sponge, replace color</value>
   </data>
+  <data name="Kanalmixer_633685cc" xml:space="preserve">
+    <value>Channel Mixer</value>
+  </data>
+  <data name="Verlaufsumsetzung_b0e0a0b5" xml:space="preserve">
+    <value>Gradient Map</value>
+  </data>
+  <data name="Tontrennung_eae253d0" xml:space="preserve">
+    <value>Posterize</value>
+  </data>
+  <data name="Schwellenwert_8165c9e0" xml:space="preserve">
+    <value>Threshold</value>
+  </data>
+  <data name="Kanalmixer_zur_cksetzen_d6a9bcb7" xml:space="preserve">
+    <value>Reset channel mixer</value>
+  </data>
+  <data name="Verlaufsumsetzung_zur_cksetzen_3e220ef5" xml:space="preserve">
+    <value>Reset gradient map</value>
+  </data>
+  <data name="Tontrennung_zur_cksetzen_0a9ebdd3" xml:space="preserve">
+    <value>Reset posterize</value>
+  </data>
+  <data name="Schwellenwert_zur_cksetzen_5cb61a2c" xml:space="preserve">
+    <value>Reset threshold</value>
+  </data>
+  <data name="Monochrom_35519acc" xml:space="preserve">
+    <value>Monochrome</value>
+  </data>
+  <data name="Mischt_aus_den_drei_Kan_len_ein_Graubild_271b4873" xml:space="preserve">
+    <value>Mixes a grayscale picture from the three channels</value>
+  </data>
+  <data name="Der_Kanal_dessen_Mischung_die_Regler_darunter_ze_178e4d5c" xml:space="preserve">
+    <value>The channel whose mix the sliders below show</value>
+  </data>
+  <data name="Grau_c83daacc" xml:space="preserve">
+    <value>Gray</value>
+  </data>
+  <data name="Konstante_562622f8" xml:space="preserve">
+    <value>Constant</value>
+  </data>
+  <data name="Hebt_oder_senkt_den_Kanal_gleichm_ig_unabh_ngig__bbb55366" xml:space="preserve">
+    <value>Raises or lowers the channel evenly, regardless of the inputs</value>
+  </data>
+  <data name="Stufen_792958e4" xml:space="preserve">
+    <value>Levels</value>
+  </data>
+  <data name="Tonstufen_je_Farbkanal_0_schaltet_die_Tontrennun_ddf5b2d1" xml:space="preserve">
+    <value>Tone levels per color channel, 0 turns posterize off</value>
+  </data>
+  <data name="Schwelle_f5095d0d" xml:space="preserve">
+    <value>Level</value>
+  </data>
+  <data name="Ab_dieser_Helligkeit_wird_ein_Punkt_wei_darunter_978e32ff" xml:space="preserve">
+    <value>From this brightness on a pixel turns white, below it black. 0 turns threshold off</value>
+  </data>
 </root>

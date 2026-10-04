@@ -338,7 +338,7 @@
                                      FormatString="F0" />
         </Grid>
         <!-- Beim QR-Code werden Hintergrund und Vordergrund über den Farbmischer gesetzt. -->
-        <Grid ColumnDefinitions="92,*" VerticalAlignment="Top"
+        <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Top"
               IsVisible="{Binding ShowFillColorPicker}">
             <TextBlock Text="{Binding FillColorLabel}"
                        Foreground="{DynamicResource FP.Text.Secondary}"
@@ -390,7 +390,7 @@
                 </Button>
             </WrapPanel>
         </Grid>
-        <Grid ColumnDefinitions="92,*" VerticalAlignment="Top"
+        <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Top"
               IsVisible="{Binding ShowGradientFillControls}">
             <TextBlock Text="Verlauf bis" Foreground="{DynamicResource FP.Text.Secondary}"
                        VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
@@ -416,7 +416,7 @@
                   IsChecked="{Binding AnnotationGradientInverted}" FontSize="{DynamicResource FP.Font.Small}"
                   IsVisible="{Binding ShowRadialGradientControl}" />
         <!-- Beim QR-Code ist das die Modulfarbe ("Vordergrund", siehe StrokeColorLabel). -->
-        <Grid ColumnDefinitions="92,*" VerticalAlignment="Top"
+        <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Top"
               IsVisible="{Binding ShowStrokeColorControls}">
             <TextBlock Text="{Binding StrokeColorLabel}"
                        Foreground="{DynamicResource FP.Text.Secondary}"

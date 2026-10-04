@@ -1548,6 +1548,8 @@ Namespace Services
                     ("curve", "Tonwertkurve"),
                     ("hsl", "Farbmischer"),
                     ("color-grading", "Farbgradierung"),
+                    ("channel-mixer", "Kanalmixer"),
+                    ("gradient-map", "Verlaufsumsetzung"),
                     ("calibration", "Kalibrierung"),
                     ("objektivkorrektur", "Objektivkorrektur"),
                     ("film-negative", "Filmnegativ"),
@@ -1558,6 +1560,8 @@ Namespace Services
                     ("bokeh", "Tiefen-Unschärfe"),
                     ("vignette", "Vignette"),
                     ("grain", "Körnung"),
+                    ("posterize", "Tontrennung"),
+                    ("threshold", "Schwellenwert"),
                     ("frame", "Rahmen"),
                     ("filter", "Filter"),
                     ("lut", "LUT (.cube)"),
@@ -1581,9 +1585,10 @@ Namespace Services
             Get
                 Return {
                     ("Adjust", New String() {"adjust-presets", "light", "curve", "objektivkorrektur", "film-negative"}),
-                    ("Color", New String() {"color", "hsl", "color-grading", "calibration"}),
+                    ("Color", New String() {"color", "hsl", "color-grading", "channel-mixer",
+                                            "gradient-map", "calibration"}),
                     ("Details", New String() {"details", "rauschen", "sharpen", "soften", "bokeh"}),
-                    ("Effects", New String() {"vignette", "grain", "frame"}),
+                    ("Effects", New String() {"vignette", "grain", "posterize", "threshold", "frame"}),
                     ("Filters", New String() {"filter", "lut", "xmp-preset"})}
             End Get
         End Property
@@ -1615,9 +1620,10 @@ Namespace Services
                 Return New String()() {
                     New String() {"adjust-presets"}, New String() {"light"}, New String() {"curve"},
                     New String() {"objektivkorrektur"}, New String() {"film-negative"},
-                    New String() {"color"}, New String() {"hsl"}, New String() {"color-grading"}, New String() {"calibration"},
+                    New String() {"color"}, New String() {"hsl"}, New String() {"color-grading"}, New String() {"channel-mixer"}, New String() {"gradient-map"},
+                    New String() {"calibration"},
                     New String() {"details"}, New String() {"rauschen"}, New String() {"sharpen", "soften"}, New String() {"bokeh"},
-                    New String() {"vignette", "grain"}, New String() {"frame"},
+                    New String() {"vignette", "grain"}, New String() {"posterize"}, New String() {"threshold"}, New String() {"frame"},
                     New String() {"filter"}, New String() {"xmp-preset"}, New String() {"lut"}}
             End Get
         End Property

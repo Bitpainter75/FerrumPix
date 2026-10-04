@@ -408,6 +408,58 @@ Namespace Services
 
         ''' Gruen-/Magenta-Verschiebung, die nur die TIEFEN faerbt (crs:ShadowTint).
         Public Property CalibrationShadowTint As Single = 0
+
+        ' ── Weitere Korrekturen (Farbe und Effekte) ─────────────────────────
+        '
+        ' Kanalmixer und Verlaufsumsetzung (Werkzeug Farbe), Tontrennung und Schwellenwert
+        ' (Werkzeug Effekte). Gewoehnliche Pixelregler: sie wirken
+        ' global UND auf jeder Korrekturebene mit Maske, ohne eigene Ebenenart (Entscheidung Patrick,
+        ' 2026-10-04). Keiner hat ein crs:-Gegenstueck; ein XMP-Preset laesst sie deshalb unberuehrt.
+        ' Ab Werk neutral: jede Stufe tut erst etwas, wenn ein Wert vom Werkszustand abweicht.
+        ' Gerechnet wird in der verschmolzenen Punktkette (ImageProcessorPointOps).
+
+        ''' Kanalmixer: jede Ausgabe ist die Summe der drei Eingaben mal ihrem Anteil in Prozent
+        ''' (-200 bis 200) plus eine Konstante (-100 bis 100). Ab Werk 100 auf dem eigenen Kanal.
+        Public Property ChannelMixerRedRed As Single = 100
+        Public Property ChannelMixerRedGreen As Single = 0
+        Public Property ChannelMixerRedBlue As Single = 0
+        Public Property ChannelMixerRedConstant As Single = 0
+        Public Property ChannelMixerGreenRed As Single = 0
+        Public Property ChannelMixerGreenGreen As Single = 100
+        Public Property ChannelMixerGreenBlue As Single = 0
+        Public Property ChannelMixerGreenConstant As Single = 0
+        Public Property ChannelMixerBlueRed As Single = 0
+        Public Property ChannelMixerBlueGreen As Single = 0
+        Public Property ChannelMixerBlueBlue As Single = 100
+        Public Property ChannelMixerBlueConstant As Single = 0
+        ''' Monochrom: alle drei Ausgaben sind dieselbe Graumischung aus der Grau-Zeile
+        ''' (ab Werk 40/40/20, die uebliche Vorgabe beim Umschalten).
+        Public Property ChannelMixerMonochrome As Boolean = False
+        Public Property ChannelMixerGrayRed As Single = 40
+        Public Property ChannelMixerGrayGreen As Single = 40
+        Public Property ChannelMixerGrayBlue As Single = 20
+        Public Property ChannelMixerGrayConstant As Single = 0
+
+        ''' Verlaufsumsetzung: die Helligkeit jedes Punktes waehlt eine Farbe auf dem Verlauf von der
+        ''' Tiefen- zur Lichterfarbe; STAERKE Prozent davon werden ueberblendet.
+        Public Property GradientMapShadowColor As String = "#FF000000"
+        Public Property GradientMapHighlightColor As String = "#FFFFFFFF"
+        Public Property GradientMapAmount As Single = 0
+
+        ''' Tontrennung: Anzahl der Tonstufen je Kanal, 2 bis 64. 0 = aus.
+        Public Property PosterizeLevels As Single = 0
+
+        ''' Schwellenwert: Punkte mit einer Helligkeit ab diesem Wert (1 bis 255) werden weiss, alle
+        ''' anderen schwarz. 0 = aus.
+        Public Property ThresholdLevel As Single = 0
+
+        ''' <summary>Weicht der Kanalmixer vom Werkszustand ab?</summary>
+        Public Function HasChannelMixerChanges() As Boolean
+            If ChannelMixerMonochrome Then Return True
+            Return ChannelMixerRedRed <> 100 OrElse ChannelMixerRedGreen <> 0 OrElse ChannelMixerRedBlue <> 0 OrElse ChannelMixerRedConstant <> 0 OrElse
+                   ChannelMixerGreenRed <> 0 OrElse ChannelMixerGreenGreen <> 100 OrElse ChannelMixerGreenBlue <> 0 OrElse ChannelMixerGreenConstant <> 0 OrElse
+                   ChannelMixerBlueRed <> 0 OrElse ChannelMixerBlueGreen <> 0 OrElse ChannelMixerBlueBlue <> 100 OrElse ChannelMixerBlueConstant <> 0
+        End Function
         ' ── Objektivkorrektur, uebersteuert je Bild ─────────────────────────
         '
         ' Nothing heisst "wie in den Einstellungen vorgegeben". Bewusst dreiwertig und nicht einfach
@@ -1171,6 +1223,18 @@ Namespace Services
                 .CalibrationBlueHue = CalibrationBlueHue,
                 .CalibrationBlueSaturation = CalibrationBlueSaturation,
                 .CalibrationShadowTint = CalibrationShadowTint,
+                .ChannelMixerRedRed = ChannelMixerRedRed, .ChannelMixerRedGreen = ChannelMixerRedGreen,
+                .ChannelMixerRedBlue = ChannelMixerRedBlue, .ChannelMixerRedConstant = ChannelMixerRedConstant,
+                .ChannelMixerGreenRed = ChannelMixerGreenRed, .ChannelMixerGreenGreen = ChannelMixerGreenGreen,
+                .ChannelMixerGreenBlue = ChannelMixerGreenBlue, .ChannelMixerGreenConstant = ChannelMixerGreenConstant,
+                .ChannelMixerBlueRed = ChannelMixerBlueRed, .ChannelMixerBlueGreen = ChannelMixerBlueGreen,
+                .ChannelMixerBlueBlue = ChannelMixerBlueBlue, .ChannelMixerBlueConstant = ChannelMixerBlueConstant,
+                .ChannelMixerMonochrome = ChannelMixerMonochrome,
+                .ChannelMixerGrayRed = ChannelMixerGrayRed, .ChannelMixerGrayGreen = ChannelMixerGrayGreen,
+                .ChannelMixerGrayBlue = ChannelMixerGrayBlue, .ChannelMixerGrayConstant = ChannelMixerGrayConstant,
+                .GradientMapShadowColor = GradientMapShadowColor, .GradientMapHighlightColor = GradientMapHighlightColor,
+                .GradientMapAmount = GradientMapAmount,
+                .PosterizeLevels = PosterizeLevels, .ThresholdLevel = ThresholdLevel,
                 .Highlights = Highlights,
                 .ShadowsLevel = ShadowsLevel,
                 .Whites = Whites,

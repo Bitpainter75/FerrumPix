@@ -9198,4 +9198,58 @@
   <data name="Bildpinsel_Radieren_Abwedeln_Nachbelichten_Schwa_3068b135" xml:space="preserve">
     <value>图像画笔：擦除、减淡、加深、海绵、替换颜色</value>
   </data>
+  <data name="Kanalmixer_633685cc" xml:space="preserve">
+    <value>通道混合器</value>
+  </data>
+  <data name="Verlaufsumsetzung_b0e0a0b5" xml:space="preserve">
+    <value>渐变映射</value>
+  </data>
+  <data name="Tontrennung_eae253d0" xml:space="preserve">
+    <value>色调分离</value>
+  </data>
+  <data name="Schwellenwert_8165c9e0" xml:space="preserve">
+    <value>阈值</value>
+  </data>
+  <data name="Kanalmixer_zur_cksetzen_d6a9bcb7" xml:space="preserve">
+    <value>重置通道混合器</value>
+  </data>
+  <data name="Verlaufsumsetzung_zur_cksetzen_3e220ef5" xml:space="preserve">
+    <value>重置渐变映射</value>
+  </data>
+  <data name="Tontrennung_zur_cksetzen_0a9ebdd3" xml:space="preserve">
+    <value>重置色调分离</value>
+  </data>
+  <data name="Schwellenwert_zur_cksetzen_5cb61a2c" xml:space="preserve">
+    <value>重置阈值</value>
+  </data>
+  <data name="Monochrom_35519acc" xml:space="preserve">
+    <value>单色</value>
+  </data>
+  <data name="Mischt_aus_den_drei_Kan_len_ein_Graubild_271b4873" xml:space="preserve">
+    <value>由三个通道混合出灰度图像</value>
+  </data>
+  <data name="Der_Kanal_dessen_Mischung_die_Regler_darunter_ze_178e4d5c" xml:space="preserve">
+    <value>下方滑块所显示混合的通道</value>
+  </data>
+  <data name="Grau_c83daacc" xml:space="preserve">
+    <value>灰色</value>
+  </data>
+  <data name="Konstante_562622f8" xml:space="preserve">
+    <value>常数</value>
+  </data>
+  <data name="Hebt_oder_senkt_den_Kanal_gleichm_ig_unabh_ngig__bbb55366" xml:space="preserve">
+    <value>均匀地提高或降低通道，与输入无关</value>
+  </data>
+  <data name="Stufen_792958e4" xml:space="preserve">
+    <value>色阶</value>
+  </data>
+  <data name="Tonstufen_je_Farbkanal_0_schaltet_die_Tontrennun_ddf5b2d1" xml:space="preserve">
+    <value>每个颜色通道的色阶数，0 关闭色调分离</value>
+  </data>
+  <data name="Schwelle_f5095d0d" xml:space="preserve">
+    <value>色阶</value>
+  </data>
+  <data name="Ab_dieser_Helligkeit_wird_ein_Punkt_wei_darunter_978e32ff" xml:space="preserve">
+    <value>从此亮度起像素变为白色，低于则为黑色。0 关闭阈值</value>
+  </data>
 </root>

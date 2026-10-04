@@ -9200,4 +9200,58 @@
   <data name="Bildpinsel_Radieren_Abwedeln_Nachbelichten_Schwa_3068b135" xml:space="preserve">
     <value>Pincel de imagen: borrar, sobreexponer, subexponer, esponja, reemplazar color</value>
   </data>
+  <data name="Kanalmixer_633685cc" xml:space="preserve">
+    <value>Mezclador de canales</value>
+  </data>
+  <data name="Verlaufsumsetzung_b0e0a0b5" xml:space="preserve">
+    <value>Mapa de degradado</value>
+  </data>
+  <data name="Tontrennung_eae253d0" xml:space="preserve">
+    <value>Posterizar</value>
+  </data>
+  <data name="Schwellenwert_8165c9e0" xml:space="preserve">
+    <value>Umbral</value>
+  </data>
+  <data name="Kanalmixer_zur_cksetzen_d6a9bcb7" xml:space="preserve">
+    <value>Restablecer mezclador de canales</value>
+  </data>
+  <data name="Verlaufsumsetzung_zur_cksetzen_3e220ef5" xml:space="preserve">
+    <value>Restablecer mapa de degradado</value>
+  </data>
+  <data name="Tontrennung_zur_cksetzen_0a9ebdd3" xml:space="preserve">
+    <value>Restablecer posterización</value>
+  </data>
+  <data name="Schwellenwert_zur_cksetzen_5cb61a2c" xml:space="preserve">
+    <value>Restablecer umbral</value>
+  </data>
+  <data name="Monochrom_35519acc" xml:space="preserve">
+    <value>Monocromo</value>
+  </data>
+  <data name="Mischt_aus_den_drei_Kan_len_ein_Graubild_271b4873" xml:space="preserve">
+    <value>Mezcla una imagen en escala de grises a partir de los tres canales</value>
+  </data>
+  <data name="Der_Kanal_dessen_Mischung_die_Regler_darunter_ze_178e4d5c" xml:space="preserve">
+    <value>El canal cuya mezcla muestran los controles de abajo</value>
+  </data>
+  <data name="Grau_c83daacc" xml:space="preserve">
+    <value>Gris</value>
+  </data>
+  <data name="Konstante_562622f8" xml:space="preserve">
+    <value>Constante</value>
+  </data>
+  <data name="Hebt_oder_senkt_den_Kanal_gleichm_ig_unabh_ngig__bbb55366" xml:space="preserve">
+    <value>Sube o baja el canal de forma uniforme, independientemente de las entradas</value>
+  </data>
+  <data name="Stufen_792958e4" xml:space="preserve">
+    <value>Niveles</value>
+  </data>
+  <data name="Tonstufen_je_Farbkanal_0_schaltet_die_Tontrennun_ddf5b2d1" xml:space="preserve">
+    <value>Niveles de tono por canal de color, 0 desactiva la posterización</value>
+  </data>
+  <data name="Schwelle_f5095d0d" xml:space="preserve">
+    <value>Nivel</value>
+  </data>
+  <data name="Ab_dieser_Helligkeit_wird_ein_Punkt_wei_darunter_978e32ff" xml:space="preserve">
+    <value>A partir de este brillo un píxel se vuelve blanco, por debajo negro. 0 desactiva el umbral</value>
+  </data>
 </root>

@@ -138,7 +138,7 @@
                                                  FormatString="F0" />
                     </Grid>
                     <!-- Kompakter Farb-Button mit Hex, Pipette und zuletzt genutzten Farben. -->
-                    <Grid ColumnDefinitions="92,*" VerticalAlignment="Top">
+                    <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Top">
                         <TextBlock Text="Farbe" Foreground="{DynamicResource FP.Text.Secondary}"
                                    VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                         <icons:ColorPickerButton Grid.Column="1"
@@ -260,7 +260,7 @@
                                                  Minimum="0" Maximum="100" Increment="1"
                                                  FormatString="F0" />
                     </Grid>
-                    <Grid ColumnDefinitions="92,*" VerticalAlignment="Top" IsVisible="{Binding IsEraserPaintMode}">
+                    <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Top" IsVisible="{Binding IsEraserPaintMode}">
                         <TextBlock Text="Hintergrundfarbe" Foreground="{DynamicResource FP.Text.Secondary}"
                                    VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                         <icons:ColorPickerButton Grid.Column="1"
@@ -292,7 +292,7 @@
                         </StackPanel>
                     </Grid>
                     <!-- Farbe ersetzen: Farbton und Saettigung kommen von hier, die Helligkeit bleibt. -->
-                    <Grid ColumnDefinitions="92,*" VerticalAlignment="Top" IsVisible="{Binding IsReplaceColorMode}">
+                    <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Top" IsVisible="{Binding IsReplaceColorMode}">
                         <TextBlock Text="Neue Farbe" Foreground="{DynamicResource FP.Text.Secondary}"
                                    VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}"
                                    ToolTip.Tip="Farbton und Sättigung dieser Farbe ersetzen die des Bildes; Helligkeit und Struktur bleiben" />

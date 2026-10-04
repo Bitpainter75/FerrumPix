@@ -9244,4 +9244,58 @@
   <data name="Bildpinsel_Radieren_Abwedeln_Nachbelichten_Schwa_3068b135" xml:space="preserve">
     <value>이미지 브러시: 지우기, 닷지, 번, 스펀지, 색상 바꾸기</value>
   </data>
+  <data name="Kanalmixer_633685cc" xml:space="preserve">
+    <value>채널 혼합</value>
+  </data>
+  <data name="Verlaufsumsetzung_b0e0a0b5" xml:space="preserve">
+    <value>그레이디언트 맵</value>
+  </data>
+  <data name="Tontrennung_eae253d0" xml:space="preserve">
+    <value>포스터화</value>
+  </data>
+  <data name="Schwellenwert_8165c9e0" xml:space="preserve">
+    <value>한계값</value>
+  </data>
+  <data name="Kanalmixer_zur_cksetzen_d6a9bcb7" xml:space="preserve">
+    <value>채널 혼합 재설정</value>
+  </data>
+  <data name="Verlaufsumsetzung_zur_cksetzen_3e220ef5" xml:space="preserve">
+    <value>그레이디언트 맵 재설정</value>
+  </data>
+  <data name="Tontrennung_zur_cksetzen_0a9ebdd3" xml:space="preserve">
+    <value>포스터화 재설정</value>
+  </data>
+  <data name="Schwellenwert_zur_cksetzen_5cb61a2c" xml:space="preserve">
+    <value>한계값 재설정</value>
+  </data>
+  <data name="Monochrom_35519acc" xml:space="preserve">
+    <value>단색</value>
+  </data>
+  <data name="Mischt_aus_den_drei_Kan_len_ein_Graubild_271b4873" xml:space="preserve">
+    <value>세 채널을 섞어 회색조 이미지를 만듭니다</value>
+  </data>
+  <data name="Der_Kanal_dessen_Mischung_die_Regler_darunter_ze_178e4d5c" xml:space="preserve">
+    <value>아래 슬라이더가 혼합을 보여주는 채널</value>
+  </data>
+  <data name="Grau_c83daacc" xml:space="preserve">
+    <value>회색</value>
+  </data>
+  <data name="Konstante_562622f8" xml:space="preserve">
+    <value>상수</value>
+  </data>
+  <data name="Hebt_oder_senkt_den_Kanal_gleichm_ig_unabh_ngig__bbb55366" xml:space="preserve">
+    <value>입력과 관계없이 채널을 고르게 올리거나 내립니다</value>
+  </data>
+  <data name="Stufen_792958e4" xml:space="preserve">
+    <value>레벨</value>
+  </data>
+  <data name="Tonstufen_je_Farbkanal_0_schaltet_die_Tontrennun_ddf5b2d1" xml:space="preserve">
+    <value>색상 채널당 톤 레벨, 0이면 포스터화가 꺼집니다</value>
+  </data>
+  <data name="Schwelle_f5095d0d" xml:space="preserve">
+    <value>레벨</value>
+  </data>
+  <data name="Ab_dieser_Helligkeit_wird_ein_Punkt_wei_darunter_978e32ff" xml:space="preserve">
+    <value>이 밝기부터 픽셀은 흰색, 그 아래는 검은색이 됩니다. 0이면 한계값이 꺼집니다</value>
+  </data>
 </root>

@@ -1,5 +1,6 @@
 Imports System
 Imports System.Buffers
+Imports System.Linq
 Imports System.Runtime.InteropServices
 Imports SkiaSharp
 
@@ -112,6 +113,18 @@ Namespace Services
             Public CubeTable As Single()
             Public CubeSize As Integer
             Public CubeStrength As Single
+
+            ''' Kanalmixer als 3x4 zeilenweise (Anteile und Konstante, schon durch 100 geteilt).
+            Public Mixer As Single()
+
+            ''' Verlaufsumsetzung: Tiefen- und Lichterfarbe 0..1, Staerke 0..1.
+            Public MapShadow As Single()
+            Public MapHighlight As Single()
+            Public MapAmount As Single
+
+            ''' Tontrennung (Stufen, 0 = aus) und Schwellenwert (1..255, 0 = aus), ganz am Ende.
+            Public PosterizeLevels As Integer
+            Public ThresholdLevel As Integer
         End Class
 
         ' ── Aufsatzpunkt ─────────────────────────────────────────────────────────
@@ -290,8 +303,46 @@ Namespace Services
                 End If
             End If
 
+            BuildExtraCorrections(adj, chain)
             Return chain
         End Function
+
+        ''' <summary>Die weiteren Korrekturen (Kanalmixer, Verlaufsumsetzung, Tontrennung,
+        ''' Schwellenwert). Jede nur, wenn sie vom Werkszustand
+        ''' abweicht - ein neutraler Regler kostet keine Zeit.</summary>
+        Private Shared Sub BuildExtraCorrections(adj As ImageAdjustments, chain As PointOpChain)
+            If adj.HasChannelMixerChanges() Then
+                If adj.ChannelMixerMonochrome Then
+                    Dim row = {adj.ChannelMixerGrayRed / 100.0F, adj.ChannelMixerGrayGreen / 100.0F,
+                               adj.ChannelMixerGrayBlue / 100.0F, adj.ChannelMixerGrayConstant / 100.0F}
+                    chain.Mixer = row.Concat(row).Concat(row).ToArray()
+                Else
+                    chain.Mixer = {adj.ChannelMixerRedRed / 100.0F, adj.ChannelMixerRedGreen / 100.0F, adj.ChannelMixerRedBlue / 100.0F, adj.ChannelMixerRedConstant / 100.0F,
+                                   adj.ChannelMixerGreenRed / 100.0F, adj.ChannelMixerGreenGreen / 100.0F, adj.ChannelMixerGreenBlue / 100.0F, adj.ChannelMixerGreenConstant / 100.0F,
+                                   adj.ChannelMixerBlueRed / 100.0F, adj.ChannelMixerBlueGreen / 100.0F, adj.ChannelMixerBlueBlue / 100.0F, adj.ChannelMixerBlueConstant / 100.0F}
+                End If
+                chain.IsIdentity = False
+            End If
+
+            If adj.GradientMapAmount > 0 Then
+                Dim s = ParseColor(adj.GradientMapShadowColor, SKColors.Black)
+                Dim h = ParseColor(adj.GradientMapHighlightColor, SKColors.White)
+                chain.MapShadow = {s.Red / 255.0F, s.Green / 255.0F, s.Blue / 255.0F}
+                chain.MapHighlight = {h.Red / 255.0F, h.Green / 255.0F, h.Blue / 255.0F}
+                chain.MapAmount = Clamp(adj.GradientMapAmount / 100.0F, 0.0F, 1.0F)
+                chain.IsIdentity = False
+            End If
+
+            If adj.PosterizeLevels >= 2 Then
+                chain.PosterizeLevels = CInt(Math.Min(64.0F, Math.Round(adj.PosterizeLevels)))
+                chain.IsIdentity = False
+            End If
+
+            If adj.ThresholdLevel >= 1 Then
+                chain.ThresholdLevel = CInt(Math.Min(255.0F, Math.Round(adj.ThresholdLevel)))
+                chain.IsIdentity = False
+            End If
+        End Sub
 
         ''' <summary>Filmnegativ-Tonwertkurve eines Kanals als stetige Tabelle - wortgleich zu
         ''' BuildFilmNegativeLut, nur an 4097 statt 256 Stuetzstellen und ohne Byte-Rundung. Diese
@@ -1061,6 +1112,12 @@ Namespace Services
             Dim cube = chain.CubeTable
             Dim cubeSize = chain.CubeSize
             Dim cubeStrength = chain.CubeStrength
+            Dim mixer = chain.Mixer
+            Dim mapShadow = chain.MapShadow
+            Dim mapHigh = chain.MapHighlight
+            Dim mapAmount = chain.MapAmount
+            Dim posterize = chain.PosterizeLevels
+            Dim threshold = chain.ThresholdLevel
             ' Einmal ausserhalb der Pixelschleife entschieden (schleifeninvariant).
             Dim hslBlockAktiv = lumCurve IsNot Nothing OrElse hslAdj IsNot Nothing OrElse
                                 splitAdj IsNot Nothing OrElse vibrance <> 0.0F
@@ -1328,6 +1385,24 @@ Namespace Services
                             End If
                         End If
 
+                        ' --- 6b. Weitere Korrekturen: auf das fertig korrigierte Farbbild, vor Preset
+                        ' und LUT. Erst die Kanaele mischen, dann die Helligkeit auf den Verlauf
+                        ' umsetzen.
+                        If mixer IsNot Nothing Then
+                            Dim mr = mixer(0) * rr + mixer(1) * gg + mixer(2) * bb + mixer(3)
+                            Dim mg = mixer(4) * rr + mixer(5) * gg + mixer(6) * bb + mixer(7)
+                            Dim mb = mixer(8) * rr + mixer(9) * gg + mixer(10) * bb + mixer(11)
+                            rr = Clamp(mr, 0.0F, 1.0F) : gg = Clamp(mg, 0.0F, 1.0F) : bb = Clamp(mb, 0.0F, 1.0F)
+                        End If
+
+                        If mapShadow IsNot Nothing Then
+                            Dim lumMap = Clamp(0.299F * rr + 0.587F * gg + 0.114F * bb, 0.0F, 1.0F)
+                            Dim tr = mapShadow(0) + (mapHigh(0) - mapShadow(0)) * lumMap
+                            Dim tg = mapShadow(1) + (mapHigh(1) - mapShadow(1)) * lumMap
+                            Dim tb = mapShadow(2) + (mapHigh(2) - mapShadow(2)) * lumMap
+                            rr += (tr - rr) * mapAmount : gg += (tg - gg) * mapAmount : bb += (tb - bb) * mapAmount
+                        End If
+
                         ' --- 7. Preset-Farbmatrix, ueber das Original geblendet ---
                         If pm IsNot Nothing Then
                             Dim fr = pm(0) * rr + pm(1) * gg + pm(2) * bb + pm(4)
@@ -1354,6 +1429,22 @@ Namespace Services
                                 gg += (lg - gg) * cubeStrength
                                 bb += (lb - bb) * cubeStrength
                             End If
+                        End If
+
+                        ' --- 9. Tontrennung und Schwellenwert, ganz am Ende: sie verfremden das
+                        ' Ergebnis und sollen auf allem anderen arbeiten. Die Stufen liegen genau auf
+                        ' ganzen Bytewerten - das Dithering darunter laesst sie dann unberuehrt, und
+                        ' die Flaechen bleiben wirklich flach.
+                        If posterize >= 2 Then
+                            Dim steps = posterize - 1
+                            rr = CSng(Math.Round(Math.Round(Clamp(rr, 0.0F, 1.0F) * steps) / steps * 255.0) / 255.0)
+                            gg = CSng(Math.Round(Math.Round(Clamp(gg, 0.0F, 1.0F) * steps) / steps * 255.0) / 255.0)
+                            bb = CSng(Math.Round(Math.Round(Clamp(bb, 0.0F, 1.0F) * steps) / steps * 255.0) / 255.0)
+                        End If
+                        If threshold >= 1 Then
+                            Dim lumT = (0.299F * rr + 0.587F * gg + 0.114F * bb) * 255.0F
+                            Dim t = If(lumT >= threshold - 0.0001F, 1.0F, 0.0F)
+                            rr = t : gg = t : bb = t
                         End If
 
                         Dim dth = DitherMatrix(ditherRow Or (x And 7))

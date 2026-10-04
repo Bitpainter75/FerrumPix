@@ -17,7 +17,7 @@
             <CheckBox Content="Aktiv" IsChecked="{Binding AnnotationShadowEnabled}"
                       FontSize="{DynamicResource FP.Font.Small}" />
             <StackPanel Spacing="2" IsVisible="{Binding AnnotationShadowEnabled}">
-                <Grid ColumnDefinitions="92,*" VerticalAlignment="Top">
+                <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Top">
                     <TextBlock Text="Farbe" Foreground="{DynamicResource FP.Text.Secondary}"
                                VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                     <icons:ColorPickerButton Grid.Column="1"

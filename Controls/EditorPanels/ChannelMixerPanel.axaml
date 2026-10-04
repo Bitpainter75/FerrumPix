@@ -1,0 +1,83 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:icons="clr-namespace:FerrumPix.Controls"
+             x:Class="FerrumPix.Controls.EditorPanels.ChannelMixerPanel">
+    <!-- Kanalmixer: jede Ausgabe mischt sich aus den drei Eingaben plus einer Konstanten. Die
+         Regler zeigen die gewaehlte Ausgabe; mit Monochrom gibt es nur noch eine Graumischung. -->
+    <Expander Header="Kanalmixer" icons:ExpanderState.Key="channel-mixer"
+        IsVisible="{Binding HiddenAdjustmentGroups, Converter={StaticResource NotInListConverter}, ConverterParameter=channel-mixer}">
+        <Expander.HeaderTemplate>
+            <DataTemplate>
+                <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
+                    <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                        <icons:SvgIcon
+                            Source="avares://FerrumPix/Assets/Icons/outline/adjustments-horizontal.svg"
+                            Width="14" Height="14" />
+                        <TextBlock Text="{Binding}" FontWeight="SemiBold" />
+                    </StackPanel>
+                    <Button Grid.Column="1"
+                            Classes="icon-btn group-reset"
+                            Width="28"
+                            Height="28"
+                            Padding="0"
+                            Command="{Binding DataContext.ResetChannelMixerCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                            ToolTip.Tip="Kanalmixer zurücksetzen">
+                        <icons:SvgIcon
+                            Source="avares://FerrumPix/Assets/Icons/outline/rotate-clockwise.svg"
+                            Width="14" Height="14" />
+                    </Button>
+                </Grid>
+            </DataTemplate>
+        </Expander.HeaderTemplate>
+        <StackPanel Spacing="2" Margin="0,8,0,0">
+            <CheckBox Content="Monochrom" IsChecked="{Binding ChannelMixerMonochrome}"
+                      FontSize="{DynamicResource FP.Font.Small}"
+                      ToolTip.Tip="Mischt aus den drei Kanälen ein Graubild" />
+            <Grid ColumnDefinitions="92,*" VerticalAlignment="Center" IsVisible="{Binding IsChannelMixerColor}">
+                <TextBlock Text="Ausgabe" Foreground="{DynamicResource FP.Text.Secondary}"
+                           VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                <ComboBox Grid.Column="1"
+                          ItemsSource="{Binding ChannelMixerOutputOptions}"
+                          SelectedIndex="{Binding ChannelMixerOutputIndex}"
+                          FontSize="{DynamicResource FP.Font.Small}"
+                          Margin="6,0,0,0"
+                          HorizontalAlignment="Stretch"
+                          DropDownOpened="OnMatchWidthDropDownOpened"
+                          ToolTip.Tip="Der Kanal, dessen Mischung die Regler darunter zeigen" />
+            </Grid>
+            <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
+                <TextBlock Text="Rot" Foreground="{DynamicResource FP.Text.Secondary}"
+                           VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap" />
+                <icons:RoundSlider Grid.Column="1" Minimum="-200" Maximum="200" DefaultValue="0"
+                                   Value="{Binding ChannelMixerRed}" Margin="0,0" />
+                <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                         Value="{Binding ChannelMixerRed, Mode=TwoWay}" Minimum="-200" Maximum="200" />
+            </Grid>
+            <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
+                <TextBlock Text="Grün" Foreground="{DynamicResource FP.Text.Secondary}"
+                           VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap" />
+                <icons:RoundSlider Grid.Column="1" Minimum="-200" Maximum="200" DefaultValue="0"
+                                   Value="{Binding ChannelMixerGreen}" Margin="0,0" />
+                <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                         Value="{Binding ChannelMixerGreen, Mode=TwoWay}" Minimum="-200" Maximum="200" />
+            </Grid>
+            <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
+                <TextBlock Text="Blau" Foreground="{DynamicResource FP.Text.Secondary}"
+                           VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap" />
+                <icons:RoundSlider Grid.Column="1" Minimum="-200" Maximum="200" DefaultValue="0"
+                                   Value="{Binding ChannelMixerBlue}" Margin="0,0" />
+                <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                         Value="{Binding ChannelMixerBlue, Mode=TwoWay}" Minimum="-200" Maximum="200" />
+            </Grid>
+            <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
+                <TextBlock Text="Konstante" Foreground="{DynamicResource FP.Text.Secondary}"
+                           VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap"
+                           ToolTip.Tip="Hebt oder senkt den Kanal gleichmäßig, unabhängig von den Eingaben" />
+                <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100" DefaultValue="0"
+                                   Value="{Binding ChannelMixerConstant}" Margin="0,0" />
+                <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                         Value="{Binding ChannelMixerConstant, Mode=TwoWay}" Minimum="-100" Maximum="100" />
+            </Grid>
+        </StackPanel>
+    </Expander>
+</UserControl>

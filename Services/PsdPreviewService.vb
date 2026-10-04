@@ -39,6 +39,7 @@ Namespace Services
 
         Private Enum PsdColorMode
             Grayscale = 1
+            Indexed = 2
             Rgb = 3
             Cmyk = 4
         End Enum
@@ -114,12 +115,38 @@ Namespace Services
             If header.Depth <> 8 AndAlso header.Depth <> 16 Then Return Nothing
             If header.ColorMode <> PsdColorMode.Grayscale AndAlso
                header.ColorMode <> PsdColorMode.Rgb AndAlso
-               header.ColorMode <> PsdColorMode.Cmyk Then Return Nothing
+               header.ColorMode <> PsdColorMode.Cmyk AndAlso
+               header.ColorMode <> PsdColorMode.Indexed Then Return Nothing
+            ' Indizierte Farbe gibt es nur mit acht Bit: ein Byte je Punkt ist der Index.
+            If header.ColorMode = PsdColorMode.Indexed AndAlso header.Depth <> 8 Then Return Nothing
 
-            ' Farbmodus-Daten überspringen; die Bildressourcen werden GELESEN, weil dort das
-            ' Farbprofil liegt (siehe ReadIccFromResources). Danach die Ebenen-Sektion überspringen.
-            If Not SkipBlock(fs, ReadU32(fs)) Then Return Nothing
-            Dim iccProfile = ReadIccFromResources(fs, ReadU32(fs))
+            ' Farbmodus-Daten: bei indizierter Farbe die Farbtabelle (768 Byte, erst die 256 Rot-,
+            ' dann die Grün-, dann die Blauwerte), sonst überspringen. Die Bildressourcen werden
+            ' GELESEN, weil dort das Farbprofil liegt (1039) und bei indizierter Farbe die
+            ' durchsichtige Farbe (1047). Danach die Ebenen-Sektion überspringen: ein indiziertes
+            ' Dokument hat ohnehin keine Ebenen.
+            Dim colorDataLen = CLng(ReadU32(fs))
+            Dim palette As Byte() = Nothing
+            If header.ColorMode = PsdColorMode.Indexed Then
+                If colorDataLen < 768 Then Return Nothing
+                palette = New Byte(767) {}
+                If Not ReadExactly(fs, palette, 768) Then Return Nothing
+                If Not SkipBlock(fs, colorDataLen - 768) Then Return Nothing
+            ElseIf Not SkipBlock(fs, colorDataLen) Then
+                Return Nothing
+            End If
+            Dim resources = ReadResourceSection(fs, ReadU32(fs))
+            ' Ressource 1047: zwei Byte, der Index der Farbe, die durchsichtig ist. Photoshop schreibt
+            ' sie, wenn ein indiziertes Bild Transparenz hat; ohne sie kaeme es voll deckend an.
+            Dim transparentIndex = -1
+            If header.ColorMode = PsdColorMode.Indexed Then
+                Dim tIndex = FindResource(resources, 1047)
+                If tIndex IsNot Nothing AndAlso tIndex.Length >= 2 Then
+                    Dim value = CInt(tIndex(0)) * 256 + tIndex(1)
+                    If value >= 0 AndAlso value <= 255 Then transparentIndex = value
+                End If
+            End If
+            Dim iccProfile = CreateIccOrNothing(FindResource(resources, 1039))
             Dim layerLen = If(header.IsPsb, ReadU64(fs), CLng(ReadU32(fs)))
             If Not SkipBlock(fs, layerLen) Then Return Nothing
 
@@ -143,6 +170,12 @@ Namespace Services
                     If header.Channels < 1 Then Return Nothing
                     hasAlpha = header.Channels >= 2
                     neededChannels = If(hasAlpha, 2, 1)
+                Case PsdColorMode.Indexed
+                    ' Ein Kanal mit dem Index. Durchsichtig ist hoechstens die eine Farbe aus
+                    ' Ressource 1047; gibt es sie, bekommt das Bild einen Alphakanal.
+                    If header.Channels < 1 Then Return Nothing
+                    hasAlpha = transparentIndex >= 0
+                    neededChannels = 1
                 Case Else ' CMYK
                     If header.Channels < 4 Then Return Nothing
                     hasAlpha = False
@@ -217,7 +250,7 @@ Namespace Services
                 zip?.Dispose()
             End Try
 
-            Dim composed = ComposePlanes(header, planes, hasAlpha)
+            Dim composed = ComposePlanes(header, planes, hasAlpha, palette, transparentIndex)
             If composed Is Nothing Then Return Nothing
 
             ' Photoshop legt seine Bilder oft in Adobe RGB ab. Ohne diese Wandlung kaeme das
@@ -268,7 +301,9 @@ Namespace Services
             End If
         End Sub
 
-        Private Shared Function ComposePlanes(header As PsdHeader, planes As Byte()(), hasAlpha As Boolean) As SKBitmap
+        Private Shared Function ComposePlanes(header As PsdHeader, planes As Byte()(), hasAlpha As Boolean,
+                                              Optional palette As Byte() = Nothing,
+                                              Optional transparentIndex As Integer = -1) As SKBitmap
             Dim info = New SKImageInfo(header.Width, header.Height, SKColorType.Bgra8888,
                                        If(hasAlpha, SKAlphaType.Unpremul, SKAlphaType.Opaque))
             Dim bitmap = New SKBitmap(info)
@@ -293,6 +328,18 @@ Namespace Services
                             buffer(i * 4 + 2) = g
                             buffer(i * 4 + 3) = If(hasAlpha, planes(1)(i), CByte(255))
                         Next
+                    Case PsdColorMode.Indexed
+                        If palette Is Nothing OrElse palette.Length < 768 Then
+                            bitmap.Dispose()
+                            Return Nothing
+                        End If
+                        For i = 0 To count - 1
+                            Dim index = CInt(planes(0)(i))
+                            buffer(i * 4) = palette(512 + index)      ' B
+                            buffer(i * 4 + 1) = palette(256 + index)  ' G
+                            buffer(i * 4 + 2) = palette(index)        ' R
+                            buffer(i * 4 + 3) = If(index = transparentIndex, CByte(0), CByte(255))
+                        Next
                     Case Else
                         ' Photoshop legt CMYK INVERTIERT ab (255 = keine Farbe). Naive Wandlung ohne
                         ' ICC-Profil: Kanalwert mal Schwarzanteil - für eine Vorschau ausreichend.
@@ -313,17 +360,9 @@ Namespace Services
             End Try
         End Function
 
-        ''' <summary>Liest die Bildressourcen und liefert daraus das ICC-Profil (Ressource 1039),
-        ''' oder Nothing. Der Strom steht danach IMMER hinter der Sektion - auch wenn nichts
-        ''' gefunden wurde, sonst verruecken alle folgenden Angaben.
-        '''
-        ''' Aufbau eines Blocks: die Kennung "8BIM", zwei Byte Nummer, ein Pascal-Text als Name
-        ''' (auf gerade Laenge aufgefuellt), vier Byte Groesse, dann die Daten (ebenfalls auf gerade
-        ''' Laenge aufgefuellt).</summary>
-        ''' <summary>Wie <see cref="ReadIccBytesFromResources"/>, liefert aber gleich das fertige
-        ''' Profil. Fuer den flachen Weg, der es sofort anwendet und wieder freigibt.</summary>
-        Friend Shared Function ReadIccFromResources(fs As FileStream, length As Long) As SKColorSpace
-            Dim bytes = ReadIccBytesFromResources(fs, length)
+        ''' <summary>Das Profil aus seinen Bytes, oder Nothing. Fuer den flachen Weg, der es sofort
+        ''' anwendet und wieder freigibt.</summary>
+        Private Shared Function CreateIccOrNothing(bytes As Byte()) As SKColorSpace
             If bytes Is Nothing Then Return Nothing
             Try
                 Return SKColorSpace.CreateIcc(bytes)
@@ -335,20 +374,36 @@ Namespace Services
             End Try
         End Function
 
-        ''' <summary>Dasselbe, aber als ROHE BYTES. Wer das Profil erst spaeter braucht, nimmt
-        ''' diesen Weg: ein Bytefeld raeumt die Laufzeitumgebung selbst ab, ein fertiges Profil
-        ''' dagegen ist natives Eigentum und muss durch jeden Abbruch- und Ausnahmepfad getragen
-        ''' werden, der bis dahin noch kommt. Der Ebenenleser tut genau das - er erzeugt das Profil
-        ''' erst, wenn sein Dokument steht.</summary>
+        ''' <summary>Liest die Bildressourcen und liefert daraus das ICC-Profil (Ressource 1039)
+        ''' als ROHE BYTES, oder Nothing. Wer das Profil erst spaeter braucht, nimmt diesen Weg: ein
+        ''' Bytefeld raeumt die Laufzeitumgebung selbst ab, ein fertiges Profil dagegen ist natives
+        ''' Eigentum und muss durch jeden Abbruch- und Ausnahmepfad getragen werden, der bis dahin
+        ''' noch kommt. Der Ebenenleser tut genau das - er erzeugt das Profil erst, wenn sein
+        ''' Dokument steht.</summary>
         Friend Shared Function ReadIccBytesFromResources(fs As FileStream, length As Long) As Byte()
+            Return FindResource(ReadResourceSection(fs, length), 1039)
+        End Function
+
+        ''' <summary>Liest die ganze Sektion der Bildressourcen, oder Nothing. Der Strom steht danach
+        ''' hinter der Sektion - auch wenn sie unbrauchbar ist, sonst verruecken alle folgenden
+        ''' Angaben.</summary>
+        Private Shared Function ReadResourceSection(fs As FileStream, length As Long) As Byte()
             If length <= 0 OrElse fs.Position + length > fs.Length Then
                 If length > 0 Then SkipBlock(fs, length)
                 Return Nothing
             End If
-
             Dim section(CInt(Math.Min(length, Integer.MaxValue)) - 1) As Byte
             If Not ReadExactly(fs, section, section.Length) Then Return Nothing
+            Return section
+        End Function
 
+        ''' <summary>Die Daten der Ressource mit dieser Nummer, oder Nothing.
+        '''
+        ''' Aufbau eines Blocks: die Kennung "8BIM", zwei Byte Nummer, ein Pascal-Text als Name
+        ''' (auf gerade Laenge aufgefuellt), vier Byte Groesse, dann die Daten (ebenfalls auf gerade
+        ''' Laenge aufgefuellt).</summary>
+        Private Shared Function FindResource(section As Byte(), wanted As Integer) As Byte()
+            If section Is Nothing Then Return Nothing
             Try
                 Dim offset = 0
                 While offset + 12 <= section.Length
@@ -367,11 +422,10 @@ Namespace Services
                     Dim dataOffset = sizeOffset + 4
                     If size < 0 OrElse dataOffset + size > section.Length Then Exit While
 
-                    ' 1039 (0x040F) ist das ICC-Profil.
-                    If id = 1039 AndAlso size > 0 Then
-                        Dim profile(size - 1) As Byte
-                        Buffer.BlockCopy(section, dataOffset, profile, 0, size)
-                        Return profile
+                    If id = wanted AndAlso size > 0 Then
+                        Dim data(size - 1) As Byte
+                        Buffer.BlockCopy(section, dataOffset, data, 0, size)
+                        Return data
                     End If
 
                     Dim padded = size
@@ -379,7 +433,7 @@ Namespace Services
                     offset = dataOffset + padded
                 End While
             Catch ex As Exception
-                DiagnosticLogService.LogException("Psd.ReadIccFromResources", ex)
+                DiagnosticLogService.LogException("Psd.FindResource", ex)
             End Try
             Return Nothing
         End Function

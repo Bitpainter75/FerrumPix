@@ -467,7 +467,7 @@
                             </StackPanel>
                         </Button>
                     </Grid>
-                    <Grid ColumnDefinitions="92,*" VerticalAlignment="Center">
+                    <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
                         <TextBlock Text="Farbe" Foreground="{DynamicResource FP.Text.Secondary}"
                                    VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                         <icons:ColorPickerButton Grid.Column="1"

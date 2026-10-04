@@ -9218,4 +9218,58 @@
   <data name="Bildpinsel_Radieren_Abwedeln_Nachbelichten_Schwa_3068b135" xml:space="preserve">
     <value>Bildpinsel: Radieren, Abwedeln, Nachbelichten, Schwamm, Farbe ersetzen</value>
   </data>
+  <data name="Kanalmixer_633685cc" xml:space="preserve">
+    <value>Kanalmixer</value>
+  </data>
+  <data name="Verlaufsumsetzung_b0e0a0b5" xml:space="preserve">
+    <value>Verlaufsumsetzung</value>
+  </data>
+  <data name="Tontrennung_eae253d0" xml:space="preserve">
+    <value>Tontrennung</value>
+  </data>
+  <data name="Schwellenwert_8165c9e0" xml:space="preserve">
+    <value>Schwellenwert</value>
+  </data>
+  <data name="Kanalmixer_zur_cksetzen_d6a9bcb7" xml:space="preserve">
+    <value>Kanalmixer zurücksetzen</value>
+  </data>
+  <data name="Verlaufsumsetzung_zur_cksetzen_3e220ef5" xml:space="preserve">
+    <value>Verlaufsumsetzung zurücksetzen</value>
+  </data>
+  <data name="Tontrennung_zur_cksetzen_0a9ebdd3" xml:space="preserve">
+    <value>Tontrennung zurücksetzen</value>
+  </data>
+  <data name="Schwellenwert_zur_cksetzen_5cb61a2c" xml:space="preserve">
+    <value>Schwellenwert zurücksetzen</value>
+  </data>
+  <data name="Monochrom_35519acc" xml:space="preserve">
+    <value>Monochrom</value>
+  </data>
+  <data name="Mischt_aus_den_drei_Kan_len_ein_Graubild_271b4873" xml:space="preserve">
+    <value>Mischt aus den drei Kanälen ein Graubild</value>
+  </data>
+  <data name="Der_Kanal_dessen_Mischung_die_Regler_darunter_ze_178e4d5c" xml:space="preserve">
+    <value>Der Kanal, dessen Mischung die Regler darunter zeigen</value>
+  </data>
+  <data name="Grau_c83daacc" xml:space="preserve">
+    <value>Grau</value>
+  </data>
+  <data name="Konstante_562622f8" xml:space="preserve">
+    <value>Konstante</value>
+  </data>
+  <data name="Hebt_oder_senkt_den_Kanal_gleichm_ig_unabh_ngig__bbb55366" xml:space="preserve">
+    <value>Hebt oder senkt den Kanal gleichmäßig, unabhängig von den Eingaben</value>
+  </data>
+  <data name="Stufen_792958e4" xml:space="preserve">
+    <value>Stufen</value>
+  </data>
+  <data name="Tonstufen_je_Farbkanal_0_schaltet_die_Tontrennun_ddf5b2d1" xml:space="preserve">
+    <value>Tonstufen je Farbkanal, 0 schaltet die Tontrennung aus</value>
+  </data>
+  <data name="Schwelle_f5095d0d" xml:space="preserve">
+    <value>Schwelle</value>
+  </data>
+  <data name="Ab_dieser_Helligkeit_wird_ein_Punkt_wei_darunter_978e32ff" xml:space="preserve">
+    <value>Ab dieser Helligkeit wird ein Punkt weiß, darunter schwarz. 0 schaltet den Schwellenwert aus</value>
+  </data>
 </root>

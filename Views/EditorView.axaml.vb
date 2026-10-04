@@ -1401,9 +1401,10 @@ Namespace Views
             ' gibt es hier nicht, nur die Vorschauaufloesung selbst.
             '
             ' Danach die uebrigen Korrekturen: Licht, Farbe, Farbmischer, Farbgradierung,
-            ' Kalibrierung, Filmnegativ, Filter und LUT rechnen je Bildpunkt, ein verkleinertes
-            ' Bild zeigt dasselbe Ergebnis mit weniger Punkten. Die Tonwertkurve gehoert dazu, wird
-            ' aber oben ueber ihren eigenen Typ erkannt.
+            ' Kalibrierung, Kanalmixer, Verlaufsumsetzung, Tontrennung, Schwellenwert, Filmnegativ,
+            ' Filter und LUT rechnen je Bildpunkt, ein verkleinertes Bild zeigt dasselbe Ergebnis
+            ' mit weniger Punkten. Die Tonwertkurve gehoert dazu, wird aber oben ueber ihren
+            ' eigenen Typ erkannt.
             For Each ancestor In slider.GetVisualAncestors()
                 If TypeOf ancestor Is SharpnessPanel OrElse TypeOf ancestor Is NoisePanel OrElse
                    TypeOf ancestor Is DetailsPanel OrElse TypeOf ancestor Is EffectsPanel OrElse
@@ -1414,6 +1415,8 @@ Namespace Views
                    TypeOf ancestor Is HslPanel OrElse TypeOf ancestor Is ColorGradingPanel OrElse
                    TypeOf ancestor Is CalibrationPanel OrElse TypeOf ancestor Is FilmNegativePanel OrElse
                    TypeOf ancestor Is FilterPanel OrElse TypeOf ancestor Is LutPresetPanel OrElse
+                   TypeOf ancestor Is ChannelMixerPanel OrElse TypeOf ancestor Is GradientMapPanel OrElse
+                   TypeOf ancestor Is PosterizePanel OrElse TypeOf ancestor Is ThresholdPanel OrElse
                    TypeOf ancestor Is RotatePanel Then
                     ' DAS AUSRICHTEN GEHOERT HIERHER, auch wenn es keine Farbkorrektur ist: es dreht
                     ' den Bildinhalt, und ein verkleinertes Bild um denselben Winkel gedreht zeigt
