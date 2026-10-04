@@ -9298,4 +9298,37 @@
   <data name="Ab_dieser_Helligkeit_wird_ein_Punkt_wei_darunter_978e32ff" xml:space="preserve">
     <value>ตั้งแต่ความสว่างนี้พิกเซลจะเป็นสีขาว ต่ำกว่านั้นเป็นสีดำ 0 คือปิดค่าขีดแบ่ง</value>
   </data>
+  <data name="Innen_e67344db" xml:space="preserve">
+    <value>ด้านใน</value>
+  </data>
+  <data name="Au_en_1946cfea" xml:space="preserve">
+    <value>ด้านนอก</value>
+  </data>
+  <data name="Die_Linie_liegt_innerhalb_der_Auswahl_2679c403" xml:space="preserve">
+    <value>เส้นอยู่ด้านในของส่วนที่เลือก</value>
+  </data>
+  <data name="Die_Linie_liegt_mittig_auf_der_Auswahlkante_54431beb" xml:space="preserve">
+    <value>เส้นอยู่กึ่งกลางขอบของส่วนที่เลือก</value>
+  </data>
+  <data name="Die_Linie_liegt_au_erhalb_der_Auswahl_52b6a5fd" xml:space="preserve">
+    <value>เส้นอยู่ด้านนอกของส่วนที่เลือก</value>
+  </data>
+  <data name="Konturfarbe_560f5fae" xml:space="preserve">
+    <value>สีเส้นขอบ</value>
+  </data>
+  <data name="Eine_Linie_entlang_der_Auswahlkante_als_neue_Bil_2f217c8f" xml:space="preserve">
+    <value>วาดเส้นตามขอบของส่วนที่เลือกเป็นเลเยอร์ภาพใหม่</value>
+  </data>
+  <data name="Kontur_zeichnen_7d6fa55c" xml:space="preserve">
+    <value>วาดเส้นขอบ</value>
+  </data>
+  <data name="Kontur_wird_gezeichnet_12310b58" xml:space="preserve">
+    <value>กำลังวาดเส้นขอบ...</value>
+  </data>
+  <data name="Kontur_zeichnen_fehlgeschlagen_d9644e5f" xml:space="preserve">
+    <value>วาดเส้นขอบไม่สำเร็จ</value>
+  </data>
+  <data name="Kontur_gezeichnet_eb192d00" xml:space="preserve">
+    <value>วาดเส้นขอบแล้ว</value>
+  </data>
 </root>

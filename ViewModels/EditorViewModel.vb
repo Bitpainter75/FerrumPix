@@ -16309,6 +16309,8 @@ Namespace ViewModels
         Public ReadOnly Property ClearLayerAdjustmentsCommand As ICommand
         Public ReadOnly Property CreateAdjustmentLayerFromSelectionCommand As ICommand
         Public ReadOnly Property FillSelectionCommand As ICommand
+        Public ReadOnly Property StrokeSelectionCommand As ICommand
+        Public ReadOnly Property SetSelectionStrokePositionCommand As ICommand
         Public ReadOnly Property SetSelectionModeCommand As ICommand
         Public ReadOnly Property AlignSelectionCommand As ICommand
         Public ReadOnly Property DistributeSelectionCommand As ICommand
@@ -16821,6 +16823,8 @@ Namespace ViewModels
             CreateAdjustmentLayerFromSelectionCommand = ReactiveCommand.CreateFromTask(
                 Function() CreateAdjustmentLayerFromSelectionAsync())
             FillSelectionCommand = ReactiveCommand.Create(Sub() FillSelection())
+            StrokeSelectionCommand = ReactiveCommand.CreateFromTask(Function() StrokeSelectionAsync())
+            SetSelectionStrokePositionCommand = ReactiveCommand.Create(Of String)(Sub(value) SelectionStrokePosition = value)
             SetSelectionModeCommand = ReactiveCommand.Create(Of String)(Sub(mode) SetSelectionMode(mode))
             AlignSelectionCommand = ReactiveCommand.Create(Of String)(Sub(mode) AlignSelection(mode))
             DistributeSelectionCommand = ReactiveCommand.Create(Of String)(

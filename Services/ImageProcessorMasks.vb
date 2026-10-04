@@ -4620,6 +4620,129 @@ RasterTeil:
             End Using
         End Function
 
+        ''' <summary>Wo die Kontur zur Auswahlkante liegt.</summary>
+        Public Enum SelectionStrokePosition
+            Inside
+            Center
+            Outside
+        End Enum
+
+        ''' <summary>
+        ''' Die Kontur einer Auswahl als eigenes Bild: eine Linie in <paramref name="width"/> Punkten
+        ''' entlang der Auswahlkante, innen, mittig oder aussen. Zurueck kommt ein BGRA-Bild,
+        ''' vormultipliziert, so gross wie die Linie selbst, und in <paramref name="placement"/> das
+        ''' Rechteck, an dem es im Dokument sitzt. Nothing, wenn keine Linie entsteht.
+        '''
+        ''' Gerechnet ueber dieselbe Abstandskarte wie Erweitern und Reduzieren
+        ''' (SquaredDistanceToFeature, daher hoechstens 250 Punkte breit): jeder Punkt kennt seinen
+        ''' Abstand zur naechsten Stelle auf der anderen Seite
+        ''' der Kante. Die Linie deckt einen Punkt so weit, wie das Band [0, Breite] ihn ueberdeckt.
+        ''' Unmittelbar an der Kante wird zusaetzlich mit der Deckung der Maske gewichtet: innen mit
+        ''' ihr, aussen mit dem Rest. Eine weiche oder geglaettete Auswahlkante bleibt so weich, und
+        ''' innen plus aussen ergibt an der Kante genau eine volle Linie ohne Spalt.
+        '''
+        ''' Ausserhalb der Maske gilt alles als "aussen", auch jenseits des Bildrands: eine Auswahl
+        ''' ueber das ganze Bild bekommt innen ihre Linie am Rand. Was aussen ueber das Bild hinaus
+        ''' liefe, faellt weg.
+        ''' </summary>
+        ''' <param name="mask">Alpha8 in der Groesse von <paramref name="maskRect"/>.</param>
+        Friend Shared Function BuildSelectionStroke(mask As SKBitmap, maskRect As SKRectI,
+                                                    documentWidth As Integer, documentHeight As Integer,
+                                                    width As Single, position As SelectionStrokePosition,
+                                                    color As SKColor, ByRef placement As SKRectI) As SKBitmap
+            placement = SKRectI.Empty
+            If mask Is Nothing OrElse mask.ColorType <> SKColorType.Alpha8 OrElse width <= 0.0F Then Return Nothing
+            If documentWidth <= 0 OrElse documentHeight <= 0 Then Return Nothing
+
+            Dim innerWidth = If(position = SelectionStrokePosition.Center, width / 2.0F,
+                                If(position = SelectionStrokePosition.Inside, width, 0.0F))
+            Dim outerWidth = If(position = SelectionStrokePosition.Center, width / 2.0F,
+                                If(position = SelectionStrokePosition.Outside, width, 0.0F))
+
+            ' Das Raster: die Maske plus Platz fuer die aeussere Linie und einen Punkt "aussen"
+            ' rundum, damit auch eine Maske bis an den Bildrand dort eine Kante hat.
+            Dim margin = CInt(Math.Ceiling(outerWidth)) + 2
+            Dim gridLeft = maskRect.Left - margin
+            Dim gridTop = maskRect.Top - margin
+            Dim gw = maskRect.Width + margin * 2
+            Dim gh = maskRect.Height + margin * 2
+            If gw <= 0 OrElse gh <= 0 Then Return Nothing
+
+            Dim coverage(gw * gh - 1) As Byte
+            Dim maskRow(mask.Width - 1) As Byte
+            Dim maskPixels = mask.GetPixels()
+            For y = 0 To Math.Min(mask.Height, maskRect.Height) - 1
+                Runtime.InteropServices.Marshal.Copy(maskPixels + y * mask.RowBytes, maskRow, 0, mask.Width)
+                Array.Copy(maskRow, 0, coverage, (y + margin) * gw + margin, Math.Min(mask.Width, maskRect.Width))
+            Next
+
+            ' Abstand zum Quadrat, dieselbe Rechnung wie Erweitern und Reduzieren: innen zum naechsten
+            ' Punkt aussen, aussen zum naechsten Punkt innen. Gedeckelt knapp ueber der Breite, darueber
+            ' interessiert der Wert nicht. Das Raster hat rundum Rand, keine Seite liegt am Bildrand.
+            Dim cap = CInt(Math.Ceiling(Math.Max(innerWidth, outerWidth))) + 2
+            Dim toOutside = If(innerWidth > 0.0F, SquaredDistanceToFeature(coverage, gw, gh, cap, featureInside:=False), Nothing)
+            Dim toInside = If(outerWidth > 0.0F, SquaredDistanceToFeature(coverage, gw, gh, cap, featureInside:=True), Nothing)
+
+            ' Nur der Teil im Dokument zaehlt.
+            Dim left = Math.Max(0, gridLeft), top = Math.Max(0, gridTop)
+            Dim right = Math.Min(documentWidth, gridLeft + gw), bottom = Math.Min(documentHeight, gridTop + gh)
+            If right <= left OrElse bottom <= top Then Return Nothing
+
+            Dim alpha((right - left) * (bottom - top) - 1) As Single
+            Dim minX = Integer.MaxValue, minY = Integer.MaxValue, maxX = -1, maxY = -1
+            For y = top To bottom - 1
+                Dim gy = y - gridTop
+                For x = left To right - 1
+                    Dim gi = gy * gw + (x - gridLeft)
+                    Dim m = coverage(gi) / 255.0F
+                    Dim a = 0.0F
+                    If innerWidth > 0.0F Then
+                        Dim d = CSng(Math.Max(1.0, Math.Sqrt(toOutside(gi))))
+                        a += m * Clamp01(innerWidth + 1.0F - d)
+                    End If
+                    If outerWidth > 0.0F Then
+                        Dim d = CSng(Math.Max(1.0, Math.Sqrt(toInside(gi))))
+                        a += (1.0F - m) * Clamp01(outerWidth + 1.0F - d)
+                    End If
+                    If a <= 0.0F Then Continue For
+                    alpha((y - top) * (right - left) + (x - left)) = Math.Min(1.0F, a)
+                    If x < minX Then minX = x
+                    If x > maxX Then maxX = x
+                    If y < minY Then minY = y
+                    If y > maxY Then maxY = y
+                Next
+            Next
+            If maxX < 0 Then Return Nothing
+
+            placement = New SKRectI(minX, minY, maxX + 1, maxY + 1)
+            Dim result = New SKBitmap(placement.Width, placement.Height, SKColorType.Bgra8888, SKAlphaType.Premul)
+            Dim rowBytes = result.RowBytes
+            Dim row(placement.Width * 4 - 1) As Byte
+            Dim colorAlpha = color.Alpha / 255.0F
+            For y = 0 To placement.Height - 1
+                Array.Clear(row, 0, row.Length)
+                Dim source = (placement.Top + y - top) * (right - left) + (placement.Left - left)
+                For x = 0 To placement.Width - 1
+                    Dim a = alpha(source + x) * colorAlpha
+                    If a <= 0.0F Then Continue For
+                    Dim o = x * 4
+                    row(o) = CByte(Math.Round(color.Blue * a))
+                    row(o + 1) = CByte(Math.Round(color.Green * a))
+                    row(o + 2) = CByte(Math.Round(color.Red * a))
+                    row(o + 3) = CByte(Math.Round(255.0F * a))
+                Next
+                Runtime.InteropServices.Marshal.Copy(row, 0, result.GetPixels() + y * rowBytes, row.Length)
+            Next
+            result.NotifyPixelsChanged()
+            Return result
+        End Function
+
+        Private Shared Function Clamp01(value As Single) As Single
+            If value <= 0.0F Then Return 0.0F
+            If value >= 1.0F Then Return 1.0F
+            Return value
+        End Function
+
     End Class
 
 End Namespace

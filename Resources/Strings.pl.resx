@@ -9294,4 +9294,37 @@
   <data name="Ab_dieser_Helligkeit_wird_ein_Punkt_wei_darunter_978e32ff" xml:space="preserve">
     <value>Od tej jasności piksel staje się biały, poniżej czarny. 0 wyłącza próg</value>
   </data>
+  <data name="Innen_e67344db" xml:space="preserve">
+    <value>Wewnątrz</value>
+  </data>
+  <data name="Au_en_1946cfea" xml:space="preserve">
+    <value>Na zewnątrz</value>
+  </data>
+  <data name="Die_Linie_liegt_innerhalb_der_Auswahl_2679c403" xml:space="preserve">
+    <value>Linia leży wewnątrz zaznaczenia</value>
+  </data>
+  <data name="Die_Linie_liegt_mittig_auf_der_Auswahlkante_54431beb" xml:space="preserve">
+    <value>Linia leży na środku krawędzi zaznaczenia</value>
+  </data>
+  <data name="Die_Linie_liegt_au_erhalb_der_Auswahl_52b6a5fd" xml:space="preserve">
+    <value>Linia leży na zewnątrz zaznaczenia</value>
+  </data>
+  <data name="Konturfarbe_560f5fae" xml:space="preserve">
+    <value>Kolor obrysu</value>
+  </data>
+  <data name="Eine_Linie_entlang_der_Auswahlkante_als_neue_Bil_2f217c8f" xml:space="preserve">
+    <value>Narysuj linię wzdłuż krawędzi zaznaczenia jako nową warstwę obrazu</value>
+  </data>
+  <data name="Kontur_zeichnen_7d6fa55c" xml:space="preserve">
+    <value>Rysuj obrys</value>
+  </data>
+  <data name="Kontur_wird_gezeichnet_12310b58" xml:space="preserve">
+    <value>Rysowanie obrysu...</value>
+  </data>
+  <data name="Kontur_zeichnen_fehlgeschlagen_d9644e5f" xml:space="preserve">
+    <value>Nie udało się narysować obrysu</value>
+  </data>
+  <data name="Kontur_gezeichnet_eb192d00" xml:space="preserve">
+    <value>Obrys narysowany</value>
+  </data>
 </root>

@@ -209,9 +209,18 @@ Namespace Services
                             Dim insetY = slot.Y + (slot.Height - innerHeight) / 2.0F
                             Dim dst = New SKRect(insetX, insetY, insetX + innerWidth, insetY + innerHeight)
                             Dim src = GetUniformToFillSourceRect(source.Width, source.Height, CInt(innerWidth), CInt(innerHeight))
-                            Using image = SKImage.FromBitmap(source)
-                                canvas.DrawImage(image, src, dst, samplingHigh, paint)
+                            ' Der Ausschnitt wird vorher auf die Kachelgroesse verkleinert
+                            ' (ImageResampler): Skias fester kubischer Filter faltet bei einem
+                            ' Foto in einer kleinen Kachel feines Muster in grobe Streifen.
+                            Dim reduced = ReduceToTile(source, src, CInt(Math.Ceiling(innerWidth)), CInt(Math.Ceiling(innerHeight)))
+                            Using image = SKImage.FromBitmap(If(reduced, source))
+                                If reduced IsNot Nothing Then
+                                    canvas.DrawImage(image, New SKRect(0, 0, reduced.Width, reduced.Height), dst, samplingHigh, paint)
+                                Else
+                                    canvas.DrawImage(image, src, dst, samplingHigh, paint)
+                                End If
                             End Using
+                            reduced?.Dispose()
                             canvas.Restore()
                         End Using
                     Next
@@ -421,6 +430,22 @@ Namespace Services
             Dim cropHeight = CSng(sourceWidth / targetAspect)
             Dim top = (sourceHeight - cropHeight) / 2.0F
             Return New SKRect(0, top, sourceWidth, top + cropHeight)
+        End Function
+
+        ''' <summary>Der Ausschnitt <paramref name="sourceRect"/>, verkleinert auf die Kachelgroesse.
+        ''' Nothing, wenn nichts zu verkleinern ist oder der Farbtyp nicht passt; dann zeichnet der
+        ''' Aufrufer wie bisher direkt aus der Quelle. Der Ausschnitt wird auf ganze Punkte gerundet,
+        ''' die Verschiebung bleibt unter einem Quellpunkt.</summary>
+        Private Shared Function ReduceToTile(source As SKBitmap, sourceRect As SKRect, tileWidth As Integer, tileHeight As Integer) As SKBitmap
+            Dim area = SKRectI.Round(sourceRect)
+            area.Intersect(New SKRectI(0, 0, source.Width, source.Height))
+            If area.Width <= 0 OrElse area.Height <= 0 Then Return Nothing
+            If Not ImageResampler.IsDownscale(area.Width, area.Height, tileWidth, tileHeight) Then Return Nothing
+            Using subset = New SKBitmap()
+                If Not source.ExtractSubset(subset, area) Then Return Nothing
+                Return ImageResampler.Resize(subset, Math.Min(tileWidth, area.Width), Math.Min(tileHeight, area.Height),
+                                             ImageResampler.Kernel.CatmullRom)
+            End Using
         End Function
 
         Private Shared Function ParseColor(value As String, fallback As SKColor) As SKColor

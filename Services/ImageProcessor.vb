@@ -821,7 +821,7 @@ Namespace Services
                     Dim ratio = Math.Min(maxDimension / CDbl(bitmap.Width), maxDimension / CDbl(bitmap.Height))
                     Dim w = Math.Max(1, CInt(Math.Round(bitmap.Width * ratio)))
                     Dim h = Math.Max(1, CInt(Math.Round(bitmap.Height * ratio)))
-                    scaled = bitmap.Resize(New SKImageInfo(w, h), SamplingHigh)
+                    scaled = ResizeBitmapHighQuality(bitmap, w, h)
                     If scaled IsNot Nothing Then source = scaled
                 End If
 
@@ -4539,12 +4539,38 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                 occupied = ClipCanvasToOccupied(canvas, occupied,
                                                 SKMatrix.CreateScale(targetWidth / CSng(source.Width), targetHeight / CSng(source.Height)),
                                                 source.Width, source.Height, targetWidth, targetHeight, antialiased:=True)
+                ' Verkleinert wird mit einem Filter, der mit dem Faktor waechst (ImageResampler);
+                ' Skias fester Filter faltet feines Muster in grobe Streifen. "Naechstgelegen"
+                ' bleibt bei Skia, wer das waehlt, will die harten Punkte.
+                Dim downscaled As SKBitmap = Nothing
+                If adj.ResizeInterpolation <> ResizeInterpolationMode.Nearest AndAlso
+                   ImageResampler.IsDownscale(source.Width, source.Height, targetWidth, targetHeight) Then
+                    downscaled = ImageResampler.Resize(source, targetWidth, targetHeight,
+                                                       If(adj.ResizeInterpolation = ResizeInterpolationMode.Bilinear,
+                                                          ImageResampler.Kernel.Triangle, ImageResampler.Kernel.CatmullRom))
+                End If
                 Using paint = New SKPaint With {.IsAntialias = True}
-                    DrawBitmapSampled(canvas, source, New SKRect(0, 0, source.Width, source.Height), New SKRect(0, 0, targetWidth, targetHeight),
-                                      ToSampling(adj.ResizeInterpolation), paint)
+                    If downscaled IsNot Nothing Then
+                        canvas.DrawBitmap(downscaled, 0, 0, paint)
+                        downscaled.Dispose()
+                    Else
+                        DrawBitmapSampled(canvas, source, New SKRect(0, 0, source.Width, source.Height), New SKRect(0, 0, targetWidth, targetHeight),
+                                          ToSampling(adj.ResizeInterpolation), paint)
+                    End If
                 End Using
             End Using
             Return result
+        End Function
+
+        ''' <summary>Bringt ein Bild auf eine kleinere Groesse fuer Druck, Collage und Vorschaubilder
+        ''' im Buendel: verkleinert ueber <see cref="ImageResampler"/>, sonst (vergroessern, anderer
+        ''' Farbtyp) wie bisher ueber Skia mit <see cref="SamplingHigh"/>.</summary>
+        Friend Shared Function ResizeBitmapHighQuality(source As SKBitmap, targetWidth As Integer, targetHeight As Integer) As SKBitmap
+            If ImageResampler.IsDownscale(source.Width, source.Height, targetWidth, targetHeight) Then
+                Dim resampled = ImageResampler.Resize(source, targetWidth, targetHeight, ImageResampler.Kernel.CatmullRom)
+                If resampled IsNot Nothing Then Return resampled
+            End If
+            Return source.Resize(New SKImageInfo(targetWidth, targetHeight), SamplingHigh)
         End Function
 
         Private Shared Function ToSampling(mode As ResizeInterpolationMode) As SKSamplingOptions

@@ -9,7 +9,15 @@
   Effects, posterize reduces each channel to a few flat steps, and threshold turns the
   picture into pure black and white.
 
+- **Stroke a selection.** The selection tool draws a line along the edge of the selection, inside,
+  centered or outside, in a color and width of your choice. It lands on its own picture layer, so it
+  can be moved, faded or deleted like any other.
+
 ### Fixes
+
+- Shrinking a picture a lot, such as a full film scan down to a size for the web, no longer turns
+  film grain and fine patterns into coarse stripes. This applies to resizing, exporting with a size,
+  printing and collages.
 
 - Exported PSD files carry an sRGB color profile. Before, programs that assume their own working
   space without one could show them too saturated. They also keep the resolution of the original

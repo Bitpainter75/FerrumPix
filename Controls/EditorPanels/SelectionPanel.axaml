@@ -489,6 +489,66 @@
                     <TextBlock Text="Auswahl füllen" HorizontalAlignment="Center" />
                 </StackPanel>
             </Button>
+
+            <!-- KONTUR: eine Linie entlang der Auswahlkante, als eigene Bildebene (StrokeSelectionAsync).
+                 Eigene Farbe statt "Farbe 1" der Fuellung: wer eine Flaeche fuellt und umrandet,
+                 will fast immer zwei Farben. -->
+            <Border Height="1" Background="{DynamicResource FP.Border.Normal}" Margin="0,4,0,0" />
+            <TextBlock Text="Kontur" Foreground="{DynamicResource FP.Text.Secondary}"
+                       FontSize="{DynamicResource FP.Font.Small}" FontWeight="SemiBold" />
+            <WrapPanel Orientation="Horizontal">
+                <Button Classes="ghost" Padding="8,4" Margin="0,0,6,4"
+                        Command="{Binding SetSelectionStrokePositionCommand}"
+                        CommandParameter="Inside"
+                        Classes.active="{Binding SelectionStrokePosition, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Inside}"
+                        ToolTip.Tip="Die Linie liegt innerhalb der Auswahl">
+                    <TextBlock Text="Innen" FontSize="{DynamicResource FP.Font.Small}" />
+                </Button>
+                <Button Classes="ghost" Padding="8,4" Margin="0,0,6,4"
+                        Command="{Binding SetSelectionStrokePositionCommand}"
+                        CommandParameter="Center"
+                        Classes.active="{Binding SelectionStrokePosition, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Center}"
+                        ToolTip.Tip="Die Linie liegt mittig auf der Auswahlkante">
+                    <TextBlock Text="Mitte" FontSize="{DynamicResource FP.Font.Small}" />
+                </Button>
+                <Button Classes="ghost" Padding="8,4" Margin="0,0,6,4"
+                        Command="{Binding SetSelectionStrokePositionCommand}"
+                        CommandParameter="Outside"
+                        Classes.active="{Binding SelectionStrokePosition, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Outside}"
+                        ToolTip.Tip="Die Linie liegt außerhalb der Auswahl">
+                    <TextBlock Text="Außen" FontSize="{DynamicResource FP.Font.Small}" />
+                </Button>
+            </WrapPanel>
+            <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Top">
+                <TextBlock Text="Konturfarbe" Foreground="{DynamicResource FP.Text.Secondary}"
+                           VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                <icons:ColorPickerButton Grid.Column="1"
+                                         SelectedColor="{Binding SelectionStrokeColorValue, Mode=TwoWay}" />
+            </Grid>
+            <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
+                <TextBlock Text="Konturbreite" Foreground="{DynamicResource FP.Text.Secondary}"
+                           VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap" />
+                <icons:RoundSlider Grid.Column="1" Minimum="1" Maximum="100"
+                                   DefaultValue="4"
+                                   Value="{Binding SelectionStrokeWidth}"
+                                   Margin="0,0" />
+                <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                         Value="{Binding SelectionStrokeWidth, Mode=TwoWay}"
+                                         Minimum="1" Maximum="250" Increment="1"
+                                         FormatString="F0" />
+            </Grid>
+            <Button Classes="accent"
+                    HorizontalAlignment="Stretch"
+                    Padding="10,6"
+                    IsEnabled="{Binding HasActiveSelection}"
+                    Command="{Binding StrokeSelectionCommand}"
+                    ToolTip.Tip="Eine Linie entlang der Auswahlkante als neue Bildebene zeichnen">
+                <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/border-outer.svg"
+                                   Width="16" Height="16" />
+                    <TextBlock Text="Kontur zeichnen" HorizontalAlignment="Center" />
+                </StackPanel>
+            </Button>
             <Button Classes="ghost" HorizontalAlignment="Stretch" Padding="10,6"
                 Margin="0,10,0,0"
                 IsVisible="{Binding IsMoveSelectionMode}"

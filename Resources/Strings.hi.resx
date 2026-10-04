@@ -9298,4 +9298,37 @@
   <data name="Ab_dieser_Helligkeit_wird_ein_Punkt_wei_darunter_978e32ff" xml:space="preserve">
     <value>इस चमक से पिक्सेल सफ़ेद, उससे नीचे काला हो जाता है। 0 थ्रेशोल्ड बंद करता है</value>
   </data>
+  <data name="Innen_e67344db" xml:space="preserve">
+    <value>अंदर</value>
+  </data>
+  <data name="Au_en_1946cfea" xml:space="preserve">
+    <value>बाहर</value>
+  </data>
+  <data name="Die_Linie_liegt_innerhalb_der_Auswahl_2679c403" xml:space="preserve">
+    <value>रेखा चयन के अंदर रहती है</value>
+  </data>
+  <data name="Die_Linie_liegt_mittig_auf_der_Auswahlkante_54431beb" xml:space="preserve">
+    <value>रेखा चयन के किनारे के बीचोंबीच रहती है</value>
+  </data>
+  <data name="Die_Linie_liegt_au_erhalb_der_Auswahl_52b6a5fd" xml:space="preserve">
+    <value>रेखा चयन के बाहर रहती है</value>
+  </data>
+  <data name="Konturfarbe_560f5fae" xml:space="preserve">
+    <value>रूपरेखा का रंग</value>
+  </data>
+  <data name="Eine_Linie_entlang_der_Auswahlkante_als_neue_Bil_2f217c8f" xml:space="preserve">
+    <value>चयन के किनारे के साथ एक रेखा नई चित्र परत के रूप में बनाएँ</value>
+  </data>
+  <data name="Kontur_zeichnen_7d6fa55c" xml:space="preserve">
+    <value>रूपरेखा बनाएँ</value>
+  </data>
+  <data name="Kontur_wird_gezeichnet_12310b58" xml:space="preserve">
+    <value>रूपरेखा बन रही है...</value>
+  </data>
+  <data name="Kontur_zeichnen_fehlgeschlagen_d9644e5f" xml:space="preserve">
+    <value>रूपरेखा नहीं बन सकी</value>
+  </data>
+  <data name="Kontur_gezeichnet_eb192d00" xml:space="preserve">
+    <value>रूपरेखा बन गई</value>
+  </data>
 </root>

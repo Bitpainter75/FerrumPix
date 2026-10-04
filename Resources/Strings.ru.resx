@@ -9294,4 +9294,37 @@
   <data name="Ab_dieser_Helligkeit_wird_ein_Punkt_wei_darunter_978e32ff" xml:space="preserve">
     <value>Начиная с этой яркости пиксель становится белым, ниже чёрным. 0 отключает порог</value>
   </data>
+  <data name="Innen_e67344db" xml:space="preserve">
+    <value>Внутри</value>
+  </data>
+  <data name="Au_en_1946cfea" xml:space="preserve">
+    <value>Снаружи</value>
+  </data>
+  <data name="Die_Linie_liegt_innerhalb_der_Auswahl_2679c403" xml:space="preserve">
+    <value>Линия проходит внутри выделения</value>
+  </data>
+  <data name="Die_Linie_liegt_mittig_auf_der_Auswahlkante_54431beb" xml:space="preserve">
+    <value>Линия проходит по центру края выделения</value>
+  </data>
+  <data name="Die_Linie_liegt_au_erhalb_der_Auswahl_52b6a5fd" xml:space="preserve">
+    <value>Линия проходит снаружи выделения</value>
+  </data>
+  <data name="Konturfarbe_560f5fae" xml:space="preserve">
+    <value>Цвет обводки</value>
+  </data>
+  <data name="Eine_Linie_entlang_der_Auswahlkante_als_neue_Bil_2f217c8f" xml:space="preserve">
+    <value>Нарисовать линию вдоль края выделения на новом слое изображения</value>
+  </data>
+  <data name="Kontur_zeichnen_7d6fa55c" xml:space="preserve">
+    <value>Нарисовать обводку</value>
+  </data>
+  <data name="Kontur_wird_gezeichnet_12310b58" xml:space="preserve">
+    <value>Рисуется обводка...</value>
+  </data>
+  <data name="Kontur_zeichnen_fehlgeschlagen_d9644e5f" xml:space="preserve">
+    <value>Не удалось нарисовать обводку</value>
+  </data>
+  <data name="Kontur_gezeichnet_eb192d00" xml:space="preserve">
+    <value>Обводка нарисована</value>
+  </data>
 </root>

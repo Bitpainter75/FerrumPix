@@ -5036,6 +5036,116 @@ Namespace ViewModels
         Private Function EnsureCorrectionLayerForActiveSelection() As MaskedAdjustmentLayer
             Return PromoteActiveSelectionToLayer()
         End Function
+
+        ' ===================== Kontur entlang der Auswahl =====================
+        '
+        ' Eine Linie in Farbe und Breite entlang der Auswahlkante, innen, mittig oder aussen. Sie
+        ' entsteht als eigene Bildebene wie eine kopierte Auswahl: verschiebbar, mit Deckkraft und
+        ' Mischmodus, und mit Entf wieder weg. Eine deklarative Kontur auf der Korrekturebene (wie
+        ' das Fuellen) waere nachtraeglich in der Breite aenderbar, braeuchte aber einen eigenen
+        ' Zeichenweg in der Pixelkette, im Schluessel des Basis-Caches und in der Datei.
+
+        Private _selectionStrokeColor As String = "#FF000000"
+        Private _selectionStrokeWidth As Double = 4.0
+        Private _selectionStrokePosition As String = "Center"
+
+        Public Property SelectionStrokeColorValue As Avalonia.Media.Color
+            Get
+                Return ParseAvaloniaColorOrDefault(_selectionStrokeColor, Avalonia.Media.Colors.Black)
+            End Get
+            Set(value As Avalonia.Media.Color)
+                ' Ausdruecklich als #AARRGGBB: Color.ToString() liefert fuer bekannte Farben den
+                ' Namen ("Red"), und den versteht SKColor.TryParse nicht.
+                Dim text = $"#{value.A:X2}{value.R:X2}{value.G:X2}{value.B:X2}"
+                If String.Equals(text, _selectionStrokeColor, StringComparison.OrdinalIgnoreCase) Then Return
+                _selectionStrokeColor = text
+                Me.RaisePropertyChanged(NameOf(SelectionStrokeColorValue))
+            End Set
+        End Property
+
+        ''' <summary>Breite der Linie in Bildpunkten des Dokuments, 1 bis 250. Die Obergrenze kommt
+        ''' aus der Abstandsrechnung: sie legt die Quadrate in 16 Bit ab (siehe SquaredDistanceToFeature).</summary>
+        Public Property SelectionStrokeWidth As Double
+            Get
+                Return _selectionStrokeWidth
+            End Get
+            Set(value As Double)
+                Me.RaiseAndSetIfChanged(_selectionStrokeWidth, Math.Max(1.0, Math.Min(250.0, value)))
+            End Set
+        End Property
+
+        ''' <summary>"Inside", "Center" oder "Outside".</summary>
+        Public Property SelectionStrokePosition As String
+            Get
+                Return _selectionStrokePosition
+            End Get
+            Set(value As String)
+                Dim normalized = If(value = "Inside" OrElse value = "Outside", value, "Center")
+                Me.RaiseAndSetIfChanged(_selectionStrokePosition, normalized)
+            End Set
+        End Property
+
+        Public Async Function StrokeSelectionAsync() As Task
+            If Not _hasActiveSelection OrElse String.IsNullOrWhiteSpace(_currentImagePath) Then Return
+            Dim documentSize = GetAnnotationDisplayPixelSize()
+            Dim documentWidth = documentSize.Width, documentHeight = documentSize.Height
+            If documentWidth <= 0 OrElse documentHeight <= 0 Then Return
+
+            ' Dieselbe Maske wie beim Kopieren und Fuellen: mit weicher Kante die weichgezeichnete,
+            ' sonst die gespeicherte, und fuer ein schlichtes Rechteck eine volle.
+            Dim maskRect As SKRectI
+            Dim mask As SKBitmap
+            If _selectionMask IsNot Nothing OrElse _selectionFeather > 0.05 Then
+                Dim ownsMask As Boolean
+                Dim outputMask = GetSelectionMaskForOutput(maskRect, ownsMask)
+                If outputMask Is Nothing Then Return
+                ' Die gespeicherte Maske gehoert der Auswahl; gerechnet wird im Hintergrund auf einer Kopie.
+                mask = If(ownsMask, outputMask, outputMask.Copy())
+            Else
+                maskRect = SelectionRectPixels()
+                If maskRect.Width <= 0 OrElse maskRect.Height <= 0 Then Return
+                mask = CreateSolidMask(maskRect.Width, maskRect.Height)
+            End If
+
+            Dim color As SKColor
+            If Not SKColor.TryParse(_selectionStrokeColor, color) Then color = SKColors.Black
+            Dim width = CSng(_selectionStrokeWidth)
+            Dim position = If(_selectionStrokePosition = "Inside", ImageProcessor.SelectionStrokePosition.Inside,
+                              If(_selectionStrokePosition = "Outside", ImageProcessor.SelectionStrokePosition.Outside,
+                                 ImageProcessor.SelectionStrokePosition.Center))
+            Dim targetPath = CreateSelectionAssetTempPath("stroke")
+            Dim document = _currentImagePath
+
+            StatusText = LocalizationService.T("Kontur wird gezeichnet...")
+            Dim outcome = Await Task.Run(
+                Function()
+                    Dim placement As SKRectI
+                    Try
+                        Using mask
+                            Using stroke = ImageProcessor.BuildSelectionStroke(mask, maskRect, documentWidth, documentHeight,
+                                                                               width, position, color, placement)
+                                If stroke Is Nothing Then Return (Ok:=False, Placement:=placement)
+                                Return (Ok:=WriteObjectPaintFile(stroke, targetPath), Placement:=placement)
+                            End Using
+                        End Using
+                    Catch ex As Exception
+                        ' Etwa ein Dokumentwechsel mittendrin: der Zwischenordner ist dann schon weg.
+                        DiagnosticLogService.LogException("Editor.SelectionStroke", ex)
+                        Return (Ok:=False, Placement:=placement)
+                    End Try
+                End Function)
+
+            ' Inzwischen ein anderes Bild: die Linie gehoert nicht dorthin.
+            If Not String.Equals(document, _currentImagePath, StringComparison.Ordinal) Then Return
+            If Not outcome.Ok Then
+                StatusText = LocalizationService.T("Kontur zeichnen fehlgeschlagen")
+                Return
+            End If
+            Dim p = PixelRectToPercent(outcome.Placement)
+            AddSelectionImageAnnotationAt(targetPath, p.X, p.Y, p.W, p.H, GeneratedLayerNames.Stroke)
+            NameHistoryStep(LocalizationService.T("Kontur gezeichnet"))
+            StatusText = LocalizationService.T("Kontur gezeichnet")
+        End Function
     End Class
 
 End Namespace

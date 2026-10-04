@@ -248,7 +248,7 @@ Namespace Services
                     Dim ratio = Math.Min(maxWidth / CDbl(bitmap.Width), maxHeight / CDbl(bitmap.Height))
                     Dim targetWidth = Math.Max(1, CInt(Math.Round(bitmap.Width * ratio)))
                     Dim targetHeight = Math.Max(1, CInt(Math.Round(bitmap.Height * ratio)))
-                    scaled = bitmap.Resize(New SKImageInfo(targetWidth, targetHeight), ImageProcessor.SamplingHigh)
+                    scaled = ImageProcessor.ResizeBitmapHighQuality(bitmap, targetWidth, targetHeight)
                     If scaled IsNot Nothing Then source = scaled
                 End If
 

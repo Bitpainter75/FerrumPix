@@ -24,6 +24,7 @@ Namespace Services
         Public Const LinearGradient As String = "Linearer Verlauf"
         Public Const MigratedMaskLayer As String = "Übernommene Maskenebene"
         Public Const PastedImage As String = "Eingefügtes Bild"
+        Public Const Stroke As String = "Kontur"
         Private Const CopySuffix As String = " Kopie"
 
         Private Shared ReadOnly NumberedName As New Regex("^(.*\S) (\d+)$", RegexOptions.CultureInvariant)
@@ -67,6 +68,7 @@ Namespace Services
                 Case LinearGradient : Return LocalizationService.T("Linearer Verlauf")
                 Case MigratedMaskLayer : Return LocalizationService.T("Übernommene Maskenebene")
                 Case PastedImage : Return LocalizationService.T("Eingefügtes Bild")
+                Case Stroke : Return LocalizationService.T("Kontur")
                 Case Else : Return Nothing
             End Select
         End Function

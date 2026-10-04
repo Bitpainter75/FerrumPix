@@ -9294,4 +9294,37 @@
   <data name="Ab_dieser_Helligkeit_wird_ein_Punkt_wei_darunter_978e32ff" xml:space="preserve">
     <value>Vanaf deze helderheid wordt een pixel wit, daaronder zwart. 0 schakelt de drempel uit</value>
   </data>
+  <data name="Innen_e67344db" xml:space="preserve">
+    <value>Binnen</value>
+  </data>
+  <data name="Au_en_1946cfea" xml:space="preserve">
+    <value>Buiten</value>
+  </data>
+  <data name="Die_Linie_liegt_innerhalb_der_Auswahl_2679c403" xml:space="preserve">
+    <value>De lijn ligt binnen de selectie</value>
+  </data>
+  <data name="Die_Linie_liegt_mittig_auf_der_Auswahlkante_54431beb" xml:space="preserve">
+    <value>De lijn ligt midden op de selectierand</value>
+  </data>
+  <data name="Die_Linie_liegt_au_erhalb_der_Auswahl_52b6a5fd" xml:space="preserve">
+    <value>De lijn ligt buiten de selectie</value>
+  </data>
+  <data name="Konturfarbe_560f5fae" xml:space="preserve">
+    <value>Lijnkleur</value>
+  </data>
+  <data name="Eine_Linie_entlang_der_Auswahlkante_als_neue_Bil_2f217c8f" xml:space="preserve">
+    <value>Een lijn langs de selectierand tekenen als nieuwe afbeeldingslaag</value>
+  </data>
+  <data name="Kontur_zeichnen_7d6fa55c" xml:space="preserve">
+    <value>Lijn tekenen</value>
+  </data>
+  <data name="Kontur_wird_gezeichnet_12310b58" xml:space="preserve">
+    <value>Lijn wordt getekend...</value>
+  </data>
+  <data name="Kontur_zeichnen_fehlgeschlagen_d9644e5f" xml:space="preserve">
+    <value>Lijn tekenen mislukt</value>
+  </data>
+  <data name="Kontur_gezeichnet_eb192d00" xml:space="preserve">
+    <value>Lijn getekend</value>
+  </data>
 </root>

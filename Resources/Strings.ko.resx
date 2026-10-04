@@ -9298,4 +9298,37 @@
   <data name="Ab_dieser_Helligkeit_wird_ein_Punkt_wei_darunter_978e32ff" xml:space="preserve">
     <value>이 밝기부터 픽셀은 흰색, 그 아래는 검은색이 됩니다. 0이면 한계값이 꺼집니다</value>
   </data>
+  <data name="Innen_e67344db" xml:space="preserve">
+    <value>안쪽</value>
+  </data>
+  <data name="Au_en_1946cfea" xml:space="preserve">
+    <value>바깥쪽</value>
+  </data>
+  <data name="Die_Linie_liegt_innerhalb_der_Auswahl_2679c403" xml:space="preserve">
+    <value>선이 선택 영역 안쪽에 놓입니다</value>
+  </data>
+  <data name="Die_Linie_liegt_mittig_auf_der_Auswahlkante_54431beb" xml:space="preserve">
+    <value>선이 선택 영역 가장자리의 가운데에 놓입니다</value>
+  </data>
+  <data name="Die_Linie_liegt_au_erhalb_der_Auswahl_52b6a5fd" xml:space="preserve">
+    <value>선이 선택 영역 바깥쪽에 놓입니다</value>
+  </data>
+  <data name="Konturfarbe_560f5fae" xml:space="preserve">
+    <value>윤곽선 색</value>
+  </data>
+  <data name="Eine_Linie_entlang_der_Auswahlkante_als_neue_Bil_2f217c8f" xml:space="preserve">
+    <value>선택 영역 가장자리를 따라 선을 새 이미지 레이어로 그립니다</value>
+  </data>
+  <data name="Kontur_zeichnen_7d6fa55c" xml:space="preserve">
+    <value>윤곽선 그리기</value>
+  </data>
+  <data name="Kontur_wird_gezeichnet_12310b58" xml:space="preserve">
+    <value>윤곽선을 그리는 중...</value>
+  </data>
+  <data name="Kontur_zeichnen_fehlgeschlagen_d9644e5f" xml:space="preserve">
+    <value>윤곽선을 그리지 못했습니다</value>
+  </data>
+  <data name="Kontur_gezeichnet_eb192d00" xml:space="preserve">
+    <value>윤곽선을 그렸습니다</value>
+  </data>
 </root>
