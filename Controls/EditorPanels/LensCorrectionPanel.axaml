@@ -107,6 +107,15 @@
                     </Grid>
                 </StackPanel>
 
+                <!-- Der Sensorrand haengt nicht am Objektiv, sondern an der Kamera, und steht
+                     deshalb ausserhalb des Blocks darueber. Angeboten nur, wenn fuer Kamera und
+                     Bildgroesse ein Rand bekannt ist; ein Haken, der nichts tun kann, ist
+                     schlimmer als keiner. -->
+                <CheckBox Content="Sensorrand entfernen" IsChecked="{Binding RawSensorEdgeCropEnabled}"
+                          IsVisible="{Binding RawSensorEdgeCropAvailable}"
+                          FontSize="{DynamicResource FP.Font.Small}"
+                          ToolTip.Tip="Schneidet die äußersten Pixelreihen ab, die der Sensor nicht sauber liefert und die als farbige Streifen am Bildrand stehen können. Am besten gleich zu Beginn entscheiden - schaltet man später um, passen bereits gesetzte Masken und eingefügte Objekte nicht mehr genau."/>
+
                 <!-- Feinkorrektur des Farbquerfehlers von Hand. BEWUSST ausserhalb des Blocks
                      darueber, der nur mit gefundenem Profil sichtbar ist: gerade wenn die Sammlung
                      das Objektiv nicht kennt oder es an dieser Brennweite schlecht trifft (Issue

@@ -1983,9 +1983,10 @@ Namespace Services
                 ' Perzentile sind ab gut hunderttausend Stichproben stabil - jedes Pixel eines 40-MP-Scans
                 ' anzufassen würde die Messung nur verlangsamen, nicht verbessern.
                 Dim stepPx = Math.Max(1, CInt(Math.Sqrt(bmp.Width * CDbl(bmp.Height) / 250000.0)))
-                For y As Integer = 0 To bmp.Height - 1 Step stepPx
+                Dim area = FindFilmHolderArea(buffer, stride, bmp.Width, bmp.Height, stepPx)
+                For y As Integer = area.Top To area.Bottom - 1 Step stepPx
                     Dim row = y * stride
-                    For x As Integer = 0 To bmp.Width - 1 Step stepPx
+                    For x As Integer = area.Left To area.Right - 1 Step stepPx
                         Dim o = row + x * 4
                         If buffer(o + 3) < 8 Then Continue For
                         histB(buffer(o)) += 1
@@ -2000,6 +2001,105 @@ Namespace Services
             Dim baseColor = New SKColor(HistogramPercentile(histR, total, 0.995), HistogramPercentile(histG, total, 0.995), HistogramPercentile(histB, total, 0.995), 255)
             Dim densityColor = New SKColor(HistogramPercentile(histR, total, 0.005), HistogramPercentile(histG, total, 0.005), HistogramPercentile(histB, total, 0.005), 255)
             Return (baseColor, densityColor)
+        End Function
+
+        ''' <summary>Wie weit ein Halterstreifen hoechstens ins Bild reicht, je Seite als Anteil.</summary>
+        Private Const FilmHolderMaxEdgeFraction As Double = 0.15
+
+        ''' <summary>Die Flaeche, auf der die Negativmessung zaehlt: das ganze Bild ohne den Halter
+        ''' des Scanners, falls einer am Rand steht.
+        '''
+        ''' Ein Filmscan zeigt oft den Halter als schwarzen Streifen. Er ist undurchsichtig, also
+        ''' dunkler als jede belichtete Stelle des Films, und schon ein halbes Prozent der Flaeche
+        ''' macht ihn zum dichtesten Punkt: das Positiv saeuft ab (Schwarzweiss-Scan vom LS-5000,
+        ''' ganz umgekehrt Mittel 30 und 13 Prozent Schwarz, beschnitten 75 und 3). Erkannt wird er
+        ''' daran, dass ganze Randzeilen oder -spalten deutlich dunkler sind als der dichteste
+        ''' Punkt im INNEREN des Bildes. Ein dunkles Motiv am Rand setzt sich nach innen fort und
+        ''' bleibt deshalb stehen; der helle Filmrand zwischen zwei Bildern ist unbelichteter
+        ''' Traeger, also gerade die Basis, und wird nie herausgenommen.
+        '''
+        ''' Nur die MESSUNG laesst den Streifen aus, das Bild bleibt wie es ist.</summary>
+        Private Shared Function FindFilmHolderArea(buffer As Byte(), stride As Integer, width As Integer, height As Integer,
+                                                   stepPx As Integer) As SKRectI
+            Dim full = New SKRectI(0, 0, width, height)
+            Dim cols = (width + stepPx - 1) \ stepPx
+            Dim rows = (height + stepPx - 1) \ stepPx
+            If cols < 20 OrElse rows < 20 Then Return full
+
+            ' Helligkeit je Stichprobe, -1 fuer durchsichtige Stellen.
+            Dim luma = New Integer(cols * rows - 1) {}
+            For r As Integer = 0 To rows - 1
+                Dim row = r * stepPx * stride
+                For c As Integer = 0 To cols - 1
+                    Dim o = row + c * stepPx * 4
+                    luma(r * cols + c) = If(buffer(o + 3) < 8, -1,
+                        (114 * buffer(o) + 587 * buffer(o + 1) + 299 * buffer(o + 2)) \ 1000)
+                Next
+            Next
+
+            ' Der dichteste Punkt des Inneren ist der Massstab.
+            Dim maxRows = CInt(rows * FilmHolderMaxEdgeFraction)
+            Dim maxCols = CInt(cols * FilmHolderMaxEdgeFraction)
+            Dim hist = New Integer(255) {}
+            Dim total = 0
+            For r As Integer = maxRows To rows - 1 - maxRows
+                For c As Integer = maxCols To cols - 1 - maxCols
+                    Dim v = luma(r * cols + c)
+                    If v < 0 Then Continue For
+                    hist(v) += 1
+                    total += 1
+                Next
+            Next
+            If total = 0 Then Return full
+            Dim innerDensity = CInt(HistogramPercentile(hist, total, 0.005))
+            Dim limit = innerDensity - Math.Max(8, innerDensity \ 4)
+            ' Ist das Innere selbst schon fast schwarz, ist ein Halter davon nicht zu unterscheiden.
+            If limit <= 0 Then Return full
+
+            Dim lineMean = Function(isRow As Boolean, index As Integer, fromIdx As Integer, toIdx As Integer) As Double
+                               Dim sum = 0L
+                               Dim n = 0
+                               For k As Integer = fromIdx To toIdx - 1
+                                   Dim v = If(isRow, luma(index * cols + k), luma(k * cols + index))
+                                   If v < 0 Then Continue For
+                                   sum += v
+                                   n += 1
+                               Next
+                               Return If(n = 0, Double.MaxValue, sum / CDbl(n))
+                           End Function
+
+            Dim top = 0
+            While top < maxRows AndAlso lineMean(True, top, 0, cols) < limit
+                top += 1
+            End While
+            Dim bottom = 0
+            While bottom < maxRows AndAlso lineMean(True, rows - 1 - bottom, 0, cols) < limit
+                bottom += 1
+            End While
+            ' Spalten nur ueber die Zeilen, die stehen bleiben: ein Halter oben und unten zoege
+            ' sonst jede Spalte nach unten.
+            Dim left = 0
+            While left < maxCols AndAlso lineMean(False, left, top, rows - bottom) < limit
+                left += 1
+            End While
+            Dim right = 0
+            While right < maxCols AndAlso lineMean(False, cols - 1 - right, top, rows - bottom) < limit
+                right += 1
+            End While
+
+            ' Die Kante des Halters ist im Scan unscharf. Die Zeilen des Uebergangs liegen schon
+            ' ueber der Grenze, tragen aber noch genug Halter, um das Perzentil zu ziehen; ein
+            ' schmaler Saum geht deshalb mit.
+            Dim rowSeam = Math.Max(1, rows \ 50)
+            Dim colSeam = Math.Max(1, cols \ 50)
+            If top > 0 Then top = Math.Min(maxRows, top + rowSeam)
+            If bottom > 0 Then bottom = Math.Min(maxRows, bottom + rowSeam)
+            If left > 0 Then left = Math.Min(maxCols, left + colSeam)
+            If right > 0 Then right = Math.Min(maxCols, right + colSeam)
+            If top + bottom + left + right = 0 Then Return full
+
+            Return New SKRectI(left * stepPx, top * stepPx,
+                               Math.Min(width, (cols - right) * stepPx), Math.Min(height, (rows - bottom) * stepPx))
         End Function
 
         ''' <summary>Kleinster Tonwert, unterhalb dessen <paramref name="fraction"/> aller gezählten Pixel liegen.</summary>

@@ -8748,9 +8748,6 @@
   <data name="Ver_ndern_um_259e91a8" xml:space="preserve">
     <value>เปลี่ยนเป็นระยะ</value>
   </data>
-  <data name="Um_wie_viele_Bildpunkte_die_vier_Kn_pfe_darunter_f3f8fd19" xml:space="preserve">
-    <value>จำนวนพิกเซลที่ปุ่มสี่ปุ่มด้านล่างใช้เปลี่ยนส่วนที่เลือก</value>
-  </data>
   <data name="Die_Auswahl_rundherum_um_den_Betrag_vergr_ern_610649f0" xml:space="preserve">
     <value>ขยายส่วนที่เลือกรอบด้านตามระยะที่กำหนด</value>
   </data>
@@ -9162,5 +9159,23 @@
   </data>
   <data name="Stellt_die_Gr_e_bei_jeder_nderung_so_ein_dass_ke_9fe6042b" xml:space="preserve">
     <value>ปรับขนาดทุกครั้งที่มีการเปลี่ยนแปลง เพื่อไม่ให้มีมุมว่าง</value>
+  </data>
+  <data name="Sensorrand_entfernen_0dd93d02" xml:space="preserve">
+    <value>ลบขอบเซนเซอร์</value>
+  </data>
+  <data name="Schneidet_die_u_ersten_Pixelreihen_ab_die_der_Se_21684cb8" xml:space="preserve">
+    <value>ตัดแถวพิกเซลด้านนอกสุดที่เซนเซอร์ให้ข้อมูลได้ไม่สะอาดและอาจปรากฏเป็นแถบสีที่ขอบภาพ ควรตัดสินใจตั้งแต่ต้น - หากเปลี่ยนภายหลัง มาสก์และวัตถุที่วางไว้แล้วจะไม่ตรงตำแหน่งพอดีอีกต่อไป</value>
+  </data>
+  <data name="Kante_verfeinern_a28c54d3" xml:space="preserve">
+    <value>ปรับแต่งขอบ</value>
+  </data>
+  <data name="Die_Kante_der_Auswahl_in_einem_Saum_so_breit_wie_1b4910a2" xml:space="preserve">
+    <value>ทำให้ขอบของส่วนที่เลือกไล่ตามภาพภายในแถบที่กว้างเท่าค่าที่ตั้ง สำหรับเส้นผม ขนสัตว์ และกิ่งไม้เล็ก ด้านในและด้านนอกส่วนที่เลือกยังคงเหมือนเดิม</value>
+  </data>
+  <data name="Kante_verfeinert_d716f1e0" xml:space="preserve">
+    <value>ปรับแต่งขอบแล้ว</value>
+  </data>
+  <data name="Um_wie_viele_Bildpunkte_die_Kn_pfe_darunter_die__d9bce2a1" xml:space="preserve">
+    <value>ปุ่มด้านล่างเปลี่ยนส่วนที่เลือกกี่พิกเซล</value>
   </data>
 </root>

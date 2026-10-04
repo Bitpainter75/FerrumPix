@@ -8744,9 +8744,6 @@
   <data name="Ver_ndern_um_259e91a8" xml:space="preserve">
     <value>Ændr med</value>
   </data>
-  <data name="Um_wie_viele_Bildpunkte_die_vier_Kn_pfe_darunter_f3f8fd19" xml:space="preserve">
-    <value>Hvor mange pixel de fire knapper nedenfor ændrer markeringen med</value>
-  </data>
   <data name="Die_Auswahl_rundherum_um_den_Betrag_vergr_ern_610649f0" xml:space="preserve">
     <value>Udvid markeringen hele vejen rundt med værdien</value>
   </data>
@@ -9158,5 +9155,23 @@
   </data>
   <data name="Stellt_die_Gr_e_bei_jeder_nderung_so_ein_dass_ke_9fe6042b" xml:space="preserve">
     <value>Indstiller størrelsen ved hver ændring, så intet hjørne bliver tomt</value>
+  </data>
+  <data name="Sensorrand_entfernen_0dd93d02" xml:space="preserve">
+    <value>Fjern sensorkant</value>
+  </data>
+  <data name="Schneidet_die_u_ersten_Pixelreihen_ab_die_der_Se_21684cb8" xml:space="preserve">
+    <value>Skærer de yderste pixelrækker væk, som sensoren ikke leverer rent, og som kan stå som farvede striber langs billedkanten. Beslut det helst med det samme - skifter du senere, passer allerede satte masker og indsatte objekter ikke længere præcist.</value>
+  </data>
+  <data name="Kante_verfeinern_a28c54d3" xml:space="preserve">
+    <value>Forfin kant</value>
+  </data>
+  <data name="Die_Kante_der_Auswahl_in_einem_Saum_so_breit_wie_1b4910a2" xml:space="preserve">
+    <value>Lad markeringens kant følge billedet i et bånd så bredt som værdien, til hår, pels og fine kviste. Inden for og uden for forbliver markeringen, som den er.</value>
+  </data>
+  <data name="Kante_verfeinert_d716f1e0" xml:space="preserve">
+    <value>Kant forfinet</value>
+  </data>
+  <data name="Um_wie_viele_Bildpunkte_die_Kn_pfe_darunter_die__d9bce2a1" xml:space="preserve">
+    <value>Med hvor mange pixels knapperne nedenfor ændrer markeringen</value>
   </data>
 </root>

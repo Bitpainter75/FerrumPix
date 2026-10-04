@@ -8704,9 +8704,6 @@
   <data name="Ver_ndern_um_259e91a8" xml:space="preserve">
     <value>Modifier de</value>
   </data>
-  <data name="Um_wie_viele_Bildpunkte_die_vier_Kn_pfe_darunter_f3f8fd19" xml:space="preserve">
-    <value>De combien de pixels les quatre boutons ci-dessous modifient la sélection</value>
-  </data>
   <data name="Die_Auswahl_rundherum_um_den_Betrag_vergr_ern_610649f0" xml:space="preserve">
     <value>Étendre la sélection tout autour de la valeur indiquée</value>
   </data>
@@ -9118,5 +9115,23 @@
   </data>
   <data name="Stellt_die_Gr_e_bei_jeder_nderung_so_ein_dass_ke_9fe6042b" xml:space="preserve">
     <value>Ajuste la taille à chaque modification pour qu'aucun coin ne reste vide</value>
+  </data>
+  <data name="Sensorrand_entfernen_0dd93d02" xml:space="preserve">
+    <value>Supprimer la bordure du capteur</value>
+  </data>
+  <data name="Schneidet_die_u_ersten_Pixelreihen_ab_die_der_Se_21684cb8" xml:space="preserve">
+    <value>Rogne les rangées de pixels les plus extérieures que le capteur ne fournit pas proprement et qui peuvent apparaître comme des bandes colorées au bord de l'image. Mieux vaut le décider dès le début - si vous changez plus tard, les masques et objets déjà placés ne s'alignent plus exactement.</value>
+  </data>
+  <data name="Kante_verfeinern_a28c54d3" xml:space="preserve">
+    <value>Affiner le bord</value>
+  </data>
+  <data name="Die_Kante_der_Auswahl_in_einem_Saum_so_breit_wie_1b4910a2" xml:space="preserve">
+    <value>Fait suivre l'image au bord de la sélection dans une bande aussi large que la valeur, pour les cheveux, la fourrure et les brindilles fines. À l'intérieur et à l'extérieur, la sélection reste telle quelle.</value>
+  </data>
+  <data name="Kante_verfeinert_d716f1e0" xml:space="preserve">
+    <value>Bord affiné</value>
+  </data>
+  <data name="Um_wie_viele_Bildpunkte_die_Kn_pfe_darunter_die__d9bce2a1" xml:space="preserve">
+    <value>De combien de pixels les boutons ci-dessous modifient la sélection</value>
   </data>
 </root>

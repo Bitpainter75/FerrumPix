@@ -334,13 +334,14 @@
                                          Minimum="0" Maximum="200" Increment="1"
                                          FormatString="F0" />
             </Grid>
-            <!-- AUSWAHL VERÄNDERN: anders als die weiche Kante ändern diese vier die FORM der Auswahl
-                 selbst, und jeder Klick ist ein eigener Rückgängig-Schritt. Der Betrag gilt für alle
-                 vier, in Bildpunkten (EditorViewModel.ModifySelection). -->
+            <!-- AUSWAHL VERÄNDERN: anders als die weiche Kante ändern diese fünf die FORM der Auswahl
+                 selbst, und jeder Klick ist ein eigener Rückgängig-Schritt. Der Betrag gilt für alle,
+                 in Bildpunkten (EditorViewModel.ModifySelection); beim Verfeinern ist er die Breite
+                 des Saums, in dem die Kante dem Bild folgt. -->
             <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
                 <TextBlock Text="Verändern um" Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}"
-                           ToolTip.Tip="Um wie viele Bildpunkte die vier Knöpfe darunter die Auswahl verändern" />
+                           ToolTip.Tip="Um wie viele Bildpunkte die Knöpfe darunter die Auswahl verändern" />
                 <icons:RoundSlider Grid.Column="1" Minimum="1" Maximum="200"
                                    DefaultValue="10"
                                    Value="{Binding SelectionModifyAmount}" Margin="0,0" />
@@ -349,7 +350,7 @@
                                          Minimum="1" Maximum="200" Increment="1"
                                          FormatString="F0" />
             </Grid>
-            <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" ColumnSpacing="4" RowSpacing="4">
+            <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="4" RowSpacing="4">
                 <Button Grid.Row="0" Grid.Column="0" Classes="ghost" HorizontalAlignment="Stretch"
                         HorizontalContentAlignment="Center" Padding="6,4"
                         IsEnabled="{Binding HasActiveSelection}"
@@ -374,6 +375,12 @@
                         Command="{Binding ModifySelectionCommand}" CommandParameter="Border"
                         Content="Rand"
                         ToolTip.Tip="Aus der Auswahl ein Band entlang ihrer Kante machen, so breit wie der Betrag" />
+                <Button Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" Classes="ghost" HorizontalAlignment="Stretch"
+                        HorizontalContentAlignment="Center" Padding="6,4"
+                        IsEnabled="{Binding HasActiveSelection}"
+                        Command="{Binding ModifySelectionCommand}" CommandParameter="Refine"
+                        Content="Kante verfeinern"
+                        ToolTip.Tip="Die Kante der Auswahl in einem Saum so breit wie der Betrag am Bild entlangführen, für Haare, Fell und feine Zweige. Innen und außen bleibt die Auswahl, wie sie ist." />
             </Grid>
             <Button Classes="ghost"
                     HorizontalAlignment="Stretch"

@@ -8702,9 +8702,6 @@
   <data name="Ver_ndern_um_259e91a8" xml:space="preserve">
     <value>修改量</value>
   </data>
-  <data name="Um_wie_viele_Bildpunkte_die_vier_Kn_pfe_darunter_f3f8fd19" xml:space="preserve">
-    <value>下方四个按钮修改选区的像素数</value>
-  </data>
   <data name="Die_Auswahl_rundherum_um_den_Betrag_vergr_ern_610649f0" xml:space="preserve">
     <value>按设定量向四周扩展选区</value>
   </data>
@@ -9116,5 +9113,23 @@
   </data>
   <data name="Stellt_die_Gr_e_bei_jeder_nderung_so_ein_dass_ke_9fe6042b" xml:space="preserve">
     <value>每次更改时自动调整大小，使四角不留空白</value>
+  </data>
+  <data name="Sensorrand_entfernen_0dd93d02" xml:space="preserve">
+    <value>去除传感器边缘</value>
+  </data>
+  <data name="Schneidet_die_u_ersten_Pixelreihen_ab_die_der_Se_21684cb8" xml:space="preserve">
+    <value>裁掉传感器无法干净输出、可能在图像边缘显示为彩色条纹的最外侧像素行。最好在一开始就决定 - 之后再切换，已设置的蒙版和已插入的对象将不再精确对齐。</value>
+  </data>
+  <data name="Kante_verfeinern_a28c54d3" xml:space="preserve">
+    <value>调整边缘</value>
+  </data>
+  <data name="Die_Kante_der_Auswahl_in_einem_Saum_so_breit_wie_1b4910a2" xml:space="preserve">
+    <value>在与数值同宽的条带内让选区边缘沿图像走，适用于头发、毛发和细枝。内部和外部的选区保持不变。</value>
+  </data>
+  <data name="Kante_verfeinert_d716f1e0" xml:space="preserve">
+    <value>已调整边缘</value>
+  </data>
+  <data name="Um_wie_viele_Bildpunkte_die_Kn_pfe_darunter_die__d9bce2a1" xml:space="preserve">
+    <value>下方按钮将选区改变多少像素</value>
   </data>
 </root>

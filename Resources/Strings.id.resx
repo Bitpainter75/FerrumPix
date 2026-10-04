@@ -8748,9 +8748,6 @@
   <data name="Ver_ndern_um_259e91a8" xml:space="preserve">
     <value>Ubah sebesar</value>
   </data>
-  <data name="Um_wie_viele_Bildpunkte_die_vier_Kn_pfe_darunter_f3f8fd19" xml:space="preserve">
-    <value>Berapa piksel empat tombol di bawah mengubah pilihan</value>
-  </data>
   <data name="Die_Auswahl_rundherum_um_den_Betrag_vergr_ern_610649f0" xml:space="preserve">
     <value>Perluas pilihan ke segala arah sebesar nilai tersebut</value>
   </data>
@@ -9162,5 +9159,23 @@
   </data>
   <data name="Stellt_die_Gr_e_bei_jeder_nderung_so_ein_dass_ke_9fe6042b" xml:space="preserve">
     <value>Menyesuaikan ukuran pada setiap perubahan agar tidak ada sudut yang kosong</value>
+  </data>
+  <data name="Sensorrand_entfernen_0dd93d02" xml:space="preserve">
+    <value>Hapus tepi sensor</value>
+  </data>
+  <data name="Schneidet_die_u_ersten_Pixelreihen_ab_die_der_Se_21684cb8" xml:space="preserve">
+    <value>Memotong baris piksel terluar yang tidak dihasilkan sensor dengan bersih dan dapat tampak sebagai garis berwarna di tepi gambar. Sebaiknya diputuskan sejak awal - jika diubah nanti, masker dan objek yang sudah dipasang tidak lagi pas dengan tepat.</value>
+  </data>
+  <data name="Kante_verfeinern_a28c54d3" xml:space="preserve">
+    <value>Perhalus tepi</value>
+  </data>
+  <data name="Die_Kante_der_Auswahl_in_einem_Saum_so_breit_wie_1b4910a2" xml:space="preserve">
+    <value>Membuat tepi seleksi mengikuti gambar dalam pita selebar nilainya, untuk rambut, bulu, dan ranting halus. Di dalam dan di luar, seleksi tetap seperti semula.</value>
+  </data>
+  <data name="Kante_verfeinert_d716f1e0" xml:space="preserve">
+    <value>Tepi diperhalus</value>
+  </data>
+  <data name="Um_wie_viele_Bildpunkte_die_Kn_pfe_darunter_die__d9bce2a1" xml:space="preserve">
+    <value>Berapa piksel tombol di bawah mengubah seleksi</value>
   </data>
 </root>

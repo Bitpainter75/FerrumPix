@@ -8744,9 +8744,6 @@
   <data name="Ver_ndern_um_259e91a8" xml:space="preserve">
     <value>Změnit o</value>
   </data>
-  <data name="Um_wie_viele_Bildpunkte_die_vier_Kn_pfe_darunter_f3f8fd19" xml:space="preserve">
-    <value>O kolik pixelů čtyři tlačítka níže změní výběr</value>
-  </data>
   <data name="Die_Auswahl_rundherum_um_den_Betrag_vergr_ern_610649f0" xml:space="preserve">
     <value>Rozšířit výběr po celém obvodu o zadanou hodnotu</value>
   </data>
@@ -9158,5 +9155,23 @@
   </data>
   <data name="Stellt_die_Gr_e_bei_jeder_nderung_so_ein_dass_ke_9fe6042b" xml:space="preserve">
     <value>Při každé změně nastaví velikost tak, aby nezůstal prázdný žádný roh</value>
+  </data>
+  <data name="Sensorrand_entfernen_0dd93d02" xml:space="preserve">
+    <value>Odstranit okraj snímače</value>
+  </data>
+  <data name="Schneidet_die_u_ersten_Pixelreihen_ab_die_der_Se_21684cb8" xml:space="preserve">
+    <value>Ořízne krajní řady pixelů, které snímač nedodává čistě a které se mohou objevit jako barevné pruhy na okraji snímku. Nejlépe rozhodnout hned na začátku - při pozdější změně už nastavené masky a vložené objekty přesně nesedí.</value>
+  </data>
+  <data name="Kante_verfeinern_a28c54d3" xml:space="preserve">
+    <value>Zpřesnit okraj</value>
+  </data>
+  <data name="Die_Kante_der_Auswahl_in_einem_Saum_so_breit_wie_1b4910a2" xml:space="preserve">
+    <value>Nechá okraj výběru sledovat obraz v pásu širokém jako hodnota, pro vlasy, srst a jemné větvičky. Uvnitř i vně zůstane výběr beze změny.</value>
+  </data>
+  <data name="Kante_verfeinert_d716f1e0" xml:space="preserve">
+    <value>Okraj zpřesněn</value>
+  </data>
+  <data name="Um_wie_viele_Bildpunkte_die_Kn_pfe_darunter_die__d9bce2a1" xml:space="preserve">
+    <value>O kolik pixelů tlačítka níže mění výběr</value>
   </data>
 </root>

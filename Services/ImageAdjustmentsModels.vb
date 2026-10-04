@@ -463,6 +463,18 @@ Namespace Services
         ''' Schalter und kein Regler.</summary>
         Public Property RawHighlightRecovery As Boolean = False
 
+        ''' <summary>Den Sensorrand einer RAW abschneiden, so wie Adobe es tut: die aeussersten
+        ''' Spalten und Zeilen, die das Demosaic ohne Nachbarn nicht sauber rechnen kann und die
+        ''' als farbige Streifen am Rand stehen. Wie breit der Rand ist, steht je Kamera und
+        ''' Bildgroesse in Resources/CameraSensorCrops.json; fuer eine Kamera ohne Eintrag tut der
+        ''' Schalter nichts.
+        '''
+        ''' Gehoert in die Objektivkorrektur, weil es wie sie im Decode sitzt und dem BILD gehoert.
+        ''' AUS ist die Vorgabe: der Beschnitt verschiebt das Koordinatensystem um den linken und
+        ''' oberen Rand, und Zuschnitt, Masken und Objekte eines Rezepts, das ohne ihn entstand,
+        ''' saessen um diese Pixel daneben.</summary>
+        Public Property RawSensorEdgeCrop As Boolean = False
+
         Public Property Vignette As Single = 0
         Public Property VignetteTransition As Single = 55
         Public Property VignetteRoundness As Single = 0
@@ -872,7 +884,7 @@ Namespace Services
         Private Shared ReadOnly StructuralPropertyNames As New HashSet(Of String)(StringComparer.Ordinal) From {
             "SourceWidthPixels", "SourceHeightPixels", "RecipeCoordinateVersion",
             "WhiteBalanceAnchorX", "WhiteBalanceAnchorY", "WhiteBalanceModel",
-            "RawHighlightRecovery",
+            "RawHighlightRecovery", "RawSensorEdgeCrop",
             "LensDistortion", "LensTca", "LensVignetting", "LensModel",
             "LensDistortionAmount", "LensTcaAmount", "LensVignettingAmount", "LensTcaRed", "LensTcaBlue",
             "WorkingImageVersion", "WorkingImageHasTransparency",
@@ -1135,6 +1147,7 @@ Namespace Services
                 .WhiteBalanceKelvin = WhiteBalanceKelvin,
                 .WhiteBalanceKelvinTint = WhiteBalanceKelvinTint,
                 .RawHighlightRecovery = RawHighlightRecovery,
+                .RawSensorEdgeCrop = RawSensorEdgeCrop,
                 .LensDistortion = LensDistortion,
                 .LensTca = LensTca,
                 .LensVignetting = LensVignetting,

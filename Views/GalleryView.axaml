@@ -1333,6 +1333,7 @@
                                           <MenuItem Name="FolderTreeCutMenuItem" Header="Ausschneiden" Click="OnContextCutFolder"/>
                                           <MenuItem Name="FolderTreePasteMenuItem" Header="Einfügen" Click="OnContextPasteFolder"/>
                                           <MenuItem Header="Pfad kopieren" Click="OnContextCopyFolderPath"/>
+                                          <MenuItem Header="Aktualisieren" Click="OnContextRefreshFolder"/>
                                           <Separator/>
                                           <MenuItem Name="FolderTreeDeleteMenuItem" Header="Löschen" Click="OnContextDeleteFolder"/>
                                       </ContextMenu>

@@ -4491,6 +4491,21 @@ Namespace ViewModels
             End If
         End Sub
 
+        ''' <summary>"Aktualisieren" im Kontextmenue des Ordnerbaums: liest die Unterordner des
+        ''' angeklickten Ordners neu, samt allem, was darunter aufgeklappt ist. Zeigt die Galerie
+        ''' gerade diesen Ordner, geht sie denselben Weg wie F5. Ein anderer Ordner wird dabei
+        ''' nicht geoeffnet: das Menue wirkt auf den Knoten unter dem Rechtsklick, nicht auf die
+        ''' Ansicht.</summary>
+        Public Sub RefreshFolder(folderPath As String)
+            If String.IsNullOrEmpty(folderPath) Then Return
+            Dim node = FindLoadedFolderNode(FolderTree, folderPath)
+            node?.RefreshSubtree()
+            If Not _isVirtualFolder AndAlso
+               String.Equals(NormalizePath(_currentFolder), NormalizePath(folderPath), PathIdentity.Comparison) Then
+                LoadCurrentFolder()
+            End If
+        End Sub
+
         ''' Muss das Laden abwarten: die Auswahl greift auf Items zu, die erst danach stehen.
         Public Async Function OpenFolderForImage(imagePath As String) As Task
             If String.IsNullOrEmpty(imagePath) OrElse Not File.Exists(imagePath) Then Return

@@ -2905,6 +2905,12 @@ Namespace Views
             GetVm()?.CreateFolderIn(node.FullPath)
         End Sub
 
+        Public Sub OnContextRefreshFolder(sender As Object, e As RoutedEventArgs)
+            Dim node = GetFolderTreeContextNode()
+            If node Is Nothing Then Return
+            GetVm()?.RefreshFolder(node.FullPath)
+        End Sub
+
         Public Sub OnContextDeleteFolder(sender As Object, e As RoutedEventArgs)
             Dim node = GetFolderTreeContextNode()
             If node Is Nothing Then Return

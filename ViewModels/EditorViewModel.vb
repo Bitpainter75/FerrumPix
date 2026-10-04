@@ -4531,6 +4531,7 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(CurrentFileName))
                 _mainVm?.RefreshWindowTitle()
                 Me.RaisePropertyChanged(NameOf(IsRawDeveloped))
+                Me.RaisePropertyChanged(NameOf(RawSensorEdgeCropAvailable))
                 Me.RaisePropertyChanged(NameOf(RawFooterTooltip))
                 Me.RaisePropertyChanged(NameOf(IsCurrentImageRaw))
                 Me.RaisePropertyChanged(NameOf(IsCurrentImagePsd))
@@ -6437,6 +6438,8 @@ Namespace ViewModels
         ''' Lichter aus den Rohdaten zurueckholen. Wie die Objektivkorrektur eine Angabe, die den
         ''' DECODE aendert - deshalb steht sie hier bei ihr und nicht bei den Reglern.
         Private _rawHighlightRecovery As Boolean = False
+        ''' Den Sensorrand abschneiden (ImageAdjustments.RawSensorEdgeCrop). Ebenfalls im Decode.
+        Private _rawSensorEdgeCrop As Boolean = False
 
         Private _lensDistortion As Boolean? = Nothing
         Private _lensTca As Boolean? = Nothing
@@ -6861,7 +6864,8 @@ Namespace ViewModels
                 .VignettingStrength = _lensVignettingAmount / 100.0,
                 .LensModel = _lensModel,
                 .ChromaticAberrationRed = _lensTcaRed,
-                .ChromaticAberrationBlue = _lensTcaBlue}
+                .ChromaticAberrationBlue = _lensTcaBlue,
+                .CropSensorEdge = _rawSensorEdgeCrop}
         End Function
 
         Private Shared Function ReleaseLensSwitch(feld As Boolean?) As Boolean
@@ -6888,7 +6892,7 @@ Namespace ViewModels
             Dim hatteZuordnung = Not String.IsNullOrWhiteSpace(LensAssignment)
             Dim hatteSchalter = _lensDistortion.HasValue OrElse _lensTca.HasValue OrElse _lensVignetting.HasValue OrElse
                                 _lensDistortionAmount <> 100 OrElse _lensTcaAmount <> 100 OrElse _lensVignettingAmount <> 100 OrElse
-                                _lensTcaRed <> 0 OrElse _lensTcaBlue <> 0
+                                _lensTcaRed <> 0 OrElse _lensTcaBlue <> 0 OrElse _rawSensorEdgeCrop
             If Not hatteZuordnung AndAlso Not hatteSchalter Then Return
             CaptureUndoState("Objektivkorrektur")
             _lensDistortion = Nothing
@@ -6899,6 +6903,7 @@ Namespace ViewModels
             _lensVignettingAmount = 100
             _lensTcaRed = 0
             _lensTcaBlue = 0
+            _rawSensorEdgeCrop = False
             _lensModel = ""
             If hatteZuordnung AndAlso Not String.IsNullOrWhiteSpace(_objektivExifName) Then
                 LensDataService.SetAssignment(_objektivExifName, "")
@@ -6936,6 +6941,34 @@ Namespace ViewModels
                 ' ein blosses Nachrendern zeigte weiter das alte Bild.
                 RebuildWorkingImageForLens()
             End Set
+        End Property
+
+        ''' <summary>Den Sensorrand einer RAW abschneiden, wie Adobe es tut. Steht bei der
+        ''' Objektivkorrektur, weil es wie sie im Decode sitzt; ab Werk aus. Das Umschalten kostet
+        ''' keinen neuen Decode, geschnitten wird hinter dem Zwischenspeicher.</summary>
+        Public Property RawSensorEdgeCropEnabled As Boolean
+            Get
+                Return _rawSensorEdgeCrop
+            End Get
+            Set(value As Boolean)
+                If _rawSensorEdgeCrop = value Then Return
+                CaptureUndoState(NameOf(RawSensorEdgeCropEnabled))
+                _rawSensorEdgeCrop = value
+                Me.RaisePropertyChanged(NameOf(RawSensorEdgeCropEnabled))
+                RaiseResetButtonStateChanged()
+                RebuildWorkingImageForLens()
+            End Set
+        End Property
+
+        ''' <summary>Ist fuer Kamera und Bildgroesse des aktuellen Bildes ein Sensorrand bekannt?
+        ''' Nur dann wird der Schalter angeboten; fuer eine Kamera ohne Eintrag taete er nichts.
+        ''' Wie bei der Lichterrettung zaehlt, ob LibRaw die Datei WIRKLICH entwickelt hat
+        ''' (IsRawDeveloped): auf der eingebetteten Vorschau gibt es keinen Sensorrand.</summary>
+        Public ReadOnly Property RawSensorEdgeCropAvailable As Boolean
+            Get
+                If Not IsRawDeveloped Then Return False
+                Return RawDecodeService.SensorEdgeFor(RenderSourcePath).HasValue
+            End Get
         End Property
 
         Private Sub RebuildWorkingImageForLens()
@@ -7005,7 +7038,8 @@ Namespace ViewModels
                            NameOf(LensAssignment), NameOf(LensDistortionEnabled),
                            NameOf(LensTcaEnabled), NameOf(LensVignettingEnabled),
                            NameOf(LensDistortionAmount), NameOf(LensTcaAmount),
-                           NameOf(LensVignettingAmount), NameOf(LensTcaRed), NameOf(LensTcaBlue)}
+                           NameOf(LensVignettingAmount), NameOf(LensTcaRed), NameOf(LensTcaBlue),
+                           NameOf(RawSensorEdgeCropEnabled), NameOf(RawSensorEdgeCropAvailable)}
                 Me.RaisePropertyChanged(n)
             Next
         End Sub
@@ -15026,6 +15060,7 @@ Namespace ViewModels
         ''' wenn das Arbeitsbild gebackenen Inhalt bekommt oder verliert.</summary>
         Private Sub RaiseRawStateChanged()
             Me.RaisePropertyChanged(NameOf(IsRawDeveloped))
+            Me.RaisePropertyChanged(NameOf(RawSensorEdgeCropAvailable))
             Me.RaisePropertyChanged(NameOf(RawFooterTooltip))
             Me.RaisePropertyChanged(NameOf(LensCorrectionSupported))
             Me.RaisePropertyChanged(NameOf(LensCorrectionBlockedByBakedContent))
@@ -17923,6 +17958,7 @@ Namespace ViewModels
                 ' (System-libraw, voller Sensor-Decode) oder nur die eingebettete JPEG-Vorschau.
                 StatusText = $"{CInt(CurrentImage.Size.Width)} × {CInt(CurrentImage.Size.Height)}  {mp:F1} MP  •  {sizeStr}{RawStatusSuffix()}"
                 Me.RaisePropertyChanged(NameOf(IsRawDeveloped))
+                Me.RaisePropertyChanged(NameOf(RawSensorEdgeCropAvailable))
                 Me.RaisePropertyChanged(NameOf(RawFooterTooltip))
                 ' Erst hier steht fest, ob wirklich entwickelt wurde - die Fensterleiste faerbt den
                 ' Dateinamen danach.
@@ -18302,6 +18338,7 @@ Namespace ViewModels
                 ' (System-libraw, voller Sensor-Decode) oder nur die eingebettete JPEG-Vorschau.
                 StatusText = $"{CInt(CurrentImage.Size.Width)} × {CInt(CurrentImage.Size.Height)}  {mp:F1} MP  •  {sizeStr}{RawStatusSuffix()}"
                 Me.RaisePropertyChanged(NameOf(IsRawDeveloped))
+                Me.RaisePropertyChanged(NameOf(RawSensorEdgeCropAvailable))
                 Me.RaisePropertyChanged(NameOf(RawFooterTooltip))
                 ' Erst hier steht fest, ob wirklich entwickelt wurde - die Fensterleiste faerbt den
                 ' Dateinamen danach.
@@ -21683,6 +21720,7 @@ Namespace ViewModels
                                                     Optional includeEditorOverlayAnnotations As Boolean = False) As ImageAdjustments
             Dim adj = New ImageAdjustments With {
                 .RawHighlightRecovery = _rawHighlightRecovery,
+                .RawSensorEdgeCrop = _rawSensorEdgeCrop,
                 .LensDistortion = _lensDistortion,
                 .LensTca = _lensTca,
                 .LensVignetting = _lensVignetting,
@@ -22348,6 +22386,7 @@ Namespace ViewModels
                 ' heissen wie das Bedienelement, an dem man war. Ein eigener Wortlaut braeuchte
                 ' ausserdem einen eigenen Schluessel in allen Sprachen.
                 Case NameOf(RawHighlightRecoveryEnabled) : Return LocalizationService.T("Lichter aus den Rohdaten holen")
+                Case NameOf(RawSensorEdgeCropEnabled) : Return LocalizationService.T("Sensorrand entfernen")
                 Case NameOf(ShadowsLevel) : Return LocalizationService.T("Tiefen")
                 Case NameOf(Whites) : Return LocalizationService.T("Weiß")
                 Case NameOf(Blacks) : Return LocalizationService.T("Schwarz")
@@ -23134,6 +23173,7 @@ Namespace ViewModels
                               _lensTcaAmount <> adj.LensTcaAmount OrElse
                               _lensTcaRed <> adj.LensTcaRed OrElse _lensTcaBlue <> adj.LensTcaBlue OrElse
                               _lensVignettingAmount <> adj.LensVignettingAmount OrElse
+                              _rawSensorEdgeCrop <> adj.RawSensorEdgeCrop OrElse
                               Not String.Equals(_lensModel, If(adj.LensModel, ""), StringComparison.Ordinal)
             ' Die Objektliste wird hier geleert und Objekt fuer Objekt neu gefuellt. Ohne diese
             ' Klammer baut das Ebenenpanel bei JEDEM einzelnen Objekt komplett neu auf - bei 32
@@ -23158,6 +23198,7 @@ Namespace ViewModels
             _temperature = adj.Temperature
             _tint = adj.Tint
             _rawHighlightRecovery = adj.RawHighlightRecovery
+            _rawSensorEdgeCrop = adj.RawSensorEdgeCrop
             _lensDistortion = adj.LensDistortion
             _lensTca = adj.LensTca
             _lensVignetting = adj.LensVignetting
@@ -23776,6 +23817,7 @@ Namespace ViewModels
             ' Namen aus den Aufnahmedaten SCHLAEGT, fand der Abgleich danach fuer gar kein Bild mehr
             ' etwas.
             _rawHighlightRecovery = False
+            _rawSensorEdgeCrop = False
             _lensDistortion = Nothing
             _lensTca = Nothing
             _lensVignetting = Nothing
@@ -28271,6 +28313,13 @@ Namespace ViewModels
             ' Zurueck auf "wie in den Einstellungen vorgegeben" - nicht auf hart AUS. Jedes Feld,
             ' das hier gesetzt wird, braucht sein Gegenstueck; sonst bliebe eine Abschaltung nach
             ' dem Zuruecksetzen stehen.
+            ' Die Objektivwahl und der Sensorrand sitzen im Decode, wie die Lichterrettung: aendert
+            ' sich hier etwas daran, muss neu entwickelt werden, sonst sprangen die Haken zurueck
+            ' und das Bild blieb korrigiert bzw. beschnitten.
+            Dim decodeChanged = _lensDistortion.HasValue OrElse _lensTca.HasValue OrElse _lensVignetting.HasValue OrElse
+                                _lensDistortionAmount <> 100 OrElse _lensTcaAmount <> 100 OrElse _lensVignettingAmount <> 100 OrElse
+                                _lensTcaRed <> 0 OrElse _lensTcaBlue <> 0 OrElse _rawSensorEdgeCrop OrElse
+                                Not String.IsNullOrEmpty(_lensModel)
             _lensDistortion = Nothing
             _lensTca = Nothing
             _lensVignetting = Nothing
@@ -28279,6 +28328,7 @@ Namespace ViewModels
             _lensVignettingAmount = 100
             _lensTcaRed = 0
             _lensTcaBlue = 0
+            _rawSensorEdgeCrop = False
             _lensModel = ""
             _vignette = 0
             _vignetteTransition = 55
@@ -28293,7 +28343,12 @@ Namespace ViewModels
             _grainColor = 0
             RaiseEffectsPropertiesChanged()
             RaiseResetButtonStateChanged()
-            SchedulePreviewUpdate()
+            If decodeChanged Then
+                RefreshLensCorrection()
+                RebuildWorkingImageForLens()
+            Else
+                SchedulePreviewUpdate()
+            End If
         End Sub
 
         ''' <summary>Setzt NUR die Regler der Filter-Gruppe zurück (Preset und Stärke), so wie jeder
@@ -29599,6 +29654,7 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(CurrentFileName))
             _mainVm?.RefreshWindowTitle()
                 Me.RaisePropertyChanged(NameOf(IsRawDeveloped))
+                Me.RaisePropertyChanged(NameOf(RawSensorEdgeCropAvailable))
                 Me.RaisePropertyChanged(NameOf(RawFooterTooltip))
             Me.RaisePropertyChanged(NameOf(StatusText))
         End Sub

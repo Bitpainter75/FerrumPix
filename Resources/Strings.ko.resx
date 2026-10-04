@@ -8748,9 +8748,6 @@
   <data name="Ver_ndern_um_259e91a8" xml:space="preserve">
     <value>변경 폭</value>
   </data>
-  <data name="Um_wie_viele_Bildpunkte_die_vier_Kn_pfe_darunter_f3f8fd19" xml:space="preserve">
-    <value>아래 네 버튼이 선택 영역을 바꾸는 픽셀 수</value>
-  </data>
   <data name="Die_Auswahl_rundherum_um_den_Betrag_vergr_ern_610649f0" xml:space="preserve">
     <value>선택 영역을 사방으로 지정한 만큼 확장합니다</value>
   </data>
@@ -9162,5 +9159,23 @@
   </data>
   <data name="Stellt_die_Gr_e_bei_jeder_nderung_so_ein_dass_ke_9fe6042b" xml:space="preserve">
     <value>변경할 때마다 크기를 조정해 빈 모서리가 남지 않게 합니다</value>
+  </data>
+  <data name="Sensorrand_entfernen_0dd93d02" xml:space="preserve">
+    <value>센서 가장자리 제거</value>
+  </data>
+  <data name="Schneidet_die_u_ersten_Pixelreihen_ab_die_der_Se_21684cb8" xml:space="preserve">
+    <value>센서가 깨끗하게 전달하지 못해 이미지 가장자리에 색 줄무늬로 나타날 수 있는 가장 바깥쪽 픽셀 줄을 잘라냅니다. 처음에 정하는 것이 가장 좋습니다 - 나중에 바꾸면 이미 설정한 마스크와 삽입한 개체가 더 이상 정확히 맞지 않습니다.</value>
+  </data>
+  <data name="Kante_verfeinern_a28c54d3" xml:space="preserve">
+    <value>가장자리 다듬기</value>
+  </data>
+  <data name="Die_Kante_der_Auswahl_in_einem_Saum_so_breit_wie_1b4910a2" xml:space="preserve">
+    <value>값만큼 넓은 띠 안에서 선택 영역의 가장자리가 이미지를 따라가게 합니다. 머리카락, 털, 가는 가지에 적합합니다. 안쪽과 바깥쪽 선택 영역은 그대로입니다.</value>
+  </data>
+  <data name="Kante_verfeinert_d716f1e0" xml:space="preserve">
+    <value>가장자리 다듬음</value>
+  </data>
+  <data name="Um_wie_viele_Bildpunkte_die_Kn_pfe_darunter_die__d9bce2a1" xml:space="preserve">
+    <value>아래 버튼이 선택 영역을 몇 픽셀 바꾸는지</value>
   </data>
 </root>

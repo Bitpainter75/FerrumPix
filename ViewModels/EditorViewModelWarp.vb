@@ -466,17 +466,29 @@ Namespace ViewModels
 
             ' Der Zielpunkt in der Stufengroesse. Er kommt aus dem ANZEIGE-Prozent, das dieselbe
             ' Bezugsgroesse hat wie die Ausgabe von PerspectiveCornerValues.
-            Dim targetX = xPercent / 100.0 * previousStep.Width
-            Dim targetY = yPercent / 100.0 * previousStep.Height
+            Dim cursorX = xPercent / 100.0 * previousStep.Width
+            Dim cursorY = yPercent / 100.0 * previousStep.Height
+            Dim i2 = _perspectiveCornerDrag
+
+            ' Seitenverhaeltnis und Groesse wirken NACH der Kippung als Streckung um die Bildmitte
+            ' (ImageGeometryMapper.WarpMatrix), und die angezeigte Ecke traegt sie mit. Der Versatz
+            ' gilt davor; der Zeiger wird deshalb erst durch die Umkehrung der Streckung geschickt.
+            ' Ohne das sass der Anfasser neben dem Zeiger, sobald "Groesse" nicht 0 war.
+            Dim sv = _perspectiveAspect / 100.0, gr = _perspectiveScale / 100.0
+            Dim sxF = (1.0 + sv * 0.5) * (1.0 + gr * 0.5)
+            Dim syF = (1.0 - sv * 0.5) * (1.0 + gr * 0.5)
+            If Math.Abs(sxF) < 0.0001 OrElse Math.Abs(syF) < 0.0001 Then Return
+            Dim centerX = previousStep.Width / 2.0, centerY = previousStep.Height / 2.0
+            Dim targetX = centerX + (cursorX - centerX) / sxF
+            Dim targetY = centerY + (cursorY - centerY) / syF
 
             ' Wo die Ecke OHNE ihren eigenen Versatz laege (Regler und die anderen drei Ecken
             ' bleiben stehen) - die Differenz dazu ist der neue Versatz.
             Dim ohne = CType(_perspectiveCorners.Clone(), Double())
-            ohne(_perspectiveCornerDrag * 2) = 0
-            ohne(_perspectiveCornerDrag * 2 + 1) = 0
+            ohne(i2 * 2) = 0
+            ohne(i2 * 2 + 1) = 0
             Dim basis = ImageGeometryMapper.WarpCorners(previousStep.Width, previousStep.Height,
                                                              _perspectiveHorizontal, _perspectiveVertical, ohne)
-            Dim i2 = _perspectiveCornerDrag
             Dim neuX = (targetX - basis(i2).X) / previousStep.Width * 100.0
             Dim neuY = (targetY - basis(i2).Y) / previousStep.Height * 100.0
 
@@ -494,8 +506,19 @@ Namespace ViewModels
             SchedulePreviewUpdate()
         End Sub
 
+        ''' <summary>Ende des Zugs an einer Ecke. Erst JETZT stellt "Automatisch fuellen" die Groesse
+        ''' nach (vorher lief der Zug ganz an der Nachfuehrung vorbei, und der Haken tat beim Ziehen
+        ''' der Ecken nichts).
+        '''
+        ''' Nicht waehrend des Zugs, und das ist keine Bequemlichkeit: gefuellt ist erst, wenn das
+        ''' Bild so weit herangeholt ist, dass jede Bildecke auf oder ausserhalb des Rahmens liegt.
+        ''' Eine Ecke, die nach innen gezogen wird, kann dann nie unter dem Zeiger stehen - bei jedem
+        ''' Zug sprang der Anfasser nach aussen, und die Ecke war nicht zu fuehren. So folgt sie dem
+        ''' Zeiger, und beim Loslassen fuellt das Bild den Rahmen.</summary>
         Public Sub EndPerspectiveCornerDrag()
+            If _perspectiveCornerDrag < 0 Then Return
             _perspectiveCornerDrag = -1
+            ApplyPerspectiveAutoFill()
         End Sub
 
         ' ── Gitterverzerrung ────────────────────────────────────────────────────

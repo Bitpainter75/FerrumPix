@@ -591,7 +591,7 @@ Namespace Services
                         decoded = DecodeCore(path, baseEv, lens, useHalfSize:=True, recoverHighlights:=recoverHighlights)
                     End SyncLock
                 End If
-                Return WithDistortion(decoded, lens)
+                Return WithDistortion(WithSensorEdgeCrop(decoded, path, lensChoice, halfSize:=True), lens)
             Catch
                 Return Nothing
             End Try
@@ -615,6 +615,9 @@ Namespace Services
                 Dim objKey = LensKey(lens)
                 Dim demosaic = ConfiguredDemosaic()
                 Dim unclip = ConfiguredHighlightUnclip()
+                ' Der Sensorrand wird AUSSERHALB der Sperre abgeschnitten: das Nachschlagen
+                ' oeffnet die Datei ueber LibRaw und nimmt dabei gegebenenfalls _nativeLock.
+                Dim hit As SKBitmap = Nothing
                 SyncLock _cacheLock
                     If _cachedBitmap IsNot Nothing AndAlso
                        String.Equals(_cachedPath, path, StringComparison.Ordinal) AndAlso
@@ -625,9 +628,10 @@ Namespace Services
                        _cachedHighlightRecovery = recoverHighlights AndAlso
                        _cachedHighlightKnee = knee AndAlso
                        String.Equals(_cachedObjektiv, objKey, StringComparison.Ordinal) Then
-                        Return WithDistortion(_cachedBitmap.Copy(), lens)
+                        hit = _cachedBitmap.Copy()
                     End If
                 End SyncLock
+                If hit IsNot Nothing Then Return WithDistortion(WithSensorEdgeCrop(hit, path, lensChoice), lens)
 
                 ' Ohne reentrante libraw laufen die nativen Aufrufe nacheinander - die
                 ' Thumbnail-Erzeugung ruft aus mehreren Threads hier herein (Parallel.For).
@@ -652,11 +656,110 @@ Namespace Services
                     _cachedHighlightRecovery = recoverHighlights
                     _cachedHighlightKnee = knee
                     _cachedWriteTimeUtc = writeTime
-                    Return WithDistortion(_cachedBitmap.Copy(), lens)
+                    hit = _cachedBitmap.Copy()
                 End SyncLock
+                Return WithDistortion(WithSensorEdgeCrop(hit, path, lensChoice), lens)
             Catch
                 Return Nothing
             End Try
+        End Function
+
+        Private Shared ReadOnly _sensorEdgeLock As New Object()
+        Private Shared _sensorEdgePath As String
+        Private Shared _sensorEdgeWriteTime As DateTime
+        Private Shared _sensorEdge As (Left As Integer, Top As Integer, Right As Integer, Bottom As Integer)?
+
+        ''' <summary>Der Sensorrand dieser Datei in der GEDREHTEN Lage, so wie der Decode das Bild
+        ''' ausgibt, oder Nothing, wenn fuer Kamera und Bildgroesse nichts bekannt ist.
+        '''
+        ''' Die Tabelle zaehlt in der Lage des Sensors. Umgerechnet wird wie in LibRaws Ausgabe
+        ''' (flip_index): Bit 4 vertauscht die Achsen, Bit 2 kehrt die Zeilen um, Bit 1 die
+        ''' Spalten. Ein Bild mit nicht quadratischen Bildpunkten wird gestreckt; dort stimmen die
+        ''' Pixel nicht mehr, und es gibt keinen Beschnitt.
+        '''
+        ''' Nur open_file, kein Decode; das Ergebnis der letzten Datei wird gemerkt, weil jeder
+        ''' Treffer im Zwischenspeicher hier vorbeikommt.</summary>
+        Public Shared Function SensorEdgeFor(path As String) As (Left As Integer, Top As Integer, Right As Integer, Bottom As Integer)?
+            If String.IsNullOrWhiteSpace(path) Then Return Nothing
+            Dim writeTime As DateTime
+            Try
+                writeTime = File.GetLastWriteTimeUtc(path)
+            Catch
+                Return Nothing
+            End Try
+            SyncLock _sensorEdgeLock
+                If String.Equals(_sensorEdgePath, path, StringComparison.Ordinal) AndAlso _sensorEdgeWriteTime = writeTime Then
+                    Return _sensorEdge
+                End If
+            End SyncLock
+
+            Dim result As (Left As Integer, Top As Integer, Right As Integer, Bottom As Integer)? = Nothing
+            Dim facts = ReadFileMetadata(path)
+            If facts IsNot Nothing AndAlso facts.Flip >= 0 Then
+                Dim squarePixels = (facts.OrientedWidth = facts.Width AndAlso facts.OrientedHeight = facts.Height) OrElse
+                                   (facts.OrientedWidth = facts.Height AndAlso facts.OrientedHeight = facts.Width)
+                Dim sensor = If(squarePixels,
+                                CameraSensorCropTable.Lookup(facts.NormalizedMake, facts.NormalizedModel, facts.Width, facts.Height),
+                                Nothing)
+                If sensor.HasValue Then
+                    Dim s = sensor.Value
+                    ' Zeilen (oben, unten) und Spalten (links, rechts) des Sensors, gespiegelt wie
+                    ' die Ausgabe.
+                    Dim rows = If((facts.Flip And 2) <> 0, (First:=s.Bottom, Last:=s.Top), (First:=s.Top, Last:=s.Bottom))
+                    Dim cols = If((facts.Flip And 1) <> 0, (First:=s.Right, Last:=s.Left), (First:=s.Left, Last:=s.Right))
+                    If (facts.Flip And 4) <> 0 Then
+                        result = (rows.First, cols.First, rows.Last, cols.Last)
+                    Else
+                        result = (cols.First, rows.First, cols.Last, rows.Last)
+                    End If
+                End If
+            End If
+
+            SyncLock _sensorEdgeLock
+                _sensorEdgePath = path
+                _sensorEdgeWriteTime = writeTime
+                _sensorEdge = result
+            End SyncLock
+            Return result
+        End Function
+
+        ''' <summary>Schneidet den Sensorrand ab, wenn die Wahl es verlangt und die Kamera bekannt
+        ''' ist. Laeuft HINTER dem Zwischenspeicher und VOR der Verzeichnung: der Zwischenspeicher
+        ''' haelt das volle Bild, das Umschalten kostet also keinen neuen Decode, und die
+        ''' Verzeichnung rechnet um die Mitte des beschnittenen Bildes, wie bei Adobe.
+        '''
+        ''' Eine beschnittene LibRaw-Entwicklung ist Pixel fuer Pixel der passende Ausschnitt der
+        ''' vollen (gemessen an der D7000, auch bei ungeradem Versatz), deshalb genuegt es, nach
+        ''' dem Decode zu schneiden, statt LibRaws cropbox zu setzen.
+        '''
+        ''' Bei halber Kantenlaenge (Kachel) wird der Rand halbiert und aufgerundet; ein Pixel mehr
+        ''' in einer Vorschau ist besser als ein Rest des Streifens. Besitz geht an den Aufrufer;
+        ''' das uebergebene Bild wird verbraucht.</summary>
+        Private Shared Function WithSensorEdgeCrop(image As SKBitmap, path As String,
+                                                   wahl As LensDataService.Wahl,
+                                                   Optional halfSize As Boolean = False) As SKBitmap
+            If image Is Nothing OrElse wahl Is Nothing OrElse Not wahl.CropSensorEdge Then Return image
+            Dim edge = SensorEdgeFor(path)
+            If Not edge.HasValue Then Return image
+            Dim e = edge.Value
+            Dim scale = Function(v As Integer) If(halfSize, (v + 1) \ 2, v)
+            Dim left = scale(e.Left)
+            Dim top = scale(e.Top)
+            Dim right = image.Width - scale(e.Right)
+            Dim bottom = image.Height - scale(e.Bottom)
+            If right - left < 16 OrElse bottom - top < 16 Then Return image
+            Dim cropped = New SKBitmap(New SKImageInfo(right - left, bottom - top, image.ColorType, image.AlphaType, image.ColorSpace))
+            If Not image.ExtractSubset(cropped, New SKRectI(left, top, right, bottom)) Then
+                cropped.Dispose()
+                Return image
+            End If
+            ' ExtractSubset teilt sich die Pixel mit dem Original; eine eigene Kopie, damit das
+            ' Original freigegeben werden kann.
+            Dim own = cropped.Copy()
+            cropped.Dispose()
+            If own Is Nothing Then Return image
+            image.Dispose()
+            Return own
         End Function
 
         ''' <summary>Die Verzeichnungsstufe auf ein frisch aus dem Zwischenspeicher geholtes Bild.
@@ -852,6 +955,10 @@ Namespace Services
             ''' Decode es ausgibt. 0, wenn sich der Aufbau der Struktur nicht bestaetigen liess.
             Public Property OrientedWidth As Integer
             Public Property OrientedHeight As Integer
+            ''' LibRaws Flip (0 bis 7, Bit 4 vertauscht die Achsen), -1 wenn sich der Aufbau der
+            ''' Struktur nicht bestaetigen liess. Gebraucht fuer den Sensorrand, der in der
+            ''' ungedrehten Lage zaehlt.
+            Public Property Flip As Integer = -1
         End Class
 
         ' Der Aufbau der beiden Strukturen, gegen libraw_types.h. Gelesen wird an festen Versaetzen,
@@ -1011,6 +1118,7 @@ Namespace Services
             End If
             Dim flip = Marshal.ReadInt32(handle, SizesFlipOffset)
             If flip < 0 OrElse flip > 7 Then Return (0, 0)
+            facts.Flip = flip
             ' Bit 4 ist das Vertauschen der Achsen: 5 und 6 sind die Hochkant-Drehungen.
             If (flip And 4) <> 0 Then Return (CInt(height), CInt(width))
             Return (CInt(width), CInt(height))

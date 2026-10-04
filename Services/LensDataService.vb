@@ -785,6 +785,10 @@ Namespace Services
             ''' und LensTcaBlue). Wirkt zusaetzlich zum Profil und auch ohne eines.
             Public Property ChromaticAberrationRed As Double
             Public Property ChromaticAberrationBlue As Double
+            ''' Den Sensorrand abschneiden (ImageAdjustments.RawSensorEdgeCrop). Haengt an der
+            ''' Wahl, weil sie schon durch jeden Decode-Weg gereicht wird; mit dem Objektiv hat
+            ''' er sonst nichts zu tun. Nothing als Wahl heisst: kein Beschnitt.
+            Public Property CropSensorEdge As Boolean
         End Class
 
         ''' <summary>Der Faktor einer Feinkorrektur: 100 auf dem Regler heisst, der Kanal wird bei

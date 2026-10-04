@@ -8723,9 +8723,6 @@
   <data name="Ver_ndern_um_259e91a8" xml:space="preserve">
     <value>Change by</value>
   </data>
-  <data name="Um_wie_viele_Bildpunkte_die_vier_Kn_pfe_darunter_f3f8fd19" xml:space="preserve">
-    <value>How many pixels the four buttons below change the selection by</value>
-  </data>
   <data name="Die_Auswahl_rundherum_um_den_Betrag_vergr_ern_610649f0" xml:space="preserve">
     <value>Expand the selection all around by the amount</value>
   </data>
@@ -9137,5 +9134,23 @@
   </data>
   <data name="Stellt_die_Gr_e_bei_jeder_nderung_so_ein_dass_ke_9fe6042b" xml:space="preserve">
     <value>Sets the size on every change so that no corner is left empty</value>
+  </data>
+  <data name="Sensorrand_entfernen_0dd93d02" xml:space="preserve">
+    <value>Remove sensor border</value>
+  </data>
+  <data name="Schneidet_die_u_ersten_Pixelreihen_ab_die_der_Se_21684cb8" xml:space="preserve">
+    <value>Cuts off the outermost rows of pixels that the sensor does not deliver cleanly and that can show up as colored stripes along the edge. Best decided right at the start - if you switch later, masks and inserted objects already placed no longer line up exactly.</value>
+  </data>
+  <data name="Kante_verfeinern_a28c54d3" xml:space="preserve">
+    <value>Refine edge</value>
+  </data>
+  <data name="Die_Kante_der_Auswahl_in_einem_Saum_so_breit_wie_1b4910a2" xml:space="preserve">
+    <value>Make the edge of the selection follow the picture within a band as wide as the amount, for hair, fur and fine twigs. Inside and outside, the selection stays as it is.</value>
+  </data>
+  <data name="Kante_verfeinert_d716f1e0" xml:space="preserve">
+    <value>Edge refined</value>
+  </data>
+  <data name="Um_wie_viele_Bildpunkte_die_Kn_pfe_darunter_die__d9bce2a1" xml:space="preserve">
+    <value>By how many pixels the buttons below change the selection</value>
   </data>
 </root>

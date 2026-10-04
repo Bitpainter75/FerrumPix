@@ -8744,9 +8744,6 @@
   <data name="Ver_ndern_um_259e91a8" xml:space="preserve">
     <value>変更量</value>
   </data>
-  <data name="Um_wie_viele_Bildpunkte_die_vier_Kn_pfe_darunter_f3f8fd19" xml:space="preserve">
-    <value>下の4つのボタンで選択範囲を変える量（ピクセル）</value>
-  </data>
   <data name="Die_Auswahl_rundherum_um_den_Betrag_vergr_ern_610649f0" xml:space="preserve">
     <value>選択範囲を周囲に指定量だけ拡張します</value>
   </data>
@@ -9158,5 +9155,23 @@
   </data>
   <data name="Stellt_die_Gr_e_bei_jeder_nderung_so_ein_dass_ke_9fe6042b" xml:space="preserve">
     <value>変更のたびにサイズを調整し、空いた角が残らないようにします</value>
+  </data>
+  <data name="Sensorrand_entfernen_0dd93d02" xml:space="preserve">
+    <value>センサーの縁を除去</value>
+  </data>
+  <data name="Schneidet_die_u_ersten_Pixelreihen_ab_die_der_Se_21684cb8" xml:space="preserve">
+    <value>センサーがきれいに出力できず、画像の端に色の縞として現れることがある最も外側のピクセル列を切り取ります。最初に決めておくのがおすすめです - 後から切り替えると、設定済みのマスクや挿入したオブジェクトの位置が正確に合わなくなります。</value>
+  </data>
+  <data name="Kante_verfeinern_a28c54d3" xml:space="preserve">
+    <value>境界線を調整</value>
+  </data>
+  <data name="Die_Kante_der_Auswahl_in_einem_Saum_so_breit_wie_1b4910a2" xml:space="preserve">
+    <value>値と同じ幅の帯の中で、選択範囲の境界を画像に沿わせます。髪、毛並み、細い枝に向いています。内側と外側の選択範囲はそのままです。</value>
+  </data>
+  <data name="Kante_verfeinert_d716f1e0" xml:space="preserve">
+    <value>境界線を調整しました</value>
+  </data>
+  <data name="Um_wie_viele_Bildpunkte_die_Kn_pfe_darunter_die__d9bce2a1" xml:space="preserve">
+    <value>下のボタンで選択範囲を何ピクセル変えるか</value>
   </data>
 </root>

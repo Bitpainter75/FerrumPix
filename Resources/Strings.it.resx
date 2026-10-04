@@ -8704,9 +8704,6 @@
   <data name="Ver_ndern_um_259e91a8" xml:space="preserve">
     <value>Modifica di</value>
   </data>
-  <data name="Um_wie_viele_Bildpunkte_die_vier_Kn_pfe_darunter_f3f8fd19" xml:space="preserve">
-    <value>Di quanti pixel i quattro pulsanti sotto modificano la selezione</value>
-  </data>
   <data name="Die_Auswahl_rundherum_um_den_Betrag_vergr_ern_610649f0" xml:space="preserve">
     <value>Espandere la selezione tutto intorno del valore indicato</value>
   </data>
@@ -9118,5 +9115,23 @@
   </data>
   <data name="Stellt_die_Gr_e_bei_jeder_nderung_so_ein_dass_ke_9fe6042b" xml:space="preserve">
     <value>Imposta la dimensione a ogni modifica in modo che nessun angolo resti vuoto</value>
+  </data>
+  <data name="Sensorrand_entfernen_0dd93d02" xml:space="preserve">
+    <value>Rimuovi bordo del sensore</value>
+  </data>
+  <data name="Schneidet_die_u_ersten_Pixelreihen_ab_die_der_Se_21684cb8" xml:space="preserve">
+    <value>Taglia le file di pixel più esterne che il sensore non fornisce in modo pulito e che possono apparire come strisce colorate sul bordo dell'immagine. Meglio deciderlo subito all'inizio - se lo cambi dopo, maschere e oggetti già inseriti non combaciano più esattamente.</value>
+  </data>
+  <data name="Kante_verfeinern_a28c54d3" xml:space="preserve">
+    <value>Rifinisci bordo</value>
+  </data>
+  <data name="Die_Kante_der_Auswahl_in_einem_Saum_so_breit_wie_1b4910a2" xml:space="preserve">
+    <value>Fa seguire all'immagine il bordo della selezione in una fascia larga quanto il valore, per capelli, pelo e rametti sottili. Dentro e fuori la selezione resta com'è.</value>
+  </data>
+  <data name="Kante_verfeinert_d716f1e0" xml:space="preserve">
+    <value>Bordo rifinito</value>
+  </data>
+  <data name="Um_wie_viele_Bildpunkte_die_Kn_pfe_darunter_die__d9bce2a1" xml:space="preserve">
+    <value>Di quanti pixel i pulsanti qui sotto modificano la selezione</value>
   </data>
 </root>

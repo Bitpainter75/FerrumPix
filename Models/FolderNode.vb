@@ -2,6 +2,7 @@ Imports System
 Imports System.Collections.ObjectModel
 Imports System.ComponentModel
 Imports System.IO
+Imports FerrumPix.Services
 
 Namespace Models
 
@@ -70,25 +71,72 @@ Namespace Models
         Public Sub EnsureChildrenLoaded()
             If _childrenLoaded Then Return
             _childrenLoaded = True
-            Children.Clear()
-            If String.IsNullOrEmpty(FullPath) Then Return
-            Try
-                Dim dirs = IO.Directory.GetDirectories(FullPath).
-                    OrderBy(Function(d) IO.Path.GetFileName(d), StringComparer.CurrentCultureIgnoreCase)
-                For Each dirEntry In dirs
-                    Dim folderName = IO.Path.GetFileName(dirEntry)
-                    If Not ShowHiddenFolders AndAlso folderName.StartsWith(".") Then Continue For
-                    Children.Add(New FolderNode(dirEntry))
-                Next
-            Catch ex As UnauthorizedAccessException
-            Catch ex As IOException
-            End Try
+            SyncChildren()
         End Sub
 
+        ''' <summary>Liest die Unterordner neu und gleicht sie mit den vorhandenen Knoten ab.
+        ''' Ein Ordner, der geblieben ist, behaelt seinen Knoten und damit Aufklappzustand und
+        ''' geladene Unterordner; nur Neues kommt hinzu, Verschwundenes geht. Ein Neuaufbau
+        ''' klappte bei jedem Nachladen alles darunter zu.</summary>
         Public Sub ReloadChildren()
-            _childrenLoaded = False
-            EnsureChildrenLoaded()
-            RaiseEvent PropertyChanged(Me, New PropertyChangedEventArgs(NameOf(Children)))
+            _childrenLoaded = True
+            SyncChildren()
+        End Sub
+
+        ''' <summary>"Aktualisieren" im Kontextmenue: dieser Ordner und alles, was darunter
+        ''' aufgeklappt ist. Zugeklappte Unterordner, die schon einmal geladen waren, lesen beim
+        ''' naechsten Aufklappen neu ein, statt hier jeden einzeln von der Platte zu holen; auf
+        ''' einer Netzfreigabe waere das ein Lauf ueber alles, was je offen war.</summary>
+        Public Sub RefreshSubtree()
+            ReloadChildren()
+            For Each child In Children.ToList()
+                If child.IsExpanded Then
+                    child.RefreshSubtree()
+                Else
+                    child._childrenLoaded = False
+                End If
+            Next
+        End Sub
+
+        Private Sub SyncChildren()
+            If String.IsNullOrEmpty(FullPath) Then
+                Children.Clear()
+                Return
+            End If
+            Dim wanted As List(Of String)
+            Try
+                wanted = IO.Directory.GetDirectories(FullPath).
+                    Where(Function(d) ShowHiddenFolders OrElse Not IO.Path.GetFileName(d).StartsWith(".")).
+                    OrderBy(Function(d) IO.Path.GetFileName(d), StringComparer.CurrentCultureIgnoreCase).
+                    ToList()
+            Catch ex As UnauthorizedAccessException
+                wanted = New List(Of String)()
+            Catch ex As IOException
+                wanted = New List(Of String)()
+            End Try
+
+            ' Platzhalter und verschwundene Ordner heraus, dann in der Reihenfolge der Platte
+            ' verschieben oder neu einsetzen.
+            Dim wantedSet = New HashSet(Of String)(wanted, PathIdentity.Comparer)
+            For i = Children.Count - 1 To 0 Step -1
+                Dim childPath = Children(i).FullPath
+                If String.IsNullOrEmpty(childPath) OrElse Not wantedSet.Contains(childPath) Then Children.RemoveAt(i)
+            Next
+            For i = 0 To wanted.Count - 1
+                Dim target = wanted(i)
+                Dim existing = -1
+                For j = i To Children.Count - 1
+                    If String.Equals(Children(j).FullPath, target, PathIdentity.Comparison) Then
+                        existing = j
+                        Exit For
+                    End If
+                Next
+                If existing < 0 Then
+                    Children.Insert(i, New FolderNode(target))
+                ElseIf existing <> i Then
+                    Children.Move(existing, i)
+                End If
+            Next
         End Sub
     End Class
 

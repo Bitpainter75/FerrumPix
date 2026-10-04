@@ -8,7 +8,19 @@
   edits if it has any, a PSD or project as its finished picture.
 
 - **Perspective fills the frame on its own.** A new "Fill automatically" option keeps the size
-  adjusted while you correct the perspective, so no empty corners are left.
+  adjusted while you correct the perspective, so no empty corners are left. When you drag the
+  corners in the picture, it fills the frame as you let go.
+
+- **Remove the sensor border.** A new switch under lens correction cuts off the outermost pixel
+  rows of a RAW that the sensor does not deliver cleanly and that can show up as colored stripes
+  along the edge. It is off by default and offered for more than 300 camera models.
+
+- **Refine edge.** A new button in the selection tool makes the edge of a selection follow the
+  picture within a narrow band, so hair, fur and fine twigs are picked up instead of being cut off
+  hard. It needs no model.
+
+- **Refresh in the folder tree.** Right click a folder and choose "Refresh" to read its subfolders
+  again, for example after changes in a file manager. Folders you had opened stay open.
 
 ### Fixes
 
@@ -37,6 +49,15 @@
 - Film negative conversion measures the picture again after cropping. Before, film edges,
   sprocket holes or the scanner holder that were cropped away afterwards still threw off the
   colors. A film base picked with the eyedropper is kept.
+
+- PSD files in 16 and 32 bit open with their layers, as do large PSB files. Before, they
+  opened as a single flattened picture. A layer's fill opacity is now taken into account.
+
+- Resetting the effects also takes lens correction back out of the picture. Before, only the
+  switches went back while the picture stayed corrected.
+
+- Film negative conversion leaves out the black scanner holder at the edges even without
+  cropping. Before, it made the converted picture much too dark.
 
 - Automatic enhancement works on film negatives. Before, it looked at the negative instead of the
   converted picture and pushed it the wrong way, often much too cold and too dark.

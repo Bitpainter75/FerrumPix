@@ -8703,9 +8703,6 @@
   <data name="Ver_ndern_um_259e91a8" xml:space="preserve">
     <value>Alterar em</value>
   </data>
-  <data name="Um_wie_viele_Bildpunkte_die_vier_Kn_pfe_darunter_f3f8fd19" xml:space="preserve">
-    <value>Quantos pixels os quatro botões abaixo alteram a seleção</value>
-  </data>
   <data name="Die_Auswahl_rundherum_um_den_Betrag_vergr_ern_610649f0" xml:space="preserve">
     <value>Expandir a seleção em toda a volta pelo valor</value>
   </data>
@@ -9117,5 +9114,23 @@
   </data>
   <data name="Stellt_die_Gr_e_bei_jeder_nderung_so_ein_dass_ke_9fe6042b" xml:space="preserve">
     <value>Ajusta o tamanho a cada alteração para que nenhum canto fique vazio</value>
+  </data>
+  <data name="Sensorrand_entfernen_0dd93d02" xml:space="preserve">
+    <value>Remover borda do sensor</value>
+  </data>
+  <data name="Schneidet_die_u_ersten_Pixelreihen_ab_die_der_Se_21684cb8" xml:space="preserve">
+    <value>Corta as filas de pixels mais externas que o sensor não entrega de forma limpa e que podem aparecer como faixas coloridas na borda da imagem. É melhor decidir logo no início - se mudar depois, máscaras e objetos já colocados deixam de coincidir exatamente.</value>
+  </data>
+  <data name="Kante_verfeinern_a28c54d3" xml:space="preserve">
+    <value>Refinar borda</value>
+  </data>
+  <data name="Die_Kante_der_Auswahl_in_einem_Saum_so_breit_wie_1b4910a2" xml:space="preserve">
+    <value>Faz a borda da seleção acompanhar a imagem numa faixa tão larga quanto o valor, para cabelo, pelo e galhos finos. Por dentro e por fora a seleção fica como está.</value>
+  </data>
+  <data name="Kante_verfeinert_d716f1e0" xml:space="preserve">
+    <value>Borda refinada</value>
+  </data>
+  <data name="Um_wie_viele_Bildpunkte_die_Kn_pfe_darunter_die__d9bce2a1" xml:space="preserve">
+    <value>Em quantos pixels os botões abaixo alteram a seleção</value>
   </data>
 </root>

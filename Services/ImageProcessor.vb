@@ -901,7 +901,8 @@ Namespace Services
                 .VignettingStrength = adj.LensVignettingAmount / 100.0,
                 .LensModel = adj.LensModel,
                 .ChromaticAberrationRed = adj.LensTcaRed,
-                .ChromaticAberrationBlue = adj.LensTcaBlue}
+                .ChromaticAberrationBlue = adj.LensTcaBlue,
+                .CropSensorEdge = adj.RawSensorEdgeCrop}
         End Function
 
         Public Shared Function ApplyAdjustments(source As SKBitmap, adj As ImageAdjustments) As Bitmap
@@ -5806,6 +5807,17 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             Using processed = RenderDisplayImage(sourcePath, adj, workingFull)
                 If processed Is Nothing Then Return Nothing
                 Return BuildMagicWandMask(processed, seedX, seedY, tolerance, bounds, confineRect, confine)
+            End Using
+        End Function
+
+        ''' <summary>Kante verfeinern mit dem Bild als Führung, das der Zauberstab auch sieht: die
+        ''' fertige Anzeige samt Reglern, in der Größe des Koordinatensystems der Auswahl.</summary>
+        Public Shared Function RefineSelectionEdgeFromFile(sourcePath As String, adj As ImageAdjustments,
+                                                           mask As SKBitmap, rect As SKRectI, amount As Integer,
+                                                           Optional workingFull As SKBitmap = Nothing) As (Mask As SKBitmap, Rect As SKRectI)?
+            Using processed = RenderDisplayImage(sourcePath, adj, workingFull)
+                If processed Is Nothing Then Return Nothing
+                Return RefineSelectionEdge(mask, rect, processed, amount)
             End Using
         End Function
 

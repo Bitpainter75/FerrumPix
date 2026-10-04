@@ -184,8 +184,9 @@ Namespace Services
                     If Not SkipBlock(fs, ReadU32(fs)) Then Return 0
                     Dim sectionLen = If(isPsb, ReadU64(fs), CLng(ReadU32(fs)))
                     If sectionLen <= 0 Then Return 0
-                    Dim infoLen = If(isPsb, ReadU64(fs), CLng(ReadU32(fs)))
-                    If infoLen <= 0 Then Return 0
+                    Dim sectionEnd = fs.Position + sectionLen
+                    If sectionEnd > fs.Length Then Return 0
+                    If Not SeekLayerCount(fs, isPsb, sectionEnd) Then Return 0
 
                     Dim raw = ReadU16(fs)
                     If raw > 32767 Then raw -= 65536
@@ -214,8 +215,11 @@ Namespace Services
             ' Ebenenstapel mit etwas Genauigkeitsverlust ist mehr wert als gar keiner. CMYK nimmt
             ' denselben vorsichtigen, profilfreien Weg wie die Vorschau: die Ebenen bleiben damit
             ' editierbar, statt dass die Datei nur als Gesamtbild aufgeht.
-            If depth <> 8 AndAlso depth <> 16 Then Return Nothing
+            ' 32 Bit ist Gleitkomma und nur in RGB und Graustufen möglich; die Ebenen stehen dort in
+            ' Lr32 und werden beim Lesen auf acht Bit gebracht (FloatSampleToByte).
+            If depth <> 8 AndAlso depth <> 16 AndAlso depth <> 32 Then Return Nothing
             If colorMode <> 3 AndAlso colorMode <> 1 AndAlso colorMode <> 4 Then Return Nothing
+            If depth = 32 AndAlso colorMode = 4 Then Return Nothing
             Dim bytesPerSample = depth \ 8
             Dim grayscale = colorMode = 1
             Dim cmyk = colorMode = 4
@@ -252,10 +256,9 @@ Namespace Services
             Dim sectionEnd = fs.Position + sectionLen
             If sectionEnd > fs.Length Then Return Nothing
 
-            Dim infoLen = If(isPsb, ReadU64(fs), CLng(ReadU32(fs)))
-            If infoLen <= 0 Then Return Nothing
-            Dim infoEnd = fs.Position + infoLen
-            If infoEnd > fs.Length Then Return Nothing
+            ' Bei 16 und 32 Bit legt Photoshop die Ebenen nicht in die Ebenen-Info, sondern in einen
+            ' eigenen Block dahinter (Lr16, Lr32); SeekLayerCount findet beide Stellen.
+            If Not SeekLayerCount(fs, isPsb, sectionEnd) Then Return Nothing
 
             ' Negativ heißt: der erste Alphakanal des Gesamtbilds ist die Transparenz. Für die
             ' Ebenen selbst ändert das nichts, nur das Vorzeichen der Anzahl.
@@ -302,7 +305,7 @@ Namespace Services
             Try
                 For Each rec In records
                     Dim maskBmp As SKBitmap = Nothing
-                    Dim bmp = ReadChannelData(fs, rec, metadataOnly, maskBmp, bytesPerSample, grayscale, cmyk)
+                    Dim bmp = ReadChannelData(fs, rec, metadataOnly, maskBmp, bytesPerSample, grayscale, cmyk, isPsb)
                     If bmp Is Nothing AndAlso rec.HasPixels AndAlso Not metadataOnly Then Return Nothing   ' das Profil raeumt der Finally-Zweig ab
                     ' Gruppenmarken haben keine Bildpunkte und gehen trotzdem mit: ohne sie wüsste
                     ' der Import nicht, wo eine Gruppe anfängt und wo sie aufhört.
@@ -315,7 +318,7 @@ Namespace Services
                         .Top = rec.Top,
                         .Width = rec.Right - rec.Left,
                         .Height = rec.Bottom - rec.Top,
-                        .OpacityPercent = CSng(rec.Opacity) * 100.0F / 255.0F,
+                        .OpacityPercent = CSng(rec.Opacity) * CSng(rec.FillOpacity) * 100.0F / (255.0F * 255.0F),
                         .BlendMode = ResolveBlendName(rec.BlendKey),
                         .ClipToLayerBelow = rec.Clipping <> 0,
                         .IsVisible = (rec.Flags And 2) = 0,
@@ -343,6 +346,77 @@ Namespace Services
             End Try
         End Function
 
+        ''' <summary>Zusatzblöcke, deren Länge in einer PSB acht statt vier Byte lang ist (laut Adobes
+        ''' Formatbeschreibung). Wer sie mit vier Byte liest, verliert jeden Block dahinter - in einem
+        ''' Ebenendatensatz auch die Gruppenmarke, und die Gruppen zerfallen.</summary>
+        Private Shared ReadOnly PsbLongLengthKeys As New HashSet(Of String)(StringComparer.Ordinal) From {
+            "LMsk", "Lr16", "Lr32", "Layr", "Mt16", "Mt32", "Mtrn", "Alph", "FMsk", "lnk2", "FEid", "FXid", "PxSD"}
+
+        Private Shared Function ReadBlockLength(fs As FileStream, isPsb As Boolean, key As String) As Long
+            Return If(isPsb AndAlso PsbLongLengthKeys.Contains(key), ReadU64(fs), CLng(ReadU32(fs)))
+        End Function
+
+        ''' <summary>Setzt den Lesezeiger auf die Ebenenzahl. Der Zeiger steht beim Aufruf am Anfang
+        ''' der Ebenen-Info, also hinter der Länge des ganzen Abschnitts.
+        '''
+        ''' Normalfall: die Ebenen-Info trägt die Ebenen. Bei 16 und 32 Bit ist sie dagegen leer
+        ''' (Länge 0 oder Ebenenzahl 0), und die Ebenen stehen in einem Zusatzblock HINTER der
+        ''' globalen Maske, `Lr16` bzw. `Lr32`, mit genau dem Aufbau der Ebenen-Info. Vorher brach
+        ''' der Leser an der leeren Ebenen-Info ab, und jede echte 16-Bit-Datei aus Photoshop ging
+        ''' flach auf; die handgebauten Prüfdateien legten ihre Ebenen am Standardplatz ab und
+        ''' sahen das nicht.
+        '''
+        ''' Ob der Block mit der Ebenenzahl beginnt oder noch eine eigene Länge vorneweg trägt, ist
+        ''' in den Beschreibungen nicht einheitlich. Steht vorne genau die Restlänge des Blocks,
+        ''' wird sie übersprungen.</summary>
+        Private Shared Function SeekLayerCount(fs As FileStream, isPsb As Boolean, sectionEnd As Long) As Boolean
+            Dim infoLen = If(isPsb, ReadU64(fs), CLng(ReadU32(fs)))
+            If infoLen < 0 Then Return False
+            Dim infoStart = fs.Position
+            If infoStart + infoLen > sectionEnd Then Return False
+            If infoLen >= 2 Then
+                Dim count = ReadU16(fs)
+                If count <> 0 Then
+                    fs.Position = infoStart
+                    Return True
+                End If
+            End If
+
+            ' Hinter der Ebenen-Info: die globale Maske (Länge immer vier Byte), dann die Zusatzblöcke.
+            fs.Position = infoStart + infoLen
+            If fs.Position + 4 > sectionEnd Then Return False
+            If Not SkipBlock(fs, ReadU32(fs)) Then Return False
+            While fs.Position + 12 <= sectionEnd
+                Dim sig(3) As Byte
+                If Not ReadExactly(fs, sig, 4) Then Return False
+                Dim s = Encoding.ASCII.GetString(sig)
+                If s <> "8BIM" AndAlso s <> "8B64" Then Return False
+                Dim keyBytes(3) As Byte
+                If Not ReadExactly(fs, keyBytes, 4) Then Return False
+                Dim key = Encoding.ASCII.GetString(keyBytes)
+                Dim length = ReadBlockLength(fs, isPsb, key)
+                Dim dataStart = fs.Position
+                If length < 0 OrElse dataStart + length > sectionEnd Then Return False
+                If key = "Lr16" OrElse key = "Lr32" Then
+                    If length >= 6 Then
+                        Dim lead = If(isPsb, ReadU64(fs), CLng(ReadU32(fs)))
+                        Dim leadBytes = If(isPsb, 8L, 4L)
+                        ' Eine vorangestellte Länge zählt den Rest des Blocks, höchstens um die
+                        ' Auffüllung auf vier Byte kürzer.
+                        If lead > 0 AndAlso lead <= length - leadBytes AndAlso lead >= length - leadBytes - 3 Then
+                            Return True
+                        End If
+                    End If
+                    fs.Position = dataStart
+                    Return True
+                End If
+                ' Auf vier Byte ausgerichtet; Photoshop zählt die Auffüllung meist schon mit, dann
+                ' ändert das Ausrichten nichts.
+                fs.Position = dataStart + ((length + 3L) And Not 3L)
+            End While
+            Return False
+        End Function
+
         ''' <summary>Gibt die Bildpunkte aller schon gelesenen Ebenen frei. Fuer die Abbruchwege -
         ''' wer Nothing zurueckbekommt, hat keine Handhabe mehr auf das, was bis dahin entstand.</summary>
         Private Shared Sub DisposeLayerPixels(doc As PsdDocumentInfo)
@@ -366,6 +440,8 @@ Namespace Services
             Public Property Name As String = ""
             Public Property BlendKey As String = "norm"
             Public Property Opacity As Integer = 255
+            ''' Füllkraft aus dem Block iOpa, 0 bis 255.
+            Public Property FillOpacity As Integer = 255
             Public Property Clipping As Integer
             Public Property Flags As Integer
             ''' Kanalkennung und Länge, in genau der Reihenfolge, in der die Daten später folgen.
@@ -455,7 +531,7 @@ Namespace Services
                 Dim blockKey(3) As Byte
                 If Not ReadExactly(fs, blockKey, 4) Then Exit While
                 Dim bk = Encoding.ASCII.GetString(blockKey)
-                Dim blockLen = ReadU32(fs)
+                Dim blockLen = ReadBlockLength(fs, isPsb, bk)
                 Dim blockStart = fs.Position
                 If blockStart + blockLen > extraEnd Then Exit While
 
@@ -477,6 +553,12 @@ Namespace Services
                     If ReadExactly(fs, textBlock, textBlock.Length) Then
                         rec.TextContent = PsdTextReader.ExtractText(textBlock)
                     End If
+                ElseIf bk = "iOpa" AndAlso blockLen >= 1 Then
+                    ' Füllkraft: wirkt auf den Inhalt der Ebene, nicht auf ihre Effekte. Ohne Effekte
+                    ' ist sie dasselbe wie eine Deckkraft. Übergangen erschien eine Ebene mit
+                    ' Füllkraft 0, die nur über eine Kontur sichtbar sein soll, voll deckend.
+                    Dim fill = fs.ReadByte()
+                    If fill >= 0 Then rec.FillOpacity = fill
                 ElseIf bk = "lsct" AndAlso blockLen >= 4 Then
                     ' Abschnittsmarke: 1 und 2 sind die Gruppenzeile selbst, 3 ist ihr unteres Ende.
                     ' Solche Datensätze tragen keine Bildpunkte, werden aber weitergereicht - aus
@@ -558,7 +640,8 @@ Namespace Services
                                                 ByRef maskBitmap As SKBitmap,
                                                 bytesPerSample As Integer,
                                                 grayscale As Boolean,
-                                                cmyk As Boolean) As SKBitmap
+                                                cmyk As Boolean,
+                                                isPsb As Boolean) As SKBitmap
             Dim width = rec.Right - rec.Left
             Dim height = rec.Bottom - rec.Top
             Dim maskWidth = rec.MaskRight - rec.MaskLeft
@@ -586,7 +669,7 @@ Namespace Services
                 Dim wantMask = Not metadataOnly AndAlso (rec.HasPixels OrElse rec.SectionType <> 0) AndAlso
                                rec.HasMaskRect AndAlso id = -2 AndAlso maskWidth > 0 AndAlso maskHeight > 0
                 If wanted Then
-                    Dim plane = ReadPlane(fs, width, height, declaredLen, bytesPerSample)
+                    Dim plane = ReadPlane(fs, width, height, declaredLen, bytesPerSample, isPsb, colorChannel:=id >= 0)
                     If plane IsNot Nothing Then
                         Select Case id
                             Case 0 : red = plane
@@ -599,7 +682,7 @@ Namespace Services
                 ElseIf wantMask Then
                     ' Scheitert die Maske, bleibt die Ebene gültig - sie sieht dann aus wie ohne
                     ' Maske, und das ist der Stand von vorher, kein neuer Schaden.
-                    Dim maskPlane = ReadPlane(fs, maskWidth, maskHeight, declaredLen, bytesPerSample)
+                    Dim maskPlane = ReadPlane(fs, maskWidth, maskHeight, declaredLen, bytesPerSample, isPsb, colorChannel:=False)
                     If maskPlane IsNot Nothing Then
                         maskBitmap?.Dispose()
                         maskBitmap = BuildAlphaBitmap(maskPlane, maskWidth, maskHeight)
@@ -698,20 +781,30 @@ Namespace Services
         ''' EINSCHLIESSLICH der zwei Byte für die Kompressionsmarke. Nur der ZIP-Weg braucht sie: ein
         ''' Deflate-Strom sagt selbst nicht, wo er aufhört, und weiterzulesen als der Block reicht
         ''' hieße in den nächsten Kanal hinein.</param>
-        ''' <param name="bytesPerSample">1 bei acht Bit, 2 bei sechzehn. Herauskommt in beiden Fällen
-        ''' ein Byte je Bildpunkt - bei sechzehn Bit das obere, wie es der flache Weg auch tut.</param>
+        ''' <param name="bytesPerSample">1 bei acht Bit, 2 bei sechzehn, 4 bei 32 Bit Gleitkomma.
+        ''' Herauskommt immer ein Byte je Bildpunkt - bei sechzehn Bit das obere, wie es der flache
+        ''' Weg auch tut, bei 32 Bit siehe <see cref="FloatSampleToByte"/>.</param>
+        ''' <param name="isPsb">In einer PSB sind die RLE-Zeilenlängen vier Byte lang statt zwei.</param>
+        ''' <param name="colorChannel">Ein Farbkanal (Kennung ab 0) und keine Deckung (Transparenz,
+        ''' Maske). Zählt nur bei 32 Bit: dort ist Farbe linear abgelegt, Deckung nicht.</param>
         Private Shared Function ReadPlane(fs As FileStream, width As Integer, height As Integer,
-                                          declaredLen As Integer, bytesPerSample As Integer) As Byte()
+                                          declaredLen As Integer, bytesPerSample As Integer,
+                                          isPsb As Boolean, colorChannel As Boolean) As Byte()
             If width < 1 OrElse height < 1 Then Return Nothing
             Dim compression = ReadU16(fs)
             Dim plane(width * height - 1) As Byte
+
+            ' Eine Maske kann in einem 32-Bit-Dokument schmaler abgelegt sein als die Farbe. Die
+            ' Blocklänge sagt bei unkomprimierten Daten genau, wie breit ein Wert ist.
+            If compression = 0 AndAlso bytesPerSample > 1 AndAlso
+               CLng(declaredLen) - 2 = CLng(width) * height Then bytesPerSample = 1
             Dim rowBytes = width * bytesPerSample
 
             If compression = 0 Then
                 Dim rowBuffer(rowBytes - 1) As Byte
                 For row = 0 To height - 1
                     If Not ReadExactly(fs, rowBuffer, rowBytes) Then Return Nothing
-                    StoreRow(plane, row, width, rowBuffer, bytesPerSample)
+                    StoreRow(plane, row, width, rowBuffer, bytesPerSample, colorChannel)
                 Next
                 Return plane
             End If
@@ -721,17 +814,20 @@ Namespace Services
             ' Programme und alles ab sechzehn Bit greifen zu ZIP - ohne diesen Zweig lieferte der
             ' Leser dort gar keine Ebenen, und die Datei fiel auf das flache Gesamtbild zurück.
             If compression = 2 OrElse compression = 3 Then
-                Return ReadZipPlane(fs, width, height, declaredLen - 2, compression = 3, bytesPerSample)
+                Return ReadZipPlane(fs, width, height, declaredLen - 2, compression = 3, bytesPerSample, colorChannel)
             End If
 
             If compression <> 1 Then Return Nothing
 
             ' Die Zeilenlängen sind GEPACKTE Längen. Der Schlimmstfall von PackBits ist etwas mehr
             ' als die rohe Zeile, deshalb der großzügige Rand - alles darüber ist keine gültige Datei.
+            ' In einer PSB sind sie vier Byte lang. Mit zwei gelesen verrutschte alles danach, und die
+            ' Datei ging flach auf; das Gesamtbild machte es schon immer richtig.
             Dim rowLengths(height - 1) As Integer
             For row = 0 To height - 1
-                rowLengths(row) = ReadU16(fs)
-                If rowLengths(row) < 0 OrElse rowLengths(row) > rowBytes * 2 + 64 Then Return Nothing
+                Dim length = If(isPsb, ReadU32(fs), CLng(ReadU16(fs)))
+                If length < 0 OrElse length > rowBytes * 2L + 64 Then Return Nothing
+                rowLengths(row) = CInt(length)
             Next
 
             Dim packed(Math.Max(1, rowBytes * 2 + 64) - 1) As Byte
@@ -741,23 +837,77 @@ Namespace Services
                 If packed.Length < len Then ReDim packed(len - 1)
                 If Not ReadExactly(fs, packed, len) Then Return Nothing
                 If Not PsdPreviewService.UnpackBits(packed, len, unpacked, rowBytes) Then Return Nothing
-                StoreRow(plane, row, width, unpacked, bytesPerSample)
+                StoreRow(plane, row, width, unpacked, bytesPerSample, colorChannel)
             Next
             Return plane
         End Function
 
         ''' <summary>Legt eine entpackte Zeile in die Kanalfläche. Bei sechzehn Bit wird dabei das
         ''' obere Byte genommen: der Ebenenstapel rechnet in acht Bit, und derselbe Griff steht seit
-        ''' jeher im flachen Weg.</summary>
+        ''' jeher im flachen Weg. Bei 32 Bit stehen Gleitkommazahlen, oberes Byte zuerst.</summary>
         Private Shared Sub StoreRow(plane As Byte(), row As Integer, width As Integer,
-                                    rowBuffer As Byte(), bytesPerSample As Integer)
+                                    rowBuffer As Byte(), bytesPerSample As Integer, colorChannel As Boolean)
             Dim target = row * width
             If bytesPerSample = 1 Then
                 Array.Copy(rowBuffer, 0, plane, target, width)
                 Return
             End If
+            If bytesPerSample = 4 Then
+                For x = 0 To width - 1
+                    Dim o = x * 4
+                    Dim bits = (CInt(rowBuffer(o)) << 24) Or (CInt(rowBuffer(o + 1)) << 16) Or
+                               (CInt(rowBuffer(o + 2)) << 8) Or CInt(rowBuffer(o + 3))
+                    plane(target + x) = FloatSampleToByte(BitConverter.Int32BitsToSingle(bits), colorChannel)
+                Next
+                Return
+            End If
             For x = 0 To width - 1
                 plane(target + x) = rowBuffer(x * 2)
+            Next
+        End Sub
+
+        ''' <summary>Stufen der Tabelle von linear nach sRGB. 4096 genügen: der Abstand zweier Stufen
+        ''' ist im Dunkeln, wo die Kurve am steilsten ist, kleiner als ein Ausgabewert.</summary>
+        Private Const LinearTableSize As Integer = 4096
+
+        Private Shared ReadOnly LinearToSrgbTable As Byte() = BuildLinearToSrgbTable()
+
+        Private Shared Function BuildLinearToSrgbTable() As Byte()
+            Dim table(LinearTableSize) As Byte
+            For i = 0 To LinearTableSize
+                Dim v = i / CDbl(LinearTableSize)
+                Dim s = If(v <= 0.0031308, v * 12.92, 1.055 * Math.Pow(v, 1.0 / 2.4) - 0.055)
+                table(i) = CByte(Math.Max(0.0, Math.Min(255.0, Math.Round(s * 255.0))))
+            Next
+            Return table
+        End Function
+
+        ''' <summary>Ein 32-Bit-Wert als Byte. Photoshop legt Farbe im 32-Bit-Modus LINEAR ab
+        ''' (Gamma 1,0); sie wird nach sRGB umgerechnet, sonst käme jede Ebene viel zu dunkel. Was
+        ''' über 1 hinausgeht, wird abgeschnitten - der Ebenenstapel kennt nur acht Bit. Transparenz
+        ''' und Masken sind dagegen Deckung und gehen unverändert auf 0 bis 255.</summary>
+        Private Shared Function FloatSampleToByte(value As Single, colorChannel As Boolean) As Byte
+            If Single.IsNaN(value) OrElse value <= 0.0F Then Return 0
+            If value >= 1.0F Then Return 255
+            If Not colorChannel Then Return CByte(Math.Round(value * 255.0F))
+            Return LinearToSrgbTable(CInt(Math.Round(value * LinearTableSize)))
+        End Function
+
+        ''' <summary>Die Vorhersage bei 32 Bit, wie beim Gleitkomma-Prädiktor von TIFF: die Zeile ist
+        ''' in Byte-Ebenen zerlegt (erst alle oberen Bytes, dann die zweiten und so fort), und über
+        ''' die ganze Zeile steht je Byte die Differenz zum vorigen. Zurück geht es in derselben
+        ''' Reihenfolge: aufsummieren, dann die Ebenen wieder zu Werten verschränken.</summary>
+        Private Shared Sub UndoFloatPrediction(raw As Byte(), offset As Integer, width As Integer)
+            Dim rowBytes = width * 4
+            For i = 1 To rowBytes - 1
+                raw(offset + i) = CByte((CInt(raw(offset + i)) + CInt(raw(offset + i - 1))) And &HFF)
+            Next
+            Dim planar(rowBytes - 1) As Byte
+            Array.Copy(raw, offset, planar, 0, rowBytes)
+            For x = 0 To width - 1
+                For b = 0 To 3
+                    raw(offset + x * 4 + b) = planar(b * width + x)
+                Next
             Next
         End Sub
 
@@ -779,7 +929,7 @@ Namespace Services
         ''' Übertrag ein sichtbarer Fehler, der sich über die ganze Zeile fortpflanzt.</summary>
         Private Shared Function ReadZipPlane(fs As FileStream, width As Integer, height As Integer,
                                              payloadLen As Integer, predicted As Boolean,
-                                             bytesPerSample As Integer) As Byte()
+                                             bytesPerSample As Integer, colorChannel As Boolean) As Byte()
             If payloadLen <= 0 Then Return Nothing
             If fs.Position + payloadLen > fs.Length Then Return Nothing
 
@@ -788,21 +938,33 @@ Namespace Services
 
             Dim rowBytes = width * bytesPerSample
             Dim raw(rowBytes * height - 1) As Byte
-            If Not Inflate(packed, raw) Then Return Nothing
+            If Not Inflate(packed, raw) Then
+                ' Eine Maske in einem 32-Bit-Dokument kann schmaler abgelegt sein als die Farbe. Der
+                ' breitere Versuch kommt zuerst: ein schmaler Strom füllt das breite Feld nicht.
+                If bytesPerSample = 1 Then Return Nothing
+                bytesPerSample = 1
+                rowBytes = width
+                raw = New Byte(rowBytes * height - 1) {}
+                If Not Inflate(packed, raw) Then Return Nothing
+            End If
 
             If predicted Then
                 For row = 0 To height - 1
-                    PsdPreviewService.UndoPrediction(raw, row * rowBytes, width, bytesPerSample)
+                    If bytesPerSample = 4 Then
+                        UndoFloatPrediction(raw, row * rowBytes, width)
+                    Else
+                        PsdPreviewService.UndoPrediction(raw, row * rowBytes, width, bytesPerSample)
+                    End If
                 Next
             End If
 
             If bytesPerSample = 1 Then Return raw
 
             Dim plane(width * height - 1) As Byte
+            Dim rowBuffer(rowBytes - 1) As Byte
             For row = 0 To height - 1
-                For x = 0 To width - 1
-                    plane(row * width + x) = raw(row * rowBytes + x * 2)
-                Next
+                Array.Copy(raw, row * rowBytes, rowBuffer, 0, rowBytes)
+                StoreRow(plane, row, width, rowBuffer, bytesPerSample, colorChannel)
             Next
             Return plane
         End Function

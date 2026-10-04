@@ -1820,7 +1820,8 @@ Namespace ViewModels
 
         Private Async Function ModifySelectionAsync(kind As String) As Task
             If Not _hasActiveSelection OrElse _selectionModifyRunning Then Return
-            If kind <> "Expand" AndAlso kind <> "Contract" AndAlso kind <> "Smooth" AndAlso kind <> "Border" Then Return
+            If kind <> "Expand" AndAlso kind <> "Contract" AndAlso kind <> "Smooth" AndAlso kind <> "Border" AndAlso
+               kind <> "Refine" Then Return
             If _editingLayerMaskId <> "" Then
                 Dim edited = EditedLayerMask()
                 If edited IsNot Nothing AndAlso edited.ComponentCount > 1 Then
@@ -1840,10 +1841,21 @@ Namespace ViewModels
             Dim stampMask = _selectionMask
             Dim amount = CInt(_selectionModifyAmount)
             Dim changed As (Mask As SKBitmap, Rect As SKRectI)?
+            ' Kante verfeinern braucht das Bild als Führung, und zwar dasselbe, das der Zauberstab
+            ' sieht. Eingefroren wird es hier auf dem Anzeigefaden, gerechnet im Hintergrund.
+            Dim sourcePath = RenderSourcePath
+            Dim adjustments = If(kind = "Refine", GetCurrentAdjustments(), Nothing)
+            Dim workingFull = If(kind = "Refine", CloneWorkingFullForRender(), Nothing)
             _selectionModifyRunning = True
             Try
-                changed = Await Task.Run(Function() ImageProcessor.ModifySelectionMask(existingMask, existingRect,
-                                                                                        size.Width, size.Height, kind, amount))
+                If kind = "Refine" Then
+                    changed = Await Task.Run(Function() ImageProcessor.RefineSelectionEdgeFromFile(
+                                                 sourcePath, adjustments, existingMask, existingRect, amount,
+                                                 workingFull:=workingFull))
+                Else
+                    changed = Await Task.Run(Function() ImageProcessor.ModifySelectionMask(existingMask, existingRect,
+                                                                                            size.Width, size.Height, kind, amount))
+                End If
             Finally
                 existingMask.Dispose()
                 _selectionModifyRunning = False
@@ -1862,6 +1874,7 @@ Namespace ViewModels
                 Case "Expand" : label = LocalizationService.T("Auswahl vergrößert")
                 Case "Contract" : label = LocalizationService.T("Auswahl verkleinert")
                 Case "Smooth" : label = LocalizationService.T("Auswahl geglättet")
+                Case "Refine" : label = LocalizationService.T("Kante verfeinert")
                 Case Else : label = LocalizationService.T("Auswahlrand gebildet")
             End Select
             PushUndo(label)

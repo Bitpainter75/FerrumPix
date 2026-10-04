@@ -8744,9 +8744,6 @@
   <data name="Ver_ndern_um_259e91a8" xml:space="preserve">
     <value>Zmień o</value>
   </data>
-  <data name="Um_wie_viele_Bildpunkte_die_vier_Kn_pfe_darunter_f3f8fd19" xml:space="preserve">
-    <value>O ile pikseli cztery przyciski poniżej zmieniają zaznaczenie</value>
-  </data>
   <data name="Die_Auswahl_rundherum_um_den_Betrag_vergr_ern_610649f0" xml:space="preserve">
     <value>Rozszerzyć zaznaczenie dookoła o podaną wartość</value>
   </data>
@@ -9158,5 +9155,23 @@
   </data>
   <data name="Stellt_die_Gr_e_bei_jeder_nderung_so_ein_dass_ke_9fe6042b" xml:space="preserve">
     <value>Ustawia rozmiar przy każdej zmianie tak, aby żaden róg nie pozostał pusty</value>
+  </data>
+  <data name="Sensorrand_entfernen_0dd93d02" xml:space="preserve">
+    <value>Usuń krawędź matrycy</value>
+  </data>
+  <data name="Schneidet_die_u_ersten_Pixelreihen_ab_die_der_Se_21684cb8" xml:space="preserve">
+    <value>Odcina skrajne rzędy pikseli, których matryca nie dostarcza czysto i które mogą być widoczne jako kolorowe pasy na krawędzi zdjęcia. Najlepiej zdecydować od razu na początku - po późniejszej zmianie ustawione już maski i wstawione obiekty nie będą dokładnie pasować.</value>
+  </data>
+  <data name="Kante_verfeinern_a28c54d3" xml:space="preserve">
+    <value>Popraw krawędź</value>
+  </data>
+  <data name="Die_Kante_der_Auswahl_in_einem_Saum_so_breit_wie_1b4910a2" xml:space="preserve">
+    <value>Prowadzi krawędź zaznaczenia wzdłuż obrazu w pasie o szerokości wartości, dla włosów, sierści i cienkich gałązek. Wewnątrz i na zewnątrz zaznaczenie pozostaje bez zmian.</value>
+  </data>
+  <data name="Kante_verfeinert_d716f1e0" xml:space="preserve">
+    <value>Krawędź poprawiona</value>
+  </data>
+  <data name="Um_wie_viele_Bildpunkte_die_Kn_pfe_darunter_die__d9bce2a1" xml:space="preserve">
+    <value>O ile pikseli przyciski poniżej zmieniają zaznaczenie</value>
   </data>
 </root>

@@ -8744,9 +8744,6 @@
   <data name="Ver_ndern_um_259e91a8" xml:space="preserve">
     <value>Muuta</value>
   </data>
-  <data name="Um_wie_viele_Bildpunkte_die_vier_Kn_pfe_darunter_f3f8fd19" xml:space="preserve">
-    <value>Kuinka monta kuvapistettä alla olevat neljä painiketta muuttavat valintaa</value>
-  </data>
   <data name="Die_Auswahl_rundherum_um_den_Betrag_vergr_ern_610649f0" xml:space="preserve">
     <value>Laajenna valintaa joka suuntaan annetulla määrällä</value>
   </data>
@@ -9158,5 +9155,23 @@
   </data>
   <data name="Stellt_die_Gr_e_bei_jeder_nderung_so_ein_dass_ke_9fe6042b" xml:space="preserve">
     <value>Säätää koon jokaisen muutoksen yhteydessä niin, ettei yksikään kulma jää tyhjäksi</value>
+  </data>
+  <data name="Sensorrand_entfernen_0dd93d02" xml:space="preserve">
+    <value>Poista kennon reuna</value>
+  </data>
+  <data name="Schneidet_die_u_ersten_Pixelreihen_ab_die_der_Se_21684cb8" xml:space="preserve">
+    <value>Leikkaa pois uloimmat pikselirivit, joita kenno ei tuota puhtaasti ja jotka voivat näkyä värillisinä raitoina kuvan reunassa. Päätä tämä mieluiten heti alussa - jos vaihdat myöhemmin, jo asetetut maskit ja lisätyt objektit eivät enää osu tarkasti kohdalleen.</value>
+  </data>
+  <data name="Kante_verfeinern_a28c54d3" xml:space="preserve">
+    <value>Hienosäädä reuna</value>
+  </data>
+  <data name="Die_Kante_der_Auswahl_in_einem_Saum_so_breit_wie_1b4910a2" xml:space="preserve">
+    <value>Anna valinnan reunan seurata kuvaa arvon levyisellä vyöhykkeellä hiuksia, turkkia ja ohuita oksia varten. Sisä- ja ulkopuolella valinta pysyy ennallaan.</value>
+  </data>
+  <data name="Kante_verfeinert_d716f1e0" xml:space="preserve">
+    <value>Reuna hienosäädetty</value>
+  </data>
+  <data name="Um_wie_viele_Bildpunkte_die_Kn_pfe_darunter_die__d9bce2a1" xml:space="preserve">
+    <value>Kuinka monta kuvapistettä alla olevat painikkeet muuttavat valintaa</value>
   </data>
 </root>

@@ -4171,20 +4171,7 @@ RasterTeil:
             Dim w = area.Width, h = area.Height
             If w <= 0 OrElse h <= 0 Then Return Nothing
 
-            ' Die Quelle als Bytes im Rechteck der Rechnung; außerhalb der Auswahl ist sie 0.
-            Dim source(w * h - 1) As Byte
-            Dim rowBuffer(mask.RowBytes - 1) As Byte
-            Dim pixels = mask.GetPixels()
-            For y As Integer = 0 To mask.Height - 1
-                Dim ay = rect.Top + y - area.Top
-                If ay < 0 OrElse ay >= h Then Continue For
-                Marshal.Copy(IntPtr.Add(pixels, y * mask.RowBytes), rowBuffer, 0, mask.RowBytes)
-                Dim ax0 = rect.Left - area.Left
-                For x As Integer = 0 To Math.Min(mask.Width, rect.Width) - 1
-                    Dim ax = ax0 + x
-                    If ax >= 0 AndAlso ax < w Then source(ay * w + ax) = rowBuffer(x)
-                Next
-            Next
+            Dim source = ReadMaskIntoArea(mask, rect, area)
 
             Dim result(w * h - 1) As Byte
             Dim touches = (area.Left = 0, area.Top = 0, area.Right = imageWidth, area.Bottom = imageHeight)
@@ -4228,7 +4215,32 @@ RasterTeil:
                     Return Nothing
             End Select
 
-            ' Auf das belegte Rechteck zuschneiden; nichts belegt heißt keine Auswahl mehr.
+            Return CropAreaToOccupied(result, area)
+        End Function
+
+        ''' <summary>Die Maske als Bytes im Rechteck <paramref name="area"/>; außerhalb der Auswahl 0.</summary>
+        Private Shared Function ReadMaskIntoArea(mask As SKBitmap, rect As SKRectI, area As SKRectI) As Byte()
+            Dim w = area.Width, h = area.Height
+            Dim source(w * h - 1) As Byte
+            Dim rowBuffer(mask.RowBytes - 1) As Byte
+            Dim pixels = mask.GetPixels()
+            For y As Integer = 0 To mask.Height - 1
+                Dim ay = rect.Top + y - area.Top
+                If ay < 0 OrElse ay >= h Then Continue For
+                Marshal.Copy(IntPtr.Add(pixels, y * mask.RowBytes), rowBuffer, 0, mask.RowBytes)
+                Dim ax0 = rect.Left - area.Left
+                For x As Integer = 0 To Math.Min(mask.Width, rect.Width) - 1
+                    Dim ax = ax0 + x
+                    If ax >= 0 AndAlso ax < w Then source(ay * w + ax) = rowBuffer(x)
+                Next
+            Next
+            Return source
+        End Function
+
+        ''' <summary>Ein Ergebnis im Rechteck <paramref name="area"/> auf das belegte Rechteck
+        ''' zuschneiden; nichts belegt heißt keine Auswahl mehr (Nothing).</summary>
+        Private Shared Function CropAreaToOccupied(result As Byte(), area As SKRectI) As (Mask As SKBitmap, Rect As SKRectI)?
+            Dim w = area.Width, h = area.Height
             Dim minX = w, minY = h, maxX = -1, maxY = -1
             For y As Integer = 0 To h - 1
                 Dim row = y * w
@@ -4252,6 +4264,218 @@ RasterTeil:
             Next
             Return (outMask, New SKRectI(area.Left + minX, area.Top + minY, area.Left + maxX + 1, area.Top + maxY + 1))
         End Function
+
+        ''' <summary>Kantenlänge der Kacheln, in denen der Führungsfilter rechnet. Begrenzt den
+        ''' Speicher: dreizehn Summenfelder in Double je Kachel samt Rand, statt je Bild.</summary>
+        Private Const RefineTileSize As Integer = 256
+
+        ''' <summary>KANTE VERFEINERN: die Grenze der Auswahl in einem Saum der Breite
+        ''' <paramref name="amount"/> am Bild entlangführen, ohne Modell. Für Haare, Fell und dünne
+        ''' Zweige, an denen eine Auswahl aus Objekterkennung, Zauberstab oder Pinsel hart und zu grob
+        ''' liegt.
+        '''
+        ''' Das Verfahren ist der Führungsfilter (He, Sun und Tang, „Guided Image Filtering", 2010),
+        ''' mit dem FARBBILD als Führung: in jedem Fenster wird die Maske als lineare Funktion der
+        ''' drei Farbkanäle angesetzt, und wo sich die Farbe ändert, darf sich die Maske mitändern.
+        ''' Ein Haar, das sich vom Hintergrund abhebt, bekommt so seine eigene Deckung, auch wenn die
+        ''' Auswahl es gar nicht enthielt; die Fläche dazwischen bleibt, was sie war.
+        '''
+        ''' Gerechnet wird NUR im Saum um die Grenze (Abstand bis <paramref name="amount"/> nach
+        ''' innen und außen). Innen bleibt volle Deckung, außen keine; der Filter zöge sonst auf
+        ''' großen gleichförmigen Flächen die Maske ins Grau. Ein Bildrand, an den die Auswahl stößt,
+        ''' ist keine Grenze (wie beim Verkleinern).
+        '''
+        ''' <paramref name="guide"/> ist das Bild in DERSELBEN Größe wie das Koordinatensystem der
+        ''' Auswahl (Anzeigeraum), wie beim Zauberstab. Rückgabe Nothing, wenn danach nichts mehr
+        ''' ausgewählt ist.</summary>
+        Public Shared Function RefineSelectionEdge(mask As SKBitmap, rect As SKRectI, guide As SKBitmap,
+                                                   amount As Integer) As (Mask As SKBitmap, Rect As SKRectI)?
+            If mask Is Nothing OrElse guide Is Nothing OrElse rect.Width <= 0 OrElse rect.Height <= 0 Then Return Nothing
+            Dim imageWidth = guide.Width, imageHeight = guide.Height
+            If imageWidth <= 0 OrElse imageHeight <= 0 Then Return Nothing
+            amount = Math.Max(1, Math.Min(SelectionModifyMaxPixels, amount))
+            Dim pad = amount + 2
+            Dim area = New SKRectI(Math.Max(0, rect.Left - pad), Math.Max(0, rect.Top - pad),
+                                   Math.Min(imageWidth, rect.Right + pad), Math.Min(imageHeight, rect.Bottom + pad))
+            Dim w = area.Width, h = area.Height
+            If w <= 0 OrElse h <= 0 Then Return Nothing
+            Dim source = ReadMaskIntoArea(mask, rect, area)
+
+            ' Der Saum: höchstens AMOUNT von der Grenze entfernt, innen wie außen.
+            Dim touches = (area.Left = 0, area.Top = 0, area.Right = imageWidth, area.Bottom = imageHeight)
+            Dim toInside = SquaredDistanceToFeature(source, w, h, amount + 2, featureInside:=True)
+            Dim toOutside = SquaredDistanceToFeature(source, w, h, amount + 2, featureInside:=False,
+                                                     areaTouchesImage:=touches)
+            Dim limit = amount * amount
+            Dim band(w * h - 1) As Boolean
+            Dim anyBand = False
+            For i As Integer = 0 To band.Length - 1
+                If toInside(i) <= limit AndAlso toOutside(i) <= limit Then
+                    band(i) = True
+                    anyBand = True
+                End If
+            Next
+            If Not anyBand Then Return CropAreaToOccupied(source, area)
+
+            ' Das Führungsbild im Rechteck der Rechnung, Kanäle 0 bis 1.
+            Dim guideBgra As SKBitmap = If(guide.ColorType = SKColorType.Bgra8888, guide, guide.Copy(SKColorType.Bgra8888))
+            Dim red(w * h - 1) As Single, green(w * h - 1) As Single, blue(w * h - 1) As Single
+            Try
+                Dim rowBytes = guideBgra.RowBytes
+                Dim row(w * 4 - 1) As Byte
+                Dim basePtr = guideBgra.GetPixels()
+                For y As Integer = 0 To h - 1
+                    Marshal.Copy(IntPtr.Add(basePtr, (area.Top + y) * rowBytes + area.Left * 4), row, 0, w * 4)
+                    For x As Integer = 0 To w - 1
+                        Dim i = y * w + x
+                        blue(i) = row(x * 4) / 255.0F
+                        green(i) = row(x * 4 + 1) / 255.0F
+                        red(i) = row(x * 4 + 2) / 255.0F
+                    Next
+                Next
+            Finally
+                If Not Object.ReferenceEquals(guideBgra, guide) Then guideBgra.Dispose()
+            End Try
+
+            ' Das Fenster ist so breit wie der Saum. Ein Punkt erfährt nur aus seinem Fenster, was
+            ' ausgewählt ist: mit halb so breitem Fenster bekam ein Haar am äußeren Rand des Saums
+            ' keinen ausgewählten Punkt mehr zu sehen und blieb leer (gemessen: 111 statt über 128).
+            Dim radius = Math.Max(2, amount)
+            Dim result = CType(source.Clone(), Byte())
+            Dim tiles As New List(Of SKRectI)()
+            For tileTop As Integer = 0 To h - 1 Step RefineTileSize
+                For tileLeft As Integer = 0 To w - 1 Step RefineTileSize
+                    Dim tile = New SKRectI(tileLeft, tileTop, Math.Min(w, tileLeft + RefineTileSize), Math.Min(h, tileTop + RefineTileSize))
+                    Dim hasBand = False
+                    For y As Integer = tile.Top To tile.Bottom - 1
+                        For x As Integer = tile.Left To tile.Right - 1
+                            If band(y * w + x) Then hasBand = True : Exit For
+                        Next
+                        If hasBand Then Exit For
+                    Next
+                    If hasBand Then tiles.Add(tile)
+                Next
+            Next
+            ' Die Kacheln sind unabhängig: jede liest nur und schreibt nur in ihr eigenes Rechteck.
+            ' Auf vier Fäden begrenzt, weil jede Kachel ihre Summenfelder samt Rand selbst anlegt
+            ' (bei Betrag 50 rund 20 MB).
+            Parallel.For(0, tiles.Count, New ParallelOptions With {.MaxDegreeOfParallelism = 4},
+                         Sub(t) GuidedFilterTile(red, green, blue, source, band, result, w, h, tiles(t), radius))
+            Return CropAreaToOccupied(result, area)
+        End Function
+
+        ''' <summary>Regularisierung des Führungsfilters, bezogen auf Kanäle von 0 bis 1. Klein, damit
+        ''' die Maske Farbkanten folgt; eine Fläche mit Rauschen (Varianz um 1e-4) wird dadurch noch
+        ''' nicht zur Kante.</summary>
+        Private Const RefineEpsilon As Double = 0.0001
+
+        ''' <summary>Der Führungsfilter für EINE Kachel. Gerechnet wird auf der Kachel samt zweimal dem
+        ''' Fensterradius als Rand: einmal für die Koeffizienten a und b, einmal für deren Mittel.
+        ''' Fenster am Rand des Rechenrechtecks werden auf dessen Fläche gekürzt und durch ihre echte
+        ''' Größe geteilt.</summary>
+        Private Shared Sub GuidedFilterTile(red As Single(), green As Single(), blue As Single(), source As Byte(),
+                                            band As Boolean(), result As Byte(), w As Integer, h As Integer,
+                                            tile As SKRectI, radius As Integer)
+            Dim outer = New SKRectI(Math.Max(0, tile.Left - 2 * radius), Math.Max(0, tile.Top - 2 * radius),
+                                    Math.Min(w, tile.Right + 2 * radius), Math.Min(h, tile.Bottom + 2 * radius))
+            Dim ow = outer.Width, oh = outer.Height
+            ' Dreizehn Summenfelder: I (3), p, I*I (6), I*p (3).
+            Const Channels As Integer = 13
+            Dim sums(Channels - 1)() As Double
+            For c As Integer = 0 To Channels - 1
+                sums(c) = New Double((ow + 1) * (oh + 1) - 1) {}
+            Next
+            Dim v(Channels - 1) As Double
+            For y As Integer = 0 To oh - 1
+                Dim rowSum(Channels - 1) As Double
+                For x As Integer = 0 To ow - 1
+                    Dim i = (outer.Top + y) * w + outer.Left + x
+                    Dim r As Double = red(i), g As Double = green(i), b As Double = blue(i)
+                    Dim p = source(i) / 255.0
+                    v(0) = r : v(1) = g : v(2) = b : v(3) = p
+                    v(4) = r * r : v(5) = r * g : v(6) = r * b : v(7) = g * g : v(8) = g * b : v(9) = b * b
+                    v(10) = r * p : v(11) = g * p : v(12) = b * p
+                    Dim o = (y + 1) * (ow + 1) + x + 1
+                    Dim above = y * (ow + 1) + x + 1
+                    For c As Integer = 0 To Channels - 1
+                        rowSum(c) += v(c)
+                        sums(c)(o) = sums(c)(above) + rowSum(c)
+                    Next
+                Next
+            Next
+
+            ' Koeffizienten auf der Kachel samt einem Radius Rand.
+            Dim mid = New SKRectI(Math.Max(outer.Left, tile.Left - radius), Math.Max(outer.Top, tile.Top - radius),
+                                  Math.Min(outer.Right, tile.Right + radius), Math.Min(outer.Bottom, tile.Bottom + radius))
+            Dim mw = mid.Width, mh = mid.Height
+            Dim coef(3)() As Double
+            For c As Integer = 0 To 3
+                coef(c) = New Double(mw * mh - 1) {}
+            Next
+            Dim m(Channels - 1) As Double
+            For y As Integer = 0 To mh - 1
+                For x As Integer = 0 To mw - 1
+                    Dim cx = mid.Left + x - outer.Left, cy = mid.Top + y - outer.Top
+                    Dim x0 = Math.Max(0, cx - radius), x1 = Math.Min(ow, cx + radius + 1)
+                    Dim y0 = Math.Max(0, cy - radius), y1 = Math.Min(oh, cy + radius + 1)
+                    Dim n = CDbl((x1 - x0) * (y1 - y0))
+                    For c As Integer = 0 To Channels - 1
+                        Dim s = sums(c)
+                        m(c) = (s(y1 * (ow + 1) + x1) - s(y0 * (ow + 1) + x1) - s(y1 * (ow + 1) + x0) + s(y0 * (ow + 1) + x0)) / n
+                    Next
+                    ' Kovarianz der Farbe (symmetrisch) plus Regularisierung, und Kovarianz Farbe zu Maske.
+                    Dim srr = m(4) - m(0) * m(0) + RefineEpsilon, srg = m(5) - m(0) * m(1), srb = m(6) - m(0) * m(2)
+                    Dim sgg = m(7) - m(1) * m(1) + RefineEpsilon, sgb = m(8) - m(1) * m(2)
+                    Dim sbb = m(9) - m(2) * m(2) + RefineEpsilon
+                    Dim cr = m(10) - m(0) * m(3), cg = m(11) - m(1) * m(3), cb = m(12) - m(2) * m(3)
+                    ' 3x3 symmetrisch invertieren (Adjunkte).
+                    Dim i00 = sgg * sbb - sgb * sgb, i01 = srb * sgb - srg * sbb, i02 = srg * sgb - srb * sgg
+                    Dim i11 = srr * sbb - srb * srb, i12 = srb * srg - srr * sgb, i22 = srr * sgg - srg * srg
+                    Dim det = srr * i00 + srg * i01 + srb * i02
+                    Dim ar = 0.0, ag = 0.0, ab = 0.0
+                    If Math.Abs(det) > 1.0E-18 Then
+                        ar = (i00 * cr + i01 * cg + i02 * cb) / det
+                        ag = (i01 * cr + i11 * cg + i12 * cb) / det
+                        ab = (i02 * cr + i12 * cg + i22 * cb) / det
+                    End If
+                    Dim k = y * mw + x
+                    coef(0)(k) = ar : coef(1)(k) = ag : coef(2)(k) = ab
+                    coef(3)(k) = m(3) - ar * m(0) - ag * m(1) - ab * m(2)
+                Next
+            Next
+
+            ' Die Koeffizienten mitteln und auf die Kachel anwenden, nur im Saum.
+            Dim coefSums(3)() As Double
+            For c As Integer = 0 To 3
+                Dim s = New Double((mw + 1) * (mh + 1) - 1) {}
+                Dim src = coef(c)
+                For y As Integer = 0 To mh - 1
+                    Dim rowSum = 0.0
+                    For x As Integer = 0 To mw - 1
+                        rowSum += src(y * mw + x)
+                        s((y + 1) * (mw + 1) + x + 1) = s(y * (mw + 1) + x + 1) + rowSum
+                    Next
+                Next
+                coefSums(c) = s
+            Next
+            For y As Integer = tile.Top To tile.Bottom - 1
+                For x As Integer = tile.Left To tile.Right - 1
+                    Dim i = y * w + x
+                    If Not band(i) Then Continue For
+                    Dim cx = x - mid.Left, cy = y - mid.Top
+                    Dim x0 = Math.Max(0, cx - radius), x1 = Math.Min(mw, cx + radius + 1)
+                    Dim y0 = Math.Max(0, cy - radius), y1 = Math.Min(mh, cy + radius + 1)
+                    Dim n = CDbl((x1 - x0) * (y1 - y0))
+                    Dim mc(3) As Double
+                    For c As Integer = 0 To 3
+                        Dim s = coefSums(c)
+                        mc(c) = (s(y1 * (mw + 1) + x1) - s(y0 * (mw + 1) + x1) - s(y1 * (mw + 1) + x0) + s(y0 * (mw + 1) + x0)) / n
+                    Next
+                    Dim q = mc(0) * red(i) + mc(1) * green(i) + mc(2) * blue(i) + mc(3)
+                    result(i) = CByte(Math.Max(0.0, Math.Min(255.0, Math.Round(q * 255.0))))
+                Next
+            Next
+        End Sub
 
         ''' <summary>Quadrierter euklidischer Abstand jedes Punktes zum nächsten MERKMALSPUNKT,
         ''' gedeckelt bei <paramref name="cap"/>² (darüber interessiert der Wert nicht, und so passt er
