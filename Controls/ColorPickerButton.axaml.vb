@@ -97,13 +97,19 @@ Namespace Controls
         End Sub
 
         Private Sub OnViewModelPropertyChanged(sender As Object, e As System.ComponentModel.PropertyChangedEventArgs)
-            If e.PropertyName <> NameOf(EditorViewModel.IsPickingColorFromImage) Then Return
-            If _observedVm Is Nothing OrElse _observedVm.IsPickingColorFromImage Then Return
-            SetPickingActive(False)
+            If _observedVm Is Nothing Then Return
+            Select Case e.PropertyName
+                Case NameOf(EditorViewModel.ColorPickPreview)
+                    ' Nur das Farbfeld, dessen Pipette gerade läuft, zeigt die Farbe unter dem Zeiger.
+                    If _isPicking Then UpdateSwatchDisplay()
+                Case NameOf(EditorViewModel.IsPickingColorFromImage)
+                    If Not _observedVm.IsPickingColorFromImage Then SetPickingActive(False)
+            End Select
         End Sub
 
         Private Sub SetPickingActive(active As Boolean)
             _isPicking = active
+            UpdateSwatchDisplay()
             Dim eyedropperButton = Me.FindControl(Of Button)("EyedropperButton")
             If eyedropperButton Is Nothing Then Return
             If active Then
@@ -141,12 +147,26 @@ Namespace Controls
             End If
         End Sub
 
-        Private Sub UpdateVisuals()
+        ''' Farbfeld und Hex-Text: normalerweise die gewählte Farbe, während die eigene Pipette über
+        ''' dem Bild schwebt die Farbe unter ihrer Spitze, mit Akzentrahmen. So ist vor dem Klick zu
+        ''' sehen, was man trifft; übernommen wird erst mit dem Klick, SelectedColor bleibt bis dahin.
+        Private Sub UpdateSwatchDisplay()
+            Dim live As Color? = If(_isPicking AndAlso _observedVm IsNot Nothing AndAlso _observedVm.IsPickingColorFromImage,
+                                    _observedVm.ColorPickPreview, Nothing)
+            Dim shown = If(live.HasValue, live.Value, SelectedColor)
+
             Dim swatch = Me.FindControl(Of Border)("SwatchBorder")
-            If swatch IsNot Nothing Then swatch.Background = New SolidColorBrush(SelectedColor)
+            If swatch IsNot Nothing Then
+                swatch.Background = New SolidColorBrush(shown)
+                swatch.Classes.Set("live", live.HasValue)
+            End If
 
             Dim hexText = Me.FindControl(Of TextBlock)("HexTextBlock")
-            If hexText IsNot Nothing Then hexText.Text = FormatHex(SelectedColor)
+            If hexText IsNot Nothing Then hexText.Text = FormatHex(shown)
+        End Sub
+
+        Private Sub UpdateVisuals()
+            UpdateSwatchDisplay()
 
             If _suppressSync Then Return
             _suppressSync = True

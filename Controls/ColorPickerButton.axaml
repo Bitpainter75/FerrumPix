@@ -2,10 +2,20 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:icons="clr-namespace:FerrumPix.Controls"
              x:Class="FerrumPix.Controls.ColorPickerButton">
+    <!-- Der Rahmen kommt aus Stilen, nicht als Wert am Element: ein lokaler Wert schlüge die Klasse
+         "live" (Farbe unter der laufenden Pipette) aus dem Feld. -->
+    <UserControl.Styles>
+        <Style Selector="Border#SwatchBorder">
+            <Setter Property="BorderBrush" Value="{DynamicResource FP.Border.Strong}"/>
+        </Style>
+        <Style Selector="Border#SwatchBorder.live">
+            <Setter Property="BorderBrush" Value="{DynamicResource FP.Accent}"/>
+        </Style>
+    </UserControl.Styles>
     <StackPanel Orientation="Horizontal" Spacing="6">
         <Button Name="SwatchButton" Classes="ghost" Height="34" Padding="6,4" HorizontalAlignment="Stretch" MinWidth="120" ToolTip.Tip="Farbe wählen">
             <Grid ColumnDefinitions="28,*" ColumnSpacing="8">
-                <Border Name="SwatchBorder" Width="26" Height="22" BorderBrush="{DynamicResource FP.Border.Strong}" BorderThickness="1" CornerRadius="4"/>
+                <Border Name="SwatchBorder" Width="26" Height="22" BorderThickness="1" CornerRadius="4"/>
                 <TextBlock Grid.Column="1" Name="HexTextBlock" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}" VerticalAlignment="Center"/>
             </Grid>
             <Button.Flyout>

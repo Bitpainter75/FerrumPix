@@ -874,9 +874,12 @@ Namespace ViewModels
         ' der Objekte lag er um gut einen Pixel versetzt unter dem Strich und war nicht zu sehen.
         Private Const ObjectShadowOffsetDefault As Double = 4
         Private Const BrushShadowOffsetDefault As Double = 20
+        ' Dasselbe für die Größe des Glühens: die 5 der Objekte sind auf einem Strich kaum ein Saum.
+        Private Const ObjectGlowSizeDefault As Double = 5
+        Private Const BrushGlowSizeDefault As Double = 20
 
-        ''' <summary>Der zuletzt gesehene Stand von IsBrushShadowContext, um das Betreten zu erkennen.</summary>
-        Private _lastBrushShadowContext As Boolean
+        ''' <summary>Der zuletzt gesehene Stand von IsBrushEffectsContext, um das Betreten zu erkennen.</summary>
+        Private _lastBrushEffectsContext As Boolean
 
         ''' <summary>Startwert der beiden Versatzregler (Doppelklick): beim Malpinsel ein anderer als bei Objekten.</summary>
         Public ReadOnly Property ShadowOffsetDefault As Double
@@ -885,28 +888,40 @@ Namespace ViewModels
             End Get
         End Property
 
-        ''' <summary>Meinen die Schattenpuffer die nächsten Pinselstriche? Im Malwerkzeug, solange kein
-        ''' Objekt markiert ist; ein markierter Strich bringt seine eigenen Werte mit.</summary>
-        Private ReadOnly Property IsBrushShadowContext As Boolean
+        ''' <summary>Startwert des Größenreglers beim Glühen (Doppelklick), ebenso nach Pinsel und Objekt getrennt.</summary>
+        Public ReadOnly Property GlowSizeDefault As Double
+            Get
+                Return If(IsBrushPaintMode, BrushGlowSizeDefault, ObjectGlowSizeDefault)
+            End Get
+        End Property
+
+        ''' <summary>Meinen die Puffer von Schatten und Glühen die nächsten Pinselstriche? Im
+        ''' Malwerkzeug, solange kein Objekt markiert ist; ein markierter Strich bringt seine eigenen
+        ''' Werte mit.</summary>
+        Private ReadOnly Property IsBrushEffectsContext As Boolean
             Get
                 Return _currentTool = EditorTool.Draw AndAlso Not HasSelectedAnnotation
             End Get
         End Property
 
-        ''' <summary>Wer das Malwerkzeug betritt, bekommt den Versatz des Pinsels vorbelegt, so wie ein
-        ''' Objektwerkzeug beim Scharfstellen seine Vorgaben setzt (SeedAnnotationDefaultsForKind).
-        ''' Der Wechsel zwischen Pinsel und Radierer bleibt im Werkzeug und setzt nichts zurück.</summary>
-        Private Sub UpdateBrushShadowContext()
+        ''' <summary>Wer das Malwerkzeug betritt, bekommt Schattenversatz und Glühgröße des Pinsels
+        ''' vorbelegt, so wie ein Objektwerkzeug beim Scharfstellen seine Vorgaben setzt
+        ''' (SeedAnnotationDefaultsForKind). Der Wechsel zwischen Pinsel und Radierer bleibt im
+        ''' Werkzeug und setzt nichts zurück.</summary>
+        Private Sub UpdateBrushEffectsContext()
             Me.RaisePropertyChanged(NameOf(ShadowOffsetDefault))
-            Dim entered = IsBrushShadowContext AndAlso Not _lastBrushShadowContext
-            _lastBrushShadowContext = IsBrushShadowContext
+            Me.RaisePropertyChanged(NameOf(GlowSizeDefault))
+            Dim entered = IsBrushEffectsContext AndAlso Not _lastBrushEffectsContext
+            _lastBrushEffectsContext = IsBrushEffectsContext
             If Not entered Then Return
             _annotationShadowOffsetX = BrushShadowOffsetDefault
             _annotationShadowOffsetY = BrushShadowOffsetDefault
             _annotationShadowLightAngle = ComputeShadowLightAngle(_annotationShadowOffsetX, _annotationShadowOffsetY)
+            _annotationGlowBlur = BrushGlowSizeDefault
             Me.RaisePropertyChanged(NameOf(AnnotationShadowOffsetX))
             Me.RaisePropertyChanged(NameOf(AnnotationShadowOffsetY))
             Me.RaisePropertyChanged(NameOf(AnnotationShadowLightAngle))
+            Me.RaisePropertyChanged(NameOf(AnnotationGlowBlur))
         End Sub
 
         Public Property AnnotationShadowLightAngle As Double

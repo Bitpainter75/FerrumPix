@@ -17301,9 +17301,9 @@ Namespace ViewModels
                             Me.RaisePropertyChanged(NameOf(ShowSelectionFillGroup))
                             Me.RaisePropertyChanged(NameOf(ShowSelectionLineAndEffectsGroups))
                         Case NameOf(IsBrushPaintMode)
-                            UpdateBrushShadowContext()
+                            UpdateBrushEffectsContext()
                         Case NameOf(ShowSelectionAdjustments), NameOf(HasSelectedAnnotation)
-                            If e.PropertyName = NameOf(HasSelectedAnnotation) Then UpdateBrushShadowContext()
+                            If e.PropertyName = NameOf(HasSelectedAnnotation) Then UpdateBrushEffectsContext()
                             Dim wasSelectionContext = _lastSelectionStyleContext
                             _lastSelectionStyleContext = IsSelectionStyleContext
                             Me.RaisePropertyChanged(NameOf(IsSelectionStyleContext))
@@ -24706,8 +24706,8 @@ Namespace ViewModels
             _annotationShadowOffsetX = 4
             _annotationShadowOffsetY = 4
             ' Die Puffer stehen jetzt auf den Objektvorgaben: im Malwerkzeug setzt die nächste Meldung
-            ' von IsBrushPaintMode den Versatz des Pinsels wieder.
-            _lastBrushShadowContext = False
+            ' von IsBrushPaintMode Schattenversatz und Glühgröße des Pinsels wieder.
+            _lastBrushEffectsContext = False
             _annotationShadowLightAngle = ComputeShadowLightAngle(_annotationShadowOffsetX, _annotationShadowOffsetY)
             _annotationShadowBlur = 6
             _annotationShadowStrength = 100

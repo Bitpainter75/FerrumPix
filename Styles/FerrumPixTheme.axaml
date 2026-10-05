@@ -1069,19 +1069,20 @@
         <Setter Property="Width" Value="40"/>
         <Setter Property="MinWidth" Value="40"/>
     </Style>
-    <!-- Das Zahlenfeld sitzt AUF der Reglerzeile und nimmt deren Farbe an, nicht die eines Feldes.
-         Deshalb holt es die Feldflaeche, die weiter oben fuer jedes Textfeld am Rahmenelement
-         steht, hier ausdruecklich zurueck. -->
+    <!-- Das Zahlenfeld neben dem Regler hebt sich dezent von der Gruppe ab: FP.Bg.Elevated steht
+         in allen vier Themen eine Stufe neben FP.Bg.Content, dem Grund der Gruppen. FP.Bg.Input
+         taugt dafuer nicht, im hellen Thema ist es dasselbe Weiss wie der Grund. Die Feldflaeche,
+         die weiter oben fuer jedes Textfeld am Rahmenelement steht, wird hier ersetzt. -->
     <Style Selector="TextBox.slider-value /template/ Border#PART_BorderElement">
-        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Background" Value="{DynamicResource FP.Bg.Elevated}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource FP.Border.Subtle}"/>
     </Style>
     <Style Selector="TextBox.slider-value:pointerover /template/ Border#PART_BorderElement">
-        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Background" Value="{DynamicResource FP.Bg.Hover}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource FP.Border.Normal}"/>
     </Style>
     <Style Selector="TextBox.slider-value:focus /template/ Border#PART_BorderElement">
-        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Background" Value="{DynamicResource FP.Bg.Elevated}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource FP.Accent}"/>
     </Style>
     <Style Selector="TextBox.slider-value /template/ ScrollViewer#PART_ScrollViewer">
@@ -1089,7 +1090,9 @@
     </Style>
     <!-- 1. Haupt-Style: Gilt für NumericUpDown, aber NUR mit der Klasse .slider-value -->
     <Style Selector=":is(NumericUpDown).slider-value">
-        <Setter Property="Background" Value="Transparent"/>
+        <!-- Dezent abgehoben wie TextBox.slider-value oben; die Flaeche malt der ButtonSpinner der
+             Vorlage, das Textfeld darin bleibt durchsichtig. -->
+        <Setter Property="Background" Value="{DynamicResource FP.Bg.Elevated}"/>
         <Setter Property="Foreground" Value="{DynamicResource FP.Text.Secondary}"/>
         <Setter Property="BorderBrush" Value="Transparent"/>
         <Setter Property="BorderThickness" Value="0"/>
@@ -1106,6 +1109,14 @@
     <!-- 2. Fokus-Zustand -->
     <Style Selector=":is(NumericUpDown).slider-value:focus-within">
         <Setter Property="BorderBrush" Value="Transparent"/>
+    </Style>
+    <Style Selector=":is(NumericUpDown).slider-value:pointerover">
+        <Setter Property="Background" Value="{DynamicResource FP.Bg.Hover}"/>
+    </Style>
+    <!-- Im Aufklapper ist FP.Bg.Elevated die Menuefarbe: dort steht das Zahlenfeld neben dem Hex-Feld
+         des Farbwaehlers und traegt wie dieses die Feldfarbe, statt als Menueblock zu erscheinen. -->
+    <Style Selector="Popup :is(NumericUpDown).slider-value">
+        <Setter Property="Background" Value="{DynamicResource FP.Bg.Input}"/>
     </Style>
 
     <!-- 3. Das eigentliche Textfeld im Template stylen -->
