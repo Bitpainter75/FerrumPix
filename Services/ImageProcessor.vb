@@ -1504,7 +1504,7 @@ Namespace Services
                 End If
                 If Not bounds.HasValue Then Return SKRectI.Empty
                 ' Muss die RENDER-Reichweite von DrawBrushStrokeWithEffects spiegeln:
-                ' dort pad = strokeWidth + |shadowDx| + |shadowDy| + 3*max(shadowSigma, glowSigma) + 4.
+                ' dort pad = strokeWidth + |shadowDx| + |shadowDy| + Weitung + 3*max(shadowSigma, glowSigma) + 4.
                 ' Der alte Pauschalwert Max(4, strokeWidth*2) war kleiner als die Glow-Reichweite
                 ' (glowSigma bis 0,8*strokeWidth => 3 Sigma = 2,4*strokeWidth ZUSAETZLICH zum Strich) -
                 ' beim Patch-Render blieben abgeschnittene/veraltete Glow-Saeume am Patchrand stehen.
@@ -1512,10 +1512,11 @@ Namespace Services
                 Dim paintObjSize = Math.Max(1.0F, annotation.StrokeWidth)
                 Dim paintShadowDx = If(annotation.ShadowEnabled, Clamp(annotation.ShadowOffsetXPercent, -100, 100) / 100.0F * paintObjSize, 0.0F)
                 Dim paintShadowDy = If(annotation.ShadowEnabled, Clamp(annotation.ShadowOffsetYPercent, -100, 100) / 100.0F * paintObjSize, 0.0F)
-                Dim paintShadowSigma = If(annotation.ShadowEnabled, Clamp(annotation.ShadowBlur, 0, 100) / 100.0F * paintObjSize * ShadowBlurSigmaFactor, 0.0F)
+                Dim paintShadowSigma = BrushShadowSigma(annotation, paintObjSize)
+                Dim paintShadowGrow = Math.Max(0, BrushShadowGrow(annotation, paintObjSize))
                 Dim paintGlowSigma = If(annotation.GlowEnabled, Clamp(annotation.GlowBlur, 0, 100) / 100.0F * paintObjSize * 0.8F, 0.0F)
                 Dim paintPad = Math.Max(Math.Max(4.0F, annotation.StrokeWidth * 2.0F),
-                                        paintObjSize + Math.Abs(paintShadowDx) + Math.Abs(paintShadowDy) +
+                                        paintObjSize + Math.Abs(paintShadowDx) + Math.Abs(paintShadowDy) + paintShadowGrow +
                                         Math.Max(paintShadowSigma, paintGlowSigma) * 3.0F + 4.0F)
                 Return ClampRectToBitmap(InflateToRectI(bounds.Value, paintPad), sourceWidth, sourceHeight)
             End If

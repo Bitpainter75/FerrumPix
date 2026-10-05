@@ -200,10 +200,12 @@ Namespace Services
             Dim objSize = Math.Max(1.0F, strokeWidth)
             Dim shadowDx = If(ann.ShadowEnabled, Clamp(ann.ShadowOffsetXPercent, -100, 100) / 100.0F * objSize, 0.0F)
             Dim shadowDy = If(ann.ShadowEnabled, Clamp(ann.ShadowOffsetYPercent, -100, 100) / 100.0F * objSize, 0.0F)
-            Dim shadowSigma = If(ann.ShadowEnabled, Clamp(ann.ShadowBlur, 0, 100) / 100.0F * objSize * ShadowBlurSigmaFactor, 0.0F)
+            Dim shadowSigma = BrushShadowSigma(ann, objSize)
+            Dim shadowGrow = BrushShadowGrow(ann, objSize)
             Dim glowSigma = If(ann.GlowEnabled, Clamp(ann.GlowBlur, 0, 100) / 100.0F * objSize * 0.8F, 0.0F)
 
-            Dim pad = objSize + Math.Abs(shadowDx) + Math.Abs(shadowDy) + Math.Max(shadowSigma, glowSigma) * 3.0F + 4.0F
+            Dim pad = objSize + Math.Abs(shadowDx) + Math.Abs(shadowDy) + Math.Max(0, shadowGrow) +
+                      Math.Max(shadowSigma, glowSigma) * 3.0F + 4.0F
             Dim left = CInt(Math.Floor(Clamp(minX - pad, 0, width)))
             Dim top = CInt(Math.Floor(Clamp(minY - pad, 0, height)))
             Dim right = CInt(Math.Ceiling(Clamp(maxX + pad, 0, width)))
@@ -229,9 +231,15 @@ Namespace Services
                 End If
                 If ann.ShadowEnabled AndAlso ImageAnnotation.EffectDrawsOutside(ann.ShadowPlacement) Then
                     Dim shadowColor = ApplyAlpha(ParseColor(ann.ShadowColor, New SKColor(0, 0, 0, 128)), Clamp(ann.ShadowStrength, 0, 100) / 100.0F)
-                    Using p = New SKPaint()
-                        p.ImageFilter = SKImageFilter.CreateDropShadowOnly(shadowDx, shadowDy, Math.Max(0.01F, shadowSigma), Math.Max(0.01F, shadowSigma), shadowColor)
-                        canvas.DrawBitmap(layer, left, top, p)
+                    ' Die Größe weitet oder verengt die Silhouette des Strichs, bevor sie zum Schatten wird.
+                    Dim growRadius = CInt(Math.Round(Math.Abs(shadowGrow)))
+                    Using morph = If(growRadius < 1, Nothing,
+                                     If(shadowGrow > 0, SKImageFilter.CreateDilate(growRadius, growRadius),
+                                                        SKImageFilter.CreateErode(growRadius, growRadius)))
+                        Using p = New SKPaint()
+                            p.ImageFilter = SKImageFilter.CreateDropShadowOnly(shadowDx, shadowDy, Math.Max(0.01F, shadowSigma), Math.Max(0.01F, shadowSigma), shadowColor, morph)
+                            canvas.DrawBitmap(layer, left, top, p)
+                        End Using
                     End Using
                 End If
                 canvas.DrawBitmap(layer, left, top)
@@ -242,6 +250,22 @@ Namespace Services
                 End If
             End Using
         End Sub
+
+        ''' <summary>Weichheit des Pinselschattens. Bemessen an der Strichbreite und deshalb mit dem
+        ''' Faktor des Scheins statt mit dem der Objekte: der Objektfaktor ist auf eine Kante von
+        ''' einigen hundert Pixeln ausgelegt, auf einen Strich von 30 Pixeln ergab er Bruchteile eines
+        ''' Pixels.</summary>
+        Friend Shared Function BrushShadowSigma(ann As ImageAnnotation, objSize As Single) As Single
+            If Not ann.ShadowEnabled Then Return 0.0F
+            Return Clamp(ann.ShadowBlur, 0, 100) / 100.0F * objSize * 0.8F
+        End Function
+
+        ''' <summary>Um wie viele Pixel die Größe den Pinselschatten weitet (negativ: verengt). 100 %
+        ''' ist die Silhouette selbst, 200 % legt eine halbe Strichbreite rundum zu.</summary>
+        Friend Shared Function BrushShadowGrow(ann As ImageAnnotation, objSize As Single) As Single
+            If Not ann.ShadowEnabled Then Return 0.0F
+            Return (Clamp(ann.ShadowSizePercent, 10, 400) / 100.0F - 1.0F) * objSize * 0.5F
+        End Function
 
         ' Grain-Cache: je Preset eine deterministisch erzeugte Alpha-Korn-Kachel (256x256), die als
         ' wiederholender Shader in die Strichform gestanzt wird. Deterministisch, damit Vorschau und

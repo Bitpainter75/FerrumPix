@@ -67,7 +67,7 @@
                                Foreground="{DynamicResource FP.Text.Secondary}"
                                VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                     <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100"
-                                       DefaultValue="4"
+                                       DefaultValue="{Binding ShadowOffsetDefault}"
                                        WheelIncrement="0.1" DragIncrement="0.1"
                                        Value="{Binding AnnotationShadowOffsetX}" Margin="0,0" />
                     <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
@@ -80,7 +80,7 @@
                                Foreground="{DynamicResource FP.Text.Secondary}"
                                VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                     <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100"
-                                       DefaultValue="4"
+                                       DefaultValue="{Binding ShadowOffsetDefault}"
                                        WheelIncrement="0.1" DragIncrement="0.1"
                                        Value="{Binding AnnotationShadowOffsetY}" Margin="0,0" />
                     <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"

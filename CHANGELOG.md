@@ -35,5 +35,9 @@
 
 - Raw files from the Fujifilm X100VI get better matched brightness and colors.
 
+- The shadow of the paint brush is visible now. It used to sit almost exactly under the stroke,
+  and its softness and size had next to no effect. The brush starts with a larger offset than
+  objects.
+
 - Save as, export, apply adjustments and the other dialogs with a target folder remember whether
   you last picked the current or the last folder.

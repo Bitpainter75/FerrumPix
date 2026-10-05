@@ -870,6 +870,45 @@ Namespace ViewModels
             End Set
         End Property
 
+        ' Der Versatz des Pinselschattens zählt in Strichbreiten, nicht in Objektkanten: mit den 4 %
+        ' der Objekte lag er um gut einen Pixel versetzt unter dem Strich und war nicht zu sehen.
+        Private Const ObjectShadowOffsetDefault As Double = 4
+        Private Const BrushShadowOffsetDefault As Double = 20
+
+        ''' <summary>Der zuletzt gesehene Stand von IsBrushShadowContext, um das Betreten zu erkennen.</summary>
+        Private _lastBrushShadowContext As Boolean
+
+        ''' <summary>Startwert der beiden Versatzregler (Doppelklick): beim Malpinsel ein anderer als bei Objekten.</summary>
+        Public ReadOnly Property ShadowOffsetDefault As Double
+            Get
+                Return If(IsBrushPaintMode, BrushShadowOffsetDefault, ObjectShadowOffsetDefault)
+            End Get
+        End Property
+
+        ''' <summary>Meinen die Schattenpuffer die nächsten Pinselstriche? Im Malwerkzeug, solange kein
+        ''' Objekt markiert ist; ein markierter Strich bringt seine eigenen Werte mit.</summary>
+        Private ReadOnly Property IsBrushShadowContext As Boolean
+            Get
+                Return _currentTool = EditorTool.Draw AndAlso Not HasSelectedAnnotation
+            End Get
+        End Property
+
+        ''' <summary>Wer das Malwerkzeug betritt, bekommt den Versatz des Pinsels vorbelegt, so wie ein
+        ''' Objektwerkzeug beim Scharfstellen seine Vorgaben setzt (SeedAnnotationDefaultsForKind).
+        ''' Der Wechsel zwischen Pinsel und Radierer bleibt im Werkzeug und setzt nichts zurück.</summary>
+        Private Sub UpdateBrushShadowContext()
+            Me.RaisePropertyChanged(NameOf(ShadowOffsetDefault))
+            Dim entered = IsBrushShadowContext AndAlso Not _lastBrushShadowContext
+            _lastBrushShadowContext = IsBrushShadowContext
+            If Not entered Then Return
+            _annotationShadowOffsetX = BrushShadowOffsetDefault
+            _annotationShadowOffsetY = BrushShadowOffsetDefault
+            _annotationShadowLightAngle = ComputeShadowLightAngle(_annotationShadowOffsetX, _annotationShadowOffsetY)
+            Me.RaisePropertyChanged(NameOf(AnnotationShadowOffsetX))
+            Me.RaisePropertyChanged(NameOf(AnnotationShadowOffsetY))
+            Me.RaisePropertyChanged(NameOf(AnnotationShadowLightAngle))
+        End Sub
+
         Public Property AnnotationShadowLightAngle As Double
             Get
                 Return _annotationShadowLightAngle
