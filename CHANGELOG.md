@@ -9,9 +9,6 @@
   from the edge of the picture. A semi-transparent gradient frame now keeps the opacity you set
   instead of turning fainter.
 
-- **Support FerrumPix.** The top of the settings now says it plainly: FerrumPix is free and open
-  source, forever. If you want to give something back, a button there lets you buy me a coffee.
-
 ### Fixes
 
 - Red eye removal moved to the image brush, next to the eraser, dodge, burn, sponge and replace
