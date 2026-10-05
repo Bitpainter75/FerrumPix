@@ -27,7 +27,10 @@ Namespace ViewModels
         Private _spongeSaturate As Boolean = False
         Private _replaceColor As String = "#FF3A7BD5"
 
-        Private Shared ReadOnly ToneModes As String() = {"Dodge", "Burn", "Sponge", "ReplaceColor"}
+        ''' <summary>Die Arten neben dem Radierer. "RedEye" ist dabei, rechnet aber nicht mit einem Zug:
+        ''' ein Klick entfernt rote Augen im Pinselkreis (RemoveRedEyeAt). Frueher war das ein Schalter
+        ''' im Retusche-Werkzeug; hier steht es bei den Arten, die das vorhandene Bild aendern.</summary>
+        Private Shared ReadOnly ToneModes As String() = {"Dodge", "Burn", "Sponge", "ReplaceColor", "RedEye"}
 
         ''' <summary>Was ein Zug des Bildpinsels zum Umrechnen braucht, auf dem UI-Faden
         ''' eingefroren: der Hintergrund darf die Felder des Werkzeugs nicht lesen, und wer mitten im
@@ -62,10 +65,18 @@ Namespace ViewModels
             End Get
         End Property
 
-        ''' <summary>Eine der vier Arten, die das Bild umrechnen (nicht der Radierer).</summary>
+        ''' <summary>Eine der vier Arten, die das Bild mit einem Zug umrechnen (nicht der Radierer,
+        ''' nicht Rote Augen).</summary>
         Public ReadOnly Property IsToneBrushMode As Boolean
             Get
-                Return _currentTool = EditorTool.Draw AndAlso _toneMode <> ""
+                Return _currentTool = EditorTool.Draw AndAlso _toneMode <> "" AndAlso _toneMode <> "RedEye"
+            End Get
+        End Property
+
+        ''' <summary>Rote Augen: ein Klick ins Bild ist ein fertiger Schritt, kein Zug.</summary>
+        Public ReadOnly Property IsRedEyeMode As Boolean
+            Get
+                Return _currentTool = EditorTool.Draw AndAlso _toneMode = "RedEye"
             End Get
         End Property
 
@@ -176,6 +187,7 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(IsDodgeBurnMode))
             Me.RaisePropertyChanged(NameOf(IsSpongeMode))
             Me.RaisePropertyChanged(NameOf(IsReplaceColorMode))
+            Me.RaisePropertyChanged(NameOf(IsRedEyeMode))
             Me.RaisePropertyChanged(NameOf(IsBrushPaintMode))
             Me.RaisePropertyChanged(NameOf(IsEraserPaintMode))
             Me.RaisePropertyChanged(NameOf(ShowBrushStrokeAdjustments))
@@ -192,6 +204,7 @@ Namespace ViewModels
                 Case "Burn" : Return LocalizationService.T("Nachbelichten")
                 Case "Sponge" : Return LocalizationService.T("Schwamm")
                 Case "ReplaceColor" : Return LocalizationService.T("Farbe ersetzen")
+                Case "RedEye" : Return LocalizationService.T("Rote Augen entfernen")
                 Case Else : Return ""
             End Select
         End Function
@@ -202,6 +215,7 @@ Namespace ViewModels
                 Case "Burn" : Return "brightness-down.svg"
                 Case "Sponge" : Return "droplet-half.svg"
                 Case "ReplaceColor" : Return "replace.svg"
+                Case "RedEye" : Return "eye.svg"
                 Case Else : Return "eraser.svg"
             End Select
         End Function
@@ -216,6 +230,8 @@ Namespace ViewModels
         ''' Bildpinsels). Steht ein Ziel fest, bleibt es dabei, auch wenn es scheitert - ein Rueckfall
         ''' aufs Foto saesse in den falschen Pixeln.</summary>
         Private Sub AddToneStroke(normalized As List(Of Avalonia.Point))
+            ' Rote Augen kennen keinen Zug; der Klick geht in der Ansicht an RemoveRedEyeAt.
+            If _toneMode = "RedEye" Then Return
             Dim imageObject = FindStrokeTargetImageAnnotation()
             If imageObject IsNot Nothing Then
                 If Not TryPaintStrokeIntoImageAnnotation(imageObject, normalized, isEraser:=False,

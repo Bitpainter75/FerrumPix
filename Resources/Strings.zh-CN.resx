@@ -8726,9 +8726,6 @@
   <data name="Rote_Augen_entfernen_fehlgeschlagen_2f91768f" xml:space="preserve">
     <value>去除红眼失败</value>
   </data>
-  <data name="Solange_eingeschaltet_entfernt_jeder_Klick_ins_B_cc00c082" xml:space="preserve">
-    <value>开启时，在图像中每次点击都会去除画笔圆圈内的红眼</value>
-  </data>
   <data name="Rote_Augen_entfernen_ed756d76" xml:space="preserve">
     <value>去除红眼</value>
   </data>

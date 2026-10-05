@@ -194,6 +194,14 @@
                                 ToolTip.Tip="Farbe ersetzen: färbt unter dem Pinsel um und behält Helligkeit und Struktur">
                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/replace.svg" Width="16" Height="16" />
                         </Button>
+                        <!-- ROTE AUGEN: kein Zug, ein Klick ist ein fertiger Schritt im Pinselkreis
+                             (EditorViewModel.RemoveRedEyeAt). Nur die Groesse zaehlt. -->
+                        <Button Classes="ghost" Padding="8,6"
+                                Command="{Binding SetToolCommand}" CommandParameter="RedEye"
+                                Classes.active="{Binding ImageBrushMode, Converter={StaticResource StringEqualsConverter}, ConverterParameter=RedEye}"
+                                ToolTip.Tip="Rote Augen entfernen">
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/eye.svg" Width="16" Height="16" />
+                        </Button>
                     </StackPanel>
                     <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
                         <TextBlock Text="Größe" Foreground="{DynamicResource FP.Text.Secondary}"
@@ -206,6 +214,14 @@
                                                  Minimum="1" Maximum="2000" Increment="1"
                                                  FormatString="F0" />
                     </Grid>
+                    <TextBlock Text="Mit dem Pinselkreis auf die Pupille klicken. Er sollte das Rot ganz umfassen, aber nicht viel mehr: stark gerötete Haut im Kreis würde mit entfärbt."
+                               IsVisible="{Binding IsRedEyeMode}"
+                               Foreground="{DynamicResource FP.Text.Muted}"
+                               FontSize="{DynamicResource FP.Font.Caption}"
+                               TextWrapping="Wrap" Margin="0,2,0,0" />
+                    <!-- Haerte, Deckkraft, Fluss und Glaetten gehoeren zu einem Zug; Rote Augen ist ein
+                         Klick mit fester Wirkung und braucht sie nicht. -->
+                    <StackPanel Spacing="2" IsVisible="{Binding !IsRedEyeMode}">
                     <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
                         <TextBlock Text="Härte" Foreground="{DynamicResource FP.Text.Secondary}"
                                    VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
@@ -260,6 +276,7 @@
                                                  Minimum="0" Maximum="100" Increment="1"
                                                  FormatString="F0" />
                     </Grid>
+                    </StackPanel>
                     <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Top" IsVisible="{Binding IsEraserPaintMode}">
                         <TextBlock Text="Hintergrundfarbe" Foreground="{DynamicResource FP.Text.Secondary}"
                                    VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
@@ -403,24 +420,6 @@
                             <TextBlock Text="Quelle lösen" FontSize="{DynamicResource FP.Font.Caption}" />
                         </Button>
                     </Grid>
-                    <!-- ROTE AUGEN: ein Schalter, keine vierte Retusche-Art (EditorViewModel.IsRedEyeArmed).
-                         Ist er an, ist jeder Klick ins Bild ein fertiger Schritt im Pinselkreis. -->
-                    <Button Classes="ghost" Classes.accent="{Binding IsRedEyeArmed}"
-                            HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
-                            Padding="10,6" Margin="0,6,0,0"
-                            Command="{Binding ToggleRedEyeCommand}"
-                            ToolTip.Tip="Solange eingeschaltet, entfernt jeder Klick ins Bild rote Augen im Pinselkreis">
-                        <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
-                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/eye.svg"
-                                           Width="16" Height="16" />
-                            <TextBlock Text="Rote Augen entfernen" />
-                        </StackPanel>
-                    </Button>
-                    <TextBlock Text="Mit dem Pinselkreis auf die Pupille klicken. Er sollte das Rot ganz umfassen, aber nicht viel mehr: stark gerötete Haut im Kreis würde mit entfärbt."
-                               IsVisible="{Binding IsRedEyeArmed}"
-                               Foreground="{DynamicResource FP.Text.Muted}"
-                               FontSize="{DynamicResource FP.Font.Caption}"
-                               TextWrapping="Wrap" />
                 </StackPanel>
             </Expander>
         </Border>

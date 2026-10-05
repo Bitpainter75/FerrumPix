@@ -1362,24 +1362,26 @@
 
                             <!-- Die Füllung arbeitet auch auf einer Maskenebene: ihre Luminanz stuft
                                  dort die Anpassung ab. Kontur, Schatten und Glühen gibt es dagegen nur
-                                 an einer sichtbaren Auswahlebene (ShowSelectionLineAndEffects). -->
+                                 an einer sichtbaren Auswahlebene (ShowSelectionLineAndEffects). Alle
+                                 vier erst, wenn es eine Auswahl gibt (auch die Maske einer markierten
+                                 Auswahlebene): ohne sie wirken sie auf nichts. -->
                             <Border Classes="adjustment-group" Margin="0,7,0,0"
-                                    IsVisible="{Binding IsSelectionStyleContext}">
+                                    IsVisible="{Binding ShowSelectionFillGroup}">
                                 <panels:FillPanel />
                             </Border>
 
                             <Border Classes="adjustment-group" Margin="0,7,0,0"
-                                    IsVisible="{Binding ShowSelectionLineAndEffects}">
+                                    IsVisible="{Binding ShowSelectionLineAndEffectsGroups}">
                                 <panels:SelectionStrokePanel />
                             </Border>
 
                             <Border Classes="adjustment-group" Margin="0,7,0,0"
-                                    IsVisible="{Binding ShowSelectionLineAndEffects}">
+                                    IsVisible="{Binding ShowSelectionLineAndEffectsGroups}">
                                 <panels:AnnotationShadowPanel />
                             </Border>
 
                             <Border Classes="adjustment-group" Margin="0,7,0,0"
-                                    IsVisible="{Binding ShowSelectionLineAndEffects}">
+                                    IsVisible="{Binding ShowSelectionLineAndEffectsGroups}">
                                 <panels:AnnotationGlowPanel />
                             </Border>
 

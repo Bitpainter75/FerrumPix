@@ -8772,9 +8772,6 @@
   <data name="Rote_Augen_entfernen_fehlgeschlagen_2f91768f" xml:space="preserve">
     <value>적목 제거 실패</value>
   </data>
-  <data name="Solange_eingeschaltet_entfernt_jeder_Klick_ins_B_cc00c082" xml:space="preserve">
-    <value>켜져 있는 동안 이미지를 클릭할 때마다 브러시 원 안의 적목을 제거합니다</value>
-  </data>
   <data name="Rote_Augen_entfernen_ed756d76" xml:space="preserve">
     <value>적목 제거</value>
   </data>

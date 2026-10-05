@@ -43,36 +43,9 @@ Namespace ViewModels
 
         ' ── Rote Augen ──────────────────────────────────────────────────────────
 
-        Private _isRedEyeArmed As Boolean
-
-        ''' <summary>Ist ROTE AUGEN scharf? Dann entfernt jeder Klick ins Bild im Retusche-Werkzeug
-        ''' rote Augen im Pinselkreis, statt einen Retuschezug zu beginnen. Bewusst ein Schalter und
-        ''' keine vierte Art neben Verwischen, Reparatur und Stempel: die drei hängen an Live-Puffern
-        ''' und gemerkten Werkzeugständen, ein Klick mit fester Wirkung braucht nichts davon. Er
-        ''' bleibt an, bis man ihn ausschaltet oder das Werkzeug verlässt, damit sich zwei Augen
-        ''' nacheinander anklicken lassen.</summary>
-        Public Property IsRedEyeArmed As Boolean
-            Get
-                Return _isRedEyeArmed
-            End Get
-            Set(value As Boolean)
-                Me.RaiseAndSetIfChanged(_isRedEyeArmed, value)
-            End Set
-        End Property
-
-        Private _toggleRedEyeCommand As ICommand
-
-        Public ReadOnly Property ToggleRedEyeCommand As ICommand
-            Get
-                If _toggleRedEyeCommand Is Nothing Then
-                    _toggleRedEyeCommand = New DelegateCommand(Sub() IsRedEyeArmed = Not IsRedEyeArmed)
-                End If
-                Return _toggleRedEyeCommand
-            End Get
-        End Property
-
         ''' <summary>Entfernt rote Augen im Pinselkreis um die angeklickte Stelle, im Arbeitsbild
-        ''' und in dessen Bildpunkten (Radius wie bei der Retusche). Ein Schritt mit eigenem
+        ''' und in dessen Bildpunkten. Eine Art des Bildpinsels (IsRedEyeMode), der Kreis ist seine
+        ''' Groesse (Durchmesser, also halbe Groesse als Radius). Ein Klick ist ein Schritt mit eigenem
         ''' Rückgängig. Die Rechnung steht in ImageProcessor.RemoveRedEyeInPlace.
         '''
         ''' Liegt im Kreis nichts Rotes, geschieht nichts und die Fußzeile sagt es - vorher geprüft,
@@ -93,7 +66,7 @@ Namespace ViewModels
             If Double.IsNaN(wip.X) OrElse Double.IsNaN(wip.Y) Then Return
             Dim cx = CSng(PercentXToPixels(wip.X))
             Dim cy = CSng(PercentYToPixels(wip.Y))
-            Dim radius = CSng(Math.Max(1.0, _retouchRadius))
+            Dim radius = CSng(Math.Max(1.0, _brushSize / 2.0))
             Dim rect = New SKRectI(CInt(Math.Floor(cx - radius)) - 1, CInt(Math.Floor(cy - radius)) - 1,
                                    CInt(Math.Ceiling(cx + radius)) + 2, CInt(Math.Ceiling(cy + radius)) + 2)
             rect = ClampRectToBitmap(rect, _workingImage.FullWidth, _workingImage.FullHeight)

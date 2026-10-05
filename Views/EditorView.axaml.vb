@@ -2949,14 +2949,6 @@ Namespace Views
                     Return
                 End If
 
-                ' ROTE AUGEN: ein Klick ist ein fertiger Schritt, kein Zug. Kein Fang, kein
-                ' Loslassen - der Pinselkreis sagt, wie weit er wirkt.
-                If vm.IsRedEyeArmed Then
-                    vm.RemoveRedEyeAt(xPct, yPct)
-                    e.Handled = True
-                    Return
-                End If
-
                 vm.AddRetouchSpot(xPct, yPct)
                 _lastRetouchPoint = New Avalonia.Point(xPct, yPct)
                 BeginBrushLineConstraint(pos)
@@ -2969,6 +2961,17 @@ Namespace Views
             If vm IsNot Nothing AndAlso vm.CurrentTool = EditorTool.Draw AndAlso String.IsNullOrEmpty(vm.PendingInsertKind) Then
                 Dim imageRect = GetDisplayedImageRect(canvas, vm)
                 If imageRect.Width <= 0 OrElse imageRect.Height <= 0 Then Return
+                ' ROTE AUGEN (Art des Bildpinsels): ein Klick ist ein fertiger Schritt, kein Zug. Kein
+                ' Fang, kein Loslassen - der Pinselkreis sagt, wie weit er wirkt. Nicht auf den Bildrand
+                ' geklemmt, wie bei der Retusche: ein Ansetzen knapp daneben meint den Teil des Kreises
+                ' ueber dem Bild.
+                If vm.IsRedEyeMode Then
+                    Dim clickPos = e.GetPosition(canvas)
+                    vm.RemoveRedEyeAt((clickPos.X - imageRect.Left) / imageRect.Width * 100.0,
+                                      (clickPos.Y - imageRect.Top) / imageRect.Height * 100.0)
+                    e.Handled = True
+                    Return
+                End If
                 _hideBrushPreviewAfterBake = False
                 _brushPoints.Clear()
                 _brushPressures.Clear()

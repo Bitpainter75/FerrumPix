@@ -425,6 +425,7 @@ Namespace ViewModels
                 {"Burn", New PaintToolState With {.Hardness = 30, .Size = 80}},
                 {"Sponge", New PaintToolState With {.Hardness = 30, .Size = 80}},
                 {"ReplaceColor", New PaintToolState With {.Hardness = 30, .Size = 80}},
+                {"RedEye", New PaintToolState With {.Size = 40}},
                 {"Blur", New PaintToolState()},
                 {"Repair", New PaintToolState()},
                 {"Clone", New PaintToolState()}
@@ -5313,10 +5314,6 @@ Namespace ViewModels
                     ' sehen. Ausserhalb davon lagen die Markierungen ueber einem Bild, an dem man
                     ' ganz anders arbeitet, und der Schalter dafuer war nicht mehr zu sehen.
                     If Not IsClippingWarningAvailable Then ShowClippingWarning = False
-                    ' Rote Augen gehören zur Retusche. Blieben sie scharf, entfernte der erste Klick
-                    ' nach der Rückkehr rote Augen statt einen Zug zu beginnen - ohne dass man den
-                    ' Schalter zuletzt gesehen hätte.
-                    If value <> EditorTool.Retouch Then IsRedEyeArmed = False
                     ' Die beim Werkzeug gewählte Objektart gilt nur in den Werkzeugen, die Objekte setzen.
                     If Not IsArmedInsertTool(value) Then ArmedInsertKind = ""
                     Me.RaisePropertyChanged(NameOf(ShowInsertTextButton))
@@ -13058,6 +13055,26 @@ Namespace ViewModels
             End Get
         End Property
 
+        ''' <summary>SICHTBARKEIT der Gruppe Füllung im Auswahl-Werkzeug: wie IsSelectionStyleContext,
+        ''' aber nur mit einer Auswahl. Ohne Auswahl und ohne Ebene haben Füllung, Kontur, Schatten
+        ''' und Glühen nichts, worauf sie wirken, und blieben stehen wie bedienbar (Nutzerbefund). Eine
+        ''' markierte Auswahlebene macht ihre Maske zur Auswahl und zählt damit mit.
+        ''' IsSelectionStyleContext selbst bleibt unverändert: es entscheidet, wohin der Haken
+        ''' schreibt, nicht ob die Gruppe zu sehen ist.</summary>
+        Public ReadOnly Property ShowSelectionFillGroup As Boolean
+            Get
+                Return IsSelectionStyleContext AndAlso _hasActiveSelection
+            End Get
+        End Property
+
+        ''' <summary>Sichtbarkeit von Kontur, Schatten und Glühen im Auswahl-Werkzeug, ebenso nur mit
+        ''' einer Auswahl.</summary>
+        Public ReadOnly Property ShowSelectionLineAndEffectsGroups As Boolean
+            Get
+                Return ShowSelectionLineAndEffects AndAlso _hasActiveSelection
+            End Get
+        End Property
+
         ''' <summary>Der Haken "Aktiv" der Gruppe Füllung: am Objekt die sichtbare Füllfarbe, im
         ''' Auswahl-Werkzeug die Füllung der Auswahl. EIN Panel, deshalb EINE Eigenschaft.</summary>
         Public Property FillGroupActive As Boolean
@@ -17034,7 +17051,7 @@ Namespace ViewModels
                                                                    End If
 
                                                                    Select Case normalizedToolName
-                                                                       Case "brush", "pinsel", "eraser", "radiergummi", "imagebrush", "bildpinsel", "dodge", "burn", "sponge", "replacecolor", "blur", "verwischen", "repair", "reparatur", "reparaturpinsel", "heal", "heilen", "retusche", "clone", "stempel"
+                                                                       Case "brush", "pinsel", "eraser", "radiergummi", "imagebrush", "bildpinsel", "dodge", "burn", "sponge", "replacecolor", "redeye", "blur", "verwischen", "repair", "reparatur", "reparaturpinsel", "heal", "heilen", "retusche", "clone", "stempel"
                                                                            SetPaintMode(toolName)
                                                                            Return
                                                                        Case "text", "image", "bild", "qr", "qrcode", "qr-code", "watermark", "wasserzeichen"
@@ -17391,11 +17408,17 @@ Namespace ViewModels
                             RaiseObjectFillStrokeGroupsChanged()
                         Case NameOf(ActiveSelectionIsMask)
                             Me.RaisePropertyChanged(NameOf(ShowSelectionLineAndEffects))
+                            Me.RaisePropertyChanged(NameOf(ShowSelectionLineAndEffectsGroups))
+                        Case NameOf(HasActiveSelection)
+                            Me.RaisePropertyChanged(NameOf(ShowSelectionFillGroup))
+                            Me.RaisePropertyChanged(NameOf(ShowSelectionLineAndEffectsGroups))
                         Case NameOf(ShowSelectionAdjustments), NameOf(HasSelectedAnnotation)
                             Dim wasSelectionContext = _lastSelectionStyleContext
                             _lastSelectionStyleContext = IsSelectionStyleContext
                             Me.RaisePropertyChanged(NameOf(IsSelectionStyleContext))
                             Me.RaisePropertyChanged(NameOf(ShowSelectionLineAndEffects))
+                            Me.RaisePropertyChanged(NameOf(ShowSelectionFillGroup))
+                            Me.RaisePropertyChanged(NameOf(ShowSelectionLineAndEffectsGroups))
                             RaiseObjectFillStrokeGroupsChanged()
                             ' Wird die Auswahl wieder gemeint (Werkzeug betreten, Objekt abgewaehlt),
                             ' zeigen die geteilten Haken von Schatten und Glühen ihren Stand an der
@@ -26024,6 +26047,9 @@ Namespace ViewModels
                 AddToneStroke(normalized)
                 Return
             End If
+            ' Rote Augen sind ein Klick, kein Zug (RemoveRedEyeAt). Kaeme hier doch ein Zug an, darf
+            ' er nicht als Pinselstrich durchfallen und Farbe auftragen.
+            If IsRedEyeMode Then Return
 
             ' RADIEREN AUF EINER EBENE MIT BILD GEHT IN IHRE BILDPUNKTE, genau wie Pinsel und
             ' Retusche: gemerkt wird das Ergebnis, nicht der Zug. Früher ging der Radierer auf jeder
@@ -29622,8 +29648,8 @@ Namespace ViewModels
                     Case "eraser", "radiergummi"
                         CurrentTool = EditorTool.Draw
                         IsEraserMode = True
-                    Case "dodge", "burn", "sponge", "replacecolor"
-                        ' Die vier Arten des Bildpinsels, die das Bild umrechnen.
+                    Case "dodge", "burn", "sponge", "replacecolor", "redeye"
+                        ' Die Arten des Bildpinsels neben dem Radierer: vier mit Zug, Rote Augen mit Klick.
                         CurrentTool = EditorTool.Draw
                         IsEraserMode = False
                         SetToneMode(ToneModes.First(Function(m) m.ToLowerInvariant() = normalized))
@@ -29724,6 +29750,9 @@ Namespace ViewModels
                     state.Hardness = _brushHardness
                     state.Opacity = _brushOpacity
                     state.Flow = _brushFlow
+                Case "RedEye"
+                    ' Nur der Kreis zaehlt, die uebrigen Regler sind dort ausgeblendet.
+                    state.Size = _brushSize
                 Case "Blur", "Repair", "Clone"
                     state.Size = _retouchRadius
                     state.Hardness = _brushHardness
@@ -29763,6 +29792,8 @@ Namespace ViewModels
                     BrushHardness = state.Hardness
                     BrushOpacity = state.Opacity
                     BrushFlow = state.Flow
+                Case "RedEye"
+                    BrushSize = state.Size
                 Case "Blur", "Repair", "Clone"
                     RetouchRadius = state.Size
                     BrushHardness = state.Hardness
