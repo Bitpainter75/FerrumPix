@@ -9456,4 +9456,16 @@
   <data name="Gl_hen_von_der_Kante_nach_innen_aa54abad" xml:space="preserve">
     <value>Gloed van de rand naar binnen</value>
   </data>
+  <data name="Frei_und_quelloffen_F_r_immer_b8604517" xml:space="preserve">
+    <value>Vrij en open source. Voor altijd.</value>
+  </data>
+  <data name="FerrumPix_kostet_nichts_zeigt_keine_Werbung_und__a73fa3a6" xml:space="preserve">
+    <value>FerrumPix kost niets, toont geen reclame en heeft geen abonnement nodig. Als je de app goed vindt en mijn werk eraan wilt steunen, ben ik blij met een kop koffie.</value>
+  </data>
+  <data name="ffnet_meine_Seite_auf_Ko_fi_c673b22d" xml:space="preserve">
+    <value>Opent mijn pagina op Ko-fi</value>
+  </data>
+  <data name="Randabstand_a68c50d0" xml:space="preserve">
+    <value>Randafstand</value>
+  </data>
 </root>

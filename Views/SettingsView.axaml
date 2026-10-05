@@ -305,6 +305,45 @@
                             </Button>
                         </Grid>
 
+                        <!-- Frei und quelloffen, dazu die Bitte um Unterstuetzung. Die Tasse ist in
+                             XAML gezeichnet und nicht als Bild eingebunden: so nimmt sie Akzentfarbe
+                             und Thema mit, ein fertiges Bild passte nur zu einer Fassung. Bewusst
+                             zurueckhaltend: eine Zeile wie Homepage und GitHub, keine farbige Karte, die
+                             Tasse nur im Knopf. Das Herz ist ein LOCH in der Tasse (F0 = EvenOdd) und
+                             keine Flaeche in Hintergrundfarbe: der Knopf wechselt seinen Grund beim
+                             Ueberfahren, eine gemalte Flaeche stuende dann als Fleck da. -->
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Frei und quelloffen. Für immer." FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="FerrumPix kostet nichts, zeigt keine Werbung und braucht kein Abo. Wenn dir die Anwendung gefällt und du meine Arbeit daran unterstützen möchtest, freue ich mich über einen Kaffee."
+                                           Foreground="{DynamicResource FP.Text.Secondary}"
+                                           FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <!-- Nur die Tasse, ohne Beschriftung; was der Knopf tut, sagt der Hinweis. -->
+                            <Button Grid.Column="1" Classes="ghost" Padding="10,8" VerticalAlignment="Center"
+                                    Tag="https://ko-fi.com/bitpainter75" Click="OnLicenseLinkClick"
+                                    ToolTip.Tip="Öffnet meine Seite auf Ko-fi">
+                                    <Viewbox Width="34" Height="34" VerticalAlignment="Center">
+                                        <Canvas Width="64" Height="64">
+                                            <!-- Dampf -->
+                                            <Path Data="M22,18 C18,13 26,10 22,4" Stroke="{DynamicResource FP.Text.Muted}"
+                                                  StrokeThickness="4" StrokeLineCap="Round"/>
+                                            <Path Data="M32,17 C28,12 36,9 32,2" Stroke="{DynamicResource FP.Text.Muted}"
+                                                  StrokeThickness="4" StrokeLineCap="Round"/>
+                                            <Path Data="M42,18 C38,13 46,10 42,4" Stroke="{DynamicResource FP.Text.Muted}"
+                                                  StrokeThickness="4" StrokeLineCap="Round"/>
+                                            <!-- Untertasse, Henkel, Tasse mit Herz als Loch -->
+                                            <Rectangle Canvas.Left="6" Canvas.Top="56" Width="52" Height="5"
+                                                       RadiusX="2.5" RadiusY="2.5" Fill="{DynamicResource FP.Text.Muted}"/>
+                                            <Path Data="M50,29 C60,29 61,44 48,45" Stroke="{DynamicResource FP.Accent}"
+                                                  StrokeThickness="5" StrokeLineCap="Round"/>
+                                            <Path Data="F0 M12,24 L52,24 L48,48 C47.5,52 44.5,55 40,55 L24,55 C19.5,55 16.5,52 16,48 Z M32,48 C26,43 22,40 22,36 C22,33 24.5,31 27,31 C29,31 31,32.5 32,34 C33,32.5 35,31 37,31 C39.5,31 42,33 42,36 C42,40 38,43 32,48 Z"
+                                                  Fill="{DynamicResource FP.Accent}"/>
+                                        </Canvas>
+                                    </Viewbox>
+                            </Button>
+                        </Grid>
+
                         <Border Height="1" Background="{DynamicResource FP.Border.Normal}"/>
 
                         <StackPanel Spacing="2">

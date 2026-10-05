@@ -1780,6 +1780,40 @@
                                 <panels:FramePanel />
                             </Border>
 
+                            <!-- Füllung, Schatten und Glühen des Rahmens: DIESELBEN Panels wie beim
+                                 Textobjekt, als eigene Gruppen unter der Rahmengruppe und nur bei
+                                 aktivem Rahmen. Sie meinen den Rahmen über IsFrameStyleContext,
+                                 derselbe Mechanismus wie bei der Auswahl (IsSelectionStyleContext). -->
+                            <Border Classes="adjustment-group" Margin="0,7,0,0">
+                                <Border.IsVisible>
+                                    <MultiBinding Converter="{StaticResource AllTrueConverter}">
+                                        <Binding Path="IsFrameStyleContext"/>
+                                        <Binding Path="HiddenAdjustmentGroups" Converter="{StaticResource NotInListConverter}" ConverterParameter="frame"/>
+                                    </MultiBinding>
+                                </Border.IsVisible>
+                                <panels:FillPanel />
+                            </Border>
+
+                            <Border Classes="adjustment-group" Margin="0,7,0,0">
+                                <Border.IsVisible>
+                                    <MultiBinding Converter="{StaticResource AllTrueConverter}">
+                                        <Binding Path="IsFrameStyleContext"/>
+                                        <Binding Path="HiddenAdjustmentGroups" Converter="{StaticResource NotInListConverter}" ConverterParameter="frame"/>
+                                    </MultiBinding>
+                                </Border.IsVisible>
+                                <panels:AnnotationShadowPanel />
+                            </Border>
+
+                            <Border Classes="adjustment-group" Margin="0,7,0,0">
+                                <Border.IsVisible>
+                                    <MultiBinding Converter="{StaticResource AllTrueConverter}">
+                                        <Binding Path="IsFrameStyleContext"/>
+                                        <Binding Path="HiddenAdjustmentGroups" Converter="{StaticResource NotInListConverter}" ConverterParameter="frame"/>
+                                    </MultiBinding>
+                                </Border.IsVisible>
+                                <panels:AnnotationGlowPanel />
+                            </Border>
+
                             <Border Classes="adjustment-group" Margin="0,7,0,0"
                                     >
                                 <Border.IsVisible>

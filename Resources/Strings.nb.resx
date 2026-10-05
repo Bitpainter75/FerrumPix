@@ -9456,4 +9456,16 @@
   <data name="Gl_hen_von_der_Kante_nach_innen_aa54abad" xml:space="preserve">
     <value>Glød fra kanten og innover</value>
   </data>
+  <data name="Frei_und_quelloffen_F_r_immer_b8604517" xml:space="preserve">
+    <value>Fri og åpen kildekode. For alltid.</value>
+  </data>
+  <data name="FerrumPix_kostet_nichts_zeigt_keine_Werbung_und__a73fa3a6" xml:space="preserve">
+    <value>FerrumPix koster ingenting, viser ingen reklame og krever ikke abonnement. Hvis du liker programmet og vil støtte arbeidet mitt med det, blir jeg glad for en kopp kaffe.</value>
+  </data>
+  <data name="ffnet_meine_Seite_auf_Ko_fi_c673b22d" xml:space="preserve">
+    <value>Åpner siden min på Ko-fi</value>
+  </data>
+  <data name="Randabstand_a68c50d0" xml:space="preserve">
+    <value>Kantavstand</value>
+  </data>
 </root>

@@ -775,7 +775,7 @@ Namespace Services
         Public Property ShadowRounded As Boolean = False
         Public Property ShadowCornerRadiusPercent As Single = 0
         Public Property GlowEnabled As Boolean = False
-        Public Property GlowBlur As Single = 10
+        Public Property GlowBlur As Single = 5
         Public Property GlowStrength As Single = 100
         Public Property GlowColor As String = "#FFFFFF00"
         ''' <summary>Lage von Schatten und Gluehen wie am Objekt (ImageAnnotation.ShadowPlacement):

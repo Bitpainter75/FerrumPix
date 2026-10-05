@@ -153,7 +153,7 @@ Namespace Services
         Public Property ShadowColor As String = "#80000000"
         Public Property ShadowSizePercent As Single = 100
         Public Property GlowEnabled As Boolean = False
-        Public Property GlowBlur As Single = 10
+        Public Property GlowBlur As Single = 5
         Public Property GlowStrength As Single = 100
         Public Property GlowColor As String = "#FFFFFF00"
         ''' <summary>Lage von Schatten und Gluehen wie am Objekt (ImageAnnotation.ShadowPlacement).</summary>
@@ -343,6 +343,7 @@ Namespace Services
         Private _frameEffect As String = "Einfach"
         Private _frameSymbol As String = ""
         Private _frameSymbolSpacingPercent As Single = 50
+        Private _frameMarginPercent As Single = 0
         Private _frameSymbolRotate As Boolean = False
         Private _fontSizePixels As Single = 48
         Private _fontFamily As String = "Arial"
@@ -417,7 +418,7 @@ Namespace Services
         Private _shadowCornerRadiusPercent As Single = 20
         Private _shadowSizePercent As Single = 100
         Private _glowEnabled As Boolean = False
-        Private _glowBlur As Single = 10
+        Private _glowBlur As Single = 5
         Private _glowStrength As Single = 100
         Private _glowColor As String = "#FFFFFF00"
         Private _shadowPlacement As String = ""
@@ -904,6 +905,17 @@ Namespace Services
             End Get
             Set(value As String)
                 SetField(_frameSymbol, If(value, ""))
+            End Set
+        End Property
+
+        ''' <summary>Abstand des Rahmens zur Bildkante, in Prozent der kuerzeren Bildseite wie die
+        ''' Staerke. 0 heisst: er liegt an der Kante, wie in alten Dateien.</summary>
+        Public Property FrameMarginPercent As Single
+            Get
+                Return _frameMarginPercent
+            End Get
+            Set(value As Single)
+                SetField(_frameMarginPercent, Math.Max(0.0F, Math.Min(40.0F, value)))
             End Set
         End Property
 
@@ -1491,6 +1503,7 @@ Namespace Services
                 .FrameEffect = FrameEffect,
                 .FrameSymbol = FrameSymbol,
                 .FrameSymbolSpacingPercent = FrameSymbolSpacingPercent,
+                .FrameMarginPercent = FrameMarginPercent,
                 .FrameSymbolRotate = FrameSymbolRotate,
                 .Warp = Warp?.Clone(),
                 .OwnWarp = OwnWarp?.Clone(),

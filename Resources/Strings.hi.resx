@@ -9460,4 +9460,16 @@
   <data name="Gl_hen_von_der_Kante_nach_innen_aa54abad" xml:space="preserve">
     <value>किनारे से भीतर की ओर चमक</value>
   </data>
+  <data name="Frei_und_quelloffen_F_r_immer_b8604517" xml:space="preserve">
+    <value>मुक्त और ओपन सोर्स। हमेशा के लिए।</value>
+  </data>
+  <data name="FerrumPix_kostet_nichts_zeigt_keine_Werbung_und__a73fa3a6" xml:space="preserve">
+    <value>FerrumPix मुफ़्त है, कोई विज्ञापन नहीं दिखाता और किसी सदस्यता की ज़रूरत नहीं है। अगर आपको यह ऐप पसंद है और आप इस पर मेरे काम का समर्थन करना चाहते हैं, तो एक कॉफ़ी से मुझे बहुत खुशी होगी।</value>
+  </data>
+  <data name="ffnet_meine_Seite_auf_Ko_fi_c673b22d" xml:space="preserve">
+    <value>Ko-fi पर मेरा पेज खोलता है</value>
+  </data>
+  <data name="Randabstand_a68c50d0" xml:space="preserve">
+    <value>किनारे से दूरी</value>
+  </data>
 </root>

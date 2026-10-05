@@ -55,12 +55,12 @@
                                Foreground="{DynamicResource FP.Text.Secondary}"
                                VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap" />
                     <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
-                                       DefaultValue="10"
+                                       DefaultValue="5"
                                        Value="{Binding AnnotationGlowBlur}" Margin="0,0" />
                     <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
                                              Value="{Binding AnnotationGlowBlur, Mode=TwoWay}"
                                              Minimum="0" Maximum="100" Increment="1"
-                                             FormatString="F0" />
+                                             FormatString="F1" />
                 </Grid>
                 <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
                     <TextBlock Text="Stärke" Foreground="{DynamicResource FP.Text.Secondary}"

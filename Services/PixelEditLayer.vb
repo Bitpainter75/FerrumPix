@@ -20,7 +20,7 @@ Namespace Services
         Public Property ShadowColor As String = "#80000000"
         Public Property ShadowSizePercent As Single = 100
         Public Property GlowEnabled As Boolean = False
-        Public Property GlowBlur As Single = 10
+        Public Property GlowBlur As Single = 5
         Public Property GlowStrength As Single = 100
         Public Property GlowColor As String = "#FFFFFF00"
         Public Property ShadowPlacement As String = ""

@@ -9460,4 +9460,16 @@
   <data name="Gl_hen_von_der_Kante_nach_innen_aa54abad" xml:space="preserve">
     <value>가장자리에서 안쪽으로 퍼지는 광선</value>
   </data>
+  <data name="Frei_und_quelloffen_F_r_immer_b8604517" xml:space="preserve">
+    <value>자유 오픈 소스. 영원히.</value>
+  </data>
+  <data name="FerrumPix_kostet_nichts_zeigt_keine_Werbung_und__a73fa3a6" xml:space="preserve">
+    <value>FerrumPix는 무료이며 광고도 구독도 없습니다. 앱이 마음에 들고 제 작업을 응원하고 싶다면 커피 한 잔으로 후원해 주시면 기쁘겠습니다.</value>
+  </data>
+  <data name="ffnet_meine_Seite_auf_Ko_fi_c673b22d" xml:space="preserve">
+    <value>Ko-fi의 제 페이지를 엽니다</value>
+  </data>
+  <data name="Randabstand_a68c50d0" xml:space="preserve">
+    <value>여백</value>
+  </data>
 </root>

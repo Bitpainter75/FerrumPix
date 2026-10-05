@@ -1454,13 +1454,11 @@ Namespace Services
                     ' Der Rahmen sitzt am Rechteck des Objekts, und das ist beim Rahmen immer das
                     ' ganze Bild (siehe ComputeAnnotationRect) - er bleibt damit an der Bildkante,
                     ' auch wenn spaeter zugeschnitten oder die Leinwand geaendert wird.
-                    Dim frameFill2 = ApplyAlpha(ParseColor(annotation.FillColor2, SKColors.White), alphaFactor)
                     DrawFrameOnCanvas(canvas, rect, annotation.FrameSizePercent / 100.0F, fill,
                                       annotation.FrameCornerRadiusPercent / 100.0F, annotation.FrameEffect,
-                                      annotation.FillKind, frameFill2,
-                                      annotation.GradientAngleDegrees, annotation.GradientInverted,
-                                      annotation.FrameSymbol, annotation.FrameSymbolSpacingPercent,
-                                      annotation.FrameSymbolRotate, stroke, annotation.StrokeWidth)
+                                      gradient, annotation.FrameSymbol, annotation.FrameSymbolSpacingPercent,
+                                      annotation.FrameSymbolRotate, stroke, annotation.StrokeWidth,
+                                      annotation.FrameMarginPercent / 100.0F)
                 Case "rectangle", "rect", "selectionfill"
                     DrawShape(canvas, rect, fill, stroke, strokeWidth, False, gradient)
                 Case "roundedrectangle", "rounded-rectangle"
@@ -1583,7 +1581,7 @@ Namespace Services
             ' Problem "Glow hat bei Text keine Auswirkung") - Text-/Objektgröße variiert unabhängig von
             ' der Fotoauflösung, der Effekt soll aber immer proportional zum jeweiligen Objekt wirken.
             ' Skalierungsfaktor 0.4 (vormals 0.12): bei 0.12 blieb der Blur-Radius bei üblichen
-            ' Slider-Werten (Default Glow=10, Shadow=6) so klein (wenige Zehntel-Prozent der
+            ' Slider-Werten (Default Glow damals 10, Shadow 6) so klein (wenige Zehntel-Prozent der
             ' Objektgröße), dass er komplett unter dem später deckend gezeichneten Objekt
             ' verschwand - "Glow wirkungslos"/"Shadow-Stärke ohne Auswirkung".
             Dim objSize = Math.Max(1.0F, Math.Min(rect.Width, rect.Height))
@@ -2666,22 +2664,6 @@ Namespace Services
             Return GradientFillSpec.IsGradientKind(fillKind)
         End Function
 
-        ''' <summary>Der bisherige Einstieg mit zwei Farben, fuer den Rahmen.</summary>
-        Private Shared Function CreateFillGradientShader(rect As SKRect, normalizedFillKind As String, color1 As SKColor, color2 As SKColor, angleDegrees As Single, Optional inverted As Boolean = False) As SKShader
-            Dim spec = New GradientFillSpec With {
-                .Kind = GradientFillSpec.NormalizeKind(normalizedFillKind),
-                .Stops = New List(Of GradientStopValue) From {New GradientStopValue(SkColorToArgb(color1), 0), New GradientStopValue(SkColorToArgb(color2), 100)},
-                .AngleDegrees = angleDegrees,
-                .Inverted = inverted
-            }
-            If spec.Kind = GradientFillSpec.KindSolid Then spec.Kind = GradientFillSpec.KindLinear
-            Return CreateFillGradientShader(rect, spec)
-        End Function
-
-        Private Shared Function SkColorToArgb(c As SKColor) As UInteger
-            Return (CUInt(c.Alpha) << 24) Or (CUInt(c.Red) << 16) Or (CUInt(c.Green) << 8) Or CUInt(c.Blue)
-        End Function
-
         Friend Shared Function CreateFillGradientShader(rect As SKRect, spec As GradientFillSpec) As SKShader
             Dim stops = spec.EffectiveStops()
             Dim colors = stops.Select(Function(s) New SKColor(s.R, s.G, s.B, s.A)).ToArray()
@@ -2745,11 +2727,15 @@ Namespace Services
         ' Raute: Skia kennt diese Form nicht. Ein kleiner Laufzeit-Schattierer rechnet je Punkt den
         ' Abstand |x| + |y| im Einheitsquadrat der Raute und liest die Farbe aus einem gewoehnlichen
         ' linearen Verlauf von 0 bis 1 - so gelten Stopps und Wiederholung genau wie bei den
-        ' anderen Formen. Lage, Groesse und Drehung stehen in der Matrix.
+        ' anderen Formen. Lage, Groesse und Drehung stehen in der Matrix. Anfang und Spanne legen
+        ' die Rampe auf einen Ring statt auf die ganze Flaeche: das Objekt nimmt 0 und 1, der
+        ' Rahmen 1 und die Groesse, weil er nur zwischen Kantenmitte (1) und Ecke (2) liegt.
         Private Const DiamondShaderSource As String =
             "uniform shader ramp;" & vbLf &
+            "uniform float rampStart;" & vbLf &
+            "uniform float rampSpan;" & vbLf &
             "half4 main(float2 p) {" & vbLf &
-            "    float t = abs(p.x) + abs(p.y);" & vbLf &
+            "    float t = (abs(p.x) + abs(p.y) - rampStart) / rampSpan;" & vbLf &
             "    return ramp.eval(float2(t, 0.5));" & vbLf &
             "}"
 
@@ -2758,7 +2744,9 @@ Namespace Services
         Private Shared ReadOnly _diamondEffectLock As New Object()
 
         Private Shared Function CreateDiamondShader(center As SKPoint, rx As Single, ry As Single, angleDegrees As Single,
-                                                    colors As SKColor(), positions As Single(), tile As SKShaderTileMode) As SKShader
+                                                    colors As SKColor(), positions As Single(), tile As SKShaderTileMode,
+                                                    Optional rampStart As Single = 0.0F,
+                                                    Optional rampSpan As Single = 1.0F) As SKShader
             Dim effect As SKRuntimeEffect
             SyncLock _diamondEffectLock
                 If _diamondEffect Is Nothing AndAlso Not _diamondEffectFailed Then
@@ -2780,6 +2768,8 @@ Namespace Services
             ' Effekt bleibt; der fertige Schattierer haelt seinen Verlauf selbst.
             Using ramp = SKShader.CreateLinearGradient(New SKPoint(0, 0), New SKPoint(1, 0), colors, positions, tile)
                 Using uniforms = New SKRuntimeEffectUniforms(effect)
+                    uniforms.Add("rampStart", rampStart)
+                    uniforms.Add("rampSpan", Math.Max(0.001F, rampSpan))
                     Using children = New SKRuntimeEffectChildren(effect)
                         children.Add("ramp", ramp)
                         Dim matrix = SKMatrix.CreateTranslation(center.X, center.Y).

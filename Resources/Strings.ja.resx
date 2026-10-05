@@ -9456,4 +9456,16 @@
   <data name="Gl_hen_von_der_Kante_nach_innen_aa54abad" xml:space="preserve">
     <value>縁から内側への光彩</value>
   </data>
+  <data name="Frei_und_quelloffen_F_r_immer_b8604517" xml:space="preserve">
+    <value>自由でオープンソース。これからもずっと。</value>
+  </data>
+  <data name="FerrumPix_kostet_nichts_zeigt_keine_Werbung_und__a73fa3a6" xml:space="preserve">
+    <value>FerrumPix は無料で、広告もサブスクリプションもありません。気に入っていただけて、開発を応援したいと思ったら、コーヒー一杯でサポートしてもらえるとうれしいです。</value>
+  </data>
+  <data name="ffnet_meine_Seite_auf_Ko_fi_c673b22d" xml:space="preserve">
+    <value>Ko-fi の私のページを開きます</value>
+  </data>
+  <data name="Randabstand_a68c50d0" xml:space="preserve">
+    <value>余白</value>
+  </data>
 </root>

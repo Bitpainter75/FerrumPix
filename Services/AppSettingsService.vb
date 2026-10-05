@@ -85,7 +85,7 @@ Namespace Services
         Public Property ShadowCornerRadiusPercent As Double = 20
         Public Property ShadowSizePercent As Double = 100
         Public Property GlowEnabled As Boolean = False
-        Public Property GlowBlur As Double = 10
+        Public Property GlowBlur As Double = 5
         Public Property GlowStrength As Double = 100
         Public Property GlowColor As String = "#FFFFFF00"
         ' Lage von Schatten und Gluehen wie am Objekt (ImageAnnotation.ShadowPlacement).
@@ -275,6 +275,10 @@ Namespace Services
         Public Property GalleryStartupCustomFolder As String = ""
         Public Property LastGalleryFolder As String = ""
         Public Property LastSaveAsTargetFolder As String = ""
+        ''' <summary>Welcher der beiden Ordnerknoepfe in "Speichern unter" zuletzt aktiv war:
+        ''' "Current" (aktueller Ordner, ab Werk) oder "LastSaved" (letzter Ordner). Der Dialog
+        ''' belegt ihn beim naechsten Oeffnen wieder vor.</summary>
+        Public Property SaveAsFolderChoice As String = "Current"
         Public Property ViewerShowFilmstrip As Boolean = True
         ''' Markierungen im Filmstrip kosten etwas Bildruhe und sind deshalb ab Werk aus.
         Public Property FilmstripItemBadgesVisible As Boolean = False
@@ -2478,6 +2482,16 @@ Namespace Services
         Public Shared Sub SaveLastSaveAsTargetFolder(folderPath As String)
             Update(Sub(s) s.LastSaveAsTargetFolder = NormalizeFolderPath(folderPath))
         End Sub
+
+        Public Shared Sub SaveSaveAsFolderChoice(choice As String)
+            Update(Sub(s) s.SaveAsFolderChoice = NormalizeSaveAsFolderChoice(choice))
+        End Sub
+
+        ''' <summary>Alles ausser "LastSaved" ist der aktuelle Ordner, auch ein fehlender Wert aus
+        ''' einer aelteren Einstellungsdatei.</summary>
+        Public Shared Function NormalizeSaveAsFolderChoice(choice As String) As String
+            Return If(String.Equals(choice, "LastSaved", StringComparison.Ordinal), "LastSaved", "Current")
+        End Function
 
         ''' <summary>Merkt das Zieldateinamen-Muster. Leer ist ein gueltiger Wert (Originalname
         ''' behalten) und wird deshalb NICHT auf einen Standard zurueckgebogen - anders als beim

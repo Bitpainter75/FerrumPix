@@ -9456,4 +9456,16 @@
   <data name="Gl_hen_von_der_Kante_nach_innen_aa54abad" xml:space="preserve">
     <value>Poświata od krawędzi do wewnątrz</value>
   </data>
+  <data name="Frei_und_quelloffen_F_r_immer_b8604517" xml:space="preserve">
+    <value>Wolne i otwartoźródłowe. Na zawsze.</value>
+  </data>
+  <data name="FerrumPix_kostet_nichts_zeigt_keine_Werbung_und__a73fa3a6" xml:space="preserve">
+    <value>FerrumPix nic nie kosztuje, nie wyświetla reklam i nie wymaga subskrypcji. Jeśli aplikacja Ci się podoba i chcesz wesprzeć moją pracę nad nią, ucieszę się z kawy.</value>
+  </data>
+  <data name="ffnet_meine_Seite_auf_Ko_fi_c673b22d" xml:space="preserve">
+    <value>Otwiera moją stronę na Ko-fi</value>
+  </data>
+  <data name="Randabstand_a68c50d0" xml:space="preserve">
+    <value>Odstęp od krawędzi</value>
+  </data>
 </root>

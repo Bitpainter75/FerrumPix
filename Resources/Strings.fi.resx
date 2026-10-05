@@ -9456,4 +9456,16 @@
   <data name="Gl_hen_von_der_Kante_nach_innen_aa54abad" xml:space="preserve">
     <value>Hehku reunasta sisäänpäin</value>
   </data>
+  <data name="Frei_und_quelloffen_F_r_immer_b8604517" xml:space="preserve">
+    <value>Vapaa ja avoin lähdekoodi. Ikuisesti.</value>
+  </data>
+  <data name="FerrumPix_kostet_nichts_zeigt_keine_Werbung_und__a73fa3a6" xml:space="preserve">
+    <value>FerrumPix on maksuton, ei näytä mainoksia eikä vaadi tilausta. Jos pidät sovelluksesta ja haluat tukea työtäni sen parissa, ilahdun kupillisesta kahvia.</value>
+  </data>
+  <data name="ffnet_meine_Seite_auf_Ko_fi_c673b22d" xml:space="preserve">
+    <value>Avaa sivuni Ko-fissa</value>
+  </data>
+  <data name="Randabstand_a68c50d0" xml:space="preserve">
+    <value>Reunaväli</value>
+  </data>
 </root>

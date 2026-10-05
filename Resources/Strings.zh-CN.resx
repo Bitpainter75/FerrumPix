@@ -9414,4 +9414,16 @@
   <data name="Gl_hen_von_der_Kante_nach_innen_aa54abad" xml:space="preserve">
     <value>从边缘向内发光</value>
   </data>
+  <data name="Frei_und_quelloffen_F_r_immer_b8604517" xml:space="preserve">
+    <value>自由且开源，永远如此。</value>
+  </data>
+  <data name="FerrumPix_kostet_nichts_zeigt_keine_Werbung_und__a73fa3a6" xml:space="preserve">
+    <value>FerrumPix 完全免费，不显示广告，也无需订阅。如果你喜欢这个应用并想支持我的工作，请我喝杯咖啡吧。</value>
+  </data>
+  <data name="ffnet_meine_Seite_auf_Ko_fi_c673b22d" xml:space="preserve">
+    <value>打开我在 Ko-fi 上的页面</value>
+  </data>
+  <data name="Randabstand_a68c50d0" xml:space="preserve">
+    <value>边距</value>
+  </data>
 </root>

@@ -28,59 +28,44 @@ Namespace Services
         ''' ein Rahmen bei jedem Seitenverhaeltnis gleich breit wirkt.</summary>
         Friend Shared Sub DrawFrameOnCanvas(canvas As SKCanvas, bounds As SKRect, sizePercent As Single,
                                             color As SKColor, cornerRadiusPercent As Single, effect As String,
-                                            Optional fillKind As String = "Solid",
-                                            Optional color2 As SKColor = Nothing,
-                                            Optional gradientAngleDegrees As Single = 0,
-                                            Optional gradientInverted As Boolean = False,
+                                            Optional gradient As GradientFillSpec = Nothing,
                                             Optional symbol As String = "",
                                             Optional symbolSpacingPercent As Single = 50,
                                             Optional symbolRotate As Boolean = False,
                                             Optional symbolStrokeColor As SKColor = Nothing,
-                                            Optional symbolStrokeWidth As Single = 0)
+                                            Optional symbolStrokeWidth As Single = 0,
+                                            Optional marginPercent As Single = 0)
             If canvas Is Nothing Then Return
-            Dim boundsWidth = bounds.Width
-            Dim boundsHeight = bounds.Height
-            If boundsWidth <= 0 OrElse boundsHeight <= 0 Then Return
-            Dim thickness = CInt(Math.Round(Math.Min(boundsWidth, boundsHeight) * Clamp(sizePercent, 0, 0.25F)))
+            If bounds.Width <= 0 OrElse bounds.Height <= 0 Then Return
+            ' Staerke, Rundung und Abstand beziehen sich auf die kuerzere Seite des GANZEN Rechtecks,
+            ' damit ein Abstand die Linie nicht duenner macht. Der Abstand rueckt nur das Rechteck,
+            ' auf dem der Rahmen liegt, nach innen; alles Weitere rechnet in diesem Rechteck.
+            Dim shortSide = Math.Min(bounds.Width, bounds.Height)
+            Dim thickness = CInt(Math.Round(shortSide * Clamp(sizePercent, 0, 0.25F)))
             If thickness <= 0 Then Return
+            Dim margin = CSng(Math.Round(shortSide * Clamp(marginPercent, 0, 0.4F)))
+            Dim boundsWidth = bounds.Width - 2 * margin
+            Dim boundsHeight = bounds.Height - 2 * margin
+            If boundsWidth <= thickness OrElse boundsHeight <= thickness Then Return
 
             ' VOR dem Try: was im Finally freigegeben wird, muss dort auch sichtbar sein - eine
             ' Deklaration im Try-Block ist es in VB nicht.
             Dim gradientShader As SKShader = Nothing
 
             canvas.Save()
-            canvas.Translate(bounds.Left, bounds.Top)
+            canvas.Translate(bounds.Left + margin, bounds.Top + margin)
             Try
                 Dim normalized = If(effect, "Einfach").Trim().ToLowerInvariant()
-                Dim radius = Math.Min(boundsWidth, boundsHeight) * Clamp(cornerRadiusPercent, 0, 1) * 0.25F
+                Dim radius = shortSide * Clamp(cornerRadiusPercent, 0, 1) * 0.25F
 
-                ' Verlauf wie bei den Formen, nur auf der KONTUR statt in der Flaeche: derselbe
-                ' Schattierer, damit Winkel, Umkehrung und Radialform sich ueberall gleich verhalten.
-                ' Er wird EINMAL gebaut und an jeden Pinsel gehaengt - der doppelte Rahmen zeichnet
-                ' zwei Linien und soll denselben Verlauf tragen, nicht zwei eigene.
-                Dim normalizedFillKind = If(fillKind, "Solid").Trim().ToLowerInvariant()
-                If normalizedFillKind = "radialgradient" Then
-                    ' Der radiale Verlauf einer FLAECHE spannt von der Mitte bis zur Ecke. Ein Rahmen
-                    ' liegt aber nur im aeussersten Ring davon: bei 800x600 laege die Mitte einer
-                    ' Kante bei 0,6 des Radius und die Ecke bei 1,0 - der Rahmen zeigte also nur die
-                    ' letzten 40 Prozent der Farbrampe und sah fast einfarbig aus. Deshalb bekommen
-                    ' die beiden Farben hier VERSCHOBENE Stuetzstellen: die Rampe faengt dort an, wo
-                    ' der Rahmen anfaengt (Kantenmitte), und endet in der Ecke.
-                    Dim mitte = New SKPoint(boundsWidth / 2.0F, boundsHeight / 2.0F)
-                    Dim aussen = CSng(Math.Sqrt(CDbl(boundsWidth) * boundsWidth + CDbl(boundsHeight) * boundsHeight) / 2.0)
-                    Dim innen = Math.Min(boundsWidth, boundsHeight) / 2.0F
-                    Dim start = If(gradientInverted, color2, color)
-                    Dim ende = If(gradientInverted, color, color2)
-                    Dim beginn = If(aussen > 0, Clamp(innen / aussen, 0, 0.95F), 0.0F)
-                    gradientShader = SKShader.CreateRadialGradient(mitte, Math.Max(1.0F, aussen),
-                                                                   New SKColor() {start, ende},
-                                                                   New Single() {beginn, 1.0F},
-                                                                   SKShaderTileMode.Clamp)
-                ElseIf normalizedFillKind = "lineargradient" Then
-                    gradientShader = CreateFillGradientShader(New SKRect(0, 0, boundsWidth, boundsHeight),
-                                                              normalizedFillKind, color, color2,
-                                                              gradientAngleDegrees, gradientInverted)
-                End If
+                ' Verlauf wie bei den Formen, nur auf der KONTUR statt in der Flaeche. Er wird EINMAL
+                ' gebaut und an jeden Pinsel gehaengt - der doppelte Rahmen zeichnet zwei Linien und
+                ' soll denselben Verlauf tragen, nicht zwei eigene.
+                If gradient IsNot Nothing Then gradientShader = CreateFrameGradientShader(boundsWidth, boundsHeight, thickness, gradient)
+                ' Die Deckkraft steckt beim Verlauf schon in jedem Stopp. Die Farbe des Pinsels
+                ' wirkt neben dem Schattierer nur noch mit ihrem Alpha und nahm sie sonst ein
+                ' zweites Mal.
+                Dim strokePaintColor = If(gradientShader Is Nothing, color, SKColors.White)
 
                 ' MIT SYMBOL wird der Rahmen nicht gestrichen, sondern bestempelt: die Rahmenart
                 ' liefert nur noch den PFAD, auf dem die Symbole sitzen.
@@ -96,7 +81,7 @@ Namespace Services
                     ''' statt einer einzelnen Linie in voller Stärke.
                     Dim thinWidth = Math.Max(1.0F, thickness * 0.35F)
                     Dim gap = thickness * 0.6F
-                    Using paint = New SKPaint With {.Color = color, .Style = SKPaintStyle.Stroke, .StrokeWidth = thinWidth, .IsAntialias = True}
+                    Using paint = New SKPaint With {.Color = strokePaintColor, .Style = SKPaintStyle.Stroke, .StrokeWidth = thinWidth, .IsAntialias = True}
                         If gradientShader IsNot Nothing Then paint.Shader = gradientShader
                         Dim outerInset = thinWidth / 2.0F
                         Dim outerRect = New SKRect(outerInset, outerInset, boundsWidth - outerInset, boundsHeight - outerInset)
@@ -112,7 +97,7 @@ Namespace Services
                     Return
                 End If
 
-                Using paint = New SKPaint With {.Color = color, .Style = SKPaintStyle.Stroke, .StrokeWidth = thickness, .IsAntialias = True}
+                Using paint = New SKPaint With {.Color = strokePaintColor, .Style = SKPaintStyle.Stroke, .StrokeWidth = thickness, .IsAntialias = True}
                     If gradientShader IsNot Nothing Then paint.Shader = gradientShader
                     Select Case normalized
                         Case "gestrichelt"
@@ -146,6 +131,64 @@ Namespace Services
                 canvas.Restore()
             End Try
         End Sub
+
+        ''' <summary>Der Verlauf des Rahmens, mit denselben Feldern wie bei den Formen.
+        '''
+        ''' Linear, Gespiegelt und Winkel kommen unveraendert aus CreateFillGradientShader: sie
+        ''' wirken entlang des Rahmens so wie in einer Flaeche. Radial und Raute dagegen wachsen von
+        ''' der Mitte aus, und der Rahmen liegt nur in ihrem aeussersten Ring. Bei 800x600 laege die
+        ''' Mitte einer Kante bei 0,6 des radialen Radius und die Ecke bei 1,0, der Rahmen zeigte
+        ''' also nur die letzten 40 Prozent der Farbrampe und sah fast einfarbig aus; die Raute einer
+        ''' Flaeche endet sogar an der Kantenmitte, jenseits davon stuende nur noch der letzte Stopp.
+        ''' Beide bekommen deshalb hier eine Rampe entlang der MITTELLINIE des Rahmens: sie faengt
+        ''' an der naeheren Kantenmitte an und endet bei Groesse 100 in der Ecke dieser Linie. Bis
+        ''' zur Bildecke gerechnet erreichte der Rahmen den letzten Stopp nur in einem Zipfel von
+        ''' wenigen Punkten (gemessen: Blau auf 0 von 1340 Punkten der Mittellinie). Die Groesse
+        ''' streckt die Spanne, die Mitte verschiebt den Ursprung, die Wiederholung gilt wie ueberall.</summary>
+        Private Shared Function CreateFrameGradientShader(width As Single, height As Single, thickness As Single,
+                                                          spec As GradientFillSpec) As SKShader
+            Dim rect = New SKRect(0, 0, width, height)
+            If spec.Kind <> GradientFillSpec.KindRadial AndAlso spec.Kind <> GradientFillSpec.KindDiamond Then
+                Return CreateFillGradientShader(rect, spec)
+            End If
+
+            Dim stops = spec.EffectiveStops()
+            Dim colors = stops.Select(Function(s) New SKColor(s.R, s.G, s.B, s.A)).ToArray()
+            Dim positions = stops.Select(Function(s) CSng(s.Position / 100.0)).ToArray()
+            Dim tile = SKShaderTileMode.Clamp
+            Select Case spec.Repeat
+                Case GradientFillSpec.RepeatRepeat : tile = SKShaderTileMode.Repeat
+                Case GradientFillSpec.RepeatMirror : tile = SKShaderTileMode.Mirror
+            End Select
+            Dim scale = Math.Max(0.1F, spec.ScalePercent / 100.0F)
+            Dim center = New SKPoint(width / 2.0F + spec.OffsetXPercent / 100.0F * width / 2.0F,
+                                     height / 2.0F + spec.OffsetYPercent / 100.0F * height / 2.0F)
+            ' Halbe Breite und Hoehe der Mittellinie.
+            Dim halfWidth = Math.Max(1.0F, (width - thickness) / 2.0F)
+            Dim halfHeight = Math.Max(1.0F, (height - thickness) / 2.0F)
+
+            If spec.Kind = GradientFillSpec.KindDiamond Then
+                ' Im Einheitsmass der Raute (halbe Bildbreite und -hoehe) liegt eine Kantenmitte der
+                ' Mittellinie bei halfHeight / (height / 2) bzw. halfWidth / (width / 2), ihre Ecke
+                ' bei der Summe aus beidem.
+                Dim topEdge = halfHeight / (height / 2.0F)
+                Dim sideEdge = halfWidth / (width / 2.0F)
+                Dim rampBegin = Math.Min(topEdge, sideEdge)
+                Dim rampEnd = topEdge + sideEdge
+                Dim diamond = CreateDiamondShader(center, width / 2.0F, height / 2.0F, spec.AngleDegrees,
+                                                  colors, positions, tile,
+                                                  rampStart:=rampBegin, rampSpan:=(rampEnd - rampBegin) * scale)
+                If diamond IsNot Nothing Then Return diamond
+                ' Ohne Laufzeit-Schattierer (steht im Diagnoselog) radial wie unten.
+            End If
+
+            ' Ein Kreis um die Mitte, zwei konzentrische Radien statt verschobener Stuetzstellen:
+            ' so wiederholt die Wiederholung die Rampe und nicht die Luecke davor.
+            Dim outer = CSng(Math.Sqrt(CDbl(halfWidth) * halfWidth + CDbl(halfHeight) * halfHeight))
+            Dim inner = Math.Min(Math.Min(halfWidth, halfHeight), outer * 0.95F)
+            Dim span = Math.Max(0.5F, (outer - inner) * scale)
+            Return SKShader.CreateTwoPointConicalGradient(center, inner, center, inner + span, colors, positions, tile)
+        End Function
 
         ''' <summary>Baut den Pfad, auf dem der Rahmen liegt - dieselbe Form, die sonst gestrichen
         ''' wird. "Doppelt" liefert zwei ineinanderliegende Ringe, daraus werden die zwei Reihen.</summary>
@@ -206,7 +249,9 @@ Namespace Services
                 If schrittweite <= 0.5F Then schrittweite = 1.0F
 
                 Dim kind = NormalizeFrameSymbolKind(symbol)
-                Dim malfarbe = If(gradientShader Is Nothing, color, New SKColor(255, 255, 255, color.Alpha))
+                ' Deckend: SrcIn nimmt das Alpha der Ebene mal das des Verlaufs, und in dem steckt
+                ' die Deckkraft schon.
+                Dim fillPaintColor = If(gradientShader Is Nothing, color, SKColors.White)
                 Dim vorlage = New ImageAnnotation With {.Kind = kind, .FillColor = "#FFFFFFFF", .StrokeWidth = 0}
 
                 ' Einmal ueber den Pfad laufen und an jeder Stelle stempeln. Steht als eigener
@@ -250,9 +295,13 @@ Namespace Services
                 Else
                     canvas.SaveLayer()
                     Try
-                        stempeln(malfarbe, SKColors.Transparent, 0.0F)
+                        stempeln(fillPaintColor, SKColors.Transparent, 0.0F)
+                        ' Die GANZE Ebene einfaerben, nicht nur das Rahmenrechteck: "Wellig" schwingt
+                        ' nach aussen darueber hinaus, und mit Randabstand liegen diese Symbole
+                        ' sichtbar im Bild. Ausserhalb des Rechtecks blieben sie ungefaerbt und damit
+                        ' durchsichtig (Nutzerbefund). SrcIn wirkt ohnehin nur, wo gestempelt wurde.
                         Using paint = New SKPaint With {.Shader = gradientShader, .BlendMode = SKBlendMode.SrcIn}
-                            canvas.DrawRect(New SKRect(0, 0, width, height), paint)
+                            canvas.DrawPaint(paint)
                         End Using
                     Finally
                         canvas.Restore()

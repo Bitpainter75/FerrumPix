@@ -9456,4 +9456,16 @@
   <data name="Gl_hen_von_der_Kante_nach_innen_aa54abad" xml:space="preserve">
     <value>Свечение от края внутрь</value>
   </data>
+  <data name="Frei_und_quelloffen_F_r_immer_b8604517" xml:space="preserve">
+    <value>Свободно и с открытым исходным кодом. Навсегда.</value>
+  </data>
+  <data name="FerrumPix_kostet_nichts_zeigt_keine_Werbung_und__a73fa3a6" xml:space="preserve">
+    <value>FerrumPix ничего не стоит, не показывает рекламу и не требует подписки. Если приложение вам нравится и вы хотите поддержать мою работу над ним, буду рад чашке кофе.</value>
+  </data>
+  <data name="ffnet_meine_Seite_auf_Ko_fi_c673b22d" xml:space="preserve">
+    <value>Открывает мою страницу на Ko-fi</value>
+  </data>
+  <data name="Randabstand_a68c50d0" xml:space="preserve">
+    <value>Отступ от края</value>
+  </data>
 </root>

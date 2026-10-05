@@ -1334,7 +1334,8 @@ Namespace ViewModels
         ''' Dialoge, die einen Zielordner zeigen, gehen hier durch - sonst haetten die einen die
         ''' Schnellwahl und die anderen nicht.</summary>
         Private Sub InitDialogTargetFolder(currentFolder As String)
-            Dim zuletzt = AppSettingsService.Load().LastSaveAsTargetFolder
+            Dim settings = AppSettingsService.Load()
+            Dim zuletzt = settings.LastSaveAsTargetFolder
             ' Die Haelfte der Dialoge bekommt gar keinen Ordner uebergeben - dort fehlte der Knopf
             ' "Aktueller Ordner" deshalb ganz. Der Ordner, in dem der Nutzer steht, ist aber immer
             ' bekannt: er steht in der Galerie. In einer Suchliste oder in Immich ist er leer, dann
@@ -1359,9 +1360,16 @@ Namespace ViewModels
             ' denselben wie der aktuelle, statt zu fehlen: eine Zeile mit wechselnder Knopfzahl ist
             ' schwerer zu lesen als eine, in der einmal beide dasselbe meinen.
             If _dialogFolderChoiceLastSaved = "" Then _dialogFolderChoiceLastSaved = _dialogFolderChoiceCurrent
-            DialogSaveAsTargetFolder = If(_dialogFolderChoiceCurrent <> "",
-                                          _dialogFolderChoiceCurrent,
-                                          ResolveDefaultSaveAsTargetFolder())
+            ' Der Knopf, der beim letzten Speichern aktiv war, ist es wieder (SaveAsFolderChoice).
+            ' Ohne den gemerkten Ordner faellt die Wahl auf den aktuellen zurueck.
+            Dim wantsLastSaved = AppSettingsService.NormalizeSaveAsFolderChoice(settings.SaveAsFolderChoice) = "LastSaved"
+            If wantsLastSaved AndAlso _dialogFolderChoiceLastSaved <> "" Then
+                DialogSaveAsTargetFolder = _dialogFolderChoiceLastSaved
+            Else
+                DialogSaveAsTargetFolder = If(_dialogFolderChoiceCurrent <> "",
+                                              _dialogFolderChoiceCurrent,
+                                              ResolveDefaultSaveAsTargetFolder())
+            End If
             Me.RaisePropertyChanged(NameOf(DialogFolderChoiceCurrent))
             Me.RaisePropertyChanged(NameOf(DialogFolderChoiceLastSaved))
             Me.RaisePropertyChanged(NameOf(IsDialogFolderChoiceCurrentEnabled))
@@ -4937,6 +4945,12 @@ Namespace ViewModels
             If Not IsSaveAsTargetLocal Then Return
             Dim folder = AppSettingsService.NormalizeFolderPath(DialogSaveAsTargetFolder)
             If String.IsNullOrWhiteSpace(folder) Then Return
+            ' Merken, welcher Ordnerknopf aktiv war, bevor der letzte Ordner gleich auf diesen
+            ' wechselt. Meinen beide denselben Ordner oder keiner (eigener Ordner), bleibt die
+            ' bisherige Wahl: daran laesst sich nicht ablesen, welcher gemeint war.
+            Dim current = IsDialogFolderChoiceCurrentActive
+            Dim lastSaved = IsDialogFolderChoiceLastSavedActive
+            If current <> lastSaved Then AppSettingsService.SaveSaveAsFolderChoice(If(lastSaved, "LastSaved", "Current"))
             AppSettingsService.SaveLastSaveAsTargetFolder(folder)
         End Sub
 

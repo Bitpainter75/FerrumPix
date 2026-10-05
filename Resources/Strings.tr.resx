@@ -9460,4 +9460,16 @@
   <data name="Gl_hen_von_der_Kante_nach_innen_aa54abad" xml:space="preserve">
     <value>Kenardan içe doğru parıltı</value>
   </data>
+  <data name="Frei_und_quelloffen_F_r_immer_b8604517" xml:space="preserve">
+    <value>Özgür ve açık kaynak. Sonsuza dek.</value>
+  </data>
+  <data name="FerrumPix_kostet_nichts_zeigt_keine_Werbung_und__a73fa3a6" xml:space="preserve">
+    <value>FerrumPix ücretsizdir, reklam göstermez ve abonelik gerektirmez. Uygulamayı beğendiysen ve üzerindeki çalışmamı desteklemek istersen, bir kahveye çok sevinirim.</value>
+  </data>
+  <data name="ffnet_meine_Seite_auf_Ko_fi_c673b22d" xml:space="preserve">
+    <value>Ko-fi sayfamı açar</value>
+  </data>
+  <data name="Randabstand_a68c50d0" xml:space="preserve">
+    <value>Kenar boşluğu</value>
+  </data>
 </root>

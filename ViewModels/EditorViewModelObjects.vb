@@ -966,7 +966,8 @@ Namespace ViewModels
                 Return _annotationShadowSize
             End Get
             Set(value As Double)
-                Me.RaiseAndSetIfChanged(_annotationShadowSize, Math.Max(25, Math.Min(300, value)))
+                ' Auf eine Nachkommastelle, wie beim Gluehen (AnnotationGlowBlur).
+                Me.RaiseAndSetIfChanged(_annotationShadowSize, Math.Round(Math.Max(25, Math.Min(300, value)), 1))
                 SyncSelectedAnnotation()
             End Set
         End Property
@@ -986,7 +987,9 @@ Namespace ViewModels
                 Return _annotationGlowBlur
             End Get
             Set(value As Double)
-                Me.RaiseAndSetIfChanged(_annotationGlowBlur, Math.Max(0, Math.Min(100, value)))
+                ' Auf eine Nachkommastelle, wie das Zahlenfeld sie zeigt: sonst traegt der Zug am
+                ' Regler Werte, die das Feld nicht anzeigen und nicht wieder eingeben kann.
+                Me.RaiseAndSetIfChanged(_annotationGlowBlur, Math.Round(Math.Max(0, Math.Min(100, value)), 1))
                 SyncSelectedAnnotation()
             End Set
         End Property
