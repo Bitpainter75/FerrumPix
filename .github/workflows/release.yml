@@ -575,3 +575,35 @@ jobs:
           su builder -c "git config --global user.name 'Bitpainter75'"
           su builder -c "git config --global user.email 'patrick@bitpainter.de'"
           su builder -c "GIT_SSH_COMMAND='ssh -i ~/.ssh/aur -o StrictHostKeyChecking=accept-new' packaging/publish-aur.sh"
+
+  # Die Liste der Laeufe raeumt GitHub nicht selbst: die Artefakte verfallen nach retention-days,
+  # die Laeufe samt Protokoll bleiben stehen. Dieser Job loescht jeden ABGESCHLOSSENEN Lauf des
+  # Repos, der aelter als drei Tage ist, aus allen Workflows. Er haengt an keinem Bau-Job, damit
+  # auch ein gescheiterter Lauf aufraeumt, und der laufende ist nie abgeschlossen. Nur er bekommt
+  # "actions: write"; ein Lauf, der sich nicht loeschen laesst, haelt nichts auf.
+  aufraeumen:
+    name: Alte Laeufe loeschen
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+
+    steps:
+      - name: Laeufe aelter als drei Tage loeschen
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          grenze="$(date -u -d '3 days ago' +%Y-%m-%d)"
+          echo "Loesche abgeschlossene Laeufe vor $grenze"
+          ids="$(gh api -X GET "repos/$REPO/actions/runs" --paginate \
+                   -f per_page=100 -f "created=<$grenze" \
+                   --jq '.workflow_runs[] | select(.status == "completed") | .id')"
+          anzahl=0
+          for id in $ids; do
+            if gh api -X DELETE "repos/$REPO/actions/runs/$id" --silent; then
+              anzahl=$((anzahl + 1))
+            else
+              echo "::warning::Lauf $id liess sich nicht loeschen"
+            fi
+          done
+          echo "Geloescht: $anzahl"

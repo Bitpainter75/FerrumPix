@@ -1281,19 +1281,36 @@ Namespace ViewModels
             End Get
         End Property
 
+        ''' <summary>Der zuletzt gewaehlte Ordnerknopf, "Current" oder "LastSaved": aus den
+        ''' Einstellungen vorbelegt (SaveAsFolderChoice) und mit jedem Klick nachgezogen. Er entscheidet,
+        ''' welcher Knopf leuchtet, wenn beide denselben Ordner meinen, und was beim Bestaetigen
+        ''' gemerkt wird. Aus den Ordnern allein liess sich das nicht ablesen: zeigten beide auf
+        ''' denselben, leuchteten beide, ein Klick aenderte sichtbar nichts und gemerkt wurde nichts
+        ''' (Nutzerbefund).</summary>
+        Private _dialogFolderChoiceSelected As String = "Current"
+
         Public ReadOnly Property IsDialogFolderChoiceCurrentActive As Boolean
             Get
-                Return IsSaveAsTargetLocal AndAlso _dialogFolderChoiceCurrent <> "" AndAlso
-                       PathIdentity.AreSame(_dialogFolderChoiceCurrent, _dialogSaveAsTargetFolder)
+                Return IsDialogFolderChoiceActive(_dialogFolderChoiceCurrent, _dialogFolderChoiceLastSaved, "Current")
             End Get
         End Property
 
         Public ReadOnly Property IsDialogFolderChoiceLastSavedActive As Boolean
             Get
-                Return IsSaveAsTargetLocal AndAlso _dialogFolderChoiceLastSaved <> "" AndAlso
-                       PathIdentity.AreSame(_dialogFolderChoiceLastSaved, _dialogSaveAsTargetFolder)
+                Return IsDialogFolderChoiceActive(_dialogFolderChoiceLastSaved, _dialogFolderChoiceCurrent, "LastSaved")
             End Get
         End Property
+
+        ''' <summary>Ein Ordnerknopf leuchtet, wenn sein Ordner das Ziel ist. Meint der andere Knopf
+        ''' denselben Ordner, leuchtet nur der gewaehlte.</summary>
+        Private Function IsDialogFolderChoiceActive(ownFolder As String, otherFolder As String, choice As String) As Boolean
+            If Not IsSaveAsTargetLocal OrElse ownFolder = "" Then Return False
+            If Not PathIdentity.AreSame(ownFolder, _dialogSaveAsTargetFolder) Then Return False
+            If otherFolder <> "" AndAlso PathIdentity.AreSame(otherFolder, ownFolder) Then
+                Return String.Equals(_dialogFolderChoiceSelected, choice, StringComparison.Ordinal)
+            End If
+            Return True
+        End Function
 
         ''' <summary>Der Ordner des Bildes, das gerade offen ist - oder "", wenn es keines gibt oder
         ''' sein Ordner als Ziel nicht taugt.
@@ -1362,7 +1379,8 @@ Namespace ViewModels
             If _dialogFolderChoiceLastSaved = "" Then _dialogFolderChoiceLastSaved = _dialogFolderChoiceCurrent
             ' Der Knopf, der beim letzten Speichern aktiv war, ist es wieder (SaveAsFolderChoice).
             ' Ohne den gemerkten Ordner faellt die Wahl auf den aktuellen zurueck.
-            Dim wantsLastSaved = AppSettingsService.NormalizeSaveAsFolderChoice(settings.SaveAsFolderChoice) = "LastSaved"
+            _dialogFolderChoiceSelected = AppSettingsService.NormalizeSaveAsFolderChoice(settings.SaveAsFolderChoice)
+            Dim wantsLastSaved = _dialogFolderChoiceSelected = "LastSaved"
             If wantsLastSaved AndAlso _dialogFolderChoiceLastSaved <> "" Then
                 DialogSaveAsTargetFolder = _dialogFolderChoiceLastSaved
             Else
@@ -1379,10 +1397,17 @@ Namespace ViewModels
 
         Public Sub SetDialogTargetFolderChoice(welche As String)
             If String.Equals(welche, "Current", StringComparison.Ordinal) Then
-                If _dialogFolderChoiceCurrent <> "" Then DialogSaveAsTargetFolder = _dialogFolderChoiceCurrent
+                If _dialogFolderChoiceCurrent = "" Then Return
+                _dialogFolderChoiceSelected = "Current"
+                DialogSaveAsTargetFolder = _dialogFolderChoiceCurrent
             ElseIf String.Equals(welche, "LastSaved", StringComparison.Ordinal) Then
-                If _dialogFolderChoiceLastSaved <> "" Then DialogSaveAsTargetFolder = _dialogFolderChoiceLastSaved
+                If _dialogFolderChoiceLastSaved = "" Then Return
+                _dialogFolderChoiceSelected = "LastSaved"
+                DialogSaveAsTargetFolder = _dialogFolderChoiceLastSaved
             End If
+            ' Bei gleichem Ordner aendert sich das Ziel nicht, die Hervorhebung aber schon.
+            Me.RaisePropertyChanged(NameOf(IsDialogFolderChoiceCurrentActive))
+            Me.RaisePropertyChanged(NameOf(IsDialogFolderChoiceLastSavedActive))
         End Sub
 
         ''' <summary>Ein Klick in der Ziel-Zeile. "Immich" schaltet das Ziel um, die beiden
@@ -4946,11 +4971,13 @@ Namespace ViewModels
             Dim folder = AppSettingsService.NormalizeFolderPath(DialogSaveAsTargetFolder)
             If String.IsNullOrWhiteSpace(folder) Then Return
             ' Merken, welcher Ordnerknopf aktiv war, bevor der letzte Ordner gleich auf diesen
-            ' wechselt. Meinen beide denselben Ordner oder keiner (eigener Ordner), bleibt die
-            ' bisherige Wahl: daran laesst sich nicht ablesen, welcher gemeint war.
-            Dim current = IsDialogFolderChoiceCurrentActive
-            Dim lastSaved = IsDialogFolderChoiceLastSavedActive
-            If current <> lastSaved Then AppSettingsService.SaveSaveAsFolderChoice(If(lastSaved, "LastSaved", "Current"))
+            ' wechselt. Auch bei gleichem Ordner unter beiden leuchtet nur der gewaehlte (siehe
+            ' _dialogFolderChoiceSelected). Ist es keiner (eigener Ordner), bleibt die bisherige Wahl.
+            If IsDialogFolderChoiceLastSavedActive Then
+                AppSettingsService.SaveSaveAsFolderChoice("LastSaved")
+            ElseIf IsDialogFolderChoiceCurrentActive Then
+                AppSettingsService.SaveSaveAsFolderChoice("Current")
+            End If
             AppSettingsService.SaveLastSaveAsTargetFolder(folder)
         End Sub
 
