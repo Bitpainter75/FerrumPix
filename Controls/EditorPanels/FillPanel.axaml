@@ -6,7 +6,11 @@
          binden an dieselben Eigenschaften (AnnotationFillKind, AnnotationFillColorValue ...). Haken
          "Aktiv" in der Kopfzeile (FillGroupActive): am Objekt die sichtbare Fuellfarbe, im
          Auswahl-Werkzeug die Fuellung der Auswahl, dort live wie die Kontur, ohne Knopf. Zu,
-         solange er aus ist, auf, sobald er an ist (ExpanderState.ExpandWhen). -->
+         solange er aus ist, auf, sobald er an ist (ExpanderState.ExpandWhen).
+
+         Ein Verlauf hat beliebig viele Farbstopps (Verlaufsleiste, GradientStopEditor), eine von
+         fuenf Formen, Winkel, Groesse, Mitte und Wiederholung. Vorlagen setzen nur die Stopps.
+         Was die Werte bedeuten, steht an GradientFillSpec. -->
     <Expander Header="Füllung" icons:ExpanderState.Key="fill"
               icons:ExpanderState.ExpandWhen="{Binding ObjectFillGroupExpanded}">
         <Expander.HeaderTemplate>
@@ -18,78 +22,236 @@
                     <icons:SvgIcon
                         Source="avares://FerrumPix/Assets/Icons/outline/bucket-droplet.svg"
                         Width="14" Height="14" />
-                    <TextBlock Text="{Binding}" FontWeight="SemiBold" />
+                    <TextBlock Text="{Binding}" FontWeight="SemiBold" VerticalAlignment="Center" />
                 </StackPanel>
             </DataTemplate>
         </Expander.HeaderTemplate>
         <StackPanel Spacing="8" Margin="0,8,0,0">
             <StackPanel Spacing="8" IsVisible="{Binding ShowFillGroupContent}">
-            <!-- WrapPanel statt StackPanel: die Beschriftungen sprengen sonst die Spaltenbreite.
-                 In der laengsten Sprache summieren sich "Vollfarbe|Verlauf|Radial" auf 28 Zeichen -
-                 im Deutschen passt es knapp, anderswo nicht. Umbruch statt fester Aufteilung, damit
-                 es sich nach der tatsaechlichen Breite richtet.
-                 Abstaende ueber Margin je Knopf, weil WrapPanel kein Spacing kennt. -->
+            <!-- Die Fuellart als Symbolknoepfe: sechs Beschriftungen sprengten jede Spaltenbreite.
+                 Der Name steht im Hinweis. WrapPanel, falls das Panel sehr schmal ist; Abstaende
+                 ueber Margin je Knopf, weil WrapPanel kein Spacing kennt. -->
             <WrapPanel Orientation="Horizontal">
-                <Button Classes="ghost" Padding="8,4" Margin="0,0,6,4"
-                        Command="{Binding SetAnnotationFillKindCommand}"
-                        CommandParameter="Solid"
-                        Classes.active="{Binding AnnotationFillKind, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Solid}">
-                    <StackPanel Orientation="Horizontal" Spacing="6">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/bucket-droplet.svg"
-                                       Width="14" Height="14" />
-                        <TextBlock Text="Vollfarbe" FontSize="{DynamicResource FP.Font.Small}" />
-                    </StackPanel>
+                <Button Classes="ghost" Width="34" Height="30" Padding="0" Margin="0,0,4,4"
+                        Command="{Binding SetAnnotationFillKindCommand}" CommandParameter="Solid"
+                        Classes.active="{Binding IsSolidFill}" ToolTip.Tip="Vollfarbe">
+                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/bucket-droplet.svg" Width="16" Height="16" />
                 </Button>
-                <Button Classes="ghost" Padding="8,4" Margin="0,0,6,4"
-                        Command="{Binding SetAnnotationFillKindCommand}"
-                        CommandParameter="LinearGradient"
-                        Classes.active="{Binding AnnotationFillKind, Converter={StaticResource StringEqualsConverter}, ConverterParameter=LinearGradient}">
-                    <StackPanel Orientation="Horizontal" Spacing="6">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/gradient-linear.svg"
-                                       Width="14" Height="14" />
-                        <TextBlock Text="Verlauf" FontSize="{DynamicResource FP.Font.Small}" />
-                    </StackPanel>
+                <Button Classes="ghost" Width="34" Height="30" Padding="0" Margin="0,0,4,4"
+                        Command="{Binding SetAnnotationFillKindCommand}" CommandParameter="LinearGradient"
+                        Classes.active="{Binding IsLinearGradientFill}" ToolTip.Tip="Linearer Verlauf">
+                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/gradient-linear.svg" Width="16" Height="16" />
                 </Button>
-                <Button Classes="ghost" Padding="8,4" Margin="0,0,6,4"
-                        Command="{Binding SetAnnotationFillKindCommand}"
-                        CommandParameter="RadialGradient"
-                        Classes.active="{Binding AnnotationFillKind, Converter={StaticResource StringEqualsConverter}, ConverterParameter=RadialGradient}">
-                    <StackPanel Orientation="Horizontal" Spacing="6">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/gradient-radial.svg"
-                                       Width="14" Height="14" />
-                        <TextBlock Text="Radial" FontSize="{DynamicResource FP.Font.Small}" />
-                    </StackPanel>
+                <Button Classes="ghost" Width="34" Height="30" Padding="0" Margin="0,0,4,4"
+                        Command="{Binding SetAnnotationFillKindCommand}" CommandParameter="RadialGradient"
+                        Classes.active="{Binding IsRadialGradientFill}" ToolTip.Tip="Radialer Verlauf">
+                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/gradient-radial.svg" Width="16" Height="16" />
+                </Button>
+                <Button Classes="ghost" Width="34" Height="30" Padding="0" Margin="0,0,4,4"
+                        Command="{Binding SetAnnotationFillKindCommand}" CommandParameter="AngleGradient"
+                        Classes.active="{Binding IsAngleGradientFill}" ToolTip.Tip="Winkelverlauf">
+                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/chart-pie.svg" Width="16" Height="16" />
+                </Button>
+                <Button Classes="ghost" Width="34" Height="30" Padding="0" Margin="0,0,4,4"
+                        Command="{Binding SetAnnotationFillKindCommand}" CommandParameter="ReflectedGradient"
+                        Classes.active="{Binding IsReflectedGradientFill}" ToolTip.Tip="Gespiegelter Verlauf">
+                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/arrows-horizontal.svg" Width="16" Height="16" />
+                </Button>
+                <Button Classes="ghost" Width="34" Height="30" Padding="0" Margin="0,0,4,4"
+                        Command="{Binding SetAnnotationFillKindCommand}" CommandParameter="DiamondGradient"
+                        Classes.active="{Binding IsDiamondGradientFill}" ToolTip.Tip="Rautenverlauf">
+                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/diamond.svg" Width="16" Height="16" />
                 </Button>
             </WrapPanel>
-            <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Top">
-                <TextBlock Text="Farbe 1" Foreground="{DynamicResource FP.Text.Secondary}"
+
+            <!-- Vollfarbe: eine Farbe. -->
+            <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Top" IsVisible="{Binding ShowSolidFillColorControl}">
+                <TextBlock Text="Farbe" Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                 <icons:ColorPickerButton Grid.Column="1"
                                          SelectedColor="{Binding AnnotationFillColorValue, Mode=TwoWay}" />
             </Grid>
-            <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Top"
-                  IsVisible="{Binding ShowGradientFillControls}">
-                <TextBlock Text="Farbe 2" Foreground="{DynamicResource FP.Text.Secondary}"
-                           VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
-                <icons:ColorPickerButton Grid.Column="1"
-                                         SelectedColor="{Binding AnnotationFillColor2Value, Mode=TwoWay}" />
-            </Grid>
-            <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center"
-                  IsVisible="{Binding ShowLinearGradientAngleControl}">
-                <TextBlock Text="Winkel" Foreground="{DynamicResource FP.Text.Secondary}"
-                           VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
-                <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="360"
-                                   DefaultValue="0"
-                                   Value="{Binding AnnotationGradientAngleDegrees}"
-                                   Margin="0,0" />
-                <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
-                                         Value="{Binding AnnotationGradientAngleDegrees, Mode=TwoWay}"
-                                         Minimum="0" Maximum="360" Increment="1"
-                                         FormatString="F0" />
-            </Grid>
-            <CheckBox Content="Verlauf invertieren"
-                      IsChecked="{Binding AnnotationGradientInverted}" FontSize="{DynamicResource FP.Font.Small}"
-                      IsVisible="{Binding ShowRadialGradientControl}" />
+
+            <!-- Verlauf -->
+            <StackPanel Spacing="8" IsVisible="{Binding ShowGradientFillControls}">
+                <!-- Vorlagen wie die Pinselliste: Farbstreifen und Name. Daneben Speichern (mit
+                     Namensfeld im Flyout) und Loeschen, das nur bei einer eigenen Vorlage steht. -->
+                <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="4">
+                    <ComboBox HorizontalAlignment="Stretch" PlaceholderText="Vorlage wählen"
+                              ItemsSource="{Binding GradientPresets}"
+                              SelectedItem="{Binding SelectedGradientPreset, Mode=TwoWay}"
+                              MaxDropDownHeight="360">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <!-- Ohne Vorlage (nichts passt zu den Stopps) wendet die Liste die
+                                     Vorlage trotzdem an, und der Rahmen des Farbstreifens schien leer
+                                     unter "Vorlage wählen" durch. -->
+                                <Grid ColumnDefinitions="64,*" ColumnSpacing="8"
+                                      IsVisible="{Binding Converter={x:Static ObjectConverters.IsNotNull}}">
+                                    <Border Height="14" CornerRadius="3" VerticalAlignment="Center"
+                                            Background="{Binding PreviewBrush}"
+                                            BorderBrush="{DynamicResource FP.Border.Strong}" BorderThickness="1" />
+                                    <TextBlock Grid.Column="1" Text="{Binding Label}" VerticalAlignment="Center"
+                                               TextTrimming="CharacterEllipsis"
+                                               FontSize="{DynamicResource FP.Font.Small}" />
+                                </Grid>
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                    <Button x:Name="SavePresetButton" Grid.Column="1" Classes="ghost" Width="32" Height="30" Padding="0"
+                            ToolTip.Tip="Verlauf als Vorlage speichern">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/device-floppy.svg" Width="16" Height="16" />
+                        <Button.Flyout>
+                            <Flyout Placement="Bottom" Opened="OnLocalizedFlyoutOpened">
+                                <StackPanel Spacing="6" Width="220">
+                                    <TextBlock Text="Name der Vorlage" FontSize="{DynamicResource FP.Font.Small}"
+                                               Foreground="{DynamicResource FP.Text.Secondary}" />
+                                    <TextBox Text="{Binding NewGradientPresetName}" PlaceholderText="Eigener Verlauf" />
+                                    <Button Classes="accent" HorizontalAlignment="Right" Content="Speichern"
+                                            Command="{Binding SaveGradientPresetCommand}"
+                                            Click="OnSavePresetClick" />
+                                </StackPanel>
+                            </Flyout>
+                        </Button.Flyout>
+                    </Button>
+                    <Button Grid.Column="2" Classes="ghost" Width="32" Height="30" Padding="0"
+                            Command="{Binding DeleteGradientPresetCommand}"
+                            IsVisible="{Binding SelectedGradientPreset.IsCustom, FallbackValue=False}"
+                            ToolTip.Tip="Eigene Vorlage löschen">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/trash.svg" Width="16" Height="16" />
+                    </Button>
+                </Grid>
+
+                <icons:GradientStopEditor x:Name="GradientStops" Height="42"
+                                          Stops="{Binding AnnotationGradientStops, Mode=TwoWay}"
+                                          ToolTip.Tip="Klick setzt einen Farbstopp, Ziehen verschiebt ihn. Nach unten ziehen oder ENTF entfernt ihn." />
+
+                <!-- Der markierte Farbstopp: Farbe samt Deckkraft und Lage. -->
+                <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Top">
+                    <TextBlock Text="Farbstopp" Foreground="{DynamicResource FP.Text.Secondary}"
+                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                    <icons:ColorPickerButton Grid.Column="1"
+                                             SelectedColor="{Binding #GradientStops.SelectedColor, Mode=TwoWay}" />
+                </Grid>
+                <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
+                    <TextBlock Text="Position" Foreground="{DynamicResource FP.Text.Secondary}"
+                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                    <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
+                                       Value="{Binding #GradientStops.SelectedPosition, Mode=TwoWay}" />
+                    <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                             Value="{Binding #GradientStops.SelectedPosition, Mode=TwoWay}"
+                                             Minimum="0" Maximum="100" Increment="1" FormatString="F0" />
+                </Grid>
+                <WrapPanel Orientation="Horizontal">
+                    <Button Classes="ghost" Padding="8,4" Margin="0,0,6,4"
+                            IsEnabled="{Binding #GradientStops.CanRemoveStop}"
+                            Click="OnRemoveStopClick" ToolTip.Tip="Markierten Farbstopp entfernen (ENTF)">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/trash.svg" Width="14" Height="14" />
+                            <TextBlock Text="Entfernen" FontSize="{DynamicResource FP.Font.Small}" />
+                        </StackPanel>
+                    </Button>
+                    <Button Classes="ghost" Padding="8,4" Margin="0,0,6,4"
+                            Command="{Binding DistributeGradientStopsCommand}"
+                            ToolTip.Tip="Farbstopps in gleichen Abständen verteilen">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/layout-distribute-horizontal.svg" Width="14" Height="14" />
+                            <TextBlock Text="Verteilen" FontSize="{DynamicResource FP.Font.Small}" />
+                        </StackPanel>
+                    </Button>
+                    <Button Classes="ghost" Padding="8,4" Margin="0,0,6,4"
+                            Command="{Binding ReverseGradientStopsCommand}"
+                            ToolTip.Tip="Reihenfolge der Farbstopps umdrehen">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/arrows-left-right.svg" Width="14" Height="14" />
+                            <TextBlock Text="Umdrehen" FontSize="{DynamicResource FP.Font.Small}" />
+                        </StackPanel>
+                    </Button>
+                </WrapPanel>
+
+                <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center"
+                      IsVisible="{Binding ShowGradientAngleControl}">
+                    <TextBlock Text="Winkel" Foreground="{DynamicResource FP.Text.Secondary}"
+                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                    <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="360"
+                                       DefaultValue="0"
+                                       Value="{Binding AnnotationGradientAngleDegrees}"
+                                       Margin="0,0" />
+                    <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                             Value="{Binding AnnotationGradientAngleDegrees, Mode=TwoWay}"
+                                             Minimum="0" Maximum="360" Increment="1"
+                                             FormatString="F0" />
+                </Grid>
+                <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center"
+                      IsVisible="{Binding ShowGradientScaleControls}">
+                    <TextBlock Text="Größe" Foreground="{DynamicResource FP.Text.Secondary}"
+                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                    <icons:RoundSlider Grid.Column="1" Minimum="10" Maximum="400"
+                                       DefaultValue="100"
+                                       Value="{Binding AnnotationGradientScale}" />
+                    <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                             Value="{Binding AnnotationGradientScale, Mode=TwoWay}"
+                                             Minimum="10" Maximum="400" Increment="1"
+                                             FormatString="F0" />
+                </Grid>
+                <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
+                    <TextBlock Text="Mitte X" Foreground="{DynamicResource FP.Text.Secondary}"
+                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                    <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100"
+                                       DefaultValue="0"
+                                       Value="{Binding AnnotationGradientOffsetX}" />
+                    <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                             Value="{Binding AnnotationGradientOffsetX, Mode=TwoWay}"
+                                             Minimum="-100" Maximum="100" Increment="1"
+                                             FormatString="F0" />
+                </Grid>
+                <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
+                    <TextBlock Text="Mitte Y" Foreground="{DynamicResource FP.Text.Secondary}"
+                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                    <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100"
+                                       DefaultValue="0"
+                                       Value="{Binding AnnotationGradientOffsetY}" />
+                    <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                             Value="{Binding AnnotationGradientOffsetY, Mode=TwoWay}"
+                                             Minimum="-100" Maximum="100" Increment="1"
+                                             FormatString="F0" />
+                </Grid>
+
+                <!-- Was jenseits des letzten Stopps liegt; wirkt erst, wenn die Groesse unter 100
+                     liegt oder die Mitte verschoben ist. Wiederholung und Gespiegelt setzen deshalb ab
+                     Groesse 100 gleich die halbe Groesse (SetAnnotationGradientRepeat). Beim
+                     gespiegelten Verlauf fehlt Gespiegelt: er ist schon symmetrisch. -->
+                <WrapPanel Orientation="Horizontal" IsVisible="{Binding ShowGradientScaleControls}">
+                    <Button Classes="ghost" Padding="8,4" Margin="0,0,6,4"
+                            Command="{Binding SetAnnotationGradientRepeatCommand}" CommandParameter=""
+                            Classes.active="{Binding IsGradientRepeatNone}"
+                            ToolTip.Tip="Jenseits des Verlaufs die Randfarbe halten">
+                        <TextBlock Text="Randfarbe" FontSize="{DynamicResource FP.Font.Small}" />
+                    </Button>
+                    <Button Classes="ghost" Padding="8,4" Margin="0,0,6,4"
+                            Command="{Binding SetAnnotationGradientRepeatCommand}" CommandParameter="Repeat"
+                            Classes.active="{Binding IsGradientRepeatRepeat}"
+                            ToolTip.Tip="Verlauf wiederholen">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/repeat.svg" Width="14" Height="14" />
+                            <TextBlock Text="Wiederholung" FontSize="{DynamicResource FP.Font.Small}" />
+                        </StackPanel>
+                    </Button>
+                    <Button Classes="ghost" Padding="8,4" Margin="0,0,6,4"
+                            Command="{Binding SetAnnotationGradientRepeatCommand}" CommandParameter="Mirror"
+                            Classes.active="{Binding IsGradientRepeatMirror}"
+                            IsVisible="{Binding ShowGradientMirrorRepeat}"
+                            ToolTip.Tip="Verlauf gespiegelt wiederholen">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/flip-horizontal.svg" Width="14" Height="14" />
+                            <TextBlock Text="Gespiegelt" FontSize="{DynamicResource FP.Font.Small}" />
+                        </StackPanel>
+                    </Button>
+                </WrapPanel>
+
+                <CheckBox Content="Verlauf invertieren"
+                          IsChecked="{Binding AnnotationGradientInverted}" FontSize="{DynamicResource FP.Font.Small}" />
+            </StackPanel>
             </StackPanel>
         </StackPanel>
     </Expander>

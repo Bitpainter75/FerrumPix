@@ -9336,4 +9336,127 @@
   <data name="Ecken_der_Kontur_44390a90" xml:space="preserve">
     <value>境界線の角</value>
   </data>
+  <data name="Winkelverlauf_6f276eb9" xml:space="preserve">
+    <value>角度グラデーション</value>
+  </data>
+  <data name="Gespiegelter_Verlauf_9384096f" xml:space="preserve">
+    <value>反射グラデーション</value>
+  </data>
+  <data name="Rautenverlauf_62732ac5" xml:space="preserve">
+    <value>ダイヤモンドグラデーション</value>
+  </data>
+  <data name="Vorlage_w_hlen_7df6eb54" xml:space="preserve">
+    <value>プリセットを選択</value>
+  </data>
+  <data name="Verlauf_als_Vorlage_speichern_2d633574" xml:space="preserve">
+    <value>グラデーションをプリセットとして保存</value>
+  </data>
+  <data name="Name_der_Vorlage_bc81ad2f" xml:space="preserve">
+    <value>プリセット名</value>
+  </data>
+  <data name="Eigener_Verlauf_0d52cf71" xml:space="preserve">
+    <value>カスタムグラデーション</value>
+  </data>
+  <data name="Eigene_Vorlage_l_schen_5276b483" xml:space="preserve">
+    <value>カスタムプリセットを削除</value>
+  </data>
+  <data name="Klick_setzt_einen_Farbstopp_Ziehen_verschiebt_ih_13771329" xml:space="preserve">
+    <value>クリックでカラー分岐点を追加し、ドラッグで移動します。下へドラッグするか DEL で削除します。</value>
+  </data>
+  <data name="Farbstopp_038dd2a0" xml:space="preserve">
+    <value>カラー分岐点</value>
+  </data>
+  <data name="Markierten_Farbstopp_entfernen_ENTF_edf3c091" xml:space="preserve">
+    <value>選択したカラー分岐点を削除 (DEL)</value>
+  </data>
+  <data name="Farbstopps_in_gleichen_Abst_nden_verteilen_aa1ef29b" xml:space="preserve">
+    <value>カラー分岐点を均等に配置</value>
+  </data>
+  <data name="Reihenfolge_der_Farbstopps_umdrehen_d2eb86ee" xml:space="preserve">
+    <value>カラー分岐点の順序を反転</value>
+  </data>
+  <data name="Umdrehen_bd500b25" xml:space="preserve">
+    <value>順序を反転</value>
+  </data>
+  <data name="Jenseits_des_Verlaufs_die_Randfarbe_halten_36114af2" xml:space="preserve">
+    <value>グラデーションの外側は端の色を保持</value>
+  </data>
+  <data name="Randfarbe_0a2558c0" xml:space="preserve">
+    <value>端の色</value>
+  </data>
+  <data name="Verlauf_wiederholen_52f0224f" xml:space="preserve">
+    <value>グラデーションを繰り返す</value>
+  </data>
+  <data name="Wiederholung_31786adb" xml:space="preserve">
+    <value>繰り返し</value>
+  </data>
+  <data name="Verlauf_gespiegelt_wiederholen_896d6d86" xml:space="preserve">
+    <value>グラデーションを反射して繰り返す</value>
+  </data>
+  <data name="Gespiegelt_da97cceb" xml:space="preserve">
+    <value>反射</value>
+  </data>
+  <data name="Schwarz_zu_Wei_f802e62c" xml:space="preserve">
+    <value>黒から白</value>
+  </data>
+  <data name="Ausblenden_2e03e3a6" xml:space="preserve">
+    <value>フェードアウト</value>
+  </data>
+  <data name="Sonnenuntergang_9079255c" xml:space="preserve">
+    <value>夕焼け</value>
+  </data>
+  <data name="Morgenrot_bfe3ebd7" xml:space="preserve">
+    <value>朝焼け</value>
+  </data>
+  <data name="Ozean_82535d6f" xml:space="preserve">
+    <value>海</value>
+  </data>
+  <data name="Himmel_a3d8e72b" xml:space="preserve">
+    <value>空</value>
+  </data>
+  <data name="Wald_a18d7cd0" xml:space="preserve">
+    <value>森</value>
+  </data>
+  <data name="Feuer_084f04b7" xml:space="preserve">
+    <value>炎</value>
+  </data>
+  <data name="Violett_1186ae2f" xml:space="preserve">
+    <value>バイオレット</value>
+  </data>
+  <data name="Pfirsich_34c30ceb" xml:space="preserve">
+    <value>ピーチ</value>
+  </data>
+  <data name="Gold_c57604db" xml:space="preserve">
+    <value>ゴールド</value>
+  </data>
+  <data name="Silber_8c50fd66" xml:space="preserve">
+    <value>シルバー</value>
+  </data>
+  <data name="Kupfer_c906e360" xml:space="preserve">
+    <value>カッパー</value>
+  </data>
+  <data name="Regenbogen_c35233b4" xml:space="preserve">
+    <value>虹</value>
+  </data>
+  <data name="Neon_00706b5e" xml:space="preserve">
+    <value>ネオン</value>
+  </data>
+  <data name="Lage_ffbcda4e" xml:space="preserve">
+    <value>位置</value>
+  </data>
+  <data name="Schatten_unter_dem_Objekt_bbaf1274" xml:space="preserve">
+    <value>オブジェクトの下の影</value>
+  </data>
+  <data name="Schatten_auf_der_Fl_che_an_der_dem_Licht_zugewan_ee2adc6b" xml:space="preserve">
+    <value>光に向いた内側の縁に沿って面の上に落ちる影</value>
+  </data>
+  <data name="Au_en_und_innen_mit_denselben_Werten_3502b4bc" xml:space="preserve">
+    <value>外側と内側に同じ値で</value>
+  </data>
+  <data name="Gl_hen_um_das_Objekt_herum_2afeecaa" xml:space="preserve">
+    <value>オブジェクトの周りの光彩</value>
+  </data>
+  <data name="Gl_hen_von_der_Kante_nach_innen_aa54abad" xml:space="preserve">
+    <value>縁から内側への光彩</value>
+  </data>
 </root>

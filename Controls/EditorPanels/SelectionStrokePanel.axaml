@@ -19,7 +19,7 @@
                     <icons:SvgIcon
                         Source="avares://FerrumPix/Assets/Icons/outline/border-outer.svg"
                         Width="14" Height="14" />
-                    <TextBlock Text="{Binding}" FontWeight="SemiBold" />
+                    <TextBlock Text="{Binding}" FontWeight="SemiBold" VerticalAlignment="Center" />
                 </StackPanel>
             </DataTemplate>
         </Expander.HeaderTemplate>

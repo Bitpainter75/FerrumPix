@@ -262,18 +262,24 @@ Namespace ViewModels
             End Set
         End Property
 
-        ' "Solid", "LinearGradient" oder "RadialGradient" - nur für Rechteck/Ellipse-Objekte relevant,
-        ' siehe ImageAnnotation.FillKind. Dient sowohl zum Bearbeiten des ausgewählten Objekts als auch
+        ' "Solid" oder eine Verlaufsform (GradientFillSpec.KindLinear usw.), siehe
+        ' ImageAnnotation.FillKind. Dient sowohl zum Bearbeiten des ausgewählten Objekts als auch
         ' (wie AnnotationFillColor) als "aktueller Stift" für neu erzeugte Objekte (FillSelection).
         Public Property AnnotationFillKind As String
             Get
                 Return _annotationFillKind
             End Get
             Set(value As String)
-                Me.RaiseAndSetIfChanged(_annotationFillKind, If(String.IsNullOrWhiteSpace(value), "Solid", value))
-                Me.RaisePropertyChanged(NameOf(ShowGradientFillControls))
-                Me.RaisePropertyChanged(NameOf(ShowLinearGradientAngleControl))
-                Me.RaisePropertyChanged(NameOf(ShowRadialGradientControl))
+                ' Ein Zwischenstand trug die Stopps im Namen ("...|#..@0;..."): sie wandern in die
+                ' Stoppliste, der Name wird wieder einer der festen.
+                Dim raw = If(value, "")
+                If raw.Contains("|"c) AndAlso String.IsNullOrEmpty(_annotationGradientStops) Then
+                    _annotationGradientStops = GradientFillSpec.NormalizeStops(raw.Substring(raw.IndexOf("|"c) + 1))
+                End If
+                Me.RaiseAndSetIfChanged(_annotationFillKind, GradientFillSpec.NormalizeKind(raw))
+                RaiseFillKindDependentProperties()
+                Me.RaisePropertyChanged(NameOf(AnnotationGradientStops))
+                Me.RaisePropertyChanged(NameOf(SelectedGradientPreset))
                 Me.RaisePropertyChanged(NameOf(SelectionFillPreviewBrush))
                 SyncSelectedAnnotation()
             End Set
@@ -511,6 +517,8 @@ Namespace ViewModels
             End Get
             Set(value As String)
                 Me.RaiseAndSetIfChanged(_annotationFillColor2, NormalizeAvaloniaColor(value, _annotationFillColor2))
+                ' Farbe 2 ist der letzte Stopp: wer sie setzt (Farbmischer, Haken "Aktiv"), setzt ihn mit.
+                SetGradientEndStopColor(lastStop:=True, colorHex:=_annotationFillColor2)
                 Me.RaisePropertyChanged(NameOf(AnnotationFillColor2Value))
                 Me.RaisePropertyChanged(NameOf(AnnotationFillColor2Brush))
                 Me.RaisePropertyChanged(NameOf(SelectionFillPreviewBrush))
@@ -526,6 +534,281 @@ Namespace ViewModels
                 AnnotationFillColor2 = value.ToString()
             End Set
         End Property
+
+        ''' <summary>Die Farbstopps des Verlaufs, "#AARRGGBB@Prozent;...", gebunden an die
+        ''' Verlaufsleiste (GradientStopEditor). Ohne eigene Stopps liefert sie die zwei aus Farbe 1
+        ''' und Farbe 2. Wer sie setzt, zieht Farbe 1 und Farbe 2 auf den ersten und letzten Stopp
+        ''' nach (siehe GradientFillSpec).</summary>
+        Public Property AnnotationGradientStops As String
+            Get
+                Return GradientFillSpec.FormatStops(GradientFillSpec.ParseStops(_annotationGradientStops, _annotationFillColor, _annotationFillColor2))
+            End Get
+            Set(value As String)
+                Dim normalized = GradientFillSpec.NormalizeStops(value)
+                If normalized.Length = 0 OrElse String.Equals(normalized, AnnotationGradientStops, StringComparison.Ordinal) Then Return
+                Dim stops = GradientFillSpec.TryParseStops(normalized)
+                _annotationGradientStops = normalized
+                _annotationFillColor = stops(0).Hex
+                _annotationFillColor2 = stops(stops.Count - 1).Hex
+                _annotationFillColorIsAutomaticDefault = False
+                Me.RaisePropertyChanged(NameOf(AnnotationGradientStops))
+                Me.RaisePropertyChanged(NameOf(AnnotationFillColorValue))
+                Me.RaisePropertyChanged(NameOf(AnnotationFillBrush))
+                Me.RaisePropertyChanged(NameOf(AnnotationFillColor2Value))
+                Me.RaisePropertyChanged(NameOf(AnnotationFillColor2Brush))
+                Me.RaisePropertyChanged(NameOf(AnnotationFillEnabled))
+                RaiseFillGroupActiveChanged()
+                Me.RaisePropertyChanged(NameOf(SelectedGradientPreset))
+                Me.RaisePropertyChanged(NameOf(SelectionFillPreviewBrush))
+                SyncSelectedAnnotation()
+            End Set
+        End Property
+
+        ''' <summary>Haelt den ersten bzw. letzten Stopp auf Farbe 1 bzw. Farbe 2. Nur, wenn eigene
+        ''' Stopps gesetzt sind; sonst SIND die beiden Farben schon der Verlauf.</summary>
+        Private Sub SetGradientEndStopColor(lastStop As Boolean, colorHex As String)
+            Dim stops = GradientFillSpec.TryParseStops(_annotationGradientStops)
+            If stops Is Nothing Then
+                ' Ohne eigene Stopps SIND die beiden Farben der Verlauf: die Leiste muss es trotzdem
+                ' erfahren. Sonst zeigte sie nach dem Umschalten auf einen Verlauf noch die alte
+                ' Farbe 2, waehrend im Bild schon die neue lag (Nutzerbefund: Leiste "transparent
+                ' nach weiss", im Bild nichts).
+                Me.RaisePropertyChanged(NameOf(AnnotationGradientStops))
+                Me.RaisePropertyChanged(NameOf(SelectedGradientPreset))
+                Return
+            End If
+            Dim i = If(lastStop, stops.Count - 1, 0)
+            Dim argb = GradientFillSpec.ArgbOrDefault(colorHex, stops(i).Argb)
+            If argb = stops(i).Argb Then Return
+            stops(i) = stops(i).WithArgb(argb)
+            _annotationGradientStops = GradientFillSpec.FormatStops(stops)
+            Me.RaisePropertyChanged(NameOf(AnnotationGradientStops))
+            Me.RaisePropertyChanged(NameOf(SelectedGradientPreset))
+        End Sub
+
+        ''' <summary>Groesse des Verlaufs in Prozent des Objekts.</summary>
+        Public Property AnnotationGradientScale As Double
+            Get
+                Return _annotationGradientScale
+            End Get
+            Set(value As Double)
+                Me.RaiseAndSetIfChanged(_annotationGradientScale, CDbl(GradientFillSpec.ClampScale(value)))
+                Me.RaisePropertyChanged(NameOf(SelectionFillPreviewBrush))
+                SyncSelectedAnnotation()
+            End Set
+        End Property
+
+        ''' <summary>Waagrechte Verschiebung der Verlaufsmitte, in Prozent der halben Breite.</summary>
+        Public Property AnnotationGradientOffsetX As Double
+            Get
+                Return _annotationGradientOffsetX
+            End Get
+            Set(value As Double)
+                Me.RaiseAndSetIfChanged(_annotationGradientOffsetX, CDbl(GradientFillSpec.ClampOffset(value)))
+                Me.RaisePropertyChanged(NameOf(SelectionFillPreviewBrush))
+                SyncSelectedAnnotation()
+            End Set
+        End Property
+
+        ''' <summary>Senkrechte Verschiebung der Verlaufsmitte, in Prozent der halben Hoehe.</summary>
+        Public Property AnnotationGradientOffsetY As Double
+            Get
+                Return _annotationGradientOffsetY
+            End Get
+            Set(value As Double)
+                Me.RaiseAndSetIfChanged(_annotationGradientOffsetY, CDbl(GradientFillSpec.ClampOffset(value)))
+                Me.RaisePropertyChanged(NameOf(SelectionFillPreviewBrush))
+                SyncSelectedAnnotation()
+            End Set
+        End Property
+
+        ''' <summary>"" haelt die Randfarbe, "Repeat" wiederholt, "Mirror" wiederholt gespiegelt.</summary>
+        Public Property AnnotationGradientRepeat As String
+            Get
+                Return _annotationGradientRepeat
+            End Get
+            Set(value As String)
+                Me.RaiseAndSetIfChanged(_annotationGradientRepeat, GradientFillSpec.NormalizeRepeat(value))
+                RaiseGradientRepeatProperties()
+                Me.RaisePropertyChanged(NameOf(SelectionFillPreviewBrush))
+                SyncSelectedAnnotation()
+            End Set
+        End Property
+
+        ''' <summary>Der Knopf der Wiederholung. Bei Groesse 100 liegt ein linearer Verlauf genau von
+        ''' der aeussersten Ecke zur gegenueberliegenden: jenseits davon ist nichts, Randfarbe,
+        ''' Wiederholung und Spiegeln saehen gleich aus (Nutzerbefund: "macht nur bei der Raute etwas").
+        ''' Wer wiederholen will, bekommt deshalb ab Groesse 100 gleich die halbe Groesse und sieht
+        ''' zwei Durchgaenge; eine kleinere, selbst gewaehlte Groesse bleibt.</summary>
+        Private Sub SetAnnotationGradientRepeat(mode As String)
+            Dim normalized = GradientFillSpec.NormalizeRepeat(mode)
+            If normalized <> GradientFillSpec.RepeatNone AndAlso _annotationGradientScale >= 100 Then
+                BeginObjectHistoryGroup()
+                Try
+                    AnnotationGradientScale = 50
+                    AnnotationGradientRepeat = normalized
+                Finally
+                    EndObjectHistoryGroup()
+                End Try
+                Return
+            End If
+            AnnotationGradientRepeat = normalized
+        End Sub
+
+        ''' <summary>Verteilt die Stopps in gleichen Abstaenden, Reihenfolge und Farben bleiben.</summary>
+        Private Sub DistributeGradientStops()
+            Dim stops = GradientFillSpec.ParseStops(_annotationGradientStops, _annotationFillColor, _annotationFillColor2)
+            If stops.Count < 3 Then Return
+            For i = 0 To stops.Count - 1
+                stops(i) = stops(i).WithPosition(i * 100.0 / (stops.Count - 1))
+            Next
+            AnnotationGradientStops = GradientFillSpec.FormatStops(stops)
+        End Sub
+
+        ''' <summary>Dreht die Reihenfolge der Stopps um und brennt das ein, anders als der Haken
+        ''' "Verlauf umkehren", der nur die Zeichenrichtung dreht.</summary>
+        Private Sub ReverseGradientStops()
+            Dim stops = GradientFillSpec.ParseStops(_annotationGradientStops, _annotationFillColor, _annotationFillColor2)
+            Dim reversed = stops.Select(Function(s) s.WithPosition(100.0 - s.Position)).Reverse().ToList()
+            AnnotationGradientStops = GradientFillSpec.FormatStops(reversed)
+        End Sub
+
+        ''' <summary>Uebertraegt alle Verlaufsfelder auf ein Objekt. EIN Ort, damit Anlegen,
+        ''' Abgleich und Wasserzeichen-Vorlage nicht auseinanderlaufen.</summary>
+        Private Sub ApplyGradientBuffersTo(a As ImageAnnotation)
+            a.FillColor2 = _annotationFillColor2
+            a.GradientAngleDegrees = CSng(_annotationGradientAngle)
+            a.GradientInverted = _annotationGradientInverted
+            a.GradientStops = _annotationGradientStops
+            a.GradientScalePercent = CSng(_annotationGradientScale)
+            a.GradientOffsetXPercent = CSng(_annotationGradientOffsetX)
+            a.GradientOffsetYPercent = CSng(_annotationGradientOffsetY)
+            a.GradientRepeat = _annotationGradientRepeat
+        End Sub
+
+        ''' <summary>Gegenstueck: die Verlaufsfelder eines Objekts ins Panel.</summary>
+        Private Sub LoadGradientBuffersFrom(a As ImageAnnotation)
+            _annotationGradientStops = GradientFillSpec.NormalizeStops(a.GradientStops)
+            AnnotationFillColor2 = a.FillColor2
+            AnnotationGradientAngleDegrees = a.GradientAngleDegrees
+            AnnotationGradientInverted = a.GradientInverted
+            AnnotationGradientScale = a.GradientScalePercent
+            AnnotationGradientOffsetX = a.GradientOffsetXPercent
+            AnnotationGradientOffsetY = a.GradientOffsetYPercent
+            AnnotationGradientRepeat = a.GradientRepeat
+            Me.RaisePropertyChanged(NameOf(AnnotationGradientStops))
+            Me.RaisePropertyChanged(NameOf(SelectedGradientPreset))
+        End Sub
+
+        ''' <summary>Startwerte des Verlaufs fuer ein neues Objekt.</summary>
+        Private Sub ResetGradientBuffers()
+            _annotationGradientStops = ""
+            _annotationGradientScale = 100
+            _annotationGradientOffsetX = 0
+            _annotationGradientOffsetY = 0
+            _annotationGradientRepeat = ""
+            Me.RaisePropertyChanged(NameOf(AnnotationGradientStops))
+            Me.RaisePropertyChanged(NameOf(AnnotationGradientScale))
+            Me.RaisePropertyChanged(NameOf(AnnotationGradientOffsetX))
+            Me.RaisePropertyChanged(NameOf(AnnotationGradientOffsetY))
+            Me.RaisePropertyChanged(NameOf(AnnotationGradientRepeat))
+            RaiseGradientRepeatProperties()
+            Me.RaisePropertyChanged(NameOf(SelectedGradientPreset))
+        End Sub
+
+        ' ===================== Verlaufsvorlagen =====================
+        '
+        ' Eingebaute Vorlagen (GradientFillSpec.BuiltInPresets) und eigene aus den Einstellungen
+        ' (AppSettings.GradientPresets) in EINER Liste. Eine Vorlage traegt nur die Stopps; Form,
+        ' Winkel und Groesse bleiben, wie sie sind. Welche gerade gilt, wird aus den Stopps
+        ' abgelesen statt gemerkt: wer danach einen Stopp verschiebt, sieht die Auswahl leer.
+
+        Private _gradientPresets As System.Collections.ObjectModel.ObservableCollection(Of GradientPresetItem)
+        Private _newGradientPresetName As String = ""
+
+        Public ReadOnly Property GradientPresets As System.Collections.ObjectModel.ObservableCollection(Of GradientPresetItem)
+            Get
+                If _gradientPresets Is Nothing Then
+                    _gradientPresets = New System.Collections.ObjectModel.ObservableCollection(Of GradientPresetItem)()
+                    RebuildGradientPresets()
+                End If
+                Return _gradientPresets
+            End Get
+        End Property
+
+        Private Sub RebuildGradientPresets()
+            If _gradientPresets Is Nothing Then Return
+            _gradientPresets.Clear()
+            For Each preset In GradientFillSpec.BuiltInPresets
+                _gradientPresets.Add(New GradientPresetItem(preset.Name, GradientFillSpec.NormalizeStops(preset.Stops), False))
+            Next
+            For Each preset In AppSettingsService.Load().GradientPresets
+                _gradientPresets.Add(New GradientPresetItem(preset.Name, preset.Stops, True))
+            Next
+        End Sub
+
+        Public Property SelectedGradientPreset As GradientPresetItem
+            Get
+                If Not GradientFillSpec.IsGradientKind(_annotationFillKind) Then Return Nothing
+                Dim current = AnnotationGradientStops
+                ' Eigene zuerst: wer eine eingebaute Vorlage unter eigenem Namen sichert, will diesen sehen.
+                Return GradientPresets.Where(Function(p) String.Equals(p.Stops, current, StringComparison.Ordinal)).
+                    OrderByDescending(Function(p) p.IsCustom).FirstOrDefault()
+            End Get
+            Set(value As GradientPresetItem)
+                If value Is Nothing Then Return
+                If Not GradientFillSpec.IsGradientKind(_annotationFillKind) Then AnnotationFillKind = GradientFillSpec.KindLinear
+                AnnotationGradientStops = value.Stops
+                Me.RaisePropertyChanged(NameOf(SelectedGradientPreset))
+            End Set
+        End Property
+
+        ''' <summary>Name fuer die naechste eigene Vorlage (Eingabefeld im Speichern-Flyout).</summary>
+        Public Property NewGradientPresetName As String
+            Get
+                Return _newGradientPresetName
+            End Get
+            Set(value As String)
+                Me.RaiseAndSetIfChanged(_newGradientPresetName, If(value, ""))
+            End Set
+        End Property
+
+        ''' <summary>Sichert die aktuellen Stopps als eigene Vorlage. Ohne Namen heisst sie
+        ''' "Eigener Verlauf" mit fortlaufender Nummer; ein vorhandener Name wird ueberschrieben.</summary>
+        Private Sub SaveGradientPreset()
+            Dim stops = AnnotationGradientStops
+            Dim name = If(_newGradientPresetName, "").Trim()
+            If name.Length = 0 Then
+                Dim baseName = LocalizationService.T("Eigener Verlauf")
+                Dim n = 1
+                Do While GradientPresets.Any(Function(p) p.IsCustom AndAlso String.Equals(p.Name, baseName & " " & n.ToString(Globalization.CultureInfo.InvariantCulture), StringComparison.OrdinalIgnoreCase))
+                    n += 1
+                Loop
+                name = baseName & " " & n.ToString(Globalization.CultureInfo.InvariantCulture)
+            End If
+            AppSettingsService.Update(Sub(s)
+                                          Dim list = If(s.GradientPresets, New List(Of GradientPresetSettings)())
+                                          list.RemoveAll(Function(p) String.Equals(p.Name, name, StringComparison.OrdinalIgnoreCase))
+                                          list.Add(New GradientPresetSettings With {.Name = name, .Stops = stops})
+                                          s.GradientPresets = AppSettingsService.NormalizeGradientPresets(list)
+                                      End Sub)
+            NewGradientPresetName = ""
+            RebuildGradientPresets()
+            Me.RaisePropertyChanged(NameOf(SelectedGradientPreset))
+        End Sub
+
+        Private Sub DeleteGradientPreset()
+            Dim selected = SelectedGradientPreset
+            If selected Is Nothing OrElse Not selected.IsCustom Then Return
+            Dim name = selected.Name
+            AppSettingsService.Update(Sub(s)
+                                          Dim list = If(s.GradientPresets, New List(Of GradientPresetSettings)())
+                                          list.RemoveAll(Function(p) String.Equals(p.Name, name, StringComparison.OrdinalIgnoreCase))
+                                          s.GradientPresets = list
+                                      End Sub)
+            RebuildGradientPresets()
+            Me.RaisePropertyChanged(NameOf(SelectedGradientPreset))
+        End Sub
 
         Public Property AnnotationGradientAngleDegrees As Double
             Get
@@ -738,6 +1021,83 @@ Namespace ViewModels
                 AnnotationGlowColor = value.ToString()
             End Set
         End Property
+
+        ''' <summary>Lage des Schattens: "" aussen, "Inside" innen, "Both" beides.</summary>
+        Public Property AnnotationShadowPlacement As String
+            Get
+                Return _annotationShadowPlacement
+            End Get
+            Set(value As String)
+                Me.RaiseAndSetIfChanged(_annotationShadowPlacement, ImageAnnotation.NormalizeEffectPlacement(value))
+                RaiseEffectPlacementProperties()
+                SyncSelectedAnnotation()
+            End Set
+        End Property
+
+        ''' <summary>Lage des Gluehens, wie <see cref="AnnotationShadowPlacement"/>.</summary>
+        Public Property AnnotationGlowPlacement As String
+            Get
+                Return _annotationGlowPlacement
+            End Get
+            Set(value As String)
+                Me.RaiseAndSetIfChanged(_annotationGlowPlacement, ImageAnnotation.NormalizeEffectPlacement(value))
+                RaiseEffectPlacementProperties()
+                SyncSelectedAnnotation()
+            End Set
+        End Property
+
+        Public ReadOnly Property IsShadowOutside As Boolean
+            Get
+                Return _annotationShadowPlacement = ""
+            End Get
+        End Property
+
+        Public ReadOnly Property IsShadowInside As Boolean
+            Get
+                Return _annotationShadowPlacement = "Inside"
+            End Get
+        End Property
+
+        Public ReadOnly Property IsShadowBoth As Boolean
+            Get
+                Return _annotationShadowPlacement = "Both"
+            End Get
+        End Property
+
+        ''' <summary>Größe und Abrunden wirken nur auf den äußeren Schatten.</summary>
+        Public ReadOnly Property ShowShadowOuterControls As Boolean
+            Get
+                Return ImageAnnotation.EffectDrawsOutside(_annotationShadowPlacement)
+            End Get
+        End Property
+
+        Public ReadOnly Property IsGlowOutside As Boolean
+            Get
+                Return _annotationGlowPlacement = ""
+            End Get
+        End Property
+
+        Public ReadOnly Property IsGlowInside As Boolean
+            Get
+                Return _annotationGlowPlacement = "Inside"
+            End Get
+        End Property
+
+        Public ReadOnly Property IsGlowBoth As Boolean
+            Get
+                Return _annotationGlowPlacement = "Both"
+            End Get
+        End Property
+
+        Private Sub RaiseEffectPlacementProperties()
+            Me.RaisePropertyChanged(NameOf(IsShadowOutside))
+            Me.RaisePropertyChanged(NameOf(IsShadowInside))
+            Me.RaisePropertyChanged(NameOf(IsShadowBoth))
+            Me.RaisePropertyChanged(NameOf(ShowShadowOuterControls))
+            Me.RaisePropertyChanged(NameOf(IsGlowOutside))
+            Me.RaisePropertyChanged(NameOf(IsGlowInside))
+            Me.RaisePropertyChanged(NameOf(IsGlowBoth))
+        End Sub
         ' ── Freier Pfad: setzen und nachziehen ──────────────────────────────────
         '
         ' Der ENTWURF laeuft in ANZEIGE-Prozent, weil dort auch der Zeiger liegt. Erst beim

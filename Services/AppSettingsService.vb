@@ -28,6 +28,13 @@ Namespace Services
         Public Property Arguments As String = ""
     End Class
 
+    ''' <summary>Eine eigene Verlaufsvorlage der Gruppe Füllung: Name und Stoppliste in der Form von
+    ''' GradientFillSpec ("#AARRGGBB@Prozent;...").</summary>
+    Public Class GradientPresetSettings
+        Public Property Name As String = ""
+        Public Property Stops As String = ""
+    End Class
+
     Public Class WatermarkPresetSettings
         Public Property Id As String = Guid.NewGuid().ToString("N")
         Public Property Name As String = ""
@@ -52,6 +59,11 @@ Namespace Services
         Public Property FillColor2 As String = "#FFFFFFFF"
         Public Property GradientAngleDegrees As Double = 0
         Public Property GradientInverted As Boolean = False
+        Public Property GradientStops As String = ""
+        Public Property GradientScalePercent As Double = 100
+        Public Property GradientOffsetXPercent As Double = 0
+        Public Property GradientOffsetYPercent As Double = 0
+        Public Property GradientRepeat As String = ""
         Public Property BlendMode As String = "Normal"
         Public Property BlendIncludesStroke As Boolean = True
         ' Lage, Haerte und Ecken der Kontur, wie am Objekt (ImageAnnotation.StrokePosition usw.).
@@ -76,6 +88,9 @@ Namespace Services
         Public Property GlowBlur As Double = 10
         Public Property GlowStrength As Double = 100
         Public Property GlowColor As String = "#FFFFFF00"
+        ' Lage von Schatten und Gluehen wie am Objekt (ImageAnnotation.ShadowPlacement).
+        Public Property ShadowPlacement As String = ""
+        Public Property GlowPlacement As String = ""
     End Class
 
     ''' <summary>Eine gespeicherte Regler-Zusammenstellung („Vorlage") aus dem Anpassen-Werkzeug.
@@ -726,6 +741,8 @@ Namespace Services
         ''' Eigene Gestenbelegung für Trackpads; standardmäßig aus, damit Mauswege unverändert bleiben.
         Public Property TrackpadMode As Boolean = False
         Public Property WatermarkPresets As New List(Of WatermarkPresetSettings)()
+        ''' <summary>Eigene Verlaufsvorlagen der Gruppe Füllung, in der Reihenfolge des Anlegens.</summary>
+        Public Property GradientPresets As New List(Of GradientPresetSettings)()
         ''' <summary>Die Programme im Untermenue "Öffnen mit", in der Reihenfolge der Einstellungen.</summary>
         Public Property OpenWithPrograms As New List(Of OpenWithProgramSettings)()
         ''' <summary>Wo gmic_qt liegt. Leer heisst: im Suchpfad suchen. Unter Windows liegt es dort
@@ -1061,6 +1078,7 @@ Namespace Services
                 settings.LastBatchResizeInterpolation = NormalizeResizeInterpolationModeName(settings.LastBatchResizeInterpolation)
                 settings.LastWatermarkPresetName = NormalizePresetName(settings.LastWatermarkPresetName)
                 settings.WatermarkPresets = NormalizeWatermarkPresets(settings.WatermarkPresets)
+                settings.GradientPresets = NormalizeGradientPresets(settings.GradientPresets)
                 settings.AdjustmentPresets = NormalizeAdjustmentPresets(settings.AdjustmentPresets)
                 settings.LightroomPresets = NormalizeXmpPresets(settings.LightroomPresets)
                 settings.LutPresets = NormalizeLutPresets(settings.LutPresets)
@@ -1306,6 +1324,7 @@ Namespace Services
                 settings.LastBatchResizeInterpolation = NormalizeResizeInterpolationModeName(settings.LastBatchResizeInterpolation)
                 settings.LastWatermarkPresetName = NormalizePresetName(settings.LastWatermarkPresetName)
                 settings.WatermarkPresets = NormalizeWatermarkPresets(settings.WatermarkPresets)
+                settings.GradientPresets = NormalizeGradientPresets(settings.GradientPresets)
                 settings.AdjustmentPresets = NormalizeAdjustmentPresets(settings.AdjustmentPresets)
                 settings.LightroomPresets = NormalizeXmpPresets(settings.LightroomPresets)
                 settings.LutPresets = NormalizeLutPresets(settings.LutPresets)
@@ -2205,6 +2224,11 @@ Namespace Services
                     .FillColor2 = NormalizeHexColor(preset.FillColor2, "#FFFFFFFF"),
                     .GradientAngleDegrees = Math.Max(0, Math.Min(360, preset.GradientAngleDegrees)),
                     .GradientInverted = preset.GradientInverted,
+                    .GradientStops = GradientFillSpec.NormalizeStops(preset.GradientStops),
+                    .GradientScalePercent = GradientFillSpec.ClampScale(preset.GradientScalePercent),
+                    .GradientOffsetXPercent = GradientFillSpec.ClampOffset(preset.GradientOffsetXPercent),
+                    .GradientOffsetYPercent = GradientFillSpec.ClampOffset(preset.GradientOffsetYPercent),
+                    .GradientRepeat = GradientFillSpec.NormalizeRepeat(preset.GradientRepeat),
                     .BlendMode = NormalizeWatermarkBlendMode(preset.BlendMode),
                     .BlendIncludesStroke = preset.BlendIncludesStroke,
                     .StrokePosition = If(preset.StrokePosition, ""),
@@ -2227,18 +2251,32 @@ Namespace Services
                     .GlowEnabled = preset.GlowEnabled,
                     .GlowBlur = Math.Max(0, Math.Min(100, preset.GlowBlur)),
                     .GlowStrength = Math.Max(0, Math.Min(100, preset.GlowStrength)),
-                    .GlowColor = NormalizeHexColor(preset.GlowColor, "#FFFFFF00")
+                    .GlowColor = NormalizeHexColor(preset.GlowColor, "#FFFFFF00"),
+                    .ShadowPlacement = ImageAnnotation.NormalizeEffectPlacement(preset.ShadowPlacement),
+                    .GlowPlacement = ImageAnnotation.NormalizeEffectPlacement(preset.GlowPlacement)
                 })
             Next
             Return result.OrderBy(Function(p) p.Name, StringComparer.OrdinalIgnoreCase).ToList()
         End Function
 
         Private Shared Function NormalizeWatermarkFillKind(value As String) As String
-            Select Case If(value, "").Trim().ToLowerInvariant()
-                Case "lineargradient" : Return "LinearGradient"
-                Case "radialgradient" : Return "RadialGradient"
-                Case Else : Return "Solid"
-            End Select
+            Return GradientFillSpec.NormalizeKind(value)
+        End Function
+
+        ''' <summary>Eigene Verlaufsvorlagen: ohne Namen oder ohne gueltige Stopps fallen sie weg,
+        ''' bei gleichem Namen gilt die spaetere.</summary>
+        Public Shared Function NormalizeGradientPresets(value As List(Of GradientPresetSettings)) As List(Of GradientPresetSettings)
+            Dim result As New List(Of GradientPresetSettings)()
+            If value Is Nothing Then Return result
+            For Each preset In value
+                If preset Is Nothing Then Continue For
+                Dim name = If(preset.Name, "").Trim()
+                Dim stops = GradientFillSpec.NormalizeStops(preset.Stops)
+                If name.Length = 0 OrElse stops.Length = 0 Then Continue For
+                result.RemoveAll(Function(p) String.Equals(p.Name, name, StringComparison.OrdinalIgnoreCase))
+                result.Add(New GradientPresetSettings With {.Name = name, .Stops = stops})
+            Next
+            Return result
         End Function
 
         Private Shared Function NormalizeWatermarkBlendMode(value As String) As String

@@ -69,6 +69,18 @@ Namespace Controls
             DefaultExpandedProperty.Changed.AddClassHandler(Of Expander)(AddressOf OnKeyChanged)
             ExpandWhenProperty.Changed.AddClassHandler(Of Expander)(AddressOf OnKeyChanged)
             Expander.IsExpandedProperty.Changed.AddClassHandler(Of Expander)(AddressOf OnIsExpandedChanged)
+            Expander.CollapsingEvent.AddClassHandler(Of Expander)(AddressOf OnCollapsing)
+        End Sub
+
+        ''' <summary>Eine Gruppe mit gesetztem Haken "Aktiv" (ExpandWhen True) bleibt offen: ein Klick
+        ''' auf ihren Kopf klappt sie nicht zu. Vorher folgte sie dem Haken nur im Augenblick des
+        ''' Umschaltens und liess sich danach schliessen, obwohl sie wirkt. Zuklappen
+        ''' durch den Code (Haken aus, Kompaktmodus) laeuft ueber ApplyWithoutSaving und bleibt frei.
+        ''' Das Ereignis steigt auf: nur die Gruppe selbst zaehlt, nicht eine darin liegende.</summary>
+        Private Shared Sub OnCollapsing(expander As Expander, e As Avalonia.Interactivity.CancelRoutedEventArgs)
+            If _applying OrElse Not Object.ReferenceEquals(e.Source, expander) Then Return
+            Dim follow = GetExpandWhen(expander)
+            If follow.HasValue AndAlso follow.Value Then e.Cancel = True
         End Sub
 
         ''' <summary>Der gemerkte Stand, sonst der Standard der Gruppe.</summary>

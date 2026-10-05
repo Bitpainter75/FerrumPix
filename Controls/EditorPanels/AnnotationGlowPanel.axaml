@@ -16,12 +16,34 @@
                     <icons:SvgIcon
                         Source="avares://FerrumPix/Assets/Icons/outline/sparkles.svg"
                         Width="14" Height="14" />
-                    <TextBlock Text="{Binding}" FontWeight="SemiBold" />
+                    <TextBlock Text="{Binding}" FontWeight="SemiBold" VerticalAlignment="Center" />
                 </StackPanel>
             </DataTemplate>
         </Expander.HeaderTemplate>
         <StackPanel Spacing="2" Margin="0,8,0,0">
             <StackPanel Spacing="2" IsVisible="{Binding AnnotationGlowEnabled}">
+                <!-- Lage wie beim Schatten: aussen um das Objekt, innen von der Kante in die Flaeche,
+                     oder beides (ImageAnnotation.GlowPlacement). -->
+                <WrapPanel Orientation="Horizontal" Margin="0,0,0,4">
+                    <Button Classes="ghost" Padding="8,4" Margin="0,0,6,4"
+                            Command="{Binding SetAnnotationGlowPlacementCommand}" CommandParameter=""
+                            Classes.active="{Binding IsGlowOutside}"
+                            ToolTip.Tip="Glühen um das Objekt herum">
+                        <TextBlock Text="Außen" FontSize="{DynamicResource FP.Font.Small}" />
+                    </Button>
+                    <Button Classes="ghost" Padding="8,4" Margin="0,0,6,4"
+                            Command="{Binding SetAnnotationGlowPlacementCommand}" CommandParameter="Inside"
+                            Classes.active="{Binding IsGlowInside}"
+                            ToolTip.Tip="Glühen von der Kante nach innen">
+                        <TextBlock Text="Innen" FontSize="{DynamicResource FP.Font.Small}" />
+                    </Button>
+                    <Button Classes="ghost" Padding="8,4" Margin="0,0,6,4"
+                            Command="{Binding SetAnnotationGlowPlacementCommand}" CommandParameter="Both"
+                            Classes.active="{Binding IsGlowBoth}"
+                            ToolTip.Tip="Außen und innen mit denselben Werten">
+                        <TextBlock Text="Beides" FontSize="{DynamicResource FP.Font.Small}" />
+                    </Button>
+                </WrapPanel>
                 <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Top">
                     <TextBlock Text="Farbe" Foreground="{DynamicResource FP.Text.Secondary}"
                                VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />

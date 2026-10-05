@@ -1,4 +1,4 @@
-## Unreleased
+## 0.9.61
 
 ### What's new
 
@@ -21,7 +21,21 @@
   outside, fade out softly and have round or sharp corners. Fill, stroke, shadow and glow switch on
   with a checkbox in their header and only open when they are in use.
 
+- **Gradients with any number of colors.** A fill can be linear, radial, angle, reflected or
+  diamond shaped. Click the gradient bar to add a color, drag to move it, drag it off to remove it;
+  each color can be partly transparent. Size, center and repeating can be set, and a list of
+  ready-made gradients sits next to the bar, where your own can be saved too.
+
+- **Inner shadow and inner glow.** Shadow and glow can lie outside, inside or both. Inside, the
+  shadow falls along the inner edge that faces the light and the glow shines from the edge into
+  the shape, on objects, text, brush strokes and selections alike.
+
 ### Fixes
+
+- Linear and radial fills now show exactly the colors you set: a radial fill reaches its outer
+  color at the edge of a circle or text instead of stopping short of it.
+
+- Text and symbols keep the same stroke width whether "Blend the outline too" is on or off.
 
 - Shrinking a picture a lot, such as a full film scan down to a size for the web, no longer turns
   film grain and fine patterns into coarse stripes. This applies to resizing, exporting with a size,
@@ -61,3 +75,6 @@
 
 - Color buttons in the editor panels sit at the right edge, like the number fields, so a longer
   label such as "Background color" no longer runs into them.
+
+- A group with its checkbox ticked, such as fill, stroke, shadow or glow, stays open, and the
+  title in its header lines up with the checkbox and the icon.

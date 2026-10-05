@@ -249,8 +249,7 @@ Namespace Services
                 ' Bei einem Verlauf gibt es kein Raster - eine Fuellung hat dort nichts zu
                 ' stufen, die Rampe IST schon die Abstufung.
                 If dBuf IsNot Nothing AndAlso fillLayer IsNot Nothing AndAlso fillLayer.HasFill() Then
-                    Dim lum = ComputeFillLuminance(dWidth, dHeight, fillLayer.FillKind,
-                        fillLayer.FillColor, fillLayer.FillColor2, CSng(fillLayer.FillAngle), fillLayer.FillInverted)
+                    Dim lum = ComputeFillLuminance(dWidth, dHeight, fillLayer.FillColor, GradientFillSpec.FromLayer(fillLayer))
                     If lum IsNot Nothing Then
                         ' EIGENE ABSCHRIFT: der Puffer darueber gehoert der Maske und wird von
                         ' anderen Wegen gleichzeitig gelesen.
@@ -3243,16 +3242,20 @@ Namespace Services
         Public Shared Function RenderMaskedFill(mask As SKBitmap, colorHex As String, fillKind As String,
                                                 color2Hex As String, gradientAngleDegrees As Single,
                                                 gradientInverted As Boolean) As SKBitmap
+            Return RenderMaskedFill(mask, colorHex, GradientFillSpec.Create(fillKind, colorHex, color2Hex, "", gradientAngleDegrees,
+                                                                            gradientInverted, 100, 0, 0, ""))
+        End Function
+
+        ''' <summary>Wie oben, mit dem vollstaendigen Verlauf (Nothing = Vollfarbe aus colorHex).</summary>
+        Public Shared Function RenderMaskedFill(mask As SKBitmap, colorHex As String, gradient As GradientFillSpec) As SKBitmap
             Dim col = ParseColor(colorHex, SKColors.White)
             Dim w = mask.Width, h = mask.Height
             Dim fill = New SKBitmap(w, h, SKColorType.Bgra8888, SKAlphaType.Unpremul)
             Using canvas = New SKCanvas(fill)
                 canvas.Clear(SKColors.Transparent)
                 Dim rect = New SKRect(0, 0, w, h)
-                Dim normalizedFillKind = If(fillKind, "Solid").Trim().ToLowerInvariant()
-                If normalizedFillKind = "lineargradient" OrElse normalizedFillKind = "radialgradient" Then
-                    Dim col2 = ParseColor(color2Hex, col)
-                    Using shader = CreateFillGradientShader(rect, normalizedFillKind, col, col2, gradientAngleDegrees, gradientInverted)
+                If gradient IsNot Nothing Then
+                    Using shader = CreateFillGradientShader(rect, gradient)
                         Using paint = New SKPaint With {.Shader = shader, .Style = SKPaintStyle.Fill, .IsAntialias = True}
                             canvas.DrawRect(rect, paint)
                         End Using
@@ -3277,16 +3280,20 @@ Namespace Services
         Friend Shared Function ComputeFillLuminance(w As Integer, h As Integer, fillKind As String, colorHex As String,
                                                     color2Hex As String, gradientAngleDegrees As Single,
                                                     gradientInverted As Boolean) As Byte()
+            Return ComputeFillLuminance(w, h, colorHex, GradientFillSpec.Create(fillKind, colorHex, color2Hex, "", gradientAngleDegrees,
+                                                                                gradientInverted, 100, 0, 0, ""))
+        End Function
+
+        ''' <summary>Wie oben, mit dem vollstaendigen Verlauf (Nothing = Vollfarbe aus colorHex).</summary>
+        Friend Shared Function ComputeFillLuminance(w As Integer, h As Integer, colorHex As String, gradient As GradientFillSpec) As Byte()
             If w <= 0 OrElse h <= 0 Then Return Nothing
             Dim col = ParseColor(colorHex, SKColors.White)
             Using fill = New SKBitmap(w, h, SKColorType.Bgra8888, SKAlphaType.Unpremul)
                 Using canvas = New SKCanvas(fill)
                     canvas.Clear(SKColors.Transparent)
                     Dim rect = New SKRect(0, 0, w, h)
-                    Dim nk = If(fillKind, "Solid").Trim().ToLowerInvariant()
-                    If nk = "lineargradient" OrElse nk = "radialgradient" Then
-                        Dim col2 = ParseColor(color2Hex, col)
-                        Using shader = CreateFillGradientShader(rect, nk, col, col2, gradientAngleDegrees, gradientInverted)
+                    If gradient IsNot Nothing Then
+                        Using shader = CreateFillGradientShader(rect, gradient)
                             Using paint = New SKPaint With {.Shader = shader, .Style = SKPaintStyle.Fill, .IsAntialias = True}
                                 canvas.DrawRect(rect, paint)
                             End Using
@@ -3323,9 +3330,20 @@ Namespace Services
         Public Shared Function RenderMaskFilledWithGradient(mask As SKBitmap, colorHex As String, fillKind As String,
                                                             color2Hex As String, gradientAngleDegrees As Single,
                                                             gradientInverted As Boolean) As SKBitmap
+            Return RenderMaskFilledWithGradient(mask, colorHex, GradientFillSpec.Create(fillKind, colorHex, color2Hex, "",
+                                                                                         gradientAngleDegrees, gradientInverted, 100, 0, 0, ""))
+        End Function
+
+        ''' <summary>Die Abstufung durch die Fuellung einer Ebene, mit allen Verlaufseinstellungen.</summary>
+        Public Shared Function RenderMaskFilledWithGradient(mask As SKBitmap, layer As MaskedAdjustmentLayer) As SKBitmap
+            If layer Is Nothing Then Return Nothing
+            Return RenderMaskFilledWithGradient(mask, layer.FillColor, GradientFillSpec.FromLayer(layer))
+        End Function
+
+        Private Shared Function RenderMaskFilledWithGradient(mask As SKBitmap, colorHex As String, gradient As GradientFillSpec) As SKBitmap
             If mask Is Nothing OrElse mask.Width <= 0 OrElse mask.Height <= 0 Then Return Nothing
             Dim w = mask.Width, h = mask.Height
-            Dim lum = ComputeFillLuminance(w, h, fillKind, colorHex, color2Hex, gradientAngleDegrees, gradientInverted)
+            Dim lum = ComputeFillLuminance(w, h, colorHex, gradient)
             If lum Is Nothing Then Return Nothing
             Dim mStride = mask.RowBytes
             Dim mBuf = New Byte(mStride * h - 1) {}

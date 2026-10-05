@@ -12119,6 +12119,11 @@ Namespace ViewModels
                 .FillColor2 = AppSettingsService.NormalizeHexColor(preset.FillColor2, "#FFFFFFFF"),
                 .GradientAngleDegrees = CSng(preset.GradientAngleDegrees),
                 .GradientInverted = preset.GradientInverted,
+                .GradientStops = If(preset.GradientStops, ""),
+                .GradientScalePercent = CSng(preset.GradientScalePercent),
+                .GradientOffsetXPercent = CSng(preset.GradientOffsetXPercent),
+                .GradientOffsetYPercent = CSng(preset.GradientOffsetYPercent),
+                .GradientRepeat = If(preset.GradientRepeat, ""),
                 .LetterSpacingPercent = CSng(preset.LetterSpacingPercent),
                 .Bold = preset.Bold,
                 .Italic = preset.Italic,
@@ -12134,7 +12139,9 @@ Namespace ViewModels
                 .GlowEnabled = preset.GlowEnabled,
                 .GlowBlur = CSng(preset.GlowBlur),
                 .GlowStrength = CSng(preset.GlowStrength),
-                .GlowColor = AppSettingsService.NormalizeHexColor(preset.GlowColor, "#FFFFFF00")
+                .GlowColor = AppSettingsService.NormalizeHexColor(preset.GlowColor, "#FFFFFF00"),
+                .ShadowPlacement = If(preset.ShadowPlacement, ""),
+                .GlowPlacement = If(preset.GlowPlacement, "")
             }
         End Function
 

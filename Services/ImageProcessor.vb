@@ -1868,10 +1868,14 @@ Namespace Services
                                  If(renderAnnotation.FlipVertical, -1.0F, 1.0F))
                     canvas.Translate(-rect.MidX, -rect.MidY)
                 End If
-                If renderAnnotation.ShadowEnabled OrElse renderAnnotation.GlowEnabled Then
+                If renderAnnotation.HasOuterEffects() Then
                     DrawAnnotationEffects(canvas, kind, renderAnnotation, rect, x, y, maxWidth, fontSize, fill, stroke, strokeWidth, alphaFactor, width, height)
                 End If
                 DrawAnnotationShape(canvas, kind, renderAnnotation, rect, x, y, maxWidth, fontSize, fill, stroke, strokeWidth, alphaFactor)
+                ' Innen nach dem Objekt, wie im Bildrender (DrawAnnotationOnCanvas).
+                If renderAnnotation.HasInnerEffects() Then
+                    DrawAnnotationEffects(canvas, kind, renderAnnotation, rect, x, y, maxWidth, fontSize, fill, stroke, strokeWidth, alphaFactor, width, height, inner:=True)
+                End If
             End Using
 
             If HasObjectAdjustments(renderAnnotation) Then
@@ -3060,7 +3064,8 @@ Namespace Services
                 .ShadowSizePercent = layer.ShadowSizePercent, .ShadowRounded = layer.ShadowRounded,
                 .ShadowCornerRadiusPercent = layer.ShadowCornerRadiusPercent,
                 .GlowEnabled = layer.GlowEnabled, .GlowBlur = layer.GlowBlur, .GlowStrength = layer.GlowStrength,
-                .GlowColor = layer.GlowColor}
+                .GlowColor = layer.GlowColor,
+                .ShadowPlacement = layer.ShadowPlacement, .GlowPlacement = layer.GlowPlacement}
 
             ' Die Silhouette als deckend weisses RGBA, wie DrawAnnotationEffects sie zeichnet. Ueber das
             ' ganze Bild: Schatten und Glühen reichen über das Rechteck der Maske hinaus, und am
@@ -3089,6 +3094,10 @@ Namespace Services
                         canvas.DrawBitmap(silhouette, 0, 0, knockOut)
                     End Using
                     canvas.Restore()
+                    ' Innen dagegen AUF den Pixeln der Auswahl, auf sie beschnitten.
+                    If effects.HasInnerEffects() Then
+                        DrawInnerSilhouetteEffects(canvas, silhouette, 0, 0, w, h, rect, effects, 1.0F)
+                    End If
                 End Using
                 Return result
             End Using
@@ -3165,10 +3174,9 @@ Namespace Services
                 Using canvas = New SKCanvas(fill)
                     canvas.Clear(SKColors.Transparent)
                     Dim rect = New SKRect(minX, minY, maxX + 1, maxY + 1)
-                    Dim nk = If(layer.FillKind, "Solid").Trim().ToLowerInvariant()
-                    If nk = "lineargradient" OrElse nk = "radialgradient" Then
-                        Dim col2 = ParseColor(layer.FillColor2, col)
-                        Using shader = CreateFillGradientShader(rect, nk, col, col2, CSng(layer.FillAngle), layer.FillInverted)
+                    Dim gradient = GradientFillSpec.FromLayer(layer)
+                    If gradient IsNot Nothing Then
+                        Using shader = CreateFillGradientShader(rect, gradient)
                             Using paint = New SKPaint With {.Shader = shader, .Style = SKPaintStyle.Fill, .IsAntialias = True}
                                 canvas.DrawRect(rect, paint)
                             End Using
@@ -4095,6 +4103,8 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                                               l.StackAboveAnnotationId,
                                               l.IsMaskLayer, l.FillKind, l.FillColor, l.FillColor2,
                                               KeyPart(l.FillAngle), l.FillInverted,
+                                              l.FillStops, KeyPart(l.FillScale), KeyPart(l.FillOffsetX),
+                                              KeyPart(l.FillOffsetY), l.FillRepeat,
                                               KeyPart(l.StrokeWidth), l.StrokeColor, l.StrokePosition,
                                               KeyPart(l.StrokeHardness), l.StrokeSquareCorners,
                                               l.EffectsKey(),

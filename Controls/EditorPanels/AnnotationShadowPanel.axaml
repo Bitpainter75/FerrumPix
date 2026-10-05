@@ -15,12 +15,35 @@
                     <icons:SvgIcon
                         Source="avares://FerrumPix/Assets/Icons/outline/shadow.svg"
                         Width="14" Height="14" />
-                    <TextBlock Text="{Binding}" FontWeight="SemiBold" />
+                    <TextBlock Text="{Binding}" FontWeight="SemiBold" VerticalAlignment="Center" />
                 </StackPanel>
             </DataTemplate>
         </Expander.HeaderTemplate>
         <StackPanel Spacing="2" Margin="0,8,0,0">
             <StackPanel Spacing="2" IsVisible="{Binding AnnotationShadowEnabled}">
+                <!-- Lage: aussen unter dem Objekt (wie schon immer), innen auf seiner Flaeche an der
+                     dem Licht zugewandten Kante, oder beides mit denselben Werten
+                     (ImageAnnotation.ShadowPlacement, ImageProcessor.DrawInnerSilhouetteEffects). -->
+                <WrapPanel Orientation="Horizontal" Margin="0,0,0,4">
+                    <Button Classes="ghost" Padding="8,4" Margin="0,0,6,4"
+                            Command="{Binding SetAnnotationShadowPlacementCommand}" CommandParameter=""
+                            Classes.active="{Binding IsShadowOutside}"
+                            ToolTip.Tip="Schatten unter dem Objekt">
+                        <TextBlock Text="Außen" FontSize="{DynamicResource FP.Font.Small}" />
+                    </Button>
+                    <Button Classes="ghost" Padding="8,4" Margin="0,0,6,4"
+                            Command="{Binding SetAnnotationShadowPlacementCommand}" CommandParameter="Inside"
+                            Classes.active="{Binding IsShadowInside}"
+                            ToolTip.Tip="Schatten auf der Fläche, an der dem Licht zugewandten Innenkante">
+                        <TextBlock Text="Innen" FontSize="{DynamicResource FP.Font.Small}" />
+                    </Button>
+                    <Button Classes="ghost" Padding="8,4" Margin="0,0,6,4"
+                            Command="{Binding SetAnnotationShadowPlacementCommand}" CommandParameter="Both"
+                            Classes.active="{Binding IsShadowBoth}"
+                            ToolTip.Tip="Außen und innen mit denselben Werten">
+                        <TextBlock Text="Beides" FontSize="{DynamicResource FP.Font.Small}" />
+                    </Button>
+                </WrapPanel>
                 <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Top">
                     <TextBlock Text="Farbe" Foreground="{DynamicResource FP.Text.Secondary}"
                                VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
@@ -88,6 +111,9 @@
                                              Minimum="0" Maximum="100" Increment="1"
                                              FormatString="F0" />
                 </Grid>
+                <!-- Groesse und Abrunden gelten nur aussen: innen liegt der Schatten auf der Flaeche
+                     selbst, die sich weder vergroessern noch abrunden laesst. -->
+                <StackPanel Spacing="2" IsVisible="{Binding ShowShadowOuterControls}">
                 <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
                     <TextBlock Text="Größe" Foreground="{DynamicResource FP.Text.Secondary}"
                                VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
@@ -114,6 +140,7 @@
                                              Minimum="0" Maximum="100" Increment="1"
                                              FormatString="F0" />
                 </Grid>
+                </StackPanel>
             </StackPanel>
         </StackPanel>
     </Expander>

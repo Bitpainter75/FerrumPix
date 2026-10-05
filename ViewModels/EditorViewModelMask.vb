@@ -788,8 +788,7 @@ Namespace ViewModels
             Dim maskForOverlay = _selectionMask
             Dim ownsMaskForOverlay = False
             If _selectionMask IsNot Nothing AndAlso fillLayer IsNot Nothing Then
-                Dim graded = ImageProcessor.RenderMaskFilledWithGradient(_selectionMask, fillLayer.FillColor,
-                    fillLayer.FillKind, fillLayer.FillColor2, CSng(fillLayer.FillAngle), fillLayer.FillInverted)
+                Dim graded = ImageProcessor.RenderMaskFilledWithGradient(_selectionMask, fillLayer)
                 If graded IsNot Nothing Then
                     maskForOverlay = graded
                     ownsMaskForOverlay = True
@@ -5256,6 +5255,8 @@ Namespace ViewModels
             layer.GlowBlur = CSng(_annotationGlowBlur)
             layer.GlowStrength = CSng(_annotationGlowStrength)
             layer.GlowColor = ToHexColor(_annotationGlowColor, Avalonia.Media.Colors.Yellow)
+            layer.ShadowPlacement = _annotationShadowPlacement
+            layer.GlowPlacement = _annotationGlowPlacement
             _hasChanges = True
             If isNew Then
                 _selectedMaskedAdjustmentLayerId = layer.Id
@@ -5292,11 +5293,20 @@ Namespace ViewModels
                 ' Füllung wird geladen, sonst blieben die Werte für das nächste Objekt stehen.
                 _selectionFillEnabled = layer.HasFill()
                 If layer.HasFill() Then
+                    ' Erst die Stopps, dann die Farben: die ziehen sonst die Enden der vorigen
+                    ' Stoppliste nach.
+                    _annotationGradientStops = GradientFillSpec.NormalizeStops(layer.FillStops)
                     AnnotationFillKind = layer.FillKind
                     AnnotationFillColor2 = layer.FillColor2
                     AnnotationFillColor = layer.FillColor
                     AnnotationGradientAngleDegrees = layer.FillAngle
                     AnnotationGradientInverted = layer.FillInverted
+                    AnnotationGradientScale = layer.FillScale
+                    AnnotationGradientOffsetX = layer.FillOffsetX
+                    AnnotationGradientOffsetY = layer.FillOffsetY
+                    AnnotationGradientRepeat = layer.FillRepeat
+                    Me.RaisePropertyChanged(NameOf(AnnotationGradientStops))
+                    Me.RaisePropertyChanged(NameOf(SelectedGradientPreset))
                 End If
                 Me.RaisePropertyChanged(NameOf(SelectionFillEnabled))
                 RaiseFillGroupActiveChanged()
@@ -5318,11 +5328,13 @@ Namespace ViewModels
                         AnnotationShadowSize = layer.ShadowSizePercent
                         AnnotationShadowRounded = layer.ShadowRounded
                         AnnotationShadowCornerRadius = layer.ShadowCornerRadiusPercent
+                        AnnotationShadowPlacement = layer.ShadowPlacement
                     End If
                     If layer.GlowEnabled Then
                         AnnotationGlowBlur = layer.GlowBlur
                         AnnotationGlowStrength = layer.GlowStrength
                         AnnotationGlowColor = layer.GlowColor
+                        AnnotationGlowPlacement = layer.GlowPlacement
                     End If
                 End If
             Finally

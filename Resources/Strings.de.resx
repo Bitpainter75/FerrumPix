@@ -9314,4 +9314,127 @@
   <data name="Ecken_der_Kontur_44390a90" xml:space="preserve">
     <value>Ecken der Kontur</value>
   </data>
+  <data name="Winkelverlauf_6f276eb9" xml:space="preserve">
+    <value>Winkelverlauf</value>
+  </data>
+  <data name="Gespiegelter_Verlauf_9384096f" xml:space="preserve">
+    <value>Gespiegelter Verlauf</value>
+  </data>
+  <data name="Rautenverlauf_62732ac5" xml:space="preserve">
+    <value>Rautenverlauf</value>
+  </data>
+  <data name="Vorlage_w_hlen_7df6eb54" xml:space="preserve">
+    <value>Vorlage wählen</value>
+  </data>
+  <data name="Verlauf_als_Vorlage_speichern_2d633574" xml:space="preserve">
+    <value>Verlauf als Vorlage speichern</value>
+  </data>
+  <data name="Name_der_Vorlage_bc81ad2f" xml:space="preserve">
+    <value>Name der Vorlage</value>
+  </data>
+  <data name="Eigener_Verlauf_0d52cf71" xml:space="preserve">
+    <value>Eigener Verlauf</value>
+  </data>
+  <data name="Eigene_Vorlage_l_schen_5276b483" xml:space="preserve">
+    <value>Eigene Vorlage löschen</value>
+  </data>
+  <data name="Klick_setzt_einen_Farbstopp_Ziehen_verschiebt_ih_13771329" xml:space="preserve">
+    <value>Klick setzt einen Farbstopp, Ziehen verschiebt ihn. Nach unten ziehen oder ENTF entfernt ihn.</value>
+  </data>
+  <data name="Farbstopp_038dd2a0" xml:space="preserve">
+    <value>Farbstopp</value>
+  </data>
+  <data name="Markierten_Farbstopp_entfernen_ENTF_edf3c091" xml:space="preserve">
+    <value>Markierten Farbstopp entfernen (ENTF)</value>
+  </data>
+  <data name="Farbstopps_in_gleichen_Abst_nden_verteilen_aa1ef29b" xml:space="preserve">
+    <value>Farbstopps in gleichen Abständen verteilen</value>
+  </data>
+  <data name="Reihenfolge_der_Farbstopps_umdrehen_d2eb86ee" xml:space="preserve">
+    <value>Reihenfolge der Farbstopps umdrehen</value>
+  </data>
+  <data name="Umdrehen_bd500b25" xml:space="preserve">
+    <value>Umdrehen</value>
+  </data>
+  <data name="Jenseits_des_Verlaufs_die_Randfarbe_halten_36114af2" xml:space="preserve">
+    <value>Jenseits des Verlaufs die Randfarbe halten</value>
+  </data>
+  <data name="Randfarbe_0a2558c0" xml:space="preserve">
+    <value>Randfarbe</value>
+  </data>
+  <data name="Verlauf_wiederholen_52f0224f" xml:space="preserve">
+    <value>Verlauf wiederholen</value>
+  </data>
+  <data name="Wiederholung_31786adb" xml:space="preserve">
+    <value>Wiederholung</value>
+  </data>
+  <data name="Verlauf_gespiegelt_wiederholen_896d6d86" xml:space="preserve">
+    <value>Verlauf gespiegelt wiederholen</value>
+  </data>
+  <data name="Gespiegelt_da97cceb" xml:space="preserve">
+    <value>Gespiegelt</value>
+  </data>
+  <data name="Schwarz_zu_Wei_f802e62c" xml:space="preserve">
+    <value>Schwarz zu Weiß</value>
+  </data>
+  <data name="Ausblenden_2e03e3a6" xml:space="preserve">
+    <value>Ausblenden</value>
+  </data>
+  <data name="Sonnenuntergang_9079255c" xml:space="preserve">
+    <value>Sonnenuntergang</value>
+  </data>
+  <data name="Morgenrot_bfe3ebd7" xml:space="preserve">
+    <value>Morgenrot</value>
+  </data>
+  <data name="Ozean_82535d6f" xml:space="preserve">
+    <value>Ozean</value>
+  </data>
+  <data name="Himmel_a3d8e72b" xml:space="preserve">
+    <value>Himmel</value>
+  </data>
+  <data name="Wald_a18d7cd0" xml:space="preserve">
+    <value>Wald</value>
+  </data>
+  <data name="Feuer_084f04b7" xml:space="preserve">
+    <value>Feuer</value>
+  </data>
+  <data name="Violett_1186ae2f" xml:space="preserve">
+    <value>Violett</value>
+  </data>
+  <data name="Pfirsich_34c30ceb" xml:space="preserve">
+    <value>Pfirsich</value>
+  </data>
+  <data name="Gold_c57604db" xml:space="preserve">
+    <value>Gold</value>
+  </data>
+  <data name="Silber_8c50fd66" xml:space="preserve">
+    <value>Silber</value>
+  </data>
+  <data name="Kupfer_c906e360" xml:space="preserve">
+    <value>Kupfer</value>
+  </data>
+  <data name="Regenbogen_c35233b4" xml:space="preserve">
+    <value>Regenbogen</value>
+  </data>
+  <data name="Neon_00706b5e" xml:space="preserve">
+    <value>Neon</value>
+  </data>
+  <data name="Lage_ffbcda4e" xml:space="preserve">
+    <value>Lage</value>
+  </data>
+  <data name="Schatten_unter_dem_Objekt_bbaf1274" xml:space="preserve">
+    <value>Schatten unter dem Objekt</value>
+  </data>
+  <data name="Schatten_auf_der_Fl_che_an_der_dem_Licht_zugewan_ee2adc6b" xml:space="preserve">
+    <value>Schatten auf der Fläche, an der dem Licht zugewandten Innenkante</value>
+  </data>
+  <data name="Au_en_und_innen_mit_denselben_Werten_3502b4bc" xml:space="preserve">
+    <value>Außen und innen mit denselben Werten</value>
+  </data>
+  <data name="Gl_hen_um_das_Objekt_herum_2afeecaa" xml:space="preserve">
+    <value>Glühen um das Objekt herum</value>
+  </data>
+  <data name="Gl_hen_von_der_Kante_nach_innen_aa54abad" xml:space="preserve">
+    <value>Glühen von der Kante nach innen</value>
+  </data>
 </root>

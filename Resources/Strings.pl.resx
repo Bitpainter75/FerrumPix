@@ -9336,4 +9336,127 @@
   <data name="Ecken_der_Kontur_44390a90" xml:space="preserve">
     <value>Narożniki obrysu</value>
   </data>
+  <data name="Winkelverlauf_6f276eb9" xml:space="preserve">
+    <value>Gradient kątowy</value>
+  </data>
+  <data name="Gespiegelter_Verlauf_9384096f" xml:space="preserve">
+    <value>Gradient odbity</value>
+  </data>
+  <data name="Rautenverlauf_62732ac5" xml:space="preserve">
+    <value>Gradient rombowy</value>
+  </data>
+  <data name="Vorlage_w_hlen_7df6eb54" xml:space="preserve">
+    <value>Wybierz ustawienie</value>
+  </data>
+  <data name="Verlauf_als_Vorlage_speichern_2d633574" xml:space="preserve">
+    <value>Zapisz gradient jako ustawienie</value>
+  </data>
+  <data name="Name_der_Vorlage_bc81ad2f" xml:space="preserve">
+    <value>Nazwa ustawienia</value>
+  </data>
+  <data name="Eigener_Verlauf_0d52cf71" xml:space="preserve">
+    <value>Własny gradient</value>
+  </data>
+  <data name="Eigene_Vorlage_l_schen_5276b483" xml:space="preserve">
+    <value>Usuń własne ustawienie</value>
+  </data>
+  <data name="Klick_setzt_einen_Farbstopp_Ziehen_verschiebt_ih_13771329" xml:space="preserve">
+    <value>Kliknięcie dodaje punkt koloru, przeciąganie go przesuwa. Przeciągnięcie w dół lub DEL go usuwa.</value>
+  </data>
+  <data name="Farbstopp_038dd2a0" xml:space="preserve">
+    <value>Punkt koloru</value>
+  </data>
+  <data name="Markierten_Farbstopp_entfernen_ENTF_edf3c091" xml:space="preserve">
+    <value>Usuń zaznaczony punkt koloru (DEL)</value>
+  </data>
+  <data name="Farbstopps_in_gleichen_Abst_nden_verteilen_aa1ef29b" xml:space="preserve">
+    <value>Rozmieść punkty koloru równomiernie</value>
+  </data>
+  <data name="Reihenfolge_der_Farbstopps_umdrehen_d2eb86ee" xml:space="preserve">
+    <value>Odwróć kolejność punktów koloru</value>
+  </data>
+  <data name="Umdrehen_bd500b25" xml:space="preserve">
+    <value>Odwróć kolejność</value>
+  </data>
+  <data name="Jenseits_des_Verlaufs_die_Randfarbe_halten_36114af2" xml:space="preserve">
+    <value>Zachowaj kolor krawędzi poza gradientem</value>
+  </data>
+  <data name="Randfarbe_0a2558c0" xml:space="preserve">
+    <value>Kolor krawędzi</value>
+  </data>
+  <data name="Verlauf_wiederholen_52f0224f" xml:space="preserve">
+    <value>Powtarzaj gradient</value>
+  </data>
+  <data name="Wiederholung_31786adb" xml:space="preserve">
+    <value>Powtarzanie</value>
+  </data>
+  <data name="Verlauf_gespiegelt_wiederholen_896d6d86" xml:space="preserve">
+    <value>Powtarzaj gradient z odbiciem</value>
+  </data>
+  <data name="Gespiegelt_da97cceb" xml:space="preserve">
+    <value>Z odbiciem</value>
+  </data>
+  <data name="Schwarz_zu_Wei_f802e62c" xml:space="preserve">
+    <value>Z czerni do bieli</value>
+  </data>
+  <data name="Ausblenden_2e03e3a6" xml:space="preserve">
+    <value>Zanikanie</value>
+  </data>
+  <data name="Sonnenuntergang_9079255c" xml:space="preserve">
+    <value>Zachód słońca</value>
+  </data>
+  <data name="Morgenrot_bfe3ebd7" xml:space="preserve">
+    <value>Jutrzenka</value>
+  </data>
+  <data name="Ozean_82535d6f" xml:space="preserve">
+    <value>Ocean</value>
+  </data>
+  <data name="Himmel_a3d8e72b" xml:space="preserve">
+    <value>Niebo</value>
+  </data>
+  <data name="Wald_a18d7cd0" xml:space="preserve">
+    <value>Las</value>
+  </data>
+  <data name="Feuer_084f04b7" xml:space="preserve">
+    <value>Ogień</value>
+  </data>
+  <data name="Violett_1186ae2f" xml:space="preserve">
+    <value>Fiolet</value>
+  </data>
+  <data name="Pfirsich_34c30ceb" xml:space="preserve">
+    <value>Brzoskwinia</value>
+  </data>
+  <data name="Gold_c57604db" xml:space="preserve">
+    <value>Złoto</value>
+  </data>
+  <data name="Silber_8c50fd66" xml:space="preserve">
+    <value>Srebro</value>
+  </data>
+  <data name="Kupfer_c906e360" xml:space="preserve">
+    <value>Miedź</value>
+  </data>
+  <data name="Regenbogen_c35233b4" xml:space="preserve">
+    <value>Tęcza</value>
+  </data>
+  <data name="Neon_00706b5e" xml:space="preserve">
+    <value>Neon</value>
+  </data>
+  <data name="Lage_ffbcda4e" xml:space="preserve">
+    <value>Położenie</value>
+  </data>
+  <data name="Schatten_unter_dem_Objekt_bbaf1274" xml:space="preserve">
+    <value>Cień pod obiektem</value>
+  </data>
+  <data name="Schatten_auf_der_Fl_che_an_der_dem_Licht_zugewan_ee2adc6b" xml:space="preserve">
+    <value>Cień na powierzchni, przy wewnętrznej krawędzi od strony światła</value>
+  </data>
+  <data name="Au_en_und_innen_mit_denselben_Werten_3502b4bc" xml:space="preserve">
+    <value>Na zewnątrz i wewnątrz z tymi samymi wartościami</value>
+  </data>
+  <data name="Gl_hen_um_das_Objekt_herum_2afeecaa" xml:space="preserve">
+    <value>Poświata wokół obiektu</value>
+  </data>
+  <data name="Gl_hen_von_der_Kante_nach_innen_aa54abad" xml:space="preserve">
+    <value>Poświata od krawędzi do wewnątrz</value>
+  </data>
 </root>

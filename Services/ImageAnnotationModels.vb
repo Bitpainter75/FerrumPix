@@ -156,6 +156,9 @@ Namespace Services
         Public Property GlowBlur As Single = 10
         Public Property GlowStrength As Single = 100
         Public Property GlowColor As String = "#FFFFFF00"
+        ''' <summary>Lage von Schatten und Gluehen wie am Objekt (ImageAnnotation.ShadowPlacement).</summary>
+        Public Property ShadowPlacement As String = ""
+        Public Property GlowPlacement As String = ""
         Public Property Strokes As New List(Of BrushStroke)()
 
         Public Function Clone() As PixelPaintStroke
@@ -184,6 +187,8 @@ Namespace Services
                 .GlowBlur = GlowBlur,
                 .GlowStrength = GlowStrength,
                 .GlowColor = If(GlowColor, "#FFFFFF00"),
+                .ShadowPlacement = If(ShadowPlacement, ""),
+                .GlowPlacement = If(GlowPlacement, ""),
                 .Strokes = New List(Of BrushStroke)(Strokes)
             }
         End Function
@@ -214,6 +219,8 @@ Namespace Services
                 .GlowBlur = GlowBlur,
                 .GlowStrength = GlowStrength,
                 .GlowColor = If(GlowColor, "#FFFFFF00"),
+                .ShadowPlacement = If(ShadowPlacement, ""),
+                .GlowPlacement = If(GlowPlacement, ""),
                 .Strokes = New List(Of BrushStroke)(Strokes)
             }
         End Function
@@ -395,6 +402,11 @@ Namespace Services
         Private _fillColor2 As String = "#FFFFFFFF"
         Private _gradientAngleDegrees As Single = 0
         Private _gradientInverted As Boolean = False
+        Private _gradientStops As String = ""
+        Private _gradientScalePercent As Single = 100
+        Private _gradientOffsetXPercent As Single
+        Private _gradientOffsetYPercent As Single
+        Private _gradientRepeat As String = ""
         Private _shadowEnabled As Boolean = False
         Private _shadowOffsetXPercent As Single = 4
         Private _shadowOffsetYPercent As Single = 4
@@ -408,6 +420,8 @@ Namespace Services
         Private _glowBlur As Single = 10
         Private _glowStrength As Single = 100
         Private _glowColor As String = "#FFFFFF00"
+        Private _shadowPlacement As String = ""
+        Private _glowPlacement As String = ""
 
         ''' <summary>Eigene Pixel-Anpassungen dieses Objekts (Belichtung, Farbe, Details, Effekte, Filter …).
         ''' Nothing = keine. Ist ein Objekt markiert, bedienen die Regler der Werkzeuge Anpassen/Farbe/Details/
@@ -1103,8 +1117,8 @@ Namespace Services
             End Set
         End Property
 
-        ' "Solid", "LinearGradient" oder "RadialGradient" - nur für Kind="Rectangle"/"Ellipse" relevant,
-        ' siehe DrawShape/CreateFillGradientShader in ApplyAnnotations.
+        ' "Solid" oder eine Verlaufsform (GradientFillSpec.KindLinear, KindRadial, KindAngle,
+        ' KindReflected, KindDiamond); siehe GradientFillSpec und CreateFillGradientShader.
         Public Property FillKind As String
             Get
                 Return _fillKind
@@ -1234,6 +1248,58 @@ Namespace Services
             End Set
         End Property
 
+        ''' <summary>Farbstopps des Verlaufs, "#AARRGGBB@Prozent;...". Leer: zwei Stopps aus
+        ''' FillColor und FillColor2 (so lesen sich Dateien von vor den Stopps). Siehe
+        ''' GradientFillSpec.</summary>
+        Public Property GradientStops As String
+            Get
+                Return _gradientStops
+            End Get
+            Set(value As String)
+                SetField(_gradientStops, If(value, ""))
+            End Set
+        End Property
+
+        ''' <summary>Groesse des Verlaufs in Prozent des Objekts, 100 spannt ihn genau darueber.</summary>
+        Public Property GradientScalePercent As Single
+            Get
+                Return _gradientScalePercent
+            End Get
+            Set(value As Single)
+                SetField(_gradientScalePercent, GradientFillSpec.ClampScale(value))
+            End Set
+        End Property
+
+        ''' <summary>Verschiebung der Verlaufsmitte in Prozent der halben Objektbreite.</summary>
+        Public Property GradientOffsetXPercent As Single
+            Get
+                Return _gradientOffsetXPercent
+            End Get
+            Set(value As Single)
+                SetField(_gradientOffsetXPercent, GradientFillSpec.ClampOffset(value))
+            End Set
+        End Property
+
+        ''' <summary>Verschiebung der Verlaufsmitte in Prozent der halben Objekthoehe.</summary>
+        Public Property GradientOffsetYPercent As Single
+            Get
+                Return _gradientOffsetYPercent
+            End Get
+            Set(value As Single)
+                SetField(_gradientOffsetYPercent, GradientFillSpec.ClampOffset(value))
+            End Set
+        End Property
+
+        ''' <summary>"" haelt die Randfarbe, "Repeat" wiederholt, "Mirror" wiederholt gespiegelt.</summary>
+        Public Property GradientRepeat As String
+            Get
+                Return _gradientRepeat
+            End Get
+            Set(value As String)
+                SetField(_gradientRepeat, GradientFillSpec.NormalizeRepeat(value))
+            End Set
+        End Property
+
         Public Property ShadowEnabled As Boolean
             Get
                 Return _shadowEnabled
@@ -1353,6 +1419,58 @@ Namespace Services
             End Set
         End Property
 
+        ''' <summary>Lage des Schattens: "" aussen (unter dem Objekt, wie schon immer), "Inside" innen
+        ''' (auf der Flaeche, an der dem Licht zugewandten Kante), "Both" beides mit denselben Werten.
+        ''' Siehe ImageProcessor.DrawInnerSilhouetteEffects.</summary>
+        Public Property ShadowPlacement As String
+            Get
+                Return _shadowPlacement
+            End Get
+            Set(value As String)
+                SetField(_shadowPlacement, NormalizeEffectPlacement(value))
+            End Set
+        End Property
+
+        ''' <summary>Lage des Gluehens, wie <see cref="ShadowPlacement"/>: innen leuchtet die Kante nach
+        ''' innen in die Flaeche.</summary>
+        Public Property GlowPlacement As String
+            Get
+                Return _glowPlacement
+            End Get
+            Set(value As String)
+                SetField(_glowPlacement, NormalizeEffectPlacement(value))
+            End Set
+        End Property
+
+        ''' <summary>"" (aussen), "Inside" oder "Both"; alles andere ist aussen.</summary>
+        Public Shared Function NormalizeEffectPlacement(value As String) As String
+            Select Case If(value, "").Trim().ToLowerInvariant()
+                Case "inside" : Return "Inside"
+                Case "both" : Return "Both"
+                Case Else : Return ""
+            End Select
+        End Function
+
+        Public Shared Function EffectDrawsOutside(placement As String) As Boolean
+            Return NormalizeEffectPlacement(placement) <> "Inside"
+        End Function
+
+        Public Shared Function EffectDrawsInside(placement As String) As Boolean
+            Return NormalizeEffectPlacement(placement) <> ""
+        End Function
+
+        ''' <summary>Schatten oder Gluehen UNTER dem Objekt (vor ihm gezeichnet).</summary>
+        Public Function HasOuterEffects() As Boolean
+            Return (ShadowEnabled AndAlso EffectDrawsOutside(ShadowPlacement)) OrElse
+                   (GlowEnabled AndAlso EffectDrawsOutside(GlowPlacement))
+        End Function
+
+        ''' <summary>Schatten oder Gluehen AUF dem Objekt (nach ihm gezeichnet, auf seine Flaeche beschnitten).</summary>
+        Public Function HasInnerEffects() As Boolean
+            Return (ShadowEnabled AndAlso EffectDrawsInside(ShadowPlacement)) OrElse
+                   (GlowEnabled AndAlso EffectDrawsInside(GlowPlacement))
+        End Function
+
         ''' Strokes wird flach kopiert: die Liste ist neu, die Striche darin werden geteilt. Das ist
         ''' zulässig, weil BrushStroke unveränderlich ist, und hält Undo-Schnappschüsse klein.
         Public Function Clone() As ImageAnnotation
@@ -1420,6 +1538,11 @@ Namespace Services
                 .FillColor2 = FillColor2,
                 .GradientAngleDegrees = GradientAngleDegrees,
                 .GradientInverted = GradientInverted,
+                .GradientStops = GradientStops,
+                .GradientScalePercent = GradientScalePercent,
+                .GradientOffsetXPercent = GradientOffsetXPercent,
+                .GradientOffsetYPercent = GradientOffsetYPercent,
+                .GradientRepeat = GradientRepeat,
                 .ShadowEnabled = ShadowEnabled,
                 .ShadowOffsetXPercent = ShadowOffsetXPercent,
                 .ShadowOffsetYPercent = ShadowOffsetYPercent,
@@ -1433,6 +1556,8 @@ Namespace Services
                 .GlowBlur = GlowBlur,
                 .GlowStrength = GlowStrength,
                 .GlowColor = GlowColor,
+                .ShadowPlacement = ShadowPlacement,
+                .GlowPlacement = GlowPlacement,
                 .Strokes = New List(Of BrushStroke)(Strokes)
             }
         End Function

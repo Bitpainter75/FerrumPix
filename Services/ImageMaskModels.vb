@@ -733,8 +733,8 @@ Namespace Services
         ''' etwas anderes zu bedeuten.</summary>
         Public Property ClipToLayerBelow As Boolean = False
 
-        ''' <summary>DEKLARATIVE Füllung (kein PNG/Objekt): leer = keine Füllung, sonst "Solid"/
-        ''' "LinearGradient"/"RadialGradient". Bei einer AUSWAHL-Ebene wird die Füllung SICHTBAR in die
+        ''' <summary>DEKLARATIVE Füllung (kein PNG/Objekt): leer = keine Füllung, sonst "Solid" oder
+        ''' eine Verlaufsform (siehe GradientFillSpec). Bei einer AUSWAHL-Ebene wird die Füllung SICHTBAR in die
         ''' Auswahl komponiert (Farbe/Verlauf); bei einer MASKEN-Ebene stuft die LUMINANZ der Füllung die
         ''' Maske ab und bestimmt so, wie stark die Anpassung der Ebene je Bereich wirkt. Der Render zeichnet
         ''' beides selbst - so bleibt die Füllung nachträglich änderbar (Winkel/Farben) statt eingebrannt.</summary>
@@ -743,6 +743,13 @@ Namespace Services
         Public Property FillColor2 As String = "#FF000000"
         Public Property FillAngle As Double = 0
         Public Property FillInverted As Boolean = False
+        ''' <summary>Farbstopps, Groesse, Mitte und Wiederholung des Verlaufs, mit derselben Bedeutung
+        ''' wie an einem Objekt (ImageAnnotation.GradientStops usw., GradientFillSpec).</summary>
+        Public Property FillStops As String = ""
+        Public Property FillScale As Double = 100
+        Public Property FillOffsetX As Double = 0
+        Public Property FillOffsetY As Double = 0
+        Public Property FillRepeat As String = ""
 
         ''' <summary>DEKLARATIVE Kontur einer AUSWAHL-Ebene, wie die Füllung: eine Linie entlang der
         ''' Auswahlkante, vom Render selbst gezeichnet (ImageProcessor.CompositeVisibleStroke) und damit
@@ -771,6 +778,10 @@ Namespace Services
         Public Property GlowBlur As Single = 10
         Public Property GlowStrength As Single = 100
         Public Property GlowColor As String = "#FFFFFF00"
+        ''' <summary>Lage von Schatten und Gluehen wie am Objekt (ImageAnnotation.ShadowPlacement):
+        ''' "" aussen, "Inside" auf den Pixeln der Auswahl, "Both" beides.</summary>
+        Public Property ShadowPlacement As String = ""
+        Public Property GlowPlacement As String = ""
 
         Public Function Clone() As MaskedAdjustmentLayer
             Return New MaskedAdjustmentLayer With {
@@ -781,6 +792,8 @@ Namespace Services
                 .ClipToLayerBelow = ClipToLayerBelow,
                 .FillKind = FillKind, .FillColor = FillColor, .FillColor2 = FillColor2,
                 .FillAngle = FillAngle, .FillInverted = FillInverted,
+                .FillStops = FillStops, .FillScale = FillScale, .FillOffsetX = FillOffsetX,
+                .FillOffsetY = FillOffsetY, .FillRepeat = FillRepeat,
                 .StrokeWidth = StrokeWidth, .StrokeColor = StrokeColor, .StrokePosition = StrokePosition,
                 .StrokeHardness = StrokeHardness, .StrokeSquareCorners = StrokeSquareCorners,
                 .ShadowEnabled = ShadowEnabled, .ShadowOffsetXPercent = ShadowOffsetXPercent,
@@ -790,6 +803,7 @@ Namespace Services
                 .ShadowCornerRadiusPercent = ShadowCornerRadiusPercent,
                 .GlowEnabled = GlowEnabled, .GlowBlur = GlowBlur, .GlowStrength = GlowStrength,
                 .GlowColor = GlowColor,
+                .ShadowPlacement = ShadowPlacement, .GlowPlacement = GlowPlacement,
                 .Adjustments = If(Adjustments Is Nothing, New ImageAdjustments(), Adjustments.Clone())
             }
         End Function
@@ -816,7 +830,8 @@ Namespace Services
             Return String.Join(",", ShadowEnabled, ShadowOffsetXPercent.ToString("R", inv), ShadowOffsetYPercent.ToString("R", inv),
                                ShadowBlur.ToString("R", inv), ShadowStrength.ToString("R", inv), ShadowColor,
                                ShadowSizePercent.ToString("R", inv), ShadowRounded, ShadowCornerRadiusPercent.ToString("R", inv),
-                               GlowEnabled, GlowBlur.ToString("R", inv), GlowStrength.ToString("R", inv), GlowColor)
+                               GlowEnabled, GlowBlur.ToString("R", inv), GlowStrength.ToString("R", inv), GlowColor,
+                               ShadowPlacement, GlowPlacement)
         End Function
     End Class
 

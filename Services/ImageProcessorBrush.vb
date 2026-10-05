@@ -220,14 +220,14 @@ Namespace Services
                 End Using
 
                 ' Glühen zuerst (Halo hinter dem Strich), dann Schatten, dann der Strich selbst.
-                If ann.GlowEnabled AndAlso glowSigma > 0.05F Then
+                If ann.GlowEnabled AndAlso glowSigma > 0.05F AndAlso ImageAnnotation.EffectDrawsOutside(ann.GlowPlacement) Then
                     Dim glowColor = ApplyAlpha(ParseColor(ann.GlowColor, SKColors.Yellow), Clamp(ann.GlowStrength, 0, 100) / 100.0F)
                     Using p = New SKPaint()
                         p.ImageFilter = SKImageFilter.CreateDropShadowOnly(0, 0, glowSigma, glowSigma, glowColor)
                         canvas.DrawBitmap(layer, left, top, p)
                     End Using
                 End If
-                If ann.ShadowEnabled Then
+                If ann.ShadowEnabled AndAlso ImageAnnotation.EffectDrawsOutside(ann.ShadowPlacement) Then
                     Dim shadowColor = ApplyAlpha(ParseColor(ann.ShadowColor, New SKColor(0, 0, 0, 128)), Clamp(ann.ShadowStrength, 0, 100) / 100.0F)
                     Using p = New SKPaint()
                         p.ImageFilter = SKImageFilter.CreateDropShadowOnly(shadowDx, shadowDy, Math.Max(0.01F, shadowSigma), Math.Max(0.01F, shadowSigma), shadowColor)
@@ -235,6 +235,11 @@ Namespace Services
                     End Using
                 End If
                 canvas.DrawBitmap(layer, left, top)
+                ' Innen auf dem Strich, bemessen an der Strichbreite wie aussen: das Rechteck ist nur
+                ' das Mass, die Silhouette ist der Strich selbst.
+                If ann.HasInnerEffects() Then
+                    DrawInnerSilhouetteEffects(canvas, layer, left, top, w, h, New SKRect(0, 0, objSize, objSize), ann, 1.0F)
+                End If
             End Using
         End Sub
 

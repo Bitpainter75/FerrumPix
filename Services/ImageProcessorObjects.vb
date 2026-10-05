@@ -68,10 +68,14 @@ Namespace Services
                 canvas.Translate(-rect.MidX, -rect.MidY)
             End If
 
-            If renderAnnotation.ShadowEnabled OrElse renderAnnotation.GlowEnabled Then
+            If renderAnnotation.HasOuterEffects() Then
                 DrawAnnotationEffects(canvas, kind, renderAnnotation, rect, x, y, maxWidth, fontSize, fill, stroke, strokeWidth, alphaFactor, sourceWidth, sourceHeight)
             End If
             DrawAnnotationShape(canvas, kind, renderAnnotation, rect, x, y, maxWidth, fontSize, fill, stroke, strokeWidth, alphaFactor)
+            ' Innenschatten und inneres Gluehen liegen AUF dem Objekt, also danach.
+            If renderAnnotation.HasInnerEffects() Then
+                DrawAnnotationEffects(canvas, kind, renderAnnotation, rect, x, y, maxWidth, fontSize, fill, stroke, strokeWidth, alphaFactor, sourceWidth, sourceHeight, inner:=True)
+            End If
             canvas.Restore()
         End Sub
 
@@ -695,10 +699,18 @@ Namespace Services
                                            renderAnnotation.BlendMode, coverage, adj)
                     ' Ein Bild zeichnet sich unabhaengig von der Fuellfarbe: im Kontur-Durchgang wird
                     ' sein Inhalt ausdruecklich weggelassen.
+                    ' Text und Symbol legen ihre Kontur UNTER die Fuellung, die deren innere Haelfte
+                    ' deckt. Ohne Fuellung im Konturdurchgang stuende die Kontur dort doppelt so breit
+                    ' da wie mit Haken (Nutzerbefund: "die Kontur hat auf einmal eine andere Groesse").
+                    ' Deshalb bleibt die Fuellung hier erhalten und RADIERT nur, was sie zudecken wuerde.
                     Dim previousStyle = _objectStrokeStyle
-                    If IsImageContentKind(kind, renderAnnotation) Then _objectStrokeStyle = New ObjectStrokeStyle With {.HideContent = True}
+                    Dim fillErases = StrokeLiesUnderFill(kind, renderAnnotation)
+                    If IsImageContentKind(kind, renderAnnotation) OrElse fillErases Then
+                        _objectStrokeStyle = New ObjectStrokeStyle With {.HideContent = IsImageContentKind(kind, renderAnnotation),
+                                                                         .FillErasesStroke = fillErases}
+                    End If
                     Try
-                        DrawAnnotationViaLayer(canvas, annotation, AnnotationStrokeOnly(renderAnnotation), kind, rect,
+                        DrawAnnotationViaLayer(canvas, annotation, AnnotationStrokeOnly(renderAnnotation, keepFill:=fillErases), kind, rect,
                                                sourceWidth, sourceHeight, layerWidth, layerHeight, offsetX, offsetY,
                                                "Normal", coverage, adj)
                     Finally
@@ -1145,15 +1157,33 @@ Namespace Services
             Return clone
         End Function
 
-        Private Shared Function AnnotationStrokeOnly(source As ImageAnnotation) As ImageAnnotation
+        ''' <param name="keepFill">Die Fuellung behalten: im Konturdurchgang von Text und Symbol, wo
+        ''' sie als Radierer zeichnet (ObjectStrokeStyle.FillErasesStroke).</param>
+        Private Shared Function AnnotationStrokeOnly(source As ImageAnnotation, Optional keepFill As Boolean = False) As ImageAnnotation
             Dim clone = source.Clone()
-            clone.FillColor = TransparentColorHex
-            clone.FillColor2 = TransparentColorHex
             ' Schatten und Gluehen gehoeren zur Silhouette und liegen bereits unter der gemischten
             ' Fuellung - ein zweites Mal gezeichnet wuerden sie sich selbst verdoppeln.
             clone.ShadowEnabled = False
             clone.GlowEnabled = False
+            If keepFill Then Return clone
+            clone.FillColor = TransparentColorHex
+            clone.FillColor2 = TransparentColorHex
+            ' Ein Verlauf mit Stopps zeichnet unabhaengig von den beiden Farben: ohne diese Zeile
+            ' laege die Fuellung im Konturdurchgang ein zweites Mal ungemischt obenauf.
+            clone.FillKind = "Solid"
+            clone.GradientStops = ""
             Return clone
+        End Function
+
+        ''' <summary>Liegt die Kontur dieser Art unter ihrer Fuellung? Bei Text (auch als
+        ''' Wasserzeichen) und Symbol, siehe DrawAnnotationText und DrawSingleGlyph.</summary>
+        Private Shared Function StrokeLiesUnderFill(kind As String, annotation As ImageAnnotation) As Boolean
+            Select Case kind
+                Case "symbol" : Return True
+                Case "watermark" : Return String.IsNullOrWhiteSpace(annotation?.ImagePath)
+                Case "", "text" : Return True
+                Case Else : Return False
+            End Select
         End Function
 
         ''' <summary>Wie <see cref="DrawAnnotationLayer"/>, aber mit Versatz - eine verzerrte Ebene
@@ -1228,7 +1258,18 @@ Namespace Services
             ''' Arten genuegt dafuer die durchsichtige Fuellfarbe, ein Bild zeichnet sich aber
             ''' unabhaengig von ihr und stuende sonst doppelt da.</summary>
             Public HideContent As Boolean
+            ''' <summary>Die Fuellung zeichnet nicht, sondern radiert (DstOut), was sie von der
+            ''' darunterliegenden Kontur zudecken wuerde: der Konturdurchgang von Text und Symbol
+            ''' ohne "Kontur mitmischen" (StrokeLiesUnderFill).</summary>
+            Public FillErasesStroke As Boolean
         End Class
+
+        ''' <summary>Der Fuellstift wird zum Radierer, siehe ObjectStrokeStyle.FillErasesStroke.</summary>
+        Private Shared Sub ApplyFillEraser(paint As SKPaint)
+            Dim style = _objectStrokeStyle
+            If style Is Nothing OrElse Not style.FillErasesStroke Then Return
+            paint.BlendMode = SKBlendMode.DstOut
+        End Sub
 
         <ThreadStatic> Private Shared _objectStrokeStyle As ObjectStrokeStyle
 
@@ -1337,16 +1378,20 @@ Namespace Services
             ' Laeuft gerade der Kontur-Durchgang eines Bildes (HideContent), gilt das fuer jeden
             ' Teil-Durchgang weiter - nur die Silhouette braucht das Bild und setzt es selbst zurueck.
             Dim hideContent = previous IsNot Nothing AndAlso previous.HideContent
+            ' Ebenso die radierende Fuellung im Konturdurchgang von Text und Symbol.
+            Dim fillErases = previous IsNot Nothing AndAlso previous.FillErasesStroke
             Try
                 If position = "Center" Then
-                    _objectStrokeStyle = New ObjectStrokeStyle With {.Join = join, .BlurSigma = sigma, .HideContent = hideContent}
+                    _objectStrokeStyle = New ObjectStrokeStyle With {.Join = join, .BlurSigma = sigma, .HideContent = hideContent,
+                                                                     .FillErasesStroke = fillErases}
                     DrawAnnotationShapeCore(canvas, kind, annotation, rect, x, y, maxWidth, fontSize, fill, stroke, strokeWidth, alphaFactor)
                     Return
                 End If
 
                 If position = "Outside" Then
                     ' Erst Fuellung und innere Linien, ohne Umriss.
-                    _objectStrokeStyle = New ObjectStrokeStyle With {.SkipOutline = True, .HideContent = hideContent}
+                    _objectStrokeStyle = New ObjectStrokeStyle With {.SkipOutline = True, .HideContent = hideContent,
+                                                                     .FillErasesStroke = fillErases}
                     DrawAnnotationShapeCore(canvas, kind, annotation, rect, x, y, maxWidth, fontSize, fill, stroke, strokeWidth, alphaFactor)
                 End If
 
@@ -1362,7 +1407,8 @@ Namespace Services
                     Dim margin = strokeWidth * 2.0F + 3.0F * sigma + 2.0F
                     canvas.SaveLayer(SKRect.Inflate(rect, margin, margin), Nothing)
                 End If
-                _objectStrokeStyle = New ObjectStrokeStyle With {.WidthFactor = 2.0F, .Join = join, .BlurSigma = sigma, .HideContent = hideContent}
+                _objectStrokeStyle = New ObjectStrokeStyle With {.WidthFactor = 2.0F, .Join = join, .BlurSigma = sigma, .HideContent = hideContent,
+                                                                 .FillErasesStroke = fillErases}
                 If position = "Outside" Then
                     DrawAnnotationShapeCore(canvas, kind, AnnotationStrokeOnly(annotation), rect, x, y, maxWidth, fontSize,
                                             SKColors.Transparent, stroke, strokeWidth, alphaFactor)
@@ -1386,6 +1432,7 @@ Namespace Services
                                                     x As Single, y As Single, maxWidth As Single, fontSize As Single, strokeWidth As Single)
             Dim solid = annotation.Clone()
             solid.FillKind = "Solid"
+            solid.GradientStops = ""
             solid.FillColor = "#FFFFFFFF"
             solid.FillColor2 = "#FFFFFFFF"
             solid.Opacity = 100
@@ -1399,6 +1446,9 @@ Namespace Services
         End Sub
 
         Private Shared Sub DrawAnnotationShapeCore(canvas As SKCanvas, kind As String, annotation As ImageAnnotation, rect As SKRect, x As Single, y As Single, maxWidth As Single, fontSize As Single, fill As SKColor, stroke As SKColor, strokeWidth As Single, alphaFactor As Single)
+            ' Der Verlauf EINMAL aus dem Objekt, mit seiner Deckkraft in jedem Stopp. Nothing bei
+            ' Vollfarbe; dann gilt fill.
+            Dim gradient = GradientFillSpec.FromAnnotation(annotation)?.WithAlphaFactor(alphaFactor)
             Select Case kind
                 Case "frame"
                     ' Der Rahmen sitzt am Rechteck des Objekts, und das ist beim Rahmen immer das
@@ -1412,68 +1462,49 @@ Namespace Services
                                       annotation.FrameSymbol, annotation.FrameSymbolSpacingPercent,
                                       annotation.FrameSymbolRotate, stroke, annotation.StrokeWidth)
                 Case "rectangle", "rect", "selectionfill"
-                    Dim fill2 = ApplyAlpha(ParseColor(annotation.FillColor2, SKColors.White), alphaFactor)
-                    DrawShape(canvas, rect, fill, stroke, strokeWidth, False, annotation.FillKind, fill2, annotation.GradientAngleDegrees, annotation.GradientInverted)
+                    DrawShape(canvas, rect, fill, stroke, strokeWidth, False, gradient)
                 Case "roundedrectangle", "rounded-rectangle"
-                    Dim fill2 = ApplyAlpha(ParseColor(annotation.FillColor2, SKColors.White), alphaFactor)
-                    DrawRoundedRectangle(canvas, rect, fill, stroke, strokeWidth, annotation.FillKind, fill2, annotation.GradientAngleDegrees, annotation.GradientInverted)
+                    DrawRoundedRectangle(canvas, rect, fill, stroke, strokeWidth, gradient)
                 Case "ellipse", "circle"
-                    Dim fill2 = ApplyAlpha(ParseColor(annotation.FillColor2, SKColors.White), alphaFactor)
-                    DrawShape(canvas, rect, fill, stroke, strokeWidth, True, annotation.FillKind, fill2, annotation.GradientAngleDegrees, annotation.GradientInverted)
+                    DrawShape(canvas, rect, fill, stroke, strokeWidth, True, gradient)
                 Case "square"
-                    Dim fill2 = ApplyAlpha(ParseColor(annotation.FillColor2, SKColors.White), alphaFactor)
-                    DrawSquare(canvas, rect, fill, stroke, strokeWidth, annotation.FillKind, fill2, annotation.GradientAngleDegrees, annotation.GradientInverted)
+                    DrawSquare(canvas, rect, fill, stroke, strokeWidth, gradient)
                 Case "triangle"
-                    Dim fill2 = ApplyAlpha(ParseColor(annotation.FillColor2, SKColors.White), alphaFactor)
-                    DrawTriangle(canvas, rect, fill, stroke, strokeWidth, annotation.FillKind, fill2, annotation.GradientAngleDegrees, annotation.GradientInverted)
+                    DrawTriangle(canvas, rect, fill, stroke, strokeWidth, gradient)
                 Case "cone"
                     DrawCone(canvas, rect, fill, stroke, strokeWidth)
                 Case "pyramid"
                     DrawPyramid(canvas, rect, fill, stroke, strokeWidth)
                 Case "trapezoid"
-                    Dim fill2 = ApplyAlpha(ParseColor(annotation.FillColor2, SKColors.White), alphaFactor)
-                    DrawTrapezoid(canvas, rect, fill, stroke, strokeWidth, annotation.FillKind, fill2, annotation.GradientAngleDegrees, annotation.GradientInverted)
+                    DrawTrapezoid(canvas, rect, fill, stroke, strokeWidth, gradient)
                 Case "diamond"
-                    Dim fill2 = ApplyAlpha(ParseColor(annotation.FillColor2, SKColors.White), alphaFactor)
-                    DrawDiamond(canvas, rect, fill, stroke, strokeWidth, annotation.FillKind, fill2, annotation.GradientAngleDegrees, annotation.GradientInverted)
+                    DrawDiamond(canvas, rect, fill, stroke, strokeWidth, gradient)
                 Case "polygon"
-                    Dim fill2 = ApplyAlpha(ParseColor(annotation.FillColor2, SKColors.White), alphaFactor)
-                    DrawRegularPolygon(canvas, rect, 6, fill, stroke, strokeWidth, annotation.FillKind, fill2, annotation.GradientAngleDegrees, annotation.GradientInverted)
+                    DrawRegularPolygon(canvas, rect, 6, fill, stroke, strokeWidth, gradient)
                 Case "star"
-                    Dim fill2 = ApplyAlpha(ParseColor(annotation.FillColor2, SKColors.White), alphaFactor)
-                    DrawStar(canvas, rect, 5, 0.45F, fill, stroke, strokeWidth, annotation.FillKind, fill2, annotation.GradientAngleDegrees, annotation.GradientInverted)
+                    DrawStar(canvas, rect, 5, 0.45F, fill, stroke, strokeWidth, gradient)
                 Case "doublestar", "double-star"
-                    Dim fill2 = ApplyAlpha(ParseColor(annotation.FillColor2, SKColors.White), alphaFactor)
-                    DrawStar(canvas, rect, 8, 0.42F, fill, stroke, strokeWidth, annotation.FillKind, fill2, annotation.GradientAngleDegrees, annotation.GradientInverted)
+                    DrawStar(canvas, rect, 8, 0.42F, fill, stroke, strokeWidth, gradient)
                 Case "spiral"
                     DrawSpiral(canvas, rect, stroke, strokeWidth)
                 Case "droplet"
-                    Dim fill2 = ApplyAlpha(ParseColor(annotation.FillColor2, SKColors.White), alphaFactor)
-                    DrawDroplet(canvas, rect, fill, stroke, strokeWidth, annotation.FillKind, fill2, annotation.GradientAngleDegrees, annotation.GradientInverted)
+                    DrawDroplet(canvas, rect, fill, stroke, strokeWidth, gradient)
                 Case "ellipsespeechbubble", "ellipse-speech-bubble"
-                    Dim fill2 = ApplyAlpha(ParseColor(annotation.FillColor2, SKColors.White), alphaFactor)
-                    DrawEllipseSpeechBubble(canvas, rect, fill, stroke, strokeWidth, annotation.FillKind, fill2, annotation.GradientAngleDegrees, annotation.GradientInverted)
+                    DrawEllipseSpeechBubble(canvas, rect, fill, stroke, strokeWidth, gradient)
                 Case "rectspeechbubble", "rect-speech-bubble"
-                    Dim fill2 = ApplyAlpha(ParseColor(annotation.FillColor2, SKColors.White), alphaFactor)
-                    DrawRectSpeechBubble(canvas, rect, fill, stroke, strokeWidth, annotation.FillKind, fill2, annotation.GradientAngleDegrees, annotation.GradientInverted)
+                    DrawRectSpeechBubble(canvas, rect, fill, stroke, strokeWidth, gradient)
                 Case "speechbubble", "speech-bubble", "bubble"
-                    Dim fill2 = ApplyAlpha(ParseColor(annotation.FillColor2, SKColors.White), alphaFactor)
-                    DrawSpeechBubble(canvas, rect, fill, stroke, strokeWidth, annotation.FillKind, fill2, annotation.GradientAngleDegrees, annotation.GradientInverted)
+                    DrawSpeechBubble(canvas, rect, fill, stroke, strokeWidth, gradient)
                 Case "heart"
-                    Dim fill2 = ApplyAlpha(ParseColor(annotation.FillColor2, SKColors.White), alphaFactor)
-                    DrawHeart(canvas, rect, fill, stroke, strokeWidth, annotation.FillKind, fill2, annotation.GradientAngleDegrees, annotation.GradientInverted)
+                    DrawHeart(canvas, rect, fill, stroke, strokeWidth, gradient)
                 Case "cloud"
-                    Dim fill2 = ApplyAlpha(ParseColor(annotation.FillColor2, SKColors.White), alphaFactor)
-                    DrawCloud(canvas, rect, fill, stroke, strokeWidth, annotation.FillKind, fill2, annotation.GradientAngleDegrees, annotation.GradientInverted)
+                    DrawCloud(canvas, rect, fill, stroke, strokeWidth, gradient)
                 Case "path"
                     ' Der freie Pfad geht durch DIESELBE Fuell- und Konturroutine wie jede andere
                     ' Form - Verlauf, Schatten, Leuchten und Mischmethode gelten damit unveraendert.
-                    Dim pathFill2 = ApplyAlpha(ParseColor(annotation.FillColor2, SKColors.White), alphaFactor)
                     Using freePath = BuildFreePath(rect, annotation.PathPoints, annotation.PathClosed)
                         If freePath IsNot Nothing Then
-                            DrawClosedPath(canvas, freePath, fill, stroke, strokeWidth, rect,
-                                           annotation.FillKind, pathFill2,
-                                           annotation.GradientAngleDegrees, annotation.GradientInverted)
+                            DrawClosedPath(canvas, freePath, fill, stroke, strokeWidth, rect, gradient)
                         End If
                     End Using
                 Case "line"
@@ -1489,26 +1520,23 @@ Namespace Services
                     ' Ohne Seitenverhaeltnis-Sperre wird das Bild auf die Objekt-Box gestreckt.
                     DrawImageAnnotation(canvas, annotation.ImagePath, rect, annotation.Opacity, stroke, annotation.StrokeWidth, stretchToFill:=(kind = "selectionimage" OrElse Not annotation.LockAspect))
                 Case "svg"
-                    Dim fill2 = ApplyAlpha(ParseColor(annotation.FillColor2, SKColors.White), alphaFactor)
-                    DrawSvgAnnotation(canvas, annotation.ImagePath, rect, fill, stroke, strokeWidth, annotation.FillKind, fill2, annotation.GradientAngleDegrees, annotation.GradientInverted)
+                    DrawSvgAnnotation(canvas, annotation.ImagePath, rect, fill, stroke, strokeWidth, gradient)
                 Case "watermark"
                     If Not String.IsNullOrWhiteSpace(annotation.ImagePath) Then
                         DrawImageAnnotation(canvas, annotation.ImagePath, rect, annotation.Opacity, stroke, annotation.StrokeWidth, stretchToFill:=Not annotation.LockAspect)
                     Else
                         Dim watermark = If(String.IsNullOrWhiteSpace(annotation.Text), "FerrumPix", annotation.Text)
-                        Dim fill2 = ApplyAlpha(ParseColor(annotation.FillColor2, SKColors.White), alphaFactor)
                         ' Pfad-Parameter durchreichen wie beim normalen Text: der Renderer kann
                         ' das laengst, hier wurden sie nur nicht weitergegeben - das Wasserzeichen
                         ' blieb dadurch immer gerade.
                         ' Ein Text-Wasserzeichen verwendet dieselbe Deckkraft wie jedes andere
                         ' Textobjekt. Die frühere Sonderregel begrenzte eine volle Füllfarbe hier
                         ' auf Alpha 130 (ca. 51 %) – unabhängig von der Deckkraft-Einstellung.
-                        DrawAnnotationText(canvas, watermark, x, y, maxWidth, fontSize, fill, stroke, annotation.StrokeWidth, annotation.FontFamily, rect, annotation.FillKind, fill2, annotation.GradientAngleDegrees, annotation.GradientInverted, annotation.TextPathKind, annotation.TextPathInverted, annotation.TextPathBend, annotation.TextPathStartOffset, annotation.LetterSpacingPercent, annotation.Bold, annotation.Italic, annotation.TextAlignment, annotation.PathPoints, annotation.PathClosed)
+                        DrawAnnotationText(canvas, watermark, x, y, maxWidth, fontSize, fill, stroke, annotation.StrokeWidth, annotation.FontFamily, rect, gradient, annotation.TextPathKind, annotation.TextPathInverted, annotation.TextPathBend, annotation.TextPathStartOffset, annotation.LetterSpacingPercent, annotation.Bold, annotation.Italic, annotation.TextAlignment, annotation.PathPoints, annotation.PathClosed)
                     End If
                 Case Else
                     If Not String.IsNullOrWhiteSpace(annotation.Text) Then
-                        Dim fill2 = ApplyAlpha(ParseColor(annotation.FillColor2, SKColors.White), alphaFactor)
-                        DrawAnnotationText(canvas, annotation.Text, x, y, maxWidth, fontSize, fill, stroke, annotation.StrokeWidth, annotation.FontFamily, rect, annotation.FillKind, fill2, annotation.GradientAngleDegrees, annotation.GradientInverted, annotation.TextPathKind, annotation.TextPathInverted, annotation.TextPathBend, annotation.TextPathStartOffset, annotation.LetterSpacingPercent, annotation.Bold, annotation.Italic, annotation.TextAlignment, annotation.PathPoints, annotation.PathClosed)
+                        DrawAnnotationText(canvas, annotation.Text, x, y, maxWidth, fontSize, fill, stroke, annotation.StrokeWidth, annotation.FontFamily, rect, gradient, annotation.TextPathKind, annotation.TextPathInverted, annotation.TextPathBend, annotation.TextPathStartOffset, annotation.LetterSpacingPercent, annotation.Bold, annotation.Italic, annotation.TextAlignment, annotation.PathPoints, annotation.PathClosed)
                     End If
             End Select
         End Sub
@@ -1544,7 +1572,11 @@ Namespace Services
         Private Const MaxGlowDilatePx As Single = 12.0F
         Private Const MaxGlowDim As Single = 512.0F
 
-        Private Shared Sub DrawAnnotationEffects(canvas As SKCanvas, kind As String, annotation As ImageAnnotation, rect As SKRect, x As Single, y As Single, maxWidth As Single, fontSize As Single, fill As SKColor, stroke As SKColor, strokeWidth As Single, alphaFactor As Single, canvasWidth As Integer, canvasHeight As Integer)
+        ''' <param name="inner">False: Schatten und Gluehen AUSSEN, vor dem Objekt zu zeichnen. True: die
+        ''' INNEREN, nach dem Objekt, auf seine Flaeche beschnitten (DrawInnerSilhouetteEffects). Beide
+        ''' Durchgaenge bauen dieselbe Silhouette.</param>
+        Private Shared Sub DrawAnnotationEffects(canvas As SKCanvas, kind As String, annotation As ImageAnnotation, rect As SKRect, x As Single, y As Single, maxWidth As Single, fontSize As Single, fill As SKColor, stroke As SKColor, strokeWidth As Single, alphaFactor As Single, canvasWidth As Integer, canvasHeight As Integer,
+                                                 Optional inner As Boolean = False)
             ' Bewusst relativ zur Objekt-Bounding-Box (nicht zur ganzen Canvas wie bei RetouchRadius/
             ' BrushSize) skaliert: bei kleinem Text auf einem großen Foto wäre ein an der Canvas-Größe
             ' bemessener Blur-Radius so riesig, dass er sich fast unsichtbar verwaschen würde (genau das
@@ -1594,7 +1626,141 @@ Namespace Services
                     maskCanvas.Translate(-maskLeft, -maskTop)
                     DrawAnnotationShape(maskCanvas, kind, annotation, rect, x, y, maxWidth, fontSize, fill, stroke, strokeWidth, alphaFactor)
                 End Using
-                DrawSilhouetteEffects(canvas, mask, maskLeft, maskTop, maskWidth, maskHeight, rect, annotation, alphaFactor)
+                If inner Then
+                    DrawInnerSilhouetteEffects(canvas, mask, maskLeft, maskTop, maskWidth, maskHeight, rect, annotation, alphaFactor)
+                Else
+                    DrawSilhouetteEffects(canvas, mask, maskLeft, maskTop, maskWidth, maskHeight, rect, annotation, alphaFactor)
+                End If
+            End Using
+        End Sub
+
+        ''' <summary>Innenschatten und inneres Gluehen AUF einer fertigen Silhouette, gezeichnet NACH
+        ''' dem Objekt. Masse und Formeln wie aussen (DrawSilhouetteEffects), damit derselbe Regler
+        ''' innen und aussen gleich weit reicht.
+        '''
+        ''' Beide entstehen aus dem GEGENSTUECK der Silhouette, also allem ausserhalb des Objekts:
+        ''' - Innenschatten: das Gegenstueck um den Versatz verschoben und weichgezeichnet. Bei Licht
+        '''   von oben links (Versatz nach unten rechts) faellt er an die obere linke Innenkante, wie in
+        '''   den ueblichen Programmen.
+        ''' - Inneres Gluehen: das Gegenstueck nach innen ausgebreitet (Dilate) und weichgezeichnet.
+        ''' Danach wird beides auf die Silhouette beschnitten (DstIn): es bleibt auf der Flaeche, und
+        ''' eine halb deckende Fuellung traegt es auch nur halb. Groesse und Abrunden gelten nur aussen.
+        '''
+        ''' Am Rand der Maske endet das Gegenstueck; die Maske hat aber ringsum mindestens so viel Platz,
+        ''' wie Versatz und Weichzeichnung reichen (DrawAnnotationEffects), dort liegt nichts vom Objekt.</summary>
+        Friend Shared Sub DrawInnerSilhouetteEffects(canvas As SKCanvas, mask As SKBitmap,
+                                                     maskLeft As Integer, maskTop As Integer,
+                                                     maskWidth As Integer, maskHeight As Integer,
+                                                     rect As SKRect, annotation As ImageAnnotation, alphaFactor As Single)
+            Dim innerShadow = annotation.ShadowEnabled AndAlso ImageAnnotation.EffectDrawsInside(annotation.ShadowPlacement)
+            Dim innerGlow = annotation.GlowEnabled AndAlso ImageAnnotation.EffectDrawsInside(annotation.GlowPlacement)
+            If Not innerShadow AndAlso Not innerGlow Then Return
+
+            Dim objSize = Math.Max(1.0F, Math.Min(rect.Width, rect.Height))
+            Dim glowReach = objSize * Clamp(annotation.GlowBlur, 0, 100) / 100.0F * 1.5F
+            Dim glowDilate = Math.Max(0, CInt(Math.Round(glowReach * 0.5F)))
+            Dim glowSigma = Math.Max(0.1F, glowReach * 0.17F)
+            Dim shadowBlurPx = objSize * Clamp(annotation.ShadowBlur, 0, 100) / 100.0F * ShadowBlurSigmaFactor
+            Dim offsetX = objSize * annotation.ShadowOffsetXPercent / 100.0F
+            Dim offsetY = objSize * annotation.ShadowOffsetYPercent / 100.0F
+
+            ' Das Gegenstueck: ueberall deckend, wo die Silhouette es nicht ist.
+            Using inverse = New SKBitmap(maskWidth, maskHeight, SKColorType.Rgba8888, SKAlphaType.Premul)
+                Using inverseCanvas = New SKCanvas(inverse)
+                    inverseCanvas.Clear(SKColors.Black)
+                    Using knockOut = New SKPaint With {.BlendMode = SKBlendMode.DstOut}
+                        inverseCanvas.DrawBitmap(mask, 0, 0, knockOut)
+                    End Using
+                End Using
+
+                If innerGlow Then
+                    Dim glowColor = ApplyAlpha(ParseColor(annotation.GlowColor, SKColors.Yellow), alphaFactor * Clamp(annotation.GlowStrength, 0, 100) / 100.0F)
+                    ' Kleiner gerechnet wie aussen: Dilate kostet linear im Radius (siehe dort).
+                    Dim glowScale = 1.0F
+                    If glowDilate > MaxGlowDilatePx Then glowScale = MaxGlowDilatePx / CSng(glowDilate)
+                    Dim longestSide = CSng(Math.Max(maskWidth, maskHeight))
+                    If longestSide > MaxGlowDim Then glowScale = Math.Min(glowScale, MaxGlowDim / longestSide)
+                    Dim glowW = Math.Max(1, CInt(Math.Round(maskWidth * glowScale)))
+                    Dim glowH = Math.Max(1, CInt(Math.Round(maskHeight * glowScale)))
+                    Dim scaledDilate = Math.Max(0, CInt(Math.Round(glowDilate * glowScale)))
+                    Dim scaledSigma = Math.Max(0.1F, glowSigma * glowScale)
+                    ' Erst verkleinern, dann filtern: unter einer skalierten Leinwand rechnete Skia die
+                    ' Radien von Dilate und Blur noch einmal mit, sie waeren doppelt verkleinert.
+                    Using inverseSmall = New SKBitmap(glowW, glowH, SKColorType.Rgba8888, SKAlphaType.Premul)
+                        Using smallCanvas = New SKCanvas(inverseSmall)
+                            smallCanvas.Clear(SKColors.Transparent)
+                            DrawBitmapSampled(smallCanvas, inverse, New SKRect(0, 0, maskWidth, maskHeight),
+                                              New SKRect(0, 0, glowW, glowH), SamplingHigh, Nothing)
+                        End Using
+                        Using glowSmall = New SKBitmap(glowW, glowH, SKColorType.Rgba8888, SKAlphaType.Premul)
+                            Using glowCanvas = New SKCanvas(glowSmall)
+                                glowCanvas.Clear(SKColors.Transparent)
+                                Using glowColorFilter = SKColorFilter.CreateBlendMode(glowColor, SKBlendMode.SrcIn)
+                                    Using coloredFilter = SKImageFilter.CreateColorFilter(glowColorFilter)
+                                        Dim spreadFilter As SKImageFilter = coloredFilter
+                                        Dim dilatedOwned As SKImageFilter = Nothing
+                                        Try
+                                            If scaledDilate > 0 Then
+                                                dilatedOwned = SKImageFilter.CreateDilate(scaledDilate, scaledDilate, coloredFilter)
+                                                spreadFilter = dilatedOwned
+                                            End If
+                                            Using glowImageFilter = SKImageFilter.CreateBlur(scaledSigma, scaledSigma, spreadFilter)
+                                                Using paint = New SKPaint With {.ImageFilter = glowImageFilter, .IsAntialias = True}
+                                                    glowCanvas.DrawBitmap(inverseSmall, 0, 0, paint)
+                                                End Using
+                                            End Using
+                                        Finally
+                                            dilatedOwned?.Dispose()
+                                        End Try
+                                    End Using
+                                End Using
+                            End Using
+                            DrawClippedToSilhouette(canvas, mask, maskLeft, maskTop, maskWidth, maskHeight,
+                                                    Sub(layerCanvas)
+                                                        DrawBitmapSampled(layerCanvas, glowSmall,
+                                                                          New SKRect(0, 0, glowW, glowH),
+                                                                          New SKRect(0, 0, maskWidth, maskHeight),
+                                                                          SamplingHigh, Nothing)
+                                                    End Sub)
+                        End Using
+                    End Using
+                End If
+
+                If innerShadow Then
+                    Dim shadowColor = ApplyAlpha(ParseColor(annotation.ShadowColor, New SKColor(0, 0, 0, 128)), alphaFactor * Clamp(annotation.ShadowStrength, 0, 100) / 100.0F)
+                    Dim shadowSigma = Math.Max(0.1F, shadowBlurPx)
+                    DrawClippedToSilhouette(canvas, mask, maskLeft, maskTop, maskWidth, maskHeight,
+                                            Sub(layerCanvas)
+                                                Using shadowColorFilter = SKColorFilter.CreateBlendMode(shadowColor, SKBlendMode.SrcIn)
+                                                    Using shadowImageFilter = SKImageFilter.CreateBlur(shadowSigma, shadowSigma)
+                                                        Using paint = New SKPaint With {.ColorFilter = shadowColorFilter, .ImageFilter = shadowImageFilter}
+                                                            layerCanvas.DrawBitmap(inverse, offsetX, offsetY, paint)
+                                                        End Using
+                                                    End Using
+                                                End Using
+                                            End Sub)
+                End If
+            End Using
+        End Sub
+
+        ''' <summary>Zeichnet <paramref name="draw"/> in eine eigene Ebene der Maskengroesse, behaelt
+        ''' davon nur, was in der Silhouette liegt (DstIn mit ihrer Deckung), und legt das Ergebnis
+        ''' an die Stelle der Maske.</summary>
+        Private Shared Sub DrawClippedToSilhouette(canvas As SKCanvas, mask As SKBitmap,
+                                                   maskLeft As Integer, maskTop As Integer,
+                                                   maskWidth As Integer, maskHeight As Integer,
+                                                   draw As Action(Of SKCanvas))
+            Using layer = New SKBitmap(maskWidth, maskHeight, SKColorType.Rgba8888, SKAlphaType.Premul)
+                Using layerCanvas = New SKCanvas(layer)
+                    layerCanvas.Clear(SKColors.Transparent)
+                    draw(layerCanvas)
+                    Using clip = New SKPaint With {.BlendMode = SKBlendMode.DstIn}
+                        layerCanvas.DrawBitmap(mask, 0, 0, clip)
+                    End Using
+                End Using
+                Using paint = New SKPaint With {.BlendMode = SKBlendMode.SrcOver, .IsAntialias = True}
+                    canvas.DrawBitmap(layer, maskLeft, maskTop, paint)
+                End Using
             End Using
         End Sub
 
@@ -1617,7 +1783,7 @@ Namespace Services
             Dim offsetX = objSize * annotation.ShadowOffsetXPercent / 100.0F
             Dim offsetY = objSize * annotation.ShadowOffsetYPercent / 100.0F
 
-                If annotation.GlowEnabled Then
+                If annotation.GlowEnabled AndAlso ImageAnnotation.EffectDrawsOutside(annotation.GlowPlacement) Then
                     Dim glowColor = ApplyAlpha(ParseColor(annotation.GlowColor, SKColors.Yellow), alphaFactor * Clamp(annotation.GlowStrength, 0, 100) / 100.0F)
 
                     ' Das Glühen wird in KLEINERER Auflösung gerechnet und danach hochskaliert. Grund: Skias
@@ -1685,7 +1851,7 @@ Namespace Services
                     End Using
                 End If
 
-                If annotation.ShadowEnabled Then
+                If annotation.ShadowEnabled AndAlso ImageAnnotation.EffectDrawsOutside(annotation.ShadowPlacement) Then
                     Dim shadowColor = ApplyAlpha(ParseColor(annotation.ShadowColor, New SKColor(0, 0, 0, 128)), alphaFactor * Clamp(annotation.ShadowStrength, 0, 100) / 100.0F)
                     Dim shadowSource = mask
                     Dim roundedShadowMask As SKBitmap = Nothing
@@ -1871,7 +2037,7 @@ Namespace Services
             Return ""
         End Function
 
-        Private Shared Sub DrawAnnotationText(canvas As SKCanvas, text As String, x As Single, y As Single, maxWidth As Single, fontSize As Single, fill As SKColor, stroke As SKColor, strokeWidth As Single, fontFamily As String, bounds As SKRect, Optional fillKind As String = "Solid", Optional fill2 As SKColor = Nothing, Optional gradientAngleDegrees As Single = 0, Optional gradientInverted As Boolean = False, Optional textPathKind As String = "", Optional textPathInverted As Boolean = False, Optional textPathBend As Single = 0, Optional textPathStartOffset As Single = 0, Optional letterSpacingPercent As Single = 0, Optional bold As Boolean = False, Optional italic As Boolean = False, Optional textAlignment As String = "Left", Optional pathPoints As String = "", Optional pathClosed As Boolean = False)
+        Private Shared Sub DrawAnnotationText(canvas As SKCanvas, text As String, x As Single, y As Single, maxWidth As Single, fontSize As Single, fill As SKColor, stroke As SKColor, strokeWidth As Single, fontFamily As String, bounds As SKRect, Optional gradient As GradientFillSpec = Nothing, Optional textPathKind As String = "", Optional textPathInverted As Boolean = False, Optional textPathBend As Single = 0, Optional textPathStartOffset As Single = 0, Optional letterSpacingPercent As Single = 0, Optional bold As Boolean = False, Optional italic As Boolean = False, Optional textAlignment As String = "Left", Optional pathPoints As String = "", Optional pathClosed As Boolean = False)
             ' Text an Pfad: EIN Zweig fuer Kontur und Fuellung, damit beide exakt dieselben
             ' Glyphenpositionen bekommen (und damit auch die Effekt-Maske, die ueber dieselbe
             ' Routine laeuft - Regel "Objektinhalt nur aus GENAU EINEM Renderpfad").
@@ -1963,15 +2129,15 @@ Namespace Services
                         End Using
                     End If
 
-                    Using fillPaint = New SKPaint With {
+                    ' Der Schattierer gehoert diesem Aufruf und wird mit dem Stift entsorgt.
+                    Using textShader = If(gradient Is Nothing, Nothing, CreateFillGradientShader(bounds, gradient)),
+                          fillPaint = New SKPaint With {
                         .Color = fill,
                         .IsAntialias = True,
                         .Style = SKPaintStyle.Fill
                     }
-                        Dim normalizedFillKind = If(fillKind, "Solid").Trim().ToLowerInvariant()
-                        If normalizedFillKind = "lineargradient" OrElse normalizedFillKind = "radialgradient" Then
-                            fillPaint.Shader = CreateFillGradientShader(bounds, normalizedFillKind, fill, fill2, gradientAngleDegrees, gradientInverted)
-                        End If
+                        If textShader IsNot Nothing Then fillPaint.Shader = textShader
+                        ApplyFillEraser(fillPaint)
                         If path IsNot Nothing Then
                             DrawTextOnPathSpaced(canvas, pathText, path, font, fillPaint, spacing)
                         Else
@@ -2282,7 +2448,7 @@ Namespace Services
         ''' Skaliert wie SvgIcon.vb (uniform/"contain", zentriert anhand der eigenen Bounds) statt
         ''' pro Achse getrennt zu strecken - sonst weicht das gebackene Rendering bei nicht-quadratischen
         ''' Ziel-Rects (jedes nicht-quadratische Foto) sichtbar von der Live-Vorschau ab.
-        Private Shared Sub DrawSvgAnnotation(canvas As SKCanvas, iconPath As String, rect As SKRect, fill As SKColor, stroke As SKColor, strokeWidth As Single, Optional fillKind As String = "Solid", Optional fill2 As SKColor = Nothing, Optional gradientAngleDegrees As Single = 0, Optional gradientInverted As Boolean = False)
+        Private Shared Sub DrawSvgAnnotation(canvas As SKCanvas, iconPath As String, rect As SKRect, fill As SKColor, stroke As SKColor, strokeWidth As Single, Optional gradient As GradientFillSpec = Nothing)
             If String.IsNullOrWhiteSpace(iconPath) Then Return
             Dim shape = GetShapePath(iconPath)
             If shape Is Nothing OrElse shape.Path.IsEmpty OrElse shape.Bounds.Width <= 0 OrElse shape.Bounds.Height <= 0 Then Return
@@ -2295,14 +2461,13 @@ Namespace Services
             canvas.Scale(scaleX, scaleY)
             canvas.Translate(-shape.Bounds.Left, -shape.Bounds.Top)
 
-            Dim normalizedFillKind = If(fillKind, "Solid").Trim().ToLowerInvariant()
-            If fill.Alpha > 0 Then
-                If normalizedFillKind = "lineargradient" OrElse normalizedFillKind = "radialgradient" Then
+            If fill.Alpha > 0 OrElse (gradient IsNot Nothing AndAlso gradient.HasVisibleColor()) Then
+                If gradient IsNot Nothing Then
                     ''' shape.Bounds statt rect: der Canvas ist an dieser Stelle bereits in den lokalen
                     ''' Pfad-Koordinatenraum transformiert (s.o.), der Shader muss im selben Koordinatenraum
                     ''' wie der gezeichnete Pfad definiert werden, sonst landet der Verlauf weit außerhalb
                     ''' des sichtbaren Bereichs und wirkt wie eine einfarbige Füllung.
-                    Using shader = CreateFillGradientShader(shape.Bounds, normalizedFillKind, fill, fill2, gradientAngleDegrees, gradientInverted)
+                    Using shader = CreateFillGradientShader(shape.Bounds, gradient)
                         Using fillPaint = New SKPaint With {.Shader = shader, .Style = SKPaintStyle.Fill, .IsAntialias = True}
                             canvas.DrawPath(shape.Path, fillPaint)
                         End Using
@@ -2460,10 +2625,9 @@ Namespace Services
             Return New SKRect(left, top, left + drawWidth, top + drawHeight)
         End Function
 
-        Private Shared Sub DrawShape(canvas As SKCanvas, rect As SKRect, fill As SKColor, stroke As SKColor, strokeWidth As Single, ellipse As Boolean, Optional fillKind As String = "Solid", Optional fill2 As SKColor = Nothing, Optional gradientAngleDegrees As Single = 0, Optional gradientInverted As Boolean = False)
-            Dim normalizedFillKind = If(fillKind, "Solid").Trim().ToLowerInvariant()
-            If normalizedFillKind = "lineargradient" OrElse normalizedFillKind = "radialgradient" Then
-                Using shader = CreateFillGradientShader(rect, normalizedFillKind, fill, fill2, gradientAngleDegrees, gradientInverted)
+        Private Shared Sub DrawShape(canvas As SKCanvas, rect As SKRect, fill As SKColor, stroke As SKColor, strokeWidth As Single, ellipse As Boolean, Optional gradient As GradientFillSpec = Nothing)
+            If gradient IsNot Nothing Then
+                Using shader = CreateFillGradientShader(rect, gradient)
                     Using fillPaint = New SKPaint With {.Shader = shader, .Style = SKPaintStyle.Fill, .IsAntialias = True}
                         If ellipse Then canvas.DrawOval(rect, fillPaint) Else canvas.DrawRect(rect, fillPaint)
                     End Using
@@ -2484,29 +2648,153 @@ Namespace Services
         ' Verlauf ist bewusst auf das übergebene Rect begrenzt (nicht die ganze Canvas wie beim
         ' bestehenden Vignette-Radialgradient in ApplyVignette) - Zentrum/Winkel beziehen sich auf
         ' die Objekt-Bounds, damit der Verlauf mit dem Objekt mitwandert/rotiert.
-        Private Shared Function CreateFillGradientShader(rect As SKRect, normalizedFillKind As String, color1 As SKColor, color2 As SKColor, angleDegrees As Single, Optional inverted As Boolean = False) As SKShader
-            Dim startColor = If(inverted, color2, color1)
-            Dim endColor = If(inverted, color1, color2)
-
-            If normalizedFillKind = "radialgradient" Then
-                Dim center = New SKPoint(rect.MidX, rect.MidY)
-                Dim radius = CSng(Math.Sqrt(CDbl(rect.Width) * rect.Width + CDbl(rect.Height) * rect.Height) / 2.0)
-                Return SKShader.CreateRadialGradient(center, Math.Max(1.0F, radius), New SKColor() {startColor, endColor}, Nothing, SKShaderTileMode.Clamp)
-            End If
-
-            Dim angleRad = angleDegrees * Math.PI / 180.0
-            Dim dx = CSng(Math.Cos(angleRad)) * rect.Width / 2.0F
-            Dim dy = CSng(Math.Sin(angleRad)) * rect.Height / 2.0F
-            Dim startPoint = New SKPoint(rect.MidX - dx, rect.MidY - dy)
-            Dim endPoint = New SKPoint(rect.MidX + dx, rect.MidY + dy)
-            Return SKShader.CreateLinearGradient(startPoint, endPoint, New SKColor() {startColor, endColor}, Nothing, SKShaderTileMode.Clamp)
+        '
+        ' Die Formen im Einzelnen, alle auf das Rechteck des Objekts bezogen:
+        '   Linear      Gerade Bahnen im eingestellten Winkel. Die Laenge ist die Ausdehnung des
+        '               Rechtecks in dieser Richtung, damit erster und letzter Stopp bei JEDEM Winkel
+        '               genau an den aeussersten Ecken liegen.
+        '   Radial      Eine Ellipse, die das Rechteck innen beruehrt: bei Kreis, Ellipse und Text
+        '               erreicht der Verlauf seinen letzten Stopp an der Kante. Frueher reichte er bis
+        '               zur Ecke des umschliessenden Rechtecks, ein Kreis zeigte dann nie die letzte
+        '               Farbe.
+        '   Winkel      Einmal im Kreis herum, der Winkel dreht den Anfang.
+        '   Gespiegelt  Linear von der Mitte aus nach beiden Seiten.
+        '   Raute       Wie Radial, nur mit Abstand |x| + |y| statt der Ellipse.
+        ' Groesse und Mitte verschieben bzw. skalieren das alles, die Wiederholung entscheidet,
+        ' was jenseits des letzten Stopps liegt.
+        Private Shared Function IsGradientFillKind(fillKind As String) As Boolean
+            Return GradientFillSpec.IsGradientKind(fillKind)
         End Function
 
-        Private Shared Sub DrawRoundedRectangle(canvas As SKCanvas, rect As SKRect, fill As SKColor, stroke As SKColor, strokeWidth As Single, Optional fillKind As String = "Solid", Optional fill2 As SKColor = Nothing, Optional gradientAngleDegrees As Single = 0, Optional gradientInverted As Boolean = False)
+        ''' <summary>Der bisherige Einstieg mit zwei Farben, fuer den Rahmen.</summary>
+        Private Shared Function CreateFillGradientShader(rect As SKRect, normalizedFillKind As String, color1 As SKColor, color2 As SKColor, angleDegrees As Single, Optional inverted As Boolean = False) As SKShader
+            Dim spec = New GradientFillSpec With {
+                .Kind = GradientFillSpec.NormalizeKind(normalizedFillKind),
+                .Stops = New List(Of GradientStopValue) From {New GradientStopValue(SkColorToArgb(color1), 0), New GradientStopValue(SkColorToArgb(color2), 100)},
+                .AngleDegrees = angleDegrees,
+                .Inverted = inverted
+            }
+            If spec.Kind = GradientFillSpec.KindSolid Then spec.Kind = GradientFillSpec.KindLinear
+            Return CreateFillGradientShader(rect, spec)
+        End Function
+
+        Private Shared Function SkColorToArgb(c As SKColor) As UInteger
+            Return (CUInt(c.Alpha) << 24) Or (CUInt(c.Red) << 16) Or (CUInt(c.Green) << 8) Or CUInt(c.Blue)
+        End Function
+
+        Friend Shared Function CreateFillGradientShader(rect As SKRect, spec As GradientFillSpec) As SKShader
+            Dim stops = spec.EffectiveStops()
+            Dim colors = stops.Select(Function(s) New SKColor(s.R, s.G, s.B, s.A)).ToArray()
+            Dim positions = stops.Select(Function(s) CSng(s.Position / 100.0)).ToArray()
+            Dim tile = SKShaderTileMode.Clamp
+            Select Case spec.Repeat
+                Case GradientFillSpec.RepeatRepeat : tile = SKShaderTileMode.Repeat
+                Case GradientFillSpec.RepeatMirror : tile = SKShaderTileMode.Mirror
+            End Select
+
+            Dim w = Math.Max(1.0F, rect.Width)
+            Dim h = Math.Max(1.0F, rect.Height)
+            Dim scale = Math.Max(0.1F, spec.ScalePercent / 100.0F)
+            Dim center = New SKPoint(rect.MidX + spec.OffsetXPercent / 100.0F * w / 2.0F,
+                                     rect.MidY + spec.OffsetYPercent / 100.0F * h / 2.0F)
+            Dim angleRad = spec.AngleDegrees * Math.PI / 180.0
+            Dim cos = CSng(Math.Cos(angleRad)), sin = CSng(Math.Sin(angleRad))
+
+            Select Case spec.Kind
+                Case GradientFillSpec.KindRadial
+                    ' Kreis mit dem Radius der halben Breite, in der Hoehe auf die halbe Hoehe gestaucht.
+                    Dim rx = w / 2.0F * scale
+                    Dim ry = h / 2.0F * scale
+                    Dim matrix = SKMatrix.CreateScale(1.0F, ry / rx, center.X, center.Y)
+                    Return SKShader.CreateRadialGradient(center, Math.Max(0.5F, rx), colors, positions, tile, matrix)
+
+                Case GradientFillSpec.KindAngle
+                    ' Skia beginnt bei 3 Uhr und laeuft im Uhrzeigersinn; der Winkel dreht den Anfang.
+                    Dim matrix = SKMatrix.CreateRotationDegrees(spec.AngleDegrees, center.X, center.Y)
+                    Return SKShader.CreateSweepGradient(center, colors, positions, SKShaderTileMode.Clamp, 0.0F, 360.0F, matrix)
+
+                Case GradientFillSpec.KindDiamond
+                    Dim diamond = CreateDiamondShader(center, w / 2.0F * scale, h / 2.0F * scale, spec.AngleDegrees, colors, positions, tile)
+                    If diamond IsNot Nothing Then Return diamond
+                    Dim fallback = SKMatrix.CreateScale(1.0F, h / w, center.X, center.Y)
+                    Return SKShader.CreateRadialGradient(center, Math.Max(0.5F, w / 2.0F * scale), colors, positions, tile, fallback)
+            End Select
+
+            ' Linear und Gespiegelt: halbe Ausdehnung des Rechtecks in Verlaufsrichtung.
+            Dim half = (Math.Abs(w * cos) + Math.Abs(h * sin)) / 2.0F * scale
+            half = Math.Max(0.5F, half)
+            Dim startPoint = New SKPoint(center.X - cos * half, center.Y - sin * half)
+            Dim endPoint = New SKPoint(center.X + cos * half, center.Y + sin * half)
+            If spec.Kind = GradientFillSpec.KindReflected Then
+                ' Erster Stopp in der Mitte, nach beiden Seiten hin zum letzten: die Stopps werden
+                ' gespiegelt auf die ganze Strecke gelegt.
+                Dim n = colors.Length
+                Dim mirroredColors(2 * n - 1) As SKColor
+                Dim mirroredPositions(2 * n - 1) As Single
+                For i = 0 To n - 1
+                    mirroredColors(n - 1 - i) = colors(i)
+                    mirroredPositions(n - 1 - i) = 0.5F - positions(i) / 2.0F
+                    mirroredColors(n + i) = colors(i)
+                    mirroredPositions(n + i) = 0.5F + positions(i) / 2.0F
+                Next
+                Return SKShader.CreateLinearGradient(startPoint, endPoint, mirroredColors, mirroredPositions, tile)
+            End If
+            Return SKShader.CreateLinearGradient(startPoint, endPoint, colors, positions, tile)
+        End Function
+
+        ' Raute: Skia kennt diese Form nicht. Ein kleiner Laufzeit-Schattierer rechnet je Punkt den
+        ' Abstand |x| + |y| im Einheitsquadrat der Raute und liest die Farbe aus einem gewoehnlichen
+        ' linearen Verlauf von 0 bis 1 - so gelten Stopps und Wiederholung genau wie bei den
+        ' anderen Formen. Lage, Groesse und Drehung stehen in der Matrix.
+        Private Const DiamondShaderSource As String =
+            "uniform shader ramp;" & vbLf &
+            "half4 main(float2 p) {" & vbLf &
+            "    float t = abs(p.x) + abs(p.y);" & vbLf &
+            "    return ramp.eval(float2(t, 0.5));" & vbLf &
+            "}"
+
+        Private Shared _diamondEffect As SKRuntimeEffect
+        Private Shared _diamondEffectFailed As Boolean
+        Private Shared ReadOnly _diamondEffectLock As New Object()
+
+        Private Shared Function CreateDiamondShader(center As SKPoint, rx As Single, ry As Single, angleDegrees As Single,
+                                                    colors As SKColor(), positions As Single(), tile As SKShaderTileMode) As SKShader
+            Dim effect As SKRuntimeEffect
+            SyncLock _diamondEffectLock
+                If _diamondEffect Is Nothing AndAlso Not _diamondEffectFailed Then
+                    Dim errors As String = Nothing
+                    _diamondEffect = SKRuntimeEffect.CreateShader(DiamondShaderSource, errors)
+                    If _diamondEffect Is Nothing Then
+                        _diamondEffectFailed = True
+                        DiagnosticLogService.LogAlways("Fill.Diamond", "Laufzeit-Schattierer nicht uebersetzt: " & errors)
+                    End If
+                End If
+                effect = _diamondEffect
+            End SyncLock
+            If effect Is Nothing Then Return Nothing
+
+            ' KEIN SKRuntimeShaderBuilder: dessen Dispose entsorgt auch den EFFEKT, und der ist hier
+            ' fuer alle Aufrufe zwischengespeichert. Nach dem ersten Rautenverlauf zeigte er auf
+            ' freigegebenen Speicher, der zweite stuerzte in SkRuntimeEffect::uniformSize ab
+            ' (Nutzerbefund: Absturz beim Fuellen). Uniforms und Children werden entsorgt, der
+            ' Effekt bleibt; der fertige Schattierer haelt seinen Verlauf selbst.
+            Using ramp = SKShader.CreateLinearGradient(New SKPoint(0, 0), New SKPoint(1, 0), colors, positions, tile)
+                Using uniforms = New SKRuntimeEffectUniforms(effect)
+                    Using children = New SKRuntimeEffectChildren(effect)
+                        children.Add("ramp", ramp)
+                        Dim matrix = SKMatrix.CreateTranslation(center.X, center.Y).
+                            PreConcat(SKMatrix.CreateRotationDegrees(angleDegrees)).
+                            PreConcat(SKMatrix.CreateScale(Math.Max(0.5F, rx), Math.Max(0.5F, ry)))
+                        Return effect.ToShader(uniforms, children, matrix)
+                    End Using
+                End Using
+            End Using
+        End Function
+
+        Private Shared Sub DrawRoundedRectangle(canvas As SKCanvas, rect As SKRect, fill As SKColor, stroke As SKColor, strokeWidth As Single, Optional gradient As GradientFillSpec = Nothing)
             Dim radius = Math.Min(rect.Width, rect.Height) * 0.18F
-            Dim normalizedFillKind = If(fillKind, "Solid").Trim().ToLowerInvariant()
-            If normalizedFillKind = "lineargradient" OrElse normalizedFillKind = "radialgradient" Then
-                Using shader = CreateFillGradientShader(rect, normalizedFillKind, fill, fill2, gradientAngleDegrees, gradientInverted)
+            If gradient IsNot Nothing Then
+                Using shader = CreateFillGradientShader(rect, gradient)
                     Using fillPaint = New SKPaint With {.Shader = shader, .Style = SKPaintStyle.Fill, .IsAntialias = True}
                         canvas.DrawRoundRect(rect, radius, radius, fillPaint)
                     End Using
@@ -2521,20 +2809,20 @@ Namespace Services
             End Using
         End Sub
 
-        Private Shared Sub DrawSquare(canvas As SKCanvas, rect As SKRect, fill As SKColor, stroke As SKColor, strokeWidth As Single, Optional fillKind As String = "Solid", Optional fill2 As SKColor = Nothing, Optional gradientAngleDegrees As Single = 0, Optional gradientInverted As Boolean = False)
+        Private Shared Sub DrawSquare(canvas As SKCanvas, rect As SKRect, fill As SKColor, stroke As SKColor, strokeWidth As Single, Optional gradient As GradientFillSpec = Nothing)
             Dim side = Math.Min(rect.Width, rect.Height)
             Dim x = rect.MidX - side / 2.0F
             Dim y = rect.MidY - side / 2.0F
-            DrawShape(canvas, New SKRect(x, y, x + side, y + side), fill, stroke, strokeWidth, False, fillKind, fill2, gradientAngleDegrees, gradientInverted)
+            DrawShape(canvas, New SKRect(x, y, x + side, y + side), fill, stroke, strokeWidth, False, gradient)
         End Sub
 
-        Private Shared Sub DrawTriangle(canvas As SKCanvas, rect As SKRect, fill As SKColor, stroke As SKColor, strokeWidth As Single, Optional fillKind As String = "Solid", Optional fill2 As SKColor = Nothing, Optional gradientAngleDegrees As Single = 0, Optional gradientInverted As Boolean = False)
+        Private Shared Sub DrawTriangle(canvas As SKCanvas, rect As SKRect, fill As SKColor, stroke As SKColor, strokeWidth As Single, Optional gradient As GradientFillSpec = Nothing)
             Using path = New SKPath()
                 path.MoveTo(rect.MidX, rect.Top)
                 path.LineTo(rect.Right, rect.Bottom)
                 path.LineTo(rect.Left, rect.Bottom)
                 path.Close()
-                DrawClosedPath(canvas, path, fill, stroke, strokeWidth, rect, fillKind, fill2, gradientAngleDegrees, gradientInverted)
+                DrawClosedPath(canvas, path, fill, stroke, strokeWidth, rect, gradient)
             End Using
         End Sub
 
@@ -2562,7 +2850,7 @@ Namespace Services
             End Using
         End Sub
 
-        Private Shared Sub DrawTrapezoid(canvas As SKCanvas, rect As SKRect, fill As SKColor, stroke As SKColor, strokeWidth As Single, Optional fillKind As String = "Solid", Optional fill2 As SKColor = Nothing, Optional gradientAngleDegrees As Single = 0, Optional gradientInverted As Boolean = False)
+        Private Shared Sub DrawTrapezoid(canvas As SKCanvas, rect As SKRect, fill As SKColor, stroke As SKColor, strokeWidth As Single, Optional gradient As GradientFillSpec = Nothing)
             Using path = New SKPath()
                 Dim inset = rect.Width * 0.22F
                 path.MoveTo(rect.Left + inset, rect.Top)
@@ -2570,29 +2858,29 @@ Namespace Services
                 path.LineTo(rect.Right, rect.Bottom)
                 path.LineTo(rect.Left, rect.Bottom)
                 path.Close()
-                DrawClosedPath(canvas, path, fill, stroke, strokeWidth, rect, fillKind, fill2, gradientAngleDegrees, gradientInverted)
+                DrawClosedPath(canvas, path, fill, stroke, strokeWidth, rect, gradient)
             End Using
         End Sub
 
-        Private Shared Sub DrawDiamond(canvas As SKCanvas, rect As SKRect, fill As SKColor, stroke As SKColor, strokeWidth As Single, Optional fillKind As String = "Solid", Optional fill2 As SKColor = Nothing, Optional gradientAngleDegrees As Single = 0, Optional gradientInverted As Boolean = False)
+        Private Shared Sub DrawDiamond(canvas As SKCanvas, rect As SKRect, fill As SKColor, stroke As SKColor, strokeWidth As Single, Optional gradient As GradientFillSpec = Nothing)
             Using path = New SKPath()
                 path.MoveTo(rect.MidX, rect.Top)
                 path.LineTo(rect.Right, rect.MidY)
                 path.LineTo(rect.MidX, rect.Bottom)
                 path.LineTo(rect.Left, rect.MidY)
                 path.Close()
-                DrawClosedPath(canvas, path, fill, stroke, strokeWidth, rect, fillKind, fill2, gradientAngleDegrees, gradientInverted)
+                DrawClosedPath(canvas, path, fill, stroke, strokeWidth, rect, gradient)
             End Using
         End Sub
 
-        Private Shared Sub DrawRegularPolygon(canvas As SKCanvas, rect As SKRect, sides As Integer, fill As SKColor, stroke As SKColor, strokeWidth As Single, Optional fillKind As String = "Solid", Optional fill2 As SKColor = Nothing, Optional gradientAngleDegrees As Single = 0, Optional gradientInverted As Boolean = False)
+        Private Shared Sub DrawRegularPolygon(canvas As SKCanvas, rect As SKRect, sides As Integer, fill As SKColor, stroke As SKColor, strokeWidth As Single, Optional gradient As GradientFillSpec = Nothing)
             Using path = New SKPath()
                 AddRegularPoints(path, rect, Math.Max(3, sides), 0.45F, -Math.PI / 2)
-                DrawClosedPath(canvas, path, fill, stroke, strokeWidth, rect, fillKind, fill2, gradientAngleDegrees, gradientInverted)
+                DrawClosedPath(canvas, path, fill, stroke, strokeWidth, rect, gradient)
             End Using
         End Sub
 
-        Private Shared Sub DrawStar(canvas As SKCanvas, rect As SKRect, points As Integer, innerRadiusFactor As Single, fill As SKColor, stroke As SKColor, strokeWidth As Single, Optional fillKind As String = "Solid", Optional fill2 As SKColor = Nothing, Optional gradientAngleDegrees As Single = 0, Optional gradientInverted As Boolean = False)
+        Private Shared Sub DrawStar(canvas As SKCanvas, rect As SKRect, points As Integer, innerRadiusFactor As Single, fill As SKColor, stroke As SKColor, strokeWidth As Single, Optional gradient As GradientFillSpec = Nothing)
             Using path = New SKPath()
                 Dim cx = rect.MidX
                 Dim cy = rect.MidY
@@ -2607,11 +2895,11 @@ Namespace Services
                     If i = 0 Then path.MoveTo(x, y) Else path.LineTo(x, y)
                 Next
                 path.Close()
-                DrawClosedPath(canvas, path, fill, stroke, strokeWidth, rect, fillKind, fill2, gradientAngleDegrees, gradientInverted)
+                DrawClosedPath(canvas, path, fill, stroke, strokeWidth, rect, gradient)
             End Using
         End Sub
 
-        Private Shared Sub DrawDroplet(canvas As SKCanvas, rect As SKRect, fill As SKColor, stroke As SKColor, strokeWidth As Single, Optional fillKind As String = "Solid", Optional fill2 As SKColor = Nothing, Optional gradientAngleDegrees As Single = 0, Optional gradientInverted As Boolean = False)
+        Private Shared Sub DrawDroplet(canvas As SKCanvas, rect As SKRect, fill As SKColor, stroke As SKColor, strokeWidth As Single, Optional gradient As GradientFillSpec = Nothing)
             Using path = New SKPath()
                 path.MoveTo(rect.MidX, rect.Top + rect.Height * 0.04F)
                 path.CubicTo(rect.Right - rect.Width * 0.18F, rect.Top + rect.Height * 0.34F,
@@ -2624,11 +2912,11 @@ Namespace Services
                              rect.Left + rect.Width * 0.18F, rect.Top + rect.Height * 0.34F,
                              rect.MidX, rect.Top + rect.Height * 0.04F)
                 path.Close()
-                DrawClosedPath(canvas, path, fill, stroke, strokeWidth, rect, fillKind, fill2, gradientAngleDegrees, gradientInverted)
+                DrawClosedPath(canvas, path, fill, stroke, strokeWidth, rect, gradient)
             End Using
         End Sub
 
-        Private Shared Sub DrawSpeechBubble(canvas As SKCanvas, rect As SKRect, fill As SKColor, stroke As SKColor, strokeWidth As Single, Optional fillKind As String = "Solid", Optional fill2 As SKColor = Nothing, Optional gradientAngleDegrees As Single = 0, Optional gradientInverted As Boolean = False)
+        Private Shared Sub DrawSpeechBubble(canvas As SKCanvas, rect As SKRect, fill As SKColor, stroke As SKColor, strokeWidth As Single, Optional gradient As GradientFillSpec = Nothing)
             Dim tailHeight = rect.Height * 0.20F
             Dim radius = Math.Min(rect.Width, rect.Height) * 0.12F
             Dim body = New SKRect(rect.Left + rect.Width * 0.04F,
@@ -2649,11 +2937,11 @@ Namespace Services
                 path.LineTo(body.Left, body.Top + radius)
                 path.QuadTo(body.Left, body.Top, body.Left + radius, body.Top)
                 path.Close()
-                DrawClosedPath(canvas, path, fill, stroke, strokeWidth, rect, fillKind, fill2, gradientAngleDegrees, gradientInverted)
+                DrawClosedPath(canvas, path, fill, stroke, strokeWidth, rect, gradient)
             End Using
         End Sub
 
-        Private Shared Sub DrawEllipseSpeechBubble(canvas As SKCanvas, rect As SKRect, fill As SKColor, stroke As SKColor, strokeWidth As Single, Optional fillKind As String = "Solid", Optional fill2 As SKColor = Nothing, Optional gradientAngleDegrees As Single = 0, Optional gradientInverted As Boolean = False)
+        Private Shared Sub DrawEllipseSpeechBubble(canvas As SKCanvas, rect As SKRect, fill As SKColor, stroke As SKColor, strokeWidth As Single, Optional gradient As GradientFillSpec = Nothing)
             Using path = New SKPath()
                 path.MoveTo(rect.MidX, rect.Top + rect.Height * 0.07F)
                 path.CubicTo(rect.Right - rect.Width * 0.12F, rect.Top + rect.Height * 0.07F,
@@ -2671,11 +2959,11 @@ Namespace Services
                              rect.Left + rect.Width * 0.18F, rect.Top + rect.Height * 0.07F,
                              rect.MidX, rect.Top + rect.Height * 0.07F)
                 path.Close()
-                DrawClosedPath(canvas, path, fill, stroke, strokeWidth, rect, fillKind, fill2, gradientAngleDegrees, gradientInverted)
+                DrawClosedPath(canvas, path, fill, stroke, strokeWidth, rect, gradient)
             End Using
         End Sub
 
-        Private Shared Sub DrawRectSpeechBubble(canvas As SKCanvas, rect As SKRect, fill As SKColor, stroke As SKColor, strokeWidth As Single, Optional fillKind As String = "Solid", Optional fill2 As SKColor = Nothing, Optional gradientAngleDegrees As Single = 0, Optional gradientInverted As Boolean = False)
+        Private Shared Sub DrawRectSpeechBubble(canvas As SKCanvas, rect As SKRect, fill As SKColor, stroke As SKColor, strokeWidth As Single, Optional gradient As GradientFillSpec = Nothing)
             Dim tailHeight = rect.Height * 0.20F
             Dim body = New SKRect(rect.Left + rect.Width * 0.04F,
                                   rect.Top + rect.Height * 0.05F,
@@ -2690,11 +2978,11 @@ Namespace Services
                 path.LineTo(rect.MidX - rect.Width * 0.10F, body.Bottom)
                 path.LineTo(body.Left, body.Bottom)
                 path.Close()
-                DrawClosedPath(canvas, path, fill, stroke, strokeWidth, rect, fillKind, fill2, gradientAngleDegrees, gradientInverted)
+                DrawClosedPath(canvas, path, fill, stroke, strokeWidth, rect, gradient)
             End Using
         End Sub
 
-        Private Shared Sub DrawHeart(canvas As SKCanvas, rect As SKRect, fill As SKColor, stroke As SKColor, strokeWidth As Single, Optional fillKind As String = "Solid", Optional fill2 As SKColor = Nothing, Optional gradientAngleDegrees As Single = 0, Optional gradientInverted As Boolean = False)
+        Private Shared Sub DrawHeart(canvas As SKCanvas, rect As SKRect, fill As SKColor, stroke As SKColor, strokeWidth As Single, Optional gradient As GradientFillSpec = Nothing)
             Using path = New SKPath()
                 path.MoveTo(rect.MidX, rect.Bottom - rect.Height * 0.10F)
                 path.CubicTo(rect.Left + rect.Width * 0.08F, rect.Top + rect.Height * 0.58F, rect.Left, rect.Top + rect.Height * 0.24F, rect.Left + rect.Width * 0.26F, rect.Top + rect.Height * 0.12F)
@@ -2702,11 +2990,11 @@ Namespace Services
                 path.CubicTo(rect.MidX, rect.Top + rect.Height * 0.17F, rect.Left + rect.Width * 0.60F, rect.Top + rect.Height * 0.05F, rect.Left + rect.Width * 0.74F, rect.Top + rect.Height * 0.12F)
                 path.CubicTo(rect.Right, rect.Top + rect.Height * 0.24F, rect.Right - rect.Width * 0.08F, rect.Top + rect.Height * 0.58F, rect.MidX, rect.Bottom - rect.Height * 0.10F)
                 path.Close()
-                DrawClosedPath(canvas, path, fill, stroke, strokeWidth, rect, fillKind, fill2, gradientAngleDegrees, gradientInverted)
+                DrawClosedPath(canvas, path, fill, stroke, strokeWidth, rect, gradient)
             End Using
         End Sub
 
-        Private Shared Sub DrawCloud(canvas As SKCanvas, rect As SKRect, fill As SKColor, stroke As SKColor, strokeWidth As Single, Optional fillKind As String = "Solid", Optional fill2 As SKColor = Nothing, Optional gradientAngleDegrees As Single = 0, Optional gradientInverted As Boolean = False)
+        Private Shared Sub DrawCloud(canvas As SKCanvas, rect As SKRect, fill As SKColor, stroke As SKColor, strokeWidth As Single, Optional gradient As GradientFillSpec = Nothing)
             Using path = New SKPath()
                 path.MoveTo(rect.Left + rect.Width * 0.24F, rect.Bottom - rect.Height * 0.22F)
                 path.CubicTo(rect.Left + rect.Width * 0.07F, rect.Bottom - rect.Height * 0.22F, rect.Left + rect.Width * 0.04F, rect.Top + rect.Height * 0.47F, rect.Left + rect.Width * 0.18F, rect.Top + rect.Height * 0.39F)
@@ -2714,7 +3002,7 @@ Namespace Services
                 path.CubicTo(rect.Left + rect.Width * 0.66F, rect.Top + rect.Height * 0.20F, rect.Left + rect.Width * 0.82F, rect.Top + rect.Height * 0.28F, rect.Left + rect.Width * 0.83F, rect.Top + rect.Height * 0.44F)
                 path.CubicTo(rect.Right - rect.Width * 0.02F, rect.Top + rect.Height * 0.49F, rect.Right - rect.Width * 0.06F, rect.Bottom - rect.Height * 0.22F, rect.Right - rect.Width * 0.22F, rect.Bottom - rect.Height * 0.22F)
                 path.Close()
-                DrawClosedPath(canvas, path, fill, stroke, strokeWidth, rect, fillKind, fill2, gradientAngleDegrees, gradientInverted)
+                DrawClosedPath(canvas, path, fill, stroke, strokeWidth, rect, gradient)
             End Using
         End Sub
 
@@ -2755,11 +3043,10 @@ Namespace Services
             End Using
         End Sub
 
-        Private Shared Sub DrawClosedPath(canvas As SKCanvas, path As SKPath, fill As SKColor, stroke As SKColor, strokeWidth As Single, Optional fillBounds As SKRect = Nothing, Optional fillKind As String = "Solid", Optional fill2 As SKColor = Nothing, Optional gradientAngleDegrees As Single = 0, Optional gradientInverted As Boolean = False)
-            Dim normalizedFillKind = If(fillKind, "Solid").Trim().ToLowerInvariant()
-            If normalizedFillKind = "lineargradient" OrElse normalizedFillKind = "radialgradient" Then
+        Private Shared Sub DrawClosedPath(canvas As SKCanvas, path As SKPath, fill As SKColor, stroke As SKColor, strokeWidth As Single, Optional fillBounds As SKRect = Nothing, Optional gradient As GradientFillSpec = Nothing)
+            If gradient IsNot Nothing Then
                 Dim bounds = If(fillBounds.IsEmpty, path.Bounds, fillBounds)
-                Using shader = CreateFillGradientShader(bounds, normalizedFillKind, fill, fill2, gradientAngleDegrees, gradientInverted)
+                Using shader = CreateFillGradientShader(bounds, gradient)
                     Using fillPaint = New SKPaint With {.Shader = shader, .Style = SKPaintStyle.Fill, .IsAntialias = True}
                         canvas.DrawPath(path, fillPaint)
                     End Using
@@ -2817,7 +3104,9 @@ Namespace Services
                     End If
                     paint.Style = SKPaintStyle.Fill
                     paint.Color = fill
+                    ApplyFillEraser(paint)
                     canvas.DrawText(text, x, y, font, paint)
+                    paint.BlendMode = SKBlendMode.SrcOver
                     If strokeWidth > 0 AndAlso strokeOnTop Then
                         Using strokePaint = ObjectStrokePaint(stroke, strokeWidth)
                             canvas.DrawText(text, x, y, font, strokePaint)

@@ -9296,4 +9296,127 @@
   <data name="Ecken_der_Kontur_44390a90" xml:space="preserve">
     <value>Esquinas del contorno</value>
   </data>
+  <data name="Winkelverlauf_6f276eb9" xml:space="preserve">
+    <value>Degradado angular</value>
+  </data>
+  <data name="Gespiegelter_Verlauf_9384096f" xml:space="preserve">
+    <value>Degradado reflejado</value>
+  </data>
+  <data name="Rautenverlauf_62732ac5" xml:space="preserve">
+    <value>Degradado de diamante</value>
+  </data>
+  <data name="Vorlage_w_hlen_7df6eb54" xml:space="preserve">
+    <value>Elegir un preajuste</value>
+  </data>
+  <data name="Verlauf_als_Vorlage_speichern_2d633574" xml:space="preserve">
+    <value>Guardar el degradado como preajuste</value>
+  </data>
+  <data name="Name_der_Vorlage_bc81ad2f" xml:space="preserve">
+    <value>Nombre del preajuste</value>
+  </data>
+  <data name="Eigener_Verlauf_0d52cf71" xml:space="preserve">
+    <value>Degradado propio</value>
+  </data>
+  <data name="Eigene_Vorlage_l_schen_5276b483" xml:space="preserve">
+    <value>Eliminar preajuste propio</value>
+  </data>
+  <data name="Klick_setzt_einen_Farbstopp_Ziehen_verschiebt_ih_13771329" xml:space="preserve">
+    <value>Un clic añade una parada de color y arrastrarla la mueve. Arrastrarla hacia abajo o pulsar SUPR la elimina.</value>
+  </data>
+  <data name="Farbstopp_038dd2a0" xml:space="preserve">
+    <value>Parada de color</value>
+  </data>
+  <data name="Markierten_Farbstopp_entfernen_ENTF_edf3c091" xml:space="preserve">
+    <value>Eliminar la parada de color seleccionada (SUPR)</value>
+  </data>
+  <data name="Farbstopps_in_gleichen_Abst_nden_verteilen_aa1ef29b" xml:space="preserve">
+    <value>Distribuir las paradas de color uniformemente</value>
+  </data>
+  <data name="Reihenfolge_der_Farbstopps_umdrehen_d2eb86ee" xml:space="preserve">
+    <value>Invertir el orden de las paradas de color</value>
+  </data>
+  <data name="Umdrehen_bd500b25" xml:space="preserve">
+    <value>Invertir orden</value>
+  </data>
+  <data name="Jenseits_des_Verlaufs_die_Randfarbe_halten_36114af2" xml:space="preserve">
+    <value>Mantener el color del borde más allá del degradado</value>
+  </data>
+  <data name="Randfarbe_0a2558c0" xml:space="preserve">
+    <value>Color del borde</value>
+  </data>
+  <data name="Verlauf_wiederholen_52f0224f" xml:space="preserve">
+    <value>Repetir el degradado</value>
+  </data>
+  <data name="Wiederholung_31786adb" xml:space="preserve">
+    <value>Repetición</value>
+  </data>
+  <data name="Verlauf_gespiegelt_wiederholen_896d6d86" xml:space="preserve">
+    <value>Repetir el degradado reflejado</value>
+  </data>
+  <data name="Gespiegelt_da97cceb" xml:space="preserve">
+    <value>Reflejado</value>
+  </data>
+  <data name="Schwarz_zu_Wei_f802e62c" xml:space="preserve">
+    <value>Negro a blanco</value>
+  </data>
+  <data name="Ausblenden_2e03e3a6" xml:space="preserve">
+    <value>Desvanecer</value>
+  </data>
+  <data name="Sonnenuntergang_9079255c" xml:space="preserve">
+    <value>Puesta de sol</value>
+  </data>
+  <data name="Morgenrot_bfe3ebd7" xml:space="preserve">
+    <value>Aurora</value>
+  </data>
+  <data name="Ozean_82535d6f" xml:space="preserve">
+    <value>Océano</value>
+  </data>
+  <data name="Himmel_a3d8e72b" xml:space="preserve">
+    <value>Cielo</value>
+  </data>
+  <data name="Wald_a18d7cd0" xml:space="preserve">
+    <value>Bosque</value>
+  </data>
+  <data name="Feuer_084f04b7" xml:space="preserve">
+    <value>Fuego</value>
+  </data>
+  <data name="Violett_1186ae2f" xml:space="preserve">
+    <value>Violeta</value>
+  </data>
+  <data name="Pfirsich_34c30ceb" xml:space="preserve">
+    <value>Melocotón</value>
+  </data>
+  <data name="Gold_c57604db" xml:space="preserve">
+    <value>Oro</value>
+  </data>
+  <data name="Silber_8c50fd66" xml:space="preserve">
+    <value>Plata</value>
+  </data>
+  <data name="Kupfer_c906e360" xml:space="preserve">
+    <value>Cobre</value>
+  </data>
+  <data name="Regenbogen_c35233b4" xml:space="preserve">
+    <value>Arcoíris</value>
+  </data>
+  <data name="Neon_00706b5e" xml:space="preserve">
+    <value>Neón</value>
+  </data>
+  <data name="Lage_ffbcda4e" xml:space="preserve">
+    <value>Posición</value>
+  </data>
+  <data name="Schatten_unter_dem_Objekt_bbaf1274" xml:space="preserve">
+    <value>Sombra bajo el objeto</value>
+  </data>
+  <data name="Schatten_auf_der_Fl_che_an_der_dem_Licht_zugewan_ee2adc6b" xml:space="preserve">
+    <value>Sombra sobre la superficie, en el borde interior orientado a la luz</value>
+  </data>
+  <data name="Au_en_und_innen_mit_denselben_Werten_3502b4bc" xml:space="preserve">
+    <value>Fuera y dentro con los mismos valores</value>
+  </data>
+  <data name="Gl_hen_um_das_Objekt_herum_2afeecaa" xml:space="preserve">
+    <value>Resplandor alrededor del objeto</value>
+  </data>
+  <data name="Gl_hen_von_der_Kante_nach_innen_aa54abad" xml:space="preserve">
+    <value>Resplandor desde el borde hacia dentro</value>
+  </data>
 </root>

@@ -9340,4 +9340,127 @@
   <data name="Ecken_der_Kontur_44390a90" xml:space="preserve">
     <value>윤곽선 모서리</value>
   </data>
+  <data name="Winkelverlauf_6f276eb9" xml:space="preserve">
+    <value>각도 그레이디언트</value>
+  </data>
+  <data name="Gespiegelter_Verlauf_9384096f" xml:space="preserve">
+    <value>반사 그레이디언트</value>
+  </data>
+  <data name="Rautenverlauf_62732ac5" xml:space="preserve">
+    <value>다이아몬드 그레이디언트</value>
+  </data>
+  <data name="Vorlage_w_hlen_7df6eb54" xml:space="preserve">
+    <value>사전 설정 선택</value>
+  </data>
+  <data name="Verlauf_als_Vorlage_speichern_2d633574" xml:space="preserve">
+    <value>그레이디언트를 사전 설정으로 저장</value>
+  </data>
+  <data name="Name_der_Vorlage_bc81ad2f" xml:space="preserve">
+    <value>사전 설정 이름</value>
+  </data>
+  <data name="Eigener_Verlauf_0d52cf71" xml:space="preserve">
+    <value>사용자 그레이디언트</value>
+  </data>
+  <data name="Eigene_Vorlage_l_schen_5276b483" xml:space="preserve">
+    <value>사용자 사전 설정 삭제</value>
+  </data>
+  <data name="Klick_setzt_einen_Farbstopp_Ziehen_verschiebt_ih_13771329" xml:space="preserve">
+    <value>클릭하면 색상 정지점이 추가되고 드래그하면 이동합니다. 아래로 끌거나 DEL을 누르면 삭제됩니다.</value>
+  </data>
+  <data name="Farbstopp_038dd2a0" xml:space="preserve">
+    <value>색상 정지점</value>
+  </data>
+  <data name="Markierten_Farbstopp_entfernen_ENTF_edf3c091" xml:space="preserve">
+    <value>선택한 색상 정지점 삭제 (DEL)</value>
+  </data>
+  <data name="Farbstopps_in_gleichen_Abst_nden_verteilen_aa1ef29b" xml:space="preserve">
+    <value>색상 정지점 균등 배치</value>
+  </data>
+  <data name="Reihenfolge_der_Farbstopps_umdrehen_d2eb86ee" xml:space="preserve">
+    <value>색상 정지점 순서 뒤집기</value>
+  </data>
+  <data name="Umdrehen_bd500b25" xml:space="preserve">
+    <value>순서 뒤집기</value>
+  </data>
+  <data name="Jenseits_des_Verlaufs_die_Randfarbe_halten_36114af2" xml:space="preserve">
+    <value>그레이디언트 바깥은 가장자리 색 유지</value>
+  </data>
+  <data name="Randfarbe_0a2558c0" xml:space="preserve">
+    <value>가장자리 색</value>
+  </data>
+  <data name="Verlauf_wiederholen_52f0224f" xml:space="preserve">
+    <value>그레이디언트 반복</value>
+  </data>
+  <data name="Wiederholung_31786adb" xml:space="preserve">
+    <value>반복</value>
+  </data>
+  <data name="Verlauf_gespiegelt_wiederholen_896d6d86" xml:space="preserve">
+    <value>그레이디언트 대칭 반복</value>
+  </data>
+  <data name="Gespiegelt_da97cceb" xml:space="preserve">
+    <value>대칭</value>
+  </data>
+  <data name="Schwarz_zu_Wei_f802e62c" xml:space="preserve">
+    <value>검정에서 흰색</value>
+  </data>
+  <data name="Ausblenden_2e03e3a6" xml:space="preserve">
+    <value>페이드 아웃</value>
+  </data>
+  <data name="Sonnenuntergang_9079255c" xml:space="preserve">
+    <value>일몰</value>
+  </data>
+  <data name="Morgenrot_bfe3ebd7" xml:space="preserve">
+    <value>새벽노을</value>
+  </data>
+  <data name="Ozean_82535d6f" xml:space="preserve">
+    <value>바다</value>
+  </data>
+  <data name="Himmel_a3d8e72b" xml:space="preserve">
+    <value>하늘</value>
+  </data>
+  <data name="Wald_a18d7cd0" xml:space="preserve">
+    <value>숲</value>
+  </data>
+  <data name="Feuer_084f04b7" xml:space="preserve">
+    <value>불꽃</value>
+  </data>
+  <data name="Violett_1186ae2f" xml:space="preserve">
+    <value>바이올렛</value>
+  </data>
+  <data name="Pfirsich_34c30ceb" xml:space="preserve">
+    <value>복숭아</value>
+  </data>
+  <data name="Gold_c57604db" xml:space="preserve">
+    <value>금색</value>
+  </data>
+  <data name="Silber_8c50fd66" xml:space="preserve">
+    <value>은색</value>
+  </data>
+  <data name="Kupfer_c906e360" xml:space="preserve">
+    <value>구리색</value>
+  </data>
+  <data name="Regenbogen_c35233b4" xml:space="preserve">
+    <value>무지개</value>
+  </data>
+  <data name="Neon_00706b5e" xml:space="preserve">
+    <value>네온</value>
+  </data>
+  <data name="Lage_ffbcda4e" xml:space="preserve">
+    <value>위치</value>
+  </data>
+  <data name="Schatten_unter_dem_Objekt_bbaf1274" xml:space="preserve">
+    <value>개체 아래 그림자</value>
+  </data>
+  <data name="Schatten_auf_der_Fl_che_an_der_dem_Licht_zugewan_ee2adc6b" xml:space="preserve">
+    <value>빛을 향한 안쪽 가장자리를 따라 표면에 드리우는 그림자</value>
+  </data>
+  <data name="Au_en_und_innen_mit_denselben_Werten_3502b4bc" xml:space="preserve">
+    <value>바깥과 안쪽에 같은 값으로</value>
+  </data>
+  <data name="Gl_hen_um_das_Objekt_herum_2afeecaa" xml:space="preserve">
+    <value>개체 주위의 광선</value>
+  </data>
+  <data name="Gl_hen_von_der_Kante_nach_innen_aa54abad" xml:space="preserve">
+    <value>가장자리에서 안쪽으로 퍼지는 광선</value>
+  </data>
 </root>

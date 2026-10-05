@@ -23,6 +23,8 @@ Namespace Services
         Public Property GlowBlur As Single = 10
         Public Property GlowStrength As Single = 100
         Public Property GlowColor As String = "#FFFFFF00"
+        Public Property ShadowPlacement As String = ""
+        Public Property GlowPlacement As String = ""
     End Class
 
     Public NotInheritable Class PixelPaintResult
@@ -229,7 +231,9 @@ Namespace Services
                 .GlowEnabled = (Not isEraser) AndAlso options.GlowEnabled,
                 .GlowBlur = options.GlowBlur,
                 .GlowStrength = options.GlowStrength,
-                .GlowColor = options.GlowColor
+                .GlowColor = options.GlowColor,
+                .ShadowPlacement = ImageAnnotation.NormalizeEffectPlacement(options.ShadowPlacement),
+                .GlowPlacement = ImageAnnotation.NormalizeEffectPlacement(options.GlowPlacement)
             }
         End Function
     End Class

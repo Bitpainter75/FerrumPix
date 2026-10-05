@@ -331,6 +331,40 @@ Namespace ViewModels
             End Property
         End Class
 
+        ''' <summary>Ein Eintrag in der Liste der Verlaufsvorlagen: eingebaut oder eigene, mit einem
+        ''' Farbstreifen als Vorschau. Der Name einer eingebauten Vorlage ist der deutsche
+        ''' Ausgangstext und wird beim LESEN uebersetzt, damit ein Sprachwechsel ihn mitnimmt.</summary>
+        Public NotInheritable Class GradientPresetItem
+            Public Sub New(name As String, stops As String, isCustom As Boolean)
+                Me.Name = name
+                Me.Stops = stops
+                Me.IsCustom = isCustom
+                Dim brush As New Avalonia.Media.LinearGradientBrush With {
+                    .StartPoint = New Avalonia.RelativePoint(0, 0.5, Avalonia.RelativeUnit.Relative),
+                    .EndPoint = New Avalonia.RelativePoint(1, 0.5, Avalonia.RelativeUnit.Relative)
+                }
+                For Each s In GradientFillSpec.ParseStops(stops, "#FF000000", "#FFFFFFFF")
+                    brush.GradientStops.Add(New Avalonia.Media.GradientStop(Avalonia.Media.Color.FromArgb(s.A, s.R, s.G, s.B), s.Position / 100.0))
+                Next
+                PreviewBrush = brush
+            End Sub
+
+            Public ReadOnly Property Name As String
+            Public ReadOnly Property Stops As String
+            Public ReadOnly Property IsCustom As Boolean
+            Public ReadOnly Property PreviewBrush As Avalonia.Media.IBrush
+
+            Public ReadOnly Property Label As String
+                Get
+                    Return If(IsCustom, Name, LocalizationService.T(Name))
+                End Get
+            End Property
+
+            Public Overrides Function ToString() As String
+                Return Label
+            End Function
+        End Class
+
         Public NotInheritable Class AnnotationBlendModeOption
             Private ReadOnly _displayName As String
 
@@ -551,6 +585,13 @@ Namespace ViewModels
         Private _annotationFillColor2 As String = "#FFFFFFFF"
         Private _annotationGradientAngle As Double = 0
         Private _annotationGradientInverted As Boolean = False
+        ' Farbstopps, Groesse, Mitte und Wiederholung des Verlaufs (siehe GradientFillSpec). Leere
+        ' Stopps heissen: zwei Stopps aus Farbe 1 und Farbe 2.
+        Private _annotationGradientStops As String = ""
+        Private _annotationGradientScale As Double = 100
+        Private _annotationGradientOffsetX As Double = 0
+        Private _annotationGradientOffsetY As Double = 0
+        Private _annotationGradientRepeat As String = ""
         Private _annotationShadowEnabled As Boolean = False
         Private _annotationShadowOffsetX As Double = 4
         Private _annotationShadowOffsetY As Double = 4
@@ -565,6 +606,9 @@ Namespace ViewModels
         Private _annotationGlowBlur As Double = 10
         Private _annotationGlowStrength As Double = 100
         Private _annotationGlowColor As String = "#FFFFFF00"
+        ' Lage von Schatten und Gluehen: "" aussen, "Inside", "Both" (ImageAnnotation.ShadowPlacement).
+        Private _annotationShadowPlacement As String = ""
+        Private _annotationGlowPlacement As String = ""
         Private _watermarkImagePath As String = ""
         Private _hasActiveSelection As Boolean = False
         ' Persistenter Render-Skopus ist von der sichtbaren/editierbaren Auswahl getrennt. Eine FPX darf
@@ -2172,8 +2216,7 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(ShowFillColorControls))
             Me.RaisePropertyChanged(NameOf(ShowFillColorPicker))
             Me.RaisePropertyChanged(NameOf(ShowGradientFillControls))
-            Me.RaisePropertyChanged(NameOf(ShowLinearGradientAngleControl))
-            Me.RaisePropertyChanged(NameOf(ShowRadialGradientControl))
+            RaiseFillKindDependentProperties()
         End Sub
 
         Private Sub RaiseAnnotationPositionControlProperties()
@@ -2214,10 +2257,15 @@ Namespace ViewModels
             _annotationFillColor = NormalizeAvaloniaColor(preset.FillColor, "#FFFFFFFF")
             _annotationStrokeColor = NormalizeAvaloniaColor(preset.StrokeColor, "#FF000000")
             _annotationStrokeWidth = Math.Max(0, Math.Min(200, preset.StrokeWidth))
-            _annotationFillKind = preset.FillKind
+            _annotationFillKind = GradientFillSpec.NormalizeKind(preset.FillKind)
             _annotationFillColor2 = NormalizeAvaloniaColor(preset.FillColor2, "#FFFFFFFF")
             _annotationGradientAngle = preset.GradientAngleDegrees
             _annotationGradientInverted = preset.GradientInverted
+            _annotationGradientStops = GradientFillSpec.NormalizeStops(preset.GradientStops)
+            _annotationGradientScale = GradientFillSpec.ClampScale(preset.GradientScalePercent)
+            _annotationGradientOffsetX = GradientFillSpec.ClampOffset(preset.GradientOffsetXPercent)
+            _annotationGradientOffsetY = GradientFillSpec.ClampOffset(preset.GradientOffsetYPercent)
+            _annotationGradientRepeat = GradientFillSpec.NormalizeRepeat(preset.GradientRepeat)
             _annotationBlendMode = NormalizeAnnotationBlendMode(preset.BlendMode)
             _annotationBlendIncludesStroke = preset.BlendIncludesStroke
             _annotationStrokePosition = If(preset.StrokePosition, "")
@@ -2241,6 +2289,11 @@ Namespace ViewModels
             _annotationGlowBlur = preset.GlowBlur
             _annotationGlowStrength = preset.GlowStrength
             _annotationGlowColor = NormalizeAvaloniaColor(preset.GlowColor, "#FFFFFF00")
+            _annotationShadowPlacement = ImageAnnotation.NormalizeEffectPlacement(preset.ShadowPlacement)
+            _annotationGlowPlacement = ImageAnnotation.NormalizeEffectPlacement(preset.GlowPlacement)
+            Me.RaisePropertyChanged(NameOf(AnnotationShadowPlacement))
+            Me.RaisePropertyChanged(NameOf(AnnotationGlowPlacement))
+            RaiseEffectPlacementProperties()
 
             Me.RaisePropertyChanged(NameOf(AnnotationText))
             Me.RaisePropertyChanged(NameOf(AnnotationAnchor))
@@ -2267,12 +2320,18 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(ShowFillColorControls))
             Me.RaisePropertyChanged(NameOf(ShowFillColorPicker))
             Me.RaisePropertyChanged(NameOf(ShowGradientFillControls))
-            Me.RaisePropertyChanged(NameOf(ShowLinearGradientAngleControl))
-            Me.RaisePropertyChanged(NameOf(ShowRadialGradientControl))
+            RaiseFillKindDependentProperties()
             Me.RaisePropertyChanged(NameOf(AnnotationFillColor2))
             Me.RaisePropertyChanged(NameOf(AnnotationFillColor2Value))
             Me.RaisePropertyChanged(NameOf(AnnotationGradientAngleDegrees))
             Me.RaisePropertyChanged(NameOf(AnnotationGradientInverted))
+            Me.RaisePropertyChanged(NameOf(AnnotationGradientStops))
+            Me.RaisePropertyChanged(NameOf(AnnotationGradientScale))
+            Me.RaisePropertyChanged(NameOf(AnnotationGradientOffsetX))
+            Me.RaisePropertyChanged(NameOf(AnnotationGradientOffsetY))
+            Me.RaisePropertyChanged(NameOf(AnnotationGradientRepeat))
+            RaiseGradientRepeatProperties()
+            Me.RaisePropertyChanged(NameOf(SelectedGradientPreset))
             Me.RaisePropertyChanged(NameOf(AnnotationBlendMode))
             Me.RaisePropertyChanged(NameOf(SelectedAnnotationBlendModeOption))
             Me.RaisePropertyChanged(NameOf(AnnotationBlendIncludesStroke))
@@ -2378,6 +2437,11 @@ Namespace ViewModels
             existing.FillColor2 = _annotationFillColor2
             existing.GradientAngleDegrees = _annotationGradientAngle
             existing.GradientInverted = _annotationGradientInverted
+            existing.GradientStops = _annotationGradientStops
+            existing.GradientScalePercent = _annotationGradientScale
+            existing.GradientOffsetXPercent = _annotationGradientOffsetX
+            existing.GradientOffsetYPercent = _annotationGradientOffsetY
+            existing.GradientRepeat = _annotationGradientRepeat
             existing.BlendMode = _annotationBlendMode
             existing.BlendIncludesStroke = _annotationBlendIncludesStroke
             existing.StrokePosition = _annotationStrokePosition
@@ -2401,6 +2465,8 @@ Namespace ViewModels
             existing.GlowBlur = _annotationGlowBlur
             existing.GlowStrength = _annotationGlowStrength
             existing.GlowColor = _annotationGlowColor
+            existing.ShadowPlacement = _annotationShadowPlacement
+            existing.GlowPlacement = _annotationGlowPlacement
             PersistWatermarkPresets()
             SelectedWatermarkPresetName = name
             ' Überschreibt der Nutzer die bereits gewählte Vorlage, ändert sich der Name nicht - der
@@ -2724,8 +2790,7 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(ShowWatermarkAnchorControls))
                 Me.RaisePropertyChanged(NameOf(ShowFreeAnnotationPositionControls))
                 Me.RaisePropertyChanged(NameOf(ShowGradientFillControls))
-                Me.RaisePropertyChanged(NameOf(ShowLinearGradientAngleControl))
-                Me.RaisePropertyChanged(NameOf(ShowRadialGradientControl))
+                RaiseFillKindDependentProperties()
                 Me.RaisePropertyChanged(NameOf(ShowStrokeWidthControls))
                 Me.RaisePropertyChanged(NameOf(IsFrameAnnotationSelected))
                 Me.RaisePropertyChanged(NameOf(ShowAnnotationGeometryControls))
@@ -2980,8 +3045,7 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(ShowFillColorPicker))
             Me.RaisePropertyChanged(NameOf(ShowFillColorControls))
             Me.RaisePropertyChanged(NameOf(ShowGradientFillControls))
-            Me.RaisePropertyChanged(NameOf(ShowLinearGradientAngleControl))
-            Me.RaisePropertyChanged(NameOf(ShowRadialGradientControl))
+            RaiseFillKindDependentProperties()
             Me.RaisePropertyChanged(NameOf(ShowStrokeColorControls))
             Me.RaisePropertyChanged(NameOf(ShowStrokeWidthControls))
             Me.RaisePropertyChanged(NameOf(IsFrameAnnotationSelected))
@@ -3839,8 +3903,7 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(ShowWatermarkAnchorControls))
                 Me.RaisePropertyChanged(NameOf(ShowFreeAnnotationPositionControls))
                 Me.RaisePropertyChanged(NameOf(ShowGradientFillControls))
-                Me.RaisePropertyChanged(NameOf(ShowLinearGradientAngleControl))
-                Me.RaisePropertyChanged(NameOf(ShowRadialGradientControl))
+                RaiseFillKindDependentProperties()
                 Me.RaisePropertyChanged(NameOf(ShowStrokeWidthControls))
                 Me.RaisePropertyChanged(NameOf(IsFrameAnnotationSelected))
                 Me.RaisePropertyChanged(NameOf(ShowAnnotationGeometryControls))
@@ -3948,64 +4011,209 @@ Namespace ViewModels
             Get
                 ' Bei einer MEHRFACHauswahl beschriebe dieser Bereich nur den Anker - er bleibt weg.
                 If HasMultiAnnotationSelection Then Return False
-                Return ShowFillColorControls AndAlso Not String.Equals(_annotationFillKind, "Solid", StringComparison.OrdinalIgnoreCase)
+                Return ShowFillColorControls AndAlso GradientFillSpec.IsGradientKind(_annotationFillKind)
             End Get
         End Property
 
-        Public ReadOnly Property ShowLinearGradientAngleControl As Boolean
+        ''' <summary>Die eine Farbe der Vollfarbe. Beim Verlauf stehen die Farben in den Stopps.</summary>
+        Public ReadOnly Property ShowSolidFillColorControl As Boolean
             Get
-                ' Bei einer MEHRFACHauswahl beschriebe dieser Bereich nur den Anker - er bleibt weg.
                 If HasMultiAnnotationSelection Then Return False
-                Return ShowGradientFillControls AndAlso String.Equals(_annotationFillKind, "LinearGradient", StringComparison.OrdinalIgnoreCase)
+                Return ShowFillColorControls AndAlso Not GradientFillSpec.IsGradientKind(_annotationFillKind)
             End Get
         End Property
 
-        Public ReadOnly Property ShowRadialGradientControl As Boolean
+        Public ReadOnly Property ShowGradientAngleControl As Boolean
             Get
-                ' Bei einer MEHRFACHauswahl beschriebe dieser Bereich nur den Anker - er bleibt weg.
-                If HasMultiAnnotationSelection Then Return False
-                Return ShowGradientFillControls AndAlso String.Equals(_annotationFillKind, "RadialGradient", StringComparison.OrdinalIgnoreCase)
+                Return ShowGradientFillControls AndAlso GradientFillSpec.UsesAngle(_annotationFillKind)
+            End Get
+        End Property
+
+        Public ReadOnly Property ShowGradientScaleControls As Boolean
+            Get
+                Return ShowGradientFillControls AndAlso GradientFillSpec.UsesScale(_annotationFillKind)
+            End Get
+        End Property
+
+        ''' <summary>"Gespiegelt wiederholen" nicht beim gespiegelten Verlauf: der ist schon symmetrisch,
+        ''' wiederholt und gespiegelt wiederholt ergeben dort dasselbe Bild (gemessen).</summary>
+        Public ReadOnly Property ShowGradientMirrorRepeat As Boolean
+            Get
+                Return GradientFillSpec.NormalizeKind(_annotationFillKind) <> GradientFillSpec.KindReflected
+            End Get
+        End Property
+
+        ''' <summary>Welche Fuellart gerade gilt, fuer die Hervorhebung der Knoepfe.</summary>
+        Public ReadOnly Property IsSolidFill As Boolean
+            Get
+                Return GradientFillSpec.NormalizeKind(_annotationFillKind) = GradientFillSpec.KindSolid
+            End Get
+        End Property
+
+        Public ReadOnly Property IsLinearGradientFill As Boolean
+            Get
+                Return GradientFillSpec.NormalizeKind(_annotationFillKind) = GradientFillSpec.KindLinear
+            End Get
+        End Property
+
+        Public ReadOnly Property IsRadialGradientFill As Boolean
+            Get
+                Return GradientFillSpec.NormalizeKind(_annotationFillKind) = GradientFillSpec.KindRadial
+            End Get
+        End Property
+
+        Public ReadOnly Property IsAngleGradientFill As Boolean
+            Get
+                Return GradientFillSpec.NormalizeKind(_annotationFillKind) = GradientFillSpec.KindAngle
+            End Get
+        End Property
+
+        Public ReadOnly Property IsReflectedGradientFill As Boolean
+            Get
+                Return GradientFillSpec.NormalizeKind(_annotationFillKind) = GradientFillSpec.KindReflected
+            End Get
+        End Property
+
+        Public ReadOnly Property IsDiamondGradientFill As Boolean
+            Get
+                Return GradientFillSpec.NormalizeKind(_annotationFillKind) = GradientFillSpec.KindDiamond
+            End Get
+        End Property
+
+        Public ReadOnly Property IsGradientRepeatNone As Boolean
+            Get
+                Return _annotationGradientRepeat = GradientFillSpec.RepeatNone
+            End Get
+        End Property
+
+        Public ReadOnly Property IsGradientRepeatRepeat As Boolean
+            Get
+                ' Beim gespiegelten Verlauf ist Gespiegelt dasselbe Bild und sein Knopf ausgeblendet.
+                Return _annotationGradientRepeat = GradientFillSpec.RepeatRepeat OrElse
+                       (_annotationGradientRepeat = GradientFillSpec.RepeatMirror AndAlso Not ShowGradientMirrorRepeat)
+            End Get
+        End Property
+
+        Public ReadOnly Property IsGradientRepeatMirror As Boolean
+            Get
+                Return _annotationGradientRepeat = GradientFillSpec.RepeatMirror
             End Get
         End Property
 
         Public Sub SetAnnotationFillKind(kind As String)
+            Dim wasGradient = GradientFillSpec.IsGradientKind(_annotationFillKind)
             AnnotationFillKind = kind
+            ' Von Vollfarbe zum Verlauf: sind beide Farben GANZ gleich (ab Werk Weiss auf Weiss), zeigte
+            ' der Verlauf nichts. Farbe 2 wird dann die deckende Gegenfarbe. Unterscheiden sie sich nur
+            ' in der Deckkraft (durchsichtig nach Weiss), ist das schon ein sichtbarer Verlauf und
+            ' bleibt. Die Deckkraft von Farbe 1 zu uebernehmen war falsch: aus durchsichtigem Weiss
+            ' wurde durchsichtiges Schwarz, und die Auswahl zeigte nichts (Nutzerbefund). Nur ueber
+            ' den Knopf, nie beim Laden eines Objekts.
+            If wasGradient OrElse Not GradientFillSpec.IsGradientKind(_annotationFillKind) Then Return
+            If _annotationGradientStops.Length > 0 Then Return
+            Dim c1 = ParseAvaloniaColorOrDefault(_annotationFillColor, Avalonia.Media.Colors.White)
+            Dim c2 = ParseAvaloniaColorOrDefault(_annotationFillColor2, Avalonia.Media.Colors.White)
+            If c1 <> c2 Then Return
+            Dim light = c1.R * 0.299 + c1.G * 0.587 + c1.B * 0.114 > 128
+            AnnotationFillColor2 = If(light, "#FF000000", "#FFFFFFFF")
         End Sub
+
+        ''' <summary>Meldet alles, was an der Fuellart haengt: Sichtbarkeit der Regler und die
+        ''' Hervorhebung der Knoepfe.</summary>
+        Private Sub RaiseFillKindDependentProperties()
+            Me.RaisePropertyChanged(NameOf(ShowGradientFillControls))
+            Me.RaisePropertyChanged(NameOf(ShowSolidFillColorControl))
+            Me.RaisePropertyChanged(NameOf(ShowGradientAngleControl))
+            Me.RaisePropertyChanged(NameOf(ShowGradientScaleControls))
+            Me.RaisePropertyChanged(NameOf(ShowGradientMirrorRepeat))
+            RaiseGradientRepeatProperties()
+            Me.RaisePropertyChanged(NameOf(IsSolidFill))
+            Me.RaisePropertyChanged(NameOf(IsLinearGradientFill))
+            Me.RaisePropertyChanged(NameOf(IsRadialGradientFill))
+            Me.RaisePropertyChanged(NameOf(IsAngleGradientFill))
+            Me.RaisePropertyChanged(NameOf(IsReflectedGradientFill))
+            Me.RaisePropertyChanged(NameOf(IsDiamondGradientFill))
+        End Sub
+
+        Private Sub RaiseGradientRepeatProperties()
+            Me.RaisePropertyChanged(NameOf(IsGradientRepeatNone))
+            Me.RaisePropertyChanged(NameOf(IsGradientRepeatRepeat))
+            Me.RaisePropertyChanged(NameOf(IsGradientRepeatMirror))
+        End Sub
+
+        ''' <summary>Der Verlauf, wie er gerade im Panel steht. Nothing bei Vollfarbe.</summary>
+        Private Function CurrentGradientSpec() As GradientFillSpec
+            Return GradientFillSpec.Create(_annotationFillKind, _annotationFillColor, _annotationFillColor2, _annotationGradientStops,
+                                           _annotationGradientAngle, _annotationGradientInverted, _annotationGradientScale,
+                                           _annotationGradientOffsetX, _annotationGradientOffsetY, _annotationGradientRepeat)
+        End Function
 
         ''' Live-Vorschau der aktuell konfigurierten Füllung (Vollfarbe/Verlauf) direkt auf dem
         ''' Auswahl-Overlay, BEVOR "Auswahl füllen" geklickt wird - besonders bei Verläufen wichtig,
         ''' da Winkel/Farbkombination sonst erst nach dem Anlegen des Objekts sichtbar wären.
+        ''' Gerechnet wie ImageProcessor.CreateFillGradientShader, in Anteilen des Rechtecks; die Raute
+        ''' kennt Avalonia nicht, sie erscheint hier als Ellipse.
         Public ReadOnly Property SelectionFillPreviewBrush As Avalonia.Media.IBrush
             Get
-                Dim startColor = If(_annotationGradientInverted, AnnotationFillColor2Value, AnnotationFillColorValue)
-                Dim endColor = If(_annotationGradientInverted, AnnotationFillColorValue, AnnotationFillColor2Value)
-                Select Case If(_annotationFillKind, "Solid").Trim().ToLowerInvariant()
-                    Case "lineargradient"
-                        Dim angleRad = _annotationGradientAngle * Math.PI / 180.0
-                        Dim dx = Math.Cos(angleRad) * 0.5
-                        Dim dy = Math.Sin(angleRad) * 0.5
-                        Dim brush As New Avalonia.Media.LinearGradientBrush With {
-                            .StartPoint = New Avalonia.RelativePoint(0.5 - dx, 0.5 - dy, Avalonia.RelativeUnit.Relative),
-                            .EndPoint = New Avalonia.RelativePoint(0.5 + dx, 0.5 + dy, Avalonia.RelativeUnit.Relative)
-                        }
-                        brush.GradientStops.Add(New Avalonia.Media.GradientStop(startColor, 0))
-                        brush.GradientStops.Add(New Avalonia.Media.GradientStop(endColor, 1))
-                        Return brush
-                    Case "radialgradient"
-                        Dim brush As New Avalonia.Media.RadialGradientBrush With {
-                            .Center = New Avalonia.RelativePoint(0.5, 0.5, Avalonia.RelativeUnit.Relative),
-                            .GradientOrigin = New Avalonia.RelativePoint(0.5, 0.5, Avalonia.RelativeUnit.Relative),
-                            .RadiusX = New Avalonia.RelativeScalar(0.5, Avalonia.RelativeUnit.Relative),
-                            .RadiusY = New Avalonia.RelativeScalar(0.5, Avalonia.RelativeUnit.Relative)
-                        }
-                        brush.GradientStops.Add(New Avalonia.Media.GradientStop(startColor, 0))
-                        brush.GradientStops.Add(New Avalonia.Media.GradientStop(endColor, 1))
-                        Return brush
-                    Case Else
-                        Return New Avalonia.Media.SolidColorBrush(AnnotationFillColorValue)
-                End Select
+                Dim spec = CurrentGradientSpec()
+                If spec Is Nothing Then Return New Avalonia.Media.SolidColorBrush(AnnotationFillColorValue)
+                Return BuildGradientPreviewBrush(spec)
             End Get
         End Property
+
+        Friend Shared Function BuildGradientPreviewBrush(spec As GradientFillSpec) As Avalonia.Media.IBrush
+            Dim stops = spec.EffectiveStops()
+            Dim spread = Avalonia.Media.GradientSpreadMethod.Pad
+            If spec.Repeat = GradientFillSpec.RepeatRepeat Then spread = Avalonia.Media.GradientSpreadMethod.Repeat
+            If spec.Repeat = GradientFillSpec.RepeatMirror Then spread = Avalonia.Media.GradientSpreadMethod.Reflect
+            Dim scale = spec.ScalePercent / 100.0
+            Dim cx = 0.5 + spec.OffsetXPercent / 200.0
+            Dim cy = 0.5 + spec.OffsetYPercent / 200.0
+            Dim center = New Avalonia.RelativePoint(cx, cy, Avalonia.RelativeUnit.Relative)
+            Dim collection As New Avalonia.Media.GradientStops()
+            Dim addStop = Sub(s As GradientStopValue, offset As Double)
+                              collection.Add(New Avalonia.Media.GradientStop(Avalonia.Media.Color.FromArgb(s.A, s.R, s.G, s.B), offset))
+                          End Sub
+
+            Select Case spec.Kind
+                Case GradientFillSpec.KindRadial, GradientFillSpec.KindDiamond
+                    For Each s In stops
+                        addStop(s, s.Position / 100.0)
+                    Next
+                    Return New Avalonia.Media.RadialGradientBrush With {
+                        .Center = center, .GradientOrigin = center,
+                        .RadiusX = New Avalonia.RelativeScalar(0.5 * scale, Avalonia.RelativeUnit.Relative),
+                        .RadiusY = New Avalonia.RelativeScalar(0.5 * scale, Avalonia.RelativeUnit.Relative),
+                        .SpreadMethod = spread, .GradientStops = collection}
+                Case GradientFillSpec.KindAngle
+                    For Each s In stops
+                        addStop(s, s.Position / 100.0)
+                    Next
+                    ' Avalonia beginnt oben, Skia rechts.
+                    Return New Avalonia.Media.ConicGradientBrush With {
+                        .Center = center, .Angle = spec.AngleDegrees + 90.0, .GradientStops = collection}
+            End Select
+
+            Dim angleRad = spec.AngleDegrees * Math.PI / 180.0
+            Dim dx = Math.Cos(angleRad) * 0.5 * scale
+            Dim dy = Math.Sin(angleRad) * 0.5 * scale
+            If spec.Kind = GradientFillSpec.KindReflected Then
+                For i = stops.Count - 1 To 0 Step -1
+                    addStop(stops(i), 0.5 - stops(i).Position / 200.0)
+                Next
+                For Each s In stops
+                    addStop(s, 0.5 + s.Position / 200.0)
+                Next
+            Else
+                For Each s In stops
+                    addStop(s, s.Position / 100.0)
+                Next
+            End If
+            Return New Avalonia.Media.LinearGradientBrush With {
+                .StartPoint = New Avalonia.RelativePoint(cx - dx, cy - dy, Avalonia.RelativeUnit.Relative),
+                .EndPoint = New Avalonia.RelativePoint(cx + dx, cy + dy, Avalonia.RelativeUnit.Relative),
+                .SpreadMethod = spread, .GradientStops = collection}
+        End Function
 
         ''' DrawQrCode (siehe ImageProcessor) zeichnet die Module immer randlos in voller Zellgröße
         ''' und bekommt gar keine Konturbreite übergeben - der Regler hätte beim QR-Code also nie
@@ -4099,6 +4307,7 @@ Namespace ViewModels
             ' ohne Rücksetzen erbt das nächste platzierte Objekt sie aus dem Puffer des zuvor
             ' selektierten (die Werte sind dieselben wie in ResetEditorUiStateForNewImage).
             AnnotationFillKind = "Solid"
+            ResetGradientBuffers()
             AnnotationFillColor2 = "#FFFFFFFF"
             AnnotationGradientAngleDegrees = 0
             AnnotationGradientInverted = False
@@ -4116,6 +4325,8 @@ Namespace ViewModels
             AnnotationGlowBlur = 10
             AnnotationGlowStrength = 100
             AnnotationGlowColor = "#FFFFFF00"
+            AnnotationShadowPlacement = ""
+            AnnotationGlowPlacement = ""
             AnnotationTextPathKind = ""
             AnnotationTextPathInverted = False
             AnnotationTextPathBend = 50
@@ -9213,6 +9424,8 @@ Namespace ViewModels
             Set(value As String)
                 Me.RaiseAndSetIfChanged(_annotationFillColor, NormalizeAvaloniaColor(value, "#FFFFFFFF"))
                 _annotationFillColorIsAutomaticDefault = False
+                ' Farbe 1 ist der erste Stopp eines Verlaufs (siehe AnnotationGradientStops).
+                SetGradientEndStopColor(lastStop:=False, colorHex:=_annotationFillColor)
                 Me.RaisePropertyChanged(NameOf(AnnotationFillEnabled))
                 RaiseFillGroupActiveChanged()
                 Me.RaisePropertyChanged(NameOf(AnnotationFillColorValue))
@@ -9463,6 +9676,7 @@ Namespace ViewModels
         ''' <summary>Farben, die "Aktiv" der Füllung zurückholt. Gemerkt beim Ausschalten.</summary>
         Private _lastAnnotationFillColor As String = "#FFFFFFFF"
         Private _lastAnnotationFillColor2 As String = "#FFFFFFFF"
+        Private _lastAnnotationGradientStops As String = ""
 
         ''' <summary>Schalter "Aktiv" der Gruppe Füllung. Eine Füllung ist aktiv, wenn ihre Farbe
         ''' sichtbar ist; aus macht beide Farben durchsichtig und merkt sie sich, an holt sie zurück.
@@ -9470,13 +9684,12 @@ Namespace ViewModels
         ''' Objekt ohne Füllung (durchsichtig) schon richtig "aus" aus, ohne Umstellung der Datei.</summary>
         Public Property AnnotationFillEnabled As Boolean
             Get
-                ' Bei einem Verlauf zaehlt auch Farbe 2: ist nur sie sichtbar, wird er gezeichnet,
+                If ParseAvaloniaColorOrDefault(_annotationFillColor, Avalonia.Media.Colors.White).A > 0 Then Return True
+                ' Bei einem Verlauf zaehlt JEDER Stopp: ist nur einer sichtbar, wird er gezeichnet,
                 ' und ein Haken auf "aus" klappte die Bedienung eines sichtbaren Verlaufs weg
                 ' (Prueferbefund).
-                If ParseAvaloniaColorOrDefault(_annotationFillColor, Avalonia.Media.Colors.White).A > 0 Then Return True
-                Dim kind = If(_annotationFillKind, "").Trim().ToLowerInvariant()
-                If kind = "lineargradient" OrElse kind = "radialgradient" Then
-                    Return ParseAvaloniaColorOrDefault(_annotationFillColor2, Avalonia.Media.Colors.White).A > 0
+                If GradientFillSpec.IsGradientKind(_annotationFillKind) Then
+                    Return GradientFillSpec.ParseStops(_annotationGradientStops, _annotationFillColor, _annotationFillColor2).Any(Function(s) s.A > 0)
                 End If
                 Return False
             End Get
@@ -9485,11 +9698,21 @@ Namespace ViewModels
                 If value Then
                     AnnotationFillColor2 = _lastAnnotationFillColor2
                     AnnotationFillColor = _lastAnnotationFillColor
+                    ' Die inneren Stopps mit zurueck; die beiden aeusseren stimmen danach ohnehin.
+                    If _lastAnnotationGradientStops.Length > 0 AndAlso _annotationGradientStops.Length > 0 Then
+                        AnnotationGradientStops = _lastAnnotationGradientStops
+                    End If
                 Else
                     _lastAnnotationFillColor = _annotationFillColor
                     _lastAnnotationFillColor2 = _annotationFillColor2
+                    _lastAnnotationGradientStops = _annotationGradientStops
                     AnnotationFillColor2 = WithZeroAlpha(_annotationFillColor2)
                     AnnotationFillColor = WithZeroAlpha(_annotationFillColor)
+                    ' Auch die inneren Stopps durchsichtig, sonst zeichnete der Verlauf weiter.
+                    Dim stops = GradientFillSpec.TryParseStops(_annotationGradientStops)
+                    If stops IsNot Nothing Then
+                        AnnotationGradientStops = GradientFillSpec.FormatStops(stops.Select(Function(s) s.WithArgb(s.Argb And &HFFFFFFUI)))
+                    End If
                 End If
             End Set
         End Property
@@ -12746,6 +12969,11 @@ Namespace ViewModels
             Set(value As Boolean)
                 If _selectionFillEnabled = value Then Return
                 _selectionFillEnabled = value
+                ' Wie am Objekt: an holt eine sichtbare Farbe, wenn alle durchsichtig sind. Ab Werk
+                ' steht Farbe 1 auf durchsichtigem Weiss, und der Haken fuellte die Auswahl mit
+                ' nichts; ein danach gewaehlter Verlauf blieb ebenso unsichtbar (Nutzerbefund).
+                ' Aus laesst die Farben stehen: es setzt nur die Fuellung der Ebene leer.
+                If value AndAlso Not AnnotationFillEnabled Then AnnotationFillEnabled = True
                 Me.RaisePropertyChanged(NameOf(SelectionFillEnabled))
                 RaiseFillGroupActiveChanged()
                 ApplySelectionFillLive()
@@ -12783,11 +13011,16 @@ Namespace ViewModels
             End If
             If layer Is Nothing Then Return
             If _selectionFillEnabled Then
-                layer.FillKind = If(String.IsNullOrWhiteSpace(_annotationFillKind), "Solid", _annotationFillKind)
+                layer.FillKind = GradientFillSpec.NormalizeKind(_annotationFillKind)
                 layer.FillColor = _annotationFillColor
                 layer.FillColor2 = _annotationFillColor2
                 layer.FillAngle = _annotationGradientAngle
                 layer.FillInverted = _annotationGradientInverted
+                layer.FillStops = _annotationGradientStops
+                layer.FillScale = _annotationGradientScale
+                layer.FillOffsetX = _annotationGradientOffsetX
+                layer.FillOffsetY = _annotationGradientOffsetY
+                layer.FillRepeat = _annotationGradientRepeat
             Else
                 layer.FillKind = ""
             End If
@@ -16628,6 +16861,13 @@ Namespace ViewModels
         Public ReadOnly Property SetAnnotationTextAlignmentCommand As ICommand
         Public ReadOnly Property SetFrameFillKindCommand As ICommand
         Public ReadOnly Property SetAnnotationFillKindCommand As ICommand
+        Public ReadOnly Property SaveGradientPresetCommand As ICommand
+        Public ReadOnly Property DeleteGradientPresetCommand As ICommand
+        Public ReadOnly Property DistributeGradientStopsCommand As ICommand
+        Public ReadOnly Property ReverseGradientStopsCommand As ICommand
+        Public ReadOnly Property SetAnnotationGradientRepeatCommand As ICommand
+        Public ReadOnly Property SetAnnotationShadowPlacementCommand As ICommand
+        Public ReadOnly Property SetAnnotationGlowPlacementCommand As ICommand
         Public ReadOnly Property SetAnnotationAnchorCommand As ICommand
         Public ReadOnly Property ResetTransformCommand As ICommand
         Public ReadOnly Property SetBrushPresetCommand As ICommand
@@ -17166,10 +17406,13 @@ Namespace ViewModels
                             ' ins Panel mit - abgeglichen nach dem Zeilenwechsel, der ihre Maske erst
                             ' noch zur laufenden Auswahl macht.
                             If SelectedLayerRow?.AdjustmentLayer IsNot Nothing Then QueueSelectionStyleSync()
-                        Case NameOf(AnnotationFillKind), NameOf(AnnotationFillColor), NameOf(AnnotationFillColor2),
-                             NameOf(AnnotationGradientAngleDegrees), NameOf(AnnotationGradientInverted)
-                            ' Ob die Füllung "aktiv" ist, hängt beim Verlauf auch an Farbe 2 und an der Füllart.
-                            If e.PropertyName = NameOf(AnnotationFillKind) OrElse e.PropertyName = NameOf(AnnotationFillColor2) Then
+                        Case NameOf(AnnotationFillKind), NameOf(AnnotationFillColor), NameOf(AnnotationFillColor2), NameOf(AnnotationGradientStops),
+                             NameOf(AnnotationGradientAngleDegrees), NameOf(AnnotationGradientInverted),
+                             NameOf(AnnotationGradientScale), NameOf(AnnotationGradientOffsetX), NameOf(AnnotationGradientOffsetY),
+                             NameOf(AnnotationGradientRepeat)
+                            ' Ob die Füllung "aktiv" ist, hängt beim Verlauf an allen Stopps und an der Füllart.
+                            If e.PropertyName = NameOf(AnnotationFillKind) OrElse e.PropertyName = NameOf(AnnotationFillColor2) OrElse
+                               e.PropertyName = NameOf(AnnotationGradientStops) Then
                                 Me.RaisePropertyChanged(NameOf(AnnotationFillEnabled))
                                 RaiseFillGroupActiveChanged()
                             End If
@@ -17179,7 +17422,7 @@ Namespace ViewModels
                              NameOf(AnnotationShadowBlur), NameOf(AnnotationShadowStrength), NameOf(AnnotationShadowColor),
                              NameOf(AnnotationShadowSize), NameOf(AnnotationShadowRounded), NameOf(AnnotationShadowCornerRadius),
                              NameOf(AnnotationGlowEnabled), NameOf(AnnotationGlowBlur), NameOf(AnnotationGlowStrength),
-                             NameOf(AnnotationGlowColor)
+                             NameOf(AnnotationGlowColor), NameOf(AnnotationShadowPlacement), NameOf(AnnotationGlowPlacement)
                             ' Ebenso Schatten und Glühen der Auswahl.
                             If IsSelectionStyleContext Then ApplySelectionEffectsLive()
                     End Select
@@ -17193,6 +17436,13 @@ Namespace ViewModels
             SetSelectionCombineModeCommand = ReactiveCommand.Create(Of String)(Sub(mode) SetSelectionCombineMode(mode))
             SetAnnotationAnchorCommand = ReactiveCommand.Create(Of String)(Sub(anchor) AnnotationAnchor = anchor)
             SetAnnotationFillKindCommand = ReactiveCommand.Create(Of String)(Sub(kind) SetAnnotationFillKind(kind))
+            SaveGradientPresetCommand = ReactiveCommand.Create(Sub() SaveGradientPreset())
+            DeleteGradientPresetCommand = ReactiveCommand.Create(Sub() DeleteGradientPreset())
+            DistributeGradientStopsCommand = ReactiveCommand.Create(Sub() DistributeGradientStops())
+            ReverseGradientStopsCommand = ReactiveCommand.Create(Sub() ReverseGradientStops())
+            SetAnnotationGradientRepeatCommand = ReactiveCommand.Create(Of String)(Sub(mode) SetAnnotationGradientRepeat(mode))
+            SetAnnotationShadowPlacementCommand = ReactiveCommand.Create(Of String)(Sub(mode) AnnotationShadowPlacement = mode)
+            SetAnnotationGlowPlacementCommand = ReactiveCommand.Create(Of String)(Sub(mode) AnnotationGlowPlacement = mode)
             SetFrameFillKindCommand = ReactiveCommand.Create(Of String)(Sub(kind) FrameFillKind = kind)
             SetAnnotationTextPathKindCommand = ReactiveCommand.Create(Of String)(Sub(kind) SetAnnotationTextPathKind(kind))
             SetAnnotationTextAlignmentCommand = ReactiveCommand.Create(Of String)(Sub(alignment) AnnotationTextAlignment = alignment)
@@ -22993,6 +23243,11 @@ Namespace ViewModels
                 Case NameOf(AnnotationFillColor2) : Return LocalizationService.T("Verlauf bis")
                 Case NameOf(AnnotationGradientAngleDegrees) : Return LocalizationService.T("Winkel")
                 Case NameOf(AnnotationGradientInverted) : Return LocalizationService.T("Verlauf invertieren")
+                Case NameOf(AnnotationGradientStops) : Return ObjectBlockLabel("Füllung", "Farbstopp")
+                Case NameOf(AnnotationGradientScale) : Return ObjectBlockLabel("Füllung", "Größe")
+                Case NameOf(AnnotationGradientOffsetX) : Return ObjectBlockLabel("Füllung", "Mitte X")
+                Case NameOf(AnnotationGradientOffsetY) : Return ObjectBlockLabel("Füllung", "Mitte Y")
+                Case NameOf(AnnotationGradientRepeat) : Return ObjectBlockLabel("Füllung", "Wiederholung")
                 Case NameOf(AnnotationStrokeWidth) : Return LocalizationService.T("Konturbreite")
                 Case NameOf(AnnotationBlendIncludesStroke) : Return LocalizationService.T("Kontur mitmischen")
                 Case NameOf(AnnotationStrokePosition) : Return LocalizationService.T("Lage der Kontur")
@@ -23024,6 +23279,8 @@ Namespace ViewModels
                 Case NameOf(AnnotationGlowColor) : Return ObjectBlockLabel("Glühen", "Farbe")
                 Case NameOf(AnnotationGlowBlur) : Return ObjectBlockLabel("Glühen", "Größe")
                 Case NameOf(AnnotationGlowStrength) : Return ObjectBlockLabel("Glühen", "Stärke")
+                Case NameOf(AnnotationShadowPlacement) : Return ObjectBlockLabel("Schatten", "Lage")
+                Case NameOf(AnnotationGlowPlacement) : Return ObjectBlockLabel("Glühen", "Lage")
                 ' Die Pinselregler gehoeren zur Mal- und Radierebene: dort sind sie deren
                 ' Eigenschaften und landen ueber SyncSelectedAnnotationIfStroke hier.
                 Case NameOf(BrushSize) : Return LocalizationService.T("Größe")
@@ -24522,6 +24779,7 @@ Namespace ViewModels
             _annotationFillColor2 = "#FFFFFFFF"
             _annotationGradientAngle = 0
             _annotationGradientInverted = False
+            ResetGradientBuffers()
             _annotationShadowEnabled = False
             _annotationShadowOffsetX = 4
             _annotationShadowOffsetY = 4
@@ -24536,6 +24794,11 @@ Namespace ViewModels
             _annotationGlowBlur = 10
             _annotationGlowStrength = 100
             _annotationGlowColor = "#FFFFFF00"
+            _annotationShadowPlacement = ""
+            _annotationGlowPlacement = ""
+            Me.RaisePropertyChanged(NameOf(AnnotationShadowPlacement))
+            Me.RaisePropertyChanged(NameOf(AnnotationGlowPlacement))
+            RaiseEffectPlacementProperties()
 
             ClearSelection(captureUndo:=False)
             _globalAdjustmentsHidden = False
@@ -24642,8 +24905,7 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(AnnotationGradientAngleDegrees))
             Me.RaisePropertyChanged(NameOf(AnnotationGradientInverted))
             Me.RaisePropertyChanged(NameOf(ShowGradientFillControls))
-            Me.RaisePropertyChanged(NameOf(ShowLinearGradientAngleControl))
-            Me.RaisePropertyChanged(NameOf(ShowRadialGradientControl))
+            RaiseFillKindDependentProperties()
             Me.RaisePropertyChanged(NameOf(SelectionFillPreviewBrush))
 
             Me.RaisePropertyChanged(NameOf(AnnotationShadowEnabled))
@@ -25308,11 +25570,9 @@ Namespace ViewModels
                 .FlipVertical = DisplayAnnotationFlipVerticalToStored(normalizedKind, newAnchor, _annotationFlipV),
                 .Anchor = newAnchor,
                 .IsVisible = _annotationIsVisible,
-                .FillKind = _annotationFillKind,
-                .FillColor2 = _annotationFillColor2,
-                .GradientAngleDegrees = CSng(_annotationGradientAngle),
-                .GradientInverted = _annotationGradientInverted
+                .FillKind = _annotationFillKind
             }
+            ApplyGradientBuffersTo(annotation)
             HardenAnnotationBuffersForNewObject()
             _annotations.Add(annotation)
             SelectedAnnotationIndex = _annotations.Count - 1
@@ -26016,7 +26276,9 @@ Namespace ViewModels
                 .GlowEnabled = (Not isEraser) AndAlso _annotationGlowEnabled,
                 .GlowBlur = CSng(_annotationGlowBlur),
                 .GlowStrength = CSng(_annotationGlowStrength),
-                .GlowColor = _annotationGlowColor
+                .GlowColor = _annotationGlowColor,
+                .ShadowPlacement = _annotationShadowPlacement,
+                .GlowPlacement = _annotationGlowPlacement
             }
         End Function
 
@@ -27970,9 +28232,7 @@ Namespace ViewModels
                     AnnotationLetterSpacingPercent = a.LetterSpacingPercent
                     AnnotationBold = a.Bold
                     AnnotationItalic = a.Italic
-                    AnnotationFillColor2 = a.FillColor2
-                    AnnotationGradientAngleDegrees = a.GradientAngleDegrees
-                    AnnotationGradientInverted = a.GradientInverted
+                    LoadGradientBuffersFrom(a)
                     AnnotationShadowEnabled = a.ShadowEnabled
                     AnnotationShadowOffsetX = a.ShadowOffsetXPercent
                     AnnotationShadowOffsetY = a.ShadowOffsetYPercent
@@ -27987,6 +28247,8 @@ Namespace ViewModels
                     AnnotationGlowBlur = a.GlowBlur
                     AnnotationGlowStrength = a.GlowStrength
                     AnnotationGlowColor = a.GlowColor
+                    AnnotationShadowPlacement = a.ShadowPlacement
+                    AnnotationGlowPlacement = a.GlowPlacement
                     If normalizedKind = "Brush" OrElse normalizedKind = "Eraser" Then
                         _isEraserMode = normalizedKind = "Eraser"
                         _brushSize = Math.Max(1, Math.Min(300, CDbl(a.StrokeWidth)))
@@ -28161,9 +28423,7 @@ Namespace ViewModels
             a.LetterSpacingPercent = CSng(_annotationLetterSpacingPercent)
             a.Bold = _annotationBold
             a.Italic = _annotationItalic
-            a.FillColor2 = _annotationFillColor2
-            a.GradientAngleDegrees = CSng(_annotationGradientAngle)
-            a.GradientInverted = _annotationGradientInverted
+            ApplyGradientBuffersTo(a)
             a.ShadowEnabled = _annotationShadowEnabled
             a.ShadowOffsetXPercent = CSng(_annotationShadowOffsetX)
             a.ShadowOffsetYPercent = CSng(_annotationShadowOffsetY)
@@ -28177,6 +28437,8 @@ Namespace ViewModels
             a.GlowBlur = CSng(_annotationGlowBlur)
             a.GlowStrength = CSng(_annotationGlowStrength)
             a.GlowColor = _annotationGlowColor
+            a.ShadowPlacement = _annotationShadowPlacement
+            a.GlowPlacement = _annotationGlowPlacement
             _annotationModelVersion += 1
             ' Auch waehrend eines Zuges AKKUMULIEREND vereinen: der Region-Worker koalesziert
             ' Anforderungen, und ein gebogener Zug hat Zwischenlagen, die ein blosses
