@@ -288,7 +288,7 @@
                            FontSize="{DynamicResource FP.Font.Small}" />
                 <Grid ColumnDefinitions="92,*,44">
                     <TextBlock Text="Toleranz" Foreground="{DynamicResource FP.Text.Secondary}" VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
-                    <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100" Value="{Binding ColorRangeTolerance}" />
+                    <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100" DefaultValue="18" Value="{Binding ColorRangeTolerance}" />
                     <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value" Value="{Binding ColorRangeTolerance, Mode=TwoWay}" Minimum="0" Maximum="100" />
                 </Grid>
                 <Grid ColumnDefinitions="92,*,44">
@@ -309,12 +309,12 @@
                 </Grid>
                 <Grid ColumnDefinitions="92,*,44">
                     <TextBlock Text="Bis" Foreground="{DynamicResource FP.Text.Secondary}" VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
-                    <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100" Value="{Binding LuminanceRangeTo}" />
+                    <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100" DefaultValue="100" Value="{Binding LuminanceRangeTo}" />
                     <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value" Value="{Binding LuminanceRangeTo, Mode=TwoWay}" Minimum="0" Maximum="100" />
                 </Grid>
                 <Grid ColumnDefinitions="92,*,44">
                     <TextBlock Text="Übergang" Foreground="{DynamicResource FP.Text.Secondary}" VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
-                    <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="50" Value="{Binding LuminanceRangeFeather}" />
+                    <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="50" DefaultValue="12" Value="{Binding LuminanceRangeFeather}" />
                     <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value" Value="{Binding LuminanceRangeFeather, Mode=TwoWay}" Minimum="0" Maximum="50" />
                 </Grid>
             </StackPanel>

@@ -115,7 +115,7 @@
                 <TextBlock Text="Überblendung" Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                 <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
-                                   Value="{Binding ColorGradeBlending}" Margin="0,0" />
+                                   DefaultValue="50" Value="{Binding ColorGradeBlending}" Margin="0,0" />
                 <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
                                          Value="{Binding ColorGradeBlending, Mode=TwoWay}" Minimum="0" Maximum="100" />
             </Grid>

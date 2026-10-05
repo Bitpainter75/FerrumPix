@@ -81,7 +81,7 @@
                         <TextBlock Text="Verzeichnung" Foreground="{DynamicResource FP.Text.Secondary}"
                                    VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                         <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="200"
-                                           Value="{Binding LensDistortionAmount}" Margin="0,0" />
+                                           DefaultValue="100" Value="{Binding LensDistortionAmount}" Margin="0,0" />
                         <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
                                                  Value="{Binding LensDistortionAmount, Mode=TwoWay}" Minimum="0" Maximum="200" />
                     </Grid>
@@ -91,7 +91,7 @@
                         <TextBlock Text="Farbsäume" Foreground="{DynamicResource FP.Text.Secondary}"
                                    VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                         <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="200"
-                                           Value="{Binding LensTcaAmount}" Margin="0,0" />
+                                           DefaultValue="100" Value="{Binding LensTcaAmount}" Margin="0,0" />
                         <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
                                                  Value="{Binding LensTcaAmount, Mode=TwoWay}" Minimum="0" Maximum="200" />
                     </Grid>
@@ -101,7 +101,7 @@
                         <TextBlock Text="Randabdunklung" Foreground="{DynamicResource FP.Text.Secondary}"
                                    VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                         <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="200"
-                                           Value="{Binding LensVignettingAmount}" Margin="0,0" />
+                                           DefaultValue="100" Value="{Binding LensVignettingAmount}" Margin="0,0" />
                         <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
                                                  Value="{Binding LensVignettingAmount, Mode=TwoWay}" Minimum="0" Maximum="200" />
                     </Grid>

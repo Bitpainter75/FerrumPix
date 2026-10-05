@@ -175,7 +175,7 @@
     "FUJIFILMX100S": -0.022,
     "FUJIFILMX100T": -0.098,
     "FUJIFILMX100V": 0.008,
-    "FUJIFILMX100VI": 0.125,
+    "FUJIFILMX100VI": -0.002,
     "FUJIFILMX20": 0.069,
     "FUJIFILMX30": 0.235,
     "FUJIFILMXA10": 0.342,
@@ -772,13 +772,13 @@
       "shadowTint": 1
     },
     "FUJIFILMX100VI": {
-      "redHue": 0,
-      "redSaturation": 7,
-      "greenHue": 13,
+      "redHue": -1,
+      "redSaturation": 16,
+      "greenHue": 8,
       "greenSaturation": -9,
-      "blueHue": -6,
-      "blueSaturation": -2,
-      "shadowTint": 0
+      "blueHue": -7,
+      "blueSaturation": -3,
+      "shadowTint": -2
     },
     "FUJIFILMXH2S": {
       "redHue": -4,

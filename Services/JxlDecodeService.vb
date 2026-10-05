@@ -405,6 +405,18 @@ Namespace Services
                                   End Function)
         End Function
 
+        ''' <summary>Dekodiert ein JPEG XL aus dem Speicher, als Bgra8888 (Besitz beim Aufrufer) oder
+        ''' Nothing. Fuer JPEG XL, das nicht als eigene Datei vorliegt, etwa die Vorschau-Kacheln in
+        ''' einem DNG 1.7 (DngJxlPreviewService).</summary>
+        Public Shared Function TryDecodeBytes(bytes As Byte()) As SKBitmap
+            If bytes Is Nothing OrElse bytes.Length = 0 OrElse Not IsAvailable Then Return Nothing
+            Return DecodeGate.Run(Function()
+                                      SyncLock _nativeLock
+                                          Return DecodeBytesCore(bytes)
+                                      End SyncLock
+                                  End Function)
+        End Function
+
         Private Shared Function DecodeCore(path As String) As SKBitmap
             Dim bytes As Byte()
             Try
@@ -412,7 +424,11 @@ Namespace Services
             Catch
                 Return Nothing
             End Try
-            If bytes.Length = 0 Then Return Nothing
+            Return DecodeBytesCore(bytes)
+        End Function
+
+        Private Shared Function DecodeBytesCore(bytes As Byte()) As SKBitmap
+            If bytes Is Nothing OrElse bytes.Length = 0 Then Return Nothing
 
             Dim dec As IntPtr = IntPtr.Zero
             Dim runner As IntPtr = IntPtr.Zero

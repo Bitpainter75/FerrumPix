@@ -75,6 +75,7 @@
               IsVisible="{Binding IsDialogBatchDenoiseFixed}">
             <icons:RoundSlider Minimum="0"
                                Maximum="100"
+                               DefaultValue="{Binding DialogBatchDenoiseStrengthDefault}"
                                Value="{Binding DialogBatchDenoiseStrength, Mode=TwoWay}"
                                VerticalAlignment="Center"
                                HorizontalAlignment="Stretch"

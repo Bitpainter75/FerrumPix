@@ -1212,6 +1212,15 @@ Namespace ViewModels
             End Get
         End Property
 
+        ''' <summary>Rückfallwert des Reglers "Stärke" beim Entrauschen im Stapel, aus derselben
+        ''' Einstellung wie sein Startwert (siehe DialogJpgQualityDefault). Ohne ihn sprang der
+        ''' Doppelklick auf 0, also auf "kein Entrauschen".</summary>
+        Public ReadOnly Property DialogBatchDenoiseStrengthDefault As Double
+            Get
+                Return Math.Round(EditorViewModel.ClampDenoiseStrength(AppSettingsService.Load().BatchDenoiseStrength))
+            End Get
+        End Property
+
         ''' <summary>Zielort im Speichern-unter-Dialog: "Local" oder "Immich" (nur wählbar, wenn konfiguriert).</summary>
         Public Property DialogSaveAsTarget As String
             Get

@@ -72,7 +72,10 @@ Namespace ViewModels
 
         Private _bokehVon As Double = 70.0
         Private _bokehBis As Double = 100.0
-        Private _bokehStaerke As Double = 40.0
+        ' Start 0 wie beim Zuruecksetzen (ResetBokeh) und beim Doppelklick: mit 40 galt das
+        ' Werkzeug schon beim Oeffnen als geaendert, und "Anwenden" war bereit, ohne dass man
+        ' etwas getan hatte.
+        Private _bokehStaerke As Double = 0.0
         Private _bokehUebergang As Double = 25.0
         Private _bokehBlende As Integer = 0
         Private _bokehLichter As Double = 60.0

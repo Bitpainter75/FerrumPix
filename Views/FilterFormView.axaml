@@ -88,6 +88,7 @@
                      verschieden weit reichen, sehen nach Versehen aus. -->
                 <icons:RoundSlider Minimum="0"
                                    Maximum="100"
+                                   DefaultValue="100"
                                    Value="{Binding DialogFilterStrength, Mode=TwoWay}"
                                    VerticalAlignment="Center"
                                    HorizontalAlignment="Stretch"

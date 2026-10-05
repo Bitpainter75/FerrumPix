@@ -1550,6 +1550,7 @@
                                 <icons:RoundSlider Width="150"
                                                    Minimum="0"
                                                    Maximum="20"
+                                                   DefaultValue="4"
                                                    Value="{Binding EditorSnapMarginPercent}"/>
                                 <TextBlock Text="{Binding EditorSnapMarginPercent, StringFormat={}{0}%}"
                                            MinWidth="42"

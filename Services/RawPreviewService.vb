@@ -72,6 +72,20 @@ Namespace Services
                 Return thumb
             End If
 
+            ' DNG 1.7 mit JPEG XL: die grosse Vorschau ist selbst JPEG XL, und keiner der beiden
+            ' Wege oben findet sie (der Scanner sucht JPEG, LibRaw meldet nur das Miniaturbild).
+            ' Entwickeln geht bei diesen Dateien ebenfalls nicht, LibRaw kennt die Kompression
+            ' nicht. Deshalb VOR dem Entwickeln (Issue 83: 1024 statt 256 Punkte).
+            If String.Equals(Path.GetExtension(filePath), ".dng", StringComparison.OrdinalIgnoreCase) Then
+                Dim jxlPreview = DngJxlPreviewService.TryExtract(filePath)
+                If IsBigEnoughForDisplay(jxlPreview) Then
+                    scanned?.Dispose()
+                    thumb?.Dispose()
+                    Return jxlPreview
+                End If
+                jxlPreview?.Dispose()
+            End If
+
             ' Letzte Stufe: manche Dateien betten GAR KEINE brauchbare Vorschau ein - dann bleibt nur
             ' das echte Entwickeln. Kostet einen Decode (halb, siehe TryRenderPreviewJpeg), aber die Alternative ist ein winziges Bild auf
             ' Bildschirmgroesse gezogen. Die Leica M8 legt als einzige Vorschau ein 320x240-TIFF ab

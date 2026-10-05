@@ -47,7 +47,7 @@
                     <TextBlock Text="Scharf von" Foreground="{DynamicResource FP.Text.Secondary}"
                                VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                     <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
-                                       Value="{Binding BokehFrom}" Margin="0,0" />
+                                       DefaultValue="70" Value="{Binding BokehFrom}" Margin="0,0" />
                     <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
                                              Value="{Binding BokehFrom, Mode=TwoWay}" Minimum="0" Maximum="100" />
                 </Grid>
@@ -56,7 +56,7 @@
                     <TextBlock Text="Scharf bis" Foreground="{DynamicResource FP.Text.Secondary}"
                                VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                     <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
-                                       Value="{Binding BokehTo}" Margin="0,0" />
+                                       DefaultValue="100" Value="{Binding BokehTo}" Margin="0,0" />
                     <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
                                              Value="{Binding BokehTo, Mode=TwoWay}" Minimum="0" Maximum="100" />
                 </Grid>
@@ -83,7 +83,7 @@
                     <TextBlock Text="Lichter" Foreground="{DynamicResource FP.Text.Secondary}"
                                VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                     <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
-                                       Value="{Binding BokehHighlights}" Margin="0,0" />
+                                       DefaultValue="60" Value="{Binding BokehHighlights}" Margin="0,0" />
                     <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
                                              Value="{Binding BokehHighlights, Mode=TwoWay}" Minimum="0" Maximum="100" />
                 </Grid>

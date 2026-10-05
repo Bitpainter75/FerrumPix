@@ -3438,7 +3438,9 @@ Namespace Views
                 If wCanvas Is Nothing OrElse wVm Is Nothing Then Return
                 Dim wRect = GetDisplayedImageRect(wCanvas, wVm)
                 If wRect.Width <= 0 OrElse wRect.Height <= 0 Then Return
-                Dim wPos = ClampPointToRect(e.GetPosition(wCanvas), wRect)
+                ' Ungeklemmt: ein Punkt darf ueber den Bildrand hinaus, die Grenze zieht das
+                ' ViewModel (WarpOutsideMarginPercent), wie bei Verformen und Linien.
+                Dim wPos = e.GetPosition(wCanvas)
                 wVm.UpdateWarpDrag((wPos.X - wRect.Left) / wRect.Width * 100.0,
                                    (wPos.Y - wRect.Top) / wRect.Height * 100.0,
                                    e.KeyModifiers.HasFlag(KeyModifiers.Shift))
@@ -5470,10 +5472,14 @@ Namespace Views
             Dim previewImage = Me.FindControl(Of Image)("ToolPreviewImage")
             If previewImage Is Nothing Then Return
             If iw <= 0 OrElse ih <= 0 Then Return
-            Avalonia.Controls.Canvas.SetLeft(previewImage, ix)
-            Avalonia.Controls.Canvas.SetTop(previewImage, iy)
-            previewImage.Width = iw
-            previewImage.Height = ih
+            ' Beim erweiterten Gitter reicht die Vorschau ueber den Bildrahmen hinaus
+            ' (ToolPreviewMarginPercent je Seite) und zeigt dort, was hinausgezogen ist.
+            Dim vm = TryCast(DataContext, EditorViewModel)
+            Dim margin = If(vm Is Nothing, 0.0, vm.ToolPreviewMarginPercent / 100.0)
+            Avalonia.Controls.Canvas.SetLeft(previewImage, ix - margin * iw)
+            Avalonia.Controls.Canvas.SetTop(previewImage, iy - margin * ih)
+            previewImage.Width = iw * (1 + 2 * margin)
+            previewImage.Height = ih * (1 + 2 * margin)
         End Sub
 
         ''' <summary>Legt das Verzerrungsviereck ueber das Bild. Die Ecken kommen in Anzeige-Prozent

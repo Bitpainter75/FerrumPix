@@ -581,6 +581,47 @@ Namespace ViewModels
             End Set
         End Property
 
+        ' ── Ueber den Bildrand hinaus ───────────────────────────────────────────
+        '
+        ' Am BILD duerfen die Punkte von Gitter, Verformen und Linien ueber den Bildrand hinaus,
+        ' bis WarpOutsideMarginPercent: eine Bildecke laesst sich nach aussen ziehen, wie beim
+        ' freien Transformieren anderer Programme (Nutzerwunsch aus dem Forum). Das Ergebnis
+        ' behaelt die Bildmaße, der Bildrahmen wirkt als Zuschnitt: was hinausgezogen ist, faellt
+        ' beim Anwenden weg, eine nach innen gezogene Kante laesst eine durchsichtige Stelle.
+        '
+        ' Frueher liefen die Randpunkte nur AUF ihrer Kante, weil man die Folgen beim Ziehen nicht
+        ' sah. Die sieht man jetzt: die Vorschau von Gitter und Verformen reicht ueber den Rahmen
+        ' hinaus und dunkelt den Teil ausserhalb ab (RefreshWarpPreview). Gegen ein versehentliches
+        ' Verziehen einer Kante rastet ein Randpunkt in ihrer Naehe auf ihr ein (SnapToEdge).
+        '
+        ' Einen Streifen zusaetzlicher Knoten rund ums Bild braucht es NICHT: das Netz bildet
+        ' Bildpunkte auf ihre gezogene Lage ab (NodeMapping, BuildWarpMesh), und ausserhalb des
+        ' Bildes liegen keine. Am Objekt gilt das alles nicht, dort waechst die Ebene mit.
+
+        ''' <summary>Wie weit Punkte ueber den Bildrand hinaus duerfen und wie weit die Vorschau
+        ''' reicht: in Prozent der Bildbreite bzw. -hoehe je Seite.</summary>
+        Private Const WarpOutsideMarginPercent As Double = 50
+
+        ''' <summary>Wie nah ein Randpunkt seiner urspruenglichen Kante kommen muss, um auf ihr
+        ''' einzurasten, in Prozent der Bildbreite bzw. -hoehe.</summary>
+        Private Const WarpEdgeSnapPercent As Double = 1.5
+
+        ''' <summary>Duerfen Rand- und Eckpunkte gerade frei wandern? Am Bild ja; am Objekt bleibt
+        ''' das Raster bei seiner Regel.</summary>
+        Private ReadOnly Property GridEdgesFree As Boolean
+            Get
+                Return Not WarpsTheObject
+            End Get
+        End Property
+
+        Private Shared Function SnapToEdge(value As Double, edge As Double) As Double
+            Return If(Math.Abs(value - edge) <= WarpEdgeSnapPercent, edge, value)
+        End Function
+
+        Private Shared Function ClampOutside(value As Double, start As Double, size As Double) As Double
+            Return Math.Max(start - WarpOutsideMarginPercent, Math.Min(start + size + WarpOutsideMarginPercent, value))
+        End Function
+
         ''' <summary>Das Raster fuer die Anzeige: [spalten, zeilen, x0, y0, ...] in ANZEIGE-Prozent.
         ''' Am BILD ist das die gespeicherte Lage selbst; am markierten OBJEKT wird jeder Punkt auf
         ''' dessen Rechteck umgerechnet. Punkte ohne Anzeigeort kommen als NaN heraus - die Anzeige
@@ -686,6 +727,25 @@ Namespace ViewModels
             End Get
         End Property
 
+        Private _toolPreviewMarginPercent As Double
+
+        ''' <summary>Wie weit das Vorschaubild ueber den Bildrahmen hinausreicht, in Prozent der
+        ''' Bildbreite bzw. -hoehe je Seite. 0 heisst: es deckt genau das Bild. Nur das erweiterte
+        ''' Gitter setzt einen Rand; die Ansicht legt das Vorschaubild dann entsprechend groesser.
+        ''' Gesetzt wird er VOR dem Bild, damit die Ansicht beim Bildwechsel schon den neuen Rand
+        ''' kennt.</summary>
+        Public ReadOnly Property ToolPreviewMarginPercent As Double
+            Get
+                Return _toolPreviewMarginPercent
+            End Get
+        End Property
+
+        Private Sub SetToolPreviewMargin(value As Double)
+            If Math.Abs(_toolPreviewMarginPercent - value) < 0.0001 Then Return
+            _toolPreviewMarginPercent = value
+            Me.RaisePropertyChanged(NameOf(ToolPreviewMarginPercent))
+        End Sub
+
         ''' <summary>Auf Bgra8888/Premul bringen. ToAvaloniaBitmapFast ist eine reine Zeilenkopie
         ''' und braucht exakt dieses Format; der PNG-Decode liefert je nach Plattform auch anderes.
         ''' Dann wird einmal umgezeichnet und das Original freigegeben - einmal je Zuggeste, nicht
@@ -790,6 +850,7 @@ Namespace ViewModels
                String.Equals(_vorschauQuelle, "Verformen", StringComparison.Ordinal) Then
                 ToolPreviewImage = Nothing
                 _vorschauQuelle = ""
+                SetToolPreviewMargin(0)
             End If
             _gridPreviewBase?.Dispose()
             _gridPreviewBase = Nothing
@@ -821,6 +882,44 @@ Namespace ViewModels
                 zx(i) = CSng(x / 100.0 * bw)
                 zy(i) = CSng(y / 100.0 * bh)
             Next
+
+            ' AM BILD reicht die Vorschau von Gitter und Verformen ueber den Bildrahmen hinaus, damit
+            ' man sieht, was hinausgezogen ist. Dieser Teil wird abgedunkelt - beim Anwenden faellt
+            ' er weg. Am Objekt bleibt es bei der Vorschau in Bildgroesse.
+            If GridEdgesFree Then
+                Dim moved = If(String.Equals(holder, "Verformen", StringComparison.Ordinal),
+                               HasEnvelopeChanges, HasWarpGridChanges)
+                If Not moved Then
+                    DisposeGridPreview()
+                    Return
+                End If
+                Dim margin = WarpOutsideMarginPercent / 100.0
+                Dim ox = CSng(Math.Round(margin * bw)), oy = CSng(Math.Round(margin * bh))
+                For i = 0 To n - 1
+                    zx(i) += ox
+                    zy(i) += oy
+                Next
+                Dim wide = ImageGeometryMapper.WarpOverGridTo(
+                    _gridPreviewBase, CInt(bw + 2 * ox), CInt(bh + 2 * oy), columns, rows, zx, zy,
+                    _gridPreviewSourceX, _gridPreviewSourceY)
+                If wide Is Nothing Then Return
+                Using wide
+                    ' SrcATop: abgedunkelt wird nur, wo Bild liegt - der leere Rand bleibt leer.
+                    Using cv As New SKCanvas(wide)
+                        Using shade As New SKPaint With {.Color = New SKColor(0, 0, 0, 150), .BlendMode = SKBlendMode.SrcATop}
+                            cv.DrawRect(New SKRect(0, 0, wide.Width, oy), shade)
+                            cv.DrawRect(New SKRect(0, oy + bh, wide.Width, wide.Height), shade)
+                            cv.DrawRect(New SKRect(0, oy, ox, oy + bh), shade)
+                            cv.DrawRect(New SKRect(ox + bw, oy, wide.Width, oy + bh), shade)
+                        End Using
+                    End Using
+                    SetToolPreviewMargin(WarpOutsideMarginPercent)
+                    ToolPreviewImage = ImageOrientationService.ToAvaloniaBitmapFast(wide)
+                    _vorschauQuelle = holder
+                End Using
+                Return
+            End If
+            SetToolPreviewMargin(0)
 
             Dim warped = ImageGeometryMapper.WarpOverGrid(
                 _gridPreviewBase, columns, rows, zx, zy,
@@ -1088,10 +1187,9 @@ Namespace ViewModels
         Public Sub UpdateLineDrag(xPercent As Double, yPercent As Double)
             If _linienDragIndex < 0 OrElse _linienDragIndex >= _linien.Count Then Return
             Dim l = _linien(_linienDragIndex)
-            ' GEKLEMMT WIRD NUR AM BILD. Am OBJEKT ist der Bezugsraum sein Rechteck, und dort soll
-            ' sich ein Linienende ueber den Rahmen hinausziehen lassen - Gitter und Verformen halten
-            ' es genauso (limit = Not WarpsTheObject). Vorher klemmte diese Stelle immer, und am
-            ' Objekt liess sich keine Kante nach aussen ziehen.
+            ' GEKLEMMT WIRD NUR AM BILD, und dort auf das Bild samt Rand (ClampPercent): ein
+            ' Linienende darf wie bei Gitter und Verformen ueber den Bildrand hinaus. Am OBJEKT ist
+            ' der Bezugsraum sein Rechteck, dort gibt es keine Grenze.
             Dim clampToImage = Not WarpsTheObject
             Dim clamp = Function(value As Double) If(clampToImage, ClampPercent(value), value)
 
@@ -1113,6 +1211,13 @@ Namespace ViewModels
                 Dim source = DisplayToWarpSpace(xPercent, yPercent)
                 If Not source.HasValue Then Return
                 Dim nx = clamp(source.Value.X), ny = clamp(source.Value.Y)
+                ' Beim AUFZIEHEN legt der Zug die QUELLE der Linie fest, und die liegt auf einer
+                ' Kante im Bild: ausserhalb gibt es keine. Dort bleibt es beim Bild selbst; nur das
+                ' ZIEL darf ueber den Rand hinaus.
+                If _linienDragTeil = 3 AndAlso clampToImage Then
+                    nx = Math.Max(0.0, Math.Min(100.0, nx))
+                    ny = Math.Max(0.0, Math.Min(100.0, ny))
+                End If
                 Select Case _linienDragTeil
                     Case 0
                         l.TargetAx = nx : l.TargetAy = ny
@@ -1134,9 +1239,12 @@ Namespace ViewModels
             End If
         End Sub
 
-        ''' <summary>Auf das Bild klemmen: 0 bis 100 Prozent.</summary>
+        ''' <summary>Auf das Bild samt Rand klemmen: wie bei Gitter und Verformen darf ein Linienende
+        ''' bis WarpOutsideMarginPercent ueber den Bildrand hinaus. Eine Vorschau ueber den Rahmen
+        ''' hinaus gibt es bei den Linien nicht (ihr Feld wird rueckwaerts ueber den Rahmen gerechnet,
+        ''' siehe RefreshLinePreview); wohin die Kante geht, zeigt die Linie selbst.</summary>
         Private Shared Function ClampPercent(value As Double) As Double
-            Return Math.Max(0.0, Math.Min(100.0, value))
+            Return ClampOutside(value, 0.0, 100.0)
         End Function
 
         Public Sub EndLineDrag()
@@ -1568,12 +1676,6 @@ Namespace ViewModels
             If _envelope Is Nothing OrElse _envelope.Length <> 24 Then ResetEnvelopePoints()
         End Sub
 
-        ''' <summary>Haelt einen Wert innerhalb des Bezugsrechtecks.</summary>
-        Private Shared Function ClampToEnvelopeRect(value As Double, start As Double, length As Double) As Double
-            If length <= 0 Then Return start
-            Return Math.Max(start, Math.Min(start + length, value))
-        End Function
-
         Private Sub ResetEnvelopePoints()
             _envelope = NeutralEnvelope(CurrentEnvelopeRect())
             _envelopeDragIndex = -1
@@ -1772,10 +1874,10 @@ Namespace ViewModels
             ' Wert zu springen.
             If Not target.HasValue Then Return
             PrepareEnvelope()
-            ' Beim BILD bleiben die Anfasser im Bild: ein herausgezogener Griff laege neben der
-            ' Bildflaeche und waere weder anzuzeigen noch je wieder zu fassen. Beim OBJEKT ist der
-            ' Bezug das Objektrechteck, dort ist Hinauswandern erlaubt und gewollt - die Ebene
-            ' waechst mit.
+            ' Beim BILD duerfen die Anfasser bis WarpOutsideMarginPercent ueber den Bildrand hinaus
+            ' (siehe "Ueber den Bildrand hinaus"); in der Naehe einer Bildkante rasten sie auf ihr ein,
+            ' damit eine Kante beim normalen Arbeiten gerade bleibt. Beim OBJEKT ist der Bezug das
+            ' Objektrechteck, dort ist Hinauswandern ohne Grenze erlaubt - die Ebene waechst mit.
             Dim nx = CDbl(target.Value.X), ny = CDbl(target.Value.Y)
             ' ACHSENTREU gegen den Beginn des Zuges: die kleinere der beiden Bewegungen faellt weg.
             If axisLock Then
@@ -1785,12 +1887,11 @@ Namespace ViewModels
                     nx = _envelopeDragStartX
                 End If
             End If
-            ' Geklemmt wird auf den sichtbaren Bereich - am Bild ist das der Verzerrraum selbst.
             Dim limit = Not WarpsTheObject
             Dim rect = CurrentEnvelopeRect()
             If limit Then
-                nx = ClampToEnvelopeRect(nx, rect.X, rect.Width)
-                ny = ClampToEnvelopeRect(ny, rect.Y, rect.Height)
+                nx = SnapToEdge(SnapToEdge(ClampOutside(nx, rect.X, rect.Width), rect.X), rect.X + rect.Width)
+                ny = SnapToEdge(SnapToEdge(ClampOutside(ny, rect.Y, rect.Height), rect.Y), rect.Y + rect.Height)
             End If
             ' Eine Ecke nimmt ihre beiden Griffe mit. Sonst bliebe die Kante an ihren alten Griffen
             ' haengen und beulte aus, waehrend die Ecke davonlaeuft. Mit Alt bleibt genau das aus.
@@ -1800,8 +1901,8 @@ Namespace ViewModels
                 For Each h In EnvelopeCornerHandles(_envelopeDragIndex)
                     Dim hx = _envelope(h * 2) + dx
                     Dim hy = _envelope(h * 2 + 1) + dy
-                    _envelope(h * 2) = If(limit, ClampToEnvelopeRect(hx, rect.X, rect.Width), hx)
-                    _envelope(h * 2 + 1) = If(limit, ClampToEnvelopeRect(hy, rect.Y, rect.Height), hy)
+                    _envelope(h * 2) = If(limit, ClampOutside(hx, rect.X, rect.Width), hx)
+                    _envelope(h * 2 + 1) = If(limit, ClampOutside(hy, rect.Y, rect.Height), hy)
                 Next
             End If
             _envelope(_envelopeDragIndex * 2) = nx
@@ -2456,14 +2557,17 @@ Namespace ViewModels
             ' Ohne gueltigen Punkt im Verzerrraum bleibt der Zug einfach stehen, statt auf einen
             ' geratenen Wert zu springen.
             If Not target.HasValue Then Return
-            ' Die Randpunkte duerfen NICHT ins Bild hinein oder aus ihm heraus wandern: sonst
-            ' entstehen an der Bildkante durchsichtige Streifen oder es wird Bildinhalt
-            ' abgeschnitten, ohne dass man es beim Ziehen sieht. Sie bleiben auf ihrer Kante und
-            ' laufen nur DARAUF entlang.
+            ' AM BILD duerfen alle Punkte ueber den Bildrand hinaus, bis an den Rand der Vorschau,
+            ' die das Hinausgezogene abgedunkelt zeigt; ein Randpunkt rastet nahe seiner Kante auf
+            ' ihr ein (siehe "Ueber den Bildrand hinaus"). AM OBJEKT laufen die Randpunkte weiter
+            ' nur auf ihrer Kante.
             Dim column = _warpDragIndex Mod (_warpColumns + 1)
             Dim row = _warpDragIndex \ (_warpColumns + 1)
-            Dim nx = Math.Max(0.0, Math.Min(100.0, CDbl(target.Value.X)))
-            Dim ny = Math.Max(0.0, Math.Min(100.0, CDbl(target.Value.Y)))
+            Dim edgesFree = GridEdgesFree
+            Dim low = If(edgesFree, -WarpOutsideMarginPercent, 0.0)
+            Dim high = If(edgesFree, 100.0 + WarpOutsideMarginPercent, 100.0)
+            Dim nx = Math.Max(low, Math.Min(high, CDbl(target.Value.X)))
+            Dim ny = Math.Max(low, Math.Min(high, CDbl(target.Value.Y)))
             ' ACHSENTREU: die kleinere der beiden Bewegungen faellt weg. Verglichen wird gegen den
             ' Beginn des Zuges und nicht gegen den letzten Punkt - sonst waere die Achse bei jedem
             ' Mausereignis neu zu haben, und der Punkt wanderte doch in beide Richtungen.
@@ -2474,10 +2578,17 @@ Namespace ViewModels
                     nx = _warpDragStartX
                 End If
             End If
-            If column = 0 Then nx = 0
-            If column = _warpColumns Then nx = 100
-            If row = 0 Then ny = 0
-            If row = _warpRows Then ny = 100
+            If edgesFree Then
+                If column = 0 Then nx = SnapToEdge(nx, 0)
+                If column = _warpColumns Then nx = SnapToEdge(nx, 100)
+                If row = 0 Then ny = SnapToEdge(ny, 0)
+                If row = _warpRows Then ny = SnapToEdge(ny, 100)
+            Else
+                If column = 0 Then nx = 0
+                If column = _warpColumns Then nx = 100
+                If row = 0 Then ny = 0
+                If row = _warpRows Then ny = 100
+            End If
             _warpX(_warpDragIndex) = nx
             _warpY(_warpDragIndex) = ny
             Me.RaisePropertyChanged(NameOf(WarpGridValues))
