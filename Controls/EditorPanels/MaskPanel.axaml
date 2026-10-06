@@ -454,7 +454,6 @@
                  Umkehren und Verwerfen stehen hier statt in der Modusreihe: sie tun etwas mit der
                  vorhandenen Maske und sagen nicht, was der naechste Zug tut. -->
             <StackPanel Spacing="8" IsVisible="{Binding ShowMaskProperties}">
-                <Border Height="1" Background="{DynamicResource FP.Border.Normal}" />
                 <TextBlock Text="Maskeneigenschaften"
                            Foreground="{DynamicResource FP.Text.Secondary}"
                            FontSize="{DynamicResource FP.Font.Small}" FontWeight="SemiBold" />
@@ -540,7 +539,6 @@
                  die Regler nicht schon zeigen. Die angeklickte Zeile ist die, die Griffe und Regler
                  bedienen. -->
             <StackPanel Spacing="4" IsVisible="{Binding HasMaskComponents}">
-                <Border Height="1" Background="{DynamicResource FP.Border.Normal}" />
                 <TextBlock Text="Bestandteile"
                            Foreground="{DynamicResource FP.Text.Secondary}"
                            FontSize="{DynamicResource FP.Font.Small}" />
@@ -646,7 +644,6 @@
 
             <!-- Verlaufs-Zweig -->
             <StackPanel Spacing="8" IsVisible="{Binding ShowGradientControls}">
-                <Border Height="1" Background="{DynamicResource FP.Border.Normal}" />
                 <TextBlock Text="Im Bild ziehen, um den Verlauf aufzuspannen. Die Griffe bleiben danach greifbar."
                            Foreground="{DynamicResource FP.Text.Secondary}"
                            FontSize="{DynamicResource FP.Font.Small}"

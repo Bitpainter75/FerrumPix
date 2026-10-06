@@ -4496,7 +4496,7 @@ Namespace ViewModels
 
         Public ReadOnly Property CanCopyMask As Boolean
             Get
-                Return CurrentMaskForComponents() IsNot Nothing
+                Return _hasActiveSelection OrElse CurrentMaskForComponents() IsNot Nothing
             End Get
         End Property
 
@@ -4516,7 +4516,11 @@ Namespace ViewModels
         End Function
 
         Public Sub CopyCurrentMask()
-            Dim m = CurrentMaskForComponents()
+            ' Eine aktive Auswahl ist im Maskenwerkzeug ebenfalls eine kopierbare Maske.
+            ' CreateSourceMaskFromSelection behandelt auch reine Rechteckauswahlen ohne Raster.
+            Dim m = If(_hasActiveSelection,
+                       ImageProcessor.CreateSourceMaskFromSelection(BuildAdjustmentsFromFields(), "Auswahlmaske"),
+                       CurrentMaskForComponents())
             If m Is Nothing Then Return
             _copiedMask = m.Clone()
             Me.RaisePropertyChanged(NameOf(CanPasteMask))

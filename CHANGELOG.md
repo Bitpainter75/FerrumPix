@@ -38,7 +38,3 @@
 
 - Removing a layer's adjustments while editing that object no longer lets stale adjustment values
   reappear when changing its effects.
-
-- Button spacing in the selection tool panel is now consistent.
-
-- Separator lines have been removed from the editor adjustment panels.

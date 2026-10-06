@@ -11796,7 +11796,9 @@ Namespace ViewModels
 
         Public ReadOnly Property CanCopySelectionShape As Boolean
             Get
-                Return _hasActiveSelection AndAlso _selectionMask IsNot Nothing
+                If Not _hasActiveSelection Then Return False
+                Dim rect = SelectionRectPixels()
+                Return rect.Width > 0 AndAlso rect.Height > 0
             End Get
         End Property
 
@@ -11807,10 +11809,14 @@ Namespace ViewModels
         End Property
 
         Public Sub CopySelectionShape()
-            If _selectionMask Is Nothing OrElse _selectionMaskRect.Width <= 0 Then Return
-            _copiedSelectionShape?.Dispose()
-            _copiedSelectionShape = _selectionMask.Copy()
-            _copiedSelectionShapeRect = _selectionMaskRect
+            Dim rect = SelectionRectPixels()
+            If Not _hasActiveSelection OrElse rect.Width <= 0 OrElse rect.Height <= 0 Then Return
+            Using shape = BuildCurrentSelectionMask()
+                If shape Is Nothing Then Return
+                _copiedSelectionShape?.Dispose()
+                _copiedSelectionShape = shape.Copy()
+            End Using
+            _copiedSelectionShapeRect = rect
             Me.RaisePropertyChanged(NameOf(CanPasteSelectionShape))
             StatusText = LocalizationService.T("Auswahl abgelegt")
         End Sub
