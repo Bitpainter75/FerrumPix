@@ -59,7 +59,7 @@
                                        Value="{Binding AnnotationGlowBlur}" Margin="0,0" />
                     <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
                                              Value="{Binding AnnotationGlowBlur, Mode=TwoWay}"
-                                             Minimum="0" Maximum="100" Increment="1"
+                                             Minimum="0" Maximum="100" Increment="0.1"
                                              FormatString="F1" />
                 </Grid>
                 <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">

@@ -76,6 +76,8 @@ Namespace Controls
         ''' Klicks ohne eigenes Zeigerereignis, und wer mit SHIFT angefangen hat, meint den groben
         ''' Schritt auch für die Wiederholung.
         Private _coarseModifierOnPointer As Boolean
+        Private _lastWheelStepAt As DateTime = DateTime.MinValue
+        Private Const WheelStepIntervalMs As Double = 50.0
 
         Private Sub OnPointerDownForCoarseStep(sender As Object, e As PointerPressedEventArgs)
             _coarseModifierOnPointer = (e.KeyModifiers And KeyModifiers.Shift) = KeyModifiers.Shift
@@ -83,6 +85,22 @@ Namespace Controls
 
         Private Sub OnPointerWheelForCoarseStep(sender As Object, e As PointerWheelEventArgs)
             _coarseModifierOnPointer = (e.KeyModifiers And KeyModifiers.Shift) = KeyModifiers.Shift
+        End Sub
+
+        ''' <summary>Ein Radschritt wirkt sofort. Sehr dicht eintreffende Impulse werden verworfen
+        ''' statt gepuffert, damit ein schnell laufendes Mausrad keinen langen Nachlauf aufbaut.</summary>
+        Protected Overrides Sub OnPointerWheelChanged(e As PointerWheelEventArgs)
+            If e.Delta.Y <> 0 Then
+                Dim now = DateTime.UtcNow
+                If (now - _lastWheelStepAt).TotalMilliseconds >= WheelStepIntervalMs Then
+                    _lastWheelStepAt = now
+                    Dim stepSize = StepIncrement((e.KeyModifiers And KeyModifiers.Shift) = KeyModifiers.Shift)
+                    StepValue(If(e.Delta.Y > 0, stepSize, -stepSize))
+                End If
+                e.Handled = True
+                Return
+            End If
+            MyBase.OnPointerWheelChanged(e)
         End Sub
 
         ''' <summary>Die Weite für den nächsten Schritt: grob, wenn eine grobe eingestellt ist UND

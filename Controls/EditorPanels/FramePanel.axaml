@@ -46,7 +46,8 @@
                 <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="25"
                                    Value="{Binding BorderSize}" Margin="0,0" />
                 <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
-                                         Value="{Binding BorderSize, Mode=TwoWay}" Minimum="0" Maximum="25" />
+                                         Value="{Binding BorderSize, Mode=TwoWay}" Minimum="0" Maximum="25"
+                                         Increment="0.1" FormatString="F1" />
             </Grid>
             <!-- Abstand zur Bildkante, wie die Groesse in Prozent der kuerzeren Bildseite. -->
             <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
@@ -56,7 +57,7 @@
                                    Value="{Binding FrameMargin}" Margin="0,0" />
                 <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
                                          Value="{Binding FrameMargin, Mode=TwoWay}" Minimum="0" Maximum="40"
-                                         Increment="0.5" FormatString="F1" />
+                                         Increment="0.1" FormatString="F1" />
             </Grid>
             <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
                 <TextBlock Text="Rundung" Foreground="{DynamicResource FP.Text.Secondary}"
