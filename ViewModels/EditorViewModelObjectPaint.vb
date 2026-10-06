@@ -498,6 +498,21 @@ Namespace ViewModels
             Dim target = If(row?.Annotation, CurrentObject())
             If target Is Nothing OrElse target.Adjustments Is Nothing Then Return
             If Not target.Adjustments.HasPixelAdjustments() Then Return
+            Dim targetId = target.Id
+            ' Im Objekt-Anpassungsmodus liegen die Werte zusätzlich in den Reglerfeldern. Nur das
+            ' Rezept am Objekt zu löschen reicht nicht: die nächste Eigenschaftsänderung (etwa
+            ' Glühen) schriebe über PushObjectAdjustValuesToTargets genau diese alten Werte wieder
+            ' zurück. Den Modus erst sauber abschließen, dann das Objekt neu suchen (ApplyAdjustments
+            ' ersetzt die Annotationen durch Klone) und verwerfen. Der anschließende Refresh lädt
+            ' für das markierte Objekt den neutralen Stand, während die Bildwerte geparkt bleiben.
+            If Object.ReferenceEquals(target, CurrentObject()) AndAlso IsObjectAdjustModeActive() AndAlso
+               _objectAdjustIndex = _selectedAnnotationIndex Then
+                CommitObjectAdjustModeToModel()
+                target = _annotations.FirstOrDefault(Function(a) a IsNot Nothing AndAlso
+                    String.Equals(a.Id, targetId, StringComparison.Ordinal))
+                If target Is Nothing OrElse target.Adjustments Is Nothing OrElse
+                   Not target.Adjustments.HasPixelAdjustments() Then Return
+            End If
             PushUndo()
             target.Adjustments = Nothing
             target.AdjustmentsHidden = False

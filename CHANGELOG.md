@@ -35,3 +35,6 @@
 
 - **More precise numeric controls** are available for tone and color adjustments, color grading,
   detail effects, white balance and layer opacity. Kelvin white balance uses 10 K steps.
+
+- Removing a layer's adjustments while editing that object no longer lets stale adjustment values
+  reappear when changing its effects.
