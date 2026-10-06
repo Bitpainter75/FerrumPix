@@ -585,7 +585,7 @@ Namespace ViewModels
         '
         ' Am BILD duerfen die Punkte von Gitter, Verformen und Linien ueber den Bildrand hinaus,
         ' bis WarpOutsideMarginPercent: eine Bildecke laesst sich nach aussen ziehen, wie beim
-        ' freien Transformieren anderer Programme (Nutzerwunsch aus dem Forum). Das Ergebnis
+        ' freien Transformieren anderer Programme (Wunsch aus dem Forum). Das Ergebnis
         ' behaelt die Bildmaße, der Bildrahmen wirkt als Zuschnitt: was hinausgezogen ist, faellt
         ' beim Anwenden weg, eine nach innen gezogene Kante laesst eine durchsichtige Stelle.
         '

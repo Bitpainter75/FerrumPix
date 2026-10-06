@@ -48,13 +48,13 @@
                                     Spacing="12">
                             <!-- Die Logos sind nicht treffbar, damit der Druck darauf beim
                                  Ziehbereich landet; nur der Hinweis daneben ist ein Knopf. -->
-                            <Image Source="avares://FerrumPix/Assets/FerrumPix_TopBarDark_small.png"
+                            <Image Source="{DynamicResource FP.Logo.Dark}"
                                    Height="22"
                                    VerticalAlignment="Center"
                                    Stretch="Uniform"
                                    IsHitTestVisible="False"
                                    IsVisible="{Binding IsDarkLogoVisible}"/>
-                            <Image Source="avares://FerrumPix/Assets/FerrumPix_TopBarLight_small.png"
+                            <Image Source="{DynamicResource FP.Logo.Light}"
                                    Height="22"
                                    VerticalAlignment="Center"
                                    Stretch="Uniform"

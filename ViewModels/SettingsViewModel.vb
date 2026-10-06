@@ -5597,6 +5597,9 @@ Namespace ViewModels
             SetAccentBrushes(accentColor, isDark)
             ApplyFluentAccentPalette(accentColor)
             MirrorAppearanceBrushes()
+            ' "Pix" im Logo der Fensterleiste folgt dem Akzent, samt Staerke (siehe oben).
+            app.Resources("FP.Logo.Dark") = AccentLogoService.GetTintedLogo(AccentLogoService.DarkLogoUri, accentColor)
+            app.Resources("FP.Logo.Light") = AccentLogoService.GetTintedLogo(AccentLogoService.LightLogoUri, accentColor)
         End Sub
 
         ''' <summary>Checkboxen und Standard-ToggleSwitches kommen aus Fluent und lesen ihre
