@@ -61,8 +61,9 @@
                                            ToolTip.Tip="Ziehen setzt Farbton und Sättigung; mit SHIFT nur die Sättigung"/>
                     <Grid ColumnDefinitions="*,40" Margin="0,4,0,0">
                         <icons:RoundSlider Minimum="-100" Maximum="100" Value="{Binding ColorGradeShadowLuminance}"/>
-                        <icons:SliderValueUpDown Grid.Column="1" Classes="slider-value"
-                                                 Value="{Binding ColorGradeShadowLuminance, Mode=TwoWay}" Minimum="-100" Maximum="100"/>
+                        <icons:SliderValueUpDown Grid.Column="1" Classes="slider-value slider-value-wide"
+                                                 Value="{Binding ColorGradeShadowLuminance, Mode=TwoWay}" Minimum="-100" Maximum="100"
+                                                 Increment="0.1" FormatString="F1"/>
                     </Grid>
                 </StackPanel>
 
@@ -73,8 +74,9 @@
                                            ToolTip.Tip="Ziehen setzt Farbton und Sättigung; mit SHIFT nur die Sättigung"/>
                     <Grid ColumnDefinitions="*,40" Margin="0,4,0,0">
                         <icons:RoundSlider Minimum="-100" Maximum="100" Value="{Binding ColorGradeMidtoneLuminance}"/>
-                        <icons:SliderValueUpDown Grid.Column="1" Classes="slider-value"
-                                                 Value="{Binding ColorGradeMidtoneLuminance, Mode=TwoWay}" Minimum="-100" Maximum="100"/>
+                        <icons:SliderValueUpDown Grid.Column="1" Classes="slider-value slider-value-wide"
+                                                 Value="{Binding ColorGradeMidtoneLuminance, Mode=TwoWay}" Minimum="-100" Maximum="100"
+                                                 Increment="0.1" FormatString="F1"/>
                     </Grid>
                 </StackPanel>
 
@@ -85,8 +87,9 @@
                                            ToolTip.Tip="Ziehen setzt Farbton und Sättigung; mit SHIFT nur die Sättigung"/>
                     <Grid ColumnDefinitions="*,40" Margin="0,4,0,0">
                         <icons:RoundSlider Minimum="-100" Maximum="100" Value="{Binding ColorGradeHighlightLuminance}"/>
-                        <icons:SliderValueUpDown Grid.Column="1" Classes="slider-value"
-                                                 Value="{Binding ColorGradeHighlightLuminance, Mode=TwoWay}" Minimum="-100" Maximum="100"/>
+                        <icons:SliderValueUpDown Grid.Column="1" Classes="slider-value slider-value-wide"
+                                                 Value="{Binding ColorGradeHighlightLuminance, Mode=TwoWay}" Minimum="-100" Maximum="100"
+                                                 Increment="0.1" FormatString="F1"/>
                     </Grid>
                 </StackPanel>
 
@@ -97,8 +100,9 @@
                                            ToolTip.Tip="Wirkt auf das ganze Bild, unabhängig vom Tonwert"/>
                     <Grid ColumnDefinitions="*,40" Margin="0,4,0,0">
                         <icons:RoundSlider Minimum="-100" Maximum="100" Value="{Binding ColorGradeGlobalLuminance}"/>
-                        <icons:SliderValueUpDown Grid.Column="1" Classes="slider-value"
-                                                 Value="{Binding ColorGradeGlobalLuminance, Mode=TwoWay}" Minimum="-100" Maximum="100"/>
+                        <icons:SliderValueUpDown Grid.Column="1" Classes="slider-value slider-value-wide"
+                                                 Value="{Binding ColorGradeGlobalLuminance, Mode=TwoWay}" Minimum="-100" Maximum="100"
+                                                 Increment="0.1" FormatString="F1"/>
                     </Grid>
                 </StackPanel>
             </Grid>
@@ -108,16 +112,18 @@
                            VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                 <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100"
                                    Value="{Binding ColorGradeBalance}" Margin="0,0" />
-                <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
-                                         Value="{Binding ColorGradeBalance, Mode=TwoWay}" Minimum="-100" Maximum="100" />
+                <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value slider-value-wide"
+                                         Value="{Binding ColorGradeBalance, Mode=TwoWay}" Minimum="-100" Maximum="100"
+                                         Increment="0.1" FormatString="F1" />
             </Grid>
             <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
                 <TextBlock Text="Überblendung" Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                 <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
                                    DefaultValue="50" Value="{Binding ColorGradeBlending}" Margin="0,0" />
-                <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
-                                         Value="{Binding ColorGradeBlending, Mode=TwoWay}" Minimum="0" Maximum="100" />
+                <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value slider-value-wide"
+                                         Value="{Binding ColorGradeBlending, Mode=TwoWay}" Minimum="0" Maximum="100"
+                                         Increment="0.1" FormatString="F1" />
             </Grid>
         </StackPanel>
     </Expander>

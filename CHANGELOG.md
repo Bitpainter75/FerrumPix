@@ -1,4 +1,4 @@
-## 0.9.62-1
+## 0.9.63
 
 ### What's new
 
@@ -11,17 +11,8 @@
 - **A clearer editor footer.** The output dimensions no longer compete with the centered zoom
   controls on smaller windows.
 
-- **The frame works like the other objects.** It has an on and off switch in its group, and below
-  it the same fill, shadow and glow groups as text, with every option: all gradient types with as
-  many color stops as you like, presets, and shadow and glow inside or outside. Radial and diamond
-  gradients run along the frame itself, so every color shows. The frame can also keep a distance
-  from the edge of the picture. A semi-transparent gradient frame now keeps the opacity you set
-  instead of turning fainter.
-
-- **Warp beyond the edge.** The grid, envelope and line warps let you drag the corners and edges
-  of the picture past its border, like a free transform. The preview shows the part outside
-  darkened, and applying keeps the picture size, so what was pulled out is cut off. Edges snap
-  back onto their line when you come close, so they stay straight unless you mean otherwise.
+- **Accent-colored window logo.** The “Pix” part of the title-bar logo now follows the selected
+  accent color and strength.
 
 ### Fixes
 
@@ -29,40 +20,18 @@
   A 50 mm lens is no longer labelled 75 mm on a crop camera, and existing catalog entries are
   refreshed automatically. This also refreshes missing lens names, including Sigma lenses.
 
-- Red eye removal moved to the image brush, next to the eraser, dodge, burn, sponge and replace
-  color. One click on the pupil removes the red inside the brush circle. Blur, healing brush and
-  clone stamp no longer carry it.
+- **HSL color chips now refresh their change indicators** when an image is loaded or switched, or
+  when global adjustments are reset.
 
-- In the selection tool, fill, stroke, shadow and glow only show once there is a selection or a
-  selection layer is picked, since they have nothing to work on before that.
+- **More precise size controls.** Frame width and margin, shadow size and glow size can be adjusted
+  in 0.1 steps.
+
+- **Mouse-wheel input on numeric fields no longer builds up a delayed queue.** Rapid extra wheel
+  impulses are discarded instead of continuing to change the value after scrolling stops.
 
 - The frame group only appears for the main image or the selected frame layer. A small frame
   toggle in the image footer shows whether the frame is active. Frame layers cannot be duplicated
   or copied and pasted, keeping at most one frame layer in a project.
 
-- The size of shadow and glow can now be set to one decimal place, and a new glow starts at size 5
-  instead of 10.
-
-- DNG files that store their pictures as JPEG XL now show their large embedded preview instead of
-  a tiny thumbnail. Developing their raw data is not possible yet.
-
-- Double-clicking a slider now returns it to its starting value everywhere. Lens correction,
-  color grading blend, depth blur, the mask and selection range sliders and two dialog sliders used
-  to jump to zero instead. Depth blur now starts at zero strength, the same value its reset uses.
-
-- Raw files from the Fujifilm X100VI get better matched brightness and colors.
-
-- The shadow of the paint brush is visible now. It used to sit almost exactly under the stroke,
-  and its softness and size had next to no effect. The brush starts with a larger shadow offset
-  and glow size than objects.
-
-- The number fields next to the sliders stand out slightly from the panel, so they are easier to
-  spot and click.
-
-- While the eyedropper of a color field hovers over the picture, the color field already shows the
-  color under it. It is only taken over with the click.
-
-- A cropped or rotated picture no longer shrinks on the canvas while you drag an adjustment slider.
-
-- Save as, export, apply adjustments and the other dialogs with a target folder remember whether
-  you last picked the current or the last folder.
+- **More precise numeric controls** are available for tone and color adjustments, color grading,
+  detail effects, white balance and layer opacity. Kelvin white balance uses 10 K steps.

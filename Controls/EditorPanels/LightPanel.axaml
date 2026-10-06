@@ -73,48 +73,54 @@
                            VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                 <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100"
                                    Value="{Binding Brightness}" Margin="0,0" />
-                <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
-                                         Value="{Binding Brightness, Mode=TwoWay}" Minimum="-100" Maximum="100" />
+                <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value slider-value-wide"
+                                         Value="{Binding Brightness, Mode=TwoWay}" Minimum="-100" Maximum="100"
+                                         Increment="0.1" FormatString="F1" />
             </Grid>
             <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
                 <TextBlock Text="Kontrast" Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                 <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100"
                                    Value="{Binding Contrast}" Margin="0,0" />
-                <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
-                                         Value="{Binding Contrast, Mode=TwoWay}" Minimum="-100" Maximum="100" />
+                <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value slider-value-wide"
+                                         Value="{Binding Contrast, Mode=TwoWay}" Minimum="-100" Maximum="100"
+                                         Increment="0.1" FormatString="F1" />
             </Grid>
             <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
                 <TextBlock Text="Lichter" Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                 <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100"
                                    Value="{Binding Highlights}" Margin="0,0" />
-                <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
-                                         Value="{Binding Highlights, Mode=TwoWay}" Minimum="-100" Maximum="100" />
+                <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value slider-value-wide"
+                                         Value="{Binding Highlights, Mode=TwoWay}" Minimum="-100" Maximum="100"
+                                         Increment="0.1" FormatString="F1" />
             </Grid>
             <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
                 <TextBlock Text="Tiefen" Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                 <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100"
                                    Value="{Binding ShadowsLevel}" Margin="0,0" />
-                <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
-                                         Value="{Binding ShadowsLevel, Mode=TwoWay}" Minimum="-100" Maximum="100" />
+                <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value slider-value-wide"
+                                         Value="{Binding ShadowsLevel, Mode=TwoWay}" Minimum="-100" Maximum="100"
+                                         Increment="0.1" FormatString="F1" />
             </Grid>
             <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
                 <TextBlock Text="Weiß" Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                 <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100"
                                    Value="{Binding Whites}" Margin="0,0" />
-                <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
-                                         Value="{Binding Whites, Mode=TwoWay}" Minimum="-100" Maximum="100" />
+                <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value slider-value-wide"
+                                         Value="{Binding Whites, Mode=TwoWay}" Minimum="-100" Maximum="100"
+                                         Increment="0.1" FormatString="F1" />
             </Grid>
             <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
                 <TextBlock Text="Schwarz" Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                 <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100"
                                    Value="{Binding Blacks}" Margin="0,0" />
-                <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
-                                         Value="{Binding Blacks, Mode=TwoWay}" Minimum="-100" Maximum="100" />
+                <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value slider-value-wide"
+                                         Value="{Binding Blacks, Mode=TwoWay}" Minimum="-100" Maximum="100"
+                                         Increment="0.1" FormatString="F1" />
             </Grid>
             <!-- EIN HAKEN UND KEIN REGLER, und zwar aus einem handfesten Grund: die Stufe sitzt
                  im Decode, das Umschalten laesst also die Umsetzung neu laufen.

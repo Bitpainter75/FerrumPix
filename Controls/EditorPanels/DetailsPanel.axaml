@@ -35,24 +35,27 @@
                                VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                     <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100"
                                        Value="{Binding Clarity}" Margin="0,0" />
-                    <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
-                                             Value="{Binding Clarity, Mode=TwoWay}" Minimum="-100" Maximum="100" />
+                    <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value slider-value-wide"
+                                             Value="{Binding Clarity, Mode=TwoWay}" Minimum="-100" Maximum="100"
+                                             Increment="0.1" FormatString="F1" />
                 </Grid>
                 <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
                     <TextBlock Text="Struktur" Foreground="{DynamicResource FP.Text.Secondary}"
                                VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                     <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100"
                                        Value="{Binding Structure}" Margin="0,0" />
-                    <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
-                                             Value="{Binding Structure, Mode=TwoWay}" Minimum="-100" Maximum="100" />
+                    <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value slider-value-wide"
+                                             Value="{Binding Structure, Mode=TwoWay}" Minimum="-100" Maximum="100"
+                                             Increment="0.1" FormatString="F1" />
                 </Grid>
                 <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
                     <TextBlock Text="Dunst" Foreground="{DynamicResource FP.Text.Secondary}"
                                VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                     <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100"
                                        Value="{Binding Haze}" Margin="0,0" />
-                    <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
-                                             Value="{Binding Haze, Mode=TwoWay}" Minimum="-100" Maximum="100" />
+                    <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value slider-value-wide"
+                                             Value="{Binding Haze, Mode=TwoWay}" Minimum="-100" Maximum="100"
+                                             Increment="0.1" FormatString="F1" />
                 </Grid>
                 <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
                     <TextBlock Text="Staub/Kratzer" Foreground="{DynamicResource FP.Text.Secondary}"
@@ -68,8 +71,9 @@
                                VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                     <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100"
                                        Value="{Binding Glow}" Margin="0,0" />
-                    <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
-                                             Value="{Binding Glow, Mode=TwoWay}" Minimum="-100" Maximum="100" />
+                    <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value slider-value-wide"
+                                             Value="{Binding Glow, Mode=TwoWay}" Minimum="-100" Maximum="100"
+                                             Increment="0.1" FormatString="F1" />
                 </Grid>
             </StackPanel>
         </Expander>

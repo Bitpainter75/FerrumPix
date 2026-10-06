@@ -36,9 +36,9 @@
                         <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
                                            DefaultValue="100"
                                            Value="{Binding SelectedLayerOpacity}" Margin="0,0" />
-                        <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                        <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value slider-value-wide"
                                                  Value="{Binding SelectedLayerOpacity, Mode=TwoWay}"
-                                                 Minimum="0" Maximum="100" Increment="1" FormatString="F0" />
+                                                 Minimum="0" Maximum="100" Increment="0.1" FormatString="F1" />
                     </Grid>
                     <!-- Deckkraft und Mischen gelten der markierten ZEILE. Ist es eine
                          Gruppenzeile, meinen sie die GANZE Gruppe: sie kommt dann auf eine eigene

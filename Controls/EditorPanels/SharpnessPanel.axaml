@@ -45,7 +45,8 @@
                         <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
                                            Value="{Binding SharpenRadius}" Margin="0,0" />
                         <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
-                                                 Value="{Binding SharpenRadius, Mode=TwoWay}" Minimum="0" Maximum="100" />
+                                                 Value="{Binding SharpenRadius, Mode=TwoWay}" Minimum="0" Maximum="100"
+                                                 Increment="0.1" FormatString="F1" />
                     </Grid>
                     <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
                         <TextBlock Text="Detail" Foreground="{DynamicResource FP.Text.Secondary}"
