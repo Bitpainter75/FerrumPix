@@ -11821,7 +11821,7 @@ Namespace ViewModels
             StatusText = LocalizationService.T("Auswahl abgelegt")
         End Sub
 
-        Public Sub PasteSelectionShape()
+        Public Async Function PasteSelectionShape() As Task
             If _copiedSelectionShape Is Nothing Then Return
             ' Die Form ist in ANZEIGEPIXELN abgelegt. Auf einem kleineren Bild laege sie teilweise
             ' ausserhalb - dann lieber nichts tun und es sagen, statt eine angeschnittene Form
@@ -11837,8 +11837,11 @@ Namespace ViewModels
                 ApplySelectionCandidate(kopie, _copiedSelectionShapeRect, "MagicWand", Nothing, Nothing,
                                         isMask:=False, forceNew:=True)
             End Using
+            Dim layer = Await CreateAdjustmentLayerFromSelectionAsync(captureUndo:=False)
+            If layer Is Nothing Then Return
+            NameHistoryStep(LocalizationService.T("Auswahl eingefügt"))
             StatusText = LocalizationService.T("Auswahl eingefügt")
-        End Sub
+        End Function
 
         Public Sub InvertSelection()
             If Not _hasActiveSelection Then Return
@@ -17396,7 +17399,7 @@ Namespace ViewModels
             ClearSelectionCommand = ReactiveCommand.Create(Sub() ClearSelection())
             InvertSelectionCommand = ReactiveCommand.Create(Sub() InvertSelection())
             CopySelectionShapeCommand = ReactiveCommand.Create(Sub() CopySelectionShape())
-            PasteSelectionShapeCommand = ReactiveCommand.Create(Sub() PasteSelectionShape())
+            PasteSelectionShapeCommand = ReactiveCommand.CreateFromTask(Function() PasteSelectionShape())
             CopySelectionCommand = ReactiveCommand.CreateFromTask(Function() CopySelectionToNewObjectAsync())
             AddPaintLayerCommand = ReactiveCommand.Create(Sub() AddPaintLayer())
             ToggleTransparencyLockCommand = ReactiveCommand.Create(
@@ -25100,7 +25103,7 @@ Namespace ViewModels
                 Dim lineCount As Integer = 0
                 For Each line In content.Replace(vbCrLf, vbLf).Replace(vbCr, vbLf).Split(ControlChars.Lf)
                     lineCount += 1
-                    maxLineWidth = Math.Max(maxLineWidth, font.MeasureText(If(String.IsNullOrEmpty(line), " ", line), paint))
+                    maxLineWidth = Math.Max(maxLineWidth, TextShaper.MeasureWidth(font, If(String.IsNullOrEmpty(line), " ", line)))
                 Next
                 If lineCount = 0 Then lineCount = 1
 
@@ -25933,6 +25936,38 @@ Namespace ViewModels
                 Case Else : Return EditorTool.Insert
             End Select
         End Function
+
+        ''' <summary>Öffnet beim Doppelklick das Werkzeug der markierten Overlay-Ebene.
+        ''' Einzelklicks bleiben ausdrücklich beim aktiven Werkzeug, damit dessen Anpassungspanel
+        ''' weiterhin auf die ausgewählte Ebene wirken kann.</summary>
+        Public Sub OpenSelectedAnnotationTool()
+            If HasMultiAnnotationSelection OrElse _selectedAnnotationIndex < 0 OrElse
+               _selectedAnnotationIndex >= _annotations.Count Then Return
+
+            Dim annotation = _annotations(_selectedAnnotationIndex)
+            If annotation Is Nothing Then Return
+            Dim kind = NormalizeAnnotationKind(annotation.Kind)
+            Dim targetTool = AnnotationKindToTool(kind)
+            Dim selectedIndex = _selectedAnnotationIndex
+
+            _overlayNotifySuppressDepth += 1
+            Try
+                PendingInsertKind = ""
+                ArmedInsertKind = ""
+                If targetTool = EditorTool.Text Then
+                    PendingInsertKind = kind
+                    ArmedInsertKind = kind
+                End If
+                CurrentTool = targetTool
+                ' Einige Werkzeuge wählen beim Eintritt gewöhnlich die Ebene ab. Beim gezielten
+                ' Öffnen des Werkzeugs dieser Ebene muss die Ebene jedoch Bearbeitungsziel bleiben.
+                If selectedIndex < _annotations.Count Then SelectedAnnotationIndex = selectedIndex
+                ShowToolTabUnlessHistoryOpen()
+            Finally
+                _overlayNotifySuppressDepth -= 1
+            End Try
+            NotifyAnnotationOverlayStateChanged()
+        End Sub
 
         Private Shared Function ToolbarKindForAnnotation(kind As String) As String
             Select Case NormalizeAnnotationKind(kind)

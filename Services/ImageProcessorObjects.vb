@@ -3079,8 +3079,10 @@ Namespace Services
             Dim fontSize = Math.Max(12.0F, Math.Min(rect.Width, rect.Height) * 0.82F)
             Using font = CreateFont(fontFamily, fontSize)
                 Using paint = New SKPaint With {.IsAntialias = True}
-                    Dim bounds As SKRect
-                    font.MeasureText(text, bounds, paint)
+                    ' Geformt wie jeder Text: ein Symbol aus mehreren Zeichen (Emoji mit
+                    ' Verbinder, Zeichen mit Akzent) ist sonst kein Zeichen, sondern mehrere.
+                    Dim shaped = TextShaper.Shape(font, text)
+                    Dim bounds = TextShaper.MeasureInk(shaped, font)
                     Dim x = rect.MidX - bounds.MidX
                     Dim y = rect.MidY - bounds.MidY
                     ' Ohne eigene Einstellung liegt die Kontur UNTER der Fuellung, wie schon immer -
@@ -3089,17 +3091,17 @@ Namespace Services
                     Dim strokeOnTop = StrokeDrawsOnTop()
                     If strokeWidth > 0 AndAlso Not strokeOnTop Then
                         Using strokePaint = ObjectStrokePaint(stroke, strokeWidth)
-                            canvas.DrawText(text, x, y, font, strokePaint)
+                            TextShaper.Draw(canvas, shaped, font, x, y, strokePaint)
                         End Using
                     End If
                     paint.Style = SKPaintStyle.Fill
                     paint.Color = fill
                     ApplyFillEraser(paint)
-                    canvas.DrawText(text, x, y, font, paint)
+                    TextShaper.Draw(canvas, shaped, font, x, y, paint)
                     paint.BlendMode = SKBlendMode.SrcOver
                     If strokeWidth > 0 AndAlso strokeOnTop Then
                         Using strokePaint = ObjectStrokePaint(stroke, strokeWidth)
-                            canvas.DrawText(text, x, y, font, strokePaint)
+                            TextShaper.Draw(canvas, shaped, font, x, y, strokePaint)
                         End Using
                     End If
                 End Using
@@ -3138,62 +3140,56 @@ Namespace Services
             Return New SKColor(color.Red, color.Green, color.Blue, alpha)
         End Function
 
-        ''' <summary>Textbreite EINSCHLIESSLICH Zeichenabstand. Muss ueberall dort benutzt werden,
-        ''' wo bisher font.MeasureText stand - sonst passt die Einpassung auf den Pfad nicht mehr
-        ''' zum tatsaechlich gezeichneten Text.</summary>
+        ''' <summary>Textbreite EINSCHLIESSLICH Zeichenabstand, aus dem geformten Text (siehe
+        ''' <see cref="TextShaper"/>). Muss ueberall dort benutzt werden, wo gemessen wird - sonst
+        ''' passen Einpassung auf den Pfad, Ausrichtung und Rahmen nicht zum gezeichneten Text.</summary>
         Private Shared Function MeasureTextSpaced(font As SKFont, text As String, spacing As Single) As Single
             If String.IsNullOrEmpty(text) Then Return 0.0F
-            Dim w = font.MeasureText(text)
-            If spacing <> 0.0F AndAlso text.Length > 1 Then w += spacing * (text.Length - 1)
-            Return w
+            Return TextShaper.MeasureWidth(font, text, spacing)
         End Function
 
-        ''' <summary>Zeichnet eine Zeile mit Zeichenabstand. Bei spacing = 0 exakt der bisherige
-        ''' Weg (ein DrawText fuer die ganze Zeile, mit Kerning) - der Normalfall bleibt also
-        ''' unveraendert. Erst ein gesetzter Abstand setzt die Zeichen einzeln.</summary>
+        ''' <summary>Zeichnet eine geformte Zeile. Der Zeichenabstand faellt zwischen ZEICHENGRUPPEN,
+        ''' nicht zwischen einzelne Zeichen: ein Thai-Tonzeichen bleibt auf seinem Buchstaben, statt
+        ''' wie frueher als eigenes Zeichen daneben gesetzt zu werden.</summary>
         Private Shared Sub DrawTextSpaced(canvas As SKCanvas, text As String, x As Single, baseline As Single,
                                           font As SKFont, paint As SKPaint, spacing As Single)
-            If spacing = 0.0F Then
-                canvas.DrawText(text, x, baseline, font, paint)
-                Return
-            End If
-            Dim cx = x
-            For Each ch In text
-                Dim einzeln = ch.ToString()
-                canvas.DrawText(einzeln, cx, baseline, font, paint)
-                cx += font.MeasureText(einzeln) + spacing
-            Next
+            If String.IsNullOrEmpty(text) Then Return
+            TextShaper.DrawText(canvas, text, x, baseline, font, paint, spacing)
         End Sub
 
-        ''' <summary>Text auf einem Pfad mit Zeichenabstand. Bei spacing = 0 bleibt es bei Skias
-        ''' DrawTextOnPath; sonst werden die Zeichen einzeln gesetzt und zur Tangente gedreht -
-        ''' dasselbe Verhalten wie warpGlyphs:=False, nur mit eigenem Vorschub.
-        ''' Ohne diesen Zweig waere der Zeichenabstand bei gesetztem Pfad wirkungslos gewesen.</summary>
+        ''' <summary>Text auf einem Pfad: jede Zeichengruppe wird mit ihrer Mitte auf den Pfad gesetzt
+        ''' und zur Tangente gedreht, starr und ohne die Glyphe zu verbiegen - dasselbe wie Skias
+        ''' DrawTextOnPath mit warpGlyphs:=False, nur geformt und mit eigenem Vorschub. Eine Gruppe
+        ''' dreht als Ganzes; ihre Zeichen behalten untereinander die Lage aus der Formung.</summary>
         Private Shared Sub DrawTextOnPathSpaced(canvas As SKCanvas, text As String, path As SKPath,
                                                 font As SKFont, paint As SKPaint, spacing As Single)
-            If spacing = 0.0F Then
-                canvas.DrawTextOnPath(text, path, New SKPoint(0, 0), warpGlyphs:=False, font, paint)
-                Return
-            End If
+            If String.IsNullOrEmpty(text) Then Return
+            Dim shaped = TextShaper.Shape(font, text, spacing)
+            Dim glyphCount = shaped.Glyphs.Length
             Using measure = New SKPathMeasure(path, False)
-                Dim laenge = measure.Length
-                Dim d As Single = 0.0F
-                For Each ch In text
-                    Dim einzeln = ch.ToString()
-                    Dim width = font.MeasureText(einzeln)
-                    Dim center = d + width / 2.0F
-                    If center > laenge Then Exit For
-                    Dim pos As SKPoint, tangente As SKPoint
-                    If measure.GetPositionAndTangent(center, pos, tangente) Then
-                        Dim angle = CSng(Math.Atan2(tangente.Y, tangente.X) * 180.0 / Math.PI)
+                Dim pathLength = measure.Length
+                Dim first = 0
+                While first < glyphCount
+                    Dim last = first
+                    Dim width = shaped.Advance(first)
+                    While last + 1 < glyphCount AndAlso shaped.ClusterIndex(last + 1) = shaped.ClusterIndex(first)
+                        last += 1
+                        width += shaped.Advance(last)
+                    End While
+                    Dim clusterStart = shaped.PenX(first)
+                    Dim center = clusterStart + width / 2.0F
+                    If center > pathLength Then Exit While
+                    Dim pos As SKPoint, tangent As SKPoint
+                    If measure.GetPositionAndTangent(center, pos, tangent) Then
+                        Dim angle = CSng(Math.Atan2(tangent.Y, tangent.X) * 180.0 / Math.PI)
                         Dim state = canvas.Save()
                         canvas.Translate(pos.X, pos.Y)
                         canvas.RotateDegrees(angle)
-                        canvas.DrawText(einzeln, -width / 2.0F, 0, font, paint)
+                        TextShaper.DrawGlyphs(canvas, shaped, font, first, last - first + 1, -center, 0.0F, paint)
                         canvas.RestoreToCount(state)
                     End If
-                    d += width + spacing
-                Next
+                    first = last + 1
+                End While
             End Using
         End Sub
 
@@ -3280,25 +3276,8 @@ Namespace Services
                             For Each span In GetJustifiedTextSpans(line, lineX, targetWidth, font, spacing)
                                 AddTextSpanInk(ink, span.Text, span.X, baseline, font, spacing)
                             Next
-                        ElseIf spacing = 0.0F Then
-                            Dim bounds As SKRect
-                            font.MeasureText(line, bounds)
-                            If Not bounds.IsEmpty Then
-                                bounds.Offset(lineX, baseline)
-                                If ink.IsEmpty Then ink = bounds Else ink.Union(bounds)
-                            End If
                         Else
-                            Dim cx = lineX
-                            For Each ch In line
-                                Dim einzeln = ch.ToString()
-                                Dim bounds As SKRect
-                                Dim advance = font.MeasureText(einzeln, bounds)
-                                If Not bounds.IsEmpty Then
-                                    bounds.Offset(cx, baseline)
-                                    If ink.IsEmpty Then ink = bounds Else ink.Union(bounds)
-                                End If
-                                cx += advance + spacing
-                            Next
+                            AddTextSpanInk(ink, line, lineX, baseline, font, spacing)
                         End If
                     End If
                     baseline += lineHeight
@@ -3359,26 +3338,11 @@ Namespace Services
 
         Private Shared Sub AddTextSpanInk(ByRef ink As SKRect, text As String, x As Single, baseline As Single,
                                           font As SKFont, spacing As Single)
-            If spacing = 0.0F Then
-                Dim bounds As SKRect
-                font.MeasureText(text, bounds)
-                If Not bounds.IsEmpty Then
-                    bounds.Offset(x, baseline)
-                    If ink.IsEmpty Then ink = bounds Else ink.Union(bounds)
-                End If
-                Return
-            End If
-            Dim position = x
-            For Each ch In text
-                Dim glyph = ch.ToString()
-                Dim bounds As SKRect
-                Dim advance = font.MeasureText(glyph, bounds)
-                If Not bounds.IsEmpty Then
-                    bounds.Offset(position, baseline)
-                    If ink.IsEmpty Then ink = bounds Else ink.Union(bounds)
-                End If
-                position += advance + spacing
-            Next
+            If String.IsNullOrEmpty(text) Then Return
+            Dim bounds = TextShaper.MeasureInk(TextShaper.Shape(font, text, spacing), font)
+            If bounds.IsEmpty Then Return
+            bounds.Offset(x, baseline)
+            If ink.IsEmpty Then ink = bounds Else ink.Union(bounds)
         End Sub
 
         ''' <summary>Erhält alle Leerzeichen der Originalzeile. Der zusätzliche Blocksatzraum wird

@@ -362,8 +362,10 @@ Namespace Services
                                 ' die Unterschrift sonst weit abgesetzt schweben.
                                 Dim baseline = Math.Min(drawnRect.Bottom + CaptionFontSizePoints * scale,
                                                         cell.Bottom - 2.0F * scale)
-                                canvas.DrawText(caption, cell.MidX, baseline,
-                                                SKTextAlign.Center, captionFont, captionPaint)
+                                ' Geformt wie der Text auf dem Bild (siehe TextShaper), mittig unter der Zelle.
+                                Dim shapedCaption = TextShaper.Shape(captionFont, caption)
+                                TextShaper.Draw(canvas, shapedCaption, captionFont, cell.MidX - shapedCaption.Width / 2.0F,
+                                                baseline, captionPaint)
                             End If
                         Next
                     End Using

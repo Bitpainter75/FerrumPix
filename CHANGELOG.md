@@ -38,3 +38,11 @@
 
 - Removing a layer's adjustments while editing that object no longer lets stale adjustment values
   reappear when changing its effects.
+
+- Pasting a copied mask or selection without a selected layer creates a new mask or selection layer.
+
+- Double-clicking an overlay object now opens its matching editing tool; a single click still leaves
+  the current adjustment tool active.
+
+- Image text now uses HarfBuzz shaping for Thai and other complex scripts, with shaped widths also
+  used for drawing and multiline alignment.

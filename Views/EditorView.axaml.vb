@@ -1942,6 +1942,7 @@ Namespace Views
                      NameOf(EditorViewModel.AnnotationFontSize),
                      NameOf(EditorViewModel.AnnotationFontFamily),
                      NameOf(EditorViewModel.AnnotationTextAlignment),
+                     NameOf(EditorViewModel.AnnotationLetterSpacingPercent),
                      NameOf(EditorViewModel.AnnotationOpacity),
                      NameOf(EditorViewModel.AnnotationRotation),
                      NameOf(EditorViewModel.AnnotationDisplayFlipHorizontal),
@@ -2592,6 +2593,11 @@ Namespace Views
                         Dim wasSelectedBefore = hitIndex >= 0 AndAlso hitIndex < vm.TextAnnotations.Count AndAlso
                                                 vm.IsAnnotationSelected(vm.TextAnnotations(hitIndex))
                         SelectAnnotationFromCanvas(vm, hitIndex, e.KeyModifiers)
+                        If e.ClickCount >= 2 AndAlso vm.HasSelectedAnnotation AndAlso Not vm.HasMultiAnnotationSelection Then
+                            vm.OpenSelectedAnnotationTool()
+                            e.Handled = True
+                            Return
+                        End If
                         If vm.CurrentTool = EditorTool.Text Then FocusTextOverlayEditor()
                         ' Auswahl + Ziehen in EINER Geste (siehe gleicher Block im allgemeinen Pfad).
                         Dim overlayAfterSelect = Me.FindControl(Of Border)("TextOverlay")
@@ -2805,6 +2811,11 @@ Namespace Views
                         Dim wasSelectedBefore = hitIndex >= 0 AndAlso hitIndex < vm.TextAnnotations.Count AndAlso
                                                 vm.IsAnnotationSelected(vm.TextAnnotations(hitIndex))
                         SelectAnnotationFromCanvas(vm, hitIndex, e.KeyModifiers)
+                        If e.ClickCount >= 2 AndAlso vm.HasSelectedAnnotation AndAlso Not vm.HasMultiAnnotationSelection Then
+                            vm.OpenSelectedAnnotationTool()
+                            e.Handled = True
+                            Return
+                        End If
                         If vm.CurrentTool = EditorTool.Text Then FocusTextOverlayEditor()
                         ' Auswahl + Ziehen in EINER Geste: der Selektions-Setter hat das TextOverlay
                         ' synchron positioniert - den Move-Drag direkt auf DIESEM Press starten, statt
@@ -3051,6 +3062,11 @@ Namespace Views
                         Dim wasSelectedBefore = hitIndex >= 0 AndAlso hitIndex < vm.TextAnnotations.Count AndAlso
                                                 vm.IsAnnotationSelected(vm.TextAnnotations(hitIndex))
                         SelectAnnotationFromCanvas(vm, hitIndex, e.KeyModifiers)
+                        If e.ClickCount >= 2 AndAlso vm.HasSelectedAnnotation AndAlso Not vm.HasMultiAnnotationSelection Then
+                            vm.OpenSelectedAnnotationTool()
+                            e.Handled = True
+                            Return
+                        End If
                         If vm.CurrentTool = EditorTool.Text Then FocusTextOverlayEditor()
                         ' Auswahl + Ziehen in EINER Geste: der Selektions-Setter hat das TextOverlay
                         ' synchron positioniert - den Move-Drag direkt auf DIESEM Press starten, statt
@@ -6494,17 +6510,18 @@ Namespace Views
                 ' den Schriftmetriken, den Avalonia von sich aus nimmt. Ein gesetztes LineHeight schöbe
                 ' die erste Zeile um die zusätzliche Durchschusshöhe nach unten - sichtbar als Sprung von
                 ' ein bis zwei Pixeln beim Selektieren und zurück beim Abwählen.
-                ' Avalonia setzt Text über HarfBuzz und wendet dabei Kerning und Ligaturen an. Skias
-                ' SKCanvas.DrawText im gebackenen Bild tut das nicht, es reiht die Glyphen mit ihren
-                ' nackten Vorschubbreiten. Bei Paaren wie "Te" rückt Avalonia die Buchstaben deshalb
-                ' enger zusammen als im Ergebnis. Damit der Editor zeigt, was herauskommt, sind beide
-                ' Merkmale in der Live-Textbox abgeschaltet - dieselbe Annahme trifft auch die
-                ' Breitenschätzung in EditorViewModel.EstimateTextAnnotationSizePercent, die mit
-                ' SKPaint.MeasureText misst.
-                editor.FontFeatures = New FontFeatureCollection() From {
-                    New FontFeature With {.Tag = "kern", .Value = 0},
-                    New FontFeature With {.Tag = "liga", .Value = 0}
-                }
+                ' Avalonia setzt Text über HarfBuzz, mit Kerning und Ligaturen. Das gebackene Bild
+                ' formt über Services.TextShaper ebenfalls mit HarfBuzz und denselben Merkmalen. Ein
+                ' gesetzter Zeichenabstand schaltet dort die Ligaturen ab; die Textbox muss das
+                ' mitmachen, sonst steht "fi" beim Tippen als Ligatur und im Ergebnis getrennt.
+                If vm.AnnotationLetterSpacingPercent <> 0 Then
+                    editor.FontFeatures = New FontFeatureCollection() From {
+                        New FontFeature With {.Tag = "liga", .Value = 0},
+                        New FontFeature With {.Tag = "clig", .Value = 0}
+                    }
+                Else
+                    editor.FontFeatures = Nothing
+                End If
                 editor.FontFamily = New FontFamily(vm.AnnotationFontFamily)
                 editor.TextAlignment = If(String.Equals(vm.AnnotationTextAlignment, "Center", StringComparison.OrdinalIgnoreCase), TextAlignment.Center,
                                       If(String.Equals(vm.AnnotationTextAlignment, "Right", StringComparison.OrdinalIgnoreCase), TextAlignment.Right,
@@ -6663,6 +6680,20 @@ Namespace Views
             ' der die soeben zurückgesetzte Drehung beim ersten Wackeln wieder überschriebe.
             If mode = TextDragMode.Rotate AndAlso e.ClickCount >= 2 Then
                 ResetSelectionRotation(vm)
+                e.Handled = True
+                Return
+            End If
+
+            ' Doppelklick auf den Objektkörper öffnet dessen Werkzeug. Einzelklick bleibt beim
+            ' aktiven Werkzeug (z. B. Anpassungen), und Anfasser behalten ihre jeweilige Funktion.
+            If mode = TextDragMode.Move AndAlso e.ClickCount >= 2 AndAlso
+               PressHitsAnnotation(vm, canvas, pos) AndAlso vm.HasSelectedAnnotation AndAlso
+               Not vm.HasMultiAnnotationSelection Then
+                _isTextDragging = False
+                _textDragMode = TextDragMode.None
+                _textDragPlacementStarted = False
+                e.Pointer.Capture(Nothing)
+                vm.OpenSelectedAnnotationTool()
                 e.Handled = True
                 Return
             End If

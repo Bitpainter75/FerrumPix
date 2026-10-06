@@ -4505,7 +4505,7 @@ Namespace ViewModels
         Public ReadOnly Property CanPasteMask As Boolean
             Get
                 If _copiedMask Is Nothing Then Return False
-                Return MaskTargetAnnotation() IsNot Nothing OrElse PasteTargetLayer() IsNot Nothing
+                Return MaskTargetAnnotation() IsNot Nothing OrElse PasteTargetLayer() IsNot Nothing OrElse _hasActiveSelection
             End Get
         End Property
 
@@ -4536,7 +4536,30 @@ Namespace ViewModels
             If _copiedMask Is Nothing Then Return
             Dim annotation = MaskTargetAnnotation()
             Dim layer = If(annotation Is Nothing, PasteTargetLayer(), Nothing)
-            If annotation Is Nothing AndAlso layer Is Nothing Then Return
+            If annotation Is Nothing AndAlso layer Is Nothing Then
+                If Not _hasActiveSelection Then Return
+                PushUndo(LocalizationService.T("Maske eingefügt"))
+                Dim selectionMask = _copiedMask.Clone()
+                selectionMask.Id = Guid.NewGuid().ToString("N")
+                _imageMasks.Add(selectionMask)
+                ApplyPendingRangeMetadata(selectionMask)
+                Dim maskLayer As New MaskedAdjustmentLayer With {
+                    .Name = GeneratedLayerNames.Numbered(GeneratedLayerNames.MaskLayer, _maskedAdjustmentLayers.Count + 1),
+                    .MaskId = selectionMask.Id,
+                    .Adjustments = New ImageAdjustments(),
+                    .IsMaskLayer = True
+                }
+                PlaceNewCorrectionLayer(maskLayer)
+                _maskedAdjustmentLayers.Add(maskLayer)
+                _selectedMaskedAdjustmentLayerId = maskLayer.Id
+                LoadMaskIntoSelection(selectionMask.Id, showAsMask:=True)
+                _hasChanges = True
+                RaiseMaskComponentsChanged()
+                RebuildLayerRows()
+                NameHistoryStep(LocalizationService.T("Maske eingefügt"))
+                SchedulePreviewUpdate()
+                Return
+            End If
             PushUndo()
             Dim copy = _copiedMask.Clone()
             copy.Id = Guid.NewGuid().ToString("N")
