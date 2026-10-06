@@ -8,6 +8,9 @@
   HSL settings, curves, grain and vignette, so it remains fully editable after applying it and is
   also available in batch adjustments and Export to.
 
+- **A clearer editor footer.** The output dimensions no longer compete with the centered zoom
+  controls on smaller windows.
+
 - **The frame works like the other objects.** It has an on and off switch in its group, and below
   it the same fill, shadow and glow groups as text, with every option: all gradient types with as
   many color stops as you like, presets, and shadow and glow inside or outside. Radial and diamond

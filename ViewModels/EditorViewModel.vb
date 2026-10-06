@@ -16007,23 +16007,10 @@ Namespace ViewModels
 
 #End Region
 
-        Public ReadOnly Property OutputSizeText As String
-            Get
-                Dim w = If(_resizeWidth > 0, _resizeWidth, GetCroppedWidth())
-                Dim h = If(_resizeHeight > 0, _resizeHeight, GetCroppedHeight())
-                w = If(_canvasWidth > 0, _canvasWidth, w)
-                h = If(_canvasHeight > 0, _canvasHeight, h)
-                If w <= 0 OrElse h <= 0 Then Return ""
-                Return $"{w} × {h}"
-            End Get
-        End Property
-
-        ''' <summary>Die Ausgabegroesse hat sich geaendert. ZWEI Zeilen nennen sie, und beide
-        ''' muessen es erfahren: die Plakette unter dem Bild und die Vorschau des Hochskalierens
-        ''' ("Aus ... wird ..."). Letztere hing frueher nur an der Modellwahl und stand danach auf
-        ''' den Zahlen von vorher.</summary>
+        ''' <summary>Die Ausgabegroesse hat sich geaendert. Die Vorschau des Hochskalierens
+        ''' ("Aus ... wird ...") muss die neuen Zahlen erfahren; frueher hing sie nur an der
+        ''' Modellwahl und stand danach auf den Zahlen von vorher.</summary>
         Private Sub RaiseOutputSizeChanged()
-            Me.RaisePropertyChanged(NameOf(OutputSizeText))
             Me.RaisePropertyChanged(NameOf(UpscaleTargetText))
         End Sub
 

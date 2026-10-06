@@ -2132,9 +2132,6 @@
                              und wächst mit dem Text, bis sie die mittig zentrierten Zoom-Bedienelemente
                              überdeckt („Gespeichert als <langer Dateiname>"). Er steht rechts vor den
                              Sternen und reicht dort bis an die Zoom-Gruppe (UpdateFooterStatusFit). -->
-                        <!-- Bildgröße wie im Betrachter; ein "Bild x von y" wäre hier belanglos,
-                             bearbeitet wird immer genau eines. Der Wert folgt Zuschnitt, Bildgröße
-                             und Leinwand - es ist die Größe, die ein Export ergäbe. -->
                         <Border Background="{DynamicResource FP.Bg.Raised}" BorderBrush="{DynamicResource FP.Border.Subtle}"
                                 BorderThickness="1" CornerRadius="5" Padding="7,2" ToolTip.Tip="Aktuelles Wirkziel">
                             <StackPanel Orientation="Horizontal" Spacing="5">
@@ -2145,8 +2142,6 @@
                                            MaxWidth="180" TextTrimming="CharacterEllipsis" />
                             </StackPanel>
                         </Border>
-                        <TextBlock Text="{Binding OutputSizeText}" Foreground="{DynamicResource FP.Text.Secondary}"
-                                   FontSize="{DynamicResource FP.Font.Body}" VerticalAlignment="Center" />
                     </StackPanel>
                     <!-- Die Zoom-Gruppe steht NICHT hier, sondern als eigenes Kind des Wurzelrasters
                          in der Bild-Spalte - gleiche Begruendung wie oben in der Kopfleiste. -->

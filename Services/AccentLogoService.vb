@@ -73,11 +73,10 @@ Namespace Services
                 Using bitmap = SKBitmap.Decode(stream)
                     If bitmap Is Nothing Then Return Nothing
                     TintPixels(bitmap, reference, accent)
-                    Using image = SKImage.FromBitmap(bitmap)
-                        Using data = image.Encode(SKEncodedImageFormat.Png, 100)
-                            Using png = New MemoryStream(data.ToArray())
-                                Return New Bitmap(png)
-                            End Using
+                    Using data = PngEncoder.Encode(bitmap, PngPurpose.Transient)
+                        If data Is Nothing Then Return Nothing
+                        Using png = New MemoryStream(data.ToArray())
+                            Return New Bitmap(png)
                         End Using
                     End Using
                 End Using
