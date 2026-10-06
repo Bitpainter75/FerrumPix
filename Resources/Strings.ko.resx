@@ -9472,4 +9472,28 @@
   <data name="Randabstand_a68c50d0" xml:space="preserve">
     <value>여백</value>
   </data>
+  <data name="Grundlicht_3a3e8b48" xml:space="preserve">
+    <value>기본 조명</value>
+  </data>
+  <data name="Farbklang_d003f5f7" xml:space="preserve">
+    <value>색상 조화</value>
+  </data>
+  <data name="Leuchtkurve_ca71ff05" xml:space="preserve">
+    <value>빛나는 곡선</value>
+  </data>
+  <data name="W_stenlicht_7f839fb7" xml:space="preserve">
+    <value>사막의 빛</value>
+  </data>
+  <data name="Kornfilm_e738e176" xml:space="preserve">
+    <value>필름 그레인</value>
+  </data>
+  <data name="Farbdunst_bd7da7da" xml:space="preserve">
+    <value>색 안개</value>
+  </data>
+  <data name="Klarblick_9368e451" xml:space="preserve">
+    <value>선명한 보기</value>
+  </data>
+  <data name="Zeitlos_e1bb3248" xml:space="preserve">
+    <value>시대를 초월한</value>
+  </data>
 </root>

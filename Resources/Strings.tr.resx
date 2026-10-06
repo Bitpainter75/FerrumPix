@@ -9472,4 +9472,28 @@
   <data name="Randabstand_a68c50d0" xml:space="preserve">
     <value>Kenar boşluğu</value>
   </data>
+  <data name="Grundlicht_3a3e8b48" xml:space="preserve">
+    <value>Temel ışık</value>
+  </data>
+  <data name="Farbklang_d003f5f7" xml:space="preserve">
+    <value>Renk uyumu</value>
+  </data>
+  <data name="Leuchtkurve_ca71ff05" xml:space="preserve">
+    <value>Parlak eğri</value>
+  </data>
+  <data name="W_stenlicht_7f839fb7" xml:space="preserve">
+    <value>Çöl ışığı</value>
+  </data>
+  <data name="Kornfilm_e738e176" xml:space="preserve">
+    <value>Film gren</value>
+  </data>
+  <data name="Farbdunst_bd7da7da" xml:space="preserve">
+    <value>Renk sisi</value>
+  </data>
+  <data name="Klarblick_9368e451" xml:space="preserve">
+    <value>Net görünüm</value>
+  </data>
+  <data name="Zeitlos_e1bb3248" xml:space="preserve">
+    <value>Zamansız</value>
+  </data>
 </root>

@@ -9428,4 +9428,28 @@
   <data name="Randabstand_a68c50d0" xml:space="preserve">
     <value>Margine</value>
   </data>
+  <data name="Grundlicht_3a3e8b48" xml:space="preserve">
+    <value>Luce di base</value>
+  </data>
+  <data name="Farbklang_d003f5f7" xml:space="preserve">
+    <value>Armonia di colori</value>
+  </data>
+  <data name="Leuchtkurve_ca71ff05" xml:space="preserve">
+    <value>Curva luminosa</value>
+  </data>
+  <data name="W_stenlicht_7f839fb7" xml:space="preserve">
+    <value>Luce del deserto</value>
+  </data>
+  <data name="Kornfilm_e738e176" xml:space="preserve">
+    <value>Grana cinematografica</value>
+  </data>
+  <data name="Farbdunst_bd7da7da" xml:space="preserve">
+    <value>Foschia di colore</value>
+  </data>
+  <data name="Klarblick_9368e451" xml:space="preserve">
+    <value>Vista nitida</value>
+  </data>
+  <data name="Zeitlos_e1bb3248" xml:space="preserve">
+    <value>Senza tempo</value>
+  </data>
 </root>

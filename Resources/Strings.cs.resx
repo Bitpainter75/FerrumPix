@@ -9468,4 +9468,28 @@
   <data name="Randabstand_a68c50d0" xml:space="preserve">
     <value>Okraj</value>
   </data>
+  <data name="Grundlicht_3a3e8b48" xml:space="preserve">
+    <value>Základní světlo</value>
+  </data>
+  <data name="Farbklang_d003f5f7" xml:space="preserve">
+    <value>Barevná harmonie</value>
+  </data>
+  <data name="Leuchtkurve_ca71ff05" xml:space="preserve">
+    <value>Světelná křivka</value>
+  </data>
+  <data name="W_stenlicht_7f839fb7" xml:space="preserve">
+    <value>Pouštní světlo</value>
+  </data>
+  <data name="Kornfilm_e738e176" xml:space="preserve">
+    <value>Filmové zrno</value>
+  </data>
+  <data name="Farbdunst_bd7da7da" xml:space="preserve">
+    <value>Barevný opar</value>
+  </data>
+  <data name="Klarblick_9368e451" xml:space="preserve">
+    <value>Jasný pohled</value>
+  </data>
+  <data name="Zeitlos_e1bb3248" xml:space="preserve">
+    <value>Nadčasový</value>
+  </data>
 </root>

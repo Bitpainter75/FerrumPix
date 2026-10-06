@@ -692,7 +692,15 @@ Namespace Services
             result.Lens = data.Lens
             result.ShutterSpeed = data.ShutterSpeed
             result.Aperture = ParseLeadingDouble(data.Aperture)
-            result.FocalLengthMm = ParseLeadingDouble(GetComparableFocalLength(data))
+            ' Die Kachel, der Katalog und die Brennweiten-Suche meinen die tatsaechliche
+            ' Objektivbrennweite. Das Kleinbild-Aequivalent ist eine ZWEITE Information, keine
+            ' Ersatzbrennweite: Ein 50-mm-Objektiv an DX bleibt ein 50er und darf nicht als 75 mm
+            ' unter dem Vorschaubild stehen. Fehlt der echte Wert (typisch bei einzelnen
+            ' Telefonbildern), bleibt das Aequivalent ein sinnvoller Rueckfall.
+            result.FocalLengthMm = ParseLeadingDouble(data.FocalLength)
+            If Not result.FocalLengthMm.HasValue Then
+                result.FocalLengthMm = ParseLeadingDouble(data.FocalLength35mm)
+            End If
             result.Iso = ParseLeadingInt(data.ISO)
 
             If Not String.IsNullOrWhiteSpace(data.GPS) Then
@@ -746,7 +754,10 @@ Namespace Services
         ' nach: dort stand die Angabe der Aufnahmedaten, bei manchen Kameras der ganze Sensorrahmen,
         ' oder was der Betrachter zuletzt aus der eingebetteten Vorschau gemessen hatte. Dazu stehen
         ' die Masse aller Formate jetzt GEDREHT wie angezeigt (siehe ReadImageDimensions).
-        Public Const SummaryFormatVersion As Integer = 6
+        ' 7 trennt die gespeicherte echte Brennweite vom Kleinbild-Aequivalent. Der Wechsel sorgt
+        ' dafuer, dass bestehende Katalogzeilen beim naechsten Ordnerbesuch einmal neu gelesen
+        ' werden; andernfalls blieben etwa 50-mm-Nikon-Aufnahmen dauerhaft als 75 mm sichtbar.
+        Public Const SummaryFormatVersion As Integer = 7
 
         Public Shared ReadOnly Property CurrentSummaryFormat As String
             Get
@@ -980,10 +991,10 @@ Namespace Services
             End Try
         End Function
 
-        ''' <summary>Die Brennweite, mit der sich Bilder verschiedener Kameras vergleichen lassen:
-        ''' das Kleinbild-Äquivalent, falls die Kamera es liefert, sonst die echte Brennweite. Ohne das
-        ''' sortierten Handybilder mit 4,2 mm zwischen echten Ultraweitwinkeln, obwohl sie einem 28er
-        ''' entsprechen. Der Rohwert bleibt in ExifData.FocalLength und in der EXIF-Liste sichtbar.</summary>
+        ''' <summary>Die Brennweite fuer Dateinamen, mit der sich Bilder verschiedener Kameras
+        ''' vergleichen lassen: das Kleinbild-Äquivalent, falls die Kamera es liefert, sonst die
+        ''' echte Brennweite. Katalog, Kachel und Suche verwenden dagegen die echte Brennweite -
+        ''' siehe <see cref="ExtractSearchFields"/>.</summary>
         Public Shared Function GetComparableFocalLength(data As ExifData) As String
             If data Is Nothing Then Return ""
             ' Nicht auf "nicht leer" prüfen: Steht der Tag zwar im Bild, ist aber unbrauchbar belegt,

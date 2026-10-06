@@ -9468,4 +9468,28 @@
   <data name="Randabstand_a68c50d0" xml:space="preserve">
     <value>Randafstand</value>
   </data>
+  <data name="Grundlicht_3a3e8b48" xml:space="preserve">
+    <value>Basislicht</value>
+  </data>
+  <data name="Farbklang_d003f5f7" xml:space="preserve">
+    <value>Kleurharmonie</value>
+  </data>
+  <data name="Leuchtkurve_ca71ff05" xml:space="preserve">
+    <value>Lichtgevende curve</value>
+  </data>
+  <data name="W_stenlicht_7f839fb7" xml:space="preserve">
+    <value>Woestijnlicht</value>
+  </data>
+  <data name="Kornfilm_e738e176" xml:space="preserve">
+    <value>Filmkorrel</value>
+  </data>
+  <data name="Farbdunst_bd7da7da" xml:space="preserve">
+    <value>Kleurwaas</value>
+  </data>
+  <data name="Klarblick_9368e451" xml:space="preserve">
+    <value>Helder beeld</value>
+  </data>
+  <data name="Zeitlos_e1bb3248" xml:space="preserve">
+    <value>Tijdloos</value>
+  </data>
 </root>

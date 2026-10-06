@@ -2,6 +2,12 @@
 
 ### What's new
 
+- **Eight editable looks in Filters.** Base Light, Color Harmony and Luminous Curve highlight
+  individual adjustment groups; Desert Light, Film Grain, Color Haze, Clear View and Timeless
+  offer further starting points. Every look consists only of ordinary FerrumPix sliders,
+  HSL settings, curves, grain and vignette, so it remains fully editable after applying it and is
+  also available in batch adjustments and Export to.
+
 - **The frame works like the other objects.** It has an on and off switch in its group, and below
   it the same fill, shadow and glow groups as text, with every option: all gradient types with as
   many color stops as you like, presets, and shadow and glow inside or outside. Radial and diamond
@@ -15,6 +21,10 @@
   back onto their line when you come close, so they stay straight unless you mean otherwise.
 
 ### Fixes
+
+- **Lens data below thumbnails now comes from the same actual focal length as the EXIF panel.**
+  A 50 mm lens is no longer labelled 75 mm on a crop camera, and existing catalog entries are
+  refreshed automatically. This also refreshes missing lens names, including Sigma lenses.
 
 - Red eye removal moved to the image brush, next to the eraser, dodge, burn, sponge and replace
   color. One click on the pupil removes the red inside the brush circle. Blur, healing brush and

@@ -9426,4 +9426,28 @@
   <data name="Randabstand_a68c50d0" xml:space="preserve">
     <value>边距</value>
   </data>
+  <data name="Grundlicht_3a3e8b48" xml:space="preserve">
+    <value>基础光</value>
+  </data>
+  <data name="Farbklang_d003f5f7" xml:space="preserve">
+    <value>色彩和谐</value>
+  </data>
+  <data name="Leuchtkurve_ca71ff05" xml:space="preserve">
+    <value>发光曲线</value>
+  </data>
+  <data name="W_stenlicht_7f839fb7" xml:space="preserve">
+    <value>沙漠之光</value>
+  </data>
+  <data name="Kornfilm_e738e176" xml:space="preserve">
+    <value>胶片颗粒</value>
+  </data>
+  <data name="Farbdunst_bd7da7da" xml:space="preserve">
+    <value>色彩薄雾</value>
+  </data>
+  <data name="Klarblick_9368e451" xml:space="preserve">
+    <value>清晰视野</value>
+  </data>
+  <data name="Zeitlos_e1bb3248" xml:space="preserve">
+    <value>永恒</value>
+  </data>
 </root>

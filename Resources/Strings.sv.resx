@@ -9468,4 +9468,28 @@
   <data name="Randabstand_a68c50d0" xml:space="preserve">
     <value>Kantavstånd</value>
   </data>
+  <data name="Grundlicht_3a3e8b48" xml:space="preserve">
+    <value>Grundljus</value>
+  </data>
+  <data name="Farbklang_d003f5f7" xml:space="preserve">
+    <value>Färgharmoni</value>
+  </data>
+  <data name="Leuchtkurve_ca71ff05" xml:space="preserve">
+    <value>Lysande kurva</value>
+  </data>
+  <data name="W_stenlicht_7f839fb7" xml:space="preserve">
+    <value>Ökenljus</value>
+  </data>
+  <data name="Kornfilm_e738e176" xml:space="preserve">
+    <value>Filmkorn</value>
+  </data>
+  <data name="Farbdunst_bd7da7da" xml:space="preserve">
+    <value>Färgad dis</value>
+  </data>
+  <data name="Klarblick_9368e451" xml:space="preserve">
+    <value>Klar vy</value>
+  </data>
+  <data name="Zeitlos_e1bb3248" xml:space="preserve">
+    <value>Tidlös</value>
+  </data>
 </root>

@@ -1501,6 +1501,9 @@ Namespace ViewModels
         ''' Anzeigename -> Dateipfad. Bei den eingebauten Filtern leer: sie stehen als Name in den
         ''' Anpassungen, nicht als Datei.
         Private ReadOnly _dialogFilterChoicePaths As New Dictionary(Of String, String)(StringComparer.OrdinalIgnoreCase)
+        ''' Sichtbarer Name -> technischer Filtername. Die Mehrregler-Looks werden im Dialog
+        ''' übersetzt angezeigt, müssen aber mit ihrem stabilen Rezeptnamen weitergereicht werden.
+        Private ReadOnly _dialogFilterChoiceNames As New Dictionary(Of String, String)(StringComparer.OrdinalIgnoreCase)
 
         ''' Die Auswahlliste zur aktuellen Quelle - eingebaute Filter, gespeicherte XMP-Presets oder
         ''' gespeicherte LUTs. Wird bei jedem Quellenwechsel neu aufgebaut.
@@ -1633,7 +1636,7 @@ Namespace ViewModels
                 ' im Editor anfängt (S/W und Sepia voll, alle anderen halb). Sonst sähe derselbe Filter im
                 ' Stapel anders aus als in der Einzelbearbeitung.
                 If IsDialogFilterSourceFilter AndAlso normalized.Length > 0 Then
-                    DialogFilterStrength = CInt(ImageAdjustments.DefaultFilterStrength(normalized))
+                    DialogFilterStrength = CInt(ImageAdjustments.DefaultFilterStrength(DialogFilterChoiceName(normalized)))
                 End If
                 Me.RaisePropertyChanged(NameOf(DialogSelectedFilterChoice))
                 Me.RaisePropertyChanged(NameOf(IsDialogPrimaryEnabled))
@@ -1814,11 +1817,14 @@ Namespace ViewModels
         Private Sub RebuildDialogFilterChoices()
             DialogFilterChoices.Clear()
             _dialogFilterChoicePaths.Clear()
+            _dialogFilterChoiceNames.Clear()
 
             If IsDialogFilterSourceFilter Then
                 ' "Keine" ist der neutrale Eintrag des Editors und im Stapel sinnlos.
                 For Each name In ImageAdjustments.FilterPresetNames.Where(Function(n) Not String.Equals(n, "Keine", StringComparison.OrdinalIgnoreCase))
-                    DialogFilterChoices.Add(name)
+                    Dim label = If(ImageAdjustments.IsBuiltInLook(name), LocalizationService.T(name), name)
+                    _dialogFilterChoiceNames(label) = name
+                    DialogFilterChoices.Add(label)
                 Next
             ElseIf IsDialogFilterSourceNone Then
                 ' Wie bei der Automatik ein fester Eintrag, damit die Auswahl nicht leer ist. Ob der
@@ -1860,6 +1866,12 @@ Namespace ViewModels
             ' bedienbar, obwohl jetzt nichts mehr zu wählen ist.
             Me.RaisePropertyChanged(NameOf(IsDialogPrimaryEnabled))
         End Sub
+
+        Private Function DialogFilterChoiceName(label As String) As String
+            Dim name As String = Nothing
+            If _dialogFilterChoiceNames.TryGetValue(If(label, ""), name) Then Return name
+            Return If(label, "")
+        End Function
 
         ' ── „Exportieren nach" (Galerie): Sammel-Export ─────────────────────────
         ' Ein Look aus EINER Liste (eingebaute Filter + gespeicherte XMP-/LUT-Vorgaben),
@@ -2044,8 +2056,9 @@ Namespace ViewModels
                     autoEnhance = True
                 Else
                     lookKind = _dialogFilterSourceKind
-                    lookName = If(_dialogSelectedFilterChoice, "")
-                    _dialogFilterChoicePaths.TryGetValue(lookName, lookPath)
+                    Dim selectedLabel = If(_dialogSelectedFilterChoice, "")
+                    lookName = DialogFilterChoiceName(selectedLabel)
+                    _dialogFilterChoicePaths.TryGetValue(selectedLabel, lookPath)
                     If String.IsNullOrWhiteSpace(lookName) Then lookKind = ""
                 End If
             End If
@@ -2429,10 +2442,11 @@ Namespace ViewModels
 
             Dim path As String = Nothing
             _dialogFilterChoicePaths.TryGetValue(_dialogSelectedFilterChoice, path)
+            Dim selectedName = DialogFilterChoiceName(_dialogSelectedFilterChoice)
             Return New BatchFilterDialogResult With {
                 .SourceKind = _dialogFilterSourceKind,
                 .DisplayName = If(IsDialogFilterSourceAuto, "Auto",
-                                  If(IsDialogFilterSourceNone, LocalizationService.T("Entrauscht"), _dialogSelectedFilterChoice)),
+                                  If(IsDialogFilterSourceNone, LocalizationService.T("Entrauscht"), selectedName)),
                 .PresetPath = If(path, ""),
                 .Strength = _dialogFilterStrength,
                 .Overwrite = _dialogBatchFilterOverwrite,

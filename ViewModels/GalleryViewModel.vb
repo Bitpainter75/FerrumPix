@@ -11883,6 +11883,9 @@ Namespace ViewModels
 
                 Case Else
                     If String.IsNullOrWhiteSpace(result.DisplayName) Then Return Nothing
+                    If ImageAdjustments.IsBuiltInLook(result.DisplayName) Then
+                        Return ImageAdjustments.CreateBuiltInLook(result.DisplayName, result.Strength)
+                    End If
                     Return New ImageAdjustments With {
                         .FilterPreset = result.DisplayName,
                         .FilterStrength = result.Strength
@@ -12779,7 +12782,9 @@ Namespace ViewModels
                                  New ImageAdjustments With {.LutPath = result.LookPath, .LutStrength = result.LookStrength},
                                  Nothing)
                 Case BatchFilterDialogResult.SourceFilter
-                    template = New ImageAdjustments With {.FilterPreset = result.LookName, .FilterStrength = result.LookStrength}
+                    template = If(ImageAdjustments.IsBuiltInLook(result.LookName),
+                                  ImageAdjustments.CreateBuiltInLook(result.LookName, result.LookStrength),
+                                  New ImageAdjustments With {.FilterPreset = result.LookName, .FilterStrength = result.LookStrength})
                 Case BatchFilterDialogResult.SourceAuto
                     ' Die Auto-Verbesserung kommt als result.AutoEnhance herein (der Dialog setzt
                     ' dann KEIN LookKind) - dieser Zweig ist nur das Sicherheitsnetz, falls sich

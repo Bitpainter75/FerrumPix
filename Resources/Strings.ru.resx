@@ -9468,4 +9468,28 @@
   <data name="Randabstand_a68c50d0" xml:space="preserve">
     <value>Отступ от края</value>
   </data>
+  <data name="Grundlicht_3a3e8b48" xml:space="preserve">
+    <value>Базовый свет</value>
+  </data>
+  <data name="Farbklang_d003f5f7" xml:space="preserve">
+    <value>Цветовая гармония</value>
+  </data>
+  <data name="Leuchtkurve_ca71ff05" xml:space="preserve">
+    <value>Светящаяся кривая</value>
+  </data>
+  <data name="W_stenlicht_7f839fb7" xml:space="preserve">
+    <value>Свет пустыни</value>
+  </data>
+  <data name="Kornfilm_e738e176" xml:space="preserve">
+    <value>Зерно плёнки</value>
+  </data>
+  <data name="Farbdunst_bd7da7da" xml:space="preserve">
+    <value>Цветная дымка</value>
+  </data>
+  <data name="Klarblick_9368e451" xml:space="preserve">
+    <value>Ясный вид</value>
+  </data>
+  <data name="Zeitlos_e1bb3248" xml:space="preserve">
+    <value>Вневременной</value>
+  </data>
 </root>

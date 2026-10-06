@@ -37,6 +37,26 @@
                  Der Wert „Keine" bleibt intern der neutrale Zustand (SetFilterPresetCommand). -->
             <WrapPanel>
                 <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6"
+                        Classes.active="{Binding LastAppliedFilterPresetName, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Grundlicht}"
+                        Command="{Binding SetBuiltInLookCommand}" CommandParameter="Grundlicht">
+                    <TextBlock Text="Grundlicht" FontSize="{DynamicResource FP.Font.Small}" />
+                </Button>
+                <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6"
+                        Classes.active="{Binding LastAppliedFilterPresetName, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Farbklang}"
+                        Command="{Binding SetBuiltInLookCommand}" CommandParameter="Farbklang">
+                    <TextBlock Text="Farbklang" FontSize="{DynamicResource FP.Font.Small}" />
+                </Button>
+                <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6"
+                        Classes.active="{Binding LastAppliedFilterPresetName, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Leuchtkurve}"
+                        Command="{Binding SetBuiltInLookCommand}" CommandParameter="Leuchtkurve">
+                    <TextBlock Text="Leuchtkurve" FontSize="{DynamicResource FP.Font.Small}" />
+                </Button>
+                <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6" Classes.active="{Binding LastAppliedFilterPresetName, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Wüstenlicht}" Command="{Binding SetBuiltInLookCommand}" CommandParameter="Wüstenlicht"><TextBlock Text="Wüstenlicht" FontSize="{DynamicResource FP.Font.Small}" /></Button>
+                <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6" Classes.active="{Binding LastAppliedFilterPresetName, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Kornfilm}" Command="{Binding SetBuiltInLookCommand}" CommandParameter="Kornfilm"><TextBlock Text="Kornfilm" FontSize="{DynamicResource FP.Font.Small}" /></Button>
+                <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6" Classes.active="{Binding LastAppliedFilterPresetName, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Farbdunst}" Command="{Binding SetBuiltInLookCommand}" CommandParameter="Farbdunst"><TextBlock Text="Farbdunst" FontSize="{DynamicResource FP.Font.Small}" /></Button>
+                <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6" Classes.active="{Binding LastAppliedFilterPresetName, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Klarblick}" Command="{Binding SetBuiltInLookCommand}" CommandParameter="Klarblick"><TextBlock Text="Klarblick" FontSize="{DynamicResource FP.Font.Small}" /></Button>
+                <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6" Classes.active="{Binding LastAppliedFilterPresetName, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Zeitlos}" Command="{Binding SetBuiltInLookCommand}" CommandParameter="Zeitlos"><TextBlock Text="Zeitlos" FontSize="{DynamicResource FP.Font.Small}" /></Button>
+                <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6"
                         Classes.active="{Binding LastAppliedFilterPresetName, Converter={StaticResource StringEqualsConverter}, ConverterParameter=S/W}"
                         Command="{Binding SetFilterPresetCommand}" CommandParameter="S/W">
                     <TextBlock Text="S/W" FontSize="{DynamicResource FP.Font.Small}" />
