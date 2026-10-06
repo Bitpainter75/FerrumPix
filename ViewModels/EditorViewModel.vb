@@ -29580,6 +29580,11 @@ Namespace ViewModels
                 NameOf(StraightenDegrees), NameOf(StraightenExpandCanvas), NameOf(StraightenAutoCrop)}
                 Me.RaisePropertyChanged(propertyName)
             Next
+            ' Die HSL-Werte werden beim Laden, Bildwechsel und globalen Zuruecksetzen direkt in
+            ' ihre Felder geschrieben. Die Regler erhalten oben ihre PropertyChanged-Meldungen,
+            ' die acht Farbchips halten ihre Abweichungsmarke aber als eigenen Zustand. Ohne dieses
+            ' Nachziehen blieb ihr weisser Punkt vom vorherigen Bild bzw. Zustand stehen.
+            RefreshHslBandChips()
             RaiseResetButtonStateChanged()
         End Sub
 
