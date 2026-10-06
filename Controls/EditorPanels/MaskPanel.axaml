@@ -699,19 +699,16 @@
             <!-- OBJEKT ENTFERNEN: braucht nur eine Markierung, egal aus welchem Zweig sie kommt -
                  gemalt, per Klick erkannt oder nach Entfernung ausgewaehlt. Deshalb steht der Knopf
                  nicht in einem der Zweige, sondern unter allen. -->
-            <StackPanel Spacing="6" Margin="0,4,0,0">
-                <Separator Margin="0,2,0,2" Background="{DynamicResource FP.Border.Normal}" Height="1"/>
-                <Button Classes="ghost" HorizontalAlignment="Stretch" Padding="10,6"
-                        IsEnabled="{Binding CanRemoveObject}"
-                        Command="{Binding RemoveObjectCommand}"
-                        ToolTip.Tip="{Binding RemoveObjectHint}" ToolTip.ShowOnDisabled="True">
-                    <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/eraser.svg"
-                                       Width="16" Height="16" />
-                        <TextBlock Text="Objekt entfernen" FontSize="{DynamicResource FP.Font.Small}" />
-                    </StackPanel>
-                </Button>
-            </StackPanel>
+            <Button Classes="ghost" HorizontalAlignment="Stretch" Padding="10,6"
+                    IsEnabled="{Binding CanRemoveObject}"
+                    Command="{Binding RemoveObjectCommand}"
+                    ToolTip.Tip="{Binding RemoveObjectHint}" ToolTip.ShowOnDisabled="True">
+                <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/eraser.svg"
+                                   Width="16" Height="16" />
+                    <TextBlock Text="Objekt entfernen" FontSize="{DynamicResource FP.Font.Small}" />
+                </StackPanel>
+            </Button>
     </StackPanel>
     </Expander>
 </UserControl>
