@@ -45,5 +45,7 @@
 - While the eyedropper of a color field hovers over the picture, the color field already shows the
   color under it. It is only taken over with the click.
 
+- A cropped or rotated picture no longer shrinks on the canvas while you drag an adjustment slider.
+
 - Save as, export, apply adjustments and the other dialogs with a target folder remember whether
   you last picked the current or the last folder.

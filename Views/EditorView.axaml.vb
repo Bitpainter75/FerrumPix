@@ -2008,12 +2008,15 @@ Namespace Views
                     Dim previewAspect = imgW / imgH
                     Dim baseAspect = baseW / baseH
                     If Math.Abs(previewAspect - baseAspect) < 0.01 Then
-                        imgW = baseW
-                        imgH = baseH
+                        Return New Avalonia.Size(baseW, baseH)
                     End If
                 End If
             End If
-            Return New Avalonia.Size(imgW, imgH)
+            ' Beschnitten oder gedreht: die Szene selbst gibt die Groesse vor. Waehrend eines
+            ' Reglerzugs ist sie aus der verkleinerten Quelle gerechnet und wird auf die gewohnte
+            ' Groesse hochgerechnet, sonst schrumpft das Bild bis zum Loslassen.
+            Dim sceneScale = vm.SceneDisplayScale
+            Return New Avalonia.Size(imgW * sceneScale, imgH * sceneScale)
         End Function
 
         Private Sub UpdateSliderLayout()

@@ -20762,6 +20762,19 @@ Namespace ViewModels
             Return GetPreviewSource()
         End Function
 
+        ''' <summary>Wie viel kleiner die Renderquelle ist als die gewohnte Vorschauquelle. Nur die
+        ''' verkleinerte Quelle des Reglerzugs weicht ab; alles andere rechnet in der gewohnten
+        ''' Groesse und liefert 1,0.</summary>
+        Private Function GetSceneSourceScale(renderSource As SKBitmap) As Double
+            If renderSource Is Nothing OrElse renderSource.Width <= 0 Then Return 1.0
+            SyncLock _previewSync
+                If Not Object.ReferenceEquals(renderSource, _sliderPreviewSource) Then Return 1.0
+                Dim normal = If(_sliderPreviewSourceUsesUnbakedPixels, _comparisonOriginalSource, _previewSource)
+                If normal Is Nothing OrElse normal.Width <= 0 Then Return 1.0
+                Return normal.Width / CDbl(renderSource.Width)
+            End SyncLock
+        End Function
+
         ''' <summary>Arbeitsbild fuer den Voll-Render (Export/Speichern). Nothing bei ausgeblendeter
         ''' Pixel-Ebene - der Renderer faellt dann auf den Datei-Decode des Basisbilds zurueck, also auf
         ''' denselben ungebackenen Stand, den die Vorschau zeigt.</summary>
@@ -21369,7 +21382,7 @@ Namespace ViewModels
                             $"accepted=geometrySizeDeviation scene={result.SceneSk.Width}x{result.SceneSk.Height} modell={expectedSize.Width}x{expectedSize.Height}")
                     End If
                 End If
-                SetSceneBitmap(result.SceneSk)
+                SetSceneBitmap(result.SceneSk, GetSceneSourceScale(previewSource))
                 result.SceneSk = Nothing
                 ComparisonImage = result.Comparison
                 ' NUR loeschen, wenn seit dem Start nichts Neues angemeldet wurde. Sonst bleibt die

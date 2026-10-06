@@ -113,10 +113,29 @@ Namespace ViewModels
             Return adj
         End Function
 
+        ''' <summary>Um wieviel die Szene kleiner gerechnet ist als die gewohnte Vorschau. 1,0 im
+        ''' Normalfall; waehrend eines Reglerzugs auf der verkleinerten Quelle groesser als 1.</summary>
+        Private _sceneSourceScale As Double = 1.0
+
+        ''' <summary>Faktor, mit dem die Ansicht die Pixelgroesse der Szene in ihre Anzeigegroesse
+        ''' umrechnet. Die Ansicht faellt nur bei UNGLEICHEM Seitenverhaeltnis (Beschnitt, Drehung)
+        ''' auf die Szenengroesse zurueck - und genau dort schrumpfte das Bild waehrend eines
+        ''' Reglerzugs auf die Groesse der verkleinerten Quelle und sprang beim Loslassen zurueck
+        ''' (Nutzerbefund). Gilt nur, solange die Anzeige wirklich die Szene ist.</summary>
+        Public ReadOnly Property SceneDisplayScale As Double
+            Get
+                If _sceneDisplay Is Nothing OrElse Not Object.ReferenceEquals(_previewImage, _sceneDisplay) Then Return 1.0
+                Return _sceneSourceScale
+            End Get
+        End Property
+
         ''' <summary>Ersetzt die persistente Szene komplett (nach einem Vollrender) und blittet sie in
         ''' die persistente Anzeige. Uebernimmt die Ownership von sceneSk.</summary>
-        Private Sub SetSceneBitmap(sceneSk As SKBitmap)
+        ''' <param name="sourceScale">Verhaeltnis der gewohnten Vorschauquelle zur Quelle, aus der
+        ''' diese Szene gerechnet ist - siehe <see cref="SceneDisplayScale"/>.</param>
+        Private Sub SetSceneBitmap(sceneSk As SKBitmap, Optional sourceScale As Double = 1.0)
             If sceneSk Is Nothing Then Return
+            _sceneSourceScale = If(sourceScale > 0.0 AndAlso Not Double.IsNaN(sourceScale), sourceScale, 1.0)
             ' Ein Vollrender malt die ganze Anzeige neu - die Zugbahn-Verkettung der Blits beginnt
             ' danach frisch, und vorgemerkte Reste der ALTEN Szene sind hinfaellig (der folgende
             ' Blit merkt sich seinen ungesehenen Teil selbst wieder vor).
