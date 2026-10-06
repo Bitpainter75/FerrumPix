@@ -8281,6 +8281,10 @@ Namespace Views
                             End If
                         End If
                     Case Key.C
+                        If Not isTextInputFocused AndAlso vm.IsFrameAnnotationSelected Then
+                            e.Handled = True
+                            Return
+                        End If
                         ' EINE LAUFENDE PIXELAUSWAHL KOMMT VOR DER MARKIERTEN EBENE - dieselbe
                         ' Reihenfolge wie bei Entf (ApplyDeleteShortcut) und bei Strg+X darunter.
                         ' Wer eine Ebene markiert und darauf eine Auswahl aufzieht, meint diesen
@@ -8323,6 +8327,10 @@ Namespace Views
                             CutSelectionToSystemClipboardAsync(vm)
                         End If
                     Case Key.V
+                        If Not isTextInputFocused AndAlso vm.IsFrameAnnotationSelected Then
+                            e.Handled = True
+                            Return
+                        End If
                         If Not isTextInputFocused AndAlso vm.PasteLayerClipboard() Then
                             e.Handled = True
                         ElseIf Not isTextInputFocused Then

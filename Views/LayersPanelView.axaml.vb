@@ -319,10 +319,12 @@ Namespace Views
                 items.Add(MakeLayerMenuItem(LocalizationService.T("Objekte duplizieren"), "copy", vm.DuplicateSelectedAnnotationsCommand))
             Else
                 Dim text = LocalizationService.T("Ebene duplizieren (STRG+D)")
-                items.Add(MakeLayerMenuItem(
+                Dim duplicateItem = MakeLayerMenuItem(
                     PlatformShortcutService.FormatShortcutInLabel(
                         text, PlatformShortcutService.FormatPrimaryShortcut("D")),
-                    "copy", vm.DuplicateSelectedAnnotationCommand))
+                    "copy", vm.DuplicateSelectedAnnotationCommand)
+                duplicateItem.IsEnabled = vm.CanDuplicateSelectedAnnotation
+                items.Add(duplicateItem)
             End If
             ' Ebenenmaske und Schnittmaske gelten fuer GENAU EIN Objekt - bei einer Mehrfachauswahl
             ' sagen die Eigenschaften des ViewModels schon Nein, hier bleiben die Eintraege dann weg.

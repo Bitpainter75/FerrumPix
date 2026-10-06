@@ -36,6 +36,10 @@
 - In the selection tool, fill, stroke, shadow and glow only show once there is a selection or a
   selection layer is picked, since they have nothing to work on before that.
 
+- The frame group only appears for the main image or the selected frame layer. A small frame
+  toggle in the image footer shows whether the frame is active. Frame layers cannot be duplicated
+  or copied and pasted, keeping at most one frame layer in a project.
+
 - The size of shadow and glow can now be set to one decimal place, and a new glow starts at size 5
   instead of 10.
 

@@ -418,6 +418,7 @@
                     <Button Classes="icon-btn" Width="30" Height="30" Padding="0"
                             Command="{Binding DuplicateSelectedAnnotationCommand}"
                             IsVisible="{Binding IsSingleLayerSelection}"
+                            IsEnabled="{Binding CanDuplicateSelectedAnnotation}"
                             ToolTip.Tip="Ebene duplizieren (STRG+D)">
                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/copy.svg"
                                        Width="16" Height="16" />

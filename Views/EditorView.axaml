@@ -1774,6 +1774,7 @@
                                 <Border.IsVisible>
                                     <MultiBinding Converter="{StaticResource AllTrueConverter}">
                                         <Binding Path="ShowEffectsAdjustments"/>
+                                        <Binding Path="IsFramePanelTarget"/>
                                         <Binding Path="HiddenAdjustmentGroups" Converter="{StaticResource NotInListConverter}" ConverterParameter="frame"/>
                                     </MultiBinding>
                                 </Border.IsVisible>
@@ -2244,6 +2245,14 @@
                     VerticalAlignment="Bottom" HorizontalAlignment="Center"
                     IsVisible="{Binding ShowFooter}"
                     IsEnabled="{Binding IsInteractionAllowed}">
+            <ToggleButton Classes="ghost" Width="28" Height="26" Padding="4,2"
+                          IsVisible="{Binding IsGlobalAdjustmentsSelected}"
+                          IsChecked="{Binding FrameGroupActive, Mode=TwoWay}"
+                          Classes.active="{Binding FrameGroupActive}"
+                          ToolTip.Tip="{Binding GroupActiveToolTip}">
+                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/frame.svg"
+                               Width="18" Height="18" />
+            </ToggleButton>
             <Button Classes="ghost" Height="20" Padding="4,0,4,2" VerticalContentAlignment="Center"
                     Focusable="False"
                     Click="OnZoomOutClick" ToolTip.Tip="Verkleinern">

@@ -2896,6 +2896,8 @@ Namespace ViewModels
                 RaiseFillKindDependentProperties()
                 Me.RaisePropertyChanged(NameOf(ShowStrokeWidthControls))
                 Me.RaisePropertyChanged(NameOf(IsFrameAnnotationSelected))
+                Me.RaisePropertyChanged(NameOf(IsFramePanelTarget))
+                Me.RaisePropertyChanged(NameOf(CanDuplicateSelectedAnnotation))
                 Me.RaisePropertyChanged(NameOf(ShowAnnotationGeometryControls))
                 Me.RaisePropertyChanged(NameOf(ShowAnnotationProperties))
                 Me.RaisePropertyChanged(NameOf(FillColorLabel))
@@ -3152,6 +3154,8 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(ShowStrokeColorControls))
             Me.RaisePropertyChanged(NameOf(ShowStrokeWidthControls))
             Me.RaisePropertyChanged(NameOf(IsFrameAnnotationSelected))
+            Me.RaisePropertyChanged(NameOf(IsFramePanelTarget))
+            Me.RaisePropertyChanged(NameOf(CanDuplicateSelectedAnnotation))
             Me.RaisePropertyChanged(NameOf(ShowAnnotationGeometryControls))
             Me.RaisePropertyChanged(NameOf(ShowAnnotationProperties))
             Me.RaisePropertyChanged(NameOf(ShowSingleAnnotationEffects))
@@ -3410,6 +3414,9 @@ Namespace ViewModels
                 DuplicateSelectedAnnotation()
                 Return
             End If
+            originals = originals.Where(Function(a) a IsNot Nothing AndAlso
+                Not String.Equals(a.Kind, "Frame", StringComparison.OrdinalIgnoreCase)).ToList()
+            If originals.Count = 0 Then Return
             PushUndo(LocalizationService.T("Objekte dupliziert"))
             Dim copies As New List(Of ImageAnnotation)()
             Dim displaySize = GetAnnotationDisplayPixelSize()
@@ -4009,6 +4016,8 @@ Namespace ViewModels
                 RaiseFillKindDependentProperties()
                 Me.RaisePropertyChanged(NameOf(ShowStrokeWidthControls))
                 Me.RaisePropertyChanged(NameOf(IsFrameAnnotationSelected))
+                Me.RaisePropertyChanged(NameOf(IsFramePanelTarget))
+                Me.RaisePropertyChanged(NameOf(CanDuplicateSelectedAnnotation))
                 Me.RaisePropertyChanged(NameOf(ShowAnnotationGeometryControls))
                 Me.RaisePropertyChanged(NameOf(ShowAnnotationProperties))
                 Me.RaisePropertyChanged(NameOf(FillColorLabel))
@@ -4336,6 +4345,20 @@ Namespace ViewModels
         Public ReadOnly Property IsFrameAnnotationSelected As Boolean
             Get
                 Return String.Equals(EffectiveAnnotationKind, "Frame", StringComparison.OrdinalIgnoreCase)
+            End Get
+        End Property
+
+        ''' <summary>Die Rahmengruppe gehört zum Hauptbild, soll aber auch beim Bearbeiten der
+        ''' Rahmenebene selbst erreichbar bleiben. Für jedes andere ausgewählte Ziel bleibt sie weg.</summary>
+        Public ReadOnly Property IsFramePanelTarget As Boolean
+            Get
+                Return IsGlobalAdjustmentsSelected OrElse IsFrameAnnotationSelected
+            End Get
+        End Property
+
+        Public ReadOnly Property CanDuplicateSelectedAnnotation As Boolean
+            Get
+                Return (HasSelectedAdjustmentLayer OrElse HasSelectedAnnotation) AndAlso Not IsFrameAnnotationSelected
             End Get
         End Property
 
@@ -12711,6 +12734,7 @@ Namespace ViewModels
 
             Dim annotation = SelectedLayer
             If annotation Is Nothing Then Return False
+            If String.Equals(annotation.Kind, "Frame", StringComparison.OrdinalIgnoreCase) Then Return False
             _layerClipboardAnnotationId = annotation.Id
             _layerClipboardAdjustmentLayerId = ""
             StatusText = LocalizationService.T("Ebene kopiert")
@@ -12725,7 +12749,7 @@ Namespace ViewModels
                 Dim source = _annotations.FirstOrDefault(Function(annotation) annotation IsNot Nothing AndAlso
                                                                annotation.Id = _layerClipboardAnnotationId)
                 Dim index = _annotations.IndexOf(source)
-                If index < 0 Then Return False
+                If index < 0 OrElse String.Equals(source.Kind, "Frame", StringComparison.OrdinalIgnoreCase) Then Return False
                 SelectedAnnotationIndex = index
                 DuplicateSelectedAnnotation()
                 StatusText = LocalizationService.T("Ebene eingefügt")
@@ -27428,6 +27452,7 @@ Namespace ViewModels
                 Return
             End If
             If _selectedAnnotationIndex < 0 OrElse _selectedAnnotationIndex >= _annotations.Count Then Return
+            If IsFrameAnnotationSelected Then Return
             CommitObjectAdjustModeToModel()
             PushUndo(LocalizationService.T("Ebene dupliziert"))
             Dim copy = _annotations(_selectedAnnotationIndex).Clone()

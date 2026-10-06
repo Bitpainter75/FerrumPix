@@ -4293,6 +4293,8 @@ Namespace ViewModels
                 RaiseCurrentTargetChanged()
                 Me.RaisePropertyChanged(NameOf(SelectedLayerOpacity))
                 Me.RaisePropertyChanged(NameOf(IsGlobalAdjustmentsSelected))
+                Me.RaisePropertyChanged(NameOf(IsFramePanelTarget))
+                Me.RaisePropertyChanged(NameOf(CanDuplicateSelectedAnnotation))
                 ' Die Gruppenregler haengen an der markierten KOPFZEILE - ohne diese Meldung zeigten
                 ' sie nach einem Zeilenwechsel weiter die Werte der vorigen Gruppe.
                 Me.RaisePropertyChanged(NameOf(ShowGroupProperties))
