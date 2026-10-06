@@ -70,7 +70,6 @@
                         <TextBlock Text="ICC"/>
                     </Button>
                 </StackPanel>
-                <Border Height="1" Background="{DynamicResource FP.Border.Normal}" Margin="0,7,0,0"/>
             </StackPanel>
 
             <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" FocusAdorner="{x:Null}">
@@ -99,7 +98,9 @@
                         </ItemsControl>
                     </StackPanel>
 
-                    <StackPanel Spacing="18" IsVisible="{Binding IsInfoTabGeneral}" Margin="0,0,12,0">
+                    <!-- Ohne Trennlinien gliedert ein klarer, etwas größerer Weißraum die
+                         unabhängigen Bereiche (Bilddaten, Scope, Bewertung und Stichwörter). -->
+                    <StackPanel Spacing="32" IsVisible="{Binding IsInfoTabGeneral}" Margin="0,0,12,0">
                         <StackPanel Spacing="10" IsVisible="{Binding IsSingleImage}">
                             <!-- Dateiname ohne Beschriftung über die volle Breite: er ist die
                                  Überschrift des Blocks, keine Wertzeile - und lange Namen haben so
@@ -245,11 +246,6 @@
                                 </DockPanel>
                             </StackPanel>
                         </StackPanel>
-
-                        <!-- Die Trennlinien gehoeren zu den Bloecken, die sie abgrenzen: sonst
-                             stehen bei ausgeblendetem Histogramm zwei uebereinander. -->
-                        <Border Height="1" Background="{DynamicResource FP.Border.Normal}"
-                                IsVisible="{Binding HasScope}"/>
 
                         <StackPanel Spacing="10" IsVisible="{Binding HasScope}">
                             <!-- Ueberschrift und Umschalter in einer Zeile: die drei Darstellungen
@@ -489,9 +485,6 @@
                             </StackPanel>
                         </StackPanel>
 
-                        <Border Height="1" Background="{DynamicResource FP.Border.Normal}"
-                                IsVisible="{Binding ShowTagsSeparator}"/>
-
                         <StackPanel Spacing="10" IsVisible="{Binding ShowTagsSection}">
                             <TextBlock Text="Stichwörter" FontSize="{DynamicResource FP.Font.Subtitle}" FontWeight="SemiBold"/>
                             <ItemsControl ItemsSource="{Binding Tags}">
@@ -569,7 +562,6 @@
                         </StackPanel>
 
                         <StackPanel Spacing="8" IsVisible="{Binding ShowAiTagsSection}">
-                            <Border Height="1" Background="{DynamicResource FP.Border.Normal}"/>
                             <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto">
                                 <TextBlock Grid.Column="0" Text="KI-Stichwörter" FontSize="{DynamicResource FP.Font.Subtitle}" FontWeight="SemiBold"/>
                                 <Button Grid.Column="1" Classes="ghost" Padding="8,4"
@@ -691,7 +683,7 @@
                             </ItemsControl.ItemsPanel>
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate DataType="{x:Type services:ExifTag}">
-                                    <Border BorderBrush="{DynamicResource FP.Border.Normal}" BorderThickness="0,0,0,1" Padding="0,8">
+                                    <Border Padding="0,8">
                                         <Grid ColumnDefinitions="170,*">
                                             <TextBlock Text="{Binding Name}" Foreground="{DynamicResource FP.Text.Muted}" TextTrimming="CharacterEllipsis"/>
                                             <TextBlock Grid.Column="1" Text="{Binding Value}" HorizontalAlignment="Right" TextAlignment="Right" TextWrapping="Wrap"/>
@@ -712,7 +704,7 @@
                             </ItemsControl.ItemsPanel>
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate DataType="{x:Type services:ExifTag}">
-                                    <Border BorderBrush="{DynamicResource FP.Border.Normal}" BorderThickness="0,0,0,1" Padding="0,8">
+                                    <Border Padding="0,8">
                                         <Grid ColumnDefinitions="170,*">
                                             <TextBlock Text="{Binding Name}" Foreground="{DynamicResource FP.Text.Muted}" TextTrimming="CharacterEllipsis"/>
                                             <TextBlock Grid.Column="1" Text="{Binding Value}" HorizontalAlignment="Right" TextAlignment="Right" TextWrapping="Wrap"/>
@@ -733,7 +725,7 @@
                             </ItemsControl.ItemsPanel>
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate DataType="{x:Type services:ExifTag}">
-                                    <Border BorderBrush="{DynamicResource FP.Border.Normal}" BorderThickness="0,0,0,1" Padding="0,8">
+                                    <Border Padding="0,8">
                                         <Grid ColumnDefinitions="170,*">
                                             <TextBlock Text="{Binding Name}" Foreground="{DynamicResource FP.Text.Muted}" TextTrimming="CharacterEllipsis"/>
                                             <TextBlock Grid.Column="1" Text="{Binding Value}" HorizontalAlignment="Right" TextAlignment="Right" TextWrapping="Wrap"/>
@@ -754,7 +746,7 @@
                             </ItemsControl.ItemsPanel>
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate DataType="{x:Type services:ExifTag}">
-                                    <Border BorderBrush="{DynamicResource FP.Border.Normal}" BorderThickness="0,0,0,1" Padding="0,8">
+                                    <Border Padding="0,8">
                                         <Grid ColumnDefinitions="170,*">
                                             <TextBlock Text="{Binding Name}" Foreground="{DynamicResource FP.Text.Muted}" TextTrimming="CharacterEllipsis"/>
                                             <TextBlock Grid.Column="1" Text="{Binding Value}" HorizontalAlignment="Right" TextAlignment="Right" TextWrapping="Wrap"/>

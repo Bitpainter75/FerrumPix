@@ -138,13 +138,25 @@ Namespace Services
                 Dim count = infos.Length
                 Dim factorY = font.Size / ShapingScale
                 Dim factorX = factorY * font.ScaleX
+                ' HarfBuzz gibt fuer RTL-Laeufe negative X-Vorschuebe aus. Das ist fuer einen
+                ' Renderer mit einem rechten Startpunkt richtig, hier erwarten aber alle Aufrufer
+                ' (Auswahlrahmen, Ausrichtung und Textpfad) eine Breite und Koordinaten rechts vom
+                ' linken Zeilenanfang. Die Glyphenreihenfolge bleibt dabei bewusst unangetastet -
+                ' sie ist bereits die visuelle Reihenfolge von HarfBuzz.
+                Dim rawAdvance As Single = 0.0F
+                For i = 0 To count - 1
+                    rawAdvance += positions(i).XAdvance * factorX
+                Next
+                Dim isRightToLeft = rawAdvance < 0.0F
                 Allocate(result, count)
                 Dim pen As Single = 0.0F
                 Dim cluster = -1
                 For i = 0 To count - 1
                     If i = 0 OrElse infos(i).Cluster <> infos(i - 1).Cluster Then
                         cluster += 1
-                        If cluster > 0 Then pen += spacing
+                        ' Zeichenabstand folgt der Schreibrichtung. Ein positives Plus zwischen
+                        ' zwei RTL-Gruppen zöge sie sonst wieder zusammen statt auseinander.
+                        If cluster > 0 Then pen += If(isRightToLeft, -spacing, spacing)
                     End If
                     result.Glyphs(i) = CUShort(infos(i).Codepoint And &HFFFFUI)
                     result.PenX(i) = pen
@@ -156,7 +168,17 @@ Namespace Services
                     pen += result.Advance(i)
                 Next
                 result.ClusterCount = cluster + 1
-                result.Width = pen
+                If isRightToLeft Then
+                    ' Den von HarfBuzz erwarteten rechten Startpunkt auf unseren linken
+                    ' Zeilenanfang abbilden. PenX bleibt mitsamt negativem Vorschub erhalten;
+                    ' damit sitzt jede Gruppe auch auf einem Textpfad an ihrer echten Stelle.
+                    Dim offset = -pen
+                    For i = 0 To count - 1
+                        result.X(i) += offset
+                        result.PenX(i) += offset
+                    Next
+                End If
+                result.Width = Math.Abs(pen)
             End Using
             Return result
         End Function
