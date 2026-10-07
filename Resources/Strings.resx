@@ -9558,4 +9558,28 @@
   <data name="Dateioperationen_au_erhalb_des_pers_nlichen_Ordn_06ca3dd8" xml:space="preserve">
     <value>Allow file operations outside the home folder</value>
   </data>
+  <data name="In_anderes_Format_konvertieren_0_Dateien_0087d19c" xml:space="preserve">
+    <value>Convert to another format ({0} files)</value>
+  </data>
+  <data name="Konvertieren_a3262ed0" xml:space="preserve">
+    <value>Convert</value>
+  </data>
+  <data name="Systemvorgabe_eaaef9d9" xml:space="preserve">
+    <value>System default</value>
+  </data>
+  <data name="Abst_X_d162de0e" xml:space="preserve">
+    <value>Offs. X</value>
+  </data>
+  <data name="Abst_Y_cf4354e3" xml:space="preserve">
+    <value>Offs. Y</value>
+  </data>
+  <data name="Kreis_Ellipse_0bbf1ea9" xml:space="preserve">
+    <value>Circle/ellipse</value>
+  </data>
+  <data name="Ellipsen_Sprechblase_c9db5666" xml:space="preserve">
+    <value>Oval speech bubble</value>
+  </data>
+  <data name="Suche_bearbeiten_a5d35bb4" xml:space="preserve">
+    <value>Edit search</value>
+  </data>
 </root>

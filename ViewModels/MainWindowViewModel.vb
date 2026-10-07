@@ -4924,8 +4924,10 @@ Namespace ViewModels
             ResetDialogSaveAsMetaOptions()
             Me.RaisePropertyChanged(NameOf(IsSaveAsImmichAvailable))
 
+            ' Mit Platzhalter uebersetzen: der fertig eingesetzte Text hat keinen Schluessel.
             Dim result = Await ShowDialogAsync(AppDialogKind.BatchConvert,
-                                               $"In anderes Format konvertieren ({fileCount} Dateien)",
+                                               String.Format(Globalization.CultureInfo.CurrentCulture,
+                                                             LocalizationService.T("In anderes Format konvertieren ({0} Dateien)"), fileCount),
                                                "Wähle das Zielformat. Die Dateien werden mit neuer Endung im selben Ordner gespeichert.",
                                                "",
                                                "Konvertieren",
@@ -5491,7 +5493,10 @@ Namespace ViewModels
             Dim isDirectory = IO.Directory.Exists(itemPath)
             Dim extension = If(isDirectory, "", IO.Path.GetExtension(oldName))
             Dim baseName = If(isDirectory, oldName, IO.Path.GetFileNameWithoutExtension(oldName))
-            Dim promptMessage = If(String.IsNullOrEmpty(extension), "Neuen Namen eingeben", $"Neuen Namen eingeben ({extension})")
+            ' ERST uebersetzen, dann die Endung anhaengen: "Neuen Namen eingeben (.nef)" hat keinen
+            ' Schluessel, und ShowInputAsync uebersetzt nur, was es wortgleich findet.
+            Dim prompt = LocalizationService.T("Neuen Namen eingeben")
+            Dim promptMessage = If(String.IsNullOrEmpty(extension), prompt, $"{prompt} ({extension})")
             Dim newBaseName = Await ShowInputAsync(AppDialogKind.Rename, "Umbenennen", promptMessage, baseName, "Umbenennen", "Abbrechen")
             If String.IsNullOrWhiteSpace(newBaseName) OrElse String.Equals(newBaseName, baseName, StringComparison.Ordinal) Then Return
             Dim newName = newBaseName & extension

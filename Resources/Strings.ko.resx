@@ -9583,4 +9583,28 @@
   <data name="Dateioperationen_au_erhalb_des_pers_nlichen_Ordn_06ca3dd8" xml:space="preserve">
     <value>개인 폴더 밖에서도 파일 작업 허용</value>
   </data>
+  <data name="In_anderes_Format_konvertieren_0_Dateien_0087d19c" xml:space="preserve">
+    <value>다른 형식으로 변환 ({0}개 파일)</value>
+  </data>
+  <data name="Konvertieren_a3262ed0" xml:space="preserve">
+    <value>변환</value>
+  </data>
+  <data name="Systemvorgabe_eaaef9d9" xml:space="preserve">
+    <value>시스템 기본값</value>
+  </data>
+  <data name="Abst_X_d162de0e" xml:space="preserve">
+    <value>간격 X</value>
+  </data>
+  <data name="Abst_Y_cf4354e3" xml:space="preserve">
+    <value>간격 Y</value>
+  </data>
+  <data name="Kreis_Ellipse_0bbf1ea9" xml:space="preserve">
+    <value>원/타원</value>
+  </data>
+  <data name="Ellipsen_Sprechblase_c9db5666" xml:space="preserve">
+    <value>타원형 말풍선</value>
+  </data>
+  <data name="Suche_bearbeiten_a5d35bb4" xml:space="preserve">
+    <value>검색 편집</value>
+  </data>
 </root>

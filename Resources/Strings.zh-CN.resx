@@ -9537,4 +9537,28 @@
   <data name="Dateioperationen_au_erhalb_des_pers_nlichen_Ordn_06ca3dd8" xml:space="preserve">
     <value>允许在个人文件夹之外进行文件操作</value>
   </data>
+  <data name="In_anderes_Format_konvertieren_0_Dateien_0087d19c" xml:space="preserve">
+    <value>转换为其他格式（{0} 个文件）</value>
+  </data>
+  <data name="Konvertieren_a3262ed0" xml:space="preserve">
+    <value>转换</value>
+  </data>
+  <data name="Systemvorgabe_eaaef9d9" xml:space="preserve">
+    <value>系统默认</value>
+  </data>
+  <data name="Abst_X_d162de0e" xml:space="preserve">
+    <value>偏移 X</value>
+  </data>
+  <data name="Abst_Y_cf4354e3" xml:space="preserve">
+    <value>偏移 Y</value>
+  </data>
+  <data name="Kreis_Ellipse_0bbf1ea9" xml:space="preserve">
+    <value>圆形/椭圆</value>
+  </data>
+  <data name="Ellipsen_Sprechblase_c9db5666" xml:space="preserve">
+    <value>椭圆对话气泡</value>
+  </data>
+  <data name="Suche_bearbeiten_a5d35bb4" xml:space="preserve">
+    <value>编辑搜索</value>
+  </data>
 </root>

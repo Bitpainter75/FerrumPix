@@ -36,6 +36,9 @@
 - **Stars, heart and metadata badges on thumbnails now sit on one line**, the heart has the same
   color as the stars, and the smallest thumbnail size leaves room for every badge.
 
+- **Missing translations filled in:** the rename and convert dialogs, the window button setting,
+  the watermark offsets and the shape names in the editor.
+
 - **Color grading now tones black-and-white pictures.** Before, the black-and-white look turned
   every toning back into gray.
 

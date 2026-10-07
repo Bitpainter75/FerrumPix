@@ -1761,13 +1761,14 @@ Namespace ViewModels
 
         Public ReadOnly Property AnnotationXLabel As String
             Get
-                Return If(ShowWatermarkAnchorControls, "Abst. X", "X")
+                ' Gebunden, also hier uebersetzen: der Baumdurchlauf erreicht gebundene Texte nicht.
+                Return If(ShowWatermarkAnchorControls, LocalizationService.T("Abst. X"), "X")
             End Get
         End Property
 
         Public ReadOnly Property AnnotationYLabel As String
             Get
-                Return If(ShowWatermarkAnchorControls, "Abst. Y", "Y")
+                Return If(ShowWatermarkAnchorControls, LocalizationService.T("Abst. Y"), "Y")
             End Get
         End Property
 
@@ -1896,10 +1897,13 @@ Namespace ViewModels
         End Sub
 
         Private Sub AddFixedShape(kind As String, displayName As String, iconPath As String)
+            ' Der Name ist der Tooltip im Raster und kommt ueber eine Bindung dorthin - der
+            ' Baumdurchlauf der Uebersetzung erreicht ihn nicht, also hier uebersetzen (wie die
+            ' Symbole ueber LocalizationService.Tag).
             _fixedShapeItems.Add(New ShapeIconEntry With {
                 .IconPath = iconPath,
                 .SourceName = displayName,
-                .DisplayName = displayName,
+                .DisplayName = LocalizationService.T(displayName),
                 .PendingKind = kind
             })
         End Sub
