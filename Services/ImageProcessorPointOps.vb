@@ -56,6 +56,13 @@ Namespace Services
             Public ScalarG As Single()
             Public ScalarB As Single()
 
+            ''' <summary>Nur bei Lichter/Tiefen/Weiss/Schwarz gesetzt, dann ist die Skalarkette
+            ''' dreigeteilt: ToneBefore je Kanal (Belichtung, Kontrast, Helligkeit; Nothing, wenn
+            ''' neutral), ToneZones ueber die Helligkeit des Pixels, danach ScalarR/G/B mit den
+            ''' Kurven. Ohne die vier Regler bleibt alles in ScalarR/G/B verschmolzen.</summary>
+            Public ToneBefore As Single()
+            Public ToneZones As Single()
+
             ''' <summary>Weissabgleich als chromatische Adaption, 3x3 zeilenweise, ODER Nothing.
             ''' Nothing ist der Normalfall: Modell 1 rechnet den Weissabgleich weiter in der
             ''' Farbmatrix, und auch unter Modell 2 steht der Regler meist auf dem Anker.
@@ -219,7 +226,15 @@ Namespace Services
             If wantsTone OrElse wantsTonal OrElse wantsRgbCurve OrElse wantsChannelCurves Then
                 ' Die Kanaele trennen sich erst bei den Kanalkurven - vorher ist die Kette identisch,
                 ' deshalb wird der gemeinsame Teil nur EINMAL gerechnet.
-                Dim common = BuildPointOpScalarTable(adj, wantsTone, wantsTonal, wantsRgbCurve)
+                ' Lichter/Tiefen/Weiss/Schwarz wirken auf die HELLIGKEIT, nicht je Kanal: je Kanal
+                ' rueckten R, G und B ueberall zusammen, wo die Kennlinie flach wird, und ein Orange
+                ' verlor bei Lichter -100 / Tiefen +100 mehr als die Haelfte seiner Spreizung (Forum
+                ' pixls.us, 2026-10-07). Dafuer muss die Kette an dieser Stelle aufgetrennt werden.
+                If wantsTonal Then
+                    If wantsTone Then chain.ToneBefore = BuildPointOpScalarTable(adj, True, False, False)
+                    chain.ToneZones = BuildToneZoneTable(adj)
+                End If
+                Dim common = BuildPointOpScalarTable(adj, wantsTone AndAlso Not wantsTonal, False, wantsRgbCurve)
                 If wantsChannelCurves Then
                     chain.ScalarR = ChainCurveOntoTable(common, adj.CurveRedPoints)
                     chain.ScalarG = ChainCurveOntoTable(common, adj.CurveGreenPoints)
@@ -759,6 +774,45 @@ Namespace Services
             Return table
         End Function
 
+        ''' <summary>Lichter/Tiefen/Weiss/Schwarz allein als Tabelle, angewandt ueber ApplyToneZones.
+        ''' Monoton wie in der verschmolzenen Kette.</summary>
+        Private Shared Function BuildToneZoneTable(adj As ImageAdjustments) As Single()
+            Dim monotone = BuildMonotoneToneZones(adj)
+            Dim table = New Single(PointOpTableSize - 1) {}
+            For i = 0 To PointOpTableSize - 1
+                Dim v = i / CSng(PointOpTableSize - 1)
+                table(i) = If(monotone IsNot Nothing,
+                              Clamp(monotone(i), 0.0F, 1.0F),
+                              Clamp(CSng(v + ToneZoneLift(adj, v)), 0.0F, 1.0F))
+            Next
+            Return table
+        End Function
+
+        ''' <summary>Lichter/Tiefen/Weiss/Schwarz auf einen Pixel, farbtonerhaltend wie Adobes
+        ''' RGB-Tonkurve im DNG-SDK: die Tabelle wirkt auf den groessten und den kleinsten Kanal, der
+        ''' mittlere behaelt seine relative Lage dazwischen. Je Kanal gerechnet rueckte er dorthin, wo
+        ''' die Kennlinie flach ist, und ein Orange 0,9/0,6/0,3 wurde bei Lichter -100 / Tiefen +100
+        ''' zu Gruen gleich Blau, also gelblich grau (Forum pixls.us, 2026-10-07). Die Saettigung folgt
+        ''' dagegen weiter der Steigung, wie bei Lightroom: dieselbe Rechnung mit einem gemeinsamen
+        ''' Faktor auf alle drei Kanaele (Farbverhaeltnis ganz erhalten) lag gemessen weiter weg
+        ''' (dE 7,69 gegen 5,15 am Export "nur Grundregler", Mitten zu rot). Ein Grau rechnet genau
+        ''' wie die Tabelle selbst.</summary>
+        Private Shared Sub ApplyToneZones(ByRef rr As Single, ByRef gg As Single, ByRef bb As Single,
+                                          zones As Single())
+            Dim vMax = Math.Max(rr, Math.Max(gg, bb))
+            Dim vMin = Math.Min(rr, Math.Min(gg, bb))
+            Dim newMax = SampleTable(zones, vMax)
+            Dim newMin = SampleTable(zones, vMin)
+            If vMax - vMin < 0.000001F Then
+                rr = newMax : gg = newMax : bb = newMax
+                Return
+            End If
+            Dim scale = (newMax - newMin) / (vMax - vMin)
+            rr = newMin + (rr - vMin) * scale
+            gg = newMin + (gg - vMin) * scale
+            bb = newMin + (bb - vMin) * scale
+        End Sub
+
         ''' <summary>Die verschmolzene per-Kanal-Skalarkette als STETIGE Tabelle: erst die
         ''' Tonwertkurve (Belichtung/Kontrast/Helligkeit, identisch zu BuildToneCurveLut), dann die
         ''' Lichter/Tiefen/Weiss/Schwarz-Kaskade (identisch zu ApplyTonalLUT) - beide an 4097 statt
@@ -1196,6 +1250,8 @@ Namespace Services
             Dim sr = chain.ScalarR
             Dim sg = chain.ScalarG
             Dim sb = chain.ScalarB
+            Dim toneBefore = chain.ToneBefore
+            Dim toneZones = chain.ToneZones
             Dim negR = chain.NegR
             Dim negG = chain.NegG
             Dim negB = chain.NegB
@@ -1347,6 +1403,14 @@ Namespace Services
                                     End If
                                     satVorTon *= torC * tFade
                                 End If
+                            End If
+                            If toneZones IsNot Nothing Then
+                                If toneBefore IsNot Nothing Then
+                                    rr = SampleTable(toneBefore, rr)
+                                    gg = SampleTable(toneBefore, gg)
+                                    bb = SampleTable(toneBefore, bb)
+                                End If
+                                ApplyToneZones(rr, gg, bb, toneZones)
                             End If
                             rr = SampleTable(sr, rr)
                             gg = SampleTable(sg, gg)
