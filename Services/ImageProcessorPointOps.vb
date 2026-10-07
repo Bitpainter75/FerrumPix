@@ -674,6 +674,91 @@ Namespace Services
             Return c * c
         End Function
 
+        ''' <summary>Kleinste Steigung, die Lichter/Tiefen/Weiss/Schwarz zusammen der Kennlinie lassen.
+        ''' Darunter wird ein Verlauf so flach, dass er im 8-Bit-Bild zur Flaeche wird.</summary>
+        Private Const ToneZoneMinSlope As Double = 0.2
+
+        ''' <summary>Der Hub von Lichter/Tiefen/Weiss/Schwarz am Eingangston <paramref name="d0"/>.
+        ''' Grundton-Kaskade an Adobe PV2012 angenaehert. ALT war fehlerhaft:
+        ''' Lichter/Tiefen waren schmale Dreiecke um 0.75/0.25 -> die Extreme (reine Lichter,
+        ''' tiefe Schatten) blieben UNBERUEHRT, die Wirkung staute sich auf den 1/4-/3/4-Ton
+        ''' (Lichter=-100 zog 192->104, sichtbare Mitten-Delle). Schwarz/Weiss waren Rampen*0.4
+        ''' -> bei starkem Ausschlag ein PLATEAU (Schwarz=+100: alles &lt;=96 auf 102, Weiss=-100:
+        ''' alles &gt;=160 auf 153, Detailverlust). NEU: breite, ueberlappende, GLATTE Zonen aus
+        ''' dem Eingangston d0 (keine Kaskaden-Kopplung mehr). Jeder Regler fuer sich bleibt monoton;
+        ''' zusammen koennen sie es nicht, das faengt BuildMonotoneToneZones ab.
+        ''' Gemessen mit FERRUMPIX_DUMP_CURVES; Staerken sind bewusst moderat und nachjustierbar.</summary>
+        Private Shared Function ToneZoneLift(adj As ImageAdjustments, d0 As Double) As Double
+            Dim wBlacks = ToneSmoothFade(1.0 - d0 / 0.5)      ' 1 bei Schwarz, glatt 0 ab d=0.5
+            Dim wWhites = ToneSmoothFade((d0 - 0.5) / 0.5)    ' 0 bis d=0.5, 1 bei Weiss
+            Dim wShadows = ToneCosBump(d0, 0.28, 0.5)         ' breiter Bauch, deckt 0..0.78
+            Dim wHighlights = ToneCosBump(d0, 0.72, 0.5)      ' breiter Bauch, deckt 0.22..1
+            Dim lift = (adj.Blacks / 100.0) * wBlacks * 0.28 _
+                + (adj.ShadowsLevel / 100.0) * wShadows * 0.2 _
+                + (adj.Whites / 100.0) * wWhites * 0.28 _
+                + (adj.Highlights / 100.0) * wHighlights * 0.2
+            ' SCHWARZ BLEIBT FESTGENAGELT: eine positive Anhebung war bisher am
+            ' Punkt d0=0 ein reiner OFFSET (wBlacks=1 dort) - Blacks +25 / Shadows +43 hoben
+            ' reines Schwarz auf ~0.10, die dahinterliegende steile Kurvenzone machte 0.19
+            ' daraus. Gemessen an echten Referenz-Exporten desselben Presets bleibt deren
+            ' Schwarzboden dagegen EXAKT am Fusspunkt der Tonwertkurve: positive Blacks/
+            ' Shadows STRECKEN die Tiefen aus dem Schwarz heraus, sie verschieben es nicht.
+            ' Deshalb laeuft eine positive Anhebung unter d0=0.1 glatt auf null aus. NUR die
+            ' positive Richtung: negatives Absenken DARF bis in den Boden druecken
+            ' (Schwarz-Crush), die Klemmung haelt f(0)=0 dort von selbst.
+            ' Die Breite dieses Auslaufs (0,1) wurde am 28.07.2026 gegen die Referenzbasis
+            ' abgetastet: 0,1 bis 0,5. An einem Motiv sank die Abweichung dabei stetig, am
+            ' zweiten stieg sie - der Wert ist also NICHT der Fehler, siehe RAW_UND_FARBE.md.
+            If lift > 0.0 Then lift *= ToneSmoothFade(d0 / 0.1)
+            Return lift
+        End Function
+
+        ''' <summary>Lichter/Tiefen/Weiss/Schwarz als monotone Tabelle, oder Nothing, solange die
+        ''' Kennlinie ohnehin nirgends flacher als ToneZoneMinSlope wird. Die fallenden Flanken der
+        ''' Tiefen- und der Lichter-Glocke liegen beide in den Mitten: Lichter -100 / Tiefen +100
+        ''' kehrte dort die Toene um (Steigung -0,23 zwischen 0,43 und 0,57). Hier wird jede zu
+        ''' flache Stelle auf die Mindeststeigung angehoben und der Zuwachs den steileren Stellen
+        ''' anteilig abgezogen, ueber ihren Ueberschuss. Beide Enden bleiben, wo der Hub sie
+        ''' hinsetzt, und die Mindeststeigung gilt danach ueberall. Nothing heisst: die Kette rechnet
+        ''' wie bisher direkt, bitgleich.</summary>
+        Private Shared Function BuildMonotoneToneZones(adj As ImageAdjustments) As Single()
+            Dim n = PointOpTableSize - 1
+            Dim stepSize = 1.0 / n
+            Dim curve = New Double(n) {}
+            For i = 0 To n
+                Dim d = i * stepSize
+                curve(i) = d + ToneZoneLift(adj, d)
+            Next
+
+            Dim slopes = New Double(n - 1) {}
+            Dim deficit = 0.0
+            Dim surplus = 0.0
+            For i = 0 To n - 1
+                Dim s = (curve(i + 1) - curve(i)) / stepSize
+                slopes(i) = s
+                If s < ToneZoneMinSlope Then
+                    deficit += (ToneZoneMinSlope - s) * stepSize
+                Else
+                    surplus += (s - ToneZoneMinSlope) * stepSize
+                End If
+            Next
+            If deficit <= 0.0 Then Return Nothing
+            ' Der Ueberschuss reicht immer: die Enden liegen mindestens ToneZoneMinSlope
+            ' auseinander, solange kein Regler ueber 100 steht. Sonst so weit wie moeglich.
+            Dim keep = If(surplus > deficit, (surplus - deficit) / surplus, 0.0)
+
+            Dim table = New Single(n) {}
+            Dim y = curve(0)
+            table(0) = CSng(y)
+            For i = 0 To n - 1
+                Dim s = slopes(i)
+                s = If(s < ToneZoneMinSlope, ToneZoneMinSlope, ToneZoneMinSlope + (s - ToneZoneMinSlope) * keep)
+                y += s * stepSize
+                table(i + 1) = CSng(y)
+            Next
+            Return table
+        End Function
+
         ''' <summary>Die verschmolzene per-Kanal-Skalarkette als STETIGE Tabelle: erst die
         ''' Tonwertkurve (Belichtung/Kontrast/Helligkeit, identisch zu BuildToneCurveLut), dann die
         ''' Lichter/Tiefen/Weiss/Schwarz-Kaskade (identisch zu ApplyTonalLUT) - beide an 4097 statt
@@ -696,6 +781,7 @@ Namespace Services
             Dim shoulder = Clamp(ToneShoulderBase + 0.5F * overshootHigh, ToneShoulderBase, ToneShoulderMax)
             Dim toe = Clamp(ToneShoulderBase + 0.5F * overshootLow, ToneShoulderBase, ToneShoulderMax)
             Dim rolloff = Clamp((overshootHigh + overshootLow) / ToneShoulderBase, 0.0F, 1.0F)
+            Dim tonalMonotone = If(includeTonal, BuildMonotoneToneZones(adj), Nothing)
 
             Dim table = New Single(PointOpTableSize - 1) {}
             For i = 0 To PointOpTableSize - 1
@@ -709,38 +795,11 @@ Namespace Services
                 End If
 
                 If includeTonal Then
-                    ' Grundton-Kaskade an Adobe PV2012 angenaehert. ALT war fehlerhaft:
-                    ' Lichter/Tiefen waren schmale Dreiecke um 0.75/0.25 -> die Extreme (reine Lichter,
-                    ' tiefe Schatten) blieben UNBERUEHRT, die Wirkung staute sich auf den 1/4-/3/4-Ton
-                    ' (Lichter=-100 zog 192->104, sichtbare Mitten-Delle). Schwarz/Weiss waren Rampen*0.4
-                    ' -> bei starkem Ausschlag ein PLATEAU (Schwarz=+100: alles <=96 auf 102, Weiss=-100:
-                    ' alles >=160 auf 153, Detailverlust). NEU: breite, ueberlappende, GLATTE Zonen aus
-                    ' dem Eingangston d0 (keine Kaskaden-Kopplung mehr), Verstaerkungen klein genug, dass
-                    ' die Kennlinie monoton bleibt (kein Plateau, keine Delle) und die Enden mitlaufen.
-                    ' Gemessen mit FERRUMPIX_DUMP_CURVES; Staerken sind bewusst moderat und nachjustierbar.
-                    Dim d0 = CDbl(v)
-                    Dim wBlacks = ToneSmoothFade(1.0 - d0 / 0.5)      ' 1 bei Schwarz, glatt 0 ab d=0.5
-                    Dim wWhites = ToneSmoothFade((d0 - 0.5) / 0.5)    ' 0 bis d=0.5, 1 bei Weiss
-                    Dim wShadows = ToneCosBump(d0, 0.28, 0.5)         ' breiter Bauch, deckt 0..0.78
-                    Dim wHighlights = ToneCosBump(d0, 0.72, 0.5)      ' breiter Bauch, deckt 0.22..1
-                    Dim lift = (adj.Blacks / 100.0) * wBlacks * 0.28 _
-                        + (adj.ShadowsLevel / 100.0) * wShadows * 0.2 _
-                        + (adj.Whites / 100.0) * wWhites * 0.28 _
-                        + (adj.Highlights / 100.0) * wHighlights * 0.2
-                    ' SCHWARZ BLEIBT FESTGENAGELT: eine positive Anhebung war bisher am
-                    ' Punkt d0=0 ein reiner OFFSET (wBlacks=1 dort) - Blacks +25 / Shadows +43 hoben
-                    ' reines Schwarz auf ~0.10, die dahinterliegende steile Kurvenzone machte 0.19
-                    ' daraus. Gemessen an echten Referenz-Exporten desselben Presets bleibt deren
-                    ' Schwarzboden dagegen EXAKT am Fusspunkt der Tonwertkurve: positive Blacks/
-                    ' Shadows STRECKEN die Tiefen aus dem Schwarz heraus, sie verschieben es nicht.
-                    ' Deshalb laeuft eine positive Anhebung unter d0=0.1 glatt auf null aus. NUR die
-                    ' positive Richtung: negatives Absenken DARF bis in den Boden druecken
-                    ' (Schwarz-Crush), die Klemmung haelt f(0)=0 dort von selbst.
-                    ' Die Breite dieses Auslaufs (0,1) wurde am 28.07.2026 gegen die Referenzbasis
-                    ' abgetastet: 0,1 bis 0,5. An einem Motiv sank die Abweichung dabei stetig, am
-                    ' zweiten stieg sie - der Wert ist also NICHT der Fehler, siehe RAW_UND_FARBE.md.
-                    If lift > 0.0 Then lift *= ToneSmoothFade(d0 / 0.1)
-                    v = Clamp(CSng(d0 + lift), 0.0F, 1.0F)
+                    If tonalMonotone IsNot Nothing Then
+                        v = Clamp(SampleTable(tonalMonotone, v), 0.0F, 1.0F)
+                    Else
+                        v = Clamp(CSng(v + ToneZoneLift(adj, v)), 0.0F, 1.0F)
+                    End If
                 End If
 
                 If includeRgbCurve Then

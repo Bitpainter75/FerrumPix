@@ -17,6 +17,10 @@
 
 ### Fixes
 
+- **Highlights, Shadows, Whites and Blacks no longer turn tones around.** Pulling highlights
+  down and shadows up together, especially at full strength, could make the midtones run
+  backwards; brighter parts of a gradient came out darker than the parts next to them.
+
 - **More lenses are recognised.** Older Canon EOS, Olympus Four Thirds and Panasonic G bodies,
   Samsung NX, Sony A-mount and Pentax cameras, including Pentax DNG files, now name the lens they
   were used with, so lens correction finds its profile. A Leica DG lens no longer gets the profile of a Lumix lens of the same range.
