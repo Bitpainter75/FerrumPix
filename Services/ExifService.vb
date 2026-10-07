@@ -761,7 +761,9 @@ Namespace Services
 
         Public Shared ReadOnly Property CurrentSummaryFormat As String
             Get
-                Return $"{SummaryFormatVersion}:{LocalizationService.EffectiveLanguage}"
+                ' Der Stand der Nikon-Objektivtabelle gehoert mit hinein: der Objektivname einer
+                ' Zeile haengt an ihr, nicht nur an der Datei (siehe NikonLensIdService.TableStamp).
+                Return $"{SummaryFormatVersion}:{LocalizationService.EffectiveLanguage}:{NikonLensIdService.TableStamp}"
             End Get
         End Property
 

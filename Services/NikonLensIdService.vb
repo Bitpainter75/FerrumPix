@@ -59,6 +59,28 @@ Namespace Services
             {"0040182B2C340006", "Tokina AT-X 107 AF DX Fisheye 10-17mm f/3.5-4.5"}
         }
 
+        Private Shared ReadOnly _tableStamp As New Lazy(Of String)(AddressOf ComputeTableStamp)
+
+        ''' <summary>Fingerabdruck der Tabelle oben, acht Zeichen. Er steht im Stempel jeder
+        ''' Katalogzeile (ExifService.CurrentSummaryFormat): kommt ein Objektiv dazu oder aendert sich
+        ''' ein Name, wird jede Zeile beim naechsten Besuch einmal neu gelesen. Ohne ihn behielten
+        ''' Fotos, die vor der Erweiterung eingelesen wurden, unter der Kachel den alten, oft leeren
+        ''' Objektivnamen - waehrend das Infopanel, das die Datei frisch liest, schon den neuen zeigt.</summary>
+        Public Shared ReadOnly Property TableStamp As String
+            Get
+                Return _tableStamp.Value
+            End Get
+        End Property
+
+        Private Shared Function ComputeTableStamp() As String
+            Dim content = String.Join(vbLf, _knownLenses.OrderBy(Function(p) p.Key, StringComparer.Ordinal).
+                                                         Select(Function(p) p.Key & "=" & p.Value))
+            Using sha = Security.Cryptography.SHA1.Create()
+                Dim hash = sha.ComputeHash(System.Text.Encoding.UTF8.GetBytes(content))
+                Return Convert.ToHexString(hash, 0, 4).ToLowerInvariant()
+            End Using
+        End Function
+
         Public Shared Function TryGetLensName(metaDirectories As IEnumerable(Of Directory)) As String
             Dim id = TryGetLensId(metaDirectories)
             Dim result As String = Nothing

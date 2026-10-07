@@ -40,7 +40,8 @@
 
 - **Lens data below thumbnails now comes from the same actual focal length as the EXIF panel.**
   A 50 mm lens is no longer labelled 75 mm on a crop camera, and existing catalog entries are
-  refreshed automatically. This also refreshes missing lens names, including Sigma lenses.
+  refreshed automatically. This also refreshes missing lens names, including Sigma lenses, and
+  lenses added to FerrumPix's lens list later now reach photos that were already catalogued.
 
 - **HSL color chips now refresh their change indicators** when an image is loaded or switched, or
   when global adjustments are reset.
