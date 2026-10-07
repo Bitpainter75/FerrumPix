@@ -1714,9 +1714,10 @@
          bekommen einen Akzentstreifen unten an der Bildflaeche (stack-member-strip). -->
     <Style Selector="Button.stack-badge">
         <Setter Property="Panel.ZIndex" Value="3"/>
-        <Setter Property="MinWidth" Value="28"/>
-        <Setter Property="Height" Value="24"/>
-        <Setter Property="Padding" Value="6,0"/>
+        <Setter Property="MinWidth" Value="36"/>
+        <Setter Property="Height" Value="30"/>
+        <Setter Property="CornerRadius" Value="15"/>
+        <Setter Property="Padding" Value="9,0"/>
     </Style>
     <Style Selector="Button.stack-badge.expanded">
         <Setter Property="BorderBrush" Value="{DynamicResource FP.Accent}"/>
@@ -1978,6 +1979,13 @@
     </Style>
     <Style Selector="icons|SvgIcon.fav-heart.active">
         <Setter Property="IconBrush" Value="{DynamicResource FP.Accent}"/>
+    </Style>
+    <!-- AUF DEM BILD (Kachel, Vergleichsflaechen) steht das Herz neben den Sternen und bekommt
+         ungesetzt deren Farbe statt der Textfarbe des Themas, die in hellen Themen dunkel ist. Das
+         gesetzte Herz bleibt im Akzent, wie ein gesetzter Stern. -->
+    <Style Selector="Button.image-favorite-btn icons|SvgIcon.fav-heart:not(.active)">
+        <Setter Property="IconBrush" Value="#EAEFF5"/>
+        <Setter Property="Opacity" Value="0.92"/>
     </Style>
     <!-- Derselbe Schatten wie bei den Sternen darunter: das Herz steht ueberall neben ihnen, auf
          der Kachel auch ueber hellen Bildstellen, und ging dort ohne Kante unter. -->

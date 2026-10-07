@@ -109,6 +109,11 @@ Namespace Services
             Public PresetMatrix As Single()
             Public PresetStrength As Single
 
+            ''' Die Farbgradierung erst NACH der Preset-Matrix: gesetzt, wenn die Matrix ein reines
+            ''' Grau ergibt (S/W). Sonst rechnete die Matrix jede Tonung wieder auf Grau, und wer ein
+            ''' S/W-Bild tonen wollte, sah im Bild nichts davon. Siehe BuildPointOpChain.
+            Public ToneAfterPreset As Boolean
+
             ''' 3D-Cube-LUT mit trilinearer Interpolation.
             Public CubeTable As Single()
             Public CubeSize As Integer
@@ -288,6 +293,11 @@ Namespace Services
                     ' quantisiert, sonst weicht die Staerke um bis zu 1/255 ab.
                     chain.PresetStrength = ClampToByte(255 * presetStrength) / 255.0F
                     chain.IsIdentity = False
+                    ' Ein S/W-Look rechnet jede Farbe auf Grau, auch die der Farbgradierung davor.
+                    ' Die Tonung wandert deshalb hinter die Matrix; alles andere zwischen beiden
+                    ' Stufen (Kanalmixer, Verlaufsumsetzung, Schattentoenung) bleibt, wo es ist,
+                    ' und wirkt aufs Graubild wie bisher.
+                    chain.ToneAfterPreset = chain.SplitToning IsNot Nothing AndAlso IsGrayMatrix(m)
                 End If
             End If
 
@@ -761,6 +771,42 @@ Namespace Services
         ''' <summary>Mischt eine Zonen-Toenung in den Pixel. Die Tintfarbe uebernimmt die Luminanz des
         ''' Pixels - es wird also nur chromatisch verschoben, nicht aufgehellt (dafuer ist die getrennte
         ''' Luminanz-Achse da). Anteil = Zonengewicht mal Saettigung, wie in der Altstufe.</summary>
+        ''' <summary>Ergibt die Matrix fuer jede Eingabe ein Grau? Drei gleiche Farbzeilen ohne
+        ''' Versatz - so sieht der S/W-Look aus, und so jede kuenftige Graumischung.</summary>
+        Friend Shared Function IsGrayMatrix(m As Single()) As Boolean
+            If m Is Nothing OrElse m.Length < 15 Then Return False
+            For c = 0 To 4
+                If m(c) <> m(5 + c) OrElse m(c) <> m(10 + c) Then Return False
+            Next
+            Return m(4) = 0.0F
+        End Function
+
+        ''' <summary>Die Farbgradierung auf ein fertiges Bild: Zonengewichte aus der Helligkeit, dann
+        ''' die Tonung je Zone. Hinter der S/W-Matrix (ToneAfterPreset); dort ist das Bild grau, und
+        ''' seine HSL-Helligkeit ist der Grauwert.</summary>
+        Private Shared Sub ApplyColorGradeAfterPreset(ByRef rr As Single, ByRef gg As Single, ByRef bb As Single,
+                                                       chain As PointOpChain)
+            Dim splitAdj = chain.SplitToning
+            Dim mx = Math.Max(rr, Math.Max(gg, bb))
+            Dim mn = Math.Min(rr, Math.Min(gg, bb))
+            Dim lum As Double = (mx + mn) / 2.0
+            Dim pivot = chain.SplitPivot
+            Dim wShadow = Clamp(CSng((pivot - lum) / pivot), 0.0F, 1.0F)
+            Dim wHigh = Clamp(CSng((lum - pivot) / (1.0 - pivot)), 0.0F, 1.0F)
+            If chain.SplitBlendExponent <> 1.0F Then
+                wShadow = CSng(Math.Pow(wShadow, chain.SplitBlendExponent))
+                wHigh = CSng(Math.Pow(wHigh, chain.SplitBlendExponent))
+            End If
+            Dim wMid = Clamp(1.0F - wShadow - wHigh, 0.0F, 1.0F)
+            If chain.SplitHasShadow Then ApplyColorGradeTint(rr, gg, bb, wShadow, splitAdj.ColorGradeShadowHue, splitAdj.ColorGradeShadowSaturation, lum)
+            If chain.SplitHasMidtone Then ApplyColorGradeTint(rr, gg, bb, wMid, splitAdj.ColorGradeMidtoneHue, splitAdj.ColorGradeMidtoneSaturation, lum)
+            If chain.SplitHasHighlight Then ApplyColorGradeTint(rr, gg, bb, wHigh, splitAdj.ColorGradeHighlightHue, splitAdj.ColorGradeHighlightSaturation, lum)
+            If chain.SplitHasGlobal Then ApplyColorGradeTint(rr, gg, bb, 1.0F, splitAdj.ColorGradeGlobalHue, splitAdj.ColorGradeGlobalSaturation, lum)
+            rr = Clamp(rr, 0.0F, 1.0F)
+            gg = Clamp(gg, 0.0F, 1.0F)
+            bb = Clamp(bb, 0.0F, 1.0F)
+        End Sub
+
         Private Shared Sub ApplyColorGradeTint(ByRef rr As Single, ByRef gg As Single, ByRef bb As Single,
                                                weight As Single, hue As Single, saturation As Single, lum As Double)
             If weight <= 0.0F OrElse saturation = 0.0F Then Return
@@ -1109,6 +1155,7 @@ Namespace Services
             Dim splitBlendExp = chain.SplitBlendExponent
             Dim pm = chain.PresetMatrix
             Dim pmStrength = chain.PresetStrength
+            Dim toneAfterPreset = chain.ToneAfterPreset
             Dim cube = chain.CubeTable
             Dim cubeSize = chain.CubeSize
             Dim cubeStrength = chain.CubeStrength
@@ -1333,7 +1380,8 @@ Namespace Services
                             HslToRgbF(h, sat, lum, hr, hg, hb)
                             rr = CSng(hr) : gg = CSng(hg) : bb = CSng(hb)
 
-                            If splitAdj IsNot Nothing Then
+                            ' Bei S/W wartet die Tonung hinter der Matrix (ToneAfterPreset).
+                            If splitAdj IsNot Nothing AndAlso Not toneAfterPreset Then
                                 ' Die Altstufe rechnet in 0..255; hier auf 0..1 normiert, sonst
                                 ' stimmt der Anteil nicht.
                                 If splitShadow Then
@@ -1416,6 +1464,8 @@ Namespace Services
                             rr += (fr - rr) * pmStrength
                             gg += (fg - gg) * pmStrength
                             bb += (fb - bb) * pmStrength
+                            ' Tonung eines S/W-Bildes: erst jetzt, auf das Grau.
+                            If toneAfterPreset Then ApplyColorGradeAfterPreset(rr, gg, bb, chain)
                         End If
 
                         ' --- 8. Cube-LUT ---

@@ -4,6 +4,7 @@
              xmlns:models="clr-namespace:FerrumPix.Models;assembly=FerrumPix"
              xmlns:conv="clr-namespace:Avalonia.Data.Converters;assembly=Avalonia.Base"
              xmlns:views="clr-namespace:FerrumPix.Views"
+             xmlns:services="clr-namespace:FerrumPix.Services"
              x:Class="FerrumPix.Views.GalleryView"
              Background="{DynamicResource FP.Bg.Root}"
              Focusable="True"
@@ -2108,25 +2109,28 @@
                                                                        IsVisible="{Binding IsSelected}"/>
                                                     </Border>
                                                 </Button>
-                                                <!-- STAPEL: Serie oder RAW+JPEG-Paar. Der Klick klappt
-                                                     auf und zu (ToggleStackExpanded); links neben dem
-                                                     Auswahlkreis, damit beide getrennt treffbar bleiben. -->
+                                                <!-- STAPEL: Serie oder RAW+JPEG-Paar. Der Klick oeffnet
+                                                     die Serienansicht bzw. klappt ein Paar auf
+                                                     (OpenOrCloseStack); links neben dem Auswahlkreis,
+                                                     damit beide getrennt treffbar bleiben. Oben 8 wie
+                                                     die Knoepfe links (gallery-hover-actions): beide
+                                                     sind 30 hoch, ihre Mitten liegen auf einer Linie. -->
                                                 <Button Classes="gallery-overlay-btn stack-badge tile-action-hit"
                                                         Classes.expanded="{Binding IsStackExpanded}"
                                                         IsVisible="{Binding HasStackBadge}"
                                                         HorizontalAlignment="Right"
                                                         VerticalAlignment="Top"
-                                                        Margin="0,4,34,0"
+                                                        Margin="0,8,34,0"
                                                         Click="OnStackBadgeClick"
                                                         ToolTip.Tip="Stapel auf- oder zuklappen">
-                                                    <StackPanel Orientation="Horizontal" Spacing="4">
+                                                    <StackPanel Orientation="Horizontal" Spacing="5">
                                                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/stack-2.svg"
-                                                                       Width="14" Height="14"
+                                                                       Width="18" Height="18"
                                                                        IconBrush="White"
                                                                        VerticalAlignment="Center"/>
                                                         <TextBlock Text="{Binding StackBadgeText}"
                                                                    Classes="no-translate"
-                                                                   FontSize="{DynamicResource FP.Font.Small}"
+                                                                   FontSize="{DynamicResource FP.Font.Subtitle}"
                                                                    FontWeight="SemiBold"
                                                                    Foreground="White"
                                                                    VerticalAlignment="Center"/>
@@ -2625,8 +2629,10 @@
                                                            FontSize="{DynamicResource FP.Font.ItemTitle}"
                                                            FontWeight="SemiBold"
                                                            TextTrimming="CharacterEllipsis"/>
+                                                <!-- In der Zeile kleiner als auf der Kachel: die Zeile ist knapp. -->
                                                 <Button Grid.Column="2"
                                                         Classes="gallery-overlay-btn stack-badge tile-action-hit"
+                                                        Height="24" MinWidth="28" Padding="6,0" CornerRadius="12"
                                                         Classes.expanded="{Binding IsStackExpanded}"
                                                         IsVisible="{Binding HasStackBadge}"
                                                         VerticalAlignment="Center"
@@ -3166,8 +3172,8 @@
                         <TextBlock Text="−" FontSize="{DynamicResource FP.Glyph.Large}" Foreground="{DynamicResource FP.Text.Secondary}" VerticalAlignment="Center"/>
                     </Button>
                     <icons:RoundSlider Width="200"
-                                       Minimum="140"
-                                       Maximum="640"
+                                       Minimum="{x:Static services:AppSettingsService.MinThumbnailSize}"
+                                       Maximum="{x:Static services:AppSettingsService.MaxThumbnailSize}"
                                        DefaultValue="260"
                                        Value="{Binding ThumbnailSize}"
                                        DragIncrement="2"

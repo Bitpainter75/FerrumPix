@@ -1430,9 +1430,15 @@ Namespace Services
             End SyncLock
         End Sub
 
+        ''' <summary>Kleinste Kachelbreite der Galerie. Darunter stossen auf der Kachel die drei
+        ''' Knoepfe links (8 + 3 x 30 + 2 x 5 = 108) und Serien-Abzeichen samt Auswahlkreis rechts
+        ''' (34 + 36 = 70) aneinander. Der Regler liest denselben Wert.</summary>
+        Public Const MinThumbnailSize As Double = 180
+        Public Const MaxThumbnailSize As Double = 640
+
         Public Shared Function NormalizeThumbnailSize(value As Double) As Double
             If Double.IsNaN(value) OrElse Double.IsInfinity(value) Then Return 260
-            Return Math.Max(140, Math.Min(640, value))
+            Return Math.Max(MinThumbnailSize, Math.Min(MaxThumbnailSize, value))
         End Function
 
         Public Shared Function NormalizeThumbnailQuality(value As Integer) As Integer

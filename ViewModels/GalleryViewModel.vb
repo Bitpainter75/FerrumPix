@@ -9951,6 +9951,8 @@ Namespace ViewModels
             Dim back = If(selected?.Stack?.LeadShot?.Primary, selected)
             If back IsNot Nothing AndAlso Items.Contains(back) Then
                 ReplaceSelection({back})
+                ' Der Neuaufbau von Items setzt die Kachelflaeche nach oben; zurueck zur Serie rollen.
+                RaiseEvent RequestScrollToItem(Me, EventArgs.Empty)
             Else
                 ReplaceSelection(Enumerable.Empty(Of ImageItem)())
             End If
@@ -9975,7 +9977,9 @@ Namespace ViewModels
                 If last IsNot Nothing Then
                     ' Nach dem Neuaufbau markieren, nicht mittendrin: die Liste steht hier noch nicht.
                     Dispatcher.UIThread.Post(Sub()
-                                                 If Items.Contains(last) Then ReplaceSelection({last})
+                                                 If Not Items.Contains(last) Then Return
+                                                 ReplaceSelection({last})
+                                                 RaiseEvent RequestScrollToItem(Me, EventArgs.Empty)
                                              End Sub)
                 End If
                 Return filtered
