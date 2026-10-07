@@ -8542,6 +8542,7 @@ Namespace ViewModels
                 item.ExifDateTaken = ExifService.ParseExifDateTime(meta.DateTaken)
                 item.ExifDateModified = ExifService.ParseExifDateTime(meta.DateModifiedExif)
                 item.ExifCamera = meta.Camera
+                item.CaptureMode = meta.CaptureMode
                 item.ExifIso = meta.Iso
                 item.ExifAperture = meta.Aperture
                 item.ExifLens = meta.Lens
@@ -8658,6 +8659,7 @@ Namespace ViewModels
                                                                Dim exifTaken = ExifService.ParseExifDateTime(fields.DateTaken)
                                                                Dim exifModified = ExifService.ParseExifDateTime(fields.DateModifiedExif)
                                                                Dim camera = fields.Camera
+                                                               Dim shotMode = fields.CaptureMode
                                                                Dim iso = fields.Iso
                                                                Dim aperture = fields.Aperture
                                                                Dim lens = fields.Lens
@@ -8680,6 +8682,7 @@ Namespace ViewModels
                                                                                                           item.ExifDateTaken = exifTaken
                                                                                                           item.ExifDateModified = exifModified
                                                                                                           item.ExifCamera = camera
+                                                                                                          item.CaptureMode = shotMode
                                                                                                           item.ExifIso = iso
                                                                                                           item.ExifAperture = aperture
                                                                                                           item.ExifLens = lens
@@ -9212,6 +9215,7 @@ Namespace ViewModels
                                 item.ExifDateTaken = ExifService.ParseExifDateTime(m.DateTaken)
                                 item.ExifDateModified = ExifService.ParseExifDateTime(m.DateModifiedExif)
                                 item.ExifCamera = m.Camera
+                                item.CaptureMode = m.CaptureMode
                                 item.ExifIso = m.Iso
                                 item.ExifAperture = m.Aperture
                                 item.ExifLens = m.Lens

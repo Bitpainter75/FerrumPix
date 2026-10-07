@@ -9582,4 +9582,16 @@
   <data name="Suche_bearbeiten_a5d35bb4" xml:space="preserve">
     <value>Edit search</value>
   </data>
+  <data name="ExifTool_2679da58" xml:space="preserve">
+    <value>ExifTool</value>
+  </data>
+  <data name="Objektivkennungen_f_r_Nikon_Sony_und_Pentax_0e4d3b62" xml:space="preserve">
+    <value>Lens identifiers for Nikon, Sony and Pentax</value>
+  </data>
+  <data name="GPL_1_0_3234fa33" xml:space="preserve">
+    <value>GPL-1.0+</value>
+  </data>
+  <data name="Objektivkorrektur_aus_der_Kamera_513a6234" xml:space="preserve">
+    <value>lens correction from the camera</value>
+  </data>
 </root>

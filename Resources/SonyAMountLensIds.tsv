@@ -1,0 +1,134 @@
+# Objektivkennungen fuer das Sony-A- und Minolta-AF-Bajonett: die Zahl aus dem LensID-Feld des Herstellerteils.
+# Quelle: ExifTool 13.59, lib/Image/ExifTool/Minolta.pm, Tabelle %minoltaLensTypes
+# SHA-256 der Quelldatei: e4f77a975e9465ea23c430125d12e53c54d68a4f042e10b23d6cae97758b0f4b
+# ExifTool: Copyright 2003-2026 Phil Harvey. Freie Software unter denselben Bedingungen wie Perl
+# (Artistic License oder GNU GPL); FerrumPix verwendet die Tabelle unter der GNU GPL.
+# 127 Kennungen mit genau einem Objektiv. Mehrdeutige fehlen mit Absicht.
+# Erzeugt mit packaging/ci/lens-ids.py, nicht von Hand bearbeiten.
+0	Minolta AF 28-85mm F3.5-4.5 New
+1	Minolta AF 80-200mm F2.8 HS-APO G
+10	Minolta AF 28-105mm F3.5-4.5 [New]
+11	Minolta AF 300mm F4 HS-APO G
+12	Minolta AF 100mm F2.8 Soft Focus
+131	Tamron 20-40mm F2.7-3.5 SP Aspherical IF
+135	Vivitar 28-210mm F3.5-5.6
+136	Tokina EMZ M100 AF 100mm F3.5
+137	Cosina 70-210mm F2.8-4 AF
+138	Soligor 19-35mm F3.5-4.5
+139	Tokina AF 28-300mm F4-6.3
+14	Minolta AF 100-400mm F4.5-6.7 APO
+142	Cosina AF 70-300mm F4.5-5.6 MC
+146	Voigtlander Macro APO-Lanthar 125mm F2.5 SL
+15	Minolta AF 400mm F4.5 HS-APO G
+16	Minolta AF 17-35mm F3.5 G
+17	Minolta AF 20-35mm F3.5-4.5
+18	Minolta AF 28-80mm F3.5-5.6 II
+19	Minolta AF 35mm F1.4 G
+194	Tamron SP AF 17-50mm F2.8 XR Di II LD Aspherical [IF]
+2	Minolta AF 28-70mm F2.8 G
+20	Minolta/Sony 135mm F2.8 [T4.5] STF
+202	Tamron SP AF 70-200mm F2.8 Di LD [IF] Macro
+203	Tamron SP 70-200mm F2.8 Di USD
+204	Tamron SP 24-70mm F2.8 Di USD
+212	Tamron 28-300mm F3.5-6.3 Di PZD
+213	Tamron 16-300mm F3.5-6.3 Di II PZD Macro
+214	Tamron SP 150-600mm F5-6.3 Di USD
+215	Tamron SP 15-30mm F2.8 Di USD
+216	Tamron SP 45mm F1.8 Di USD
+217	Tamron SP 35mm F1.8 Di USD
+218	Tamron SP 90mm F2.8 Di Macro 1:1 USD (F017)
+22	Minolta AF 35-80mm F4-5.6 II
+220	Tamron SP 150-600mm F5-6.3 Di USD G2
+224	Tamron SP 90mm F2.8 Di Macro 1:1 USD (F004)
+23	Minolta AF 200mm F4 Macro APO G
+25501	Minolta AF 50mm F1.7
+25541	Minolta AF 35-105mm F3.5-4.5
+25561	Minolta AF 135mm F2.8
+25571	Minolta/Sony AF 28mm F2.8
+25581	Minolta AF 24-50mm F4
+25601	Minolta AF 100-200mm F4.5
+25621	Minolta AF 50mm F1.4 [New]
+25651	Minolta AF 600mm F4 APO
+25721	Minolta/Sony AF 500mm F8 Reflex
+25851	Beroflex 35-135mm F3.5-4.5
+25881	Minolta AF 70-210mm F3.5-4.5
+25911	Minolta AF 35mm F1.4
+25921	Minolta AF 85mm F1.4 G (D)
+25931	Minolta AF 200mm F2.8 APO
+25961	Minolta AF 28mm F2
+25971	Minolta AF 35mm F2 [New]
+25981	Minolta AF 100mm F2
+26041	Minolta AF 80-200mm F4.5-5.6
+26051	Minolta AF 35-80mm F4-5.6
+26061	Minolta AF 100-300mm F4.5-5.6
+26071	Minolta AF 35-80mm F4-5.6
+26081	Minolta AF 300mm F2.8 HS-APO G
+26091	Minolta AF 600mm F4 HS-APO G
+26121	Minolta AF 200mm F2.8 HS-APO G
+26131	Minolta AF 50mm F1.7 New
+26151	Minolta AF 28-105mm F3.5-4.5 xi
+26161	Minolta AF 35-200mm F4.5-5.6 xi
+26181	Minolta AF 28-80mm F4-5.6 xi
+26191	Minolta AF 80-200mm F4.5-5.6 xi
+26201	Minolta AF 28-70mm F2.8 G
+26211	Minolta AF 100-300mm F4.5-5.6 xi
+26241	Minolta AF 35-80mm F4-5.6 Power Zoom
+26281	Minolta AF 80-200mm F2.8 HS-APO G
+26291	Minolta AF 85mm F1.4 New
+26311	Minolta AF 100-300mm F4.5-5.6 APO
+26321	Minolta AF 24-50mm F4 New
+26381	Minolta AF 50mm F2.8 Macro New
+26391	Minolta AF 100mm F2.8 Macro
+26411	Minolta/Sony AF 20mm F2.8 New
+26421	Minolta AF 24mm F2.8 New
+26441	Minolta AF 100-400mm F4.5-6.7 APO
+26621	Minolta AF 50mm F1.4 New
+26671	Minolta AF 35mm F2 New
+26681	Minolta AF 28mm F2 New
+26721	Minolta AF 24-105mm F3.5-4.5 (D)
+27	Minolta AF 85mm F1.4 G (D)
+29	Minolta/Sony AF 75-300mm F4.5-5.6 (D)
+3	Minolta AF 28-80mm F4-5.6
+33	Minolta/Sony AF 70-200mm F2.8 G
+35	Minolta AF 85mm F1.4 G (D) Limited
+36	Minolta AF 28-100mm F3.5-5.6 (D)
+38	Minolta AF 17-35mm F2.8-4 (D)
+39	Minolta AF 28-75mm F2.8 (D)
+4	Minolta AF 85mm F1.4G
+40	Minolta/Sony AF DT 18-70mm F3.5-5.6 (D)
+42	Minolta/Sony AF DT 18-200mm F3.5-6.3 (D)
+43	Sony 35mm F1.4 G (SAL35F14G)
+44	Sony 50mm F1.4 (SAL50F14)
+45	Carl Zeiss Planar T* 85mm F1.4 ZA (SAL85F14Z)
+45671	Tokina 70-210mm F4-5.6
+45681	Tokina AF 35-200mm F4-5.6 Zoom SD
+45701	Tamron AF 35-135mm F3.5-4.5
+45711	Vivitar 70-210mm F4.5-5.6
+45851	Tamron SP AF 300mm F2.8 LD IF
+45861	Tamron SP AF 35-105mm F2.8 LD Aspherical IF
+45871	Tamron AF 70-210mm F2.8 SP LD
+46	Carl Zeiss Vario-Sonnar T* DT 16-80mm F3.5-4.5 ZA (SAL1680Z)
+47	Carl Zeiss Sonnar T* 135mm F1.8 ZA (SAL135F18Z)
+49	Sony DT 55-200mm F4-5.6 (SAL55200)
+5	Minolta AF 35-70mm F3.5-4.5 [II]
+50	Sony DT 18-250mm F3.5-6.3 (SAL18250)
+51	Sony DT 16-105mm F3.5-5.6 (SAL16105)
+53	Sony 70-400mm F4-5.6 G SSM (SAL70400G)
+56	Sony DT 55-200mm F4-5.6 SAM (SAL55200-2)
+58	Sony DT 30mm F2.8 Macro SAM (SAL30M28)
+59	Sony 28-75mm F2.8 SAM (SAL2875)
+6	Minolta AF 24-85mm F3.5-4.5 [New]
+60	Carl Zeiss Distagon T* 24mm F2 ZA SSM (SAL24F20Z)
+61	Sony 85mm F2.8 SAM (SAL85F28)
+62	Sony DT 35mm F1.8 SAM (SAL35F18)
+63	Sony DT 16-50mm F2.8 SSM (SAL1650)
+64	Sony 500mm F4 G SSM (SAL500F40G)
+65	Sony DT 18-135mm F3.5-5.6 SAM (SAL18135)
+65280	Sigma 16mm F2.8 Filtermatic Fisheye
+66	Sony 300mm F2.8 G SSM II (SAL300F28G2)
+67	Sony 70-200mm F2.8 G SSM II (SAL70200G2)
+68	Sony DT 55-300mm F4.5-5.6 SAM (SAL55300)
+69	Sony 70-400mm F4-5.6 G SSM II (SAL70400G2)
+70	Carl Zeiss Planar T* 50mm F1.4 ZA SSM (SAL50F14Z)
+8	Minolta AF 70-210mm F4.5-5.6 [II]
+9	Minolta AF 50mm F3.5 Macro

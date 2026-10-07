@@ -36,6 +36,8 @@ Namespace Services
         Public Property DateModifiedExif As String = ""
         Public Property Camera As String = ""
         Public Property Lens As String = ""
+        ''' Einzelbild oder Serie laut Kamera (siehe ExifService.GetCaptureMode).
+        Public Property CaptureMode As CaptureMode
         Public Property Aperture As Double?
         Public Property FocalLengthMm As Double?
         Public Property Iso As Integer?
@@ -490,7 +492,8 @@ Namespace Services
             ("City", "TEXT"),
             ("Country", "TEXT"),
             ("CountryCode", "TEXT"),
-            ("PickState", "INTEGER NOT NULL DEFAULT 0")
+            ("PickState", "INTEGER NOT NULL DEFAULT 0"),
+            ("CaptureMode", "INTEGER NOT NULL DEFAULT 0")
         }
 
         ''' <summary>Spalten, die spaeter zur Gesichtstabelle dazugekommen sind. Bestehende
@@ -1189,6 +1192,7 @@ Namespace Services
                    String.Equals(existing.DateModifiedExif, If(exif.DateModifiedExif, ""), StringComparison.Ordinal) AndAlso
                    String.Equals(existing.Camera, If(exif.Camera, ""), StringComparison.Ordinal) AndAlso
                    String.Equals(existing.Lens, If(exif.Lens, ""), StringComparison.Ordinal) AndAlso
+                   existing.CaptureMode = exif.CaptureMode AndAlso
                    NullableEquals(existing.Aperture, exif.Aperture) AndAlso
                    NullableEquals(existing.FocalLengthMm, exif.FocalLengthMm) AndAlso
                    NullableEquals(existing.Iso, exif.Iso) AndAlso
@@ -1249,8 +1253,8 @@ Namespace Services
                 conn.Open()
                 Using cmd = conn.CreateCommand()
                     cmd.CommandText =
-                        "INSERT INTO ImageMeta(FilePath,DateTaken,DateModifiedExif,Camera,Lens,Aperture,FocalLengthMm,Iso,ShutterSpeed,GpsLatitude,GpsLongitude,ImageWidth,ImageHeight,FileCreatedAt,HasExifMetadata,HasIptcMetadata,HasXmpMetadata,ScannedSourceModifiedAt,ScannedSidecarModifiedAt,ExifSummary,IptcSummary,XmpSummary,IccSummary,SummaryFormat,HasIccProfile,City,Country,CountryCode) " &
-                        "VALUES($p,$dateTaken,$dateModifiedExif,$camera,$lens,$aperture,$focalLength,$iso,$shutterSpeed,$gpsLat,$gpsLon,$width,$height,$fileCreatedAt,$hasExifMetadata,$hasIptcMetadata,$hasXmpMetadata,$scannedSourceModifiedAt,$scannedSidecarModifiedAt,$exifSummary,$iptcSummary,$xmpSummary,$iccSummary,$summaryFormat,$hasIccProfile,$city,$country,$countryCode) " &
+                        "INSERT INTO ImageMeta(FilePath,DateTaken,DateModifiedExif,Camera,Lens,Aperture,FocalLengthMm,Iso,ShutterSpeed,GpsLatitude,GpsLongitude,ImageWidth,ImageHeight,FileCreatedAt,HasExifMetadata,HasIptcMetadata,HasXmpMetadata,ScannedSourceModifiedAt,ScannedSidecarModifiedAt,ExifSummary,IptcSummary,XmpSummary,IccSummary,SummaryFormat,HasIccProfile,City,Country,CountryCode,CaptureMode) " &
+                        "VALUES($p,$dateTaken,$dateModifiedExif,$camera,$lens,$aperture,$focalLength,$iso,$shutterSpeed,$gpsLat,$gpsLon,$width,$height,$fileCreatedAt,$hasExifMetadata,$hasIptcMetadata,$hasXmpMetadata,$scannedSourceModifiedAt,$scannedSidecarModifiedAt,$exifSummary,$iptcSummary,$xmpSummary,$iccSummary,$summaryFormat,$hasIccProfile,$city,$country,$countryCode,$captureMode) " &
                         "ON CONFLICT(FilePath) DO UPDATE SET " &
                         "DateTaken=excluded.DateTaken, DateModifiedExif=excluded.DateModifiedExif, Camera=excluded.Camera, Lens=excluded.Lens, " &
                         "Aperture=excluded.Aperture, FocalLengthMm=excluded.FocalLengthMm, Iso=excluded.Iso, " &
@@ -1263,8 +1267,9 @@ Namespace Services
                         "ExifSummary=excluded.ExifSummary, IptcSummary=excluded.IptcSummary, XmpSummary=excluded.XmpSummary, " &
                         "IccSummary=excluded.IccSummary, SummaryFormat=excluded.SummaryFormat, " &
                         "HasIccProfile=excluded.HasIccProfile, City=excluded.City, Country=excluded.Country, " &
-                        "CountryCode=excluded.CountryCode"
+                        "CountryCode=excluded.CountryCode, CaptureMode=excluded.CaptureMode"
                     cmd.Parameters.AddWithValue("$p", PathKey(filePath))
+                    cmd.Parameters.AddWithValue("$captureMode", CInt(exif.CaptureMode))
                     cmd.Parameters.AddWithValue("$dateTaken", If(exif.DateTaken, ""))
                     cmd.Parameters.AddWithValue("$dateModifiedExif", If(exif.DateModifiedExif, ""))
                     cmd.Parameters.AddWithValue("$camera", If(exif.Camera, ""))
@@ -1300,7 +1305,7 @@ Namespace Services
         ''' ACHTUNG: ReadMetaRow greift über SPALTENNUMMERN zu - neue Spalten gehören ans Ende, sonst
         ''' verschieben sich alle folgenden Indizes stillschweigend auf die falschen Werte.
         Private Const MetaColumnList As String =
-            "FilePath, IsFavorite, Rating, Tags, DateTaken, Camera, Lens, Aperture, FocalLengthMm, Iso, ShutterSpeed, GpsLatitude, GpsLongitude, ImageWidth, ImageHeight, DateModifiedExif, FileCreatedAt, HasExifMetadata, HasIptcMetadata, HasXmpMetadata, ScannedSourceModifiedAt, ExifSummary, IptcSummary, XmpSummary, HasIccProfile, IccSummary, SummaryFormat, ColorLabel, ScannedSidecarModifiedAt, City, Country, CountryCode, PickState"
+            "FilePath, IsFavorite, Rating, Tags, DateTaken, Camera, Lens, Aperture, FocalLengthMm, Iso, ShutterSpeed, GpsLatitude, GpsLongitude, ImageWidth, ImageHeight, DateModifiedExif, FileCreatedAt, HasExifMetadata, HasIptcMetadata, HasXmpMetadata, ScannedSourceModifiedAt, ExifSummary, IptcSummary, XmpSummary, HasIccProfile, IccSummary, SummaryFormat, ColorLabel, ScannedSidecarModifiedAt, City, Country, CountryCode, PickState, CaptureMode"
 
         Private Shared Function ReadMetaRow(reader As SqliteDataReader) As LibraryImageMeta
             Return New LibraryImageMeta With {
@@ -1336,7 +1341,8 @@ Namespace Services
                 .City = If(reader.IsDBNull(29), "", reader.GetString(29)),
                 .Country = If(reader.IsDBNull(30), "", reader.GetString(30)),
                 .CountryCode = If(reader.IsDBNull(31), "", reader.GetString(31)),
-                .PickState = If(reader.IsDBNull(32), 0, NormalizePickState(reader.GetInt32(32)))
+                .PickState = If(reader.IsDBNull(32), 0, NormalizePickState(reader.GetInt32(32))),
+                .CaptureMode = If(reader.IsDBNull(33), CaptureMode.Unknown, CType(reader.GetInt32(33), CaptureMode))
             }
         End Function
 

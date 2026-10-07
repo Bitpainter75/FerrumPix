@@ -4095,6 +4095,18 @@
                                 </Grid>
                                 <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="4" Margin="0,0,12,6">
                                     <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="ExifTool" FontSize="{DynamicResource FP.Font.Body}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock Text="Objektivkennungen für Nikon, Sony und Pentax" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}" TextTrimming="CharacterEllipsis"/>
+                                    </StackPanel>
+                                    <Button Grid.Column="1" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/exiftool/exiftool" Click="OnLicenseLinkClick" ToolTip.Tip="Projektseite öffnen">
+                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/brand-github.svg" Width="13" Height="13"/>
+                                    </Button>
+                                    <Button Grid.Column="2" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://dev.perl.org/licenses/" Click="OnLicenseLinkClick" ToolTip.Tip="Lizenztext öffnen">
+                                        <TextBlock Text="GPL-1.0+" FontSize="{DynamicResource FP.Font.Small}"/>
+                                    </Button>
+                                </Grid>
+                                <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="4" Margin="0,0,12,6">
+                                    <StackPanel VerticalAlignment="Center">
                                         <TextBlock Text="LibRaw" FontSize="{DynamicResource FP.Font.Body}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
                                         <TextBlock Text="RAW-Dateien entwickeln" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}" TextTrimming="CharacterEllipsis"/>
                                     </StackPanel>

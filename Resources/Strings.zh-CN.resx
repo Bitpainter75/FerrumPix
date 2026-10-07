@@ -9561,4 +9561,16 @@
   <data name="Suche_bearbeiten_a5d35bb4" xml:space="preserve">
     <value>编辑搜索</value>
   </data>
+  <data name="ExifTool_2679da58" xml:space="preserve">
+    <value>ExifTool</value>
+  </data>
+  <data name="Objektivkennungen_f_r_Nikon_Sony_und_Pentax_0e4d3b62" xml:space="preserve">
+    <value>尼康、索尼和宾得镜头识别码</value>
+  </data>
+  <data name="GPL_1_0_3234fa33" xml:space="preserve">
+    <value>GPL-1.0+</value>
+  </data>
+  <data name="Objektivkorrektur_aus_der_Kamera_513a6234" xml:space="preserve">
+    <value>来自相机的镜头校正</value>
+  </data>
 </root>

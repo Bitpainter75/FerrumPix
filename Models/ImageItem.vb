@@ -892,6 +892,7 @@ Namespace Models
             ExifDateTaken = scanned.ExifDateTaken
             ExifDateModified = scanned.ExifDateModified
             ExifCamera = scanned.ExifCamera
+            CaptureMode = scanned.CaptureMode
             ExifIso = scanned.ExifIso
             ExifAperture = scanned.ExifAperture
             ExifLens = scanned.ExifLens
@@ -949,6 +950,10 @@ Namespace Models
                 RaisePropertyChanged(NameOf(DateExifModifiedText))
             End Set
         End Property
+
+        ''' <summary>Einzelbild oder Serie laut Kamera, aus dem Katalog gespiegelt. Nur fuer das
+        ''' Bilden der Stapel (ImageStackService); keine Anzeige, deshalb ohne Benachrichtigung.</summary>
+        Public Property CaptureMode As Services.CaptureMode
 
         ' Schlanke EXIF-Sortierfelder, aus dem Katalog gespiegelt (siehe GalleryViewModel.LoadFolderImages/
         ' QueueBackgroundMetaRefresh) - vermeidet DB-Zugriffe live während des Sortierens.
@@ -1889,6 +1894,7 @@ Namespace Models
             ExifDateTaken = ExifService.ParseExifDateTime(meta.DateTaken)
             ExifDateModified = ExifService.ParseExifDateTime(meta.DateModifiedExif)
             ExifCamera = meta.Camera
+            CaptureMode = meta.CaptureMode
             ExifIso = meta.Iso
             ExifAperture = meta.Aperture
             ExifLens = meta.Lens

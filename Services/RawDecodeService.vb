@@ -780,12 +780,20 @@ Namespace Services
         Private Shared Function LensKey(k As LensDataService.Korrektur) As String
             If k Is Nothing Then Return ""
             Return String.Format(Globalization.CultureInfo.InvariantCulture,
-                "{0}|{1}|{2:R}|{3:R}|{4:R}|{5:R}|{6:R}|{7:R}|{8:R}|{9:R}|{10:R}|{11:R}|{12:R}|{13:R}",
+                "{0}|{1}|{2:R}|{3:R}|{4:R}|{5:R}|{6:R}|{7:R}|{8:R}|{9:R}|{10:R}|{11:R}|{12:R}|{13:R}|{14}|{15}",
                 k.HasChromaticAberration, k.HasVignetting,
                 k.TcaBr, k.TcaCr, k.TcaVr, k.TcaBb, k.TcaCb, k.TcaVb,
                 k.NormScale, k.Vk1 + k.Vk2 * 3 + k.Vk3 * 7,
                 k.ChromaticAberrationStrength, k.VignettingStrength,
-                k.TcaRedFine, k.TcaBlueFine)
+                k.TcaRedFine, k.TcaBlueFine,
+                KnotsKey(k.TcaRedKnots), KnotsKey(k.TcaBlueKnots))
+        End Function
+
+        ''' <summary>Stuetzwerte des Farbquerfehlers als Teil des Schluessels: zwei Dateien mit
+        ''' gleicher Formel, aber anderen Stuetzwerten, duerfen sich den Zwischenspeicher nicht teilen.</summary>
+        Private Shared Function KnotsKey(knots As Double()) As String
+            If knots Is Nothing Then Return ""
+            Return String.Join(";", knots.Select(Function(v) v.ToString("R", Globalization.CultureInfo.InvariantCulture)))
         End Function
 
         ''' <summary>Die Kennlinien fuer diese Datei, sofern die Korrektur gilt. Die Verzeichnung

@@ -16,6 +16,17 @@ Imports MetadataExtractor.Formats.Iptc
 
 Namespace Services
 
+    ''' <summary>Wie die Kamera ausgeloest hat, soweit der Herstellerteil es sagt. Die Werte
+    ''' stehen so im Katalog; nicht umnummerieren.</summary>
+    Public Enum CaptureMode
+        ''' Keine Angabe (Telefone, Bearbeitungen, Hersteller ohne lesbares Feld).
+        Unknown = 0
+        ''' Einzelbild, auch mit Selbstausloeser oder Fernausloeser.
+        SingleShot = 1
+        ''' Serienbild oder Belichtungsreihe.
+        Series = 2
+    End Enum
+
     ' Typisierte, für die Datenbank/Suche geeignete Teilmenge der EXIF-Daten - abgeleitet aus den
     ' bereits von ReadExif erzeugten formatierten Anzeige-Strings (kein zweites Einlesen der Datei).
     Public Class ExifSearchFields
@@ -39,6 +50,10 @@ Namespace Services
         ''' Schluessel zur Uebersetzung des Landesnamens - der Name selbst steht englisch in der
         ''' Tabelle.</summary>
         Public Property CountryCode As String = ""
+
+        ''' <summary>Einzelbild oder Serie laut Kamera; trennt in den Stapeln zwei Einzelbilder
+        ''' derselben Sekunde von einer Serie.</summary>
+        Public Property CaptureMode As CaptureMode
     End Class
 
     Public Class ExifTag
@@ -94,6 +109,7 @@ Namespace Services
             End Get
         End Property
         Public Property Lens As String = ""
+        Public Property CaptureMode As CaptureMode
         Public Property FocalLength As String = ""
         ''' Kleinbild-Äquivalent (EXIF-Tag "FocalLengthIn35mmFilm"). Bei Handykameras ist die echte
         ''' Brennweite (4,2 mm) für sich genommen nichtssagend - erst der Äquivalentwert (28 mm) ist
@@ -318,6 +334,7 @@ Namespace Services
                 .DateModifiedExif = source.DateModifiedExif,
                 .Camera = source.Camera,
                 .Lens = source.Lens,
+                .CaptureMode = source.CaptureMode,
                 .FocalLength = source.FocalLength,
                 .FocalLength35mm = source.FocalLength35mm,
                 .Aperture = source.Aperture,
@@ -398,6 +415,7 @@ Namespace Services
                 End If
                 data.ColorSpace = GetTagDescAcross(Of ExifSubIfdDirectory)(metaDirectories, ExifSubIfdDirectory.TagColorSpace)
                 data.Lens = GetLensDescription(captureDirectories)
+                data.CaptureMode = GetCaptureMode(captureDirectories)
                 Dim make = GetTagDescAcross(Of ExifIfd0Directory)(captureDirectories, ExifIfd0Directory.TagMake)
                 Dim model = GetTagDescAcross(Of ExifIfd0Directory)(captureDirectories, ExifIfd0Directory.TagModel)
                 data.Camera = (make & " " & model).Trim()
@@ -690,6 +708,7 @@ Namespace Services
             result.DateModifiedExif = data.DateModifiedExif
             result.Camera = data.Camera
             result.Lens = data.Lens
+            result.CaptureMode = data.CaptureMode
             result.ShutterSpeed = data.ShutterSpeed
             result.Aperture = ParseLeadingDouble(data.Aperture)
             ' Die Kachel, der Katalog und die Brennweiten-Suche meinen die tatsaechliche
@@ -757,13 +776,15 @@ Namespace Services
         ' 7 trennt die gespeicherte echte Brennweite vom Kleinbild-Aequivalent. Der Wechsel sorgt
         ' dafuer, dass bestehende Katalogzeilen beim naechsten Ordnerbesuch einmal neu gelesen
         ' werden; andernfalls blieben etwa 50-mm-Nikon-Aufnahmen dauerhaft als 75 mm sichtbar.
-        Public Const SummaryFormatVersion As Integer = 7
+        ' 8 liest den Objektivnamen auch aus dem Herstellerteil (Canon, Olympus, Panasonic, Sony A,
+        ' Pentax); ohne die Erhoehung blieben die Katalogzeilen dieser Gehaeuse ohne Objektiv.
+        Public Const SummaryFormatVersion As Integer = 8
 
         Public Shared ReadOnly Property CurrentSummaryFormat As String
             Get
-                ' Der Stand der Nikon-Objektivtabelle gehoert mit hinein: der Objektivname einer
-                ' Zeile haengt an ihr, nicht nur an der Datei (siehe NikonLensIdService.TableStamp).
-                Return $"{SummaryFormatVersion}:{LocalizationService.EffectiveLanguage}:{NikonLensIdService.TableStamp}"
+                ' Der Stand der Objektivtabellen gehoert mit hinein: der Objektivname einer Zeile
+                ' haengt an ihnen, nicht nur an der Datei (siehe NikonLensIdService.TableStamp).
+                Return $"{SummaryFormatVersion}:{LocalizationService.EffectiveLanguage}:{MakerLensIdService.TableStamp}:{NikonLensIdService.TableStamp}"
             End Get
         End Property
 
@@ -1058,28 +1079,176 @@ Namespace Services
             Return ""
         End Function
 
-        ''' <summary>Der normale EXIF-Tag <c>LensModel</c> ist die beste Angabe und hat immer
-        ''' Vorrang. Manche Nikon-NEFs - unter anderem aus der D5300/D7500 - schreiben ihn aber
+        ''' <summary>Der normale EXIF-Tag <c>LensModel</c> gilt, solange keine Nikon-ID aufgelöst
+        ''' ist (siehe unten). Manche Nikon-NEFs - unter anderem aus der D5300/D7500 - schreiben ihn aber
         ''' nicht. Die Brennweite und die Lichtstärke stehen trotzdem als Nikon-MakerNote bereit.
-        ''' Das ist kein voller, eindeutiger Handelsname, reicht zusammen mit Gehäuse und Bajonett
-        ''' aber für den vorsichtigen Abgleich mit der Objektivdatenbank.
+        ''' Das ist kein voller, eindeutiger Handelsname; er bleibt der letzte Rückfall.
         '''
-        ''' MetadataExtractor dekodiert die proprietäre Nikon-Lens-ID nicht zu einem Namen; bewusst
-        ''' wird daher nur der lesbare <c>Lens</c>-Eintrag genutzt, statt eine eigene, unvollständige
-        ''' Lens-ID-Tabelle zu pflegen.</summary>
+        ''' MetadataExtractor dekodiert die proprietäre Nikon-Lens-ID nicht zu einem Namen; das
+        ''' übernimmt <see cref="NikonLensIdService"/>.</summary>
         Friend Shared Function GetLensDescription(metaDirectories As IEnumerable(Of MetadataExtractor.Directory)) As String
             ' Eine bekannte Nikon-ID geht vor das EXIF-LensModel: neuere Nikon-Gehaeuse (D6, D780,
             ' Z mit Adapter) schreiben dort fuer ein Fremdobjektiv den Namen eines eigenen, etwa
-            ' "50mm f/1.4G" fuer ein Sigma 50mm Art. Die Tabelle kennt nur Fremdobjektive, die an
-            ' einer Datei belegt sind; fuer alles andere bleibt es beim LensModel.
+            ' "50mm f/1.4G" fuer ein Sigma 50mm Art, und fuer Nikons eigene Objektive oft nur eine
+            ' Kurzform ("VR 24-120mm f/4G"). Eine unbekannte oder mehrdeutige ID liefert nichts.
             Dim nikonLens = NikonLensIdService.TryGetLensName(metaDirectories)
             If Not String.IsNullOrWhiteSpace(nikonLens) Then Return nikonLens
 
             Dim lens = GetTagDescAcross(Of ExifSubIfdDirectory)(metaDirectories, ExifSubIfdDirectory.TagLensModel)
             If Not String.IsNullOrWhiteSpace(lens) Then Return lens
 
+            lens = GetMakerNoteLensName(metaDirectories)
+            If Not String.IsNullOrWhiteSpace(lens) Then Return lens
+
             Return GetTagDescAcross(Of NikonType2MakernoteDirectory)(metaDirectories,
                                                                        NikonType2MakernoteDirectory.TagLens)
+        End Function
+
+        ' MetadataExtractor kennt das Fujifilm-Feld DriveSettings nicht unter einem Namen.
+        Private Const FujifilmDriveSettingsTag As Integer = &H1103
+
+        ''' <summary>Einzelbild oder Serie laut Herstellerteil. Belichtungs- und Weissabgleichsreihen
+        ''' zaehlen als Serie: auch sie sind mehrere Ausloesungen eines Motivs. Gelesen werden die
+        ''' Rohwerte: Canon ContinuousDrive (0, 6, 9 Einzelbild; 1, 3, 4, 5, 8, 10 Serie; 2 Film),
+        ''' Nikon ShootingMode (Bit 0 Serie, Bit 4, 6 und 8 Reihen), Sony ReleaseMode (0 normal,
+        ''' 2 Serie, 5, 6, 8 Reihen), Olympus DriveMode (erster Wert 0 Einzelbild, 1 bis 4 Serie
+        ''' oder Reihe), Panasonic BurstMode (0 aus, alles andere Serie oder Reihe; am Bestand
+        ''' traegt jede Datei mit einem Wert ungleich 0 eine Seriennummer ab 1), Fujifilm
+        ''' DriveSettings oder ersatzweise die Seriennummer.</summary>
+        Friend Shared Function GetCaptureMode(metaDirectories As IEnumerable(Of MetadataExtractor.Directory)) As CaptureMode
+            Dim value As Integer
+            For Each canon In metaDirectories.OfType(Of CanonMakernoteDirectory)()
+                If Not canon.TryGetInt32(CanonMakernoteDirectory.CameraSettings.TagContinuousDriveMode, value) Then Continue For
+                Select Case value
+                    Case 0, 6, 9 : Return CaptureMode.SingleShot
+                    Case 1, 3, 4, 5, 8, 10 : Return CaptureMode.Series
+                End Select
+            Next
+            For Each nikon In metaDirectories.OfType(Of NikonType2MakernoteDirectory)()
+                If Not nikon.TryGetInt32(NikonType2MakernoteDirectory.TagShootingMode, value) Then Continue For
+                Return If((value And (&H1 Or &H10 Or &H40 Or &H100)) <> 0, CaptureMode.Series, CaptureMode.SingleShot)
+            Next
+            For Each sony In metaDirectories.OfType(Of SonyType1MakernoteDirectory)()
+                If Not sony.TryGetInt32(SonyType1MakernoteDirectory.TagReleaseMode, value) Then Continue For
+                Select Case value
+                    Case 0 : Return CaptureMode.SingleShot
+                    Case 2, 5, 6, 8 : Return CaptureMode.Series
+                End Select
+            Next
+            For Each olympus In metaDirectories.OfType(Of OlympusCameraSettingsMakernoteDirectory)()
+                If Not olympus.ContainsTag(OlympusCameraSettingsMakernoteDirectory.TagDriveMode) Then Continue For
+                Dim values = TryGetIntArray(olympus.GetObject(OlympusCameraSettingsMakernoteDirectory.TagDriveMode))
+                If values Is Nothing OrElse values.Length = 0 Then Continue For
+                Select Case values(0)
+                    Case 0 : Return CaptureMode.SingleShot
+                    Case 1, 2, 3, 4 : Return CaptureMode.Series
+                End Select
+            Next
+            For Each panasonic In metaDirectories.OfType(Of PanasonicMakernoteDirectory)()
+                If Not panasonic.TryGetInt32(PanasonicMakernoteDirectory.TagBurstMode, value) Then Continue For
+                Return If(value = 0, CaptureMode.SingleShot, CaptureMode.Series)
+            Next
+            For Each fujifilm In metaDirectories.OfType(Of FujifilmMakernoteDirectory)()
+                ' DriveSettings (0x1103, neuere Gehaeuse): unteres Byte 0 Einzelbild, 1 und 2 Serie.
+                ' Sonst die Seriennummer (0x1101): 0 Einzelbild, ab 1 die wievielte einer Serie oder
+                ' Reihe. Am Bestand stimmen beide und die Belichtungsreihe in jeder Datei ueberein.
+                If fujifilm.TryGetInt32(FujifilmDriveSettingsTag, value) Then
+                    Select Case value And &HFF
+                        Case 0 : Return CaptureMode.SingleShot
+                        Case 1, 2 : Return CaptureMode.Series
+                    End Select
+                End If
+                If fujifilm.TryGetInt32(FujifilmMakernoteDirectory.TagSequenceNumber, value) Then
+                    Return If(value = 0, CaptureMode.SingleShot, CaptureMode.Series)
+                End If
+            Next
+            Return CaptureMode.Unknown
+        End Function
+
+        Private Shared Function TryGetIntArray(value As Object) As Integer()
+            Select Case True
+                Case TypeOf value Is UShort() : Return DirectCast(value, UShort()).Select(Function(v) CInt(v)).ToArray()
+                Case TypeOf value Is Short() : Return DirectCast(value, Short()).Select(Function(v) CInt(v)).ToArray()
+                Case TypeOf value Is Integer() : Return DirectCast(value, Integer())
+                Case TypeOf value Is UShort : Return {CInt(DirectCast(value, UShort))}
+                Case TypeOf value Is Integer : Return {DirectCast(value, Integer)}
+                Case Else : Return Nothing
+            End Select
+        End Function
+
+        ''' <summary>Der Fokusabstand der Aufnahme in Metern, 0 wenn unbekannt; 1000 steht fuer
+        ''' unendlich, wie in den Objektivdaten. Gebraucht fuer die Vignettierung, die bei vielen
+        ''' Objektiven von der Entfernung abhaengt. Quellen in dieser Reihenfolge: Nikons
+        ''' LensData-Block, Canons Fokusabstand oben und unten (Zentimeter, 65535 unendlich, das
+        ''' geometrische Mittel beider), Olympus und das EXIF-Feld SubjectDistance.</summary>
+        Public Shared Function GetFocusDistanceMeters(metaDirectories As IEnumerable(Of MetadataExtractor.Directory)) As Double
+            Const Infinity As Double = 1000.0
+            Dim nikon = NikonLensIdService.TryGetFocusDistance(metaDirectories)
+            If nikon > 0 Then Return Math.Min(nikon, Infinity)
+
+            For Each canon In metaDirectories.OfType(Of CanonMakernoteDirectory)()
+                Dim upper, lower As Integer
+                If Not canon.TryGetInt32(CanonMakernoteDirectory.ShotInfo.TagFocusDistanceUpper, upper) OrElse
+                   Not canon.TryGetInt32(CanonMakernoteDirectory.ShotInfo.TagFocusDistanceLower, lower) Then Continue For
+                Dim known = {upper, lower}.Where(Function(v) v > 0 AndAlso v < 65535).Select(Function(v) v / 100.0).ToList()
+                If known.Count = 0 Then
+                    If upper = 65535 OrElse lower = 65535 Then Return Infinity
+                    Continue For
+                End If
+                Return Math.Min(Math.Sqrt(known.First() * known.Last()), Infinity)
+            Next
+
+            Dim olympus = MetersFromDescription(GetTagDescAcross(Of OlympusFocusInfoMakernoteDirectory)(
+                metaDirectories, OlympusFocusInfoMakernoteDirectory.TagFocusDistance))
+            If olympus > 0 Then Return Math.Min(olympus, Infinity)
+
+            Dim subject = GetTagDescAcross(Of ExifSubIfdDirectory)(metaDirectories, ExifDirectoryBase.TagSubjectDistance)
+            If subject.StartsWith("Infinity", StringComparison.OrdinalIgnoreCase) Then Return Infinity
+            Return Math.Min(MetersFromDescription(subject), Infinity)
+        End Function
+
+        ''' <summary>Die Zahl vor "m" oder "metres" aus einer Beschreibung; die Beschreibungen sind
+        ''' in der Anzeigesprache formatiert, Komma und Punkt zaehlen deshalb beide.</summary>
+        Private Shared Function MetersFromDescription(description As String) As Double
+            If String.IsNullOrWhiteSpace(description) Then Return 0
+            If description.StartsWith("inf", StringComparison.OrdinalIgnoreCase) Then Return 1000.0
+            Dim m = Regex.Match(description, "^\s*(\d+(?:[.,]\d+)?)\s*m", RegexOptions.IgnoreCase)
+            If Not m.Success Then Return 0
+            Dim value As Double
+            If Not Double.TryParse(m.Groups(1).Value.Replace(","c, "."c), NumberStyles.Float, CultureInfo.InvariantCulture, value) Then Return 0
+            Return value
+        End Function
+
+        ''' <summary>Der Objektivname aus dem Herstellerteil, fuer Gehaeuse, die das EXIF-Feld
+        ''' <c>LensModel</c> leer lassen: aeltere Canon EOS, Olympus Four Thirds, Panasonic G bis
+        ''' etwa 2016, Samsung NX. Alle tragen den Namen dort, MetadataExtractor liest ihn schon
+        ''' (bei Samsung aus der Objektivnummer). Panasonic meldet ein Objektiv ohne Kontakte als
+        ''' "NO-LENS", Samsung als "Built-in or Manual Lens", MetadataExtractor eine unbekannte
+        ''' Olympus-Kennung als "Unknown (...)", Canon ein fehlendes als "None"; das ist kein Name.
+        ''' Ebenso wenig die blosse Brennweite ("100mm", "28-70mm"), die Canon bei
+        ''' Fremdobjektiven eintraegt: aus ihr raet der Abgleich ein Canon-Objektiv derselben
+        ''' Brennweite, also womoeglich das falsche. Dann lieber kein Profil.</summary>
+        Private Shared Function GetMakerNoteLensName(metaDirectories As IEnumerable(Of MetadataExtractor.Directory)) As String
+            Dim candidates = {
+                GetTagDescAcross(Of CanonMakernoteDirectory)(metaDirectories, CanonMakernoteDirectory.TagLensModel),
+                GetTagDescAcross(Of OlympusEquipmentMakernoteDirectory)(metaDirectories, OlympusEquipmentMakernoteDirectory.TagLensModel),
+                GetTagDescAcross(Of OlympusEquipmentMakernoteDirectory)(metaDirectories, OlympusEquipmentMakernoteDirectory.TagLensType),
+                GetTagDescAcross(Of PanasonicMakernoteDirectory)(metaDirectories, PanasonicMakernoteDirectory.TagLensType),
+                GetTagDescAcross(Of SamsungType2MakernoteDirectory)(metaDirectories, SamsungType2MakernoteDirectory.TagLensType)
+            }
+            For Each candidate In candidates
+                Dim name = If(candidate, "").Trim()
+                If name.Length = 0 Then Continue For
+                If name.Equals("NO-LENS", StringComparison.OrdinalIgnoreCase) Then Continue For
+                If name.StartsWith("Unknown", StringComparison.OrdinalIgnoreCase) Then Continue For
+                If name.Equals("N/A", StringComparison.OrdinalIgnoreCase) Then Continue For
+                If name.Equals("None", StringComparison.OrdinalIgnoreCase) Then Continue For
+                If name.StartsWith("Built-in or Manual", StringComparison.OrdinalIgnoreCase) Then Continue For
+                If Regex.IsMatch(name, "^\d+(?:[.,]\d+)?(?:\s*-\s*\d+(?:[.,]\d+)?)?\s*mm$", RegexOptions.IgnoreCase) Then Continue For
+                Return name
+            Next
+            ' Sony A und Pentax schreiben keinen Namen, nur eine Kennung.
+            Return MakerLensIdService.TryGetLensName(metaDirectories)
         End Function
 
         ''' <summary>ICC-v4-Profile hinterlegen ihren Namen mehrsprachig; MetadataExtractor gibt das roh als

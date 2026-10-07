@@ -8,15 +8,19 @@ Imports MetadataExtractor.Formats.Exif.Makernotes
 
 Namespace Services
 
-    ''' <summary>Loest Nikons verschluesselte Lens-ID auf. Diese kleine Tabelle ist nur fuer die
-    ''' sonst nicht unterscheidbaren Fremdobjektive da.
+    ''' <summary>Loest Nikons verschluesselte Lens-ID zu einem Objektivnamen auf.
     '''
     ''' <para>REIHENFOLGE, und die ist Absicht: Eine getroffene ID schlaegt das EXIF-LensModel,
     ''' weil neuere Gehaeuse dort fuer ein Fremdobjektiv den Namen eines eigenen eintragen, und
-    ''' erst recht Nikons eigenen Lens-Tag. Der traegt bei Fremdobjektiven nur Brennweite und
-    ''' Blende ("18-35mm f/1.8") und nennt den Hersteller gar nicht - ihm den Vorrang zu lassen
-    ''' hiesse, die Aufloesung wegzuwerfen, fuer die es diese Klasse gibt. Eine unbekannte ID
-    ''' faellt auf LensModel und dann auf den Nikon-Tag zurueck.</para></summary>
+    ''' erst recht Nikons eigenen Lens-Tag. Der traegt nur Brennweite und Blende ("18-55mm
+    ''' f/3.5-5.6") und nennt weder Hersteller noch Baureihe - die Objektivdaten raten daraus
+    ''' etwa ein AF-P statt des AF-S, das wirklich dran war. Eine unbekannte ID faellt auf
+    ''' LensModel und dann auf den Nikon-Tag zurueck.</para>
+    '''
+    ''' <para>Zwei Quellen: zuerst die eigenen, an Dateien des Bestands belegten Eintraege, deren
+    ''' Namen auf das passende Profil der Objektivdaten zugeschnitten sind; danach die
+    ''' mitgelieferte Tabelle <c>Resources/NikonLensIds.tsv</c>. Eine ID, unter der dort mehrere
+    ''' Objektive stehen, ist gar nicht erst aufgenommen und liefert nichts.</para></summary>
     Public NotInheritable Class NikonLensIdService
 
         Private Sub New()
@@ -30,10 +34,10 @@ Namespace Services
         Private Shared ReadOnly _countTable As Byte() = Convert.FromHexString(
             "a7bcc9ad91df85e5d478d517467c294c4d03e925681186b3bdf76f6122a226342abe1e4614689d4418c240f47e5f1bad0b94b667b40be1ea959c66dce75d6c05dad5df7aeff6db1f824cc06847a1bdee3950564adddfa5f8c6daca90ca01429d8b0c7343750594de24b38034e52cdc9b3fca3345d0db5ff552c321dae222726b3ed05ba8878c065d0fdd091993d0b9fc8b0f8460331c9b45f1f0a3943a1277334d4478283c9efd655716946bfb59d0c82236dbd2639843a1048786f7a626bbd6594dbf6a2eaa2befe678b64ee02fdc7cbe5719327e2ad0b8ba29003c527da8493b2deb2549faa3aa39a7c5a7501136fbc6674af5a512657eb0dfaf4eb3617f2f")
 
-        ' Nur eindeutig bestaetigte IDs aufnehmen. Eine unbekannte ID bleibt bei der lesbaren
-        ' Nikon-Angabe, statt anhand Brennweite und Blende einen falschen Hersteller zu erfinden.
-        ' Jede ID ist an einer Datei des Bestands belegt; der Name ist, wo es eines gibt, der des
-        ' passenden Profils mit Nikon-F-Anschluss in den Objektivdaten.
+        ' Die eigenen Eintraege gehen der mitgelieferten Tabelle vor. Jede ID ist an einer Datei
+        ' des Bestands belegt; der Name ist, wo es eines gibt, der des passenden Profils mit
+        ' Nikon-F-Anschluss in den Objektivdaten. Drei davon (das Sigma 18-250 und die beiden
+        ' Sigma 17-70 Contemporary) fehlen in der mitgelieferten Tabelle ganz.
         Private Shared ReadOnly _knownLenses As New Dictionary(Of String, String)(StringComparer.Ordinal) From {
             {"A14119312C2C4B06", "Sigma 10-20mm f/3.5 EX DC HSM"},
             {"8F482B5024244B0E", "Sigma 17-50mm f/2.8 EX DC OS HSM"},
@@ -59,7 +63,58 @@ Namespace Services
             {"0040182B2C340006", "Tokina AT-X 107 AF DX Fisheye 10-17mm f/3.5-4.5"}
         }
 
+        Private Const PublishedTableResource As String = "NikonLensIds.tsv"
+
+        Private Shared ReadOnly _publishedLenses As New Lazy(Of Dictionary(Of String, String))(AddressOf LoadPublishedLenses)
+
         Private Shared ReadOnly _tableStamp As New Lazy(Of String)(AddressOf ComputeTableStamp)
+
+        ''' <summary>Die mitgelieferte Tabelle: je Zeile ID und Name, durch einen Tab getrennt,
+        ''' Zeilen mit # sind Kopf. Fehlt sie oder ist sie kaputt, bleibt es bei den eigenen
+        ''' Eintraegen; ein Objektivname ist keinen Absturz wert.</summary>
+        Private Shared Function LoadPublishedLenses() As Dictionary(Of String, String)
+            Dim result As New Dictionary(Of String, String)(StringComparer.Ordinal)
+            Try
+                Dim assembly = GetType(NikonLensIdService).Assembly
+                Dim resourceName = assembly.GetManifestResourceNames().
+                    FirstOrDefault(Function(name) name.EndsWith(PublishedTableResource, StringComparison.OrdinalIgnoreCase))
+                If resourceName Is Nothing Then Return result
+                Using stream = assembly.GetManifestResourceStream(resourceName)
+                    If stream Is Nothing Then Return result
+                    Using reader As New IO.StreamReader(stream, System.Text.Encoding.UTF8)
+                        Dim line = reader.ReadLine()
+                        While line IsNot Nothing
+                            Dim tab = line.IndexOf(ControlChars.Tab)
+                            If Not line.StartsWith("#"c) AndAlso tab = 16 Then
+                                Dim name = line.Substring(tab + 1).Trim()
+                                If name.Length > 0 Then result(line.Substring(0, tab)) = name
+                            End If
+                            line = reader.ReadLine()
+                        End While
+                    End Using
+                End Using
+            Catch ex As Exception
+                DiagnosticLogService.LogException("NikonLensIdService.LoadPublishedLenses", ex)
+            End Try
+            Return result
+        End Function
+
+        ''' <summary>Anzahl der Eintraege aus der mitgelieferten Tabelle. Fuer den Pruefstand.</summary>
+        Public Shared ReadOnly Property PublishedLensCount As Integer
+            Get
+                Return _publishedLenses.Value.Count
+            End Get
+        End Property
+
+        ''' <summary>Der Name zu einer ID, eigene Eintraege zuerst. Leer, wenn die ID unbekannt ist
+        ''' oder in der Tabelle mehrdeutig war.</summary>
+        Public Shared Function TryGetLensNameForId(id As String) As String
+            If String.IsNullOrEmpty(id) Then Return ""
+            Dim result As String = Nothing
+            If _knownLenses.TryGetValue(id, result) Then Return result
+            If _publishedLenses.Value.TryGetValue(id, result) Then Return result
+            Return ""
+        End Function
 
         ''' <summary>Fingerabdruck der Tabelle oben, acht Zeichen. Er steht im Stempel jeder
         ''' Katalogzeile (ExifService.CurrentSummaryFormat): kommt ein Objektiv dazu oder aendert sich
@@ -73,8 +128,13 @@ Namespace Services
         End Property
 
         Private Shared Function ComputeTableStamp() As String
+            ' Beide Quellen gehen ein: auch eine neu erzeugte mitgelieferte Tabelle soll die
+            ' Katalogzeilen neu lesen lassen.
             Dim content = String.Join(vbLf, _knownLenses.OrderBy(Function(p) p.Key, StringComparer.Ordinal).
-                                                         Select(Function(p) p.Key & "=" & p.Value))
+                                                         Select(Function(p) p.Key & "=" & p.Value)) &
+                          vbLf & "--" & vbLf &
+                          String.Join(vbLf, _publishedLenses.Value.OrderBy(Function(p) p.Key, StringComparer.Ordinal).
+                                                                   Select(Function(p) p.Key & "=" & p.Value))
             Using sha = Security.Cryptography.SHA1.Create()
                 Dim hash = sha.ComputeHash(System.Text.Encoding.UTF8.GetBytes(content))
                 Return Convert.ToHexString(hash, 0, 4).ToLowerInvariant()
@@ -82,19 +142,70 @@ Namespace Services
         End Function
 
         Public Shared Function TryGetLensName(metaDirectories As IEnumerable(Of Directory)) As String
-            Dim id = TryGetLensId(metaDirectories)
-            Dim result As String = Nothing
-            Return If(_knownLenses.TryGetValue(id, result), result, "")
+            Return TryGetLensNameForId(TryGetLensId(metaDirectories))
         End Function
 
         ''' <summary>Die entschluesselte acht Byte lange Nikon-ID als Hexwert. Oeffentlich nur
         ''' fuer den Diagnosepruefstand; die Anwendung verwendet <see cref="TryGetLensName"/>.</summary>
         Public Shared Function TryGetLensId(metaDirectories As IEnumerable(Of Directory)) As String
-            If metaDirectories Is Nothing Then Return ""
+            Dim block = DecodeLensData(metaDirectories)
+            If block.Data Is Nothing Then Return ""
+            Dim decoded = block.Data
+            Dim offset = block.IdOffset
+
+            ' Lauter Nullen heisst: kein Objektiv mit Kennung (ohne CPU oder ein Z-Objektiv, das
+            ' seinen Namen anders meldet).
+            If decoded.Skip(offset).Take(7).All(Function(b) b = 0) Then Return ""
+
+            ' Die ersten sieben Kennbytes stehen im verschluesselten LensData-Block. LensType
+            ' (D/G/VR-Bits) ist dagegen ein eigener, unverschluesselter Nikon-Tag und bildet
+            ' das achte Byte der handelsueblichen Lens-ID.
+            Dim nikon = metaDirectories.OfType(Of NikonType2MakernoteDirectory)().First()
+            Dim lensType As Integer
+            Try
+                lensType = nikon.GetInt32(NikonType2MakernoteDirectory.TagLensType)
+            Catch
+                Return ""
+            End Try
+            Dim idBytes(7) As Byte
+            Array.Copy(decoded, offset, idBytes, 0, 7)
+            idBytes(7) = CByte(lensType And &HFF)
+            Return Convert.ToHexString(idBytes)
+        End Function
+
+        ''' <summary>Der Fokusabstand in Metern aus dem LensData-Block, 0 wenn unbekannt. Er steht
+        ''' zwei Bytes vor der Kennung, die Brennweite eines davor (siehe
+        ''' <see cref="TryGetLensDataFocalLength"/>); die Fassung 0100 fuehrt beides nicht. Kodiert
+        ''' ist er logarithmisch, 0,01 m mal 10 hoch Wert durch 40; 0 heisst "nicht gemeldet",
+        ''' 255 "unendlich".</summary>
+        Public Shared Function TryGetFocusDistance(metaDirectories As IEnumerable(Of Directory)) As Double
+            Dim block = DecodeLensData(metaDirectories)
+            If block.Data Is Nothing OrElse block.Version = "0100" Then Return 0
+            If block.Data.Skip(block.IdOffset).Take(7).All(Function(b) b = 0) Then Return 0
+            Dim value = block.Data(block.IdOffset - 2)
+            If value = 0 Then Return 0
+            Return 0.01 * Math.Pow(10.0, value / 40.0)
+        End Function
+
+        ''' <summary>Die Brennweite in Millimetern aus dem LensData-Block, 0 wenn unbekannt; kodiert
+        ''' als 5 mm mal 2 hoch Wert durch 24. Sie dient nur der Pruefung, dass die Lage der Felder
+        ''' je Fassung stimmt: sie muss zur Brennweite im EXIF passen.</summary>
+        Public Shared Function TryGetLensDataFocalLength(metaDirectories As IEnumerable(Of Directory)) As Double
+            Dim block = DecodeLensData(metaDirectories)
+            If block.Data Is Nothing OrElse block.Version = "0100" Then Return 0
+            Dim value = block.Data(block.IdOffset - 1)
+            If value = 0 Then Return 0
+            Return 5.0 * Math.Pow(2.0, value / 24.0)
+        End Function
+
+        ''' <summary>Der entschluesselte LensData-Block, die Fassung und die Lage der Kennbytes.
+        ''' Data ist Nothing, wenn die Datei keinen lesbaren Block traegt.</summary>
+        Private Shared Function DecodeLensData(metaDirectories As IEnumerable(Of Directory)) As (Data As Byte(), Version As String, IdOffset As Integer)
+            If metaDirectories Is Nothing Then Return (Nothing, "", 0)
             Dim nikon = metaDirectories.OfType(Of NikonType2MakernoteDirectory)().FirstOrDefault()
-            If nikon Is Nothing Then Return ""
+            If nikon Is Nothing Then Return (Nothing, "", 0)
             Dim raw = nikon.GetByteArray(NikonType2MakernoteDirectory.TagLensData)
-            If raw Is Nothing OrElse raw.Length < 20 Then Return ""
+            If raw Is Nothing OrElse raw.Length < 20 Then Return (Nothing, "", 0)
 
             ' Wo die Kennbytes stehen und ob der Block verschluesselt ist, haengt an der Fassung in
             ' den ersten vier Bytes. Am ganzen Nikon-Bestand nachgemessen: 0100 klar ab 6, 0101 klar
@@ -110,7 +221,7 @@ Namespace Services
                 Case "0201", "0202", "0203" : offset = 11 : encrypted = True
                 Case "0204" : offset = 12 : encrypted = True
                 Case "0800", "0801", "0802" : offset = 13 : encrypted = True
-                Case Else : Return ""
+                Case Else : Return (Nothing, version, 0)
             End Select
 
             Dim decoded = DirectCast(raw.Clone(), Byte())
@@ -127,7 +238,7 @@ Namespace Services
                 Try
                     count = nikon.GetInt64(NikonType2MakernoteDirectory.TagExposureSequenceNumber)
                 Catch
-                    Return ""
+                    Return (Nothing, version, 0)
                 End Try
 
                 Dim countKey As Integer = CInt((count Xor (count >> 8) Xor (count >> 16) Xor (count >> 24)) And &HFFL)
@@ -140,24 +251,7 @@ Namespace Services
                     decoded(i) = CByte(decoded(i) Xor cj)
                 Next
             End If
-
-            ' Lauter Nullen heisst: kein Objektiv mit Kennung (ohne CPU oder ein Z-Objektiv, das
-            ' seinen Namen anders meldet).
-            If decoded.Skip(offset).Take(7).All(Function(b) b = 0) Then Return ""
-
-            ' Die ersten sieben Kennbytes stehen im verschluesselten LensData-Block. LensType
-            ' (D/G/VR-Bits) ist dagegen ein eigener, unverschluesselter Nikon-Tag und bildet
-            ' das achte Byte der handelsueblichen Lens-ID.
-            Dim lensType As Integer
-            Try
-                lensType = nikon.GetInt32(NikonType2MakernoteDirectory.TagLensType)
-            Catch
-                Return ""
-            End Try
-            Dim idBytes(7) As Byte
-            Array.Copy(decoded, offset, idBytes, 0, 7)
-            idBytes(7) = CByte(lensType And &HFF)
-            Return Convert.ToHexString(idBytes)
+            Return (decoded, version, offset)
         End Function
     End Class
 End Namespace

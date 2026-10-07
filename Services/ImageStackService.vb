@@ -125,7 +125,8 @@ Namespace Services
                 Dim run As New List(Of StackShot)()
                 For Each shot In ordered
                     If run.Count > 0 AndAlso
-                       (shot.TakenAt.Value - run(run.Count - 1).TakenAt.Value).TotalSeconds > BurstGapSeconds Then
+                       ((shot.TakenAt.Value - run(run.Count - 1).TakenAt.Value).TotalSeconds > BurstGapSeconds OrElse
+                        BothSingleShots(run(run.Count - 1), shot)) Then
                         If run.Count > 1 Then stacks.Add(NewStack(run)) : inBurst.UnionWith(run)
                         run = New List(Of StackShot)()
                     End If
@@ -139,6 +140,15 @@ Namespace Services
                 If shot.IsPair AndAlso Not inBurst.Contains(shot) Then stacks.Add(NewStack({shot}))
             Next
             Return stacks
+        End Function
+
+        ''' <summary>Sagt die Kamera bei beiden Aufnahmen "Einzelbild", sind sie keine Serie, auch
+        ''' wenn sie in derselben Sekunde entstanden: zwei schnelle Einzelausloesungen sind zwei
+        ''' Motive, die nicht hinter einer Kachel verschwinden sollen. Fehlt die Angabe bei einer
+        ''' der beiden (Telefone, Bearbeitungen), entscheidet wie bisher allein die Zeit.</summary>
+        Private Shared Function BothSingleShots(previous As StackShot, current As StackShot) As Boolean
+            Return previous.Primary.CaptureMode = CaptureMode.SingleShot AndAlso
+                   current.Primary.CaptureMode = CaptureMode.SingleShot
         End Function
 
         Private Shared Function NewStack(shots As IEnumerable(Of StackShot)) As ImageStack

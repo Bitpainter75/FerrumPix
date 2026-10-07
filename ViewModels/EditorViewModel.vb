@@ -6909,9 +6909,23 @@ Namespace ViewModels
                 If Not String.IsNullOrWhiteSpace(_unmatchedLensInput) Then
                     Return _unmatchedLensInput & " - " & LocalizationService.T("keine Messwerte vorhanden")
                 End If
+                ' Angezeigt wird der Profilname ohne die Verwaltungszusaetze der Sammlung
+                ' ("Sony RX10 & compatibles" wird "Sony RX10").
+                Dim shownName = LensDataService.DisplayLensName(_objektivKorrektur?.LensName)
+                ' Die Korrekturwerte der Kamera selbst: sagen, woher sie kommen, sonst sieht ein Bild
+                ' ohne Profil in der Sammlung aus, als sei es doch eines.
+                If _objektivKorrektur IsNot Nothing AndAlso
+                   _objektivKorrektur.Source = LensDataService.CorrectionSource.CameraData Then
+                    Return shownName & " - " & LocalizationService.T("Objektivkorrektur aus der Kamera")
+                End If
                 If String.IsNullOrWhiteSpace(_objektivExifName) Then
+                    ' Eine Kompaktkamera nennt kein Objektiv; ihr festes findet der Abgleich ueber
+                    ' die Kamera. Das ist keine Wahl von Hand.
+                    If _objektivKorrektur IsNot Nothing AndAlso String.IsNullOrWhiteSpace(_lensModel) Then
+                        Return shownName
+                    End If
                     If _objektivKorrektur IsNot Nothing Then
-                        Return _objektivKorrektur.LensName & " - " &
+                        Return shownName & " - " &
                                LocalizationService.T("von Hand gewählt, nur für dieses Bild")
                     End If
                     ' Ein gewaehltes Objektiv OHNE Ergebnis hat einen Grund - den soll die Zeile
@@ -6927,15 +6941,16 @@ Namespace ViewModels
                 End If
                 If _objektivKorrektur Is Nothing Then
                     If Not String.IsNullOrWhiteSpace(_objektivErkannterName) Then
-                        Return _objektivErkannterName & " - " & LocalizationService.T("keine Messwerte vorhanden")
+                        Return LensDataService.DisplayLensName(_objektivErkannterName) & " - " &
+                               LocalizationService.T("keine Messwerte vorhanden")
                     End If
                     Return _objektivExifName & " - " & LocalizationService.T("keine Messwerte vorhanden")
                 End If
-                Dim zugeordnet = LensDataService.ZuordnungFuer(_objektivExifName)
-                If Not String.IsNullOrWhiteSpace(zugeordnet) Then
-                    Return _objektivKorrektur.LensName & " - " & LocalizationService.T("von Hand zugeordnet")
+                Dim assigned = LensDataService.ZuordnungFuer(_objektivExifName)
+                If Not String.IsNullOrWhiteSpace(assigned) Then
+                    Return shownName & " - " & LocalizationService.T("von Hand zugeordnet")
                 End If
-                Return _objektivKorrektur.LensName
+                Return shownName
             End Get
         End Property
 

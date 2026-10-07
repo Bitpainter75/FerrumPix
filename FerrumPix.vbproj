@@ -71,5 +71,9 @@
     <EmbeddedResource Include="Resources\CameraColorMatrices.json" />
     <!-- Sensorrand je Kamera und Bildgroesse, aus Adobes DefaultCrop (sensorrand.py). -->
     <EmbeddedResource Include="Resources\CameraSensorCrops.json" />
+    <!-- Objektivkennungen fuer Nikon, Sony A und Pentax, erzeugt mit packaging/ci/lens-ids.py. -->
+    <EmbeddedResource Include="Resources\NikonLensIds.tsv" />
+    <EmbeddedResource Include="Resources\SonyAMountLensIds.tsv" />
+    <EmbeddedResource Include="Resources\PentaxLensIds.tsv" />
   </ItemGroup>
 </Project>
