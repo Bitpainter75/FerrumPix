@@ -29,6 +29,8 @@ Namespace Services
         ''' Farbetikett fürs Culling ("Red","Yellow","Green","Blue","Purple", "" = keins) -
         ''' rein lokale FerrumPix-Zuordnung, wird in keine Datei geschrieben.
         Public Property ColorLabel As String = ""
+        ''' Markierung beim Aussortieren: -1 verworfen, 0 keine, 1 behalten (siehe LibraryService.SetPickStateForMany).
+        Public Property PickState As Integer
         Public Property Tags As New List(Of String)()
         Public Property DateTaken As String = ""
         Public Property DateModifiedExif As String = ""
@@ -487,7 +489,8 @@ Namespace Services
             ("ScannedSidecarModifiedAt", "TEXT"),
             ("City", "TEXT"),
             ("Country", "TEXT"),
-            ("CountryCode", "TEXT")
+            ("CountryCode", "TEXT"),
+            ("PickState", "INTEGER NOT NULL DEFAULT 0")
         }
 
         ''' <summary>Spalten, die spaeter zur Gesichtstabelle dazugekommen sind. Bestehende
@@ -724,6 +727,61 @@ Namespace Services
                         For Each path In list
                             pParam.Value = PathKey(path)
                             cParam.Value = value
+                            cmd.ExecuteNonQuery()
+                        Next
+                    End Using
+                    transaction.Commit()
+                End Using
+            End Using
+
+            For Each path In list
+                SyncCatalogToFpxmp(path)
+            Next
+            If syncToXmp Then
+                For Each path In list
+                    SyncCatalogToXmpSidecar(path)
+                Next
+            End If
+        End Sub
+
+        Friend Shared Function NormalizePickState(value As Integer) As Integer
+            Return Math.Max(-1, Math.Min(1, value))
+        End Function
+
+        Public Function GetPickState(filePath As String) As Integer
+            Using conn = New SqliteConnection(_connectionString)
+                conn.Open()
+                Using cmd = conn.CreateCommand()
+                    cmd.CommandText = "SELECT PickState FROM ImageMeta WHERE FilePath=$p"
+                    cmd.Parameters.AddWithValue("$p", PathKey(filePath))
+                    Dim r = cmd.ExecuteScalar()
+                    If r Is Nothing OrElse TypeOf r Is DBNull Then Return 0
+                    Return NormalizePickState(CInt(r))
+                End Using
+            End Using
+        End Function
+
+        ''' <summary>Setzt die Markierung beim Aussortieren fuer mehrere Dateien in einer Transaktion:
+        ''' -1 verworfen, 0 keine, 1 behalten. Wandert wie Bewertung und Etikett in die .fpxmp und, bei
+        ''' eingeschaltetem Abgleich, als xmpDM:good in die XMP-Beistelldatei.</summary>
+        Public Sub SetPickStateForMany(filePaths As IEnumerable(Of String), pickState As Integer, Optional syncToXmp As Boolean = False)
+            Dim list = If(filePaths, Enumerable.Empty(Of String)()).Where(AddressOf IsCatalogWritable).ToList()
+            If list.Count = 0 Then Return
+            Dim value = NormalizePickState(pickState)
+
+            Using conn = New SqliteConnection(_connectionString)
+                conn.Open()
+                Using transaction = conn.BeginTransaction()
+                    Using cmd = conn.CreateCommand()
+                        cmd.Transaction = transaction
+                        cmd.CommandText =
+                            "INSERT INTO ImageMeta(FilePath,PickState) VALUES($p,$s) " &
+                            "ON CONFLICT(FilePath) DO UPDATE SET PickState=$s"
+                        Dim pParam = cmd.Parameters.Add("$p", SqliteType.Text)
+                        Dim sParam = cmd.Parameters.Add("$s", SqliteType.Integer)
+                        sParam.Value = value
+                        For Each path In list
+                            pParam.Value = PathKey(path)
                             cmd.ExecuteNonQuery()
                         Next
                     End Using
@@ -1010,13 +1068,15 @@ Namespace Services
                 Dim currentFavorite = GetFavorite(filePath)
                 Dim currentColorLabel = GetColorLabel(filePath)
                 Dim currentTags = GetTags(filePath)
+                Dim currentPick = GetPickState(filePath)
                 Dim rating = If(data.Rating, currentRating)
                 Dim favorite = If(data.IsFavorite, currentFavorite)
                 Dim colorLabel = If(data.ColorLabel Is Nothing, currentColorLabel, data.ColorLabel)
                 Dim tags = If(data.HasKeywords, data.Keywords, currentTags)
+                Dim pick = If(data.PickState, currentPick)
                 Dim tagsMatch = currentTags.Count = tags.Count AndAlso
                                 currentTags.All(Function(value) tags.Any(Function(other) String.Equals(value, other, StringComparison.OrdinalIgnoreCase)))
-                If currentRating = rating AndAlso currentFavorite = favorite AndAlso
+                If currentRating = rating AndAlso currentFavorite = favorite AndAlso currentPick = pick AndAlso
                    String.Equals(currentColorLabel, colorLabel, StringComparison.OrdinalIgnoreCase) AndAlso tagsMatch Then
                     Return data
                 End If
@@ -1024,13 +1084,14 @@ Namespace Services
                     conn.Open()
                     Using cmd = conn.CreateCommand()
                         cmd.CommandText =
-                            "INSERT INTO ImageMeta(FilePath,Rating,IsFavorite,ColorLabel,Tags) VALUES($p,$r,$f,$c,$t) " &
-                            "ON CONFLICT(FilePath) DO UPDATE SET Rating=$r,IsFavorite=$f,ColorLabel=$c,Tags=$t"
+                            "INSERT INTO ImageMeta(FilePath,Rating,IsFavorite,ColorLabel,Tags,PickState) VALUES($p,$r,$f,$c,$t,$s) " &
+                            "ON CONFLICT(FilePath) DO UPDATE SET Rating=$r,IsFavorite=$f,ColorLabel=$c,Tags=$t,PickState=$s"
                         cmd.Parameters.AddWithValue("$p", PathKey(filePath))
                         cmd.Parameters.AddWithValue("$r", Math.Max(0, Math.Min(5, rating)))
                         cmd.Parameters.AddWithValue("$f", If(favorite, 1, 0))
                         cmd.Parameters.AddWithValue("$c", If(colorLabel, ""))
                         cmd.Parameters.AddWithValue("$t", String.Join(",", If(tags, New List(Of String)())))
+                        cmd.Parameters.AddWithValue("$s", NormalizePickState(pick))
                         cmd.ExecuteNonQuery()
                     End Using
                 End Using
@@ -1050,7 +1111,8 @@ Namespace Services
                                                   GetRating(filePath),
                                                   GetFavorite(filePath),
                                                   GetColorLabel(filePath),
-                                                  GetTags(filePath))
+                                                  GetTags(filePath),
+                                                  GetPickState(filePath))
             Catch ex As Exception
                 DiagnosticLogService.LogException("Library.SyncCatalogToFpxmp", ex)
             End Try
@@ -1068,7 +1130,7 @@ Namespace Services
                 If Not settings.SyncCatalogToXmp Then Return
                 Dim labelWord = XmpSidecarService.LabelToXmpWord(GetColorLabel(filePath))
                 ExifService.WriteXmpCatalogSidecar(filePath, GetRating(filePath), labelWord, GetTags(filePath),
-                                                   settings.CreateXmpSidecarIfMissing)
+                                                   settings.CreateXmpSidecarIfMissing, GetPickState(filePath))
             Catch ex As Exception
                 DiagnosticLogService.LogException("Library.SyncCatalogToXmpSidecar", ex)
             End Try
@@ -1233,7 +1295,7 @@ Namespace Services
         ''' ACHTUNG: ReadMetaRow greift über SPALTENNUMMERN zu - neue Spalten gehören ans Ende, sonst
         ''' verschieben sich alle folgenden Indizes stillschweigend auf die falschen Werte.
         Private Const MetaColumnList As String =
-            "FilePath, IsFavorite, Rating, Tags, DateTaken, Camera, Lens, Aperture, FocalLengthMm, Iso, ShutterSpeed, GpsLatitude, GpsLongitude, ImageWidth, ImageHeight, DateModifiedExif, FileCreatedAt, HasExifMetadata, HasIptcMetadata, HasXmpMetadata, ScannedSourceModifiedAt, ExifSummary, IptcSummary, XmpSummary, HasIccProfile, IccSummary, SummaryFormat, ColorLabel, ScannedSidecarModifiedAt, City, Country, CountryCode"
+            "FilePath, IsFavorite, Rating, Tags, DateTaken, Camera, Lens, Aperture, FocalLengthMm, Iso, ShutterSpeed, GpsLatitude, GpsLongitude, ImageWidth, ImageHeight, DateModifiedExif, FileCreatedAt, HasExifMetadata, HasIptcMetadata, HasXmpMetadata, ScannedSourceModifiedAt, ExifSummary, IptcSummary, XmpSummary, HasIccProfile, IccSummary, SummaryFormat, ColorLabel, ScannedSidecarModifiedAt, City, Country, CountryCode, PickState"
 
         Private Shared Function ReadMetaRow(reader As SqliteDataReader) As LibraryImageMeta
             Return New LibraryImageMeta With {
@@ -1268,14 +1330,15 @@ Namespace Services
                 .ScannedSidecarModifiedAt = If(reader.IsDBNull(28), "", reader.GetString(28)),
                 .City = If(reader.IsDBNull(29), "", reader.GetString(29)),
                 .Country = If(reader.IsDBNull(30), "", reader.GetString(30)),
-                .CountryCode = If(reader.IsDBNull(31), "", reader.GetString(31))
+                .CountryCode = If(reader.IsDBNull(31), "", reader.GetString(31)),
+                .PickState = If(reader.IsDBNull(32), 0, NormalizePickState(reader.GetInt32(32)))
             }
         End Function
 
         ''' <summary>Nur die drei Stempel, an denen der Katalogindex erkennt, ob eine Datei erneut
         ''' gelesen werden muss - fuer den Ordner UND alles darunter, in EINER Abfrage.
         '''
-        ''' Warum nicht <see cref="GetMetaForPaths"/>: das holt zweiunddreissig Spalten je Zeile, samt
+        ''' Warum nicht <see cref="GetMetaForPaths"/>: das holt dreiunddreissig Spalten je Zeile, samt
         ''' der vorformatierten Zusammenfassungen. Ueber einen Fotobestand mit sechsstelliger
         ''' Bilderzahl ist das ein Vielfaches an Speicher fuer eine Frage, die drei Zeichenketten
         ''' beantworten. Der Index vergleicht nur und zeigt nichts an.</summary>

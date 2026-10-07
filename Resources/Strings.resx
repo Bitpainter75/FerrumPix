@@ -8655,8 +8655,8 @@
   <data name="Gilt_f_r_alle_Kachelansichten_der_Galerie_enger__a80faeba" xml:space="preserve">
     <value>Applies to every tile view of the gallery; it does not get tighter than four pixels. The list is left alone.</value>
   </data>
-  <data name="Nach_dem_Speichern_unter_die_neue_Datei_ffnen_aeebd97e" xml:space="preserve">
-    <value>Open the new file after Save as</value>
+  <data name="Nach_Speichern_unter_die_neue_Datei_ffnen_15ad139c" xml:space="preserve">
+    <value>Open the new file after “Save as”</value>
   </data>
   <data name="Ausgeschaltet_bleibt_das_bisherige_Bild_im_Edito_96a283d3" xml:space="preserve">
     <value>Switched off, the picture you were working on stays in the editor and the saved file simply sits on disk. Switched on, the editor moves to the new file and carries on there.</value>
@@ -9470,5 +9470,92 @@
   </data>
   <data name="Zeitlos_e1bb3248" xml:space="preserve">
     <value>Timeless</value>
+  </data>
+  <data name="Stapel_auf_oder_zuklappen_62f1a2f7" xml:space="preserve">
+    <value>Expand or collapse stack</value>
+  </data>
+  <data name="Sch_rfe_innerhalb_der_Serie_b46d877c" xml:space="preserve">
+    <value>Sharpness within the burst</value>
+  </data>
+  <data name="STAPEL_e65ce6e3" xml:space="preserve">
+    <value>STACKS</value>
+  </data>
+  <data name="Serien_und_RAW_JPEG_stapeln_f25c79c6" xml:space="preserve">
+    <value>Stack bursts and RAW+JPEG</value>
+  </data>
+  <data name="Alle_Stapel_aufklappen_92710c8f" xml:space="preserve">
+    <value>Expand all stacks</value>
+  </data>
+  <data name="Alle_Stapel_zuklappen_acebd684" xml:space="preserve">
+    <value>Collapse all stacks</value>
+  </data>
+  <data name="VERWORFENE_282370e5" xml:space="preserve">
+    <value>REJECTED</value>
+  </data>
+  <data name="Gedimmt_zeigen_5ef493eb" xml:space="preserve">
+    <value>Show dimmed</value>
+  </data>
+  <data name="Verworfene_ausblenden_0fae7bc7" xml:space="preserve">
+    <value>Hide rejected</value>
+  </data>
+  <data name="Nur_verworfene_4de29eb3" xml:space="preserve">
+    <value>Rejected only</value>
+  </data>
+  <data name="Verworfen_f16ad9ac" xml:space="preserve">
+    <value>Rejected</value>
+  </data>
+  <data name="Das_gew_hlte_Bild_geh_rt_zu_keiner_Serie_f3c9ed16" xml:space="preserve">
+    <value>The selected image is not part of a burst</value>
+  </data>
+  <data name="0_Aufnahmen_der_Serie_verworfen_abc92ec7" xml:space="preserve">
+    <value>{0} shots of the burst rejected</value>
+  </data>
+  <data name="Als_verworfen_markieren_4cbab469" xml:space="preserve">
+    <value>Mark as rejected</value>
+  </data>
+  <data name="Verwerfen_zur_cknehmen_7495df42" xml:space="preserve">
+    <value>Undo reject</value>
+  </data>
+  <data name="Rest_der_Serie_verwerfen_db0ef49b" xml:space="preserve">
+    <value>Reject rest of burst</value>
+  </data>
+  <data name="Stapel_aufklappen_ca058705" xml:space="preserve">
+    <value>Expand stack</value>
+  </data>
+  <data name="Stapel_zuklappen_a0ebedb5" xml:space="preserve">
+    <value>Collapse stack</value>
+  </data>
+  <data name="SHIFT_X_5129d4ce" xml:space="preserve">
+    <value>SHIFT+X</value>
+  </data>
+  <data name="Als_verworfen_markieren_erneut_nimmt_es_zur_ck_a4d2d39a" xml:space="preserve">
+    <value>Mark as rejected (press again to undo)</value>
+  </data>
+  <data name="In_einer_Serie_alles_au_er_dem_gew_hlten_Bild_ve_460ee5e6" xml:space="preserve">
+    <value>In a burst, reject everything except the chosen shot</value>
+  </data>
+  <data name="Serie_mit_0_Aufnahmen_f18c3e8f" xml:space="preserve">
+    <value>Burst of {0} shots</value>
+  </data>
+  <data name="Zur_ck_zum_Ordner_439e81fe" xml:space="preserve">
+    <value>Back to folder</value>
+  </data>
+  <data name="Serie_ffnen_aada409b" xml:space="preserve">
+    <value>Open burst</value>
+  </data>
+  <data name="Serie_schlie_en_4518a1c3" xml:space="preserve">
+    <value>Close burst</value>
+  </data>
+  <data name="Fasst_Aufnahmen_kurz_hintereinander_und_das_Kame_584d9de7" xml:space="preserve">
+    <value>Combines shots taken in quick succession and the camera JPEG next to a RAW into one thumbnail. A click on a burst shows just that burst, with the sharpest shot first.</value>
+  </data>
+  <data name="Eine_Serie_wird_nicht_als_Ganzes_gel_scht_ffne_s_49842129" xml:space="preserve">
+    <value>A burst is not deleted as a whole. Open it and delete the pictures one by one.</value>
+  </data>
+  <data name="Erlaubt_Kopieren_Verschieben_Umbenennen_und_L_sc_253e26b9" xml:space="preserve">
+    <value>Allows copying, moving, renaming and deleting on other drives, mounted media and network folders as well. System folders, the root of a drive and parent folders such as /home or /media always stay locked.</value>
+  </data>
+  <data name="Dateioperationen_au_erhalb_des_pers_nlichen_Ordn_06ca3dd8" xml:space="preserve">
+    <value>Allow file operations outside the home folder</value>
   </data>
 </root>

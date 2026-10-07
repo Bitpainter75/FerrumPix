@@ -45,6 +45,13 @@ Namespace ViewModels
         ''' auch dort nur in der Papierkorbansicht.</summary>
         Public Property RestoreFromTrash As ICommand
 
+        ''' <summary>Aussortieren: verwerfen oder zuruecknehmen, in einer Serie den Rest verwerfen,
+        ''' einen Stapel auf- oder zuklappen. Nur die Galerie bietet sie an - Serien und Stapel
+        ''' gibt es nur dort.</summary>
+        Public Property ToggleReject As ICommand
+        Public Property RejectRestOfStack As ICommand
+        Public Property ToggleStack As ICommand
+
         ' Stapelarbeit am Bild
         Public Property ResizeImage As ICommand
         Public Property ApplyWatermark As ICommand

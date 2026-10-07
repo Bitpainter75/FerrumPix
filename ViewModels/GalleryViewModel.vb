@@ -101,6 +101,17 @@ Namespace ViewModels
         ' eingeloest, der tatsaechlich uebernimmt.
         Private _pendingSelectionPaths As HashSet(Of String)
         Private _filterFavorite As String = "All"
+        ''' Serien und RAW+JPEG-Paare als Stapel zeigen (AppSettings.GalleryStacks).
+        Private _stacksEnabled As Boolean = False
+        ''' Schluessel der aufgeklappten Stapel (ImageStack.Key). Lebt nur in der Sitzung.
+        Private ReadOnly _expandedStacks As New HashSet(Of String)(PathIdentity.Comparer)
+        Private _stacks As New List(Of ImageStack)()
+        ''' Serienansicht: die Pfade der geoeffneten Serie, Nothing = keine. Pfade statt Stapelschluessel,
+        ''' weil der Schluessel an der ersten Aufnahme haengt - wird sie verworfen und ausgeblendet,
+        ''' haette die Ansicht ihre Serie sonst verloren.
+        Private _focusedStackPaths As HashSet(Of String)
+        ''' Verworfene Bilder: "Show" (gedimmt), "Hide" oder "Only".
+        Private _filterRejected As String = "Show"
         Private ReadOnly _filterRatings As New HashSet(Of Integer)()
         ''' Farbetikett-Filter (Mehrfachauswahl). Bewusst NICHT persistiert: Etiketten sind
         ''' Arbeits-Markierungen - ein vergessener, mitgespeicherter Filter würde Wochen später
@@ -180,6 +191,7 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(CurrentFolderName))
                 Me.RaisePropertyChanged(NameOf(BreadcrumbParent))
                 Me.RaisePropertyChanged(NameOf(HasBreadcrumbParent))
+                Me.RaisePropertyChanged(NameOf(CanNavigateParent))
                 If Not String.IsNullOrWhiteSpace(value) AndAlso Directory.Exists(value) Then
                     ' Nur merken; geschrieben wird der Ordner gesammelt beim Schließen der App.
                     AppSettingsService.RememberLastGalleryFolder(value)
@@ -940,7 +952,8 @@ Namespace ViewModels
         Public ReadOnly Property HasActiveFilter As Boolean
             Get
                 Return _filterFavorite <> "All" OrElse _filterRatings.Count > 0 OrElse
-                       _filterFileType <> "All" OrElse _filterColorLabels.Count > 0
+                       _filterFileType <> "All" OrElse _filterColorLabels.Count > 0 OrElse
+                       _filterRejected <> "Show"
             End Get
         End Property
 
@@ -959,7 +972,10 @@ Namespace ViewModels
             _filterRatings.Clear()
             _filterFileType = "All"
             _filterColorLabels.Clear()
+            _filterRejected = "Show"
+            SaveFileBrowserSettings()
             For Each name In {NameOf(IsFilterFavoriteAll), NameOf(IsFilterFavoriteOnly),
+                              NameOf(IsFilterRejectedShow), NameOf(IsFilterRejectedHide), NameOf(IsFilterRejectedOnly),
                               NameOf(IsFilterRatingAll), NameOf(IsFilterRatingUnrated),
                               NameOf(IsFilterRating1Plus), NameOf(IsFilterRating2Plus),
                               NameOf(IsFilterRating3Plus), NameOf(IsFilterRating4Plus),
@@ -1646,20 +1662,36 @@ Namespace ViewModels
         Public ReadOnly Property IncreaseThumbnailSizeCommand As ICommand
         Public ReadOnly Property DecreaseThumbnailSizeCommand As ICommand
         Public ReadOnly Property SetFilterFavoriteCommand As ICommand
+        Public ReadOnly Property SetFilterRejectedCommand As ICommand
+        Public ReadOnly Property ToggleRejectSelectedCommand As ICommand
+        Public ReadOnly Property RejectRestOfStackCommand As ICommand
+        Public ReadOnly Property ExpandAllStacksCommand As ICommand
+        Public ReadOnly Property CloseStackFocusCommand As ICommand
+        Public ReadOnly Property CollapseAllStacksCommand As ICommand
         Public ReadOnly Property SetFilterColorLabelCommand As ICommand
         Public ReadOnly Property SetFilterRatingCommand As ICommand
         Public ReadOnly Property SetFilterTypeCommand As ICommand
         Public ReadOnly Property ClearFiltersCommand As ICommand
 
+        ' In der Serienansicht sind die Knoepfe immer bedienbar: sie beenden dort nur die Ansicht
+        ' (siehe TryCloseStackFocusInstead).
         Public ReadOnly Property CanNavigateBack As Boolean
             Get
-                Return _historyBack.Count > 0
+                Return _historyBack.Count > 0 OrElse IsStackFocused
             End Get
         End Property
 
         Public ReadOnly Property CanNavigateForward As Boolean
             Get
-                Return _historyForward.Count > 0
+                Return _historyForward.Count > 0 OrElse IsStackFocused
+            End Get
+        End Property
+
+        ''' <summary>Der Knopf „Eine Ebene nach oben". Eigene Eigenschaft, weil HasBreadcrumbParent
+        ''' auch die Anzeige des Pfads steuert, die in der Serienansicht unverändert bleibt.</summary>
+        Public ReadOnly Property CanNavigateParent As Boolean
+            Get
+                Return HasBreadcrumbParent OrElse IsStackFocused
             End Get
         End Property
 
@@ -1880,6 +1912,8 @@ Namespace ViewModels
             _filterFavorite = settings.GalleryFilterFavorite
             _filterRatings.UnionWith(settings.GalleryFilterRatings)
             _filterFileType = settings.GalleryFilterFileType
+            _stacksEnabled = settings.GalleryStacks
+            _filterRejected = NormalizeRejectedFilter(settings.GalleryFilterRejected)
             ' Die Galerie lebt so lange wie das Fenster; die Anmeldung haelt sie also nicht
             ' ungebuehrlich am Leben (siehe InfoPanelRowSettings, dasselbe Muster).
             AddHandler TileCaptionSettings.Changed, AddressOf OnTileCaptionSettingsChanged
@@ -1935,10 +1969,13 @@ Namespace ViewModels
 
             RefreshCommand = ReactiveCommand.Create(Sub() LoadCurrentFolder())
             ClearSearchCommand = ReactiveCommand.Create(Sub() SearchText = "")
-            NavigateForwardCommand = ReactiveCommand.Create(Sub() NavigateForward())
-            NavigateUpCommand = ReactiveCommand.Create(Sub() NavigateBack())
-            NavigateParentCommand = ReactiveCommand.Create(Sub() NavigateToParent())
-            NavigatePicturesCommand = ReactiveCommand.Create(Sub() NavigateToPicturesFolder())
+            ' In der Serienansicht beenden die vier Knoepfe der Leiste nur die Ansicht: man ist
+            ' gedanklich noch im Ordner, und ein Klick auf "Zurueck" soll dorthin fuehren und nicht
+            ' in den vorigen Ordner.
+            NavigateForwardCommand = ReactiveCommand.Create(Sub() If Not TryCloseStackFocusInstead() Then NavigateForward())
+            NavigateUpCommand = ReactiveCommand.Create(Sub() If Not TryCloseStackFocusInstead() Then NavigateBack())
+            NavigateParentCommand = ReactiveCommand.Create(Sub() If Not TryCloseStackFocusInstead() Then NavigateToParent())
+            NavigatePicturesCommand = ReactiveCommand.Create(Sub() If Not TryCloseStackFocusInstead() Then NavigateToPicturesFolder())
             SetSortCommand = ReactiveCommand.Create(Of String)(Sub(m) SortMode = m)
             SetSortDirectionCommand = ReactiveCommand.Create(Of String)(Sub(direction)
                                                                             SortAscending = Not String.Equals(direction, "Descending", StringComparison.OrdinalIgnoreCase)
@@ -1991,6 +2028,12 @@ Namespace ViewModels
             SetSelectedRatingCommand = ReactiveCommand.Create(Of String)(Sub(r) SetSelectedRating(r))
             SetSelectedColorLabelCommand = ReactiveCommand.Create(Of String)(Sub(hex) SetSelectedColorLabel(hex))
             SetFilterFavoriteCommand = ReactiveCommand.Create(Of String)(Sub(v) FilterFavorite = v)
+            SetFilterRejectedCommand = ReactiveCommand.Create(Of String)(Sub(v) FilterRejected = v)
+            ToggleRejectSelectedCommand = ReactiveCommand.Create(Sub() ToggleRejectSelected())
+            RejectRestOfStackCommand = ReactiveCommand.Create(Sub() RejectRestOfStack())
+            ExpandAllStacksCommand = ReactiveCommand.Create(Sub() SetAllStacksExpanded(True))
+            CloseStackFocusCommand = ReactiveCommand.Create(Sub() CloseStackFocus())
+            CollapseAllStacksCommand = ReactiveCommand.Create(Sub() SetAllStacksExpanded(False))
             SetFilterRatingCommand = ReactiveCommand.Create(Of String)(Sub(v)
                 Dim r As Integer
                 If Integer.TryParse(v, r) Then ToggleFilterRating(r)
@@ -2589,6 +2632,7 @@ Namespace ViewModels
         ''' Server saehe sie nie, und der naechste Abgleich raeumte sie wieder weg.</summary>
         Friend Sub ApplyRatingTo(items As IList(Of ImageItem), rating As Integer)
             If items Is Nothing OrElse items.Count = 0 Then Return
+            items = WithHiddenPartners(items)
             ' Alte Werte VOR dem Setzen sichern - nur damit kann ein abgelehnter Immich-Schreibvorgang
             ' die Kachel wieder auf ihren echten Stand zurueckdrehen.
             Dim beforePerItem = items.ToDictionary(Function(i) i, Function(i) i.Rating)
@@ -2606,6 +2650,7 @@ Namespace ViewModels
 
         Friend Sub ApplyFavoriteTo(items As IList(Of ImageItem), value As Boolean)
             If items Is Nothing OrElse items.Count = 0 Then Return
+            items = WithHiddenPartners(items)
             For Each item In items
                 Dim before = item.IsFavorite
                 item.IsFavorite = value
@@ -2619,12 +2664,27 @@ Namespace ViewModels
         ''' Pseudo-Pfad ist dafuer ein stabiler Schluessel in der Bibliothek.</summary>
         Friend Sub ApplyColorLabelTo(items As IList(Of ImageItem), colorLabel As String)
             If items Is Nothing OrElse items.Count = 0 Then Return
+            items = WithHiddenPartners(items)
+            For Each item In items
+                item.ColorLabel = If(colorLabel, "")
+            Next
             LibraryService.Instance.SetColorLabelForMany(items.Select(Function(i) i.FilePath), If(colorLabel, ""), syncToXmp:=True)
             If _filterColorLabels.Count > 0 Then FilterAndSort()
         End Sub
 
         Friend Sub ApplyTagTo(items As IList(Of ImageItem), tag As String, add As Boolean)
             If items Is Nothing OrElse items.Count = 0 OrElse String.IsNullOrEmpty(tag) Then Return
+            ' Das Infopanel hat die Stichwortliste der sichtbaren Kachel schon geaendert, die der
+            ' verborgenen Dateien derselben Aufnahme noch nicht.
+            Dim visible As New HashSet(Of ImageItem)(items)
+            items = WithHiddenPartners(items)
+            For Each partner In items.Where(Function(i) Not visible.Contains(i))
+                Dim tags = If(partner.Tags, New List(Of String)()).ToList()
+                Dim has = tags.Contains(tag, StringComparer.OrdinalIgnoreCase)
+                If add AndAlso Not has Then tags.Add(tag)
+                If Not add AndAlso has Then tags.RemoveAll(Function(t) String.Equals(t, tag, StringComparison.OrdinalIgnoreCase))
+                partner.Tags = tags
+            Next
             For Each item In items
                 If item.IsImmichAsset Then
                     If add Then
@@ -2728,7 +2788,7 @@ Namespace ViewModels
         Private Sub SetSelectedRating(ratingText As String)
             Dim rating As Integer
             If Not Integer.TryParse(ratingText, rating) Then Return
-            Dim images = GetSelectedImageItems()
+            Dim images = WithHiddenPartners(GetSelectedImageItems())
             If images.Count = 0 Then Return
 
             Dim currentRating = SelectedRating
@@ -2759,7 +2819,7 @@ Namespace ViewModels
         ''' Taste die Farbe, statt sie wegzunehmen. Sonst hinge das Ergebnis daran, welches Bild
         ''' zufällig zuerst in der Auswahl steht.</summary>
         Private Sub SetSelectedColorLabel(colorLabel As String)
-            Dim images = GetSelectedImageItems()
+            Dim images = WithHiddenPartners(GetSelectedImageItems())
             If images.Count = 0 Then Return
 
             Dim value = If(colorLabel, "")
@@ -2789,6 +2849,7 @@ Namespace ViewModels
                 targets.AddRange(SelectedItems.Where(Function(i) i IsNot Nothing AndAlso i.IsImage))
             End If
             If targets.Count = 0 Then targets.Add(item)
+            targets = WithHiddenPartners(targets)
 
             For Each t In targets
                 t.ColorLabel = target
@@ -2800,9 +2861,11 @@ Namespace ViewModels
         Public Sub SetItemRating(item As ImageItem, rating As Integer)
             If item Is Nothing OrElse Not item.IsImage Then Return
             Dim targetRating = If(item.Rating = rating, 0, rating)
-            Dim before = item.Rating
-            item.Rating = targetRating
-            PersistRating(item, targetRating, before)
+            For Each target In WithHiddenPartners({item})
+                Dim before = target.Rating
+                target.Rating = targetRating
+                PersistRating(target, targetRating, before)
+            Next
 
             If Object.ReferenceEquals(item, _selectedItem) OrElse (SelectedItems IsNot Nothing AndAlso SelectedItems.Contains(item)) Then
                 Me.RaisePropertyChanged(NameOf(SelectedRating))
@@ -4540,6 +4603,7 @@ Namespace ViewModels
                     If Not metaByPath.TryGetValue(item.FilePath, meta) Then Continue For
                     If item.Rating <> meta.Rating Then item.Rating = meta.Rating
                     If item.IsFavorite <> meta.IsFavorite Then item.IsFavorite = meta.IsFavorite
+                    If item.PickState <> meta.PickState Then item.PickState = meta.PickState
                     Dim label = If(meta.ColorLabel, "")
                     If Not String.Equals(If(item.ColorLabel, ""), label, StringComparison.OrdinalIgnoreCase) Then item.ColorLabel = label
                     Dim tags = If(meta.Tags, New List(Of String)())
@@ -6259,6 +6323,7 @@ Namespace ViewModels
                                                           Dim item = ImageItem.CreateLightweight(m.FilePath, thumbnailToken, cacheScopeId, cacheScopeName)
                                                           item.IsFavorite = m.IsFavorite
                                                           item.Rating = m.Rating
+                                                          item.PickState = m.PickState
                                                           item.ColorLabel = m.ColorLabel
                                                           item.Tags = If(m.Tags, New List(Of String)())
                                                           item.ImageWidth = If(m.ImageWidth, 0)
@@ -6992,9 +7057,9 @@ Namespace ViewModels
                                                         currentRating As Integer,
                                                         currentColorLabel As String,
                                                         currentTags As List(Of String)) _
-                                                        As (Rating As Integer?, Favorite As Boolean?, ColorLabel As String, HasColorLabel As Boolean, Tags As List(Of String))
-            Dim result As (Rating As Integer?, Favorite As Boolean?, ColorLabel As String, HasColorLabel As Boolean, Tags As List(Of String)) =
-                (Nothing, Nothing, "", False, Nothing)
+                                                        As (Rating As Integer?, Favorite As Boolean?, ColorLabel As String, HasColorLabel As Boolean, Tags As List(Of String), Pick As Integer?)
+            Dim result As (Rating As Integer?, Favorite As Boolean?, ColorLabel As String, HasColorLabel As Boolean, Tags As List(Of String), Pick As Integer?) =
+                (Nothing, Nothing, "", False, Nothing, Nothing)
             Try
                 ' .fpxmp ist fuer RAW/PSD die primaere portable Katalogquelle. Vor dem XMP-Fallback
                 ' exakt nach SQLite uebernehmen; explizite Leerwerte (0/False/keine Tags/kein Label)
@@ -7008,6 +7073,7 @@ Namespace ViewModels
                         result.HasColorLabel = True
                     End If
                     If fpxmpCatalog.HasKeywords Then result.Tags = New List(Of String)(fpxmpCatalog.Keywords)
+                    If fpxmpCatalog.PickState.HasValue Then result.Pick = fpxmpCatalog.PickState
                 End If
 
                 Dim sidecar As XmpSidecarService.XmpSidecarData = Nothing
@@ -7073,6 +7139,7 @@ Namespace ViewModels
                 If imported.Favorite.HasValue Then meta.IsFavorite = imported.Favorite.Value
                 If imported.HasColorLabel Then meta.ColorLabel = imported.ColorLabel
                 If imported.Tags IsNot Nothing Then meta.Tags = imported.Tags
+                If imported.Pick.HasValue Then meta.PickState = imported.Pick.Value
                 meta.DateTaken = fields.DateTaken
                 meta.DateModifiedExif = fields.DateModifiedExif
                 meta.Camera = fields.Camera
@@ -7609,6 +7676,7 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(CurrentFolderName))
             Me.RaisePropertyChanged(NameOf(BreadcrumbParent))
             Me.RaisePropertyChanged(NameOf(HasBreadcrumbParent))
+            Me.RaisePropertyChanged(NameOf(CanNavigateParent))
             Me.RaisePropertyChanged(NameOf(CanNavigateBack))
             Me.RaisePropertyChanged(NameOf(CanNavigateForward))
             Return thumbnailToken
@@ -7650,6 +7718,7 @@ Namespace ViewModels
                 Dim neu = New ImageItem(meta.FilePath, thumbnailToken, cacheScopeId, cacheScopeName) With {
                     .IsFavorite = meta.IsFavorite,
                     .Rating = meta.Rating,
+                    .PickState = meta.PickState,
                     .ColorLabel = meta.ColorLabel,
                     .Tags = If(meta.Tags, New List(Of String)()),
                     .ImageWidth = If(meta.ImageWidth, 0),
@@ -7849,6 +7918,7 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(CurrentFolderName))
             Me.RaisePropertyChanged(NameOf(BreadcrumbParent))
             Me.RaisePropertyChanged(NameOf(HasBreadcrumbParent))
+            Me.RaisePropertyChanged(NameOf(CanNavigateParent))
         End Sub
 
         ' Anzeigbare Medien. Die Liste steht in MediaFileTypes, weil der Katalogindex dieselben
@@ -8055,8 +8125,11 @@ Namespace ViewModels
         Private Sub DoToggleFavorite(item As ImageItem)
             If item Is Nothing OrElse item.IsFolder Then Return
             Dim newVal = Not item.IsFavorite
-            item.IsFavorite = newVal
-            PersistFavorite(item, newVal, Not newVal)
+            For Each target In WithHiddenPartners({item})
+                Dim before = target.IsFavorite
+                target.IsFavorite = newVal
+                PersistFavorite(target, newVal, before)
+            Next
             If Object.ReferenceEquals(item, _selectedItem) OrElse (SelectedItems IsNot Nothing AndAlso SelectedItems.Contains(item)) Then
                 Me.RaisePropertyChanged(NameOf(SelectedIsFavorite))
             End If
@@ -8066,7 +8139,7 @@ Namespace ViewModels
         ''' Herz in der Fußleiste: setzt die gesamte Auswahl auf denselben Zustand, statt jedes Bild
         ''' einzeln umzuschalten - bei gemischter Auswahl werden also erst alle zu Favoriten.
         Private Sub ToggleSelectedFavorite()
-            Dim images = GetSelectedImageItems()
+            Dim images = WithHiddenPartners(GetSelectedImageItems())
             If images.Count = 0 Then Return
 
             Dim target = Not SelectedIsFavorite
@@ -8451,6 +8524,7 @@ Namespace ViewModels
                 Dim item = ImageItem.CreateLightweight(meta.FilePath, thumbnailToken)
                 item.IsFavorite = meta.IsFavorite
                 item.Rating = meta.Rating
+                item.PickState = meta.PickState
                 item.ColorLabel = meta.ColorLabel
                 item.Tags = If(meta.Tags, New List(Of String)())
                 item.ImageWidth = meta.ImageWidth.GetValueOrDefault()
@@ -8589,6 +8663,7 @@ Namespace ViewModels
                                                                                                           If imported.Rating.HasValue Then item.Rating = imported.Rating.Value
                                                                                                           If imported.Favorite.HasValue Then item.IsFavorite = imported.Favorite.Value
                                                                                                           If imported.HasColorLabel Then item.ColorLabel = imported.ColorLabel
+                                                                                                          If imported.Pick.HasValue Then item.PickState = imported.Pick.Value
                                                                                                           ' Der Tags-Setter verwirft den Suchtext-Cache selbst, die
                                                                                                           ' importierten Stichworte sind also sofort auffindbar.
                                                                                                           If imported.Tags IsNot Nothing Then item.Tags = imported.Tags
@@ -9086,6 +9161,7 @@ Namespace ViewModels
                         If meta.TryGetValue(file, m) Then
                             item.IsFavorite = m.IsFavorite
                             item.Rating = m.Rating
+                            item.PickState = m.PickState
                             item.ColorLabel = m.ColorLabel
                             item.Tags = If(m.Tags, New List(Of String)())
                             ' Nur übernehmen, wenn die Datei sich seit dem letzten EXIF-Scan nicht geändert hat -
@@ -9456,6 +9532,12 @@ Namespace ViewModels
                 filtered = filtered.Where(Function(i) i.IsFolder OrElse i.IsFavorite)
             End If
 
+            If _filterRejected = "Hide" Then
+                filtered = filtered.Where(Function(i) i.IsFolder OrElse Not i.IsRejected)
+            ElseIf _filterRejected = "Only" Then
+                filtered = filtered.Where(Function(i) i.IsFolder OrElse i.IsRejected)
+            End If
+
             If _filterColorLabels.Count > 0 Then
                 filtered = filtered.Where(Function(i) i.IsFolder OrElse _filterColorLabels.Contains(i.ColorLabel))
             End If
@@ -9473,7 +9555,9 @@ Namespace ViewModels
                     String.Equals(i.ExtensionLower, extension, StringComparison.OrdinalIgnoreCase))
             End If
 
-            Items.ReplaceAll(SortItems(filtered))
+            Dim filteredList = filtered.ToList()
+            filteredList = ApplyStackFocus(filteredList)
+            Items.ReplaceAll(ApplyStacks(filteredList, SortItems(filteredList)))
             RefreshFileTypeFilterOptions()
             If DisplayItems.Count = 0 Then
                 ResetDisplayWindow()
@@ -9489,11 +9573,11 @@ Namespace ViewModels
             End If
             Me.RaisePropertyChanged(NameOf(FooterStatusText))
 
-            ' Ein Durchlauf für beide Zahlen statt zweier - die Liste ist hier bereits gefiltert und
-            ' sortiert, sie noch zweimal komplett abzugehen ist reine Zugabe.
+            ' Ein Durchlauf für beide Zahlen statt zweier. Gezaehlt wird ueber die gefilterte Liste
+            ' und nicht ueber Items: ein zugeklappter Stapel ist EINE Kachel, aber mehrere Bilder.
             Dim imageCount = 0
             Dim folderCount = 0
-            For Each item In Items
+            For Each item In filteredList
                 If item.IsImage Then
                     imageCount += 1
                 ElseIf item.IsFolder AndAlso Not item.IsParentFolderEntry Then
@@ -9506,6 +9590,470 @@ Namespace ViewModels
                 StatusText = $"{imageCount} {LocalizationService.T("Bilder")}  •  {folderCount} {LocalizationService.T("Ordner")}  •  {CurrentFolderName}"
             End If
         End Sub
+
+        ' ── Stapel: Serien und RAW+JPEG-Paare ───────────────────────────────────
+        '
+        ' Gebildet wird bei jedem Filterlauf aus der GEFILTERTEN Liste: was ein Filter ausblendet,
+        ' gehoert auch keinem Stapel an. Items traegt danach je zugeklapptem Stapel nur die Kachel der
+        ' fuehrenden Aufnahme; aufgeklappt folgen ihr die uebrigen Dateien direkt dahinter. Damit
+        ' sehen Auswahl, Betrachterliste und Gruppenansicht genau das, was im Raster steht.
+
+        Public Property StacksEnabled As Boolean
+            Get
+                Return _stacksEnabled
+            End Get
+            Set(value As Boolean)
+                If _stacksEnabled = value Then Return
+                Me.RaiseAndSetIfChanged(_stacksEnabled, value)
+                FilterAndSort()
+                SaveFileBrowserSettings()
+            End Set
+        End Property
+
+        ' ── Verwerfen ───────────────────────────────────────────────────────────
+        '
+        ' Eine Markierung, kein Loeschen: verworfene Bilder bleiben, wo sie sind, und lassen sich mit
+        ' dem Filter ausblenden oder gesammelt zeigen. Geloescht wird danach bewusst und von Hand.
+
+        Public Property FilterRejected As String
+            Get
+                Return _filterRejected
+            End Get
+            Set(value As String)
+                value = NormalizeRejectedFilter(value)
+                If _filterRejected = value Then Return
+                Me.RaiseAndSetIfChanged(_filterRejected, value)
+                Me.RaisePropertyChanged(NameOf(IsFilterRejectedShow))
+                Me.RaisePropertyChanged(NameOf(IsFilterRejectedHide))
+                Me.RaisePropertyChanged(NameOf(IsFilterRejectedOnly))
+                Me.RaisePropertyChanged(NameOf(HasActiveFilter))
+                Me.RaisePropertyChanged(NameOf(FilterLabel))
+                FilterAndSort()
+                SaveFileBrowserSettings()
+            End Set
+        End Property
+
+        Public ReadOnly Property IsFilterRejectedShow As Boolean
+            Get
+                Return _filterRejected = "Show"
+            End Get
+        End Property
+
+        Public ReadOnly Property IsFilterRejectedHide As Boolean
+            Get
+                Return _filterRejected = "Hide"
+            End Get
+        End Property
+
+        Public ReadOnly Property IsFilterRejectedOnly As Boolean
+            Get
+                Return _filterRejected = "Only"
+            End Get
+        End Property
+
+        ''' <summary>X in der Galerie: verwirft die Auswahl, oder nimmt das Verwerfen zurueck, wenn
+        ''' schon alles verworfen ist (wie bei den Sternen: dieselbe Taste noch einmal hebt auf).</summary>
+        Public Sub ToggleRejectSelected()
+            ToggleRejectFor(GetSelectedImageItems())
+        End Sub
+
+        Public Sub ToggleRejectFor(items As IEnumerable(Of ImageItem))
+            ' Nur LOKALE Bilder: die Markierung lebt im lokalen Katalog und in der Beistelldatei.
+            ' Ein Serverbild bekaeme sie unter seinem Pseudo-Pfad, der Server erfuehre nichts davon,
+            ' und nach dem Neuladen waere sie weg. Dieselbe Regel wie im Kontextmenue - hier steht sie
+            ' noch einmal, weil X nicht durch das Menue geht.
+            Dim visible = If(items, Enumerable.Empty(Of ImageItem)()).
+                Where(Function(i) i IsNot Nothing AndAlso i.IsImage AndAlso Not i.IsRemoteAsset).ToList()
+            If visible.Count = 0 Then Return
+            Dim target = If(visible.All(Function(i) i.IsRejected), 0, -1)
+            ApplyPickState(WithHiddenPartners(visible), target)
+        End Sub
+
+        ''' <summary>SHIFT+X: in der Serie der gewaehlten Kachel alles verwerfen ausser dieser einen
+        ''' Aufnahme (samt ihrem JPEG). Die behaltene verliert ein frueheres Verwerfen.</summary>
+        Public Sub RejectRestOfStack()
+            RejectRestOfStack(If(_selectedItem, GetSelectedImageItems().FirstOrDefault()))
+        End Sub
+
+        Public Sub RejectRestOfStack(anchor As ImageItem)
+            Dim stack = anchor?.Stack
+            If stack Is Nothing OrElse Not stack.IsBurst Then
+                StatusText = LocalizationService.T("Das gewählte Bild gehört zu keiner Serie")
+                Return
+            End If
+            Dim keep = stack.ShotOf(anchor)
+            Dim rest = stack.Shots.Where(Function(s) s IsNot keep).ToList()
+            Dim keptRejected = keep.Files.Where(Function(f) f.IsRejected).ToList()
+            If keptRejected.Count > 0 Then ApplyPickState(keptRejected, 0)
+            ApplyPickState(rest.SelectMany(Function(s) s.Files).ToList(), -1)
+            StatusText = String.Format(Globalization.CultureInfo.CurrentCulture,
+                                       LocalizationService.T("{0} Aufnahmen der Serie verworfen"), rest.Count)
+        End Sub
+
+        Private Sub ApplyPickState(items As List(Of ImageItem), state As Integer)
+            items = items?.Where(Function(i) i IsNot Nothing AndAlso Not i.IsRemoteAsset).ToList()
+            If items Is Nothing OrElse items.Count = 0 Then Return
+            For Each item In items
+                item.PickState = state
+            Next
+            LibraryService.Instance.SetPickStateForMany(items.Select(Function(i) i.FilePath), state, syncToXmp:=True)
+            If _filterRejected <> "Show" Then FilterAndSort()
+        End Sub
+
+        Friend Shared Function NormalizeRejectedFilter(value As String) As String
+            Select Case value
+                Case "Hide", "Only" : Return value
+                Case Else : Return "Show"
+            End Select
+        End Function
+
+        Private Function ApplyStacks(filtered As List(Of ImageItem), sorted As IEnumerable(Of ImageItem)) As List(Of ImageItem)
+            For Each old In _stacks
+                For Each file In old.AllFiles()
+                    ResetStackState(file)
+                Next
+            Next
+            _stacks = If(_stacksEnabled, ImageStackService.Build(filtered), New List(Of ImageStack)())
+            If _stacks.Count = 0 Then Return sorted.ToList()
+
+            Dim focused = IsStackFocused
+            For Each stack In _stacks
+                ImageStackService.ChooseLead(stack, Function(i) i.Sharpness)
+                Dim lead = stack.LeadShot.Primary
+                For Each file In stack.AllFiles()
+                    file.Stack = stack
+                Next
+                lead.StackBadgeText = StackBadgeText(stack)
+                If focused Then
+                    ' Serienansicht: jede Aufnahme eine Kachel, ihr JPEG dahinter verborgen.
+                    lead.IsStackExpanded = True
+                    For Each shot In stack.Shots
+                        shot.Primary.HiddenPartners = shot.Files.Skip(1).ToList()
+                    Next
+                    For Each file In stack.AllFiles()
+                        file.IsInStackFocus = True
+                    Next
+                Else
+                    Dim expanded = _expandedStacks.Contains(stack.Key)
+                    For Each file In stack.AllFiles()
+                        file.IsStackMember = expanded AndAlso file IsNot lead
+                    Next
+                    lead.IsStackExpanded = expanded
+                    If Not expanded Then lead.HiddenPartners = stack.LeadShot.Files.Skip(1).ToList()
+                End If
+                ApplyStackSharpness(stack)
+            Next
+
+            Dim result As New List(Of ImageItem)(filtered.Count)
+            Dim placed As New HashSet(Of ImageStack)()
+            For Each item In sorted
+                Dim stack = item.Stack
+                If stack Is Nothing Then
+                    result.Add(item)
+                    Continue For
+                End If
+                ' Der Stapel steht dort, wo sein erstes Mitglied in der Sortierung steht.
+                If Not placed.Add(stack) Then Continue For
+                If focused Then
+                    ' In der Serienansicht in der Zeitfolge: so wird eine Serie durchgesehen.
+                    result.AddRange(stack.Shots.Select(Function(s) s.Primary))
+                Else
+                    result.AddRange(StackDisplayOrder(stack, _expandedStacks.Contains(stack.Key)))
+                End If
+            Next
+            QueueStackSharpness()
+            Return result
+        End Function
+
+        ''' <summary>Die Kacheln eines Stapels in der Reihenfolge des Rasters: die fuehrende Aufnahme
+        ''' vorn (ihre Kachel traegt das Abzeichen und bleibt beim Aufklappen an ihrer Stelle), danach
+        ''' die uebrigen in der Zeitfolge.</summary>
+        Private Shared Iterator Function StackDisplayOrder(stack As ImageStack, expanded As Boolean) As IEnumerable(Of ImageItem)
+            Yield stack.LeadShot.Primary
+            If Not expanded Then Return
+            For Each file In stack.LeadShot.Files.Skip(1)
+                Yield file
+            Next
+            For Each shot In stack.Shots
+                If shot Is stack.LeadShot Then Continue For
+                For Each file In shot.Files
+                    Yield file
+                Next
+            Next
+        End Function
+
+        Private Shared Sub ResetStackState(item As ImageItem)
+            item.Stack = Nothing
+            item.HiddenPartners = Array.Empty(Of ImageItem)()
+            item.StackBadgeText = ""
+            item.IsStackExpanded = False
+            item.IsStackMember = False
+            item.IsInStackFocus = False
+            item.SharpnessShare = -1
+            item.IsSharpestInStack = False
+        End Sub
+
+        ''' <summary>Serie: die Zahl der Aufnahmen. Paar allein: die beiden Endungen, etwa
+        ''' "NEF+JPG" - das sagt mehr als eine 2, die wie eine Serie aussaehe.</summary>
+        Private Shared Function StackBadgeText(stack As ImageStack) As String
+            If stack.IsBurst Then Return stack.Shots.Count.ToString(Globalization.CultureInfo.InvariantCulture)
+            Return String.Join("+", stack.LeadShot.Files.Select(
+                Function(f) IO.Path.GetExtension(f.FilePath).TrimStart("."c).ToUpperInvariant()))
+        End Function
+
+        ''' <summary>Schaerfebalken einer Serie: jede Aufnahme im Verhaeltnis zur schaerfsten. Erst
+        ''' wenn alle gemessen sind - ein Balken gegen eine halbe Serie waere ein falscher Vergleich.</summary>
+        Private Shared Sub ApplyStackSharpness(stack As ImageStack)
+            If Not stack.IsBurst Then Return
+            If stack.Shots.Any(Function(s) Not s.Primary.Sharpness.HasValue) Then Return
+            Dim best = stack.Shots.Max(Function(s) s.Primary.Sharpness.Value)
+            If best <= 0 Then Return
+            For Each shot In stack.Shots
+                Dim share = shot.Primary.Sharpness.Value / best
+                For Each file In shot.Files
+                    file.SharpnessShare = share
+                    file.IsSharpestInStack = shot Is stack.LeadShot
+                Next
+            Next
+        End Sub
+
+        ' ── Schaerfe der Serien ─────────────────────────────────────────────────
+        '
+        ' Gemessen wird nur, was in einer Serie der aktuellen Ansicht steht, auf EINEM
+        ' Hintergrundfaden und durch die Decode-Schleuse (SharpnessService). Ein fertiger Wert
+        ' setzt die Balken seiner Serie sofort; nur wenn er die fuehrende Aufnahme aendert, wird
+        ' die Liste neu aufgebaut - und das gebuendelt, nicht je Wert.
+
+        Private ReadOnly _sharpnessQueue As New Concurrent.ConcurrentQueue(Of ImageItem)()
+        Private ReadOnly _sharpnessQueued As New HashSet(Of ImageItem)()
+        Private _sharpnessWorkerRunning As Integer
+        Private _stackRefreshTimer As DispatcherTimer
+
+        Private Sub QueueStackSharpness()
+            For Each stack In _stacks
+                If Not stack.IsBurst Then Continue For
+                For Each shot In stack.Shots
+                    Dim item = shot.Primary
+                    If item.Sharpness.HasValue OrElse Not _sharpnessQueued.Add(item) Then Continue For
+                    _sharpnessQueue.Enqueue(item)
+                Next
+            Next
+            StartSharpnessWorker()
+        End Sub
+
+        Private Sub StartSharpnessWorker()
+            If _sharpnessQueue.IsEmpty Then Return
+            If Interlocked.CompareExchange(_sharpnessWorkerRunning, 1, 0) <> 0 Then Return
+            Dim ignored = Task.Run(AddressOf RunSharpnessWorker)
+        End Sub
+
+        Private Sub RunSharpnessWorker()
+            Try
+                Dim item As ImageItem = Nothing
+                While _sharpnessQueue.TryDequeue(item)
+                    Dim current = item
+                    ' Steht die Aufnahme in keiner Serie mehr (Ordnerwechsel, Filter, Stapel
+                    ' ausgeschaltet), wird nicht gemessen; sie kommt wieder, sobald sie es tut.
+                    Dim stack = current.Stack
+                    If stack Is Nothing OrElse Not stack.IsBurst Then
+                        Dispatcher.UIThread.Post(Sub() _sharpnessQueued.Remove(current))
+                        Continue While
+                    End If
+                    Dim score = SharpnessService.Measure(current.FilePath)
+                    Dispatcher.UIThread.Post(Sub() OnSharpnessMeasured(current, score))
+                End While
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Gallery.Sharpness", ex)
+            Finally
+                Interlocked.Exchange(_sharpnessWorkerRunning, 0)
+            End Try
+            ' Was zwischen dem letzten TryDequeue und dem Freigeben dazukam, haette sonst niemand.
+            Dispatcher.UIThread.Post(AddressOf StartSharpnessWorker)
+        End Sub
+
+        Private Sub OnSharpnessMeasured(item As ImageItem, score As Double?)
+            _sharpnessQueued.Remove(item)
+            ' Ohne lesbare Vorschau zaehlt die Aufnahme als unscharf: sonst wartete die Serie ewig
+            ' auf den letzten Wert und zeigte nie Balken.
+            item.Sharpness = If(score, 0.0)
+            Dim stack = item.Stack
+            If stack Is Nothing Then Return
+            Dim before = stack.LeadShot
+            ImageStackService.ChooseLead(stack, Function(i) i.Sharpness)
+            If stack.LeadShot Is before Then
+                ApplyStackSharpness(stack)
+            Else
+                stack.LeadShot = before
+                ScheduleStackRefresh()
+            End If
+        End Sub
+
+        Private Sub ScheduleStackRefresh()
+            If _stackRefreshTimer Is Nothing Then
+                _stackRefreshTimer = New DispatcherTimer With {.Interval = TimeSpan.FromMilliseconds(600)}
+                AddHandler _stackRefreshTimer.Tick, Sub()
+                                                        _stackRefreshTimer.Stop()
+                                                        FilterAndSort()
+                                                    End Sub
+            End If
+            _stackRefreshTimer.Stop()
+            _stackRefreshTimer.Start()
+        End Sub
+
+        ' ── Serienansicht ───────────────────────────────────────────────────────
+        '
+        ' Ein Klick auf das Abzeichen einer SERIE filtert die Galerie auf genau diese Serie: jede
+        ' Aufnahme eine Kachel, in der Zeitfolge, mit Schaerfebalken. Die uebrigen Filter gelten
+        ' weiter, so dass "Verworfene ausblenden" die Serie beim Aussortieren schrumpfen laesst.
+        ' Ein PAAR allein klappt dagegen in der Zeile auf - eine Ansicht mit einem einzigen Bild
+        ' waere keine.
+
+        Public ReadOnly Property IsStackFocused As Boolean
+            Get
+                Return _focusedStackPaths IsNot Nothing
+            End Get
+        End Property
+
+        Private _stackFocusText As String = ""
+        Public ReadOnly Property StackFocusText As String
+            Get
+                Return _stackFocusText
+            End Get
+        End Property
+
+        Public Sub OpenOrCloseStack(item As ImageItem)
+            If item Is Nothing Then Return
+            If IsStackFocused Then
+                CloseStackFocus()
+                Return
+            End If
+            Dim stack = item.Stack
+            If stack Is Nothing Then Return
+            If Not stack.IsBurst Then
+                ToggleStackExpanded(item)
+                Return
+            End If
+            _focusedStackPaths = New HashSet(Of String)(stack.AllFiles().Select(Function(f) f.FilePath), PathIdentity.Comparer)
+            RaiseStackFocusChanged()
+            FilterAndSort()
+            Dim lead = stack.LeadShot.Primary
+            If Items.Contains(lead) Then ReplaceSelection({lead})
+        End Sub
+
+        Public Sub CloseStackFocus()
+            If Not IsStackFocused Then Return
+            Dim selected = GetSelectedImageItems().FirstOrDefault()
+            _focusedStackPaths = Nothing
+            RaiseStackFocusChanged()
+            FilterAndSort()
+            ' Zurueck im Ordner steht die Serie wieder zugeklappt; markiert wird ihre Kachel, damit
+            ' man sieht, wo man war.
+            Dim back = If(selected?.Stack?.LeadShot?.Primary, selected)
+            If back IsNot Nothing AndAlso Items.Contains(back) Then
+                ReplaceSelection({back})
+            Else
+                ReplaceSelection(Enumerable.Empty(Of ImageItem)())
+            End If
+        End Sub
+
+        ''' <summary>Schraenkt die gefilterte Liste auf die geoeffnete Serie ein.
+        '''
+        ''' Die Ansicht endet von selbst, sobald im BESTAND keine Serie mehr daraus wird - nach dem
+        ''' Loeschen bis auf eine Aufnahme ebenso wie nach einem Ordnerwechsel. Gezaehlt wird am
+        ''' Bestand und nicht an der gefilterten Liste: ein Filter, der die Serie gerade leer oder auf
+        ''' ein Bild zeigt, laesst sich zuruecknehmen, ein geloeschtes Bild nicht. Wird die Serie
+        ''' dabei wieder zur Einzelaufnahme, steht sie danach markiert im Ordner.</summary>
+        Private Function ApplyStackFocus(filtered As List(Of ImageItem)) As List(Of ImageItem)
+            If _focusedStackPaths Is Nothing Then Return filtered
+            Dim remaining = _allItems.Where(Function(i) i IsNot Nothing AndAlso Not String.IsNullOrEmpty(i.FilePath) AndAlso
+                                                        _focusedStackPaths.Contains(i.FilePath)).ToList()
+            If Not ImageStackService.Build(remaining).Any(Function(s) s.IsBurst) Then
+                _focusedStackPaths = Nothing
+                RaiseStackFocusChanged()
+                Dim last = remaining.FirstOrDefault(Function(i) i.IsRawFile)
+                If last Is Nothing Then last = remaining.FirstOrDefault()
+                If last IsNot Nothing Then
+                    ' Nach dem Neuaufbau markieren, nicht mittendrin: die Liste steht hier noch nicht.
+                    Dispatcher.UIThread.Post(Sub()
+                                                 If Items.Contains(last) Then ReplaceSelection({last})
+                                             End Sub)
+                End If
+                Return filtered
+            End If
+            Dim result = filtered.Where(Function(i) i.IsImage AndAlso _focusedStackPaths.Contains(i.FilePath)).ToList()
+            Dim shots = ImageStackService.Build(result).Sum(Function(s) s.Shots.Count)
+            _stackFocusText = String.Format(Globalization.CultureInfo.CurrentCulture,
+                                            LocalizationService.T("Serie mit {0} Aufnahmen"), If(shots > 0, shots, result.Count))
+            Me.RaisePropertyChanged(NameOf(StackFocusText))
+            Return result
+        End Function
+
+        Private Sub RaiseStackFocusChanged()
+            Me.RaisePropertyChanged(NameOf(IsStackFocused))
+            Me.RaisePropertyChanged(NameOf(StackFocusText))
+            ' Die Knoepfe der Leiste sind in der Serienansicht immer bedienbar - sie fuehren zurueck
+            ' in den Ordner, auch wenn es sonst keinen Verlauf gaebe.
+            Me.RaisePropertyChanged(NameOf(CanNavigateBack))
+            Me.RaisePropertyChanged(NameOf(CanNavigateForward))
+            Me.RaisePropertyChanged(NameOf(HasBreadcrumbParent))
+            Me.RaisePropertyChanged(NameOf(CanNavigateParent))
+        End Sub
+
+        ''' <summary>Steht die Galerie in einer Serie, beendet das nur die Serienansicht und liefert
+        ''' True; der Aufrufer wechselt dann NICHT den Ordner.</summary>
+        Private Function TryCloseStackFocusInstead() As Boolean
+            If Not IsStackFocused Then Return False
+            CloseStackFocus()
+            Return True
+        End Function
+
+        ''' <summary>Klappt den Stapel der Kachel auf oder zu. Beim Zuklappen fallen die verborgenen
+        ''' Dateien aus der Auswahl - sonst wirkte die naechste Aktion auf Bilder, die man nicht sieht.</summary>
+        Public Sub ToggleStackExpanded(item As ImageItem)
+            Dim stack = item?.Stack
+            If stack Is Nothing Then Return
+            If Not _expandedStacks.Remove(stack.Key) Then _expandedStacks.Add(stack.Key)
+            FilterAndSort()
+            If Not _expandedStacks.Contains(stack.Key) Then DeselectHidden(stack)
+        End Sub
+
+        Public Sub SetAllStacksExpanded(expanded As Boolean)
+            Dim stacks = _stacks.ToList()
+            If stacks.Count = 0 Then Return
+            For Each stack In stacks
+                If expanded Then _expandedStacks.Add(stack.Key) Else _expandedStacks.Remove(stack.Key)
+            Next
+            FilterAndSort()
+            If Not expanded Then
+                For Each stack In stacks
+                    DeselectHidden(stack)
+                Next
+            End If
+        End Sub
+
+        Private Sub DeselectHidden(stack As ImageStack)
+            Dim lead = stack.LeadShot.Primary
+            Dim hidden = stack.AllFiles().Where(Function(f) f IsNot lead AndAlso f.IsSelected).ToList()
+            If hidden.Count = 0 Then Return
+            ReplaceSelection(SelectedItems.Where(Function(i) Not hidden.Contains(i)).ToList())
+        End Sub
+
+        ''' <summary>Nimmt zu jeder Kachel die Dateien derselben Aufnahme dazu, die hinter ihr
+        ''' verborgen sind (beim zugeklappten Paar das JPEG). Fuer alles, was die AUFNAHME meint:
+        ''' Bewertung, Etikett, Favorit, Stichwort, Verwerfen, Loeschen. Nicht fuer Oeffnen,
+        ''' Exportieren und Umwandeln - dort ist die sichtbare Datei gemeint.</summary>
+        Friend Shared Function WithHiddenPartners(items As IEnumerable(Of ImageItem)) As List(Of ImageItem)
+            Dim result As New List(Of ImageItem)()
+            Dim seen As New HashSet(Of ImageItem)()
+            For Each item In items
+                If item Is Nothing Then Continue For
+                If seen.Add(item) Then result.Add(item)
+                For Each partner In item.HiddenPartners
+                    If seen.Add(partner) Then result.Add(partner)
+                Next
+            Next
+            Return result
+        End Function
 
         Private Function SortItems(items As IEnumerable(Of ImageItem)) As IEnumerable(Of ImageItem)
             Dim parent = items.Where(Function(i) i.IsParentFolderEntry).ToList()
@@ -10504,6 +11052,12 @@ Namespace ViewModels
         End Function
 
         Public Sub DeleteSelected()
+            ' Eine zugeklappte Serie wird nicht als Ganzes geloescht: hinter der Kachel liegen
+            ' Aufnahmen, die man nicht sieht. Geloescht wird in der Serienansicht, Bild fuer Bild.
+            If GetSelectedImageItems().Any(Function(i) i.IsCollapsedBurst) Then
+                StatusText = LocalizationService.T("Eine Serie wird nicht als Ganzes gelöscht. Öffne sie und lösche die Bilder einzeln.")
+                Return
+            End If
             If _isVirtualFolder Then
                 ' Immich-Items haben keinen Dateipfad (Pseudo-Pfad) - sie werden auf dem Server gelöscht,
                 ' alles andere in der virtuellen Ansicht (Suchliste) wie gewohnt lokal.
@@ -10515,11 +11069,11 @@ Namespace ViewModels
                 If nextcloudItems.Count > 0 Then
                     Dim ignored2 = DeleteNextcloudFilesAsync(nextcloudItems)
                 End If
-                Dim virtualTargets = GetSelectedPaths().Where(Function(p) File.Exists(p)).ToList()
+                Dim virtualTargets = GetSelectedPathsWithPartners().Where(Function(p) File.Exists(p)).ToList()
                 DeletePaths(virtualTargets)
                 Return
             End If
-            Dim targets = GetSelectedPaths()
+            Dim targets = GetSelectedPathsWithPartners()
             If targets.Count = 0 AndAlso SelectedFolderNode IsNot Nothing AndAlso SelectedItem Is Nothing Then
                 targets.Add(SelectedFolderNode.FullPath)
             End If
@@ -10626,6 +11180,14 @@ Namespace ViewModels
         ''' löschen" zeigt (VirtualNavigationNode.CanDeleteImmichAlbum) - wird sie umgelegt, während die
         ''' Galerie offen ist, müssen beide das mitbekommen. Die Album-Knoten baut RefreshImmichAlbumsAsync
         ''' dafür neu auf (der Knoten hat keine Benachrichtigung).</summary>
+        ''' <summary>Nach dem Umlegen von „Dateiarbeit ausserhalb des persönlichen Ordners": jede Kachel
+        ''' fragt ihren Löschknopf neu ab.</summary>
+        Public Sub RefreshFileOperationFlags()
+            For Each item In _allItems.Where(Function(i) i IsNot Nothing)
+                item.RefreshFileOperationFlags()
+            Next
+        End Sub
+
         Public Sub RefreshImmichDeletePermission()
             For Each item In _allItems.Where(Function(i) i IsNot Nothing AndAlso i.IsImmichAsset)
                 item.RefreshFileOperationFlags()
@@ -10899,6 +11461,21 @@ Namespace ViewModels
                 ToList()
         End Function
 
+        ''' <summary>Wie <see cref="GetSelectedPaths"/>, dazu die Dateien, die hinter einer
+        ''' zugeklappten Kachel derselben Aufnahme liegen. Fuer Loeschen, Ausschneiden und Kopieren:
+        ''' ein RAW ohne sein JPEG zu verschieben trennte das Paar.</summary>
+        Public Function GetSelectedPathsWithPartners() As List(Of String)
+            Dim selected = If(SelectedItems Is Nothing OrElse SelectedItems.Count = 0,
+                              If(SelectedItem Is Nothing, Enumerable.Empty(Of ImageItem)(), {SelectedItem}),
+                              SelectedItems)
+            Return WithHiddenPartners(selected).
+                Where(Function(i) Not i.IsParentFolderEntry).
+                Select(Function(i) i.FilePath).
+                Where(Function(p) Not String.IsNullOrEmpty(p)).
+                Distinct(PathIdentity.Comparer).
+                ToList()
+        End Function
+
         ''' <summary>Öffnet den Druckdialog für die Auswahl. Immich-Assets tragen in FilePath nur
         ''' einen Pseudopfad - für sie muss erst das Original lokal vorliegen, sonst fände der
         ''' PDF-Renderer keine Datei. Videos scheiden aus (nichts zu drucken).</summary>
@@ -11165,7 +11742,7 @@ Namespace ViewModels
         End Function
 
         Public Sub StoreClipboard(cut As Boolean)
-            Dim paths = GetSelectedPaths()
+            Dim paths = GetSelectedPathsWithPartners()
             paths = paths.Where(Function(p) If(cut, FileOperationPolicy.CanRename(p), FileOperationPolicy.CanCopy(p))).ToList()
             If paths.Count = 0 Then
                 StatusText = LocalizationService.T("Kein Element ausgewählt")
@@ -13152,6 +13729,8 @@ Namespace ViewModels
                                           s.GalleryRatingBadgesAlwaysVisible = _ratingBadgesAlwaysVisible
                                           s.GalleryFavoriteBadgeAlwaysVisible = _favoriteBadgeAlwaysVisible
                                           s.GalleryMetadataBadgesAlwaysVisible = _metadataBadgesAlwaysVisible
+                                          s.GalleryStacks = _stacksEnabled
+                                          s.GalleryFilterRejected = _filterRejected
                                       End Sub)
         End Sub
 

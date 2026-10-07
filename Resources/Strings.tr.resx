@@ -8684,7 +8684,7 @@
   <data name="Gilt_f_r_alle_Kachelansichten_der_Galerie_enger__a80faeba" xml:space="preserve">
     <value>Galerinin bütün karo görünümleri için geçerlidir; dört pikselden dar olmaz. Liste görünümü değişmez.</value>
   </data>
-  <data name="Nach_dem_Speichern_unter_die_neue_Datei_ffnen_aeebd97e" xml:space="preserve">
+  <data name="Nach_Speichern_unter_die_neue_Datei_ffnen_15ad139c" xml:space="preserve">
     <value>Farklı kaydetten sonra yeni dosyayı aç</value>
   </data>
   <data name="Ausgeschaltet_bleibt_das_bisherige_Bild_im_Edito_96a283d3" xml:space="preserve">
@@ -9495,5 +9495,92 @@
   </data>
   <data name="Zeitlos_e1bb3248" xml:space="preserve">
     <value>Zamansız</value>
+  </data>
+  <data name="Stapel_auf_oder_zuklappen_62f1a2f7" xml:space="preserve">
+    <value>Yığını aç veya kapat</value>
+  </data>
+  <data name="Sch_rfe_innerhalb_der_Serie_b46d877c" xml:space="preserve">
+    <value>Seri içindeki netlik</value>
+  </data>
+  <data name="STAPEL_e65ce6e3" xml:space="preserve">
+    <value>YIĞINLAR</value>
+  </data>
+  <data name="Serien_und_RAW_JPEG_stapeln_f25c79c6" xml:space="preserve">
+    <value>Serileri ve RAW+JPEG'i yığınla</value>
+  </data>
+  <data name="Alle_Stapel_aufklappen_92710c8f" xml:space="preserve">
+    <value>Tüm yığınları aç</value>
+  </data>
+  <data name="Alle_Stapel_zuklappen_acebd684" xml:space="preserve">
+    <value>Tüm yığınları kapat</value>
+  </data>
+  <data name="VERWORFENE_282370e5" xml:space="preserve">
+    <value>REDDEDİLENLER</value>
+  </data>
+  <data name="Gedimmt_zeigen_5ef493eb" xml:space="preserve">
+    <value>Soluk göster</value>
+  </data>
+  <data name="Verworfene_ausblenden_0fae7bc7" xml:space="preserve">
+    <value>Reddedilenleri gizle</value>
+  </data>
+  <data name="Nur_verworfene_4de29eb3" xml:space="preserve">
+    <value>Yalnızca reddedilenler</value>
+  </data>
+  <data name="Verworfen_f16ad9ac" xml:space="preserve">
+    <value>Reddedildi</value>
+  </data>
+  <data name="Das_gew_hlte_Bild_geh_rt_zu_keiner_Serie_f3c9ed16" xml:space="preserve">
+    <value>Seçilen görüntü bir seriye ait değil</value>
+  </data>
+  <data name="0_Aufnahmen_der_Serie_verworfen_abc92ec7" xml:space="preserve">
+    <value>Serideki {0} çekim reddedildi</value>
+  </data>
+  <data name="Als_verworfen_markieren_4cbab469" xml:space="preserve">
+    <value>Reddedildi olarak işaretle</value>
+  </data>
+  <data name="Verwerfen_zur_cknehmen_7495df42" xml:space="preserve">
+    <value>Reddi geri al</value>
+  </data>
+  <data name="Rest_der_Serie_verwerfen_db0ef49b" xml:space="preserve">
+    <value>Serinin geri kalanını reddet</value>
+  </data>
+  <data name="Stapel_aufklappen_ca058705" xml:space="preserve">
+    <value>Yığını aç</value>
+  </data>
+  <data name="Stapel_zuklappen_a0ebedb5" xml:space="preserve">
+    <value>Yığını kapat</value>
+  </data>
+  <data name="SHIFT_X_5129d4ce" xml:space="preserve">
+    <value>SHIFT+X</value>
+  </data>
+  <data name="Als_verworfen_markieren_erneut_nimmt_es_zur_ck_a4d2d39a" xml:space="preserve">
+    <value>Reddedildi olarak işaretle (tekrar basmak geri alır)</value>
+  </data>
+  <data name="In_einer_Serie_alles_au_er_dem_gew_hlten_Bild_ve_460ee5e6" xml:space="preserve">
+    <value>Seride seçilen çekim dışındaki her şeyi reddet</value>
+  </data>
+  <data name="Serie_mit_0_Aufnahmen_f18c3e8f" xml:space="preserve">
+    <value>{0} çekimlik seri</value>
+  </data>
+  <data name="Zur_ck_zum_Ordner_439e81fe" xml:space="preserve">
+    <value>Klasöre dön</value>
+  </data>
+  <data name="Serie_ffnen_aada409b" xml:space="preserve">
+    <value>Seriyi aç</value>
+  </data>
+  <data name="Serie_schlie_en_4518a1c3" xml:space="preserve">
+    <value>Seriyi kapat</value>
+  </data>
+  <data name="Fasst_Aufnahmen_kurz_hintereinander_und_das_Kame_584d9de7" xml:space="preserve">
+    <value>Art arda çekilen fotoğrafları ve RAW'ın yanındaki kamera JPEG'ini tek bir küçük resimde birleştirir. Bir seriye tıklamak yalnızca o seriyi, en net çekim başta olacak şekilde gösterir.</value>
+  </data>
+  <data name="Eine_Serie_wird_nicht_als_Ganzes_gel_scht_ffne_s_49842129" xml:space="preserve">
+    <value>Bir seri bütün olarak silinmez. Seriyi açın ve görüntüleri tek tek silin.</value>
+  </data>
+  <data name="Erlaubt_Kopieren_Verschieben_Umbenennen_und_L_sc_253e26b9" xml:space="preserve">
+    <value>Diğer sürücülerde, bağlanmış ortamlarda ve ağ klasörlerinde de kopyalama, taşıma, yeniden adlandırma ve silmeye izin verir. Sistem klasörleri, bir sürücünün kökü ve /home ya da /media gibi üst klasörler her zaman kilitli kalır.</value>
+  </data>
+  <data name="Dateioperationen_au_erhalb_des_pers_nlichen_Ordn_06ca3dd8" xml:space="preserve">
+    <value>Kişisel klasör dışında dosya işlemlerine izin ver</value>
   </data>
 </root>

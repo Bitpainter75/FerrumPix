@@ -1134,6 +1134,21 @@ Namespace Views
                     End Select
                 End If
 
+                ' X VERWIRFT in der Galerie die Auswahl, ein zweites X nimmt es zurueck; SHIFT+X
+                ' verwirft in einer Serie alles ausser der gewaehlten Aufnahme. Nur blank oder mit
+                ' SHIFT: mit Strg ist X das Ausschneiden (Zweig weiter unten).
+                If e.Key = Key.X AndAlso vm.CurrentMode = AppMode.Gallery AndAlso
+                   Not PlatformShortcutService.IsInputFieldSource(e.Source) AndAlso
+                   (e.KeyModifiers = KeyModifiers.None OrElse e.KeyModifiers = KeyModifiers.Shift) Then
+                    If e.KeyModifiers = KeyModifiers.Shift Then
+                        vm.Gallery?.RejectRestOfStackCommand.Execute(Nothing)
+                    Else
+                        vm.Gallery?.ToggleRejectSelectedCommand.Execute(Nothing)
+                    End If
+                    e.Handled = True
+                    Return
+                End If
+
                 ' Dieselbe Bauart wie Strg+R darueber, fuer die drei Stapel-Ablaeufe: in der Galerie
                 ' fuer die Auswahl, im Betrachter fuer das angezeigte Bild. Im Editor fallen sie
                 ' bewusst durch - dort ist Strg+D „Objekt duplizieren" und Strg+T das Textwerkzeug.
@@ -1329,7 +1344,7 @@ Namespace Views
             Dim gallery = vm.Gallery
             If gallery Is Nothing Then Return
 
-            Dim paths = gallery.GetSelectedPaths()
+            Dim paths = gallery.GetSelectedPathsWithPartners()
             gallery.StoreClipboardPaths(paths, cut)
             Await ClipboardPathService.CopyPathsAsync(Clipboard, StorageProvider, paths, cut)
         End Function

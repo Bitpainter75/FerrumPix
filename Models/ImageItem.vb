@@ -457,7 +457,16 @@ Namespace Models
         ''' umgelegt, während die Galerie offen ist).</summary>
         Public Sub RefreshFileOperationFlags()
             RaisePropertyChanged(NameOf(CanFileOperationDelete))
+            RaisePropertyChanged(NameOf(CanDeleteFromTile))
         End Sub
+
+        ''' <summary>Der Loeschknopf auf Kachel und Zeile: wie <see cref="CanFileOperationDelete"/>,
+        ''' aber nicht an einer zugeklappten Serie (siehe <see cref="IsCollapsedBurst"/>).</summary>
+        Public ReadOnly Property CanDeleteFromTile As Boolean
+            Get
+                Return CanFileOperationDelete AndAlso Not IsCollapsedBurst
+            End Get
+        End Property
 
         Public ReadOnly Property CanFileOperationPasteInto As Boolean
             Get
@@ -563,6 +572,193 @@ Namespace Models
                 _isFavorite = value
                 RaisePropertyChanged()
                 InvalidateSearchText()
+            End Set
+        End Property
+
+        Private _isCompareAnchor As Boolean
+        ''' <summary>Im Vergleich des Betrachters das angeheftete Bild: im Filmstreifen gedimmt und
+        ''' nicht anwaehlbar (ViewerViewModel.SetPinnedPath).</summary>
+        Public Property IsCompareAnchor As Boolean
+            Get
+                Return _isCompareAnchor
+            End Get
+            Set(value As Boolean)
+                If _isCompareAnchor = value Then Return
+                _isCompareAnchor = value
+                RaisePropertyChanged()
+            End Set
+        End Property
+
+        Private _pickState As Integer
+        ''' <summary>Markierung beim Aussortieren: -1 verworfen, 0 keine, 1 behalten. Lokal im
+        ''' Katalog, gespiegelt in .fpxmp und XMP (xmpDM:good).</summary>
+        Public Property PickState As Integer
+            Get
+                Return _pickState
+            End Get
+            Set(value As Integer)
+                value = Math.Max(-1, Math.Min(1, value))
+                If _pickState = value Then Return
+                _pickState = value
+                RaisePropertyChanged()
+                RaisePropertyChanged(NameOf(IsRejected))
+                RaisePropertyChanged(NameOf(IsPicked))
+            End Set
+        End Property
+
+        Public ReadOnly Property IsRejected As Boolean
+            Get
+                Return _pickState < 0
+            End Get
+        End Property
+
+        Public ReadOnly Property IsPicked As Boolean
+            Get
+                Return _pickState > 0
+            End Get
+        End Property
+
+        ' Stapel: Serie und RAW+JPEG-Paar. Die Galerie setzt das bei jedem Filterlauf neu
+        ' (GalleryViewModel.ApplyStacks); am Element steht nur, was die Kachel zum Zeichnen braucht.
+
+        ''' <summary>Der Stapel, zu dem die Datei gehoert, oder Nothing.</summary>
+        Public Property Stack As ImageStack
+
+        ''' <summary>Die Dateien derselben Aufnahme, die hinter dieser Kachel verborgen sind (beim
+        ''' zugeklappten Paar das JPEG). Bewertung, Etikett, Favorit, Stichwort und Loeschen gehen
+        ''' an sie mit.</summary>
+        Public Property HiddenPartners As IReadOnlyList(Of ImageItem) = Array.Empty(Of ImageItem)()
+
+        Private _stackBadgeText As String = ""
+        ''' <summary>Text des Stapel-Abzeichens, nur an der Kachel, die den Stapel traegt; sonst leer.</summary>
+        Public Property StackBadgeText As String
+            Get
+                Return _stackBadgeText
+            End Get
+            Set(value As String)
+                value = If(value, "")
+                If _stackBadgeText = value Then Return
+                _stackBadgeText = value
+                RaisePropertyChanged()
+                RaisePropertyChanged(NameOf(HasStackBadge))
+                RaisePropertyChanged(NameOf(IsCollapsedBurst))
+                RaisePropertyChanged(NameOf(CanDeleteFromTile))
+            End Set
+        End Property
+
+        Public ReadOnly Property HasStackBadge As Boolean
+            Get
+                Return _stackBadgeText.Length > 0
+            End Get
+        End Property
+
+        Private _isStackExpanded As Boolean
+        Public Property IsStackExpanded As Boolean
+            Get
+                Return _isStackExpanded
+            End Get
+            Set(value As Boolean)
+                If _isStackExpanded = value Then Return
+                _isStackExpanded = value
+                RaisePropertyChanged()
+                RaisePropertyChanged(NameOf(IsCollapsedBurst))
+                RaisePropertyChanged(NameOf(CanDeleteFromTile))
+            End Set
+        End Property
+
+        Private _isInStackFocus As Boolean
+        ''' <summary>Steht in der geoeffneten Serienansicht (GalleryViewModel.OpenOrCloseStack).</summary>
+        Public Property IsInStackFocus As Boolean
+            Get
+                Return _isInStackFocus
+            End Get
+            Set(value As Boolean)
+                If _isInStackFocus = value Then Return
+                _isInStackFocus = value
+                RaisePropertyChanged()
+                RaisePropertyChanged(NameOf(HasSharpnessBar))
+                RaisePropertyChanged(NameOf(IsCollapsedBurst))
+                RaisePropertyChanged(NameOf(CanDeleteFromTile))
+            End Set
+        End Property
+
+        ''' <summary>Die Kachel steht fuer eine ZUGEKLAPPTE Serie: sie traegt das Abzeichen, und
+        ''' hinter ihr liegen weitere Aufnahmen. Geloescht wird so etwas nicht - erst in der
+        ''' Serienansicht, Bild fuer Bild.</summary>
+        Public ReadOnly Property IsCollapsedBurst As Boolean
+            Get
+                Return Stack IsNot Nothing AndAlso Stack.IsBurst AndAlso HasStackBadge AndAlso
+                       Not IsStackExpanded AndAlso Not IsInStackFocus
+            End Get
+        End Property
+
+        Private _isStackMember As Boolean
+        ''' <summary>Steht als Teil eines AUFGEKLAPPTEN Stapels im Raster (nicht dessen erste Kachel).</summary>
+        Public Property IsStackMember As Boolean
+            Get
+                Return _isStackMember
+            End Get
+            Set(value As Boolean)
+                If _isStackMember = value Then Return
+                _isStackMember = value
+                RaisePropertyChanged()
+            End Set
+        End Property
+
+        Private _sharpness As Double?
+        ''' <summary>Schaerfewert aus SharpnessService, Nothing = noch nicht gemessen.</summary>
+        Public Property Sharpness As Double?
+            Get
+                Return _sharpness
+            End Get
+            Set(value As Double?)
+                If Nullable.Equals(_sharpness, value) Then Return
+                _sharpness = value
+                RaisePropertyChanged()
+            End Set
+        End Property
+
+        Public Const SharpnessBarTrackWidth As Double = 72
+
+        Private _sharpnessShare As Double = -1
+        ''' <summary>Schaerfe im Verhaeltnis zur schaerfsten Aufnahme der Serie, 0 bis 1; -1 heisst
+        ''' kein Balken (kein Serienmitglied oder noch nicht alles gemessen).</summary>
+        Public Property SharpnessShare As Double
+            Get
+                Return _sharpnessShare
+            End Get
+            Set(value As Double)
+                If _sharpnessShare = value Then Return
+                _sharpnessShare = value
+                RaisePropertyChanged()
+                RaisePropertyChanged(NameOf(HasSharpnessBar))
+                RaisePropertyChanged(NameOf(SharpnessBarWidth))
+            End Set
+        End Property
+
+        ''' <summary>Den Balken gibt es nur in der Serienansicht: dort wird eine Serie Aufnahme fuer
+        ''' Aufnahme durchgesehen. Im Ordner steht von einer Serie ohnehin nur die schaerfste vorn.</summary>
+        Public ReadOnly Property HasSharpnessBar As Boolean
+            Get
+                Return _sharpnessShare >= 0 AndAlso _isInStackFocus
+            End Get
+        End Property
+
+        Public ReadOnly Property SharpnessBarWidth As Double
+            Get
+                Return Math.Max(2.0, Math.Max(0.0, Math.Min(1.0, _sharpnessShare)) * SharpnessBarTrackWidth)
+            End Get
+        End Property
+
+        Private _isSharpestInStack As Boolean
+        Public Property IsSharpestInStack As Boolean
+            Get
+                Return _isSharpestInStack
+            End Get
+            Set(value As Boolean)
+                If _isSharpestInStack = value Then Return
+                _isSharpestInStack = value
+                RaisePropertyChanged()
             End Set
         End Property
 
@@ -682,6 +878,7 @@ Namespace Models
 
             IsFavorite = scanned.IsFavorite
             Rating = scanned.Rating
+            PickState = scanned.PickState
             ColorLabel = scanned.ColorLabel
             ' Der Tags-Setter meldet IMMER, und er verwirft zusaetzlich den Suchtext. Deshalb hier
             ' der Vergleich statt dort: eine unveraenderte Stichwortliste soll nichts ausloesen.

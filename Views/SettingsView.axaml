@@ -924,6 +924,14 @@
 
                         <Grid ColumnDefinitions="*,Auto">
                             <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Dateioperationen außerhalb des persönlichen Ordners erlauben" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Erlaubt Kopieren, Verschieben, Umbenennen und Löschen auch auf anderen Laufwerken, eingehängten Datenträgern und Netzordnern. Systemordner, die Wurzel eines Laufwerks und Sammelordner wie /home oder /media bleiben immer gesperrt." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1" IsChecked="{Binding AllowFileOperationsOutsideHome}" OnContent="" OffContent="" VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
                                 <TextBlock Text="Ordner in der Galerie anzeigen" FontSize="{DynamicResource FP.Font.Body}"/>
                                 <TextBlock Text="Zeigt Unterordner neben Bildern an; Doppelklick öffnet den Ordner." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </StackPanel>
@@ -936,6 +944,14 @@
                                 <TextBlock Text="Blendet in der Galerie zusätzlich einen Eintrag für den übergeordneten Ordner ein." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </StackPanel>
                             <ToggleSwitch Grid.Column="1" IsChecked="{Binding GalleryShowParentFolder}" OnContent="" OffContent="" VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Serien und RAW+JPEG stapeln" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Fasst Aufnahmen kurz hintereinander und das Kamera-JPEG neben einem RAW zu einer Kachel zusammen. Ein Klick auf eine Serie zeigt nur sie, mit der schärfsten Aufnahme vorn." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1" IsChecked="{Binding GalleryStacks}" OnContent="" OffContent="" VerticalAlignment="Center"/>
                         </Grid>
 
                         <Grid ColumnDefinitions="*,Auto">
@@ -1923,7 +1939,7 @@
 
                         <Grid ColumnDefinitions="*,Auto">
                             <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
-                                <TextBlock Text="Nach dem Speichern unter die neue Datei öffnen" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Nach „Speichern unter“ die neue Datei öffnen" FontSize="{DynamicResource FP.Font.Body}"/>
                                 <TextBlock Text="Ausgeschaltet bleibt das bisherige Bild im Editor und die gespeicherte Datei liegt nur auf der Platte. Eingeschaltet wechselt der Editor auf die neue Datei und arbeitet dort weiter." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </StackPanel>
                             <ToggleSwitch Grid.Column="1"
@@ -3448,6 +3464,14 @@
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
                                 <TextBlock Text="STRG+V" Tag="Primary" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                                 <TextBlock Grid.Column="1" Text="Einfügen" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </Grid>
+                            <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
+                                <TextBlock Text="X" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Grid.Column="1" Text="Als verworfen markieren (erneut nimmt es zurück)" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </Grid>
+                            <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
+                                <TextBlock Text="SHIFT+X" Tag="Shift" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Grid.Column="1" Text="In einer Serie alles außer dem gewählten Bild verwerfen" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
                                 <TextBlock Text="STRG+F" Tag="Primary" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>

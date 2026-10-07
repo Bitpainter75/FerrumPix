@@ -1212,8 +1212,12 @@ Namespace Services
         ''' xmp:Label. Leere Stichwortliste entfernt dc:subject. Legt nur bei
         ''' <paramref name="createIfMissing"/> eine neue Datei an. Gegated wird über die Einstellung im
         ''' Aufrufer (LibraryService), NICHT hier.</summary>
+        ''' <param name="pickState">Markierung beim Aussortieren als xmpDM:good (1 True, -1 False,
+        ''' 0 entfernt). Nothing laesst ein vorhandenes Feld unangetastet - fuer Aufrufer, die nur
+        ''' Stichwoerter oder Sterne nachziehen.</param>
         Public Shared Function WriteXmpCatalogSidecar(imagePath As String, rating As Integer, colorLabelWord As String,
-                                                      keywords As IEnumerable(Of String), createIfMissing As Boolean) As Boolean
+                                                      keywords As IEnumerable(Of String), createIfMissing As Boolean,
+                                                      Optional pickState As Integer? = Nothing) As Boolean
             If String.IsNullOrWhiteSpace(imagePath) Then Return False
 
             Dim sidecarPath = XmpSidecarService.FindSidecar(imagePath)
@@ -1242,6 +1246,20 @@ Namespace Services
                     description.SetAttributeValue(xmpNamespace + "Label", colorLabelWord)
                 Else
                     description.SetAttributeValue(xmpNamespace + "Label", Nothing)
+                End If
+
+                If pickState.HasValue Then
+                    Dim xmpDmNamespace As XNamespace = "http://ns.adobe.com/xmp/1.0/DynamicMedia/"
+                    Select Case LibraryService.NormalizePickState(pickState.Value)
+                        Case 1
+                            description.SetAttributeValue(XNamespace.Xmlns + "xmpDM", xmpDmNamespace.NamespaceName)
+                            description.SetAttributeValue(xmpDmNamespace + "good", "True")
+                        Case -1
+                            description.SetAttributeValue(XNamespace.Xmlns + "xmpDM", xmpDmNamespace.NamespaceName)
+                            description.SetAttributeValue(xmpDmNamespace + "good", "False")
+                        Case Else
+                            description.SetAttributeValue(xmpDmNamespace + "good", Nothing)
+                    End Select
                 End If
 
                 ' dc:subject als rdf:Bag neu aufbauen (vorhandenes ersetzen); leere Liste entfernt es.

@@ -8684,7 +8684,7 @@
   <data name="Gilt_f_r_alle_Kachelansichten_der_Galerie_enger__a80faeba" xml:space="preserve">
     <value>ใช้กับทุกมุมมองแบบช่องภาพของแกลเลอรี และจะไม่แคบกว่าสี่พิกเซล ส่วนมุมมองรายการไม่เปลี่ยน</value>
   </data>
-  <data name="Nach_dem_Speichern_unter_die_neue_Datei_ffnen_aeebd97e" xml:space="preserve">
+  <data name="Nach_Speichern_unter_die_neue_Datei_ffnen_15ad139c" xml:space="preserve">
     <value>เปิดไฟล์ใหม่หลังจากบันทึกเป็น</value>
   </data>
   <data name="Ausgeschaltet_bleibt_das_bisherige_Bild_im_Edito_96a283d3" xml:space="preserve">
@@ -9495,5 +9495,92 @@
   </data>
   <data name="Zeitlos_e1bb3248" xml:space="preserve">
     <value>เหนือกาลเวลา</value>
+  </data>
+  <data name="Stapel_auf_oder_zuklappen_62f1a2f7" xml:space="preserve">
+    <value>ขยายหรือยุบกอง</value>
+  </data>
+  <data name="Sch_rfe_innerhalb_der_Serie_b46d877c" xml:space="preserve">
+    <value>ความคมชัดภายในชุดถ่ายต่อเนื่อง</value>
+  </data>
+  <data name="STAPEL_e65ce6e3" xml:space="preserve">
+    <value>กอง</value>
+  </data>
+  <data name="Serien_und_RAW_JPEG_stapeln_f25c79c6" xml:space="preserve">
+    <value>จัดกองชุดถ่ายต่อเนื่องและ RAW+JPEG</value>
+  </data>
+  <data name="Alle_Stapel_aufklappen_92710c8f" xml:space="preserve">
+    <value>ขยายกองทั้งหมด</value>
+  </data>
+  <data name="Alle_Stapel_zuklappen_acebd684" xml:space="preserve">
+    <value>ยุบกองทั้งหมด</value>
+  </data>
+  <data name="VERWORFENE_282370e5" xml:space="preserve">
+    <value>ที่ปฏิเสธแล้ว</value>
+  </data>
+  <data name="Gedimmt_zeigen_5ef493eb" xml:space="preserve">
+    <value>แสดงแบบจาง</value>
+  </data>
+  <data name="Verworfene_ausblenden_0fae7bc7" xml:space="preserve">
+    <value>ซ่อนที่ปฏิเสธแล้ว</value>
+  </data>
+  <data name="Nur_verworfene_4de29eb3" xml:space="preserve">
+    <value>เฉพาะที่ปฏิเสธแล้ว</value>
+  </data>
+  <data name="Verworfen_f16ad9ac" xml:space="preserve">
+    <value>ปฏิเสธแล้ว</value>
+  </data>
+  <data name="Das_gew_hlte_Bild_geh_rt_zu_keiner_Serie_f3c9ed16" xml:space="preserve">
+    <value>ภาพที่เลือกไม่ได้อยู่ในชุดถ่ายต่อเนื่อง</value>
+  </data>
+  <data name="0_Aufnahmen_der_Serie_verworfen_abc92ec7" xml:space="preserve">
+    <value>ปฏิเสธภาพในชุด {0} ภาพ</value>
+  </data>
+  <data name="Als_verworfen_markieren_4cbab469" xml:space="preserve">
+    <value>ทำเครื่องหมายว่าปฏิเสธ</value>
+  </data>
+  <data name="Verwerfen_zur_cknehmen_7495df42" xml:space="preserve">
+    <value>ยกเลิกการปฏิเสธ</value>
+  </data>
+  <data name="Rest_der_Serie_verwerfen_db0ef49b" xml:space="preserve">
+    <value>ปฏิเสธภาพที่เหลือในชุด</value>
+  </data>
+  <data name="Stapel_aufklappen_ca058705" xml:space="preserve">
+    <value>ขยายกอง</value>
+  </data>
+  <data name="Stapel_zuklappen_a0ebedb5" xml:space="preserve">
+    <value>ยุบกอง</value>
+  </data>
+  <data name="SHIFT_X_5129d4ce" xml:space="preserve">
+    <value>SHIFT+X</value>
+  </data>
+  <data name="Als_verworfen_markieren_erneut_nimmt_es_zur_ck_a4d2d39a" xml:space="preserve">
+    <value>ทำเครื่องหมายว่าปฏิเสธ (กดอีกครั้งเพื่อยกเลิก)</value>
+  </data>
+  <data name="In_einer_Serie_alles_au_er_dem_gew_hlten_Bild_ve_460ee5e6" xml:space="preserve">
+    <value>ในชุดถ่ายต่อเนื่อง ปฏิเสธทุกภาพยกเว้นภาพที่เลือก</value>
+  </data>
+  <data name="Serie_mit_0_Aufnahmen_f18c3e8f" xml:space="preserve">
+    <value>ชุดถ่ายต่อเนื่อง {0} ภาพ</value>
+  </data>
+  <data name="Zur_ck_zum_Ordner_439e81fe" xml:space="preserve">
+    <value>กลับไปที่โฟลเดอร์</value>
+  </data>
+  <data name="Serie_ffnen_aada409b" xml:space="preserve">
+    <value>เปิดชุดถ่ายต่อเนื่อง</value>
+  </data>
+  <data name="Serie_schlie_en_4518a1c3" xml:space="preserve">
+    <value>ปิดชุดถ่ายต่อเนื่อง</value>
+  </data>
+  <data name="Fasst_Aufnahmen_kurz_hintereinander_und_das_Kame_584d9de7" xml:space="preserve">
+    <value>รวมภาพที่ถ่ายต่อเนื่องกันและ JPEG จากกล้องที่อยู่ข้าง RAW เป็นภาพย่อเดียว คลิกที่ชุดถ่ายต่อเนื่องจะแสดงเฉพาะชุดนั้น โดยภาพที่คมชัดที่สุดอยู่หน้าสุด</value>
+  </data>
+  <data name="Eine_Serie_wird_nicht_als_Ganzes_gel_scht_ffne_s_49842129" xml:space="preserve">
+    <value>ชุดถ่ายต่อเนื่องจะไม่ถูกลบทั้งชุด เปิดชุดแล้วลบภาพทีละภาพ</value>
+  </data>
+  <data name="Erlaubt_Kopieren_Verschieben_Umbenennen_und_L_sc_253e26b9" xml:space="preserve">
+    <value>อนุญาตให้คัดลอก ย้าย เปลี่ยนชื่อ และลบได้บนไดรฟ์อื่น สื่อที่เมานต์ และโฟลเดอร์เครือข่ายด้วย โฟลเดอร์ระบบ รากของไดรฟ์ และโฟลเดอร์รวมอย่าง /home หรือ /media ยังคงถูกล็อกเสมอ</value>
+  </data>
+  <data name="Dateioperationen_au_erhalb_des_pers_nlichen_Ordn_06ca3dd8" xml:space="preserve">
+    <value>อนุญาตการจัดการไฟล์นอกโฟลเดอร์ส่วนตัว</value>
   </data>
 </root>

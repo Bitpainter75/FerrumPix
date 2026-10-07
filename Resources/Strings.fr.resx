@@ -8640,7 +8640,7 @@
   <data name="Gilt_f_r_alle_Kachelansichten_der_Galerie_enger__a80faeba" xml:space="preserve">
     <value>S'applique à toutes les vues en vignettes de la galerie ; l'écart ne descend pas sous quatre pixels. La liste reste inchangée.</value>
   </data>
-  <data name="Nach_dem_Speichern_unter_die_neue_Datei_ffnen_aeebd97e" xml:space="preserve">
+  <data name="Nach_Speichern_unter_die_neue_Datei_ffnen_15ad139c" xml:space="preserve">
     <value>Ouvrir le nouveau fichier après Enregistrer sous</value>
   </data>
   <data name="Ausgeschaltet_bleibt_das_bisherige_Bild_im_Edito_96a283d3" xml:space="preserve">
@@ -9451,5 +9451,92 @@
   </data>
   <data name="Zeitlos_e1bb3248" xml:space="preserve">
     <value>Intemporel</value>
+  </data>
+  <data name="Stapel_auf_oder_zuklappen_62f1a2f7" xml:space="preserve">
+    <value>Déplier ou replier la pile</value>
+  </data>
+  <data name="Sch_rfe_innerhalb_der_Serie_b46d877c" xml:space="preserve">
+    <value>Netteté au sein de la rafale</value>
+  </data>
+  <data name="STAPEL_e65ce6e3" xml:space="preserve">
+    <value>PILES</value>
+  </data>
+  <data name="Serien_und_RAW_JPEG_stapeln_f25c79c6" xml:space="preserve">
+    <value>Empiler rafales et RAW+JPEG</value>
+  </data>
+  <data name="Alle_Stapel_aufklappen_92710c8f" xml:space="preserve">
+    <value>Déplier toutes les piles</value>
+  </data>
+  <data name="Alle_Stapel_zuklappen_acebd684" xml:space="preserve">
+    <value>Replier toutes les piles</value>
+  </data>
+  <data name="VERWORFENE_282370e5" xml:space="preserve">
+    <value>REJETÉES</value>
+  </data>
+  <data name="Gedimmt_zeigen_5ef493eb" xml:space="preserve">
+    <value>Afficher atténuées</value>
+  </data>
+  <data name="Verworfene_ausblenden_0fae7bc7" xml:space="preserve">
+    <value>Masquer les rejetées</value>
+  </data>
+  <data name="Nur_verworfene_4de29eb3" xml:space="preserve">
+    <value>Rejetées uniquement</value>
+  </data>
+  <data name="Verworfen_f16ad9ac" xml:space="preserve">
+    <value>Rejetée</value>
+  </data>
+  <data name="Das_gew_hlte_Bild_geh_rt_zu_keiner_Serie_f3c9ed16" xml:space="preserve">
+    <value>L'image choisie ne fait partie d'aucune rafale</value>
+  </data>
+  <data name="0_Aufnahmen_der_Serie_verworfen_abc92ec7" xml:space="preserve">
+    <value>{0} vues de la rafale rejetées</value>
+  </data>
+  <data name="Als_verworfen_markieren_4cbab469" xml:space="preserve">
+    <value>Marquer comme rejetée</value>
+  </data>
+  <data name="Verwerfen_zur_cknehmen_7495df42" xml:space="preserve">
+    <value>Annuler le rejet</value>
+  </data>
+  <data name="Rest_der_Serie_verwerfen_db0ef49b" xml:space="preserve">
+    <value>Rejeter le reste de la rafale</value>
+  </data>
+  <data name="Stapel_aufklappen_ca058705" xml:space="preserve">
+    <value>Déplier la pile</value>
+  </data>
+  <data name="Stapel_zuklappen_a0ebedb5" xml:space="preserve">
+    <value>Replier la pile</value>
+  </data>
+  <data name="SHIFT_X_5129d4ce" xml:space="preserve">
+    <value>SHIFT+X</value>
+  </data>
+  <data name="Als_verworfen_markieren_erneut_nimmt_es_zur_ck_a4d2d39a" xml:space="preserve">
+    <value>Marquer comme rejetée (une seconde fois annule)</value>
+  </data>
+  <data name="In_einer_Serie_alles_au_er_dem_gew_hlten_Bild_ve_460ee5e6" xml:space="preserve">
+    <value>Dans une rafale, rejeter tout sauf la vue choisie</value>
+  </data>
+  <data name="Serie_mit_0_Aufnahmen_f18c3e8f" xml:space="preserve">
+    <value>Rafale de {0} vues</value>
+  </data>
+  <data name="Zur_ck_zum_Ordner_439e81fe" xml:space="preserve">
+    <value>Retour au dossier</value>
+  </data>
+  <data name="Serie_ffnen_aada409b" xml:space="preserve">
+    <value>Ouvrir la rafale</value>
+  </data>
+  <data name="Serie_schlie_en_4518a1c3" xml:space="preserve">
+    <value>Fermer la rafale</value>
+  </data>
+  <data name="Fasst_Aufnahmen_kurz_hintereinander_und_das_Kame_584d9de7" xml:space="preserve">
+    <value>Regroupe les vues prises en succession rapide et le JPEG de l'appareil à côté d'un RAW en une seule vignette. Un clic sur une rafale n'affiche qu'elle, la vue la plus nette en premier.</value>
+  </data>
+  <data name="Eine_Serie_wird_nicht_als_Ganzes_gel_scht_ffne_s_49842129" xml:space="preserve">
+    <value>Une rafale ne se supprime pas en bloc. Ouvrez-la et supprimez les images une par une.</value>
+  </data>
+  <data name="Erlaubt_Kopieren_Verschieben_Umbenennen_und_L_sc_253e26b9" xml:space="preserve">
+    <value>Autorise la copie, le déplacement, le renommage et la suppression aussi sur d'autres disques, des supports montés et des dossiers réseau. Les dossiers système, la racine d'un disque et les dossiers conteneurs comme /home ou /media restent toujours verrouillés.</value>
+  </data>
+  <data name="Dateioperationen_au_erhalb_des_pers_nlichen_Ordn_06ca3dd8" xml:space="preserve">
+    <value>Autoriser les opérations sur les fichiers hors du dossier personnel</value>
   </data>
 </root>

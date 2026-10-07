@@ -228,6 +228,34 @@ Namespace ViewModels
             Return Build("Wiederherstellen", "restore", c)
         End Function
 
+        Public Shared Function Reject(c As ICommand) As AppAction
+            Return Build("Als verworfen markieren", "flag-x", c)
+        End Function
+
+        Public Shared Function Unreject(c As ICommand) As AppAction
+            Return Build("Verwerfen zurücknehmen", "flag", c)
+        End Function
+
+        Public Shared Function RejectRestOfStack(c As ICommand) As AppAction
+            Return Build("Rest der Serie verwerfen", "stack-pop", c)
+        End Function
+
+        Public Shared Function OpenSeries(c As ICommand) As AppAction
+            Return Build("Serie öffnen", "stack-2", c)
+        End Function
+
+        Public Shared Function CloseSeries(c As ICommand) As AppAction
+            Return Build("Serie schließen", "arrow-back-up", c)
+        End Function
+
+        Public Shared Function ExpandStack(c As ICommand) As AppAction
+            Return Build("Stapel aufklappen", "stack-2", c)
+        End Function
+
+        Public Shared Function CollapseStack(c As ICommand) As AppAction
+            Return Build("Stapel zuklappen", "stack-2", c)
+        End Function
+
     End Class
 
 End Namespace

@@ -8680,7 +8680,7 @@
   <data name="Gilt_f_r_alle_Kachelansichten_der_Galerie_enger__a80faeba" xml:space="preserve">
     <value>Dotyczy wszystkich widoków kafelkowych galerii; ciaśniej niż cztery piksele nie będzie. Widok listy pozostaje bez zmian.</value>
   </data>
-  <data name="Nach_dem_Speichern_unter_die_neue_Datei_ffnen_aeebd97e" xml:space="preserve">
+  <data name="Nach_Speichern_unter_die_neue_Datei_ffnen_15ad139c" xml:space="preserve">
     <value>Po zapisaniu jako otwórz nowy plik</value>
   </data>
   <data name="Ausgeschaltet_bleibt_das_bisherige_Bild_im_Edito_96a283d3" xml:space="preserve">
@@ -9491,5 +9491,92 @@
   </data>
   <data name="Zeitlos_e1bb3248" xml:space="preserve">
     <value>Ponadczasowy</value>
+  </data>
+  <data name="Stapel_auf_oder_zuklappen_62f1a2f7" xml:space="preserve">
+    <value>Rozwiń lub zwiń stos</value>
+  </data>
+  <data name="Sch_rfe_innerhalb_der_Serie_b46d877c" xml:space="preserve">
+    <value>Ostrość w obrębie serii</value>
+  </data>
+  <data name="STAPEL_e65ce6e3" xml:space="preserve">
+    <value>STOSY</value>
+  </data>
+  <data name="Serien_und_RAW_JPEG_stapeln_f25c79c6" xml:space="preserve">
+    <value>Układaj serie i RAW+JPEG w stosy</value>
+  </data>
+  <data name="Alle_Stapel_aufklappen_92710c8f" xml:space="preserve">
+    <value>Rozwiń wszystkie stosy</value>
+  </data>
+  <data name="Alle_Stapel_zuklappen_acebd684" xml:space="preserve">
+    <value>Zwiń wszystkie stosy</value>
+  </data>
+  <data name="VERWORFENE_282370e5" xml:space="preserve">
+    <value>ODRZUCONE</value>
+  </data>
+  <data name="Gedimmt_zeigen_5ef493eb" xml:space="preserve">
+    <value>Pokaż przyciemnione</value>
+  </data>
+  <data name="Verworfene_ausblenden_0fae7bc7" xml:space="preserve">
+    <value>Ukryj odrzucone</value>
+  </data>
+  <data name="Nur_verworfene_4de29eb3" xml:space="preserve">
+    <value>Tylko odrzucone</value>
+  </data>
+  <data name="Verworfen_f16ad9ac" xml:space="preserve">
+    <value>Odrzucone</value>
+  </data>
+  <data name="Das_gew_hlte_Bild_geh_rt_zu_keiner_Serie_f3c9ed16" xml:space="preserve">
+    <value>Wybrane zdjęcie nie należy do żadnej serii</value>
+  </data>
+  <data name="0_Aufnahmen_der_Serie_verworfen_abc92ec7" xml:space="preserve">
+    <value>Odrzucono zdjęcia z serii: {0}</value>
+  </data>
+  <data name="Als_verworfen_markieren_4cbab469" xml:space="preserve">
+    <value>Oznacz jako odrzucone</value>
+  </data>
+  <data name="Verwerfen_zur_cknehmen_7495df42" xml:space="preserve">
+    <value>Cofnij odrzucenie</value>
+  </data>
+  <data name="Rest_der_Serie_verwerfen_db0ef49b" xml:space="preserve">
+    <value>Odrzuć resztę serii</value>
+  </data>
+  <data name="Stapel_aufklappen_ca058705" xml:space="preserve">
+    <value>Rozwiń stos</value>
+  </data>
+  <data name="Stapel_zuklappen_a0ebedb5" xml:space="preserve">
+    <value>Zwiń stos</value>
+  </data>
+  <data name="SHIFT_X_5129d4ce" xml:space="preserve">
+    <value>SHIFT+X</value>
+  </data>
+  <data name="Als_verworfen_markieren_erneut_nimmt_es_zur_ck_a4d2d39a" xml:space="preserve">
+    <value>Oznacz jako odrzucone (ponownie cofa)</value>
+  </data>
+  <data name="In_einer_Serie_alles_au_er_dem_gew_hlten_Bild_ve_460ee5e6" xml:space="preserve">
+    <value>W serii odrzuć wszystko poza wybranym zdjęciem</value>
+  </data>
+  <data name="Serie_mit_0_Aufnahmen_f18c3e8f" xml:space="preserve">
+    <value>Seria, zdjęcia: {0}</value>
+  </data>
+  <data name="Zur_ck_zum_Ordner_439e81fe" xml:space="preserve">
+    <value>Wróć do folderu</value>
+  </data>
+  <data name="Serie_ffnen_aada409b" xml:space="preserve">
+    <value>Otwórz serię</value>
+  </data>
+  <data name="Serie_schlie_en_4518a1c3" xml:space="preserve">
+    <value>Zamknij serię</value>
+  </data>
+  <data name="Fasst_Aufnahmen_kurz_hintereinander_und_das_Kame_584d9de7" xml:space="preserve">
+    <value>Łączy zdjęcia zrobione szybko po sobie oraz JPEG z aparatu obok pliku RAW w jedną miniaturę. Kliknięcie serii pokazuje tylko ją, z najostrzejszym zdjęciem na początku.</value>
+  </data>
+  <data name="Eine_Serie_wird_nicht_als_Ganzes_gel_scht_ffne_s_49842129" xml:space="preserve">
+    <value>Serii nie usuwa się w całości. Otwórz ją i usuwaj zdjęcia pojedynczo.</value>
+  </data>
+  <data name="Erlaubt_Kopieren_Verschieben_Umbenennen_und_L_sc_253e26b9" xml:space="preserve">
+    <value>Pozwala kopiować, przenosić, zmieniać nazwy i usuwać także na innych dyskach, zamontowanych nośnikach i w folderach sieciowych. Foldery systemowe, katalog główny dysku i foldery zbiorcze, takie jak /home lub /media, zawsze pozostają zablokowane.</value>
+  </data>
+  <data name="Dateioperationen_au_erhalb_des_pers_nlichen_Ordn_06ca3dd8" xml:space="preserve">
+    <value>Zezwalaj na operacje na plikach poza folderem osobistym</value>
   </data>
 </root>

@@ -1,5 +1,6 @@
 Imports System
 Imports System.Collections
+Imports System.Collections.Generic
 Imports System.IO
 Imports System.Linq
 
@@ -23,6 +24,58 @@ Namespace Services
         ''' Gesetzt wird der Wert beim Start und bei jeder Aenderung aus den Einstellungen.
         ''' </summary>
         Public Shared Property FollowLinkedFolders As Boolean = False
+
+        ''' <summary>
+        ''' Darf Dateiarbeit auch AUSSERHALB des Benutzerordners stattfinden - auf einer zweiten
+        ''' Platte, einem eingehaengten Laufwerk, einem Netzordner?
+        '''
+        ''' Standard AUS. Eingeschaltet bleibt trotzdem gesperrt, was
+        ''' das System traegt (<see cref="IsSystemPath"/>), dazu die Wurzel jedes Laufwerks und die
+        ''' Sammelordner wie /home oder /media selbst (<see cref="IsProtectedFolder"/>).
+        ''' </summary>
+        Public Shared Property AllowOutsidePersonalFolder As Boolean = False
+
+        ''' <summary>Liegt der Pfad dort, wo Dateiarbeit erlaubt ist? Ab Werk der Benutzerordner,
+        ''' mit <see cref="AllowOutsidePersonalFolder"/> alles ausser den Systemordnern.</summary>
+        Public Shared Function IsInAllowedArea(path As String) As Boolean
+            If IsInPersonalFolder(path) Then Return True
+            If Not AllowOutsidePersonalFolder OrElse String.IsNullOrEmpty(path) Then Return False
+            ' Beide Schreibweisen: ein Verweis aus einem harmlosen Ordner ins System waere sonst ein
+            ' Ausbruch, genau wie beim Benutzerordner.
+            Return Not IsSystemPath(path) AndAlso Not IsSystemPath(ResolveLinks(path))
+        End Function
+
+        ''' <summary>Ordner, die das System traegt und in denen FerrumPix nie Dateien anfasst, auch
+        ''' nicht mit <see cref="AllowOutsidePersonalFolder"/>. Unter Linux und macOS feste Pfade,
+        ''' unter Windows die Sonderordner des Systems.</summary>
+        Friend Shared Function IsSystemPath(path As String) As Boolean
+            Dim full As String
+            Try
+                full = IO.Path.GetFullPath(path)
+            Catch
+                Return True
+            End Try
+            Dim root = IO.Path.GetPathRoot(full)
+            If String.IsNullOrEmpty(root) OrElse PathIdentity.Comparer.Equals(NormalizePath(full), NormalizePath(root)) Then Return True
+            ' /run gehoert dem System, aber unter /run/media haengt Linux die Laufwerke ein.
+            If Not OperatingSystem.IsWindows() AndAlso IsAncestorOrSelf("/run/media", full) Then Return False
+            Return SystemFolders().Any(Function(s) IsAncestorOrSelf(s, full))
+        End Function
+
+        Private Shared ReadOnly _unixSystemFolders As String() = {
+            "/bin", "/boot", "/dev", "/etc", "/lib", "/lib32", "/lib64", "/libx32", "/opt", "/proc",
+            "/root", "/run", "/sbin", "/srv", "/sys", "/usr", "/var", "/snap", "/efi",
+            "/System", "/Library", "/Applications", "/private", "/cores"
+        }
+
+        Private Shared Function SystemFolders() As IEnumerable(Of String)
+            If Not OperatingSystem.IsWindows() Then Return _unixSystemFolders
+            Return {Environment.GetFolderPath(Environment.SpecialFolder.Windows),
+                    Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
+                    Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86),
+                    Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData)}.
+                Where(Function(p) Not String.IsNullOrEmpty(p))
+        End Function
 
         ''' <summary>
         ''' Liegt der Pfad im Benutzerordner? Geprueft wird ZWEIMAL: einmal so, wie er geschrieben
@@ -104,13 +157,13 @@ Namespace Services
         End Function
 
         Public Shared Function CanCopy(path As String) As Boolean
-            Return IsInPersonalFolder(path) AndAlso Not IsHiddenPath(path)
+            Return IsInAllowedArea(path) AndAlso Not IsHiddenPath(path)
         End Function
 
         Public Shared Function CanPasteInto(folderPath As String) As Boolean
             Return Not String.IsNullOrEmpty(folderPath) AndAlso
                    Directory.Exists(folderPath) AndAlso
-                   IsInPersonalFolder(folderPath) AndAlso
+                   IsInAllowedArea(folderPath) AndAlso
                    Not IsHiddenPath(folderPath)
         End Function
 
@@ -136,7 +189,7 @@ Namespace Services
         Private Shared Function CanModify(path As String) As Boolean
             Return Not String.IsNullOrEmpty(path) AndAlso
                    (File.Exists(path) OrElse Directory.Exists(path)) AndAlso
-                   IsInPersonalFolder(path) AndAlso
+                   IsInAllowedArea(path) AndAlso
                    Not IsHiddenPath(path)
         End Function
 
@@ -164,6 +217,13 @@ Namespace Services
                 Path.Combine(home, "Bilder"),
                 Path.Combine(home, "Downloads")
             }
+            ' Die Sammelordner, unter denen Benutzer und Laufwerke haengen. Was DARIN liegt, ist mit
+            ' AllowOutsidePersonalFolder erlaubt; sie selbst umzubenennen oder zu loeschen nie.
+            If Not OperatingSystem.IsWindows() Then
+                Dim user = Environment.UserName
+                folders.AddRange({"/home", "/Users", "/mnt", "/media", "/Volumes", "/run/media",
+                                  "/media/" & user, "/run/media/" & user})
+            End If
 
             Return folders.Where(Function(p) Not String.IsNullOrEmpty(p)).Distinct(StringComparer.OrdinalIgnoreCase)
         End Function

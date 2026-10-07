@@ -271,6 +271,11 @@ Namespace Services
         Public Property GalleryFilterFavorite As String = "All"
         Public Property GalleryFilterRatings As New List(Of Integer)()
         Public Property GalleryFilterFileType As String = "All"
+        ''' <summary>Serien und RAW+JPEG-Paare in der Galerie als Stapel zeigen. Ab Werk aus: es
+        ''' aendert, was das Raster zeigt, und soll bewusst eingeschaltet werden.</summary>
+        Public Property GalleryStacks As Boolean = False
+        ''' <summary>Verworfene Bilder: "Show" (gedimmt zeigen), "Hide" (ausblenden), "Only" (nur sie).</summary>
+        Public Property GalleryFilterRejected As String = "Show"
         Public Property GalleryStartupFolderMode As String = "Pictures"
         Public Property GalleryStartupCustomFolder As String = ""
         Public Property LastGalleryFolder As String = ""
@@ -355,6 +360,9 @@ Namespace Services
         ''' Standard AUS: das ist die sichere Richtung. Wer seinen Bilderordner bewusst per Verweis
         ''' auf eine andere Platte legt, schaltet es ein.
         Public Property FollowLinkedFolders As Boolean = False
+        ''' Ob Dateiarbeit auch ausserhalb des Benutzerordners erlaubt ist (zweite Platte, Laufwerke,
+        ''' Netzordner). Standard AUS; Systemordner bleiben auch eingeschaltet gesperrt.
+        Public Property AllowFileOperationsOutsideHome As Boolean = False
         ' Löschen: standardmäßig in den Papierkorb und mit Sicherheitsabfrage. Beide Schalter können das
         ' einzeln abschalten (True = überspringen).
         Public Property DeleteSkipTrash As Boolean = False

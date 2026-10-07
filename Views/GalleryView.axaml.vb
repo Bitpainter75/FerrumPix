@@ -1948,6 +1948,14 @@ Namespace Views
             e.Handled = True
         End Sub
 
+        Public Sub OnStackBadgeClick(sender As Object, e As RoutedEventArgs)
+            Dim item = TryCast(TryCast(sender, Control)?.DataContext, ImageItem)
+            Dim vm = GetVm()
+            If vm Is Nothing OrElse item Is Nothing Then Return
+            vm.OpenOrCloseStack(item)
+            e.Handled = True
+        End Sub
+
         Public Sub OnHoverDeleteClick(sender As Object, e As RoutedEventArgs)
             Dim button = TryCast(sender, Button)
             Dim item = TryCast(button?.DataContext, ImageItem)
@@ -2759,7 +2767,10 @@ Namespace Views
                 .Delete = vm.DeleteSelectedCommand,
                 .RestoreFromTrash = New DelegateCommand(Sub()
                                                             Dim ignored = vm.RestoreSelectedFromTrashAsync()
-                                                        End Sub)}
+                                                        End Sub),
+                .ToggleReject = New DelegateCommand(Sub() vm.ToggleRejectFor(vm.ContextItems)),
+                .RejectRestOfStack = New DelegateCommand(Sub() vm.RejectRestOfStack(vm.ContextItems?.FirstOrDefault())),
+                .ToggleStack = New DelegateCommand(Sub() vm.OpenOrCloseStack(vm.ContextItems?.FirstOrDefault()))}
         End Function
 
         ''' <summary>Farbetikett aus dem Kontextmenue setzen.
@@ -3365,6 +3376,12 @@ Namespace Views
                     vm.RefreshCommand.Execute(Nothing)
                     e.Handled = True
                 Case Key.Escape
+                    ' Erst die Serienansicht verlassen, erst beim naechsten ESC die Auswahl.
+                    If vm.IsStackFocused Then
+                        vm.CloseStackFocus()
+                        e.Handled = True
+                        Return
+                    End If
                     vm.SelectedItem = Nothing
                     vm.ReplaceSelection(Enumerable.Empty(Of ImageItem)())
                     _selectionAnchor = Nothing

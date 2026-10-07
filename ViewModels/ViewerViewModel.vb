@@ -1361,6 +1361,23 @@ Namespace ViewModels
             End Get
         End Property
 
+        ''' <summary>Die EINE Stelle, die die Heftung setzt. Sie zieht die Markierung im Filmstreifen
+        ''' mit (ImageItem.IsCompareAnchor): das angeheftete Bild ist dort gedimmt und nicht
+        ''' anwaehlbar, weil es rechts neben sich selbst stuende.</summary>
+        Private Sub SetPinnedPath(path As String)
+            _pinnedPath = If(path, "")
+            For Each item In FilmstripItems
+                item.IsCompareAnchor = _pinnedPath.Length > 0 AndAlso
+                                       String.Equals(item.FilePath, _pinnedPath, StringComparison.OrdinalIgnoreCase)
+            Next
+        End Sub
+
+        ''' <summary>Steht der Pfad als angeheftetes Bild im Vergleich?</summary>
+        Private Function IsCompareAnchorPath(path As String) As Boolean
+            Return _isCompareMode AndAlso Not String.IsNullOrEmpty(path) AndAlso
+                   String.Equals(path, _compareLeftPath, StringComparison.OrdinalIgnoreCase)
+        End Function
+
         Public ReadOnly Property PinnedFileName As String
             Get
                 Return IO.Path.GetFileName(If(_pinnedPath, ""))
@@ -1373,7 +1390,7 @@ Namespace ViewModels
             If IsImagePinned Then
                 ' ExitCompare loest die Heftung mit; laeuft ausnahmsweise kein Vergleich (etwa nach
                 ' einem Fehlschlag beim Laden), bleibt sie sonst haengen - deshalb beides.
-                _pinnedPath = ""
+                SetPinnedPath("")
                 ExitCompare()
             Else
                 Dim path = If(_isCompareMode, _compareLeftPath, _currentImagePath)
@@ -1385,10 +1402,13 @@ Namespace ViewModels
                 Dim nextPath = NextPathFrom(_currentIndex + 1, path)
                 If Not String.IsNullOrWhiteSpace(nextPath) AndAlso File.Exists(nextPath) Then
                     ActivateCompare(path, nextPath)
-                Else
-                    ActivateCompare(path, path)
+                    Return
                 End If
-                Return
+                ' Kein zweites Bild: KEIN Vergleich mit sich selbst. Zweimal dasselbe Bild
+                ' nebeneinander zeigt nichts, und wer auf einer Seite loescht, loescht das Bild, das
+                ' er auf der anderen behalten wollte. Die Heftung bleibt, und das naechste
+                ' angesteuerte Bild oeffnet den Vergleich (LoadPathAt).
+                SetPinnedPath(path)
             End If
             Me.RaisePropertyChanged(NameOf(IsImagePinned))
             Me.RaisePropertyChanged(NameOf(PinnedFileName))
@@ -1593,7 +1613,7 @@ Namespace ViewModels
             _compareLeftPath = leftPath
             _compareRightPath = rightPath
             _focusedComparePane = 0
-            _pinnedPath = leftPath
+            SetPinnedPath(leftPath)
             IsCompareMode = True
             LoadCompareMarkers()
             For Each n In {NameOf(CompareLeftFileName), NameOf(CompareRightFileName),
@@ -1884,7 +1904,7 @@ Namespace ViewModels
                 Dim wegwerfen = CompareLeftImage
                 SetCompareBitmaps(CompareRightImage, Nothing)
                 ReleaseCompareBitmap(wegwerfen)
-                _pinnedPath = _compareLeftPath
+                SetPinnedPath(_compareLeftPath)
                 _vergleichLadeZaehler += 1
             End If
 
@@ -1982,7 +2002,7 @@ Namespace ViewModels
             SetCompareBitmaps(CompareRightImage, CompareLeftImage)
 
             _vergleichLadeZaehler += 1
-            _pinnedPath = _compareLeftPath
+            SetPinnedPath(_compareLeftPath)
             _focusedComparePane = 0
             LoadCompareMarkers()
 
@@ -2032,7 +2052,7 @@ Namespace ViewModels
             ' sichtbar gemacht. Blieb sie stehen, sprang der naechste Bildwechsel unvermittelt
             ' zurueck in den Vergleich - und zwar mit dem Ordner des alten angehefteten Bildes,
             ' weil dessen Neuoeffnen den Filmstreifen mitzieht.
-            _pinnedPath = ""
+            SetPinnedPath("")
             For Each n In {NameOf(IsCompareLeftFocused), NameOf(IsCompareRightFocused),
                            NameOf(IsImagePinned), NameOf(PinnedFileName),
                            NameOf(CanDeleteCurrent), NameOf(CanSwapComparePanes),
@@ -2833,6 +2853,8 @@ Namespace ViewModels
                 Where(Function(p) Not String.IsNullOrEmpty(p)).
                 Select(AddressOf CreateFilmstripItem))
             RefreshFilmstripItemBadges()
+            ' Neue Kacheln kennen die Heftung noch nicht.
+            SetPinnedPath(_pinnedPath)
             MarkCurrentFilmstripItem()
             Dim itemsSnapshot = FilmstripItems.ToList()
             Dispatcher.UIThread.Post(Sub() ImageItem.QueueBackgroundThumbnails(itemsSnapshot), DispatcherPriority.Background)
@@ -3347,6 +3369,13 @@ Namespace ViewModels
                 Return
             End If
             If _isCompareMode Then
+                ' Das angeheftete Bild kommt nie auf die rechte Seite: es stuende neben sich selbst.
+                ' Blaettern geht in derselben Richtung daran vorbei; gibt es kein anderes Bild,
+                ' bleibt alles stehen.
+                If IsCompareAnchorPath(_folderPaths(idx)) Then
+                    idx = SkipCompareAnchor(idx)
+                    If idx < 0 Then Return
+                End If
                 SetCompareRight(_folderPaths(idx))
                 _currentIndex = idx
                 Me.RaisePropertyChanged(NameOf(PositionText))
@@ -3402,9 +3431,28 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(CanEdit))
         End Sub
 
+        ''' <summary>Der naechste Index in Blaetterrichtung, der nicht das angeheftete Bild ist; -1,
+        ''' wenn es keinen gibt. Die Richtung kommt aus dem kuerzeren Weg vom aktuellen Bild her,
+        ''' weil der Filmstreifen ringsum laeuft.</summary>
+        Private Function SkipCompareAnchor(idx As Integer) As Integer
+            Dim count = _folderPaths.Count
+            If count < 2 Then Return -1
+            Dim forward = ((idx - _currentIndex) Mod count + count) Mod count
+            Dim direction = If(forward = 0 OrElse forward <= count \ 2, 1, -1)
+            Dim candidate = idx
+            For i = 1 To count - 1
+                candidate = ((candidate + direction) Mod count + count) Mod count
+                If Not IsCompareAnchorPath(_folderPaths(candidate)) Then Return candidate
+            Next
+            Return -1
+        End Function
+
         Public Async Sub NavigateToItem(item As ImageItem)
             Try
                 If item Is Nothing Then Return
+                ' Ein Klick auf das angeheftete Bild im Filmstreifen tut nichts: es ist gedimmt, weil
+                ' es im Vergleich nicht rechts neben sich selbst stehen kann.
+                If IsCompareAnchorPath(item.FilePath) Then Return
                 Dim idx = _folderPaths.FindIndex(Function(p) String.Equals(p, item.FilePath, StringComparison.OrdinalIgnoreCase))
                 If idx >= 0 Then Await CommitNavigateAsync(idx)
             Catch ex As Exception

@@ -41,6 +41,8 @@ Folder tree, grid, list, group view, photo wall and map view, fast thumbnails, f
 
 The group view puts a heading above each block of pictures, following whatever you sort by: one block per day when sorting by date, or by month or year, and by name, camera, file type or rating just as well. A circle in front of the heading selects a whole block at once.
 
+If you switch it on in Settings, bursts and RAW+JPEG pairs are stacked: shots taken in quick succession, and the JPEG the camera wrote next to a RAW, show up as one thumbnail. A click on a burst shows just that burst, shot by shot, until you go back to the folder; that is also where its pictures are deleted, one at a time, never the whole burst at once. Within a burst the sharpest shot moves to the front and every shot gets a small sharpness bar, so culling a series is a matter of keeping the best and pressing SHIFT+X to reject the rest. Rejected pictures stay where they are, dimmed, until you hide them with the filter or delete them yourself.
+
 The photo wall lays the pictures out edge to edge in their own proportions, without captions; its gap is adjustable, and rounded corners and frames can be turned off.
 
 A map view shows the pictures by where they were taken. It is off until you switch it on in Settings, because the map itself comes from a tile server on the internet, which learns which area you are looking at. The photos themselves never leave your machine, and map tiles you have seen are kept there until you clear them.

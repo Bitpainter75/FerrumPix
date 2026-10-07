@@ -62,6 +62,8 @@ Namespace Services
             Public Property ColorLabel As String = Nothing
             Public Property Keywords As New List(Of String)()
             Public Property HasKeywords As Boolean
+            ''' Nothing = Feld fehlt (aeltere Sidecar); sonst -1 verworfen, 0 keine, 1 behalten.
+            Public Property PickState As Integer?
         End Class
 
         ''' <summary>"foto.cr2" -> "foto.cr2.fpxmp" (voller Name bleibt erhalten, damit
@@ -89,7 +91,8 @@ Namespace Services
                     .IsFavorite = LibraryService.Instance.GetFavorite(rawPath),
                     .ColorLabel = If(LibraryService.Instance.GetColorLabel(rawPath), ""),
                     .Keywords = NormalizeKeywords(LibraryService.Instance.GetTags(rawPath)),
-                    .HasKeywords = True
+                    .HasKeywords = True,
+                    .PickState = LibraryService.Instance.GetPickState(rawPath)
                 }
                 Return TryWriteCore(rawPath, adjustments, catalog, developedThumbnail)
             Catch
@@ -101,7 +104,8 @@ Namespace Services
         ''' vorhandene Bearbeitungsrezept. Gibt es noch keine Sidecar, wird eine mit neutralem Rezept
         ''' angelegt - Katalogdaten sind seit Formatversion 2 selbst ein legitimer Sidecar-Inhalt.</summary>
         Public Shared Function TryWriteCatalog(rawPath As String, rating As Integer, isFavorite As Boolean, colorLabel As String,
-                                               keywords As IEnumerable(Of String)) As Boolean
+                                               keywords As IEnumerable(Of String),
+                                               Optional pickState As Integer = 0) As Boolean
             If String.IsNullOrWhiteSpace(rawPath) OrElse Not IsSidecarFormat(rawPath) Then Return False
             Dim adjustments = If(TryRead(rawPath), New ImageAdjustments())
             Dim catalog = New RawSidecarCatalogData With {
@@ -109,7 +113,8 @@ Namespace Services
                 .IsFavorite = isFavorite,
                 .ColorLabel = If(colorLabel, "").Trim(),
                 .Keywords = NormalizeKeywords(keywords),
-                .HasKeywords = True
+                .HasKeywords = True,
+                .PickState = LibraryService.NormalizePickState(pickState)
             }
             Return TryWriteCore(rawPath, adjustments, catalog, Nothing)
         End Function
@@ -141,6 +146,8 @@ Namespace Services
                         New XElement(Ns + "rating", safeRating.ToString(Globalization.CultureInfo.InvariantCulture)),
                         New XElement(Ns + "favorite", If(isFavorite, "true", "false")),
                         New XElement(Ns + "colorLabel", If(catalog?.ColorLabel, "")),
+                        New XElement(Ns + "pick", LibraryService.NormalizePickState(
+                            If(catalog Is Nothing, 0, catalog.PickState.GetValueOrDefault())).ToString(Globalization.CultureInfo.InvariantCulture)),
                         keywordsNode)
                     Dim doc = New XDocument(
                         New XDeclaration("1.0", "utf-8", Nothing),
@@ -400,6 +407,11 @@ Namespace Services
                 End If
                 Dim colorLabelNode = catalogNode.Element(Ns + "colorLabel")
                 If colorLabelNode IsNot Nothing Then result.ColorLabel = colorLabelNode.Value.Trim()
+                Dim pickNode = catalogNode.Element(Ns + "pick")
+                Dim pick As Integer
+                If pickNode IsNot Nothing AndAlso Integer.TryParse(pickNode.Value, pick) Then
+                    result.PickState = LibraryService.NormalizePickState(pick)
+                End If
                 Dim keywordsNode = catalogNode.Element(Ns + "keywords")
                 If keywordsNode IsNot Nothing Then
                     result.HasKeywords = True

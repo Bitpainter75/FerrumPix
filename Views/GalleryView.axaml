@@ -161,7 +161,7 @@
                     </Button>
                     <Button Classes="icon-btn" Width="34" Height="34"
                             Command="{Binding NavigateParentCommand}"
-                            IsEnabled="{Binding HasBreadcrumbParent}"
+                            IsEnabled="{Binding CanNavigateParent}"
                             ToolTip.Tip="Eine Ebene nach oben">
                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/arrow-up.svg"
                                Width="20" Height="20"/>
@@ -601,10 +601,64 @@
                                     Opened="OnLocalizedFlyoutOpened">
                                 <StackPanel Spacing="1" MinWidth="248">
 
+                                        <!-- STAPEL: nur bei eingeschalteter Einstellung (Einstellungen,
+                                             Galerie). Der Schalter selbst steht dort und nicht hier:
+                                             zwei Schalter fuer denselben Wert liefen auseinander. -->
+                                        <StackPanel Spacing="1" IsVisible="{Binding StacksEnabled}">
+                                            <TextBlock Text="STAPEL" FontSize="{DynamicResource FP.Font.Caption}" FontWeight="SemiBold"
+                                                       Foreground="{DynamicResource FP.Text.Muted}"
+                                                       Margin="10,8,10,4"/>
+                                            <Button Classes="ghost" HorizontalAlignment="Stretch"
+                                                    HorizontalContentAlignment="Stretch" Padding="10,8"
+                                                    Command="{Binding ExpandAllStacksCommand}">
+                                                <TextBlock Text="Alle Stapel aufklappen" VerticalAlignment="Center"/>
+                                            </Button>
+                                            <Button Classes="ghost" HorizontalAlignment="Stretch"
+                                                    HorizontalContentAlignment="Stretch" Padding="10,8"
+                                                    Command="{Binding CollapseAllStacksCommand}">
+                                                <TextBlock Text="Alle Stapel zuklappen" VerticalAlignment="Center"/>
+                                            </Button>
+                                            <Separator Margin="4,6"/>
+                                        </StackPanel>
+
+                                        <!-- VERWORFENE: gedimmt zeigen, ausblenden oder nur sie -->
+                                        <TextBlock Text="VERWORFENE" FontSize="{DynamicResource FP.Font.Caption}" FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource FP.Text.Muted}"
+                                                   Margin="10,4,10,4"/>
+                                        <Button Classes="ghost" HorizontalAlignment="Stretch"
+                                                HorizontalContentAlignment="Stretch" Padding="10,8"
+                                                Command="{Binding SetFilterRejectedCommand}" CommandParameter="Show">
+                                            <Grid ColumnDefinitions="*,20">
+                                                <TextBlock Text="Gedimmt zeigen" VerticalAlignment="Center"/>
+                                                <TextBlock Grid.Column="1" Text="✓" IsVisible="{Binding IsFilterRejectedShow}"
+                                                           Foreground="{DynamicResource FP.Accent}" HorizontalAlignment="Center" FontWeight="Bold"/>
+                                            </Grid>
+                                        </Button>
+                                        <Button Classes="ghost" HorizontalAlignment="Stretch"
+                                                HorizontalContentAlignment="Stretch" Padding="10,8"
+                                                Command="{Binding SetFilterRejectedCommand}" CommandParameter="Hide">
+                                            <Grid ColumnDefinitions="*,20">
+                                                <TextBlock Text="Verworfene ausblenden" VerticalAlignment="Center"/>
+                                                <TextBlock Grid.Column="1" Text="✓" IsVisible="{Binding IsFilterRejectedHide}"
+                                                           Foreground="{DynamicResource FP.Accent}" HorizontalAlignment="Center" FontWeight="Bold"/>
+                                            </Grid>
+                                        </Button>
+                                        <Button Classes="ghost" HorizontalAlignment="Stretch"
+                                                HorizontalContentAlignment="Stretch" Padding="10,8"
+                                                Command="{Binding SetFilterRejectedCommand}" CommandParameter="Only">
+                                            <Grid ColumnDefinitions="*,20">
+                                                <TextBlock Text="Nur verworfene" VerticalAlignment="Center"/>
+                                                <TextBlock Grid.Column="1" Text="✓" IsVisible="{Binding IsFilterRejectedOnly}"
+                                                           Foreground="{DynamicResource FP.Accent}" HorizontalAlignment="Center" FontWeight="Bold"/>
+                                            </Grid>
+                                        </Button>
+
+                                        <Separator Margin="4,6"/>
+
                                         <!-- FAVORITEN -->
                                         <TextBlock Text="FAVORITEN" FontSize="{DynamicResource FP.Font.Caption}" FontWeight="SemiBold"
                                                    Foreground="{DynamicResource FP.Text.Muted}"
-                                                   Margin="10,8,10,4"/>
+                                                   Margin="10,4,10,4"/>
                                         <Button Classes="ghost" HorizontalAlignment="Stretch"
                                                 HorizontalContentAlignment="Stretch" Padding="10,8"
                                                 Command="{Binding SetFilterFavoriteCommand}" CommandParameter="All">
@@ -1806,6 +1860,38 @@
                     <TextBlock Text="Wähle einen Ordner in der Sidebar" Foreground="{DynamicResource FP.Text.Muted}" FontSize="{DynamicResource FP.Font.Small}" HorizontalAlignment="Center"/>
                 </StackPanel>
 
+                <!-- SERIENANSICHT: die Galerie zeigt nur eine geoeffnete Serie. Die Leiste schwebt
+                     unten ueber den Kacheln, statt eine Zeile ueber dem Raster einzuziehen - die
+                     Flaechen darunter liegen alle uebereinander in diesem Raster, und eine Zeile
+                     haette jede von ihnen verschoben. Zurueck ueber den Knopf, ESC oder das Abzeichen. -->
+                <Border Classes="stack-focus-bar"
+                        IsVisible="{Binding IsStackFocused}"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Bottom"
+                        Margin="0,0,0,16">
+                    <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/stack-2.svg"
+                                       Width="18" Height="18"
+                                       IconBrush="{DynamicResource FP.Accent}"
+                                       VerticalAlignment="Center"/>
+                        <TextBlock Text="{Binding StackFocusText}"
+                                   Classes="no-translate"
+                                   FontWeight="SemiBold"
+                                   VerticalAlignment="Center"/>
+                        <Button Classes="accent"
+                                Padding="12,5"
+                                Command="{Binding CloseStackFocusCommand}"
+                                ToolTip.Tip="ESC">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/arrow-back-up.svg"
+                                               Width="16" Height="16"
+                                               VerticalAlignment="Center"/>
+                                <TextBlock Text="Zurück zum Ordner" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+                </Border>
+
                 <!-- DIE GRUPPENANSICHT VIRTUALISIERT WIE DAS RASTER, nur ueber eine eigene
                      Anordnung: sie schiebt Kopfzeilen mit voller Zeilenbreite zwischen die Kacheln,
                      und mit gemischten Breiten kommt keine der mitgelieferten Anordnungen zurecht
@@ -1888,6 +1974,7 @@
                                         Classes.badges-on-hover="{Binding DataContext.TileBadgesOnHover, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                         Classes.selected="{Binding IsSelected}"
                                         Classes.navigation-selected="{Binding IsNavigationSelected}"
+                                        Classes.rejected="{Binding IsRejected}"
                                         AttachedToVisualTree="OnGalleryItemAttachedToVisualTree"
                                         Width="{Binding DataContext.TileWidthOrAuto, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                         Margin="{Binding DataContext.TileMargin, RelativeSource={RelativeSource AncestorType=UserControl}}"
@@ -1926,9 +2013,24 @@
                                                 CornerRadius="{Binding DataContext.TileImageCornerRadius, RelativeSource={RelativeSource AncestorType=UserControl}}">
                                             <Grid>
                                                 <Image Source="{Binding Thumbnail}"
+                                                       Classes="tile-thumb"
                                                        IsVisible="{Binding IsImage}"
                                                        Stretch="{Binding DataContext.TileImageStretch, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                        RenderOptions.BitmapInterpolationMode="MediumQuality"/>
+                                                <!-- VERWORFEN: das Bild gedimmt (Stil thumb-card.rejected),
+                                                     dazu dieses Zeichen oben in der Mitte. -->
+                                                <Border Classes="reject-badge"
+                                                        IsVisible="{Binding IsRejected}"
+                                                        HorizontalAlignment="Center"
+                                                        VerticalAlignment="Top"
+                                                        Margin="0,6,0,0"
+                                                        ToolTip.Tip="Verworfen">
+                                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/flag-x.svg"
+                                                                   Width="15" Height="15"
+                                                                   IconBrush="White"
+                                                                   HorizontalAlignment="Center"
+                                                                   VerticalAlignment="Center"/>
+                                                </Border>
                                                 <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/folder.svg"
                                                                IsVisible="{Binding IsFolder}"
                                                                Width="54" Height="54"
@@ -2006,6 +2108,47 @@
                                                                        IsVisible="{Binding IsSelected}"/>
                                                     </Border>
                                                 </Button>
+                                                <!-- STAPEL: Serie oder RAW+JPEG-Paar. Der Klick klappt
+                                                     auf und zu (ToggleStackExpanded); links neben dem
+                                                     Auswahlkreis, damit beide getrennt treffbar bleiben. -->
+                                                <Button Classes="gallery-overlay-btn stack-badge tile-action-hit"
+                                                        Classes.expanded="{Binding IsStackExpanded}"
+                                                        IsVisible="{Binding HasStackBadge}"
+                                                        HorizontalAlignment="Right"
+                                                        VerticalAlignment="Top"
+                                                        Margin="0,4,34,0"
+                                                        Click="OnStackBadgeClick"
+                                                        ToolTip.Tip="Stapel auf- oder zuklappen">
+                                                    <StackPanel Orientation="Horizontal" Spacing="4">
+                                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/stack-2.svg"
+                                                                       Width="14" Height="14"
+                                                                       IconBrush="White"
+                                                                       VerticalAlignment="Center"/>
+                                                        <TextBlock Text="{Binding StackBadgeText}"
+                                                                   Classes="no-translate"
+                                                                   FontSize="{DynamicResource FP.Font.Small}"
+                                                                   FontWeight="SemiBold"
+                                                                   Foreground="White"
+                                                                   VerticalAlignment="Center"/>
+                                                    </StackPanel>
+                                                </Button>
+                                                <Border Classes="stack-member-strip"
+                                                        IsVisible="{Binding IsStackMember}"
+                                                        VerticalAlignment="Bottom"/>
+                                                <!-- Schaerfe innerhalb der Serie, im Verhaeltnis zur
+                                                     schaerfsten Aufnahme; die schaerfste im Akzent. -->
+                                                <Border Classes="sharpness-track"
+                                                        IsVisible="{Binding HasSharpnessBar}"
+                                                        Width="{x:Static models:ImageItem.SharpnessBarTrackWidth}"
+                                                        HorizontalAlignment="Left"
+                                                        VerticalAlignment="Bottom"
+                                                        Margin="10,0,0,36"
+                                                        ToolTip.Tip="Schärfe innerhalb der Serie">
+                                                    <Border Classes="sharpness-fill"
+                                                            Classes.best="{Binding IsSharpestInStack}"
+                                                            Width="{Binding SharpnessBarWidth}"
+                                                            HorizontalAlignment="Left"/>
+                                                </Border>
                                                 <!-- DIE AUFSAETZE DER KACHEL stehen bewusst FEST in
                                                      der Vorlage und werden ueber Opacity versteckt.
                                                      Sie erst beim Ueberfahren zu bauen war am
@@ -2052,7 +2195,7 @@
                                                             Width="30"
                                                             Height="30"
                                                             Padding="0"
-                                                            IsVisible="{Binding CanFileOperationDelete}"
+                                                            IsVisible="{Binding CanDeleteFromTile}"
                                                             Click="OnHoverDeleteClick"
                                                             ToolTip.Tip="Löschen">
                                                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/trash.svg"
@@ -2066,9 +2209,15 @@
                                                             Orientation="Horizontal"
                                                             HorizontalAlignment="Left"
                                                             VerticalAlignment="Bottom"
-                                                            Margin="8,0,0,8"
+                                                            Margin="8,0,0,4"
                                                             Spacing="0"
                                                             IsVisible="{Binding IsImage}">
+                                                    <!-- EINE LINIE MIT HERZ UND ABZEICHEN: die Mitten der
+                                                         Sterne, des Herzens und der Metadatenzeichen stehen
+                                                         alle 18 Punkte ueber der Unterkante (Rand 4 plus
+                                                         halbe Knopfhoehe 14; bei den Abzeichen Rand 5 plus
+                                                         halbe Zeichenhoehe 13). Mit 8 standen die Sterne
+                                                         sichtbar hoeher (Nutzerbefund). -->
                                                     <!-- 22 breit wie die Sterne der Fusszeile, ohne Abstand: die
                                                          Reihe bleibt lueckenlos treffbar, und die Sterne stehen
                                                          nicht mehr so weit auseinander. 28 hoch wie jeder Knopf
@@ -2123,7 +2272,7 @@
                                                             Orientation="Horizontal"
                                                             HorizontalAlignment="Right"
                                                             VerticalAlignment="Bottom"
-                                                            Margin="0,0,20,4"
+                                                            Margin="0,0,20,5"
                                                             Spacing="0">
                                                         <Border Width="32" Height="32"
                                                                 Background="Transparent"
@@ -2468,7 +2617,7 @@
                                                     VerticalAlignment="Center"
                                                     Spacing="5"
                                                     Margin="4,0,14,0">
-                                            <Grid ColumnDefinitions="Auto,*,Auto">
+                                            <Grid ColumnDefinitions="Auto,*,Auto,Auto">
                                                 <Ellipse Width="10" Height="10" Margin="0,0,6,0" VerticalAlignment="Center"
                                                          Fill="{Binding ColorLabelBrush}"
                                                          IsVisible="{Binding HasColorLabel}"/>
@@ -2476,7 +2625,28 @@
                                                            FontSize="{DynamicResource FP.Font.ItemTitle}"
                                                            FontWeight="SemiBold"
                                                            TextTrimming="CharacterEllipsis"/>
-                                                <StackPanel Grid.Column="2"
+                                                <Button Grid.Column="2"
+                                                        Classes="gallery-overlay-btn stack-badge tile-action-hit"
+                                                        Classes.expanded="{Binding IsStackExpanded}"
+                                                        IsVisible="{Binding HasStackBadge}"
+                                                        VerticalAlignment="Center"
+                                                        Margin="8,0,0,0"
+                                                        Click="OnStackBadgeClick"
+                                                        ToolTip.Tip="Stapel auf- oder zuklappen">
+                                                    <StackPanel Orientation="Horizontal" Spacing="4">
+                                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/stack-2.svg"
+                                                                       Width="14" Height="14"
+                                                                       IconBrush="White"
+                                                                       VerticalAlignment="Center"/>
+                                                        <TextBlock Text="{Binding StackBadgeText}"
+                                                                   Classes="no-translate"
+                                                                   FontSize="{DynamicResource FP.Font.Small}"
+                                                                   FontWeight="SemiBold"
+                                                                   Foreground="White"
+                                                                   VerticalAlignment="Center"/>
+                                                    </StackPanel>
+                                                </Button>
+                                                <StackPanel Grid.Column="3"
                                                             Classes="gallery-toggle-badge"
                                                             Classes.badge-always="{Binding DataContext.MetadataBadgesAlwaysVisible, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                             Orientation="Horizontal"
@@ -2630,7 +2800,7 @@
                                             </Button>
                                             <Button Classes="gallery-overlay-btn danger"
                                                     Width="26" Height="26" Padding="0"
-                                                    IsVisible="{Binding CanFileOperationDelete}"
+                                                    IsVisible="{Binding CanDeleteFromTile}"
                                                     Click="OnHoverDeleteClick"
                                                     ToolTip.Tip="Löschen">
                                                 <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/trash.svg"

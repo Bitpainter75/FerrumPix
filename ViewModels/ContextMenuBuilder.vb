@@ -186,6 +186,38 @@ Namespace ViewModels
                 Divider(list)
             End If
 
+            ' --- Aussortieren ------------------------------------------------------------------
+            ' Verwerfen ist eine Markierung im lokalen Katalog und gilt fuer lokale Bilder. Die
+            ' Beschriftung folgt dem Zustand: sind ALLE schon verworfen, nimmt der Eintrag es zurueck.
+            ' Serie und Stapel gibt es nur fuer EIN angeklicktes Bild - bei einer Auswahl waere
+            ' offen, welche Serie gemeint ist.
+            If imageBatch AndAlso Not videoOnly AndAlso images.All(Function(i) Not i.IsRemoteAsset) Then
+                If images.All(Function(i) i.IsRejected) Then
+                    AddIfOffered(list, commands.ToggleReject, FooterMenuCatalog.Unreject(commands.ToggleReject))
+                Else
+                    AddIfOffered(list, commands.ToggleReject, FooterMenuCatalog.Reject(commands.ToggleReject))
+                End If
+                Dim stack = If(isSingle, first?.Stack, Nothing)
+                If stack IsNot Nothing AndAlso stack.IsBurst Then
+                    AddIfOffered(list, commands.RejectRestOfStack, FooterMenuCatalog.RejectRestOfStack(commands.RejectRestOfStack))
+                End If
+                If stack IsNot Nothing AndAlso stack.IsBurst Then
+                    ' Eine Serie oeffnet sich als eigene Ansicht, siehe GalleryViewModel.OpenOrCloseStack.
+                    If first.IsInStackFocus Then
+                        AddIfOffered(list, commands.ToggleStack, FooterMenuCatalog.CloseSeries(commands.ToggleStack))
+                    Else
+                        AddIfOffered(list, commands.ToggleStack, FooterMenuCatalog.OpenSeries(commands.ToggleStack))
+                    End If
+                ElseIf stack IsNot Nothing Then
+                    If stack.LeadShot.Primary.IsStackExpanded Then
+                        AddIfOffered(list, commands.ToggleStack, FooterMenuCatalog.CollapseStack(commands.ToggleStack))
+                    Else
+                        AddIfOffered(list, commands.ToggleStack, FooterMenuCatalog.ExpandStack(commands.ToggleStack))
+                    End If
+                End If
+                Divider(list)
+            End If
+
             ' --- Metadaten (Untermenue) --------------------------------------------------------
             ' Aufnahmeort und "Metadaten entfernen" arbeiten beide an den Angaben ZUR Aufnahme und
             ' gehoeren zusammen. Einzeln im Hauptmenue waeren es vier weitere Zeilen in einer
@@ -230,7 +262,9 @@ Namespace ViewModels
                 Divider(list)
             End If
 
-            If Not isParentEntry AndAlso first IsNot Nothing AndAlso first.CanFileOperationDelete Then
+            ' Eine zugeklappte Serie loescht man nicht als Ganzes, siehe GalleryViewModel.DeleteSelected.
+            If Not isParentEntry AndAlso first IsNot Nothing AndAlso first.CanFileOperationDelete AndAlso
+               Not entries.Any(Function(i) i.IsCollapsedBurst) Then
                 AddIfOffered(list, commands.Delete, FooterMenuCatalog.Delete(commands.Delete))
             End If
 

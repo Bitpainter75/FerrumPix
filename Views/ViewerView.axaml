@@ -588,6 +588,7 @@
                                     Classes="thumb-card"
                                     Classes.flat="{Binding DataContext.FilmstripTilesAreFlat, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                     Classes.selected="{Binding IsSelected}"
+                                    Classes.compare-anchor="{Binding IsCompareAnchor}"
                                     ClipToBounds="True"
                                     PointerPressed="OnFilmstripItemPressed"
                                     ToolTip.ToolTipOpening="OnFilmstripItemToolTipOpening"

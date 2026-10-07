@@ -1708,6 +1708,71 @@
         <Setter Property="Background" Value="#AA6E1D1D"/>
         <Setter Property="BorderBrush" Value="#C08E2D2D"/>
     </Style>
+    <!-- STAPEL: das Abzeichen an der ersten Kachel einer Serie oder eines RAW+JPEG-Paars. Immer
+         sichtbar, nicht nur beim Ueberfahren: ein zugeklappter Stapel verbirgt Bilder, und das muss
+         man sehen, ohne zu suchen. Aufgeklappt traegt es den Akzent, die Mitglieder dahinter
+         bekommen einen Akzentstreifen unten an der Bildflaeche (stack-member-strip). -->
+    <Style Selector="Button.stack-badge">
+        <Setter Property="Panel.ZIndex" Value="3"/>
+        <Setter Property="MinWidth" Value="28"/>
+        <Setter Property="Height" Value="24"/>
+        <Setter Property="Padding" Value="6,0"/>
+    </Style>
+    <Style Selector="Button.stack-badge.expanded">
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Accent}"/>
+    </Style>
+    <Style Selector="Button.stack-badge.expanded /template/ ContentPresenter">
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Accent}"/>
+    </Style>
+    <Style Selector="Border.stack-member-strip">
+        <Setter Property="Height" Value="3"/>
+        <Setter Property="Background" Value="{DynamicResource FP.Accent}"/>
+        <Setter Property="Opacity" Value="0.7"/>
+        <Setter Property="IsHitTestVisible" Value="False"/>
+    </Style>
+    <!-- SERIENANSICHT: die schwebende Leiste unten. Sie steht im Raster VOR den Kachelflaechen
+         und braucht deshalb den Z-Index, sonst laege sie darunter. -->
+    <Style Selector="Border.stack-focus-bar">
+        <Setter Property="Panel.ZIndex" Value="10"/>
+        <Setter Property="Background" Value="{DynamicResource FP.Bg.Content}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Accent}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="10"/>
+        <Setter Property="Padding" Value="16,8,8,8"/>
+        <Setter Property="BoxShadow" Value="0 4 16 0 #80000000"/>
+    </Style>
+    <!-- VERGLEICH IM BETRACHTER: das angeheftete Bild im Filmstreifen. Gedimmt und ohne
+         Handzeiger, weil es nicht rechts neben sich selbst stehen kann (ViewerViewModel.SetPinnedPath). -->
+    <Style Selector="Border.thumb-card.compare-anchor">
+        <Setter Property="Opacity" Value="0.35"/>
+        <Setter Property="Cursor" Value="Arrow"/>
+    </Style>
+    <!-- VERWORFEN: das Vorschaubild gedimmt, die Aufsaetze bleiben voll lesbar. -->
+    <Style Selector="Border.thumb-card.rejected Image.tile-thumb">
+        <Setter Property="Opacity" Value="0.35"/>
+    </Style>
+    <Style Selector="Border.reject-badge">
+        <Setter Property="Width" Value="26"/>
+        <Setter Property="Height" Value="24"/>
+        <Setter Property="CornerRadius" Value="12"/>
+        <Setter Property="Background" Value="#C08E2D2D"/>
+        <Setter Property="BorderBrush" Value="#E0B23A3A"/>
+        <Setter Property="BorderThickness" Value="1"/>
+    </Style>
+    <!-- Schaerfebalken einer Serie: Spur und Fuellung, links unten ueber den Sternen. -->
+    <Style Selector="Border.sharpness-track">
+        <Setter Property="Height" Value="7"/>
+        <Setter Property="CornerRadius" Value="3.5"/>
+        <Setter Property="Background" Value="#80000000"/>
+    </Style>
+    <Style Selector="Border.sharpness-fill">
+        <Setter Property="Height" Value="7"/>
+        <Setter Property="CornerRadius" Value="3.5"/>
+        <Setter Property="Background" Value="#E7ECF0"/>
+    </Style>
+    <Style Selector="Border.sharpness-fill.best">
+        <Setter Property="Background" Value="{DynamicResource FP.Accent}"/>
+    </Style>
     <Style Selector="Border.gallery-meta-pill">
         <Setter Property="Background" Value="#C010141A"/>
         <Setter Property="BorderBrush" Value="#8A4C5A69"/>

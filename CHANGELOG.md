@@ -2,6 +2,23 @@
 
 ### What's new
 
+- **Bursts and RAW+JPEG pairs as stacks.** When switched on in Settings, shots taken in quick
+  succession and the camera JPEG next to a RAW appear as one thumbnail. A click on a burst shows
+  just that burst until you go back to the folder; pictures of a burst are deleted there one at a
+  time, never the whole burst at once. The navigation buttons only leave the burst view and stay
+  in the folder. Ratings, labels, keywords and deleting on a pair apply to both files.
+
+- **Sharpest shot first.** Within a burst the sharpest shot moves to the front, and each shot shows
+  how sharp it is compared to the best one.
+
+- **Reject while culling.** X marks pictures as rejected, SHIFT+X rejects everything in a burst
+  except the chosen shot. Rejected pictures are dimmed and can be hidden or shown on their own with
+  the filter; the mark is written to the sidecar as well.
+
+- **File operations outside the home folder.** A new setting allows copying, moving, renaming and
+  deleting on other drives, mounted media and network folders. It is off by default, and system
+  folders stay locked either way.
+
 - **Eight editable looks in Filters.** Base Light, Color Harmony and Luminous Curve highlight
   individual adjustment groups; Desert Light, Film Grain, Color Haze, Clear View and Timeless
   offer further starting points. Every look consists only of ordinary FerrumPix sliders,
@@ -15,6 +32,11 @@
   accent color and strength.
 
 ### Fixes
+
+- **Stars, heart and metadata badges on thumbnails now sit on one line.**
+
+- **The viewer comparison no longer puts a picture next to itself.** Paging skips the pinned
+  picture, and it is dimmed in the filmstrip.
 
 - **Lens data below thumbnails now comes from the same actual focal length as the EXIF panel.**
   A 50 mm lens is no longer labelled 75 mm on a crop camera, and existing catalog entries are

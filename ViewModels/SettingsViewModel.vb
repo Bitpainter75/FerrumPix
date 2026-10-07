@@ -47,11 +47,13 @@ Namespace ViewModels
         Private _defaultSaveFormat As String = "JPG"
         Private _showHiddenFolders As Boolean = False
         Private _followLinkedFolders As Boolean = False
+        Private _allowFileOperationsOutsideHome As Boolean = False
         Private _deleteSkipTrash As Boolean = False
         Private _deleteSkipConfirmation As Boolean = False
         Private _galleryShowFolders As Boolean = True
         Private _galleryShowParentFolder As Boolean = True
         Private _galleryRatingBadgesAlwaysVisible As Boolean = False
+        Private _galleryStacks As Boolean = False
         Private _galleryFavoriteBadgeAlwaysVisible As Boolean = True
         Private _galleryMetadataBadgesAlwaysVisible As Boolean = True
         Private _galleryViewMode As String = "Grid"
@@ -212,11 +214,13 @@ Namespace ViewModels
         Private _savedThumbnailCacheEnabled As Boolean = True
         Private _savedShowHiddenFolders As Boolean = False
         Private _savedFollowLinkedFolders As Boolean = False
+        Private _savedAllowFileOperationsOutsideHome As Boolean = False
         Private _savedDeleteSkipTrash As Boolean = False
         Private _savedDeleteSkipConfirmation As Boolean = False
         Private _savedGalleryShowFolders As Boolean = True
         Private _savedGalleryShowParentFolder As Boolean = True
         Private _savedGalleryRatingBadgesAlwaysVisible As Boolean = False
+        Private _savedGalleryStacks As Boolean = False
         Private _savedGalleryFavoriteBadgeAlwaysVisible As Boolean = True
         Private _savedGalleryMetadataBadgesAlwaysVisible As Boolean = True
         Private _savedGalleryViewMode As String = "Grid"
@@ -1761,6 +1765,21 @@ Namespace ViewModels
             End Set
         End Property
 
+        ''' <summary>Dateiarbeit auch ausserhalb des Benutzerordners; Systemordner bleiben gesperrt
+        ''' (siehe FileOperationPolicy.AllowOutsidePersonalFolder).</summary>
+        Public Property AllowFileOperationsOutsideHome As Boolean
+            Get
+                Return _allowFileOperationsOutsideHome
+            End Get
+            Set(value As Boolean)
+                If _allowFileOperationsOutsideHome = value Then Return
+                Me.RaiseAndSetIfChanged(_allowFileOperationsOutsideHome, value)
+                FileOperationPolicy.AllowOutsidePersonalFolder = value
+                _mainVm?.Gallery?.RefreshFileOperationFlags()
+                SaveFileBrowserSettings()
+            End Set
+        End Property
+
         Public Property GalleryShowFolders As Boolean
             Get
                 Return _galleryShowFolders
@@ -1797,6 +1816,19 @@ Namespace ViewModels
                 If _galleryRatingBadgesAlwaysVisible = value Then Return
                 Me.RaiseAndSetIfChanged(_galleryRatingBadgesAlwaysVisible, value)
                 If _mainVm?.Gallery IsNot Nothing Then _mainVm.Gallery.RatingBadgesAlwaysVisible = value
+                SaveFileBrowserSettings()
+            End Set
+        End Property
+
+        ''' <summary>Serien und RAW+JPEG-Paare in der Galerie als Stapel. Ab Werk aus.</summary>
+        Public Property GalleryStacks As Boolean
+            Get
+                Return _galleryStacks
+            End Get
+            Set(value As Boolean)
+                If _galleryStacks = value Then Return
+                Me.RaiseAndSetIfChanged(_galleryStacks, value)
+                If _mainVm?.Gallery IsNot Nothing Then _mainVm.Gallery.StacksEnabled = value
                 SaveFileBrowserSettings()
             End Set
         End Property
@@ -4101,11 +4133,13 @@ Namespace ViewModels
             _preserveMetadataOnSave = _appSettings.PreserveMetadataOnSave
             _showHiddenFolders = _appSettings.ShowHiddenFolders
             _followLinkedFolders = _appSettings.FollowLinkedFolders
+            _allowFileOperationsOutsideHome = _appSettings.AllowFileOperationsOutsideHome
             _deleteSkipTrash = _appSettings.DeleteSkipTrash
             _deleteSkipConfirmation = _appSettings.DeleteSkipConfirmation
             _galleryShowFolders = _appSettings.GalleryShowFolders
             _galleryShowParentFolder = _appSettings.GalleryShowParentFolder
             _galleryRatingBadgesAlwaysVisible = _appSettings.GalleryRatingBadgesAlwaysVisible
+            _galleryStacks = _appSettings.GalleryStacks
             _galleryFavoriteBadgeAlwaysVisible = _appSettings.GalleryFavoriteBadgeAlwaysVisible
             _galleryMetadataBadgesAlwaysVisible = _appSettings.GalleryMetadataBadgesAlwaysVisible
             _galleryViewMode = AppSettingsService.NormalizeGalleryViewMode(_appSettings.GalleryViewMode)
@@ -4196,6 +4230,7 @@ Namespace ViewModels
             ImageItem.NextcloudDeleteAllowed = _nextcloudAllowDelete
             FolderNode.ShowHiddenFolders = _showHiddenFolders
             FileOperationPolicy.FollowLinkedFolders = _followLinkedFolders
+            FileOperationPolicy.AllowOutsidePersonalFolder = _allowFileOperationsOutsideHome
             ImageItem.ImmichDeleteAllowed = _immichAllowDelete
             BuildModelGroups()
             BuildAdjustmentGroupItems()
@@ -4503,11 +4538,13 @@ Namespace ViewModels
             _savedNextcloudDeletePermanently = _nextcloudDeletePermanently
             _savedShowHiddenFolders = _showHiddenFolders
             _savedFollowLinkedFolders = _followLinkedFolders
+            _savedAllowFileOperationsOutsideHome = _allowFileOperationsOutsideHome
             _savedDeleteSkipTrash = _deleteSkipTrash
             _savedDeleteSkipConfirmation = _deleteSkipConfirmation
             _savedGalleryShowFolders = _galleryShowFolders
             _savedGalleryShowParentFolder = _galleryShowParentFolder
             _savedGalleryRatingBadgesAlwaysVisible = _galleryRatingBadgesAlwaysVisible
+            _savedGalleryStacks = _galleryStacks
             _savedGalleryFavoriteBadgeAlwaysVisible = _galleryFavoriteBadgeAlwaysVisible
             _savedGalleryMetadataBadgesAlwaysVisible = _galleryMetadataBadgesAlwaysVisible
             _savedGalleryViewMode = _galleryViewMode
@@ -4623,11 +4660,13 @@ Namespace ViewModels
             NextcloudEnabled = _savedNextcloudEnabled
             ShowHiddenFolders = _savedShowHiddenFolders
             FollowLinkedFolders = _savedFollowLinkedFolders
+            AllowFileOperationsOutsideHome = _savedAllowFileOperationsOutsideHome
             DeleteSkipTrash = _savedDeleteSkipTrash
             DeleteSkipConfirmation = _savedDeleteSkipConfirmation
             GalleryShowFolders = _savedGalleryShowFolders
             GalleryShowParentFolder = _savedGalleryShowParentFolder
             GalleryRatingBadgesAlwaysVisible = _savedGalleryRatingBadgesAlwaysVisible
+            GalleryStacks = _savedGalleryStacks
             GalleryFavoriteBadgeAlwaysVisible = _savedGalleryFavoriteBadgeAlwaysVisible
             GalleryMetadataBadgesAlwaysVisible = _savedGalleryMetadataBadgesAlwaysVisible
             GalleryViewMode = _savedGalleryViewMode
@@ -4759,11 +4798,13 @@ Namespace ViewModels
             ImmichWritePeopleTags = False
             ShowHiddenFolders = False
             FollowLinkedFolders = False
+            AllowFileOperationsOutsideHome = False
             DeleteSkipTrash = False
             DeleteSkipConfirmation = False
             GalleryShowFolders = True
             GalleryShowParentFolder = True
             GalleryRatingBadgesAlwaysVisible = False
+            GalleryStacks = False
             GalleryFavoriteBadgeAlwaysVisible = True
             GalleryMetadataBadgesAlwaysVisible = True
             GalleryViewMode = "Grid"
@@ -5058,9 +5099,11 @@ Namespace ViewModels
             AppSettingsService.Update(Sub(s)
                                           s.ShowHiddenFolders = _showHiddenFolders
                                           s.FollowLinkedFolders = _followLinkedFolders
+                                          s.AllowFileOperationsOutsideHome = _allowFileOperationsOutsideHome
                                           s.GalleryShowFolders = _galleryShowFolders
                                           s.GalleryShowParentFolder = _galleryShowParentFolder
                                           s.GalleryRatingBadgesAlwaysVisible = _galleryRatingBadgesAlwaysVisible
+                                          s.GalleryStacks = _galleryStacks
                                           s.GalleryFavoriteBadgeAlwaysVisible = _galleryFavoriteBadgeAlwaysVisible
                                           s.GalleryMetadataBadgesAlwaysVisible = _galleryMetadataBadgesAlwaysVisible
                                           s.GalleryViewMode = _galleryViewMode
