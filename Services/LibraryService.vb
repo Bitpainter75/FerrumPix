@@ -764,7 +764,11 @@ Namespace Services
         ''' <summary>Setzt die Markierung beim Aussortieren fuer mehrere Dateien in einer Transaktion:
         ''' -1 verworfen, 0 keine, 1 behalten. Wandert wie Bewertung und Etikett in die .fpxmp und, bei
         ''' eingeschaltetem Abgleich, als xmpDM:good in die XMP-Beistelldatei.</summary>
-        Public Sub SetPickStateForMany(filePaths As IEnumerable(Of String), pickState As Integer, Optional syncToXmp As Boolean = False)
+        ''' <param name="catalogOnly">Nur die Katalogspalte, keine .fpxmp und keine XMP - fuer den
+        ''' Katalogindex, der nichts neben den Fotos anlegen darf (KATALOGINDEX.md, „Die drei
+        ''' Zusagen").</param>
+        Public Sub SetPickStateForMany(filePaths As IEnumerable(Of String), pickState As Integer, Optional syncToXmp As Boolean = False,
+                                       Optional catalogOnly As Boolean = False)
             Dim list = If(filePaths, Enumerable.Empty(Of String)()).Where(AddressOf IsCatalogWritable).ToList()
             If list.Count = 0 Then Return
             Dim value = NormalizePickState(pickState)
@@ -789,6 +793,7 @@ Namespace Services
                 End Using
             End Using
 
+            If catalogOnly Then Return
             For Each path In list
                 SyncCatalogToFpxmp(path)
             Next

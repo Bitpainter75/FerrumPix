@@ -22,6 +22,7 @@ Namespace Services
         Private Shared ReadOnly DcNs As XNamespace = "http://purl.org/dc/elements/1.1/"
         Private Shared ReadOnly LrNs As XNamespace = "http://ns.adobe.com/lightroom/1.0/"
         Private Shared ReadOnly ExifNs As XNamespace = "http://ns.adobe.com/exif/1.0/"
+        Private Shared ReadOnly XmpDmNs As XNamespace = "http://ns.adobe.com/xmp/1.0/DynamicMedia/"
 
         Public Class XmpSidecarData
             Public Property Rating As Integer?
@@ -30,11 +31,14 @@ Namespace Services
             ''' Nur gefuellt, wenn beide Werte dastehen - eine halbe Koordinate ist keine.
             Public Property GpsLatitude As Double?
             Public Property GpsLongitude As Double?
+            ''' Markierung beim Aussortieren: aus xmpDM:good (True 1, False -1), sonst -1 aus einer
+            ''' Bewertung von -1 (so schreiben Bridge und darktable "abgelehnt"). Nothing = keine Angabe.
+            Public Property PickState As Integer?
 
             Public ReadOnly Property IsEmpty As Boolean
                 Get
                     Return Not Rating.HasValue AndAlso String.IsNullOrEmpty(ColorLabel) AndAlso
-                           Keywords.Count = 0 AndAlso Not GpsLatitude.HasValue
+                           Keywords.Count = 0 AndAlso Not GpsLatitude.HasValue AndAlso Not PickState.HasValue
                 End Get
             End Property
         End Class
@@ -103,8 +107,18 @@ Namespace Services
                         If Not String.IsNullOrWhiteSpace(ratingText) AndAlso
                            Double.TryParse(ratingText, NumberStyles.Float, CultureInfo.InvariantCulture, parsed) Then
                             ' Das Schema kennt "abgelehnt" als Bewertung -1; unsere Skala geht bei 0 los.
+                            ' Die -1 ist deshalb keine Bewertung, sondern die Markierung "verworfen".
                             result.Rating = CInt(Math.Max(0, Math.Min(5, Math.Round(parsed))))
+                            If Math.Round(parsed) < 0 AndAlso Not result.PickState.HasValue Then result.PickState = -1
                         End If
+                    End If
+
+                    ' xmpDM:good geht vor einer Bewertung von -1: es ist die ausdrueckliche Angabe.
+                    Dim good = ReadValue(description, XmpDmNs + "good")
+                    If String.Equals(good, "True", StringComparison.OrdinalIgnoreCase) Then
+                        result.PickState = 1
+                    ElseIf String.Equals(good, "False", StringComparison.OrdinalIgnoreCase) Then
+                        result.PickState = -1
                     End If
 
                     If String.IsNullOrEmpty(result.ColorLabel) Then

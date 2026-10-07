@@ -7093,6 +7093,16 @@ Namespace ViewModels
                 End If
 
                 If sidecar IsNot Nothing Then
+                    ' Verwerfen/Behalten aus einer fremden Beistelldatei (xmpDM:good, Bewertung -1):
+                    ' dieselbe Regel wie fuer Bewertung und Etikett - die .fpxmp geht vor, und gefuellt
+                    ' wird nur, was im Katalog leer ist.
+                    If sidecar.PickState.HasValue AndAlso
+                       (fpxmpCatalog Is Nothing OrElse Not fpxmpCatalog.PickState.HasValue) AndAlso
+                       LibraryService.Instance.GetPickState(filePath) = 0 Then
+                        LibraryService.Instance.SetPickStateForMany({filePath}, sidecar.PickState.Value)
+                        result.Pick = sidecar.PickState.Value
+                    End If
+
                     If (fpxmpCatalog Is Nothing OrElse fpxmpCatalog.ColorLabel Is Nothing) AndAlso
                        Not String.IsNullOrEmpty(sidecar.ColorLabel) AndAlso String.IsNullOrEmpty(currentColorLabel) Then
                         LibraryService.Instance.SetColorLabelForMany({filePath}, sidecar.ColorLabel)

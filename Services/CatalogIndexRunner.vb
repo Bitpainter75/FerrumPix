@@ -388,7 +388,20 @@ Namespace Services
             ' portable Quelle fuer Bewertung, Etikett und Stichwoerter bei RAW und PSD. NUR LESEN:
             ' ImportFpxmpCatalogData legt keine an, im Unterschied zum Weg der Galerie, der eine
             ' XMP-Beistelldatei zusaetzlich in eine .fpxmp uebersetzt.
-            LibraryService.Instance.ImportFpxmpCatalogData(filePath)
+            Dim fpxmpCatalog = LibraryService.Instance.ImportFpxmpCatalogData(filePath)
+
+            ' Verwerfen/Behalten aus einer fremden XMP-Beistelldatei (xmpDM:good, Bewertung -1),
+            ' nach derselben Regel wie im Ordnerlauf der Galerie: die .fpxmp geht vor, gefuellt wird
+            ' nur, was im Katalog leer ist. Nur lesen, nichts anlegen.
+            Dim sidecarPath = XmpSidecarService.FindSidecar(filePath)
+            If Not String.IsNullOrEmpty(sidecarPath) AndAlso
+               (fpxmpCatalog Is Nothing OrElse Not fpxmpCatalog.PickState.HasValue) Then
+                Dim sidecar = XmpSidecarService.ReadSidecar(sidecarPath)
+                If sidecar IsNot Nothing AndAlso sidecar.PickState.HasValue AndAlso
+                   LibraryService.Instance.GetPickState(filePath) = 0 Then
+                    LibraryService.Instance.SetPickStateForMany({filePath}, sidecar.PickState.Value, catalogOnly:=True)
+                End If
+            End If
 
             ' Und die Stichwoerter aus der Beistelldatei UND aus der Bilddatei selbst - derselbe Weg,
             ' den auch der Ordnerlauf der Galerie nimmt. Ohne ihn faende die Suche sie erst, wenn

@@ -104,14 +104,18 @@ Namespace Services
 
         Public Shared Function Build(items As IEnumerable(Of ImageItem)) As List(Of ImageStack)
             Dim candidates = items.Where(AddressOf IsStackable).ToList()
-            Dim shots = BuildShots(candidates)
+            Dim standalone As New HashSet(Of StackShot)()
+            Dim shots = BuildShots(candidates, standalone)
             Dim stacks As New List(Of ImageStack)()
 
             ' Serien je Ordner und Kamera; zwei Gehaeuse, die in derselben Sekunde ausloesen, sind
             ' zwei Serien und keine. OHNE Kamera keine Serie: alle Bilder eines Ordners ohne Angabe
             ' teilten sonst denselben leeren Schluessel, und unabhaengige Bilder (Scans, Exporte,
             ' Bildschirmfotos) verschwaenden hinter einer Kachel, nur weil ihre Zeiten nah liegen.
-            Dim timed = shots.Where(Function(s) s.TakenAt.HasValue AndAlso
+            ' Auch keine Serie aus einer uebrigen Begleitdatei (RAW+JPG+HEIC): sie traegt denselben
+            ' Namen und dieselbe Zeit wie das Paar, ist aber keine zweite Ausloesung. Sie steht
+            ' einzeln im Raster.
+            Dim timed = shots.Where(Function(s) s.TakenAt.HasValue AndAlso Not standalone.Contains(s) AndAlso
                                                 Not String.IsNullOrWhiteSpace(s.Primary.ExifCamera)).
                 GroupBy(Function(s) SeriesKey(s.Primary), StringComparer.OrdinalIgnoreCase)
             Dim inBurst As New HashSet(Of StackShot)()
@@ -158,7 +162,7 @@ Namespace Services
         ''' <see cref="PairGapSeconds"/> auseinander, und, wo beide sie nennen, dieselbe Kamera.
         ''' Was davon abweicht, bleibt eine eigene Aufnahme - lieber ein Paar zu wenig als ein
         ''' fremdes JPEG, das hinter dem RAW verschwindet.</summary>
-        Private Shared Function BuildShots(items As List(Of ImageItem)) As List(Of StackShot)
+        Private Shared Function BuildShots(items As List(Of ImageItem), standalone As HashSet(Of StackShot)) As List(Of StackShot)
             Dim result As New List(Of StackShot)()
             Dim byName = items.GroupBy(Function(i) Path.Combine(FolderOf(i.FilePath), Path.GetFileNameWithoutExtension(i.FilePath)),
                                        StringComparer.OrdinalIgnoreCase)
@@ -172,15 +176,23 @@ Namespace Services
                     Continue For
                 End If
 
+                ' Genau EINE Begleitdatei: die Kamera schreibt zu einem RAW ein JPEG oder ein HEIF,
+                ' nicht beides. Liegen mehrere passende daneben (RAW+JPG+HEIC), ist mindestens eine
+                ' davon nicht das Kamerabild - sie bleibt sichtbar als eigene Aufnahme, statt hinter
+                ' dem RAW zu verschwinden. JPEG geht vor HEIF, bei Gleichstand die naehere Zeit.
                 Dim raw = raws(0)
                 Dim shot = SingleShot(raw)
+                Dim companion = files.Where(Function(f) f IsNot raw AndAlso IsCompanion(raw, f)).
+                    OrderBy(Function(f) CompanionRank(f)).
+                    ThenBy(Function(f) Math.Abs((f.ExifDateTaken.Value - raw.ExifDateTaken.Value).TotalSeconds)).
+                    ThenBy(Function(f) f.FilePath, StringComparer.OrdinalIgnoreCase).
+                    FirstOrDefault()
+                If companion IsNot Nothing Then shot.Files.Add(companion)
                 For Each file In files
-                    If file Is raw Then Continue For
-                    If IsCompanion(raw, file) Then
-                        shot.Files.Add(file)
-                    Else
-                        result.Add(SingleShot(file))
-                    End If
+                    If file Is raw OrElse file Is companion Then Continue For
+                    Dim leftover = SingleShot(file)
+                    standalone.Add(leftover)
+                    result.Add(leftover)
                 Next
                 result.Add(shot)
             Next
@@ -191,6 +203,13 @@ Namespace Services
             Dim shot As New StackShot()
             shot.Files.Add(item)
             Return shot
+        End Function
+
+        Private Shared Function CompanionRank(item As ImageItem) As Integer
+            Select Case Path.GetExtension(item.FilePath).ToLowerInvariant()
+                Case ".jpg", ".jpeg" : Return 0
+                Case Else : Return 1
+            End Select
         End Function
 
         Friend Shared Function IsCompanion(raw As ImageItem, other As ImageItem) As Boolean
