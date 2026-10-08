@@ -110,7 +110,17 @@
                 <StackPanel Spacing="2" Margin="0,8,0,0">
                     <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
                         <TextBlock Text="Weichzeichnen" Foreground="{DynamicResource FP.Text.Secondary}"
-                                   VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap" />
+                                   VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap"
+                                   ToolTip.Tip="Zeichnet das ganze Bild gleichmäßig weich. Die Stärke richtet sich nach der Bildgröße, Vorschau und Export sehen gleich aus." />
+                        <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
+                                           Value="{Binding Blur}" Margin="0,0" />
+                        <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                                 Value="{Binding Blur, Mode=TwoWay}" Minimum="0" Maximum="100" />
+                    </Grid>
+                    <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center" Margin="0,6,0,0">
+                        <TextBlock Text="Glätten" Foreground="{DynamicResource FP.Text.Secondary}"
+                                   VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap"
+                                   ToolTip.Tip="Mindert Rauschen und lässt Kanten und Zeichnung stehen. Ein sauberes Foto verändert sich dabei kaum." />
                         <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
                                            Value="{Binding NoiseReduction}" Margin="0,0" />
                         <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
@@ -119,7 +129,7 @@
                     <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
                         <TextBlock Text="Detail" Foreground="{DynamicResource FP.Text.Secondary}"
                                    VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}"
-                                   ToolTip.Tip="Schützt Kanten beim Weichzeichnen: höher = mehr Details bleiben erhalten." />
+                                   ToolTip.Tip="Schützt Kanten beim Glätten: höher = mehr Details bleiben erhalten." />
                         <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
                                            Value="{Binding NoiseReductionDetail}" Margin="0,0" />
                         <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
@@ -136,7 +146,7 @@
                                   Margin="6,0,0,0"
                                   HorizontalAlignment="Stretch"
                                   DropDownOpened="OnMatchWidthDropDownOpened"
-                                  ToolTip.Tip="Adaptive: glättet so stark, wie das Bild bei der jeweiligen Helligkeit rauscht. Guided: glättet mit fester Schwelle nur flache Flächen. Gaussian: gleichmäßiges Weichzeichnen. Median: kantenerhaltend, echte Rauschunterdrückung." />
+                                  ToolTip.Tip="Adaptive: glättet so stark, wie das Bild bei der jeweiligen Helligkeit rauscht. Guided: glättet mit fester Schwelle nur flache Flächen. Gaussian: glättet gleichmäßig mit kleinem Radius. Median: kantenerhaltend, echte Rauschunterdrückung." />
                     </Grid>
                 </StackPanel>
             </Expander>

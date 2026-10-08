@@ -4,8 +4,8 @@
              x:Class="FerrumPix.Controls.EditorPanels.NoisePanel">
     <!-- ALLES ZUM RAUSCHEN an einem Ort. "Rauschen" und "Farbrauschen" lagen vorher bei den
          Details, mitten zwischen Struktur, Klarheit und Staub - drei Regler zu einer Sache, verteilt
-         auf zwei Gruppen. Das Weichzeichnen bleibt bewusst, wo es war: es ist ein Werkzeug fuer sich
-         und nicht nur eine Rauschminderung. -->
+         auf zwei Gruppen. Das Glaetten bleibt bewusst in der Gruppe Weichzeichnen, neben dem
+         Weichzeichner: beide machen das Bild ruhiger, das eine nur dort, wo es rauscht. -->
     <Border Classes="adjustment-group"
             IsVisible="{Binding HiddenAdjustmentGroups, Converter={StaticResource NotInListConverter}, ConverterParameter=rauschen}">
         <Expander Header="Rauschen" icons:ExpanderState.Key="rauschen">

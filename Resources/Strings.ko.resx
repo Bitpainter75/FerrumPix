@@ -1833,9 +1833,6 @@
   <data name="Unsharp_Mask_verst_rkt_Kanten_und_legt_dabei_hel_f79ad433" xml:space="preserve">
     <value>Unsharp Mask: 가장자리를 강조하며 밝고 어두운 테두리가 생깁니다. Deconvolution: 흐림을 역으로 계산해 미세한 디테일을 테두리 없이 다시 선명하게 합니다. 이때 Detail은 반복 횟수를 정합니다.</value>
   </data>
-  <data name="Adaptive_gl_ttet_so_stark_wie_das_Bild_bei_der_j_c2a3e582" xml:space="preserve">
-    <value>Adaptive: 밝기마다 실제 노이즈 양에 맞춰 부드럽게 합니다. Guided: 고정된 기준으로 평평한 부분만 부드럽게 합니다. 가우시안: 고르게 흐립니다. 미디언: 가장자리를 지키는 진짜 노이즈 제거입니다.</value>
-  </data>
   <data name="Glow_d5545dea" xml:space="preserve">
     <value>글로우</value>
   </data>
@@ -3905,9 +3902,6 @@
   </data>
   <data name="Hebt_die_feinen_Details_bei_der_Sch_rfung_st_rke_195d5aa8" xml:space="preserve">
     <value>선명하게 할 때 고운 디테일을 더 강하게 살립니다.</value>
-  </data>
-  <data name="Sch_tzt_Kanten_beim_Weichzeichnen_h_her_mehr_Det_43db4112" xml:space="preserve">
-    <value>흐리게 할 때 가장자리를 지킵니다. 값이 클수록 디테일이 더 남습니다.</value>
   </data>
   <data name="Korngr_e_0_feines_Korn_h_her_gr_ber_bae6e47b" xml:space="preserve">
     <value>입자 크기: 0이면 고운 입자, 값이 클수록 거칩니다.</value>
@@ -9618,5 +9612,17 @@
   </data>
   <data name="Objektivkorrektur_aus_der_Kamera_513a6234" xml:space="preserve">
     <value>카메라의 렌즈 보정</value>
+  </data>
+  <data name="Zeichnet_das_ganze_Bild_gleichm_ig_weich_Die_St__867d2016" xml:space="preserve">
+    <value>이미지 전체를 고르게 흐립니다. 강도는 이미지 크기에 맞춰지므로 미리 보기와 내보내기가 똑같이 보입니다.</value>
+  </data>
+  <data name="Mindert_Rauschen_und_l_sst_Kanten_und_Zeichnung__6fd591ec" xml:space="preserve">
+    <value>가장자리와 질감은 그대로 두고 노이즈를 줄입니다. 깨끗한 사진은 거의 바뀌지 않습니다.</value>
+  </data>
+  <data name="Sch_tzt_Kanten_beim_Gl_tten_h_her_mehr_Details_b_63c663c0" xml:space="preserve">
+    <value>부드럽게 할 때 가장자리를 지킵니다. 값이 클수록 디테일이 더 남습니다.</value>
+  </data>
+  <data name="Adaptive_gl_ttet_so_stark_wie_das_Bild_bei_der_j_6f9632c5" xml:space="preserve">
+    <value>Adaptive: 밝기마다 실제 노이즈 양에 맞춰 부드럽게 합니다. Guided: 고정된 기준으로 평평한 부분만 부드럽게 합니다. 가우시안: 작은 반경으로 고르게 부드럽게 합니다. 미디언: 가장자리를 지키는 진짜 노이즈 제거입니다.</value>
   </data>
 </root>

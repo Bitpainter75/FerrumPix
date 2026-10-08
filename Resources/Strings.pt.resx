@@ -1834,9 +1834,6 @@
   <data name="Unsharp_Mask_verst_rkt_Kanten_und_legt_dabei_hel_f79ad433" xml:space="preserve">
     <value>Unsharp Mask: reforça as bordas e acrescenta halos claros e escuros. Deconvolution: reverte o desfoque por cálculo, e o detalhe fino volta a ficar nítido sem halos. Aí, Detalhe define o número de passagens.</value>
   </data>
-  <data name="Adaptive_gl_ttet_so_stark_wie_das_Bild_bei_der_j_c2a3e582" xml:space="preserve">
-    <value>Adaptive: suaviza na medida do ruído que a imagem tem em cada brilho. Guided: suaviza apenas áreas planas, com um limiar fixo. Gaussiano: desfoque uniforme. Mediana: preserva as bordas, redução de ruído real.</value>
-  </data>
   <data name="Glow_d5545dea" xml:space="preserve">
     <value>Resplendor</value>
   </data>
@@ -3906,9 +3903,6 @@
   </data>
   <data name="Hebt_die_feinen_Details_bei_der_Sch_rfung_st_rke_195d5aa8" xml:space="preserve">
     <value>Realça mais os detalhes finos ao aplicar nitidez.</value>
-  </data>
-  <data name="Sch_tzt_Kanten_beim_Weichzeichnen_h_her_mehr_Det_43db4112" xml:space="preserve">
-    <value>Protege as bordas ao desfocar: mais alto = mais detalhes preservados.</value>
   </data>
   <data name="Korngr_e_0_feines_Korn_h_her_gr_ber_bae6e47b" xml:space="preserve">
     <value>Tamanho do grão: 0 = grão fino, mais alto = mais grosso.</value>
@@ -9573,5 +9567,17 @@
   </data>
   <data name="Objektivkorrektur_aus_der_Kamera_513a6234" xml:space="preserve">
     <value>correção da objetiva pela câmara</value>
+  </data>
+  <data name="Zeichnet_das_ganze_Bild_gleichm_ig_weich_Die_St__867d2016" xml:space="preserve">
+    <value>Desfoca a imagem inteira de forma uniforme. A intensidade acompanha o tamanho da imagem, por isso a pré-visualização e a exportação ficam iguais.</value>
+  </data>
+  <data name="Mindert_Rauschen_und_l_sst_Kanten_und_Zeichnung__6fd591ec" xml:space="preserve">
+    <value>Reduz o ruído e deixa as bordas e a textura intactas. Uma foto limpa quase não muda.</value>
+  </data>
+  <data name="Sch_tzt_Kanten_beim_Gl_tten_h_her_mehr_Details_b_63c663c0" xml:space="preserve">
+    <value>Protege as bordas ao suavizar: mais alto = mais detalhes preservados.</value>
+  </data>
+  <data name="Adaptive_gl_ttet_so_stark_wie_das_Bild_bei_der_j_6f9632c5" xml:space="preserve">
+    <value>Adaptive: suaviza na medida do ruído que a imagem tem em cada brilho. Guided: suaviza apenas áreas planas, com um limiar fixo. Gaussiano: suaviza de forma uniforme com um raio pequeno. Mediana: preserva as bordas, redução de ruído real.</value>
   </data>
 </root>

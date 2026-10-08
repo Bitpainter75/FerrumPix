@@ -2503,6 +2503,40 @@ Namespace Services
             End Using
         End Function
 
+        ''' <summary>Sigma des Weichzeichners bei voller Staerke, als Anteil der kurzen Bildkante.
+        ''' Bei einem Bild mit 4000 Punkten kurzer Kante sind das 100 Punkte: das Motiv ist dann
+        ''' nur noch als Farbflaeche zu erkennen, und mehr braucht ein Weichzeichner nicht.</summary>
+        Private Const ImageBlurSigmaShare As Single = 0.025F
+
+        ''' <summary>Der Weichzeichner des Panels: ein Gauss ueber das ganze Bild.
+        '''
+        ''' DIE REICHWEITE IST EIN ANTEIL DER BILDGROESSE, wie bei der Klarheit. In Bildpunkten
+        ''' gezaehlt waere derselbe Wert in der verkleinerten Vorschau ein Vielfaches staerker als im
+        ''' Export. Deshalb steht der Regler auch nicht in HasScaleSensitiveStages.
+        '''
+        ''' DIE KENNLINIE IST QUADRATISCH: die ersten Prozente sollen ein leichtes Weichzeichnen
+        ''' geben und nicht schon einen Radius von zehn Punkten. Bei 10 liegt das Sigma bei einem
+        ''' Hundertstel des Hoechstwerts, bei 50 bei einem Viertel.
+        '''
+        ''' DER RAND WIRD GEKLEMMT. Skia mittelt ohne Angabe gegen Durchsichtig, und bei diesen
+        ''' Radien liefe dann ein dunkler, halb durchsichtiger Saum um das ganze Bild.</summary>
+        ''' <param name="amount">0 bis 1.</param>
+        Private Shared Function ApplyImageBlur(source As SKBitmap, amount As Single) As SKBitmap
+            Dim a = Clamp(amount, 0, 1)
+            If a <= 0 Then Return source
+            Dim sigma = Math.Min(source.Width, source.Height) * ImageBlurSigmaShare * a * a
+            ' Unter einem halben Punkt rechnet Skia nichts Sichtbares, das Bild bliebe gleich.
+            If sigma < 0.5F Then Return source
+            Dim result = New SKBitmap(source.Width, source.Height, source.ColorType, source.AlphaType)
+            Using filter = SKImageFilter.CreateBlur(sigma, sigma, SKShaderTileMode.Clamp),
+                  paint = New SKPaint With {.ImageFilter = filter, .BlendMode = SKBlendMode.Src},
+                  canvas = New SKCanvas(result)
+                canvas.Clear(SKColors.Transparent)
+                canvas.DrawBitmap(source, 0, 0, paint)
+            End Using
+            Return result
+        End Function
+
         Private Class Lut3DData
             Public Property Size As Integer
             ''' Flach abgelegt, R am schnellsten laufend (Standard-.cube-Reihenfolge): Index = (b*Size*Size + g*Size + r)*3 + Kanal.

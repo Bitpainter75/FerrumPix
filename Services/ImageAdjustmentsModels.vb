@@ -425,7 +425,15 @@ Namespace Services
         ''' Unschaerfemaske: ein Rezept aus der Zeit vor dem Feld traegt es nicht und muss genauso
         ''' weiterrechnen wie bisher.</summary>
         Public Property SharpenMethod As SharpenMethod = SharpenMethod.UnsharpMask
+        ''' <summary>Das Glaetten im Panel (frueher dort "Weichzeichnen" genannt): eine
+        ''' Rauschminderung, die nach Verfahren entscheidet, was sie anfasst. Entspricht
+        ''' crs:LuminanceSmoothing.</summary>
         Public Property NoiseReduction As Single = 0
+        ''' <summary>Der Weichzeichner, 0-100: ein Gauss ueber das ganze Bild, dessen Reichweite ein
+        ''' ANTEIL der kurzen Bildkante ist und nicht eine Zahl von Bildpunkten. Nur so sieht die
+        ''' verkleinerte Vorschau aus wie der Export. Keine Entsprechung in den Presets: Adobe hat
+        ''' keinen solchen Regler. Siehe ImageProcessorFilters.ApplyImageBlur.</summary>
+        Public Property Blur As Single = 0
         ''' <summary>Kantenerhalt der Rauschreduzierung, 0-100. 0 = die Glaettung gilt ueberall;
         ''' höher = an kontrastreichen Kanten wird das Original zurückgemischt, Details bleiben
         ''' stehen. Wirkt nur bei aktiver NoiseReduction, und in jedem der drei Verfahren gleich.</summary>

@@ -2502,6 +2502,12 @@ Namespace Services
                             "Pixel: Rauschen", Function() ApplyNoiseReduction(processed, adj.NoiseReduction / 100.0F, adj.NoiseReductionDetail / 100.0F)), owned)
                 End Select
             End If
+            ' Der Weichzeichner direkt hinter dem Glaetten und VOR der Schaerfe, der Vignette und der
+            ' Koernung: Korn auf einem weichgezeichneten Bild soll scharf bleiben, wie auf Film.
+            If adj.Blur > 0 Then
+                processed = ReplaceBitmapOwned(processed, PerformanceTraceService.Measure(
+                    "Pixel: Weichzeichnen", Function() ApplyImageBlur(processed, adj.Blur / 100.0F)), owned)
+            End If
             ' Die beiden Seiten desselben Panel-Reglers: Minus glaettet die Farbanteile, Plus faerbt
             ' sie ein. Getrennte Felder, weil nur die Reduzierung eine Entsprechung in den Presets hat
             ' (crs:ColorNoiseReduction) - siehe ImageAdjustments.ColorNoiseAdd.
@@ -3914,7 +3920,7 @@ Namespace Services
                 adj.WhiteBalanceModel, adj.WhiteBalanceAnchorX, adj.WhiteBalanceAnchorY,
                 adj.WhiteBalanceKelvin, adj.WhiteBalanceKelvinTint,
                 adj.SharpenMasking, adj.SharpenMethod,
-                adj.NoiseReduction, adj.NoiseReductionMethod, adj.NoiseReductionDetail, adj.ColorNoiseReduction,
+                adj.NoiseReduction, adj.NoiseReductionMethod, adj.NoiseReductionDetail, adj.Blur, adj.ColorNoiseReduction,
                 adj.FarbrauschGrob, adj.ColorNoiseCoarseScale,
                 adj.ColorNoiseAdd,
                 adj.DustScratches, adj.Haze, adj.AddNoise, adj.[Structure], adj.Glow,

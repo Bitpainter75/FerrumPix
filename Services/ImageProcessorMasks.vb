@@ -604,7 +604,8 @@ Namespace Services
         '''
         ''' Die KLARHEIT ist ebenfalls draußen: ihre Reichweite ist ein Anteil der Bildgröße (siehe
         ''' ApplyClarity), auf einem Ausschnitt also eine andere, und bei großen Bildern mehrere
-        ''' Dutzend Bildpunkte - weit über dem Rand von <c>MaskScopeMargin</c>.
+        ''' Dutzend Bildpunkte - weit über dem Rand von <c>MaskScopeMargin</c>. Aus demselben Grund
+        ''' bleibt der WEICHZEICHNER draußen (ApplyImageBlur), dessen Reichweite noch größer ist.
         '''
         ''' <para>ZWEITE AUSSCHLUSSKLASSE, und sie ist die tückischere: Stufen, die das GANZE BILD
         ''' ANALYSIEREN und aus dem Ergebnis ihre Parameter ableiten. Sie fallen bei einem Vergleich
@@ -634,6 +635,7 @@ Namespace Services
                    a.ColorNoiseAdd = 0 AndAlso
                    a.Sharpness = 0 AndAlso
                    a.Clarity = 0 AndAlso
+                   a.Blur = 0 AndAlso
                    IsNoiseReductionCropSafe(a) AndAlso
                    Not a.NegativeEnabled
         End Function

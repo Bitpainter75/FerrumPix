@@ -209,6 +209,7 @@ Namespace ViewModels
         Private _sharpenMethod As SharpenMethod = SharpenMethod.UnsharpMask
         Private _noiseReduction As Double = 0
         Private _noiseReductionDetail As Double = 0
+        Private _blur As Double = 0
         Private _colorNoiseReduction As Double = 0
         Private _farbrauschGrob As Double = 0
         Private _farbrauschGrobSkala As Double = 50
@@ -6698,6 +6699,17 @@ Namespace ViewModels
             End Get
             Set(value As Double)
                 SetUndoableDouble(_noiseReduction, value, NameOf(NoiseReduction))
+            End Set
+        End Property
+
+        ''' <summary>Der Weichzeichner der Weichzeichnen-Gruppe, 0-100. Anders als das Glaetten
+        ''' darueber zeichnet er das ganze Bild gleichmaessig weich.</summary>
+        Public Property Blur As Double
+            Get
+                Return _blur
+            End Get
+            Set(value As Double)
+                SetUndoableDouble(_blur, Math.Max(0, Math.Min(100, value)), NameOf(Blur))
             End Set
         End Property
 
@@ -22487,6 +22499,7 @@ Namespace ViewModels
                 .SharpenMethod = _sharpenMethod,
                 .NoiseReduction = CSng(_noiseReduction),
                 .NoiseReductionDetail = CSng(_noiseReductionDetail),
+                .Blur = CSng(_blur),
                 .ColorNoiseReduction = CSng(_colorNoiseReduction),
                 .FarbrauschGrob = CSng(_farbrauschGrob),
                 .ColorNoiseCoarseScale = CSng(_farbrauschGrobSkala),
@@ -23128,10 +23141,11 @@ Namespace ViewModels
                 Case NameOf(SharpenMasking) : Return CombineHistoryLabel("Schärfe", "Maskierung")
                 Case NameOf(SharpenMethodLabel) : Return CombineHistoryLabel("Schärfe", "Methode")
                 ' Die Wortlaute sind die der Panels: der Regler NoiseReduction heisst dort
-                ' "Weichzeichnen", "Rauschen" ist der Regler, der welches HINZUFUEGT.
-                Case NameOf(NoiseReduction) : Return LocalizationService.T("Weichzeichnen")
-                Case NameOf(NoiseReductionDetail) : Return CombineHistoryLabel("Weichzeichnen", "Detail")
-                Case NameOf(NoiseReductionMethodLabel) : Return CombineHistoryLabel("Weichzeichnen", "Methode")
+                ' "Glätten", "Rauschen" ist der Regler, der welches HINZUFUEGT.
+                Case NameOf(NoiseReduction) : Return LocalizationService.T("Glätten")
+                Case NameOf(NoiseReductionDetail) : Return CombineHistoryLabel("Glätten", "Detail")
+                Case NameOf(NoiseReductionMethodLabel) : Return CombineHistoryLabel("Glätten", "Methode")
+                Case NameOf(Blur) : Return LocalizationService.T("Weichzeichnen")
                 Case NameOf(AddNoise) : Return LocalizationService.T("Rauschen")
                 Case NameOf(ColorNoiseReduction), NameOf(ColorNoiseAdd) : Return LocalizationService.T("Farbrauschen")
                 Case NameOf(FarbrauschGrob) : Return LocalizationService.T("Farbflecken")
@@ -23581,7 +23595,7 @@ Namespace ViewModels
                      NameOf(WhiteBalance), NameOf(Temperature), NameOf(Tint), NameOf(KelvinTemperature)
                     Return outline & "color-filter.svg"
                 Case NameOf(Sharpness), NameOf(SharpenRadius), NameOf(SharpenDetail), NameOf(SharpenMasking), NameOf(SharpenMethodLabel), NameOf(NoiseReduction),
-                     NameOf(NoiseReductionDetail), NameOf(NoiseReductionMethodLabel), NameOf(Clarity)
+                     NameOf(NoiseReductionDetail), NameOf(NoiseReductionMethodLabel), NameOf(Blur), NameOf(Clarity)
                     Return outline & "adjustments.svg"
                 Case NameOf(Vignette), NameOf(VignetteTransition), NameOf(VignetteRoundness), NameOf(VignetteFeather),
                      NameOf(VignetteCenterX), NameOf(VignetteCenterY), NameOf(VignetteStyleLabel),
@@ -23998,6 +24012,7 @@ Namespace ViewModels
             _sharpenMethod = adj.SharpenMethod
             _noiseReduction = adj.NoiseReduction
             _noiseReductionDetail = adj.NoiseReductionDetail
+            _blur = adj.Blur
             _colorNoiseReduction = adj.ColorNoiseReduction
             ' Die gebackenen Vorgaenge kommen mit dem Rezept herein - samt der Frage, ob sie in den
             ' Pixeln stecken. Beides gehoert zusammen: die Liste allein sagt nur WAS, nicht OB.
@@ -24275,6 +24290,7 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(Exposure))
             Me.RaisePropertyChanged(NameOf(Sharpness))
             Me.RaisePropertyChanged(NameOf(NoiseReduction))
+            Me.RaisePropertyChanged(NameOf(Blur))
             Me.RaisePropertyChanged(NameOf(ColorNoiseReduction))
             Me.RaisePropertyChanged(NameOf(ColorNoiseAdd))
             Me.RaisePropertyChanged(NameOf(ColorNoiseAmount))
@@ -24563,6 +24579,7 @@ Namespace ViewModels
             _sharpenMethod = SharpenMethod.UnsharpMask
             _noiseReduction = 0
             _noiseReductionDetail = 0
+            _blur = 0
             _colorNoiseReduction = 0
             _farbrauschGrob = 0
             _farbrauschGrobSkala = 50
@@ -24722,6 +24739,7 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(Exposure))
             Me.RaisePropertyChanged(NameOf(Sharpness))
             Me.RaisePropertyChanged(NameOf(NoiseReduction))
+            Me.RaisePropertyChanged(NameOf(Blur))
             Me.RaisePropertyChanged(NameOf(ColorNoiseReduction))
             Me.RaisePropertyChanged(NameOf(ColorNoiseAdd))
             Me.RaisePropertyChanged(NameOf(ColorNoiseAmount))
@@ -29183,6 +29201,7 @@ Namespace ViewModels
             _sharpenMethod = SharpenMethod.UnsharpMask
             _noiseReduction = 0
             _noiseReductionDetail = 0
+            _blur = 0
             _colorNoiseReduction = 0
             _farbrauschGrob = 0
             _farbrauschGrobSkala = 50
@@ -29278,13 +29297,15 @@ Namespace ViewModels
             SchedulePreviewUpdate()
         End Sub
 
-        ''' <summary>Nur die Weichzeichnen-Gruppe (Weichzeichnen, Detail, Methode).</summary>
+        ''' <summary>Nur die Weichzeichnen-Gruppe (Weichzeichnen, Glätten, Detail, Methode).</summary>
         Private Sub ResetSoftenGroupInternal()
             _noiseReduction = 0
             _noiseReductionDetail = 0
+            _blur = 0
             _noiseReductionMethod = NoiseReductionMethod.AdaptiveGuided
             Me.RaisePropertyChanged(NameOf(NoiseReduction))
             Me.RaisePropertyChanged(NameOf(NoiseReductionDetail))
+            Me.RaisePropertyChanged(NameOf(Blur))
             Me.RaisePropertyChanged(NameOf(NoiseReductionMethod))
             Me.RaisePropertyChanged(NameOf(NoiseReductionMethodLabel))
             RaiseResetButtonStateChanged()
@@ -29370,6 +29391,7 @@ Namespace ViewModels
             _sharpenMethod = SharpenMethod.UnsharpMask
             _noiseReduction = 0
             _noiseReductionDetail = 0
+            _blur = 0
             _noiseReductionMethod = NoiseReductionMethod.AdaptiveGuided
             Me.RaisePropertyChanged(NameOf(Sharpness))
             Me.RaisePropertyChanged(NameOf(SharpenRadius))
@@ -29378,6 +29400,7 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(SharpenMethodLabel))
             Me.RaisePropertyChanged(NameOf(NoiseReduction))
             Me.RaisePropertyChanged(NameOf(NoiseReductionDetail))
+            Me.RaisePropertyChanged(NameOf(Blur))
             Me.RaisePropertyChanged(NameOf(NoiseReductionMethod))
             Me.RaisePropertyChanged(NameOf(NoiseReductionMethodLabel))
             RaiseResetButtonStateChanged()
@@ -29628,6 +29651,7 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(SharpenMasking))
             Me.RaisePropertyChanged(NameOf(NoiseReduction))
             Me.RaisePropertyChanged(NameOf(NoiseReductionDetail))
+            Me.RaisePropertyChanged(NameOf(Blur))
             Me.RaisePropertyChanged(NameOf(ColorNoiseReduction))
             Me.RaisePropertyChanged(NameOf(ColorNoiseAdd))
             Me.RaisePropertyChanged(NameOf(ColorNoiseAmount))
@@ -30117,6 +30141,7 @@ Namespace ViewModels
             SharpenMasking = look.SharpenMasking
             NoiseReduction = look.NoiseReduction
             NoiseReductionDetail = look.NoiseReductionDetail
+            Blur = look.Blur
             ColorNoiseReduction = look.ColorNoiseReduction
             ' Presets kennen nur die Entfernung (crs:ColorNoiseReduction); die Plus-Seite steht
             ' trotzdem hier, damit ein Look sie genauso zuruecksetzt wie jedes andere Feld - sonst

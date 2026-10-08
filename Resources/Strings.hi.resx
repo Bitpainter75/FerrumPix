@@ -1833,9 +1833,6 @@
   <data name="Unsharp_Mask_verst_rkt_Kanten_und_legt_dabei_hel_f79ad433" xml:space="preserve">
     <value>Unsharp Mask: किनारों को उभारता है और उनके आसपास हल्के और गहरे घेरे बनाता है। Deconvolution: धुंधलेपन को उलटकर गणना करता है, बारीक विवरण बिना घेरों के फिर से तीखे हो जाते हैं। वहाँ Detail दोहरावों की संख्या तय करता है।</value>
   </data>
-  <data name="Adaptive_gl_ttet_so_stark_wie_das_Bild_bei_der_j_c2a3e582" xml:space="preserve">
-    <value>Adaptive: हर चमक पर छवि में जितना शोर है, उतना ही चिकना करता है। Guided: तय सीमा से सिर्फ़ समतल हिस्सों को चिकना करता है। गॉसियन: एक-सा धुंधलापन। मीडियन: किनारे बचाता है, असली शोर हटाना।</value>
-  </data>
   <data name="Glow_d5545dea" xml:space="preserve">
     <value>चमक</value>
   </data>
@@ -3905,9 +3902,6 @@
   </data>
   <data name="Hebt_die_feinen_Details_bei_der_Sch_rfung_st_rke_195d5aa8" xml:space="preserve">
     <value>तीक्ष्ण करते समय महीन ब्योरे को और मज़बूती से उभारता है।</value>
-  </data>
-  <data name="Sch_tzt_Kanten_beim_Weichzeichnen_h_her_mehr_Det_43db4112" xml:space="preserve">
-    <value>धुंधला करते समय किनारे बचाता है: ऊँचा = अधिक ब्योरा बचा रहता है।</value>
   </data>
   <data name="Korngr_e_0_feines_Korn_h_her_gr_ber_bae6e47b" xml:space="preserve">
     <value>दाने का आकार: 0 = महीन दाना, ऊँचा = मोटा।</value>
@@ -9618,5 +9612,17 @@
   </data>
   <data name="Objektivkorrektur_aus_der_Kamera_513a6234" xml:space="preserve">
     <value>कैमरे से लेंस सुधार</value>
+  </data>
+  <data name="Zeichnet_das_ganze_Bild_gleichm_ig_weich_Die_St__867d2016" xml:space="preserve">
+    <value>पूरी छवि को एक-सा धुंधला करता है। तीव्रता छवि के आकार के अनुसार चलती है, इसलिए पूर्वावलोकन और निर्यात एक जैसे दिखते हैं।</value>
+  </data>
+  <data name="Mindert_Rauschen_und_l_sst_Kanten_und_Zeichnung__6fd591ec" xml:space="preserve">
+    <value>शोर घटाता है और किनारों व बनावट को नहीं छूता। साफ़ फ़ोटो लगभग नहीं बदलती।</value>
+  </data>
+  <data name="Sch_tzt_Kanten_beim_Gl_tten_h_her_mehr_Details_b_63c663c0" xml:space="preserve">
+    <value>चिकना करते समय किनारे बचाता है: ऊँचा = अधिक ब्योरा बचा रहता है।</value>
+  </data>
+  <data name="Adaptive_gl_ttet_so_stark_wie_das_Bild_bei_der_j_6f9632c5" xml:space="preserve">
+    <value>Adaptive: हर चमक पर छवि में जितना शोर है, उतना ही चिकना करता है। Guided: तय सीमा से सिर्फ़ समतल हिस्सों को चिकना करता है। गॉसियन: छोटे दायरे में एक-सा चिकना करता है। मीडियन: किनारे बचाता है, असली शोर हटाना।</value>
   </data>
 </root>

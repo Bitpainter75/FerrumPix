@@ -1834,9 +1834,6 @@
   <data name="Unsharp_Mask_verst_rkt_Kanten_und_legt_dabei_hel_f79ad433" xml:space="preserve">
     <value>Unsharp Mask: boosts edges and adds light and dark halos around them. Deconvolution: reverses the blur, so fine detail becomes crisp again without halos. There, Detail sets the number of passes.</value>
   </data>
-  <data name="Adaptive_gl_ttet_so_stark_wie_das_Bild_bei_der_j_c2a3e582" xml:space="preserve">
-    <value>Adaptive: smooths as strongly as the image is noisy at each brightness. Guided: smooths only flat areas, with a fixed threshold. Gaussian: uniform blur. Median: edge-preserving, true noise reduction.</value>
-  </data>
   <data name="Glow_d5545dea" xml:space="preserve">
     <value>Glow</value>
   </data>
@@ -3908,9 +3905,6 @@
   </data>
   <data name="Hebt_die_feinen_Details_bei_der_Sch_rfung_st_rke_195d5aa8" xml:space="preserve">
     <value>Emphasizes fine detail more strongly when sharpening.</value>
-  </data>
-  <data name="Sch_tzt_Kanten_beim_Weichzeichnen_h_her_mehr_Det_43db4112" xml:space="preserve">
-    <value>Protects edges when blurring: higher = more detail is preserved.</value>
   </data>
   <data name="Korngr_e_0_feines_Korn_h_her_gr_ber_bae6e47b" xml:space="preserve">
     <value>Grain size: 0 = fine grain, higher = coarser.</value>
@@ -9593,5 +9587,17 @@
   </data>
   <data name="Objektivkorrektur_aus_der_Kamera_513a6234" xml:space="preserve">
     <value>lens correction from the camera</value>
+  </data>
+  <data name="Zeichnet_das_ganze_Bild_gleichm_ig_weich_Die_St__867d2016" xml:space="preserve">
+    <value>Blurs the whole image evenly. The strength follows the image size, so preview and export look the same.</value>
+  </data>
+  <data name="Mindert_Rauschen_und_l_sst_Kanten_und_Zeichnung__6fd591ec" xml:space="preserve">
+    <value>Reduces noise and leaves edges and texture alone. A clean photo barely changes.</value>
+  </data>
+  <data name="Sch_tzt_Kanten_beim_Gl_tten_h_her_mehr_Details_b_63c663c0" xml:space="preserve">
+    <value>Protects edges when smoothing: higher = more detail is preserved.</value>
+  </data>
+  <data name="Adaptive_gl_ttet_so_stark_wie_das_Bild_bei_der_j_6f9632c5" xml:space="preserve">
+    <value>Adaptive: smooths as strongly as the image is noisy at each brightness. Guided: smooths only flat areas, with a fixed threshold. Gaussian: smooths evenly with a small radius. Median: edge-preserving, true noise reduction.</value>
   </data>
 </root>

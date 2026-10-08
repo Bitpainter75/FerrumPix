@@ -15,6 +15,11 @@
   the edge darkening is corrected for that distance instead of always for infinity, which helps
   close-ups in particular.
 
+- **A real blur.** The Blur group now has a slider that softens the whole picture evenly, from a
+  gentle touch to a strong blur, and it looks the same in the preview as in the export. The
+  slider that used to be called Blur is now called Smoothing, because that is what it does: it
+  reduces noise and leaves edges and detail alone.
+
 ### Fixes
 
 - **Highlights, Shadows, Whites and Blacks no longer turn tones around.** Pulling highlights
