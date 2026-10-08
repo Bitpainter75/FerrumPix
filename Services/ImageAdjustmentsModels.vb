@@ -374,6 +374,43 @@ Namespace Services
         ''' beim Laden mitbekommen haben.</summary>
         Public Property WhiteBalanceModel As Integer = 0
 
+        ''' <summary>Welche Rechnung Kontrast, Lichter, Tiefen, Weiss und Schwarz meinen.
+        ''' 1 = die eigene Formel (ToneZoneLift, Kontrast in ToneTransfer), 2 = die gemessenen
+        ''' Kennlinien einer verbreiteten RAW-Entwicklung (ToneSliderCurves).
+        '''
+        ''' Dasselbe Muster wie <see cref="WhiteBalanceModel"/>, aus demselben Grund: beide Modelle
+        ''' geben demselben Reglerwert eine andere Bedeutung, und eine gespeicherte Bearbeitung muss
+        ''' so bleiben, wie sie gespeichert wurde. 0 heisst „nicht angegeben" und rechnet als 2,
+        ''' das Modell aller neuen Bearbeitungen; beim Speichern wird daraus die feste Zahl
+        ''' (FpxService.SerializeAdjustments), beim Laden bekommt ein Rezept ohne das Feld mit
+        ''' gesetzten Tonreglern die 1 (NormalizeLoadedAdjustments).
+        '''
+        ''' KEIN strukturelles Feld: die Zahl gehoert zu den Reglerwerten und wandert mit ihnen,
+        ''' wenn ein Look auf ein anderes Foto oder in eine Maskenebene uebertragen wird.</summary>
+        Public Property ToneModel As Integer = 0
+
+        ''' <summary>Das Tonmodell, mit dem gerechnet wird: das eingetragene, sonst 2. Ohne die
+        ''' Kennlinien-Ressource bleibt es bei 1.</summary>
+        Public Function ResolvedToneModel() As Integer
+            If Not ToneSliderCurves.Available Then Return 1
+            Return If(ToneModel > 0, ToneModel, 2)
+        End Function
+
+        ''' <summary>Steht ein Regler, dessen Bedeutung am Reglermodell haengt? Die fuenf Tonregler,
+        ''' dazu Dynamik, die Luminanz im Farbmischer, die Farbgradierung und die Vignette. Ein altes
+        ''' Rezept mit einem davon bekommt beim Laden Modell 1 und sieht aus wie beim Speichern.</summary>
+        Public Function UsesToneModel() As Boolean
+            Return Contrast <> 0.0F OrElse Highlights <> 0.0F OrElse ShadowsLevel <> 0.0F OrElse
+                   Whites <> 0.0F OrElse Blacks <> 0.0F OrElse Vibrance <> 0.0F OrElse Vignette <> 0.0F OrElse
+                   RedLuminance <> 0.0F OrElse OrangeLuminance <> 0.0F OrElse YellowLuminance <> 0.0F OrElse
+                   GreenLuminance <> 0.0F OrElse AquaLuminance <> 0.0F OrElse BlueLuminance <> 0.0F OrElse
+                   PurpleLuminance <> 0.0F OrElse MagentaLuminance <> 0.0F OrElse
+                   ColorGradeShadowSaturation <> 0.0F OrElse ColorGradeMidtoneSaturation <> 0.0F OrElse
+                   ColorGradeHighlightSaturation <> 0.0F OrElse ColorGradeGlobalSaturation <> 0.0F OrElse
+                   ColorGradeShadowLuminance <> 0.0F OrElse ColorGradeMidtoneLuminance <> 0.0F OrElse
+                   ColorGradeHighlightLuminance <> 0.0F OrElse ColorGradeGlobalLuminance <> 0.0F
+        End Function
+
         ''' <summary>Der Weißpunkt der AUFNAHME als Farbort, für Modell 2. Beide 0 heißt: kein
         ''' Anker bekannt, dann gilt D65 - so wie bei allem, was keine RAW-Datei ist.
         '''
@@ -1270,6 +1307,7 @@ Namespace Services
                 .SourceHeightPixels = SourceHeightPixels,
                 .RecipeCoordinateVersion = RecipeCoordinateVersion,
                 .WhiteBalanceModel = WhiteBalanceModel,
+                .ToneModel = ToneModel,
                 .WhiteBalanceAnchorX = WhiteBalanceAnchorX,
                 .WhiteBalanceAnchorY = WhiteBalanceAnchorY,
                 .WhiteBalanceKelvin = WhiteBalanceKelvin,

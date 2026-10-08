@@ -68,6 +68,8 @@ Namespace Services
                 ' Auf einer Kopie arbeiten: die Bildpfade werden auf Namen im Block umgeschrieben,
                 ' ohne die im Editor lebende Bearbeitung anzufassen - dieselbe Regel wie beim .fpx.
                 Dim copy = adj.Clone()
+                ' Tonmodell festschreiben, wie beim .fpx.
+                FpxService.PinToneModel(copy, 0)
                 Dim envelope As New RecipeEnvelope With {
                     .Signature = Signature,
                     .Version = CurrentVersion,
@@ -139,6 +141,8 @@ Namespace Services
                     Next
                 End If
 
+                ' Ein Block ohne Tonmodell stammt aus der Zeit der eigenen Formel (FpxService).
+                FpxService.PinToneModel(envelope.Adjustments, 1)
                 Return envelope.Adjustments
             Catch
                 Return Nothing

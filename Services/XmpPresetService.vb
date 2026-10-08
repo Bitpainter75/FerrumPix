@@ -353,6 +353,7 @@ Namespace Services
             ' Prozent-Faktoren mit vergleichbarer Semantik. Kein Rueckweg betroffen: HueAdjustment*
             ' wird nirgends exportiert (nur gelesen).
             Const HueImportScale As Double = 0.3
+            Const HueImportScaleAqua As Double = 0.12
             ' Im Kanalkurven-Look bleibt der Farbmischer bewusst AUS: ohne ihn trifft ein solches
             ' Preset den Referenz-Export besser als mit ihm.
             If Not useChannelCurveColorLook Then
@@ -368,7 +369,10 @@ Namespace Services
             If TryGetXmpDouble(values, "HueAdjustmentGreen", d) Then adj.GreenHue = Clamp100(d * HueImportScale)
             If TryGetXmpDouble(values, "SaturationAdjustmentGreen", d) Then adj.GreenSaturation = Clamp100(d)
             If TryGetXmpDouble(values, "LuminanceAdjustmentGreen", d) Then adj.GreenLuminance = Clamp100(d)
-            If TryGetXmpDouble(values, "HueAdjustmentAqua", d) Then adj.AquaHue = Clamp100(d * HueImportScale)
+            ' Aqua eigens: gemessen an 57 Aufnahmen drehte es mit 0,3 auf Aqua-Pixeln rund 2,5-mal so
+            ' weit wie das Original (gleiche Richtung). Die anderen Baender blieben beim Einzelfaktor
+            ' schlechter, weil dort die Bandform abweicht, nicht die Staerke (XMP_PRESETS.md).
+            If TryGetXmpDouble(values, "HueAdjustmentAqua", d) Then adj.AquaHue = Clamp100(d * HueImportScaleAqua)
             If TryGetXmpDouble(values, "SaturationAdjustmentAqua", d) Then adj.AquaSaturation = Clamp100(d)
             If TryGetXmpDouble(values, "LuminanceAdjustmentAqua", d) Then adj.AquaLuminance = Clamp100(d)
             If TryGetXmpDouble(values, "HueAdjustmentBlue", d) Then adj.BlueHue = Clamp100(d * HueImportScale)
@@ -539,6 +543,31 @@ Namespace Services
             Dim midtoneSplit = GetXmpDoubleOrDefault(values, "ParametricMidtoneSplit", 50) * 2.55
             Dim highlightSplit = GetXmpDoubleOrDefault(values, "ParametricHighlightSplit", 75) * 2.55
 
+            ' GEMESSENE ZONEN, wo vorhanden: die vier Zonen als Kennlinie einer verbreiteten
+            ' RAW-Entwicklung (ToneSliderCurves, gemessen bei +-50 mit den Standardteilungen 25/50/75).
+            ' Die Knoten unten trafen gemessen nur die Haelfte von Dunkel und Hell und setzten die
+            ' Zonen zu weit in die Mitte (Dunkel +50 hob die Tiefen um 2,3 statt 6,9 L). Andere
+            ' Teilungen verschieben die Kurve stueckweise linear auf die Standardteilung.
+            If ToneSliderCurves.Has("ParametricShadows") Then
+                Dim measuredBase = ImageProcessor.ParseCurvePoints(pointCurve)
+                Dim fromX = {0.0, shadowSplit, midtoneSplit, highlightSplit, 255.0}
+                Dim toX = {0.0, 63.75, 127.5, 191.25, 255.0}
+                Dim measured As New List(Of String)()
+                Dim mx = 0
+                Do
+                    Dim u = InterpolateLinear(fromX, toX, mx) / 255.0
+                    Dim y = ImageProcessor.EvaluateCurveSpline(measuredBase, mx) + 255.0 * (
+                        ToneSliderCurves.Lift("ParametricShadows", shadowsAmount, u) +
+                        ToneSliderCurves.Lift("ParametricDarks", darksAmount, u) +
+                        ToneSliderCurves.Lift("ParametricLights", lightsAmount, u) +
+                        ToneSliderCurves.Lift("ParametricHighlights", highlightsAmount, u))
+                    measured.Add($"{mx},{CInt(Math.Max(0, Math.Min(255, Math.Round(y))))}")
+                    If mx = 255 Then Exit Do
+                    mx = Math.Min(255, mx + 8)
+                Loop
+                Return String.Join(";", measured)
+            End If
+
             ' Vollausschlag eines Zonenreglers verschiebt seine Zone um diesen Betrag (von 255).
             ' Am 28.07.2026 gegen die Referenzbasis abgetastet (50 bis 130): der Wert bringt die
             ' Bandform zwar naeher heran, die Gesamtabweichung steigt an einem der beiden Motive
@@ -573,6 +602,19 @@ Namespace Services
             Dim d As Double
             If TryGetXmpDouble(values, name, d) Then Return d
             Return fallback
+        End Function
+
+        ''' <summary>Stueckweise lineare Abbildung von <paramref name="fromX"/> auf
+        ''' <paramref name="toX"/> (beide steigend, gleich lang).</summary>
+        Private Shared Function InterpolateLinear(fromX As Double(), toX As Double(), x As Double) As Double
+            For i = 1 To fromX.Length - 1
+                If x <= fromX(i) Then
+                    Dim span = fromX(i) - fromX(i - 1)
+                    If span <= 0 Then Return toX(i)
+                    Return toX(i - 1) + (toX(i) - toX(i - 1)) * (x - fromX(i - 1)) / span
+                End If
+            Next
+            Return toX(toX.Length - 1)
         End Function
 
         ''' <summary>Parametrik-Zonenkurve: glatte (smoothstep) Interpolation zwischen den fuenf

@@ -1,4 +1,4 @@
-## Unreleased
+## 0.9.64
 
 ### What's new
 
@@ -19,6 +19,11 @@
   gentle touch to a strong blur, and it looks the same in the preview as in the export. The
   slider that used to be called Blur is now called Smoothing, because that is what it does: it
   reduces noise and leaves edges and detail alone.
+
+- **Recalibrated sliders.** Contrast, Highlights, Shadows, Whites, Blacks, Vibrance, the
+  luminance of the colour mixer, the brightness in colour grading and the vignette now have a
+  more natural strength and range, and presets with a parametric curve come out closer to how
+  they were made. Pictures you already edited keep their look.
 
 ### Fixes
 

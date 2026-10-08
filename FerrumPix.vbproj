@@ -71,6 +71,8 @@
     <EmbeddedResource Include="Resources\CameraColorMatrices.json" />
     <!-- Sensorrand je Kamera und Bildgroesse, aus Adobes DefaultCrop (sensorrand.py). -->
     <EmbeddedResource Include="Resources\CameraSensorCrops.json" />
+    <!-- Gemessene Kennlinien der Tonregler fuer Tonmodell 2 (Diagnostics/Reglereichung). -->
+    <EmbeddedResource Include="Resources\ToneSliderCurves.json" />
     <!-- Objektivkennungen fuer Nikon, Sony A und Pentax, erzeugt mit packaging/ci/lens-ids.py. -->
     <EmbeddedResource Include="Resources\NikonLensIds.tsv" />
     <EmbeddedResource Include="Resources\SonyAMountLensIds.tsv" />

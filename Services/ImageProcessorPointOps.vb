@@ -83,6 +83,13 @@ Namespace Services
             ''' koennte die Chroma-Abhaengigkeit nicht abbilden und wuerde nur wie eine zweite
             ''' Saettigung wirken (und liesse sich von der Saettigung nicht mehr auf Grau ziehen).
             Public Vibrance As Single
+            ''' Reglermodell 2, negative Dynamik: sat * exp(Vibrance * (1 - sat)) statt der linearen
+            ''' Formel. Die lineare schlaegt auf Referenzstaerke schon bei -50 an der Null an, und -100
+            ''' brachte nichts mehr dazu.
+            Public VibranceExponential As Boolean
+            ''' Reglermodell 2: die Bandsuche des Farbmischers sieht den Farbton auf Adobes Bandlage
+            ''' verschoben (ModelTwoBandHue).
+            Public HslBandWarp As Boolean
 
             ''' Filmnegativ - laeuft als ERSTE Stufe, noch vor der Farbmatrix. Eigene Tabellen statt
             ''' der verschmolzenen, weil im S/W-Fall die Graumatrix DAZWISCHEN liegt.
@@ -107,6 +114,16 @@ Namespace Services
             Public SplitHasLuminance As Boolean
             ''' Exponent auf die Zonengewichte (ColorGradeBlending). 1 = wie frueheres Split-Toning.
             Public SplitBlendExponent As Single
+            ''' Staerke der Helligkeit je Zone (Tiefen, Mitten, Lichter, Global). 1 im Reglermodell 1;
+            ''' im Modell 2 gemessen gegen eine verbreitete RAW-Entwicklung (ModelTwoColorGradeLumGain).
+            Public SplitLumGain As Single() = {1.0F, 1.0F, 1.0F, 1.0F}
+            ''' Reglermodell 2: die Toenung ist ein Versatz in Y/Cb/Cr je Zone (ApplyModelTwoGrade)
+            ''' statt einer Mischung zur Tonfarbe. SplitOffsets haelt je Zone (Tiefen, Mitten,
+            ''' Lichter, Global) dY, dCb, dCr bei vollem Gewicht; SplitYShift verschiebt die Zonen
+            ''' nach der Balance.
+            Public SplitOffsetMode As Boolean
+            Public SplitOffsets As Single()
+            Public SplitYShift As Single
 
             ''' Gruen-/Magenta-Verschiebung nur in den Tiefen (crs:ShadowTint). Luminanzabhaengig,
             ''' laesst sich also nicht in die Matrix falten.
@@ -203,8 +220,14 @@ Namespace Services
             ' Laeuft NACH der Saettigungsmatrix: eine per Saettigung=-100 auf Grau gezogene Flaeche hat
             ' dann sat=0 und bleibt grau, egal wie hoch die Dynamik steht - genau das Verhalten, das
             ' die flache Alt-Fusion (Dynamik einfach zu sat addiert) verhinderte.
+            ' Das Reglermodell (ImageAdjustments.ToneModel) entscheidet ab hier, was Dynamik,
+            ' Farbmischer-Luminanz, Farbgradierung und die Tonregler bedeuten.
+            Dim toneModel = adj.ResolvedToneModel()
             If adj.Vibrance <> 0 Then
-                chain.Vibrance = CSng(Math.Max(-1.0, Math.Min(1.0, adj.Vibrance / 100.0)))
+                chain.Vibrance = If(toneModel >= 2,
+                                    ModelTwoVibrance(adj.Vibrance),
+                                    CSng(Math.Max(-1.0, Math.Min(1.0, adj.Vibrance / 100.0))))
+                chain.VibranceExponential = toneModel >= 2 AndAlso adj.Vibrance < 0
                 chain.IsIdentity = False
             End If
 
@@ -212,9 +235,13 @@ Namespace Services
             ' Die Bedingungen bleiben getrennt (wie die Frueh-Ausstiege der Altfunktionen), die
             ' AUSWERTUNG wird verschmolzen: v durchlaeuft beide Formeln stetig, ohne Zwischenrundung.
             ' Genau hier verschwindet eine der 8-Bit-Stufen.
-            Dim wantsTone = adj.Exposure <> 0 OrElse adj.Contrast <> 0 OrElse adj.Brightness <> 0
+            ' Im Tonmodell 2 gehoert der Kontrast zu den Zonen (gemessene Kennlinie, farbtonerhaltend)
+            ' und nicht mehr zur Tonwertkurve; siehe ImageAdjustments.ToneModel.
+            Dim contrastInZones = toneModel >= 2
+            Dim wantsTone = adj.Exposure <> 0 OrElse (adj.Contrast <> 0 AndAlso Not contrastInZones) OrElse adj.Brightness <> 0
             Dim wantsTonal = adj.Highlights <> 0 OrElse adj.ShadowsLevel <> 0 OrElse
-                             adj.Whites <> 0 OrElse adj.Blacks <> 0
+                             adj.Whites <> 0 OrElse adj.Blacks <> 0 OrElse
+                             (adj.Contrast <> 0 AndAlso contrastInZones)
             ' RGB-Kurve und Kanalkurven kommen in DIESELBE Tabelle. Heute steht dort
             ' redLut(rgbLut(i)) - eine DOPPELTE Byte-Rundung, die schlimmste Stelle der ganzen
             ' Kette. Stetig verkettet verschwindet sie ersatzlos.
@@ -226,15 +253,15 @@ Namespace Services
             If wantsTone OrElse wantsTonal OrElse wantsRgbCurve OrElse wantsChannelCurves Then
                 ' Die Kanaele trennen sich erst bei den Kanalkurven - vorher ist die Kette identisch,
                 ' deshalb wird der gemeinsame Teil nur EINMAL gerechnet.
-                ' Lichter/Tiefen/Weiss/Schwarz wirken auf die HELLIGKEIT, nicht je Kanal: je Kanal
-                ' rueckten R, G und B ueberall zusammen, wo die Kennlinie flach wird, und ein Orange
-                ' verlor bei Lichter -100 / Tiefen +100 mehr als die Haelfte seiner Spreizung (Forum
-                ' pixls.us, 2026-10-07). Dafuer muss die Kette an dieser Stelle aufgetrennt werden.
+                ' Lichter/Tiefen/Weiss/Schwarz wirken FARBTONERHALTEND, nicht je Kanal: je Kanal
+                ' rueckte der mittlere Kanal dorthin, wo die Kennlinie flach wird, und ein Orange
+                ' kippte bei Lichter -100 / Tiefen +100 ins Gelbgraue (Forum pixls.us, 2026-10-07).
+                ' Dafuer muss die Kette an dieser Stelle aufgetrennt werden (ApplyToneZones).
                 If wantsTonal Then
-                    If wantsTone Then chain.ToneBefore = BuildPointOpScalarTable(adj, True, False, False)
-                    chain.ToneZones = BuildToneZoneTable(adj)
+                    If wantsTone Then chain.ToneBefore = BuildPointOpScalarTable(adj, True, False, False, toneModel)
+                    chain.ToneZones = BuildToneZoneTable(adj, toneModel)
                 End If
-                Dim common = BuildPointOpScalarTable(adj, wantsTone AndAlso Not wantsTonal, False, wantsRgbCurve)
+                Dim common = BuildPointOpScalarTable(adj, wantsTone AndAlso Not wantsTonal, False, wantsRgbCurve, toneModel)
                 If wantsChannelCurves Then
                     chain.ScalarR = ChainCurveOntoTable(common, adj.CurveRedPoints)
                     chain.ScalarG = ChainCurveOntoTable(common, adj.CurveGreenPoints)
@@ -263,7 +290,8 @@ Namespace Services
 
             ' --- HSL-Baender: exakt die Bedingung aus ApplyHsl ---
             If adj.HasHslChanges() Then
-                chain.Hsl = adj
+                chain.Hsl = If(toneModel >= 2, ModelTwoHsl(adj), adj)
+                chain.HslBandWarp = toneModel >= 2
                 chain.IsIdentity = False
             End If
 
@@ -293,6 +321,16 @@ Namespace Services
                 ' Blending 50 ergibt Exponent 1 und damit exakt die frueheren Rampen; darunter bleiben
                 ' die Toenungen staerker in ihrer Zone, darueber greifen sie weiter ineinander.
                 chain.SplitBlendExponent = CSng(Math.Pow(2.0, (50.0 - Clamp(adj.ColorGradeBlending, 0, 100)) / 50.0))
+                If toneModel >= 2 Then
+                    chain.SplitLumGain = ModelTwoColorGradeLumGain
+                    chain.SplitOffsetMode = True
+                    chain.SplitOffsets = New Single(11) {}
+                    ModelTwoGradeVector(If(hasShadow, adj.ColorGradeShadowHue, 0), If(hasShadow, adj.ColorGradeShadowSaturation, 0), chain.SplitOffsets, 0)
+                    ModelTwoGradeVector(If(hasMidtone, adj.ColorGradeMidtoneHue, 0), If(hasMidtone, adj.ColorGradeMidtoneSaturation, 0), chain.SplitOffsets, 3)
+                    ModelTwoGradeVector(If(hasHighlight, adj.ColorGradeHighlightHue, 0), If(hasHighlight, adj.ColorGradeHighlightSaturation, 0), chain.SplitOffsets, 6)
+                    ModelTwoGradeVector(If(hasGlobal, adj.ColorGradeGlobalHue, 0), If(hasGlobal, adj.ColorGradeGlobalSaturation, 0), chain.SplitOffsets, 9)
+                    chain.SplitYShift = CSng(0.5 - chain.SplitPivot)
+                End If
                 chain.IsIdentity = False
             End If
 
@@ -703,7 +741,16 @@ Namespace Services
         ''' dem Eingangston d0 (keine Kaskaden-Kopplung mehr). Jeder Regler fuer sich bleibt monoton;
         ''' zusammen koennen sie es nicht, das faengt BuildMonotoneToneZones ab.
         ''' Gemessen mit FERRUMPIX_DUMP_CURVES; Staerken sind bewusst moderat und nachjustierbar.</summary>
-        Private Shared Function ToneZoneLift(adj As ImageAdjustments, d0 As Double) As Double
+        Private Shared Function ToneZoneLift(adj As ImageAdjustments, d0 As Double, toneModel As Integer) As Double
+            ' Tonmodell 2: die gemessenen Kennlinien, Kontrast eingeschlossen. Ihre Enden sind
+            ' gemessen und laufen auf null aus; die Schwarz-Regel darunter gehoert zur Formel.
+            If toneModel >= 2 Then
+                Return ToneSliderCurves.Lift("Contrast", adj.Contrast, d0) +
+                       ToneSliderCurves.Lift("Highlights", adj.Highlights, d0) +
+                       ToneSliderCurves.Lift("Shadows", adj.ShadowsLevel, d0) +
+                       ToneSliderCurves.Lift("Whites", adj.Whites, d0) +
+                       ToneSliderCurves.Lift("Blacks", adj.Blacks, d0)
+            End If
             Dim wBlacks = ToneSmoothFade(1.0 - d0 / 0.5)      ' 1 bei Schwarz, glatt 0 ab d=0.5
             Dim wWhites = ToneSmoothFade((d0 - 0.5) / 0.5)    ' 0 bis d=0.5, 1 bei Weiss
             Dim wShadows = ToneCosBump(d0, 0.28, 0.5)         ' breiter Bauch, deckt 0..0.78
@@ -736,13 +783,13 @@ Namespace Services
         ''' anteilig abgezogen, ueber ihren Ueberschuss. Beide Enden bleiben, wo der Hub sie
         ''' hinsetzt, und die Mindeststeigung gilt danach ueberall. Nothing heisst: die Kette rechnet
         ''' wie bisher direkt, bitgleich.</summary>
-        Private Shared Function BuildMonotoneToneZones(adj As ImageAdjustments) As Single()
+        Private Shared Function BuildMonotoneToneZones(adj As ImageAdjustments, toneModel As Integer) As Single()
             Dim n = PointOpTableSize - 1
             Dim stepSize = 1.0 / n
             Dim curve = New Double(n) {}
             For i = 0 To n
                 Dim d = i * stepSize
-                curve(i) = d + ToneZoneLift(adj, d)
+                curve(i) = d + ToneZoneLift(adj, d, toneModel)
             Next
 
             Dim slopes = New Double(n - 1) {}
@@ -776,17 +823,164 @@ Namespace Services
 
         ''' <summary>Lichter/Tiefen/Weiss/Schwarz allein als Tabelle, angewandt ueber ApplyToneZones.
         ''' Monoton wie in der verschmolzenen Kette.</summary>
-        Private Shared Function BuildToneZoneTable(adj As ImageAdjustments) As Single()
-            Dim monotone = BuildMonotoneToneZones(adj)
+        Private Shared Function BuildToneZoneTable(adj As ImageAdjustments, toneModel As Integer) As Single()
+            Dim monotone = BuildMonotoneToneZones(adj, toneModel)
             Dim table = New Single(PointOpTableSize - 1) {}
             For i = 0 To PointOpTableSize - 1
                 Dim v = i / CSng(PointOpTableSize - 1)
                 table(i) = If(monotone IsNot Nothing,
                               Clamp(monotone(i), 0.0F, 1.0F),
-                              Clamp(CSng(v + ToneZoneLift(adj, v)), 0.0F, 1.0F))
+                              Clamp(CSng(v + ToneZoneLift(adj, v, toneModel)), 0.0F, 1.0F))
             Next
             Return table
         End Function
+
+        ' ── Reglermodell 2: Dynamik, Farbmischer-Luminanz, Farbgradierung ───────────────────
+        ' Gemessen gegen eine verbreitete RAW-Entwicklung an 34 Aufnahmen (Diagnostics/
+        ' Reglereichung): Faktor unserer Wirkung durch die Referenz, je Stellung. Die Werte hier sind
+        ' die Kehrwerte; dazwischen wird linear geteilt. Im Modell 1 gilt jeweils 1.
+
+        ''' <summary>Dynamik: unsere Formel wirkte bei +50 mit 0,81, bei +100 mit 0,59, bei -50 mit
+        ''' 0,43 und bei -100 mit 0,53 der Referenz. Positiv ist der Rueckgabewert das v der Formel
+        ''' sat * (1 + v * (1 - sat)) und darf ueber 1 gehen (die Kette klemmt sat); negativ der
+        ''' Exponent k in sat * exp(k * (1 - sat)) (PointOpChain.VibranceExponential).</summary>
+        Private Shared Function ModelTwoVibrance(value As Single) As Single
+            Dim v = Math.Max(-1.0, Math.Min(1.0, value / 100.0))
+            If v >= 0 Then
+                Return CSng(If(v <= 0.5, v / 0.5 * 0.62, 0.62 + (v - 0.5) / 0.5 * (1.7 - 0.62)))
+            End If
+            Return CSng(v * ModelTwoVibranceNegativeK)
+        End Function
+
+        ''' <summary>Exponent der negativen Dynamik bei -100 (linear im Reglerwert).</summary>
+        Private Const ModelTwoVibranceNegativeK As Double = 3.2
+
+        ''' <summary>Farbmischer im Reglermodell 2: die Luminanz je Band und Richtung gestaucht.
+        ''' Unsere Wirkung lag bei +60 1,2- bis 2,9-fach, bei -60 2,1- bis 6,2-fach ueber der
+        ''' Referenz. Farbton und Saettigung bleiben (Saettigung traf, der Farbton ist eine Frage der
+        ''' Bandform, nicht der Staerke). Magenta ist nur ueber alle Bilder zusammen messbar: nach
+        ''' unten -3,7 L bei der Referenz gegen -7,2 mit 0,3, also 0,15; nach oben das Mittel.
+        ''' Eine leichte Kopie nur der 24 Bandwerte; mehr liest GetHslBandAdjustments nicht.</summary>
+        Private Shared Function ModelTwoHsl(adj As ImageAdjustments) As ImageAdjustments
+            ' Nach der Bandlage (ModelTwoBandHue) nachgemessen; Aqua nach oben und Magenta nach oben
+            ' sind in keinem Messbild genug vertreten und behalten den Wert vor der Bandlage.
+            Dim up = {0.71F, 0.61F, 0.42F, 0.48F, 0.34F, 0.67F, 0.84F, 0.57F}
+            Dim down = {0.36F, 0.34F, 0.24F, 0.34F, 0.15F, 0.28F, 0.39F, 0.15F}
+            Dim S = Function(value As Single, band As Integer) value * If(value >= 0, up(band), down(band))
+            Return New ImageAdjustments With {
+                .RedHue = adj.RedHue, .RedSaturation = adj.RedSaturation, .RedLuminance = S(adj.RedLuminance, 0),
+                .OrangeHue = adj.OrangeHue, .OrangeSaturation = adj.OrangeSaturation, .OrangeLuminance = S(adj.OrangeLuminance, 1),
+                .YellowHue = adj.YellowHue, .YellowSaturation = adj.YellowSaturation, .YellowLuminance = S(adj.YellowLuminance, 2),
+                .GreenHue = adj.GreenHue, .GreenSaturation = adj.GreenSaturation, .GreenLuminance = S(adj.GreenLuminance, 3),
+                .AquaHue = adj.AquaHue, .AquaSaturation = adj.AquaSaturation, .AquaLuminance = S(adj.AquaLuminance, 4),
+                .BlueHue = adj.BlueHue, .BlueSaturation = adj.BlueSaturation, .BlueLuminance = S(adj.BlueLuminance, 5),
+                .PurpleHue = adj.PurpleHue, .PurpleSaturation = adj.PurpleSaturation, .PurpleLuminance = S(adj.PurpleLuminance, 6),
+                .MagentaHue = adj.MagentaHue, .MagentaSaturation = adj.MagentaSaturation, .MagentaLuminance = S(adj.MagentaLuminance, 7)}
+        End Function
+
+        ''' <summary>Toenung der Farbgradierung im Reglermodell 2, gemessen an 34 Aufnahmen
+        ''' (Diagnostics/Reglereichung/gradmodell.py): die Referenz legt einen GLEICHEN Farbversatz auf
+        ''' alle Bildpunkte der Zone, statt sie zur Tonfarbe hin zu mischen; ihr Farbrad ist nicht der
+        ''' HSL-Farbkreis; ihre Zonen sind breiter (Tiefen bis Y 0,9, Lichter ab Y 0,15); und die
+        ''' Helligkeit aendert sich nur um den kleinen Anteil, den der Farbton selbst mitbringt.
+        ''' Gerechnet in Y/Cb/Cr (BT.601) auf den Gammawerten: der Versatz je Zone mal deren Gewicht an
+        ''' der Helligkeit Y des Bildpunkts, alle vier Zonen addiert.</summary>
+        Private Shared Sub ApplyModelTwoGrade(ByRef rr As Single, ByRef gg As Single, ByRef bb As Single,
+                                              chain As PointOpChain)
+            Dim y = 0.299F * rr + 0.587F * gg + 0.114F * bb + chain.SplitYShift
+            Dim o = chain.SplitOffsets
+            Dim wS = SampleGradeWeight(ModelTwoGradeShadow, y)
+            Dim wM = SampleGradeWeight(ModelTwoGradeMid, y)
+            Dim wH = SampleGradeWeight(ModelTwoGradeHigh, y)
+            Dim wG = SampleGradeWeight(ModelTwoGradeGlobal, y)
+            Dim dY = wS * o(0) + wM * o(3) + wH * o(6) + wG * o(9)
+            Dim dCb = wS * o(1) + wM * o(4) + wH * o(7) + wG * o(10)
+            Dim dCr = wS * o(2) + wM * o(5) + wH * o(8) + wG * o(11)
+            Dim dR = dY + dCr / 0.713F
+            Dim dB = dY + dCb / 0.564F
+            Dim dG = dY - (0.299F * dCr / 0.713F + 0.114F * dCb / 0.564F) / 0.587F
+            rr = Clamp(rr + dR, 0.0F, 1.0F)
+            gg = Clamp(gg + dG, 0.0F, 1.0F)
+            bb = Clamp(bb + dB, 0.0F, 1.0F)
+        End Sub
+
+        ''' <summary>Zonengewicht an der Helligkeit <paramref name="y"/>: 20 Stufen, linear dazwischen.</summary>
+        Private Shared Function SampleGradeWeight(table As Single(), y As Single) As Single
+            Dim pos = y * table.Length - 0.5F
+            If pos <= 0.0F Then Return table(0)
+            If pos >= table.Length - 1 Then Return table(table.Length - 1)
+            Dim i = CInt(Math.Floor(pos))
+            Return table(i) + (table(i + 1) - table(i)) * (pos - i)
+        End Function
+
+        ''' <summary>Versatz dY, dCb, dCr einer Zone bei vollem Gewicht, aus dem Farbton der
+        ''' Farbgradierung (Farbrad der Referenz, 30-Grad-Stufen, linear dazwischen) und ihrer
+        ''' Saettigung (linear, gemessen 25/50/100). Schreibt nach <paramref name="target"/> ab
+        ''' <paramref name="offset"/>.</summary>
+        Private Shared Sub ModelTwoGradeVector(hue As Single, saturation As Single, target As Single(), offset As Integer)
+            Dim h = ((hue Mod 360.0F) + 360.0F) Mod 360.0F
+            Dim i = CInt(Math.Floor(h / 30.0F)) Mod 12
+            Dim f = (h - i * 30.0F) / 30.0F
+            Dim j = (i + 1) Mod 12
+            Dim k = saturation / 50.0F
+            For c = 0 To 2
+                target(offset + c) = (ModelTwoGradeHue(i, c) + (ModelTwoGradeHue(j, c) - ModelTwoGradeHue(i, c)) * f) * k
+            Next
+        End Sub
+
+        ''' Versatz dY, dCb, dCr je 30 Grad Farbton bei Saettigung 50 (gemessen, Mittel Y 0,2 bis 0,8).
+        Private Shared ReadOnly ModelTwoGradeHue As Single(,) = {
+            {-0.0089F, -0.0185F, 0.0996F}, {0.0184F, -0.0395F, 0.0628F}, {0.0427F, -0.0603F, 0.023F},
+            {0.018F, -0.046F, -0.0335F}, {-0.0121F, -0.0288F, -0.0965F}, {-0.0112F, 0.0007F, -0.1094F},
+            {-0.0107F, 0.0296F, -0.1226F}, {-0.0267F, 0.0435F, -0.0734F}, {-0.045F, 0.0578F, -0.0265F},
+            {-0.0226F, 0.045F, 0.029F}, {-0.0044F, 0.0346F, 0.0808F}, {-0.0063F, 0.0081F, 0.0907F}}
+
+        ''' Zonengewichte ueber Y in 20 Stufen, bezogen auf den globalen Versatz in der Bildmitte.
+        Private Shared ReadOnly ModelTwoGradeGlobal As Single() = {0.142F, 0.365F, 0.491F, 0.616F, 0.745F, 0.872F, 0.967F, 1.06F, 1.151F, 1.171F, 1.103F, 1.118F, 1.1F, 1.033F, 0.88F, 0.801F, 0.719F, 0.573F, 0.395F, 0.155F}
+        Private Shared ReadOnly ModelTwoGradeShadow As Single() = {0.257F, 0.688F, 0.919F, 1.109F, 1.256F, 1.358F, 1.414F, 1.453F, 1.465F, 1.36F, 1.109F, 1.007F, 0.796F, 0.65F, 0.535F, 0.391F, 0.255F, 0.148F, 0.063F, 0.018F}
+        Private Shared ReadOnly ModelTwoGradeMid As Single() = {0.008F, 0.049F, 0.132F, 0.263F, 0.383F, 0.584F, 0.691F, 0.792F, 0.924F, 0.97F, 0.941F, 0.926F, 0.819F, 0.702F, 0.522F, 0.387F, 0.256F, 0.143F, 0.068F, 0.014F}
+        Private Shared ReadOnly ModelTwoGradeHigh As Single() = {0.009F, 0.059F, 0.117F, 0.223F, 0.332F, 0.499F, 0.636F, 0.783F, 0.967F, 1.12F, 1.211F, 1.317F, 1.494F, 1.521F, 1.326F, 1.304F, 1.253F, 1.037F, 0.707F, 0.282F}
+
+        ''' <summary>Farbton fuer die Bandsuche im Reglermodell 2. Gemessen an 34 Aufnahmen
+        ''' (Diagnostics/Reglereichung/bandlage.py) liegen die Baender der Referenz anders auf dem
+        ''' Farbkreis: Orange bis Aqua rund 12 bis 15 Grad tiefer, Lila und Magenta rund 9 Grad
+        ''' hoeher, Rot und Blau gleich. Der Farbton wird stueckweise linear so verschoben, dass die
+        ''' gemessenen Bandmitten der Referenz auf die gemessenen Mitten unseres Farbmischers fallen;
+        ''' die Breiten folgen den Abstaenden. Nur fuer die SUCHE, verschoben wird der echte Farbton.</summary>
+        Private Shared Function ModelTwoBandHue(h As Double) As Double
+            Return WarpCircular(h, ModelTwoBandFrom, ModelTwoBandTo)
+        End Function
+
+        Private Shared ReadOnly ModelTwoBandFrom As Double() = {18.6, 53.8, 108.8, 156.4, 226.9, 278.4, 324.0, 354.5}
+        Private Shared ReadOnly ModelTwoBandTo As Double() = {30.5, 68.7, 120.1, 171.1, 224.2, 270.2, 314.6, 355.5}
+
+        ''' <summary>Stueckweise lineare Abbildung auf dem Kreis: die steigend sortierten Stuetzstellen
+        ''' <paramref name="from"/> gehen auf <paramref name="target"/>, dazwischen linear, ueber 360
+        ''' hinweg geschlossen.</summary>
+        Private Shared Function WarpCircular(h As Double, from As Double(), target As Double()) As Double
+            Dim n = from.Length
+            h = ((h Mod 360.0) + 360.0) Mod 360.0
+            For i = 0 To n - 1
+                Dim a = from(i)
+                Dim b = If(i + 1 < n, from(i + 1), from(0) + 360.0)
+                Dim x = h
+                If x < a Then x += 360.0
+                If x >= a AndAlso x < b Then
+                    Dim ta = target(i)
+                    Dim tb = If(i + 1 < n, target(i + 1), target(0) + 360.0)
+                    If tb < ta Then tb += 360.0
+                    Return ((ta + (tb - ta) * (x - a) / (b - a)) Mod 360.0 + 360.0) Mod 360.0
+                End If
+            Next
+            Return h
+        End Function
+
+        ''' <summary>Farbgradierung im Reglermodell 2, je Zone Tiefen, Mitten, Lichter, Global: die
+        ''' Helligkeit wirkte in Tiefen und Lichtern 2,89- und 1,56-fach zu stark (Mitten und Global
+        ''' ungemessen, 1). Die TOENUNG bleibt bewusst wie im Modell 1: sie wirkte zwar nur mit 0,35
+        ''' (Tiefen) und 0,18 (Lichter), auf Referenzstaerke angehoben wuchs ihr Abstand aber (Tiefen
+        ''' 7,8 auf 10,4 dE, Lichter 6,1 auf 7,3). Das ist eine Frage der Zonen- und Farbform.</summary>
+        Private Shared ReadOnly ModelTwoColorGradeLumGain As Single() = {0.35F, 1.0F, 0.64F, 1.0F}
 
         ''' <summary>Lichter/Tiefen/Weiss/Schwarz auf einen Pixel, farbtonerhaltend wie Adobes
         ''' RGB-Tonkurve im DNG-SDK: die Tabelle wirkt auf den groessten und den kleinsten Kanal, der
@@ -821,9 +1015,11 @@ Namespace Services
         Private Shared Function BuildPointOpScalarTable(adj As ImageAdjustments,
                                                         includeTone As Boolean,
                                                         includeTonal As Boolean,
-                                                        includeRgbCurve As Boolean) As Single()
+                                                        includeRgbCurve As Boolean,
+                                                        toneModel As Integer) As Single()
             Dim exposureGain = CSng(Math.Pow(2.0, adj.Exposure / 100.0 * 4.0))
-            Dim contrast = Math.Max(0.0F, 1.0F + adj.Contrast / 100.0F * 0.75F)
+            ' Im Tonmodell 2 rechnet der Kontrast in den Zonen (BuildToneZoneTable), hier nicht.
+            Dim contrast = If(toneModel >= 2, 1.0F, Math.Max(0.0F, 1.0F + adj.Contrast / 100.0F * 0.75F))
             Dim brightness = adj.Brightness / 100.0F * 80.0F / 255.0F
 
             Dim rgbPoints = If(includeRgbCurve, ParseCurvePoints(adj.CurveRgbPoints), Nothing)
@@ -835,7 +1031,7 @@ Namespace Services
             Dim shoulder = Clamp(ToneShoulderBase + 0.5F * overshootHigh, ToneShoulderBase, ToneShoulderMax)
             Dim toe = Clamp(ToneShoulderBase + 0.5F * overshootLow, ToneShoulderBase, ToneShoulderMax)
             Dim rolloff = Clamp((overshootHigh + overshootLow) / ToneShoulderBase, 0.0F, 1.0F)
-            Dim tonalMonotone = If(includeTonal, BuildMonotoneToneZones(adj), Nothing)
+            Dim tonalMonotone = If(includeTonal, BuildMonotoneToneZones(adj, toneModel), Nothing)
 
             Dim table = New Single(PointOpTableSize - 1) {}
             For i = 0 To PointOpTableSize - 1
@@ -852,7 +1048,7 @@ Namespace Services
                     If tonalMonotone IsNot Nothing Then
                         v = Clamp(SampleTable(tonalMonotone, v), 0.0F, 1.0F)
                     Else
-                        v = Clamp(CSng(v + ToneZoneLift(adj, v)), 0.0F, 1.0F)
+                        v = Clamp(CSng(v + ToneZoneLift(adj, v, toneModel)), 0.0F, 1.0F)
                     End If
                 End If
 
@@ -899,6 +1095,10 @@ Namespace Services
         ''' seine HSL-Helligkeit ist der Grauwert.</summary>
         Private Shared Sub ApplyColorGradeAfterPreset(ByRef rr As Single, ByRef gg As Single, ByRef bb As Single,
                                                        chain As PointOpChain)
+            If chain.SplitOffsetMode Then
+                ApplyModelTwoGrade(rr, gg, bb, chain)
+                Return
+            End If
             Dim splitAdj = chain.SplitToning
             Dim mx = Math.Max(rr, Math.Max(gg, bb))
             Dim mn = Math.Min(rr, Math.Min(gg, bb))
@@ -1258,6 +1458,8 @@ Namespace Services
             Dim negMono = chain.NegMonochrome
             Dim lumCurve = chain.LuminanceCurve
             Dim vibrance = chain.Vibrance
+            Dim vibranceExponential = chain.VibranceExponential
+            Dim hslBandWarp = chain.HslBandWarp
             Dim hslAdj = chain.Hsl
             Dim schattenToenung = chain.ShadowTint
             Dim splitAdj = chain.SplitToning
@@ -1268,6 +1470,7 @@ Namespace Services
             Dim splitGlobal = chain.SplitHasGlobal
             Dim splitLumShift = chain.SplitHasLuminance
             Dim splitBlendExp = chain.SplitBlendExponent
+            Dim splitLumGain = chain.SplitLumGain
             Dim pm = chain.PresetMatrix
             Dim pmStrength = chain.PresetStrength
             Dim toneAfterPreset = chain.ToneAfterPreset
@@ -1437,13 +1640,15 @@ Namespace Services
                             ' saturierte Pixel werden am staerksten angehoben, ein bereits kraeftiges
                             ' (sat=1) bleibt unangetastet, ein neutrales Grau (sat=0) bleibt neutral.
                             ' Damit kann Dynamik keine Farbe erfinden, die die Saettigung entfernt hat.
-                            If vibrance <> 0.0F Then
+                            If vibranceExponential Then
+                                sat = sat * Math.Exp(vibrance * (1.0 - sat))
+                            ElseIf vibrance <> 0.0F Then
                                 sat = Math.Max(0.0, Math.Min(1.0, sat * (1.0 + vibrance * (1.0 - sat))))
                             End If
 
                             If hslAdj IsNot Nothing Then
                                 Dim hueShift As Single = 0, satShift As Single = 0, lumShift As Single = 0
-                                GetHslBandAdjustments(h, hslAdj, hueShift, satShift, lumShift)
+                                GetHslBandAdjustments(If(hslBandWarp, ModelTwoBandHue(h), h), hslAdj, hueShift, satShift, lumShift)
                                 ' Bandwirkung mit der Chroma GEWICHTEN: ein neutrales Grau hat keinen
                                 ' Farbton, bekam aber ueber h=0 die volle LUMINANZ des Rot-Bands ab (nur
                                 ' satShift war durch sat*x=0 automatisch neutral) - der Regler
@@ -1491,10 +1696,10 @@ Namespace Services
                                 ' Verschiebung - sonst wanderte ein Pixel beim Aufhellen in die naechste
                                 ' Zone und tuente sich selbst um.
                                 If splitLumShift Then
-                                    Dim shift = (wShadow * splitAdj.ColorGradeShadowLuminance +
-                                                 wMid * splitAdj.ColorGradeMidtoneLuminance +
-                                                 wHigh * splitAdj.ColorGradeHighlightLuminance +
-                                                 splitAdj.ColorGradeGlobalLuminance) / 100.0F
+                                    Dim shift = (wShadow * splitAdj.ColorGradeShadowLuminance * splitLumGain(0) +
+                                                 wMid * splitAdj.ColorGradeMidtoneLuminance * splitLumGain(1) +
+                                                 wHigh * splitAdj.ColorGradeHighlightLuminance * splitLumGain(2) +
+                                                 splitAdj.ColorGradeGlobalLuminance * splitLumGain(3)) / 100.0F
                                     lum = Math.Max(0.0, Math.Min(1.0, lum + shift * 0.5))
                                 End If
                             End If
@@ -1504,7 +1709,9 @@ Namespace Services
                             rr = CSng(hr) : gg = CSng(hg) : bb = CSng(hb)
 
                             ' Bei S/W wartet die Tonung hinter der Matrix (ToneAfterPreset).
-                            If splitAdj IsNot Nothing AndAlso Not toneAfterPreset Then
+                            If splitAdj IsNot Nothing AndAlso Not toneAfterPreset AndAlso chain.SplitOffsetMode Then
+                                ApplyModelTwoGrade(rr, gg, bb, chain)
+                            ElseIf splitAdj IsNot Nothing AndAlso Not toneAfterPreset Then
                                 ' Die Altstufe rechnet in 0..255; hier auf 0..1 normiert, sonst
                                 ' stimmt der Anteil nicht.
                                 If splitShadow Then

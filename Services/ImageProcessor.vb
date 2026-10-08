@@ -2541,8 +2541,12 @@ Namespace Services
             End If
 
             If adj.Vignette <> 0 Then
+                ' Reglermodell 2: gemessen gegen eine verbreitete RAW-Entwicklung wirkte das Abdunkeln
+                ' (unser +, dort -) 1,70-fach, das Aufhellen 1,18-fach zu stark.
+                Dim vignetteAmount = adj.Vignette / 100.0F
+                If adj.ResolvedToneModel() >= 2 Then vignetteAmount *= If(vignetteAmount > 0, 0.59F, 0.85F)
                 processed = ReplaceBitmapOwned(processed, PerformanceTraceService.Measure(
-                    "Pixel: Vignette", Function() ApplyVignette(processed, adj.Vignette / 100.0F, adj.VignetteTransition, adj.VignetteRoundness, adj.VignetteFeather, adj.VignetteCenterX, adj.VignetteCenterY, adj.VignetteStyle)), owned)
+                    "Pixel: Vignette", Function() ApplyVignette(processed, vignetteAmount, adj.VignetteTransition, adj.VignetteRoundness, adj.VignetteFeather, adj.VignetteCenterX, adj.VignetteCenterY, adj.VignetteStyle)), owned)
             End If
 
             If adj.Grain > 0 Then
@@ -3919,6 +3923,7 @@ Namespace Services
                 adj.Whites, adj.Blacks, adj.Temperature, adj.Tint, adj.Sharpness, adj.SharpenRadius, adj.SharpenDetail,
                 adj.WhiteBalanceModel, adj.WhiteBalanceAnchorX, adj.WhiteBalanceAnchorY,
                 adj.WhiteBalanceKelvin, adj.WhiteBalanceKelvinTint,
+                adj.ResolvedToneModel(),
                 adj.SharpenMasking, adj.SharpenMethod,
                 adj.NoiseReduction, adj.NoiseReductionMethod, adj.NoiseReductionDetail, adj.Blur, adj.ColorNoiseReduction,
                 adj.FarbrauschGrob, adj.ColorNoiseCoarseScale,

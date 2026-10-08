@@ -76,6 +76,13 @@ Namespace Services
         ''' <summary>Rezept-JSON fuer den RAW-Sidecar (RawSidecarService): exakt dieselben
         ''' Serialisierungsregeln wie im .fpx-Buendel, damit beide Formate nie auseinanderdriften.</summary>
         Friend Shared Function SerializeAdjustments(adjustments As ImageAdjustments) As String
+            ' Das Tonmodell wird beim Speichern festgeschrieben, auf einer Kopie: die Datei behaelt
+            ' damit, was beim Speichern zu sehen war, auch wenn sich das Modell neuer Bearbeitungen
+            ' spaeter aendert.
+            If adjustments IsNot Nothing AndAlso NeedsToneModelPin(adjustments) Then
+                adjustments = adjustments.Clone()
+                PinToneModel(adjustments, 0)
+            End If
             ' Die globalen Regler bleiben absichtlich vollständig serialisiert (die Datei ist
             ' zugleich ein stabiles Rezeptformat). Ein Geometrieschritt benötigt dagegen nur seine
             ' wenigen Eingabefelder. Json.NET kann das pro verschachteltem Typ nicht ohne Converter
@@ -122,6 +129,30 @@ Namespace Services
             Return names.Split("|"c)
         End Function
 
+        ''' <summary>Traegt das Tonmodell fest ein, wo Tonregler stehen und keins eingetragen ist: im
+        ''' Rezept selbst und in jeder Maskenebene. <paramref name="model"/> 0 heisst: das, mit dem
+        ''' gerade gerechnet wird (Speichern); 1 heisst: die eigene Formel (Laden alter Rezepte).</summary>
+        Friend Shared Sub PinToneModel(adj As ImageAdjustments, model As Integer)
+            If adj Is Nothing Then Return
+            If adj.ToneModel <= 0 AndAlso adj.UsesToneModel() Then
+                adj.ToneModel = If(model > 0, model, adj.ResolvedToneModel())
+            End If
+            If adj.MaskedAdjustmentLayers Is Nothing Then Return
+            For Each layer In adj.MaskedAdjustmentLayers
+                Dim layerAdj = layer?.Adjustments
+                If layerAdj IsNot Nothing AndAlso layerAdj.ToneModel <= 0 AndAlso layerAdj.UsesToneModel() Then
+                    layerAdj.ToneModel = If(model > 0, model, layerAdj.ResolvedToneModel())
+                End If
+            Next
+        End Sub
+
+        Private Shared Function NeedsToneModelPin(adj As ImageAdjustments) As Boolean
+            If adj.ToneModel <= 0 AndAlso adj.UsesToneModel() Then Return True
+            If adj.MaskedAdjustmentLayers Is Nothing Then Return False
+            Return adj.MaskedAdjustmentLayers.Any(Function(l) l?.Adjustments IsNot Nothing AndAlso
+                                                      l.Adjustments.ToneModel <= 0 AndAlso l.Adjustments.UsesToneModel())
+        End Function
+
         Friend Shared Function DeserializeAdjustments(json As String) As ImageAdjustments
             If String.IsNullOrWhiteSpace(json) Then Return Nothing
             Return NormalizeLoadedAdjustments(JsonSerializer.Deserialize(Of ImageAdjustments)(json, JsonOptions))
@@ -148,6 +179,12 @@ Namespace Services
             If adj.WhiteBalanceModel <= 0 AndAlso (adj.Temperature <> 0.0F OrElse adj.Tint <> 0.0F) Then
                 adj.WhiteBalanceModel = 1
             End If
+
+            ' TONMODELL, nach derselben Regel: ein Rezept ohne das Feld mit gesetzten Tonreglern
+            ' stammt aus der Zeit der eigenen Formel und bleibt dabei. Neu gespeicherte Rezepte
+            ' tragen ihr Modell immer (SerializeAdjustments). Auch jede Maskenebene, denn sie hat
+            ' eigene Tonregler.
+            PinToneModel(adj, 1)
 
             Dim hadLegacyScope = adj.SelectionScopeEnabled OrElse adj.HasActiveSelection
             If hadLegacyScope AndAlso (adj.MaskedAdjustmentLayers Is Nothing OrElse adj.MaskedAdjustmentLayers.Count = 0) Then
@@ -297,6 +334,8 @@ Namespace Services
             ' Wiederladen weder die Auswahl reaktivieren noch ein rotes Overlay heraufholen noch globale
             ' Regler nachträglich auf diese Auswahl begrenzen (siehe StripTransientSelectionState).
             StripTransientSelectionState(recipeAdj)
+            ' Tonmodell festschreiben, wie in SerializeAdjustments.
+            PinToneModel(recipeAdj, 0)
             ' Das Gegenstueck zur .fpxmp: dieses Buendel traegt das Arbeitsbild in voller Aufloesung
             ' mit, Entrauschen und Retusche stecken also in seinen Pixeln. Der Vermerk darueber wird
             ' hier trotzdem NICHT auf wahr gezwungen, sondern uebernommen wie er kommt: wer eine
