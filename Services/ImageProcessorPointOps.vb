@@ -117,16 +117,19 @@ Namespace Services
             Public SplitHasLuminance As Boolean
             ''' Exponent auf die Zonengewichte (ColorGradeBlending). 1 = wie frueheres Split-Toning.
             Public SplitBlendExponent As Single
-            ''' Staerke der Helligkeit je Zone (Tiefen, Mitten, Lichter, Global). 1 im Reglermodell 1;
-            ''' im Modell 2 gemessen gegen eine verbreitete RAW-Entwicklung (ModelTwoColorGradeLumGain).
+            ''' Staerke der Helligkeit je Zone (Tiefen, Mitten, Lichter, Global) auf dem HSL-Weg; im
+            ''' Reglermodell 2 rechnet die Helligkeit ApplyModelTwoGrade mit (SplitLumTable).
             Public SplitLumGain As Single() = {1.0F, 1.0F, 1.0F, 1.0F}
             ''' Reglermodell 2: die Toenung ist ein Versatz in Y/Cb/Cr je Zone (ApplyModelTwoGrade)
             ''' statt einer Mischung zur Tonfarbe. SplitOffsets haelt je Zone (Tiefen, Mitten,
-            ''' Lichter, Global) dY, dCb, dCr bei vollem Gewicht; SplitYShift verschiebt die Zonen
-            ''' nach der Balance.
+            ''' Lichter, Global) dY, dCb, dCr bei vollem Gewicht.
             Public SplitOffsetMode As Boolean
             Public SplitOffsets As Single()
-            Public SplitYShift As Single
+            ''' Zonengewichte von Tiefen und Lichtern nach Ueberblendung und Balance, und der
+            ''' Helligkeitsversatz aller vier Zonen, je 20 Stufen ueber Y (ModelTwoGradeTables).
+            Public SplitShadowTable As Single()
+            Public SplitHighTable As Single()
+            Public SplitLumTable As Single()
 
             ''' Gruen-/Magenta-Verschiebung nur in den Tiefen (crs:ShadowTint). Luminanzabhaengig,
             ''' laesst sich also nicht in die Matrix falten.
@@ -333,14 +336,15 @@ Namespace Services
                 ' die Toenungen staerker in ihrer Zone, darueber greifen sie weiter ineinander.
                 chain.SplitBlendExponent = CSng(Math.Pow(2.0, (50.0 - Clamp(adj.ColorGradeBlending, 0, 100)) / 50.0))
                 If toneModel >= 2 Then
-                    chain.SplitLumGain = ModelTwoColorGradeLumGain
                     chain.SplitOffsetMode = True
+                    ModelTwoGradeTables(adj, chain)
+                    ' Die Helligkeit der Zonen rechnet ApplyModelTwoGrade mit, nicht der HSL-Weg.
+                    chain.SplitHasLuminance = False
                     chain.SplitOffsets = New Single(11) {}
                     ModelTwoGradeVector(If(hasShadow, adj.ColorGradeShadowHue, 0), If(hasShadow, adj.ColorGradeShadowSaturation, 0), chain.SplitOffsets, 0)
                     ModelTwoGradeVector(If(hasMidtone, adj.ColorGradeMidtoneHue, 0), If(hasMidtone, adj.ColorGradeMidtoneSaturation, 0), chain.SplitOffsets, 3)
                     ModelTwoGradeVector(If(hasHighlight, adj.ColorGradeHighlightHue, 0), If(hasHighlight, adj.ColorGradeHighlightSaturation, 0), chain.SplitOffsets, 6)
                     ModelTwoGradeVector(If(hasGlobal, adj.ColorGradeGlobalHue, 0), If(hasGlobal, adj.ColorGradeGlobalSaturation, 0), chain.SplitOffsets, 9)
-                    chain.SplitYShift = CSng(0.5 - chain.SplitPivot)
                 End If
                 chain.IsIdentity = False
             End If
@@ -898,13 +902,13 @@ Namespace Services
         ''' der Helligkeit Y des Bildpunkts, alle vier Zonen addiert.</summary>
         Private Shared Sub ApplyModelTwoGrade(ByRef rr As Single, ByRef gg As Single, ByRef bb As Single,
                                               chain As PointOpChain)
-            Dim y = 0.299F * rr + 0.587F * gg + 0.114F * bb + chain.SplitYShift
+            Dim y = 0.299F * rr + 0.587F * gg + 0.114F * bb
             Dim o = chain.SplitOffsets
-            Dim wS = SampleGradeWeight(ModelTwoGradeShadow, y)
+            Dim wS = SampleGradeWeight(chain.SplitShadowTable, y)
             Dim wM = SampleGradeWeight(ModelTwoGradeMid, y)
-            Dim wH = SampleGradeWeight(ModelTwoGradeHigh, y)
+            Dim wH = SampleGradeWeight(chain.SplitHighTable, y)
             Dim wG = SampleGradeWeight(ModelTwoGradeGlobal, y)
-            Dim dY = wS * o(0) + wM * o(3) + wH * o(6) + wG * o(9)
+            Dim dY = wS * o(0) + wM * o(3) + wH * o(6) + wG * o(9) + SampleGradeWeight(chain.SplitLumTable, y)
             Dim dCb = wS * o(1) + wM * o(4) + wH * o(7) + wG * o(10)
             Dim dCr = wS * o(2) + wM * o(5) + wH * o(8) + wG * o(11)
             Dim dR = dY + dCr / 0.713F
@@ -948,9 +952,61 @@ Namespace Services
 
         ''' Zonengewichte ueber Y in 20 Stufen, bezogen auf den globalen Versatz in der Bildmitte.
         Private Shared ReadOnly ModelTwoGradeGlobal As Single() = {0.142F, 0.365F, 0.491F, 0.616F, 0.745F, 0.872F, 0.967F, 1.06F, 1.151F, 1.171F, 1.103F, 1.118F, 1.1F, 1.033F, 0.88F, 0.801F, 0.719F, 0.573F, 0.395F, 0.155F}
-        Private Shared ReadOnly ModelTwoGradeShadow As Single() = {0.257F, 0.688F, 0.919F, 1.109F, 1.256F, 1.358F, 1.414F, 1.453F, 1.465F, 1.36F, 1.109F, 1.007F, 0.796F, 0.65F, 0.535F, 0.391F, 0.255F, 0.148F, 0.063F, 0.018F}
         Private Shared ReadOnly ModelTwoGradeMid As Single() = {0.008F, 0.049F, 0.132F, 0.263F, 0.383F, 0.584F, 0.691F, 0.792F, 0.924F, 0.97F, 0.941F, 0.926F, 0.819F, 0.702F, 0.522F, 0.387F, 0.256F, 0.143F, 0.068F, 0.014F}
-        Private Shared ReadOnly ModelTwoGradeHigh As Single() = {0.009F, 0.059F, 0.117F, 0.223F, 0.332F, 0.499F, 0.636F, 0.783F, 0.967F, 1.12F, 1.211F, 1.317F, 1.494F, 1.521F, 1.326F, 1.304F, 1.253F, 1.037F, 0.707F, 0.282F}
+
+        ''' Tiefen und Lichter bei Ueberblendung 100 (so rechnet die Referenz auch, wenn ein Preset
+        ''' keine Ueberblendung angibt) und 0, dazu bei Balance -50 und +50 (Ueberblendung 100).
+        ''' Gemessen an 57 Aufnahmen, gg-*-h30-s50-* (Diagnostics/Reglereichung/stellungen.py).
+        Private Shared ReadOnly ModelTwoGradeShadow100 As Single() = {0.316F, 0.821F, 0.997F, 1.291F, 1.405F, 1.428F, 1.423F, 1.453F, 1.360F, 1.263F, 1.104F, 0.993F, 0.840F, 0.698F, 0.563F, 0.425F, 0.292F, 0.171F, 0.081F, 0.022F}
+        Private Shared ReadOnly ModelTwoGradeShadow0 As Single() = {0.285F, 0.698F, 0.769F, 0.842F, 0.816F, 0.721F, 0.580F, 0.424F, 0.293F, 0.181F, 0.097F, 0.053F, 0.028F, 0.016F, 0.016F, 0.010F, 0.004F, 0.002F, 0.001F, 0.002F}
+        Private Shared ReadOnly ModelTwoGradeShadowBalM As Single() = {0.322F, 0.886F, 1.091F, 1.485F, 1.651F, 1.726F, 1.786F, 1.904F, 1.857F, 1.806F, 1.686F, 1.600F, 1.445F, 1.274F, 1.072F, 0.849F, 0.618F, 0.377F, 0.184F, 0.044F}
+        Private Shared ReadOnly ModelTwoGradeShadowBalP As Single() = {0.302F, 0.714F, 0.819F, 0.961F, 1.003F, 0.963F, 0.887F, 0.849F, 0.742F, 0.645F, 0.522F, 0.439F, 0.352F, 0.281F, 0.219F, 0.163F, 0.109F, 0.060F, 0.032F, 0.009F}
+        Private Shared ReadOnly ModelTwoGradeHigh100 As Single() = {0.010F, 0.055F, 0.129F, 0.263F, 0.377F, 0.556F, 0.638F, 0.833F, 0.873F, 0.997F, 1.146F, 1.250F, 1.365F, 1.434F, 1.390F, 1.363F, 1.283F, 1.058F, 0.749F, 0.279F}
+        Private Shared ReadOnly ModelTwoGradeHigh0 As Single() = {0.001F, 0.000F, 0.001F, 0.004F, 0.020F, 0.046F, 0.053F, 0.066F, 0.070F, 0.090F, 0.157F, 0.220F, 0.356F, 0.491F, 0.620F, 0.764F, 0.875F, 0.829F, 0.633F, 0.247F}
+        Private Shared ReadOnly ModelTwoGradeHighBalM As Single() = {0.004F, 0.013F, 0.048F, 0.114F, 0.182F, 0.288F, 0.325F, 0.445F, 0.460F, 0.545F, 0.665F, 0.751F, 0.867F, 0.953F, 0.974F, 1.019F, 1.029F, 0.912F, 0.677F, 0.265F}
+        Private Shared ReadOnly ModelTwoGradeHighBalP As Single() = {0.026F, 0.149F, 0.291F, 0.542F, 0.746F, 0.961F, 1.098F, 1.350F, 1.403F, 1.521F, 1.640F, 1.715F, 1.782F, 1.790F, 1.662F, 1.557F, 1.409F, 1.125F, 0.781F, 0.287F}
+
+        ''' Helligkeitsversatz dY der Zonen bei -50 und +50 (gemessen, gg-*-lum*), je 20 Stufen.
+        Private Shared ReadOnly ModelTwoGradeLum As Single()() = {
+            New Single() {-0.0115F, -0.0296F, -0.0363F, -0.0394F, -0.0403F, -0.0416F, -0.0382F, -0.0324F, -0.0239F, -0.0185F, -0.0147F, -0.0122F, -0.0098F, -0.0081F, -0.0061F, -0.0044F, -0.0029F, -0.0016F, -0.0007F, -0.0003F}, New Single() {0.0581F, 0.0582F, 0.0562F, 0.0501F, 0.0454F, 0.0405F, 0.0318F, 0.0239F, 0.0173F, 0.0128F, 0.0104F, 0.0086F, 0.0069F, 0.0055F, 0.0042F, 0.0029F, 0.0018F, 0.0009F, 0.0003F, -0.0001F},
+            New Single() {0.0002F, -0.0002F, -0.0011F, -0.0033F, -0.0071F, -0.0127F, -0.0209F, -0.0293F, -0.0364F, -0.0416F, -0.0441F, -0.0427F, -0.0377F, -0.0320F, -0.0241F, -0.0169F, -0.0104F, -0.0052F, -0.0020F, -0.0006F}, New Single() {0.0002F, 0.0008F, 0.0021F, 0.0049F, 0.0087F, 0.0147F, 0.0233F, 0.0313F, 0.0375F, 0.0416F, 0.0433F, 0.0414F, 0.0361F, 0.0299F, 0.0217F, 0.0145F, 0.0085F, 0.0040F, 0.0013F, -0.0001F},
+            New Single() {0.0001F, -0.0000F, -0.0003F, -0.0008F, -0.0012F, -0.0015F, -0.0025F, -0.0041F, -0.0061F, -0.0081F, -0.0101F, -0.0138F, -0.0206F, -0.0283F, -0.0377F, -0.0462F, -0.0537F, -0.0585F, -0.0598F, -0.0563F}, New Single() {0.0001F, 0.0002F, 0.0006F, 0.0014F, 0.0022F, 0.0032F, 0.0043F, 0.0059F, 0.0083F, 0.0105F, 0.0142F, 0.0193F, 0.0269F, 0.0340F, 0.0423F, 0.0477F, 0.0490F, 0.0434F, 0.0313F, 0.0117F},
+            New Single() {-0.0047F, -0.0118F, -0.0164F, -0.0209F, -0.0253F, -0.0302F, -0.0347F, -0.0386F, -0.0410F, -0.0430F, -0.0447F, -0.0453F, -0.0448F, -0.0440F, -0.0414F, -0.0380F, -0.0332F, -0.0265F, -0.0181F, -0.0069F}, New Single() {0.0067F, 0.0138F, 0.0182F, 0.0231F, 0.0281F, 0.0338F, 0.0378F, 0.0408F, 0.0425F, 0.0438F, 0.0448F, 0.0448F, 0.0439F, 0.0420F, 0.0388F, 0.0345F, 0.0293F, 0.0224F, 0.0147F, 0.0049F}}
+
+        ''' <summary>Baut die Zonentabellen einer Farbgradierung im Reglermodell 2: Tiefen und
+        ''' Lichter linear zwischen Ueberblendung 0 und 100, die Balance als gemessene Abweichung bei
+        ''' -50/+50 linear dazu (bei +-100 doppelt); die Helligkeit aller vier Zonen als Summe ihrer
+        ''' gemessenen Kurven, je nach Vorzeichen, linear im Wert.</summary>
+        Private Shared Sub ModelTwoGradeTables(adj As ImageAdjustments, chain As PointOpChain)
+            Dim t = Clamp(adj.ColorGradeBlending, 0, 100) / 100.0F
+            Dim b = Clamp(adj.ColorGradeBalance, -100, 100) / 50.0F
+            chain.SplitShadowTable = BlendGradeTable(ModelTwoGradeShadow0, ModelTwoGradeShadow100, ModelTwoGradeShadowBalM, ModelTwoGradeShadowBalP, t, b)
+            chain.SplitHighTable = BlendGradeTable(ModelTwoGradeHigh0, ModelTwoGradeHigh100, ModelTwoGradeHighBalM, ModelTwoGradeHighBalP, t, b)
+            Dim lums = {adj.ColorGradeShadowLuminance, adj.ColorGradeMidtoneLuminance,
+                        adj.ColorGradeHighlightLuminance, adj.ColorGradeGlobalLuminance}
+            Dim lum = New Single(19) {}
+            For z = 0 To 3
+                If lums(z) = 0.0F Then Continue For
+                Dim curve = ModelTwoGradeLum(z * 2 + If(lums(z) > 0, 1, 0))
+                Dim k = Clamp(lums(z), -100, 100) / 50.0F
+                If k < 0 Then k = -k
+                For i = 0 To 19
+                    lum(i) += curve(i) * k
+                Next
+            Next
+            chain.SplitLumTable = lum
+        End Sub
+
+        Private Shared Function BlendGradeTable(zero As Single(), full As Single(), balM As Single(), balP As Single(),
+                                                t As Single, b As Single) As Single()
+            Dim result = New Single(19) {}
+            For i = 0 To 19
+                Dim v = zero(i) + (full(i) - zero(i)) * t
+                v += If(b < 0, (balM(i) - full(i)) * -b, (balP(i) - full(i)) * b)
+                result(i) = Math.Max(0.0F, v)
+            Next
+            Return result
+        End Function
 
         ''' <summary>Punkt- und Kanalkurven im Reglermodell 2. Gemessen an 20 Aufnahmen
         ''' (Diagnostics/Reglereichung/kurvenraum.py) wendet die Referenz ihre Kurven in ProPhoto-
@@ -1015,12 +1071,6 @@ Namespace Services
             Return h
         End Function
 
-        ''' <summary>Farbgradierung im Reglermodell 2, je Zone Tiefen, Mitten, Lichter, Global: die
-        ''' Helligkeit wirkte in Tiefen und Lichtern 2,89- und 1,56-fach zu stark (Mitten und Global
-        ''' ungemessen, 1). Die TOENUNG bleibt bewusst wie im Modell 1: sie wirkte zwar nur mit 0,35
-        ''' (Tiefen) und 0,18 (Lichter), auf Referenzstaerke angehoben wuchs ihr Abstand aber (Tiefen
-        ''' 7,8 auf 10,4 dE, Lichter 6,1 auf 7,3). Das ist eine Frage der Zonen- und Farbform.</summary>
-        Private Shared ReadOnly ModelTwoColorGradeLumGain As Single() = {0.35F, 1.0F, 0.64F, 1.0F}
 
         ''' <summary>Lichter/Tiefen/Weiss/Schwarz auf einen Pixel, farbtonerhaltend wie Adobes
         ''' RGB-Tonkurve im DNG-SDK: die Tabelle wirkt auf den groessten und den kleinsten Kanal, der
