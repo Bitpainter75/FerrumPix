@@ -397,10 +397,14 @@ Namespace Services
         End Function
 
         ''' <summary>Steht ein Regler, dessen Bedeutung am Reglermodell haengt? Die fuenf Tonregler,
-        ''' dazu Dynamik, die Luminanz im Farbmischer, die Farbgradierung und die Vignette. Ein altes
-        ''' Rezept mit einem davon bekommt beim Laden Modell 1 und sieht aus wie beim Speichern.</summary>
+        ''' dazu Dynamik, die Luminanz im Farbmischer, die Farbgradierung und die Vignette, und die
+        ''' Punkt- und Kanalkurven (Modell 2 rechnet sie mit anderem Spline in anderem Farbraum).
+        ''' Ein altes Rezept mit einem davon bekommt beim Laden Modell 1 und sieht aus wie beim
+        ''' Speichern. Die Luminanzkurve gehoert nicht dazu: sie rechnet in beiden Modellen gleich.</summary>
         Public Function UsesToneModel() As Boolean
-            Return Contrast <> 0.0F OrElse Highlights <> 0.0F OrElse ShadowsLevel <> 0.0F OrElse
+            Return Not IsIdentityCurve(CurveRgbPoints) OrElse Not IsIdentityCurve(CurveRedPoints) OrElse
+                   Not IsIdentityCurve(CurveGreenPoints) OrElse Not IsIdentityCurve(CurveBluePoints) OrElse
+                   Contrast <> 0.0F OrElse Highlights <> 0.0F OrElse ShadowsLevel <> 0.0F OrElse
                    Whites <> 0.0F OrElse Blacks <> 0.0F OrElse Vibrance <> 0.0F OrElse Vignette <> 0.0F OrElse
                    RedLuminance <> 0.0F OrElse OrangeLuminance <> 0.0F OrElse YellowLuminance <> 0.0F OrElse
                    GreenLuminance <> 0.0F OrElse AquaLuminance <> 0.0F OrElse BlueLuminance <> 0.0F OrElse

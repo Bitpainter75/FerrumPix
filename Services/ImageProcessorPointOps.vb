@@ -170,9 +170,14 @@ Namespace Services
         ''' <param name="measured">Quelle fuer die Filmnegativ-Messung. Die Basis-/Dichtefarbe wird am
         ''' UNVERAENDERTEN Bild gemessen; seit die Umkehr Teil der Kette ist, muss das ausdruecklich
         ''' dasselbe Bitmap sein, das auch in die Kette geht.</param>
-        Friend Shared Function ApplyPointOpChain(source As SKBitmap, adj As ImageAdjustments) As SKBitmap
+        ''' <param name="toneReferenceMedian">Helligkeit L (Median) des GANZEN Bildes, nach der Lichter
+        ''' und Tiefen ihre Kennlinie waehlen. 0 heisst: an <paramref name="source"/> messen. Gesetzt
+        ''' nur, wo die Kette auf einem Ausschnitt laeuft (Maskenebene im Rechteck) - dort waere der
+        ''' eigene Median ein anderer und die Ebene wirkte innen anders als ueber das ganze Bild.</param>
+        Friend Shared Function ApplyPointOpChain(source As SKBitmap, adj As ImageAdjustments,
+                                                 Optional toneReferenceMedian As Double = 0.0) As SKBitmap
             If source Is Nothing OrElse adj Is Nothing Then Return source
-            Dim chain = BuildPointOpChain(adj, source)
+            Dim chain = BuildPointOpChain(adj, source, toneReferenceMedian)
             If chain.IsIdentity Then Return source
             Return RunPointOpChain(source, chain)
         End Function
@@ -181,7 +186,8 @@ Namespace Services
         ''' nachgebildet: ein neutraler Regler muss weiterhin GAR NICHTS tun, sonst kostet die Kette
         ''' Zeit, wo heute nur ein If steht.</summary>
         Friend Shared Function BuildPointOpChain(adj As ImageAdjustments,
-                                                 Optional measured As SKBitmap = Nothing) As PointOpChain
+                                                 Optional measured As SKBitmap = Nothing,
+                                                 Optional toneReferenceMedian As Double = 0.0) As PointOpChain
             Dim chain As New PointOpChain()
 
             ' --- Filmnegativ: ERSTE Stufe, exakt die Bedingung aus ApplyFilmNegative ---
@@ -269,7 +275,19 @@ Namespace Services
                 Dim curvesInMelissa = toneModel >= 2 AndAlso (wantsRgbCurve OrElse wantsChannelCurves)
                 If wantsTonal OrElse curvesInMelissa Then
                     If wantsTone Then chain.ToneBefore = BuildPointOpScalarTable(adj, True, False, False, toneModel)
-                    If wantsTonal Then chain.ToneZones = BuildToneZoneTable(adj, toneModel)
+                    If wantsTonal Then
+                        ' Lichter und Tiefen haengen im Modell 2 an der Helligkeit des ganzen Bildes
+                        ' (ToneSliderCurves.Lift mit Median). Gemessen VOR der Kette, dann durch die
+                        ' Tonwertkurve davor geschickt: Belichtung verschiebt den Median mit.
+                        Dim imageMedianL = 0.0
+                        If toneModel >= 2 AndAlso (adj.Highlights <> 0 OrElse adj.ShadowsLevel <> 0) Then
+                            imageMedianL = If(toneReferenceMedian > 0.0, toneReferenceMedian, MeasureMedianLightness(measured))
+                            If imageMedianL > 0.0 AndAlso chain.ToneBefore IsNot Nothing Then
+                                imageMedianL = GrayVToLightness(SampleTable(chain.ToneBefore, CSng(LightnessToGrayV(imageMedianL))))
+                            End If
+                        End If
+                        chain.ToneZones = BuildToneZoneTable(adj, toneModel, imageMedianL)
+                    End If
                 End If
                 If curvesInMelissa Then
                     chain.CurvesInMelissa = True
@@ -756,13 +774,15 @@ Namespace Services
         ''' dem Eingangston d0 (keine Kaskaden-Kopplung mehr). Jeder Regler fuer sich bleibt monoton;
         ''' zusammen koennen sie es nicht, das faengt BuildMonotoneToneZones ab.
         ''' Gemessen mit FERRUMPIX_DUMP_CURVES; Staerken sind bewusst moderat und nachjustierbar.</summary>
-        Private Shared Function ToneZoneLift(adj As ImageAdjustments, d0 As Double, toneModel As Integer) As Double
+        Private Shared Function ToneZoneLift(adj As ImageAdjustments, d0 As Double, toneModel As Integer,
+                                             Optional imageMedianL As Double = 0.0) As Double
             ' Tonmodell 2: die gemessenen Kennlinien, Kontrast eingeschlossen. Ihre Enden sind
             ' gemessen und laufen auf null aus; die Schwarz-Regel darunter gehoert zur Formel.
+            ' Lichter und Tiefen waehlen ihre Kurve nach der Helligkeit des ganzen Bildes.
             If toneModel >= 2 Then
                 Return ToneSliderCurves.Lift("Contrast", adj.Contrast, d0) +
-                       ToneSliderCurves.Lift("Highlights", adj.Highlights, d0) +
-                       ToneSliderCurves.Lift("Shadows", adj.ShadowsLevel, d0) +
+                       ToneSliderCurves.Lift("Highlights", adj.Highlights, d0, imageMedianL) +
+                       ToneSliderCurves.Lift("Shadows", adj.ShadowsLevel, d0, imageMedianL) +
                        ToneSliderCurves.Lift("Whites", adj.Whites, d0) +
                        ToneSliderCurves.Lift("Blacks", adj.Blacks, d0)
             End If
@@ -798,13 +818,14 @@ Namespace Services
         ''' anteilig abgezogen, ueber ihren Ueberschuss. Beide Enden bleiben, wo der Hub sie
         ''' hinsetzt, und die Mindeststeigung gilt danach ueberall. Nothing heisst: die Kette rechnet
         ''' wie bisher direkt, bitgleich.</summary>
-        Private Shared Function BuildMonotoneToneZones(adj As ImageAdjustments, toneModel As Integer) As Single()
+        Private Shared Function BuildMonotoneToneZones(adj As ImageAdjustments, toneModel As Integer,
+                                                       Optional imageMedianL As Double = 0.0) As Single()
             Dim n = PointOpTableSize - 1
             Dim stepSize = 1.0 / n
             Dim curve = New Double(n) {}
             For i = 0 To n
                 Dim d = i * stepSize
-                curve(i) = d + ToneZoneLift(adj, d, toneModel)
+                curve(i) = d + ToneZoneLift(adj, d, toneModel, imageMedianL)
             Next
 
             Dim slopes = New Double(n - 1) {}
@@ -838,16 +859,75 @@ Namespace Services
 
         ''' <summary>Lichter/Tiefen/Weiss/Schwarz allein als Tabelle, angewandt ueber ApplyToneZones.
         ''' Monoton wie in der verschmolzenen Kette.</summary>
-        Private Shared Function BuildToneZoneTable(adj As ImageAdjustments, toneModel As Integer) As Single()
-            Dim monotone = BuildMonotoneToneZones(adj, toneModel)
+        Private Shared Function BuildToneZoneTable(adj As ImageAdjustments, toneModel As Integer,
+                                                   Optional imageMedianL As Double = 0.0) As Single()
+            Dim monotone = BuildMonotoneToneZones(adj, toneModel, imageMedianL)
             Dim table = New Single(PointOpTableSize - 1) {}
             For i = 0 To PointOpTableSize - 1
                 Dim v = i / CSng(PointOpTableSize - 1)
                 table(i) = If(monotone IsNot Nothing,
                               Clamp(monotone(i), 0.0F, 1.0F),
-                              Clamp(CSng(v + ToneZoneLift(adj, v, toneModel)), 0.0F, 1.0F))
+                              Clamp(CSng(v + ToneZoneLift(adj, v, toneModel, imageMedianL)), 0.0F, 1.0F))
             Next
             Return table
+        End Function
+
+        ''' <summary>Median der Helligkeit L (CIE, 0 bis 100) eines Bildes, aus einem Raster von rund
+        ''' 250 000 Bildpunkten; voll durchsichtige zaehlen nicht. 0, wenn kein Bild da ist oder das
+        ''' Format nicht 8 Bit RGBA ist. Gelesen wird zeilenweise ueber den nativen Zeiger, ohne
+        ''' das Bild zu kopieren.</summary>
+        Friend Shared Function MeasureMedianLightness(bmp As SKBitmap) As Double
+            If bmp Is Nothing OrElse bmp.Width <= 0 OrElse bmp.Height <= 0 Then Return 0.0
+            Dim rOff, bOff As Integer
+            Select Case bmp.ColorType
+                Case SKColorType.Bgra8888 : rOff = 2 : bOff = 0
+                Case SKColorType.Rgba8888 : rOff = 0 : bOff = 2
+                Case Else : Return 0.0
+            End Select
+            Dim pixels = bmp.GetPixels()
+            If pixels = IntPtr.Zero Then Return 0.0
+            Dim linear = New Double(255) {}
+            For i = 0 To 255
+                Dim c = i / 255.0
+                linear(i) = If(c <= 0.04045, c / 12.92, Math.Pow((c + 0.055) / 1.055, 2.4))
+            Next
+            Dim stepSize = Math.Max(1, CInt(Math.Sqrt(CDbl(bmp.Width) * bmp.Height / 250000.0)))
+            Dim histogram = New Long(1000) {}
+            Dim total = 0L
+            Dim rowBytes = bmp.RowBytes
+            Dim row = New Byte(rowBytes - 1) {}
+            For y = 0 To bmp.Height - 1 Step stepSize
+                Marshal.Copy(IntPtr.Add(pixels, y * rowBytes), row, 0, rowBytes)
+                For x = 0 To bmp.Width - 1 Step stepSize
+                    Dim o = x * 4
+                    If row(o + 3) = 0 Then Continue For
+                    Dim lum = 0.2126 * linear(row(o + rOff)) + 0.7152 * linear(row(o + 1)) + 0.0722 * linear(row(o + bOff))
+                    Dim l = If(lum > 0.008856, 116.0 * Math.Pow(lum, 1.0 / 3.0) - 16.0, 903.3 * lum)
+                    histogram(Math.Max(0, Math.Min(1000, CInt(l * 10.0)))) += 1
+                    total += 1
+                Next
+            Next
+            If total = 0 Then Return 0.0
+            Dim half = total \ 2
+            Dim acc = 0L
+            For k = 0 To 1000
+                acc += histogram(k)
+                If acc > half Then Return Math.Max(0.05, k / 10.0)
+            Next
+            Return 100.0
+        End Function
+
+        ''' <summary>L (0 bis 100) eines Graus auf seinen sRGB-Gammawert, und zurueck.</summary>
+        Private Shared Function LightnessToGrayV(l As Double) As Double
+            Dim y = If(l > 8.0, Math.Pow((l + 16.0) / 116.0, 3.0), l / 903.3)
+            y = Math.Max(0.0, Math.Min(1.0, y))
+            Return If(y <= 0.0031308, 12.92 * y, 1.055 * Math.Pow(y, 1.0 / 2.4) - 0.055)
+        End Function
+
+        Private Shared Function GrayVToLightness(v As Double) As Double
+            Dim c = Math.Max(0.0, Math.Min(1.0, v))
+            Dim y = If(c <= 0.04045, c / 12.92, Math.Pow((c + 0.055) / 1.055, 2.4))
+            Return If(y > 0.008856, 116.0 * Math.Pow(y, 1.0 / 3.0) - 16.0, 903.3 * y)
         End Function
 
         ' ── Reglermodell 2: Dynamik, Farbmischer-Luminanz, Farbgradierung ───────────────────

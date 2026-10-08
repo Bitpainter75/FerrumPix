@@ -811,13 +811,19 @@ Namespace Services
             If target Is Nothing OrElse effectMask Is Nothing OrElse layerAdjustments Is Nothing Then Return False
             Dim width = rect.Width, height = rect.Height
             If width <= 0 OrElse height <= 0 Then Return False
+            ' Lichter und Tiefen richten sich nach der Helligkeit des GANZEN Bildes, nicht nach der des
+            ' Rechtecks; sonst wirkte dieselbe Ebene im Ausschnitt anders als ueber das ganze Bild.
+            Dim toneReferenceMedian = 0.0
+            If layerAdjustments.Highlights <> 0 OrElse layerAdjustments.ShadowsLevel <> 0 Then
+                toneReferenceMedian = MeasureMedianLightness(target)
+            End If
 
             Using crop = CopyBgraRegion(target, rect)
                 If crop Is Nothing Then Return False
                 Threading.Interlocked.Increment(_maskScopeUseCount)
                 Using maskCrop = CopyAlphaRegion(effectMask, rect)
                     If maskCrop Is Nothing Then Return False
-                    Using adjusted = ApplyPixelAdjustmentStages(crop, layerAdjustments)
+                    Using adjusted = ApplyPixelAdjustmentStages(crop, layerAdjustments, toneReferenceMedian)
                         Using composited = CompositeSelectionScoped(crop, adjusted, maskCrop)
                             If composited Is Nothing Then Return False
                             Return WriteBgraRegion(composited, target, rect)

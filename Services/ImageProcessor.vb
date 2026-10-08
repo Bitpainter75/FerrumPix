@@ -2434,9 +2434,12 @@ Namespace Services
 
         ''' <summary>Die wiederverwendbare Pixelkette ohne Geometrie, Objekte und Auswahl-Compositing.
         ''' Sie dient sowohl der globalen Bearbeitung als auch jeder lokalen Einstellungsebene.</summary>
-        Private Shared Function ApplyPixelAdjustmentStages(source As SKBitmap, adj As ImageAdjustments) As SKBitmap
+        ''' <param name="toneReferenceMedian">Siehe ApplyPointOpChain: Helligkeit des ganzen Bildes, wenn
+        ''' <paramref name="source"/> nur ein Ausschnitt davon ist; 0 misst an der Quelle.</param>
+        Private Shared Function ApplyPixelAdjustmentStages(source As SKBitmap, adj As ImageAdjustments,
+                                                           Optional toneReferenceMedian As Double = 0.0) As SKBitmap
             Dim owned = False
-            Return TakeOwnership(ApplyPixelAdjustmentStagesCore(source, adj, owned), owned)
+            Return TakeOwnership(ApplyPixelAdjustmentStagesCore(source, adj, owned, toneReferenceMedian), owned)
         End Function
 
         ''' <summary>Der Kern der Pixelkette. <paramref name="owned"/> wandert durch: beim Eintritt
@@ -2444,7 +2447,8 @@ Namespace Services
         ''' gehört. Nur so kann die Kette ohne Eingangskopie beginnen - siehe
         ''' <see cref="ReplaceBitmapOwned"/>.</summary>
         Private Shared Function ApplyPixelAdjustmentStagesCore(source As SKBitmap, adj As ImageAdjustments,
-                                                               ByRef owned As Boolean) As SKBitmap
+                                                               ByRef owned As Boolean,
+                                                               Optional toneReferenceMedian As Double = 0.0) As SKBitmap
             Dim processed = source
 
             ' Alle Farb-Punktoperationen laufen in EINER verschmolzenen Gleitkomma-Stufe
@@ -2457,7 +2461,7 @@ Namespace Services
             ' Filter sollen auf dem fertigen Positiv arbeiten - auf dem Negativ wären sie
             ' seitenverkehrt (Aufhellen würde abdunkeln).
             processed = ReplaceBitmapOwned(processed, PerformanceTraceService.Measure(
-                "Pixel: Punktkette (Ton/Farbe)", Function() ApplyPointOpChain(processed, adj)), owned)
+                "Pixel: Punktkette (Ton/Farbe)", Function() ApplyPointOpChain(processed, adj, toneReferenceMedian)), owned)
 
             ' "weich" steht im selben Select Case wie die 15 Farbpresets, ist aber als einziges KEINE
             ' Punktoperation, sondern eine echte räumliche Unschärfe. BuildFilterPresetMatrix liefert

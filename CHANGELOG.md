@@ -24,8 +24,9 @@
   luminance of the colour mixer, the brightness in colour grading and the vignette now have a
   more natural strength and range. Colour grading tints more evenly, the colour mixer bands sit
   where presets expect them, and tone and channel curves shape colours the way presets were made
-  for, so presets with curves no longer drift red or green. Pictures you already edited keep
-  their look.
+  for, so presets with curves no longer drift red or green. Highlights and Shadows also take the
+  brightness of the whole picture into account: in a bright picture Shadows open up dark areas
+  further, in a dark one they stay gentler. Pictures you already edited keep their look.
 
 ### Fixes
 
