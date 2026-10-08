@@ -183,6 +183,19 @@ Namespace ViewModels
         ''' Reglerwerte. Kelvin 0 heißt „wie aufgenommen", und das ist mehr als ein Zahlenwert: der
         ''' Anker selbst, also garantiert keine Stufe in der Pixelkette.</summary>
         Private _whiteBalanceModel As Integer = 0
+        ''' <summary>Das Reglermodell des geoeffneten Rezepts (ImageAdjustments.ToneModel), mitgefuehrt
+        ''' wie das Weissabgleichsmodell: ohne es rechnete eine alte Bearbeitung im Editor mit dem
+        ''' Modell neuer Bearbeitungen und saehe anders aus als gespeichert.</summary>
+        Private _toneModel As Integer = 0
+
+        ''' <summary>Zeichnet der Kurven-Editor die Kurve wie die Referenz (natuerlicher kubischer
+        ''' Spline, Reglermodell 2) oder als PCHIP (Modell 1)? Muss zur Bildkette passen, sonst ist die
+        ''' gezeichnete Kurve nicht die angewandte.</summary>
+        Public ReadOnly Property CurveUsesReferenceSpline As Boolean
+            Get
+                Return New ImageAdjustments With {.ToneModel = _toneModel}.ResolvedToneModel() >= 2
+            End Get
+        End Property
         Private _whiteBalanceAnchorX As Double = 0
         Private _whiteBalanceAnchorY As Double = 0
         Private _whiteBalanceKelvin As Double = 0
@@ -22487,6 +22500,7 @@ Namespace ViewModels
                 .Temperature = CSng(_temperature),
                 .Tint = CSng(_tint),
                 .WhiteBalanceModel = _whiteBalanceModel,
+                .ToneModel = _toneModel,
                 .WhiteBalanceAnchorX = _whiteBalanceAnchorX,
                 .WhiteBalanceAnchorY = _whiteBalanceAnchorY,
                 .WhiteBalanceKelvin = _whiteBalanceKelvin,
@@ -24000,6 +24014,8 @@ Namespace ViewModels
             _lensVignettingAmount = adj.LensVignettingAmount
             _lensModel = If(adj.LensModel, "")
             _whiteBalanceModel = adj.WhiteBalanceModel
+            _toneModel = adj.ToneModel
+            Me.RaisePropertyChanged(NameOf(CurveUsesReferenceSpline))
             _whiteBalanceAnchorX = adj.WhiteBalanceAnchorX
             _whiteBalanceAnchorY = adj.WhiteBalanceAnchorY
             _whiteBalanceKelvin = adj.WhiteBalanceKelvin
@@ -24557,6 +24573,8 @@ Namespace ViewModels
             _whiteBalanceAnchorX = 0
             _whiteBalanceAnchorY = 0
             _whiteBalanceModel = 0
+            _toneModel = 0
+            Me.RaisePropertyChanged(NameOf(CurveUsesReferenceSpline))
             _colorGradeShadowHue = 0
             _colorGradeShadowSaturation = 0
             _colorGradeHighlightHue = 0

@@ -90,6 +90,9 @@ Namespace Services
             ''' Reglermodell 2: die Bandsuche des Farbmischers sieht den Farbton auf Adobes Bandlage
             ''' verschoben (ModelTwoBandHue).
             Public HslBandWarp As Boolean
+            ''' Reglermodell 2: ScalarR/G/B halten nur die Kurven und wirken in ProPhoto-Primaerfarben
+            ''' mit sRGB-Gammakurve (ApplyCurvesInMelissa); die Tonwertkurve steht dann in ToneBefore.
+            Public CurvesInMelissa As Boolean
 
             ''' Filmnegativ - laeuft als ERSTE Stufe, noch vor der Farbmatrix. Eigene Tabellen statt
             ''' der verschmolzenen, weil im S/W-Fall die Graumatrix DAZWISCHEN liegt.
@@ -257,15 +260,23 @@ Namespace Services
                 ' rueckte der mittlere Kanal dorthin, wo die Kennlinie flach wird, und ein Orange
                 ' kippte bei Lichter -100 / Tiefen +100 ins Gelbgraue (Forum pixls.us, 2026-10-07).
                 ' Dafuer muss die Kette an dieser Stelle aufgetrennt werden (ApplyToneZones).
-                If wantsTonal Then
+                ' Im Reglermodell 2 rechnen Punkt- und Kanalkurven im Raum der Referenz: ProPhoto-
+                ' Primaerfarben mit sRGB-Gammakurve (CurvesInMelissa). Die Tonwertkurve davor bleibt
+                ' im sRGB-Gamma, die Kette wird dafuer auch ohne Tonregler aufgetrennt.
+                Dim curvesInMelissa = toneModel >= 2 AndAlso (wantsRgbCurve OrElse wantsChannelCurves)
+                If wantsTonal OrElse curvesInMelissa Then
                     If wantsTone Then chain.ToneBefore = BuildPointOpScalarTable(adj, True, False, False, toneModel)
-                    chain.ToneZones = BuildToneZoneTable(adj, toneModel)
+                    If wantsTonal Then chain.ToneZones = BuildToneZoneTable(adj, toneModel)
                 End If
-                Dim common = BuildPointOpScalarTable(adj, wantsTone AndAlso Not wantsTonal, False, wantsRgbCurve, toneModel)
+                If curvesInMelissa Then
+                    chain.CurvesInMelissa = True
+                    EnsureGammaTables()
+                End If
+                Dim common = BuildPointOpScalarTable(adj, wantsTone AndAlso Not wantsTonal AndAlso Not curvesInMelissa, False, wantsRgbCurve, toneModel)
                 If wantsChannelCurves Then
-                    chain.ScalarR = ChainCurveOntoTable(common, adj.CurveRedPoints)
-                    chain.ScalarG = ChainCurveOntoTable(common, adj.CurveGreenPoints)
-                    chain.ScalarB = ChainCurveOntoTable(common, adj.CurveBluePoints)
+                    chain.ScalarR = ChainCurveOntoTable(common, adj.CurveRedPoints, toneModel >= 2)
+                    chain.ScalarG = ChainCurveOntoTable(common, adj.CurveGreenPoints, toneModel >= 2)
+                    chain.ScalarB = ChainCurveOntoTable(common, adj.CurveBluePoints, toneModel >= 2)
                 Else
                     chain.ScalarR = common
                     chain.ScalarG = common
@@ -941,6 +952,35 @@ Namespace Services
         Private Shared ReadOnly ModelTwoGradeMid As Single() = {0.008F, 0.049F, 0.132F, 0.263F, 0.383F, 0.584F, 0.691F, 0.792F, 0.924F, 0.97F, 0.941F, 0.926F, 0.819F, 0.702F, 0.522F, 0.387F, 0.256F, 0.143F, 0.068F, 0.014F}
         Private Shared ReadOnly ModelTwoGradeHigh As Single() = {0.009F, 0.059F, 0.117F, 0.223F, 0.332F, 0.499F, 0.636F, 0.783F, 0.967F, 1.12F, 1.211F, 1.317F, 1.494F, 1.521F, 1.326F, 1.304F, 1.253F, 1.037F, 0.707F, 0.282F}
 
+        ''' <summary>Punkt- und Kanalkurven im Reglermodell 2. Gemessen an 20 Aufnahmen
+        ''' (Diagnostics/Reglereichung/kurvenraum.py) wendet die Referenz ihre Kurven in ProPhoto-
+        ''' Primaerfarben mit sRGB-Gammakurve an: eine Rot-Kanalkurve lag so 2,1 dE neben ihr, im
+        ''' sRGB-Gamma 7,8, eine Blau-Kurve 1,8 gegen 3,5; die Masterkurve 2,5 gegen 2,8. Hin ueber
+        ''' Linearlicht und die Primaermatrix (Zeilen auf 1 normiert, Grau bleibt grau), Kurven je
+        ''' Kanal, zurueck und auf sRGB geklemmt.</summary>
+        Private Shared Sub ApplyCurvesInMelissa(ByRef rr As Single, ByRef gg As Single, ByRef bb As Single,
+                                                sr As Single(), sg As Single(), sb As Single(),
+                                                toLinear As Single(), toGamma As Single())
+            Dim lr = SampleTable(toLinear, rr)
+            Dim lg = SampleTable(toLinear, gg)
+            Dim lb = SampleTable(toLinear, bb)
+            Dim pr = 0.529214F * lr + 0.330063F * lg + 0.140723F * lb
+            Dim pg = 0.098324F * lr + 0.873625F * lg + 0.028051F * lb
+            Dim pb = 0.016879F * lr + 0.117714F * lg + 0.865407F * lb
+            pr = SampleTable(sr, SampleTable(toGamma, Clamp(pr, 0.0F, 1.0F)))
+            pg = SampleTable(sg, SampleTable(toGamma, Clamp(pg, 0.0F, 1.0F)))
+            pb = SampleTable(sb, SampleTable(toGamma, Clamp(pb, 0.0F, 1.0F)))
+            pr = SampleTable(toLinear, pr)
+            pg = SampleTable(toLinear, pg)
+            pb = SampleTable(toLinear, pb)
+            Dim nr = 2.034515F * pr - 0.727257F * pg - 0.307258F * pb
+            Dim ng = -0.228704F * pr + 1.23143F * pg - 0.002726F * pb
+            Dim nb = -0.008573F * pr - 0.153316F * pg + 1.161889F * pb
+            rr = SampleTable(toGamma, Clamp(nr, 0.0F, 1.0F))
+            gg = SampleTable(toGamma, Clamp(ng, 0.0F, 1.0F))
+            bb = SampleTable(toGamma, Clamp(nb, 0.0F, 1.0F))
+        End Sub
+
         ''' <summary>Farbton fuer die Bandsuche im Reglermodell 2. Gemessen an 34 Aufnahmen
         ''' (Diagnostics/Reglereichung/bandlage.py) liegen die Baender der Referenz anders auf dem
         ''' Farbkreis: Orange bis Aqua rund 12 bis 15 Grad tiefer, Lila und Magenta rund 9 Grad
@@ -1055,7 +1095,7 @@ Namespace Services
                 If includeRgbCurve Then
                     ' EvaluateCurveSpline rechnet in 0..255 - stetig ausgewertet, nicht aus einer
                     ' 256er-Tabelle gelesen.
-                    v = Clamp(CSng(EvaluateCurveSpline(rgbPoints, v * 255.0) / 255.0), 0.0F, 1.0F)
+                    v = Clamp(CSng(EvaluateCurveFor(rgbPoints, v * 255.0, toneModel >= 2) / 255.0), 0.0F, 1.0F)
                 End If
 
                 table(i) = v
@@ -1065,12 +1105,13 @@ Namespace Services
 
         ''' <summary>Haengt eine Kanalkurve stetig an eine bereits gebaute Tabelle. Ersetzt das
         ''' heutige redLut(rgbLut(i)), bei dem der Zwischenwert auf ein Byte gerundet wird.</summary>
-        Private Shared Function ChainCurveOntoTable(source As Single(), pointsCsv As String) As Single()
+        Private Shared Function ChainCurveOntoTable(source As Single(), pointsCsv As String,
+                                                    Optional referenceSpline As Boolean = False) As Single()
             If ImageAdjustments.IsIdentityCurve(pointsCsv) Then Return source
             Dim points = ParseCurvePoints(pointsCsv)
             Dim table = New Single(PointOpTableSize - 1) {}
             For i = 0 To PointOpTableSize - 1
-                table(i) = Clamp(CSng(EvaluateCurveSpline(points, source(i) * 255.0) / 255.0), 0.0F, 1.0F)
+                table(i) = Clamp(CSng(EvaluateCurveFor(points, source(i) * 255.0, referenceSpline) / 255.0), 0.0F, 1.0F)
             Next
             Return table
         End Function
@@ -1460,6 +1501,7 @@ Namespace Services
             Dim vibrance = chain.Vibrance
             Dim vibranceExponential = chain.VibranceExponential
             Dim hslBandWarp = chain.HslBandWarp
+            Dim curvesMelissa = chain.CurvesInMelissa
             Dim hslAdj = chain.Hsl
             Dim schattenToenung = chain.ShadowTint
             Dim splitAdj = chain.SplitToning
@@ -1607,17 +1649,21 @@ Namespace Services
                                     satVorTon *= torC * tFade
                                 End If
                             End If
-                            If toneZones IsNot Nothing Then
+                            If toneZones IsNot Nothing OrElse curvesMelissa Then
                                 If toneBefore IsNot Nothing Then
                                     rr = SampleTable(toneBefore, rr)
                                     gg = SampleTable(toneBefore, gg)
                                     bb = SampleTable(toneBefore, bb)
                                 End If
-                                ApplyToneZones(rr, gg, bb, toneZones)
+                                If toneZones IsNot Nothing Then ApplyToneZones(rr, gg, bb, toneZones)
                             End If
-                            rr = SampleTable(sr, rr)
-                            gg = SampleTable(sg, gg)
-                            bb = SampleTable(sb, bb)
+                            If curvesMelissa Then
+                                ApplyCurvesInMelissa(rr, gg, bb, sr, sg, sb, toLinear, toGamma)
+                            Else
+                                rr = SampleTable(sr, rr)
+                                gg = SampleTable(sg, gg)
+                                bb = SampleTable(sb, bb)
+                            End If
                         End If
 
                         ' --- 4./5./6. Luminanzkurve, HSL-Baender, Split-Toning ---

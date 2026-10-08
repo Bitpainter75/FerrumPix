@@ -92,6 +92,7 @@
                                Points="{Binding ActiveCurvePoints}"
                                HistogramCounts="{Binding ActiveCurveHistogramCounts}"
                                CurveBrush="{Binding ActiveCurveBrush}"
+                               UseReferenceSpline="{Binding CurveUsesReferenceSpline}"
                                ToolTip.Tip="Linksklick: Punkt hinzufügen/verschieben. Rechtsklick: Punkt entfernen." />
         </StackPanel>
     </Expander>

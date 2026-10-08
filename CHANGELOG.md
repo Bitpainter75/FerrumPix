@@ -22,8 +22,10 @@
 
 - **Recalibrated sliders.** Contrast, Highlights, Shadows, Whites, Blacks, Vibrance, the
   luminance of the colour mixer, the brightness in colour grading and the vignette now have a
-  more natural strength and range, and presets with a parametric curve come out closer to how
-  they were made. Pictures you already edited keep their look.
+  more natural strength and range. Colour grading tints more evenly, the colour mixer bands sit
+  where presets expect them, and tone and channel curves shape colours the way presets were made
+  for, so presets with curves no longer drift red or green. Pictures you already edited keep
+  their look.
 
 ### Fixes
 

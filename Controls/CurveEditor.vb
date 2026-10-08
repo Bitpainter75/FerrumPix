@@ -25,6 +25,20 @@ Namespace Controls
         Public Shared ReadOnly CurveBrushProperty As StyledProperty(Of IBrush) =
             AvaloniaProperty.Register(Of CurveEditor, IBrush)(NameOf(CurveBrush), New SolidColorBrush(Color.Parse("#F08A1A")))
 
+        ''' <summary>Kurvenform wie die Bildkette: im Reglermodell 2 der Spline der Referenz, sonst
+        ''' PCHIP (ImageProcessor.EvaluateCurveFor). Gebunden an EditorViewModel.CurveUsesReferenceSpline.</summary>
+        Public Shared ReadOnly UseReferenceSplineProperty As StyledProperty(Of Boolean) =
+            AvaloniaProperty.Register(Of CurveEditor, Boolean)(NameOf(UseReferenceSpline))
+
+        Public Property UseReferenceSpline As Boolean
+            Get
+                Return GetValue(UseReferenceSplineProperty)
+            End Get
+            Set(value As Boolean)
+                SetValue(UseReferenceSplineProperty, value)
+            End Set
+        End Property
+
         Public Shared ReadOnly HistogramBrushProperty As StyledProperty(Of IBrush) =
             AvaloniaProperty.Register(Of CurveEditor, IBrush)(NameOf(HistogramBrush), New SolidColorBrush(Color.FromArgb(140, 205, 213, 224)))
 
@@ -35,7 +49,7 @@ Namespace Controls
         Private _subscribedPoints As ObservableCollection(Of Point)
 
         Shared Sub New()
-            AffectsRender(Of CurveEditor)(PointsProperty, HistogramCountsProperty, CurveBrushProperty, HistogramBrushProperty)
+            AffectsRender(Of CurveEditor)(PointsProperty, HistogramCountsProperty, CurveBrushProperty, HistogramBrushProperty, UseReferenceSplineProperty)
         End Sub
 
         Public Sub New()
@@ -159,7 +173,7 @@ Namespace Controls
                 Dim stepCount = Math.Max(32, CInt(w))
                 For i = 0 To stepCount
                     Dim x = i / CDbl(stepCount) * 255.0
-                    Dim y = EvaluateCurve(curvePoints, x)
+                    Dim y = EvaluateCurve(curvePoints, x, UseReferenceSpline)
                     Dim sp = ToScreen(New Point(x, y))
                     If first Then
                         ctx.BeginFigure(sp, False)
@@ -195,9 +209,10 @@ Namespace Controls
         ''' Die Punkte kommen SCHON UMGEWANDELT herein. Der Aufrufer ist eine Schleife ueber die
         ''' Breite des Steuerelements; wandelte diese Funktion selbst um, entstuende je Stuetzstelle
         ''' eine Liste.</summary>
-        Private Shared Function EvaluateCurve(points As List(Of (X As Double, Y As Double)), x As Double) As Double
+        Private Shared Function EvaluateCurve(points As List(Of (X As Double, Y As Double)), x As Double,
+                                              referenceSpline As Boolean) As Double
             If points Is Nothing OrElse points.Count = 0 Then Return x
-            Return Math.Max(0.0, Math.Min(255.0, Services.ImageProcessor.EvaluateCurveSpline(points, x)))
+            Return Math.Max(0.0, Math.Min(255.0, Services.ImageProcessor.EvaluateCurveFor(points, x, referenceSpline)))
         End Function
 
         Private Function FindNearestPointIndex(screenPos As Point) As Integer

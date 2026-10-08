@@ -2198,6 +2198,63 @@ Namespace Services
                    (t3 - t2) * tangentAtP2
         End Function
 
+        ''' <summary>Die Kurvenform der Referenz fuer das Reglermodell 2: natuerlicher kubischer Spline
+        ''' durch die Punkte (zweite Ableitung an den Enden null), auf 0 bis 255 geklemmt.
+        '''
+        ''' Gemessen an Cool Glow (Diagnostics/Reglereichung): dieselben drei Kanalkurven im Raum der
+        ''' Referenz trafen deren Bild mit diesem Spline auf dE 3,2, mit PCHIP auf 6,9. PCHIP hob die
+        ''' Gruenkurve (0,11 79,82 ...) in den Tiefen staerker an (bei 10 auf 19,5 statt 15,9), und im
+        ''' ProPhoto-Raum wurde daraus ein Gruenstich in dunklen Haaren und Vorhaengen. Der Preis ist
+        ''' das Ueberschwingen bei engen steilen Punkten, das die Klemmung abfaengt; im Modell 1 bleibt
+        ''' es bei PCHIP (EvaluateCurveSpline).</summary>
+        Friend Shared Function EvaluateCurveSplineReference(points As List(Of (X As Double, Y As Double)), x As Double) As Double
+            Dim n = points.Count
+            If n = 0 Then Return x
+            If x <= points(0).X Then Return points(0).Y
+            If x >= points(n - 1).X Then Return points(n - 1).Y
+            If n = 2 Then
+                Dim run = points(1).X - points(0).X
+                If run <= 0.0001 Then Return points(0).Y
+                Return points(0).Y + (points(1).Y - points(0).Y) * (x - points(0).X) / run
+            End If
+            ' Zweite Ableitungen ueber das tridiagonale System (Thomas-Verfahren).
+            Dim m = New Double(n - 1) {}
+            Dim c = New Double(n - 1) {}
+            Dim d = New Double(n - 1) {}
+            For i = 1 To n - 2
+                Dim h0 = Math.Max(points(i).X - points(i - 1).X, 0.0001)
+                Dim h1 = Math.Max(points(i + 1).X - points(i).X, 0.0001)
+                Dim a = h0
+                Dim b = 2.0 * (h0 + h1)
+                Dim cc = h1
+                Dim r = 6.0 * ((points(i + 1).Y - points(i).Y) / h1 - (points(i).Y - points(i - 1).Y) / h0)
+                Dim denom = b - a * c(i - 1)
+                c(i) = cc / denom
+                d(i) = (r - a * d(i - 1)) / denom
+            Next
+            For i = n - 2 To 1 Step -1
+                m(i) = d(i) - c(i) * m(i + 1)
+            Next
+            Dim seg = 0
+            For i = 0 To n - 2
+                If x <= points(i + 1).X Then seg = i : Exit For
+            Next
+            Dim p1 = points(seg)
+            Dim p2 = points(seg + 1)
+            Dim h = Math.Max(p2.X - p1.X, 0.0001)
+            Dim t1 = (p2.X - x) / h
+            Dim t2 = (x - p1.X) / h
+            Dim y = m(seg) * t1 * t1 * t1 * h * h / 6.0 + m(seg + 1) * t2 * t2 * t2 * h * h / 6.0 +
+                    (p1.Y - m(seg) * h * h / 6.0) * t1 + (p2.Y - m(seg + 1) * h * h / 6.0) * t2
+            Return Math.Max(0.0, Math.Min(255.0, y))
+        End Function
+
+        ''' <summary>Die Kurvenform je Reglermodell: der Spline der Referenz im Modell 2, sonst PCHIP.</summary>
+        Friend Shared Function EvaluateCurveFor(points As List(Of (X As Double, Y As Double)), x As Double,
+                                                referenceSpline As Boolean) As Double
+            Return If(referenceSpline, EvaluateCurveSplineReference(points, x), EvaluateCurveSpline(points, x))
+        End Function
+
         ''' <summary>Die Steigung der Kurve im Punkt <paramref name="index"/> nach Fritsch-Carlson.
         '''
         ''' AN DEN ENDEN die Sehne des Randabschnitts - dasselbe wie ein geradlinig fortgesetzter
