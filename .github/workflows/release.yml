@@ -542,9 +542,7 @@ jobs:
     # GHCR beherbergt dieselben offiziellen, taeglich gebauten Arch-Images.
     container: ghcr.io/archlinux/archlinux:base-devel
     needs: veroeffentlichen
-    # ZULETZT: der PKGBUILD laedt das Linux-ZIP aus dem veroeffentlichten Release und haelt seine
-    # Pruefsumme fest. Nur, wenn das Linux-ZIP in diesem Lauf mitkam.
-    if: ${{ needs.veroeffentlichen.result == 'success' && (inputs.pakete == 'alle' || inputs.pakete == 'zip') }}
+    # ZULETZT: nach dem Release wird der PKGBUILD immer aus dessen aktuellem Linux-ZIP erzeugt.
 
     steps:
       - name: Werkzeuge
