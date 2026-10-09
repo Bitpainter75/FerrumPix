@@ -535,47 +535,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
 
-  aur:
-    name: AUR
-    runs-on: ubuntu-latest
-    # Nicht Docker Hub: dessen anonyme Pull-Quote trifft auf GitHub-Runnern regelmaessig.
-    # GHCR beherbergt dieselben offiziellen, taeglich gebauten Arch-Images.
-    container: ghcr.io/archlinux/archlinux:base-devel
-    needs: veroeffentlichen
-    # ZULETZT: nach dem Release wird der PKGBUILD immer aus dessen aktuellem Linux-ZIP erzeugt.
-
-    steps:
-      - name: Werkzeuge
-        run: pacman -Sy --noconfirm --needed git openssh jq curl python
-
-      - uses: actions/checkout@v7
-
-      - uses: actions/checkout@v7
-        with:
-          repository: Bitpainter75/FerrumPix-Build
-          path: packaging
-          ssh-key: ${{ secrets.PACKAGING_DEPLOY_KEY }}
-
-      - name: AUR-Repo klonen
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.AUR_SSH_KEY }}" > ~/.ssh/aur
-          chmod 600 ~/.ssh/aur
-          ssh-keyscan aur.archlinux.org >> ~/.ssh/known_hosts 2>/dev/null || true
-          export GIT_SSH_COMMAND="ssh -i ~/.ssh/aur -o StrictHostKeyChecking=accept-new"
-          git clone ssh://aur@aur.archlinux.org/ferrumpix-bin.git packaging/AUR
-
-      # makepkg laeuft nicht als root; die Identitaet entspricht der manuellen Veroeffentlichung.
-      - name: AUR veroeffentlichen
-        run: |
-          useradd -m builder
-          chown -R builder:builder .
-          cp -r ~/.ssh /home/builder/.ssh
-          chown -R builder:builder /home/builder/.ssh
-          su builder -c "git config --global user.name 'Bitpainter75'"
-          su builder -c "git config --global user.email 'patrick@bitpainter.de'"
-          su builder -c "GIT_SSH_COMMAND='ssh -i ~/.ssh/aur -o StrictHostKeyChecking=accept-new' packaging/publish-aur.sh"
-
   # Die Liste der Laeufe raeumt GitHub nicht selbst: die Artefakte verfallen nach retention-days,
   # die Laeufe samt Protokoll bleiben stehen. Dieser Job loescht jeden ABGESCHLOSSENEN Lauf des
   # Repos, der aelter als drei Tage ist, aus allen Workflows. Er haengt an keinem Bau-Job, damit
