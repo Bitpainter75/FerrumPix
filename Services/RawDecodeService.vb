@@ -3104,6 +3104,12 @@ Namespace Services
                                 r = rowShorts(x * 3) And &HFFFF
                                 b = rowShorts(x * 3 + 2) And &HFFFF
                             End If
+                            ' Entklemmen holt in manchen RAWs noch Rot und Blau oberhalb des
+                            ' Weisspunkts, waehrend Gruen bereits abgeschnitten ist. Ohne eine
+                            ' gezielte Farbrekonstruktion wird daraus ein pinker Glanzpunkt. Nur
+                            ' die explizite Lichterrettung darf daran drehen: ein echtes helles
+                            ' Magenta bleibt mit ausgeschalteter Rettung unveraendert.
+                            If knee < 1.0 Then RecoverMagentaHighlight(r, g, b)
                             ' DIESELBE Schwelle fuer alle drei Kanaele eines Pixels (wie in der
                             ' Punktoperationskette): kanalweise verschiedene Schwellen faerben neutrale
                             ' Flaechen ein. (v*255 + T) \ 65535 liegt fuer T < 65535 immer in 0..255,
@@ -3132,6 +3138,25 @@ Namespace Services
                         onRow(y, rowBuffer)
                     Next
                 End Sub)
+        End Sub
+
+        ''' <summary>Ergaenzt fehlendes Gruen in teils ausgefressenen, hellen Lichtern.
+        '''
+        ''' Wird nur hinter LibRaws Entklemmung eingesetzt. Die Staerke steigt weich ab der
+        ''' halben linearen Aussteuerung; damit bleiben farbige Mitteltöne und nicht betroffene
+        ''' helle Bildpunkte unveraendert. Der Zielwert liegt knapp unter dem kleineren der roten
+        ''' und blauen Werte, damit nicht aus jedem warmen Licht reines Weiss wird.</summary>
+        Private Shared Sub RecoverMagentaHighlight(ByRef r As Integer, ByRef g As Integer, ByRef b As Integer)
+            Dim maximum = Math.Max(r, Math.Max(g, b))
+            If maximum <= 32768 Then Return
+            Dim magenta = Math.Min(r, b) - g
+            If magenta <= 0 Then Return
+
+            Dim t = Math.Min(1.0, (maximum - 32768) / 32767.0)
+            Dim blend = t * t * (3.0 - 2.0 * t) ' smoothstep
+            Dim target = Math.Min(r, b) * 0.8 + (r + b) * 0.1
+            Dim correction = Math.Max(0.0, target - g) * blend
+            g = Math.Min(65535, CInt(Math.Round(g + correction)))
         End Sub
 
         ''' <summary>Einen Kanal bilinear an einer beliebigen Stelle abtasten. Die Raender werden
