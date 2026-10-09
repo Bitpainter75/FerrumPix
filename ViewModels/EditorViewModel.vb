@@ -24302,6 +24302,7 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(Whites))
             Me.RaisePropertyChanged(NameOf(Blacks))
             Me.RaisePropertyChanged(NameOf(Temperature))
+            Me.RaisePropertyChanged(NameOf(KelvinTemperature))
             Me.RaisePropertyChanged(NameOf(Tint))
             Me.RaisePropertyChanged(NameOf(Exposure))
             Me.RaisePropertyChanged(NameOf(Sharpness))
