@@ -2079,12 +2079,10 @@ Namespace Views
             ' Was für ein fremdes Ziel wie Dolphin fehlt, ist die Datei. Dafür gibt es "Exportieren
             ' nach" und Kopieren; ein Zug aus der Galerie meint innerhalb der Anwendung fast immer
             ' die Zuordnung, und dafür ist der Pseudo-Pfad genau das Richtige.
-            Dim paths As New List(Of String)()
+            Dim paths = vm.GetPathsForTransfer(dragItems)
             Dim hatServerbilder = False
             For Each it In dragItems
-                If it Is Nothing OrElse String.IsNullOrEmpty(it.FilePath) Then Continue For
-                If it.IsRemoteAsset Then hatServerbilder = True
-                paths.Add(it.FilePath)
+                If it IsNot Nothing AndAlso it.IsRemoteAsset Then hatServerbilder = True
             Next
             If paths.Count = 0 Then Return
 
@@ -2467,8 +2465,7 @@ Namespace Views
             ' Das dynamische Menü merkt beim Öffnen bereits präzise, welche Kachel bzw. Zeile es
             ' meint. Der Aufruf aus seinem Command hat keinen Sender; die globale Auswahl hier
             ' nochmals auszulesen konnte deshalb leer oder inzwischen eine andere sein.
-            Dim paths = If(vm.ContextItems, Enumerable.Empty(Of ImageItem)()).
-                Select(Function(i) If(i?.FilePath, "")).
+            Dim paths = vm.GetPathsForTransfer(vm.ContextItems).
                 Where(Function(p) vm.CanCopyPath(p)).
                 Distinct(PathIdentity.Comparer).
                 ToList()
@@ -3426,9 +3423,7 @@ Namespace Views
             If vm Is Nothing Then Return
             vm.StoreClipboard(cut)
 
-            Dim paths = If(vm.SelectedItems IsNot Nothing AndAlso vm.SelectedItems.Count > 0,
-                           vm.SelectedItems.Select(Function(i) i.FilePath).Where(Function(p) Not String.IsNullOrEmpty(p)).ToList(),
-                           If(vm.SelectedItem Is Nothing, New List(Of String)(), New List(Of String) From {vm.SelectedItem.FilePath}))
+            Dim paths = vm.GetPathsForTransfer()
             paths = paths.Where(Function(p) If(cut, vm.CanCutPath(p), vm.CanCopyPath(p))).ToList()
             If paths.Count = 0 Then Return
             CopyPathsToClipboard(paths, cut)

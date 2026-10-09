@@ -1201,6 +1201,9 @@ Namespace Services
             Dim shoulder = Clamp(ToneShoulderBase + 0.5F * overshootHigh, ToneShoulderBase, ToneShoulderMax)
             Dim toe = Clamp(ToneShoulderBase + 0.5F * overshootLow, ToneShoulderBase, ToneShoulderMax)
             Dim rolloff = Clamp((overshootHigh + overshootLow) / ToneShoulderBase, 0.0F, 1.0F)
+            Dim peakHard = Clamp(high, 0.0F, 1.0F)
+            Dim peakSoft = SoftShoulder(high, toe, shoulder)
+            Dim peakAfterShoulder = Clamp(peakHard + (peakSoft - peakHard) * rolloff, 0.0F, 1.0F)
             Dim tonalMonotone = If(includeTonal, BuildMonotoneToneZones(adj, toneModel), Nothing)
 
             Dim table = New Single(PointOpTableSize - 1) {}
@@ -1212,6 +1215,7 @@ Namespace Services
                     Dim hard = Clamp(y, 0.0F, 1.0F)
                     Dim soft = SoftShoulder(y, toe, shoulder)
                     v = Clamp(hard + (soft - hard) * rolloff, 0.0F, 1.0F)
+                    v = PreserveRecoveredHighlightSeparation(v, peakAfterShoulder, adj)
                 End If
 
                 If includeTonal Then
@@ -1231,6 +1235,39 @@ Namespace Services
                 table(i) = v
             Next
             Return table
+        End Function
+
+        ''' <summary>Gibt einer absichtlich abgesenkten Lichterzone nach positiver Belichtung wieder
+        ''' Abstand. Die RAW-Lichterrettung legt oberhalb des Weisspunkts echte Sensorwerte frei;
+        ''' die Belichtungs-Schulter muss diese aber vor der 8-Bit-Ausgabe verdichten. Ohne den
+        ''' Ausgleich wurden bei +0,30 EV Werte von 0,90 bis 1,00 auf nur etwa 0,94 bis 0,97
+        ''' zusammengedrueckt. Der anschliessende Lichter-Regler sah dann praktisch eine Flaeche,
+        ''' obwohl die Wolkenzeichnung noch vorhanden war.
+        '''
+        ''' Der Schritt gilt NUR, wenn die RAW-Rettung eingeschaltet ist, die Belichtung positiv
+        ''' steht und der Nutzer die Lichter bewusst absenkt. Er erweitert ausschliesslich die
+        ''' obere Zone und laesst den Weisspunkt unveraendert; normale Belichtung, JPEGs und ein
+        ''' neutraler oder positiver Lichter-Regler bleiben bitgleich.</summary>
+        Private Shared Function PreserveRecoveredHighlightSeparation(v As Single, peak As Single, adj As ImageAdjustments) As Single
+            If adj Is Nothing OrElse Not adj.RawHighlightRecovery OrElse adj.Exposure <= 0.0F OrElse adj.Highlights >= 0.0F Then Return v
+
+            ' Der UI-Wert speichert 25 Punkte je EV. Bei +0,30 EV und Lichter -30 ergibt sich
+            ' Faktor 1,54: genug Abstand fuer die gerettete Struktur, mit einer festen Obergrenze
+            ' gegen unnatuerlichen Mikrokontrast bei extremen Einstellungen.
+            Dim ev = Math.Min(5.0, adj.Exposure / 25.0)
+            Dim loweredHighlights = Math.Min(1.0, -adj.Highlights / 100.0)
+            Dim expansion = CSng(1.0 + Math.Min(0.75, ev * loweredHighlights * 6.0))
+            If expansion <= 1.0F Then Return v
+
+            ' Sanft von 0,82 bis 0,94 einblenden. Die Formel v -> peak-(peak-v)*expansion
+            ' dehnt den Abstand zum Tatsaechlichen Schulter-Weiss, trifft diesen wieder exakt und
+            ' bleibt monoton. Mit 1,0 zu verankern waere falsch: nach positiver Belichtung liegt
+            ' auch ein weisser Eingabepunkt durch die Schulter etwas darunter und wuerde sonst
+            ' ungewollt dunkler.
+            Dim fade = Clamp((v - 0.82F) / 0.12F, 0.0F, 1.0F)
+            fade = fade * fade * (3.0F - 2.0F * fade)
+            Dim expanded = peak - (peak - v) * expansion
+            Return Clamp(v + (expanded - v) * fade, 0.0F, 1.0F)
         End Function
 
         ''' <summary>Haengt eine Kanalkurve stetig an eine bereits gebaute Tabelle. Ersetzt das

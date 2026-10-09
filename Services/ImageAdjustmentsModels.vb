@@ -374,6 +374,12 @@ Namespace Services
         ''' beim Laden mitbekommen haben.</summary>
         Public Property WhiteBalanceModel As Integer = 0
 
+        ''' <summary>Die Auswahl im Weißabgleich-Menü. Sie ist keine Pixeloperation: die
+        ''' Temperaturfelder beschreiben das Bild, dieser Wert bewahrt nur die dazugehörige
+        ''' Bedienbedeutung (insbesondere „Wie Aufnahme“ gegen „Benutzerdefiniert“) über
+        ''' Undo/Redo und einen gespeicherten Rezeptstand hinweg.</summary>
+        Public Property WhiteBalanceMode As String = "Wie Aufnahme"
+
         ''' <summary>Welche Rechnung Kontrast, Lichter, Tiefen, Weiss und Schwarz meinen.
         ''' 1 = die eigene Formel (ToneZoneLift, Kontrast in ToneTransfer), 2 = die gemessenen
         ''' Kennlinien einer verbreiteten RAW-Entwicklung (ToneSliderCurves).
@@ -1052,7 +1058,7 @@ Namespace Services
         ''' ausdruecklich mit.</remarks>
         Private Shared ReadOnly StructuralPropertyNames As New HashSet(Of String)(StringComparer.Ordinal) From {
             "SourceWidthPixels", "SourceHeightPixels", "RecipeCoordinateVersion",
-            "WhiteBalanceAnchorX", "WhiteBalanceAnchorY", "WhiteBalanceModel",
+            "WhiteBalanceAnchorX", "WhiteBalanceAnchorY", "WhiteBalanceModel", "WhiteBalanceMode",
             "RawHighlightRecovery", "RawSensorEdgeCrop",
             "LensDistortion", "LensTca", "LensVignetting", "LensModel",
             "LensDistortionAmount", "LensTcaAmount", "LensVignettingAmount", "LensTcaRed", "LensTcaBlue",
@@ -1311,6 +1317,7 @@ Namespace Services
                 .SourceHeightPixels = SourceHeightPixels,
                 .RecipeCoordinateVersion = RecipeCoordinateVersion,
                 .WhiteBalanceModel = WhiteBalanceModel,
+                .WhiteBalanceMode = WhiteBalanceMode,
                 .ToneModel = ToneModel,
                 .WhiteBalanceAnchorX = WhiteBalanceAnchorX,
                 .WhiteBalanceAnchorY = WhiteBalanceAnchorY,

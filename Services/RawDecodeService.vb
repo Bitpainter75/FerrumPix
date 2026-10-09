@@ -1896,16 +1896,17 @@ Namespace Services
         ''' 0,50    0,015 %      0,28       4,6 %       1,11     0,00 bis 0,14
         ''' </code>
         '''
-        ''' <para>0,60 ist die Stelle, an der es kippt: bis dahin verschwinden 96 bzw. 76 Prozent
-        ''' der ausgefressenen Stellen fuer weniger als ein Fuenftel einer Tonwertstufe, danach
-        ''' steigt der Preis schneller als der Gewinn. Dateien ohne ausgefressene Lichter kostet
-        ''' es bei 0,60 hoechstens 0,03 Stufen - sie merken nichts.</para>
+        ''' <para>0,45 ist bewusst die sichtbarere Vorgabe: Sie holt gegenueber 0,50 weitere
+        ''' Zeichnung aus den Lichtern, kostet vorhandene Lichter aber mehr. Bei der DNG
+        ''' RYN03000 sinkt der ausgefressene Anteil damit von 1,597 auf 1,437 Prozent; der
+        ''' mittlere Verlust in schon gezeichneten Lichtern steigt von 0,53 auf 0,75 Stufen.
+        ''' Dateien ohne ausgefressene Lichter bleiben unveraendert.</para>
         '''
         ''' <para>DASS DIE SCHULTER UEBERHAUPT ETWAS BRINGT, widerspricht der Messung von 2026-08
         ''' nur scheinbar: die lief mit Lichtermodus Beschnitt, also ohne irgendetwas oberhalb des
         ''' Weisspunktes, das die Schulter haette aufnehmen koennen. Erst das Entklemmen gibt ihr
         ''' etwas zu tun.</para></summary>
-        Public Const HighlightRecoveryKnee As Double = 0.6
+        Public Const HighlightRecoveryKnee As Double = 0.45
 
         ''' <summary>Um wie viel tiefer LibRaw dieselben Sensorwerte legt, sobald der Lichtermodus
         ''' nicht mehr Beschnitt ist: das Verhaeltnis von groesstem zu kleinstem
@@ -2425,6 +2426,8 @@ Namespace Services
             ' vergeudet. Die halbe Kantenlaenge bleibt aussen vor: sie hat eine andere Groesse
             ' und darf nie als Arbeitsbild herauskommen.
             Dim wantedKnee = If(recoverHighlights, knee, 1.0)
+            DiagnosticLogService.LogAlways("RawDecodeService.HighlightRecovery",
+                $"request file={IO.Path.GetFileName(path)}; enabled={recoverHighlights}; knee={wantedKnee:F2}; half={useHalfSize}")
             Dim writeTime As DateTime = Nothing
             Dim demosaic = ConfiguredDemosaic()
             If Not useHalfSize Then
@@ -2567,6 +2570,9 @@ Namespace Services
                 If _setHighlight IsNot Nothing Then
                     _setHighlight(handle, If(unclipping, HighlightRecoveryMode, HighlightMode))
                 End If
+                DiagnosticLogService.LogAlways("RawDecodeService.HighlightRecovery",
+                    $"libraw file={IO.Path.GetFileName(path)}; enabled={recoverHighlights}; knee={wantedKnee:F2}; " &
+                    $"unclip={unclipping}; normalization={normalization:F4}")
                 ' Die motivabhaengige Weisspunkt-Nachfuehrung aus, siehe AdjustMaximumThreshold.
                 If _setAdjustMaximumThr IsNot Nothing Then _setAdjustMaximumThr(handle, AdjustMaximumThreshold)
 

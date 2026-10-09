@@ -2675,9 +2675,9 @@ Namespace ViewModels
         Friend Sub ApplyTagTo(items As IList(Of ImageItem), tag As String, add As Boolean)
             If items Is Nothing OrElse items.Count = 0 OrElse String.IsNullOrEmpty(tag) Then Return
             ' Das Infopanel hat die Stichwortliste der sichtbaren Kachel schon geaendert, die der
-            ' verborgenen Dateien derselben Aufnahme noch nicht.
+            ' verborgenen Dateien derselben Aufnahme bzw. Serie noch nicht.
             Dim visible As New HashSet(Of ImageItem)(items)
-            items = WithHiddenPartners(items)
+            items = WithSeriesMembersInNormalGallery(items)
             For Each partner In items.Where(Function(i) Not visible.Contains(i))
                 Dim tags = If(partner.Tags, New List(Of String)()).ToList()
                 Dim has = tags.Contains(tag, StringComparer.OrdinalIgnoreCase)
@@ -2703,6 +2703,25 @@ Namespace ViewModels
             Next
             RefreshTagFilterOptions()
         End Sub
+
+        ''' <summary>Erweitert eine Metadatenänderung in der normalen Galerie von der sichtbaren
+        ''' Serienkachel auf alle Aufnahmen. In der Serienansicht bleibt die Auswahl absichtlich
+        ''' bildgenau: dort sind die Einzelaufnahmen sichtbar und einzeln auswählbar.</summary>
+        Private Function WithSeriesMembersInNormalGallery(items As IEnumerable(Of ImageItem)) As List(Of ImageItem)
+            If IsStackFocused Then Return WithHiddenPartners(items)
+            Dim result As New List(Of ImageItem)()
+            Dim seen As New HashSet(Of ImageItem)()
+            For Each item In items
+                If item Is Nothing Then Continue For
+                Dim members = If(item.Stack IsNot Nothing AndAlso item.Stack.IsBurst,
+                                 item.Stack.AllFiles(),
+                                 WithHiddenPartners({item}))
+                For Each member In members
+                    If member IsNot Nothing AndAlso seen.Add(member) Then result.Add(member)
+                Next
+            Next
+            Return result
+        End Function
 
         ''' <summary>Schreibt ein Stichwort an eine Nextcloud-Aufnahme oder loest es.
         '''
@@ -11480,8 +11499,9 @@ Namespace ViewModels
         End Function
 
         ''' <summary>Wie <see cref="GetSelectedPaths"/>, dazu die Dateien, die hinter einer
-        ''' zugeklappten Kachel derselben Aufnahme liegen. Fuer Loeschen, Ausschneiden und Kopieren:
-        ''' ein RAW ohne sein JPEG zu verschieben trennte das Paar.</summary>
+        ''' zugeklappten Kachel derselben Aufnahme liegen. Fuer Loeschen: ein RAW ohne sein JPEG zu
+        ''' verschieben trennte das Paar. Kopieren und Verschieben einer Serie gehen über
+        ''' <see cref="GetPathsForTransfer"/>, weil sie zusätzlich ALLE Serienaufnahmen meinen.</summary>
         Public Function GetSelectedPathsWithPartners() As List(Of String)
             Dim selected = If(SelectedItems Is Nothing OrElse SelectedItems.Count = 0,
                               If(SelectedItem Is Nothing, Enumerable.Empty(Of ImageItem)(), {SelectedItem}),
@@ -11489,6 +11509,40 @@ Namespace ViewModels
             Return WithHiddenPartners(selected).
                 Where(Function(i) Not i.IsParentFolderEntry).
                 Select(Function(i) i.FilePath).
+                Where(Function(p) Not String.IsNullOrEmpty(p)).
+                Distinct(PathIdentity.Comparer).
+                ToList()
+        End Function
+
+        ''' <summary>Die Dateilast für Kopieren, Ausschneiden und Ziehen.
+        '''
+        ''' <para>Eine Serienkachel ist nur die sichtbare Vertretung mehrerer Aufnahmen. Die
+        ''' Dateiarbeit meint hier die Serie selbst: werden nur die Führungsdatei und ihr RAW/JPEG-
+        ''' Partner übertragen, zerreißt ein Verschieben die Serie und ein Kopieren erzeugt einen
+        ''' unvollständigen Satz. Deshalb erweitert jede ausgewählte Serienaufnahme auf
+        ''' <see cref="ImageStack.AllFiles"/>. Ein einzelnes RAW/JPEG-Paar bleibt wie bisher ein
+        ''' Paar; eine einzelne, nicht zur Serie gehörende Datei bleibt einzeln.</para>
+        '''
+        ''' <para>Der Weg ist absichtlich NICHT für Löschen: dort muss eine zugeklappte Serie erst
+        ''' geöffnet werden, damit ein gefährlicher Schritt nicht unsichtbare Bilder trifft.</para></summary>
+        Public Function GetPathsForTransfer(Optional items As IEnumerable(Of ImageItem) = Nothing) As List(Of String)
+            Dim source = If(items,
+                            If(SelectedItems Is Nothing OrElse SelectedItems.Count = 0,
+                               If(SelectedItem Is Nothing, Enumerable.Empty(Of ImageItem)(), {SelectedItem}),
+                               SelectedItems.AsEnumerable()))
+            Dim files As New List(Of ImageItem)()
+            Dim seen As New HashSet(Of ImageItem)()
+            For Each item In source
+                If item Is Nothing OrElse item.IsParentFolderEntry Then Continue For
+                Dim stack = item.Stack
+                Dim members = If(stack IsNot Nothing AndAlso stack.IsBurst,
+                                 stack.AllFiles(),
+                                 WithHiddenPartners({item}))
+                For Each member In members
+                    If member IsNot Nothing AndAlso seen.Add(member) Then files.Add(member)
+                Next
+            Next
+            Return files.Select(Function(i) i.FilePath).
                 Where(Function(p) Not String.IsNullOrEmpty(p)).
                 Distinct(PathIdentity.Comparer).
                 ToList()
@@ -11760,7 +11814,7 @@ Namespace ViewModels
         End Function
 
         Public Sub StoreClipboard(cut As Boolean)
-            Dim paths = GetSelectedPathsWithPartners()
+            Dim paths = GetPathsForTransfer()
             paths = paths.Where(Function(p) If(cut, FileOperationPolicy.CanRename(p), FileOperationPolicy.CanCopy(p))).ToList()
             If paths.Count = 0 Then
                 StatusText = LocalizationService.T("Kein Element ausgewählt")
@@ -11892,7 +11946,7 @@ Namespace ViewModels
 
         Public Async Function DuplicateSelectedAsync() As Task
             If _isVirtualFolder Then Return
-            Dim targets = GetSelectedPaths()
+            Dim targets = GetPathsForTransfer()
             If targets.Count = 0 OrElse String.IsNullOrEmpty(_currentFolder) OrElse Not FileOperationPolicy.CanPasteInto(_currentFolder) Then Return
             Dim errorMessage As String = Nothing
             Try

@@ -1870,7 +1870,10 @@
                         HorizontalAlignment="Center"
                         VerticalAlignment="Bottom"
                         Margin="0,0,0,16">
-                    <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+                    <Button Classes="stack-focus-click"
+                            Command="{Binding CloseStackFocusCommand}"
+                            ToolTip.Tip="Zurück zum Ordner (ESC)">
+                        <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/stack-2.svg"
                                        Width="18" Height="18"
                                        IconBrush="{DynamicResource FP.Accent}"
@@ -1879,18 +1882,15 @@
                                    Classes="no-translate"
                                    FontWeight="SemiBold"
                                    VerticalAlignment="Center"/>
-                        <Button Classes="accent"
-                                Padding="12,5"
-                                Command="{Binding CloseStackFocusCommand}"
-                                ToolTip.Tip="ESC">
-                            <StackPanel Orientation="Horizontal" Spacing="6">
-                                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/arrow-back-up.svg"
-                                               Width="16" Height="16"
-                                               VerticalAlignment="Center"/>
-                                <TextBlock Text="Zurück zum Ordner" VerticalAlignment="Center"/>
-                            </StackPanel>
-                        </Button>
-                    </StackPanel>
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/arrow-back-up.svg"
+                                           Width="16" Height="16"
+                                           IconBrush="{DynamicResource FP.Accent}"
+                                           VerticalAlignment="Center"/>
+                            <TextBlock Text="Zurück zum Ordner" VerticalAlignment="Center"/>
+                        </StackPanel>
+                        </StackPanel>
+                    </Button>
                 </Border>
 
                 <!-- DIE GRUPPENANSICHT VIRTUALISIERT WIE DAS RASTER, nur ueber eine eigene

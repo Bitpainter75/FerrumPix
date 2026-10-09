@@ -7385,6 +7385,8 @@ Namespace ViewModels
                 If _rawHighlightRecovery = value Then Return
                 CaptureUndoState(NameOf(RawHighlightRecoveryEnabled))
                 _rawHighlightRecovery = value
+                DiagnosticLogService.LogAlways("Editor.RawHighlightRecovery",
+                    $"toggle enabled={value}; source={RenderSourcePath}; baked={_workingImage.HasBakedContent}; rawDeveloped={IsRawDeveloped}")
                 Me.RaisePropertyChanged(NameOf(RawHighlightRecoveryEnabled))
                 RaiseResetButtonStateChanged()
                 ' Derselbe Weg wie bei der Objektivkorrektur: die Stufe sitzt VOR der Reglerkette,
@@ -7436,6 +7438,8 @@ Namespace ViewModels
             ' wirkt aber nicht. Erreichbar ist das nur noch ueber Rueckgaengig oder ein geladenes
             ' Rezept, die Schalter selbst sind dann ausgeblendet.
             If _workingImage.HasBakedContent Then
+                DiagnosticLogService.LogAlways("Editor.RawHighlightRecovery",
+                    $"rebuild skipped (baked working image); enabled={_rawHighlightRecovery}; source={RenderSourcePath}")
                 SchedulePreviewUpdate()
                 Return
             End If
@@ -7446,6 +7450,8 @@ Namespace ViewModels
             ' RenderSourcePath, nicht der Dokumentpfad: bei einer .fpx waere das das ZIP-Buendel,
             ' das kein Decoder lesen kann. Der Neuaufbau warf dann den RAW-Zwischenspeicher weg
             ' und liess das Arbeitsbild leer, bis ein spaeterer Render zufaellig neu entwickelte.
+            DiagnosticLogService.LogAlways("Editor.RawHighlightRecovery",
+                $"rebuild requested; enabled={_rawHighlightRecovery}; source={RenderSourcePath}")
             PreparePreviewSource(RenderSourcePath)
             If warEingepasst Then ActiveZoomPreset = ZoomPresetMode.Fit
         End Sub
@@ -20286,6 +20292,9 @@ Namespace ViewModels
             ' das hat oben schon Vorrang.
             If fullDecode Is Nothing AndAlso Not bakedFromFpx Then fullDecode = DecodedImageHandoff.TryTake(imagePath)
             If fullDecode Is Nothing Then fullDecode = ImageProcessor.DecodeWorkingImage(imagePath, lensChoice, recoverHighlights)
+            DiagnosticLogService.LogAlways("Editor.RawHighlightRecovery",
+                $"decode completed; enabled={recoverHighlights}; source={imagePath}; override={Not String.IsNullOrEmpty(overridePath)}; " &
+                $"baked={bakedFromFpx}; result={If(fullDecode Is Nothing, "<none>", $"{fullDecode.Width}x{fullDecode.Height}")}")
             Return (fullDecode, bakedFromFpx)
         End Function
 
@@ -22500,6 +22509,7 @@ Namespace ViewModels
                 .Temperature = CSng(_temperature),
                 .Tint = CSng(_tint),
                 .WhiteBalanceModel = _whiteBalanceModel,
+                .WhiteBalanceMode = _whiteBalance,
                 .ToneModel = _toneModel,
                 .WhiteBalanceAnchorX = _whiteBalanceAnchorX,
                 .WhiteBalanceAnchorY = _whiteBalanceAnchorY,
@@ -24002,6 +24012,7 @@ Namespace ViewModels
             _blacks = adj.Blacks
             _temperature = adj.Temperature
             _tint = adj.Tint
+            _whiteBalance = If(String.IsNullOrWhiteSpace(adj.WhiteBalanceMode), "Wie Aufnahme", adj.WhiteBalanceMode)
             _rawHighlightRecovery = adj.RawHighlightRecovery
             _rawSensorEdgeCrop = adj.RawSensorEdgeCrop
             _lensDistortion = adj.LensDistortion
@@ -24302,6 +24313,8 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(Whites))
             Me.RaisePropertyChanged(NameOf(Blacks))
             Me.RaisePropertyChanged(NameOf(Temperature))
+            Me.RaisePropertyChanged(NameOf(WhiteBalance))
+            RaiseWhiteBalanceModeChanged()
             Me.RaisePropertyChanged(NameOf(Tint))
             Me.RaisePropertyChanged(NameOf(Exposure))
             Me.RaisePropertyChanged(NameOf(Sharpness))

@@ -1739,8 +1739,14 @@
         <Setter Property="BorderBrush" Value="{DynamicResource FP.Accent}"/>
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="CornerRadius" Value="10"/>
-        <Setter Property="Padding" Value="16,8,8,8"/>
+        <Setter Property="Padding" Value="0"/>
         <Setter Property="BoxShadow" Value="0 4 16 0 #80000000"/>
+    </Style>
+    <Style Selector="Button.stack-focus-click">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="CornerRadius" Value="9"/>
+        <Setter Property="Padding" Value="16,8"/>
     </Style>
     <!-- VERGLEICH IM BETRACHTER: das angeheftete Bild im Filmstreifen. Gedimmt und ohne
          Handzeiger, weil es nicht rechts neben sich selbst stehen kann (ViewerViewModel.SetPinnedPath). -->

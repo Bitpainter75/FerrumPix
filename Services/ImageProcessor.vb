@@ -143,6 +143,10 @@ Namespace Services
         ' Maskenanteil). Er haengt an derselben Quelle und demselben Stempel wie der Basis-Cache.
         Private Shared _preMaskBitmap As SKBitmap = Nothing
         Private Shared _preMaskKey As String = Nothing
+        ' Ton/Farbe vor den raeumlichen Details. Der Detail-Cache darunter ist der seit langem
+        ' vorhandene _preMaskBitmap: er liegt nach Details/Effekten, aber vor Maskenebenen.
+        Private Shared _toneCacheBitmap As SKBitmap = Nothing
+        Private Shared _toneCacheKey As String = Nothing
 
         ''' <summary>Meldet, dass die Bildpunkte der Vorschauquelle sich geaendert haben, ohne dass
         ''' eine neue Bitmap entstanden ist.</summary>
@@ -2353,10 +2357,12 @@ Namespace Services
 
         ''' <summary>Geometrie, globale Pixelkette und Auswahl-Skopus - alles, was NICHT an den
         ''' Masken haengt. Das Ergebnis gehoert dem Aufrufer.</summary>
-        Private Shared Function ProcessBitmapBaseBeforeMaskedLayers(source As SKBitmap, adj As ImageAdjustments) As SKBitmap
+        Private Shared Function ProcessBitmapBaseBeforeMaskedLayers(source As SKBitmap, adj As ImageAdjustments,
+                                                                     Optional cachedTone As SKBitmap = Nothing,
+                                                                     Optional ByRef builtTone As SKBitmap = Nothing) As SKBitmap
             ' Copy-on-write: die Kette startet auf der FREMDEN Quelle und kopiert erst, wenn eine Stufe
             ' wirklich ein neues Bild liefert. Siehe ReplaceBitmapOwned.
-            Dim processed As SKBitmap = source
+            Dim processed As SKBitmap = If(cachedTone, source)
             Dim owned = False
 
             ' EIN MESSPUNKT UM DIE GANZE GEOMETRIE. Diese acht Stufen haengen ausschliesslich an den
@@ -2365,11 +2371,13 @@ Namespace Services
             ' Zahl hier sagt, ob sie sich lohnt. Steht keine Geometrie an, liefert jede Stufe ihre
             ' Quelle unveraendert zurueck (Copy-on-write) und der Messwert liegt bei null - genau
             ' das muss man wissen, bevor man einen Zwischenspeicher dafuer baut.
-            PerformanceTraceService.Measure("Pixel: Geometrie",
-                Sub()
-                    processed = ApplyGeometryPipelineOwned(processed, adj, owned)
-                    processed = ReplaceBitmapOwned(processed, ApplyDocumentBackground(processed, adj), owned)
-                End Sub)
+            If cachedTone Is Nothing Then
+                PerformanceTraceService.Measure("Pixel: Geometrie",
+                    Sub()
+                        processed = ApplyGeometryPipelineOwned(processed, adj, owned)
+                        processed = ReplaceBitmapOwned(processed, ApplyDocumentBackground(processed, adj), owned)
+                    End Sub)
+            End If
 
             ' Eine Auswahl wird im bereits gerenderten Display-Raum angelegt. Deshalb muss auch der
             ' unveraenderte Vergleichsstand fuer selektive Farb-/Detailanpassungen NACH der Geometrie
@@ -2379,7 +2387,11 @@ Namespace Services
                 Dim selectionBaseline As SKBitmap = Nothing
                 If SelectionScopeIsEnabled(adj) Then selectionBaseline = CloneBitmap(processed)
 
-                processed = ApplyPixelAdjustmentStagesCore(processed, adj, owned)
+                If cachedTone Is Nothing Then
+                    processed = ApplyToneAdjustmentStagesCore(processed, adj, owned)
+                    If selectionBaseline Is Nothing Then builtTone = CloneBitmap(processed)
+                End If
+                processed = ApplyDetailAdjustmentStagesCore(processed, adj, owned)
 
                 ' Auswahl-Skopus: Anpassungen nur INNERHALB der aktiven Auswahl wirken lassen. Maske,
                 ' Vergleichsstand und angepasstes Bild liegen hier gemeinsam im gerenderten Display-Raum.
@@ -2449,6 +2461,15 @@ Namespace Services
         Private Shared Function ApplyPixelAdjustmentStagesCore(source As SKBitmap, adj As ImageAdjustments,
                                                                ByRef owned As Boolean,
                                                                Optional toneReferenceMedian As Double = 0.0) As SKBitmap
+            Dim toned = ApplyToneAdjustmentStagesCore(source, adj, owned, toneReferenceMedian)
+            Return ApplyDetailAdjustmentStagesCore(toned, adj, owned)
+        End Function
+
+        ''' <summary>Die ausschliesslich punktweise Ton- und Farbkorrekturen. Diese Stufe ist die
+        ''' Grenze vor allen raeumlichen Details/Effekten und damit der Inhalt des Tone-Caches.</summary>
+        Private Shared Function ApplyToneAdjustmentStagesCore(source As SKBitmap, adj As ImageAdjustments,
+                                                              ByRef owned As Boolean,
+                                                              Optional toneReferenceMedian As Double = 0.0) As SKBitmap
             Dim processed = source
 
             ' Alle Farb-Punktoperationen laufen in EINER verschmolzenen Gleitkomma-Stufe
@@ -2462,6 +2483,15 @@ Namespace Services
             ' seitenverkehrt (Aufhellen würde abdunkeln).
             processed = ReplaceBitmapOwned(processed, PerformanceTraceService.Measure(
                 "Pixel: Punktkette (Ton/Farbe)", Function() ApplyPointOpChain(processed, adj, toneReferenceMedian)), owned)
+
+            Return processed
+        End Function
+
+        ''' <summary>Die raeumlichen Detail- und Effektstufen. Ihr Ergebnis ist die Grundlage
+        ''' des Detail-Caches vor den Maskenebenen.</summary>
+        Private Shared Function ApplyDetailAdjustmentStagesCore(source As SKBitmap, adj As ImageAdjustments,
+                                                                ByRef owned As Boolean) As SKBitmap
+            Dim processed = source
 
             ' "weich" steht im selben Select Case wie die 15 Farbpresets, ist aber als einziges KEINE
             ' Punktoperation, sondern eine echte räumliche Unschärfe. BuildFilterPresetMatrix liefert
@@ -3799,6 +3829,9 @@ Namespace Services
                 If _preMaskBitmap IsNot Nothing AndAlso Not Object.ReferenceEquals(_preMaskBitmap, _baseCacheBitmap) Then _preMaskBitmap.Dispose()
                 _preMaskBitmap = Nothing
                 _preMaskKey = Nothing
+                _toneCacheBitmap?.Dispose()
+                _toneCacheBitmap = Nothing
+                _toneCacheKey = Nothing
                 _baseCacheBitmap?.Dispose()
                 _baseCacheBitmap = Nothing
                 _baseCacheKey = Nothing
@@ -3834,7 +3867,21 @@ Namespace Services
                 preMask = _preMaskBitmap
                 preMaskIsCached = True
             Else
-                preMask = ProcessBitmapBaseBeforeMaskedLayers(source, adj)
+                Dim useToneCache = Not SelectionScopeIsEnabled(adj)
+                Dim toneKey = If(useToneCache, ComputeToneCacheKey(adj), Nothing)
+                Dim cachedTone As SKBitmap = Nothing
+                If sameSource AndAlso useToneCache AndAlso _toneCacheBitmap IsNot Nothing AndAlso
+                   String.Equals(_toneCacheKey, toneKey, StringComparison.Ordinal) Then
+                    cachedTone = CloneBitmap(_toneCacheBitmap)
+                End If
+                Dim builtTone As SKBitmap = Nothing
+                preMask = ProcessBitmapBaseBeforeMaskedLayers(source, adj, cachedTone, builtTone)
+                If cachedTone IsNot Nothing AndAlso Not Object.ReferenceEquals(preMask, cachedTone) Then cachedTone.Dispose()
+                If builtTone IsNot Nothing Then
+                    _toneCacheBitmap?.Dispose()
+                    _toneCacheBitmap = builtTone
+                    _toneCacheKey = toneKey
+                End If
             End If
 
             ' Der Zwischenstand BLEIBT im Speicher stehen, die Ebenen duerfen ihn also nicht
@@ -3899,6 +3946,33 @@ Namespace Services
         ''' koennen: ein neues Feld steht sofort in beiden.</summary>
         Private Shared Function ComputeBaseKeyBeforeMasks(adj As ImageAdjustments) As String
             Return ComputeBaseKeyCore(adj, includeMasks:=False)
+        End Function
+
+        ''' <summary>Schluessel des Tone-Caches. Detail-/Effektregler werden neutralisiert;
+        ''' Geometrie und jede Ton-/Farbentscheidung bleiben im gemeinsamen Bauplan enthalten.</summary>
+        Private Shared Function ComputeToneCacheKey(adj As ImageAdjustments) As String
+            Dim tone = adj.Clone()
+            Dim neutral = New ImageAdjustments()
+            tone.Clarity = neutral.Clarity : tone.Structure = neutral.Structure : tone.Haze = neutral.Haze
+            tone.NoiseReduction = neutral.NoiseReduction : tone.NoiseReductionMethod = neutral.NoiseReductionMethod
+            tone.NoiseReductionDetail = neutral.NoiseReductionDetail : tone.Blur = neutral.Blur
+            tone.ColorNoiseReduction = neutral.ColorNoiseReduction : tone.FarbrauschGrob = neutral.FarbrauschGrob
+            tone.ColorNoiseCoarseScale = neutral.ColorNoiseCoarseScale : tone.ColorNoiseAdd = neutral.ColorNoiseAdd
+            tone.DustScratches = neutral.DustScratches : tone.Glow = neutral.Glow
+            tone.Sharpness = neutral.Sharpness : tone.SharpenRadius = neutral.SharpenRadius
+            tone.SharpenDetail = neutral.SharpenDetail : tone.SharpenMasking = neutral.SharpenMasking
+            tone.SharpenMethod = neutral.SharpenMethod
+            tone.Vignette = neutral.Vignette : tone.VignetteTransition = neutral.VignetteTransition
+            tone.VignetteRoundness = neutral.VignetteRoundness : tone.VignetteFeather = neutral.VignetteFeather
+            tone.VignetteCenterX = neutral.VignetteCenterX : tone.VignetteCenterY = neutral.VignetteCenterY
+            tone.VignetteStyle = neutral.VignetteStyle
+            tone.Grain = neutral.Grain : tone.GrainSize = neutral.GrainSize
+            tone.GrainFrequency = neutral.GrainFrequency : tone.GrainColor = neutral.GrainColor
+            tone.AddNoise = neutral.AddNoise
+            If String.Equals(If(tone.FilterPreset, "").Trim(), "weich", StringComparison.OrdinalIgnoreCase) Then
+                tone.FilterPreset = "" : tone.FilterStrength = 0
+            End If
+            Return ComputeBaseKeyBeforeMasks(tone)
         End Function
 
         Private Shared Function ComputeBaseKeyCore(adj As ImageAdjustments, includeMasks As Boolean) As String

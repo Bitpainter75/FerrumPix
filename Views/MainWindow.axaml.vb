@@ -1344,7 +1344,9 @@ Namespace Views
             Dim gallery = vm.Gallery
             If gallery Is Nothing Then Return
 
-            Dim paths = gallery.GetSelectedPathsWithPartners()
+            ' Tastatur-Kopieren/-Ausschneiden folgt derselben Serienregel wie Toolbar,
+            ' Kontextmenü und Ziehen: die sichtbare Serienkachel vertritt alle Aufnahmen.
+            Dim paths = gallery.GetPathsForTransfer()
             gallery.StoreClipboardPaths(paths, cut)
             Await ClipboardPathService.CopyPathsAsync(Clipboard, StorageProvider, paths, cut)
         End Function
