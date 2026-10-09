@@ -538,7 +538,9 @@ jobs:
   aur:
     name: AUR
     runs-on: ubuntu-latest
-    container: archlinux:base-devel
+    # Nicht Docker Hub: dessen anonyme Pull-Quote trifft auf GitHub-Runnern regelmaessig.
+    # GHCR beherbergt dieselben offiziellen, taeglich gebauten Arch-Images.
+    container: ghcr.io/archlinux/archlinux:base-devel
     needs: veroeffentlichen
     # ZULETZT: der PKGBUILD laedt das Linux-ZIP aus dem veroeffentlichten Release und haelt seine
     # Pruefsumme fest. Nur, wenn das Linux-ZIP in diesem Lauf mitkam.
