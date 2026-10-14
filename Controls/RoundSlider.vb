@@ -38,9 +38,30 @@ Namespace Controls
         Public Shared ReadOnly DragIncrementProperty As StyledProperty(Of Double) =
             AvaloniaProperty.Register(Of RoundSlider, Double)(NameOf(DragIncrement), 0)
 
+        ''' <summary>Rechtsklick schaltet den EINZELVERGLEICH: der Wert geht auf den Standardwert,
+        ''' der eingestellte wird gemerkt, und der nächste Rechtsklick holt ihn zurück. Ab Werk aus;
+        ''' das Anpassungspanel des Editors schaltet es per Stil ein (EditorView.axaml). Das
+        ''' Zahlenfeld daneben (SliderValueUpDown) folgt seinem Regler.</summary>
+        Public Shared ReadOnly CompareOnRightClickProperty As StyledProperty(Of Boolean) =
+            AvaloniaProperty.Register(Of RoundSlider, Boolean)(NameOf(CompareOnRightClick), False)
+
+        ''' <summary>Steht der Regler gerade im Einzelvergleich? Setzt zugleich die Pseudoklasse
+        ''' :comparing, über die Regler und Zahlenfeld anders eingefärbt werden.</summary>
+        Public Shared ReadOnly IsComparingProperty As DirectProperty(Of RoundSlider, Boolean) =
+            AvaloniaProperty.RegisterDirect(Of RoundSlider, Boolean)(NameOf(IsComparing), Function(o As RoundSlider) o.IsComparing)
+
         Private _isDragging As Boolean
         Private _dragStartX As Double
         Private _dragStartValue As Double
+
+        ''' Alle Regler, die gerade im Einzelvergleich stehen. Nur auf dem UI-Faden angefasst.
+        Private Shared ReadOnly ComparingSliders As New List(Of RoundSlider)
+        Private _isComparing As Boolean
+        ''' Der eingestellte Wert, solange der Regler auf dem Standardwert steht.
+        Private _comparedValue As Double
+        ''' Der Regler setzt seinen Wert gerade SELBST (Vergleich an oder aus). Was die Bindung dabei
+        ''' synchron zurückschreibt, beendet den Vergleich nicht.
+        Private _isApplyingCompare As Boolean
 
         Shared Sub New()
             AffectsRender(Of RoundSlider)(MinimumProperty, MaximumProperty, ValueProperty, TrackBrushProperty, FillBrushProperty, ThumbBorderBrushProperty)
@@ -103,6 +124,94 @@ Namespace Controls
                 SetValue(DefaultValueProperty, value)
             End Set
         End Property
+
+        Public Property CompareOnRightClick As Boolean
+            Get
+                Return GetValue(CompareOnRightClickProperty)
+            End Get
+            Set(value As Boolean)
+                SetValue(CompareOnRightClickProperty, value)
+            End Set
+        End Property
+
+        Public Property IsComparing As Boolean
+            Get
+                Return _isComparing
+            End Get
+            Private Set(value As Boolean)
+                SetAndRaise(IsComparingProperty, _isComparing, value)
+                PseudoClasses.Set(":comparing", value)
+            End Set
+        End Property
+
+        ''' <summary>Schaltet den Einzelvergleich um: aus dem eingestellten Wert auf den Standardwert
+        ''' und zurück. Der Wert läuft dabei ganz normal über die Bindung ins ViewModel, ein Speichern
+        ''' im Vergleich schreibt also den Standardwert. Steht der Regler schon auf dem Standardwert,
+        ''' gibt es nichts zu vergleichen, und es geschieht nichts.</summary>
+        ''' <returns>Ob sich etwas getan hat.</returns>
+        Public Function ToggleCompare() As Boolean
+            If IsComparing Then
+                EndCompare(restore:=True)
+                Return True
+            End If
+            Dim target = ClampValue(DefaultValue)
+            If IsAtValue(target) Then Return False
+            _comparedValue = Value
+            ApplyCompareValue(target)
+            ' Hat die Bindung den Standardwert nicht angenommen (das ViewModel lehnt ihn ab), gibt
+            ' es keinen Vergleich, der angezeigt werden könnte.
+            If Not IsAtValue(target) Then Return False
+            IsComparing = True
+            ComparingSliders.Add(Me)
+            Return True
+        End Function
+
+        ''' <summary>Holt bei allen Reglern im Einzelvergleich den eingestellten Wert zurück. Die
+        ''' EditorView ruft das vor jedem Verlassen des Bildes (EditorViewModel.LeavingDocument).</summary>
+        Public Shared Sub RestoreAllCompared()
+            For Each slider In ComparingSliders.ToArray()
+                slider.EndCompare(restore:=True)
+            Next
+        End Sub
+
+        Private Sub EndCompare(restore As Boolean)
+            If Not IsComparing Then Return
+            IsComparing = False
+            ComparingSliders.Remove(Me)
+            If restore Then ApplyCompareValue(_comparedValue)
+        End Sub
+
+        Private Sub ApplyCompareValue(target As Double)
+            _isApplyingCompare = True
+            Try
+                Value = target
+            Finally
+                _isApplyingCompare = False
+            End Try
+        End Sub
+
+        ''' Gleich bis auf Rundung: die Bindung kann den Wert über einen Umrechner zurückgeben.
+        Private Function IsAtValue(target As Double) As Boolean
+            Return Math.Abs(Value - target) <= Math.Max(0.000000001, (Maximum - Minimum) * 0.000001)
+        End Function
+
+        ''' <summary>Ändert sich der Wert im Vergleich von ANDERER Seite weg vom Standardwert (Ziehen,
+        ''' Tippen ins Zahlenfeld, Rückgängig, ein Preset), gilt der neue Wert: der Vergleich endet,
+        ''' der gemerkte Wert wird verworfen und nicht zurückgeholt.</summary>
+        Protected Overrides Sub OnPropertyChanged(change As AvaloniaPropertyChangedEventArgs)
+            MyBase.OnPropertyChanged(change)
+            If change.Property Is ValueProperty AndAlso IsComparing AndAlso Not _isApplyingCompare AndAlso
+               Not IsAtValue(ClampValue(DefaultValue)) Then
+                EndCompare(restore:=False)
+            End If
+        End Sub
+
+        ''' <summary>Ein Regler, der aus der Oberfläche genommen wird, gibt seinen Vergleich zurück,
+        ''' solange die Bindung den Wert noch ins ViewModel tragen kann.</summary>
+        Protected Overrides Sub OnDetachedFromVisualTree(e As VisualTreeAttachmentEventArgs)
+            EndCompare(restore:=True)
+            MyBase.OnDetachedFromVisualTree(e)
+        End Sub
 
         Public Property TrackBrush As IBrush
             Get
@@ -173,6 +282,13 @@ Namespace Controls
 
         Protected Overrides Sub OnPointerPressed(e As PointerPressedEventArgs)
             MyBase.OnPointerPressed(e)
+            ' Behandelt, damit der Rechtsklick kein Kontextmenü öffnet. Das Loslassen meldet
+            ' OnPointerReleased ohnehin immer als behandelt.
+            If CompareOnRightClick AndAlso e.GetCurrentPoint(Me).Properties.IsRightButtonPressed Then
+                ToggleCompare()
+                e.Handled = True
+                Return
+            End If
             If Not e.GetCurrentPoint(Me).Properties.IsLeftButtonPressed Then Return
             If e.ClickCount >= 2 Then
                 Value = ClampValue(DefaultValue)

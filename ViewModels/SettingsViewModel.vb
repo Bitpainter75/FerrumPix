@@ -5747,6 +5747,12 @@ Namespace ViewModels
             SetBrush("FP.Accent.Light", ToHex(Mix(baseColor, Colors.White, If(isDark, 0.18, 0.12))))
             SetBrush("FP.Accent.Dark", ToHex(Mix(baseColor, Colors.Black, If(isDark, 0.24, 0.18))))
             SetBrush("FP.Accent.Dim", ToHex(Mix(baseColor, If(isDark, Color.Parse("#0B0E11"), Color.Parse("#E9EDF2")), If(isDark, 0.78, 0.82))))
+            ' Der Einzelvergleich eines Reglers braucht eine Farbe, die sich von JEDEM Akzent abhebt:
+            ' der Gegenton auf dem Farbkreis, bei gleicher Sättigung und Helligkeit.
+            Dim hsl = baseColor.ToHsl()
+            Dim compareColor = HslColor.ToRgb((hsl.H + 180.0) Mod 360.0, hsl.S, hsl.L)
+            SetBrush("FP.Compare", ToHex(compareColor))
+            SetBrush("FP.Compare.Dim", ToHex(Mix(compareColor, If(isDark, Color.Parse("#0B0E11"), Color.Parse("#E9EDF2")), If(isDark, 0.78, 0.82))))
         End Sub
 
         ''' <summary>Nimmt einer Farbe die Farbigkeit, ohne ihre HELLIGKEIT anzutasten. 100 lässt sie,

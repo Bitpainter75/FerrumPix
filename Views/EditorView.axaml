@@ -1305,6 +1305,14 @@
 
         <Border x:Name="AdjustmentsPanelBorder"
                 Grid.Row="1" Grid.Column="2" Classes="panel-right">
+            <!-- EINZELVERGLEICH nur hier, in den Panels der Werkzeuge: Rechtsklick auf Regler oder
+                 Zahlenfeld (im Feld auch LEERTASTE) stellt den Wert auf den Standard und wieder
+                 zurück (RoundSlider.ToggleCompare). Der Zoomregler und die Dialoge bleiben aussen vor. -->
+            <Border.Styles>
+                <Style Selector="icons|RoundSlider">
+                    <Setter Property="CompareOnRightClick" Value="True" />
+                </Style>
+            </Border.Styles>
             <Grid RowDefinitions="*,Auto">
                 <Grid Grid.Row="0">
                     <ScrollViewer x:Name="AdjustmentsScrollViewer"

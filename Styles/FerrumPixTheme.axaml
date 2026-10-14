@@ -48,6 +48,10 @@
         <SolidColorBrush x:Key="FP.Accent.Dark" Color="#BC6711"/>
         <SolidColorBrush x:Key="FP.Accent.Dim" Color="#2B1606"/>
         <SolidColorBrush x:Key="FP.Brand.Accent" Color="#F08A1A"/>
+        <!-- Einzelvergleich eines Reglers (Rechtsklick): die Gegenfarbe zum Akzent, damit sie sich
+             bei jeder waehlbaren Akzentfarbe abhebt. Zur Laufzeit setzt SettingsViewModel beide neu. -->
+        <SolidColorBrush x:Key="FP.Compare" Color="#1A80F0"/>
+        <SolidColorBrush x:Key="FP.Compare.Dim" Color="#061A2B"/>
 
         <SolidColorBrush x:Key="FP.Text.Primary" Color="#E7ECF0"/>
         <SolidColorBrush x:Key="FP.Text.Secondary" Color="#A6AFB7"/>
@@ -1193,6 +1197,17 @@
         <!-- Bestimmt die Zeilenhöhe der Schieberegler-Zeilen: die Spur ist nur 4px hoch, der Rest ist
              Klickfläche um sie herum. -->
         <Setter Property="Height" Value="36"/>
+    </Style>
+    <!-- Einzelvergleich (RoundSlider.ToggleCompare): Regler und Zahlenfeld in der Vergleichsfarbe,
+         solange der Wert vorübergehend auf dem Standard steht. -->
+    <Style Selector="icons|RoundSlider:comparing">
+        <Setter Property="FillBrush" Value="{DynamicResource FP.Compare}"/>
+    </Style>
+    <Style Selector=":is(NumericUpDown).slider-value:comparing">
+        <Setter Property="Background" Value="{DynamicResource FP.Compare.Dim}"/>
+    </Style>
+    <Style Selector=":is(NumericUpDown).slider-value:comparing /template/ TextBox#PART_TextBox">
+        <Setter Property="Foreground" Value="{DynamicResource FP.Compare}"/>
     </Style>
     <Style Selector="ScrollBar:vertical">
         <Setter Property="Width" Value="13"/>

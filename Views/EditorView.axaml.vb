@@ -1638,6 +1638,7 @@ Namespace Views
                 RemoveHandler _currentVm.ImageGeometryChanged, AddressOf OnEditorImageGeometryChanged
                 RemoveHandler _currentVm.FitToViewportRequested, AddressOf OnEditorFitToViewportRequested
                 RemoveHandler _currentVm.SceneInvalidated, AddressOf OnSceneInvalidated
+                RemoveHandler _currentVm.LeavingDocument, AddressOf OnEditorLeavingDocument
             End If
             _currentVm = TryCast(DataContext, EditorViewModel)
             If _currentVm IsNot Nothing Then
@@ -1645,6 +1646,7 @@ Namespace Views
                 AddHandler _currentVm.ImageGeometryChanged, AddressOf OnEditorImageGeometryChanged
                 AddHandler _currentVm.FitToViewportRequested, AddressOf OnEditorFitToViewportRequested
                 AddHandler _currentVm.SceneInvalidated, AddressOf OnSceneInvalidated
+                AddHandler _currentVm.LeavingDocument, AddressOf OnEditorLeavingDocument
             End If
             _filmstripController.Reset()
             ' Steht das Werkzeug schon beim Anhaengen auf dem Kompaktwerkzeug (erster Aufruf des
@@ -1660,6 +1662,13 @@ Namespace Views
         Private Sub OnSceneInvalidated(sender As Object, e As EventArgs)
             Me.FindControl(Of Image)("AfterImageControl")?.InvalidateVisual()
             HideBrushPreviewLineAfterBake()
+        End Sub
+
+        ''' <summary>Vor jedem Verlassen des Bildes stehen alle Regler wieder auf ihrem eingestellten
+        ''' Wert: der Einzelvergleich (Rechtsklick auf Regler oder Zahlenfeld) gilt nur für das
+        ''' offene Bild und darf weder in die Speichern-Rückfrage noch ins nächste Bild geraten.</summary>
+        Private Sub OnEditorLeavingDocument(sender As Object, e As EventArgs)
+            RoundSlider.RestoreAllCompared()
         End Sub
 
         ''' <summary>Der KeyDown-Handler hängt an dieser UserControl - er sieht eine Taste nur, wenn der
@@ -1715,6 +1724,7 @@ Namespace Views
                 RemoveHandler _currentVm.ImageGeometryChanged, AddressOf OnEditorImageGeometryChanged
                 RemoveHandler _currentVm.FitToViewportRequested, AddressOf OnEditorFitToViewportRequested
                 RemoveHandler _currentVm.SceneInvalidated, AddressOf OnSceneInvalidated
+                RemoveHandler _currentVm.LeavingDocument, AddressOf OnEditorLeavingDocument
                 _currentVm = Nothing
             End If
         End Sub

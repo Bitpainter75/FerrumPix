@@ -16828,6 +16828,12 @@ Namespace ViewModels
         ''' samt Anfassern auf dem Schirm, und zwar unabhaengig vom vorher gewaehlten Zoom.</summary>
         Public Event FitToViewportRequested As EventHandler
 
+        ''' <summary>Das Bild wird gleich verlassen (anderes Bild, Editor verlassen, Anwendung
+        ''' schließen). Ausgelöst VOR der Speichern-Rückfrage: die View holt dann alle Regler aus dem
+        ''' Einzelvergleich zurück, damit Rückfrage und Speichern die eingestellten Werte sehen und
+        ''' nicht den vorübergehenden Standardwert.</summary>
+        Public Event LeavingDocument As EventHandler
+
         Public ReadOnly Property ClearCloneSourceCommand As ICommand
         Public ReadOnly Property ResetResizeCommand As ICommand
         Public ReadOnly Property SetResizePresetCommand As ICommand
@@ -22387,6 +22393,7 @@ Namespace ViewModels
         End Function
 
         Public Async Function ConfirmSaveBeforeLeavingAsync(actionDescription As String) As Task(Of Boolean)
+            RaiseEvent LeavingDocument(Me, EventArgs.Empty)
             If Not _hasChanges Then Return True
             If _mainVm Is Nothing Then Return True
 

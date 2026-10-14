@@ -69,6 +69,67 @@ Namespace Controls
             ' Methode sonst verdeckt bleibt.
             Me.[AddHandler](PointerPressedEvent, New EventHandler(Of PointerPressedEventArgs)(AddressOf OnPointerDownForCoarseStep), RoutingStrategies.Tunnel)
             Me.[AddHandler](PointerWheelChangedEvent, New EventHandler(Of PointerWheelEventArgs)(AddressOf OnPointerWheelForCoarseStep), RoutingStrategies.Tunnel)
+            ' Einzelvergleich: ebenfalls im Tunnel, weil das innere Textfeld sonst den Rechtsklick
+            ' (eigenes Kontextmenü) und die Leertaste (als Zeichen) zuerst bekäme.
+            Me.[AddHandler](PointerReleasedEvent, New EventHandler(Of PointerReleasedEventArgs)(AddressOf OnPointerUpForCompare), RoutingStrategies.Tunnel)
+            Me.[AddHandler](KeyDownEvent, New EventHandler(Of KeyEventArgs)(AddressOf OnKeyDownForCompare), RoutingStrategies.Tunnel)
+            Me.[AddHandler](TextInputEvent, New EventHandler(Of TextInputEventArgs)(AddressOf OnTextInputForCompare), RoutingStrategies.Tunnel)
+        End Sub
+
+        ''' <summary>Der Regler derselben Zeile, dem das Feld im Einzelvergleich folgt: der einzige
+        ''' RoundSlider im selben Panel, und nur, wenn er den Vergleich eingeschaltet hat. Der Zustand
+        ''' liegt beim Regler, das Feld schaltet ihn nur und färbt sich mit.</summary>
+        Private _partner As RoundSlider
+
+        Private ReadOnly Property ComparePartner As RoundSlider
+            Get
+                If _partner Is Nothing OrElse Not _partner.CompareOnRightClick Then Return Nothing
+                Return _partner
+            End Get
+        End Property
+
+        Protected Overrides Sub OnAttachedToVisualTree(e As VisualTreeAttachmentEventArgs)
+            MyBase.OnAttachedToVisualTree(e)
+            Dim row = TryCast(Parent, Panel)
+            Dim sliders = If(row Is Nothing, New List(Of RoundSlider)(), row.Children.OfType(Of RoundSlider)().ToList())
+            _partner = If(sliders.Count = 1, sliders(0), Nothing)
+            If _partner IsNot Nothing Then
+                AddHandler _partner.PropertyChanged, AddressOf OnPartnerPropertyChanged
+                PseudoClasses.Set(":comparing", _partner.IsComparing)
+            End If
+        End Sub
+
+        Protected Overrides Sub OnDetachedFromVisualTree(e As VisualTreeAttachmentEventArgs)
+            If _partner IsNot Nothing Then RemoveHandler _partner.PropertyChanged, AddressOf OnPartnerPropertyChanged
+            _partner = Nothing
+            PseudoClasses.Set(":comparing", False)
+            MyBase.OnDetachedFromVisualTree(e)
+        End Sub
+
+        Private Sub OnPartnerPropertyChanged(sender As Object, e As AvaloniaPropertyChangedEventArgs)
+            If e.Property Is RoundSlider.IsComparingProperty Then PseudoClasses.Set(":comparing", _partner.IsComparing)
+        End Sub
+
+        ''' Der Rechtsklick wird beim Drücken geschaltet (wie am Regler) und beim Loslassen nur noch
+        ''' geschluckt: ein unbehandeltes Loslassen der rechten Taste öffnet das Kontextmenü.
+        Private Sub OnPointerUpForCompare(sender As Object, e As PointerReleasedEventArgs)
+            If e.InitialPressMouseButton = MouseButton.Right AndAlso ComparePartner IsNot Nothing Then e.Handled = True
+        End Sub
+
+        ''' LEERTASTE schaltet den Einzelvergleich aus der Tastatur. Eine Zahl enthält kein
+        ''' Leerzeichen, die Taste wird im Feld also sonst nicht gebraucht, und die Ansicht wertet sie
+        ''' bei einem Textfeld im Fokus nicht aus (Schwenken im Editor).
+        Private Sub OnKeyDownForCompare(sender As Object, e As KeyEventArgs)
+            If e.Key <> Key.Space OrElse e.KeyModifiers <> KeyModifiers.None Then Return
+            Dim partner = ComparePartner
+            If partner Is Nothing Then Return
+            partner.ToggleCompare()
+            e.Handled = True
+        End Sub
+
+        ''' Das Leerzeichen kommt als eigenes Ereignis nach dem Tastendruck und landete sonst im Feld.
+        Private Sub OnTextInputForCompare(sender As Object, e As TextInputEventArgs)
+            If e.Text = " " AndAlso ComparePartner IsNot Nothing Then e.Handled = True
         End Sub
 
         ''' Lag SHIFT auf dem Zeigerereignis, das den laufenden Schritt ausgelöst hat? Beim Halten
@@ -81,6 +142,11 @@ Namespace Controls
 
         Private Sub OnPointerDownForCoarseStep(sender As Object, e As PointerPressedEventArgs)
             _coarseModifierOnPointer = (e.KeyModifiers And KeyModifiers.Shift) = KeyModifiers.Shift
+            Dim partner = ComparePartner
+            If partner IsNot Nothing AndAlso e.GetCurrentPoint(Me).Properties.IsRightButtonPressed Then
+                partner.ToggleCompare()
+                e.Handled = True
+            End If
         End Sub
 
         Private Sub OnPointerWheelForCoarseStep(sender As Object, e As PointerWheelEventArgs)

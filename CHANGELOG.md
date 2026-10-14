@@ -1,3 +1,18 @@
+## 0.9.65
+
+### What's new
+
+- **Compare a single slider.** Right-click a slider or its number field in the editor to set it
+  to its default for a moment; slider and field change colour, and the next right-click brings
+  your value back. Several sliders can be compared at once, and in the number field SPACE does
+  the same. Saving while comparing saves what you see, and before you move to another picture
+  every slider gets its value back.
+
+- **More cameras with their own base brightness.** Thirty more camera models, among them the
+  Canon EOS 77D and M5, Fujifilm X-T2 and GFX 50S, Panasonic G9, Pentax K-3 Mark III and KP and
+  several Sony Alpha models, now have their own value for the setting that matches the base
+  brightness to the camera, and the Fujifilm X-T30 II has its own colours.
+
 ## 0.9.64
 
 ### What's new
