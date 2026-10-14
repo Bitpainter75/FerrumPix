@@ -1095,6 +1095,13 @@ Namespace Services
             If Not String.IsNullOrWhiteSpace(nikonLens) Then Return nikonLens
 
             Dim lens = GetTagDescAcross(Of ExifSubIfdDirectory)(metaDirectories, ExifSubIfdDirectory.TagLensModel)
+            ' Neuere Canons schreiben bei einem Fremdobjektiv nur die Brennweite ins LensModel
+            ' ("24-70mm"), genau wie aeltere in ihren Herstellerteil. Dann sagt die Objektivnummer
+            ' mehr; loest sie nichts auf, bleibt die Brennweite als Anzeige stehen (Issue #92).
+            If IsFocalLengthOnly(lens) Then
+                Dim canonLens = MakerLensIdService.TryGetCanonLensName(metaDirectories)
+                If canonLens.Length > 0 Then Return canonLens
+            End If
             If Not String.IsNullOrWhiteSpace(lens) Then Return lens
 
             lens = GetMakerNoteLensName(metaDirectories)
@@ -1228,6 +1235,13 @@ Namespace Services
         ''' Ebenso wenig die blosse Brennweite ("100mm", "28-70mm"), die Canon bei
         ''' Fremdobjektiven eintraegt: aus ihr raet der Abgleich ein Canon-Objektiv derselben
         ''' Brennweite, also womoeglich das falsche. Dann lieber kein Profil.</summary>
+        ''' <summary>Ist der Objektivname nur eine Brennweite ("100mm", "28-70mm")? Canon traegt das
+        ''' bei Fremdobjektiven ein; ein Name, an dem man ein Profil festmachen koennte, ist es nicht.</summary>
+        Friend Shared Function IsFocalLengthOnly(name As String) As Boolean
+            If String.IsNullOrWhiteSpace(name) Then Return False
+            Return Regex.IsMatch(name.Trim(), "^\d+(?:[.,]\d+)?(?:\s*-\s*\d+(?:[.,]\d+)?)?\s*mm$", RegexOptions.IgnoreCase)
+        End Function
+
         Private Shared Function GetMakerNoteLensName(metaDirectories As IEnumerable(Of MetadataExtractor.Directory)) As String
             Dim candidates = {
                 GetTagDescAcross(Of CanonMakernoteDirectory)(metaDirectories, CanonMakernoteDirectory.TagLensModel),
@@ -1244,7 +1258,7 @@ Namespace Services
                 If name.Equals("N/A", StringComparison.OrdinalIgnoreCase) Then Continue For
                 If name.Equals("None", StringComparison.OrdinalIgnoreCase) Then Continue For
                 If name.StartsWith("Built-in or Manual", StringComparison.OrdinalIgnoreCase) Then Continue For
-                If Regex.IsMatch(name, "^\d+(?:[.,]\d+)?(?:\s*-\s*\d+(?:[.,]\d+)?)?\s*mm$", RegexOptions.IgnoreCase) Then Continue For
+                If IsFocalLengthOnly(name) Then Continue For
                 Return name
             Next
             ' Sony A und Pentax schreiben keinen Namen, nur eine Kennung.

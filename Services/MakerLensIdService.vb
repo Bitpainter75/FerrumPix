@@ -7,11 +7,17 @@ Imports MetadataExtractor.Formats.Exif.Makernotes
 
 Namespace Services
 
-    ''' <summary>Loest die Objektivnummer im Herstellerteil von Sony-A- und Pentax-Gehaeusen zu
-    ''' einem Namen auf. Beide schreiben kein EXIF-LensModel, sondern nur eine Kennung; die
-    ''' Tabellen dazu liegen als <c>Resources/SonyAMountLensIds.tsv</c> und
+    ''' <summary>Loest die Objektivnummer im Herstellerteil von Sony-A-, Pentax- und Canon-Gehaeusen
+    ''' zu einem Namen auf. Sony A und Pentax schreiben kein EXIF-LensModel, sondern nur eine
+    ''' Kennung; die Tabellen dazu liegen als <c>Resources/SonyAMountLensIds.tsv</c> und
     ''' <c>Resources/PentaxLensIds.tsv</c> bei. Unter einer Kennung, die mehrere Objektive
-    ''' meint, steht dort nichts, und dann liefert die Abfrage nichts.</summary>
+    ''' meint, steht dort nichts, und dann liefert die Abfrage nichts.
+    '''
+    ''' Canon ist der Sonderfall: aeltere Gehaeuse tragen bei Fremdobjektiven als LensModel nur
+    ''' die Brennweite ("18-200mm"), und die Nummer teilen sich Canon, Sigma und Tamron. Die
+    ''' Tabelle <c>Resources/CanonLensTypes.tsv</c> fuehrt deshalb ALLE Varianten einer Nummer,
+    ''' und gewaehlt wird an Brennweitenbereich und Blende, die die Kamera mitschreibt
+    ''' (<see cref="SelectCanonLens"/>).</summary>
     Public NotInheritable Class MakerLensIdService
 
         Private Sub New()
@@ -19,6 +25,7 @@ Namespace Services
 
         Private Const SonyTableResource As String = "SonyAMountLensIds.tsv"
         Private Const PentaxTableResource As String = "PentaxLensIds.tsv"
+        Private Const CanonTableResource As String = "CanonLensTypes.tsv"
 
         ' Pentax legt den Objektivtyp unter 0x003F ab: zwei Bytes, Serie und Modell, bei neueren
         ' Gehaeusen gefolgt von weiteren, die fuer die Kennung nicht zaehlen. MetadataExtractor
@@ -28,6 +35,7 @@ Namespace Services
 
         Private Shared ReadOnly _sonyLenses As New Lazy(Of Dictionary(Of String, String))(Function() LoadTable(SonyTableResource))
         Private Shared ReadOnly _pentaxLenses As New Lazy(Of Dictionary(Of String, String))(Function() LoadTable(PentaxTableResource))
+        Private Shared ReadOnly _canonLenses As New Lazy(Of Dictionary(Of String, String))(Function() LoadTable(CanonTableResource))
         Private Shared ReadOnly _tableStamp As New Lazy(Of String)(AddressOf ComputeTableStamp)
 
         ''' <summary>Fingerabdruck beider Tabellen, acht Zeichen. Steht wie der der Nikon-Tabelle
@@ -50,6 +58,12 @@ Namespace Services
             End Get
         End Property
 
+        Public Shared ReadOnly Property CanonLensCount As Integer
+            Get
+                Return _canonLenses.Value.Count
+            End Get
+        End Property
+
         ''' <summary>Der Objektivname aus der Kennung, oder leer.</summary>
         Public Shared Function TryGetLensName(metaDirectories As IEnumerable(Of Directory)) As String
             If metaDirectories Is Nothing Then Return ""
@@ -58,7 +72,100 @@ Namespace Services
             If sony.Length > 0 AndAlso _sonyLenses.Value.TryGetValue(sony, result) Then Return result
             Dim pentax = TryGetPentaxLensId(metaDirectories)
             If pentax.Length > 0 AndAlso _pentaxLenses.Value.TryGetValue(pentax, result) Then Return result
+            Return TryGetCanonLensName(metaDirectories)
+        End Function
+
+        ''' <summary>Das Objektiv einer Canon aus LensType, Brennweitenbereich und Blende der
+        ''' CameraSettings, oder leer. Nur bei einer Canon: dieselben Felder bedeuten anderswo nichts.</summary>
+        Public Shared Function TryGetCanonLensName(metaDirectories As IEnumerable(Of Directory)) As String
+            Dim make = ExifService.GetTagDescAcross(Of ExifIfd0Directory)(metaDirectories, ExifDirectoryBase.TagMake)
+            If Not make.StartsWith("Canon", StringComparison.OrdinalIgnoreCase) Then Return ""
+            For Each canon In metaDirectories.OfType(Of CanonMakernoteDirectory)()
+                Dim lensType, shortFocal, longFocal As Integer
+                If Not canon.TryGetInt32(CanonMakernoteDirectory.CameraSettings.TagLensType, lensType) OrElse
+                   Not canon.TryGetInt32(CanonMakernoteDirectory.CameraSettings.TagShortFocalLength, shortFocal) OrElse
+                   Not canon.TryGetInt32(CanonMakernoteDirectory.CameraSettings.TagLongFocalLength, longFocal) Then Continue For
+                Dim units As Integer
+                If Not canon.TryGetInt32(CanonMakernoteDirectory.CameraSettings.TagFocalUnitsPerMm, units) OrElse units <= 0 Then units = 1
+                Dim maxAperture As Integer
+                If Not canon.TryGetInt32(CanonMakernoteDirectory.CameraSettings.TagMaxAperture, maxAperture) Then maxAperture = 0
+                Return SelectCanonLens(lensType, shortFocal / CDbl(units), longFocal / CDbl(units),
+                                       CanonApertureToFNumber(maxAperture))
+            Next
             Return ""
+        End Function
+
+        Private Shared ReadOnly FocalRangePattern As New Text.RegularExpressions.Regex(
+            "(\d+(?:\.\d+)?)(?:-(\d+(?:\.\d+)?))?\s*mm", Text.RegularExpressions.RegexOptions.IgnoreCase)
+        Private Shared ReadOnly AperturePattern As New Text.RegularExpressions.Regex(
+            "f/(\d+(?:\.\d+)?)(?:-(\d+(?:\.\d+)?))?", Text.RegularExpressions.RegexOptions.IgnoreCase)
+
+        ''' <summary>Waehlt unter allen Objektiven einer Canon-Nummer das eine, dessen Name zu
+        ''' Brennweitenbereich und Blende passt. Leer, wenn keines oder mehr als eines passt: ein
+        ''' geratenes Profil korrigierte falsch, kein Profil korrigiert nur nicht.
+        '''
+        ''' Ein Name mit "or" ist die Sammelzeile der Nummer ("Canon EF 300mm f/4L IS USM or Sigma
+        ''' Lens") und bleibt aussen vor. Hierher kommt die Abfrage nur, wenn LensModel bloss die
+        ''' Brennweite traegt, und das tun die Gehaeuse bei Fremdobjektiven; ein Canon-Objektiv
+        ''' hat seinen Namen dann schon aus LensModel.</summary>
+        ''' <param name="maxAperture">Groesste Blende an der aktuellen Brennweite als Blendenzahl,
+        ''' 0 wenn unbekannt.</param>
+        Friend Shared Function SelectCanonLens(lensType As Integer, shortFocal As Double, longFocal As Double,
+                                               maxAperture As Double) As String
+            If lensType <= 0 OrElse lensType >= 65535 OrElse shortFocal <= 0 Then Return ""
+            If longFocal < shortFocal Then longFocal = shortFocal
+            Dim number = lensType.ToString(Globalization.CultureInfo.InvariantCulture)
+            Dim found As String = Nothing
+            For Each pair In _canonLenses.Value
+                If pair.Key <> number AndAlso Not pair.Key.StartsWith(number & ".", StringComparison.Ordinal) Then Continue For
+                Dim name = pair.Value
+                If name.Contains(" or ", StringComparison.OrdinalIgnoreCase) Then Continue For
+                Dim focal = FocalRangePattern.Match(name)
+                If Not focal.Success Then Continue For
+                Dim nameShort = ParseNumber(focal.Groups(1).Value)
+                Dim nameLong = If(focal.Groups(2).Success, ParseNumber(focal.Groups(2).Value), nameShort)
+                If Not SameFocal(nameShort, shortFocal) OrElse Not SameFocal(nameLong, longFocal) Then Continue For
+                If maxAperture > 0 Then
+                    Dim aperture = AperturePattern.Match(name)
+                    If aperture.Success Then
+                        Dim wide = ParseNumber(aperture.Groups(1).Value)
+                        Dim tele = If(aperture.Groups(2).Success, ParseNumber(aperture.Groups(2).Value), wide)
+                        ' Eine Zehntelblende Spielraum je Seite: Canon rundet auf Achtel-EV, und
+                        ' 6,17 aus der Kamera meint die f/6,3 des Namens.
+                        If maxAperture < wide * 0.93 OrElse maxAperture > tele * 1.07 Then Continue For
+                    End If
+                End If
+                If found IsNot Nothing Then Return ""
+                found = name
+            Next
+            Return If(found, "")
+        End Function
+
+        ''' Brennweiten aus der Kamera sind ganze Millimeter, die im Namen auch; 1 mm Spielraum
+        ''' fuer Objektive wie das 17,5 mm, das als 17 oder 18 erscheinen kann.
+        Private Shared Function SameFocal(fromName As Double, fromCamera As Double) As Boolean
+            Return Math.Abs(fromName - fromCamera) <= Math.Max(1.0, fromCamera * 0.02)
+        End Function
+
+        Private Shared Function ParseNumber(text As String) As Double
+            Dim value As Double
+            Double.TryParse(text, Globalization.NumberStyles.Float, Globalization.CultureInfo.InvariantCulture, value)
+            Return value
+        End Function
+
+        ''' <summary>Canons Blendenwert in eine Blendenzahl. Die Werte sind EV mal 32, mit zwei
+        ''' Sonderbruechen fuer Drittelstufen (0x0C und 0x14); die Blendenzahl ist 2 hoch EV/2.
+        ''' 0 bei einem fehlenden oder unsinnigen Wert.</summary>
+        Friend Shared Function CanonApertureToFNumber(value As Integer) As Double
+            If value <= 0 OrElse value >= 32767 Then Return 0
+            Dim fraction = value And &H1F
+            Dim adjusted As Double = fraction
+            If fraction = &HC Then
+                adjusted = 32.0 / 3.0
+            ElseIf fraction = &H14 Then
+                adjusted = 64.0 / 3.0
+            End If
+            Return Math.Pow(2.0, (value - fraction + adjusted) / 32.0 / 2.0)
         End Function
 
         ''' <summary>Die Nummer aus dem LensID-Feld eines Sony-Gehaeuses mit A-Bajonett, als Text.
@@ -193,7 +300,10 @@ Namespace Services
                                                           Select(Function(p) "s" & p.Key & "=" & p.Value)) &
                           vbLf &
                           String.Join(vbLf, _pentaxLenses.Value.OrderBy(Function(p) p.Key, StringComparer.Ordinal).
-                                                            Select(Function(p) "p" & p.Key & "=" & p.Value))
+                                                            Select(Function(p) "p" & p.Key & "=" & p.Value)) &
+                          vbLf &
+                          String.Join(vbLf, _canonLenses.Value.OrderBy(Function(p) p.Key, StringComparer.Ordinal).
+                                                           Select(Function(p) "c" & p.Key & "=" & p.Value))
             Using sha = Security.Cryptography.SHA1.Create()
                 Dim hash = sha.ComputeHash(System.Text.Encoding.UTF8.GetBytes(content))
                 Return Convert.ToHexString(hash, 0, 4).ToLowerInvariant()

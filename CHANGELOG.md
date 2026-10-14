@@ -13,6 +13,29 @@
   several Sony Alpha models, now have their own value for the setting that matches the base
   brightness to the camera, and the Fujifilm X-T30 II has its own colours.
 
+- **More from blown highlights.** Recovering highlights from the raw data now brings back more
+  detail in bright skies, pink spots in recovered highlights turn neutral, and when you brighten
+  a picture and pull the highlights down, recovered clouds keep their structure.
+
+- **Faster detail sliders.** Sharpening, noise reduction, clarity, haze, vignette and the other
+  detail and effect sliders respond faster, because the light and colour work underneath them is
+  kept instead of being worked out again.
+
+- **Lens correction for Sigma, Tamron and Tokina lenses on Canon.** Canon cameras store only the
+  focal length for these lenses; FerrumPix now works out the lens from the camera's lens number,
+  focal range and aperture, so the Tamron 17-50 and 18-200, the Sigma 10-20 and many more are
+  recognised. Where the lens cannot be told apart, the correction for a Canon lens of the same
+  focal length is no longer applied by mistake.
+
+### Fixes
+
+- Switching to another picture while depth blur was set but not applied no longer leaves the
+  old picture's blurred preview over the new one.
+
+- Copying, moving, duplicating or dragging a burst takes all of its pictures along, and a tag
+  set on a burst reaches every picture in it; the white balance menu keeps its choice through
+  undo and in saved edits.
+
 ## 0.9.64
 
 ### What's new

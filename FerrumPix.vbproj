@@ -77,5 +77,6 @@
     <EmbeddedResource Include="Resources\NikonLensIds.tsv" />
     <EmbeddedResource Include="Resources\SonyAMountLensIds.tsv" />
     <EmbeddedResource Include="Resources\PentaxLensIds.tsv" />
+    <EmbeddedResource Include="Resources\CanonLensTypes.tsv" />
   </ItemGroup>
 </Project>

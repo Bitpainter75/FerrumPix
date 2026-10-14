@@ -1067,6 +1067,13 @@ Namespace Services
         End Function
 
         Private Shared Function BestLens(lensName As String, camera As CameraEntry) As LensEntry
+            ' Eine Canon schreibt fuer ihre eigenen Objektive den vollen Namen. Steht nur die
+            ' Brennweite da ("24-70mm"), ist es ein Fremdobjektiv, dessen Nummer sich nicht
+            ' aufloesen liess, und ein Canon-Profil derselben Brennweite waere eine fremde Kennlinie.
+            ' Gemessen am Bestand: drei Aufnahmen einer 5D Mark IV mit einem Fremd-24-70 bekamen so
+            ' das Canon EF 24-70mm f/2.8L (Issue #92). Bei anderen Marken bleibt es beim Abgleich.
+            If camera IsNot Nothing AndAlso ExifService.IsFocalLengthOnly(lensName) AndAlso
+               If(camera.Maker, "").StartsWith("Canon", StringComparison.OrdinalIgnoreCase) Then Return Nothing
             Dim best As LensEntry = Nothing
             Dim bestScore As Double = 0
             Dim bestCropDistance As Double = Double.MaxValue

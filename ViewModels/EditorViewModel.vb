@@ -20425,6 +20425,12 @@ Namespace ViewModels
             ReleaseComparisonOriginalSource()
             ImageProcessor.ClearBaseCache()
             TryDisposeStalePreviewSources()
+            ' Die Live-Vorschauen der Werkzeuge sind auf der alten Quelle gerechnet und liegen ueber
+            ' dem Bild. Die Anzeige zieht sie auf den neuen Bildbereich; stehen geblieben zeigten sie
+            ' das vorige Bild verzerrt im Seitenverhaeltnis des neuen (Issue #91).
+            DisposeBokehPreview()
+            DisposeGridPreview()
+            DisposeLinePreview()
 
             ' Den Base-Cache sofort wärmen: EIN initialer Voll-Render nach dem Quellwechsel (async,
             ' gedeckelte Auflösung ~1 s). Ohne ihn bleibt der Cache kalt, bis der Nutzer die erste
@@ -24852,6 +24858,11 @@ Namespace ViewModels
             ' Blieb die Unterdrueckung stehen, zeigte das naechste Bild seine Filmumkehr nicht an,
             ' sobald sie dort eingeschaltet wird: der Regler stuende auf an, das Bild bliebe negativ.
             _suppressNegativeForPick = False
+            ' Die Tiefen-Unschaerfe ist bis zum Anwenden nur eine Vorschau des VORIGEN Bildes.
+            ' Blieb sie stehen, lag sie nach dem Blaettern verzerrt ueber dem neuen Bild (Issue
+            ' #91), und mit ihren Reglern stand "Anwenden" fuer ein Bild bereit, an dem niemand
+            ' etwas eingestellt hatte.
+            ResetBokeh()
             _pixelEditLayer.ResetActiveStroke()
             _isEraserMode = False
             _eraserFillColor = "#00FFFFFF"
