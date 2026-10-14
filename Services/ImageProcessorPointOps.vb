@@ -1259,15 +1259,26 @@ Namespace Services
             Dim expansion = CSng(1.0 + Math.Min(0.75, ev * loweredHighlights * 6.0))
             If expansion <= 1.0F Then Return v
 
-            ' Sanft von 0,82 bis 0,94 einblenden. Die Formel v -> peak-(peak-v)*expansion
-            ' dehnt den Abstand zum Tatsaechlichen Schulter-Weiss, trifft diesen wieder exakt und
-            ' bleibt monoton. Mit 1,0 zu verankern waere falsch: nach positiver Belichtung liegt
+            ' EINE KUBISCHE HERMITE-KURVE zwischen einem unteren Anker und dem tatsaechlichen
+            ' Schulter-Weiss (peak): am Anker Wert und Steigung 1, oben Steigung topSlope, Weiss
+            ' trifft sie exakt. Mit 1,0 zu verankern waere falsch: nach positiver Belichtung liegt
             ' auch ein weisser Eingabepunkt durch die Schulter etwas darunter und wuerde sonst
             ' ungewollt dunkler.
-            Dim fade = Clamp((v - 0.82F) / 0.12F, 0.0F, 1.0F)
-            fade = fade * fade * (3.0F - 2.0F * fade)
-            Dim expanded = peak - (peak - v) * expansion
-            Return Clamp(v + (expanded - v) * fade, 0.0F, 1.0F)
+            '
+            ' Mehr Abstand oben bei festem Weiss heisst zwingend weniger Abstand darunter. Die
+            ' Kurve verteilt das gleichmaessig ueber 0,75 bis Weiss: ihre kleinste Steigung ist
+            ' 1 - (topSlope - 1) / 3, also 0,76 bei Faktor 1,54 und 0,67 am Deckel. Vorher dehnte
+            ' eine Einblendung von 0,82 bis 0,94 den Abstand zum Weiss direkt, und knapp ueber
+            ' 0,82 fiel die Steigung bis 0,26: helle Haut und heller Himmel verloren dort bis zur
+            ' Haelfte ihrer Tonwertstufen. Monoton bleibt sie bis topSlope 2. Der Zuschlag von 35
+            ' Prozent auf die obere Steigung haelt die Dehnung oben mindestens dort, wo sie vorher
+            ' lag (Pruefung "+EV und Lichter erhalten die Zeichnung": 12,2 statt 12,0 Stufen).
+            Const lowAnchor As Single = 0.75F
+            If v <= lowAnchor OrElse peak <= lowAnchor + 0.05F Then Return v
+            Dim topSlope = Math.Min(2.0F, 1.0F + (expansion - 1.0F) * 1.35F)
+            Dim u = Clamp((v - lowAnchor) / (peak - lowAnchor), 0.0F, 1.0F)
+            Dim shaped = u + u * u * (1.0F - u) * (1.0F - topSlope)
+            Return Clamp(lowAnchor + (peak - lowAnchor) * shaped, 0.0F, 1.0F)
         End Function
 
         ''' <summary>Haengt eine Kanalkurve stetig an eine bereits gebaute Tabelle. Ersetzt das
