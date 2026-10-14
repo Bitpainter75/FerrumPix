@@ -275,7 +275,7 @@ Namespace Services
             Dim result As RawContainerInfo
             result.Origin = SKEncodedOrigin.TopLeft
             Try
-                For Each directory In MetadataExtractor.ImageMetadataReader.ReadMetadata(path).
+                For Each directory In ExifService.ReadMetadataDirectories(path).
                                           OfType(Of MetadataExtractor.Formats.Exif.ExifIfd0Directory)()
                     Dim orientation As Integer
                     If Not MetadataExtractor.DirectoryExtensions.TryGetInt32(directory, &H112, orientation) Then Continue For

@@ -241,7 +241,7 @@ Namespace Services
                     Return PlausibleDpi(If(unit = 2, value * 2.54, value))
                 End If
 
-                Dim directories = MetadataExtractor.ImageMetadataReader.ReadMetadata(sourcePath)
+                Dim directories = ExifService.ReadMetadataDirectories(sourcePath)
                 For Each exif In directories.OfType(Of MetadataExtractor.Formats.Exif.ExifIfd0Directory)()
                     Dim resolution As MetadataExtractor.Rational
                     If Not MetadataExtractor.DirectoryExtensions.TryGetRational(exif, MetadataExtractor.Formats.Exif.ExifDirectoryBase.TagXResolution, resolution) Then Continue For

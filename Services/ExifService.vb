@@ -380,7 +380,7 @@ Namespace Services
                                          ReadFpxCompositeMetadata(imagePath),
                                          If(JxlDecodeService.IsSupportedJxl(imagePath),
                                             JxlDecodeService.ReadMetadataDirectories(imagePath),
-                                            ImageMetadataReader.ReadMetadata(imagePath)))
+                                            ReadMetadataDirectories(imagePath)))
                 Dim captureDirectories = If(isFpx, ReadFpxBaseMetadata(imagePath), metaDirectories)
 
                 If isFpx Then
@@ -1058,6 +1058,50 @@ Namespace Services
             Dim result As DateTime
             If DateTime.TryParseExact(raw, "yyyy:MM:dd HH:mm:ss", CultureInfo.InvariantCulture, DateTimeStyles.None, result) Then Return result
             Return Nothing
+        End Function
+
+        ''' <summary>Die Dateitypen, die MetadataExtractor mit seinem TIFF-Leser liest (siehe
+        ''' ImageMetadataReader: TIFF und die meisten RAW-Formate samt DNG).</summary>
+        Private Shared ReadOnly TiffFamily As New HashSet(Of MetadataExtractor.Util.FileType) From {
+            MetadataExtractor.Util.FileType.Tiff, MetadataExtractor.Util.FileType.Dng,
+            MetadataExtractor.Util.FileType.Arw, MetadataExtractor.Util.FileType.Cr2,
+            MetadataExtractor.Util.FileType.Nef, MetadataExtractor.Util.FileType.Orf,
+            MetadataExtractor.Util.FileType.Pef, MetadataExtractor.Util.FileType.Rw2,
+            MetadataExtractor.Util.FileType.Srw, MetadataExtractor.Util.FileType.Kdc,
+            MetadataExtractor.Util.FileType.ThreeFR, MetadataExtractor.Util.FileType.GoPro}
+
+        ''' <summary>Die Metadaten einer Datei, wie <c>ImageMetadataReader.ReadMetadata(Pfad)</c> sie
+        ''' liefert - aber ohne die ganze Datei zu lesen.
+        '''
+        ''' DER GRUND: MetadataExtractor gibt eine TIFF-artige Datei an
+        ''' <c>TiffMetadataReader.ReadMetadata(Stream)</c> weiter, und diese Fassung sammelt alle Bytes
+        ''' bis zur gesuchten Stelle ein (IndexedCapturingReader). Liegen die Verzeichnisse hinter den
+        ''' Bilddaten, wie bei Scans als TIFF oder DNG, ist das die ganze Datei. Gemessen: 144 MB fuer
+        ''' eine 144-MB-TIFF, 141 MB fuer einen Filmscan als DNG; der Katalogindex las sie danach fuer
+        ''' die Kachel ein zweites Mal, ueber eine Netzfreigabe also doppelt (Nutzerbefund: 17000 Scans
+        ''' in sechseinhalb Stunden). Die Fassung mit Pfad springt gezielt (IndexedSeekingReader) und
+        ''' liest dieselbe Datei mit unter 0,1 MB.
+        '''
+        ''' Das Ergebnis ist dasselbe, Verzeichnis fuer Verzeichnis und in derselben Reihenfolge:
+        ''' dieselbe Typerkennung, derselbe TIFF-Leser, dazu wie im Original "File Type" und "File".
+        ''' Jeder Weg, der Metadaten aus einem Pfad liest, geht hierueber.</summary>
+        Public Shared Function ReadMetadataDirectories(path As String) As IReadOnlyList(Of MetadataExtractor.Directory)
+            Dim fileType As MetadataExtractor.Util.FileType
+            Using stream = New FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read)
+                fileType = MetadataExtractor.Util.FileTypeDetector.DetectFileType(stream, path)
+            End Using
+            If Not TiffFamily.Contains(fileType) Then Return ImageMetadataReader.ReadMetadata(path)
+
+            ' Der TIFF-Leser mit Pfad haengt "File" schon selbst an, als letztes Verzeichnis. Das
+            ' Original liefert [TIFF-Verzeichnisse, File Type, File]; "File Type" gehoert also VOR
+            ' das vorhandene "File", und ein zweites "File" darf nicht dazukommen - sonst stuenden
+            ' Dateiname, Groesse und Aenderungszeit doppelt in den technischen Angaben.
+            Dim result As New List(Of MetadataExtractor.Directory)(
+                MetadataExtractor.Formats.Tiff.TiffMetadataReader.ReadMetadata(path))
+            Dim fileDirectory = result.FindLastIndex(Function(d) TypeOf d Is MetadataExtractor.Formats.FileSystem.FileMetadataDirectory)
+            result.Insert(If(fileDirectory < 0, result.Count, fileDirectory),
+                          New MetadataExtractor.Formats.FileType.FileTypeDirectory(fileType))
+            Return result
         End Function
 
         ''' <summary>Sucht einen Tag über ALLE Verzeichnisse des angegebenen Typs und liefert den ersten

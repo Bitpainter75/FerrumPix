@@ -3261,7 +3261,7 @@ Namespace Services
                 ' Dasselbe bei Olympus ORF (Graustufen 1), Sony SRF, Kodak KDC und Leaf MOS.
                 ' Nur bei DNG steht im Vollbild verlaesslich, was es ist.
                 If Not path.EndsWith(".dng", StringComparison.OrdinalIgnoreCase) Then Return False
-                Dim directories = MetadataExtractor.ImageMetadataReader.ReadMetadata(path)
+                Dim directories = ExifService.ReadMetadataDirectories(path)
 
                 ' AUSNAHME FUER CHDK, und zwar eine bewusst enge.
                 '
@@ -3359,7 +3359,7 @@ Namespace Services
                     Dim viaLibRaw = CameraBaselineTable.BaseExposureFor(facts.NormalizedMake, facts.NormalizedModel, BaseExposureEv)
                     If viaLibRaw <> BaseExposureEv Then Return viaLibRaw
                 End If
-                Dim verzeichnisse = MetadataExtractor.ImageMetadataReader.ReadMetadata(path)
+                Dim verzeichnisse = ExifService.ReadMetadataDirectories(path)
                 Dim ifd0 = verzeichnisse.OfType(Of MetadataExtractor.Formats.Exif.ExifIfd0Directory)().FirstOrDefault()
                 If ifd0 Is Nothing Then Return BaseExposureEv
                 Return CameraBaselineTable.BaseExposureFor(
@@ -3382,7 +3382,7 @@ Namespace Services
                 If facts IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(facts.NormalizedModel) Then
                     Return CameraBaselineTable.ColorCalibrationFor(facts.NormalizedMake, facts.NormalizedModel)
                 End If
-                Dim verzeichnisse = MetadataExtractor.ImageMetadataReader.ReadMetadata(path)
+                Dim verzeichnisse = ExifService.ReadMetadataDirectories(path)
                 Dim ifd0 = verzeichnisse.OfType(Of MetadataExtractor.Formats.Exif.ExifIfd0Directory)().FirstOrDefault()
                 If ifd0 Is Nothing Then Return CameraBaselineTable.DefaultColorCalibration
                 Return CameraBaselineTable.ColorCalibrationFor(
@@ -3437,7 +3437,7 @@ Namespace Services
 
             Dim stops As Double = 0.0
             Try
-                Dim verzeichnisse = MetadataExtractor.ImageMetadataReader.ReadMetadata(path)
+                Dim verzeichnisse = ExifService.ReadMetadataDirectories(path)
                 If isRaf Then
                     Dim ifd0Raf = verzeichnisse.OfType(Of MetadataExtractor.Formats.Exif.ExifIfd0Directory)().FirstOrDefault()
                     Dim percent = FujiDynamicRangePercent(ifd0Raf?.GetDescription(MetadataExtractor.Formats.Exif.ExifDirectoryBase.TagModel),

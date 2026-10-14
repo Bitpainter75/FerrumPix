@@ -113,7 +113,7 @@ Namespace Services
             Try
                 Dim directories = If(JxlDecodeService.IsSupportedJxl(sourcePath),
                                      JxlDecodeService.ReadMetadataDirectories(sourcePath),
-                                     ImageMetadataReader.ReadMetadata(sourcePath))
+                                     ExifService.ReadMetadataDirectories(sourcePath))
                 Dim ifd0 = CollectIfd0Fields(directories)
                 Dim exif = CollectExifFields(directories)
                 ' DER AUFNAHMEORT WIRD VOR DER SUBSTANZFRAGE GELESEN, weil er selbst Substanz ist.

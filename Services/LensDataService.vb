@@ -728,7 +728,7 @@ Namespace Services
 
             Dim result As Korrektur = Nothing
             Try
-                Dim directories = MetadataExtractor.ImageMetadataReader.ReadMetadata(path)
+                Dim directories = ExifService.ReadMetadataDirectories(path)
                 ' NICHT das erste Verzeichnis nehmen, sondern das erste mit einem belegten Wert.
                 ' RAW-Container (ARW/DNG/NEF) zeigen ueber den TIFF-Eintrag "SubIFDs" auf ihre
                 ' Vorschaubilder, und jedes davon wird ebenfalls ein "Exif SubIFD". Da TIFF die
@@ -1005,7 +1005,7 @@ Namespace Services
         Public Shared Function ResolveLensNameForFile(path As String, Optional modelOverride As String = "") As String
             If String.IsNullOrWhiteSpace(path) Then Return ""
             Try
-                Dim directories = MetadataExtractor.ImageMetadataReader.ReadMetadata(path)
+                Dim directories = ExifService.ReadMetadataDirectories(path)
                 Dim maker = ExifService.GetTagDescAcross(Of MetadataExtractor.Formats.Exif.ExifIfd0Directory)(
                     directories, MetadataExtractor.Formats.Exif.ExifDirectoryBase.TagMake)
                 Dim model = ExifService.GetTagDescAcross(Of MetadataExtractor.Formats.Exif.ExifIfd0Directory)(

@@ -1,3 +1,12 @@
+## 0.9.66
+
+### Fixes
+
+- Scans saved as TIFF or DNG are read far less often: reading their details no longer loads the
+  whole file, so indexing watched folders, opening a picture in the editor and the info panel are
+  much quicker on a network drive. A film scan as DNG used to travel over the network up to four
+  times, now about once.
+
 ## 0.9.65
 
 ### What's new
