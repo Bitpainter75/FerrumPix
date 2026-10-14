@@ -258,9 +258,8 @@ The packages are self-contained and bring the .NET runtime with them, so nothing
 installed for that.
 
 libmpv (video) and libraw (RAW development) are needed rather than optional. The Linux
-packages ask for both, the Windows downloads bring them along. The Flatpak has LibRaw built
-in but no libmpv, so it plays no video, and on macOS libraw comes from Homebrew with
-"brew install libraw".
+packages ask for both, the Windows downloads and the Flatpak bring them along, and on macOS
+libraw comes from Homebrew with "brew install libraw". Subtitles are not shown.
 
 libheif opens HEIC and HEIF. The Windows downloads bring it along, on Linux it comes from
 your package manager (the packages recommend it), and macOS reads those files itself.

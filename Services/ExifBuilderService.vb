@@ -255,7 +255,12 @@ Namespace Services
             AddAscii(fields, TagDateTimeOriginal, FindText(Of ExifSubIfdDirectory)(directories, ExifDirectoryBase.TagDateTimeOriginal))
             AddAscii(fields, TagDateTimeDigitized, FindText(Of ExifSubIfdDirectory)(directories, ExifDirectoryBase.TagDateTimeDigitized))
             AddAscii(fields, TagLensMake, FindText(Of ExifSubIfdDirectory)(directories, ExifDirectoryBase.TagLensMake))
-            AddAscii(fields, TagLensModel, FindText(Of ExifSubIfdDirectory)(directories, ExifDirectoryBase.TagLensModel))
+            ' DERSELBE Name, den die Anwendung anzeigt, nicht nur das EXIF-Feld: viele Gehaeuse
+            ' tragen das Objektiv nur im Herstellerteil oder als Nummer (aeltere Canon, Nikon,
+            ' Sony A, Pentax), und den Herstellerteil nimmt dieser neu gebaute Block nicht mit.
+            ' Eine RAW als JPEG gespeichert stand sonst ohne Objektiv da, obwohl FerrumPix es an
+            ' der RAW erkannt hatte (Nutzerbefund: Sigma 50mm Macro an einer Sony).
+            AddAscii(fields, TagLensModel, ExifService.GetLensDescription(directories))
 
             AddRational(fields, TagExposureTime, FindRational(Of ExifSubIfdDirectory)(directories, ExifDirectoryBase.TagExposureTime))
             AddRational(fields, TagFNumber, FindRational(Of ExifSubIfdDirectory)(directories, ExifDirectoryBase.TagFNumber))

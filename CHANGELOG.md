@@ -27,10 +27,19 @@
   recognised. Where the lens cannot be told apart, the correction for a Canon lens of the same
   focal length is no longer applied by mistake.
 
+- **Videos in the Flatpak.** The Flatpak now brings its own video player along, so videos get
+  their thumbnails in the gallery and play in the viewer, with sound.
+
 ### Fixes
 
 - Switching to another picture while depth blur was set but not applied no longer leaves the
   old picture's blurred preview over the new one.
+
+- Bright, almost white areas in RAW files, such as lit fluorescent tubes or a sunny patch, no
+  longer turn pink, also without recovering highlights.
+
+- A RAW saved as JPEG, PNG or another format keeps the name of its lens, also where the camera
+  stores the lens only in its own data.
 
 - Copying, moving, duplicating or dragging a burst takes all of its pictures along, and a tag
   set on a burst reaches every picture in it; the white balance menu keeps its choice through

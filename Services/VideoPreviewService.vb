@@ -51,6 +51,9 @@ Namespace Services
                 SetOption(handle, "input-default-bindings", "no")
                 SetOption(handle, "osc", "no")
                 SetOption(handle, "audio", "no")
+                ' Ohne Untertitel, sonst landete eine eingeblendete Zeile im Standbild der Kachel.
+                SetOption(handle, "sid", "no")
+                SetOption(handle, "sub-auto", "no")
                 SetOption(handle, "pause", "yes")
                 SetOption(handle, "keep-open", "yes")
                 SetOption(handle, "hwdec", "no")

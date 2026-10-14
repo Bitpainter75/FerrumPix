@@ -2362,8 +2362,14 @@ Namespace Services
                                                                      Optional ByRef builtTone As SKBitmap = Nothing) As SKBitmap
             ' Copy-on-write: die Kette startet auf der FREMDEN Quelle und kopiert erst, wenn eine Stufe
             ' wirklich ein neues Bild liefert. Siehe ReplaceBitmapOwned.
+            '
+            ' Ein gemerkter Tonstand kommt als ABSCHRIFT herein, die der Kette gehoert: sie gilt
+            ' deshalb gleich als eigen. Sonst kopierte TakeOwnership am Ende ein zweites Mal, obwohl
+            ' schon die Abschrift eine Kopie war - eine Vollkopie je Schritt an einem Detailregler.
+            ' Die Kette entsorgt sie selbst, sobald eine Stufe ein neues Bild liefert; der Aufrufer
+            ' fasst sie danach nicht mehr an.
             Dim processed As SKBitmap = If(cachedTone, source)
-            Dim owned = False
+            Dim owned = cachedTone IsNot Nothing
 
             ' EIN MESSPUNKT UM DIE GANZE GEOMETRIE. Diese acht Stufen haengen ausschliesslich an den
             ' Geometriewerten - kein Ton-, Farb- oder Effektregler, keine Retusche und keine Maske
@@ -3875,8 +3881,9 @@ Namespace Services
                     cachedTone = CloneBitmap(_toneCacheBitmap)
                 End If
                 Dim builtTone As SKBitmap = Nothing
+                ' Die Abschrift cachedTone gehoert ab hier der Kette: entweder ist sie das Ergebnis,
+                ' oder die Kette hat sie beim Ersetzen schon entsorgt.
                 preMask = ProcessBitmapBaseBeforeMaskedLayers(source, adj, cachedTone, builtTone)
-                If cachedTone IsNot Nothing AndAlso Not Object.ReferenceEquals(preMask, cachedTone) Then cachedTone.Dispose()
                 If builtTone IsNot Nothing Then
                     _toneCacheBitmap?.Dispose()
                     _toneCacheBitmap = builtTone

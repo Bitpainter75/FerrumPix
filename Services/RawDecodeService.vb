@@ -3110,12 +3110,19 @@ Namespace Services
                                 r = rowShorts(x * 3) And &HFFFF
                                 b = rowShorts(x * 3 + 2) And &HFFFF
                             End If
-                            ' Entklemmen holt in manchen RAWs noch Rot und Blau oberhalb des
-                            ' Weisspunkts, waehrend Gruen bereits abgeschnitten ist. Ohne eine
-                            ' gezielte Farbrekonstruktion wird daraus ein pinker Glanzpunkt. Nur
-                            ' die explizite Lichterrettung darf daran drehen: ein echtes helles
-                            ' Magenta bleibt mit ausgeschalteter Rettung unveraendert.
-                            If knee < 1.0 Then RecoverMagentaHighlight(r, g, b)
+                            ' Rosa Lichter entstehen auf BEIDEN Wegen. Mit Entklemmen holt LibRaw Rot
+                            ' und Blau oberhalb des Weisspunkts, waehrend Gruen schon abgeschnitten
+                            ' ist. Ohne Entklemmen (Lichtermodus Beschnitt) schneidet LibRaw jeden
+                            ' Kamerakanal NACH dem Weissabgleich einzeln ab: Rot und Blau mit ihren
+                            ' groesseren Faktoren erreichen die Grenze vor Gruen, ein heller, fast
+                            ' neutraler Bereich kommt als 1,0 / 0,9 / 1,0 an, und die Farbmatrix
+                            ' zieht im sRGB-Gruen Rot und Blau ab - aus dem kleinen Gruenmangel
+                            ' wird deutliches Rosa, ganz ohne Sensorsaettigung (Leuchtstoffroehren
+                            ' und Sonnenfleck einer RX100 II, Adobe zeigt beides weiss). Deshalb
+                            ' laeuft die Korrektur immer. Gemessen an 60 Bestandsdateien ohne
+                            ' Rettung: sichtbar mehr als 0,1 Prozent der Flaeche nur bei zweien,
+                            ' beide rosa Lichter; echte Farben wie Petunien bleiben unberuehrt.
+                            RecoverMagentaHighlight(r, g, b)
                             ' DIESELBE Schwelle fuer alle drei Kanaele eines Pixels (wie in der
                             ' Punktoperationskette): kanalweise verschiedene Schwellen faerben neutrale
                             ' Flaechen ein. (v*255 + T) \ 65535 liegt fuer T < 65535 immer in 0..255,
@@ -3148,7 +3155,7 @@ Namespace Services
 
         ''' <summary>Ergaenzt fehlendes Gruen in teils ausgefressenen, hellen Lichtern.
         '''
-        ''' Wird nur hinter LibRaws Entklemmung eingesetzt. Die Staerke steigt weich ab der
+        ''' Laeuft mit und ohne Entklemmung, siehe die Aufrufstelle. Die Staerke steigt weich ab der
         ''' halben linearen Aussteuerung; damit bleiben farbige Mitteltöne und nicht betroffene
         ''' helle Bildpunkte unveraendert. Der Zielwert liegt knapp unter dem kleineren der roten
         ''' und blauen Werte, damit nicht aus jedem warmen Licht reines Weiss wird.</summary>

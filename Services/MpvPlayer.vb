@@ -536,6 +536,10 @@ Namespace Services
                 SetOptionStringRaw("input-default-bindings", "no")
                 SetOptionStringRaw("osc", "no")
                 SetOptionStringRaw("keep-open", "no")
+                ' Untertitel unterstuetzt die Anwendung nicht. Ohne diese beiden Zeilen blendete mpv
+                ' eine als Standard markierte Spur oder eine .srt neben dem Video von sich aus ein.
+                SetOptionStringRaw("sid", "no")
+                SetOptionStringRaw("sub-auto", "no")
 
                 If _usesRenderSurface Then
                     ' Kein Fenster: mpv gibt das fertige Bild heraus. Die Bildbeschleunigung muss
