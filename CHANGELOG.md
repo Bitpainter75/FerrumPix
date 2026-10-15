@@ -16,6 +16,9 @@
 - The Flatpak no longer looks for a newer version on GitHub; updates come through the software
   manager that installed it.
 
+- In the Flatpak, pictures in a folder you shared through the system's folder dialog can be
+  renamed, moved and deleted again, like on a second drive.
+
 ## 0.9.65
 
 ### What's new

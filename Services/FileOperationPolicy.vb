@@ -59,7 +59,35 @@ Namespace Services
             If String.IsNullOrEmpty(root) OrElse PathIdentity.Comparer.Equals(NormalizePath(full), NormalizePath(root)) Then Return True
             ' /run gehoert dem System, aber unter /run/media haengt Linux die Laufwerke ein.
             If Not OperatingSystem.IsWindows() AndAlso IsAncestorOrSelf("/run/media", full) Then Return False
+            If IsInDocumentPortal(full) Then Return False
             Return SystemFolders().Any(Function(s) IsAncestorOrSelf(s, full))
+        End Function
+
+        ''' <summary>Wo das Dokument-Portal im Flatpak die Ordner einhaengt, die der Nutzer ueber den
+        ''' Dialog des Systems freigegeben hat: $XDG_RUNTIME_DIR/doc, also /run/user/UID/doc.
+        '''
+        ''' NUR IM FLATPAK gesetzt, erkannt an FLATPAK_ID wie beim Update-Check. Die Sandbox sieht ab
+        ''' Werk nur Bilder, Downloads und die Laufwerke; jeder andere Ordner kommt ueber das Portal
+        ''' und liegt dann unter /run, das sonst ganz dem System gehoert. Ausserhalb des Flatpak bleibt
+        ''' /run/user gesperrt wie bisher. Leer heisst: keine Ausnahme.</summary>
+        Public Shared Property DocumentPortalRoot As String = FindDocumentPortalRoot()
+
+        Private Shared Function FindDocumentPortalRoot() As String
+            If OperatingSystem.IsWindows() OrElse
+               String.IsNullOrEmpty(Environment.GetEnvironmentVariable("FLATPAK_ID")) Then Return ""
+            Dim runtimeDir = Environment.GetEnvironmentVariable("XDG_RUNTIME_DIR")
+            If String.IsNullOrEmpty(runtimeDir) Then Return ""
+            Return IO.Path.Combine(runtimeDir, "doc")
+        End Function
+
+        ''' <summary>Liegt der Pfad IN einer Freigabe des Dokument-Portals? Das heisst mindestens zwei
+        ''' Ebenen unter dem Portal: doc/KENNUNG/ORDNER. Das Portal selbst und die Kennungsordner
+        ''' darunter verwaltet das Portal; die bleiben Systempfade und damit gesperrt.</summary>
+        Private Shared Function IsInDocumentPortal(full As String) As Boolean
+            Dim root = DocumentPortalRoot
+            If String.IsNullOrEmpty(root) OrElse Not IsAncestorOrSelf(root, full) Then Return False
+            Dim relative = IO.Path.GetRelativePath(root, full)
+            Return relative.Split(IO.Path.DirectorySeparatorChar, StringSplitOptions.RemoveEmptyEntries).Length >= 2
         End Function
 
         Private Shared ReadOnly _unixSystemFolders As String() = {
