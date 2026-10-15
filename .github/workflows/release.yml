@@ -15,8 +15,8 @@
 # DIE AUR IST EIN EIGENER HANDLAUF (aur.yml), danach und nur auf Ansage. Sie nimmt das normale
 # Linux-ZIP aus dem schon veroeffentlichten Release; dieser Lauf fasst sie nicht an.
 #
-# DER FLATPAK GEHT NICHT MEHR INS RELEASE (Patrick am 2026-10-15): er kommt ueber Flathub. Sein
-# Bau ist ein eigener Handlauf (flatpak.yml), der das Bundle nur als Artefakt am Lauf ablegt.
+# DER FLATPAK GEHT NICHT MEHR INS RELEASE (Patrick am 2026-10-15): er kommt ueber Flathub. Einen
+# eigenen Lauf fuer ihn gibt es nicht; gebaut wird er lokal mit package.sh flatpak.
 #
 # DIE MSIX GEHT NICHT INS RELEASE. Ein Store-Paket wird unsigniert eingereicht, der Store signiert
 # selbst - und unsigniert laesst Windows es nicht installieren. Es steht als Artefakt am Lauf, von
