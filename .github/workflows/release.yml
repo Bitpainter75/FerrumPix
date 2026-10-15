@@ -4,13 +4,18 @@
 # frei, fuer private werden sie gegen das Monatskontingent gerechnet. Ein voller Lauf ueber alle
 # Plattformen ist nicht kurz.
 #
-# EIN LAUF FUER ALLE PAKETE. Eine neue Version wird als Entwurf mit ALLEN Dateien aufgebaut und
+# EIN LAUF FUER ALLE PAKETE AUSSER MACOS. Eine neue Version wird als Entwurf mit ALLEN Dateien aufgebaut und
 # auf einmal veroeffentlicht (siehe publish-github-release.sh), und dafuer muessen alle Pakete im
 # selben Lauf fertig werden.
 #
 # DER AUFBAU: je ein Job baut (Pakete, MSIX), legt seine Dateien als Artefakt ab, ein Job
 # sammelt sie ein und veroeffentlicht in einem Zug. Faellt ein Bau-Job aus, laeuft nichts
 # danach - ein halber Satz Pakete darf nie ins Release.
+#
+# MACOS IST EIN EIGENER HANDLAUF (macos.yml), danach (Patrick am 2026-10-15). Er baut beide
+# macOS-ZIPs, auf Wunsch vorher LibRaw auf echten Macs, und haengt die ZIPs an das Release
+# DESSELBEN Builds an (publish-github-release.sh --attach). Bis er gelaufen ist, steht eine neue
+# Version ohne macOS-Pakete da; die der vorigen bleiben im archivierten Release.
 #
 # DIE AUR IST EIN EIGENER HANDLAUF (aur.yml), danach und nur auf Ansage. Sie nimmt das normale
 # Linux-ZIP aus dem schon veroeffentlichten Release; dieser Lauf fasst sie nicht an.
@@ -73,7 +78,6 @@ on:
           - rpm
           - winzip
           - winsetup
-          - maczip
           - armzip
           - msix
       paketversion:
@@ -159,7 +163,7 @@ jobs:
       # rund 27 Sekunden je Durchgang.
       #
       # DIE REIHENFOLGE IST NACH WICHTIGKEIT: Linux-ZIP und AppImage zuerst, dann deb und rpm,
-      # dann Windows, dann macOS, und ganz zuletzt ARM.
+      # dann Windows, und ganz zuletzt ARM. macOS steht nicht hier, siehe Kopf der Datei.
       - name: Paket - Linux-ZIP
         if: ${{ env.PAKETE == 'alle' || env.PAKETE == 'zip' }}
         run: packaging/package.sh zip
@@ -193,12 +197,6 @@ jobs:
       - name: Paket - Windows-Setup
         if: ${{ env.PAKETE == 'alle' || env.PAKETE == 'winsetup' }}
         run: packaging/package.sh winsetup
-        env:
-          FERRUMPIX_BUILD_BOX: ""
-
-      - name: Paket - macOS-ZIPs (x64 + arm64)
-        if: ${{ env.PAKETE == 'alle' || env.PAKETE == 'maczip' }}
-        run: packaging/package.sh maczip
         env:
           FERRUMPIX_BUILD_BOX: ""
 

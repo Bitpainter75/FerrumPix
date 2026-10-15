@@ -1,0 +1,154 @@
+# Vorlage. Gehoert ins OEFFENTLICHE Repo nach .github/workflows/macos.yml
+#
+# ALLES FUER MACOS IN EINEM EIGENEN LAUF, getrennt vom Release (Patrick am 2026-10-15). release.yml
+# baut kein macOS mehr. Dieser Lauf baut die beiden unsignierten .app-ZIPs (x64 und arm64) und
+# haengt sie an das Release an, das release.yml fuer DENSELBEN Build angelegt hat.
+#
+# Ablauf bei einer neuen Version oder einem neuen Paketstand:
+#   1. release.yml laufen lassen (legt das Release an, ohne macOS).
+#   2. Diesen Lauf starten. Er bricht ab, wenn das Release einen anderen Build traegt als VERSION
+#      (publish-github-release.sh --attach), statt Pakete unter falschem Titel abzulegen. Titel und
+#      Tags fasst er nicht an.
+# Bis Schritt 2 gelaufen ist, steht die neue Version ohne macOS-Pakete da.
+#
+# LIBRAW: ab Werk nimmt der Lauf die eingecheckten, geprueften Bibliotheken aus
+# packaging/libraw/osx-*. Mit "libraw_neu" baut er sie vorher auf ECHTEN Macs neu
+# (libraw/build-macos.sh, je Architektur nativ, mit Ladeprobe an den Test-RAWs) und packt diese
+# frischen ein. Sie stehen dann zusaetzlich als Artefakt am Lauf und gehoeren danach ins Build-Repo,
+# samt Pruefsummen in ci/binaries.sha256 und libraw/osx-*/licenses/THIRD-PARTY-libraw.txt - sonst
+# packt der naechste Lauf ohne den Schalter wieder die alten.
+#
+# Die Pakete selbst entstehen auf Ubuntu, wie bisher im Release: package.sh setzt GNU-Werkzeuge
+# und eine neue bash voraus, die macOS nicht mitbringt, und dotnet publish baut fuer osx-* auch
+# unter Linux. Nur LibRaw braucht einen Mac.
+#
+# Im oeffentlichen Repo, weil macOS-Minuten in einem privaten zehnfach zaehlen.
+
+name: macOS
+
+on:
+  workflow_dispatch:
+    inputs:
+      libraw_neu:
+        description: "LibRaw vorher auf Macs neu bauen und einpacken (sonst die eingecheckte)"
+        type: boolean
+        default: false
+      libraw_version:
+        description: "Nur mit libraw_neu: LibRaw-Fassung (leer: die Vorgabe in build-macos.sh)"
+        type: string
+        required: false
+        default: ""
+      veroeffentlichen:
+        description: "Die ZIPs an das Release anhaengen (sonst nur als Artefakt am Lauf)"
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+
+jobs:
+
+  libraw:
+    name: LibRaw ${{ matrix.arch }}
+    if: ${{ inputs.libraw_neu }}
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - arch: arm64
+            runner: macos-15
+          - arch: x64
+            runner: macos-15-intel
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
+    permissions:
+      contents: read
+
+    steps:
+      # Nur das Build-Repo: Skript, Pruefprogramm und Test-RAWs liegen alle dort.
+      - uses: actions/checkout@v7
+        with:
+          repository: Bitpainter75/FerrumPix-Build
+          path: packaging
+          ssh-key: ${{ secrets.PACKAGING_DEPLOY_KEY }}
+
+      - name: Bauen und pruefen
+        run: packaging/libraw/build-macos.sh ${{ matrix.arch }} ${{ inputs.libraw_version }}
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: libraw-osx-${{ matrix.arch }}
+          path: |
+            packaging/libraw/osx-${{ matrix.arch }}-build/libraw.dylib
+            packaging/libraw/osx-${{ matrix.arch }}-build/HERKUNFT.txt
+          if-no-files-found: error
+          retention-days: 14
+
+  pakete:
+    name: macOS-ZIPs
+    runs-on: ubuntu-latest
+    needs: [libraw]
+    # Uebersprungenes LibRaw (Schalter aus) haelt nichts auf, ein gescheitertes schon: dann
+    # entstuenden Pakete mit der alten Bibliothek, obwohl eine neue verlangt war.
+    if: ${{ always() && (needs.libraw.result == 'success' || needs.libraw.result == 'skipped') }}
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/checkout@v7
+        with:
+          repository: Bitpainter75/FerrumPix-Build
+          path: packaging
+          ssh-key: ${{ secrets.PACKAGING_DEPLOY_KEY }}
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Werkzeuge
+        run: |
+          for cmd in zip jq xz sha256sum; do
+            command -v "$cmd" >/dev/null || { echo "Fehlt auf dem Laeufer: $cmd" >&2; exit 1; }
+          done
+
+      # Prueft die eingecheckten Dateien gegen ci/binaries.sha256, die macOS-LibRaw eingeschlossen.
+      - name: Fremdbinaerdateien pruefen
+        run: packaging/ci/ensure-binaries.sh
+
+      - uses: actions/download-artifact@v8
+        if: ${{ inputs.libraw_neu }}
+        with:
+          path: libraw-neu
+          pattern: libraw-osx-*
+
+      # Erst NACH der Pruefung oben: die frischen Dateien haben andere Pruefsummen als die
+      # eingecheckten, und das ist hier gewollt.
+      - name: Frisch gebaute LibRaw einsetzen
+        if: ${{ inputs.libraw_neu }}
+        run: |
+          for arch in arm64 x64; do
+            src="libraw-neu/libraw-osx-$arch"
+            dst="packaging/libraw/osx-$arch"
+            cp "$src/libraw.dylib" "$dst/libraw.dylib"
+            cp "$src/HERKUNFT.txt" "$dst/licenses/HERKUNFT.txt"
+            echo "osx-$arch: $(sha256sum "$dst/libraw.dylib" | cut -d' ' -f1)"
+          done
+
+      - name: Paket - macOS-ZIPs (x64 + arm64)
+        run: packaging/package.sh maczip
+        env:
+          FERRUMPIX_BUILD_BOX: ""
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: macos-pakete
+          path: packaging/build/FerrumPix*-unsigned.app.zip
+          if-no-files-found: error
+          retention-days: 3
+
+      - name: An das Release anhaengen
+        if: ${{ inputs.veroeffentlichen }}
+        run: packaging/publish-github-release.sh --attach
+        env:
+          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
