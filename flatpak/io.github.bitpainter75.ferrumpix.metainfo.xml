@@ -99,7 +99,7 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
-    <release version="0.9.65-3" date="2026-10-15">
+    <release version="0.9.65-4" date="2026-10-15">
       <description>
         <p>This update makes it easier to compare slider settings, improves lens detection on Canon cameras and fixes a few issues with bright areas in RAW images:</p>
         <p xml:lang="de">Mit diesem Update lassen sich Reglereinstellungen leichter vergleichen. Außerdem werden Fremdobjektive an Canon-Kameras besser erkannt und einige Probleme mit hellen Bildbereichen in RAW-Dateien behoben:</p>
