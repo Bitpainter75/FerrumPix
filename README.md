@@ -196,7 +196,6 @@ All packages are in the [latest release](https://github.com/Bitpainter75/FerrumP
 | Package | For | File ends in |
 |---|---|---|
 | AppImage | Any distribution, runs without installing | -x86_64.AppImage |
-| Flatpak | Any distribution with Flatpak, sandboxed | .flatpak |
 | DEB | Debian, Ubuntu, Mint (amd64) | -amd64.deb |
 | RPM | Fedora, openSUSE (x86_64) | -x86_64.rpm |
 | ZIP | Portable, unpack and run (x64) | -linux-x64.zip |
@@ -258,7 +257,7 @@ The packages are self-contained and bring the .NET runtime with them, so nothing
 installed for that.
 
 libmpv (video) and libraw (RAW development) are needed rather than optional. The Linux
-packages ask for both, the Windows downloads and the Flatpak bring them along, and on macOS
+packages ask for both, the Windows downloads bring them along, and on macOS
 libraw comes from Homebrew with "brew install libraw". Subtitles are not shown.
 
 libheif opens HEIC and HEIF. The Windows downloads bring it along, on Linux it comes from
@@ -266,7 +265,7 @@ your package manager (the packages recommend it), and macOS reads those files it
 Without it they simply stay closed and everything else works.
 
 libjxl opens and saves JPEG XL. The Windows downloads bring it along, on Linux it comes from your package
-manager (the packages recommend it, the Flatpak has it built in), and on macOS from Homebrew with
+manager (the packages recommend it), and on macOS from Homebrew with
 "brew install jpeg-xl".
 
 ## Building from source
