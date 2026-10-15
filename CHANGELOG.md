@@ -1,5 +1,11 @@
 ## 0.9.66
 
+### What's new
+
+- **RAW development on macOS without Homebrew.** The Mac packages now bring their own LibRaw, so
+  RAW files are developed from the sensor data even if nothing is installed. A LibRaw from
+  Homebrew is still preferred when it is there.
+
 ### Fixes
 
 - Scans saved as TIFF or DNG are read far less often: reading their details no longer loads the
