@@ -43,15 +43,50 @@ Namespace Services
                 Return client
             End Function)
 
-        ''' <summary>Fragt diese Fassung überhaupt nach? Im Flatpak nicht: dort kommt die
-        ''' Aktualisierung über die Paketverwaltung (Flathub), und ein Hinweis auf die
-        ''' GitHub-Releases führte am Weg vorbei, den der Nutzer gewählt hat. Erkannt wird das an
-        ''' FLATPAK_ID, die flatpak in jeder Sandbox setzt. Gilt auch für das Bundle aus dem Release.</summary>
+        ''' <summary>Fragt diese Fassung überhaupt nach? Im Flatpak und in der Fassung aus dem
+        ''' Microsoft Store nicht: dort kommt die Aktualisierung über die Paketverwaltung (Flathub
+        ''' oder den Store), und ein Hinweis auf die GitHub-Releases führte am Weg vorbei, den der
+        ''' Nutzer gewählt hat. Den Flatpak erkennt FerrumPix an FLATPAK_ID, die flatpak in jeder
+        ''' Sandbox setzt (gilt auch für das Bundle aus dem Release), die Store-Fassung daran, dass
+        ''' sie als MSIX-Paket läuft (<see cref="IsStorePackage"/>).</summary>
         Public Shared ReadOnly Property IsEnabled As Boolean
             Get
-                Return String.IsNullOrEmpty(Environment.GetEnvironmentVariable("FLATPAK_ID"))
+                Return String.IsNullOrEmpty(Environment.GetEnvironmentVariable("FLATPAK_ID")) AndAlso
+                       Not IsStorePackage
             End Get
         End Property
+
+        ''' <summary>Läuft diese Fassung als MSIX-Paket? Das MSIX geht nur in den Store; die
+        ''' Windows-Pakete aus dem Release (Setup und ZIP) laufen ohne Paketidentität.
+        '''
+        ''' Gefragt wird Windows selbst: GetCurrentPackageFullName meldet ohne Paket
+        ''' APPMODEL_ERROR_NO_PACKAGE (15700), mit Paket ERROR_INSUFFICIENT_BUFFER (122), weil der
+        ''' Puffer hier mit Länge null übergeben wird. Den Namen selbst braucht es nicht. Einmal je
+        ''' Programmlauf, die Antwort ändert sich nicht.</summary>
+        Public Shared ReadOnly Property IsStorePackage As Boolean
+            Get
+                Return _isStorePackage.Value
+            End Get
+        End Property
+
+        Private Shared ReadOnly _isStorePackage As New Lazy(Of Boolean)(
+            Function()
+                If Not OperatingSystem.IsWindowsVersionAtLeast(8) Then Return False
+                Try
+                    Dim length As Integer = 0
+                    Return GetCurrentPackageFullName(length, IntPtr.Zero) = ErrorInsufficientBuffer
+                Catch ex As Exception
+                    DiagnosticLogService.LogException("Aktualisierung.Paketpruefung", ex)
+                    Return False
+                End Try
+            End Function)
+
+        Private Const ErrorInsufficientBuffer As Integer = 122
+
+        <Runtime.InteropServices.DllImport("kernel32.dll", CharSet:=Runtime.InteropServices.CharSet.Unicode)>
+        Private Shared Function GetCurrentPackageFullName(ByRef packageFullNameLength As Integer,
+                                                          packageFullName As IntPtr) As Integer
+        End Function
 
         ''' <summary>Holt die veröffentlichte Nummer. Leerer Text heißt: nicht erreichbar oder
         ''' unbrauchbare Antwort - in beiden Fällen wird nichts angezeigt. Im Flatpak wird gar

@@ -106,6 +106,8 @@ Namespace Services
             Try
                 If OperatingSystem.IsMacOS() Then
                     answer = New WindowButtonLayout(True, DefaultOrderLeft)
+                ElseIf Not String.IsNullOrEmpty(Environment.GetEnvironmentVariable("FLATPAK_ID")) Then
+                    answer = ReadPortalLayout()
                 ElseIf Not OperatingSystem.IsWindows() Then
                     answer = If(ReadKdeLayout(), If(ReadGSettingsLayout(), ReadXfceLayout()))
                 End If
@@ -162,14 +164,47 @@ Namespace Services
             For Each entry In schemas
                 Dim value = RunTool("gsettings", $"get {entry.Item1} {entry.Item2}")
                 If String.IsNullOrWhiteSpace(value) Then Continue For
-                Dim layout = value.Trim().Trim(""""c, "'"c)
-                Dim colon = layout.IndexOf(":"c)
-                If colon < 0 Then Continue For
-                Dim decided = Decide(ParseGroup(layout.Substring(0, colon), Nothing),
-                                     ParseGroup(layout.Substring(colon + 1), Nothing))
+                Dim decided = DecideGnomeLayout(value.Trim().Trim(""""c, "'"c))
                 If decided IsNot Nothing Then Return decided
             Next
             Return Nothing
+        End Function
+
+        ''' <summary>Ein Text in der Schreibweise von GNOME, „appmenu:minimize,maximize,close".
+        ''' Nothing ohne Doppelpunkt oder ohne einen Fensterknopf.</summary>
+        Private Shared Function DecideGnomeLayout(layout As String) As WindowButtonLayout
+            If String.IsNullOrEmpty(layout) Then Return Nothing
+            Dim colon = layout.IndexOf(":"c)
+            If colon < 0 Then Return Nothing
+            Return Decide(ParseGroup(layout.Substring(0, colon), Nothing),
+                          ParseGroup(layout.Substring(colon + 1), Nothing))
+        End Function
+
+        ''' <summary>IM FLATPAK fragt FerrumPix das Settings-Portal statt der drei Quellen darunter.
+        '''
+        ''' Die sehen in der Sandbox nicht den Rechner: kwinrc liegt im persoenlichen Ordner, der
+        ''' nicht freigegeben ist, und gsettings liest die Einstellungen der Sandbox und meldet
+        ''' GNOMEs Werksvorgabe „appmenu:close", ganz gleich, was der Desktop eingestellt hat. Daraus
+        ''' wurde rechts Schliessen, Minimieren, Maximieren, also die Reihe verkehrt herum. Das
+        ''' Portal liefert die echte Anordnung in GNOMEs Schreibweise; das Portal von KDE uebersetzt
+        ''' seine eigene dorthin. `Read` statt `ReadOne`, weil es auch die aelteren Portale kennen;
+        ''' die Antwort ist dann doppelt verpackt: (&lt;&lt;'icon:minimize,maximize,close'&gt;&gt;,).</summary>
+        Private Shared Function ReadPortalLayout() As WindowButtonLayout
+            Dim value = RunTool("gdbus", "call --session --dest org.freedesktop.portal.Desktop " &
+                                         "--object-path /org/freedesktop/portal/desktop " &
+                                         "--method org.freedesktop.portal.Settings.Read " &
+                                         "org.gnome.desktop.wm.preferences button-layout")
+            Return DecideGnomeLayout(UnwrapPortalString(value))
+        End Function
+
+        ''' <summary>Der Text zwischen dem ersten und dem letzten Hochkomma einer Antwort von gdbus.
+        ''' Leer, wenn keiner darin steht.</summary>
+        Private Shared Function UnwrapPortalString(reply As String) As String
+            If String.IsNullOrEmpty(reply) Then Return ""
+            Dim first = reply.IndexOf("'"c)
+            Dim last = reply.LastIndexOf("'"c)
+            If first < 0 OrElse last <= first Then Return ""
+            Return reply.Substring(first + 1, last - first - 1)
         End Function
 
         ''' <summary>Xfce schreibt dasselbe als „O|SHMC": vor dem Strich steht die linke Seite,

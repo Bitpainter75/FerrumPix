@@ -2968,6 +2968,20 @@ Namespace ViewModels
                     Dim label = If(String.IsNullOrWhiteSpace(drive.VolumeLabel), drive.Name, $"{drive.VolumeLabel} ({drive.Name})")
                     FolderTree.Add(New FolderNode(label, drive.RootDirectory.FullName))
                 Next
+            ElseIf Not String.IsNullOrEmpty(Environment.GetEnvironmentVariable("FLATPAK_ID")) Then
+                ' IM FLATPAK KEINE WURZEL: "/" ist dort die Sandbox (/app, /usr der Laufzeit, /run)
+                ' und nicht das Dateisystem des Rechners. Erreichbar sind ausser dem persoenlichen
+                ' Ordner nur die freigegebenen Einhaengeorte; die stehen einzeln da, sobald dort
+                ' etwas haengt. Beschriftet mit dem Pfad, der ist hier selbst der Name.
+                For Each mountPath In {"/run/media/" & Environment.UserName, "/media", "/mnt"}
+                    Try
+                        If Directory.Exists(mountPath) AndAlso Directory.EnumerateFileSystemEntries(mountPath).Any() Then
+                            FolderTree.Add(New FolderNode(mountPath, mountPath))
+                        End If
+                    Catch ex As Exception
+                        DiagnosticLogService.LogException("Galerie.Einhaengeorte", ex)
+                    End Try
+                Next
             Else
                 Dim rootPath = IO.Path.GetPathRoot(homePath)
                 If String.IsNullOrEmpty(rootPath) Then rootPath = IO.Path.DirectorySeparatorChar.ToString()
