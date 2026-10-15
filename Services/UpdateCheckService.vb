@@ -43,9 +43,21 @@ Namespace Services
                 Return client
             End Function)
 
+        ''' <summary>Fragt diese Fassung überhaupt nach? Im Flatpak nicht: dort kommt die
+        ''' Aktualisierung über die Paketverwaltung (Flathub), und ein Hinweis auf die
+        ''' GitHub-Releases führte am Weg vorbei, den der Nutzer gewählt hat. Erkannt wird das an
+        ''' FLATPAK_ID, die flatpak in jeder Sandbox setzt. Gilt auch für das Bundle aus dem Release.</summary>
+        Public Shared ReadOnly Property IsEnabled As Boolean
+            Get
+                Return String.IsNullOrEmpty(Environment.GetEnvironmentVariable("FLATPAK_ID"))
+            End Get
+        End Property
+
         ''' <summary>Holt die veröffentlichte Nummer. Leerer Text heißt: nicht erreichbar oder
-        ''' unbrauchbare Antwort - in beiden Fällen wird nichts angezeigt.</summary>
+        ''' unbrauchbare Antwort - in beiden Fällen wird nichts angezeigt. Im Flatpak wird gar
+        ''' nicht gefragt (siehe <see cref="IsEnabled"/>).</summary>
         Public Shared Async Function FetchLatestVersionAsync(Optional cancel As CancellationToken = Nothing) As Task(Of String)
+            If Not IsEnabled Then Return ""
             Try
                 Using response = Await _client.Value.GetAsync(VersionAddress, cancel)
                     If Not response.IsSuccessStatusCode Then Return ""

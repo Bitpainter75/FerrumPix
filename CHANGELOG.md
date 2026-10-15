@@ -7,6 +7,9 @@
   much quicker on a network drive. A film scan as DNG used to travel over the network up to four
   times, now about once.
 
+- The Flatpak no longer looks for a newer version on GitHub; updates come through the software
+  manager that installed it.
+
 ## 0.9.65
 
 ### What's new

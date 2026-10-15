@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.bitpainter75.ferrumpix</id>
+  <name>FerrumPix</name>
+  <summary>Desktop Photo/RAW-Editor, Viewer, Gallery, Immich and Nextcloud Client in one App</summary>
+  <summary xml:lang="de">Foto/RAW-Editor, Betrachter, Galerie, Immich- und Nextcloud-Client in einer Anwendung</summary>
+
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-only</project_license>
+
+  <developer id="io.github.bitpainter75">
+    <name>Bitpainter75</name>
+  </developer>
+
+
+  <description>
+    <p>
+      FerrumPix brings your photos together in one desktop application.
+      Browse and organise your pictures in a gallery, view them quickly,
+      or open them in the editor to make anything from a small correction
+      to a more detailed edit. FerrumPix supports RAW photos as well as
+      common image formats, so you can work with your pictures in the
+      way that suits you.
+    </p>
+    <p>
+      Adjust exposure and colors, develop RAW images, fine-tune tones
+      with curves and color grading, or use automatic enhancements.
+      For more creative work, FerrumPix offers layers, masks, filters,
+      text and shapes, along with optional AI-assisted selections.
+      Edits can be saved in a project format and continued later
+      without losing the original image.
+    </p>
+    <p>
+      You can also create new images from scratch, manage your photo
+      collection and connect to your own Immich or Nextcloud server.
+      Whether you simply want to look through your photos or spend
+      more time editing them, FerrumPix gives you the tools in one place.
+    </p>
+    <p xml:lang="de">
+      Mit FerrumPix kannst du deine Fotos an einem Ort ansehen,
+      verwalten und bearbeiten. Durchstöbere deine Bilder in der
+      Galerie, öffne sie im schnellen Bildbetrachter oder bearbeite
+      sie direkt im Editor. Von kleinen Korrekturen bis zur
+      ausführlichen Bildbearbeitung ist vieles möglich.
+      Neben gängigen Bildformaten unterstützt FerrumPix auch RAW-Dateien.
+    </p>
+    <p xml:lang="de">
+      Passe Belichtung und Farben an, entwickle RAW-Aufnahmen,
+      arbeite mit Gradationskurven und Color Grading oder nutze
+      automatische Bildverbesserungen. Für aufwendigere Bearbeitungen
+      stehen dir Ebenen, Masken, Filter, Text und Formen sowie
+      optionale KI-gestützte Auswahlwerkzeuge zur Verfügung.
+      Deine Bearbeitungen kannst du als Projekt speichern und
+      später fortsetzen, ohne das Originalbild zu verändern.
+    </p>
+    <p xml:lang="de">
+      Außerdem kannst du neue Bilder auf einer leeren Arbeitsfläche
+      erstellen, deine Fotosammlung organisieren und FerrumPix
+      mit deinem eigenen Immich- oder Nextcloud-Server verbinden.
+      Ob du einfach nur Bilder anschauen oder kreativ bearbeiten
+      möchtest, FerrumPix bietet dir beides in einer Anwendung.
+    </p>
+  </description>
+
+
+  <launchable type="desktop-id">io.github.bitpainter75.ferrumpix.desktop</launchable>
+
+  <screenshots>
+    <screenshot type="default">
+      <caption>Gallery view showing the photo catalog</caption>
+      <caption xml:lang="de">Galerieansicht des Fotokatalogs</caption>
+      <image>https://raw.githubusercontent.com/Bitpainter75/FerrumPix/2e11598fcd339b025cbd3bc609d4cd5be9d2d242/Screenshots/Gallery_en.jpg</image>
+    </screenshot>
+    <screenshot>
+      <caption>Image viewer with navigation, filmstrip and compare</caption>
+      <caption xml:lang="de">Bild-Viewer mit Navigation, Filmstreifen und Vergleich</caption>
+      <image>https://raw.githubusercontent.com/Bitpainter75/FerrumPix/2e11598fcd339b025cbd3bc609d4cd5be9d2d242/Screenshots/Viewer_Compare_en.jpg</image>
+    </screenshot>
+    <screenshot>
+      <caption>Editor with text and shape overlays</caption>
+      <caption xml:lang="de">Editor mit Text- und Formen-Overlays</caption>
+      <image>https://raw.githubusercontent.com/Bitpainter75/FerrumPix/2e11598fcd339b025cbd3bc609d4cd5be9d2d242/Screenshots/Editor_Text_en.jpg</image>
+    </screenshot>
+    <screenshot>
+      <caption>Layers inside the editor</caption>
+      <caption xml:lang="de">Ebenen im Editor</caption>
+      <image>https://raw.githubusercontent.com/Bitpainter75/FerrumPix/2e11598fcd339b025cbd3bc609d4cd5be9d2d242/Screenshots/Editor_Layer_en.jpg</image>
+    </screenshot>
+    <screenshot>
+      <caption>Adjustment sliders inside the editor</caption>
+      <caption xml:lang="de">Anpassungsregler im Editor</caption>
+      <image>https://raw.githubusercontent.com/Bitpainter75/FerrumPix/2e11598fcd339b025cbd3bc609d4cd5be9d2d242/Screenshots/Editor_Color_en.jpg</image>
+    </screenshot>
+  </screenshots>
+
+  <url type="homepage">https://github.com/Bitpainter75/FerrumPix</url>
+  <url type="bugtracker">https://github.com/Bitpainter75/FerrumPix/issues</url>
+
+  <content_rating type="oars-1.1"/>
+
+  <releases>
+    <release version="0.9.66" date="2026-10-14">
+      <description>
+        <p>This update makes it easier to compare slider settings, improves lens detection on Canon cameras and fixes a few issues with bright areas in RAW images:</p>
+        <p xml:lang="de">Mit diesem Update lassen sich Reglereinstellungen leichter vergleichen. Außerdem werden Fremdobjektive an Canon-Kameras besser erkannt und einige Probleme mit hellen Bildbereichen in RAW-Dateien behoben:</p>
+        <ul>
+          <li>Right-click a slider or its value field in the editor to temporarily reset it to its default. Right-click again to restore your previous setting. You can also use the SPACE key when the value field is selected.</li>
+          <li xml:lang="de">Per Rechtsklick auf einen Regler oder das zugehörige Zahlenfeld im Editor lässt sich der Wert vorübergehend auf die Standardeinstellung zurücksetzen. Ein weiterer Rechtsklick stellt den vorherigen Wert wieder her. Im Zahlenfeld funktioniert das auch mit der Leertaste.</li>
+          <li>Sigma, Tamron and Tokina lenses used on Canon cameras are now identified using their lens ID, focal length range and aperture, so the correct lens corrections can be applied.</li>
+          <li xml:lang="de">Objektive von Sigma, Tamron und Tokina werden an Canon-Kameras jetzt anhand ihrer Objektiv-ID, des Brennweitenbereichs und der Blende erkannt. Dadurch kann die passende Objektivkorrektur angewendet werden.</li>
+          <li>Highlight recovery now brings out more detail in bright skies. We've also fixed an issue that could give very bright, nearly white areas in RAW images a pink tint, even when highlight recovery was turned off.</li>
+          <li xml:lang="de">Die Lichterrettung bringt jetzt mehr Details in hellen Himmelsbereichen zurück. Außerdem wurde ein Problem behoben, durch das sehr helle, fast weiße Bereiche in RAW-Bildern einen Rosastich bekommen konnten, auch bei ausgeschalteter Lichterrettung.</li>
+          <li>Detail and effect sliders now react more quickly. We've also added individual base brightness settings for 30 more cameras, and the Flatpak package now includes its own video player.</li>
+          <li xml:lang="de">Die Regler für Details und Effekte reagieren jetzt schneller. Für 30 weitere Kameras gibt es außerdem angepasste Werte für die Grundhelligkeit. Das Flatpak-Paket bringt nun auch einen eigenen Videoplayer mit.</li>
+          <li>Several smaller fixes are included: the depth blur preview no longer carries over to the next image, lens information is preserved when saving a RAW file as JPEG, and entire bursts can now be moved or copied together.</li>
+          <li xml:lang="de">Dazu kommen einige kleinere Fehlerbehebungen: Die Vorschau der Tiefenunschärfe bleibt beim Wechsel zum nächsten Bild nicht mehr stehen, Objektivinformationen bleiben beim Speichern von RAW-Dateien als JPEG erhalten und ganze Bildserien lassen sich jetzt gemeinsam verschieben oder kopieren.</li>
+        </ul>
+      </description>
+    </release>
+  </releases>
+
+  <categories>
+    <category>Graphics</category>
+    <category>Photography</category>
+  </categories>
+</component>

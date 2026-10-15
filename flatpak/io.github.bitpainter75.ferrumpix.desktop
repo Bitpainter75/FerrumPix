@@ -1,0 +1,15 @@
+[Desktop Entry]
+Type=Application
+Name=FerrumPix
+GenericName=Photo Gallery - Viewer - Editor
+GenericName[de]=Fotogalerie - Betrachter - Editor
+Comment=Desktop Photo/RAW-Editor, Viewer, Gallery, Immich and Nextcloud Client in one App
+Comment[de]=Foto/RAW-Editor, Betrachter, Galerie, Immich- und Nextcloud-Client in einer Anwendung
+Keywords=photo;image;picture;gallery;viewer;editor;raw;exif;immich;
+Keywords[de]=Foto;Bild;Galerie;Betrachter;Editor;Bearbeiten;RAW;EXIF;Immich;
+Icon=io.github.bitpainter75.ferrumpix
+Exec=ferrumpix %F
+Terminal=false
+Categories=Graphics;Photography;2DGraphics;RasterGraphics;
+MimeType=image/jpeg;image/png;image/webp;image/gif;image/bmp;image/tiff;image/avif;image/heif;image/jxl;image/svg+xml;image/vnd.microsoft.icon;image/x-adobe-dng;image/x-canon-cr2;image/x-canon-cr3;image/x-nikon-nef;image/x-sony-arw;image/x-panasonic-rw2;image/x-pentax-pef;video/mp4;video/quicktime;video/x-matroska;video/x-msvideo;video/webm;
+StartupWMClass=FerrumPix

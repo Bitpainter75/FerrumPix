@@ -1,0 +1,33 @@
+FerrumPix Flatpak LibRaw runtime
+================================
+
+The FerrumPix Flatpak builds LibRaw from source as its own module and therefore
+redistributes it. LibRaw provides true RAW development in the editor without it FerrumPix falls back to the embedded JPEG preview of the RAW file.
+
+Bundled version:
+
+  LibRaw 0.22.2
+    Source URL:
+      https://www.libraw.org/data/LibRaw-0.22.2.tar.gz
+    SHA-256:
+      de86b035655accff8d4010f1a221fdf50d353cb7b1422ba26f14a0db92612cfa
+    Build options:
+      --disable-examples --disable-static --enable-zlib --enable-jpeg
+      --enable-lcms --enable-openmp
+
+License notes:
+
+  FerrumPix is GPL-3.0-only.
+
+  LibRaw is dual licensed: LGPL-2.1 or CDDL-1.0. FerrumPix uses it under
+  LGPL-2.1 - CDDL-1.0 is not GPL-compatible and must not be chosen here.
+  LGPL-2.1 section 3 permits applying the ordinary GNU GPL "version 2 ... or,
+  if a newer version ... has appeared, that version instead", which covers
+  GPLv3. The combination is therefore permitted.
+
+  LibRaw is used unmodified and is NOT statically linked, it is loaded
+  dynamically at runtime, so recipients can replace it with their own build.
+
+  The full LGPL-2.1 text ships next to this file as LICENSE.LGPL-2.1.txt.
+  The source URL and checksum above let recipients obtain the corresponding
+  source, as required by the LGPL.
