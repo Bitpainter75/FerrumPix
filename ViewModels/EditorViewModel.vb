@@ -24397,6 +24397,15 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(ColorNoiseAmount))
             Me.RaisePropertyChanged(NameOf(NoiseReductionMethodLabel))
             Me.RaisePropertyChanged(NameOf(SharpenMethodLabel))
+            ' Details, Schärfe, Weichzeichnen und Rauschen vollständig. Hier fehlten Struktur,
+            ' Dunst, Staub und Kratzer, Glühen, Rauschen, das grobe Farbrauschen und drei Regler
+            ' der Schärfe: nach Rückgängig, Wiederholen oder dem Auge einer Gruppe stand das Bild
+            ' auf dem Rezept, die Regler aber auf dem alten Wert. Wacht: „Editor: ein ganzes
+            ' Rezept meldet jeden geaenderten Regler an die Oberflaeche".
+            RaiseDetailPropertiesChanged()
+            Me.RaisePropertyChanged(NameOf(FarbrauschGrob))
+            Me.RaisePropertyChanged(NameOf(ColorNoiseCoarseScale))
+            Me.RaisePropertyChanged(NameOf(HasColorBlotches))
             RaiseEffectsPropertiesChanged()
             RaiseExtendedAdjustmentProperties()
             Me.RaisePropertyChanged(NameOf(CropLeft))

@@ -2,6 +2,10 @@
 
 ### Fixes
 
+- After undo, redo or the eye of a group, the sliders of Details, Noise and some of Sharpness
+  stayed where they were, although the picture already showed the restored values. They follow
+  now.
+
 - The reset button and the eye of an adjustment group only touch that group's own sliders. Details
   also reset the noise sliders, and the reset button of Vignette reset the grain and the lens
   corrections as well.
