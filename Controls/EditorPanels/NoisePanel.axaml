@@ -90,29 +90,12 @@
                 <!-- ENTRAUSCHEN MIT MODELL: kein Regler, sondern ein Zug in die Pixel - bei
                      mehreren Minuten Rechenzeit kann das nicht an einer Vorschau haengen.
                      Deshalb steht es abgesetzt unter den Reglern und nicht zwischen ihnen. -->
-                <!-- Die Staerke steht UEBER den Knoepfen, weil sie fuer beide gilt und vor dem
-                     Druck eingestellt wird - danach laeuft die Rechnung minutenlang. Sie wirkt nur
-                     auf die Helligkeit; die Farbe kommt immer voll aus dem Modell. -->
-                <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center"
-                      Margin="0,10,0,0"
-                      IsEnabled="{Binding CanDenoiseWithAnyModel}">
-                    <TextBlock Text="Stärke" Foreground="{DynamicResource FP.Text.Secondary}"
-                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap"
-                               ToolTip.Tip="Wie stark die Helligkeit entrauscht wird. Niedriger lässt mehr feine Zeichnung stehen, höher nimmt mehr Korn. Die Farbe wird immer voll entrauscht, das kostet keine Zeichnung. Gilt für den nächsten Druck auf einen der beiden Knöpfe." />
-                    <!-- Der Rueckfallwert des Doppelklicks ist der Startwert aus dem ViewModel
-                         (DenoiseStrength). Die beiden liefen schon einmal auseinander, und der Doppelklick
-                         hob die Staerke dann an, statt sie zurueckzusetzen. Wer den einen Wert
-                         aendert, aendert den anderen mit. -->
-                    <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
-                                       DefaultValue="70"
-                                       Value="{Binding DenoiseStrength}" Margin="0,0" />
-                    <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
-                                             Value="{Binding DenoiseStrength, Mode=TwoWay}" Minimum="0" Maximum="100" />
-                </Grid>
-                <!-- Misst das Rauschen und stellt nur den Regler darueber ein. Gerechnet wird
+                <!-- Misst das Rauschen und stellt nur den Regler darunter ein. Gerechnet wird
                      erst mit einem der beiden Knoepfe darunter: so steht der Vorschlag da, bevor
-                     die Minuten laufen, und laesst sich noch aendern. -->
+                     die Minuten laufen, und laesst sich noch aendern. Der Knopf steht ueber dem
+                     Regler, weil man in dieser Reihenfolge vorgeht: messen, nachstellen, rechnen. -->
                 <Button Classes="ghost" HorizontalAlignment="Stretch" Padding="10,6"
+                        Margin="0,10,0,0"
                         IsEnabled="{Binding CanDenoiseWithAnyModel}"
                         Command="{Binding MeasureDenoiseStrengthCommand}"
                         ToolTip.ShowOnDisabled="True"
@@ -129,6 +112,24 @@
                            Foreground="{DynamicResource FP.Text.Secondary}"
                            FontSize="{DynamicResource FP.Font.Small}"
                            Classes="no-translate" />
+                <!-- Die Staerke steht UEBER den Knoepfen zum Entrauschen, weil sie fuer beide gilt
+                     und vor dem Druck eingestellt wird - danach laeuft die Rechnung minutenlang. Sie
+                     wirkt nur auf die Helligkeit; die Farbe kommt immer voll aus dem Modell. -->
+                <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center"
+                      IsEnabled="{Binding CanDenoiseWithAnyModel}">
+                    <TextBlock Text="Stärke" Foreground="{DynamicResource FP.Text.Secondary}"
+                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap"
+                               ToolTip.Tip="Wie stark die Helligkeit entrauscht wird. Niedriger lässt mehr feine Zeichnung stehen, höher nimmt mehr Korn. Die Farbe wird immer voll entrauscht, das kostet keine Zeichnung. Gilt für den nächsten Druck auf einen der beiden Knöpfe." />
+                    <!-- Der Rueckfallwert des Doppelklicks ist der Startwert aus dem ViewModel
+                         (DenoiseStrength). Die beiden liefen schon einmal auseinander, und der Doppelklick
+                         hob die Staerke dann an, statt sie zurueckzusetzen. Wer den einen Wert
+                         aendert, aendert den anderen mit. -->
+                    <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
+                                       DefaultValue="70"
+                                       Value="{Binding DenoiseStrength}" Margin="0,0" />
+                    <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                             Value="{Binding DenoiseStrength, Mode=TwoWay}" Minimum="0" Maximum="100" />
+                </Grid>
                 <Button Classes="ghost" HorizontalAlignment="Stretch" Padding="10,6"
                         IsEnabled="{Binding CanDenoiseWithModel}"
                         Command="{Binding DenoiseWithModelCommand}"

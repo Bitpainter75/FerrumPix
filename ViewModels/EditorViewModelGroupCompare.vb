@@ -51,7 +51,8 @@ Namespace ViewModels
         ''' <summary>Der Name der Gruppe in der Historie und der Weg, sie auf den Startwert zu setzen.
         ''' Nothing fuer eine Gruppe ohne Vergleich.
         '''
-        ''' Es sind die Gruppen der RAW-Entwicklung. Wo der Zuruecksetzer der Gruppe ueber sie hinaus
+        ''' Es sind die Gruppen der RAW-Entwicklung, dazu die vier weiteren Korrekturen (Kanalmixer,
+        ''' Verlaufsumsetzung, Tontrennung, Schwellenwert). Wo der Zuruecksetzer der Gruppe ueber sie hinaus
         ''' greift, steht ein eigener Weg: der Knopf der Vignette setzt das ganze Werkzeug Effekte
         ''' zurueck, samt Objektivkorrektur, und der des Rauschens wirft das gespeicherte Entrauschen
         ''' weg, das kein Vergleich zurueckholen koennte. Die Objektivkorrektur selbst hat keinen
@@ -70,6 +71,10 @@ Namespace ViewModels
                 Case "hsl" : Return ("Farbmischer", AddressOf ResetHslInternal)
                 Case "color-grading" : Return ("Farbgradierung", AddressOf ResetColorGradingInternal)
                 Case "calibration" : Return ("Kalibrierung", AddressOf ResetCalibrationInternal)
+                Case "channel-mixer" : Return ("Kanalmixer", Sub() NeutralizeCorrectionGroup(AddressOf ResetChannelMixerValues))
+                Case "gradient-map" : Return ("Verlaufsumsetzung", Sub() NeutralizeCorrectionGroup(AddressOf ResetGradientMapValues))
+                Case "posterize" : Return ("Tontrennung", Sub() NeutralizeCorrectionGroup(AddressOf ResetPosterizeValues))
+                Case "threshold" : Return ("Schwellenwert", Sub() NeutralizeCorrectionGroup(AddressOf ResetThresholdValues))
                 Case "sharpen" : Return ("Schärfe", AddressOf ResetSharpenGroupInternal)
                 Case "soften" : Return ("Weichzeichnen", AddressOf ResetSoftenGroupInternal)
                 Case "rauschen" : Return ("Rauschen", AddressOf ResetNoiseSlidersInternal)
@@ -265,6 +270,15 @@ Namespace ViewModels
             Finally
                 _suppressUndoCapture = False
             End Try
+        End Sub
+
+        ''' <summary>Die Zuruecksetzer der vier weiteren Korrekturen setzen nur ihre Werte; Meldung und Vorschau
+        ''' haengt ihr Zuruecksetzer selbst an (ResetCorrectionGroup), samt eigenem Historienschritt,
+        ''' den der Vergleich nicht braucht.</summary>
+        Private Sub NeutralizeCorrectionGroup(reset As Action)
+            reset()
+            RaiseResetButtonStateChanged()
+            SchedulePreviewForCurrentTarget()
         End Sub
 
         ''' <summary>Nur die Vignette. Ihr Knopf im Gruppenkopf setzt das ganze Werkzeug Effekte
