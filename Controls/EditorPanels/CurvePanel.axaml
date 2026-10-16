@@ -30,7 +30,8 @@
         <StackPanel Spacing="8" Margin="0,8,0,0">
             <StackPanel Orientation="Horizontal" Spacing="14">
                 <Button Classes="info-tab channel-tab" Command="{Binding SetCurveChannelCommand}"
-                        CommandParameter="Rgb" Classes.active="{Binding IsCurveChannelRgb}">
+                        CommandParameter="Rgb" Classes.active="{Binding IsCurveChannelRgb}"
+                        Classes.comparing="{Binding IsCurveRgbComparing}">
                     <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
                         <TextBlock Text="RGB" FontSize="{DynamicResource FP.Font.Small}" VerticalAlignment="Center" />
                         <!-- Punkt zeigt: in diesem Kanal liegt eine Kurve, auch wenn gerade
@@ -41,7 +42,8 @@
                     </StackPanel>
                 </Button>
                 <Button Classes="info-tab channel-tab" Command="{Binding SetCurveChannelCommand}"
-                        CommandParameter="Red" Classes.active="{Binding IsCurveChannelRed}">
+                        CommandParameter="Red" Classes.active="{Binding IsCurveChannelRed}"
+                        Classes.comparing="{Binding IsCurveRedComparing}">
                     <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
                         <TextBlock Text="R" FontSize="{DynamicResource FP.Font.Small}" VerticalAlignment="Center" />
                         <!-- Punkt zeigt: in diesem Kanal liegt eine Kurve, auch wenn gerade
@@ -53,7 +55,8 @@
                 </Button>
                 <Button Classes="info-tab channel-tab" Command="{Binding SetCurveChannelCommand}"
                         CommandParameter="Green"
-                        Classes.active="{Binding IsCurveChannelGreen}">
+                        Classes.active="{Binding IsCurveChannelGreen}"
+                        Classes.comparing="{Binding IsCurveGreenComparing}">
                     <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
                         <TextBlock Text="G" FontSize="{DynamicResource FP.Font.Small}" VerticalAlignment="Center" />
                         <!-- Punkt zeigt: in diesem Kanal liegt eine Kurve, auch wenn gerade
@@ -65,7 +68,8 @@
                 </Button>
                 <Button Classes="info-tab channel-tab" Command="{Binding SetCurveChannelCommand}"
                         CommandParameter="Blue"
-                        Classes.active="{Binding IsCurveChannelBlue}">
+                        Classes.active="{Binding IsCurveChannelBlue}"
+                        Classes.comparing="{Binding IsCurveBlueComparing}">
                     <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
                         <TextBlock Text="B" FontSize="{DynamicResource FP.Font.Small}" VerticalAlignment="Center" />
                         <!-- Punkt zeigt: in diesem Kanal liegt eine Kurve, auch wenn gerade
@@ -77,7 +81,8 @@
                 </Button>
                 <Button Classes="info-tab channel-tab" Command="{Binding SetCurveChannelCommand}"
                         CommandParameter="Luminance"
-                        Classes.active="{Binding IsCurveChannelLuminance}">
+                        Classes.active="{Binding IsCurveChannelLuminance}"
+                        Classes.comparing="{Binding IsCurveLuminanceComparing}">
                     <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
                         <TextBlock Text="L" FontSize="{DynamicResource FP.Font.Small}" VerticalAlignment="Center" />
                         <!-- Punkt zeigt: in diesem Kanal liegt eine Kurve, auch wenn gerade

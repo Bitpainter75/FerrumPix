@@ -22399,6 +22399,7 @@ Namespace ViewModels
         End Function
 
         Public Async Function ConfirmSaveBeforeLeavingAsync(actionDescription As String) As Task(Of Boolean)
+            RestoreAllCurveCompares()
             RaiseEvent LeavingDocument(Me, EventArgs.Empty)
             If Not _hasChanges Then Return True
             If _mainVm Is Nothing Then Return True
@@ -29626,6 +29627,9 @@ Namespace ViewModels
         End Sub
 
         Private Sub ResetCurvePoints()
+            ' Ein Zuruecksetzen ist eine Aenderung von anderer Seite: was im Vergleich gemerkt war,
+            ' gilt nicht mehr und kaeme sonst beim naechsten Rechtsklick zurueck.
+            _curveCompareSaved.Clear()
             LoadCurvePointsFromString(_curveRgbPoints, "")
             LoadCurvePointsFromString(_curveRedPoints, "")
             LoadCurvePointsFromString(_curveGreenPoints, "")
@@ -29640,6 +29644,12 @@ Namespace ViewModels
 
         Private Sub OnCurvePointsChanged(sender As Object, e As System.Collections.Specialized.NotifyCollectionChangedEventArgs)
             If _suppressCurvePointsChanged Then Return
+            ' Bearbeiten beendet den Vergleich dieses Kanals sofort und nicht erst beim Abfragen:
+            ' wer die Kurve verbiegt und danach von Hand auf die Diagonale zurueckzieht, stuende
+            ' sonst wieder im Vergleich, und der naechste Rechtsklick holte den alten Stand.
+            For Each channel In _curveCompareSaved.Keys.ToArray()
+                If Object.ReferenceEquals(CurvePointsOf(channel), sender) Then _curveCompareSaved.Remove(channel)
+            Next
             CaptureUndoState("Tonwertkurve")
             RaiseResetButtonStateChanged()
             RaiseCurveEditedMarkers()
@@ -29650,7 +29660,9 @@ Namespace ViewModels
         ''' der Kurvenpunkte aendert (Bedienen, Rueckgaengig, Preset, Laden), dieselbe Stelle ruft.</summary>
         Private Sub RaiseCurveEditedMarkers()
             For Each n In {NameOf(IsCurveRgbEdited), NameOf(IsCurveRedEdited), NameOf(IsCurveGreenEdited),
-                           NameOf(IsCurveBlueEdited), NameOf(IsCurveLuminanceEdited)}
+                           NameOf(IsCurveBlueEdited), NameOf(IsCurveLuminanceEdited),
+                           NameOf(IsCurveRgbComparing), NameOf(IsCurveRedComparing), NameOf(IsCurveGreenComparing),
+                           NameOf(IsCurveBlueComparing), NameOf(IsCurveLuminanceComparing)}
                 Me.RaisePropertyChanged(n)
             Next
         End Sub
@@ -29668,6 +29680,113 @@ Namespace ViewModels
             If [Enum].TryParse(channelName, True, parsed) Then
                 SelectedCurveChannel = parsed
             End If
+        End Sub
+
+        ''' <summary>Die gemerkten Kurven der Kanaele im Einzelvergleich, als Punktliste.
+        '''
+        ''' DAS GEGENSTUECK ZUM REGLER (RoundSlider.ToggleCompare): ein Rechtsklick auf einen
+        ''' Kanalschalter legt dessen Kurve auf die Diagonale und merkt sie sich, der naechste holt
+        ''' sie zurueck. Anders als beim Regler liegt der Zustand hier im ViewModel, weil auch die
+        ''' Punkte hier liegen und kein Steuerelement sie haelt.
+        '''
+        ''' Ein Kanal steht nur im Vergleich, solange er wirklich auf der Diagonalen steht. Aendert
+        ''' ihn etwas anderes (Bearbeiten, Rueckgaengig, ein Preset), gilt der neue Stand und der
+        ''' gemerkte ist verloren - dieselbe Regel wie am Regler. Das wird beim Abfragen entschieden
+        ''' statt an jedem Weg, der Kurven schreibt: davon gibt es zu viele, und einen vergaesse man.</summary>
+        Private ReadOnly _curveCompareSaved As New Dictionary(Of CurveChannel, String)
+
+        Private Function CurvePointsOf(channel As CurveChannel) As ObservableCollection(Of Avalonia.Point)
+            Select Case channel
+                Case CurveChannel.Red : Return _curveRedPoints
+                Case CurveChannel.Green : Return _curveGreenPoints
+                Case CurveChannel.Blue : Return _curveBluePoints
+                Case CurveChannel.Luminance : Return _curveLuminancePoints
+                Case Else : Return _curveRgbPoints
+            End Select
+        End Function
+
+        Private Function IsCurveComparing(channel As CurveChannel) As Boolean
+            Return _curveCompareSaved.ContainsKey(channel) AndAlso Not CurveIsEdited(CurvePointsOf(channel))
+        End Function
+
+        Public ReadOnly Property IsCurveRgbComparing As Boolean
+            Get
+                Return IsCurveComparing(CurveChannel.Rgb)
+            End Get
+        End Property
+
+        Public ReadOnly Property IsCurveRedComparing As Boolean
+            Get
+                Return IsCurveComparing(CurveChannel.Red)
+            End Get
+        End Property
+
+        Public ReadOnly Property IsCurveGreenComparing As Boolean
+            Get
+                Return IsCurveComparing(CurveChannel.Green)
+            End Get
+        End Property
+
+        Public ReadOnly Property IsCurveBlueComparing As Boolean
+            Get
+                Return IsCurveComparing(CurveChannel.Blue)
+            End Get
+        End Property
+
+        Public ReadOnly Property IsCurveLuminanceComparing As Boolean
+            Get
+                Return IsCurveComparing(CurveChannel.Luminance)
+            End Get
+        End Property
+
+        ''' <summary>Schaltet den Einzelvergleich eines Kurvenkanals um. Steht der Kanal schon auf der
+        ''' Diagonalen, gibt es nichts zu vergleichen, und es geschieht nichts.</summary>
+        ''' <returns>Ob sich etwas getan hat.</returns>
+        Public Function ToggleCurveCompare(channelName As String) As Boolean
+            Dim channel As CurveChannel
+            If Not [Enum].TryParse(channelName, True, channel) Then Return False
+            Dim points = CurvePointsOf(channel)
+            Dim saved As String = Nothing
+            If _curveCompareSaved.TryGetValue(channel, saved) Then
+                _curveCompareSaved.Remove(channel)
+                If Not CurveIsEdited(points) Then
+                    ApplyCurveCompareValue(points, saved)
+                    Return True
+                End If
+                ' Inzwischen von anderer Seite geaendert: der gemerkte Stand ist verworfen, und
+                ' dieser Klick beginnt einen neuen Vergleich mit dem, was jetzt dasteht.
+            End If
+            If Not CurveIsEdited(points) Then
+                RaiseCurveEditedMarkers()
+                Return False
+            End If
+            _curveCompareSaved(channel) = PointsToCurveString(points)
+            ApplyCurveCompareValue(points, "")
+            Return True
+        End Function
+
+        ''' <summary>Holt die gemerkten Kurven aller Kanaele zurueck. Laeuft vor jedem Verlassen des
+        ''' Bildes, wie RoundSlider.RestoreAllCompared fuer die Regler: so sieht schon die
+        ''' Speichern-Rueckfrage die eingestellten Kurven.</summary>
+        Private Sub RestoreAllCurveCompares()
+            If _curveCompareSaved.Count = 0 Then Return
+            Dim entries = _curveCompareSaved.ToArray()
+            _curveCompareSaved.Clear()
+            For Each entry In entries
+                Dim points = CurvePointsOf(entry.Key)
+                If Not CurveIsEdited(points) Then ApplyCurveCompareValue(points, entry.Value)
+            Next
+            RaiseCurveEditedMarkers()
+        End Sub
+
+        ''' Eine gewoehnliche Kurvenaenderung samt Eintrag in der Historie, wie das Ziehen eines
+        ''' Punktes: Speichern im Vergleich schreibt deshalb die Diagonale.
+        Private Sub ApplyCurveCompareValue(points As ObservableCollection(Of Avalonia.Point), value As String)
+            CaptureUndoState("Tonwertkurve")
+            LoadCurvePointsFromString(points, value)
+            RaiseResetButtonStateChanged()
+            RaiseCurveEditedMarkers()
+            SchedulePreviewForCurrentTarget()
         End Sub
 
         Private Sub ResetHslFields()
@@ -29732,6 +29851,8 @@ Namespace ViewModels
                 NameOf(AdjustedHslBands),
                 NameOf(IsCurveRgbEdited), NameOf(IsCurveRedEdited), NameOf(IsCurveGreenEdited),
                 NameOf(IsCurveBlueEdited), NameOf(IsCurveLuminanceEdited),
+                NameOf(IsCurveRgbComparing), NameOf(IsCurveRedComparing), NameOf(IsCurveGreenComparing),
+                NameOf(IsCurveBlueComparing), NameOf(IsCurveLuminanceComparing),
                 NameOf(ColorGradeShadowHue), NameOf(ColorGradeShadowSaturation),
                 NameOf(ColorGradeHighlightHue), NameOf(ColorGradeHighlightSaturation), NameOf(ColorGradeBalance),
                 NameOf(ColorGradeShadowLuminance), NameOf(ColorGradeMidtoneHue), NameOf(ColorGradeMidtoneSaturation), NameOf(ColorGradeMidtoneLuminance), NameOf(ColorGradeHighlightLuminance), NameOf(ColorGradeGlobalHue), NameOf(ColorGradeGlobalSaturation), NameOf(ColorGradeGlobalLuminance), NameOf(ColorGradeBlending),

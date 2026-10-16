@@ -486,7 +486,7 @@ Namespace Services
                     ' Feldliste bestimmt, sondern ueber denselben Schluessel, den auch der
                     ' Deckungs-Speicher benutzt - eine dritte Liste liefe irgendwann auseinander.
                     If pipelineInputWidth = targetW AndAlso pipelineInputHeight = targetH AndAlso
-                       String.Equals(MaskGeometryKey(maskGeometry), NeutralMaskGeometryKey, StringComparison.Ordinal) Then
+                       String.Equals(MaskGeometryKey(maskGeometry), NeutralMaskGeometryKey(maskGeometry), StringComparison.Ordinal) Then
                         Return StoreMaskRaster(cacheKey, BuildAlpha8FromAlphaMask(inputMask, targetW, targetH, opacity))
                     End If
 
@@ -999,9 +999,16 @@ Namespace Services
         ''' Absichtlich aus <see cref="MaskGeometryKey"/> und einem frischen Rezept gebildet statt aus
         ''' einer Aufzaehlung neutraler Werte: so kann er gar nicht von dem abweichen, was die Kette
         ''' tatsaechlich liest. Kommt ein Feld hinzu, wandert es ueber MaskGeometryKey automatisch
-        ''' auch hierher.</summary>
-        Private Shared ReadOnly NeutralMaskGeometryKey As String =
-            MaskGeometryKey(BuildMaskGeometry(New ImageAdjustments()))
+        ''' auch hierher.
+        '''
+        ''' MIT DERSELBEN BEZUGSGROESSE wie die verglichene Geometrie. Sie steht im Schluessel, weil
+        ''' an ihr haengt, wie weit Bildgroesse und Leinwand auf einer verkleinerten Quelle
+        ''' mitschrumpfen; ohne Schritte bewirkt sie aber nichts. Ein fester Schluessel mit
+        ''' Bezugsgroesse 0 hiesse deshalb: keine Geometrie ist je wieder neutral.</summary>
+        Private Shared Function NeutralMaskGeometryKey(geometry As ImageAdjustments) As String
+            Return MaskGeometryKey(BuildMaskGeometry(New ImageAdjustments With {
+                .SourceWidthPixels = geometry.SourceWidthPixels, .SourceHeightPixels = geometry.SourceHeightPixels}))
+        End Function
 
         ''' <summary>Fertige Alpha8-Maske direkt aus dem Alpha8-Raster, mit Deckkraft.
         '''
@@ -1036,7 +1043,11 @@ Namespace Services
         ' ImageWarp gehoert MIT hinein: ohne sie bliebe die Maske ungebogen liegen, waehrend das
         ' Bild sich verzieht - derselbe Weg wie bei der Perspektive.
         Private Shared Function BuildMaskGeometry(geometry As ImageAdjustments) As ImageAdjustments
+            ' Die Bezugsgroesse gehoert dazu: an ihr misst die Kette, wie weit Bildgroesse und
+            ' Leinwand auf einer verkleinerten Quelle mitschrumpfen (ImageProcessor.GeometrySteps).
+            ' Ohne sie liefe die Maske mit den vollen Pixelzahlen und laege neben dem Bild.
             Return New ImageAdjustments With {
+                .SourceWidthPixels = geometry.SourceWidthPixels, .SourceHeightPixels = geometry.SourceHeightPixels,
                 .CropLeftPercent = geometry.CropLeftPercent, .CropTopPercent = geometry.CropTopPercent,
                 .CropRightPercent = geometry.CropRightPercent, .CropBottomPercent = geometry.CropBottomPercent,
                 .RotationDegrees = geometry.RotationDegrees,
@@ -1104,7 +1115,8 @@ Namespace Services
                 KeyPart(geometry.ResizeWidth), KeyPart(geometry.ResizeHeight),
                 KeyPart(geometry.ResizeInterpolation),
                 KeyPart(geometry.CanvasWidth), KeyPart(geometry.CanvasHeight),
-                KeyPart(geometry.CanvasAnchor))
+                KeyPart(geometry.CanvasAnchor),
+                KeyPart(geometry.SourceWidthPixels), KeyPart(geometry.SourceHeightPixels))
         End Function
 
         ''' <summary>Die Schritte gehen ueber DENSELBEN Fingerabdruck in den Maskenschluessel wie in

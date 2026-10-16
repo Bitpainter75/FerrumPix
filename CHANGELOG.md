@@ -6,7 +6,15 @@
   RAW files are developed from the sensor data even if nothing is installed. A LibRaw from
   Homebrew is still preferred when it is there.
 
+- **Compare a single curve.** Right-click RGB, R, G, B or L above the tone curve to set that
+  channel's curve back to a straight line for a moment; the next right-click brings it back,
+  just like comparing a single slider.
+
 ### Fixes
+
+- Enlarging the canvas no longer makes the photo shrink inside the editor. Even one extra pixel
+  could show the picture at half its size with a huge border around it; the saved image was
+  always right, now the editor shows the same.
 
 - Scans saved as TIFF or DNG are read far less often: reading their details no longer loads the
   whole file, so indexing watched folders, opening a picture in the editor and the info panel are

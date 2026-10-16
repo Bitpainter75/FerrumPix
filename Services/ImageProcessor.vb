@@ -3290,7 +3290,7 @@ Namespace Services
             ' alte Rezepte verlieren sie beim Laden, und alles, was heute Geometrie erzeugt - Editor,
             ' Stapel, Betrachter, XMP-Import - legt Schritte an.
             Dim size = New SKSizeI(sourceWidth, sourceHeight)
-            Dim steps = GeometrySteps(adj)
+            Dim steps = GeometrySteps(adj, sourceWidth, sourceHeight)
             For Each stepItem In steps
                 If stepItem?.Adjustments Is Nothing Then Continue For
                 size = ComputeGeometryOperationOutputSize(size.Width, size.Height, stepItem)
@@ -3534,7 +3534,7 @@ Namespace Services
                                                               adj As ImageAdjustments, ByRef output As SKPoint,
                                                               clipToOutput As Boolean) As Boolean
             Dim operationX = sourceX, operationY = sourceY, width = sourceWidth, height = sourceHeight
-            For Each stepItem In GeometrySteps(adj)
+            For Each stepItem In GeometrySteps(adj, sourceWidth, sourceHeight)
                 If stepItem?.Adjustments Is Nothing Then Continue For
                 Dim mapped As SKPoint
                 If Not TryStepPointToOutput(operationX, operationY, width, height,
@@ -3668,7 +3668,7 @@ Namespace Services
                                                       adj As ImageAdjustments) As GeometryInverse
             ' Rueckwaerts durch die SCHRITTFOLGE. Ohne Schritte ist das die Identitaet - dieselbe
             ' Regel wie auf dem Hinweg und im Pixelweg.
-            Dim steps = GeometrySteps(adj)
+            Dim steps = GeometrySteps(adj, sourceWidth, sourceHeight)
             Dim sizes As New List(Of SKSizeI) From {New SKSizeI(sourceWidth, sourceHeight)}
             Dim mappings(steps.Count - 1) As ImageAdjustments
             For index = 0 To steps.Count - 1
@@ -4047,6 +4047,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                 adj.ResizeWidth, adj.ResizeHeight, adj.LockResizeAspect, adj.ResizeFitInsideBox, adj.ResizeScalePercent, adj.NoResizeUpscale, adj.ResizeInterpolation,
                 adj.CanvasWidth, adj.CanvasHeight, adj.LockCanvasAspect, adj.CanvasAnchor, adj.CanvasBackgroundColor,
                 GeometryOperationsKey(adj.GeometryOperations),
+                adj.SourceWidthPixels, adj.SourceHeightPixels,
                 adj.FilterPreset, adj.FilterStrength, adj.LutPath, adj.LutStrength,
                 adj.SelectionScopeEnabled, selectionScopeKey,
                 adj.GlobalAdjustmentsHidden,
@@ -4102,6 +4103,33 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             Next
             If usable Then Return operations
             Return operations.Where(Function(operation) operation IsNot Nothing AndAlso operation.Adjustments IsNot Nothing).ToList()
+        End Function
+
+        ''' <summary>Die Schritte fuer eine Quelle der Groesse <paramref name="sourceWidth"/> mal
+        ''' <paramref name="sourceHeight"/>.
+        '''
+        ''' WOFUER: <c>resize</c> und <c>canvas</c> stehen in Pixeln des Raums, den
+        ''' <c>SourceWidthPixels</c> nennt. Die Vorschau des Editors rechnet aber auf einer
+        ''' verkleinerten Quelle (PreviewMaxDimension, beim Reglerzug noch kleiner), Betrachter und
+        ''' Anzeigebild des Buendels ebenso. Liefen die Pixelzahlen dort unveraendert durch, stand
+        ''' eine um einen Punkt vergroesserte Leinwand von 4949 um ein Vorschaubild von 2560, und
+        ''' das Foto schrumpfte auf die Haelfte (Nutzerbefund). Alle anderen Arten stehen in
+        ''' Prozent und wachsen von selbst mit; diese beiden werden hier im selben Verhaeltnis
+        ''' mitgenommen, und zwar fuer Pixelweg, Massrechnung und Punktabbildung gemeinsam - sonst
+        ''' saessen Objekte und Masken neben dem Bild.
+        '''
+        ''' Ohne Bezugsgroesse oder bei passender Quelle bleibt alles, wie es ist, und zwar ohne
+        ''' jede Kopie: die Punktabbildung fragt hier fuer jeden Punkt einer Maske an.</summary>
+        Private Shared Function GeometrySteps(adj As ImageAdjustments,
+                                              sourceWidth As Integer, sourceHeight As Integer) As List(Of GeometryOperation)
+            Dim steps = GeometrySteps(adj)
+            If steps.Count = 0 Then Return steps
+            Dim recipeWidth = adj.SourceWidthPixels, recipeHeight = adj.SourceHeightPixels
+            If recipeWidth <= 0 OrElse recipeHeight <= 0 OrElse sourceWidth <= 0 OrElse sourceHeight <= 0 Then Return steps
+            If sourceWidth = recipeWidth AndAlso sourceHeight = recipeHeight Then Return steps
+            Dim scaled = New List(Of GeometryOperation)(steps)
+            ScaleGeometryStepsForSource(scaled, sourceWidth / CSng(recipeWidth), sourceHeight / CSng(recipeHeight))
+            Return scaled
         End Function
 
         ''' <summary>Fingerabdruck EINER Maske. Ausgelagert, weil neben dem Basis-Schlüssel auch der
@@ -4517,7 +4545,8 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             If source Is Nothing Then Return Nothing
             Dim result = source
             ' KEINE Schritte heisst KEINE Geometrie - die oberen Felder werden nicht mehr gelesen.
-            For Each stepItem In GeometrySteps(adj)
+            ' Pixelmasse auf die Groesse DIESER Quelle gebracht, siehe GeometrySteps.
+            For Each stepItem In GeometrySteps(adj, source.Width, source.Height)
                 Dim stepAdj = stepItem?.Adjustments
                 If stepAdj Is Nothing Then Continue For
                 Select Case If(stepItem.Kind, "").ToLowerInvariant()
@@ -4638,9 +4667,10 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
         ''' nicht und darf erst nach der ersten tatsächlich wirksamen Stufe freigegeben werden.</summary>
         Private Shared Function ApplyGeometryPipelineOwned(source As SKBitmap, adj As ImageAdjustments,
                                                             ByRef owned As Boolean) As SKBitmap
+            If source Is Nothing Then Return Nothing
             Dim result = source
             ' KEINE Schritte heisst KEINE Geometrie - siehe ApplyGeometryPipeline.
-            For Each stepItem In GeometrySteps(adj)
+            For Each stepItem In GeometrySteps(adj, source.Width, source.Height)
                 Dim stepAdj = stepItem?.Adjustments
                 If stepAdj Is Nothing Then Continue For
                 Select Case If(stepItem.Kind, "").ToLowerInvariant()

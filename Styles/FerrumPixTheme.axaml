@@ -1209,6 +1209,12 @@
     <Style Selector=":is(NumericUpDown).slider-value:comparing /template/ TextBox#PART_TextBox">
         <Setter Property="Foreground" Value="{DynamicResource FP.Compare}"/>
     </Style>
+    <!-- Dasselbe an der Tonwertkurve (EditorViewModel.ToggleCurveCompare): der Kanalschalter,
+         dessen Kurve gerade auf der Diagonalen steht. Steht hinter Button.info-tab.active und
+         gewinnt deshalb auch am gewaehlten Kanal. -->
+    <Style Selector="Button.info-tab.channel-tab.comparing TextBlock">
+        <Setter Property="Foreground" Value="{DynamicResource FP.Compare}"/>
+    </Style>
     <Style Selector="ScrollBar:vertical">
         <Setter Property="Width" Value="13"/>
     </Style>
