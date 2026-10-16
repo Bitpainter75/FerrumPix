@@ -1,3 +1,11 @@
+## 0.9.67
+
+### Fixes
+
+- The reset button and the eye of an adjustment group only touch that group's own sliders. Details
+  also reset the noise sliders, and the reset button of Vignette reset the grain and the lens
+  corrections as well.
+
 ## 0.9.66
 
 ### What's new

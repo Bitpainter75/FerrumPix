@@ -3929,6 +3929,9 @@
   <data name="Weichzeichnen_zur_cksetzen_8db0e95e" xml:space="preserve">
     <value>Reimposta sfocatura</value>
   </data>
+  <data name="Vignette_zur_cksetzen_36711b5f" xml:space="preserve">
+    <value>Reimposta vignettatura</value>
+  </data>
   <data name="K_rnung_zur_cksetzen_07f39e8b" xml:space="preserve">
     <value>Reimposta grana</value>
   </data>

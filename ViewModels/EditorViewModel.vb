@@ -16971,6 +16971,7 @@ Namespace ViewModels
         Public ReadOnly Property ApplyLensAssignmentCommand As ICommand
         Public ReadOnly Property ResetLensCorrectionCommand As ICommand
         Public ReadOnly Property ResetEffectsCommand As ICommand
+        Public ReadOnly Property ResetVignetteCommand As ICommand
         Public ReadOnly Property ResetRetouchCommand As ICommand
         Public ReadOnly Property ClearSelectionCommand As ICommand
         Public ReadOnly Property InvertSelectionCommand As ICommand
@@ -17492,6 +17493,12 @@ Namespace ViewModels
                                                              PushUndo(ResetHistoryLabel("Effekte"))
                                                              ResetEffectsInternal()
                                                          End Sub)
+            ' Der Knopf im Kopf der Vignette: nur die Vignette. Er hing bis 2026-10-16 an
+            ' ResetEffectsCommand und setzte damit auch Koernung und Objektivkorrektur zurueck.
+            ResetVignetteCommand = ReactiveCommand.Create(Sub()
+                                                              PushUndo(ResetHistoryLabel("Vignette"))
+                                                              ResetVignetteGroupInternal()
+                                                          End Sub)
             ResetRetouchCommand = ReactiveCommand.Create(Sub()
                                                              PushUndo(ResetHistoryLabel("Retusche"))
                                                              ResetRetouchInternal()
@@ -29466,27 +29473,24 @@ Namespace ViewModels
             SchedulePreviewUpdate()
         End Sub
 
-        ''' <summary>Nur die verbleibende Details-Gruppe (Klarheit, Staub/Kratzer, Dunst, Rauschen,
-        ''' Farbrauschen, Struktur, Glühen) - Schärfe/Weichzeichnen/Körnung haben eigene Zurücksetzer.
+        ''' <summary>Nur die Regler im Aufklapper Details: Klarheit, Struktur, Dunst, Staub und
+        ''' Kratzer, Glühen. Schärfe, Weichzeichnen, Rauschen und Körnung haben eigene Zurücksetzer.
+        '''
+        ''' JEDER ZURÜCKSETZER BLEIBT IN SEINER GRUPPE. Hier standen früher auch Rauschen, Farbrauschen und grobes Farbrauschen aus dem Aufklapper Rauschen,
+        ''' ein Überbleibsel aus der Zeit, als beides eine Gruppe war; das grobe Farbrauschen
+        ''' wurde dabei nicht einmal gemeldet und stand danach im Panel mit dem alten Wert. Der
+        ''' Gruppenvergleich nimmt denselben Weg, sein Auge blendete deshalb das Rauschen mit aus.
+        ''' Wacht: „Gruppen: Zuruecksetzer und Auge fassen nur Regler der eigenen Gruppe an".
         ''' Der breite <see cref="ResetDetailInternal"/> bleibt für das Ersetzen des ganzen Looks.</summary>
         Private Sub ResetDetailGroupInternal()
             _clarity = 0
             _dustScratches = 0
             _haze = 0
-            _addNoise = 0
-            _colorNoiseReduction = 0
-            _farbrauschGrob = 0
-            _farbrauschGrobSkala = 50
-            _colorNoiseAdd = 0
             _structure = 0
             _glow = 0
             Me.RaisePropertyChanged(NameOf(Clarity))
             Me.RaisePropertyChanged(NameOf(DustScratches))
             Me.RaisePropertyChanged(NameOf(Haze))
-            Me.RaisePropertyChanged(NameOf(AddNoise))
-            Me.RaisePropertyChanged(NameOf(ColorNoiseReduction))
-            Me.RaisePropertyChanged(NameOf(ColorNoiseAdd))
-            Me.RaisePropertyChanged(NameOf(ColorNoiseAmount))
             Me.RaisePropertyChanged(NameOf([Structure]))
             Me.RaisePropertyChanged(NameOf(Glow))
             RaiseResetButtonStateChanged()

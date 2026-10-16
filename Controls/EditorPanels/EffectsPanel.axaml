@@ -35,8 +35,8 @@
                                 Width="28"
                                 Height="28"
                                 Padding="0"
-                                Command="{Binding DataContext.ResetEffectsCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                ToolTip.Tip="Effekte zurücksetzen">
+                                Command="{Binding DataContext.ResetVignetteCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                ToolTip.Tip="Vignette zurücksetzen">
                             <icons:SvgIcon
                                 Source="avares://FerrumPix/Assets/Icons/outline/rotate-clockwise.svg"
                                 Width="14" Height="14" />
