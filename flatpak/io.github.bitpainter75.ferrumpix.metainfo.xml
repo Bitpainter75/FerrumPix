@@ -99,6 +99,22 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="0.9.66-1" date="2026-10-16">
+      <description>
+        <p>This update makes it easier to compare individual adjustments and entire editing groups. It also improves RAW support on macOS and fixes several issues with white balance, image display and TIFF/DNG performance:</p>
+        <p xml:lang="de">Mit diesem Update lassen sich einzelne Anpassungen und ganze Bearbeitungsgruppen leichter vergleichen. Außerdem wird die RAW-Unterstützung unter macOS verbessert und mehrere Probleme mit dem Weißabgleich, der Bilddarstellung und der Verarbeitung von TIFF- und DNG-Dateien behoben:</p>
+        <ul>
+          <li>You can now temporarily disable individual tone curves or entire adjustment groups to compare their effect. Right-click a curve channel (RGB, R, G, B or L) or click the eye icon next to a group's reset button. Repeat the action to restore your settings.</li>
+          <li xml:lang="de">Einzelne Gradationskurven oder ganze Bearbeitungsgruppen lassen sich jetzt vorübergehend ausschalten, um ihre Wirkung zu vergleichen. Dazu genügt ein Rechtsklick auf einen Kurvenkanal (RGB, R, G, B oder L) oder ein Klick auf das Augensymbol neben dem Zurücksetzen-Button einer Gruppe. Ein erneuter Klick stellt die Einstellungen wieder her.</li>
+          <li>Changing the white balance of a RAW photo now preserves its original tint. This fixes unwanted green or magenta color shifts when adjusting temperature, using automatic enhancement, picking a white balance or applying presets. Double-clicking the temperature or tint value restores the original setting.</li>
+          <li xml:lang="de">Beim Ändern des Weißabgleichs von RAW-Fotos bleibt der ursprüngliche Farbton jetzt erhalten. Dadurch entstehen keine unerwünschten Grün- oder Magentastiche mehr, wenn die Farbtemperatur angepasst, die Automatik verwendet oder ein Preset angewendet wird. Per Doppelklick lassen sich Temperatur und Farbton auf ihre ursprünglichen Werte zurücksetzen.</li>
+          <li>Expanding the canvas no longer makes the photo appear smaller in the editor. The preview now shows the image at the correct size, even when the canvas is enlarged by just a few pixels.</li>
+          <li xml:lang="de">Beim Vergrößern der Arbeitsfläche wird das Foto im Editor nicht mehr fälschlicherweise verkleinert dargestellt. Die Vorschau zeigt das Bild jetzt auch bei kleinen Änderungen der Arbeitsfläche in der richtigen Größe.</li>
+          <li>Reading TIFF and DNG metadata is now much faster, especially on network drives. FerrumPix no longer needs to load the entire file just to read its details, speeding up folder indexing, opening images and displaying image information.</li>
+          <li xml:lang="de">Das Auslesen von TIFF- und DNG-Metadaten geht jetzt deutlich schneller, besonders auf Netzlaufwerken. FerrumPix muss dafür nicht mehr die gesamte Datei laden. Dadurch werden die Ordnerüberwachung, das Öffnen von Bildern und die Anzeige von Bildinformationen beschleunigt.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.9.65-4" date="2026-10-15">
       <description>
         <p>This update makes it easier to compare slider settings, improves lens detection on Canon cameras and fixes a few issues with bright areas in RAW images:</p>
