@@ -12,6 +12,7 @@
         <conv:EditorToolEqualsConverter x:Key="EditorToolEqualsConverter"/>
         <conv:StringEqualsConverter x:Key="StringEqualsConverter"/>
         <conv:NotInListConverter x:Key="NotInListConverter"/>
+        <conv:InListConverter x:Key="InListConverter"/>
         <conv:AllTrueConverter x:Key="AllTrueConverter"/>
         <conv:FilmstripTileWidthConverter x:Key="FilmstripTileWidthConverter"/>
         <conv:TranslateConverter x:Key="TranslateConverter"/>

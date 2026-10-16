@@ -9600,4 +9600,7 @@
   <data name="Adaptive_gl_ttet_so_stark_wie_das_Bild_bei_der_j_6f9632c5" xml:space="preserve">
     <value>Adaptive: smooths as strongly as the image is noisy at each brightness. Guided: smooths only flat areas, with a fixed threshold. Gaussian: smooths evenly with a small radius. Median: edge-preserving, true noise reduction.</value>
   </data>
+  <data name="Gruppe_vor_bergehend_ausblenden_um_vorher_und_na_455169be" xml:space="preserve">
+    <value>Hide this group for a moment to compare before and after</value>
+  </data>
 </root>

@@ -9625,4 +9625,7 @@
   <data name="Adaptive_gl_ttet_so_stark_wie_das_Bild_bei_der_j_6f9632c5" xml:space="preserve">
     <value>Adaptive: हर चमक पर छवि में जितना शोर है, उतना ही चिकना करता है। Guided: तय सीमा से सिर्फ़ समतल हिस्सों को चिकना करता है। गॉसियन: छोटे दायरे में एक-सा चिकना करता है। मीडियन: किनारे बचाता है, असली शोर हटाना।</value>
   </data>
+  <data name="Gruppe_vor_bergehend_ausblenden_um_vorher_und_na_455169be" xml:space="preserve">
+    <value>पहले और बाद की तुलना के लिए समूह को कुछ देर के लिए छिपाएँ</value>
+  </data>
 </root>

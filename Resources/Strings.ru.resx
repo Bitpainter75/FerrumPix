@@ -9621,4 +9621,7 @@
   <data name="Adaptive_gl_ttet_so_stark_wie_das_Bild_bei_der_j_6f9632c5" xml:space="preserve">
     <value>Adaptive: сглаживает настолько, насколько изображение шумит при данной яркости. Guided: сглаживает только ровные участки с постоянным порогом. Gaussian: равномерно сглаживает с малым радиусом. Median: с сохранением краёв, настоящее подавление шума.</value>
   </data>
+  <data name="Gruppe_vor_bergehend_ausblenden_um_vorher_und_na_455169be" xml:space="preserve">
+    <value>Временно скрыть группу, чтобы сравнить до и после</value>
+  </data>
 </root>

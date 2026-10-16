@@ -9621,4 +9621,7 @@
   <data name="Adaptive_gl_ttet_so_stark_wie_das_Bild_bei_der_j_6f9632c5" xml:space="preserve">
     <value>Adaptive: wygładza tak mocno, jak bardzo obraz szumi przy danej jasności. Guided: wygładza ze stałym progiem tylko płaskie obszary. Gaussian: wygładza równomiernie z małym promieniem. Median: zachowuje krawędzie, prawdziwa redukcja szumu.</value>
   </data>
+  <data name="Gruppe_vor_bergehend_ausblenden_um_vorher_und_na_455169be" xml:space="preserve">
+    <value>Tymczasowo ukryj grupę, aby porównać przed i po</value>
+  </data>
 </root>

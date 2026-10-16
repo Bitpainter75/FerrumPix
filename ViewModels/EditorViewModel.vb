@@ -22400,6 +22400,7 @@ Namespace ViewModels
 
         Public Async Function ConfirmSaveBeforeLeavingAsync(actionDescription As String) As Task(Of Boolean)
             RestoreAllCurveCompares()
+            RestoreAllAdjustmentGroupCompares()
             RaiseEvent LeavingDocument(Me, EventArgs.Empty)
             If Not _hasChanges Then Return True
             If _mainVm Is Nothing Then Return True
@@ -22822,6 +22823,7 @@ Namespace ViewModels
         End Sub
 
         Private Sub RaiseResetButtonStateChanged()
+            RaiseAdjustmentGroupCompareChanged()
             Me.RaisePropertyChanged(NameOf(HasCropChanges))
             Me.RaisePropertyChanged(NameOf(CanApplyTransform))
             Me.RaisePropertyChanged(NameOf(HasImageResizeChanges))
@@ -23002,6 +23004,9 @@ Namespace ViewModels
             Next
             _undoStack.Clear()
             ClearRedoStack()
+            ' Jeder Weg hierher wechselt das Dokument oder verwirft seine Bearbeitung, und ein
+            ' gemerkter Gruppenvergleich gehoert zum Bild, auf dem er entstand.
+            ForgetAdjustmentGroupCompares()
             RebuildHistorySteps()
             Me.RaisePropertyChanged(NameOf(CanUndo))
             Me.RaisePropertyChanged(NameOf(CanRedo))
@@ -28016,6 +28021,7 @@ Namespace ViewModels
                 _objectAdjustSwapInProgress = False
             End Try
             Me.RaisePropertyChanged(NameOf(IsAdjustingObject))
+            Me.RaisePropertyChanged(NameOf(CanCompareAdjustmentGroups))
         End Sub
 
         ''' <summary>Auf welche Objekte wirken die Regler im Objekt-Anpassungsmodus? Bei einer
@@ -28114,6 +28120,7 @@ Namespace ViewModels
                 _selectionAdjustSwapInProgress = False
             End Try
             Me.RaisePropertyChanged(NameOf(IsAdjustingSelection))
+            Me.RaisePropertyChanged(NameOf(CanCompareAdjustmentGroups))
         End Sub
 
         ''' <summary>Wechselt die Regler zwischen globalem Bild und der einzigen aktiven Auswahl.
@@ -28213,6 +28220,7 @@ Namespace ViewModels
                 _selectionAdjustSwapInProgress = False
             End Try
             Me.RaisePropertyChanged(NameOf(IsAdjustingSelection))
+            Me.RaisePropertyChanged(NameOf(CanCompareAdjustmentGroups))
             SchedulePreviewUpdate()
         End Sub
 
@@ -28291,6 +28299,7 @@ Namespace ViewModels
             End Try
 
             Me.RaisePropertyChanged(NameOf(IsAdjustingObject))
+            Me.RaisePropertyChanged(NameOf(CanCompareAdjustmentGroups))
             ' GERECHNET wird nur, wenn am Bild wirklich etwas anders wird - also wenn die Anpassung
             ' des bisherigen Objekts sich geaendert hat. Ein blosser Wechsel der Markierung stellt
             ' die Regler um und laesst das Bild, wie es ist. Vorher standen hier drei Anstoesse je
@@ -29366,11 +29375,6 @@ Namespace ViewModels
         ''' Weichzeichnen gehoert NICHT dazu - es hat seine eigene Gruppe mit eigenem Knopf, und ein
         ''' Zuruecksetzer, der ueber die Gruppengrenze hinaus greift, ueberrascht nur.</summary>
         Private Sub ResetNoiseGroupInternal()
-            _addNoise = 0
-            _colorNoiseReduction = 0
-            _colorNoiseAdd = 0
-            _farbrauschGrob = 0
-            _farbrauschGrobSkala = 50
             ' Auch das gespeicherte Entrauschen mit Modell gehoert hierher: es steht in derselben
             ' Gruppe, und ohne diesen Weg gaebe es keinen, es wieder loszuwerden.
             '
@@ -29382,6 +29386,17 @@ Namespace ViewModels
                 RaiseStoredDenoiseChanged()
                 StatusText = LocalizationService.T("Gespeichertes Entrauschen entfernt - die Bildpunkte bleiben, wie sie sind")
             End If
+            ResetNoiseSlidersInternal()
+        End Sub
+
+        ''' <summary>Nur die Regler der Rauschen-Gruppe, ohne das gespeicherte Entrauschen. Der
+        ''' Gruppenvergleich nimmt diesen Weg: den Vermerk wegzuwerfen holte kein Vergleich zurueck.</summary>
+        Private Sub ResetNoiseSlidersInternal()
+            _addNoise = 0
+            _colorNoiseReduction = 0
+            _colorNoiseAdd = 0
+            _farbrauschGrob = 0
+            _farbrauschGrobSkala = 50
             For Each n In {NameOf(AddNoise), NameOf(ColorNoiseAmount), NameOf(ColorNoiseReduction),
                            NameOf(ColorNoiseAdd), NameOf(FarbrauschGrob), NameOf(ColorNoiseCoarseScale),
                            NameOf(HasColorBlotches)}

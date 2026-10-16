@@ -9625,4 +9625,7 @@
   <data name="Adaptive_gl_ttet_so_stark_wie_das_Bild_bei_der_j_6f9632c5" xml:space="preserve">
     <value>Adaptive: ลดสัญญาณรบกวนตามปริมาณที่ภาพมีจริงในแต่ละระดับความสว่าง Guided: ทำให้เรียบเฉพาะพื้นที่ราบด้วยเกณฑ์คงที่ เกาส์เซียน: ทำให้เรียบสม่ำเสมอด้วยรัศมีเล็ก มีเดียน: รักษาขอบไว้ เป็นการลดสัญญาณรบกวนที่แท้จริง</value>
   </data>
+  <data name="Gruppe_vor_bergehend_ausblenden_um_vorher_und_na_455169be" xml:space="preserve">
+    <value>ซ่อนกลุ่มชั่วคราวเพื่อเปรียบเทียบก่อนและหลัง</value>
+  </data>
 </root>

@@ -9625,4 +9625,7 @@
   <data name="Adaptive_gl_ttet_so_stark_wie_das_Bild_bei_der_j_6f9632c5" xml:space="preserve">
     <value>Adaptive: görüntü her parlaklıkta ne kadar gürültülüyse o kadar yumuşatır. Guided: sabit bir eşikle yalnızca düz alanları yumuşatır. Gauss: küçük bir yarıçapla eşit biçimde yumuşatır. Ortanca: kenar koruyan, gerçek gürültü giderme.</value>
   </data>
+  <data name="Gruppe_vor_bergehend_ausblenden_um_vorher_und_na_455169be" xml:space="preserve">
+    <value>Öncesi ve sonrasını karşılaştırmak için grubu geçici olarak gizle</value>
+  </data>
 </root>

@@ -9621,4 +9621,7 @@
   <data name="Adaptive_gl_ttet_so_stark_wie_das_Bild_bei_der_j_6f9632c5" xml:space="preserve">
     <value>Adaptive: pehmentää niin voimakkaasti kuin kuvassa on kohinaa kullakin kirkkaudella. Guided: pehmentää kiinteällä kynnyksellä vain tasaiset alueet. Gaussian: pehmentää tasaisesti pienellä säteellä. Median: säilyttää reunat, aitoa kohinanpoistoa.</value>
   </data>
+  <data name="Gruppe_vor_bergehend_ausblenden_um_vorher_und_na_455169be" xml:space="preserve">
+    <value>Piilota ryhmä hetkeksi vertaillaksesi ennen ja jälkeen</value>
+  </data>
 </root>

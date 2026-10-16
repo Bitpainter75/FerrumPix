@@ -9625,4 +9625,7 @@
   <data name="Adaptive_gl_ttet_so_stark_wie_das_Bild_bei_der_j_6f9632c5" xml:space="preserve">
     <value>Adaptive: 밝기마다 실제 노이즈 양에 맞춰 부드럽게 합니다. Guided: 고정된 기준으로 평평한 부분만 부드럽게 합니다. 가우시안: 작은 반경으로 고르게 부드럽게 합니다. 미디언: 가장자리를 지키는 진짜 노이즈 제거입니다.</value>
   </data>
+  <data name="Gruppe_vor_bergehend_ausblenden_um_vorher_und_na_455169be" xml:space="preserve">
+    <value>그룹을 잠시 숨겨 적용 전후를 비교합니다</value>
+  </data>
 </root>

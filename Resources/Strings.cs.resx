@@ -9621,4 +9621,7 @@
   <data name="Adaptive_gl_ttet_so_stark_wie_das_Bild_bei_der_j_6f9632c5" xml:space="preserve">
     <value>Adaptive: vyhlazuje tak silně, jak je obraz zašuměný při dané jasnosti. Guided: vyhlazuje s pevným prahem jen ploché oblasti. Gaussian: vyhlazuje rovnoměrně s malým poloměrem. Median: zachovává hrany, skutečné potlačení šumu.</value>
   </data>
+  <data name="Gruppe_vor_bergehend_ausblenden_um_vorher_und_na_455169be" xml:space="preserve">
+    <value>Dočasně skrýt skupinu a porovnat před a po</value>
+  </data>
 </root>

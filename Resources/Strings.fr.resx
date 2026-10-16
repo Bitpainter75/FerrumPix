@@ -9581,4 +9581,7 @@
   <data name="Adaptive_gl_ttet_so_stark_wie_das_Bild_bei_der_j_6f9632c5" xml:space="preserve">
     <value>Adaptive : lisse autant que l'image est bruitée à chaque luminosité. Guided : lisse seulement les zones planes, avec un seuil fixe. Gaussien : lisse uniformément avec un petit rayon. Médiane : préserve les contours, réduction de bruit réelle.</value>
   </data>
+  <data name="Gruppe_vor_bergehend_ausblenden_um_vorher_und_na_455169be" xml:space="preserve">
+    <value>Masquer temporairement le groupe pour comparer avant et après</value>
+  </data>
 </root>

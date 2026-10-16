@@ -9621,4 +9621,7 @@
   <data name="Adaptive_gl_ttet_so_stark_wie_das_Bild_bei_der_j_6f9632c5" xml:space="preserve">
     <value>Adaptive: jämnar ut så starkt som bilden brusar vid varje ljusstyrka. Guided: jämnar bara ut plana ytor med en fast tröskel. Gaussian: jämnar ut jämnt med liten radie. Median: bevarar kanter, verklig brusreducering.</value>
   </data>
+  <data name="Gruppe_vor_bergehend_ausblenden_um_vorher_und_na_455169be" xml:space="preserve">
+    <value>Dölj gruppen tillfälligt för att jämföra före och efter</value>
+  </data>
 </root>

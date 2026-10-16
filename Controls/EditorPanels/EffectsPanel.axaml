@@ -10,7 +10,7 @@
         <Expander Header="Vignette" icons:ExpanderState.Key="vignette">
             <Expander.HeaderTemplate>
                 <DataTemplate>
-                    <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
+                    <Grid ColumnDefinitions="*,Auto,Auto" VerticalAlignment="Center">
                         <StackPanel Orientation="Horizontal" Spacing="8"
                                     VerticalAlignment="Center">
                             <icons:SvgIcon
@@ -18,7 +18,19 @@
                                 Width="14" Height="14" />
                             <TextBlock Text="{Binding}" FontWeight="SemiBold" />
                         </StackPanel>
+                        <!-- Gruppenvergleich, beschrieben in LightPanel.axaml. Er blendet nur die
+                             Vignette aus, anders als der Zuruecksetzer daneben. -->
                         <Button Grid.Column="1"
+                                Classes="icon-btn group-compare"
+                                Classes.comparing="{Binding DataContext.ComparingAdjustmentGroups, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource InListConverter}, ConverterParameter=vignette}"
+                                IsVisible="{Binding DataContext.CanCompareAdjustmentGroups, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                Width="28" Height="28" Padding="0"
+                                Command="{Binding DataContext.ToggleAdjustmentGroupCompareCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                CommandParameter="vignette"
+                                ToolTip.Tip="Gruppe vorübergehend ausblenden, um vorher und nachher zu vergleichen">
+                            <icons:SvgIcon Width="14" Height="14" />
+                        </Button>
+                        <Button Grid.Column="2"
                                 Classes="icon-btn group-reset"
                                 Width="28"
                                 Height="28"
@@ -106,7 +118,7 @@
             <Expander Header="Körnung" icons:ExpanderState.Key="grain">
                 <Expander.HeaderTemplate>
                     <DataTemplate>
-                        <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
+                        <Grid ColumnDefinitions="*,Auto,Auto" VerticalAlignment="Center">
                             <StackPanel Orientation="Horizontal" Spacing="8"
                                         VerticalAlignment="Center">
                                 <icons:SvgIcon
@@ -114,7 +126,18 @@
                                     Width="14" Height="14" />
                                 <TextBlock Text="{Binding}" FontWeight="SemiBold" />
                             </StackPanel>
+                            <!-- Gruppenvergleich, beschrieben in LightPanel.axaml -->
                             <Button Grid.Column="1"
+                                    Classes="icon-btn group-compare"
+                                    Classes.comparing="{Binding DataContext.ComparingAdjustmentGroups, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource InListConverter}, ConverterParameter=grain}"
+                                    IsVisible="{Binding DataContext.CanCompareAdjustmentGroups, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                    Width="28" Height="28" Padding="0"
+                                    Command="{Binding DataContext.ToggleAdjustmentGroupCompareCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                    CommandParameter="grain"
+                                    ToolTip.Tip="Gruppe vorübergehend ausblenden, um vorher und nachher zu vergleichen">
+                                <icons:SvgIcon Width="14" Height="14" />
+                            </Button>
+                            <Button Grid.Column="2"
                                     Classes="icon-btn group-reset"
                                     Width="28"
                                     Height="28"

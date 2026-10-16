@@ -9621,4 +9621,7 @@
   <data name="Adaptive_gl_ttet_so_stark_wie_das_Bild_bei_der_j_6f9632c5" xml:space="preserve">
     <value>Adaptive: strijkt zo sterk glad als het beeld bij elke helderheid ruist. Guided: strijkt met een vaste drempel alleen vlakke delen glad. Gaussian: strijkt gelijkmatig glad met een kleine straal. Median: randbehoudend, echte ruisonderdrukking.</value>
   </data>
+  <data name="Gruppe_vor_bergehend_ausblenden_um_vorher_und_na_455169be" xml:space="preserve">
+    <value>Groep tijdelijk verbergen om voor en na te vergelijken</value>
+  </data>
 </root>

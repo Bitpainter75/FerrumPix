@@ -111,7 +111,7 @@ RAW files are developed from the actual sensor data: a photo keeps the exposure 
 
 The compare button in the editor can also show the JPEG the camera stored inside the raw file, so you see where the development differs from the camera's own look of the same shot.
 
-To see what a single slider does, right-click it: it jumps to its default and changes colour, and the next right-click brings your value back. Several sliders can be compared like this at once.
+To see what a single slider does, right-click it: it jumps to its default and changes colour, and the next right-click brings your value back. Several sliders can be compared like this at once. The eye in the heading of a group such as Light or Color does the same for all of its sliders together.
 
 Lens defects are corrected from measured data covering more than 1500 lenses on over 1000 camera bodies: distortion, coloured fringes and the darkening towards the edges. Lens and camera are recognised from the shot data, compact cameras with their built-in lens included. For Sony, Olympus, OM System and Panasonic cameras without measured data, the correction the camera stores in the raw file is used instead, and where there is nothing for your lens, nothing is changed. Coloured fringes the measured data leaves behind, or those of a lens without data, can be removed by hand.
 

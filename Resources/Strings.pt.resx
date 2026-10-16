@@ -9580,4 +9580,7 @@
   <data name="Adaptive_gl_ttet_so_stark_wie_das_Bild_bei_der_j_6f9632c5" xml:space="preserve">
     <value>Adaptive: suaviza na medida do ruído que a imagem tem em cada brilho. Guided: suaviza apenas áreas planas, com um limiar fixo. Gaussiano: suaviza de forma uniforme com um raio pequeno. Mediana: preserva as bordas, redução de ruído real.</value>
   </data>
+  <data name="Gruppe_vor_bergehend_ausblenden_um_vorher_und_na_455169be" xml:space="preserve">
+    <value>Ocultar o grupo temporariamente para comparar antes e depois</value>
+  </data>
 </root>

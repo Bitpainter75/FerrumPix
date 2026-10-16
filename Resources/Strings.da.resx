@@ -9621,4 +9621,7 @@
   <data name="Adaptive_gl_ttet_so_stark_wie_das_Bild_bei_der_j_6f9632c5" xml:space="preserve">
     <value>Adaptive: udglatter så kraftigt, som billedet støjer ved den enkelte lysstyrke. Guided: udglatter kun flade områder med en fast tærskel. Gaussian: udglatter jævnt med en lille radius. Median: bevarer kanter, ægte støjreduktion.</value>
   </data>
+  <data name="Gruppe_vor_bergehend_ausblenden_um_vorher_und_na_455169be" xml:space="preserve">
+    <value>Skjul gruppen midlertidigt for at sammenligne før og efter</value>
+  </data>
 </root>

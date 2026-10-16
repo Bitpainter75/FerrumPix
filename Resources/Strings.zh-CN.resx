@@ -9579,4 +9579,7 @@
   <data name="Adaptive_gl_ttet_so_stark_wie_das_Bild_bei_der_j_6f9632c5" xml:space="preserve">
     <value>Adaptive：按图像在各亮度下的实际噪点强度进行平滑。Guided：以固定阈值仅平滑平坦区域。高斯：以小半径均匀平滑。中值：保留边缘，真正减少噪点。</value>
   </data>
+  <data name="Gruppe_vor_bergehend_ausblenden_um_vorher_und_na_455169be" xml:space="preserve">
+    <value>暂时隐藏该组，以比较前后效果</value>
+  </data>
 </root>

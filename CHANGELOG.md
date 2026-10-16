@@ -10,6 +10,11 @@
   channel's curve back to a straight line for a moment; the next right-click brings it back,
   just like comparing a single slider.
 
+- **Compare a whole group.** The eye next to the reset button of Light, Color, Tone curve,
+  Color mixer, Colour grading, Calibration, Sharpness, Blur, Noise, Details, Vignette and
+  Grain hides that group's adjustments for a moment, so you see the photo without them; click it
+  again to bring them back.
+
 ### Fixes
 
 - Enlarging the canvas no longer makes the photo shrink inside the editor. Even one extra pixel

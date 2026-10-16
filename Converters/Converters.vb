@@ -191,6 +191,26 @@ Namespace Converters
         End Function
     End Class
 
+    ''' <summary>Das Gegenteil von <see cref="NotInListConverter"/>: wahr, wenn der Parameter in der
+    ''' gebundenen Komma-Liste steht. Fuer den Vergleichsknopf der Anpassungsgruppen
+    ''' (EditorViewModel.ComparingAdjustmentGroups).</summary>
+    Public Class InListConverter
+        Implements IValueConverter
+
+        Private Shared ReadOnly Inverse As New NotInListConverter()
+
+        Public Function Convert(value As Object, targetType As Type, parameter As Object,
+                                culture As Globalization.CultureInfo) As Object Implements IValueConverter.Convert
+            If String.IsNullOrWhiteSpace(TryCast(parameter, String)) Then Return False
+            Return Not CBool(Inverse.Convert(value, targetType, parameter, culture))
+        End Function
+
+        Public Function ConvertBack(value As Object, targetType As Type, parameter As Object,
+                                    culture As Globalization.CultureInfo) As Object Implements IValueConverter.ConvertBack
+            Throw New NotSupportedException()
+        End Function
+    End Class
+
     Public Class StringEqualsConverter
         Implements IValueConverter
 

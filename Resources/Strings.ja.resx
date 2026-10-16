@@ -9621,4 +9621,7 @@
   <data name="Adaptive_gl_ttet_so_stark_wie_das_Bild_bei_der_j_6f9632c5" xml:space="preserve">
     <value>Adaptive: 明るさごとの実際のノイズ量に合わせて滑らかにします。Guided: 固定のしきい値で平坦な部分だけを滑らかにします。Gaussian: 小さな半径で均一に滑らかにします。Median: エッジを保つ本来のノイズ除去。</value>
   </data>
+  <data name="Gruppe_vor_bergehend_ausblenden_um_vorher_und_na_455169be" xml:space="preserve">
+    <value>グループを一時的に非表示にして、適用前と適用後を比較します</value>
+  </data>
 </root>

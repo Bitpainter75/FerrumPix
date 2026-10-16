@@ -31,6 +31,19 @@
                                 Source="avares://FerrumPix/Assets/Icons/outline/alert-triangle.svg"
                                 Width="14" Height="14" />
                         </Button>
+                        <!-- Blendet die Anpassungen der Gruppe vorübergehend aus und wieder ein,
+                             wie der Rechtsklick am Regler, nur für alle Regler der Gruppe
+                             (EditorViewModel.ToggleAdjustmentGroupCompare). Das Symbol setzt der
+                             Stil, damit es im Vergleich wechseln kann. -->
+                        <Button Classes="icon-btn group-compare"
+                                Classes.comparing="{Binding DataContext.ComparingAdjustmentGroups, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource InListConverter}, ConverterParameter=light}"
+                                IsVisible="{Binding DataContext.CanCompareAdjustmentGroups, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                Width="28" Height="28" Padding="0"
+                                Command="{Binding DataContext.ToggleAdjustmentGroupCompareCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                CommandParameter="light"
+                                ToolTip.Tip="Gruppe vorübergehend ausblenden, um vorher und nachher zu vergleichen">
+                            <icons:SvgIcon Width="14" Height="14" />
+                        </Button>
                         <Button Classes="icon-btn group-reset"
                                 Width="28"
                                 Height="28"
