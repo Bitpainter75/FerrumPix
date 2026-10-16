@@ -521,6 +521,10 @@ Namespace Services
         ''' Anpassungswerkzeug wechselt? Ab Werk aus. Die Tasten STRG+TAB und STRG+SHIFT+TAB gelten
         ''' unabhaengig davon immer.</summary>
         Public Property EditorToolSwitcher As Boolean = False
+        ''' <summary>Regler mit Farbbedeutung zeigen ihre Wirkung als Farbverlauf (Temperatur,
+        ''' Tönung, Sättigung, Farbmischer, Kalibrierung, Punktfarbe). Ab Werk aus: dann sind alle
+        ''' Regler die gewohnten in der Akzentfarbe.</summary>
+        Public Property ColoredSliders As Boolean = False
         ''' <summary>KOMPAKTMODUS der Anpassungen: statt der fuenf Werkzeuge Anpassen, Farbe, Details,
         ''' Effekte und Filter steht in der Werkzeugleiste EINES, "Anpassungen", das alle ihre
         ''' Gruppen untereinander zeigt, und darin ist immer nur eine Gruppe aufgeklappt. Ab Werk aus.</summary>

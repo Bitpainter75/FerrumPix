@@ -60,7 +60,8 @@
                 <TextBlock Text="Rot" Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap" />
                 <icons:RoundSlider Grid.Column="1" Minimum="-200" Maximum="200" DefaultValue="{Binding ChannelMixerRedDefault}"
-                                   Value="{Binding ChannelMixerRed}" Margin="0,0" />
+                                   Value="{Binding ChannelMixerRed}" Margin="0,0"
+                                   ColorTrack="{x:Static icons:SliderTracks.ChannelRed}" />
                 <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
                                          Value="{Binding ChannelMixerRed, Mode=TwoWay}" Minimum="-200" Maximum="200" />
             </Grid>
@@ -68,7 +69,8 @@
                 <TextBlock Text="Grün" Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap" />
                 <icons:RoundSlider Grid.Column="1" Minimum="-200" Maximum="200" DefaultValue="{Binding ChannelMixerGreenDefault}"
-                                   Value="{Binding ChannelMixerGreen}" Margin="0,0" />
+                                   Value="{Binding ChannelMixerGreen}" Margin="0,0"
+                                   ColorTrack="{x:Static icons:SliderTracks.ChannelGreen}" />
                 <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
                                          Value="{Binding ChannelMixerGreen, Mode=TwoWay}" Minimum="-200" Maximum="200" />
             </Grid>
@@ -76,7 +78,8 @@
                 <TextBlock Text="Blau" Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap" />
                 <icons:RoundSlider Grid.Column="1" Minimum="-200" Maximum="200" DefaultValue="{Binding ChannelMixerBlueDefault}"
-                                   Value="{Binding ChannelMixerBlue}" Margin="0,0" />
+                                   Value="{Binding ChannelMixerBlue}" Margin="0,0"
+                                   ColorTrack="{x:Static icons:SliderTracks.ChannelBlue}" />
                 <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
                                          Value="{Binding ChannelMixerBlue, Mode=TwoWay}" Minimum="-200" Maximum="200" />
             </Grid>
@@ -85,7 +88,8 @@
                            VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap"
                            ToolTip.Tip="Hebt oder senkt den Kanal gleichmäßig, unabhängig von den Eingaben" />
                 <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100" DefaultValue="0"
-                                   Value="{Binding ChannelMixerConstant}" Margin="0,0" />
+                                   Value="{Binding ChannelMixerConstant}" Margin="0,0"
+                                   ColorTrack="{x:Static icons:SliderTracks.ChannelConstant}" />
                 <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
                                          Value="{Binding ChannelMixerConstant, Mode=TwoWay}" Minimum="-100" Maximum="100" />
             </Grid>

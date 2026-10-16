@@ -9590,4 +9590,64 @@
   <data name="Gruppe_vor_bergehend_ausblenden_um_vorher_und_na_455169be" xml:space="preserve">
     <value>Masquer temporairement le groupe pour comparer avant et après</value>
   </data>
+  <data name="Mischer_395d0d0f" xml:space="preserve">
+    <value>Mélangeur</value>
+  </data>
+  <data name="Punktfarbe_e9bf7118" xml:space="preserve">
+    <value>Couleur ponctuelle</value>
+  </data>
+  <data name="Streuung_e58f4606" xml:space="preserve">
+    <value>Variance</value>
+  </data>
+  <data name="Bereich_anzeigen_6efa4f8a" xml:space="preserve">
+    <value>Afficher la plage</value>
+  </data>
+  <data name="Mit_der_Pipette_eine_Farbe_im_Bild_aufnehmen_ada9762e" xml:space="preserve">
+    <value>Prélevez une couleur dans la photo avec la pipette</value>
+  </data>
+  <data name="Pipette_auf_die_Farbe_im_Bild_klicken_die_versch_2a317f6b" xml:space="preserve">
+    <value>Pipette : cliquez sur la couleur de la photo à décaler</value>
+  </data>
+  <data name="Mittlere_Maustaste_l_scht_dieses_Farbfeld_e6b1c396" xml:space="preserve">
+    <value>Le bouton central de la souris supprime cet échantillon</value>
+  </data>
+  <data name="R_ckt_die_getroffenen_Farben_auseinander_oder_n__cdecc6f7" xml:space="preserve">
+    <value>Écarte les couleurs touchées ou les rapproche de la couleur prélevée</value>
+  </data>
+  <data name="Wie_weit_um_die_aufgenommene_Farbe_herum_noch_Fa_54a823ca" xml:space="preserve">
+    <value>Jusqu'où autour de la couleur prélevée les autres couleurs sont encore touchées</value>
+  </data>
+  <data name="Zeigt_grau_was_das_gew_hlte_Farbfeld_nicht_triff_bea4cc00" xml:space="preserve">
+    <value>Affiche en gris ce que l'échantillon choisi ne touche pas. Aperçu uniquement</value>
+  </data>
+  <data name="Die_Punktfarbe_nimmt_h_chstens_acht_Farben_auf_f485f83c" xml:space="preserve">
+    <value>La couleur ponctuelle accepte au plus huit couleurs</value>
+  </data>
+  <data name="Diese_Farbe_ist_zu_blass_oder_zu_dunkel_bitte_ei_25c60546" xml:space="preserve">
+    <value>Cette couleur est trop pâle ou trop sombre, cliquez sur un endroit plus coloré</value>
+  </data>
+  <data name="F_r_diese_Farbe_gibt_es_schon_ein_Farbfeld_8e42e124" xml:space="preserve">
+    <value>Il existe déjà un échantillon pour cette couleur</value>
+  </data>
+  <data name="Farbe_aufgenommen_56c0cf18" xml:space="preserve">
+    <value>Couleur prélevée</value>
+  </data>
+  <data name="Farbfeld_l_schen_ef9636b2" xml:space="preserve">
+    <value>Supprimer l'échantillon</value>
+  </data>
+  <data name="Farbe_aufnehmen_3352db4c" xml:space="preserve">
+    <value>Prélever une couleur</value>
+  </data>
+  <data name="Farbmischer_acht_Farbb_nder_f150ebbe" xml:space="preserve">
+    <value>Mélangeur de couleurs : huit bandes de couleur</value>
+  </data>
+  <data name="Punktfarbe_eine_Farbe_im_Bild_aufnehmen_und_vers_34b3b5c0" xml:space="preserve">
+    <value>Couleur ponctuelle : prélevez une couleur dans la photo et décalez-la</value>
+  </data>
+  <data name="Farbige_Regler_a130cb77" xml:space="preserve">
+    <value>Curseurs colorés</value>
+  </data>
+  <data name="Regler_mit_Farbbedeutung_zeigen_ihre_Wirkung_als_e9ae433e" xml:space="preserve">
+    <value>Les curseurs liés à la couleur montrent leur effet sous forme de dégradé, par exemple température, teinte ou mélangeur de couleurs. Désactivé, tous les curseurs utilisent la couleur d'accent.</value>
+  </data>
 </root>

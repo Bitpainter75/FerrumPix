@@ -9630,4 +9630,64 @@
   <data name="Gruppe_vor_bergehend_ausblenden_um_vorher_und_na_455169be" xml:space="preserve">
     <value>Dölj gruppen tillfälligt för att jämföra före och efter</value>
   </data>
+  <data name="Mischer_395d0d0f" xml:space="preserve">
+    <value>Mixer</value>
+  </data>
+  <data name="Punktfarbe_e9bf7118" xml:space="preserve">
+    <value>Punktfärg</value>
+  </data>
+  <data name="Streuung_e58f4606" xml:space="preserve">
+    <value>Spridning</value>
+  </data>
+  <data name="Bereich_anzeigen_6efa4f8a" xml:space="preserve">
+    <value>Visa område</value>
+  </data>
+  <data name="Mit_der_Pipette_eine_Farbe_im_Bild_aufnehmen_ada9762e" xml:space="preserve">
+    <value>Hämta en färg i bilden med pipetten</value>
+  </data>
+  <data name="Pipette_auf_die_Farbe_im_Bild_klicken_die_versch_2a317f6b" xml:space="preserve">
+    <value>Pipett: klicka på färgen i bilden som ska förskjutas</value>
+  </data>
+  <data name="Mittlere_Maustaste_l_scht_dieses_Farbfeld_e6b1c396" xml:space="preserve">
+    <value>Mittenknappen tar bort detta färgfält</value>
+  </data>
+  <data name="R_ckt_die_getroffenen_Farben_auseinander_oder_n__cdecc6f7" xml:space="preserve">
+    <value>Sprider de träffade färgerna eller för dem närmare den hämtade</value>
+  </data>
+  <data name="Wie_weit_um_die_aufgenommene_Farbe_herum_noch_Fa_54a823ca" xml:space="preserve">
+    <value>Hur långt runt den hämtade färgen andra färger fortfarande träffas</value>
+  </data>
+  <data name="Zeigt_grau_was_das_gew_hlte_Farbfeld_nicht_triff_bea4cc00" xml:space="preserve">
+    <value>Visar i grått det valda färgfältet inte träffar. Endast i förhandsvisningen</value>
+  </data>
+  <data name="Die_Punktfarbe_nimmt_h_chstens_acht_Farben_auf_f485f83c" xml:space="preserve">
+    <value>Punktfärg rymmer högst åtta färger</value>
+  </data>
+  <data name="Diese_Farbe_ist_zu_blass_oder_zu_dunkel_bitte_ei_25c60546" xml:space="preserve">
+    <value>Den här färgen är för blek eller för mörk, klicka på ett kraftigare ställe</value>
+  </data>
+  <data name="F_r_diese_Farbe_gibt_es_schon_ein_Farbfeld_8e42e124" xml:space="preserve">
+    <value>Det finns redan ett färgfält för den här färgen</value>
+  </data>
+  <data name="Farbe_aufgenommen_56c0cf18" xml:space="preserve">
+    <value>Färg hämtad</value>
+  </data>
+  <data name="Farbfeld_l_schen_ef9636b2" xml:space="preserve">
+    <value>Ta bort färgfält</value>
+  </data>
+  <data name="Farbe_aufnehmen_3352db4c" xml:space="preserve">
+    <value>Hämta färg</value>
+  </data>
+  <data name="Farbmischer_acht_Farbb_nder_f150ebbe" xml:space="preserve">
+    <value>Färgmixer: åtta färgband</value>
+  </data>
+  <data name="Punktfarbe_eine_Farbe_im_Bild_aufnehmen_und_vers_34b3b5c0" xml:space="preserve">
+    <value>Punktfärg: hämta en färg i bilden och förskjut den</value>
+  </data>
+  <data name="Farbige_Regler_a130cb77" xml:space="preserve">
+    <value>Färgade reglage</value>
+  </data>
+  <data name="Regler_mit_Farbbedeutung_zeigen_ihre_Wirkung_als_e9ae433e" xml:space="preserve">
+    <value>Reglage med färgbetydelse visar sin verkan som färgövergång, till exempel temperatur, ton eller färgmixer. Avstängt har alla reglage accentfärgen.</value>
+  </data>
 </root>

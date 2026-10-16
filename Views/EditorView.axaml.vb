@@ -1912,6 +1912,13 @@ Namespace Views
                     Dim vmForPick = TryCast(DataContext, EditorViewModel)
                     If pickCanvas IsNot Nothing AndAlso vmForPick IsNot Nothing Then
                         pickCanvas.Cursor = If(vmForPick.IsPickingColorFromImage, GetPipetteCursor(), Nothing)
+                        ' Der Rahmen eines markierten Objekts liegt darüber und trägt seinen
+                        ' eigenen Zeiger; ohne diese Zeile zeigte er bis zur nächsten Mausbewegung
+                        ' weiter den Verschiebezeiger.
+                        Dim pickOverlay = Me.FindControl(Of Border)("TextOverlay")
+                        If pickOverlay IsNot Nothing Then
+                            pickOverlay.Cursor = If(vmForPick.IsPickingColorFromImage, GetPipetteCursor(), New Cursor(StandardCursorType.SizeAll))
+                        End If
                     End If
                     If vmForPick Is Nothing OrElse Not vmForPick.IsPickingColorFromImage Then ReleasePickSampleBitmap()
                 Case NameOf(EditorViewModel.IsStraightenLineActive)
@@ -6633,6 +6640,11 @@ Namespace Views
             Dim canvas = Me.FindControl(Of Canvas)("PreviewCanvas")
             Dim vm = TryCast(DataContext, EditorViewModel)
             If overlay Is Nothing OrElse canvas Is Nothing OrElse vm Is Nothing Then Return
+            ' WARTET EINE PIPETTE, gehört der Klick ihr. Der Rahmen eines markierten Objekts liegt
+            ' über der Bühne und nahm ihn sonst als Beginn eines Verschiebens; die Pipette kam nie
+            ' an. Unbehandelt steigt das Ereignis zur Bühne auf (OnSliderPointerPressed), und die
+            ' nimmt die Farbe dort auf, wo geklickt wurde.
+            If vm.IsPickingColorFromImage Then Return
             Dim pos = e.GetPosition(canvas)
 
             ' Beim Vergleich liegt der TextOverlay-Border (transparent, hit-test-sichtbar) in der
@@ -6915,6 +6927,12 @@ Namespace Views
             Dim canvas = Me.FindControl(Of Canvas)("PreviewCanvas")
             Dim vm = TryCast(DataContext, EditorViewModel)
             If canvas Is Nothing OrElse vm Is Nothing Then Return
+            ' Mit wartender Pipette zeigt auch der Objektrahmen die Pipette, nicht den Verschiebe-
+            ' oder Griffzeiger: der Klick geht an sie (OnTextOverlayPointerPressed).
+            If vm.IsPickingColorFromImage Then
+                overlay.Cursor = GetPipetteCursor()
+                Return
+            End If
             Dim mode = NoHandlesWhileWarping(vm, If(SelectionAcceptsDrag(vm), GetTextDragMode(e.GetPosition(canvas), GetTextOverlayRect(), OverlayHitRotation(vm)), TextDragMode.None))
             overlay.Cursor = GetCursorForTextDragMode(mode, IsSelectedAnnotationTextLayer(vm))
         End Sub

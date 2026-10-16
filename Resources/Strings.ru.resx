@@ -9630,4 +9630,64 @@
   <data name="Gruppe_vor_bergehend_ausblenden_um_vorher_und_na_455169be" xml:space="preserve">
     <value>Временно скрыть группу, чтобы сравнить до и после</value>
   </data>
+  <data name="Mischer_395d0d0f" xml:space="preserve">
+    <value>Микшер</value>
+  </data>
+  <data name="Punktfarbe_e9bf7118" xml:space="preserve">
+    <value>Точечный цвет</value>
+  </data>
+  <data name="Streuung_e58f4606" xml:space="preserve">
+    <value>Разброс</value>
+  </data>
+  <data name="Bereich_anzeigen_6efa4f8a" xml:space="preserve">
+    <value>Показать диапазон</value>
+  </data>
+  <data name="Mit_der_Pipette_eine_Farbe_im_Bild_aufnehmen_ada9762e" xml:space="preserve">
+    <value>Выберите цвет на фото пипеткой</value>
+  </data>
+  <data name="Pipette_auf_die_Farbe_im_Bild_klicken_die_versch_2a317f6b" xml:space="preserve">
+    <value>Пипетка: щёлкните по цвету на фото, который нужно сдвинуть</value>
+  </data>
+  <data name="Mittlere_Maustaste_l_scht_dieses_Farbfeld_e6b1c396" xml:space="preserve">
+    <value>Средняя кнопка мыши удаляет этот образец</value>
+  </data>
+  <data name="R_ckt_die_getroffenen_Farben_auseinander_oder_n__cdecc6f7" xml:space="preserve">
+    <value>Раздвигает затронутые цвета или приближает их к выбранному</value>
+  </data>
+  <data name="Wie_weit_um_die_aufgenommene_Farbe_herum_noch_Fa_54a823ca" xml:space="preserve">
+    <value>Насколько далеко вокруг выбранного цвета затрагиваются другие цвета</value>
+  </data>
+  <data name="Zeigt_grau_was_das_gew_hlte_Farbfeld_nicht_triff_bea4cc00" xml:space="preserve">
+    <value>Показывает серым то, что выбранный образец не затрагивает. Только в предпросмотре</value>
+  </data>
+  <data name="Die_Punktfarbe_nimmt_h_chstens_acht_Farben_auf_f485f83c" xml:space="preserve">
+    <value>Точечный цвет вмещает не более восьми цветов</value>
+  </data>
+  <data name="Diese_Farbe_ist_zu_blass_oder_zu_dunkel_bitte_ei_25c60546" xml:space="preserve">
+    <value>Этот цвет слишком бледный или тёмный, щёлкните по более насыщенному месту</value>
+  </data>
+  <data name="F_r_diese_Farbe_gibt_es_schon_ein_Farbfeld_8e42e124" xml:space="preserve">
+    <value>Для этого цвета уже есть образец</value>
+  </data>
+  <data name="Farbe_aufgenommen_56c0cf18" xml:space="preserve">
+    <value>Цвет выбран</value>
+  </data>
+  <data name="Farbfeld_l_schen_ef9636b2" xml:space="preserve">
+    <value>Удалить образец</value>
+  </data>
+  <data name="Farbe_aufnehmen_3352db4c" xml:space="preserve">
+    <value>Выбрать цвет</value>
+  </data>
+  <data name="Farbmischer_acht_Farbb_nder_f150ebbe" xml:space="preserve">
+    <value>Микшер цвета: восемь цветовых полос</value>
+  </data>
+  <data name="Punktfarbe_eine_Farbe_im_Bild_aufnehmen_und_vers_34b3b5c0" xml:space="preserve">
+    <value>Точечный цвет: выберите цвет на фото и сдвиньте его</value>
+  </data>
+  <data name="Farbige_Regler_a130cb77" xml:space="preserve">
+    <value>Цветные ползунки</value>
+  </data>
+  <data name="Regler_mit_Farbbedeutung_zeigen_ihre_Wirkung_als_e9ae433e" xml:space="preserve">
+    <value>Ползунки, связанные с цветом, показывают своё действие цветовым градиентом, например температура, оттенок или микшер цвета. Если выключено, все ползунки окрашены цветом акцента.</value>
+  </data>
 </root>

@@ -290,6 +290,7 @@ Namespace ViewModels
         Private _magentaHue As Double = 0
         Private _magentaSaturation As Double = 0
         Private _magentaLuminance As Double = 0
+        Private _pointColors As String = ""
         Private _retouchRadius As Double = 24.0
         Private _brushSize As Double = 24.0
         Private _brushHardness As Double = 100
@@ -8482,6 +8483,25 @@ Namespace ViewModels
             End Set
         End Property
 
+        ''' <summary>Die Farbfelder der Punktfarbe als Rezepttext (<see cref="PointColorSwatch"/>).
+        ''' Ein Schritt in der Historie je Änderung; die Oberfläche arbeitet über
+        ''' <see cref="PointColorSwatch.ParseList"/> und <see cref="PointColorSwatch.FormatList"/>.</summary>
+        Public Property PointColors As String
+            Get
+                Return _pointColors
+            End Get
+            Set(value As String)
+                Dim normalized = If(value, "")
+                If String.Equals(_pointColors, normalized, StringComparison.Ordinal) Then Return
+                CaptureUndoState(NameOf(PointColors))
+                _pointColors = normalized
+                Me.RaisePropertyChanged(NameOf(PointColors))
+                RefreshPointColorChips()
+                RaiseResetButtonStateChanged()
+                SchedulePreviewForCurrentTarget()
+            End Set
+        End Property
+
         Private _selectedHslBand As String = "Red"
 
         ''' Welches der 8 HSL-Bänder gerade per Farbrad ausgewählt ist - steuert, welches der 16
@@ -8550,6 +8570,33 @@ Namespace ViewModels
             ("Blue", "Blau", 240.0),
             ("Purple", "Lila", 275.0),
             ("Magenta", "Magenta", 315.0)}
+
+        ''' <summary>Die Farbspuren der drei Regler des gewählten Bands (Einstellung „Farbige
+        ''' Regler"): sein Farbton zu beiden Nachbarn hin, grau nach seiner Farbe, dunkel nach hell.</summary>
+        Public ReadOnly Property ActiveHslHueTrack As Avalonia.Media.IBrush
+            Get
+                Return Controls.SliderTracks.HueSpan(SelectedHslBandHue(), 30.0)
+            End Get
+        End Property
+
+        Public ReadOnly Property ActiveHslSaturationTrack As Avalonia.Media.IBrush
+            Get
+                Return Controls.SliderTracks.SaturationOf(SelectedHslBandHue())
+            End Get
+        End Property
+
+        Public ReadOnly Property ActiveHslLuminanceTrack As Avalonia.Media.IBrush
+            Get
+                Return Controls.SliderTracks.LuminanceOf(SelectedHslBandHue())
+            End Get
+        End Property
+
+        Private Function SelectedHslBandHue() As Double
+            For Each band In HslBands
+                If String.Equals(band.Key, _selectedHslBand, StringComparison.Ordinal) Then Return band.Hue
+            Next
+            Return 0.0
+        End Function
 
         Public ReadOnly Property SelectedHslBandLabel As String
             Get
@@ -8649,6 +8696,9 @@ Namespace ViewModels
         ''' <summary>Auswahl und Abweichungsmarken der Kreise nachziehen. Aufgerufen bei jedem
         ''' Bandwechsel und bei jeder Aenderung eines Bandwertes.</summary>
         Private Sub RefreshHslBandChips()
+            Me.RaisePropertyChanged(NameOf(ActiveHslHueTrack))
+            Me.RaisePropertyChanged(NameOf(ActiveHslSaturationTrack))
+            Me.RaisePropertyChanged(NameOf(ActiveHslLuminanceTrack))
             If _hslBandChips Is Nothing Then Return
             Dim adjusted = AdjustedHslBands
             For Each chip In _hslBandChips
@@ -12808,7 +12858,7 @@ Namespace ViewModels
             RaiseNegativePropertiesChanged()
             RaiseResetButtonStateChanged()
             Me.RaisePropertyChanged(NameOf(TransparencyBackgroundBrush))
-            SchedulePreviewUpdate()
+            SchedulePreviewForCurrentTarget()
         End Sub
 
         Private _selectionClipboardPath As String = Nothing
@@ -22648,6 +22698,7 @@ Namespace ViewModels
                 .MagentaHue = CSng(_magentaHue),
                 .MagentaSaturation = CSng(_magentaSaturation),
                 .MagentaLuminance = CSng(_magentaLuminance),
+                .PointColors = If(forPreview, PointColorsForPreview(), _pointColors),
                 .ColorGradeShadowHue = CSng(_colorGradeShadowHue),
                 .ColorGradeShadowSaturation = CSng(_colorGradeShadowSaturation),
                 .ColorGradeHighlightHue = CSng(_colorGradeHighlightHue),
@@ -23327,6 +23378,12 @@ Namespace ViewModels
                 Case NameOf(MagentaHue) : Return HslHistoryLabel("Magenta", "Farbton")
                 Case NameOf(MagentaSaturation) : Return HslHistoryLabel("Magenta", "Sättigung")
                 Case NameOf(MagentaLuminance) : Return HslHistoryLabel("Magenta", "Luminanz")
+                Case NameOf(PointColors) : Return LocalizationService.T("Punktfarbe")
+                Case NameOf(PointColorHueShift) : Return CombineHistoryLabel("Punktfarbe", "Farbton")
+                Case NameOf(PointColorSaturationShift) : Return CombineHistoryLabel("Punktfarbe", "Sättigung")
+                Case NameOf(PointColorLuminanceShift) : Return CombineHistoryLabel("Punktfarbe", "Luminanz")
+                Case NameOf(PointColorVariance) : Return CombineHistoryLabel("Punktfarbe", "Streuung")
+                Case NameOf(PointColorRange) : Return CombineHistoryLabel("Punktfarbe", "Bereich")
                 Case NameOf(FilterPreset)
                     Return LocalizationService.T("Filter")
                 Case NameOf(FilterStrength)
@@ -24184,6 +24241,7 @@ Namespace ViewModels
             _magentaHue = adj.MagentaHue
             _magentaSaturation = adj.MagentaSaturation
             _magentaLuminance = adj.MagentaLuminance
+            _pointColors = If(adj.PointColors, "")
             _colorGradeShadowHue = adj.ColorGradeShadowHue
             _colorGradeShadowSaturation = adj.ColorGradeShadowSaturation
             _colorGradeHighlightHue = adj.ColorGradeHighlightHue
@@ -28062,6 +28120,7 @@ Namespace ViewModels
         ''' Bild-Regler wieder her, bevor der Ebenenstapel seine Indizes ändert.</summary>
         Private Sub CommitObjectAdjustModeToModel()
             If Not IsObjectAdjustModeActive() Then Return
+            RestoreAllAdjustmentGroupCompares()
             Dim keepIndex = _selectedAnnotationIndex
             _objectAdjustSwapInProgress = True
             Try
@@ -28148,6 +28207,7 @@ Namespace ViewModels
         ''' Dokument bestehen. Nur die sichtbare aktive Auswahl darf anschließend verschwinden.</summary>
         Private Sub CommitSelectionAdjustModeToModel()
             If Not IsSelectionAdjustModeActive() Then Return
+            RestoreAllAdjustmentGroupCompares()
             _selectionAdjustSwapInProgress = True
             Try
                 ' Bearbeitete Ebenen-Maske zurückschreiben (aber NICHT räumen): der Wechsel ins
@@ -28209,6 +28269,9 @@ Namespace ViewModels
             If shouldBeActive AndAlso IsSelectionAdjustModeActive() AndAlso
                (selectedExisting Is Nothing OrElse selectedExisting.Id = _selectionAdjustLayerId) Then Return
             If Not shouldBeActive AndAlso Not IsSelectionAdjustModeActive() Then Return
+            ' Das Reglerziel wechselt: ein laufender Gruppenvergleich kommt VORHER zurück, sonst
+            ' bliebe die bisherige Ebene auf dem Startwert stehen.
+            RestoreAllAdjustmentGroupCompares()
 
             If IsSelectionAdjustModeActive() Then
                 CommitSelectionAdjustModeToModel()
@@ -28315,6 +28378,9 @@ Namespace ViewModels
             ' geaendert, weil jemand an den Reglern war. Der Wechsel selbst aendert nichts - die
             ' Regler zeigen danach andere Zahlen, das Bild sieht gleich aus.
             Dim imageChanges = False
+            ' Das Reglerziel wechselt: ein laufender Gruppenvergleich kommt VORHER zurück, sonst
+            ' bliebe das bisherige Objekt auf dem Startwert stehen.
+            RestoreAllAdjustmentGroupCompares()
             _objectAdjustSwapInProgress = True
             Try
                 If IsObjectAdjustModeActive() Then
@@ -29083,7 +29149,7 @@ Namespace ViewModels
             ResetHslFields()
             RaiseExtendedAdjustmentProperties()
             RaiseResetButtonStateChanged()
-            SchedulePreviewUpdate()
+            SchedulePreviewForCurrentTarget()
         End Sub
 
         Private Sub ResetLightInternal()
@@ -29107,7 +29173,7 @@ Namespace ViewModels
             If rawHighlightRecoveryChanged Then
                 RebuildWorkingImageForLens()
             Else
-                SchedulePreviewUpdate()
+                SchedulePreviewForCurrentTarget()
             End If
         End Sub
 
@@ -29127,7 +29193,7 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(Vibrance))
             Me.RaisePropertyChanged(NameOf(Saturation))
             RaiseResetButtonStateChanged()
-            SchedulePreviewUpdate()
+            SchedulePreviewForCurrentTarget()
         End Sub
 
         ''' <summary>Wohin die Kalibrierung zurueckgeht. Fuer das Foto einer RAW sind das ihre
@@ -29161,7 +29227,7 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(CalibrationBlueSaturation))
             Me.RaisePropertyChanged(NameOf(CalibrationShadowTint))
             RaiseResetButtonStateChanged()
-            SchedulePreviewUpdate()
+            SchedulePreviewForCurrentTarget()
         End Sub
 
         ''' Eigene Gruppe im Werkzeug "Farbe" (unterhalb des HSL-Farbmischers) - wird sowohl vom
@@ -29198,7 +29264,7 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(ColorGradeGlobalLuminance))
             Me.RaisePropertyChanged(NameOf(ColorGradeBlending))
             RaiseResetButtonStateChanged()
-            SchedulePreviewUpdate()
+            SchedulePreviewForCurrentTarget()
         End Sub
 
         ''' <summary>Nimmt ALLE Reglerwerte zurueck, die eine gespeicherte Anpassung bzw. die
@@ -29376,7 +29442,7 @@ Namespace ViewModels
                 RefreshLensCorrection()
                 RebuildWorkingImageForLens()
             Else
-                SchedulePreviewUpdate()
+                SchedulePreviewForCurrentTarget()
             End If
         End Sub
 
@@ -29415,7 +29481,7 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(SharpenMasking))
             Me.RaisePropertyChanged(NameOf(SharpenMethodLabel))
             RaiseResetButtonStateChanged()
-            SchedulePreviewUpdate()
+            SchedulePreviewForCurrentTarget()
         End Sub
 
         ''' <summary>Nur die Weichzeichnen-Gruppe (Weichzeichnen, Glätten, Detail, Methode).</summary>
@@ -29430,7 +29496,7 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(NoiseReductionMethod))
             Me.RaisePropertyChanged(NameOf(NoiseReductionMethodLabel))
             RaiseResetButtonStateChanged()
-            SchedulePreviewUpdate()
+            SchedulePreviewForCurrentTarget()
         End Sub
 
         ''' <summary>Die Rauschen-Gruppe: die drei Stufen, die im Panel zusammenstehen. Das
@@ -29465,7 +29531,7 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(n)
             Next
             RaiseResetButtonStateChanged()
-            SchedulePreviewUpdate()
+            SchedulePreviewForCurrentTarget()
         End Sub
 
         ''' <summary>Nur die Körnung-Gruppe (Stärke, Größe, Rauheit, Farbe).</summary>
@@ -29479,7 +29545,7 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(GrainFrequency))
             Me.RaisePropertyChanged(NameOf(GrainColor))
             RaiseResetButtonStateChanged()
-            SchedulePreviewUpdate()
+            SchedulePreviewForCurrentTarget()
         End Sub
 
         ''' <summary>Nur die Regler im Aufklapper Details: Klarheit, Struktur, Dunst, Staub und
@@ -29503,7 +29569,7 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf([Structure]))
             Me.RaisePropertyChanged(NameOf(Glow))
             RaiseResetButtonStateChanged()
-            SchedulePreviewUpdate()
+            SchedulePreviewForCurrentTarget()
         End Sub
 
         ''' <summary>Setzt nur Schärfe und Weichzeichnen zurück - die Regler dieser Gruppe.</summary>
@@ -29542,7 +29608,7 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(HasLutApplied))
             Me.RaisePropertyChanged(NameOf(LastAppliedFilterPresetName))
             RaiseResetButtonStateChanged()
-            SchedulePreviewUpdate()
+            SchedulePreviewForCurrentTarget()
         End Sub
 
         ''' <summary>Setzt den Rahmen zurück, und das heisst seit dem Umbau: das Rahmen-Objekt kommt
@@ -29598,7 +29664,7 @@ Namespace ViewModels
             RebuildLayerRows()
             RaiseExtendedAdjustmentProperties()
             RaiseResetButtonStateChanged()
-            SchedulePreviewUpdate()
+            SchedulePreviewForCurrentTarget()
         End Sub
 
         Private Sub RaiseEffectsPropertiesChanged()
@@ -29872,6 +29938,7 @@ Namespace ViewModels
             _blueHue = 0 : _blueSaturation = 0 : _blueLuminance = 0
             _purpleHue = 0 : _purpleSaturation = 0 : _purpleLuminance = 0
             _magentaHue = 0 : _magentaSaturation = 0 : _magentaLuminance = 0
+            _pointColors = ""
         End Sub
 
         Private Sub RaiseLightPropertiesChanged()
@@ -29921,6 +29988,7 @@ Namespace ViewModels
                 NameOf(BlueHue), NameOf(BlueSaturation), NameOf(BlueLuminance),
                 NameOf(PurpleHue), NameOf(PurpleSaturation), NameOf(PurpleLuminance),
                 NameOf(MagentaHue), NameOf(MagentaSaturation), NameOf(MagentaLuminance),
+                NameOf(PointColors),
                 NameOf(ActiveHslHue), NameOf(ActiveHslSaturation), NameOf(ActiveHslLuminance),
                 NameOf(AdjustedHslBands),
                 NameOf(IsCurveRgbEdited), NameOf(IsCurveRedEdited), NameOf(IsCurveGreenEdited),
@@ -29938,6 +30006,7 @@ Namespace ViewModels
             ' die acht Farbchips halten ihre Abweichungsmarke aber als eigenen Zustand. Ohne dieses
             ' Nachziehen blieb ihr weisser Punkt vom vorherigen Bild bzw. Zustand stehen.
             RefreshHslBandChips()
+            RefreshPointColorChips()
             RaiseResetButtonStateChanged()
         End Sub
 
@@ -30452,6 +30521,7 @@ Namespace ViewModels
             BlueHue = look.BlueHue : BlueSaturation = look.BlueSaturation : BlueLuminance = look.BlueLuminance
             PurpleHue = look.PurpleHue : PurpleSaturation = look.PurpleSaturation : PurpleLuminance = look.PurpleLuminance
             MagentaHue = look.MagentaHue : MagentaSaturation = look.MagentaSaturation : MagentaLuminance = look.MagentaLuminance
+            PointColors = If(look.PointColors, "")
 
             ' Der Filter kommt aus dem Preset (S/W-Umwandlung). Ohne diese Zeilen bliebe der zuvor
             ' gewählte stehen und das Preset käme bunt an.

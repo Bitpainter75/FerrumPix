@@ -9589,4 +9589,64 @@
   <data name="Gruppe_vor_bergehend_ausblenden_um_vorher_und_na_455169be" xml:space="preserve">
     <value>Ocultar o grupo temporariamente para comparar antes e depois</value>
   </data>
+  <data name="Mischer_395d0d0f" xml:space="preserve">
+    <value>Misturador</value>
+  </data>
+  <data name="Punktfarbe_e9bf7118" xml:space="preserve">
+    <value>Cor pontual</value>
+  </data>
+  <data name="Streuung_e58f4606" xml:space="preserve">
+    <value>Variação</value>
+  </data>
+  <data name="Bereich_anzeigen_6efa4f8a" xml:space="preserve">
+    <value>Mostrar intervalo</value>
+  </data>
+  <data name="Mit_der_Pipette_eine_Farbe_im_Bild_aufnehmen_ada9762e" xml:space="preserve">
+    <value>Recolha uma cor da foto com o conta-gotas</value>
+  </data>
+  <data name="Pipette_auf_die_Farbe_im_Bild_klicken_die_versch_2a317f6b" xml:space="preserve">
+    <value>Conta-gotas: clique na cor da foto que pretende deslocar</value>
+  </data>
+  <data name="Mittlere_Maustaste_l_scht_dieses_Farbfeld_e6b1c396" xml:space="preserve">
+    <value>O botão do meio do rato elimina esta amostra</value>
+  </data>
+  <data name="R_ckt_die_getroffenen_Farben_auseinander_oder_n__cdecc6f7" xml:space="preserve">
+    <value>Afasta as cores atingidas ou aproxima-as da cor recolhida</value>
+  </data>
+  <data name="Wie_weit_um_die_aufgenommene_Farbe_herum_noch_Fa_54a823ca" xml:space="preserve">
+    <value>Até que distância da cor recolhida outras cores ainda são atingidas</value>
+  </data>
+  <data name="Zeigt_grau_was_das_gew_hlte_Farbfeld_nicht_triff_bea4cc00" xml:space="preserve">
+    <value>Mostra a cinzento o que a amostra escolhida não atinge. Apenas na pré-visualização</value>
+  </data>
+  <data name="Die_Punktfarbe_nimmt_h_chstens_acht_Farben_auf_f485f83c" xml:space="preserve">
+    <value>A cor pontual aceita no máximo oito cores</value>
+  </data>
+  <data name="Diese_Farbe_ist_zu_blass_oder_zu_dunkel_bitte_ei_25c60546" xml:space="preserve">
+    <value>Esta cor é demasiado pálida ou escura, clique num ponto mais intenso</value>
+  </data>
+  <data name="F_r_diese_Farbe_gibt_es_schon_ein_Farbfeld_8e42e124" xml:space="preserve">
+    <value>Já existe uma amostra para esta cor</value>
+  </data>
+  <data name="Farbe_aufgenommen_56c0cf18" xml:space="preserve">
+    <value>Cor recolhida</value>
+  </data>
+  <data name="Farbfeld_l_schen_ef9636b2" xml:space="preserve">
+    <value>Eliminar amostra</value>
+  </data>
+  <data name="Farbe_aufnehmen_3352db4c" xml:space="preserve">
+    <value>Recolher cor</value>
+  </data>
+  <data name="Farbmischer_acht_Farbb_nder_f150ebbe" xml:space="preserve">
+    <value>Misturador de cor: oito bandas de cor</value>
+  </data>
+  <data name="Punktfarbe_eine_Farbe_im_Bild_aufnehmen_und_vers_34b3b5c0" xml:space="preserve">
+    <value>Cor pontual: recolha uma cor da foto e desloque-a</value>
+  </data>
+  <data name="Farbige_Regler_a130cb77" xml:space="preserve">
+    <value>Controlos deslizantes coloridos</value>
+  </data>
+  <data name="Regler_mit_Farbbedeutung_zeigen_ihre_Wirkung_als_e9ae433e" xml:space="preserve">
+    <value>Os controlos com significado de cor mostram o efeito como gradiente, por exemplo temperatura, tonalidade ou misturador de cor. Desligado, todos usam a cor de destaque.</value>
+  </data>
 </root>

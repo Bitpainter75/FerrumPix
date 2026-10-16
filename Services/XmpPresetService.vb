@@ -403,6 +403,15 @@ Namespace Services
             If TryGetXmpDouble(values, "LuminanceAdjustmentMagenta", d) Then adj.MagentaLuminance = Clamp100(d)
             End If
 
+            ' PUNKTFARBE (crs:PointColors, je Farbfeld 19 Zahlen, dazu crs:ColorVariance). Steht das
+            ' Element da, gilt es, auch wenn es nur die leere Auswahl trägt: ein Preset mit der
+            ' Gruppe Farbe räumt so die Farbfelder ab. Fehlt es, bleiben die vorhandenen stehen.
+            Dim pointColorItems = ParseXmpSeqItems(xmpText, "PointColors")
+            If pointColorItems IsNot Nothing Then
+                adj.PointColors = PointColorSwatch.FormatList(
+                    PointColorSwatch.FromCrs(pointColorItems, ParseXmpSeqItems(xmpText, "ColorVariance")))
+            End If
+
             ''' SCHWARZWEISS-MISCHER (crs:GrayMixer*). Im S/W-Modus ersetzt das Schema das ganze HSL-Panel
             ''' durch diese acht Regler - sie bestimmen, wie hell jeder Farbbereich im Grau landet, und
             ''' sind damit der eigentliche Charakter eines S/W-Presets (gemessen an einer echten Sammlung:
@@ -776,6 +785,15 @@ Namespace Services
         ''' Extrahiert eine crs:ToneCurvePV2012[Red|Green|Blue]-Punktliste (rdf:Seq aus rdf:li-Einträgen
         ''' "x, y") und liefert sie im gleichen "x,y;x,y;..."-Format wie ImageAdjustments.Curve*Points.
         ''' Nothing wenn das Element fehlt oder keine gültigen Punkte enthält.
+        ''' <summary>Die Einträge einer crs:-Liste (rdf:Seq aus rdf:li), roh als Text. Nothing, wenn
+        ''' das Element fehlt; eine leere Liste, wenn es leer ist.</summary>
+        Private Shared Function ParseXmpSeqItems(text As String, elementName As String) As List(Of String)
+            Dim blockMatch = Regex.Match(text, $"<crs:{elementName}>(?<body>.*?)</crs:{elementName}>", RegexOptions.Singleline)
+            If Not blockMatch.Success Then Return Nothing
+            Return Regex.Matches(blockMatch.Groups("body").Value, "<rdf:li>(?<item>[^<]*)</rdf:li>").
+                Cast(Of Match)().Select(Function(m) m.Groups("item").Value).ToList()
+        End Function
+
         Private Shared Function ParseXmpCurvePoints(text As String, elementName As String) As String
             Dim blockMatch = Regex.Match(text, $"<crs:{elementName}>(?<body>.*?)</crs:{elementName}>", RegexOptions.Singleline)
             If Not blockMatch.Success Then Return Nothing

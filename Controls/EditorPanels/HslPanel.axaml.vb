@@ -46,6 +46,19 @@ Namespace Controls.EditorPanels
             ' zusaetzlich aus.
             e.Handled = True
         End Sub
+
+        ''' <summary>Mittlere Maustaste auf einem Farbfeld der Punktfarbe: das Feld löschen.
+        ''' Dieselbe Geste wie auf den Bändern, aus demselben Grund über den Datenkontext.</summary>
+        Private Sub OnPointColorPointerPressed(sender As Object, e As PointerPressedEventArgs)
+            Dim button = TryCast(sender, Button)
+            If button Is Nothing Then Return
+            If Not e.GetCurrentPoint(button).Properties.IsMiddleButtonPressed Then Return
+            Dim chip = TryCast(button.DataContext, ViewModels.EditorViewModel.PointColorChip)
+            Dim editor = TryCast(Me.DataContext, ViewModels.EditorViewModel)
+            If chip Is Nothing OrElse editor Is Nothing Then Return
+            If editor.DeletePointColorCommand.CanExecute(chip.Index) Then editor.DeletePointColorCommand.Execute(chip.Index)
+            e.Handled = True
+        End Sub
     End Class
 
 End Namespace

@@ -9634,4 +9634,64 @@
   <data name="Gruppe_vor_bergehend_ausblenden_um_vorher_und_na_455169be" xml:space="preserve">
     <value>पहले और बाद की तुलना के लिए समूह को कुछ देर के लिए छिपाएँ</value>
   </data>
+  <data name="Mischer_395d0d0f" xml:space="preserve">
+    <value>मिक्सर</value>
+  </data>
+  <data name="Punktfarbe_e9bf7118" xml:space="preserve">
+    <value>पॉइंट रंग</value>
+  </data>
+  <data name="Streuung_e58f4606" xml:space="preserve">
+    <value>विचलन</value>
+  </data>
+  <data name="Bereich_anzeigen_6efa4f8a" xml:space="preserve">
+    <value>सीमा दिखाएँ</value>
+  </data>
+  <data name="Mit_der_Pipette_eine_Farbe_im_Bild_aufnehmen_ada9762e" xml:space="preserve">
+    <value>ड्रॉपर से फ़ोटो में कोई रंग चुनें</value>
+  </data>
+  <data name="Pipette_auf_die_Farbe_im_Bild_klicken_die_versch_2a317f6b" xml:space="preserve">
+    <value>ड्रॉपर: फ़ोटो में उस रंग पर क्लिक करें जिसे बदलना है</value>
+  </data>
+  <data name="Mittlere_Maustaste_l_scht_dieses_Farbfeld_e6b1c396" xml:space="preserve">
+    <value>माउस का बीच वाला बटन इस नमूने को हटाता है</value>
+  </data>
+  <data name="R_ckt_die_getroffenen_Farben_auseinander_oder_n__cdecc6f7" xml:space="preserve">
+    <value>चुने गए रंगों को अलग करता है या उठाए गए रंग के पास लाता है</value>
+  </data>
+  <data name="Wie_weit_um_die_aufgenommene_Farbe_herum_noch_Fa_54a823ca" xml:space="preserve">
+    <value>उठाए गए रंग के आसपास कितनी दूर तक अन्य रंग प्रभावित होते हैं</value>
+  </data>
+  <data name="Zeigt_grau_was_das_gew_hlte_Farbfeld_nicht_triff_bea4cc00" xml:space="preserve">
+    <value>चुना गया नमूना जो प्रभावित नहीं करता उसे धूसर दिखाता है। केवल पूर्वावलोकन में</value>
+  </data>
+  <data name="Die_Punktfarbe_nimmt_h_chstens_acht_Farben_auf_f485f83c" xml:space="preserve">
+    <value>पॉइंट रंग में अधिकतम आठ रंग हो सकते हैं</value>
+  </data>
+  <data name="Diese_Farbe_ist_zu_blass_oder_zu_dunkel_bitte_ei_25c60546" xml:space="preserve">
+    <value>यह रंग बहुत फीका या बहुत गहरा है, कृपया अधिक रंगीन जगह पर क्लिक करें</value>
+  </data>
+  <data name="F_r_diese_Farbe_gibt_es_schon_ein_Farbfeld_8e42e124" xml:space="preserve">
+    <value>इस रंग के लिए पहले से एक नमूना है</value>
+  </data>
+  <data name="Farbe_aufgenommen_56c0cf18" xml:space="preserve">
+    <value>रंग चुना गया</value>
+  </data>
+  <data name="Farbfeld_l_schen_ef9636b2" xml:space="preserve">
+    <value>नमूना हटाएँ</value>
+  </data>
+  <data name="Farbe_aufnehmen_3352db4c" xml:space="preserve">
+    <value>रंग चुनें</value>
+  </data>
+  <data name="Farbmischer_acht_Farbb_nder_f150ebbe" xml:space="preserve">
+    <value>रंग मिक्सर: आठ रंग बैंड</value>
+  </data>
+  <data name="Punktfarbe_eine_Farbe_im_Bild_aufnehmen_und_vers_34b3b5c0" xml:space="preserve">
+    <value>पॉइंट रंग: फ़ोटो में कोई रंग चुनें और उसे बदलें</value>
+  </data>
+  <data name="Farbige_Regler_a130cb77" xml:space="preserve">
+    <value>रंगीन स्लाइडर</value>
+  </data>
+  <data name="Regler_mit_Farbbedeutung_zeigen_ihre_Wirkung_als_e9ae433e" xml:space="preserve">
+    <value>रंग से जुड़े स्लाइडर अपना प्रभाव रंग ढाल के रूप में दिखाते हैं, जैसे तापमान, टिंट या रंग मिक्सर। बंद होने पर सभी स्लाइडर एक्सेंट रंग में रहते हैं।</value>
+  </data>
 </root>

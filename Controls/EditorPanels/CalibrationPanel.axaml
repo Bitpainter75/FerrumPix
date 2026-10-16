@@ -46,7 +46,8 @@
                 <TextBlock Text="Tiefen Tönung" Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap" />
                 <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100" DefaultValue="0"
-                                   Value="{Binding CalibrationShadowTint}" Margin="0,0" />
+                                   Value="{Binding CalibrationShadowTint}"
+                                   ColorTrack="{x:Static icons:SliderTracks.Tint}" Margin="0,0" />
                 <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
                                          Value="{Binding CalibrationShadowTint, Mode=TwoWay}" Minimum="-100" Maximum="100" />
             </Grid>
@@ -54,7 +55,8 @@
                 <TextBlock Text="Rot Farbton" Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap" />
                 <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100" DefaultValue="0"
-                                   Value="{Binding CalibrationRedHue}" Margin="0,0" />
+                                   Value="{Binding CalibrationRedHue}"
+                                   ColorTrack="{x:Static icons:SliderTracks.CalibrationRedHue}" Margin="0,0" />
                 <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
                                          Value="{Binding CalibrationRedHue, Mode=TwoWay}" Minimum="-100" Maximum="100" />
             </Grid>
@@ -62,7 +64,8 @@
                 <TextBlock Text="Rot Sättigung" Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap" />
                 <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100" DefaultValue="0"
-                                   Value="{Binding CalibrationRedSaturation}" Margin="0,0" />
+                                   Value="{Binding CalibrationRedSaturation}"
+                                   ColorTrack="{x:Static icons:SliderTracks.CalibrationRedSaturation}" Margin="0,0" />
                 <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
                                          Value="{Binding CalibrationRedSaturation, Mode=TwoWay}" Minimum="-100" Maximum="100" />
             </Grid>
@@ -70,7 +73,8 @@
                 <TextBlock Text="Grün Farbton" Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap" />
                 <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100" DefaultValue="0"
-                                   Value="{Binding CalibrationGreenHue}" Margin="0,0" />
+                                   Value="{Binding CalibrationGreenHue}"
+                                   ColorTrack="{x:Static icons:SliderTracks.CalibrationGreenHue}" Margin="0,0" />
                 <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
                                          Value="{Binding CalibrationGreenHue, Mode=TwoWay}" Minimum="-100" Maximum="100" />
             </Grid>
@@ -78,7 +82,8 @@
                 <TextBlock Text="Grün Sättigung" Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap" />
                 <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100" DefaultValue="0"
-                                   Value="{Binding CalibrationGreenSaturation}" Margin="0,0" />
+                                   Value="{Binding CalibrationGreenSaturation}"
+                                   ColorTrack="{x:Static icons:SliderTracks.CalibrationGreenSaturation}" Margin="0,0" />
                 <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
                                          Value="{Binding CalibrationGreenSaturation, Mode=TwoWay}" Minimum="-100" Maximum="100" />
             </Grid>
@@ -86,7 +91,8 @@
                 <TextBlock Text="Blau Farbton" Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap" />
                 <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100" DefaultValue="0"
-                                   Value="{Binding CalibrationBlueHue}" Margin="0,0" />
+                                   Value="{Binding CalibrationBlueHue}"
+                                   ColorTrack="{x:Static icons:SliderTracks.CalibrationBlueHue}" Margin="0,0" />
                 <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
                                          Value="{Binding CalibrationBlueHue, Mode=TwoWay}" Minimum="-100" Maximum="100" />
             </Grid>
@@ -94,7 +100,8 @@
                 <TextBlock Text="Blau Sättigung" Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap" />
                 <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100" DefaultValue="0"
-                                   Value="{Binding CalibrationBlueSaturation}" Margin="0,0" />
+                                   Value="{Binding CalibrationBlueSaturation}"
+                                   ColorTrack="{x:Static icons:SliderTracks.CalibrationBlueSaturation}" Margin="0,0" />
                 <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
                                          Value="{Binding CalibrationBlueSaturation, Mode=TwoWay}" Minimum="-100" Maximum="100" />
             </Grid>

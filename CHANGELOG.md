@@ -1,6 +1,26 @@
 ## 0.9.67
 
+### What's new
+
+- **Point color.** In the color mixer, a second view picks a color in the photo with the
+  eyedropper and shifts only that color in hue, saturation and luminance, with a range for how
+  far around it other colors are affected. Up to eight colors, shown as circles; "Show range"
+  greys out everything a color does not reach. Presets with point color now arrive complete.
+
+- **Colored sliders.** A new setting shows sliders with a color meaning as a color gradient,
+  such as temperature, tint, the color mixer, calibration, the channel mixer and point color.
+  Off by default.
+
+- **The eye of a group works on layers too.** It hides the group's adjustments of the selected
+  layer or correction layer for a moment and brings them back.
+
 ### Fixes
+
+- The reset button of a group works on a selected layer right away instead of only after the
+  layer is deselected.
+
+- The eyedropper works on a selected layer: the click no longer starts moving the layer, and the
+  point color takes the color of the layer instead of the photo below it.
 
 - After undo, redo or the eye of a group, the sliders of Details, Noise and some of Sharpness
   stayed where they were, although the picture already showed the restored values. They follow

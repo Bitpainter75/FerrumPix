@@ -99,7 +99,7 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
-    <release version="0.9.66-1" date="2026-10-16">
+    <release version="0.9.66-2" date="2026-10-16">
       <description>
         <p>This update makes it easier to compare individual adjustments and entire editing groups. It also improves RAW support on macOS and fixes several issues with white balance, image display and TIFF/DNG performance:</p>
         <p xml:lang="de">Mit diesem Update lassen sich einzelne Anpassungen und ganze Bearbeitungsgruppen leichter vergleichen. Außerdem wird die RAW-Unterstützung unter macOS verbessert und mehrere Probleme mit dem Weißabgleich, der Bilddarstellung und der Verarbeitung von TIFF- und DNG-Dateien behoben:</p>

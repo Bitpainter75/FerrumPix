@@ -105,6 +105,7 @@ Namespace ViewModels
         Private _editorAdjustmentsPanelOnLeft As Boolean = False
         Private _editorAdjustmentsScrollBarAlwaysVisible As Boolean = False
         Private _editorToolSwitcher As Boolean = False
+        Private _coloredSliders As Boolean = False
         Private _editorCompactAdjustments As Boolean = False
         Private _editorCompactAutoCollapse As Boolean = True
         Private _editorCompactGroupOrder As String = ""
@@ -194,6 +195,7 @@ Namespace ViewModels
         Private _savedEditorAdjustmentsPanelOnLeft As Boolean = False
         Private _savedEditorAdjustmentsScrollBarAlwaysVisible As Boolean = False
         Private _savedEditorToolSwitcher As Boolean = False
+        Private _savedColoredSliders As Boolean = False
         Private _savedEditorCompactAdjustments As Boolean = False
         Private _savedEditorCompactAutoCollapse As Boolean = True
         Private _savedEditorCompactGroupOrder As String = ""
@@ -2394,6 +2396,20 @@ Namespace ViewModels
             End Set
         End Property
 
+        ''' <summary>Farbige Regler: Regler mit Farbbedeutung zeigen ihre Wirkung als Farbverlauf.
+        ''' Ab Werk aus. Wirkt sofort auf alle Regler (RoundSlider.ColoredTracks).</summary>
+        Public Property ColoredSliders As Boolean
+            Get
+                Return _coloredSliders
+            End Get
+            Set(value As Boolean)
+                If _coloredSliders = value Then Return
+                Me.RaiseAndSetIfChanged(_coloredSliders, value)
+                Controls.RoundSlider.ColoredTracks = value
+                SaveLayoutSettings()
+            End Set
+        End Property
+
         ''' <summary>Kompaktmodus der Anpassungen: ein Werkzeug "Anpassungen" statt der fuenf. Ab Werk
         ''' aus. Der Editor stellt Leiste und Werkzeug sofort um
         ''' (EditorViewModel.RefreshCompactAdjustments).</summary>
@@ -4183,6 +4199,8 @@ Namespace ViewModels
             _editorAdjustmentsPanelOnLeft = _appSettings.EditorAdjustmentsPanelOnLeft
             _editorAdjustmentsScrollBarAlwaysVisible = _appSettings.EditorAdjustmentsScrollBarAlwaysVisible
             _editorToolSwitcher = _appSettings.EditorToolSwitcher
+            _coloredSliders = _appSettings.ColoredSliders
+            Controls.RoundSlider.ColoredTracks = _coloredSliders
             _editorCompactAdjustments = _appSettings.EditorCompactAdjustments
             _editorCompactAutoCollapse = _appSettings.EditorCompactAutoCollapse
             _editorCompactGroupOrder = AppSettingsService.NormalizeEditorCompactGroupOrder(_appSettings.EditorCompactGroupOrder)
@@ -4501,6 +4519,7 @@ Namespace ViewModels
             _savedEditorAdjustmentsPanelOnLeft = _editorAdjustmentsPanelOnLeft
             _savedEditorAdjustmentsScrollBarAlwaysVisible = _editorAdjustmentsScrollBarAlwaysVisible
             _savedEditorToolSwitcher = _editorToolSwitcher
+            _savedColoredSliders = _coloredSliders
             _savedEditorCompactAdjustments = _editorCompactAdjustments
             _savedEditorCompactAutoCollapse = _editorCompactAutoCollapse
             _savedEditorCompactGroupOrder = _editorCompactGroupOrder
@@ -4621,6 +4640,7 @@ Namespace ViewModels
             EditorAdjustmentsPanelOnLeft = _savedEditorAdjustmentsPanelOnLeft
             EditorAdjustmentsScrollBarAlwaysVisible = _savedEditorAdjustmentsScrollBarAlwaysVisible
             EditorToolSwitcher = _savedEditorToolSwitcher
+            ColoredSliders = _savedColoredSliders
             EditorCompactAdjustments = _savedEditorCompactAdjustments
             EditorCompactAutoCollapse = _savedEditorCompactAutoCollapse
             EditorCompactGroupOrder = _savedEditorCompactGroupOrder
@@ -4766,6 +4786,7 @@ Namespace ViewModels
             EditorAdjustmentsPanelOnLeft = False
             EditorAdjustmentsScrollBarAlwaysVisible = False
             EditorToolSwitcher = False
+            ColoredSliders = False
             EditorCompactAdjustments = False
             EditorCompactAutoCollapse = True
             EditorCompactGroupOrder = ""
@@ -5147,6 +5168,7 @@ Namespace ViewModels
                                           s.EditorAdjustmentsPanelOnLeft = _editorAdjustmentsPanelOnLeft
                                           s.EditorAdjustmentsScrollBarAlwaysVisible = _editorAdjustmentsScrollBarAlwaysVisible
                                           s.EditorToolSwitcher = _editorToolSwitcher
+                                          s.ColoredSliders = _coloredSliders
                                           s.EditorCompactAdjustments = _editorCompactAdjustments
                                           s.EditorCompactAutoCollapse = _editorCompactAutoCollapse
                                           s.EditorCompactGroupOrder = _editorCompactGroupOrder

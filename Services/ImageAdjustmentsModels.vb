@@ -719,6 +719,10 @@ Namespace Services
         Public Property MagentaHue As Single = 0
         Public Property MagentaSaturation As Single = 0
         Public Property MagentaLuminance As Single = 0
+        ''' <summary>Punktfarbe: bis zu acht aufgenommene Farben, jede mit eigener Verschiebung in
+        ''' Farbton, Sättigung und Helligkeit (<see cref="PointColorSwatch"/>). Als Text, je Farbfeld
+        ''' 20 Zahlen, Felder durch Semikolon getrennt; leer heisst keine Punktfarbe.</summary>
+        Public Property PointColors As String = ""
         ''' <summary>Farbgradierung: vier Zonen (Schatten/Mitten/Lichter/Global) mit je Farbton (0-360),
         ''' Sättigung (0-100) und Luminanz (±100). Die Schatten- und Lichter-Felder hießen bis
         ''' SplitToning*: Split-Toning ist die Zweizonen-Variante desselben Werkzeugs, und Adobe hat es
@@ -1017,6 +1021,12 @@ Namespace Services
 
         Public Shared Function IsIdentityCurve(pointsCsv As String) As Boolean
             Return String.IsNullOrWhiteSpace(pointsCsv) OrElse String.Equals(pointsCsv.Trim(), "0,0;255,255", StringComparison.Ordinal)
+        End Function
+
+        ''' <summary>Trägt das Rezept ein Farbfeld der Punktfarbe, das etwas ändert?</summary>
+        Public Function HasPointColorChanges() As Boolean
+            If String.IsNullOrWhiteSpace(PointColors) Then Return False
+            Return PointColorSwatch.ParseList(PointColors).Any(Function(s) s.IsActive())
         End Function
 
         Public Function HasHslChanges() As Boolean

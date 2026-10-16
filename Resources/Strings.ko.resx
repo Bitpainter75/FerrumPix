@@ -9634,4 +9634,64 @@
   <data name="Gruppe_vor_bergehend_ausblenden_um_vorher_und_na_455169be" xml:space="preserve">
     <value>그룹을 잠시 숨겨 적용 전후를 비교합니다</value>
   </data>
+  <data name="Mischer_395d0d0f" xml:space="preserve">
+    <value>믹서</value>
+  </data>
+  <data name="Punktfarbe_e9bf7118" xml:space="preserve">
+    <value>포인트 색상</value>
+  </data>
+  <data name="Streuung_e58f4606" xml:space="preserve">
+    <value>분산</value>
+  </data>
+  <data name="Bereich_anzeigen_6efa4f8a" xml:space="preserve">
+    <value>범위 표시</value>
+  </data>
+  <data name="Mit_der_Pipette_eine_Farbe_im_Bild_aufnehmen_ada9762e" xml:space="preserve">
+    <value>스포이트로 사진의 색상을 선택하세요</value>
+  </data>
+  <data name="Pipette_auf_die_Farbe_im_Bild_klicken_die_versch_2a317f6b" xml:space="preserve">
+    <value>스포이트: 바꾸려는 사진의 색상을 클릭하세요</value>
+  </data>
+  <data name="Mittlere_Maustaste_l_scht_dieses_Farbfeld_e6b1c396" xml:space="preserve">
+    <value>마우스 가운데 버튼으로 이 견본을 삭제합니다</value>
+  </data>
+  <data name="R_ckt_die_getroffenen_Farben_auseinander_oder_n__cdecc6f7" xml:space="preserve">
+    <value>선택된 색상을 퍼뜨리거나 선택한 색상에 더 가깝게 모읍니다</value>
+  </data>
+  <data name="Wie_weit_um_die_aufgenommene_Farbe_herum_noch_Fa_54a823ca" xml:space="preserve">
+    <value>선택한 색상 주변으로 어디까지 다른 색상이 영향을 받는지</value>
+  </data>
+  <data name="Zeigt_grau_was_das_gew_hlte_Farbfeld_nicht_triff_bea4cc00" xml:space="preserve">
+    <value>선택한 견본이 영향을 주지 않는 부분을 회색으로 표시합니다. 미리 보기에만 적용</value>
+  </data>
+  <data name="Die_Punktfarbe_nimmt_h_chstens_acht_Farben_auf_f485f83c" xml:space="preserve">
+    <value>포인트 색상은 최대 8개 색상까지 담습니다</value>
+  </data>
+  <data name="Diese_Farbe_ist_zu_blass_oder_zu_dunkel_bitte_ei_25c60546" xml:space="preserve">
+    <value>이 색상은 너무 흐리거나 어둡습니다. 더 선명한 곳을 클릭하세요</value>
+  </data>
+  <data name="F_r_diese_Farbe_gibt_es_schon_ein_Farbfeld_8e42e124" xml:space="preserve">
+    <value>이 색상의 견본이 이미 있습니다</value>
+  </data>
+  <data name="Farbe_aufgenommen_56c0cf18" xml:space="preserve">
+    <value>색상을 선택했습니다</value>
+  </data>
+  <data name="Farbfeld_l_schen_ef9636b2" xml:space="preserve">
+    <value>견본 삭제</value>
+  </data>
+  <data name="Farbe_aufnehmen_3352db4c" xml:space="preserve">
+    <value>색상 선택</value>
+  </data>
+  <data name="Farbmischer_acht_Farbb_nder_f150ebbe" xml:space="preserve">
+    <value>색상 믹서: 8개 색상 대역</value>
+  </data>
+  <data name="Punktfarbe_eine_Farbe_im_Bild_aufnehmen_und_vers_34b3b5c0" xml:space="preserve">
+    <value>포인트 색상: 사진에서 색상을 선택해 바꿉니다</value>
+  </data>
+  <data name="Farbige_Regler_a130cb77" xml:space="preserve">
+    <value>색상 슬라이더</value>
+  </data>
+  <data name="Regler_mit_Farbbedeutung_zeigen_ihre_Wirkung_als_e9ae433e" xml:space="preserve">
+    <value>색상과 관련된 슬라이더가 효과를 그라데이션으로 보여 줍니다. 예: 색온도, 색조, 색상 믹서. 끄면 모든 슬라이더가 강조 색상입니다.</value>
+  </data>
 </root>

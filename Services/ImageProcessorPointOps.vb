@@ -108,6 +108,8 @@ Namespace Services
             ''' HSL-Baender und Split-Toning brauchen die Reglerwerte im Pixel - der Zustand wird
             ''' mitgefuehrt statt kopiert.
             Public Hsl As ImageAdjustments
+            ''' Die wirksamen Farbfelder der Punktfarbe, oder Nothing (PointColorMath).
+            Public PointColors As PointColorMath.Prepared()
             Public SplitToning As ImageAdjustments
             Public SplitPivot As Double
             Public SplitHasShadow As Boolean
@@ -324,6 +326,13 @@ Namespace Services
             If adj.HasHslChanges() Then
                 chain.Hsl = If(toneModel >= 2, ModelTwoHsl(adj), adj)
                 chain.HslBandWarp = toneModel >= 2
+                chain.IsIdentity = False
+            End If
+
+            ' --- Punktfarbe: direkt nach dem Farbmischer, wie beim Referenzprogramm ---
+            Dim pointColors = PointColorMath.Prepare(adj.PointColors)
+            If pointColors IsNot Nothing Then
+                chain.PointColors = pointColors
                 chain.IsIdentity = False
             End If
 
@@ -1704,8 +1713,9 @@ Namespace Services
             Dim posterize = chain.PosterizeLevels
             Dim threshold = chain.ThresholdLevel
             ' Einmal ausserhalb der Pixelschleife entschieden (schleifeninvariant).
+            Dim pointColors = chain.PointColors
             Dim hslBlockAktiv = lumCurve IsNot Nothing OrElse hslAdj IsNot Nothing OrElse
-                                splitAdj IsNot Nothing OrElse vibrance <> 0.0F
+                                splitAdj IsNot Nothing OrElse vibrance <> 0.0F OrElse pointColors IsNot Nothing
 
             ForEachRow(width, source.Height,
                 Sub(y)
@@ -1726,6 +1736,8 @@ Namespace Services
                         End If
 
                         Dim rr As Single, gg As Single, bb As Single
+                        ' Gewicht des Farbfelds, dessen Bereich die Vorschau zeigt; -1 ohne Anzeige.
+                        Dim pointColorShown = -1.0
                         If a = 255 OrElse Not srcPremul Then
                             ' Deckend, oder die Werte liegen ohnehin schon unvormultipliziert vor.
                             rr = srcBuf(o + ri) / 255.0F
@@ -1930,6 +1942,23 @@ Namespace Services
 
                             Dim hr As Double, hg As Double, hb As Double
                             HslToRgbF(h, sat, lum, hr, hg, hb)
+
+                            ' --- Punktfarbe, nach dem Farbmischer und vor der Farbgradierung ---
+                            ' Im HSV von LINEAREM ProPhoto, wo sie gemessen ist: dekodieren, in
+                            ' ProPhoto umrechnen, die Farbfelder anwenden, zurück. Was danach
+                            ' ausserhalb von sRGB liegt, wird je Kanal geklemmt, wie beim
+                            ' Referenzprogramm.
+                            If pointColors IsNot Nothing Then
+                                Dim pr = PointColorMath.SrgbDecode(Math.Max(0.0, Math.Min(1.0, hr)))
+                                Dim pg = PointColorMath.SrgbDecode(Math.Max(0.0, Math.Min(1.0, hg)))
+                                Dim pb = PointColorMath.SrgbDecode(Math.Max(0.0, Math.Min(1.0, hb)))
+                                PointColorMath.Transform(PointColorMath.SrgbToProPhoto, pr, pg, pb)
+                                pointColorShown = PointColorMath.Apply(pointColors, pr, pg, pb)
+                                PointColorMath.Transform(PointColorMath.ProPhotoToSrgb, pr, pg, pb)
+                                hr = PointColorMath.SrgbEncode(Math.Max(0.0, Math.Min(1.0, pr)))
+                                hg = PointColorMath.SrgbEncode(Math.Max(0.0, Math.Min(1.0, pg)))
+                                hb = PointColorMath.SrgbEncode(Math.Max(0.0, Math.Min(1.0, pb)))
+                            End If
                             rr = CSng(hr) : gg = CSng(hg) : bb = CSng(hb)
 
                             ' Bei S/W wartet die Tonung hinter der Matrix (ToneAfterPreset).
@@ -2050,6 +2079,8 @@ Namespace Services
                             Dim t = If(lumT >= threshold - 0.0001F, 1.0F, 0.0F)
                             rr = t : gg = t : bb = t
                         End If
+
+                        If pointColorShown >= 0.0 Then PointColorMath.Visualize(pointColorShown, rr, gg, bb)
 
                         Dim dth = DitherMatrix(ditherRow Or (x And 7))
                         Dim outR = QuantizeDithered(rr, dth)

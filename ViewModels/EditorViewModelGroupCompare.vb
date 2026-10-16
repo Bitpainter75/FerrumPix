@@ -94,12 +94,14 @@ Namespace ViewModels
             End Get
         End Property
 
-        ''' <summary>Zeigen die Regler auf das Foto? Nur dann gibt es den Gruppenvergleich. Bedienen sie
-        ''' ein Objekt oder eine Korrekturebene, stehen die Werte des Fotos geparkt neben den Reglern,
-        ''' und das Zurueckholen ueber das Rezept traefe die falschen.</summary>
+        ''' <summary>Gibt es den Gruppenvergleich? Für jedes Reglerziel: das Foto, eine markierte Ebene
+        ''' und eine Korrekturebene. Bei den beiden letzten steht das Foto geparkt neben den Reglern,
+        ''' das Zurückholen nimmt deshalb den Ladeweg des jeweiligen Ziels
+        ''' (<see cref="ApplyGroupCompareRecipe"/>), und vor jedem Wechsel des Ziels kommt ein
+        ''' laufender Vergleich zurück (RefreshObjectAdjustMode, RefreshSelectionAdjustMode).</summary>
         Public ReadOnly Property CanCompareAdjustmentGroups As Boolean
             Get
-                Return Not IsObjectAdjustModeActive() AndAlso Not IsSelectionAdjustModeActive()
+                Return True
             End Get
         End Property
 
@@ -187,26 +189,20 @@ Namespace ViewModels
 
         ''' <summary>Holt die gemerkten Werte aller Gruppen zurueck. Laeuft vor jedem Verlassen des
         ''' Bildes, wie RestoreAllCurveCompares und RoundSlider.RestoreAllCompared: so sieht schon die
-        ''' Speichern-Rueckfrage die eingestellten Werte.
-        '''
-        ''' Bedienen die Regler gerade ein Objekt oder eine Korrekturebene, bleibt es beim
-        ''' Startwert: die Werte des Fotos stehen dann geparkt, und dort hinein schreibt dieser Weg
-        ''' nicht. Der Schritt in der Historie fuehrt zurueck. Derselbe Fall beendet auch den
-        ''' Einzelvergleich am Regler, ohne den Wert zurueckzuholen.</summary>
+        ''' Speichern-Rueckfrage die eingestellten Werte. Ebenso vor jedem Wechsel des Reglerziels:
+        ''' die gemerkten Werte gehören dem Ziel, an dem sie ausgeblendet wurden.</summary>
         Private Sub RestoreAllAdjustmentGroupCompares()
             If _groupCompares.Count = 0 Then Return
             Dim entries = _groupCompares.Values.ToArray()
             _groupCompares.Clear()
-            If CanCompareAdjustmentGroups Then
-                Dim target = BuildAdjustmentsFromFields()
-                Dim restored = False
-                For Each compare In entries
-                    If Not GroupCompareStillNeutral(compare, target) Then Continue For
-                    CopyGroupCompareValues(compare.Saved, target)
-                    restored = True
-                Next
-                If restored Then ApplyGroupCompareRecipe(target, LocalizationService.T("Vergleich"))
-            End If
+            Dim target = BuildAdjustmentsFromFields()
+            Dim restored = False
+            For Each compare In entries
+                If Not GroupCompareStillNeutral(compare, target) Then Continue For
+                CopyGroupCompareValues(compare.Saved, target)
+                restored = True
+            Next
+            If restored Then ApplyGroupCompareRecipe(target, LocalizationService.T("Vergleich"))
             RaiseAdjustmentGroupCompareChanged()
         End Sub
 
@@ -261,15 +257,29 @@ Namespace ViewModels
         ''' <summary>Schreibt das Rezept mit den zurueckgeholten Werten in die Regler, als EIN Schritt
         ''' in der Historie. Derselbe Weg wie Rueckgaengig: er kennt Lichterrettung und Kurven, die
         ''' beim blossen Setzen der Felder nicht mitkaemen, und baut das Arbeitsbild neu auf, wenn sich
-        ''' am Decode etwas aendert.</summary>
+        ''' am Decode etwas aendert.
+        '''
+        ''' <para>BEI EINER EBENE ODER KORREKTUREBENE tragen die Felder deren Werte, das Foto steht
+        ''' geparkt daneben. ApplyAdjustments würde dann die Werte des Ziels mit denen des Fotos
+        ''' vertauschen; der Schalter des laufenden Zielwechsels hält das fern, wie beim Laden der
+        ''' Ebenenwerte nach Rückgängig. Danach gehen die Werte in die Ebene
+        ''' (SchedulePreviewForCurrentTarget).</para></summary>
         Private Sub ApplyGroupCompareRecipe(target As ImageAdjustments, label As String)
             PushUndo(label)
             _suppressUndoCapture = True
+            Dim objectTarget = IsObjectAdjustModeActive()
+            Dim selectionTarget = IsSelectionAdjustModeActive()
+            Dim keepIndex = _selectedAnnotationIndex
             Try
-                ApplyAdjustmentsKeepingSelection(target, _selectedAnnotationIndex)
+                If objectTarget Then _objectAdjustSwapInProgress = True
+                If selectionTarget Then _selectionAdjustSwapInProgress = True
+                ApplyAdjustmentsKeepingSelection(target, keepIndex)
             Finally
+                If objectTarget Then _objectAdjustSwapInProgress = False
+                If selectionTarget Then _selectionAdjustSwapInProgress = False
                 _suppressUndoCapture = False
             End Try
+            If objectTarget OrElse selectionTarget Then SchedulePreviewForCurrentTarget()
         End Sub
 
         ''' <summary>Die Zuruecksetzer der vier weiteren Korrekturen setzen nur ihre Werte; Meldung und Vorschau
@@ -298,7 +308,7 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(n)
             Next
             RaiseResetButtonStateChanged()
-            SchedulePreviewUpdate()
+            SchedulePreviewForCurrentTarget()
         End Sub
 
     End Class

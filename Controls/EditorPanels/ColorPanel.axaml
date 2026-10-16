@@ -89,7 +89,8 @@
                            Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                 <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100"
-                                   Value="{Binding Temperature}" Margin="0,0" />
+                                   Value="{Binding Temperature}"
+                                   ColorTrack="{x:Static icons:SliderTracks.Temperature}" Margin="0,0" />
                 <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value slider-value-wide"
                                          Value="{Binding Temperature, Mode=TwoWay}" Minimum="-100" Maximum="100"
                                          Increment="0.1" FormatString="F1" />
@@ -108,6 +109,7 @@
                      Temperatur DIESER Aufnahme, also gebunden. -->
                 <icons:RoundSlider Grid.Column="1" Minimum="2000" Maximum="12000"
                                    Value="{Binding KelvinTemperature}"
+                                   ColorTrack="{x:Static icons:SliderTracks.Temperature}"
                                    DefaultValue="{Binding CaptureKelvinDefault}" Margin="0,0" />
                 <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value slider-value-wide"
                                          Value="{Binding KelvinTemperature, Mode=TwoWay}"
@@ -120,6 +122,7 @@
                      "wie aufgenommen" die Toenung DIESER Aufnahme, nicht 0. -->
                 <icons:RoundSlider Grid.Column="1" Minimum="-150" Maximum="150"
                                    Value="{Binding Tint}"
+                                   ColorTrack="{x:Static icons:SliderTracks.Tint}"
                                    DefaultValue="{Binding TintDefault}" Margin="0,0" />
                 <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value slider-value-wide"
                                          Value="{Binding Tint, Mode=TwoWay}" Minimum="-150" Maximum="150"

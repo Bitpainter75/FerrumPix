@@ -42,6 +42,37 @@ Namespace Controls
         ''' der eingestellte wird gemerkt, und der nächste Rechtsklick holt ihn zurück. Ab Werk aus;
         ''' das Anpassungspanel des Editors schaltet es per Stil ein (EditorView.axaml). Das
         ''' Zahlenfeld daneben (SliderValueUpDown) folgt seinem Regler.</summary>
+        ''' <summary>Die FARBSPUR eines Reglers mit Farbbedeutung: ein Verlauf, der zeigt, wohin der
+        ''' Regler führt (Temperatur blau nach gelb, Tönung grün nach magenta, ein Farbband, die
+        ''' Punktfarbe). Gezeichnet wird sie nur, wenn <see cref="ColoredTracks"/> an ist; dann
+        ''' ersetzt sie Spur und Füllung, ein wenig dicker. Ohne bleibt es beim Akzent-Regler.</summary>
+        Public Shared ReadOnly ColorTrackProperty As StyledProperty(Of IBrush) =
+            AvaloniaProperty.Register(Of RoundSlider, IBrush)(NameOf(ColorTrack), Nothing)
+
+        Private Shared _coloredTracks As Boolean
+        ''' Alle Regler mit Farbspur, die gerade im Baum hängen: nach dem Umschalten der Einstellung
+        ''' zeichnen sie sich neu. Nur auf dem UI-Faden angefasst.
+        Private Shared ReadOnly ColorTrackSliders As New List(Of WeakReference(Of RoundSlider))
+
+        ''' <summary>Die Einstellung „Farbige Regler" (AppSettings.ColoredSliders), ab Werk aus. App-weit
+        ''' statt je Regler gebunden: die Farbspuren stehen in vielen Panels, und eine Bindung je
+        ''' Regler an die Einstellungen wäre in jedem davon ein Umweg über das ViewModel.</summary>
+        Public Shared Property ColoredTracks As Boolean
+            Get
+                Return _coloredTracks
+            End Get
+            Set(value As Boolean)
+                If _coloredTracks = value Then Return
+                _coloredTracks = value
+                ColorTrackSliders.RemoveAll(Function(w)
+                                                Dim slider As RoundSlider = Nothing
+                                                If Not w.TryGetTarget(slider) Then Return True
+                                                slider.InvalidateVisual()
+                                                Return False
+                                            End Function)
+            End Set
+        End Property
+
         Public Shared ReadOnly CompareOnRightClickProperty As StyledProperty(Of Boolean) =
             AvaloniaProperty.Register(Of RoundSlider, Boolean)(NameOf(CompareOnRightClick), False)
 
@@ -64,7 +95,7 @@ Namespace Controls
         Private _isApplyingCompare As Boolean
 
         Shared Sub New()
-            AffectsRender(Of RoundSlider)(MinimumProperty, MaximumProperty, ValueProperty, TrackBrushProperty, FillBrushProperty, ThumbBorderBrushProperty)
+            AffectsRender(Of RoundSlider)(MinimumProperty, MaximumProperty, ValueProperty, TrackBrushProperty, FillBrushProperty, ThumbBorderBrushProperty, ColorTrackProperty)
         End Sub
 
         Public Sub New()
@@ -210,8 +241,26 @@ Namespace Controls
         ''' solange die Bindung den Wert noch ins ViewModel tragen kann.</summary>
         Protected Overrides Sub OnDetachedFromVisualTree(e As VisualTreeAttachmentEventArgs)
             EndCompare(restore:=True)
+            ColorTrackSliders.RemoveAll(Function(w)
+                                            Dim slider As RoundSlider = Nothing
+                                            Return Not w.TryGetTarget(slider) OrElse ReferenceEquals(slider, Me)
+                                        End Function)
             MyBase.OnDetachedFromVisualTree(e)
         End Sub
+
+        Protected Overrides Sub OnAttachedToVisualTree(e As VisualTreeAttachmentEventArgs)
+            MyBase.OnAttachedToVisualTree(e)
+            ColorTrackSliders.Add(New WeakReference(Of RoundSlider)(Me))
+        End Sub
+
+        Public Property ColorTrack As IBrush
+            Get
+                Return GetValue(ColorTrackProperty)
+            End Get
+            Set(value As IBrush)
+                SetValue(ColorTrackProperty, value)
+            End Set
+        End Property
 
         Public Property TrackBrush As IBrush
             Get
@@ -273,10 +322,17 @@ Namespace Controls
             Dim ratio = GetRatio()
             Dim thumbX = trackStart + trackWidth * ratio
 
-            Dim trackPen = New Pen(TrackBrush, 4)
-            Dim fillPen = New Pen(FillBrush, 4)
-            context.DrawLine(trackPen, New Point(trackStart, centerY), New Point(trackEnd, centerY))
-            context.DrawLine(fillPen, New Point(trackStart, centerY), New Point(thumbX, centerY))
+            Dim colorTrack = If(_coloredTracks, Me.ColorTrack, Nothing)
+            If colorTrack IsNot Nothing Then
+                ' Nur die Farbspur, als Rechteck statt als Linie: ein Verlauf mit relativen Punkten
+                ' braucht eine Fläche, eine Linie hat keine Höhe, über die er sich legen liesse.
+                context.FillRectangle(colorTrack, New Rect(trackStart, centerY - 3, trackWidth, 6), 3)
+            Else
+                Dim trackPen = New Pen(TrackBrush, 4)
+                Dim fillPen = New Pen(FillBrush, 4)
+                context.DrawLine(trackPen, New Point(trackStart, centerY), New Point(trackEnd, centerY))
+                context.DrawLine(fillPen, New Point(trackStart, centerY), New Point(thumbX, centerY))
+            End If
             context.DrawEllipse(FillBrush, New Pen(ThumbBorderBrush, 2), New Point(thumbX, centerY), thumbRadius, thumbRadius)
         End Sub
 
