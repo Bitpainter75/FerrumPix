@@ -34,12 +34,7 @@
   much quicker on a network drive. A film scan as DNG used to travel over the network up to four
   times, now about once.
 
-- The Flatpak and the Microsoft Store version no longer look for a newer version on GitHub;
-  updates come through the software manager or the Store that installed them.
+- The Microsoft Store version no longer looks for a newer version on GitHub; updates come through
+  the Store.
 
-- In the Flatpak, pictures in a folder you shared through the system's folder dialog can be
-  renamed, moved and deleted again, like on a second drive.
-
-- In the Flatpak, the window buttons follow your desktop's order again instead of standing the
-  wrong way round, and the folder tree shows your drives instead of the inside of the sandbox.
 
