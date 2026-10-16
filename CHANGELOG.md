@@ -17,6 +17,14 @@
 
 ### Fixes
 
+- Moving the temperature of a RAW photo no longer throws away the tint of the shot. Even a small
+  nudge could tip the whole picture towards green or magenta, most visibly on phone photos; the
+  same happened with automatic enhancement, the white balance picker and presets that shift the
+  white balance. The tint row now shows the tint of the shot, just as the temperature row shows its
+  temperature, and a double-click brings both back.
+
+- The tooltip of the button that leads from a burst back to its folder is translated now.
+
 - Enlarging the canvas no longer makes the photo shrink inside the editor. Even one extra pixel
   could show the picture at half its size with a huge border around it; the saved image was
   always right, now the editor shows the same.

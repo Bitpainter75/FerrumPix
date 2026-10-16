@@ -100,6 +100,7 @@ Namespace Services
                                                rgbCam As Single()) As CaptureWhiteBalance
             If camMul Is Nothing OrElse preMul Is Nothing OrElse rgbCam Is Nothing Then Return Nothing
             If camMul.Length < 3 OrElse preMul.Length < 3 OrElse rgbCam.Length < 9 Then Return Nothing
+            If IsIdentityMatrix(rgbCam) Then Return Nothing
 
             ' Grün ist der Bezug. Ist es nicht positiv, trägt die Datei keine brauchbaren
             ' Multiplikatoren - das kommt vor und ist kein Fehler.
@@ -135,6 +136,22 @@ Namespace Services
                 .X = x,
                 .Y = y
             }
+        End Function
+
+        ''' <summary>Steht für die Kamera gar keine Farbmatrix bereit? LibRaw liefert dann die
+        ''' Einheitsmatrix, behandelt die Kamerakanäle also als sRGB. Ein Farbort daraus sagt nichts
+        ''' über das Licht der Aufnahme: an einem Handy-DNG kam so ein Anker mit einer Tönung von
+        ''' +205 heraus, ausserhalb des Reglerbereichs, und jede Kelvin-Zahl kippte das Bild ins
+        ''' Grüne (whitebalanceprobe --anker). Echte Kameramatrizen haben dagegen kräftige Glieder
+        ''' neben der Diagonale, typisch -0,3 bis -0,6.</summary>
+        Private Shared Function IsIdentityMatrix(rgbCam As Single()) As Boolean
+            For row = 0 To 2
+                For column = 0 To 2
+                    Dim expected = If(row = column, 1.0, 0.0)
+                    If Math.Abs(rgbCam(row * 3 + column) - expected) > 0.01 Then Return False
+                Next
+            Next
+            Return True
         End Function
 
         ''' <summary>Farbtemperatur aus dem Farbort, Näherung nach McCamy (1992).

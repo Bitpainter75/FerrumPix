@@ -288,6 +288,12 @@ Namespace Services
                 Dim kelvin As Double
                 Dim tintPoints As Double
                 Dim hasKelvin = False
+                Dim relativeKelvin = False
+                ' Kelvin-Zahl und Tönung der AUFNAHME, aus derselben Umkehrung wie im Editor: nur
+                ' so ergeben sie zusammen wieder genau den Anker.
+                Dim anchorPoint = New WhitePoint(capture.X, capture.Y)
+                Dim anchorKelvin = WhiteBalanceAdaptation.KelvinOf(anchorPoint)
+                Dim anchorTint = WhiteBalanceAdaptation.TintPointsOf(anchorPoint, anchorKelvin)
                 If TryGetXmpDouble(values, "Temperature", kelvin) AndAlso kelvin >= 1000 Then
                     hasKelvin = True
                 ElseIf TryGetXmpDouble(values, "IncrementalTemperature", d) Then
@@ -296,22 +302,33 @@ Namespace Services
                     ' Form steht. ACHTUNG, offener Punkt: Adobes Incremental-Skala ist nicht als
                     ' mired dokumentiert und gegen nichts geeicht - hier steht sie 1:1 als mired,
                     ' wie im alten Weg auch. Eine Eichung gegen Referenzdateien fehlt.
-                    Dim anchorKelvin = CaptureWhiteBalanceService.CorrelatedColorTemperature(capture.X, capture.Y)
-                    If Not Double.IsNaN(anchorKelvin) AndAlso anchorKelvin > 0.0 Then
-                        Dim mired = 1000000.0 / anchorKelvin - Clamp100(d)
-                        If mired > 1.0 Then
-                            kelvin = 1000000.0 / mired
-                            hasKelvin = True
-                        End If
+                    Dim mired = 1000000.0 / anchorKelvin - Clamp100(d)
+                    If mired > 1.0 Then
+                        kelvin = 1000000.0 / mired
+                        hasKelvin = True
+                        relativeKelvin = True
                     End If
                 End If
 
                 If hasKelvin Then
                     adj.WhiteBalanceKelvin = Math.Max(WhiteBalanceAdaptation.MinKelvin,
                                                       Math.Min(WhiteBalanceAdaptation.MaxKelvin, kelvin))
-                End If
-                If TryGetXmpDouble(values, "IncrementalTint", tintPoints) OrElse
-                   TryGetXmpDouble(values, "Tint", tintPoints) Then
+                    ' EINE KELVIN-ZAHL TRÄGT IHRE TÖNUNG ABSOLUT. Kam die Zahl aus einem relativen
+                    ' Versatz, gilt das auch für die Tönung: sie setzt auf die der Aufnahme auf.
+                    ' Vorher stand hier der Versatz selbst als absolute Tönung, und ohne
+                    ' Tönungsangabe die 0 - beides zog das Bild quer zur Kurve von der Aufnahme weg.
+                    If relativeKelvin Then
+                        Dim incrementalTint As Double
+                        If Not TryGetXmpDouble(values, "IncrementalTint", incrementalTint) Then incrementalTint = 0.0
+                        adj.WhiteBalanceKelvinTint = Clamp(anchorTint + incrementalTint, -150, 150)
+                    ElseIf TryGetXmpDouble(values, "Tint", tintPoints) OrElse
+                           TryGetXmpDouble(values, "IncrementalTint", tintPoints) Then
+                        adj.WhiteBalanceKelvinTint = Clamp(tintPoints, -150, 150)
+                    End If
+                ElseIf TryGetXmpDouble(values, "IncrementalTint", tintPoints) OrElse
+                       TryGetXmpDouble(values, "Tint", tintPoints) Then
+                    ' Nur eine Tönung ohne Kelvin-Zahl: sie bleibt ein Versatz zur Aufnahme
+                    ' (ImageProcessor.ClaimedWhitePointOf, Zweig „nur die Tönung"), wie bisher.
                     adj.WhiteBalanceKelvinTint = Clamp(tintPoints, -150, 150)
                 End If
             ElseIf Not keepsCaptureWhiteBalance Then

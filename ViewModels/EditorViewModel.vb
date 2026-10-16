@@ -2237,11 +2237,14 @@ Namespace ViewModels
                 ' alten Verstärkung und wirkt als mired-Versatz anders. Richtung, Dämpfung und
                 ' die enge Klemmung auf ±20 bleiben sinnvoll, der Betrag gehört gemessen.
                 If HasAbsoluteWhiteBalance Then
-                    KelvinTemperature = MiredShiftToKelvin(measured.Temperature)
+                    ' Der Tönungsausschlag setzt auf die Tönung der AUFNAHME auf: die Automatik
+                    ' misst das unbearbeitete Bild, ihr Wert ist ein Versatz zu ihr.
+                    SetAbsoluteWhiteBalance(MiredShiftToKelvin(measured.Temperature),
+                                            CaptureTint() + measured.Tint, Nothing)
                 Else
                     Temperature = measured.Temperature
+                    Tint = measured.Tint
                 End If
-                Tint = measured.Tint
             Finally
                 _suppressUndoCapture = False
             End Try
@@ -6144,17 +6147,40 @@ Namespace ViewModels
             Set(value As Double)
                 Dim clamped = Math.Max(WhiteBalanceAdaptation.MinKelvin,
                                        Math.Min(WhiteBalanceAdaptation.MaxKelvin, value))
-                Dim anchorKelvin = CaptureKelvin()
-                Dim target = If(Math.Abs(clamped - anchorKelvin) < 1.0, 0.0, clamped)
-                If Math.Abs(_whiteBalanceKelvin - target) < 0.0001 Then Return
-                CaptureUndoState(NameOf(KelvinTemperature))
-                _whiteBalanceKelvin = target
-                Me.RaisePropertyChanged(NameOf(KelvinTemperature))
-                RaiseResetButtonStateChanged()
-                MarkWhiteBalanceCustom()
-                SchedulePreviewForCurrentTarget()
+                ' Die Tönung geht mit, so wie sie gerade angezeigt wird: bei „wie aufgenommen"
+                ' die der Aufnahme. Vorher blieb sie auf 0 stehen, und 0 heisst bei einer
+                ' Kelvin-Zahl „auf der Kurve" - schon ein kleiner Griff zog das Bild quer zu ihr
+                ' weg, gemessen um das Drei- bis Siebenfache dessen, was der Griff selbst tat.
+                SetAbsoluteWhiteBalance(clamped, Tint, NameOf(KelvinTemperature))
             End Set
         End Property
+
+        ''' <summary>Setzt Kelvin-Zahl und Tönung als PAAR. Fällt das Paar auf die Aufnahme, steht
+        ''' 0/0 im Rezept, also „wie aufgenommen" ohne jede Rechnung; sonst stehen beide absolut,
+        ''' denn eine Kelvin-Zahl gilt nur zusammen mit ihrer Tönung
+        ''' (ImageProcessor.ClaimedWhitePointOf). Gibt False zurück, wenn sich nichts ändert.
+        ''' <paramref name="undoName"/> Nothing heisst: der Aufrufer hat den Verlaufsschritt schon
+        ''' angelegt.</summary>
+        Private Function SetAbsoluteWhiteBalance(kelvin As Double, tintPoints As Double, undoName As String) As Boolean
+            Dim newKelvin = kelvin
+            Dim newTint = tintPoints
+            If Math.Abs(kelvin - CaptureKelvin()) < 1.0 AndAlso Math.Abs(tintPoints - CaptureTint()) < 0.05 Then
+                newKelvin = 0.0
+                newTint = 0.0
+            End If
+            If Math.Abs(_whiteBalanceKelvin - newKelvin) < 0.0001 AndAlso Math.Abs(_whiteBalanceKelvinTint - newTint) < 0.0001 Then
+                Return False
+            End If
+            If undoName IsNot Nothing Then CaptureUndoState(undoName)
+            _whiteBalanceKelvin = newKelvin
+            _whiteBalanceKelvinTint = newTint
+            Me.RaisePropertyChanged(NameOf(KelvinTemperature))
+            Me.RaisePropertyChanged(NameOf(Tint))
+            RaiseResetButtonStateChanged()
+            MarkWhiteBalanceCustom()
+            SchedulePreviewForCurrentTarget()
+            Return True
+        End Function
 
         ''' <summary>Trägt beim Öffnen den Aufnahme-Weißpunkt ins Rezept ein, wenn die Datei einen
         ''' hat und das Rezept noch keinen mitbringt.
@@ -6191,6 +6217,7 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(HasAbsoluteWhiteBalance))
             Me.RaisePropertyChanged(NameOf(KelvinTemperature))
             Me.RaisePropertyChanged(NameOf(CaptureKelvinDefault))
+            Me.RaisePropertyChanged(NameOf(TintDefault))
             Me.RaisePropertyChanged(NameOf(Tint))
         End Sub
 
@@ -6224,26 +6251,47 @@ Namespace ViewModels
         ''' erscheint.</summary>
         Private Function CaptureKelvin() As Double
             If _whiteBalanceAnchorX <= 0.0 OrElse _whiteBalanceAnchorY <= 0.0 Then Return 6504.0
-            Dim kelvin = CaptureWhiteBalanceService.CorrelatedColorTemperature(_whiteBalanceAnchorX, _whiteBalanceAnchorY)
-            If Double.IsNaN(kelvin) OrElse kelvin <= 0.0 Then Return 6504.0
-            Return Math.Max(WhiteBalanceAdaptation.MinKelvin, Math.Min(WhiteBalanceAdaptation.MaxKelvin, kelvin))
+            ' Dieselbe Umkehrung wie CaptureTint: nur das Paar aus beiden trifft den Anker.
+            Return WhiteBalanceAdaptation.KelvinOf(New WhitePoint(_whiteBalanceAnchorX, _whiteBalanceAnchorY))
         End Function
+
+        ''' <summary>Die Tönung der Aufnahme: wie weit der Anker quer zur Kurve liegt, in
+        ''' Reglerpunkten. Kaum eine Aufnahme liegt genau auf der Kurve; gemessen lagen Kameras
+        ''' zwischen -32 und +47 Punkten. Ohne Anker 0.</summary>
+        Private Function CaptureTint() As Double
+            If _whiteBalanceAnchorX <= 0.0 OrElse _whiteBalanceAnchorY <= 0.0 Then Return 0.0
+            Return WhiteBalanceAdaptation.TintPointsOf(New WhitePoint(_whiteBalanceAnchorX, _whiteBalanceAnchorY), CaptureKelvin())
+        End Function
+
+        ''' <summary>Der Rückfall des Tönungsreglers, aus demselben Grund gebunden wie
+        ''' <see cref="CaptureKelvinDefault"/>: mit Anker ist „wie aufgenommen" nicht 0, sondern
+        ''' die Tönung dieser Aufnahme.</summary>
+        Public ReadOnly Property TintDefault As Double
+            Get
+                Return If(HasAbsoluteWhiteBalance, CaptureTint(), 0.0)
+            End Get
+        End Property
 
         ''' <summary>Die Tönung. EIN Regler in der Oberfläche, aber zwei Ablagen: im absoluten
         ''' Modell gehört sie zur Kelvin-Zahl, sonst zum relativen Regler. Der Umweg über diese
-        ''' Eigenschaft hält die Oberfläche bei einer einzigen Zeile.</summary>
+        ''' Eigenschaft hält die Oberfläche bei einer einzigen Zeile.
+        '''
+        ''' <para>IM ABSOLUTEN MODELL ZEIGT SIE DIE TÖNUNG DER AUFNAHME, solange keine Kelvin-Zahl
+        ''' gesetzt ist, so wie die Kelvin-Zeile die Temperatur der Aufnahme zeigt. Ein älteres
+        ''' Rezept kann dort noch einen Tönungsversatz tragen (Kelvin 0, Tönung ungleich 0); er
+        ''' verschiebt den Anker genau in v, die Anzeige ist also die Summe.</para></summary>
         Public Property Tint As Double
             Get
-                Return If(HasAbsoluteWhiteBalance, _whiteBalanceKelvinTint, _tint)
+                If Not HasAbsoluteWhiteBalance Then Return _tint
+                If _whiteBalanceKelvin >= WhiteBalanceAdaptation.MinKelvin Then Return _whiteBalanceKelvinTint
+                Return CaptureTint() + _whiteBalanceKelvinTint
             End Get
             Set(value As Double)
-                Dim changed As Boolean
                 If HasAbsoluteWhiteBalance Then
-                    changed = SetUndoableDouble(_whiteBalanceKelvinTint, value, NameOf(Tint))
-                Else
-                    changed = SetUndoableDouble(_tint, value, NameOf(Tint))
+                    SetAbsoluteWhiteBalance(KelvinTemperature, value, NameOf(Tint))
+                    Return
                 End If
-                If changed Then MarkWhiteBalanceCustom()
+                If SetUndoableDouble(_tint, value, NameOf(Tint)) Then MarkWhiteBalanceCustom()
             End Set
         End Property
 
@@ -6322,11 +6370,9 @@ Namespace ViewModels
                         SrgbToLinear(r), SrgbToLinear(g), SrgbToLinear(b)})
                     Dim kelvin = WhiteBalanceAdaptation.KelvinOf(neutral)
                     Dim tintPoints = WhiteBalanceAdaptation.TintPointsOf(neutral, kelvin)
-                    ' Die 0 heisst „wie aufgenommen" und ist die einzige Stellung ganz ohne
-                    ' Rechnung - genau wie im Setter des Reglers.
-                    Dim anchorKelvin = CaptureKelvin()
-                    _whiteBalanceKelvin = If(Math.Abs(kelvin - anchorKelvin) < 1.0, 0.0, kelvin)
-                    _whiteBalanceKelvinTint = Math.Max(-150.0, Math.Min(150.0, tintPoints))
+                    ' Als Paar, wie im Setter des Reglers: trifft die Stelle die Aufnahme, steht
+                    ' „wie aufgenommen" im Rezept. Der Verlaufsschritt steht schon.
+                    SetAbsoluteWhiteBalance(kelvin, Math.Max(-150.0, Math.Min(150.0, tintPoints)), Nothing)
                 Else
                     Dim newTemperature As Double
                     Dim newTint As Double
@@ -30364,8 +30410,15 @@ Namespace ViewModels
                 ' mired gelesen und in Kelvin gelegt, damit der sichtbare Regler den Zustand zeigt.
                 ' Dieselbe Abwaegung wie bei der Automatik - die MENGE stammt aus der Eichung der
                 ' alten Verstaerkung und ist offen, die Richtung stimmt.
-                _whiteBalanceKelvin = If(look.Temperature = 0.0F, 0.0, MiredShiftToKelvin(look.Temperature))
-                _whiteBalanceKelvinTint = look.Tint
+                ' Mit Kelvin-Zahl ist die Tönung absolut und setzt auf die der Aufnahme auf; ohne
+                ' bleibt sie ein Versatz zur Aufnahme (ImageProcessor.ClaimedWhitePointOf).
+                If look.Temperature = 0.0F Then
+                    _whiteBalanceKelvin = 0.0
+                    _whiteBalanceKelvinTint = look.Tint
+                Else
+                    _whiteBalanceKelvin = MiredShiftToKelvin(look.Temperature)
+                    _whiteBalanceKelvinTint = CaptureTint() + look.Tint
+                End If
                 _temperature = 0
                 _tint = 0
             Else

@@ -9515,6 +9515,9 @@
   <data name="Zur_ck_zum_Ordner_439e81fe" xml:space="preserve">
     <value>Torna alla cartella</value>
   </data>
+  <data name="Zur_ck_zum_Ordner_ESC_61b3339d" xml:space="preserve">
+    <value>Torna alla cartella (ESC)</value>
+  </data>
   <data name="Serie_ffnen_aada409b" xml:space="preserve">
     <value>Apri raffica</value>
   </data>

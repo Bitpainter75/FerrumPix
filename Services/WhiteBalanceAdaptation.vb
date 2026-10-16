@@ -222,12 +222,47 @@ Namespace Services
             Return candidate
         End Function
 
-        ''' <summary>Die Temperatur zu einem Farbort, geklemmt auf den Reglerbereich.</summary>
+        ''' <summary>Die Temperatur zu einem Farbort, geklemmt auf den Reglerbereich.
+        '''
+        ''' <para>DIE GENAUE UMKEHRUNG von <see cref="FromKelvinAndTint"/>. Die Tönung verschiebt
+        ''' dort nur v der CIE-1960-Ebene, u bleibt stehen. Gesucht wird deshalb die Temperatur,
+        ''' deren Kurvenpunkt dasselbe u hat wie der Farbort; die Tönung ist danach der Rest in v
+        ''' (<see cref="TintPointsOf"/>). Damit ergeben Kelvin-Zahl und Tönung zusammen wieder
+        ''' genau den Farbort.</para>
+        '''
+        ''' <para>FRÜHER STAND HIER DIE NÄHERUNG NACH McCAMY. Sie misst die Temperatur an einer
+        ''' anderen Kurve als der, auf der der Regler läuft, und das Paar aus ihr und der Tönung
+        ''' traf den Aufnahmepunkt nicht: gemessen (whitebalanceprobe --anker) sprang der Weißpunkt
+        ''' bei einer D850 schon bei Kelvin +50 um 0,0039 in uv, mehr als fünfmal so weit wie 50 K
+        ''' entlang der Kurve.</para></summary>
         Public Shared Function KelvinOf(point As WhitePoint) As Double
             If Not point.IsValid Then Return CaptureWhiteBalanceService.ReferenceKelvin
-            Dim kelvin = CaptureWhiteBalanceService.CorrelatedColorTemperature(point.X, point.Y)
+            Dim pointUv = ToCie1960(point)
+            If Double.IsNaN(pointUv.U) Then Return CaptureWhiteBalanceService.ReferenceKelvin
+            Dim kelvin = KelvinAtU(pointUv.U)
             If Not Double.IsFinite(kelvin) OrElse kelvin <= 0.0 Then Return CaptureWhiteBalanceService.ReferenceKelvin
             Return Math.Max(MinKelvin, Math.Min(MaxKelvin, kelvin))
+        End Function
+
+        ''' <summary>Die Temperatur, deren Kurvenpunkt das gegebene u hat. u fällt entlang der Kurve
+        ''' mit steigender Temperatur, also genügt eine Halbierung. Gesucht wird über einen Bereich
+        ''' weit über den Regler hinaus, damit das Klemmen in <see cref="KelvinOf"/> geschieht und
+        ''' nicht hier als stiller Randwert.</summary>
+        Private Shared Function KelvinAtU(u As Double) As Double
+            Dim low = 1000.0
+            Dim high = 25000.0
+            Dim uLow = ToCie1960(LocusPoint(low)).U
+            Dim uHigh = ToCie1960(LocusPoint(high)).U
+            If Double.IsNaN(uLow) OrElse Double.IsNaN(uHigh) Then Return Double.NaN
+            If u >= uLow Then Return low
+            If u <= uHigh Then Return high
+            For i = 1 To 60
+                Dim mid = (low + high) / 2.0
+                Dim uMid = ToCie1960(LocusPoint(mid)).U
+                If Double.IsNaN(uMid) Then Return Double.NaN
+                If uMid > u Then low = mid Else high = mid
+            Next
+            Return (low + high) / 2.0
         End Function
 
         ''' <summary>Die Tönung zu einem Farbort, in Reglerpunkten - die Umkehrung von
