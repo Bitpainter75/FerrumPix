@@ -1,3 +1,10 @@
+## 0.9.68
+
+### What's new
+
+- **The eyedropper shows what it hits.** A small label follows the eyedropper over the picture
+  with a swatch and the value of the color under its tip.
+
 ## 0.9.67
 
 ### What's new

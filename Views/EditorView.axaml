@@ -1212,6 +1212,27 @@
                                  Stroke="{DynamicResource FP.Accent}"
                                  StrokeThickness="1.5"
                                  StrokeDashArray="3,3" />
+                        <!-- Folgt der Pipette: Farbfeld und Wert der Farbe unter der Spitze, so wie
+                             das Farbfeld des Farbwaehlers sie zeigt (UpdatePickColorBadge). -->
+                        <Border x:Name="PickColorBadge"
+                                IsVisible="False"
+                                IsHitTestVisible="False"
+                                Background="{DynamicResource FP.Bg.Elevated}"
+                                BorderBrush="{DynamicResource FP.Border.Normal}"
+                                BorderThickness="1"
+                                CornerRadius="6"
+                                Padding="6,4">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <Border x:Name="PickColorBadgeSwatch"
+                                        Width="26" Height="22"
+                                        BorderThickness="1" CornerRadius="4"
+                                        BorderBrush="{DynamicResource FP.Border.Strong}" />
+                                <TextBlock x:Name="PickColorBadgeText"
+                                           VerticalAlignment="Center"
+                                           Foreground="{DynamicResource FP.Text.Primary}"
+                                           FontSize="{DynamicResource FP.Font.Small}" />
+                            </StackPanel>
+                        </Border>
                     </Canvas>
                     <!-- LIVE-VORSCHAU rechnet. Bewusst zurueckhaltend und OHNE Sperre: sie
                          entsteht ja gerade deshalb, weil man am Regler zieht. Ohne diesen Hinweis

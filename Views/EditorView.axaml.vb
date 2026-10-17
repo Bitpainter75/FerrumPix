@@ -1920,7 +1920,10 @@ Namespace Views
                             pickOverlay.Cursor = If(vmForPick.IsPickingColorFromImage, GetPipetteCursor(), New Cursor(StandardCursorType.SizeAll))
                         End If
                     End If
-                    If vmForPick Is Nothing OrElse Not vmForPick.IsPickingColorFromImage Then ReleasePickSampleBitmap()
+                    If vmForPick Is Nothing OrElse Not vmForPick.IsPickingColorFromImage Then
+                        ReleasePickSampleBitmap()
+                        HidePickColorBadge()
+                    End If
                 Case NameOf(EditorViewModel.IsStraightenLineActive)
                     ' Sofort umschalten, nicht erst bei der naechsten Mausbewegung: der Knopf liegt
                     ' im Panel, und nach einer Linie steht der Zeiger still auf dem Bild.
@@ -3260,6 +3263,7 @@ Namespace Views
                 Else
                     cursorVm.ColorPickPreview = Nothing
                 End If
+                UpdatePickColorBadge(cursorCanvas, pickPoint, cursorVm.ColorPickPreview)
             ElseIf cursorCanvas IsNot Nothing AndAlso cursorVm IsNot Nothing AndAlso cursorVm.IsStraightenLineActive Then
                 ' Linie ziehen: der naechste Zug legt eine Linie, das Fadenkreuz sagt das. Auch hier
                 ' vor dem Rueckfall unten, der den Zeiger sonst je Bewegung zuruecksetzte.
@@ -4735,6 +4739,7 @@ Namespace Views
 
         Private Sub OnPreviewCanvasPointerExited(sender As Object, e As PointerEventArgs)
             _lastCanvasPointer = Nothing
+            HidePickColorBadge()
             Dim vm = TryCast(DataContext, EditorViewModel)
             If vm IsNot Nothing Then vm.MousePositionText = ""
             ' Das Gummiband gehoert zum Zeiger. Bleibt es stehen, zeigt es auf eine Stelle, an der
@@ -5199,6 +5204,41 @@ Namespace Views
             _pickSampleBitmap?.Dispose()
             _pickSampleBitmap = Nothing
             _pickSampleSource = Nothing
+        End Sub
+
+        ''' Die kleine Anzeige neben der Pipette: Farbfeld und Hex-Wert der Farbe unter der Spitze.
+        ''' Sie sitzt rechts unter dem Zeiger, weil das Pipettensymbol nach rechts oben ragt, und
+        ''' klappt an den Rändern des Canvas auf die andere Seite, statt abgeschnitten zu werden.
+        ''' Ohne Farbe (Zeiger neben dem Bild) verschwindet sie.
+        Private Sub UpdatePickColorBadge(previewCanvas As Canvas, position As Avalonia.Point, color As Color?)
+            Dim badge = Me.FindControl(Of Border)("PickColorBadge")
+            If badge Is Nothing Then Return
+            If Not color.HasValue Then
+                badge.IsVisible = False
+                Return
+            End If
+
+            Dim c = color.Value
+            Dim swatch = Me.FindControl(Of Border)("PickColorBadgeSwatch")
+            If swatch IsNot Nothing Then swatch.Background = New SolidColorBrush(c)
+            Dim text = Me.FindControl(Of TextBlock)("PickColorBadgeText")
+            If text IsNot Nothing Then text.Text = $"#{c.R:X2}{c.G:X2}{c.B:X2}"
+            badge.IsVisible = True
+
+            Const offset As Double = 16.0
+            badge.Measure(Size.Infinity)
+            Dim badgeSize = badge.DesiredSize
+            Dim left = position.X + offset
+            Dim top = position.Y + offset
+            If left + badgeSize.Width > previewCanvas.Bounds.Width Then left = position.X - offset - badgeSize.Width
+            If top + badgeSize.Height > previewCanvas.Bounds.Height Then top = position.Y - offset - badgeSize.Height
+            Canvas.SetLeft(badge, Math.Max(0, left))
+            Canvas.SetTop(badge, Math.Max(0, top))
+        End Sub
+
+        Private Sub HidePickColorBadge()
+            Dim badge = Me.FindControl(Of Border)("PickColorBadge")
+            If badge IsNot Nothing Then badge.IsVisible = False
         End Sub
 
         Private Sub UpdateSelectionOverlayFromDrag()
