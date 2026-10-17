@@ -46,6 +46,23 @@ Namespace Views
             e.Handled = True
         End Sub
 
+        ''' Platzhalter des Zieldateinamens an der Cursorposition einfuegen, wie im
+        ''' Stapel-Umbenennen-Dialog.
+        Private Sub OnInsertNamePlaceholder(sender As Object, e As RoutedEventArgs)
+            Dim chip = TryCast(sender, Button)
+            Dim box = Me.FindControl(Of TextBox)("TargetNamePatternTextBox")
+            If chip Is Nothing OrElse box Is Nothing Then Return
+            Dim placeholder = TryCast(chip.Tag, String)
+            If String.IsNullOrEmpty(placeholder) Then Return
+
+            Dim text = If(box.Text, "")
+            Dim caret = Math.Max(0, Math.Min(box.CaretIndex, text.Length))
+            box.Text = text.Substring(0, caret) & placeholder & text.Substring(caret)
+            box.CaretIndex = caret + placeholder.Length
+            box.Focus()
+            e.Handled = True
+        End Sub
+
         ''' Schnellwahl des Zielordners: aktueller Ordner oder zuletzt gespeicherter.
         Private Sub OnTargetFolderChoiceClick(sender As Object, e As RoutedEventArgs)
             Dim button = TryCast(sender, Button)

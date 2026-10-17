@@ -348,19 +348,39 @@
                                     </Button>
                                 </Grid>
                                 <!-- Zieldateinamen-Muster (nur Stapel-Dialoge): dieselben Platzhalter wie
-                                     beim Stapel-Umbenennen; leer = Originalname bleibt. -->
+                                     beim Stapel-Umbenennen; leer = Originalname bleibt. Die Platzhalter
+                                     stehen wie dort als Klick-Auswahl darunter; die Beschriftung sitzt
+                                     deshalb oben auf Hoehe des Textfelds statt mittig. -->
                                 <TextBlock Grid.Row="4"
                                            Text="Dateiname"
-                                           VerticalAlignment="Center"
+                                           VerticalAlignment="Top"
+                                           Margin="0,9,0,0"
                                            IsVisible="{Binding IsDialogNamePatternVisible}"
                                            Foreground="{DynamicResource FP.Text.Secondary}"/>
-                                <TextBox Grid.Row="4"
-                                         Grid.Column="1"
-                                         Text="{Binding DialogTargetNamePattern, Mode=TwoWay}"
-                                         PlaceholderText="{}{name} (leer = Originalname behalten)"
-                                         IsVisible="{Binding IsDialogNamePatternVisible}"
-                                         ToolTip.Tip="Muster wie beim Stapel-Umbenennen: {name}, ### (Zähler), {date:yyyyMMdd}, {datetaken:yyyyMMdd_HHmmss}, {camera}, {iso}, {aperture}, {focal}, {width}, {height}"
-                                         MinHeight="36"/>
+                                <StackPanel Grid.Row="4"
+                                            Grid.Column="1"
+                                            Spacing="7"
+                                            IsVisible="{Binding IsDialogNamePatternVisible}">
+                                    <TextBox Name="TargetNamePatternTextBox"
+                                             Text="{Binding DialogTargetNamePattern, Mode=TwoWay}"
+                                             PlaceholderText="{}{name} (leer = Originalname behalten)"
+                                             ToolTip.Tip="Muster wie beim Stapel-Umbenennen: {name}, ### (Zähler), {date:yyyyMMdd}, {datetaken:yyyyMMdd_HHmmss}, {camera}, {iso}, {aperture}, {focal}, {width}, {height}"
+                                             MinHeight="36"/>
+                                    <WrapPanel ItemSpacing="4" LineSpacing="4">
+                                        <Button Classes="ghost" Padding="8,3" Content="###" Tag="###" Click="OnInsertNamePlaceholder" ToolTip.Tip="Laufende Nummer (Stellen = Anzahl #)"/>
+                                        <Button Classes="ghost" Padding="8,3" Content="{}{name}" Tag="{}{name}" Click="OnInsertNamePlaceholder" ToolTip.Tip="Ursprünglicher Dateiname"/>
+                                        <Button Classes="ghost" Padding="8,3" Content="{}{date:yyyyMMdd}" Tag="{}{date:yyyyMMdd}" Click="OnInsertNamePlaceholder" ToolTip.Tip="Dateidatum"/>
+                                        <Button Classes="ghost" Padding="8,3" Content="{}{datetaken:yyyyMMdd}" Tag="{}{datetaken:yyyyMMdd}" Click="OnInsertNamePlaceholder" ToolTip.Tip="Aufnahmedatum (EXIF)"/>
+                                        <Button Classes="ghost" Padding="8,3" Content="{}{date:yyyyMMdd_HHmmss}" Tag="{}{date:yyyyMMdd_HHmmss}" Click="OnInsertNamePlaceholder" ToolTip.Tip="Dateidatum mit Uhrzeit"/>
+                                        <Button Classes="ghost" Padding="8,3" Content="{}{datetaken:yyyyMMdd_HHmmss}" Tag="{}{datetaken:yyyyMMdd_HHmmss}" Click="OnInsertNamePlaceholder" ToolTip.Tip="Aufnahmedatum mit Uhrzeit (EXIF)"/>
+                                        <Button Classes="ghost" Padding="8,3" Content="{}{width}" Tag="{}{width}" Click="OnInsertNamePlaceholder" ToolTip.Tip="Bildbreite in Pixeln"/>
+                                        <Button Classes="ghost" Padding="8,3" Content="{}{height}" Tag="{}{height}" Click="OnInsertNamePlaceholder" ToolTip.Tip="Bildhöhe in Pixeln"/>
+                                        <Button Classes="ghost" Padding="8,3" Content="{}{camera}" Tag="{}{camera}" Click="OnInsertNamePlaceholder" ToolTip.Tip="Kameramodell (EXIF)"/>
+                                        <Button Classes="ghost" Padding="8,3" Content="{}{iso}" Tag="{}{iso}" Click="OnInsertNamePlaceholder" ToolTip.Tip="ISO-Wert (EXIF)"/>
+                                        <Button Classes="ghost" Padding="8,3" Content="{}{aperture}" Tag="{}{aperture}" Click="OnInsertNamePlaceholder" ToolTip.Tip="Blende (EXIF)"/>
+                                        <Button Classes="ghost" Padding="8,3" Content="{}{focal}" Tag="{}{focal}" Click="OnInsertNamePlaceholder" ToolTip.Tip="Brennweite (EXIF)"/>
+                                    </WrapPanel>
+                                </StackPanel>
 
                                 <!-- Einzeloptionen: welche Katalog-Metadaten die
                                      neue Datei übernimmt - Akzent = aktiv, Klick schaltet um. -->

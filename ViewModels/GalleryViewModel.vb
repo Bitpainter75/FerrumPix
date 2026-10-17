@@ -12969,6 +12969,7 @@ Namespace ViewModels
             Dim ext = If(String.IsNullOrWhiteSpace(requestedExtension), IO.Path.GetExtension(sourcePath), requestedExtension)
             If String.IsNullOrWhiteSpace(ext) Then ext = ".jpg"
             If Not ext.StartsWith(".", StringComparison.Ordinal) Then ext = "." & ext
+            ext = ext.ToLowerInvariant()
 
             ' MIT Namensmuster: der gewuenschte Name muss EXAKT so hochgeladen werden - Immich
             ' uebernimmt den Dateinamen als Assetnamen. Die Eindeutigkeit der Temp-Datei kommt
@@ -13045,6 +13046,9 @@ Namespace ViewModels
             Dim ext = If(String.IsNullOrWhiteSpace(requestedExtension), IO.Path.GetExtension(sourcePath), requestedExtension)
             If String.IsNullOrWhiteSpace(ext) Then ext = ".jpg"
             If Not ext.StartsWith(".", StringComparison.Ordinal) Then ext = "." & ext
+            ' Ein neu vergebener Name, auch wenn das Format bleibt: IMG_0001.JPG wird IMG_0001.jpg
+            ' (siehe MediaFileTypes.WithLowerCaseExtension).
+            ext = ext.ToLowerInvariant()
 
             Dim stem As String = Nothing
             If nameBuilder IsNot Nothing Then stem = nameBuilder(sourcePath)

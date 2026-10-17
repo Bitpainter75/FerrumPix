@@ -4938,7 +4938,7 @@ Namespace ViewModels
 
             Return New BatchRenameResult With {
                 .Mappings = DialogBatchRenamePreview.
-                    Where(Function(i) Not String.Equals(i.SourcePath, i.TargetPath, StringComparison.OrdinalIgnoreCase)).
+                    Where(Function(i) Not String.Equals(i.SourcePath, i.TargetPath, StringComparison.Ordinal)).
                     Select(Function(i) New BatchRenameMapping With {.SourcePath = i.SourcePath, .TargetPath = i.TargetPath}).
                     ToList()
             }
@@ -5285,13 +5285,23 @@ Namespace ViewModels
                 If String.IsNullOrWhiteSpace(newName) OrElse HasInvalidFileNameChars(newName) Then
                     status = LocalizationService.T("Ungültiger Name")
                     hasProblem = True
-                ElseIf Not usedTargets.Add(NormalizePath(targetPath)) Then
-                    status = LocalizationService.T("Doppelter Zielname")
-                    hasProblem = True
-                ElseIf Not String.Equals(NormalizePath(sourcePath), NormalizePath(targetPath), PathIdentity.Comparison) AndAlso
-                       (IO.File.Exists(targetPath) OrElse IO.Directory.Exists(targetPath)) Then
-                    status = LocalizationService.T("Existiert bereits")
-                    hasProblem = True
+                Else
+                    ' Ein Namenskonflikt haelt den Lauf nicht auf: die erste Datei behaelt den Namen,
+                    ' jede folgende bekommt _1, _2 ... vor die Endung. Das trifft vor allem Muster
+                    ' aus Datum und Uhrzeit, bei denen eine Serie dieselbe Sekunde traegt. Konflikt
+                    ' ist ein Name, den schon eine Datei dieses Laufs bekommt, oder eine fremde Datei
+                    ' im Ordner; die Quelldatei selbst zaehlt nicht, sie wird ja umbenannt.
+                    Dim stem = IO.Path.GetFileNameWithoutExtension(newName)
+                    Dim extension = IO.Path.GetExtension(newName)
+                    Dim suffix = 0
+                    Do While usedTargets.Contains(NormalizePath(targetPath)) OrElse
+                             (Not String.Equals(NormalizePath(sourcePath), NormalizePath(targetPath), PathIdentity.Comparison) AndAlso
+                              (IO.File.Exists(targetPath) OrElse IO.Directory.Exists(targetPath)))
+                        suffix += 1
+                        newName = $"{stem}_{suffix}{extension}"
+                        targetPath = If(String.IsNullOrEmpty(directoryPath), newName, IO.Path.Combine(directoryPath, newName))
+                    Loop
+                    usedTargets.Add(NormalizePath(targetPath))
                 End If
 
                 DialogBatchRenamePreview.Add(New BatchRenamePreviewItem With {
@@ -5369,7 +5379,7 @@ Namespace ViewModels
 
             Dim result = pattern.Replace("{name}", baseName).
                                  Replace("{filename}", baseName).
-                                 Replace("{ext}", extension.TrimStart("."c)).
+                                 Replace("{ext}", extension.TrimStart("."c).ToLowerInvariant()).
                                  Replace("{width}", width).
                                  Replace("{height}", height).
                                  Replace("{camera}", camera).
@@ -5406,6 +5416,9 @@ Namespace ViewModels
                String.IsNullOrEmpty(IO.Path.GetExtension(result)) AndAlso Not String.IsNullOrEmpty(extension) Then
                 result &= extension
             End If
+            ' Ein Dateiname, nicht nur ein Stamm: die Endung kleinschreiben, egal ob sie von der
+            ' Quelle kommt (IMG_0001.JPG) oder im Muster steht.
+            If appendSourceExtension Then result = MediaFileTypes.WithLowerCaseExtension(result)
             Return result
         End Function
 
@@ -5621,7 +5634,8 @@ Namespace ViewModels
             If Not FileOperationPolicy.CanRename(itemPath) Then Return
             Dim oldName = IO.Path.GetFileName(itemPath.TrimEnd(IO.Path.DirectorySeparatorChar, IO.Path.AltDirectorySeparatorChar))
             Dim isDirectory = IO.Directory.Exists(itemPath)
-            Dim extension = If(isDirectory, "", IO.Path.GetExtension(oldName))
+            ' Die Endung wird kleingeschrieben wieder angehaengt, wie bei jedem neu vergebenen Namen.
+            Dim extension = If(isDirectory, "", IO.Path.GetExtension(oldName).ToLowerInvariant())
             Dim baseName = If(isDirectory, oldName, IO.Path.GetFileNameWithoutExtension(oldName))
             ' ERST uebersetzen, dann die Endung anhaengen: "Neuen Namen eingeben (.nef)" hat keinen
             ' Schluessel, und ShowInputAsync uebersetzt nur, was es wortgleich findet.

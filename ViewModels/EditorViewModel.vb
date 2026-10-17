@@ -11412,6 +11412,7 @@ Namespace ViewModels
                             Continue Do
                         End If
                         If String.IsNullOrEmpty(IO.Path.GetExtension(newName)) Then newName &= extension
+                        newName = MediaFileTypes.WithLowerCaseExtension(newName)
                         Dim folder = IO.Path.GetDirectoryName(targetPath)
                         If String.IsNullOrEmpty(folder) Then Return ""
                         Dim renamed = IO.Path.Combine(folder, newName)

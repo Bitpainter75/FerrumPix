@@ -5,8 +5,17 @@
 - **The eyedropper shows what it hits.** A small label follows the eyedropper over the picture
   with a swatch and the value of the color under its tip.
 
-- **Batch rename with the time.** Two more placeholders to click insert the file date and the
-  date taken together with the time of day.
+- **File name placeholders with the time.** Batch rename has two more placeholders to click
+  that insert the file date and the date taken together with the time of day. The file name
+  field of the other batch dialogs now offers the same placeholders to click.
+
+- **Batch rename resolves name conflicts.** If two pictures would get the same name, or the
+  name is already taken in the folder, the next one gets _1, _2 and so on instead of stopping
+  the rename.
+
+- **File extensions in lower case.** Saving under a new name, exporting, batch converting,
+  renaming and batch renaming now write the file extension in lower case, so IMG_0001.JPG
+  becomes IMG_0001.jpg. Files saved in place keep their name.
 
 ### Fixes
 

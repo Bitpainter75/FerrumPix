@@ -37,6 +37,18 @@ Namespace Services
             Return Displayable.Contains(Path.GetExtension(filePath).ToLowerInvariant())
         End Function
 
+        ''' <summary>Der Name mit kleingeschriebener Endung ("IMG_0001.JPG" wird "IMG_0001.jpg").
+        ''' Gilt fuer jeden Namen, den die Anwendung NEU vergibt: Speichern unter, Exportieren,
+        ''' Stapel-Konvertieren, Umbenennen und Stapel-Umbenennen. Der Stamm bleibt, wie er ist.
+        ''' Eine Datei, die an Ort und Stelle ueberschrieben wird, behaelt ihren Namen; ebenso eine
+        ''' Kopie oder ein Verschieben, das ist dieselbe Datei an anderer Stelle.</summary>
+        Public Shared Function WithLowerCaseExtension(fileName As String) As String
+            If String.IsNullOrEmpty(fileName) Then Return fileName
+            Dim extension = Path.GetExtension(fileName)
+            If extension.Length = 0 OrElse String.Equals(extension, extension.ToLowerInvariant(), StringComparison.Ordinal) Then Return fileName
+            Return fileName.Substring(0, fileName.Length - extension.Length) & extension.ToLowerInvariant()
+        End Function
+
     End Class
 
 End Namespace
