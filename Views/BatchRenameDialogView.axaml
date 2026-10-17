@@ -21,6 +21,8 @@
                     <Button Classes="ghost" Padding="8,3" Content="{}{name}" Tag="{}{name}" Click="OnInsertPlaceholder" ToolTip.Tip="Ursprünglicher Dateiname"/>
                     <Button Classes="ghost" Padding="8,3" Content="{}{date:yyyyMMdd}" Tag="{}{date:yyyyMMdd}" Click="OnInsertPlaceholder" ToolTip.Tip="Dateidatum"/>
                     <Button Classes="ghost" Padding="8,3" Content="{}{datetaken:yyyyMMdd}" Tag="{}{datetaken:yyyyMMdd}" Click="OnInsertPlaceholder" ToolTip.Tip="Aufnahmedatum (EXIF)"/>
+                    <Button Classes="ghost" Padding="8,3" Content="{}{date:yyyyMMdd_HHmmss}" Tag="{}{date:yyyyMMdd_HHmmss}" Click="OnInsertPlaceholder" ToolTip.Tip="Dateidatum mit Uhrzeit"/>
+                    <Button Classes="ghost" Padding="8,3" Content="{}{datetaken:yyyyMMdd_HHmmss}" Tag="{}{datetaken:yyyyMMdd_HHmmss}" Click="OnInsertPlaceholder" ToolTip.Tip="Aufnahmedatum mit Uhrzeit (EXIF)"/>
                     <Button Classes="ghost" Padding="8,3" Content="{}{width}" Tag="{}{width}" Click="OnInsertPlaceholder" ToolTip.Tip="Bildbreite in Pixeln"/>
                     <Button Classes="ghost" Padding="8,3" Content="{}{height}" Tag="{}{height}" Click="OnInsertPlaceholder" ToolTip.Tip="Bildhöhe in Pixeln"/>
                     <Button Classes="ghost" Padding="8,3" Content="{}{camera}" Tag="{}{camera}" Click="OnInsertPlaceholder" ToolTip.Tip="Kameramodell (EXIF)"/>

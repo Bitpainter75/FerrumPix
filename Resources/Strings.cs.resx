@@ -2991,6 +2991,12 @@
   <data name="Aufnahmedatum_EXIF_3d0d84e8" xml:space="preserve">
     <value>Datum pořízení (EXIF)</value>
   </data>
+  <data name="Dateidatum_mit_Uhrzeit_5a26d5f6" xml:space="preserve">
+    <value>Datum souboru s časem</value>
+  </data>
+  <data name="Aufnahmedatum_mit_Uhrzeit_EXIF_5054ad49" xml:space="preserve">
+    <value>Datum pořízení s časem (EXIF)</value>
+  </data>
   <data name="Bildbreite_in_Pixeln_6dba108e" xml:space="preserve">
     <value>Šířka obrázku v pixelech</value>
   </data>

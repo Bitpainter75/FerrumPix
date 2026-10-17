@@ -124,6 +124,64 @@ Public Class App
             Avalonia.Interactivity.RoutingStrategies.Tunnel)
     End Sub
 
+    ''' <summary>Die Scrollpfeile eines Menues erscheinen nur, wenn das Menue wirklich nicht passt.
+    '''
+    ''' <para>Kontextmenues, Fussleistenmenues und Untermenues scrollen ueber eine eigene
+    ''' ScrollViewer-Vorlage mit je einem Pfeilknopf oben und unten statt einer Leiste. Ob ein Pfeil
+    ''' steht, entscheidet die Vorlage ueber einen exakten Vergleich von Inhaltshoehe und
+    ''' Sichthoehe. Bei gebrochener Skalierung (1,5) bleibt zwischen beiden ein Rundungsrest, und
+    ''' schon der zeigt den unteren Pfeil. Der nimmt Platz weg, ab da passt das Menue tatsaechlich
+    ''' nicht mehr, und mit dem ersten Schritt Richtung Fokus steht auch der obere: beide Pfeile an
+    ''' einem Menue, das reichlich Platz hatte (Nutzerbefund).</para>
+    '''
+    ''' <para>Die Vorlage erkennt man am Aufbau, nicht an ihrem Schluessel: ein DockPanel als Wurzel
+    ''' mit den beiden Pfeilknoepfen. Deren Sichtbarkeit wird mit einem lokalen Wert ueberschrieben,
+    ''' der vor der Bindung der Vorlage gilt, und erst ab einem ganzen Punkt Ueberhang gesetzt.
+    ''' Ohne Pfeile ist die Sichtflaeche die volle, also kippt der Zustand nicht hin und her.</para></summary>
+    Private Shared Sub ShowMenuScrollArrowsOnlyOnOverflow()
+        Avalonia.Controls.Primitives.TemplatedControl.TemplateAppliedEvent.AddClassHandler(Of ScrollViewer)(
+            Sub(viewer, e)
+                If MenuScrollArrows(viewer) Is Nothing Then Return
+                RemoveHandler viewer.PropertyChanged, AddressOf OnMenuScrollViewerChanged
+                AddHandler viewer.PropertyChanged, AddressOf OnMenuScrollViewerChanged
+                UpdateMenuScrollArrows(viewer)
+            End Sub)
+    End Sub
+
+    Private Shared Function MenuScrollArrows(viewer As ScrollViewer) As RepeatButton()
+        Dim root = TryCast(Avalonia.VisualTree.VisualExtensions.GetVisualChildren(viewer).FirstOrDefault(), DockPanel)
+        If root Is Nothing Then Return Nothing
+        Dim arrows = root.Children.OfType(Of RepeatButton)().ToArray()
+        Return If(arrows.Length = 2, arrows, Nothing)
+    End Function
+
+    Private Shared Sub OnMenuScrollViewerChanged(sender As Object, e As AvaloniaPropertyChangedEventArgs)
+        If e.Property Is ScrollViewer.ExtentProperty OrElse e.Property Is ScrollViewer.ViewportProperty OrElse
+           e.Property Is ScrollViewer.OffsetProperty OrElse e.Property Is ScrollViewer.VerticalScrollBarVisibilityProperty Then
+            UpdateMenuScrollArrows(DirectCast(sender, ScrollViewer))
+        End If
+    End Sub
+
+    Private Shared Sub UpdateMenuScrollArrows(viewer As ScrollViewer)
+        Dim arrows = MenuScrollArrows(viewer)
+        If arrows Is Nothing Then Return
+        Dim overflow = viewer.Extent.Height - viewer.Viewport.Height
+        Dim scrolls As Boolean
+        Select Case viewer.VerticalScrollBarVisibility
+            Case Avalonia.Controls.Primitives.ScrollBarVisibility.Visible
+                scrolls = True
+            Case Avalonia.Controls.Primitives.ScrollBarVisibility.Auto
+                scrolls = overflow >= 1.0
+            Case Else
+                scrolls = False
+        End Select
+        For Each arrow In arrows
+            Dim atTop = DockPanel.GetDock(arrow) = Dock.Top
+            Dim room = If(atTop, viewer.Offset.Y, overflow - viewer.Offset.Y)
+            arrow.IsVisible = scrolls AndAlso (viewer.VerticalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Visible OrElse room >= 0.5)
+        Next
+    End Sub
+
     ''' <summary>Zwei Bauformen, deren Inhalt der Durchlauf ueber das Fenster nie zu sehen bekommt.
     ''' Je EIN Klassen-Handler fuer die ganze Anwendung, statt eines Ereignisses je Stelle.</summary>
     Private Shared Sub LocalizeLateContent()
@@ -158,6 +216,7 @@ Public Class App
         LocalizeLateContent()
         KeepPenDragsOnTheirControl()
         DropImplausibleWheelEvents()
+        ShowMenuScrollArrowsOnlyOnOverflow()
         If TypeOf ApplicationLifetime Is IClassicDesktopStyleApplicationLifetime Then
             Dim desktop = CType(ApplicationLifetime, IClassicDesktopStyleApplicationLifetime)
 

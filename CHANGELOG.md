@@ -5,6 +5,13 @@
 - **The eyedropper shows what it hits.** A small label follows the eyedropper over the picture
   with a swatch and the value of the color under its tip.
 
+- **Batch rename with the time.** Two more placeholders to click insert the file date and the
+  date taken together with the time of day.
+
+### Fixes
+
+- Context menus and footer menus no longer show scroll arrows when they fit on the screen.
+
 ## 0.9.67
 
 ### What's new
