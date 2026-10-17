@@ -1,0 +1,95 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:icons="clr-namespace:FerrumPix.Controls"
+             x:Class="FerrumPix.Controls.EditorPanels.TiltShiftPanel">
+    <!-- Tilt-Shift: ein scharfes Band durch das Bild, davor und dahinter wachsende Unschaerfe.
+         Gerechnet hinter der Schaerfe und vor Vignette und Koernung (ImageProcessor.ProcessBitmapBase). -->
+    <Expander Header="Tilt-Shift" icons:ExpanderState.Key="tiltshift"
+        IsVisible="{Binding HiddenAdjustmentGroups, Converter={StaticResource NotInListConverter}, ConverterParameter=tiltshift}">
+        <Expander.HeaderTemplate>
+            <DataTemplate>
+                <Grid ColumnDefinitions="*,Auto,Auto" VerticalAlignment="Center">
+                    <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                        <icons:SvgIcon
+                            Source="avares://FerrumPix/Assets/Icons/outline/tilt-shift.svg"
+                            Width="14" Height="14" />
+                        <TextBlock Text="{Binding}" FontWeight="SemiBold" />
+                    </StackPanel>
+                    <!-- Gruppenvergleich, beschrieben in LightPanel.axaml -->
+                    <Button Grid.Column="1"
+                            Classes="icon-btn group-compare"
+                            Classes.comparing="{Binding DataContext.ComparingAdjustmentGroups, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource InListConverter}, ConverterParameter=tiltshift}"
+                            IsVisible="{Binding DataContext.CanCompareAdjustmentGroups, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                            Width="28" Height="28" Padding="0"
+                            Command="{Binding DataContext.ToggleAdjustmentGroupCompareCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                            CommandParameter="tiltshift"
+                            ToolTip.Tip="Gruppe vorübergehend ausblenden, um vorher und nachher zu vergleichen">
+                        <icons:SvgIcon Width="14" Height="14" />
+                    </Button>
+                    <Button Grid.Column="2"
+                            Classes="icon-btn group-reset"
+                            Width="28"
+                            Height="28"
+                            Padding="0"
+                            Command="{Binding DataContext.ResetTiltShiftCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                            ToolTip.Tip="Tilt-Shift zurücksetzen">
+                        <icons:SvgIcon
+                            Source="avares://FerrumPix/Assets/Icons/outline/rotate-clockwise.svg"
+                            Width="14" Height="14" />
+                    </Button>
+                </Grid>
+            </DataTemplate>
+        </Expander.HeaderTemplate>
+        <StackPanel Spacing="2" Margin="0,8,0,0">
+            <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
+                <TextBlock Text="Stärke" Foreground="{DynamicResource FP.Text.Secondary}"
+                           VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100" DefaultValue="0"
+                                   Value="{Binding TiltShiftAmount}" Margin="0,0" />
+                <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                         Value="{Binding TiltShiftAmount, Mode=TwoWay}" Minimum="0" Maximum="100" />
+            </Grid>
+            <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
+                <TextBlock Text="Schärfebereich" Foreground="{DynamicResource FP.Text.Secondary}"
+                           VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap"
+                           ToolTip.Tip="Breite des scharfen Bandes" />
+                <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100" DefaultValue="20"
+                                   Value="{Binding TiltShiftFocus}" Margin="0,0" />
+                <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                         Value="{Binding TiltShiftFocus, Mode=TwoWay}" Minimum="0" Maximum="100" />
+            </Grid>
+            <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
+                <TextBlock Text="Übergang" Foreground="{DynamicResource FP.Text.Secondary}"
+                           VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100" DefaultValue="40"
+                                   Value="{Binding TiltShiftTransition}" Margin="0,0" />
+                <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                         Value="{Binding TiltShiftTransition, Mode=TwoWay}" Minimum="0" Maximum="100" />
+            </Grid>
+            <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
+                <TextBlock Text="Winkel" Foreground="{DynamicResource FP.Text.Secondary}"
+                           VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                <icons:RoundSlider Grid.Column="1" Minimum="-90" Maximum="90" DefaultValue="0"
+                                   Value="{Binding TiltShiftAngle}" Margin="0,0" />
+                <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                         Value="{Binding TiltShiftAngle, Mode=TwoWay}" Minimum="-90" Maximum="90" />
+            </Grid>
+            <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
+                <TextBlock Text="Mitte X" Foreground="{DynamicResource FP.Text.Secondary}"
+                           VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100" DefaultValue="50"
+                                   Value="{Binding TiltShiftCenterX}" Margin="0,0" />
+                <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                         Value="{Binding TiltShiftCenterX, Mode=TwoWay}" Minimum="0" Maximum="100" />
+            </Grid>
+            <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
+                <TextBlock Text="Mitte Y" Foreground="{DynamicResource FP.Text.Secondary}"
+                           VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100" DefaultValue="50"
+                                   Value="{Binding TiltShiftCenterY}" Margin="0,0" />
+                <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                         Value="{Binding TiltShiftCenterY, Mode=TwoWay}" Minimum="0" Maximum="100" />
+            </Grid>
+        </StackPanel>
+    </Expander>
+</UserControl>

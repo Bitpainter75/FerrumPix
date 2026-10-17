@@ -595,7 +595,8 @@ Namespace Services
         '''
         ''' Die Liste ist gemessen und nicht hergeleitet (<c>Diagnostics/Kettenmessung raender</c>).
         ''' Ausgeschlossen sind zwei Sorten: Stufen, die an der POSITION im Bild hängen (Vignette
-        ''' weicht um bis zu 92 Stufen ab, Körnung 56, Staub und Kratzer 76), und Stufen, die auch
+        ''' weicht um bis zu 92 Stufen ab, Körnung 56, Staub und Kratzer 76; Tilt-Shift legt sein
+        ''' Band nach der Bildmitte und ist ungemessen gleich mit draussen), und Stufen, die auch
         ''' ausgerichtet nur dither-gleich bleiben (Farbrauschen 2, grobes Farbrauschen 1).
         '''
         ''' Die SCHÄRFE ist bewusst ganz draußen, obwohl sie bei halbem Radius bitgleich war: bei
@@ -627,6 +628,7 @@ Namespace Services
             ' lokaler Ausschnitt hätte andere Werte; auch mit gesetzten Farben bleibt es
             ' bewusst außerhalb der Whitelist (siehe Erläuterung oben).
             Return a.Vignette = 0 AndAlso
+                   a.TiltShiftAmount = 0 AndAlso
                    a.Grain = 0 AndAlso
                    a.DustScratches = 0 AndAlso
                    a.AddNoise = 0 AndAlso

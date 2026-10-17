@@ -328,7 +328,8 @@ Namespace ViewModels
                    p.Name.StartsWith("Filter", StringComparison.Ordinal) OrElse
                    p.Name.StartsWith("Lut", StringComparison.Ordinal) OrElse
                    p.Name = NameOf(ImageAdjustments.PosterizeLevels) OrElse
-                   p.Name = NameOf(ImageAdjustments.ThresholdLevel) Then
+                   p.Name = NameOf(ImageAdjustments.ThresholdLevel) OrElse
+                   p.Name.StartsWith("TiltShift", StringComparison.Ordinal) Then
                     p.SetValue(probe, p.GetValue(neutral))
                 End If
             Next

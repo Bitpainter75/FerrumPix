@@ -8,7 +8,7 @@ Imports ReactiveUI
 Namespace ViewModels
 
     ''' <summary>Die weiteren Korrekturen: KANALMIXER und VERLAUFSUMSETZUNG im Werkzeug "Farbe",
-    ''' TONTRENNUNG und SCHWELLENWERT im Werkzeug "Effekte".
+    ''' TONTRENNUNG, SCHWELLENWERT und TILT-SHIFT im Werkzeug "Effekte".
     '''
     ''' Es sind gewoehnliche Pixelregler des Rezepts (<see cref="ImageAdjustments"/>), keine eigene
     ''' Ebenenart: was hier steht, wirkt auf das ganze Bild, auf ein Objekt im Anpassen-Modus und auf
@@ -39,6 +39,14 @@ Namespace ViewModels
         Private _resetGradientMapCommand As ICommand
         Private _resetPosterizeCommand As ICommand
         Private _resetThresholdCommand As ICommand
+
+        Private _tiltShiftAmount As Double
+        Private _tiltShiftCenterX As Double = 50
+        Private _tiltShiftCenterY As Double = 50
+        Private _tiltShiftAngle As Double
+        Private _tiltShiftFocus As Double = 20
+        Private _tiltShiftTransition As Double = 40
+        Private _resetTiltShiftCommand As ICommand
 
 #Region "Kanalmixer"
 
@@ -293,6 +301,90 @@ Namespace ViewModels
 
 #End Region
 
+#Region "Tilt-Shift"
+
+        Public Property TiltShiftAmount As Double
+            Get
+                Return _tiltShiftAmount
+            End Get
+            Set(value As Double)
+                SetUndoableDouble(_tiltShiftAmount, Math.Max(0, Math.Min(100, value)), NameOf(TiltShiftAmount))
+            End Set
+        End Property
+
+        Public Property TiltShiftCenterX As Double
+            Get
+                Return _tiltShiftCenterX
+            End Get
+            Set(value As Double)
+                SetUndoableDouble(_tiltShiftCenterX, Math.Max(0, Math.Min(100, value)), NameOf(TiltShiftCenterX))
+            End Set
+        End Property
+
+        Public Property TiltShiftCenterY As Double
+            Get
+                Return _tiltShiftCenterY
+            End Get
+            Set(value As Double)
+                SetUndoableDouble(_tiltShiftCenterY, Math.Max(0, Math.Min(100, value)), NameOf(TiltShiftCenterY))
+            End Set
+        End Property
+
+        Public Property TiltShiftAngle As Double
+            Get
+                Return _tiltShiftAngle
+            End Get
+            Set(value As Double)
+                SetUndoableDouble(_tiltShiftAngle, Math.Max(-90, Math.Min(90, value)), NameOf(TiltShiftAngle))
+            End Set
+        End Property
+
+        Public Property TiltShiftFocus As Double
+            Get
+                Return _tiltShiftFocus
+            End Get
+            Set(value As Double)
+                SetUndoableDouble(_tiltShiftFocus, Math.Max(0, Math.Min(100, value)), NameOf(TiltShiftFocus))
+            End Set
+        End Property
+
+        Public Property TiltShiftTransition As Double
+            Get
+                Return _tiltShiftTransition
+            End Get
+            Set(value As Double)
+                SetUndoableDouble(_tiltShiftTransition, Math.Max(0, Math.Min(100, value)), NameOf(TiltShiftTransition))
+            End Set
+        End Property
+
+        Public ReadOnly Property ResetTiltShiftCommand As ICommand
+            Get
+                If _resetTiltShiftCommand Is Nothing Then
+                    _resetTiltShiftCommand = ReactiveCommand.Create(Sub() ResetCorrectionGroup("Tilt-Shift", AddressOf ResetTiltShiftValues))
+                End If
+                Return _resetTiltShiftCommand
+            End Get
+        End Property
+
+        Private Sub ResetTiltShiftValues()
+            _tiltShiftAmount = 0
+            _tiltShiftCenterX = 50
+            _tiltShiftCenterY = 50
+            _tiltShiftAngle = 0
+            _tiltShiftFocus = 20
+            _tiltShiftTransition = 40
+            RaiseTiltShiftChanged()
+        End Sub
+
+        Private Sub RaiseTiltShiftChanged()
+            For Each n In {NameOf(TiltShiftAmount), NameOf(TiltShiftCenterX), NameOf(TiltShiftCenterY),
+                           NameOf(TiltShiftAngle), NameOf(TiltShiftFocus), NameOf(TiltShiftTransition)}
+                Me.RaisePropertyChanged(n)
+            Next
+        End Sub
+
+#End Region
+
 #Region "Anbindung an Rezept, Zuruecksetzen und Historie"
 
         ''' <summary>Ein Gruppen-Zuruecksetzer: ein benannter Schritt in der Historie, dann die Werte.</summary>
@@ -310,10 +402,11 @@ Namespace ViewModels
             ResetGradientMapValues()
         End Sub
 
-        ''' <summary>Tontrennung und Schwellenwert zurueck, fuer das Werkzeug "Effekte".</summary>
+        ''' <summary>Tontrennung, Schwellenwert und Tilt-Shift zurueck, fuer das Werkzeug "Effekte".</summary>
         Private Sub ResetEffectCorrectionsInternal()
             ResetPosterizeValues()
             ResetThresholdValues()
+            ResetTiltShiftValues()
         End Sub
 
         ''' <summary>Schreibt die Werte aller sechs Gruppen ins Rezept.</summary>
@@ -333,6 +426,12 @@ Namespace ViewModels
             adj.GradientMapAmount = CSng(_gradientMapAmount)
             adj.PosterizeLevels = CSng(_posterizeLevels)
             adj.ThresholdLevel = CSng(_thresholdLevel)
+            adj.TiltShiftAmount = CSng(_tiltShiftAmount)
+            adj.TiltShiftCenterX = CSng(_tiltShiftCenterX)
+            adj.TiltShiftCenterY = CSng(_tiltShiftCenterY)
+            adj.TiltShiftAngle = CSng(_tiltShiftAngle)
+            adj.TiltShiftFocus = CSng(_tiltShiftFocus)
+            adj.TiltShiftTransition = CSng(_tiltShiftTransition)
         End Sub
 
         ''' <summary>Uebernimmt die Werte aller sechs Gruppen aus dem Rezept und meldet sie der
@@ -351,6 +450,12 @@ Namespace ViewModels
             _gradientMapAmount = adj.GradientMapAmount
             _posterizeLevels = adj.PosterizeLevels
             _thresholdLevel = adj.ThresholdLevel
+            _tiltShiftAmount = adj.TiltShiftAmount
+            _tiltShiftCenterX = adj.TiltShiftCenterX
+            _tiltShiftCenterY = adj.TiltShiftCenterY
+            _tiltShiftAngle = adj.TiltShiftAngle
+            _tiltShiftFocus = adj.TiltShiftFocus
+            _tiltShiftTransition = adj.TiltShiftTransition
             RaiseCorrectionsChanged()
         End Sub
 
@@ -363,6 +468,7 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(GradientMapAmount))
             Me.RaisePropertyChanged(NameOf(PosterizeLevels))
             Me.RaisePropertyChanged(NameOf(ThresholdLevel))
+            RaiseTiltShiftChanged()
         End Sub
 
         ''' <summary>Der Name eines Handgriffs in der Historie, oder Nothing, wenn er nicht hierher
@@ -378,6 +484,12 @@ Namespace ViewModels
                 Case NameOf(GradientMapAmount) : Return CombineHistoryLabel("Verlaufsumsetzung", "Stärke")
                 Case NameOf(PosterizeLevels) : Return LocalizationService.T("Tontrennung")
                 Case NameOf(ThresholdLevel) : Return LocalizationService.T("Schwellenwert")
+                Case NameOf(TiltShiftAmount) : Return CombineHistoryLabel("Tilt-Shift", "Stärke")
+                Case NameOf(TiltShiftCenterX) : Return CombineHistoryLabel("Tilt-Shift", "Mitte X")
+                Case NameOf(TiltShiftCenterY) : Return CombineHistoryLabel("Tilt-Shift", "Mitte Y")
+                Case NameOf(TiltShiftAngle) : Return CombineHistoryLabel("Tilt-Shift", "Winkel")
+                Case NameOf(TiltShiftFocus) : Return CombineHistoryLabel("Tilt-Shift", "Schärfebereich")
+                Case NameOf(TiltShiftTransition) : Return CombineHistoryLabel("Tilt-Shift", "Übergang")
             End Select
             Return Nothing
         End Function
@@ -390,7 +502,9 @@ Namespace ViewModels
                      NameOf(ChannelMixerBlue), NameOf(ChannelMixerConstant),
                      NameOf(GradientMapShadowColorValue), NameOf(GradientMapHighlightColorValue), NameOf(GradientMapAmount)
                     Return outline & "color-filter.svg"
-                Case NameOf(PosterizeLevels), NameOf(ThresholdLevel)
+                Case NameOf(PosterizeLevels), NameOf(ThresholdLevel),
+                     NameOf(TiltShiftAmount), NameOf(TiltShiftCenterX), NameOf(TiltShiftCenterY),
+                     NameOf(TiltShiftAngle), NameOf(TiltShiftFocus), NameOf(TiltShiftTransition)
                     Return outline & "sparkles.svg"
             End Select
             Return Nothing

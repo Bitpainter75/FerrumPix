@@ -9690,4 +9690,55 @@
   <data name="Regler_mit_Farbbedeutung_zeigen_ihre_Wirkung_als_e9ae433e" xml:space="preserve">
     <value>色に関係するスライダーが効果をグラデーションで表示します。たとえば色温度、色かぶり補正、カラーミキサーです。オフのときはすべてアクセントカラーです。</value>
   </data>
+  <data name="Tilt_Shift_1b0745f4" xml:space="preserve">
+    <value>ティルトシフト</value>
+  </data>
+  <data name="Tilt_Shift_zur_cksetzen_bf78a408" xml:space="preserve">
+    <value>ティルトシフトをリセット</value>
+  </data>
+  <data name="Sch_rfebereich_a2b082ac" xml:space="preserve">
+    <value>ピント範囲</value>
+  </data>
+  <data name="Breite_des_scharfen_Bandes_b1145f96" xml:space="preserve">
+    <value>シャープな帯の幅</value>
+  </data>
+  <data name="Nebel_nach_Tiefe_e60397cf" xml:space="preserve">
+    <value>深度フォグ</value>
+  </data>
+  <data name="Nebel_zur_cksetzen_ce24610b" xml:space="preserve">
+    <value>フォグをリセット</value>
+  </data>
+  <data name="Beginn_21063753" xml:space="preserve">
+    <value>開始</value>
+  </data>
+  <data name="Volle_Dichte_90381649" xml:space="preserve">
+    <value>最大濃度</value>
+  </data>
+  <data name="Wie_dicht_der_Nebel_am_fernsten_Punkt_wird_6ee90f90" xml:space="preserve">
+    <value>最も遠い点でのフォグの濃さ</value>
+  </data>
+  <data name="Ab_dieser_Entfernung_beginnt_der_Nebel_100_ist_a_ca3f128d" xml:space="preserve">
+    <value>この距離からフォグが始まります。100が最も近い</value>
+  </data>
+  <data name="Ab_dieser_Entfernung_liegt_die_volle_Dichte_0_is_71a85b6b" xml:space="preserve">
+    <value>この距離から最大濃度になります。0が最も遠い</value>
+  </data>
+  <data name="Der_Nebel_kommt_je_Bildpunkt_aus_seiner_Entfernu_80909c48" xml:space="preserve">
+    <value>フォグは各ピクセルの距離から決まります。</value>
+  </data>
+  <data name="Nebel_abgebrochen_das_Bild_ist_unver_ndert_ef4a982e" xml:space="preserve">
+    <value>フォグを中止しました。画像は変更されていません</value>
+  </data>
+  <data name="Nebel_wird_angewendet_a55f514e" xml:space="preserve">
+    <value>フォグを適用中…</value>
+  </data>
+  <data name="Nebel_wird_angewendet_d0497b7d" xml:space="preserve">
+    <value>フォグを適用中</value>
+  </data>
+  <data name="Nebel_fehlgeschlagen_ae66bfe1" xml:space="preserve">
+    <value>フォグに失敗しました</value>
+  </data>
+  <data name="Nebel_angewendet_658b6738" xml:space="preserve">
+    <value>フォグを適用しました</value>
+  </data>
 </root>

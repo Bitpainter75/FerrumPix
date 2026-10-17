@@ -9668,4 +9668,55 @@
   <data name="Regler_mit_Farbbedeutung_zeigen_ihre_Wirkung_als_e9ae433e" xml:space="preserve">
     <value>Regler mit Farbbedeutung zeigen ihre Wirkung als Farbverlauf, etwa Temperatur, Tönung oder Farbmischer. Ausgeschaltet sind alle Regler in der Akzentfarbe.</value>
   </data>
+  <data name="Tilt_Shift_1b0745f4" xml:space="preserve">
+    <value>Tilt-Shift</value>
+  </data>
+  <data name="Tilt_Shift_zur_cksetzen_bf78a408" xml:space="preserve">
+    <value>Tilt-Shift zurücksetzen</value>
+  </data>
+  <data name="Sch_rfebereich_a2b082ac" xml:space="preserve">
+    <value>Schärfebereich</value>
+  </data>
+  <data name="Breite_des_scharfen_Bandes_b1145f96" xml:space="preserve">
+    <value>Breite des scharfen Bandes</value>
+  </data>
+  <data name="Nebel_nach_Tiefe_e60397cf" xml:space="preserve">
+    <value>Nebel nach Tiefe</value>
+  </data>
+  <data name="Nebel_zur_cksetzen_ce24610b" xml:space="preserve">
+    <value>Nebel zurücksetzen</value>
+  </data>
+  <data name="Beginn_21063753" xml:space="preserve">
+    <value>Beginn</value>
+  </data>
+  <data name="Volle_Dichte_90381649" xml:space="preserve">
+    <value>Volle Dichte</value>
+  </data>
+  <data name="Wie_dicht_der_Nebel_am_fernsten_Punkt_wird_6ee90f90" xml:space="preserve">
+    <value>Wie dicht der Nebel am fernsten Punkt wird</value>
+  </data>
+  <data name="Ab_dieser_Entfernung_beginnt_der_Nebel_100_ist_a_ca3f128d" xml:space="preserve">
+    <value>Ab dieser Entfernung beginnt der Nebel. 100 ist am nächsten</value>
+  </data>
+  <data name="Ab_dieser_Entfernung_liegt_die_volle_Dichte_0_is_71a85b6b" xml:space="preserve">
+    <value>Ab dieser Entfernung liegt die volle Dichte. 0 ist am weitesten weg</value>
+  </data>
+  <data name="Der_Nebel_kommt_je_Bildpunkt_aus_seiner_Entfernu_80909c48" xml:space="preserve">
+    <value>Der Nebel kommt je Bildpunkt aus seiner Entfernung.</value>
+  </data>
+  <data name="Nebel_abgebrochen_das_Bild_ist_unver_ndert_ef4a982e" xml:space="preserve">
+    <value>Nebel abgebrochen, das Bild ist unverändert</value>
+  </data>
+  <data name="Nebel_wird_angewendet_a55f514e" xml:space="preserve">
+    <value>Nebel wird angewendet…</value>
+  </data>
+  <data name="Nebel_wird_angewendet_d0497b7d" xml:space="preserve">
+    <value>Nebel wird angewendet</value>
+  </data>
+  <data name="Nebel_fehlgeschlagen_ae66bfe1" xml:space="preserve">
+    <value>Nebel fehlgeschlagen</value>
+  </data>
+  <data name="Nebel_angewendet_658b6738" xml:space="preserve">
+    <value>Nebel angewendet</value>
+  </data>
 </root>

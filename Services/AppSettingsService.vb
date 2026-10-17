@@ -1607,6 +1607,8 @@ Namespace Services
                     ("grain", "Körnung"),
                     ("posterize", "Tontrennung"),
                     ("threshold", "Schwellenwert"),
+                    ("tiltshift", "Tilt-Shift"),
+                    ("fog", "Nebel nach Tiefe"),
                     ("frame", "Rahmen"),
                     ("filter", "Filter"),
                     ("lut", "LUT (.cube)"),
@@ -1633,7 +1635,7 @@ Namespace Services
                     ("Color", New String() {"color", "hsl", "color-grading", "channel-mixer",
                                             "gradient-map", "calibration"}),
                     ("Details", New String() {"details", "rauschen", "sharpen", "soften", "bokeh"}),
-                    ("Effects", New String() {"vignette", "grain", "posterize", "threshold", "frame"}),
+                    ("Effects", New String() {"vignette", "grain", "posterize", "threshold", "tiltshift", "fog", "frame"}),
                     ("Filters", New String() {"filter", "lut", "xmp-preset"})}
             End Get
         End Property
@@ -1668,7 +1670,7 @@ Namespace Services
                     New String() {"color"}, New String() {"hsl"}, New String() {"color-grading"}, New String() {"channel-mixer"}, New String() {"gradient-map"},
                     New String() {"calibration"},
                     New String() {"details"}, New String() {"rauschen"}, New String() {"sharpen", "soften"}, New String() {"bokeh"},
-                    New String() {"vignette", "grain"}, New String() {"posterize"}, New String() {"threshold"}, New String() {"frame"},
+                    New String() {"vignette", "grain"}, New String() {"posterize"}, New String() {"threshold"}, New String() {"tiltshift"}, New String() {"fog"}, New String() {"frame"},
                     New String() {"filter"}, New String() {"xmp-preset"}, New String() {"lut"}}
             End Get
         End Property

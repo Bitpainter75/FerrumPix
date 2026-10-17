@@ -49,7 +49,7 @@ Namespace ViewModels
                 Dispatcher.UIThread.Post(Sub() RefreshModelAvailability())
                 Return
             End If
-            For Each name In {NameOf(IsBokehAvailable), NameOf(BokehHint),
+            For Each name In {NameOf(IsBokehAvailable), NameOf(BokehHint), NameOf(FogHint),
                               NameOf(IsDepthMaskAvailable), NameOf(DepthMaskHint),
                               NameOf(IsSubjectMaskAvailable), NameOf(SubjectMaskHint),
                               NameOf(IsObjectRemovalAvailable), NameOf(CanRemoveObject), NameOf(RemoveObjectHint),
@@ -570,6 +570,306 @@ Namespace ViewModels
                 ' NUR wenn der Commit gar nicht erst eingereiht wurde. Ist er unterwegs, gehoert das
                 ' Aufraeumen ihm - siehe onAlwaysUi oben. Ohne diese Weiche liefe beides doppelt:
                 ' EndCancellableBusy vertraegt das, ein zweites Release des Gates aber nicht.
+                If Not commitEnqueued Then
+                    EndCancellableBusy()
+                    _depthGate.Release()
+                End If
+            End Try
+        End Function
+
+        ' ── Nebel nach Tiefe ────────────────────────────────────────────────────
+        '
+        ' Bauform wie die Tiefen-Unschaerfe darueber, aus demselben Grund gebacken: er braucht die
+        ' Tiefenkarte. Vorschau und Tiefenkarte teilen beide Werkzeuge (PrepareBokehBase), die
+        ' Begruendungen fuer Gate, Abbruch und Aufraeumen stehen bei ApplyBokeh.
+
+        Private Const FogDefaultColor As String = "#FFD5DCE3"
+        Private _fogDensity As Double = 0.0
+        Private _fogNear As Double = 60.0
+        Private _fogFar As Double = 0.0
+        Private _fogColor As String = FogDefaultColor
+        Private _fogPreviewPass As Integer = 0
+        Private _applyFogCommand As ICommand
+        Private _resetFogCommand As ICommand
+
+        ''' <summary>Wie dicht der Nebel am fernsten Punkt wird. 0 ist aus.</summary>
+        Public Property FogDensity As Double
+            Get
+                Return _fogDensity
+            End Get
+            Set(value As Double)
+                Dim v = Math.Max(0.0, Math.Min(100.0, value))
+                If Math.Abs(_fogDensity - v) < 0.0001 Then Return
+                _fogDensity = v
+                Me.RaisePropertyChanged(NameOf(FogDensity))
+                Me.RaisePropertyChanged(NameOf(HasFogChanges))
+                ScheduleFogPreview()
+            End Set
+        End Property
+
+        ''' <summary>Ab dieser Tiefe beginnt der Nebel. Naeher bleibt das Bild klar; 100 ist nah.</summary>
+        Public Property FogNear As Double
+            Get
+                Return _fogNear
+            End Get
+            Set(value As Double)
+                Dim v = Math.Max(0.0, Math.Min(100.0, value))
+                If Math.Abs(_fogNear - v) < 0.0001 Then Return
+                _fogNear = v
+                ' Die Grenzen schieben einander wie bei der Tiefen-Unschaerfe.
+                If _fogFar > _fogNear Then
+                    _fogFar = _fogNear
+                    Me.RaisePropertyChanged(NameOf(FogFar))
+                End If
+                Me.RaisePropertyChanged(NameOf(FogNear))
+                ScheduleFogPreview()
+            End Set
+        End Property
+
+        ''' <summary>Ab dieser Tiefe liegt die volle Dichte. 0 ist am weitesten weg.</summary>
+        Public Property FogFar As Double
+            Get
+                Return _fogFar
+            End Get
+            Set(value As Double)
+                Dim v = Math.Max(0.0, Math.Min(100.0, value))
+                If Math.Abs(_fogFar - v) < 0.0001 Then Return
+                _fogFar = v
+                If _fogNear < _fogFar Then
+                    _fogNear = _fogFar
+                    Me.RaisePropertyChanged(NameOf(FogNear))
+                End If
+                Me.RaisePropertyChanged(NameOf(FogFar))
+                ScheduleFogPreview()
+            End Set
+        End Property
+
+        Public Property FogColorValue As Avalonia.Media.Color
+            Get
+                Return ParseAvaloniaColorOrDefault(_fogColor, Avalonia.Media.Color.Parse(FogDefaultColor))
+            End Get
+            Set(value As Avalonia.Media.Color)
+                Dim text = value.ToString()
+                If String.Equals(_fogColor, text, StringComparison.OrdinalIgnoreCase) Then Return
+                _fogColor = text
+                Me.RaisePropertyChanged(NameOf(FogColorValue))
+                ScheduleFogPreview()
+            End Set
+        End Property
+
+        Public ReadOnly Property HasFogChanges As Boolean
+            Get
+                Return _fogDensity > 0.01
+            End Get
+        End Property
+
+        Public ReadOnly Property FogHint As String
+            Get
+                If Not DepthMapService.Available Then Return MissingModelHint
+                Return LocalizationService.T("Der Nebel kommt je Bildpunkt aus seiner Entfernung.")
+            End Get
+        End Property
+
+        Public ReadOnly Property ApplyFogCommand As ICommand
+            Get
+                If _applyFogCommand Is Nothing Then
+                    _applyFogCommand = ReactiveCommand.Create(Sub()
+                                                                  Dim ignoriert = ApplyFog()
+                                                              End Sub)
+                End If
+                Return _applyFogCommand
+            End Get
+        End Property
+
+        Public ReadOnly Property ResetFogCommand As ICommand
+            Get
+                If _resetFogCommand Is Nothing Then _resetFogCommand = ReactiveCommand.Create(Sub() ResetFog())
+                Return _resetFogCommand
+            End Get
+        End Property
+
+        ''' <summary>Die Gruppe auf ihren Ausgangsstand. Ein gebackener Nebel bleibt, dafuer ist der
+        ''' Schritt zurueck da.</summary>
+        Public Sub ResetFog()
+            _fogDensity = 0.0
+            _fogNear = 60.0
+            _fogFar = 0.0
+            _fogColor = FogDefaultColor
+            DisposeFogPreview()
+            For Each n In {NameOf(FogDensity), NameOf(FogNear), NameOf(FogFar), NameOf(FogColorValue), NameOf(HasFogChanges)}
+                Me.RaisePropertyChanged(n)
+            Next
+        End Sub
+
+        Public Sub DisposeFogPreview()
+            If String.Equals(_vorschauQuelle, "Fog", StringComparison.Ordinal) Then
+                ToolPreviewImage = Nothing
+                _vorschauQuelle = ""
+            End If
+            _fogPreviewPass += 1
+        End Sub
+
+        Private Sub ScheduleFogPreview()
+            If Not DepthMapService.Available Then Return
+            _fogPreviewPass += 1
+            Dim pass = _fogPreviewPass
+            Dim ignoriert = RedrawFogPreview(pass)
+        End Sub
+
+        Private Async Function RedrawFogPreview(pass As Integer) As Task
+            Await Task.Delay(220)
+            If pass <> _fogPreviewPass Then Return
+            If Not DepthMapService.Available OrElse String.IsNullOrWhiteSpace(_currentImagePath) Then Return
+            If Not HasFogChanges Then
+                DisposeFogPreview()
+                Return
+            End If
+
+            Await _depthGate.WaitAsync()
+            Try
+                If pass <> _fogPreviewPass Then Return
+                If Not Await PrepareBokehBase() Then Return
+                If pass <> _fogPreviewPass Then Return
+                If _bokehVorschauBasis Is Nothing OrElse _depthMap Is Nothing Then Return
+                ' EIGENE Kopien: die gemeinsame Vorschaukopie gehoert der Tiefen-Unschaerfe, und
+                ' deren Aufraeumen wartet nicht auf das Gate.
+                Dim basis = _bokehVorschauBasis.Copy()
+                Dim map = _depthMap.Copy()
+                Dim density = _fogDensity, near = _fogNear, far = _fogFar
+                Dim color = FogSkColor()
+
+                SetPreviewBusy(True)
+                Dim fogPreview As Bitmap
+                Try
+                    fogPreview = Await Task.Run(
+                    Function() As Bitmap
+                        Try
+                            Using fog = DepthMapService.DepthFog(basis, map, density, near, far, color)
+                                If fog Is Nothing Then Return Nothing
+                                Using norm = NormalizePreviewBase(fog)
+                                    Return ImageOrientationService.ToAvaloniaBitmapFast(norm)
+                                End Using
+                            End Using
+                        Finally
+                            basis.Dispose()
+                            map.Dispose()
+                        End Try
+                    End Function)
+                Finally
+                    SetPreviewBusy(False)
+                End Try
+
+                If fogPreview Is Nothing Then Return
+                If pass <> _fogPreviewPass Then
+                    fogPreview.Dispose()
+                    Return
+                End If
+                ToolPreviewImage = fogPreview
+                _vorschauQuelle = "Fog"
+            Catch ex As Exception
+                DiagnosticLogService.LogAlways("NebelVorschau", ex.Message)
+                DisposeFogPreview()
+            Finally
+                _depthGate.Release()
+            End Try
+        End Function
+
+        Private Function FogSkColor() As SKColor
+            Dim c = FogColorValue
+            Return New SKColor(c.R, c.G, c.B, 255)
+        End Function
+
+        ''' <summary>Den Nebel ins Arbeitsbild backen. Ablauf wie ApplyBokeh.</summary>
+        Public Async Function ApplyFog() As Task
+            If Not DepthMapService.Available OrElse Not HasFogChanges Then Return
+            If _workingImage Is Nothing OrElse Not _workingImage.IsInitialized Then Return
+
+            Await _depthGate.WaitAsync()
+            Dim commitEnqueued = False
+            Try
+                Dim cancel = BeginCancellableBusy()
+                _depthRunning = True
+                Me.RaisePropertyChanged(NameOf(IsDepthMaskRunning))
+                RefreshBusyState()
+                StatusText = LocalizationService.T("Tiefe wird berechnet…")
+                SetBusyReason(LocalizationService.T("Tiefe wird berechnet"))
+                Dim sourcePath = RenderSourcePath
+                Dim rezept = RecipeWithoutObjects()
+                Dim workingImage = CloneWorkingFullForRender()
+                Dim map As SKBitmap = Nothing
+                Try
+                    map = Await Task.Run(
+                        Function()
+                            Using fertig = ImageProcessor.RenderDisplayImage(sourcePath, rezept, workingImage)
+                                If fertig Is Nothing Then Return Nothing
+                                Return DepthMapService.Compute(fertig, cancel)
+                            End Using
+                        End Function)
+                Finally
+                    _depthRunning = False
+                    Me.RaisePropertyChanged(NameOf(IsDepthMaskRunning))
+                    RefreshBusyState()
+                End Try
+                If map Is Nothing OrElse cancel.IsCancellationRequested Then
+                    Dim cancelled = BusyWasCancelled() OrElse cancel.IsCancellationRequested
+                    map?.Dispose()
+                    EndCancellableBusy()
+                    StatusText = LocalizationService.T(If(cancelled,
+                                                          "Nebel abgebrochen, das Bild ist unverändert",
+                                                          "Tiefe konnte nicht berechnet werden"))
+                    Return
+                End If
+
+                Dim density = _fogDensity, near = _fogNear, far = _fogFar
+                Dim color = FogSkColor()
+                PushUndo(LocalizationService.T("Nebel nach Tiefe"))
+                Dim undoItem = _lastPushedUndoEntry
+                Dim fogApplied = False
+                StatusText = LocalizationService.T("Nebel wird angewendet…")
+                SetBusyReason(LocalizationService.T("Nebel wird angewendet"))
+                EnqueueWorkingCommit(
+                    Function()
+                        Return _workingImage.CommitRegion(New SKRectI(0, 0, _workingImage.FullWidth, _workingImage.FullHeight),
+                            Sub(full)
+                                Using fog = DepthMapService.DepthFog(full, map, density, near, far, color, cancel)
+                                    cancel.ThrowIfCancellationRequested()
+                                    If fog Is Nothing Then Return
+                                    Using canvas = New SKCanvas(full)
+                                        canvas.Clear(SKColors.Transparent)
+                                        Using paint = New SKPaint With {.BlendMode = SKBlendMode.Src}
+                                            canvas.DrawBitmap(fog, 0, 0, paint)
+                                        End Using
+                                        fogApplied = True
+                                    End Using
+                                End Using
+                            End Sub)
+                    End Function,
+                    Sub(patch)
+                        map.Dispose()
+                        Dim cancelled = BusyWasCancelled()
+                        EndCancellableBusy()
+                        If cancelled Then
+                            StatusText = LocalizationService.T("Nebel abgebrochen, das Bild ist unverändert")
+                            Return
+                        End If
+                        If patch Is Nothing OrElse Not fogApplied Then
+                            StatusText = LocalizationService.T("Nebel fehlgeschlagen")
+                            Return
+                        End If
+                        If undoItem IsNot Nothing Then undoItem.Patch = patch
+                        FogDensity = 0
+                        DisposeFogPreview()
+                        StatusText = LocalizationService.T("Nebel angewendet")
+                        SchedulePreviewUpdate()
+                    End Sub,
+                    onAlwaysUi:=Sub()
+                                    EndCancellableBusy()
+                                    _depthGate.Release()
+                                End Sub)
+                commitEnqueued = True
+            Catch ex As OperationCanceledException
+                StatusText = LocalizationService.T("Nebel abgebrochen, das Bild ist unverändert")
+            Finally
                 If Not commitEnqueued Then
                     EndCancellableBusy()
                     _depthGate.Release()

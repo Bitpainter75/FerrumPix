@@ -9694,4 +9694,55 @@
   <data name="Regler_mit_Farbbedeutung_zeigen_ihre_Wirkung_als_e9ae433e" xml:space="preserve">
     <value>रंग से जुड़े स्लाइडर अपना प्रभाव रंग ढाल के रूप में दिखाते हैं, जैसे तापमान, टिंट या रंग मिक्सर। बंद होने पर सभी स्लाइडर एक्सेंट रंग में रहते हैं।</value>
   </data>
+  <data name="Tilt_Shift_1b0745f4" xml:space="preserve">
+    <value>टिल्ट-शिफ्ट</value>
+  </data>
+  <data name="Tilt_Shift_zur_cksetzen_bf78a408" xml:space="preserve">
+    <value>टिल्ट-शिफ्ट रीसेट करें</value>
+  </data>
+  <data name="Sch_rfebereich_a2b082ac" xml:space="preserve">
+    <value>फ़ोकस क्षेत्र</value>
+  </data>
+  <data name="Breite_des_scharfen_Bandes_b1145f96" xml:space="preserve">
+    <value>तीखी पट्टी की चौड़ाई</value>
+  </data>
+  <data name="Nebel_nach_Tiefe_e60397cf" xml:space="preserve">
+    <value>गहराई के अनुसार कोहरा</value>
+  </data>
+  <data name="Nebel_zur_cksetzen_ce24610b" xml:space="preserve">
+    <value>कोहरा रीसेट करें</value>
+  </data>
+  <data name="Beginn_21063753" xml:space="preserve">
+    <value>आरंभ</value>
+  </data>
+  <data name="Volle_Dichte_90381649" xml:space="preserve">
+    <value>पूर्ण घनत्व</value>
+  </data>
+  <data name="Wie_dicht_der_Nebel_am_fernsten_Punkt_wird_6ee90f90" xml:space="preserve">
+    <value>सबसे दूर के बिंदु पर कोहरा कितना घना होता है</value>
+  </data>
+  <data name="Ab_dieser_Entfernung_beginnt_der_Nebel_100_ist_a_ca3f128d" xml:space="preserve">
+    <value>कोहरा इस दूरी से शुरू होता है। 100 सबसे पास है</value>
+  </data>
+  <data name="Ab_dieser_Entfernung_liegt_die_volle_Dichte_0_is_71a85b6b" xml:space="preserve">
+    <value>इस दूरी से पूर्ण घनत्व। 0 सबसे दूर है</value>
+  </data>
+  <data name="Der_Nebel_kommt_je_Bildpunkt_aus_seiner_Entfernu_80909c48" xml:space="preserve">
+    <value>कोहरा हर पिक्सेल की दूरी से आता है।</value>
+  </data>
+  <data name="Nebel_abgebrochen_das_Bild_ist_unver_ndert_ef4a982e" xml:space="preserve">
+    <value>कोहरा रद्द, छवि अपरिवर्तित है</value>
+  </data>
+  <data name="Nebel_wird_angewendet_a55f514e" xml:space="preserve">
+    <value>कोहरा लागू किया जा रहा है…</value>
+  </data>
+  <data name="Nebel_wird_angewendet_d0497b7d" xml:space="preserve">
+    <value>कोहरा लागू किया जा रहा है</value>
+  </data>
+  <data name="Nebel_fehlgeschlagen_ae66bfe1" xml:space="preserve">
+    <value>कोहरा विफल</value>
+  </data>
+  <data name="Nebel_angewendet_658b6738" xml:space="preserve">
+    <value>कोहरा लागू हुआ</value>
+  </data>
 </root>

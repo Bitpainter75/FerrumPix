@@ -542,6 +542,98 @@ Namespace Services
             End Try
         End Function
 
+        ''' <summary>Nebel nach Tiefe: je ferner ein Punkt, desto mehr Nebelfarbe liegt ueber ihm.
+        '''
+        ''' Zwischen <paramref name="nearPct"/> und <paramref name="farPct"/> steigt der Nebel weich
+        ''' an, naeher bleibt das Bild klar, ferner liegt die volle <paramref name="densityPct"/>.
+        ''' Die Grenzen zaehlen wie ueberall in der Tiefenkarte: 100 ist nah, 0 ist fern.
+        '''
+        ''' DER ANSTIEG IST EIN SMOOTHSTEP, keine Gerade. Eine Gerade knickt an beiden Grenzen, und
+        ''' auf einer stetigen Tiefenkarte sieht man diesen Knick als Linie quer durchs Bild, etwa
+        ''' entlang eines Hangs.
+        '''
+        ''' Gemischt wird auf den vormultiplizierten Bytes, die Nebelfarbe wird dafuer mit dem Alpha
+        ''' des Punktes multipliziert. Ein durchsichtiger Punkt bleibt so durchsichtig.</summary>
+        ''' <returns>Nothing, wenn es nichts zu tun gibt oder das Farbformat unbekannt ist.</returns>
+        Public Shared Function DepthFog(source As SKBitmap, depth As SKBitmap,
+                                        densityPct As Double, nearPct As Double, farPct As Double,
+                                        fogColor As SKColor,
+                                        Optional cancel As CancellationToken = Nothing) As SKBitmap
+            If source Is Nothing OrElse depth Is Nothing Then Return Nothing
+            cancel.ThrowIfCancellationRequested()
+            Dim density = Math.Max(0.0, Math.Min(100.0, densityPct)) / 100.0
+            If density <= 0.0001 OrElse source.Width <= 0 OrElse source.Height <= 0 Then Return Nothing
+            Dim ri, gi, bi As Integer
+            Select Case source.ColorType
+                Case SKColorType.Bgra8888 : ri = 2 : gi = 1 : bi = 0
+                Case SKColorType.Rgba8888 : ri = 0 : gi = 1 : bi = 2
+                Case Else : Return Nothing
+            End Select
+            Dim near = Math.Max(0.0, Math.Min(100.0, Math.Max(nearPct, farPct)))
+            Dim far = Math.Max(0.0, Math.Min(100.0, Math.Min(nearPct, farPct)))
+
+            ' Wie bei den Masken: der Anteil haengt nur am Tiefenbyte.
+            Dim table(255) As Single
+            For value = 0 To 255
+                Dim t = value / 255.0 * 100.0
+                Dim f As Double
+                If t >= near Then
+                    f = 0.0
+                ElseIf t <= far OrElse near - far < 0.0001 Then
+                    f = 1.0
+                Else
+                    f = (near - t) / (near - far)
+                    f = f * f * (3.0 - 2.0 * f)
+                End If
+                table(value) = CSng(f * density)
+            Next
+
+            Dim map = depth
+            Dim ownMap As SKBitmap = Nothing
+            Try
+                If depth.Width <> source.Width OrElse depth.Height <> source.Height Then
+                    ownMap = New SKBitmap(New SKImageInfo(source.Width, source.Height,
+                                                          SKColorType.Alpha8, SKAlphaType.Premul))
+                    If Not depth.ScalePixels(ownMap, New SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.None)) Then Return Nothing
+                    map = ownMap
+                End If
+                Dim depthStride As Integer
+                Dim depthBytes = ImageProcessor.TryReadAlpha8(map, depthStride)
+                If depthBytes Is Nothing Then Return Nothing
+
+                Dim w = source.Width, h = source.Height
+                Dim stride = source.RowBytes
+                Dim pixels(stride * h - 1) As Byte
+                Marshal.Copy(source.GetPixels(), pixels, 0, pixels.Length)
+                Dim fr = CSng(fogColor.Red), fg = CSng(fogColor.Green), fb = CSng(fogColor.Blue)
+                ' Kein Werfen im Faden: Parallel.For verpackt es in eine AggregateException, und der
+                ' Abbruch kaeme beim Aufrufer nicht als Abbruch an. Angehalten, geworfen wird danach.
+                Parallel.For(0, h, Sub(y, state)
+                                       If cancel.IsCancellationRequested Then
+                                           state.Stop()
+                                           Return
+                                       End If
+                                       Dim row = y * stride
+                                       Dim depthRow = y * depthStride
+                                       For x = 0 To w - 1
+                                           Dim k = table(depthBytes(depthRow + x))
+                                           If k <= 0 Then Continue For
+                                           Dim o = row + x * 4
+                                           Dim a = pixels(o + 3) / 255.0F
+                                           pixels(o + ri) = CByte(Math.Min(255.0F, pixels(o + ri) + (fr * a - pixels(o + ri)) * k))
+                                           pixels(o + gi) = CByte(Math.Min(255.0F, pixels(o + gi) + (fg * a - pixels(o + gi)) * k))
+                                           pixels(o + bi) = CByte(Math.Min(255.0F, pixels(o + bi) + (fb * a - pixels(o + bi)) * k))
+                                       Next
+                                   End Sub)
+                cancel.ThrowIfCancellationRequested()
+                Dim result = New SKBitmap(w, h, source.ColorType, source.AlphaType)
+                Marshal.Copy(pixels, 0, result.GetPixels(), pixels.Length)
+                Return result
+            Finally
+                ownMap?.Dispose()
+            End Try
+        End Function
+
         ''' <summary>Wie stark diese Unschaerfestufe an jedem Punkt beitraegt. Die Stufen ueberlappen
         ''' sich bewusst und laufen weich aus - ohne das saehe man ihre Grenzen als Ringe.</summary>
         Private Shared Function StepMask(depth As SKBitmap, fromPct As Double, toPct As Double,

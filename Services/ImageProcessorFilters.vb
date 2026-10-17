@@ -2594,6 +2594,110 @@ Namespace Services
             Return result
         End Function
 
+        ''' <summary>Sigma der vollen Tilt-Shift-Unschaerfe bei Staerke 100, als Anteil der kurzen
+        ''' Bildkante. Wie beim Weichzeichner ein Anteil, damit Vorschau und Export gleich aussehen.</summary>
+        Private Const TiltShiftSigmaShare As Single = 0.02F
+
+        ''' <summary>Anteil des vollen Sigmas fuer die mittlere Stufe des Verlaufs.</summary>
+        Private Const TiltShiftMidShare As Single = 0.35F
+
+        ''' <summary>Tilt-Shift: ein scharfes Band durch die Mitte, quer dazu wachsende Unschaerfe.
+        '''
+        ''' ZWEI UNSCHAERFESTUFEN STATT EINER. Eine echte verschwenkte Optik wird mit dem Abstand zur
+        ''' Schaerfeebene immer unschaerfer. Mit nur einem Gauss, der nach aussen deckender
+        ''' ueberblendet wird, laege im Uebergang ein scharfes Bild unter einem unscharfen, und das
+        ''' sieht nach Nebel aus statt nach Unschaerfe. Mit einer mittleren Stufe dazwischen ist der
+        ''' Verlauf nah genug an einem wachsenden Radius, und es bleibt bei zwei Weichzeichnern.
+        '''
+        ''' DER ABSTAND IST AUF DIE BILDAUSDEHNUNG QUER ZUM BAND BEZOGEN. Bei 0 Grad ist das die
+        ''' Bildhoehe, bei 90 Grad die Breite, dazwischen die Projektion beider. So bedeutet dieselbe
+        ''' Bandbreite bei jeder Neigung denselben Anteil des Bildes.
+        '''
+        ''' Gemischt werden alle vier Bytes gleich, die Reihenfolge der Kanaele spielt also keine Rolle,
+        ''' und auf vormultiplizierten Werten bleibt eine Mischung gueltig.</summary>
+        ''' <param name="amount">0 bis 1.</param>
+        ''' <param name="angleDegrees">Neigung des Bandes, positiv gegen den Uhrzeigersinn.</param>
+        Private Shared Function ApplyTiltShift(source As SKBitmap, amount As Single, centerXPercent As Single, centerYPercent As Single,
+                                               angleDegrees As Single, focus As Single, transition As Single) As SKBitmap
+            Dim a = Clamp(amount, 0, 1)
+            If a <= 0 Then Return source
+            Dim w = source.Width, h = source.Height
+            Dim sigma = Math.Min(w, h) * TiltShiftSigmaShare * a
+            If sigma < 0.5F Then Return source
+
+            Dim theta = Clamp(angleDegrees, -90, 90) * CSng(Math.PI) / 180.0F
+            Dim nx = CSng(Math.Sin(theta)), ny = CSng(Math.Cos(theta))
+            Dim extent = Math.Max(1.0F, Math.Abs(w * nx) + Math.Abs(h * ny))
+            Dim cx = w * Clamp(centerXPercent, 0, 100) / 100.0F
+            Dim cy = h * Clamp(centerYPercent, 0, 100) / 100.0F
+            Dim half = Clamp(focus, 0, 100) / 100.0F * 0.5F
+            Dim ramp = Math.Max(0.01F, Clamp(transition, 0, 100) / 100.0F * 0.5F)
+
+            Dim full = GaussianClamped(source, sigma)
+            Dim midSigma = sigma * TiltShiftMidShare
+            Dim mid = If(midSigma >= 0.5F, GaussianClamped(source, midSigma), Nothing)
+            Try
+                Dim srcBuf As Byte() = Nothing, midBuf As Byte() = Nothing, fullBuf As Byte() = Nothing
+                Dim length, stride, ri, gi, bi, ai As Integer
+                Dim midLength, fullLength, midStride, fullStride As Integer
+                If Not TryRentRgbaLikeBuffer(source, srcBuf, length, stride, ri, gi, bi, ai) Then Return source
+                Try
+                    If Not TryRentRgbaLikeBuffer(full, fullBuf, fullLength, fullStride, ri, gi, bi, ai) Then Return source
+                    If mid IsNot Nothing AndAlso Not TryRentRgbaLikeBuffer(mid, midBuf, midLength, midStride, ri, gi, bi, ai) Then Return source
+                    Dim lowBuf = If(midBuf, srcBuf)
+                    Dim result = New SKBitmap(w, h, source.ColorType, source.AlphaType)
+                    Dim dst = New Byte(length - 1) {}
+                    ForEachRow(w, h, Sub(y)
+                                         Dim row = y * stride
+                                         Dim dy = (y + 0.5F - cy) * ny
+                                         For x = 0 To w - 1
+                                             Dim u = Math.Abs((x + 0.5F - cx) * nx + dy) / extent
+                                             Dim t = Clamp((u - half) / ramp, 0, 1)
+                                             Dim o = row + x * 4
+                                             If t <= 0 Then
+                                                 dst(o) = srcBuf(o) : dst(o + 1) = srcBuf(o + 1)
+                                                 dst(o + 2) = srcBuf(o + 2) : dst(o + 3) = srcBuf(o + 3)
+                                                 Continue For
+                                             End If
+                                             t = t * t * (3.0F - 2.0F * t)
+                                             ' Erste Haelfte scharf nach mittel, zweite mittel nach voll.
+                                             Dim fromBuf As Byte(), toBuf As Byte(), k As Single
+                                             If t < 0.5F Then
+                                                 fromBuf = srcBuf : toBuf = lowBuf : k = t * 2.0F
+                                             Else
+                                                 fromBuf = lowBuf : toBuf = fullBuf : k = (t - 0.5F) * 2.0F
+                                             End If
+                                             For c = 0 To 3
+                                                 Dim f = CSng(fromBuf(o + c))
+                                                 dst(o + c) = ClampToByte(f + (toBuf(o + c) - f) * k)
+                                             Next
+                                         Next
+                                     End Sub)
+                    CommitBgraBuffer(result, dst)
+                    Return result
+                Finally
+                    ReturnPooledBuffer(srcBuf)
+                    ReturnPooledBuffer(midBuf)
+                    ReturnPooledBuffer(fullBuf)
+                End Try
+            Finally
+                full.Dispose()
+                mid?.Dispose()
+            End Try
+        End Function
+
+        ''' <summary>Ein Gauss ueber das ganze Bild mit geklemmtem Rand, wie in ApplyImageBlur.</summary>
+        Private Shared Function GaussianClamped(source As SKBitmap, sigma As Single) As SKBitmap
+            Dim result = New SKBitmap(source.Width, source.Height, source.ColorType, source.AlphaType)
+            Using filter = SKImageFilter.CreateBlur(sigma, sigma, SKShaderTileMode.Clamp),
+                  paint = New SKPaint With {.ImageFilter = filter, .BlendMode = SKBlendMode.Src},
+                  canvas = New SKCanvas(result)
+                canvas.Clear(SKColors.Transparent)
+                canvas.DrawBitmap(source, 0, 0, paint)
+            End Using
+            Return result
+        End Function
+
         Private Class Lut3DData
             Public Property Size As Integer
             ''' Flach abgelegt, R am schnellsten laufend (Standard-.cube-Reihenfolge): Index = (b*Size*Size + g*Size + r)*3 + Kanal.

@@ -5398,6 +5398,7 @@ Namespace ViewModels
                     ' dem Bild und wuerde sonst in einem anderen Werkzeug stehen bleiben, wo ihre
                     ' Regler gar nicht mehr zu sehen sind.
                     DisposeBokehPreview()
+                    DisposeFogPreview()
                     ' Das Analysebild gehoert ebenfalls zum Werkzeug: die dort gemerkte Darstellung
                     ' wird gueltig. Gemeldet wird sie ueber denselben Weg wie ein Klick auf die drei
                     ' Knoepfe, das Bild wird also von PanelScope selbst verworfen und neu gerechnet.
@@ -19544,6 +19545,7 @@ Namespace ViewModels
             ' Bild eine Fassung von vorhin zu zeigen - und die Aenderung waere unsichtbar. Hier ist
             ' die eine Stelle, durch die jede Aenderung geht.
             DisposeBokehPreview()
+            DisposeFogPreview()
             DisposeGridPreview()
             DisposeLinePreview()
             If markDirty AndAlso Not _suppressPreviewDirty Then
@@ -20532,6 +20534,7 @@ Namespace ViewModels
             ' dem Bild. Die Anzeige zieht sie auf den neuen Bildbereich; stehen geblieben zeigten sie
             ' das vorige Bild verzerrt im Seitenverhaeltnis des neuen (Issue #91).
             DisposeBokehPreview()
+            DisposeFogPreview()
             DisposeGridPreview()
             DisposeLinePreview()
 
@@ -24989,6 +24992,7 @@ Namespace ViewModels
             ' #91), und mit ihren Reglern stand "Anwenden" fuer ein Bild bereit, an dem niemand
             ' etwas eingestellt hatte.
             ResetBokeh()
+            ResetFog()
             _pixelEditLayer.ResetActiveStroke()
             _isEraserMode = False
             _eraserFillColor = "#00FFFFFF"

@@ -9649,4 +9649,55 @@
   <data name="Regler_mit_Farbbedeutung_zeigen_ihre_Wirkung_als_e9ae433e" xml:space="preserve">
     <value>Os controlos com significado de cor mostram o efeito como gradiente, por exemplo temperatura, tonalidade ou misturador de cor. Desligado, todos usam a cor de destaque.</value>
   </data>
+  <data name="Tilt_Shift_1b0745f4" xml:space="preserve">
+    <value>Tilt-shift</value>
+  </data>
+  <data name="Tilt_Shift_zur_cksetzen_bf78a408" xml:space="preserve">
+    <value>Repor tilt-shift</value>
+  </data>
+  <data name="Sch_rfebereich_a2b082ac" xml:space="preserve">
+    <value>Área de foco</value>
+  </data>
+  <data name="Breite_des_scharfen_Bandes_b1145f96" xml:space="preserve">
+    <value>Largura da faixa nítida</value>
+  </data>
+  <data name="Nebel_nach_Tiefe_e60397cf" xml:space="preserve">
+    <value>Névoa por profundidade</value>
+  </data>
+  <data name="Nebel_zur_cksetzen_ce24610b" xml:space="preserve">
+    <value>Repor névoa</value>
+  </data>
+  <data name="Beginn_21063753" xml:space="preserve">
+    <value>Início</value>
+  </data>
+  <data name="Volle_Dichte_90381649" xml:space="preserve">
+    <value>Densidade total</value>
+  </data>
+  <data name="Wie_dicht_der_Nebel_am_fernsten_Punkt_wird_6ee90f90" xml:space="preserve">
+    <value>Quão densa a névoa fica no ponto mais distante</value>
+  </data>
+  <data name="Ab_dieser_Entfernung_beginnt_der_Nebel_100_ist_a_ca3f128d" xml:space="preserve">
+    <value>A névoa começa a esta distância. 100 é o mais próximo</value>
+  </data>
+  <data name="Ab_dieser_Entfernung_liegt_die_volle_Dichte_0_is_71a85b6b" xml:space="preserve">
+    <value>Densidade total a partir desta distância. 0 é o mais distante</value>
+  </data>
+  <data name="Der_Nebel_kommt_je_Bildpunkt_aus_seiner_Entfernu_80909c48" xml:space="preserve">
+    <value>A névoa resulta da distância de cada píxel.</value>
+  </data>
+  <data name="Nebel_abgebrochen_das_Bild_ist_unver_ndert_ef4a982e" xml:space="preserve">
+    <value>Névoa cancelada, a imagem não foi alterada</value>
+  </data>
+  <data name="Nebel_wird_angewendet_a55f514e" xml:space="preserve">
+    <value>A aplicar névoa…</value>
+  </data>
+  <data name="Nebel_wird_angewendet_d0497b7d" xml:space="preserve">
+    <value>A aplicar névoa</value>
+  </data>
+  <data name="Nebel_fehlgeschlagen_ae66bfe1" xml:space="preserve">
+    <value>A névoa falhou</value>
+  </data>
+  <data name="Nebel_angewendet_658b6738" xml:space="preserve">
+    <value>Névoa aplicada</value>
+  </data>
 </root>

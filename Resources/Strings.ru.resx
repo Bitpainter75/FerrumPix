@@ -4879,7 +4879,7 @@
     <value>Выбор по расстоянию: всё, что лежит в диапазоне глубины. Захватывает фон и передний план и там, где цвета совпадают</value>
   </data>
   <data name="W_hlt_alles_was_in_einem_Entfernungsbereich_lieg_5bd8748e" xml:space="preserve">
-    <value>Выбирает всё, что лежит в диапазоне расстояний. 100 — ближе всего, 0 — дальше всего.</value>
+    <value>Выбирает всё, что лежит в диапазоне расстояний. 100 означает ближе всего, 0 означает дальше всего.</value>
   </data>
   <data name="Die_Tiefe_wird_einmal_je_Bild_berechnet_das_daue_4fcb924a" xml:space="preserve">
     <value>Глубина рассчитывается один раз на изображение, это занимает мгновение.</value>
@@ -4918,7 +4918,7 @@
     <value>Глубина резкости</value>
   </data>
   <data name="Die_Entfernung_die_scharf_bleibt_100_ist_am_n_ch_203b6782" xml:space="preserve">
-    <value>Расстояние, которое остаётся резким. 100 — ближе всего</value>
+    <value>Расстояние, которое остаётся резким. 100 означает ближе всего</value>
   </data>
   <data name="Wie_stark_die_Unsch_rfe_am_fernsten_Punkt_wird_6ec3a381" xml:space="preserve">
     <value>Насколько сильным становится размытие в самой дальней точке</value>
@@ -5080,10 +5080,10 @@
     <value>Резко до</value>
   </data>
   <data name="Untere_Grenze_des_scharfen_Bereichs_0_ist_am_wei_27b06783" xml:space="preserve">
-    <value>Нижняя граница резкой зоны. 0 — дальше всего</value>
+    <value>Нижняя граница резкой зоны. 0 означает дальше всего</value>
   </data>
   <data name="Obere_Grenze_des_scharfen_Bereichs_100_ist_am_n__abaeaab6" xml:space="preserve">
-    <value>Верхняя граница резкой зоны. 100 — ближе всего</value>
+    <value>Верхняя граница резкой зоны. 100 означает ближе всего</value>
   </data>
   <data name="Wie_weich_der_bergang_vom_scharfen_Bereich_in_di_93f7a02a" xml:space="preserve">
     <value>Насколько мягко проходит переход из резкой зоны в размытие</value>
@@ -9689,5 +9689,56 @@
   </data>
   <data name="Regler_mit_Farbbedeutung_zeigen_ihre_Wirkung_als_e9ae433e" xml:space="preserve">
     <value>Ползунки, связанные с цветом, показывают своё действие цветовым градиентом, например температура, оттенок или микшер цвета. Если выключено, все ползунки окрашены цветом акцента.</value>
+  </data>
+  <data name="Tilt_Shift_1b0745f4" xml:space="preserve">
+    <value>Тилт-шифт</value>
+  </data>
+  <data name="Tilt_Shift_zur_cksetzen_bf78a408" xml:space="preserve">
+    <value>Сбросить тилт-шифт</value>
+  </data>
+  <data name="Sch_rfebereich_a2b082ac" xml:space="preserve">
+    <value>Зона резкости</value>
+  </data>
+  <data name="Breite_des_scharfen_Bandes_b1145f96" xml:space="preserve">
+    <value>Ширина резкой полосы</value>
+  </data>
+  <data name="Nebel_nach_Tiefe_e60397cf" xml:space="preserve">
+    <value>Туман по глубине</value>
+  </data>
+  <data name="Nebel_zur_cksetzen_ce24610b" xml:space="preserve">
+    <value>Сбросить туман</value>
+  </data>
+  <data name="Beginn_21063753" xml:space="preserve">
+    <value>Начало</value>
+  </data>
+  <data name="Volle_Dichte_90381649" xml:space="preserve">
+    <value>Полная плотность</value>
+  </data>
+  <data name="Wie_dicht_der_Nebel_am_fernsten_Punkt_wird_6ee90f90" xml:space="preserve">
+    <value>Насколько плотным становится туман в самой дальней точке</value>
+  </data>
+  <data name="Ab_dieser_Entfernung_beginnt_der_Nebel_100_ist_a_ca3f128d" xml:space="preserve">
+    <value>Туман начинается с этого расстояния. 100 означает ближе всего</value>
+  </data>
+  <data name="Ab_dieser_Entfernung_liegt_die_volle_Dichte_0_is_71a85b6b" xml:space="preserve">
+    <value>С этого расстояния полная плотность. 0 означает дальше всего</value>
+  </data>
+  <data name="Der_Nebel_kommt_je_Bildpunkt_aus_seiner_Entfernu_80909c48" xml:space="preserve">
+    <value>Туман зависит от расстояния каждой точки.</value>
+  </data>
+  <data name="Nebel_abgebrochen_das_Bild_ist_unver_ndert_ef4a982e" xml:space="preserve">
+    <value>Туман отменён, изображение не изменено</value>
+  </data>
+  <data name="Nebel_wird_angewendet_a55f514e" xml:space="preserve">
+    <value>Применение тумана…</value>
+  </data>
+  <data name="Nebel_wird_angewendet_d0497b7d" xml:space="preserve">
+    <value>Применение тумана</value>
+  </data>
+  <data name="Nebel_fehlgeschlagen_ae66bfe1" xml:space="preserve">
+    <value>Туман не удался</value>
+  </data>
+  <data name="Nebel_angewendet_658b6738" xml:space="preserve">
+    <value>Туман применён</value>
   </data>
 </root>

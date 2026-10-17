@@ -2580,6 +2580,15 @@ Namespace Services
                     "Pixel: Schaerfe", Function() ApplySharpness(processed, adj.Sharpness / 100.0F, adj.SharpenRadius / 100.0F, adj.SharpenDetail / 100.0F, adj.SharpenMasking / 100.0F, adj.SharpenMethod)), owned)
             End If
 
+            ' Tilt-Shift HINTER der Schaerfe: das scharfe Band behaelt sie, die Unschaerfe davor und
+            ' dahinter nimmt sie mit weg. Vor Vignette und Korn, aus demselben Grund wie beim
+            ' Weichzeichner oben.
+            If adj.TiltShiftAmount > 0 Then
+                processed = ReplaceBitmapOwned(processed, PerformanceTraceService.Measure(
+                    "Pixel: Tilt-Shift", Function() ApplyTiltShift(processed, adj.TiltShiftAmount / 100.0F, adj.TiltShiftCenterX, adj.TiltShiftCenterY,
+                                                                   adj.TiltShiftAngle, adj.TiltShiftFocus, adj.TiltShiftTransition)), owned)
+            End If
+
             If adj.Vignette <> 0 Then
                 ' Reglermodell 2: gemessen gegen eine verbreitete RAW-Entwicklung wirkte das Abdunkeln
                 ' (unser +, dort -) 1,70-fach, das Aufhellen 1,18-fach zu stark.
@@ -3973,6 +3982,9 @@ Namespace Services
             tone.VignetteRoundness = neutral.VignetteRoundness : tone.VignetteFeather = neutral.VignetteFeather
             tone.VignetteCenterX = neutral.VignetteCenterX : tone.VignetteCenterY = neutral.VignetteCenterY
             tone.VignetteStyle = neutral.VignetteStyle
+            tone.TiltShiftAmount = neutral.TiltShiftAmount : tone.TiltShiftAngle = neutral.TiltShiftAngle
+            tone.TiltShiftCenterX = neutral.TiltShiftCenterX : tone.TiltShiftCenterY = neutral.TiltShiftCenterY
+            tone.TiltShiftFocus = neutral.TiltShiftFocus : tone.TiltShiftTransition = neutral.TiltShiftTransition
             tone.Grain = neutral.Grain : tone.GrainSize = neutral.GrainSize
             tone.GrainFrequency = neutral.GrainFrequency : tone.GrainColor = neutral.GrainColor
             tone.AddNoise = neutral.AddNoise
@@ -4030,6 +4042,8 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                 adj.PosterizeLevels, adj.ThresholdLevel,
                                 adj.Vibrance, adj.Vignette, adj.VignetteTransition, adj.VignetteRoundness, adj.VignetteFeather,
                 adj.VignetteCenterX, adj.VignetteCenterY, adj.VignetteStyle,
+                adj.TiltShiftAmount, adj.TiltShiftCenterX, adj.TiltShiftCenterY, adj.TiltShiftAngle,
+                adj.TiltShiftFocus, adj.TiltShiftTransition,
                 adj.Grain, adj.GrainSize, adj.GrainFrequency, adj.GrainColor, adj.Clarity,
                 adj.NegativeEnabled, adj.NegativeMonochrome, adj.NegativeBaseColor, adj.NegativeDensityColor, adj.NegativeGamma,
                 adj.CurveRgbPoints, adj.CurveRedPoints, adj.CurveGreenPoints, adj.CurveBluePoints, adj.CurveLuminancePoints,
@@ -5828,6 +5842,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             unsharpened.SharpenMasking = 0
             unsharpened.SharpenMethod = SharpenMethod.UnsharpMask
             unsharpened.Vignette = 0
+            unsharpened.TiltShiftAmount = 0
             unsharpened.Grain = 0
             unsharpened.AddNoise = 0
             Return unsharpened

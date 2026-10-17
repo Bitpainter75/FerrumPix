@@ -659,6 +659,18 @@ Namespace Services
         ''' <summary>Stil, mit dem eine dunkelnde Vignette wirkt. Standard = ColorPriority = bisheriges
         ''' Verhalten (siehe <see cref="Services.VignetteStyle"/>).</summary>
         Public Property VignetteStyle As VignetteStyle = VignetteStyle.ColorPriority
+        ''' <summary>Tilt-Shift: ein scharfes Band durch das Bild, davor und dahinter wachsende
+        ''' Unschaerfe, wie bei einer verschwenkten Optik. 0 bis 100, 0 ist aus.</summary>
+        Public Property TiltShiftAmount As Single = 0
+        ''' <summary>Mitte des scharfen Bandes in Prozent der Bildbreite und -hoehe.</summary>
+        Public Property TiltShiftCenterX As Single = 50
+        Public Property TiltShiftCenterY As Single = 50
+        ''' <summary>Neigung des Bandes in Grad, -90 bis 90. 0 ist waagerecht.</summary>
+        Public Property TiltShiftAngle As Single = 0
+        ''' <summary>Breite des scharfen Bandes, 0 bis 100 Prozent der Bildausdehnung quer zum Band.</summary>
+        Public Property TiltShiftFocus As Single = 20
+        ''' <summary>Laenge des Uebergangs von scharf nach voll unscharf, 0 bis 100.</summary>
+        Public Property TiltShiftTransition As Single = 40
         Public Property Grain As Single = 0
         ''' <summary>Körnungsgröße, 0-100. 0 = feinstes Korn (1 px, bisheriges Verhalten); höher =
         ''' gröberes Korn (das Rauschen wird zellenweise über größere Blöcke konstant gehalten).
@@ -1394,6 +1406,12 @@ Namespace Services
                 .VignetteFeather = VignetteFeather,
                 .VignetteCenterX = VignetteCenterX,
                 .VignetteCenterY = VignetteCenterY,
+                .TiltShiftAmount = TiltShiftAmount,
+                .TiltShiftCenterX = TiltShiftCenterX,
+                .TiltShiftCenterY = TiltShiftCenterY,
+                .TiltShiftAngle = TiltShiftAngle,
+                .TiltShiftFocus = TiltShiftFocus,
+                .TiltShiftTransition = TiltShiftTransition,
                 .Grain = Grain,
                 .Clarity = Clarity,
                 .NegativeEnabled = NegativeEnabled,

@@ -1782,6 +1782,22 @@
                                 <Border.IsVisible>
                                     <MultiBinding Converter="{StaticResource AllTrueConverter}">
                                         <Binding Path="ShowEffectsAdjustments"/>
+                                        <Binding Path="HiddenAdjustmentGroups" Converter="{StaticResource NotInListConverter}" ConverterParameter="tiltshift"/>
+                                    </MultiBinding>
+                                </Border.IsVisible>
+                                <panels:TiltShiftPanel />
+                            </Border>
+
+                            <!-- Der Nebel nach Tiefe wird gebacken wie die Tiefen-Unschaerfe und rahmt
+                                 sich deshalb selbst (BokehPanel.axaml). -->
+                            <panels:FogPanel Margin="0,7,0,0"
+                                             IsVisible="{Binding ShowEffectsAdjustments}" />
+
+                            <Border Classes="adjustment-group" Margin="0,7,0,0"
+                                    >
+                                <Border.IsVisible>
+                                    <MultiBinding Converter="{StaticResource AllTrueConverter}">
+                                        <Binding Path="ShowEffectsAdjustments"/>
                                         <Binding Path="IsFramePanelTarget"/>
                                         <Binding Path="HiddenAdjustmentGroups" Converter="{StaticResource NotInListConverter}" ConverterParameter="frame"/>
                                     </MultiBinding>

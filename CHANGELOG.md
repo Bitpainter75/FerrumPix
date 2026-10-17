@@ -14,6 +14,14 @@
 - **The eye of a group works on layers too.** It hides the group's adjustments of the selected
   layer or correction layer for a moment and brings them back.
 
+- **Tilt-shift.** A new group in Effects keeps a band through the picture sharp and blurs more
+  and more towards the edges, like a tilted lens. Width, transition, angle and position of the
+  band can be set, and the group can be hidden or moved in the settings like any other.
+
+- **Depth fog.** Another new group in Effects lays fog over the picture by distance: near things
+  stay clear, far things fade into the fog colour. Like depth blur it needs the depth model and is
+  applied into the pixels with its own button.
+
 ### Fixes
 
 - The reset button of a group works on a selected layer right away instead of only after the
