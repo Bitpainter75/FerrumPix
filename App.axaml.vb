@@ -153,8 +153,6 @@ Public Class App
                 For Each arrow In arrows
                     arrow.Bind(Visual.IsVisibleProperty, arrow.GetObservable(MenuArrowShownProperty))
                 Next
-                Services.DiagnosticLogService.LogAlways("UI.MenuArrows",
-                    $"Menue-Scroller erkannt in {viewer.TemplatedParent?.GetType().Name}")
                 RemoveHandler viewer.PropertyChanged, AddressOf OnMenuScrollViewerChanged
                 AddHandler viewer.PropertyChanged, AddressOf OnMenuScrollViewerChanged
                 UpdateMenuScrollArrows(viewer)
@@ -205,11 +203,6 @@ Public Class App
             arrow.SetValue(MenuArrowShownProperty,
                            scrolls AndAlso (viewer.VerticalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Visible OrElse room >= 0.5))
         Next
-        Services.DiagnosticLogService.LogAlways("UI.MenuArrows",
-            $"Inhalt {viewer.Extent.Height:0.#}, Sicht {viewer.Viewport.Height:0.#}, Pfeile {arrowSpace:0.#}, " &
-            $"Versatz {viewer.Offset.Y:0.#}, Scroller {viewer.Bounds.Height:0.#} -> " &
-            $"oben {arrows.First(Function(a) DockPanel.GetDock(a) = Dock.Top).IsVisible}, " &
-            $"unten {arrows.First(Function(a) DockPanel.GetDock(a) <> Dock.Top).IsVisible}")
     End Sub
 
     ''' <summary>Ein Kontextmenue bekommt die Groesse seines Inhalts, auch wenn der sich nach dem
@@ -231,9 +224,7 @@ Public Class App
     ''' aus, und der Positionierer setzt das Fenster mit der inzwischen gemessenen Groesse neu.
     ''' Das gilt fuer jede Lage, also auch fuer die Fussleistenmenues an ihrer Schaltflaeche. Je
     ''' gemessener Groesse nur einmal, sonst liefe es in einer Schleife, wenn das Menue
-    ''' wirklich nicht auf den Schirm passt und der Positionierer es kuerzt. Mit eingeschaltetem
-    ''' Diagnoseprotokoll steht jede Korrektur dort ("UI.ContextMenu"), samt Lage und
-    ''' Fenstergroesse danach.</para>
+    ''' wirklich nicht auf den Schirm passt und der Positionierer es kuerzt.</para>
     '''
     ''' <para>Das ContextMenu selbst wird wiederverwendet, samt dem ScrollViewer seiner Vorlage.
     ''' Dessen Scrollstand blieb vom letzten Mal stehen; er wird beim Oeffnen und beim
@@ -243,11 +234,6 @@ Public Class App
             Sub(menu, e)
                 If Not Object.ReferenceEquals(e.Source, menu) Then Return
                 _openContextMenus(menu) = Nothing
-                Dim host = TryCast(TopLevel.GetTopLevel(menu), Avalonia.Controls.Primitives.PopupRoot)
-                Services.DiagnosticLogService.LogAlways("UI.ContextMenu",
-                    $"geoeffnet ({menu.Name}): braucht {menu.DesiredSize.Width:0.#}x{menu.DesiredSize.Height:0.#}, " &
-                    $"angeordnet {menu.Bounds.Width:0.#}x{menu.Bounds.Height:0.#}, " &
-                    $"Fenster {host?.ClientSize.Width:0.#}x{host?.ClientSize.Height:0.#}")
                 ScrollContextMenuToTop(menu)
                 RemoveHandler menu.LayoutUpdated, AddressOf OnOpenContextMenuLayoutUpdated
                 AddHandler menu.LayoutUpdated, AddressOf OnOpenContextMenuLayoutUpdated
@@ -296,10 +282,6 @@ Public Class App
     Private Shared Sub OnPopupRootResized(sender As Object, e As WindowResizedEventArgs)
         Dim root = TryCast(sender, Avalonia.Controls.Primitives.PopupRoot)
         If root Is Nothing Then Return
-        Services.DiagnosticLogService.LogAlways("UI.PopupResized",
-            $"Fenster {e.ClientSize.Width:0.#}x{e.ClientSize.Height:0.#} ({e.Reason}), " &
-            $"Wurzel braucht {root.DesiredSize.Width:0.#}x{root.DesiredSize.Height:0.#}, " &
-            $"angeordnet {root.Bounds.Width:0.#}x{root.Bounds.Height:0.#}, Skalierung {root.RenderScaling}")
         root.InvalidateMeasure()
         root.InvalidateArrange()
     End Sub
@@ -355,11 +337,6 @@ Public Class App
         Dim original = popup.HorizontalOffset
         popup.HorizontalOffset = original + 0.01
         popup.HorizontalOffset = original
-        Dim host = TryCast(TopLevel.GetTopLevel(menu), Avalonia.Controls.Primitives.PopupRoot)
-        Services.DiagnosticLogService.LogAlways("UI.ContextMenu",
-            $"neu platziert: Lage {popup.Placement}, gebraucht {wanted.Width:0.#}x{wanted.Height:0.#}, " &
-            $"bekommen {got.Width:0.#}x{got.Height:0.#}, Fenster {host?.ClientSize.Width:0.#}x{host?.ClientSize.Height:0.#}, " &
-            $"Rand des Menues {menu.Margin}")
     End Sub
 
     ''' <summary>Zwei Bauformen, deren Inhalt der Durchlauf ueber das Fenster nie zu sehen bekommt.
