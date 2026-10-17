@@ -573,7 +573,7 @@
                                 <TextBlock Grid.Row="1" Grid.ColumnSpan="2" Text="Lokal erkannt; nicht von Hand vergeben."
                                            Foreground="{DynamicResource FP.Text.Muted}" FontSize="{DynamicResource FP.Font.Small}"/>
                             </Grid>
-                            <TextBlock Text="KI-Modell ist noch nicht installiert. Es lässt sich in den Einstellungen im Abschnitt Modelle laden."
+                            <TextBlock Text="KI-Modell ist noch nicht installiert. Beim ersten Analysieren wird gefragt, ob es heruntergeladen werden soll."
                                        IsVisible="{Binding !AiTaggingAvailable}"
                                        Foreground="{DynamicResource FP.Text.Muted}" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap"/>
                             <TextBlock Text="{Binding AiTaggingStatus}" IsVisible="{Binding HasAiTaggingStatus}"

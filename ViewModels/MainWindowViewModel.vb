@@ -156,6 +156,65 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(DocumentOpenText))
         End Sub
 
+        Private _modalModelDownload As Boolean
+
+        ''' <summary>Duerfen die Einstellungen jetzt geschlossen werden? Laeuft dort ein Download,
+        ''' wird gefragt, ob er abgebrochen werden soll; ein Haengen der Verbindung soll niemanden in
+        ''' den Einstellungen festhalten. True, wenn danach nichts mehr laedt.</summary>
+        Public Async Function ConfirmLeaveSettingsAsync() As Task(Of Boolean)
+            If Not ModelDownloadService.AnyRunning Then Return True
+            Dim cancelDownloads = Await ShowConfirmAsync(LocalizationService.T("Einstellungen"),
+                LocalizationService.T("Es wird noch ein Modell heruntergeladen. Den Download abbrechen und die Einstellungen schließen?"),
+                "Download abbrechen", "Weiter laden")
+            If Not cancelDownloads Then Return False
+            ' Das Warten auf das Ende der Downloads ist ebenso MODAL wie ein Download aus einer
+            ' Rueckfrage: sonst waeren die Einstellungen bis zu zehn Sekunden bedienbar, ein
+            ' anschliessendes Zuruecknehmen verwuerfe Aenderungen aus dieser Zeit, und ein dann
+            ' gestarteter Download entginge dem Abbruch.
+            BeginModalModelDownload(LocalizationService.T("Download wird abgebrochen…"))
+            Try
+                If Settings IsNot Nothing Then Await Settings.CancelModelGroupDownloadsAsync()
+            Finally
+                EndModalModelDownload()
+            End Try
+            Return Not ModelDownloadService.AnyRunning
+        End Function
+
+        Private Async Function LeaveSettingsAfterDownloadsAsync(target As AppMode) As Task
+            Try
+                If Await ConfirmLeaveSettingsAsync() Then CurrentMode = target
+            Catch ex As Exception
+                DiagnosticLogService.LogException("MainWindowViewModel.LeaveSettingsAfterDownloads", ex)
+            End Try
+        End Function
+
+        ''' <summary>Ein Modell wird geladen, und danach laeuft ein schon bestaetigter Stapel weiter
+        ''' (SettingsViewModel.RequestModelsAsync mit modal). Bis dahin darf nichts dazwischen.
+        '''
+        ''' ZWEI SPERREN, weil eine nicht reicht. Die Anzeige faengt die Maus ab, und zwar SOFORT,
+        ''' nicht erst nach der Viertelsekunde des Bildoeffnens; dazwischen liesse sich sonst noch
+        ''' klicken. Tastenkuerzel erreicht sie aber nicht, und STRG+R oeffnete einen zweiten
+        ''' Stapeldialog. Deshalb oeffnet ShowDialogAsync waehrend dieser Zeit gar keinen Dialog.</summary>
+        Public Sub BeginModalModelDownload(text As String)
+            _modalModelDownload = True
+            BeginBusyOverlay(text)
+            If Not _showsDocumentOpen Then
+                _showsDocumentOpen = True
+                Me.RaisePropertyChanged(NameOf(ShowsDocumentOpen))
+            End If
+        End Sub
+
+        Public Sub EndModalModelDownload()
+            _modalModelDownload = False
+            EndBusyOverlay()
+        End Sub
+
+        Public ReadOnly Property IsModalModelDownloadRunning As Boolean
+            Get
+                Return _modalModelDownload
+            End Get
+        End Property
+
         Public Sub EndBusyOverlay()
             _documentOpenInFlight = False
             EndDocumentOpenIndicator()
@@ -276,6 +335,15 @@ Namespace ViewModels
                 Return _currentMode
             End Get
             Set(value As AppMode)
+                ' WAEHREND EINES DOWNLOADS BLEIBEN DIE EINSTELLUNGEN OFFEN. Der Knopf dort laedt nicht
+                ' modal und zeigt seinen Fortschritt in der Gruppe; ausserhalb liefe er unsichtbar
+                ' weiter, und eine Funktion koennte waehrenddessen nach derselben Datei fragen. Hier
+                ' und nicht an "Fertig": jeder Rueckweg (Leiste, Personen, Tasten) kommt hier vorbei.
+                If _currentMode = AppMode.Settings AndAlso value <> AppMode.Settings AndAlso ModelDownloadService.AnyRunning Then
+                    Me.RaisePropertyChanged(NameOf(CurrentMode))
+                    Dim ignoriert = LeaveSettingsAfterDownloadsAsync(value)
+                    Return
+                End If
                 Dim previousMode = _currentMode
                 Me.RaiseAndSetIfChanged(_currentMode, value)
                 ' Mit Messpunkt: an dieser Meldung baut das Fenster die neue Ansicht und haengt sie
@@ -506,6 +574,8 @@ Namespace ViewModels
 
         Public Sub New(Optional initialImagePath As String = Nothing, Optional initialFolderPath As String = Nothing)
             Settings = New SettingsViewModel(Me)
+            ' Die Rueckfrage nach fehlenden Modellen, fuer Stellen ohne eigenen Weg hierher.
+            ModelRequestService.Handler = Function(feature, keys) Settings.RequestModelsAsync(feature, keys)
             AddHandler Settings.PropertyChanged,
                 Sub(s, e)
                     If e.PropertyName = NameOf(SettingsViewModel.IsUpdateAvailable) Then
@@ -2094,7 +2164,9 @@ Namespace ViewModels
                 scalePercent = 0
             End If
 
-            Return New ExportToDialogResult With {
+            Dim exportDenoise = If(_dialogExportUseDenoise, TakeDialogBatchDenoiseRequest(), Nothing)
+            Dim order = New ExportToDialogResult With {
+                .ApplyPendingBaked = _dialogApplyPendingBaked,
                 .AutoEnhance = autoEnhance,
                 .LookKind = lookKind,
                 .LookName = lookName,
@@ -2113,7 +2185,7 @@ Namespace ViewModels
                 .NoUpscale = _dialogBatchResizeNoUpscale,
                 .ResizeInterpolation = _dialogBatchResizeInterpolation,
                 .UpscaleModel = upscaleModel,
-                .Denoise = If(_dialogExportUseDenoise, TakeDialogBatchDenoiseRequest(), Nothing),
+                .Denoise = exportDenoise,
                 .PreserveMetadata = _dialogSaveAsPreserveExif,
                 .Copyright = _dialogCopyright,
                 .NamePattern = If(_dialogTargetNamePattern, "").Trim(),
@@ -2126,6 +2198,11 @@ Namespace ViewModels
                 .CopyColorLabel = _dialogSaveAsCopyColorLabel,
                 .CopyKeywords = _dialogSaveAsCopyKeywords
             }
+            ' ERST der Auftrag, DANN die Rueckfrage: waehrend des Downloads bleibt die Anwendung
+            ' bedienbar, und ein anderer Dialog koennte dieselben Felder (Ziel, Format, Ueberschreiben)
+            ' umstellen. Der Auftrag haelt, was bestaetigt wurde.
+            If Not Await EnsureBatchModelsAsync(exportDenoise, upscaleModel) Then Return Nothing
+            Return order
         End Function
 
         ''' Vom Dialog aufgerufen, wenn der Nutzer eine .xmp/.cube-Datei außerhalb der gespeicherten
@@ -2163,7 +2240,8 @@ Namespace ViewModels
         Public ReadOnly Property IsDialogBatchDenoiseAvailable As Boolean
             Get
                 If IsDialogBatchDenoiseLockedByRecipes Then Return False
-                Return DenoiseModelService.Available OrElse DenoiseModelService.FastAvailable
+                ' Ein fehlendes Modell wird vor dem Lauf nachgefragt, siehe EnsureBatchModelsAsync.
+                Return AiModelService.RuntimeAvailable
             End Get
         End Property
 
@@ -2203,13 +2281,13 @@ Namespace ViewModels
 
         Public ReadOnly Property IsDialogBatchDenoiseQualityAvailable As Boolean
             Get
-                Return DenoiseModelService.Available
+                Return AiModelService.RuntimeAvailable
             End Get
         End Property
 
         Public ReadOnly Property IsDialogBatchDenoiseFastAvailable As Boolean
             Get
-                Return DenoiseModelService.FastAvailable
+                Return AiModelService.RuntimeAvailable
             End Get
         End Property
 
@@ -2306,8 +2384,7 @@ Namespace ViewModels
         ''' waehlen; dann bleibt das andere stehen.</summary>
         Public Sub SetDialogBatchDenoiseModel(model As String)
             Dim fast = String.Equals(model, "fast", StringComparison.OrdinalIgnoreCase)
-            If fast AndAlso Not DenoiseModelService.FastAvailable Then Return
-            If Not fast AndAlso Not DenoiseModelService.Available Then Return
+            If Not AiModelService.RuntimeAvailable Then Return
             _dialogBatchDenoiseFast = fast
             RaiseDialogBatchDenoiseChanged()
         End Sub
@@ -2443,7 +2520,9 @@ Namespace ViewModels
             Dim path As String = Nothing
             _dialogFilterChoicePaths.TryGetValue(_dialogSelectedFilterChoice, path)
             Dim selectedName = DialogFilterChoiceName(_dialogSelectedFilterChoice)
-            Return New BatchFilterDialogResult With {
+            Dim filterDenoise = TakeDialogBatchDenoiseRequest()
+            Dim order = New BatchFilterDialogResult With {
+                .ApplyPendingBaked = _dialogApplyPendingBaked,
                 .SourceKind = _dialogFilterSourceKind,
                 .DisplayName = If(IsDialogFilterSourceAuto, "Auto",
                                   If(IsDialogFilterSourceNone, LocalizationService.T("Entrauscht"), selectedName)),
@@ -2462,8 +2541,13 @@ Namespace ViewModels
                 .NamePattern = If(_dialogTargetNamePattern, "").Trim(),
                 .PreserveMetadata = _dialogSaveAsPreserveExif,
                 .Copyright = _dialogCopyright,
-                .Denoise = TakeDialogBatchDenoiseRequest()
+                .Denoise = filterDenoise
             }
+            ' ERST der Auftrag, DANN die Rueckfrage: waehrend des Downloads bleibt die Anwendung
+            ' bedienbar, und ein anderer Dialog koennte dieselben Felder (Ziel, Format, Ueberschreiben)
+            ' umstellen. Der Auftrag haelt, was bestaetigt wurde.
+            If Not Await EnsureBatchModelsAsync(filterDenoise, "") Then Return Nothing
+            Return order
         End Function
 
 #End Region
@@ -2789,6 +2873,7 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(DialogShowsSetPlace))
                 Me.RaisePropertyChanged(NameOf(DialogShowsGpxTrack))
                 Me.RaisePropertyChanged(NameOf(DialogShowsCaptureDate))
+                Me.RaisePropertyChanged(NameOf(DialogShowsModelDownload))
                 Me.RaisePropertyChanged(NameOf(IsDialogPrimaryEnabled))
                 Me.RaisePropertyChanged(NameOf(IsDialogBatchOverwriteAvailable))
                 Me.RaisePropertyChanged(NameOf(IsDialogNamePatternVisible))
@@ -2830,7 +2915,8 @@ Namespace ViewModels
                        _dialogKind <> AppDialogKind.WatermarkPreset AndAlso
                        _dialogKind <> AppDialogKind.ExportTo AndAlso
                        _dialogKind <> AppDialogKind.SetPlace AndAlso
-                       _dialogKind <> AppDialogKind.CaptureDate
+                       _dialogKind <> AppDialogKind.CaptureDate AndAlso
+                       _dialogKind <> AppDialogKind.ModelDownload
             End Get
         End Property
 
@@ -3204,6 +3290,7 @@ Namespace ViewModels
                 ' Kein Treffer, nichts zu setzen: der Knopf bliebe sonst offen und taete nichts.
                 If _dialogKind = AppDialogKind.GpxTrack Then Return HasDialogGpxMatch
                 If _dialogKind = AppDialogKind.CaptureDate Then Return HasDialogCaptureDate
+                If _dialogKind = AppDialogKind.ModelDownload Then Return IsModelDialogPrimaryEnabled
                 If BatchFilterHasNothingToDo() Then Return False
                 If NeedsFilterChoice() Then Return Not String.IsNullOrWhiteSpace(_dialogSelectedFilterChoice)
                 Return True
@@ -3885,7 +3972,7 @@ Namespace ViewModels
         Public ReadOnly Property DialogUpscaleModelOptions As IReadOnlyList(Of String)
             Get
                 Dim liste As New List(Of String) From {UpscaleOffLabel}
-                liste.AddRange(UpscaleModelService.AvailableModels.Select(Function(m) m.Label))
+                liste.AddRange(OfferedUpscaleModels().Select(Function(m) m.Label))
                 Return liste
             End Get
         End Property
@@ -3898,9 +3985,35 @@ Namespace ViewModels
         ''' mit nur "aus" waere eine Frage ohne Antwortmoeglichkeit.</summary>
         Public ReadOnly Property IsDialogUpscaleAvailable As Boolean
             Get
-                Return UpscaleModelService.Available
+                ' Auch ohne geladene Datei: ein fehlendes Modell wird vor dem Lauf nachgefragt
+                ' (EnsureBatchModelsAsync).
+                Return AiModelService.RuntimeAvailable
             End Get
         End Property
+
+        ''' <summary>Was die Auswahl anbietet: jedes bekannte Modell, sobald die Laufzeit da ist.</summary>
+        Private Shared Function OfferedUpscaleModels() As IReadOnlyList(Of UpscaleModelService.UpscaleModel)
+            If Not AiModelService.RuntimeAvailable Then Return New List(Of UpscaleModelService.UpscaleModel)()
+            Return UpscaleModelService.KnownModels
+        End Function
+
+        ''' <summary>Fehlt ein Modell, das der Stapel braucht, wird NACH dem Dialog gefragt: der
+        ''' Dialog ist dann zu, und eine zweite Rueckfrage stuende nicht ueber ihm.
+        '''
+        ''' DER DOWNLOAD IST MODAL, und erst deshalb darf der Stapel danach weiterlaufen. Er steht in
+        ''' der Busy-Anzeige mit Abbrechen, und die faengt die Maus ab: kein zweiter Stapel, kein
+        ''' zweiter Dialog, der Felder umstellt, die erst beim Lauf gelesen werden (der Haken fuer
+        ''' gespeicherte Bearbeitungen etwa), und kein Ende eines fremden Laufs. Ohne Weiterlaufen
+        ''' muesste man den Dialog neu oeffnen, und der setzt Modellwahl und Entrauschen zurueck.</summary>
+        Private Async Function EnsureBatchModelsAsync(denoise As DenoiseModelService.DenoiseRequest, upscaleKey As String) As Task(Of Boolean)
+            If denoise IsNot Nothing Then
+                Dim key = If(denoise.Kind = DenoiseModelService.DenoiseKind.Fast, DenoiseModelService.FastModelFile, DenoiseModelService.ModelFile)
+                If Not Await Settings.RequestModelsAsync(LocalizationService.T("Entrauschen"), {key}) Then Return False
+            End If
+            If Not String.IsNullOrEmpty(upscaleKey) AndAlso
+               Not Await Settings.RequestModelsAsync(LocalizationService.T("Hochskalieren"), {upscaleKey}) Then Return False
+            Return True
+        End Function
 
         ''' <summary>Sind die gewoehnlichen Groessenfelder zu sehen? Beim Hochskalieren NICHT.
         '''
@@ -3922,12 +4035,12 @@ Namespace ViewModels
                 ' uebersetzten Text zurueck, faende die Liste ihn in einer anderen Sprache nicht
                 ' wieder und stuende leer da - der Wert ist der Vergleichsschluessel, nicht die
                 ' Anzeige.
-                Dim treffer = UpscaleModelService.AvailableModels.FirstOrDefault(
+                Dim treffer = OfferedUpscaleModels().FirstOrDefault(
                     Function(m) String.Equals(m.Key, _dialogUpscaleModelKey, StringComparison.OrdinalIgnoreCase))
                 Return If(treffer Is Nothing, UpscaleOffLabel, treffer.Label)
             End Get
             Set(value As String)
-                Dim treffer = UpscaleModelService.AvailableModels.FirstOrDefault(
+                Dim treffer = OfferedUpscaleModels().FirstOrDefault(
                     Function(m) String.Equals(m.Label, value, StringComparison.Ordinal))
                 _dialogUpscaleModelKey = If(treffer Is Nothing, "", treffer.Key)
                 Me.RaisePropertyChanged(NameOf(DialogUpscaleModelLabel))
@@ -3940,7 +4053,7 @@ Namespace ViewModels
         ''' <summary>Was das gewaehlte Modell tut und was es kostet.</summary>
         Public ReadOnly Property DialogUpscaleModelHint As String
             Get
-                Dim treffer = UpscaleModelService.AvailableModels.FirstOrDefault(
+                Dim treffer = OfferedUpscaleModels().FirstOrDefault(
                     Function(m) String.Equals(m.Key, _dialogUpscaleModelKey, StringComparison.OrdinalIgnoreCase))
                 If treffer Is Nothing Then
                     Return LocalizationService.T("Vergrößert jedes Bild mit einem gelernten Modell, statt seine Bildpunkte nur zu mitteln. Das kostet Sekunden bis Minuten je Bild.")
@@ -4594,7 +4707,8 @@ Namespace ViewModels
                 scalePercent = 0
             End If
 
-            Return New BatchResizeResult With {
+            Dim order = New BatchResizeResult With {
+                .ApplyPendingBaked = _dialogApplyPendingBaked,
                 .Width = width,
                 .Height = height,
                 .ScalePercent = scalePercent,
@@ -4615,6 +4729,11 @@ Namespace ViewModels
                 .PreserveMetadata = _dialogSaveAsPreserveExif,
                 .Copyright = _dialogCopyright
             }
+            ' ERST der Auftrag, DANN die Rueckfrage: waehrend des Downloads bleibt die Anwendung
+            ' bedienbar, und ein anderer Dialog koennte dieselben Felder (Ziel, Format, Ueberschreiben)
+            ' umstellen. Der Auftrag haelt, was bestaetigt wurde.
+            If Not Await EnsureBatchModelsAsync(Nothing, upscaleModel) Then Return Nothing
+            Return order
         End Function
 
         Public Async Function ShowWatermarkPresetDialogAsync(Optional allowOverwrite As Boolean = True,
@@ -5007,6 +5126,9 @@ Namespace ViewModels
         End Sub
 
         Private Function ShowDialogAsync(kind As AppDialogKind, titleText As String, messageText As String, initialText As String, confirmText As String, cancelText As String, Optional secondaryText As String = "") As Task(Of String)
+            ' Waehrend ein Stapel sein Modell laedt, oeffnet sich kein Dialog, auch nicht ueber ein
+            ' Tastenkuerzel (siehe BeginModalModelDownload). Nothing ist dieselbe Antwort wie Abbrechen.
+            If _modalModelDownload Then Return Task.FromResult(Of String)(Nothing)
             If _dialogCompletion IsNot Nothing Then
                 _dialogCompletion.TrySetResult(Nothing)
             End If
@@ -5027,7 +5149,9 @@ Namespace ViewModels
         End Function
 
         Public Sub ConfirmDialog()
-            If DialogShowsFileConflict Then
+            If DialogShowsModelDownload Then
+                ConfirmModelDialog()
+            ElseIf DialogShowsFileConflict Then
                 CompleteDialog("Overwrite")
             ElseIf DialogShowsBatchRename Then
                 CompleteDialog("BatchRename")
@@ -5105,6 +5229,12 @@ Namespace ViewModels
         End Sub
 
         Public Sub CancelDialog()
+            ' Der Modelldialog bleibt ueber Download und Probe offen; Abbrechen heisst dort je nach
+            ' Phase etwas anderes (siehe CancelModelDialog).
+            If DialogShowsModelDownload AndAlso _dialogCompletion IsNot Nothing Then
+                CancelModelDialog()
+                Return
+            End If
             CompleteDialog(Nothing)
         End Sub
 

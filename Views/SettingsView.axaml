@@ -2564,7 +2564,7 @@
                     <StackPanel Spacing="14">
                         <StackPanel Spacing="2">
                             <TextBlock Text="Modelle" FontSize="{DynamicResource FP.Font.Title}" FontWeight="SemiBold"/>
-                            <TextBlock Text="Einige Werkzeuge brauchen eine Modelldatei, die sich hier nachladen lässt. Was nicht geladen ist, erscheint auch nicht im Editor." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            <TextBlock Text="Einige Werkzeuge brauchen eine Modelldatei, die sich hier nachladen lässt. Fehlt sie, fragt das Werkzeug beim ersten Verwenden nach dem Download." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                         </StackPanel>
                         <StackPanel Spacing="10">
                             <ItemsControl ItemsSource="{Binding ModelGroups}">
@@ -2572,7 +2572,7 @@
                                     <DataTemplate>
                                         <Border Classes="adjustment-group" Margin="0,0,0,8">
                                             <StackPanel Spacing="6">
-                                                <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="8">
+                                                <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto" ColumnSpacing="8">
                                                     <StackPanel Spacing="2" VerticalAlignment="Center">
                                                         <TextBlock Classes="no-translate" Text="{Binding Name}" FontSize="{DynamicResource FP.Font.Body}"/>
                                                         <TextBlock Classes="no-translate" Text="{Binding Description}" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
@@ -2590,6 +2590,15 @@
                                                             Command="{Binding $parent[ItemsControl].DataContext.RemoveModelCommand}"
                                                             CommandParameter="{Binding}">
                                                         <TextBlock Classes="no-translate" Text="{Binding RemoveButtonText}" FontSize="{DynamicResource FP.Font.Small}"/>
+                                                    </Button>
+                                                    <!-- Abbrechen, solange geladen wird: die Einstellungen lassen sich waehrend
+                                                         eines Downloads nicht verlassen, und eine haengende Verbindung soll
+                                                         niemanden festhalten. -->
+                                                    <Button Grid.Column="4" Classes="ghost" Padding="12,7" VerticalAlignment="Center"
+                                                            IsVisible="{Binding CancelButtonVisible}"
+                                                            Command="{Binding $parent[ItemsControl].DataContext.CancelModelDownloadCommand}"
+                                                            CommandParameter="{Binding}">
+                                                        <TextBlock Classes="no-translate" Text="{Binding CancelButtonText}" FontSize="{DynamicResource FP.Font.Small}"/>
                                                     </Button>
                                                 </Grid>
                                                 <ProgressBar Minimum="0" Maximum="1" Value="{Binding Progress}"

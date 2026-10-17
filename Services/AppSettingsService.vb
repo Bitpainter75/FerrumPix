@@ -666,6 +666,13 @@ Namespace Services
         ''' Umbau ins Leere, greift wieder die Vorauswahl, statt die Funktion abzuschalten.</summary>
         Public Property GpuAccelerationDevice As String = ""
 
+        ''' <summary>Wie die Probe auf einer Karte zuletzt ausging, je Kartenschluessel (siehe
+        ''' GpuAccelerationDevice): "works" oder "failed", bei einem Fehler mit dessen Text hinter
+        ''' einem Doppelpunkt. Ohne das stand nach jedem Programmstart wieder "nicht geprueft" da,
+        ''' obwohl dieselbe Karte schon laengst gelaufen war. Ein neuer Treiber kann das Ergebnis
+        ''' aendern; deshalb ueberschreibt JEDE Probe den Eintrag, auch die beim Modelllauf.</summary>
+        Public Property GpuProbeResults As New Dictionary(Of String, String)()
+
         ''' <summary>Gesichter im eigenen Bestand suchen und zu Personen zusammenfassen. AB WERK AUS.
         '''
         ''' Kein Standardverhalten, sondern eine Entscheidung des Benutzers: die Erkennung liest den
@@ -2626,6 +2633,14 @@ Namespace Services
 
         Public Shared Sub SavePsdTextImport(value As String)
             Update(Sub(s) s.PsdTextImport = NormalizePsdTextImport(value))
+        End Sub
+
+        Public Shared Sub SaveGpuProbeResult(deviceKey As String, result As String)
+            If String.IsNullOrEmpty(deviceKey) Then Return
+            Update(Sub(s)
+                       If s.GpuProbeResults Is Nothing Then s.GpuProbeResults = New Dictionary(Of String, String)()
+                       s.GpuProbeResults(deviceKey) = If(result, "")
+                   End Sub)
         End Sub
 
         Public Shared Sub SaveEditorExpanderState(key As String, expanded As Boolean)

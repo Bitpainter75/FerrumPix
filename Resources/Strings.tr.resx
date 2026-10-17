@@ -6276,9 +6276,6 @@
   <data name="Diese_Dateien_geh_ren_nicht_zur_Anwendung_und_we_ee5feb94" xml:space="preserve">
     <value>Bu dosyalar uygulamanın parçası değildir ve yalnızca Modeller bölümünde istediğinizde indirilir. Onlar olmadan ilgili işlevler eksik kalır; geri kalan her şey değişmeden çalışır.</value>
   </data>
-  <data name="Einige_Werkzeuge_brauchen_eine_Modelldatei_die_s_1b4a6355" xml:space="preserve">
-    <value>Bazı araçlar buradan alınabilecek bir model dosyasına ihtiyaç duyar. İndirilmemiş olan, düzenleyicide de görünmez.</value>
-  </data>
   <data name="Entrauschen_gr_ndlich_1bc59b56" xml:space="preserve">
     <value>Gürültü giderme, titiz</value>
   </data>
@@ -9744,5 +9741,68 @@
   </data>
   <data name="Nebel_angewendet_658b6738" xml:space="preserve">
     <value>Sis uygulandı</value>
+  </data>
+  <data name="Die_Laufzeit_f_r_die_Modelle_steht_auf_diesem_Ge_58ca4ab3" xml:space="preserve">
+    <value>Modeller için çalışma ortamı bu cihazda mevcut değil, bu nedenle bu işlev kullanılamaz.</value>
+  </data>
+  <data name="0_braucht_eine_Modelldatei_die_noch_nicht_herunt_1cfb7195" xml:space="preserve">
+    <value>{0} henüz indirilmemiş bir model dosyasına ihtiyaç duyuyor ({1}). Şimdi indirilsin mi?</value>
+  </data>
+  <data name="Modell_herunterladen_952b29e0" xml:space="preserve">
+    <value>Modeli indir</value>
+  </data>
+  <data name="Modell_wird_heruntergeladen_0_f772143f" xml:space="preserve">
+    <value>Model indiriliyor: %{0}</value>
+  </data>
+  <data name="Modell_heruntergeladen_fb410604" xml:space="preserve">
+    <value>Model indirildi</value>
+  </data>
+  <data name="Daf_r_fehlt_eine_Modelldatei_Beim_ersten_Verwend_11860d49" xml:space="preserve">
+    <value>Bunun için bir model dosyası eksik. İlk kullanımda indirilip indirilmeyeceği sorulur.</value>
+  </data>
+  <data name="KI_Modell_ist_noch_nicht_installiert_Beim_ersten_3ca371a9" xml:space="preserve">
+    <value>Yapay zeka modeli henüz yüklü değil. İlk analizde indirilip indirilmeyeceği sorulur.</value>
+  </data>
+  <data name="Maske_nach_Tiefe_4a92da70" xml:space="preserve">
+    <value>Derinliğe göre maske</value>
+  </data>
+  <data name="Diese_Datei_wird_gerade_schon_heruntergeladen_a800e688" xml:space="preserve">
+    <value>Bu dosya zaten indiriliyor</value>
+  </data>
+  <data name="Es_wird_noch_ein_Modell_heruntergeladen_Den_Down_6ef52508" xml:space="preserve">
+    <value>Hâlâ bir model indiriliyor. İndirme iptal edilip ayarlar kapatılsın mı?</value>
+  </data>
+  <data name="Download_abbrechen_5ba37006" xml:space="preserve">
+    <value>İndirmeyi iptal et</value>
+  </data>
+  <data name="Weiter_laden_078cf0e6" xml:space="preserve">
+    <value>İndirmeye devam et</value>
+  </data>
+  <data name="Einige_Werkzeuge_brauchen_eine_Modelldatei_die_s_37f1034d" xml:space="preserve">
+    <value>Bazı araçlar buradan indirilebilen bir model dosyasına ihtiyaç duyar. Eksikse araç ilk kullanımda indirmeyi sorar.</value>
+  </data>
+  <data name="Download_wird_abgebrochen_b2fc09e2" xml:space="preserve">
+    <value>İndirme iptal ediliyor…</value>
+  </data>
+  <data name="Grafikbeschleunigung_einschalten_5aeacc38" xml:space="preserve">
+    <value>Grafik hızlandırmayı aç</value>
+  </data>
+  <data name="Das_Modell_rechnet_dann_auf_der_Grafikkarte_meis_4478e0e0" xml:space="preserve">
+    <value>Model bu durumda ekran kartında çalışır, genellikle birkaç kat daha hızlı. Önce orada gerçekten çalışıp çalışmadığı denetlenir; aksi hâlde işlemci kullanılır.</value>
+  </data>
+  <data name="Modell_heruntergeladen_Die_Grafikkarte_wird_gepr_80babefa" xml:space="preserve">
+    <value>Model indirildi. Ekran kartı denetleniyor…</value>
+  </data>
+  <data name="Die_Grafikbeschleunigung_ist_eingeschaltet_47aebd73" xml:space="preserve">
+    <value>Grafik hızlandırma açık.</value>
+  </data>
+  <data name="Die_Grafikbeschleunigung_bleibt_aus_die_Modelle__4295679f" xml:space="preserve">
+    <value>Grafik hızlandırma kapalı kalır; modeller işlemcide çalışır.</value>
+  </data>
+  <data name="Die_letzte_Pr_fung_blieb_ohne_Ergebnis_weil_w_hr_d364787b" xml:space="preserve">
+    <value>Son denetim sonuç vermedi, çünkü bu arada başka bir kart seçildi.</value>
+  </data>
+  <data name="Die_letzte_Pr_fung_blieb_ohne_Ergebnis_auf_der_K_05a4726c" xml:space="preserve">
+    <value>Son denetim sonuç vermedi: yüklü modellerin hiçbiri kartta başlamadı. Bu illa karttan kaynaklanmıyor olabilir.</value>
   </data>
 </root>

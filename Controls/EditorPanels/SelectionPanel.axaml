@@ -60,7 +60,7 @@
                 <!-- Dasselbe Werkzeug wie im Maskenpanel, nur wird hier eine AUSWAHL daraus. Grau,
                      solange die Modelldatei fehlt - der Hinweis sagt dann, woran es liegt. -->
                 <Button Classes="ghost" Padding="8,6"
-                        IsEnabled="{Binding IsSubjectMaskAvailable}"
+                        IsEnabled="{Binding CanRequestModels}"
                         Command="{Binding SetSelectionModeCommand}" CommandParameter="Subject"
                         Classes.active="{Binding IsSubjectSelectionMode}"
                         ToolTip.Tip="{Binding SubjectMaskHint}" ToolTip.ShowOnDisabled="True">
@@ -426,7 +426,7 @@
                  gemalt, per Klick erkannt oder nach Entfernung ausgewaehlt. Deshalb steht der Knopf
                  nicht in einem der Zweige, sondern unter allen. -->
             <Button Classes="ghost" HorizontalAlignment="Stretch" Padding="10,6"
-                    IsEnabled="{Binding CanRemoveObject}"
+                    IsEnabled="{Binding CanRequestObjectRemoval}"
                     Command="{Binding RemoveObjectCommand}"
                     ToolTip.Tip="{Binding RemoveObjectHint}" ToolTip.ShowOnDisabled="True">
                 <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">

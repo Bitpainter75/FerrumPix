@@ -10609,11 +10609,12 @@ Namespace ViewModels
         '''
         ''' Der Knopf wird dann GRAU statt weg. Frueher war er weg, mit der Begruendung, ein toter
         ''' Knopf sei schlimmer als keiner - das stimmt, solange es keinen Weg gibt, ihn zum Leben zu
-        ''' erwecken. Den gibt es: der Einstellungsdialog laedt die Datei. Ein verschwundener Knopf
-        ''' verschweigt, dass es die Funktion ueberhaupt gibt.</summary>
+        ''' erwecken. Den gibt es: der Einstellungsdialog laedt die Datei, und die Funktion selbst
+        ''' fragt beim ersten Verwenden danach (EditorViewModelModelRequest.vb). Grau ist der Knopf
+        ''' deshalb nur noch ohne Modell-Laufzeit.</summary>
         Public Shared ReadOnly Property MissingModelHint As String
             Get
-                Return LocalizationService.T("Dafür fehlt eine Modelldatei. Sie lässt sich in den Einstellungen unter Modelle herunterladen.")
+                Return LocalizationService.T("Dafür fehlt eine Modelldatei. Beim ersten Verwenden wird gefragt, ob sie heruntergeladen werden soll.")
             End Get
         End Property
 
@@ -10670,7 +10671,9 @@ Namespace ViewModels
         ''' eine Auswahl ohne Antwortmoeglichkeit waere eine Frage ohne Sinn.</summary>
         Public ReadOnly Property IsUpscaleWithModelAvailable As Boolean
             Get
-                Return UpscaleModelService.Available
+                ' Auch ohne geladene Datei: die Wahl eines fehlenden Modells fragt beim Anwenden
+                ' nach dem Download (UpscaleWithModelAsync).
+                Return AiModelService.RuntimeAvailable
             End Get
         End Property
 
@@ -10684,7 +10687,7 @@ Namespace ViewModels
         Public ReadOnly Property UpscaleModelOptions As List(Of String)
             Get
                 Dim options = New List(Of String) From {""}
-                options.AddRange(UpscaleModelService.AvailableModels.Select(Function(m) m.Label))
+                options.AddRange(OfferedUpscaleModels().Select(Function(m) m.Label))
                 Return options
             End Get
         End Property
@@ -10700,7 +10703,7 @@ Namespace ViewModels
             Set(value As String)
                 ' Der leere Eintrag ist eine gueltige Wahl: er nimmt die Auswahl zurueck, und der
                 ' Knopf wird wieder grau.
-                Dim match = UpscaleModelService.AvailableModels.FirstOrDefault(
+                Dim match = OfferedUpscaleModels().FirstOrDefault(
                     Function(m) String.Equals(m.Label, value, StringComparison.Ordinal))
                 Dim key = If(match Is Nothing, "", match.Key)
                 If match Is Nothing AndAlso Not String.IsNullOrEmpty(value) Then Return
@@ -10724,8 +10727,16 @@ Namespace ViewModels
         ''' Einstellungsdialog laedt sie nach).</summary>
         Private Function CurrentUpscaleModel() As UpscaleModelService.UpscaleModel
             If String.IsNullOrEmpty(_upscaleModelKey) Then Return Nothing
-            Return UpscaleModelService.AvailableModels.FirstOrDefault(
+            Return OfferedUpscaleModels().FirstOrDefault(
                 Function(m) String.Equals(m.Key, _upscaleModelKey, StringComparison.OrdinalIgnoreCase))
+        End Function
+
+        ''' <summary>Was in der Auswahl steht: jedes bekannte Modell, sobald die Laufzeit da ist.
+        ''' Ein fehlendes wird beim Anwenden nachgefragt; geprueft wird die Datei dann in
+        ''' ApplyModelUpscale, damit kein stiller Rueckfall auf ein anderes Modell rechnet.</summary>
+        Private Shared Function OfferedUpscaleModels() As IReadOnlyList(Of UpscaleModelService.UpscaleModel)
+            If Not AiModelService.RuntimeAvailable Then Return New List(Of UpscaleModelService.UpscaleModel)()
+            Return UpscaleModelService.KnownModels
         End Function
 
         Public ReadOnly Property UpscaleModelHint As String
@@ -10772,8 +10783,8 @@ Namespace ViewModels
         ''' haben eine andere Antwort (Modell holen oder Modell waehlen).</summary>
         Public ReadOnly Property UpscaleWithModelHint As String
             Get
-                If Not UpscaleModelService.Available Then Return MissingModelHint
                 If CurrentUpscaleModel() Is Nothing Then Return LocalizationService.T("Erst ein Modell wählen.")
+                If String.IsNullOrEmpty(AiModelService.BestFile(CurrentUpscaleModel().Key)) Then Return MissingModelHint
                 Return LocalizationService.T("Rechnet das Bild mit dem Modell größer. Wird in die Pixel gerechnet, wie eine Retusche.")
             End Get
         End Property
@@ -10889,6 +10900,9 @@ Namespace ViewModels
             Dim model = CurrentUpscaleModel()
             If model Is Nothing Then Return
             Dim key = model.Key
+            ' Die Auswahl bietet auch fehlende Modelle an. Ohne Datei fiele ModelFor auf ein
+            ' anderes vorhandenes zurueck, und es rechnete eines, das niemand gewaehlt hat.
+            If String.IsNullOrEmpty(AiModelService.BestFile(key)) Then Return
 
             ' Das Arbeitsbild von VORHER, bevor irgendetwas laeuft: es ist der Rueckweg.
             Dim before = _workingImage.CloneFull()
@@ -17324,7 +17338,10 @@ Namespace ViewModels
             ApplyResizeCommand = ReactiveCommand.Create(Async Function() As Task
                                                             Await ApplyResizeAsync()
                                                         End Function)
-            UpscaleWithModelCommand = ReactiveCommand.Create(Sub() ApplyModelUpscale())
+            UpscaleWithModelCommand = ReactiveCommand.Create(
+                Sub()
+                    Dim ignoriert = UpscaleWithModelAsync()
+                End Sub)
             ApplyCanvasCommand = ReactiveCommand.Create(Async Function() As Task
                                                             Await ApplyCanvasAsync()
                                                         End Function)
@@ -17497,18 +17514,26 @@ Namespace ViewModels
                 End Sub)
             ApplyBokehCommand = ReactiveCommand.Create(
                 Sub()
-                    Dim ignoriert = ApplyBokeh()
+                    Dim ignoriert = ApplyBokehWithModelAsync()
                 End Sub)
             ResetBokehCommand = ReactiveCommand.Create(Sub() ResetBokeh())
             ResetLinesCommand = ReactiveCommand.Create(Sub() ResetLines())
             ResetObjectWarpCommand = ReactiveCommand.Create(Sub() ResetObjectWarp())
             ApplyLinesCommand = ReactiveCommand.Create(Sub() ApplyLineWarp())
             RemoveLastLineCommand = ReactiveCommand.Create(Sub() RemoveLastLine())
-            RemoveObjectCommand = ReactiveCommand.Create(Sub() ApplyObjectRemoval())
+            RemoveObjectCommand = ReactiveCommand.Create(
+                Sub()
+                    Dim ignoriert = RemoveObjectWithModelAsync()
+                End Sub)
             CancelBusyCommand = ReactiveCommand.Create(Sub() RequestBusyCancel())
-            DenoiseWithModelCommand = ReactiveCommand.Create(Sub() ApplyModelDenoise())
+            DenoiseWithModelCommand = ReactiveCommand.Create(
+                Sub()
+                    Dim ignoriert = DenoiseWithModelAsync(DenoiseModelService.DenoiseKind.Quality)
+                End Sub)
             DenoiseFastCommand = ReactiveCommand.Create(
-                Sub() ApplyModelDenoise(DenoiseModelService.DenoiseKind.Fast))
+                Sub()
+                    Dim ignoriert = DenoiseWithModelAsync(DenoiseModelService.DenoiseKind.Fast)
+                End Sub)
             MeasureDenoiseStrengthCommand = ReactiveCommand.CreateFromTask(Function() MeasureDenoiseStrengthAsync())
             OpenContextItemCommand = ReactiveCommand.Create(
                 Sub()
@@ -17638,12 +17663,18 @@ Namespace ViewModels
                             If IsFrameStyleContext Then ApplyFrameStyleLive()
                     End Select
                 End Sub
-            SetSelectionModeCommand = ReactiveCommand.Create(Of String)(Sub(mode) SetSelectionMode(mode))
+            SetSelectionModeCommand = ReactiveCommand.Create(Of String)(
+                Sub(mode)
+                    Dim ignoriert = SetSelectionModeWithModelAsync(mode)
+                End Sub)
             AlignSelectionCommand = ReactiveCommand.Create(Of String)(Sub(mode) AlignSelection(mode))
             DistributeSelectionCommand = ReactiveCommand.Create(Of String)(
                 Sub(direction) DistributeSelection(String.Equals(direction, "Horizontal", StringComparison.Ordinal)))
             ToggleAlignTargetCommand = ReactiveCommand.Create(Sub() AlignToImage = Not AlignToImage)
-            SetMaskModeCommand = ReactiveCommand.Create(Of String)(Sub(mode) MaskMode = mode)
+            SetMaskModeCommand = ReactiveCommand.Create(Of String)(
+                Sub(mode)
+                    Dim ignoriert = SetMaskModeWithModelAsync(mode)
+                End Sub)
             SetSelectionCombineModeCommand = ReactiveCommand.Create(Of String)(Sub(mode) SetSelectionCombineMode(mode))
             SetAnnotationAnchorCommand = ReactiveCommand.Create(Of String)(Sub(anchor) AnnotationAnchor = anchor)
             SetAnnotationFillKindCommand = ReactiveCommand.Create(Of String)(Sub(kind) SetAnnotationFillKind(kind))
@@ -24497,6 +24528,7 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(CanRasterizeSelectedAnnotation))
             Me.RaisePropertyChanged(NameOf(HasActiveSelection))
             Me.RaisePropertyChanged(NameOf(CanRemoveObject))
+            Me.RaisePropertyChanged(NameOf(CanRequestObjectRemoval))
             Me.RaisePropertyChanged(NameOf(SelectionXPercent))
             Me.RaisePropertyChanged(NameOf(SelectionYPercent))
             Me.RaisePropertyChanged(NameOf(SelectionWidthPercent))
@@ -25217,6 +25249,7 @@ Namespace ViewModels
 
             Me.RaisePropertyChanged(NameOf(HasActiveSelection))
             Me.RaisePropertyChanged(NameOf(CanRemoveObject))
+            Me.RaisePropertyChanged(NameOf(CanRequestObjectRemoval))
             Me.RaisePropertyChanged(NameOf(SelectionXPercent))
             Me.RaisePropertyChanged(NameOf(SelectionYPercent))
             Me.RaisePropertyChanged(NameOf(SelectionWidthPercent))

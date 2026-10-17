@@ -125,7 +125,7 @@ Pictures from a phone or a scanner open too, and your edit is saved as a new fil
 
 ### Model files
 
-Eight features use an extra file: selecting an object by clicking it, working by distance, removing an object, denoising, enlarging with a model, finding the people in your photos, automatically tagging image contents, and turning coordinates into a place name. The settings have a *Models* section that fetches each file on request; where one is missing, the matching controls are simply not there. Finding people, automatic image tagging and naming places have to be switched on there as well.
+Eight features use an extra file: selecting an object by clicking it, working by distance, removing an object, denoising, enlarging with a model, finding the people in your photos, automatically tagging image contents, and turning coordinates into a place name. The settings have a *Models* section that fetches each file on request, and a function whose file is missing asks whether to download it the first time you use it. Finding people, automatic image tagging and naming places have to be switched on there as well.
 
 Enlarging offers five models, from twice to four times, thorough or quick, one that keeps the grain and one for drawings, right in the image size tool of the editor. A switch in the same section lets the graphics card do the work, which finishes several times sooner with the same result.
 

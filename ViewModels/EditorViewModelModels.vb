@@ -53,6 +53,7 @@ Namespace ViewModels
                               NameOf(IsDepthMaskAvailable), NameOf(DepthMaskHint),
                               NameOf(IsSubjectMaskAvailable), NameOf(SubjectMaskHint),
                               NameOf(IsObjectRemovalAvailable), NameOf(CanRemoveObject), NameOf(RemoveObjectHint),
+                              NameOf(CanRequestModels), NameOf(CanRequestObjectRemoval),
                               NameOf(CanDenoiseWithModel), NameOf(DenoiseWithModelHint),
                               NameOf(CanDenoiseFast), NameOf(DenoiseFastHint),
                               NameOf(CanDenoiseWithAnyModel),
@@ -276,7 +277,10 @@ Namespace ViewModels
         ''' Faltung ueber das ganze Bild zu starten hiesse, dass die Anzeige immer der Maus
         ''' hinterherhinkt. Es zaehlt nur der zuletzt angestossene Lauf.</summary>
         Private Sub ScheduleBokehPreview()
-            If Not IsBokehAvailable Then Return
+            If Not IsBokehAvailable Then
+                RequestDepthForPreview(LocalizationService.T("Tiefen-Unschärfe"), AddressOf ResetBokeh, AddressOf ScheduleBokehPreview)
+                Return
+            End If
             _bokehVorschauLauf += 1
             Dim pass = _bokehVorschauLauf
             Dim ignoriert = RedrawBokehPreview(pass)
@@ -674,7 +678,7 @@ Namespace ViewModels
             Get
                 If _applyFogCommand Is Nothing Then
                     _applyFogCommand = ReactiveCommand.Create(Sub()
-                                                                  Dim ignoriert = ApplyFog()
+                                                                  Dim ignoriert = ApplyFogWithModelAsync()
                                                               End Sub)
                 End If
                 Return _applyFogCommand
@@ -710,7 +714,10 @@ Namespace ViewModels
         End Sub
 
         Private Sub ScheduleFogPreview()
-            If Not DepthMapService.Available Then Return
+            If Not DepthMapService.Available Then
+                RequestDepthForPreview(LocalizationService.T("Nebel nach Tiefe"), AddressOf ResetFog, AddressOf ScheduleFogPreview)
+                Return
+            End If
             _fogPreviewPass += 1
             Dim pass = _fogPreviewPass
             Dim ignoriert = RedrawFogPreview(pass)

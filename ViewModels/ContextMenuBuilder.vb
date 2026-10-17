@@ -332,7 +332,8 @@ Namespace ViewModels
                 ' aktivierte Katalog-Automatik noch Schreibzugriff auf XMP. Der Eintrag steht bei
                 ' den übrigen Aufnahmeangaben, weil das Ergebnis optional als XMP-Metadatum
                 ' zurückgeschrieben wird.
-                If ImageTaggingService.Available Then
+                ' Auch ohne geladenes Modell: der Eintrag fragt dann nach dem Download.
+                If ImageTaggingService.Available OrElse AiModelService.RuntimeAvailable Then
                     children.Add(FooterMenuCatalog.Divider())
                     AddIfOffered(children, commands.ReanalyzeAiTags,
                                  FooterMenuCatalog.ReanalyzeAiTags(commands.ReanalyzeAiTags))
@@ -341,7 +342,7 @@ Namespace ViewModels
 
             ' Auch reine Serverauswahlen haben eine bewusste Neu-Analyse. Sie schreibt nur in den
             ' lokalen Serverindex; XMP ist dafür weder Voraussetzung noch Nebenwirkung.
-            If imageBatch AndAlso localImages.Count = 0 AndAlso ImageTaggingService.Available Then
+            If imageBatch AndAlso localImages.Count = 0 AndAlso (ImageTaggingService.Available OrElse AiModelService.RuntimeAvailable) Then
                 If children.Count > 0 Then children.Add(FooterMenuCatalog.Divider())
                 AddIfOffered(children, commands.ReanalyzeAiTags,
                              FooterMenuCatalog.ReanalyzeAiTags(commands.ReanalyzeAiTags))

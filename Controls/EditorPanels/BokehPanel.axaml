@@ -40,7 +40,7 @@
                  so kam es aus dem Nutzerkreis zurueck: "kann manche Regler nicht anfassen, Fehler
                  oder noch nicht gebaut?". Der Hinweis am gesperrten Element ist der einzige Ort,
                  an dem die Antwort steht. -->
-            <StackPanel Spacing="2" Margin="0,8,0,0" IsEnabled="{Binding IsBokehAvailable}"
+            <StackPanel Spacing="2" Margin="0,8,0,0" IsEnabled="{Binding CanRequestModels}"
                         ToolTip.Tip="{Binding BokehHint}" ToolTip.ShowOnDisabled="True">
                 <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center"
                       ToolTip.Tip="Untere Grenze des scharfen Bereichs. 0 ist am weitesten weg">

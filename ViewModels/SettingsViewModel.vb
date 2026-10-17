@@ -2929,6 +2929,10 @@ Namespace ViewModels
                     LocalizationService.T("Gefunden: {0} {1}, {2}, angesprochen über {3}."),
                     vendor, model, kind, GpuAccelerationService.BackendName)
 
+                ' Blieb die LETZTE Probe ohne Ergebnis, steht das dahinter: der Stand davor gilt weiter,
+                ' sonst laese man nach einem erneuten Pruefen ein altes "laeuft" als neues Ergebnis.
+                Dim note = GpuAccelerationService.ProbeNote
+                If Not String.IsNullOrEmpty(note) Then foundText = foundText & " " & note
                 Select Case GpuAccelerationService.ProbeState
                     Case GpuAccelerationService.ProbeResult.Works
                         Return foundText & " " & LocalizationService.T("Geprüft: ein Modell läuft darauf.")
@@ -2949,12 +2953,24 @@ Namespace ViewModels
         ''' der einzige ehrliche Weg zu der Frage, ob die Beschleunigung auf diesem Rechner
         ''' funktioniert: die Geräteliste meldet eine Karte auch dann, wenn kein brauchbarer Treiber
         ''' dahintersteht.</summary>
+        ''' <summary>Wurde waehrend einer laufenden Prüfung eine neue verlangt, etwa weil eine
+        ''' andere Karte gewaehlt wurde? Dann laeuft sie danach, statt still zu verfallen.</summary>
+        Private _gpuAccelerationRecheck As Boolean
+
         Public Async Function CheckGpuAccelerationAsync() As Task
-            If _gpuAccelerationBusy Then Return
+            If _gpuAccelerationBusy Then
+                ' NICHT verwerfen: die Karte kann inzwischen eine andere sein, und die bliebe sonst
+                ' ungeprueft, obwohl die Beschleunigung eingeschaltet ist.
+                _gpuAccelerationRecheck = True
+                Return
+            End If
             _gpuAccelerationBusy = True
             Me.RaisePropertyChanged(NameOf(GpuAccelerationStatusText))
             Try
-                Await Task.Run(Sub() GpuAccelerationService.Probe())
+                Do
+                    _gpuAccelerationRecheck = False
+                    Await Task.Run(Sub() GpuAccelerationService.Probe())
+                Loop While _gpuAccelerationRecheck
             Catch ex As Exception
                 DiagnosticLogService.LogException("Settings.CheckGpuAcceleration", ex)
             Finally
@@ -2975,6 +2991,11 @@ Namespace ViewModels
                 If _faceRecognitionEnabled = value Then Return
                 Me.RaiseAndSetIfChanged(_faceRecognitionEnabled, value)
                 SaveFeatureSettings()
+                If value Then
+                    Dim ignoriert = OfferModelsForSwitchAsync(LocalizationService.T("Personen"),
+                        {FaceDetectionService.DetectorKey, FaceDetectionService.RecognizerKey},
+                        Sub() FaceRecognitionEnabled = False)
+                End If
                 ' Der Knopf "Gesichter suchen" bei den überwachten Ordnern hängt daran. Ohne diese
                 ' Meldung bliebe er grau, bis die Einstellungen einmal neu aufgebaut werden - und
                 ' der Satz daneben nennte weiter den Grund, den es nicht mehr gibt.
@@ -3022,6 +3043,10 @@ Namespace ViewModels
                 If _photoMapEnabled = value Then Return
                 Me.RaiseAndSetIfChanged(_photoMapEnabled, value)
                 SaveFeatureSettings()
+                If value Then
+                    Dim ignoriert = OfferModelsForSwitchAsync(LocalizationService.T("Aufnahmeorte benennen"),
+                        {PlaceLookupService.PlaceFileKey}, Sub() PhotoMapEnabled = False)
+                End If
             End Set
         End Property
 
@@ -3481,7 +3506,10 @@ Namespace ViewModels
         End Function
 
         Private Async Function RunServerAiTaggingAsync(immich As Boolean) As Task
-            If ServerScanRunning OrElse Not ImageTaggingService.Available Then Return
+            If ServerScanRunning Then Return
+            ' Der Download ist modal: danach steht alles noch so, wie es beim Klick war.
+            If Not Await RequestModelsAsync(LocalizationService.T("Automatische Stichwörter"),
+                    {ImageTaggingService.ModelKey, ImageTaggingService.TagsKey, ImageTaggingService.ThresholdsKey}) Then Return
             ServerScanRunning = True
             _serverScanCancellation?.Dispose()
             _serverScanCancellation = New System.Threading.CancellationTokenSource()
@@ -3616,6 +3644,7 @@ Namespace ViewModels
         Public ReadOnly Property TestImmichConnectionCommand As ICommand
 
         Public ReadOnly Property FetchModelCommand As ICommand
+        Public ReadOnly Property CancelModelDownloadCommand As ICommand
         Public ReadOnly Property ResetCommand As ICommand
         Public ReadOnly Property ApplyCommand As ICommand
         Public ReadOnly Property CancelCommand As ICommand
@@ -4260,6 +4289,7 @@ Namespace ViewModels
                 Sub(g)
                     Dim ignored = FetchModelGroupAsync(g)
                 End Sub)
+            CancelModelDownloadCommand = ReactiveCommand.Create(Of ModelGroup)(Sub(g) CancelModelGroupDownload(g))
             RemoveModelCommand = ReactiveCommand.Create(Of ModelGroup)(
                 Sub(g)
                     Dim ignored = RemoveModelGroupAsync(g)
@@ -4269,14 +4299,16 @@ Namespace ViewModels
                     Dim ignored = CheckGpuAccelerationAsync()
                 End Sub)
             ResetCommand = ReactiveCommand.Create(Sub() ResetToDefaults())
-            ApplyCommand = ReactiveCommand.Create(Sub()
-                                                     SnapshotSettings()
-                                                     _mainVm?.CloseSettings()
-                                                 End Sub)
-            CancelCommand = ReactiveCommand.Create(Sub()
-                                                       RestoreSnapshot()
-                                                       _mainVm?.CloseSettings()
-                                                   End Sub)
+            ' ERST fragen, ob geschlossen werden darf, DANN Stand sichern oder zuruecknehmen. Umgekehrt
+            ' war der gespeicherte Ausgangsstand schon veraendert, wenn das Schliessen an einem
+            ' laufenden Download scheiterte, und ein spaeteres Abbrechen stellte nicht mehr den Stand
+            ' vom Oeffnen her.
+            '
+            ' OHNE laufenden Download wirken beide SOFORT, wie immer: ein Befehl, der erst nach einer
+            ' Rueckfrage zurueckkommt, liess "Abbrechen" die Einstellungen spaeter zuruecknehmen als
+            ' im Moment des Klicks. Nur waehrend eines Downloads wird erst gefragt.
+            ApplyCommand = ReactiveCommand.Create(Sub() LeaveSettings(keepChanges:=True))
+            CancelCommand = ReactiveCommand.Create(Sub() LeaveSettings(keepChanges:=False))
             SetThemeModeCommand = ReactiveCommand.Create(Of String)(Sub(m) ThemeMode = m)
             SetWindowButtonsSideCommand = ReactiveCommand.Create(Of String)(Sub(m) WindowButtonsSide = m)
             SetAccentColorCommand = ReactiveCommand.Create(Of String)(Sub(c) AccentColor = c)
@@ -4607,7 +4639,62 @@ Namespace ViewModels
                     .ScreenName = i.ScreenName, .Scale = i.Scale}).ToList()
         End Sub
 
+        ''' <summary>Speichern oder Abbrechen. Laeuft gerade ein Download aus den Einstellungen, wird
+        ''' erst gefragt (MainWindowViewModel.ConfirmLeaveSettingsAsync), und gesichert oder
+        ''' zurueckgenommen wird erst danach.</summary>
+        Private Sub LeaveSettings(keepChanges As Boolean)
+            If _mainVm IsNot Nothing AndAlso ModelDownloadService.AnyRunning Then
+                Dim ignoriert = LeaveSettingsAfterConfirmAsync(keepChanges)
+                Return
+            End If
+            FinishLeavingSettings(keepChanges)
+        End Sub
+
+        Private Async Function LeaveSettingsAfterConfirmAsync(keepChanges As Boolean) As Task
+            Try
+                If Not Await _mainVm.ConfirmLeaveSettingsAsync() Then Return
+                FinishLeavingSettings(keepChanges)
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Settings.LeaveSettings", ex)
+            End Try
+        End Function
+
+        Private Sub FinishLeavingSettings(keepChanges As Boolean)
+            If keepChanges Then
+                SnapshotSettings()
+            Else
+                RestoreSnapshot()
+            End If
+            _mainVm?.CloseSettings()
+        End Sub
+
+        Private _restoringSnapshot As Boolean
+
+        ''' <summary>Ein Schalter, dessen Funktion ein Modell braucht: beim Einschalten nach dem
+        ''' Download fragen, wenn es fehlt. Ein Nein legt den Schalter wieder um, denn ohne Modell
+        ''' taete er nichts. Beim Zuruecknehmen der Einstellungen wird nicht gefragt: dort kommt nur
+        ''' ein frueherer Stand zurueck, eingeschaltet hat niemand etwas.</summary>
+        Private Async Function OfferModelsForSwitchAsync(featureName As String, keys As String(), switchOff As Action) As Task
+            If _restoringSnapshot OrElse _mainVm Is Nothing Then Return
+            If keys.All(Function(k) Not String.IsNullOrEmpty(AiModelService.BestFile(k))) Then Return
+            If Not Await RequestModelsAsync(featureName, keys) Then
+                switchOff()
+                Return
+            End If
+            _mainVm.Gallery?.RefreshModelFeatures()
+            FaceIndex?.RefreshCanStart()
+        End Function
+
         Private Sub RestoreSnapshot()
+            _restoringSnapshot = True
+            Try
+                RestoreSnapshotCore()
+            Finally
+                _restoringSnapshot = False
+            End Try
+        End Sub
+
+        Private Sub RestoreSnapshotCore()
             EditorDenoiseStrength = _savedEditorDenoiseStrength
             EditorLayerThumbnails = _savedEditorLayerThumbnails
             PsdTextImport = _savedPsdTextImport
@@ -5902,6 +5989,19 @@ Namespace ViewModels
                 End Get
             End Property
 
+            ''' <summary>Abbrechen gibt es, solange die Gruppe laedt.</summary>
+            Public ReadOnly Property CancelButtonVisible As Boolean
+                Get
+                    Return _running
+                End Get
+            End Property
+
+            Public ReadOnly Property CancelButtonText As String
+                Get
+                    Return LocalizationService.T("Abbrechen")
+                End Get
+            End Property
+
             Public ReadOnly Property RemoveButtonVisible As Boolean
                 Get
                     Return Not _running AndAlso Files.Any(Function(d) AiModelService.CanRemoveUserModel(d.Key))
@@ -5946,6 +6046,7 @@ Namespace ViewModels
             Public Sub RaiseStateChanged()
                 For Each n In {NameOf(IsComplete), NameOf(IsUpdatable), NameOf(StatusText),
                                NameOf(ButtonText), NameOf(ButtonVisible), NameOf(RemoveButtonVisible),
+                               NameOf(CancelButtonVisible), NameOf(CancelButtonText),
                                NameOf(RemoveButtonText)}
                     Me.RaisePropertyChanged(n)
                 Next
@@ -6032,15 +6133,48 @@ Namespace ViewModels
                     Case "Objektauswahl" : anzeigeName = LocalizationService.T("Objektauswahl")
                     Case Else : anzeigeName = name
                 End Select
-                ModelGroups.Add(New ModelGroup With {
+                Dim built = New ModelGroup With {
                     .Name = anzeigeName,
                     .Description = description,
-                    .Files = files})
+                    .Files = files}
+                ' Laeuft fuer die Gruppe gerade ein Download (Sprachwechsel mittendrin), zeigt auch die
+                ' neu gebaute ihn an; FetchModelGroupAsync findet sie ueber die Dateien wieder.
+                If files.Any(Function(f) ModelDownloadService.IsRunning(f)) Then built.Running = True
+                ModelGroups.Add(built)
             Next
         End Sub
 
-        ''' <summary>Holt alle Dateien einer Gruppe. NUR von hier aus - es gibt keinen anderen Weg,
-        ''' auf dem die Anwendung etwas aus dem Netz holt.</summary>
+        ''' <summary>Holt alle Dateien einer Gruppe, auf den Knopf in den Einstellungen hin. Der
+        ''' einzige andere Weg ist <see cref="RequestModelsAsync"/>, ebenfalls nur nach Rueckfrage.</summary>
+        ''' <summary>Die Abbruchmarken der laufenden Downloads aus den Einstellungen, je Gruppe ueber
+        ''' ihre Dateien. Ueber die Dateien und nicht das Gruppenobjekt: ein Sprachwechsel baut die
+        ''' Gruppen neu auf, der Abbrechen-Knopf haengt dann an einem anderen Objekt.</summary>
+        Private ReadOnly _groupDownloads As New Dictionary(Of String, System.Threading.CancellationTokenSource)()
+
+        Private Shared Function GroupDownloadKey(group As ModelGroup) As String
+            Return String.Join("|", group.Files.Select(Function(f) f.Key))
+        End Function
+
+        Private Sub CancelModelGroupDownload(group As ModelGroup)
+            If group Is Nothing Then Return
+            Dim cts As System.Threading.CancellationTokenSource = Nothing
+            If _groupDownloads.TryGetValue(GroupDownloadKey(group), cts) Then cts.Cancel()
+        End Sub
+
+        ''' <summary>Alle Downloads aus den Einstellungen abbrechen und warten, bis sie wirklich
+        ''' stehen. Gerufen, wenn jemand die Einstellungen verlassen will und dafuer abbricht.</summary>
+        Public Async Function CancelModelGroupDownloadsAsync() As Task
+            For Each cts In _groupDownloads.Values.ToList()
+                cts.Cancel()
+            Next
+            ' Der Abbruch greift beim naechsten Lesen aus dem Netz; laenger als ein paar Sekunden
+            ' haengt das nur, wenn die Verbindung selbst haengt, und dann soll man nicht ewig warten.
+            Dim deadline = DateTime.UtcNow.AddSeconds(10)
+            While ModelDownloadService.AnyRunning AndAlso DateTime.UtcNow < deadline
+                Await Task.Delay(50)
+            End While
+        End Function
+
         Public Async Function FetchModelGroupAsync(group As ModelGroup) As Task
             If group Is Nothing OrElse group.Running Then Return
 
@@ -6070,6 +6204,14 @@ Namespace ViewModels
             group.Message = ""
             group.Running = True
             group.Progress = 0
+            Dim downloadKey = GroupDownloadKey(group)
+            Dim cancellation = New System.Threading.CancellationTokenSource()
+            _groupDownloads(downloadKey) = cancellation
+            ' Die Gruppe wird bei JEDER Meldung neu gesucht: ein Sprachwechsel baut die Gruppen neu
+            ' auf (RefreshLocalization), und die sichtbare ist dann ein anderes Objekt als diese.
+            Dim live = Function() As ModelGroup
+                           Return If(ModelGroups.FirstOrDefault(Function(g) g.Files.SequenceEqual(group.Files)), group)
+                       End Function
             Try
                 Dim total = group.Files.Sum(Function(d) d.Bytes)
                 Dim fertig As Long = 0
@@ -6079,30 +6221,154 @@ Namespace ViewModels
                     Dim notifier = New Progress(Of Double)(
                         Sub(share)
                             If total > 0 Then
-                                group.Progress = Math.Min(1.0, (bisher + share * thisFile.Bytes) / total)
+                                live().Progress = Math.Min(1.0, (bisher + share * thisFile.Bytes) / total)
                             End If
                         End Sub)
-                    Dim result = Await ModelDownloadService.FetchAsync(thisFile, notifier)
+                    Dim result = Await ModelDownloadService.FetchAsync(thisFile, notifier, cancellation.Token)
                     Select Case result
                         Case ModelDownloadService.Result.Done, ModelDownloadService.Result.AlreadyPresent
                             fertig += thisFile.Bytes
                         Case ModelDownloadService.Result.ChecksumMismatch
-                            group.Message = LocalizationService.T("Die geladene Datei stimmt nicht mit der erwarteten überein und wurde verworfen")
+                            live().Message = LocalizationService.T("Die geladene Datei stimmt nicht mit der erwarteten überein und wurde verworfen")
+                            Return
+                        Case ModelDownloadService.Result.AlreadyRunning
+                            live().Message = LocalizationService.T("Diese Datei wird gerade schon heruntergeladen")
                             Return
                         Case ModelDownloadService.Result.Cancelled
-                            group.Message = LocalizationService.T("Abgebrochen")
+                            live().Message = LocalizationService.T("Abgebrochen")
                             Return
                         Case Else
-                            group.Message = LocalizationService.T("Das Herunterladen ist fehlgeschlagen")
+                            live().Message = LocalizationService.T("Das Herunterladen ist fehlgeschlagen")
                             Return
                     End Select
                 Next
-                group.Progress = 1
+                live().Progress = 1
             Finally
+                _groupDownloads.Remove(downloadKey)
+                cancellation.Dispose()
                 group.Running = False
                 group.RaiseStateChanged()
+                Dim current = live()
+                current.Running = False
+                current.RaiseStateChanged()
             End Try
         End Function
+
+        Private _modelRequestRunning As Boolean
+
+        ''' <summary>Der zweite Weg zum Herunterladen: aus der Funktion heraus, die das Modell
+        ''' braucht. Fehlt eine der Dateien, wird GEFRAGT, und nur auf ein Ja hin geholt. Es gilt
+        ''' dieselbe Zusage wie beim Knopf in den Einstellungen: nichts kommt von selbst aus dem Netz.
+        '''
+        ''' Geholt wird nur, was die Funktion braucht, nicht die ganze Gruppe. Beim Hochskalieren
+        ''' waeren das sonst fuenf Modelle fuer eines, beim Entrauschen zwei Wege fuer einen.
+        '''
+        ''' DER DOWNLOAD IST MODAL, und darauf baut alles danach. Frage, Grafikkarte, Fortschritt
+        ''' und Ergebnis stehen in EINEM Dialog, der bis zum Ergebnis offen bleibt
+        ''' (MainWindowViewModel.ShowModelDownloadDialogAsync): er faengt die Maus, der Tastenhandler
+        ''' laesst nur ESC und RETURN zu ihm durch, und kein anderer Dialog verdraengt ihn. Waehrend
+        ''' des Downloads aendert sich also nichts, und der Aufrufer darf danach einfach weitermachen. Ein frueherer Entwurf liess die Anwendung bedienbar; jede
+        ''' Durchsicht fand dann einen neuen Zustand, der sich unterwegs verschieben konnte (Bild,
+        ''' Auswahl, Dialogfelder, ein zweiter Stapel, die Gruppen nach einem Sprachwechsel).
+        '''
+        ''' Der Knopf in den Einstellungen bleibt dagegen nicht modal (FetchModelGroupAsync); dafuer
+        ''' lassen sich die Einstellungen nicht verlassen, solange er laedt
+        ''' (MainWindowViewModel.CurrentMode).</summary>
+        ''' <param name="featureName">Die Funktion, schon uebersetzt.</param>
+        ''' <param name="keys">Die Schluessel der benoetigten Dateien (AiModelService.KnownEntries).</param>
+        ''' <returns>True, wenn danach alle Dateien vorliegen.</returns>
+        Public Async Function RequestModelsAsync(featureName As String, keys As IEnumerable(Of String)) As Task(Of Boolean)
+            Dim missing = keys.Distinct().
+                Where(Function(k) String.IsNullOrEmpty(AiModelService.BestFile(k))).
+                Select(Function(k) AiModelService.EntryFor(k)).ToList()
+            If missing.Count = 0 Then Return AiModelService.RuntimeAvailable
+            If _mainVm Is Nothing Then Return False
+            ' Kann nicht vorkommen, solange Frage und Download modal sind; die Sperre bleibt als Netz.
+            If _modelRequestRunning Then Return False
+            ' Laeuft dieselbe Datei schon ueber den Knopf in den Einstellungen, gar nicht erst fragen.
+            If missing.Any(Function(e) e IsNot Nothing AndAlso ModelDownloadService.IsRunning(e)) Then
+                Await _mainVm.ShowMessageAsync(featureName, LocalizationService.T("Diese Datei wird gerade schon heruntergeladen"))
+                Return False
+            End If
+            ' Ohne Laufzeit liesse sich die Datei holen, aber nichts koennte sie ausfuehren.
+            If Not AiModelService.RuntimeAvailable OrElse missing.Any(Function(e) e Is Nothing) Then
+                Await _mainVm.ShowMessageAsync(featureName,
+                    LocalizationService.T("Die Laufzeit für die Modelle steht auf diesem Gerät nicht bereit. Die Funktion lässt sich deshalb nicht verwenden."))
+                Return False
+            End If
+
+            _modelRequestRunning = True
+            Try
+                Dim bytesTotal = missing.Sum(Function(e) e.Bytes)
+                Dim sizeText = (bytesTotal / 1048576.0).ToString("F0", Globalization.CultureInfo.CurrentCulture) & " MiB"
+                Dim message = String.Format(
+                    LocalizationService.T("{0} braucht eine Modelldatei, die noch nicht heruntergeladen ist ({1}). Soll sie jetzt heruntergeladen werden?"),
+                    featureName, sizeText)
+                ' Die Bedingung des Gesichtsvergleichs gehoert in DIESELBE Frage, aus demselben Grund
+                ' wie bei FetchModelGroupAsync: gefragt wird vor dem Zug ins Netz.
+                If missing.Any(Function(e) e.NonCommercialOnly) Then
+                    message &= Environment.NewLine & Environment.NewLine &
+                        LocalizationService.T("ArcFace ResNet100 wird aus dem ONNX Model Zoo auf Hugging Face heruntergeladen. Die vortrainierten Gewichte stammen laut InsightFace aus Daten, die nur für nicht-kommerzielle Forschung freigegeben sind. Bei kommerzieller Nutzung von FerrumPix darf das Modell nicht heruntergeladen oder verwendet werden; die übrigen Funktionen bleiben verfügbar.")
+                End If
+                ' Frage, Grafikkarte, Fortschritt und Ergebnis stehen in EINEM Dialog, der bis zum
+                ' Ende offen bleibt (MainWindowViewModel.ShowModelDownloadDialogAsync). Er ist modal:
+                ' waehrenddessen aendert sich nichts, und der Aufrufer darf danach weitermachen.
+                If Not Await _mainVm.ShowModelDownloadDialogAsync(featureName, message, missing) Then Return False
+                Return missing.All(Function(e) Not String.IsNullOrEmpty(AiModelService.BestFile(e.Key)))
+            Finally
+                _modelRequestRunning = False
+            End Try
+        End Function
+
+        ''' <summary>Holt die Dateien fuer den Dialog "Modell herunterladen". Liefert Nothing bei
+        ''' Erfolg, sonst den Grund, schon uebersetzt.</summary>
+        ''' <param name="progress">Bekommt den Gesamtanteil von 0 bis 1.</param>
+        Public Async Function DownloadModelEntriesAsync(entries As IList(Of AiModelService.ModelEntry),
+                                                        progress As Action(Of Double),
+                                                        cancel As System.Threading.CancellationToken) As Task(Of String)
+            Dim bytesTotal = entries.Sum(Function(e) e.Bytes)
+            Dim failure As String = Nothing
+            Try
+                Dim done As Long = 0
+                For Each entry In entries
+                    Dim thisEntry = entry
+                    Dim before = done
+                    Dim notifier = New Progress(Of Double)(
+                        Sub(share)
+                            If bytesTotal > 0 Then progress?.Invoke(Math.Min(1.0, (before + share * thisEntry.Bytes) / bytesTotal))
+                        End Sub)
+                    Dim result = Await ModelDownloadService.FetchAsync(thisEntry, notifier, cancel)
+                    Select Case result
+                        Case ModelDownloadService.Result.Done, ModelDownloadService.Result.AlreadyPresent
+                            done += thisEntry.Bytes
+                        Case ModelDownloadService.Result.ChecksumMismatch
+                            failure = LocalizationService.T("Die geladene Datei stimmt nicht mit der erwarteten überein und wurde verworfen")
+                        Case ModelDownloadService.Result.Cancelled
+                            failure = LocalizationService.T("Abgebrochen")
+                        Case ModelDownloadService.Result.AlreadyRunning
+                            failure = LocalizationService.T("Diese Datei wird gerade schon heruntergeladen")
+                        Case Else
+                            failure = LocalizationService.T("Das Herunterladen ist fehlgeschlagen")
+                    End Select
+                    If failure IsNot Nothing Then Exit For
+                Next
+            Finally
+                ' Den Bestand in den Einstellungen nachziehen. Gesucht wird erst JETZT: nach einem
+                ' Sprachwechsel waeren es andere Gruppenobjekte als vorher.
+                For Each g In ModelGroups
+                    g.RaiseStateChanged()
+                Next
+            End Try
+            Return failure
+        End Function
+
+        ''' <summary>Die Grafikbeschleunigung einschalten, nachdem der Dialog "Modell herunterladen"
+        ''' sie geprueft hat. Ueber die Eigenschaft, damit Schalter und Statustext folgen; die Probe
+        ''' ist dann schon gelaufen, und der Schalter stoesst keine zweite an.</summary>
+        Public Sub EnableGpuAccelerationAfterProbe()
+            GpuAccelerationEnabled = True
+            Me.RaisePropertyChanged(NameOf(GpuAccelerationStatusText))
+        End Sub
 
     End Class
 

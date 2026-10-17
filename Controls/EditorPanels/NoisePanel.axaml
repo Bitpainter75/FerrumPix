@@ -96,7 +96,7 @@
                      Regler, weil man in dieser Reihenfolge vorgeht: messen, nachstellen, rechnen. -->
                 <Button Classes="ghost" HorizontalAlignment="Stretch" Padding="10,6"
                         Margin="0,10,0,0"
-                        IsEnabled="{Binding CanDenoiseWithAnyModel}"
+                        IsEnabled="{Binding CanRequestModels}"
                         Command="{Binding MeasureDenoiseStrengthCommand}"
                         ToolTip.ShowOnDisabled="True"
                         ToolTip.Tip="Misst das Rauschen im Bild und stellt die Stärke so ein, dass etwa so viel Korn bleibt wie bei einer sauberen Aufnahme mit niedrigem ISO. Entrauscht wird erst mit einem der Knöpfe darunter.">
@@ -116,7 +116,7 @@
                      und vor dem Druck eingestellt wird - danach laeuft die Rechnung minutenlang. Sie
                      wirkt nur auf die Helligkeit; die Farbe kommt immer voll aus dem Modell. -->
                 <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center"
-                      IsEnabled="{Binding CanDenoiseWithAnyModel}">
+                      IsEnabled="{Binding CanRequestModels}">
                     <TextBlock Text="Stärke" Foreground="{DynamicResource FP.Text.Secondary}"
                                VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap"
                                ToolTip.Tip="Wie stark die Helligkeit entrauscht wird. Niedriger lässt mehr feine Zeichnung stehen, höher nimmt mehr Korn. Die Farbe wird immer voll entrauscht, das kostet keine Zeichnung. Gilt für den nächsten Druck auf einen der beiden Knöpfe." />
@@ -131,7 +131,7 @@
                                              Value="{Binding DenoiseStrength, Mode=TwoWay}" Minimum="0" Maximum="100" />
                 </Grid>
                 <Button Classes="ghost" HorizontalAlignment="Stretch" Padding="10,6"
-                        IsEnabled="{Binding CanDenoiseWithModel}"
+                        IsEnabled="{Binding CanRequestModels}"
                         Command="{Binding DenoiseWithModelCommand}"
                         ToolTip.Tip="{Binding DenoiseWithModelHint}" ToolTip.ShowOnDisabled="True">
                     <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
@@ -141,7 +141,7 @@
                     </StackPanel>
                 </Button>
                 <Button Classes="ghost" HorizontalAlignment="Stretch" Padding="10,6"
-                        IsEnabled="{Binding CanDenoiseFast}"
+                        IsEnabled="{Binding CanRequestModels}"
                         Command="{Binding DenoiseFastCommand}"
                         ToolTip.Tip="{Binding DenoiseFastHint}" ToolTip.ShowOnDisabled="True">
                     <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">

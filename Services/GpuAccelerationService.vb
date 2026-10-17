@@ -48,9 +48,11 @@ Namespace Services
         ''' zwei verschiedene Dinge: die Karte wird ueber die Geraeteliste des Systems gefunden,
         ''' auch wenn kein brauchbarer Treiber dahintersteht. Erst der Versuch, wirklich ein Modell
         ''' zu laden, beantwortet die zweite Frage.</summary>
+        ''' Dass gerade geprobt wird, ist KEIN Wert hiervon (siehe _probeRunning): bis zum Ergebnis
+        ''' gilt der letzte gueltige Stand weiter, sonst gaebe eine laufende Probe eine als
+        ''' untauglich bekannte Karte schon frei.
         Public Enum ProbeResult
             Untested = 0
-            Running = 1
             Works = 2
             Failed = 3
         End Enum
@@ -87,6 +89,13 @@ Namespace Services
         Private Shared _libraryMissing As Boolean = False
         Private Shared _setupError As String = ""
         Private Shared _probe As ProbeResult = ProbeResult.Untested
+        ''' Laeuft gerade eine Probe? Getrennt vom Stand, siehe ProbeResult.
+        Private Shared _probeRunning As Boolean
+        ''' Warum die LETZTE Probe ohne Ergebnis blieb, sonst leer. Ein Hinweis, kein Stand: der
+        ''' bisherige Stand bleibt, aber der Benutzer soll sehen, dass die Pruefung nichts belegt hat.
+        Private Shared _probeNote As String = ""
+        ''' Zu welcher Karte der Hinweis gehoert. Er erscheint nur bei ihr.
+        Private Shared _probeNoteKey As String = ""
         Private Shared _probeError As String = ""
 
         ''' <summary>Steht eine Karte bereit, die die Laufzeit ansprechen kann?</summary>
@@ -233,12 +242,83 @@ Namespace Services
             End Get
         End Property
 
-        ''' <summary>Der Stand der echten Probe.</summary>
+        ''' <summary>Der Stand der echten Probe. Ist in diesem Programmlauf noch nicht geprobt worden,
+        ''' gilt, was fuer diese Karte gemerkt ist (AppSettings.GpuProbeResults).</summary>
         Public Shared ReadOnly Property ProbeState As ProbeResult
             Get
+                If _probe = ProbeResult.Untested Then RestoreRememberedProbe()
                 Return _probe
             End Get
         End Property
+
+        ''' <summary>Den gemerkten Ausgang der Probe fuer die aktive Karte holen. Bleibt Untested, wenn
+        ''' fuer sie noch nichts gemerkt ist.</summary>
+        Private Shared Sub RestoreRememberedProbe()
+            ' Unter dem Schloss des Kartenwechsels, aus demselben Grund wie in NoteProbe: Karte
+            ' lesen und Stand setzen gehoeren zusammen.
+            SyncLock _lock
+                Dim key = _active?.Key
+                If String.IsNullOrEmpty(key) OrElse _probe <> ProbeResult.Untested Then Return
+                Dim stored As String = Nothing
+                Try
+                    Dim results = AppSettingsService.Load().GpuProbeResults
+                    If results Is Nothing OrElse Not results.TryGetValue(key, stored) Then Return
+                Catch
+                    Return
+                End Try
+                If String.Equals(stored, "works", StringComparison.Ordinal) Then
+                    _probe = ProbeResult.Works
+                    _probeError = ""
+                ElseIf stored IsNot Nothing AndAlso stored.StartsWith("failed", StringComparison.Ordinal) Then
+                    _probe = ProbeResult.Failed
+                    _probeError = If(stored.Length > 7, stored.Substring(7), "")
+                End If
+            End SyncLock
+        End Sub
+
+        Private Shared Sub RememberProbe(deviceKey As String, result As String)
+            If String.IsNullOrEmpty(deviceKey) Then Return
+            Try
+                AppSettingsService.SaveGpuProbeResult(deviceKey, result)
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Grafik.RememberProbe", ex)
+            End Try
+        End Sub
+
+        ''' <summary>Warum die letzte Probe ohne Ergebnis blieb, schon uebersetzt; sonst leer.</summary>
+        Public Shared ReadOnly Property ProbeNote As String
+            Get
+                SyncLock _lock
+                    If Not String.Equals(_probeNoteKey, _active?.Key, StringComparison.Ordinal) Then Return ""
+                    Return _probeNote
+                End SyncLock
+            End Get
+        End Property
+
+        Private Shared Sub SetProbeNote(deviceKey As String, note As String)
+            SyncLock _lock
+                _probeNote = If(note, "")
+                _probeNoteKey = If(deviceKey, "")
+            End SyncLock
+        End Sub
+
+        ''' <summary>Ist diese Karte als untauglich bekannt, im Speicher (aktive Karte) oder gemerkt?</summary>
+        Public Shared Function IsCardKnownFailed(deviceKey As String) As Boolean
+            If String.IsNullOrEmpty(deviceKey) Then Return False
+            SyncLock _lock
+                If String.Equals(deviceKey, _active?.Key, StringComparison.Ordinal) AndAlso _probe <> ProbeResult.Untested Then
+                    Return _probe = ProbeResult.Failed
+                End If
+                Try
+                    Dim stored As String = Nothing
+                    Dim results = AppSettingsService.Load().GpuProbeResults
+                    Return results IsNot Nothing AndAlso results.TryGetValue(deviceKey, stored) AndAlso
+                           stored IsNot Nothing AndAlso stored.StartsWith("failed", StringComparison.Ordinal)
+                Catch
+                    Return False
+                End Try
+            End SyncLock
+        End Function
 
         ''' <summary>Woran die Probe gescheitert ist, sonst leer.</summary>
         Public Shared ReadOnly Property ProbeError As String
@@ -258,12 +338,21 @@ Namespace Services
             End Get
         End Property
 
-        ''' <summary>Soll das naechste Modell auf der Karte laufen? Beides muss stimmen:
-        ''' eingeschaltet UND vorhanden. Ob das jeweilige MODELL darf, entscheidet
-        ''' <see cref="AiModelService.IsGpuAllowed"/>.</summary>
+        ''' <summary>Soll das naechste Modell auf der Karte laufen? Eingeschaltet, vorhanden, und die
+        ''' Karte ist nicht als untauglich bekannt. Ob das jeweilige MODELL darf, entscheidet
+        ''' <see cref="AiModelService.IsGpuAllowed"/>.
+        '''
+        ''' DER GEMERKTE FEHLER ZAEHLT MIT. Ohne ihn baute jeder Modellzugriff nach einem
+        ''' gescheiterten Anhaengen erneut: die Prozessor-Sitzung passte nicht zum gewuenschten
+        ''' Geraet, und mit dem Neuaufbau wurde auch die Karte wieder versucht, bei jeder Nutzung.
+        ''' Freigegeben wird sie durch eine neue Probe (Knopf "Pruefen" in den Einstellungen).
+        '''
+        ''' Gefragt wird VOR jedem Schloss in AiModelService (siehe LoadSession); ProbeState nimmt
+        ''' das Schloss dieses Dienstes, und ein Rueckweg in umgekehrter Reihenfolge waere die
+        ''' Verklemmung aus FALLEN_UND_ENTSCHEIDUNGEN.</summary>
         Public Shared ReadOnly Property ShouldUse As Boolean
             Get
-                Return Enabled AndAlso Available
+                Return Enabled AndAlso Available AndAlso ProbeState <> ProbeResult.Failed
             End Get
         End Property
 
@@ -282,7 +371,17 @@ Namespace Services
         ''' Schluessel aus derselben Aufnahme zurueckgegeben. Was danach gewaehlt wird, betrifft
         ''' erst die naechste Sitzung.</summary>
         Public Shared Function TryApply(options As SessionOptions, ByRef deviceKey As String) As Boolean
+            Dim attempted As String = ""
+            Return TryApply(options, deviceKey, attempted)
+        End Function
+
+        ''' <summary>Wie oben, und <paramref name="attemptedKey"/> nennt die Karte, an die
+        ''' angehaengt werden SOLLTE, auch wenn das Anhaengen scheitert. Die Probe braucht das: ihr
+        ''' Scheitern gehoert zu dieser Karte und soll dort gemerkt werden, sonst gaelte sie nach
+        ''' einem Neustart wieder als ungeprueft und wuerde erneut angeboten.</summary>
+        Public Shared Function TryApply(options As SessionOptions, ByRef deviceKey As String, ByRef attemptedKey As String) As Boolean
             deviceKey = ""
+            attemptedKey = ""
             If options Is Nothing Then Return False
             EnsureActive()
             Dim devices As List(Of OrtEpDevice)
@@ -292,6 +391,7 @@ Namespace Services
                 devices = New List(Of OrtEpDevice)(_devices)
                 applied = _active.Key
             End SyncLock
+            attemptedKey = applied
             Try
                 options.AppendExecutionProvider(OrtEnv.Instance(), devices, New Dictionary(Of String, String)())
                 deviceKey = applied
@@ -303,17 +403,41 @@ Namespace Services
         End Function
 
         ''' <summary>Ein Modell ist wirklich auf der Karte angelaufen.</summary>
-        Public Shared Sub NoteSuccess()
-            _probe = ProbeResult.Works
-            _probeError = ""
+        ''' <param name="deviceKey">Die Karte, an die die Sitzung WIRKLICH gehaengt wurde (aus
+        ''' <see cref="TryApply"/>), nicht die gerade aktive. Zwischen Anhaengen und Ergebnis kann
+        ''' in den Einstellungen eine andere gewaehlt worden sein; das Ergebnis gehoerte sonst
+        ''' dauerhaft zur falschen.</param>
+        Public Shared Sub NoteSuccess(deviceKey As String)
+            NoteProbe(deviceKey, ProbeResult.Works, "")
         End Sub
 
         ''' <summary>Ein Modell ist auf der Karte NICHT angelaufen. Der Text ist die Meldung der
         ''' Laufzeit; sie wird gekuerzt, weil sie mehrere Zeilen Dateipfade aus dem Bauverzeichnis
         ''' der Laufzeit mitbringt, die niemandem helfen.</summary>
-        Public Shared Sub NoteFailure(message As String)
-            _probe = ProbeResult.Failed
-            _probeError = ShortMessage(message)
+        Public Shared Sub NoteFailure(deviceKey As String, message As String)
+            NoteProbe(deviceKey, ProbeResult.Failed, ShortMessage(message))
+        End Sub
+
+        ''' <summary>Merken immer unter der Karte, auf der geprobt wurde. Der Stand im Speicher
+        ''' gilt dagegen der AKTIVEN Karte und wird nur gesetzt, wenn es dieselbe ist.
+        '''
+        ''' Vergleich und Setzen stehen unter DEMSELBEN Schloss wie der Kartenwechsel
+        ''' (EnsureActive): wechselte die Karte genau dazwischen, bekaeme die neue den Stand der
+        ''' alten.</summary>
+        Private Shared Sub NoteProbe(deviceKey As String, result As ProbeResult, message As String)
+            ' Speichern und Setzen in EINER Reihenfolge: liefen zwei Sitzungsaufbauten auf derselben
+            ' Karte gleichzeitig zu Ende, stuende sonst im Programm "laeuft" und in der Datei
+            ' "gescheitert", und nach dem Neustart gaelte die Datei.
+            ' OHNE KARTE gehoert der Fehler keiner: gescheitert, bevor eine angehaengt werden sollte
+            ' (etwa beim Anlegen der Optionen). Er darf dann auch nicht bei der gerade aktiven landen,
+            ' die womoeglich eine andere ist. Das "Pruefung laeuft" der Probe loest Probe selbst auf.
+            If String.IsNullOrEmpty(deviceKey) Then Return
+            SyncLock _lock
+                RememberProbe(deviceKey, If(result = ProbeResult.Works, "works", "failed:" & message))
+                If Not String.Equals(deviceKey, _active?.Key, StringComparison.Ordinal) Then Return
+                _probe = result
+                _probeError = message
+            End SyncLock
         End Sub
 
         ''' <summary>Die Meldung auf das kuerzen, was einen Menschen angeht: den Satz hinter den
@@ -327,75 +451,179 @@ Namespace Services
             Return text.Trim()
         End Function
 
+        ''' <summary>Proben laufen NACHEINANDER. Einstellungen und Modelldialog starten sie
+        ''' unabhaengig; parallel teilten sie sich Laufmarkierung und Stand, die erste fertige setzte
+        ''' die Markierung der anderen zurueck, und eine konnte das Ergebnis der anderen zurueckgeben.
+        ''' Wer wartet, probt danach selbst und bekommt SEIN Ergebnis.</summary>
+        Private Shared ReadOnly _probeGate As New Object()
+
         ''' <summary>Wirklich nachsehen, ob ein Modell auf der Karte laeuft.
         '''
-        ''' Dafuer wird die kleinste vorhandene Modelldatei genommen und eine Sitzung damit gebaut -
-        ''' der Punkt, an dem die Laufzeit die Karte tatsaechlich anfordert. Die Sitzung wird sofort
-        ''' wieder geschlossen; sie soll nichts, ausser die Frage zu beantworten. GERECHNET wird
-        ''' dabei nichts: welches Modell auf der Karte rechnen darf, steht in der Positivliste, und
-        ''' fuer die Frage nach dem Treiber ist gleichgueltig, welche Datei dafuer herhaelt.
+        ''' Dafuer wird die kleinste vorhandene freigegebene Modelldatei genommen und eine Sitzung
+        ''' damit gebaut - der Punkt, an dem die Laufzeit die Karte tatsaechlich anfordert. Die
+        ''' Sitzung wird sofort wieder geschlossen; sie soll nichts, ausser die Frage zu beantworten.
+        ''' GERECHNET wird dabei nichts.
+        '''
+        ''' KARTE UND MODELL SIND ZWEI FEHLER, wie beim normalen Modellaufbau. Scheitert das
+        ''' Anhaengen, taugt die Karte nicht. Scheitert nach erfolgreichem Anhaengen die Sitzung,
+        ''' kann es am Modell liegen (beschaedigte Datei, Speicher reicht gerade fuer dieses nicht):
+        ''' dann wird nur dieses Modell auf dieser Karte gesperrt und das naechste versucht. Laeuft
+        ''' keines an, belegt auch das KEINEN Kartenfehler (es kann das einzige vorhandene Modell
+        ''' sein, und dessen Datei beschaedigt): die Probe endet ohne Ergebnis und aendert nichts.
+        ''' Laeuft eines an, wird seine Sperre aufgehoben, denn die Probe hat es gerade bestaetigt.
+        '''
+        ''' ALLE VERSUCHE GEHOEREN EINER KARTE, der des ersten Anhaengens. Wird waehrend der Probe
+        ''' umgewaehlt und haengt ein spaeterer Versuch an einer anderen an, endet die Probe ohne
+        ''' Ergebnis, statt Versuche zweier Karten zu einem Urteil zu vermischen.
         '''
         ''' Ist keine Modelldatei da, bleibt die Frage offen: ohne Modell gibt es auch nichts zu
         ''' beschleunigen.
         '''
         ''' Braucht Zeit - gehoert also NICHT auf den Oberflaechenfaden.</summary>
+        ''' <returns>Das Ergebnis DIESER Probe, nicht der gemeinsame Stand.</returns>
         Public Shared Function Probe() As ProbeResult
-            EnsureActive()
-            If _devices.Count = 0 Then
-                _probe = ProbeResult.Failed
-                _probeError = ""
-                Return _probe
-            End If
-
-            Dim file = SmallestModelFile()
-            If String.IsNullOrEmpty(file) Then
-                _probe = ProbeResult.Untested
-                _probeError = ""
-                Return _probe
-            End If
-
-            _probe = ProbeResult.Running
-            Try
-                Using options = New SessionOptions()
-                    options.LogSeverityLevel = OrtLoggingLevel.ORT_LOGGING_LEVEL_ERROR
-                    Dim probedOn As String = ""
-                    If Not TryApply(options, probedOn) Then
-                        _probe = ProbeResult.Failed
-                        _probeError = ""
-                        Return _probe
-                    End If
-                    Using session = New InferenceSession(file, options)
-                    End Using
-                End Using
-                NoteSuccess()
-                DiagnosticLogService.LogAlways("Grafik", $"Probe bestanden auf {VendorName} {DeviceName} ({BackendName})")
-            Catch ex As Exception
-                NoteFailure(ex.Message)
-                DiagnosticLogService.LogAlways("Grafik", $"Probe gescheitert: {_probeError}")
-            End Try
-            Return _probe
+            SyncLock _probeGate
+                Return ProbeCore()
+            End SyncLock
         End Function
 
-        ''' <summary>Die kleinste Modelldatei, die vorliegt - die Probe soll den Rechner nicht
-        ''' minutenlang beschaeftigen. Die Ortstabelle faellt heraus, sie ist kein Modell.</summary>
+        Private Shared Function ProbeCore() As ProbeResult
+            EnsureActive()
+            ' Jede neue Probe loescht den Hinweis der vorigen, auch wenn sie gleich wieder umkehrt.
+            SetProbeNote("", "")
+            If _devices.Count = 0 Then
+                SyncLock _lock
+                    _probe = ProbeResult.Failed
+                    _probeError = ""
+                End SyncLock
+                Return ProbeResult.Failed
+            End If
+
+            Dim files = ProbeModelFiles()
+            If files.Count = 0 Then
+                SyncLock _lock
+                    _probe = ProbeResult.Untested
+                    _probeError = ""
+                End SyncLock
+                Return ProbeResult.Untested
+            End If
+
+            ' Der Stand bleibt bis zum Ergebnis, was er war; nur die Markierung sagt, dass geprobt wird.
+            _probeRunning = True
+            ' Fuer welche Karte diese Probe laeuft. Scheitert sie, bevor eine Karte feststeht, gilt
+            ' ihr Scheitern nur fuer DIESE (ResolveProbeWithoutCard).
+            Dim startedFor = ActiveDeviceKey
+            Try
+                Dim lastModelError = ""
+                Dim attachedOn = ""
+                For Each file In files
+                    ' Vor dem Try: auch das Scheitern gehoert zu der Karte, auf der geprobt wurde.
+                    ' Scheitert schon das Anhaengen, ist das die Karte, an die angehaengt werden SOLLTE.
+                    Dim probedOn As String = ""
+                    Dim attemptedOn As String = ""
+                    Try
+                        Using options = New SessionOptions()
+                            options.LogSeverityLevel = OrtLoggingLevel.ORT_LOGGING_LEVEL_ERROR
+                            If Not TryApply(options, probedOn, attemptedOn) Then
+                                ' Das Anhaengen selbst: ein Fehler der KARTE.
+                                If attemptedOn.Length > 0 Then
+                                    NoteFailure(attemptedOn, "")
+                                Else
+                                    ResolveProbeWithoutCard(startedFor, "")
+                                End If
+                                Return ProbeResult.Failed
+                            End If
+                            If attachedOn.Length > 0 AndAlso Not String.Equals(attachedOn, probedOn, StringComparison.Ordinal) Then
+                                DiagnosticLogService.LogAlways("Grafik", "Probe abgebrochen: waehrend der Probe wurde eine andere Karte gewaehlt")
+                                SetProbeNote(startedFor, LocalizationService.T("Die letzte Prüfung blieb ohne Ergebnis, weil währenddessen eine andere Karte gewählt wurde."))
+                                Return ProbeResult.Untested
+                            End If
+                            attachedOn = probedOn
+                            Using session = New InferenceSession(file, options)
+                            End Using
+                        End Using
+                        AiModelService.ClearGpuFailedModel(Path.GetFileName(file), probedOn)
+                        NoteSuccess(probedOn)
+                        DiagnosticLogService.LogAlways("Grafik", $"Probe bestanden auf {VendorName} {DeviceName} ({BackendName}) mit {Path.GetFileName(file)}")
+                        Return ProbeResult.Works
+                    Catch ex As Exception
+                        If probedOn.Length = 0 Then
+                            ' Gescheitert, bevor eine Karte angehaengt war (etwa beim Anlegen der
+                            ' Optionen): keiner Karte zuzuordnen.
+                            Dim key = attemptedOn
+                            If key.Length > 0 Then
+                                NoteFailure(key, ex.Message)
+                            Else
+                                ResolveProbeWithoutCard(startedFor, ShortMessage(ex.Message))
+                            End If
+                            DiagnosticLogService.LogAlways("Grafik", $"Probe gescheitert: {ShortMessage(ex.Message)}")
+                            Return ProbeResult.Failed
+                        End If
+                        ' Angehaengt, aber die Sitzung mit DIESEM Modell scheiterte: nur das Modell
+                        ' sperren und das naechste versuchen. Laeuft das Modell aber schon auf dieser
+                        ' Karte, belegt ein Fehlschlag der ZUSAETZLICHEN Probesitzung nichts gegen es
+                        ' (der Speicher kann von der laufenden belegt sein), und die laufende Sitzung
+                        ' bliebe sonst beim naechsten Zugriff auf der Strecke.
+                        lastModelError = ShortMessage(ex.Message)
+                        AiModelService.NoteGpuFailedModelUnlessRunning(Path.GetFileName(file), probedOn)
+                        DiagnosticLogService.LogAlways("Grafik",
+                            $"Probe mit {Path.GetFileName(file)} gescheitert, naechstes Modell: {lastModelError}")
+                    End Try
+                Next
+                ' Kein Modell lief, obwohl die Karte jedes Mal angehaengt war. Das liegt an den
+                ' Modellen oder ist ungeklaert, ein Kartenfehler ist es nicht belegt: nichts aendern.
+                DiagnosticLogService.LogAlways("Grafik", $"Probe ohne Ergebnis, kein Modell lief auf der Karte: {lastModelError}")
+                SetProbeNote(attachedOn, LocalizationService.T("Die letzte Prüfung blieb ohne Ergebnis: auf der Karte lief keines der vorhandenen Modelle an. Das muss nicht an der Karte liegen."))
+                Return ProbeResult.Untested
+            Finally
+                _probeRunning = False
+            End Try
+        End Function
+
+        ''' <summary>Die Probe ist gescheitert, bevor eine Karte feststand. Das gilt als ihr Ergebnis,
+        ''' aber nur, wenn die Karte, fuer die sie gestartet wurde, noch die aktive ist; sonst bleibt
+        ''' der Stand der neuen, wie er ist. Gemerkt wird nichts: ohne Karte gibt es keinen
+        ''' Schluessel, unter dem es stehen koennte.</summary>
+        Private Shared Sub ResolveProbeWithoutCard(startedFor As String, message As String)
+            SyncLock _lock
+                If Not _probeRunning Then Return
+                If Not String.Equals(startedFor, _active?.Key, StringComparison.Ordinal) Then Return
+                _probe = ProbeResult.Failed
+                _probeError = message
+            End SyncLock
+        End Sub
+
+        ''' <summary>Die kleinste Modelldatei, die vorliegt UND auf der Karte rechnen darf - die Probe
+        ''' soll den Rechner nicht minutenlang beschaeftigen. Die Ortstabelle faellt heraus, sie ist
+        ''' kein Modell. Ein Modell ausserhalb der Positivliste (GpuAllowed) wird NIE auf die Karte
+        ''' gegeben, auch nicht zur Probe: der MobileSAM-Dekodierer etwa ist ausdruecklich nicht
+        ''' freigegeben, und lagen nur die beiden Dateien der Objektauswahl vor, war er die kleinste.</summary>
         Private Shared Function SmallestModelFile() As String
+            Dim files = ProbeModelFiles()
+            Return If(files.Count > 0, files(0), "")
+        End Function
+
+        ''' <summary>Alle vorhandenen freigegebenen Modelldateien, kleinste zuerst. Die Probe geht sie
+        ''' der Reihe nach durch, falls eine an sich selbst scheitert.</summary>
+        Private Shared Function ProbeModelFiles() As List(Of String)
+            Dim result As New List(Of String)()
             Try
                 For Each entry In AiModelService.KnownEntries.
-                        Where(Function(e) e.FileName.EndsWith(".onnx", StringComparison.OrdinalIgnoreCase)).
+                        Where(Function(e) e.FileName.EndsWith(".onnx", StringComparison.OrdinalIgnoreCase) AndAlso e.GpuAllowed).
                         OrderBy(Function(e) e.Bytes)
                     Dim fileName = AiModelService.BestFile(entry.Key)
                     If String.IsNullOrEmpty(fileName) Then Continue For
                     Dim path = AiModelService.ModelPath(fileName)
-                    If Not String.IsNullOrEmpty(path) Then Return path
+                    If Not String.IsNullOrEmpty(path) Then result.Add(path)
                 Next
             Catch ex As Exception
                 ' Ohne Spur waere hinterher nicht zu unterscheiden, ob keine Modelldatei vorliegt
                 ' oder ob das Nachsehen selbst gescheitert ist - und die Probe meldete beides als
                 ' "ungeprueft".
                 DiagnosticLogService.LogAlways("Grafik",
-                    $"kleinste Modelldatei laesst sich nicht bestimmen: {ex.Message}")
+                    $"Modelldateien fuer die Probe lassen sich nicht bestimmen: {ex.Message}")
             End Try
-            Return ""
+            Return result
         End Function
 
         ''' <summary>Welche Karte hat der Benutzer gewaehlt? Leer heisst "such dir eine aus".</summary>
@@ -435,9 +663,11 @@ Namespace Services
                 _active = _infos(index)
                 _devices = New List(Of OrtEpDevice) From {_found(index)}
                 If previousKey <> _active.Key Then
-                    ' Andere Karte, alte Probe wertlos.
+                    ' Andere Karte, alte Probe wertlos, und ihr Hinweis mit ihr.
                     _probe = ProbeResult.Untested
                     _probeError = ""
+                    _probeNote = ""
+                    _probeNoteKey = ""
                     DiagnosticLogService.LogAlways("Grafik",
                         $"benutzt {_active.VendorName} {_active.DeviceName} {_active.DeviceIdText}")
                 End If

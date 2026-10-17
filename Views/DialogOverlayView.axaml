@@ -442,6 +442,36 @@
                                       ToolTip.Tip="JPEG-Dateien werden ohne jeden Verlust umgepackt statt neu kodiert: rund ein Fünftel kleiner, und das Original lässt sich Byte für Byte zurückholen. Die Qualität oben gilt dann nur für die übrigen Bilder. Ist ein Urheberhinweis gesetzt oder EXIF unter Übernehmen abgewählt, wird neu kodiert."/>
                         </StackPanel>
 
+                        <!-- MODELL HERUNTERLADEN: Frage, Grafikkarte, Fortschritt und Ergebnis in einem
+                             Dialog, der bis zum Ergebnis offen bleibt
+                             (MainWindowViewModelModelDownload.vb). Die Grafikkarte steht nur da,
+                             wenn sie angeboten wird; der Haken laesst sich nur beim Fragen umlegen. -->
+                        <StackPanel Grid.Row="3"
+                                    Margin="0,16,0,0"
+                                    Spacing="10"
+                                    IsVisible="{Binding DialogShowsModelDownload}">
+                            <StackPanel Spacing="4" IsVisible="{Binding DialogModelOfferGpu}">
+                                <CheckBox Content="Grafikbeschleunigung einschalten"
+                                          IsChecked="{Binding DialogModelUseGpu, Mode=TwoWay}"
+                                          IsEnabled="{Binding IsDialogModelAsking}"
+                                          ToolTip.Tip="Das Modell rechnet dann auf der Grafikkarte, meist um ein Vielfaches schneller. Vorher wird geprüft, ob es dort wirklich läuft; sonst bleibt es beim Prozessor."/>
+                                <TextBlock Classes="no-translate"
+                                           Text="{Binding DialogModelGpuText}"
+                                           Foreground="{DynamicResource FP.Text.Secondary}"
+                                           FontSize="{DynamicResource FP.Font.Small}"
+                                           TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <ProgressBar Minimum="0" Maximum="1" Height="4"
+                                         Value="{Binding DialogModelProgress}"
+                                         IsVisible="{Binding !IsDialogModelAsking}"/>
+                            <TextBlock Classes="no-translate"
+                                       Text="{Binding DialogModelStatus}"
+                                       IsVisible="{Binding HasDialogModelStatus}"
+                                       Foreground="{DynamicResource FP.Text.Secondary}"
+                                       FontSize="{DynamicResource FP.Font.Small}"
+                                       TextWrapping="Wrap"/>
+                        </StackPanel>
+
                         <views:BatchRenameDialogView Grid.Row="3"
                                                      Margin="0,16,0,0"
                                                      IsVisible="{Binding DialogShowsBatchRename}"/>

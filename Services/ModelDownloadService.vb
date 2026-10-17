@@ -13,7 +13,8 @@ Namespace Services
     ''' BEWUSST ein eigener Dienst, getrennt von KiModellService. Der darf nichts aus dem Netz holen
     ''' koennen, und ein Waechter haelt das fest - waere der Netzzugriff dort eingebaut, waere die
     ''' Zusage "laedt nie von selbst" nur noch ein Vorsatz. Hier gibt es Netzzugriff, und er hat
-    ''' genau einen Aufrufer: den Knopf in den Einstellungen.
+    ''' zwei Aufrufer, beide in SettingsViewModel: den Knopf in den Einstellungen und die Rueckfrage
+    ''' einer Funktion, deren Modell fehlt (RequestModelsAsync). Beide holen nur nach einem Ja.
     '''
     ''' Zwei Dinge, die nicht verhandelbar sind:
     '''
@@ -45,7 +46,33 @@ Namespace Services
             NetworkError
             ChecksumMismatch
             Cancelled
+            ''' <summary>Dieselbe Datei wird gerade schon geholt, ueber den anderen Weg.</summary>
+            AlreadyRunning
         End Enum
+
+        ''' <summary>Die Dateien, die gerade geholt werden. Beide Wege (Knopf in den Einstellungen
+        ''' und Rueckfrage einer Funktion) schreiben in dieselbe Nachbardatei; ein zweiter Lauf
+        ''' derselben Datei loeschte sie dem ersten unter den Fuessen weg oder liesse sich nicht
+        ''' oeffnen. Deshalb gilt die Sperre hier und nicht in einem der Aufrufer.</summary>
+        Private Shared ReadOnly _running As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
+        Private Shared ReadOnly _runningLock As New Object()
+
+        ''' <summary>Laeuft gerade irgendein Download? Solange, lassen sich die Einstellungen nicht
+        ''' verlassen (MainWindowViewModel.CurrentMode).</summary>
+        Public Shared ReadOnly Property AnyRunning As Boolean
+            Get
+                SyncLock _runningLock
+                    Return _running.Count > 0
+                End SyncLock
+            End Get
+        End Property
+
+        Public Shared Function IsRunning(entry As AiModelService.ModelEntry) As Boolean
+            If entry Is Nothing Then Return False
+            SyncLock _runningLock
+                Return _running.Contains(entry.FileName)
+            End SyncLock
+        End Function
 
         ''' <summary>Ein Modell holen. <paramref name="progress"/> bekommt 0 bis 1.</summary>
         Public Shared Async Function FetchAsync(entry As AiModelService.ModelEntry,
@@ -53,6 +80,21 @@ Namespace Services
                                                Optional cancel As CancellationToken = Nothing) As Task(Of Result)
             If entry Is Nothing Then Return Result.NetworkError
             If AiModelService.IsIntact(entry) Then Return Result.AlreadyPresent
+            SyncLock _runningLock
+                If Not _running.Add(entry.FileName) Then Return Result.AlreadyRunning
+            End SyncLock
+            Try
+                Return Await FetchCoreAsync(entry, progress, cancel)
+            Finally
+                SyncLock _runningLock
+                    _running.Remove(entry.FileName)
+                End SyncLock
+            End Try
+        End Function
+
+        Private Shared Async Function FetchCoreAsync(entry As AiModelService.ModelEntry,
+                                                     progress As IProgress(Of Double),
+                                                     cancel As CancellationToken) As Task(Of Result)
 
             Dim folder = AiModelService.ModelFolder
             Dim target = Path.Combine(folder, entry.FileName)

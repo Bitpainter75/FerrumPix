@@ -997,6 +997,16 @@ Namespace Views
                 Dim vm = TryCast(DataContext, MainWindowViewModel)
                 If vm Is Nothing Then Return
 
+                ' Waehrend ein Modell geladen oder ein Download abgebrochen wird, erreicht KEINE Taste
+                ' die Ansichten: hinter der Anzeige startete sonst STRG+R einen zweiten Ablauf, und X
+                ' verwuerfe Bilder. Steht dabei der Dialog "Modell herunterladen", bekommt er ESC und
+                ' RETURN wie jeder Dialog (Zweig darunter); sonst bricht ESC die Busy-Anzeige ab.
+                If vm.IsModalModelDownloadRunning AndAlso Not vm.IsDialogOpen Then
+                    If e.Key = Key.Escape Then vm.RequestBusyOverlayCancel()
+                    e.Handled = True
+                    Return
+                End If
+
                 If vm.IsDialogOpen Then
                     Select Case e.Key
                         Case Key.Escape

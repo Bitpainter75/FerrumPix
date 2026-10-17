@@ -744,7 +744,12 @@ Namespace ViewModels
         ''' Indexieren, der Benutzer darf ein einzelnes Bild jederzeit neu prüfen.</summary>
         Private Async Function AnalyzeAiTagsAsync() As Task
             Dim target = _path
-            If _isSummary OrElse String.IsNullOrWhiteSpace(target) OrElse Not ImageTaggingService.Available Then Return
+            Dim targetItem = _item
+            If _isSummary OrElse String.IsNullOrWhiteSpace(target) Then Return
+            ' Der Download ist modal: danach zeigt das Panel noch dasselbe Bild.
+            If Not Await ModelRequestService.RequestAsync(LocalizationService.T("Automatische Stichwörter"),
+                    {ImageTaggingService.ModelKey, ImageTaggingService.TagsKey, ImageTaggingService.ThresholdsKey}) Then Return
+            Me.RaisePropertyChanged(NameOf(AiTaggingAvailable))
 
             _isAiTagging = True
             _aiTaggingStatus = LocalizationService.T("Bild wird lokal analysiert…")
@@ -753,8 +758,8 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(CanAnalyzeAiTags))
             Try
                 Dim found As List(Of AiImageTag)
-                If _item IsNot Nothing AndAlso _item.IsRemoteAsset Then
-                    found = Await ServerAiTagRunner.AnalyzeItemAsync(_item, CancellationToken.None)
+                If targetItem IsNot Nothing AndAlso targetItem.IsRemoteAsset Then
+                    found = Await ServerAiTagRunner.AnalyzeItemAsync(targetItem, CancellationToken.None)
                 Else
                     found = Await Task.Run(Function() ImageTaggingService.TagFile(target))
                 End If
@@ -1126,7 +1131,8 @@ Namespace ViewModels
 
         Public ReadOnly Property CanAnalyzeAiTags As Boolean
             Get
-                Return AiTaggingAvailable AndAlso Not IsAiTagging AndAlso Not _isSummary AndAlso
+                ' Auch ohne geladenes Modell: das Analysieren fragt dann nach dem Download.
+                Return (AiTaggingAvailable OrElse AiModelService.RuntimeAvailable) AndAlso Not IsAiTagging AndAlso Not _isSummary AndAlso
                        Not String.IsNullOrWhiteSpace(_path)
             End Get
         End Property

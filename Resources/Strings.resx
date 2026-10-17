@@ -6279,9 +6279,6 @@
   <data name="Diese_Dateien_geh_ren_nicht_zur_Anwendung_und_we_ee5feb94" xml:space="preserve">
     <value>These files are not part of the application and are fetched only when you ask for them in the Models section. Without them the matching features are missing; everything else works unchanged.</value>
   </data>
-  <data name="Einige_Werkzeuge_brauchen_eine_Modelldatei_die_s_1b4a6355" xml:space="preserve">
-    <value>Some tools need a model file, which can be fetched here. What is not loaded does not appear in the editor either.</value>
-  </data>
   <data name="Entrauschen_gr_ndlich_1bc59b56" xml:space="preserve">
     <value>Denoising, thorough</value>
   </data>
@@ -9719,5 +9716,68 @@
   </data>
   <data name="Nebel_angewendet_658b6738" xml:space="preserve">
     <value>Fog applied</value>
+  </data>
+  <data name="Die_Laufzeit_f_r_die_Modelle_steht_auf_diesem_Ge_58ca4ab3" xml:space="preserve">
+    <value>The runtime for the models is not available on this device, so this function cannot be used.</value>
+  </data>
+  <data name="0_braucht_eine_Modelldatei_die_noch_nicht_herunt_1cfb7195" xml:space="preserve">
+    <value>{0} needs a model file that has not been downloaded yet ({1}). Download it now?</value>
+  </data>
+  <data name="Modell_herunterladen_952b29e0" xml:space="preserve">
+    <value>Download model</value>
+  </data>
+  <data name="Modell_wird_heruntergeladen_0_f772143f" xml:space="preserve">
+    <value>Downloading model: {0} %</value>
+  </data>
+  <data name="Modell_heruntergeladen_fb410604" xml:space="preserve">
+    <value>Model downloaded</value>
+  </data>
+  <data name="Daf_r_fehlt_eine_Modelldatei_Beim_ersten_Verwend_11860d49" xml:space="preserve">
+    <value>A model file is missing for this. On first use you will be asked whether to download it.</value>
+  </data>
+  <data name="KI_Modell_ist_noch_nicht_installiert_Beim_ersten_3ca371a9" xml:space="preserve">
+    <value>The AI model is not installed yet. On the first analysis you will be asked whether to download it.</value>
+  </data>
+  <data name="Maske_nach_Tiefe_4a92da70" xml:space="preserve">
+    <value>Mask by depth</value>
+  </data>
+  <data name="Diese_Datei_wird_gerade_schon_heruntergeladen_a800e688" xml:space="preserve">
+    <value>This file is already being downloaded</value>
+  </data>
+  <data name="Es_wird_noch_ein_Modell_heruntergeladen_Den_Down_6ef52508" xml:space="preserve">
+    <value>A model is still being downloaded. Cancel the download and close the settings?</value>
+  </data>
+  <data name="Download_abbrechen_5ba37006" xml:space="preserve">
+    <value>Cancel download</value>
+  </data>
+  <data name="Weiter_laden_078cf0e6" xml:space="preserve">
+    <value>Keep downloading</value>
+  </data>
+  <data name="Einige_Werkzeuge_brauchen_eine_Modelldatei_die_s_37f1034d" xml:space="preserve">
+    <value>Some tools need a model file that can be downloaded here. If it is missing, the tool asks to download it the first time you use it.</value>
+  </data>
+  <data name="Download_wird_abgebrochen_b2fc09e2" xml:space="preserve">
+    <value>Cancelling download…</value>
+  </data>
+  <data name="Grafikbeschleunigung_einschalten_5aeacc38" xml:space="preserve">
+    <value>Turn on graphics acceleration</value>
+  </data>
+  <data name="Das_Modell_rechnet_dann_auf_der_Grafikkarte_meis_4478e0e0" xml:space="preserve">
+    <value>The model then runs on the graphics card, usually several times faster. It is checked first whether it really runs there; otherwise the processor is used.</value>
+  </data>
+  <data name="Modell_heruntergeladen_Die_Grafikkarte_wird_gepr_80babefa" xml:space="preserve">
+    <value>Model downloaded. Checking the graphics card…</value>
+  </data>
+  <data name="Die_Grafikbeschleunigung_ist_eingeschaltet_47aebd73" xml:space="preserve">
+    <value>Graphics acceleration is on.</value>
+  </data>
+  <data name="Die_Grafikbeschleunigung_bleibt_aus_die_Modelle__4295679f" xml:space="preserve">
+    <value>Graphics acceleration stays off; the models run on the processor.</value>
+  </data>
+  <data name="Die_letzte_Pr_fung_blieb_ohne_Ergebnis_weil_w_hr_d364787b" xml:space="preserve">
+    <value>The last check gave no result because a different card was selected in the meantime.</value>
+  </data>
+  <data name="Die_letzte_Pr_fung_blieb_ohne_Ergebnis_auf_der_K_05a4726c" xml:space="preserve">
+    <value>The last check gave no result: none of the installed models started on the card. This is not necessarily the card's fault.</value>
   </data>
 </root>

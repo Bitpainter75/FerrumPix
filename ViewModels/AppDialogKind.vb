@@ -19,6 +19,9 @@ Namespace ViewModels
         SetPlace
         GpxTrack
         CaptureDate
+        ''' <summary>Modell herunterladen: Frage, Grafikkarte, Fortschritt und Ergebnis in einem
+        ''' Dialog (MainWindowViewModelModelDownload.vb).</summary>
+        ModelDownload
     End Enum
 
     ''' <summary>Was der Dialog "Aufnahmeort setzen" herausgibt: die Koordinate und, wenn bekannt,
@@ -64,6 +67,10 @@ Namespace ViewModels
     ''' einem Durchgang anbietet. Originale werden NIE überschrieben - es entstehen immer neue
     ''' Dateien (die Zielpfad-Bildung weicht vorhandenen Dateien aus).</summary>
     Public Class ExportToDialogResult
+        ''' <summary>Der Haken "gespeicherte Bearbeitung mitrechnen", festgehalten beim Bestaetigen.
+        ''' Er steht im Auftrag und nicht nur im Dialog: zwischen Bestaetigen und Lauf kann ein
+        ''' Modell geladen werden, und der Dialogwert gehoert dann womoeglich schon einem anderen.</summary>
+        Public Property ApplyPendingBaked As Boolean
         ''' <summary>Automatische Bildverbesserung: pro Bild messen und die Grundregler setzen.</summary>
         Public Property AutoEnhance As Boolean
         ''' <summary>"" = kein Look; sonst BatchFilterDialogResult.SourceFilter/SourceAdjustmentPreset/
@@ -197,6 +204,10 @@ Namespace ViewModels
     End Class
 
     Public Class BatchResizeResult
+        ''' <summary>Der Haken "gespeicherte Bearbeitung mitrechnen", festgehalten beim Bestaetigen.
+        ''' Er steht im Auftrag und nicht nur im Dialog: zwischen Bestaetigen und Lauf kann ein
+        ''' Modell geladen werden, und der Dialogwert gehoert dann womoeglich schon einem anderen.</summary>
+        Public Property ApplyPendingBaked As Boolean
         ''' <summary>Datei-Metadaten (EXIF/XMP) der Quelle in die Zieldatei uebernehmen -
         ''' der Knopf "EXIF" im Uebernehmen-Bereich des Dialogs.</summary>
         Public Property PreserveMetadata As Boolean = True

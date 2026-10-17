@@ -4,6 +4,10 @@ Namespace ViewModels
 
     ''' <summary>Auswahl aus dem Dialog "Filter anwenden" (Galerie, Stapelverarbeitung).</summary>
     Public Class BatchFilterDialogResult
+        ''' <summary>Der Haken "gespeicherte Bearbeitung mitrechnen", festgehalten beim Bestaetigen.
+        ''' Er steht im Auftrag und nicht nur im Dialog: zwischen Bestaetigen und Lauf kann ein
+        ''' Modell geladen werden, und der Dialogwert gehoert dann womoeglich schon einem anderen.</summary>
+        Public Property ApplyPendingBaked As Boolean
         ''' <summary>Datei-Metadaten (EXIF/XMP) der Quelle in die Zieldatei uebernehmen -
         ''' der Knopf "EXIF" im Uebernehmen-Bereich des Dialogs.</summary>
         Public Property PreserveMetadata As Boolean = True

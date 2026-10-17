@@ -5727,7 +5727,9 @@ Namespace ViewModels
         ''' Menueeintrag hing sonst allein an der Galerie und fehlte in den beiden anderen Ansichten
         ''' wortlos.</summary>
         Public Async Function ReanalyzeAiTagsForImageItemsAsync(source As IEnumerable(Of ImageItem)) As Task
-            If _aiTaggingRunning OrElse Not ImageTaggingService.Available Then Return
+            If _aiTaggingRunning Then Return
+            If Not Await ModelRequestService.RequestAsync(LocalizationService.T("Automatische Stichwörter"),
+                    {ImageTaggingService.ModelKey, ImageTaggingService.TagsKey, ImageTaggingService.ThresholdsKey}) Then Return
 
             Dim items = If(source, Enumerable.Empty(Of ImageItem)()).
                 Where(Function(i) i IsNot Nothing AndAlso (i.IsRemoteAsset OrElse (Not String.IsNullOrWhiteSpace(i.FilePath) AndAlso File.Exists(i.FilePath)))).ToList()
@@ -12215,9 +12217,8 @@ Namespace ViewModels
                                                            singleImage:=targetItems.Count = 1,
                                                            sourcesIncludeJpg:=BatchIncludesJpg(targetItems))
             If resize Is Nothing Then Return
-            ' Der Haken wird JETZT festgehalten: der Schreiblauf liest ihn im Hintergrund, und bis
-            ' dahin kann der naechste Dialog ihn laengst zurueckgesetzt haben.
-            Dim applyPendingBaked = _mainVm.DialogApplyPendingBaked
+            ' Der Haken steht im Auftrag, festgehalten beim Bestaetigen (siehe ApplyPendingBaked).
+            Dim applyPendingBaked = resize.ApplyPendingBaked
 
             StatusText = LocalizationService.T("Ändere Bildgröße...")
             ' Der Knopf "EXIF" im Uebernehmen-Bereich des Dialogs entscheidet je Lauf; die
@@ -12403,7 +12404,7 @@ Namespace ViewModels
                                                             sourcesIncludeJpg:=BatchIncludesJpg(targetItems),
                                                             recipeCount:=recipeCount)
             If result Is Nothing Then Return
-            Dim applyPendingBaked = _mainVm.DialogApplyPendingBaked
+            Dim applyPendingBaked = result.ApplyPendingBaked
 
             Dim adjustmentsTemplate = BuildBatchFilterAdjustments(result)
             If adjustmentsTemplate Is Nothing Then
@@ -13429,7 +13430,7 @@ Namespace ViewModels
             Await _mainVm.PreparePendingBakedOptionAsync(targetItems.Select(Function(i) i.FilePath))
             Dim result = Await _mainVm.ShowExportToAsync(targetItems.Count, folderHint, samplePath)
             If result Is Nothing Then Return
-            Dim applyPendingBaked = _mainVm.DialogApplyPendingBaked
+            Dim applyPendingBaked = result.ApplyPendingBaked
 
             ' Die Vorlage trägt alles Bild-UNabhängige (Look, Größe, Wasserzeichen); die
             ' automatische Bildverbesserung misst dagegen PRO BILD im Writer.

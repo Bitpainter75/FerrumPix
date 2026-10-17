@@ -49,7 +49,7 @@
                      ShowOnDisabled, weil Avalonia den Hinweis am gesperrten Knopf sonst
                      unterdrueckt - Begruendung bei BokehPanel.axaml. -->
                 <Button Classes="ghost" Padding="8,6"
-                        IsEnabled="{Binding IsDepthMaskAvailable}"
+                        IsEnabled="{Binding CanRequestModels}"
                         Command="{Binding SetMaskModeCommand}" CommandParameter="Tiefe"
                         Classes.active="{Binding IsMaskDepthMode}"
                         ToolTip.Tip="{Binding DepthMaskHint}" ToolTip.ShowOnDisabled="True">
@@ -58,7 +58,7 @@
                 <!-- Objektauswahl: der Bestand wird beim Programmstart einmal erhoben - siehe
                      AiModelService.CheckInventory. -->
                 <Button Classes="ghost" Padding="8,6"
-                        IsEnabled="{Binding IsSubjectMaskAvailable}"
+                        IsEnabled="{Binding CanRequestModels}"
                         Command="{Binding SetMaskModeCommand}" CommandParameter="Objekt"
                         Classes.active="{Binding IsMaskObjectMode}"
                         ToolTip.Tip="{Binding SubjectMaskHint}" ToolTip.ShowOnDisabled="True">
@@ -697,7 +697,7 @@
                  gemalt, per Klick erkannt oder nach Entfernung ausgewaehlt. Deshalb steht der Knopf
                  nicht in einem der Zweige, sondern unter allen. -->
             <Button Classes="ghost" HorizontalAlignment="Stretch" Padding="10,6"
-                    IsEnabled="{Binding CanRemoveObject}"
+                    IsEnabled="{Binding CanRequestObjectRemoval}"
                     Command="{Binding RemoveObjectCommand}"
                     ToolTip.Tip="{Binding RemoveObjectHint}" ToolTip.ShowOnDisabled="True">
                 <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">

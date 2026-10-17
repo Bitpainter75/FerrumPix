@@ -47,6 +47,7 @@ Namespace ViewModels
                 If before <> _hasActiveSelection Then
                     RaiseCurrentTargetChanged()
                     Me.RaisePropertyChanged(NameOf(CanRemoveObject))
+                    Me.RaisePropertyChanged(NameOf(CanRequestObjectRemoval))
                     ' Und das Ablegen der Auswahlform, aus demselben Grund.
                     Me.RaisePropertyChanged(NameOf(CanCopySelectionShape))
                     ' Umkehren und Verwerfen haengen ebenfalls daran. Ohne diese Meldung blieben sie
