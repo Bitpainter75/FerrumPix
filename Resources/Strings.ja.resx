@@ -3279,12 +3279,6 @@
   <data name="Ung_ltiger_Name_7832f740" xml:space="preserve">
     <value>使用できない名前</value>
   </data>
-  <data name="Doppelter_Zielname_981b916a" xml:space="preserve">
-    <value>保存名が重複しています</value>
-  </data>
-  <data name="Existiert_bereits_41e404d3" xml:space="preserve">
-    <value>すでに存在します</value>
-  </data>
   <data name="Startordner_der_Galerie_w_hlen_d3f8f9e8" xml:space="preserve">
     <value>ギャラリーの起動フォルダーを選択</value>
   </data>

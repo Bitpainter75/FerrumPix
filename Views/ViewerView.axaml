@@ -18,7 +18,7 @@
         <!-- EIN Kontextmenue fuer Buehne, Filmstreifen und Fusszeile. Welcher Ort gemeint ist
              und welche Elemente, entscheidet OnContextRequested. -->
         <Grid.ContextMenu>
-            <ContextMenu x:Name="ViewerKontextMenu" Opened="OnFooterMenuOpened" ItemsSource="{Binding ContextActions}">
+            <ContextMenu x:Name="ViewerKontextMenu" ItemsSource="{Binding ContextActions}">
             <!-- Eine Vorlage fuer alle Eintraege. Symbol und Text liegen zusammen im
             Header statt in MenuItem.Icon: die eingebaute Symbolspalte ist breiter
             als 16 Punkte und schob das Zeichen sichtbar nach links weg. So bestimmt

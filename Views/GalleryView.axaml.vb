@@ -2625,6 +2625,32 @@ Namespace Views
             SetMenuItemVisible("FolderTreeCutMenuItem", vm.CanCutPath(path))
             SetMenuItemVisible("FolderTreePasteMenuItem", vm.CanPasteIntoFolder(path))
             SetMenuItemVisible("FolderTreeDeleteMenuItem", vm.CanDeletePath(path))
+            TidyMenuSeparators(tree.ContextMenu)
+        End Sub
+
+        ''' <summary>Trenner am Anfang, am Ende und doppelte ausblenden, nachdem Eintraege
+        ''' ausgeblendet wurden. Bei "Root" fallen fast alle Eintraege weg, und uebrig blieben
+        ''' zwei Trenner hintereinander und einer am Ende (Nutzerbefund). Dieselbe Regel wie
+        ''' ContextMenuBuilder.TidySeparators fuer die aus Daten gebauten Menues, nur hier ueber
+        ''' die Sichtbarkeit, weil die Eintraege fest im XAML stehen.</summary>
+        Private Shared Sub TidyMenuSeparators(menu As ContextMenu)
+            If menu Is Nothing Then Return
+            Dim entries = menu.Items.OfType(Of Control)().ToList()
+            Dim seenEntry = False
+            Dim pending As Separator = Nothing
+            For Each entry In entries
+                Dim divider = TryCast(entry, Separator)
+                If divider IsNot Nothing Then
+                    divider.IsVisible = False
+                    ' Ein Trenner zaehlt nur zwischen zwei sichtbaren Eintraegen; welcher von
+                    ' mehreren aufeinanderfolgenden es wird, ist gleich.
+                    If seenEntry AndAlso pending Is Nothing Then pending = divider
+                ElseIf TypeOf entry Is MenuItem AndAlso entry.IsVisible Then
+                    If pending IsNot Nothing Then pending.IsVisible = True
+                    pending = Nothing
+                    seenEntry = True
+                End If
+            Next
         End Sub
 
         ' ── Favoriten ────────────────────────────────────────────────────────────

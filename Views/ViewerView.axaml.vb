@@ -158,6 +158,7 @@ Namespace Views
 
             vm.ContextSite = MenuSite.ViewerFooter
             vm.ContextItems = ContextTarget.Affected(Nothing, Nothing, StageItem(vm))
+            PrepareContextActions(vm)
 
             ' Open(control) besteht darauf, dass control GENAU das Element ist, an dem das Menue
             ' haengt - das ist hier die Fussleiste, nicht die Schaltflaeche. Der parameterlose
@@ -195,9 +196,12 @@ Namespace Views
         End Sub
 
 
-        Private Sub OnFooterMenuOpened(sender As Object, e As Avalonia.Interactivity.RoutedEventArgs)
+        ''' <summary>Die Eintraege fuer den eben gesetzten Aufrufort bauen, BEVOR das Menue aufgeht.
+        ''' In Opened war es zu spaet: das Menue ist dann schon bemessen, und die neue Liste kam in
+        ''' ein Fenster der alten Groesse (siehe App.ResizeContextMenusToTheirContent).</summary>
+        Private Sub PrepareContextActions(vm As ViewerViewModel)
             SetClipboardHook()
-            TryCast(DataContext, ViewerViewModel)?.RefreshContextActions()
+            vm.RefreshContextActions()
         End Sub
 
         ''' <summary>Rechtsklick irgendwo im Betrachter. EIN Handler fuer alle drei Aufruforte:
@@ -234,6 +238,7 @@ Namespace Views
             vm.ContextSite = If(hit IsNot Nothing, MenuSite.ViewerFilmstrip,
                                 If(onStage, MenuSite.ViewerStage, MenuSite.ViewerFooter))
             vm.ContextItems = ContextTarget.Affected(hit, Nothing, StageItem(vm))
+            PrepareContextActions(vm)
 
             ' NICHT selbst oeffnen und NICHT als behandelt melden: das Menue haengt am selben
             ' Element und oeffnet sich gleich nach diesem Handler von allein - siehe

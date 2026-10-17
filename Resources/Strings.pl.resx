@@ -3279,12 +3279,6 @@
   <data name="Ung_ltiger_Name_7832f740" xml:space="preserve">
     <value>Niedozwolona nazwa</value>
   </data>
-  <data name="Doppelter_Zielname_981b916a" xml:space="preserve">
-    <value>Powtórzona nazwa docelowa</value>
-  </data>
-  <data name="Existiert_bereits_41e404d3" xml:space="preserve">
-    <value>Już istnieje</value>
-  </data>
   <data name="Startordner_der_Galerie_w_hlen_d3f8f9e8" xml:space="preserve">
     <value>Wybierz folder startowy galerii</value>
   </data>

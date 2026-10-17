@@ -19,7 +19,10 @@
 
 ### Fixes
 
-- Context menus and footer menus no longer show scroll arrows when they fit on the screen.
+- Context menus and footer menus always open at the size of their content and from the top:
+  no more changing sizes, missing rows or scroll arrows when the menu fits on the screen.
+  The folder tree menu no longer shows doubled or trailing separator lines, and the dialogs for
+  setting the capture date and the place are wide enough for their options.
 
 ## 0.9.67
 

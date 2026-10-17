@@ -106,14 +106,17 @@
                                     Margin="0,16,0,0"
                                     Spacing="12"
                                     IsVisible="{Binding DialogShowsCaptureDate}">
-                            <StackPanel Orientation="Horizontal" Spacing="20">
+                            <!-- WrapPanel statt waagerechtem StackPanel: ein StackPanel bricht
+                                 nicht um und schnitt die zweite Option ab, sobald beide zusammen
+                                 breiter als der Dialog waren (laengere Uebersetzungen). -->
+                            <WrapPanel ItemSpacing="20" LineSpacing="8">
                                 <RadioButton GroupName="CaptureDateMode"
                                              Content="Auf festen Wert setzen"
                                              IsChecked="{Binding DialogCaptureUsesFixedValue, Mode=TwoWay}"/>
                                 <RadioButton GroupName="CaptureDateMode"
                                              Content="Um eine Zeitspanne verschieben"
                                              IsChecked="{Binding DialogCaptureUsesShift, Mode=TwoWay}"/>
-                            </StackPanel>
+                            </WrapPanel>
 
                             <Grid RowDefinitions="Auto,Auto,Auto"
                                   ColumnDefinitions="Auto,*"

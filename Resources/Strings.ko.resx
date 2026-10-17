@@ -3279,12 +3279,6 @@
   <data name="Ung_ltiger_Name_7832f740" xml:space="preserve">
     <value>이름이 올바르지 않습니다</value>
   </data>
-  <data name="Doppelter_Zielname_981b916a" xml:space="preserve">
-    <value>대상 이름이 겹칩니다</value>
-  </data>
-  <data name="Existiert_bereits_41e404d3" xml:space="preserve">
-    <value>이미 있습니다</value>
-  </data>
   <data name="Startordner_der_Galerie_w_hlen_d3f8f9e8" xml:space="preserve">
     <value>갤러리 시작 폴더 선택</value>
   </data>

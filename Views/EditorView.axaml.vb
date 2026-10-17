@@ -277,6 +277,7 @@ Namespace Views
 
             vm.ContextSite = MenuSite.EditorFooter
             vm.ContextItems = ContextTarget.Affected(Nothing, Nothing, StageItem(vm))
+            PrepareContextActions(vm)
 
             ' Open(control) besteht darauf, dass control GENAU das Element ist, an dem das Menue
             ' haengt - das ist hier die Fussleiste, nicht die Schaltflaeche. Der parameterlose
@@ -357,6 +358,7 @@ Namespace Views
 
             vm.ContextSite = If(isStage, MenuSite.EditorFilmstrip, MenuSite.EditorFilmstripOther)
             vm.ContextItems = ContextTarget.Affected(hit, Nothing, StageItem(vm))
+            PrepareContextActions(vm)
 
             ' NICHT selbst oeffnen und NICHT als behandelt melden: das Menue haengt am selben
             ' Element und oeffnet sich gleich nach diesem Handler von allein - siehe
@@ -383,10 +385,15 @@ Namespace Views
             Dim vm = TryCast(DataContext, EditorViewModel)
             If vm IsNot Nothing AndAlso Not vm.IsInteractionAllowed Then
                 TryCast(sender, ContextMenu)?.Close()
-                Return
             End If
+        End Sub
+
+        ''' <summary>Die Eintraege fuer den eben gesetzten Aufrufort bauen, BEVOR das Menue aufgeht.
+        ''' In Opened war es zu spaet: das Menue ist dann schon bemessen, und die neue Liste kam in
+        ''' ein Fenster der alten Groesse (siehe App.ResizeContextMenusToTheirContent).</summary>
+        Private Sub PrepareContextActions(vm As EditorViewModel)
             SetClipboardHook()
-            vm?.RefreshContextActions()
+            vm.RefreshContextActions()
         End Sub
 
         Private Sub SetZoom(sliderValue As Double)

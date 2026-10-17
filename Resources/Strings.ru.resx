@@ -3279,12 +3279,6 @@
   <data name="Ung_ltiger_Name_7832f740" xml:space="preserve">
     <value>Недопустимое имя</value>
   </data>
-  <data name="Doppelter_Zielname_981b916a" xml:space="preserve">
-    <value>Повторяющееся имя назначения</value>
-  </data>
-  <data name="Existiert_bereits_41e404d3" xml:space="preserve">
-    <value>Уже существует</value>
-  </data>
   <data name="Startordner_der_Galerie_w_hlen_d3f8f9e8" xml:space="preserve">
     <value>Выбрать начальную папку галереи</value>
   </data>

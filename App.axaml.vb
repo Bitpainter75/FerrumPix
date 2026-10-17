@@ -129,24 +129,41 @@ Public Class App
     ''' <para>Kontextmenues, Fussleistenmenues und Untermenues scrollen ueber eine eigene
     ''' ScrollViewer-Vorlage mit je einem Pfeilknopf oben und unten statt einer Leiste. Ob ein Pfeil
     ''' steht, entscheidet die Vorlage ueber einen exakten Vergleich von Inhaltshoehe und
-    ''' Sichthoehe. Bei gebrochener Skalierung (1,5) bleibt zwischen beiden ein Rundungsrest, und
-    ''' schon der zeigt den unteren Pfeil. Der nimmt Platz weg, ab da passt das Menue tatsaechlich
-    ''' nicht mehr, und mit dem ersten Schritt Richtung Fokus steht auch der obere: beide Pfeile an
-    ''' einem Menue, das reichlich Platz hatte (Nutzerbefund).</para>
+    ''' Sichthoehe. Bei gebrochener Skalierung (1,5) kann zwischen beiden ein Rundungsrest bleiben,
+    ''' und schon der zeigte den unteren Pfeil. Der nimmt Platz weg, und ab da passt das Menue
+    ''' tatsaechlich nicht mehr. Das ist eine Absicherung; die Hauptursache falsch bemessener
+    ''' Menues steht bei <see cref="ResizeContextMenusToTheirContent"/>.</para>
     '''
     ''' <para>Die Vorlage erkennt man am Aufbau, nicht an ihrem Schluessel: ein DockPanel als Wurzel
-    ''' mit den beiden Pfeilknoepfen. Deren Sichtbarkeit wird mit einem lokalen Wert ueberschrieben,
-    ''' der vor der Bindung der Vorlage gilt, und erst ab einem ganzen Punkt Ueberhang gesetzt.
-    ''' Ohne Pfeile ist die Sichtflaeche die volle, also kippt der Zustand nicht hin und her.</para></summary>
+    ''' mit den beiden Pfeilknoepfen. Deren Sichtbarkeit wird an eine eigene Eigenschaft neu
+    ''' gebunden und erst ab einem ganzen Punkt Ueberhang gesetzt, gemessen an der Sichthoehe
+    ''' ohne Pfeile.</para></summary>
     Private Shared Sub ShowMenuScrollArrowsOnlyOnOverflow()
         Avalonia.Controls.Primitives.TemplatedControl.TemplateAppliedEvent.AddClassHandler(Of ScrollViewer)(
             Sub(viewer, e)
-                If MenuScrollArrows(viewer) Is Nothing Then Return
+                Dim arrows = MenuScrollArrows(viewer)
+                If arrows Is Nothing Then Return
+                ' Die Vorlage BINDET IsVisible, und zwar mit der Prioritaet eines lokalen Werts.
+                ' Ein gesetzter Wert hebt eine solche Bindung nicht auf; die Vorlage ueberschrieb
+                ' ihn bei jeder Aenderung von Inhalt oder Sichthoehe wieder, und der Pfeil stand,
+                ' bis das Ueberfahren mit der Maus zufaellig den eigenen Wert zuletzt setzte
+                ' (Nutzerbefund). Erst eine NEUE lokale Bindung ersetzt die alte
+                ' (ValueStore.AddBinding entsorgt sie): IsVisible haengt deshalb ab hier an
+                ' MenuArrowShown, und nur das wird gesetzt.
+                For Each arrow In arrows
+                    arrow.Bind(Visual.IsVisibleProperty, arrow.GetObservable(MenuArrowShownProperty))
+                Next
+                Services.DiagnosticLogService.LogAlways("UI.MenuArrows",
+                    $"Menue-Scroller erkannt in {viewer.TemplatedParent?.GetType().Name}")
                 RemoveHandler viewer.PropertyChanged, AddressOf OnMenuScrollViewerChanged
                 AddHandler viewer.PropertyChanged, AddressOf OnMenuScrollViewerChanged
                 UpdateMenuScrollArrows(viewer)
             End Sub)
     End Sub
+
+    ''' <summary>Ob ein Scrollpfeil eines Menues steht; die Quelle seiner Sichtbarkeit.</summary>
+    Private Shared ReadOnly MenuArrowShownProperty As AttachedProperty(Of Boolean) =
+        AvaloniaProperty.RegisterAttached(Of App, RepeatButton, Boolean)("MenuArrowShown")
 
     Private Shared Function MenuScrollArrows(viewer As ScrollViewer) As RepeatButton()
         Dim root = TryCast(Avalonia.VisualTree.VisualExtensions.GetVisualChildren(viewer).FirstOrDefault(), DockPanel)
@@ -165,21 +182,184 @@ Public Class App
     Private Shared Sub UpdateMenuScrollArrows(viewer As ScrollViewer)
         Dim arrows = MenuScrollArrows(viewer)
         If arrows Is Nothing Then Return
+        ' Ob gescrollt werden muss, entscheidet die Sichthoehe OHNE Pfeile. Ein sichtbarer Pfeil
+        ' nimmt seine eigene Hoehe von der Sichtflaeche weg; gemessen an der verkleinerten Flaeche
+        ' passt der Inhalt nie, und der Pfeil hielte sich selbst am Leben. Genau so blieb er ueber
+        ' der letzten Zeile stehen, bis das Ueberfahren mit der Maus ihn zuruecksetzte
+        ' (Nutzerbefund). overflow ist dagegen der tatsaechliche Scrollweg bei der jetzigen Flaeche.
         Dim overflow = viewer.Extent.Height - viewer.Viewport.Height
+        Dim arrowSpace = arrows.Where(Function(a) a.IsVisible).Sum(Function(a) a.Bounds.Height)
+        Dim overflowWithoutArrows = viewer.Extent.Height - (viewer.Viewport.Height + arrowSpace)
         Dim scrolls As Boolean
         Select Case viewer.VerticalScrollBarVisibility
             Case Avalonia.Controls.Primitives.ScrollBarVisibility.Visible
                 scrolls = True
             Case Avalonia.Controls.Primitives.ScrollBarVisibility.Auto
-                scrolls = overflow >= 1.0
+                scrolls = overflowWithoutArrows >= 1.0
             Case Else
                 scrolls = False
         End Select
         For Each arrow In arrows
             Dim atTop = DockPanel.GetDock(arrow) = Dock.Top
             Dim room = If(atTop, viewer.Offset.Y, overflow - viewer.Offset.Y)
-            arrow.IsVisible = scrolls AndAlso (viewer.VerticalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Visible OrElse room >= 0.5)
+            arrow.SetValue(MenuArrowShownProperty,
+                           scrolls AndAlso (viewer.VerticalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Visible OrElse room >= 0.5))
         Next
+        Services.DiagnosticLogService.LogAlways("UI.MenuArrows",
+            $"Inhalt {viewer.Extent.Height:0.#}, Sicht {viewer.Viewport.Height:0.#}, Pfeile {arrowSpace:0.#}, " &
+            $"Versatz {viewer.Offset.Y:0.#}, Scroller {viewer.Bounds.Height:0.#} -> " &
+            $"oben {arrows.First(Function(a) DockPanel.GetDock(a) = Dock.Top).IsVisible}, " &
+            $"unten {arrows.First(Function(a) DockPanel.GetDock(a) <> Dock.Top).IsVisible}")
+    End Sub
+
+    ''' <summary>Ein Kontextmenue bekommt die Groesse seines Inhalts, auch wenn der sich nach dem
+    ''' Aufgehen noch aendert, und beginnt jedes Mal oben.
+    '''
+    ''' <para>Ein Menue an der Zeigerposition (die Vorgabe jedes ContextMenu) legt Avalonia beim
+    ''' ersten Anordnen fest, Lage UND Fenstergroesse. Danach verwirft PopupRoot.ArrangeSetBounds
+    ''' jede Groessenaenderung, solange die Lage "Pointer" ist: das Fenster bleibt so gross wie
+    ''' beim ersten Durchgang, der Inhalt wird abgeschnitten, und die Vorlage zeigt Scrollpfeile.
+    ''' Geaendert wird der Inhalt nach dem Aufgehen aber an mehreren Stellen: Betrachter und
+    ''' Editor lesen ihre Eintraege erst in Opened neu, die Galerie uebersetzt dort, und die
+    ''' Sichtbarkeiten im Ordnerbaum haengen am Knoten. Ergebnis war eine Groesse, die von Mal zu
+    ''' Mal wechselte, je nachdem, was zuletzt offen war, bis hin zu einer fehlenden Zeile
+    ''' (Nutzerbefund, am staerksten im Ordnerbaum).</para>
+    '''
+    ''' <para>Abhilfe: nach jedem Layoutdurchgang eines offenen Menues vergleichen, was es braucht
+    ''' (DesiredSize), mit dem, was es bekommen hat (Bounds). Weicht beides ab, wird das Popup neu
+    ''' platziert: den Versatz kurz verschieben und zuruecknehmen loest Popup.UpdateHostPosition
+    ''' aus, und der Positionierer setzt das Fenster mit der inzwischen gemessenen Groesse neu.
+    ''' Das gilt fuer jede Lage, also auch fuer die Fussleistenmenues an ihrer Schaltflaeche. Je
+    ''' gemessener Groesse nur einmal, sonst liefe es in einer Schleife, wenn das Menue
+    ''' wirklich nicht auf den Schirm passt und der Positionierer es kuerzt. Mit eingeschaltetem
+    ''' Diagnoseprotokoll steht jede Korrektur dort ("UI.ContextMenu"), samt Lage und
+    ''' Fenstergroesse danach.</para>
+    '''
+    ''' <para>Das ContextMenu selbst wird wiederverwendet, samt dem ScrollViewer seiner Vorlage.
+    ''' Dessen Scrollstand blieb vom letzten Mal stehen; er wird beim Oeffnen und beim
+    ''' Schliessen auf oben gesetzt.</para></summary>
+    Private Shared Sub ResizeContextMenusToTheirContent()
+        MenuBase.OpenedEvent.AddClassHandler(Of ContextMenu)(
+            Sub(menu, e)
+                If Not Object.ReferenceEquals(e.Source, menu) Then Return
+                _openContextMenus(menu) = Nothing
+                Dim host = TryCast(TopLevel.GetTopLevel(menu), Avalonia.Controls.Primitives.PopupRoot)
+                Services.DiagnosticLogService.LogAlways("UI.ContextMenu",
+                    $"geoeffnet ({menu.Name}): braucht {menu.DesiredSize.Width:0.#}x{menu.DesiredSize.Height:0.#}, " &
+                    $"angeordnet {menu.Bounds.Width:0.#}x{menu.Bounds.Height:0.#}, " &
+                    $"Fenster {host?.ClientSize.Width:0.#}x{host?.ClientSize.Height:0.#}")
+                ScrollContextMenuToTop(menu)
+                RemoveHandler menu.LayoutUpdated, AddressOf OnOpenContextMenuLayoutUpdated
+                AddHandler menu.LayoutUpdated, AddressOf OnOpenContextMenuLayoutUpdated
+                ' SOFORT pruefen, nicht erst beim naechsten Layoutdurchgang. Das Popup-Fenster
+                ' entsteht mit Skalierung 1 und wird so zum ersten Mal gemessen; erst danach kommt
+                ' die echte Skalierung (1,5), und das Menue braucht ein paar Punkte mehr, als das
+                ' Fenster hat. Das alles ist vor Opened erledigt; ohne diesen Aufruf kam die
+                ' Korrektur erst beim naechsten Durchgang, also beim Ueberfahren mit der Maus
+                ' (im Protokoll gemessen: Fenster 998,7 hoch, Menue braucht 1010,7).
+                FitContextMenu(menu)
+                Avalonia.Threading.Dispatcher.UIThread.Post(Sub() If menu.IsOpen Then FitContextMenu(menu),
+                                                            Avalonia.Threading.DispatcherPriority.Loaded)
+            End Sub)
+        MenuBase.ClosedEvent.AddClassHandler(Of ContextMenu)(
+            Sub(menu, e)
+                If Not Object.ReferenceEquals(e.Source, menu) Then Return
+                RemoveHandler menu.LayoutUpdated, AddressOf OnOpenContextMenuLayoutUpdated
+                _openContextMenus.Remove(menu)
+                ScrollContextMenuToTop(menu)
+                InvalidateWholeMenu(menu)
+            End Sub)
+    End Sub
+
+    ''' <summary>Jedes Popup ordnet seinen Inhalt neu an, wenn sein Fenster die Groesse aendert.
+    '''
+    ''' <para>Unter X11 kommt die neue Fenstergroesse eines Popups nicht sofort, sondern spaeter
+    ''' als Meldung des Fenstersystems. WindowBase.HandleResized setzt dann ClientSize und
+    ''' startet einen Layoutdurchgang, setzt aber nichts ungueltig: ist sonst nichts zu tun, tut
+    ''' der Durchgang nichts, und der Inhalt bleibt in der alten, kleineren Groesse angeordnet.
+    ''' Bei einem Menue hiess das: der untere Scrollpfeil stand, bis das Ueberfahren mit der Maus
+    ''' irgendetwas neu anordnen liess, und dann sprang das Menue auf seine volle Groesse
+    ''' (Nutzerbefund).</para>
+    '''
+    ''' <para>Resized kommt vor diesem Layoutdurchgang; was hier ungueltig gesetzt wird, ordnet
+    ''' derselbe Durchgang neu an. Fuer JEDES Popup (Kontextmenue, Untermenue, Flyout,
+    ''' Aufklappliste, Kurzhinweis), angemeldet beim Anwenden seiner Vorlage, also einmal je
+    ''' Popup-Fenster.</para></summary>
+    Private Shared Sub RearrangePopupsOnResize()
+        Avalonia.Controls.Primitives.TemplatedControl.TemplateAppliedEvent.AddClassHandler(Of Avalonia.Controls.Primitives.PopupRoot)(
+            Sub(root, e)
+                RemoveHandler root.Resized, AddressOf OnPopupRootResized
+                AddHandler root.Resized, AddressOf OnPopupRootResized
+            End Sub)
+    End Sub
+
+    Private Shared Sub OnPopupRootResized(sender As Object, e As WindowResizedEventArgs)
+        Dim root = TryCast(sender, Avalonia.Controls.Primitives.PopupRoot)
+        If root Is Nothing Then Return
+        Services.DiagnosticLogService.LogAlways("UI.PopupResized",
+            $"Fenster {e.ClientSize.Width:0.#}x{e.ClientSize.Height:0.#} ({e.Reason}), " &
+            $"Wurzel braucht {root.DesiredSize.Width:0.#}x{root.DesiredSize.Height:0.#}, " &
+            $"angeordnet {root.Bounds.Width:0.#}x{root.Bounds.Height:0.#}, Skalierung {root.RenderScaling}")
+        root.InvalidateMeasure()
+        root.InvalidateArrange()
+    End Sub
+
+    ''' <summary>Das GANZE Menue als neu zu messen markieren, solange es zu ist.
+    '''
+    ''' <para>Das wiederverwendete Menue behaelt seine letzte Messung. Aendert sich im
+    ''' geschlossenen Zustand etwas tief darin (eine Zeile wird ein- oder ausgeblendet, die
+    ''' Eintragsliste neu gesetzt), wird nur dieses Element ungueltig: ohne Fenster gibt es
+    ''' keinen Layoutlauf, der die Aenderung nach oben meldet. Beim naechsten Oeffnen fragt das
+    ''' Popup das Menue, das Menue seinen ScrollViewer - beide gelten noch als gemessen und
+    ''' liefern die alte Groesse, ohne bis zur geaenderten Zeile hinabzusteigen. Erst ein
+    ''' spaeterer Lauf (beim Ueberfahren mit der Maus) holt das nach, und das Menue sprang
+    ''' auf seine volle Groesse (Nutzerbefund).</para>
+    '''
+    ''' <para>Beim Schliessen jedes Element ungueltig zu setzen heisst: der erste Lauf nach dem
+    ''' naechsten Oeffnen misst von oben bis unten neu, gleich was sich inzwischen geaendert
+    ''' hat.</para></summary>
+    Private Shared Sub InvalidateWholeMenu(menu As ContextMenu)
+        menu.InvalidateMeasure()
+        For Each element In Avalonia.VisualTree.VisualExtensions.GetVisualDescendants(menu).OfType(Of Avalonia.Layout.Layoutable)()
+            element.InvalidateMeasure()
+        Next
+    End Sub
+
+    ''' <summary>Die offenen Kontextmenues, je mit der Groesse, fuer die zuletzt neu platziert
+    ''' wurde (Nothing: noch nie).</summary>
+    Private Shared ReadOnly _openContextMenus As New Dictionary(Of ContextMenu, Size?)()
+
+    Private Shared Sub ScrollContextMenuToTop(menu As ContextMenu)
+        Dim viewer = Avalonia.VisualTree.VisualExtensions.GetVisualDescendants(menu).OfType(Of ScrollViewer)().FirstOrDefault()
+        If viewer IsNot Nothing Then viewer.Offset = New Vector(0, 0)
+    End Sub
+
+    Private Shared Sub OnOpenContextMenuLayoutUpdated(sender As Object, e As EventArgs)
+        ' LayoutUpdated nennt das Menue nicht als Absender. Es sind selten mehr als eines offen,
+        ' also werden einfach alle offenen geprueft.
+        For Each menu In _openContextMenus.Keys.ToList()
+            FitContextMenu(menu)
+        Next
+    End Sub
+
+    Private Shared Sub FitContextMenu(menu As ContextMenu)
+        Dim popup = TryCast(menu.Parent, Avalonia.Controls.Primitives.Popup)
+        If popup Is Nothing OrElse Not popup.IsOpen Then Return
+        Dim wanted = menu.DesiredSize
+        Dim got = menu.Bounds.Size
+        If Math.Abs(wanted.Height - got.Height) < 0.5 AndAlso Math.Abs(wanted.Width - got.Width) < 0.5 Then Return
+        Dim last = _openContextMenus(menu)
+        If last.HasValue AndAlso last.Value = wanted Then Return
+        _openContextMenus(menu) = wanted
+
+        Dim original = popup.HorizontalOffset
+        popup.HorizontalOffset = original + 0.01
+        popup.HorizontalOffset = original
+        Dim host = TryCast(TopLevel.GetTopLevel(menu), Avalonia.Controls.Primitives.PopupRoot)
+        Services.DiagnosticLogService.LogAlways("UI.ContextMenu",
+            $"neu platziert: Lage {popup.Placement}, gebraucht {wanted.Width:0.#}x{wanted.Height:0.#}, " &
+            $"bekommen {got.Width:0.#}x{got.Height:0.#}, Fenster {host?.ClientSize.Width:0.#}x{host?.ClientSize.Height:0.#}, " &
+            $"Rand des Menues {menu.Margin}")
     End Sub
 
     ''' <summary>Zwei Bauformen, deren Inhalt der Durchlauf ueber das Fenster nie zu sehen bekommt.
@@ -217,6 +397,8 @@ Public Class App
         KeepPenDragsOnTheirControl()
         DropImplausibleWheelEvents()
         ShowMenuScrollArrowsOnlyOnOverflow()
+        ResizeContextMenusToTheirContent()
+        RearrangePopupsOnResize()
         If TypeOf ApplicationLifetime Is IClassicDesktopStyleApplicationLifetime Then
             Dim desktop = CType(ApplicationLifetime, IClassicDesktopStyleApplicationLifetime)
 

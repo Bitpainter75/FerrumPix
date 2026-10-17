@@ -3860,6 +3860,12 @@ Namespace ViewModels
                    _dialogKind = AppDialogKind.BatchFilter OrElse
                    _dialogKind = AppDialogKind.WatermarkPreset Then Return 840
                 If _dialogKind = AppDialogKind.SaveAs Then Return 570
+                ' Aufnahmedatum: die beiden Wege stehen als Optionen nebeneinander, und bei 440
+                ' wurde "Um eine Zeitspanne verschieben" abgeschnitten (Nutzerbefund).
+                If DialogShowsCaptureDate Then Return 570
+                ' Aufnahmeort in derselben Breite: die beiden Metadaten-Dialoge stehen im selben
+                ' Untermenue nebeneinander und sollen nicht unterschiedlich breit aufgehen.
+                If DialogShowsSetPlace Then Return 570
                 Return 440
             End Get
         End Property
