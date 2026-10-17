@@ -212,13 +212,13 @@ Public Class App
     ''' ersten Anordnen fest, Lage UND Fenstergroesse. Danach verwirft PopupRoot.ArrangeSetBounds
     ''' jede Groessenaenderung, solange die Lage "Pointer" ist: das Fenster bleibt so gross wie
     ''' beim ersten Durchgang, der Inhalt wird abgeschnitten, und die Vorlage zeigt Scrollpfeile.
-    ''' Geaendert wird der Inhalt nach dem Aufgehen aber an mehreren Stellen: Betrachter und
-    ''' Editor lesen ihre Eintraege erst in Opened neu, die Galerie uebersetzt dort, und die
-    ''' Sichtbarkeiten im Ordnerbaum haengen am Knoten. Ergebnis war eine Groesse, die von Mal zu
-    ''' Mal wechselte, je nachdem, was zuletzt offen war, bis hin zu einer fehlenden Zeile
+    ''' Und dieser erste Durchgang laeuft noch mit Skalierung 1: das Popup-Fenster entsteht so,
+    ''' erst danach gilt die echte Skalierung (1,5), und mit deren Pixelrundung braucht das Menue
+    ''' ein paar Punkte mehr, als das Fenster hat (gemessen: Galerie 1010,7 statt 998,7).
+    ''' Ergebnis war eine Groesse, die von Mal zu Mal wechselte, bis hin zu einer fehlenden Zeile
     ''' (Nutzerbefund, am staerksten im Ordnerbaum).</para>
     '''
-    ''' <para>Abhilfe: nach jedem Layoutdurchgang eines offenen Menues vergleichen, was es braucht
+    ''' <para>Abhilfe: beim Oeffnen und nach jedem Layoutdurchgang eines offenen Menues vergleichen, was es braucht
     ''' (DesiredSize), mit dem, was es bekommen hat (Bounds). Weicht beides ab, wird das Popup neu
     ''' platziert: den Versatz kurz verschieben und zuruecknehmen loest Popup.UpdateHostPosition
     ''' aus, und der Positionierer setzt das Fenster mit der inzwischen gemessenen Groesse neu.
@@ -227,25 +227,19 @@ Public Class App
     ''' wirklich nicht auf den Schirm passt und der Positionierer es kuerzt.</para>
     '''
     ''' <para>Das ContextMenu selbst wird wiederverwendet, samt dem ScrollViewer seiner Vorlage.
-    ''' Dessen Scrollstand blieb vom letzten Mal stehen; er wird beim Oeffnen und beim
-    ''' Schliessen auf oben gesetzt.</para></summary>
+    ''' Dessen Scrollstand blieb vom letzten Mal stehen; er wird beim Schliessen auf oben
+    ''' gesetzt.</para></summary>
     Private Shared Sub ResizeContextMenusToTheirContent()
         MenuBase.OpenedEvent.AddClassHandler(Of ContextMenu)(
             Sub(menu, e)
                 If Not Object.ReferenceEquals(e.Source, menu) Then Return
                 _openContextMenus(menu) = Nothing
-                ScrollContextMenuToTop(menu)
                 RemoveHandler menu.LayoutUpdated, AddressOf OnOpenContextMenuLayoutUpdated
                 AddHandler menu.LayoutUpdated, AddressOf OnOpenContextMenuLayoutUpdated
-                ' SOFORT pruefen, nicht erst beim naechsten Layoutdurchgang. Das Popup-Fenster
-                ' entsteht mit Skalierung 1 und wird so zum ersten Mal gemessen; erst danach kommt
-                ' die echte Skalierung (1,5), und das Menue braucht ein paar Punkte mehr, als das
-                ' Fenster hat. Das alles ist vor Opened erledigt; ohne diesen Aufruf kam die
-                ' Korrektur erst beim naechsten Durchgang, also beim Ueberfahren mit der Maus
-                ' (im Protokoll gemessen: Fenster 998,7 hoch, Menue braucht 1010,7).
+                ' SOFORT pruefen, nicht erst beim naechsten Layoutdurchgang: die Durchgaenge mit
+                ' Skalierung 1 und 1,5 sind vor Opened erledigt. Ohne diesen Aufruf kam die
+                ' Korrektur erst beim Ueberfahren mit der Maus.
                 FitContextMenu(menu)
-                Avalonia.Threading.Dispatcher.UIThread.Post(Sub() If menu.IsOpen Then FitContextMenu(menu),
-                                                            Avalonia.Threading.DispatcherPriority.Loaded)
             End Sub)
         MenuBase.ClosedEvent.AddClassHandler(Of ContextMenu)(
             Sub(menu, e)
@@ -253,7 +247,6 @@ Public Class App
                 RemoveHandler menu.LayoutUpdated, AddressOf OnOpenContextMenuLayoutUpdated
                 _openContextMenus.Remove(menu)
                 ScrollContextMenuToTop(menu)
-                InvalidateWholeMenu(menu)
             End Sub)
     End Sub
 
@@ -284,27 +277,6 @@ Public Class App
         If root Is Nothing Then Return
         root.InvalidateMeasure()
         root.InvalidateArrange()
-    End Sub
-
-    ''' <summary>Das GANZE Menue als neu zu messen markieren, solange es zu ist.
-    '''
-    ''' <para>Das wiederverwendete Menue behaelt seine letzte Messung. Aendert sich im
-    ''' geschlossenen Zustand etwas tief darin (eine Zeile wird ein- oder ausgeblendet, die
-    ''' Eintragsliste neu gesetzt), wird nur dieses Element ungueltig: ohne Fenster gibt es
-    ''' keinen Layoutlauf, der die Aenderung nach oben meldet. Beim naechsten Oeffnen fragt das
-    ''' Popup das Menue, das Menue seinen ScrollViewer - beide gelten noch als gemessen und
-    ''' liefern die alte Groesse, ohne bis zur geaenderten Zeile hinabzusteigen. Erst ein
-    ''' spaeterer Lauf (beim Ueberfahren mit der Maus) holt das nach, und das Menue sprang
-    ''' auf seine volle Groesse (Nutzerbefund).</para>
-    '''
-    ''' <para>Beim Schliessen jedes Element ungueltig zu setzen heisst: der erste Lauf nach dem
-    ''' naechsten Oeffnen misst von oben bis unten neu, gleich was sich inzwischen geaendert
-    ''' hat.</para></summary>
-    Private Shared Sub InvalidateWholeMenu(menu As ContextMenu)
-        menu.InvalidateMeasure()
-        For Each element In Avalonia.VisualTree.VisualExtensions.GetVisualDescendants(menu).OfType(Of Avalonia.Layout.Layoutable)()
-            element.InvalidateMeasure()
-        Next
     End Sub
 
     ''' <summary>Die offenen Kontextmenues, je mit der Groesse, fuer die zuletzt neu platziert
