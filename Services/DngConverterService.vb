@@ -52,10 +52,11 @@ Namespace Services
             ' bestaetigte Ziel samt --override: ein Abbruch oder Fehler konnte ein vorhandenes DNG
             ' halb ueberschrieben zuruecklassen. Die Endung bleibt .dng, weil der Konverter das
             ' Ausgabeformat daran erkennt; der Punkt vorn haelt sie aus der Galerie heraus.
+            ' Der Name wird gekuerzt, wo ein langer, gueltiger Stamm mit dem Zusatz sonst ueber die
+            ' Grenze des Dateisystems liefe (ImageProcessor.SiblingPath).
             Dim targetDirectory = Path.GetDirectoryName(targetPath)
-            Dim stagePath = Path.Combine(If(targetDirectory, ""),
-                                         "." & Path.GetFileNameWithoutExtension(targetPath) &
-                                         ".fpconvert-" & Guid.NewGuid().ToString("N") & ".dng")
+            Dim stagePath = ImageProcessor.SiblingPath(Path.Combine(If(targetDirectory, ""), Path.GetFileNameWithoutExtension(targetPath)),
+                                                       ".fpconvert-", ".dng")
             Try
                 If Not String.IsNullOrWhiteSpace(targetDirectory) Then Directory.CreateDirectory(targetDirectory)
                 Dim startInfo As New ProcessStartInfo With {

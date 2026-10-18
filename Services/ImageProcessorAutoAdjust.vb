@@ -335,7 +335,7 @@ Namespace Services
                     ' derselben Kurve auf, die das Bild dann rechnet.
                     Dim topL = 0.0
                     If model >= 3 Then
-                        Dim reference = MeasureToneReference(source)
+                        Dim reference = MeasureToneReference(source, unpremultiply:=True)
                         If reference.IsMeasured Then
                             topL = GrayVToLightness(AutoMapExposure(LightnessToGrayV(reference.TopL), usedGain))
                         End If

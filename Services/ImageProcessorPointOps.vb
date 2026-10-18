@@ -295,10 +295,14 @@ Namespace Services
                         ' (ToneSliderCurves.Lift mit Median), Weiss im Modell 3 an seiner Spitze
                         ' (ToneSliderCurves.LiftByTop). Gemessen VOR der Kette, dann durch die
                         ' Tonwertkurve davor geschickt: Belichtung verschiebt beide mit.
+                        ' Bei einem Filmnegativ misst Tonmodell 3 das Positiv, das bei den Tonzonen
+                        ' ankommt. Tonmodell 2 misst wie bei seiner Veroeffentlichung das Negativ
+                        ' selbst, damit gespeicherte Bearbeitungen aussehen wie beim Speichern.
                         Dim reference As ToneReference = Nothing
-                        If (toneModel >= 2 AndAlso (adj.Highlights <> 0 OrElse adj.ShadowsLevel <> 0)) OrElse
-                           (toneModel >= 3 AndAlso adj.Whites <> 0) Then
-                            reference = If(toneReference.IsMeasured, toneReference, MeasureToneReference(measured))
+                        If adj.ReadsImageStatistics() Then
+                            reference = If(toneReference.IsMeasured, toneReference,
+                                           MeasureToneReference(measured, If(toneModel >= 3, chain, Nothing),
+                                                                unpremultiply:=toneModel >= 3))
                             If reference.IsMeasured AndAlso chain.ToneBefore IsNot Nothing Then
                                 reference.MedianL = GrayVToLightness(SampleTable(chain.ToneBefore, CSng(LightnessToGrayV(reference.MedianL))))
                                 reference.TopL = GrayVToLightness(SampleTable(chain.ToneBefore, CSng(LightnessToGrayV(reference.TopL))))
@@ -957,7 +961,14 @@ Namespace Services
         ''' Raster von rund 250 000 Bildpunkten; voll durchsichtige zaehlen nicht. Ungemessen, wenn
         ''' kein Bild da ist oder das Format nicht 8 Bit RGBA ist. Gelesen wird zeilenweise ueber den
         ''' nativen Zeiger, ohne das Bild zu kopieren.</summary>
-        Friend Shared Function MeasureToneReference(bmp As SKBitmap) As ToneReference
+        ''' <param name="negative">Eine Kette mit Filmumkehr (NegR, NegG, NegB): dann wird das POSITIV
+        ''' gemessen, so wie es bei den Tonzonen ankommt; die hellen Stellen dort sind die dunklen des
+        ''' Negativs. Ohne Umkehr oder Nothing das Bild selbst.</param>
+        ''' <param name="unpremultiply">Halbtransparente Bildpunkte eines vormultiplizierten Bildes erst
+        ''' durch Alpha teilen, wie die Kette es vor dem Rechnen tut (Tonmodell 3). False misst die
+        ''' gespeicherten Bytes, wie Tonmodell 2 es bei seiner Veroeffentlichung tat.</param>
+        Friend Shared Function MeasureToneReference(bmp As SKBitmap, Optional negative As PointOpChain = Nothing,
+                                                    Optional unpremultiply As Boolean = False) As ToneReference
             Dim none As ToneReference = Nothing
             If bmp Is Nothing OrElse bmp.Width <= 0 OrElse bmp.Height <= 0 Then Return none
             Dim rOff, bOff As Integer
@@ -968,11 +979,31 @@ Namespace Services
             End Select
             Dim pixels = bmp.GetPixels()
             If pixels = IntPtr.Zero Then Return none
+            Dim toLinear = Function(c As Double) If(c <= 0.04045, c / 12.92, Math.Pow((c + 0.055) / 1.055, 2.4))
             Dim linear = New Double(255) {}
             For i = 0 To 255
-                Dim c = i / 255.0
-                linear(i) = If(c <= 0.04045, c / 12.92, Math.Pow((c + 0.055) / 1.055, 2.4))
+                linear(i) = toLinear(i / 255.0)
             Next
+            ' Die Umkehr als Tabelle je Kanal, auf den Gammawert des Positivs. Einfarbig mischt die
+            ' Kette die drei Gammawerte zu einem Grau (wie ApplyStagesBeforeToneZones).
+            Dim inverts = negative IsNot Nothing AndAlso negative.NegR IsNot Nothing
+            Dim dividesAlpha = unpremultiply AndAlso bmp.AlphaType = SKAlphaType.Premul
+            Dim negGamma As Double()() = Nothing
+            Dim negLinear As Double()() = Nothing
+            If inverts Then
+                negGamma = New Double(2)() {}
+                negLinear = New Double(2)() {}
+                Dim tables = {negative.NegR, negative.NegG, negative.NegB}
+                For ch = 0 To 2
+                    negGamma(ch) = New Double(255) {}
+                    negLinear(ch) = New Double(255) {}
+                    For i = 0 To 255
+                        Dim g = CDbl(SampleTable(tables(ch), CSng(i / 255.0)))
+                        negGamma(ch)(i) = g
+                        negLinear(ch)(i) = toLinear(Math.Max(0.0, Math.Min(1.0, g)))
+                    Next
+                Next
+            End If
             Dim stepSize = Math.Max(1, CInt(Math.Sqrt(CDbl(bmp.Width) * bmp.Height / 250000.0)))
             Dim histogram = New Long(1000) {}
             Dim total = 0L
@@ -983,7 +1014,33 @@ Namespace Services
                 For x = 0 To bmp.Width - 1 Step stepSize
                     Dim o = x * 4
                     If row(o + 3) = 0 Then Continue For
-                    Dim lum = 0.2126 * linear(row(o + rOff)) + 0.7152 * linear(row(o + 1)) + 0.0722 * linear(row(o + bOff))
+                    Dim lum As Double
+                    Dim alpha = row(o + 3)
+                    If dividesAlpha AndAlso alpha < 255 Then
+                        ' Wie die Kette: erst durch Alpha teilen, dann wie ein deckender Bildpunkt.
+                        Dim r = Math.Min(1.0, row(o + rOff) / CDbl(alpha))
+                        Dim g = Math.Min(1.0, row(o + 1) / CDbl(alpha))
+                        Dim b = Math.Min(1.0, row(o + bOff) / CDbl(alpha))
+                        If inverts Then
+                            r = SampleTable(negative.NegR, CSng(r))
+                            g = SampleTable(negative.NegG, CSng(g))
+                            b = SampleTable(negative.NegB, CSng(b))
+                            If negative.NegMonochrome Then
+                                Dim gray = 0.299 * r + 0.587 * g + 0.114 * b
+                                r = gray : g = gray : b = gray
+                            End If
+                        End If
+                        lum = 0.2126 * toLinear(Math.Max(0.0, Math.Min(1.0, r))) +
+                              0.7152 * toLinear(Math.Max(0.0, Math.Min(1.0, g))) +
+                              0.0722 * toLinear(Math.Max(0.0, Math.Min(1.0, b)))
+                    ElseIf Not inverts Then
+                        lum = 0.2126 * linear(row(o + rOff)) + 0.7152 * linear(row(o + 1)) + 0.0722 * linear(row(o + bOff))
+                    ElseIf negative.NegMonochrome Then
+                        Dim gray = 0.299 * negGamma(0)(row(o + rOff)) + 0.587 * negGamma(1)(row(o + 1)) + 0.114 * negGamma(2)(row(o + bOff))
+                        lum = toLinear(Math.Max(0.0, Math.Min(1.0, gray)))
+                    Else
+                        lum = 0.2126 * negLinear(0)(row(o + rOff)) + 0.7152 * negLinear(1)(row(o + 1)) + 0.0722 * negLinear(2)(row(o + bOff))
+                    End If
                     Dim l = If(lum > 0.008856, 116.0 * Math.Pow(lum, 1.0 / 3.0) - 16.0, 903.3 * lum)
                     histogram(Math.Max(0, Math.Min(1000, CInt(l * 10.0)))) += 1
                     total += 1

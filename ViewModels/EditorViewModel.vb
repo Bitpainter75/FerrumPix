@@ -19970,18 +19970,18 @@ Namespace ViewModels
                 ' nachzurechnen lohnt nicht, sie zwingt einfach zum vollen Durchgang.
                 If layer.HasStroke() OrElse layer.HasEffects() Then Return True
                 If Not wirkt Then Continue For
+                ' Lichter und Tiefen waehlen ihre Kennlinie nach dem Median des GANZEN Bildes, Weiss im
+                ' Tonmodell 3 nach seiner Spitze (ApplyLayerAdjustmentsInRect misst sie am ganzen
+                ' Bild). Eine Aenderung irgendwo kann sie verschieben, und die Korrektur in der Maske
+                ' stuende dann mit der alten Kennlinie da. Welche Aenderung die Statistik bewegt, laesst
+                ' sich vorab nicht sagen: also voll.
+                If layer.Adjustments IsNot Nothing AndAlso layer.Adjustments.ReadsImageStatistics() Then Return True
                 Dim mask = _imageMasks.FirstOrDefault(Function(m) m IsNot Nothing AndAlso m.Id = layer.MaskId)
                 If mask Is Nothing Then Return True
                 Dim maskRect = ImageProcessor.ComputeMaskDirtyRect(sceneSize.Width, sceneSize.Height, mask, adj)
                 If maskRect.IsEmpty Then Return True
-                ' Oertliche Lichter und Tiefen (Tonmodell 3) lesen ihre Basisschicht aus der Umgebung
-                ' der Maske: eine Aenderung knapp daneben verschiebt die Basis darin. Das Rechteck
-                ' waechst deshalb um genau diese Reichweite (ImageProcessor.LocalToneReach).
-                If layer.Adjustments IsNot Nothing AndAlso layer.Adjustments.UsesLocalToneZones() Then
-                    Dim reach = CInt(Math.Ceiling(ImageProcessor.LocalToneReach(Math.Max(sceneSize.Width, sceneSize.Height))))
-                    maskRect = New SKRectI(maskRect.Left - reach, maskRect.Top - reach,
-                                           maskRect.Right + reach, maskRect.Bottom + reach)
-                End If
+                ' Oertliche Lichter und Tiefen (Tonmodell 3) lesen zudem ihre Basisschicht aus der
+                ' Umgebung der Maske; sie sind oben schon erfasst, weil sie auch den Median lesen.
                 If OverlaySceneRenderer.Intersects(maskRect, dirtyRect) Then Return True
             Next
             Return False

@@ -413,6 +413,16 @@ Namespace Services
             Return (Highlights <> 0.0F OrElse ShadowsLevel <> 0.0F) AndAlso ResolvedToneModel() >= 3
         End Function
 
+        ''' <summary>Waehlt ein Tonregler seine Kennlinie nach der Helligkeit des ganzen Bildes? Lichter
+        ''' und Tiefen ab Tonmodell 2 nach dem Median, Weiss ab Tonmodell 3 nach der Spitze
+        ''' (ImageProcessor.ToneReference). Dann rechnet ein Ausschnitt mit seiner eigenen Statistik
+        ''' anders als das ganze Bild, und wer nur einen Teil rechnet, muss sie hereinreichen.</summary>
+        Public Function ReadsImageStatistics() As Boolean
+            Dim model = ResolvedToneModel()
+            Return (model >= 2 AndAlso (Highlights <> 0.0F OrElse ShadowsLevel <> 0.0F)) OrElse
+                   (model >= 3 AndAlso Whites <> 0.0F)
+        End Function
+
         ''' <summary>Steht ein Regler, dessen Bedeutung am Reglermodell haengt? Die fuenf Tonregler,
         ''' dazu Dynamik, die Luminanz im Farbmischer, die Farbgradierung und die Vignette, und die
         ''' Punkt- und Kanalkurven (Modell 2 rechnet sie mit anderem Spline in anderem Farbraum).

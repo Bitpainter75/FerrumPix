@@ -818,9 +818,8 @@ Namespace Services
             ' der des Rechtecks; sonst wirkte dieselbe Ebene im Ausschnitt anders als ueber das ganze
             ' Bild.
             Dim toneReference As ToneReference = Nothing
-            If layerAdjustments.Highlights <> 0 OrElse layerAdjustments.ShadowsLevel <> 0 OrElse
-               layerAdjustments.Whites <> 0 Then
-                toneReference = MeasureToneReference(target)
+            If layerAdjustments.ReadsImageStatistics() Then
+                toneReference = MeasureToneReference(target, unpremultiply:=layerAdjustments.ResolvedToneModel() >= 3)
             End If
 
             Using crop = CopyBgraRegion(target, rect)

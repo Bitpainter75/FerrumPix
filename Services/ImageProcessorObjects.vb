@@ -1140,14 +1140,13 @@ Namespace Services
         ''' <summary>Haengt das Ergebnis einer Objektanpassung an mehr als dem Bildpunkt selbst, also
         ''' an seiner Umgebung, an der Lage in der Ebene oder an der Statistik des ganzen Objekts?
         ''' Dieselbe Liste wie fuer den Ausschnittweg der Maskenebenen (LayerAdjustmentsAreCropSafe),
-        ''' dazu Lichter und Tiefen ab Tonmodell 2: sie waehlen ihre Kennlinie nach dem Median der
-        ''' Ebene, und ein Ausschnitt haette einen anderen. Die Maskenebene reicht diesen Median
-        ''' ausdruecklich herein, die Objektebene nicht.</summary>
+        ''' dazu Lichter und Tiefen ab Tonmodell 2 und Weiss ab Tonmodell 3: sie waehlen ihre
+        ''' Kennlinie nach Median oder Spitze der Ebene, und ein Ausschnitt haette andere. Die
+        ''' Maskenebene reicht diese Werte ausdruecklich herein, die Objektebene nicht.</summary>
         Private Shared Function ObjectAdjustmentsReadSurroundings(objectAdj As ImageAdjustments) As Boolean
             If objectAdj Is Nothing Then Return False
             If Not LayerAdjustmentsAreCropSafe(objectAdj) Then Return True
-            Return (objectAdj.Highlights <> 0.0F OrElse objectAdj.ShadowsLevel <> 0.0F) AndAlso
-                   objectAdj.ResolvedToneModel() >= 2
+            Return objectAdj.ReadsImageStatistics()
         End Function
 
         ''' <summary>Liegt das ganze Objekt samt Effektrand auf der Ebene? Eine Ebene in Bildgroesse

@@ -14142,9 +14142,9 @@ Namespace ViewModels
                                                     IO.Path.GetFileName(target)))
             End If
 
-            Dim folder = IO.Path.GetDirectoryName(target)
-            Dim aside = IO.Path.Combine(folder, "." & IO.Path.GetFileName(target) & ".ferrumpix-old-" &
-                                        Guid.NewGuid().ToString("N").Substring(0, 8))
+            ' Gekuerzt, wo ein langer, gueltiger Name sonst mit dem Zusatz ueber die Grenze des
+            ' Dateisystems liefe; Platz bleibt fuer die Endungen der Begleiter (".stem.xmp").
+            Dim aside = ImageProcessor.SiblingPath(target, ".ferrumpix-old-", "", reserveBytes:=16)
             ' Die Begleitdateien, die eindeutig DIESEM Ziel gehoeren: seine .fpxmp und die angehaengte
             ' XMP-Form. Die ersetzte Form ("foto.xmp") geht nur mit, wenn kein anderes Bild desselben
             ' Stamms daneben liegt (RawSidecarService.OwnedStemXmp); sonst kann sie diesem gehoeren
@@ -14152,11 +14152,16 @@ Namespace ViewModels
             ' "ziel/foto.cr2" an ihr, sobald die Quelle keine eigene XMP mitbrachte.
             ' Gefragt wird VOR dem Beiseitelegen: danach fehlt das Ziel, und die Frage gaelte einer
             ' anderen Lage.
-            Dim companions As New List(Of (String, String)) From {
-                (RawSidecarService.SidecarPathFor(target), RawSidecarService.SidecarPathFor(aside)),
-                (target & ".xmp", aside & ".xmp")}
-            Dim ownedStem = If(File.Exists(target), RawSidecarService.OwnedStemXmp(target), Nothing)
-            If ownedStem IsNot Nothing Then companions.Add((ownedStem, aside & ".stem.xmp"))
+            ' NUR BEI EINEM DATEIZIEL. Ein Ordner "Urlaub" hat keine Begleitdateien: ein daneben
+            ' liegendes "Urlaub.xmp" oder "Urlaub.fpxmp" gehoert zu einem Foto "Urlaub.cr2" und ginge
+            ' sonst mit der alten Fassung beiseite und nach dem Erfolg mit ihr weg.
+            Dim companions As New List(Of (String, String))()
+            If File.Exists(target) Then
+                companions.Add((RawSidecarService.SidecarPathFor(target), RawSidecarService.SidecarPathFor(aside)))
+                companions.Add((target & ".xmp", aside & ".xmp"))
+                Dim ownedStem = RawSidecarService.OwnedStemXmp(target)
+                If ownedStem IsNot Nothing Then companions.Add((ownedStem, aside & ".stem.xmp"))
+            End If
             Dim setAside As New List(Of (Original As String, Aside As String))()
             MovePathSameFolder(target, aside)
             Try
@@ -14214,9 +14219,7 @@ Namespace ViewModels
         Private Shared Function TransferPath(source As String, target As String, movePath As Boolean, replaceConfirmed As Boolean) As List(Of String)
             Dim isFile = File.Exists(source)
             If isFile Then ThrowIfTargetSidecarConflict(source, target, replaceConfirmed)
-            Dim staging = IO.Path.Combine(IO.Path.GetDirectoryName(target),
-                                          "." & IO.Path.GetFileName(target) & ".ferrumpix-new-" &
-                                          Guid.NewGuid().ToString("N").Substring(0, 8))
+            Dim staging = ImageProcessor.SiblingPath(target, ".ferrumpix-new-", "", reserveBytes:=16)
             Try
                 If isFile Then
                     If movePath Then File.Move(source, staging) Else File.Copy(source, staging)

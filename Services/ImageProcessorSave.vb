@@ -673,21 +673,58 @@ Namespace Services
                             $"Quelle fehlt, gespeichert ohne Aufnahmedaten source={IO.Path.GetFileName(sourcePath)} target={IO.Path.GetFileName(targetPath)}")
                         keepMetadata = False
                     End If
-                    Dim sourceMetadata = If(keepMetadata, ReadSourceMetadata(sourcePath, targetPath), Nothing)
-                    ' TIFF nimmt die Aufnahmedaten nicht bytegenau mit, sondern als einzelne Felder: die
-                    ' Datei IST dort der TIFF-Block, und die Felder gehen beim Schreiben selbst hinein.
+                    ' UEBER DAS ORIGINAL: ERST GANZ LESEN, DANN ZERLEGEN. Die Zerleger unten werten
+                    ' jeden Fehler als Zerlegefehler und speichern ohne Aufnahmedaten weiter (siehe
+                    ' ReadSourceMetadata). Faellt zwischen der Vorfrage und dem Lesen das Netzlaufwerk
+                    ' weg, ersetzte das Original sich so ohne seinen Block. Deshalb kommt die Quelle
+                    ' zuerst vollstaendig in eine lokale Momentaufnahme: ein Lesefehler fliegt dabei
+                    ' heraus und bricht ab, bevor etwas geschrieben ist, und was danach beim Zerlegen
+                    ' scheitert, ist wirklich nur noch ein Zerlegefehler.
+                    ' NICHT NUR BEI GLEICHEM PFAD. Drehen im Betrachter, die Stapel der Galerie und die
+                    ' Serverwege schreiben in eine Nachbardatei und kopieren sie danach ueber das
+                    ' Original; fuer SaveImage sind das zwei Pfade. Die Stapel-Schreiber dienen dabei
+                    ' auch neuen Dateien und koennen den Unterschied nicht sagen. Deshalb entscheidet
+                    ' die QUELLE: ueberschrieben werden kann nur, was SaveImage selbst kodiert (JPEG,
+                    ' PNG, WebP), und fuer genau diese Quellen gibt es immer die Momentaufnahme. Sie
+                    ' sind klein; eine RAW, HEIC oder TIFF als Quelle wird nie ueberschrieben und
+                    ' bleibt beim direkten Lesen.
+                    Dim metadataSource = sourcePath
+                    Dim snapshot As String = Nothing
+                    Dim sourceCanBeReplaced = PathIdentity.AreSame(sourcePath, targetPath) OrElse
+                                              missingSource = MissingSourceMetadata.Fail OrElse
+                                              IsRewritableInPlace(sourcePath)
+                    If keepMetadata AndAlso sourceCanBeReplaced Then
+                        snapshot = SnapshotMetadataSource(sourcePath)
+                        metadataSource = snapshot
+                    End If
+                    Dim sourceMetadata As SourceMetadata = Nothing
                     Dim tiffMetadata As ExifBuilderService.ExifFieldSet = Nothing
-                    If isTiff AndAlso keepMetadata Then tiffMetadata = ExifBuilderService.CollectFields(sourcePath)
-                    ' JPEG XL nimmt EXIF und XMP als Boxen, und die muessen beim Kodieren dabei sein:
-                    ' ein Nachlauf, der die fertige Datei aufschneidet, wie bei JPEG und PNG, braeuchte
-                    ' einen eigenen Behaelter-Schreiber. Die Masse kommen erst nach der Reglerkette.
                     Dim jxlExif As Byte() = Nothing
                     Dim jxlXmp As Byte() = Nothing
-                    If isJxl AndAlso keepMetadata Then
-                        jxlExif = ExtractExifTiffBytes(sourcePath)
-                        Dim xmp = ExtractXmpBytes(sourcePath)
-                        If xmp IsNot Nothing Then jxlXmp = If(StripXmpColorFields(xmp), xmp)
-                    End If
+                    Try
+                        If keepMetadata Then sourceMetadata = ReadSourceMetadata(metadataSource, targetPath)
+                        ' TIFF nimmt die Aufnahmedaten nicht bytegenau mit, sondern als einzelne Felder: die
+                        ' Datei IST dort der TIFF-Block, und die Felder gehen beim Schreiben selbst hinein.
+                        If isTiff AndAlso keepMetadata Then tiffMetadata = ExifBuilderService.CollectFields(metadataSource)
+                        ' JPEG XL nimmt EXIF und XMP als Boxen, und die muessen beim Kodieren dabei sein:
+                        ' ein Nachlauf, der die fertige Datei aufschneidet, wie bei JPEG und PNG, braeuchte
+                        ' einen eigenen Behaelter-Schreiber. Die Masse kommen erst nach der Reglerkette.
+                        If isJxl AndAlso keepMetadata Then
+                            jxlExif = ExtractExifTiffBytes(metadataSource)
+                            Dim xmp = ExtractXmpBytes(metadataSource)
+                            If xmp IsNot Nothing Then jxlXmp = If(StripXmpColorFields(xmp), xmp)
+                        End If
+                    Finally
+                        ' Alles oben liest sofort in den Speicher; die Momentaufnahme wird danach nicht
+                        ' mehr gebraucht.
+                        If snapshot IsNot Nothing Then
+                            Try
+                                File.Delete(snapshot)
+                            Catch ex As Exception
+                                DiagnosticLogService.LogException("ImageProcessor.Save.Snapshot", ex)
+                            End Try
+                        End If
+                    End Try
 
                     Using processed = ProcessBitmap(original, adj)
                         ' DIE LETZTE FRAGE VOR DEM SCHREIBEN. Die Modellwege steigen an ihrer
@@ -937,7 +974,10 @@ Namespace Services
         ''' EIN LESEFEHLER BRICHT DAS SPEICHERN AB, er wird nicht geschluckt. Frueher kam dann Nothing
         ''' zurueck, und es wurde ohne Aufnahmedaten geschrieben: beim Speichern ueber das Original
         ''' war der alte Block weg, und SaveImage meldete Erfolg. Gefragt wird das VORHER und
-        ''' getrennt, in ProbeMetadataSource; zu diesem Zeitpunkt ist noch nichts geschrieben.
+        ''' getrennt, in ProbeMetadataSource; zu diesem Zeitpunkt ist noch nichts geschrieben. Beim
+        ''' Speichern ueber das Original liest SaveImage die Quelle zudem vorher ganz in eine lokale
+        ''' Momentaufnahme (SnapshotMetadataSource), und hier wird nur noch diese zerlegt: ein
+        ''' Lesefehler NACH der Vorfrage bricht so ebenfalls ab.
         '''
         ''' JEDER FEHLER HIER DRIN IST DAGEGEN EIN ZERLEGEFEHLER. Laesst sich der Block einer
         ''' eigenwillig gebauten Datei nicht zerlegen, koennte er ohnehin nicht mitgenommen werden;
@@ -961,6 +1001,38 @@ Namespace Services
                 DiagnosticLogService.LogException("ImageProcessor.ReadSourceMetadata", ex)
             End Try
             Return Nothing
+        End Function
+
+        ''' <summary>Kopiert die Quelle vollstaendig in eine lokale Datei im Ordner fuer
+        ''' Zwischendateien, mit derselben Endung (die Zerleger waehlen ihren Weg danach). Jeder
+        ''' Lesefehler fliegt als Ausnahme weiter und bricht das Speichern ab; siehe den Aufruf in
+        ''' SaveImage.</summary>
+        ''' <summary>Kann eine Datei dieser Endung an Ort und Stelle neu geschrieben werden? Nur, was
+        ''' SaveImage selbst als Ziel kodiert und was ein Bild ist: JPEG, PNG, WebP. TIFF und JPEG XL
+        ''' entstehen nur als neue Datei (CanEncodeToTargetExtension).</summary>
+        Private Shared Function IsRewritableInPlace(sourcePath As String) As Boolean
+            Select Case IO.Path.GetExtension(If(sourcePath, "")).ToLowerInvariant()
+                Case ".jpg", ".jpeg", ".png", ".webp"
+                    Return True
+                Case Else
+                    Return False
+            End Select
+        End Function
+
+        Private Shared Function SnapshotMetadataSource(sourcePath As String) As String
+            Dim snapshot = IO.Path.Combine(IO.Path.GetTempPath(),
+                                           "ferrumpix-source-" & Guid.NewGuid().ToString("N").Substring(0, 8) &
+                                           IO.Path.GetExtension(sourcePath))
+            Try
+                File.Copy(sourcePath, snapshot)
+            Catch
+                Try
+                    If File.Exists(snapshot) Then File.Delete(snapshot)
+                Catch
+                End Try
+                Throw
+            End Try
+            Return snapshot
         End Function
 
         ''' <summary>Ist die Quelle zum Lesen der Aufnahmedaten da? Oeffnet sie und schliesst sie
@@ -1074,12 +1146,24 @@ Namespace Services
         ''' das Ziel selbst gueltig war. Reicht es trotzdem nicht, wird der Name hinten gekuerzt; die
         ''' Nachbardatei muss nur eindeutig sein, nicht lesbar.</summary>
         Friend Shared Function AtomicSiblingPath(targetPath As String) As String
+            Return SiblingPath(targetPath, ".", ".tmp")
+        End Function
+
+        ''' <summary>Ein versteckter Nachbarname im selben Ordner: Punkt, Name des Ziels, dann
+        ''' <paramref name="marker"/>, acht zufaellige Hexzeichen und <paramref name="ending"/>.
+        ''' Ueberschreitet das die Grenze des Dateisystems (255 Byte in UTF-8), wird der Name hinten
+        ''' gekuerzt, wie bei <see cref="AtomicSiblingPath"/>. <paramref name="reserveBytes"/> haelt
+        ''' Platz fuer Endungen frei, die der Aufrufer spaeter noch anhaengt (etwa ".stem.xmp" an
+        ''' einen beiseitegelegten Namen). Das Kennzeichen bleibt immer ganz: an ihm erkennen
+        ''' Meldungen, Aufraeumer und Pruefungen die Nachbardatei.</summary>
+        Friend Shared Function SiblingPath(targetPath As String, marker As String, ending As String,
+                                           Optional reserveBytes As Integer = 0) As String
             Const MaxNameBytes As Integer = 255
             Dim folder = IO.Path.GetDirectoryName(targetPath)
             ' Schon versteckt (eine Nachbardatei der zweiten Stufe): keinen zweiten Punkt davor.
             Dim name = IO.Path.GetFileName(targetPath).TrimStart("."c)
-            Dim suffix = "." & Guid.NewGuid().ToString("N").Substring(0, 8) & ".tmp"
-            Dim room = MaxNameBytes - 1 - suffix.Length
+            Dim suffix = marker & Guid.NewGuid().ToString("N").Substring(0, 8) & ending
+            Dim room = MaxNameBytes - 1 - Text.Encoding.UTF8.GetByteCount(suffix) - reserveBytes
             While name.Length > 0 AndAlso Text.Encoding.UTF8.GetByteCount(name) > room
                 ' Nie ein Ersatzzeichenpaar halbieren: es waere danach kein gueltiger Name mehr.
                 Dim cut = If(name.Length >= 2 AndAlso Char.IsLowSurrogate(name(name.Length - 1)), 2, 1)

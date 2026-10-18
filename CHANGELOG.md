@@ -8,9 +8,9 @@
   dark corners. Edits you saved before keep their look.
 
 - **Whites adapt to the picture.** The whites slider now looks at how close the brightest parts
-  already are to white: a flat picture opens up further, one that already reaches white is
-  lifted more gently. This brings the slider much closer to what photographers know from other
-  raw editors.
+  already are to white. A flat picture opens up further, one whose highlights already reach
+  white is lifted more gently, so the slider behaves much more like you would expect from a raw
+  editor. Highlights, shadows and whites also read a film negative as the positive you see.
 
 - **The eyedropper shows what it hits.** A small label follows the eyedropper over the picture
   with a swatch and the value of the color under its tip.
@@ -46,14 +46,21 @@
 
 - Overwriting a file or folder while pasting or moving keeps the old one until the new one is
   complete. If the copy fails, for example because a network drive drops out, the old file or
-  folder is back as it was.
+  folder is back as it was. Replacing a folder no longer takes along the sidecar of a photo
+  that happens to have the same name.
 
 - Saving a JPEG, PNG or WebP with its photo information no longer reports success when that
   information could not be carried over. The file stays as it was and the save is shown as
-  failed.
+  failed. This now also covers rotating in the viewer, batch changes and replacing a picture on
+  a server, even when the drive drops out in the middle of reading.
 
 - Converting RAW files to DNG over an existing DNG no longer leaves a half written file behind
   when the conversion fails or is cancelled. The existing DNG stays as it was.
+
+- Pasting, moving and converting to DNG no longer fail for files with very long names.
+
+- An adjustment stacked above an object now updates right away when the object changes
+  elsewhere in the picture, instead of only after the next full refresh.
 
 - Saved searches, favorites and settings that could not be written are now reported in the
   gallery instead of silently counting as saved. A removed saved search no longer comes back
