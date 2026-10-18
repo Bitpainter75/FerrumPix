@@ -146,11 +146,12 @@ Namespace Services
                     fields.Altitude = gps.Value.Altitude
                 End If
                 Return fields
-            Catch ex As Exception When Not TypeOf ex Is IO.IOException AndAlso Not TypeOf ex Is UnauthorizedAccessException
+            Catch ex As Exception
                 ' Ein unlesbarer, also nicht ZERLEGBARER Kopf darf das Speichern nicht kosten: das
-                ' BILD ist der Auftrag, die Aufnahmedaten sind die Zugabe. Ein LESEfehler an der Datei
-                ' geht dagegen weiter: sonst wuerde ohne die gewuenschten Aufnahmedaten gespeichert und
-                ' Erfolg gemeldet (siehe ImageProcessor.ReadSourceMetadata).
+                ' BILD ist der Auftrag, die Aufnahmedaten sind die Zugabe. Ob die Datei ueberhaupt
+                ' LESBAR ist, fragt ImageProcessor.SaveImage vorher (ProbeMetadataSource). Nach
+                ' Ausnahmetyp trennen geht nicht: der Metadatenleser meldet einen verbogenen Versatz
+                ' als IOException, und eine solche Datei liesse sich sonst gar nicht exportieren.
                 DiagnosticLogService.LogException("ExifBuilderService.CollectFields", ex)
                 Return Nothing
             End Try

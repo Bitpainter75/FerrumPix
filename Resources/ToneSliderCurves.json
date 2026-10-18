@@ -17,7 +17,7 @@
   }
  },
  "localDetail": {
-  "_": "Tonmodell 3: Verstaerkung der Feinstruktur (Bildpunkt minus Gauss mit 0,5 % der langen Kante) je Zone der geglaetteten Helligkeit, Zonenmitten in L, gemessen ueber 57 Aufnahmen mit den Kennlinien an der Basisschicht (Diagnostics/Reglereichung/oertlich.py).",
+  "_": "Tonmodell 3: Verstaerkung der Feinstruktur (Bildpunkt minus Gauss mit der Standardabweichung 0,338 % der langen Kante, nominell 0,5 %: drei Kastenmittel vom Radius 3 auf 1024 Punkten) je Zone der geglaetteten Helligkeit, Zonenmitten in L, gemessen ueber 57 Aufnahmen mit den Kennlinien an der Basisschicht (Diagnostics/Reglereichung/oertlich.py).",
   "centers": [10, 30, 50, 70, 88.5],
   "Highlights": {
    "-100": [0.906, 0.963, 0.982, 1.031, 1.187],

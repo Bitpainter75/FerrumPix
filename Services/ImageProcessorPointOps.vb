@@ -1762,7 +1762,9 @@ Namespace Services
 
         ''' <summary>Radius des Filters als Anteil der langen Kante. Gemessen lagen 1 und 2 % gleich
         ''' gut, 0,5 % und 4 % etwas schlechter; der Anteil macht die Stufe unabhaengig von der
-        ''' Aufloesung, die Vorschau rechnet wie der Export.</summary>
+        ''' Aufloesung, die Vorschau rechnet wie der Export. Auf dem Raster gilt er als gebrochener
+        ''' Radius (FractionalBoxMean): auf ganze Rasterpunkte gerundet laege er je nach Bildgroesse
+        ''' bis zu einem halben Punkt daneben.</summary>
         Private Const LocalToneRadius As Double = 0.01
 
         ''' <summary>Kantenschwelle des Filters im Quadrat des Gammawerts: Stufen deutlich ueber
@@ -1770,25 +1772,56 @@ Namespace Services
         ''' Kantentreue verloren.</summary>
         Private Const LocalToneEpsilon As Single = 0.01F
 
-        ''' <summary>Radius der Glaettung, gegen die die Feinstruktur gemessen wird, als Anteil der
-        ''' langen Kante; ein Gauss, angenaehert durch drei Kastenmittel. Auf diesem Radius sind die
-        ''' Verstaerkungen je Zone gemessen (ToneSliderCurves.DetailGain).</summary>
-        Private Const LocalToneDetailRadius As Double = 0.005
+        ''' <summary>Breite der Glaettung, gegen die die Feinstruktur gemessen wird: die
+        ''' Standardabweichung als Anteil der langen Kante, angenaehert durch drei Kastenmittel.
+        '''
+        ''' Die Verstaerkungen je Zone (ToneSliderCurves.DetailGain) sind an Vorschauen mit 1024
+        ''' Punkten Kante gemessen, geglaettet mit drei Kastenmitteln vom Radius 3 (nominell „0,5 %",
+        ''' Radius 0,5 % durch 1,7, gerundet). Das ist eine Standardabweichung von Wurzel aus 12
+        ''' Punkten, also 0,338 % der Kante, und genau diese Breite gilt hier fuer jede Bildgroesse
+        ''' (Diagnostics/Reglereichung/oertlich.py rechnet dieselbe). Ein auf ganze Rasterpunkte
+        ''' gerundeter Radius traf sie nur bei 1024 Rasterpunkten; sonst lag sie je nach Bildgroesse
+        ''' zwischen 0,33 und 0,48 %, und Vorschau und Export zeigten verschieden viel Struktur.</summary>
+        Private Const LocalToneDetailSigma As Double = 0.0033829117335329633
+
+        ''' <summary>Lange Kante, auf die sich Radius und Glaettung der Basisschicht beziehen; 0 heisst:
+        ''' die Kante der sichtbaren Flaeche des Bildes, das gerade durch die Kette laeuft. Gesetzt nur
+        ''' fuer die Ebene eines Objekts mit eigenen Anpassungen (WithLocalToneReference): dieselbe
+        ''' Ebene entsteht im Bildrender, im Ausschnitt und im Kompositor verschieden gross und, im
+        ''' Kompositor, ungedreht. Das Objektrechteck ist dagegen ueberall dasselbe.
+        ''' Je Faden, weil Bildrender und Kompositor gleichzeitig laufen koennen; gelesen wird er auf
+        ''' dem Faden, der die Kette aufruft, vor dem verteilten Durchlauf.</summary>
+        <ThreadStatic> Private Shared _localToneReferenceEdge As Double
+
+        ''' <summary>Fuehrt <paramref name="work"/> mit <paramref name="referenceEdge"/> als Bezug der
+        ''' Basisschicht aus (siehe _localToneReferenceEdge) und stellt danach den vorigen Bezug her.</summary>
+        Friend Shared Function WithLocalToneReference(referenceEdge As Double, work As Func(Of SKBitmap)) As SKBitmap
+            Dim previous = _localToneReferenceEdge
+            _localToneReferenceEdge = Math.Max(0.0, referenceEdge)
+            Try
+                Return work()
+            Finally
+                _localToneReferenceEdge = previous
+            End Try
+        End Function
 
         ''' <summary>Die Basisschicht als Koeffizienten des Fuehrungsfilters auf dem Raster:
         ''' Basis = A * Grauwert + B, A und B bilinear auf den Bildpunkt gelesen. Dazu der geglaettete
-        ''' Grauwert fuer das Strukturglied.</summary>
+        ''' Grauwert fuer das Strukturglied. Das Raster deckt nur die sichtbare Flaeche ab und
+        ''' beginnt bei OriginX/OriginY.</summary>
         Friend NotInheritable Class LocalToneBase
             Public Width As Integer
             Public Height As Integer
             Public StepSize As Integer
+            Public OriginX As Integer
+            Public OriginY As Integer
             Public MeanA As Single()
             Public MeanB As Single()
             Public Smooth As Single()
 
             Public Sub Sample(x As Integer, y As Integer, gray As Single, ByRef baseValue As Single, ByRef smoothValue As Single)
-                Dim gx = Math.Max(0.0F, Math.Min(Width - 1.0F, (x + 0.5F) / StepSize - 0.5F))
-                Dim gy = Math.Max(0.0F, Math.Min(Height - 1.0F, (y + 0.5F) / StepSize - 0.5F))
+                Dim gx = Math.Max(0.0F, Math.Min(Width - 1.0F, (x - OriginX + 0.5F) / StepSize - 0.5F))
+                Dim gy = Math.Max(0.0F, Math.Min(Height - 1.0F, (y - OriginY + 0.5F) / StepSize - 0.5F))
                 Dim x0 = CInt(Math.Floor(gx))
                 Dim y0 = CInt(Math.Floor(gy))
                 Dim x1 = Math.Min(x0 + 1, Width - 1)
@@ -1825,27 +1858,41 @@ Namespace Services
         ''' Rasterfeld das Farbmittel, durch die Stufen VOR den Tonzonen geschickt, als Grauwert
         ''' gefiltert. Ein Ausschnitt bekaeme so eine andere Basis als das ganze Bild; die
         ''' Maskenebene im Rechteck nimmt solche Ebenen deshalb nicht
-        ''' (ImageAdjustments.UsesLocalToneZones).</summary>
+        ''' (ImageAdjustments.UsesLocalToneZones).
+        '''
+        ''' Gerechnet wird nur ueber das Rechteck der sichtbaren Bildpunkte: ein Objekt auf einer
+        ''' Ebene von Bildgroesse bekommt so dasselbe Raster wie auf einer Ebene, die es knapp
+        ''' umschliesst. Radius und Glaettung beziehen sich auf <paramref name="referenceEdge"/>,
+        ''' ohne Angabe (0) auf die lange Kante dieses Rechtecks; auf einem deckenden Bild ist das die
+        ''' lange Bildkante.</summary>
         Private Shared Function BuildLocalToneBase(srcBuf As Byte(), stride As Integer, width As Integer, height As Integer,
                                                    ri As Integer, gi As Integer, bi As Integer, ai As Integer,
-                                                   srcPremul As Boolean, chain As PointOpChain) As LocalToneBase
-            Dim stepSize = Math.Max(1, CInt(Math.Ceiling(Math.Max(width, height) / CDbl(LocalToneGridEdge))))
-            Dim gw = (width + stepSize - 1) \ stepSize
-            Dim gh = (height + stepSize - 1) \ stepSize
+                                                   srcPremul As Boolean, chain As PointOpChain,
+                                                   referenceEdge As Double) As LocalToneBase
+            Dim bounds = VisibleBounds(srcBuf, stride, width, height, ai)
+            If bounds.Width <= 0 OrElse bounds.Height <= 0 Then bounds = New SKRectI(0, 0, width, height)
+            Dim originX = bounds.Left, originY = bounds.Top
+            Dim boundsRight = bounds.Right, boundsBottom = bounds.Bottom
+            Dim visibleEdge = Math.Max(bounds.Width, bounds.Height)
+            Dim stepSize = Math.Max(1, CInt(Math.Ceiling(visibleEdge / CDbl(LocalToneGridEdge))))
+            Dim gw = (bounds.Width + stepSize - 1) \ stepSize
+            Dim gh = (bounds.Height + stepSize - 1) \ stepSize
             Dim gray = New Single(gw * gh - 1) {}
             Dim coverage = New Single(gw * gh - 1) {}
             Dim toLinear = _srgbToLinearTable
             Dim toGamma = _linearToSrgbTable
             ForEachRow(gw, gh,
                 Sub(gy)
-                    Dim yEnd = Math.Min(height, (gy + 1) * stepSize)
+                    Dim yStart = originY + gy * stepSize
+                    Dim yEnd = Math.Min(boundsBottom, yStart + stepSize)
                     For gx = 0 To gw - 1
-                        Dim xEnd = Math.Min(width, (gx + 1) * stepSize)
+                        Dim xStart = originX + gx * stepSize
+                        Dim xEnd = Math.Min(boundsRight, xStart + stepSize)
                         Dim sumR = 0.0F, sumG = 0.0F, sumB = 0.0F
                         Dim totalAlpha = 0.0F
-                        For y = gy * stepSize To yEnd - 1
+                        For y = yStart To yEnd - 1
                             Dim row = y * stride
-                            For x = gx * stepSize To xEnd - 1
+                            For x = xStart To xEnd - 1
                                 Dim o = row + x * 4
                                 Dim a = srcBuf(o + ai)
                                 If a = 0 Then Continue For
@@ -1870,21 +1917,34 @@ Namespace Services
                             value = LocalToneGray(rr, gg, bb, toLinear, toGamma)
                         End If
                         gray(gy * gw + gx) = value
-                        coverage(gy * gw + gx) = totalAlpha / ((xEnd - gx * stepSize) * (yEnd - gy * stepSize))
+                        coverage(gy * gw + gx) = totalAlpha / ((xEnd - xStart) * (yEnd - yStart))
                     Next
                 End Sub)
 
-            Dim radius = Math.Max(1, CInt(Math.Round(LocalToneRadius * Math.Max(gw, gh))))
+            ' Radius und Glaettung in Bildpunkten der vollen Aufloesung, umgerechnet aufs Raster, als
+            ' Bruchteil statt auf ganze Rasterpunkte gerundet. Die Glaettung zieht die Breite ab, die
+            ' schon das Zusammenfassen eines Rasterfelds mitbringt (ein Kasten aus stepSize Punkten
+            ' hat die Varianz (stepSize^2 - 1) / 12 Bildpunkte zum Quadrat).
+            Dim edge = If(referenceEdge > 0.0, referenceEdge, CDbl(visibleEdge))
+            Dim radius = LocalToneRadius * edge / stepSize
+            Dim sigmaPixels = LocalToneDetailSigma * edge
+            Dim gridVariance = Math.Max(0.0, (sigmaPixels * sigmaPixels - (CDbl(stepSize) * stepSize - 1.0) / 12.0) /
+                                             (CDbl(stepSize) * stepSize))
+            Dim smoothRadius = FractionalBoxRadiusForVariance(gridVariance / 3.0)
             Dim squares = New Single(gray.Length - 1) {}
             For i = 0 To gray.Length - 1
                 squares(i) = gray(i) * gray(i)
             Next
             ' Ein leeres Rasterfeld ist KEIN schwarzer Bildpunkt. Die Deckung wird bei jedem
-            ' Mittel mitgefuehrt; auf deckenden Bildern bleibt der bisherige schnelle Weg.
+            ' Mittel mitgefuehrt; auf deckenden Bildern bleibt der bisherige schnelle Weg. Ihr
+            ' Kastenmittel haengt nur am Radius und wird je Radius einmal gerechnet, nicht bei
+            ' jedem der sieben Mittel neu.
             Dim hasTransparency = coverage.Any(Function(value) value < 0.999999F)
             Dim weights = If(hasTransparency, coverage, Nothing)
-            Dim mean = BoxMeanWithCoverage(gray, weights, gw, gh, radius)
-            Dim meanSquare = BoxMeanWithCoverage(squares, weights, gw, gh, radius)
+            Dim weightsMean = If(hasTransparency, FractionalBoxMean(coverage, gw, gh, radius), Nothing)
+            Dim weightsSmooth = If(hasTransparency, FractionalBoxMean(coverage, gw, gh, smoothRadius), Nothing)
+            Dim mean = BoxMeanWithCoverage(gray, weights, weightsMean, gw, gh, radius)
+            Dim meanSquare = BoxMeanWithCoverage(squares, weights, weightsMean, gw, gh, radius)
             Dim coefA = New Single(gray.Length - 1) {}
             Dim coefB = New Single(gray.Length - 1) {}
             For i = 0 To gray.Length - 1
@@ -1892,30 +1952,112 @@ Namespace Services
                 coefA(i) = variance / (variance + LocalToneEpsilon)
                 coefB(i) = mean(i) - coefA(i) * mean(i)
             Next
-            Dim smoothRadius = Math.Max(1, CInt(Math.Round(LocalToneDetailRadius * Math.Max(gw, gh) / 1.7)))
+            Dim smooth = gray
+            For pass = 1 To 3
+                smooth = BoxMeanWithCoverage(smooth, weights, weightsSmooth, gw, gh, smoothRadius)
+            Next
             Return New LocalToneBase With {
                 .Width = gw, .Height = gh, .StepSize = stepSize,
-                .MeanA = BoxMeanWithCoverage(coefA, weights, gw, gh, radius),
-                .MeanB = BoxMeanWithCoverage(coefB, weights, gw, gh, radius),
-                .Smooth = BoxMeanWithCoverage(BoxMeanWithCoverage(BoxMeanWithCoverage(gray, weights, gw, gh, smoothRadius),
-                                                                  weights, gw, gh, smoothRadius), weights, gw, gh, smoothRadius)
+                .OriginX = originX, .OriginY = originY,
+                .MeanA = BoxMeanWithCoverage(coefA, weights, weightsMean, gw, gh, radius),
+                .MeanB = BoxMeanWithCoverage(coefB, weights, weightsMean, gw, gh, radius),
+                .Smooth = smooth
             }
         End Function
 
-        ''' <summary>Mittelt nur sichtbare Anteile; transparente Felder verdunkeln die Umgebung nicht.</summary>
-        Private Shared Function BoxMeanWithCoverage(source As Single(), coverage As Single(), width As Integer,
-                                                    height As Integer, radius As Integer) As Single()
-            If coverage Is Nothing Then Return BoxMean(source, width, height, radius)
+        ''' <summary>Wie weit die Basisschicht eines Bildes mit der langen Kante
+        ''' <paramref name="edge"/> um einen Bildpunkt herum liest, in Bildpunkten: der Fuehrungsfilter
+        ''' mittelt zweimal mit seinem Radius (erst die Statistik, dann die Koeffizienten), die
+        ''' Glaettung des Strukturglieds dreimal mit ihrem; dazu ein Rasterfeld fuer das bilineare
+        ''' Lesen. Fuer Ebenen, die nur ueber einem Ausschnitt neu gerechnet werden sollen.</summary>
+        Friend Shared Function LocalToneReach(edge As Double) As Double
+            If edge <= 0.0 Then Return 0.0
+            Dim stepSize = Math.Max(1.0, Math.Ceiling(edge / LocalToneGridEdge))
+            Dim guidedReach = 2.0 * (Math.Ceiling(LocalToneRadius * edge / stepSize) + 1.0) * stepSize
+            Dim sigma = LocalToneDetailSigma * edge / stepSize
+            Dim smoothReach = 3.0 * (Math.Ceiling(FractionalBoxRadiusForVariance(sigma * sigma / 3.0)) + 1.0) * stepSize
+            Return Math.Max(guidedReach, smoothReach) + 2.0 * stepSize
+        End Function
+
+        ''' <summary>Das Rechteck um alle nicht voll durchsichtigen Bildpunkte (rechte und untere Kante
+        ''' ausschliessend); leer, wenn keiner sichtbar ist. Auf einem deckenden Bild liest es je
+        ''' Zeile nur die beiden Randpunkte.</summary>
+        Private Shared Function VisibleBounds(srcBuf As Byte(), stride As Integer, width As Integer, height As Integer,
+                                              ai As Integer) As SKRectI
+            Dim top = -1
+            For y = 0 To height - 1
+                If RowHasVisiblePixel(srcBuf, y * stride, width, ai) Then
+                    top = y
+                    Exit For
+                End If
+            Next
+            If top < 0 Then Return SKRectI.Empty
+            Dim bottom = top
+            For y = height - 1 To top Step -1
+                If RowHasVisiblePixel(srcBuf, y * stride, width, ai) Then
+                    bottom = y
+                    Exit For
+                End If
+            Next
+            Dim left = width, right = -1
+            For y = top To bottom
+                Dim row = y * stride
+                For x = 0 To left - 1
+                    If srcBuf(row + x * 4 + ai) <> 0 Then
+                        left = x
+                        Exit For
+                    End If
+                Next
+                For x = width - 1 To right + 1 Step -1
+                    If srcBuf(row + x * 4 + ai) <> 0 Then
+                        right = x
+                        Exit For
+                    End If
+                Next
+            Next
+            If right < left Then Return SKRectI.Empty
+            Return New SKRectI(left, top, right + 1, bottom + 1)
+        End Function
+
+        Private Shared Function RowHasVisiblePixel(srcBuf As Byte(), row As Integer, width As Integer, ai As Integer) As Boolean
+            For x = 0 To width - 1
+                If srcBuf(row + x * 4 + ai) <> 0 Then Return True
+            Next
+            Return False
+        End Function
+
+        ''' <summary>Mittelt nur sichtbare Anteile; transparente Felder verdunkeln die Umgebung nicht.
+        ''' <paramref name="coverageMean"/> ist das Kastenmittel der Deckung mit demselben Radius; der
+        ''' Aufrufer rechnet es einmal fuer alle Mittel dieses Radius.</summary>
+        Private Shared Function BoxMeanWithCoverage(source As Single(), coverage As Single(), coverageMean As Single(),
+                                                    width As Integer, height As Integer, radius As Double) As Single()
+            If coverage Is Nothing Then Return FractionalBoxMean(source, width, height, radius)
             Dim weighted = New Single(source.Length - 1) {}
             For i = 0 To source.Length - 1
                 weighted(i) = source(i) * coverage(i)
             Next
-            Dim sums = BoxMean(weighted, width, height, radius)
-            Dim weights = BoxMean(coverage, width, height, radius)
+            Dim sums = FractionalBoxMean(weighted, width, height, radius)
             For i = 0 To sums.Length - 1
-                sums(i) = If(weights(i) > 0.0000001F, sums(i) / weights(i), 0.0F)
+                sums(i) = If(coverageMean(i) > 0.0000001F, sums(i) / coverageMean(i), 0.0F)
             Next
             Return sums
+        End Function
+
+        ''' <summary>Der gebrochene Radius eines Kastenmittels (FractionalBoxMean) mit der Varianz
+        ''' <paramref name="variance"/> in Rasterpunkten zum Quadrat. Mit dem Bruchteil f waechst die
+        ''' Varianz stetig von r(r+1)/3 (f = 0) bis (r+1)(r+2)/3 (f = 1); drei solche Mittel
+        ''' hintereinander haben die dreifache Varianz.</summary>
+        Private Shared Function FractionalBoxRadiusForVariance(variance As Double) As Double
+            If variance <= 0.0 Then Return 0.0
+            Dim whole = 0
+            While (whole + 1.0) * (whole + 2.0) / 3.0 <= variance
+                whole += 1
+            End While
+            ' Summe von k^2 ueber -whole..whole und das Gewicht der beiden Randpunkte.
+            Dim inner = whole * (whole + 1.0) * (2.0 * whole + 1.0) / 3.0
+            Dim edgeSquare = (whole + 1.0) * (whole + 1.0)
+            Dim part = (variance * (2.0 * whole + 1.0) - inner) / (2.0 * (edgeSquare - variance))
+            Return whole + Math.Max(0.0, Math.Min(1.0, part))
         End Function
 
         ''' <summary>Die Stufen der Kette VOR den Tonzonen, fuer ein Rasterfeld der Basisschicht:
@@ -1958,9 +2100,14 @@ Namespace Services
             End If
         End Sub
 
-        ''' <summary>Kastenmittel mit Radius <paramref name="radius"/>, zeilen- und dann
-        ''' spaltenweise ueber Praefixsummen; am Rand ueber die vorhandenen Punkte gemittelt.</summary>
-        Private Shared Function BoxMean(source As Single(), width As Integer, height As Integer, radius As Integer) As Single()
+        ''' <summary>Kastenmittel mit gebrochenem Radius <paramref name="radius"/>: die Punkte bis zum
+        ''' ganzen Teil des Radius zaehlen voll, der naechste auf jeder Seite mit dem Bruchteil. So
+        ''' waechst die Breite stetig mit dem Radius statt in ganzen Rasterpunkten; bei ganzem Radius
+        ''' ist es das gewoehnliche Kastenmittel. Zeilen- und dann spaltenweise ueber Praefixsummen;
+        ''' am Rand ueber die vorhandenen Punkte gemittelt.</summary>
+        Private Shared Function FractionalBoxMean(source As Single(), width As Integer, height As Integer, radius As Double) As Single()
+            Dim whole = CInt(Math.Floor(Math.Max(0.0, radius)))
+            Dim part = Math.Max(0.0, radius) - whole
             Dim rows = New Single(source.Length - 1) {}
             Dim result = New Single(source.Length - 1) {}
             ForEachRow(width, height,
@@ -1971,9 +2118,7 @@ Namespace Services
                         prefix(x + 1) = prefix(x) + source(offset + x)
                     Next
                     For x = 0 To width - 1
-                        Dim x0 = Math.Max(0, x - radius)
-                        Dim x1 = Math.Min(width, x + radius + 1)
-                        rows(offset + x) = CSng((prefix(x1) - prefix(x0)) / (x1 - x0))
+                        rows(offset + x) = CSng(FractionalWindowMean(prefix, width, x, whole, part))
                     Next
                 End Sub)
             ' Spalten: ForEachRow verteilt hier die Spaltennummer.
@@ -1984,12 +2129,33 @@ Namespace Services
                         prefix(y + 1) = prefix(y) + rows(y * width + x)
                     Next
                     For y = 0 To height - 1
-                        Dim y0 = Math.Max(0, y - radius)
-                        Dim y1 = Math.Min(height, y + radius + 1)
-                        result(y * width + x) = CSng((prefix(y1) - prefix(y0)) / (y1 - y0))
+                        result(y * width + x) = CSng(FractionalWindowMean(prefix, height, y, whole, part))
                     Next
                 End Sub)
             Return result
+        End Function
+
+        ''' <summary>Ein Fenster des gebrochenen Kastenmittels ueber den Praefixsummen einer Zeile oder
+        ''' Spalte mit <paramref name="count"/> Punkten.</summary>
+        Private Shared Function FractionalWindowMean(prefix As Double(), count As Integer, center As Integer,
+                                                     whole As Integer, part As Double) As Double
+            Dim i0 = Math.Max(0, center - whole)
+            Dim i1 = Math.Min(count, center + whole + 1)
+            Dim sum = prefix(i1) - prefix(i0)
+            Dim weight As Double = i1 - i0
+            If part > 0.0 Then
+                Dim before = center - whole - 1
+                If before >= 0 Then
+                    sum += part * (prefix(before + 1) - prefix(before))
+                    weight += part
+                End If
+                Dim after = center + whole + 1
+                If after < count Then
+                    sum += part * (prefix(after + 1) - prefix(after))
+                    weight += part
+                End If
+            End If
+            Return sum / weight
         End Function
 
         ' ── Der eine Durchlauf ───────────────────────────────────────────────────
@@ -2071,7 +2237,8 @@ Namespace Services
             Dim localDetail = chain.LocalDetailGain
             Dim localBase As LocalToneBase = Nothing
             If localZones IsNot Nothing Then
-                localBase = BuildLocalToneBase(srcBuf, stride, width, source.Height, ri, gi, bi, ai, srcPremul, chain)
+                localBase = BuildLocalToneBase(srcBuf, stride, width, source.Height, ri, gi, bi, ai, srcPremul, chain,
+                                               _localToneReferenceEdge)
             End If
 
             ForEachRow(width, source.Height,

@@ -130,14 +130,20 @@ Namespace Services
             Return CSng(Math.Max(-100.0, Math.Min(100.0, value)))
         End Function
 
-        ''' <summary>Liest "#RRGGBB" oder "#AARRGGBB".</summary>
+        ''' <summary>Liest "#RRGGBB" oder "#AARRGGBB", ersatzweise einen Farbnamen aus einer alten
+        ''' Datei (ImageProcessor.TryParseColorName).</summary>
         Public Shared Function TryParseArgb(text As String, ByRef argb As UInteger) As Boolean
             If String.IsNullOrWhiteSpace(text) Then Return False
             Dim hex = text.Trim().TrimStart("#"c)
-            If hex.Length <> 6 AndAlso hex.Length <> 8 Then Return False
             Dim raw As UInteger
-            If Not UInteger.TryParse(hex, NumberStyles.HexNumber, CultureInfo.InvariantCulture, raw) Then Return False
-            argb = If(hex.Length = 6, raw Or &HFF000000UI, raw)
+            If (hex.Length = 6 OrElse hex.Length = 8) AndAlso
+               UInteger.TryParse(hex, NumberStyles.HexNumber, CultureInfo.InvariantCulture, raw) Then
+                argb = If(hex.Length = 6, raw Or &HFF000000UI, raw)
+                Return True
+            End If
+            Dim named As SkiaSharp.SKColor
+            If Not ImageProcessor.TryParseColorName(text, named) Then Return False
+            argb = (CUInt(named.Alpha) << 24) Or (CUInt(named.Red) << 16) Or (CUInt(named.Green) << 8) Or CUInt(named.Blue)
             Return True
         End Function
 

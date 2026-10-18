@@ -31,11 +31,13 @@
 
 - Picking exactly black, white, red or another standard color in a color picker no longer
   falls back to a different color. This affected the background of a new document, of a
-  collage and behind transparent areas, the replace color brush and the gradient map.
+  collage and behind transparent areas, the replace color brush and the gradient map. Edits
+  and settings saved earlier with such a color show it correctly again.
 
 - A rating, label or keyword on a RAW or PSD no longer replaces an edit file that could not be
   read, for example one from a newer version or on a drive that is offline; the same goes for
-  rotating in the viewer. The change stays in the catalog and the gallery says so.
+  rotating in the viewer and applying adjustments to a selection. The change stays in the
+  catalog and the gallery says so.
 
 - Overwriting a file or folder while pasting or moving keeps the old one until the new one is
   complete. If the copy fails, for example because a network drive drops out, the old file or
@@ -58,8 +60,6 @@
   photo.xmp stays where another file with the same name still needs it.
 
 - When a sidecar cannot be moved to the trash or deleted, the remaining file is reported.
-
-- Highlights and shadows no longer treat transparent areas as black when adjusting their surroundings.
 
 - Some NEF files from the Nikon Z50II and Z5II that could not be decoded showed colored noise
   and a green area. They now show the preview embedded in the file instead.

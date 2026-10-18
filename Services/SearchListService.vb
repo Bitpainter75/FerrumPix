@@ -98,6 +98,7 @@ Namespace Services
         Private Shared ReadOnly JsonOptions As New JsonSerializerOptions With {.WriteIndented = True}
 
         Public Shared Function Load() As List(Of SearchListEntry)
+            JsonStoreService.RemoveStaleTemps(SearchListsPath, "SearchLists")
             Dim entries As List(Of SearchListEntry) = Nothing
             TryLoad(entries)
             Return entries

@@ -9822,4 +9822,16 @@
   <data name="Die_Datei_wurde_entfernt_aber_diese_Begleitdatei_4c8e2973" xml:space="preserve">
     <value>Soubor byl odstraněn, ale tyto doprovodné soubory zůstaly: {0}</value>
   </data>
+  <data name="Am_Ziel_liegt_schon_die_Begleitdatei_0_Sie_geh_r_82eced67" xml:space="preserve">
+    <value>V cíli už je doprovodný soubor {0}. Patří k jinému obrázku se stejným názvem a jinak by byl přiřazen i tomuto obrázku.</value>
+  </data>
+  <data name="0_Datei_en_ausgelassen_die_Begleitdatei_lie_sich_17fc3c55" xml:space="preserve">
+    <value>Vynecháno souborů: {0}. Doprovodný soubor se nepodařilo přečíst a zůstává beze změny.</value>
+  </data>
+  <data name="0_Begleitdatei_en_lie_en_sich_nicht_schreiben_dacb948d" xml:space="preserve">
+    <value>Doprovodné soubory, které se nepodařilo zapsat: {0}.</value>
+  </data>
+  <data name="F_r_0_Dateien_steht_die_nderung_nur_im_Katalog_d_7672cf42" xml:space="preserve">
+    <value>U {0} souborů je změna jen v katalogu: doprovodný soubor se nepodařilo přečíst ani zapsat. První je {1}</value>
+  </data>
 </root>

@@ -629,7 +629,9 @@ Namespace Services
                         If reader.Read() Then
                             If Not reader.IsDBNull(0) Then result.Rating = Math.Max(0, Math.Min(5, reader.GetInt32(0)))
                             If Not reader.IsDBNull(1) Then result.IsFavorite = reader.GetInt32(1) <> 0
-                            If Not reader.IsDBNull(2) Then result.ColorLabel = reader.GetString(2)
+                            ' Getrimmt wie in RawSidecarService.TryWriteCatalog: beide Wege schreiben
+                            ' dieselbe Datei und muessen denselben Wert hineinlegen.
+                            If Not reader.IsDBNull(2) Then result.ColorLabel = reader.GetString(2).Trim()
                             If Not reader.IsDBNull(3) Then result.Keywords = ParseTags(reader.GetString(3))
                             If Not reader.IsDBNull(4) Then result.PickState = NormalizePickState(reader.GetInt32(4))
                         End If

@@ -128,6 +128,22 @@
                 <Panel x:Name="MainContentHost" Grid.Row="1"/>
             </Grid>
 
+            <Border ZIndex="497" IsVisible="{Binding HasFileWarning}"
+                    HorizontalAlignment="Center" VerticalAlignment="Top" Margin="16,40,16,0"
+                    Background="{DynamicResource FP.Bg.Elevated}" BorderBrush="{DynamicResource FP.Border.Strong}"
+                    BorderThickness="1" CornerRadius="8" Padding="12,8">
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                    <ScrollViewer MaxHeight="200" MaxWidth="700" VerticalScrollBarVisibility="Auto">
+                        <TextBlock Classes="no-translate" Text="{Binding FileWarning}" TextWrapping="Wrap"
+                                   VerticalAlignment="Center"/>
+                    </ScrollViewer>
+                    <Button Grid.Column="1" Classes="icon-btn" Width="26" Height="26" Padding="0"
+                            Command="{Binding DismissFileWarningCommand}" ToolTip.Tip="Schließen">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/x.svg" Width="14" Height="14"/>
+                    </Button>
+                </Grid>
+            </Border>
+
             <!-- EIN BILD WIRD GEOEFFNET. Der Editor wechselt den Modus erst, wenn das Bild offen
                  ist; bei einem RAW dauert das Sekunden, und ohne Anzeige haelt man den Klick fuer
                  danebengegangen. Erscheint erst nach einer Viertelsekunde - ein JPEG ist vorher da.

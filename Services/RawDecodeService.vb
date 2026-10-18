@@ -152,8 +152,12 @@ Namespace Services
         ' zwei der vier NEF haben unten Rauschen statt einer Flaeche, eine gesunde Samsung viele
         ' flache Zeilen.
 
+        ' Der Versatz ist INT64 (libraw_types.h: "data_callback(void *data, const char *file,
+        ' const INT64 offset)"), nachgesehen in den Kopfdateien von 0.22.2; die geladenen Fassungen
+        ' ab Soname 22 haben dieselbe Signatur. Nur Fassungen vor 0.20 hatten hier int; auf 64-Bit-
+        ' Plattformen liegt das Argument ohnehin in einem vollen Register.
         <UnmanagedFunctionPointer(CallingConvention.Cdecl)>
-        Private Delegate Sub DataErrorCallback(data As IntPtr, file As IntPtr, offset As Integer)
+        Private Delegate Sub DataErrorCallback(data As IntPtr, file As IntPtr, offset As Long)
         Private Delegate Sub SetDataErrorHandlerFn(handle As IntPtr, callback As IntPtr, data As IntPtr)
 
         ''' <summary>libraw_decoder_info_t: Name des Dekoders (gehoert der Bibliothek) und Merkmale.</summary>
@@ -180,7 +184,7 @@ Namespace Services
         Private Shared ReadOnly _handlesWithDataError As New Concurrent.ConcurrentDictionary(Of IntPtr, Byte)()
 
         ''' <summary>Laeuft IM nativen unpack. Darf nichts werfen.</summary>
-        Private Shared Sub OnLibRawDataError(data As IntPtr, file As IntPtr, offset As Integer)
+        Private Shared Sub OnLibRawDataError(data As IntPtr, file As IntPtr, offset As Long)
             Try
                 _handlesWithDataError(data) = 0
             Catch

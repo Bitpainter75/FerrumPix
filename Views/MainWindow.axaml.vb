@@ -409,6 +409,8 @@ Namespace Views
                     SaveWindowStateOnExit()
                     ' Einstellungen werden entprellt geschrieben; beim Schließen darf nichts ausstehen.
                     AppSettingsService.Flush()
+                    ' Ebenso die Suchlisten: sie gehen im Hintergrund hinaus (GalleryViewModel.SaveSearches).
+                    vm?.Gallery?.FlushSearchListSaves()
                     ' Dasselbe fuer die gesammelten Messungen des Diagnoseprotokolls: sie gehen nur
                     ' alle zwei Sekunden hinaus, der letzte Schritt vor dem Beenden fehlte sonst.
                     PerformanceTraceService.Flush()
@@ -450,6 +452,7 @@ Namespace Views
                 End If
                 SaveWindowStateOnExit()
                 AppSettingsService.Flush()
+                vm?.Gallery?.FlushSearchListSaves()
                 PerformanceTraceService.Flush()
             Catch ex As Exception
                 ' Absicherung: eine Ausnahme in einem Async Sub landet sonst beim Dispatcher

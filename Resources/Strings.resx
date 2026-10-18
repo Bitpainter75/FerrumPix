@@ -9801,4 +9801,16 @@
   <data name="Die_Datei_wurde_entfernt_aber_diese_Begleitdatei_4c8e2973" xml:space="preserve">
     <value>The file was removed, but these sidecar files remain: {0}</value>
   </data>
+  <data name="Am_Ziel_liegt_schon_die_Begleitdatei_0_Sie_geh_r_82eced67" xml:space="preserve">
+    <value>The sidecar file {0} already exists at the destination. It belongs to another picture with the same name and would otherwise be assigned to this picture as well.</value>
+  </data>
+  <data name="0_Datei_en_ausgelassen_die_Begleitdatei_lie_sich_17fc3c55" xml:space="preserve">
+    <value>{0} file(s) skipped: the sidecar file could not be read and remains unchanged.</value>
+  </data>
+  <data name="0_Begleitdatei_en_lie_en_sich_nicht_schreiben_dacb948d" xml:space="preserve">
+    <value>{0} sidecar file(s) could not be written.</value>
+  </data>
+  <data name="F_r_0_Dateien_steht_die_nderung_nur_im_Katalog_d_7672cf42" xml:space="preserve">
+    <value>For {0} files the change is only in the catalog: the sidecar file could not be read or written. The first is {1}</value>
+  </data>
 </root>

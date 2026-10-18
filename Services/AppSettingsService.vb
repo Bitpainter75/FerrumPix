@@ -1423,7 +1423,14 @@ Namespace Services
                     Dim tempPath = SettingsPath & ".tmp"
                     ' Erst hier werden die Zugangsdaten verschluesselt: im Speicher stehen sie im
                     ' Klartext (sonst muesste jede Abfrage entschluesseln), in der DATEI nicht.
-                    File.WriteAllText(tempPath, ProtectSecrets(json))
+                    ' Bis auf die Platte, bevor umbenannt wird: sonst kann nach einem Stromausfall der
+                    ' neue Name gelten und der Inhalt fehlen, und settings.json ist leer.
+                    Using fs = New FileStream(tempPath, FileMode.Create, FileAccess.Write, FileShare.None)
+                        Using writer = New StreamWriter(fs, New Text.UTF8Encoding(encoderShouldEmitUTF8Identifier:=False), 4096, leaveOpen:=True)
+                            writer.Write(ProtectSecrets(json))
+                        End Using
+                        fs.Flush(flushToDisk:=True)
+                    End Using
                     File.Move(tempPath, SettingsPath, overwrite:=True)
                 Catch ex As Exception
                     ' Volle Platte, fehlende Rechte: früher fiel das lautlos unter den Tisch und der Nutzer
@@ -2084,7 +2091,17 @@ Namespace Services
         Public Shared Function NormalizeHexColor(value As String, fallback As String) As String
             If String.IsNullOrWhiteSpace(value) Then Return fallback
             Dim trimmed = value.Trim()
-            If Not System.Text.RegularExpressions.Regex.IsMatch(trimmed, "^#([0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$") Then Return fallback
+            If Not System.Text.RegularExpressions.Regex.IsMatch(trimmed, "^#([0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$") Then
+                ' Fruehere Fassungen schrieben die Farbe des Waehlers ueber Color.ToString(), fuer
+                ' eine benannte Farbe also "Red" statt "#FFFF0000". Der Name wird umgeschrieben,
+                ' nicht verworfen (ImageProcessor.NormalizeColorName). Ein kaputter Hexwert wie
+                ' "#GG0000" kommt dort unveraendert zurueck; deshalb zaehlt nur ein Ergebnis, das
+                ' selbst wieder ein gueltiger Hexwert ist.
+                Dim named = ImageProcessor.NormalizeColorName(trimmed)
+                If named IsNot Nothing AndAlso
+                   System.Text.RegularExpressions.Regex.IsMatch(named, "^#([0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$") Then Return named.ToUpperInvariant()
+                Return fallback
+            End If
             Return trimmed.ToUpperInvariant()
         End Function
 

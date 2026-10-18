@@ -1093,18 +1093,38 @@ Namespace Services
                                                   Optional coverage As Byte() = Nothing,
                                                   Optional adj As ImageAdjustments = Nothing)
             Dim vx = offsetX, vy = offsetY
+            Dim drawWidth = layerWidth, drawHeight = layerHeight
+            Dim objectAdj As ImageAdjustments = Nothing
+            If HasObjectAdjustments(annotation) Then
+                objectAdj = annotation.Adjustments.ExtractPixelAdjustments()
+                ' Liest eine Anpassung die Umgebung oder das ganze Objekt, sieht sie auf einer Ebene
+                ' von der Groesse des Ausschnitts (Regionen-Patch) nur einen Teil davon, und das
+                ' Objekt saehe dort anders aus als im ganzen Bild. Schneidet der Ausschnitt das
+                ' Objekt, entsteht die Ebene deshalb wie im Bildrender in voller Bildgroesse;
+                ' gezeichnet wird trotzdem nur, was in den Ausschnitt faellt. Eine Gruppenebene
+                ' umschliesst ihre Mitglieder ganz und bleibt, wie sie ist.
+                If ObjectAdjustmentsReadSurroundings(objectAdj) AndAlso
+                   Not LayerContainsAnnotation(renderAnnotation, annotation, sourceWidth, sourceHeight,
+                                               offsetX, offsetY, layerWidth, layerHeight) Then
+                    vx = 0 : vy = 0
+                    drawWidth = sourceWidth : drawHeight = sourceHeight
+                End If
+            End If
             Dim drawn = RenderAnnotationToLayer(annotation, renderAnnotation, kind, rect,
-                                                sourceWidth, sourceHeight, layerWidth, layerHeight, vx, vy, adj)
+                                                sourceWidth, sourceHeight, drawWidth, drawHeight, vx, vy, adj)
             If drawn Is Nothing Then Return
             Try
                 ' Die Deckung kommt NACH den Objektanpassungen: eine Weichzeichnung oder ein
                 ' Filter soll die vollen Objektpixel sehen und nicht den abgeschnittenen Rest -
                 ' sonst zoege die Maskenkante ihre eigene Unschaerfe ins Bild.
-                If HasObjectAdjustments(annotation) Then
-                    Dim objectAdj = annotation.Adjustments.ExtractPixelAdjustments()
+                If objectAdj IsNot Nothing Then
                     objectAdj.SourceWidthPixels = drawn.Width
                     objectAdj.SourceHeightPixels = drawn.Height
-                    Using processedLayer = ProcessBitmapBase(drawn, objectAdj)
+                    ' Bezug der oertlichen Lichter und Tiefen ist das Objektrechteck, nicht die Ebene:
+                    ' der Kompositor rechnet dasselbe Objekt auf einer knappen, ungedrehten Ebene
+                    ' (RenderAnnotationOverlaySk) und nimmt dort dasselbe Rechteck.
+                    Dim referenceEdge = Math.Max(rect.Width, rect.Height)
+                    Using processedLayer = WithLocalToneReference(referenceEdge, Function() ProcessBitmapBase(drawn, objectAdj))
                         ApplyCoverageToLayer(processedLayer, vx - offsetX, vy - offsetY, coverage, layerWidth, layerHeight)
                         DrawAnnotationLayerAt(canvas, processedLayer, blendModeName, vx - offsetX, vy - offsetY)
                     End Using
@@ -1116,6 +1136,35 @@ Namespace Services
                 drawn.Dispose()
             End Try
         End Sub
+
+        ''' <summary>Haengt das Ergebnis einer Objektanpassung an mehr als dem Bildpunkt selbst, also
+        ''' an seiner Umgebung, an der Lage in der Ebene oder an der Statistik des ganzen Objekts?
+        ''' Dieselbe Liste wie fuer den Ausschnittweg der Maskenebenen (LayerAdjustmentsAreCropSafe),
+        ''' dazu Lichter und Tiefen ab Tonmodell 2: sie waehlen ihre Kennlinie nach dem Median der
+        ''' Ebene, und ein Ausschnitt haette einen anderen. Die Maskenebene reicht diesen Median
+        ''' ausdruecklich herein, die Objektebene nicht.</summary>
+        Private Shared Function ObjectAdjustmentsReadSurroundings(objectAdj As ImageAdjustments) As Boolean
+            If objectAdj Is Nothing Then Return False
+            If Not LayerAdjustmentsAreCropSafe(objectAdj) Then Return True
+            Return (objectAdj.Highlights <> 0.0F OrElse objectAdj.ShadowsLevel <> 0.0F) AndAlso
+                   objectAdj.ResolvedToneModel() >= 2
+        End Function
+
+        ''' <summary>Liegt das ganze Objekt samt Effektrand auf der Ebene? Eine Ebene in Bildgroesse
+        ''' enthaelt es immer; mit eigener Verzerrung laesst sich die Ausdehnung nicht vorab sagen,
+        ''' dann gilt es als angeschnitten.</summary>
+        Private Shared Function LayerContainsAnnotation(renderAnnotation As ImageAnnotation, annotation As ImageAnnotation,
+                                                        sourceWidth As Integer, sourceHeight As Integer,
+                                                        offsetX As Integer, offsetY As Integer,
+                                                        layerWidth As Integer, layerHeight As Integer) As Boolean
+            If offsetX <= 0 AndAlso offsetY <= 0 AndAlso
+               offsetX + layerWidth >= sourceWidth AndAlso offsetY + layerHeight >= sourceHeight Then Return True
+            If HasWarp(annotation) Then Return False
+            Dim extent = ComputeAnnotationDirtyRectCore(sourceWidth, sourceHeight, renderAnnotation)
+            If extent.IsEmpty Then Return False
+            Return extent.Left >= offsetX AndAlso extent.Top >= offsetY AndAlso
+                   extent.Right <= offsetX + layerWidth AndAlso extent.Bottom <= offsetY + layerHeight
+        End Function
 
         Private Const TransparentColorHex As String = "#00000000"
 
@@ -3410,7 +3459,34 @@ Namespace Services
                 End If
             Catch
             End Try
+            ' Erst wenn die Hexform nicht passt: ein Farbname aus einer alten Datei.
+            Dim named As SKColor
+            If TryParseColorName(value, named) Then Return named
             Return fallback
+        End Function
+
+        ''' <summary>Liest einen Farbnamen ("Red", "White", "Transparent"). Fruehere Fassungen
+        ''' speicherten die Farbe eines Farbwaehlers ueber Color.ToString(), und das liefert fuer
+        ''' jede Farbe, die genau einer benannten entspricht, den Namen statt #AARRGGBB. Die
+        ''' Oberflaeche zeigte solche Farben richtig an, der Renderer nahm still seine Ersatzfarbe.
+        ''' Gedacht als Rueckfall NACH der Hexform: auf dem Renderweg kostet er nur dort etwas, wo
+        ''' wirklich ein Name steht. Text mit „#" vorn ist nie ein Name.</summary>
+        Friend Shared Function TryParseColorName(value As String, ByRef color As SKColor) As Boolean
+            If String.IsNullOrWhiteSpace(value) Then Return False
+            Dim text = value.Trim()
+            If text.StartsWith("#"c) Then Return False
+            Dim parsed As Avalonia.Media.Color
+            If Not Avalonia.Media.Color.TryParse(text, parsed) Then Return False
+            color = New SKColor(parsed.R, parsed.G, parsed.B, parsed.A)
+            Return True
+        End Function
+
+        ''' <summary>Macht aus einem Farbnamen die gespeicherte Form #AARRGGBB; alles andere kommt
+        ''' unveraendert zurueck. Fuer das Laden alter Rezepte und Einstellungen.</summary>
+        Friend Shared Function NormalizeColorName(value As String) As String
+            Dim color As SKColor
+            If Not TryParseColorName(value, color) Then Return value
+            Return $"#{color.Alpha:X2}{color.Red:X2}{color.Green:X2}{color.Blue:X2}"
         End Function
 
     End Class

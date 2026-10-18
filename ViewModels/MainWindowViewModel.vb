@@ -31,6 +31,84 @@ Namespace ViewModels
         Private _previousModeBeforeSettings As AppMode = AppMode.Gallery
         Private _previousModeBeforeFullscreen As AppMode = AppMode.Viewer
         Private _title As String = "FerrumPix"
+        Private _fileWarning As String = ""
+        Public Property FileWarning As String
+            Get
+                Return _fileWarning
+            End Get
+            Set(value As String)
+                Me.RaiseAndSetIfChanged(_fileWarning, If(value, ""))
+                Me.RaisePropertyChanged(NameOf(HasFileWarning))
+            End Set
+        End Property
+
+        Public ReadOnly Property HasFileWarning As Boolean
+            Get
+                Return Not String.IsNullOrEmpty(_fileWarning)
+            End Get
+        End Property
+
+        Public ReadOnly Property DismissFileWarningCommand As ICommand
+
+        ''' <summary>Haengt eine Zeile an die Warnung des Fensters an (doppelte Zeilen nicht). Fuer
+        ''' Fehlschlaege an Dateien, die bis zum Schliessen sichtbar bleiben sollen, ohne einen Ablauf
+        ''' auf einen Dialog warten zu lassen. Nur auf dem Anzeigefaden.</summary>
+        Friend Sub ReportFileWarning(message As String)
+            If String.IsNullOrWhiteSpace(message) Then Return
+            If String.IsNullOrEmpty(FileWarning) Then
+                FileWarning = message
+            ElseIf Not FileWarning.Split(ControlChars.Lf).Contains(message) Then
+                FileWarning &= ControlChars.Lf & message
+            End If
+        End Sub
+
+        ' Die Katalogaenderungen, die nicht in die .fpxmp kamen. Gesammelt wird ueber alle Faeden
+        ' (das Ereignis kommt auch aus Hintergrundlaeufen), gezaehlt auf dem Anzeigefaden.
+        Private ReadOnly _pendingCatalogSidecarFailures As New List(Of String)()
+        Private _catalogSidecarFlushScheduled As Boolean
+        Private ReadOnly _reportedCatalogSidecarFailures As New HashSet(Of String)(PathIdentity.Comparer)
+        Private _firstCatalogSidecarFailure As String
+        Private _catalogSidecarWarningLine As String
+
+        ''' <summary>Fasst die gesammelten Fehlschlaege zu EINER Zeile der Fensterwarnung zusammen. Eine
+        ''' einzelne Datei bekommt die Meldung mit ihrem Pfad wie bisher; mehrere bekommen die Zahl
+        ''' und den ersten Pfad. Kommen waehrend eines langen Stapels weitere dazu, waechst dieselbe
+        ''' Zeile mit, statt dass je Schub eine neue erscheint. Nach dem Schliessen der Warnung
+        ''' beginnt die Zaehlung neu.</summary>
+        Private Sub ReportCatalogSidecarFailures()
+            Dim batch As List(Of String)
+            SyncLock _pendingCatalogSidecarFailures
+                batch = _pendingCatalogSidecarFailures.ToList()
+                _pendingCatalogSidecarFailures.Clear()
+                _catalogSidecarFlushScheduled = False
+            End SyncLock
+            If batch.Count = 0 Then Return
+
+            Dim lines = If(String.IsNullOrEmpty(FileWarning), New List(Of String)(), FileWarning.Split(ControlChars.Lf).ToList())
+            Dim previousIndex = If(_catalogSidecarWarningLine Is Nothing, -1, lines.IndexOf(_catalogSidecarWarningLine))
+            If previousIndex < 0 Then
+                _reportedCatalogSidecarFailures.Clear()
+                _firstCatalogSidecarFailure = Nothing
+            End If
+            For Each path In batch
+                If _reportedCatalogSidecarFailures.Add(path) AndAlso _firstCatalogSidecarFailure Is Nothing Then
+                    _firstCatalogSidecarFailure = path
+                End If
+            Next
+
+            Dim line = If(_reportedCatalogSidecarFailures.Count = 1,
+                String.Format(LocalizationService.T("Für {0} steht die Änderung nur im Katalog: die Begleitdatei ließ sich nicht lesen oder schreiben"),
+                              _firstCatalogSidecarFailure),
+                String.Format(LocalizationService.T("Für {0} Dateien steht die Änderung nur im Katalog: die Begleitdatei ließ sich nicht lesen oder schreiben. Die erste ist {1}"),
+                              _reportedCatalogSidecarFailures.Count, _firstCatalogSidecarFailure))
+            If previousIndex >= 0 Then
+                lines(previousIndex) = line
+                FileWarning = String.Join(ControlChars.Lf, lines)
+            Else
+                ReportFileWarning(line)
+            End If
+            _catalogSidecarWarningLine = line
+        End Sub
         Private _isFullscreen As Boolean
         Private _dialogTitle As String = ""
         Private _dialogMessage As String = ""
@@ -607,18 +685,20 @@ Namespace ViewModels
                         End Sub)
                 End Sub
 
-            ' Eine Bewertung, ein Etikett oder ein Stichwort an einer RAW stand bisher still nur in
-            ' der Datenbank, wenn die .fpxmp daneben nicht lesbar war. Gemeldet wird hier und nicht
-            ' in der Galerie selbst: das Ereignis ist statisch, und diese Instanz gibt es nur einmal.
+            ' Katalog- und Einstellungsfehler werden im Fenster angezeigt: die ausloesende Ansicht
+            ' muss nicht die Galerie sein, und mehrere Meldungen bleiben bis zum Schliessen stehen.
+            ' Ein Stapel ueber viele Dateien meldet JEDE einzeln; gesammelt wird deshalb kurz und
+            ' zu EINER Zeile zusammengefasst (ReportCatalogSidecarFailures).
             AddHandler LibraryService.CatalogSidecarNotWritten,
                 Sub(s, path)
-                    Dispatcher.UIThread.Post(
-                        Sub()
-                            If Gallery Is Nothing Then Return
-                            Gallery.StatusText = String.Format(
-                                LocalizationService.T("Für {0} steht die Änderung nur im Katalog: die Begleitdatei ließ sich nicht lesen oder schreiben"),
-                                IO.Path.GetFileName(path))
-                        End Sub)
+                    SyncLock _pendingCatalogSidecarFailures
+                        _pendingCatalogSidecarFailures.Add(path)
+                        If _catalogSidecarFlushScheduled Then Return
+                        _catalogSidecarFlushScheduled = True
+                    End SyncLock
+                    Task.Delay(400).ContinueWith(
+                        Sub(t) Dispatcher.UIThread.Post(AddressOf ReportCatalogSidecarFailures),
+                        TaskScheduler.Default)
                 End Sub
 
             ' Eine Einstellung, die nicht auf die Platte kam, galt bisher still als gespeichert und
@@ -627,13 +707,12 @@ Namespace ViewModels
                 Sub(s, e)
                     Dispatcher.UIThread.Post(
                         Sub()
-                            If Gallery IsNot Nothing Then
-                                Gallery.StatusText = LocalizationService.T("Die Einstellungen ließen sich nicht speichern")
-                            End If
+                            ReportFileWarning(LocalizationService.T("Die Einstellungen ließen sich nicht speichern"))
                         End Sub)
                 End Sub
 
             DialogConfirmCommand = ReactiveCommand.Create(Sub() ConfirmDialog())
+            DismissFileWarningCommand = ReactiveCommand.Create(Sub() FileWarning = "")
             DialogCancelCommand = ReactiveCommand.Create(Sub() CancelDialog())
             DialogSecondaryCommand = ReactiveCommand.Create(Sub() CompleteDialog("Secondary"))
             DialogSkipCommand = ReactiveCommand.Create(Sub() SkipDialog())
@@ -5691,10 +5770,17 @@ Namespace ViewModels
                 Dim target = IO.Path.Combine(parent, newName)
                 If IO.File.Exists(target) OrElse IO.Directory.Exists(target) Then Throw New IOException("Ein Element mit diesem Namen existiert bereits.")
                 If IO.File.Exists(itemPath) Then
+                    GalleryViewModel.ThrowIfTargetSidecarConflict(itemPath, target, replaceConfirmed:=False)
                     Viewer.ReleaseCurrentImageIfAny({itemPath})
                     Editor.ReleaseCurrentImageIfAny({itemPath})
                     IO.File.Move(itemPath, target)
-                    RawSidecarService.AccompanyMove(itemPath, target)
+                    Dim failed = RawSidecarService.AccompanyMove(itemPath, target)
+                    LibraryService.Instance.MoveEverythingForPath(itemPath, target)
+                    afterRename?.Invoke(target)
+                    If failed.Count > 0 Then
+                        Throw New IOException(LocalizationService.T("Begleitdatei konnte nicht geschrieben werden") & ": " & String.Join(", ", failed))
+                    End If
+                    Return
                 Else
                     IO.Directory.Move(itemPath, target)
                 End If

@@ -9822,4 +9822,16 @@
   <data name="Die_Datei_wurde_entfernt_aber_diese_Begleitdatei_4c8e2973" xml:space="preserve">
     <value>Het bestand is verwijderd, maar deze bijbehorende bestanden zijn blijven staan: {0}</value>
   </data>
+  <data name="Am_Ziel_liegt_schon_die_Begleitdatei_0_Sie_geh_r_82eced67" xml:space="preserve">
+    <value>Op de bestemming staat al het bijbehorende bestand {0}. Het hoort bij een andere afbeelding met dezelfde naam en zou anders ook aan deze afbeelding worden gekoppeld.</value>
+  </data>
+  <data name="0_Datei_en_ausgelassen_die_Begleitdatei_lie_sich_17fc3c55" xml:space="preserve">
+    <value>{0} bestand(en) overgeslagen: het bijbehorende bestand kon niet worden gelezen en blijft ongewijzigd.</value>
+  </data>
+  <data name="0_Begleitdatei_en_lie_en_sich_nicht_schreiben_dacb948d" xml:space="preserve">
+    <value>{0} bijbehorend(e) bestand(en) kon(den) niet worden geschreven.</value>
+  </data>
+  <data name="F_r_0_Dateien_steht_die_nderung_nur_im_Katalog_d_7672cf42" xml:space="preserve">
+    <value>Voor {0} bestanden staat de wijziging alleen in de catalogus: het sidecar-bestand kon niet worden gelezen of geschreven. Het eerste is {1}</value>
+  </data>
 </root>

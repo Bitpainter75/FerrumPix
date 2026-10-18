@@ -209,8 +209,57 @@ Namespace Services
             End If
             StripTransientSelectionState(adj)
             DropRecipeGeometryFields(adj)
+            NormalizeColorNames(adj)
             Return adj
         End Function
+
+        ''' <summary>Farbnamen alter Rezepte werden beim Laden zu #AARRGGBB.
+        '''
+        ''' Fruehere Fassungen schrieben die Farbe eines Farbwaehlers ueber Color.ToString(), und das
+        ''' liefert fuer jede Farbe, die genau einer benannten entspricht, den Namen ("Red"). Die
+        ''' Oberflaeche liest Namen, mehrere Stellen dahinter nur die Hexform (SKColor.TryParse im
+        ''' Editor, die Verlaufsstopps): dieselbe Datei zeigte im Waehler Rot und rechnete mit der
+        ''' Ersatzfarbe. ImageProcessor.ParseColor versteht Namen inzwischen auch selbst; hier
+        ''' bekommen alle uebrigen Leser dieselbe Form. Angefasst werden nur Felder, in denen
+        ''' tatsaechlich ein Name steht.</summary>
+        Private Shared Sub NormalizeColorNames(adj As ImageAdjustments)
+            If adj Is Nothing Then Return
+            adj.CanvasBackgroundColor = ImageProcessor.NormalizeColorName(adj.CanvasBackgroundColor)
+            adj.GradientMapShadowColor = ImageProcessor.NormalizeColorName(adj.GradientMapShadowColor)
+            adj.GradientMapHighlightColor = ImageProcessor.NormalizeColorName(adj.GradientMapHighlightColor)
+            If adj.Annotations IsNot Nothing Then
+                For Each annotation In adj.Annotations
+                    If annotation Is Nothing Then Continue For
+                    annotation.FillColor = ImageProcessor.NormalizeColorName(annotation.FillColor)
+                    annotation.FillColor2 = ImageProcessor.NormalizeColorName(annotation.FillColor2)
+                    annotation.StrokeColor = ImageProcessor.NormalizeColorName(annotation.StrokeColor)
+                    annotation.EraserFillColor = ImageProcessor.NormalizeColorName(annotation.EraserFillColor)
+                    annotation.ShadowColor = ImageProcessor.NormalizeColorName(annotation.ShadowColor)
+                    annotation.GlowColor = ImageProcessor.NormalizeColorName(annotation.GlowColor)
+                    NormalizeColorNames(annotation.Adjustments)
+                Next
+            End If
+            If adj.RasterPaintStrokes IsNot Nothing Then
+                For Each paintStroke In adj.RasterPaintStrokes
+                    If paintStroke Is Nothing Then Continue For
+                    paintStroke.StrokeColor = ImageProcessor.NormalizeColorName(paintStroke.StrokeColor)
+                    paintStroke.EraserFillColor = ImageProcessor.NormalizeColorName(paintStroke.EraserFillColor)
+                    paintStroke.ShadowColor = ImageProcessor.NormalizeColorName(paintStroke.ShadowColor)
+                    paintStroke.GlowColor = ImageProcessor.NormalizeColorName(paintStroke.GlowColor)
+                Next
+            End If
+            If adj.MaskedAdjustmentLayers IsNot Nothing Then
+                For Each layer In adj.MaskedAdjustmentLayers
+                    If layer Is Nothing Then Continue For
+                    layer.FillColor = ImageProcessor.NormalizeColorName(layer.FillColor)
+                    layer.FillColor2 = ImageProcessor.NormalizeColorName(layer.FillColor2)
+                    layer.StrokeColor = ImageProcessor.NormalizeColorName(layer.StrokeColor)
+                    layer.ShadowColor = ImageProcessor.NormalizeColorName(layer.ShadowColor)
+                    layer.GlowColor = ImageProcessor.NormalizeColorName(layer.GlowColor)
+                    NormalizeColorNames(layer.Adjustments)
+                Next
+            End If
+        End Sub
 
         ''' <summary>Nach dem Laden lebt die Geometrie AUSSCHLIESSLICH in der Schrittliste.
         '''

@@ -9826,4 +9826,16 @@
   <data name="Die_Datei_wurde_entfernt_aber_diese_Begleitdatei_4c8e2973" xml:space="preserve">
     <value>Berkas telah dihapus, tetapi berkas pendamping ini masih ada: {0}</value>
   </data>
+  <data name="Am_Ziel_liegt_schon_die_Begleitdatei_0_Sie_geh_r_82eced67" xml:space="preserve">
+    <value>Berkas pendamping {0} sudah ada di tujuan. Berkas itu milik gambar lain dengan nama yang sama dan jika tidak, juga akan dikaitkan dengan gambar ini.</value>
+  </data>
+  <data name="0_Datei_en_ausgelassen_die_Begleitdatei_lie_sich_17fc3c55" xml:space="preserve">
+    <value>{0} berkas dilewati: berkas pendamping tidak dapat dibaca dan tetap tidak berubah.</value>
+  </data>
+  <data name="0_Begleitdatei_en_lie_en_sich_nicht_schreiben_dacb948d" xml:space="preserve">
+    <value>{0} berkas pendamping tidak dapat ditulis.</value>
+  </data>
+  <data name="F_r_0_Dateien_steht_die_nderung_nur_im_Katalog_d_7672cf42" xml:space="preserve">
+    <value>Untuk {0} berkas perubahan hanya ada di katalog: berkas sidecar tidak dapat dibaca atau ditulis. Yang pertama adalah {1}</value>
+  </data>
 </root>

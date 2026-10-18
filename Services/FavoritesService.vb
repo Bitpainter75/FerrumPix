@@ -89,6 +89,7 @@ Namespace Services
         Private Shared ReadOnly JsonOptions As New JsonSerializerOptions With {.WriteIndented = True}
 
         Public Shared Function Load() As List(Of FavoriteEntry)
+            JsonStoreService.RemoveStaleTemps(FavoritesPath, "Favorites")
             Dim entries As List(Of FavoriteEntry) = Nothing
             TryLoad(entries)
             Return entries

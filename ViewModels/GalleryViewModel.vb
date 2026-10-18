@@ -7665,55 +7665,96 @@ Namespace ViewModels
                 Select(Function(r) Math.Max(0, Math.Min(5, r))))
         End Function
 
-        ''' <summary>Schreibt die Suchlisten SOFORT, aber ueber dieselbe Kette wie die Trefferschuebe,
-        ''' und wartet auf den eigenen Auftrag.
+        ''' <summary>Schreibt die Suchlisten ueber denselben Weg wie die Trefferschuebe, ohne auf die
+        ''' Platte zu warten.
         '''
-        ''' Frueher ging dieser Weg direkt an die Platte, die Trefferschuebe dagegen ueber die Kette.
+        ''' Frueher ging dieser Weg direkt an die Platte, die Trefferschuebe dagegen ueber eine Kette.
         ''' Ein aelterer, schon eingereihter Schub konnte deshalb NACH einem Anlegen, Aendern oder
         ''' Entfernen fertig werden und den neueren Stand ueberschreiben: eine entfernte Suche war
-        ''' nach dem Neustart wieder da. Gewartet wird, damit der Stand fuer den Aufrufer wie bisher
-        ''' auf der Platte steht, wenn er zurueckkehrt.</summary>
+        ''' nach dem Neustart wieder da. Danach wartete dieser Weg auf dem Anzeigefaden auf die ganze
+        ''' Kette, und waehrend einer Suche standen dort Dutzende Schuebe, jeder mit der ganzen
+        ''' Datei. Gewartet werden muss nicht: die Datei liest nur der Start, und das Beenden wartet
+        ''' selbst (FlushSearchListSaves).</summary>
         Private Sub SaveSearches()
-            Dim job = QueueSearchListSave(SearchListService.Normalize(_savedSearches.ToList()))
-            job.Wait()
+            QueueSearchListSave(SearchListService.Normalize(_savedSearches.ToList()))
         End Sub
 
-        ''' Die Schreibvorgaenge der Suchlisten laufen NACHEINANDER. Waehrend einer Suche kommen die
-        ''' Treffer schubweise, und jeder Schub stiess bisher einen eigenen Hintergrundlauf an. Zwei
-        ''' davon haben ohne diese Kette keine Reihenfolge: der aeltere kann nach dem juengeren
-        ''' fertig werden und dessen Treffer wieder wegschreiben.
-        Private _searchListSaveChain As Task = Task.CompletedTask
+        ''' Die Schreibvorgaenge der Suchlisten laufen NACHEINANDER, in EINEM Hintergrundlauf, und es
+        ''' zaehlt nur der NEUESTE Stand. Waehrend einer Suche kommen die Treffer schubweise; jeder
+        ''' Schub legt seine Momentaufnahme hier ab und ersetzt damit eine noch nicht geschriebene
+        ''' aeltere. Der Lauf nimmt immer die juengste und hoert auf, wenn keine mehr wartet. So kann
+        ''' kein aelterer Stand nach einem juengeren auf die Platte kommen, und zwanzig Schuebe in
+        ''' einer Sekunde kosten zwei Schreibvorgaenge statt zwanzig.
+        Private _pendingSearchListSnapshot As List(Of SearchListEntry)
+        Private _searchListSaveRunning As Boolean
+        Private _searchListSaveWorker As Task = Task.CompletedTask
         Private ReadOnly _searchListSaveLock As New Object()
 
-        ''' <summary>Schreibt eine MOMENTAUFNAHME der Suchlisten im Hintergrund weg und liefert den
-        ''' Auftrag; sein Ergebnis ist False, wenn nichts geschrieben wurde. Ein Fehlschlag steht
-        ''' dann auch in der Statuszeile.
+        ''' <summary>Legt eine MOMENTAUFNAHME der Suchlisten zum Schreiben ab und startet den
+        ''' Hintergrundlauf, falls er nicht schon laeuft. Ein Fehlschlag steht in der Statuszeile.
         '''
         ''' Die Aufnahme muss der Aufrufer machen, und zwar tief (SearchListService.Normalize baut
         ''' neue Eintraege samt neuer Trefferliste). Eine flache Kopie teilt die Trefferlisten mit
         ''' der Oberflaeche, die waehrend der Suche weiter anhaengt - der Serialisierer laeuft dann
         ''' ueber eine Liste, die sich unter ihm aendert, und wirft.</summary>
-        Private Function QueueSearchListSave(snapshot As List(Of SearchListEntry)) As Task(Of Boolean)
+        Private Sub QueueSearchListSave(snapshot As List(Of SearchListEntry))
             SyncLock _searchListSaveLock
-                Dim job = _searchListSaveChain.ContinueWith(
-                    Function(previous)
-                        Dim written = False
-                        Try
-                            written = SearchListService.Save(snapshot)
-                        Catch ex As Exception
-                            ' Ein verworfener Task verschluckt seine Ausnahme sonst spurlos.
-                            DiagnosticLogService.LogException("Gallery.SearchListSave", ex)
-                        End Try
-                        If Not written Then
-                            Dispatcher.UIThread.Post(
-                                Sub() StatusText = LocalizationService.T("Die gespeicherten Suchen ließen sich nicht schreiben"))
-                        End If
-                        Return written
-                    End Function, TaskScheduler.Default)
-                _searchListSaveChain = job
-                Return job
+                _pendingSearchListSnapshot = snapshot
+                ' Das Kennzeichen und nicht Task.IsCompleted: der Lauf meldet sich unter dieser
+                ' Sperre ab, sein Task gilt aber erst einen Augenblick spaeter als fertig. Eine
+                ' Aufnahme aus genau dieser Luecke bliebe sonst liegen.
+                If _searchListSaveRunning Then Return
+                _searchListSaveRunning = True
+                _searchListSaveWorker = Task.Run(AddressOf RunSearchListSaves)
             End SyncLock
-        End Function
+        End Sub
+
+        Private Sub RunSearchListSaves()
+            Do
+                Dim snapshot As List(Of SearchListEntry)
+                SyncLock _searchListSaveLock
+                    snapshot = _pendingSearchListSnapshot
+                    _pendingSearchListSnapshot = Nothing
+                    If snapshot Is Nothing Then
+                        _searchListSaveRunning = False
+                        Return
+                    End If
+                End SyncLock
+                Dim written = False
+                Try
+                    written = SearchListService.Save(snapshot)
+                Catch ex As Exception
+                    ' Ein Hintergrundlauf verschluckt seine Ausnahme sonst spurlos.
+                    DiagnosticLogService.LogException("Gallery.SearchListSave", ex)
+                End Try
+                If Not written Then
+                    Dispatcher.UIThread.Post(
+                        Sub() StatusText = LocalizationService.T("Die gespeicherten Suchen ließen sich nicht schreiben"))
+                End If
+            Loop
+        End Sub
+
+        ''' <summary>Wartet, bis der letzte abgelegte Stand der Suchlisten auf der Platte ist. Fuer das
+        ''' Beenden (MainWindow.HandleWindowClosing): ohne diese Frage fiele ein Schreibvorgang, der
+        ''' beim Schliessen noch laeuft, mit dem Prozess weg, und eine eben angelegte oder entfernte
+        ''' Suche stuende nach dem Neustart wieder im alten Zustand da. Begrenzt, damit ein
+        ''' haengendes Netzlaufwerk das Beenden nicht festhaelt.</summary>
+        Public Sub FlushSearchListSaves(Optional timeout As TimeSpan = Nothing)
+            Dim limit = If(timeout = TimeSpan.Zero, TimeSpan.FromSeconds(10), timeout)
+            Dim deadline = DateTime.UtcNow + limit
+            Do
+                Dim worker As Task
+                SyncLock _searchListSaveLock
+                    If Not _searchListSaveRunning AndAlso _pendingSearchListSnapshot Is Nothing Then Return
+                    worker = _searchListSaveWorker
+                End SyncLock
+                Dim remaining = deadline - DateTime.UtcNow
+                If remaining <= TimeSpan.Zero OrElse Not worker.Wait(remaining) Then
+                    DiagnosticLogService.LogAlways("Gallery.SearchListSave", "beim Beenden nicht rechtzeitig geschrieben")
+                    Return
+                End If
+            Loop
+        End Sub
 
         ''' <summary>Leert die Ansicht fuer einen virtuellen Ordner (Suchliste, Immich-Album, ...). Bricht
         ''' dabei einen noch laufenden Suchlauf ab: JEDER Ansichtswechsel geht hier durch, deshalb ist das
@@ -11468,6 +11509,7 @@ Namespace ViewModels
             If result Is Nothing OrElse result.Mappings Is Nothing OrElse result.Mappings.Count = 0 Then Return
 
             Dim errorMessage As String = Nothing
+            Dim failedCompanions As New List(Of String)()
             Try
                 Dim sources = result.Mappings.Select(Function(m) m.SourcePath).ToList()
                 _mainVm.Viewer.ReleaseCurrentImageIfAny(sources)
@@ -11481,8 +11523,9 @@ Namespace ViewModels
                     If File.Exists(mapping.TargetPath) OrElse Directory.Exists(mapping.TargetPath) Then Throw New IOException("Ein Zielname existiert bereits.")
 
                     If File.Exists(mapping.SourcePath) Then
+                        ThrowIfTargetSidecarConflict(mapping.SourcePath, mapping.TargetPath, replaceConfirmed:=False)
                         File.Move(mapping.SourcePath, mapping.TargetPath)
-                        RawSidecarService.AccompanyMove(mapping.SourcePath, mapping.TargetPath)
+                        failedCompanions.AddRange(RawSidecarService.AccompanyMove(mapping.SourcePath, mapping.TargetPath))
                     ElseIf Directory.Exists(mapping.SourcePath) Then
                         Directory.Move(mapping.SourcePath, mapping.TargetPath)
                     End If
@@ -11502,6 +11545,7 @@ Namespace ViewModels
             End Try
 
             If errorMessage IsNot Nothing Then Await _mainVm.ShowMessageAsync(LocalizationService.T("Stapel-Umbenennen fehlgeschlagen"), errorMessage)
+            If failedCompanions.Count > 0 Then Await _mainVm.ShowMessageAsync(LocalizationService.T("Begleitdatei konnte nicht geschrieben werden"), String.Join(Environment.NewLine, failedCompanions))
         End Sub
 
         Public Async Sub CreateFolderIn(folderPath As String)
@@ -12101,25 +12145,64 @@ Namespace ViewModels
             Return RawSidecarService.IsSidecarFormat(item.FilePath)
         End Function
 
-        ''' <summary>Das Rezept, auf das der Stapel beim Ueberschreiben einer RAW- oder PSD-Datei
-        ''' aufsetzt. Nothing heisst: diese Datei auslassen.
+        ''' <summary>Legt die Vorlage in das Rezept EINER RAW- oder PSD-Datei, beim Ueberschreiben in
+        ''' "Anpassungen anwenden".
         '''
-        ''' Anders als <see cref="BatchBaseAdjustments"/>, das fuer das RECHNEN neuer Dateien gedacht
-        ''' ist: dort haengt der Startwert einer RAW ohne Rezept daran, ob der Stapel sie ueberhaupt
-        ''' entwickelt. Hier wird das Rezept GESCHRIEBEN, und es muss mit denselben Startwerten
-        ''' beginnen wie im Editor, sonst oeffnet der Editor die Datei danach anders als ohne Stapel.
+        ''' Der Startwert einer Datei ohne Rezept ist ein anderer als in
+        ''' <see cref="BatchBaseAdjustments"/>, das fuer das RECHNEN neuer Dateien gedacht ist: dort
+        ''' haengt er daran, ob der Stapel die RAW ueberhaupt entwickelt. Hier wird das Rezept
+        ''' GESCHRIEBEN, und es muss mit denselben Startwerten beginnen wie im Editor, sonst oeffnet der
+        ''' Editor die Datei danach anders als ohne Stapel.
         '''
-        ''' Eine Beistelldatei, die sich nicht lesen laesst, fuehrt zum Auslassen und nicht zu einem
-        ''' frischen Rezept: das wuerde die Bearbeitung darin still ersetzen.
+        ''' Eine Beistelldatei, die sich nicht lesen laesst, fuehrt zum Auslassen (Unreadable) und
+        ''' nicht zu einem frischen Rezept: das wuerde die Bearbeitung darin still ersetzen.
         '''
-        ''' Eine Lightroom-.xmp ohne eigene .fpxmp wird VORHER uebernommen, auf demselben Weg wie
-        ''' beim Ordnerscan. Sonst saesse der Stapel auf neutralen Werten auf, und die neue .fpxmp
-        ''' verdeckte die Entwicklung aus Lightroom von da an.</summary>
-        Private Shared Function RecipeBaseAdjustments(sourcePath As String) As ImageAdjustments
-            RawSidecarService.TryImportFromXmpSidecar(sourcePath)
-            If RawSidecarService.Exists(sourcePath) Then Return RawSidecarService.TryRead(sourcePath)
-            If RawPreviewService.IsSupportedRaw(sourcePath) Then Return ImageAdjustments.ForUneditedRaw(sourcePath)
-            Return New ImageAdjustments()
+        ''' Eine fremde .xmp ohne eigene .fpxmp wird VORHER uebernommen, auf demselben Weg wie beim
+        ''' Ordnerscan. Sonst saesse der Stapel auf neutralen Werten auf, und die neue .fpxmp verdeckte
+        ''' die Entwicklung aus der .xmp von da an.
+        '''
+        ''' LESEN, AENDERN UND SCHREIBEN UNTER EINER SPERRE (RawSidecarService.TryModifyRecipeDetailed):
+        ''' sonst konnte ein anderer Schreiber dieser Anwendung (Editor, Katalog) die Datei dazwischen
+        ''' aendern, und seine Aenderung war weg. Was teuer ist, laeuft trotzdem davor: der Startwert
+        ''' einer RAW (LibRaw) nur, wenn das Rezept fehlt, und die Messung der automatischen
+        ''' Bildverbesserung (ein ganzer Decode) auf dem vorab gelesenen Stand. Unter der Sperre wird
+        ''' ihr Ergebnis nur uebernommen, wenn das Rezept dort noch genau so aussieht; hat es sich
+        ''' dazwischen geaendert, wird dort neu gemessen. Das ist selten und dann richtig.</summary>
+        Private Shared Function WriteRecipeInPlace(source As String, template As ImageAdjustments,
+                                                   isAutoEnhance As Boolean) As RawSidecarService.ModifyRecipeResult
+            RawSidecarService.TryImportFromXmpSidecar(source)
+            Dim isRaw = RawPreviewService.IsSupportedRaw(source)
+            Dim makeStartValues = Function() If(isRaw, ImageAdjustments.ForUneditedRaw(source), New ImageAdjustments())
+            Dim existing As ImageAdjustments = Nothing
+            Dim state = RawSidecarService.ReadRecipe(source, existing)
+            If state = RawSidecarService.SidecarReadResult.Unreadable Then Return RawSidecarService.ModifyRecipeResult.Unreadable
+            Dim startValues = If(state = RawSidecarService.SidecarReadResult.Missing, makeStartValues(), Nothing)
+
+            Dim measured As ImageAdjustments = Nothing
+            Dim measuredBase As String = Nothing
+            If isAutoEnhance Then
+                Dim base = If(existing, startValues)
+                measuredBase = FpxService.SerializeAdjustments(base)
+                measured = base.Clone()
+                measured.MergeNonDefaultPixelAdjustmentsFrom(template)
+                ImageProcessor.ApplyAutoAdjustmentsTo(measured, source)
+            End If
+
+            Return RawSidecarService.TryModifyRecipeDetailed(
+                source,
+                Function() If(startValues, makeStartValues()),
+                Sub(adj)
+                    ' Vorlage und Messung setzen nur Pixelregler; stimmt der Stand, ist das Kopieren
+                    ' dieser Regler dasselbe wie Mischen und Messen.
+                    If measured IsNot Nothing AndAlso
+                       String.Equals(FpxService.SerializeAdjustments(adj), measuredBase, StringComparison.Ordinal) Then
+                        adj.CopyPixelAdjustmentsFrom(measured)
+                        Return
+                    End If
+                    adj.MergeNonDefaultPixelAdjustmentsFrom(template)
+                    If isAutoEnhance Then ImageProcessor.ApplyAutoAdjustmentsTo(adj, source)
+                End Sub,
+                developedThumbnail:=True)
         End Function
 
         ''' <summary>"Anpassungen anwenden" mit Ueberschreiben fuer RAW und PSD: die Vorlage kommt
@@ -12138,17 +12221,23 @@ Namespace ViewModels
             If targets Is Nothing OrElse targets.Count = 0 Then Return 0
             Dim changedCount = 0
             Dim errorMessage As String = Nothing
+            ' Was nicht geschrieben wurde, wird am Ende genannt. Frueher fiel eine unlesbare .fpxmp
+            ' still heraus, und die Schlusszahl war der einzige Hinweis.
+            Dim unreadable As New List(Of String)()
+            Dim failed As New List(Of String)()
             Try
                 _mainVm.BeginBusyOverlay(BatchProgressText())
                 Await Task.Run(Sub()
                     For Each source In targets
                         If BatchWasCancelled() Then Exit For
-                        Dim adj = RecipeBaseAdjustments(source)
-                        If adj IsNot Nothing Then
-                            adj.MergeNonDefaultPixelAdjustmentsFrom(template)
-                            If isAutoEnhance Then ImageProcessor.ApplyAutoAdjustmentsTo(adj, source)
-                            If RawSidecarService.TryWrite(source, adj, developedThumbnail:=True) Then changedCount += 1
-                        End If
+                        Select Case WriteRecipeInPlace(source, template, isAutoEnhance)
+                            Case RawSidecarService.ModifyRecipeResult.Written
+                                changedCount += 1
+                            Case RawSidecarService.ModifyRecipeResult.Unreadable
+                                unreadable.Add(RawSidecarService.SidecarPathFor(source))
+                            Case Else
+                                failed.Add(RawSidecarService.SidecarPathFor(source))
+                        End Select
                         ReportBatchFileDone()
                     Next
                 End Sub)
@@ -12158,6 +12247,20 @@ Namespace ViewModels
                 _mainVm.EndBusyOverlay()
             End Try
             If errorMessage IsNot Nothing Then Await _mainVm.ShowMessageAsync(LocalizationService.T("Bildverarbeitung fehlgeschlagen"), errorMessage)
+            ' In die Warnung des Fensters und nicht in einen Dialog: sie bleibt stehen, bis der Nutzer
+            ' sie schliesst, und der Stapel muss nicht auf ihn warten, um seine Zahl zu melden.
+            ' Die Zahl nennt alle, die Liste die ersten zehn: ein Stapel ueber einen ganzen Ordner
+            ' gaebe sonst eine Meldung, die nicht mehr auf den Schirm passt.
+            If unreadable.Count > 0 Then
+                _mainVm.ReportFileWarning(String.Join(ControlChars.Lf,
+                    {String.Format(LocalizationService.T("{0} Datei(en) ausgelassen: die Begleitdatei ließ sich nicht lesen und bleibt unverändert."), unreadable.Count)}.
+                    Concat(unreadable.Take(10))))
+            End If
+            If failed.Count > 0 Then
+                _mainVm.ReportFileWarning(String.Join(ControlChars.Lf,
+                    {String.Format(LocalizationService.T("{0} Begleitdatei(en) ließen sich nicht schreiben."), failed.Count)}.
+                    Concat(failed.Take(10))))
+            End If
             Return changedCount
         End Function
 
@@ -12283,11 +12386,15 @@ Namespace ViewModels
                              ' erst vierfach durch das Modell, dann auf das eingetragene Zielmass
                              ' herunter.
                              adj.UpscaleModel = resize.UpscaleModel
+                             ' Fehlt die Quelle beim Lesen der Aufnahmedaten, entsteht die neue Datei
+                             ' ohne sie. Beim Ueberschreiben haelt RewriteImagesInPlaceAsync den Fall
+                             ' selbst auf (siehe dort), deshalb gilt die Regel fuer beide Wege.
                              Return ImageProcessor.SaveImage(source, target, adj, jpgQuality, preserveMetadata,
                                                              developRaw:=BatchDevelopsRaw(source),
                                                              applyPendingBaked:=applyPendingBaked,
                                                              copyrightText:=resize.Copyright,
-                                                             cancel:=cancel)
+                                                             cancel:=cancel,
+                                                             missingSource:=ImageProcessor.MissingSourceMetadata.SaveWithoutMetadata)
                          End Function
 
             ' LOKAL heisst "hat eine Datei auf dieser Platte" - nicht "ist kein Immich". Ein
@@ -12460,12 +12567,14 @@ Namespace ViewModels
                              If isAutoEnhance Then ImageProcessor.ApplyAutoAdjustmentsTo(adj, source)
                              ' Das Entrauschen misst bei der Automatik JE BILD, und zwar erst im
                              ' Speicherweg am frisch entwickelten Bild - hier gibt es noch keine Pixel.
+                             ' Fehlende Quelle: siehe ResizeImageItemsCoreAsync.
                              Return ImageProcessor.SaveImage(source, target, adj, result.JpgQuality, preserveMetadata,
                                                              developRaw:=BatchDevelopsRaw(source),
                                                              applyPendingBaked:=applyPendingBaked,
                                                              copyrightText:=result.Copyright,
                                                              cancel:=cancel,
-                                                             denoise:=result.Denoise)
+                                                             denoise:=result.Denoise,
+                                                             missingSource:=ImageProcessor.MissingSourceMetadata.SaveWithoutMetadata)
                          End Function
 
             ' LOKAL heisst "hat eine Datei auf dieser Platte" - nicht "ist kein Immich". Ein
@@ -12708,11 +12817,13 @@ Namespace ViewModels
                              ' Objekte aus dem Rezept bleiben stehen.
                              Dim adj = BatchBaseAdjustments(source)
                              adj.Annotations.Add(annotation.Clone())
+                             ' Fehlende Quelle: siehe ResizeImageItemsCoreAsync.
                              Return ImageProcessor.SaveImage(source, target, adj, result.JpgQuality, preserveMetadata,
                                                              developRaw:=BatchDevelopsRaw(source),
                                                              applyPendingBaked:=applyPendingBaked,
                                                              copyrightText:=result.Copyright,
-                                                             cancel:=cancel)
+                                                             cancel:=cancel,
+                                                             missingSource:=ImageProcessor.MissingSourceMetadata.SaveWithoutMetadata)
                          End Function
             ' LOKAL heisst "hat eine Datei auf dieser Platte" - nicht "ist kein Immich". Ein
             ' Nextcloud-Element fiel vorher in diesen Topf und wurde mit seinem Pseudo-Pfad wie eine
@@ -12955,7 +13066,12 @@ Namespace ViewModels
                         Dim ext = IO.Path.GetExtension(source)
                         Dim temp = IO.Path.Combine(IO.Path.GetDirectoryName(source), $".{IO.Path.GetFileNameWithoutExtension(source)}.ferrumpix-{Guid.NewGuid():N}{ext}")
                         Try
-                            If writer(source, temp) Then
+                            ' NUR UEBER EIN NOCH VORHANDENES ORIGINAL. Die Schreiber nehmen bei einer
+                            ' fehlenden Quelle in Kauf, ohne Aufnahmedaten zu schreiben, weil sie auch
+                            ' neue Dateien erzeugen (MissingSourceMetadata.SaveWithoutMetadata). Hier
+                            ' waere das Ergebnis aber eine Datei, die von aussen geloescht oder
+                            ' umbenannt wurde und nun ohne EXIF neu entstuende: dann lieber nichts.
+                            If writer(source, temp) AndAlso File.Exists(source) Then
                                 File.Copy(temp, source, True)
                                 changedCount += 1
                                 ExifService.Invalidate(source)
@@ -13568,12 +13684,15 @@ Namespace ViewModels
                                  End If
                              End If
                              SetBatchResizeStep(adj, resizeFields)
+                             ' Export schreibt immer neue Dateien: fehlt die Quelle beim Lesen der
+                             ' Aufnahmedaten, entsteht die Datei ohne sie.
                              Return ImageProcessor.SaveImage(source, target, adj, result.JpgQuality, result.PreserveMetadata,
                                                              developRaw:=BatchDevelopsRaw(source),
                                                              applyPendingBaked:=applyPendingBaked,
                                                              copyrightText:=result.Copyright,
                                                              cancel:=cancel,
-                                                             denoise:=result.Denoise)
+                                                             denoise:=result.Denoise,
+                                                             missingSource:=ImageProcessor.MissingSourceMetadata.SaveWithoutMetadata)
                          End Function
             Dim nameBuilder = CreateNameBuilder(result.NamePattern)
 
@@ -13703,11 +13822,14 @@ Namespace ViewModels
                              If losslessJpegToJxl AndAlso Not cancel.IsCancellationRequested AndAlso
                                 ImageProcessor.TryTranscodeJpegToJxl(source, target, preserveMetadata, result.Copyright) Then Return True
                              Dim adj = BatchBaseAdjustments(source)
+                             ' Konvertieren schreibt immer neue Dateien: fehlt die Quelle beim Lesen
+                             ' der Aufnahmedaten, entsteht die Datei ohne sie.
                              Return ImageProcessor.SaveImage(source, target, adj, result.JpgQuality, preserveMetadata,
                                                              developRaw:=BatchDevelopsRaw(source),
                                                              applyPendingBaked:=applyPendingBaked,
                                                              copyrightText:=result.Copyright,
-                                                             cancel:=cancel)
+                                                             cancel:=cancel,
+                                                             missingSource:=ImageProcessor.MissingSourceMetadata.SaveWithoutMetadata)
                          End Function
             ' Fuer die Serverwege dieselbe Kette, nur mit der Bedingung davor, die es dort seit jeher
             ' gibt: liegt die Quelle schon im Zielformat vor, gibt es nichts zu konvertieren.
@@ -13893,13 +14015,17 @@ Namespace ViewModels
             ' Kopieren kann bei großen Dateien und Ordnern Sekunden dauern - nicht auf dem UI-Thread.
             ' TransferPath legt den Inhalt erst vollständig neben das Ziel und hängt ihn dann um;
             ' ein vorhandenes Ziel ersetzt es nur, wenn es zum Überschreiben freigegeben ist.
-            Await Task.Run(Sub()
-                               TransferPath(source, target, movePath, resolved.ReplaceConfirmed)
+            Dim failed = Await Task.Run(Function()
+                               Dim companions = TransferPath(source, target, movePath, resolved.ReplaceConfirmed)
                                ' NUR beim Verschieben. Eine Kopie ist ein NEUES Bild: sie bekommt
                                ' ihre eigenen Katalogzeilen und ihre eigene Kachel, und die des
                                ' Originals müssen dort bleiben, wo sie sind.
                                If movePath Then LibraryService.Instance.MoveEverythingForPath(source, target)
-                           End Sub)
+                               Return companions
+                           End Function)
+            If failed.Count > 0 Then
+                Await _mainVm.ShowMessageAsync(LocalizationService.T("Begleitdatei konnte nicht geschrieben werden"), String.Join(Environment.NewLine, failed))
+            End If
             Return True
         End Function
 
@@ -14020,9 +14146,17 @@ Namespace ViewModels
             Dim aside = IO.Path.Combine(folder, "." & IO.Path.GetFileName(target) & ".ferrumpix-old-" &
                                         Guid.NewGuid().ToString("N").Substring(0, 8))
             ' Die Begleitdateien, die eindeutig DIESEM Ziel gehoeren: seine .fpxmp und die angehaengte
-            ' XMP-Form. Die ersetzte Form ("foto.xmp") kann einer anderen Datei gehoeren und bleibt.
-            Dim companions = {(RawSidecarService.SidecarPathFor(target), RawSidecarService.SidecarPathFor(aside)),
-                              (target & ".xmp", aside & ".xmp")}
+            ' XMP-Form. Die ersetzte Form ("foto.xmp") geht nur mit, wenn kein anderes Bild desselben
+            ' Stamms daneben liegt (RawSidecarService.OwnedStemXmp); sonst kann sie diesem gehoeren
+            ' und bleibt. Blieb sie auch ohne Nachbarn liegen, scheiterte das bestaetigte Ersetzen von
+            ' "ziel/foto.cr2" an ihr, sobald die Quelle keine eigene XMP mitbrachte.
+            ' Gefragt wird VOR dem Beiseitelegen: danach fehlt das Ziel, und die Frage gaelte einer
+            ' anderen Lage.
+            Dim companions As New List(Of (String, String)) From {
+                (RawSidecarService.SidecarPathFor(target), RawSidecarService.SidecarPathFor(aside)),
+                (target & ".xmp", aside & ".xmp")}
+            Dim ownedStem = If(File.Exists(target), RawSidecarService.OwnedStemXmp(target), Nothing)
+            If ownedStem IsNot Nothing Then companions.Add((ownedStem, aside & ".stem.xmp"))
             Dim setAside As New List(Of (Original As String, Aside As String))()
             MovePathSameFolder(target, aside)
             Try
@@ -14077,8 +14211,9 @@ Namespace ViewModels
         ''' inzwischen entstanden ist, lässt das Umbenennen scheitern, statt ersetzt zu werden.
         ''' Scheitert der letzte Schritt, geht beim Verschieben der Inhalt an die Quelle zurück,
         ''' bei der Kopie fällt die Nachbardatei weg. Die Begleitdateien folgen erst danach.</summary>
-        Private Shared Sub TransferPath(source As String, target As String, movePath As Boolean, replaceConfirmed As Boolean)
+        Private Shared Function TransferPath(source As String, target As String, movePath As Boolean, replaceConfirmed As Boolean) As List(Of String)
             Dim isFile = File.Exists(source)
+            If isFile Then ThrowIfTargetSidecarConflict(source, target, replaceConfirmed)
             Dim staging = IO.Path.Combine(IO.Path.GetDirectoryName(target),
                                           "." & IO.Path.GetFileName(target) & ".ferrumpix-new-" &
                                           Guid.NewGuid().ToString("N").Substring(0, 8))
@@ -14120,8 +14255,25 @@ Namespace ViewModels
             End Try
 
             If isFile Then
-                If movePath Then RawSidecarService.AccompanyMove(source, target) Else RawSidecarService.AccompanyCopy(source, target)
+                Return If(movePath, RawSidecarService.AccompanyMove(source, target), RawSidecarService.AccompanyCopy(source, target))
             End If
+            Return New List(Of String)()
+        End Function
+
+        ''' <summary>Hält einen Vorgang auf, dessen Ziel schon eine Begleitdatei trägt, die nicht zur
+        ''' Quelle gehört (RawSidecarService.UnrelatedTargetSidecar). Die Meldung sagt, warum: bei der
+        ''' Stamm-XMP ("foto.xmp" neben "foto.cr2") steht dort, dass sie einem anderen Bild mit
+        ''' demselben Namen gehört. Ein blosses "bereits vorhanden" liess offen, was das mit dem
+        ''' gerade verschobenen Bild zu tun hat.</summary>
+        Friend Shared Sub ThrowIfTargetSidecarConflict(source As String, target As String, replaceConfirmed As Boolean)
+            Dim conflict = RawSidecarService.UnrelatedTargetSidecar(source, target, replacingTarget:=replaceConfirmed)
+            If conflict Is Nothing Then Return
+            If String.Equals(conflict, RawSidecarService.StemXmpPathFor(target), PathIdentity.Comparison) Then
+                Throw New IOException(String.Format(
+                    LocalizationService.T("Am Ziel liegt schon die Begleitdatei {0}. Sie gehört zu einem anderen Bild mit demselben Namen und würde sonst auch diesem Bild zugeordnet."),
+                    conflict))
+            End If
+            Throw New IOException(LocalizationService.T("bereits vorhanden") & ": " & conflict)
         End Sub
 
         ''' <summary>Verschiebt über Ordner- und Datenträgergrenzen; ein Ordner geht dabei nur

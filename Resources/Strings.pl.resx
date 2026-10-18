@@ -9822,4 +9822,16 @@
   <data name="Die_Datei_wurde_entfernt_aber_diese_Begleitdatei_4c8e2973" xml:space="preserve">
     <value>Plik został usunięty, ale te pliki pomocnicze pozostały: {0}</value>
   </data>
+  <data name="Am_Ziel_liegt_schon_die_Begleitdatei_0_Sie_geh_r_82eced67" xml:space="preserve">
+    <value>W miejscu docelowym jest już plik pomocniczy {0}. Należy do innego obrazu o tej samej nazwie i w przeciwnym razie zostałby przypisany także do tego obrazu.</value>
+  </data>
+  <data name="0_Datei_en_ausgelassen_die_Begleitdatei_lie_sich_17fc3c55" xml:space="preserve">
+    <value>Pominięte pliki: {0}. Nie udało się odczytać pliku pomocniczego i pozostaje on bez zmian.</value>
+  </data>
+  <data name="0_Begleitdatei_en_lie_en_sich_nicht_schreiben_dacb948d" xml:space="preserve">
+    <value>Nie udało się zapisać plików pomocniczych: {0}.</value>
+  </data>
+  <data name="F_r_0_Dateien_steht_die_nderung_nur_im_Katalog_d_7672cf42" xml:space="preserve">
+    <value>Dla {0} plików zmiana jest tylko w katalogu: nie udało się odczytać ani zapisać pliku towarzyszącego. Pierwszy to {1}</value>
+  </data>
 </root>

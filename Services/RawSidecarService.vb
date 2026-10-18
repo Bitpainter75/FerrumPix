@@ -91,8 +91,12 @@ Namespace Services
             If String.IsNullOrWhiteSpace(rawPath) OrElse adjustments Is Nothing Then Return False
             Try
                 SyncLock _writeLock
+                    Dim existing As ImageAdjustments = Nothing
+                    Dim state = ReadRecipe(rawPath, existing)
+                    If state = SidecarReadResult.Unreadable Then Return False
                     Dim catalog = LibraryService.Instance.GetSidecarCatalogData(rawPath)
-                    Return TryWriteCore(rawPath, adjustments, catalog, developedThumbnail, requireAbsent)
+                    Return TryWriteCore(rawPath, adjustments, catalog, developedThumbnail,
+                                        requireAbsent OrElse state = SidecarReadResult.Missing)
                 End SyncLock
             Catch
                 Return False
@@ -154,17 +158,51 @@ Namespace Services
         ''' <paramref name="createWhenMissing"/> und wird nur angelegt, wenn dort noch immer nichts
         ''' liegt.</summary>
         Public Shared Function TryModifyRecipe(rawPath As String, createWhenMissing As Func(Of ImageAdjustments),
-                                               modify As Action(Of ImageAdjustments)) As Boolean
-            If String.IsNullOrWhiteSpace(rawPath) OrElse createWhenMissing Is Nothing OrElse modify Is Nothing Then Return False
-            SyncLock _writeLock
-                Dim adjustments As ImageAdjustments = Nothing
-                Dim state = ReadRecipe(rawPath, adjustments)
-                If state = SidecarReadResult.Unreadable Then Return False
-                If state = SidecarReadResult.Missing Then adjustments = createWhenMissing()
-                If adjustments Is Nothing Then Return False
-                modify(adjustments)
-                Return TryWrite(rawPath, adjustments, requireAbsent:=state = SidecarReadResult.Missing)
-            End SyncLock
+                                               modify As Action(Of ImageAdjustments),
+                                               Optional developedThumbnail As Boolean? = Nothing) As Boolean
+            Return TryModifyRecipeCore(rawPath, createWhenMissing, modify, developedThumbnail) = ModifyRecipeResult.Written
+        End Function
+
+        ''' <summary>Was <see cref="TryModifyRecipeDetailed"/> herausbekam. Unreadable steht fuer sich,
+        ''' weil der Aufrufer es anders melden soll als einen Schreibfehler: dort liegt eine Datei, die
+        ''' wir nicht verstehen und deshalb nicht anfassen.</summary>
+        Public Enum ModifyRecipeResult
+            Written
+            Unreadable
+            Failed
+        End Enum
+
+        ''' <summary>Wie <see cref="TryModifyRecipe"/>, sagt aber, warum nichts geschrieben wurde.</summary>
+        Public Shared Function TryModifyRecipeDetailed(rawPath As String, createWhenMissing As Func(Of ImageAdjustments),
+                                                       modify As Action(Of ImageAdjustments),
+                                                       Optional developedThumbnail As Boolean? = Nothing) As ModifyRecipeResult
+            Return TryModifyRecipeCore(rawPath, createWhenMissing, modify, developedThumbnail)
+        End Function
+
+        ''' <paramref name="createWhenMissing"/> laeuft NUR, wenn die Datei fehlt. Er darf also teuer
+        ''' sein (die Startwerte einer RAW kommen aus ihren Metadaten), ein vorhandenes Rezept kostet
+        ''' ihn nicht.
+        Private Shared Function TryModifyRecipeCore(rawPath As String, createWhenMissing As Func(Of ImageAdjustments),
+                                                    modify As Action(Of ImageAdjustments),
+                                                    developedThumbnail As Boolean?) As ModifyRecipeResult
+            If String.IsNullOrWhiteSpace(rawPath) OrElse createWhenMissing Is Nothing OrElse modify Is Nothing Then Return ModifyRecipeResult.Failed
+            Try
+                SyncLock _writeLock
+                    Dim adjustments As ImageAdjustments = Nothing
+                    Dim state = ReadRecipe(rawPath, adjustments)
+                    If state = SidecarReadResult.Unreadable Then Return ModifyRecipeResult.Unreadable
+                    If state = SidecarReadResult.Missing Then adjustments = createWhenMissing()
+                    If adjustments Is Nothing Then Return ModifyRecipeResult.Failed
+                    modify(adjustments)
+                    Dim catalog = LibraryService.Instance.GetSidecarCatalogData(rawPath)
+                    Dim written = TryWriteCore(rawPath, adjustments, catalog, developedThumbnail,
+                                               requireAbsent:=state = SidecarReadResult.Missing)
+                    Return If(written, ModifyRecipeResult.Written, ModifyRecipeResult.Failed)
+                End SyncLock
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Sidecar.ModifyRecipe", ex)
+                Return ModifyRecipeResult.Failed
+            End Try
         End Function
 
         Private Shared Function TryWriteCore(rawPath As String, adjustments As ImageAdjustments,
@@ -174,6 +212,7 @@ Namespace Services
             If String.IsNullOrWhiteSpace(rawPath) OrElse adjustments Is Nothing Then Return False
             SyncLock _writeLock
                 Dim temp As String = Nothing
+                Dim target As String = Nothing
                 Try
                     Dim keepDevelopedThumbnail = If(developedThumbnail.HasValue, developedThumbnail.Value,
                                                     ReadDevelopedThumbnail(rawPath))
@@ -195,7 +234,7 @@ Namespace Services
                     Dim catalogNode = New XElement(Ns + "catalog",
                         New XElement(Ns + "rating", safeRating.ToString(Globalization.CultureInfo.InvariantCulture)),
                         New XElement(Ns + "favorite", If(isFavorite, "true", "false")),
-                        New XElement(Ns + "colorLabel", If(catalog?.ColorLabel, "")),
+                        New XElement(Ns + "colorLabel", If(catalog?.ColorLabel, "").Trim()),
                         New XElement(Ns + "pick", LibraryService.NormalizePickState(
                             If(catalog Is Nothing, 0, catalog.PickState.GetValueOrDefault())).ToString(Globalization.CultureInfo.InvariantCulture)),
                         keywordsNode)
@@ -213,10 +252,15 @@ Namespace Services
                                 New XAttribute("format", "fpx-json"),
                                 New XCData(json))))
 
-                    Dim target = SidecarPathFor(rawPath)
+                    target = SidecarPathFor(rawPath)
                     temp = target & ".tmp"
-                    Using writer = XmlWriter.Create(temp, New XmlWriterSettings With {.Indent = True})
-                        doc.Save(writer)
+                    Using fs = New FileStream(temp, FileMode.Create, FileAccess.Write, FileShare.None)
+                        Using writer = XmlWriter.Create(fs, New XmlWriterSettings With {.Indent = True})
+                            doc.Save(writer)
+                        End Using
+                        ' Bis auf die Platte, bevor umbenannt wird: sonst kann nach einem
+                        ' Stromausfall der neue Name gelten und der Inhalt fehlen.
+                        fs.Flush(flushToDisk:=True)
                     End Using
                     ' Ohne Ueberschreiben wirft Move, wenn am Ziel inzwischen eine Datei liegt.
                     File.Move(temp, target, overwrite:=Not requireAbsent)
@@ -227,7 +271,14 @@ Namespace Services
                     _displayFactsCache.TryRemove(target, ignored)
                     Return True
                 Catch ex As Exception
-                    DiagnosticLogService.LogException("Sidecar.Write", ex)
+                    If requireAbsent AndAlso target IsNot Nothing AndAlso File.Exists(target) Then
+                        ' Kein Fehler, sondern der vereinbarte Ausgang: der Aufrufer hatte "fehlt"
+                        ' gelesen, und inzwischen liegt dort eine Datei. Sie bleibt, wie sie ist.
+                        DiagnosticLogService.LogAlways("Sidecar.Write",
+                            $"inzwischen vorhanden, nicht ersetzt: {Path.GetFileName(target)}")
+                    Else
+                        DiagnosticLogService.LogException("Sidecar.Write", ex)
+                    End If
                     Try
                         If temp IsNot Nothing AndAlso File.Exists(temp) Then File.Delete(temp)
                     Catch
@@ -252,33 +303,39 @@ Namespace Services
         ' nur die .fpxmp mit; Bewertung, Stichwoerter und eine fremde Entwicklung blieben am alten
         ' Ort liegen und wurden am neuen nicht mehr gefunden.
         '
-        ' Ein Fehler an einer Begleitdatei laesst die Hauptoperation nicht scheitern (sie ist schon
-        ' geschehen, wenn diese Methoden laufen), wird aber protokolliert statt geschluckt.
+        ' Ein Fehler an einer Begleitdatei laesst die Hauptoperation stehen (sie ist schon geschehen),
+        ' wird protokolliert und als Pfad an den Aufrufer zur sichtbaren Meldung zurueckgegeben.
         '
         ' DIE ERSETZTE FORM KANN MEHREREN DATEIEN GEHOEREN: "foto.xmp" passt zu foto.cr2 UND foto.jpg.
         ' Sie wird deshalb nur verschoben oder geloescht, wenn keine andere Datei desselben Stamms
         ' am alten Ort bleibt; sonst kopiert beziehungsweise stehen gelassen. Eine vorhandene XMP am
         ' Ziel wird nie ueberschrieben: sie gehoert dort womoeglich einer anderen Datei.
 
-        Public Shared Sub AccompanyMove(sourcePath As String, targetPath As String)
+        Public Shared Function AccompanyMove(sourcePath As String, targetPath As String) As List(Of String)
+            Dim failed As New List(Of String)()
             Try
                 Dim sidecar = SidecarPathFor(sourcePath)
-                If File.Exists(sidecar) Then File.Move(sidecar, SidecarPathFor(targetPath), overwrite:=True)
+                If File.Exists(sidecar) Then File.Move(sidecar, SidecarPathFor(targetPath), overwrite:=False)
             Catch ex As Exception
                 DiagnosticLogService.LogException("Sidecar.AccompanyMove", ex)
+                failed.Add(SidecarPathFor(sourcePath))
             End Try
-            CarryXmpCompanions(sourcePath, targetPath, moveFiles:=True)
-        End Sub
+            CarryXmpCompanions(sourcePath, targetPath, moveFiles:=True, failed:=failed)
+            Return failed
+        End Function
 
-        Public Shared Sub AccompanyCopy(sourcePath As String, targetPath As String)
+        Public Shared Function AccompanyCopy(sourcePath As String, targetPath As String) As List(Of String)
+            Dim failed As New List(Of String)()
             Try
                 Dim sidecar = SidecarPathFor(sourcePath)
-                If File.Exists(sidecar) Then File.Copy(sidecar, SidecarPathFor(targetPath), overwrite:=True)
+                If File.Exists(sidecar) Then File.Copy(sidecar, SidecarPathFor(targetPath), overwrite:=False)
             Catch ex As Exception
                 DiagnosticLogService.LogException("Sidecar.AccompanyCopy", ex)
+                failed.Add(SidecarPathFor(sourcePath))
             End Try
-            CarryXmpCompanions(sourcePath, targetPath, moveFiles:=False)
-        End Sub
+            CarryXmpCompanions(sourcePath, targetPath, moveFiles:=False, failed:=failed)
+            Return failed
+        End Function
 
         ''' <summary>Beim Papierkorb wandern die Begleitdateien ebenfalls in den Papierkorb (die
         ''' Bilddatei laesst sich so mitsamt Rezept wiederherstellen), sonst werden sie geloescht. Die
@@ -311,20 +368,25 @@ Namespace Services
         End Function
 
         ''' <summary>Nimmt die fremden XMP-Dateien mit. Siehe den Block oben fuer die Regeln.</summary>
-        Private Shared Sub CarryXmpCompanions(sourcePath As String, targetPath As String, moveFiles As Boolean)
+        Private Shared Sub CarryXmpCompanions(sourcePath As String, targetPath As String, moveFiles As Boolean,
+                                              failed As List(Of String))
             ' Angehaengte Form: gehoert eindeutig dieser einen Datei.
-            CarryOne(sourcePath & ".xmp", targetPath & ".xmp", moveFiles, removeSourceIfSame:=moveFiles)
+            CarryOne(sourcePath & ".xmp", targetPath & ".xmp", moveFiles, removeSourceIfSame:=moveFiles, failed:=failed)
             ' Ersetzte Form: geteilt moeglich.
             Dim sourceStem = StemXmpPathFor(sourcePath)
             Dim targetStem = StemXmpPathFor(targetPath)
             If sourceStem Is Nothing OrElse targetStem Is Nothing Then Return
             If String.Equals(sourceStem, targetStem, PathIdentity.Comparison) Then Return
             Dim siblingStays = HasStemSibling(sourcePath)
+            ' Die ersetzte Form am Ziel kann einem anderen Bild gehoeren. Der eindeutige Name
+            ' nimmt die Quell-XMP auf und hat beim Lesen Vorrang vor der fremden Stamm-XMP.
+            If File.Exists(targetStem) AndAlso Not File.Exists(targetPath & ".xmp") Then targetStem = targetPath & ".xmp"
             CarryOne(sourceStem, targetStem, moveFiles AndAlso Not siblingStays,
-                     removeSourceIfSame:=moveFiles AndAlso Not siblingStays)
+                     removeSourceIfSame:=moveFiles AndAlso Not siblingStays, failed:=failed)
         End Sub
 
-        Private Shared Sub CarryOne(source As String, target As String, moveFile As Boolean, removeSourceIfSame As Boolean)
+        Private Shared Sub CarryOne(source As String, target As String, moveFile As Boolean, removeSourceIfSame As Boolean,
+                                    failed As List(Of String))
             Try
                 If Not File.Exists(source) Then Return
                 If File.Exists(target) Then
@@ -336,6 +398,7 @@ Namespace Services
                     Else
                         DiagnosticLogService.LogAlways("Sidecar.Accompany",
                             $"XMP am Ziel vorhanden, nicht ueberschrieben: {Path.GetFileName(target)}")
+                        failed.Add(source)
                     End If
                     Return
                 End If
@@ -346,12 +409,45 @@ Namespace Services
                 End If
             Catch ex As Exception
                 DiagnosticLogService.LogException("Sidecar.AccompanyXmp", ex)
+                failed.Add(source)
             End Try
         End Sub
 
+        ''' <summary>Ein verwaister Begleiter darf nicht ersetzt und eine fremde Stamm-XMP nicht
+        ''' an ein Bild ohne eigene XMP angehaengt werden. Liefert den kollidierenden Pfad.
+        '''
+        ''' <paramref name="replacingTarget"/>: das vorhandene Ziel ist zum Ersetzen freigegeben. Dann
+        ''' gehoert seine Stamm-XMP ("ziel/foto.xmp" neben "ziel/foto.cr2") ihm und geht mit ihm
+        ''' beiseite (<see cref="OwnedStemXmp"/>), statt den Vorgang aufzuhalten - es sei denn, ein
+        ''' anderes Bild desselben Stamms liegt dort und kann sie ebenso meinen.</summary>
+        Public Shared Function UnrelatedTargetSidecar(sourcePath As String, targetPath As String,
+                                                      Optional replacingTarget As Boolean = False) As String
+            If Not File.Exists(targetPath) AndAlso File.Exists(SidecarPathFor(targetPath)) Then Return SidecarPathFor(targetPath)
+            If Not File.Exists(targetPath) AndAlso File.Exists(targetPath & ".xmp") AndAlso
+               Not String.Equals(sourcePath, targetPath, PathIdentity.Comparison) Then Return targetPath & ".xmp"
+            Dim sourceStem = StemXmpPathFor(sourcePath)
+            Dim targetStem = StemXmpPathFor(targetPath)
+            If targetStem Is Nothing OrElse Not File.Exists(targetStem) Then Return Nothing
+            If String.Equals(sourceStem, targetStem, PathIdentity.Comparison) Then Return Nothing
+            If replacingTarget AndAlso File.Exists(targetPath) AndAlso OwnedStemXmp(targetPath) IsNot Nothing Then Return Nothing
+            If Not File.Exists(sourcePath & ".xmp") AndAlso
+               (sourceStem Is Nothing OrElse Not File.Exists(sourceStem)) Then Return targetStem
+            Return Nothing
+        End Function
+
+        ''' <summary>Die Stamm-XMP ("ordner/foto.xmp"), wenn sie vorhanden ist und allein dieser Datei
+        ''' gehoert, weil kein anderes Bild desselben Stamms daneben liegt. Sonst Nothing: dann kann
+        ''' sie ebenso einem Nachbarn gehoeren (foto.jpg neben foto.cr2) und wird nicht angefasst.</summary>
+        Public Shared Function OwnedStemXmp(imagePath As String) As String
+            Dim stem = StemXmpPathFor(imagePath)
+            If stem Is Nothing OrElse Not File.Exists(stem) Then Return Nothing
+            If HasStemSibling(imagePath) Then Return Nothing
+            Return stem
+        End Function
+
         ''' <summary>"ordner/foto.cr2" -> "ordner/foto.xmp"; Nothing, wenn die Datei selbst eine .xmp
         ''' ist oder keine Endung hat (dann gibt es keine ersetzte Form).</summary>
-        Private Shared Function StemXmpPathFor(imagePath As String) As String
+        Friend Shared Function StemXmpPathFor(imagePath As String) As String
             If String.IsNullOrWhiteSpace(imagePath) Then Return Nothing
             Dim ext = Path.GetExtension(imagePath)
             If String.IsNullOrEmpty(ext) OrElse String.Equals(ext, ".xmp", StringComparison.OrdinalIgnoreCase) Then Return Nothing
@@ -545,19 +641,23 @@ Namespace Services
         '''
         ''' NICHT File.Exists: das sagt auch bei einem Zugriffsfehler False (Netzlaufwerk weg,
         ''' fehlende Rechte am Ordner), und dann sah eine vorhandene Datei wie eine fehlende aus und
-        ''' wurde neu angelegt. Gefragt wird der Ordner selbst; scheitert die Frage, ist das
-        ''' Unreadable.</summary>
+        ''' wurde neu angelegt. File.GetAttributes wirft dagegen und sagt mit dem Ausnahmetyp, was
+        ''' los ist: Datei oder Ordner nicht gefunden heisst Missing, jeder andere Fehler Unreadable.
+        '''
+        ''' AUCH KEINE ORDNERAUFZAEHLUNG mit dem Namen als Muster: unter Unix geht die durch den
+        ''' ganzen Ordner und filtert erst danach. Ein Stapel ueber tausend Bilder auf einem
+        ''' Netzlaufwerk las so tausendmal den ganzen Ordner.
+        '''
+        ''' Ein ORDNER mit dem Namen der Begleitdatei ist Unreadable: er laesst sich weder lesen
+        ''' noch ersetzen, und ihn als "fehlt" zu melden, liesse einen Schreiber gegen ihn laufen.</summary>
         Private Shared Function ProbeSidecar(sidecar As String) As SidecarReadResult
             Try
-                Dim folder = Path.GetDirectoryName(sidecar)
-                If String.IsNullOrEmpty(folder) Then Return If(File.Exists(sidecar), SidecarReadResult.Read, SidecarReadResult.Missing)
-                Dim name = Path.GetFileName(sidecar)
-                ' Fehlt der Ordner, fehlt auch die Datei. Directory.Exists hat dieselbe Schwaeche wie
-                ' File.Exists; die Aufzaehlung darunter wirft dagegen bei einem Zugriffsfehler.
-                If Not Directory.Exists(folder) Then Return SidecarReadResult.Missing
-                For Each candidate In Directory.EnumerateFiles(folder, name)
-                    If String.Equals(Path.GetFileName(candidate), name, PathIdentity.Comparison) Then Return SidecarReadResult.Read
-                Next
+                Dim attributes = File.GetAttributes(sidecar)
+                If (attributes And FileAttributes.Directory) = FileAttributes.Directory Then Return SidecarReadResult.Unreadable
+                Return SidecarReadResult.Read
+            Catch ex As FileNotFoundException
+                Return SidecarReadResult.Missing
+            Catch ex As DirectoryNotFoundException
                 Return SidecarReadResult.Missing
             Catch
                 Return SidecarReadResult.Unreadable

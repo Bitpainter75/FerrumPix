@@ -9826,4 +9826,16 @@
   <data name="Die_Datei_wurde_entfernt_aber_diese_Begleitdatei_4c8e2973" xml:space="preserve">
     <value>ลบไฟล์แล้ว แต่ไฟล์ประกอบเหล่านี้ยังคงอยู่: {0}</value>
   </data>
+  <data name="Am_Ziel_liegt_schon_die_Begleitdatei_0_Sie_geh_r_82eced67" xml:space="preserve">
+    <value>ที่ปลายทางมีไฟล์ประกอบ {0} อยู่แล้ว ไฟล์นี้เป็นของภาพอื่นที่มีชื่อเดียวกัน และหากไม่หยุดไว้ จะถูกผูกกับภาพนี้ด้วย</value>
+  </data>
+  <data name="0_Datei_en_ausgelassen_die_Begleitdatei_lie_sich_17fc3c55" xml:space="preserve">
+    <value>ข้าม {0} ไฟล์: อ่านไฟล์ประกอบไม่ได้ และไฟล์นั้นยังคงไม่เปลี่ยนแปลง</value>
+  </data>
+  <data name="0_Begleitdatei_en_lie_en_sich_nicht_schreiben_dacb948d" xml:space="preserve">
+    <value>เขียนไฟล์ประกอบ {0} ไฟล์ไม่ได้</value>
+  </data>
+  <data name="F_r_0_Dateien_steht_die_nderung_nur_im_Katalog_d_7672cf42" xml:space="preserve">
+    <value>การเปลี่ยนแปลงของ {0} ไฟล์อยู่ในแคตตาล็อกเท่านั้น: อ่านหรือเขียนไฟล์ข้างไม่ได้ ไฟล์แรกคือ {1}</value>
+  </data>
 </root>

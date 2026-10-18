@@ -9782,4 +9782,16 @@
   <data name="Die_Datei_wurde_entfernt_aber_diese_Begleitdatei_4c8e2973" xml:space="preserve">
     <value>Se eliminó el archivo, pero estos archivos auxiliares permanecen: {0}</value>
   </data>
+  <data name="Am_Ziel_liegt_schon_die_Begleitdatei_0_Sie_geh_r_82eced67" xml:space="preserve">
+    <value>En el destino ya existe el archivo auxiliar {0}. Pertenece a otra imagen con el mismo nombre y, de lo contrario, también se asignaría a esta imagen.</value>
+  </data>
+  <data name="0_Datei_en_ausgelassen_die_Begleitdatei_lie_sich_17fc3c55" xml:space="preserve">
+    <value>{0} archivo(s) omitido(s): no se pudo leer el archivo auxiliar y queda sin cambios.</value>
+  </data>
+  <data name="0_Begleitdatei_en_lie_en_sich_nicht_schreiben_dacb948d" xml:space="preserve">
+    <value>No se pudo escribir {0} archivo(s) auxiliar(es).</value>
+  </data>
+  <data name="F_r_0_Dateien_steht_die_nderung_nur_im_Katalog_d_7672cf42" xml:space="preserve">
+    <value>Para {0} archivos el cambio solo está en el catálogo: no se pudo leer ni escribir el archivo adjunto. El primero es {1}</value>
+  </data>
 </root>

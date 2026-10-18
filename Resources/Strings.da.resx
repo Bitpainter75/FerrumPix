@@ -9822,4 +9822,16 @@
   <data name="Die_Datei_wurde_entfernt_aber_diese_Begleitdatei_4c8e2973" xml:space="preserve">
     <value>Filen blev fjernet, men disse tilhørende filer blev tilbage: {0}</value>
   </data>
+  <data name="Am_Ziel_liegt_schon_die_Begleitdatei_0_Sie_geh_r_82eced67" xml:space="preserve">
+    <value>Følgefilen {0} findes allerede ved destinationen. Den hører til et andet billede med samme navn og ville ellers også blive knyttet til dette billede.</value>
+  </data>
+  <data name="0_Datei_en_ausgelassen_die_Begleitdatei_lie_sich_17fc3c55" xml:space="preserve">
+    <value>{0} fil(er) sprunget over: følgefilen kunne ikke læses og forbliver uændret.</value>
+  </data>
+  <data name="0_Begleitdatei_en_lie_en_sich_nicht_schreiben_dacb948d" xml:space="preserve">
+    <value>{0} følgefil(er) kunne ikke skrives.</value>
+  </data>
+  <data name="F_r_0_Dateien_steht_die_nderung_nur_im_Katalog_d_7672cf42" xml:space="preserve">
+    <value>For {0} filer findes ændringen kun i kataloget: følgefilen kunne ikke læses eller skrives. Den første er {1}</value>
+  </data>
 </root>

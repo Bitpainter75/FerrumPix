@@ -1887,7 +1887,10 @@ Namespace Services
                 Dim objectAdj = renderAnnotation.Adjustments.ExtractPixelAdjustments()
                 objectAdj.SourceWidthPixels = width
                 objectAdj.SourceHeightPixels = height
-                Dim processed = ProcessBitmapBase(bitmap, objectAdj)
+                ' Bezug der oertlichen Lichter und Tiefen ist das Objektrechteck, wie im Bildrender
+                ' (DrawAnnotationViaLayer), nicht dieses Bitmap samt Effektrand.
+                Dim layerBitmap = bitmap
+                Dim processed = WithLocalToneReference(Math.Max(objW, objH), Function() ProcessBitmapBase(layerBitmap, objectAdj))
                 If Not Object.ReferenceEquals(processed, bitmap) Then bitmap.Dispose()
                 bitmap = processed
             End If
@@ -4870,8 +4873,10 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
         Friend Shared Function DocumentBackgroundColor(adj As ImageAdjustments) As SKColor
             If adj Is Nothing OrElse String.IsNullOrWhiteSpace(adj.CanvasBackgroundColor) Then Return SKColors.Transparent
             Dim color As SKColor
-            If Not SKColor.TryParse(adj.CanvasBackgroundColor, color) Then Return SKColors.Transparent
-            Return color
+            If SKColor.TryParse(adj.CanvasBackgroundColor, color) Then Return color
+            ' Ein Farbname aus einer alten Datei (TryParseColorName).
+            If TryParseColorName(adj.CanvasBackgroundColor, color) Then Return color
+            Return SKColors.Transparent
         End Function
 
         Private Shared Function ApplyDocumentBackground(source As SKBitmap, adj As ImageAdjustments) As SKBitmap

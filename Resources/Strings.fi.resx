@@ -9822,4 +9822,16 @@
   <data name="Die_Datei_wurde_entfernt_aber_diese_Begleitdatei_4c8e2973" xml:space="preserve">
     <value>Tiedosto poistettiin, mutta nämä oheistiedostot jäivät jäljelle: {0}</value>
   </data>
+  <data name="Am_Ziel_liegt_schon_die_Begleitdatei_0_Sie_geh_r_82eced67" xml:space="preserve">
+    <value>Kohteessa on jo oheistiedosto {0}. Se kuuluu toiseen samannimiseen kuvaan, ja muuten se liitettäisiin myös tähän kuvaan.</value>
+  </data>
+  <data name="0_Datei_en_ausgelassen_die_Begleitdatei_lie_sich_17fc3c55" xml:space="preserve">
+    <value>{0} tiedosto(a) ohitettiin: oheistiedostoa ei voitu lukea, ja se pysyy ennallaan.</value>
+  </data>
+  <data name="0_Begleitdatei_en_lie_en_sich_nicht_schreiben_dacb948d" xml:space="preserve">
+    <value>{0} oheistiedosto(a) ei voitu kirjoittaa.</value>
+  </data>
+  <data name="F_r_0_Dateien_steht_die_nderung_nur_im_Katalog_d_7672cf42" xml:space="preserve">
+    <value>{0} tiedoston muutos on vain luettelossa: oheistiedostoa ei voitu lukea tai kirjoittaa. Ensimmäinen on {1}</value>
+  </data>
 </root>

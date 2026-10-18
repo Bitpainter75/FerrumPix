@@ -19974,6 +19974,14 @@ Namespace ViewModels
                 If mask Is Nothing Then Return True
                 Dim maskRect = ImageProcessor.ComputeMaskDirtyRect(sceneSize.Width, sceneSize.Height, mask, adj)
                 If maskRect.IsEmpty Then Return True
+                ' Oertliche Lichter und Tiefen (Tonmodell 3) lesen ihre Basisschicht aus der Umgebung
+                ' der Maske: eine Aenderung knapp daneben verschiebt die Basis darin. Das Rechteck
+                ' waechst deshalb um genau diese Reichweite (ImageProcessor.LocalToneReach).
+                If layer.Adjustments IsNot Nothing AndAlso layer.Adjustments.UsesLocalToneZones() Then
+                    Dim reach = CInt(Math.Ceiling(ImageProcessor.LocalToneReach(Math.Max(sceneSize.Width, sceneSize.Height))))
+                    maskRect = New SKRectI(maskRect.Left - reach, maskRect.Top - reach,
+                                           maskRect.Right + reach, maskRect.Bottom + reach)
+                End If
                 If OverlaySceneRenderer.Intersects(maskRect, dirtyRect) Then Return True
             Next
             Return False
@@ -22271,8 +22279,11 @@ Namespace ViewModels
                 StatusText = LocalizationService.T("Wird gespeichert…")
                 Dim adj = GetCurrentAdjustments()
                 Dim preserveMetadata = If(_mainVm?.Settings IsNot Nothing, _mainVm.Settings.PreserveMetadataOnSave, True)
+                ' Die Temp-Datei ERSETZT danach das Asset auf dem Server: fehlt die lokale Quelle,
+                ' wird nicht ohne Aufnahmedaten ersetzt, sondern gar nicht (MissingSourceMetadata).
                 Dim ok = Await Task.Run(Function() ImageProcessor.SaveImage(sourcePath, renderPath, adj, SaveQuality, preserveMetadata,
-                                                                            workingFull:=CloneWorkingFullForRender()))
+                                                                            workingFull:=CloneWorkingFullForRender(),
+                                                                            missingSource:=ImageProcessor.MissingSourceMetadata.Fail))
                 If Not ok Then
                     StatusText = LocalizationService.T("Speichern fehlgeschlagen")
                     Return False
@@ -22399,8 +22410,10 @@ Namespace ViewModels
                 CommitObjectAdjustModeToModel()
                 Dim adj = GetCurrentAdjustments()
                 Dim preserveMetadata = If(_mainVm?.Settings IsNot Nothing, _mainVm.Settings.PreserveMetadataOnSave, True)
+                ' Wie beim Ersetzen in Immich: die Temp-Datei geht UEBER das Original auf dem Server.
                 Dim ok = Await Task.Run(Function() ImageProcessor.SaveImage(sourcePath, renderPath, adj, SaveQuality, preserveMetadata,
-                                                                            workingFull:=CloneWorkingFullForRender()))
+                                                                            workingFull:=CloneWorkingFullForRender(),
+                                                                            missingSource:=ImageProcessor.MissingSourceMetadata.Fail))
                 If Not ok Then
                     StatusText = LocalizationService.T("Speichern fehlgeschlagen")
                     Return False

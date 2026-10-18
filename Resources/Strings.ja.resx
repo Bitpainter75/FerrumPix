@@ -9822,4 +9822,16 @@
   <data name="Die_Datei_wurde_entfernt_aber_diese_Begleitdatei_4c8e2973" xml:space="preserve">
     <value>ファイルは削除されましたが、次の付随ファイルが残っています: {0}</value>
   </data>
+  <data name="Am_Ziel_liegt_schon_die_Begleitdatei_0_Sie_geh_r_82eced67" xml:space="preserve">
+    <value>移動先に付随ファイル {0} が既にあります。同じ名前の別の画像のものなので、このままではこの画像にも割り当てられてしまいます。</value>
+  </data>
+  <data name="0_Datei_en_ausgelassen_die_Begleitdatei_lie_sich_17fc3c55" xml:space="preserve">
+    <value>{0} 件のファイルをスキップしました: 付随ファイルを読み込めなかったため、変更せずに残しています。</value>
+  </data>
+  <data name="0_Begleitdatei_en_lie_en_sich_nicht_schreiben_dacb948d" xml:space="preserve">
+    <value>{0} 件の付随ファイルを書き込めませんでした。</value>
+  </data>
+  <data name="F_r_0_Dateien_steht_die_nderung_nur_im_Katalog_d_7672cf42" xml:space="preserve">
+    <value>{0} 件のファイルの変更はカタログにのみ保存されています。サイドカーファイルを読み込みも書き込みもできませんでした。最初のファイルは {1} です</value>
+  </data>
 </root>

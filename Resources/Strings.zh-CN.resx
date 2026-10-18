@@ -9780,4 +9780,16 @@
   <data name="Die_Datei_wurde_entfernt_aber_diese_Begleitdatei_4c8e2973" xml:space="preserve">
     <value>文件已删除，但这些附属文件仍然保留：{0}</value>
   </data>
+  <data name="Am_Ziel_liegt_schon_die_Begleitdatei_0_Sie_geh_r_82eced67" xml:space="preserve">
+    <value>目标位置已存在附属文件 {0}。它属于另一张同名图片，否则也会被关联到这张图片。</value>
+  </data>
+  <data name="0_Datei_en_ausgelassen_die_Begleitdatei_lie_sich_17fc3c55" xml:space="preserve">
+    <value>已跳过 {0} 个文件：无法读取附属文件，该文件保持不变。</value>
+  </data>
+  <data name="0_Begleitdatei_en_lie_en_sich_nicht_schreiben_dacb948d" xml:space="preserve">
+    <value>{0} 个附属文件无法写入。</value>
+  </data>
+  <data name="F_r_0_Dateien_steht_die_nderung_nur_im_Katalog_d_7672cf42" xml:space="preserve">
+    <value>{0} 个文件的更改仅保存在目录中：无法读取或写入附属文件。第一个是 {1}</value>
+  </data>
 </root>

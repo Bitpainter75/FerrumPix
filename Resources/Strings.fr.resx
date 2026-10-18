@@ -9782,4 +9782,16 @@
   <data name="Die_Datei_wurde_entfernt_aber_diese_Begleitdatei_4c8e2973" xml:space="preserve">
     <value>Le fichier a été supprimé, mais ces fichiers annexes sont restés : {0}</value>
   </data>
+  <data name="Am_Ziel_liegt_schon_die_Begleitdatei_0_Sie_geh_r_82eced67" xml:space="preserve">
+    <value>Le fichier annexe {0} existe déjà à la destination. Il appartient à une autre image portant le même nom et serait sinon aussi associé à cette image.</value>
+  </data>
+  <data name="0_Datei_en_ausgelassen_die_Begleitdatei_lie_sich_17fc3c55" xml:space="preserve">
+    <value>{0} fichier(s) ignoré(s) : le fichier annexe n&#x27;a pas pu être lu et reste inchangé.</value>
+  </data>
+  <data name="0_Begleitdatei_en_lie_en_sich_nicht_schreiben_dacb948d" xml:space="preserve">
+    <value>{0} fichier(s) annexe(s) n&#x27;ont pas pu être écrits.</value>
+  </data>
+  <data name="F_r_0_Dateien_steht_die_nderung_nur_im_Katalog_d_7672cf42" xml:space="preserve">
+    <value>Pour {0} fichiers, la modification n&#x27;est que dans le catalogue : le fichier annexe n&#x27;a pas pu être lu ni écrit. Le premier est {1}</value>
+  </data>
 </root>

@@ -9826,4 +9826,16 @@
   <data name="Die_Datei_wurde_entfernt_aber_diese_Begleitdatei_4c8e2973" xml:space="preserve">
     <value>파일은 삭제되었지만 다음 보조 파일은 남아 있습니다: {0}</value>
   </data>
+  <data name="Am_Ziel_liegt_schon_die_Begleitdatei_0_Sie_geh_r_82eced67" xml:space="preserve">
+    <value>대상 위치에 보조 파일 {0}이(가) 이미 있습니다. 이름이 같은 다른 이미지의 파일이므로 그대로 두면 이 이미지에도 연결됩니다.</value>
+  </data>
+  <data name="0_Datei_en_ausgelassen_die_Begleitdatei_lie_sich_17fc3c55" xml:space="preserve">
+    <value>파일 {0}개를 건너뛰었습니다: 보조 파일을 읽지 못해 변경하지 않고 그대로 두었습니다.</value>
+  </data>
+  <data name="0_Begleitdatei_en_lie_en_sich_nicht_schreiben_dacb948d" xml:space="preserve">
+    <value>보조 파일 {0}개를 쓰지 못했습니다.</value>
+  </data>
+  <data name="F_r_0_Dateien_steht_die_nderung_nur_im_Katalog_d_7672cf42" xml:space="preserve">
+    <value>파일 {0}개의 변경 사항은 카탈로그에만 저장되었습니다. 사이드카 파일을 읽거나 쓰지 못했습니다. 첫 번째 파일은 {1}입니다</value>
+  </data>
 </root>

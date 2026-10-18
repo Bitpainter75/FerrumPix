@@ -3242,7 +3242,10 @@ Namespace ViewModels
                                         ' oberen Felder nicht mehr aus, dort steht sie wirkungslos.
                                         Dim adj As New ImageAdjustments()
                                         AppendRotationStep(adj, angle)
-                                        Return ImageProcessor.SaveImage(source, temp, adj, 95, preserveMetadata)
+                                        ' Die Nachbardatei geht danach UEBER das Original: fehlt die
+                                        ' Quelle, wird nicht ohne Aufnahmedaten gedreht, sondern gar nicht.
+                                        Return ImageProcessor.SaveImage(source, temp, adj, 95, preserveMetadata,
+                                                                        missingSource:=ImageProcessor.MissingSourceMetadata.Fail)
                                     End Function)
                 If ok AndAlso File.Exists(temp) Then
                     File.Copy(temp, source, True)
@@ -3310,12 +3313,17 @@ Namespace ViewModels
                                         ' liegen, wie sie ist: sie zu ersetzen hiesse, die Entwicklung
                                         ' darin fuer einen Drehschritt wegzuwerfen. Lesen, Anhaengen und
                                         ' Schreiben laufen unter einer Sperre (TryModifyRecipe).
-                                        ' Der Startwert vorab: ForUneditedRaw oeffnet LibRaw, und das soll
-                                        ' nicht unter der Sperre laufen, an der alle Schreiber warten.
-                                        Dim startValues = If(RawPreviewService.IsSupportedRaw(source), ImageAdjustments.ForUneditedRaw(source), New ImageAdjustments())
+                                        ' Der Startwert vorab und NUR OHNE Rezept: ForUneditedRaw oeffnet
+                                        ' LibRaw, und das soll weder unter der Sperre laufen, an der alle
+                                        ' Schreiber warten, noch bei jedem Drehen einer schon bearbeiteten
+                                        ' Datei. Die Vorfrage ist nur eine Abkuerzung: verschwindet die
+                                        ' Datei bis zur Sperre doch noch, wird der Startwert dort gerechnet.
+                                        Dim isRaw = RawPreviewService.IsSupportedRaw(source)
+                                        Dim makeStartValues = Function() If(isRaw, ImageAdjustments.ForUneditedRaw(source), New ImageAdjustments())
+                                        Dim startValues = If(RawSidecarService.Exists(source), Nothing, makeStartValues())
                                         Return RawSidecarService.TryModifyRecipe(
                                             source,
-                                            Function() startValues,
+                                            Function() If(startValues, makeStartValues()),
                                             Sub(adj) AppendRotationStep(adj, angle))
                                     End Function)
                 If ok Then

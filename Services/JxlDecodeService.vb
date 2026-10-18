@@ -708,9 +708,10 @@ Namespace Services
                 End Using
                 Return (Nothing, Nothing)
             End If
-            ' Ein Lesefehler geht an den Aufrufer, statt wie "keine Boxen" auszusehen: beim Speichern
-            ' mit Aufnahmedaten waere das ein stiller Verlust (siehe ImageProcessor.ReadSourceMetadata).
-            ' Die Anzeige faengt ihn wie bei jedem anderen Format selbst ab.
+            ' Ein Lesefehler geht an den Aufrufer, statt wie "keine Boxen" auszusehen. Der Speicherweg
+            ' fragt die Erreichbarkeit der Quelle vorher selbst (ImageProcessor.ProbeMetadataSource)
+            ' und nimmt alles, was hier danach noch fliegt, als Zerlegefehler. Die Anzeige faengt ihn
+            ' wie bei jedem anderen Format selbst ab.
             Dim bytes = File.ReadAllBytes(path)
             SyncLock _nativeLock
                 Dim exif As Byte() = Nothing
