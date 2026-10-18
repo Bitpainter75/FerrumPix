@@ -37,9 +37,20 @@ Namespace Services
                 Dim folder = Path.GetDirectoryName(zielPfad)
                 If Not String.IsNullOrEmpty(folder) Then Directory.CreateDirectory(folder)
 
-                Dim tempPath = zielPfad & ".tmp"
-                File.WriteAllText(tempPath, json)
-                File.Move(tempPath, zielPfad, overwrite:=True)
+                ' Eine Nachbardatei JE SCHREIBVORGANG. Mit einer festen ".tmp" schrieben zwei
+                ' Vorgaenge auf dieselbe Datei in dieselbe Nachbardatei: der eine scheiterte, oder der
+                ' eine haengte die halbe Datei des anderen um.
+                Dim tempPath = zielPfad & "." & Guid.NewGuid().ToString("N").Substring(0, 8) & ".tmp"
+                Try
+                    File.WriteAllText(tempPath, json)
+                    File.Move(tempPath, zielPfad, overwrite:=True)
+                Catch
+                    Try
+                        If File.Exists(tempPath) Then File.Delete(tempPath)
+                    Catch
+                    End Try
+                    Throw
+                End Try
                 Return True
             Catch ex As Exception
                 ' Volle Platte, fehlende Rechte: frueher fiel das lautlos unter den Tisch und der

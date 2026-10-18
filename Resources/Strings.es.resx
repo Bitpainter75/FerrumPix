@@ -9761,4 +9761,25 @@
   <data name="Die_letzte_Pr_fung_blieb_ohne_Ergebnis_auf_der_K_05a4726c" xml:space="preserve">
     <value>La última comprobación no dio resultado: ninguno de los modelos instalados arrancó en la tarjeta. No tiene por qué ser culpa de la tarjeta.</value>
   </data>
+  <data name="F_r_0_steht_die_nderung_nur_im_Katalog_die_Begle_ccedd289" xml:space="preserve">
+    <value>Para {0} el cambio solo está en el catálogo: no se pudo leer ni escribir el archivo adjunto</value>
+  </data>
+  <data name="Die_Favoriten_lie_en_sich_nicht_speichern_c32ff059" xml:space="preserve">
+    <value>No se pudieron guardar los favoritos</value>
+  </data>
+  <data name="Die_gespeicherten_Suchen_lie_en_sich_nicht_schre_04a60e61" xml:space="preserve">
+    <value>No se pudieron escribir las búsquedas guardadas</value>
+  </data>
+  <data name="Die_Einstellungen_lie_en_sich_nicht_speichern_1ca65966" xml:space="preserve">
+    <value>No se pudieron guardar los ajustes</value>
+  </data>
+  <data name="0_ist_inzwischen_entstanden_und_wurde_nicht_erse_17e67db0" xml:space="preserve">
+    <value>{0} apareció entretanto y no se reemplazó</value>
+  </data>
+  <data name="Der_Vorgang_ist_gescheitert_und_die_alte_Fassung_7da1ffb1" xml:space="preserve">
+    <value>La operación falló y no se pudo restaurar la versión anterior. Está en {0}</value>
+  </data>
+  <data name="Die_Datei_wurde_entfernt_aber_diese_Begleitdatei_4c8e2973" xml:space="preserve">
+    <value>Se eliminó el archivo, pero estos archivos auxiliares permanecen: {0}</value>
+  </data>
 </root>

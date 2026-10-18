@@ -47,11 +47,16 @@ Namespace Services
             If String.IsNullOrWhiteSpace(sourcePath) OrElse String.IsNullOrWhiteSpace(targetPath) Then Return False
             If Not RawPreviewService.IsSupportedRaw(sourcePath) OrElse
                String.Equals(Path.GetExtension(sourcePath), ".dng", StringComparison.OrdinalIgnoreCase) Then Return False
-            ' Nur eine Datei, die es vorher NICHT gab, darf nach einem Fehlschlag wieder
-            ' verschwinden. Ein vorhandenes Ziel gehoert dem Anwender, auch als Bruchstueck.
-            Dim targetExisted = File.Exists(targetPath)
+            ' DER KONVERTER SCHREIBT NIE INS ZIEL, sondern in eine versteckte Nachbardatei im selben
+            ' Ordner, und erst nach einem sauberen Ende wird sie umgehaengt. Frueher bekam dnglab das
+            ' bestaetigte Ziel samt --override: ein Abbruch oder Fehler konnte ein vorhandenes DNG
+            ' halb ueberschrieben zuruecklassen. Die Endung bleibt .dng, weil der Konverter das
+            ' Ausgabeformat daran erkennt; der Punkt vorn haelt sie aus der Galerie heraus.
+            Dim targetDirectory = Path.GetDirectoryName(targetPath)
+            Dim stagePath = Path.Combine(If(targetDirectory, ""),
+                                         "." & Path.GetFileNameWithoutExtension(targetPath) &
+                                         ".fpconvert-" & Guid.NewGuid().ToString("N") & ".dng")
             Try
-                Dim targetDirectory = Path.GetDirectoryName(targetPath)
                 If Not String.IsNullOrWhiteSpace(targetDirectory) Then Directory.CreateDirectory(targetDirectory)
                 Dim startInfo As New ProcessStartInfo With {
                     .FileName = "dnglab", .UseShellExecute = False,
@@ -59,14 +64,10 @@ Namespace Services
                     .CreateNoWindow = True
                 }
                 startInfo.ArgumentList.Add("convert")
-                ' Ueber das vorhandene Ziel schreiben darf der Konverter nur, weil die Konfliktfrage
-                ' im Stapel VORHER gestellt wurde: wer dort nicht ueberschreiben wollte, bekommt
-                ' einen anderen Namen oder wird uebersprungen, und hier kommt gar kein Ziel an, das
-                ' schon belegt ist. Ohne dieses Wort weist dnglab die vorhandene Datei ab, und der
-                ' Lauf zaehlte eine Datei weniger, ohne zu sagen warum.
-                startInfo.ArgumentList.Add("--override")
+                ' Jeder Auftrag bekommt einen eigenen Namen; eine vorhandene Datei darf der
+                ' Konverter weder ersetzen noch fuer den eigenen Erfolg halten.
                 startInfo.ArgumentList.Add(sourcePath)
-                startInfo.ArgumentList.Add(targetPath)
+                startInfo.ArgumentList.Add(stagePath)
                 Using process As Process = Process.Start(startInfo)
                     If process Is Nothing Then Return False
                     ' Nebenlaeufig lesen, nicht mit ReadToEnd blockieren: sonst haengt der Faden bis
@@ -83,20 +84,21 @@ Namespace Services
                     Loop
                     Dim standardError = If(errorReader.Wait(2000), errorReader.Result, "")
                     If Not cancel.IsCancellationRequested AndAlso process.HasExited AndAlso
-                       process.ExitCode = 0 AndAlso File.Exists(targetPath) Then Return True
+                       process.ExitCode = 0 AndAlso File.Exists(stagePath) Then
+                        File.Move(stagePath, targetPath, overwrite:=True)
+                        Return True
+                    End If
                     If Not String.IsNullOrWhiteSpace(standardError) Then DiagnosticLogService.LogAlways("DngConverter", standardError.Trim())
                 End Using
             Catch ex As Exception
                 DiagnosticLogService.LogException("DngConverter", ex)
             End Try
             ' Ein abgebrochener oder gescheiterter Lauf laesst ein halbes DNG liegen. Es sieht wie
-            ' ein Bild aus, ist aber keins.
-            If Not targetExisted Then
-                Try
-                    If File.Exists(targetPath) Then File.Delete(targetPath)
-                Catch
-                End Try
-            End If
+            ' ein Bild aus, ist aber keins; weg muss nur die Nachbardatei, das Ziel ist unberuehrt.
+            Try
+                If File.Exists(stagePath) Then File.Delete(stagePath)
+            Catch
+            End Try
             Return False
         End Function
     End Class

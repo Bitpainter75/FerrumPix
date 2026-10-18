@@ -9805,4 +9805,25 @@
   <data name="Die_letzte_Pr_fung_blieb_ohne_Ergebnis_auf_der_K_05a4726c" xml:space="preserve">
     <value>Son denetim sonuç vermedi: yüklü modellerin hiçbiri kartta başlamadı. Bu illa karttan kaynaklanmıyor olabilir.</value>
   </data>
+  <data name="F_r_0_steht_die_nderung_nur_im_Katalog_die_Begle_ccedd289" xml:space="preserve">
+    <value>{0} için değişiklik yalnızca katalogda: yan dosya okunamadı veya yazılamadı</value>
+  </data>
+  <data name="Die_Favoriten_lie_en_sich_nicht_speichern_c32ff059" xml:space="preserve">
+    <value>Sık kullanılanlar kaydedilemedi</value>
+  </data>
+  <data name="Die_gespeicherten_Suchen_lie_en_sich_nicht_schre_04a60e61" xml:space="preserve">
+    <value>Kaydedilmiş aramalar yazılamadı</value>
+  </data>
+  <data name="Die_Einstellungen_lie_en_sich_nicht_speichern_1ca65966" xml:space="preserve">
+    <value>Ayarlar kaydedilemedi</value>
+  </data>
+  <data name="0_ist_inzwischen_entstanden_und_wurde_nicht_erse_17e67db0" xml:space="preserve">
+    <value>{0} bu arada oluştu ve değiştirilmedi</value>
+  </data>
+  <data name="Der_Vorgang_ist_gescheitert_und_die_alte_Fassung_7da1ffb1" xml:space="preserve">
+    <value>İşlem başarısız oldu ve eski sürüm geri yüklenemedi. Eski sürüm şurada: {0}</value>
+  </data>
+  <data name="Die_Datei_wurde_entfernt_aber_diese_Begleitdatei_4c8e2973" xml:space="preserve">
+    <value>Dosya kaldırıldı, ancak bu yardımcı dosyalar kaldı: {0}</value>
+  </data>
 </root>

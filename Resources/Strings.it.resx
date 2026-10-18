@@ -9761,4 +9761,25 @@
   <data name="Die_letzte_Pr_fung_blieb_ohne_Ergebnis_auf_der_K_05a4726c" xml:space="preserve">
     <value>L'ultima verifica non ha dato esito: nessuno dei modelli presenti si è avviato sulla scheda. Non è detto che dipenda dalla scheda.</value>
   </data>
+  <data name="F_r_0_steht_die_nderung_nur_im_Katalog_die_Begle_ccedd289" xml:space="preserve">
+    <value>Per {0} la modifica è solo nel catalogo: impossibile leggere o scrivere il file collaterale</value>
+  </data>
+  <data name="Die_Favoriten_lie_en_sich_nicht_speichern_c32ff059" xml:space="preserve">
+    <value>Impossibile salvare i preferiti</value>
+  </data>
+  <data name="Die_gespeicherten_Suchen_lie_en_sich_nicht_schre_04a60e61" xml:space="preserve">
+    <value>Impossibile scrivere le ricerche salvate</value>
+  </data>
+  <data name="Die_Einstellungen_lie_en_sich_nicht_speichern_1ca65966" xml:space="preserve">
+    <value>Impossibile salvare le impostazioni</value>
+  </data>
+  <data name="0_ist_inzwischen_entstanden_und_wurde_nicht_erse_17e67db0" xml:space="preserve">
+    <value>{0} è stato creato nel frattempo e non è stato sostituito</value>
+  </data>
+  <data name="Der_Vorgang_ist_gescheitert_und_die_alte_Fassung_7da1ffb1" xml:space="preserve">
+    <value>L&#x27;operazione non è riuscita e non è stato possibile ripristinare la versione precedente. Si trova in {0}</value>
+  </data>
+  <data name="Die_Datei_wurde_entfernt_aber_diese_Begleitdatei_4c8e2973" xml:space="preserve">
+    <value>Il file è stato rimosso, ma questi file associati sono rimasti: {0}</value>
+  </data>
 </root>

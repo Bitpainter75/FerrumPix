@@ -9760,4 +9760,25 @@
   <data name="Die_letzte_Pr_fung_blieb_ohne_Ergebnis_auf_der_K_05a4726c" xml:space="preserve">
     <value>A última verificação não deu resultado: nenhum dos modelos instalados arrancou na placa. Não é necessariamente culpa da placa.</value>
   </data>
+  <data name="F_r_0_steht_die_nderung_nur_im_Katalog_die_Begle_ccedd289" xml:space="preserve">
+    <value>Para {0} a alteração está apenas no catálogo: não foi possível ler ou gravar o arquivo sidecar</value>
+  </data>
+  <data name="Die_Favoriten_lie_en_sich_nicht_speichern_c32ff059" xml:space="preserve">
+    <value>Não foi possível salvar os favoritos</value>
+  </data>
+  <data name="Die_gespeicherten_Suchen_lie_en_sich_nicht_schre_04a60e61" xml:space="preserve">
+    <value>Não foi possível gravar as buscas salvas</value>
+  </data>
+  <data name="Die_Einstellungen_lie_en_sich_nicht_speichern_1ca65966" xml:space="preserve">
+    <value>Não foi possível salvar as configurações</value>
+  </data>
+  <data name="0_ist_inzwischen_entstanden_und_wurde_nicht_erse_17e67db0" xml:space="preserve">
+    <value>{0} surgiu nesse meio tempo e não foi substituído</value>
+  </data>
+  <data name="Der_Vorgang_ist_gescheitert_und_die_alte_Fassung_7da1ffb1" xml:space="preserve">
+    <value>A operação falhou e não foi possível restaurar a versão anterior. Ela está em {0}</value>
+  </data>
+  <data name="Die_Datei_wurde_entfernt_aber_diese_Begleitdatei_4c8e2973" xml:space="preserve">
+    <value>O arquivo foi removido, mas estes arquivos associados permaneceram: {0}</value>
+  </data>
 </root>

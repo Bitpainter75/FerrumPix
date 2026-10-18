@@ -1833,6 +1833,7 @@ Namespace Services
             Dim gw = (width + stepSize - 1) \ stepSize
             Dim gh = (height + stepSize - 1) \ stepSize
             Dim gray = New Single(gw * gh - 1) {}
+            Dim coverage = New Single(gw * gh - 1) {}
             Dim toLinear = _srgbToLinearTable
             Dim toGamma = _linearToSrgbTable
             ForEachRow(gw, gh,
@@ -1841,35 +1842,35 @@ Namespace Services
                     For gx = 0 To gw - 1
                         Dim xEnd = Math.Min(width, (gx + 1) * stepSize)
                         Dim sumR = 0.0F, sumG = 0.0F, sumB = 0.0F
-                        Dim count = 0
+                        Dim totalAlpha = 0.0F
                         For y = gy * stepSize To yEnd - 1
                             Dim row = y * stride
                             For x = gx * stepSize To xEnd - 1
                                 Dim o = row + x * 4
                                 Dim a = srcBuf(o + ai)
-                                ' Durchsichtiges zaehlt nicht mit; ein ganz durchsichtiges Feld
-                                ' bleibt Schwarz, die Kette laesst seine Bildpunkte ohnehin aus.
                                 If a = 0 Then Continue For
+                                Dim weight = a / 255.0F
                                 If a = 255 OrElse Not srcPremul Then
-                                    sumR += srcBuf(o + ri) / 255.0F
-                                    sumG += srcBuf(o + gi) / 255.0F
-                                    sumB += srcBuf(o + bi) / 255.0F
+                                    sumR += srcBuf(o + ri) / 255.0F * weight
+                                    sumG += srcBuf(o + gi) / 255.0F * weight
+                                    sumB += srcBuf(o + bi) / 255.0F * weight
                                 Else
                                     Dim inv = 1.0F / a
-                                    sumR += Math.Min(1.0F, srcBuf(o + ri) * inv)
-                                    sumG += Math.Min(1.0F, srcBuf(o + gi) * inv)
-                                    sumB += Math.Min(1.0F, srcBuf(o + bi) * inv)
+                                    sumR += Math.Min(1.0F, srcBuf(o + ri) * inv) * weight
+                                    sumG += Math.Min(1.0F, srcBuf(o + gi) * inv) * weight
+                                    sumB += Math.Min(1.0F, srcBuf(o + bi) * inv) * weight
                                 End If
-                                count += 1
+                                totalAlpha += weight
                             Next
                         Next
                         Dim value = 0.0F
-                        If count > 0 Then
-                            Dim rr = sumR / count, gg = sumG / count, bb = sumB / count
+                        If totalAlpha > 0 Then
+                            Dim rr = sumR / totalAlpha, gg = sumG / totalAlpha, bb = sumB / totalAlpha
                             ApplyStagesBeforeToneZones(rr, gg, bb, chain, toLinear, toGamma)
                             value = LocalToneGray(rr, gg, bb, toLinear, toGamma)
                         End If
                         gray(gy * gw + gx) = value
+                        coverage(gy * gw + gx) = totalAlpha / ((xEnd - gx * stepSize) * (yEnd - gy * stepSize))
                     Next
                 End Sub)
 
@@ -1878,8 +1879,12 @@ Namespace Services
             For i = 0 To gray.Length - 1
                 squares(i) = gray(i) * gray(i)
             Next
-            Dim mean = BoxMean(gray, gw, gh, radius)
-            Dim meanSquare = BoxMean(squares, gw, gh, radius)
+            ' Ein leeres Rasterfeld ist KEIN schwarzer Bildpunkt. Die Deckung wird bei jedem
+            ' Mittel mitgefuehrt; auf deckenden Bildern bleibt der bisherige schnelle Weg.
+            Dim hasTransparency = coverage.Any(Function(value) value < 0.999999F)
+            Dim weights = If(hasTransparency, coverage, Nothing)
+            Dim mean = BoxMeanWithCoverage(gray, weights, gw, gh, radius)
+            Dim meanSquare = BoxMeanWithCoverage(squares, weights, gw, gh, radius)
             Dim coefA = New Single(gray.Length - 1) {}
             Dim coefB = New Single(gray.Length - 1) {}
             For i = 0 To gray.Length - 1
@@ -1890,10 +1895,27 @@ Namespace Services
             Dim smoothRadius = Math.Max(1, CInt(Math.Round(LocalToneDetailRadius * Math.Max(gw, gh) / 1.7)))
             Return New LocalToneBase With {
                 .Width = gw, .Height = gh, .StepSize = stepSize,
-                .MeanA = BoxMean(coefA, gw, gh, radius),
-                .MeanB = BoxMean(coefB, gw, gh, radius),
-                .Smooth = BoxMean(BoxMean(BoxMean(gray, gw, gh, smoothRadius), gw, gh, smoothRadius), gw, gh, smoothRadius)
+                .MeanA = BoxMeanWithCoverage(coefA, weights, gw, gh, radius),
+                .MeanB = BoxMeanWithCoverage(coefB, weights, gw, gh, radius),
+                .Smooth = BoxMeanWithCoverage(BoxMeanWithCoverage(BoxMeanWithCoverage(gray, weights, gw, gh, smoothRadius),
+                                                                  weights, gw, gh, smoothRadius), weights, gw, gh, smoothRadius)
             }
+        End Function
+
+        ''' <summary>Mittelt nur sichtbare Anteile; transparente Felder verdunkeln die Umgebung nicht.</summary>
+        Private Shared Function BoxMeanWithCoverage(source As Single(), coverage As Single(), width As Integer,
+                                                    height As Integer, radius As Integer) As Single()
+            If coverage Is Nothing Then Return BoxMean(source, width, height, radius)
+            Dim weighted = New Single(source.Length - 1) {}
+            For i = 0 To source.Length - 1
+                weighted(i) = source(i) * coverage(i)
+            Next
+            Dim sums = BoxMean(weighted, width, height, radius)
+            Dim weights = BoxMean(coverage, width, height, radius)
+            For i = 0 To sums.Length - 1
+                sums(i) = If(weights(i) > 0.0000001F, sums(i) / weights(i), 0.0F)
+            Next
+            Return sums
         End Function
 
         ''' <summary>Die Stufen der Kette VOR den Tonzonen, fuer ein Rasterfeld der Basisschicht:

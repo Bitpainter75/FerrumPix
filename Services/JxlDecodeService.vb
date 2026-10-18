@@ -701,14 +701,17 @@ Namespace Services
         ''' Kein DecodeGate: gelesen werden nur Boxen, keine Bildpunkte. Das Schloss dieses Dienstes
         ''' haelt die nativen Aufrufe auseinander.</summary>
         Public Shared Function ReadMetadataBoxes(path As String) As (Exif As Byte(), Xmp As Byte())
-            If String.IsNullOrWhiteSpace(path) OrElse Not IsAvailable Then Return (Nothing, Nothing)
-            If _getBoxType Is Nothing OrElse _setBoxBuffer Is Nothing OrElse _releaseBoxBuffer Is Nothing Then Return (Nothing, Nothing)
-            Dim bytes As Byte()
-            Try
-                bytes = File.ReadAllBytes(path)
-            Catch
+            If String.IsNullOrWhiteSpace(path) Then Return (Nothing, Nothing)
+            If Not IsAvailable OrElse _getBoxType Is Nothing OrElse _setBoxBuffer Is Nothing OrElse _releaseBoxBuffer Is Nothing Then
+                ' Auch ohne Box-Leser muss eine unerreichbare Quelle als Lesefehler erkennbar bleiben.
+                Using stream = File.OpenRead(path)
+                End Using
                 Return (Nothing, Nothing)
-            End Try
+            End If
+            ' Ein Lesefehler geht an den Aufrufer, statt wie "keine Boxen" auszusehen: beim Speichern
+            ' mit Aufnahmedaten waere das ein stiller Verlust (siehe ImageProcessor.ReadSourceMetadata).
+            ' Die Anzeige faengt ihn wie bei jedem anderen Format selbst ab.
+            Dim bytes = File.ReadAllBytes(path)
             SyncLock _nativeLock
                 Dim exif As Byte() = Nothing
                 Dim xmp As Byte() = Nothing

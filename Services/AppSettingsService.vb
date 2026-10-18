@@ -981,6 +981,15 @@ Namespace Services
         Private Shared ReadOnly _writeLock As New Object()
         Private Shared _pendingJson As String = Nothing
         Private Shared _flushTimer As Timers.Timer = Nothing
+        ''' Klammert einen GANZEN Schreibvorgang, vom Entnehmen bis zum Umbenennen. _writeLock allein
+        ''' schuetzte nur das Entnehmen: ein Zeitgeber-Flush und ein weiterer konnten sich dann
+        ''' ueberholen, und ein aelterer Stand landete nach einem neueren auf der Platte.
+        Private Shared ReadOnly _flushLock As New Object()
+
+        ''' <summary>Die Einstellungen liessen sich nicht schreiben. Der Stand bleibt vorgemerkt und
+        ''' wird beim naechsten Schreiben erneut versucht, spaetestens beim Programmende. Kann von
+        ''' einem Hintergrundfaden kommen.</summary>
+        Public Shared Event WriteFailed As EventHandler
 
         ''' Die Klammer um LESEN-AENDERN-SPEICHERN. Ohne sie sind das drei Schritte, und zwei Faeden
         ''' koennen sich dazwischenschieben: der Zeitgeber-Faden schreibt beim Flush den gemerkten
@@ -1395,30 +1404,39 @@ Namespace Services
             ' Erst den gemerkten Ordner in einen ausstehenden Stand überführen, dann diesen wegschreiben.
             CommitPendingLastGalleryFolder()
 
-            Dim json As String
-            SyncLock _writeLock
-                json = _pendingJson
-                _pendingJson = Nothing
-                _flushTimer?.Stop()
-            End SyncLock
-            If json Is Nothing Then Return
+            Dim failed = False
+            SyncLock _flushLock
+                Dim json As String
+                SyncLock _writeLock
+                    json = _pendingJson
+                    _pendingJson = Nothing
+                    _flushTimer?.Stop()
+                End SyncLock
+                If json Is Nothing Then Return
 
-            Try
-                Directory.CreateDirectory(SettingsDirectory)
-                ' Nicht direkt in settings.json schreiben: ein Absturz mitten im Schreiben hinterließe eine
-                ' abgeschnittene Datei. Load würde die beim nächsten Start als unlesbar verwerfen - samt
-                ' Wasserzeichen-Presets, gespeicherten Suchen und Theme. Erst vollständig danebenschreiben,
-                ' dann ersetzen.
-                Dim tempPath = SettingsPath & ".tmp"
-                ' Erst hier werden die Zugangsdaten verschluesselt: im Speicher stehen sie im
-                ' Klartext (sonst muesste jede Abfrage entschluesseln), in der DATEI nicht.
-                File.WriteAllText(tempPath, ProtectSecrets(json))
-                File.Move(tempPath, SettingsPath, overwrite:=True)
-            Catch ex As Exception
-                ' Volle Platte, fehlende Rechte: früher fiel das lautlos unter den Tisch und der Nutzer
-                ' glaubte, seine Einstellung sei gespeichert.
-                DiagnosticLogService.LogException("Settings.Flush", ex)
-            End Try
+                Try
+                    Directory.CreateDirectory(SettingsDirectory)
+                    ' Nicht direkt in settings.json schreiben: ein Absturz mitten im Schreiben hinterließe eine
+                    ' abgeschnittene Datei. Load würde die beim nächsten Start als unlesbar verwerfen - samt
+                    ' Wasserzeichen-Presets, gespeicherten Suchen und Theme. Erst vollständig danebenschreiben,
+                    ' dann ersetzen.
+                    Dim tempPath = SettingsPath & ".tmp"
+                    ' Erst hier werden die Zugangsdaten verschluesselt: im Speicher stehen sie im
+                    ' Klartext (sonst muesste jede Abfrage entschluesseln), in der DATEI nicht.
+                    File.WriteAllText(tempPath, ProtectSecrets(json))
+                    File.Move(tempPath, SettingsPath, overwrite:=True)
+                Catch ex As Exception
+                    ' Volle Platte, fehlende Rechte: früher fiel das lautlos unter den Tisch und der Nutzer
+                    ' glaubte, seine Einstellung sei gespeichert. Und der Stand war weg: er war schon
+                    ' entnommen. Jetzt bleibt er vorgemerkt, es sei denn, inzwischen kam ein neuerer.
+                    DiagnosticLogService.LogException("Settings.Flush", ex)
+                    SyncLock _writeLock
+                        If _pendingJson Is Nothing Then _pendingJson = json
+                    End SyncLock
+                    failed = True
+                End Try
+            End SyncLock
+            If failed Then RaiseEvent WriteFailed(Nothing, EventArgs.Empty)
         End Sub
 
         ''' <summary>Ändert genau ein paar Felder und speichert. Ersetzt das fünfzehnmal kopierte

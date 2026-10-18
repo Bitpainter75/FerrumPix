@@ -33,51 +33,33 @@
   falls back to a different color. This affected the background of a new document, of a
   collage and behind transparent areas, the replace color brush and the gradient map.
 
-## 0.9.67
+- A rating, label or keyword on a RAW or PSD no longer replaces an edit file that could not be
+  read, for example one from a newer version or on a drive that is offline; the same goes for
+  rotating in the viewer. The change stays in the catalog and the gallery says so.
 
-### What's new
+- Overwriting a file or folder while pasting or moving keeps the old one until the new one is
+  complete. If the copy fails, for example because a network drive drops out, the old file or
+  folder is back as it was.
 
-- **Point color.** In the color mixer, a second view picks a color in the photo with the
-  eyedropper and shifts only that color in hue, saturation and luminance, with a range for how
-  far around it other colors are affected. Up to eight colors, shown as circles; "Show range"
-  greys out everything a color does not reach. Presets with point color now arrive complete.
+- Saving a JPEG, PNG or WebP with its photo information no longer reports success when that
+  information could not be carried over. The file stays as it was and the save is shown as
+  failed.
 
-- **Colored sliders.** A new setting shows sliders with a color meaning as a color gradient,
-  such as temperature, tint, the color mixer, calibration, the channel mixer and point color.
-  Off by default.
+- Converting RAW files to DNG over an existing DNG no longer leaves a half written file behind
+  when the conversion fails or is cancelled. The existing DNG stays as it was.
 
-- **The eye of a group works on layers too.** It hides the group's adjustments of the selected
-  layer or correction layer for a moment and brings them back.
+- Saved searches, favorites and settings that could not be written are now reported in the
+  gallery instead of silently counting as saved. A removed saved search no longer comes back
+  after a restart, and a favorite that could not be stored is no longer reported as already
+  present.
 
-- **Tilt-shift.** A new group in Effects keeps a band through the picture sharp and blurs more
-  and more towards the edges, like a tilted lens. Width, transition, angle and position of the
-  band can be set, and the group can be hidden or moved in the settings like any other.
+- XMP sidecar files from other programs now travel along when a picture is renamed, copied,
+  moved or deleted, so ratings, keywords and edits are found at the new place. A shared
+  photo.xmp stays where another file with the same name still needs it.
 
-- **Depth fog.** Another new group in Effects lays fog over the picture by distance: near things
-  stay clear, far things fade into the fog colour. Like depth blur it needs the depth model and is
-  applied into the pixels with its own button.
+- When a sidecar cannot be moved to the trash or deleted, the remaining file is reported.
 
-- **Missing models are offered where they are needed.** A function that needs a model which is
-  not downloaded yet now asks whether to download it when you try to use it, instead of being
-  greyed out. Only the file that function needs is fetched, and the same window shows the progress.
-  Where the model can use the graphics card and acceleration is off, it offers to switch it on,
-  checks the card and shows the result.
+- Highlights and shadows no longer treat transparent areas as black when adjusting their surroundings.
 
-- **The graphics card check is remembered.** Settings no longer show a card as unchecked after
-  every restart; each new check replaces the result.
-
-### Fixes
-
-- The reset button of a group works on a selected layer right away instead of only after the
-  layer is deselected.
-
-- The eyedropper works on a selected layer: the click no longer starts moving the layer, and the
-  point color takes the color of the layer instead of the photo below it.
-
-- After undo, redo or the eye of a group, the sliders of Details, Noise and some of Sharpness
-  stayed where they were, although the picture already showed the restored values. They follow
-  now.
-
-- The reset button and the eye of an adjustment group only touch that group's own sliders. Details
-  also reset the noise sliders, and the reset button of Vignette reset the grain and the lens
-  corrections as well.
+- Some NEF files from the Nikon Z50II and Z5II that could not be decoded showed colored noise
+  and a green area. They now show the preview embedded in the file instead.

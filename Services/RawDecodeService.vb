@@ -135,6 +135,87 @@ Namespace Services
         Private Shared _cameraList As CameraListFn
         Private Shared _cameraCount As CameraCountFn
 
+        ' ── Datenfehler beim Entpacken ───────────────────────────────────────────
+        ' LibRaw meldet beschaedigte Rohdaten nicht ueber den Rueckgabewert von unpack, sondern ueber
+        ' einen Rueckruf ("data corrupted at ..." auf stderr ist nur dessen Vorgabe). Ohne eigenen
+        ' Rueckruf kam ein solches Bild als entwickelt heraus: bei den kleinen NEF im Format High
+        ' Efficiency der Z50II und Z5II, die LibRaw 0.22 nicht kennt und trotzdem dekodiert, oben
+        ' Farbrauschen und darunter Gruen.
+        '
+        ' DER RUECKRUF ALLEIN REICHT NICHT. Gemessen ueber den ganzen Bestand (1673 RAW-Dateien):
+        ' er kam bei zehn Dateien, und nur die vier NEF waren Salat. Zwei Panasonic FZ35 (Fehler am
+        ' Dateiende) und vier Samsung-DNG (Fehler in einer Kachel) entwickeln einwandfrei. Was sie
+        ' trennt, ist der Dekoder: nikon_load_raw ist ein Huffman-Dekoder, der nach einem Fehler nie
+        ' wieder Tritt fasst, alles danach ist Salat. Als gescheitert gilt deshalb nur "Datenfehler
+        ' UND nikon_load_raw"; bei jedem anderen Dekoder bleibt das entwickelte Bild, und der Fehler
+        ' steht im Protokoll. Gepruefte Bildmerkmale (gleiche oder flache Zeilen) trennten nicht:
+        ' zwei der vier NEF haben unten Rauschen statt einer Flaeche, eine gesunde Samsung viele
+        ' flache Zeilen.
+
+        <UnmanagedFunctionPointer(CallingConvention.Cdecl)>
+        Private Delegate Sub DataErrorCallback(data As IntPtr, file As IntPtr, offset As Integer)
+        Private Delegate Sub SetDataErrorHandlerFn(handle As IntPtr, callback As IntPtr, data As IntPtr)
+
+        ''' <summary>libraw_decoder_info_t: Name des Dekoders (gehoert der Bibliothek) und Merkmale.</summary>
+        <StructLayout(LayoutKind.Sequential)>
+        Private Structure DecoderInfo
+            Public Name As IntPtr
+            Public Flags As UInteger
+        End Structure
+        Private Delegate Function GetDecoderInfoFn(handle As IntPtr, ByRef info As DecoderInfo) As Integer
+
+        ''' Die Dekoder, bei denen ein gemeldeter Datenfehler das ganze Bild unbrauchbar macht. Nur
+        ''' aufgenommen, was gemessen ist; siehe den Block oben.
+        Private Shared ReadOnly DecodersFatalOnDataError As String() = {"nikon_load_raw"}
+
+        Private Shared _setDataErrorHandler As SetDataErrorHandlerFn
+        Private Shared _getDecoderInfo As GetDecoderInfoFn
+        ''' Der Delegat MUSS in einem statischen Feld leben: nur ein Funktionszeiger geht an LibRaw,
+        ''' und raeumte die Speicherbereinigung den Delegaten weg, spraenge der naechste Aufruf ins Leere.
+        Private Shared ReadOnly _dataErrorCallback As DataErrorCallback = AddressOf OnLibRawDataError
+        Private Shared _dataErrorCallbackPointer As IntPtr
+        ''' Die Handles, fuer die LibRaw waehrend des laufenden unpack einen Datenfehler gemeldet hat.
+        ''' Als data-Zeiger geht das Handle selbst an LibRaw; so braucht es keine eigene Zuordnung, und
+        ''' parallel laufende Decodes mit der reentranten Bibliothek bleiben getrennt.
+        Private Shared ReadOnly _handlesWithDataError As New Concurrent.ConcurrentDictionary(Of IntPtr, Byte)()
+
+        ''' <summary>Laeuft IM nativen unpack. Darf nichts werfen.</summary>
+        Private Shared Sub OnLibRawDataError(data As IntPtr, file As IntPtr, offset As Integer)
+            Try
+                _handlesWithDataError(data) = 0
+            Catch
+            End Try
+        End Sub
+
+        ''' <summary>unpack mit Datenfehler-Pruefung. Liefert LibRaws Rueckgabe, oder -100
+        ''' (LIBRAW_DATA_ERROR), wenn LibRaw zwar 0 meldet, waehrend des Entpackens aber beschaedigte
+        ''' Daten gefunden hat UND der Dekoder einer ist, bei dem das das ganze Bild zerstoert. Ohne
+        ''' die beiden Exporte (aeltere Bibliothek) wie bisher nur unpack.</summary>
+        Private Shared Function UnpackChecked(handle As IntPtr, path As String) As Integer
+            If _setDataErrorHandler Is Nothing OrElse _getDecoderInfo Is Nothing OrElse
+               _dataErrorCallbackPointer = IntPtr.Zero Then Return _unpack(handle)
+            Dim ignored As Byte
+            _handlesWithDataError.TryRemove(handle, ignored)
+            _setDataErrorHandler(handle, _dataErrorCallbackPointer, handle)
+            Dim result = _unpack(handle)
+            If Not _handlesWithDataError.TryRemove(handle, ignored) Then Return result
+
+            Dim decoder = ""
+            Try
+                Dim info As DecoderInfo
+                If _getDecoderInfo(handle, info) = 0 AndAlso info.Name <> IntPtr.Zero Then
+                    decoder = If(Marshal.PtrToStringAnsi(info.Name), "")
+                End If
+            Catch
+            End Try
+            Dim fatal = DecodersFatalOnDataError.Any(Function(d) decoder.StartsWith(d, StringComparison.Ordinal))
+            DiagnosticLogService.LogAlways("RawDecodeService.DataError",
+                $"LibRaw meldet beschaedigte Rohdaten (Dekoder {decoder}): {IO.Path.GetFileName(path)}; " &
+                If(fatal, "es gilt die eingebettete Vorschau", "das entwickelte Bild bleibt"))
+            If fatal Then Return If(result = 0, -100, result)
+            Return result
+        End Function
+
         ''' <summary>True, wenn das System-libraw geladen werden konnte (Ergebnis wird gecacht).</summary>
         Public Shared ReadOnly Property IsAvailable As Boolean
             Get
@@ -306,6 +387,17 @@ Namespace Services
                         _setFbdd = GetExport(Of SetIntFn)(handle, "libraw_set_fbdd_noiserd")
                     Catch
                         _setFbdd = Nothing
+                    End Try
+                    ' OPTIONAL wie die uebrigen: ohne ihn bleibt es beim alten Verhalten, ein
+                    ' Datenfehler beim Entpacken wird dann nicht erkannt (siehe UnpackChecked).
+                    Try
+                        _setDataErrorHandler = GetExport(Of SetDataErrorHandlerFn)(handle, "libraw_set_dataerror_handler")
+                        _getDecoderInfo = GetExport(Of GetDecoderInfoFn)(handle, "libraw_get_decoder_info")
+                        _dataErrorCallbackPointer = Marshal.GetFunctionPointerForDelegate(_dataErrorCallback)
+                    Catch
+                        _setDataErrorHandler = Nothing
+                        _getDecoderInfo = Nothing
+                        _dataErrorCallbackPointer = IntPtr.Zero
                     End Try
                     Try
                         _setDemosaic = GetExport(Of SetIntFn)(handle, "libraw_set_demosaic")
@@ -2457,7 +2549,9 @@ Namespace Services
                 If _openFile(handle, pathPtr) <> 0 Then Return Nothing
                 ' Gemessen nur mit eingeschaltetem Diagnoseprotokoll: Auspacken und Entwickeln in
                 ' LibRaw sind die beiden Schritte, deren Dauer an der Einzelkernleistung haengt.
-                If PerformanceTraceService.Measure("RAW: auspacken", Function() _unpack(handle)) <> 0 Then Return Nothing
+                ' Mit Datenfehler-Pruefung: beschaedigte Rohdaten gelten als gescheitert, und der
+                ' Rueckfall auf die eingebettete Vorschau greift (siehe UnpackChecked).
+                If PerformanceTraceService.Measure("RAW: auspacken", Function() UnpackChecked(handle, path)) <> 0 Then Return Nothing
 
                 ' Fuer eine Kachel reichen die 2x2-Bayer-Zellen von half_size. Einen C-API-Setter
                 ' gibt es dafuer nicht. Der Zugriff ueber params ist von LibRaw vorgesehen, seine

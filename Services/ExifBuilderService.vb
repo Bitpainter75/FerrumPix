@@ -108,7 +108,7 @@ Namespace Services
         ''' <summary>Liest die Aufnahmeangaben der Quelle als einzelne Felder. Nothing, wenn sich
         ''' nichts Nennenswertes lesen laesst.</summary>
         Friend Shared Function CollectFields(sourcePath As String) As ExifFieldSet
-            If String.IsNullOrWhiteSpace(sourcePath) OrElse Not IO.File.Exists(sourcePath) Then Return Nothing
+            If String.IsNullOrWhiteSpace(sourcePath) Then Return Nothing
 
             Try
                 Dim directories = If(JxlDecodeService.IsSupportedJxl(sourcePath),
@@ -146,9 +146,11 @@ Namespace Services
                     fields.Altitude = gps.Value.Altitude
                 End If
                 Return fields
-            Catch ex As Exception
-                ' Ein unlesbarer Kopf darf das Speichern nicht kosten: das BILD ist der Auftrag,
-                ' die Aufnahmedaten sind die Zugabe.
+            Catch ex As Exception When Not TypeOf ex Is IO.IOException AndAlso Not TypeOf ex Is UnauthorizedAccessException
+                ' Ein unlesbarer, also nicht ZERLEGBARER Kopf darf das Speichern nicht kosten: das
+                ' BILD ist der Auftrag, die Aufnahmedaten sind die Zugabe. Ein LESEfehler an der Datei
+                ' geht dagegen weiter: sonst wuerde ohne die gewuenschten Aufnahmedaten gespeichert und
+                ' Erfolg gemeldet (siehe ImageProcessor.ReadSourceMetadata).
                 DiagnosticLogService.LogException("ExifBuilderService.CollectFields", ex)
                 Return Nothing
             End Try

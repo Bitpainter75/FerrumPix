@@ -128,11 +128,13 @@ Namespace Services
             End Try
         End Function
 
-        Public Shared Sub Save(searchLists As IEnumerable(Of SearchListEntry))
-            JsonStoreService.WriteAtomic(SearchListsPath,
-                                         JsonSerializer.Serialize(Normalize(searchLists?.ToList()), JsonOptions),
-                                         "SearchLists")
-        End Sub
+        ''' <summary>Schreibt die Liste. False, wenn nichts geschrieben wurde; die alte Datei steht
+        ''' dann unveraendert (JsonStoreService.WriteAtomic).</summary>
+        Public Shared Function Save(searchLists As IEnumerable(Of SearchListEntry)) As Boolean
+            Return JsonStoreService.WriteAtomic(SearchListsPath,
+                                                JsonSerializer.Serialize(Normalize(searchLists?.ToList()), JsonOptions),
+                                                "SearchLists")
+        End Function
 
         Public Shared Sub Delete(searchListId As String)
             Dim geladen As List(Of SearchListEntry) = Nothing

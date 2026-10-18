@@ -607,6 +607,32 @@ Namespace ViewModels
                         End Sub)
                 End Sub
 
+            ' Eine Bewertung, ein Etikett oder ein Stichwort an einer RAW stand bisher still nur in
+            ' der Datenbank, wenn die .fpxmp daneben nicht lesbar war. Gemeldet wird hier und nicht
+            ' in der Galerie selbst: das Ereignis ist statisch, und diese Instanz gibt es nur einmal.
+            AddHandler LibraryService.CatalogSidecarNotWritten,
+                Sub(s, path)
+                    Dispatcher.UIThread.Post(
+                        Sub()
+                            If Gallery Is Nothing Then Return
+                            Gallery.StatusText = String.Format(
+                                LocalizationService.T("Für {0} steht die Änderung nur im Katalog: die Begleitdatei ließ sich nicht lesen oder schreiben"),
+                                IO.Path.GetFileName(path))
+                        End Sub)
+                End Sub
+
+            ' Eine Einstellung, die nicht auf die Platte kam, galt bisher still als gespeichert und
+            ' war nach dem Neustart weg. Der Stand bleibt vorgemerkt; gesagt wird es hier.
+            AddHandler AppSettingsService.WriteFailed,
+                Sub(s, e)
+                    Dispatcher.UIThread.Post(
+                        Sub()
+                            If Gallery IsNot Nothing Then
+                                Gallery.StatusText = LocalizationService.T("Die Einstellungen ließen sich nicht speichern")
+                            End If
+                        End Sub)
+                End Sub
+
             DialogConfirmCommand = ReactiveCommand.Create(Sub() ConfirmDialog())
             DialogCancelCommand = ReactiveCommand.Create(Sub() CancelDialog())
             DialogSecondaryCommand = ReactiveCommand.Create(Sub() CompleteDialog("Secondary"))
@@ -5605,16 +5631,22 @@ Namespace ViewModels
                 If Not TrashService.MoveToTrash(itemPath) Then
                     Throw New IOException("Papierkorb nicht verfügbar")
                 End If
-                RawSidecarService.AccompanyDelete(itemPath, useTrash:=True)
+                ReportFailedCompanionDeletion(RawSidecarService.AccompanyDelete(itemPath, useTrash:=True))
                 Return
             End If
 
             If IO.File.Exists(itemPath) Then
                 IO.File.Delete(itemPath)
-                RawSidecarService.AccompanyDelete(itemPath, useTrash:=False)
+                ReportFailedCompanionDeletion(RawSidecarService.AccompanyDelete(itemPath, useTrash:=False))
             ElseIf IO.Directory.Exists(itemPath) Then
                 IO.Directory.Delete(itemPath, True)
             End If
+        End Sub
+
+        Private Shared Sub ReportFailedCompanionDeletion(failed As List(Of String))
+            If failed Is Nothing OrElse failed.Count = 0 Then Return
+            Throw New IOException(String.Format(LocalizationService.T("Die Datei wurde entfernt, aber diese Begleitdateien blieben zurück: {0}"),
+                                                String.Join(", ", failed)))
         End Sub
 
         ''' <summary>Laedt die Vorschaubilder EINER Datei in allen drei Ansichten neu: Galerie-Kacheln

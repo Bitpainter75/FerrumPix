@@ -615,6 +615,30 @@ Namespace Services
             End Using
         End Function
 
+        ''' <summary>Die Katalogfelder einer Begleitdatei aus einem gemeinsamen Datenbankstand.</summary>
+        Friend Function GetSidecarCatalogData(filePath As String) As RawSidecarService.RawSidecarCatalogData
+            Dim result As New RawSidecarService.RawSidecarCatalogData With {
+                .Rating = 0, .IsFavorite = False, .ColorLabel = "", .HasKeywords = True, .PickState = 0
+            }
+            Using conn = New SqliteConnection(_connectionString)
+                conn.Open()
+                Using cmd = conn.CreateCommand()
+                    cmd.CommandText = "SELECT Rating, IsFavorite, ColorLabel, Tags, PickState FROM ImageMeta WHERE FilePath=$p"
+                    cmd.Parameters.AddWithValue("$p", PathKey(filePath))
+                    Using reader = cmd.ExecuteReader()
+                        If reader.Read() Then
+                            If Not reader.IsDBNull(0) Then result.Rating = Math.Max(0, Math.Min(5, reader.GetInt32(0)))
+                            If Not reader.IsDBNull(1) Then result.IsFavorite = reader.GetInt32(1) <> 0
+                            If Not reader.IsDBNull(2) Then result.ColorLabel = reader.GetString(2)
+                            If Not reader.IsDBNull(3) Then result.Keywords = ParseTags(reader.GetString(3))
+                            If Not reader.IsDBNull(4) Then result.PickState = NormalizePickState(reader.GetInt32(4))
+                        End If
+                    End Using
+                End Using
+            End Using
+            Return result
+        End Function
+
         Public Function HasXmpMetadata(filePath As String) As Boolean
             If String.IsNullOrWhiteSpace(filePath) Then Return False
             Using conn = New SqliteConnection(_connectionString)
@@ -1110,20 +1134,28 @@ Namespace Services
             End Try
         End Function
 
+        ''' <summary>Eine Katalogaenderung an RAW/PSD liess sich nicht in die .fpxmp schreiben, weil
+        ''' die vorhandene Datei nicht lesbar war oder das Schreiben scheiterte. Der Wert steht dann nur
+        ''' in der Datenbank. Kann von einem Hintergrundfaden kommen.</summary>
+        Public Shared Event CatalogSidecarNotWritten As EventHandler(Of String)
+
         ''' <summary>Jede bewusste lokale Katalogaenderung an RAW/PSD wird ohne Einstellungs-Gate in
-        ''' die primaere .fpxmp gespiegelt. Ein vorhandenes Entwicklungsrezept bleibt dabei erhalten.</summary>
+        ''' die primaere .fpxmp gespiegelt. Ein vorhandenes Entwicklungsrezept bleibt dabei erhalten;
+        ''' eine vorhandene, aber nicht lesbare Datei wird nicht angefasst (siehe
+        ''' RawSidecarService.TryWriteCatalog), und das wird gemeldet statt verschluckt.</summary>
         Private Sub SyncCatalogToFpxmp(filePath As String)
             If String.IsNullOrWhiteSpace(filePath) OrElse Not RawSidecarService.IsSidecarFormat(filePath) Then Return
+            Dim written = False
             Try
-                RawSidecarService.TryWriteCatalog(filePath,
-                                                  GetRating(filePath),
-                                                  GetFavorite(filePath),
-                                                  GetColorLabel(filePath),
-                                                  GetTags(filePath),
-                                                  GetPickState(filePath))
+                written = RawSidecarService.TryWriteCatalogFromLibrary(filePath, Me)
             Catch ex As Exception
                 DiagnosticLogService.LogException("Library.SyncCatalogToFpxmp", ex)
             End Try
+            If written Then Return
+            DiagnosticLogService.LogException("Library.SyncCatalogToFpxmp",
+                New IOException("Katalogaenderung nicht in die Begleitdatei geschrieben (unlesbar oder Schreibfehler): " &
+                                RawSidecarService.SidecarPathFor(filePath)))
+            RaiseEvent CatalogSidecarNotWritten(Me, filePath)
         End Sub
 
         ''' <summary>Schreibt den aktuellen Katalog (Rating/Farb-Label/Stichworte) dieser Datei zusätzlich

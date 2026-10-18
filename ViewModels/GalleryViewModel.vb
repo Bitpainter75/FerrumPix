@@ -3330,7 +3330,7 @@ Namespace ViewModels
             If String.IsNullOrWhiteSpace(folderPath) OrElse Not IO.Directory.Exists(folderPath) Then Return
             Dim name = IO.Path.GetFileName(folderPath.TrimEnd(IO.Path.DirectorySeparatorChar, IO.Path.AltDirectorySeparatorChar))
             If String.IsNullOrWhiteSpace(name) Then name = folderPath
-            AnnounceFavorite(FavoritesService.Add(New FavoriteEntry With {.Kind = "Folder", .Name = name, .Path = folderPath}), name)
+            AnnounceFavorite(FavoritesService.TryAdd(New FavoriteEntry With {.Kind = "Folder", .Name = name, .Path = folderPath}), name)
         End Sub
 
         ''' <summary>Legt einen Immich-Knoten oder eine gespeicherte Suche als Favorit an
@@ -3358,24 +3358,32 @@ Namespace ViewModels
                     Return
             End Select
             If entry Is Nothing Then Return
-            AnnounceFavorite(FavoritesService.Add(entry), node.Name)
+            AnnounceFavorite(FavoritesService.TryAdd(entry), node.Name)
         End Sub
 
-        Private Sub AnnounceFavorite(added As Boolean, name As String)
-            If added Then
-                RefreshFavorites()
-                StatusText = String.Format(LocalizationService.T("{0} zu den Favoriten hinzugefügt"), name)
-            Else
-                StatusText = String.Format(LocalizationService.T("{0} ist bereits ein Favorit"), name)
-            End If
+        ''' <summary>Ein Fehlschlag beim Lesen oder Schreiben der Favoritenliste darf nicht als
+        ''' "ist bereits ein Favorit" erscheinen: das war die alte Anzeige fuer jedes False.</summary>
+        Private Sub AnnounceFavorite(result As FavoritesService.FavoriteChangeResult, name As String)
+            Select Case result
+                Case FavoritesService.FavoriteChangeResult.Changed
+                    RefreshFavorites()
+                    StatusText = String.Format(LocalizationService.T("{0} zu den Favoriten hinzugefügt"), name)
+                Case FavoritesService.FavoriteChangeResult.Unchanged
+                    StatusText = String.Format(LocalizationService.T("{0} ist bereits ein Favorit"), name)
+                Case Else
+                    StatusText = LocalizationService.T("Die Favoriten ließen sich nicht speichern")
+            End Select
         End Sub
 
         Public Sub RemoveFavorite(node As VirtualNavigationNode)
             If node Is Nothing OrElse String.IsNullOrWhiteSpace(node.FavoriteKey) Then Return
-            If FavoritesService.Remove(node.FavoriteKey) Then
-                RefreshFavorites()
-                StatusText = String.Format(LocalizationService.T("{0} aus den Favoriten entfernt"), node.Name)
-            End If
+            Select Case FavoritesService.TryRemove(node.FavoriteKey)
+                Case FavoritesService.FavoriteChangeResult.Changed
+                    RefreshFavorites()
+                    StatusText = String.Format(LocalizationService.T("{0} aus den Favoriten entfernt"), node.Name)
+                Case FavoritesService.FavoriteChangeResult.Failed
+                    StatusText = LocalizationService.T("Die Favoriten ließen sich nicht speichern")
+            End Select
         End Sub
 
         ''' <summary>Gibt einem Favoriten einen eigenen Namen in der Liste, etwa um zwei Ordner
@@ -3386,10 +3394,13 @@ Namespace ViewModels
                 Dim name = Await _mainVm.ShowInputAsync(AppDialogKind.Rename, LocalizationService.T("Favorit umbenennen"),
                                                         LocalizationService.T("Neuer Name:"), node.Name)
                 If String.IsNullOrWhiteSpace(name) OrElse String.Equals(name.Trim(), node.Name, StringComparison.Ordinal) Then Return
-                If FavoritesService.Rename(node.FavoriteKey, name) Then
-                    RefreshFavorites()
-                    StatusText = String.Format(LocalizationService.T("Favorit umbenannt: {0}"), name.Trim())
-                End If
+                Select Case FavoritesService.TryRename(node.FavoriteKey, name)
+                    Case FavoritesService.FavoriteChangeResult.Changed
+                        RefreshFavorites()
+                        StatusText = String.Format(LocalizationService.T("Favorit umbenannt: {0}"), name.Trim())
+                    Case FavoritesService.FavoriteChangeResult.Failed
+                        StatusText = LocalizationService.T("Die Favoriten ließen sich nicht speichern")
+                End Select
             Catch ex As Exception
                 ' Absicherung: eine Ausnahme in einem Async Sub landet sonst beim Dispatcher
                 ' und beendet den Prozess.
@@ -7654,8 +7665,17 @@ Namespace ViewModels
                 Select(Function(r) Math.Max(0, Math.Min(5, r))))
         End Function
 
+        ''' <summary>Schreibt die Suchlisten SOFORT, aber ueber dieselbe Kette wie die Trefferschuebe,
+        ''' und wartet auf den eigenen Auftrag.
+        '''
+        ''' Frueher ging dieser Weg direkt an die Platte, die Trefferschuebe dagegen ueber die Kette.
+        ''' Ein aelterer, schon eingereihter Schub konnte deshalb NACH einem Anlegen, Aendern oder
+        ''' Entfernen fertig werden und den neueren Stand ueberschreiben: eine entfernte Suche war
+        ''' nach dem Neustart wieder da. Gewartet wird, damit der Stand fuer den Aufrufer wie bisher
+        ''' auf der Platte steht, wenn er zurueckkehrt.</summary>
         Private Sub SaveSearches()
-            SearchListService.Save(_savedSearches)
+            Dim job = QueueSearchListSave(SearchListService.Normalize(_savedSearches.ToList()))
+            job.Wait()
         End Sub
 
         ''' Die Schreibvorgaenge der Suchlisten laufen NACHEINANDER. Waehrend einer Suche kommen die
@@ -7665,25 +7685,35 @@ Namespace ViewModels
         Private _searchListSaveChain As Task = Task.CompletedTask
         Private ReadOnly _searchListSaveLock As New Object()
 
-        ''' <summary>Schreibt eine MOMENTAUFNAHME der Suchlisten im Hintergrund weg.
+        ''' <summary>Schreibt eine MOMENTAUFNAHME der Suchlisten im Hintergrund weg und liefert den
+        ''' Auftrag; sein Ergebnis ist False, wenn nichts geschrieben wurde. Ein Fehlschlag steht
+        ''' dann auch in der Statuszeile.
         '''
         ''' Die Aufnahme muss der Aufrufer machen, und zwar tief (SearchListService.Normalize baut
         ''' neue Eintraege samt neuer Trefferliste). Eine flache Kopie teilt die Trefferlisten mit
         ''' der Oberflaeche, die waehrend der Suche weiter anhaengt - der Serialisierer laeuft dann
         ''' ueber eine Liste, die sich unter ihm aendert, und wirft.</summary>
-        Private Sub QueueSearchListSave(snapshot As List(Of SearchListEntry))
+        Private Function QueueSearchListSave(snapshot As List(Of SearchListEntry)) As Task(Of Boolean)
             SyncLock _searchListSaveLock
-                _searchListSaveChain = _searchListSaveChain.ContinueWith(
-                    Sub()
+                Dim job = _searchListSaveChain.ContinueWith(
+                    Function(previous)
+                        Dim written = False
                         Try
-                            SearchListService.Save(snapshot)
+                            written = SearchListService.Save(snapshot)
                         Catch ex As Exception
                             ' Ein verworfener Task verschluckt seine Ausnahme sonst spurlos.
                             DiagnosticLogService.LogException("Gallery.SearchListSave", ex)
                         End Try
-                    End Sub, TaskScheduler.Default)
+                        If Not written Then
+                            Dispatcher.UIThread.Post(
+                                Sub() StatusText = LocalizationService.T("Die gespeicherten Suchen ließen sich nicht schreiben"))
+                        End If
+                        Return written
+                    End Function, TaskScheduler.Default)
+                _searchListSaveChain = job
+                Return job
             End SyncLock
-        End Sub
+        End Function
 
         ''' <summary>Leert die Ansicht fuer einen virtuellen Ordner (Suchliste, Immich-Album, ...). Bricht
         ''' dabei einen noch laufenden Suchlauf ab: JEDER Ansichtswechsel geht hier durch, deshalb ist das
@@ -13086,7 +13116,7 @@ Namespace ViewModels
                 Dim target = CreateBatchTargetFolderPath(source, targetFolder, outputExtension(source),
                                                          nameSuffix, nameBuilder, makeUnique:=False)
                 If File.Exists(target) OrElse claimed.Contains(target) Then
-                    target = Await ResolveConflictTargetAsync(target, source, deleteOnOverwrite:=False)
+                    target = Await ResolveConflictTargetAsync(target, source)
                     If String.IsNullOrEmpty(target) Then Continue For   ' übersprungen
                 End If
                 claimed.Add(target)
@@ -13856,26 +13886,15 @@ Namespace ViewModels
             End If
             If Directory.Exists(source) AndAlso IsAncestorOrSelf(source, targetFolder) Then Throw New IOException("Ein Ordner kann nicht in sich selbst verschoben werden.")
 
-            Dim target = Await ResolveCopyTargetAsync(source, targetFolder, movePath, duplicate)
+            Dim resolved = Await ResolveCopyTargetAsync(source, targetFolder, movePath, duplicate)
+            Dim target = resolved.Path
             If String.IsNullOrEmpty(target) Then Return False
 
             ' Kopieren kann bei großen Dateien und Ordnern Sekunden dauern - nicht auf dem UI-Thread.
+            ' TransferPath legt den Inhalt erst vollständig neben das Ziel und hängt ihn dann um;
+            ' ein vorhandenes Ziel ersetzt es nur, wenn es zum Überschreiben freigegeben ist.
             Await Task.Run(Sub()
-                               If File.Exists(source) Then
-                                   If movePath Then
-                                       File.Move(source, target)
-                                       RawSidecarService.AccompanyMove(source, target)
-                                   Else
-                                       File.Copy(source, target)
-                                       RawSidecarService.AccompanyCopy(source, target)
-                                   End If
-                               Else
-                                   If movePath Then
-                                       Directory.Move(source, target)
-                                   Else
-                                       CopyDirectory(source, target)
-                                   End If
-                               End If
+                               TransferPath(source, target, movePath, resolved.ReplaceConfirmed)
                                ' NUR beim Verschieben. Eine Kopie ist ein NEUES Bild: sie bekommt
                                ' ihre eigenen Katalogzeilen und ihre eigene Kachel, und die des
                                ' Originals müssen dort bleiben, wo sie sind.
@@ -13884,46 +13903,51 @@ Namespace ViewModels
             Return True
         End Function
 
-        Private Async Function ResolveCopyTargetAsync(source As String, targetFolder As String, movePath As Boolean, duplicate As Boolean) As Task(Of String)
+        ''' <summary>Das Ziel fuer Einfuegen und Verschieben, und ob der Nutzer genau dieses Ziel zum
+        ''' Ueberschreiben freigegeben hat. Nur dann darf ein dort liegendes Element ersetzt werden;
+        ''' entsteht ein Ziel erst nach dieser Frage, bleibt es stehen (TransferPath).</summary>
+        Private Async Function ResolveCopyTargetAsync(source As String, targetFolder As String, movePath As Boolean,
+                                                      duplicate As Boolean) As Task(Of (Path As String, ReplaceConfirmed As Boolean))
             Dim name = IO.Path.GetFileName(source.TrimEnd(IO.Path.DirectorySeparatorChar, IO.Path.AltDirectorySeparatorChar))
-            If String.IsNullOrWhiteSpace(name) Then Return Nothing
+            If String.IsNullOrWhiteSpace(name) Then Return (Nothing, False)
 
             Dim target = IO.Path.Combine(targetFolder, name)
             Dim normalizedSource = NormalizePath(source)
             Dim normalizedTarget = NormalizePath(target)
 
             If String.Equals(normalizedSource, normalizedTarget, PathIdentity.Comparison) Then
-                If movePath Then Return Nothing
-                Return CreateUniquePath(target)
+                If movePath Then Return (Nothing, False)
+                Return (CreateUniquePath(target), False)
             End If
 
             If duplicate Then
-                Return CreateUniquePath(target)
+                Return (CreateUniquePath(target), False)
             End If
 
-            If Not movePath Then
-                If Not File.Exists(target) AndAlso Not Directory.Exists(target) Then Return target
-                Return Await ResolveConflictTargetAsync(target, source)
-            End If
+            If Not File.Exists(target) AndAlso Not Directory.Exists(target) Then Return (target, False)
 
-            If Not File.Exists(target) AndAlso Not Directory.Exists(target) Then Return target
-
-            Return Await ResolveConflictTargetAsync(target, source)
+            ' "Überschreiben" liefert genau das vorhandene Ziel zurück, "Umbenennen" einen anderen,
+            ' freien Namen. Nur im ersten Fall ist das Ersetzen freigegeben.
+            Dim chosen = Await ResolveConflictTargetAsync(target, source)
+            Return (chosen, chosen IsNot Nothing AndAlso String.Equals(chosen, target, PathIdentity.Comparison))
         End Function
 
         ' "Alle überschreiben"/"Alle überspringen" gilt für den Rest des laufenden Stapels. Wird zu Beginn
         ' jedes konfliktbehafteten Stapels (Einfügen/Verschieben) zurückgesetzt.
         Private _conflictBatchDecision As FileConflictChoice? = Nothing
 
-        ''' <param name="deleteOnOverwrite">Beim Einfügen und Verschieben wird die vorhandene Datei
-        ''' sofort gelöscht, weil die Kopie unmittelbar folgt. Der STAPEL klärt seine Ziele dagegen
-        ''' lange vor dem Schreiben - dort darf nichts vorab gelöscht werden, sonst wäre die alte
-        ''' Datei weg, falls der Lauf danach scheitert. Der Schreiber überschreibt selbst.</param>
-        Private Async Function ResolveConflictTargetAsync(conflictingTarget As String, source As String,
-                                                          Optional deleteOnOverwrite As Boolean = True) As Task(Of String)
+        ''' <summary>Fragt bei einem vorhandenen Ziel nach und liefert den Pfad, auf den geschrieben
+        ''' werden soll, oder Nothing fürs Überspringen.
+        '''
+        ''' HIER WIRD NICHTS GELÖSCHT, auch nicht bei "Überschreiben". Früher verschwand das alte Ziel
+        ''' an dieser Stelle, Ordner rekursiv, und erst danach begann das Kopieren: scheiterte es
+        ''' (Netzabbruch, voller Datenträger, fehlende Rechte), war das alte Ziel weg und das neue
+        ''' unvollständig. Wer schreibt, legt das alte Ziel selbst beiseite und räumt es erst nach
+        ''' Erfolg weg (CopyOrMovePathAsync, RunWithTargetSetAside); der Stapel überschreibt beim
+        ''' Schreiben selbst.</summary>
+        Private Async Function ResolveConflictTargetAsync(conflictingTarget As String, source As String) As Task(Of String)
             If _conflictBatchDecision.HasValue Then
                 If _conflictBatchDecision.Value = FileConflictChoice.OverwriteAll Then
-                    If deleteOnOverwrite Then DeleteTargetForOverwrite(conflictingTarget)
                     Return conflictingTarget
                 End If
                 Return Nothing   ' SkipAll
@@ -13939,13 +13963,11 @@ Namespace ViewModels
                 Select Case result.Choice
                     Case FileConflictChoice.OverwriteAll
                         _conflictBatchDecision = FileConflictChoice.OverwriteAll
-                        If deleteOnOverwrite Then DeleteTargetForOverwrite(conflictingTarget)
                         Return conflictingTarget
                     Case FileConflictChoice.SkipAll
                         _conflictBatchDecision = FileConflictChoice.SkipAll
                         Return Nothing
                     Case FileConflictChoice.Overwrite
-                        If deleteOnOverwrite Then DeleteTargetForOverwrite(conflictingTarget)
                         Return conflictingTarget
                     Case FileConflictChoice.Rename
                         Dim newName = If(result.NewName, "").Trim()
@@ -13970,11 +13992,161 @@ Namespace ViewModels
             Loop
         End Function
 
-        Private Shared Sub DeleteTargetForOverwrite(target As String)
-            If File.Exists(target) Then
-                File.Delete(target)
-            ElseIf Directory.Exists(target) Then
-                Directory.Delete(target, True)
+        ''' <summary>Führt einen Kopier- oder Verschiebevorgang auf ein Ziel aus, das schon vorhanden
+        ''' sein darf ("Überschreiben"), ohne das alte Ziel vorher zu verlieren.
+        '''
+        ''' Das alte Ziel wird im selben Ordner UMBENANNT statt gelöscht, samt seiner .fpxmp: das ist
+        ''' auch auf Netzlaufwerken ein einzelner, schneller Schritt, und ein nichtleerer Ordner lässt
+        ''' sich nicht atomar ersetzen. Gelingt der Vorgang, wird die beiseitegelegte Fassung entfernt.
+        ''' Scheitert er, wird die alte Fassung zurückbenannt, dann geht der Fehler weiter an den
+        ''' Aufrufer. Der Vorgang muss dafür ein einzelnes Umbenennen sein (TransferPath legt den
+        ''' Inhalt vorher daneben): am Ziel wird im Fehlerfall nichts gelöscht.
+        '''
+        ''' Die .fpxmp des alten Ziels muss mit beiseite: blieb sie liegen und brachte die Quelle keine
+        ''' eigene mit, hing sich das alte Rezept an die neue Datei.</summary>
+        Private Shared Sub RunWithTargetSetAside(target As String, replaceConfirmed As Boolean, operation As Action)
+            If Not File.Exists(target) AndAlso Not Directory.Exists(target) Then
+                operation()
+                Return
+            End If
+            ' Ein Ziel, das erst NACH der Rückfrage entstanden ist, hat niemand zum Ersetzen
+            ' freigegeben. Es bleibt stehen, und der Vorgang meldet das.
+            If Not replaceConfirmed Then
+                Throw New IOException(String.Format(LocalizationService.T("{0} ist inzwischen entstanden und wurde nicht ersetzt"),
+                                                    IO.Path.GetFileName(target)))
+            End If
+
+            Dim folder = IO.Path.GetDirectoryName(target)
+            Dim aside = IO.Path.Combine(folder, "." & IO.Path.GetFileName(target) & ".ferrumpix-old-" &
+                                        Guid.NewGuid().ToString("N").Substring(0, 8))
+            ' Die Begleitdateien, die eindeutig DIESEM Ziel gehoeren: seine .fpxmp und die angehaengte
+            ' XMP-Form. Die ersetzte Form ("foto.xmp") kann einer anderen Datei gehoeren und bleibt.
+            Dim companions = {(RawSidecarService.SidecarPathFor(target), RawSidecarService.SidecarPathFor(aside)),
+                              (target & ".xmp", aside & ".xmp")}
+            Dim setAside As New List(Of (Original As String, Aside As String))()
+            MovePathSameFolder(target, aside)
+            Try
+                For Each companion In companions
+                    If File.Exists(companion.Item1) Then
+                        File.Move(companion.Item1, companion.Item2)
+                        setAside.Add((companion.Item1, companion.Item2))
+                    End If
+                Next
+                operation()
+            Catch ex As Exception
+                Try
+                    ' AM ZIEL WIRD NICHTS GELÖSCHT. Der Vorgang ist ein einzelnes Umbenennen
+                    ' (TransferPath): ist er gescheitert, liegt dort nichts von uns. Was dort jetzt
+                    ' liegt, ist inzwischen von woanders entstanden und gehört jemand anderem. Dann
+                    ' scheitert eben das Zurückbenennen, und die Meldung nennt den Ort der alten Fassung.
+                    MovePathSameFolder(aside, target)
+                    ' Ebenso bei den Begleitern: eine inzwischen entstandene fremde Datei bleibt.
+                    For Each companion In setAside
+                        File.Move(companion.Aside, companion.Original)
+                    Next
+                Catch restoreEx As Exception
+                    ' Die alte Fassung liegt dann noch unter dem Beiseite-Namen und ist nicht verloren.
+                    ' Das muss der Nutzer erfahren, nicht nur das Protokoll: sonst sucht er sie am
+                    ' alten Namen und hält sie für weg.
+                    DiagnosticLogService.LogException("Gallery.RunWithTargetSetAside.Restore", restoreEx)
+                    Throw New IOException(String.Format(
+                        LocalizationService.T("Der Vorgang ist gescheitert, und die alte Fassung ließ sich nicht zurückholen. Sie liegt unter {0}"),
+                        aside), ex)
+                End Try
+                Throw
+            End Try
+
+            ' Erfolg. Scheitert das Aufräumen, bleibt die alte Fassung mit erkennbarem Namen liegen:
+            ' ärgerlich, aber kein Verlust und kein Grund, den gelungenen Vorgang als Fehler zu melden.
+            Try
+                DeletePathIfPresent(aside)
+                For Each companion In setAside
+                    DeletePathIfPresent(companion.Aside)
+                Next
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Gallery.RunWithTargetSetAside.Cleanup", ex)
+            End Try
+        End Sub
+
+        ''' <summary>Kopiert oder verschiebt eine Datei oder einen Ordner so, dass am Ziel nie etwas
+        ''' Halbfertiges liegt und ein Ziel nur ersetzt wird, wenn es freigegeben ist.
+        '''
+        ''' Erst kommt der ganze Inhalt in eine versteckte Nachbardatei (bzw. einen Nachbarordner) im
+        ''' Zielordner, dann wird er mit EINEM Umbenennen ans Ziel gehängt. Eine Ordnerkopie, die
+        ''' mittendrin scheitert, hinterlässt so keinen halben Ordner am Ziel, und ein Ziel, das
+        ''' inzwischen entstanden ist, lässt das Umbenennen scheitern, statt ersetzt zu werden.
+        ''' Scheitert der letzte Schritt, geht beim Verschieben der Inhalt an die Quelle zurück,
+        ''' bei der Kopie fällt die Nachbardatei weg. Die Begleitdateien folgen erst danach.</summary>
+        Private Shared Sub TransferPath(source As String, target As String, movePath As Boolean, replaceConfirmed As Boolean)
+            Dim isFile = File.Exists(source)
+            Dim staging = IO.Path.Combine(IO.Path.GetDirectoryName(target),
+                                          "." & IO.Path.GetFileName(target) & ".ferrumpix-new-" &
+                                          Guid.NewGuid().ToString("N").Substring(0, 8))
+            Try
+                If isFile Then
+                    If movePath Then File.Move(source, staging) Else File.Copy(source, staging)
+                Else
+                    If movePath Then Directory.Move(source, staging) Else CopyDirectory(source, staging)
+                End If
+            Catch
+                ' Liegt die Quelle noch da, ist alles in der Nachbardatei Halbfertiges und gehört weg.
+                ' Ist sie weg, steckt ihr Inhalt dort und muss zurück.
+                Try
+                    If File.Exists(source) OrElse Directory.Exists(source) Then
+                        DeletePathIfPresent(staging)
+                    ElseIf File.Exists(staging) OrElse Directory.Exists(staging) Then
+                        MovePathAnywhere(staging, source)
+                    End If
+                Catch cleanupEx As Exception
+                    DiagnosticLogService.LogException("Gallery.TransferPath.Cleanup", cleanupEx)
+                End Try
+                Throw
+            End Try
+
+            Try
+                RunWithTargetSetAside(target, replaceConfirmed, Sub() MovePathSameFolder(staging, target))
+            Catch ex As Exception
+                Try
+                    If movePath Then MovePathAnywhere(staging, source) Else DeletePathIfPresent(staging)
+                Catch backEx As Exception
+                    DiagnosticLogService.LogException("Gallery.TransferPath.Back", backEx)
+                    If movePath Then
+                        Throw New IOException(String.Format(
+                            LocalizationService.T("Der Vorgang ist gescheitert, und die alte Fassung ließ sich nicht zurückholen. Sie liegt unter {0}"),
+                            staging), ex)
+                    End If
+                End Try
+                Throw
+            End Try
+
+            If isFile Then
+                If movePath Then RawSidecarService.AccompanyMove(source, target) Else RawSidecarService.AccompanyCopy(source, target)
+            End If
+        End Sub
+
+        ''' <summary>Verschiebt über Ordner- und Datenträgergrenzen; ein Ordner geht dabei nur
+        ''' innerhalb desselben Datenträgers (Directory.Move).</summary>
+        Private Shared Sub MovePathAnywhere(source As String, target As String)
+            If File.Exists(source) Then
+                File.Move(source, target)
+            Else
+                Directory.Move(source, target)
+            End If
+        End Sub
+
+        Private Shared Sub MovePathSameFolder(source As String, target As String)
+            If File.Exists(source) Then
+                File.Move(source, target)
+            Else
+                Directory.Move(source, target)
+            End If
+        End Sub
+
+        Private Shared Sub DeletePathIfPresent(path As String)
+            If File.Exists(path) Then
+                File.Delete(path)
+            ElseIf Directory.Exists(path) Then
+                Directory.Delete(path, True)
             End If
         End Sub
 

@@ -725,7 +725,13 @@ Namespace Services
                                                     image.Encode(fileFormat, quality))
                                         ' Atomar: erst daneben schreiben, dann darüberbewegen - ein
                                         ' abgebrochener Encode darf das Original nicht zerstören.
-                                        WriteFileAtomic(targetPath, Sub(fs) data.SaveTo(fs))
+                                        ' Mit Aufnahmedaten kommen sie in DERSELBEN Nachbardatei
+                                        ' hinzu, bevor sie umgehängt wird.
+                                        If sourceMetadata IsNot Nothing AndAlso Not sourceMetadata.IsEmpty Then
+                                            WriteImageWithMetadataAtomic(targetPath, Sub(fs) data.SaveTo(fs), sourceMetadata)
+                                        Else
+                                            WriteFileAtomic(targetPath, Sub(fs) data.SaveTo(fs))
+                                        End If
                                     End Using
                                 End Using
                             End If
@@ -733,7 +739,6 @@ Namespace Services
                             If Not Object.ReferenceEquals(toEncode, processed) Then toEncode.Dispose()
                         End Try
                     End Using
-                    ApplySourceMetadata(sourceMetadata, targetPath)
                     ' Der Urheberrechtshinweis kommt NACH dem Kopieren der Metadaten: sonst
                     ' ueberschriebe der Hinweis aus der Quelle den gerade gesetzten wieder. Ein
                     ' leerer Text tut nichts - das ist die Regel der Stapelformulare, "leer heisst
@@ -890,10 +895,25 @@ Namespace Services
         ''' EINGELESEN WIRD IN DEN SPEICHER, nicht in eine Kopie der Quelldatei. Es geht um ein paar
         ''' Kilobyte; eine Sicherungskopie haette bei einem 50-MB-Foto 50 MB kopiert, bei jedem
         ''' Speichern. Welche Form gebraucht wird, entscheidet das ZIELformat - deshalb steht der
-        ''' Zielpfad hier schon dabei, obwohl noch nichts geschrieben ist.</summary>
+        ''' Zielpfad hier schon dabei, obwohl noch nichts geschrieben ist.
+        '''
+        ''' EIN LESEFEHLER BRICHT DAS SPEICHERN AB, er wird nicht geschluckt. Frueher kam dann Nothing
+        ''' zurueck, und es wurde ohne Aufnahmedaten geschrieben: beim Speichern ueber das Original
+        ''' war der alte Block weg, und SaveImage meldete Erfolg. Die Ausnahme geht an den Fang in
+        ''' SaveImage (Protokoll, False), und zu diesem Zeitpunkt ist noch nichts geschrieben.
+        '''
+        ''' EIN ZERLEGEFEHLER DAGEGEN NICHT. Laesst sich der Block einer eigenwillig gebauten Datei
+        ''' nicht zerlegen, koennte er ohnehin nicht mitgenommen werden; brache das Speichern dann ab,
+        ''' liesse sich die Datei gar nicht mehr speichern. Sie wird wie bisher ohne Aufnahmedaten
+        ''' geschrieben, und das Protokoll haelt es fest.</summary>
         Private Shared Function ReadSourceMetadata(sourcePath As String, targetPath As String) As SourceMetadata
             If String.IsNullOrWhiteSpace(sourcePath) OrElse String.IsNullOrWhiteSpace(targetPath) Then Return Nothing
-            If Not File.Exists(sourcePath) Then Return Nothing
+            ' File.Exists sagt auch bei einem Zugriffsfehler False. Die Quelle ist eben erst dekodiert
+            ' worden; fehlt sie jetzt, ist sie nicht weg, sondern nicht erreichbar - und das ist ein
+            ' Lesefehler, kein "die Quelle hat keine Aufnahmedaten".
+            If Not File.Exists(sourcePath) Then
+                Throw New IOException("Die Quelle ist zum Lesen der Aufnahmedaten nicht erreichbar: " & sourcePath)
+            End If
 
             Try
                 Select Case IO.Path.GetExtension(targetPath).ToLowerInvariant()
@@ -904,29 +924,39 @@ Namespace Services
                     Case ".webp"
                         Return New SourceMetadata With {.WebpChunks = ReadWebpSourceChunks(sourcePath)}
                 End Select
-            Catch ex As Exception
-                ' Protokollieren statt schlucken: ein stiller Fehlschlag hier sieht von aussen aus
-                ' wie ein Foto ohne Aufnahmedaten und faellt erst Wochen spaeter auf.
+            Catch ex As Exception When Not TypeOf ex Is IOException AndAlso Not TypeOf ex Is UnauthorizedAccessException
                 DiagnosticLogService.LogException("ImageProcessor.ReadSourceMetadata", ex)
             End Try
             Return Nothing
         End Function
 
-        ''' <summary>Das Eingelesene ins fertig geschriebene Ziel legen.</summary>
-        Private Shared Sub ApplySourceMetadata(metadata As SourceMetadata, targetPath As String)
-            If metadata Is Nothing OrElse metadata.IsEmpty Then Return
-            If String.IsNullOrWhiteSpace(targetPath) OrElse Not File.Exists(targetPath) Then Return
-
+        ''' <summary>Schreibt das kodierte Bild MIT den Aufnahmedaten und legt es erst danach ueber
+        ''' das Ziel.
+        '''
+        ''' Frueher kam das Bild zuerst atomar ans Ziel und die Aufnahmedaten danach hinein. Scheiterte
+        ''' der zweite Schritt, stand ein Bild ohne EXIF, XMP und IPTC da, beim Speichern ueber das
+        ''' Original ohne Rueckweg, und SaveImage meldete trotzdem Erfolg. Jetzt entsteht beides in
+        ''' einer Nachbardatei im Zielordner; nur wenn beides gelingt, wird sie umgehaengt. Sonst
+        ''' bleibt das Ziel unberuehrt, die Nachbardatei geht weg, und der Fehler geht weiter.</summary>
+        Private Shared Sub WriteImageWithMetadataAtomic(targetPath As String, writer As Action(Of Stream),
+                                                        metadata As SourceMetadata)
+            Dim stagePath = targetPath & ".fpmeta-" & Guid.NewGuid().ToString("N") & ".tmp"
             Try
+                WriteFileAtomic(stagePath, writer)
                 If metadata.JpegSegments IsNot Nothing Then
-                    WriteJpegMetadata(metadata.JpegSegments, targetPath)
+                    WriteJpegMetadata(metadata.JpegSegments, stagePath)
                 ElseIf metadata.PngChunks IsNot Nothing Then
-                    WritePngMetadata(metadata.PngChunks, targetPath)
+                    WritePngMetadata(metadata.PngChunks, stagePath)
                 ElseIf metadata.WebpChunks IsNot Nothing Then
-                    WriteWebpMetadata(metadata.WebpChunks, targetPath)
+                    WriteWebpMetadata(metadata.WebpChunks, stagePath)
                 End If
-            Catch ex As Exception
-                DiagnosticLogService.LogException("ImageProcessor.ApplySourceMetadata", ex)
+                File.Move(stagePath, targetPath, overwrite:=True)
+            Catch
+                Try
+                    If File.Exists(stagePath) Then File.Delete(stagePath)
+                Catch
+                End Try
+                Throw
             End Try
         End Sub
 
@@ -948,11 +978,12 @@ Namespace Services
             If String.IsNullOrWhiteSpace(targetPath) OrElse writer Is Nothing Then Return False
             Dim targetDirectory = IO.Path.GetDirectoryName(targetPath)
             If Not String.IsNullOrEmpty(targetDirectory) Then Directory.CreateDirectory(targetDirectory)
-            ' Prozess-ID im Namen: zwei gleichzeitig laufende FerrumPix-Instanzen (oder der
-            ' Prüfstand daneben) dürfen sich nicht dieselbe Zwischendatei teilen.
-            Dim tempPath = targetPath & ".fpwrite" & Environment.ProcessId.ToString() & ".tmp"
+            ' Jeder Auftrag erhaelt seine eigene Datei, auch bei demselben Ziel im selben Prozess.
+            Dim tempPath = targetPath & ".fpwrite-" & Guid.NewGuid().ToString("N") & ".tmp"
+            Dim created = False
             Try
-                Using fs = File.Open(tempPath, FileMode.Create, FileAccess.Write)
+                Using fs = File.Open(tempPath, FileMode.CreateNew, FileAccess.Write)
+                    created = True
                     writer(fs)
                     fs.Flush()
                 End Using
@@ -960,7 +991,7 @@ Namespace Services
                 Return True
             Catch
                 Try
-                    If File.Exists(tempPath) Then File.Delete(tempPath)
+                    If created AndAlso File.Exists(tempPath) Then File.Delete(tempPath)
                 Catch
                 End Try
                 Throw
@@ -1942,7 +1973,11 @@ Namespace Services
                         ' Uebernahme eingeschaltet war.
                         Return ExifBuilderService.BuildExifTiff(path)
                 End Select
-            Catch
+            Catch ex As Exception When Not TypeOf ex Is IOException AndAlso Not TypeOf ex Is UnauthorizedAccessException
+                ' Ein ZERLEGEfehler heisst: dieser Block laesst sich nicht mitnehmen. Ein LESEfehler
+                ' geht dagegen weiter nach oben, sonst wuerde ohne die gewuenschten Aufnahmedaten
+                ' gespeichert und Erfolg gemeldet (siehe ReadSourceMetadata).
+                DiagnosticLogService.LogException("ImageProcessor.ExtractExifTiffBytes", ex)
             End Try
             Return Nothing
         End Function
@@ -1987,7 +2022,9 @@ Namespace Services
                         Dim xmp = JxlDecodeService.ReadMetadataBoxes(path).Xmp
                         If xmp IsNot Nothing Then Return If(StripXmpColorFields(xmp), xmp)
                 End Select
-            Catch
+            Catch ex As Exception When Not TypeOf ex Is IOException AndAlso Not TypeOf ex Is UnauthorizedAccessException
+                ' Wie bei ExtractExifTiffBytes: Zerlegefehler abfangen, Lesefehler weitergeben.
+                DiagnosticLogService.LogException("ImageProcessor.ExtractXmpBytes", ex)
             End Try
             Return Nothing
         End Function

@@ -121,49 +121,79 @@ Namespace Services
             End Try
         End Function
 
-        Public Shared Sub Save(entries As IEnumerable(Of FavoriteEntry))
-            JsonStoreService.WriteAtomic(FavoritesPath,
-                                         JsonSerializer.Serialize(Normalize(entries?.ToList()), JsonOptions),
-                                         "Favorites")
-        End Sub
+        ''' <summary>Schreibt die Liste. False, wenn nichts geschrieben wurde; die alte Datei steht
+        ''' dann unveraendert (JsonStoreService.WriteAtomic).</summary>
+        Public Shared Function Save(entries As IEnumerable(Of FavoriteEntry)) As Boolean
+            Return JsonStoreService.WriteAtomic(FavoritesPath,
+                                                JsonSerializer.Serialize(Normalize(entries?.ToList()), JsonOptions),
+                                                "Favorites")
+        End Function
 
-        ''' <summary>Legt den Favoriten an, wenn er noch nicht da ist. Liefert True, wenn sich die
-        ''' Liste geaendert hat (der Aufrufer meldet es dann in der Statuszeile).</summary>
+        ''' <summary>Was eine Aenderung an den Favoriten ergeben hat. Fehlgeschlagen und "nichts zu
+        ''' tun" MUESSEN getrennt bleiben: frueher hiessen beide False, und ein gescheitertes Lesen
+        ''' oder Schreiben erschien in der Statuszeile als "ist bereits ein Favorit".</summary>
+        Public Enum FavoriteChangeResult
+            Changed
+            Unchanged
+            Failed
+        End Enum
+
+        ' Lesen, Aendern und Zurueckschreiben gehoeren zusammen: zwei Aenderungen kurz
+        ' hintereinander duerfen sich nicht gegenseitig den Stand wegschreiben.
+        Private Shared ReadOnly _changeLock As New Object()
+
+        ''' <summary>Legt den Favoriten an, wenn er noch nicht da ist. True, wenn sich die Liste
+        ''' geaendert hat. Wer einen Fehlschlag melden will, nimmt <see cref="TryAdd"/>.</summary>
         Public Shared Function Add(entry As FavoriteEntry) As Boolean
-            If entry Is Nothing Then Return False
-            Dim entries As List(Of FavoriteEntry) = Nothing
-            ' Nicht schreiben, wenn das Lesen misslungen ist: die Liste waere dann leer und
-            ' wuerde den ganzen Bestand ersetzen.
-            If Not TryLoad(entries) Then Return False
-            If entries.Any(Function(f) String.Equals(f.Key, entry.Key, StringComparison.Ordinal)) Then Return False
-            entries.Add(entry)
-            Save(entries)
-            Return True
+            Return TryAdd(entry) = FavoriteChangeResult.Changed
+        End Function
+
+        Public Shared Function TryAdd(entry As FavoriteEntry) As FavoriteChangeResult
+            If entry Is Nothing Then Return FavoriteChangeResult.Unchanged
+            SyncLock _changeLock
+                Dim entries As List(Of FavoriteEntry) = Nothing
+                ' Nicht schreiben, wenn das Lesen misslungen ist: die Liste waere dann leer und
+                ' wuerde den ganzen Bestand ersetzen.
+                If Not TryLoad(entries) Then Return FavoriteChangeResult.Failed
+                If entries.Any(Function(f) String.Equals(f.Key, entry.Key, StringComparison.Ordinal)) Then Return FavoriteChangeResult.Unchanged
+                entries.Add(entry)
+                Return If(Save(entries), FavoriteChangeResult.Changed, FavoriteChangeResult.Failed)
+            End SyncLock
         End Function
 
         Public Shared Function Remove(key As String) As Boolean
-            If String.IsNullOrWhiteSpace(key) Then Return False
-            Dim entries As List(Of FavoriteEntry) = Nothing
-            If Not TryLoad(entries) Then Return False
-            Dim removed = entries.RemoveAll(Function(f) String.Equals(f.Key, key, StringComparison.Ordinal))
-            If removed <= 0 Then Return False
-            Save(entries)
-            Return True
+            Return TryRemove(key) = FavoriteChangeResult.Changed
+        End Function
+
+        Public Shared Function TryRemove(key As String) As FavoriteChangeResult
+            If String.IsNullOrWhiteSpace(key) Then Return FavoriteChangeResult.Unchanged
+            SyncLock _changeLock
+                Dim entries As List(Of FavoriteEntry) = Nothing
+                If Not TryLoad(entries) Then Return FavoriteChangeResult.Failed
+                Dim removed = entries.RemoveAll(Function(f) String.Equals(f.Key, key, StringComparison.Ordinal))
+                If removed <= 0 Then Return FavoriteChangeResult.Unchanged
+                Return If(Save(entries), FavoriteChangeResult.Changed, FavoriteChangeResult.Failed)
+            End SyncLock
         End Function
 
         ''' <summary>Aendert den Anzeigenamen eines Favoriten. Nur den Eintrag in der Liste - das Ziel
         ''' dahinter (Ordner, Album, Suche) bleibt unberuehrt.</summary>
         Public Shared Function Rename(key As String, name As String) As Boolean
-            If String.IsNullOrWhiteSpace(key) OrElse String.IsNullOrWhiteSpace(name) Then Return False
-            Dim entries As List(Of FavoriteEntry) = Nothing
-            If Not TryLoad(entries) Then Return False
-            Dim target = entries.FirstOrDefault(Function(f) String.Equals(f.Key, key, StringComparison.Ordinal))
-            If target Is Nothing Then Return False
-            Dim trimmed = name.Trim()
-            If String.Equals(target.Name, trimmed, StringComparison.Ordinal) Then Return False
-            target.Name = trimmed
-            Save(entries)
-            Return True
+            Return TryRename(key, name) = FavoriteChangeResult.Changed
+        End Function
+
+        Public Shared Function TryRename(key As String, name As String) As FavoriteChangeResult
+            If String.IsNullOrWhiteSpace(key) OrElse String.IsNullOrWhiteSpace(name) Then Return FavoriteChangeResult.Unchanged
+            SyncLock _changeLock
+                Dim entries As List(Of FavoriteEntry) = Nothing
+                If Not TryLoad(entries) Then Return FavoriteChangeResult.Failed
+                Dim target = entries.FirstOrDefault(Function(f) String.Equals(f.Key, key, StringComparison.Ordinal))
+                If target Is Nothing Then Return FavoriteChangeResult.Unchanged
+                Dim trimmed = name.Trim()
+                If String.Equals(target.Name, trimmed, StringComparison.Ordinal) Then Return FavoriteChangeResult.Unchanged
+                target.Name = trimmed
+                Return If(Save(entries), FavoriteChangeResult.Changed, FavoriteChangeResult.Failed)
+            End SyncLock
         End Function
 
         Public Shared Function Contains(key As String) As Boolean

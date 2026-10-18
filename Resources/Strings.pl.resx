@@ -9801,4 +9801,25 @@
   <data name="Die_letzte_Pr_fung_blieb_ohne_Ergebnis_auf_der_K_05a4726c" xml:space="preserve">
     <value>Ostatnie sprawdzenie nie dało wyniku: żaden z dostępnych modeli nie uruchomił się na karcie. Nie musi to być wina karty.</value>
   </data>
+  <data name="F_r_0_steht_die_nderung_nur_im_Katalog_die_Begle_ccedd289" xml:space="preserve">
+    <value>Dla {0} zmiana jest tylko w katalogu: nie udało się odczytać ani zapisać pliku towarzyszącego</value>
+  </data>
+  <data name="Die_Favoriten_lie_en_sich_nicht_speichern_c32ff059" xml:space="preserve">
+    <value>Nie udało się zapisać ulubionych</value>
+  </data>
+  <data name="Die_gespeicherten_Suchen_lie_en_sich_nicht_schre_04a60e61" xml:space="preserve">
+    <value>Nie udało się zapisać zapisanych wyszukiwań</value>
+  </data>
+  <data name="Die_Einstellungen_lie_en_sich_nicht_speichern_1ca65966" xml:space="preserve">
+    <value>Nie udało się zapisać ustawień</value>
+  </data>
+  <data name="0_ist_inzwischen_entstanden_und_wurde_nicht_erse_17e67db0" xml:space="preserve">
+    <value>{0} pojawił się w międzyczasie i nie został zastąpiony</value>
+  </data>
+  <data name="Der_Vorgang_ist_gescheitert_und_die_alte_Fassung_7da1ffb1" xml:space="preserve">
+    <value>Operacja nie powiodła się, a starej wersji nie udało się przywrócić. Znajduje się w {0}</value>
+  </data>
+  <data name="Die_Datei_wurde_entfernt_aber_diese_Begleitdatei_4c8e2973" xml:space="preserve">
+    <value>Plik został usunięty, ale te pliki pomocnicze pozostały: {0}</value>
+  </data>
 </root>

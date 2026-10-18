@@ -9805,4 +9805,25 @@
   <data name="Die_letzte_Pr_fung_blieb_ohne_Ergebnis_auf_der_K_05a4726c" xml:space="preserve">
     <value>การตรวจสอบครั้งล่าสุดไม่มีผล ไม่มีโมเดลใดที่ติดตั้งไว้เริ่มทำงานบนการ์ด ซึ่งไม่จำเป็นว่าเป็นที่การ์ด</value>
   </data>
+  <data name="F_r_0_steht_die_nderung_nur_im_Katalog_die_Begle_ccedd289" xml:space="preserve">
+    <value>การเปลี่ยนแปลงของ {0} อยู่ในแคตตาล็อกเท่านั้น: อ่านหรือเขียนไฟล์ข้างไม่ได้</value>
+  </data>
+  <data name="Die_Favoriten_lie_en_sich_nicht_speichern_c32ff059" xml:space="preserve">
+    <value>บันทึกรายการโปรดไม่ได้</value>
+  </data>
+  <data name="Die_gespeicherten_Suchen_lie_en_sich_nicht_schre_04a60e61" xml:space="preserve">
+    <value>เขียนการค้นหาที่บันทึกไว้ไม่ได้</value>
+  </data>
+  <data name="Die_Einstellungen_lie_en_sich_nicht_speichern_1ca65966" xml:space="preserve">
+    <value>บันทึกการตั้งค่าไม่ได้</value>
+  </data>
+  <data name="0_ist_inzwischen_entstanden_und_wurde_nicht_erse_17e67db0" xml:space="preserve">
+    <value>{0} เกิดขึ้นระหว่างนั้นและไม่ได้ถูกแทนที่</value>
+  </data>
+  <data name="Der_Vorgang_ist_gescheitert_und_die_alte_Fassung_7da1ffb1" xml:space="preserve">
+    <value>การดำเนินการล้มเหลวและกู้คืนเวอร์ชันเก่าไม่ได้ เวอร์ชันเก่าอยู่ที่ {0}</value>
+  </data>
+  <data name="Die_Datei_wurde_entfernt_aber_diese_Begleitdatei_4c8e2973" xml:space="preserve">
+    <value>ลบไฟล์แล้ว แต่ไฟล์ประกอบเหล่านี้ยังคงอยู่: {0}</value>
+  </data>
 </root>

@@ -3306,12 +3306,17 @@ Namespace ViewModels
                                         ' Ohne Rezept die Startwerte einer unbearbeiteten RAW: die neue
                                         ' Beistelldatei macht die Datei sonst zu einer bearbeiteten mit
                                         ' anderen Werten als vor dem Drehen.
-                                        Dim adj = RawSidecarService.TryRead(source)
-                                        If adj Is Nothing Then
-                                            adj = If(RawPreviewService.IsSupportedRaw(source), ImageAdjustments.ForUneditedRaw(source), New ImageAdjustments())
-                                        End If
-                                        AppendRotationStep(adj, angle)
-                                        Return RawSidecarService.TryWrite(source, adj)
+                                        ' Eine VORHANDENE, aber nicht lesbare Beistelldatei bleibt
+                                        ' liegen, wie sie ist: sie zu ersetzen hiesse, die Entwicklung
+                                        ' darin fuer einen Drehschritt wegzuwerfen. Lesen, Anhaengen und
+                                        ' Schreiben laufen unter einer Sperre (TryModifyRecipe).
+                                        ' Der Startwert vorab: ForUneditedRaw oeffnet LibRaw, und das soll
+                                        ' nicht unter der Sperre laufen, an der alle Schreiber warten.
+                                        Dim startValues = If(RawPreviewService.IsSupportedRaw(source), ImageAdjustments.ForUneditedRaw(source), New ImageAdjustments())
+                                        Return RawSidecarService.TryModifyRecipe(
+                                            source,
+                                            Function() startValues,
+                                            Sub(adj) AppendRotationStep(adj, angle))
                                     End Function)
                 If ok Then
                     ' Das Original ist unverändert - nur der Sidecar ist neu. Der Disk-Cache merkt das

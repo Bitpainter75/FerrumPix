@@ -9805,4 +9805,25 @@
   <data name="Die_letzte_Pr_fung_blieb_ohne_Ergebnis_auf_der_K_05a4726c" xml:space="preserve">
     <value>마지막 확인은 결과가 없습니다. 설치된 모델 중 어느 것도 카드에서 시작되지 않았습니다. 반드시 카드 문제인 것은 아닙니다.</value>
   </data>
+  <data name="F_r_0_steht_die_nderung_nur_im_Katalog_die_Begle_ccedd289" xml:space="preserve">
+    <value>{0}의 변경 사항은 카탈로그에만 저장되었습니다. 사이드카 파일을 읽거나 쓰지 못했습니다</value>
+  </data>
+  <data name="Die_Favoriten_lie_en_sich_nicht_speichern_c32ff059" xml:space="preserve">
+    <value>즐겨찾기를 저장하지 못했습니다</value>
+  </data>
+  <data name="Die_gespeicherten_Suchen_lie_en_sich_nicht_schre_04a60e61" xml:space="preserve">
+    <value>저장된 검색을 기록하지 못했습니다</value>
+  </data>
+  <data name="Die_Einstellungen_lie_en_sich_nicht_speichern_1ca65966" xml:space="preserve">
+    <value>설정을 저장하지 못했습니다</value>
+  </data>
+  <data name="0_ist_inzwischen_entstanden_und_wurde_nicht_erse_17e67db0" xml:space="preserve">
+    <value>{0}이(가) 그 사이에 생겨 바꾸지 않았습니다</value>
+  </data>
+  <data name="Der_Vorgang_ist_gescheitert_und_die_alte_Fassung_7da1ffb1" xml:space="preserve">
+    <value>작업에 실패했고 이전 버전을 복원하지 못했습니다. 이전 버전은 {0}에 있습니다</value>
+  </data>
+  <data name="Die_Datei_wurde_entfernt_aber_diese_Begleitdatei_4c8e2973" xml:space="preserve">
+    <value>파일은 삭제되었지만 다음 보조 파일은 남아 있습니다: {0}</value>
+  </data>
 </root>
