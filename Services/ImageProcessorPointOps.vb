@@ -63,6 +63,18 @@ Namespace Services
             Public ToneBefore As Single()
             Public ToneZones As Single()
 
+            ''' <summary>Tonmodell 3: Lichter und Tiefen allein als Tabelle, ausgewertet nicht am
+            ''' Bildpunkt, sondern an der Basisschicht seiner Umgebung (LocalToneBase, gebaut im
+            ''' Durchlauf aus dem Bild selbst). ToneZones haelt dann die gemeinsame Tabelle aller
+            ''' fuenf Regler abzueglich dieses Hubs. Nothing in den Modellen 1 und 2 und ohne Lichter
+            ''' und Tiefen.</summary>
+            Public LocalToneZones As Single()
+
+            ''' <summary>Tonmodell 3: um wie viel Lichter und Tiefen die Feinstruktur zusaetzlich
+            ''' verstaerken (Faktor minus 1), ueber dem Grauwert der geglaetteten Umgebung
+            ''' (ToneSliderCurves.DetailGain). Nothing, wenn kein Faktor von 1 abweicht.</summary>
+            Public LocalDetailGain As Single()
+
             ''' <summary>Weissabgleich als chromatische Adaption, 3x3 zeilenweise, ODER Nothing.
             ''' Nothing ist der Normalfall: Modell 1 rechnet den Weissabgleich weiter in der
             ''' Farbmatrix, und auch unter Modell 2 steht der Regler meist auf dem Anker.
@@ -288,7 +300,27 @@ Namespace Services
                                 imageMedianL = GrayVToLightness(SampleTable(chain.ToneBefore, CSng(LightnessToGrayV(imageMedianL))))
                             End If
                         End If
-                        chain.ToneZones = BuildToneZoneTable(adj, toneModel, imageMedianL)
+                        ' Tonmodell 3: Lichter und Tiefen in eine eigene Tabelle, die an der
+                        ' Basisschicht ausgewertet wird; Kontrast, Weiss und Schwarz bleiben am
+                        ' Bildpunkt. So rechnet die Referenz (Messung in RAW_UND_FARBE.md, Tonmodell 3).
+                        If adj.UsesLocalToneZones() Then
+                            EnsureGammaTables()
+                            chain.LocalToneZones = BuildToneZoneTable(adj, toneModel, imageMedianL, ToneZonePart.Local)
+                            chain.LocalDetailGain = BuildLocalDetailTable(adj)
+                            ' Die Tabelle am Bildpunkt ist die gemeinsame monotone Tabelle aller fuenf
+                            ' Regler MINUS dem oertlichen Hub. Wo Basis und Bildpunkt gleich sind (glatte
+                            ' Flaeche, Verlauf), kommt so genau die gemeinsame Tabelle heraus, also
+                            ' dasselbe wie im Modell 2 samt dessen Schutz gegen Tonumkehr. Zwei fuer
+                            ' sich monotone Teile waeren zusammen nicht monoton: Weiss -100 und Lichter
+                            ' -100 flachen beide die Lichter ab.
+                            Dim combined = BuildToneZoneTable(adj, toneModel, imageMedianL)
+                            For i = 0 To combined.Length - 1
+                                combined(i) -= chain.LocalToneZones(i) - i / CSng(PointOpTableSize - 1)
+                            Next
+                            chain.ToneZones = combined
+                        Else
+                            chain.ToneZones = BuildToneZoneTable(adj, toneModel, imageMedianL)
+                        End If
                     End If
                 End If
                 If curvesInMelissa Then
@@ -784,17 +816,21 @@ Namespace Services
         ''' zusammen koennen sie es nicht, das faengt BuildMonotoneToneZones ab.
         ''' Gemessen mit FERRUMPIX_DUMP_CURVES; Staerken sind bewusst moderat und nachjustierbar.</summary>
         Private Shared Function ToneZoneLift(adj As ImageAdjustments, d0 As Double, toneModel As Integer,
-                                             Optional imageMedianL As Double = 0.0) As Double
+                                             Optional imageMedianL As Double = 0.0,
+                                             Optional part As ToneZonePart = ToneZonePart.All) As Double
             ' Tonmodell 2: die gemessenen Kennlinien, Kontrast eingeschlossen. Ihre Enden sind
             ' gemessen und laufen auf null aus; die Schwarz-Regel darunter gehoert zur Formel.
             ' Lichter und Tiefen waehlen ihre Kurve nach der Helligkeit des ganzen Bildes.
             If toneModel >= 2 Then
+                Dim highlightsShadows = ToneSliderCurves.Lift("Highlights", adj.Highlights, d0, imageMedianL) +
+                                        ToneSliderCurves.Lift("Shadows", adj.ShadowsLevel, d0, imageMedianL)
+                ' Der oertliche Teil gibt es erst im Tonmodell 3.
+                If part = ToneZonePart.Local Then Return If(toneModel >= 3, highlightsShadows, 0.0)
                 Return ToneSliderCurves.Lift("Contrast", adj.Contrast, d0) +
-                       ToneSliderCurves.Lift("Highlights", adj.Highlights, d0, imageMedianL) +
-                       ToneSliderCurves.Lift("Shadows", adj.ShadowsLevel, d0, imageMedianL) +
                        ToneSliderCurves.Lift("Whites", adj.Whites, d0) +
-                       ToneSliderCurves.Lift("Blacks", adj.Blacks, d0)
+                       ToneSliderCurves.Lift("Blacks", adj.Blacks, d0) + highlightsShadows
             End If
+            If part = ToneZonePart.Local Then Return 0.0
             Dim wBlacks = ToneSmoothFade(1.0 - d0 / 0.5)      ' 1 bei Schwarz, glatt 0 ab d=0.5
             Dim wWhites = ToneSmoothFade((d0 - 0.5) / 0.5)    ' 0 bis d=0.5, 1 bei Weiss
             Dim wShadows = ToneCosBump(d0, 0.28, 0.5)         ' breiter Bauch, deckt 0..0.78
@@ -828,13 +864,14 @@ Namespace Services
         ''' hinsetzt, und die Mindeststeigung gilt danach ueberall. Nothing heisst: die Kette rechnet
         ''' wie bisher direkt, bitgleich.</summary>
         Private Shared Function BuildMonotoneToneZones(adj As ImageAdjustments, toneModel As Integer,
-                                                       Optional imageMedianL As Double = 0.0) As Single()
+                                                       Optional imageMedianL As Double = 0.0,
+                                                       Optional part As ToneZonePart = ToneZonePart.All) As Single()
             Dim n = PointOpTableSize - 1
             Dim stepSize = 1.0 / n
             Dim curve = New Double(n) {}
             For i = 0 To n
                 Dim d = i * stepSize
-                curve(i) = d + ToneZoneLift(adj, d, toneModel, imageMedianL)
+                curve(i) = d + ToneZoneLift(adj, d, toneModel, imageMedianL, part)
             Next
 
             Dim slopes = New Double(n - 1) {}
@@ -866,17 +903,25 @@ Namespace Services
             Return table
         End Function
 
+        ''' <summary>Welche Tonregler eine Zonentabelle traegt: All alle fuenf, Local im Tonmodell 3
+        ''' nur Lichter und Tiefen, die oertlich an der Basisschicht ausgewertet werden.</summary>
+        Friend Enum ToneZonePart
+            All
+            Local
+        End Enum
+
         ''' <summary>Lichter/Tiefen/Weiss/Schwarz allein als Tabelle, angewandt ueber ApplyToneZones.
         ''' Monoton wie in der verschmolzenen Kette.</summary>
         Private Shared Function BuildToneZoneTable(adj As ImageAdjustments, toneModel As Integer,
-                                                   Optional imageMedianL As Double = 0.0) As Single()
-            Dim monotone = BuildMonotoneToneZones(adj, toneModel, imageMedianL)
+                                                   Optional imageMedianL As Double = 0.0,
+                                                   Optional part As ToneZonePart = ToneZonePart.All) As Single()
+            Dim monotone = BuildMonotoneToneZones(adj, toneModel, imageMedianL, part)
             Dim table = New Single(PointOpTableSize - 1) {}
             For i = 0 To PointOpTableSize - 1
                 Dim v = i / CSng(PointOpTableSize - 1)
                 table(i) = If(monotone IsNot Nothing,
                               Clamp(monotone(i), 0.0F, 1.0F),
-                              Clamp(CSng(v + ToneZoneLift(adj, v, toneModel, imageMedianL)), 0.0F, 1.0F))
+                              Clamp(CSng(v + ToneZoneLift(adj, v, toneModel, imageMedianL, part)), 0.0F, 1.0F))
             Next
             Return table
         End Function
@@ -1185,6 +1230,61 @@ Namespace Services
             gg = newMin + (gg - vMin) * scale
             bb = newMin + (bb - vMin) * scale
         End Sub
+
+        ''' <summary>Wie <see cref="ApplyToneZones"/>, im Tonmodell 3: <paramref name="pixelZones"/>
+        ''' (die gemeinsame Tabelle ohne den oertlichen Hub) wirkt am Kanalwert,
+        ''' <paramref name="localZones"/> (Lichter, Tiefen) an der um <paramref name="baseOffset"/>
+        ''' verschobenen Stelle, also an der Basisschicht statt am Bildpunkt. Ohne Verschiebung ist
+        ''' das genau die gemeinsame Tabelle. <paramref name="detailShift"/>
+        ''' ist das Strukturglied: die Feinstruktur des Bildpunkts mal der Verstaerkung seiner Zone
+        ''' (PointOpChain.LocalDetailGain).
+        '''
+        ''' Verschoben wird jeder Kanal um denselben Betrag: ein Grau bekommt genau den Hub seiner
+        ''' Basis, und zwischen dem groessten und dem kleinsten Kanal wirkt weiter die Steigung der
+        ''' Kennlinie, die Saettigung folgt ihr also wie am Bildpunkt.</summary>
+        Private Shared Sub ApplyLocalToneZones(ByRef rr As Single, ByRef gg As Single, ByRef bb As Single,
+                                               pixelZones As Single(), localZones As Single(), baseOffset As Single,
+                                               detailShift As Single)
+            Dim vMax = Math.Max(rr, Math.Max(gg, bb))
+            Dim vMin = Math.Min(rr, Math.Min(gg, bb))
+            Dim newMax = LocalZoneValue(vMax, pixelZones, localZones, baseOffset, detailShift)
+            If vMax - vMin < 0.000001F Then
+                rr = newMax : gg = newMax : bb = newMax
+                Return
+            End If
+            Dim newMin = LocalZoneValue(vMin, pixelZones, localZones, baseOffset, detailShift)
+            ' Mit Verschiebung ist die Kennlinie an diesem Bildpunkt nicht mehr zwingend monoton.
+            ' Kehrte sich die Reihenfolge von groesstem und kleinstem Kanal um, kippte der Farbton;
+            ' dann bleibt ein Grau.
+            If newMax < newMin Then
+                Dim mid = (newMax + newMin) * 0.5F
+                rr = mid : gg = mid : bb = mid
+                Return
+            End If
+            Dim scale = (newMax - newMin) / (vMax - vMin)
+            rr = newMin + (rr - vMin) * scale
+            gg = newMin + (gg - vMin) * scale
+            bb = newMin + (bb - vMin) * scale
+        End Sub
+
+        Private Shared Function LocalZoneValue(v As Single, pixelZones As Single(), localZones As Single(),
+                                               baseOffset As Single, detailShift As Single) As Single
+            Dim at = Clamp(v + baseOffset, 0.0F, 1.0F)
+            Dim pixel = If(pixelZones IsNot Nothing, SampleTable(pixelZones, v), v)
+            Dim result = pixel + (SampleTable(localZones, at) - at) + detailShift
+            Return If(result < 0.0F, 0.0F, If(result > 1.0F, 1.0F, result))
+        End Function
+
+        ''' <summary>Grauwert eines Bildpunkts fuer die Basisschicht: Luminanz im Linearlicht,
+        ''' zurueck in den Gammawert. Derselbe Massstab, an dem die Kennlinien gemessen sind (L des
+        ''' Bildpunkts, als Grau gelesen).</summary>
+        Private Shared Function LocalToneGray(rr As Single, gg As Single, bb As Single,
+                                              toLinear As Single(), toGamma As Single()) As Single
+            Dim y = 0.2126F * SampleTable(toLinear, Clamp(rr, 0.0F, 1.0F)) +
+                    0.7152F * SampleTable(toLinear, Clamp(gg, 0.0F, 1.0F)) +
+                    0.0722F * SampleTable(toLinear, Clamp(bb, 0.0F, 1.0F))
+            Return SampleTable(toGamma, Clamp(y, 0.0F, 1.0F))
+        End Function
 
         ''' <summary>Die verschmolzene per-Kanal-Skalarkette als STETIGE Tabelle: erst die
         ''' Tonwertkurve (Belichtung/Kontrast/Helligkeit, identisch zu BuildToneCurveLut), dann die
@@ -1642,6 +1742,234 @@ Namespace Services
             buf(o + ai) = CByte(a)
         End Sub
 
+        ' ── Tonmodell 3: die Basisschicht fuer Lichter und Tiefen ─────────────────
+        '
+        ' Lichter und Tiefen werten ihre Kennlinie an der geglaetteten Helligkeit der Umgebung aus,
+        ' nicht am Bildpunkt; die Abweichung des Bildpunkts davon, also die Struktur, wandert
+        ' unveraendert mit. Ein Lichterregler staucht so die grossen Helligkeitsunterschiede und
+        ' laesst die Zeichnung in der hellen Flaeche stehen. Gemessen an Referenzentwicklungen mit je
+        ' einem gesetzten Regler: bei Lichter und Tiefen trifft die Basisschicht besser als der
+        ' Bildpunkt, bei Kontrast, Weiss und Schwarz schlechter (Audits, RAW_UND_FARBE.md).
+        '
+        ' Die Basisschicht ist ein kantenerhaltender Fuehrungsfilter, an sich selbst gefuehrt, auf
+        ' einem verkleinerten Raster; die Koeffizienten werden auf die volle Aufloesung gelesen und
+        ' dort am eigenen Grauwert des Bildpunkts ausgewertet. Harte Kanten bleiben damit in der
+        ' Basis und bekommen keinen Saum.
+
+        ''' <summary>Hoechstens so viele Punkte hat das Raster an der langen Kante. Auf dieser Groesse
+        ''' sind Radius und Kantenschwelle gemessen.</summary>
+        Private Const LocalToneGridEdge As Integer = 1024
+
+        ''' <summary>Radius des Filters als Anteil der langen Kante. Gemessen lagen 1 und 2 % gleich
+        ''' gut, 0,5 % und 4 % etwas schlechter; der Anteil macht die Stufe unabhaengig von der
+        ''' Aufloesung, die Vorschau rechnet wie der Export.</summary>
+        Private Const LocalToneRadius As Double = 0.01
+
+        ''' <summary>Kantenschwelle des Filters im Quadrat des Gammawerts: Stufen deutlich ueber
+        ''' 0,1 bleiben in der Basis. Gemessen war 0,01 besser als 0,003 und 0,03; bei 0,1 geht die
+        ''' Kantentreue verloren.</summary>
+        Private Const LocalToneEpsilon As Single = 0.01F
+
+        ''' <summary>Radius der Glaettung, gegen die die Feinstruktur gemessen wird, als Anteil der
+        ''' langen Kante; ein Gauss, angenaehert durch drei Kastenmittel. Auf diesem Radius sind die
+        ''' Verstaerkungen je Zone gemessen (ToneSliderCurves.DetailGain).</summary>
+        Private Const LocalToneDetailRadius As Double = 0.005
+
+        ''' <summary>Die Basisschicht als Koeffizienten des Fuehrungsfilters auf dem Raster:
+        ''' Basis = A * Grauwert + B, A und B bilinear auf den Bildpunkt gelesen. Dazu der geglaettete
+        ''' Grauwert fuer das Strukturglied.</summary>
+        Friend NotInheritable Class LocalToneBase
+            Public Width As Integer
+            Public Height As Integer
+            Public StepSize As Integer
+            Public MeanA As Single()
+            Public MeanB As Single()
+            Public Smooth As Single()
+
+            Public Sub Sample(x As Integer, y As Integer, gray As Single, ByRef baseValue As Single, ByRef smoothValue As Single)
+                Dim gx = Math.Max(0.0F, Math.Min(Width - 1.0F, (x + 0.5F) / StepSize - 0.5F))
+                Dim gy = Math.Max(0.0F, Math.Min(Height - 1.0F, (y + 0.5F) / StepSize - 0.5F))
+                Dim x0 = CInt(Math.Floor(gx))
+                Dim y0 = CInt(Math.Floor(gy))
+                Dim x1 = Math.Min(x0 + 1, Width - 1)
+                Dim y1 = Math.Min(y0 + 1, Height - 1)
+                Dim fx = gx - x0
+                Dim fy = gy - y0
+                Dim w00 = (1.0F - fx) * (1.0F - fy), w01 = fx * (1.0F - fy)
+                Dim w10 = (1.0F - fx) * fy, w11 = fx * fy
+                Dim i00 = y0 * Width + x0, i01 = y0 * Width + x1
+                Dim i10 = y1 * Width + x0, i11 = y1 * Width + x1
+                Dim a = MeanA(i00) * w00 + MeanA(i01) * w01 + MeanA(i10) * w10 + MeanA(i11) * w11
+                Dim b = MeanB(i00) * w00 + MeanB(i01) * w01 + MeanB(i10) * w10 + MeanB(i11) * w11
+                baseValue = a * gray + b
+                smoothValue = Smooth(i00) * w00 + Smooth(i01) * w01 + Smooth(i10) * w10 + Smooth(i11) * w11
+            End Sub
+        End Class
+
+        ''' <summary>Das Strukturglied als Tabelle ueber dem geglaetteten Grauwert: Faktor minus 1,
+        ''' Lichter und Tiefen addiert. Nothing, wenn beide Faktoren ueberall 1 sind.</summary>
+        Private Shared Function BuildLocalDetailTable(adj As ImageAdjustments) As Single()
+            Dim table = New Single(PointOpTableSize - 1) {}
+            Dim any = False
+            For i = 0 To PointOpTableSize - 1
+                Dim l = GrayVToLightness(i / CDbl(PointOpTableSize - 1))
+                Dim excess = (ToneSliderCurves.DetailGain("Highlights", adj.Highlights, l) - 1.0) +
+                             (ToneSliderCurves.DetailGain("Shadows", adj.ShadowsLevel, l) - 1.0)
+                table(i) = CSng(excess)
+                If Math.Abs(excess) > 0.000001 Then any = True
+            Next
+            Return If(any, table, Nothing)
+        End Function
+
+        ''' <summary>Baut die Basisschicht aus dem Bild, das gerade durch die Kette laeuft: je
+        ''' Rasterfeld das Farbmittel, durch die Stufen VOR den Tonzonen geschickt, als Grauwert
+        ''' gefiltert. Ein Ausschnitt bekaeme so eine andere Basis als das ganze Bild; die
+        ''' Maskenebene im Rechteck nimmt solche Ebenen deshalb nicht
+        ''' (ImageAdjustments.UsesLocalToneZones).</summary>
+        Private Shared Function BuildLocalToneBase(srcBuf As Byte(), stride As Integer, width As Integer, height As Integer,
+                                                   ri As Integer, gi As Integer, bi As Integer, ai As Integer,
+                                                   srcPremul As Boolean, chain As PointOpChain) As LocalToneBase
+            Dim stepSize = Math.Max(1, CInt(Math.Ceiling(Math.Max(width, height) / CDbl(LocalToneGridEdge))))
+            Dim gw = (width + stepSize - 1) \ stepSize
+            Dim gh = (height + stepSize - 1) \ stepSize
+            Dim gray = New Single(gw * gh - 1) {}
+            Dim toLinear = _srgbToLinearTable
+            Dim toGamma = _linearToSrgbTable
+            ForEachRow(gw, gh,
+                Sub(gy)
+                    Dim yEnd = Math.Min(height, (gy + 1) * stepSize)
+                    For gx = 0 To gw - 1
+                        Dim xEnd = Math.Min(width, (gx + 1) * stepSize)
+                        Dim sumR = 0.0F, sumG = 0.0F, sumB = 0.0F
+                        Dim count = 0
+                        For y = gy * stepSize To yEnd - 1
+                            Dim row = y * stride
+                            For x = gx * stepSize To xEnd - 1
+                                Dim o = row + x * 4
+                                Dim a = srcBuf(o + ai)
+                                ' Durchsichtiges zaehlt nicht mit; ein ganz durchsichtiges Feld
+                                ' bleibt Schwarz, die Kette laesst seine Bildpunkte ohnehin aus.
+                                If a = 0 Then Continue For
+                                If a = 255 OrElse Not srcPremul Then
+                                    sumR += srcBuf(o + ri) / 255.0F
+                                    sumG += srcBuf(o + gi) / 255.0F
+                                    sumB += srcBuf(o + bi) / 255.0F
+                                Else
+                                    Dim inv = 1.0F / a
+                                    sumR += Math.Min(1.0F, srcBuf(o + ri) * inv)
+                                    sumG += Math.Min(1.0F, srcBuf(o + gi) * inv)
+                                    sumB += Math.Min(1.0F, srcBuf(o + bi) * inv)
+                                End If
+                                count += 1
+                            Next
+                        Next
+                        Dim value = 0.0F
+                        If count > 0 Then
+                            Dim rr = sumR / count, gg = sumG / count, bb = sumB / count
+                            ApplyStagesBeforeToneZones(rr, gg, bb, chain, toLinear, toGamma)
+                            value = LocalToneGray(rr, gg, bb, toLinear, toGamma)
+                        End If
+                        gray(gy * gw + gx) = value
+                    Next
+                End Sub)
+
+            Dim radius = Math.Max(1, CInt(Math.Round(LocalToneRadius * Math.Max(gw, gh))))
+            Dim squares = New Single(gray.Length - 1) {}
+            For i = 0 To gray.Length - 1
+                squares(i) = gray(i) * gray(i)
+            Next
+            Dim mean = BoxMean(gray, gw, gh, radius)
+            Dim meanSquare = BoxMean(squares, gw, gh, radius)
+            Dim coefA = New Single(gray.Length - 1) {}
+            Dim coefB = New Single(gray.Length - 1) {}
+            For i = 0 To gray.Length - 1
+                Dim variance = Math.Max(0.0F, meanSquare(i) - mean(i) * mean(i))
+                coefA(i) = variance / (variance + LocalToneEpsilon)
+                coefB(i) = mean(i) - coefA(i) * mean(i)
+            Next
+            Dim smoothRadius = Math.Max(1, CInt(Math.Round(LocalToneDetailRadius * Math.Max(gw, gh) / 1.7)))
+            Return New LocalToneBase With {
+                .Width = gw, .Height = gh, .StepSize = stepSize,
+                .MeanA = BoxMean(coefA, gw, gh, radius),
+                .MeanB = BoxMean(coefB, gw, gh, radius),
+                .Smooth = BoxMean(BoxMean(BoxMean(gray, gw, gh, smoothRadius), gw, gh, smoothRadius), gw, gh, smoothRadius)
+            }
+        End Function
+
+        ''' <summary>Die Stufen der Kette VOR den Tonzonen, fuer ein Rasterfeld der Basisschicht:
+        ''' Filmnegativ, Weissabgleich, Farbmatrix und die Tonwertkurve davor. Dieselbe Rechnung und
+        ''' Reihenfolge wie im Durchlauf (RunPointOpChain, Stufen 1 bis 3); wer dort eine Stufe vor
+        ''' den Tonzonen einfuegt, traegt sie hier nach.</summary>
+        Private Shared Sub ApplyStagesBeforeToneZones(ByRef rr As Single, ByRef gg As Single, ByRef bb As Single,
+                                                      chain As PointOpChain, toLinear As Single(), toGamma As Single())
+            If chain.NegR IsNot Nothing Then
+                rr = SampleTable(chain.NegR, rr)
+                gg = SampleTable(chain.NegG, gg)
+                bb = SampleTable(chain.NegB, bb)
+                If chain.NegMonochrome Then
+                    Dim gray = 0.299F * rr + 0.587F * gg + 0.114F * bb
+                    rr = gray : gg = gray : bb = gray
+                End If
+            End If
+            Dim wbm = chain.WhiteBalanceMatrix
+            If wbm IsNot Nothing Then
+                Dim linR = SampleTable(toLinear, rr)
+                Dim linG = SampleTable(toLinear, gg)
+                Dim linB = SampleTable(toLinear, bb)
+                rr = SampleTable(toGamma, Clamp(wbm(0) * linR + wbm(1) * linG + wbm(2) * linB, 0.0F, 1.0F))
+                gg = SampleTable(toGamma, Clamp(wbm(3) * linR + wbm(4) * linG + wbm(5) * linB, 0.0F, 1.0F))
+                bb = SampleTable(toGamma, Clamp(wbm(6) * linR + wbm(7) * linG + wbm(8) * linB, 0.0F, 1.0F))
+            End If
+            Dim m = chain.ColorMatrix
+            If m IsNot Nothing Then
+                Dim nr = m(0) * rr + m(1) * gg + m(2) * bb + m(4)
+                Dim ng = m(5) * rr + m(6) * gg + m(7) * bb + m(9)
+                Dim nb = m(10) * rr + m(11) * gg + m(12) * bb + m(14)
+                rr = Clamp(nr, 0.0F, 1.0F)
+                gg = Clamp(ng, 0.0F, 1.0F)
+                bb = Clamp(nb, 0.0F, 1.0F)
+            End If
+            If chain.ToneBefore IsNot Nothing Then
+                rr = SampleTable(chain.ToneBefore, rr)
+                gg = SampleTable(chain.ToneBefore, gg)
+                bb = SampleTable(chain.ToneBefore, bb)
+            End If
+        End Sub
+
+        ''' <summary>Kastenmittel mit Radius <paramref name="radius"/>, zeilen- und dann
+        ''' spaltenweise ueber Praefixsummen; am Rand ueber die vorhandenen Punkte gemittelt.</summary>
+        Private Shared Function BoxMean(source As Single(), width As Integer, height As Integer, radius As Integer) As Single()
+            Dim rows = New Single(source.Length - 1) {}
+            Dim result = New Single(source.Length - 1) {}
+            ForEachRow(width, height,
+                Sub(y)
+                    Dim offset = y * width
+                    Dim prefix = New Double(width) {}
+                    For x = 0 To width - 1
+                        prefix(x + 1) = prefix(x) + source(offset + x)
+                    Next
+                    For x = 0 To width - 1
+                        Dim x0 = Math.Max(0, x - radius)
+                        Dim x1 = Math.Min(width, x + radius + 1)
+                        rows(offset + x) = CSng((prefix(x1) - prefix(x0)) / (x1 - x0))
+                    Next
+                End Sub)
+            ' Spalten: ForEachRow verteilt hier die Spaltennummer.
+            ForEachRow(height, width,
+                Sub(x)
+                    Dim prefix = New Double(height) {}
+                    For y = 0 To height - 1
+                        prefix(y + 1) = prefix(y) + rows(y * width + x)
+                    Next
+                    For y = 0 To height - 1
+                        Dim y0 = Math.Max(0, y - radius)
+                        Dim y1 = Math.Min(height, y + radius + 1)
+                        result(y * width + x) = CSng((prefix(y1) - prefix(y0)) / (y1 - y0))
+                    Next
+                End Sub)
+            Return result
+        End Function
+
         ' ── Der eine Durchlauf ───────────────────────────────────────────────────
 
         Private Shared Function RunPointOpChain(source As SKBitmap, chain As PointOpChain) As SKBitmap
@@ -1716,6 +2044,13 @@ Namespace Services
             Dim pointColors = chain.PointColors
             Dim hslBlockAktiv = lumCurve IsNot Nothing OrElse hslAdj IsNot Nothing OrElse
                                 splitAdj IsNot Nothing OrElse vibrance <> 0.0F OrElse pointColors IsNot Nothing
+            ' Tonmodell 3: die Basisschicht entsteht aus DIESEM Bild, vor dem Durchlauf.
+            Dim localZones = chain.LocalToneZones
+            Dim localDetail = chain.LocalDetailGain
+            Dim localBase As LocalToneBase = Nothing
+            If localZones IsNot Nothing Then
+                localBase = BuildLocalToneBase(srcBuf, stride, width, source.Height, ri, gi, bi, ai, srcPremul, chain)
+            End If
 
             ForEachRow(width, source.Height,
                 Sub(y)
@@ -1839,13 +2174,23 @@ Namespace Services
                                     satVorTon *= torC * tFade
                                 End If
                             End If
-                            If toneZones IsNot Nothing OrElse curvesMelissa Then
+                            If toneZones IsNot Nothing OrElse localZones IsNot Nothing OrElse curvesMelissa Then
                                 If toneBefore IsNot Nothing Then
                                     rr = SampleTable(toneBefore, rr)
                                     gg = SampleTable(toneBefore, gg)
                                     bb = SampleTable(toneBefore, bb)
                                 End If
-                                If toneZones IsNot Nothing Then ApplyToneZones(rr, gg, bb, toneZones)
+                                If localZones IsNot Nothing Then
+                                    Dim gray = LocalToneGray(rr, gg, bb, toLinear, toGamma)
+                                    Dim baseValue As Single, smoothValue As Single
+                                    localBase.Sample(x, y, gray, baseValue, smoothValue)
+                                    Dim detailShift = If(localDetail IsNot Nothing,
+                                                         SampleTable(localDetail, Clamp(smoothValue, 0.0F, 1.0F)) * (gray - smoothValue),
+                                                         0.0F)
+                                    ApplyLocalToneZones(rr, gg, bb, toneZones, localZones, baseValue - gray, detailShift)
+                                ElseIf toneZones IsNot Nothing Then
+                                    ApplyToneZones(rr, gg, bb, toneZones)
+                                End If
                             End If
                             If curvesMelissa Then
                                 ApplyCurvesInMelissa(rr, gg, bb, sr, sg, sb, toLinear, toGamma)

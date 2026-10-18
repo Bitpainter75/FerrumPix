@@ -7807,7 +7807,7 @@ Namespace ViewModels
                 Return ParseAvaloniaColorOrDefault(BorderColor, Avalonia.Media.Colors.White)
             End Get
             Set(value As Avalonia.Media.Color)
-                BorderColor = value.ToString()
+                BorderColor = ColorToHex(value)
             End Set
         End Property
 
@@ -8048,7 +8048,7 @@ Namespace ViewModels
                                                    Avalonia.Media.Colors.Black)
             End Get
             Set(value As Avalonia.Media.Color)
-                Dim target = NormalizeAvaloniaColor(value.ToString(), "#FF000000")
+                Dim target = NormalizeAvaloniaColor(ColorToHex(value), "#FF000000")
                 SetFrameValue(NameOf(FrameSymbolStrokeColorValue),
                               Function(f) String.Equals(f.StrokeColor, target, StringComparison.Ordinal),
                               Sub(f) f.StrokeColor = target)
@@ -9548,7 +9548,7 @@ Namespace ViewModels
                 Return ParseAvaloniaColorOrDefault(_canvasBackgroundColor, Avalonia.Media.Colors.Transparent)
             End Get
             Set(value As Avalonia.Media.Color)
-                CanvasBackgroundColor = value.ToString()
+                CanvasBackgroundColor = ColorToHex(value)
             End Set
         End Property
 
@@ -9659,7 +9659,7 @@ Namespace ViewModels
                 Return ParseAvaloniaColorOrDefault(BrushColor, Avalonia.Media.Colors.Black)
             End Get
             Set(value As Avalonia.Media.Color)
-                BrushColor = value.ToString()
+                BrushColor = ColorToHex(value)
             End Set
         End Property
 
@@ -9680,7 +9680,7 @@ Namespace ViewModels
                 Return ParseAvaloniaColorOrDefault(_annotationFillColor, Avalonia.Media.Colors.White)
             End Get
             Set(value As Avalonia.Media.Color)
-                AnnotationFillColor = value.ToString()
+                AnnotationFillColor = ColorToHex(value)
             End Set
         End Property
 
@@ -9689,7 +9689,7 @@ Namespace ViewModels
                 Return ParseAvaloniaColorOrDefault(_annotationStrokeColor, Avalonia.Media.Colors.Black)
             End Get
             Set(value As Avalonia.Media.Color)
-                AnnotationStrokeColor = value.ToString()
+                AnnotationStrokeColor = ColorToHex(value)
             End Set
         End Property
 
@@ -9712,7 +9712,7 @@ Namespace ViewModels
                 Return ParseAvaloniaColorOrDefault(_eraserFillColor, Avalonia.Media.Colors.Transparent)
             End Get
             Set(value As Avalonia.Media.Color)
-                EraserFillColor = value.ToString()
+                EraserFillColor = ColorToHex(value)
             End Set
         End Property
 
@@ -16060,7 +16060,7 @@ Namespace ViewModels
                 End Try
             End Get
             Set(value As Avalonia.Media.Color)
-                NewDocBackgroundColor = value.ToString()
+                NewDocBackgroundColor = ColorToHex(value)
             End Set
         End Property
 

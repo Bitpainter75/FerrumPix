@@ -1090,7 +1090,7 @@ Namespace ViewModels
                 End Try
             End Get
             Set(value As Avalonia.Media.Color)
-                CollageBackgroundColor = value.ToString()
+                CollageBackgroundColor = ColorToHex(value)
             End Set
         End Property
 

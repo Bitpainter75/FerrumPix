@@ -3110,7 +3110,7 @@ Namespace ViewModels
                 End Try
             End Get
             Set(value As Avalonia.Media.Color)
-                TransparencyBackgroundColor = value.ToString()
+                TransparencyBackgroundColor = ColorToHex(value)
             End Set
         End Property
 

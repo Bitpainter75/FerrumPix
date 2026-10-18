@@ -41,6 +41,15 @@ Namespace Services
         ''' steht hier. Fehlt ein Eintrag, gilt 1. Steht wie MedianCurves VOR Curves.</summary>
         Private Shared ReadOnly Gains As New Dictionary(Of String, Double())(StringComparer.Ordinal)
 
+        ''' <summary>Tonmodell 3: Verstaerkung der Feinstruktur je Zone, Schluessel "localDetail" der
+        ''' Datei. Je Regler und Stellung (Index wie bei Curves) ein Faktor je Zonenmitte
+        ''' (DetailCenters, in L). Gemessen lassen Lichter und Tiefen die Struktur nicht einfach
+        ''' stehen: in ihrer eigenen Zone verstaerken sie sie beim Zurueckholen (Lichter -100 in den
+        ''' Lichtern 1,19, Tiefen +100 in den tiefen Tiefen 1,47) und daempfen sie beim Verstaerken.
+        ''' Steht wie MedianCurves VOR Curves.</summary>
+        Private Shared ReadOnly DetailGains As New Dictionary(Of String, Double()())(StringComparer.Ordinal)
+        Private Shared DetailCenters As Double()
+
         Private Shared ReadOnly Curves As Dictionary(Of String, Double()()) = LoadResource()
         Private Shared _grid As Integer
 
@@ -73,6 +82,25 @@ Namespace Services
                                 Next
                                 Gains(slider.Name) = g
                             Next
+                        End If
+                        Dim detailElement As JsonElement
+                        If root.TryGetProperty("localDetail", detailElement) Then
+                            Dim centers = detailElement.GetProperty("centers").EnumerateArray().Select(Function(e) e.GetDouble()).ToArray()
+                            For Each slider In detailElement.EnumerateObject()
+                                If slider.Value.ValueKind <> JsonValueKind.Object Then Continue For
+                                Dim sets = New Double(3)() {}
+                                Dim dkeys = {"-100", "-50", "50", "100"}
+                                Dim complete = centers.Length >= 2
+                                For k = 0 To 3
+                                    Dim value As JsonElement
+                                    If Not slider.Value.TryGetProperty(dkeys(k), value) Then complete = False : Exit For
+                                    sets(k) = value.EnumerateArray().Select(Function(e) e.GetDouble()).ToArray()
+                                    complete = complete AndAlso sets(k).Length = centers.Length
+                                Next
+                                ' Unvollstaendig: dann rechnet der Regler ohne Strukturglied.
+                                If complete Then DetailGains(slider.Name) = sets
+                            Next
+                            DetailCenters = centers
                         End If
                         For Each slider In root.GetProperty("curves").EnumerateObject()
                             If slider.Name.EndsWith("ByMedian", StringComparison.Ordinal) Then
@@ -160,6 +188,38 @@ Namespace Services
             Dim atHalf = (Sample(halfSet(gi), v) + (Sample(halfSet(gi + 1), v) - Sample(halfSet(gi), v)) * f) * Gain(slider, value, False)
             If magnitude <= 50.0 Then Return atHalf * magnitude / 50.0
             Dim atFull = (Sample(fullSet(gi), v) + (Sample(fullSet(gi + 1), v) - Sample(fullSet(gi), v)) * f) * Gain(slider, value, True)
+            Return atHalf + (atFull - atHalf) * (magnitude - 50.0) / 50.0
+        End Function
+
+        ''' <summary>Tonmodell 3: Faktor auf die Feinstruktur fuer Regler <paramref name="slider"/>
+        ''' (Highlights, Shadows) bei Wert <paramref name="value"/>, an der geglaetteten Helligkeit
+        ''' <paramref name="lightness"/> (L, 0 bis 100). Zwischen den Zonenmitten linear, ausserhalb
+        ''' die naechste; im Wert wie <see cref="Lift"/> zwischen 0, 50 und 100 linear. 1 ohne
+        ''' gemessene Werte.</summary>
+        Public Shared Function DetailGain(slider As String, value As Double, lightness As Double) As Double
+            Dim sets As Double()() = Nothing
+            If value = 0.0 OrElse DetailCenters Is Nothing OrElse Not DetailGains.TryGetValue(slider, sets) Then Return 1.0
+            Dim c = DetailCenters
+            Dim gi = 0
+            Dim f = 0.0
+            If lightness <= c(0) Then
+                gi = 0 : f = 0.0
+            ElseIf lightness >= c(c.Length - 1) Then
+                gi = c.Length - 2 : f = 1.0
+            Else
+                For i = 0 To c.Length - 2
+                    If lightness <= c(i + 1) Then
+                        gi = i : f = (lightness - c(i)) / (c(i + 1) - c(i))
+                        Exit For
+                    End If
+                Next
+            End If
+            Dim magnitude = Math.Min(100.0, Math.Abs(value))
+            Dim half = If(value < 0, sets(1), sets(2))
+            Dim full = If(value < 0, sets(0), sets(3))
+            Dim atHalf = half(gi) + (half(gi + 1) - half(gi)) * f
+            If magnitude <= 50.0 Then Return 1.0 + (atHalf - 1.0) * magnitude / 50.0
+            Dim atFull = full(gi) + (full(gi + 1) - full(gi)) * f
             Return atHalf + (atFull - atHalf) * (magnitude - 50.0) / 50.0
         End Function
 

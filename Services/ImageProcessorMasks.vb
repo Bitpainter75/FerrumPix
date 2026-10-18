@@ -639,7 +639,8 @@ Namespace Services
                    a.Clarity = 0 AndAlso
                    a.Blur = 0 AndAlso
                    IsNoiseReductionCropSafe(a) AndAlso
-                   Not a.NegativeEnabled
+                   Not a.NegativeEnabled AndAlso
+                   Not a.UsesLocalToneZones()
         End Function
 
         ''' <summary>Vertraegt die Rauschminderung dieser Ebene einen Ausschnitt?

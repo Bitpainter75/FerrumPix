@@ -2,6 +2,11 @@
 
 ### What's new
 
+- **Highlights and shadows keep their detail.** Both sliders now work on the brightness of the
+  surroundings instead of each single pixel: pulling the highlights down brings out the
+  structure in a bright sky instead of flattening it, and lifting the shadows does the same in
+  dark corners. Edits you saved before keep their look.
+
 - **The eyedropper shows what it hits.** A small label follows the eyedropper over the picture
   with a swatch and the value of the color under its tip.
 
@@ -23,6 +28,10 @@
   no more changing sizes, missing rows or scroll arrows when the menu fits on the screen.
   The folder tree menu no longer shows doubled or trailing separator lines, and the dialogs for
   setting the capture date and the place are wide enough for their options.
+
+- Picking exactly black, white, red or another standard color in a color picker no longer
+  falls back to a different color. This affected the background of a new document, of a
+  collage and behind transparent areas, the replace color brush and the gradient map.
 
 ## 0.9.67
 

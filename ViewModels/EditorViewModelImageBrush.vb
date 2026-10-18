@@ -163,7 +163,7 @@ Namespace ViewModels
                 Return ParseAvaloniaColorOrDefault(_replaceColor, Avalonia.Media.Color.Parse("#FF3A7BD5"))
             End Get
             Set(value As Avalonia.Media.Color)
-                Dim text = value.ToString()
+                Dim text = ColorToHex(value)
                 If String.Equals(text, _replaceColor, StringComparison.OrdinalIgnoreCase) Then Return
                 _replaceColor = text
                 Me.RaisePropertyChanged(NameOf(ReplaceColorValue))

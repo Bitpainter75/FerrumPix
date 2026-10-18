@@ -193,7 +193,7 @@ Namespace ViewModels
                 Return ParseAvaloniaColorOrDefault(_gradientMapShadowColor, Avalonia.Media.Colors.Black)
             End Get
             Set(value As Avalonia.Media.Color)
-                Dim text = value.ToString()
+                Dim text = ColorToHex(value)
                 If String.Equals(_gradientMapShadowColor, text, StringComparison.OrdinalIgnoreCase) Then Return
                 CaptureUndoState(NameOf(GradientMapShadowColorValue))
                 _gradientMapShadowColor = text
@@ -208,7 +208,7 @@ Namespace ViewModels
                 Return ParseAvaloniaColorOrDefault(_gradientMapHighlightColor, Avalonia.Media.Colors.White)
             End Get
             Set(value As Avalonia.Media.Color)
-                Dim text = value.ToString()
+                Dim text = ColorToHex(value)
                 If String.Equals(_gradientMapHighlightColor, text, StringComparison.OrdinalIgnoreCase) Then Return
                 CaptureUndoState(NameOf(GradientMapHighlightColorValue))
                 _gradientMapHighlightColor = text

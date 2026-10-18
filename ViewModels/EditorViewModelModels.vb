@@ -653,7 +653,7 @@ Namespace ViewModels
                 Return ParseAvaloniaColorOrDefault(_fogColor, Avalonia.Media.Color.Parse(FogDefaultColor))
             End Get
             Set(value As Avalonia.Media.Color)
-                Dim text = value.ToString()
+                Dim text = ColorToHex(value)
                 If String.Equals(_fogColor, text, StringComparison.OrdinalIgnoreCase) Then Return
                 _fogColor = text
                 Me.RaisePropertyChanged(NameOf(FogColorValue))

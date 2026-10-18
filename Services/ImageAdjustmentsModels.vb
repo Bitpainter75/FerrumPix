@@ -382,11 +382,15 @@ Namespace Services
 
         ''' <summary>Welche Rechnung Kontrast, Lichter, Tiefen, Weiss und Schwarz meinen.
         ''' 1 = die eigene Formel (ToneZoneLift, Kontrast in ToneTransfer), 2 = die gemessenen
-        ''' Kennlinien einer verbreiteten RAW-Entwicklung (ToneSliderCurves).
+        ''' Kennlinien einer verbreiteten RAW-Entwicklung (ToneSliderCurves), 3 = dieselben
+        ''' Kennlinien, aber Lichter und Tiefen OERTLICH: ihr Hub richtet sich nach der geglaetteten
+        ''' Helligkeit der Umgebung statt nach dem Bildpunkt, die Feinstruktur wandert mit und wird
+        ''' je Zone nach Messung verstaerkt oder gedaempft (UsesLocalToneZones,
+        ''' ImageProcessor.LocalToneBase, ToneSliderCurves.DetailGain).
         '''
         ''' Dasselbe Muster wie <see cref="WhiteBalanceModel"/>, aus demselben Grund: beide Modelle
         ''' geben demselben Reglerwert eine andere Bedeutung, und eine gespeicherte Bearbeitung muss
-        ''' so bleiben, wie sie gespeichert wurde. 0 heisst „nicht angegeben" und rechnet als 2,
+        ''' so bleiben, wie sie gespeichert wurde. 0 heisst „nicht angegeben" und rechnet als 3,
         ''' das Modell aller neuen Bearbeitungen; beim Speichern wird daraus die feste Zahl
         ''' (FpxService.SerializeAdjustments), beim Laden bekommt ein Rezept ohne das Feld mit
         ''' gesetzten Tonreglern die 1 (NormalizeLoadedAdjustments).
@@ -395,11 +399,18 @@ Namespace Services
         ''' wenn ein Look auf ein anderes Foto oder in eine Maskenebene uebertragen wird.</summary>
         Public Property ToneModel As Integer = 0
 
-        ''' <summary>Das Tonmodell, mit dem gerechnet wird: das eingetragene, sonst 2. Ohne die
+        ''' <summary>Das Tonmodell, mit dem gerechnet wird: das eingetragene, sonst 3. Ohne die
         ''' Kennlinien-Ressource bleibt es bei 1.</summary>
         Public Function ResolvedToneModel() As Integer
             If Not ToneSliderCurves.Available Then Return 1
-            Return If(ToneModel > 0, ToneModel, 2)
+            Return If(ToneModel > 0, ToneModel, 3)
+        End Function
+
+        ''' <summary>Wirken Lichter oder Tiefen oertlich (Tonmodell 3)? Dann haengt ihr Ergebnis an
+        ''' der Umgebung jedes Bildpunkts, und ein Ausschnitt rechnet am Rand anders als das ganze
+        ''' Bild.</summary>
+        Public Function UsesLocalToneZones() As Boolean
+            Return (Highlights <> 0.0F OrElse ShadowsLevel <> 0.0F) AndAlso ResolvedToneModel() >= 3
         End Function
 
         ''' <summary>Steht ein Regler, dessen Bedeutung am Reglermodell haengt? Die fuenf Tonregler,

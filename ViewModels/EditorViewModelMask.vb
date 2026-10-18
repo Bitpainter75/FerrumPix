@@ -5124,9 +5124,7 @@ Namespace ViewModels
                 Return ParseAvaloniaColorOrDefault(_selectionStrokeColor, Avalonia.Media.Colors.Black)
             End Get
             Set(value As Avalonia.Media.Color)
-                ' Ausdruecklich als #AARRGGBB: Color.ToString() liefert fuer bekannte Farben den
-                ' Namen ("Red"), und den versteht SKColor.TryParse nicht.
-                Dim text = $"#{value.A:X2}{value.R:X2}{value.G:X2}{value.B:X2}"
+                Dim text = ColorToHex(value)
                 If String.Equals(text, _selectionStrokeColor, StringComparison.OrdinalIgnoreCase) Then Return
                 _selectionStrokeColor = text
                 Me.RaisePropertyChanged(NameOf(SelectionStrokeColorValue))

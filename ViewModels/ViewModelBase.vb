@@ -67,6 +67,17 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(AreFilterLabelsVisible))
         End Sub
 
+        ''' <summary>Die Farbe eines Farbwählers als Text für das Modell, immer #AARRGGBB.
+        '''
+        ''' <para>NICHT Color.ToString(): das liefert für jede Farbe, die exakt einer benannten
+        ''' CSS-Farbe entspricht, den Namen ("Red", "White", "Black"). Der Renderer liest mit
+        ''' ImageProcessor.ParseColor, SKColor.TryParse oder AppSettingsService.NormalizeHexColor,
+        ''' und keiner davon kennt Namen: wer im Wähler genau so eine Farbe traf, bekam still die
+        ''' Ersatzfarbe der jeweiligen Stelle.</para></summary>
+        Protected Shared Function ColorToHex(color As Avalonia.Media.Color) As String
+            Return $"#{color.A:X2}{color.R:X2}{color.G:X2}{color.B:X2}"
+        End Function
+
     End Class
 
     Public Enum AppMode

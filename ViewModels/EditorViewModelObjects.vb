@@ -531,7 +531,7 @@ Namespace ViewModels
                 Return ParseAvaloniaColorOrDefault(_annotationFillColor2, Avalonia.Media.Colors.White)
             End Get
             Set(value As Avalonia.Media.Color)
-                AnnotationFillColor2 = value.ToString()
+                AnnotationFillColor2 = ColorToHex(value)
             End Set
         End Property
 
@@ -991,7 +991,7 @@ Namespace ViewModels
                 Return ParseAvaloniaColorOrDefault(_annotationShadowColor, Avalonia.Media.Color.FromArgb(128, 0, 0, 0))
             End Get
             Set(value As Avalonia.Media.Color)
-                AnnotationShadowColor = value.ToString()
+                AnnotationShadowColor = ColorToHex(value)
             End Set
         End Property
 
@@ -1075,7 +1075,7 @@ Namespace ViewModels
                 Return ParseAvaloniaColorOrDefault(_annotationGlowColor, Avalonia.Media.Colors.Yellow)
             End Get
             Set(value As Avalonia.Media.Color)
-                AnnotationGlowColor = value.ToString()
+                AnnotationGlowColor = ColorToHex(value)
             End Set
         End Property
 
