@@ -33,6 +33,13 @@ Namespace Services
         ''' LoadResource fuellt dieses hier.</summary>
         Private Shared ReadOnly MedianCurves As New Dictionary(Of String, (Medians As Double(), Sets As Double()()()))(StringComparer.Ordinal)
 
+        ''' <summary>Weiss je Spitze des Bildes (Schluessel Whites): das 99. Perzentil von L je Gruppe,
+        ''' und je Stellung eine Kurve je Gruppe. Gemessen haengt Weiss nicht am Median, sondern daran,
+        ''' wie nah die Lichter schon an Weiss stehen: Weiss +100 hebt ein flaues Bild weit und eines,
+        ''' das schon oben anstoesst, kaum. In der Kreuzprobe ueber 57 Bilder sank der Fehler bei
+        ''' Weiss +100 von 8,1 auf 3,3 L. Nur im Tonmodell 3. Steht wie MedianCurves VOR Curves.</summary>
+        Private Shared ReadOnly TopCurves As New Dictionary(Of String, (Medians As Double(), Sets As Double()()()))(StringComparer.Ordinal)
+
         ''' <summary>Kurven je Regler: Index 0 bis 3 fuer -100, -50, +50, +100. Nothing, wenn die
         ''' Ressource fehlt; dann rechnet Modell 2 wie Modell 1.</summary>
         ''' <summary>Verstaerkung je Regler und Stellung (Index wie bei Curves), Schluessel "gains" der
@@ -103,8 +110,10 @@ Namespace Services
                             DetailCenters = centers
                         End If
                         For Each slider In root.GetProperty("curves").EnumerateObject()
-                            If slider.Name.EndsWith("ByMedian", StringComparison.Ordinal) Then
-                                Dim medians = slider.Value.GetProperty("medians").EnumerateArray().Select(Function(e) e.GetDouble()).ToArray()
+                            Dim byMedian = slider.Name.EndsWith("ByMedian", StringComparison.Ordinal)
+                            Dim byTop = slider.Name.EndsWith("ByTop", StringComparison.Ordinal)
+                            If byMedian OrElse byTop Then
+                                Dim medians = slider.Value.GetProperty(If(byTop, "tops", "medians")).EnumerateArray().Select(Function(e) e.GetDouble()).ToArray()
                                 Dim sets = New Double(3)()() {}
                                 Dim mkeys = {"-100", "-50", "50", "100"}
                                 Dim complete = medians.Length >= 2
@@ -115,7 +124,11 @@ Namespace Services
                                                sets(k).All(Function(c) c.Length = grid)
                                 Next
                                 ' Unvollstaendig: dann bleibt es bei der mittleren Kurve des Reglers.
-                                If complete Then MedianCurves(slider.Name.Substring(0, slider.Name.Length - "ByMedian".Length)) = (medians, sets)
+                                If complete Then
+                                    Dim suffix = If(byTop, "ByTop", "ByMedian")
+                                    Dim target = If(byTop, TopCurves, MedianCurves)
+                                    target(slider.Name.Substring(0, slider.Name.Length - suffix.Length)) = (medians, sets)
+                                End If
                                 Continue For
                             End If
                             Dim set4 = New Double(3)() {}
@@ -167,17 +180,37 @@ Namespace Services
             If imageMedianL <= 0.0 OrElse value = 0.0 OrElse Not MedianCurves.TryGetValue(slider, entry) Then
                 Return Lift(slider, value, v)
             End If
+            Return LiftGrouped(slider, entry, value, v, imageMedianL)
+        End Function
+
+        ''' <summary>Wie <see cref="Lift"/>, aber nach der Spitze des Bildes: liegen fuer den Regler
+        ''' Kurven je Spitze vor (bisher nur Weiss), wird zwischen den Gruppen linear nach
+        ''' <paramref name="imageTopL"/> (99. Perzentil von L, 0 bis 100) geteilt, ausserhalb die
+        ''' naechste Gruppe. Ohne solche Kurven oder ohne Spitze (0 oder weniger) die mittlere Kurve.</summary>
+        Public Shared Function LiftByTop(slider As String, value As Double, v As Double, imageTopL As Double) As Double
+            Dim entry As (Medians As Double(), Sets As Double()()()) = Nothing
+            If imageTopL <= 0.0 OrElse value = 0.0 OrElse Not TopCurves.TryGetValue(slider, entry) Then
+                Return Lift(slider, value, v)
+            End If
+            Return LiftGrouped(slider, entry, value, v, imageTopL)
+        End Function
+
+        ''' <summary>Hub aus Kurven je Gruppe: linear zwischen den beiden Gruppen, deren Mitten
+        ''' <paramref name="measure"/> einschliessen, ausserhalb die naechste Gruppe; im Wert wie
+        ''' <see cref="Lift"/> zwischen 0, 50 und 100 linear.</summary>
+        Private Shared Function LiftGrouped(slider As String, entry As (Medians As Double(), Sets As Double()()()),
+                                            value As Double, v As Double, measure As Double) As Double
             Dim m = entry.Medians
             Dim gi = 0
             Dim f = 0.0
-            If imageMedianL <= m(0) Then
+            If measure <= m(0) Then
                 gi = 0 : f = 0.0
-            ElseIf imageMedianL >= m(m.Length - 1) Then
+            ElseIf measure >= m(m.Length - 1) Then
                 gi = m.Length - 2 : f = 1.0
             Else
                 For i = 0 To m.Length - 2
-                    If imageMedianL <= m(i + 1) Then
-                        gi = i : f = (imageMedianL - m(i)) / (m(i + 1) - m(i))
+                    If measure <= m(i + 1) Then
+                        gi = i : f = (measure - m(i)) / (m(i + 1) - m(i))
                         Exit For
                     End If
                 Next

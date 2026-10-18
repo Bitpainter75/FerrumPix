@@ -330,8 +330,18 @@ Namespace Services
                         Function(b) lowAfter + ToneSliderCurves.Lift("Blacks", b, lowIn), AutoTargetBlackPoint, -100.0, 0.0))
                 End If
                 If clippedWhite <= 0.005 AndAlso highAfter < AutoTargetWhitePoint Then
+                    ' Im Tonmodell 3 waehlt Weiss seine Kurve nach der Spitze des Bildes, gemessen wie
+                    ' in der Kette und wie dort durch die Belichtung geschoben; die Automatik loest mit
+                    ' derselben Kurve auf, die das Bild dann rechnet.
+                    Dim topL = 0.0
+                    If model >= 3 Then
+                        Dim reference = MeasureToneReference(source)
+                        If reference.IsMeasured Then
+                            topL = GrayVToLightness(AutoMapExposure(LightnessToGrayV(reference.TopL), usedGain))
+                        End If
+                    End If
                     result.Whites = AutoDeadband(AutoSolveRising(
-                        Function(w) highAfter + ToneSliderCurves.Lift("Whites", w, highIn), AutoTargetWhitePoint, 0.0, 100.0))
+                        Function(w) highAfter + ToneSliderCurves.LiftByTop("Whites", w, highIn, topL), AutoTargetWhitePoint, 0.0, 100.0))
                 End If
             Else
                 If clippedBlack <= 0.005 AndAlso lowAfter > AutoTargetBlackPoint Then

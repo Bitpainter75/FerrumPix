@@ -2455,12 +2455,12 @@ Namespace Services
 
         ''' <summary>Die wiederverwendbare Pixelkette ohne Geometrie, Objekte und Auswahl-Compositing.
         ''' Sie dient sowohl der globalen Bearbeitung als auch jeder lokalen Einstellungsebene.</summary>
-        ''' <param name="toneReferenceMedian">Siehe ApplyPointOpChain: Helligkeit des ganzen Bildes, wenn
-        ''' <paramref name="source"/> nur ein Ausschnitt davon ist; 0 misst an der Quelle.</param>
+        ''' <param name="toneReference">Siehe ApplyPointOpChain: Helligkeit des ganzen Bildes, wenn
+        ''' <paramref name="source"/> nur ein Ausschnitt davon ist; ungemessen misst an der Quelle.</param>
         Private Shared Function ApplyPixelAdjustmentStages(source As SKBitmap, adj As ImageAdjustments,
-                                                           Optional toneReferenceMedian As Double = 0.0) As SKBitmap
+                                                           Optional toneReference As ToneReference = Nothing) As SKBitmap
             Dim owned = False
-            Return TakeOwnership(ApplyPixelAdjustmentStagesCore(source, adj, owned, toneReferenceMedian), owned)
+            Return TakeOwnership(ApplyPixelAdjustmentStagesCore(source, adj, owned, toneReference), owned)
         End Function
 
         ''' <summary>Der Kern der Pixelkette. <paramref name="owned"/> wandert durch: beim Eintritt
@@ -2469,8 +2469,8 @@ Namespace Services
         ''' <see cref="ReplaceBitmapOwned"/>.</summary>
         Private Shared Function ApplyPixelAdjustmentStagesCore(source As SKBitmap, adj As ImageAdjustments,
                                                                ByRef owned As Boolean,
-                                                               Optional toneReferenceMedian As Double = 0.0) As SKBitmap
-            Dim toned = ApplyToneAdjustmentStagesCore(source, adj, owned, toneReferenceMedian)
+                                                               Optional toneReference As ToneReference = Nothing) As SKBitmap
+            Dim toned = ApplyToneAdjustmentStagesCore(source, adj, owned, toneReference)
             Return ApplyDetailAdjustmentStagesCore(toned, adj, owned)
         End Function
 
@@ -2478,7 +2478,7 @@ Namespace Services
         ''' Grenze vor allen raeumlichen Details/Effekten und damit der Inhalt des Tone-Caches.</summary>
         Private Shared Function ApplyToneAdjustmentStagesCore(source As SKBitmap, adj As ImageAdjustments,
                                                               ByRef owned As Boolean,
-                                                              Optional toneReferenceMedian As Double = 0.0) As SKBitmap
+                                                              Optional toneReference As ToneReference = Nothing) As SKBitmap
             Dim processed = source
 
             ' Alle Farb-Punktoperationen laufen in EINER verschmolzenen Gleitkomma-Stufe
@@ -2491,7 +2491,7 @@ Namespace Services
             ' Filter sollen auf dem fertigen Positiv arbeiten - auf dem Negativ wären sie
             ' seitenverkehrt (Aufhellen würde abdunkeln).
             processed = ReplaceBitmapOwned(processed, PerformanceTraceService.Measure(
-                "Pixel: Punktkette (Ton/Farbe)", Function() ApplyPointOpChain(processed, adj, toneReferenceMedian)), owned)
+                "Pixel: Punktkette (Ton/Farbe)", Function() ApplyPointOpChain(processed, adj, toneReference)), owned)
 
             Return processed
         End Function

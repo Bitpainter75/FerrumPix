@@ -184,14 +184,15 @@ Namespace Services
         ''' <param name="measured">Quelle fuer die Filmnegativ-Messung. Die Basis-/Dichtefarbe wird am
         ''' UNVERAENDERTEN Bild gemessen; seit die Umkehr Teil der Kette ist, muss das ausdruecklich
         ''' dasselbe Bitmap sein, das auch in die Kette geht.</param>
-        ''' <param name="toneReferenceMedian">Helligkeit L (Median) des GANZEN Bildes, nach der Lichter
-        ''' und Tiefen ihre Kennlinie waehlen. 0 heisst: an <paramref name="source"/> messen. Gesetzt
-        ''' nur, wo die Kette auf einem Ausschnitt laeuft (Maskenebene im Rechteck) - dort waere der
-        ''' eigene Median ein anderer und die Ebene wirkte innen anders als ueber das ganze Bild.</param>
+        ''' <param name="toneReference">Helligkeit des GANZEN Bildes, nach der Lichter, Tiefen und
+        ''' Weiss ihre Kennlinie waehlen. Ungemessen heisst: an <paramref name="source"/> messen.
+        ''' Gesetzt nur, wo die Kette auf einem Ausschnitt laeuft (Maskenebene im Rechteck) - dort
+        ''' waeren Median und Spitze andere und die Ebene wirkte innen anders als ueber das ganze
+        ''' Bild.</param>
         Friend Shared Function ApplyPointOpChain(source As SKBitmap, adj As ImageAdjustments,
-                                                 Optional toneReferenceMedian As Double = 0.0) As SKBitmap
+                                                 Optional toneReference As ToneReference = Nothing) As SKBitmap
             If source Is Nothing OrElse adj Is Nothing Then Return source
-            Dim chain = BuildPointOpChain(adj, source, toneReferenceMedian)
+            Dim chain = BuildPointOpChain(adj, source, toneReference)
             If chain.IsIdentity Then Return source
             Return RunPointOpChain(source, chain)
         End Function
@@ -201,7 +202,7 @@ Namespace Services
         ''' Zeit, wo heute nur ein If steht.</summary>
         Friend Shared Function BuildPointOpChain(adj As ImageAdjustments,
                                                  Optional measured As SKBitmap = Nothing,
-                                                 Optional toneReferenceMedian As Double = 0.0) As PointOpChain
+                                                 Optional toneReference As ToneReference = Nothing) As PointOpChain
             Dim chain As New PointOpChain()
 
             ' --- Filmnegativ: ERSTE Stufe, exakt die Bedingung aus ApplyFilmNegative ---
@@ -291,13 +292,16 @@ Namespace Services
                     If wantsTone Then chain.ToneBefore = BuildPointOpScalarTable(adj, True, False, False, toneModel)
                     If wantsTonal Then
                         ' Lichter und Tiefen haengen im Modell 2 an der Helligkeit des ganzen Bildes
-                        ' (ToneSliderCurves.Lift mit Median). Gemessen VOR der Kette, dann durch die
-                        ' Tonwertkurve davor geschickt: Belichtung verschiebt den Median mit.
-                        Dim imageMedianL = 0.0
-                        If toneModel >= 2 AndAlso (adj.Highlights <> 0 OrElse adj.ShadowsLevel <> 0) Then
-                            imageMedianL = If(toneReferenceMedian > 0.0, toneReferenceMedian, MeasureMedianLightness(measured))
-                            If imageMedianL > 0.0 AndAlso chain.ToneBefore IsNot Nothing Then
-                                imageMedianL = GrayVToLightness(SampleTable(chain.ToneBefore, CSng(LightnessToGrayV(imageMedianL))))
+                        ' (ToneSliderCurves.Lift mit Median), Weiss im Modell 3 an seiner Spitze
+                        ' (ToneSliderCurves.LiftByTop). Gemessen VOR der Kette, dann durch die
+                        ' Tonwertkurve davor geschickt: Belichtung verschiebt beide mit.
+                        Dim reference As ToneReference = Nothing
+                        If (toneModel >= 2 AndAlso (adj.Highlights <> 0 OrElse adj.ShadowsLevel <> 0)) OrElse
+                           (toneModel >= 3 AndAlso adj.Whites <> 0) Then
+                            reference = If(toneReference.IsMeasured, toneReference, MeasureToneReference(measured))
+                            If reference.IsMeasured AndAlso chain.ToneBefore IsNot Nothing Then
+                                reference.MedianL = GrayVToLightness(SampleTable(chain.ToneBefore, CSng(LightnessToGrayV(reference.MedianL))))
+                                reference.TopL = GrayVToLightness(SampleTable(chain.ToneBefore, CSng(LightnessToGrayV(reference.TopL))))
                             End If
                         End If
                         ' Tonmodell 3: Lichter und Tiefen in eine eigene Tabelle, die an der
@@ -305,7 +309,7 @@ Namespace Services
                         ' Bildpunkt. So rechnet die Referenz (Messung in RAW_UND_FARBE.md, Tonmodell 3).
                         If adj.UsesLocalToneZones() Then
                             EnsureGammaTables()
-                            chain.LocalToneZones = BuildToneZoneTable(adj, toneModel, imageMedianL, ToneZonePart.Local)
+                            chain.LocalToneZones = BuildToneZoneTable(adj, toneModel, reference, ToneZonePart.Local)
                             chain.LocalDetailGain = BuildLocalDetailTable(adj)
                             ' Die Tabelle am Bildpunkt ist die gemeinsame monotone Tabelle aller fuenf
                             ' Regler MINUS dem oertlichen Hub. Wo Basis und Bildpunkt gleich sind (glatte
@@ -313,13 +317,13 @@ Namespace Services
                             ' dasselbe wie im Modell 2 samt dessen Schutz gegen Tonumkehr. Zwei fuer
                             ' sich monotone Teile waeren zusammen nicht monoton: Weiss -100 und Lichter
                             ' -100 flachen beide die Lichter ab.
-                            Dim combined = BuildToneZoneTable(adj, toneModel, imageMedianL)
+                            Dim combined = BuildToneZoneTable(adj, toneModel, reference)
                             For i = 0 To combined.Length - 1
                                 combined(i) -= chain.LocalToneZones(i) - i / CSng(PointOpTableSize - 1)
                             Next
                             chain.ToneZones = combined
                         Else
-                            chain.ToneZones = BuildToneZoneTable(adj, toneModel, imageMedianL)
+                            chain.ToneZones = BuildToneZoneTable(adj, toneModel, reference)
                         End If
                     End If
                 End If
@@ -816,18 +820,21 @@ Namespace Services
         ''' zusammen koennen sie es nicht, das faengt BuildMonotoneToneZones ab.
         ''' Gemessen mit FERRUMPIX_DUMP_CURVES; Staerken sind bewusst moderat und nachjustierbar.</summary>
         Private Shared Function ToneZoneLift(adj As ImageAdjustments, d0 As Double, toneModel As Integer,
-                                             Optional imageMedianL As Double = 0.0,
+                                             Optional reference As ToneReference = Nothing,
                                              Optional part As ToneZonePart = ToneZonePart.All) As Double
             ' Tonmodell 2: die gemessenen Kennlinien, Kontrast eingeschlossen. Ihre Enden sind
             ' gemessen und laufen auf null aus; die Schwarz-Regel darunter gehoert zur Formel.
-            ' Lichter und Tiefen waehlen ihre Kurve nach der Helligkeit des ganzen Bildes.
+            ' Lichter und Tiefen waehlen ihre Kurve nach der Helligkeit des ganzen Bildes, Weiss im
+            ' Tonmodell 3 nach seiner Spitze.
             If toneModel >= 2 Then
-                Dim highlightsShadows = ToneSliderCurves.Lift("Highlights", adj.Highlights, d0, imageMedianL) +
-                                        ToneSliderCurves.Lift("Shadows", adj.ShadowsLevel, d0, imageMedianL)
+                Dim highlightsShadows = ToneSliderCurves.Lift("Highlights", adj.Highlights, d0, reference.MedianL) +
+                                        ToneSliderCurves.Lift("Shadows", adj.ShadowsLevel, d0, reference.MedianL)
                 ' Der oertliche Teil gibt es erst im Tonmodell 3.
                 If part = ToneZonePart.Local Then Return If(toneModel >= 3, highlightsShadows, 0.0)
-                Return ToneSliderCurves.Lift("Contrast", adj.Contrast, d0) +
-                       ToneSliderCurves.Lift("Whites", adj.Whites, d0) +
+                Dim whites = If(toneModel >= 3,
+                                ToneSliderCurves.LiftByTop("Whites", adj.Whites, d0, reference.TopL),
+                                ToneSliderCurves.Lift("Whites", adj.Whites, d0))
+                Return ToneSliderCurves.Lift("Contrast", adj.Contrast, d0) + whites +
                        ToneSliderCurves.Lift("Blacks", adj.Blacks, d0) + highlightsShadows
             End If
             If part = ToneZonePart.Local Then Return 0.0
@@ -864,14 +871,14 @@ Namespace Services
         ''' hinsetzt, und die Mindeststeigung gilt danach ueberall. Nothing heisst: die Kette rechnet
         ''' wie bisher direkt, bitgleich.</summary>
         Private Shared Function BuildMonotoneToneZones(adj As ImageAdjustments, toneModel As Integer,
-                                                       Optional imageMedianL As Double = 0.0,
+                                                       Optional reference As ToneReference = Nothing,
                                                        Optional part As ToneZonePart = ToneZonePart.All) As Single()
             Dim n = PointOpTableSize - 1
             Dim stepSize = 1.0 / n
             Dim curve = New Double(n) {}
             For i = 0 To n
                 Dim d = i * stepSize
-                curve(i) = d + ToneZoneLift(adj, d, toneModel, imageMedianL, part)
+                curve(i) = d + ToneZoneLift(adj, d, toneModel, reference, part)
             Next
 
             Dim slopes = New Double(n - 1) {}
@@ -913,33 +920,54 @@ Namespace Services
         ''' <summary>Lichter/Tiefen/Weiss/Schwarz allein als Tabelle, angewandt ueber ApplyToneZones.
         ''' Monoton wie in der verschmolzenen Kette.</summary>
         Private Shared Function BuildToneZoneTable(adj As ImageAdjustments, toneModel As Integer,
-                                                   Optional imageMedianL As Double = 0.0,
+                                                   Optional reference As ToneReference = Nothing,
                                                    Optional part As ToneZonePart = ToneZonePart.All) As Single()
-            Dim monotone = BuildMonotoneToneZones(adj, toneModel, imageMedianL, part)
+            Dim monotone = BuildMonotoneToneZones(adj, toneModel, reference, part)
             Dim table = New Single(PointOpTableSize - 1) {}
             For i = 0 To PointOpTableSize - 1
                 Dim v = i / CSng(PointOpTableSize - 1)
                 table(i) = If(monotone IsNot Nothing,
                               Clamp(monotone(i), 0.0F, 1.0F),
-                              Clamp(CSng(v + ToneZoneLift(adj, v, toneModel, imageMedianL, part)), 0.0F, 1.0F))
+                              Clamp(CSng(v + ToneZoneLift(adj, v, toneModel, reference, part)), 0.0F, 1.0F))
             Next
             Return table
         End Function
 
-        ''' <summary>Median der Helligkeit L (CIE, 0 bis 100) eines Bildes, aus einem Raster von rund
-        ''' 250 000 Bildpunkten; voll durchsichtige zaehlen nicht. 0, wenn kein Bild da ist oder das
-        ''' Format nicht 8 Bit RGBA ist. Gelesen wird zeilenweise ueber den nativen Zeiger, ohne
-        ''' das Bild zu kopieren.</summary>
-        Friend Shared Function MeasureMedianLightness(bmp As SKBitmap) As Double
-            If bmp Is Nothing OrElse bmp.Width <= 0 OrElse bmp.Height <= 0 Then Return 0.0
+        ''' <summary>Helligkeit des ganzen Bildes, nach der Tonregler ihre Kennlinie waehlen: der
+        ''' Median von L fuer Lichter und Tiefen, die Spitze (99. Perzentil von L) fuer Weiss. Beide
+        ''' in L, 0 bis 100; ungemessen steht beides auf 0.</summary>
+        Friend Structure ToneReference
+            Public MedianL As Double
+            Public TopL As Double
+
+            Public ReadOnly Property IsMeasured As Boolean
+                Get
+                    Return MedianL > 0.0
+                End Get
+            End Property
+        End Structure
+
+        ''' <summary>Anteil der Bildpunkte unter der Spitze, die Weiss im Tonmodell 3 misst. Das 99.
+        ''' Perzentil traf in der Kreuzprobe am besten (Weiss +100: 3,3 L gegen 3,8 bei 99,5 und 3,6
+        ''' bei 98); geglaettet gemessen war es nicht besser. Diagnostics/Reglereichung/kennlinien.py
+        ''' (TOP_PERCENTILE) muss denselben Wert tragen.</summary>
+        Private Const ToneTopFraction As Double = 0.99
+
+        ''' <summary>Median und Spitze der Helligkeit L (CIE, 0 bis 100) eines Bildes, aus einem
+        ''' Raster von rund 250 000 Bildpunkten; voll durchsichtige zaehlen nicht. Ungemessen, wenn
+        ''' kein Bild da ist oder das Format nicht 8 Bit RGBA ist. Gelesen wird zeilenweise ueber den
+        ''' nativen Zeiger, ohne das Bild zu kopieren.</summary>
+        Friend Shared Function MeasureToneReference(bmp As SKBitmap) As ToneReference
+            Dim none As ToneReference = Nothing
+            If bmp Is Nothing OrElse bmp.Width <= 0 OrElse bmp.Height <= 0 Then Return none
             Dim rOff, bOff As Integer
             Select Case bmp.ColorType
                 Case SKColorType.Bgra8888 : rOff = 2 : bOff = 0
                 Case SKColorType.Rgba8888 : rOff = 0 : bOff = 2
-                Case Else : Return 0.0
+                Case Else : Return none
             End Select
             Dim pixels = bmp.GetPixels()
-            If pixels = IntPtr.Zero Then Return 0.0
+            If pixels = IntPtr.Zero Then Return none
             Dim linear = New Double(255) {}
             For i = 0 To 255
                 Dim c = i / 255.0
@@ -961,14 +989,24 @@ Namespace Services
                     total += 1
                 Next
             Next
-            If total = 0 Then Return 0.0
+            If total = 0 Then Return none
             Dim half = total \ 2
+            Dim topCount = CLng(Math.Ceiling(total * ToneTopFraction))
+            Dim result As New ToneReference With {.MedianL = 100.0, .TopL = 100.0}
+            Dim medianFound = False
             Dim acc = 0L
             For k = 0 To 1000
                 acc += histogram(k)
-                If acc > half Then Return Math.Max(0.05, k / 10.0)
+                If Not medianFound AndAlso acc > half Then
+                    result.MedianL = Math.Max(0.05, k / 10.0)
+                    medianFound = True
+                End If
+                If acc >= topCount Then
+                    result.TopL = Math.Max(0.05, k / 10.0)
+                    Exit For
+                End If
             Next
-            Return 100.0
+            Return result
         End Function
 
         ''' <summary>L (0 bis 100) eines Graus auf seinen sRGB-Gammawert, und zurueck.</summary>

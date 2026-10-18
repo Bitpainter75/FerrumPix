@@ -7,6 +7,11 @@
   structure in a bright sky instead of flattening it, and lifting the shadows does the same in
   dark corners. Edits you saved before keep their look.
 
+- **Whites adapt to the picture.** The whites slider now looks at how close the brightest parts
+  already are to white: a flat picture opens up further, one that already reaches white is
+  lifted more gently. This brings the slider much closer to what photographers know from other
+  raw editors.
+
 - **The eyedropper shows what it hits.** A small label follows the eyedropper over the picture
   with a swatch and the value of the color under its tip.
 
