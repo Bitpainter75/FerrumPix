@@ -50,17 +50,37 @@ Namespace ViewModels
 
         Public ReadOnly Property DismissFileWarningCommand As ICommand
 
-        ''' <summary>Haengt eine Zeile an die Warnung des Fensters an (doppelte Zeilen nicht). Fuer
-        ''' Fehlschlaege an Dateien, die bis zum Schliessen sichtbar bleiben sollen, ohne einen Ablauf
-        ''' auf einen Dialog warten zu lassen. Nur auf dem Anzeigefaden.</summary>
+        ''' <summary>Haengt eine Meldung an die Warnung des Fensters an (eine, die dort schon steht,
+        ''' nicht). Fuer Fehlschlaege an Dateien, die bis zum Schliessen sichtbar bleiben sollen, ohne
+        ''' einen Ablauf auf einen Dialog warten zu lassen. Nur auf dem Anzeigefaden.</summary>
         Friend Sub ReportFileWarning(message As String)
             If String.IsNullOrWhiteSpace(message) Then Return
             If String.IsNullOrEmpty(FileWarning) Then
                 FileWarning = message
-            ElseIf Not FileWarning.Split(ControlChars.Lf).Contains(message) Then
+            ElseIf Not ContainsWholeLines(FileWarning, message) Then
                 FileWarning &= ControlChars.Lf & message
             End If
         End Sub
+
+        ''' <summary>Steht <paramref name="block"/> als zusammenhaengende Folge GANZER Zeilen in
+        ''' <paramref name="text"/>? Die Meldungen der Stapel sind mehrzeilig (Kopfzeile und Pfade);
+        ''' ein Vergleich Zeile gegen ganze Meldung faende sie nie und haengte sie bei jedem Lauf
+        ''' erneut an.</summary>
+        Private Shared Function ContainsWholeLines(text As String, block As String) As Boolean
+            Dim lines = text.Split(ControlChars.Lf)
+            Dim wanted = block.Split(ControlChars.Lf)
+            For start = 0 To lines.Length - wanted.Length
+                Dim match = True
+                For i = 0 To wanted.Length - 1
+                    If Not String.Equals(lines(start + i), wanted(i), StringComparison.Ordinal) Then
+                        match = False
+                        Exit For
+                    End If
+                Next
+                If match Then Return True
+            Next
+            Return False
+        End Function
 
         ' Die Katalogaenderungen, die nicht in die .fpxmp kamen. Gesammelt wird ueber alle Faeden
         ' (das Ereignis kommt auch aus Hintergrundlaeufen), gezaehlt auf dem Anzeigefaden.
@@ -5779,8 +5799,11 @@ Namespace ViewModels
                     Dim failed = RawSidecarService.AccompanyMove(itemPath, target)
                     LibraryService.Instance.MoveEverythingForPath(itemPath, target)
                     afterRename?.Invoke(target)
+                    ' Die Datei IST umbenannt. Eine liegen gebliebene Begleitdatei gehoert deshalb in
+                    ' die Warnung des Fensters und nicht in "Umbenennen fehlgeschlagen": das lud dazu
+                    ' ein, eine gelungene Umbenennung noch einmal oder von Hand zurueck zu machen.
                     If failed.Count > 0 Then
-                        Throw New IOException(LocalizationService.T("Begleitdatei konnte nicht geschrieben werden") & ": " & String.Join(", ", failed))
+                        ReportFileWarning(LocalizationService.T("Begleitdatei konnte nicht geschrieben werden") & ": " & String.Join(", ", failed))
                     End If
                     Return
                 Else

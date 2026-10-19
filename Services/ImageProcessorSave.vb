@@ -682,17 +682,19 @@ Namespace Services
                     ' scheitert, ist wirklich nur noch ein Zerlegefehler.
                     ' NICHT NUR BEI GLEICHEM PFAD. Drehen im Betrachter, die Stapel der Galerie und die
                     ' Serverwege schreiben in eine Nachbardatei und kopieren sie danach ueber das
-                    ' Original; fuer SaveImage sind das zwei Pfade. Die Stapel-Schreiber dienen dabei
-                    ' auch neuen Dateien und koennen den Unterschied nicht sagen. Deshalb entscheidet
-                    ' die QUELLE: ueberschrieben werden kann nur, was SaveImage selbst kodiert (JPEG,
-                    ' PNG, WebP), und fuer genau diese Quellen gibt es immer die Momentaufnahme. Sie
-                    ' sind klein; eine RAW, HEIC oder TIFF als Quelle wird nie ueberschrieben und
-                    ' bleibt beim direkten Lesen.
+                    ' Original; fuer SaveImage sind das zwei Pfade. Betrachter und Editor sagen es mit
+                    ' MissingSourceMetadata.Fail. Die Stapel-Schreiber dienen auch neuen Dateien und
+                    ' sagen es deshalb nicht selbst; der Ablauf, der ueberschreibt, legt den Aufruf in
+                    ' ReplacingSource. Ueberschrieben werden kann dabei nur, was SaveImage selbst
+                    ' kodiert (JPEG, PNG, WebP); eine RAW, HEIC oder TIFF als Quelle bleibt beim
+                    ' direkten Lesen. Ein Export in eine neue Datei kopiert die Quelle NICHT: bei einem
+                    ' Stapel ueber Hunderte grosse Fotos waere das jedes Mal die ganze Datei, um ein paar
+                    ' Kilobyte Aufnahmedaten zu lesen.
                     Dim metadataSource = sourcePath
                     Dim snapshot As String = Nothing
                     Dim sourceCanBeReplaced = PathIdentity.AreSame(sourcePath, targetPath) OrElse
                                               missingSource = MissingSourceMetadata.Fail OrElse
-                                              IsRewritableInPlace(sourcePath)
+                                              (_replacingSourceDepth > 0 AndAlso IsRewritableInPlace(sourcePath))
                     If keepMetadata AndAlso sourceCanBeReplaced Then
                         snapshot = SnapshotMetadataSource(sourcePath)
                         metadataSource = snapshot
@@ -799,10 +801,9 @@ Namespace Services
                                                     image.Encode(fileFormat, quality))
                                         ' Atomar: erst daneben schreiben, dann darüberbewegen - ein
                                         ' abgebrochener Encode darf das Original nicht zerstören.
-                                        ' Mit Aufnahmedaten kommen sie in DERSELBEN Nachbardatei
-                                        ' hinzu, bevor sie umgehängt wird.
+                                        ' Mit Aufnahmedaten kommen sie vorher im Speicher hinzu.
                                         If sourceMetadata IsNot Nothing AndAlso Not sourceMetadata.IsEmpty Then
-                                            WriteImageWithMetadataAtomic(targetPath, Sub(fs) data.SaveTo(fs), sourceMetadata)
+                                            WriteImageWithMetadataAtomic(targetPath, data.ToArray(), sourceMetadata)
                                         Else
                                             WriteFileAtomic(targetPath, Sub(fs) data.SaveTo(fs))
                                         End If
@@ -1003,10 +1004,6 @@ Namespace Services
             Return Nothing
         End Function
 
-        ''' <summary>Kopiert die Quelle vollstaendig in eine lokale Datei im Ordner fuer
-        ''' Zwischendateien, mit derselben Endung (die Zerleger waehlen ihren Weg danach). Jeder
-        ''' Lesefehler fliegt als Ausnahme weiter und bricht das Speichern ab; siehe den Aufruf in
-        ''' SaveImage.</summary>
         ''' <summary>Kann eine Datei dieser Endung an Ort und Stelle neu geschrieben werden? Nur, was
         ''' SaveImage selbst als Ziel kodiert und was ein Bild ist: JPEG, PNG, WebP. TIFF und JPEG XL
         ''' entstehen nur als neue Datei (CanEncodeToTargetExtension).</summary>
@@ -1019,6 +1016,35 @@ Namespace Services
             End Select
         End Function
 
+        ' Je Faden: der Schreiber eines Stapels laeuft synchron auf dem Faden, der ihn ruft.
+        <ThreadStatic> Private Shared _replacingSourceDepth As Integer
+
+        ''' <summary>Fuer die Dauer des Using: was SaveImage auf diesem Faden schreibt, ersetzt
+        ''' danach seine Quelle (ueber eine Nachbardatei, die der Aufrufer auf das Original kopiert
+        ''' oder an den Server gibt). SaveImage liest die Aufnahmedaten dann aus einer vollstaendigen
+        ''' Momentaufnahme, siehe dort. Fuer die Stapel-Schreiber, die dieselbe Funktion auch fuer
+        ''' neue Dateien benutzen und den Unterschied selbst nicht kennen.</summary>
+        Friend Shared Function ReplacingSource() As IDisposable
+            _replacingSourceDepth += 1
+            Return New ReplacingSourceScope()
+        End Function
+
+        Private NotInheritable Class ReplacingSourceScope
+            Implements IDisposable
+
+            Private _disposed As Boolean
+
+            Public Sub Dispose() Implements IDisposable.Dispose
+                If _disposed Then Return
+                _disposed = True
+                _replacingSourceDepth -= 1
+            End Sub
+        End Class
+
+        ''' <summary>Kopiert die Quelle vollstaendig in eine lokale Datei im Ordner fuer
+        ''' Zwischendateien, mit derselben Endung (die Zerleger waehlen ihren Weg danach). Jeder
+        ''' Lesefehler fliegt als Ausnahme weiter und bricht das Speichern ab; siehe den Aufruf in
+        ''' SaveImage.</summary>
         Private Shared Function SnapshotMetadataSource(sourcePath As String) As String
             Dim snapshot = IO.Path.Combine(IO.Path.GetTempPath(),
                                            "ferrumpix-source-" & Guid.NewGuid().ToString("N").Substring(0, 8) &
@@ -1063,29 +1089,22 @@ Namespace Services
         '''
         ''' Frueher kam das Bild zuerst atomar ans Ziel und die Aufnahmedaten danach hinein. Scheiterte
         ''' der zweite Schritt, stand ein Bild ohne EXIF, XMP und IPTC da, beim Speichern ueber das
-        ''' Original ohne Rueckweg, und SaveImage meldete trotzdem Erfolg. Jetzt entsteht beides in
-        ''' einer Nachbardatei im Zielordner; nur wenn beides gelingt, wird sie umgehaengt. Sonst
-        ''' bleibt das Ziel unberuehrt, die Nachbardatei geht weg, und der Fehler geht weiter.</summary>
-        Private Shared Sub WriteImageWithMetadataAtomic(targetPath As String, writer As Action(Of Stream),
+        ''' Original ohne Rueckweg, und SaveImage meldete trotzdem Erfolg. Jetzt werden die
+        ''' Aufnahmedaten im Speicher in das kodierte Bild gesetzt, und erst das fertige Ganze geht in
+        ''' EINEM atomaren Schreibvorgang ans Ziel. Scheitert etwas davor, ist am Ziel nichts
+        ''' geschehen. Eine Nachbardatei als Zwischenstand schrieb das Bild zweimal und rief dreimal
+        ''' fsync, was auf Netzlaufwerken und Speicherkarten spuerbar war.</summary>
+        Private Shared Sub WriteImageWithMetadataAtomic(targetPath As String, encoded As Byte(),
                                                         metadata As SourceMetadata)
-            Dim stagePath = AtomicSiblingPath(targetPath)
-            Try
-                WriteFileAtomic(stagePath, writer)
-                If metadata.JpegSegments IsNot Nothing Then
-                    WriteJpegMetadata(metadata.JpegSegments, stagePath)
-                ElseIf metadata.PngChunks IsNot Nothing Then
-                    WritePngMetadata(metadata.PngChunks, stagePath)
-                ElseIf metadata.WebpChunks IsNot Nothing Then
-                    WriteWebpMetadata(metadata.WebpChunks, stagePath)
-                End If
-                File.Move(stagePath, targetPath, overwrite:=True)
-            Catch
-                Try
-                    If File.Exists(stagePath) Then File.Delete(stagePath)
-                Catch
-                End Try
-                Throw
-            End Try
+            Dim bytes = encoded
+            If metadata.JpegSegments IsNot Nothing Then
+                bytes = WithJpegMetadata(metadata.JpegSegments, bytes)
+            ElseIf metadata.PngChunks IsNot Nothing Then
+                bytes = WithPngMetadata(metadata.PngChunks, bytes)
+            ElseIf metadata.WebpChunks IsNot Nothing Then
+                bytes = WithWebpMetadata(metadata.WebpChunks, bytes)
+            End If
+            WriteAllBytesAtomic(targetPath, bytes)
         End Sub
 
         ''' <summary>
@@ -1184,11 +1203,11 @@ Namespace Services
                       BuildJpegMetadataSegmentsFromSource(sourcePath))
         End Function
 
-        Private Shared Sub WriteJpegMetadata(metadataSegments As List(Of Byte()), targetPath As String)
-            If metadataSegments Is Nothing OrElse metadataSegments.Count = 0 Then Return
-
-            Dim targetBytes = File.ReadAllBytes(targetPath)
-            If targetBytes.Length < 4 OrElse targetBytes(0) <> &HFF OrElse targetBytes(1) <> &HD8 Then Return
+        ''' <summary>Das kodierte JPEG mit den Aufnahmedaten der Quelle. Unveraendert zurueck, wenn
+        ''' es nichts einzusetzen gibt oder die Datei kein JPEG ist.</summary>
+        Private Shared Function WithJpegMetadata(metadataSegments As List(Of Byte()), targetBytes As Byte()) As Byte()
+            If metadataSegments Is Nothing OrElse metadataSegments.Count = 0 Then Return targetBytes
+            If targetBytes.Length < 4 OrElse targetBytes(0) <> &HFF OrElse targetBytes(1) <> &HD8 Then Return targetBytes
 
             Dim frame = TryReadJpegFrameSize(targetBytes)
             For Each segment In metadataSegments
@@ -1203,8 +1222,8 @@ Namespace Services
                 output.AddRange(segment)
             Next
             output.AddRange(stripped.Skip(insertAt))
-            WriteAllBytesAtomic(targetPath, output.ToArray())
-        End Sub
+            Return output.ToArray()
+        End Function
 
         ''' <summary>Die Metadaten-Segmente eines JPEG, SEQUENZIELL gelesen statt die Datei am Stueck.
         '''
@@ -1766,11 +1785,11 @@ Namespace Services
                       BuildPngMetadataChunksFromSource(sourcePath))
         End Function
 
-        Private Shared Sub WritePngMetadata(metadataChunks As List(Of Byte()), targetPath As String)
-            If metadataChunks Is Nothing OrElse metadataChunks.Count = 0 Then Return
-
-            Dim targetBytes = File.ReadAllBytes(targetPath)
-            If Not IsPngBytes(targetBytes) Then Return
+        ''' <summary>Das kodierte PNG mit den Aufnahmedaten der Quelle. Unveraendert zurueck, wenn es
+        ''' nichts einzusetzen gibt oder die Datei nicht lesbar ist.</summary>
+        Private Shared Function WithPngMetadata(metadataChunks As List(Of Byte()), targetBytes As Byte()) As Byte()
+            If metadataChunks Is Nothing OrElse metadataChunks.Count = 0 Then Return targetBytes
+            If Not IsPngBytes(targetBytes) Then Return targetBytes
 
             ' Bildmasse und Vorschau am GESCHRIEBENEN Bild ausrichten, siehe PatchExifToWrittenSize.
             ' Der Block wird dafuer neu gebaut statt an Ort und Stelle geaendert: ein PNG-Block
@@ -1795,7 +1814,7 @@ Namespace Services
             While offset + 12 <= targetBytes.Length
                 Dim length = ReadInt32BE(targetBytes, offset)
                 Dim chunkEnd = offset + 12 + length
-                If length < 0 OrElse chunkEnd > targetBytes.Length Then Return
+                If length < 0 OrElse chunkEnd > targetBytes.Length Then Return targetBytes
                 Dim chunkType = Text.Encoding.ASCII.GetString(targetBytes, offset + 4, 4)
 
                 If Not inserted AndAlso chunkType = "IDAT" Then
@@ -1812,8 +1831,8 @@ Namespace Services
                 offset = chunkEnd
             End While
 
-            WriteAllBytesAtomic(targetPath, output.ToArray())
-        End Sub
+            Return output.ToArray()
+        End Function
 
         Private Shared Function ReadPngMetadataChunks(path As String) As List(Of Byte())
             Dim bytes = File.ReadAllBytes(path)
@@ -1938,16 +1957,17 @@ Namespace Services
             Return sourceChunks
         End Function
 
-        Private Shared Sub WriteWebpMetadata(sourceChunks As List(Of WebpChunk), targetPath As String)
-            If sourceChunks Is Nothing OrElse sourceChunks.Count = 0 Then Return
+        ''' <summary>Das kodierte WEBP mit den Aufnahmedaten der Quelle. Unveraendert zurueck, wenn
+        ''' es nichts einzusetzen gibt oder die Datei nicht lesbar ist.</summary>
+        Private Shared Function WithWebpMetadata(sourceChunks As List(Of WebpChunk), targetBytes As Byte()) As Byte()
+            If sourceChunks Is Nothing OrElse sourceChunks.Count = 0 Then Return targetBytes
 
-            Dim targetBytes = File.ReadAllBytes(targetPath)
             Dim targetChunks = ReadWebpChunks(targetBytes)
-            If targetChunks.Count = 0 Then Return
+            If targetChunks.Count = 0 Then Return targetBytes
 
             Dim vp8x = targetChunks.FirstOrDefault(Function(c) c.Type = "VP8X")
             Dim imageChunk = targetChunks.FirstOrDefault(Function(c) c.Type = "VP8 " OrElse c.Type = "VP8L")
-            If vp8x Is Nothing AndAlso imageChunk Is Nothing Then Return
+            If vp8x Is Nothing AndAlso imageChunk Is Nothing Then Return targetBytes
 
             Dim flags As Byte = 0
             Dim width As Integer = 0
@@ -1962,7 +1982,7 @@ Namespace Services
                 height = size.Height
                 If targetChunks.Any(Function(c) c.Type = "ALPH") Then flags = CByte(flags Or &H10)
             End If
-            If width <= 0 OrElse height <= 0 Then Return
+            If width <= 0 OrElse height <= 0 Then Return targetBytes
 
             ' Bildmasse und Vorschau am GESCHRIEBENEN Bild ausrichten, siehe PatchExifToWrittenSize.
             ' Hier ist es ein Patch an Ort und Stelle: ein WEBP-Block traegt keine Pruefsumme, und
@@ -1990,8 +2010,8 @@ Namespace Services
                 outputChunks.Add(chunk)
             Next
 
-            WriteWebpChunks(targetPath, outputChunks)
-        End Sub
+            Return BuildWebpFile(outputChunks)
+        End Function
 
         Private Class WebpChunk
             Public Property Type As String = ""
@@ -2054,7 +2074,7 @@ Namespace Services
             Return New WebpChunk With {.Type = "VP8X", .Data = data}
         End Function
 
-        Private Shared Sub WriteWebpChunks(path As String, chunks As List(Of WebpChunk))
+        Private Shared Function BuildWebpFile(chunks As List(Of WebpChunk)) As Byte()
             Dim body As New List(Of Byte)()
             For Each chunk In chunks
                 body.AddRange(Text.Encoding.ASCII.GetBytes(chunk.Type))
@@ -2068,10 +2088,8 @@ Namespace Services
             bytes.AddRange(BitConverter.GetBytes(CUInt(4 + body.Count)))
             bytes.AddRange(Text.Encoding.ASCII.GetBytes("WEBP"))
             bytes.AddRange(body)
-            ' Ueber die atomare Fassung wie bei JPEG und PNG: sie schreibt bis auf die Platte, bevor
-            ' die Datei umgehaengt wird (siehe WriteFileAtomic).
-            WriteAllBytesAtomic(path, bytes.ToArray())
-        End Sub
+            Return bytes.ToArray()
+        End Function
 
         Private Shared Function BuildWebpMetadataChunksFromSource(sourcePath As String) As List(Of WebpChunk)
             Dim result As New List(Of WebpChunk)()

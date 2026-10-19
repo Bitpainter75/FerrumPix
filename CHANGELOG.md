@@ -81,6 +81,12 @@
   photo.xmp stays where another file with the same name still needs it.
 
 - When a sidecar cannot be moved to the trash or deleted, the remaining file is reported.
+  Renaming a picture whose sidecar stays behind no longer says the rename failed: the picture
+  is renamed, and the sidecar is named in the warning bar. The same warning no longer appears
+  twice when a batch runs again over the same files.
+
+- Objects with their own highlights, shadows or whites in a saved .fpx or edit file look the
+  same as when they were saved.
 
 - Some NEF files from the Nikon Z50II and Z5II that could not be decoded showed colored noise
   and a green area. They now show the preview embedded in the file instead.

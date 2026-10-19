@@ -13134,7 +13134,11 @@ Namespace ViewModels
                             ' neue Dateien erzeugen (MissingSourceMetadata.SaveWithoutMetadata). Hier
                             ' waere das Ergebnis aber eine Datei, die von aussen geloescht oder
                             ' umbenannt wurde und nun ohne EXIF neu entstuende: dann lieber nichts.
-                            If writer(source, temp) AndAlso File.Exists(source) Then
+                            Dim written As Boolean
+                            Using ImageProcessor.ReplacingSource()
+                                written = writer(source, temp)
+                            End Using
+                            If written AndAlso File.Exists(source) Then
                                 File.Copy(temp, source, True)
                                 changedCount += 1
                                 ExifService.Invalidate(source)
@@ -13337,7 +13341,12 @@ Namespace ViewModels
                                         CreateImmichReplaceOutputPath(item, outputExtension(source)),
                                         CreateImmichBatchOutputPath(source, outputExtension(source), nameSuffix, nameBuilder))
                     Try
-                        Dim ok = Await Task.Run(Function() writer(source, outputPath))
+                        ' Im Aktualisieren-Modus ersetzt das Ergebnis das Original auf dem Server.
+                        Dim ok = Await Task.Run(Function()
+                                                    Using If(updateExisting, ImageProcessor.ReplacingSource(), Nothing)
+                                                        Return writer(source, outputPath)
+                                                    End Using
+                                                End Function)
                         If Not ok OrElse Not File.Exists(outputPath) Then Continue For
 
                         Dim newAssetId As String
@@ -14226,7 +14235,7 @@ Namespace ViewModels
                 If ownedStem IsNot Nothing Then companions.Add((ownedStem, aside & ".stem.xmp"))
             End If
             Dim setAside As New List(Of (Original As String, Aside As String))()
-            MovePathSameFolder(target, aside)
+            MoveFileOrFolder(target, aside)
             Try
                 For Each companion In companions
                     If File.Exists(companion.Item1) Then
@@ -14241,7 +14250,7 @@ Namespace ViewModels
                     ' (TransferPath): ist er gescheitert, liegt dort nichts von uns. Was dort jetzt
                     ' liegt, ist inzwischen von woanders entstanden und gehört jemand anderem. Dann
                     ' scheitert eben das Zurückbenennen, und die Meldung nennt den Ort der alten Fassung.
-                    MovePathSameFolder(aside, target)
+                    MoveFileOrFolder(aside, target)
                     ' Ebenso bei den Begleitern: eine inzwischen entstandene fremde Datei bleibt.
                     For Each companion In setAside
                         File.Move(companion.Aside, companion.Original)
@@ -14296,7 +14305,7 @@ Namespace ViewModels
                     If File.Exists(source) OrElse Directory.Exists(source) Then
                         DeletePathIfPresent(staging)
                     ElseIf File.Exists(staging) OrElse Directory.Exists(staging) Then
-                        MovePathAnywhere(staging, source)
+                        MoveFileOrFolder(staging, source)
                     End If
                 Catch cleanupEx As Exception
                     DiagnosticLogService.LogException("Gallery.TransferPath.Cleanup", cleanupEx)
@@ -14305,10 +14314,10 @@ Namespace ViewModels
             End Try
 
             Try
-                RunWithTargetSetAside(target, replaceConfirmed, Sub() MovePathSameFolder(staging, target))
+                RunWithTargetSetAside(target, replaceConfirmed, Sub() MoveFileOrFolder(staging, target))
             Catch ex As Exception
                 Try
-                    If movePath Then MovePathAnywhere(staging, source) Else DeletePathIfPresent(staging)
+                    If movePath Then MoveFileOrFolder(staging, source) Else DeletePathIfPresent(staging)
                 Catch backEx As Exception
                     DiagnosticLogService.LogException("Gallery.TransferPath.Back", backEx)
                     If movePath Then
@@ -14344,15 +14353,7 @@ Namespace ViewModels
 
         ''' <summary>Verschiebt über Ordner- und Datenträgergrenzen; ein Ordner geht dabei nur
         ''' innerhalb desselben Datenträgers (Directory.Move).</summary>
-        Private Shared Sub MovePathAnywhere(source As String, target As String)
-            If File.Exists(source) Then
-                File.Move(source, target)
-            Else
-                Directory.Move(source, target)
-            End If
-        End Sub
-
-        Private Shared Sub MovePathSameFolder(source As String, target As String)
+        Private Shared Sub MoveFileOrFolder(source As String, target As String)
             If File.Exists(source) Then
                 File.Move(source, target)
             Else

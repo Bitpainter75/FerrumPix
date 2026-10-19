@@ -130,32 +130,72 @@ Namespace Services
         End Function
 
         ''' <summary>Traegt das Tonmodell fest ein, wo Tonregler stehen und keins eingetragen ist: im
-        ''' Rezept selbst und in jeder Maskenebene. <paramref name="model"/> 0 heisst: das, mit dem
-        ''' gerade gerechnet wird (Speichern); 1 heisst: die eigene Formel (Laden alter Rezepte).</summary>
+        ''' Rezept selbst, in jeder Maskenebene und in jedem Objekt mit eigenen Anpassungen.
+        ''' <paramref name="model"/> 0 heisst: das, mit dem gerade gerechnet wird (Speichern); 1
+        ''' heisst: die eigene Formel (Laden alter Rezepte).</summary>
         Friend Shared Sub PinToneModel(adj As ImageAdjustments, model As Integer)
-            If adj Is Nothing Then Return
-            If adj.ToneModel <= 0 AndAlso adj.UsesToneModel() Then
-                adj.ToneModel = If(model > 0, model, adj.ResolvedToneModel())
-            End If
-            If adj.MaskedAdjustmentLayers Is Nothing Then Return
-            For Each layer In adj.MaskedAdjustmentLayers
-                Dim layerAdj = layer?.Adjustments
-                If layerAdj IsNot Nothing AndAlso layerAdj.ToneModel <= 0 AndAlso layerAdj.UsesToneModel() Then
-                    layerAdj.ToneModel = If(model > 0, model, layerAdj.ResolvedToneModel())
+            For Each part In ToneModelCarriers(adj)
+                If part.ToneModel <= 0 AndAlso part.UsesToneModel() Then
+                    part.ToneModel = If(model > 0, model, part.ResolvedToneModel())
                 End If
             Next
         End Sub
 
         Private Shared Function NeedsToneModelPin(adj As ImageAdjustments) As Boolean
-            If adj.ToneModel <= 0 AndAlso adj.UsesToneModel() Then Return True
-            If adj.MaskedAdjustmentLayers Is Nothing Then Return False
-            Return adj.MaskedAdjustmentLayers.Any(Function(l) l?.Adjustments IsNot Nothing AndAlso
-                                                      l.Adjustments.ToneModel <= 0 AndAlso l.Adjustments.UsesToneModel())
+            Return ToneModelCarriers(adj).Any(Function(part) part.ToneModel <= 0 AndAlso part.UsesToneModel())
+        End Function
+
+        ''' <summary>Jeder Satz Anpassungen im Rezept, der eigene Tonregler hat: das Rezept selbst,
+        ''' die Maskenebenen und die Objekte.</summary>
+        Private Shared Iterator Function ToneModelCarriers(adj As ImageAdjustments) As IEnumerable(Of ImageAdjustments)
+            If adj Is Nothing Then Return
+            Yield adj
+            If adj.MaskedAdjustmentLayers IsNot Nothing Then
+                For Each layer In adj.MaskedAdjustmentLayers
+                    If layer?.Adjustments IsNot Nothing Then Yield layer.Adjustments
+                Next
+            End If
+            If adj.Annotations IsNot Nothing Then
+                For Each annotation In adj.Annotations
+                    If annotation?.Adjustments IsNot Nothing Then Yield annotation.Adjustments
+                Next
+            End If
+        End Function
+
+        ''' <summary>Die Objekte bekamen ihr Tonmodell beim Speichern lange nicht eingetragen, anders
+        ''' als Rezept und Maskenebenen. Ihre 0 ist deshalb zweideutig, und nur das JSON loest sie
+        ''' auf: steht das Feld ToneModel in ihren Anpassungen, wurde die Datei mit Tonmodell
+        ''' geschrieben, und die 0 rechnete damals als 2. Fehlt das Feld, stammt sie aus der Zeit der
+        ''' eigenen Formel und bekommt danach in <see cref="PinToneModel"/> die 1. Muss VOR dem
+        ''' Deserialisieren laufen, danach ist der Unterschied verloren.</summary>
+        Friend Shared Sub PinLegacyObjectToneModels(adjustmentsNode As JsonNode)
+            Dim annotations = TryCast(FindProperty(TryCast(adjustmentsNode, JsonObject), "Annotations"), JsonArray)
+            If annotations Is Nothing Then Return
+            For Each annotation In annotations
+                Dim objectAdj = TryCast(FindProperty(TryCast(annotation, JsonObject), "Adjustments"), JsonObject)
+                If objectAdj Is Nothing Then Continue For
+                Dim key = objectAdj.Select(Function(p) p.Key).
+                    FirstOrDefault(Function(k) String.Equals(k, NameOf(ImageAdjustments.ToneModel), StringComparison.OrdinalIgnoreCase))
+                If key Is Nothing Then Continue For
+                Dim value = TryCast(objectAdj(key), JsonValue)
+                Dim number As Integer
+                If value IsNot Nothing AndAlso value.TryGetValue(number) AndAlso number <= 0 Then objectAdj(key) = 2
+            Next
+        End Sub
+
+        Private Shared Function FindProperty(obj As JsonObject, name As String) As JsonNode
+            If obj Is Nothing Then Return Nothing
+            For Each p In obj
+                If String.Equals(p.Key, name, StringComparison.OrdinalIgnoreCase) Then Return p.Value
+            Next
+            Return Nothing
         End Function
 
         Friend Shared Function DeserializeAdjustments(json As String) As ImageAdjustments
             If String.IsNullOrWhiteSpace(json) Then Return Nothing
-            Return NormalizeLoadedAdjustments(JsonSerializer.Deserialize(Of ImageAdjustments)(json, JsonOptions))
+            Dim node = JsonNode.Parse(json)
+            PinLegacyObjectToneModels(node)
+            Return NormalizeLoadedAdjustments(node.Deserialize(Of ImageAdjustments)(JsonOptions))
         End Function
 
 
@@ -507,7 +547,9 @@ Namespace Services
                     If recipeZip Is Nothing Then Return Nothing
                     Dim recipe As FpxRecipe
                     Using es = recipeZip.Open()
-                        recipe = JsonSerializer.Deserialize(Of FpxRecipe)(es, JsonOptions)
+                        Dim recipeNode = JsonNode.Parse(es)
+                        PinLegacyObjectToneModels(FindProperty(TryCast(recipeNode, JsonObject), "Adjustments"))
+                        recipe = recipeNode?.Deserialize(Of FpxRecipe)(JsonOptions)
                     End Using
                     If recipe?.Adjustments Is Nothing Then Return Nothing
                     recipe.Adjustments = NormalizeLoadedAdjustments(recipe.Adjustments)

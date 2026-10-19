@@ -1415,23 +1415,14 @@ Namespace Services
                 If json Is Nothing Then Return
 
                 Try
-                    Directory.CreateDirectory(SettingsDirectory)
                     ' Nicht direkt in settings.json schreiben: ein Absturz mitten im Schreiben hinterließe eine
                     ' abgeschnittene Datei. Load würde die beim nächsten Start als unlesbar verwerfen - samt
-                    ' Wasserzeichen-Presets, gespeicherten Suchen und Theme. Erst vollständig danebenschreiben,
-                    ' dann ersetzen.
-                    Dim tempPath = SettingsPath & ".tmp"
+                    ' Wasserzeichen-Presets, gespeicherten Suchen und Theme. Der gemeinsame Weg schreibt
+                    ' vollständig in eine Nachbardatei je Vorgang und ersetzt dann; eine feste
+                    ' "settings.json.tmp" teilten sich zwei Instanzen, die gleichzeitig speichern.
                     ' Erst hier werden die Zugangsdaten verschluesselt: im Speicher stehen sie im
                     ' Klartext (sonst muesste jede Abfrage entschluesseln), in der DATEI nicht.
-                    ' Bis auf die Platte, bevor umbenannt wird: sonst kann nach einem Stromausfall der
-                    ' neue Name gelten und der Inhalt fehlen, und settings.json ist leer.
-                    Using fs = New FileStream(tempPath, FileMode.Create, FileAccess.Write, FileShare.None)
-                        Using writer = New StreamWriter(fs, New Text.UTF8Encoding(encoderShouldEmitUTF8Identifier:=False), 4096, leaveOpen:=True)
-                            writer.Write(ProtectSecrets(json))
-                        End Using
-                        fs.Flush(flushToDisk:=True)
-                    End Using
-                    File.Move(tempPath, SettingsPath, overwrite:=True)
+                    JsonStoreService.WriteAtomicOrThrow(SettingsPath, ProtectSecrets(json))
                 Catch ex As Exception
                     ' Volle Platte, fehlende Rechte: früher fiel das lautlos unter den Tisch und der Nutzer
                     ' glaubte, seine Einstellung sei gespeichert. Und der Stand war weg: er war schon
@@ -1444,6 +1435,9 @@ Namespace Services
                 End Try
             End SyncLock
             If failed Then RaiseEvent WriteFailed(Nothing, EventArgs.Empty)
+            ' Nachbardateien eines abgestuerzten Laufs, einmal je Prozess. Hier und nicht in Load:
+            ' das Aufraeumen protokolliert, und das Protokoll laedt die Einstellungen.
+            JsonStoreService.RemoveStaleTemps(SettingsPath, "Settings")
         End Sub
 
         ''' <summary>Ändert genau ein paar Felder und speichert. Ersetzt das fünfzehnmal kopierte

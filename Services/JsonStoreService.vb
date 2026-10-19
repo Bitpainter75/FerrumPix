@@ -16,9 +16,8 @@ Namespace Services
     ''' Favorit den gesamten Bestand durch eine Datei mit genau diesem einen Eintrag - ohne
     ''' jede Meldung. Favoriten und Suchlisten sind Handarbeit und nicht wiederherstellbar.
     '''
-    ''' AppSettingsService loest dasselbe seit laengerem selbst und bleibt bewusst eigenstaendig
-    ''' (es haelt zusaetzlich einen Zwischenspeicher). Hier steht die Fassung fuer alle anderen,
-    ''' damit es keine dritte und vierte Kopie derselben Regel gibt.
+    ''' AppSettingsService haelt Zwischenspeicher und Fehlerbehandlung selbst, schreibt aber ueber
+    ''' <see cref="WriteAtomicOrThrow"/> hier. So gibt es die Regel nur einmal.
     ''' </summary>
     Public NotInheritable Class JsonStoreService
 
@@ -37,31 +36,7 @@ Namespace Services
         ''' Kleinschreibung, "Path.GetDirectoryName" loeste dann auf den Parameter auf.
         Public Shared Function WriteAtomic(targetFile As String, json As String, area As String) As Boolean
             Try
-                Dim folder = Path.GetDirectoryName(targetFile)
-                If Not String.IsNullOrEmpty(folder) Then Directory.CreateDirectory(folder)
-
-                ' Eine Nachbardatei JE SCHREIBVORGANG. Mit einer festen ".tmp" schrieben zwei
-                ' Vorgaenge auf dieselbe Datei in dieselbe Nachbardatei: der eine scheiterte, oder der
-                ' eine haengte die halbe Datei des anderen um. Das Muster des Namens kennt
-                ' RemoveStaleTemps; wer es aendert, aendert es dort mit.
-                Dim tempPath = targetFile & "." & Guid.NewGuid().ToString("N").Substring(0, 8) & ".tmp"
-                Try
-                    Using fs = New FileStream(tempPath, FileMode.CreateNew, FileAccess.Write, FileShare.None)
-                        Using writer = New StreamWriter(fs, New UTF8Encoding(encoderShouldEmitUTF8Identifier:=False), 4096, leaveOpen:=True)
-                            writer.Write(json)
-                        End Using
-                        ' Bis auf die Platte, bevor umbenannt wird: sonst kann nach einem Stromausfall
-                        ' der neue Name gelten und der Inhalt fehlen, und die Datei ist leer.
-                        fs.Flush(flushToDisk:=True)
-                    End Using
-                    File.Move(tempPath, targetFile, overwrite:=True)
-                Catch
-                    Try
-                        If File.Exists(tempPath) Then File.Delete(tempPath)
-                    Catch
-                    End Try
-                    Throw
-                End Try
+                WriteAtomicOrThrow(targetFile, json)
                 Return True
             Catch ex As Exception
                 ' Volle Platte, fehlende Rechte: frueher fiel das lautlos unter den Tisch und der
@@ -70,6 +45,37 @@ Namespace Services
                 Return False
             End Try
         End Function
+
+        ''' <summary>Dasselbe wie <see cref="WriteAtomic"/>, aber ein Fehler kommt als Ausnahme beim
+        ''' Aufrufer an. Fuer AppSettingsService: es protokolliert selbst und haelt den Stand dann
+        ''' vorgemerkt.</summary>
+        Public Shared Sub WriteAtomicOrThrow(targetFile As String, json As String)
+            Dim folder = Path.GetDirectoryName(targetFile)
+            If Not String.IsNullOrEmpty(folder) Then Directory.CreateDirectory(folder)
+
+            ' Eine Nachbardatei JE SCHREIBVORGANG. Mit einer festen ".tmp" schrieben zwei
+            ' Vorgaenge auf dieselbe Datei in dieselbe Nachbardatei: der eine scheiterte, oder der
+            ' eine haengte die halbe Datei des anderen um. Das Muster des Namens kennt
+            ' RemoveStaleTemps; wer es aendert, aendert es dort mit.
+            Dim tempPath = targetFile & "." & Guid.NewGuid().ToString("N").Substring(0, 8) & ".tmp"
+            Try
+                Using fs = New FileStream(tempPath, FileMode.CreateNew, FileAccess.Write, FileShare.None)
+                    Using writer = New StreamWriter(fs, New UTF8Encoding(encoderShouldEmitUTF8Identifier:=False), 4096, leaveOpen:=True)
+                        writer.Write(json)
+                    End Using
+                    ' Bis auf die Platte, bevor umbenannt wird: sonst kann nach einem Stromausfall
+                    ' der neue Name gelten und der Inhalt fehlen, und die Datei ist leer.
+                    fs.Flush(flushToDisk:=True)
+                End Using
+                File.Move(tempPath, targetFile, overwrite:=True)
+            Catch
+                Try
+                    If File.Exists(tempPath) Then File.Delete(tempPath)
+                Catch
+                End Try
+                Throw
+            End Try
+        End Sub
 
         ''' <summary>
         ''' Legt eine unlesbare Datei zur Seite, statt sie beim naechsten Speichern ueberschreiben

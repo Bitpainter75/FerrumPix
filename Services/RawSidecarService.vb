@@ -253,8 +253,10 @@ Namespace Services
                                 New XCData(json))))
 
                     target = SidecarPathFor(rawPath)
-                    temp = target & ".tmp"
-                    Using fs = New FileStream(temp, FileMode.Create, FileAccess.Write, FileShare.None)
+                    ' Eine Nachbardatei je Vorgang: eine feste ".tmp" teilten sich zwei Instanzen, die
+                    ' dieselbe Datei gleichzeitig schreiben, und eine haengte die halbe der anderen um.
+                    temp = ImageProcessor.AtomicSiblingPath(target)
+                    Using fs = New FileStream(temp, FileMode.CreateNew, FileAccess.Write, FileShare.None)
                         Using writer = XmlWriter.Create(fs, New XmlWriterSettings With {.Indent = True})
                             doc.Save(writer)
                         End Using
