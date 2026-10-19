@@ -11578,28 +11578,27 @@ Namespace ViewModels
                 _mainVm.Viewer.ReleaseCurrentImageIfAny(sources)
                 _mainVm.Editor.ReleaseCurrentImageIfAny(sources)
 
-                ' Ueber geteilte Stamm-XMP entscheidet erst das Ende des Stapels, mit frisch gelesenem
-                ' Ordner und im Hintergrund (RawSidecarService.BatchScope).
-                Using batch = RawSidecarService.BatchScope()
-                    For Each mapping In result.Mappings
-                        If String.IsNullOrEmpty(mapping.SourcePath) OrElse String.IsNullOrEmpty(mapping.TargetPath) Then Continue For
-                        ' Reines Aendern der Gross-/Kleinschreibung ist auf Linux eine ECHTE Umbenennung
-                        ' (RAW.jpg und raw.jpg sind zwei Dateien) und darf nicht uebersprungen werden.
-                        If String.Equals(NormalizePath(mapping.SourcePath), NormalizePath(mapping.TargetPath), PathIdentity.Comparison) Then Continue For
-                        If File.Exists(mapping.TargetPath) OrElse Directory.Exists(mapping.TargetPath) Then Throw New IOException("Ein Zielname existiert bereits.")
+                Await RunSidecarBatchAsync(
+                    Function()
+                        For Each mapping In result.Mappings
+                            If String.IsNullOrEmpty(mapping.SourcePath) OrElse String.IsNullOrEmpty(mapping.TargetPath) Then Continue For
+                            ' Reines Aendern der Gross-/Kleinschreibung ist auf Linux eine ECHTE Umbenennung
+                            ' (RAW.jpg und raw.jpg sind zwei Dateien) und darf nicht uebersprungen werden.
+                            If String.Equals(NormalizePath(mapping.SourcePath), NormalizePath(mapping.TargetPath), PathIdentity.Comparison) Then Continue For
+                            If File.Exists(mapping.TargetPath) OrElse Directory.Exists(mapping.TargetPath) Then Throw New IOException("Ein Zielname existiert bereits.")
 
-                        If File.Exists(mapping.SourcePath) Then
-                            ThrowIfTargetSidecarConflict(mapping.SourcePath, mapping.TargetPath, replaceConfirmed:=False)
-                            File.Move(mapping.SourcePath, mapping.TargetPath)
-                            failedCompanions.AddRange(RawSidecarService.AccompanyMove(mapping.SourcePath, mapping.TargetPath))
-                        ElseIf Directory.Exists(mapping.SourcePath) Then
-                            Directory.Move(mapping.SourcePath, mapping.TargetPath)
-                        End If
-                        ' Wie beim einzelnen Umbenennen: Katalog und Kacheln wandern mit.
-                        LibraryService.Instance.MoveEverythingForPath(mapping.SourcePath, mapping.TargetPath)
-                    Next
-                    failedCompanions.AddRange(Await Task.Run(Function() batch.Finish()))
-                End Using
+                            If File.Exists(mapping.SourcePath) Then
+                                ThrowIfTargetSidecarConflict(mapping.SourcePath, mapping.TargetPath, replaceConfirmed:=False)
+                                File.Move(mapping.SourcePath, mapping.TargetPath)
+                                failedCompanions.AddRange(RawSidecarService.AccompanyMove(mapping.SourcePath, mapping.TargetPath))
+                            ElseIf Directory.Exists(mapping.SourcePath) Then
+                                Directory.Move(mapping.SourcePath, mapping.TargetPath)
+                            End If
+                            ' Wie beim einzelnen Umbenennen: Katalog und Kacheln wandern mit.
+                            LibraryService.Instance.MoveEverythingForPath(mapping.SourcePath, mapping.TargetPath)
+                        Next
+                        Return Task.CompletedTask
+                    End Function, failedCompanions)
 
                 ClearSelection()
                 ' Erst den Wunsch hinterlegen, dann abgleichen: das Umbenennen hat den Watcher schon
@@ -12027,6 +12026,7 @@ Namespace ViewModels
             Dim errorMessage As String = Nothing
             Dim sourcePaths As List(Of String) = Nothing
             Dim completedSources As New List(Of String)()
+            Dim leftoverCompanions As New List(Of String)()
             Try
                 sourcePaths = paths.
                     Where(Function(p) Not String.IsNullOrEmpty(p) AndAlso (File.Exists(p) OrElse Directory.Exists(p))).
@@ -12035,21 +12035,13 @@ Namespace ViewModels
                     Where(Function(p) If(cut, FileOperationPolicy.CanMove(p, targetFolder), FileOperationPolicy.CanCopy(p))).
                     ToList()
 
-                ' Ueber geteilte Stamm-XMP entscheidet erst das Ende des Stapels, mit frisch gelesenem
-                ' Ordner und im Hintergrund (RawSidecarService.BatchScope).
-                Dim leftoverCompanions As List(Of String)
-                Using batch = RawSidecarService.BatchScope()
-                    For Each source In sourcePaths
-                        If Await CopyOrMovePathAsync(source, targetFolder, cut) Then
-                            completedSources.Add(source)
-                        End If
-                    Next
-                    leftoverCompanions = Await Task.Run(Function() batch.Finish())
-                End Using
-                If leftoverCompanions.Count > 0 Then
-                    Await _mainVm.ShowMessageAsync(LocalizationService.T("Begleitdatei konnte nicht geschrieben werden"),
-                                                   String.Join(Environment.NewLine, leftoverCompanions))
-                End If
+                Await RunSidecarBatchAsync(Async Function()
+                                               For Each source In sourcePaths
+                                                   If Await CopyOrMovePathAsync(source, targetFolder, cut) Then
+                                                       completedSources.Add(source)
+                                                   End If
+                                               Next
+                                           End Function, leftoverCompanions)
                 ClearSelection()
                 If _isVirtualFolder Then
                     If cut Then RemovePathsFromVirtualFolder(completedSources)
@@ -12062,6 +12054,32 @@ Namespace ViewModels
                 errorMessage = ex.Message
             End Try
             If errorMessage IsNot Nothing Then Await _mainVm.ShowMessageAsync(LocalizationService.T("Einfügen fehlgeschlagen"), errorMessage)
+            Await ReportLeftoverCompanionsAsync(leftoverCompanions)
+        End Function
+
+        ''' <summary>Die Schleife eines Stapels, der Bilder verschiebt, umbenennt oder einfuegt, in
+        ''' einem Rahmen fuer die Begleitdateien (RawSidecarService.BatchScope). Ueber geteilte
+        ''' Stamm-XMP entscheidet dessen Ende; Finish laeuft hier IMMER im Hintergrund, auch wenn die
+        ''' Schleife mit einer Ausnahme abbricht. Die geht danach unveraendert weiter, und was sich
+        ''' nicht entfernen liess, steht in <paramref name="leftover"/>, damit der Aufrufer es auch
+        ''' nach einem Abbruch meldet.</summary>
+        Private Shared Async Function RunSidecarBatchAsync(body As Func(Of Task), leftover As List(Of String)) As Task
+            Using batch = RawSidecarService.BatchScope()
+                Dim failure As Runtime.ExceptionServices.ExceptionDispatchInfo = Nothing
+                Try
+                    Await body()
+                Catch ex As Exception
+                    failure = Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(ex)
+                End Try
+                leftover.AddRange(Await Task.Run(Function() batch.Finish()))
+                failure?.Throw()
+            End Using
+        End Function
+
+        Private Async Function ReportLeftoverCompanionsAsync(leftover As List(Of String)) As Task
+            If leftover Is Nothing OrElse leftover.Count = 0 Then Return
+            Await _mainVm.ShowMessageAsync(LocalizationService.T("Begleitdatei konnte nicht geschrieben werden"),
+                                           String.Join(Environment.NewLine, leftover))
         End Function
 
         ''' <summary>Lädt Serveroriginale (Pseudo-Pfade) in einen lokalen Zielordner herunter - der
@@ -13988,6 +14006,7 @@ Namespace ViewModels
             Dim errorMessage As String = Nothing
             Dim sourcePaths As List(Of String) = Nothing
             Dim completedSources As New List(Of String)()
+            Dim leftoverCompanions As New List(Of String)()
             Try
                 sourcePaths = paths.
                     Where(Function(p) Not String.IsNullOrEmpty(p)).
@@ -13997,21 +14016,13 @@ Namespace ViewModels
                     ToList()
                 If sourcePaths.Count = 0 Then Return
 
-                ' Ueber geteilte Stamm-XMP entscheidet erst das Ende des Stapels, mit frisch gelesenem
-                ' Ordner und im Hintergrund (RawSidecarService.BatchScope).
-                Dim leftoverCompanions As List(Of String)
-                Using batch = RawSidecarService.BatchScope()
-                    For Each source In sourcePaths
-                        If Await CopyOrMovePathAsync(source, targetFolder, True) Then
-                            completedSources.Add(source)
-                        End If
-                    Next
-                    leftoverCompanions = Await Task.Run(Function() batch.Finish())
-                End Using
-                If leftoverCompanions.Count > 0 Then
-                    Await _mainVm.ShowMessageAsync(LocalizationService.T("Begleitdatei konnte nicht geschrieben werden"),
-                                                   String.Join(Environment.NewLine, leftoverCompanions))
-                End If
+                Await RunSidecarBatchAsync(Async Function()
+                                               For Each source In sourcePaths
+                                                   If Await CopyOrMovePathAsync(source, targetFolder, True) Then
+                                                       completedSources.Add(source)
+                                                   End If
+                                               Next
+                                           End Function, leftoverCompanions)
                 ClearSelection()
                 If _isVirtualFolder Then
                     RemovePathsFromVirtualFolder(completedSources)
@@ -14024,6 +14035,7 @@ Namespace ViewModels
                 errorMessage = ex.Message
             End Try
             If errorMessage IsNot Nothing Then Await _mainVm.ShowMessageAsync(LocalizationService.T("Verschieben fehlgeschlagen"), errorMessage)
+            Await ReportLeftoverCompanionsAsync(leftoverCompanions)
         End Function
 
         Public Sub ClearSelection()

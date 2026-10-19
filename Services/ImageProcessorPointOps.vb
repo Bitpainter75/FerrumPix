@@ -1035,10 +1035,20 @@ Namespace Services
             Do
                 histogram = New Long(1000) {}
                 total = 0L
-                For y = bounds.Top To bounds.Bottom - 1 Step stepSize
+                ' VERSETZT IM TONMODELL 3: je Rasterzeile eine feste, pseudozufaellige Zeile in ihrer
+                ' Zelle, je Zelle eine ebensolche Spalte. Ein Raster immer in der linken oberen Ecke
+                ' sah ein regelmaessiges Muster nur von einer Seite: ein schwarz-weisses Schachbrett mit
+                ' einem Bildpunkt je Feld traf bei Schrittweite 4 nur Schwarz. Der Versatz haengt allein
+                ' an der Lage der Zelle im Rechteck, Bildrender und Kompositor sehen also dieselben
+                ' Punkte. Tonmodell 2 bleibt bei der Ecke, wie veroeffentlicht.
+                Dim jitter = unpremultiply AndAlso stepSize > 1
+                For yCell = bounds.Top To bounds.Bottom - 1 Step stepSize
+                    Dim cellRow = (yCell - bounds.Top) \ stepSize
+                    Dim y = If(jitter, Math.Min(bounds.Bottom - 1, yCell + RasterJitter(cellRow, -1, stepSize)), yCell)
                     Marshal.Copy(IntPtr.Add(pixels, y * rowBytes), row, 0, rowBytes)
                     Dim maskRow = y * bmp.Width
-                    For x = bounds.Left To bounds.Right - 1 Step stepSize
+                    For xCell = bounds.Left To bounds.Right - 1 Step stepSize
+                        Dim x = If(jitter, Math.Min(bounds.Right - 1, xCell + RasterJitter((xCell - bounds.Left) \ stepSize, cellRow, stepSize)), xCell)
                         Dim o = x * 4
                         If row(o + 3) = 0 Then Continue For
                         If mask IsNot Nothing AndAlso mask(maskRow + x) = 0 Then Continue For
@@ -1101,6 +1111,16 @@ Namespace Services
                 End If
             Next
             Return result
+        End Function
+
+        ''' <summary>Fester Versatz 0 bis <paramref name="stepSize"/> - 1 fuer die Rasterzelle
+        ''' (<paramref name="a"/>, <paramref name="b"/>), aus einer Ganzzahl-Streuung. In Long gerechnet:
+        ''' VB wirft bei einem Ueberlauf der Integer-Multiplikation.</summary>
+        Private Shared Function RasterJitter(a As Integer, b As Integer, stepSize As Integer) As Integer
+            Dim h = (CLng(a) * 73856093L) Xor (CLng(b) * 19349663L) Xor 83492791L
+            h = (h Xor (h >> 13)) And &H7FFFFFFFL
+            h = (h * 1274126177L) And &H7FFFFFFFL
+            Return CInt(h Mod stepSize)
         End Function
 
         ''' <summary>Das kleinste Rechteck um alle nicht voll durchsichtigen Bildpunkte einer 8-Bit-

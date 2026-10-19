@@ -315,6 +315,9 @@ Namespace Services
 
         Public Shared Function AccompanyMove(sourcePath As String, targetPath As String) As List(Of String)
             Dim failed As New List(Of String)()
+            ' Die Bilddatei hat der Aufrufer schon verschoben; die Listen des Stapels erfahren es.
+            NoteInBatch(sourcePath, added:=False)
+            NoteInBatch(targetPath, added:=True)
             Try
                 Dim sidecar = SidecarPathFor(sourcePath)
                 If File.Exists(sidecar) Then File.Move(sidecar, SidecarPathFor(targetPath), overwrite:=False)
@@ -328,6 +331,7 @@ Namespace Services
 
         Public Shared Function AccompanyCopy(sourcePath As String, targetPath As String) As List(Of String)
             Dim failed As New List(Of String)()
+            NoteInBatch(targetPath, added:=True)
             Try
                 Dim sidecar = SidecarPathFor(sourcePath)
                 If File.Exists(sidecar) Then File.Copy(sidecar, SidecarPathFor(targetPath), overwrite:=False)
@@ -350,6 +354,7 @@ Namespace Services
         Private Shared Function AccompanyDeleteCore(rawPath As String, useTrash As Boolean,
                                                     moveToTrash As Func(Of String, Boolean)) As List(Of String)
             Dim failed As New List(Of String)()
+            NoteInBatch(rawPath, added:=False)
             Dim companions As New List(Of String) From {SidecarPathFor(rawPath), rawPath & ".xmp"}
             Dim stemXmp = StemXmpPathFor(rawPath)
             ' Erst nachsehen, ob es die Stamm-XMP gibt: HasStemSibling zaehlt den Ordner auf.
@@ -392,9 +397,24 @@ Namespace Services
             ' Ohne Stamm-XMP gibt es nichts mitzunehmen, und die Aufzaehlung des Ordners in
             ' HasStemSibling entfaellt (siehe AccompanyDeleteCore).
             If Not File.Exists(sourceStem) Then Return
-            ' Die ersetzte Form am Ziel kann einem anderen Bild gehoeren. Der eindeutige Name
-            ' nimmt die Quell-XMP auf und hat beim Lesen Vorrang vor der fremden Stamm-XMP.
-            If File.Exists(targetStem) AndAlso Not File.Exists(targetPath & ".xmp") Then targetStem = targetPath & ".xmp"
+            ' Die ersetzte Form am Ziel kann einem anderen Bild gehoeren: weil dort schon eine liegt,
+            ' oder weil dort ein anderes Bild desselben Stamms liegt (foto.jpg neben dem neuen
+            ' foto.cr2), das eine neue foto.xmp sonst ebenso faende und fremde Bewertungen und
+            ' Stichwoerter uebernaehme. Der eindeutige Name nimmt die Quell-XMP dann auf und hat beim
+            ' Lesen Vorrang. Im Zweifel (Ordner nicht lesbar) der eindeutige Name.
+            Dim stemTaken = File.Exists(targetStem)
+            Dim targetHasSibling = Not stemTaken AndAlso HasStemSiblingInBatch(targetPath, whenUnknown:=True)
+            If (stemTaken OrElse targetHasSibling) AndAlso Not File.Exists(targetPath & ".xmp") Then
+                targetStem = targetPath & ".xmp"
+            ElseIf targetHasSibling Then
+                ' Der eindeutige Name ist schon belegt (die angehaengte Form kam eben mit), die
+                ' Stamm-Form wuerde dem Nachbarn zugeordnet: kein freier Platz, die Quell-XMP bleibt
+                ' und wird gemeldet, wie bei einer fremden XMP am Ziel.
+                DiagnosticLogService.LogAlways("Sidecar.Accompany",
+                    $"Stamm-XMP nicht mitgenommen, am Ziel liegt ein Bild desselben Stamms: {Path.GetFileName(targetStem)}")
+                failed.Add(sourceStem)
+                Return
+            End If
             Dim scope = _currentStemScope.Value
             If moveFiles AndAlso scope IsNot Nothing Then
                 ' Im Stapel nur kopieren und vormerken: ob die Quelle gehen darf, entscheidet das Ende
@@ -475,28 +495,34 @@ Namespace Services
         Public Shared Function OwnedStemXmp(imagePath As String) As String
             Dim stem = StemXmpPathFor(imagePath)
             If stem Is Nothing OrElse Not File.Exists(stem) Then Return Nothing
-            Dim scope = _currentStemScope.Value
-            If scope IsNot Nothing Then
-                Dim folder = Path.GetDirectoryName(imagePath)
-                If String.IsNullOrEmpty(folder) Then Return Nothing
-                Dim byStem As ILookup(Of String, String) = Nothing
-                Try
-                    SyncLock scope.TargetListings
-                        If Not scope.TargetListings.TryGetValue(folder, byStem) Then
-                            byStem = Directory.EnumerateFiles(folder).ToLookup(Function(f) Path.GetFileNameWithoutExtension(f), PathIdentity.Comparer)
-                            scope.TargetListings(folder) = byStem
-                        End If
-                    End SyncLock
-                Catch ex As Exception
-                    ' Im Zweifel geteilt: dann bleibt sie, wo sie ist.
-                    DiagnosticLogService.LogException("Sidecar.OwnedStemXmp", ex)
-                    Return Nothing
-                End Try
-                If HasStemSiblingAmong(byStem(Path.GetFileNameWithoutExtension(imagePath)), imagePath) Then Return Nothing
-                Return stem
-            End If
-            If HasStemSibling(imagePath) Then Return Nothing
+            ' Im Zweifel geteilt: dann bleibt sie, wo sie ist.
+            If HasStemSiblingInBatch(imagePath, whenUnknown:=True) Then Return Nothing
             Return stem
+        End Function
+
+        ''' <summary>HasStemSibling, im Stapel aus der Liste des Ordners (StemListing, nach ihrer
+        ''' Gueltigkeit neu gelesen) statt mit einer Aufzaehlung je Bild. Laesst sich der Ordner nicht
+        ''' lesen, gilt <paramref name="whenUnknown"/>: der Aufrufer waehlt die sichere Seite.</summary>
+        Private Shared Function HasStemSiblingInBatch(imagePath As String, whenUnknown As Boolean) As Boolean
+            Dim scope = _currentStemScope.Value
+            If scope Is Nothing Then Return HasStemSibling(imagePath)
+            Dim folder = Path.GetDirectoryName(imagePath)
+            If String.IsNullOrEmpty(folder) Then Return whenUnknown
+            Dim sameStem As List(Of String)
+            Try
+                SyncLock scope.TargetListings
+                    Dim listing As StemListing = Nothing
+                    If Not scope.TargetListings.TryGetValue(folder, listing) OrElse listing.IsStale Then
+                        listing = StemListing.Read(folder)
+                        scope.TargetListings(folder) = listing
+                    End If
+                    sameStem = listing.WithStem(Path.GetFileNameWithoutExtension(imagePath))
+                End SyncLock
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Sidecar.HasStemSiblingInBatch", ex)
+                Return whenUnknown
+            End Try
+            Return HasStemSiblingAmong(sameStem, imagePath)
         End Function
 
         ''' <summary>Nach einem gelungenen Ersetzen: die mit dem alten Ziel beiseitegelegte Stamm-XMP
@@ -558,9 +584,9 @@ Namespace Services
             Implements IDisposable
 
             Friend ReadOnly Pending As New List(Of PendingStemRemoval)()
-            ''' Zielordner, einmal gelesen und nach Stamm geordnet, fuer OwnedStemXmp. Veraltet sie,
-            ''' faengt Finish das auf (siehe DeferAsideStemRemoval).
-            Friend ReadOnly TargetListings As New Dictionary(Of String, ILookup(Of String, String))(PathIdentity.Comparer)
+            ''' Zielordner, gelesen und nach Stamm geordnet, fuer OwnedStemXmp; nach
+            ''' StemListing.MaxAgeSeconds neu gelesen.
+            Friend ReadOnly TargetListings As New Dictionary(Of String, StemListing)(PathIdentity.Comparer)
             Private ReadOnly _previous As SidecarBatch
             Private _finished As Boolean
             Private _disposed As Boolean
@@ -583,16 +609,108 @@ Namespace Services
                 Return FinishPendingStemRemovals(toFinish)
             End Function
 
+            ''' <summary>Beendet den Rahmen. Wurde Finish nicht gerufen, laeuft es hier im Hintergrund
+            ''' nach, nie auf dem Faden des Aufrufers (das kann der Anzeigefaden sein); was dann
+            ''' scheitert, steht nur im Protokoll. Die Aufrufer rufen Finish deshalb auch nach einer
+            ''' Ausnahme selbst.</summary>
             Public Sub Dispose() Implements IDisposable.Dispose
                 If _disposed Then Return
                 _disposed = True
                 _currentStemScope.Value = _previous
-                Dim failed = Finish()
-                If failed.Count > 0 Then
-                    DiagnosticLogService.LogAlways("Sidecar.FinishStemXmp", "nicht entfernt: " & String.Join(", ", failed))
-                End If
+                Dim open As Boolean
+                SyncLock Pending
+                    open = Not _finished
+                End SyncLock
+                If Not open Then Return
+                Task.Run(Sub()
+                             Dim failed = Finish()
+                             If failed.Count > 0 Then
+                                 DiagnosticLogService.LogAlways("Sidecar.FinishStemXmp", "nicht entfernt: " & String.Join(", ", failed))
+                             End If
+                         End Sub)
             End Sub
         End Class
+
+        ''' <summary>Ein Ordner, nach Stamm geordnet, mit dem Zeitpunkt des Lesens. Aelter als
+        ''' <see cref="MaxAgeSeconds"/> wird er neu gelesen: so sieht eine Entscheidung, was von aussen
+        ''' dazukam, spaetestens nach dieser Zeit, und ein grosser Ordner wird trotzdem hoechstens
+        ''' einmal je Zeitspanne gelesen statt je Bild.</summary>
+        Friend NotInheritable Class StemListing
+            Friend Const MaxAgeSeconds As Double = 1.0
+            ''' Stamm -> Pfade mit diesem Stamm.
+            Private ReadOnly _byStem As New Dictionary(Of String, List(Of String))(PathIdentity.Comparer)
+            ''' Alle Dateien des Ordners, fuer die Frage, ob eine bestimmte da ist.
+            Private ReadOnly _all As New HashSet(Of String)(PathIdentity.Comparer)
+            ''' Beginn des Lesens: was danach von AUSSEN entstand, kennt die Liste nicht. Was der
+            ''' eigene Stapel anlegt oder wegnimmt, traegt er nach (Add, Remove).
+            Friend ReadUtc As DateTime
+            Friend ReadSeconds As Double
+
+            Friend Function Contains(filePath As String) As Boolean
+                Return _all.Contains(filePath)
+            End Function
+
+            ''' <summary>Die Pfade mit diesem Stamm, als Kopie.</summary>
+            Friend Function WithStem(stem As String) As List(Of String)
+                Dim paths As List(Of String) = Nothing
+                Return If(_byStem.TryGetValue(stem, paths), paths.ToList(), New List(Of String)())
+            End Function
+
+            Friend Sub Add(filePath As String)
+                If Not _all.Add(filePath) Then Return
+                Dim stem = Path.GetFileNameWithoutExtension(filePath)
+                Dim paths As List(Of String) = Nothing
+                If Not _byStem.TryGetValue(stem, paths) Then
+                    paths = New List(Of String)()
+                    _byStem(stem) = paths
+                End If
+                paths.Add(filePath)
+            End Sub
+
+            Friend Sub Remove(filePath As String)
+                If Not _all.Remove(filePath) Then Return
+                Dim paths As List(Of String) = Nothing
+                If _byStem.TryGetValue(Path.GetFileNameWithoutExtension(filePath), paths) Then
+                    paths.RemoveAll(Function(p) String.Equals(p, filePath, PathIdentity.Comparison))
+                End If
+            End Sub
+
+            ''' <summary>Aelter als eine Sekunde, mindestens aber als das Vierfache der Lesezeit. Ohne
+            ''' den zweiten Teil waere eine Liste, deren Lesen auf einer langsamen Freigabe laenger
+            ''' dauert als die Sekunde, schon bei der Rueckgabe veraltet, und jedes Bild laese den
+            ''' Ordner neu. So geht hoechstens ein Fuenftel der Zeit ins Lesen.</summary>
+            Friend ReadOnly Property IsStale As Boolean
+                Get
+                    Return (DateTime.UtcNow - ReadUtc).TotalSeconds > Math.Max(MaxAgeSeconds, 4.0 * ReadSeconds)
+                End Get
+            End Property
+
+            Friend Shared Function Read(folder As String) As StemListing
+                Dim readUtc = DateTime.UtcNow
+                Dim listing = New StemListing With {.ReadUtc = readUtc}
+                For Each file In Directory.EnumerateFiles(folder)
+                    listing.Add(file)
+                Next
+                listing.ReadSeconds = (DateTime.UtcNow - readUtc).TotalSeconds
+                Return listing
+            End Function
+        End Class
+
+        ''' <summary>Traegt in die Zielliste des laufenden Stapels nach, was er selbst in einen
+        ''' Ordner gelegt oder daraus genommen hat. Ohne das saehe ein Stapel, der erst foto.jpg und
+        ''' danach foto.cr2 samt foto.xmp ins selbe Ziel kopiert, das eben kopierte JPEG nicht, und
+        ''' die XMP landete unter dem gemeinsamen Stamm. Ohne Stapel oder ohne Liste nichts.</summary>
+        Private Shared Sub NoteInBatch(filePath As String, added As Boolean)
+            Dim scope = _currentStemScope.Value
+            If scope Is Nothing OrElse String.IsNullOrEmpty(filePath) Then Return
+            Dim folder = Path.GetDirectoryName(filePath)
+            If String.IsNullOrEmpty(folder) Then Return
+            SyncLock scope.TargetListings
+                Dim listing As StemListing = Nothing
+                If Not scope.TargetListings.TryGetValue(folder, listing) Then Return
+                If added Then listing.Add(filePath) Else listing.Remove(filePath)
+            End SyncLock
+        End Sub
 
         ' AsyncLocal und nicht je Faden: die Stapel laufen ueber Await und Task.Run.
         Private Shared ReadOnly _currentStemScope As New Threading.AsyncLocal(Of SidecarBatch)()
@@ -626,46 +744,68 @@ Namespace Services
             If pending Is Nothing OrElse pending.Count = 0 Then Return failed
             For Each folderGroup In pending.GroupBy(Function(r) If(Path.GetDirectoryName(r.ImagePath), ""), PathIdentity.Comparer)
                 If String.IsNullOrEmpty(folderGroup.Key) Then Continue For
-                ' Nach Stamm geordnet: ein grosser Ordner wird einmal gelesen und dann je Bild nur
-                ' noch nachgeschlagen.
-                Dim byStem As ILookup(Of String, String)
-                Try
-                    byStem = Directory.EnumerateFiles(folderGroup.Key).ToLookup(Function(f) Path.GetFileNameWithoutExtension(f), PathIdentity.Comparer)
-                Catch ex As Exception
-                    ' Ordner nicht lesbar: im Zweifel bleiben alle stehen.
-                    DiagnosticLogService.LogException("Sidecar.FinishStemXmp", ex)
-                    Continue For
-                End Try
+                ' Nach Stamm geordnet: ein grosser Ordner wird gelesen und dann je Bild nur noch
+                ' nachgeschlagen. Dauert das Abarbeiten (der Papierkorb ist unter Linux ein eigener
+                ' Prozess je Datei), wird nach StemListing.MaxAgeSeconds neu gelesen.
+                Dim listing As StemListing = Nothing
                 For Each removal In folderGroup
                     Try
-                        If Not File.Exists(removal.StemXmp) Then Continue For
+                        ' ERST DEN ORDNER LESEN, dann fragen, was da ist. File.Exists sagt auch bei
+                        ' einer weggebrochenen Freigabe "fehlt", und die XMP waere still uebergangen
+                        ' worden; die Aufzaehlung wirft dann und wird gemeldet.
+                        If listing Is Nothing OrElse listing.IsStale Then
+                            Try
+                                listing = StemListing.Read(folderGroup.Key)
+                            Catch ex As Exception
+                                ' Ordner nicht lesbar: im Zweifel bleiben alle stehen, und der
+                                ' Nutzer erfaehrt es. Ob sie noch da sind, laesst sich nicht sagen.
+                                DiagnosticLogService.LogException("Sidecar.FinishStemXmp", ex)
+                                failed.AddRange(folderGroup.SkipWhile(Function(r) r IsNot removal).Select(Function(r) r.StemXmp).
+                                                Except(failed, PathIdentity.Comparer))
+                                Exit For
+                            End Try
+                        End If
+                        ' ALLEIN DIE LISTE sagt, was da ist, nachgefuehrt um das, was dieser Abschluss
+                        ' selbst entfernt oder zurueckgelegt hat (zwei Bilder desselben Stamms hatten
+                        ' dieselbe XMP vorgemerkt). Kein File.Exists: das sagt bei einer Freigabe, die
+                        ' nach dem Lesen wegbricht, still "fehlt". Ist sie weg, wirft der Versuch
+                        ' unten, und die XMP wird gemeldet.
+                        If Not listing.Contains(removal.StemXmp) Then Continue For
+                        Dim sameStem = listing.WithStem(Path.GetFileNameWithoutExtension(removal.ImagePath))
                         If removal.AsideOriginal IsNot Nothing Then
                             ' Beiseitegelegt beim Ersetzen: das neue Bild am Ziel zaehlt nicht als
                             ' Geschwister, jedes andere schon. Dann gehoerte die XMP auch ihm.
-                            If HasStemSiblingAmong(byStem(Path.GetFileNameWithoutExtension(removal.ImagePath)), removal.ImagePath) Then
-                                If File.Exists(removal.AsideOriginal) Then
+                            If HasStemSiblingAmong(sameStem, removal.ImagePath) Then
+                                If listing.Contains(removal.AsideOriginal) Then
                                     ' Der Name ist inzwischen belegt: die alte Fassung bleibt unter dem
                                     ' Beiseite-Namen liegen und wird gemeldet.
                                     failed.Add(removal.StemXmp)
                                 Else
                                     File.Move(removal.StemXmp, removal.AsideOriginal)
+                                    listing.Remove(removal.StemXmp)
+                                    listing.Add(removal.AsideOriginal)
                                 End If
                             Else
-                                File.Delete(removal.StemXmp)
+                                DeleteExisting(removal.StemXmp)
+                                listing.Remove(removal.StemXmp)
                             End If
                             Continue For
                         End If
-                        If File.Exists(removal.ImagePath) Then Continue For
-                        If HasStemSiblingAmong(byStem(Path.GetFileNameWithoutExtension(removal.ImagePath)), removal.ImagePath) Then Continue For
+                        If listing.Contains(removal.ImagePath) Then Continue For
+                        If HasStemSiblingAmong(sameStem, removal.ImagePath) Then Continue For
                         If removal.CopyAt IsNot Nothing Then
-                            If Not File.Exists(removal.CopyAt) OrElse
-                               Not File.ReadAllBytes(removal.StemXmp).AsSpan().SequenceEqual(File.ReadAllBytes(removal.CopyAt)) Then Continue For
-                            File.Delete(removal.StemXmp)
+                            ' Die Kopie liegt in einem anderen Ordner. Fehlt sie, bleibt die Quelle und
+                            ' wird gemeldet; ist sie anders (eine fremde XMP am Ziel), hat das Mitnehmen
+                            ' das schon gemeldet.
+                            If Not File.Exists(removal.CopyAt) Then Throw New IOException("Kopie am Ziel nicht da: " & removal.CopyAt)
+                            If Not File.ReadAllBytes(removal.StemXmp).AsSpan().SequenceEqual(File.ReadAllBytes(removal.CopyAt)) Then Continue For
+                            DeleteExisting(removal.StemXmp)
                         ElseIf removal.UseTrash Then
                             If Not removal.MoveToTrash(removal.StemXmp) Then Throw New IOException("Papierkorb nicht verfuegbar: " & removal.StemXmp)
                         Else
-                            File.Delete(removal.StemXmp)
+                            DeleteExisting(removal.StemXmp)
                         End If
+                        listing.Remove(removal.StemXmp)
                     Catch ex As Exception
                         DiagnosticLogService.LogException("Sidecar.FinishStemXmp", ex)
                         failed.Add(removal.StemXmp)
@@ -674,6 +814,14 @@ Namespace Services
             Next
             Return failed
         End Function
+
+        ''' <summary>Loescht eine Datei, von der die Liste sagt, dass sie da ist. File.Delete wirft
+        ''' bei einer fehlenden Datei NICHT; ist sie danach nicht weg, ebenso wenig. Deshalb danach
+        ''' geprueft: steht sie noch da oder laesst sich das nicht sagen, ist es ein Fehler.</summary>
+        Private Shared Sub DeleteExisting(filePath As String)
+            File.Delete(filePath)
+            If File.Exists(filePath) Then Throw New IOException("nicht entfernt: " & filePath)
+        End Sub
 
         ''' <summary>Liegt neben der Datei noch eine ANDERE Datei desselben Stamms (foto.jpg neben
         ''' foto.cr2)? Begleitdateien und die Datei selbst zaehlen nicht.</summary>
