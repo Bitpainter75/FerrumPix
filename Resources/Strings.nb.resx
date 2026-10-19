@@ -9837,4 +9837,7 @@
   <data name="Wie_viel_Nebel_schon_am_n_chsten_Punkt_liegt_als_30286f81" xml:space="preserve">
     <value>Hvor mye tåke som allerede ligger på det nærmeste punktet, som andel av tettheten</value>
   </data>
+  <data name="Die_alte_Fassung_lie_sich_nicht_entfernen_und_li_484267f0" xml:space="preserve">
+    <value>Den gamle versjonen kunne ikke fjernes og ligger fortsatt på {0}</value>
+  </data>
 </root>

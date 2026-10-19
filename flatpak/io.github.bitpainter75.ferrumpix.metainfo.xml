@@ -99,6 +99,54 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="0.9.68-1" date="2026-10-19">
+      <description>
+        <p>This update improves how highlights, shadows and whites respond to adjustments, bringing them closer to what you'd expect from a RAW editor. File operations are now safer, too:</p>
+        <p xml:lang="de">Mit diesem Update lassen sich Lichter, Tiefen und Weiß jetzt ähnlich wie in einem RAW-Entwickler anpassen. Auch der Umgang mit Dateien ist sicherer geworden:</p>
+        <ul>
+          <li>Highlights and shadows now take the surrounding brightness into account, preserving details in bright skies and dark areas. Previously saved edits still look the same.</li>
+          <li xml:lang="de">Lichter und Tiefen berücksichtigen jetzt die Helligkeit der Umgebung. So bleiben Details in hellen Himmeln und dunklen Bildbereichen besser erhalten. Bereits gespeicherte Bearbeitungen sehen weiterhin genauso aus wie vorher.</li>
+          <li>The whites slider now responds more naturally, depending on how close the brightest areas already are to pure white.</li>
+          <li xml:lang="de">Der Weiß-Regler reagiert jetzt natürlicher und berücksichtigt, wie nah die hellsten Bildbereiche bereits an reinem Weiß liegen.</li>
+          <li>Depth fog now has a Foreground slider. The photo wall shows file names when you hover over an image, and the eyedropper displays the color it's picking up.</li>
+          <li xml:lang="de">Beim Tiefennebel gibt es jetzt einen Regler für den Vordergrund. In der Fotowand erscheint der Dateiname, wenn du mit der Maus über ein Bild fährst, und die Pipette zeigt direkt die aufgenommene Farbe an.</li>
+          <li>Batch renaming now supports time placeholders and automatically adds numbers to avoid duplicate names. File extensions are also consistently written in lowercase.</li>
+          <li xml:lang="de">Beim Stapelumbenennen stehen jetzt auch Platzhalter für die Uhrzeit zur Verfügung. Doppelte Dateinamen werden automatisch durchnummeriert und Dateiendungen einheitlich kleingeschrieben.</li>
+          <li>Overwriting, moving and deleting images now also take care of sidecar files created by other programs. If a file can't be moved or deleted, you'll be notified.</li>
+          <li xml:lang="de">Beim Überschreiben, Verschieben und Löschen werden jetzt auch Begleitdateien anderer Programme berücksichtigt. Falls eine Datei nicht verschoben oder gelöscht werden kann, bekommst du einen Hinweis.</li>
+          <li>There are also a few smaller fixes: context menus now fit their contents, and predefined colors in the color pickers retain their exact values.</li>
+          <li xml:lang="de">Außerdem wurden einige kleinere Fehler behoben: Kontextmenüs passen sich jetzt an ihren Inhalt an, und vordefinierte Farben in den Farbwählern behalten ihre exakten Werte.</li>
+        </ul>
+      </description>
+    </release>
+    <release version="0.9.67-1" date="2026-10-17">
+      <description>
+        <p>This update brings more control over individual colors, new effects and a smoother experience when working with AI models:</p>
+        <p xml:lang="de">Dieses Update bietet mehr Möglichkeiten bei der Farbbearbeitung, neue Effekte und einen einfacheren Umgang mit KI-Modellen:</p>
+        <ul>
+          <li>Point Color is now available in the color mixer. Pick a color directly from your photo and adjust its hue, saturation and luminance without changing the rest of the image. You can fine-tune the affected color range, work with up to eight colors and use Show Range to see exactly which areas are affected. Point Color settings are also included when applying presets.</li>
+          <li xml:lang="de">Im Farbmischer gibt es jetzt Punktfarbe. Damit kannst du eine Farbe direkt im Bild auswählen und ihren Farbton, ihre Sättigung und Helligkeit gezielt anpassen. Wie viele ähnliche Farbtöne mit verändert werden, lässt sich einstellen. Bis zu acht Farben sind möglich, und mit „Bereich anzeigen“ siehst du genau, welche Bildbereiche betroffen sind. Auch in Presets werden Punktfarben jetzt vollständig übernommen.</li>
+
+          <li>Sliders for color adjustments can now display matching color gradients, making their effect easier to see at a glance. This works with temperature, tint, the color mixer, calibration, channel mixer and Point Color. The option is disabled by default.</li>
+          <li xml:lang="de">Regler für Farbanpassungen können jetzt passende Farbverläufe anzeigen. So erkennst du auf einen Blick, in welche Richtung sich die Farben verändern. Das funktioniert unter anderem bei Temperatur, Tönung, Farbmischer, Kalibrierung, Kanalmischer und Punktfarbe. Die Option ist standardmäßig ausgeschaltet.</li>
+
+          <li>The visibility toggle for adjustment groups now works with layers and correction layers, too. You can temporarily hide a group's adjustments on the selected layer and bring them back with another click.</li>
+          <li xml:lang="de">Das Augensymbol einer Einstellungsgruppe funktioniert jetzt auch bei Ebenen und Korrekturebenen. Damit kannst du die Anpassungen einer Gruppe auf der ausgewählten Ebene kurz ausblenden und mit einem weiteren Klick wieder einblenden.</li>
+
+          <li>The new Tilt-Shift effect keeps a strip of your photo sharp while gradually blurring the areas around it, creating a look similar to a tilted lens. You can adjust the width, transition, angle and position of the sharp area. The effect can also be hidden or rearranged in the settings.</li>
+          <li xml:lang="de">Mit dem neuen Tilt-Shift-Effekt bleibt ein Streifen im Bild scharf, während die Bereiche darüber und darunter zunehmend verschwimmen. So entsteht ein Look wie bei einem gekippten Objektiv. Breite, Übergang, Winkel und Position des scharfen Bereichs lassen sich frei einstellen. Der Effekt kann in den Einstellungen auch ausgeblendet oder verschoben werden.</li>
+
+          <li>Depth Fog is another new effect that adds fog based on the distance of objects in your photo. Nearby areas stay clear, while more distant ones gradually fade into the fog color. Like Depth Blur, it requires the depth model and is applied to the image using its own button.</li>
+          <li xml:lang="de">Neu ist auch der Tiefennebel, der abhängig von der Entfernung Nebel ins Bild bringt. Nahe Bereiche bleiben klar, während weiter entfernte Motive langsam in der Nebelfarbe verschwinden. Wie bei der Tiefenunschärfe wird dafür das Tiefenmodell benötigt. Der Effekt wird über eine eigene Schaltfläche auf das Bild angewendet.</li>
+
+          <li>Features that need an AI model are no longer simply disabled when the model is missing. Instead, you're asked whether you'd like to download it when you use the feature. Only the required model is downloaded, and you can follow the progress in the same window. If GPU acceleration is available but disabled, you'll also be offered the option to enable it and check your graphics card.</li>
+          <li xml:lang="de">Funktionen, für die noch ein KI-Modell fehlt, sind jetzt nicht mehr einfach ausgegraut. Wenn du sie verwendest, kannst du das benötigte Modell direkt herunterladen. Dabei wird nur das heruntergeladen, was die Funktion tatsächlich braucht, und der Fortschritt erscheint im selben Fenster. Falls die GPU-Beschleunigung ausgeschaltet ist, obwohl die Funktion sie unterstützt, kannst du sie direkt aktivieren und deine Grafikkarte prüfen lassen.</li>
+
+          <li>The graphics card check is now saved between sessions, so you won't see an unchecked status after every restart. Running a new check updates the saved result.</li>
+          <li xml:lang="de">Das Ergebnis der Grafikkartenprüfung bleibt jetzt auch nach einem Neustart erhalten. Du musst die Prüfung also nicht jedes Mal wiederholen. Wenn du sie erneut ausführst, wird das bisherige Ergebnis aktualisiert.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.9.66-2" date="2026-10-16">
       <description>
         <p>This update makes it easier to compare individual adjustments and entire editing groups. It also improves RAW support on macOS and fixes several issues with white balance, image display and TIFF/DNG performance:</p>

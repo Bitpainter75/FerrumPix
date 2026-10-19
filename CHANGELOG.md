@@ -56,7 +56,8 @@
 - Overwriting a file or folder while pasting or moving keeps the old one until the new one is
   complete. If the copy fails, for example because a network drive drops out, the old file or
   folder is back as it was. Replacing a folder no longer takes along the sidecar of a photo
-  that happens to have the same name.
+  that happens to have the same name. If the old version cannot be removed afterwards, the
+  window says where it was left.
 
 - Saving a JPEG, PNG or WebP with its photo information no longer reports success when that
   information could not be carried over. The file stays as it was and the save is shown as

@@ -9797,4 +9797,7 @@
   <data name="Wie_viel_Nebel_schon_am_n_chsten_Punkt_liegt_als_30286f81" xml:space="preserve">
     <value>Quantité de brouillard déjà présente au point le plus proche, en part de la densité</value>
   </data>
+  <data name="Die_alte_Fassung_lie_sich_nicht_entfernen_und_li_484267f0" xml:space="preserve">
+    <value>L'ancienne version n'a pas pu être supprimée et se trouve toujours à l'emplacement {0}</value>
+  </data>
 </root>

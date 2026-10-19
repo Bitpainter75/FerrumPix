@@ -9796,4 +9796,7 @@
   <data name="Wie_viel_Nebel_schon_am_n_chsten_Punkt_liegt_als_30286f81" xml:space="preserve">
     <value>Quanta névoa já existe no ponto mais próximo, como parte da densidade</value>
   </data>
+  <data name="Die_alte_Fassung_lie_sich_nicht_entfernen_und_li_484267f0" xml:space="preserve">
+    <value>Não foi possível remover a versão antiga, que ainda está em {0}</value>
+  </data>
 </root>

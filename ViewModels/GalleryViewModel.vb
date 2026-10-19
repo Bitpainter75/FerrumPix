@@ -14124,16 +14124,21 @@ Namespace ViewModels
             ' Kopieren kann bei großen Dateien und Ordnern Sekunden dauern - nicht auf dem UI-Thread.
             ' TransferPath legt den Inhalt erst vollständig neben das Ziel und hängt ihn dann um;
             ' ein vorhandenes Ziel ersetzt es nur, wenn es zum Überschreiben freigegeben ist.
-            Dim failed = Await Task.Run(Function()
-                               Dim companions = TransferPath(source, target, movePath, resolved.ReplaceConfirmed)
+            Dim outcome = Await Task.Run(Function()
+                               Dim result = TransferPath(source, target, movePath, resolved.ReplaceConfirmed)
                                ' NUR beim Verschieben. Eine Kopie ist ein NEUES Bild: sie bekommt
                                ' ihre eigenen Katalogzeilen und ihre eigene Kachel, und die des
                                ' Originals müssen dort bleiben, wo sie sind.
                                If movePath Then LibraryService.Instance.MoveEverythingForPath(source, target)
-                               Return companions
+                               Return result
                            End Function)
-            If failed.Count > 0 Then
-                Await _mainVm.ShowMessageAsync(LocalizationService.T("Begleitdatei konnte nicht geschrieben werden"), String.Join(Environment.NewLine, failed))
+            ' Ein Rest des ersetzten Ziels in die Warnung des Fensters: der Vorgang ist gelungen und
+            ' soll nicht auf einen Dialog warten, aber der Pfad muss sichtbar bleiben.
+            For Each leftover In outcome.LeftoverOldVersions
+                _mainVm.ReportFileWarning(String.Format(LocalizationService.T("Die alte Fassung ließ sich nicht entfernen und liegt noch unter {0}"), leftover))
+            Next
+            If outcome.FailedCompanions.Count > 0 Then
+                Await _mainVm.ShowMessageAsync(LocalizationService.T("Begleitdatei konnte nicht geschrieben werden"), String.Join(Environment.NewLine, outcome.FailedCompanions))
             End If
             Return True
         End Function
@@ -14238,11 +14243,14 @@ Namespace ViewModels
         ''' Inhalt vorher daneben): am Ziel wird im Fehlerfall nichts gelöscht.
         '''
         ''' Die .fpxmp des alten Ziels muss mit beiseite: blieb sie liegen und brachte die Quelle keine
-        ''' eigene mit, hing sich das alte Rezept an die neue Datei.</summary>
-        Private Shared Sub RunWithTargetSetAside(target As String, replaceConfirmed As Boolean, operation As Action)
+        ''' eigene mit, hing sich das alte Rezept an die neue Datei.
+        '''
+        ''' Liefert die Pfade, die nach dem Erfolg beim Aufräumen liegen blieben (".ferrumpix-old-");
+        ''' der Aufrufer zeigt sie an.</summary>
+        Private Shared Function RunWithTargetSetAside(target As String, replaceConfirmed As Boolean, operation As Action) As List(Of String)
             If Not File.Exists(target) AndAlso Not Directory.Exists(target) Then
                 operation()
-                Return
+                Return New List(Of String)()
             End If
             ' Ein Ziel, das erst NACH der Rückfrage entstanden ist, hat niemand zum Ersetzen
             ' freigegeben. Es bleibt stehen, und der Vorgang meldet das.
@@ -14306,21 +14314,29 @@ Namespace ViewModels
             End Try
 
             ' Erfolg. Scheitert das Aufräumen, bleibt die alte Fassung mit erkennbarem Namen liegen:
-            ' ärgerlich, aber kein Verlust und kein Grund, den gelungenen Vorgang als Fehler zu melden.
-            Try
-                DeletePathIfPresent(aside)
-                For Each companion In setAside
-                    ' Die Stamm-XMP im Stapel erst am Ende loeschen: ob sie dem alten Ziel allein
-                    ' gehoerte, wurde dort aus einer gemerkten Ordnerliste entschieden
-                    ' (RawSidecarService.DeferAsideStemRemoval).
-                    If ownedStem IsNot Nothing AndAlso String.Equals(companion.Original, ownedStem, PathIdentity.Comparison) AndAlso
-                       RawSidecarService.DeferAsideStemRemoval(companion.Aside, companion.Original, target) Then Continue For
-                    DeletePathIfPresent(companion.Aside)
-                Next
-            Catch ex As Exception
-                DiagnosticLogService.LogException("Gallery.RunWithTargetSetAside.Cleanup", ex)
-            End Try
-        End Sub
+            ' kein Verlust und kein Grund, den gelungenen Vorgang als Fehler zu melden. Aber der
+            ' Nutzer erfährt den Pfad: sonst belegt sie unbemerkt Platz und hält alte Inhalte fest.
+            ' Jede Datei für sich, damit eine gesperrte die übrigen nicht aufhält.
+            Dim leftover As New List(Of String)()
+            Dim tryDelete = Sub(path As String)
+                                Try
+                                    DeletePathIfPresent(path)
+                                Catch ex As Exception
+                                    DiagnosticLogService.LogException("Gallery.RunWithTargetSetAside.Cleanup", ex)
+                                    leftover.Add(path)
+                                End Try
+                            End Sub
+            tryDelete(aside)
+            For Each companion In setAside
+                ' Die Stamm-XMP im Stapel erst am Ende loeschen: ob sie dem alten Ziel allein
+                ' gehoerte, wurde dort aus einer gemerkten Ordnerliste entschieden
+                ' (RawSidecarService.DeferAsideStemRemoval).
+                If ownedStem IsNot Nothing AndAlso String.Equals(companion.Original, ownedStem, PathIdentity.Comparison) AndAlso
+                   RawSidecarService.DeferAsideStemRemoval(companion.Aside, companion.Original, target) Then Continue For
+                tryDelete(companion.Aside)
+            Next
+            Return leftover
+        End Function
 
         ''' <summary>Kopiert oder verschiebt eine Datei oder einen Ordner so, dass am Ziel nie etwas
         ''' Halbfertiges liegt und ein Ziel nur ersetzt wird, wenn es freigegeben ist.
@@ -14331,7 +14347,7 @@ Namespace ViewModels
         ''' inzwischen entstanden ist, lässt das Umbenennen scheitern, statt ersetzt zu werden.
         ''' Scheitert der letzte Schritt, geht beim Verschieben der Inhalt an die Quelle zurück,
         ''' bei der Kopie fällt die Nachbardatei weg. Die Begleitdateien folgen erst danach.</summary>
-        Private Shared Function TransferPath(source As String, target As String, movePath As Boolean, replaceConfirmed As Boolean) As List(Of String)
+        Private Shared Function TransferPath(source As String, target As String, movePath As Boolean, replaceConfirmed As Boolean) As TransferOutcome
             Dim isFile = File.Exists(source)
             If isFile Then ThrowIfTargetSidecarConflict(source, target, replaceConfirmed)
             Dim staging = ImageProcessor.SiblingPath(target, ".ferrumpix-new-", "", reserveBytes:=16)
@@ -14356,8 +14372,9 @@ Namespace ViewModels
                 Throw
             End Try
 
+            Dim outcome As New TransferOutcome()
             Try
-                RunWithTargetSetAside(target, replaceConfirmed, Sub() MoveFileOrFolder(staging, target))
+                outcome.LeftoverOldVersions = RunWithTargetSetAside(target, replaceConfirmed, Sub() MoveFileOrFolder(staging, target))
             Catch ex As Exception
                 Try
                     If movePath Then MoveFileOrFolder(staging, source) Else DeletePathIfPresent(staging)
@@ -14373,10 +14390,17 @@ Namespace ViewModels
             End Try
 
             If isFile Then
-                Return If(movePath, RawSidecarService.AccompanyMove(source, target), RawSidecarService.AccompanyCopy(source, target))
+                outcome.FailedCompanions = If(movePath, RawSidecarService.AccompanyMove(source, target), RawSidecarService.AccompanyCopy(source, target))
             End If
-            Return New List(Of String)()
+            Return outcome
         End Function
+
+        ''' <summary>Was nach einem gelungenen TransferPath zu melden bleibt: Begleitdateien, die nicht
+        ''' mitkamen, und Reste des ersetzten Ziels, die sich nicht entfernen liessen.</summary>
+        Private NotInheritable Class TransferOutcome
+            Public FailedCompanions As New List(Of String)()
+            Public LeftoverOldVersions As New List(Of String)()
+        End Class
 
         ''' <summary>Hält einen Vorgang auf, dessen Ziel schon eine Begleitdatei trägt, die nicht zur
         ''' Quelle gehört (RawSidecarService.UnrelatedTargetSidecar). Die Meldung sagt, warum: bei der

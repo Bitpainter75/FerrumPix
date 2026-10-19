@@ -320,7 +320,7 @@ Namespace Services
             NoteInBatch(targetPath, added:=True)
             Try
                 Dim sidecar = SidecarPathFor(sourcePath)
-                If File.Exists(sidecar) Then File.Move(sidecar, SidecarPathFor(targetPath), overwrite:=False)
+                If CompanionExists(sidecar) Then File.Move(sidecar, SidecarPathFor(targetPath), overwrite:=False)
             Catch ex As Exception
                 DiagnosticLogService.LogException("Sidecar.AccompanyMove", ex)
                 failed.Add(SidecarPathFor(sourcePath))
@@ -334,7 +334,7 @@ Namespace Services
             NoteInBatch(targetPath, added:=True)
             Try
                 Dim sidecar = SidecarPathFor(sourcePath)
-                If File.Exists(sidecar) Then File.Copy(sidecar, SidecarPathFor(targetPath), overwrite:=False)
+                If CompanionExists(sidecar) Then File.Copy(sidecar, SidecarPathFor(targetPath), overwrite:=False)
             Catch ex As Exception
                 DiagnosticLogService.LogException("Sidecar.AccompanyCopy", ex)
                 failed.Add(SidecarPathFor(sourcePath))
@@ -357,8 +357,17 @@ Namespace Services
             NoteInBatch(rawPath, added:=False)
             Dim companions As New List(Of String) From {SidecarPathFor(rawPath), rawPath & ".xmp"}
             Dim stemXmp = StemXmpPathFor(rawPath)
-            ' Erst nachsehen, ob es die Stamm-XMP gibt: HasStemSibling zaehlt den Ordner auf.
-            If stemXmp IsNot Nothing AndAlso File.Exists(stemXmp) Then
+            ' Erst nachsehen, ob es die Stamm-XMP gibt: HasStemSibling zaehlt den Ordner auf. Ist sie
+            ' nicht erreichbar, wird sie gemeldet statt still uebergangen (CompanionExists).
+            Dim stemExists As Boolean
+            Try
+                stemExists = stemXmp IsNot Nothing AndAlso CompanionExists(stemXmp)
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Sidecar.AccompanyDelete", ex)
+                failed.Add(stemXmp)
+                stemExists = False
+            End Try
+            If stemExists Then
                 Dim scope = _currentStemScope.Value
                 If scope IsNot Nothing Then
                     ' Im Stapel entscheidet erst dessen Ende, mit frisch gelesenem Ordner.
@@ -370,7 +379,7 @@ Namespace Services
             End If
             For Each companion In companions
                 Try
-                    If Not File.Exists(companion) Then Continue For
+                    If Not CompanionExists(companion) Then Continue For
                     If useTrash Then
                         If Not moveToTrash(companion) Then Throw New IOException("Papierkorb nicht verfuegbar: " & companion)
                     Else
@@ -384,6 +393,21 @@ Namespace Services
             Return failed
         End Function
 
+        ''' <summary>Liegt dort eine Begleitdatei? False NUR, wenn sie fehlt (Datei oder Ordner nicht
+        ''' gefunden), und fuer einen Ordner dieses Namens. Jeder andere Fehler (Freigabe weg, keine
+        ''' Rechte) fliegt als Ausnahme weiter: File.Exists sagte dann ebenfalls "fehlt", und die
+        ''' Begleitdatei blieb nach dem Loeschen oder Verschieben des Bildes still am alten Ort
+        ''' liegen. Die Aufrufer melden sie dann.</summary>
+        Private Shared Function CompanionExists(filePath As String) As Boolean
+            Try
+                Return (File.GetAttributes(filePath) And FileAttributes.Directory) = 0
+            Catch ex As FileNotFoundException
+                Return False
+            Catch ex As DirectoryNotFoundException
+                Return False
+            End Try
+        End Function
+
         ''' <summary>Nimmt die fremden XMP-Dateien mit. Siehe den Block oben fuer die Regeln.</summary>
         Private Shared Sub CarryXmpCompanions(sourcePath As String, targetPath As String, moveFiles As Boolean,
                                               failed As List(Of String))
@@ -395,8 +419,15 @@ Namespace Services
             If sourceStem Is Nothing OrElse targetStem Is Nothing Then Return
             If String.Equals(sourceStem, targetStem, PathIdentity.Comparison) Then Return
             ' Ohne Stamm-XMP gibt es nichts mitzunehmen, und die Aufzaehlung des Ordners in
-            ' HasStemSibling entfaellt (siehe AccompanyDeleteCore).
-            If Not File.Exists(sourceStem) Then Return
+            ' HasStemSibling entfaellt (siehe AccompanyDeleteCore). Nicht erreichbar heisst nicht
+            ' "fehlt": dann wird sie gemeldet.
+            Try
+                If Not CompanionExists(sourceStem) Then Return
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Sidecar.AccompanyXmp", ex)
+                failed.Add(sourceStem)
+                Return
+            End Try
             ' Die ersetzte Form am Ziel kann einem anderen Bild gehoeren: weil dort schon eine liegt,
             ' oder weil dort ein anderes Bild desselben Stamms liegt (foto.jpg neben dem neuen
             ' foto.cr2), das eine neue foto.xmp sonst ebenso faende und fremde Bewertungen und
@@ -433,7 +464,7 @@ Namespace Services
         Private Shared Sub CarryOne(source As String, target As String, moveFile As Boolean, removeSourceIfSame As Boolean,
                                     failed As List(Of String), Optional sameIsDone As Boolean = False)
             Try
-                If Not File.Exists(source) Then Return
+                If Not CompanionExists(source) Then Return
                 If File.Exists(target) Then
                     ' Liegt dort schon DIESELBE Datei (ein Stapel, der foto.cr2 und foto.jpg nacheinander
                     ' umbenennt, hat sie beim ersten Schritt kopiert), bleibt die Quelle sonst als Waise

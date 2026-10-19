@@ -9837,4 +9837,7 @@
   <data name="Wie_viel_Nebel_schon_am_n_chsten_Punkt_liegt_als_30286f81" xml:space="preserve">
     <value>Hur mycket dimma som redan ligger på den närmaste punkten, som andel av tätheten</value>
   </data>
+  <data name="Die_alte_Fassung_lie_sich_nicht_entfernen_und_li_484267f0" xml:space="preserve">
+    <value>Den gamla versionen kunde inte tas bort och ligger kvar på {0}</value>
+  </data>
 </root>

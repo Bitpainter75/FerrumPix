@@ -9841,4 +9841,7 @@
   <data name="Wie_viel_Nebel_schon_am_n_chsten_Punkt_liegt_als_30286f81" xml:space="preserve">
     <value>ปริมาณหมอกที่มีอยู่แล้วที่จุดใกล้ที่สุด เป็นสัดส่วนของความหนาแน่น</value>
   </data>
+  <data name="Die_alte_Fassung_lie_sich_nicht_entfernen_und_li_484267f0" xml:space="preserve">
+    <value>ไม่สามารถลบเวอร์ชันเก่าได้ และยังคงอยู่ที่ {0}</value>
+  </data>
 </root>

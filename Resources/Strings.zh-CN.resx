@@ -9795,4 +9795,7 @@
   <data name="Wie_viel_Nebel_schon_am_n_chsten_Punkt_liegt_als_30286f81" xml:space="preserve">
     <value>最近处已有的雾量，以密度的比例表示</value>
   </data>
+  <data name="Die_alte_Fassung_lie_sich_nicht_entfernen_und_li_484267f0" xml:space="preserve">
+    <value>无法删除旧版本，它仍位于 {0}</value>
+  </data>
 </root>

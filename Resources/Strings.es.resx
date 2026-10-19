@@ -9797,4 +9797,7 @@
   <data name="Wie_viel_Nebel_schon_am_n_chsten_Punkt_liegt_als_30286f81" xml:space="preserve">
     <value>Cuánta niebla hay ya en el punto más cercano, como parte de la densidad</value>
   </data>
+  <data name="Die_alte_Fassung_lie_sich_nicht_entfernen_und_li_484267f0" xml:space="preserve">
+    <value>No se pudo eliminar la versión anterior; sigue en {0}</value>
+  </data>
 </root>
