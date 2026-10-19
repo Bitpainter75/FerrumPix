@@ -12,6 +12,10 @@
   white is lifted more gently, so the slider behaves much more like you would expect from a raw
   editor. Highlights, shadows and whites also read a film negative as the positive you see.
 
+- **Depth fog reaches the foreground.** A new Foreground slider in Depth fog puts some fog over
+  the nearest parts of the picture too, so a person or an animal close to the camera no longer
+  stays perfectly clear while everything behind them disappears in the mist.
+
 - **The eyedropper shows what it hits.** A small label follows the eyedropper over the picture
   with a swatch and the value of the color under its tip.
 

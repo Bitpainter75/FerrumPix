@@ -9838,4 +9838,7 @@
   <data name="F_r_0_Dateien_steht_die_nderung_nur_im_Katalog_d_7672cf42" xml:space="preserve">
     <value>{0} फ़ाइलों के लिए परिवर्तन केवल कैटलॉग में है: साइडकार फ़ाइल पढ़ी या लिखी नहीं जा सकी। पहली फ़ाइल {1} है</value>
   </data>
+  <data name="Wie_viel_Nebel_schon_am_n_chsten_Punkt_liegt_als_30286f81" xml:space="preserve">
+    <value>निकटतम बिंदु पर पहले से कितना कोहरा है, घनत्व के हिस्से के रूप में</value>
+  </data>
 </root>

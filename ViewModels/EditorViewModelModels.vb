@@ -591,6 +591,7 @@ Namespace ViewModels
         Private _fogDensity As Double = 0.0
         Private _fogNear As Double = 60.0
         Private _fogFar As Double = 0.0
+        Private _fogForeground As Double = 0.0
         Private _fogColor As String = FogDefaultColor
         Private _fogPreviewPass As Integer = 0
         Private _applyFogCommand As ICommand
@@ -607,6 +608,22 @@ Namespace ViewModels
                 _fogDensity = v
                 Me.RaisePropertyChanged(NameOf(FogDensity))
                 Me.RaisePropertyChanged(NameOf(HasFogChanges))
+                ScheduleFogPreview()
+            End Set
+        End Property
+
+        ''' <summary>Wie viel Nebel schon am naechsten Punkt liegt, als Anteil der Dichte. 0 laesst
+        ''' den Vordergrund klar; der Anstieg zwischen Beginn und voller Dichte laeuft darueber
+        ''' (DepthMapService.DepthFog).</summary>
+        Public Property FogForeground As Double
+            Get
+                Return _fogForeground
+            End Get
+            Set(value As Double)
+                Dim v = Math.Max(0.0, Math.Min(100.0, value))
+                If Math.Abs(_fogForeground - v) < 0.0001 Then Return
+                _fogForeground = v
+                Me.RaisePropertyChanged(NameOf(FogForeground))
                 ScheduleFogPreview()
             End Set
         End Property
@@ -698,9 +715,10 @@ Namespace ViewModels
             _fogDensity = 0.0
             _fogNear = 60.0
             _fogFar = 0.0
+            _fogForeground = 0.0
             _fogColor = FogDefaultColor
             DisposeFogPreview()
-            For Each n In {NameOf(FogDensity), NameOf(FogNear), NameOf(FogFar), NameOf(FogColorValue), NameOf(HasFogChanges)}
+            For Each n In {NameOf(FogDensity), NameOf(FogNear), NameOf(FogFar), NameOf(FogForeground), NameOf(FogColorValue), NameOf(HasFogChanges)}
                 Me.RaisePropertyChanged(n)
             Next
         End Sub
@@ -742,7 +760,7 @@ Namespace ViewModels
                 ' deren Aufraeumen wartet nicht auf das Gate.
                 Dim basis = _bokehVorschauBasis.Copy()
                 Dim map = _depthMap.Copy()
-                Dim density = _fogDensity, near = _fogNear, far = _fogFar
+                Dim density = _fogDensity, near = _fogNear, far = _fogFar, foreground = _fogForeground
                 Dim color = FogSkColor()
 
                 SetPreviewBusy(True)
@@ -751,7 +769,8 @@ Namespace ViewModels
                     fogPreview = Await Task.Run(
                     Function() As Bitmap
                         Try
-                            Using fog = DepthMapService.DepthFog(basis, map, density, near, far, color)
+                            Using fog = DepthMapService.DepthFog(basis, map, density, near, far, color,
+                                                                 foregroundPct:=foreground)
                                 If fog Is Nothing Then Return Nothing
                                 Using norm = NormalizePreviewBase(fog)
                                     Return ImageOrientationService.ToAvaloniaBitmapFast(norm)
@@ -827,7 +846,7 @@ Namespace ViewModels
                     Return
                 End If
 
-                Dim density = _fogDensity, near = _fogNear, far = _fogFar
+                Dim density = _fogDensity, near = _fogNear, far = _fogFar, foreground = _fogForeground
                 Dim color = FogSkColor()
                 PushUndo(LocalizationService.T("Nebel nach Tiefe"))
                 Dim undoItem = _lastPushedUndoEntry
@@ -838,7 +857,7 @@ Namespace ViewModels
                     Function()
                         Return _workingImage.CommitRegion(New SKRectI(0, 0, _workingImage.FullWidth, _workingImage.FullHeight),
                             Sub(full)
-                                Using fog = DepthMapService.DepthFog(full, map, density, near, far, color, cancel)
+                                Using fog = DepthMapService.DepthFog(full, map, density, near, far, color, cancel, foreground)
                                     cancel.ThrowIfCancellationRequested()
                                     If fog Is Nothing Then Return
                                     Using canvas = New SKCanvas(full)

@@ -9794,4 +9794,7 @@
   <data name="F_r_0_Dateien_steht_die_nderung_nur_im_Katalog_d_7672cf42" xml:space="preserve">
     <value>Para {0} archivos el cambio solo está en el catálogo: no se pudo leer ni escribir el archivo adjunto. El primero es {1}</value>
   </data>
+  <data name="Wie_viel_Nebel_schon_am_n_chsten_Punkt_liegt_als_30286f81" xml:space="preserve">
+    <value>Cuánta niebla hay ya en el punto más cercano, como parte de la densidad</value>
+  </data>
 </root>

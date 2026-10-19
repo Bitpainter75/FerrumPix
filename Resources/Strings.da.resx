@@ -9834,4 +9834,7 @@
   <data name="F_r_0_Dateien_steht_die_nderung_nur_im_Katalog_d_7672cf42" xml:space="preserve">
     <value>For {0} filer findes ændringen kun i kataloget: følgefilen kunne ikke læses eller skrives. Den første er {1}</value>
   </data>
+  <data name="Wie_viel_Nebel_schon_am_n_chsten_Punkt_liegt_als_30286f81" xml:space="preserve">
+    <value>Hvor meget tåge der allerede ligger på det nærmeste punkt, som andel af tætheden</value>
+  </data>
 </root>

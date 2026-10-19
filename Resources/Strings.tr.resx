@@ -9838,4 +9838,7 @@
   <data name="F_r_0_Dateien_steht_die_nderung_nur_im_Katalog_d_7672cf42" xml:space="preserve">
     <value>{0} dosya için değişiklik yalnızca katalogda: yan dosya okunamadı veya yazılamadı. İlki: {1}</value>
   </data>
+  <data name="Wie_viel_Nebel_schon_am_n_chsten_Punkt_liegt_als_30286f81" xml:space="preserve">
+    <value>En yakın noktada zaten ne kadar sis olduğu, yoğunluğun bir payı olarak</value>
+  </data>
 </root>

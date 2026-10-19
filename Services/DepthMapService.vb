@@ -553,12 +553,20 @@ Namespace Services
         ''' entlang eines Hangs.
         '''
         ''' Gemischt wird auf den vormultiplizierten Bytes, die Nebelfarbe wird dafuer mit dem Alpha
-        ''' des Punktes multipliziert. Ein durchsichtiger Punkt bleibt so durchsichtig.</summary>
+        ''' des Punktes multipliziert. Ein durchsichtiger Punkt bleibt so durchsichtig.
+        '''
+        ''' <paramref name="foregroundPct"/> legt fest, wie viel Nebel schon vor "Nah" liegt, als
+        ''' Anteil der Dichte; der Anstieg laeuft darueber bis zur vollen Dichte. Die Tiefenkarte
+        ''' ist je Bild gestreckt, der naechste Punkt ist immer 100: ohne diesen Anteil blieb das
+        ''' Motiv im Vordergrund bei jeder Einstellung klar, waehrend echter Nebel auch zwischen
+        ''' Kamera und Motiv liegt (Befund aus dem Forum, ein Hund und eine Person auf einem
+        ''' Kuestenweg).</summary>
         ''' <returns>Nothing, wenn es nichts zu tun gibt oder das Farbformat unbekannt ist.</returns>
         Public Shared Function DepthFog(source As SKBitmap, depth As SKBitmap,
                                         densityPct As Double, nearPct As Double, farPct As Double,
                                         fogColor As SKColor,
-                                        Optional cancel As CancellationToken = Nothing) As SKBitmap
+                                        Optional cancel As CancellationToken = Nothing,
+                                        Optional foregroundPct As Double = 0.0) As SKBitmap
             If source Is Nothing OrElse depth Is Nothing Then Return Nothing
             cancel.ThrowIfCancellationRequested()
             Dim density = Math.Max(0.0, Math.Min(100.0, densityPct)) / 100.0
@@ -571,6 +579,7 @@ Namespace Services
             End Select
             Dim near = Math.Max(0.0, Math.Min(100.0, Math.Max(nearPct, farPct)))
             Dim far = Math.Max(0.0, Math.Min(100.0, Math.Min(nearPct, farPct)))
+            Dim foreground = Math.Max(0.0, Math.Min(100.0, foregroundPct)) / 100.0
 
             ' Wie bei den Masken: der Anteil haengt nur am Tiefenbyte.
             Dim table(255) As Single
@@ -585,6 +594,7 @@ Namespace Services
                     f = (near - t) / (near - far)
                     f = f * f * (3.0 - 2.0 * f)
                 End If
+                f = foreground + (1.0 - foreground) * f
                 table(value) = CSng(f * density)
             Next
 

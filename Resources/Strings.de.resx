@@ -9812,4 +9812,7 @@
   <data name="F_r_0_Dateien_steht_die_nderung_nur_im_Katalog_d_7672cf42" xml:space="preserve">
     <value>Für {0} Dateien steht die Änderung nur im Katalog: die Begleitdatei ließ sich nicht lesen oder schreiben. Die erste ist {1}</value>
   </data>
+  <data name="Wie_viel_Nebel_schon_am_n_chsten_Punkt_liegt_als_30286f81" xml:space="preserve">
+    <value>Wie viel Nebel schon am nächsten Punkt liegt, als Anteil der Dichte</value>
+  </data>
 </root>

@@ -9838,4 +9838,7 @@
   <data name="F_r_0_Dateien_steht_die_nderung_nur_im_Katalog_d_7672cf42" xml:space="preserve">
     <value>파일 {0}개의 변경 사항은 카탈로그에만 저장되었습니다. 사이드카 파일을 읽거나 쓰지 못했습니다. 첫 번째 파일은 {1}입니다</value>
   </data>
+  <data name="Wie_viel_Nebel_schon_am_n_chsten_Punkt_liegt_als_30286f81" xml:space="preserve">
+    <value>가장 가까운 지점에 이미 깔린 안개의 양, 농도에 대한 비율</value>
+  </data>
 </root>

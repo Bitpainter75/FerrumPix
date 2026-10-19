@@ -9834,4 +9834,7 @@
   <data name="F_r_0_Dateien_steht_die_nderung_nur_im_Katalog_d_7672cf42" xml:space="preserve">
     <value>{0} tiedoston muutos on vain luettelossa: oheistiedostoa ei voitu lukea tai kirjoittaa. Ensimmäinen on {1}</value>
   </data>
+  <data name="Wie_viel_Nebel_schon_am_n_chsten_Punkt_liegt_als_30286f81" xml:space="preserve">
+    <value>Kuinka paljon sumua on jo lähimmässä kohdassa, osuutena tiheydestä</value>
+  </data>
 </root>

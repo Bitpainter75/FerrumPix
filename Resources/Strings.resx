@@ -9813,4 +9813,7 @@
   <data name="F_r_0_Dateien_steht_die_nderung_nur_im_Katalog_d_7672cf42" xml:space="preserve">
     <value>For {0} files the change is only in the catalog: the sidecar file could not be read or written. The first is {1}</value>
   </data>
+  <data name="Wie_viel_Nebel_schon_am_n_chsten_Punkt_liegt_als_30286f81" xml:space="preserve">
+    <value>How much fog already lies on the nearest point, as a share of the density</value>
+  </data>
 </root>

@@ -9834,4 +9834,7 @@
   <data name="F_r_0_Dateien_steht_die_nderung_nur_im_Katalog_d_7672cf42" xml:space="preserve">
     <value>U {0} souborů je změna jen v katalogu: doprovodný soubor se nepodařilo přečíst ani zapsat. První je {1}</value>
   </data>
+  <data name="Wie_viel_Nebel_schon_am_n_chsten_Punkt_liegt_als_30286f81" xml:space="preserve">
+    <value>Kolik mlhy leží už v nejbližším bodě, jako podíl hustoty</value>
+  </data>
 </root>

@@ -43,6 +43,15 @@
                                              Value="{Binding FogDensity, Mode=TwoWay}" Minimum="0" Maximum="100" />
                 </Grid>
                 <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center"
+                      ToolTip.Tip="Wie viel Nebel schon am nächsten Punkt liegt, als Anteil der Dichte">
+                    <TextBlock Text="Vordergrund" Foreground="{DynamicResource FP.Text.Secondary}"
+                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                    <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100" DefaultValue="0"
+                                       Value="{Binding FogForeground}" Margin="0,0" />
+                    <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                             Value="{Binding FogForeground, Mode=TwoWay}" Minimum="0" Maximum="100" />
+                </Grid>
+                <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center"
                       ToolTip.Tip="Ab dieser Entfernung beginnt der Nebel. 100 ist am nächsten">
                     <TextBlock Text="Beginn" Foreground="{DynamicResource FP.Text.Secondary}"
                                VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
