@@ -266,7 +266,23 @@ Namespace Services
 
                 Dim targetW = Math.Max(1, CInt(Math.Round(rect.Width)))
                 Dim targetH = Math.Max(1, CInt(Math.Round(rect.Height)))
-                Dim entry = cache.GetOrRender(renderAnnotation, targetW, targetH)
+                Dim measureClip As SKPoint() = Nothing
+                Dim readsStatistics = ReadsObjectStatistics(renderAnnotation)
+                Dim warped = renderAnnotation.OwnWarp IsNot Nothing AndAlso Not renderAnnotation.OwnWarp.IsEmpty
+                If readsStatistics Then
+                    ' Ein verzerrtes Objekt waechst um seine Verzerrung, und wie weit, sagt erst das
+                    ' Rendern; die Ausdehnung kommt dann aus dem letzten Eintrag.
+                    Dim extent = If(warped, cache.PeekExtent(renderAnnotation, targetW, targetH),
+                                    ImageProcessor.ComputeOverlayExtent(renderAnnotation, targetW, targetH, Single.PositiveInfinity))
+                    measureClip = ComputeMeasureClip(renderAnnotation, rect, targetW, targetH, sceneWidth, sceneHeight, extent)
+                End If
+                Dim entry = cache.GetOrRender(renderAnnotation, targetW, targetH, measureClip)
+                If readsStatistics AndAlso warped AndAlso measureClip Is Nothing AndAlso entry IsNot Nothing Then
+                    ' Beim ersten Rendern war die Ausdehnung unbekannt. Ragt das verzerrte Bitmap
+                    ' ueber den Bildrand, einmal mit Maske nachrechnen; danach kennt PeekExtent sie.
+                    measureClip = ComputeMeasureClip(renderAnnotation, rect, targetW, targetH, sceneWidth, sceneHeight, entry.Extent)
+                    If measureClip IsNot Nothing Then entry = cache.GetOrRender(renderAnnotation, targetW, targetH, measureClip)
+                End If
                 If entry Is Nothing OrElse entry.Image Is Nothing Then Continue For
                 If entry.ObjectWidth <= 0 OrElse entry.ObjectHeight <= 0 Then Continue For
 
@@ -295,6 +311,57 @@ Namespace Services
                 drawn += 1
             Next
             Return drawn
+        End Function
+
+        ''' <summary>Der Teil des Objekts, der im Bild liegt, als Vieleck im Bezug des Objekt-Bitmaps
+        ''' (ImageProcessor.ComputeOverlayExtent), oder Nothing, wenn es keinen braucht.
+        '''
+        ''' Lichter, Tiefen und Weiss eines Objekts waehlen ihre Kennlinie nach Median und Spitze des
+        ''' Objekts. Der Bildrender rechnet es auf einer Ebene in Bildgroesse und sieht dabei nur den
+        ''' Teil im Bild; dieser Weg hier sah das ganze Objekt. Lag der helle Teil eines Verlaufs
+        ''' ausserhalb, wirkten die Regler in Vorschau und Ergebnis verschieden. Das Ergebnis gilt,
+        ''' deshalb misst die Vorschau jetzt wie dort.
+        '''
+        ''' Nothing, wenn das Bitmap samt Effektrand (<paramref name="extent"/>, im Bezug des
+        ''' Objektrechtecks) ganz im Bild liegt oder unbekannt ist: dann bleibt der Schluessel des
+        ''' Zwischenspeichers ohne Lage, und Ziehen kostet nichts.
+        '''
+        ''' Die Ecken werden auf halbe Bildpunkte gerundet, und genau diese Punkte gehen in Schluessel
+        ''' UND Maske. So gehoert zu einem Schluessel immer dieselbe Maske, auch an einer schraegen
+        ''' Kante, und ein Ziehen um Bruchteile eines Bildpunkts rechnet nicht neu.</summary>
+        Private Shared Function ComputeMeasureClip(annotation As ImageAnnotation, rect As SKRect,
+                                                   targetW As Integer, targetH As Integer,
+                                                   sceneWidth As Integer, sceneHeight As Integer,
+                                                   extent As SKRect) As SKPoint()
+            If annotation Is Nothing OrElse extent.IsEmpty Then Return Nothing
+
+            ' Dieselbe Abbildung, mit der DrawCachedAnnotations zeichnet: Objektrechteck auf rect,
+            ' dann um dessen Mitte gedreht.
+            Dim toScene = SKMatrix.CreateScaleTranslation(rect.Width / CSng(targetW), rect.Height / CSng(targetH), rect.Left, rect.Top)
+            If Math.Abs(annotation.RotationDegrees) > 0.01F Then
+                toScene = toScene.PostConcat(SKMatrix.CreateRotationDegrees(annotation.RotationDegrees, rect.MidX, rect.MidY))
+            End If
+            Dim corners = toScene.MapPoints({New SKPoint(extent.Left, extent.Top), New SKPoint(extent.Right, extent.Top),
+                                             New SKPoint(extent.Right, extent.Bottom), New SKPoint(extent.Left, extent.Bottom)})
+            Const Tolerance As Single = 0.5F
+            If corners.All(Function(p) p.X >= -Tolerance AndAlso p.Y >= -Tolerance AndAlso
+                                       p.X <= sceneWidth + Tolerance AndAlso p.Y <= sceneHeight + Tolerance) Then Return Nothing
+
+            Dim toObject As SKMatrix
+            If Not toScene.TryInvert(toObject) Then Return Nothing
+            Return toObject.MapPoints({New SKPoint(0, 0), New SKPoint(sceneWidth, 0),
+                                       New SKPoint(sceneWidth, sceneHeight), New SKPoint(0, sceneHeight)}).
+                Select(Function(p) New SKPoint(CSng(Math.Round(p.X * 2.0F) / 2.0F), CSng(Math.Round(p.Y * 2.0F) / 2.0F))).
+                ToArray()
+        End Function
+
+        ''' <summary>Waehlen die eigenen Anpassungen des Objekts ihre Kennlinie nach der Statistik
+        ''' des Objekts (Lichter und Tiefen ab Tonmodell 2, Weiss ab 3)? Nur dann haengt sein
+        ''' Aussehen daran, welcher Teil im Bild liegt.</summary>
+        Private Shared Function ReadsObjectStatistics(annotation As ImageAnnotation) As Boolean
+            Return annotation IsNot Nothing AndAlso Not annotation.AdjustmentsHidden AndAlso
+                   annotation.Adjustments IsNot Nothing AndAlso annotation.Adjustments.HasPixelAdjustments() AndAlso
+                   annotation.Adjustments.ReadsImageStatistics()
         End Function
 
         ''' <summary>Konservative, klonfreie Sichtfenster-Prüfung für den Kompositor. Sie bildet

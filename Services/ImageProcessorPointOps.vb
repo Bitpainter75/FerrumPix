@@ -1004,48 +1004,85 @@ Namespace Services
                     Next
                 Next
             End If
-            Dim stepSize = Math.Max(1, CInt(Math.Sqrt(CDbl(bmp.Width) * bmp.Height / 250000.0)))
-            Dim histogram = New Long(1000) {}
-            Dim total = 0L
+            ' DAS RASTER LIEGT AUF DEN SICHTBAREN BILDPUNKTEN, nicht auf der Bitmap. Dasselbe Objekt
+            ' entsteht im Bildrender auf einer Ebene in Bildgroesse, im Kompositor auf einem knappen
+            ' Bitmap. Mit Schrittweite und Ursprung aus den Bitmap-Massen sah das Raster dort andere
+            ' Punkte, und eine duenne Linie auf einem grossen Bild konnte es ganz verfehlen: Weiss
+            ' im Tonmodell 3 sah dann je nach Weg anders aus. Bei einem deckenden Bild ist das
+            ' Rechteck die ganze Bitmap, und es bleibt wie zuvor. Tonmodell 2 (unpremultiply False)
+            ' misst wie bei seiner Veroeffentlichung auf der ganzen Bitmap, damit gespeicherte
+            ' Bearbeitungen gleich bleiben.
+            ' Eine Messmaske (WithToneMeasureMask) laesst nur den Teil eines Objekts zaehlen, der im
+            ' Bild liegt: der Bildrender sieht auf seiner Ebene in Bildgroesse nichts anderes.
+            Dim mask = If(_toneMeasureMask IsNot Nothing AndAlso _toneMeasureMaskWidth = bmp.Width AndAlso
+                          _toneMeasureMaskHeight = bmp.Height AndAlso _toneMeasureMask.Length = bmp.Width * bmp.Height,
+                          _toneMeasureMask, Nothing)
             Dim rowBytes = bmp.RowBytes
+            Dim bounds = If(unpremultiply, OpaqueBounds(pixels, bmp.Width, bmp.Height, rowBytes, mask),
+                            New SKRectI(0, 0, bmp.Width, bmp.Height))
+            If bounds.IsEmpty Then Return none
+            Dim stepSize = Math.Max(1, CInt(Math.Sqrt(CDbl(bounds.Width) * bounds.Height / 250000.0)))
+            Dim histogram As Long() = Nothing
+            Dim total = 0L
             Dim row = New Byte(rowBytes - 1) {}
-            For y = 0 To bmp.Height - 1 Step stepSize
-                Marshal.Copy(IntPtr.Add(pixels, y * rowBytes), row, 0, rowBytes)
-                For x = 0 To bmp.Width - 1 Step stepSize
-                    Dim o = x * 4
-                    If row(o + 3) = 0 Then Continue For
-                    Dim lum As Double
-                    Dim alpha = row(o + 3)
-                    If dividesAlpha AndAlso alpha < 255 Then
-                        ' Wie die Kette: erst durch Alpha teilen, dann wie ein deckender Bildpunkt.
-                        Dim r = Math.Min(1.0, row(o + rOff) / CDbl(alpha))
-                        Dim g = Math.Min(1.0, row(o + 1) / CDbl(alpha))
-                        Dim b = Math.Min(1.0, row(o + bOff) / CDbl(alpha))
-                        If inverts Then
-                            r = SampleTable(negative.NegR, CSng(r))
-                            g = SampleTable(negative.NegG, CSng(g))
-                            b = SampleTable(negative.NegB, CSng(b))
-                            If negative.NegMonochrome Then
-                                Dim gray = 0.299 * r + 0.587 * g + 0.114 * b
-                                r = gray : g = gray : b = gray
+            ' DUENN BESETZT HEISST: JEDEN BILDPUNKT ZAEHLEN. Ein festes Raster kann sichtbare Punkte
+            ' systematisch verfehlen: eine weisse Diagonale in einem grossen durchsichtigen Objekt
+            ' liegt bei Schrittweite 4 auf keinem Rasterpunkt, ein einzelner schwarzer daneben schon,
+            ' und Median und Spitze beschrieben Schwarz. Trifft das Raster weniger als ein Viertel
+            ' seiner Punkte sichtbar, ist der Inhalt duenn, und der zweite Durchgang liest das ganze
+            ' Rechteck. Ein deckendes Foto trifft fast jeden Rasterpunkt und bleibt beim Raster.
+            ' Nur im Tonmodell 3, wie das Rechteck oben.
+            Do
+                histogram = New Long(1000) {}
+                total = 0L
+                For y = bounds.Top To bounds.Bottom - 1 Step stepSize
+                    Marshal.Copy(IntPtr.Add(pixels, y * rowBytes), row, 0, rowBytes)
+                    Dim maskRow = y * bmp.Width
+                    For x = bounds.Left To bounds.Right - 1 Step stepSize
+                        Dim o = x * 4
+                        If row(o + 3) = 0 Then Continue For
+                        If mask IsNot Nothing AndAlso mask(maskRow + x) = 0 Then Continue For
+                        Dim lum As Double
+                        Dim alpha = row(o + 3)
+                        If dividesAlpha AndAlso alpha < 255 Then
+                            ' Wie die Kette: erst durch Alpha teilen, dann wie ein deckender Bildpunkt.
+                            Dim r = Math.Min(1.0, row(o + rOff) / CDbl(alpha))
+                            Dim g = Math.Min(1.0, row(o + 1) / CDbl(alpha))
+                            Dim b = Math.Min(1.0, row(o + bOff) / CDbl(alpha))
+                            If inverts Then
+                                r = SampleTable(negative.NegR, CSng(r))
+                                g = SampleTable(negative.NegG, CSng(g))
+                                b = SampleTable(negative.NegB, CSng(b))
+                                If negative.NegMonochrome Then
+                                    Dim gray = 0.299 * r + 0.587 * g + 0.114 * b
+                                    r = gray : g = gray : b = gray
+                                End If
                             End If
+                            lum = 0.2126 * toLinear(Math.Max(0.0, Math.Min(1.0, r))) +
+                                  0.7152 * toLinear(Math.Max(0.0, Math.Min(1.0, g))) +
+                                  0.0722 * toLinear(Math.Max(0.0, Math.Min(1.0, b)))
+                        ElseIf Not inverts Then
+                            lum = 0.2126 * linear(row(o + rOff)) + 0.7152 * linear(row(o + 1)) + 0.0722 * linear(row(o + bOff))
+                        ElseIf negative.NegMonochrome Then
+                            Dim gray = 0.299 * negGamma(0)(row(o + rOff)) + 0.587 * negGamma(1)(row(o + 1)) + 0.114 * negGamma(2)(row(o + bOff))
+                            lum = toLinear(Math.Max(0.0, Math.Min(1.0, gray)))
+                        Else
+                            lum = 0.2126 * negLinear(0)(row(o + rOff)) + 0.7152 * negLinear(1)(row(o + 1)) + 0.0722 * negLinear(2)(row(o + bOff))
                         End If
-                        lum = 0.2126 * toLinear(Math.Max(0.0, Math.Min(1.0, r))) +
-                              0.7152 * toLinear(Math.Max(0.0, Math.Min(1.0, g))) +
-                              0.0722 * toLinear(Math.Max(0.0, Math.Min(1.0, b)))
-                    ElseIf Not inverts Then
-                        lum = 0.2126 * linear(row(o + rOff)) + 0.7152 * linear(row(o + 1)) + 0.0722 * linear(row(o + bOff))
-                    ElseIf negative.NegMonochrome Then
-                        Dim gray = 0.299 * negGamma(0)(row(o + rOff)) + 0.587 * negGamma(1)(row(o + 1)) + 0.114 * negGamma(2)(row(o + bOff))
-                        lum = toLinear(Math.Max(0.0, Math.Min(1.0, gray)))
-                    Else
-                        lum = 0.2126 * negLinear(0)(row(o + rOff)) + 0.7152 * negLinear(1)(row(o + 1)) + 0.0722 * negLinear(2)(row(o + bOff))
-                    End If
-                    Dim l = If(lum > 0.008856, 116.0 * Math.Pow(lum, 1.0 / 3.0) - 16.0, 903.3 * lum)
-                    histogram(Math.Max(0, Math.Min(1000, CInt(l * 10.0)))) += 1
-                    total += 1
+                        Dim l = If(lum > 0.008856, 116.0 * Math.Pow(lum, 1.0 / 3.0) - 16.0, 903.3 * lum)
+                        histogram(Math.Max(0, Math.Min(1000, CInt(l * 10.0)))) += 1
+                        total += 1
+                    Next
                 Next
-            Next
+                If unpremultiply AndAlso stepSize > 1 Then
+                    Dim gridPoints = CLng((bounds.Height + stepSize - 1) \ stepSize) * ((bounds.Width + stepSize - 1) \ stepSize)
+                    If total * 4L < gridPoints Then
+                        stepSize = 1
+                        Continue Do
+                    End If
+                End If
+                Exit Do
+            Loop
             If total = 0 Then Return none
             Dim half = total \ 2
             Dim topCount = CLng(Math.Ceiling(total * ToneTopFraction))
@@ -1064,6 +1101,68 @@ Namespace Services
                 End If
             Next
             Return result
+        End Function
+
+        ''' <summary>Das kleinste Rechteck um alle nicht voll durchsichtigen Bildpunkte einer 8-Bit-
+        ''' RGBA-Bitmap; leer, wenn alle durchsichtig sind. Oben und unten bis zur ersten sichtbaren
+        ''' Zeile, links und rechts je Zeile nur, bis der bisherige Rand erreicht ist: ein deckendes
+        ''' Bild kostet damit zwei Bildpunkte je Zeile.
+        '''
+        ''' Ein kleines Objekt auf einer Ebene in Bildgroesse kostet dagegen fast die ganze Flaeche,
+        ''' bevor es gefunden ist. Deshalb zeilenweise am Stueck kopiert und als Ganzzahl je
+        ''' Bildpunkt geprueft (Alpha ist das oberste Byte), nicht Byte fuer Byte ueber den Zeiger:
+        ''' das ist ein Kopieren in Speichergeschwindigkeit statt eines Aufrufs je Bildpunkt. Im
+        ''' Verhaeltnis bleibt es klein, denn die Kette rechnet danach ohnehin jeden Bildpunkt der
+        ''' Ebene.
+        '''
+        ''' Mit <paramref name="mask"/> zaehlt ein Bildpunkt nur, wo die Maske nicht 0 ist (siehe
+        ''' WithToneMeasureMask).</summary>
+        Private Shared Function OpaqueBounds(pixels As IntPtr, width As Integer, height As Integer,
+                                             rowBytes As Integer, Optional mask As Byte() = Nothing) As SKRectI
+            Const AlphaMask As Integer = &HFF000000
+            Dim row = New Integer(width - 1) {}
+            Dim loadRow = Sub(y As Integer)
+                              Marshal.Copy(IntPtr.Add(pixels, y * rowBytes), row, 0, width)
+                              If mask Is Nothing Then Return
+                              Dim maskRow = y * width
+                              For x = 0 To width - 1
+                                  If mask(maskRow + x) = 0 Then row(x) = 0
+                              Next
+                          End Sub
+            Dim top = -1
+            For y = 0 To height - 1
+                loadRow(y)
+                For x = 0 To width - 1
+                    If (row(x) And AlphaMask) <> 0 Then top = y : Exit For
+                Next
+                If top >= 0 Then Exit For
+            Next
+            If top < 0 Then Return SKRectI.Empty
+            Dim bottom = top
+            For y = height - 1 To top Step -1
+                loadRow(y)
+                Dim found = False
+                For x = 0 To width - 1
+                    If (row(x) And AlphaMask) <> 0 Then found = True : Exit For
+                Next
+                If found Then bottom = y : Exit For
+            Next
+            Dim left = width
+            Dim right = -1
+            For y = top To bottom
+                ' Ein deckendes Bild hat beide Raender nach der ersten Zeile; dann gibt es nichts mehr
+                ' zu lesen.
+                If left = 0 AndAlso right = width - 1 Then Exit For
+                loadRow(y)
+                For x = 0 To Math.Min(left, width) - 1
+                    If (row(x) And AlphaMask) <> 0 Then left = x : Exit For
+                Next
+                For x = width - 1 To right + 1 Step -1
+                    If (row(x) And AlphaMask) <> 0 Then right = x : Exit For
+                Next
+            Next
+            If right < left Then Return SKRectI.Empty
+            Return New SKRectI(left, top, right + 1, bottom + 1)
         End Function
 
         ''' <summary>L (0 bis 100) eines Graus auf seinen sRGB-Gammawert, und zurueck.</summary>
@@ -1887,6 +1986,33 @@ Namespace Services
         ''' Je Faden, weil Bildrender und Kompositor gleichzeitig laufen koennen; gelesen wird er auf
         ''' dem Faden, der die Kette aufruft, vor dem verteilten Durchlauf.</summary>
         <ThreadStatic> Private Shared _localToneReferenceEdge As Double
+
+        ''' <summary>Welche Bildpunkte die Bildstatistik (MeasureToneReference) zaehlen darf: ein Byte je
+        ''' Bildpunkt, 0 heisst draussen. Gesetzt vom Kompositor fuer ein Objekt, das ueber den
+        ''' Bildrand reicht (RenderAnnotationOverlaySk); gilt nur fuer eine Bitmap genau dieser Groesse.
+        ''' Je Faden wie _localToneReferenceEdge.</summary>
+        <ThreadStatic> Private Shared _toneMeasureMask As Byte()
+        <ThreadStatic> Private Shared _toneMeasureMaskWidth As Integer
+        <ThreadStatic> Private Shared _toneMeasureMaskHeight As Integer
+
+        ''' <summary>Fuehrt <paramref name="work"/> mit <paramref name="mask"/> als Messmaske aus und
+        ''' stellt danach die vorige her. Nothing als Maske misst wie gewohnt alles.</summary>
+        Friend Shared Function WithToneMeasureMask(mask As Byte(), width As Integer, height As Integer,
+                                                   work As Func(Of SKBitmap)) As SKBitmap
+            Dim previous = _toneMeasureMask
+            Dim previousWidth = _toneMeasureMaskWidth
+            Dim previousHeight = _toneMeasureMaskHeight
+            _toneMeasureMask = mask
+            _toneMeasureMaskWidth = width
+            _toneMeasureMaskHeight = height
+            Try
+                Return work()
+            Finally
+                _toneMeasureMask = previous
+                _toneMeasureMaskWidth = previousWidth
+                _toneMeasureMaskHeight = previousHeight
+            End Try
+        End Function
 
         ''' <summary>Fuehrt <paramref name="work"/> mit <paramref name="referenceEdge"/> als Bezug der
         ''' Basisschicht aus (siehe _localToneReferenceEdge) und stellt danach den vorigen Bezug her.</summary>

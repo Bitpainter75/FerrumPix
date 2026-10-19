@@ -1,3 +1,5 @@
+Imports System.Globalization
+Imports System.Linq
 Imports System.Security.Cryptography
 Imports System.Text
 Imports System.Text.Json
@@ -42,7 +44,18 @@ Namespace Services
             Public Property ObjectWidth As Integer
             Public Property ObjectHeight As Integer
             Friend Property AppearanceKey As String
+            ''' Der Schluessel ohne Messvieleck: dasselbe Aussehen, ob mit oder ohne Maske gemessen.
+            Friend Property BaseKey As String
             Friend Property LastUse As Long
+
+            ''' <summary>Wo das Bitmap um das Objektrechteck liegt, in Bitmap-Pixeln und relativ zu
+            ''' dessen linker oberer Ecke, wie ImageProcessor.ComputeOverlayExtent.</summary>
+            Public ReadOnly Property Extent As SKRect
+                Get
+                    If Image Is Nothing Then Return SKRect.Empty
+                    Return New SKRect(-ObjectX, -ObjectY, Image.Width - ObjectX, Image.Height - ObjectY)
+                End Get
+            End Property
         End Class
 
         ' 256 MB Budget: bei 36 Kacheln zu je ~430x430 Bitmap-Pixeln (~0,7 MB) ist das reichlich,
@@ -67,13 +80,28 @@ Namespace Services
         ''' <summary>Liefert die Bitmap des Objekts fuer die Ziel-Szenengroesse - aus dem Cache oder
         ''' frisch gerendert. Nothing bei Objekten, die der Cache nicht traegt (Pinsel-/Radierer-
         ''' Ebenen: ihr Inhalt sind Striche im Bildraum, keine freistehende Objektflaeche).</summary>
-        Public Function GetOrRender(annotation As ImageAnnotation, targetWidthPixels As Integer, targetHeightPixels As Integer) As Entry
+        ''' <param name="measureClip">Der Teil des Objekts, der im Bild liegt, fuer die Bildstatistik
+        ''' der eigenen Anpassungen (siehe ImageProcessor.RenderAnnotationOverlaySk). Er steht dann im
+        ''' Schluessel: ein solches Objekt am Bildrand wird beim Ziehen neu gerechnet, weil sich mit
+        ''' der Lage seine Statistik aendert. Nothing fuer alle anderen, deren Schluessel die Lage
+        ''' bewusst nicht kennt.</param>
+        Public Function GetOrRender(annotation As ImageAnnotation, targetWidthPixels As Integer, targetHeightPixels As Integer,
+                                    Optional measureClip As SKPoint() = Nothing) As Entry
             If annotation Is Nothing OrElse String.IsNullOrEmpty(annotation.Id) Then Return Nothing
             If targetWidthPixels <= 0 OrElse targetHeightPixels <= 0 Then Return Nothing
             Dim kind = If(annotation.Kind, "").Trim().ToLowerInvariant()
             If kind = "brush" OrElse kind = "eraser" Then Return Nothing
 
-            Dim key = ComputeAppearanceKey(annotation, targetWidthPixels, targetHeightPixels)
+            Dim baseKey = ComputeAppearanceKey(annotation, targetWidthPixels, targetHeightPixels)
+            Dim key = baseKey
+            If measureClip IsNot Nothing Then
+                ' Die Punkte VOLLSTAENDIG, nicht gerundet: aus genau diesen rastert die Maske. Mit
+                ' gerundeten Ecken im Schluessel konnte eine schraege Kante andere Bildpunkte treffen,
+                ' waehrend der Schluessel gleich blieb. Der Kompositor rundet sie vorher selbst auf
+                ' halbe Bildpunkte (OverlaySceneRenderer.ComputeMeasureClip).
+                key &= "|clip:" & String.Join(";", measureClip.Select(
+                    Function(p) $"{p.X.ToString("R", CultureInfo.InvariantCulture)},{p.Y.ToString("R", CultureInfo.InvariantCulture)}"))
+            End If
 
             SyncLock _lock
                 Dim existing As Entry = Nothing
@@ -92,38 +120,25 @@ Namespace Services
             ' Millisekunden, und andere Objekte sollen waehrenddessen an ihre Bitmaps kommen.
             ' UNGEDECKELT in Szenenaufloesung: das komponierte Bild muss pixelgleich zur gebackenen
             ' Qualitaet sein (der 720er-Deckel gehoert nur dem Ghost).
+            ' Die EIGENE Verzerrung des Objekts wird in die Bitmap gerechnet - und genau deshalb
+            ' darf ein verzerrtes Objekt ueberhaupt in den Kompositor (siehe die Grenze in
+            ' OverlaySceneRenderer.MustBakeForWarp). Sie geschieht im Kern VOR den Anpassungen
+            ' (applyOwnWarp), wie im Bildrender: danach verzerrt, saehen Statistik und Umgebung der
+            ' Tonregler ein anderes Objekt als im Ergebnis.
+            '
+            ' Der Bezug stimmt ohne Umrechnung: OwnWarp steht in Prozent DES OBJEKTS, und dort ist
+            ' das Objektrechteck bekannt. Was die Verzerrung NICHT aendert, ist das Objektrechteck
+            ' selbst: es bleibt der Bezugsrahmen, an dem der Kompositor die Bitmap ausrichtet. Nur
+            ' die Lage der Bitmap um dieses Rechteck herum verschiebt sich (ObjectX, ObjectY), weil
+            ' verzerrte Ecken darueber hinausragen koennen.
             Dim rendered = ImageProcessor.RenderAnnotationOverlaySk(annotation, targetWidthPixels, targetHeightPixels,
-                                                                    maxRenderDimension:=Single.PositiveInfinity)
+                                                                    maxRenderDimension:=Single.PositiveInfinity,
+                                                                    measureClip:=measureClip,
+                                                                    applyOwnWarp:=True)
             If rendered Is Nothing OrElse rendered.Bitmap Is Nothing Then Return Nothing
-
-            ' Die EIGENE Verzerrung des Objekts wird HIER in die Bitmap gerechnet - und genau
-            ' deshalb darf ein verzerrtes Objekt ueberhaupt in den Kompositor (siehe die Grenze in
-            ' OverlaySceneRenderer.MustBakeForWarp).
-            '
-            ' Der Bezug stimmt ohne Umrechnung: OwnWarp steht in Prozent DES OBJEKTS, und hier ist
-            ' das Objektrechteck bekannt. Der Versatz geht als Lage der EBENE relativ zum
-            ' Objektrechteck hinein - im Bitmap liegt das Objekt bei (ObjectX, ObjectY), die Ebene
-            ' also bei (-ObjectX, -ObjectY) - und kommt im selben Bezug zurueck.
-            '
-            ' Was die Verzerrung NICHT aendert, ist das Objektrechteck selbst: es bleibt der
-            ' Bezugsrahmen, an dem der Kompositor die Bitmap ausrichtet. Nur die Lage der Bitmap um
-            ' dieses Rechteck herum verschiebt sich, weil verzerrte Ecken darueber hinausragen
-            ' koennen.
             Dim bitmap = rendered.Bitmap
             Dim objectX = rendered.ObjectX
             Dim objectY = rendered.ObjectY
-            If annotation.OwnWarp IsNot Nothing AndAlso Not annotation.OwnWarp.IsEmpty Then
-                Dim layerX = -objectX, layerY = -objectY
-                Dim warped = ImageProcessor.WarpObjectLayer(bitmap, annotation.OwnWarp,
-                                                            rendered.ObjectWidth, rendered.ObjectHeight,
-                                                            layerX, layerY)
-                If warped IsNot Nothing Then
-                    bitmap.Dispose()
-                    bitmap = warped
-                    objectX = -layerX
-                    objectY = -layerY
-                End If
-            End If
 
             ' Einmalige Umwandlung in ein unveraenderliches SKImage - jedes spaetere Zeichnen ist
             ' dann kopiefrei.
@@ -137,7 +152,8 @@ Namespace Services
                 .ObjectY = objectY,
                 .ObjectWidth = rendered.ObjectWidth,
                 .ObjectHeight = rendered.ObjectHeight,
-                .AppearanceKey = key
+                .AppearanceKey = key,
+                .BaseKey = baseKey
             }
 
             SyncLock _lock
@@ -159,6 +175,21 @@ Namespace Services
                 EvictOverBudgetLocked(keepId:=annotation.Id)
                 Return fresh
             End SyncLock
+        End Function
+
+        ''' <summary>Die Ausdehnung eines schon gerenderten Objekts mit diesem Aussehen, gleich ob mit
+        ''' oder ohne Messvieleck gerechnet; leer, wenn keins da ist. Fuer ein verzerrtes Objekt, dessen
+        ''' Ausdehnung erst die Verzerrung beim Rendern ergibt (OverlaySceneRenderer).</summary>
+        Public Function PeekExtent(annotation As ImageAnnotation, targetWidthPixels As Integer, targetHeightPixels As Integer) As SKRect
+            If annotation Is Nothing OrElse String.IsNullOrEmpty(annotation.Id) Then Return SKRect.Empty
+            If targetWidthPixels <= 0 OrElse targetHeightPixels <= 0 Then Return SKRect.Empty
+            Dim baseKey = ComputeAppearanceKey(annotation, targetWidthPixels, targetHeightPixels)
+            SyncLock _lock
+                Dim existing As Entry = Nothing
+                If _entries.TryGetValue(annotation.Id, existing) AndAlso
+                   String.Equals(existing.BaseKey, baseKey, StringComparison.Ordinal) Then Return existing.Extent
+            End SyncLock
+            Return SKRect.Empty
         End Function
 
         ''' <summary>Wirft den Eintrag eines Objekts weg (Objekt geloescht oder gerastert).</summary>

@@ -86,7 +86,11 @@
   twice when a batch runs again over the same files.
 
 - Objects with their own highlights, shadows or whites in a saved .fpx or edit file look the
-  same as when they were saved.
+  same as when they were saved. A thin object, or one that reaches over the edge of the
+  picture, now looks the same while editing and after saving.
+
+- Moving a folder to the trash no longer takes along the sidecar of a photo next to it that
+  has the same name as the folder.
 
 - Some NEF files from the Nikon Z50II and Z5II that could not be decoded showed colored noise
   and a green area. They now show the preview embedded in the file instead.

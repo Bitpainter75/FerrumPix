@@ -1745,18 +1745,35 @@ Namespace Services
             End Using
         End Function
 
-        ''' <summary>Der Skia-Kern: Objekt inkl. Effekten und eigenen Pixel-Anpassungen, Drehung bewusst
-        ''' NICHT eingerechnet (die legt der Anzeiger als Transformation darueber), Lage nicht enthalten.
-        ''' Genau die Eigenschaften, die den Objekt-Bitmap-Cache tragen.
-        '''
-        ''' <paramref name="maxRenderDimension"/>: Deckel der internen Aufloesung. Der GHOST nimmt die
-        ''' 720 (er wird ohnehin auf die Bildschirmgroesse gestreckt und bei jedem Effektregler-Tick
-        ''' neu gerendert); der Objekt-Bitmap-Cache rendert UNGEDECKELT in Szenenaufloesung - das
-        ''' komponierte Bild muss pixelgleich zur gebackenen Qualitaet sein.</summary>
-        Public Shared Function RenderAnnotationOverlaySk(annotation As ImageAnnotation, pixelWidth As Integer, pixelHeight As Integer,
-                                                         Optional maxRenderDimension As Single = MaxOverlayRenderDim) As AnnotationOverlaySkRender
-            If annotation Is Nothing Then Return Nothing
+        ''' <summary>Aufloesung und Raender des Objekt-Bitmaps, wie <see cref="RenderAnnotationOverlaySk"/>
+        ''' sie nimmt: der ungedrehte, auf die Aufloesung skalierte Klon, die Objektgroesse im Bitmap
+        ''' und der Rand fuer Kontur, Schatten, Gluehen und ueberstehenden Text.</summary>
+        Private NotInheritable Class OverlayLayout
+            Public RenderAnnotation As ImageAnnotation
+            Public RenderScale As Single
+            Public ObjectWidth As Integer
+            Public ObjectHeight As Integer
+            Public LeftPad As Integer
+            Public TopPad As Integer
+            Public RightPad As Integer
+            Public BottomPad As Integer
+        End Class
 
+        ''' <summary>Wo das Objekt-Bitmap samt Raendern liegt, in Einheiten von
+        ''' <paramref name="pixelWidth"/> und <paramref name="pixelHeight"/> und relativ zur linken oberen
+        ''' Ecke des Objektrechtecks, ungedreht. Ohne zu zeichnen: der Kompositor fragt es VOR dem
+        ''' Rendern, um zu wissen, ob das Bitmap ueber den Bildrand reicht.</summary>
+        Friend Shared Function ComputeOverlayExtent(annotation As ImageAnnotation, pixelWidth As Integer, pixelHeight As Integer,
+                                                    Optional maxRenderDimension As Single = MaxOverlayRenderDim) As SKRect
+            If annotation Is Nothing Then Return SKRect.Empty
+            Dim layout = ComputeOverlayLayout(annotation, pixelWidth, pixelHeight, maxRenderDimension)
+            Dim s = Math.Max(0.000001F, layout.RenderScale)
+            Return New SKRect(-layout.LeftPad / s, -layout.TopPad / s,
+                              (layout.ObjectWidth + layout.RightPad) / s, (layout.ObjectHeight + layout.BottomPad) / s)
+        End Function
+
+        Private Shared Function ComputeOverlayLayout(annotation As ImageAnnotation, pixelWidth As Integer, pixelHeight As Integer,
+                                                     maxRenderDimension As Single) As OverlayLayout
             Dim renderAnnotation = annotation.Clone()
             renderAnnotation.RotationDegrees = 0
 
@@ -1834,6 +1851,53 @@ Namespace Services
                 End If
             End If
 
+            Return New OverlayLayout With {
+                .RenderAnnotation = renderAnnotation,
+                .RenderScale = renderScale,
+                .ObjectWidth = objW,
+                .ObjectHeight = objH,
+                .LeftPad = leftPad,
+                .TopPad = topPad,
+                .RightPad = rightPad,
+                .BottomPad = bottomPad
+            }
+        End Function
+
+        ''' <summary>Der Skia-Kern: Objekt inkl. Effekten und eigenen Pixel-Anpassungen, Drehung bewusst
+        ''' NICHT eingerechnet (die legt der Anzeiger als Transformation darueber), Lage nicht enthalten.
+        ''' Genau die Eigenschaften, die den Objekt-Bitmap-Cache tragen.
+        '''
+        ''' <paramref name="maxRenderDimension"/>: Deckel der internen Aufloesung. Der GHOST nimmt die
+        ''' 720 (er wird ohnehin auf die Bildschirmgroesse gestreckt und bei jedem Effektregler-Tick
+        ''' neu gerendert); der Objekt-Bitmap-Cache rendert UNGEDECKELT in Szenenaufloesung - das
+        ''' komponierte Bild muss pixelgleich zur gebackenen Qualitaet sein.
+        '''
+        ''' <paramref name="measureClip"/>: der Teil des Objekts, der IM BILD liegt, als Vieleck in
+        ''' denselben Einheiten wie <see cref="ComputeOverlayExtent"/>. Nur die Bildstatistik der
+        ''' eigenen Anpassungen (Median und Spitze fuer Lichter, Tiefen und Weiss) sieht dann allein
+        ''' diesen Teil, wie der Bildrender, der das Objekt auf einer Ebene in Bildgroesse rechnet und
+        ''' den Rest dabei abschneidet. Gezeichnet wird trotzdem das ganze Objekt. Nothing, wenn das
+        ''' Bitmap ganz im Bild liegt. Bei einem verzerrten Objekt liegt das Vieleck im Bezug des
+        ''' Objektrechtecks; das Bitmap wird um die Verzerrung groesser, das Rechteck bleibt.
+        '''
+        ''' <paramref name="applyOwnWarp"/>: die eigene Verzerrung des Objekts hier rechnen, VOR den
+        ''' Anpassungen (der Objekt-Bitmap-Cache). ObjectX und ObjectY geben dann die Lage des
+        ''' Objektrechtecks im verzerrten Bitmap an.</summary>
+        Public Shared Function RenderAnnotationOverlaySk(annotation As ImageAnnotation, pixelWidth As Integer, pixelHeight As Integer,
+                                                         Optional maxRenderDimension As Single = MaxOverlayRenderDim,
+                                                         Optional measureClip As SKPoint() = Nothing,
+                                                         Optional applyOwnWarp As Boolean = False) As AnnotationOverlaySkRender
+            If annotation Is Nothing Then Return Nothing
+            Dim layout = ComputeOverlayLayout(annotation, pixelWidth, pixelHeight, maxRenderDimension)
+            Dim renderAnnotation = layout.RenderAnnotation
+            Dim renderScale = layout.RenderScale
+            Dim objW = layout.ObjectWidth
+            Dim objH = layout.ObjectHeight
+            Dim leftPad = layout.LeftPad
+            Dim topPad = layout.TopPad
+            Dim rightPad = layout.RightPad
+            Dim bottomPad = layout.BottomPad
+
             ' Das Bitmap um die Effekt-Ränder VERGRÖSSERN (nicht das Objekt hineinschrumpfen): so wird
             ' der Schatten/Glow nie an der Bitmap-Kante abgeschnitten - im Gegensatz zum gebackenen Bild,
             ' das ins ganze Foto ausbluten kann.
@@ -1883,25 +1947,75 @@ Namespace Services
                 End If
             End Using
 
+            ' DIE EIGENE VERZERRUNG VOR DEN ANPASSUNGEN, wie im Bildrender (RenderAnnotationToLayer):
+            ' sie ist Geometrie und kann helle und dunkle Teile verschieden stark vergroessern, also
+            ' Statistik und Umgebung der Tonregler aendern. Der Bezug ist das Objektrechteck; das
+            ' Bitmap kann dabei wachsen, und die Lage des Objekts darin wandert mit.
+            Dim objectX = leftPad
+            Dim objectY = topPad
+            If applyOwnWarp AndAlso renderAnnotation.OwnWarp IsNot Nothing AndAlso Not renderAnnotation.OwnWarp.IsEmpty Then
+                Dim layerX = -objectX, layerY = -objectY
+                Dim warped = WarpObjectLayer(bitmap, renderAnnotation.OwnWarp, objW, objH, layerX, layerY)
+                If warped IsNot Nothing Then
+                    bitmap.Dispose()
+                    bitmap = warped
+                    objectX = -layerX
+                    objectY = -layerY
+                End If
+            End If
+
             If HasObjectAdjustments(renderAnnotation) Then
                 Dim objectAdj = renderAnnotation.Adjustments.ExtractPixelAdjustments()
-                objectAdj.SourceWidthPixels = width
-                objectAdj.SourceHeightPixels = height
+                Dim layerWidth = bitmap.Width
+                Dim layerHeight = bitmap.Height
+                objectAdj.SourceWidthPixels = layerWidth
+                objectAdj.SourceHeightPixels = layerHeight
                 ' Bezug der oertlichen Lichter und Tiefen ist das Objektrechteck, wie im Bildrender
                 ' (DrawAnnotationViaLayer), nicht dieses Bitmap samt Effektrand.
                 Dim layerBitmap = bitmap
-                Dim processed = WithLocalToneReference(Math.Max(objW, objH), Function() ProcessBitmapBase(layerBitmap, objectAdj))
+                Dim measureMask = RasterizeMeasureClip(measureClip, layerWidth, layerHeight, objectX, objectY, renderScale)
+                Dim processed = WithLocalToneReference(Math.Max(objW, objH),
+                    Function() WithToneMeasureMask(measureMask, layerWidth, layerHeight, Function() ProcessBitmapBase(layerBitmap, objectAdj)))
                 If Not Object.ReferenceEquals(processed, bitmap) Then bitmap.Dispose()
                 bitmap = processed
             End If
 
             Return New AnnotationOverlaySkRender With {
                 .Bitmap = bitmap,
-                .ObjectX = leftPad,
-                .ObjectY = topPad,
+                .ObjectX = objectX,
+                .ObjectY = objectY,
                 .ObjectWidth = objW,
                 .ObjectHeight = objH
             }
+        End Function
+
+        ''' <summary>Das Vieleck aus <see cref="RenderAnnotationOverlaySk"/> als Maske ueber dem
+        ''' Objekt-Bitmap: ein Byte je Bildpunkt, 0 ausserhalb. Ohne Kantenglaettung, damit ein
+        ''' Bildpunkt ganz dazugehoert oder gar nicht, wie auf der Ebene in Bildgroesse. Nothing ohne
+        ''' Vieleck.</summary>
+        Private Shared Function RasterizeMeasureClip(clip As SKPoint(), width As Integer, height As Integer,
+                                                     leftPad As Integer, topPad As Integer, renderScale As Single) As Byte()
+            If clip Is Nothing OrElse clip.Length < 3 OrElse width <= 0 OrElse height <= 0 Then Return Nothing
+            Using mask = New SKBitmap(New SKImageInfo(width, height, SKColorType.Alpha8, SKAlphaType.Premul))
+                Using canvas = New SKCanvas(mask)
+                    canvas.Clear(SKColors.Transparent)
+                    canvas.Translate(leftPad, topPad)
+                    canvas.Scale(renderScale)
+                    Using path = New SKPath()
+                        path.AddPoly(clip, close:=True)
+                        Using paint = New SKPaint With {.Color = SKColors.White, .IsAntialias = False, .Style = SKPaintStyle.Fill}
+                            canvas.DrawPath(path, paint)
+                        End Using
+                    End Using
+                End Using
+                Dim result = New Byte(width * height - 1) {}
+                Dim rowBytes = mask.RowBytes
+                Dim source = mask.GetPixels()
+                For y = 0 To height - 1
+                    Marshal.Copy(IntPtr.Add(source, y * rowBytes), result, y * width, width)
+                Next
+                Return result
+            End Using
         End Function
 
         ''' DrawWrappedText setzt die Grundlinie der ersten Zeile auf rect.Top + fontSize, die Glyphen-

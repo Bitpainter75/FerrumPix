@@ -135,11 +135,21 @@ Namespace Services
         ''' heisst: die eigene Formel (Laden alter Rezepte).</summary>
         Friend Shared Sub PinToneModel(adj As ImageAdjustments, model As Integer)
             For Each part In ToneModelCarriers(adj)
-                If part.ToneModel <= 0 AndAlso part.UsesToneModel() Then
+                If part.ToneModel = UnpinnedObjectToneModel Then
+                    ' Siehe PinLegacyObjectToneModels: nur ein Objekt, das damals Tonregler trug,
+                    ' rechnete mit 2. Ohne sie bleibt es "nicht angegeben" und bekommt das Modell
+                    ' neuer Bearbeitungen, sobald dort ein Tonregler bewegt wird.
+                    part.ToneModel = If(part.UsesToneModel(), 2, 0)
+                ElseIf part.ToneModel <= 0 AndAlso part.UsesToneModel() Then
                     part.ToneModel = If(model > 0, model, part.ResolvedToneModel())
                 End If
             Next
         End Sub
+
+        ''' <summary>Vorlaeufige Marke beim Laden, nie gespeichert und nie gerechnet: die Anpassungen
+        ''' eines Objekts trugen das Feld ToneModel mit 0. Was daraus wird, entscheidet
+        ''' <see cref="PinToneModel"/>, sobald die Reglerwerte deserialisiert sind.</summary>
+        Private Const UnpinnedObjectToneModel As Integer = -2
 
         Private Shared Function NeedsToneModelPin(adj As ImageAdjustments) As Boolean
             Return ToneModelCarriers(adj).Any(Function(part) part.ToneModel <= 0 AndAlso part.UsesToneModel())
@@ -165,9 +175,14 @@ Namespace Services
         ''' <summary>Die Objekte bekamen ihr Tonmodell beim Speichern lange nicht eingetragen, anders
         ''' als Rezept und Maskenebenen. Ihre 0 ist deshalb zweideutig, und nur das JSON loest sie
         ''' auf: steht das Feld ToneModel in ihren Anpassungen, wurde die Datei mit Tonmodell
-        ''' geschrieben, und die 0 rechnete damals als 2. Fehlt das Feld, stammt sie aus der Zeit der
-        ''' eigenen Formel und bekommt danach in <see cref="PinToneModel"/> die 1. Muss VOR dem
-        ''' Deserialisieren laufen, danach ist der Unterschied verloren.</summary>
+        ''' geschrieben. Fehlt das Feld, stammt sie aus der Zeit der eigenen Formel und bekommt danach
+        ''' in <see cref="PinToneModel"/> die 1. Muss VOR dem Deserialisieren laufen, danach ist der
+        ''' Unterschied verloren.
+        '''
+        ''' Eine 0 im Feld heisst aber nicht immer Modell 2: auch heute steht sie dort, wenn am Objekt
+        ''' nur modellunabhaengige Regler wie die Belichtung stehen (gespeichert wird das Modell nur
+        ''' bei UsesToneModel). Hier wird deshalb nur markiert; ob 2 oder "nicht angegeben", sagen
+        ''' erst die Reglerwerte in PinToneModel.</summary>
         Friend Shared Sub PinLegacyObjectToneModels(adjustmentsNode As JsonNode)
             Dim annotations = TryCast(FindProperty(TryCast(adjustmentsNode, JsonObject), "Annotations"), JsonArray)
             If annotations Is Nothing Then Return
@@ -179,7 +194,7 @@ Namespace Services
                 If key Is Nothing Then Continue For
                 Dim value = TryCast(objectAdj(key), JsonValue)
                 Dim number As Integer
-                If value IsNot Nothing AndAlso value.TryGetValue(number) AndAlso number <= 0 Then objectAdj(key) = 2
+                If value IsNot Nothing AndAlso value.TryGetValue(number) AndAlso number <= 0 Then objectAdj(key) = UnpinnedObjectToneModel
             Next
         End Sub
 

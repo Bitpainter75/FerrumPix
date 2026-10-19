@@ -5692,13 +5692,16 @@ Namespace ViewModels
             ' Fenster so lange still, und die Ansicht konnte das Ausblenden gar nicht erst zeigen.
             Dim failures = Await Task.Run(Function()
                                               Dim errors As New List(Of String)()
-                                              For Each itemPath In pathList
-                                                  Try
-                                                      DeletePath(itemPath, useTrash)
-                                                  Catch ex As Exception
-                                                      errors.Add($"{IO.Path.GetFileName(itemPath)}: {ex.Message}")
-                                                  End Try
-                                              Next
+                                              ' Jeden Ordner fuer die Begleitdateien nur einmal lesen.
+                                              Using RawSidecarService.BatchScope()
+                                                  For Each itemPath In pathList
+                                                      Try
+                                                          DeletePath(itemPath, useTrash)
+                                                      Catch ex As Exception
+                                                          errors.Add($"{IO.Path.GetFileName(itemPath)}: {ex.Message}")
+                                                      End Try
+                                                  Next
+                                              End Using
                                               Return errors
                                           End Function)
             DiagnosticLogService.LogAlways("Delete", $"{pathList.Count} Element(e), Papierkorb={useTrash}, Fehler={failures.Count}")
@@ -5727,12 +5730,16 @@ Namespace ViewModels
             If String.IsNullOrEmpty(itemPath) Then Return
 
             If useTrash Then
+                ' Ob es eine DATEI war, vorher festhalten: danach ist sie weg und laesst sich nicht
+                ' mehr fragen. Ein Ordner hat keine Begleitdateien. "Urlaub.xmp" neben dem Ordner
+                ' Urlaub gehoert zu Urlaub.cr2 und darf nicht mit in den Papierkorb.
+                Dim isFile = IO.File.Exists(itemPath)
                 ' Bewusst KEIN stiller Rückfall auf dauerhaftes Löschen, wenn der Papierkorb scheitert -
                 ' das wäre die gefährliche Überraschung, die dieser Schalter gerade verhindern soll.
                 If Not TrashService.MoveToTrash(itemPath) Then
                     Throw New IOException("Papierkorb nicht verfügbar")
                 End If
-                ReportFailedCompanionDeletion(RawSidecarService.AccompanyDelete(itemPath, useTrash:=True))
+                If isFile Then ReportFailedCompanionDeletion(RawSidecarService.AccompanyDelete(itemPath, useTrash:=True))
                 Return
             End If
 
