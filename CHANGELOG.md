@@ -16,6 +16,11 @@
   the nearest parts of the picture too, so a person or an animal close to the camera no longer
   stays perfectly clear while everything behind them disappears in the mist.
 
+- **File names in the photo wall.** The photo wall has no caption strip under its tiles, so a raw
+  file and its .fpx project looked the same. Hovering over a tile now shows its name with the
+  extension and the details you would otherwise see under it, in the same info box the EXIF and
+  XMP badges use.
+
 - **The eyedropper shows what it hits.** A small label follows the eyedropper over the picture
   with a swatch and the value of the color under its tip.
 

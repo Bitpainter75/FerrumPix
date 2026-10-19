@@ -509,6 +509,61 @@ Namespace ViewModels
             End Set
         End Property
 
+        ''' <summary>Die Kachel der Fotowand, ueber der der Zeiger gerade steht, sonst Nothing.</summary>
+        Private _hoveredWallTile As ImageItem
+
+        ''' <summary>DIE FOTOWAND HAT KEINEN BESCHRIFTUNGSSTREIFEN, und damit fehlte dort, was sonst
+        ''' unter der Kachel steht: Name samt Endung und die gewaehlten Angaben. Eine NEF und ihre
+        ''' .fpx sahen gleich aus (Befund aus einem Forum). Beim Ueberfahren einer Kachel zeigt die
+        ''' Infobox der Metadaten-Badges deshalb diese Angaben; die Badges selbst haben Vorrang.
+        ''' Raster und Liste zeigen den Streifen und bleiben, wie sie sind.</summary>
+        Public Sub BeginTileHover(item As ImageItem)
+            If Not IsWallView OrElse item Is Nothing OrElse item.IsFolder OrElse item.IsParentFolderEntry Then Return
+            _hoveredWallTile = item
+            ShowWallTileInfo(item)
+        End Sub
+
+        ''' <summary>Der Zeiger hat die Kachel verlassen. Nur die eigene Angabe raeumt die Box; eine
+        ''' andere Kachel, die schon uebernommen hat, bleibt stehen.</summary>
+        Public Sub EndTileHover(item As ImageItem)
+            If item Is Nothing OrElse _hoveredWallTile IsNot item Then Return
+            _hoveredWallTile = Nothing
+            HoveredMetadataTitle = ""
+            HoveredMetadataText = ""
+        End Sub
+
+        ''' <summary>Ein Metadaten-Badge wurde verlassen. Steht der Zeiger noch auf seiner Kachel der
+        ''' Fotowand, kommt deren Angabe zurueck, sonst wird die Box geleert.</summary>
+        Public Sub EndMetadataBadgeHover()
+            If _hoveredWallTile IsNot Nothing AndAlso IsWallView Then
+                ShowWallTileInfo(_hoveredWallTile)
+            Else
+                HoveredMetadataTitle = ""
+                HoveredMetadataText = ""
+            End If
+        End Sub
+
+        Private Sub ShowWallTileInfo(item As ImageItem)
+            HoveredMetadataTitle = If(item.FileName, "")
+            HoveredMetadataText = WallTileInfoText(item)
+        End Sub
+
+        ''' <summary>Die Angaben, die sonst im Beschriftungsstreifen stuenden: je gewaehlte Zeile die
+        ''' linke und die rechte Angabe, leere fallen weg. Eine Zeile je Zeile des Streifens.</summary>
+        Friend Function WallTileInfoText(item As ImageItem) As String
+            If item Is Nothing Then Return ""
+            Dim rows = {(IsTileCaptionRow1Visible, item.CaptionRow1Left, item.CaptionRow1Right),
+                        (IsTileCaptionRow2Visible, item.CaptionRow2Left, item.CaptionRow2Right),
+                        (IsTileCaptionRow3Visible, item.CaptionRow3Left, item.CaptionRow3Right)}
+            Dim lines As New List(Of String)()
+            For Each row In rows
+                If Not row.Item1 Then Continue For
+                Dim parts = {row.Item2, row.Item3}.Where(Function(p) Not String.IsNullOrWhiteSpace(p)).ToArray()
+                If parts.Length > 0 Then lines.Add(String.Join(", ", parts))
+            Next
+            Return String.Join(Environment.NewLine, lines)
+        End Function
+
         Public Property SearchText As String
             Get
                 Return _searchText
@@ -1318,6 +1373,14 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(TileWidthOrAuto))
                 Me.RaisePropertyChanged(NameOf(TileImageHeightOrAuto))
                 Me.RaisePropertyChanged(NameOf(AreTileLabelsVisible))
+                Me.RaisePropertyChanged(NameOf(AreTileLabelsHidden))
+                ' Eine Angabe der Fotowand gehoert nicht in die naechste Ansicht: der Zeiger verlaesst
+                ' beim Umschalten keine Kachel, also raeumt hier niemand sonst.
+                If _hoveredWallTile IsNot Nothing Then
+                    _hoveredWallTile = Nothing
+                    HoveredMetadataTitle = ""
+                    HoveredMetadataText = ""
+                End If
                 Me.RaisePropertyChanged(NameOf(AreTileLabelsHidden))
                 Me.RaisePropertyChanged(NameOf(TileImageStretch))
                 Me.RaisePropertyChanged(NameOf(TileMargin))

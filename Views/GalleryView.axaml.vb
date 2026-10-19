@@ -2026,10 +2026,19 @@ Namespace Views
             Dim item = TryCast(control?.DataContext, ImageItem)
             Dim vm = GetVm()
             If item IsNot Nothing Then item.HoveredMetadataKind = ""
-            If vm IsNot Nothing Then
-                vm.HoveredMetadataTitle = ""
-                vm.HoveredMetadataText = ""
-            End If
+            ' In der Fotowand kommt die Angabe der Kachel zurueck, sonst wird die Box geleert.
+            vm?.EndMetadataBadgeHover()
+        End Sub
+
+        ''' <summary>Die Fotowand hat keinen Beschriftungsstreifen; beim Ueberfahren einer Kachel
+        ''' zeigt die Infobox der Badges, was sonst darunter stuende (GalleryViewModel.BeginTileHover).
+        ''' In den anderen Ansichten tut das ViewModel hier nichts.</summary>
+        Public Sub OnThumbnailPointerEntered(sender As Object, e As PointerEventArgs)
+            GetVm()?.BeginTileHover(TryCast(TryCast(sender, Control)?.DataContext, ImageItem))
+        End Sub
+
+        Public Sub OnThumbnailPointerExited(sender As Object, e As PointerEventArgs)
+            GetVm()?.EndTileHover(TryCast(TryCast(sender, Control)?.DataContext, ImageItem))
         End Sub
 
         Private Sub ApplyPointerSelection(vm As GalleryViewModel, item As ImageItem, modifiers As KeyModifiers)

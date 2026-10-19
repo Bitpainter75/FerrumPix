@@ -143,6 +143,21 @@ Namespace Services
             Return False
         End Function
 
+        ''' <summary>Wie <see cref="IsDifferent"/>, aber ohne die Paketfassung: ein rein numerischer
+        ''' Anhang hinter dem letzten Bindestrich (das "-4" in 0.9.67-4) zählt nicht. Eine neue
+        ''' Paketfassung derselben Fassung ist ein Neubau, keine neue Fassung, und soll nicht in der
+        ''' Fensterleiste stehen; die Einstellungen nennen sie weiter (IsDifferent). Ein Anhang mit
+        ''' Buchstaben wie "-beta2" ist keine Paketfassung und bleibt Teil der Nummer.</summary>
+        Public Shared Function IsDifferentRelease(published As String, current As String) As Boolean
+            Return IsDifferent(WithoutPackageRelease(published), WithoutPackageRelease(current))
+        End Function
+
+        ''' <summary>Die Nummer ohne einen rein numerischen Anhang hinter dem letzten Bindestrich.</summary>
+        Public Shared Function WithoutPackageRelease(version As String) As String
+            If String.IsNullOrWhiteSpace(version) Then Return ""
+            Return Regex.Replace(version.Trim(), "-[0-9]+$", "")
+        End Function
+
         ''' <summary>Die Zahlengruppen einer Versionsangabe, höchstens sechs.</summary>
         Private Shared Function NumberGroups(text As String) As List(Of Long)
             Dim groups As New List(Of Long)()

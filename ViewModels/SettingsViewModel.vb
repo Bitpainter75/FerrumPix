@@ -371,10 +371,21 @@ Namespace ViewModels
             End Get
         End Property
 
-        ''' <summary>Steuert den Hinweis neben der Versionsangabe.</summary>
+        ''' <summary>Steuert den Hinweis neben der Versionsangabe. Auch eine neue Paketfassung
+        ''' derselben Fassung (0.9.67-4 auf 0.9.67-5) zählt hier.</summary>
         Public ReadOnly Property IsUpdateAvailable As Boolean
             Get
                 Return _availableVersion.Length > 0
+            End Get
+        End Property
+
+        ''' <summary>Steuert den Hinweis in der Fensterleiste: nur eine andere FASSUNG, nicht eine
+        ''' neue Paketfassung derselben (UpdateCheckService.IsDifferentRelease). Ein Neubau mit
+        ''' höherem pkgrel ist für die Einstellungen eine Angabe wert, für die Leiste, die bei
+        ''' jeder Arbeit sichtbar ist, kein Anlass.</summary>
+        Public ReadOnly Property IsReleaseUpdateAvailable As Boolean
+            Get
+                Return _availableVersion.Length > 0 AndAlso UpdateCheckService.IsDifferentRelease(_availableVersion, DisplayVersion)
             End Get
         End Property
 
@@ -399,6 +410,7 @@ Namespace ViewModels
                 _availableVersion = other
                 Me.RaisePropertyChanged(NameOf(AvailableVersion))
                 Me.RaisePropertyChanged(NameOf(IsUpdateAvailable))
+                Me.RaisePropertyChanged(NameOf(IsReleaseUpdateAvailable))
             Catch ex As Exception
                 ' Ein Async Sub reicht Ausnahmen an niemanden weiter - unbehandelt beendet das die App.
                 DiagnosticLogService.LogException("SettingsViewModel.BeginUpdateCheck", ex)

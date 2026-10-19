@@ -1982,6 +1982,8 @@
                                         Cursor="Hand"
                                         PointerPressed="OnThumbnailPointerPressed"
                                         PointerMoved="OnThumbnailPointerMoved"
+                                        PointerEntered="OnThumbnailPointerEntered"
+                                        PointerExited="OnThumbnailPointerExited"
                                         DoubleTapped="OnThumbnailDoubleTapped"
                                         DragDrop.AllowDrop="True"
                                         DragDrop.DragOver="OnItemDragOver"

@@ -612,10 +612,12 @@ Namespace ViewModels
         End Property
 
         ''' <summary>Der Hinweis neben dem Logo. Kein eigener Zustand: das Ergebnis der einen
-        ''' Abfrage beim Start liegt im SettingsViewModel und wird hier nur weitergereicht.</summary>
+        ''' Abfrage beim Start liegt im SettingsViewModel und wird hier nur weitergereicht. Nur bei
+        ''' einer anderen Fassung, nicht bei einer neuen Paketfassung derselben; die nennen die
+        ''' Einstellungen (SettingsViewModel.IsReleaseUpdateAvailable).</summary>
         Public ReadOnly Property IsUpdateAvailable As Boolean
             Get
-                Return Settings IsNot Nothing AndAlso Settings.IsUpdateAvailable
+                Return Settings IsNot Nothing AndAlso Settings.IsReleaseUpdateAvailable
             End Get
         End Property
 
@@ -656,7 +658,7 @@ Namespace ViewModels
             ModelRequestService.Handler = Function(feature, keys) Settings.RequestModelsAsync(feature, keys)
             AddHandler Settings.PropertyChanged,
                 Sub(s, e)
-                    If e.PropertyName = NameOf(SettingsViewModel.IsUpdateAvailable) Then
+                    If e.PropertyName = NameOf(SettingsViewModel.IsReleaseUpdateAvailable) Then
                         Me.RaisePropertyChanged(NameOf(IsUpdateAvailable))
                     ElseIf e.PropertyName = NameOf(SettingsViewModel.AvailableVersion) Then
                         Me.RaisePropertyChanged(NameOf(AvailableVersion))
