@@ -5692,8 +5692,9 @@ Namespace ViewModels
             ' Fenster so lange still, und die Ansicht konnte das Ausblenden gar nicht erst zeigen.
             Dim failures = Await Task.Run(Function()
                                               Dim errors As New List(Of String)()
-                                              ' Jeden Ordner fuer die Begleitdateien nur einmal lesen.
-                                              Using RawSidecarService.BatchScope()
+                                              ' Ueber geteilte Stamm-XMP entscheidet erst das Ende des
+                                              ' Stapels, mit frisch gelesenem Ordner (RawSidecarService.BatchScope).
+                                              Using batch = RawSidecarService.BatchScope()
                                                   For Each itemPath In pathList
                                                       Try
                                                           DeletePath(itemPath, useTrash)
@@ -5701,6 +5702,11 @@ Namespace ViewModels
                                                           errors.Add($"{IO.Path.GetFileName(itemPath)}: {ex.Message}")
                                                       End Try
                                                   Next
+                                                  Dim leftover = batch.Finish()
+                                                  If leftover.Count > 0 Then
+                                                      errors.Add(String.Format(LocalizationService.T("Die Datei wurde entfernt, aber diese Begleitdateien blieben zurück: {0}"),
+                                                                               String.Join(", ", leftover)))
+                                                  End If
                                               End Using
                                               Return errors
                                           End Function)

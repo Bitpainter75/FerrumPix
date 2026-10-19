@@ -11578,8 +11578,9 @@ Namespace ViewModels
                 _mainVm.Viewer.ReleaseCurrentImageIfAny(sources)
                 _mainVm.Editor.ReleaseCurrentImageIfAny(sources)
 
-                ' Jeden Ordner fuer die Begleitdateien nur einmal lesen (RawSidecarService.BatchScope).
-                Using RawSidecarService.BatchScope()
+                ' Ueber geteilte Stamm-XMP entscheidet erst das Ende des Stapels, mit frisch gelesenem
+                ' Ordner und im Hintergrund (RawSidecarService.BatchScope).
+                Using batch = RawSidecarService.BatchScope()
                     For Each mapping In result.Mappings
                         If String.IsNullOrEmpty(mapping.SourcePath) OrElse String.IsNullOrEmpty(mapping.TargetPath) Then Continue For
                         ' Reines Aendern der Gross-/Kleinschreibung ist auf Linux eine ECHTE Umbenennung
@@ -11597,6 +11598,7 @@ Namespace ViewModels
                         ' Wie beim einzelnen Umbenennen: Katalog und Kacheln wandern mit.
                         LibraryService.Instance.MoveEverythingForPath(mapping.SourcePath, mapping.TargetPath)
                     Next
+                    failedCompanions.AddRange(Await Task.Run(Function() batch.Finish()))
                 End Using
 
                 ClearSelection()
@@ -12033,14 +12035,21 @@ Namespace ViewModels
                     Where(Function(p) If(cut, FileOperationPolicy.CanMove(p, targetFolder), FileOperationPolicy.CanCopy(p))).
                     ToList()
 
-                ' Jeden Ordner fuer die Begleitdateien nur einmal lesen (RawSidecarService.BatchScope).
-                Using RawSidecarService.BatchScope()
+                ' Ueber geteilte Stamm-XMP entscheidet erst das Ende des Stapels, mit frisch gelesenem
+                ' Ordner und im Hintergrund (RawSidecarService.BatchScope).
+                Dim leftoverCompanions As List(Of String)
+                Using batch = RawSidecarService.BatchScope()
                     For Each source In sourcePaths
                         If Await CopyOrMovePathAsync(source, targetFolder, cut) Then
                             completedSources.Add(source)
                         End If
                     Next
+                    leftoverCompanions = Await Task.Run(Function() batch.Finish())
                 End Using
+                If leftoverCompanions.Count > 0 Then
+                    Await _mainVm.ShowMessageAsync(LocalizationService.T("Begleitdatei konnte nicht geschrieben werden"),
+                                                   String.Join(Environment.NewLine, leftoverCompanions))
+                End If
                 ClearSelection()
                 If _isVirtualFolder Then
                     If cut Then RemovePathsFromVirtualFolder(completedSources)
@@ -13988,14 +13997,21 @@ Namespace ViewModels
                     ToList()
                 If sourcePaths.Count = 0 Then Return
 
-                ' Jeden Ordner fuer die Begleitdateien nur einmal lesen (RawSidecarService.BatchScope).
-                Using RawSidecarService.BatchScope()
+                ' Ueber geteilte Stamm-XMP entscheidet erst das Ende des Stapels, mit frisch gelesenem
+                ' Ordner und im Hintergrund (RawSidecarService.BatchScope).
+                Dim leftoverCompanions As List(Of String)
+                Using batch = RawSidecarService.BatchScope()
                     For Each source In sourcePaths
                         If Await CopyOrMovePathAsync(source, targetFolder, True) Then
                             completedSources.Add(source)
                         End If
                     Next
+                    leftoverCompanions = Await Task.Run(Function() batch.Finish())
                 End Using
+                If leftoverCompanions.Count > 0 Then
+                    Await _mainVm.ShowMessageAsync(LocalizationService.T("Begleitdatei konnte nicht geschrieben werden"),
+                                                   String.Join(Environment.NewLine, leftoverCompanions))
+                End If
                 ClearSelection()
                 If _isVirtualFolder Then
                     RemovePathsFromVirtualFolder(completedSources)
@@ -14237,10 +14253,11 @@ Namespace ViewModels
             ' liegendes "Urlaub.xmp" oder "Urlaub.fpxmp" gehoert zu einem Foto "Urlaub.cr2" und ginge
             ' sonst mit der alten Fassung beiseite und nach dem Erfolg mit ihr weg.
             Dim companions As New List(Of (String, String))()
+            Dim ownedStem As String = Nothing
             If File.Exists(target) Then
                 companions.Add((RawSidecarService.SidecarPathFor(target), RawSidecarService.SidecarPathFor(aside)))
                 companions.Add((target & ".xmp", aside & ".xmp"))
-                Dim ownedStem = RawSidecarService.OwnedStemXmp(target)
+                ownedStem = RawSidecarService.OwnedStemXmp(target)
                 If ownedStem IsNot Nothing Then companions.Add((ownedStem, aside & ".stem.xmp"))
             End If
             Dim setAside As New List(Of (Original As String, Aside As String))()
@@ -14281,6 +14298,11 @@ Namespace ViewModels
             Try
                 DeletePathIfPresent(aside)
                 For Each companion In setAside
+                    ' Die Stamm-XMP im Stapel erst am Ende loeschen: ob sie dem alten Ziel allein
+                    ' gehoerte, wurde dort aus einer gemerkten Ordnerliste entschieden
+                    ' (RawSidecarService.DeferAsideStemRemoval).
+                    If ownedStem IsNot Nothing AndAlso String.Equals(companion.Original, ownedStem, PathIdentity.Comparison) AndAlso
+                       RawSidecarService.DeferAsideStemRemoval(companion.Aside, companion.Original, target) Then Continue For
                     DeletePathIfPresent(companion.Aside)
                 Next
             Catch ex As Exception
