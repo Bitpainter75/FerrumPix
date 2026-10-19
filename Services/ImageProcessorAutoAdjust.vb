@@ -325,23 +325,65 @@ Namespace Services
                 ' kam mit +-45 nur von 67 auf 93 Tonwerte.
                 Dim lowIn = AutoMapExposure(pLow, usedGain)
                 Dim highIn = AutoMapExposure(pHigh, usedGain)
-                If clippedBlack <= 0.005 AndAlso lowAfter > AutoTargetBlackPoint Then
-                    result.Blacks = AutoDeadband(AutoSolveRising(
-                        Function(b) lowAfter + ToneSliderCurves.Lift("Blacks", b, lowIn), AutoTargetBlackPoint, -100.0, 0.0))
-                End If
-                If clippedWhite <= 0.005 AndAlso highAfter < AutoTargetWhitePoint Then
+                Dim wantsBlack = clippedBlack <= 0.005 AndAlso lowAfter > AutoTargetBlackPoint
+                Dim wantsWhite = clippedWhite <= 0.005 AndAlso highAfter < AutoTargetWhitePoint
+                If model >= 3 Then
                     ' Im Tonmodell 3 waehlt Weiss seine Kurve nach der Spitze des Bildes, gemessen wie
                     ' in der Kette und wie dort durch die Belichtung geschoben; die Automatik loest mit
                     ' derselben Kurve auf, die das Bild dann rechnet.
                     Dim topL = 0.0
-                    If model >= 3 Then
-                        Dim reference = MeasureToneReference(source, unpremultiply:=True)
-                        If reference.IsMeasured Then
-                            topL = GrayVToLightness(AutoMapExposure(LightnessToGrayV(reference.TopL), usedGain))
-                        End If
+                    Dim reference = MeasureToneReference(source, unpremultiply:=True)
+                    If reference.IsMeasured Then
+                        topL = GrayVToLightness(AutoMapExposure(LightnessToGrayV(reference.TopL), usedGain))
                     End If
-                    result.Whites = AutoDeadband(AutoSolveRising(
-                        Function(w) highAfter + ToneSliderCurves.LiftByTop("Whites", w, highIn, topL), AutoTargetWhitePoint, 0.0, 100.0))
+                    ' SCHWARZ UND WEISS GEMEINSAM, WEISS NACH DEM GEWINN AN UMFANG. Bei einem flauen
+                    ' Bild liegt die Spitze unter allen Eichbildern, und die Kurve dieser Gruppe hebt
+                    ' die Mitten und das untere Ende kraeftig, dort sogar staerker als oben (Weiss +100
+                    ' bei v 0,45 um +0,43, bei 0,6 um +0,33). Weiss bis zum oberen Ziel aufzuloesen hob
+                    ' dann alles mit, und auch Schwarz -100 holte das untere Ende nicht zurueck: aus
+                    ' einem Umfang von 67 Tonwerten wurden 76, mit gemeinsamem Aufloesen gar keiner
+                    ' mehr. Deshalb wird Weiss so gewaehlt, dass der Abstand zwischen oberem und unterem
+                    ' Ende am groessten ist, wobei oben nichts ueber das Ziel hinaus zaehlt; Schwarz
+                    ' loest je Versuch mit dem Hub von Weiss am unteren Ende. Bei einer gewoehnlichen
+                    ' Kurve ist das genau der Wert, der das obere Ziel trifft.
+                    Dim blacksFor = Function(w As Double) As Double
+                                        If Not wantsBlack Then Return 0.0
+                                        Return AutoSolveRising(
+                                            Function(b) lowAfter + ToneSliderCurves.LiftByTop("Whites", w, lowIn, topL) +
+                                                        ToneSliderCurves.Lift("Blacks", b, lowIn),
+                                            AutoTargetBlackPoint, -100.0, 0.0)
+                                    End Function
+                    Dim spanFor = Function(w As Double, b As Double) As Double
+                                      Dim high = highAfter + ToneSliderCurves.Lift("Blacks", b, highIn) +
+                                                 ToneSliderCurves.LiftByTop("Whites", w, highIn, topL)
+                                      Dim low = lowAfter + ToneSliderCurves.LiftByTop("Whites", w, lowIn, topL) +
+                                                ToneSliderCurves.Lift("Blacks", b, lowIn)
+                                      Return Math.Min(high, AutoTargetWhitePoint) - Math.Max(low, AutoTargetBlackPoint)
+                                  End Function
+                    Dim whites = 0.0
+                    Dim blacks = blacksFor(0.0)
+                    If wantsWhite Then
+                        Dim bestSpan = spanFor(0.0, blacks)
+                        For candidate = 1 To 100
+                            Dim b = blacksFor(candidate)
+                            Dim span = spanFor(candidate, b)
+                            ' Nur ein echter Gewinn zaehlt; bei Gleichstand bleibt der kleinere Wert.
+                            If span > bestSpan + 0.0005 Then
+                                bestSpan = span : whites = candidate : blacks = b
+                            End If
+                        Next
+                    End If
+                    If wantsBlack Then result.Blacks = AutoDeadband(blacks)
+                    If wantsWhite Then result.Whites = AutoDeadband(whites)
+                Else
+                    If wantsBlack Then
+                        result.Blacks = AutoDeadband(AutoSolveRising(
+                            Function(b) lowAfter + ToneSliderCurves.Lift("Blacks", b, lowIn), AutoTargetBlackPoint, -100.0, 0.0))
+                    End If
+                    If wantsWhite Then
+                        result.Whites = AutoDeadband(AutoSolveRising(
+                            Function(w) highAfter + ToneSliderCurves.Lift("Whites", w, highIn), AutoTargetWhitePoint, 0.0, 100.0))
+                    End If
                 End If
             Else
                 If clippedBlack <= 0.005 AndAlso lowAfter > AutoTargetBlackPoint Then
