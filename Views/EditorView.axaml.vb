@@ -1968,6 +1968,8 @@ Namespace Views
                      NameOf(EditorViewModel.AnnotationStrokeColor),
                      NameOf(EditorViewModel.AnnotationFontSize),
                      NameOf(EditorViewModel.AnnotationFontFamily),
+                     NameOf(EditorViewModel.AnnotationBold),
+                     NameOf(EditorViewModel.AnnotationItalic),
                      NameOf(EditorViewModel.AnnotationTextAlignment),
                      NameOf(EditorViewModel.AnnotationLetterSpacingPercent),
                      NameOf(EditorViewModel.AnnotationOpacity),
@@ -6444,16 +6446,30 @@ Namespace Views
         '''
         ''' Die Textbox nimmt selbst keine Klicks an (IsHitTestVisible aus): sonst schluckte sie
         ''' jeden Druck, und der Text liesse sich nicht mehr verschieben. Gerechnet wird deshalb
-        ''' hier, am Layout ihres Textes. GetPosition beruecksichtigt Drehung des Rahmens und den
-        ''' Versatz der Textbox, die Stelle stimmt also auch an einem gedrehten Text.</summary>
+        ''' hier, an den geformten Positionen des Bildrenderers. GetPosition beruecksichtigt
+        ''' Drehung des Rahmens und den Versatz der Textbox.</summary>
         Private Function TextOverlayCaretIndexAt(e As PointerEventArgs) As Integer
             Dim editor = Me.FindControl(Of TextBox)("TextOverlayEditor")
             If editor Is Nothing OrElse Not editor.IsVisible Then Return -1
-            Dim presenter = editor.GetVisualDescendants().OfType(Of Presenters.TextPresenter)().FirstOrDefault()
-            If presenter Is Nothing OrElse presenter.TextLayout Is Nothing Then Return -1
-            Dim hit = presenter.TextLayout.HitTestPoint(e.GetPosition(presenter))
-            Dim index = hit.CharacterHit.FirstCharacterIndex + hit.CharacterHit.TrailingLength
-            Return Math.Max(0, Math.Min(index, If(editor.Text, "").Length))
+            Dim text = If(editor.Text, "")
+            Dim point = e.GetPosition(editor)
+            Dim offset = ImageProcessor.GetBakedTextTopOffset(editor.FontFamily.Name, CSng(editor.FontSize), text,
+                                                              editor.FontWeight = FontWeight.Bold, editor.FontStyle = FontStyle.Italic)
+            Dim best = 0
+            Dim bestDistance = Double.PositiveInfinity
+            For index = 0 To text.Length
+                Dim hit = ImageProcessor.MeasureAnnotationCaret(text, index, editor.FontFamily.Name, CSng(editor.FontSize),
+                                                                CSng(editor.LetterSpacing), editor.FontWeight = FontWeight.Bold,
+                                                                editor.FontStyle = FontStyle.Italic, editor.TextAlignment.ToString(), CSng(editor.Bounds.Width))
+                Dim dx = point.X - hit.X
+                Dim dy = point.Y + offset - hit.Y - editor.FontSize / 2.0
+                Dim distance = dx * dx + dy * dy * 4.0
+                If distance < bestDistance Then
+                    best = index
+                    bestDistance = distance
+                End If
+            Next
+            Return best
         End Function
 
         ''' <summary>Die Lage des Auswahlrahmens: NUR die Drehung.
@@ -6592,7 +6608,7 @@ Namespace Views
                 ' Ziehen an den Griffen skaliert die View den Schriftgrad (ScaleSelectedTextFontFromDrag)
                 ' und die Box folgt der Schrift, nie umgekehrt.
                 Dim displayScale = ComputeBasePixelToDisplayScale(vm, iw, ih, scale)
-                Dim bakedFontSize = Math.Max(8.0, vm.AnnotationFontSize)
+                Dim bakedFontSize = Math.Max(8.0, vm.GetSelectedTextDisplayFontSize())
                 Dim displayFontSize = Math.Max(1.0, bakedFontSize * displayScale)
                 editor.FontSize = displayFontSize
 
@@ -6634,6 +6650,9 @@ Namespace Views
                     editor.FontFeatures = Nothing
                 End If
                 editor.FontFamily = New FontFamily(vm.AnnotationFontFamily)
+                editor.FontWeight = If(vm.AnnotationBold, FontWeight.Bold, FontWeight.Normal)
+                editor.FontStyle = If(vm.AnnotationItalic, FontStyle.Italic, FontStyle.Normal)
+                editor.LetterSpacing = displayFontSize * vm.AnnotationLetterSpacingPercent / 100.0
                 editor.TextAlignment = If(String.Equals(vm.AnnotationTextAlignment, "Center", StringComparison.OrdinalIgnoreCase), TextAlignment.Center,
                                       If(String.Equals(vm.AnnotationTextAlignment, "Right", StringComparison.OrdinalIgnoreCase), TextAlignment.Right,
                                       If(String.Equals(vm.AnnotationTextAlignment, "Justify", StringComparison.OrdinalIgnoreCase), TextAlignment.Justify,
@@ -6642,10 +6661,16 @@ Namespace Views
                 ' Overlay darunter vollständig, die Textbox bleibt nur noch für Eingabe und Schreibmarke da.
                 Dim textColor = ParseAvaloniaColor(vm.AnnotationFillColor, Colors.White)
                 editor.Foreground = Brushes.Transparent
-                editor.CaretBrush = New SolidColorBrush(textColor)
+                editor.CaretBrush = Brushes.Transparent
+                Dim caret = Me.FindControl(Of TextOverlayCaret)("TextOverlayCaret")
+                If caret IsNot Nothing Then
+                    caret.Editor = editor
+                    caret.CaretColor = New SolidColorBrush(textColor)
+                    caret.InvalidateVisual()
+                End If
                 ' Skia hängt die erste Zeile an der Grundlinie unter der Oberkante auf, Avalonia an der
                 ' Glyphen-Oberkante - ohne diesen Versatz säße der Live-Text über dem gebackenen.
-                editor.RenderTransform = New TranslateTransform(0, ImageProcessor.GetBakedTextTopOffset(vm.AnnotationFontFamily, CSng(displayFontSize)))
+                editor.RenderTransform = New TranslateTransform(0, ImageProcessor.GetBakedTextTopOffset(vm.AnnotationFontFamily, CSng(displayFontSize), vm.AnnotationText, vm.AnnotationBold, vm.AnnotationItalic))
             End If
         End Sub
 

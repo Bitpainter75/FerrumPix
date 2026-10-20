@@ -3347,6 +3347,53 @@ Namespace Services
             End Using
         End Function
 
+        ''' <summary>Schreibmarke im selben Zeichnungsraum und mit derselben Formung wie der Bildtext.</summary>
+        Friend Shared Function MeasureAnnotationCaret(text As String, index As Integer, fontFamily As String,
+                                                       fontSize As Single, spacing As Single, bold As Boolean, italic As Boolean,
+                                                       alignment As String, width As Single) As SKPoint
+            text = If(text, "")
+            index = Math.Max(0, Math.Min(index, text.Length))
+            Dim before = text.Substring(0, index)
+            Dim lineStart = before.LastIndexOf(ControlChars.Lf) + 1
+            Dim lineEnd = text.IndexOf(ControlChars.Lf, lineStart)
+            If lineEnd < 0 Then lineEnd = text.Length
+            Dim line = text.Substring(lineStart, lineEnd - lineStart).TrimEnd(ControlChars.Cr)
+            Dim lineIndex = before.Count(Function(c) c = ControlChars.Lf)
+            Dim localIndex = Math.Min(index - lineStart, line.Length)
+            Using font = CreateTextFont(fontFamily, fontSize, text, bold, italic)
+                Dim shaped = TextShaper.Shape(font, line, spacing)
+                Dim x As Single = 0
+                If String.Equals(alignment, "Center", StringComparison.OrdinalIgnoreCase) Then
+                    x = Math.Max(0.0F, (width - shaped.Width) / 2.0F)
+                ElseIf String.Equals(alignment, "Right", StringComparison.OrdinalIgnoreCase) Then
+                    x = Math.Max(0.0F, width - shaped.Width)
+                End If
+                If shaped.Glyphs.Length > 0 Then
+                    Dim starts = shaped.TextIndex.Distinct().OrderBy(Function(n) n).ToArray()
+                    Dim rtl = shaped.TextIndex(0) > shaped.TextIndex(shaped.TextIndex.Length - 1)
+                    Dim clusterStart = starts(0)
+                    For Each start In starts
+                        If start > localIndex Then Exit For
+                        clusterStart = start
+                    Next
+                    Dim nextStart = line.Length
+                    For Each start In starts
+                        If start > clusterStart Then
+                            nextStart = start
+                            Exit For
+                        End If
+                    Next
+                    Dim first = Array.IndexOf(shaped.TextIndex, clusterStart)
+                    Dim last = Array.LastIndexOf(shaped.TextIndex, clusterStart)
+                    Dim left = shaped.PenX(first)
+                    Dim right = shaped.PenX(last) + shaped.Advance(last)
+                    Dim fraction = If(nextStart > clusterStart, CSng(localIndex - clusterStart) / (nextStart - clusterStart), 0.0F)
+                    x += If(rtl, right + (left - right) * fraction, left + (right - left) * fraction)
+                End If
+                Return New SKPoint(x, lineIndex * GetLineHeight(font.Metrics))
+            End Using
+        End Function
+
         Private Shared Sub DrawWrappedText(canvas As SKCanvas, text As String, x As Single, y As Single, maxWidth As Single, fontSize As Single, font As SKFont, paint As SKPaint, Optional spacing As Single = 0, Optional alignment As String = "Left")
             If String.IsNullOrEmpty(text) Then Return
             Dim lineHeight = GetLineHeight(font.Metrics)

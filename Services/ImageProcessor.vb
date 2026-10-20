@@ -2124,10 +2124,12 @@ Namespace Services
             End Using
         End Function
 
-        Public Shared Function GetBakedTextTopOffset(fontFamily As String, fontSize As Single) As Double
+        Public Shared Function GetBakedTextTopOffset(fontFamily As String, fontSize As Single,
+                                                     Optional text As String = "", Optional bold As Boolean = False,
+                                                     Optional italic As Boolean = False) As Double
             If fontSize <= 0 Then Return 0
-            Using font = CreateFont(fontFamily, fontSize)
-                Return Math.Max(0.0F, fontSize + font.Metrics.Ascent)
+            Using font = CreateTextFont(fontFamily, fontSize, If(text, ""), bold, italic)
+                Return fontSize + font.Metrics.Ascent
             End Using
         End Function
 

@@ -19,6 +19,7 @@ Namespace Services
         Friend Advance As Single() = Array.Empty(Of Single)()
         ''' <summary>Laufende Nummer der Zeichengruppe je Glyphe, in Zeichenreihenfolge.</summary>
         Friend ClusterIndex As Integer() = Array.Empty(Of Integer)()
+        Friend TextIndex As Integer() = Array.Empty(Of Integer)()
         Friend ClusterCount As Integer
         ''' <summary>Vorschub der ganzen Zeile, Zeichenabstand eingerechnet.</summary>
         Friend Width As Single
@@ -165,6 +166,7 @@ Namespace Services
                     result.Y(i) = -positions(i).YOffset * factorY
                     result.Advance(i) = positions(i).XAdvance * factorX
                     result.ClusterIndex(i) = cluster
+                    result.TextIndex(i) = CInt(infos(i).Cluster)
                     pen += result.Advance(i)
                 Next
                 result.ClusterCount = cluster + 1
@@ -200,6 +202,7 @@ Namespace Services
                 result.X(i) = pen
                 result.Advance(i) = widths(i)
                 result.ClusterIndex(i) = i
+                result.TextIndex(i) = Math.Min(i, text.Length)
                 pen += widths(i)
             Next
             result.ClusterCount = count
@@ -214,6 +217,7 @@ Namespace Services
             ReDim result.PenX(count - 1)
             ReDim result.Advance(count - 1)
             ReDim result.ClusterIndex(count - 1)
+            ReDim result.TextIndex(count - 1)
         End Sub
 
         ''' <summary>Vorschub einer Zeile, Zeichenabstand eingerechnet.</summary>

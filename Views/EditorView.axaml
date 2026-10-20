@@ -1108,6 +1108,7 @@
                                          VerticalContentAlignment="Top"
                                          IsHitTestVisible="False"
                                          FocusAdorner="{x:Null}" />
+                                <icons:TextOverlayCaret x:Name="TextOverlayCaret" IsHitTestVisible="False" />
                                 <Border x:Name="TextSizeBadge"
                                         IsVisible="False"
                                         IsHitTestVisible="False"

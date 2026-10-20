@@ -418,7 +418,6 @@ Namespace ViewModels
                 New AnnotationBlendModeOption("Plus", "Hinzufügen"),
                 New AnnotationBlendModeOption("Overlay", "Ineinanderkopieren"),
                 New AnnotationBlendModeOption("SoftLight", "Weiches Licht"),
-                New AnnotationBlendModeOption("PsdSoftLight", "Weiches Licht (PSD)"),
                 New AnnotationBlendModeOption("HardLight", "Hartes Licht"),
                 New AnnotationBlendModeOption("VividLight", "Strahlendes Licht"),
                 New AnnotationBlendModeOption("LinearLight", "Lineares Licht"),
@@ -466,6 +465,7 @@ Namespace ViewModels
 
         Private Shared Function NormalizeAnnotationBlendMode(value As String) As String
             Dim raw = If(value, "Normal").Trim()
+            If String.Equals(raw, "PsdSoftLight", StringComparison.OrdinalIgnoreCase) Then Return "SoftLight"
             Dim match = _annotationBlendModeOptions.FirstOrDefault(Function(o) String.Equals(o.Key, raw, StringComparison.OrdinalIgnoreCase))
             Return If(match?.Key, "Normal")
         End Function
@@ -8250,7 +8250,7 @@ Namespace ViewModels
 
         Public Property SelectedFrameBlendModeOption As AnnotationBlendModeOption
             Get
-                Dim aktuell = If(FindFrameAnnotation()?.BlendMode, "Normal")
+                Dim aktuell = NormalizeAnnotationBlendMode(FindFrameAnnotation()?.BlendMode)
                 Return _annotationBlendModeOptions.FirstOrDefault(Function(o) String.Equals(o.Key, aktuell, StringComparison.Ordinal))
             End Get
             Set(value As AnnotationBlendModeOption)
@@ -25685,6 +25685,13 @@ Namespace ViewModels
             ' Bildgroessen-Aenderung waere die sichtbare Schrift damit kleiner als ihre
             ' Einrastkanten. Der gespeicherte Weg bildet alles gemeinsam in die Anzeige ab.
             Return MeasureStoredTextInkPercent(_annotations(_selectedAnnotationIndex), allowRotated:=True)
+        End Function
+
+        Public Function GetSelectedTextDisplayFontSize() As Double
+            If _selectedAnnotationIndex < 0 OrElse _selectedAnnotationIndex >= _annotations.Count Then Return AnnotationFontSize
+            Dim size = GetAnnotationDisplayPixelSize()
+            Dim annotation = TransformAnnotationToDisplayGeometry(_annotations(_selectedAnnotationIndex), size.Width, size.Height)
+            Return If(annotation Is Nothing, AnnotationFontSize, CDbl(annotation.FontSizePixels))
         End Function
 
         ''' <summary>Dasselbe für ein gespeichertes Objekt, in dessen Anzeige-Geometrie - als

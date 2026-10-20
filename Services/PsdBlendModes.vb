@@ -13,7 +13,7 @@ Namespace Services
 
         Public Shared Function IsCustom(name As String) As Boolean
             Select Case If(name, "").Trim().ToLowerInvariant()
-                Case "linearburn", "vividlight", "linearlight", "pinlight", "hardmix", "subtract", "divide", "psdsoftlight"
+                Case "linearburn", "vividlight", "linearlight", "pinlight", "hardmix", "subtract", "divide", "softlight", "psdsoftlight"
                     Return True
                 Case Else
                     Return False
@@ -35,7 +35,7 @@ Namespace Services
                 Case "hardmix" : expression = "b >= 1.0 ? 1.0 : (b <= 0.0 ? 0.0 : (b + s >= 1.0 ? 1.0 : 0.0))"
                 Case "subtract" : expression = "max(0.0, b - s)"
                 Case "divide" : expression = "s <= 0.0 ? 1.0 : min(1.0, b / s)"
-                Case "psdsoftlight" : expression = "s <= 0.5 ? 2.0 * b * s + b * b * (1.0 - 2.0 * s) : 2.0 * b * (1.0 - s) + sqrt(b) * (2.0 * s - 1.0)"
+                Case "softlight", "psdsoftlight" : expression = "s <= 0.5 ? 2.0 * b * s + b * b * (1.0 - 2.0 * s) : 2.0 * b * (1.0 - s) + sqrt(b) * (2.0 * s - 1.0)"
                 Case Else : Throw New ArgumentException("Unknown blend mode", NameOf(name))
             End Select
             Dim source = "half vivid(half b, half s) {" & vbLf &

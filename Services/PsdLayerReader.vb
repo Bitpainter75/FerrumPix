@@ -135,7 +135,7 @@ Namespace Services
         Private Shared ReadOnly BlendNames As New Dictionary(Of String, String)(StringComparer.Ordinal) From {
             {"norm", "Normal"}, {"mul ", "Multiply"}, {"scrn", "Screen"}, {"over", "Overlay"},
             {"dark", "Darken"}, {"lite", "Lighten"}, {"div ", "ColorDodge"}, {"idiv", "ColorBurn"},
-            {"hLit", "HardLight"}, {"sLit", "PsdSoftLight"}, {"diff", "Difference"}, {"smud", "Exclusion"},
+            {"hLit", "HardLight"}, {"sLit", "SoftLight"}, {"diff", "Difference"}, {"smud", "Exclusion"},
             {"hue ", "Hue"}, {"sat ", "Saturation"}, {"colr", "Color"}, {"lum ", "Luminosity"},
             {"lddg", "Plus"}, {"lbrn", "LinearBurn"}, {"vLit", "VividLight"}, {"lLit", "LinearLight"},
             {"pLit", "PinLight"}, {"hMix", "HardMix"}, {"fsub", "Subtract"}, {"fdiv", "Divide"}
