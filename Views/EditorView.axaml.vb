@@ -6425,15 +6425,36 @@ Namespace Views
             e.Handled = True
         End Sub
 
-        Private Sub FocusTextOverlayEditor()
+        ''' <param name="caretIndex">Wohin die Schreibmarke soll; unter 0 ans Ende.</param>
+        Private Sub FocusTextOverlayEditor(Optional caretIndex As Integer = -1)
             Dispatcher.UIThread.Post(Sub()
                                           Dim editor = Me.FindControl(Of TextBox)("TextOverlayEditor")
                                           If editor IsNot Nothing AndAlso editor.IsVisible Then
                                               editor.Focus()
-                                              editor.CaretIndex = If(editor.Text, "").Length
+                                              Dim length = If(editor.Text, "").Length
+                                              Dim index = If(caretIndex < 0, length, Math.Min(caretIndex, length))
+                                              editor.SelectionStart = index
+                                              editor.SelectionEnd = index
+                                              editor.CaretIndex = index
                                           End If
                                       End Sub, DispatcherPriority.Background)
         End Sub
+
+        ''' <summary>Die Zeichenstelle unter dem Zeiger in der Textbox über dem Text, oder -1.
+        '''
+        ''' Die Textbox nimmt selbst keine Klicks an (IsHitTestVisible aus): sonst schluckte sie
+        ''' jeden Druck, und der Text liesse sich nicht mehr verschieben. Gerechnet wird deshalb
+        ''' hier, am Layout ihres Textes. GetPosition beruecksichtigt Drehung des Rahmens und den
+        ''' Versatz der Textbox, die Stelle stimmt also auch an einem gedrehten Text.</summary>
+        Private Function TextOverlayCaretIndexAt(e As PointerEventArgs) As Integer
+            Dim editor = Me.FindControl(Of TextBox)("TextOverlayEditor")
+            If editor Is Nothing OrElse Not editor.IsVisible Then Return -1
+            Dim presenter = editor.GetVisualDescendants().OfType(Of Presenters.TextPresenter)().FirstOrDefault()
+            If presenter Is Nothing OrElse presenter.TextLayout Is Nothing Then Return -1
+            Dim hit = presenter.TextLayout.HitTestPoint(e.GetPosition(presenter))
+            Dim index = hit.CharacterHit.FirstCharacterIndex + hit.CharacterHit.TrailingLength
+            Return Math.Max(0, Math.Min(index, If(editor.Text, "").Length))
+        End Function
 
         ''' <summary>Die Lage des Auswahlrahmens: NUR die Drehung.
         '''
@@ -6520,11 +6541,15 @@ Namespace Views
             Dim height = ih * rectPercent.Height / 100.0
             Dim left = ix + iw * rectPercent.X / 100.0
             Dim top = iy + ih * rectPercent.Y / 100.0
+            ' Der Kasten des Textes in Rahmenpunkten, wenn der Rahmen nur die Glyphen fasst: die
+            ' Textbox gehoert auf den KASTEN, nicht auf den Rahmen (siehe unten).
+            Dim editorBox As Avalonia.Rect? = Nothing
             If Not vm.HasMultiAnnotationSelection AndAlso IsSelectedAnnotationTextLayer(vm) Then
                 Dim ink = vm.GetSelectedTextInkPercent()
                 If ink.HasValue Then
                     Dim inkPixels = InkPercentToPixels(ink.Value, iw, ih)
                     Dim offset = TextFrameOffset(width, height, inkPixels, vm.AnnotationRotation)
+                    editorBox = New Avalonia.Rect(-inkPixels.X, -inkPixels.Y, width, height)
                     left += offset.X
                     top += offset.Y
                     width = inkPixels.Width
@@ -6570,6 +6595,28 @@ Namespace Views
                 Dim bakedFontSize = Math.Max(8.0, vm.AnnotationFontSize)
                 Dim displayFontSize = Math.Max(1.0, bakedFontSize * displayScale)
                 editor.FontSize = displayFontSize
+
+                ' Fasst der Rahmen nur die Glyphen, ist er kleiner als der Kasten, ab dem der Text
+                ' gezeichnet wird, und gegen ihn versetzt. Die Textbox darin war damit niedriger als
+                ' eine Zeile und um Seitenvorbreite und Oberlaenge verschoben: die Schreibmarke
+                ' erschien abgeschnitten und stand neben den Zeichen. Sie liegt deshalb mit
+                ' negativem Rand auf dem Kasten, so breit wie er (die Ausrichtung haengt an der
+                ' Breite) und eine Zeile hoeher, damit die Marke der untersten Zeile nicht
+                ' abgeschnitten wird.
+                If editorBox.HasValue Then
+                    Dim box = editorBox.Value
+                    editor.HorizontalAlignment = Layout.HorizontalAlignment.Left
+                    editor.VerticalAlignment = Layout.VerticalAlignment.Top
+                    editor.Margin = New Thickness(box.X, box.Y, 0, 0)
+                    editor.Width = box.Width
+                    editor.Height = box.Height + displayFontSize
+                Else
+                    editor.HorizontalAlignment = Layout.HorizontalAlignment.Stretch
+                    editor.VerticalAlignment = Layout.VerticalAlignment.Stretch
+                    editor.Margin = New Thickness(0)
+                    editor.Width = Double.NaN
+                    editor.Height = Double.NaN
+                End If
                 ' Kein LineHeight setzen: DrawWrappedText benutzt inzwischen denselben Zeilenabstand aus
                 ' den Schriftmetriken, den Avalonia von sich aus nimmt. Ein gesetztes LineHeight schöbe
                 ' die erste Zeile um die zusätzliche Durchschusshöhe nach unten - sichtbar als Sprung von
@@ -6802,7 +6849,9 @@ Namespace Views
                 _textRotateStartRotation = vm.AnnotationRotation
                 _textRotateLastAngle = vm.AnnotationRotation
             ElseIf mode = TextDragMode.Move AndAlso (vm.CurrentTool = EditorTool.Text OrElse vm.CurrentTool = EditorTool.Insert) Then
-                FocusTextOverlayEditor()
+                ' Die Schreibmarke an die angeklickte Stelle. Wird daraus ein Zug, verschiebt er
+                ' den Text, und die Stelle ist ohne Belang.
+                FocusTextOverlayEditor(TextOverlayCaretIndexAt(e))
             End If
             e.Handled = True
         End Sub

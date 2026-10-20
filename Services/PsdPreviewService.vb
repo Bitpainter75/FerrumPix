@@ -1,4 +1,5 @@
 Imports System
+Imports System.Collections.Generic
 Imports System.IO
 Imports SkiaSharp
 
@@ -122,19 +123,48 @@ Namespace Services
 
         ' ── Composite (Bilddaten-Sektion) ────────────────────────────────────────
 
-        Private Shared Function DecodeComposite(fs As FileStream) As SKBitmap
-            Dim header As PsdHeader
-            If Not TryReadHeader(fs, header) Then Return Nothing
+        ''' <summary>Trägt die Datei ein Gesamtbild, das dieser Leser in VOLLER Auflösung liefert?
+        ''' Nein heißt: <see cref="TryDecode"/> käme nur mit dem eingebetteten Vorschaubild zurück
+        ''' oder mit gar nichts. Der Editor fragt das, bevor er „Als Gesamtbild" anbietet; sonst
+        ''' öffnete diese Wahl eine PSD ohne „Kompatibilität maximieren" in Vorschaugröße.
+        ''' Das Gesamtbild wird probeweise dekodiert, damit auch beschädigte oder fehlende
+        ''' Bilddaten nicht als verfügbare Alternative gelten.</summary>
+        Public Shared Function HasFullComposite(filePath As String) As Boolean
+            Try
+                Using fs = File.OpenRead(filePath)
+                    Using bitmap = DecodeComposite(fs)
+                        Return bitmap IsNot Nothing
+                    End Using
+                End Using
+            Catch
+                Return False
+            End Try
+        End Function
 
-            ' Nur Bittiefen/Modi, die dieser Leser wirklich beherrscht - alles andere geht in den
-            ' Thumbnail-Fallback statt in ein falsch eingefärbtes Bild.
-            If header.Depth <> 8 AndAlso header.Depth <> 16 Then Return Nothing
+        ''' <summary>Nur Bittiefen/Modi, die dieser Leser wirklich beherrscht - alles andere geht in
+        ''' den Thumbnail-Fallback statt in ein falsch eingefärbtes Bild.</summary>
+        Private Shared Function CompositeModeSupported(header As PsdHeader) As Boolean
+            If header.Depth <> 8 AndAlso header.Depth <> 16 Then Return False
             If header.ColorMode <> PsdColorMode.Grayscale AndAlso
                header.ColorMode <> PsdColorMode.Rgb AndAlso
                header.ColorMode <> PsdColorMode.Cmyk AndAlso
-               header.ColorMode <> PsdColorMode.Indexed Then Return Nothing
+               header.ColorMode <> PsdColorMode.Indexed Then Return False
             ' Indizierte Farbe gibt es nur mit acht Bit: ein Byte je Punkt ist der Index.
-            If header.ColorMode = PsdColorMode.Indexed AndAlso header.Depth <> 8 Then Return Nothing
+            Return header.ColorMode <> PsdColorMode.Indexed OrElse header.Depth = 8
+        End Function
+
+        ''' <summary>Ressource 1057: Version (vier Byte), dann ein Byte "echtes Gesamtbild". Steht
+        ''' dort 0, war beim Speichern "Kompatibilität maximieren" aus, und die Bilddaten sind nur
+        ''' eine weiße Fläche.</summary>
+        Private Shared Function IsPlaceholderComposite(resources As Byte()) As Boolean
+            Dim versionInfo = FindResource(resources, 1057)
+            Return versionInfo IsNot Nothing AndAlso versionInfo.Length >= 5 AndAlso versionInfo(4) = 0
+        End Function
+
+        Private Shared Function DecodeComposite(fs As FileStream) As SKBitmap
+            Dim header As PsdHeader
+            If Not TryReadHeader(fs, header) Then Return Nothing
+            If Not CompositeModeSupported(header) Then Return Nothing
 
             ' Farbmodus-Daten: bei indizierter Farbe die Farbtabelle (768 Byte, erst die 256 Rot-,
             ' dann die Grün-, dann die Blauwerte), sonst überspringen. Die Bildressourcen werden
@@ -162,9 +192,18 @@ Namespace Services
                     If value >= 0 AndAlso value <= 255 Then transparentIndex = value
                 End If
             End If
-            Dim iccProfile = CreateIccOrNothing(FindResource(resources, 1039))
+            ' Nur ein weißer Platzhalter: dann lieber das eingebettete Vorschaubild als ein weißes
+            ' Rechteck in Galerie und Betrachter.
+            If IsPlaceholderComposite(resources) Then Return Nothing
+
             Dim layerLen = If(header.IsPsb, ReadU64(fs), CLng(ReadU32(fs)))
-            If Not SkipBlock(fs, layerLen) Then Return Nothing
+            If layerLen < 0 OrElse fs.Position + layerLen > fs.Length Then Return Nothing
+            Dim layerSectionEnd = fs.Position + layerLen
+            Dim colorChannels = If(header.ColorMode = PsdColorMode.Rgb, 3, If(header.ColorMode = PsdColorMode.Grayscale, 1, 0))
+            Dim mergedAlpha = colorChannels > 0 AndAlso header.Channels > colorChannels AndAlso
+                              MergedImageHasAlpha(fs, header, layerSectionEnd, resources, header.Channels - colorChannels)
+            fs.Position = layerSectionEnd
+            Dim iccProfile = CreateIccOrNothing(FindResource(resources, 1039))
 
             Dim compression = ReadU16(fs)
             ' 0 roh, 1 RLE, 2 und 3 ZIP. Die beiden ZIP-Spielarten sind hier seltener als bei den
@@ -174,17 +213,18 @@ Namespace Services
 
             ' Wie viele der planar abgelegten Kanäle das Ergebnis wirklich braucht: RGB 3 (+Alpha),
             ' Graustufen 1 (+Alpha), CMYK 4. Weitere Kanäle (gespeicherte Auswahlen) werden gelesen
-            ' und verworfen, damit die Planar-Reihenfolge nicht verrutscht.
+            ' und verworfen, damit die Planar-Reihenfolge nicht verrutscht. Ob der erste Zusatzkanal
+            ' Transparenz ist oder nur eine gespeicherte Auswahl, sagt MergedImageHasAlpha.
             Dim neededChannels As Integer
             Dim hasAlpha As Boolean
             Select Case header.ColorMode
                 Case PsdColorMode.Rgb
                     If header.Channels < 3 Then Return Nothing
-                    hasAlpha = header.Channels >= 4
+                    hasAlpha = mergedAlpha
                     neededChannels = If(hasAlpha, 4, 3)
                 Case PsdColorMode.Grayscale
                     If header.Channels < 1 Then Return Nothing
-                    hasAlpha = header.Channels >= 2
+                    hasAlpha = mergedAlpha
                     neededChannels = If(hasAlpha, 2, 1)
                 Case PsdColorMode.Indexed
                     ' Ein Kanal mit dem Index. Durchsichtig ist hoechstens die eine Farbe aus
@@ -328,13 +368,26 @@ Namespace Services
                 Dim buffer(header.Width * header.Height * 4 - 1) As Byte
                 Dim count = header.Width * header.Height
 
+                ' Bei RGB legt Photoshop das Gesamtbild mit Transparenz GEGEN WEISS verrechnet ab: in jedem
+                ' Kanal steht Farbe mal Deckung plus Weiß mal Rest. Gelesen ohne Rückrechnung
+                ' bekäme jede halbdurchsichtige Kante einen hellen Saum. Die Rückrechnung geht über
+                ' eine Tafel je Deckung, nicht über eine Division je Punkt.
+                Dim unmatte = If(hasAlpha AndAlso header.ColorMode = PsdColorMode.Rgb, UnmatteTable(), Nothing)
                 Select Case header.ColorMode
                     Case PsdColorMode.Rgb
                         For i = 0 To count - 1
-                            buffer(i * 4) = planes(2)(i)      ' B
-                            buffer(i * 4 + 1) = planes(1)(i)  ' G
-                            buffer(i * 4 + 2) = planes(0)(i)  ' R
-                            buffer(i * 4 + 3) = If(hasAlpha, planes(3)(i), CByte(255))
+                            If hasAlpha Then
+                                Dim row = unmatte(planes(3)(i))
+                                buffer(i * 4) = row(planes(2)(i))      ' B
+                                buffer(i * 4 + 1) = row(planes(1)(i))  ' G
+                                buffer(i * 4 + 2) = row(planes(0)(i))  ' R
+                                buffer(i * 4 + 3) = planes(3)(i)
+                            Else
+                                buffer(i * 4) = planes(2)(i)      ' B
+                                buffer(i * 4 + 1) = planes(1)(i)  ' G
+                                buffer(i * 4 + 2) = planes(0)(i)  ' R
+                                buffer(i * 4 + 3) = 255
+                            End If
                         Next
                     Case PsdColorMode.Grayscale
                         For i = 0 To count - 1
@@ -374,6 +427,137 @@ Namespace Services
                 bitmap.Dispose()
                 Return Nothing
             End Try
+        End Function
+
+        ''' <summary>Je Deckung a eine Zeile, die einen gegen Weiß verrechneten Wert c auf die
+        ''' eigentliche Farbe zurückführt: (c + a - 255) mal 255 durch a, gerundet und auf 0 bis 255
+        ''' begrenzt. Bei a = 0 gibt es keine Farbe zurückzugewinnen, der Wert bleibt.</summary>
+        Friend Shared Function UnmatteTable() As Byte()()
+            Dim table(255)() As Byte
+            For a = 0 To 255
+                Dim row(255) As Byte
+                For c = 0 To 255
+                    If a = 0 Then
+                        row(c) = CByte(c)
+                    Else
+                        Dim straight = (Math.Max(0, c + a - 255) * 255 + a \ 2) \ a
+                        row(c) = CByte(Math.Min(255, straight))
+                    End If
+                Next
+                table(a) = row
+            Next
+            Return table
+        End Function
+
+        ''' <summary>Ist der erste Zusatzkanal des Gesamtbilds seine Transparenz? Ein Zusatzkanal
+        ''' kann auch eine gespeicherte Auswahl sein, und die als Transparenz gelesen stanzte Löcher
+        ''' ins Bild.
+        '''
+        ''' Transparenz ist er, wenn die Datei gar keine Ebenen trägt (dann kennt sie nur das
+        ''' Gesamtbild), wenn die Ebenenzahl negativ ist, wenn ein globaler Block "Mtrn", "Mt16"
+        ''' oder "Mt32" es anzeigt, oder wenn die Ebenen in "Lr16"/"Lr32" stehen und die
+        ''' Kanalnamen (Ressource 1045, sonst 1006) genau so viele sind wie Zusatzkanäle und der
+        ''' erste "Transparency" heißt. So schreibt es Photoshop; abgeleitet aus Dateien, die es
+        ''' selbst geschrieben hat.
+        '''
+        ''' Der Strom steht beim Aufruf am Anfang der Ebenen-Sektion, hinter ihrer Länge. Wo er
+        ''' danach steht, ist gleich: der Aufrufer springt selbst an das Ende. Lässt sich die
+        ''' Sektion nicht lesen, gilt der Kanal als Transparenz, wie vor dieser Prüfung.</summary>
+        Private Shared Function MergedImageHasAlpha(fs As FileStream, header As PsdHeader, sectionEnd As Long,
+                                                    resources As Byte(), extraChannels As Integer) As Boolean
+            Try
+                If fs.Position >= sectionEnd Then Return True
+
+                Dim hasLayers = False
+                Dim negativeCount = False
+                Dim infoLen = If(header.IsPsb, ReadU64(fs), CLng(ReadU32(fs)))
+                Dim infoStart = fs.Position
+                If infoLen < 0 OrElse infoStart + infoLen > sectionEnd Then Return True
+                If infoLen >= 2 Then
+                    Dim count = ReadU16(fs)
+                    If count <> 0 Then
+                        hasLayers = True
+                        negativeCount = count > 32767
+                    End If
+                End If
+
+                ' Hinter der Ebenen-Info: die globale Maske, dann die globalen Zusatzblöcke.
+                fs.Position = infoStart + infoLen
+                If fs.Position + 4 > sectionEnd Then Return Not hasLayers OrElse negativeCount
+                If Not SkipBlock(fs, ReadU32(fs)) Then Return Not hasLayers OrElse negativeCount
+
+                Dim marked = False
+                Dim layersInBlock = False
+                While fs.Position + 12 <= sectionEnd
+                    Dim sig(3) As Byte
+                    If Not ReadExactly(fs, sig, 4) Then Exit While
+                    Dim s = Text.Encoding.ASCII.GetString(sig)
+                    If s <> "8BIM" AndAlso s <> "8B64" Then Exit While
+                    Dim keyBytes(3) As Byte
+                    If Not ReadExactly(fs, keyBytes, 4) Then Exit While
+                    Dim key = Text.Encoding.ASCII.GetString(keyBytes)
+                    Dim length = If(header.IsPsb AndAlso PsdLayerReader.IsPsbLongLengthKey(key), ReadU64(fs), CLng(ReadU32(fs)))
+                    Dim dataStart = fs.Position
+                    If length < 0 OrElse dataStart + length > sectionEnd Then Exit While
+
+                    If key = "Mtrn" OrElse key = "Mt16" OrElse key = "Mt32" Then marked = True
+                    If (key = "Lr16" OrElse key = "Lr32") AndAlso Not hasLayers AndAlso length >= 2 Then
+                        layersInBlock = True
+                        hasLayers = True
+                        ' Wie im Ebenenleser: eine vorangestellte Länge zählt den Rest des
+                        ' Blocks, höchstens um die Auffüllung auf vier Byte kürzer.
+                        Dim countAt = dataStart
+                        If length >= 6 Then
+                            Dim lead = If(header.IsPsb, ReadU64(fs), CLng(ReadU32(fs)))
+                            Dim leadBytes = If(header.IsPsb, 8L, 4L)
+                            If lead > 0 AndAlso lead <= length - leadBytes AndAlso lead >= length - leadBytes - 3 Then countAt = fs.Position
+                        End If
+                        fs.Position = countAt
+                        negativeCount = ReadU16(fs) > 32767
+                    End If
+                    fs.Position = dataStart + ((length + 3L) And Not 3L)
+                End While
+
+                If Not hasLayers OrElse negativeCount OrElse marked Then Return True
+                Return layersInBlock AndAlso NamesMergedTransparency(resources, extraChannels)
+            Catch
+                Return True
+            End Try
+        End Function
+
+        ''' <summary>Tragen die Kanalnamen genau <paramref name="extraChannels"/> Einträge, und
+        ''' heißt der erste "Transparency"? Ressource 1045 (Unicode: Länge in Zeichen, dann
+        ''' UTF-16), sonst 1006 (Pascal: ein Längenbyte, dann der Text).</summary>
+        Private Shared Function NamesMergedTransparency(resources As Byte(), extraChannels As Integer) As Boolean
+            Dim names As New List(Of String)()
+            Dim unicode = FindResource(resources, 1045)
+            If unicode IsNot Nothing Then
+                Dim at = 0
+                While at + 4 <= unicode.Length
+                    Dim length = (CLng(unicode(at)) << 24) Or (CLng(unicode(at + 1)) << 16) Or
+                                 (CLng(unicode(at + 2)) << 8) Or CLng(unicode(at + 3))
+                    at += 4
+                    If length < 0 OrElse at + length * 2 > unicode.Length Then Exit While
+                    Dim sb As New Text.StringBuilder()
+                    For i = 0 To CInt(length) - 1
+                        sb.Append(ChrW(CInt(unicode(at + i * 2)) * 256 + unicode(at + i * 2 + 1)))
+                    Next
+                    names.Add(sb.ToString().TrimEnd(ChrW(0)))
+                    at += CInt(length) * 2
+                End While
+            Else
+                Dim pascal = FindResource(resources, 1006)
+                If pascal Is Nothing Then Return False
+                Dim at = 0
+                While at < pascal.Length
+                    Dim length = CInt(pascal(at))
+                    If at + 1 + length > pascal.Length Then Exit While
+                    names.Add(Text.Encoding.ASCII.GetString(pascal, at + 1, length))
+                    at += 1 + length
+                End While
+            End If
+            Return names.Count = extraChannels AndAlso names.Count > 0 AndAlso
+                   String.Equals(names(0), "Transparency", StringComparison.Ordinal)
         End Function
 
         ''' <summary>Das Profil aus seinen Bytes, oder Nothing. Fuer den flachen Weg, der es sofort

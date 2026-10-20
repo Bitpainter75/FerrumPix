@@ -9864,4 +9864,28 @@
   <data name="Bei_0_sind_alle_Bilder_gleich_gro_bei_100_reiche_5c4a4af2" xml:space="preserve">
     <value>Bij 0 zijn alle foto's even groot, bij 100 lopen ze van half tot anderhalf keer zo groot</value>
   </data>
+  <data name="0_Ebenen_tragen_Ebeneneffekte_wie_Schatten_oder__36f72d92" xml:space="preserve">
+    <value>{0} lagen hebben laageffecten zoals schaduw of lijn. FerrumPix toont deze lagen zonder hun effecten.</value>
+  </data>
+  <data name="0_Ebenen_lie_en_sich_nicht_lesen_und_fehlen_7d15ee84" xml:space="preserve">
+    <value>{0} lagen konden niet worden gelezen en ontbreken.</value>
+  </data>
+  <data name="Als_Gesamtbild_ge_ffnet_stimmt_jeder_Bildpunkt_d_5be2716e" xml:space="preserve">
+    <value>Als samengevoegde afbeelding geopend klopt elke pixel, maar de lagen liggen dan vast.</value>
+  </data>
+  <data name="Nicht_alles_l_sst_sich_als_Ebene_bernehmen_c67b3baa" xml:space="preserve">
+    <value>Niet alles kan als laag worden overgenomen</value>
+  </data>
+  <data name="Als_Ebenen_18a2e8d1" xml:space="preserve">
+    <value>Als lagen</value>
+  </data>
+  <data name="Als_Gesamtbild_7282bdee" xml:space="preserve">
+    <value>Als samengevoegde afbeelding</value>
+  </data>
+  <data name="Ein_Gesamtbild_in_voller_Gr_e_tr_gt_die_Datei_ni_c6dd221c" xml:space="preserve">
+    <value>Het bestand bevat geen samengevoegde afbeelding op volle grootte en wordt daarom met zijn lagen geopend.</value>
+  </data>
+  <data name="0_Anpassungsebenen_werden_nicht_bernommen_923cda4a" xml:space="preserve">
+    <value>{0} aanpassingslagen worden niet geïmporteerd.</value>
+  </data>
 </root>

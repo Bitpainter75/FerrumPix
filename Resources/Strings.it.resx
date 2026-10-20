@@ -9824,4 +9824,28 @@
   <data name="Bei_0_sind_alle_Bilder_gleich_gro_bei_100_reiche_5c4a4af2" xml:space="preserve">
     <value>A 0 tutte le immagini hanno la stessa dimensione, a 100 vanno dalla metà a una volta e mezza</value>
   </data>
+  <data name="0_Ebenen_tragen_Ebeneneffekte_wie_Schatten_oder__36f72d92" xml:space="preserve">
+    <value>{0} livelli hanno effetti di livello come ombra o traccia. FerrumPix mostra questi livelli senza i loro effetti.</value>
+  </data>
+  <data name="0_Ebenen_lie_en_sich_nicht_lesen_und_fehlen_7d15ee84" xml:space="preserve">
+    <value>{0} livelli non sono stati letti e mancano.</value>
+  </data>
+  <data name="Als_Gesamtbild_ge_ffnet_stimmt_jeder_Bildpunkt_d_5be2716e" xml:space="preserve">
+    <value>Aperto come immagine unita, ogni pixel è corretto, ma i livelli restano fissi.</value>
+  </data>
+  <data name="Nicht_alles_l_sst_sich_als_Ebene_bernehmen_c67b3baa" xml:space="preserve">
+    <value>Non tutto può essere ripreso come livelli</value>
+  </data>
+  <data name="Als_Ebenen_18a2e8d1" xml:space="preserve">
+    <value>Come livelli</value>
+  </data>
+  <data name="Als_Gesamtbild_7282bdee" xml:space="preserve">
+    <value>Come immagine unita</value>
+  </data>
+  <data name="Ein_Gesamtbild_in_voller_Gr_e_tr_gt_die_Datei_ni_c6dd221c" xml:space="preserve">
+    <value>Il file non contiene un'immagine unita a dimensione piena, quindi viene aperto con i suoi livelli.</value>
+  </data>
+  <data name="0_Anpassungsebenen_werden_nicht_bernommen_923cda4a" xml:space="preserve">
+    <value>{0} livelli di regolazione non vengono importati.</value>
+  </data>
 </root>

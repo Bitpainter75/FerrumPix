@@ -9824,4 +9824,28 @@
   <data name="Bei_0_sind_alle_Bilder_gleich_gro_bei_100_reiche_5c4a4af2" xml:space="preserve">
     <value>Con 0 todas las imágenes tienen el mismo tamaño, con 100 van de la mitad a una vez y media</value>
   </data>
+  <data name="0_Ebenen_tragen_Ebeneneffekte_wie_Schatten_oder__36f72d92" xml:space="preserve">
+    <value>{0} capas tienen efectos de capa como sombra o trazo. FerrumPix muestra estas capas sin sus efectos.</value>
+  </data>
+  <data name="0_Ebenen_lie_en_sich_nicht_lesen_und_fehlen_7d15ee84" xml:space="preserve">
+    <value>{0} capas no se pudieron leer y faltan.</value>
+  </data>
+  <data name="Als_Gesamtbild_ge_ffnet_stimmt_jeder_Bildpunkt_d_5be2716e" xml:space="preserve">
+    <value>Abierto como imagen acoplada, cada píxel es correcto, pero las capas quedan fijas.</value>
+  </data>
+  <data name="Nicht_alles_l_sst_sich_als_Ebene_bernehmen_c67b3baa" xml:space="preserve">
+    <value>No todo se puede conservar como capas</value>
+  </data>
+  <data name="Als_Ebenen_18a2e8d1" xml:space="preserve">
+    <value>Como capas</value>
+  </data>
+  <data name="Als_Gesamtbild_7282bdee" xml:space="preserve">
+    <value>Como imagen acoplada</value>
+  </data>
+  <data name="Ein_Gesamtbild_in_voller_Gr_e_tr_gt_die_Datei_ni_c6dd221c" xml:space="preserve">
+    <value>El archivo no contiene una imagen acoplada a tamaño completo, por eso se abre con sus capas.</value>
+  </data>
+  <data name="0_Anpassungsebenen_werden_nicht_bernommen_923cda4a" xml:space="preserve">
+    <value>No se importarán {0} capas de ajuste.</value>
+  </data>
 </root>

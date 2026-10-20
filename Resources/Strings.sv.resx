@@ -9864,4 +9864,28 @@
   <data name="Bei_0_sind_alle_Bilder_gleich_gro_bei_100_reiche_5c4a4af2" xml:space="preserve">
     <value>Vid 0 är alla bilder lika stora, vid 100 varierar de från halva till en och en halv gånger storleken</value>
   </data>
+  <data name="0_Ebenen_tragen_Ebeneneffekte_wie_Schatten_oder__36f72d92" xml:space="preserve">
+    <value>{0} lager har lagereffekter som skugga eller kontur. FerrumPix visar dessa lager utan deras effekter.</value>
+  </data>
+  <data name="0_Ebenen_lie_en_sich_nicht_lesen_und_fehlen_7d15ee84" xml:space="preserve">
+    <value>{0} lager kunde inte läsas och saknas.</value>
+  </data>
+  <data name="Als_Gesamtbild_ge_ffnet_stimmt_jeder_Bildpunkt_d_5be2716e" xml:space="preserve">
+    <value>Öppnad som sammanslagen bild stämmer varje pixel, men lagren är då låsta.</value>
+  </data>
+  <data name="Nicht_alles_l_sst_sich_als_Ebene_bernehmen_c67b3baa" xml:space="preserve">
+    <value>Allt kan inte tas över som lager</value>
+  </data>
+  <data name="Als_Ebenen_18a2e8d1" xml:space="preserve">
+    <value>Som lager</value>
+  </data>
+  <data name="Als_Gesamtbild_7282bdee" xml:space="preserve">
+    <value>Som sammanslagen bild</value>
+  </data>
+  <data name="Ein_Gesamtbild_in_voller_Gr_e_tr_gt_die_Datei_ni_c6dd221c" xml:space="preserve">
+    <value>Filen har ingen sammanslagen bild i full storlek och öppnas därför med sina lager.</value>
+  </data>
+  <data name="0_Anpassungsebenen_werden_nicht_bernommen_923cda4a" xml:space="preserve">
+    <value>{0} justeringslager importeras inte.</value>
+  </data>
 </root>

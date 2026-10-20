@@ -9864,4 +9864,28 @@
   <data name="Bei_0_sind_alle_Bilder_gleich_gro_bei_100_reiche_5c4a4af2" xml:space="preserve">
     <value>Při 0 jsou všechny obrázky stejně velké, při 100 od poloviny do jedenapůlnásobku</value>
   </data>
+  <data name="0_Ebenen_tragen_Ebeneneffekte_wie_Schatten_oder__36f72d92" xml:space="preserve">
+    <value>{0} vrstev nese efekty vrstvy, například stín nebo tah. FerrumPix zobrazí tyto vrstvy bez jejich efektů.</value>
+  </data>
+  <data name="0_Ebenen_lie_en_sich_nicht_lesen_und_fehlen_7d15ee84" xml:space="preserve">
+    <value>{0} vrstev se nepodařilo načíst a chybí.</value>
+  </data>
+  <data name="Als_Gesamtbild_ge_ffnet_stimmt_jeder_Bildpunkt_d_5be2716e" xml:space="preserve">
+    <value>Při otevření jako sloučený obraz sedí každý pixel, vrstvy jsou však pevné.</value>
+  </data>
+  <data name="Nicht_alles_l_sst_sich_als_Ebene_bernehmen_c67b3baa" xml:space="preserve">
+    <value>Ne vše lze převzít jako vrstvy</value>
+  </data>
+  <data name="Als_Ebenen_18a2e8d1" xml:space="preserve">
+    <value>Jako vrstvy</value>
+  </data>
+  <data name="Als_Gesamtbild_7282bdee" xml:space="preserve">
+    <value>Jako sloučený obraz</value>
+  </data>
+  <data name="Ein_Gesamtbild_in_voller_Gr_e_tr_gt_die_Datei_ni_c6dd221c" xml:space="preserve">
+    <value>Soubor neobsahuje sloučený obraz v plné velikosti, proto se otevře se svými vrstvami.</value>
+  </data>
+  <data name="0_Anpassungsebenen_werden_nicht_bernommen_923cda4a" xml:space="preserve">
+    <value>{0} vrstev úprav nebude importováno.</value>
+  </data>
 </root>

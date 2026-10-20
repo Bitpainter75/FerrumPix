@@ -22,7 +22,9 @@ Namespace Services
     '''
     ''' Was Photoshop nicht als Bildpunkte ablegt - Korrekturebenen, Effekte, Textebenen als solche -
     ''' kommt nicht mit. Es steckt im Gesamtbild der Datei, aber nicht in den Ebenen, und eine leere
-    ''' Ebene wäre schlimmer als eine fehlende. Wie viele es waren, steht im Ergebnis.
+    ''' Ebene wäre schlimmer als eine fehlende. Wie viele es waren, steht im Ergebnis; Ebenen mit
+    ''' Effekten und unlesbare Ebenen eigens, weil bei ihnen das Gesamtbild die bessere Wahl sein
+    ''' kann und der Editor danach fragt.
     ''' </summary>
     Public NotInheritable Class PsdImportService
 
@@ -38,6 +40,12 @@ Namespace Services
             ''' Wie viele Ebenen die Datei trug, die keine Bildpunkte haben - Korrekturebenen etwa.
             Public Property SkippedLayers As Integer
             Public Property LayerCount As Integer
+            ''' <summary>Sichtbare Ebenen und Gruppen mit eingeschalteten Ebeneneffekten. Sie
+            ''' kommen ohne ihre Effekte an; das Gesamtbild der Datei zeigt sie richtig.</summary>
+            Public Property EffectLayers As Integer
+            ''' <summary>Ebenen, deren Bildpunkte sich nicht lesen ließen. Sie fehlen im Stapel.</summary>
+            Public Property BrokenLayers As Integer
+            Public Property AdjustmentLayers As Integer
             ''' <summary>True, wenn die Datei den eigenen Rezeptblock trug und die Bearbeitung
             ''' vollständig zurückkam - Text als Text statt als Bildpunkte.</summary>
             Public Property FromOwnRecipe As Boolean
@@ -266,13 +274,23 @@ Namespace Services
                     adjustments.AnnotationGroups.Add(openGroups(g))
                 Next
 
+                ' Mitgezählt wird auch die unterste Ebene, wenn sie das Grundbild wurde, und jede
+                ' Gruppenzeile: ihre Effekte fehlen genauso.
+                Dim effectLayers = 0
+                For Each layer In layers
+                    If layer.HasEffects AndAlso layer.IsVisible AndAlso layer.SectionType <> 3 Then effectLayers += 1
+                Next
+
                 success = True
                 Return New PsdImportResult With {
                     .BaseImagePath = baseImagePath,
                     .Adjustments = adjustments,
                     .TempDir = tempDir,
                     .LayerCount = index,
-                    .SkippedLayers = CountSkipped(psdPath, layers.Count)
+                    .SkippedLayers = CountSkipped(psdPath, layers.Count),
+                    .EffectLayers = effectLayers,
+                    .BrokenLayers = doc.BrokenLayers,
+                    .AdjustmentLayers = doc.AdjustmentLayers
                 }
             Catch
                 Return Nothing

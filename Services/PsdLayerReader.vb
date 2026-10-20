@@ -28,12 +28,15 @@ Namespace Services
     ''' eine Struktur baut, ist der Import.
     '''
     ''' Bewusst nicht gelesen:
-    ''' - Korrekturebenen und Ebeneneffekte. Photoshop legt für sie KEINE gerechneten Bildpunkte ab,
+    ''' - Korrekturebenen. Photoshop legt für sie KEINE gerechneten Bildpunkte ab,
     '''   nur ihre Einstellungen in je eigenen, kaum dokumentierten Datensätzen. Sie kämen als leere
     '''   Ebene heraus und würden ein falsches Bild ergeben, deshalb bleiben sie draußen. Ihr Beitrag
     '''   steckt im Gesamtbild, das der Aufrufer als Grundlage nimmt.
-    ''' - Vektormasken. Nur die gemalte Ebenenmaske kommt mit (Kanal -2); die zusammengerechnete
-    '''   Fassung aus beidem (Kanal -3) bliebe ohne ihren Vektoranteil eine halbe Wahrheit.
+    ''' - Vektormasken als Pfad. Bei einer gewöhnlichen Ebene hat Photoshop sie meist schon in
+    '''   Kanal -2 gerastert, und die kommt mit; trägt die Ebene daneben eine gemalte Maske, kommt
+    '''   die gemalte aus Kanal -3 (siehe SelectMaskChannel).
+    ''' - Ebeneneffekte. Erkannt werden sie (<see cref="PsdLayerInfo.HasEffects"/>), nachgebildet
+    '''   nicht.
     ''' - 32 Bit je Kanal. Dann liefert der Leser Nothing, und der Aufrufer bleibt beim flachen
     '''   Gesamtbild, das diese Variante besser auffangen kann.
     ''' </summary>
@@ -114,16 +117,28 @@ Namespace Services
                     Return SectionType <> 0
                 End Get
             End Property
+
+            ''' <summary>Die Ebene trägt eingeschaltete Ebeneneffekte (Schatten, Kontur, Schein
+            ''' und so fort). Nachgebildet werden sie nicht: die Ebene kommt ohne sie an, und eine
+            ''' Ebene mit Füllkraft 0, die nur über ihre Kontur zu sehen sein soll, bleibt
+            ''' unsichtbar. Der Import meldet das deshalb.</summary>
+            Public Property HasEffects As Boolean
         End Class
 
         ''' <summary>Rückübersetzung der Vierzeichenschlüssel. Was hier fehlt, wird "Normal" - die
-        ''' Bildpunkte stimmen dann, nur das Zusammenrechnen weicht ab.</summary>
+        ''' Bildpunkte stimmen dann, nur das Zusammenrechnen weicht ab.
+        '''
+        ''' Linear abwedeln ("lddg") ist die Addition und heißt im eigenen Renderer "Plus"; der
+        ''' Schreiber bildet es umgekehrt genauso ab. Unter seinem eigenen Namen kannte der Renderer
+        ''' es nicht und mischte still normal. Die übrigen Photoshop-Modi ohne Gegenstück im Renderer
+        ''' (Linear nachbelichten, Strahlendes, Lineares und Lichtpunkt-Licht, Harte Mischung) stehen
+        ''' hier unter ihrem Namen, damit sie ein Schreiben überleben; gerechnet werden sie normal.</summary>
         Private Shared ReadOnly BlendNames As New Dictionary(Of String, String)(StringComparer.Ordinal) From {
             {"norm", "Normal"}, {"mul ", "Multiply"}, {"scrn", "Screen"}, {"over", "Overlay"},
             {"dark", "Darken"}, {"lite", "Lighten"}, {"div ", "ColorDodge"}, {"idiv", "ColorBurn"},
             {"hLit", "HardLight"}, {"sLit", "SoftLight"}, {"diff", "Difference"}, {"smud", "Exclusion"},
             {"hue ", "Hue"}, {"sat ", "Saturation"}, {"colr", "Color"}, {"lum ", "Luminosity"},
-            {"lddg", "LinearDodge"}, {"lbrn", "LinearBurn"}, {"vLit", "VividLight"}, {"lLit", "LinearLight"},
+            {"lddg", "Plus"}, {"lbrn", "LinearBurn"}, {"vLit", "VividLight"}, {"lLit", "LinearLight"},
             {"pLit", "PinLight"}, {"hMix", "HardMix"}
         }
 
@@ -137,6 +152,11 @@ Namespace Services
             ''' an und stuenden flau und farbverschoben neben dem Gesamtbild, das laengst gewandelt
             ''' wird. Nothing heisst sRGB. Der Aufrufer gibt es frei.</summary>
             Public Property IccProfile As SKColorSpace
+            ''' <summary>Wie viele Ebenen Bildpunkte tragen sollten, die sich nicht lesen ließen.
+            ''' Sie fehlen im Stapel; der Rest der Datei kommt trotzdem.</summary>
+            Public Property BrokenLayers As Integer
+            ''' Sichtbare Anpassungsebenen, deren Wirkung beim Ebenenimport fehlt.
+            Public Property AdjustmentLayers As Integer
         End Class
 
         ''' <summary>Liefert die Bildebenen von unten nach oben, oder Nothing, wenn die Datei keine
@@ -282,6 +302,12 @@ Namespace Services
                     totalPixels += CLng(Math.Max(0, rec.MaskRight - rec.MaskLeft)) *
                                    Math.Max(0, rec.MaskBottom - rec.MaskTop)
                 End If
+                ' Zwei Masken, die multipliziert werden: die zweite und das Ergebnis über beide
+                ' Rechtecke liegen kurz zusätzlich im Speicher.
+                If rec.CombineVectorMask Then
+                    totalPixels += 2L * Math.Max(0, rec.VectorMaskRight - rec.VectorMaskLeft) *
+                                   Math.Max(0, rec.VectorMaskBottom - rec.VectorMaskTop)
+                End If
                 If totalPixels > MaxTotalLayerPixels Then Return Nothing
                 records.Add(rec)
             Next
@@ -299,6 +325,9 @@ Namespace Services
                 End Try
             End If
             Dim doc As New PsdDocumentInfo With {.Width = docWidth, .Height = docHeight, .IccProfile = iccProfile}
+            For Each rec In records
+                If rec.IsAdjustment AndAlso (rec.Flags And 2) = 0 Then doc.AdjustmentLayers += 1
+            Next
             Dim layers = doc.Layers
             ' Bricht das Lesen mittendrin ab - eine defekte Ebene oder eine Ausnahme -, sind die
             ' Ebenen davor bereits dekodiert und haengen als Bitmap in der Liste, die danach
@@ -309,7 +338,13 @@ Namespace Services
                 For Each rec In records
                     Dim maskBmp As SKBitmap = Nothing
                     Dim bmp = ReadChannelData(fs, rec, metadataOnly, maskBmp, bytesPerSample, grayscale, cmyk, isPsb)
-                    If bmp Is Nothing AndAlso rec.HasPixels AndAlso Not metadataOnly Then Return Nothing   ' das Profil raeumt der Finally-Zweig ab
+                    ' Eine Ebene, deren Bildpunkte sich nicht lesen lassen, fehlt im Stapel und
+                    ' wird gezählt; die Datei geht deshalb nicht mehr als Ganzes flach auf. Der
+                    ' Lesezeiger steht nach ReadChannelData in jedem Fall hinter ihren Kanälen.
+                    If bmp Is Nothing AndAlso rec.HasPixels AndAlso Not metadataOnly Then
+                        doc.BrokenLayers += 1
+                        Continue For
+                    End If
                     ' Gruppenmarken haben keine Bildpunkte und gehen trotzdem mit: ohne sie wüsste
                     ' der Import nicht, wo eine Gruppe anfängt und wo sie aufhört.
                     If bmp Is Nothing AndAlso rec.SectionType = 0 AndAlso Not metadataOnly Then Continue For
@@ -334,7 +369,8 @@ Namespace Services
                         .MaskHeight = If(maskBmp IsNot Nothing, rec.MaskBottom - rec.MaskTop, 0),
                         .MaskDefaultValue = rec.MaskDefaultValue,
                         .MaskDisabled = rec.MaskDisabled,
-                        .SectionType = rec.SectionType
+                        .SectionType = rec.SectionType,
+                        .HasEffects = rec.HasEffects
                     })
                 Next
                 completed = True
@@ -354,6 +390,11 @@ Namespace Services
         ''' Ebenendatensatz auch die Gruppenmarke, und die Gruppen zerfallen.</summary>
         Private Shared ReadOnly PsbLongLengthKeys As New HashSet(Of String)(StringComparer.Ordinal) From {
             "LMsk", "Lr16", "Lr32", "Layr", "Mt16", "Mt32", "Mtrn", "Alph", "FMsk", "lnk2", "FEid", "FXid", "PxSD"}
+
+        ''' Auch für das Gesamtbild, das die globalen Zusatzblöcke nach Transparenzmarken absucht.
+        Friend Shared Function IsPsbLongLengthKey(key As String) As Boolean
+            Return PsbLongLengthKeys.Contains(key)
+        End Function
 
         Private Shared Function ReadBlockLength(fs As FileStream, isPsb As Boolean, key As String) As Long
             Return If(isPsb AndAlso PsbLongLengthKeys.Contains(key), ReadU64(fs), CLng(ReadU32(fs)))
@@ -460,7 +501,34 @@ Namespace Services
             Public Property MaskDefaultValue As Byte = 0
             Public Property MaskDisabled As Boolean
             Public Property HasMaskRect As Boolean = False
+            ''' <summary>Der Kanal, aus dem die Maske kommt: -2 gewöhnlich, -3, wenn die Ebene
+            ''' neben der Vektormaske eine gemalte trägt (siehe ReadMaskBlock).</summary>
+            Public Property MaskChannelId As Integer = -2
+            ''' Merkmal Bit 3: die Maske in Kanal -2 hat Photoshop aus Vektordaten gerechnet.
+            Public Property MaskFromVectorData As Boolean
+            ''' Die zweite Maske des Maskenblocks, zu Kanal -3: Rechteck, Vorgabewert, Merkmale.
+            Public Property HasRealMask As Boolean
+            Public Property RealMaskTop As Integer
+            Public Property RealMaskLeft As Integer
+            Public Property RealMaskBottom As Integer
+            Public Property RealMaskRight As Integer
+            Public Property RealMaskDefaultValue As Byte
+            Public Property RealMaskDisabled As Boolean
+            ''' <summary>Kanal -2 wird zusätzlich gelesen und mit -3 multipliziert: eine
+            ''' gewöhnliche Ebene mit gemalter Maske UND Vektormaske. Dafür sein Rechteck und
+            ''' Vorgabewert, solange Mask* schon auf -3 steht.</summary>
+            Public Property CombineVectorMask As Boolean
+            Public Property VectorMaskTop As Integer
+            Public Property VectorMaskLeft As Integer
+            Public Property VectorMaskBottom As Integer
+            Public Property VectorMaskRight As Integer
+            Public Property VectorMaskDefaultValue As Byte
             Public Property SectionType As Integer = 0
+            Public Property HasEffects As Boolean
+            Public Property IsAdjustment As Boolean
+            ''' <summary>Photoshop hat die Bildpunkte dieser Ebene aus etwas anderem gerechnet:
+            ''' Text, Form oder Smartobjekt. Ihre Kante steckt dann schon in den Bildpunkten.</summary>
+            Public Property IsRendered As Boolean
         End Class
 
         Private Shared Function ReadLayerRecord(fs As FileStream, isPsb As Boolean) As LayerRecord
@@ -505,9 +573,8 @@ Namespace Services
             If maskLen > 0 Then
                 Dim maskEnd = fs.Position + maskLen
                 ReadMaskBlock(fs, rec, maskLen)
-                ' In JEDEM Fall auf das Blockende springen. Der Block ist 20 oder 36 Byte lang, und
-                ' die zweite Fassung trägt hinter der Maske noch ein zweites Rechteck, das hier
-                ' niemanden angeht - gelesen wird der Anfang, verlassen wird er über die Länge.
+                ' In JEDEM Fall auf das Blockende springen: ReadMaskBlock liest nur, was es braucht,
+                ' und verlassen wird der Block über seine Länge.
                 fs.Seek(maskEnd, SeekOrigin.Begin)
             End If
             Dim rangesLen = ReadU32(fs)
@@ -525,7 +592,14 @@ Namespace Services
                 consumed += 1
             End While
 
-            ' Zusatzblöcke. Interessant sind zwei: der Unicode-Name und die Gruppenmarke.
+            ' Zusatzblöcke: der Unicode-Name, der Text, die Füllkraft, die Gruppenmarke und die
+            ' Effekte. Von den übrigen zählt nur, DASS sie da sind: an ihnen ist zu erkennen, ob
+            ' Photoshop die Bildpunkte aus Text, Form oder Smartobjekt gerechnet hat.
+            Dim hasText = False, hasSmart = False, hasShapeContent = False
+            Dim hasVectorMask = False, hasFill = False, hasStroke = False
+            Dim effectsBlock As Byte() = Nothing
+            Dim effectsKey = ""
+            Dim hasLegacyEffects = False
             While fs.Position + 12 <= extraEnd
                 Dim blockSig(3) As Byte
                 If Not ReadExactly(fs, blockSig, 4) Then Exit While
@@ -534,6 +608,7 @@ Namespace Services
                 Dim blockKey(3) As Byte
                 If Not ReadExactly(fs, blockKey, 4) Then Exit While
                 Dim bk = Encoding.ASCII.GetString(blockKey)
+                If AdjustmentKeys.Contains(bk) Then rec.IsAdjustment = True
                 Dim blockLen = ReadBlockLength(fs, isPsb, bk)
                 Dim blockStart = fs.Position
                 If blockStart + blockLen > extraEnd Then Exit While
@@ -552,10 +627,35 @@ Namespace Services
                     End If
                 ElseIf bk = "TySh" AndAlso blockLen > 100 AndAlso blockLen < 8_000_000 Then
                     ' Textebene: den Block als Ganzes einlesen und den Wortlaut daraus holen.
+                    hasText = True
                     Dim textBlock(CInt(blockLen) - 1) As Byte
                     If ReadExactly(fs, textBlock, textBlock.Length) Then
                         rec.TextContent = PsdTextReader.ExtractText(textBlock)
                     End If
+                ElseIf (bk = "lmfx" OrElse bk = "lfx2" OrElse bk = "lfxs") AndAlso blockLen >= 8 AndAlso blockLen < 8_000_000 Then
+                    ' Effekte. "lmfx" schreibt Photoshop, sobald eine Effektart mehrfach vorkommt,
+                    ' und es geht dann "lfx2" vor; bei Gruppen heißt der Block "lfxs".
+                    If effectsBlock Is Nothing OrElse bk = "lmfx" Then
+                        Dim fx(CInt(blockLen) - 1) As Byte
+                        If ReadExactly(fs, fx, fx.Length) Then
+                            effectsBlock = fx
+                            effectsKey = bk
+                        End If
+                    End If
+                ElseIf bk = "lrFX" Then
+                    ' Die alte Form der Effekte. Neuere Fassungen schreiben "lfx2" daneben, das dann
+                    ' gilt; an Gruppen übergeht Photoshop "lrFX" ganz.
+                    hasLegacyEffects = True
+                ElseIf bk = "SoLd" OrElse bk = "SoLE" OrElse bk = "PlLd" OrElse bk = "plLd" Then
+                    hasSmart = True
+                ElseIf bk = "vscg" OrElse bk = "vogk" Then
+                    hasShapeContent = True
+                ElseIf bk = "vmsk" OrElse bk = "vsms" Then
+                    hasVectorMask = True
+                ElseIf bk = "SoCo" OrElse bk = "GdFl" OrElse bk = "PtFl" Then
+                    hasFill = True
+                ElseIf bk = "vstk" Then
+                    hasStroke = True
                 ElseIf bk = "iOpa" AndAlso blockLen >= 1 Then
                     ' Füllkraft: wirkt auf den Inhalt der Ebene, nicht auf ihre Effekte. Ohne Effekte
                     ' ist sie dasselbe wie eine Deckkraft. Übergangen erschien eine Ebene mit
@@ -581,7 +681,113 @@ Namespace Services
             fs.Seek(extraEnd, SeekOrigin.Begin)
 
             If rec.Right <= rec.Left OrElse rec.Bottom <= rec.Top Then rec.HasPixels = False
+
+            ' Eine Form ist ein Pfad mit Füllung oder Kontur; eine Füllebene mit Vektormaske ist in
+            ' Photoshop dasselbe.
+            rec.IsRendered = hasText OrElse hasSmart OrElse hasShapeContent OrElse
+                             (hasVectorMask AndAlso (hasFill OrElse hasStroke))
+            If effectsBlock IsNot Nothing Then
+                rec.HasEffects = EffectsAreActive(effectsBlock)
+            ElseIf hasLegacyEffects AndAlso rec.SectionType = 0 Then
+                rec.HasEffects = True
+            End If
+            SelectMaskChannel(rec)
             Return rec
+        End Function
+
+        Private Shared ReadOnly AdjustmentKeys As New HashSet(Of String)(StringComparer.Ordinal) From {
+            "curv", "levl", "expA", "brit", "CgEd", "vibA", "hue2", "hue ", "nvrt",
+            "thrs", "mixr", "clrL", "post", "grdm", "blnc", "selc", "phfl", "blwh"}
+
+        ''' <summary>Entscheidet, welche Maske die Ebene bekommt.
+        '''
+        ''' Trägt eine Ebene neben einer gemalten Maske auch eine Vektormaske, legt Photoshop die
+        ''' gemalte in Kanal -3 ab, mit dem zweiten Rechteck des Maskenblocks, und in Kanal -2 die
+        ''' aus dem Pfad gerechnete. Photoshop multipliziert beide. Bei einer gewöhnlichen Ebene
+        ''' werden deshalb beide gelesen und multipliziert (CombineMaskPlanes); nur -3 genommen,
+        ''' tauchte alles wieder auf, was die Vektormaske abschneidet. Bei Text, Form und
+        ''' Smartobjekt kommt nur -3: die Vektorkante steckt dort schon in den Bildpunkten.
+        ''' Ist eine der beiden abgeschaltet, gilt die andere allein.
+        '''
+        ''' Ohne -3 kommt -2. Hat Photoshop sie aus Vektordaten gerechnet (Merkmal Bit 3) und ist die
+        ''' Ebene Text, Form oder Smartobjekt, entfällt sie: deren Bildpunkte tragen diese Kante
+        ''' schon, und noch einmal maskiert würde jede Kante dünner. Bei einer gewöhnlichen Ebene
+        ''' bleibt sie, denn dort ist sie die einzige Spur der Vektormaske.</summary>
+        Private Shared Sub SelectMaskChannel(rec As LayerRecord)
+            Dim hasRealChannel = False, hasVectorChannel = False
+            For Each ch In rec.Channels
+                If ch(0) = -3 Then hasRealChannel = True
+                If ch(0) = -2 Then hasVectorChannel = True
+            Next
+
+            ' Die gemalte ist abgeschaltet: bei einer gewöhnlichen Ebene wirkt dann nur die
+            ' Vektormaske, und die steht in -2 wie ohne gemalte.
+            If rec.HasRealMask AndAlso hasRealChannel AndAlso rec.RealMaskDisabled AndAlso
+               Not rec.IsRendered AndAlso rec.HasMaskRect AndAlso hasVectorChannel Then
+                rec.MaskChannelId = -2
+                Return
+            End If
+
+            If rec.HasRealMask AndAlso hasRealChannel Then
+                rec.CombineVectorMask = Not rec.IsRendered AndAlso hasVectorChannel AndAlso
+                                        rec.HasMaskRect AndAlso Not rec.MaskDisabled
+                If rec.CombineVectorMask Then
+                    rec.VectorMaskTop = rec.MaskTop
+                    rec.VectorMaskLeft = rec.MaskLeft
+                    rec.VectorMaskBottom = rec.MaskBottom
+                    rec.VectorMaskRight = rec.MaskRight
+                    rec.VectorMaskDefaultValue = rec.MaskDefaultValue
+                End If
+                rec.MaskChannelId = -3
+                rec.MaskTop = rec.RealMaskTop
+                rec.MaskLeft = rec.RealMaskLeft
+                rec.MaskBottom = rec.RealMaskBottom
+                rec.MaskRight = rec.RealMaskRight
+                rec.MaskDefaultValue = rec.RealMaskDefaultValue
+                rec.MaskDisabled = rec.RealMaskDisabled
+                rec.HasMaskRect = True
+                Return
+            End If
+
+            rec.MaskChannelId = -2
+            If rec.MaskFromVectorData AndAlso rec.IsRendered Then rec.HasMaskRect = False
+        End Sub
+
+        ''' <summary>Ob ein Effektblock ("lfx2", "lmfx", "lfxs") wirklich etwas zeigt: der
+        ''' Hauptschalter an und mindestens ein Effekt eingeschaltet. Photoshop behält den Block,
+        ''' wenn der Anwender die Effekte nur ausblendet.
+        '''
+        ''' Aufbau: vier Byte Version der Effekte, dann eine Beschreibungsstruktur mit eigener
+        ''' Version. Darin "masterFXSwitch" und je Effektart ein Eintrag mit "enab" (und bei
+        ''' manchen "present"), bei mehrfachen Effekten eine Liste solcher Einträge.
+        '''
+        ''' Lässt sich die Struktur nicht lesen, gilt der Block als aktiv: lieber einmal zu viel
+        ''' gemeldet als eine Ebene, deren Kontur fehlt, ohne Hinweis.</summary>
+        Friend Shared Function EffectsAreActive(block As Byte()) As Boolean
+            Dim root = PsdDescriptor.ParseVersioned(block, 4)
+            If root Is Nothing Then Return True
+            If IsFalse(root.GetValue("masterFXSwitch")) Then Return False
+
+            For Each item In root.Items
+                Dim effect = TryCast(item.Value, PsdDescriptor)
+                If effect IsNot Nothing AndAlso IsEffectEnabled(effect) Then Return True
+                Dim list = TryCast(item.Value, List(Of Object))
+                If list Is Nothing Then Continue For
+                For Each element In list
+                    effect = TryCast(element, PsdDescriptor)
+                    If effect IsNot Nothing AndAlso IsEffectEnabled(effect) Then Return True
+                Next
+            Next
+            Return False
+        End Function
+
+        ''' Fehlt "enab", gilt der Effekt als eingeschaltet, wie bei Photoshop selbst.
+        Private Shared Function IsEffectEnabled(effect As PsdDescriptor) As Boolean
+            Return Not IsFalse(effect.GetValue("enab")) AndAlso Not IsFalse(effect.GetValue("present"))
+        End Function
+
+        Private Shared Function IsFalse(value As Object) As Boolean
+            Return TypeOf value Is Boolean AndAlso Not DirectCast(value, Boolean)
         End Function
 
         ''' <summary>Der Maskenteil eines Ebenendatensatzes: Rechteck, Vorgabewert außerhalb davon,
@@ -591,42 +797,132 @@ Namespace Services
         ''' Das Merkmal-Byte trägt in Bit 1 das Abschalten der Maske und in Bit 0 die Aussage, dass
         ''' ihr Rechteck RELATIV zur Ebene gemeint ist statt absolut im Dokument. Das kommt selten
         ''' vor, kostet aber nichts - und übergangen säße die Maske um den Ebenenversatz verschoben,
-        ''' was bei einer Ebene am Bildrand sofort auffiele und bei einer bildgroßen nie.</summary>
+        ''' was bei einer Ebene am Bildrand sofort auffiele und bei einer bildgroßen nie.
+        '''
+        ''' Bit 3 heißt: Photoshop hat die Maske aus Vektordaten gerechnet. Bit 4 heißt: es folgen
+        ''' Parameter (Dichte, weiche Kante). Trägt die Ebene eine gemalte Maske UND eine
+        ''' Vektormaske, steht dahinter ein zweiter Satz für Kanal -3: Merkmale, Vorgabewert,
+        ''' Rechteck (siehe <see cref="RealMaskComesFirst"/> zur Reihenfolge).</summary>
         Private Shared Sub ReadMaskBlock(fs As FileStream, rec As LayerRecord, maskLen As Long)
             ' Rechteck, Vorgabewert und Merkmale sind zusammen achtzehn Byte. Weniger heißt: hier
             ' steht etwas anderes, als diese Fassung des Formats vorsieht.
             If maskLen < 18 Then Return
             Try
-                Dim top = CInt(ReadU32Signed(fs))
-                Dim left = CInt(ReadU32Signed(fs))
-                Dim bottom = CInt(ReadU32Signed(fs))
-                Dim right = CInt(ReadU32Signed(fs))
-                Dim defaultValue = fs.ReadByte()
-                Dim flags = fs.ReadByte()
-                If defaultValue < 0 OrElse flags < 0 Then Return
+                ' Der Block ist klein (höchstens rund sechzig Byte); gelesen wird er am Stück. Wo
+                ' er endet, bestimmt der Aufrufer über die Länge.
+                Dim data(CInt(Math.Min(maskLen, 256L)) - 1) As Byte
+                If Not ReadExactly(fs, data, data.Length) Then Return
+                Dim length = CInt(Math.Min(maskLen, Integer.MaxValue))
 
-                If (flags And 1) <> 0 Then
-                    left += rec.Left : right += rec.Left
-                    top += rec.Top : bottom += rec.Top
+                Dim flags = CInt(data(17))
+                rec.MaskFromVectorData = (flags And 8) <> 0
+                If ApplyMaskRect(rec, data, 0, flags,
+                                 Sub(top, left, bottom, right)
+                                     rec.MaskTop = top
+                                     rec.MaskLeft = left
+                                     rec.MaskBottom = bottom
+                                     rec.MaskRight = right
+                                 End Sub) Then
+                    ' Der Wert wird UNVERAENDERT uebernommen. Das Format nennt zwar nur 0 und 255,
+                    ' aber es steht ein ganzes Byte dort, und ein Grauwert dazwischen ist eine
+                    ' Maske, die ausserhalb ihres Rechtecks halb deckt. Auf die beiden Enden
+                    ' gerundet aendert sich die Deckkraft der Ebene sichtbar, und zwar ueberall
+                    ' dort, wo die Maske nichts sagt.
+                    rec.MaskDefaultValue = data(16)
+                    rec.MaskDisabled = (flags And 2) <> 0
+                    rec.HasMaskRect = True
                 End If
 
-                If right <= left OrElse bottom <= top Then Return
-                rec.MaskTop = top
-                rec.MaskLeft = left
-                rec.MaskBottom = bottom
-                rec.MaskRight = right
-                ' Der Wert wird UNVERAENDERT uebernommen. Das Format nennt zwar nur 0 und 255, aber
-                ' es steht ein ganzes Byte dort, und ein Grauwert dazwischen ist eine Maske, die
-                ' ausserhalb ihres Rechtecks halb deckt. Auf die beiden Enden gerundet aendert sich
-                ' die Deckkraft der Ebene sichtbar, und zwar ueberall dort, wo die Maske nichts sagt.
-                rec.MaskDefaultValue = CByte(defaultValue And &HFF)
-                rec.MaskDisabled = (flags And 2) <> 0
-                rec.HasMaskRect = True
+                ' Der zweite Satz: Merkmale, Vorgabewert, dann das Rechteck.
+                Dim realAt = -1
+                If (flags And 16) = 0 Then
+                    If length >= 36 Then realAt = 18
+                ElseIf RealMaskComesFirst(data, length) Then
+                    realAt = 18
+                Else
+                    Dim afterParameters = 19 + MaskParameterBytes(data(18))
+                    If length >= afterParameters + 18 Then realAt = afterParameters
+                End If
+                If realAt >= 0 AndAlso realAt + 18 <= data.Length Then
+                    Dim realFlags = CInt(data(realAt))
+                    If ApplyMaskRect(rec, data, realAt + 2, realFlags,
+                                     Sub(top, left, bottom, right)
+                                         rec.RealMaskTop = top
+                                         rec.RealMaskLeft = left
+                                         rec.RealMaskBottom = bottom
+                                         rec.RealMaskRight = right
+                                     End Sub) Then
+                        rec.RealMaskDefaultValue = data(realAt + 1)
+                        rec.RealMaskDisabled = (realFlags And 2) <> 0
+                        rec.HasRealMask = True
+                    End If
+                End If
             Catch
                 ' Ein unlesbarer Maskenblock kostet die Maske, nicht die Ebene.
                 rec.HasMaskRect = False
+                rec.HasRealMask = False
             End Try
         End Sub
+
+        ''' <summary>Liest ein Maskenrechteck (oben, links, unten, rechts) ab
+        ''' <paramref name="offset"/> und gibt es weiter, wenn es eine Fläche hat. Bit 0 der
+        ''' Merkmale verschiebt es um die Lage der Ebene (siehe ReadMaskBlock).</summary>
+        Private Shared Function ApplyMaskRect(rec As LayerRecord, data As Byte(), offset As Integer,
+                                              flags As Integer,
+                                              apply As Action(Of Integer, Integer, Integer, Integer)) As Boolean
+            Dim top = ReadI32(data, offset)
+            Dim left = ReadI32(data, offset + 4)
+            Dim bottom = ReadI32(data, offset + 8)
+            Dim right = ReadI32(data, offset + 12)
+            If (flags And 1) <> 0 Then
+                left += rec.Left : right += rec.Left
+                top += rec.Top : bottom += rec.Top
+            End If
+            If right <= left OrElse bottom <= top Then Return False
+            apply(top, left, bottom, right)
+            Return True
+        End Function
+
+        ''' Wie viele Byte die Parameter hinter ihrem Merkmalbyte belegen: Bit 0 Dichte der
+        ''' gemalten Maske (1 Byte), Bit 1 ihre weiche Kante (8 Byte), Bit 2 und 3 dasselbe für die
+        ''' Vektormaske.
+        Private Shared Function MaskParameterBytes(parameterFlags As Byte) As Integer
+            Return If((parameterFlags And 1) <> 0, 1, 0) + If((parameterFlags And 2) <> 0, 8, 0) +
+                   If((parameterFlags And 4) <> 0, 1, 0) + If((parameterFlags And 8) <> 0, 8, 0)
+        End Function
+
+        ''' <summary>Steht der zweite Maskensatz VOR den Parametern? Die Formatbeschreibung nennt
+        ''' die Parameter zuerst, Photoshop schreibt den Satz zuerst. Entschieden wird an der Länge
+        ''' und an der Plausibilität, abgeleitet aus Dateien, die Photoshop geschrieben hat:
+        ''' passen die Parameter ab Byte 18 allein mit höchstens drei Byte Auffüllung in den Block,
+        ''' gibt es gar keinen zweiten Satz. Passen sie erst ab Byte 36, gilt Photoshops
+        ''' Reihenfolge, es sei denn, ihre Lesart ist unplausibel (Vorgabewert weder 0 noch 255,
+        ''' unbekannte Merkmalbits) und die der Beschreibung nicht.</summary>
+        Private Shared Function RealMaskComesFirst(data As Byte(), length As Integer) As Boolean
+            Dim fits = Function(at As Integer) As Boolean
+                           If at >= data.Length Then Return False
+                           Dim size = MaskParameterBytes(data(at))
+                           Return length >= at + 1 + size AndAlso length <= at + 4 + size
+                       End Function
+            If fits(18) Then Return False
+            If Not fits(36) Then Return False
+
+            Dim knownFlags = Function(pf As Byte) (pf And &HF0) = 0
+            Dim backgroundOk = Function(at As Integer) at + 1 < data.Length AndAlso
+                                                       (data(at + 1) = 0 OrElse data(at + 1) = 255)
+            Dim photoshopPlausible = backgroundOk(18) AndAlso knownFlags(data(36))
+            Dim realAfter = 19 + MaskParameterBytes(data(18))
+            Dim specPlausible = knownFlags(data(18)) AndAlso
+                                length >= realAfter + 18 AndAlso length <= realAfter + 21 AndAlso
+                                backgroundOk(realAfter)
+            Return photoshopPlausible OrElse Not specPlausible
+        End Function
+
+        Private Shared Function ReadI32(data As Byte(), offset As Integer) As Integer
+            Dim value = (CLng(data(offset)) << 24) Or (CLng(data(offset + 1)) << 16) Or
+                        (CLng(data(offset + 2)) << 8) Or CLng(data(offset + 3))
+            Return CInt(If(value > Integer.MaxValue, value - 4_294_967_296L, value))
+        End Function
 
         ' ── Kanaldaten ───────────────────────────────────────────────────────────
 
@@ -651,6 +947,9 @@ Namespace Services
             Dim height = rec.Bottom - rec.Top
             Dim maskWidth = rec.MaskRight - rec.MaskLeft
             Dim maskHeight = rec.MaskBottom - rec.MaskTop
+            Dim vectorWidth = rec.VectorMaskRight - rec.VectorMaskLeft
+            Dim vectorHeight = rec.VectorMaskBottom - rec.VectorMaskTop
+            Dim maskPlane As Byte() = Nothing, vectorPlane As Byte() = Nothing
             maskBitmap = Nothing
 
             Dim red As Byte() = Nothing, green As Byte() = Nothing, blue As Byte() = Nothing, alpha As Byte() = Nothing
@@ -665,14 +964,14 @@ Namespace Services
                 ' drei beziehungsweise einen, CMYK vier; Transparenz liegt bei allen in Kanal -1.
                 Dim wanted = Not metadataOnly AndAlso rec.HasPixels AndAlso
                              (id = 0 OrElse id = 1 OrElse id = 2 OrElse id = -1 OrElse (cmyk AndAlso id = 3))
-                ' Die Maske liegt in Kanal -2 und hat die Maße IHRES Rechtecks, nicht die der Ebene.
-                ' Kanal -3 wäre die zusammengerechnete Fassung aus Ebenen- und Vektormaske; die
-                ' bleibt draußen, weil ihr Vektoranteil hier ohnehin nicht nachvollzogen wird und
-                ' eine halb übernommene Maske schlechter ist als die ehrliche Ebenenmaske.
+                ' Die Maske liegt in Kanal -2 oder -3 (welcher, entscheidet SelectMaskChannel) und
+                ' hat die Maße IHRES Rechtecks, nicht die der Ebene.
                 ' Auch eine GRUPPENZEILE darf eine Maske tragen; sie gilt dann für alles, was in der
                 ' Gruppe liegt. Deshalb hängt das Lesen hier nicht an den Bildpunkten.
                 Dim wantMask = Not metadataOnly AndAlso (rec.HasPixels OrElse rec.SectionType <> 0) AndAlso
-                               rec.HasMaskRect AndAlso id = -2 AndAlso maskWidth > 0 AndAlso maskHeight > 0
+                               rec.HasMaskRect AndAlso id = rec.MaskChannelId AndAlso maskWidth > 0 AndAlso maskHeight > 0
+                Dim wantVectorMask = Not metadataOnly AndAlso (rec.HasPixels OrElse rec.SectionType <> 0) AndAlso
+                                     rec.CombineVectorMask AndAlso id = -2 AndAlso vectorWidth > 0 AndAlso vectorHeight > 0
                 If wanted Then
                     Dim plane = ReadPlane(fs, width, height, declaredLen, bytesPerSample, isPsb, colorChannel:=id >= 0)
                     If plane IsNot Nothing Then
@@ -687,11 +986,9 @@ Namespace Services
                 ElseIf wantMask Then
                     ' Scheitert die Maske, bleibt die Ebene gültig - sie sieht dann aus wie ohne
                     ' Maske, und das ist der Stand von vorher, kein neuer Schaden.
-                    Dim maskPlane = ReadPlane(fs, maskWidth, maskHeight, declaredLen, bytesPerSample, isPsb, colorChannel:=False)
-                    If maskPlane IsNot Nothing Then
-                        maskBitmap?.Dispose()
-                        maskBitmap = BuildAlphaBitmap(maskPlane, maskWidth, maskHeight)
-                    End If
+                    maskPlane = ReadPlane(fs, maskWidth, maskHeight, declaredLen, bytesPerSample, isPsb, colorChannel:=False)
+                ElseIf wantVectorMask Then
+                    vectorPlane = ReadPlane(fs, vectorWidth, vectorHeight, declaredLen, bytesPerSample, isPsb, colorChannel:=False)
                 End If
 
                 ' In jedem Fall exakt hinter den Block springen: die angegebene Länge ist die
@@ -699,6 +996,23 @@ Namespace Services
                 If blockEnd > fs.Length Then Return DropMask(maskBitmap)
                 fs.Seek(blockEnd, SeekOrigin.Begin)
             Next
+
+            ' Die Maske erst nach allen Kanälen bauen: bei zwei Masken stehen -2 und -3 in
+            ' beliebiger Reihenfolge, und multipliziert wird erst, wenn beide da sind.
+            If maskPlane IsNot Nothing AndAlso vectorPlane IsNot Nothing Then
+                maskBitmap = CombineMaskPlanes(rec, maskPlane, vectorPlane)
+            ElseIf maskPlane IsNot Nothing Then
+                maskBitmap = BuildAlphaBitmap(maskPlane, maskWidth, maskHeight)
+            ElseIf vectorPlane IsNot Nothing Then
+                ' Die gemalte ließ sich nicht lesen: dann wenigstens die Vektormaske allein.
+                rec.MaskTop = rec.VectorMaskTop
+                rec.MaskLeft = rec.VectorMaskLeft
+                rec.MaskBottom = rec.VectorMaskBottom
+                rec.MaskRight = rec.VectorMaskRight
+                rec.MaskDefaultValue = rec.VectorMaskDefaultValue
+                rec.MaskDisabled = False
+                maskBitmap = BuildAlphaBitmap(vectorPlane, vectorWidth, vectorHeight)
+            End If
 
             ' Kommt keine Ebene zustande, ist auch ihre Maske gegenstandslos - und ein Bitmap, das
             ' niemand mehr in die Hand bekommt, wäre nativer Speicher bis zum Finalisierer. Bei
@@ -756,6 +1070,48 @@ Namespace Services
             maskBitmap?.Dispose()
             maskBitmap = Nothing
             Return Nothing
+        End Function
+
+        ''' <summary>Multipliziert die gemalte Maske (Kanal -3, Rechteck in Mask*) mit der
+        ''' Vektormaske (Kanal -2, Rechteck in VectorMask*), wie Photoshop beide zusammen wirken
+        ''' lässt. Jede trägt außerhalb ihres Rechtecks ihren Vorgabewert; das Ergebnis umfasst
+        ''' beide Rechtecke, und außerhalb gilt das Produkt der Vorgabewerte. Rechteck und
+        ''' Vorgabewert der Ebene werden auf das Ergebnis umgestellt.</summary>
+        Private Shared Function CombineMaskPlanes(rec As LayerRecord, realPlane As Byte(), vectorPlane As Byte()) As SKBitmap
+            Dim realLeft = rec.MaskLeft, realTop = rec.MaskTop
+            Dim realWidth = rec.MaskRight - rec.MaskLeft, realHeight = rec.MaskBottom - rec.MaskTop
+            Dim vecLeft = rec.VectorMaskLeft, vecTop = rec.VectorMaskTop
+            Dim vecWidth = rec.VectorMaskRight - rec.VectorMaskLeft, vecHeight = rec.VectorMaskBottom - rec.VectorMaskTop
+            Dim left = Math.Min(rec.MaskLeft, rec.VectorMaskLeft)
+            Dim top = Math.Min(rec.MaskTop, rec.VectorMaskTop)
+            Dim right = Math.Max(rec.MaskRight, rec.VectorMaskRight)
+            Dim bottom = Math.Max(rec.MaskBottom, rec.VectorMaskBottom)
+            Dim width = right - left, height = bottom - top
+            If CLng(width) * height > Integer.MaxValue Then Return Nothing
+
+            Dim realDefault = CInt(rec.MaskDefaultValue)
+            Dim vecDefault = CInt(rec.VectorMaskDefaultValue)
+            Dim combined(width * height - 1) As Byte
+            For y = 0 To height - 1
+                Dim docY = top + y
+                Dim realRow = docY - realTop, vecRow = docY - vecTop
+                For x = 0 To width - 1
+                    Dim docX = left + x
+                    Dim rx = docX - realLeft, vx = docX - vecLeft
+                    Dim r = If(rx >= 0 AndAlso rx < realWidth AndAlso realRow >= 0 AndAlso realRow < realHeight,
+                               CInt(realPlane(realRow * realWidth + rx)), realDefault)
+                    Dim v = If(vx >= 0 AndAlso vx < vecWidth AndAlso vecRow >= 0 AndAlso vecRow < vecHeight,
+                               CInt(vectorPlane(vecRow * vecWidth + vx)), vecDefault)
+                    combined(y * width + x) = CByte((r * v + 127) \ 255)
+                Next
+            Next
+
+            rec.MaskLeft = left
+            rec.MaskTop = top
+            rec.MaskRight = right
+            rec.MaskBottom = bottom
+            rec.MaskDefaultValue = CByte((realDefault * vecDefault + 127) \ 255)
+            Return BuildAlphaBitmap(combined, width, height)
         End Function
 
         ''' <summary>Eine Graustufenfläche als Alpha8-Bitmap. Genau die Bauform, die der eigene

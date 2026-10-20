@@ -519,9 +519,24 @@ Namespace Services
 
         ''' <summary>Schreibt das fertige Bild planar je Kanal. Anders als bei den Ebenen stehen hier
         ''' die Zeilenlaengen ALLER Kanaele gesammelt vor den Daten - genau so, wie der eigene Leser
-        ''' sie erwartet.</summary>
+        ''' sie erwartet.
+        '''
+        ''' Halbdurchsichtige Punkte werden dabei GEGEN WEISS verrechnet: Farbe mal Deckung plus
+        ''' Weiss mal Rest. So legt Photoshop das Gesamtbild ab, und so rechnen die Leser es
+        ''' zurueck, der eigene eingeschlossen (PsdPreviewService). Gerade geschrieben bekaeme jede
+        ''' weiche Kante beim Lesen einen dunklen Saum. Die Ebenen bleiben gerade. Die Kanaele
+        ''' werden dafuer an Ort und Stelle geaendert; danach braucht sie niemand mehr.</summary>
         Private Shared Sub WriteMergedImage(fs As Stream, width As Integer, height As Integer,
                                             planes As Byte()())
+
+            Dim alpha = planes(3)
+            For i = 0 To alpha.Length - 1
+                Dim a = CInt(alpha(i))
+                If a = 255 Then Continue For
+                For c = 0 To 2
+                    planes(c)(i) = CByte((CInt(planes(c)(i)) * a + 255 * (255 - a) + 127) \ 255)
+                Next
+            Next
 
             WriteU16(fs, 1)  ' Kompression: RLE/PackBits
 

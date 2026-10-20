@@ -37,3 +37,12 @@
   once while they are open instead of again after every change, and they grow with the window
   so the preview gets more room.
 
+- **PSD files open more faithfully.** Layers set to Linear Dodge now blend as they should, a
+  painted layer mask next to a vector mask is kept, text, shape and smart object layers no
+  longer get their edges masked twice, and one unreadable layer no longer turns the whole file
+  flat. When a file uses layer effects such as shadows or strokes, FerrumPix asks whether to
+  open it as layers without the effects or as a flattened image. In the gallery and viewer,
+  files saved without maximum compatibility no longer show a white area, transparent edges no
+  longer get a light fringe, and a saved selection is no longer taken for transparency. PSD
+  files exported from FerrumPix store their transparent edges the way other programs expect.
+

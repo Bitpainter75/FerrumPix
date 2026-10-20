@@ -19074,7 +19074,10 @@ Namespace ViewModels
         ''' tippbar braucht, öffnet die Datei ausdrücklich.
         '''
         ''' Eine FESTGELEGTE Einstellung gilt auf beiden Wegen unverändert - nur das „Immer fragen"
-        ''' wird beim Blättern zu „Als Bild".</param>
+        ''' wird beim Blättern zu „Als Bild".
+        '''
+        ''' Dieselbe Regel gilt für die Frage nach Ebeneneffekten und unlesbaren Ebenen: nur beim
+        ''' Öffnen, beim Blättern bleibt es beim Ebenenstapel.</param>
         Private Async Function LoadPsdDocumentAsync(psdSource As String,
                                                     Optional mayAskAboutText As Boolean = True) As Task(Of PsdDocumentLoad)
             ' Die gespeicherte Bearbeitung, falls es eine gibt. Sie kommt ÜBER den Stapel und
@@ -19114,7 +19117,52 @@ Namespace ViewModels
             End If
 
             DiagnosticLogService.LogAlways("Editor.PsdImport",
-                $"{IO.Path.GetFileName(psdSource)} layers={importResult.LayerCount} skipped={importResult.SkippedLayers} sidecar={If(sidecar IsNot Nothing, "1", "0")}")
+                $"{IO.Path.GetFileName(psdSource)} layers={importResult.LayerCount} skipped={importResult.SkippedLayers} effects={importResult.EffectLayers} broken={importResult.BrokenLayers} sidecar={If(sidecar IsNot Nothing, "1", "0")}")
+
+            ' Ebenen mit Effekten kommen ohne sie an, unlesbare Ebenen fehlen ganz. Das Gesamtbild
+            ' der Datei zeigt beides richtig, nur eben flach. Gefragt wird wie beim Text nur beim
+            ' Öffnen; beim Blättern bleibt es beim Ebenenstapel, damit dieselbe Datei auf beiden
+            ' Wegen gleich aufgebaut ankommt. Schließt der Anwender die Frage, gilt das Gesamtbild:
+            ' es ist das, was die Datei wirklich zeigt.
+            If mayAskAboutText AndAlso (importResult.EffectLayers > 0 OrElse importResult.BrokenLayers > 0 OrElse importResult.AdjustmentLayers > 0) Then
+                Dim parts As New List(Of String)()
+                If importResult.EffectLayers > 0 Then
+                    parts.Add(String.Format(LocalizationService.T("{0} Ebenen tragen Ebeneneffekte wie Schatten oder Kontur. FerrumPix zeigt diese Ebenen ohne ihre Effekte."), importResult.EffectLayers))
+                End If
+                If importResult.BrokenLayers > 0 Then
+                    parts.Add(String.Format(LocalizationService.T("{0} Ebenen ließen sich nicht lesen und fehlen."), importResult.BrokenLayers))
+                End If
+                If importResult.AdjustmentLayers > 0 Then
+                    parts.Add(String.Format(LocalizationService.T("{0} Anpassungsebenen werden nicht übernommen."), importResult.AdjustmentLayers))
+                End If
+                ' Die Wahl gibt es nur, wenn die Datei ein Gesamtbild in voller Auflösung trägt.
+                ' Ohne „Kompatibilität maximieren" gespeichert (oder zu groß, 32 Bit, Lab) bliebe
+                ' sonst nur das eingebettete Vorschaubild oder gar nichts - dann wird gemeldet und
+                ' mit den Ebenen geöffnet.
+                Dim hasComposite = Await Task.Run(Function() PsdPreviewService.HasFullComposite(psdSource))
+                Dim keepLayers = True
+                If hasComposite Then
+                    parts.Add(LocalizationService.T("Als Gesamtbild geöffnet stimmt jeder Bildpunkt, die Ebenen sind dann fest."))
+                    keepLayers = Await _mainVm.ShowConfirmAsync(
+                        LocalizationService.T("Nicht alles lässt sich als Ebene übernehmen"),
+                        String.Join(" ", parts),
+                        LocalizationService.T("Als Ebenen"),
+                        LocalizationService.T("Als Gesamtbild"))
+                Else
+                    parts.Add(LocalizationService.T("Ein Gesamtbild in voller Größe trägt die Datei nicht, sie wird deshalb mit ihren Ebenen geöffnet."))
+                    Await _mainVm.ShowMessageAsync(
+                        LocalizationService.T("Nicht alles lässt sich als Ebene übernehmen"),
+                        String.Join(" ", parts))
+                End If
+                If Not keepLayers Then
+                    Try
+                        Directory.Delete(importResult.TempDir, True)
+                    Catch
+                    End Try
+                    Return New PsdDocumentLoad With {.Adjustments = sidecar}
+                End If
+            End If
+
             Return New PsdDocumentLoad With {
                 .Adjustments = PsdImportService.MergeSidecarRecipe(importResult.Adjustments, sidecar),
                 .BaseImagePath = importResult.BaseImagePath,
