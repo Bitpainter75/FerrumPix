@@ -9840,4 +9840,28 @@
   <data name="Die_alte_Fassung_lie_sich_nicht_entfernen_und_li_484267f0" xml:space="preserve">
     <value>Starou verzi se nepodařilo odstranit a stále leží v {0}</value>
   </data>
+  <data name="Eigene_Gr_e_dd614aa6" xml:space="preserve">
+    <value>Vlastní velikost</value>
+  </data>
+  <data name="Quer_fe2540c9" xml:space="preserve">
+    <value>Na šířku</value>
+  </data>
+  <data name="Hoch_bc2ace52" xml:space="preserve">
+    <value>Na výšku</value>
+  </data>
+  <data name="Die_H_he_ergibt_sich_aus_Layout_und_Anzahl_der_B_569da9b5" xml:space="preserve">
+    <value>Výška vyplývá z rozvržení a počtu obrázků</value>
+  </data>
+  <data name="Im_Zufallsmodus_positiv_bleiben_die_Bilder_so_we_14a7ddd6" xml:space="preserve">
+    <value>V náhodném režimu: kladná hodnota drží obrázky v této vzdálenosti od okraje, záporná je nechá o tolik přesahovat</value>
+  </data>
+  <data name="Gr_enunterschied_64660b89" xml:space="preserve">
+    <value>Rozdíl velikostí</value>
+  </data>
+  <data name="Unter_100_liegen_die_Bilder_verstreut_und_der_Hi_426e2204" xml:space="preserve">
+    <value>Pod 100 % leží obrázky roztroušeně a prosvítá pozadí</value>
+  </data>
+  <data name="Bei_0_sind_alle_Bilder_gleich_gro_bei_100_reiche_5c4a4af2" xml:space="preserve">
+    <value>Při 0 jsou všechny obrázky stejně velké, při 100 od poloviny do jedenapůlnásobku</value>
+  </data>
 </root>

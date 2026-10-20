@@ -43,10 +43,24 @@ Namespace Views
             ApplyPreviewImageSize()
         End Sub
 
+        ''' Die erste Vorschau nach dem Oeffnen wird eingepasst: sie ist 1200 Punkte gross, und der
+        ''' Dialog waechst mit dem Fenster, bei 100 % passte sie fast nie genau.
+        Private _fitNextPreview As Boolean = True
+
         Private Sub OnViewModelPropertyChanged(sender As Object, e As System.ComponentModel.PropertyChangedEventArgs)
+            If e.PropertyName = NameOf(GalleryViewModel.IsCollageDialogOpen) AndAlso _observedVm IsNot Nothing AndAlso
+               _observedVm.IsCollageDialogOpen Then
+                _fitNextPreview = True
+            End If
             If e.PropertyName = NameOf(GalleryViewModel.CollagePreviewImage) OrElse
                e.PropertyName = NameOf(GalleryViewModel.CollagePreviewZoom) Then
                 ApplyPreviewImageSize()
+            End If
+            If e.PropertyName = NameOf(GalleryViewModel.CollagePreviewImage) AndAlso _fitNextPreview AndAlso
+               _observedVm?.CollagePreviewImage IsNot Nothing Then
+                _fitNextPreview = False
+                ' Nach dem Layout: vorher hat der ScrollViewer noch keine Groesse.
+                Avalonia.Threading.Dispatcher.UIThread.Post(Sub() FitPreview(), Avalonia.Threading.DispatcherPriority.Loaded)
             End If
         End Sub
 
@@ -83,6 +97,20 @@ Namespace Views
             Dim vm = TryCast(DataContext, GalleryViewModel)
             If btn Is Nothing OrElse vm Is Nothing Then Return
             vm.CollageLayoutMode = TryCast(btn.Tag, String)
+        End Sub
+
+        Private Sub OnSizeModeClick(sender As Object, e As RoutedEventArgs)
+            Dim btn = TryCast(sender, Button)
+            Dim vm = TryCast(DataContext, GalleryViewModel)
+            If btn Is Nothing OrElse vm Is Nothing Then Return
+            vm.CollageSizeMode = TryCast(btn.Tag, String)
+        End Sub
+
+        Private Sub OnOrientationClick(sender As Object, e As RoutedEventArgs)
+            Dim btn = TryCast(sender, Button)
+            Dim vm = TryCast(DataContext, GalleryViewModel)
+            If btn Is Nothing OrElse vm Is Nothing Then Return
+            vm.CollagePortrait = String.Equals(TryCast(btn.Tag, String), "Portrait", StringComparison.Ordinal)
         End Sub
 
         Private Sub OnHeroPositionClick(sender As Object, e As RoutedEventArgs)
@@ -165,6 +193,11 @@ Namespace Views
         ''' ScrollViewer-Viewport einpasst (wie "An Fenster anpassen" im Viewer), und setzt den
         ''' Offset zurück auf den Ursprung.
         Private Sub OnFitPreviewClick(sender As Object, e As RoutedEventArgs)
+            FitPreview()
+            e.Handled = True
+        End Sub
+
+        Private Sub FitPreview()
             Dim vm = TryCast(DataContext, GalleryViewModel)
             Dim scrollViewer = Me.FindControl(Of ScrollViewer)("PreviewScrollViewer")
             If vm Is Nothing OrElse scrollViewer Is Nothing Then Return
@@ -175,7 +208,6 @@ Namespace Views
             Dim scaleY = scrollViewer.Bounds.Height / bitmap.PixelSize.Height
             vm.CollagePreviewZoom = Math.Min(scaleX, scaleY)
             scrollViewer.Offset = New Vector(0, 0)
-            e.Handled = True
         End Sub
     End Class
 

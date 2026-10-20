@@ -306,7 +306,9 @@ Namespace Services
                                     pageSize As SKSize,
                                     options As PrintOptions,
                                     scale As Single,
-                                    embedAsJpeg As Boolean)
+                                    embedAsJpeg As Boolean,
+                                    Optional fromPreviewCache As Boolean = False,
+                                    Optional cacheGeneration As Long = 0)
             canvas.Clear(ParseColor(options.BackgroundColor, SKColors.White))
 
             Dim margin = MmToPoints(options.EffectiveMarginMm()) * scale
@@ -342,9 +344,15 @@ Namespace Services
                             ' korrekt behandelt - niemals SKBitmap.Decode direkt. Gedruckt wird die
                             ' BEARBEITETE Fassung; sonst käme aus dem Drucker ein anderes Bild, als
                             ' der Editor zeigt.
+                            ' Die Vorschau nimmt die verkleinerte Fassung aus dem Zwischenspeicher
+                            ' (PreviewImageCache): sonst entwickelte sie jede RAW bei jeder Aenderung
+                            ' im Dialog neu.
                             Dim drawnRect As SKRect
-                            Using bitmap = ImageProcessor.DecodeDevelopedForOutput(
-                                imagePath, True, options.ApplyPendingBakedOperations)
+                            Dim applyPending = options.ApplyPendingBakedOperations
+                            Using bitmap = If(fromPreviewCache,
+                                              PreviewImageCache.GetCopy(imagePath, $"raw=True;pending={applyPending}", cacheGeneration,
+                                                  Function() ImageProcessor.DecodeDevelopedForOutput(imagePath, True, applyPending)),
+                                              ImageProcessor.DecodeDevelopedForOutput(imagePath, True, applyPending))
                                 If bitmap Is Nothing Then
                                     ' Ohne diese Spur ist eine leer gebliebene Zelle im fertigen PDF
                                     ' nicht mehr zu erklären (so fiel .fpx lange nicht auf).
@@ -477,7 +485,11 @@ Namespace Services
 
         ''' <summary>Rendert NUR die erste Seite verkleinert für die Live-Vorschau im Druckdialog -
         ''' identisches Layout wie die Ausgabe, weil dieselbe DrawPage-Routine läuft.</summary>
-        Public Shared Function RenderPreview(imagePaths As IEnumerable(Of String), options As PrintOptions, maxDimension As Integer) As Bitmap
+        ''' <param name="cacheGeneration">PreviewImageCache.Generation, erfasst BEVOR der Render in den
+        ''' Hintergrund geht (siehe CollageService.RenderPreview). Ohne Angabe die beim Aufruf.</param>
+        Public Shared Function RenderPreview(imagePaths As IEnumerable(Of String), options As PrintOptions, maxDimension As Integer,
+                                             Optional cacheGeneration As Long? = Nothing) As Bitmap
+            Dim generation = If(cacheGeneration, PreviewImageCache.Generation)
             If options Is Nothing Then Return Nothing
 
             Dim pages = BuildPages(imagePaths, options)
@@ -494,7 +506,8 @@ Namespace Services
             Try
                 Using surfaceBitmap = New SKBitmap(width, height, SKColorType.Bgra8888, SKAlphaType.Premul)
                     Using canvas = New SKCanvas(surfaceBitmap)
-                        DrawPage(canvas, pages(0), pageSize, options, scale, embedAsJpeg:=False)
+                        DrawPage(canvas, pages(0), pageSize, options, scale, embedAsJpeg:=False, fromPreviewCache:=True,
+                                 cacheGeneration:=generation)
                     End Using
                     Return ImageProcessor.ToAvaloniaBitmap(surfaceBitmap)
                 End Using

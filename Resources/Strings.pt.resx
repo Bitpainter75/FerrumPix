@@ -9799,4 +9799,28 @@
   <data name="Die_alte_Fassung_lie_sich_nicht_entfernen_und_li_484267f0" xml:space="preserve">
     <value>Não foi possível remover a versão antiga, que ainda está em {0}</value>
   </data>
+  <data name="Eigene_Gr_e_dd614aa6" xml:space="preserve">
+    <value>Tamanho personalizado</value>
+  </data>
+  <data name="Quer_fe2540c9" xml:space="preserve">
+    <value>Paisagem</value>
+  </data>
+  <data name="Hoch_bc2ace52" xml:space="preserve">
+    <value>Retrato</value>
+  </data>
+  <data name="Die_H_he_ergibt_sich_aus_Layout_und_Anzahl_der_B_569da9b5" xml:space="preserve">
+    <value>A altura resulta do layout e do número de imagens</value>
+  </data>
+  <data name="Im_Zufallsmodus_positiv_bleiben_die_Bilder_so_we_14a7ddd6" xml:space="preserve">
+    <value>No modo aleatório: positivo mantém as imagens a esta distância da borda, negativo deixa-as ultrapassá-la nesta medida</value>
+  </data>
+  <data name="Gr_enunterschied_64660b89" xml:space="preserve">
+    <value>Variação de tamanho</value>
+  </data>
+  <data name="Unter_100_liegen_die_Bilder_verstreut_und_der_Hi_426e2204" xml:space="preserve">
+    <value>Abaixo de 100 % as imagens ficam espalhadas e o fundo aparece</value>
+  </data>
+  <data name="Bei_0_sind_alle_Bilder_gleich_gro_bei_100_reiche_5c4a4af2" xml:space="preserve">
+    <value>Em 0 todas as imagens têm o mesmo tamanho, em 100 vão de metade a uma vez e meia</value>
+  </data>
 </root>

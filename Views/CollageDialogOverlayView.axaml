@@ -5,15 +5,20 @@
 
     <Border Background="#B8000000"
             IsVisible="{Binding IsCollageDialogOpen}">
-        <Border Width="1040"
-                HorizontalAlignment="Center"
-                VerticalAlignment="Center"
+        <!-- Waechst mit dem Fenster bis 1500 x 1100; den Zuwachs bekommt die Vorschau, die
+             Einstellungen behalten ihre Breite. Kleiner als frueher (1040) wird er nicht. -->
+        <Border MinWidth="1040"
+                MaxWidth="1500"
+                MaxHeight="1100"
+                Margin="32"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch"
                 Background="{DynamicResource FP.Bg.Panel}"
                 BorderBrush="{DynamicResource FP.Border.Strong}"
                 BorderThickness="1"
                 CornerRadius="8"
                 Padding="22">
-            <Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="16">
+            <Grid RowDefinitions="Auto,*,Auto" RowSpacing="16">
                 <StackPanel Spacing="8">
                     <TextBlock Text="Collage erstellen"
                                FontSize="{DynamicResource FP.Font.Heading}"
@@ -25,15 +30,15 @@
                 </StackPanel>
 
                 <Grid Grid.Row="1"
-                      ColumnDefinitions="520,*"
+                      ColumnDefinitions="*,450"
                       ColumnSpacing="28">
-                    <StackPanel Grid.Column="0" Spacing="8">
+                    <Grid Grid.Column="0" RowDefinitions="*,Auto" RowSpacing="8">
                         <Border Background="{DynamicResource FP.Bg.Input}"
                                 BorderBrush="{DynamicResource FP.Border.Normal}"
                                 BorderThickness="1"
                                 CornerRadius="8"
                                 Padding="10"
-                                Height="440"
+                                MinHeight="440"
                                 ClipToBounds="True"
                                 PointerWheelChanged="OnPreviewPointerWheelChanged">
                             <Grid>
@@ -58,7 +63,7 @@
                                 </ScrollViewer>
                             </Grid>
                         </Border>
-                        <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="10">
+                        <Grid Grid.Row="1" ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="10">
                             <TextBlock Text="Zoom" Foreground="{DynamicResource FP.Text.Secondary}" VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Body}"/>
                             <icons:RoundSlider Grid.Column="1"
                                                Minimum="0.25"
@@ -76,11 +81,11 @@
                                 <TextBlock Text="Einpassen"/>
                             </Button>
                         </Grid>
-                    </StackPanel>
+                    </Grid>
 
                     <Grid Grid.Column="1"
                           ColumnDefinitions="120,*"
-                          RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto"
+                          RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto"
                           ColumnSpacing="14"
                           RowSpacing="12">
                         <TextBlock Text="Dateiname"
@@ -195,11 +200,37 @@
                                   SelectedItem="{Binding CollageFormat}"
                                   MinHeight="34"/>
 
-                        <TextBlock Grid.Row="6"
+                        <TextBlock Grid.Row="7"
+                                   Text="Größe"
+                                   Foreground="{DynamicResource FP.Text.Secondary}"
+                                   VerticalAlignment="Center"/>
+                        <WrapPanel Grid.Row="7" Grid.Column="1" ItemSpacing="8" LineSpacing="8">
+                            <Button Classes="segmented" Classes.active="{Binding IsCollageSizeAuto}" Click="OnSizeModeClick" Tag="Auto"
+                                    ToolTip.Tip="Die Höhe ergibt sich aus Layout und Anzahl der Bilder">Automatisch</Button>
+                            <Button Classes="segmented" Classes.active="{Binding IsCollageSizeAspect}" Click="OnSizeModeClick" Tag="Aspect">Seitenverhältnis</Button>
+                            <Button Classes="segmented" Classes.active="{Binding IsCollageSizeCustom}" Click="OnSizeModeClick" Tag="Custom">Eigene Größe</Button>
+                        </WrapPanel>
+
+                        <TextBlock Grid.Row="8"
+                                   Text="Seitenverhältnis"
+                                   Foreground="{DynamicResource FP.Text.Secondary}"
+                                   VerticalAlignment="Center"
+                                   IsVisible="{Binding IsCollageSizeAspect}"/>
+                        <StackPanel Grid.Row="8" Grid.Column="1" Orientation="Horizontal" Spacing="8"
+                                    IsVisible="{Binding IsCollageSizeAspect}">
+                            <ComboBox ItemsSource="{Binding CollageAspectRatioOptions}"
+                                      SelectedItem="{Binding CollageAspectRatio}"
+                                      MinWidth="96"
+                                      MinHeight="34"/>
+                            <Button Classes="segmented" Classes.active="{Binding !CollagePortrait}" Click="OnOrientationClick" Tag="Landscape">Quer</Button>
+                            <Button Classes="segmented" Classes.active="{Binding CollagePortrait}" Click="OnOrientationClick" Tag="Portrait">Hoch</Button>
+                        </StackPanel>
+
+                        <TextBlock Grid.Row="9"
                                    Text="Breite"
                                    Foreground="{DynamicResource FP.Text.Secondary}"
                                    VerticalAlignment="Center"/>
-                        <icons:SliderValueUpDown Grid.Row="6"
+                        <icons:SliderValueUpDown Grid.Row="9"
                                        Grid.Column="1"
                                        Classes="combo-like"
                                        Minimum="640"
@@ -208,70 +239,122 @@
                                        Value="{Binding CollageWidth}"
                                        MinHeight="34"/>
 
-                        <TextBlock Grid.Row="7"
+                        <TextBlock Grid.Row="10"
+                                   Text="Höhe"
+                                   Foreground="{DynamicResource FP.Text.Secondary}"
+                                   VerticalAlignment="Center"
+                                   IsVisible="{Binding IsCollageSizeCustom}"/>
+                        <icons:SliderValueUpDown Grid.Row="10"
+                                       Grid.Column="1"
+                                       Classes="combo-like"
+                                       Minimum="320"
+                                       Maximum="12000"
+                                       Increment="100"
+                                       Value="{Binding CollageHeight}"
+                                       IsVisible="{Binding IsCollageSizeCustom}"
+                                       MinHeight="34"/>
+
+                        <TextBlock Grid.Row="11"
                                    Text="Spalten"
                                    Foreground="{DynamicResource FP.Text.Secondary}"
                                    VerticalAlignment="Center"/>
-                        <icons:SliderValueUpDown Grid.Row="7"
-                                       Grid.Column="1"
-                                       Classes="combo-like"
-                                       Minimum="1"
-                                       Maximum="12"
-                                       Increment="1"
-                                       Value="{Binding CollageColumns}"
-                                       MinHeight="34"/>
+                        <!-- Regler mit Zahlenfeld wie im Anpassungspanel; das Feld ist mit 64 etwas
+                             breiter als dort (44), der Rand reicht von -400 bis 800. Breite und Hoehe
+                             bleiben reine Zahlenfelder. -->
+                        <Grid Grid.Row="11" Grid.Column="1" ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                            <icons:RoundSlider Minimum="1" Maximum="12" DefaultValue="3"
+                                               Value="{Binding CollageColumns, Mode=TwoWay}"
+                                               VerticalAlignment="Center" Height="28" MinHeight="0"/>
+                            <icons:SliderValueUpDown Grid.Column="1" Classes="slider-value" Width="64" MinWidth="64"
+                                                     Minimum="1" Maximum="12" Increment="1"
+                                                     Value="{Binding CollageColumns, Mode=TwoWay}"/>
+                        </Grid>
 
-                        <TextBlock Grid.Row="8"
+                        <TextBlock Grid.Row="12"
                                    Text="Bildrahmen"
                                    Foreground="{DynamicResource FP.Text.Secondary}"
                                    VerticalAlignment="Center"
                                    ToolTip.Tip="Weißer (Hintergrundfarbe) Rahmen um jedes einzelne Bild"/>
-                        <icons:SliderValueUpDown Grid.Row="8"
-                                       Grid.Column="1"
-                                       Classes="combo-like"
-                                       Minimum="0"
-                                       Maximum="200"
-                                       Increment="2"
-                                       Value="{Binding CollageGap}"
-                                       MinHeight="34"/>
+                        <Grid Grid.Row="12" Grid.Column="1" ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                            <icons:RoundSlider Minimum="0" Maximum="200" DefaultValue="24"
+                                               Value="{Binding CollageGap, Mode=TwoWay}"
+                                               VerticalAlignment="Center" Height="28" MinHeight="0"/>
+                            <icons:SliderValueUpDown Grid.Column="1" Classes="slider-value" Width="64" MinWidth="64"
+                                                     Minimum="0" Maximum="200" Increment="2"
+                                                     Value="{Binding CollageGap, Mode=TwoWay}"/>
+                        </Grid>
 
-                        <TextBlock Grid.Row="9"
+                        <TextBlock Grid.Row="13"
                                    Text="Rand"
                                    Foreground="{DynamicResource FP.Text.Secondary}"
-                                   VerticalAlignment="Center"/>
-                        <icons:SliderValueUpDown Grid.Row="9"
-                                       Grid.Column="1"
-                                       Classes="combo-like"
-                                       Minimum="0"
-                                       Maximum="800"
-                                       Increment="8"
-                                       Value="{Binding CollageMargin}"
-                                       MinHeight="34"/>
+                                   VerticalAlignment="Center"
+                                   ToolTip.Tip="Im Zufallsmodus: positiv bleiben die Bilder so weit vom Rand weg, negativ dürfen sie so weit darüber hinausragen"/>
+                        <Grid Grid.Row="13" Grid.Column="1" ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                            <icons:RoundSlider Minimum="{Binding CollageMarginMinimum}" Maximum="800" DefaultValue="48"
+                                               Value="{Binding CollageMargin, Mode=TwoWay}"
+                                               VerticalAlignment="Center" Height="28" MinHeight="0"/>
+                            <icons:SliderValueUpDown Grid.Column="1" Classes="slider-value" Width="64" MinWidth="64"
+                                                     Minimum="{Binding CollageMarginMinimum}" Maximum="800" Increment="8"
+                                                     Value="{Binding CollageMargin, Mode=TwoWay}"/>
+                        </Grid>
 
-                        <TextBlock Grid.Row="10"
+                        <TextBlock Grid.Row="16"
                                    Text="Hintergrund"
                                    Foreground="{DynamicResource FP.Text.Secondary}"
                                    VerticalAlignment="Center"/>
-                        <icons:ColorPickerButton Grid.Row="10"
+                        <icons:ColorPickerButton Grid.Row="16"
                                                  Grid.Column="1"
                                                  HorizontalAlignment="Left"
                                                  ShowEyedropper="False"
                                                  SelectedColor="{Binding CollageBackgroundColorValue, Mode=TwoWay}"/>
 
-                        <TextBlock Grid.Row="11"
+                        <TextBlock Grid.Row="6"
                                    Text="Qualität"
                                    Foreground="{DynamicResource FP.Text.Secondary}"
                                    VerticalAlignment="Center"
                                    IsVisible="{Binding IsCollageJpgQualityVisible}"/>
-                        <icons:SliderValueUpDown Grid.Row="11"
-                                       Grid.Column="1"
-                                       Classes="combo-like"
-                                       Minimum="1"
-                                       Maximum="100"
-                                       Increment="1"
-                                       Value="{Binding CollageQuality}"
-                                       IsVisible="{Binding IsCollageJpgQualityVisible}"
-                                       MinHeight="34"/>
+                        <Grid Grid.Row="6" Grid.Column="1" ColumnDefinitions="*,Auto" ColumnSpacing="10"
+                              IsVisible="{Binding IsCollageJpgQualityVisible}">
+                            <icons:RoundSlider Minimum="1" Maximum="100" DefaultValue="90"
+                                               Value="{Binding CollageQuality, Mode=TwoWay}"
+                                               VerticalAlignment="Center" Height="28" MinHeight="0"/>
+                            <icons:SliderValueUpDown Grid.Column="1" Classes="slider-value" Width="64" MinWidth="64"
+                                                     Minimum="1" Maximum="100" Increment="1"
+                                                     Value="{Binding CollageQuality, Mode=TwoWay}"/>
+                        </Grid>
+
+                        <!-- Nur im Zufallsmodus: Groesse der Abzuege und wie verschieden gross sie sind. -->
+                        <TextBlock Grid.Row="14"
+                                   Text="Bildgröße"
+                                   Foreground="{DynamicResource FP.Text.Secondary}"
+                                   VerticalAlignment="Center"
+                                   IsVisible="{Binding IsCollageRandomMode}"
+                                   ToolTip.Tip="Unter 100 % liegen die Bilder verstreut, und der Hintergrund scheint durch"/>
+                        <Grid Grid.Row="14" Grid.Column="1" ColumnDefinitions="*,Auto" ColumnSpacing="10"
+                              IsVisible="{Binding IsCollageRandomMode}">
+                            <icons:RoundSlider Minimum="40" Maximum="200" DefaultValue="100"
+                                               Value="{Binding CollageRandomPrintSize, Mode=TwoWay}"
+                                               VerticalAlignment="Center" Height="28" MinHeight="0"/>
+                            <icons:SliderValueUpDown Grid.Column="1" Classes="slider-value" Width="64" MinWidth="64"
+                                                     Minimum="40" Maximum="200" Increment="5"
+                                                     Value="{Binding CollageRandomPrintSize, Mode=TwoWay}"/>
+                        </Grid>
+
+                        <TextBlock Grid.Row="15"
+                                   Text="Größenunterschied"
+                                   Foreground="{DynamicResource FP.Text.Secondary}"
+                                   VerticalAlignment="Center"
+                                   IsVisible="{Binding IsCollageRandomMode}"
+                                   ToolTip.Tip="Bei 0 sind alle Bilder gleich groß, bei 100 reichen sie von der halben bis zur anderthalbfachen Größe"/>
+                        <Grid Grid.Row="15" Grid.Column="1" ColumnDefinitions="*,Auto" ColumnSpacing="10"
+                              IsVisible="{Binding IsCollageRandomMode}">
+                            <icons:RoundSlider Minimum="0" Maximum="100" DefaultValue="15"
+                                               Value="{Binding CollageRandomSizeVariation, Mode=TwoWay}"
+                                               VerticalAlignment="Center" Height="28" MinHeight="0"/>
+                            <icons:SliderValueUpDown Grid.Column="1" Classes="slider-value" Width="64" MinWidth="64"
+                                                     Minimum="0" Maximum="100" Increment="5"
+                                                     Value="{Binding CollageRandomSizeVariation, Mode=TwoWay}"/>
+                        </Grid>
                     </Grid>
                 </Grid>
 

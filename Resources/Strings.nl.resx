@@ -9840,4 +9840,28 @@
   <data name="Die_alte_Fassung_lie_sich_nicht_entfernen_und_li_484267f0" xml:space="preserve">
     <value>De oude versie kon niet worden verwijderd en staat nog op {0}</value>
   </data>
+  <data name="Eigene_Gr_e_dd614aa6" xml:space="preserve">
+    <value>Eigen formaat</value>
+  </data>
+  <data name="Quer_fe2540c9" xml:space="preserve">
+    <value>Liggend</value>
+  </data>
+  <data name="Hoch_bc2ace52" xml:space="preserve">
+    <value>Staand</value>
+  </data>
+  <data name="Die_H_he_ergibt_sich_aus_Layout_und_Anzahl_der_B_569da9b5" xml:space="preserve">
+    <value>De hoogte volgt uit de indeling en het aantal foto's</value>
+  </data>
+  <data name="Im_Zufallsmodus_positiv_bleiben_die_Bilder_so_we_14a7ddd6" xml:space="preserve">
+    <value>In willekeurige modus: positief houdt de foto's zo ver van de rand, negatief laat ze zo ver erbuiten uitsteken</value>
+  </data>
+  <data name="Gr_enunterschied_64660b89" xml:space="preserve">
+    <value>Verschil in grootte</value>
+  </data>
+  <data name="Unter_100_liegen_die_Bilder_verstreut_und_der_Hi_426e2204" xml:space="preserve">
+    <value>Onder 100 % liggen de foto's verspreid en schijnt de achtergrond erdoor</value>
+  </data>
+  <data name="Bei_0_sind_alle_Bilder_gleich_gro_bei_100_reiche_5c4a4af2" xml:space="preserve">
+    <value>Bij 0 zijn alle foto's even groot, bij 100 lopen ze van half tot anderhalf keer zo groot</value>
+  </data>
 </root>

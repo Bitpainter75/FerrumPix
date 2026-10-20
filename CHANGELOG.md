@@ -23,3 +23,17 @@
   Pictures you edited with 0.9.68 can look slightly different in these four areas; edits from
   earlier versions keep their look.
 
+- **The random collage looks like a pile of real prints.** Each picture now lies on a white
+  print with a soft shadow, keeps its own shape instead of being cut square, and the prints are
+  scattered and turned across the whole page and beyond its edges, without gaps in between.
+  The picture frame setting sets the width of the white border. You choose how big the prints
+  are and how much their sizes vary, and with the margin whether the pile stays inside the page
+  or runs over its edges.
+
+- **Collages in any size.** Besides the automatic height, a collage can now take an aspect
+  ratio such as 3:2, 16:9 or A4, upright or across, or a width and height of your own.
+
+- **Faster, larger previews for collage and printing.** Both dialogs now read each picture only
+  once while they are open instead of again after every change, and they grow with the window
+  so the preview gets more room.
+

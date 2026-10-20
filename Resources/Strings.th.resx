@@ -9844,4 +9844,28 @@
   <data name="Die_alte_Fassung_lie_sich_nicht_entfernen_und_li_484267f0" xml:space="preserve">
     <value>ไม่สามารถลบเวอร์ชันเก่าได้ และยังคงอยู่ที่ {0}</value>
   </data>
+  <data name="Eigene_Gr_e_dd614aa6" xml:space="preserve">
+    <value>ขนาดกำหนดเอง</value>
+  </data>
+  <data name="Quer_fe2540c9" xml:space="preserve">
+    <value>แนวนอน</value>
+  </data>
+  <data name="Hoch_bc2ace52" xml:space="preserve">
+    <value>แนวตั้ง</value>
+  </data>
+  <data name="Die_H_he_ergibt_sich_aus_Layout_und_Anzahl_der_B_569da9b5" xml:space="preserve">
+    <value>ความสูงขึ้นอยู่กับเลย์เอาต์และจำนวนภาพ</value>
+  </data>
+  <data name="Im_Zufallsmodus_positiv_bleiben_die_Bilder_so_we_14a7ddd6" xml:space="preserve">
+    <value>ในโหมดสุ่ม: ค่าบวกให้ภาพห่างจากขอบเท่านี้ ค่าลบให้ภาพยื่นเลยขอบออกไปได้เท่านี้</value>
+  </data>
+  <data name="Gr_enunterschied_64660b89" xml:space="preserve">
+    <value>ความต่างของขนาด</value>
+  </data>
+  <data name="Unter_100_liegen_die_Bilder_verstreut_und_der_Hi_426e2204" xml:space="preserve">
+    <value>ต่ำกว่า 100 % ภาพจะวางกระจาย และเห็นพื้นหลัง</value>
+  </data>
+  <data name="Bei_0_sind_alle_Bilder_gleich_gro_bei_100_reiche_5c4a4af2" xml:space="preserve">
+    <value>ที่ 0 ทุกภาพมีขนาดเท่ากัน ที่ 100 มีตั้งแต่ครึ่งหนึ่งถึงหนึ่งเท่าครึ่ง</value>
+  </data>
 </root>

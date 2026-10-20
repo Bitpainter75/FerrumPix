@@ -9844,4 +9844,28 @@
   <data name="Die_alte_Fassung_lie_sich_nicht_entfernen_und_li_484267f0" xml:space="preserve">
     <value>Versi lama tidak dapat dihapus dan masih ada di {0}</value>
   </data>
+  <data name="Eigene_Gr_e_dd614aa6" xml:space="preserve">
+    <value>Ukuran khusus</value>
+  </data>
+  <data name="Quer_fe2540c9" xml:space="preserve">
+    <value>Lanskap</value>
+  </data>
+  <data name="Hoch_bc2ace52" xml:space="preserve">
+    <value>Potret</value>
+  </data>
+  <data name="Die_H_he_ergibt_sich_aus_Layout_und_Anzahl_der_B_569da9b5" xml:space="preserve">
+    <value>Tinggi ditentukan oleh tata letak dan jumlah gambar</value>
+  </data>
+  <data name="Im_Zufallsmodus_positiv_bleiben_die_Bilder_so_we_14a7ddd6" xml:space="preserve">
+    <value>Dalam mode acak: nilai positif menjaga gambar sejauh ini dari tepi, nilai negatif membiarkannya menjorok sejauh ini melewati tepi</value>
+  </data>
+  <data name="Gr_enunterschied_64660b89" xml:space="preserve">
+    <value>Variasi ukuran</value>
+  </data>
+  <data name="Unter_100_liegen_die_Bilder_verstreut_und_der_Hi_426e2204" xml:space="preserve">
+    <value>Di bawah 100 % gambar tersebar dan latar belakang terlihat</value>
+  </data>
+  <data name="Bei_0_sind_alle_Bilder_gleich_gro_bei_100_reiche_5c4a4af2" xml:space="preserve">
+    <value>Pada 0 semua gambar sama besar, pada 100 berkisar dari setengah hingga satu setengah kali</value>
+  </data>
 </root>

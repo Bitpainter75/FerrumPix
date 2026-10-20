@@ -9844,4 +9844,28 @@
   <data name="Die_alte_Fassung_lie_sich_nicht_entfernen_und_li_484267f0" xml:space="preserve">
     <value>이전 버전을 제거할 수 없어 아직 {0}에 있습니다</value>
   </data>
+  <data name="Eigene_Gr_e_dd614aa6" xml:space="preserve">
+    <value>사용자 지정 크기</value>
+  </data>
+  <data name="Quer_fe2540c9" xml:space="preserve">
+    <value>가로</value>
+  </data>
+  <data name="Hoch_bc2ace52" xml:space="preserve">
+    <value>세로</value>
+  </data>
+  <data name="Die_H_he_ergibt_sich_aus_Layout_und_Anzahl_der_B_569da9b5" xml:space="preserve">
+    <value>높이는 레이아웃과 이미지 수에 따라 정해집니다</value>
+  </data>
+  <data name="Im_Zufallsmodus_positiv_bleiben_die_Bilder_so_we_14a7ddd6" xml:space="preserve">
+    <value>무작위 모드에서 양수는 이미지를 가장자리에서 이만큼 떨어뜨리고, 음수는 이만큼 가장자리 밖으로 나가게 합니다</value>
+  </data>
+  <data name="Gr_enunterschied_64660b89" xml:space="preserve">
+    <value>크기 차이</value>
+  </data>
+  <data name="Unter_100_liegen_die_Bilder_verstreut_und_der_Hi_426e2204" xml:space="preserve">
+    <value>100 % 미만이면 이미지가 흩어져 놓이고 배경이 보입니다</value>
+  </data>
+  <data name="Bei_0_sind_alle_Bilder_gleich_gro_bei_100_reiche_5c4a4af2" xml:space="preserve">
+    <value>0이면 모든 이미지 크기가 같고, 100이면 절반에서 1.5배까지 다양합니다</value>
+  </data>
 </root>

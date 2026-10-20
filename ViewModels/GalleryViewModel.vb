@@ -133,6 +133,12 @@ Namespace ViewModels
         Private _collageHeroPosition As String = "Left"
         Private _collageRandomSeed As Integer = 0
         Private _collageOrderSeed As Integer? = Nothing
+        Private _collageSizeMode As String = "Auto"
+        Private _collageAspectRatio As String = "3:2"
+        Private _collagePortrait As Boolean = False
+        Private _collageHeight As Integer = 1600
+        Private _collageRandomPrintSize As Integer = 100
+        Private _collageRandomSizeVariation As Integer = 15
         Private _collagePreviewZoom As Double = 1.0
         Private _collagePreviewImage As Avalonia.Media.Imaging.Bitmap
         Private _collagePreviewRequestId As Integer
@@ -1062,6 +1068,8 @@ Namespace ViewModels
             End Get
             Set(value As Boolean)
                 Me.RaiseAndSetIfChanged(_isCollageDialogOpen, value)
+                ' Die Bilder der Vorschau gehoeren nur dem offenen Dialog.
+                If Not value Then PreviewImageCache.Clear()
             End Set
         End Property
 
@@ -1119,9 +1127,17 @@ Namespace ViewModels
                 Return _collageMargin
             End Get
             Set(value As Integer)
-                Me.RaiseAndSetIfChanged(_collageMargin, Math.Max(0, Math.Min(800, value)))
+                Me.RaiseAndSetIfChanged(_collageMargin, Math.Max(CollageMarginMinimum, Math.Min(800, value)))
                 ScheduleCollagePreviewUpdate()
             End Set
+        End Property
+
+        ''' Kleinster Rand: im Zufallsmodus negativ (die Abzuege duerfen so weit ueber die Kante
+        ''' ragen, CollageOptions.Margin), sonst 0.
+        Public ReadOnly Property CollageMarginMinimum As Integer
+            Get
+                Return If(IsCollageRandomMode, -400, 0)
+            End Get
         End Property
 
         Public Property CollageBackgroundColor As String
@@ -1171,6 +1187,9 @@ Namespace ViewModels
             Set(value As String)
                 Me.RaiseAndSetIfChanged(_collageLayoutMode, If(String.IsNullOrWhiteSpace(value), "Grid", value))
                 Me.RaisePropertyChanged(NameOf(IsCollageRandomMode))
+                Me.RaisePropertyChanged(NameOf(CollageMarginMinimum))
+                ' Raster und Hero kennen keinen negativen Rand.
+                If _collageMargin < CollageMarginMinimum Then CollageMargin = CollageMarginMinimum
                 ScheduleCollagePreviewUpdate()
             End Set
         End Property
@@ -1244,6 +1263,94 @@ Namespace ViewModels
             End Get
             Set(value As Integer?)
                 Me.RaiseAndSetIfChanged(_collageOrderSeed, value)
+                ScheduleCollagePreviewUpdate()
+            End Set
+        End Property
+
+        ''' Wie die Hoehe der Collage entsteht: "Auto", "Aspect" oder "Custom" (CollageOptions.SizeMode).
+        Public Property CollageSizeMode As String
+            Get
+                Return _collageSizeMode
+            End Get
+            Set(value As String)
+                Me.RaiseAndSetIfChanged(_collageSizeMode, If(String.IsNullOrWhiteSpace(value), "Auto", value))
+                Me.RaisePropertyChanged(NameOf(IsCollageSizeAuto))
+                Me.RaisePropertyChanged(NameOf(IsCollageSizeAspect))
+                Me.RaisePropertyChanged(NameOf(IsCollageSizeCustom))
+                ScheduleCollagePreviewUpdate()
+            End Set
+        End Property
+
+        Public ReadOnly Property IsCollageSizeAuto As Boolean
+            Get
+                Return String.Equals(_collageSizeMode, "Auto", StringComparison.OrdinalIgnoreCase)
+            End Get
+        End Property
+
+        Public ReadOnly Property IsCollageSizeAspect As Boolean
+            Get
+                Return String.Equals(_collageSizeMode, "Aspect", StringComparison.OrdinalIgnoreCase)
+            End Get
+        End Property
+
+        Public ReadOnly Property IsCollageSizeCustom As Boolean
+            Get
+                Return String.Equals(_collageSizeMode, "Custom", StringComparison.OrdinalIgnoreCase)
+            End Get
+        End Property
+
+        ''' Die waehlbaren Seitenverhaeltnisse; A4 steht fuer jedes A-Format (Wurzel 2).
+        Public ReadOnly Property CollageAspectRatioOptions As New ObservableCollection(Of String) From {"3:2", "4:3", "16:9", "5:4", "1:1", "A4"}
+
+        Public Property CollageAspectRatio As String
+            Get
+                Return _collageAspectRatio
+            End Get
+            Set(value As String)
+                Me.RaiseAndSetIfChanged(_collageAspectRatio, If(String.IsNullOrWhiteSpace(value), "3:2", value))
+                ScheduleCollagePreviewUpdate()
+            End Set
+        End Property
+
+        ''' Hochformat statt Querformat beim gewaehlten Seitenverhaeltnis.
+        Public Property CollagePortrait As Boolean
+            Get
+                Return _collagePortrait
+            End Get
+            Set(value As Boolean)
+                Me.RaiseAndSetIfChanged(_collagePortrait, value)
+                ScheduleCollagePreviewUpdate()
+            End Set
+        End Property
+
+        Public Property CollageHeight As Integer
+            Get
+                Return _collageHeight
+            End Get
+            Set(value As Integer)
+                Me.RaiseAndSetIfChanged(_collageHeight, Math.Max(320, Math.Min(12000, value)))
+                ScheduleCollagePreviewUpdate()
+            End Set
+        End Property
+
+        ''' Zufallsmodus: Groesse der Abzuege in Prozent (CollageOptions.RandomPrintSize).
+        Public Property CollageRandomPrintSize As Integer
+            Get
+                Return _collageRandomPrintSize
+            End Get
+            Set(value As Integer)
+                Me.RaiseAndSetIfChanged(_collageRandomPrintSize, Math.Max(40, Math.Min(200, value)))
+                ScheduleCollagePreviewUpdate()
+            End Set
+        End Property
+
+        ''' Zufallsmodus: Groessenunterschied der Abzuege in Prozent (CollageOptions.RandomSizeVariation).
+        Public Property CollageRandomSizeVariation As Integer
+            Get
+                Return _collageRandomSizeVariation
+            End Get
+            Set(value As Integer)
+                Me.RaiseAndSetIfChanged(_collageRandomSizeVariation, Math.Max(0, Math.Min(100, value)))
                 ScheduleCollagePreviewUpdate()
             End Set
         End Property
@@ -11809,6 +11916,12 @@ Namespace ViewModels
             CollageHeroPosition = "Center"
             CollageRandomSeed = Environment.TickCount
             CollageOrderSeed = Nothing
+            CollageSizeMode = "Auto"
+            CollageAspectRatio = "3:2"
+            CollagePortrait = False
+            CollageHeight = 1600
+            CollageRandomPrintSize = 100
+            CollageRandomSizeVariation = 15
             CollagePreviewZoom = 1.0
             IsCollageDialogOpen = True
         End Function
@@ -11866,10 +11979,20 @@ Namespace ViewModels
                     .HeroIndex = CollageHeroIndex,
                     .HeroPosition = CollageHeroPosition,
                     .RandomSeed = CollageRandomSeed,
-                    .OrderSeed = CollageOrderSeed
+                    .OrderSeed = CollageOrderSeed,
+                    .SizeMode = CollageSizeMode,
+                    .AspectRatio = CollageAspectRatio,
+                    .Portrait = CollagePortrait,
+                    .Height = CollageHeight,
+                    .RandomPrintSize = CollageRandomPrintSize,
+                    .RandomSizeVariation = CollageRandomSizeVariation
                 }
 
-                Dim preview = Await Task.Run(Function() CollageService.RenderPreview(paths, options, 900))
+                ' 1200 Punkte: der Dialog waechst mit dem Fenster, die Vorschau mit ihm.
+                ' Die Marke des Zwischenspeichers HIER, vor dem Hintergrund: schliesst der Dialog,
+                ' waehrend der Render noch Dateien liest, traegt er danach nichts mehr ein.
+                Dim cacheGeneration = PreviewImageCache.Generation
+                Dim preview = Await Task.Run(Function() CollageService.RenderPreview(paths, options, 1200, cacheGeneration))
                 If requestId <> _collagePreviewRequestId OrElse Not IsCollageDialogOpen Then Return
                 CollagePreviewImage = preview
             Catch ex As Exception
@@ -11910,7 +12033,13 @@ Namespace ViewModels
                     .HeroIndex = CollageHeroIndex,
                     .HeroPosition = CollageHeroPosition,
                     .RandomSeed = CollageRandomSeed,
-                    .OrderSeed = CollageOrderSeed
+                    .OrderSeed = CollageOrderSeed,
+                    .SizeMode = CollageSizeMode,
+                    .AspectRatio = CollageAspectRatio,
+                    .Portrait = CollagePortrait,
+                    .Height = CollageHeight,
+                    .RandomPrintSize = CollageRandomPrintSize,
+                    .RandomSizeVariation = CollageRandomSizeVariation
                 }
 
                 ' Dieselbe Frage wie vor dem Drucken, aus demselben Grund: was hier gerechnet wird,

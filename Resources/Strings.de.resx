@@ -9818,4 +9818,28 @@
   <data name="Die_alte_Fassung_lie_sich_nicht_entfernen_und_li_484267f0" xml:space="preserve">
     <value>Die alte Fassung ließ sich nicht entfernen und liegt noch unter {0}</value>
   </data>
+  <data name="Eigene_Gr_e_dd614aa6" xml:space="preserve">
+    <value>Eigene Größe</value>
+  </data>
+  <data name="Quer_fe2540c9" xml:space="preserve">
+    <value>Quer</value>
+  </data>
+  <data name="Hoch_bc2ace52" xml:space="preserve">
+    <value>Hoch</value>
+  </data>
+  <data name="Die_H_he_ergibt_sich_aus_Layout_und_Anzahl_der_B_569da9b5" xml:space="preserve">
+    <value>Die Höhe ergibt sich aus Layout und Anzahl der Bilder</value>
+  </data>
+  <data name="Im_Zufallsmodus_positiv_bleiben_die_Bilder_so_we_14a7ddd6" xml:space="preserve">
+    <value>Im Zufallsmodus: positiv bleiben die Bilder so weit vom Rand weg, negativ dürfen sie so weit darüber hinausragen</value>
+  </data>
+  <data name="Gr_enunterschied_64660b89" xml:space="preserve">
+    <value>Größenunterschied</value>
+  </data>
+  <data name="Unter_100_liegen_die_Bilder_verstreut_und_der_Hi_426e2204" xml:space="preserve">
+    <value>Unter 100 % liegen die Bilder verstreut, und der Hintergrund scheint durch</value>
+  </data>
+  <data name="Bei_0_sind_alle_Bilder_gleich_gro_bei_100_reiche_5c4a4af2" xml:space="preserve">
+    <value>Bei 0 sind alle Bilder gleich groß, bei 100 reichen sie von der halben bis zur anderthalbfachen Größe</value>
+  </data>
 </root>

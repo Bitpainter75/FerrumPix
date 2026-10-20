@@ -5890,6 +5890,8 @@ Namespace ViewModels
             End Get
             Set
                 Me.RaiseAndSetIfChanged(_isPrintDialogOpen, value)
+                ' Die Bilder der Vorschau gehoeren nur dem offenen Dialog.
+                If Not value Then PreviewImageCache.Clear()
             End Set
         End Property
 
@@ -6207,7 +6209,11 @@ Namespace ViewModels
 
                 Dim paths = _printPaths.ToList()
                 Dim options = BuildPrintOptions()
-                Dim preview = Await Task.Run(Function() PrintService.RenderPreview(paths, options, 900))
+                ' 1200 Punkte: der Dialog waechst mit dem Fenster, die Vorschau mit ihm.
+                ' Die Marke des Zwischenspeichers HIER, vor dem Hintergrund: schliesst der Dialog,
+                ' waehrend der Render noch Dateien liest, traegt er danach nichts mehr ein.
+                Dim cacheGeneration = PreviewImageCache.Generation
+                Dim preview = Await Task.Run(Function() PrintService.RenderPreview(paths, options, 1200, cacheGeneration))
                 If requestId <> _printPreviewRequestId OrElse Not IsPrintDialogOpen Then Return
                 PrintPreviewImage = preview
             Catch ex As Exception

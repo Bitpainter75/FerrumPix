@@ -9798,4 +9798,28 @@
   <data name="Die_alte_Fassung_lie_sich_nicht_entfernen_und_li_484267f0" xml:space="preserve">
     <value>无法删除旧版本，它仍位于 {0}</value>
   </data>
+  <data name="Eigene_Gr_e_dd614aa6" xml:space="preserve">
+    <value>自定义尺寸</value>
+  </data>
+  <data name="Quer_fe2540c9" xml:space="preserve">
+    <value>横向</value>
+  </data>
+  <data name="Hoch_bc2ace52" xml:space="preserve">
+    <value>纵向</value>
+  </data>
+  <data name="Die_H_he_ergibt_sich_aus_Layout_und_Anzahl_der_B_569da9b5" xml:space="preserve">
+    <value>高度由布局和图片数量决定</value>
+  </data>
+  <data name="Im_Zufallsmodus_positiv_bleiben_die_Bilder_so_we_14a7ddd6" xml:space="preserve">
+    <value>随机模式下：正值让图片与边缘保持这个距离，负值允许图片超出边缘这么多</value>
+  </data>
+  <data name="Gr_enunterschied_64660b89" xml:space="preserve">
+    <value>大小差异</value>
+  </data>
+  <data name="Unter_100_liegen_die_Bilder_verstreut_und_der_Hi_426e2204" xml:space="preserve">
+    <value>低于 100 % 时图片分散摆放，背景会露出来</value>
+  </data>
+  <data name="Bei_0_sind_alle_Bilder_gleich_gro_bei_100_reiche_5c4a4af2" xml:space="preserve">
+    <value>为 0 时所有图片一样大，为 100 时从一半到一倍半不等</value>
+  </data>
 </root>

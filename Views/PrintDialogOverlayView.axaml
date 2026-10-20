@@ -5,15 +5,20 @@
 
     <Border Background="#B8000000"
             IsVisible="{Binding IsPrintDialogOpen}">
-        <Border Width="900"
-                HorizontalAlignment="Center"
-                VerticalAlignment="Center"
+        <!-- Waechst mit dem Fenster bis 1500 x 1100; den Zuwachs bekommt die Vorschau, die
+             Einstellungen behalten ihre Breite. Kleiner als frueher (900) wird er nicht. -->
+        <Border MinWidth="900"
+                MaxWidth="1500"
+                MaxHeight="1100"
+                Margin="32"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch"
                 Background="{DynamicResource FP.Bg.Panel}"
                 BorderBrush="{DynamicResource FP.Border.Strong}"
                 BorderThickness="1"
                 CornerRadius="8"
                 Padding="22">
-            <Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="16">
+            <Grid RowDefinitions="Auto,*,Auto" RowSpacing="16">
                 <StackPanel Spacing="8">
                     <TextBlock Text="Drucken"
                                FontSize="{DynamicResource FP.Font.Heading}"
@@ -25,15 +30,15 @@
                 </StackPanel>
 
                 <Grid Grid.Row="1"
-                      ColumnDefinitions="380,*"
+                      ColumnDefinitions="*,450"
                       ColumnSpacing="28">
-                    <StackPanel Grid.Column="0" Spacing="8">
+                    <Grid Grid.Column="0" RowDefinitions="*,Auto" RowSpacing="8">
                         <Border Background="{DynamicResource FP.Bg.Input}"
                                 BorderBrush="{DynamicResource FP.Border.Normal}"
                                 BorderThickness="1"
                                 CornerRadius="8"
                                 Padding="10"
-                                Height="420"
+                                MinHeight="420"
                                 ClipToBounds="True">
                             <Grid>
                                 <TextBlock Text="Vorschau wird berechnet…"
@@ -48,11 +53,12 @@
                                        IsVisible="{Binding PrintPreviewImage, Converter={x:Static ObjectConverters.IsNotNull}}"/>
                             </Grid>
                         </Border>
-                        <TextBlock Text="{Binding PrintSummaryText}"
+                        <TextBlock Grid.Row="1"
+                                   Text="{Binding PrintSummaryText}"
                                    Foreground="{DynamicResource FP.Text.Secondary}"
                                    FontSize="{DynamicResource FP.Font.Body}"
                                    HorizontalAlignment="Center"/>
-                    </StackPanel>
+                    </Grid>
 
                     <Grid Grid.Column="1"
                           ColumnDefinitions="130,*"
@@ -115,30 +121,31 @@
                                    IsVisible="{Binding IsPrintSingleImage}"
                                    Foreground="{DynamicResource FP.Text.Secondary}"
                                    VerticalAlignment="Center"/>
-                        <icons:SliderValueUpDown Grid.Row="4"
-                                       Grid.Column="1"
-                                       Classes="combo-like"
-                                       Minimum="1"
-                                       Maximum="{Binding PrintMaxCopies}"
-                                       Increment="1"
-                                       Value="{Binding PrintCopies}"
-                                       IsVisible="{Binding IsPrintSingleImage}"
-                                       ToolTip.Tip="Dasselbe Bild mehrfach drucken - für mehrere Abzüge auf einer Seite zusätzlich „Bilder pro Seite“ setzen."
-                                       MinHeight="34"/>
+                        <!-- Regler mit Zahlenfeld wie im Anpassungspanel. -->
+                        <Grid Grid.Row="4" Grid.Column="1" ColumnDefinitions="*,Auto" ColumnSpacing="10"
+                              IsVisible="{Binding IsPrintSingleImage}"
+                              ToolTip.Tip="Dasselbe Bild mehrfach drucken - für mehrere Abzüge auf einer Seite zusätzlich „Bilder pro Seite“ setzen.">
+                            <icons:RoundSlider Minimum="1" Maximum="{Binding PrintMaxCopies}" DefaultValue="1"
+                                               Value="{Binding PrintCopies, Mode=TwoWay}"
+                                               VerticalAlignment="Center" Height="28" MinHeight="0"/>
+                            <icons:SliderValueUpDown Grid.Column="1" Classes="slider-value" Width="64" MinWidth="64"
+                                                     Minimum="1" Maximum="{Binding PrintMaxCopies}" Increment="1"
+                                                     Value="{Binding PrintCopies, Mode=TwoWay}"/>
+                        </Grid>
 
                         <TextBlock Grid.Row="5"
                                    Text="Rand (mm)"
                                    Foreground="{DynamicResource FP.Text.Secondary}"
                                    VerticalAlignment="Center"/>
-                        <icons:SliderValueUpDown Grid.Row="5"
-                                       Grid.Column="1"
-                                       Classes="combo-like"
-                                       Minimum="0"
-                                       Maximum="50"
-                                       Increment="1"
-                                       Value="{Binding PrintMarginMm}"
-                                       IsEnabled="{Binding CanEditPrintPageFit}"
-                                       MinHeight="34"/>
+                        <Grid Grid.Row="5" Grid.Column="1" ColumnDefinitions="*,Auto" ColumnSpacing="10"
+                              IsEnabled="{Binding CanEditPrintPageFit}">
+                            <icons:RoundSlider Minimum="0" Maximum="50" DefaultValue="10"
+                                               Value="{Binding PrintMarginMm, Mode=TwoWay}"
+                                               VerticalAlignment="Center" Height="28" MinHeight="0"/>
+                            <icons:SliderValueUpDown Grid.Column="1" Classes="slider-value" Width="64" MinWidth="64"
+                                                     Minimum="0" Maximum="50" Increment="1"
+                                                     Value="{Binding PrintMarginMm, Mode=TwoWay}"/>
+                        </Grid>
 
                         <CheckBox Grid.Row="6"
                                   Grid.Column="1"
