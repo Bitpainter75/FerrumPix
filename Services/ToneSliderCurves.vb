@@ -47,6 +47,19 @@ Namespace Services
         ''' Weiss +100 von 8,1 auf 3,3 L. Nur im Tonmodell 3. Steht wie MedianCurves VOR Curves.</summary>
         Private Shared ReadOnly TopCurves As New Dictionary(Of String, (Medians As Double(), Sets As Double()()()))(StringComparer.Ordinal)
 
+        ''' <summary>Tiefen je Anteil heller Bildpunkte (Schluessel Shadows, Eintrag
+        ''' "ShadowsByBrightShare"): Prozent der Bildpunkte ueber L 70 je Gruppe ("centres"), und je
+        ''' Stellung eine Kurve je Gruppe. Gemessen hebt Tiefen +100 die dunklen Stellen eines Bildes
+        ''' mit viel heller Flaeche weiter als nach dem Median erwartet; mit Kameratabelle an 57
+        ''' Eichbildern und 25 Bildern der Gegenprobe besser als die Gruppen nach dem Median (Tiefen
+        ''' +100 4,56 auf 4,04 in der Gegenprobe). Nur im Tonmodell 4. Steht wie MedianCurves VOR
+        ''' Curves.</summary>
+        Private Shared ReadOnly BrightShareCurves As New Dictionary(Of String, (Medians As Double(), Sets As Double()()()))(StringComparer.Ordinal)
+
+        ''' <summary>Die Grenze, ueber der ein Bildpunkt als hell zaehlt, in L. Muss mit
+        ''' Diagnostics/Reglereichung/kennlinien.py (SHARE_LIMITS) uebereinstimmen.</summary>
+        Public Const BrightShareLimitL As Double = 70.0
+
         ''' <summary>Kurven je Regler: Index 0 bis 3 fuer -100, -50, +50, +100. Nothing, wenn die
         ''' Ressource fehlt; dann rechnet Modell 2 wie Modell 1.</summary>
         ''' <summary>Verstaerkung je Regler und Stellung (Index wie bei Curves), Schluessel "gains" der
@@ -119,8 +132,13 @@ Namespace Services
                         For Each slider In root.GetProperty("curves").EnumerateObject()
                             Dim byMedian = slider.Name.EndsWith("ByMedian", StringComparison.Ordinal)
                             Dim byTop = slider.Name.EndsWith("ByTop", StringComparison.Ordinal)
-                            If byMedian OrElse byTop Then
-                                Dim medians = slider.Value.GetProperty(If(byTop, "tops", "medians")).EnumerateArray().Select(Function(e) e.GetDouble()).ToArray()
+                            Dim byBrightShare = slider.Name.EndsWith("ByBrightShare", StringComparison.Ordinal)
+                            ' Andere Eintraege nach Anteil (etwa Lichter nach dunklem Anteil) sind
+                            ' gemessen, aber nicht in Gebrauch.
+                            If slider.Name.EndsWith("Share", StringComparison.Ordinal) AndAlso Not byBrightShare Then Continue For
+                            If byMedian OrElse byTop OrElse byBrightShare Then
+                                Dim centresName = If(byTop, "tops", If(byBrightShare, "centres", "medians"))
+                                Dim medians = slider.Value.GetProperty(centresName).EnumerateArray().Select(Function(e) e.GetDouble()).ToArray()
                                 Dim sets = New Double(3)()() {}
                                 Dim mkeys = {"-100", "-50", "50", "100"}
                                 Dim complete = medians.Length >= 2
@@ -132,8 +150,8 @@ Namespace Services
                                 Next
                                 ' Unvollstaendig: dann bleibt es bei der mittleren Kurve des Reglers.
                                 If complete Then
-                                    Dim suffix = If(byTop, "ByTop", "ByMedian")
-                                    Dim target = If(byTop, TopCurves, MedianCurves)
+                                    Dim suffix = If(byTop, "ByTop", If(byBrightShare, "ByBrightShare", "ByMedian"))
+                                    Dim target = If(byTop, TopCurves, If(byBrightShare, BrightShareCurves, MedianCurves))
                                     Dim key = slider.Name.Substring(0, slider.Name.Length - suffix.Length)
                                     target(key) = (medians, sets)
                                     Dim model3Element As JsonElement
@@ -216,6 +234,22 @@ Namespace Services
                 Return Lift(slider, value, v, 3)
             End If
             Return LiftGrouped(slider, entry, value, v, imageTopL, slider & "ByTop", 3)
+        End Function
+
+        ''' <summary>Wie <see cref="Lift"/>, aber nach dem Anteil heller Bildpunkte: liegen fuer den
+        ''' Regler Kurven je Anteil vor (bisher nur Tiefen), wird zwischen den Gruppen linear nach
+        ''' <paramref name="brightSharePercent"/> (Prozent ueber <see cref="BrightShareLimitL"/>)
+        ''' geteilt, ausserhalb die naechste Gruppe. Ohne solche Kurven die Gruppen nach dem Median
+        ''' (<paramref name="imageMedianL"/>), wie im Tonmodell 3. Die Verstaerkung ist die des Reglers,
+        ''' mit der auch gemessen wurde.</summary>
+        Public Shared Function LiftByBrightShare(slider As String, value As Double, v As Double,
+                                                 brightSharePercent As Double, imageMedianL As Double,
+                                                 toneModel As Integer) As Double
+            Dim entry As (Medians As Double(), Sets As Double()()()) = Nothing
+            If imageMedianL <= 0.0 OrElse value = 0.0 OrElse Not BrightShareCurves.TryGetValue(slider, entry) Then
+                Return Lift(slider, value, v, imageMedianL, toneModel)
+            End If
+            Return LiftGrouped(slider, entry, value, v, brightSharePercent, toneModel:=toneModel)
         End Function
 
         ''' <summary>Hub aus Kurven je Gruppe: linear zwischen den beiden Gruppen, deren Mitten

@@ -388,7 +388,9 @@ Namespace Services
         ''' je Zone nach Messung verstaerkt oder gedaempft (UsesLocalToneZones,
         ''' ImageProcessor.LocalToneBase, ToneSliderCurves.DetailGain). 4 = wie 3, dazu bei RAW die
         ''' Belichtung in der Rampe der RAW-Stufe, VOR der Tonkurve wie beim Referenzprogramm
-        ''' (<see cref="RawExposureEv"/>); bei Belichtung 0 rechnet 4 bitgleich wie 3.
+        ''' (<see cref="RawExposureEv"/>), und die Tiefen waehlen ihre Kurve nach dem Anteil heller
+        ''' Bildpunkte statt nach dem Median (ToneSliderCurves.LiftByBrightShare). Ohne Belichtung und
+        ''' Tiefen rechnet 4 bitgleich wie 3.
         '''
         ''' Dasselbe Muster wie <see cref="WhiteBalanceModel"/>, aus demselben Grund: beide Modelle
         ''' geben demselben Reglerwert eine andere Bedeutung, und eine gespeicherte Bearbeitung muss

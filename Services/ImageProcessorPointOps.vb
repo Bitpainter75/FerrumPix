@@ -305,8 +305,16 @@ Namespace Services
                                            MeasureToneReference(measured, If(toneModel >= 3, chain, Nothing),
                                                                 unpremultiply:=toneModel >= 3))
                             If reference.IsMeasured AndAlso chain.ToneBefore IsNot Nothing Then
-                                reference.MedianL = GrayVToLightness(SampleTable(chain.ToneBefore, CSng(LightnessToGrayV(reference.MedianL))))
-                                reference.TopL = GrayVToLightness(SampleTable(chain.ToneBefore, CSng(LightnessToGrayV(reference.TopL))))
+                                Dim toneBefore = chain.ToneBefore
+                                reference.MedianL = GrayVToLightness(SampleTable(toneBefore, CSng(LightnessToGrayV(reference.MedianL))))
+                                reference.TopL = GrayVToLightness(SampleTable(toneBefore, CSng(LightnessToGrayV(reference.TopL))))
+                                ' Der Anteil heller Bildpunkte wandert ebenso mit: gezaehlt wird, was
+                                ' NACH der Stufe ueber der Grenze liegt.
+                                If toneModel >= 4 Then
+                                    reference.BrightShare = reference.ShareAboveAfter(
+                                        Function(l) GrayVToLightness(SampleTable(toneBefore, CSng(LightnessToGrayV(l)))),
+                                        ToneSliderCurves.BrightShareLimitL)
+                                End If
                             End If
                         End If
                         ' Tonmodell 3: Lichter und Tiefen in eine eigene Tabelle, die an der
@@ -832,8 +840,12 @@ Namespace Services
             ' Lichter und Tiefen waehlen ihre Kurve nach der Helligkeit des ganzen Bildes, Weiss im
             ' Tonmodell 3 nach seiner Spitze.
             If toneModel >= 2 Then
-                Dim highlightsShadows = ToneSliderCurves.Lift("Highlights", adj.Highlights, d0, reference.MedianL, toneModel) +
-                                        ToneSliderCurves.Lift("Shadows", adj.ShadowsLevel, d0, reference.MedianL, toneModel)
+                ' Tonmodell 4: die Tiefen nach dem Anteil heller Bildpunkte statt nach dem Median.
+                Dim shadowsLift = If(toneModel >= 4,
+                                 ToneSliderCurves.LiftByBrightShare("Shadows", adj.ShadowsLevel, d0, reference.BrightShare,
+                                                                    reference.MedianL, toneModel),
+                                 ToneSliderCurves.Lift("Shadows", adj.ShadowsLevel, d0, reference.MedianL, toneModel))
+                Dim highlightsShadows = ToneSliderCurves.Lift("Highlights", adj.Highlights, d0, reference.MedianL, toneModel) + shadowsLift
                 ' Der oertliche Teil gibt es erst im Tonmodell 3.
                 If part = ToneZonePart.Local Then Return If(toneModel >= 3, highlightsShadows, 0.0)
                 Dim whites = If(toneModel >= 3,
@@ -940,16 +952,36 @@ Namespace Services
 
         ''' <summary>Helligkeit des ganzen Bildes, nach der Tonregler ihre Kennlinie waehlen: der
         ''' Median von L fuer Lichter und Tiefen, die Spitze (99. Perzentil von L) fuer Weiss. Beide
-        ''' in L, 0 bis 100; ungemessen steht beides auf 0.</summary>
+        ''' in L, 0 bis 100; ungemessen steht beides auf 0. Dazu fuer die Tiefen im Tonmodell 4 der
+        ''' Anteil heller Bildpunkte, in Prozent.</summary>
         Friend Structure ToneReference
             Public MedianL As Double
             Public TopL As Double
+            ''' <summary>Prozent der gezaehlten Bildpunkte ueber ToneSliderCurves.BrightShareLimitL.</summary>
+            Public BrightShare As Double
+            ''' <summary>Das Histogramm von L in Zehntelstufen (1001 Faecher), aus dem alle drei Werte
+            ''' stammen. Damit laesst sich der Anteil nach einer Tonwertstufe neu bestimmen
+            ''' (<see cref="ShareAboveAfter"/>); der Median wandert einfach durch die Stufe mit.</summary>
+            Public Histogram As Long()
+            Public Total As Long
 
             Public ReadOnly Property IsMeasured As Boolean
                 Get
                     Return MedianL > 0.0
                 End Get
             End Property
+
+            ''' <summary>Prozent der Bildpunkte, die NACH der Abbildung <paramref name="map"/> (L auf L,
+            ''' steigend) ueber <paramref name="limitL"/> liegen. Ohne Histogramm der gemessene Anteil.</summary>
+            Public Function ShareAboveAfter(map As Func(Of Double, Double), limitL As Double) As Double
+                If Histogram Is Nothing OrElse Total <= 0 Then Return BrightShare
+                Dim above = 0L
+                For k = Histogram.Length - 1 To 0 Step -1
+                    If map(k / 10.0) <= limitL Then Exit For
+                    above += Histogram(k)
+                Next
+                Return 100.0 * above / Total
+            End Function
         End Structure
 
         ''' <summary>Anteil der Bildpunkte unter der Spitze, die Weiss im Tonmodell 3 misst. Das 99.
@@ -1097,7 +1129,13 @@ Namespace Services
             If total = 0 Then Return none
             Dim half = total \ 2
             Dim topCount = CLng(Math.Ceiling(total * ToneTopFraction))
-            Dim result As New ToneReference With {.MedianL = 100.0, .TopL = 100.0}
+            Dim result As New ToneReference With {.MedianL = 100.0, .TopL = 100.0, .Histogram = histogram, .Total = total}
+            ' Ueber der Grenze heisst: Fach k mit k / 10 > Grenze, wie im Messwerkzeug (L > 70).
+            Dim bright = 0L
+            For k = CInt(Math.Floor(ToneSliderCurves.BrightShareLimitL * 10.0)) + 1 To 1000
+                bright += histogram(k)
+            Next
+            result.BrightShare = 100.0 * bright / total
             Dim medianFound = False
             Dim acc = 0L
             For k = 0 To 1000
