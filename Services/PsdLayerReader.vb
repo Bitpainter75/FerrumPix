@@ -291,6 +291,7 @@ Namespace Services
 
             Dim records As New List(Of LayerRecord)()
             Dim totalPixels As Long = 0
+            Dim maxTemporaryPixels As Long = 0
             For i = 0 To layerCount - 1
                 Dim rec = ReadLayerRecord(fs, isPsb)
                 If rec Is Nothing Then Return Nothing
@@ -301,13 +302,33 @@ Namespace Services
                     totalPixels += CLng(Math.Max(0, rec.MaskRight - rec.MaskLeft)) *
                                    Math.Max(0, rec.MaskBottom - rec.MaskTop)
                 End If
-                ' Zwei Masken, die multipliziert werden: die zweite und das Ergebnis über beide
-                ' Rechtecke liegen kurz zusätzlich im Speicher.
+                ' Beide Masken und ihr umschließendes Ergebnis liegen gleichzeitig im Speicher.
                 If rec.CombineVectorMask Then
-                    totalPixels += 2L * Math.Max(0, rec.VectorMaskRight - rec.VectorMaskLeft) *
-                                   Math.Max(0, rec.VectorMaskBottom - rec.VectorMaskTop)
+                    Dim maskPad = CLng(Math.Ceiling(rec.PixelFeather * 4.0))
+                    Dim vectorPad = CLng(Math.Ceiling(rec.VectorFeather * 4.0))
+                    Dim unionWidth = Math.Max(CLng(rec.MaskRight) + maskPad, CLng(rec.VectorMaskRight) + vectorPad) -
+                                     Math.Min(CLng(rec.MaskLeft) - maskPad, CLng(rec.VectorMaskLeft) - vectorPad)
+                    Dim unionHeight = Math.Max(CLng(rec.MaskBottom) + maskPad, CLng(rec.VectorMaskBottom) + vectorPad) -
+                                      Math.Min(CLng(rec.MaskTop) - maskPad, CLng(rec.VectorMaskTop) - vectorPad)
+                    If unionWidth <= 0 OrElse unionHeight <= 0 OrElse unionWidth > MaxTotalLayerPixels \ unionHeight Then Return Nothing
+                    Dim temporaryPixels = CLng(Math.Max(0, rec.VectorMaskRight - rec.VectorMaskLeft)) *
+                                          Math.Max(0, rec.VectorMaskBottom - rec.VectorMaskTop) + unionWidth * unionHeight
+                    totalPixels += unionWidth * unionHeight
+                    ' Beim Weichzeichnen bestehen gepolsterte Ein- und Ausgabebitmaps sowie das
+                    ' vergrößerte Ergebnis neben den ursprünglichen Masken. Konservativ beide
+                    ' Masken gleichzeitig zählen, bevor eines dieser Raster angelegt wird.
+                    For Each mask In {New Long() {CLng(rec.MaskRight) - rec.MaskLeft, CLng(rec.MaskBottom) - rec.MaskTop, maskPad},
+                                      New Long() {CLng(rec.VectorMaskRight) - rec.VectorMaskLeft, CLng(rec.VectorMaskBottom) - rec.VectorMaskTop, vectorPad}}
+                        If mask(2) > 0 Then
+                            Dim paddedWidth = mask(0) + 4L * mask(2)
+                            Dim paddedHeight = mask(1) + 4L * mask(2)
+                            If paddedWidth <= 0 OrElse paddedHeight <= 0 OrElse paddedWidth > MaxTotalLayerPixels \ paddedHeight Then Return Nothing
+                            temporaryPixels += 3L * paddedWidth * paddedHeight
+                        End If
+                    Next
+                    maxTemporaryPixels = Math.Max(maxTemporaryPixels, temporaryPixels)
                 End If
-                If totalPixels > MaxTotalLayerPixels Then Return Nothing
+                If totalPixels + maxTemporaryPixels > MaxTotalLayerPixels Then Return Nothing
                 records.Add(rec)
             Next
 
@@ -1142,8 +1163,11 @@ Namespace Services
             Dim top = Math.Min(rec.MaskTop, rec.VectorMaskTop)
             Dim right = Math.Max(rec.MaskRight, rec.VectorMaskRight)
             Dim bottom = Math.Max(rec.MaskBottom, rec.VectorMaskBottom)
-            Dim width = right - left, height = bottom - top
-            If CLng(width) * height > Integer.MaxValue Then Return Nothing
+            Dim wideWidth = CLng(right) - left, wideHeight = CLng(bottom) - top
+            If wideWidth <= 0 OrElse wideHeight <= 0 OrElse wideWidth > MaxTotalLayerPixels \ wideHeight Then
+                Throw New InvalidOperationException("PSD combined mask exceeds memory limit")
+            End If
+            Dim width = CInt(wideWidth), height = CInt(wideHeight)
 
             Dim realDefault = CInt(rec.MaskDefaultValue)
             Dim vecDefault = CInt(rec.VectorMaskDefaultValue)

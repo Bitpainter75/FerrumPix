@@ -45,4 +45,5 @@
   files saved without maximum compatibility no longer show a white area, transparent edges no
   longer get a light fringe, and a saved selection is no longer taken for transparency. PSD
   files exported from FerrumPix store their transparent edges the way other programs expect.
+  Combining distant or feathered masks now respects the import's memory limit.
 

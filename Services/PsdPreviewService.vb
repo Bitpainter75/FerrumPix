@@ -453,26 +453,28 @@ Namespace Services
         ''' kann auch eine gespeicherte Auswahl sein, und die als Transparenz gelesen stanzte Löcher
         ''' ins Bild.
         '''
-        ''' Transparenz ist er, wenn die Datei gar keine Ebenen trägt (dann kennt sie nur das
-        ''' Gesamtbild), wenn die Ebenenzahl negativ ist, wenn ein globaler Block "Mtrn", "Mt16"
+        ''' Transparenz ist er, wenn die Ebenenzahl negativ ist, wenn ein globaler Block "Mtrn", "Mt16"
         ''' oder "Mt32" es anzeigt, oder wenn die Ebenen in "Lr16"/"Lr32" stehen und die
         ''' Kanalnamen (Ressource 1045, sonst 1006) genau so viele sind wie Zusatzkanäle und der
         ''' erste "Transparency" heißt. So schreibt es Photoshop; abgeleitet aus Dateien, die es
-        ''' selbst geschrieben hat.
+        ''' selbst geschrieben hat. Bei Dateien ohne Ebenen unterscheiden Kanalnamen eine
+        ''' gespeicherte Auswahl von Transparenz. Ohne Kanalnamen ist die Belegung nicht eindeutig;
+        ''' bei ebenenlosen Dateien wird der erste Zusatzkanal dann als Transparenz angenommen.
         '''
         ''' Der Strom steht beim Aufruf am Anfang der Ebenen-Sektion, hinter ihrer Länge. Wo er
         ''' danach steht, ist gleich: der Aufrufer springt selbst an das Ende. Lässt sich die
-        ''' Sektion nicht lesen, gilt der Kanal als Transparenz, wie vor dieser Prüfung.</summary>
+        ''' Sektion nicht lesen, wird Transparenz angenommen.</summary>
         Private Shared Function MergedImageHasAlpha(fs As FileStream, header As PsdHeader, sectionEnd As Long,
                                                     resources As Byte(), extraChannels As Integer) As Boolean
             Try
-                If fs.Position >= sectionEnd Then Return True
+                Dim namedTransparency = MergedTransparencyFromNames(resources, extraChannels)
+                If fs.Position >= sectionEnd Then Return If(namedTransparency, True)
 
                 Dim hasLayers = False
                 Dim negativeCount = False
                 Dim infoLen = If(header.IsPsb, ReadU64(fs), CLng(ReadU32(fs)))
                 Dim infoStart = fs.Position
-                If infoLen < 0 OrElse infoStart + infoLen > sectionEnd Then Return True
+                If infoLen < 0 OrElse infoStart + infoLen > sectionEnd Then Return If(namedTransparency, True)
                 If infoLen >= 2 Then
                     Dim count = ReadU16(fs)
                     If count <> 0 Then
@@ -483,8 +485,8 @@ Namespace Services
 
                 ' Hinter der Ebenen-Info: die globale Maske, dann die globalen Zusatzblöcke.
                 fs.Position = infoStart + infoLen
-                If fs.Position + 4 > sectionEnd Then Return Not hasLayers OrElse negativeCount
-                If Not SkipBlock(fs, ReadU32(fs)) Then Return Not hasLayers OrElse negativeCount
+                If fs.Position + 4 > sectionEnd Then Return negativeCount OrElse (Not hasLayers AndAlso If(namedTransparency, True))
+                If Not SkipBlock(fs, ReadU32(fs)) Then Return negativeCount OrElse (Not hasLayers AndAlso If(namedTransparency, True))
 
                 Dim marked = False
                 Dim layersInBlock = False
@@ -518,8 +520,9 @@ Namespace Services
                     fs.Position = dataStart + ((length + 3L) And Not 3L)
                 End While
 
-                If Not hasLayers OrElse negativeCount OrElse marked Then Return True
-                Return layersInBlock AndAlso NamesMergedTransparency(resources, extraChannels)
+                If negativeCount OrElse marked Then Return True
+                If Not hasLayers Then Return If(namedTransparency, True)
+                Return layersInBlock AndAlso If(namedTransparency, False)
             Catch
                 Return True
             End Try
@@ -528,7 +531,7 @@ Namespace Services
         ''' <summary>Tragen die Kanalnamen genau <paramref name="extraChannels"/> Einträge, und
         ''' heißt der erste "Transparency"? Ressource 1045 (Unicode: Länge in Zeichen, dann
         ''' UTF-16), sonst 1006 (Pascal: ein Längenbyte, dann der Text).</summary>
-        Private Shared Function NamesMergedTransparency(resources As Byte(), extraChannels As Integer) As Boolean
+        Private Shared Function MergedTransparencyFromNames(resources As Byte(), extraChannels As Integer) As Boolean?
             Dim names As New List(Of String)()
             Dim unicode = FindResource(resources, 1045)
             If unicode IsNot Nothing Then
@@ -547,7 +550,7 @@ Namespace Services
                 End While
             Else
                 Dim pascal = FindResource(resources, 1006)
-                If pascal Is Nothing Then Return False
+                If pascal Is Nothing Then Return Nothing
                 Dim at = 0
                 While at < pascal.Length
                     Dim length = CInt(pascal(at))
@@ -556,8 +559,8 @@ Namespace Services
                     at += 1 + length
                 End While
             End If
-            Return names.Count = extraChannels AndAlso names.Count > 0 AndAlso
-                   String.Equals(names(0), "Transparency", StringComparison.Ordinal)
+            If names.Count <> extraChannels OrElse names.Count = 0 Then Return Nothing
+            Return String.Equals(names(0), "Transparency", StringComparison.Ordinal)
         End Function
 
         ''' <summary>Das Profil aus seinen Bytes, oder Nothing. Fuer den flachen Weg, der es sofort
