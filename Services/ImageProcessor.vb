@@ -735,22 +735,32 @@ Namespace Services
         ''' <summary>Der Decode mit der Belichtung in der Rampe der RAW-Stufe.
         ''' <paramref name="appliedEv"/> sagt, wie viel davon wirklich im Bild steckt: die gewuenschte,
         ''' wenn die Datei ueber die RAW-Stufe kam, sonst 0, etwa wenn LibRaw sie nicht entwickeln kann
-        ''' und die eingebettete Vorschau einspringt. Dann muss die Kette die Belichtung rechnen.</summary>
+        ''' und die eingebettete Vorschau einspringt. Dann muss die Kette die Belichtung rechnen.
+        ''' <paramref name="rawDeveloped"/> sagt, ob LibRaw die Datei entwickelt hat, auch ohne
+        ''' Belichtung. Wer das wissen muss, fragt hier und nicht den Zwischenspeicher von
+        ''' RawDecodeService: der haelt nur ein Bild und gehoert nach dem naechsten Decode einem
+        ''' anderen.</summary>
         ''' <remarks>Eigener Name statt einer zweiten Fassung von DecodeOriented: Pruefstand und
         ''' Messwerkzeuge holen DecodeOriented per Reflexion ueber den Namen.</remarks>
         Friend Shared Function DecodeOrientedWithExposure(path As String, developRaw As Boolean,
                                                           lensChoice As LensDataService.Wahl,
                                                           recoverHighlights As Boolean,
                                                           exposureEv As Double,
-                                                          ByRef appliedEv As Double) As SKBitmap
+                                                          ByRef appliedEv As Double,
+                                                          Optional ByRef rawDeveloped As Boolean = False) As SKBitmap
             appliedEv = 0.0
-            If exposureEv <> 0.0 AndAlso developRaw AndAlso RawPreviewService.IsSupportedRaw(path) AndAlso
-               RawDecodeService.IsAvailable Then
+            rawDeveloped = False
+            If developRaw AndAlso RawPreviewService.IsSupportedRaw(path) AndAlso RawDecodeService.IsAvailable Then
+                ' Ohne Belichtung derselbe Aufruf wie in DecodeOriented.
                 Dim developed = RawDecodeService.TryDecode(path, lensChoice, recoverHighlights, exposureEv:=exposureEv)
                 If developed IsNot Nothing Then
                     appliedEv = exposureEv
+                    rawDeveloped = True
                     Return developed
                 End If
+                ' LibRaw kann die Datei nicht entwickeln: die eingebettete Vorschau, ohne zweiten
+                ' Versuch (DecodeOriented faellt mit developRaw auf denselben Weg zurueck).
+                Return DecodeOriented(path, False, lensChoice, recoverHighlights)
             End If
             Return DecodeOriented(path, developRaw, lensChoice, recoverHighlights)
         End Function
@@ -2322,12 +2332,15 @@ Namespace Services
         ''' <paramref name="appliedEv"/> meldet, wie viel davon wirklich im Bild steckt.</summary>
         Friend Shared Function DecodeWorkingImageWithExposure(path As String, lensChoice As LensDataService.Wahl,
                                                               recoverHighlights As Boolean, exposureEv As Double,
-                                                              ByRef appliedEv As Double) As SKBitmap
+                                                              ByRef appliedEv As Double,
+                                                              Optional ByRef rawDeveloped As Boolean = False) As SKBitmap
             appliedEv = 0.0
+            rawDeveloped = False
             Try
-                Return DecodeOrientedWithExposure(path, True, lensChoice, recoverHighlights, exposureEv, appliedEv)
+                Return DecodeOrientedWithExposure(path, True, lensChoice, recoverHighlights, exposureEv, appliedEv, rawDeveloped)
             Catch
                 appliedEv = 0.0
+                rawDeveloped = False
                 Return Nothing
             End Try
         End Function

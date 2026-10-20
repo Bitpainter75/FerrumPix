@@ -727,6 +727,11 @@ Namespace ViewModels
         ''' jedem Quellwechsel und jedem Neuaufbau fuer die Belichtung; mit eingebackenem Inhalt
         ''' bleibt der Stand stehen, spaetere Aenderungen wirken in der Kette.
         Private _workingImageExposure As Single = 0.0F
+        ''' Hat LibRaw das Arbeitsbild entwickelt? Gesetzt wie _workingImageExposure aus dem Decode,
+        ''' der es geliefert hat (IsRawDeveloped). Nicht aus dem Zwischenspeicher von RawDecodeService
+        ''' abgeleitet: der haelt nur ein Bild, und der Decode einer anderen RAW (Kachel, Betrachter,
+        ''' Export) ersetzt es, waehrend dieses Arbeitsbild weiter ein entwickeltes RAW ist.
+        Private _workingImageRawDeveloped As Boolean
         ''' Verzoegert den Neuaufbau des Arbeitsbilds nach einer Belichtungsaenderung, bis der Regler
         ''' ruht. Waehrend des Zugs rechnet die Kette den Unterschied.
         Private _rawExposureRebuildTimer As DispatcherTimer
@@ -7458,9 +7463,11 @@ Namespace ViewModels
             Try
                 prepared = Await Task.Run(Function()
                                               Dim applied = 0.0
+                                              Dim developed = False
                                               Dim full = ImageProcessor.DecodeWorkingImageWithExposure(path, wahl, recoverHighlights,
-                                                                                                       exposureEv, applied)
-                                              Return PrepareSource(full, False, previewMax, applied)
+                                                                                                       exposureEv, applied, developed)
+                                              Return PrepareSource(New DecodedSource With {
+                                                  .Full = full, .AppliedEv = applied, .RawDeveloped = developed}, previewMax)
                                           End Function)
             Catch ex As Exception
                 DiagnosticLogService.LogException("Editor.RawExposureRebuild", ex)
@@ -7474,7 +7481,8 @@ Namespace ViewModels
                 Return
             End If
             _workingImageExposure = CSng(prepared.AppliedEv * ImageAdjustments.ExposurePointsPerStop)
-            DiagnosticLogService.LogAlways("Editor.RawExposureRebuild", $"exposure={_workingImageExposure}")
+            SetWorkingImageRawDeveloped(prepared.RawDeveloped)
+            DiagnosticLogService.LogAlways("Editor.RawExposureRebuild", $"exposure={_workingImageExposure}; developed={prepared.RawDeveloped}")
             AdoptPreparedWorkingImage(prepared.Prepared, prepared.Display,
                                       hasBakedContent:=False,
                                       hasAlphaHoles:=_newDocTransparentBackground,
@@ -15931,11 +15939,17 @@ Namespace ViewModels
         ''' Vorschau bearbeitet werden.</summary>
         Public ReadOnly Property IsRawDeveloped As Boolean
             Get
-                Return IsRawSourceEditable AndAlso
-                       RawDecodeService.IsAvailable AndAlso
-                       RawDecodeService.TryGetCachedSize(RenderSourcePath).Width > 0
+                Return IsRawSourceEditable AndAlso _workingImageRawDeveloped
             End Get
         End Property
+
+        ''' <summary>Merkt, ob LibRaw das gerade eingesetzte Arbeitsbild entwickelt hat, und meldet
+        ''' alles neu, was daran haengt.</summary>
+        Private Sub SetWorkingImageRawDeveloped(developed As Boolean)
+            If _workingImageRawDeveloped = developed Then Return
+            _workingImageRawDeveloped = developed
+            RaiseRawStateChanged()
+        End Sub
 
         ''' <summary>True, solange das Arbeitsbild ein RAW ist, auf das die RAW-Einstellungen noch
         ''' wirken. Die Datei allein entscheidet das nicht: sobald etwas eingebacken ist
@@ -20562,10 +20576,11 @@ Namespace ViewModels
         Private Shared Function DecodeForPreviewSource(imagePath As String, overridePath As String,
                                                        lensChoice As LensDataService.Wahl,
                                                        recoverHighlights As Boolean,
-                                                       Optional exposureEv As Double = 0.0) As (Full As SKBitmap, Baked As Boolean, AppliedEv As Double)
+                                                       Optional exposureEv As Double = 0.0) As DecodedSource
             Dim fullDecode As SKBitmap = Nothing
             Dim bakedFromFpx = False
             Dim appliedEv = 0.0
+            Dim rawDeveloped = False
             If Not String.IsNullOrEmpty(overridePath) AndAlso File.Exists(overridePath) Then
                 fullDecode = ImageProcessor.DecodeWorkingImage(overridePath, lensChoice, recoverHighlights)
                 If fullDecode IsNot Nothing Then
@@ -20591,25 +20606,34 @@ Namespace ViewModels
             If fullDecode Is Nothing AndAlso Not bakedFromFpx Then fullDecode = DecodedImageHandoff.TryTake(imagePath)
             If fullDecode Is Nothing Then
                 fullDecode = ImageProcessor.DecodeWorkingImageWithExposure(imagePath, lensChoice, recoverHighlights,
-                                                                           exposureEv, appliedEv)
+                                                                           exposureEv, appliedEv, rawDeveloped)
             End If
             DiagnosticLogService.LogAlways("Editor.RawHighlightRecovery",
                 $"decode completed; enabled={recoverHighlights}; source={imagePath}; override={Not String.IsNullOrEmpty(overridePath)}; " &
-                $"baked={bakedFromFpx}; exposureEv={appliedEv:F2}; result={If(fullDecode Is Nothing, "<none>", $"{fullDecode.Width}x{fullDecode.Height}")}")
-            Return (fullDecode, bakedFromFpx, appliedEv)
+                $"baked={bakedFromFpx}; developed={rawDeveloped}; exposureEv={appliedEv:F2}; result={If(fullDecode Is Nothing, "<none>", $"{fullDecode.Width}x{fullDecode.Height}")}")
+            Return New DecodedSource With {.Full = fullDecode, .Baked = bakedFromFpx, .AppliedEv = appliedEv, .RawDeveloped = rawDeveloped}
         End Function
+
+        ''' <summary>Was der Decode fuer das Arbeitsbild liefert: das Vollbild, ob es ein eingebackenes
+        ''' Buendel-Arbeitsbild ist, wie viel Belichtung in der RAW-Stufe steckt und ob LibRaw die
+        ''' Datei entwickelt hat.</summary>
+        Private Structure DecodedSource
+            Public Full As SKBitmap
+            Public Baked As Boolean
+            Public AppliedEv As Double
+            Public RawDeveloped As Boolean
+        End Structure
 
         ''' <summary>Quellwechsel Teil 3: das Ergebnis übernehmen - wieder UI-Thread.
         ''' Ist die Marke veraltet (der Nutzer hat inzwischen weitergeblättert), wird das
         ''' Dekodierte verworfen statt über die neue Quelle geschrieben.</summary>
-        Private Function CompletePreviewSourceSwap(decoded As (Full As SKBitmap, Baked As Boolean, AppliedEv As Double),
+        Private Function CompletePreviewSourceSwap(decoded As DecodedSource,
                                                    token As Long, scheduleInitialRender As Boolean) As Boolean
             If IsSourceSwapStale(token) Then
                 decoded.Full?.Dispose()
                 Return False
             End If
-            Return CompletePreparedSourceSwap(PrepareSource(decoded.Full, decoded.Baked, PreviewMaxDimension, decoded.AppliedEv),
-                                              token, scheduleInitialRender)
+            Return CompletePreparedSourceSwap(PrepareSource(decoded, PreviewMaxDimension), token, scheduleInitialRender)
         End Function
 
         ''' <summary>Das Ergebnis des Hintergrundteils beim Oeffnen: das vorbereitete Arbeitsbild
@@ -20621,6 +20645,8 @@ Namespace ViewModels
             Public Baked As Boolean
             ''' Die Belichtung in Blendenstufen, die der Decode in die RAW-Stufe gelegt hat.
             Public AppliedEv As Double
+            ''' Hat LibRaw die Datei entwickelt (und nicht die eingebettete Vorschau eingesprungen)?
+            Public RawDeveloped As Boolean
 
             Public Sub DisposeAll()
                 Prepared?.DisposeAll()
@@ -20632,9 +20658,8 @@ Namespace ViewModels
         ''' beim Oeffnen im Hintergrund direkt nach dem Decode. Vorher geschah beides auf dem
         ''' Anzeigefaden und hielt ihn bei einem 12-MP-Bild rund 400 ms an (Nutzerbefund HEIC,
         ''' Messpunkt "Editor oeffnen: Arbeitsbild uebernehmen").</summary>
-        Private Shared Function PrepareSource(full As SKBitmap, baked As Boolean, previewMaxDimension As Integer,
-                                              appliedEv As Double) As PreparedSource
-            Dim prepared = WorkingImageService.Prepare(full, previewMaxDimension)
+        Private Shared Function PrepareSource(decoded As DecodedSource, previewMaxDimension As Integer) As PreparedSource
+            Dim prepared = WorkingImageService.Prepare(decoded.Full, previewMaxDimension)
             Dim display As Bitmap = Nothing
             If prepared IsNot Nothing Then
                 ' Dasselbe Bild, das frueher nach Init ueber WithFull entstand: das volle Arbeitsbild.
@@ -20644,7 +20669,8 @@ Namespace ViewModels
                     DiagnosticLogService.LogException("Editor.PrepareSource", ex)
                 End Try
             End If
-            Return New PreparedSource With {.Prepared = prepared, .Display = display, .Baked = baked, .AppliedEv = appliedEv}
+            Return New PreparedSource With {.Prepared = prepared, .Display = display, .Baked = decoded.Baked,
+                                            .AppliedEv = decoded.AppliedEv, .RawDeveloped = decoded.RawDeveloped}
         End Function
 
         ''' <summary>Ist der Quellwechsel dieser Marke ueberholt? Dann NICHT entsperren: der neue
@@ -20664,6 +20690,7 @@ Namespace ViewModels
             ' des Decodes. VOR dem Einsetzen, denn der Aufwaermrender rechnet schon damit.
             _workingImageExposure = If(source.Baked, _workingImageOverrideExposure,
                                        CSng(source.AppliedEv * ImageAdjustments.ExposurePointsPerStop))
+            SetWorkingImageRawDeveloped(Not source.Baked AndAlso source.RawDeveloped)
 
             ' Laeuft auf dem Anzeigefaden; mit Messpunkt, damit eine Stockung hier im Protokoll einen
             ' Namen hat.
@@ -20798,7 +20825,7 @@ Namespace ViewModels
             ' Decode UND Vorbereitung im Hintergrund: beides geht ueber das ganze Bild (PrepareSource).
             Dim prepared = Await Task.Run(Function()
                                               Dim decoded = DecodeForPreviewSource(imagePath, overridePath, wahl, recoverHighlights, exposureEv)
-                                              Return PrepareSource(decoded.Full, decoded.Baked, previewMax, decoded.AppliedEv)
+                                              Return PrepareSource(decoded, previewMax)
                                           End Function)
             CompletePreparedSourceSwap(prepared, token, scheduleInitialRender)
         End Function
@@ -20844,6 +20871,7 @@ Namespace ViewModels
             ' Stale-Mechanik oben, das Voll-Bitmap der Service selbst).
             _workingImage.Clear()
             _workingImageExposure = 0.0F
+            SetWorkingImageRawDeveloped(False)
             Threading.Interlocked.Increment(_rawExposureRebuildToken)
             _rawExposureRebuildTimer?.Stop()
             ReleaseComparisonOriginalSource()

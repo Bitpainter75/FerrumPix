@@ -80,15 +80,21 @@ Namespace Services
             ' DecodeForOutput statt DecodeOriented: .fpx-Projekte muessen aus Basisbild + Rezept
             ' gerendert werden - DecodeOriented reicht das ZIP an den Codec weiter und liefert
             ' Nothing, die Messung waere fuer Projektdateien still ausgefallen.
-            Using bmp = DecodeForOutput(sourcePath)
+            ' Ohne .fpx derselbe Decode wie DecodeForOutput, nur mit der Auskunft, ob LibRaw die Datei
+            ' entwickelt hat: eine RAW bekommt die Belichtung ab Tonmodell 4 nur dann in der
+            ' RAW-Stufe. Springt die eingebettete Vorschau ein, rechnet die Ausgabe sie in der Kette,
+            ' und die Automatik muss ihre Werte fuer diesen Weg waehlen. Die Belichtung kommt hier
+            ' nicht mit, gemessen wird das Bild ohne sie.
+            Dim isFpx = FpxService.IsFpx(sourcePath)
+            Dim applied = 0.0
+            Dim developed = False
+            Using bmp = If(isFpx, DecodeForOutput(sourcePath),
+                           DecodeOrientedWithExposure(sourcePath, True, Nothing, False, 0.0, applied, developed))
                 If bmp Is Nothing Then Return
                 ' Ein .fpx kommt hier schon fertig gerendert an, samt Umkehr aus seinem Rezept; ein
                 ' zweites Umkehren gaebe wieder das Negativ.
-                ' Eine RAW, die LibRaw entwickelt, bekommt die Belichtung ab Tonmodell 4 in der
-                ' RAW-Stufe; DecodeForOutput liefert sie dafuer ohne Belichtung.
-                Dim rawStage = Not FpxService.IsFpx(sourcePath) AndAlso adj.ExposureBelongsToRawStage() AndAlso
-                               RawPreviewService.IsSupportedRaw(sourcePath) AndAlso RawDecodeService.IsAvailable
-                Dim r = If(FpxService.IsFpx(sourcePath), AnalyzeAutoAdjustments(bmp, adj.ResolvedToneModel()), AnalyzeAutoAdjustments(bmp, adj, rawStage))
+                Dim rawStage = developed AndAlso adj.ExposureBelongsToRawStage()
+                Dim r = If(isFpx, AnalyzeAutoAdjustments(bmp, adj.ResolvedToneModel()), AnalyzeAutoAdjustments(bmp, adj, rawStage))
                 If Not r.HasMeasurement OrElse r.IsNeutral() Then Return
                 ' Die Messung rechnet in Double, die Regler sind Single. Das Verengen stand
                 ' vorher unsichtbar im Compiler; ausgeschrieben ist es nachvollziehbar.

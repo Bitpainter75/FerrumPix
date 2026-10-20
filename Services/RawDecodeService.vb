@@ -688,10 +688,10 @@ Namespace Services
                 Dim lens = LensCorrectionForFile(path, lensChoice)
                 Dim decoded As SKBitmap
                 If _reentrant Then
-                    decoded = DecodeCore(path, baseEv, lens, useHalfSize:=True, recoverHighlights:=recoverHighlights)
+                    decoded = DecodeCore(path, baseEv, lens, useHalfSize:=True, recoverHighlights:=recoverHighlights, sliderEv:=exposureEv)
                 Else
                     SyncLock _nativeLock
-                        decoded = DecodeCore(path, baseEv, lens, useHalfSize:=True, recoverHighlights:=recoverHighlights)
+                        decoded = DecodeCore(path, baseEv, lens, useHalfSize:=True, recoverHighlights:=recoverHighlights, sliderEv:=exposureEv)
                     End SyncLock
                 End If
                 Return WithDistortion(WithSensorEdgeCrop(decoded, path, lensChoice, halfSize:=True), lens)
@@ -743,10 +743,10 @@ Namespace Services
                 ' Thumbnail-Erzeugung ruft aus mehreren Threads hier herein (Parallel.For).
                 Dim decoded As SKBitmap
                 If _reentrant Then
-                    decoded = DecodeCore(path, baseEv, lens, recoverHighlights:=recoverHighlights, knee:=knee)
+                    decoded = DecodeCore(path, baseEv, lens, recoverHighlights:=recoverHighlights, knee:=knee, sliderEv:=exposureEv)
                 Else
                     SyncLock _nativeLock
-                        decoded = DecodeCore(path, baseEv, lens, recoverHighlights:=recoverHighlights, knee:=knee)
+                        decoded = DecodeCore(path, baseEv, lens, recoverHighlights:=recoverHighlights, knee:=knee, sliderEv:=exposureEv)
                     End SyncLock
                 End If
                 If decoded Is Nothing Then Return Nothing
@@ -1873,7 +1873,7 @@ Namespace Services
         Private Shared Function BuildFrom16Bit(data As IntPtr, width As Integer, height As Integer,
                                                lens As LensDataService.Korrektur,
                                                baseEv As Double, normalization As Double,
-                                               knee As Double) As SKBitmap
+                                               knee As Double, sliderEv As Double) As SKBitmap
             Dim bitmap = New SKBitmap(New SKImageInfo(width, height, SKColorType.Bgra8888, SKAlphaType.Opaque))
             Try
                 ' ZEILENWEISE direkt in die Bitmap. Ein 8-Bit-Vollbildpuffer waere bei 45
@@ -1892,7 +1892,7 @@ Namespace Services
                 ' Halbierung der Daten ist eine Blendenstufe auf der Grundbelichtung, und der
                 ' Schwarzabzug ist ein Anteil des Bereichs. Mit diesem Ausgleich allein bleibt das
                 ' Bild, was es war - die eigentliche Lichterrettung ist das Knie.
-                Dim ramp = ToneRampFor(baseEv, normalization)
+                Dim ramp = ToneRampFor(baseEv, normalization, sliderEv)
                 Convert16Rows(data, width, height,
                               Sub(y, row) Marshal.Copy(row, 0, IntPtr.Add(targetPtr, y * targetStride), rowLength),
                               lens, ramp.ExposureEv, ramp.BlackLevel, knee)
@@ -1907,7 +1907,7 @@ Namespace Services
         ''' der Zwischenspeicher eine andere Datei haelt.</summary>
         Private Shared Function TryBuildFromCachedRaw(path As String, writeTime As DateTime, demosaic As Integer,
                                                       lens As LensDataService.Korrektur,
-                                                      baseEv As Double, knee As Double) As SKBitmap
+                                                      baseEv As Double, knee As Double, sliderEv As Double) As SKBitmap
             Dim bytes As Byte() = Nothing
             Dim width = 0, height = 0
             Dim normalization = 1.0
@@ -1927,7 +1927,7 @@ Namespace Services
 
             Dim pin = GCHandle.Alloc(bytes, GCHandleType.Pinned)
             Try
-                Return BuildFrom16Bit(pin.AddrOfPinnedObject(), width, height, lens, baseEv, normalization, knee)
+                Return BuildFrom16Bit(pin.AddrOfPinnedObject(), width, height, lens, baseEv, normalization, knee, sliderEv)
             Finally
                 pin.Free()
             End Try
@@ -2070,11 +2070,21 @@ Namespace Services
         '''
         ''' <para>WAS SIE NICHT TUT: die Lichter zurueckholen. Dafuer muss der Weisspunkt darunter
         ''' noch einmal angehoben werden, und das kostet Helligkeit - siehe die Aufrufstelle.</para></summary>
-        Friend Shared Function ToneRampFor(baseEv As Double, normalization As Double) As ToneRamp
+        ''' <param name="sliderEv">Der Teil von <paramref name="baseEv"/>, der vom Belichtungsregler
+        ''' kommt (Tonmodell 4, ImageAdjustments.RawExposureEv). Ist er positiv, schrumpft der
+        ''' Schwarzabzug mit dem Weisspunkt der Rampe, um 2^sliderEv: mit festem Abzug lagen die
+        ''' tiefsten Toene bei +1 rund 2 L, bei +2 rund 5 L unter dem Referenzprogramm, so geschrumpft
+        ''' noch 0,1 und 1,0 (LIGHTROOM_ANGLEICH.md, „Zwei Varianten der RAW-Stufe"). Die
+        ''' Grundbelichtung der Kamera bleibt aussen vor: auf ihr ist der Abzug geeicht. Bei 0 oder
+        ''' darunter die Rampe wie bisher, bitgleich; negativ traf es schon.</param>
+        Friend Shared Function ToneRampFor(baseEv As Double, normalization As Double,
+                                           Optional sliderEv As Double = 0.0) As ToneRamp
+            Dim black = BlackSubtraction
+            If sliderEv > 0.0 Then black /= 2.0 ^ sliderEv
             If Not Double.IsFinite(normalization) OrElse normalization <= 1.0 Then
-                Return New ToneRamp(baseEv, BlackSubtraction)
+                Return New ToneRamp(baseEv, black)
             End If
-            Return New ToneRamp(baseEv + Math.Log(normalization, 2.0), BlackSubtraction / normalization)
+            Return New ToneRamp(baseEv + Math.Log(normalization, 2.0), black / normalization)
         End Function
 
         ''' <summary>LibRaws Nachfuehrung des Weisspunkts, AUSGESCHALTET (0).
@@ -2526,11 +2536,13 @@ Namespace Services
                                            lens As LensDataService.Korrektur,
                                            Optional useHalfSize As Boolean = False,
                                            Optional recoverHighlights As Boolean = False,
-                                           Optional knee As Double = HighlightRecoveryKnee) As SKBitmap
+                                           Optional knee As Double = HighlightRecoveryKnee,
+                                           Optional sliderEv As Double = 0.0) As SKBitmap
             ' ZUERST DER 16-BIT-ZWISCHENSPEICHER. Alles, was die Rampe steuert, wird erst in
             ' Convert16 angewandt; liegen die linearen Daten noch da, ist ein LibRaw-Lauf
             ' vergeudet. Die halbe Kantenlaenge bleibt aussen vor: sie hat eine andere Groesse
             ' und darf nie als Arbeitsbild herauskommen.
+            ' sliderEv: der Anteil des Belichtungsreglers an baseEv (ToneRampFor).
             Dim wantedKnee = If(recoverHighlights, knee, 1.0)
             DiagnosticLogService.LogAlways("RawDecodeService.HighlightRecovery",
                 $"request file={IO.Path.GetFileName(path)}; enabled={recoverHighlights}; knee={wantedKnee:F2}; half={useHalfSize}")
@@ -2539,7 +2551,7 @@ Namespace Services
             If Not useHalfSize Then
                 Try
                     writeTime = File.GetLastWriteTimeUtc(path)
-                    Dim reused = TryBuildFromCachedRaw(path, writeTime, demosaic, lens, baseEv, wantedKnee)
+                    Dim reused = TryBuildFromCachedRaw(path, writeTime, demosaic, lens, baseEv, wantedKnee, sliderEv)
                     If reused IsNot Nothing Then
                         DiagnosticLogService.LogAlways("RawDecodeService.RawCache", "Treffer, LibRaw uebersprungen")
                         Return reused
@@ -2762,7 +2774,7 @@ Namespace Services
                             End SyncLock
                         End Try
                     End If
-                    Return BuildFrom16Bit(pixels, width, height, lens, baseEv, normalization, wantedKnee)
+                    Return BuildFrom16Bit(pixels, width, height, lens, baseEv, normalization, wantedKnee, sliderEv)
                 End If
 
                 Dim bitmap = New SKBitmap(New SKImageInfo(width, height, SKColorType.Bgra8888, SKAlphaType.Opaque))
