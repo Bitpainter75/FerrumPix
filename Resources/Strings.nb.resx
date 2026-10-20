@@ -9888,4 +9888,28 @@
   <data name="0_Anpassungsebenen_werden_nicht_bernommen_923cda4a" xml:space="preserve">
     <value>{0} justeringslag importeres ikke.</value>
   </data>
+  <data name="Linear_nachbelichten_7f0edfaa" xml:space="preserve">
+    <value>Lineær etterbelysning</value>
+  </data>
+  <data name="Strahlendes_Licht_c5afccb3" xml:space="preserve">
+    <value>Sterkt lys</value>
+  </data>
+  <data name="Lineares_Licht_3520ae2d" xml:space="preserve">
+    <value>Lineært lys</value>
+  </data>
+  <data name="Lichtpunkt_fa5ae658" xml:space="preserve">
+    <value>Punktlys</value>
+  </data>
+  <data name="Harte_Mischung_51974e90" xml:space="preserve">
+    <value>Hard blanding</value>
+  </data>
+  <data name="Subtrahieren_c2285c1d" xml:space="preserve">
+    <value>Trekk fra</value>
+  </data>
+  <data name="Dividieren_8307883d" xml:space="preserve">
+    <value>Divider</value>
+  </data>
+  <data name="Weiches_Licht_PSD_7fc2ab6c" xml:space="preserve">
+    <value>Mykt lys (PSD)</value>
+  </data>
 </root>

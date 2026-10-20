@@ -12,12 +12,7 @@ Namespace Services
     ''' die Zeichen selbst liegen. Diese Struktur wird hier durchlaufen, bis der Schlüssel gefunden
     ''' ist; alles andere wird übersprungen.
     '''
-    ''' Bewusst NUR der Wortlaut. Schrift, Grad, Laufweite und Farbe stecken daneben in "EngineData",
-    ''' einem eigenen, verschachtelten Datenblock, dessen Aufbau nirgends festgeschrieben ist. Was
-    ''' man daraus mit Raten gewänne, wäre ein Text, der anders aussieht als im Original - und der
-    ''' Fehler fiele erst auf, wenn jemand genau hinsieht. Lage und Größe kommen deshalb aus dem
-    ''' Ebenenrechteck, die Farbe wird aus den gerasterten Bildpunkten gemessen, und die Schrift ist
-    ''' die Vorgabe. Wer das nicht will, lässt die Ebene als Bild kommen - dann stimmt jeder Punkt.
+    ''' Schriftangaben werden, soweit lesbar, aus dem EngineData-Block übernommen.
     ''' </summary>
     Public NotInheritable Class PsdTextReader
 
@@ -28,6 +23,30 @@ Namespace Services
         Private Const MaxStringChars As Integer = 100_000
         Private Const MaxDescriptorItems As Integer = 4_096
         Private Const MaxDepth As Integer = 24
+
+        Public Shared Function ExtractStyle(block As Byte()) As PsdEngineData
+            If block Is Nothing OrElse block.Length < 56 Then Return Nothing
+            Dim descriptor = PsdDescriptor.ParseVersioned(block, 52)
+            If descriptor Is Nothing Then Return Nothing
+            Dim style = PsdEngineData.Parse(TryCast(descriptor.GetValue("EngineData"), Byte()))
+            If style Is Nothing Then Return Nothing
+            Dim xx = MatrixValue(block, 2), xy = MatrixValue(block, 10)
+            Dim yx = MatrixValue(block, 18), yy = MatrixValue(block, 26)
+            Dim scale = Math.Sqrt(Math.Abs(xx * yy - xy * yx))
+            If Double.IsFinite(scale) AndAlso scale > 0 AndAlso scale <= 1000 Then
+                style.FontSize *= scale
+            Else
+                style.FontSize = 0
+            End If
+            Return style
+        End Function
+
+        Private Shared Function MatrixValue(block As Byte(), offset As Integer) As Double
+            Dim bytes(7) As Byte
+            Buffer.BlockCopy(block, offset, bytes, 0, 8)
+            If BitConverter.IsLittleEndian Then Array.Reverse(bytes)
+            Return BitConverter.ToDouble(bytes, 0)
+        End Function
 
         ''' <summary>Liest den Wortlaut aus einem TySh-Block. "" wenn keiner darin steht oder der
         ''' Aufbau nicht verstanden wird - dann bleibt die Ebene ein Bild.</summary>

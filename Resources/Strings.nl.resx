@@ -9888,4 +9888,28 @@
   <data name="0_Anpassungsebenen_werden_nicht_bernommen_923cda4a" xml:space="preserve">
     <value>{0} aanpassingslagen worden niet geïmporteerd.</value>
   </data>
+  <data name="Linear_nachbelichten_7f0edfaa" xml:space="preserve">
+    <value>Lineair doordrukken</value>
+  </data>
+  <data name="Strahlendes_Licht_c5afccb3" xml:space="preserve">
+    <value>Fel licht</value>
+  </data>
+  <data name="Lineares_Licht_3520ae2d" xml:space="preserve">
+    <value>Lineair licht</value>
+  </data>
+  <data name="Lichtpunkt_fa5ae658" xml:space="preserve">
+    <value>Puntlicht</value>
+  </data>
+  <data name="Harte_Mischung_51974e90" xml:space="preserve">
+    <value>Harde mix</value>
+  </data>
+  <data name="Subtrahieren_c2285c1d" xml:space="preserve">
+    <value>Aftrekken</value>
+  </data>
+  <data name="Dividieren_8307883d" xml:space="preserve">
+    <value>Delen</value>
+  </data>
+  <data name="Weiches_Licht_PSD_7fc2ab6c" xml:space="preserve">
+    <value>Zwak licht (PSD)</value>
+  </data>
 </root>

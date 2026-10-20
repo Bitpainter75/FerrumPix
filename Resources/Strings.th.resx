@@ -9892,4 +9892,28 @@
   <data name="0_Anpassungsebenen_werden_nicht_bernommen_923cda4a" xml:space="preserve">
     <value>ไม่ได้นำเข้าเลเยอร์ปรับแต่ง {0} เลเยอร์</value>
   </data>
+  <data name="Linear_nachbelichten_7f0edfaa" xml:space="preserve">
+    <value>เบิร์นเชิงเส้น</value>
+  </data>
+  <data name="Strahlendes_Licht_c5afccb3" xml:space="preserve">
+    <value>แสงจ้า</value>
+  </data>
+  <data name="Lineares_Licht_3520ae2d" xml:space="preserve">
+    <value>แสงเชิงเส้น</value>
+  </data>
+  <data name="Lichtpunkt_fa5ae658" xml:space="preserve">
+    <value>แสงเฉพาะจุด</value>
+  </data>
+  <data name="Harte_Mischung_51974e90" xml:space="preserve">
+    <value>ผสมแบบแข็ง</value>
+  </data>
+  <data name="Subtrahieren_c2285c1d" xml:space="preserve">
+    <value>ลบ</value>
+  </data>
+  <data name="Dividieren_8307883d" xml:space="preserve">
+    <value>หาร</value>
+  </data>
+  <data name="Weiches_Licht_PSD_7fc2ab6c" xml:space="preserve">
+    <value>แสงนุ่ม (PSD)</value>
+  </data>
 </root>

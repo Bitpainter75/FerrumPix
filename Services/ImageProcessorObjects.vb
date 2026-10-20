@@ -353,6 +353,7 @@ Namespace Services
                     .BlendMode = ResolveAnnotationBlendMode(group.BlendMode),
                     .IsAntialias = True,
                     .Color = New SKColor(255, 255, 255, alpha)}
+                    ApplyCustomAnnotationBlender(paint, group.BlendMode)
                     canvas.DrawBitmap(groupLayer, layerX - targetX, layerY - targetY, paint)
                 End Using
             End Using
@@ -1243,19 +1244,26 @@ Namespace Services
                 Return
             End If
             Using paint = New SKPaint With {.BlendMode = ResolveAnnotationBlendMode(blendModeName), .IsAntialias = True}
+                ApplyCustomAnnotationBlender(paint, blendModeName)
                 canvas.DrawBitmap(layer, dx, dy, paint)
             End Using
         End Sub
 
         Private Shared Sub DrawAnnotationLayer(canvas As SKCanvas, layer As SKBitmap, blendModeName As String)
             Using paint = New SKPaint With {.BlendMode = ResolveAnnotationBlendMode(blendModeName), .IsAntialias = True}
+                ApplyCustomAnnotationBlender(paint, blendModeName)
                 canvas.DrawBitmap(layer, 0, 0, paint)
             End Using
         End Sub
 
         Private Shared Function IsNormalAnnotationBlendMode(blendModeName As String) As Boolean
-            Return ResolveAnnotationBlendMode(blendModeName) = SKBlendMode.SrcOver
+            Return Not PsdBlendModes.IsCustom(blendModeName) AndAlso ResolveAnnotationBlendMode(blendModeName) = SKBlendMode.SrcOver
         End Function
+
+        Private Shared Sub ApplyCustomAnnotationBlender(paint As SKPaint, blendModeName As String)
+            Dim blender = PsdBlendModes.GetBlender(blendModeName)
+            If blender IsNot Nothing Then paint.Blender = blender
+        End Sub
 
         Private Shared Function ResolveAnnotationBlendMode(blendModeName As String) As SKBlendMode
             Select Case If(blendModeName, "Normal").Trim().ToLowerInvariant()

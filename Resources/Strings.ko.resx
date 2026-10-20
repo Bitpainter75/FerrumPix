@@ -9892,4 +9892,28 @@
   <data name="0_Anpassungsebenen_werden_nicht_bernommen_923cda4a" xml:space="preserve">
     <value>조정 레이어 {0}개를 가져오지 않습니다.</value>
   </data>
+  <data name="Linear_nachbelichten_7f0edfaa" xml:space="preserve">
+    <value>선형 번</value>
+  </data>
+  <data name="Strahlendes_Licht_c5afccb3" xml:space="preserve">
+    <value>비비드 라이트</value>
+  </data>
+  <data name="Lineares_Licht_3520ae2d" xml:space="preserve">
+    <value>선형 라이트</value>
+  </data>
+  <data name="Lichtpunkt_fa5ae658" xml:space="preserve">
+    <value>핀 라이트</value>
+  </data>
+  <data name="Harte_Mischung_51974e90" xml:space="preserve">
+    <value>하드 믹스</value>
+  </data>
+  <data name="Subtrahieren_c2285c1d" xml:space="preserve">
+    <value>빼기</value>
+  </data>
+  <data name="Dividieren_8307883d" xml:space="preserve">
+    <value>나누기</value>
+  </data>
+  <data name="Weiches_Licht_PSD_7fc2ab6c" xml:space="preserve">
+    <value>소프트 라이트 (PSD)</value>
+  </data>
 </root>

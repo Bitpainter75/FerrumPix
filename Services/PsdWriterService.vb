@@ -160,10 +160,11 @@ Namespace Services
         Private Shared ReadOnly BlendKeys As New Dictionary(Of String, String)(StringComparer.OrdinalIgnoreCase) From {
             {"Normal", "norm"}, {"Multiply", "mul "}, {"Screen", "scrn"}, {"Overlay", "over"},
             {"Darken", "dark"}, {"Lighten", "lite"}, {"ColorDodge", "div "}, {"ColorBurn", "idiv"},
-            {"HardLight", "hLit"}, {"SoftLight", "sLit"}, {"Difference", "diff"}, {"Exclusion", "smud"},
+            {"HardLight", "hLit"}, {"SoftLight", "sLit"}, {"PsdSoftLight", "sLit"}, {"Difference", "diff"}, {"Exclusion", "smud"},
             {"Hue", "hue "}, {"Saturation", "sat "}, {"Color", "colr"}, {"Luminosity", "lum "},
             {"LinearDodge", "lddg"}, {"LinearBurn", "lbrn"}, {"VividLight", "vLit"}, {"LinearLight", "lLit"},
-            {"PinLight", "pLit"}, {"HardMix", "hMix"}, {"Add", "lddg"}, {"Plus", "lddg"}
+            {"PinLight", "pLit"}, {"HardMix", "hMix"}, {"Subtract", "fsub"}, {"Divide", "fdiv"},
+            {"Add", "lddg"}, {"Plus", "lddg"}
         }
 
         ''' <summary>Schreibt Gesamtbild und Ebenen als .psd. Liefert False, wenn die Masse ausserhalb

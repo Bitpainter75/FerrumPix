@@ -69,6 +69,7 @@ Namespace Services
             ''' <summary>Der Wortlaut, wenn es eine Textebene ist, sonst "". Nur der Wortlaut - was
             ''' die Schrift angeht, siehe PsdTextReader.</summary>
             Public Property TextContent As String = ""
+            Public Property TextStyle As PsdEngineData
 
             ''' <summary>Die Ebenenmaske als Alpha8-Raster, oder Nothing. Gehört dem Aufrufer.
             '''
@@ -96,6 +97,7 @@ Namespace Services
             ''' <summary>Die Maske ist in Photoshop abgeschaltet. Sie bleibt erhalten und wirkt
             ''' nicht - dasselbe kennt der eigene Maskentyp als <c>IsDisabled</c>.</summary>
             Public Property MaskDisabled As Boolean
+            Public Property MaskFeatherPixels As Single
 
             Public ReadOnly Property HasMask As Boolean
                 Get
@@ -128,18 +130,15 @@ Namespace Services
         ''' <summary>Rückübersetzung der Vierzeichenschlüssel. Was hier fehlt, wird "Normal" - die
         ''' Bildpunkte stimmen dann, nur das Zusammenrechnen weicht ab.
         '''
-        ''' Linear abwedeln ("lddg") ist die Addition und heißt im eigenen Renderer "Plus"; der
-        ''' Schreiber bildet es umgekehrt genauso ab. Unter seinem eigenen Namen kannte der Renderer
-        ''' es nicht und mischte still normal. Die übrigen Photoshop-Modi ohne Gegenstück im Renderer
-        ''' (Linear nachbelichten, Strahlendes, Lineares und Lichtpunkt-Licht, Harte Mischung) stehen
-        ''' hier unter ihrem Namen, damit sie ein Schreiben überleben; gerechnet werden sie normal.</summary>
+        ''' Linear abwedeln ("lddg") ist die Addition und heißt im eigenen Renderer "Plus". Die
+        ''' weiteren hier genannten Photoshop-Modi werden durch eigene Blender gerechnet.</summary>
         Private Shared ReadOnly BlendNames As New Dictionary(Of String, String)(StringComparer.Ordinal) From {
             {"norm", "Normal"}, {"mul ", "Multiply"}, {"scrn", "Screen"}, {"over", "Overlay"},
             {"dark", "Darken"}, {"lite", "Lighten"}, {"div ", "ColorDodge"}, {"idiv", "ColorBurn"},
-            {"hLit", "HardLight"}, {"sLit", "SoftLight"}, {"diff", "Difference"}, {"smud", "Exclusion"},
+            {"hLit", "HardLight"}, {"sLit", "PsdSoftLight"}, {"diff", "Difference"}, {"smud", "Exclusion"},
             {"hue ", "Hue"}, {"sat ", "Saturation"}, {"colr", "Color"}, {"lum ", "Luminosity"},
             {"lddg", "Plus"}, {"lbrn", "LinearBurn"}, {"vLit", "VividLight"}, {"lLit", "LinearLight"},
-            {"pLit", "PinLight"}, {"hMix", "HardMix"}
+            {"pLit", "PinLight"}, {"hMix", "HardMix"}, {"fsub", "Subtract"}, {"fdiv", "Divide"}
         }
 
         ''' <summary>Die Datei als Ganzes: Maße des Dokuments und die Ebenen darin.</summary>
@@ -362,6 +361,7 @@ Namespace Services
                         .IsVisible = (rec.Flags And 2) = 0,
                         .Pixels = bmp,
                         .TextContent = rec.TextContent,
+                        .TextStyle = rec.TextStyle,
                         .MaskPixels = maskBmp,
                         .MaskLeft = rec.MaskLeft,
                         .MaskTop = rec.MaskTop,
@@ -369,6 +369,7 @@ Namespace Services
                         .MaskHeight = If(maskBmp IsNot Nothing, rec.MaskBottom - rec.MaskTop, 0),
                         .MaskDefaultValue = rec.MaskDefaultValue,
                         .MaskDisabled = rec.MaskDisabled,
+                        .MaskFeatherPixels = CSng(2.0 * rec.AppliedFeather),
                         .SectionType = rec.SectionType,
                         .HasEffects = rec.HasEffects
                     })
@@ -493,6 +494,7 @@ Namespace Services
             ''' Eine Gruppenmarke oder eine Ebene ohne Fläche trägt keine Bildpunkte.
             Public Property HasPixels As Boolean = True
             Public Property TextContent As String = ""
+            Public Property TextStyle As PsdEngineData
             ''' Das Rechteck der Ebenenmaske, in Dokumentkoordinaten wie das der Ebene.
             Public Property MaskTop As Integer
             Public Property MaskLeft As Integer
@@ -506,6 +508,11 @@ Namespace Services
             Public Property MaskChannelId As Integer = -2
             ''' Merkmal Bit 3: die Maske in Kanal -2 hat Photoshop aus Vektordaten gerechnet.
             Public Property MaskFromVectorData As Boolean
+            Public Property PixelDensity As Byte = 255
+            Public Property VectorDensity As Byte = 255
+            Public Property PixelFeather As Double
+            Public Property VectorFeather As Double
+            Public Property AppliedFeather As Double
             ''' Die zweite Maske des Maskenblocks, zu Kanal -3: Rechteck, Vorgabewert, Merkmale.
             Public Property HasRealMask As Boolean
             Public Property RealMaskTop As Integer
@@ -631,6 +638,7 @@ Namespace Services
                     Dim textBlock(CInt(blockLen) - 1) As Byte
                     If ReadExactly(fs, textBlock, textBlock.Length) Then
                         rec.TextContent = PsdTextReader.ExtractText(textBlock)
+                        rec.TextStyle = PsdTextReader.ExtractStyle(textBlock)
                     End If
                 ElseIf (bk = "lmfx" OrElse bk = "lfx2" OrElse bk = "lfxs") AndAlso blockLen >= 8 AndAlso blockLen < 8_000_000 Then
                     ' Effekte. "lmfx" schreibt Photoshop, sobald eine Effektart mehrfach vorkommt,
@@ -843,6 +851,28 @@ Namespace Services
                     Dim afterParameters = 19 + MaskParameterBytes(data(18))
                     If length >= afterParameters + 18 Then realAt = afterParameters
                 End If
+                If (flags And 16) <> 0 Then
+                    Dim parameterAt = If(realAt = 18, 36, 18)
+                    If parameterAt < data.Length Then
+                        Dim pf = CInt(data(parameterAt))
+                        Dim pos = parameterAt + 1
+                        If pos + MaskParameterBytes(CByte(pf)) <= data.Length Then
+                            If (pf And 1) <> 0 Then
+                                rec.PixelDensity = data(pos)
+                                pos += 1
+                            End If
+                            If (pf And 2) <> 0 Then
+                                rec.PixelFeather = ReadMaskFeather(data, pos)
+                                pos += 8
+                            End If
+                            If (pf And 4) <> 0 Then
+                                rec.VectorDensity = data(pos)
+                                pos += 1
+                            End If
+                            If (pf And 8) <> 0 Then rec.VectorFeather = ReadMaskFeather(data, pos)
+                        End If
+                    End If
+                End If
                 If realAt >= 0 AndAlso realAt + 18 <= data.Length Then
                     Dim realFlags = CInt(data(realAt))
                     If ApplyMaskRect(rec, data, realAt + 2, realFlags,
@@ -889,6 +919,15 @@ Namespace Services
         Private Shared Function MaskParameterBytes(parameterFlags As Byte) As Integer
             Return If((parameterFlags And 1) <> 0, 1, 0) + If((parameterFlags And 2) <> 0, 8, 0) +
                    If((parameterFlags And 4) <> 0, 1, 0) + If((parameterFlags And 8) <> 0, 8, 0)
+        End Function
+
+        Private Shared Function ReadMaskFeather(data As Byte(), offset As Integer) As Double
+            Dim bytes(7) As Byte
+            Buffer.BlockCopy(data, offset, bytes, 0, 8)
+            If BitConverter.IsLittleEndian Then Array.Reverse(bytes)
+            Dim value = BitConverter.ToDouble(bytes, 0)
+            If Double.IsNaN(value) OrElse Double.IsInfinity(value) OrElse value < 0 OrElse value > 10000 Then Return 0
+            Return value
         End Function
 
         ''' <summary>Steht der zweite Maskensatz VOR den Parametern? Die Formatbeschreibung nennt
@@ -999,7 +1038,23 @@ Namespace Services
 
             ' Die Maske erst nach allen Kanälen bauen: bei zwei Masken stehen -2 und -3 in
             ' beliebiger Reihenfolge, und multipliziert wird erst, wenn beide da sind.
+            If maskPlane IsNot Nothing Then
+                rec.AppliedFeather = If(rec.MaskChannelId = -3 OrElse Not rec.MaskFromVectorData, rec.PixelFeather, rec.VectorFeather)
+                Dim density = If(rec.MaskChannelId = -3 OrElse Not rec.MaskFromVectorData, rec.PixelDensity, rec.VectorDensity)
+                ApplyMaskDensity(maskPlane, density)
+                rec.MaskDefaultValue = MaskDensityValue(rec.MaskDefaultValue, density)
+            End If
+            If vectorPlane IsNot Nothing Then
+                ApplyMaskDensity(vectorPlane, rec.VectorDensity)
+                rec.VectorMaskDefaultValue = MaskDensityValue(rec.VectorMaskDefaultValue, rec.VectorDensity)
+            End If
             If maskPlane IsNot Nothing AndAlso vectorPlane IsNot Nothing Then
+                maskPlane = FeatherMaskPlane(maskPlane, rec.MaskLeft, rec.MaskTop, rec.MaskRight, rec.MaskBottom,
+                                             rec.MaskDefaultValue, rec.PixelFeather)
+                vectorPlane = FeatherMaskPlane(vectorPlane, rec.VectorMaskLeft, rec.VectorMaskTop,
+                                               rec.VectorMaskRight, rec.VectorMaskBottom,
+                                               rec.VectorMaskDefaultValue, rec.VectorFeather)
+                rec.AppliedFeather = 0
                 maskBitmap = CombineMaskPlanes(rec, maskPlane, vectorPlane)
             ElseIf maskPlane IsNot Nothing Then
                 maskBitmap = BuildAlphaBitmap(maskPlane, maskWidth, maskHeight)
@@ -1011,6 +1066,7 @@ Namespace Services
                 rec.MaskRight = rec.VectorMaskRight
                 rec.MaskDefaultValue = rec.VectorMaskDefaultValue
                 rec.MaskDisabled = False
+                rec.AppliedFeather = rec.VectorFeather
                 maskBitmap = BuildAlphaBitmap(vectorPlane, vectorWidth, vectorHeight)
             End If
 
@@ -1112,6 +1168,54 @@ Namespace Services
             rec.MaskBottom = bottom
             rec.MaskDefaultValue = CByte((realDefault * vecDefault + 127) \ 255)
             Return BuildAlphaBitmap(combined, width, height)
+        End Function
+
+        Private Shared Function MaskDensityValue(value As Byte, density As Byte) As Byte
+            Return CByte(255 - ((255 - CInt(value)) * CInt(density) + 127) \ 255)
+        End Function
+
+        Private Shared Sub ApplyMaskDensity(plane As Byte(), density As Byte)
+            If density = 255 Then Return
+            For i = 0 To plane.Length - 1
+                plane(i) = MaskDensityValue(plane(i), density)
+            Next
+        End Sub
+
+        ''' Beide Masken müssen vor ihrer Multiplikation einzeln weichgezeichnet werden. Der Rand
+        ''' wird mit dem PSD-Vorgabewert aufgefüllt; transparentes Padding wäre bei Vorgabe Weiß falsch.
+        Private Shared Function FeatherMaskPlane(plane As Byte(), ByRef left As Integer, ByRef top As Integer,
+                                                 ByRef right As Integer, ByRef bottom As Integer,
+                                                 defaultValue As Byte, sigma As Double) As Byte()
+            If sigma <= 0.025 Then Return plane
+            Dim width = right - left, height = bottom - top
+            Dim innerPad = CInt(Math.Ceiling(sigma * 4.0))
+            Dim pad = innerPad * 2
+            Dim paddedWidth = CLng(width) + 2L * pad, paddedHeight = CLng(height) + 2L * pad
+            If paddedWidth * paddedHeight > MaxTotalLayerPixels OrElse paddedWidth > Integer.MaxValue OrElse
+               paddedHeight > Integer.MaxValue Then Throw New InvalidOperationException("PSD mask feather exceeds memory limit")
+            Dim w = CInt(paddedWidth), h = CInt(paddedHeight)
+            Using input = BuildAlphaBitmap(plane, width, height),
+                  padded = New SKBitmap(w, h, SKColorType.Alpha8, SKAlphaType.Premul),
+                  result = New SKBitmap(w, h, SKColorType.Alpha8, SKAlphaType.Premul)
+                If input Is Nothing Then Throw New InvalidOperationException("Invalid PSD mask")
+                Using canvas = New SKCanvas(padded)
+                    canvas.Clear(New SKColor(0, 0, 0, defaultValue))
+                    Using paint = New SKPaint With {.BlendMode = SKBlendMode.Src}
+                        canvas.DrawBitmap(input, pad, pad, paint)
+                    End Using
+                End Using
+                Using canvas = New SKCanvas(result), paint = New SKPaint()
+                    paint.ImageFilter = SKImageFilter.CreateBlur(CSng(sigma), CSng(sigma))
+                    canvas.DrawBitmap(padded, 0, 0, paint)
+                End Using
+                Dim outWidth = width + 2 * innerPad, outHeight = height + 2 * innerPad
+                Dim output(outWidth * outHeight - 1) As Byte
+                For y = 0 To outHeight - 1
+                    Runtime.InteropServices.Marshal.Copy(IntPtr.Add(result.GetPixels(), (y + innerPad) * result.RowBytes + innerPad), output, y * outWidth, outWidth)
+                Next
+                left -= innerPad : top -= innerPad : right += innerPad : bottom += innerPad
+                Return output
+            End Using
         End Function
 
         ''' <summary>Eine Graustufenfläche als Alpha8-Bitmap. Genau die Bauform, die der eigene

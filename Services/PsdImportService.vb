@@ -210,10 +210,8 @@ Namespace Services
                     If layer.Pixels Is Nothing Then Continue For
                     Dim groupId = If(openGroups.Count > 0, openGroups(openGroups.Count - 1).Id, "")
 
-                    ' Textebene als Textobjekt, wenn der Nutzer es so wollte. Lage und Größe kommen
-                    ' aus dem Ebenenrechteck, die Farbe wird aus den gerasterten Bildpunkten
-                    ' gemessen, der Schriftgrad aus der Höhe geschätzt. Die Schrift selbst bleibt die
-                    ' Vorgabe - was in der Datei dazu steht, ist nicht verlässlich zu lesen.
+                    ' Textebene als Textobjekt, wenn der Nutzer es so wollte. Fehlende Schriftwerte
+                    ' werden aus dem Ebenenrechteck und den gerasterten Bildpunkten geschätzt.
                     ' Die Ebenenmaske wird ein eigener Eintrag im Rezept, auf den die Ebene über ihre
                     ' MaskId zeigt - genauso, wie eine hier gebaute Maske am Objekt hängt. Damit
                     ' bleibt sie nach dem Öffnen mit dem Maskenpinsel änderbar, statt in den
@@ -221,7 +219,8 @@ Namespace Services
                     Dim maskId = AddLayerMask(adjustments, layer, doc.Width, doc.Height)
 
                     If textAsText AndAlso Not String.IsNullOrWhiteSpace(layer.TextContent) Then
-                        adjustments.Annotations.Add(New ImageAnnotation With {
+                        Dim style = layer.TextStyle
+                        Dim annotation As New ImageAnnotation With {
                             .Kind = "Text",
                             .Text = layer.TextContent,
                             .CustomName = If(layer.Name, ""),
@@ -229,8 +228,8 @@ Namespace Services
                             .YPixels = layer.Top,
                             .WidthPixels = layer.Width,
                             .HeightPixels = layer.Height,
-                            .FontSizePixels = EstimateFontSize(layer.Height, layer.TextContent),
-                            .FillColor = MeasureDominantColor(layer.Pixels),
+                            .FontSizePixels = If(style IsNot Nothing AndAlso style.FontSize > 0 AndAlso style.FontSize <= 100_000, CSng(style.FontSize), EstimateFontSize(layer.Height, layer.TextContent)),
+                            .FillColor = If(style IsNot Nothing AndAlso Not String.IsNullOrEmpty(style.FillColor), style.FillColor, MeasureDominantColor(layer.Pixels)),
                             .Opacity = layer.OpacityPercent,
                             .BlendMode = layer.BlendMode,
                             .ClipToLayerBelow = layer.ClipToLayerBelow,
@@ -238,7 +237,9 @@ Namespace Services
                             .MaskId = maskId,
                             .GroupId = groupId,
                             .LockAspect = False
-                        })
+                        }
+                        If style IsNot Nothing Then ApplyPsdFont(annotation, style.FontName)
+                        adjustments.Annotations.Add(annotation)
                         index += 1
                         Continue For
                     End If
@@ -426,6 +427,7 @@ Namespace Services
                     .Right = right,
                     .Bottom = bottom,
                     .PngBase64 = encoded,
+                    .FeatherPixels = layer.MaskFeatherPixels,
                     .IsDisabled = layer.MaskDisabled
                 }
                 adjustments.Masks.Add(mask)
@@ -474,6 +476,26 @@ Namespace Services
         ''' alle Zeilen samt Ober- und Unterlängen; ein Anteil davon je Zeile kommt dem Schriftgrad
         ''' nahe genug, um den Text an seinem Platz stehen zu lassen. Genau ist das nicht und kann es
         ''' nicht sein - der wahre Wert steht in einem Block, der sich nicht verlässlich lesen lässt.</summary>
+        Private Shared Sub ApplyPsdFont(annotation As ImageAnnotation, postscriptName As String)
+            If String.IsNullOrWhiteSpace(postscriptName) Then Return
+            Dim parts = postscriptName.Split("-"c, 2)
+            Dim familyKey = parts(0).Replace(" ", "")
+            Dim family As String = Nothing
+            For Each candidate In SKFontManager.Default.FontFamilies
+                If String.Equals(candidate.Replace(" ", ""), familyKey, StringComparison.OrdinalIgnoreCase) Then
+                    family = candidate
+                    Exit For
+                End If
+            Next
+            If family Is Nothing Then Return
+            annotation.FontFamily = family
+            If parts.Length > 1 Then
+                annotation.Bold = parts(1).IndexOf("bold", StringComparison.OrdinalIgnoreCase) >= 0
+                annotation.Italic = parts(1).IndexOf("italic", StringComparison.OrdinalIgnoreCase) >= 0 OrElse
+                                    parts(1).IndexOf("oblique", StringComparison.OrdinalIgnoreCase) >= 0
+            End If
+        End Sub
+
         Private Shared Function EstimateFontSize(layerHeight As Integer, text As String) As Single
             Dim lines = 1
             If Not String.IsNullOrEmpty(text) Then

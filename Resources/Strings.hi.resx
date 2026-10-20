@@ -9892,4 +9892,28 @@
   <data name="0_Anpassungsebenen_werden_nicht_bernommen_923cda4a" xml:space="preserve">
     <value>{0} समायोजन परतें आयात नहीं की जाएंगी।</value>
   </data>
+  <data name="Linear_nachbelichten_7f0edfaa" xml:space="preserve">
+    <value>लीनियर बर्न</value>
+  </data>
+  <data name="Strahlendes_Licht_c5afccb3" xml:space="preserve">
+    <value>विविड लाइट</value>
+  </data>
+  <data name="Lineares_Licht_3520ae2d" xml:space="preserve">
+    <value>लीनियर लाइट</value>
+  </data>
+  <data name="Lichtpunkt_fa5ae658" xml:space="preserve">
+    <value>पिन लाइट</value>
+  </data>
+  <data name="Harte_Mischung_51974e90" xml:space="preserve">
+    <value>हार्ड मिक्स</value>
+  </data>
+  <data name="Subtrahieren_c2285c1d" xml:space="preserve">
+    <value>घटाना</value>
+  </data>
+  <data name="Dividieren_8307883d" xml:space="preserve">
+    <value>विभाजित करना</value>
+  </data>
+  <data name="Weiches_Licht_PSD_7fc2ab6c" xml:space="preserve">
+    <value>कोमल प्रकाश (PSD)</value>
+  </data>
 </root>
