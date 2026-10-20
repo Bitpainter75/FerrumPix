@@ -831,8 +831,8 @@ Namespace Services
             ' Lichter und Tiefen waehlen ihre Kurve nach der Helligkeit des ganzen Bildes, Weiss im
             ' Tonmodell 3 nach seiner Spitze.
             If toneModel >= 2 Then
-                Dim highlightsShadows = ToneSliderCurves.Lift("Highlights", adj.Highlights, d0, reference.MedianL) +
-                                        ToneSliderCurves.Lift("Shadows", adj.ShadowsLevel, d0, reference.MedianL)
+                Dim highlightsShadows = ToneSliderCurves.Lift("Highlights", adj.Highlights, d0, reference.MedianL, toneModel) +
+                                        ToneSliderCurves.Lift("Shadows", adj.ShadowsLevel, d0, reference.MedianL, toneModel)
                 ' Der oertliche Teil gibt es erst im Tonmodell 3.
                 If part = ToneZonePart.Local Then Return If(toneModel >= 3, highlightsShadows, 0.0)
                 Dim whites = If(toneModel >= 3,

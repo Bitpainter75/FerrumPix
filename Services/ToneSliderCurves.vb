@@ -33,6 +33,13 @@ Namespace Services
         ''' LoadResource fuellt dieses hier.</summary>
         Private Shared ReadOnly MedianCurves As New Dictionary(Of String, (Medians As Double(), Sets As Double()()()))(StringComparer.Ordinal)
 
+        ''' <summary>Tonmodell 3: eigene Gruppenmitten fuer dieselben Kurven (Schluessel
+        ''' "mediansModel3"). Die Mitten stammen aus unseren Nullbildern, und die liegen mit der
+        ''' Grundbelichtung je Kamera (seit sie ab Werk gilt) rund 6 L tiefer als ohne. Modell 2 behaelt
+        ''' die Mitten, mit denen es veroeffentlicht wurde, damit gespeicherte Bearbeitungen gleich
+        ''' bleiben. Steht wie MedianCurves VOR Curves.</summary>
+        Private Shared ReadOnly MedianCentersModel3 As New Dictionary(Of String, Double())(StringComparer.Ordinal)
+
         ''' <summary>Weiss je Spitze des Bildes (Schluessel Whites): das 99. Perzentil von L je Gruppe,
         ''' und je Stellung eine Kurve je Gruppe. Gemessen haengt Weiss nicht am Median, sondern daran,
         ''' wie nah die Lichter schon an Weiss stehen: Weiss +100 hebt ein flaues Bild weit und eines,
@@ -127,7 +134,13 @@ Namespace Services
                                 If complete Then
                                     Dim suffix = If(byTop, "ByTop", "ByMedian")
                                     Dim target = If(byTop, TopCurves, MedianCurves)
-                                    target(slider.Name.Substring(0, slider.Name.Length - suffix.Length)) = (medians, sets)
+                                    Dim key = slider.Name.Substring(0, slider.Name.Length - suffix.Length)
+                                    target(key) = (medians, sets)
+                                    Dim model3Element As JsonElement
+                                    If byMedian AndAlso slider.Value.TryGetProperty("mediansModel3", model3Element) Then
+                                        Dim centres3 = model3Element.EnumerateArray().Select(Function(e) e.GetDouble()).ToArray()
+                                        If centres3.Length = medians.Length Then MedianCentersModel3(key) = centres3
+                                    End If
                                 End If
                                 Continue For
                             End If
@@ -174,11 +187,17 @@ Namespace Services
         ''' <summary>Wie <see cref="Lift"/>, aber nach der Helligkeit des ganzen Bildes: liegen fuer den
         ''' Regler Kurven je Bildmedian vor, wird zwischen den Gruppen linear nach
         ''' <paramref name="imageMedianL"/> (L, 0 bis 100) geteilt, ausserhalb die naechste Gruppe.
-        ''' Ohne solche Kurven oder ohne Median (0 oder weniger) die mittlere Kurve.</summary>
-        Public Shared Function Lift(slider As String, value As Double, v As Double, imageMedianL As Double) As Double
+        ''' Ohne solche Kurven oder ohne Median (0 oder weniger) die mittlere Kurve. Ab
+        ''' <paramref name="toneModel"/> 3 gelten die Mitten aus "mediansModel3", wo es sie gibt.</summary>
+        Public Shared Function Lift(slider As String, value As Double, v As Double, imageMedianL As Double,
+                                    Optional toneModel As Integer = 2) As Double
             Dim entry As (Medians As Double(), Sets As Double()()()) = Nothing
             If imageMedianL <= 0.0 OrElse value = 0.0 OrElse Not MedianCurves.TryGetValue(slider, entry) Then
                 Return Lift(slider, value, v)
+            End If
+            Dim centres3 As Double() = Nothing
+            If toneModel >= 3 AndAlso MedianCentersModel3.TryGetValue(slider, centres3) Then
+                entry = (centres3, entry.Sets)
             End If
             Return LiftGrouped(slider, entry, value, v, imageMedianL)
         End Function
@@ -186,20 +205,24 @@ Namespace Services
         ''' <summary>Wie <see cref="Lift"/>, aber nach der Spitze des Bildes: liegen fuer den Regler
         ''' Kurven je Spitze vor (bisher nur Weiss), wird zwischen den Gruppen linear nach
         ''' <paramref name="imageTopL"/> (99. Perzentil von L, 0 bis 100) geteilt, ausserhalb die
-        ''' naechste Gruppe. Ohne solche Kurven oder ohne Spitze (0 oder weniger) die mittlere Kurve.</summary>
+        ''' naechste Gruppe. Ohne solche Kurven oder ohne Spitze (0 oder weniger) die mittlere Kurve.
+        ''' Die Verstaerkung steht unter "WhitesByTop" in "gains", getrennt von der des Reglers: die
+        ''' Kurven je Spitze rechnet nur Tonmodell 3, und Modell 2 behaelt so seine Staerke.</summary>
         Public Shared Function LiftByTop(slider As String, value As Double, v As Double, imageTopL As Double) As Double
             Dim entry As (Medians As Double(), Sets As Double()()()) = Nothing
             If imageTopL <= 0.0 OrElse value = 0.0 OrElse Not TopCurves.TryGetValue(slider, entry) Then
                 Return Lift(slider, value, v)
             End If
-            Return LiftGrouped(slider, entry, value, v, imageTopL)
+            Return LiftGrouped(slider, entry, value, v, imageTopL, slider & "ByTop")
         End Function
 
         ''' <summary>Hub aus Kurven je Gruppe: linear zwischen den beiden Gruppen, deren Mitten
         ''' <paramref name="measure"/> einschliessen, ausserhalb die naechste Gruppe; im Wert wie
         ''' <see cref="Lift"/> zwischen 0, 50 und 100 linear.</summary>
         Private Shared Function LiftGrouped(slider As String, entry As (Medians As Double(), Sets As Double()()()),
-                                            value As Double, v As Double, measure As Double) As Double
+                                            value As Double, v As Double, measure As Double,
+                                            Optional gainKey As String = Nothing) As Double
+            Dim gainSlider = If(gainKey IsNot Nothing AndAlso Gains.ContainsKey(gainKey), gainKey, slider)
             Dim m = entry.Medians
             Dim gi = 0
             Dim f = 0.0
@@ -218,9 +241,9 @@ Namespace Services
             Dim magnitude = Math.Min(100.0, Math.Abs(value))
             Dim halfSet = If(value < 0, entry.Sets(1), entry.Sets(2))
             Dim fullSet = If(value < 0, entry.Sets(0), entry.Sets(3))
-            Dim atHalf = (Sample(halfSet(gi), v) + (Sample(halfSet(gi + 1), v) - Sample(halfSet(gi), v)) * f) * Gain(slider, value, False)
+            Dim atHalf = (Sample(halfSet(gi), v) + (Sample(halfSet(gi + 1), v) - Sample(halfSet(gi), v)) * f) * Gain(gainSlider, value, False)
             If magnitude <= 50.0 Then Return atHalf * magnitude / 50.0
-            Dim atFull = (Sample(fullSet(gi), v) + (Sample(fullSet(gi + 1), v) - Sample(fullSet(gi), v)) * f) * Gain(slider, value, True)
+            Dim atFull = (Sample(fullSet(gi), v) + (Sample(fullSet(gi + 1), v) - Sample(fullSet(gi), v)) * f) * Gain(gainSlider, value, True)
             Return atHalf + (atFull - atHalf) * (magnitude - 50.0) / 50.0
         End Function
 

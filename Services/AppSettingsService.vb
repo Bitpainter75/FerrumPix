@@ -464,11 +464,15 @@ Namespace Services
         Public Property DevelopRawInBatch As Boolean = True
 
         ''' <summary>Kamera-Referenzwerte fuer die Grundbelichtung benutzen (CameraBaselineTable).
-        ''' Standard AUS: die Werte gleichen die Kameramodelle UNTEREINANDER an, ihre absolute Lage
-        ''' haengt aber an einer einzigen Kamera mit echtem Referenzexport - und die ist selbst
-        ''' untypisch. Bis ein zweiter Referenzexport vorliegt, ist das eine Wahl des Nutzers und
-        ''' keine Vorgabe. Siehe OFFENE_PUNKTE.md.</summary>
-        Public Property UseCameraBaselineTable As Boolean = False
+        ''' Standard AN: an 57 Aufnahmen vieler Kameras trifft die Grundentwicklung mit Tabelle die
+        ''' Helligkeitsverteilung des Referenzprogramms im Median auf 0,3 L, ohne Tabelle liegt sie
+        ''' rund 6 L heller. Die Tonregler sind mit Tabelle geeicht.
+        '''
+        ''' WIRKT NUR AUF NEUE INSTALLATIONEN: die settings.json traegt jede Eigenschaft, vorhandene
+        ''' Installationen behalten also ihren gespeicherten Wert. Das ist gewollt, denn der Schalter
+        ''' wirkt auf JEDE Entwicklung, auch auf Bilder, deren Regler auf der festen Grundbelichtung
+        ''' eingestellt wurden; das Rezept haelt die Grundbelichtung nicht fest.</summary>
+        Public Property UseCameraBaselineTable As Boolean = True
         ''' <summary>Die Farbkalibrierung aus der Kameratabelle als Startwert der Kalibrierungsregler
         ''' einer unbearbeiteten RAW (CameraBaselineTable.ColorCalibrationFor). Getrennt von der
         ''' Grundhelligkeit, weil es ein anderer Wunsch ist: wer gleich helle Kameras will, will
