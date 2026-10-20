@@ -654,12 +654,17 @@ Namespace Services
         ''' <param name="knee">Die Staerke der Lichterrettung, siehe
         ''' <see cref="HighlightRecoveryKnee"/>. Die Anwendung laesst sie weg; angeben tut sie nur
         ''' die Messung, die den Wert ueberhaupt erst bestimmt hat.</param>
+        ''' <param name="exposureEv">Belichtung in Blendenstufen, die zur Grundbelichtung in die
+        ''' Rampe kommt (Tonmodell 4, ImageAdjustments.RawExposureEv). Sie steht damit auch im
+        ''' Schluessel des Zwischenspeichers, und ein neuer Wert wird aus den 16-Bit-Daten umgesetzt,
+        ''' ohne LibRaw erneut laufen zu lassen.</param>
         Public Shared Function TryDecode(path As String,
                                          Optional lensChoice As LensDataService.Wahl = Nothing,
                                          Optional recoverHighlights As Boolean = False,
-                                         Optional knee As Double = HighlightRecoveryKnee) As SKBitmap
+                                         Optional knee As Double = HighlightRecoveryKnee,
+                                         Optional exposureEv As Double = 0.0) As SKBitmap
             If String.IsNullOrWhiteSpace(path) OrElse Not IsAvailable Then Return Nothing
-            Return DecodeGate.Run(Function() DecodeIntern(path, lensChoice, recoverHighlights, knee))
+            Return DecodeGate.Run(Function() DecodeIntern(path, lensChoice, recoverHighlights, knee, exposureEv))
         End Function
 
         ''' <summary>Reduzierter RAW-Decode ausschliesslich fuer kleine Vorschauen. LibRaw kann nur
@@ -668,16 +673,18 @@ Namespace Services
         ''' dessen Schluessel: ein 1/2-Decode darf niemals als Arbeitsbild wieder herauskommen.</summary>
         Friend Shared Function TryDecodeThumbnail(path As String,
                                                    Optional lensChoice As LensDataService.Wahl = Nothing,
-                                                   Optional recoverHighlights As Boolean = False) As SKBitmap
+                                                   Optional recoverHighlights As Boolean = False,
+                                                   Optional exposureEv As Double = 0.0) As SKBitmap
             If String.IsNullOrWhiteSpace(path) OrElse Not IsAvailable Then Return Nothing
-            Return DecodeGate.Run(Function() DecodeThumbnailIntern(path, lensChoice, recoverHighlights))
+            Return DecodeGate.Run(Function() DecodeThumbnailIntern(path, lensChoice, recoverHighlights, exposureEv))
         End Function
 
         Private Shared Function DecodeThumbnailIntern(path As String,
                                                        lensChoice As LensDataService.Wahl,
-                                                       recoverHighlights As Boolean) As SKBitmap
+                                                       recoverHighlights As Boolean,
+                                                       exposureEv As Double) As SKBitmap
             Try
-                Dim baseEv = BaseExposureForFile(path)
+                Dim baseEv = BaseExposureForFile(path) + exposureEv
                 Dim lens = LensCorrectionForFile(path, lensChoice)
                 Dim decoded As SKBitmap
                 If _reentrant Then
@@ -696,10 +703,13 @@ Namespace Services
         Private Shared Function DecodeIntern(path As String,
                                              lensChoice As LensDataService.Wahl,
                                              recoverHighlights As Boolean,
-                                             knee As Double) As SKBitmap
+                                             knee As Double,
+                                             exposureEv As Double) As SKBitmap
             Try
                 Dim writeTime = File.GetLastWriteTimeUtc(path)
-                Dim baseEv = BaseExposureForFile(path)
+                ' Grundbelichtung der Kamera plus die Belichtung des Reglers (Tonmodell 4): beides
+                ' ist dieselbe Rampe, und als Summe steht es im Schluessel des Zwischenspeichers.
+                Dim baseEv = BaseExposureForFile(path) + exposureEv
                 Dim lens = LensCorrectionForFile(path, lensChoice)
                 ' Der Schluessel MUSS jede Groesse tragen, die das Ergebnis veraendert. Fehlt eine,
                 ' liefert der Cache das Bild der vorigen Einstellung zurueck, und der Schalter
@@ -3016,15 +3026,34 @@ Namespace Services
                 Else
                     v = qScale * (x - (blackLevel - radius)) ^ 2
                 End If
-                ' ACR3-Kurve mit linearer Interpolation zwischen den 129 Stuetzstellen.
-                Dim pos = Math.Max(0.0, Math.Min(1.0, v)) * (Acr3Kurve.Length - 1)
-                Dim idx = CInt(Math.Floor(pos))
-                If idx > Acr3Kurve.Length - 2 Then idx = Acr3Kurve.Length - 2
-                Dim f = pos - idx
-                Dim yk = Acr3Kurve(idx) * (1.0 - f) + Acr3Kurve(idx + 1) * f
-                t(i) = CInt(Math.Round(Math.Max(0.0, Math.Min(1.0, yk)) * 65535.0))
+                t(i) = CInt(Math.Round(Math.Max(0.0, Math.Min(1.0, Acr3CurveAt(v))) * 65535.0))
             Next
             Return t
+        End Function
+
+        ''' <summary>Die ACR3-Kurve an einer Stelle der Rampe (0..1), linear interpoliert zwischen
+        ''' den 129 Stuetzstellen; das Ergebnis ist linear wie die Eingabe. Dieselbe Rechnung wie in
+        ''' der Tontabelle, damit die Automatik die Wirkung der Belichtung in der RAW-Stufe mit genau
+        ''' der Kurve vorhersagt, die der Decode rechnet.</summary>
+        Friend Shared Function Acr3CurveAt(v As Double) As Double
+            Dim pos = Math.Max(0.0, Math.Min(1.0, v)) * (Acr3Kurve.Length - 1)
+            Dim idx = CInt(Math.Floor(pos))
+            If idx > Acr3Kurve.Length - 2 Then idx = Acr3Kurve.Length - 2
+            Dim f = pos - idx
+            Return Acr3Kurve(idx) * (1.0 - f) + Acr3Kurve(idx + 1) * f
+        End Function
+
+        ''' <summary>Umkehrung von <see cref="Acr3CurveAt"/>: welche Stelle der Rampe landet auf dem
+        ''' linearen Wert <paramref name="y"/>? Die Kurve steigt, also genuegt eine Halbierung.</summary>
+        Friend Shared Function Acr3CurveInverse(y As Double) As Double
+            If y <= Acr3CurveAt(0.0) Then Return 0.0
+            If y >= Acr3CurveAt(1.0) Then Return 1.0
+            Dim low = 0.0, high = 1.0
+            For i = 1 To 40
+                Dim mid = (low + high) / 2.0
+                If Acr3CurveAt(mid) < y Then low = mid Else high = mid
+            Next
+            Return (low + high) / 2.0
         End Function
 
         Private Shared Function BuildGammaTable() As Integer()

@@ -386,11 +386,13 @@ Namespace Services
         ''' Kennlinien, aber Lichter und Tiefen OERTLICH: ihr Hub richtet sich nach der geglaetteten
         ''' Helligkeit der Umgebung statt nach dem Bildpunkt, die Feinstruktur wandert mit und wird
         ''' je Zone nach Messung verstaerkt oder gedaempft (UsesLocalToneZones,
-        ''' ImageProcessor.LocalToneBase, ToneSliderCurves.DetailGain).
+        ''' ImageProcessor.LocalToneBase, ToneSliderCurves.DetailGain). 4 = wie 3, dazu bei RAW die
+        ''' Belichtung in der Rampe der RAW-Stufe, VOR der Tonkurve wie beim Referenzprogramm
+        ''' (<see cref="RawExposureEv"/>); bei Belichtung 0 rechnet 4 bitgleich wie 3.
         '''
         ''' Dasselbe Muster wie <see cref="WhiteBalanceModel"/>, aus demselben Grund: beide Modelle
         ''' geben demselben Reglerwert eine andere Bedeutung, und eine gespeicherte Bearbeitung muss
-        ''' so bleiben, wie sie gespeichert wurde. 0 heisst „nicht angegeben" und rechnet als 3,
+        ''' so bleiben, wie sie gespeichert wurde. 0 heisst „nicht angegeben" und rechnet als 4,
         ''' das Modell aller neuen Bearbeitungen; beim Speichern wird daraus die feste Zahl
         ''' (FpxService.SerializeAdjustments), beim Laden bekommt ein Rezept ohne das Feld mit
         ''' gesetzten Tonreglern die 1 (NormalizeLoadedAdjustments).
@@ -403,7 +405,57 @@ Namespace Services
         ''' Kennlinien-Ressource bleibt es bei 1.</summary>
         Public Function ResolvedToneModel() As Integer
             If Not ToneSliderCurves.Available Then Return 1
-            Return If(ToneModel > 0, ToneModel, 3)
+            Return If(ToneModel > 0, ToneModel, 4)
+        End Function
+
+        ''' <summary>Die Belichtung in Blendenstufen, die bei einer RAW-Datei in die Rampe der
+        ''' RAW-Stufe gehoert: ab Tonmodell 4 der ganze Regler, sonst nichts. Ein Filmnegativ behaelt
+        ''' sie in der Kette, denn dort steht die Umkehr VOR der Belichtung. Ob die Datei dann
+        ''' wirklich ueber die RAW-Stufe kommt, entscheidet erst der Decode; was er aufgenommen hat,
+        ''' steht danach in <see cref="ExposureInSource"/>.</summary>
+        Public Function RawExposureEv() As Double
+            If Not ExposureBelongsToRawStage() Then Return 0.0
+            Return Exposure / ExposurePointsPerStop
+        End Function
+
+        ''' <summary>Gehoert die Belichtung bei einer RAW-Datei in die RAW-Stufe, unabhaengig davon,
+        ''' wo der Regler gerade steht? Die Automatik fragt das, bevor sie einen Wert waehlt.</summary>
+        Public Function ExposureBelongsToRawStage() As Boolean
+            Return ResolvedToneModel() >= 4 AndAlso Not NegativeEnabled
+        End Function
+
+        ''' <summary>Wie viel Belichtung, in Punkten des Reglers, schon im QUELLBILD steckt. Die
+        ''' Reglerkette rechnet nur noch den Rest (<see cref="ChainExposure"/>).
+        '''
+        ''' Gesetzt von dem, der das Quellbild liefert: vom Decode, wenn er die Belichtung in die
+        ''' Rampe der RAW-Stufe gelegt hat (ImageProcessor.DecodeForRender), und vom Editor fuer sein
+        ''' Arbeitsbild. Dort bleibt nach dem Einbacken (Retusche, Striche) der Stand des Moments
+        ''' stehen; spaetere Aenderungen wirken in der Kette, damit beim ersten Strich nichts springt.
+        '''
+        ''' Eine Eigenschaft des Bildes, nicht des Looks: nicht gespeichert, nicht auf andere Fotos
+        ''' oder Maskenebenen uebertragen (StructuralPropertyNames). 0 rechnet wie bisher.</summary>
+        <System.Text.Json.Serialization.JsonIgnore>
+        Public Property ExposureInSource As Single = 0.0F
+
+        ''' <summary>Die Belichtung, die die Reglerkette noch anwenden muss, in Punkten.</summary>
+        Public Function ChainExposure() As Single
+            Return Exposure - ExposureInSource
+        End Function
+
+        ''' <summary>Entsteht das Quellbild mit der Belichtung neu, sobald sie ruht? Gesetzt vom
+        ''' Editor fuer sein Arbeitsbild einer entwickelten RAW ohne eingebackenen Inhalt. Dann ist
+        ''' <see cref="ChainExposure"/> nur ein Vorgriff auf den Neuaufbau, und die Kette rechnet sie
+        ''' wie die RAW-Stufe (Rampe mal Faktor, dann die ACR3-Kurve) statt als Faktor nach allem;
+        ''' sonst springt das Bild, wenn das neue Arbeitsbild kommt
+        ''' (ImageProcessor.RawStageExposureAt). Wie <see cref="ExposureInSource"/> eine Eigenschaft
+        ''' des Bildes: nicht gespeichert, nicht uebertragen.</summary>
+        <System.Text.Json.Serialization.JsonIgnore>
+        Public Property SourceFollowsRawExposure As Boolean = False
+
+        ''' <summary>Rechnet die Kette ihre Belichtung wie die RAW-Stufe?
+        ''' Siehe <see cref="SourceFollowsRawExposure"/>.</summary>
+        Public Function ChainExposureInRawStage() As Boolean
+            Return SourceFollowsRawExposure AndAlso ExposureBelongsToRawStage()
         End Function
 
         ''' <summary>Wirken Lichter oder Tiefen oertlich (Tonmodell 3)? Dann haengt ihr Ergebnis an
@@ -919,6 +971,12 @@ Namespace Services
         ''' Arbeitsbild gestanzt hat - im .fpx-Rezept persistiert, damit Schachbrett und
         ''' Transparenz-Verhalten das Wiederöffnen überleben.</summary>
         Public Property WorkingImageHasTransparency As Boolean = False
+        ''' <summary>Wie viel Belichtung, in Punkten des Reglers, im gespeicherten Arbeitsbild eines
+        ''' .fpx-Buendels steckt (retouch.png). Ab Tonmodell 4 liegt die Belichtung bei RAW in der
+        ''' RAW-Stufe; ein eingebackenes Arbeitsbild traegt deshalb die Belichtung des Moments, und
+        ''' die Kette darf beim Wiederoeffnen nur den Rest rechnen (ExposureInSource). Ohne
+        ''' Arbeitsbild im Buendel bedeutungslos: dann wird die Basis frisch entwickelt.</summary>
+        Public Property WorkingImageExposure As Single = 0.0F
 
         ''' <summary>Vorgänge, die in die PIXEL gerechnet wurden: Entrauschen mit Modell und
         ''' Objektentfernen (siehe <see cref="BakedOperation"/>). In der REIHENFOLGE ihrer Anwendung -
@@ -1102,10 +1160,10 @@ Namespace Services
         Private Shared ReadOnly StructuralPropertyNames As New HashSet(Of String)(StringComparer.Ordinal) From {
             "SourceWidthPixels", "SourceHeightPixels", "RecipeCoordinateVersion",
             "WhiteBalanceAnchorX", "WhiteBalanceAnchorY", "WhiteBalanceModel", "WhiteBalanceMode",
-            "RawHighlightRecovery", "RawSensorEdgeCrop",
+            "RawHighlightRecovery", "RawSensorEdgeCrop", "ExposureInSource", "SourceFollowsRawExposure",
             "LensDistortion", "LensTca", "LensVignetting", "LensModel",
             "LensDistortionAmount", "LensTcaAmount", "LensVignettingAmount", "LensTcaRed", "LensTcaBlue",
-            "WorkingImageVersion", "WorkingImageHasTransparency",
+            "WorkingImageVersion", "WorkingImageHasTransparency", "WorkingImageExposure",
             "GeometryOperations",
             "BakedOperations", "BakedOperationsApplied",
             "RotationDegrees", "StraightenDegrees", "StraightenExpandCanvas", "StraightenAutoCrop", "FlipHorizontal", "FlipVertical",
@@ -1379,6 +1437,9 @@ Namespace Services
                 .LensTcaBlue = LensTcaBlue,
                 .WorkingImageVersion = WorkingImageVersion,
                 .WorkingImageHasTransparency = WorkingImageHasTransparency,
+                .WorkingImageExposure = WorkingImageExposure,
+                .ExposureInSource = ExposureInSource,
+                .SourceFollowsRawExposure = SourceFollowsRawExposure,
                 .BakedOperationsApplied = BakedOperationsApplied,
                 .Brightness = Brightness,
                 .Contrast = Contrast,

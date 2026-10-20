@@ -230,7 +230,8 @@ Namespace Services
 
             ' --- Farbmatrix: exakt die Bedingung aus ApplyColorAdjustments, nur OHNE Dynamik ---
             ' Dynamik ist keine Matrixstufe mehr (chroma-abhaengig, siehe unten), also nicht mehr hier.
-            Dim wantsColor = adj.Exposure <> 0 OrElse adj.Temperature <> 0 OrElse adj.Tint <> 0 OrElse
+            ' Die Belichtung zaehlt nur, soweit sie nicht schon im Quellbild steckt (ExposureInSource).
+            Dim wantsColor = adj.ChainExposure() <> 0 OrElse adj.Temperature <> 0 OrElse adj.Tint <> 0 OrElse
                              adj.Saturation <> 0 OrElse adj.Contrast <> 0 OrElse
                              adj.Brightness <> 0
             ' Kalibrierung wirkt auf die Primaerfarben und gehoert damit VOR Weissabgleich und
@@ -265,7 +266,7 @@ Namespace Services
             ' Im Tonmodell 2 gehoert der Kontrast zu den Zonen (gemessene Kennlinie, farbtonerhaltend)
             ' und nicht mehr zur Tonwertkurve; siehe ImageAdjustments.ToneModel.
             Dim contrastInZones = toneModel >= 2
-            Dim wantsTone = adj.Exposure <> 0 OrElse (adj.Contrast <> 0 AndAlso Not contrastInZones) OrElse adj.Brightness <> 0
+            Dim wantsTone = adj.ChainExposure() <> 0 OrElse (adj.Contrast <> 0 AndAlso Not contrastInZones) OrElse adj.Brightness <> 0
             Dim wantsTonal = adj.Highlights <> 0 OrElse adj.ShadowsLevel <> 0 OrElse
                              adj.Whites <> 0 OrElse adj.Blacks <> 0 OrElse
                              (adj.Contrast <> 0 AndAlso contrastInZones)
@@ -1510,15 +1511,22 @@ Namespace Services
                                                         includeTonal As Boolean,
                                                         includeRgbCurve As Boolean,
                                                         toneModel As Integer) As Single()
-            Dim exposureGain = CSng(Math.Pow(2.0, adj.Exposure / 100.0 * 4.0))
+            Dim exposureGain = CSng(Math.Pow(2.0, adj.ChainExposure() / 100.0 * 4.0))
+            ' Greift die Belichtung nur dem Neuaufbau aus der RAW-Stufe vor, rechnet sie wie dort und
+            ' nicht mehr als Faktor im Linearlicht (ImageAdjustments.SourceFollowsRawExposure).
+            Dim rawStageGain = 1.0F
+            If adj.ChainExposureInRawStage() AndAlso exposureGain <> 1.0F Then
+                rawStageGain = exposureGain
+                exposureGain = 1.0F
+            End If
             ' Im Tonmodell 2 rechnet der Kontrast in den Zonen (BuildToneZoneTable), hier nicht.
             Dim contrast = If(toneModel >= 2, 1.0F, Math.Max(0.0F, 1.0F + adj.Contrast / 100.0F * 0.75F))
             Dim brightness = adj.Brightness / 100.0F * 80.0F / 255.0F
 
             Dim rgbPoints = If(includeRgbCurve, ParseCurvePoints(adj.CurveRgbPoints), Nothing)
 
-            Dim low = ToneTransfer(0.0F, exposureGain, contrast, brightness)
-            Dim high = ToneTransfer(1.0F, exposureGain, contrast, brightness)
+            Dim low = ToneTransfer(RawStageExposureAt(0.0F, rawStageGain), exposureGain, contrast, brightness)
+            Dim high = ToneTransfer(RawStageExposureAt(1.0F, rawStageGain), exposureGain, contrast, brightness)
             Dim overshootHigh = Math.Max(0.0F, high - 1.0F)
             Dim overshootLow = Math.Max(0.0F, -low)
             Dim shoulder = Clamp(ToneShoulderBase + 0.5F * overshootHigh, ToneShoulderBase, ToneShoulderMax)
@@ -1534,7 +1542,7 @@ Namespace Services
                 Dim v = i / CSng(PointOpTableSize - 1)
 
                 If includeTone Then
-                    Dim y = ToneTransfer(v, exposureGain, contrast, brightness)
+                    Dim y = ToneTransfer(RawStageExposureAt(v, rawStageGain), exposureGain, contrast, brightness)
                     Dim hard = Clamp(y, 0.0F, 1.0F)
                     Dim soft = SoftShoulder(y, toe, shoulder)
                     v = Clamp(hard + (soft - hard) * rolloff, 0.0F, 1.0F)
@@ -1560,6 +1568,17 @@ Namespace Services
             Return table
         End Function
 
+        ''' <summary>Die Belichtung wie in der RAW-Stufe auf einen Tonwert des entwickelten Bildes
+        ''' (Gammawert): zurueck ins Linearlicht und durch die umgekehrte ACR3-Kurve auf die Rampe,
+        ''' dort mal Faktor und bei 1 abgeschnitten, dann wieder durch die Kurve. Je Kanal statt nach
+        ''' der RGBTone-Regel des Decodes und ohne den Schwarzabzug der Rampe; fuer die Zeit bis zum
+        ''' Neuaufbau nah genug. Bei Faktor 1 der Wert selbst, bitgleich.</summary>
+        Friend Shared Function RawStageExposureAt(v As Single, gain As Single) As Single
+            If gain = 1.0F Then Return v
+            Dim ramp = RawDecodeService.Acr3CurveInverse(SrgbToLinear(Clamp(v, 0.0F, 1.0F)))
+            Return Clamp(LinearToSrgb(CSng(RawDecodeService.Acr3CurveAt(Math.Min(1.0, ramp * gain)))), 0.0F, 1.0F)
+        End Function
+
         ''' <summary>Gibt einer absichtlich abgesenkten Lichterzone nach positiver Belichtung wieder
         ''' Abstand. Die RAW-Lichterrettung legt oberhalb des Weisspunkts echte Sensorwerte frei;
         ''' die Belichtungs-Schulter muss diese aber vor der 8-Bit-Ausgabe verdichten. Ohne den
@@ -1572,12 +1591,17 @@ Namespace Services
         ''' obere Zone und laesst den Weisspunkt unveraendert; normale Belichtung, JPEGs und ein
         ''' neutraler oder positiver Lichter-Regler bleiben bitgleich.</summary>
         Private Shared Function PreserveRecoveredHighlightSeparation(v As Single, peak As Single, adj As ImageAdjustments) As Single
-            If adj Is Nothing OrElse Not adj.RawHighlightRecovery OrElse adj.Exposure <= 0.0F OrElse adj.Highlights >= 0.0F Then Return v
+            ' Nur die Belichtung, die die Kette rechnet: steckt sie schon im Quellbild (Tonmodell 4,
+            ' RAW-Stufe), hat die Rampe die geretteten Lichter selbst ausgerollt.
+            ' Ebenso, wenn sie nur dem Neuaufbau aus der RAW-Stufe vorgreift.
+            Dim chainExposure = adj?.ChainExposure()
+            If adj Is Nothing OrElse Not adj.RawHighlightRecovery OrElse chainExposure <= 0.0F OrElse adj.Highlights >= 0.0F Then Return v
+            If adj.ChainExposureInRawStage() Then Return v
 
             ' Der UI-Wert speichert 25 Punkte je EV. Bei +0,30 EV und Lichter -30 ergibt sich
             ' Faktor 1,54: genug Abstand fuer die gerettete Struktur, mit einer festen Obergrenze
             ' gegen unnatuerlichen Mikrokontrast bei extremen Einstellungen.
-            Dim ev = Math.Min(5.0, adj.Exposure / 25.0)
+            Dim ev = Math.Min(5.0, CDbl(chainExposure) / 25.0)
             Dim loweredHighlights = Math.Min(1.0, -adj.Highlights / 100.0)
             Dim expansion = CSng(1.0 + Math.Min(0.75, ev * loweredHighlights * 6.0))
             If expansion <= 1.0F Then Return v

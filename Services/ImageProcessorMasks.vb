@@ -2719,9 +2719,10 @@ Namespace Services
         Public Shared Function ExtractRegionToFile(sourcePath As String, adj As ImageAdjustments, pixelRect As SKRectI, targetPngPath As String,
                                                    Optional workingFull As SKBitmap = Nothing) As Boolean
             Try
-                Using original = If(workingFull, DecodeForAdjustments(sourcePath, adj))
+                Dim renderAdj = adj
+                Using original = If(workingFull, DecodeForRender(sourcePath, adj, renderAdj))
                     If original Is Nothing Then Return False
-                    Using processed = ProcessBitmap(original, adj)
+                    Using processed = ProcessBitmap(original, renderAdj)
                         Dim left = Math.Max(0, pixelRect.Left)
                         Dim top = Math.Max(0, pixelRect.Top)
                         Dim right = Math.Min(processed.Width, pixelRect.Right)
@@ -3437,9 +3438,10 @@ Namespace Services
                                                    pixelRect As SKRectI, mask As SKBitmap,
                                                    Optional workingFull As SKBitmap = Nothing) As SKBitmap
             Try
-                Using original = If(workingFull, DecodeForAdjustments(sourcePath, adj))
+                Dim renderAdj = adj
+                Using original = If(workingFull, DecodeForRender(sourcePath, adj, renderAdj))
                     If original Is Nothing Then Return Nothing
-                    Using processed = ProcessBitmap(original, adj)
+                    Using processed = ProcessBitmap(original, renderAdj)
                         Dim left = Math.Max(0, pixelRect.Left)
                         Dim top = Math.Max(0, pixelRect.Top)
                         Dim right = Math.Min(processed.Width, pixelRect.Right)
@@ -3485,9 +3487,10 @@ Namespace Services
                     workingFull?.Dispose()
                     Return False
                 End If
-                Using original = If(workingFull, DecodeForAdjustments(sourcePath, adj))
+                Dim renderAdj = adj
+                Using original = If(workingFull, DecodeForRender(sourcePath, adj, renderAdj))
                     If original Is Nothing Then Return False
-                    Using processed = ProcessBitmap(original, adj)
+                    Using processed = ProcessBitmap(original, renderAdj)
                         Dim left = Math.Max(0, pixelRect.Left)
                         Dim top = Math.Max(0, pixelRect.Top)
                         Dim right = Math.Min(processed.Width, pixelRect.Right)

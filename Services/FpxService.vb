@@ -142,6 +142,13 @@ Namespace Services
                     part.ToneModel = If(part.UsesToneModel(), 2, 0)
                 ElseIf part.ToneModel <= 0 AndAlso part.UsesToneModel() Then
                     part.ToneModel = If(model > 0, model, part.ResolvedToneModel())
+                ElseIf part.ToneModel <= 0 AndAlso part.Exposure <> 0.0F Then
+                    ' DIE BELICHTUNG haengt erst seit Tonmodell 4 am Modell (bei RAW in der RAW-Stufe).
+                    ' Ein Rezept, das sie ohne Modell traegt, wurde davor gespeichert, und dort rechnete
+                    ' sie in der Kette: beim Laden deshalb 3, das letzte Modell davor. Ohne Tonregler
+                    ' rechnen 1 bis 3 die Belichtung gleich, und weitere Regler verhalten sich wie vor
+                    ' Modell 4. Beim Speichern das Modell, mit dem gerade gerechnet wird.
+                    part.ToneModel = If(model > 0, 3, part.ResolvedToneModel())
                 End If
             Next
         End Sub
@@ -152,7 +159,8 @@ Namespace Services
         Private Const UnpinnedObjectToneModel As Integer = -2
 
         Private Shared Function NeedsToneModelPin(adj As ImageAdjustments) As Boolean
-            Return ToneModelCarriers(adj).Any(Function(part) part.ToneModel <= 0 AndAlso part.UsesToneModel())
+            Return ToneModelCarriers(adj).Any(Function(part) part.ToneModel <= 0 AndAlso
+                                                             (part.UsesToneModel() OrElse part.Exposure <> 0.0F))
         End Function
 
         ''' <summary>Jeder Satz Anpassungen im Rezept, der eigene Tonregler hat: das Rezept selbst,

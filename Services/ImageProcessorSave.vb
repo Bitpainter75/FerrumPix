@@ -544,7 +544,11 @@ Namespace Services
                 ' .fpx-Projekte beim echten Speichern/Konvertieren immer aus Basisbild + Rezept rendern.
                 ' composite.png ist nur ein schnelles Anzeige-/Thumbnail-Bild und kann bewusst verkleinert sein.
                 Dim isFpxSource = FpxService.IsFpx(sourcePath)
-                Dim decoded = If(workingFull, If(isFpxSource, RenderFpxFullResolution(sourcePath), DecodeForAdjustments(sourcePath, adj, developRaw)))
+                ' renderAdj ist das Rezept fuer die Kette: ein hereingereichtes Arbeitsbild bringt
+                ' seine Belichtung im Rezept mit (ExposureInSource), ein selbst entwickeltes RAW
+                ' meldet sie ueber DecodeForRender. Gespeichert wird weiter adj.
+                Dim renderAdj = adj
+                Dim decoded = If(workingFull, If(isFpxSource, RenderFpxFullResolution(sourcePath), DecodeForRender(sourcePath, adj, renderAdj, developRaw)))
                 ' Nur auf dem SELBST dekodierten Bild: ein hereingereichtes Arbeitsbild traegt die
                 ' Vorgaenge schon, und ein zweites Entrauschen sieht man erst, wenn man die Bilder
                 ' nebeneinanderlegt. Und VOR der Reglerkette, weil sie zum Bild gehoeren und nicht
@@ -728,7 +732,7 @@ Namespace Services
                         End If
                     End Try
 
-                    Using processed = ProcessBitmap(original, adj)
+                    Using processed = ProcessBitmap(original, renderAdj)
                         ' DIE LETZTE FRAGE VOR DEM SCHREIBEN. Die Modellwege steigen an ihrer
                         ' Kachelgrenze aus, aber die Reglerkette darunter laeuft am Stueck und kostet
                         ' bei einem grossen Bild Sekunden. Wer in dieser Zeit abbricht, bekaeme sonst
@@ -895,19 +899,36 @@ Namespace Services
                 ' Pinsel-/Radiererstriche stehen seit Stufe D NUR noch dort, nicht mehr im Rezept.
                 ' Ein Vorschauauflösungs-Altbestand (Seed) wird ignoriert (Maße-Check).
                 Dim inputPath = loaded.BaseImagePath
+                Dim fromStage = False
                 If Not String.IsNullOrWhiteSpace(loaded.RetouchStagePath) AndAlso File.Exists(loaded.RetouchStagePath) Then
                     Dim baseSize = GetOrientedImageSize(loaded.BaseImagePath)
                     Dim stageSize = GetOrientedImageSize(loaded.RetouchStagePath)
                     If baseSize.Width > 0 AndAlso stageSize.Width = baseSize.Width AndAlso stageSize.Height = baseSize.Height Then
                         inputPath = loaded.RetouchStagePath
+                        fromStage = True
                     End If
                 End If
-                Using baseBitmap = DecodeForAdjustments(inputPath, loaded.Adjustments)
+                ' Das eingebackene Arbeitsbild traegt die Belichtung, die beim Speichern darin stak
+                ' (WorkingImageExposure); die Basis wird frisch entwickelt, ab Tonmodell 4 mit der
+                ' Belichtung in der RAW-Stufe.
+                Dim recipe = If(loaded.Adjustments, New ImageAdjustments())
+                Dim renderAdj = recipe
+                Dim baseBitmap As SKBitmap
+                If fromStage Then
+                    baseBitmap = DecodeForAdjustments(inputPath, recipe)
+                    If recipe.WorkingImageExposure <> 0.0F Then
+                        renderAdj = recipe.Clone()
+                        renderAdj.ExposureInSource = recipe.WorkingImageExposure
+                    End If
+                Else
+                    baseBitmap = DecodeForRender(inputPath, recipe, renderAdj)
+                End If
+                Using baseBitmap
                     If baseBitmap Is Nothing Then Return Nothing
                     ' Vollrenderer, Viewer und Export verwenden dieselbe geteilte Szenen-Komposition
                     ' wie der Editor. Besonders OwnWarp plus Drehung darf nicht durch den alten,
                     ' rein gebackenen Objektweg in einer anderen Reihenfolge gezeichnet werden.
-                    Return RenderSceneFullResolution(baseBitmap, If(loaded.Adjustments, New ImageAdjustments()))
+                    Return RenderSceneFullResolution(baseBitmap, renderAdj)
                 End Using
             Finally
                 If Not String.IsNullOrWhiteSpace(loaded.TempDir) Then

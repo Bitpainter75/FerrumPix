@@ -2,6 +2,13 @@
 
 ### What's new
 
+- **Exposure on raw files works like in a raw developer.** The exposure slider now acts on the
+  raw data before the tone curve, so darkening brings back detail in bright skies instead of just
+  greying them, and brightening opens up the shadows more naturally. While you drag, the picture
+  follows at once and already looks almost like the result; a moment after you let go, it is
+  rebuilt from the raw data. Automatic enhancement chooses the exposure the same way and gives
+  the same result however often you press it. Pictures you edited before keep their look.
+
 - **Raw files from every camera come out at the right brightness.** On a new installation,
   FerrumPix now adjusts the base brightness to the camera model from the start, so raw files
   from most cameras no longer open noticeably too bright. If you already use FerrumPix, nothing

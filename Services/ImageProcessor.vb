@@ -243,8 +243,11 @@ Namespace Services
                 rezept = RawSidecarService.TryRead(path)
             End If
 
-            Dim decoded = DecodeForAdjustments(path, rezept, developRaw OrElse rezept IsNot Nothing)
-            If decoded Is Nothing OrElse rezept Is Nothing Then Return decoded
+            ' Ohne Rezept die rohe Quelle, mit Rezept der Decode fuer die Kette (ab Tonmodell 4 mit
+            ' der Belichtung in der RAW-Stufe).
+            If rezept Is Nothing Then Return DecodeForAdjustments(path, Nothing, developRaw)
+            Dim decoded = DecodeForRender(path, rezept, rezept, True)
+            If decoded Is Nothing Then Return Nothing
             Using decoded
                 ' Die gebackenen Vorgaenge gehoeren VOR die Reglerkette - sie sind Teil des Bildes,
                 ' nicht eine Stufe darauf. Das Entrauschen etwa arbeitet auf dem entwickelten Bild
@@ -720,10 +723,77 @@ Namespace Services
         ''' <summary>Dekodiert eine Quelle mit allen Einstellungen, die bereits den Decode
         ''' beeinflussen. Damit dürfen Ausgabewege nicht versehentlich nur die Reglerkette,
         ''' aber weder Objektivkorrektur noch RAW-Lichterrettung übernehmen.</summary>
+        ''' <remarks>OHNE die Belichtung: das Bild ist das, auf das die Reglerkette die volle
+        ''' Belichtung noch anwenden muss. Wer danach die Kette rechnet, nimmt
+        ''' <see cref="DecodeForRender"/>, das ab Tonmodell 4 die Belichtung in die RAW-Stufe legt.</remarks>
         Friend Shared Function DecodeForAdjustments(path As String, adj As ImageAdjustments,
                                                     Optional developRaw As Boolean = True) As SKBitmap
             Return DecodeOriented(path, developRaw, LensChoiceFrom(adj),
                                   adj IsNot Nothing AndAlso adj.RawHighlightRecovery)
+        End Function
+
+        ''' <summary>Der Decode mit der Belichtung in der Rampe der RAW-Stufe.
+        ''' <paramref name="appliedEv"/> sagt, wie viel davon wirklich im Bild steckt: die gewuenschte,
+        ''' wenn die Datei ueber die RAW-Stufe kam, sonst 0, etwa wenn LibRaw sie nicht entwickeln kann
+        ''' und die eingebettete Vorschau einspringt. Dann muss die Kette die Belichtung rechnen.</summary>
+        ''' <remarks>Eigener Name statt einer zweiten Fassung von DecodeOriented: Pruefstand und
+        ''' Messwerkzeuge holen DecodeOriented per Reflexion ueber den Namen.</remarks>
+        Friend Shared Function DecodeOrientedWithExposure(path As String, developRaw As Boolean,
+                                                          lensChoice As LensDataService.Wahl,
+                                                          recoverHighlights As Boolean,
+                                                          exposureEv As Double,
+                                                          ByRef appliedEv As Double) As SKBitmap
+            appliedEv = 0.0
+            If exposureEv <> 0.0 AndAlso developRaw AndAlso RawPreviewService.IsSupportedRaw(path) AndAlso
+               RawDecodeService.IsAvailable Then
+                Dim developed = RawDecodeService.TryDecode(path, lensChoice, recoverHighlights, exposureEv:=exposureEv)
+                If developed IsNot Nothing Then
+                    appliedEv = exposureEv
+                    Return developed
+                End If
+            End If
+            Return DecodeOriented(path, developRaw, lensChoice, recoverHighlights)
+        End Function
+
+        ''' <summary>Der Decode fuer einen Render mit der Reglerkette: ab Tonmodell 4 steckt die
+        ''' Belichtung danach in der RAW-Stufe. <paramref name="renderAdj"/> ist das Rezept, mit dem
+        ''' die Kette zu rechnen ist: <paramref name="adj"/> selbst, oder eine Kopie, die vermerkt, wie
+        ''' viel Belichtung schon im Bild steckt (ImageAdjustments.ExposureInSource). Das uebergebene
+        ''' Rezept bleibt unveraendert; es gehoert dem Aufrufer.</summary>
+        Friend Shared Function DecodeForRender(path As String, adj As ImageAdjustments,
+                                               ByRef renderAdj As ImageAdjustments,
+                                               Optional developRaw As Boolean = True) As SKBitmap
+            Dim applied = 0.0
+            Dim decoded = DecodeOrientedWithExposure(path, developRaw, LensChoiceFrom(adj),
+                                                     adj IsNot Nothing AndAlso adj.RawHighlightRecovery,
+                                                     If(adj Is Nothing, 0.0, adj.RawExposureEv()), applied)
+            renderAdj = WithExposureInSource(adj, applied)
+            Return decoded
+        End Function
+
+        ''' <summary>Der halbgrosse RAW-Decode fuer Kacheln, mit derselben Belichtung in der RAW-Stufe
+        ''' wie der volle. Wie <see cref="DecodeForRender"/> meldet <paramref name="renderAdj"/> das
+        ''' Rezept fuer die Kette.</summary>
+        Friend Shared Function DecodeReducedForRender(path As String, adj As ImageAdjustments,
+                                                      ByRef renderAdj As ImageAdjustments) As SKBitmap
+            Dim exposureEv = If(adj Is Nothing, 0.0, adj.RawExposureEv())
+            Dim decoded = RawDecodeService.TryDecodeThumbnail(path, LensChoiceFrom(adj),
+                                                              adj IsNot Nothing AndAlso adj.RawHighlightRecovery, exposureEv)
+            renderAdj = WithExposureInSource(adj, If(decoded IsNot Nothing, exposureEv, 0.0))
+            Return decoded
+        End Function
+
+        ''' <summary>Das Rezept fuer die Kette zu einem Quellbild, in dem schon
+        ''' <paramref name="appliedEv"/> Blendenstufen Belichtung stecken. Stimmt der Vermerk im
+        ''' Rezept schon, das Rezept selbst, sonst eine Kopie. Auch ein Vermerk, der aus dem
+        ''' Arbeitsbild des Editors stammt, wird ueberschrieben: das Bild hier ist frisch gelesen.</summary>
+        Friend Shared Function WithExposureInSource(adj As ImageAdjustments, appliedEv As Double) As ImageAdjustments
+            If adj Is Nothing Then Return Nothing
+            Dim points = CSng(appliedEv * ImageAdjustments.ExposurePointsPerStop)
+            If adj.ExposureInSource = points Then Return adj
+            Dim copy = adj.Clone()
+            copy.ExposureInSource = points
+            Return copy
         End Function
 
         ''' TEMPORÄR ( Vorher/Nachher dunkler): protokolliert den Farbraum des rohen
@@ -790,13 +860,14 @@ Namespace Services
         Public Shared Function ApplyAdjustments(sourcePath As String, adj As ImageAdjustments,
                                                 Optional preferReducedRawDecode As Boolean = False) As Bitmap
             Dim reduced As SKBitmap = Nothing
+            Dim renderAdj = adj
             If preferReducedRawDecode AndAlso RawPreviewService.IsSupportedRaw(sourcePath) Then
-                reduced = RawDecodeService.TryDecodeThumbnail(sourcePath, LensChoiceFrom(adj), adj IsNot Nothing AndAlso adj.RawHighlightRecovery)
+                reduced = DecodeReducedForRender(sourcePath, adj, renderAdj)
             End If
-            Using original = If(reduced, DecodeForAdjustments(sourcePath, adj))
+            Using original = If(reduced, DecodeForRender(sourcePath, adj, renderAdj))
                 If original Is Nothing Then Return Nothing
 
-                Using processed = ProcessBitmap(original, adj)
+                Using processed = ProcessBitmap(original, renderAdj)
                     Return ToAvaloniaBitmap(processed)
                 End Using
             End Using
@@ -851,9 +922,10 @@ Namespace Services
             ' Nur die Kachelpipeline darf den halben RAW-Decode anfordern. Der allgemeine Weg
             ' bleibt voll aufgeloest, damit Editor, Export und Druck nie eine Vorschauauflosung
             ' bekommen. Die Objektivwahl gehoert zum Decode und muss auch fuer die Kachel gelten.
+            Dim renderAdj = adj
             Using original = If(preferReducedRawDecode,
-                                RawDecodeService.TryDecodeThumbnail(sourcePath, LensChoiceFrom(adj), adj IsNot Nothing AndAlso adj.RawHighlightRecovery),
-                                DecodeForAdjustments(sourcePath, adj))
+                                DecodeReducedForRender(sourcePath, adj, renderAdj),
+                                DecodeForRender(sourcePath, adj, renderAdj))
                 decodeMs = sw.ElapsedMilliseconds
                 If original Is Nothing Then Return Nothing
 
@@ -862,7 +934,7 @@ Namespace Services
 
                 Try
                     sw.Restart()
-                    Using processed = ProcessBitmap(workingSource, adj)
+                    Using processed = ProcessBitmap(workingSource, renderAdj)
                         processMs = sw.ElapsedMilliseconds
                         Return EncodePngStream(processed, encodeMs)
                     End Using
@@ -2242,6 +2314,20 @@ Namespace Services
             Try
                 Return DecodeOriented(path, True, lensChoice, recoverHighlights)
             Catch
+                Return Nothing
+            End Try
+        End Function
+
+        ''' <summary>Dasselbe mit der Belichtung in der RAW-Stufe (Tonmodell 4);
+        ''' <paramref name="appliedEv"/> meldet, wie viel davon wirklich im Bild steckt.</summary>
+        Friend Shared Function DecodeWorkingImageWithExposure(path As String, lensChoice As LensDataService.Wahl,
+                                                              recoverHighlights As Boolean, exposureEv As Double,
+                                                              ByRef appliedEv As Double) As SKBitmap
+            appliedEv = 0.0
+            Try
+                Return DecodeOrientedWithExposure(path, True, lensChoice, recoverHighlights, exposureEv, appliedEv)
+            Catch
+                appliedEv = 0.0
                 Return Nothing
             End Try
         End Function
@@ -4133,7 +4219,7 @@ Namespace Services
             ' komponierten auf veralteter Basis. Das gilt auch fuer APP-WEITE Render-Schalter,
             ' nicht nur adj-Felder - wer einen einfuehrt, muss ihn hier eintragen.
             Return String.Join("|", New Object() {
-                adj.Exposure, adj.Brightness, adj.Contrast, adj.Saturation, adj.Highlights, adj.ShadowsLevel,
+                adj.Exposure, adj.ExposureInSource, adj.ChainExposureInRawStage(), adj.Brightness, adj.Contrast, adj.Saturation, adj.Highlights, adj.ShadowsLevel,
                 adj.Whites, adj.Blacks, adj.Temperature, adj.Tint, adj.Sharpness, adj.SharpenRadius, adj.SharpenDetail,
                 adj.WhiteBalanceModel, adj.WhiteBalanceAnchorX, adj.WhiteBalanceAnchorY,
                 adj.WhiteBalanceKelvin, adj.WhiteBalanceKelvinTint,
@@ -6215,9 +6301,12 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
         Public Shared Function RenderDisplayImage(sourcePath As String, adj As ImageAdjustments,
                                                  Optional workingFull As SKBitmap = Nothing) As SKBitmap
             Try
-                Using original = If(workingFull, DecodeForAdjustments(sourcePath, adj))
+                ' Das Arbeitsbild bringt seine Belichtung im Rezept mit (ExposureInSource, vom
+                ' Editor gesetzt); eine frisch gelesene Quelle meldet sie ueber DecodeForRender.
+                Dim renderAdj = adj
+                Using original = If(workingFull, DecodeForRender(sourcePath, adj, renderAdj))
                     If original Is Nothing Then Return Nothing
-                    Return ProcessBitmap(original, adj)
+                    Return ProcessBitmap(original, renderAdj)
                 End Using
             Catch ex As Exception
                 Return Nothing

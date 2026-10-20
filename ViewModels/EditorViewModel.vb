@@ -718,6 +718,20 @@ Namespace ViewModels
         ''' Rezept. Leer bei normalen Bildern; die Maße-Prüfung gegen die Basis passiert beim Decode.
         Private _workingImageOverridePath As String = ""
         Private _workingImageOverrideHasAlpha As Boolean = False
+        ''' Die Belichtung (Punkte), die im Buendel-Arbeitsbild steckt (WorkingImageExposure).
+        Private _workingImageOverrideExposure As Single = 0.0F
+
+        ''' Wie viel Belichtung, in Punkten des Reglers, im aktuellen ARBEITSBILD steckt. Ab
+        ''' Tonmodell 4 entwickelt die RAW-Stufe die Belichtung mit (ImageAdjustments.RawExposureEv);
+        ''' die Kette rechnet dann nur den Rest (ImageAdjustments.ExposureInSource). Gesetzt bei
+        ''' jedem Quellwechsel und jedem Neuaufbau fuer die Belichtung; mit eingebackenem Inhalt
+        ''' bleibt der Stand stehen, spaetere Aenderungen wirken in der Kette.
+        Private _workingImageExposure As Single = 0.0F
+        ''' Verzoegert den Neuaufbau des Arbeitsbilds nach einer Belichtungsaenderung, bis der Regler
+        ''' ruht. Waehrend des Zugs rechnet die Kette den Unterschied.
+        Private _rawExposureRebuildTimer As DispatcherTimer
+        ''' Marke des laufenden Neuaufbaus: ein spaeterer verwirft das Ergebnis eines frueheren.
+        Private _rawExposureRebuildToken As Long
 
         ''' Anzahl der Commits, die gerade in der Queue stecken (UI-Thread-Zugriff): solange > 0
         ''' sind Undo/Redo gesperrt (siehe CanUndo) - die Undo-Zuordnung wäre sonst unvollständig.
@@ -2206,7 +2220,9 @@ Namespace ViewModels
             Dim source = GetPreviewSource()
             ' Mit den Anpassungen: bei einem Filmnegativ misst die Automatik das umgekehrte Bild,
             ' auf das ihre Regler wirken, nicht das Negativ.
-            Dim measured = If(source Is Nothing, Nothing, ImageProcessor.AnalyzeAutoAdjustments(source, GetCurrentAdjustments()))
+            Dim current = GetCurrentAdjustments()
+            Dim measured = If(source Is Nothing, Nothing,
+                              ImageProcessor.AnalyzeAutoAdjustments(source, current, current.ChainExposureInRawStage()))
             If measured Is Nothing OrElse Not measured.HasMeasurement Then
                 StatusText = LocalizationService.T("Das Bild konnte nicht analysiert werden")
                 Return
@@ -7352,6 +7368,121 @@ Namespace ViewModels
         ''' dort: wer bei fehlender Objektivangabe eines von Hand waehlte, sah es in der Statuszeile
         ''' stehen, bekam aber "kein Objektiv vorgegeben" in den Decode. Das Bild blieb
         ''' unveraendert, Kachel und Export waren korrigiert.</summary>
+        ''' <summary>Die Belichtung des BILDES in Blendenstufen, die in die RAW-Stufe gehoert
+        ''' (ImageAdjustments.RawExposureEv): Modell, Belichtung und Filmnegativ des Bildes.
+        '''
+        ''' Bedienen die Regler gerade ein Objekt oder Maskenebenen, stehen in den Feldern DEREN
+        ''' Werte, und die des Bildes liegen geparkt (siehe GetCurrentAdjustments). Dann kommen
+        ''' sie von dort.</summary>
+        Private Function WantedRawExposureEv() As Double
+            Dim parked As ImageAdjustments = Nothing
+            If IsObjectAdjustModeActive() Then
+                parked = _imagePixelAdjustments
+            ElseIf IsSelectionAdjustModeActive() Then
+                parked = _selectionImagePixelAdjustments
+            End If
+            If parked IsNot Nothing Then
+                Return New ImageAdjustments With {
+                    .ToneModel = parked.ToneModel,
+                    .Exposure = parked.Exposure,
+                    .NegativeEnabled = parked.NegativeEnabled}.RawExposureEv()
+            End If
+            Return New ImageAdjustments With {
+                .ToneModel = _toneModel,
+                .Exposure = CSng(_exposure),
+                .NegativeEnabled = _negativeEnabled}.RawExposureEv()
+        End Function
+
+        ''' <summary>Wie lange der Belichtungsregler ruhen muss, bevor das Arbeitsbild mit der neuen
+        ''' Belichtung aus der RAW-Stufe neu entsteht. Waehrend des Zugs rechnet die Kette den
+        ''' Unterschied (ExposureInSource), das Bild folgt also sofort.</summary>
+        Private Const RawExposureRebuildDelayMs As Double = 400.0
+
+        ''' <summary>Steckt im Arbeitsbild eine andere Belichtung als die, die das Bild jetzt traegt,
+        ''' und laesst sie sich in der RAW-Stufe nachziehen? Nur bei einer wirklich ueber LibRaw
+        ''' entwickelten RAW ohne eingebackenen Inhalt (IsRawDeveloped): mit Gebackenem bleibt der
+        ''' Stand stehen und die Kette rechnet den Rest, und eine RAW, die LibRaw nicht entwickelt,
+        ''' kaeme ohnehin mit 0 zurueck - der Neuaufbau liefe sonst bei jeder Aenderung umsonst.</summary>
+        Private Function NeedsRawExposureRebuild() As Boolean
+            If Not HasDocument OrElse _workingImage.HasBakedContent OrElse Not IsRawDeveloped Then Return False
+            Dim wanted = CSng(WantedRawExposureEv() * ImageAdjustments.ExposurePointsPerStop)
+            Return wanted <> _workingImageExposure
+        End Function
+
+        ''' <summary>Entsteht das Arbeitsbild mit der Belichtung neu, sobald sie ruht
+        ''' (ImageAdjustments.SourceFollowsRawExposure)? Dieselbe Bedingung wie beim Neuaufbau, nur
+        ''' ohne Modell und Vergleich mit dem Arbeitsbild, und nicht bei ausgeblendeter Pixelebene:
+        ''' dort rendert der Editor die unbearbeitete Datei, und die Kette rechnet die ganze
+        ''' Belichtung als Faktor.</summary>
+        Private Function SourceFollowsRawExposure() As Boolean
+            Return HasDocument AndAlso Not _pixelLayerHidden AndAlso Not _workingImage.HasBakedContent AndAlso IsRawDeveloped
+        End Function
+
+        ''' <summary>Merkt den Neuaufbau fuer die Belichtung vor; die Frist beginnt bei jeder
+        ''' Aenderung neu.</summary>
+        Private Sub ScheduleRawExposureRebuild()
+            If Not NeedsRawExposureRebuild() Then Return
+            If _rawExposureRebuildTimer Is Nothing Then
+                _rawExposureRebuildTimer = New DispatcherTimer With {
+                    .Interval = TimeSpan.FromMilliseconds(RawExposureRebuildDelayMs)}
+                AddHandler _rawExposureRebuildTimer.Tick, Sub()
+                                                              _rawExposureRebuildTimer.Stop()
+                                                              RebuildWorkingImageForRawExposureAsync()
+                                                          End Sub
+            End If
+            _rawExposureRebuildTimer.Stop()
+            _rawExposureRebuildTimer.Start()
+        End Sub
+
+        ''' <summary>Das Arbeitsbild mit der Belichtung der Regler neu aus der RAW-Stufe: aus dem
+        ''' 16-Bit-Zwischenspeicher, also ohne LibRaw (gemessen rund 14 ms je Megapixel), im
+        ''' Hintergrund. Anders als ein Quellwechsel sperrt das weder die Werkzeuge noch raeumt es
+        ''' Szene und Ansicht ab: es tauscht nur das Arbeitsbild, und der Aufwaermrender zeigt das
+        ''' Ergebnis. Verworfen wird es, wenn inzwischen ein anderes Bild offen ist, etwas
+        ''' eingebacken wurde oder ein neuerer Neuaufbau laeuft.</summary>
+        Private Async Sub RebuildWorkingImageForRawExposureAsync()
+            If Not NeedsRawExposureRebuild() Then Return
+            ' Noch am Regler: weiter warten, die Kette folgt solange.
+            If _sliderDragActive OrElse _sliderPreviewDragActive Then
+                ScheduleRawExposureRebuild()
+                Return
+            End If
+            Dim path = RenderSourcePath
+            Dim exposureEv = WantedRawExposureEv()
+            Dim wahl = LensChoiceFromFields()
+            Dim recoverHighlights = _rawHighlightRecovery
+            Dim previewMax = PreviewMaxDimension
+            Dim swapId = Threading.Interlocked.Read(_previewSourceSwapId)
+            Dim token = Threading.Interlocked.Increment(_rawExposureRebuildToken)
+            Dim prepared As PreparedSource
+            Try
+                prepared = Await Task.Run(Function()
+                                              Dim applied = 0.0
+                                              Dim full = ImageProcessor.DecodeWorkingImageWithExposure(path, wahl, recoverHighlights,
+                                                                                                       exposureEv, applied)
+                                              Return PrepareSource(full, False, previewMax, applied)
+                                          End Function)
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Editor.RawExposureRebuild", ex)
+                Return
+            End Try
+            If token <> Threading.Interlocked.Read(_rawExposureRebuildToken) OrElse
+               swapId <> Threading.Interlocked.Read(_previewSourceSwapId) OrElse
+               Not String.Equals(path, RenderSourcePath, StringComparison.Ordinal) OrElse
+               _workingImage.HasBakedContent OrElse prepared.Prepared Is Nothing Then
+                prepared.DisposeAll()
+                Return
+            End If
+            _workingImageExposure = CSng(prepared.AppliedEv * ImageAdjustments.ExposurePointsPerStop)
+            DiagnosticLogService.LogAlways("Editor.RawExposureRebuild", $"exposure={_workingImageExposure}")
+            AdoptPreparedWorkingImage(prepared.Prepared, prepared.Display,
+                                      hasBakedContent:=False,
+                                      hasAlphaHoles:=_newDocTransparentBackground,
+                                      scheduleInitialRender:=True)
+            ' Hat sich die Belichtung waehrenddessen weiter bewegt, kommt der naechste.
+            ScheduleRawExposureRebuild()
+        End Sub
+
         Private Function LensChoiceFromFields() As LensDataService.Wahl
             Return New LensDataService.Wahl With {
                 .Distortion = _lensDistortion,
@@ -18630,7 +18761,7 @@ Namespace ViewModels
                     _currentImagePath = ""
                     _renderSourcePathOverride = ""
                     _workingImageOverridePath = ""
-                    _workingImageOverrideHasAlpha = False
+                    _workingImageOverrideHasAlpha = False : _workingImageOverrideExposure = 0.0F
                     _currentFpxPath = ""
                     CleanupCurrentFpxTempDir()
                     CleanupCurrentNewDocTempDir()
@@ -18663,6 +18794,7 @@ Namespace ViewModels
             Dim fpxAdjustments As ImageAdjustments = Nothing
             Dim newWorkingOverridePath = ""
             Dim newWorkingOverrideHasAlpha = False
+            Dim newWorkingOverrideExposure = 0.0F
             If FpxService.IsFpx(path) Then
                 Dim loaded = FpxService.Load(path)
                 If loaded Is Nothing OrElse loaded.Adjustments Is Nothing OrElse String.IsNullOrEmpty(loaded.BaseImagePath) OrElse Not File.Exists(loaded.BaseImagePath) Then
@@ -18681,6 +18813,7 @@ Namespace ViewModels
                 ' dekodiert es statt des Basisbilds (Maße-Prüfung passiert dort).
                 newWorkingOverridePath = If(loaded.RetouchStagePath, "")
                 newWorkingOverrideHasAlpha = loaded.Adjustments.WorkingImageHasTransparency
+                newWorkingOverrideExposure = loaded.Adjustments.WorkingImageExposure
             ElseIf PsdPreviewService.IsSupportedPsd(path) Then
                 ' Derselbe Weg wie beim Öffnen (LoadPsdDocumentAsync): eine Photoshop-Datei kommt
                 ' auch beim Blättern mit ihren Ebenen herein. Hier fehlte er, und dieselbe Datei
@@ -18719,6 +18852,7 @@ Namespace ViewModels
             _forceSaveAsOnly = newForceSaveAsOnly
             _workingImageOverridePath = newWorkingOverridePath
             _workingImageOverrideHasAlpha = newWorkingOverrideHasAlpha
+            _workingImageOverrideExposure = newWorkingOverrideExposure
             ' Immich-Kontext gehoert zum ALTEN Bild: der SERVER-Dateiname des
             ' vorherigen Assets darf nie am naechsten Bild kleben (SaveBackToImmich haette unter
             ' fremdem Namen hochgeladen). Die Album-Zuordnung bleibt nur, solange die Navigation
@@ -19028,6 +19162,7 @@ Namespace ViewModels
             Dim fpxAdjustments As ImageAdjustments = Nothing
             Dim newWorkingOverridePath = ""
             Dim newWorkingOverrideHasAlpha = False
+            Dim newWorkingOverrideExposure = 0.0F
             If FpxService.IsFpx(imagePath) Then
                 Dim fpxSource = imagePath
                 Dim loaded = Await Task.Run(Function() FpxService.Load(fpxSource))
@@ -19048,6 +19183,7 @@ Namespace ViewModels
                 ' dekodiert es statt des Basisbilds (Maße-Prüfung passiert dort).
                 newWorkingOverridePath = If(loaded.RetouchStagePath, "")
                 newWorkingOverrideHasAlpha = loaded.Adjustments.WorkingImageHasTransparency
+                newWorkingOverrideExposure = loaded.Adjustments.WorkingImageExposure
             ElseIf PsdPreviewService.IsSupportedPsd(imagePath) Then
                 Dim psdLoad = Await LoadPsdDocumentAsync(imagePath)
                 fpxAdjustments = psdLoad.Adjustments
@@ -19090,6 +19226,7 @@ Namespace ViewModels
             _currentFpxTempDir = newFpxTempDir
             _workingImageOverridePath = newWorkingOverridePath
             _workingImageOverrideHasAlpha = newWorkingOverrideHasAlpha
+            _workingImageOverrideExposure = newWorkingOverrideExposure
             ' Vor dem Setzen von CurrentImagePath, damit dessen PropertyChanged CanSaveInPlace korrekt neu bewertet.
             ' Pfadbasierte Erkennung ergänzt das Flag: eine Immich-Temp-Kopie ist IMMER nur „Speichern
             ' unter", egal ob aus Galerie (Flag gesetzt) oder aus dem Viewer (Flag nicht durchgereicht).
@@ -19199,7 +19336,7 @@ Namespace ViewModels
                     _currentImagePath = ""
                     _renderSourcePathOverride = ""
                     _workingImageOverridePath = ""
-                    _workingImageOverrideHasAlpha = False
+                    _workingImageOverrideHasAlpha = False : _workingImageOverrideExposure = 0.0F
                     Return False
                 End If
                 VerifyWorkingImageDimensions()
@@ -19580,6 +19717,9 @@ Namespace ViewModels
             DisposeFogPreview()
             DisposeGridPreview()
             DisposeLinePreview()
+            ' Aus demselben Grund hier: jede Aenderung kann die Belichtung der RAW-Stufe verschieben
+            ' (Regler, Undo, Vorlage, Automatik, Zuruecksetzen, Tonmodell, Filmnegativ).
+            ScheduleRawExposureRebuild()
             If markDirty AndAlso Not _suppressPreviewDirty Then
                 Dim wasDirty = _hasChanges
                 _hasChanges = True
@@ -20416,11 +20556,16 @@ Namespace ViewModels
         ''' <param name="lensChoice">Die Objektivkorrektur dieses Bildes. Sie MUSS hier ankommen:
         ''' sie veraendert den DECODE, nicht die Reglerkette - ohne sie taeten die Schalter und
         ''' Regler der Gruppe schlicht nichts.</param>
+        ''' <param name="exposureEv">Die Belichtung des Bildes in Blendenstufen fuer die RAW-Stufe
+        ''' (Tonmodell 4, WantedRawExposureEv). Wie viel davon im Bild steckt, meldet AppliedEv;
+        ''' ein Buendel-Arbeitsbild und eine Uebergabe vom Betrachter bringen 0 mit.</param>
         Private Shared Function DecodeForPreviewSource(imagePath As String, overridePath As String,
                                                        lensChoice As LensDataService.Wahl,
-                                                       recoverHighlights As Boolean) As (Full As SKBitmap, Baked As Boolean)
+                                                       recoverHighlights As Boolean,
+                                                       Optional exposureEv As Double = 0.0) As (Full As SKBitmap, Baked As Boolean, AppliedEv As Double)
             Dim fullDecode As SKBitmap = Nothing
             Dim bakedFromFpx = False
+            Dim appliedEv = 0.0
             If Not String.IsNullOrEmpty(overridePath) AndAlso File.Exists(overridePath) Then
                 fullDecode = ImageProcessor.DecodeWorkingImage(overridePath, lensChoice, recoverHighlights)
                 If fullDecode IsNot Nothing Then
@@ -20441,24 +20586,30 @@ Namespace ViewModels
             ' Das Bild, das der Betrachter gerade gezeigt hat, falls er es uebergeben hat und es voll
             ' aufgeloest zu dieser Datei passt (DecodedImageHandoff). Nur ohne Buendel-Arbeitsbild:
             ' das hat oben schon Vorrang.
+            ' Die Uebergabe traegt die Belichtung nicht (der Betrachter zeigt die Datei ohne
+            ' Rezept); der Neuaufbau nach dem Oeffnen zieht sie nach (ScheduleRawExposureRebuild).
             If fullDecode Is Nothing AndAlso Not bakedFromFpx Then fullDecode = DecodedImageHandoff.TryTake(imagePath)
-            If fullDecode Is Nothing Then fullDecode = ImageProcessor.DecodeWorkingImage(imagePath, lensChoice, recoverHighlights)
+            If fullDecode Is Nothing Then
+                fullDecode = ImageProcessor.DecodeWorkingImageWithExposure(imagePath, lensChoice, recoverHighlights,
+                                                                           exposureEv, appliedEv)
+            End If
             DiagnosticLogService.LogAlways("Editor.RawHighlightRecovery",
                 $"decode completed; enabled={recoverHighlights}; source={imagePath}; override={Not String.IsNullOrEmpty(overridePath)}; " &
-                $"baked={bakedFromFpx}; result={If(fullDecode Is Nothing, "<none>", $"{fullDecode.Width}x{fullDecode.Height}")}")
-            Return (fullDecode, bakedFromFpx)
+                $"baked={bakedFromFpx}; exposureEv={appliedEv:F2}; result={If(fullDecode Is Nothing, "<none>", $"{fullDecode.Width}x{fullDecode.Height}")}")
+            Return (fullDecode, bakedFromFpx, appliedEv)
         End Function
 
         ''' <summary>Quellwechsel Teil 3: das Ergebnis übernehmen - wieder UI-Thread.
         ''' Ist die Marke veraltet (der Nutzer hat inzwischen weitergeblättert), wird das
         ''' Dekodierte verworfen statt über die neue Quelle geschrieben.</summary>
-        Private Function CompletePreviewSourceSwap(decoded As (Full As SKBitmap, Baked As Boolean),
+        Private Function CompletePreviewSourceSwap(decoded As (Full As SKBitmap, Baked As Boolean, AppliedEv As Double),
                                                    token As Long, scheduleInitialRender As Boolean) As Boolean
             If IsSourceSwapStale(token) Then
                 decoded.Full?.Dispose()
                 Return False
             End If
-            Return CompletePreparedSourceSwap(PrepareSource(decoded.Full, decoded.Baked, PreviewMaxDimension), token, scheduleInitialRender)
+            Return CompletePreparedSourceSwap(PrepareSource(decoded.Full, decoded.Baked, PreviewMaxDimension, decoded.AppliedEv),
+                                              token, scheduleInitialRender)
         End Function
 
         ''' <summary>Das Ergebnis des Hintergrundteils beim Oeffnen: das vorbereitete Arbeitsbild
@@ -20468,6 +20619,8 @@ Namespace ViewModels
             Public Prepared As WorkingImageService.PreparedImage
             Public Display As Bitmap
             Public Baked As Boolean
+            ''' Die Belichtung in Blendenstufen, die der Decode in die RAW-Stufe gelegt hat.
+            Public AppliedEv As Double
 
             Public Sub DisposeAll()
                 Prepared?.DisposeAll()
@@ -20479,7 +20632,8 @@ Namespace ViewModels
         ''' beim Oeffnen im Hintergrund direkt nach dem Decode. Vorher geschah beides auf dem
         ''' Anzeigefaden und hielt ihn bei einem 12-MP-Bild rund 400 ms an (Nutzerbefund HEIC,
         ''' Messpunkt "Editor oeffnen: Arbeitsbild uebernehmen").</summary>
-        Private Shared Function PrepareSource(full As SKBitmap, baked As Boolean, previewMaxDimension As Integer) As PreparedSource
+        Private Shared Function PrepareSource(full As SKBitmap, baked As Boolean, previewMaxDimension As Integer,
+                                              appliedEv As Double) As PreparedSource
             Dim prepared = WorkingImageService.Prepare(full, previewMaxDimension)
             Dim display As Bitmap = Nothing
             If prepared IsNot Nothing Then
@@ -20490,7 +20644,7 @@ Namespace ViewModels
                     DiagnosticLogService.LogException("Editor.PrepareSource", ex)
                 End Try
             End If
-            Return New PreparedSource With {.Prepared = prepared, .Display = display, .Baked = baked}
+            Return New PreparedSource With {.Prepared = prepared, .Display = display, .Baked = baked, .AppliedEv = appliedEv}
         End Function
 
         ''' <summary>Ist der Quellwechsel dieser Marke ueberholt? Dann NICHT entsperren: der neue
@@ -20506,14 +20660,22 @@ Namespace ViewModels
                 Return False
             End If
             SetWorkingImagePending(False)
+            ' Welche Belichtung im neuen Arbeitsbild steckt: beim Buendel die gespeicherte, sonst die
+            ' des Decodes. VOR dem Einsetzen, denn der Aufwaermrender rechnet schon damit.
+            _workingImageExposure = If(source.Baked, _workingImageOverrideExposure,
+                                       CSng(source.AppliedEv * ImageAdjustments.ExposurePointsPerStop))
 
             ' Laeuft auf dem Anzeigefaden; mit Messpunkt, damit eine Stockung hier im Protokoll einen
             ' Namen hat.
-            Return PerformanceTraceService.Measure("Editor oeffnen: Arbeitsbild uebernehmen",
+            Dim adopted = PerformanceTraceService.Measure("Editor oeffnen: Arbeitsbild uebernehmen",
                 Function() AdoptPreparedWorkingImage(source.Prepared, source.Display,
                                                      hasBakedContent:=source.Baked,
                                                      hasAlphaHoles:=(source.Baked AndAlso _workingImageOverrideHasAlpha) OrElse _newDocTransparentBackground,
                                                      scheduleInitialRender:=scheduleInitialRender))
+            ' Kam das Bild ohne die gewuenschte Belichtung (Uebergabe vom Betrachter), zieht der
+            ' Neuaufbau sie nach.
+            If adopted Then ScheduleRawExposureRebuild()
+            Return adopted
         End Function
 
         ''' <summary>Ein fertiges Vollbild als Arbeitsbild uebernehmen: Anzeige, Vorschauquelle,
@@ -20593,7 +20755,8 @@ Namespace ViewModels
         Private Sub PreparePreviewSource(imagePath As String, Optional scheduleInitialRender As Boolean = True)
             Dim token = BeginPreviewSourceSwap(imagePath)
             If token < 0 Then Return
-            CompletePreviewSourceSwap(DecodeForPreviewSource(imagePath, _workingImageOverridePath, LensChoiceFromFields(), _rawHighlightRecovery),
+            CompletePreviewSourceSwap(DecodeForPreviewSource(imagePath, _workingImageOverridePath, LensChoiceFromFields(), _rawHighlightRecovery,
+                                                             WantedRawExposureEv()),
                                       token, scheduleInitialRender)
         End Sub
 
@@ -20630,11 +20793,12 @@ Namespace ViewModels
             Dim overridePath = _workingImageOverridePath
             Dim wahl = LensChoiceFromFields()
             Dim recoverHighlights = _rawHighlightRecovery
+            Dim exposureEv = WantedRawExposureEv()
             Dim previewMax = PreviewMaxDimension
             ' Decode UND Vorbereitung im Hintergrund: beides geht ueber das ganze Bild (PrepareSource).
             Dim prepared = Await Task.Run(Function()
-                                              Dim decoded = DecodeForPreviewSource(imagePath, overridePath, wahl, recoverHighlights)
-                                              Return PrepareSource(decoded.Full, decoded.Baked, previewMax)
+                                              Dim decoded = DecodeForPreviewSource(imagePath, overridePath, wahl, recoverHighlights, exposureEv)
+                                              Return PrepareSource(decoded.Full, decoded.Baked, previewMax, decoded.AppliedEv)
                                           End Function)
             CompletePreparedSourceSwap(prepared, token, scheduleInitialRender)
         End Function
@@ -20679,6 +20843,9 @@ Namespace ViewModels
             ' Arbeitsbild gehört zur alten Quelle (das Vorschau-Bitmap entsorgt die
             ' Stale-Mechanik oben, das Voll-Bitmap der Service selbst).
             _workingImage.Clear()
+            _workingImageExposure = 0.0F
+            Threading.Interlocked.Increment(_rawExposureRebuildToken)
+            _rawExposureRebuildTimer?.Stop()
             ReleaseComparisonOriginalSource()
             ImageProcessor.ClearBaseCache()
             TryDisposeStalePreviewSources()
@@ -20783,7 +20950,7 @@ Namespace ViewModels
             _currentImagePath = ""
             _renderSourcePathOverride = ""
             _workingImageOverridePath = ""
-            _workingImageOverrideHasAlpha = False
+            _workingImageOverrideHasAlpha = False : _workingImageOverrideExposure = 0.0F
             _currentFpxPath = ""
             _forceSaveAsOnly = False
             ClearFilmstrip()
@@ -22785,6 +22952,9 @@ Namespace ViewModels
                 .SourceHeightPixels = GetBaseHeight(),
                 .WorkingImageVersion = _workingImage.Version,
                 .WorkingImageHasTransparency = _workingImage.HasAlphaHoles,
+                .WorkingImageExposure = _workingImageExposure,
+                .ExposureInSource = If(_pixelLayerHidden, 0.0F, _workingImageExposure),
+                .SourceFollowsRawExposure = SourceFollowsRawExposure(),
                 .FilterPreset = _filterPreset,
                 .FilterStrength = CSng(_filterStrength),
                 .LutPath = _lutPath,
@@ -24744,7 +24914,7 @@ Namespace ViewModels
             ' Bei den Öffnen-Pfaden (resetEditorUi:=True) folgt ohnehin PreparePreviewSource.
             If Not resetEditorUi AndAlso _workingImage.HasBakedContent Then
                 _workingImageOverridePath = ""
-                _workingImageOverrideHasAlpha = False
+                _workingImageOverrideHasAlpha = False : _workingImageOverrideExposure = 0.0F
                 PreparePreviewSource(RenderSourcePath, scheduleInitialRender:=False)
             End If
             ' Das Arbeitsbild ist danach wieder das nackte Original - also darf auch kein Vermerk
