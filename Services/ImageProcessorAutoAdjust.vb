@@ -350,14 +350,14 @@ Namespace Services
                                         If Not wantsBlack Then Return 0.0
                                         Return AutoSolveRising(
                                             Function(b) lowAfter + ToneSliderCurves.LiftByTop("Whites", w, lowIn, topL) +
-                                                        ToneSliderCurves.Lift("Blacks", b, lowIn),
+                                                        ToneSliderCurves.Lift("Blacks", b, lowIn, 3),
                                             AutoTargetBlackPoint, -100.0, 0.0)
                                     End Function
                     Dim spanFor = Function(w As Double, b As Double) As Double
-                                      Dim high = highAfter + ToneSliderCurves.Lift("Blacks", b, highIn) +
+                                      Dim high = highAfter + ToneSliderCurves.Lift("Blacks", b, highIn, 3) +
                                                  ToneSliderCurves.LiftByTop("Whites", w, highIn, topL)
                                       Dim low = lowAfter + ToneSliderCurves.LiftByTop("Whites", w, lowIn, topL) +
-                                                ToneSliderCurves.Lift("Blacks", b, lowIn)
+                                                ToneSliderCurves.Lift("Blacks", b, lowIn, 3)
                                       Return Math.Min(high, AutoTargetWhitePoint) - Math.Max(low, AutoTargetBlackPoint)
                                   End Function
                     Dim whites = 0.0

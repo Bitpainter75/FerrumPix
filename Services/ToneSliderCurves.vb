@@ -171,17 +171,19 @@ Namespace Services
 
         ''' <summary>Hub des Reglers <paramref name="slider"/> (Highlights, Shadows, Whites, Blacks,
         ''' Contrast; ParametricShadows/Darks/Lights/Highlights fuer den Preset-Import) bei Wert <paramref name="value"/> (-100 bis 100) am Gammawert
-        ''' <paramref name="v"/>. Zwischen 0 und 50 und zwischen 50 und 100 linear.</summary>
-        Public Shared Function Lift(slider As String, value As Double, v As Double) As Double
+        ''' <paramref name="v"/>. Zwischen 0 und 50 und zwischen 50 und 100 linear. Die Verstaerkung
+        ''' haengt am <paramref name="toneModel"/> (siehe <see cref="Gain"/>).</summary>
+        Public Shared Function Lift(slider As String, value As Double, v As Double,
+                                    Optional toneModel As Integer = 2) As Double
             If value = 0.0 OrElse Curves Is Nothing Then Return 0.0
             Dim set4 As Double()() = Nothing
             If Not Curves.TryGetValue(slider, set4) Then Return 0.0
             Dim magnitude = Math.Min(100.0, Math.Abs(value))
             Dim half = If(value < 0, set4(1), set4(2))
             Dim full = If(value < 0, set4(0), set4(3))
-            Dim atHalf = Sample(half, v) * Gain(slider, value, False)
+            Dim atHalf = Sample(half, v) * Gain(slider, value, False, toneModel)
             If magnitude <= 50.0 Then Return atHalf * magnitude / 50.0
-            Return atHalf + (Sample(full, v) * Gain(slider, value, True) - atHalf) * (magnitude - 50.0) / 50.0
+            Return atHalf + (Sample(full, v) * Gain(slider, value, True, toneModel) - atHalf) * (magnitude - 50.0) / 50.0
         End Function
 
         ''' <summary>Wie <see cref="Lift"/>, aber nach der Helligkeit des ganzen Bildes: liegen fuer den
@@ -193,13 +195,13 @@ Namespace Services
                                     Optional toneModel As Integer = 2) As Double
             Dim entry As (Medians As Double(), Sets As Double()()()) = Nothing
             If imageMedianL <= 0.0 OrElse value = 0.0 OrElse Not MedianCurves.TryGetValue(slider, entry) Then
-                Return Lift(slider, value, v)
+                Return Lift(slider, value, v, toneModel)
             End If
             Dim centres3 As Double() = Nothing
             If toneModel >= 3 AndAlso MedianCentersModel3.TryGetValue(slider, centres3) Then
                 entry = (centres3, entry.Sets)
             End If
-            Return LiftGrouped(slider, entry, value, v, imageMedianL)
+            Return LiftGrouped(slider, entry, value, v, imageMedianL, toneModel:=toneModel)
         End Function
 
         ''' <summary>Wie <see cref="Lift"/>, aber nach der Spitze des Bildes: liegen fuer den Regler
@@ -211,9 +213,9 @@ Namespace Services
         Public Shared Function LiftByTop(slider As String, value As Double, v As Double, imageTopL As Double) As Double
             Dim entry As (Medians As Double(), Sets As Double()()()) = Nothing
             If imageTopL <= 0.0 OrElse value = 0.0 OrElse Not TopCurves.TryGetValue(slider, entry) Then
-                Return Lift(slider, value, v)
+                Return Lift(slider, value, v, 3)
             End If
-            Return LiftGrouped(slider, entry, value, v, imageTopL, slider & "ByTop")
+            Return LiftGrouped(slider, entry, value, v, imageTopL, slider & "ByTop", 3)
         End Function
 
         ''' <summary>Hub aus Kurven je Gruppe: linear zwischen den beiden Gruppen, deren Mitten
@@ -221,7 +223,8 @@ Namespace Services
         ''' <see cref="Lift"/> zwischen 0, 50 und 100 linear.</summary>
         Private Shared Function LiftGrouped(slider As String, entry As (Medians As Double(), Sets As Double()()()),
                                             value As Double, v As Double, measure As Double,
-                                            Optional gainKey As String = Nothing) As Double
+                                            Optional gainKey As String = Nothing,
+                                            Optional toneModel As Integer = 2) As Double
             Dim gainSlider = If(gainKey IsNot Nothing AndAlso Gains.ContainsKey(gainKey), gainKey, slider)
             Dim m = entry.Medians
             Dim gi = 0
@@ -241,9 +244,9 @@ Namespace Services
             Dim magnitude = Math.Min(100.0, Math.Abs(value))
             Dim halfSet = If(value < 0, entry.Sets(1), entry.Sets(2))
             Dim fullSet = If(value < 0, entry.Sets(0), entry.Sets(3))
-            Dim atHalf = (Sample(halfSet(gi), v) + (Sample(halfSet(gi + 1), v) - Sample(halfSet(gi), v)) * f) * Gain(gainSlider, value, False)
+            Dim atHalf = (Sample(halfSet(gi), v) + (Sample(halfSet(gi + 1), v) - Sample(halfSet(gi), v)) * f) * Gain(gainSlider, value, False, toneModel)
             If magnitude <= 50.0 Then Return atHalf * magnitude / 50.0
-            Dim atFull = (Sample(fullSet(gi), v) + (Sample(fullSet(gi + 1), v) - Sample(fullSet(gi), v)) * f) * Gain(gainSlider, value, True)
+            Dim atFull = (Sample(fullSet(gi), v) + (Sample(fullSet(gi + 1), v) - Sample(fullSet(gi), v)) * f) * Gain(gainSlider, value, True, toneModel)
             Return atHalf + (atFull - atHalf) * (magnitude - 50.0) / 50.0
         End Function
 
@@ -280,10 +283,14 @@ Namespace Services
         End Function
 
         ''' <summary>Verstaerkung der Stellung +-50 (<paramref name="full"/> False) oder +-100 in der
-        ''' Richtung von <paramref name="value"/>.</summary>
-        Private Shared Function Gain(slider As String, value As Double, full As Boolean) As Double
+        ''' Richtung von <paramref name="value"/>. Ab <paramref name="toneModel"/> 3 gilt ein Eintrag
+        ''' "&lt;Regler&gt;Model3", wo es ihn gibt (seit der Eichung mit Kameratabelle, 2026-10-20), sonst
+        ''' der gemeinsame; Modell 2 behaelt so die Staerke, mit der es veroeffentlicht wurde.</summary>
+        Private Shared Function Gain(slider As String, value As Double, full As Boolean,
+                                     Optional toneModel As Integer = 2) As Double
             Dim g As Double() = Nothing
-            If Not Gains.TryGetValue(slider, g) Then Return 1.0
+            If Not (toneModel >= 3 AndAlso Gains.TryGetValue(slider & "Model3", g)) AndAlso
+               Not Gains.TryGetValue(slider, g) Then Return 1.0
             If value < 0 Then Return If(full, g(0), g(1))
             Return If(full, g(3), g(2))
         End Function

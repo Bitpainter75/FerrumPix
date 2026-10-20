@@ -8,10 +8,11 @@
   changes for you and your edited pictures keep their look; you can switch it on in the settings
   under "Match base brightness to the camera model".
 
-- **Shadows and whites recalibrated.** Both sliders were tuned again to the corrected base
-  brightness. The whites slider now has the strength you would expect in both directions, and
-  lifting the shadows matches it. Pictures you edited with 0.9.68 can look slightly different in
-  the shadows and whites; edits from earlier versions keep their look.
+- **Tone sliders recalibrated.** Shadows, whites, highlights and blacks were tuned again to the
+  corrected base brightness. The whites slider now has the strength you would expect in both
+  directions, highlights are a little gentler and pulling the blacks down works more strongly.
+  Pictures you edited with 0.9.68 can look slightly different in these four areas; edits from
+  earlier versions keep their look.
 
 ## 0.9.68
 

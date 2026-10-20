@@ -838,8 +838,8 @@ Namespace Services
                 Dim whites = If(toneModel >= 3,
                                 ToneSliderCurves.LiftByTop("Whites", adj.Whites, d0, reference.TopL),
                                 ToneSliderCurves.Lift("Whites", adj.Whites, d0))
-                Return ToneSliderCurves.Lift("Contrast", adj.Contrast, d0) + whites +
-                       ToneSliderCurves.Lift("Blacks", adj.Blacks, d0) + highlightsShadows
+                Return ToneSliderCurves.Lift("Contrast", adj.Contrast, d0, toneModel) + whites +
+                       ToneSliderCurves.Lift("Blacks", adj.Blacks, d0, toneModel) + highlightsShadows
             End If
             If part = ToneZonePart.Local Then Return 0.0
             Dim wBlacks = ToneSmoothFade(1.0 - d0 / 0.5)      ' 1 bei Schwarz, glatt 0 ab d=0.5
