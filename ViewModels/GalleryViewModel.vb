@@ -10255,6 +10255,27 @@ Namespace ViewModels
         ''' Bestand und nicht an der gefilterten Liste: ein Filter, der die Serie gerade leer oder auf
         ''' ein Bild zeigt, laesst sich zuruecknehmen, ein geloeschtes Bild nicht. Wird die Serie
         ''' dabei wieder zur Einzelaufnahme, steht sie danach markiert im Ordner.</summary>
+        ''' <summary>Eine umbenannte Datei bleibt in der geoeffneten Serie. Die Ansicht haelt ihre
+        ''' Aufnahmen ueber die Pfade; ohne diesen Tausch fiel die Datei nach dem Umbenennen aus der
+        ''' Serie und kam erst nach erneutem Oeffnen wieder, obwohl die Serie selbst nach der
+        ''' Aufnahmezeit gebildet wird und sie weiter dazugehoert.</summary>
+        Private Sub MoveStackFocusPath(oldPath As String, newPath As String)
+            If _focusedStackPaths Is Nothing OrElse String.IsNullOrEmpty(oldPath) OrElse String.IsNullOrEmpty(newPath) Then Return
+            If _focusedStackPaths.Remove(oldPath) Then _focusedStackPaths.Add(newPath)
+        End Sub
+
+        ''' <summary>Dasselbe fuer ein Stapel-Umbenennen; getauscht wird nur, was wirklich am neuen
+        ''' Ort liegt, damit ein mittendrin abgebrochener Lauf keine Datei aus der Serie nimmt.</summary>
+        Private Sub MoveStackFocusPaths(mappings As IEnumerable(Of BatchRenameMapping))
+            If _focusedStackPaths Is Nothing OrElse mappings Is Nothing Then Return
+            For Each mapping In mappings
+                If mapping Is Nothing OrElse String.IsNullOrEmpty(mapping.TargetPath) Then Continue For
+                If File.Exists(mapping.TargetPath) AndAlso Not File.Exists(mapping.SourcePath) Then
+                    MoveStackFocusPath(mapping.SourcePath, mapping.TargetPath)
+                End If
+            Next
+        End Sub
+
         Private Function ApplyStackFocus(filtered As List(Of ImageItem)) As List(Of ImageItem)
             If _focusedStackPaths Is Nothing Then Return filtered
             Dim remaining = _allItems.Where(Function(i) i IsNot Nothing AndAlso Not String.IsNullOrEmpty(i.FilePath) AndAlso
@@ -11663,6 +11684,7 @@ Namespace ViewModels
                                                       ' bisher stand hier ein blosses SelectedItem, und damit blieb
                                                       ' SelectedItems leer - ein zweites Umbenennen hintereinander
                                                       ' nahm dann den Ordner als Ziel statt die eben umbenannte Datei.
+                                                      MoveStackFocusPath(target, newPath)
                                                       RequestSelectionAfterSync({newPath})
                                                       SyncFolderItems()
                                                   End If
@@ -11708,6 +11730,7 @@ Namespace ViewModels
                     End Function, failedCompanions)
 
                 ClearSelection()
+                MoveStackFocusPaths(result.Mappings)
                 ' Erst den Wunsch hinterlegen, dann abgleichen: das Umbenennen hat den Watcher schon
                 ' geweckt, und dessen Lauf darf den hier begonnenen ueberholen, ohne dass die
                 ' Auswahl verlorengeht (siehe RequestSelectionAfterSync).
@@ -11716,6 +11739,8 @@ Namespace ViewModels
                 RefreshTree()
             Catch ex As Exception
                 errorMessage = ex.Message
+                ' Bis zum Fehler umbenannte Dateien bleiben trotzdem in der geoeffneten Serie.
+                MoveStackFocusPaths(result.Mappings)
             End Try
 
             If errorMessage IsNot Nothing Then Await _mainVm.ShowMessageAsync(LocalizationService.T("Stapel-Umbenennen fehlgeschlagen"), errorMessage)
