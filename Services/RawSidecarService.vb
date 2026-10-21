@@ -177,12 +177,15 @@ Namespace Services
             Failed
         End Enum
 
-        ''' <summary>Wie <see cref="TryModifyRecipe"/>, sagt aber, warum nichts geschrieben wurde.</summary>
+        ''' <summary>Wie <see cref="TryModifyRecipe"/>, sagt aber, warum nichts geschrieben wurde.
+        ''' <paramref name="decideEdited"/> entscheidet den Vermerk "bearbeitet" am FERTIGEN Rezept,
+        ''' nach <paramref name="modify"/>, und geht vor <paramref name="edited"/>.</summary>
         Public Shared Function TryModifyRecipeDetailed(rawPath As String, createWhenMissing As Func(Of ImageAdjustments),
                                                        modify As Action(Of ImageAdjustments),
                                                        Optional developedThumbnail As Boolean? = Nothing,
-                                                       Optional edited As Boolean? = Nothing) As ModifyRecipeResult
-            Return TryModifyRecipeCore(rawPath, createWhenMissing, modify, developedThumbnail, edited)
+                                                       Optional edited As Boolean? = Nothing,
+                                                       Optional decideEdited As Func(Of ImageAdjustments, Boolean) = Nothing) As ModifyRecipeResult
+            Return TryModifyRecipeCore(rawPath, createWhenMissing, modify, developedThumbnail, edited, decideEdited)
         End Function
 
         ''' <paramref name="createWhenMissing"/> laeuft NUR, wenn die Datei fehlt. Er darf also teuer
@@ -191,7 +194,8 @@ Namespace Services
         Private Shared Function TryModifyRecipeCore(rawPath As String, createWhenMissing As Func(Of ImageAdjustments),
                                                     modify As Action(Of ImageAdjustments),
                                                     developedThumbnail As Boolean?,
-                                                    edited As Boolean?) As ModifyRecipeResult
+                                                    edited As Boolean?,
+                                                    Optional decideEdited As Func(Of ImageAdjustments, Boolean) = Nothing) As ModifyRecipeResult
             If String.IsNullOrWhiteSpace(rawPath) OrElse createWhenMissing Is Nothing OrElse modify Is Nothing Then Return ModifyRecipeResult.Failed
             Try
                 SyncLock _writeLock
@@ -201,6 +205,7 @@ Namespace Services
                     If state = SidecarReadResult.Missing Then adjustments = createWhenMissing()
                     If adjustments Is Nothing Then Return ModifyRecipeResult.Failed
                     modify(adjustments)
+                    If decideEdited IsNot Nothing Then edited = decideEdited(adjustments)
                     Dim catalog = LibraryService.Instance.GetSidecarCatalogData(rawPath)
                     Dim written = TryWriteCore(rawPath, adjustments, catalog, developedThumbnail, edited,
                                                requireAbsent:=state = SidecarReadResult.Missing)

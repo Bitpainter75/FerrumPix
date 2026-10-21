@@ -12508,6 +12508,12 @@ Namespace ViewModels
             Dim state = RawSidecarService.ReadRecipe(source, existing)
             If state = RawSidecarService.SidecarReadResult.Unreadable Then Return RawSidecarService.ModifyRecipeResult.Unreadable
             Dim startValues = If(state = RawSidecarService.SidecarReadResult.Missing, makeStartValues(), Nothing)
+            ' Bearbeitet ist das Bild danach nur, wenn es das schon war oder das fertige Rezept von
+            ' den Startwerten abweicht, wie beim Speichern im Editor (IsEditedRecipe). Fest auf True
+            ' stand ein Bild nach einer wirkungslosen Vorlage im Filter "bearbeitet". Die Startwerte
+            ' vorab, nicht unter der Sperre: bei einer RAW oeffnen sie LibRaw.
+            Dim wasEdited = RawSidecarService.IsEditedFile(source)
+            Dim reference = If(startValues, makeStartValues())
 
             Dim measured As ImageAdjustments = Nothing
             Dim measuredBase As String = Nothing
@@ -12534,7 +12540,7 @@ Namespace ViewModels
                     If isAutoEnhance Then ImageProcessor.ApplyAutoAdjustmentsTo(adj, source)
                 End Sub,
                 developedThumbnail:=True,
-                edited:=True)
+                decideEdited:=Function(adj) wasEdited OrElse adj.IsEditedComparedTo(reference))
         End Function
 
         ''' <summary>"Anpassungen anwenden" mit Ueberschreiben fuer RAW und PSD: die Vorlage kommt
