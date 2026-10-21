@@ -676,13 +676,13 @@
       "shadowTint": 3
     },
     "CANONEOSR10": {
-      "redHue": 2,
-      "redSaturation": -5,
-      "greenHue": 6,
+      "redHue": -2,
+      "redSaturation": -8,
+      "greenHue": 3,
       "greenSaturation": 3,
-      "blueHue": -7,
-      "blueSaturation": -14,
-      "shadowTint": 0
+      "blueHue": -5,
+      "blueSaturation": -4,
+      "shadowTint": 1
     },
     "CANONEOSR50": {
       "redHue": -24,
@@ -695,12 +695,12 @@
     },
     "CANONEOSR5MARKII": {
       "redHue": -8,
-      "redSaturation": 17,
-      "greenHue": 2,
-      "greenSaturation": -13,
-      "blueHue": -13,
-      "blueSaturation": 7,
-      "shadowTint": 1
+      "redSaturation": 9,
+      "greenHue": 5,
+      "greenSaturation": -5,
+      "blueHue": -12,
+      "blueSaturation": -6,
+      "shadowTint": 2
     },
     "CANONEOSR6": {
       "redHue": -3,
@@ -739,12 +739,12 @@
       "shadowTint": -1
     },
     "CANONEOSR8": {
-      "redHue": -17,
-      "redSaturation": 7,
+      "redHue": -15,
+      "redSaturation": 12,
       "greenHue": 0,
-      "greenSaturation": -13,
-      "blueHue": -5,
-      "blueSaturation": -6,
+      "greenSaturation": -11,
+      "blueHue": -3,
+      "blueSaturation": -2,
       "shadowTint": 5
     },
     "CANONPOWERSHOTSX710HS": {
@@ -757,12 +757,12 @@
       "shadowTint": 1
     },
     "FUJIFILMGFX100II": {
-      "redHue": -23,
-      "redSaturation": 39,
-      "greenHue": -3,
-      "greenSaturation": 3,
-      "blueHue": -21,
-      "blueSaturation": -4,
+      "redHue": -22,
+      "redSaturation": 27,
+      "greenHue": -2,
+      "greenSaturation": 2,
+      "blueHue": -23,
+      "blueSaturation": -7,
       "shadowTint": -3
     },
     "FUJIFILMGFX100RF": {
@@ -793,40 +793,40 @@
       "shadowTint": 13
     },
     "FUJIFILMX100F": {
-      "redHue": -5,
+      "redHue": -6,
       "redSaturation": 15,
-      "greenHue": 19,
+      "greenHue": 20,
       "greenSaturation": 1,
-      "blueHue": -6,
-      "blueSaturation": -7,
+      "blueHue": -3,
+      "blueSaturation": -8,
       "shadowTint": 1
     },
     "FUJIFILMX100VI": {
-      "redHue": -1,
-      "redSaturation": 16,
+      "redHue": 0,
+      "redSaturation": 19,
       "greenHue": 8,
-      "greenSaturation": -9,
-      "blueHue": -7,
+      "greenSaturation": -11,
+      "blueHue": -9,
       "blueSaturation": -3,
-      "shadowTint": -2
+      "shadowTint": -1
     },
     "FUJIFILMXH2S": {
-      "redHue": -4,
-      "redSaturation": 25,
-      "greenHue": 6,
-      "greenSaturation": 2,
-      "blueHue": -4,
-      "blueSaturation": -6,
+      "redHue": -5,
+      "redSaturation": 26,
+      "greenHue": 1,
+      "greenSaturation": 0,
+      "blueHue": -1,
+      "blueSaturation": -7,
       "shadowTint": 7
     },
     "FUJIFILMXS10": {
-      "redHue": -12,
+      "redHue": -13,
       "redSaturation": -5,
-      "greenHue": 8,
-      "greenSaturation": -4,
+      "greenHue": 6,
+      "greenSaturation": -3,
       "blueHue": -9,
-      "blueSaturation": 0,
-      "shadowTint": 2
+      "blueSaturation": 2,
+      "shadowTint": 1
     },
     "FUJIFILMXT30II": {
       "redHue": -5,
