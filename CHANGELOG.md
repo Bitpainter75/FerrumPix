@@ -19,8 +19,20 @@
   corrected base brightness. The whites slider now has the strength you would expect in both
   directions, highlights are a little gentler and pulling the blacks down works more strongly.
   The shadows slider now also looks at how much of the picture is bright: next to a bright sky
-  or a light wall, dark parts open up further, as in a raw developer.
-  Pictures you edited with 0.9.68 can look slightly different in these four areas.
+  or a light wall, dark parts open up further, as in a raw developer. In dark pictures, such as
+  concerts or night shots, the highlights slider now pulls bright areas down much more firmly.
+  All pictures now share one calculation for these sliders, so pictures you edited in earlier
+  versions can look slightly different.
+
+- **See and find your edited pictures.** A new "Edited" section in the gallery filter shows only
+  edited or only unedited pictures, so you can select them all and export, convert or upload
+  just those. If you like, a small badge on the tile marks edited pictures, next to the one for
+  rejected pictures; switch it on in the settings under "Mark edited photos". In the photo wall
+  it only appears while the mouse is over the tile. Stars, labels and keywords alone don't count
+  as an edit.
+
+- **Sharper lens correction.** Correcting lens distortion no longer softens fine detail such as
+  hair; pictures keep noticeably more of their sharpness.
 
 - **The random collage looks like a pile of real prints.** Each picture now lies on a white
   print with a soft shadow, keeps its own shape instead of being cut square, and the prints are
@@ -36,8 +48,8 @@
   once while they are open instead of again after every change, and they grow with the window
   so the preview gets more room.
 
-- **PSD files open more faithfully.** Layers set to Linear Dodge now blend as they should, a
-  painted layer mask next to a vector mask is kept, text, shape and smart object layers no
+- **PSD files open more faithfully.** Layers set to Linear Dodge or Soft Light now blend as they
+  should, a painted layer mask next to a vector mask is kept, text, shape and smart object layers no
   longer get their edges masked twice, and one unreadable layer no longer turns the whole file
   flat. When a file uses layer effects such as shadows or strokes, FerrumPix asks whether to
   open it as layers without the effects or as a flattened image. In the gallery and viewer,
@@ -45,4 +57,11 @@
   longer get a light fringe, and a saved selection is no longer taken for transparency. PSD
   files exported from FerrumPix store their transparent edges the way other programs expect.
   Combining distant or feathered masks now respects the import's memory limit.
+
+- **Smaller fixes.** The text cursor sits in the right place and at the right size, also while
+  you resize a text box. The curve editor draws the luminance curve the way it is applied. A
+  picture you rename stays in the open burst. Choosing a folder in "Save as", in searches and in
+  the settings starts in the folder already entered instead of your home folder. In the filter
+  menu, bursts, rejected and edited pictures now come after the colour labels, and the people
+  and places lists are as tall as the keyword list.
 
