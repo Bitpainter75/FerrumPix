@@ -99,6 +99,30 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="0.9.69-1" date="2026-10-21">
+      <description>
+        <p>This update makes exposure and highlights on raw files work much more like in a raw developer, helps you find your edited photos and starts faster:</p>
+        <p xml:lang="de">Mit diesem Update wirken Belichtung und Lichter bei RAW-Dateien viel mehr wie in einem RAW-Entwickler, bearbeitete Fotos lassen sich leichter finden, und das Programm startet schneller:</p>
+        <ul>
+          <li>Exposure on raw files now acts on the raw data before the tone curve. Darkening brings back detail in bright skies instead of just greying them, and pulling the highlights down reaches into that detail as well. Clouds keep their texture and colour.</li>
+          <li xml:lang="de">Die Belichtung wirkt bei RAW-Dateien jetzt auf die Rohdaten, noch vor der Tonkurve. Abdunkeln holt Zeichnung in hellen Himmeln zurück, statt sie nur grau zu machen, und auch das Absenken der Lichter reicht bis in diese Zeichnung. Wolken behalten ihre Struktur und ihre Farbe.</li>
+          <li>Raw files from most cameras now open at the right brightness on a new installation. The tone sliders are tuned again to it, and highlight recovery is always on.</li>
+          <li xml:lang="de">RAW-Dateien der meisten Kameras öffnen bei einer neuen Installation jetzt in der richtigen Helligkeit. Die Tonregler sind darauf neu abgestimmt, und die Lichterrettung ist immer eingeschaltet.</li>
+          <li>A new filter shows only edited or only unedited photos, so batch actions can run on just those. An optional badge marks edited photos in the gallery.</li>
+          <li xml:lang="de">Ein neuer Filter zeigt nur bearbeitete oder nur unbearbeitete Fotos, sodass Stapelaktionen nur für diese laufen. Ein Abzeichen, das sich einschalten lässt, kennzeichnet bearbeitete Fotos in der Galerie.</li>
+          <li>FerrumPix now comes precompiled, so the gallery appears noticeably sooner after launch.</li>
+          <li xml:lang="de">FerrumPix wird jetzt vorab übersetzt ausgeliefert, deshalb erscheint die Galerie nach dem Start spürbar schneller.</li>
+          <li>Lens correction keeps fine detail such as hair sharp, and the lens data knows a few more lenses.</li>
+          <li xml:lang="de">Die Objektivkorrektur hält feine Details wie Haare scharf, und die Objektivdaten kennen ein paar Objektive mehr.</li>
+          <li>The random collage looks like a pile of real prints, collages can take any aspect ratio or size, and the collage and print previews are faster and larger.</li>
+          <li xml:lang="de">Die Zufallscollage sieht aus wie ein Stapel echter Abzüge, Collagen gibt es in jedem Seitenverhältnis und jeder Größe, und die Vorschauen für Collage und Druck sind schneller und größer.</li>
+          <li>PSD files open more faithfully: more blend modes, masks and text layers come through as intended, and files with layer effects can be opened as layers or as a flattened image.</li>
+          <li xml:lang="de">PSD-Dateien öffnen sich originalgetreuer: weitere Mischmodi, Masken und Textebenen kommen an wie gedacht, und Dateien mit Ebeneneffekten lassen sich als Ebenen oder als zusammengefügtes Bild öffnen.</li>
+          <li>There are also a few smaller fixes: the text cursor sits in the right place, folder pickers start in the folder already entered, and a renamed photo stays in its burst.</li>
+          <li xml:lang="de">Außerdem wurden einige kleinere Fehler behoben: Der Textcursor sitzt an der richtigen Stelle, die Ordnerauswahl beginnt im schon eingetragenen Ordner, und ein umbenanntes Foto bleibt in seiner Bildserie.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.9.68-1" date="2026-10-19">
       <description>
         <p>This update improves how highlights, shadows and whites respond to adjustments, bringing them closer to what you'd expect from a RAW editor. File operations are now safer, too:</p>
