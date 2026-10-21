@@ -56,7 +56,9 @@
   or a light wall, dark parts open up further, as in a raw developer. In dark pictures, such as
   concerts or night shots, the highlights slider now pulls bright areas down much more firmly.
   Detail in bright skies and clouds is now always brought back from the raw data, so the
-  checkbox for it in the light panel is gone.
+  checkbox for it in the light panel is gone. On raw files, pulling the highlights down now
+  reaches into that detail as well: bright skies, clouds and burnt out areas come down about as
+  far as in a raw developer, where before the slider stopped at half the way.
   All pictures now share one calculation for these sliders, so pictures you edited in earlier
   versions can look slightly different.
   

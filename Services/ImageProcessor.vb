@@ -747,15 +747,23 @@ Namespace Services
                                                           recoverHighlights As Boolean,
                                                           exposureEv As Double,
                                                           ByRef appliedEv As Double,
-                                                          Optional ByRef rawDeveloped As Boolean = False) As SKBitmap
+                                                          Optional ByRef rawDeveloped As Boolean = False,
+                                                          Optional knee As Double = RawDecodeService.HighlightRecoveryKnee,
+                                                          Optional ByRef rawStage As Boolean = False) As SKBitmap
             appliedEv = 0.0
             rawDeveloped = False
+            rawStage = False
             If developRaw AndAlso RawPreviewService.IsSupportedRaw(path) AndAlso RawDecodeService.IsAvailable Then
-                ' Ohne Belichtung derselbe Aufruf wie in DecodeOriented.
-                Dim developed = RawDecodeService.TryDecode(path, lensChoice, recoverHighlights, exposureEv:=exposureEv)
+                ' Ohne Belichtung und mit dem Knie ab Werk derselbe Aufruf wie in DecodeOriented.
+                Dim developed = RawDecodeService.TryDecode(path, lensChoice, recoverHighlights, knee:=knee, exposureEv:=exposureEv)
                 If developed IsNot Nothing Then
-                    appliedEv = exposureEv
+                    ' Entwickelt hat LibRaw, aber nur ueber die RAW-Stufe kommen Belichtung und
+                    ' Knie an (RawDecodeService.DevelopsThroughRawStage). Sonst rechnet die Kette
+                    ' die Belichtung; bis 2026-10-21 meldete dieser Weg sie trotzdem als im Bild,
+                    ' und bei einer DNG-Huelle um ein fertiges Bild ging sie verloren.
                     rawDeveloped = True
+                    rawStage = RawDecodeService.DevelopsThroughRawStage(path)
+                    appliedEv = If(rawStage, exposureEv, 0.0)
                     Return developed
                 End If
                 ' LibRaw kann die Datei nicht entwickeln: die eingebettete Vorschau, ohne zweiten
@@ -776,7 +784,8 @@ Namespace Services
             Dim applied = 0.0
             Dim decoded = DecodeOrientedWithExposure(path, developRaw, LensChoiceFrom(adj),
                                                      adj IsNot Nothing AndAlso adj.RawHighlightRecovery,
-                                                     If(adj Is Nothing, 0.0, adj.RawExposureEv()), applied)
+                                                     If(adj Is Nothing, 0.0, adj.RawExposureEv()), applied,
+                                                     knee:=If(adj Is Nothing, RawDecodeService.HighlightRecoveryKnee, adj.RawHighlightKnee()))
             renderAdj = WithExposureInSource(adj, applied)
             Return decoded
         End Function
@@ -788,8 +797,10 @@ Namespace Services
                                                       ByRef renderAdj As ImageAdjustments) As SKBitmap
             Dim exposureEv = If(adj Is Nothing, 0.0, adj.RawExposureEv())
             Dim decoded = RawDecodeService.TryDecodeThumbnail(path, LensChoiceFrom(adj),
-                                                              adj IsNot Nothing AndAlso adj.RawHighlightRecovery, exposureEv)
-            renderAdj = WithExposureInSource(adj, If(decoded IsNot Nothing, exposureEv, 0.0))
+                                                              adj IsNot Nothing AndAlso adj.RawHighlightRecovery, exposureEv,
+                                                              If(adj Is Nothing, RawDecodeService.HighlightRecoveryKnee, adj.RawHighlightKnee()))
+            renderAdj = WithExposureInSource(adj, If(decoded IsNot Nothing AndAlso RawDecodeService.DevelopsThroughRawStage(path),
+                                                     exposureEv, 0.0))
             Return decoded
         End Function
 
@@ -2335,14 +2346,18 @@ Namespace Services
         Friend Shared Function DecodeWorkingImageWithExposure(path As String, lensChoice As LensDataService.Wahl,
                                                               recoverHighlights As Boolean, exposureEv As Double,
                                                               ByRef appliedEv As Double,
-                                                              Optional ByRef rawDeveloped As Boolean = False) As SKBitmap
+                                                              Optional ByRef rawDeveloped As Boolean = False,
+                                                              Optional knee As Double = RawDecodeService.HighlightRecoveryKnee,
+                                                              Optional ByRef rawStage As Boolean = False) As SKBitmap
             appliedEv = 0.0
             rawDeveloped = False
+            rawStage = False
             Try
-                Return DecodeOrientedWithExposure(path, True, lensChoice, recoverHighlights, exposureEv, appliedEv, rawDeveloped)
+                Return DecodeOrientedWithExposure(path, True, lensChoice, recoverHighlights, exposureEv, appliedEv, rawDeveloped, knee, rawStage)
             Catch
                 appliedEv = 0.0
                 rawDeveloped = False
+                rawStage = False
                 Return Nothing
             End Try
         End Function
@@ -4237,7 +4252,7 @@ Namespace Services
             ' komponierten auf veralteter Basis. Das gilt auch fuer APP-WEITE Render-Schalter,
             ' nicht nur adj-Felder - wer einen einfuehrt, muss ihn hier eintragen.
             Return String.Join("|", New Object() {
-                adj.Exposure, adj.ExposureInSource, adj.ChainExposureInRawStage(), adj.Brightness, adj.Contrast, adj.Saturation, adj.Highlights, adj.ShadowsLevel,
+                adj.Exposure, adj.ExposureInSource, adj.ChainExposureInRawStage(), adj.KneeInSource, adj.Brightness, adj.Contrast, adj.Saturation, adj.Highlights, adj.ShadowsLevel,
                 adj.Whites, adj.Blacks, adj.Temperature, adj.Tint, adj.Sharpness, adj.SharpenRadius, adj.SharpenDetail,
                 adj.WhiteBalanceModel, adj.WhiteBalanceAnchorX, adj.WhiteBalanceAnchorY,
                 adj.WhiteBalanceKelvin, adj.WhiteBalanceKelvinTint,

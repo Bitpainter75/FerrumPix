@@ -87,12 +87,14 @@ Namespace Services
             Dim isFpx = FpxService.IsFpx(sourcePath)
             Dim applied = 0.0
             Dim developed = False
+            Dim throughRawStage = False
             Using bmp = If(isFpx, DecodeForOutput(sourcePath),
-                           DecodeOrientedWithExposure(sourcePath, True, Nothing, True, 0.0, applied, developed))
+                           DecodeOrientedWithExposure(sourcePath, True, Nothing, True, 0.0, applied, developed,
+                                                      rawStage:=throughRawStage))
                 If bmp Is Nothing Then Return
                 ' Ein .fpx kommt hier schon fertig gerendert an, samt Umkehr aus seinem Rezept; ein
                 ' zweites Umkehren gaebe wieder das Negativ.
-                Dim rawStage = developed AndAlso adj.ExposureBelongsToRawStage()
+                Dim rawStage = throughRawStage AndAlso adj.ExposureBelongsToRawStage()
                 Dim r = If(isFpx, AnalyzeAutoAdjustments(bmp), AnalyzeAutoAdjustments(bmp, adj, rawStage))
                 If Not r.HasMeasurement OrElse r.IsNeutral() Then Return
                 ' Die Messung rechnet in Double, die Regler sind Single. Das Verengen stand

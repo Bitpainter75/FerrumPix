@@ -731,6 +731,13 @@ Namespace ViewModels
         ''' jedem Quellwechsel und jedem Neuaufbau fuer die Belichtung; mit eingebackenem Inhalt
         ''' bleibt der Stand stehen, spaetere Aenderungen wirken in der Kette.
         Private _workingImageExposure As Single = 0.0F
+        ''' Mit welchem Knie der Lichterschulter das Arbeitsbild entwickelt ist
+        ''' (ImageAdjustments.RawHighlightKnee); gesetzt wie _workingImageExposure.
+        Private _workingImageKnee As Double = RawDecodeService.HighlightRecoveryKnee
+        ''' Kam das Arbeitsbild durch die RAW-Stufe (RawDecodeService.DevelopsThroughRawStage)?
+        ''' Nur dann kommen Belichtung und Knie dort an; eine DNG-Huelle um ein fertiges Bild
+        ''' entwickelt LibRaw zwar, aber ohne Rampe. Gesetzt wie _workingImageRawDeveloped.
+        Private _workingImageRawStage As Boolean
         ''' Hat LibRaw das Arbeitsbild entwickelt? Gesetzt wie _workingImageExposure aus dem Decode,
         ''' der es geliefert hat (IsRawDeveloped). Nicht aus dem Zwischenspeicher von RawDecodeService
         ''' abgeleitet: der haelt nur ein Bild, und der Decode einer anderen RAW (Kachel, Betrachter,
@@ -7401,6 +7408,28 @@ Namespace ViewModels
                 .NegativeEnabled = _negativeEnabled}.RawExposureEv()
         End Function
 
+        ''' <summary>Das Knie der Lichterschulter des BILDES fuer die RAW-Stufe
+        ''' (ImageAdjustments.RawHighlightKnee), geparkte Werte wie bei
+        ''' <see cref="WantedRawExposureEv"/>.</summary>
+        Private Function WantedRawHighlightKnee() As Double
+            Dim parked As ImageAdjustments = Nothing
+            If IsObjectAdjustModeActive() Then
+                parked = _imagePixelAdjustments
+            ElseIf IsSelectionAdjustModeActive() Then
+                parked = _selectionImagePixelAdjustments
+            End If
+            If parked IsNot Nothing Then
+                Return New ImageAdjustments With {
+                    .Highlights = parked.Highlights,
+                    .NegativeEnabled = parked.NegativeEnabled,
+                    .RawHighlightRecovery = _rawHighlightRecovery}.RawHighlightKnee()
+            End If
+            Return New ImageAdjustments With {
+                .Highlights = CSng(_highlights),
+                .NegativeEnabled = _negativeEnabled,
+                .RawHighlightRecovery = _rawHighlightRecovery}.RawHighlightKnee()
+        End Function
+
         ''' <summary>Wie lange der Belichtungsregler ruhen muss, bevor das Arbeitsbild mit der neuen
         ''' Belichtung aus der RAW-Stufe neu entsteht. Waehrend des Zugs rechnet die Kette den
         ''' Unterschied (ExposureInSource), das Bild folgt also sofort.</summary>
@@ -7412,9 +7441,11 @@ Namespace ViewModels
         ''' Stand stehen und die Kette rechnet den Rest, und eine RAW, die LibRaw nicht entwickelt,
         ''' kaeme ohnehin mit 0 zurueck - der Neuaufbau liefe sonst bei jeder Aenderung umsonst.</summary>
         Private Function NeedsRawExposureRebuild() As Boolean
-            If Not HasDocument OrElse _workingImage.HasBakedContent OrElse Not IsRawDeveloped Then Return False
+            If Not HasDocument OrElse _workingImage.HasBakedContent OrElse Not IsRawDeveloped OrElse
+               Not _workingImageRawStage Then Return False
             Dim wanted = CSng(WantedRawExposureEv() * ImageAdjustments.ExposurePointsPerStop)
-            Return wanted <> _workingImageExposure
+            ' Das Knie, das der Lichter-Regler verschiebt, zieht derselbe Neuaufbau nach.
+            Return wanted <> _workingImageExposure OrElse WantedRawHighlightKnee() <> _workingImageKnee
         End Function
 
         ''' <summary>Entsteht das Arbeitsbild mit der Belichtung neu, sobald sie ruht
@@ -7423,7 +7454,8 @@ Namespace ViewModels
         ''' dort rendert der Editor die unbearbeitete Datei, und die Kette rechnet die ganze
         ''' Belichtung als Faktor.</summary>
         Private Function SourceFollowsRawExposure() As Boolean
-            Return HasDocument AndAlso Not _pixelLayerHidden AndAlso Not _workingImage.HasBakedContent AndAlso IsRawDeveloped
+            Return HasDocument AndAlso Not _pixelLayerHidden AndAlso Not _workingImage.HasBakedContent AndAlso IsRawDeveloped AndAlso
+                   _workingImageRawStage
         End Function
 
         ''' <summary>Merkt den Neuaufbau fuer die Belichtung vor; die Frist beginnt bei jeder
@@ -7457,6 +7489,7 @@ Namespace ViewModels
             End If
             Dim path = RenderSourcePath
             Dim exposureEv = WantedRawExposureEv()
+            Dim knee = WantedRawHighlightKnee()
             Dim wahl = LensChoiceFromFields()
             Dim recoverHighlights = _rawHighlightRecovery
             Dim previewMax = PreviewMaxDimension
@@ -7467,10 +7500,12 @@ Namespace ViewModels
                 prepared = Await Task.Run(Function()
                                               Dim applied = 0.0
                                               Dim developed = False
+                                              Dim rawStage = False
                                               Dim full = ImageProcessor.DecodeWorkingImageWithExposure(path, wahl, recoverHighlights,
-                                                                                                       exposureEv, applied, developed)
+                                                                                                       exposureEv, applied, developed, knee, rawStage)
                                               Return PrepareSource(New DecodedSource With {
-                                                  .Full = full, .AppliedEv = applied, .RawDeveloped = developed}, previewMax)
+                                                  .Full = full, .AppliedEv = applied, .RawDeveloped = developed, .RawStage = rawStage,
+                                                  .AppliedKnee = If(rawStage, knee, RawDecodeService.HighlightRecoveryKnee)}, previewMax)
                                           End Function)
             Catch ex As Exception
                 DiagnosticLogService.LogException("Editor.RawExposureRebuild", ex)
@@ -7484,8 +7519,10 @@ Namespace ViewModels
                 Return
             End If
             _workingImageExposure = CSng(prepared.AppliedEv * ImageAdjustments.ExposurePointsPerStop)
+            _workingImageKnee = prepared.AppliedKnee
+            _workingImageRawStage = prepared.RawStage
             SetWorkingImageRawDeveloped(prepared.RawDeveloped)
-            DiagnosticLogService.LogAlways("Editor.RawExposureRebuild", $"exposure={_workingImageExposure}; developed={prepared.RawDeveloped}")
+            DiagnosticLogService.LogAlways("Editor.RawExposureRebuild", $"exposure={_workingImageExposure}; knee={_workingImageKnee:F3}; developed={prepared.RawDeveloped}")
             AdoptPreparedWorkingImage(prepared.Prepared, prepared.Display,
                                       hasBakedContent:=False,
                                       hasAlphaHoles:=_newDocTransparentBackground,
@@ -20595,11 +20632,14 @@ Namespace ViewModels
         Private Shared Function DecodeForPreviewSource(imagePath As String, overridePath As String,
                                                        lensChoice As LensDataService.Wahl,
                                                        recoverHighlights As Boolean,
-                                                       Optional exposureEv As Double = 0.0) As DecodedSource
+                                                       Optional exposureEv As Double = 0.0,
+                                                       Optional knee As Double = RawDecodeService.HighlightRecoveryKnee) As DecodedSource
             Dim fullDecode As SKBitmap = Nothing
             Dim bakedFromFpx = False
             Dim appliedEv = 0.0
+            Dim appliedKnee = RawDecodeService.HighlightRecoveryKnee
             Dim rawDeveloped = False
+            Dim rawStage = False
             If Not String.IsNullOrEmpty(overridePath) AndAlso File.Exists(overridePath) Then
                 fullDecode = ImageProcessor.DecodeWorkingImage(overridePath, lensChoice, recoverHighlights)
                 If fullDecode IsNot Nothing Then
@@ -20625,12 +20665,14 @@ Namespace ViewModels
             If fullDecode Is Nothing AndAlso Not bakedFromFpx Then fullDecode = DecodedImageHandoff.TryTake(imagePath)
             If fullDecode Is Nothing Then
                 fullDecode = ImageProcessor.DecodeWorkingImageWithExposure(imagePath, lensChoice, recoverHighlights,
-                                                                           exposureEv, appliedEv, rawDeveloped)
+                                                                           exposureEv, appliedEv, rawDeveloped, knee, rawStage)
+                If rawStage Then appliedKnee = knee
             End If
             DiagnosticLogService.LogAlways("Editor.RawHighlightRecovery",
                 $"decode completed; enabled={recoverHighlights}; source={imagePath}; override={Not String.IsNullOrEmpty(overridePath)}; " &
                 $"baked={bakedFromFpx}; developed={rawDeveloped}; exposureEv={appliedEv:F2}; result={If(fullDecode Is Nothing, "<none>", $"{fullDecode.Width}x{fullDecode.Height}")}")
-            Return New DecodedSource With {.Full = fullDecode, .Baked = bakedFromFpx, .AppliedEv = appliedEv, .RawDeveloped = rawDeveloped}
+            Return New DecodedSource With {.Full = fullDecode, .Baked = bakedFromFpx, .AppliedEv = appliedEv,
+                                           .AppliedKnee = appliedKnee, .RawDeveloped = rawDeveloped, .RawStage = rawStage}
         End Function
 
         ''' <summary>Was der Decode fuer das Arbeitsbild liefert: das Vollbild, ob es ein eingebackenes
@@ -20640,7 +20682,11 @@ Namespace ViewModels
             Public Full As SKBitmap
             Public Baked As Boolean
             Public AppliedEv As Double
+            ''' Das Knie der Lichterschulter im Bild (ab Werk, wenn LibRaw nicht entwickelt hat).
+            Public AppliedKnee As Double
             Public RawDeveloped As Boolean
+            ''' Kam es durch die RAW-Stufe (RawDecodeService.DevelopsThroughRawStage)?
+            Public RawStage As Boolean
         End Structure
 
         ''' <summary>Quellwechsel Teil 3: das Ergebnis übernehmen - wieder UI-Thread.
@@ -20664,6 +20710,10 @@ Namespace ViewModels
             Public Baked As Boolean
             ''' Die Belichtung in Blendenstufen, die der Decode in die RAW-Stufe gelegt hat.
             Public AppliedEv As Double
+            ''' Das Knie der Lichterschulter, mit dem der Decode entwickelt hat.
+            Public AppliedKnee As Double
+            ''' Kam das Bild durch die RAW-Stufe?
+            Public RawStage As Boolean
             ''' Hat LibRaw die Datei entwickelt (und nicht die eingebettete Vorschau eingesprungen)?
             Public RawDeveloped As Boolean
 
@@ -20689,7 +20739,8 @@ Namespace ViewModels
                 End Try
             End If
             Return New PreparedSource With {.Prepared = prepared, .Display = display, .Baked = decoded.Baked,
-                                            .AppliedEv = decoded.AppliedEv, .RawDeveloped = decoded.RawDeveloped}
+                                            .AppliedEv = decoded.AppliedEv, .AppliedKnee = decoded.AppliedKnee,
+                                            .RawDeveloped = decoded.RawDeveloped, .RawStage = decoded.RawStage}
         End Function
 
         ''' <summary>Ist der Quellwechsel dieser Marke ueberholt? Dann NICHT entsperren: der neue
@@ -20709,6 +20760,8 @@ Namespace ViewModels
             ' des Decodes. VOR dem Einsetzen, denn der Aufwaermrender rechnet schon damit.
             _workingImageExposure = If(source.Baked, _workingImageOverrideExposure,
                                        CSng(source.AppliedEv * ImageAdjustments.ExposurePointsPerStop))
+            _workingImageKnee = If(source.Baked, RawDecodeService.HighlightRecoveryKnee, source.AppliedKnee)
+            _workingImageRawStage = Not source.Baked AndAlso source.RawStage
             SetWorkingImageRawDeveloped(Not source.Baked AndAlso source.RawDeveloped)
 
             ' Laeuft auf dem Anzeigefaden; mit Messpunkt, damit eine Stockung hier im Protokoll einen
@@ -20802,7 +20855,7 @@ Namespace ViewModels
             Dim token = BeginPreviewSourceSwap(imagePath)
             If token < 0 Then Return
             CompletePreviewSourceSwap(DecodeForPreviewSource(imagePath, _workingImageOverridePath, LensChoiceFromFields(), _rawHighlightRecovery,
-                                                             WantedRawExposureEv()),
+                                                             WantedRawExposureEv(), WantedRawHighlightKnee()),
                                       token, scheduleInitialRender)
         End Sub
 
@@ -20840,10 +20893,11 @@ Namespace ViewModels
             Dim wahl = LensChoiceFromFields()
             Dim recoverHighlights = _rawHighlightRecovery
             Dim exposureEv = WantedRawExposureEv()
+            Dim knee = WantedRawHighlightKnee()
             Dim previewMax = PreviewMaxDimension
             ' Decode UND Vorbereitung im Hintergrund: beides geht ueber das ganze Bild (PrepareSource).
             Dim prepared = Await Task.Run(Function()
-                                              Dim decoded = DecodeForPreviewSource(imagePath, overridePath, wahl, recoverHighlights, exposureEv)
+                                              Dim decoded = DecodeForPreviewSource(imagePath, overridePath, wahl, recoverHighlights, exposureEv, knee)
                                               Return PrepareSource(decoded, previewMax)
                                           End Function)
             CompletePreparedSourceSwap(prepared, token, scheduleInitialRender)
@@ -20890,6 +20944,8 @@ Namespace ViewModels
             ' Stale-Mechanik oben, das Voll-Bitmap der Service selbst).
             _workingImage.Clear()
             _workingImageExposure = 0.0F
+            _workingImageKnee = RawDecodeService.HighlightRecoveryKnee
+            _workingImageRawStage = False
             SetWorkingImageRawDeveloped(False)
             Threading.Interlocked.Increment(_rawExposureRebuildToken)
             _rawExposureRebuildTimer?.Stop()
@@ -23005,6 +23061,7 @@ Namespace ViewModels
                 .WorkingImageExposure = _workingImageExposure,
                 .ExposureInSource = If(_pixelLayerHidden, 0.0F, _workingImageExposure),
                 .SourceFollowsRawExposure = SourceFollowsRawExposure(),
+                .KneeInSource = _workingImageKnee,
                 .FilterPreset = _filterPreset,
                 .FilterStrength = CSng(_filterStrength),
                 .LutPath = _lutPath,

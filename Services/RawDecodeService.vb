@@ -674,24 +674,26 @@ Namespace Services
         Friend Shared Function TryDecodeThumbnail(path As String,
                                                    Optional lensChoice As LensDataService.Wahl = Nothing,
                                                    Optional recoverHighlights As Boolean = True,
-                                                   Optional exposureEv As Double = 0.0) As SKBitmap
+                                                   Optional exposureEv As Double = 0.0,
+                                                   Optional knee As Double = HighlightRecoveryKnee) As SKBitmap
             If String.IsNullOrWhiteSpace(path) OrElse Not IsAvailable Then Return Nothing
-            Return DecodeGate.Run(Function() DecodeThumbnailIntern(path, lensChoice, recoverHighlights, exposureEv))
+            Return DecodeGate.Run(Function() DecodeThumbnailIntern(path, lensChoice, recoverHighlights, exposureEv, knee))
         End Function
 
         Private Shared Function DecodeThumbnailIntern(path As String,
                                                        lensChoice As LensDataService.Wahl,
                                                        recoverHighlights As Boolean,
-                                                       exposureEv As Double) As SKBitmap
+                                                       exposureEv As Double,
+                                                       knee As Double) As SKBitmap
             Try
                 Dim baseEv = BaseExposureForFile(path) + exposureEv
                 Dim lens = LensCorrectionForFile(path, lensChoice)
                 Dim decoded As SKBitmap
                 If _reentrant Then
-                    decoded = DecodeCore(path, baseEv, lens, useHalfSize:=True, recoverHighlights:=recoverHighlights, sliderEv:=exposureEv)
+                    decoded = DecodeCore(path, baseEv, lens, useHalfSize:=True, recoverHighlights:=recoverHighlights, knee:=knee, sliderEv:=exposureEv)
                 Else
                     SyncLock _nativeLock
-                        decoded = DecodeCore(path, baseEv, lens, useHalfSize:=True, recoverHighlights:=recoverHighlights, sliderEv:=exposureEv)
+                        decoded = DecodeCore(path, baseEv, lens, useHalfSize:=True, recoverHighlights:=recoverHighlights, knee:=knee, sliderEv:=exposureEv)
                     End SyncLock
                 End If
                 Return WithDistortion(WithSensorEdgeCrop(decoded, path, lensChoice, halfSize:=True), lens)
@@ -2078,6 +2080,19 @@ Namespace Services
         ''' etwas zu tun.</para></summary>
         Public Const HighlightRecoveryKnee As Double = 0.45
 
+        ''' <summary>Das Knie bei Lichter -100. Der Lichter-Regler zieht es nach unten linear von
+        ''' <see cref="HighlightRecoveryKnee"/> bis hierher (ImageAdjustments.RawHighlightKnee):
+        ''' je weiter er steht, desto mehr der Reserve ueber Weiss rollt die Schulter ins Bild.
+        '''
+        ''' <para>GEMESSEN (2026-10-21, Reglereichung, Messschalter REGLER_LICHTER_KNIE und
+        ''' REGLER_LICHTER_KNIE_START, dL je Band des eigenen Nullbilds). An 29 Bildern mit
+        ''' ausgefressenen Lichtern wirkte Lichter -100 mit festem Knie nur etwa halb so stark wie
+        ''' beim Referenzprogramm (L 95 bis 98: -6,8 gegen -11,7), mit 0,05 trifft es jedes Band
+        ''' ab L 80 auf eine halbe Stufe (-11,3). An den 89 Eichbildern steigt es in L 80 bis 90
+        ''' von -15,9 auf -18,4 (Referenz -19,9). Ein Knie bis 0,15 bleibt in beiden Saetzen
+        ''' schwaecher und bessert Lichter -50 kaum.</para></summary>
+        Public Const HighlightKneeAtFullLowering As Double = 0.05
+
         ''' <summary>Um wie viel tiefer LibRaw dieselben Sensorwerte legt, sobald der Lichtermodus
         ''' nicht mehr Beschnitt ist: das Verhaeltnis von groesstem zu kleinstem
         ''' Referenzmultiplikator. Unter Beschnitt teilt LibRaw durch das Minimum, ab Modus 1 durch
@@ -3076,11 +3091,21 @@ Namespace Services
         ''' Knie bei 0,8 auf 0,926. Die Lichter werden also dunkler, und genau das hat die
         ''' Messung von 2026-08 an der Schulter bemaengelt - damals allerdings OHNE entklemmten
         ''' Decode, also ohne irgendetwas, das die Schulter haette aufnehmen koennen.</para></summary>
-        Private Shared Function ShoulderAt(v As Double, knee As Double) As Double
+        Friend Shared Function ShoulderAt(v As Double, knee As Double) As Double
             If knee >= 1.0 Then Return Math.Min(v, 1.0)
             If v <= knee Then Return v
             Dim span = 1.0 - knee
             Return 1.0 - span * Math.Exp(-(v - knee) / span)
+        End Function
+
+        ''' <summary>Umkehrung von <see cref="ShoulderAt"/>: welche Stelle der Rampe landet bei
+        ''' <paramref name="knee"/> auf <paramref name="y"/>? Was am Anschlag liegt, kommt aus
+        ''' 16 Bit nicht genauer zurueck: der Wert eine Stufe unter 1 steht fuer alles darueber.</summary>
+        Friend Shared Function ShoulderInverse(y As Double, knee As Double) As Double
+            If knee >= 1.0 OrElse y <= knee Then Return y
+            Dim span = 1.0 - knee
+            Dim rest = Math.Max(1.0 - y, 1.0 / 65535.0)
+            Return knee - span * Math.Log(rest / span)
         End Function
 
         Private Shared Function BuildToneTable(ev As Double, blackLevel As Double,
@@ -3450,6 +3475,15 @@ Namespace Services
                    software.TrimStart().StartsWith("CHDK", StringComparison.OrdinalIgnoreCase) Then Return True
             Next
             Return False
+        End Function
+
+        ''' <summary>Laeuft diese Datei durch die RAW-Stufe, also durch Rampe, Schulter und
+        ''' ACR3-Kurve? Nur dann kommen Belichtung und Knie dort an. Eine DNG-Huelle um ein fertiges
+        ''' Bild (<see cref="IsFinishedRgb"/>) und eine LibRaw ohne lineare Ausgabe liefern 8 Bit,
+        ''' die nur umgepackt werden; dort muss die Kette die Belichtung rechnen.</summary>
+        Friend Shared Function DevelopsThroughRawStage(path As String) As Boolean
+            Return IsAvailable AndAlso _setNoAutoBright IsNot Nothing AndAlso _setGamma IsNot Nothing AndAlso
+                   Not IsFinishedRgb(path)
         End Function
 
         Private Shared Function IsFinishedRgb(path As String) As Boolean

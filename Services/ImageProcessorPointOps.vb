@@ -244,7 +244,7 @@ Namespace Services
             ' Genau hier verschwindet eine der 8-Bit-Stufen.
             ' Der Kontrast gehoert zu den Zonen (gemessene Kennlinie, farbtonerhaltend) und nicht
             ' zur Tonwertkurve.
-            Dim wantsTone = adj.ChainExposure() <> 0 OrElse adj.Brightness <> 0
+            Dim wantsTone = adj.ChainExposure() <> 0 OrElse adj.Brightness <> 0 OrElse adj.ChainFollowsRawKnee()
             Dim wantsTonal = adj.Highlights <> 0 OrElse adj.ShadowsLevel <> 0 OrElse
                              adj.Whites <> 0 OrElse adj.Blacks <> 0 OrElse adj.Contrast <> 0
             ' RGB-Kurve und Kanalkurven kommen in DIESELBE Tabelle. Heute steht dort
@@ -1447,12 +1447,19 @@ Namespace Services
                 rawStageGain = exposureGain
                 exposureGain = 1.0F
             End If
+            ' Ebenso das Knie der Lichterschulter, das der Lichter-Regler im Decode verschiebt
+            ' (ImageAdjustments.ChainFollowsRawKnee). Gleiche Knie rechnen wie bisher.
+            Dim kneeFrom = 1.0, kneeTo = 1.0
+            If adj.ChainFollowsRawKnee() Then
+                kneeFrom = adj.KneeInSource
+                kneeTo = adj.RawHighlightKnee()
+            End If
             Dim brightness = adj.Brightness / 100.0F * 80.0F / 255.0F
 
             Dim rgbPoints = If(includeRgbCurve, ParseCurvePoints(adj.CurveRgbPoints), Nothing)
 
-            Dim low = ToneTransfer(RawStageExposureAt(0.0F, rawStageGain), exposureGain, brightness)
-            Dim high = ToneTransfer(RawStageExposureAt(1.0F, rawStageGain), exposureGain, brightness)
+            Dim low = ToneTransfer(RawStageExposureAt(0.0F, rawStageGain, kneeFrom, kneeTo), exposureGain, brightness)
+            Dim high = ToneTransfer(RawStageExposureAt(1.0F, rawStageGain, kneeFrom, kneeTo), exposureGain, brightness)
             Dim overshootHigh = Math.Max(0.0F, high - 1.0F)
             Dim overshootLow = Math.Max(0.0F, -low)
             Dim shoulder = Clamp(ToneShoulderBase + 0.5F * overshootHigh, ToneShoulderBase, ToneShoulderMax)
@@ -1467,7 +1474,7 @@ Namespace Services
                 Dim v = i / CSng(PointOpTableSize - 1)
 
                 If includeTone Then
-                    Dim y = ToneTransfer(RawStageExposureAt(v, rawStageGain), exposureGain, brightness)
+                    Dim y = ToneTransfer(RawStageExposureAt(v, rawStageGain, kneeFrom, kneeTo), exposureGain, brightness)
                     Dim hard = Clamp(y, 0.0F, 1.0F)
                     Dim soft = SoftShoulder(y, toe, shoulder)
                     v = Clamp(hard + (soft - hard) * rolloff, 0.0F, 1.0F)
@@ -1488,11 +1495,23 @@ Namespace Services
         ''' (Gammawert): zurueck ins Linearlicht und durch die umgekehrte ACR3-Kurve auf die Rampe,
         ''' dort mal Faktor und bei 1 abgeschnitten, dann wieder durch die Kurve. Je Kanal statt nach
         ''' der RGBTone-Regel des Decodes und ohne den Schwarzabzug der Rampe; fuer die Zeit bis zum
-        ''' Neuaufbau nah genug. Bei Faktor 1 der Wert selbst, bitgleich.</summary>
-        Friend Shared Function RawStageExposureAt(v As Single, gain As Single) As Single
-            If gain = 1.0F Then Return v
+        ''' Neuaufbau nah genug. Bei Faktor 1 der Wert selbst, bitgleich.
+        '''
+        ''' Unterscheiden sich <paramref name="kneeFrom"/> (das Knie im Quellbild) und
+        ''' <paramref name="kneeTo"/>, wird zusaetzlich die Schulter getauscht: auf der Rampe
+        ''' zurueck durch die alte, mal Faktor, vorwaerts durch die neue. Was im Quellbild am
+        ''' Anschlag liegt, bleibt dort, so wie es der Neuaufbau aus ausgefressenen Daten auch
+        ''' liefert.</summary>
+        Friend Shared Function RawStageExposureAt(v As Single, gain As Single,
+                                                  Optional kneeFrom As Double = 1.0,
+                                                  Optional kneeTo As Double = 1.0) As Single
+            If gain = 1.0F AndAlso kneeFrom = kneeTo Then Return v
             Dim ramp = RawDecodeService.Acr3CurveInverse(SrgbToLinear(Clamp(v, 0.0F, 1.0F)))
-            Return Clamp(LinearToSrgb(CSng(RawDecodeService.Acr3CurveAt(Math.Min(1.0, ramp * gain)))), 0.0F, 1.0F)
+            If kneeFrom = kneeTo Then
+                Return Clamp(LinearToSrgb(CSng(RawDecodeService.Acr3CurveAt(Math.Min(1.0, ramp * gain)))), 0.0F, 1.0F)
+            End If
+            Dim scene = RawDecodeService.ShoulderInverse(ramp, kneeFrom) * gain
+            Return Clamp(LinearToSrgb(CSng(RawDecodeService.Acr3CurveAt(RawDecodeService.ShoulderAt(scene, kneeTo)))), 0.0F, 1.0F)
         End Function
 
         ''' <summary>Gibt einer absichtlich abgesenkten Lichterzone nach positiver Belichtung wieder

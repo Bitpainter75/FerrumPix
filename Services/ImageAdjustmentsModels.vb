@@ -390,6 +390,18 @@ Namespace Services
             Return Exposure / ExposurePointsPerStop
         End Function
 
+        ''' <summary>Das Knie der Lichterschulter in der RAW-Stufe: abgesenkte Lichter ziehen es von
+        ''' RawDecodeService.HighlightRecoveryKnee linear bis HighlightKneeAtFullLowering, die
+        ''' Schulter holt damit mehr der Reserve ueber Weiss ins Bild. Der Regler wirkt danach
+        ''' trotzdem voll in der Kette; so ist er gemessen. Angehobene Lichter lassen das Knie
+        ''' stehen, ein Filmnegativ ebenso (dort sind die Lichter der Datei die Tiefen des Bildes).</summary>
+        Public Function RawHighlightKnee() As Double
+            If Not RawHighlightRecovery OrElse Not ExposureBelongsToRawStage() Then Return RawDecodeService.HighlightRecoveryKnee
+            Dim lowered = Math.Min(1.0, Math.Max(0.0, -Highlights / 100.0))
+            Return RawDecodeService.HighlightRecoveryKnee +
+                   (RawDecodeService.HighlightKneeAtFullLowering - RawDecodeService.HighlightRecoveryKnee) * lowered
+        End Function
+
         ''' <summary>Gehoert die Belichtung bei einer RAW-Datei in die RAW-Stufe, unabhaengig davon,
         ''' wo der Regler gerade steht? Die Automatik fragt das, bevor sie einen Wert waehlt.</summary>
         Public Function ExposureBelongsToRawStage() As Boolean
@@ -428,6 +440,19 @@ Namespace Services
         ''' Siehe <see cref="SourceFollowsRawExposure"/>.</summary>
         Public Function ChainExposureInRawStage() As Boolean
             Return SourceFollowsRawExposure AndAlso ExposureBelongsToRawStage()
+        End Function
+
+        ''' <summary>Mit welchem Knie der Lichterschulter das QUELLBILD entwickelt ist (siehe
+        ''' <see cref="RawHighlightKnee"/>). Gesetzt vom Editor fuer sein Arbeitsbild; gilt nur
+        ''' zusammen mit <see cref="SourceFollowsRawExposure"/>. Wie <see cref="ExposureInSource"/>
+        ''' eine Eigenschaft des Bildes: nicht gespeichert, nicht uebertragen.</summary>
+        <System.Text.Json.Serialization.JsonIgnore>
+        Public Property KneeInSource As Double = RawDecodeService.HighlightRecoveryKnee
+
+        ''' <summary>Greift die Kette einem Neuaufbau mit anderem Knie vor? Dann rechnet sie die
+        ''' Schulter um, bis das neue Arbeitsbild kommt (ImageProcessor.RawStageExposureAt).</summary>
+        Public Function ChainFollowsRawKnee() As Boolean
+            Return ChainExposureInRawStage() AndAlso KneeInSource <> RawHighlightKnee()
         End Function
 
         ''' <summary>Wirken Lichter oder Tiefen oertlich? Ihr Hub richtet sich nach der geglaetteten
@@ -1107,7 +1132,7 @@ Namespace Services
         Private Shared ReadOnly StructuralPropertyNames As New HashSet(Of String)(StringComparer.Ordinal) From {
             "SourceWidthPixels", "SourceHeightPixels", "RecipeCoordinateVersion",
             "WhiteBalanceAnchorX", "WhiteBalanceAnchorY", "WhiteBalanceModel", "WhiteBalanceMode",
-            "RawHighlightRecovery", "RawSensorEdgeCrop", "ExposureInSource", "SourceFollowsRawExposure",
+            "RawHighlightRecovery", "RawSensorEdgeCrop", "ExposureInSource", "SourceFollowsRawExposure", "KneeInSource",
             "LensDistortion", "LensTca", "LensVignetting", "LensModel",
             "LensDistortionAmount", "LensTcaAmount", "LensVignettingAmount", "LensTcaRed", "LensTcaBlue",
             "WorkingImageVersion", "WorkingImageHasTransparency", "WorkingImageExposure",
@@ -1442,6 +1467,7 @@ Namespace Services
                 .WorkingImageExposure = WorkingImageExposure,
                 .ExposureInSource = ExposureInSource,
                 .SourceFollowsRawExposure = SourceFollowsRawExposure,
+                .KneeInSource = KneeInSource,
                 .BakedOperationsApplied = BakedOperationsApplied,
                 .Brightness = Brightness,
                 .Contrast = Contrast,
