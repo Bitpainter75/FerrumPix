@@ -9872,4 +9872,22 @@
   <data name="Weiches_Licht_PSD_7fc2ab6c" xml:space="preserve">
     <value>Lumière tamisée (PSD)</value>
   </data>
+  <data name="Bearbeitete_Bilder_kennzeichnen_6a725b2e" xml:space="preserve">
+    <value>Signaler les photos modifiées</value>
+  </data>
+  <data name="Zeigt_oben_auf_der_Kachel_ein_Symbol_wenn_das_Bi_626f9519" xml:space="preserve">
+    <value>Affiche une icône en haut de la vignette lorsque la photo a été modifiée, à côté de celle des photos rejetées. Dans le mur de photos, elle n'apparaît que lorsque la souris survole la vignette.</value>
+  </data>
+  <data name="Bearbeitet_4107bb88" xml:space="preserve">
+    <value>Modifiée</value>
+  </data>
+  <data name="BEARBEITET_5344ab44" xml:space="preserve">
+    <value>MODIFIÉES</value>
+  </data>
+  <data name="Nur_bearbeitete_c6c908b7" xml:space="preserve">
+    <value>Modifiées uniquement</value>
+  </data>
+  <data name="Nur_unbearbeitete_317574e9" xml:space="preserve">
+    <value>Non modifiées uniquement</value>
+  </data>
 </root>

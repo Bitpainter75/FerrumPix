@@ -9912,4 +9912,22 @@
   <data name="Weiches_Licht_PSD_7fc2ab6c" xml:space="preserve">
     <value>Zwak licht (PSD)</value>
   </data>
+  <data name="Bearbeitete_Bilder_kennzeichnen_6a725b2e" xml:space="preserve">
+    <value>Bewerkte foto's markeren</value>
+  </data>
+  <data name="Zeigt_oben_auf_der_Kachel_ein_Symbol_wenn_das_Bi_626f9519" xml:space="preserve">
+    <value>Toont bovenaan de tegel een symbool als de foto is bewerkt, naast dat voor afgewezen foto's. In de fotowand verschijnt het alleen zolang de muis boven de tegel staat.</value>
+  </data>
+  <data name="Bearbeitet_4107bb88" xml:space="preserve">
+    <value>Bewerkt</value>
+  </data>
+  <data name="BEARBEITET_5344ab44" xml:space="preserve">
+    <value>BEWERKT</value>
+  </data>
+  <data name="Nur_bearbeitete_c6c908b7" xml:space="preserve">
+    <value>Alleen bewerkte</value>
+  </data>
+  <data name="Nur_unbearbeitete_317574e9" xml:space="preserve">
+    <value>Alleen onbewerkte</value>
+  </data>
 </root>

@@ -126,7 +126,8 @@ Namespace Views
                 If topLevel Is Nothing Then Return
                 Dim folders = Await topLevel.StorageProvider.OpenFolderPickerAsync(New FolderPickerOpenOptions With {
                     .Title = LocalizationService.T("Startordner der Galerie wählen"),
-                    .AllowMultiple = False
+                    .AllowMultiple = False,
+                    .SuggestedStartLocation = Await FolderPickerStart.ForPathAsync(topLevel, vm.GalleryStartupCustomFolder)
                 })
                 Dim folder = folders?.FirstOrDefault()
                 If folder IsNot Nothing Then
@@ -224,7 +225,8 @@ Namespace Views
                 If topLevel Is Nothing Then Return
                 Dim folders = Await topLevel.StorageProvider.OpenFolderPickerAsync(New FolderPickerOpenOptions With {
                     .Title = LocalizationService.T("Neuer Ort dieses Ordners"),
-                    .AllowMultiple = False
+                    .AllowMultiple = False,
+                    .SuggestedStartLocation = Await FolderPickerStart.ForPathAsync(topLevel, oldPath)
                 })
                 Dim newPath = folders?.FirstOrDefault()?.Path?.LocalPath
                 If String.IsNullOrWhiteSpace(newPath) Then Return

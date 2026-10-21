@@ -71,6 +71,10 @@ Namespace ViewModels
         Private _ratingBadgesAlwaysVisible As Boolean = False
         Private _favoriteBadgeAlwaysVisible As Boolean = True
         Private _metadataBadgesAlwaysVisible As Boolean = True
+        ''' Abzeichen "bearbeitet" an der Kachel (Einstellung, ab Werk aus).
+        Private _editedBadgeEnabled As Boolean = False
+        ''' Bearbeitete Bilder: "All", "Only" (nur bearbeitete) oder "Hide" (nur unbearbeitete).
+        Private _filterEdited As String = "All"
         Private _viewMode As String = "Grid"
         Private _isLoading As Boolean
         Private _storageFreeText As String = ""
@@ -1014,7 +1018,7 @@ Namespace ViewModels
             Get
                 Return _filterFavorite <> "All" OrElse _filterRatings.Count > 0 OrElse
                        _filterFileType <> "All" OrElse _filterColorLabels.Count > 0 OrElse
-                       _filterRejected <> "Show"
+                       _filterRejected <> "Show" OrElse _filterEdited <> "All"
             End Get
         End Property
 
@@ -1034,9 +1038,11 @@ Namespace ViewModels
             _filterFileType = "All"
             _filterColorLabels.Clear()
             _filterRejected = "Show"
+            _filterEdited = "All"
             SaveFileBrowserSettings()
             For Each name In {NameOf(IsFilterFavoriteAll), NameOf(IsFilterFavoriteOnly),
                               NameOf(IsFilterRejectedShow), NameOf(IsFilterRejectedHide), NameOf(IsFilterRejectedOnly),
+                              NameOf(IsFilterEditedAll), NameOf(IsFilterEditedOnly), NameOf(IsFilterEditedHide),
                               NameOf(IsFilterRatingAll), NameOf(IsFilterRatingUnrated),
                               NameOf(IsFilterRating1Plus), NameOf(IsFilterRating2Plus),
                               NameOf(IsFilterRating3Plus), NameOf(IsFilterRating4Plus),
@@ -1431,6 +1437,20 @@ Namespace ViewModels
             Set(value As Boolean)
                 If _metadataBadgesAlwaysVisible = value Then Return
                 Me.RaiseAndSetIfChanged(_metadataBadgesAlwaysVisible, value)
+                SaveFileBrowserSettings()
+            End Set
+        End Property
+
+        ''' <summary>Das Abzeichen "bearbeitet" an der Kachel, neben dem fuer verworfene Bilder
+        ''' (Einstellung, ab Werk aus). In der Fotowand erscheint es nur beim Ueberfahren, siehe
+        ''' FerrumPixTheme, edited-badge.</summary>
+        Public Property EditedBadgeEnabled As Boolean
+            Get
+                Return _editedBadgeEnabled
+            End Get
+            Set(value As Boolean)
+                If _editedBadgeEnabled = value Then Return
+                Me.RaiseAndSetIfChanged(_editedBadgeEnabled, value)
                 SaveFileBrowserSettings()
             End Set
         End Property
@@ -1833,6 +1853,7 @@ Namespace ViewModels
         Public ReadOnly Property DecreaseThumbnailSizeCommand As ICommand
         Public ReadOnly Property SetFilterFavoriteCommand As ICommand
         Public ReadOnly Property SetFilterRejectedCommand As ICommand
+        Public ReadOnly Property SetFilterEditedCommand As ICommand
         Public ReadOnly Property ToggleRejectSelectedCommand As ICommand
         Public ReadOnly Property RejectRestOfStackCommand As ICommand
         Public ReadOnly Property ExpandAllStacksCommand As ICommand
@@ -2084,6 +2105,8 @@ Namespace ViewModels
             _filterFileType = settings.GalleryFilterFileType
             _stacksEnabled = settings.GalleryStacks
             _filterRejected = NormalizeRejectedFilter(settings.GalleryFilterRejected)
+            _filterEdited = NormalizeEditedFilter(settings.GalleryFilterEdited)
+            _editedBadgeEnabled = settings.GalleryEditedBadge
             ' Die Galerie lebt so lange wie das Fenster; die Anmeldung haelt sie also nicht
             ' ungebuehrlich am Leben (siehe InfoPanelRowSettings, dasselbe Muster).
             AddHandler TileCaptionSettings.Changed, AddressOf OnTileCaptionSettingsChanged
@@ -2199,6 +2222,7 @@ Namespace ViewModels
             SetSelectedColorLabelCommand = ReactiveCommand.Create(Of String)(Sub(hex) SetSelectedColorLabel(hex))
             SetFilterFavoriteCommand = ReactiveCommand.Create(Of String)(Sub(v) FilterFavorite = v)
             SetFilterRejectedCommand = ReactiveCommand.Create(Of String)(Sub(v) FilterRejected = v)
+            SetFilterEditedCommand = ReactiveCommand.Create(Of String)(Sub(v) FilterEdited = v)
             ToggleRejectSelectedCommand = ReactiveCommand.Create(Sub() ToggleRejectSelected())
             RejectRestOfStackCommand = ReactiveCommand.Create(Sub() RejectRestOfStack())
             ExpandAllStacksCommand = ReactiveCommand.Create(Sub() SetAllStacksExpanded(True))
@@ -9828,6 +9852,14 @@ Namespace ViewModels
                 filtered = filtered.Where(Function(i) i.IsFolder OrElse i.IsRejected)
             End If
 
+            ' Bearbeitet: hier wird der Vermerk sofort bestimmt, wo die Kachel ihn noch nicht hat
+            ' (RawSidecarService.IsEditedFile, gemerkt nach Zeitstempel der Begleitdatei).
+            If _filterEdited = "Only" Then
+                filtered = filtered.Where(Function(i) i.IsFolder OrElse i.ResolveIsEdited())
+            ElseIf _filterEdited = "Hide" Then
+                filtered = filtered.Where(Function(i) i.IsFolder OrElse Not i.ResolveIsEdited())
+            End If
+
             If _filterColorLabels.Count > 0 Then
                 filtered = filtered.Where(Function(i) i.IsFolder OrElse _filterColorLabels.Contains(i.ColorLabel))
             End If
@@ -9940,6 +9972,55 @@ Namespace ViewModels
                 Return _filterRejected = "Only"
             End Get
         End Property
+
+        ' ── Bearbeitet ──────────────────────────────────────────────────────────
+        '
+        ' Bearbeitet heisst: ein Projektbuendel, oder eine Begleitdatei mit dem Vermerk "bearbeitet"
+        ' bzw. ohne ihn mit einem Rezept, das von den Startwerten abweicht (RawSidecarService.IsEditedFile).
+        ' Ueber "Alles auswaehlen" laufen die Stapelaktionen damit nur ueber bearbeitete Bilder.
+
+        Public Property FilterEdited As String
+            Get
+                Return _filterEdited
+            End Get
+            Set(value As String)
+                value = NormalizeEditedFilter(value)
+                If _filterEdited = value Then Return
+                Me.RaiseAndSetIfChanged(_filterEdited, value)
+                Me.RaisePropertyChanged(NameOf(IsFilterEditedAll))
+                Me.RaisePropertyChanged(NameOf(IsFilterEditedOnly))
+                Me.RaisePropertyChanged(NameOf(IsFilterEditedHide))
+                Me.RaisePropertyChanged(NameOf(HasActiveFilter))
+                Me.RaisePropertyChanged(NameOf(FilterLabel))
+                FilterAndSort()
+                SaveFileBrowserSettings()
+            End Set
+        End Property
+
+        Public ReadOnly Property IsFilterEditedAll As Boolean
+            Get
+                Return _filterEdited = "All"
+            End Get
+        End Property
+
+        Public ReadOnly Property IsFilterEditedOnly As Boolean
+            Get
+                Return _filterEdited = "Only"
+            End Get
+        End Property
+
+        Public ReadOnly Property IsFilterEditedHide As Boolean
+            Get
+                Return _filterEdited = "Hide"
+            End Get
+        End Property
+
+        Friend Shared Function NormalizeEditedFilter(value As String) As String
+            Select Case value
+                Case "Only", "Hide" : Return value
+                Case Else : Return "All"
+            End Select
+        End Function
 
         ''' <summary>X in der Galerie: verwirft die Auswahl, oder nimmt das Verwerfen zurueck, wenn
         ''' schon alles verworfen ist (wie bei den Sternen: dieselbe Taste noch einmal hebt auf).</summary>
@@ -12452,7 +12533,8 @@ Namespace ViewModels
                     adj.MergeNonDefaultPixelAdjustmentsFrom(template)
                     If isAutoEnhance Then ImageProcessor.ApplyAutoAdjustmentsTo(adj, source)
                 End Sub,
-                developedThumbnail:=True)
+                developedThumbnail:=True,
+                edited:=True)
         End Function
 
         ''' <summary>"Anpassungen anwenden" mit Ueberschreiben fuer RAW und PSD: die Vorlage kommt
@@ -14237,6 +14319,8 @@ Namespace ViewModels
                                           s.GalleryMetadataBadgesAlwaysVisible = _metadataBadgesAlwaysVisible
                                           s.GalleryStacks = _stacksEnabled
                                           s.GalleryFilterRejected = _filterRejected
+                                          s.GalleryFilterEdited = _filterEdited
+                                          s.GalleryEditedBadge = _editedBadgeEnabled
                                       End Sub)
         End Sub
 

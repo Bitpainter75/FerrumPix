@@ -9890,4 +9890,22 @@
   <data name="Weiches_Licht_PSD_7fc2ab6c" xml:space="preserve">
     <value>Weiches Licht (PSD)</value>
   </data>
+  <data name="Bearbeitete_Bilder_kennzeichnen_6a725b2e" xml:space="preserve">
+    <value>Bearbeitete Bilder kennzeichnen</value>
+  </data>
+  <data name="Zeigt_oben_auf_der_Kachel_ein_Symbol_wenn_das_Bi_626f9519" xml:space="preserve">
+    <value>Zeigt oben auf der Kachel ein Symbol, wenn das Bild bearbeitet wurde, neben dem für verworfene Bilder. In der Fotowand erscheint es nur, solange die Maus über der Kachel steht.</value>
+  </data>
+  <data name="Bearbeitet_4107bb88" xml:space="preserve">
+    <value>Bearbeitet</value>
+  </data>
+  <data name="BEARBEITET_5344ab44" xml:space="preserve">
+    <value>BEARBEITET</value>
+  </data>
+  <data name="Nur_bearbeitete_c6c908b7" xml:space="preserve">
+    <value>Nur bearbeitete</value>
+  </data>
+  <data name="Nur_unbearbeitete_317574e9" xml:space="preserve">
+    <value>Nur unbearbeitete</value>
+  </data>
 </root>

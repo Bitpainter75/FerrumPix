@@ -396,7 +396,7 @@
                                     <!-- ItemsControl erzeugt beim Öffnen JEDE Zeile. Das ist bei tausend
                                          Personen sichtbar langsamer als die Abfrage. ItemsRepeater
                                          virtualisiert die lange Liste im ScrollViewer. -->
-                                    <ScrollViewer MaxHeight="380" VerticalScrollBarVisibility="Auto"><ItemsRepeater ItemsSource="{Binding PersonFilterOptions}"><ItemsRepeater.ItemTemplate><DataTemplate DataType="{x:Type models:PersonFilterOption}"><Button Classes="ghost" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Padding="10,8" Click="OnPersonFilterItemClick"><Grid ColumnDefinitions="*,20"><TextBlock Text="{Binding Label}" Classes="no-translate" TextTrimming="CharacterEllipsis"/><TextBlock Grid.Column="1" Text="✓" IsVisible="{Binding IsSelected}" Foreground="{DynamicResource FP.Accent}" HorizontalAlignment="Center" FontWeight="Bold"/></Grid></Button></DataTemplate></ItemsRepeater.ItemTemplate></ItemsRepeater></ScrollViewer>
+                                    <ScrollViewer MaxHeight="420" VerticalScrollBarVisibility="Auto"><ItemsRepeater ItemsSource="{Binding PersonFilterOptions}"><ItemsRepeater.ItemTemplate><DataTemplate DataType="{x:Type models:PersonFilterOption}"><Button Classes="ghost" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Padding="10,8" Click="OnPersonFilterItemClick"><Grid ColumnDefinitions="*,20"><TextBlock Text="{Binding Label}" Classes="no-translate" TextTrimming="CharacterEllipsis"/><TextBlock Grid.Column="1" Text="✓" IsVisible="{Binding IsSelected}" Foreground="{DynamicResource FP.Accent}" HorizontalAlignment="Center" FontWeight="Bold"/></Grid></Button></DataTemplate></ItemsRepeater.ItemTemplate></ItemsRepeater></ScrollViewer>
 
                                     <!-- Namenlose Gruppen stehen nicht in dieser Liste, deshalb ist sie
                                          nach einer frischen Erkennung noch leer. Der zweite Satz sagt,
@@ -483,7 +483,7 @@
                                         </Grid>
                                     </Border>
 
-                                    <ScrollViewer MaxHeight="380" VerticalScrollBarVisibility="Auto"><ItemsRepeater ItemsSource="{Binding PlaceFilterOptions}"><ItemsRepeater.ItemTemplate><DataTemplate DataType="{x:Type models:PlaceFilterOption}"><Button Classes="ghost" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Padding="10,8" Click="OnPlaceFilterItemClick"><Grid ColumnDefinitions="*,20"><TextBlock Text="{Binding Label}" Classes="no-translate" TextTrimming="CharacterEllipsis"/><TextBlock Grid.Column="1" Text="✓" IsVisible="{Binding IsSelected}" Foreground="{DynamicResource FP.Accent}" HorizontalAlignment="Center" FontWeight="Bold"/></Grid></Button></DataTemplate></ItemsRepeater.ItemTemplate></ItemsRepeater></ScrollViewer>
+                                    <ScrollViewer MaxHeight="420" VerticalScrollBarVisibility="Auto"><ItemsRepeater ItemsSource="{Binding PlaceFilterOptions}"><ItemsRepeater.ItemTemplate><DataTemplate DataType="{x:Type models:PlaceFilterOption}"><Button Classes="ghost" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Padding="10,8" Click="OnPlaceFilterItemClick"><Grid ColumnDefinitions="*,20"><TextBlock Text="{Binding Label}" Classes="no-translate" TextTrimming="CharacterEllipsis"/><TextBlock Grid.Column="1" Text="✓" IsVisible="{Binding IsSelected}" Foreground="{DynamicResource FP.Accent}" HorizontalAlignment="Center" FontWeight="Bold"/></Grid></Button></DataTemplate></ItemsRepeater.ItemTemplate></ItemsRepeater></ScrollViewer>
 
                                     <TextBlock Text="Noch keine Orte bekannt"
                                                IsVisible="{Binding !PlaceFilterOptions.Count}"
@@ -602,64 +602,10 @@
                                     Opened="OnLocalizedFlyoutOpened">
                                 <StackPanel Spacing="1" MinWidth="248">
 
-                                        <!-- STAPEL: nur bei eingeschalteter Einstellung (Einstellungen,
-                                             Galerie). Der Schalter selbst steht dort und nicht hier:
-                                             zwei Schalter fuer denselben Wert liefen auseinander. -->
-                                        <StackPanel Spacing="1" IsVisible="{Binding StacksEnabled}">
-                                            <TextBlock Text="STAPEL" FontSize="{DynamicResource FP.Font.Caption}" FontWeight="SemiBold"
-                                                       Foreground="{DynamicResource FP.Text.Muted}"
-                                                       Margin="10,8,10,4"/>
-                                            <Button Classes="ghost" HorizontalAlignment="Stretch"
-                                                    HorizontalContentAlignment="Stretch" Padding="10,8"
-                                                    Command="{Binding ExpandAllStacksCommand}">
-                                                <TextBlock Text="Alle Stapel aufklappen" VerticalAlignment="Center"/>
-                                            </Button>
-                                            <Button Classes="ghost" HorizontalAlignment="Stretch"
-                                                    HorizontalContentAlignment="Stretch" Padding="10,8"
-                                                    Command="{Binding CollapseAllStacksCommand}">
-                                                <TextBlock Text="Alle Stapel zuklappen" VerticalAlignment="Center"/>
-                                            </Button>
-                                            <Separator Margin="4,6"/>
-                                        </StackPanel>
-
-                                        <!-- VERWORFENE: gedimmt zeigen, ausblenden oder nur sie -->
-                                        <TextBlock Text="VERWORFENE" FontSize="{DynamicResource FP.Font.Caption}" FontWeight="SemiBold"
-                                                   Foreground="{DynamicResource FP.Text.Muted}"
-                                                   Margin="10,4,10,4"/>
-                                        <Button Classes="ghost" HorizontalAlignment="Stretch"
-                                                HorizontalContentAlignment="Stretch" Padding="10,8"
-                                                Command="{Binding SetFilterRejectedCommand}" CommandParameter="Show">
-                                            <Grid ColumnDefinitions="*,20">
-                                                <TextBlock Text="Gedimmt zeigen" VerticalAlignment="Center"/>
-                                                <TextBlock Grid.Column="1" Text="✓" IsVisible="{Binding IsFilterRejectedShow}"
-                                                           Foreground="{DynamicResource FP.Accent}" HorizontalAlignment="Center" FontWeight="Bold"/>
-                                            </Grid>
-                                        </Button>
-                                        <Button Classes="ghost" HorizontalAlignment="Stretch"
-                                                HorizontalContentAlignment="Stretch" Padding="10,8"
-                                                Command="{Binding SetFilterRejectedCommand}" CommandParameter="Hide">
-                                            <Grid ColumnDefinitions="*,20">
-                                                <TextBlock Text="Verworfene ausblenden" VerticalAlignment="Center"/>
-                                                <TextBlock Grid.Column="1" Text="✓" IsVisible="{Binding IsFilterRejectedHide}"
-                                                           Foreground="{DynamicResource FP.Accent}" HorizontalAlignment="Center" FontWeight="Bold"/>
-                                            </Grid>
-                                        </Button>
-                                        <Button Classes="ghost" HorizontalAlignment="Stretch"
-                                                HorizontalContentAlignment="Stretch" Padding="10,8"
-                                                Command="{Binding SetFilterRejectedCommand}" CommandParameter="Only">
-                                            <Grid ColumnDefinitions="*,20">
-                                                <TextBlock Text="Nur verworfene" VerticalAlignment="Center"/>
-                                                <TextBlock Grid.Column="1" Text="✓" IsVisible="{Binding IsFilterRejectedOnly}"
-                                                           Foreground="{DynamicResource FP.Accent}" HorizontalAlignment="Center" FontWeight="Bold"/>
-                                            </Grid>
-                                        </Button>
-
-                                        <Separator Margin="4,6"/>
-
                                         <!-- FAVORITEN -->
                                         <TextBlock Text="FAVORITEN" FontSize="{DynamicResource FP.Font.Caption}" FontWeight="SemiBold"
                                                    Foreground="{DynamicResource FP.Text.Muted}"
-                                                   Margin="10,4,10,4"/>
+                                                   Margin="10,8,10,4"/>
                                         <Button Classes="ghost" HorizontalAlignment="Stretch"
                                                 HorizontalContentAlignment="Stretch" Padding="10,8"
                                                 Command="{Binding SetFilterFavoriteCommand}" CommandParameter="All">
@@ -876,6 +822,94 @@
                                                 </Grid>
                                             </Button>
                                         </StackPanel>
+
+                                        <Separator Margin="4,6"/>
+
+                                        <!-- STAPEL: nur bei eingeschalteter Einstellung (Einstellungen,
+                                             Galerie). Der Schalter selbst steht dort und nicht hier:
+                                             zwei Schalter fuer denselben Wert liefen auseinander. -->
+                                        <StackPanel Spacing="1" IsVisible="{Binding StacksEnabled}">
+                                            <TextBlock Text="STAPEL" FontSize="{DynamicResource FP.Font.Caption}" FontWeight="SemiBold"
+                                                       Foreground="{DynamicResource FP.Text.Muted}"
+                                                       Margin="10,4,10,4"/>
+                                            <Button Classes="ghost" HorizontalAlignment="Stretch"
+                                                    HorizontalContentAlignment="Stretch" Padding="10,8"
+                                                    Command="{Binding ExpandAllStacksCommand}">
+                                                <TextBlock Text="Alle Stapel aufklappen" VerticalAlignment="Center"/>
+                                            </Button>
+                                            <Button Classes="ghost" HorizontalAlignment="Stretch"
+                                                    HorizontalContentAlignment="Stretch" Padding="10,8"
+                                                    Command="{Binding CollapseAllStacksCommand}">
+                                                <TextBlock Text="Alle Stapel zuklappen" VerticalAlignment="Center"/>
+                                            </Button>
+                                            <Separator Margin="4,6"/>
+                                        </StackPanel>
+
+                                        <!-- VERWORFENE: alle (verworfene gedimmt, wie immer), ausblenden oder nur sie -->
+                                        <TextBlock Text="VERWORFENE" FontSize="{DynamicResource FP.Font.Caption}" FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource FP.Text.Muted}"
+                                                   Margin="10,4,10,4"/>
+                                        <Button Classes="ghost" HorizontalAlignment="Stretch"
+                                                HorizontalContentAlignment="Stretch" Padding="10,8"
+                                                Command="{Binding SetFilterRejectedCommand}" CommandParameter="Show">
+                                            <Grid ColumnDefinitions="*,20">
+                                                <TextBlock Text="Alle" VerticalAlignment="Center"/>
+                                                <TextBlock Grid.Column="1" Text="✓" IsVisible="{Binding IsFilterRejectedShow}"
+                                                           Foreground="{DynamicResource FP.Accent}" HorizontalAlignment="Center" FontWeight="Bold"/>
+                                            </Grid>
+                                        </Button>
+                                        <Button Classes="ghost" HorizontalAlignment="Stretch"
+                                                HorizontalContentAlignment="Stretch" Padding="10,8"
+                                                Command="{Binding SetFilterRejectedCommand}" CommandParameter="Hide">
+                                            <Grid ColumnDefinitions="*,20">
+                                                <TextBlock Text="Verworfene ausblenden" VerticalAlignment="Center"/>
+                                                <TextBlock Grid.Column="1" Text="✓" IsVisible="{Binding IsFilterRejectedHide}"
+                                                           Foreground="{DynamicResource FP.Accent}" HorizontalAlignment="Center" FontWeight="Bold"/>
+                                            </Grid>
+                                        </Button>
+                                        <Button Classes="ghost" HorizontalAlignment="Stretch"
+                                                HorizontalContentAlignment="Stretch" Padding="10,8"
+                                                Command="{Binding SetFilterRejectedCommand}" CommandParameter="Only">
+                                            <Grid ColumnDefinitions="*,20">
+                                                <TextBlock Text="Nur verworfene" VerticalAlignment="Center"/>
+                                                <TextBlock Grid.Column="1" Text="✓" IsVisible="{Binding IsFilterRejectedOnly}"
+                                                           Foreground="{DynamicResource FP.Accent}" HorizontalAlignment="Center" FontWeight="Bold"/>
+                                            </Grid>
+                                        </Button>
+
+                                        <Separator Margin="4,6"/>
+
+                                        <!-- BEARBEITET: alle, nur bearbeitete oder nur unbearbeitete -->
+                                        <TextBlock Text="BEARBEITET" FontSize="{DynamicResource FP.Font.Caption}" FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource FP.Text.Muted}"
+                                                   Margin="10,4,10,4"/>
+                                        <Button Classes="ghost" HorizontalAlignment="Stretch"
+                                                HorizontalContentAlignment="Stretch" Padding="10,8"
+                                                Command="{Binding SetFilterEditedCommand}" CommandParameter="All">
+                                            <Grid ColumnDefinitions="*,20">
+                                                <TextBlock Text="Alle" VerticalAlignment="Center"/>
+                                                <TextBlock Grid.Column="1" Text="✓" IsVisible="{Binding IsFilterEditedAll}"
+                                                           Foreground="{DynamicResource FP.Accent}" HorizontalAlignment="Center" FontWeight="Bold"/>
+                                            </Grid>
+                                        </Button>
+                                        <Button Classes="ghost" HorizontalAlignment="Stretch"
+                                                HorizontalContentAlignment="Stretch" Padding="10,8"
+                                                Command="{Binding SetFilterEditedCommand}" CommandParameter="Only">
+                                            <Grid ColumnDefinitions="*,20">
+                                                <TextBlock Text="Nur bearbeitete" VerticalAlignment="Center"/>
+                                                <TextBlock Grid.Column="1" Text="✓" IsVisible="{Binding IsFilterEditedOnly}"
+                                                           Foreground="{DynamicResource FP.Accent}" HorizontalAlignment="Center" FontWeight="Bold"/>
+                                            </Grid>
+                                        </Button>
+                                        <Button Classes="ghost" HorizontalAlignment="Stretch"
+                                                HorizontalContentAlignment="Stretch" Padding="10,8"
+                                                Command="{Binding SetFilterEditedCommand}" CommandParameter="Hide">
+                                            <Grid ColumnDefinitions="*,20">
+                                                <TextBlock Text="Nur unbearbeitete" VerticalAlignment="Center"/>
+                                                <TextBlock Grid.Column="1" Text="✓" IsVisible="{Binding IsFilterEditedHide}"
+                                                           Foreground="{DynamicResource FP.Accent}" HorizontalAlignment="Center" FontWeight="Bold"/>
+                                            </Grid>
+                                        </Button>
 
                                         <Separator Margin="4,6"/>
 
@@ -1973,6 +2007,7 @@
                                         Classes="thumb-card"
                                         Classes.flat="{Binding DataContext.TilesAreFlat, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                         Classes.badges-on-hover="{Binding DataContext.TileBadgesOnHover, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                        Classes.wall="{Binding DataContext.IsWallView, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                         Classes.selected="{Binding IsSelected}"
                                         Classes.navigation-selected="{Binding IsNavigationSelected}"
                                         Classes.rejected="{Binding IsRejected}"
@@ -2021,19 +2056,36 @@
                                                        Stretch="{Binding DataContext.TileImageStretch, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                        RenderOptions.BitmapInterpolationMode="MediumQuality"/>
                                                 <!-- VERWORFEN: das Bild gedimmt (Stil thumb-card.rejected),
-                                                     dazu dieses Zeichen oben in der Mitte. -->
-                                                <Border Classes="reject-badge"
-                                                        IsVisible="{Binding IsRejected}"
-                                                        HorizontalAlignment="Center"
-                                                        VerticalAlignment="Top"
-                                                        Margin="0,6,0,0"
-                                                        ToolTip.Tip="Verworfen">
-                                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/flag-x.svg"
-                                                                   Width="15" Height="15"
-                                                                   IconBrush="White"
-                                                                   HorizontalAlignment="Center"
-                                                                   VerticalAlignment="Center"/>
-                                                </Border>
+                                                     dazu dieses Zeichen oben in der Mitte. BEARBEITET
+                                                     (Einstellung, ab Werk aus) daneben, in der Fotowand
+                                                     nur beim Ueberfahren (Stil edited-badge). Eine Reihe,
+                                                     damit beide nebeneinander stehen und eines allein
+                                                     mittig bleibt. -->
+                                                <StackPanel Orientation="Horizontal" Spacing="4"
+                                                            HorizontalAlignment="Center"
+                                                            VerticalAlignment="Top"
+                                                            Margin="0,6,0,0">
+                                                    <Border Classes="reject-badge"
+                                                            IsVisible="{Binding IsRejected}"
+                                                            ToolTip.Tip="Verworfen">
+                                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/flag-x.svg"
+                                                                       Width="15" Height="15"
+                                                                       IconBrush="White"
+                                                                       HorizontalAlignment="Center"
+                                                                       VerticalAlignment="Center"/>
+                                                    </Border>
+                                                    <Panel IsVisible="{Binding DataContext.EditedBadgeEnabled, RelativeSource={RelativeSource AncestorType=UserControl}}">
+                                                        <Border Classes="edited-badge"
+                                                                IsVisible="{Binding IsEdited}"
+                                                                ToolTip.Tip="Bearbeitet">
+                                                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/adjustments-alt.svg"
+                                                                           Width="15" Height="15"
+                                                                           IconBrush="White"
+                                                                           HorizontalAlignment="Center"
+                                                                           VerticalAlignment="Center"/>
+                                                        </Border>
+                                                    </Panel>
+                                                </StackPanel>
                                                 <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/folder.svg"
                                                                IsVisible="{Binding IsFolder}"
                                                                Width="54" Height="54"

@@ -9912,4 +9912,22 @@
   <data name="Weiches_Licht_PSD_7fc2ab6c" xml:space="preserve">
     <value>Łagodne światło (PSD)</value>
   </data>
+  <data name="Bearbeitete_Bilder_kennzeichnen_6a725b2e" xml:space="preserve">
+    <value>Oznaczaj edytowane zdjęcia</value>
+  </data>
+  <data name="Zeigt_oben_auf_der_Kachel_ein_Symbol_wenn_das_Bi_626f9519" xml:space="preserve">
+    <value>Pokazuje u góry kafelka symbol, gdy zdjęcie zostało edytowane, obok symbolu zdjęć odrzuconych. Na ścianie zdjęć pojawia się tylko wtedy, gdy kursor jest nad kafelkiem.</value>
+  </data>
+  <data name="Bearbeitet_4107bb88" xml:space="preserve">
+    <value>Edytowane</value>
+  </data>
+  <data name="BEARBEITET_5344ab44" xml:space="preserve">
+    <value>EDYTOWANE</value>
+  </data>
+  <data name="Nur_bearbeitete_c6c908b7" xml:space="preserve">
+    <value>Tylko edytowane</value>
+  </data>
+  <data name="Nur_unbearbeitete_317574e9" xml:space="preserve">
+    <value>Tylko nieedytowane</value>
+  </data>
 </root>

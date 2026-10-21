@@ -9912,4 +9912,22 @@
   <data name="Weiches_Licht_PSD_7fc2ab6c" xml:space="preserve">
     <value>ソフトライト (PSD)</value>
   </data>
+  <data name="Bearbeitete_Bilder_kennzeichnen_6a725b2e" xml:space="preserve">
+    <value>編集済みの写真に印を付ける</value>
+  </data>
+  <data name="Zeigt_oben_auf_der_Kachel_ein_Symbol_wenn_das_Bi_626f9519" xml:space="preserve">
+    <value>写真が編集されている場合、タイルの上部、不採用の印の横にアイコンを表示します。フォトウォールでは、マウスがタイルの上にあるときだけ表示されます。</value>
+  </data>
+  <data name="Bearbeitet_4107bb88" xml:space="preserve">
+    <value>編集済み</value>
+  </data>
+  <data name="BEARBEITET_5344ab44" xml:space="preserve">
+    <value>編集済み</value>
+  </data>
+  <data name="Nur_bearbeitete_c6c908b7" xml:space="preserve">
+    <value>編集済みのみ</value>
+  </data>
+  <data name="Nur_unbearbeitete_317574e9" xml:space="preserve">
+    <value>未編集のみ</value>
+  </data>
 </root>

@@ -1787,6 +1787,22 @@
         <Setter Property="BorderBrush" Value="#E0B23A3A"/>
         <Setter Property="BorderThickness" Value="1"/>
     </Style>
+    <!-- BEARBEITET: dieselbe Pille wie bei verworfen, in der Akzentfarbe statt Rot - ein Hinweis,
+         keine Warnung. In der Fotowand (Klasse wall an der Kachel) nur beim Ueberfahren. -->
+    <Style Selector="Border.edited-badge">
+        <Setter Property="Width" Value="26"/>
+        <Setter Property="Height" Value="24"/>
+        <Setter Property="CornerRadius" Value="12"/>
+        <Setter Property="Background" Value="{DynamicResource FP.Accent}"/>
+        <Setter Property="BorderBrush" Value="#40FFFFFF"/>
+        <Setter Property="BorderThickness" Value="1"/>
+    </Style>
+    <Style Selector="Border.thumb-card.wall Border.edited-badge">
+        <Setter Property="Opacity" Value="0"/>
+    </Style>
+    <Style Selector="Border.thumb-card.wall:pointerover Border.edited-badge">
+        <Setter Property="Opacity" Value="1"/>
+    </Style>
     <!-- Schaerfebalken einer Serie: Spur und Fuellung, links unten ueber den Sternen. -->
     <Style Selector="Border.sharpness-track">
         <Setter Property="Height" Value="7"/>

@@ -85,9 +85,13 @@ Namespace Services
         ''' <param name="requireAbsent">Nur anlegen, wenn am Ziel noch keine Datei liegt. Fuer Aufrufer,
         ''' die vorher "fehlt" gelesen haben: entsteht die Datei dazwischen, wird sie nicht ersetzt,
         ''' und das Ergebnis ist False.</param>
+        ''' <param name="edited">Der Vermerk "bearbeitet" (siehe <see cref="IsEditedFile"/>). Gesetzt
+        ''' wird er dort, wo bearbeitet wird; Nothing laesst einen vorhandenen stehen, wie beim
+        ''' Vermerk der entwickelten Kachel.</param>
         Public Shared Function TryWrite(rawPath As String, adjustments As ImageAdjustments,
                                         Optional developedThumbnail As Boolean? = Nothing,
-                                        Optional requireAbsent As Boolean = False) As Boolean
+                                        Optional requireAbsent As Boolean = False,
+                                        Optional edited As Boolean? = Nothing) As Boolean
             If String.IsNullOrWhiteSpace(rawPath) OrElse adjustments Is Nothing Then Return False
             Try
                 SyncLock _writeLock
@@ -95,7 +99,7 @@ Namespace Services
                     Dim state = ReadRecipe(rawPath, existing)
                     If state = SidecarReadResult.Unreadable Then Return False
                     Dim catalog = LibraryService.Instance.GetSidecarCatalogData(rawPath)
-                    Return TryWriteCore(rawPath, adjustments, catalog, developedThumbnail,
+                    Return TryWriteCore(rawPath, adjustments, catalog, developedThumbnail, edited,
                                         requireAbsent OrElse state = SidecarReadResult.Missing)
                 End SyncLock
             Catch
@@ -144,7 +148,7 @@ Namespace Services
                 }
                 ' Hiess es "fehlt", wird nur angelegt, wenn am Ziel noch immer nichts liegt: eine Datei,
                 ' die ein anderes Programm inzwischen hingelegt hat, wird nicht ersetzt.
-                Return TryWriteCore(rawPath, adjustments, catalog, Nothing,
+                Return TryWriteCore(rawPath, adjustments, catalog, Nothing, Nothing,
                                     requireAbsent:=state = SidecarReadResult.Missing)
             End SyncLock
         End Function
@@ -159,8 +163,9 @@ Namespace Services
         ''' liegt.</summary>
         Public Shared Function TryModifyRecipe(rawPath As String, createWhenMissing As Func(Of ImageAdjustments),
                                                modify As Action(Of ImageAdjustments),
-                                               Optional developedThumbnail As Boolean? = Nothing) As Boolean
-            Return TryModifyRecipeCore(rawPath, createWhenMissing, modify, developedThumbnail) = ModifyRecipeResult.Written
+                                               Optional developedThumbnail As Boolean? = Nothing,
+                                               Optional edited As Boolean? = Nothing) As Boolean
+            Return TryModifyRecipeCore(rawPath, createWhenMissing, modify, developedThumbnail, edited) = ModifyRecipeResult.Written
         End Function
 
         ''' <summary>Was <see cref="TryModifyRecipeDetailed"/> herausbekam. Unreadable steht fuer sich,
@@ -175,8 +180,9 @@ Namespace Services
         ''' <summary>Wie <see cref="TryModifyRecipe"/>, sagt aber, warum nichts geschrieben wurde.</summary>
         Public Shared Function TryModifyRecipeDetailed(rawPath As String, createWhenMissing As Func(Of ImageAdjustments),
                                                        modify As Action(Of ImageAdjustments),
-                                                       Optional developedThumbnail As Boolean? = Nothing) As ModifyRecipeResult
-            Return TryModifyRecipeCore(rawPath, createWhenMissing, modify, developedThumbnail)
+                                                       Optional developedThumbnail As Boolean? = Nothing,
+                                                       Optional edited As Boolean? = Nothing) As ModifyRecipeResult
+            Return TryModifyRecipeCore(rawPath, createWhenMissing, modify, developedThumbnail, edited)
         End Function
 
         ''' <paramref name="createWhenMissing"/> laeuft NUR, wenn die Datei fehlt. Er darf also teuer
@@ -184,7 +190,8 @@ Namespace Services
         ''' ihn nicht.
         Private Shared Function TryModifyRecipeCore(rawPath As String, createWhenMissing As Func(Of ImageAdjustments),
                                                     modify As Action(Of ImageAdjustments),
-                                                    developedThumbnail As Boolean?) As ModifyRecipeResult
+                                                    developedThumbnail As Boolean?,
+                                                    edited As Boolean?) As ModifyRecipeResult
             If String.IsNullOrWhiteSpace(rawPath) OrElse createWhenMissing Is Nothing OrElse modify Is Nothing Then Return ModifyRecipeResult.Failed
             Try
                 SyncLock _writeLock
@@ -195,7 +202,7 @@ Namespace Services
                     If adjustments Is Nothing Then Return ModifyRecipeResult.Failed
                     modify(adjustments)
                     Dim catalog = LibraryService.Instance.GetSidecarCatalogData(rawPath)
-                    Dim written = TryWriteCore(rawPath, adjustments, catalog, developedThumbnail,
+                    Dim written = TryWriteCore(rawPath, adjustments, catalog, developedThumbnail, edited,
                                                requireAbsent:=state = SidecarReadResult.Missing)
                     Return If(written, ModifyRecipeResult.Written, ModifyRecipeResult.Failed)
                 End SyncLock
@@ -208,6 +215,7 @@ Namespace Services
         Private Shared Function TryWriteCore(rawPath As String, adjustments As ImageAdjustments,
                                              catalog As RawSidecarCatalogData,
                                              developedThumbnail As Boolean?,
+                                             edited As Boolean?,
                                              Optional requireAbsent As Boolean = False) As Boolean
             If String.IsNullOrWhiteSpace(rawPath) OrElse adjustments Is Nothing Then Return False
             SyncLock _writeLock
@@ -216,6 +224,10 @@ Namespace Services
                 Try
                     Dim keepDevelopedThumbnail = If(developedThumbnail.HasValue, developedThumbnail.Value,
                                                     ReadDevelopedThumbnail(rawPath))
+                    ' Der Vermerk "bearbeitet" bleibt, wie er war, wenn der Schreiber ihn nicht nennt
+                    ' (Katalog: Sterne, Etikett, Stichwoerter). Fehlte er in einer aelteren Datei,
+                    ' fehlt er weiter: dann entscheidet beim Lesen der Vergleich (IsEditedFile).
+                    Dim keepEdited = If(edited.HasValue, edited, ReadEditedAttribute(rawPath))
                     ' HIER wird entschieden, was der Vermerk ueber gebackene Vorgaenge BEDEUTET.
                     ' Neben dieser Datei liegt kein einziges Pixel: die Quelle bleibt unangetastet,
                     ' und beim naechsten Oeffnen wird sie neu entwickelt. Also sind Entrauschen,
@@ -244,6 +256,7 @@ Namespace Services
                             New XAttribute("version", FormatVersion),
                             New XAttribute("generator", "FerrumPix"),
                             If(keepDevelopedThumbnail, New XAttribute(DevelopedThumbnailAttribute, "true"), Nothing),
+                            If(keepEdited.HasValue, New XAttribute(EditedAttribute, If(keepEdited.Value, "true", "false")), Nothing),
                             New XElement(Ns + "source",
                                 New XAttribute("fileName", Path.GetFileName(rawPath))),
                             New XElement(Ns + "savedUtc", DateTime.UtcNow.ToString("O")),
@@ -927,7 +940,9 @@ Namespace Services
             If _displayFactsCache.TryGetValue(sidecar, cached) AndAlso cached.StampTicks = stampTicks Then Return cached
 
             Dim developedThumbnail As Boolean
-            Dim adjustments = TryReadCore(rawPath, developedThumbnail)
+            Dim editedAttribute As Boolean? = Nothing
+            Dim adjustments As ImageAdjustments = Nothing
+            ReadRecipeCore(rawPath, adjustments, developedThumbnail, editedAttribute)
             Dim degrees As Integer = 0
             If adjustments IsNot Nothing Then
                 ' DIESELBE REGEL WIE IM EDITOR (EditorViewModel.AppliedTransformState): Drehung und
@@ -951,7 +966,7 @@ Namespace Services
                 End If
                 degrees = ImageOrientationService.NormalizeQuarterTurn(degrees)
             End If
-            Dim facts = New CachedDisplayFacts(stampTicks, degrees, developedThumbnail)
+            Dim facts = New CachedDisplayFacts(stampTicks, degrees, developedThumbnail, editedAttribute)
             _displayFactsCache(sidecar) = facts
             Return facts
         End Function
@@ -960,16 +975,68 @@ Namespace Services
             Public ReadOnly StampTicks As Long
             Public ReadOnly Degrees As Integer
             Public ReadOnly DevelopedThumbnail As Boolean
-            Public Sub New(stampTicks As Long, degrees As Integer, developedThumbnail As Boolean)
+            ''' Der Vermerk, wie er in der Datei steht; Nothing in einer aelteren Datei ohne ihn.
+            Public ReadOnly EditedAttribute As Boolean?
+            ''' Ohne Vermerk: das Ergebnis des Vergleichs mit den Startwerten, erst bei der ersten
+            ''' Frage danach gerechnet (IsEditedFile). Die Drehung der Kachel braucht ihn nicht, und er
+            ''' liest die Metadaten der RAW.
+            Public ComparedEdited As Boolean?
+            Public Sub New(stampTicks As Long, degrees As Integer, developedThumbnail As Boolean,
+                           editedAttribute As Boolean?)
                 Me.StampTicks = stampTicks
                 Me.Degrees = degrees
                 Me.DevelopedThumbnail = developedThumbnail
+                Me.EditedAttribute = editedAttribute
             End Sub
         End Class
 
         Private Shared ReadOnly _displayFactsCache As New ConcurrentDictionary(Of String, CachedDisplayFacts)(PathIdentity.Comparer)
 
         Private Const DevelopedThumbnailAttribute As String = "developedThumbnail"
+        Private Const EditedAttribute As String = "edited"
+
+        ''' <summary>Der Vermerk "bearbeitet", wie er in der Begleitdatei steht; Nothing ohne Datei oder
+        ''' in einer aelteren Datei ohne Vermerk.</summary>
+        Private Shared Function ReadEditedAttribute(rawPath As String) As Boolean?
+            Return ReadDisplayFacts(rawPath)?.EditedAttribute
+        End Function
+
+        ''' <summary>Die Startwerte einer Datei ohne Bearbeitung: bei einer RAW die des Editors
+        ''' (ImageAdjustments.ForUneditedRaw, mit Grundbelichtung und Kamerakalibrierung), sonst ein
+        ''' neutrales Rezept.</summary>
+        Public Shared Function StartValuesFor(path As String) As ImageAdjustments
+            Return If(RawPreviewService.IsSupportedRaw(path), ImageAdjustments.ForUneditedRaw(path), New ImageAdjustments())
+        End Function
+
+        ''' <summary>Ist diese Datei bearbeitet? Ein Projektbuendel (.fpx) immer; eine RAW oder PSD,
+        ''' wenn ihre Begleitdatei den Vermerk traegt oder, in einer aelteren Datei ohne ihn, ihr Rezept
+        ''' von den Startwerten abweicht. Eine Begleitdatei allein ist KEIN Beleg: sie entsteht schon
+        ''' durch einen Stern oder ein Stichwort. Andere Formate tragen keine Begleitdatei und gelten
+        ''' als unbearbeitet. Liest dieselbe gemerkte Datei wie die Drehung der Kachel.</summary>
+        Public Shared Function IsEditedFile(path As String) As Boolean
+            If String.IsNullOrWhiteSpace(path) Then Return False
+            If FpxService.IsFpx(path) Then Return True
+            If Not IsSidecarFormat(path) Then Return False
+            Dim facts = ReadDisplayFacts(path)
+            If facts Is Nothing Then Return False
+            If facts.EditedAttribute.HasValue Then Return facts.EditedAttribute.Value
+            ' Eine aeltere Begleitdatei ohne Vermerk: der nachsichtige Vergleich mit den Startwerten,
+            ' gemerkt mit den uebrigen Werten dieses Zeitstempels und NICHT zurueckgeschrieben - im
+            ' Bestand schreibt nur ein bewusstes Speichern. Beim naechsten Speichern steht der echte
+            ' Vermerk darin.
+            If Not facts.ComparedEdited.HasValue Then
+                Dim adjustments = TryRead(path)
+                facts.ComparedEdited = adjustments IsNot Nothing AndAlso
+                                       adjustments.IsEditedComparedTo(StartValuesFor(path), lenient:=True)
+            End If
+            Return facts.ComparedEdited.Value
+        End Function
+
+        ''' <summary>Der Vermerk fuer ein Rezept, das ein Bearbeitungsweg gerade schreibt: weicht es
+        ''' von den Startwerten der Datei ab? Streng, die Startwerte sind ja die von jetzt.</summary>
+        Public Shared Function IsEditedRecipe(path As String, adjustments As ImageAdjustments) As Boolean
+            Return adjustments IsNot Nothing AndAlso adjustments.IsEditedComparedTo(StartValuesFor(path))
+        End Function
 
         ''' <summary>Übernimmt die Entwicklungseinstellungen aus einer XMP-Sidecar
         ''' ("foto.cr2.xmp" oder "foto.xmp") in eine neue .fpxmp - EINMALIG, solange es noch keine gibt.
@@ -997,7 +1064,8 @@ Namespace Services
                 If look Is Nothing OrElse Not HasAnyAdjustment(look) Then Return False
                 ' Nur anlegen, wenn noch immer keine .fpxmp da ist: zwischen der Pruefung oben und
                 ' hier kann eine entstanden sein, und ein eigenes Rezept wird NIE ueberschrieben.
-                Return TryWrite(rawPath, look, requireAbsent:=True)
+                ' Bearbeitet: die Uebernahme laeuft nur, wenn die fremde Datei Regler setzt.
+                Return TryWrite(rawPath, look, requireAbsent:=True, edited:=True)
             Catch
                 Return False
             End Try
@@ -1072,8 +1140,16 @@ Namespace Services
 
         Private Shared Function ReadRecipeCore(rawPath As String, ByRef adjustments As ImageAdjustments,
                                                ByRef developedThumbnail As Boolean) As SidecarReadResult
+            Dim edited As Boolean? = Nothing
+            Return ReadRecipeCore(rawPath, adjustments, developedThumbnail, edited)
+        End Function
+
+        Private Shared Function ReadRecipeCore(rawPath As String, ByRef adjustments As ImageAdjustments,
+                                               ByRef developedThumbnail As Boolean,
+                                               ByRef edited As Boolean?) As SidecarReadResult
             adjustments = Nothing
             developedThumbnail = False
+            edited = Nothing
             Dim sidecar = SidecarPathFor(rawPath)
             Select Case ProbeSidecar(sidecar)
                 Case SidecarReadResult.Missing
@@ -1087,6 +1163,8 @@ Namespace Services
                 If root Is Nothing OrElse root.Name <> Ns + "recipe" Then Return SidecarReadResult.Unreadable
                 developedThumbnail = String.Equals(root.Attribute(DevelopedThumbnailAttribute)?.Value, "true",
                                                    StringComparison.OrdinalIgnoreCase)
+                Dim editedValue = root.Attribute(EditedAttribute)?.Value
+                If editedValue IsNot Nothing Then edited = String.Equals(editedValue, "true", StringComparison.OrdinalIgnoreCase)
                 Dim version As Integer
                 If Not Integer.TryParse(root.Attribute("version")?.Value, Globalization.NumberStyles.Integer,
                                         Globalization.CultureInfo.InvariantCulture, version) Then

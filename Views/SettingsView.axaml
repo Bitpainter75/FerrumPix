@@ -980,6 +980,14 @@
 
                         <Grid ColumnDefinitions="*,Auto">
                             <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Bearbeitete Bilder kennzeichnen" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Zeigt oben auf der Kachel ein Symbol, wenn das Bild bearbeitet wurde, neben dem für verworfene Bilder. In der Fotowand erscheint es nur, solange die Maus über der Kachel steht." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1" IsChecked="{Binding GalleryEditedBadge}" OnContent="" OffContent="" VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
                                 <TextBlock Text="Symbole der Fotowand nur beim Überfahren" FontSize="{DynamicResource FP.Font.Body}"/>
                                 <TextBlock Text="Blendet in der Fotowand Sterne, Herz, Metadaten-Symbole, Auswahlkreis und Abspielknopf aus, bis die Maus über der Kachel steht. Gilt auch für Symbole, die oben auf immer anzeigen stehen." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </StackPanel>

@@ -612,6 +612,42 @@ Namespace Models
             End Get
         End Property
 
+        ''' Nothing, solange noch nicht bestimmt (RawSidecarService.IsEditedFile).
+        Private _isEdited As Boolean?
+
+        ''' <summary>Ist die Datei bearbeitet (Abzeichen an der Kachel)? Bestimmt im Hintergrund beim
+        ''' Laden der Kachel und dort neu, wo die Kachel neu geladen wird (nach jedem Speichern);
+        ''' bis dahin False. Wer den Wert sicher braucht, nimmt <see cref="ResolveIsEdited"/>.</summary>
+        Public ReadOnly Property IsEdited As Boolean
+            Get
+                Return _isEdited.GetValueOrDefault()
+            End Get
+        End Property
+
+        ''' <summary>Wie <see cref="IsEdited"/>, bestimmt den Wert aber sofort, wenn er noch fehlt
+        ''' (Filter und Suche). Nur fuer lokale Dateien; Server-Eintraege gelten als unbearbeitet.</summary>
+        Public Function ResolveIsEdited() As Boolean
+            If Not _isEdited.HasValue Then
+                _isEdited = _immichAssetId Is Nothing AndAlso _nextcloudFileId Is Nothing AndAlso
+                            Services.RawSidecarService.IsEditedFile(FilePath)
+            End If
+            Return _isEdited.Value
+        End Function
+
+        ''' <summary>Bestimmt den Vermerk neu (Hintergrund) und meldet eine Aenderung auf dem
+        ''' Anzeigefaden.</summary>
+        Private Sub RefreshEditedState()
+            Dim value As Boolean
+            Try
+                value = Services.RawSidecarService.IsEditedFile(FilePath)
+            Catch
+                Return
+            End Try
+            If _isEdited.HasValue AndAlso _isEdited.Value = value Then Return
+            _isEdited = value
+            Dispatcher.UIThread.Post(Sub() RaisePropertyChanged(NameOf(IsEdited)))
+        End Sub
+
         Public ReadOnly Property IsPicked As Boolean
             Get
                 Return _pickState > 0
@@ -2255,6 +2291,9 @@ Namespace Models
                 Try
                     If token.IsCancellationRequested Then Return
                     EnsureFileInfoLoaded()
+                    ' Der Vermerk "bearbeitet" mit jeder Kachel: dieselbe Begleitdatei liest der
+                    ' Kachelweg ohnehin fuer die Drehung, und neu geladen wird nach jedem Speichern.
+                    RefreshEditedState()
                     Dim isExact As Boolean = False
                     bmp = ThumbnailCacheService.LoadCached(FilePath, DateModified, FileSize, True, isExact, token, _thumbnailCacheScopeId, _thumbnailCacheScopeName)
                     cachedWasExact = isExact

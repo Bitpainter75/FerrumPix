@@ -9916,4 +9916,22 @@
   <data name="Weiches_Licht_PSD_7fc2ab6c" xml:space="preserve">
     <value>Yumuşak Işık (PSD)</value>
   </data>
+  <data name="Bearbeitete_Bilder_kennzeichnen_6a725b2e" xml:space="preserve">
+    <value>Düzenlenmiş fotoğrafları işaretle</value>
+  </data>
+  <data name="Zeigt_oben_auf_der_Kachel_ein_Symbol_wenn_das_Bi_626f9519" xml:space="preserve">
+    <value>Fotoğraf düzenlendiyse karonun üstünde, reddedilen fotoğrafların simgesinin yanında bir simge gösterir. Fotoğraf duvarında yalnızca fare karonun üzerindeyken görünür.</value>
+  </data>
+  <data name="Bearbeitet_4107bb88" xml:space="preserve">
+    <value>Düzenlendi</value>
+  </data>
+  <data name="BEARBEITET_5344ab44" xml:space="preserve">
+    <value>DÜZENLENENLER</value>
+  </data>
+  <data name="Nur_bearbeitete_c6c908b7" xml:space="preserve">
+    <value>Yalnızca düzenlenenler</value>
+  </data>
+  <data name="Nur_unbearbeitete_317574e9" xml:space="preserve">
+    <value>Yalnızca düzenlenmeyenler</value>
+  </data>
 </root>

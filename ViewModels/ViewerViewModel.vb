@@ -3321,10 +3321,12 @@ Namespace ViewModels
                                         Dim isRaw = RawPreviewService.IsSupportedRaw(source)
                                         Dim makeStartValues = Function() If(isRaw, ImageAdjustments.ForUneditedRaw(source), New ImageAdjustments())
                                         Dim startValues = If(RawSidecarService.Exists(source), Nothing, makeStartValues())
+                                        ' Gedreht ist bearbeitet (RawSidecarService.IsEditedFile).
                                         Return RawSidecarService.TryModifyRecipe(
                                             source,
                                             Function() If(startValues, makeStartValues()),
-                                            Sub(adj) AppendRotationStep(adj, angle))
+                                            Sub(adj) AppendRotationStep(adj, angle),
+                                            edited:=True)
                                     End Function)
                 If ok Then
                     ' Das Original ist unverändert - nur der Sidecar ist neu. Der Disk-Cache merkt das

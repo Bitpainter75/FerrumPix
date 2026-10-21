@@ -56,6 +56,7 @@ Namespace ViewModels
         Private _galleryStacks As Boolean = False
         Private _galleryFavoriteBadgeAlwaysVisible As Boolean = True
         Private _galleryMetadataBadgesAlwaysVisible As Boolean = True
+        Private _galleryEditedBadge As Boolean = False
         Private _galleryViewMode As String = "Grid"
         Private _galleryStartupFolderMode As String = "Pictures"
         Private _galleryTimelineMode As String = "All"
@@ -225,6 +226,7 @@ Namespace ViewModels
         Private _savedGalleryStacks As Boolean = False
         Private _savedGalleryFavoriteBadgeAlwaysVisible As Boolean = True
         Private _savedGalleryMetadataBadgesAlwaysVisible As Boolean = True
+        Private _savedGalleryEditedBadge As Boolean = False
         Private _savedGalleryViewMode As String = "Grid"
         Private _savedGalleryStartupFolderMode As String = "Pictures"
         Private _savedGalleryTimelineMode As String = "All"
@@ -1867,6 +1869,20 @@ Namespace ViewModels
                 If _galleryMetadataBadgesAlwaysVisible = value Then Return
                 Me.RaiseAndSetIfChanged(_galleryMetadataBadgesAlwaysVisible, value)
                 If _mainVm?.Gallery IsNot Nothing Then _mainVm.Gallery.MetadataBadgesAlwaysVisible = value
+                SaveFileBrowserSettings()
+            End Set
+        End Property
+
+        ''' <summary>Abzeichen "bearbeitet" an der Kachel (ab Werk aus), siehe
+        ''' GalleryViewModel.EditedBadgeEnabled.</summary>
+        Public Property GalleryEditedBadge As Boolean
+            Get
+                Return _galleryEditedBadge
+            End Get
+            Set(value As Boolean)
+                If _galleryEditedBadge = value Then Return
+                Me.RaiseAndSetIfChanged(_galleryEditedBadge, value)
+                If _mainVm?.Gallery IsNot Nothing Then _mainVm.Gallery.EditedBadgeEnabled = value
                 SaveFileBrowserSettings()
             End Set
         End Property
@@ -4199,6 +4215,7 @@ Namespace ViewModels
             _galleryStacks = _appSettings.GalleryStacks
             _galleryFavoriteBadgeAlwaysVisible = _appSettings.GalleryFavoriteBadgeAlwaysVisible
             _galleryMetadataBadgesAlwaysVisible = _appSettings.GalleryMetadataBadgesAlwaysVisible
+            _galleryEditedBadge = _appSettings.GalleryEditedBadge
             _galleryViewMode = AppSettingsService.NormalizeGalleryViewMode(_appSettings.GalleryViewMode)
             _galleryStartupFolderMode = _appSettings.GalleryStartupFolderMode
             _galleryTimelineMode = AppSettingsService.NormalizeGalleryTimelineMode(_appSettings.GalleryTimelineMode)
@@ -4610,6 +4627,7 @@ Namespace ViewModels
             _savedGalleryStacks = _galleryStacks
             _savedGalleryFavoriteBadgeAlwaysVisible = _galleryFavoriteBadgeAlwaysVisible
             _savedGalleryMetadataBadgesAlwaysVisible = _galleryMetadataBadgesAlwaysVisible
+            _savedGalleryEditedBadge = _galleryEditedBadge
             _savedGalleryViewMode = _galleryViewMode
             _savedGalleryStartupFolderMode = _galleryStartupFolderMode
             _savedGalleryTimelineMode = _galleryTimelineMode
@@ -4788,6 +4806,7 @@ Namespace ViewModels
             GalleryStacks = _savedGalleryStacks
             GalleryFavoriteBadgeAlwaysVisible = _savedGalleryFavoriteBadgeAlwaysVisible
             GalleryMetadataBadgesAlwaysVisible = _savedGalleryMetadataBadgesAlwaysVisible
+            GalleryEditedBadge = _savedGalleryEditedBadge
             GalleryViewMode = _savedGalleryViewMode
             GalleryStartupFolderMode = _savedGalleryStartupFolderMode
             GalleryTimelineMode = _savedGalleryTimelineMode
@@ -4927,6 +4946,7 @@ Namespace ViewModels
             GalleryStacks = False
             GalleryFavoriteBadgeAlwaysVisible = True
             GalleryMetadataBadgesAlwaysVisible = True
+            GalleryEditedBadge = False
             GalleryViewMode = "Grid"
             GalleryStartupFolderMode = "Pictures"
             GalleryStartupCustomFolder = ""
@@ -5226,6 +5246,7 @@ Namespace ViewModels
                                           s.GalleryStacks = _galleryStacks
                                           s.GalleryFavoriteBadgeAlwaysVisible = _galleryFavoriteBadgeAlwaysVisible
                                           s.GalleryMetadataBadgesAlwaysVisible = _galleryMetadataBadgesAlwaysVisible
+                                          s.GalleryEditedBadge = _galleryEditedBadge
                                           s.GalleryViewMode = _galleryViewMode
                                           s.GalleryStartupFolderMode = _galleryStartupFolderMode
                                           s.GalleryStartupCustomFolder = _galleryStartupCustomFolder

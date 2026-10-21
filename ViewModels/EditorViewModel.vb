@@ -22753,7 +22753,11 @@ Namespace ViewModels
                     $"sidecarRejected canSaveSidecar=false fpxOpen={Not String.IsNullOrEmpty(_currentFpxPath)} annotations={_annotations.Count} bakedUnrecorded={_workingImage.HasUnrecordedBakedContent} retouchActive={_retouchStrokeActive} pendingCommits={_pendingWorkingCommits}")
                 Return False
             End If
-            If Not RawSidecarService.TryWrite(RenderSourcePath, GetCurrentAdjustments()) Then
+            ' Der Vermerk "bearbeitet" aus dem Vergleich mit den Startwerten der Datei: wer alles
+            ' zuruecksetzt und speichert, nimmt ihn damit wieder weg.
+            Dim sidecarAdjustments = GetCurrentAdjustments()
+            If Not RawSidecarService.TryWrite(RenderSourcePath, sidecarAdjustments,
+                                              edited:=RawSidecarService.IsEditedRecipe(RenderSourcePath, sidecarAdjustments)) Then
                 DiagnosticLogService.LogAlways("Editor.Save",
                     $"sidecarRejected writeFailed source={IO.Path.GetFileName(RenderSourcePath)}")
                 StatusText = LocalizationService.T("Begleitdatei konnte nicht geschrieben werden")

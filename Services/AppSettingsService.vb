@@ -276,6 +276,12 @@ Namespace Services
         Public Property GalleryStacks As Boolean = False
         ''' <summary>Verworfene Bilder: "Show" (gedimmt zeigen), "Hide" (ausblenden), "Only" (nur sie).</summary>
         Public Property GalleryFilterRejected As String = "Show"
+        ''' <summary>Bearbeitete Bilder: "All", "Only" (nur bearbeitete), "Hide" (nur unbearbeitete).</summary>
+        Public Property GalleryFilterEdited As String = "All"
+        ''' <summary>Abzeichen "bearbeitet" an der Kachel neben dem fuer verworfene Bilder. Ab Werk aus:
+        ''' es ist ein weiteres Zeichen auf dem Bild und soll bewusst eingeschaltet werden. In der
+        ''' Fotowand erscheint es nur beim Ueberfahren.</summary>
+        Public Property GalleryEditedBadge As Boolean = False
         Public Property GalleryStartupFolderMode As String = "Pictures"
         Public Property GalleryStartupCustomFolder As String = ""
         Public Property LastGalleryFolder As String = ""

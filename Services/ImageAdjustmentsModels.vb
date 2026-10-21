@@ -1361,6 +1361,61 @@ Namespace Services
             Return False
         End Function
 
+        ''' <summary>Was zur DATEI gehoert und nicht zur Bearbeitung: Masse, Koordinatenfassung,
+        ''' Aufnahme-Weissabgleich, die Decode-Schalter, Arbeitsbild, Auswahl und Ansichtszustand. Ein
+        ''' Rezept, das sich nur darin von den Startwerten unterscheidet, gilt nicht als bearbeitet.</summary>
+        Private Shared ReadOnly FileOwnedPropertyNames As String() = {
+            "SourceWidthPixels", "SourceHeightPixels", "RecipeCoordinateVersion",
+            "WhiteBalanceAnchorX", "WhiteBalanceAnchorY", "WhiteBalanceModel", "WhiteBalanceMode",
+            "RawHighlightRecovery", "RawSensorEdgeCrop",
+            "WorkingImageVersion", "WorkingImageHasTransparency", "WorkingImageExposure", "BakedOperationsApplied",
+            "SelectionScopeEnabled", "HasActiveSelection", "ActiveSelectionIsMask",
+            "SelectionXPercent", "SelectionYPercent", "SelectionWidthPercent", "SelectionHeightPercent",
+            "SelectionShapeMode", "SelectionShapePointsX", "SelectionShapePointsY",
+            "SelectionMaskLeft", "SelectionMaskTop", "SelectionMaskRight", "SelectionMaskBottom",
+            "SelectionMaskPngBase64", "SelectionFeatherPixels", "SelectionMaskSoftBaked",
+            "GlobalAdjustmentsHidden", "BackgroundHidden", "PixelLayerHidden"}
+
+        ''' <summary>Startwerte einer RAW, die mit der Kameratabelle und den Einstellungen wandern
+        ''' (ForUneditedRaw): die Farbkalibrierung und die beiden Farbrausch-Vorgaben. Fuer die
+        ''' nachsichtige Pruefung zaehlen sie nicht als Bearbeitung.</summary>
+        Private Shared ReadOnly MovingStartValueNames As String() = {
+            "CalibrationRedHue", "CalibrationRedSaturation", "CalibrationGreenHue", "CalibrationGreenSaturation",
+            "CalibrationBlueHue", "CalibrationBlueSaturation", "CalibrationShadowTint",
+            "FarbrauschGrob", "ColorNoiseReduction"}
+
+        ''' <summary>Wie weit die Belichtung in der nachsichtigen Pruefung von der Grundbelichtung
+        ''' abweichen darf, in Blendenstufen: die Kameratabelle verschiebt sie bei einem neuen Eingang
+        ''' um einige Hundertstel.</summary>
+        Private Const LenientExposureStops As Double = 0.15
+
+        ''' <summary>Traegt dieses Rezept eine Bearbeitung gegenueber den Startwerten
+        ''' <paramref name="start"/> derselben Datei? Verglichen wird ueber die Serialisierung, ein
+        ''' neues Feld ist damit von selbst dabei: Regler, Geometrie, Masken, Objekte, Retusche und
+        ''' eingebackene Vorgaenge zaehlen, die Felder der Datei (FileOwnedPropertyNames) nicht.
+        '''
+        ''' <paramref name="lenient"/> fuer ein Rezept, dessen Startwerte nicht bekannt sind (eine
+        ''' Begleitdatei ohne Vermerk): dann zaehlen auch die wandernden Startwerte nicht
+        ''' (MovingStartValueNames), und die Belichtung erst ab LenientExposureStops Abstand.</summary>
+        Public Function IsEditedComparedTo(start As ImageAdjustments, Optional lenient As Boolean = False) As Boolean
+            Dim own = FpxService.DeserializeAdjustments(FpxService.SerializeAdjustments(Me))
+            Dim reference = FpxService.DeserializeAdjustments(FpxService.SerializeAdjustments(If(start, New ImageAdjustments())))
+            If own Is Nothing OrElse reference Is Nothing Then Return True
+            Dim names = If(lenient, FileOwnedPropertyNames.Concat(MovingStartValueNames), FileOwnedPropertyNames)
+            Dim type = GetType(ImageAdjustments)
+            For Each name In names
+                Dim p = type.GetProperty(name)
+                If p IsNot Nothing AndAlso p.CanRead AndAlso p.CanWrite Then p.SetValue(own, p.GetValue(reference))
+            Next
+            ' Nachsichtig gilt auch 0 als Startwert: Rezepte aus der Zeit vor der Kameratabelle tragen
+            ' dort 0 statt der heutigen Grundbelichtung.
+            If lenient AndAlso (own.Exposure = 0.0F OrElse
+                                Math.Abs(own.Exposure - reference.Exposure) <= LenientExposureStops * ExposurePointsPerStop) Then
+                own.Exposure = reference.Exposure
+            End If
+            Return Not String.Equals(FpxService.SerializeAdjustments(own), FpxService.SerializeAdjustments(reference), StringComparison.Ordinal)
+        End Function
+
 
         Public Function Clone() As ImageAdjustments
             Dim result = New ImageAdjustments With {

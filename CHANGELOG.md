@@ -7,7 +7,7 @@
   greying them, and brightening opens up the shadows more naturally. While you drag, the picture
   follows at once and already looks almost like the result; a moment after you let go, it is
   rebuilt from the raw data. Automatic enhancement chooses the exposure the same way and gives
-  the same result however often you press it. Pictures you edited before keep their look.
+  the same result however often you press it.
 
 - **Raw files from every camera come out at the right brightness.** On a new installation,
   FerrumPix now adjusts the base brightness to the camera model from the start, so raw files
@@ -20,8 +20,7 @@
   directions, highlights are a little gentler and pulling the blacks down works more strongly.
   The shadows slider now also looks at how much of the picture is bright: next to a bright sky
   or a light wall, dark parts open up further, as in a raw developer.
-  Pictures you edited with 0.9.68 can look slightly different in these four areas; edits from
-  earlier versions keep their look.
+  Pictures you edited with 0.9.68 can look slightly different in these four areas.
 
 - **The random collage looks like a pile of real prints.** Each picture now lies on a white
   print with a soft shadow, keeps its own shape instead of being cut square, and the prints are
