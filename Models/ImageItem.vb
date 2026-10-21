@@ -624,28 +624,32 @@ Namespace Models
             End Get
         End Property
 
-        ''' <summary>Wie <see cref="IsEdited"/>, bestimmt den Wert aber sofort, wenn er noch fehlt
-        ''' (Filter und Suche). Nur fuer lokale Dateien; Server-Eintraege gelten als unbearbeitet.</summary>
+        ''' <summary>Wie <see cref="IsEdited"/>, fragt aber JEDES MAL die Begleitdatei
+        ''' (RawSidecarService.IsEditedFile, dort nach ihrem Zeitstempel gemerkt und damit billig)
+        ''' statt den gemerkten Wert der Kachel zu nehmen: der Filter sieht so auch die Bilder, die er
+        ''' gerade ausblendet und deren Kachel nach dem Speichern nicht neu geladen wurde. Nur fuer
+        ''' lokale Dateien; Server-Eintraege gelten als unbearbeitet.</summary>
         Public Function ResolveIsEdited() As Boolean
-            If Not _isEdited.HasValue Then
-                _isEdited = _immichAssetId Is Nothing AndAlso _nextcloudFileId Is Nothing AndAlso
-                            Services.RawSidecarService.IsEditedFile(FilePath)
+            Dim value = _immichAssetId Is Nothing AndAlso _nextcloudFileId Is Nothing AndAlso
+                        Services.RawSidecarService.IsEditedFile(FilePath)
+            If Not _isEdited.HasValue OrElse _isEdited.Value <> value Then
+                _isEdited = value
+                If Dispatcher.UIThread.CheckAccess() Then
+                    RaisePropertyChanged(NameOf(IsEdited))
+                Else
+                    Dispatcher.UIThread.Post(Sub() RaisePropertyChanged(NameOf(IsEdited)))
+                End If
             End If
-            Return _isEdited.Value
+            Return value
         End Function
 
         ''' <summary>Bestimmt den Vermerk neu (Hintergrund) und meldet eine Aenderung auf dem
         ''' Anzeigefaden.</summary>
         Private Sub RefreshEditedState()
-            Dim value As Boolean
             Try
-                value = Services.RawSidecarService.IsEditedFile(FilePath)
+                ResolveIsEdited()
             Catch
-                Return
             End Try
-            If _isEdited.HasValue AndAlso _isEdited.Value = value Then Return
-            _isEdited = value
-            Dispatcher.UIThread.Post(Sub() RaisePropertyChanged(NameOf(IsEdited)))
         End Sub
 
         Public ReadOnly Property IsPicked As Boolean

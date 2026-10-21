@@ -1362,12 +1362,13 @@ Namespace Services
         End Function
 
         ''' <summary>Was zur DATEI gehoert und nicht zur Bearbeitung: Masse, Koordinatenfassung,
-        ''' Aufnahme-Weissabgleich, die Decode-Schalter, Arbeitsbild, Auswahl und Ansichtszustand. Ein
-        ''' Rezept, das sich nur darin von den Startwerten unterscheidet, gilt nicht als bearbeitet.</summary>
+        ''' Aufnahme-Weissabgleich, Arbeitsbild, Auswahl und Ansichtszustand. Ein Rezept, das sich nur
+        ''' darin von den Startwerten unterscheidet, gilt nicht als bearbeitet. Die Decode-Schalter
+        ''' (Lichterrettung, Sensorrand) stehen NICHT hier: sie starten bei jeder RAW aus, und wer sie
+        ''' einschaltet, aendert das Bild sichtbar.</summary>
         Private Shared ReadOnly FileOwnedPropertyNames As String() = {
             "SourceWidthPixels", "SourceHeightPixels", "RecipeCoordinateVersion",
             "WhiteBalanceAnchorX", "WhiteBalanceAnchorY", "WhiteBalanceModel", "WhiteBalanceMode",
-            "RawHighlightRecovery", "RawSensorEdgeCrop",
             "WorkingImageVersion", "WorkingImageHasTransparency", "WorkingImageExposure", "BakedOperationsApplied",
             "SelectionScopeEnabled", "HasActiveSelection", "ActiveSelectionIsMask",
             "SelectionXPercent", "SelectionYPercent", "SelectionWidthPercent", "SelectionHeightPercent",

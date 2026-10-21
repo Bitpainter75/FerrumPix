@@ -13869,6 +13869,16 @@ Namespace ViewModels
             For Each item In Items.Where(Function(i) i IsNot Nothing AndAlso PathIdentity.AreSame(i.FilePath, path))
                 item.ReloadThumbnail()
             Next
+            ' Der Vermerk "bearbeitet" kann sich mit dem Speichern geaendert haben. Nachgezogen wird er
+            ' an ALLEN Eintraegen der Datei, auch an denen, die der Filter gerade ausblendet, und bei
+            ' aktivem Filter laeuft er danach neu: sonst bliebe das Bild im falschen Filter stehen
+            ' oder fehlte im richtigen.
+            Dim changed = False
+            For Each item In _allItems.Where(Function(i) i IsNot Nothing AndAlso PathIdentity.AreSame(i.FilePath, path))
+                Dim before = item.IsEdited
+                If item.ResolveIsEdited() <> before Then changed = True
+            Next
+            If changed AndAlso _filterEdited <> "All" Then FilterAndSort()
         End Sub
 
         Private Sub RefreshAfterBatchFileRewrite(paths As IEnumerable(Of String))
