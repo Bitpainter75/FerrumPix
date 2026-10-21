@@ -10,7 +10,8 @@
   as an edit.
 
 - **Sharper lens correction.** Correcting lens distortion no longer softens fine detail such as
-  hair; pictures keep noticeably more of their sharpness.
+  hair; pictures keep noticeably more of their sharpness. The lens data is updated as well and
+  knows a few more lenses.
 
 - **The random collage looks like a pile of real prints.** Each picture now lies on a white
   print with a soft shadow, keeps its own shape instead of being cut square, and the prints are
