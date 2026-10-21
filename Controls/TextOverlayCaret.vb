@@ -49,8 +49,6 @@ Namespace Controls
             End Set
         End Property
 
-        Public Property CaretColor As IBrush = Brushes.White
-
         ''' <summary>Der Satz, wie ihn der Renderer sieht, in Punkten dieses Steuerelements.</summary>
         ''' <param name="boxOrigin">Zeichnungsursprung des Textkastens; die erste Grundlinie liegt
         ''' eine Schriftgröße darunter.</param>
@@ -126,7 +124,11 @@ Namespace Controls
             Dim hit = CaretAt(_editor.Text, _editor.CaretIndex)
             Dim x = _boxOrigin.X + hit.X
             Dim top = _boxOrigin.Y + hit.Y + ink.Top
-            context.DrawLine(New Pen(CaretColor, 1.0), New Point(x, top), New Point(x, top + ink.Height))
+            Dim start = New Point(x, top)
+            Dim finish = New Point(x, top + ink.Height)
+            ' Heller Kern mit dunkler Kontur bleibt auf Bild und Text jeder Farbe sichtbar.
+            context.DrawLine(New Pen(Brushes.Black, 4.0), start, finish)
+            context.DrawLine(New Pen(Brushes.White, 2.0), start, finish)
         End Sub
     End Class
 End Namespace

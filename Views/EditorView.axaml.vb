@@ -6657,13 +6657,11 @@ Namespace Views
                                          TextAlignment.Left)))
                 ' Kontur und Verlaufsfüllung kann die TextBox nicht: solche Objekte zeichnet das
                 ' Overlay darunter vollständig, die Textbox bleibt nur noch für Eingabe und Schreibmarke da.
-                Dim textColor = ParseAvaloniaColor(vm.AnnotationFillColor, Colors.White)
                 editor.Foreground = Brushes.Transparent
                 editor.CaretBrush = Brushes.Transparent
                 Dim caret = Me.FindControl(Of TextOverlayCaret)("TextOverlayCaret")
                 If caret IsNot Nothing Then
                     caret.Editor = editor
-                    caret.CaretColor = New SolidColorBrush(textColor)
                     ' Ursprung und Breite aus den Rechenwerten, nicht aus der Textbox: deren Layout
                     ' ist gerundet und haelt die Mindestbreite des Themas ein (siehe TextOverlayCaret).
                     Dim caretBox = If(editorBox.HasValue, editorBox.Value, New Avalonia.Rect(0, 0, frameWidth, 0))
