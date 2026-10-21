@@ -909,8 +909,8 @@ Namespace Services
                     End If
                 End If
                 ' Das eingebackene Arbeitsbild traegt die Belichtung, die beim Speichern darin stak
-                ' (WorkingImageExposure); die Basis wird frisch entwickelt, ab Tonmodell 4 mit der
-                ' Belichtung in der RAW-Stufe.
+                ' (WorkingImageExposure); die Basis wird frisch entwickelt, mit der Belichtung in
+                ' der RAW-Stufe.
                 Dim recipe = If(loaded.Adjustments, New ImageAdjustments())
                 Dim renderAdj = recipe
                 Dim baseBitmap As SKBitmap

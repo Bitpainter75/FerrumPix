@@ -243,8 +243,8 @@ Namespace Services
                 rezept = RawSidecarService.TryRead(path)
             End If
 
-            ' Ohne Rezept die rohe Quelle, mit Rezept der Decode fuer die Kette (ab Tonmodell 4 mit
-            ' der Belichtung in der RAW-Stufe).
+            ' Ohne Rezept die rohe Quelle, mit Rezept der Decode fuer die Kette (mit der Belichtung
+            ' in der RAW-Stufe).
             If rezept Is Nothing Then Return DecodeForAdjustments(path, Nothing, developRaw)
             Dim decoded = DecodeForRender(path, rezept, rezept, True)
             If decoded Is Nothing Then Return Nothing
@@ -725,7 +725,7 @@ Namespace Services
         ''' aber weder Objektivkorrektur noch RAW-Lichterrettung übernehmen.</summary>
         ''' <remarks>OHNE die Belichtung: das Bild ist das, auf das die Reglerkette die volle
         ''' Belichtung noch anwenden muss. Wer danach die Kette rechnet, nimmt
-        ''' <see cref="DecodeForRender"/>, das ab Tonmodell 4 die Belichtung in die RAW-Stufe legt.</remarks>
+        ''' <see cref="DecodeForRender"/>, das die Belichtung in die RAW-Stufe legt.</remarks>
         Friend Shared Function DecodeForAdjustments(path As String, adj As ImageAdjustments,
                                                     Optional developRaw As Boolean = True) As SKBitmap
             Return DecodeOriented(path, developRaw, LensChoiceFrom(adj),
@@ -765,8 +765,8 @@ Namespace Services
             Return DecodeOriented(path, developRaw, lensChoice, recoverHighlights)
         End Function
 
-        ''' <summary>Der Decode fuer einen Render mit der Reglerkette: ab Tonmodell 4 steckt die
-        ''' Belichtung danach in der RAW-Stufe. <paramref name="renderAdj"/> ist das Rezept, mit dem
+        ''' <summary>Der Decode fuer einen Render mit der Reglerkette: die Belichtung steckt danach
+        ''' in der RAW-Stufe. <paramref name="renderAdj"/> ist das Rezept, mit dem
         ''' die Kette zu rechnen ist: <paramref name="adj"/> selbst, oder eine Kopie, die vermerkt, wie
         ''' viel Belichtung schon im Bild steckt (ImageAdjustments.ExposureInSource). Das uebergebene
         ''' Rezept bleibt unveraendert; es gehoert dem Aufrufer.</summary>
@@ -2330,7 +2330,7 @@ Namespace Services
             End Try
         End Function
 
-        ''' <summary>Dasselbe mit der Belichtung in der RAW-Stufe (Tonmodell 4);
+        ''' <summary>Dasselbe mit der Belichtung in der RAW-Stufe;
         ''' <paramref name="appliedEv"/> meldet, wie viel davon wirklich im Bild steckt.</summary>
         Friend Shared Function DecodeWorkingImageWithExposure(path As String, lensChoice As LensDataService.Wahl,
                                                               recoverHighlights As Boolean, exposureEv As Double,
@@ -2491,19 +2491,22 @@ Namespace Services
         Private Const ToneShoulderMax As Single = 0.4F
 
 
-        Private Shared Function ToneTransfer(x As Single, exposureGain As Single, contrast As Single, brightness As Single) As Single
+        Private Shared Function ToneTransfer(x As Single, exposureGain As Single, brightness As Single) As Single
             ' Belichtung in LINEARLICHT: frueher x*exposureGain im Gamma-Raum - das
             ' staucht die Lichter brutal (gemessen: +50 zog 64->218). Belichtung ist physikalisch ein
             ' linearer Faktor: sRGB dekodieren, multiplizieren, wieder kodieren. Ergebnis darf >1 sein
             ' (Ueberstrahlung), die weiche Schulter (SoftShoulder/rolloff) faengt es danach ab.
-            ' Kontrast/Helligkeit bleiben bewusst im Gamma-Raum um 0.5 - dort ist ihre Schulter definiert.
+            ' Die Helligkeit bleibt bewusst im Gamma-Raum - dort ist ihre Schulter definiert.
             Dim y As Single
             If exposureGain = 1.0F Then
                 y = x
             Else
                 y = LinearToSrgb(SrgbToLinear(x) * exposureGain)
             End If
-            y = (y - 0.5F) * contrast + 0.5F
+            ' Der Weg ueber 0,5 stammt vom Kontrast, der hier frueher wirkte (heute rechnet er in den
+            ' Tonzonen). Er bleibt, weil er im Gleitkomma nicht ganz neutral ist: unter 0,25 rundet
+            ' die Subtraktion, und ohne ihn verschoebe sich das Ergebnis um Bruchteile einer Stufe.
+            y = (y - 0.5F) + 0.5F
             Return y + brightness
         End Function
 
@@ -2808,10 +2811,10 @@ Namespace Services
             End If
 
             If adj.Vignette <> 0 Then
-                ' Reglermodell 2: gemessen gegen eine verbreitete RAW-Entwicklung wirkte das Abdunkeln
-                ' (unser +, dort -) 1,70-fach, das Aufhellen 1,18-fach zu stark.
+                ' Gemessen gegen eine verbreitete RAW-Entwicklung wirkte das Abdunkeln (unser +, dort -)
+                ' 1,70-fach, das Aufhellen 1,18-fach zu stark; daher die Faktoren.
                 Dim vignetteAmount = adj.Vignette / 100.0F
-                If adj.ResolvedToneModel() >= 2 Then vignetteAmount *= If(vignetteAmount > 0, 0.59F, 0.85F)
+                vignetteAmount *= If(vignetteAmount > 0, 0.59F, 0.85F)
                 processed = ReplaceBitmapOwned(processed, PerformanceTraceService.Measure(
                     "Pixel: Vignette", Function() ApplyVignette(processed, vignetteAmount, adj.VignetteTransition, adj.VignetteRoundness, adj.VignetteFeather, adj.VignetteCenterX, adj.VignetteCenterY, adj.VignetteStyle)), owned)
             End If
@@ -4238,7 +4241,6 @@ Namespace Services
                 adj.Whites, adj.Blacks, adj.Temperature, adj.Tint, adj.Sharpness, adj.SharpenRadius, adj.SharpenDetail,
                 adj.WhiteBalanceModel, adj.WhiteBalanceAnchorX, adj.WhiteBalanceAnchorY,
                 adj.WhiteBalanceKelvin, adj.WhiteBalanceKelvinTint,
-                adj.ResolvedToneModel(),
                 adj.SharpenMasking, adj.SharpenMethod,
                 adj.NoiseReduction, adj.NoiseReductionMethod, adj.NoiseReductionDetail, adj.Blur, adj.ColorNoiseReduction,
                 adj.FarbrauschGrob, adj.ColorNoiseCoarseScale,

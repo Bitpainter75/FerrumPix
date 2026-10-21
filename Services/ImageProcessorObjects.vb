@@ -1141,8 +1141,7 @@ Namespace Services
         ''' <summary>Haengt das Ergebnis einer Objektanpassung an mehr als dem Bildpunkt selbst, also
         ''' an seiner Umgebung, an der Lage in der Ebene oder an der Statistik des ganzen Objekts?
         ''' Dieselbe Liste wie fuer den Ausschnittweg der Maskenebenen (LayerAdjustmentsAreCropSafe),
-        ''' dazu Lichter und Tiefen ab Tonmodell 2 und Weiss ab Tonmodell 3: sie waehlen ihre
-        ''' Kennlinie nach Median oder Spitze der Ebene, und ein Ausschnitt haette andere. Die
+        ''' dazu Lichter, Tiefen und Weiss: sie waehlen ihre Kennlinie nach der Statistik der Ebene, und ein Ausschnitt haette andere. Die
         ''' Maskenebene reicht diese Werte ausdruecklich herein, die Objektebene nicht.</summary>
         Private Shared Function ObjectAdjustmentsReadSurroundings(objectAdj As ImageAdjustments) As Boolean
             If objectAdj Is Nothing Then Return False

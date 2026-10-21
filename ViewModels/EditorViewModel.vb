@@ -183,17 +183,13 @@ Namespace ViewModels
         ''' Reglerwerte. Kelvin 0 heißt „wie aufgenommen", und das ist mehr als ein Zahlenwert: der
         ''' Anker selbst, also garantiert keine Stufe in der Pixelkette.</summary>
         Private _whiteBalanceModel As Integer = 0
-        ''' <summary>Das Reglermodell des geoeffneten Rezepts (ImageAdjustments.ToneModel), mitgefuehrt
-        ''' wie das Weissabgleichsmodell: ohne es rechnete eine alte Bearbeitung im Editor mit dem
-        ''' Modell neuer Bearbeitungen und saehe anders aus als gespeichert.</summary>
-        Private _toneModel As Integer = 0
-
         ''' <summary>Zeichnet der Kurven-Editor die Kurve wie die Referenz (natuerlicher kubischer
-        ''' Spline, Reglermodell 2) oder als PCHIP (Modell 1)? Muss zur Bildkette passen, sonst ist die
-        ''' gezeichnete Kurve nicht die angewandte.</summary>
+        ''' Spline) oder als PCHIP? Muss zur Bildkette passen, sonst ist die gezeichnete Kurve nicht
+        ''' die angewandte: Punkt- und Kanalkurven rechnen mit dem Spline der Referenz, die
+        ''' Luminanzkurve als PCHIP.</summary>
         Public ReadOnly Property CurveUsesReferenceSpline As Boolean
             Get
-                Return New ImageAdjustments With {.ToneModel = _toneModel}.ResolvedToneModel() >= 2
+                Return _selectedCurveChannel <> CurveChannel.Luminance
             End Get
         End Property
         Private _whiteBalanceAnchorX As Double = 0
@@ -729,8 +725,8 @@ Namespace ViewModels
         ''' Die Belichtung (Punkte), die im Buendel-Arbeitsbild steckt (WorkingImageExposure).
         Private _workingImageOverrideExposure As Single = 0.0F
 
-        ''' Wie viel Belichtung, in Punkten des Reglers, im aktuellen ARBEITSBILD steckt. Ab
-        ''' Tonmodell 4 entwickelt die RAW-Stufe die Belichtung mit (ImageAdjustments.RawExposureEv);
+        ''' Wie viel Belichtung, in Punkten des Reglers, im aktuellen ARBEITSBILD steckt. Die
+        ''' RAW-Stufe entwickelt die Belichtung mit (ImageAdjustments.RawExposureEv);
         ''' die Kette rechnet dann nur den Rest (ImageAdjustments.ExposureInSource). Gesetzt bei
         ''' jedem Quellwechsel und jedem Neuaufbau fuer die Belichtung; mit eingebackenem Inhalt
         ''' bleibt der Stand stehen, spaetere Aenderungen wirken in der Kette.
@@ -7382,7 +7378,7 @@ Namespace ViewModels
         ''' stehen, bekam aber "kein Objektiv vorgegeben" in den Decode. Das Bild blieb
         ''' unveraendert, Kachel und Export waren korrigiert.</summary>
         ''' <summary>Die Belichtung des BILDES in Blendenstufen, die in die RAW-Stufe gehoert
-        ''' (ImageAdjustments.RawExposureEv): Modell, Belichtung und Filmnegativ des Bildes.
+        ''' (ImageAdjustments.RawExposureEv): Belichtung und Filmnegativ des Bildes.
         '''
         ''' Bedienen die Regler gerade ein Objekt oder Maskenebenen, stehen in den Feldern DEREN
         ''' Werte, und die des Bildes liegen geparkt (siehe GetCurrentAdjustments). Dann kommen
@@ -7396,12 +7392,10 @@ Namespace ViewModels
             End If
             If parked IsNot Nothing Then
                 Return New ImageAdjustments With {
-                    .ToneModel = parked.ToneModel,
                     .Exposure = parked.Exposure,
                     .NegativeEnabled = parked.NegativeEnabled}.RawExposureEv()
             End If
             Return New ImageAdjustments With {
-                .ToneModel = _toneModel,
                 .Exposure = CSng(_exposure),
                 .NegativeEnabled = _negativeEnabled}.RawExposureEv()
         End Function
@@ -19788,7 +19782,7 @@ Namespace ViewModels
             DisposeGridPreview()
             DisposeLinePreview()
             ' Aus demselben Grund hier: jede Aenderung kann die Belichtung der RAW-Stufe verschieben
-            ' (Regler, Undo, Vorlage, Automatik, Zuruecksetzen, Tonmodell, Filmnegativ).
+            ' (Regler, Undo, Vorlage, Automatik, Zuruecksetzen, Filmnegativ).
             ScheduleRawExposureRebuild()
             If markDirty AndAlso Not _suppressPreviewDirty Then
                 Dim wasDirty = _hasChanges
@@ -20180,8 +20174,8 @@ Namespace ViewModels
                 ' nachzurechnen lohnt nicht, sie zwingt einfach zum vollen Durchgang.
                 If layer.HasStroke() OrElse layer.HasEffects() Then Return True
                 If Not wirkt Then Continue For
-                ' Lichter und Tiefen waehlen ihre Kennlinie nach dem Median des GANZEN Bildes, Weiss im
-                ' Tonmodell 3 nach seiner Spitze (ApplyLayerAdjustmentsInRect misst sie am ganzen
+                ' Lichter und Tiefen waehlen ihre Kennlinie nach der Helligkeit des GANZEN Bildes, Weiss
+                ' nach seiner Spitze (ApplyLayerAdjustmentsInRect misst sie am ganzen
                 ' Bild). Eine Aenderung irgendwo kann sie verschieben, und die Korrektur in der Maske
                 ' stuende dann mit der alten Kennlinie da. Welche Aenderung die Statistik bewegt, laesst
                 ' sich vorab nicht sagen: also voll.
@@ -20190,7 +20184,7 @@ Namespace ViewModels
                 If mask Is Nothing Then Return True
                 Dim maskRect = ImageProcessor.ComputeMaskDirtyRect(sceneSize.Width, sceneSize.Height, mask, adj)
                 If maskRect.IsEmpty Then Return True
-                ' Oertliche Lichter und Tiefen (Tonmodell 3) lesen zudem ihre Basisschicht aus der
+                ' Oertliche Lichter und Tiefen lesen zudem ihre Basisschicht aus der
                 ' Umgebung der Maske; sie sind oben schon erfasst, weil sie auch den Median lesen.
                 If OverlaySceneRenderer.Intersects(maskRect, dirtyRect) Then Return True
             Next
@@ -20627,7 +20621,7 @@ Namespace ViewModels
         ''' sie veraendert den DECODE, nicht die Reglerkette - ohne sie taeten die Schalter und
         ''' Regler der Gruppe schlicht nichts.</param>
         ''' <param name="exposureEv">Die Belichtung des Bildes in Blendenstufen fuer die RAW-Stufe
-        ''' (Tonmodell 4, WantedRawExposureEv). Wie viel davon im Bild steckt, meldet AppliedEv;
+        ''' (WantedRawExposureEv). Wie viel davon im Bild steckt, meldet AppliedEv;
         ''' ein Buendel-Arbeitsbild und eine Uebergabe vom Betrachter bringen 0 mit.</param>
         Private Shared Function DecodeForPreviewSource(imagePath As String, overridePath As String,
                                                        lensChoice As LensDataService.Wahl,
@@ -22927,7 +22921,6 @@ Namespace ViewModels
                 .Tint = CSng(_tint),
                 .WhiteBalanceModel = _whiteBalanceModel,
                 .WhiteBalanceMode = _whiteBalance,
-                .ToneModel = _toneModel,
                 .WhiteBalanceAnchorX = _whiteBalanceAnchorX,
                 .WhiteBalanceAnchorY = _whiteBalanceAnchorY,
                 .WhiteBalanceKelvin = _whiteBalanceKelvin,
@@ -24456,8 +24449,6 @@ Namespace ViewModels
             _lensVignettingAmount = adj.LensVignettingAmount
             _lensModel = If(adj.LensModel, "")
             _whiteBalanceModel = adj.WhiteBalanceModel
-            _toneModel = adj.ToneModel
-            Me.RaisePropertyChanged(NameOf(CurveUsesReferenceSpline))
             _whiteBalanceAnchorX = adj.WhiteBalanceAnchorX
             _whiteBalanceAnchorY = adj.WhiteBalanceAnchorY
             _whiteBalanceKelvin = adj.WhiteBalanceKelvin
@@ -25028,8 +25019,6 @@ Namespace ViewModels
             _whiteBalanceAnchorX = 0
             _whiteBalanceAnchorY = 0
             _whiteBalanceModel = 0
-            _toneModel = 0
-            Me.RaisePropertyChanged(NameOf(CurveUsesReferenceSpline))
             _colorGradeShadowHue = 0
             _colorGradeShadowSaturation = 0
             _colorGradeHighlightHue = 0
@@ -30125,6 +30114,7 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(IsCurveChannelGreen))
             Me.RaisePropertyChanged(NameOf(IsCurveChannelBlue))
             Me.RaisePropertyChanged(NameOf(IsCurveChannelLuminance))
+            Me.RaisePropertyChanged(NameOf(CurveUsesReferenceSpline))
         End Sub
 
         Private Sub SetCurveChannel(channelName As String)

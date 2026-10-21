@@ -7,8 +7,7 @@ Imports System.Text.Json
 
 Namespace Services
 
-    ''' <summary>Die gemessenen Kennlinien von Lichter, Tiefen, Weiss, Schwarz und Kontrast fuer das
-    ''' Tonmodell 2 (ImageAdjustments.ToneModel).
+    ''' <summary>Die gemessenen Kennlinien von Lichter, Tiefen, Weiss, Schwarz und Kontrast.
     '''
     ''' WO DIE ZAHLEN STEHEN: in Resources/ToneSliderCurves.json, als eingebettete Ressource. Gebaut
     ''' von packaging/Diagnostics/Reglereichung/kennlinien.py aus Referenzentwicklungen mit je EINEM
@@ -30,21 +29,23 @@ Namespace Services
         ''' Gruppe. Gemessen wirken beide Regler stark bildabhaengig: dunkle Stellen in einem hellen
         ''' Bild hebt Tiefen +100 viermal so weit wie in einem dunklen (Diagnostics/Reglereichung/
         ''' lokal.py). Steht VOR Curves: statische Felder entstehen in der Reihenfolge der Datei, und
-        ''' LoadResource fuellt dieses hier.</summary>
+        ''' LoadResource fuellt dieses hier.
+        '''
+        ''' Die Gruppenmitten kommen aus "mediansModel3", wo es sie gibt, sonst aus "medians". Erstere
+        ''' stammen aus unseren Nullbildern mit der Grundbelichtung je Kamera und liegen rund 6 L
+        ''' tiefer. Der Zusatz "Model3" (ebenso bei den Verstaerkungen) ist ein Name aus der Zeit
+        ''' mehrerer Tonmodelle, so schreibt ihn kennlinien.py; er bezeichnet die gueltige Eichung.</summary>
         Private Shared ReadOnly MedianCurves As New Dictionary(Of String, (Medians As Double(), Sets As Double()()()))(StringComparer.Ordinal)
 
-        ''' <summary>Tonmodell 3: eigene Gruppenmitten fuer dieselben Kurven (Schluessel
-        ''' "mediansModel3"). Die Mitten stammen aus unseren Nullbildern, und die liegen mit der
-        ''' Grundbelichtung je Kamera (seit sie ab Werk gilt) rund 6 L tiefer als ohne. Modell 2 behaelt
-        ''' die Mitten, mit denen es veroeffentlicht wurde, damit gespeicherte Bearbeitungen gleich
-        ''' bleiben. Steht wie MedianCurves VOR Curves.</summary>
-        Private Shared ReadOnly MedianCentersModel3 As New Dictionary(Of String, Double())(StringComparer.Ordinal)
+        ''' <summary>Der Zusatz, unter dem die Datei die gueltige Eichung eines Eintrags fuehrt, der
+        ''' daneben auch ohne Zusatz steht. Siehe <see cref="MedianCurves"/>.</summary>
+        Private Const CalibratedSuffix As String = "Model3"
 
         ''' <summary>Weiss je Spitze des Bildes (Schluessel Whites): das 99. Perzentil von L je Gruppe,
         ''' und je Stellung eine Kurve je Gruppe. Gemessen haengt Weiss nicht am Median, sondern daran,
         ''' wie nah die Lichter schon an Weiss stehen: Weiss +100 hebt ein flaues Bild weit und eines,
         ''' das schon oben anstoesst, kaum. In der Kreuzprobe ueber 57 Bilder sank der Fehler bei
-        ''' Weiss +100 von 8,1 auf 3,3 L. Nur im Tonmodell 3. Steht wie MedianCurves VOR Curves.</summary>
+        ''' Weiss +100 von 8,1 auf 3,3 L. Steht wie MedianCurves VOR Curves.</summary>
         Private Shared ReadOnly TopCurves As New Dictionary(Of String, (Medians As Double(), Sets As Double()()()))(StringComparer.Ordinal)
 
         ''' <summary>Tiefen je Anteil heller Bildpunkte (Schluessel Shadows, Eintrag
@@ -52,23 +53,21 @@ Namespace Services
         ''' Stellung eine Kurve je Gruppe. Gemessen hebt Tiefen +100 die dunklen Stellen eines Bildes
         ''' mit viel heller Flaeche weiter als nach dem Median erwartet; mit Kameratabelle an 57
         ''' Eichbildern und 25 Bildern der Gegenprobe besser als die Gruppen nach dem Median (Tiefen
-        ''' +100 4,56 auf 4,04 in der Gegenprobe). Nur im Tonmodell 4. Steht wie MedianCurves VOR
-        ''' Curves.</summary>
+        ''' +100 4,56 auf 4,04 in der Gegenprobe). Steht wie MedianCurves VOR Curves.</summary>
         Private Shared ReadOnly BrightShareCurves As New Dictionary(Of String, (Medians As Double(), Sets As Double()()()))(StringComparer.Ordinal)
 
         ''' <summary>Die Grenze, ueber der ein Bildpunkt als hell zaehlt, in L. Muss mit
         ''' Diagnostics/Reglereichung/kennlinien.py (SHARE_LIMITS) uebereinstimmen.</summary>
         Public Const BrightShareLimitL As Double = 70.0
 
-        ''' <summary>Kurven je Regler: Index 0 bis 3 fuer -100, -50, +50, +100. Nothing, wenn die
-        ''' Ressource fehlt; dann rechnet Modell 2 wie Modell 1.</summary>
         ''' <summary>Verstaerkung je Regler und Stellung (Index wie bei Curves), Schluessel "gains" der
         ''' Datei. Die Kurven sind Mediane ueber die Bilder; die mittlere Wirkung der Referenz ist bei
         ''' manchen Reglern kraeftiger, gemessen als Faktor unserer Wirkung durch ihre. Der Kehrwert
-        ''' steht hier. Fehlt ein Eintrag, gilt 1. Steht wie MedianCurves VOR Curves.</summary>
+        ''' steht hier. Fehlt ein Eintrag, gilt 1. Ein Eintrag mit <see cref="CalibratedSuffix"/>
+        ''' ersetzt den ohne. Steht wie MedianCurves VOR Curves.</summary>
         Private Shared ReadOnly Gains As New Dictionary(Of String, Double())(StringComparer.Ordinal)
 
-        ''' <summary>Tonmodell 3: Verstaerkung der Feinstruktur je Zone, Schluessel "localDetail" der
+        ''' <summary>Verstaerkung der Feinstruktur je Zone, Schluessel "localDetail" der
         ''' Datei. Je Regler und Stellung (Index wie bei Curves) ein Faktor je Zonenmitte
         ''' (DetailCenters, in L). Gemessen lassen Lichter und Tiefen die Struktur nicht einfach
         ''' stehen: in ihrer eigenen Zone verstaerken sie sie beim Zurueckholen (Lichter -100 in den
@@ -77,6 +76,8 @@ Namespace Services
         Private Shared ReadOnly DetailGains As New Dictionary(Of String, Double()())(StringComparer.Ordinal)
         Private Shared DetailCenters As Double()
 
+        ''' <summary>Kurven je Regler: Index 0 bis 3 fuer -100, -50, +50, +100. Nothing, wenn die
+        ''' Ressource fehlt; dann bewegen die Tonregler nichts.</summary>
         Private Shared ReadOnly Curves As Dictionary(Of String, Double()()) = LoadResource()
         Private Shared _grid As Integer
 
@@ -107,7 +108,11 @@ Namespace Services
                                     Dim value As JsonElement
                                     If slider.Value.TryGetProperty(gkeys(k), value) Then g(k) = value.GetDouble()
                                 Next
-                                Gains(slider.Name) = g
+                                If slider.Name.EndsWith(CalibratedSuffix, StringComparison.Ordinal) Then
+                                    Gains(slider.Name.Substring(0, slider.Name.Length - CalibratedSuffix.Length)) = g
+                                ElseIf Not Gains.ContainsKey(slider.Name) Then
+                                    Gains(slider.Name) = g
+                                End If
                             Next
                         End If
                         Dim detailElement As JsonElement
@@ -153,12 +158,12 @@ Namespace Services
                                     Dim suffix = If(byTop, "ByTop", If(byBrightShare, "ByBrightShare", "ByMedian"))
                                     Dim target = If(byTop, TopCurves, If(byBrightShare, BrightShareCurves, MedianCurves))
                                     Dim key = slider.Name.Substring(0, slider.Name.Length - suffix.Length)
-                                    target(key) = (medians, sets)
-                                    Dim model3Element As JsonElement
-                                    If byMedian AndAlso slider.Value.TryGetProperty("mediansModel3", model3Element) Then
-                                        Dim centres3 = model3Element.EnumerateArray().Select(Function(e) e.GetDouble()).ToArray()
-                                        If centres3.Length = medians.Length Then MedianCentersModel3(key) = centres3
+                                    Dim calibratedElement As JsonElement
+                                    If byMedian AndAlso slider.Value.TryGetProperty("medians" & CalibratedSuffix, calibratedElement) Then
+                                        Dim calibrated = calibratedElement.EnumerateArray().Select(Function(e) e.GetDouble()).ToArray()
+                                        If calibrated.Length = medians.Length Then medians = calibrated
                                     End If
+                                    target(key) = (medians, sets)
                                 End If
                                 Continue For
                             End If
@@ -189,67 +194,57 @@ Namespace Services
 
         ''' <summary>Hub des Reglers <paramref name="slider"/> (Highlights, Shadows, Whites, Blacks,
         ''' Contrast; ParametricShadows/Darks/Lights/Highlights fuer den Preset-Import) bei Wert <paramref name="value"/> (-100 bis 100) am Gammawert
-        ''' <paramref name="v"/>. Zwischen 0 und 50 und zwischen 50 und 100 linear. Die Verstaerkung
-        ''' haengt am <paramref name="toneModel"/> (siehe <see cref="Gain"/>).</summary>
-        Public Shared Function Lift(slider As String, value As Double, v As Double,
-                                    Optional toneModel As Integer = 2) As Double
+        ''' <paramref name="v"/>. Zwischen 0 und 50 und zwischen 50 und 100 linear.</summary>
+        Public Shared Function Lift(slider As String, value As Double, v As Double) As Double
             If value = 0.0 OrElse Curves Is Nothing Then Return 0.0
             Dim set4 As Double()() = Nothing
             If Not Curves.TryGetValue(slider, set4) Then Return 0.0
             Dim magnitude = Math.Min(100.0, Math.Abs(value))
             Dim half = If(value < 0, set4(1), set4(2))
             Dim full = If(value < 0, set4(0), set4(3))
-            Dim atHalf = Sample(half, v) * Gain(slider, value, False, toneModel)
+            Dim atHalf = Sample(half, v) * Gain(slider, value, False)
             If magnitude <= 50.0 Then Return atHalf * magnitude / 50.0
-            Return atHalf + (Sample(full, v) * Gain(slider, value, True, toneModel) - atHalf) * (magnitude - 50.0) / 50.0
+            Return atHalf + (Sample(full, v) * Gain(slider, value, True) - atHalf) * (magnitude - 50.0) / 50.0
         End Function
 
         ''' <summary>Wie <see cref="Lift"/>, aber nach der Helligkeit des ganzen Bildes: liegen fuer den
         ''' Regler Kurven je Bildmedian vor, wird zwischen den Gruppen linear nach
         ''' <paramref name="imageMedianL"/> (L, 0 bis 100) geteilt, ausserhalb die naechste Gruppe.
-        ''' Ohne solche Kurven oder ohne Median (0 oder weniger) die mittlere Kurve. Ab
-        ''' <paramref name="toneModel"/> 3 gelten die Mitten aus "mediansModel3", wo es sie gibt.</summary>
-        Public Shared Function Lift(slider As String, value As Double, v As Double, imageMedianL As Double,
-                                    Optional toneModel As Integer = 2) As Double
+        ''' Ohne solche Kurven oder ohne Median (0 oder weniger) die mittlere Kurve.</summary>
+        Public Shared Function LiftByMedian(slider As String, value As Double, v As Double, imageMedianL As Double) As Double
             Dim entry As (Medians As Double(), Sets As Double()()()) = Nothing
             If imageMedianL <= 0.0 OrElse value = 0.0 OrElse Not MedianCurves.TryGetValue(slider, entry) Then
-                Return Lift(slider, value, v, toneModel)
+                Return Lift(slider, value, v)
             End If
-            Dim centres3 As Double() = Nothing
-            If toneModel >= 3 AndAlso MedianCentersModel3.TryGetValue(slider, centres3) Then
-                entry = (centres3, entry.Sets)
-            End If
-            Return LiftGrouped(slider, entry, value, v, imageMedianL, toneModel:=toneModel)
+            Return LiftGrouped(slider, entry, value, v, imageMedianL)
         End Function
 
         ''' <summary>Wie <see cref="Lift"/>, aber nach der Spitze des Bildes: liegen fuer den Regler
         ''' Kurven je Spitze vor (bisher nur Weiss), wird zwischen den Gruppen linear nach
         ''' <paramref name="imageTopL"/> (99. Perzentil von L, 0 bis 100) geteilt, ausserhalb die
         ''' naechste Gruppe. Ohne solche Kurven oder ohne Spitze (0 oder weniger) die mittlere Kurve.
-        ''' Die Verstaerkung steht unter "WhitesByTop" in "gains", getrennt von der des Reglers: die
-        ''' Kurven je Spitze rechnet nur Tonmodell 3, und Modell 2 behaelt so seine Staerke.</summary>
+        ''' Die Verstaerkung steht unter "WhitesByTop" in "gains", getrennt von der des Reglers.</summary>
         Public Shared Function LiftByTop(slider As String, value As Double, v As Double, imageTopL As Double) As Double
             Dim entry As (Medians As Double(), Sets As Double()()()) = Nothing
             If imageTopL <= 0.0 OrElse value = 0.0 OrElse Not TopCurves.TryGetValue(slider, entry) Then
-                Return Lift(slider, value, v, 3)
+                Return Lift(slider, value, v)
             End If
-            Return LiftGrouped(slider, entry, value, v, imageTopL, slider & "ByTop", 3)
+            Return LiftGrouped(slider, entry, value, v, imageTopL, slider & "ByTop")
         End Function
 
         ''' <summary>Wie <see cref="Lift"/>, aber nach dem Anteil heller Bildpunkte: liegen fuer den
         ''' Regler Kurven je Anteil vor (bisher nur Tiefen), wird zwischen den Gruppen linear nach
         ''' <paramref name="brightSharePercent"/> (Prozent ueber <see cref="BrightShareLimitL"/>)
         ''' geteilt, ausserhalb die naechste Gruppe. Ohne solche Kurven die Gruppen nach dem Median
-        ''' (<paramref name="imageMedianL"/>), wie im Tonmodell 3. Die Verstaerkung ist die des Reglers,
-        ''' mit der auch gemessen wurde.</summary>
+        ''' (<paramref name="imageMedianL"/>). Die Verstaerkung ist die des Reglers, mit der auch
+        ''' gemessen wurde.</summary>
         Public Shared Function LiftByBrightShare(slider As String, value As Double, v As Double,
-                                                 brightSharePercent As Double, imageMedianL As Double,
-                                                 toneModel As Integer) As Double
+                                                 brightSharePercent As Double, imageMedianL As Double) As Double
             Dim entry As (Medians As Double(), Sets As Double()()()) = Nothing
             If imageMedianL <= 0.0 OrElse value = 0.0 OrElse Not BrightShareCurves.TryGetValue(slider, entry) Then
-                Return Lift(slider, value, v, imageMedianL, toneModel)
+                Return LiftByMedian(slider, value, v, imageMedianL)
             End If
-            Return LiftGrouped(slider, entry, value, v, brightSharePercent, toneModel:=toneModel)
+            Return LiftGrouped(slider, entry, value, v, brightSharePercent)
         End Function
 
         ''' <summary>Hub aus Kurven je Gruppe: linear zwischen den beiden Gruppen, deren Mitten
@@ -257,8 +252,7 @@ Namespace Services
         ''' <see cref="Lift"/> zwischen 0, 50 und 100 linear.</summary>
         Private Shared Function LiftGrouped(slider As String, entry As (Medians As Double(), Sets As Double()()()),
                                             value As Double, v As Double, measure As Double,
-                                            Optional gainKey As String = Nothing,
-                                            Optional toneModel As Integer = 2) As Double
+                                            Optional gainKey As String = Nothing) As Double
             Dim gainSlider = If(gainKey IsNot Nothing AndAlso Gains.ContainsKey(gainKey), gainKey, slider)
             Dim m = entry.Medians
             Dim gi = 0
@@ -278,13 +272,13 @@ Namespace Services
             Dim magnitude = Math.Min(100.0, Math.Abs(value))
             Dim halfSet = If(value < 0, entry.Sets(1), entry.Sets(2))
             Dim fullSet = If(value < 0, entry.Sets(0), entry.Sets(3))
-            Dim atHalf = (Sample(halfSet(gi), v) + (Sample(halfSet(gi + 1), v) - Sample(halfSet(gi), v)) * f) * Gain(gainSlider, value, False, toneModel)
+            Dim atHalf = (Sample(halfSet(gi), v) + (Sample(halfSet(gi + 1), v) - Sample(halfSet(gi), v)) * f) * Gain(gainSlider, value, False)
             If magnitude <= 50.0 Then Return atHalf * magnitude / 50.0
-            Dim atFull = (Sample(fullSet(gi), v) + (Sample(fullSet(gi + 1), v) - Sample(fullSet(gi), v)) * f) * Gain(gainSlider, value, True, toneModel)
+            Dim atFull = (Sample(fullSet(gi), v) + (Sample(fullSet(gi + 1), v) - Sample(fullSet(gi), v)) * f) * Gain(gainSlider, value, True)
             Return atHalf + (atFull - atHalf) * (magnitude - 50.0) / 50.0
         End Function
 
-        ''' <summary>Tonmodell 3: Faktor auf die Feinstruktur fuer Regler <paramref name="slider"/>
+        ''' <summary>Faktor auf die Feinstruktur fuer Regler <paramref name="slider"/>
         ''' (Highlights, Shadows) bei Wert <paramref name="value"/>, an der geglaetteten Helligkeit
         ''' <paramref name="lightness"/> (L, 0 bis 100). Zwischen den Zonenmitten linear, ausserhalb
         ''' die naechste; im Wert wie <see cref="Lift"/> zwischen 0, 50 und 100 linear. 1 ohne
@@ -317,14 +311,10 @@ Namespace Services
         End Function
 
         ''' <summary>Verstaerkung der Stellung +-50 (<paramref name="full"/> False) oder +-100 in der
-        ''' Richtung von <paramref name="value"/>. Ab <paramref name="toneModel"/> 3 gilt ein Eintrag
-        ''' "&lt;Regler&gt;Model3", wo es ihn gibt (seit der Eichung mit Kameratabelle, 2026-10-20), sonst
-        ''' der gemeinsame; Modell 2 behaelt so die Staerke, mit der es veroeffentlicht wurde.</summary>
-        Private Shared Function Gain(slider As String, value As Double, full As Boolean,
-                                     Optional toneModel As Integer = 2) As Double
+        ''' Richtung von <paramref name="value"/>.</summary>
+        Private Shared Function Gain(slider As String, value As Double, full As Boolean) As Double
             Dim g As Double() = Nothing
-            If Not (toneModel >= 3 AndAlso Gains.TryGetValue(slider & "Model3", g)) AndAlso
-               Not Gains.TryGetValue(slider, g) Then Return 1.0
+            If Not Gains.TryGetValue(slider, g) Then Return 1.0
             If value < 0 Then Return If(full, g(0), g(1))
             Return If(full, g(3), g(2))
         End Function

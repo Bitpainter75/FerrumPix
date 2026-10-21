@@ -655,7 +655,7 @@ Namespace Services
         ''' <see cref="HighlightRecoveryKnee"/>. Die Anwendung laesst sie weg; angeben tut sie nur
         ''' die Messung, die den Wert ueberhaupt erst bestimmt hat.</param>
         ''' <param name="exposureEv">Belichtung in Blendenstufen, die zur Grundbelichtung in die
-        ''' Rampe kommt (Tonmodell 4, ImageAdjustments.RawExposureEv). Sie steht damit auch im
+        ''' Rampe kommt (ImageAdjustments.RawExposureEv). Sie steht damit auch im
         ''' Schluessel des Zwischenspeichers, und ein neuer Wert wird aus den 16-Bit-Daten umgesetzt,
         ''' ohne LibRaw erneut laufen zu lassen.</param>
         Public Shared Function TryDecode(path As String,
@@ -707,7 +707,7 @@ Namespace Services
                                              exposureEv As Double) As SKBitmap
             Try
                 Dim writeTime = File.GetLastWriteTimeUtc(path)
-                ' Grundbelichtung der Kamera plus die Belichtung des Reglers (Tonmodell 4): beides
+                ' Grundbelichtung der Kamera plus die Belichtung des Reglers: beides
                 ' ist dieselbe Rampe, und als Summe steht es im Schluessel des Zwischenspeichers.
                 Dim baseEv = BaseExposureForFile(path) + exposureEv
                 Dim lens = LensCorrectionForFile(path, lensChoice)
@@ -924,6 +924,8 @@ Namespace Services
         ''' aus, die Verzeichnung dagegen um Dutzende Zeilen. Sie dort einzubauen hiesse, den
         ''' delikatesten Teil des Decodes umzubauen. Der Preis ist eine Interpolation im 8-Bit-Bild
         ''' statt im linearen Rohbild; bei einer reinen Geometrie-Umsetzung ist das der uebliche Weg.
+        ''' Interpoliert wird nach Lanczos-3 (<see cref="SampleLanczos3"/>), nicht bilinear: das
+        ''' kostete sichtbar Schaerfe.
         '''
         ''' Die Bildgroesse bleibt gleich. Das ist eine Entscheidung, keine Vereinfachung: die
         ''' Alternative waere, auf den gueltigen Bereich zu beschneiden und damit die Bildmasse zu
@@ -985,7 +987,7 @@ Namespace Services
                             sx = cx + dx * factor
                             sy = cy + dy * factor
                         End If
-                        SampleBilinear(sourcePixels, width, height, sourceStride, sx, sy, output, z)
+                        SampleLanczos3(sourcePixels, width, height, sourceStride, sx, sy, output, z)
                         z += 4
                     Next
                 End Sub)
@@ -1052,11 +1054,20 @@ Namespace Services
         ''' Pixel fehlen an einer 6000 Pixel breiten Kante nirgends.</summary>
         Private Const DistortionEdgeInset As Integer = 2
 
-        ''' <summary>Ein Bgra-Pixel bilinear aus der Quelle ziehen. Ausserhalb wird auf den Rand
-        ''' geklemmt. Das ist nur noch die Absicherung: DistortionFillScale vergroessert das Bild so,
-        ''' dass keine Abtastung mehr hinausgeht. Greift sie nicht (Kennlinie jenseits des Deckels),
-        ''' ist ein geklemmter Streifen unauffaelliger als ein schwarzer.</summary>
-        Private Shared Sub SampleBilinear(source As Byte(), width As Integer, height As Integer,
+        ''' <summary>Ein Bgra-Pixel aus der Quelle ziehen, nach Lanczos-3 (6 x 6 Punkte). Ausserhalb
+        ''' wird auf den Rand geklemmt. Das ist nur noch die Absicherung: DistortionFillScale
+        ''' vergroessert das Bild so, dass keine Abtastung mehr hinausgeht. Greift sie nicht
+        ''' (Kennlinie jenseits des Deckels), ist ein geklemmter Streifen unauffaelliger als ein
+        ''' schwarzer.
+        '''
+        ''' NICHT BILINEAR: die Entzerrung vergroessert das ganze Bild um ein, zwei Prozent, fast
+        ''' jeder Punkt landet also zwischen den Quellpunkten, und dort entscheidet der Interpolator
+        ''' ueber die feinste Zeichnung. Bilinear haelt ueber 70 % der Nyquist-Frequenz rechnerisch
+        ''' 38 % der Leistung, Catmull-Rom 56 %, Lanczos-3 65 %; zwischen 50 und 70 % sind es 57, 80
+        ''' und 97 %. An einer R6 mit RF-Objektiv waren Haare bilinear sichtbar weich. Lanczos
+        ''' schwingt an harten Kanten leicht ueber: geklemmt wird auf 0 bis 255, die Farbe bei
+        ''' vormultipliziertem Alpha zusaetzlich auf die Deckung.</summary>
+        Private Shared Sub SampleLanczos3(source As Byte(), width As Integer, height As Integer,
                                           stride As Integer, sx As Double, sy As Double,
                                           target As Byte(), targetOffset As Integer)
             ' Der Rand wird um DistortionEdgeInset nach innen gezogen, solange das Bild dafuer
@@ -1067,18 +1078,71 @@ Namespace Services
             If sy < inset Then sy = inset
             If sx > width - 1.001 - inset Then sx = width - 1.001 - inset
             If sy > height - 1.001 - inset Then sy = height - 1.001 - inset
+            ' Die Stuetzpunkte reichen zwei Punkte vor und drei hinter die Abtastung, also auch in
+            ' den aeussersten Ring, den der Einzug fernhalten soll. Sie werden deshalb selbst
+            ' geklemmt: mit Einzug auf den zweiten Ring, sonst auf den Bildrand.
+            Dim ring = If(inset > 0, 1, 0)
+            Dim maxX = width - 1 - ring, maxY = height - 1 - ring
             Dim x0 = CInt(Math.Floor(sx)), y0 = CInt(Math.Floor(sy))
-            Dim fx = sx - x0, fy = sy - y0
-            Dim x1 = Math.Min(x0 + 1, width - 1)
-            Dim y1 = Math.Min(y0 + 1, height - 1)
-            Dim o00 = y0 * stride + x0 * 4, o01 = y0 * stride + x1 * 4
-            Dim o10 = y1 * stride + x0 * 4, o11 = y1 * stride + x1 * 4
-            For k = 0 To 3
-                Dim top = source(o00 + k) * (1.0 - fx) + source(o01 + k) * fx
-                Dim bottom = source(o10 + k) * (1.0 - fx) + source(o11 + k) * fx
-                target(targetOffset + k) = CByte(Math.Min(255.0, Math.Max(0.0, top * (1.0 - fy) + bottom * fy)))
+            Dim tableX = CInt(Math.Round((sx - x0) * LanczosSteps)) * 6
+            Dim tableY = CInt(Math.Round((sy - y0) * LanczosSteps)) * 6
+            Dim weights = LanczosWeights
+            Dim b = 0.0, g = 0.0, r = 0.0, a = 0.0
+            For j = 0 To 5
+                Dim yy = Math.Min(maxY, Math.Max(ring, y0 - 2 + j))
+                Dim row = yy * stride
+                Dim wy = weights(tableY + j)
+                For i = 0 To 5
+                    Dim xx = Math.Min(maxX, Math.Max(ring, x0 - 2 + i))
+                    Dim o = row + xx * 4
+                    Dim w = wy * weights(tableX + i)
+                    b += source(o) * w
+                    g += source(o + 1) * w
+                    r += source(o + 2) * w
+                    a += source(o + 3) * w
+                Next
             Next
+            ' Vormultipliziert darf keine Farbe ueber der Deckung liegen; deckend ist das 255 und
+            ' aendert nichts.
+            a = Math.Min(255.0, Math.Max(0.0, a))
+            target(targetOffset) = CByte(Math.Round(Math.Min(a, Math.Max(0.0, b))))
+            target(targetOffset + 1) = CByte(Math.Round(Math.Min(a, Math.Max(0.0, g))))
+            target(targetOffset + 2) = CByte(Math.Round(Math.Min(a, Math.Max(0.0, r))))
+            target(targetOffset + 3) = CByte(Math.Round(a))
         End Sub
+
+        ''' <summary>Stufen je Bildpunkt, in denen die Gewichte von Lanczos-3 vorliegen. Ein 1024stel
+        ''' Bildpunkt Lagefehler ist unsichtbar und erspart je Abtastung zwoelf Sinuswerte.</summary>
+        Private Const LanczosSteps As Integer = 1024
+
+        ''' <summary>Die sechs Gewichte von Lanczos-3 je Stufe des Bruchteils t (0 bis 1), fuer die
+        ''' Stuetzpunkte t+2, t+1, t, t-1, t-2, t-3 Bildpunkte vor der Abtastung, auf die Summe 1
+        ''' gebracht: (LanczosSteps + 1) mal 6 Werte, Stufe s bei Index s * 6.</summary>
+        Private Shared ReadOnly LanczosWeights As Double() = BuildLanczosWeights()
+
+        Private Shared Function BuildLanczosWeights() As Double()
+            Dim table = New Double((LanczosSteps + 1) * 6 - 1) {}
+            For s = 0 To LanczosSteps
+                Dim t = s / CDbl(LanczosSteps)
+                Dim sum = 0.0
+                For i = 0 To 5
+                    Dim d = Math.Abs(t - (i - 2))
+                    Dim w = 0.0
+                    If d < 0.000001 Then
+                        w = 1.0
+                    ElseIf d < 3.0 Then
+                        Dim px = Math.PI * d
+                        w = 3.0 * Math.Sin(px) * Math.Sin(px / 3.0) / (px * px)
+                    End If
+                    table(s * 6 + i) = w
+                    sum += w
+                Next
+                For i = 0 To 5
+                    table(s * 6 + i) /= sum
+                Next
+            Next
+            Return table
+        End Function
 
         ''' <summary>Maße des fertigen Decodes - nur wenn der Cache sie schon kennt (kein Demosaic
         ''' nur für eine Größenabfrage; die billigen Pfade bleiben billig und fallen sonst auf die
@@ -2071,7 +2135,7 @@ Namespace Services
         ''' <para>WAS SIE NICHT TUT: die Lichter zurueckholen. Dafuer muss der Weisspunkt darunter
         ''' noch einmal angehoben werden, und das kostet Helligkeit - siehe die Aufrufstelle.</para></summary>
         ''' <param name="sliderEv">Der Teil von <paramref name="baseEv"/>, der vom Belichtungsregler
-        ''' kommt (Tonmodell 4, ImageAdjustments.RawExposureEv). Ist er positiv, schrumpft der
+        ''' kommt (ImageAdjustments.RawExposureEv). Ist er positiv, schrumpft der
         ''' Schwarzabzug mit dem Weisspunkt der Rampe, um 2^sliderEv: mit festem Abzug lagen die
         ''' tiefsten Toene bei +1 rund 2 L, bei +2 rund 5 L unter dem Referenzprogramm, so geschrumpft
         ''' noch 0,1 und 1,0 (LIGHTROOM_ANGLEICH.md, „Zwei Varianten der RAW-Stufe"). Die

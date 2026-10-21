@@ -6446,30 +6446,13 @@ Namespace Views
         '''
         ''' Die Textbox nimmt selbst keine Klicks an (IsHitTestVisible aus): sonst schluckte sie
         ''' jeden Druck, und der Text liesse sich nicht mehr verschieben. Gerechnet wird deshalb
-        ''' hier, an den geformten Positionen des Bildrenderers. GetPosition beruecksichtigt
-        ''' Drehung des Rahmens und den Versatz der Textbox.</summary>
+        ''' hier, an den geformten Positionen des Bildrenderers, mit demselben Satz wie die
+        ''' Schreibmarke (TextOverlayCaret). GetPosition beruecksichtigt die Drehung des Rahmens.</summary>
         Private Function TextOverlayCaretIndexAt(e As PointerEventArgs) As Integer
             Dim editor = Me.FindControl(Of TextBox)("TextOverlayEditor")
-            If editor Is Nothing OrElse Not editor.IsVisible Then Return -1
-            Dim text = If(editor.Text, "")
-            Dim point = e.GetPosition(editor)
-            Dim offset = ImageProcessor.GetBakedTextTopOffset(editor.FontFamily.Name, CSng(editor.FontSize), text,
-                                                              editor.FontWeight = FontWeight.Bold, editor.FontStyle = FontStyle.Italic)
-            Dim best = 0
-            Dim bestDistance = Double.PositiveInfinity
-            For index = 0 To text.Length
-                Dim hit = ImageProcessor.MeasureAnnotationCaret(text, index, editor.FontFamily.Name, CSng(editor.FontSize),
-                                                                CSng(editor.LetterSpacing), editor.FontWeight = FontWeight.Bold,
-                                                                editor.FontStyle = FontStyle.Italic, editor.TextAlignment.ToString(), CSng(editor.Bounds.Width))
-                Dim dx = point.X - hit.X
-                Dim dy = point.Y + offset - hit.Y - editor.FontSize / 2.0
-                Dim distance = dx * dx + dy * dy * 4.0
-                If distance < bestDistance Then
-                    best = index
-                    bestDistance = distance
-                End If
-            Next
-            Return best
+            Dim caret = Me.FindControl(Of TextOverlayCaret)("TextOverlayCaret")
+            If editor Is Nothing OrElse Not editor.IsVisible OrElse caret Is Nothing Then Return -1
+            Return caret.IndexAt(e.GetPosition(caret))
         End Function
 
         ''' <summary>Die Lage des Auswahlrahmens: NUR die Drehung.
@@ -6599,7 +6582,22 @@ Namespace Views
                 editor.IsVisible = (vm.CurrentTool = EditorTool.Text OrElse vm.CurrentTool = EditorTool.Insert) AndAlso
                                    vm.ShowTextContentControls AndAlso
                                    Not selectedKind.Equals("QR", StringComparison.OrdinalIgnoreCase)
+                UpdateTextOverlayEditorLayout(editor, vm, iw, ih, scale, editorBox, width)
+            End If
+        End Sub
 
+        ''' <summary>Textbox und Schreibmarke im Rahmen: Schrift, Lage gegen den Rahmen, Satz.
+        '''
+        ''' Eigene Routine, weil sie AUCH WAEHREND EINES GRIFFZUGS laufen muss. Dann fuehrt die
+        ''' Ansicht den Rahmen, und PositionTextOverlayFromViewModel bleibt aus; die Schrift waechst
+        ''' aber schon mit, und die Schreibmarke stand sonst bis zum Loslassen in alter Groesse an
+        ''' alter Stelle.</summary>
+        ''' <param name="editorBox">Der Textkasten gegen den Rahmen, wenn der Rahmen nur die Glyphen
+        ''' fasst; sonst Nothing, und Kasten und Rahmen fallen zusammen.</param>
+        ''' <param name="frameWidth">Breite des Rahmens, gilt nur ohne editorBox.</param>
+        Private Sub UpdateTextOverlayEditorLayout(editor As TextBox, vm As EditorViewModel, iw As Double, ih As Double,
+                                                  scale As Double, editorBox As Avalonia.Rect?, frameWidth As Double)
+            If editor IsNot Nothing Then
                 ' Die Schriftgröße ist in Basisbild-Pixeln gespeichert; das gebackene Bild skaliert sie
                 ' uniform auf die Zielauflösung (ImageProcessor.ScaleAnnotationForSource). Die Live-Textbox
                 ' muss exakt dieselbe Umrechnung machen - sonst weicht der Text im Editor deutlich von der
@@ -6666,7 +6664,12 @@ Namespace Views
                 If caret IsNot Nothing Then
                     caret.Editor = editor
                     caret.CaretColor = New SolidColorBrush(textColor)
-                    caret.InvalidateVisual()
+                    ' Ursprung und Breite aus den Rechenwerten, nicht aus der Textbox: deren Layout
+                    ' ist gerundet und haelt die Mindestbreite des Themas ein (siehe TextOverlayCaret).
+                    Dim caretBox = If(editorBox.HasValue, editorBox.Value, New Avalonia.Rect(0, 0, frameWidth, 0))
+                    caret.SetLayout(caretBox.TopLeft, caretBox.Width, vm.AnnotationFontFamily, displayFontSize,
+                                    editor.LetterSpacing, vm.AnnotationBold, vm.AnnotationItalic,
+                                    If(vm.AnnotationTextAlignment, "Left").Trim())
                 End If
                 ' Skia hängt die erste Zeile an der Grundlinie unter der Oberkante auf, Avalonia an der
                 ' Glyphen-Oberkante - ohne diesen Versatz säße der Live-Text über dem gebackenen.
@@ -7286,8 +7289,28 @@ Namespace Views
             overlay.Width = finalRect.Width
             overlay.Height = finalRect.Height
             UpdateTextPixels(finalRect, imageRect, vm)
+            UpdateTextOverlayEditorDuringDrag(vm, imageRect)
             UpdateTextSizeBadge(finalRect, imageRect, vm)
             e.Handled = True
+        End Sub
+
+        ''' <summary>Fuehrt Textbox und Schreibmarke beim Ziehen an einem Griff mit der Schrift mit.
+        ''' Der Rahmen bleibt dabei, wie die Ansicht ihn gezogen hat; UpdateTextPixels hat das Objekt
+        ''' so gelegt, dass seine Glyphen an dessen Ecke beginnen. Der Kasten liegt deshalb um die
+        ''' frisch gemessene Glyphenlage versetzt, wie in PositionTextOverlayFromViewModel.</summary>
+        Private Sub UpdateTextOverlayEditorDuringDrag(vm As EditorViewModel, imageRect As Avalonia.Rect)
+            If _textDragMode = TextDragMode.Move OrElse _textDragMode = TextDragMode.Rotate Then Return
+            If vm.HasMultiAnnotationSelection OrElse Not IsSelectedAnnotationTextLayer(vm) Then Return
+            Dim editor = Me.FindControl(Of TextBox)("TextOverlayEditor")
+            If editor Is Nothing OrElse Not editor.IsVisible Then Return
+            Dim ink = vm.GetSelectedTextInkPercent()
+            If Not ink.HasValue Then Return
+            Dim box = vm.GetSelectedAnnotationDisplayRectPercent()
+            Dim inkPixels = InkPercentToPixels(ink.Value, imageRect.Width, imageRect.Height)
+            Dim editorBox = New Avalonia.Rect(-inkPixels.X, -inkPixels.Y,
+                                              imageRect.Width * box.Width / 100.0, imageRect.Height * box.Height / 100.0)
+            UpdateTextOverlayEditorLayout(editor, vm, imageRect.Width, imageRect.Height,
+                                          SliderToZoom(_zoomSliderValue) / 100.0, editorBox, editorBox.Width)
         End Sub
 
         ''' Prüft, ob left/left+width/2/left+width nahe an einem Snap-Ziel (Hilfslinie, Bildkante, Mitte,

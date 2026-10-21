@@ -380,39 +380,9 @@ Namespace Services
         ''' Undo/Redo und einen gespeicherten Rezeptstand hinweg.</summary>
         Public Property WhiteBalanceMode As String = "Wie Aufnahme"
 
-        ''' <summary>Welche Rechnung Kontrast, Lichter, Tiefen, Weiss und Schwarz meinen.
-        ''' 1 = die eigene Formel (ToneZoneLift, Kontrast in ToneTransfer), 2 = die gemessenen
-        ''' Kennlinien einer verbreiteten RAW-Entwicklung (ToneSliderCurves), 3 = dieselben
-        ''' Kennlinien, aber Lichter und Tiefen OERTLICH: ihr Hub richtet sich nach der geglaetteten
-        ''' Helligkeit der Umgebung statt nach dem Bildpunkt, die Feinstruktur wandert mit und wird
-        ''' je Zone nach Messung verstaerkt oder gedaempft (UsesLocalToneZones,
-        ''' ImageProcessor.LocalToneBase, ToneSliderCurves.DetailGain). 4 = wie 3, dazu bei RAW die
-        ''' Belichtung in der Rampe der RAW-Stufe, VOR der Tonkurve wie beim Referenzprogramm
-        ''' (<see cref="RawExposureEv"/>), und die Tiefen waehlen ihre Kurve nach dem Anteil heller
-        ''' Bildpunkte statt nach dem Median (ToneSliderCurves.LiftByBrightShare). Ohne Belichtung und
-        ''' Tiefen rechnet 4 bitgleich wie 3.
-        '''
-        ''' Dasselbe Muster wie <see cref="WhiteBalanceModel"/>, aus demselben Grund: beide Modelle
-        ''' geben demselben Reglerwert eine andere Bedeutung, und eine gespeicherte Bearbeitung muss
-        ''' so bleiben, wie sie gespeichert wurde. 0 heisst „nicht angegeben" und rechnet als 4,
-        ''' das Modell aller neuen Bearbeitungen; beim Speichern wird daraus die feste Zahl
-        ''' (FpxService.SerializeAdjustments), beim Laden bekommt ein Rezept ohne das Feld mit
-        ''' gesetzten Tonreglern die 1 (NormalizeLoadedAdjustments).
-        '''
-        ''' KEIN strukturelles Feld: die Zahl gehoert zu den Reglerwerten und wandert mit ihnen,
-        ''' wenn ein Look auf ein anderes Foto oder in eine Maskenebene uebertragen wird.</summary>
-        Public Property ToneModel As Integer = 0
-
-        ''' <summary>Das Tonmodell, mit dem gerechnet wird: das eingetragene, sonst 3. Ohne die
-        ''' Kennlinien-Ressource bleibt es bei 1.</summary>
-        Public Function ResolvedToneModel() As Integer
-            If Not ToneSliderCurves.Available Then Return 1
-            Return If(ToneModel > 0, ToneModel, 4)
-        End Function
-
         ''' <summary>Die Belichtung in Blendenstufen, die bei einer RAW-Datei in die Rampe der
-        ''' RAW-Stufe gehoert: ab Tonmodell 4 der ganze Regler, sonst nichts. Ein Filmnegativ behaelt
-        ''' sie in der Kette, denn dort steht die Umkehr VOR der Belichtung. Ob die Datei dann
+        ''' RAW-Stufe gehoert, VOR der Tonkurve wie beim Referenzprogramm: der ganze Regler. Ein
+        ''' Filmnegativ behaelt sie in der Kette, denn dort steht die Umkehr VOR der Belichtung. Ob die Datei dann
         ''' wirklich ueber die RAW-Stufe kommt, entscheidet erst der Decode; was er aufgenommen hat,
         ''' steht danach in <see cref="ExposureInSource"/>.</summary>
         Public Function RawExposureEv() As Double
@@ -423,7 +393,7 @@ Namespace Services
         ''' <summary>Gehoert die Belichtung bei einer RAW-Datei in die RAW-Stufe, unabhaengig davon,
         ''' wo der Regler gerade steht? Die Automatik fragt das, bevor sie einen Wert waehlt.</summary>
         Public Function ExposureBelongsToRawStage() As Boolean
-            Return ResolvedToneModel() >= 4 AndAlso Not NegativeEnabled
+            Return Not NegativeEnabled
         End Function
 
         ''' <summary>Wie viel Belichtung, in Punkten des Reglers, schon im QUELLBILD steckt. Die
@@ -460,40 +430,20 @@ Namespace Services
             Return SourceFollowsRawExposure AndAlso ExposureBelongsToRawStage()
         End Function
 
-        ''' <summary>Wirken Lichter oder Tiefen oertlich (Tonmodell 3)? Dann haengt ihr Ergebnis an
-        ''' der Umgebung jedes Bildpunkts, und ein Ausschnitt rechnet am Rand anders als das ganze
-        ''' Bild.</summary>
+        ''' <summary>Wirken Lichter oder Tiefen oertlich? Ihr Hub richtet sich nach der geglaetteten
+        ''' Helligkeit der Umgebung statt nach dem Bildpunkt (ImageProcessor.LocalToneBase,
+        ''' ToneSliderCurves.DetailGain). Dann haengt ihr Ergebnis an der Umgebung jedes Bildpunkts,
+        ''' und ein Ausschnitt rechnet am Rand anders als das ganze Bild.</summary>
         Public Function UsesLocalToneZones() As Boolean
-            Return (Highlights <> 0.0F OrElse ShadowsLevel <> 0.0F) AndAlso ResolvedToneModel() >= 3
+            Return Highlights <> 0.0F OrElse ShadowsLevel <> 0.0F
         End Function
 
         ''' <summary>Waehlt ein Tonregler seine Kennlinie nach der Helligkeit des ganzen Bildes? Lichter
-        ''' und Tiefen ab Tonmodell 2 nach dem Median, Weiss ab Tonmodell 3 nach der Spitze
+        ''' nach dem Median, Tiefen nach dem Anteil heller Bildpunkte, Weiss nach der Spitze
         ''' (ImageProcessor.ToneReference). Dann rechnet ein Ausschnitt mit seiner eigenen Statistik
         ''' anders als das ganze Bild, und wer nur einen Teil rechnet, muss sie hereinreichen.</summary>
         Public Function ReadsImageStatistics() As Boolean
-            Dim model = ResolvedToneModel()
-            Return (model >= 2 AndAlso (Highlights <> 0.0F OrElse ShadowsLevel <> 0.0F)) OrElse
-                   (model >= 3 AndAlso Whites <> 0.0F)
-        End Function
-
-        ''' <summary>Steht ein Regler, dessen Bedeutung am Reglermodell haengt? Die fuenf Tonregler,
-        ''' dazu Dynamik, die Luminanz im Farbmischer, die Farbgradierung und die Vignette, und die
-        ''' Punkt- und Kanalkurven (Modell 2 rechnet sie mit anderem Spline in anderem Farbraum).
-        ''' Ein altes Rezept mit einem davon bekommt beim Laden Modell 1 und sieht aus wie beim
-        ''' Speichern. Die Luminanzkurve gehoert nicht dazu: sie rechnet in beiden Modellen gleich.</summary>
-        Public Function UsesToneModel() As Boolean
-            Return Not IsIdentityCurve(CurveRgbPoints) OrElse Not IsIdentityCurve(CurveRedPoints) OrElse
-                   Not IsIdentityCurve(CurveGreenPoints) OrElse Not IsIdentityCurve(CurveBluePoints) OrElse
-                   Contrast <> 0.0F OrElse Highlights <> 0.0F OrElse ShadowsLevel <> 0.0F OrElse
-                   Whites <> 0.0F OrElse Blacks <> 0.0F OrElse Vibrance <> 0.0F OrElse Vignette <> 0.0F OrElse
-                   RedLuminance <> 0.0F OrElse OrangeLuminance <> 0.0F OrElse YellowLuminance <> 0.0F OrElse
-                   GreenLuminance <> 0.0F OrElse AquaLuminance <> 0.0F OrElse BlueLuminance <> 0.0F OrElse
-                   PurpleLuminance <> 0.0F OrElse MagentaLuminance <> 0.0F OrElse
-                   ColorGradeShadowSaturation <> 0.0F OrElse ColorGradeMidtoneSaturation <> 0.0F OrElse
-                   ColorGradeHighlightSaturation <> 0.0F OrElse ColorGradeGlobalSaturation <> 0.0F OrElse
-                   ColorGradeShadowLuminance <> 0.0F OrElse ColorGradeMidtoneLuminance <> 0.0F OrElse
-                   ColorGradeHighlightLuminance <> 0.0F OrElse ColorGradeGlobalLuminance <> 0.0F
+            Return Highlights <> 0.0F OrElse ShadowsLevel <> 0.0F OrElse Whites <> 0.0F
         End Function
 
         ''' <summary>Der Weißpunkt der AUFNAHME als Farbort, für Modell 2. Beide 0 heißt: kein
@@ -974,8 +924,7 @@ Namespace Services
         ''' Transparenz-Verhalten das Wiederöffnen überleben.</summary>
         Public Property WorkingImageHasTransparency As Boolean = False
         ''' <summary>Wie viel Belichtung, in Punkten des Reglers, im gespeicherten Arbeitsbild eines
-        ''' .fpx-Buendels steckt (retouch.png). Ab Tonmodell 4 liegt die Belichtung bei RAW in der
-        ''' RAW-Stufe; ein eingebackenes Arbeitsbild traegt deshalb die Belichtung des Moments, und
+        ''' .fpx-Buendels steckt (retouch.png). Die Belichtung liegt bei RAW in der RAW-Stufe; ein eingebackenes Arbeitsbild traegt deshalb die Belichtung des Moments, und
         ''' die Kette darf beim Wiederoeffnen nur den Rest rechnen (ExposureInSource). Ohne
         ''' Arbeitsbild im Buendel bedeutungslos: dann wird die Basis frisch entwickelt.</summary>
         Public Property WorkingImageExposure As Single = 0.0F
@@ -1421,7 +1370,6 @@ Namespace Services
                 .RecipeCoordinateVersion = RecipeCoordinateVersion,
                 .WhiteBalanceModel = WhiteBalanceModel,
                 .WhiteBalanceMode = WhiteBalanceMode,
-                .ToneModel = ToneModel,
                 .WhiteBalanceAnchorX = WhiteBalanceAnchorX,
                 .WhiteBalanceAnchorY = WhiteBalanceAnchorY,
                 .WhiteBalanceKelvin = WhiteBalanceKelvin,

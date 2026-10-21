@@ -3,7 +3,6 @@ Imports System.Collections.Generic
 Imports System.IO
 Imports System.Text
 Imports System.Text.Json
-Imports System.Text.Json.Nodes
 
 Namespace Services
 
@@ -69,8 +68,6 @@ Namespace Services
                 ' Auf einer Kopie arbeiten: die Bildpfade werden auf Namen im Block umgeschrieben,
                 ' ohne die im Editor lebende Bearbeitung anzufassen - dieselbe Regel wie beim .fpx.
                 Dim copy = adj.Clone()
-                ' Tonmodell festschreiben, wie beim .fpx.
-                FpxService.PinToneModel(copy, 0)
                 Dim envelope As New RecipeEnvelope With {
                     .Signature = Signature,
                     .Version = CurrentVersion,
@@ -115,10 +112,7 @@ Namespace Services
 
             Try
                 Dim json = Encoding.UTF8.GetString(payload)
-                Dim envelopeNode = JsonNode.Parse(json)
-                ' Objekte aus Dateien mit Tonmodell, aber ohne eingetragenes (FpxService).
-                FpxService.PinLegacyObjectToneModels(TryCast(envelopeNode, JsonObject)?("Adjustments"))
-                Dim envelope = envelopeNode?.Deserialize(Of RecipeEnvelope)(JsonOptions)
+                Dim envelope = JsonSerializer.Deserialize(Of RecipeEnvelope)(json, JsonOptions)
                 If envelope Is Nothing OrElse envelope.Adjustments Is Nothing Then Return Nothing
                 ' Die Signatur ist der eigentliche Beweis, nicht die Ressourcennummer.
                 If Not String.Equals(envelope.Signature, Signature, StringComparison.Ordinal) Then Return Nothing
@@ -145,8 +139,6 @@ Namespace Services
                     Next
                 End If
 
-                ' Ein Block ohne Tonmodell stammt aus der Zeit der eigenen Formel (FpxService).
-                FpxService.PinToneModel(envelope.Adjustments, 1)
                 Return envelope.Adjustments
             Catch
                 Return Nothing

@@ -356,7 +356,7 @@ Namespace Services
         End Function
 
         ''' <summary>Waehlen die eigenen Anpassungen des Objekts ihre Kennlinie nach der Statistik
-        ''' des Objekts (Lichter und Tiefen ab Tonmodell 2, Weiss ab 3)? Nur dann haengt sein
+        ''' des Objekts (Lichter, Tiefen, Weiss)? Nur dann haengt sein
         ''' Aussehen daran, welcher Teil im Bild liegt.</summary>
         Private Shared Function ReadsObjectStatistics(annotation As ImageAnnotation) As Boolean
             Return annotation IsNot Nothing AndAlso Not annotation.AdjustmentsHidden AndAlso

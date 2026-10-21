@@ -464,14 +464,13 @@ Namespace Services
             If TryGetXmpDouble(values, "ColorGradeGlobalLum", d) Then adj.ColorGradeGlobalLuminance = Clamp100(d)
             If TryGetXmpDouble(values, "ColorGradeBlending", d) Then
                 adj.ColorGradeBlending = Clamp(d, 0, 100)
-            ElseIf adj.ResolvedToneModel() >= 2 AndAlso
-                   (adj.ColorGradeShadowSaturation <> 0 OrElse adj.ColorGradeHighlightSaturation <> 0 OrElse
-                    adj.ColorGradeMidtoneSaturation <> 0 OrElse adj.ColorGradeGlobalSaturation <> 0 OrElse
-                    adj.ColorGradeShadowLuminance <> 0 OrElse adj.ColorGradeMidtoneLuminance <> 0 OrElse
-                    adj.ColorGradeHighlightLuminance <> 0 OrElse adj.ColorGradeGlobalLuminance <> 0) Then
+            ElseIf adj.ColorGradeShadowSaturation <> 0 OrElse adj.ColorGradeHighlightSaturation <> 0 OrElse
+                   adj.ColorGradeMidtoneSaturation <> 0 OrElse adj.ColorGradeGlobalSaturation <> 0 OrElse
+                   adj.ColorGradeShadowLuminance <> 0 OrElse adj.ColorGradeMidtoneLuminance <> 0 OrElse
+                   adj.ColorGradeHighlightLuminance <> 0 OrElse adj.ColorGradeGlobalLuminance <> 0 Then
                 ' Ohne Angabe rechnet das Original mit Ueberblendung 100, nicht mit der Vorgabe 50 neuer
-                ' Bearbeitungen (gemessen: ohne Schluessel bitgleich mit 100). Im Reglermodell 2, wo
-                ' die Ueberblendung gemessen wirkt, wird das so uebernommen.
+                ' Bearbeitungen (gemessen: ohne Schluessel bitgleich mit 100). Die Ueberblendung wirkt
+                ' gemessen, das wird so uebernommen.
                 adj.ColorGradeBlending = 100
             End If
 

@@ -81,8 +81,7 @@ Namespace Services
             ' gerendert werden - DecodeOriented reicht das ZIP an den Codec weiter und liefert
             ' Nothing, die Messung waere fuer Projektdateien still ausgefallen.
             ' Ohne .fpx derselbe Decode wie DecodeForOutput, nur mit der Auskunft, ob LibRaw die Datei
-            ' entwickelt hat: eine RAW bekommt die Belichtung ab Tonmodell 4 nur dann in der
-            ' RAW-Stufe. Springt die eingebettete Vorschau ein, rechnet die Ausgabe sie in der Kette,
+            ' entwickelt hat: eine RAW bekommt die Belichtung nur dann in der RAW-Stufe. Springt die eingebettete Vorschau ein, rechnet die Ausgabe sie in der Kette,
             ' und die Automatik muss ihre Werte fuer diesen Weg waehlen. Die Belichtung kommt hier
             ' nicht mit, gemessen wird das Bild ohne sie.
             Dim isFpx = FpxService.IsFpx(sourcePath)
@@ -94,7 +93,7 @@ Namespace Services
                 ' Ein .fpx kommt hier schon fertig gerendert an, samt Umkehr aus seinem Rezept; ein
                 ' zweites Umkehren gaebe wieder das Negativ.
                 Dim rawStage = developed AndAlso adj.ExposureBelongsToRawStage()
-                Dim r = If(isFpx, AnalyzeAutoAdjustments(bmp, adj.ResolvedToneModel()), AnalyzeAutoAdjustments(bmp, adj, rawStage))
+                Dim r = If(isFpx, AnalyzeAutoAdjustments(bmp), AnalyzeAutoAdjustments(bmp, adj, rawStage))
                 If Not r.HasMeasurement OrElse r.IsNeutral() Then Return
                 ' Die Messung rechnet in Double, die Regler sind Single. Das Verengen stand
                 ' vorher unsichtbar im Compiler; ausgeschrieben ist es nachvollziehbar.
@@ -123,15 +122,13 @@ Namespace Services
         ''' Ohne Negativ bleibt alles wie bisher (die Quelle, ungeschnitten).
         '''
         ''' Wie viel Belichtung schon in <paramref name="source"/> steckt, sagt
-        ''' <see cref="ImageAdjustments.ExposureInSource"/> (das Arbeitsbild des Editors ab Tonmodell 4).
+        ''' <see cref="ImageAdjustments.ExposureInSource"/> (das Arbeitsbild des Editors).
         ''' <paramref name="exposureInRawStage"/>: wirkt eine neue Belichtung in der RAW-Stufe, weil
         ''' das Bild mit ihr neu entwickelt wird? Siehe die Kernfunktion.</summary>
         Public Shared Function AnalyzeAutoAdjustments(source As SKBitmap, adj As ImageAdjustments,
                                                       Optional exposureInRawStage As Boolean = False) As AutoAdjustResult
-            ' Die Werte muessen in DEM Tonmodell stimmen, in dem das Rezept rechnet.
-            Dim toneModel = If(adj Is Nothing, 0, adj.ResolvedToneModel())
             If source Is Nothing OrElse adj Is Nothing OrElse Not adj.NegativeEnabled Then
-                Return AnalyzeAutoAdjustments(source, toneModel, exposureInRawStage,
+                Return AnalyzeAutoAdjustments(source, exposureInRawStage,
                                               If(adj Is Nothing, 0.0, CDbl(adj.ExposureInSource)))
             End If
             Dim measure As New ImageAdjustments With {
@@ -163,17 +160,17 @@ Namespace Services
                 Next
             End If
             Using inverted = ProcessBitmap(source, measure)
-                If inverted Is Nothing Then Return AnalyzeAutoAdjustments(source, toneModel)
-                Return AnalyzeAutoAdjustments(inverted, toneModel)
+                If inverted Is Nothing Then Return AnalyzeAutoAdjustments(source)
+                Return AnalyzeAutoAdjustments(inverted)
             End Using
         End Function
 
         ''' <summary>Misst ein Bild und liefert die Reglerwerte der automatischen Bildverbesserung.
         ''' Rein lesend, deterministisch und ohne Seiteneffekte - genau deshalb prüfbar.
-        ''' <paramref name="toneModel"/> ist das Tonmodell, in dem Kontrast, Weiss und Schwarz
-        ''' gelten sollen (ImageAdjustments.ToneModel); 0 heisst: das neuer Bearbeitungen.
+        ''' Kontrast, Weiss und Schwarz loest sie mit den gemessenen Kennlinien auf, mit denen die
+        ''' Kette sie rechnet (ToneSliderCurves).
         '''
-        ''' WO DIE BELICHTUNG WIRKT (Tonmodell 4). Bei einer RAW, die mit der Belichtung neu
+        ''' WO DIE BELICHTUNG WIRKT. Bei einer RAW, die mit der Belichtung neu
         ''' entwickelt wird (<paramref name="exposureInRawStage"/>), ist sie ein Faktor in der Rampe
         ''' VOR der ACR3-Kurve, sonst ein Faktor im Linearlicht nach allem (ToneTransfer). Beide
         ''' Kennlinien sind verschieden: vor der Kurve wirkt dieselbe Blende in den Mitten
@@ -184,15 +181,13 @@ Namespace Services
         ''' herausgerechnet: das Bild entsteht mit dem neuen Wert ja neu, und nur so ergibt zweimal
         ''' „Auto" dasselbe wie einmal. Sonst bleibt das Bild, wie es ist (eingebackener Inhalt), und
         ''' die Automatik waehlt den Unterschied, den die Kette darauf rechnet.</summary>
-        Public Shared Function AnalyzeAutoAdjustments(source As SKBitmap, Optional toneModel As Integer = 0,
+        Public Shared Function AnalyzeAutoAdjustments(source As SKBitmap,
                                                       Optional exposureInRawStage As Boolean = False,
                                                       Optional sourceExposure As Double = 0.0) As AutoAdjustResult
-            Dim model = If(toneModel > 0, toneModel, New ImageAdjustments().ResolvedToneModel())
             Dim rawStage = exposureInRawStage
             ' Die Belichtung, von der aus die Automatik rechnet: in der RAW-Stufe ist sie
             ' herausgerechnet, sonst steht das Bild mit ihr fest.
             Dim baseExposure = If(rawStage, 0.0, sourceExposure)
-            Dim measured = model >= 2 AndAlso ToneSliderCurves.Available
             Dim result As New AutoAdjustResult()
             If source Is Nothing OrElse source.Width <= 0 OrElse source.Height <= 0 Then Return result
 
@@ -330,9 +325,7 @@ Namespace Services
             ' alle um 0,5, und genau dort haben die Schwarz/Weiss-Zonengewichte ihr Minimum - der
             ' Umfang wuchs gemessen nur von 67 auf 83 Tonwerte.)
             '
-            ' Gemessen wird der Quartilsabstand, also die Spreizung der MITTE. Gebraucht wird daraus
-            ' ein FAKTOR, kein Abstand - der Kontrastregler multipliziert den Abstand zur Bildmitte
-            ' mit (1 + Wert/100 * 0,75).
+            ' Gemessen wird der Quartilsabstand, also die Spreizung der MITTE.
             Dim iqrAfter = AutoMapExposure(p75, usedGain, rawStage) - AutoMapExposure(p25, usedGain, rawStage)
             Dim k = AutoTargetIqr / Math.Max(0.02, iqrAfter)
             ' Totband als VERHÄLTNIS, bewusst BREIT und UNSYMMETRISCH: flau ist ein Mangel, knackig
@@ -341,131 +334,93 @@ Namespace Services
             ' (also IQR unter 0,24), weggenommen erst ab k < 0,6 (IQR über 0,5) und dann höchstens
             ' 15 Punkte. Und selbst dann nur halb so weit wie gerechnet - dieselbe Dämpfung wie bei
             ' der Belichtung, aus demselben Grund.
-            If measured Then
-                ' Tonmodell 2: der Kontrast ist eine gemessene Kennlinie, kein Faktor. Gesucht wird
-                ' der Reglerwert, der den Quartilsabstand um denselben gedaempften Faktor spreizt
-                ' wie oben gerechnet (halb so weit), in denselben Grenzen.
-                Dim spread = Function(c As Double) AutoMapToneMeasured(p75, usedGain, c, rawStage) - AutoMapToneMeasured(p25, usedGain, c, rawStage)
-                If k > 1.25 Then
-                    Dim wanted = iqrAfter * (1.0 + (AutoClamp(k, 1.0, 2.5) - 1.0) * 0.5)
-                    result.Contrast = AutoDeadband(AutoSolveRising(spread, wanted, 0.0, 50.0))
-                ElseIf k < 0.6 Then
-                    Dim wanted = iqrAfter * (1.0 + (AutoClamp(k, 0.5, 1.0) - 1.0) * 0.5)
-                    result.Contrast = AutoDeadband(AutoSolveRising(spread, wanted, -15.0, 0.0))
-                End If
-            ElseIf k > 1.25 Then
-                result.Contrast = AutoDeadband(AutoClamp((AutoClamp(k, 1.0, 2.5) - 1.0) / 0.75 * 100.0 * 0.5, 0.0, 50.0))
+            ' Der Kontrast ist eine gemessene Kennlinie, kein Faktor. Gesucht wird der Reglerwert,
+            ' der den Quartilsabstand um den gedaempften Faktor spreizt (halb so weit wie gerechnet).
+            Dim spread = Function(c As Double) AutoMapToneMeasured(p75, usedGain, c, rawStage) - AutoMapToneMeasured(p25, usedGain, c, rawStage)
+            If k > 1.25 Then
+                Dim wanted = iqrAfter * (1.0 + (AutoClamp(k, 1.0, 2.5) - 1.0) * 0.5)
+                result.Contrast = AutoDeadband(AutoSolveRising(spread, wanted, 0.0, 50.0))
             ElseIf k < 0.6 Then
-                result.Contrast = AutoDeadband(AutoClamp((AutoClamp(k, 0.5, 1.0) - 1.0) / 0.75 * 100.0 * 0.5, -15.0, 0.0))
+                Dim wanted = iqrAfter * (1.0 + (AutoClamp(k, 0.5, 1.0) - 1.0) * 0.5)
+                result.Contrast = AutoDeadband(AutoSolveRising(spread, wanted, -15.0, 0.0))
             End If
-            Dim contrastFactor = Math.Max(0.05, 1.0 + result.Contrast / 100.0 * 0.75)
             Dim contrastValue = result.Contrast
 
-            Dim lowAfter = If(measured, AutoMapToneMeasured(pLow, usedGain, contrastValue, rawStage), AutoMapTone(pLow, usedGain, contrastFactor, rawStage))
-            Dim highAfter = If(measured, AutoMapToneMeasured(pHigh, usedGain, contrastValue, rawStage), AutoMapTone(pHigh, usedGain, contrastFactor, rawStage))
+            Dim lowAfter = AutoMapToneMeasured(pLow, usedGain, contrastValue, rawStage)
+            Dim highAfter = AutoMapToneMeasured(pHigh, usedGain, contrastValue, rawStage)
 
             ' ── 3) Schwarz- und Weisspunkt ───────────────────────────────────────────────────
             ' Flaue Bilder (Dunst, Scan, Screenshot mit Grauschleier) nutzen den Tonwertumfang nicht
-            ' aus. Schwarz/Weiss verschieben den Ton um Wert/100 * 0,28 * Zonengewicht - der nötige
-            ' Reglerwert ist damit eine Auflösung nach dem Wert, kein Erfahrungswert.
-            ' Das Zonengewicht steht im NENNER: es darf klemmen, aber nicht als Sperre wirken. Eine
-            ' Mindestschwelle liess den Regler frueher auf 0 stehen; der Wert laeuft stattdessen in
-            ' seine Klemmung, und weil das Gewicht mit dem Tonwert waechst, holt die Kaskade nach.
-            If measured Then
-                ' Tonmodell 2: Kontrast, Schwarz und Weiss heben denselben Eingangston, ihre Huebe
-                ' addieren sich (ImageProcessor.ToneZoneLift). Gesucht wird der Reglerwert, der den
-                ' Bildrand auf sein Ziel setzt. Die Grenzen sind weiter als bei der Formel (dort
-                ' +-45): die gemessenen Regler wirken in den Mitten viel schwaecher, ein flaues Bild
-                ' kam mit +-45 nur von 67 auf 93 Tonwerte.
-                Dim lowIn = AutoMapExposure(pLow, usedGain, rawStage)
-                Dim highIn = AutoMapExposure(pHigh, usedGain, rawStage)
-                Dim wantsBlack = clippedBlack <= 0.005 AndAlso lowAfter > AutoTargetBlackPoint
-                Dim wantsWhite = clippedWhite <= 0.005 AndAlso highAfter < AutoTargetWhitePoint
-                If model >= 3 Then
-                    ' Im Tonmodell 3 waehlt Weiss seine Kurve nach der Spitze des Bildes, gemessen wie
-                    ' in der Kette und wie dort durch die Belichtung geschoben; die Automatik loest mit
-                    ' derselben Kurve auf, die das Bild dann rechnet.
-                    Dim topL = 0.0
-                    Dim reference = MeasureToneReference(source, unpremultiply:=True)
-                    If reference.IsMeasured Then
-                        ' Gemessen am Bild, wie es vorliegt: die schon enthaltene Belichtung
-                        ' der RAW-Stufe erst heraus, dann die neue hinein.
-                        Dim topV = LightnessToGrayV(reference.TopL)
-                        If undo IsNot Nothing Then
-                            topV = AutoMapExposure(topV, Math.Pow(2.0, -sourceExposure / ImageAdjustments.ExposurePointsPerStop), True)
-                        End If
-                        topL = GrayVToLightness(AutoMapExposure(topV, usedGain, rawStage))
-                    End If
-                    ' SCHWARZ UND WEISS GEMEINSAM, WEISS NACH DEM GEWINN AN UMFANG. Bei einem flauen
-                    ' Bild liegt die Spitze unter allen Eichbildern, und die Kurve dieser Gruppe hebt
-                    ' die Mitten und das untere Ende kraeftig, dort sogar staerker als oben (Weiss +100
-                    ' bei v 0,45 um +0,43, bei 0,6 um +0,33). Weiss bis zum oberen Ziel aufzuloesen hob
-                    ' dann alles mit, und auch Schwarz -100 holte das untere Ende nicht zurueck: aus
-                    ' einem Umfang von 67 Tonwerten wurden 76, mit gemeinsamem Aufloesen gar keiner
-                    ' mehr. Deshalb wird Weiss so gewaehlt, dass der Abstand zwischen oberem und unterem
-                    ' Ende am groessten ist, wobei oben nichts ueber das Ziel hinaus zaehlt; Schwarz
-                    ' loest je Versuch mit dem Hub von Weiss am unteren Ende. Bei einer gewoehnlichen
-                    ' Kurve ist das genau der Wert, der das obere Ziel trifft.
-                    Dim blacksFor = Function(w As Double) As Double
-                                        If Not wantsBlack Then Return 0.0
-                                        Return AutoSolveRising(
-                                            Function(b) lowAfter + ToneSliderCurves.LiftByTop("Whites", w, lowIn, topL) +
-                                                        ToneSliderCurves.Lift("Blacks", b, lowIn, 3),
-                                            AutoTargetBlackPoint, -100.0, 0.0)
-                                    End Function
-                    Dim spanFor = Function(w As Double, b As Double) As Double
-                                      Dim high = highAfter + ToneSliderCurves.Lift("Blacks", b, highIn, 3) +
-                                                 ToneSliderCurves.LiftByTop("Whites", w, highIn, topL)
-                                      Dim low = lowAfter + ToneSliderCurves.LiftByTop("Whites", w, lowIn, topL) +
-                                                ToneSliderCurves.Lift("Blacks", b, lowIn, 3)
-                                      Return Math.Min(high, AutoTargetWhitePoint) - Math.Max(low, AutoTargetBlackPoint)
-                                  End Function
-                    Dim whites = 0.0
-                    Dim blacks = blacksFor(0.0)
-                    If wantsWhite Then
-                        Dim bestSpan = spanFor(0.0, blacks)
-                        For candidate = 1 To 100
-                            Dim b = blacksFor(candidate)
-                            Dim span = spanFor(candidate, b)
-                            ' Nur ein echter Gewinn zaehlt; bei Gleichstand bleibt der kleinere Wert.
-                            If span > bestSpan + 0.0005 Then
-                                bestSpan = span : whites = candidate : blacks = b
-                            End If
-                        Next
-                    End If
-                    If wantsBlack Then result.Blacks = AutoDeadband(blacks)
-                    If wantsWhite Then result.Whites = AutoDeadband(whites)
-                Else
-                    If wantsBlack Then
-                        result.Blacks = AutoDeadband(AutoSolveRising(
-                            Function(b) lowAfter + ToneSliderCurves.Lift("Blacks", b, lowIn), AutoTargetBlackPoint, -100.0, 0.0))
-                    End If
-                    If wantsWhite Then
-                        result.Whites = AutoDeadband(AutoSolveRising(
-                            Function(w) highAfter + ToneSliderCurves.Lift("Whites", w, highIn), AutoTargetWhitePoint, 0.0, 100.0))
-                    End If
+            ' aus. Kontrast, Schwarz und Weiss heben denselben Eingangston, ihre Huebe addieren sich
+            ' (ImageProcessor.ToneZoneLift). Gesucht wird der Reglerwert, der den Bildrand auf sein
+            ' Ziel setzt. Die gemessenen Regler wirken in den Mitten schwach, die Grenzen sind
+            ' deshalb weit: ein flaues Bild kam mit +-45 nur von 67 auf 93 Tonwerte.
+            Dim lowIn = AutoMapExposure(pLow, usedGain, rawStage)
+            Dim highIn = AutoMapExposure(pHigh, usedGain, rawStage)
+            Dim wantsBlack = clippedBlack <= 0.005 AndAlso lowAfter > AutoTargetBlackPoint
+            Dim wantsWhite = clippedWhite <= 0.005 AndAlso highAfter < AutoTargetWhitePoint
+            ' Weiss waehlt seine Kurve nach der Spitze des Bildes, gemessen wie in der Kette und wie
+            ' dort durch die Belichtung geschoben; die Automatik loest mit derselben Kurve auf, die
+            ' das Bild dann rechnet.
+            Dim topL = 0.0
+            Dim reference = MeasureToneReference(source)
+            If reference.IsMeasured Then
+                ' Gemessen am Bild, wie es vorliegt: die schon enthaltene Belichtung der RAW-Stufe
+                ' erst heraus, dann die neue hinein.
+                Dim topV = LightnessToGrayV(reference.TopL)
+                If undo IsNot Nothing Then
+                    topV = AutoMapExposure(topV, Math.Pow(2.0, -sourceExposure / ImageAdjustments.ExposurePointsPerStop), True)
                 End If
-            Else
-                If clippedBlack <= 0.005 AndAlso lowAfter > AutoTargetBlackPoint Then
-                    Dim wBlacks = Math.Max(0.02, ToneSmoothFade(1.0 - lowAfter / 0.5))
-                    result.Blacks = AutoDeadband(AutoClamp(-100.0 * (lowAfter - AutoTargetBlackPoint) / (0.28 * wBlacks), -45.0, 0.0))
-                End If
-                If clippedWhite <= 0.005 AndAlso highAfter < AutoTargetWhitePoint Then
-                    Dim wWhites = Math.Max(0.02, ToneSmoothFade((highAfter - 0.5) / 0.5))
-                    result.Whites = AutoDeadband(AutoClamp(100.0 * (AutoTargetWhitePoint - highAfter) / (0.28 * wWhites), 0.0, 45.0))
-                End If
+                topL = GrayVToLightness(AutoMapExposure(topV, usedGain, rawStage))
             End If
+            ' SCHWARZ UND WEISS GEMEINSAM, WEISS NACH DEM GEWINN AN UMFANG. Bei einem flauen Bild
+            ' liegt die Spitze unter allen Eichbildern, und die Kurve dieser Gruppe hebt die Mitten
+            ' und das untere Ende kraeftig, dort sogar staerker als oben (Weiss +100 bei v 0,45 um
+            ' +0,43, bei 0,6 um +0,33). Weiss bis zum oberen Ziel aufzuloesen hob dann alles mit, und
+            ' auch Schwarz -100 holte das untere Ende nicht zurueck: aus einem Umfang von 67
+            ' Tonwerten wurden 76, mit gemeinsamem Aufloesen gar keiner mehr. Deshalb wird Weiss so
+            ' gewaehlt, dass der Abstand zwischen oberem und unterem Ende am groessten ist, wobei oben
+            ' nichts ueber das Ziel hinaus zaehlt; Schwarz loest je Versuch mit dem Hub von Weiss am
+            ' unteren Ende. Bei einer gewoehnlichen Kurve ist das genau der Wert, der das obere Ziel
+            ' trifft.
+            Dim blacksFor = Function(w As Double) As Double
+                                If Not wantsBlack Then Return 0.0
+                                Return AutoSolveRising(
+                                    Function(b) lowAfter + ToneSliderCurves.LiftByTop("Whites", w, lowIn, topL) +
+                                                ToneSliderCurves.Lift("Blacks", b, lowIn),
+                                    AutoTargetBlackPoint, -100.0, 0.0)
+                            End Function
+            Dim spanFor = Function(w As Double, b As Double) As Double
+                              Dim high = highAfter + ToneSliderCurves.Lift("Blacks", b, highIn) +
+                                         ToneSliderCurves.LiftByTop("Whites", w, highIn, topL)
+                              Dim low = lowAfter + ToneSliderCurves.LiftByTop("Whites", w, lowIn, topL) +
+                                        ToneSliderCurves.Lift("Blacks", b, lowIn)
+                              Return Math.Min(high, AutoTargetWhitePoint) - Math.Max(low, AutoTargetBlackPoint)
+                          End Function
+            Dim whites = 0.0
+            Dim blacks = blacksFor(0.0)
+            If wantsWhite Then
+                Dim bestSpan = spanFor(0.0, blacks)
+                For candidate = 1 To 100
+                    Dim b = blacksFor(candidate)
+                    Dim span = spanFor(candidate, b)
+                    ' Nur ein echter Gewinn zaehlt; bei Gleichstand bleibt der kleinere Wert.
+                    If span > bestSpan + 0.0005 Then
+                        bestSpan = span : whites = candidate : blacks = b
+                    End If
+                Next
+            End If
+            If wantsBlack Then result.Blacks = AutoDeadband(blacks)
+            If wantsWhite Then result.Whites = AutoDeadband(whites)
 
             ' ── 4) Lichter und Tiefen ────────────────────────────────────────────────────────
             ' Nicht an einem einzelnen Extremwert, sondern an der MASSE in der jeweiligen Endzone:
             ' ein paar helle Spitzlichter sind normal, ein weiss zugelaufenes Fünftel des Bildes
             ' nicht. Die Schwellen sind auf das Ausgangsbild zurückgerechnet.
-            Dim hiMass = AutoFractionAbove(histL, total, If(measured,
-                AutoSolveRising(Function(v) AutoMapToneMeasured(v, usedGain, contrastValue, rawStage), 0.86, 0.0, 1.0),
-                AutoUnmapTone(0.86, usedGain, contrastFactor, rawStage)))
-            Dim loMass = AutoFractionBelow(histL, total, If(measured,
-                AutoSolveRising(Function(v) AutoMapToneMeasured(v, usedGain, contrastValue, rawStage), 0.14, 0.0, 1.0),
-                AutoUnmapTone(0.14, usedGain, contrastFactor, rawStage)))
+            Dim hiMass = AutoFractionAbove(histL, total,
+                AutoSolveRising(Function(v) AutoMapToneMeasured(v, usedGain, contrastValue, rawStage), 0.86, 0.0, 1.0))
+            Dim loMass = AutoFractionBelow(histL, total,
+                AutoSolveRising(Function(v) AutoMapToneMeasured(v, usedGain, contrastValue, rawStage), 0.14, 0.0, 1.0))
             ' Die Schwelle von 8% ist gemessen, nicht geraten: Fotos haben regelmässig 10-40% ihrer
             ' Fläche in einer Endzone (Gegenlicht, dunkles Vordergrund-Ufer, heller Himmel) - das ist
             ' Bildaufbau, kein Fehler. Erst darüber wird geöffnet bzw. zurückgeholt, und höchstens
@@ -483,10 +438,10 @@ Namespace Services
             Dim meanChroma = If(chromaCount > 0, sumChroma / chromaCount, 0.0)
             ' Buntheit = mittlerer Kanalabstand (max-min) der Mitteltoene. Ein normales Farbfoto liegt
             ' bei etwa 0,10-0,20; erst darunter ist ein Bild wirklich blass.
-            ' Im Reglermodell 2 wirkt derselbe Wert staerker (bis 50 mit 0,62/0,5, ImageProcessor.
-            ' ModelTwoVibrance); umgerechnet, damit die Automatik gleich weit geht.
+            ' Der Regler wirkt bis 50 mit 0,62/0,5 (ImageProcessor.MeasuredVibrance); umgerechnet,
+            ' damit die Automatik so weit geht wie die gemessene Buntheit verlangt.
             Dim vibranceWanted = AutoClamp((0.10 - meanChroma) * 250.0, 0.0, 30.0)
-            result.Vibrance = AutoDeadband(If(measured, vibranceWanted * 0.5 / 0.62, vibranceWanted))
+            result.Vibrance = AutoDeadband(vibranceWanted * 0.5 / 0.62)
 
             ' ── 6) Weissabgleich ─────────────────────────────────────────────────────────────
             ' Grauwelt über die Mitteltöne: im Mittel sollte ein Bild neutral sein. Gedämpft und eng
@@ -568,14 +523,6 @@ Namespace Services
             Return RawDecodeService.Acr3CurveInverse(SrgbToLinear(CSng(AutoClamp(value01, 0.0, 1.0))))
         End Function
 
-        ''' <summary>Umkehrung von <see cref="AutoMapExposure"/>: welcher Tonwert im Ausgangsbild
-        ''' landet nach der Belichtung auf <paramref name="value01"/>?</summary>
-        Private Shared Function AutoUnmapExposure(value01 As Double, gain As Double, Optional rawStage As Boolean = False) As Double
-            If gain = 1.0 OrElse gain <= 0.0 Then Return value01
-            If rawStage Then Return AutoMapExposure(value01, 1.0 / gain, True)
-            Return AutoClamp(LinearToSrgb(CSng(SrgbToLinear(CSng(value01)) / gain)), 0.0, 1.0)
-        End Function
-
         ''' <summary>Rundet auf ganze Reglerpunkte und wirft Kleinstausschläge weg. Unter drei Punkten
         ''' ist kein Regler sichtbar wirksam - ein Bild, das nur solche Werte bekäme, soll ganz in Ruhe
         ''' gelassen werden, statt mit lauter Einsen und Zweien "bearbeitet" auszusehen.</summary>
@@ -584,16 +531,8 @@ Namespace Services
             Return Math.Round(value)
         End Function
 
-        ''' <summary>Tonwert durch Belichtung UND Kontrast schieben. Der Kontrast der Engine spreizt
-        ''' im Gamma-Raum um 0,5 (ToneTransfer) - genau das bildet die zweite Zeile ab.</summary>
-        Private Shared Function AutoMapTone(value01 As Double, gain As Double, contrastFactor As Double,
-                                            Optional rawStage As Boolean = False) As Double
-            Dim v = AutoMapExposure(value01, gain, rawStage)
-            Return AutoClamp((v - 0.5) * contrastFactor + 0.5, 0.0, 1.0)
-        End Function
-
-        ''' <summary>Wie <see cref="AutoMapTone"/>, aber im Tonmodell 2: der Kontrast ist dort die
-        ''' gemessene Kennlinie (ToneSliderCurves) auf dem Ton nach der Belichtung.</summary>
+        ''' <summary>Tonwert durch Belichtung UND Kontrast schieben: der Kontrast ist die gemessene
+        ''' Kennlinie (ToneSliderCurves) auf dem Ton nach der Belichtung.</summary>
         Private Shared Function AutoMapToneMeasured(value01 As Double, gain As Double, contrast As Double,
                                                     Optional rawStage As Boolean = False) As Double
             Dim v = AutoMapExposure(value01, gain, rawStage)
@@ -612,14 +551,6 @@ Namespace Services
                 If f(mid) < target Then low = mid Else high = mid
             Next
             Return (low + high) / 2.0
-        End Function
-
-        ''' <summary>Umkehrung von <see cref="AutoMapTone"/>: welcher Tonwert im Ausgangsbild landet
-        ''' nach Belichtung und Kontrast auf <paramref name="value01"/>?</summary>
-        Private Shared Function AutoUnmapTone(value01 As Double, gain As Double, contrastFactor As Double,
-                                              Optional rawStage As Boolean = False) As Double
-            Dim v = AutoClamp((value01 - 0.5) / Math.Max(0.05, contrastFactor) + 0.5, 0.0, 1.0)
-            Return AutoUnmapExposure(v, gain, rawStage)
         End Function
 
         Private Shared Function AutoClamp(value As Double, min As Double, max As Double) As Double

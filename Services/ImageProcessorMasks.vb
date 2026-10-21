@@ -819,7 +819,7 @@ Namespace Services
             ' Bild.
             Dim toneReference As ToneReference = Nothing
             If layerAdjustments.ReadsImageStatistics() Then
-                toneReference = MeasureToneReference(target, unpremultiply:=layerAdjustments.ResolvedToneModel() >= 3)
+                toneReference = MeasureToneReference(target)
             End If
 
             Using crop = CopyBgraRegion(target, rect)

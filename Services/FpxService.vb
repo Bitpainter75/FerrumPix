@@ -76,13 +76,6 @@ Namespace Services
         ''' <summary>Rezept-JSON fuer den RAW-Sidecar (RawSidecarService): exakt dieselben
         ''' Serialisierungsregeln wie im .fpx-Buendel, damit beide Formate nie auseinanderdriften.</summary>
         Friend Shared Function SerializeAdjustments(adjustments As ImageAdjustments) As String
-            ' Das Tonmodell wird beim Speichern festgeschrieben, auf einer Kopie: die Datei behaelt
-            ' damit, was beim Speichern zu sehen war, auch wenn sich das Modell neuer Bearbeitungen
-            ' spaeter aendert.
-            If adjustments IsNot Nothing AndAlso NeedsToneModelPin(adjustments) Then
-                adjustments = adjustments.Clone()
-                PinToneModel(adjustments, 0)
-            End If
             ' Die globalen Regler bleiben absichtlich vollständig serialisiert (die Datei ist
             ' zugleich ein stabiles Rezeptformat). Ein Geometrieschritt benötigt dagegen nur seine
             ' wenigen Eingabefelder. Json.NET kann das pro verschachteltem Typ nicht ohne Converter
@@ -129,96 +122,9 @@ Namespace Services
             Return names.Split("|"c)
         End Function
 
-        ''' <summary>Traegt das Tonmodell fest ein, wo Tonregler stehen und keins eingetragen ist: im
-        ''' Rezept selbst, in jeder Maskenebene und in jedem Objekt mit eigenen Anpassungen.
-        ''' <paramref name="model"/> 0 heisst: das, mit dem gerade gerechnet wird (Speichern); 1
-        ''' heisst: die eigene Formel (Laden alter Rezepte).</summary>
-        Friend Shared Sub PinToneModel(adj As ImageAdjustments, model As Integer)
-            For Each part In ToneModelCarriers(adj)
-                If part.ToneModel = UnpinnedObjectToneModel Then
-                    ' Siehe PinLegacyObjectToneModels: nur ein Objekt, das damals Tonregler trug,
-                    ' rechnete mit 2. Ohne sie bleibt es "nicht angegeben" und bekommt das Modell
-                    ' neuer Bearbeitungen, sobald dort ein Tonregler bewegt wird.
-                    part.ToneModel = If(part.UsesToneModel(), 2, 0)
-                ElseIf part.ToneModel <= 0 AndAlso part.UsesToneModel() Then
-                    part.ToneModel = If(model > 0, model, part.ResolvedToneModel())
-                ElseIf part.ToneModel <= 0 AndAlso part.Exposure <> 0.0F Then
-                    ' DIE BELICHTUNG haengt erst seit Tonmodell 4 am Modell (bei RAW in der RAW-Stufe).
-                    ' Ein Rezept, das sie ohne Modell traegt, wurde davor gespeichert, und dort rechnete
-                    ' sie in der Kette: beim Laden deshalb 3, das letzte Modell davor. Ohne Tonregler
-                    ' rechnen 1 bis 3 die Belichtung gleich, und weitere Regler verhalten sich wie vor
-                    ' Modell 4. Beim Speichern das Modell, mit dem gerade gerechnet wird.
-                    part.ToneModel = If(model > 0, 3, part.ResolvedToneModel())
-                End If
-            Next
-        End Sub
-
-        ''' <summary>Vorlaeufige Marke beim Laden, nie gespeichert und nie gerechnet: die Anpassungen
-        ''' eines Objekts trugen das Feld ToneModel mit 0. Was daraus wird, entscheidet
-        ''' <see cref="PinToneModel"/>, sobald die Reglerwerte deserialisiert sind.</summary>
-        Private Const UnpinnedObjectToneModel As Integer = -2
-
-        Private Shared Function NeedsToneModelPin(adj As ImageAdjustments) As Boolean
-            Return ToneModelCarriers(adj).Any(Function(part) part.ToneModel <= 0 AndAlso
-                                                             (part.UsesToneModel() OrElse part.Exposure <> 0.0F))
-        End Function
-
-        ''' <summary>Jeder Satz Anpassungen im Rezept, der eigene Tonregler hat: das Rezept selbst,
-        ''' die Maskenebenen und die Objekte.</summary>
-        Private Shared Iterator Function ToneModelCarriers(adj As ImageAdjustments) As IEnumerable(Of ImageAdjustments)
-            If adj Is Nothing Then Return
-            Yield adj
-            If adj.MaskedAdjustmentLayers IsNot Nothing Then
-                For Each layer In adj.MaskedAdjustmentLayers
-                    If layer?.Adjustments IsNot Nothing Then Yield layer.Adjustments
-                Next
-            End If
-            If adj.Annotations IsNot Nothing Then
-                For Each annotation In adj.Annotations
-                    If annotation?.Adjustments IsNot Nothing Then Yield annotation.Adjustments
-                Next
-            End If
-        End Function
-
-        ''' <summary>Die Objekte bekamen ihr Tonmodell beim Speichern lange nicht eingetragen, anders
-        ''' als Rezept und Maskenebenen. Ihre 0 ist deshalb zweideutig, und nur das JSON loest sie
-        ''' auf: steht das Feld ToneModel in ihren Anpassungen, wurde die Datei mit Tonmodell
-        ''' geschrieben. Fehlt das Feld, stammt sie aus der Zeit der eigenen Formel und bekommt danach
-        ''' in <see cref="PinToneModel"/> die 1. Muss VOR dem Deserialisieren laufen, danach ist der
-        ''' Unterschied verloren.
-        '''
-        ''' Eine 0 im Feld heisst aber nicht immer Modell 2: auch heute steht sie dort, wenn am Objekt
-        ''' nur modellunabhaengige Regler wie die Belichtung stehen (gespeichert wird das Modell nur
-        ''' bei UsesToneModel). Hier wird deshalb nur markiert; ob 2 oder "nicht angegeben", sagen
-        ''' erst die Reglerwerte in PinToneModel.</summary>
-        Friend Shared Sub PinLegacyObjectToneModels(adjustmentsNode As JsonNode)
-            Dim annotations = TryCast(FindProperty(TryCast(adjustmentsNode, JsonObject), "Annotations"), JsonArray)
-            If annotations Is Nothing Then Return
-            For Each annotation In annotations
-                Dim objectAdj = TryCast(FindProperty(TryCast(annotation, JsonObject), "Adjustments"), JsonObject)
-                If objectAdj Is Nothing Then Continue For
-                Dim key = objectAdj.Select(Function(p) p.Key).
-                    FirstOrDefault(Function(k) String.Equals(k, NameOf(ImageAdjustments.ToneModel), StringComparison.OrdinalIgnoreCase))
-                If key Is Nothing Then Continue For
-                Dim value = TryCast(objectAdj(key), JsonValue)
-                Dim number As Integer
-                If value IsNot Nothing AndAlso value.TryGetValue(number) AndAlso number <= 0 Then objectAdj(key) = UnpinnedObjectToneModel
-            Next
-        End Sub
-
-        Private Shared Function FindProperty(obj As JsonObject, name As String) As JsonNode
-            If obj Is Nothing Then Return Nothing
-            For Each p In obj
-                If String.Equals(p.Key, name, StringComparison.OrdinalIgnoreCase) Then Return p.Value
-            Next
-            Return Nothing
-        End Function
-
         Friend Shared Function DeserializeAdjustments(json As String) As ImageAdjustments
             If String.IsNullOrWhiteSpace(json) Then Return Nothing
-            Dim node = JsonNode.Parse(json)
-            PinLegacyObjectToneModels(node)
-            Return NormalizeLoadedAdjustments(node.Deserialize(Of ImageAdjustments)(JsonOptions))
+            Return NormalizeLoadedAdjustments(JsonSerializer.Deserialize(Of ImageAdjustments)(json, JsonOptions))
         End Function
 
 
@@ -243,11 +149,8 @@ Namespace Services
                 adj.WhiteBalanceModel = 1
             End If
 
-            ' TONMODELL, nach derselben Regel: ein Rezept ohne das Feld mit gesetzten Tonreglern
-            ' stammt aus der Zeit der eigenen Formel und bleibt dabei. Neu gespeicherte Rezepte
-            ' tragen ihr Modell immer (SerializeAdjustments). Auch jede Maskenebene, denn sie hat
-            ' eigene Tonregler.
-            PinToneModel(adj, 1)
+            ' Ein Feld ToneModel aus aelteren Dateien wird beim Lesen uebergangen: es gibt nur noch
+            ' eine Rechnung der Tonregler, und jedes Rezept laedt mit ihr.
 
             Dim hadLegacyScope = adj.SelectionScopeEnabled OrElse adj.HasActiveSelection
             If hadLegacyScope AndAlso (adj.MaskedAdjustmentLayers Is Nothing OrElse adj.MaskedAdjustmentLayers.Count = 0) Then
@@ -446,8 +349,6 @@ Namespace Services
             ' Wiederladen weder die Auswahl reaktivieren noch ein rotes Overlay heraufholen noch globale
             ' Regler nachträglich auf diese Auswahl begrenzen (siehe StripTransientSelectionState).
             StripTransientSelectionState(recipeAdj)
-            ' Tonmodell festschreiben, wie in SerializeAdjustments.
-            PinToneModel(recipeAdj, 0)
             ' Das Gegenstueck zur .fpxmp: dieses Buendel traegt das Arbeitsbild in voller Aufloesung
             ' mit, Entrauschen und Retusche stecken also in seinen Pixeln. Der Vermerk darueber wird
             ' hier trotzdem NICHT auf wahr gezwungen, sondern uebernommen wie er kommt: wer eine
@@ -570,9 +471,7 @@ Namespace Services
                     If recipeZip Is Nothing Then Return Nothing
                     Dim recipe As FpxRecipe
                     Using es = recipeZip.Open()
-                        Dim recipeNode = JsonNode.Parse(es)
-                        PinLegacyObjectToneModels(FindProperty(TryCast(recipeNode, JsonObject), "Adjustments"))
-                        recipe = recipeNode?.Deserialize(Of FpxRecipe)(JsonOptions)
+                        recipe = JsonSerializer.Deserialize(Of FpxRecipe)(es, JsonOptions)
                     End Using
                     If recipe?.Adjustments Is Nothing Then Return Nothing
                     recipe.Adjustments = NormalizeLoadedAdjustments(recipe.Adjustments)

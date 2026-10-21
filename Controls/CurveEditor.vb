@@ -25,8 +25,9 @@ Namespace Controls
         Public Shared ReadOnly CurveBrushProperty As StyledProperty(Of IBrush) =
             AvaloniaProperty.Register(Of CurveEditor, IBrush)(NameOf(CurveBrush), New SolidColorBrush(Color.Parse("#F08A1A")))
 
-        ''' <summary>Kurvenform wie die Bildkette: im Reglermodell 2 der Spline der Referenz, sonst
-        ''' PCHIP (ImageProcessor.EvaluateCurveFor). Gebunden an EditorViewModel.CurveUsesReferenceSpline.</summary>
+        ''' <summary>Kurvenform wie die Bildkette: Punkt- und Kanalkurven mit dem Spline der Referenz,
+        ''' die Luminanzkurve als PCHIP (ImageProcessor.EvaluateCurveFor). Gebunden an
+        ''' EditorViewModel.CurveUsesReferenceSpline.</summary>
         Public Shared ReadOnly UseReferenceSplineProperty As StyledProperty(Of Boolean) =
             AvaloniaProperty.Register(Of CurveEditor, Boolean)(NameOf(UseReferenceSpline))
 
@@ -199,8 +200,8 @@ Namespace Controls
         ''' Kurvenformel wie in der Bildkette. Zwei Kopien heisst: die gezeichnete Kurve ist
         ''' nur so lange die angewendete, wie beide gleich bleiben - und wer eine davon anfasst,
         ''' sieht der anderen nicht an, dass sie jetzt etwas anderes tut. Gerechnet wird deshalb an
-        ''' EINER Stelle; warum es eine monotonieerhaltende Hermite-Kurve (PCHIP) ist und nicht der
-        ''' natuerliche Spline der Referenz, steht dort und ist gemessen.
+        ''' EINER Stelle (ImageProcessor.EvaluateCurveFor), mit derselben Kurvenform wie die
+        ''' Bildkette fuer diesen Kanal.
         '''
         ''' Die Klemmung bleibt hier: sie gehoert der Anzeige, die Kurve soll im Kasten bleiben. Die
         ''' Bildkette klemmt auf denselben Bereich, nur eine Stufe spaeter beim Bauen ihrer

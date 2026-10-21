@@ -2198,15 +2198,15 @@ Namespace Services
                    (t3 - t2) * tangentAtP2
         End Function
 
-        ''' <summary>Die Kurvenform der Referenz fuer das Reglermodell 2: natuerlicher kubischer Spline
+        ''' <summary>Die Kurvenform der Referenz fuer Punkt- und Kanalkurven: natuerlicher kubischer Spline
         ''' durch die Punkte (zweite Ableitung an den Enden null), auf 0 bis 255 geklemmt.
         '''
         ''' Gemessen an Cool Glow (Diagnostics/Reglereichung): dieselben drei Kanalkurven im Raum der
         ''' Referenz trafen deren Bild mit diesem Spline auf dE 3,2, mit PCHIP auf 6,9. PCHIP hob die
         ''' Gruenkurve (0,11 79,82 ...) in den Tiefen staerker an (bei 10 auf 19,5 statt 15,9), und im
         ''' ProPhoto-Raum wurde daraus ein Gruenstich in dunklen Haaren und Vorhaengen. Der Preis ist
-        ''' das Ueberschwingen bei engen steilen Punkten, das die Klemmung abfaengt; im Modell 1 bleibt
-        ''' es bei PCHIP (EvaluateCurveSpline).</summary>
+        ''' das Ueberschwingen bei engen steilen Punkten, das die Klemmung abfaengt. Die Luminanzkurve
+        ''' bleibt bei PCHIP (EvaluateCurveSpline).</summary>
         Friend Shared Function EvaluateCurveSplineReference(points As List(Of (X As Double, Y As Double)), x As Double) As Double
             Dim n = points.Count
             If n = 0 Then Return x
@@ -2249,7 +2249,8 @@ Namespace Services
             Return Math.Max(0.0, Math.Min(255.0, y))
         End Function
 
-        ''' <summary>Die Kurvenform je Reglermodell: der Spline der Referenz im Modell 2, sonst PCHIP.</summary>
+        ''' <summary>Die Kurvenform je Kanal: der Spline der Referenz fuer Punkt- und Kanalkurven,
+        ''' PCHIP fuer die Luminanzkurve.</summary>
         Friend Shared Function EvaluateCurveFor(points As List(Of (X As Double, Y As Double)), x As Double,
                                                 referenceSpline As Boolean) As Double
             Return If(referenceSpline, EvaluateCurveSplineReference(points, x), EvaluateCurveSpline(points, x))
