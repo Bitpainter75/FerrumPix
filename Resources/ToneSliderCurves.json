@@ -35,7 +35,13 @@
   }
  },
  "localDetail": {
-  "_": "Tonmodell 3: Verstaerkung der Feinstruktur (Bildpunkt minus Gauss mit der Standardabweichung 0,338 % der langen Kante, nominell 0,5 %: drei Kastenmittel vom Radius 3 auf 1024 Punkten) je Zone der geglaetteten Helligkeit, Zonenmitten in L, gemessen ueber 57 Aufnahmen mit den Kennlinien an der Basisschicht (Diagnostics/Reglereichung/oertlich.py).",
+  "_": "Tonmodell 3: Verstaerkung der Feinstruktur (Bildpunkt minus Gauss mit der Standardabweichung 0,338 % der langen Kante, nominell 0,5 %: drei Kastenmittel vom Radius 3 auf 1024 Punkten) je Zone der geglaetteten Helligkeit, Zonenmitten in L, gemessen ueber 57 Aufnahmen mit den Kennlinien an der Basisschicht (Diagnostics/Reglereichung/oertlich.py). Der Faktor gilt fuer den Abstand der Kanaele vom Grau (Buntheit). Fuer die Feinstruktur der Helligkeit wird sein Ueberschuss ueber 1 je Zone mit lumaBoost multipliziert, geeicht an der Zeichnung im Ergebnis (Hochpass 7x7 auf 1024 Punkten) gegen die Referenz an 29 ausgefressenen und 89 gewoehnlichen Aufnahmen: Lichter -50 und -100 in den Zonen 70 und 88,5 das Fuenffache, weil Knie der RAW-Stufe und Tonzonen davor dort sonst den Grossteil wieder wegnehmen.",
+  "lumaBoost": {
+   "Highlights": {
+    "-100": [1, 1, 1, 5, 5],
+    "-50": [1, 1, 1, 5, 5]
+   }
+  },
   "centers": [
    10,
    30,

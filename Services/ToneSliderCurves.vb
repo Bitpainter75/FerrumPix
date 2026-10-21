@@ -72,9 +72,17 @@ Namespace Services
         ''' (DetailCenters, in L). Gemessen lassen Lichter und Tiefen die Struktur nicht einfach
         ''' stehen: in ihrer eigenen Zone verstaerken sie sie beim Zurueckholen (Lichter -100 in den
         ''' Lichtern 1,19, Tiefen +100 in den tiefen Tiefen 1,47) und daempfen sie beim Verstaerken.
+        ''' Mit demselben Faktor waechst der Abstand der Kanaele vom Grau, also die Buntheit.
         ''' Steht wie MedianCurves VOR Curves.</summary>
         Private Shared ReadOnly DetailGains As New Dictionary(Of String, Double()())(StringComparer.Ordinal)
         Private Shared DetailCenters As Double()
+
+        ''' <summary>Wie <see cref="DetailGains"/>, fuer die Feinstruktur der HELLIGKEIT: der
+        ''' Ueberschuss ueber 1 je Zone mal "lumaBoost" aus "localDetail". Fuer Lichter nach unten
+        ''' steht dort in den hellen Zonen das Fuenffache, im Ergebnis geeicht: Knie und Tonzonen
+        ''' davor flachen die Struktur sonst wieder ab, und vom gemessenen 1,19 kam nichts an.
+        ''' Ohne Eintrag gleich DetailGains.</summary>
+        Private Shared ReadOnly LuminanceDetailGains As New Dictionary(Of String, Double()())(StringComparer.Ordinal)
 
         ''' <summary>Kurven je Regler: Index 0 bis 3 fuer -100, -50, +50, +100. Nothing, wenn die
         ''' Ressource fehlt; dann bewegen die Tonregler nichts.</summary>
@@ -118,10 +126,10 @@ Namespace Services
                         Dim detailElement As JsonElement
                         If root.TryGetProperty("localDetail", detailElement) Then
                             Dim centers = detailElement.GetProperty("centers").EnumerateArray().Select(Function(e) e.GetDouble()).ToArray()
+                            Dim dkeys = {"-100", "-50", "50", "100"}
                             For Each slider In detailElement.EnumerateObject()
-                                If slider.Value.ValueKind <> JsonValueKind.Object Then Continue For
+                                If slider.Value.ValueKind <> JsonValueKind.Object OrElse slider.Name = "lumaBoost" Then Continue For
                                 Dim sets = New Double(3)() {}
-                                Dim dkeys = {"-100", "-50", "50", "100"}
                                 Dim complete = centers.Length >= 2
                                 For k = 0 To 3
                                     Dim value As JsonElement
@@ -131,6 +139,23 @@ Namespace Services
                                 Next
                                 ' Unvollstaendig: dann rechnet der Regler ohne Strukturglied.
                                 If complete Then DetailGains(slider.Name) = sets
+                            Next
+                            Dim boostElement As JsonElement
+                            Dim hasBoost = detailElement.TryGetProperty("lumaBoost", boostElement)
+                            For Each entry In DetailGains
+                                Dim boosted = entry.Value.Select(Function(s) CType(s.Clone(), Double())).ToArray()
+                                Dim sliderBoost As JsonElement
+                                If hasBoost AndAlso boostElement.TryGetProperty(entry.Key, sliderBoost) Then
+                                    For k = 0 To 3
+                                        Dim factors As JsonElement
+                                        If Not sliderBoost.TryGetProperty(dkeys(k), factors) OrElse
+                                           factors.GetArrayLength() <> centers.Length Then Continue For
+                                        For z = 0 To centers.Length - 1
+                                            boosted(k)(z) = 1.0 + (boosted(k)(z) - 1.0) * factors(z).GetDouble()
+                                        Next
+                                    Next
+                                End If
+                                LuminanceDetailGains(entry.Key) = boosted
                             Next
                             DetailCenters = centers
                         End If
@@ -278,14 +303,25 @@ Namespace Services
             Return atHalf + (atFull - atHalf) * (magnitude - 50.0) / 50.0
         End Function
 
-        ''' <summary>Faktor auf die Feinstruktur fuer Regler <paramref name="slider"/>
+        ''' <summary>Faktor auf den Abstand der Kanaele vom Grau fuer Regler <paramref name="slider"/>
         ''' (Highlights, Shadows) bei Wert <paramref name="value"/>, an der geglaetteten Helligkeit
         ''' <paramref name="lightness"/> (L, 0 bis 100). Zwischen den Zonenmitten linear, ausserhalb
         ''' die naechste; im Wert wie <see cref="Lift"/> zwischen 0, 50 und 100 linear. 1 ohne
         ''' gemessene Werte.</summary>
         Public Shared Function DetailGain(slider As String, value As Double, lightness As Double) As Double
+            Return GainOverZones(DetailGains, slider, value, lightness)
+        End Function
+
+        ''' <summary>Wie <see cref="DetailGain"/>, fuer die Feinstruktur der Helligkeit
+        ''' (<see cref="LuminanceDetailGains"/>).</summary>
+        Public Shared Function LuminanceDetailGain(slider As String, value As Double, lightness As Double) As Double
+            Return GainOverZones(LuminanceDetailGains, slider, value, lightness)
+        End Function
+
+        Private Shared Function GainOverZones(table As Dictionary(Of String, Double()()), slider As String,
+                                              value As Double, lightness As Double) As Double
             Dim sets As Double()() = Nothing
-            If value = 0.0 OrElse DetailCenters Is Nothing OrElse Not DetailGains.TryGetValue(slider, sets) Then Return 1.0
+            If value = 0.0 OrElse DetailCenters Is Nothing OrElse Not table.TryGetValue(slider, sets) Then Return 1.0
             Dim c = DetailCenters
             Dim gi = 0
             Dim f = 0.0

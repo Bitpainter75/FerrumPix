@@ -69,10 +69,14 @@ Namespace Services
             ''' dieses Hubs. Nothing ohne Lichter und Tiefen.</summary>
             Public LocalToneZones As Single()
 
-            ''' <summary>Um wie viel Lichter und Tiefen die Feinstruktur zusaetzlich
+            ''' <summary>Um wie viel Lichter und Tiefen die Feinstruktur der Helligkeit zusaetzlich
             ''' verstaerken (Faktor minus 1), ueber dem Grauwert der geglaetteten Umgebung
-            ''' (ToneSliderCurves.DetailGain). Nothing, wenn kein Faktor von 1 abweicht.</summary>
+            ''' (ToneSliderCurves.LuminanceDetailGain). Nothing, wenn kein Faktor von 1 abweicht.</summary>
             Public LocalDetailGain As Single()
+
+            ''' <summary>Ebenso fuer den Abstand der Kanaele vom Grau, also die Buntheit
+            ''' (ToneSliderCurves.DetailGain). Nothing, wenn kein Faktor von 1 abweicht.</summary>
+            Public LocalColorGain As Single()
 
             ''' <summary>Weissabgleich als chromatische Adaption, 3x3 zeilenweise, ODER Nothing.
             ''' Nothing ist der Normalfall: Modell 1 rechnet den Weissabgleich weiter in der
@@ -294,7 +298,8 @@ Namespace Services
                         If adj.UsesLocalToneZones() Then
                             EnsureGammaTables()
                             chain.LocalToneZones = BuildToneZoneTable(adj, reference, ToneZonePart.Local)
-                            chain.LocalDetailGain = BuildLocalDetailTable(adj)
+                            chain.LocalDetailGain = BuildLocalDetailTable(adj, True)
+                            chain.LocalColorGain = BuildLocalDetailTable(adj, False)
                             ' Die Tabelle am Bildpunkt ist die gemeinsame monotone Tabelle aller fuenf
                             ' Regler MINUS dem oertlichen Hub. Wo Basis und Bildpunkt gleich sind (glatte
                             ' Flaeche, Verlauf), kommt so genau die gemeinsame Tabelle heraus, samt
@@ -1378,26 +1383,31 @@ Namespace Services
 
         ''' <summary>Wie <see cref="ApplyToneZones"/>, mit oertlichen Lichtern und Tiefen: <paramref name="pixelZones"/>
         ''' (die gemeinsame Tabelle ohne den oertlichen Hub) wirkt am Kanalwert,
-        ''' <paramref name="localZones"/> (Lichter, Tiefen) an der um <paramref name="baseOffset"/>
-        ''' verschobenen Stelle, also an der Basisschicht statt am Bildpunkt. Ohne Verschiebung ist
-        ''' das genau die gemeinsame Tabelle. <paramref name="detailShift"/>
+        ''' <paramref name="localZones"/> (Lichter, Tiefen) an der Basisschicht
+        ''' <paramref name="baseValue"/> statt am Bildpunkt. Wo die Basis der Grauwert selbst ist,
+        ''' ist das genau die gemeinsame Tabelle. <paramref name="detailShift"/>
         ''' ist das Strukturglied: die Feinstruktur des Bildpunkts mal der Verstaerkung seiner Zone
         ''' (PointOpChain.LocalDetailGain).
         '''
-        ''' Verschoben wird jeder Kanal um denselben Betrag: ein Grau bekommt genau den Hub seiner
-        ''' Basis, und zwischen dem groessten und dem kleinsten Kanal wirkt weiter die Steigung der
-        ''' Kennlinie, die Saettigung folgt ihr also wie am Bildpunkt.</summary>
+        ''' Der oertliche Hub wird EINMAL an der Basis abgelesen und gilt fuer alle Kanaele. Den
+        ''' Abstand der Kanaele vom Grau <paramref name="gray"/> streckt
+        ''' <paramref name="colorExcess"/> (PointOpChain.LocalColorGain, Faktor minus 1) wie die
+        ''' Feinstruktur. Abgelesen je Kanal an seiner eigenen Stelle folgte die Buntheit der
+        ''' Steigung der Kennlinie und lief der Referenz entgegen: Lichter -100 machte die Lichter
+        ''' blasser (L 70 bis 85 0,77 gegen 1,07), Tiefen +100 die Tiefen (0,84 gegen 1,09).</summary>
         Private Shared Sub ApplyLocalToneZones(ByRef rr As Single, ByRef gg As Single, ByRef bb As Single,
-                                               pixelZones As Single(), localZones As Single(), baseOffset As Single,
-                                               detailShift As Single)
+                                               pixelZones As Single(), localZones As Single(), baseValue As Single,
+                                               gray As Single, detailShift As Single, colorExcess As Single)
+            Dim at = Clamp(baseValue, 0.0F, 1.0F)
+            Dim shift = SampleTable(localZones, at) - at + detailShift
             Dim vMax = Math.Max(rr, Math.Max(gg, bb))
             Dim vMin = Math.Min(rr, Math.Min(gg, bb))
-            Dim newMax = LocalZoneValue(vMax, pixelZones, localZones, baseOffset, detailShift)
+            Dim newMax = LocalZoneValue(vMax, pixelZones, shift, gray, colorExcess)
             If vMax - vMin < 0.000001F Then
                 rr = newMax : gg = newMax : bb = newMax
                 Return
             End If
-            Dim newMin = LocalZoneValue(vMin, pixelZones, localZones, baseOffset, detailShift)
+            Dim newMin = LocalZoneValue(vMin, pixelZones, shift, gray, colorExcess)
             ' Mit Verschiebung ist die Kennlinie an diesem Bildpunkt nicht mehr zwingend monoton.
             ' Kehrte sich die Reihenfolge von groesstem und kleinstem Kanal um, kippte der Farbton;
             ' dann bleibt ein Grau.
@@ -1412,11 +1422,10 @@ Namespace Services
             bb = newMin + (bb - vMin) * scale
         End Sub
 
-        Private Shared Function LocalZoneValue(v As Single, pixelZones As Single(), localZones As Single(),
-                                               baseOffset As Single, detailShift As Single) As Single
-            Dim at = Clamp(v + baseOffset, 0.0F, 1.0F)
+        Private Shared Function LocalZoneValue(v As Single, pixelZones As Single(), shift As Single,
+                                               gray As Single, colorExcess As Single) As Single
             Dim pixel = If(pixelZones IsNot Nothing, SampleTable(pixelZones, v), v)
-            Dim result = pixel + (SampleTable(localZones, at) - at) + detailShift
+            Dim result = pixel + shift + colorExcess * (v - gray)
             Return If(result < 0.0F, 0.0F, If(result > 1.0F, 1.0F, result))
         End Function
 
@@ -1994,14 +2003,18 @@ Namespace Services
         End Class
 
         ''' <summary>Das Strukturglied als Tabelle ueber dem geglaetteten Grauwert: Faktor minus 1,
-        ''' Lichter und Tiefen addiert. Nothing, wenn beide Faktoren ueberall 1 sind.</summary>
-        Private Shared Function BuildLocalDetailTable(adj As ImageAdjustments) As Single()
+        ''' Lichter und Tiefen addiert, fuer die Helligkeit (<paramref name="luminance"/>) oder fuer
+        ''' den Abstand der Kanaele vom Grau. Nothing, wenn beide Faktoren ueberall 1 sind.</summary>
+        Private Shared Function BuildLocalDetailTable(adj As ImageAdjustments, luminance As Boolean) As Single()
             Dim table = New Single(PointOpTableSize - 1) {}
             Dim any = False
+            Dim gainAt = If(luminance,
+                            New Func(Of String, Double, Double, Double)(AddressOf ToneSliderCurves.LuminanceDetailGain),
+                            New Func(Of String, Double, Double, Double)(AddressOf ToneSliderCurves.DetailGain))
             For i = 0 To PointOpTableSize - 1
                 Dim l = GrayVToLightness(i / CDbl(PointOpTableSize - 1))
-                Dim excess = (ToneSliderCurves.DetailGain("Highlights", adj.Highlights, l) - 1.0) +
-                             (ToneSliderCurves.DetailGain("Shadows", adj.ShadowsLevel, l) - 1.0)
+                Dim excess = (gainAt("Highlights", adj.Highlights, l) - 1.0) +
+                             (gainAt("Shadows", adj.ShadowsLevel, l) - 1.0)
                 table(i) = CSng(excess)
                 If Math.Abs(excess) > 0.000001 Then any = True
             Next
@@ -2380,6 +2393,7 @@ Namespace Services
             ' Die Basisschicht fuer Lichter und Tiefen entsteht aus DIESEM Bild, vor dem Durchlauf.
             Dim localZones = chain.LocalToneZones
             Dim localDetail = chain.LocalDetailGain
+            Dim localColor = chain.LocalColorGain
             Dim localBase As LocalToneBase = Nothing
             If localZones IsNot Nothing Then
                 localBase = BuildLocalToneBase(srcBuf, stride, width, source.Height, ri, gi, bi, ai, srcPremul, chain,
@@ -2518,10 +2532,12 @@ Namespace Services
                                     Dim gray = LocalToneGray(rr, gg, bb, toLinear, toGamma)
                                     Dim baseValue As Single, smoothValue As Single
                                     localBase.Sample(x, y, gray, baseValue, smoothValue)
+                                    Dim smoothAt = Clamp(smoothValue, 0.0F, 1.0F)
                                     Dim detailShift = If(localDetail IsNot Nothing,
-                                                         SampleTable(localDetail, Clamp(smoothValue, 0.0F, 1.0F)) * (gray - smoothValue),
+                                                         SampleTable(localDetail, smoothAt) * (gray - smoothValue),
                                                          0.0F)
-                                    ApplyLocalToneZones(rr, gg, bb, toneZones, localZones, baseValue - gray, detailShift)
+                                    Dim colorExcess = If(localColor IsNot Nothing, SampleTable(localColor, smoothAt), 0.0F)
+                                    ApplyLocalToneZones(rr, gg, bb, toneZones, localZones, baseValue, gray, detailShift, colorExcess)
                                 ElseIf toneZones IsNot Nothing Then
                                     ApplyToneZones(rr, gg, bb, toneZones)
                                 End If

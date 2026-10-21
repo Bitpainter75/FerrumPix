@@ -58,7 +58,9 @@
   Detail in bright skies and clouds is now always brought back from the raw data, so the
   checkbox for it in the light panel is gone. On raw files, pulling the highlights down now
   reaches into that detail as well: bright skies, clouds and burnt out areas come down about as
-  far as in a raw developer, where before the slider stopped at half the way.
+  far as in a raw developer, where before the slider stopped at half the way. Clouds and bright
+  skies also keep their texture when you pull the highlights down, instead of turning flat and
+  milky, and colours there no longer fade. Lifting the shadows keeps their colour as well.
   All pictures now share one calculation for these sliders, so pictures you edited in earlier
   versions can look slightly different.
   
