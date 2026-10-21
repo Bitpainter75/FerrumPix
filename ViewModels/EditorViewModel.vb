@@ -7501,16 +7501,23 @@ Namespace ViewModels
             ' Der laufende stoesst nach seinem Ende den naechsten an.
             If _rawExposureRebuildRunning Then Return
             _rawExposureRebuildRunning = True
+            Dim followUp As Boolean
             Try
-                Await RebuildWorkingImageForRawExposureCoreAsync()
+                followUp = Await RebuildWorkingImageForRawExposureCoreAsync()
             Finally
                 _rawExposureRebuildRunning = False
             End Try
-            ' Hat sich Belichtung oder Knie waehrenddessen bewegt, kommt der naechste.
-            ScheduleRawExposureRebuild()
+            ' Hat sich Belichtung oder Knie waehrenddessen bewegt oder ist ein anderes Bild offen,
+            ' kommt der naechste. Nach einem Fehlschlag mit unveraenderten Werten NICHT: der Decode
+            ' scheiterte sonst im Sekundentakt erneut (Datei weg, nicht lesbar), bis sich zufaellig
+            ' etwas anderes aendert.
+            If followUp Then ScheduleRawExposureRebuild()
         End Sub
 
-        Private Async Function RebuildWorkingImageForRawExposureCoreAsync() As Task
+        ''' <summary>Ein Neuaufbau. True, wenn danach ein weiterer anstehen darf: das Ergebnis wurde
+        ''' uebernommen, oder es wurde verworfen, weil sich Werte oder Bild inzwischen geaendert
+        ''' haben. False nach einem Fehlschlag mit unveraenderten Werten.</summary>
+        Private Async Function RebuildWorkingImageForRawExposureCoreAsync() As Task(Of Boolean)
             Dim path = RenderSourcePath
             Dim exposureEv = WantedRawExposureEv()
             Dim knee = WantedRawHighlightKnee()
@@ -7542,20 +7549,17 @@ Namespace ViewModels
                                           End Function)
             Catch ex As Exception
                 DiagnosticLogService.LogException("Editor.RawExposureRebuild", ex)
-                Return
+                Return MovedSince(token, swapId, path, exposureEv, knee)
             End Try
             ' Was zwischen dem Ende der Arbeit im Hintergrund und der Rueckkehr hierher liegt, ist
             ' Warten auf den Anzeigefaden.
             Dim backgroundMs = clock.Elapsed.TotalMilliseconds
-            If token <> Threading.Interlocked.Read(_rawExposureRebuildToken) OrElse
-               swapId <> Threading.Interlocked.Read(_previewSourceSwapId) OrElse
-               Not String.Equals(path, RenderSourcePath, StringComparison.Ordinal) OrElse
-               _workingImage.HasBakedContent OrElse prepared.Prepared Is Nothing OrElse
-               WantedRawExposureEv() <> exposureEv OrElse WantedRawHighlightKnee() <> knee Then
+            Dim moved = MovedSince(token, swapId, path, exposureEv, knee)
+            If moved OrElse _workingImage.HasBakedContent OrElse prepared.Prepared Is Nothing Then
                 DiagnosticLogService.LogAlways("Editor.RawExposureRebuild",
-                    $"verworfen; exposureEv={exposureEv:F3}; knee={knee:F3}; decode={decodeMs:F0}; aufbereiten={prepareMs:F0}")
+                    $"{If(moved, "verworfen", "fehlgeschlagen")}; exposureEv={exposureEv:F3}; knee={knee:F3}; decode={decodeMs:F0}; aufbereiten={prepareMs:F0}")
                 prepared.DisposeAll()
-                Return
+                Return moved
             End If
             _workingImageExposure = CSng(prepared.AppliedEv * ImageAdjustments.ExposurePointsPerStop)
             _workingImageKnee = prepared.AppliedKnee
@@ -7570,6 +7574,16 @@ Namespace ViewModels
                 "exposure={0}; knee={1:F3}; developed={2}; decode={3:F0}; aufbereiten={4:F0}; warten auf Anzeige={5:F0}; uebernehmen={6:F0}; gesamt={7:F0}",
                 _workingImageExposure, _workingImageKnee, prepared.RawDeveloped, decodeMs, prepareMs,
                 backgroundMs - decodeMs - prepareMs, clock.Elapsed.TotalMilliseconds - adoptStart, clock.Elapsed.TotalMilliseconds))
+            Return True
+        End Function
+
+        ''' <summary>Hat sich seit dem Start eines Neuaufbaus etwas bewegt, das sein Ergebnis
+        ''' ueberholt: ein neuerer Neuaufbau, ein anderes Bild, andere Belichtung oder anderes Knie?</summary>
+        Private Function MovedSince(token As Long, swapId As Long, path As String, exposureEv As Double, knee As Double) As Boolean
+            Return token <> Threading.Interlocked.Read(_rawExposureRebuildToken) OrElse
+                   swapId <> Threading.Interlocked.Read(_previewSourceSwapId) OrElse
+                   Not String.Equals(path, RenderSourcePath, StringComparison.Ordinal) OrElse
+                   WantedRawExposureEv() <> exposureEv OrElse WantedRawHighlightKnee() <> knee
         End Function
 
         Private Function LensChoiceFromFields() As LensDataService.Wahl
