@@ -748,6 +748,9 @@ Namespace ViewModels
         Private _rawExposureRebuildTimer As DispatcherTimer
         ''' Marke des laufenden Neuaufbaus: ein spaeterer verwirft das Ergebnis eines frueheren.
         Private _rawExposureRebuildToken As Long
+        ''' Laeuft gerade ein Neuaufbau? Dann startet kein zweiter; der laufende stoesst nach seinem
+        ''' Ende den naechsten an, falls sich Belichtung oder Knie inzwischen bewegt haben.
+        Private _rawExposureRebuildRunning As Boolean
 
         ''' Anzahl der Commits, die gerade in der Queue stecken (UI-Thread-Zugriff): solange > 0
         ''' sind Undo/Redo gesperrt (siehe CanUndo) - die Undo-Zuordnung wäre sonst unvollständig.
@@ -7432,8 +7435,10 @@ Namespace ViewModels
 
         ''' <summary>Wie lange der Belichtungsregler ruhen muss, bevor das Arbeitsbild mit der neuen
         ''' Belichtung aus der RAW-Stufe neu entsteht. Waehrend des Zugs rechnet die Kette den
-        ''' Unterschied (ExposureInSource), das Bild folgt also sofort.</summary>
-        Private Const RawExposureRebuildDelayMs As Double = 400.0
+        ''' Unterschied (ExposureInSource), das Bild folgt also sofort. Eine Sekunde, damit Belichtung
+        ''' und Lichter (die das Knie verschieben) kurz nacheinander gestellt EINEN Decode kosten:
+        ''' bei 33 Megapixeln dauert einer zwei bis drei Sekunden.</summary>
+        Private Const RawExposureRebuildDelayMs As Double = 1000.0
 
         ''' <summary>Steckt im Arbeitsbild eine andere Belichtung als die, die das Bild jetzt traegt,
         ''' und laesst sie sich in der RAW-Stufe nachziehen? Nur bei einer wirklich ueber LibRaw
@@ -7479,7 +7484,13 @@ Namespace ViewModels
         ''' Hintergrund. Anders als ein Quellwechsel sperrt das weder die Werkzeuge noch raeumt es
         ''' Szene und Ansicht ab: es tauscht nur das Arbeitsbild, und der Aufwaermrender zeigt das
         ''' Ergebnis. Verworfen wird es, wenn inzwischen ein anderes Bild offen ist, etwas
-        ''' eingebacken wurde oder ein neuerer Neuaufbau laeuft.</summary>
+        ''' eingebacken wurde, ein neuerer Neuaufbau laeuft oder Belichtung oder Knie sich waehrend
+        ''' des Decodes bewegt haben: ein solches Zwischenbild zeigte einen Stand, der nicht mehr
+        ''' gilt, und die Kette rechnet bis zum naechsten ohnehin richtig nach.
+        '''
+        ''' Es laeuft hoechstens EIN Neuaufbau (_rawExposureRebuildRunning). Vorher startete der
+        ''' Zeitgeber einen zweiten, waehrend der erste noch dekodierte: zwei Decodes gleichzeitig,
+        ''' die sich und die Vorschau gegenseitig bremsten, und der erste wurde danach verworfen.</summary>
         Private Async Sub RebuildWorkingImageForRawExposureAsync()
             If Not NeedsRawExposureRebuild() Then Return
             ' Noch am Regler: weiter warten, die Kette folgt solange.
@@ -7487,6 +7498,19 @@ Namespace ViewModels
                 ScheduleRawExposureRebuild()
                 Return
             End If
+            ' Der laufende stoesst nach seinem Ende den naechsten an.
+            If _rawExposureRebuildRunning Then Return
+            _rawExposureRebuildRunning = True
+            Try
+                Await RebuildWorkingImageForRawExposureCoreAsync()
+            Finally
+                _rawExposureRebuildRunning = False
+            End Try
+            ' Hat sich Belichtung oder Knie waehrenddessen bewegt, kommt der naechste.
+            ScheduleRawExposureRebuild()
+        End Sub
+
+        Private Async Function RebuildWorkingImageForRawExposureCoreAsync() As Task
             Dim path = RenderSourcePath
             Dim exposureEv = WantedRawExposureEv()
             Dim knee = WantedRawHighlightKnee()
@@ -7496,25 +7520,40 @@ Namespace ViewModels
             Dim swapId = Threading.Interlocked.Read(_previewSourceSwapId)
             Dim token = Threading.Interlocked.Increment(_rawExposureRebuildToken)
             Dim prepared As PreparedSource
+            ' Zeiten fuers Log: Decode (Einzelheiten in "RawDecodeService.Zeiten"), Aufbereiten
+            ' (PrepareSource), Uebernehmen ins Arbeitsbild, und alles von hier bis dort.
+            Dim clock = Stopwatch.StartNew()
+            Dim decodeMs = 0.0, prepareMs = 0.0
             Try
                 prepared = Await Task.Run(Function()
                                               Dim applied = 0.0
                                               Dim developed = False
                                               Dim rawStage = False
+                                              Dim stepClock = Stopwatch.StartNew()
                                               Dim full = ImageProcessor.DecodeWorkingImageWithExposure(path, wahl, recoverHighlights,
                                                                                                        exposureEv, applied, developed, knee, rawStage)
-                                              Return PrepareSource(New DecodedSource With {
+                                              decodeMs = stepClock.Elapsed.TotalMilliseconds
+                                              stepClock.Restart()
+                                              Dim result = PrepareSource(New DecodedSource With {
                                                   .Full = full, .AppliedEv = applied, .RawDeveloped = developed, .RawStage = rawStage,
                                                   .AppliedKnee = If(rawStage, knee, RawDecodeService.HighlightRecoveryKnee)}, previewMax)
+                                              prepareMs = stepClock.Elapsed.TotalMilliseconds
+                                              Return result
                                           End Function)
             Catch ex As Exception
                 DiagnosticLogService.LogException("Editor.RawExposureRebuild", ex)
                 Return
             End Try
+            ' Was zwischen dem Ende der Arbeit im Hintergrund und der Rueckkehr hierher liegt, ist
+            ' Warten auf den Anzeigefaden.
+            Dim backgroundMs = clock.Elapsed.TotalMilliseconds
             If token <> Threading.Interlocked.Read(_rawExposureRebuildToken) OrElse
                swapId <> Threading.Interlocked.Read(_previewSourceSwapId) OrElse
                Not String.Equals(path, RenderSourcePath, StringComparison.Ordinal) OrElse
-               _workingImage.HasBakedContent OrElse prepared.Prepared Is Nothing Then
+               _workingImage.HasBakedContent OrElse prepared.Prepared Is Nothing OrElse
+               WantedRawExposureEv() <> exposureEv OrElse WantedRawHighlightKnee() <> knee Then
+                DiagnosticLogService.LogAlways("Editor.RawExposureRebuild",
+                    $"verworfen; exposureEv={exposureEv:F3}; knee={knee:F3}; decode={decodeMs:F0}; aufbereiten={prepareMs:F0}")
                 prepared.DisposeAll()
                 Return
             End If
@@ -7522,14 +7561,16 @@ Namespace ViewModels
             _workingImageKnee = prepared.AppliedKnee
             _workingImageRawStage = prepared.RawStage
             SetWorkingImageRawDeveloped(prepared.RawDeveloped)
-            DiagnosticLogService.LogAlways("Editor.RawExposureRebuild", $"exposure={_workingImageExposure}; knee={_workingImageKnee:F3}; developed={prepared.RawDeveloped}")
+            Dim adoptStart = clock.Elapsed.TotalMilliseconds
             AdoptPreparedWorkingImage(prepared.Prepared, prepared.Display,
                                       hasBakedContent:=False,
                                       hasAlphaHoles:=_newDocTransparentBackground,
                                       scheduleInitialRender:=True)
-            ' Hat sich die Belichtung waehrenddessen weiter bewegt, kommt der naechste.
-            ScheduleRawExposureRebuild()
-        End Sub
+            DiagnosticLogService.LogAlways("Editor.RawExposureRebuild", String.Format(Globalization.CultureInfo.InvariantCulture,
+                "exposure={0}; knee={1:F3}; developed={2}; decode={3:F0}; aufbereiten={4:F0}; warten auf Anzeige={5:F0}; uebernehmen={6:F0}; gesamt={7:F0}",
+                _workingImageExposure, _workingImageKnee, prepared.RawDeveloped, decodeMs, prepareMs,
+                backgroundMs - decodeMs - prepareMs, clock.Elapsed.TotalMilliseconds - adoptStart, clock.Elapsed.TotalMilliseconds))
+        End Function
 
         Private Function LensChoiceFromFields() As LensDataService.Wahl
             Return New LensDataService.Wahl With {

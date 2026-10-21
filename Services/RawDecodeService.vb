@@ -664,7 +664,11 @@ Namespace Services
                                          Optional knee As Double = HighlightRecoveryKnee,
                                          Optional exposureEv As Double = 0.0) As SKBitmap
             If String.IsNullOrWhiteSpace(path) OrElse Not IsAvailable Then Return Nothing
-            Return DecodeGate.Run(Function() DecodeIntern(path, lensChoice, recoverHighlights, knee, exposureEv))
+            ' Wie lange vor dem Tor gewartet wurde (ein anderer Decode lief), steht mit den
+            ' Schritten von DecodeIntern in einer Zeile "RawDecodeService.Zeiten".
+            Dim requested = Stopwatch.GetTimestamp()
+            Return DecodeGate.Run(Function() DecodeIntern(path, lensChoice, recoverHighlights, knee, exposureEv,
+                                                          Stopwatch.GetElapsedTime(requested).TotalMilliseconds))
         End Function
 
         ''' <summary>Reduzierter RAW-Decode ausschliesslich fuer kleine Vorschauen. LibRaw kann nur
@@ -706,7 +710,9 @@ Namespace Services
                                              lensChoice As LensDataService.Wahl,
                                              recoverHighlights As Boolean,
                                              knee As Double,
-                                             exposureEv As Double) As SKBitmap
+                                             exposureEv As Double,
+                                             Optional gateWaitMs As Double = 0.0) As SKBitmap
+            Dim clock = Stopwatch.StartNew()
             Try
                 Dim writeTime = File.GetLastWriteTimeUtc(path)
                 ' Grundbelichtung der Kamera plus die Belichtung des Reglers: beides
@@ -725,7 +731,13 @@ Namespace Services
                 Dim unclip = ConfiguredHighlightUnclip()
                 ' Der Sensorrand wird AUSSERHALB der Sperre abgeschnitten: das Nachschlagen
                 ' oeffnet die Datei ueber LibRaw und nimmt dabei gegebenenfalls _nativeLock.
+                ' Mit Verzeichnung und ohne Sensorrand liest die Verzeichnung die Bildpunkte direkt
+                ' aus dem Zwischenspeicher (TakeCached): eine Bitmap-Kopie davor waere eine zweite
+                ' Vollbildkopie, gemessen rund 300 ms bei 33 Megapixeln.
+                Dim directDistortion = lens IsNot Nothing AndAlso lens.HasDistortion AndAlso
+                                       Not (lensChoice IsNot Nothing AndAlso lensChoice.CropSensorEdge)
                 Dim hit As SKBitmap = Nothing
+                Dim pixels As CachedPixels = Nothing
                 SyncLock _cacheLock
                     If _cachedBitmap IsNot Nothing AndAlso
                        String.Equals(_cachedPath, path, StringComparison.Ordinal) AndAlso
@@ -736,10 +748,12 @@ Namespace Services
                        _cachedHighlightRecovery = recoverHighlights AndAlso
                        _cachedHighlightKnee = knee AndAlso
                        String.Equals(_cachedObjektiv, objKey, StringComparison.Ordinal) Then
-                        hit = _cachedBitmap.Copy()
+                        hit = TakeCached(directDistortion, pixels)
                     End If
                 End SyncLock
-                If hit IsNot Nothing Then Return WithDistortion(WithSensorEdgeCrop(hit, path, lensChoice), lens)
+                If hit IsNot Nothing OrElse pixels IsNot Nothing Then
+                    Return FinishDecode(hit, pixels, path, lensChoice, lens, gateWaitMs, "8-Bit-Treffer", clock.Elapsed.TotalMilliseconds, 0.0)
+                End If
 
                 ' Ohne reentrante libraw laufen die nativen Aufrufe nacheinander - die
                 ' Thumbnail-Erzeugung ruft aus mehreren Threads hier herein (Parallel.For).
@@ -752,6 +766,7 @@ Namespace Services
                     End SyncLock
                 End If
                 If decoded Is Nothing Then Return Nothing
+                Dim coreMs = clock.Elapsed.TotalMilliseconds
 
                 SyncLock _cacheLock
                     _cachedBitmap?.Dispose()
@@ -764,12 +779,77 @@ Namespace Services
                     _cachedHighlightRecovery = recoverHighlights
                     _cachedHighlightKnee = knee
                     _cachedWriteTimeUtc = writeTime
-                    hit = _cachedBitmap.Copy()
+                    hit = TakeCached(directDistortion, pixels)
                 End SyncLock
-                Return WithDistortion(WithSensorEdgeCrop(hit, path, lensChoice), lens)
+                Return FinishDecode(hit, pixels, path, lensChoice, lens, gateWaitMs, "Decode", coreMs,
+                                    clock.Elapsed.TotalMilliseconds - coreMs)
             Catch
                 Return Nothing
             End Try
+        End Function
+
+        ''' <summary>Die Bildpunkte des 8-Bit-Zwischenspeichers, wie die Verzeichnung sie liest.</summary>
+        Private NotInheritable Class CachedPixels
+            Public Bytes As Byte()
+            Public Stride As Integer
+            Public Width As Integer
+            Public Height As Integer
+            Public Info As SKImageInfo
+        End Class
+
+        ''' <summary>Was der Aufrufer aus dem Zwischenspeicher bekommt; nur unter _cacheLock. Mit
+        ''' <paramref name="pixelsOnly"/> die Bildpunkte als Puffer fuer die Verzeichnung (Rueckgabe
+        ''' Nothing), sonst eine eigene Kopie der Bitmap.</summary>
+        Private Shared Function TakeCached(pixelsOnly As Boolean, ByRef pixels As CachedPixels) As SKBitmap
+            pixels = Nothing
+            If Not pixelsOnly Then Return _cachedBitmap.Copy()
+            Dim stride = _cachedBitmap.RowBytes
+            Dim bytes(stride * _cachedBitmap.Height - 1) As Byte
+            Marshal.Copy(_cachedBitmap.GetPixels(), bytes, 0, bytes.Length)
+            pixels = New CachedPixels With {.Bytes = bytes, .Stride = stride, .Width = _cachedBitmap.Width,
+                                            .Height = _cachedBitmap.Height, .Info = _cachedBitmap.Info}
+            Return Nothing
+        End Function
+
+        ''' <summary>Sensorrand und Verzeichnung hinter dem Decode, mit den Zeiten aller Schritte in
+        ''' einer Zeile "RawDecodeService.Zeiten" (in Millisekunden): Warten vor dem Tor, der Decode
+        ''' selbst (<paramref name="coreKind"/>: aus LibRaw oder dem 16-Bit-Speicher, das sagt die
+        ''' Zeile "RawCache" davor, oder ein Treffer im 8-Bit-Speicher), die Kopie fuer den
+        ''' Zwischenspeicher, Sensorrand, Verzeichnung. Kommt statt der Bitmap
+        ''' <paramref name="pixels"/>, liest die Verzeichnung direkt daraus (TakeCached).</summary>
+        Private Shared Function FinishDecode(image As SKBitmap, pixels As CachedPixels, path As String,
+                                             lensChoice As LensDataService.Wahl,
+                                             lens As LensDataService.Korrektur, gateWaitMs As Double,
+                                             coreKind As String, coreMs As Double, copyMs As Double) As SKBitmap
+            Dim clock = Stopwatch.StartNew()
+            Dim result As SKBitmap
+            Dim edgeMs = 0.0
+            If pixels IsNot Nothing Then
+                result = RemoveDistortionFromPixels(pixels.Bytes, pixels.Stride, pixels.Width, pixels.Height,
+                                                    pixels.Info.AlphaType, lens)
+                ' Kein Ergebnis (keine Bildmasse fuer die Kennlinie): das Bild unentzerrt, wie
+                ' WithDistortion es dann zurueckgibt.
+                If result Is Nothing Then result = BitmapFromPixels(pixels)
+            Else
+                Dim cropped = WithSensorEdgeCrop(image, path, lensChoice)
+                edgeMs = clock.Elapsed.TotalMilliseconds
+                result = WithDistortion(cropped, lens)
+            End If
+            Dim distortionMs = clock.Elapsed.TotalMilliseconds - edgeMs
+            DiagnosticLogService.LogAlways("RawDecodeService.Zeiten", String.Format(Globalization.CultureInfo.InvariantCulture,
+                "file={0}; size={1}x{2}; warten={3:F0}; {4}={5:F0}; kopie={6:F0}; rand={7:F0}; verzeichnung={8:F0}",
+                IO.Path.GetFileName(path), If(result?.Width, 0), If(result?.Height, 0), gateWaitMs, coreKind, coreMs, copyMs,
+                edgeMs, distortionMs))
+            Return result
+        End Function
+
+        Private Shared Function BitmapFromPixels(pixels As CachedPixels) As SKBitmap
+            Dim bitmap = New SKBitmap(pixels.Info)
+            Dim target = bitmap.GetPixels()
+            For y = 0 To pixels.Height - 1
+                Marshal.Copy(pixels.Bytes, y * pixels.Stride, IntPtr.Add(target, y * bitmap.RowBytes), pixels.Width * 4)
+            Next
+            Return bitmap
         End Function
 
         Private Shared ReadOnly _sensorEdgeLock As New Object()
@@ -942,17 +1022,23 @@ Namespace Services
             If source Is Nothing OrElse k Is Nothing OrElse Not k.HasDistortion Then Return Nothing
             Dim width = source.Width, height = source.Height
             If width < 2 OrElse height < 2 Then Return Nothing
-
-            Dim target = New SKBitmap(New SKImageInfo(width, height, SKColorType.Bgra8888, source.AlphaType))
             ' VB kann keinen Span als Parameter fuehren, deshalb eine Kopie der Quelle. Bei 20 MP
             ' sind das 80 MB fuer die Dauer der Umrechnung - vertretbar, weil die Stufe nur laeuft,
             ' wenn fuer dieses Objektiv wirklich Messwerte vorliegen.
             Dim sourceStride = source.RowBytes
             Dim sourcePixels(sourceStride * height - 1) As Byte
             Marshal.Copy(source.GetPixels(), sourcePixels, 0, sourcePixels.Length)
-            Dim targetPointer = target.GetPixels()
-            Dim output(width * height * 4 - 1) As Byte
+            Return RemoveDistortionFromPixels(sourcePixels, sourceStride, width, height, source.AlphaType, k)
+        End Function
 
+        ''' <summary>Wie <see cref="RemoveDistortion"/>, aus einem Puffer der Quelle. Der Decode
+        ''' fuellt ihn direkt aus seinem Zwischenspeicher (TakeCached). Geschrieben wird Zeile fuer
+        ''' Zeile ins Ziel, ohne Ausgabepuffer von Bildgroesse.</summary>
+        Private Shared Function RemoveDistortionFromPixels(sourcePixels As Byte(), sourceStride As Integer,
+                                                           width As Integer, height As Integer,
+                                                           alphaType As SKAlphaType,
+                                                           k As LensDataService.Korrektur) As SKBitmap
+            If k Is Nothing OrElse Not k.HasDistortion OrElse width < 2 OrElse height < 2 Then Return Nothing
             Dim cx = (width - 1) / 2.0, cy = (height - 1) / 2.0
             ' Die Kennlinie rechnet im normierten System (r = 1 an der Mitte der langen Kante), die
             ' Bildpunkte in Pixeln - der Faktor bringt beide zusammen. Er wird mit den Massen DIESES
@@ -965,16 +1051,20 @@ Namespace Services
             ' ueblichen Entwicklern. Vorher wurde dort der Rand wiederholt, und an einem
             ' kissenfoermig korrigierenden Objektiv lagen in den Ecken breite Streifen.
             Dim zoom = DistortionFillScale(k, width, height, norm)
+            Dim target = New SKBitmap(New SKImageInfo(width, height, SKColorType.Bgra8888, alphaType))
+            Dim targetPointer = target.GetPixels()
+            Dim targetStride = target.RowBytes
 
-            ' ZEILENWEISE PARALLEL. Jede Zeile schreibt ausschliesslich in ihren eigenen Abschnitt
-            ' der Ausgabe und liest nur aus der unveraenderlichen Quellkopie - die Zeilen sind
+            ' ZEILENWEISE PARALLEL. Jede Zeile schreibt ausschliesslich in ihre eigene Zeile des
+            ' Ziels und liest nur aus der unveraenderlichen Quellkopie - die Zeilen sind
             ' voneinander unabhaengig, es braucht keine Sperre. Der Grund: die Schleife rechnet je
             ' Pixel eine Wurzel und ein Polynom, und bei 45 MP dauerte sie auf einem Kern so lange,
             ' dass ein Objektivwechsel spuerbar stand.
             Parallel.For(0, height,
                 Sub(y)
                     Dim dy = (y - cy) / zoom
-                    Dim z = y * width * 4
+                    Dim output(width * 4 - 1) As Byte
+                    Dim z = 0
                     For x = 0 To width - 1
                         Dim dx = (x - cx) / zoom
                         Dim rPix = Math.Sqrt(dx * dx + dy * dy)
@@ -992,8 +1082,8 @@ Namespace Services
                         SampleLanczos3(sourcePixels, width, height, sourceStride, sx, sy, output, z)
                         z += 4
                     Next
+                    Marshal.Copy(output, 0, IntPtr.Add(targetPointer, y * targetStride), output.Length)
                 End Sub)
-            Marshal.Copy(output, 0, targetPointer, output.Length)
             Return target
         End Function
 
