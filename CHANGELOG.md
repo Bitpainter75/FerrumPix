@@ -2,28 +2,6 @@
 
 ### What's new
 
-- **Exposure on raw files works like in a raw developer.** The exposure slider now acts on the
-  raw data before the tone curve, so darkening brings back detail in bright skies instead of just
-  greying them, and brightening opens up the shadows more naturally. While you drag, the picture
-  follows at once and already looks almost like the result; a moment after you let go, it is
-  rebuilt from the raw data. Automatic enhancement chooses the exposure the same way and gives
-  the same result however often you press it.
-
-- **Raw files from every camera come out at the right brightness.** On a new installation,
-  FerrumPix now adjusts the base brightness to the camera model from the start, so raw files
-  from most cameras no longer open noticeably too bright. If you already use FerrumPix, nothing
-  changes for you and your edited pictures keep their look; you can switch it on in the settings
-  under "Match base brightness to the camera model".
-
-- **Tone sliders recalibrated.** Shadows, whites, highlights and blacks were tuned again to the
-  corrected base brightness. The whites slider now has the strength you would expect in both
-  directions, highlights are a little gentler and pulling the blacks down works more strongly.
-  The shadows slider now also looks at how much of the picture is bright: next to a bright sky
-  or a light wall, dark parts open up further, as in a raw developer. In dark pictures, such as
-  concerts or night shots, the highlights slider now pulls bright areas down much more firmly.
-  All pictures now share one calculation for these sliders, so pictures you edited in earlier
-  versions can look slightly different.
-
 - **See and find your edited pictures.** A new "Edited" section in the gallery filter shows only
   edited or only unedited pictures, so you can select them all and export, convert or upload
   just those. If you like, a small badge on the tile marks edited pictures, next to the one for
@@ -58,6 +36,32 @@
   files exported from FerrumPix store their transparent edges the way other programs expect.
   Combining distant or feathered masks now respects the import's memory limit.
 
+- **Exposure on raw files works like in a raw developer.** The exposure slider now acts on the
+  raw data before the tone curve, so darkening brings back detail in bright skies instead of just
+  greying them, and brightening opens up the shadows more naturally. While you drag, the picture
+  follows at once and already looks almost like the result; a moment after you let go, it is
+  rebuilt from the raw data. Automatic enhancement chooses the exposure the same way and gives
+  the same result however often you press it.
+
+- **Raw files from every camera come out at the right brightness.** On a new installation,
+  FerrumPix now adjusts the base brightness to the camera model from the start, so raw files
+  from most cameras no longer open noticeably too bright. If you already use FerrumPix, nothing
+  changes for you and your edited pictures keep their look; you can switch it on in the settings
+  under "Match base brightness to the camera model".
+
+- **Tone sliders recalibrated.** Shadows, whites, highlights and blacks were tuned again to the
+  corrected base brightness. The whites slider now has the strength you would expect in both
+  directions, highlights are a little gentler and pulling the blacks down works more strongly.
+  The shadows slider now also looks at how much of the picture is bright: next to a bright sky
+  or a light wall, dark parts open up further, as in a raw developer. In dark pictures, such as
+  concerts or night shots, the highlights slider now pulls bright areas down much more firmly.
+  Detail in bright skies and clouds is now always brought back from the raw data, so the
+  checkbox for it in the light panel is gone.
+  All pictures now share one calculation for these sliders, so pictures you edited in earlier
+  versions can look slightly different.
+  
+### Fixes
+  
 - **Smaller fixes.** The text cursor sits in the right place and at the right size, also while
   you resize a text box. The curve editor draws the luminance curve the way it is applied. A
   picture you rename stays in the open burst. Choosing a folder in "Save as", in searches and in

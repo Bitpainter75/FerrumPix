@@ -36,12 +36,12 @@ Namespace ViewModels
         Private Shared _groupCompareProperties As PropertyInfo() = Nothing
 
         ''' <summary>Was ein Gruppenvergleich ueberhaupt merken kann: die Pixelregler und dazu die
-        ''' beiden Felder des Rezepts, die ein Gruppen-Zuruecksetzer ausserdem anfasst, obwohl sie
-        ''' strukturell sind - die Weissabgleich-Vorgabe der Gruppe Farbe und die Lichterrettung der
-        ''' Gruppe Licht.</summary>
+        ''' Feld des Rezepts, das ein Gruppen-Zuruecksetzer ausserdem anfasst, obwohl es strukturell
+        ''' ist - die Weissabgleich-Vorgabe der Gruppe Farbe. (Die Lichterrettung der Gruppe Licht
+        ''' ist immer an und hat nichts zu merken.)</summary>
         Private Shared Function GroupCompareProperties() As PropertyInfo()
             If _groupCompareProperties Is Nothing Then
-                Dim extra = {NameOf(ImageAdjustments.WhiteBalanceMode), NameOf(ImageAdjustments.RawHighlightRecovery)}.
+                Dim extra = {NameOf(ImageAdjustments.WhiteBalanceMode)}.
                     Select(Function(n) GetType(ImageAdjustments).GetProperty(n))
                 _groupCompareProperties = ImageAdjustments.PixelAdjustmentProperties().Concat(extra).ToArray()
             End If

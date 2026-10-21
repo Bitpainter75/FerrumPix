@@ -643,7 +643,7 @@ Namespace Services
 
         Friend Shared Function DecodeOriented(path As String, Optional developRaw As Boolean = True,
                                               Optional lensChoice As LensDataService.Wahl = Nothing,
-                                              Optional recoverHighlights As Boolean = False) As SKBitmap
+                                              Optional recoverHighlights As Boolean = True) As SKBitmap
             ' Echte RAW-Entwicklung, wenn das System-libraw da ist: voll aufgelöstes Demosaic mit
             ' Kamera-Weißabgleich statt der eingebetteten JPEG-Vorschau. Liefert der Decode nichts
             ' (defekte Datei, exotisches Format), greift darunter der bisherige Vorschau-Weg.
@@ -2322,7 +2322,7 @@ Namespace Services
         ''' Der Aufrufer übernimmt den Besitz des Bitmaps.</summary>
         Public Shared Function DecodeWorkingImage(path As String,
                                                   Optional lensChoice As LensDataService.Wahl = Nothing,
-                                                  Optional recoverHighlights As Boolean = False) As SKBitmap
+                                                  Optional recoverHighlights As Boolean = True) As SKBitmap
             Try
                 Return DecodeOriented(path, True, lensChoice, recoverHighlights)
             Catch

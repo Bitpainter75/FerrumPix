@@ -88,7 +88,7 @@ Namespace Services
             Dim applied = 0.0
             Dim developed = False
             Using bmp = If(isFpx, DecodeForOutput(sourcePath),
-                           DecodeOrientedWithExposure(sourcePath, True, Nothing, False, 0.0, applied, developed))
+                           DecodeOrientedWithExposure(sourcePath, True, Nothing, True, 0.0, applied, developed))
                 If bmp Is Nothing Then Return
                 ' Ein .fpx kommt hier schon fertig gerendert an, samt Umkehr aus seinem Rezept; ein
                 ' zweites Umkehren gaebe wieder das Negativ.

@@ -652,16 +652,12 @@ Namespace Services
         ''' die den DECODE aendert und nicht die Reglerkette: LibRaw entklemmt dann die Lichter,
         ''' die Belichtungsrampe gleicht den Normierungsfaktor aus und rollt oben weich aus.
         '''
-        ''' AUS ist die Vorgabe. Aus heisst NICHT "wie vor dem Umbau": der Decode entklemmt seit
-        ''' dem 21.09.2026 immer, damit EIN zwischengespeicherter Stand fuer beide Stellungen
-        ''' taugt. Gegenueber dem Stand davor aendern sich dadurch rund 0,01 Prozent der
-        ''' Bildpunkte, naemlich die mit einem geklemmten Farbkanal. Aus heisst dagegen sehr wohl
-        ''' "bitgleich mit dem Bild, das dieselbe Datei ohne Haken zeigt" - zwischen den beiden
-        ''' Stellungen liegt nur das Knie der Rampe. Siehe RAW_UND_FARBE.md, Schritt 4.
-        '''
-        ''' Das Umschalten kostet eine Umsetzung aus den 16-Bit-Daten - deshalb ist es ein
-        ''' Schalter und kein Regler.</summary>
-        Public Property RawHighlightRecovery As Boolean = False
+        ''' IMMER AN (seit 2026-10-21), ohne Schalter. Gemessen an 29 Bildern mit ausgefressenen
+        ''' Lichtern: ohne Rettung waren 41 % der hellen Flaechen reines Weiss, mit ihr 26 % wie beim
+        ''' Referenzprogramm. Das Feld bleibt im Rezept, damit aeltere Fassungen es lesen; beim Laden
+        ''' wird es auf an gehoben (FpxService.NormalizeLoadedAdjustments). Aus gibt es nur noch fuer
+        ''' Messungen, die ausdruecklich ohne Rettung entwickeln (RAW-Anker, Messprogramme).</summary>
+        Public Property RawHighlightRecovery As Boolean = True
 
         ''' <summary>Den Sensorrand einer RAW abschneiden, so wie Adobe es tut: die aeussersten
         ''' Spalten und Zeilen, die das Demosaic ohne Nachbarn nicht sauber rechnen kann und die

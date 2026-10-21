@@ -6943,9 +6943,10 @@ Namespace ViewModels
         ' weiterhin das alte Bild. Das kostet bei RAW spuerbar Zeit; es ist eine Entscheidung, die
         ' man einmal am Anfang trifft, nicht ein Regler zum Spielen.
 
-        ''' Lichter aus den Rohdaten zurueckholen. Wie die Objektivkorrektur eine Angabe, die den
-        ''' DECODE aendert - deshalb steht sie hier bei ihr und nicht bei den Reglern.
-        Private _rawHighlightRecovery As Boolean = False
+        ''' Lichter aus den Rohdaten zurueckholen: IMMER AN, ohne Schalter (ImageAdjustments.
+        ''' RawHighlightRecovery). Bleibt ein Feld, weil der Decode-Weg es wie die Objektivkorrektur
+        ''' weiterreicht.
+        Private ReadOnly _rawHighlightRecovery As Boolean = True
         ''' Den Sensorrand abschneiden (ImageAdjustments.RawSensorEdgeCrop). Ebenfalls im Decode.
         Private _rawSensorEdgeCrop As Boolean = False
 
@@ -7551,38 +7552,6 @@ Namespace ViewModels
             RaiseResetButtonStateChanged()
             RebuildWorkingImageForLens()
         End Sub
-
-        ''' <summary>Lichter aus den Rohdaten zurueckholen. Ein SCHALTER und kein Regler: die
-        ''' Belichtungsrampe sitzt im Decode, das Umschalten kostet also einen neuen Decode.
-        '''
-        ''' AUS ist die Vorgabe, und zwischen aus und an liegt NUR das Knie der Rampe: unterhalb
-        ''' der Lichter sind beide Stellungen bitgleich, gemessen an zehn Dateien aus acht
-        ''' Formaten ohne einen einzigen abweichenden Bildpunkt.
-        '''
-        ''' NICHT ZU VERWECHSELN mit "wie vor dem Umbau": der Decode entklemmt seit dem
-        ''' 21.09.2026 immer, damit ein zwischengespeicherter Stand fuer beide Stellungen taugt.
-        ''' Gegenueber dem Stand davor haben sich rund 0,01 Prozent der Bildpunkte geaendert.
-        ''' Beides steht in RAW_UND_FARBE.md, Schritt 4.
-        '''
-        ''' Nur RAW-Dateien haben etwas davon; alles andere traegt gar keine Kopffreiheit ueber
-        ''' Weiss.</summary>
-        Public Property RawHighlightRecoveryEnabled As Boolean
-            Get
-                Return _rawHighlightRecovery
-            End Get
-            Set(value As Boolean)
-                If _rawHighlightRecovery = value Then Return
-                CaptureUndoState(NameOf(RawHighlightRecoveryEnabled))
-                _rawHighlightRecovery = value
-                DiagnosticLogService.LogAlways("Editor.RawHighlightRecovery",
-                    $"toggle enabled={value}; source={RenderSourcePath}; baked={_workingImage.HasBakedContent}; rawDeveloped={IsRawDeveloped}")
-                Me.RaisePropertyChanged(NameOf(RawHighlightRecoveryEnabled))
-                RaiseResetButtonStateChanged()
-                ' Derselbe Weg wie bei der Objektivkorrektur: die Stufe sitzt VOR der Reglerkette,
-                ' ein blosses Nachrendern zeigte weiter das alte Bild.
-                RebuildWorkingImageForLens()
-            End Set
-        End Property
 
         ''' <summary>Den Sensorrand einer RAW abschneiden, wie Adobe es tut. Steht bei der
         ''' Objektivkorrektur, weil es wie sie im Decode sitzt; ab Werk aus. Das Umschalten kostet
@@ -23568,10 +23537,6 @@ Namespace ViewModels
                 Case NameOf(Brightness) : Return LocalizationService.T("Helligkeit")
                 Case NameOf(Contrast) : Return LocalizationService.T("Kontrast")
                 Case NameOf(Highlights) : Return LocalizationService.T("Lichter")
-                ' Wortgleich mit dem Schalter im Lichtpanel: der Eintrag in der Historie soll
-                ' heissen wie das Bedienelement, an dem man war. Ein eigener Wortlaut braeuchte
-                ' ausserdem einen eigenen Schluessel in allen Sprachen.
-                Case NameOf(RawHighlightRecoveryEnabled) : Return LocalizationService.T("Lichter aus den Rohdaten holen")
                 Case NameOf(RawSensorEdgeCropEnabled) : Return LocalizationService.T("Sensorrand entfernen")
                 Case NameOf(ShadowsLevel) : Return LocalizationService.T("Tiefen")
                 Case NameOf(Whites) : Return LocalizationService.T("Weiß")
@@ -24400,14 +24365,13 @@ Namespace ViewModels
         Private Sub ApplyAdjustments(adj As ImageAdjustments,
                                      Optional resetTransientSelectionBinding As Boolean = False,
                                      Optional scheduleRender As Boolean = True)
-            ' Die Lichterrettung liegt VOR der Reglerkette im RAW-Decode. Ein wiederhergestelltes
-            ' Rezept (Sidecar, Undo/Redo) darf deshalb nicht bloss die Eigenschaft umstellen und
-            ' das schon entwickelte Arbeitsbild weiterzeigen.
-            Dim rawHighlightRecoveryChanged = _rawHighlightRecovery <> adj.RawHighlightRecovery
-            ' DIE OBJEKTIVKORREKTUR GEHOERT GENAUSO DAZU. Sie stand im Rezept und wirkte in Kachel und
+            ' DIE OBJEKTIVKORREKTUR sitzt im RAW-Decode, VOR der Reglerkette: ein wiederhergestelltes
+            ' Rezept (Sidecar, Undo/Redo) darf deshalb nicht bloss die Felder umstellen und das schon
+            ' entwickelte Arbeitsbild weiterzeigen. Sie stand im Rezept und wirkte in Kachel und
             ' Export, der Editor holte sie beim Oeffnen aber nicht zurueck: die Schalter standen
             ' wieder auf "wie in den Einstellungen", und wer danach speicherte, hatte sie auch aus
-            ' der Datei verloren (Nutzerbefund 0.9.49-4). Wie die Lichterrettung sitzt sie im Decode.
+            ' der Datei verloren (Nutzerbefund 0.9.49-4). Die Lichterrettung ist immer an und kein
+            ' Teil dieser Frage mehr.
             Dim lensChanged = Not Nullable.Equals(_lensDistortion, adj.LensDistortion) OrElse
                               Not Nullable.Equals(_lensTca, adj.LensTca) OrElse
                               Not Nullable.Equals(_lensVignetting, adj.LensVignetting) OrElse
@@ -24441,7 +24405,6 @@ Namespace ViewModels
             _temperature = adj.Temperature
             _tint = adj.Tint
             _whiteBalance = If(String.IsNullOrWhiteSpace(adj.WhiteBalanceMode), "Wie Aufnahme", adj.WhiteBalanceMode)
-            _rawHighlightRecovery = adj.RawHighlightRecovery
             _rawSensorEdgeCrop = adj.RawSensorEdgeCrop
             _lensDistortion = adj.LensDistortion
             _lensTca = adj.LensTca
@@ -24807,7 +24770,7 @@ Namespace ViewModels
             ' Hochskalieren, gilt aber fuer jeden Geometrieschritt.
             RaiseDisplayImageGeometryProperties()
             If lensChanged Then RefreshLensCorrection()
-            If rawHighlightRecoveryChanged OrElse lensChanged Then
+            If lensChanged Then
                 RebuildWorkingImageForLens()
             ElseIf scheduleRender Then
                 SchedulePreviewUpdate()
@@ -25076,7 +25039,6 @@ Namespace ViewModels
             ' Zeilen erbte Bild B die Objektivwahl von Bild A - und weil eine gesetzte Wahl den
             ' Namen aus den Aufnahmedaten SCHLAEGT, fand der Abgleich danach fuer gar kein Bild mehr
             ' etwas.
-            _rawHighlightRecovery = False
             _rawSensorEdgeCrop = False
             _lensDistortion = Nothing
             _lensTca = Nothing
@@ -29458,7 +29420,6 @@ Namespace ViewModels
         End Sub
 
         Private Sub ResetLightInternal()
-            Dim rawHighlightRecoveryChanged = _rawHighlightRecovery
             _brightness = 0
             _contrast = 0
             _highlights = 0
@@ -29471,15 +29432,9 @@ Namespace ViewModels
             ' ausgerechnet der kleine Knopf das Bild kaputt, das der grosse richtig stellt.
             _exposure = ImageAdjustments.ForUneditedRaw(
                 If(RawPreviewService.IsSupportedRaw(RenderSourcePath), RenderSourcePath, Nothing)).Exposure
-            _rawHighlightRecovery = False
             RaiseLightPropertiesChanged()
-            Me.RaisePropertyChanged(NameOf(RawHighlightRecoveryEnabled))
             RaiseResetButtonStateChanged()
-            If rawHighlightRecoveryChanged Then
-                RebuildWorkingImageForLens()
-            Else
-                SchedulePreviewForCurrentTarget()
-            End If
+            SchedulePreviewForCurrentTarget()
         End Sub
 
         Private Sub ResetColorInternal()
@@ -29973,9 +29928,6 @@ Namespace ViewModels
         End Sub
 
         Private Sub RaiseEffectsPropertiesChanged()
-            ' Liegt im Licht-Panel, wird aber auch beim globalen Wiederherstellen zusammen mit den
-            ' uebrigen Dekodieroptionen gemeldet.
-            Me.RaisePropertyChanged(NameOf(RawHighlightRecoveryEnabled))
             Me.RaisePropertyChanged(NameOf(Vignette))
             Me.RaisePropertyChanged(NameOf(VignetteTransition))
             Me.RaisePropertyChanged(NameOf(VignetteRoundness))

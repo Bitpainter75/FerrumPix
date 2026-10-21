@@ -660,7 +660,7 @@ Namespace Services
         ''' ohne LibRaw erneut laufen zu lassen.</param>
         Public Shared Function TryDecode(path As String,
                                          Optional lensChoice As LensDataService.Wahl = Nothing,
-                                         Optional recoverHighlights As Boolean = False,
+                                         Optional recoverHighlights As Boolean = True,
                                          Optional knee As Double = HighlightRecoveryKnee,
                                          Optional exposureEv As Double = 0.0) As SKBitmap
             If String.IsNullOrWhiteSpace(path) OrElse Not IsAvailable Then Return Nothing
@@ -673,7 +673,7 @@ Namespace Services
         ''' dessen Schluessel: ein 1/2-Decode darf niemals als Arbeitsbild wieder herauskommen.</summary>
         Friend Shared Function TryDecodeThumbnail(path As String,
                                                    Optional lensChoice As LensDataService.Wahl = Nothing,
-                                                   Optional recoverHighlights As Boolean = False,
+                                                   Optional recoverHighlights As Boolean = True,
                                                    Optional exposureEv As Double = 0.0) As SKBitmap
             If String.IsNullOrWhiteSpace(path) OrElse Not IsAvailable Then Return Nothing
             Return DecodeGate.Run(Function() DecodeThumbnailIntern(path, lensChoice, recoverHighlights, exposureEv))

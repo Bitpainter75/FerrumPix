@@ -133,6 +133,11 @@ Namespace Services
         Private Shared Function NormalizeLoadedAdjustments(adj As ImageAdjustments) As ImageAdjustments
             If adj Is Nothing Then Return Nothing
 
+            ' DIE LICHTERRETTUNG IST IMMER AN (ImageAdjustments.RawHighlightRecovery). Ein Rezept aus
+            ' der Zeit des Schalters, gespeichert mit aus, wird beim Laden angehoben; die Lichter
+            ' einer solchen Bearbeitung kommen danach aus den Rohdaten zurueck.
+            adj.RawHighlightRecovery = True
+
             ' WEISSABGLEICHSMODELL FESTNAGELN, UND ZWAR ZUERST. Eine Datei ohne dieses Feld stammt
             ' aus der Zeit der alten Rechnung. Trägt sie einen Weißabgleichswert, bedeutet der nur
             ' in jener Rechnung das, was der Nutzer beim Speichern gesehen hat - sie bekommt
