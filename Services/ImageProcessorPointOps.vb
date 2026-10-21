@@ -2004,12 +2004,15 @@ Namespace Services
 
         ''' <summary>Das Strukturglied als Tabelle ueber dem geglaetteten Grauwert: Faktor minus 1,
         ''' Lichter und Tiefen addiert, fuer die Helligkeit (<paramref name="luminance"/>) oder fuer
-        ''' den Abstand der Kanaele vom Grau. Nothing, wenn beide Faktoren ueberall 1 sind.</summary>
+        ''' den Abstand der Kanaele vom Grau. Nothing, wenn beide Faktoren ueberall 1 sind. Der
+        ''' Verstaerker der Helligkeit haengt an der ganzen Belichtung des Rezepts, auch dem Teil,
+        ''' der schon in der RAW-Stufe steckt: geeicht ist er am Ergebnis nach Belichtung.</summary>
         Private Shared Function BuildLocalDetailTable(adj As ImageAdjustments, luminance As Boolean) As Single()
             Dim table = New Single(PointOpTableSize - 1) {}
             Dim any = False
+            Dim exposureEv = adj.Exposure / ImageAdjustments.ExposurePointsPerStop
             Dim gainAt = If(luminance,
-                            New Func(Of String, Double, Double, Double)(AddressOf ToneSliderCurves.LuminanceDetailGain),
+                            New Func(Of String, Double, Double, Double)(Function(s, v, l) ToneSliderCurves.LuminanceDetailGain(s, v, l, exposureEv)),
                             New Func(Of String, Double, Double, Double)(AddressOf ToneSliderCurves.DetailGain))
             For i = 0 To PointOpTableSize - 1
                 Dim l = GrayVToLightness(i / CDbl(PointOpTableSize - 1))
