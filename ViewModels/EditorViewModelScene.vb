@@ -406,6 +406,48 @@ Namespace ViewModels
             RaiseEvent SceneInvalidated(Me, EventArgs.Empty)
         End Sub
 
+        ''' <summary>Der Untergrund der Tonwertkurve, solange die Regler eine Ebene bedienen
+        ''' (IsObjectAdjustModeActive): aus den Bildpunkten GENAU dieser Ebene, gezeichnet mit den
+        ''' Reglerwerten, die gerade in den Feldern stehen. Die Kurve wirkt dann auf sie und nicht
+        ''' auf den Hintergrund; zeigte der Untergrund weiter den Hintergrund, stuende bei einer PSD
+        ''' ohne deckende unterste Ebene gar nichts da (Nutzerbefund).
+        '''
+        ''' Gezaehlt werden nur ihre sichtbaren Punkte (visibleOnly), gezeichnet in Szenengroesse an
+        ''' ihrer Stelle, wie der Export eine einzelne Ebene zeichnet. False, wenn kein Objekt das
+        ''' Reglerziel ist; dann gilt die Szene.</summary>
+        Private Function TryBuildObjectCurveCounts(ByRef counts As (R As Integer(), G As Integer(), B As Integer(), L As Integer())) As Boolean
+            If Not IsObjectAdjustModeActive() Then Return False
+            Dim scene = _sceneSk
+            If scene Is Nothing OrElse scene.Width <= 0 OrElse scene.Height <= 0 Then Return False
+            If _objectAdjustIndex < 0 OrElse _objectAdjustIndex >= _annotations.Count Then Return False
+            Dim annotation = _annotations(_objectAdjustIndex)
+            If annotation Is Nothing Then Return False
+            Try
+                ' Die laufenden Reglerwerte gehoeren dem Objekt, stehen aber erst beim Wechsel des
+                ' Reglerziels in seinem Modell. Gezeichnet wird deshalb ein Klon mit ihnen.
+                Dim forRender = annotation.Clone()
+                Dim live = BuildAdjustmentsFromFields().ExtractPixelAdjustments()
+                forRender.Adjustments = If(live.HasPixelAdjustments(), live, Nothing)
+                forRender.IsVisible = True
+                ' Das volle Rezept und nicht der Schnappschuss des Kompositors: der traegt keine
+                ' Masken, und eine maskierte Ebene zaehlte sonst auch ihre verdeckten Punkte.
+                Dim context = GetCurrentAdjustments(forPreview:=True, includeEditorOverlayAnnotations:=True)
+                Using layer = New SKBitmap(New SKImageInfo(scene.Width, scene.Height, SKColorType.Rgba8888, SKAlphaType.Premul))
+                    Using canvas = New SKCanvas(layer)
+                        canvas.Clear(SKColors.Transparent)
+                        ImageProcessor.DrawAnnotationsOnCanvas(canvas, context, scene.Width, scene.Height,
+                                                               0, 0, scene.Width, scene.Height,
+                                                               New List(Of ImageAnnotation) From {forRender})
+                    End Using
+                    counts = ImageProcessor.BuildChannelHistogramCounts(layer, visibleOnly:=True)
+                End Using
+                Return True
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Editor.ObjectCurveCounts", ex)
+                Return False
+            End Try
+        End Function
+
         ''' <summary>Liegt mindestens ein Objekt im Kompositor, also NICHT in der Szene?</summary>
         Private Function HasCompositorObjects() As Boolean
             Dim adj = GetCompositorBlitAdjustments()

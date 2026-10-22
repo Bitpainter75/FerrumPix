@@ -2289,7 +2289,10 @@ Namespace Services
         End Function
 
         ' Rohe Histogramm-Zähldaten je Kanal (R/G/B/Luminanz) für den Kurven-Editor.
-        Public Shared Function BuildChannelHistogramCounts(source As SKBitmap) As (R As Integer(), G As Integer(), B As Integer(), L As Integer())
+        ''' <param name="visibleOnly">Nur Punkte zählen, die mindestens halb deckend sind. Für eine
+        ''' einzelne Ebene auf durchsichtigem Grund: sonst zählte jeder leere Punkt als Schwarz, und
+        ''' ein Berg ganz links drückte die eigentliche Verteilung flach.</param>
+        Public Shared Function BuildChannelHistogramCounts(source As SKBitmap, Optional visibleOnly As Boolean = False) As (R As Integer(), G As Integer(), B As Integer(), L As Integer())
             Dim r = New Integer(255) {}
             Dim g = New Integer(255) {}
             Dim b = New Integer(255) {}
@@ -2301,6 +2304,7 @@ Namespace Services
             For y As Integer = 0 To source.Height - 1 Step stepY
                 For x As Integer = 0 To source.Width - 1 Step stepX
                     Dim c = source.GetPixel(x, y)
+                    If visibleOnly AndAlso c.Alpha < 128 Then Continue For
                     r(c.Red) += 1
                     g(c.Green) += 1
                     b(c.Blue) += 1

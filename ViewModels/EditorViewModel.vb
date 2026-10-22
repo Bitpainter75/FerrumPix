@@ -28820,6 +28820,10 @@ Namespace ViewModels
 
             Me.RaisePropertyChanged(NameOf(IsAdjustingObject))
             Me.RaisePropertyChanged(NameOf(CanCompareAdjustmentGroups))
+            ' Der Untergrund der Kurve gehoert dem Reglerziel (TryBuildObjectCurveCounts): mit
+            ' dem Wechsel zwischen Bild und Ebene muss er nachziehen, auch wenn am Bild nichts
+            ' neu zu rechnen ist.
+            ScheduleScopeUpdate()
             ' GERECHNET wird nur, wenn am Bild wirklich etwas anders wird - also wenn die Anpassung
             ' des bisherigen Objekts sich geaendert hat. Ein blosser Wechsel der Markierung stellt
             ' die Regler um und laesst das Bild, wie es ist. Vorher standen hier drei Anstoesse je
@@ -31227,9 +31231,12 @@ Namespace ViewModels
                 ' Der Untergrund der Tonwertkurve kommt aus DERSELBEN Szene: er zeigt damit den
                 ' Stand, gegen den man die Kurve gerade zieht, und nicht mehr den der Datei. Die
                 ' Objekte im Kompositor gehören NICHT dazu: sie liegen über der Reglerkette, die
-                ' Kurve verändert sie nicht.
+                ' globale Kurve verändert sie nicht. Bedienen die Regler eine Ebene, wirkt die
+                ' Kurve auf SIE, und der Untergrund kommt aus ihr (TryBuildObjectCurveCounts).
                 If IsCurveHistogramLive Then
-                    _curveHistogramCounts = ImageProcessor.BuildChannelHistogramCounts(scene)
+                    Dim objectCounts As (R As Integer(), G As Integer(), B As Integer(), L As Integer()) = Nothing
+                    _curveHistogramCounts = If(TryBuildObjectCurveCounts(objectCounts), objectCounts,
+                                               ImageProcessor.BuildChannelHistogramCounts(scene))
                     Me.RaisePropertyChanged(NameOf(ActiveCurveHistogramCounts))
                 End If
                 _scopeDirty = False

@@ -26,4 +26,6 @@
   the export dialog.
 - **Histogram, waveform and RGB parade in the editor** now show the whole picture including its
   layers and objects. With layered PSD files they stayed empty.
+- **Tone curve on a layer:** when you adjust a layer, the histogram behind the curve now shows
+  that layer instead of the background, so it no longer stays empty with layered PSD files.
 
