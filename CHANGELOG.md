@@ -56,7 +56,8 @@
   
 - **Vibrance protects skin tones:** raising Vibrance now holds back on reds, oranges and skin
   while lifting greens, blues and skies more, and it no longer brightens colours as it saturates
-  them. Before, it acted almost like Saturation.
+  them. Before, it acted almost like Saturation. It is also gentler overall now, especially on
+  faces, so skin no longer turns orange at high settings.
   
 - **ISO on Nikon JPGs:** pictures taken at the extended Hi ISO settings now show their ISO in the
   gallery and the info panel. Before, only the NEF files had it.

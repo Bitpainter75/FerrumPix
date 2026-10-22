@@ -1171,15 +1171,24 @@ Namespace Services
         ' Farbtonfeld zu 20 Grad und Saettigung bis 0,4, ueber die Bilder wieder der Median, leicht
         ' geglaettet (1/4, 1/2, 1/4 ueber die Nachbarfelder). Die Referenz schont Rot, Orange und Pink
         ' - die Hauttoene - deutlich und hebt Gruen bis Cyan am staerksten; die alte, ueber den Farbton
-        ' gleiche Formel gab der Haut bei +50 das Dreifache (Nutzerbefund: Dynamik wirkte wie
-        ' Saettigung). Die negative Dynamik wirkt bei der Referenz ueber den Farbton gleich und bleibt
-        ' bei MeasuredVibrance. Feld i hat seine Mitte bei 20 * i + 10 Grad.
+        ' gleiche Formel gab der Haut bei +50 das Dreifache (Dynamik wirkte wie Saettigung). Die
+        ' negative Dynamik wirkt bei der Referenz ueber den Farbton gleich und bleibt bei
+        ' MeasuredVibrance. Feld i hat seine Mitte bei 20 * i + 10 Grad.
+        '
+        ' NACHGEEICHT AN DER BUNTHEIT. Abgelesen war v an der HSL-Saettigung, und die Verstaerkung
+        ' unten glich die fehlende Abdunklung durch mehr Farbe aus. Gemessen an der Buntheit in Lab
+        ' (Median je Farbtonfeld, Saettigung 0,1 bis 0,5) lag die Dynamik dadurch fast ueberall zu
+        ' hoch: Rot und Pink 1,7- bis 1,9-fach, Blau bis Violett 1,4- bis 1,6-fach, an Gesichtern
+        ' (26 Portraets) 1,6-fach. Jedes Feld ist durch dieses Verhaeltnis geteilt, bei +50 und +100
+        ' getrennt. Fuer 20 bis 40 Grad das geometrische Mittel aus Flaechen (1,17) und Gesichtern
+        ' (1,65 bzw. 1,54): die Referenz schont Haut dort staerker als gleichfarbige Flaechen, und
+        ' das laesst sich ueber den Farbton allein nicht nachbilden.
         Private Shared ReadOnly VibranceHue50 As Single() = {
-            0.21F, 0.32F, 0.45F, 0.53F, 0.56F, 0.57F, 0.6F, 0.62F, 0.6F,
-            0.58F, 0.54F, 0.49F, 0.46F, 0.44F, 0.44F, 0.41F, 0.3F, 0.21F}
+            0.12F, 0.22F, 0.45F, 0.46F, 0.46F, 0.43F, 0.48F, 0.46F, 0.54F,
+            0.59F, 0.46F, 0.3F, 0.28F, 0.31F, 0.36F, 0.34F, 0.23F, 0.12F}
         Private Shared ReadOnly VibranceHue100 As Single() = {
-            0.85F, 1.19F, 1.71F, 2.14F, 2.33F, 2.33F, 2.28F, 2.24F, 2.2F,
-            2.16F, 1.99F, 1.7F, 1.54F, 1.62F, 1.83F, 1.71F, 1.23F, 0.86F}
+            0.49F, 0.89F, 1.82F, 1.93F, 1.91F, 1.74F, 1.92F, 1.85F, 2.16F,
+            2.1F, 1.47F, 1.08F, 1.01F, 1.11F, 1.29F, 1.2F, 0.83F, 0.45F}
 
         ''' <summary>Verstaerkung der Tabellen, weil die Dynamik die Leuchtdichte haelt. Abgelesen
         ''' sind die Tabellen an einer Wirkung, die die Helligkeit mitnimmt; ohne sie fiel die Wirkung
