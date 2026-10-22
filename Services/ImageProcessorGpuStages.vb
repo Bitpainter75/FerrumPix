@@ -337,52 +337,107 @@ half4 writePremul(float3 rgb, float a) {
                 boxes = {(-(window \ 2), window), (-(window \ 2 - 1), window), (-(window \ 2), window + 1)}
             End If
             Dim border = If(odd, 3 * ((window - 1) \ 2), 3 * (window \ 2) - 1)
+            Dim partialBytes = StageEffect("Kasten Teilsumme Bytes", FloatShaderCommon & BoxPartialBytesShader)
+            Dim partialPairs = StageEffect("Kasten Teilsumme Paare", FloatShaderCommon & BoxPartialPairsShader)
             Dim first = StageEffect("Kasten erster", FloatShaderCommon & BoxFirstShader)
             Dim middle = StageEffect("Kasten mittel", FloatShaderCommon & BoxMiddleShader)
             Dim last = StageEffect("Kasten letzter", FloatShaderCommon & BoxLastShader)
 
+            ' JEDER KASTEN IN ZWEI DURCHGAENGEN. Ein Kasten der Breite w las je Bildpunkt w Werte,
+            ' bei w um 140 also gut 800 je Richtung. Zerlegt in Teilsummen ueber m (etwa Wurzel w)
+            ' Punkte und dann w \ m Teilsummen im Abstand m plus die restlichen w Mod m Punkte sind es
+            ' rund 3 Wurzel w. Die Teilsumme an t steht fuer die Punkte ab t + offset; die Flaeche
+            ' reicht um (w \ m - 1) m ueber die Ausgabe hinaus, so weit greift die Summe.
             Dim direction = Function(input As SKImage, horizontal As Boolean) As SKSurface
                                 Dim w = input.Width, h = input.Height
                                 Dim extW = If(horizontal, w + 2 * border, w)
                                 Dim extH = If(horizontal, h, h + 2 * border)
                                 Dim dirValue = If(horizontal, New Single() {1, 0}, New Single() {0, 1})
+                                ' Lage der Eingabe gegenueber der Ausgabe: der erste Kasten liest das Bild
+                                ' und schreibt das erweiterte Feld, der letzte umgekehrt.
+                                Dim shifts = {-border, 0, border}
                                 Dim boxUniforms = Function(effect As SKRuntimeEffect, box As Integer, half As Single) As SKRuntimeEffectUniforms
                                                       Dim u = New SKRuntimeEffectUniforms(effect)
+                                                      Dim boxWidth = boxes(box).Width
+                                                      Dim stride = Math.Max(1, CInt(Math.Round(Math.Sqrt(boxWidth))))
+                                                      Dim count = boxWidth \ stride
                                                       u("direction") = dirValue
-                                                      u("start") = CSng(boxes(box).Start)
-                                                      u("boxWidth") = CSng(boxes(box).Width)
-                                                      u("border") = CSng(border)
+                                                      u("offset") = CSng(shifts(box) + boxes(box).Start)
+                                                      u("stride") = CSng(stride)
+                                                      u("count") = CSng(count)
+                                                      u("boxWidth") = CSng(boxWidth)
                                                       ' Mittel statt Summe: die Summe des zweiten Kastens
                                                       ' laege bis 255 w^2 und damit ueber dem Hoechstwert
                                                       ' der halben Gleitkomma (65504).
-                                                      u("scale") = If(box < 2, 1.0F / boxes(box).Width, CSng(boxes(0).Width) * boxes(1).Width)
+                                                      u("scale") = If(box < 2, 1.0F / boxWidth, CSng(boxes(0).Width) * boxes(1).Width)
                                                       u("imageSize") = New Single() {w, h}
                                                       u("extSize") = New Single() {extW, extH}
                                                       u("part") = half
                                                       Return u
                                                   End Function
-                                ' Erster Kasten: aus den Bytes, je Haelfte der Kanaele eine Flaeche.
+                                ' Groesse der Teilsummenflaeche zu einem Kasten mit Ausgabe outW x outH.
+                                Dim partialSize = Function(box As Integer, outW As Integer, outH As Integer) As (W As Integer, H As Integer)
+                                                      Dim boxWidth = boxes(box).Width
+                                                      Dim stride = Math.Max(1, CInt(Math.Round(Math.Sqrt(boxWidth))))
+                                                      Dim reach = (boxWidth \ stride - 1) * stride
+                                                      Return If(horizontal, (outW + reach, outH), (outW, outH + reach))
+                                                  End Function
+                                Dim partialOf = Function(effect As SKRuntimeEffect, box As Integer, half As Single, outW As Integer, outH As Integer,
+                                                         children As (Name As String, Image As SKImage)()) As SKSurface
+                                                    Dim size = partialSize(box, outW, outH)
+                                                    Dim u = boxUniforms(effect, box, half)
+                                                    If effect Is partialBytes Then u("clampEdges") = If(clampEdges, 1.0F, 0.0F)
+                                                    Return DrawInto(NewFloatSurface(gr, size.W, size.H), size.W, size.H, effect, u, children)
+                                                End Function
                                 Dim a1 As SKSurface = Nothing, a2 As SKSurface = Nothing, b1 As SKSurface = Nothing, b2 As SKSurface = Nothing
+                                Dim p1 As SKSurface = Nothing, p2 As SKSurface = Nothing
+                                Dim freePartials = Sub()
+                                                       p1?.Dispose() : p2?.Dispose()
+                                                       p1 = Nothing : p2 = Nothing
+                                                   End Sub
                                 Try
-                                    Dim fu1 = boxUniforms(first, 0, 0.0F) : fu1("clampEdges") = If(clampEdges, 1.0F, 0.0F)
-                                    Dim fu2 = boxUniforms(first, 0, 1.0F) : fu2("clampEdges") = If(clampEdges, 1.0F, 0.0F)
-                                    a1 = DrawInto(NewFloatSurface(gr, extW, extH), extW, extH, first, fu1, ("src", input))
-                                    a2 = DrawInto(NewFloatSurface(gr, extW, extH), extW, extH, first, fu2, ("src", input))
+                                    ' Erster Kasten: aus den Bytes, je Haelfte der Kanaele eine Flaeche.
+                                    p1 = partialOf(partialBytes, 0, 0.0F, extW, extH, {("src", input)})
+                                    p2 = partialOf(partialBytes, 0, 1.0F, extW, extH, {("src", input)})
+                                    If p1 Is Nothing OrElse p2 Is Nothing Then Return Nothing
+                                    Using pi1 = p1.Snapshot(), pi2 = p2.Snapshot()
+                                        Dim fu1 = boxUniforms(first, 0, 0.0F) : fu1("clampEdges") = If(clampEdges, 1.0F, 0.0F)
+                                        Dim fu2 = boxUniforms(first, 0, 1.0F) : fu2("clampEdges") = If(clampEdges, 1.0F, 0.0F)
+                                        a1 = DrawInto(NewFloatSurface(gr, extW, extH), extW, extH, first, fu1, ("src", input), ("partial", pi1))
+                                        a2 = DrawInto(NewFloatSurface(gr, extW, extH), extW, extH, first, fu2, ("src", input), ("partial", pi2))
+                                    End Using
+                                    freePartials()
                                     If a1 Is Nothing OrElse a2 Is Nothing Then Return Nothing
                                     Using ai1 = a1.Snapshot(), ai2 = a2.Snapshot()
-                                        b1 = DrawInto(NewFloatSurface(gr, extW, extH), extW, extH, middle, boxUniforms(middle, 1, 0.0F), ("lowPair", ai1), ("highPair", ai2))
-                                        b2 = DrawInto(NewFloatSurface(gr, extW, extH), extW, extH, middle, boxUniforms(middle, 1, 1.0F), ("lowPair", ai1), ("highPair", ai2))
+                                        p1 = partialOf(partialPairs, 1, 0.0F, extW, extH, {("lowPair", ai1), ("highPair", ai2)})
+                                        p2 = partialOf(partialPairs, 1, 1.0F, extW, extH, {("lowPair", ai1), ("highPair", ai2)})
+                                        If p1 Is Nothing OrElse p2 Is Nothing Then Return Nothing
+                                        Using pi1 = p1.Snapshot(), pi2 = p2.Snapshot()
+                                            b1 = DrawInto(NewFloatSurface(gr, extW, extH), extW, extH, middle, boxUniforms(middle, 1, 0.0F),
+                                                          ("lowPair", ai1), ("highPair", ai2), ("partial", pi1))
+                                            b2 = DrawInto(NewFloatSurface(gr, extW, extH), extW, extH, middle, boxUniforms(middle, 1, 1.0F),
+                                                          ("lowPair", ai1), ("highPair", ai2), ("partial", pi2))
+                                        End Using
                                     End Using
+                                    freePartials()
+                                    a1.Dispose() : a2.Dispose() : a1 = Nothing : a2 = Nothing
                                     If b1 Is Nothing OrElse b2 Is Nothing Then Return Nothing
                                     Using bi1 = b1.Snapshot(), bi2 = b2.Snapshot()
-                                        Dim lu = boxUniforms(last, 2, 0.0F)
-                                        lu("divisor") = CSng(divisor)
-                                        lu("halfDivisor") = CSng((divisor + 1) >> 1)
-                                        lu("factorError") = CSng((factor - 4294967296.0 / divisor) / 4294967296.0)
-                                        Return DrawStage(gr, w, h, last, lu, ("lowPair", bi1), ("highPair", bi2))
+                                        p1 = partialOf(partialPairs, 2, 0.0F, w, h, {("lowPair", bi1), ("highPair", bi2)})
+                                        p2 = partialOf(partialPairs, 2, 1.0F, w, h, {("lowPair", bi1), ("highPair", bi2)})
+                                        If p1 Is Nothing OrElse p2 Is Nothing Then Return Nothing
+                                        Using pi1 = p1.Snapshot(), pi2 = p2.Snapshot()
+                                            Dim lu = boxUniforms(last, 2, 0.0F)
+                                            lu("divisor") = CSng(divisor)
+                                            lu("halfDivisor") = CSng((divisor + 1) >> 1)
+                                            lu("factorError") = CSng((factor - 4294967296.0 / divisor) / 4294967296.0)
+                                            Return DrawStage(gr, w, h, last, lu, ("lowPair", bi1), ("highPair", bi2),
+                                                             ("partialLow", pi1), ("partialHigh", pi2))
+                                        End Using
                                     End Using
                                 Finally
                                     a1?.Dispose() : a2?.Dispose() : b1?.Dispose() : b2?.Dispose()
+                                    freePartials()
                                 End Try
                             End Function
             Using across = direction(image, True)
@@ -393,89 +448,126 @@ half4 writePremul(float3 rgb, float a) {
             End Using
         End Function
 
-        ' Gemeinsam: e ist die Lage im erweiterten Feld, das Bild beginnt dort bei border.
-        Private Const BoxFirstShader As String = "
+        ' Gemeinsam: der Punkt p der Ausgabe liest die Eingabe ab p + offset, Kastenbreite boxWidth.
+        ' Der erste Kasten liest die Bytes des Bildes (ausserhalb 0 oder der Rand fortgesetzt), die
+        ' anderen die Wertepaare des erweiterten Feldes (ausserhalb 0). Die Teilsumme an t ist die
+        ' Summe ueber stride Punkte ab t + offset; die Summe nimmt count Teilsummen im Abstand
+        ' stride und dazu die restlichen Punkte einzeln.
+        Private Const BoxBytesInput As String = "
 uniform shader src;
+uniform float clampEdges;
+float2 inputAt(float2 q) {
+    float4 b = float4(0.0);
+    if (clampEdges > 0.5) {
+        b = toBytes(src.eval(clamp(q, float2(0.5), imageSize - 0.5)));
+    } else if (q.x > 0.0 && q.y > 0.0 && q.x < imageSize.x && q.y < imageSize.y) {
+        b = toBytes(src.eval(q));
+    }
+    return part < 0.5 ? b.rg : b.ba;
+}
+"
+
+        Private Const BoxPairsInput As String = "
+uniform shader lowPair;
+uniform shader highPair;
+float2 inputAt(float2 q) {
+    if (q.x > 0.0 && q.y > 0.0 && q.x < extSize.x && q.y < extSize.y) {
+        half4 t = part < 0.5 ? lowPair.eval(q) : highPair.eval(q);
+        return float2(joinValue(t.xy), joinValue(t.zw));
+    }
+    return float2(0.0);
+}
+"
+
+        Private Const BoxCommonUniforms As String = "
 uniform float2 direction;
-uniform float start;
+uniform float offset;
+uniform float stride;
+uniform float count;
 uniform float boxWidth;
 uniform float scale;
-uniform float border;
 uniform float2 imageSize;
 uniform float2 extSize;
 uniform float part;
-uniform float clampEdges;
-half4 main(float2 p) {
-    float2 base = p - direction * border;
-    float4 sum = float4(0.0);
-    for (int k = 0; k < 256; k++) {
-        if (float(k) >= boxWidth) break;
-        float2 q = base + direction * (start + float(k));
-        if (clampEdges > 0.5) {
-            sum += toBytes(src.eval(clamp(q, float2(0.5), imageSize - 0.5)));
-        } else if (q.x > 0.0 && q.y > 0.0 && q.x < imageSize.x && q.y < imageSize.y) {
-            sum += toBytes(src.eval(q));
-        }
-    }
-    float2 v1 = splitValue((part < 0.5 ? sum.r : sum.b) * scale);
-    float2 v2 = splitValue((part < 0.5 ? sum.g : sum.a) * scale);
+half4 writePair(float2 v) {
+    float2 v1 = splitValue(v.x);
+    float2 v2 = splitValue(v.y);
     return half4(half(v1.x), half(v1.y), half(v2.x), half(v2.y));
 }
 "
 
-        Private Const BoxMiddleShader As String = "
-uniform shader lowPair;
-uniform shader highPair;
-uniform float2 direction;
-uniform float start;
-uniform float boxWidth;
-uniform float scale;
-uniform float border;
-uniform float2 imageSize;
-uniform float2 extSize;
-uniform float part;
+        Private Const BoxPartialMain As String = "
 half4 main(float2 p) {
+    float2 base = p + direction * offset;
     float2 sum = float2(0.0);
-    for (int k = 0; k < 256; k++) {
-        if (float(k) >= boxWidth) break;
-        float2 q = p + direction * (start + float(k));
-        if (q.x > 0.0 && q.y > 0.0 && q.x < extSize.x && q.y < extSize.y) {
-            half4 t = part < 0.5 ? lowPair.eval(q) : highPair.eval(q);
-            sum += float2(joinValue(t.xy), joinValue(t.zw));
-        }
+    for (int k = 0; k < 32; k++) {
+        if (float(k) >= stride) break;
+        sum += inputAt(base + direction * float(k));
     }
-    float2 v1 = splitValue(sum.x * scale);
-    float2 v2 = splitValue(sum.y * scale);
-    return half4(half(v1.x), half(v1.y), half(v2.x), half(v2.y));
+    return writePair(sum);
 }
 "
+
+        ' Summe ueber die Teilsummen und den Rest, fuer EINE Haelfte der Kanaele.
+        Private Const BoxSumMain As String = "
+uniform shader partial;
+float2 boxSum(float2 p) {
+    float2 sum = float2(0.0);
+    for (int j = 0; j < 256; j++) {
+        if (float(j) >= count) break;
+        half4 t = partial.eval(p + direction * (float(j) * stride));
+        sum += float2(joinValue(t.xy), joinValue(t.zw));
+    }
+    float2 base = p + direction * offset;
+    for (int k = 0; k < 32; k++) {
+        float i = count * stride + float(k);
+        if (i >= boxWidth) break;
+        sum += inputAt(base + direction * i);
+    }
+    return sum;
+}
+half4 main(float2 p) {
+    return writePair(boxSum(p) * scale);
+}
+"
+
+        Private Const BoxPartialBytesShader As String = BoxCommonUniforms & BoxBytesInput & BoxPartialMain
+        Private Const BoxPartialPairsShader As String = BoxCommonUniforms & BoxPairsInput & BoxPartialMain
+        Private Const BoxFirstShader As String = BoxCommonUniforms & BoxBytesInput & BoxSumMain
+        Private Const BoxMiddleShader As String = BoxCommonUniforms & BoxPairsInput & BoxSumMain
 
         ' Der letzte Kasten liest im erweiterten Feld und schreibt das Bild, mit Skias Division.
         Private Const BoxLastShader As String = "
 uniform shader lowPair;
 uniform shader highPair;
-uniform float2 direction;
-uniform float start;
-uniform float boxWidth;
-uniform float scale;
-uniform float border;
-uniform float2 imageSize;
-uniform float2 extSize;
-uniform float part;
+uniform shader partialLow;
+uniform shader partialHigh;
 uniform float divisor;
 uniform float halfDivisor;
 uniform float factorError;
+" & BoxCommonUniforms & "
+float4 pairsAt(float2 q) {
+    if (q.x > 0.0 && q.y > 0.0 && q.x < extSize.x && q.y < extSize.y) {
+        half4 a = lowPair.eval(q);
+        half4 b = highPair.eval(q);
+        return float4(joinValue(a.xy), joinValue(a.zw), joinValue(b.xy), joinValue(b.zw));
+    }
+    return float4(0.0);
+}
 half4 main(float2 p) {
-    float2 e = p + direction * border;
     float4 sum = float4(0.0);
-    for (int k = 0; k < 256; k++) {
-        if (float(k) >= boxWidth) break;
-        float2 q = e + direction * (start + float(k));
-        if (q.x > 0.0 && q.y > 0.0 && q.x < extSize.x && q.y < extSize.y) {
-            half4 a = lowPair.eval(q);
-            half4 b = highPair.eval(q);
-            sum += float4(joinValue(a.xy), joinValue(a.zw), joinValue(b.xy), joinValue(b.zw));
-        }
+    for (int j = 0; j < 256; j++) {
+        if (float(j) >= count) break;
+        float2 q = p + direction * (float(j) * stride);
+        half4 a = partialLow.eval(q);
+        half4 b = partialHigh.eval(q);
+        sum += float4(joinValue(a.xy), joinValue(a.zw), joinValue(b.xy), joinValue(b.zw));
+    }
+    float2 base = p + direction * offset;
+    for (int k = 0; k < 32; k++) {
+        float i = count * stride + float(k);
+        if (i >= boxWidth) break;
+        sum += pairsAt(base + direction * i);
     }
     // Zurueck auf die ganzzahlige Summe; bei grossen Fenstern nur noch auf Bruchteile genau.
     float4 n = floor(sum * scale + 0.5) + halfDivisor;
@@ -602,7 +694,7 @@ half4 main(float2 p) {
             Dim sigma = 0.25F + Clamp(amount, 0, 1) * 2.2F
             Dim d = Clamp(detail, 0, 1)
             Return Function(gr, image)
-                       Dim blurred = RasterBlurOnGpu(gr, image, sigma)
+                       Dim blurred = RasterBlurOnGpu(gr, image, sigma, clampEdges:=True)
                        If blurred Is Nothing OrElse d <= 0 Then Return blurred
                        Try
                            Using blurImage = blurred.Snapshot()
@@ -655,7 +747,7 @@ half4 main(float2 p) {
             Dim coarseSigma = CoarseChromaSigma(source, amount)
             If Not RasterBlurSupported(sigma) OrElse (coarseSigma > 0.5F AndAlso Not RasterBlurSupported(coarseSigma)) Then Return Nothing
             Return Function(gr, image)
-                       Using blurred = RasterBlurOnGpu(gr, image, sigma)
+                       Using blurred = RasterBlurOnGpu(gr, image, sigma, clampEdges:=True)
                            If blurred Is Nothing Then Return Nothing
                            Using blurImage = blurred.Snapshot()
                                Dim effect = StageEffect("Farbrauschen", ColorNoiseShader)
@@ -665,7 +757,7 @@ half4 main(float2 p) {
                                    Return DrawStage(gr, image.Width, image.Height, effect, u, ("src", image), ("mixed", blurImage))
                                End If
                                ' Der grobe Durchgang setzt auf dem feinen auf.
-                               Using coarse = RasterBlurOnGpu(gr, blurImage, coarseSigma)
+                               Using coarse = RasterBlurOnGpu(gr, blurImage, coarseSigma, clampEdges:=True)
                                    If coarse Is Nothing Then Return Nothing
                                    Using coarseImage = coarse.Snapshot()
                                        Return DrawStage(gr, image.Width, image.Height, effect, u, ("src", image), ("mixed", coarseImage))
@@ -1110,7 +1202,7 @@ half4 main(float2 p) {
             Dim factor = Clamp(amount, -1, 1) * 2.4F
             Dim sigma = 0.25F + Clamp(3.6F / 8.0F, 0, 1) * 2.2F
             Return Function(gr, image)
-                       Using blurred = RasterBlurOnGpu(gr, image, sigma)
+                       Using blurred = RasterBlurOnGpu(gr, image, sigma, clampEdges:=True)
                            If blurred Is Nothing Then Return Nothing
                            Using blurImage = blurred.Snapshot()
                                Dim effect = StageEffect("Lokalkontrast", LocalContrastShader)
@@ -1517,7 +1609,7 @@ half4 main(float2 p) {
             Dim sigma = 0.25F + 0.8F * 2.2F
             Dim sv = strength * 0.55F
             Return Function(gr, image)
-                       Using blurred = RasterBlurOnGpu(gr, image, sigma)
+                       Using blurred = RasterBlurOnGpu(gr, image, sigma, clampEdges:=True)
                            If blurred Is Nothing Then Return Nothing
                            Using blurImage = blurred.Snapshot()
                                Dim effect = StageEffect("Gluehen", GlowShader)
@@ -1551,7 +1643,7 @@ half4 main(float2 p) {
             If strength <= 0 Then Return Nothing
             Dim sigma = 0.25F + 0.3F * 2.2F
             Return Function(gr, image)
-                       Using blurred = RasterBlurOnGpu(gr, image, sigma)
+                       Using blurred = RasterBlurOnGpu(gr, image, sigma, clampEdges:=True)
                            If blurred Is Nothing Then Return Nothing
                            Using blurImage = blurred.Snapshot()
                                Return OverlayOnGpu(gr, image, blurImage, ClampToByte(255 * strength))
@@ -2460,7 +2552,7 @@ half4 main(float2 p) {
             If Not RasterBlurSupported(sigma) Then Return Nothing
             Return Function(gr, image)
                        ' Die Unschaerfe wie Skia auf dem Prozessor (SKImageFilter.CreateBlur).
-                       Using blurSurface = RasterBlurOnGpu(gr, image, sigma)
+                       Using blurSurface = RasterBlurOnGpu(gr, image, sigma, clampEdges:=True)
                            If blurSurface Is Nothing Then Return Nothing
                            Using blurred = blurSurface.Snapshot()
                                Dim effect = StageEffect("Unschaerfemaske", UnsharpMaskShader)

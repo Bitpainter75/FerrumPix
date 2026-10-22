@@ -71,4 +71,8 @@
 - **Face names from other photo programs:** named faces that another program stored in an XMP
   sidecar file now come into FerrumPix with their name and position. Before, files in the common
   notation of these programs were skipped.
+  
+- **Clean picture edges:** noise reduction, colour noise reduction, structure, glow, the soft
+  filter and sharpening no longer darken the border of the picture or make it slightly
+  transparent. With colour noise reduction the colours at the border no longer shift either.
 

@@ -6013,14 +6013,8 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             Dim masking = Clamp(maskingAmount, 0, 1)
 
             Dim result = New SKBitmap(source.Width, source.Height, source.ColorType, source.AlphaType)
-            Dim blurred = New SKBitmap(source.Width, source.Height, source.ColorType, source.AlphaType)
-            Using canvas = New SKCanvas(blurred)
-                Using filter = SKImageFilter.CreateBlur(sigma, sigma)
-                    Using paint = New SKPaint With {.ImageFilter = filter}
-                        canvas.DrawBitmap(source, 0, 0, paint)
-                    End Using
-                End Using
-            End Using
+            ' Rand fortgesetzt, auf ein geleertes Ziel (siehe ApplyNoiseReduction).
+            Dim blurred = GaussianClamped(source, sigma)
 
             Dim srcBuf As Byte() = Nothing, blurBuf As Byte() = Nothing, dstBuf As Byte() = Nothing
             Dim stride, ri, gi, bi, ai As Integer

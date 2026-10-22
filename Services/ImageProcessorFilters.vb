@@ -78,28 +78,16 @@ Namespace Services
             ' Pixel um maximal 7 bzw. 6 Tonwerte) - deshalb kam die Ueberblendung dazu. Sie linear an
             ' den Reglerwert zu haengen war dann die Uebertreibung in die andere Richtung.
             Dim sigma = 0.5F + fein * 2.0F
-            Dim blurred = New SKBitmap(source.Width, source.Height, source.ColorType, source.AlphaType)
-            Using filter = SKImageFilter.CreateBlur(sigma, sigma)
-                Using paint = New SKPaint With {.ImageFilter = filter}
-                    Using canvas = New SKCanvas(blurred)
-                        canvas.DrawBitmap(source, 0, 0, paint)
-                    End Using
-                End Using
-            End Using
+            ' Rand fortgesetzt (GaussianClamped): mit durchsichtigem Rand mischte die Weichzeichnung
+            ' dort Durchsichtigkeit in die vormultiplizierten Bytes, und weil diese Stufe sie roh
+            ' liest, verschob sich die Farbe am Bildrand (gemessen an einer Flaeche 180/120/60: in
+            ' der Ecke a47c54 statt b4783c).
+            Dim blurred = GaussianClamped(source, sigma)
 
             ' Grober Pass auf dem feinen: nimmt die FLECKEN, die der feine Radius nicht erreicht.
             Dim coarseSigma = CoarseChromaSigma(source, amount)
             Dim coarse As SKBitmap = Nothing
-            If coarseSigma > 0.5F Then
-                coarse = New SKBitmap(source.Width, source.Height, source.ColorType, source.AlphaType)
-                Using filter = SKImageFilter.CreateBlur(coarseSigma, coarseSigma)
-                    Using paint = New SKPaint With {.ImageFilter = filter}
-                        Using canvas = New SKCanvas(coarse)
-                            canvas.DrawBitmap(blurred, 0, 0, paint)
-                        End Using
-                    End Using
-                End Using
-            End If
+            If coarseSigma > 0.5F Then coarse = GaussianClamped(blurred, coarseSigma)
 
             Dim srcBuf As Byte() = Nothing
             Dim srcStride As Integer = 0
@@ -1075,14 +1063,11 @@ Namespace Services
 
         Private Shared Function ApplyNoiseReduction(source As SKBitmap, amount As Single, Optional detail As Single = 0) As SKBitmap
             Dim sigma = 0.25F + Clamp(amount, 0, 1) * 2.2F
-            Dim filter = SKImageFilter.CreateBlur(sigma, sigma)
-            Dim paint = New SKPaint With {.ImageFilter = filter}
-            Dim blurred = New SKBitmap(source.Width, source.Height, source.ColorType, source.AlphaType)
-            Using canvas = New SKCanvas(blurred)
-                canvas.DrawBitmap(source, 0, 0, paint)
-            End Using
-            filter.Dispose()
-            paint.Dispose()
+            ' Rand fortgesetzt (GaussianClamped), auf ein geleertes Ziel. Mit durchsichtigem Rand
+            ' wurde der Bildrand durchscheinend (in der Ecke Alpha 101) und bei einem als deckend
+            ' markierten Foto dunkel; das traf auch Struktur, Gluehen und den Filter "weich", die
+            ' hierueber weichzeichnen.
+            Dim blurred = GaussianClamped(source, sigma)
 
             ' Detail 0 = reines Weichzeichnen wie bisher (bitgenau der frühere Rückgabewert).
             Dim d = Clamp(detail, 0, 1)
@@ -2588,9 +2573,10 @@ Namespace Services
             strength = Clamp(strength, 0, 1)
             If strength <= 0 Then Return source
             Using blurred = ApplyNoiseReduction(source, 0.3F)
-                Dim result = New SKBitmap(source.Width, source.Height, source.ColorType, source.AlphaType)
+                ' Eine Kopie der Quelle als Grund, kein frisch angelegtes Bitmap: dessen Inhalt ist
+                ' unbestimmt, und ueber ihm entschied der Speicher mit, was am Rand stand.
+                Dim result = CloneBitmap(source)
                 Using canvas = New SKCanvas(result)
-                    canvas.DrawBitmap(source, 0, 0)
                     Using paint = New SKPaint With {.Color = New SKColor(255, 255, 255, ClampToByte(255 * strength))}
                         canvas.DrawBitmap(blurred, 0, 0, paint)
                     End Using

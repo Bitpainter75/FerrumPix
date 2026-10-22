@@ -57,6 +57,7 @@ Namespace Services
         Private Shared _renderer As String = ""
 
         Private Shared _enabled As Boolean
+        Private Shared _completedJobs As Long
 
         Private Sub New()
         End Sub
@@ -92,6 +93,16 @@ Namespace Services
         Public Shared ReadOnly Property Renderer As String
             Get
                 Return _renderer
+            End Get
+        End Property
+
+        ''' <summary>Wie viele Auftraege die Karte seit dem Start ohne Fehler erledigt hat. Belegt
+        ''' im Pruefstand, dass ein Vergleich wirklich auf der Karte lief: faellt die Arbeit still
+        ''' auf den Prozessor zurueck, sind beide Ergebnisse gleich und der Vergleich waere grundlos
+        ''' gruen.</summary>
+        Public Shared ReadOnly Property CompletedJobs As Long
+            Get
+                Return Interlocked.Read(_completedJobs)
             End Get
         End Property
 
@@ -139,6 +150,7 @@ Namespace Services
                 Return False
             End If
             result = value
+            Interlocked.Increment(_completedJobs)
             Return True
         End Function
 
