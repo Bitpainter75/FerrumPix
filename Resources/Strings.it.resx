@@ -9890,4 +9890,10 @@
   <data name="Nur_unbearbeitete_317574e9" xml:space="preserve">
     <value>Solo non modificate</value>
   </data>
+  <data name="0_Textebenen_ohne_sichtbaren_Inhalt_lassen_sich__bbfcd191" xml:space="preserve">
+    <value>{0} livelli di testo senza contenuto visibile non possono essere importati e mancano.</value>
+  </data>
+  <data name="0_Textebenen_sind_ungleich_gestreckt_und_kommen__50373be7" xml:space="preserve">
+    <value>{0} livelli di testo sono allungati in modo non uniforme e arrivano come immagine, il loro testo non è modificabile.</value>
+  </data>
 </root>

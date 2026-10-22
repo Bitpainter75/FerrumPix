@@ -9930,4 +9930,10 @@
   <data name="Nur_unbearbeitete_317574e9" xml:space="preserve">
     <value>Только без изменений</value>
   </data>
+  <data name="0_Textebenen_ohne_sichtbaren_Inhalt_lassen_sich__bbfcd191" xml:space="preserve">
+    <value>{0} текстовых слоёв без видимого содержимого не удаётся перенести, они отсутствуют.</value>
+  </data>
+  <data name="0_Textebenen_sind_ungleich_gestreckt_und_kommen__50373be7" xml:space="preserve">
+    <value>{0} текстовых слоёв растянуты неравномерно и загружаются как изображение, их текст нельзя редактировать.</value>
+  </data>
 </root>

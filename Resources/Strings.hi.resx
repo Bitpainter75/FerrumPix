@@ -9934,4 +9934,10 @@
   <data name="Nur_unbearbeitete_317574e9" xml:space="preserve">
     <value>केवल असंपादित</value>
   </data>
+  <data name="0_Textebenen_ohne_sichtbaren_Inhalt_lassen_sich__bbfcd191" xml:space="preserve">
+    <value>बिना दिखाई देने वाली सामग्री वाली {0} टेक्स्ट परतें नहीं ली जा सकतीं और गायब हैं।</value>
+  </data>
+  <data name="0_Textebenen_sind_ungleich_gestreckt_und_kommen__50373be7" xml:space="preserve">
+    <value>{0} टेक्स्ट परतें असमान रूप से खिंची हुई हैं और चित्र के रूप में आती हैं, उनका पाठ संपादित नहीं किया जा सकता।</value>
+  </data>
 </root>

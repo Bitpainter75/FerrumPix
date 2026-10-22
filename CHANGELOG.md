@@ -8,6 +8,13 @@
   text comes back as text in the right place, even after cropping. Text layers from other
   programs now also keep their angle, alignment and letter spacing when you open them as text.
 
+- **Locked layers stay locked in PSD files.** Locking a layer's position or its transparent
+  pixels now carries over to the PSD and back.
+
+- **Smaller fixes:** invisible layers no longer turn into empty full-size layers in a PSD export,
+  and PSD files open a little faster. The last page of the Windows installer now reads
+  "Launch FerrumPix" in English instead of the German wording.
+
 ## 0.9.69
 
 ### What's new

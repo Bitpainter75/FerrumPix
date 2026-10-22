@@ -19187,7 +19187,14 @@ Namespace ViewModels
             ' Öffnen; beim Blättern bleibt es beim Ebenenstapel, damit dieselbe Datei auf beiden
             ' Wegen gleich aufgebaut ankommt. Schließt der Anwender die Frage, gilt das Gesamtbild:
             ' es ist das, was die Datei wirklich zeigt.
-            If mayAskAboutText AndAlso (importResult.EffectLayers > 0 OrElse importResult.BrokenLayers > 0 OrElse importResult.AdjustmentLayers > 0) Then
+            ' Gestreckter Text kommt immer als Bild. Sagen muss man es nur, wer Text wollte: wer
+            ' "Als Text" gewählt oder festgelegt hat, und wer gar nicht gefragt wurde, weil die
+            ' Datei nur solche Textebenen trägt. Wer "Als Bild" wollte, bekommt genau das.
+            Dim stretchedNotice = importResult.StretchedTextLayers > 0 AndAlso
+                                  (takeTextAsText OrElse (textLayers = 0 AndAlso String.Equals(textImportMode, "Ask", StringComparison.Ordinal)))
+            If mayAskAboutText AndAlso (importResult.EffectLayers > 0 OrElse importResult.BrokenLayers > 0 OrElse
+                                        importResult.AdjustmentLayers > 0 OrElse importResult.DroppedTextLayers > 0 OrElse
+                                        stretchedNotice) Then
                 Dim parts As New List(Of String)()
                 If importResult.EffectLayers > 0 Then
                     parts.Add(String.Format(LocalizationService.T("{0} Ebenen tragen Ebeneneffekte wie Schatten oder Kontur. FerrumPix zeigt diese Ebenen ohne ihre Effekte."), importResult.EffectLayers))
@@ -19197,6 +19204,12 @@ Namespace ViewModels
                 End If
                 If importResult.AdjustmentLayers > 0 Then
                     parts.Add(String.Format(LocalizationService.T("{0} Anpassungsebenen werden nicht übernommen."), importResult.AdjustmentLayers))
+                End If
+                If stretchedNotice Then
+                    parts.Add(String.Format(LocalizationService.T("{0} Textebenen sind ungleich gestreckt und kommen als Bild, ihr Wortlaut lässt sich nicht bearbeiten."), importResult.StretchedTextLayers))
+                End If
+                If importResult.DroppedTextLayers > 0 Then
+                    parts.Add(String.Format(LocalizationService.T("{0} Textebenen ohne sichtbaren Inhalt lassen sich nicht übernehmen und fehlen."), importResult.DroppedTextLayers))
                 End If
                 ' Die Wahl gibt es nur, wenn die Datei ein Gesamtbild in voller Auflösung trägt.
                 ' Ohne „Kompatibilität maximieren" gespeichert (oder zu groß, 32 Bit, Lab) bliebe

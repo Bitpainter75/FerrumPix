@@ -9934,4 +9934,10 @@
   <data name="Nur_unbearbeitete_317574e9" xml:space="preserve">
     <value>편집하지 않은 항목만</value>
   </data>
+  <data name="0_Textebenen_ohne_sichtbaren_Inhalt_lassen_sich__bbfcd191" xml:space="preserve">
+    <value>보이는 내용이 없는 텍스트 레이어 {0}개를 가져올 수 없어 누락되었습니다.</value>
+  </data>
+  <data name="0_Textebenen_sind_ungleich_gestreckt_und_kommen__50373be7" xml:space="preserve">
+    <value>텍스트 레이어 {0}개가 가로세로 비율이 다르게 늘어나 있어 이미지로 가져오며, 텍스트는 편집할 수 없습니다.</value>
+  </data>
 </root>

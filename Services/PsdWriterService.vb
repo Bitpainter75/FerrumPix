@@ -87,9 +87,30 @@ Namespace Services
             ''' Textmaschine zeigt sie.</summary>
             Public Property TextBlock As Byte()
 
+            ''' <summary>Die Sperren, die Photoshop ebenso kennt: die Lage (bei FerrumPix
+            ''' <c>IsLocked</c>, keine geometrische Änderung) und die transparenten Bildpunkte
+            ''' (<c>LockTransparentPixels</c>). Sie gehen als Block "lspf" in die Datei, die
+            ''' Transparenzsperre zusätzlich als Bit 0 der Ebenenmerkmale, wie Photoshop sie
+            ''' schreibt.</summary>
+            Public Property LockPosition As Boolean
+            Public Property LockTransparency As Boolean
+
+            ''' <summary>Eine Ebene ohne sichtbaren Inhalt, die trotzdem in die Datei gehört - ein
+            ''' Text in durchsichtiger Farbe etwa, der als Textebene weiter bearbeitbar sein soll.
+            ''' Sie bekommt wie eine Gruppenmarke ein leeres Rechteck und leere Kanäle; Pixels bleibt
+            ''' Nothing. Ohne diese Angabe wird eine Ebene ohne Bildpunkte übergangen.</summary>
+            Public Property IsEmptyContent As Boolean
+
             Public ReadOnly Property IsGroupMarker As Boolean
                 Get
                     Return SectionType <> 0
+                End Get
+            End Property
+
+            ''' Gruppenmarke oder leere Ebene: kein Rechteck, keine Bildpunkte.
+            Friend ReadOnly Property HasNoPixels As Boolean
+                Get
+                    Return IsGroupMarker OrElse IsEmptyContent
                 End Get
             End Property
         End Class
@@ -102,25 +123,20 @@ Namespace Services
         ''' Bildpunkte sitzen ja an der richtigen Stelle -, aber jedes Programm, das die Ebene
         ''' anfasst, haelt sie fuer bildgross: Auswahlrahmen, Anfasser und Miniaturbild ziehen sich
         ''' ueber das ganze Bild. Beim Zurueckladen in FerrumPix war das sofort zu sehen.</summary>
-        Friend Shared Function CropToContent(source As SKBitmap, ByRef offsetX As Integer, ByRef offsetY As Integer) As SKBitmap
+        ''' <param name="outcome">Was geschehen ist. Nur bei <see cref="CropOutcome.Cropped"/>
+        ''' kommt ein neues Bitmap zurück, sonst Nothing - und der Aufrufer muss die drei übrigen
+        ''' Fälle unterscheiden: einmal ist das Original richtig, einmal gibt es nichts zu zeigen,
+        ''' einmal ließ es sich nicht lesen. Früher kam für alle drei dasselbe Nothing, und jedes Mal
+        ''' wurde die bildgroße Leinwand geschrieben.</param>
+        Friend Shared Function CropToContent(source As SKBitmap, ByRef offsetX As Integer, ByRef offsetY As Integer,
+                                             ByRef outcome As CropOutcome) As SKBitmap
+            outcome = CropOutcome.Failed
             If source Is Nothing OrElse source.Width < 1 OrElse source.Height < 1 Then Return Nothing
 
             Dim width = source.Width
             Dim height = source.Height
-            Dim buffer(width * height * 4 - 1) As Byte
-            Dim info = New SKImageInfo(width, height, SKColorType.Rgba8888, SKAlphaType.Unpremul)
-            Dim handle = Runtime.InteropServices.GCHandle.Alloc(buffer, Runtime.InteropServices.GCHandleType.Pinned)
-            Try
-                Dim converted = False
-                Using pixmap = source.PeekPixels()
-                    If pixmap IsNot Nothing Then
-                        converted = pixmap.ReadPixels(info, handle.AddrOfPinnedObject(), width * 4)
-                    End If
-                End Using
-                If Not converted Then Return Nothing
-            Finally
-                handle.Free()
-            End Try
+            Dim buffer = ReadRgbaUnpremul(source)
+            If buffer Is Nothing Then Return Nothing
 
             Dim minX = width, minY = height, maxX = -1, maxY = -1
             For y = 0 To height - 1
@@ -136,13 +152,17 @@ Namespace Services
             Next
 
             ' Vollstaendig durchsichtig: es gibt nichts zu schreiben.
-            If maxX < minX OrElse maxY < minY Then Return Nothing
+            If maxX < minX OrElse maxY < minY Then
+                outcome = CropOutcome.Empty
+                Return Nothing
+            End If
 
             Dim cropWidth = maxX - minX + 1
             Dim cropHeight = maxY - minY + 1
             If cropWidth = width AndAlso cropHeight = height Then
                 offsetX = 0
                 offsetY = 0
+                outcome = CropOutcome.Unchanged
                 Return Nothing  ' nichts zuzuschneiden, der Aufrufer nimmt das Original
             End If
 
@@ -155,7 +175,53 @@ Namespace Services
 
             offsetX = minX
             offsetY = minY
+            outcome = CropOutcome.Cropped
             Return cropped
+        End Function
+
+        ''' <summary>Ergebnis von <see cref="CropToContent"/>.</summary>
+        Friend Enum CropOutcome
+            ''' Zugeschnitten; das neue Bitmap gehört dem Aufrufer.
+            Cropped
+            ''' Der Inhalt reicht an alle vier Ränder, das Original ist schon richtig.
+            Unchanged
+            ''' Kein einziger sichtbarer Bildpunkt.
+            Empty
+            ''' Die Bildpunkte ließen sich nicht lesen.
+            Failed
+        End Enum
+
+        ''' <summary>Die Bildpunkte als RGBA ohne vormultiplizierte Deckung, vier Byte je Punkt,
+        ''' oder Nothing, wenn sie sich nicht lesen lassen.
+        '''
+        ''' Über eine einheitliche Zielform gehen, statt auf das Eingangsformat zu vertrauen: die
+        ''' Ebenen kommen aus verschiedenen Ecken der Pipeline, mal Rgba, mal Bgra. Gelingt der
+        ''' direkte Weg nicht, wird über eine Kopie in Rgba8888 gewandelt; erst wenn auch das
+        ''' scheitert, ist es ein Fehler, und der wird protokolliert statt verschluckt.</summary>
+        Private Shared Function ReadRgbaUnpremul(bmp As SKBitmap) As Byte()
+            Dim width = bmp.Width
+            Dim height = bmp.Height
+            Dim buffer(width * height * 4 - 1) As Byte
+            Dim info = New SKImageInfo(width, height, SKColorType.Rgba8888, SKAlphaType.Unpremul)
+            If TryReadPixels(bmp, info, buffer) Then Return buffer
+            Using copy = bmp.Copy(SKColorType.Rgba8888)
+                If copy IsNot Nothing AndAlso TryReadPixels(copy, info, buffer) Then Return buffer
+            End Using
+            DiagnosticLogService.LogAlways("PsdWriter.ReadPixels",
+                                           $"Bildpunkte nicht lesbar: {width}x{height}, {bmp.ColorType}, {bmp.AlphaType}")
+            Return Nothing
+        End Function
+
+        Private Shared Function TryReadPixels(bmp As SKBitmap, info As SKImageInfo, buffer As Byte()) As Boolean
+            Dim handle = Runtime.InteropServices.GCHandle.Alloc(buffer, Runtime.InteropServices.GCHandleType.Pinned)
+            Try
+                Using pixmap = bmp.PeekPixels()
+                    If pixmap Is Nothing Then Return False
+                    Return pixmap.ReadPixels(info, handle.AddrOfPinnedObject(), info.Width * 4)
+                End Using
+            Finally
+                handle.Free()
+            End Try
         End Function
 
         ''' <summary>Uebersetzt die Mischmethoden von FerrumPix in die Vierzeichenschluessel von
@@ -197,7 +263,7 @@ Namespace Services
                     If layer Is Nothing Then Continue For
                     ' Eine Gruppenmarke hat von sich aus keine Bildpunkte und geht trotzdem mit -
                     ' ohne sie waere die Gruppe im Ziel nur eine Reihe loser Ebenen.
-                    If Not layer.IsGroupMarker Then
+                    If Not layer.HasNoPixels Then
                         If layer.Pixels Is Nothing Then Continue For
                         If layer.Pixels.Width < 1 OrElse layer.Pixels.Height < 1 Then Continue For
                     End If
@@ -253,7 +319,27 @@ Namespace Services
         ''' <summary>Kennung der Bildressource fuer das ICC-Farbprofil des Dokuments.</summary>
         Private Const ResolutionResourceId As Integer = 1005
         Private Const IccProfileResourceId As Integer = 1039
+        Private Const VersionInfoResourceId As Integer = 1057
         Private Const XmpResourceId As Integer = 1060
+
+        ''' <summary>Ressource 1057, die Versionsangabe: Version 1, ob das Gesamtbild echt ist (hier
+        ''' immer, es wird stets das fertige Bild eingebettet), Name des schreibenden und des
+        ''' lesenden Programms, Dateiversion 1. Ein Leser, der das Gesamtbild nur nimmt, wenn es so
+        ''' gekennzeichnet ist, findet die Kennzeichnung damit vor, statt raten zu müssen.</summary>
+        Friend Shared Function BuildVersionInfo() As Byte()
+            Using ms As New MemoryStream()
+                WriteU32(ms, 1)
+                ms.WriteByte(1)
+                For Each name In {"FerrumPix", "FerrumPix"}
+                    WriteU32(ms, name.Length)
+                    For Each ch In name
+                        WriteU16(ms, AscW(ch))
+                    Next
+                Next
+                WriteU32(ms, 1)
+                Return ms.ToArray()
+            End Using
+        End Function
 
         ''' <summary>Die Bildressourcen: IMMER das sRGB-Profil (1039), dazu der eigene Block, wenn es
         ''' einen gibt.
@@ -267,6 +353,7 @@ Namespace Services
             Dim blocks As New List(Of (Id As Integer, Data As Byte()))()
             If resolutionDpi > 0 Then blocks.Add((ResolutionResourceId, BuildResolutionInfo(resolutionDpi)))
             blocks.Add((IccProfileResourceId, SrgbIccProfile.Bytes()))
+            blocks.Add((VersionInfoResourceId, BuildVersionInfo()))
             If xmp IsNot Nothing AndAlso xmp.Length > 0 Then blocks.Add((XmpResourceId, xmp))
             If recipe IsNot Nothing AndAlso recipe.Length > 0 Then blocks.Add((PsdRecipeService.ResourceId, recipe))
 
@@ -336,12 +423,12 @@ Namespace Services
                     Dim bmp = layer.Pixels
                     ' Eine Gruppenmarke bekommt ein leeres Rechteck. Genau daran erkennt jedes
                     ' lesende Programm, dass hier keine Bildpunkte zu erwarten sind.
-                    Dim top = If(layer.IsGroupMarker, 0, layer.Top)
-                    Dim left = If(layer.IsGroupMarker, 0, layer.Left)
+                    Dim top = If(layer.HasNoPixels, 0, layer.Top)
+                    Dim left = If(layer.HasNoPixels, 0, layer.Left)
                     WriteU32(info, top)
                     WriteU32(info, left)
-                    WriteU32(info, If(layer.IsGroupMarker, 0, top + bmp.Height))
-                    WriteU32(info, If(layer.IsGroupMarker, 0, left + bmp.Width))
+                    WriteU32(info, If(layer.HasNoPixels, 0, top + bmp.Height))
+                    WriteU32(info, If(layer.HasNoPixels, 0, left + bmp.Width))
 
                     ' Kanalkennungen: -1 ist die Transparenz, danach Rot, Gruen, Blau, und -2 waere
                     ' die Ebenenmaske. Zu jeder Laenge zaehlen die zwei Bytes der Kompressionsmarke,
@@ -363,7 +450,8 @@ Namespace Services
                     info.WriteByte(If(layer.ClipToLayerBelow, CByte(1), CByte(0)))
                     ' Kennzeichen: Bit 1 bedeutet AUSGEBLENDET, nicht sichtbar. Andersherum gelesen
                     ' waere jede sichtbare Ebene in Photoshop unsichtbar.
-                    info.WriteByte(If(layer.IsVisible, CByte(0), CByte(2)))
+                    ' Bit 0 schützt die transparenten Bildpunkte.
+                    info.WriteByte(CByte(If(layer.IsVisible, 0, 2) Or If(layer.LockTransparency, 1, 0)))
                     info.WriteByte(0)  ' Fuellbyte
 
                     ' Zusatzdaten: Maske, Mischbereiche, Name, bei einer Gruppe die Abschnittsmarke.
@@ -375,6 +463,11 @@ Namespace Services
                         WriteUnicodeName(extra, layer.Name)
                         If layer.IsGroupMarker Then WriteSectionBlock(extra, layer)
                         If Not layer.IsGroupMarker AndAlso layer.TextBlock IsNot Nothing Then WriteTaggedBlock(extra, "TySh", layer.TextBlock)
+                        If layer.LockPosition OrElse layer.LockTransparency Then
+                            ' Sperren: Bit 0 Transparenz, Bit 2 Position.
+                            Dim protection = If(layer.LockTransparency, 1, 0) Or If(layer.LockPosition, 4, 0)
+                            WriteTaggedBlock(extra, "lspf", New Byte() {0, 0, 0, CByte(protection)})
+                        End If
                         WriteU32(info, CInt(extra.Length))
                         extra.Position = 0
                         extra.CopyTo(info)
@@ -459,7 +552,7 @@ Namespace Services
         ''' vorneweg. Reihenfolge wie im Verzeichnis: Transparenz, Rot, Gruen, Blau, und als
         ''' fuenften die Maske, wenn eine da ist.</summary>
         Private Shared Function PackLayerChannels(layer As PsdLayerInput) As Byte()()
-            ' Eine Gruppenmarke hat ein leeres Rechteck und damit vier LEERE Kanaele: nur die
+            ' Eine Gruppenmarke (ebenso eine leere Ebene, IsEmptyContent) hat ein leeres Rechteck und damit vier LEERE Kanaele: nur die
             ' Kompressionsmarke, keine Bildpunkte. Sie ganz wegzulassen geht nicht - das Verzeichnis
             ' nennt fuer jede Ebene eine Kanalzahl, und Photoshop erwartet dort dieselben vier wie
             ' ueberall.
@@ -467,7 +560,7 @@ Namespace Services
             ' Ihre MASKE gehoert trotzdem dazu, wenn sie eine traegt. Sie ist die Maske der ganzen
             ' Gruppe und hat ihr eigenes Rechteck - das leere Ebenenrechteck der Marke steht dem
             ' nicht im Weg, der Maskenblock traegt seine Masse selbst.
-            If layer.IsGroupMarker Then
+            If layer.HasNoPixels Then
                 Dim groupMask As Byte() = Nothing
                 If layer.HasMask Then groupMask = ExtractMaskPlane(layer.MaskPixels)
                 Dim empty As Byte()() = New Byte(If(groupMask Is Nothing, 3, 4))() {}
@@ -578,26 +671,14 @@ Namespace Services
             Dim b(count - 1) As Byte
             Dim a(count - 1) As Byte
 
-            ' Ueber eine einheitliche Zielform gehen, statt auf das Eingangsformat zu vertrauen:
-            ' die Ebenen kommen aus verschiedenen Ecken der Pipeline, mal Rgba, mal Bgra.
-            Dim info = New SKImageInfo(width, height, SKColorType.Rgba8888, SKAlphaType.Unpremul)
-            Dim buffer(count * 4 - 1) As Byte
-            Dim handle = Runtime.InteropServices.GCHandle.Alloc(buffer, Runtime.InteropServices.GCHandleType.Pinned)
-            Try
-                Dim converted = False
-                Using pixmap = bmp.PeekPixels()
-                    If pixmap IsNot Nothing Then
-                        converted = pixmap.ReadPixels(info, handle.AddrOfPinnedObject(), width * 4)
-                    End If
-                End Using
-                If Not converted Then
-                    ' Schlaegt die Wandlung fehl, bleibt ein durchsichtiges Ergebnis - besser als
-                    ' zufaellige Bytes aus einem ungefuellten Puffer.
-                    Array.Clear(buffer, 0, buffer.Length)
-                End If
-            Finally
-                handle.Free()
-            End Try
+            ' Schlaegt das Lesen auch ueber die Kopie fehl, bleibt ein durchsichtiges Ergebnis -
+            ' besser als zufaellige Bytes aus einem ungefuellten Puffer. Protokolliert ist es dann
+            ' schon (ReadRgbaUnpremul).
+            Dim buffer = ReadRgbaUnpremul(bmp)
+            If buffer Is Nothing Then
+                Dim empty(count * 4 - 1) As Byte
+                buffer = empty
+            End If
 
             For i = 0 To count - 1
                 r(i) = buffer(i * 4)

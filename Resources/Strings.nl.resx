@@ -9930,4 +9930,10 @@
   <data name="Nur_unbearbeitete_317574e9" xml:space="preserve">
     <value>Alleen onbewerkte</value>
   </data>
+  <data name="0_Textebenen_ohne_sichtbaren_Inhalt_lassen_sich__bbfcd191" xml:space="preserve">
+    <value>{0} tekstlagen zonder zichtbare inhoud kunnen niet worden overgenomen en ontbreken.</value>
+  </data>
+  <data name="0_Textebenen_sind_ungleich_gestreckt_und_kommen__50373be7" xml:space="preserve">
+    <value>{0} tekstlagen zijn ongelijk uitgerekt en komen binnen als afbeelding, hun tekst kan niet worden bewerkt.</value>
+  </data>
 </root>

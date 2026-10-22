@@ -146,13 +146,28 @@ Namespace Services
                         ' gehoert aber nur das belegte Rechteck. Ohne das ist jede Ebene beim
                         ' Zurueckladen bildgross, und Auswahlrahmen, Anfasser und Miniaturbild
                         ' ziehen sich ueber das ganze Bild.
+                        ' Drei Fälle ohne Zuschnitt, und sie verlangen Verschiedenes: reicht der
+                        ' Inhalt an alle Ränder, ist die Leinwand richtig; ist nichts zu sehen,
+                        ' wird es eine LEERE Ebene (sie bleibt im Stapel, ein Text darin als
+                        ' Textebene bearbeitbar); lässt sie sich nicht lesen, bleibt die Leinwand -
+                        ' lieber zu gross als ohne Inhalt, und das Protokoll nennt den Grund.
                         Dim layerLeft = 0
                         Dim layerTop = 0
-                        Dim cropped = PsdWriterService.CropToContent(layerBitmap, layerLeft, layerTop)
-                        If cropped IsNot Nothing Then
-                            layerBitmap.Dispose()
-                            layerBitmap = cropped
-                        End If
+                        Dim outcome As PsdWriterService.CropOutcome
+                        Dim cropped = PsdWriterService.CropToContent(layerBitmap, layerLeft, layerTop, outcome)
+                        Dim emptyContent = False
+                        Select Case outcome
+                            Case PsdWriterService.CropOutcome.Cropped
+                                layerBitmap.Dispose()
+                                layerBitmap = cropped
+                            Case PsdWriterService.CropOutcome.Empty
+                                layerBitmap.Dispose()
+                                layerBitmap = Nothing
+                                emptyContent = True
+                            Case PsdWriterService.CropOutcome.Failed
+                                DiagnosticLogService.LogAlways("PsdExport.CropToContent",
+                                                               "Ebene nicht zuschneidbar, geht bildgross hinaus: " & If(annotation.Kind, ""))
+                        End Select
 
                         ' Fällt die Beschriftung aus, tritt die Art an ihre Stelle - ein technisches
                         ' Wort, aber nie leer und ohne neuen Ressourcentext.
@@ -164,9 +179,14 @@ Namespace Services
                         ' Umkehrung -, denn ein Verlauf oder eine mehrteilige Maske hat im PSD kein
                         ' Gegenstück und muss dort ein Raster werden. Anfassbar bleibt sie trotzdem:
                         ' in Photoshop lässt sie sich weiter übermalen.
-                        Dim maskBitmap = BuildMaskRaster(adj, annotation.MaskId, width, height,
-                                                         layerLeft, layerTop,
-                                                         layerBitmap.Width, layerBitmap.Height)
+                        ' Eine leere Ebene hat kein Rechteck, ihre Maske aber ein eigenes: sie geht
+                        ' bildgross mit, wie die Maske einer Gruppe. Sonst fehlte sie, sobald der
+                        ' Inhalt in Photoshop sichtbar gemacht wird.
+                        Dim maskBitmap = If(emptyContent,
+                                            BuildMaskRaster(adj, annotation.MaskId, width, height, 0, 0, width, height),
+                                            BuildMaskRaster(adj, annotation.MaskId, width, height,
+                                                            layerLeft, layerTop,
+                                                            layerBitmap.Width, layerBitmap.Height))
 
                         ' Erst die Klammern nachziehen, dann die Ebene. In dieser Reihenfolge, weil
                         ' das untere Ende einer Gruppe VOR ihrem ersten Mitglied stehen muss.
@@ -194,7 +214,10 @@ Namespace Services
                             .MaskPixels = maskBitmap,
                             .MaskLeft = layerLeft,
                             .MaskTop = layerTop,
-                            .TextBlock = textBlock
+                            .TextBlock = textBlock,
+                            .IsEmptyContent = emptyContent,
+                            .LockPosition = annotation.IsLocked,
+                            .LockTransparency = annotation.LockTransparentPixels
                         })
                     Next
 
@@ -335,6 +358,7 @@ Namespace Services
                     .OpacityPercent = CSng(group.Opacity),
                     .BlendMode = group.BlendMode,
                     .IsVisible = group.IsVisible,
+                    .LockPosition = group.IsLocked,
                     .MaskPixels = groupMask,
                     .MaskLeft = 0,
                     .MaskTop = 0

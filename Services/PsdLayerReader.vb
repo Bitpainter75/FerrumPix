@@ -125,6 +125,12 @@ Namespace Services
             ''' Ebene mit Füllkraft 0, die nur über ihre Kontur zu sehen sein soll, bleibt
             ''' unsichtbar. Der Import meldet das deshalb.</summary>
             Public Property HasEffects As Boolean
+
+            ''' <summary>Photoshops Sperren der Position und der transparenten Bildpunkte (Block
+            ''' lspf, „alles sperren“ zählt für beide). Die dritte, „Bildpunkte sperren“, hat bei
+            ''' FerrumPix kein Gegenstück.</summary>
+            Public Property LockPosition As Boolean
+            Public Property LockTransparency As Boolean
         End Class
 
         ''' <summary>Rückübersetzung der Vierzeichenschlüssel. Was hier fehlt, wird "Normal" - die
@@ -156,6 +162,14 @@ Namespace Services
             Public Property BrokenLayers As Integer
             ''' Sichtbare Anpassungsebenen, deren Wirkung beim Ebenenimport fehlt.
             Public Property AdjustmentLayers As Integer
+            ''' <summary>Ob die Bildressourcen den eigenen Rezeptblock tragen, und beim vollen Lesen
+            ''' sein Inhalt (siehe <see cref="PsdRecipeService.FindPayload"/>). Mitgelesen, weil der
+            ''' Leser die Sektion ohnehin durchläuft; sonst öffnete der Import die Datei dafür eigens.</summary>
+            Public Property HasRecipeBlock As Boolean
+            Public Property RecipePayload As Byte()
+            ''' <summary>Wie viele Datensätze das Ebenenverzeichnis nennt, auch die ohne Bildpunkte
+            ''' (Korrekturebenen, Gruppenmarken) - dieselbe Zahl wie <see cref="CountLayerRecords"/>.</summary>
+            Public Property LayerRecordCount As Integer
         End Class
 
         ''' <summary>Liefert die Bildebenen von unten nach oben, oder Nothing, wenn die Datei keine
@@ -260,18 +274,22 @@ Namespace Services
             ' werden muesste; ein Bytefeld raeumt die Laufzeitumgebung selbst ab. Erzeugt wird es
             ' deshalb erst unten, wenn das Dokument steht.
             Dim iccBytes As Byte() = Nothing
+            ' Der eigene Rezeptblock wird in derselben Sektion gesucht. Beim reinen Verzeichnislesen
+            ' nur, OB er da ist - dafür liest niemand bis zu 128 MB.
+            Dim resourceStart = fs.Position
+            Dim resourceEnd = resourceStart + resourceLen
+            If resourceEnd > fs.Length Then Return Nothing
+            Dim hasRecipe = False
+            Dim recipePayload = PsdRecipeService.FindPayload(fs, resourceEnd, Not metadataOnly, hasRecipe)
+            fs.Position = resourceStart
             If metadataOnly Then
                 If Not SkipBlock(fs, resourceLen) Then Return Nothing
             Else
-                Dim resourceEnd = fs.Position + resourceLen
                 iccBytes = PsdPreviewService.ReadIccBytesFromResources(fs, resourceLen)
-                ' Der Leser steht danach hinter der Sektion; ein Abbruch mittendrin (unbekannter
-                ' Block) darf die folgenden Angaben nicht verschieben.
-                If fs.Position <> resourceEnd Then
-                    If resourceEnd > fs.Length Then Return Nothing
-                    fs.Position = resourceEnd
-                End If
             End If
+            ' Der Leser steht danach hinter der Sektion; ein Abbruch mittendrin (unbekannter Block)
+            ' darf die folgenden Angaben nicht verschieben.
+            If fs.Position <> resourceEnd Then fs.Position = resourceEnd
 
             Dim sectionLen = If(isPsb, ReadU64(fs), CLng(ReadU32(fs)))
             If sectionLen <= 0 Then Return Nothing
@@ -344,7 +362,9 @@ Namespace Services
                     iccProfile = Nothing
                 End Try
             End If
-            Dim doc As New PsdDocumentInfo With {.Width = docWidth, .Height = docHeight, .IccProfile = iccProfile}
+            Dim doc As New PsdDocumentInfo With {.Width = docWidth, .Height = docHeight, .IccProfile = iccProfile,
+                                                 .HasRecipeBlock = hasRecipe, .RecipePayload = recipePayload,
+                                                 .LayerRecordCount = layerCount}
             For Each rec In records
                 If rec.IsAdjustment AndAlso (rec.Flags And 2) = 0 Then doc.AdjustmentLayers += 1
             Next
@@ -366,9 +386,13 @@ Namespace Services
                         Continue For
                     End If
                     ' Gruppenmarken haben keine Bildpunkte und gehen trotzdem mit: ohne sie wüsste
-                    ' der Import nicht, wo eine Gruppe anfängt und wo sie aufhört.
-                    If bmp Is Nothing AndAlso rec.SectionType = 0 AndAlso Not metadataOnly Then Continue For
-                    If metadataOnly AndAlso Not rec.HasPixels AndAlso rec.SectionType = 0 Then Continue For
+                    ' der Import nicht, wo eine Gruppe anfängt und wo sie aufhört. Ebenso eine
+                    ' Textebene ohne sichtbaren Punkt (Text in durchsichtiger Farbe): sie hat ein
+                    ' leeres Rechteck, ihr Wortlaut steht aber im Block TySh und soll als Text
+                    ' zurückkommen können. Pixels bleibt dann Nothing.
+                    Dim emptyText = Not rec.HasPixels AndAlso Not String.IsNullOrWhiteSpace(rec.TextContent)
+                    If bmp Is Nothing AndAlso rec.SectionType = 0 AndAlso Not metadataOnly AndAlso Not emptyText Then Continue For
+                    If metadataOnly AndAlso Not rec.HasPixels AndAlso rec.SectionType = 0 AndAlso Not emptyText Then Continue For
 
                     layers.Add(New PsdLayerInfo With {
                         .Name = rec.Name,
@@ -392,7 +416,9 @@ Namespace Services
                         .MaskDisabled = rec.MaskDisabled,
                         .MaskFeatherPixels = CSng(2.0 * rec.AppliedFeather),
                         .SectionType = rec.SectionType,
-                        .HasEffects = rec.HasEffects
+                        .HasEffects = rec.HasEffects,
+                        .LockPosition = (rec.ProtectionFlags And &H80000004L) <> 0,
+                        .LockTransparency = (rec.ProtectionFlags And &H80000001L) <> 0 OrElse (rec.Flags And 1) <> 0
                     })
                 Next
                 completed = True
@@ -510,6 +536,8 @@ Namespace Services
             Public Property FillOpacity As Integer = 255
             Public Property Clipping As Integer
             Public Property Flags As Integer
+            ''' Die Sperren aus dem Block lspf.
+            Public Property ProtectionFlags As Long
             ''' Kanalkennung und Länge, in genau der Reihenfolge, in der die Daten später folgen.
             Public Property Channels As New List(Of Integer())()
             ''' Eine Gruppenmarke oder eine Ebene ohne Fläche trägt keine Bildpunkte.
@@ -685,6 +713,9 @@ Namespace Services
                     hasFill = True
                 ElseIf bk = "vstk" Then
                     hasStroke = True
+                ElseIf bk = "lspf" AndAlso blockLen >= 4 Then
+                    ' Sperren: Bit 0 Transparenz, Bit 1 Bildpunkte, Bit 2 Position, Bit 31 alles.
+                    rec.ProtectionFlags = ReadU32(fs)
                 ElseIf bk = "iOpa" AndAlso blockLen >= 1 Then
                     ' Füllkraft: wirkt auf den Inhalt der Ebene, nicht auf ihre Effekte. Ohne Effekte
                     ' ist sie dasselbe wie eine Deckkraft. Übergangen erschien eine Ebene mit
@@ -1027,10 +1058,12 @@ Namespace Services
                 ' Die Maske liegt in Kanal -2 oder -3 (welcher, entscheidet SelectMaskChannel) und
                 ' hat die Maße IHRES Rechtecks, nicht die der Ebene.
                 ' Auch eine GRUPPENZEILE darf eine Maske tragen; sie gilt dann für alles, was in der
-                ' Gruppe liegt. Deshalb hängt das Lesen hier nicht an den Bildpunkten.
-                Dim wantMask = Not metadataOnly AndAlso (rec.HasPixels OrElse rec.SectionType <> 0) AndAlso
+                ' Gruppe liegt. Deshalb hängt das Lesen hier nicht an den Bildpunkten. Dasselbe gilt
+                ' für eine leere Textebene, die als Text zurückkommen soll.
+                Dim carriesMask = rec.HasPixels OrElse rec.SectionType <> 0 OrElse Not String.IsNullOrWhiteSpace(rec.TextContent)
+                Dim wantMask = Not metadataOnly AndAlso carriesMask AndAlso
                                rec.HasMaskRect AndAlso id = rec.MaskChannelId AndAlso maskWidth > 0 AndAlso maskHeight > 0
-                Dim wantVectorMask = Not metadataOnly AndAlso (rec.HasPixels OrElse rec.SectionType <> 0) AndAlso
+                Dim wantVectorMask = Not metadataOnly AndAlso carriesMask AndAlso
                                      rec.CombineVectorMask AndAlso id = -2 AndAlso vectorWidth > 0 AndAlso vectorHeight > 0
                 If wanted Then
                     Dim plane = ReadPlane(fs, width, height, declaredLen, bytesPerSample, isPsb, colorChannel:=id >= 0)
@@ -1095,7 +1128,8 @@ Namespace Services
             ' niemand mehr in die Hand bekommt, wäre nativer Speicher bis zum Finalisierer. Bei
             ' einer Gruppenzeile ist das anders: sie hat nie Bildpunkte, ihre Maske gilt trotzdem.
             If Not rec.HasPixels Then
-                If rec.SectionType <> 0 Then Return Nothing
+                ' Gruppenzeile und leere Textebene behalten ihre Maske (carriesMask oben).
+                If rec.SectionType <> 0 OrElse Not String.IsNullOrWhiteSpace(rec.TextContent) Then Return Nothing
                 Return DropMask(maskBitmap)
             End If
             ' Bei Graustufen gibt es nur den einen Kanal 0. Er wird auf alle drei gelegt, statt einen

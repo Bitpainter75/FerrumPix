@@ -9889,4 +9889,10 @@
   <data name="Nur_unbearbeitete_317574e9" xml:space="preserve">
     <value>Apenas não editadas</value>
   </data>
+  <data name="0_Textebenen_ohne_sichtbaren_Inhalt_lassen_sich__bbfcd191" xml:space="preserve">
+    <value>{0} camadas de texto sem conteúdo visível não podem ser transferidas e estão em falta.</value>
+  </data>
+  <data name="0_Textebenen_sind_ungleich_gestreckt_und_kommen__50373be7" xml:space="preserve">
+    <value>{0} camadas de texto estão esticadas de forma desigual e chegam como imagem, o texto não pode ser editado.</value>
+  </data>
 </root>

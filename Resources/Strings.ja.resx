@@ -9930,4 +9930,10 @@
   <data name="Nur_unbearbeitete_317574e9" xml:space="preserve">
     <value>未編集のみ</value>
   </data>
+  <data name="0_Textebenen_ohne_sichtbaren_Inhalt_lassen_sich__bbfcd191" xml:space="preserve">
+    <value>表示される内容のない {0} 個のテキストレイヤーは取り込めず、欠落しています。</value>
+  </data>
+  <data name="0_Textebenen_sind_ungleich_gestreckt_und_kommen__50373be7" xml:space="preserve">
+    <value>{0} 個のテキストレイヤーは縦横比が変わるように伸ばされているため画像として取り込まれ、文字は編集できません。</value>
+  </data>
 </root>

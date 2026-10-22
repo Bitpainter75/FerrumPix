@@ -162,34 +162,60 @@ Namespace Services
                     Dim resourcesEnd = fs.Position + resourcesLen
                     If resourcesEnd > fs.Length Then Return Nothing
 
-                    While fs.Position + 12 <= resourcesEnd
-                        Dim sig(3) As Byte
-                        If fs.Read(sig, 0, 4) <> 4 Then Return Nothing
-                        If Encoding.ASCII.GetString(sig) <> "8BIM" Then Return Nothing
-                        Dim id = ReadU16(fs)
-                        ' Pascal-Name: Längenbyte plus Text, das ganze Feld auf gerade Länge gefüllt.
-                        Dim nameLen = fs.ReadByte()
-                        If nameLen < 0 Then Return Nothing
-                        Dim namePadded = If((nameLen + 1) Mod 2 = 0, nameLen, nameLen + 1)
-                        fs.Seek(namePadded, SeekOrigin.Current)
-                        Dim dataLen = ReadU32(fs)
-                        Dim dataStart = fs.Position
-                        If dataStart + dataLen > resourcesEnd Then Return Nothing
-
-                        ' Zu grosse Bloecke werden UEBERSPRUNGEN, nicht gelesen: die Nummer ab 4000
-                        ' steht jedem frei, ein Riesenblock dort ist also eher ein fremder als ein
-                        ' eigener - und selbst wenn er eigen waere, kaeme er aus einer Fassung, die
-                        ' den Deckel beim Schreiben nicht hatte.
-                        If id = ResourceId AndAlso dataLen > 0 AndAlso dataLen <= MaxPayloadBytes Then
-                            Dim buffer(CInt(dataLen) - 1) As Byte
-                            If fs.Read(buffer, 0, buffer.Length) = buffer.Length Then Return buffer
-                            Return Nothing
-                        End If
-
-                        fs.Seek(dataStart + dataLen + (dataLen And 1L), SeekOrigin.Begin)
-                    End While
+                    Dim found = False
+                    Return FindPayload(fs, resourcesEnd, True, found)
                 End Using
             Catch
+            End Try
+            Return Nothing
+        End Function
+
+        ''' <summary>Sucht den eigenen Block in einer Ressourcensektion, deren Anfang der Strom
+        ''' gerade erreicht hat. Für den Ebenenleser, der die Sektion ohnehin durchläuft: so wird
+        ''' die Datei dafür nicht noch einmal geöffnet.
+        '''
+        ''' <paramref name="readData"/> False sagt nur, OB er da ist (<paramref name="found"/>),
+        ''' ohne ihn zu lesen - bis zu 128 MB, die für die Frage nach den Textebenen niemand braucht.
+        ''' Ein Fehler beim Durchlaufen gilt als "kein Block" und wirft nicht: der Leser, der hier
+        ''' fragt, soll an einer verbogenen Ressource nicht scheitern. Wo der Strom danach steht, ist
+        ''' offen; der Aufrufer setzt ihn selbst ans Ende der Sektion.</summary>
+        Friend Shared Function FindPayload(fs As Stream, resourcesEnd As Long, readData As Boolean,
+                                           ByRef found As Boolean) As Byte()
+            found = False
+            Try
+                While fs.Position + 12 <= resourcesEnd
+                    Dim sig(3) As Byte
+                    If fs.Read(sig, 0, 4) <> 4 Then Return Nothing
+                    If Encoding.ASCII.GetString(sig) <> "8BIM" Then Return Nothing
+                    Dim id = ReadU16(fs)
+                    ' Pascal-Name: Längenbyte plus Text, das ganze Feld auf gerade Länge gefüllt.
+                    Dim nameLen = fs.ReadByte()
+                    If nameLen < 0 Then Return Nothing
+                    Dim namePadded = If((nameLen + 1) Mod 2 = 0, nameLen, nameLen + 1)
+                    fs.Seek(namePadded, SeekOrigin.Current)
+                    Dim dataLen = ReadU32(fs)
+                    Dim dataStart = fs.Position
+                    If dataStart + dataLen > resourcesEnd Then Return Nothing
+
+                    ' Zu grosse Bloecke werden UEBERSPRUNGEN, nicht gelesen: die Nummer ab 4000
+                    ' steht jedem frei, ein Riesenblock dort ist also eher ein fremder als ein
+                    ' eigener - und selbst wenn er eigen waere, kaeme er aus einer Fassung, die
+                    ' den Deckel beim Schreiben nicht hatte.
+                    If id = ResourceId AndAlso dataLen > 0 AndAlso dataLen <= MaxPayloadBytes Then
+                        If Not readData Then
+                            found = True
+                            Return Nothing
+                        End If
+                        Dim buffer(CInt(dataLen) - 1) As Byte
+                        If fs.Read(buffer, 0, buffer.Length) <> buffer.Length Then Return Nothing
+                        found = True
+                        Return buffer
+                    End If
+
+                    fs.Seek(dataStart + dataLen + (dataLen And 1L), SeekOrigin.Begin)
+                End While
+            Catch
+                found = False
             End Try
             Return Nothing
         End Function

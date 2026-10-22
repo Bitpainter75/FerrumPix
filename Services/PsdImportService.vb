@@ -46,6 +46,13 @@ Namespace Services
             ''' <summary>Ebenen, deren Bildpunkte sich nicht lesen ließen. Sie fehlen im Stapel.</summary>
             Public Property BrokenLayers As Integer
             Public Property AdjustmentLayers As Integer
+            ''' <summary>Textebenen ohne sichtbaren Punkt, die nicht als Text kamen (Wahl "als
+            ''' Bild", oder gestreckt) und deshalb fehlen; als Bild gäbe es von ihnen nichts.</summary>
+            Public Property DroppedTextLayers As Integer
+            ''' <summary>Textebenen mit Bildpunkten, die ungleich gestreckt sind und deshalb als
+            ''' Bild kamen, unabhängig von der Wahl; ob das einen Hinweis wert ist, entscheidet der
+            ''' Aufrufer, der weiß, was gewählt wurde.</summary>
+            Public Property StretchedTextLayers As Integer
             ''' <summary>True, wenn die Datei den eigenen Rezeptblock trug und die Bearbeitung
             ''' vollständig zurückkam - Text als Text statt als Bildpunkte.</summary>
             Public Property FromOwnRecipe As Boolean
@@ -59,15 +66,16 @@ Namespace Services
         ''' gelesen wird dafür nur das Verzeichnis, nicht die Bildpunkte.</summary>
         Public Shared Function CountTextLayers(psdPath As String) As Integer
             If String.IsNullOrWhiteSpace(psdPath) OrElse Not File.Exists(psdPath) Then Return 0
-            ' Trägt die Datei den eigenen Block, ist die Frage gegenstandslos: dann kommt der Text
-            ' ohnehin vollständig zurück, mit Schrift und Farbe.
-            If PsdRecipeService.ExtractPayload(psdPath) IsNot Nothing Then Return 0
 
             Dim doc = PsdLayerReader.ReadDocument(psdPath, metadataOnly:=True)
             If doc Is Nothing Then Return 0
+            ' Trägt die Datei den eigenen Block, ist die Frage gegenstandslos: dann kommt der Text
+            ' ohnehin vollständig zurück, mit Schrift und Farbe.
+            If doc.HasRecipeBlock Then Return 0
             Dim count = 0
             For Each layer In doc.Layers
-                If Not String.IsNullOrWhiteSpace(layer.TextContent) Then count += 1
+                ' Gestreckter Text kommt ohnehin als Bild, nach ihm muss niemand gefragt werden.
+                If Not String.IsNullOrWhiteSpace(layer.TextContent) AndAlso Not IsStretchedText(layer.TextStyle) Then count += 1
             Next
             Return count
         End Function
@@ -133,7 +141,9 @@ Namespace Services
             ' Formen. Der Ebenenstapel darunter wird gar nicht gebraucht - bis auf die unterste
             ' Ebene, die das Grundbild wird.
             Try
-                Dim payload = PsdRecipeService.ExtractPayload(psdPath)
+                ' Mitgelesen beim Durchlauf der Ressourcen, statt die Datei eigens zu öffnen.
+                Dim payload = doc.RecipePayload
+                doc.RecipePayload = Nothing
                 If payload IsNot Nothing Then
                     Dim fromRecipe = PsdRecipeService.Parse(payload, tempDir)
                     ' Auf die Objekte NORMALISIEREN, egal was im Block steht: das Grundbild hier ist
@@ -195,6 +205,8 @@ Namespace Services
                 End If
 
                 Dim index = 0
+                Dim droppedTextLayers = 0
+                Dim stretchedTextLayers = 0
                 ' Die offenen Gruppen, von außen nach innen. Die letzte ist die, in der gerade
                 ' gelesen wird - dorthin gehört jede Ebene, die jetzt kommt.
                 Dim openGroups As New List(Of AnnotationGroup)()
@@ -207,7 +219,20 @@ Namespace Services
                         Continue For
                     End If
 
-                    If layer.Pixels Is Nothing Then Continue For
+                    ' Ohne Bildpunkte bleibt nur eine leere Textebene, und die nur als Text: als Bild
+                    ' gäbe es nichts zu zeigen. Kommt sie nicht als Text (Wahl "als Bild", oder
+                    ' gestreckt), fehlt sie - gezählt, damit die Rückfrage beim Öffnen es sagt.
+                    Dim asText = textAsText AndAlso Not String.IsNullOrWhiteSpace(layer.TextContent) AndAlso
+                                 Not IsStretchedText(layer.TextStyle)
+                    If layer.Pixels Is Nothing AndAlso Not asText Then
+                        If Not String.IsNullOrWhiteSpace(layer.TextContent) Then droppedTextLayers += 1
+                        Continue For
+                    End If
+                    ' Gestreckter Text kommt als Bild, auch wenn Text als Text gewählt ist; gezählt,
+                    ' damit der Editor sagen kann, warum dieser Wortlaut fest ist.
+                    If Not String.IsNullOrWhiteSpace(layer.TextContent) AndAlso IsStretchedText(layer.TextStyle) Then
+                        stretchedTextLayers += 1
+                    End If
                     Dim groupId = If(openGroups.Count > 0, openGroups(openGroups.Count - 1).Id, "")
 
                     ' Textebene als Textobjekt, wenn der Nutzer es so wollte. Fehlende Schriftwerte
@@ -218,16 +243,18 @@ Namespace Services
                     ' Bildpunkten festzustecken.
                     Dim maskId = AddLayerMask(adjustments, layer, doc.Width, doc.Height)
 
-                    If textAsText AndAlso Not String.IsNullOrWhiteSpace(layer.TextContent) Then
+                    If asText Then
                         Dim style = layer.TextStyle
+                        ' Eine leere Ebene hat kein Rechteck; Lage und Groesse setzt dann der
+                        ' Rahmen aus TySh (ApplyPsdTextLayout), bis dahin wenigstens ein Punkt.
                         Dim annotation As New ImageAnnotation With {
                             .Kind = "Text",
                             .Text = layer.TextContent,
                             .CustomName = If(layer.Name, ""),
                             .XPixels = layer.Left,
                             .YPixels = layer.Top,
-                            .WidthPixels = layer.Width,
-                            .HeightPixels = layer.Height,
+                            .WidthPixels = Math.Max(1, layer.Width),
+                            .HeightPixels = Math.Max(1, layer.Height),
                             .FontSizePixels = If(style IsNot Nothing AndAlso style.FontSize > 0 AndAlso style.FontSize <= 100_000, CSng(style.FontSize), EstimateFontSize(layer.Height, layer.TextContent)),
                             .FillColor = If(style IsNot Nothing AndAlso Not String.IsNullOrEmpty(style.FillColor), style.FillColor, MeasureDominantColor(layer.Pixels)),
                             .Opacity = layer.OpacityPercent,
@@ -236,7 +263,9 @@ Namespace Services
                             .IsVisible = layer.IsVisible,
                             .MaskId = maskId,
                             .GroupId = groupId,
-                            .LockAspect = False
+                            .LockAspect = False,
+                            .IsLocked = layer.LockPosition,
+                            .LockTransparentPixels = layer.LockTransparency
                         }
                         If style IsNot Nothing Then
                             ApplyPsdFont(annotation, style.FontName)
@@ -266,7 +295,9 @@ Namespace Services
                         .IsVisible = layer.IsVisible,
                         .MaskId = maskId,
                         .GroupId = groupId,
-                        .LockAspect = False
+                        .LockAspect = False,
+                        .IsLocked = layer.LockPosition,
+                        .LockTransparentPixels = layer.LockTransparency
                     })
                 Next
 
@@ -291,10 +322,12 @@ Namespace Services
                     .Adjustments = adjustments,
                     .TempDir = tempDir,
                     .LayerCount = index,
-                    .SkippedLayers = CountSkipped(psdPath, layers.Count),
+                    .SkippedLayers = CountSkipped(doc.LayerRecordCount, layers.Count) + droppedTextLayers,
                     .EffectLayers = effectLayers,
                     .BrokenLayers = doc.BrokenLayers,
-                    .AdjustmentLayers = doc.AdjustmentLayers
+                    .AdjustmentLayers = doc.AdjustmentLayers,
+                    .DroppedTextLayers = droppedTextLayers,
+                    .StretchedTextLayers = stretchedTextLayers
                 }
             Catch
                 Return Nothing
@@ -351,6 +384,7 @@ Namespace Services
             group.Name = If(String.IsNullOrWhiteSpace(layer.Name),
                             LocalizationService.T("Gruppe"), layer.Name)
             group.IsVisible = layer.IsVisible
+            group.IsLocked = layer.LockPosition
             ' Art 2 heißt zugeklappt. Reiner Panel-Zustand, aber einer, den der Nutzer selbst so
             ' gesetzt hat - und ein Dokument mit dreißig aufgeklappten Gruppen ist unbenutzbar.
             group.IsCollapsed = layer.SectionType = 2
@@ -388,7 +422,9 @@ Namespace Services
                 Dim top = layer.MaskTop
                 Dim right = layer.MaskLeft + layer.MaskWidth
                 Dim bottom = layer.MaskTop + layer.MaskHeight
-                If layer.MaskDefaultValue > 0 Then
+                ' Eine leere Ebene (Textebene ohne sichtbaren Punkt) hat kein Rechteck; ihr
+                ' Nullrechteck zöge die Maske sonst bis an die linke obere Bildecke auf.
+                If layer.MaskDefaultValue > 0 AndAlso layer.Width > 0 AndAlso layer.Height > 0 Then
                     left = Math.Min(left, layer.Left)
                     top = Math.Min(top, layer.Top)
                     right = Math.Max(right, layer.Left + layer.Width)
@@ -462,17 +498,12 @@ Namespace Services
         ''' <summary>Wie viele Ebenen die Datei trägt, von denen keine Bildpunkte ankamen. Gezählt
         ''' wird über den Namen im Verzeichnis, nicht über das Ergebnis: Korrekturebenen und
         ''' Gruppenmarken fallen im Leser heraus, und der Nutzer soll erfahren, dass etwas fehlt.</summary>
-        Private Shared Function CountSkipped(psdPath As String, deliveredLayers As Integer) As Integer
+        Private Shared Function CountSkipped(totalRecords As Integer, deliveredLayers As Integer) As Integer
             ' Der Leser liefert nur Ebenen mit Bildpunkten. Die Gesamtzahl steht im Verzeichnis der
-            ' Datei; die Differenz sind die uebersprungenen. Schlaegt das Zaehlen fehl, wird lieber
-            ' 0 gemeldet als eine erfundene Zahl.
-            Try
-                Dim total = PsdLayerReader.CountLayerRecords(psdPath)
-                If total <= 0 Then Return 0
-                Return Math.Max(0, total - deliveredLayers)
-            Catch
-                Return 0
-            End Try
+            ' Datei und kommt aus demselben Lesedurchgang; die Differenz sind die uebersprungenen.
+            ' Fehlt sie, wird lieber 0 gemeldet als eine erfundene Zahl.
+            If totalRecords <= 0 Then Return 0
+            Return Math.Max(0, totalRecords - deliveredLayers)
         End Function
 
         ''' <summary>Schätzt den Schriftgrad aus der Höhe des Ebenenrechtecks. Das Rechteck umfasst
@@ -507,6 +538,19 @@ Namespace Services
         ''' Kanten mit dem Massstab ihrer Achse, und der Winkel der ersten Achse ist die Drehung.
         ''' Geschert oder gespiegelt bleibt es beim Ebenenrechteck, denn das kann ein Objekt nicht
         ''' abbilden.</summary>
+        ''' <summary>Ob die Matrix der Textebene waagerecht anders streckt als senkrecht. Ein
+        ''' Textobjekt kennt nur EINEN Schriftgrad und keine Streckung; als Text käme ein in
+        ''' Photoshop breit gezogener Schriftzug schmaler und in anderer Höhe zurück. Dann bleibt
+        ''' die Ebene ein Bild, und jeder Punkt stimmt.</summary>
+        Private Shared Function IsStretchedText(style As PsdEngineData) As Boolean
+            Dim m = style?.Matrix
+            If m Is Nothing Then Return False
+            Dim scaleX = Math.Sqrt(m(0) * m(0) + m(1) * m(1))
+            Dim scaleY = Math.Sqrt(m(2) * m(2) + m(3) * m(3))
+            If scaleX < 0.000001 OrElse scaleY < 0.000001 Then Return False
+            Return Math.Abs(scaleX / scaleY - 1.0) > 0.01
+        End Function
+
         Private Shared Sub ApplyPsdTextLayout(annotation As ImageAnnotation, style As PsdEngineData)
             Select Case style.Justification
                 Case 1 : annotation.TextAlignment = "Right"
