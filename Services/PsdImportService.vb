@@ -238,7 +238,10 @@ Namespace Services
                             .GroupId = groupId,
                             .LockAspect = False
                         }
-                        If style IsNot Nothing Then ApplyPsdFont(annotation, style.FontName)
+                        If style IsNot Nothing Then
+                            ApplyPsdFont(annotation, style.FontName)
+                            ApplyPsdTextLayout(annotation, style)
+                        End If
                         adjustments.Annotations.Add(annotation)
                         index += 1
                         Continue For
@@ -494,6 +497,49 @@ Namespace Services
                 annotation.Italic = parts(1).IndexOf("italic", StringComparison.OrdinalIgnoreCase) >= 0 OrElse
                                     parts(1).IndexOf("oblique", StringComparison.OrdinalIgnoreCase) >= 0
             End If
+        End Sub
+
+        ''' <summary>Lage, Drehung, Ausrichtung und Zeichenabstand aus der Textebene.
+        '''
+        ''' Das Ebenenrechteck umschliesst nur die gezeichneten Bildpunkte, bei gedrehtem Text sogar
+        ''' achsparallel. Der Rahmen im Textraum und die Matrix des TySh-Blocks sagen dagegen, wo
+        ''' der Text WIRKLICH steht: die Mitte des Rahmens geht durch die Matrix ins Dokument, die
+        ''' Kanten mit dem Massstab ihrer Achse, und der Winkel der ersten Achse ist die Drehung.
+        ''' Geschert oder gespiegelt bleibt es beim Ebenenrechteck, denn das kann ein Objekt nicht
+        ''' abbilden.</summary>
+        Private Shared Sub ApplyPsdTextLayout(annotation As ImageAnnotation, style As PsdEngineData)
+            Select Case style.Justification
+                Case 1 : annotation.TextAlignment = "Right"
+                Case 2 : annotation.TextAlignment = "Center"
+                Case 3, 4, 5, 6 : annotation.TextAlignment = "Justify"
+                Case 0 : annotation.TextAlignment = "Left"
+            End Select
+            If Double.IsFinite(style.Tracking) Then annotation.LetterSpacingPercent = CSng(style.Tracking / 10.0)
+
+            Dim m = style.Matrix
+            If m Is Nothing OrElse Not style.HasBounds Then Return
+            Dim scaleX = Math.Sqrt(m(0) * m(0) + m(1) * m(1))
+            Dim scaleY = Math.Sqrt(m(2) * m(2) + m(3) * m(3))
+            If scaleX < 0.000001 OrElse scaleY < 0.000001 Then Return
+            ' Die zweite Achse muss die um 90 Grad gedrehte erste sein, sonst ist es keine reine
+            ' Drehung mit Massstab.
+            If Math.Abs(m(0) * m(2) + m(1) * m(3)) > 0.001 * scaleX * scaleY Then Return
+            If m(0) * m(3) - m(1) * m(2) <= 0 Then Return
+
+            Dim width = (style.BoundsRight - style.BoundsLeft) * scaleX
+            Dim height = (style.BoundsBottom - style.BoundsTop) * scaleY
+            If Not Double.IsFinite(width) OrElse Not Double.IsFinite(height) OrElse width < 1 OrElse height < 1 Then Return
+            Dim localX = (style.BoundsLeft + style.BoundsRight) / 2.0
+            Dim localY = (style.BoundsTop + style.BoundsBottom) / 2.0
+            Dim centerX = m(0) * localX + m(2) * localY + m(4)
+            Dim centerY = m(1) * localX + m(3) * localY + m(5)
+            If Not Double.IsFinite(centerX) OrElse Not Double.IsFinite(centerY) Then Return
+
+            annotation.XPixels = CSng(centerX - width / 2.0)
+            annotation.YPixels = CSng(centerY - height / 2.0)
+            annotation.WidthPixels = CSng(width)
+            annotation.HeightPixels = CSng(height)
+            annotation.RotationDegrees = CSng(Math.Atan2(m(1), m(0)) * 180.0 / Math.PI)
         End Sub
 
         Private Shared Function EstimateFontSize(layerHeight As Integer, text As String) As Single

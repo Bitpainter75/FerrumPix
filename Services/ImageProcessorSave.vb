@@ -76,9 +76,10 @@ Namespace Services
         ''' <paramref name="background"/> ist dasselbe Bild OHNE die Objekte - es wird die unterste
         ''' Ebene. Jedes Objekt darüber bekommt seine eigene Ebene.
         '''
-        ''' Was dabei fest wird: Korrekturebenen, Text und Formen kommen als Bildpunkte heraus. In
-        ''' der .fpx bleiben sie veränderbar, im PSD nicht - Photoshop legt sie je Art in einem
-        ''' eigenen, kaum dokumentierten Datensatz ab.
+        ''' Was dabei fest wird: Korrekturebenen und Formen kommen als Bildpunkte heraus. In der
+        ''' .fpx bleiben sie veränderbar, im PSD nicht - Photoshop legt sie je Art in einem eigenen,
+        ''' kaum dokumentierten Datensatz ab. Text geht als Textebene hinaus, soweit er sich so
+        ''' beschreiben lässt (siehe <see cref="BuildPsdTextBlock"/>), sonst ebenfalls als Bild.
         '''
         ''' Aus <paramref name="sourcePath"/> kommen die Aufloesung (immer, sie ist eine Eigenschaft
         ''' des Bilds) und mit <paramref name="preserveMetadata"/> das XMP-Paket, so wie die anderen
@@ -107,6 +108,8 @@ Namespace Services
                 ' kein Behälter, sondern eine Klammer aus zwei Datensätzen; welche davon fällig
                 ' sind, ergibt sich aus dem Vergleich mit der Gruppenkette der nächsten Ebene.
                 Dim openChain As New List(Of AnnotationGroup)()
+                ' Jede Textebene der Datei bekommt ihre eigene Nummer (siehe PsdTextLayerWriter).
+                Dim textIndex = 0
 
                 If adj?.Annotations IsNot Nothing Then
                     For Each annotation In adj.Annotations
@@ -175,6 +178,10 @@ Namespace Services
                         ' Zurückladen wäre die Ebene dann dauerhaft ausgeblendet. Der Kommentar
                         ' steht vor der Liste und nicht darin: VB bricht die Zeilenfortsetzung nach
                         ' einem Komma ab, sobald ein Kommentar dazwischenkommt.
+                        ' Ein Text, der sich als Textebene beschreiben lässt, bekommt dazu den Block
+                        ' "TySh"; die Bildpunkte darüber gehen unverändert mit.
+                        Dim textBlock = BuildPsdTextBlock(forRender, adj, width, height, textIndex)
+                        If textBlock IsNot Nothing Then textIndex += 1
                         layers.Add(New PsdWriterService.PsdLayerInput With {
                             .Name = layerName,
                             .Pixels = layerBitmap,
@@ -186,7 +193,8 @@ Namespace Services
                             .IsVisible = annotation.IsVisible,
                             .MaskPixels = maskBitmap,
                             .MaskLeft = layerLeft,
-                            .MaskTop = layerTop
+                            .MaskTop = layerTop,
+                            .TextBlock = textBlock
                         })
                     Next
 
@@ -452,6 +460,97 @@ Namespace Services
                     Where(Function(g) g IsNot Nothing).Select(Function(g) g.Clone()).ToList(),
                 .Masks = If(adj.Masks, New List(Of ImageMask)()).
                     Where(Function(m) m IsNot Nothing).Select(Function(m) m.Clone()).ToList()}
+        End Function
+
+        ''' <summary>Der Block "TySh" für ein Textobjekt, oder Nothing, wenn es als Bild hinausgeht.
+        '''
+        ''' Als Textebene geht nur, was sich in Photoshops Textmodell genau so beschreiben lässt,
+        ''' wie der eigene Renderer es zeichnet: ein Stil für alles, eine Farbe, gerade Zeilen.
+        ''' Pfadtext, Verformung, Verlaufsfüllung, Kontur, Schatten, Schein und eigene Anpassungen
+        ''' des Objekts haben dort kein Gegenstück, ebenso eine Spiegelung. Mit ihnen bliebe nach dem
+        ''' ersten Bearbeiten in Photoshop ein anderer Text stehen als vorher; dann lieber Bild.
+        '''
+        ''' Die Lage kommt aus derselben Abbildung wie beim Zeichnen (TransformAnnotationForGeometry),
+        ''' also auch bei Beschnitt, Drehung oder Zielmass richtig. Gesetzt wird wie in
+        ''' DrawWrappedText: die erste Grundlinie einen Schriftgrad unter der Oberkante des Rahmens,
+        ''' jede weitere eine Zeilenhöhe der Schrift tiefer, waagerecht nach der Ausrichtung.</summary>
+        Friend Shared Function BuildPsdTextBlock(annotation As ImageAnnotation, adj As ImageAdjustments,
+                                                 width As Integer, height As Integer, textIndex As Integer) As Byte()
+            If annotation Is Nothing OrElse adj Is Nothing Then Return Nothing
+            If Not String.Equals(If(annotation.Kind, "").Trim(), "Text", StringComparison.OrdinalIgnoreCase) Then Return Nothing
+            If String.IsNullOrWhiteSpace(annotation.Text) Then Return Nothing
+            If Not String.IsNullOrWhiteSpace(annotation.TextPathKind) Then Return Nothing
+            If HasWarp(annotation) OrElse HasObjectAdjustments(annotation) Then Return Nothing
+            If GradientFillSpec.FromAnnotation(annotation) IsNot Nothing Then Return Nothing
+            If annotation.StrokeWidth > 0 OrElse annotation.ShadowEnabled OrElse annotation.GlowEnabled Then Return Nothing
+
+            Dim render = TransformAnnotationForGeometry(annotation, adj, width, height)
+            If render Is Nothing OrElse render.FlipHorizontal OrElse render.FlipVertical OrElse HasWarp(render) Then Return Nothing
+
+            Dim lines = render.Text.Replace(vbCrLf, vbLf).Replace(vbCr, vbLf).Split(ControlChars.Lf)
+            Dim alignment = If(render.TextAlignment, "Left").Trim()
+            ' Blocksatz streckt jede Zeile ausser der letzten auf die Rahmenbreite; Punkttext kennt
+            ' das nicht. Eine einzelne Zeile setzt der Renderer ohnehin linksbündig.
+            Dim justify = String.Equals(alignment, "Justify", StringComparison.OrdinalIgnoreCase)
+            If justify AndAlso lines.Length > 1 Then Return Nothing
+            Dim alignCenter = String.Equals(alignment, "Center", StringComparison.OrdinalIgnoreCase)
+            Dim alignRight = String.Equals(alignment, "Right", StringComparison.OrdinalIgnoreCase)
+
+            Dim rect = ComputeAnnotationRect(width, height, "text", render)
+            If rect.Width <= 0 OrElse rect.Height <= 0 Then Return Nothing
+            Dim fontSize = Math.Max(8.0F, render.FontSizePixels)
+
+            Dim postScriptName As String
+            Dim lineHeight As Single
+            Using font = CreateTextFont(render.FontFamily, fontSize, render.Text, render.Bold, render.Italic)
+                postScriptName = If(font.Typeface?.PostScriptName, "")
+                If String.IsNullOrWhiteSpace(postScriptName) Then
+                    postScriptName = If(font.Typeface?.FamilyName, "Arial").Replace(" ", "") & "-Regular"
+                End If
+                lineHeight = GetLineHeight(font.Metrics)
+                ' Mittig und rechts weicht der Renderer bei einer Zeile, die breiter ist als der
+                ' Rahmen, auf linksbündig aus; ein Punkttext liefe dort über den linken Rand.
+                If alignCenter OrElse alignRight Then
+                    Dim spacing = font.Size * render.LetterSpacingPercent / 100.0F
+                    For Each line In lines
+                        If MeasureTextSpaced(font, line, spacing) > rect.Width + 0.5F Then Return Nothing
+                    Next
+                End If
+            End Using
+            If Not Single.IsFinite(lineHeight) OrElse lineHeight <= 0 Then Return Nothing
+
+            ' Der Ursprung des Textraums auf der ersten Grundlinie, vor der Drehung.
+            Dim originX As Double = If(alignCenter, rect.MidX, If(alignRight, rect.Right, rect.Left))
+            Dim originY As Double = rect.Top + fontSize
+
+            ' Gedreht wird um die Rahmenmitte, wie DrawAnnotationOnCanvas es tut.
+            Dim radians = render.RotationDegrees * Math.PI / 180.0
+            Dim cos = Math.Cos(radians)
+            Dim sin = Math.Sin(radians)
+            Dim dx = originX - rect.MidX
+            Dim dy = originY - rect.MidY
+            Dim tx = rect.MidX + cos * dx - sin * dy
+            Dim ty = rect.MidY + sin * dx + cos * dy
+
+            Dim fillColor = ParseColor(render.FillColor, SKColors.White)
+            Return PsdTextLayerWriter.Build(New PsdTextLayerWriter.TextLayerSpec With {
+                .Text = render.Text,
+                .FontPostScriptName = postScriptName,
+                .FontSize = fontSize,
+                .Leading = lineHeight,
+                .Tracking = CInt(Math.Round(render.LetterSpacingPercent * 10.0F)),
+                .Justification = If(alignCenter, 2, If(alignRight, 1, 0)),
+                .ColorA = fillColor.Alpha,
+                .ColorR = fillColor.Red,
+                .ColorG = fillColor.Green,
+                .ColorB = fillColor.Blue,
+                .Matrix = {cos, sin, -sin, cos, tx, ty},
+                .BoundsLeft = rect.Left - originX,
+                .BoundsTop = rect.Top - originY,
+                .BoundsRight = rect.Right - originX,
+                .BoundsBottom = rect.Bottom - originY,
+                .TextIndex = textIndex
+            })
         End Function
 
         ''' <summary>Was SaveImage tut, wenn die Aufnahmedaten mitgenommen werden sollen, die Quelle

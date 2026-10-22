@@ -82,6 +82,11 @@ Namespace Services
             ''' nur geschrieben, was er anordnet.</summary>
             Public Property SectionType As Integer = 0
 
+            ''' <summary>Der fertige Block "TySh" einer Textebene (siehe <see cref="PsdTextLayerWriter"/>),
+            ''' oder Nothing für eine Bildebene. Die Bildpunkte gehen trotzdem mit: ein Leser ohne
+            ''' Textmaschine zeigt sie.</summary>
+            Public Property TextBlock As Byte()
+
             Public ReadOnly Property IsGroupMarker As Boolean
                 Get
                     Return SectionType <> 0
@@ -369,6 +374,7 @@ Namespace Services
                         WritePascalName(extra, layer.Name)
                         WriteUnicodeName(extra, layer.Name)
                         If layer.IsGroupMarker Then WriteSectionBlock(extra, layer)
+                        If Not layer.IsGroupMarker AndAlso layer.TextBlock IsNot Nothing Then WriteTaggedBlock(extra, "TySh", layer.TextBlock)
                         WriteU32(info, CInt(extra.Length))
                         extra.Position = 0
                         extra.CopyTo(info)
@@ -732,6 +738,21 @@ Namespace Services
             ms.WriteByte(0)
             ms.WriteByte(0)
             If padded <> payloadLen Then ms.WriteByte(0)
+        End Sub
+
+        ''' <summary>Ein Zusatzblock der Ebene: Signatur, Schlüssel, Länge, Daten. Aufgefüllt auf
+        ''' ein Vielfaches von vier INNERHALB der Länge, wie Photoshop es in seinen eigenen Dateien
+        ''' hält; ein Leser, der hinter einer ungeraden Länge kein Füllbyte überspringt, käme sonst
+        ''' beim nächsten Block aus dem Tritt.</summary>
+        Private Shared Sub WriteTaggedBlock(ms As Stream, key As String, data As Byte())
+            ms.Write(Encoding.ASCII.GetBytes("8BIM"), 0, 4)
+            ms.Write(Encoding.ASCII.GetBytes(key), 0, 4)
+            Dim padded = (data.Length + 3) And Not 3
+            WriteU32(ms, padded)
+            ms.Write(data, 0, data.Length)
+            For i = data.Length + 1 To padded
+                ms.WriteByte(0)
+            Next
         End Sub
 
         Private Shared Function ResolveBlendKey(blendMode As String) As String

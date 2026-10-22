@@ -1,5 +1,6 @@
 Imports System
 Imports System.IO
+Imports System.Linq
 Imports System.Text
 
 Namespace Services
@@ -38,7 +39,31 @@ Namespace Services
             Else
                 style.FontSize = 0
             End If
+
+            Dim matrix = {xx, xy, yx, yy, MatrixValue(block, 34), MatrixValue(block, 42)}
+            If matrix.All(Function(v) Double.IsFinite(v)) Then style.Matrix = matrix
+            Dim bounds = TryCast(descriptor.GetValue("bounds"), PsdDescriptor)
+            If bounds IsNot Nothing Then
+                Dim left = UnitNumber(bounds, "Left"), top = UnitNumber(bounds, "Top ")
+                Dim right = UnitNumber(bounds, "Rght"), bottom = UnitNumber(bounds, "Btom")
+                If right > left AndAlso bottom > top Then
+                    style.HasBounds = True
+                    style.BoundsLeft = left
+                    style.BoundsTop = top
+                    style.BoundsRight = right
+                    style.BoundsBottom = bottom
+                End If
+            End If
             Return style
+        End Function
+
+        ''' Ein Zahlenwert mit Einheit oder ohne; NaN, wenn keiner dasteht.
+        Private Shared Function UnitNumber(descriptor As PsdDescriptor, key As String) As Double
+            Dim value = descriptor.GetValue(key)
+            Dim unit = TryCast(value, PsdUnitValue)
+            If unit IsNot Nothing Then Return unit.Value
+            If TypeOf value Is Double Then Return CDbl(value)
+            Return Double.NaN
         End Function
 
         Private Shared Function MatrixValue(block As Byte(), offset As Integer) As Double

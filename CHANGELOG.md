@@ -1,3 +1,13 @@
+## Unreleased
+
+### What's new
+
+- **Text stays text in PSD exports.** Plain text now goes into the PSD as a real text layer, so
+  the wording, font and size can still be changed in other editors. Text with a shadow, glow,
+  outline, gradient or along a path still goes out as an image. Opened again in FerrumPix, the
+  text comes back as text in the right place, even after cropping. Text layers from other
+  programs now also keep their angle, alignment and letter spacing when you open them as text.
+
 ## 0.9.69
 
 ### What's new

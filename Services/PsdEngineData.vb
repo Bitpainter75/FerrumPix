@@ -9,6 +9,21 @@ Namespace Services
         Public Property FontSize As Double
         Public Property FontName As String = ""
         Public Property FillColor As String = ""
+        ''' Zusätzlicher Zeichenabstand in Tausendsteln des Gevierts; NaN, wenn keiner dasteht.
+        Public Property Tracking As Double = Double.NaN
+        ''' Die Ausrichtung des ersten Absatzes: 0 links, 1 rechts, 2 Mitte, 3 bis 6 Blocksatz;
+        ''' -1, wenn keine dasteht.
+        Public Property Justification As Integer = -1
+
+        ''' <summary>Die Abbildung aus dem Textraum ins Dokument (xx, xy, yx, yy, tx, ty) und der
+        ''' Rahmen im Textraum, beides aus dem TySh-Block (siehe <see cref="PsdTextReader.ExtractStyle"/>).
+        ''' Nothing bzw. False, wenn sie fehlen oder nicht lesbar sind.</summary>
+        Public Property Matrix As Double()
+        Public Property HasBounds As Boolean
+        Public Property BoundsLeft As Double
+        Public Property BoundsTop As Double
+        Public Property BoundsRight As Double
+        Public Property BoundsBottom As Double
 
         Private Sub New()
         End Sub
@@ -28,6 +43,18 @@ Namespace Services
                 Dim result As New PsdEngineData()
                 Dim size = Number(style, "FontSize")
                 If size > 0 AndAlso size <= 100_000 Then result.FontSize = size
+                If style.ContainsKey("Tracking") AndAlso TypeOf style("Tracking") Is Double Then
+                    Dim tracking = CDbl(style("Tracking"))
+                    If Double.IsFinite(tracking) AndAlso Math.Abs(tracking) <= 10_000 Then result.Tracking = tracking
+                End If
+                Dim paragraphs = Arr(Dict(engine, "ParagraphRun"), "RunArray")
+                If paragraphs IsNot Nothing AndAlso paragraphs.Count > 0 Then
+                    Dim properties = Dict(Dict(TryCast(paragraphs(0), Dictionary(Of String, Object)), "ParagraphSheet"), "Properties")
+                    Dim justification = Number(properties, "Justification")
+                    If justification >= 0 AndAlso justification <= 6 AndAlso justification = Math.Truncate(justification) Then
+                        result.Justification = CInt(justification)
+                    End If
+                End If
                 Dim index = Number(style, "Font")
                 Dim fonts = Arr(Dict(root, "ResourceDict"), "FontSet")
                 If fonts IsNot Nothing AndAlso index >= 0 AndAlso index = Math.Truncate(index) AndAlso index < fonts.Count Then
