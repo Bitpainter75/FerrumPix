@@ -31212,9 +31212,22 @@ Namespace ViewModels
                 ' fuer den Bruchteil einer Sekunde auch richtig. Beim LADEN setzt RefreshHistogram.
                 Dim scene = _sceneSk
                 If scene Is Nothing OrElse scene.Width <= 0 OrElse scene.Height <= 0 Then Return
-                If IsScopeLive Then UpdateScopeImagesFromBitmap(scene, SceneScopeKey())
+                If IsScopeLive Then
+                    ' Das Analysebild zeigt, was auf dem Schirm steht: samt der Objekte, die der
+                    ' Kompositor erst beim Blit darüberlegt. Ohne Schlüssel, weil sich diese Objekte
+                    ' ändern können, ohne dass die Szene eine neue Nummer bekommt.
+                    Using composite = BuildSceneWithCompositorObjects()
+                        If composite Is Nothing Then
+                            UpdateScopeImagesFromBitmap(scene, SceneScopeKey())
+                        Else
+                            UpdateScopeImagesFromBitmap(composite, Nothing)
+                        End If
+                    End Using
+                End If
                 ' Der Untergrund der Tonwertkurve kommt aus DERSELBEN Szene: er zeigt damit den
-                ' Stand, gegen den man die Kurve gerade zieht, und nicht mehr den der Datei.
+                ' Stand, gegen den man die Kurve gerade zieht, und nicht mehr den der Datei. Die
+                ' Objekte im Kompositor gehören NICHT dazu: sie liegen über der Reglerkette, die
+                ' Kurve verändert sie nicht.
                 If IsCurveHistogramLive Then
                     _curveHistogramCounts = ImageProcessor.BuildChannelHistogramCounts(scene)
                     Me.RaisePropertyChanged(NameOf(ActiveCurveHistogramCounts))

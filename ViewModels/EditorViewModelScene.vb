@@ -335,6 +335,13 @@ Namespace ViewModels
                                       Math.Min(_sceneSk.Width, rect.Right), Math.Min(_sceneSk.Height, rect.Bottom))
             If clamped.Width <= 0 OrElse clamped.Height <= 0 Then Return
 
+            ' Kompositor-Objekte lassen sich ziehen, ohne dass die Szene neu entsteht; das
+            ' Analysebild zeigt sie mit (BuildSceneWithCompositorObjects) und muss dann nachziehen.
+            ' HIER und nicht am Ende: liegt die Region ausserhalb des Sichtfensters, kehrt der Blit
+            ' gleich darunter zurueck, das Analysebild deckt aber das ganze Bild ab. Entprellt wie
+            ' nach einem Render: gerechnet wird erst, wenn eine Weile Ruhe ist.
+            If HasCompositorObjects() Then ScheduleScopeUpdate()
+
             Dim viewport = ComputeBlitViewportRect()
             If Not viewport.IsEmpty Then
                 Dim visible = New SKRectI(Math.Max(clamped.Left, viewport.Left), Math.Max(clamped.Top, viewport.Top),
@@ -398,6 +405,44 @@ Namespace ViewModels
             End Try
             RaiseEvent SceneInvalidated(Me, EventArgs.Empty)
         End Sub
+
+        ''' <summary>Liegt mindestens ein Objekt im Kompositor, also NICHT in der Szene?</summary>
+        Private Function HasCompositorObjects() As Boolean
+            Dim adj = GetCompositorBlitAdjustments()
+            If adj?.Annotations Is Nothing OrElse adj.Annotations.Count = 0 Then Return False
+            Return OverlaySceneRenderer.ComputeCompositorStartIndex(adj) < adj.Annotations.Count
+        End Function
+
+        ''' <summary>Die Szene, wie sie auf dem Schirm steht: das Bild samt der Objekte, die der
+        ''' Kompositor erst beim Blit darüberlegt. Für Histogramm, Waveform und Parade - sie sollen
+        ''' zeigen, was man sieht. Die Szene allein enthält nur das Foto und den gebackenen Block;
+        ''' bei einer PSD mit Ebenen ist das Foto oft eine leere Fläche und der ganze Inhalt liegt
+        ''' im Kompositor, die Analyse blieb dann leer.
+        '''
+        ''' Nothing, wenn kein Kompositor-Objekt zu zeichnen ist: dann ist die Szene schon das
+        ''' ganze Bild. Sonst gehört die Bitmap dem Aufrufer. Die Anschlagswarnung bleibt draussen,
+        ''' sie ist eine Markierung und kein Bildinhalt. NUR auf dem UI-Thread, wie der Blit selbst
+        ''' (Vertrag des Objekt-Caches).</summary>
+        Private Function BuildSceneWithCompositorObjects() As SKBitmap
+            Dim scene = _sceneSk
+            If scene Is Nothing OrElse scene.Width <= 0 OrElse scene.Height <= 0 Then Return Nothing
+            If Not HasCompositorObjects() Then Return Nothing
+            Dim composite = New SKBitmap(New SKImageInfo(scene.Width, scene.Height, SKColorType.Rgba8888, SKAlphaType.Premul))
+            Try
+                Dim drawn As Integer
+                Using canvas = New SKCanvas(composite)
+                    canvas.Clear(SKColors.Transparent)
+                    canvas.DrawBitmap(scene, 0, 0)
+                    drawn = OverlaySceneRenderer.DrawCachedAnnotations(canvas, GetCompositorBlitAdjustments(),
+                                                                        scene.Width, scene.Height, _annotationBitmapCache)
+                End Using
+                If drawn > 0 Then Return composite
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Editor.ScopeComposite", ex)
+            End Try
+            composite.Dispose()
+            Return Nothing
+        End Function
 
         ''' <summary>Kennung des aktuellen Bildstandes fuer den Analysebild-Zwischenspeicher. Die
         ''' laufende Nummer der Szene erhoeht sich mit JEDEM neuen Szeneninhalt - also bei jeder

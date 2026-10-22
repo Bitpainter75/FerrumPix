@@ -24,4 +24,6 @@
   highlighted, and with "Hero" the hint and the choice of the hero position did not appear.
 - **Batch rename:** the placeholder buttons now sit in a tidy row under the name pattern, as in
   the export dialog.
+- **Histogram, waveform and RGB parade in the editor** now show the whole picture including its
+  layers and objects. With layered PSD files they stayed empty.
 
