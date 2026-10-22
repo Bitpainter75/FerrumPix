@@ -35,6 +35,9 @@
 - **Histogram, waveform and RGB parade in the editor** now show the whole picture including its
   layers and objects. With layered PSD files they stayed empty.
   
+- **Faster browsing of developed RAWs in the viewer:** when you skip quickly through RAW files with
+  development switched on, the viewer no longer develops the pictures you have already passed.
+  
 - **Vibrance protects skin tones:** raising Vibrance now holds back on reds, oranges and skin
   while lifting greens, blues and skies more, and it no longer brightens colours as it saturates
   them. Before, it acted almost like Saturation.

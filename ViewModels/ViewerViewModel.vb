@@ -2308,7 +2308,7 @@ Namespace ViewModels
             Try
                 ' Bei jedem Laden neu gelesen, damit ein umgelegter Schalter beim naechsten Bild wirkt.
                 Dim reduced = Not AppSettingsService.Load().ViewerRawFullResolution
-                bmp = Await Task.Run(Function() DecodeViewerBitmap(path, reducedRawDecode:=reduced))
+                bmp = Await Task.Run(Function() DecodeViewerBitmapUnlessStale(path, reduced, token))
             Catch
                 bmp = Nothing
             End Try
@@ -2451,6 +2451,43 @@ Namespace ViewModels
         ''' entweder bei eingeschalteter Einstellung UND vorhandener Begleitdatei, oder wenn die
         ''' zweite Einstellung das Rezept gar nicht zur Bedingung macht - dann wird auch ein
         ''' unbearbeitetes RAW entwickelt, was je Bild einen vollen Decode kostet.</summary>
+        ''' <summary>Wie <see cref="DecodeViewerBitmap"/>, aber ein Auftrag, den ein Bildwechsel
+        ''' schon ueberholt hat, rechnet nicht mehr.
+        '''
+        ''' Beim Blaettern stellt jedes Bild einen Auftrag an <see cref="DecodeGate"/>, und vorher
+        ''' rechnete jeder davon seine ganze RAW-Entwicklung, bevor der naechste drankam - der
+        ''' Betrachter verwarf das Ergebnis erst danach (<see cref="ApplyLoadedBitmap"/>). Wer schnell
+        ''' durch fuenf RAWs blaetterte, wartete auf vier Entwicklungen, die niemand mehr sah.
+        ''' Jetzt wartet der Auftrag SELBST an der Schleuse und fragt danach seinen Token; ist er
+        ''' ueberholt, gibt er sie sofort wieder frei. Die Aufrufe darin kommen durch, weil die
+        ''' Schleuse denselben Faden wieder hineinlaesst.
+        '''
+        ''' Nur fuer eine RAW, die entwickelt wird: alles andere ist schnell genug, und eine
+        ''' eingebettete Vorschau soll nicht hinter Hintergrundarbeit (Gesichter, Kacheln) an der
+        ''' Schleuse warten.</summary>
+        Private Function DecodeViewerBitmapUnlessStale(path As String, reduced As Boolean, token As Integer) As Bitmap
+            If Not WillDevelopRawInViewer(path) Then Return DecodeViewerBitmap(path, reducedRawDecode:=reduced)
+            Return DecodeGate.Run(
+                Function() As Bitmap
+                    If token <> System.Threading.Volatile.Read(_bitmapLoadToken) Then
+                        DiagnosticLogService.LogAlways("Viewer.StaleDecode", $"uebersprungen file={IO.Path.GetFileName(path)}")
+                        Return Nothing
+                    End If
+                    Return DecodeViewerBitmap(path, reducedRawDecode:=reduced)
+                End Function)
+        End Function
+
+        ''' <summary>Entwickelt <see cref="DecodeViewerBitmap"/> diese Datei als RAW? Dieselbe
+        ''' Entscheidung wie dort, ohne Bildvergleich.</summary>
+        Private Shared Function WillDevelopRawInViewer(path As String) As Boolean
+            If Not RawPreviewService.IsSupportedRaw(path) Then Return False
+            Dim settings = AppSettingsService.Load()
+            Return ShouldDevelopRaw(False, RawDecodeService.IsAvailable,
+                                    settings.DevelopRawInViewer,
+                                    RawSidecarService.Exists(path),
+                                    settings.DevelopRawInViewerWithoutRecipe)
+        End Function
+
         Friend Shared Function ShouldDevelopRaw(alwaysDevelop As Boolean, libRawAvailable As Boolean,
                                                 settingEnabled As Boolean, sidecarExists As Boolean,
                                                 developWithoutRecipe As Boolean) As Boolean
