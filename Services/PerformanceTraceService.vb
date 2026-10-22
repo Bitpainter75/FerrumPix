@@ -175,11 +175,74 @@ Namespace Services
             End SyncLock
         End Sub
 
-        Private Shared Sub StartUiThreadWatchdogLocked()
+        ''' <summary>Stand der Speicherbereinigung beim letzten Herzschlag: Zahl der Gen-2-Läufe und
+        ''' die gesamte Pausenzeit bis dahin. Der Beobachter zieht ihn am Ende einer Stockung vom
+        ''' dann aktuellen Stand ab - so steht neben jeder Stockung, ob und wie lange in ihr
+        ''' bereinigt wurde.</summary>
+        Private Shared _schlagGen2 As Integer = 0
+        Private Shared _schlagPauseTicks As Long = 0
+
+        ''' <summary>Der zweite Blick auf den Anzeigefaden: ein Auftrag mit HOECHSTEM Vorrang (Send),
+        ''' den der Beobachter alle 50 ms hineinreicht. Der Herzschlag laeuft mit Hintergrund-Vorrang
+        ''' und bleibt deshalb auch dann aus, wenn der Faden zwar arbeitet, aber nur Eingaben, Bindungen
+        ''' und Layout abarbeitet - beim Ziehen eines Reglers ist das der Normalfall. Kommt dagegen
+        ''' der Ping nicht an, steht der Faden wirklich in EINER langen Operation. Beide Messungen
+        ''' zusammen trennen "ausgelastet" von "blockiert".
+        '''
+        ''' 0 heisst: kein Ping unterwegs. Sonst der Zeitstempel, zu dem er losgeschickt wurde.</summary>
+        Private Shared _pingGesendetTicks As Long = 0
+        Private Shared _pingGen2 As Integer = 0
+        Private Shared _pingPauseTicks As Long = 0
+        Private Shared _pingGemeldet As Boolean = False
+        Private Shared _pingWobei As String = ""
+
+        Private Shared Sub PingAngekommen(gesendet As Long)
+            Dim dauerMs = (Stopwatch.GetTimestamp() - gesendet) * 1000.0 / Stopwatch.Frequency
+            If dauerMs >= StockungAbMs Then
+                Dim gen2 = GC.CollectionCount(2) - _pingGen2
+                Dim pauseMs = TimeSpan.FromTicks(GC.GetTotalPauseDuration().Ticks - _pingPauseTicks).TotalMilliseconds
+                Record("Anzeigefaden blockiert", dauerMs)
+                DiagnosticLogService.LogAlways("Messung",
+                    $"Anzeigefaden blockiert {dauerMs:F0} ms - Bereinigung darin: {gen2} Gen-2-Laeufe, Pause {pauseMs:F0} ms - {_pingWobei}")
+            End If
+            _pingGemeldet = False
+            _pingWobei = ""
+            Threading.Volatile.Write(_pingGesendetTicks, 0L)
+        End Sub
+
+        Private Shared Sub PingPruefen()
+            Dim gesendet = Threading.Volatile.Read(_pingGesendetTicks)
+            If gesendet = 0 Then
+                Dim jetzt = Stopwatch.GetTimestamp()
+                _pingGen2 = GC.CollectionCount(2)
+                _pingPauseTicks = GC.GetTotalPauseDuration().Ticks
+                Threading.Volatile.Write(_pingGesendetTicks, jetzt)
+                Dispatcher.UIThread.Post(Sub() PingAngekommen(jetzt), DispatcherPriority.Send)
+                Return
+            End If
+            ' Unterwegs und schon lange: der Faden steht. Einmal festhalten, WOBEI - am Ende, wenn der
+            ' Ping ankommt, ist der Messpunkt laengst geschlossen.
+            Dim wartetMs = (Stopwatch.GetTimestamp() - gesendet) * 1000.0 / Stopwatch.Frequency
+            If wartetMs < StockungAbMs OrElse _pingGemeldet Then Return
+            _pingGemeldet = True
+            Dim abschnitt = _currentSection
+            Dim seit = Threading.Volatile.Read(_sectionStartedTicks)
+            Dim abschnittMs = If(seit = 0, 0.0, (Stopwatch.GetTimestamp() - seit) * 1000.0 / Stopwatch.Frequency)
+            _pingWobei = If(String.IsNullOrEmpty(abschnitt),
+                            "kein Messpunkt offen - der Blockierer hat keinen",
+                            $"offener Messpunkt: {abschnitt} (seit {abschnittMs:F0} ms)")
+        End Sub
+
+        Private Shared Sub Herzschlag()
+            _schlagGen2 = GC.CollectionCount(2)
+            Threading.Volatile.Write(_schlagPauseTicks, GC.GetTotalPauseDuration().Ticks)
             Threading.Volatile.Write(_letzterSchlagTicks, Stopwatch.GetTimestamp())
+        End Sub
+
+        Private Shared Sub StartUiThreadWatchdogLocked()
+            Herzschlag()
             _watchdog = New DispatcherTimer With {.Interval = TimeSpan.FromMilliseconds(100)}
-            AddHandler _watchdog.Tick,
-                Sub() Threading.Volatile.Write(_letzterSchlagTicks, Stopwatch.GetTimestamp())
+            AddHandler _watchdog.Tick, Sub() Herzschlag()
             _watchdog.Start()
 
             Dim meinLauf = Threading.Interlocked.Increment(_beobachterLauf)
@@ -193,11 +256,33 @@ Namespace Services
 
         Private Shared Sub BeobachterSchleife(meinLauf As Integer)
             Dim zuletztGemeldet As Long = 0
+            ' Die laufende Stockung: ihr letzter Herzschlag davor, der Stand der Bereinigung dort
+            ' und der Messpunkt, der bei ihrer Entdeckung offen war. Ohne das ENDE kennte das
+            ' Protokoll nur den Augenblick der Entdeckung (knapp ueber 200 ms) - eine Stockung von
+            ' zwei Sekunden saehe dann genauso aus wie eine von zweihundert Millisekunden.
+            Dim offenSeit As Long = 0
+            Dim offenGen2 = 0
+            Dim offenPause As Long = 0
+            Dim offenWobei = ""
             While Threading.Volatile.Read(_beobachterLauf) = meinLauf
                 Try
                     Threading.Thread.Sleep(50)
+                    PingPruefen()
                     Dim letzter = Threading.Volatile.Read(_letzterSchlagTicks)
                     If letzter = 0 Then Continue While
+
+                    ' Ende einer gemeldeten Stockung: der Herzschlag ist weitergegangen.
+                    If offenSeit <> 0 AndAlso letzter <> offenSeit Then
+                        Dim dauerMs = (letzter - offenSeit) * 1000.0 / Stopwatch.Frequency
+                        Dim gen2 = GC.CollectionCount(2) - offenGen2
+                        Dim pauseMs = TimeSpan.FromTicks(GC.GetTotalPauseDuration().Ticks - offenPause).TotalMilliseconds
+                        Record("Anzeigefaden Stockung ganz", dauerMs)
+                        Record("Anzeigefaden Stockung davon Bereinigung", pauseMs)
+                        DiagnosticLogService.LogAlways("Messung",
+                            $"Anzeigefaden stand {dauerMs:F0} ms - Bereinigung darin: {gen2} Gen-2-Laeufe, Pause {pauseMs:F0} ms - {offenWobei}")
+                        offenSeit = 0
+                    End If
+
                     Dim stillMs = (Stopwatch.GetTimestamp() - letzter) * 1000.0 / Stopwatch.Frequency
                     If stillMs < StockungAbMs Then Continue While
                     ' Nur EINMAL je Stockung melden, nicht bei jedem Blick.
@@ -212,6 +297,10 @@ Namespace Services
                                    $"offener Messpunkt: {abschnitt} (seit {abschnittMs:F0} ms)")
                     Record("Anzeigefaden stockt", stillMs)
                     DiagnosticLogService.LogAlways("Messung", $"Anzeigefaden steht seit {stillMs:F0} ms - {wobei}")
+                    offenSeit = letzter
+                    offenGen2 = _schlagGen2
+                    offenPause = Threading.Volatile.Read(_schlagPauseTicks)
+                    offenWobei = wobei
                 Catch
                 End Try
             End While

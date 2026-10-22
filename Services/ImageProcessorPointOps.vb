@@ -2051,6 +2051,9 @@ Namespace Services
             Dim coverage = New Single(gw * gh - 1) {}
             Dim toLinear = _srgbToLinearTable
             Dim toGamma = _linearToSrgbTable
+            ' Eigener Messpunkt: das Mitteln liest ALLE Bildpunkte und haengt nur am Bild, der Rest
+            ' rechnet auf dem kleinen Raster. Lohnt ein Zwischenspeicher, steht es hier.
+            PerformanceTraceService.Measure("Pixel: oertliche Basis, Raster mitteln", Sub()
             ForEachRow(gw, gh,
                 Sub(gy)
                     Dim yStart = originY + gy * stepSize
@@ -2090,6 +2093,7 @@ Namespace Services
                         coverage(gy * gw + gx) = totalAlpha / ((xEnd - xStart) * (yEnd - yStart))
                     Next
                 End Sub)
+            End Sub)
 
             ' Radius und Glaettung in Bildpunkten der vollen Aufloesung, umgerechnet aufs Raster, als
             ' Bruchteil statt auf ganze Rasterpunkte gerundet. Die Glaettung zieht die Breite ab, die
@@ -2291,18 +2295,72 @@ Namespace Services
                         rows(offset + x) = CSng(FractionalWindowMean(prefix, width, x, whole, part))
                     Next
                 End Sub)
-            ' Spalten: ForEachRow verteilt hier die Spaltennummer.
-            ForEachRow(height, width,
-                Sub(x)
-                    Dim prefix = New Double(height) {}
+            ' Spalten in STREIFEN von BoxColumnBand nebeneinanderliegenden Spalten, Zeile fuer Zeile
+            ' durchlaufen. Je Spalte einzeln hiesse, mit einer ganzen Rasterzeile Abstand durch den
+            ' Speicher zu springen - bei 1024 Feldern 4 KB je Schritt, und jeder Schritt ein neuer
+            ' Zwischenspeicher-Fehlgriff. Gerechnet wird je Spalte exakt dasselbe in derselben
+            ' Reihenfolge wie vorher (Praefixsumme von oben nach unten, dann dasselbe Fenster), das
+            ' Ergebnis ist also bitgleich.
+            Dim bands = (width + BoxColumnBand - 1) \ BoxColumnBand
+            Dim columnBand As Action(Of Integer) =
+                Sub(band)
+                    Dim x0 = band * BoxColumnBand
+                    Dim span = Math.Min(BoxColumnBand, width - x0)
+                    ' Praefixsummen des Streifens, zeilenweise abgelegt: (height + 1) Zeilen zu span.
+                    Dim prefix = New Double((height + 1) * span - 1) {}
                     For y = 0 To height - 1
-                        prefix(y + 1) = prefix(y) + rows(y * width + x)
+                        Dim src = y * width + x0
+                        Dim before = y * span
+                        Dim after = before + span
+                        For j = 0 To span - 1
+                            prefix(after + j) = prefix(before + j) + rows(src + j)
+                        Next
                     Next
                     For y = 0 To height - 1
-                        result(y * width + x) = CSng(FractionalWindowMean(prefix, height, y, whole, part))
+                        Dim dst = y * width + x0
+                        For j = 0 To span - 1
+                            result(dst + j) = CSng(FractionalWindowMeanStrided(prefix, span, j, height, y, whole, part))
+                        Next
                     Next
-                End Sub)
+                End Sub
+            If CLng(width) * height < ParallelPixelThreshold Then
+                For band = 0 To bands - 1
+                    columnBand(band)
+                Next
+            Else
+                Parallel.For(0, bands, columnBand)
+            End If
             Return result
+        End Function
+
+        ''' <summary>Wie viele nebeneinanderliegende Spalten FractionalBoxMean gemeinsam durchlaeuft.
+        ''' 64 Werte zu acht Byte je Zeile sind acht Zwischenspeicherzeilen: genug, dass jeder Zugriff
+        ''' trifft, und klein genug, dass sich die Streifen auf die Kerne verteilen.</summary>
+        Private Const BoxColumnBand As Integer = 64
+
+        ''' <summary><see cref="FractionalWindowMean"/> fuer Praefixsummen, die mit Abstand
+        ''' <paramref name="stride"/> ab <paramref name="offset"/> abgelegt sind. Dieselbe Rechnung in
+        ''' derselben Reihenfolge, damit das Ergebnis bitgleich bleibt.</summary>
+        Private Shared Function FractionalWindowMeanStrided(prefix As Double(), stride As Integer, offset As Integer,
+                                                            count As Integer, center As Integer,
+                                                            whole As Integer, part As Double) As Double
+            Dim i0 = Math.Max(0, center - whole)
+            Dim i1 = Math.Min(count, center + whole + 1)
+            Dim sum = prefix(i1 * stride + offset) - prefix(i0 * stride + offset)
+            Dim weight As Double = i1 - i0
+            If part > 0.0 Then
+                Dim before = center - whole - 1
+                If before >= 0 Then
+                    sum += part * (prefix((before + 1) * stride + offset) - prefix(before * stride + offset))
+                    weight += part
+                End If
+                Dim after = center + whole + 1
+                If after < count Then
+                    sum += part * (prefix((after + 1) * stride + offset) - prefix(after * stride + offset))
+                    weight += part
+                End If
+            End If
+            Return sum / weight
         End Function
 
         ''' <summary>Ein Fenster des gebrochenen Kastenmittels ueber den Praefixsummen einer Zeile oder
@@ -2399,8 +2457,12 @@ Namespace Services
             Dim localColor = chain.LocalColorGain
             Dim localBase As LocalToneBase = Nothing
             If localZones IsNot Nothing Then
-                localBase = BuildLocalToneBase(srcBuf, stride, width, source.Height, ri, gi, bi, ai, srcPremul, chain,
-                                               _localToneReferenceEdge)
+                ' Eigener Messpunkt: die Basis ist eine Nachbarschaftsrechnung und steckt sonst
+                ' unsichtbar in "Punktkette" - ob deren Zeit in der Punktrechnung oder hier liegt,
+                ' entscheidet, was zuerst schneller werden muss.
+                localBase = PerformanceTraceService.Measure("Pixel: Punktkette, oertliche Basis",
+                    Function() BuildLocalToneBase(srcBuf, stride, width, source.Height, ri, gi, bi, ai, srcPremul, chain,
+                                                  _localToneReferenceEdge))
             End If
 
             ForEachRow(width, source.Height,

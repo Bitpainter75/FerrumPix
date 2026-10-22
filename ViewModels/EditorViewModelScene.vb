@@ -133,7 +133,13 @@ Namespace ViewModels
         ''' die persistente Anzeige. Uebernimmt die Ownership von sceneSk.</summary>
         ''' <param name="sourceScale">Verhaeltnis der gewohnten Vorschauquelle zur Quelle, aus der
         ''' diese Szene gerechnet ist - siehe <see cref="SceneDisplayScale"/>.</param>
+        ''' <summary>Messhuelle: der Szenenwechsel laeuft auf dem Anzeigefaden, und eine Stockung dort
+        ''' soll ihren Messpunkt haben (siehe PerformanceTraceService, Waechter).</summary>
         Private Sub SetSceneBitmap(sceneSk As SKBitmap, Optional sourceScale As Double = 1.0)
+            PerformanceTraceService.Measure("Editor: Szene uebernehmen", Sub() SetSceneBitmapCore(sceneSk, sourceScale))
+        End Sub
+
+        Private Sub SetSceneBitmapCore(sceneSk As SKBitmap, sourceScale As Double)
             If sceneSk Is Nothing Then Return
             _sceneSourceScale = If(sourceScale > 0.0 AndAlso Not Double.IsNaN(sourceScale), sourceScale, 1.0)
             ' Ein Vollrender malt die ganze Anzeige neu - die Zugbahn-Verkettung der Blits beginnt
@@ -330,6 +336,10 @@ Namespace ViewModels
         ''' liegt, merkt sich _displayPendingRect, und der naechste Schwenk holt es nach
         ''' (FlushPendingDisplayRegion). In der Einpassen-Ansicht klemmt nichts.</summary>
         Private Sub BlitSceneRegionToDisplay(rect As SKRectI)
+            PerformanceTraceService.Measure("Editor: Blit", Sub() BlitSceneRegionToDisplayCore(rect))
+        End Sub
+
+        Private Sub BlitSceneRegionToDisplayCore(rect As SKRectI)
             If _sceneSk Is Nothing OrElse _sceneDisplay Is Nothing OrElse rect.IsEmpty Then Return
             Dim clamped = New SKRectI(Math.Max(0, rect.Left), Math.Max(0, rect.Top),
                                       Math.Min(_sceneSk.Width, rect.Right), Math.Min(_sceneSk.Height, rect.Bottom))
@@ -414,37 +424,62 @@ Namespace ViewModels
         '''
         ''' Gezaehlt werden nur ihre sichtbaren Punkte (visibleOnly), gezeichnet in Szenengroesse an
         ''' ihrer Stelle, wie der Export eine einzelne Ebene zeichnet. False, wenn kein Objekt das
-        ''' Reglerziel ist; dann gilt die Szene.</summary>
+        ''' Reglerziel ist; dann gilt die Szene.
+        '''
+        ''' Einsammeln und Rechnen in einem Zug, auf dem aufrufenden Faden. Der Editor selbst trennt
+        ''' beides (PrepareObjectCurveJob auf dem Anzeigefaden, ComputeObjectCurveCounts im
+        ''' Hintergrund); diese Fassung dient dem Pruefstand.</summary>
         Private Function TryBuildObjectCurveCounts(ByRef counts As (R As Integer(), G As Integer(), B As Integer(), L As Integer())) As Boolean
+            Dim job As New ScopeJob()
+            If Not PrepareObjectCurveJob(job) Then Return False
+            counts = ComputeObjectCurveCounts(job.ObjectAnnotation, job.ObjectContext, job.ObjectWidth, job.ObjectHeight)
+            Return counts.R IsNot Nothing
+        End Function
+
+        ''' <summary>Sammelt fuer den Kurvenuntergrund einer Ebene ein, was nur der Anzeigefaden
+        ''' weiss: die Ebene mit den Reglerwerten, die gerade in den Feldern stehen, und das volle
+        ''' Rezept als Rahmen. False, wenn kein Objekt das Reglerziel ist.</summary>
+        Private Function PrepareObjectCurveJob(job As ScopeJob) As Boolean
             If Not IsObjectAdjustModeActive() Then Return False
             Dim scene = _sceneSk
             If scene Is Nothing OrElse scene.Width <= 0 OrElse scene.Height <= 0 Then Return False
             If _objectAdjustIndex < 0 OrElse _objectAdjustIndex >= _annotations.Count Then Return False
             Dim annotation = _annotations(_objectAdjustIndex)
             If annotation Is Nothing Then Return False
+            ' Die laufenden Reglerwerte gehoeren dem Objekt, stehen aber erst beim Wechsel des
+            ' Reglerziels in seinem Modell. Gezeichnet wird deshalb ein Klon mit ihnen.
+            Dim forRender = annotation.Clone()
+            Dim live = BuildAdjustmentsFromFields().ExtractPixelAdjustments()
+            forRender.Adjustments = If(live.HasPixelAdjustments(), live, Nothing)
+            forRender.IsVisible = True
+            job.ObjectAnnotation = forRender
+            ' Das volle Rezept und nicht der Schnappschuss des Kompositors: der traegt keine
+            ' Masken, und eine maskierte Ebene zaehlte sonst auch ihre verdeckten Punkte. Es ist ein
+            ' Klon und darf deshalb in den Hintergrund.
+            job.ObjectContext = GetCurrentAdjustments(forPreview:=True, includeEditorOverlayAnnotations:=True)
+            job.ObjectWidth = scene.Width
+            job.ObjectHeight = scene.Height
+            Return True
+        End Function
+
+        ''' <summary>Zeichnet die eingesammelte Ebene allein in Szenengroesse und zaehlt ihre
+        ''' sichtbaren Punkte. Haengt an keinem Zustand des Editors, laeuft also im Hintergrund.
+        ''' Leere Zahlen (R ist Nothing), wenn das Zeichnen scheitert.</summary>
+        Private Shared Function ComputeObjectCurveCounts(annotation As ImageAnnotation, context As ImageAdjustments,
+                                                         width As Integer, height As Integer) As (R As Integer(), G As Integer(), B As Integer(), L As Integer())
             Try
-                ' Die laufenden Reglerwerte gehoeren dem Objekt, stehen aber erst beim Wechsel des
-                ' Reglerziels in seinem Modell. Gezeichnet wird deshalb ein Klon mit ihnen.
-                Dim forRender = annotation.Clone()
-                Dim live = BuildAdjustmentsFromFields().ExtractPixelAdjustments()
-                forRender.Adjustments = If(live.HasPixelAdjustments(), live, Nothing)
-                forRender.IsVisible = True
-                ' Das volle Rezept und nicht der Schnappschuss des Kompositors: der traegt keine
-                ' Masken, und eine maskierte Ebene zaehlte sonst auch ihre verdeckten Punkte.
-                Dim context = GetCurrentAdjustments(forPreview:=True, includeEditorOverlayAnnotations:=True)
-                Using layer = New SKBitmap(New SKImageInfo(scene.Width, scene.Height, SKColorType.Rgba8888, SKAlphaType.Premul))
+                Using layer = New SKBitmap(New SKImageInfo(width, height, SKColorType.Rgba8888, SKAlphaType.Premul))
                     Using canvas = New SKCanvas(layer)
                         canvas.Clear(SKColors.Transparent)
-                        ImageProcessor.DrawAnnotationsOnCanvas(canvas, context, scene.Width, scene.Height,
-                                                               0, 0, scene.Width, scene.Height,
-                                                               New List(Of ImageAnnotation) From {forRender})
+                        ImageProcessor.DrawAnnotationsOnCanvas(canvas, context, width, height,
+                                                               0, 0, width, height,
+                                                               New List(Of ImageAnnotation) From {annotation})
                     End Using
-                    counts = ImageProcessor.BuildChannelHistogramCounts(layer, visibleOnly:=True)
+                    Return ImageProcessor.BuildChannelHistogramCounts(layer, visibleOnly:=True)
                 End Using
-                Return True
             Catch ex As Exception
                 DiagnosticLogService.LogException("Editor.ObjectCurveCounts", ex)
-                Return False
+                Return Nothing
             End Try
         End Function
 
@@ -1066,6 +1101,18 @@ Namespace ViewModels
                 Return
             End If
 
+            ' Hat sich das Arbeitsbild waehrend des Renders geaendert, ist die Quelle nicht mehr der
+            ' Stand, zu dem sie gehoeren soll - und RenderDownscale liest ausserhalb der Sperre: sie
+            ' kann sogar einen halb geschriebenen oder danach zurueckgerollten Commit enthalten. Ein
+            ' Commit zaehlt die Version immer weiter, auch wenn er scheitert. Deshalb hier pruefen
+            ' und nicht erst beim naechsten Render: weder die Quelle in den Cache noch das Detail
+            ' auf den Schirm.
+            Dim workingChanged = _workingImage.Version <> workingVersionAtStart
+            If workingChanged AndAlso source IsNot Nothing AndAlso Not Object.ReferenceEquals(source, _zoomDetailSource) Then
+                source.Dispose()
+                source = Nothing
+            End If
+
             ' Frisch geladene Quellen in den Cache uebernehmen (fuer die naechsten Renders).
             If source IsNot Nothing AndAlso Not Object.ReferenceEquals(source, _zoomDetailSource) Then
                 _zoomDetailSource?.Dispose()
@@ -1080,15 +1127,19 @@ Namespace ViewModels
             End If
             If rendered Is Nothing Then Return
 
-            If versionAtStart <> _sceneContentVersion Then
-                ' Inhalt hat sich waehrend des Renders geaendert: verwerfen und SOFORT neu starten
-                ' (der Bump liegt in der Vergangenheit - der 350-ms-Timer wuerde nur Zeit kosten).
+            If versionAtStart <> _sceneContentVersion OrElse workingChanged Then
+                ' Inhalt hat sich waehrend des Renders geaendert: verwerfen. Neu gestartet wird nur,
+                ' wenn die Ruhefrist schon abgelaufen ist - dann hat der Timer waehrend des Renders
+                ' gefeuert, und sein Anstoss prallte an der Wache oben ab. Laeuft er noch, kam
+                ' inzwischen eine neuere Aenderung, und er startet selbst. Ein Sofortstart in diesem
+                ' Fall machte aus einem Reglerzug eine Kette von Detail-Renders, die alle verworfen
+                ' wurden (gemessen rund zwanzig je Zug, je 120 bis 300 ms, neben dem Zugrender).
                 ' Die Log-Zeile zeigt, falls Renders dauerhaft im Kreis verworfen werden.
                 rendered.Dispose()
                 beforeRendered?.Dispose()
                 DiagnosticLogService.LogAlways("Editor.ZoomDetail",
                                                $"discarded=version ms={sw.ElapsedMilliseconds}")
-                BeginZoomDetailRenderAsync()
+                If _zoomDetailTimer Is Nothing OrElse Not _zoomDetailTimer.IsEnabled Then BeginZoomDetailRenderAsync()
                 Return
             End If
 

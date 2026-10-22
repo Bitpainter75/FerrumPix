@@ -123,6 +123,8 @@ Namespace Services
         Private Shared _baseCacheKey As String = Nothing
         Private Shared _baseCacheSourceRef As SKBitmap = Nothing
         Private Shared _baseCacheBitmap As SKBitmap = Nothing
+        ' 1, wenn ClearBaseCache die Sperre belegt fand; siehe dort.
+        Private Shared _baseCacheClearPending As Integer
 
         ''' <summary>DIE QUELLE KANN SICH AENDERN, OHNE EINE ANDERE ZU WERDEN. Das Arbeitsbild wird
         ''' beim Backen einer Region IN DERSELBEN Bitmap-Instanz veraendert; die Vorschau-Ableitung
@@ -1022,7 +1024,8 @@ Namespace Services
                 End Try
             End If
 
-            SyncLock _baseCacheLock
+            Monitor.Enter(_baseCacheLock)
+            Try
                 Dim baseBitmap = GetOrComputeBaseLocked(workingSource, adj)
                 Dim annotated = ApplyAnnotations(baseBitmap, adj)
                 Try
@@ -1030,7 +1033,9 @@ Namespace Services
                 Finally
                     If Not Object.ReferenceEquals(annotated, baseBitmap) Then annotated.Dispose()
                 End Try
-            End SyncLock
+            Finally
+                ReleaseBaseCacheLock()
+            End Try
         End Function
 
         Public Shared Function RenderPreviewSkBitmap(source As SKBitmap, adj As ImageAdjustments) As SKBitmap
@@ -1045,6 +1050,7 @@ Namespace Services
             If source Is Nothing Then Return Nothing
             If Not Monitor.TryEnter(_baseCacheLock, 12) Then Return Nothing
             Try
+                DrainPendingBaseCacheClearLocked()
                 Dim key = ComputeBaseKey(adj)
                 If Not Object.ReferenceEquals(_baseCacheSourceRef, source) OrElse
                    Not String.Equals(_baseCacheKey, key, StringComparison.Ordinal) OrElse
@@ -1054,7 +1060,7 @@ Namespace Services
                 End If
                 Return CloneBitmap(_baseCacheBitmap)
             Finally
-                Monitor.Exit(_baseCacheLock)
+                ReleaseBaseCacheLock()
             End Try
         End Function
 
@@ -1065,7 +1071,8 @@ Namespace Services
         ''' (Aufrufer disposed).</summary>
         Public Shared Function RenderSceneSkCached(source As SKBitmap, adj As ImageAdjustments) As SKBitmap
             If source Is Nothing Then Return Nothing
-            SyncLock _baseCacheLock
+            Monitor.Enter(_baseCacheLock)
+            Try
                 Dim baseBitmap = GetOrComputeBaseLocked(source, adj)
                 Dim annotated = ApplyAnnotations(baseBitmap, adj)
                 ' Ohne sichtbare Annotationen liefert ApplyAnnotations die gecachte Basis selbst zurueck -
@@ -1075,7 +1082,10 @@ Namespace Services
                 ' gemischten Formaten Rot/Blau vertauschen.
                 If Object.ReferenceEquals(annotated, baseBitmap) Then Return CloneBitmapForAnnotationComposite(baseBitmap)
                 Return annotated
-            End SyncLock
+            Finally
+                ' Ein ClearBaseCache, das waehrend dieses Renders kam, gilt auch fuer sein Ergebnis.
+                ReleaseBaseCacheLock()
+            End Try
         End Function
 
         ''' <summary>Rendert eine fertige Szene ohne Editor-Zwischenspeicher in voller Aufloesung.
@@ -1425,6 +1435,7 @@ Namespace Services
 
             If Not Monitor.TryEnter(_baseCacheLock, 12) Then Return Nothing
             Try
+                DrainPendingBaseCacheClearLocked()
                 Dim key = ComputeBaseKey(adj)
                 If Not Object.ReferenceEquals(_baseCacheSourceRef, source) OrElse
                    Not String.Equals(_baseCacheKey, key, StringComparison.Ordinal) OrElse
@@ -1440,7 +1451,7 @@ Namespace Services
                     If Not Object.ReferenceEquals(annotated, _baseCacheBitmap) Then annotated.Dispose()
                 End Try
             Finally
-                Monitor.Exit(_baseCacheLock)
+                ReleaseBaseCacheLock()
             End Try
         End Function
 
@@ -1494,6 +1505,7 @@ Namespace Services
                 Return Nothing
             End If
             Try
+                DrainPendingBaseCacheClearLocked()
                 Dim key = ComputeBaseKey(adj)
                 If Not Object.ReferenceEquals(_baseCacheSourceRef, source) OrElse
                    Not String.Equals(_baseCacheKey, key, StringComparison.Ordinal) OrElse
@@ -1527,7 +1539,7 @@ Namespace Services
                 clampedRect = rect
                 Return patch
             Finally
-                Monitor.Exit(_baseCacheLock)
+                ReleaseBaseCacheLock()
             End Try
         End Function
 
@@ -4074,30 +4086,88 @@ Namespace Services
         ''' <summary>Gibt das gecachte Basis-Bitmap frei. Muss aufgerufen werden, sobald die zugehörige
         ''' Quelle verschwindet (Bildwechsel, Editor verlassen) - der Cache ist statisch und hielte sonst
         ''' ein Bitmap in Vorschauauflösung sowie eine Referenz auf das bereits disposte Quell-SKBitmap
-        ''' bis zum Programmende fest.</summary>
+        ''' bis zum Programmende fest.
+        '''
+        ''' <para>Wartet NICHT auf einen laufenden Render. Der haelt die Sperre fuer seine ganze
+        ''' Dauer, und gerufen wird das hier auch auf dem Anzeigefaden (Uebernehmen eines neuen
+        ''' Arbeitsbilds): der stand dann so lange wie der Render, gemessen 370 ms. Ist die Sperre
+        ''' belegt, wird das Leeren vorgemerkt, und wer sie haelt, holt es nach, wenn er sie abgibt
+        ''' (<see cref="ReleaseBaseCacheLock"/>). Einen falschen Treffer kann der Aufschub nicht
+        ''' erzeugen: der Cache vergleicht die Quelle ueber ihre Identitaet, und eine neue Quelle ist
+        ''' ein neues Objekt. Er verschiebt nur, wann der Speicher frei wird.</para></summary>
         Public Shared Sub ClearBaseCache()
-            SyncLock _baseCacheLock
-                If _preMaskBitmap IsNot Nothing AndAlso Not Object.ReferenceEquals(_preMaskBitmap, _baseCacheBitmap) Then _preMaskBitmap.Dispose()
-                _preMaskBitmap = Nothing
-                _preMaskKey = Nothing
-                _toneCacheBitmap?.Dispose()
-                _toneCacheBitmap = Nothing
-                _toneCacheKey = Nothing
-                _baseCacheBitmap?.Dispose()
-                _baseCacheBitmap = Nothing
-                _baseCacheKey = Nothing
-                _baseCacheSourceRef = Nothing
-                _baseCacheSourceStamp = -1
-            End SyncLock
+            If Monitor.TryEnter(_baseCacheLock, 20) Then
+                Try
+                    ClearBaseCacheLocked()
+                Finally
+                    ReleaseBaseCacheLock()
+                End Try
+            Else
+                Interlocked.Exchange(_baseCacheClearPending, 1)
+                ' Der Halter kann die Sperre zwischen dem vergeblichen Versuch oben und dem Setzen
+                ' eben abgegeben haben, ohne die Vormerkung noch zu sehen. Deshalb nach dem Setzen
+                ' selbst noch einmal versuchen - siehe ReleaseBaseCacheLock.
+                DrainPendingBaseCacheClearAfterRelease()
+            End If
             ' Die gemerkten Masken der Korrekturebenen gehoeren demselben Bild und haben denselben
             ' Grund wegzukommen. Sie stehen in ImageProcessorMasks.vb, aber an EINEM Aufraeumen -
             ' ein zweites, das der Aufrufer extra rufen muesste, wuerde irgendwann vergessen.
             ClearMaskRasterCache()
         End Sub
 
+        ''' <summary>Holt ein vorgemerktes <see cref="ClearBaseCache"/> nach. Nur unter
+        ''' _baseCacheLock rufen.</summary>
+        Private Shared Sub DrainPendingBaseCacheClearLocked()
+            If Interlocked.Exchange(_baseCacheClearPending, 0) = 1 Then ClearBaseCacheLocked()
+        End Sub
+
+        ''' <summary>Gibt _baseCacheLock ab und laesst dabei kein vorgemerktes Leeren liegen.
+        '''
+        ''' Zweimal, und das ist Absicht: VOR dem Abgeben fuer alles, was bis dahin vorgemerkt
+        ''' wurde, und DANACH fuer eine Vormerkung, die genau in diesem Augenblick kam. Setzer und
+        ''' Halter gehen in umgekehrter Reihenfolge vor - der eine setzt und versucht dann die
+        ''' Sperre, der andere gibt sie ab und sieht dann nach -, also sieht immer einer von beiden
+        ''' den anderen. Ohne den zweiten Blick blieben Bitmaps und Quellreferenz liegen, bis der
+        ''' naechste Zugriff kommt, und nach dem Verlassen des Editors kommt keiner.</summary>
+        Private Shared Sub ReleaseBaseCacheLock()
+            Try
+                DrainPendingBaseCacheClearLocked()
+            Finally
+                Monitor.Exit(_baseCacheLock)
+            End Try
+            DrainPendingBaseCacheClearAfterRelease()
+        End Sub
+
+        ''' Holt eine Vormerkung nach, wenn die Sperre gerade frei ist. Ist sie belegt, tut es der
+        ''' Halter beim Abgeben.
+        Private Shared Sub DrainPendingBaseCacheClearAfterRelease()
+            If Volatile.Read(_baseCacheClearPending) = 0 Then Return
+            If Not Monitor.TryEnter(_baseCacheLock) Then Return
+            Try
+                DrainPendingBaseCacheClearLocked()
+            Finally
+                Monitor.Exit(_baseCacheLock)
+            End Try
+        End Sub
+
+        Private Shared Sub ClearBaseCacheLocked()
+            If _preMaskBitmap IsNot Nothing AndAlso Not Object.ReferenceEquals(_preMaskBitmap, _baseCacheBitmap) Then _preMaskBitmap.Dispose()
+            _preMaskBitmap = Nothing
+            _preMaskKey = Nothing
+            _toneCacheBitmap?.Dispose()
+            _toneCacheBitmap = Nothing
+            _toneCacheKey = Nothing
+            _baseCacheBitmap?.Dispose()
+            _baseCacheBitmap = Nothing
+            _baseCacheKey = Nothing
+            _baseCacheSourceRef = Nothing
+            _baseCacheSourceStamp = -1
+        End Sub
+
         ' Liefert die gecachte Basis (Bild vor den Objekten) wenn sich seit dem letzten Aufruf nur
         ' die Objekte geändert haben, sonst wird die Pipeline neu berechnet und der Cache erneuert.
         Private Shared Function GetOrComputeBaseLocked(source As SKBitmap, adj As ImageAdjustments) As SKBitmap
+            DrainPendingBaseCacheClearLocked()
             Dim key = ComputeBaseKey(adj)
             Dim stamp = Interlocked.Read(_baseSourceStamp)
             Dim sameSource = Object.ReferenceEquals(_baseCacheSourceRef, source) AndAlso stamp = _baseCacheSourceStamp

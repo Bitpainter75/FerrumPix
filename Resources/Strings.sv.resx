@@ -9933,7 +9933,7 @@
   <data name="0_Textebenen_ohne_sichtbaren_Inhalt_lassen_sich__bbfcd191" xml:space="preserve">
     <value>{0} textlager utan synligt innehåll kan inte överföras och saknas.</value>
   </data>
-  <data name="0_Textebenen_sind_ungleich_gestreckt_und_kommen__50373be7" xml:space="preserve">
-    <value>{0} textlager är ojämnt utsträckta och kommer in som bild, texten kan inte redigeras.</value>
+  <data name="0_Textebenen_sind_gestreckt_geschert_oder_gespie_dc9f8b8b" xml:space="preserve">
+    <value>{0} textlager är utsträckta, snedställda eller speglade och kommer in som bild, texten kan inte redigeras.</value>
   </data>
 </root>

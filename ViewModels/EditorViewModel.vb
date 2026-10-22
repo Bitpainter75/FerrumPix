@@ -565,6 +565,10 @@ Namespace ViewModels
         ' Hintergrund-Ebene (Basisbild) im Ebenen-Panel aus-/eingeblendet. Wirkt strukturell übers
         ' Compositing (siehe ImageProcessor.ApplyAnnotations), nicht als Pixel-Anpassung.
         Private _backgroundHidden As Boolean = False
+        ' Sperren der Hintergrund-Ebene aus einer PSD. Ohne Wirkung im Editor (das Basisbild laesst
+        ' sich nicht verschieben); sie reisen nur mit, damit der PSD-Export sie zurueckschreibt.
+        Private _baseLayerLockPosition As Boolean = False
+        Private _baseLayerLockTransparency As Boolean = False
         Private _pixelLayerHidden As Boolean = False
         Private _globalAdjustmentsHidden As Boolean = False
 
@@ -19187,7 +19191,7 @@ Namespace ViewModels
             ' Öffnen; beim Blättern bleibt es beim Ebenenstapel, damit dieselbe Datei auf beiden
             ' Wegen gleich aufgebaut ankommt. Schließt der Anwender die Frage, gilt das Gesamtbild:
             ' es ist das, was die Datei wirklich zeigt.
-            ' Gestreckter Text kommt immer als Bild. Sagen muss man es nur, wer Text wollte: wer
+            ' Verzerrter Text kommt immer als Bild. Sagen muss man es nur, wer Text wollte: wer
             ' "Als Text" gewählt oder festgelegt hat, und wer gar nicht gefragt wurde, weil die
             ' Datei nur solche Textebenen trägt. Wer "Als Bild" wollte, bekommt genau das.
             Dim stretchedNotice = importResult.StretchedTextLayers > 0 AndAlso
@@ -19206,7 +19210,7 @@ Namespace ViewModels
                     parts.Add(String.Format(LocalizationService.T("{0} Anpassungsebenen werden nicht übernommen."), importResult.AdjustmentLayers))
                 End If
                 If stretchedNotice Then
-                    parts.Add(String.Format(LocalizationService.T("{0} Textebenen sind ungleich gestreckt und kommen als Bild, ihr Wortlaut lässt sich nicht bearbeiten."), importResult.StretchedTextLayers))
+                    parts.Add(String.Format(LocalizationService.T("{0} Textebenen sind gestreckt, geschert oder gespiegelt und kommen als Bild, ihr Wortlaut lässt sich nicht bearbeiten."), importResult.StretchedTextLayers))
                 End If
                 If importResult.DroppedTextLayers > 0 Then
                     parts.Add(String.Format(LocalizationService.T("{0} Textebenen ohne sichtbaren Inhalt lassen sich nicht übernehmen und fehlen."), importResult.DroppedTextLayers))
@@ -20897,7 +20901,9 @@ Namespace ViewModels
             ' Der Basis-Cache gehört zur alten Quelle: er würde beim nächsten Render zwar ohnehin
             ' verworfen (Referenzvergleich auf die Quelle), hielte sein Bitmap bis dahin aber fest.
             ReleaseComparisonOriginalSource()
-            ImageProcessor.ClearBaseCache()
+            ' Wartet auf die Sperre des Basis-Caches, die ein laufender Render haelt - eigener
+            ' Messpunkt, damit eine Stockung hier ihren Namen hat.
+            PerformanceTraceService.Measure("Editor: Basis-Cache leeren", Sub() ImageProcessor.ClearBaseCache())
             TryDisposeStalePreviewSources()
             ' Die Live-Vorschauen der Werkzeuge sind auf der alten Quelle gerechnet und liegen ueber
             ' dem Bild. Die Anzeige zieht sie auf den neuen Bildbereich; stehen geblieben zeigten sie
@@ -21018,7 +21024,7 @@ Namespace ViewModels
             Threading.Interlocked.Increment(_rawExposureRebuildToken)
             _rawExposureRebuildTimer?.Stop()
             ReleaseComparisonOriginalSource()
-            ImageProcessor.ClearBaseCache()
+            PerformanceTraceService.Measure("Editor: Basis-Cache leeren", Sub() ImageProcessor.ClearBaseCache())
             TryDisposeStalePreviewSources()
         End Sub
 
@@ -21647,7 +21653,16 @@ Namespace ViewModels
         Private Sub MarkPreviewPending()
             _previewPending = True
             Interlocked.Increment(_previewChangeId)
+            ' Seit wann eine Aenderung auf ihr Bild wartet - fuer den Messpunkt "Regler bis Bild".
+            ' Nur der ERSTE noch nicht gezeigte Stand zaehlt: er wartet am laengsten.
+            If PerformanceTraceService.IsActive AndAlso _previewPendingSinceTicks = 0 Then
+                _previewPendingSinceTicks = Diagnostics.Stopwatch.GetTimestamp()
+            End If
         End Sub
+
+        ''' <summary>Zeitstempel der ersten Aenderung, die noch auf ihr Bild wartet, sonst 0. Nur bei
+        ''' eingeschalteter Messung gefuehrt (PerformanceTraceService.IsActive).</summary>
+        Private _previewPendingSinceTicks As Long = 0
 
         Private Sub RegisterPreviewRenderStart()
             Interlocked.Increment(_previewRequestId)
@@ -22072,6 +22087,17 @@ Namespace ViewModels
                 ' Marke stehen, und RegisterPreviewRenderEnd zieht die Kette weiter - genau der
                 ' Fall, in dem waehrend dieses Renders am Regler weitergezogen wurde.
                 If Threading.Volatile.Read(_previewChangeId) = changeIdAtStart Then _previewPending = False
+                ' Wie lange die aelteste gezeigte Aenderung gewartet hat. Das ist, was man beim
+                ' Ziehen als Nachhinken spuert - die Renderzeit allein sagt es nicht, weil Drosselung
+                ' und Warteschlange dazukommen. Kam waehrend des Renders Neues dazu, wartet das
+                ' hoechstens seit dessen Start.
+                If _previewPendingSinceTicks <> 0 Then
+                    PerformanceTraceService.Record("Regler bis Bild",
+                        (Diagnostics.Stopwatch.GetTimestamp() - _previewPendingSinceTicks) * 1000.0 / Diagnostics.Stopwatch.Frequency)
+                    ' ElapsedTicks zaehlt in Takten des Zeitgebers, wie GetTimestamp.
+                    _previewPendingSinceTicks = If(_previewPending,
+                        Diagnostics.Stopwatch.GetTimestamp() - fullRenderSw.ElapsedTicks, 0L)
+                End If
                 ReportPreviewReady()
                 PreviewFailed = False
                 If _clearRetouchLivePatchAfterPreview Then
@@ -23142,6 +23168,8 @@ Namespace ViewModels
                 .MaskedAdjustmentLayers = _maskedAdjustmentLayers.Select(Function(l) l.Clone()).ToList(),
                 .GlobalAdjustmentsHidden = _globalAdjustmentsHidden,
                 .BackgroundHidden = _backgroundHidden,
+                .BaseLayerLockPosition = _baseLayerLockPosition,
+                .BaseLayerLockTransparency = _baseLayerLockTransparency,
                 .PixelLayerHidden = _pixelLayerHidden,
                 .SelectionScopeEnabled = _selectionScopeEnabled,
                 .HasActiveSelection = _hasActiveSelection,
@@ -24796,6 +24824,8 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(IsGlobalAdjustmentsVisible))
             _backgroundHidden = adj.BackgroundHidden
             Me.RaisePropertyChanged(NameOf(IsBackgroundVisible))
+            _baseLayerLockPosition = adj.BaseLayerLockPosition
+            _baseLayerLockTransparency = adj.BaseLayerLockTransparency
             _pixelLayerHidden = adj.PixelLayerHidden
             RaisePixelLayerVisibilityChanged()
             _selectionFeather = adj.SelectionFeatherPixels
@@ -25471,6 +25501,8 @@ Namespace ViewModels
             ClearSelection(captureUndo:=False)
             _globalAdjustmentsHidden = False
             _backgroundHidden = False
+            _baseLayerLockPosition = False
+            _baseLayerLockTransparency = False
             _pixelLayerHidden = False
             _selectionXPercent = 0
             _selectionYPercent = 0
@@ -31206,43 +31238,180 @@ Namespace ViewModels
         ''' faellt hier nicht an. Steht noch keine (kalter Start, Ladeweg), greift der Weg ueber die
         ''' Datei.</summary>
         Private Sub UpdateScopeFromScene()
+            PerformanceTraceService.Measure("Editor: Analysebild und Kurve", Sub() UpdateScopeFromSceneCore())
+        End Sub
+
+        Private Sub UpdateScopeFromSceneCore()
             If Not IsSceneAnalysisLive Then Return
             Try
-                ' Der Kompositor arbeitet auf dem UI-Thread, und dieser Zeitgeber ebenfalls - die
-                ' Szene kann hier also nicht unter der Hand ausgetauscht werden.
                 ' Ohne Szene wird hier NICHTS nachgeholt. Der Weg ueber die Datei kostet einen
                 ' vollen Decode, und genau der soll bei einem Reglerdreh nicht anfallen; das
                 ' vorhandene Bild stehen zu lassen, bis der naechste Render kommt, ist billiger und
                 ' fuer den Bruchteil einer Sekunde auch richtig. Beim LADEN setzt RefreshHistogram.
                 Dim scene = _sceneSk
                 If scene Is Nothing OrElse scene.Width <= 0 OrElse scene.Height <= 0 Then Return
+                ' Laeuft schon ein Auftrag, kommt nach ihm genau einer mit dem dann neuesten Stand.
+                If _scopeJobRunning Then
+                    _scopeJobAgain = True
+                    Return
+                End If
+
+                ' Was hier auf dem Anzeigefaden geschieht, ist nur das EINSAMMELN: Kopien der
+                ' Szene (sie kann nach dieser Zeile ersetzt oder geflickt werden) und, wenn es
+                ' welche gibt, die Kompositor-Objekte darueber - deren Zwischenspeicher darf nur
+                ' dieser Faden anfassen. Gerechnet wird im Hintergrund (RunScopeJob).
+                Dim job As New ScopeJob With {.ImagePath = _currentImagePath, .Generation = _scopeJobGeneration}
                 If IsScopeLive Then
                     ' Das Analysebild zeigt, was auf dem Schirm steht: samt der Objekte, die der
                     ' Kompositor erst beim Blit darüberlegt. Ohne Schlüssel, weil sich diese Objekte
                     ' ändern können, ohne dass die Szene eine neue Nummer bekommt.
-                    Using composite = BuildSceneWithCompositorObjects()
-                        If composite Is Nothing Then
-                            UpdateScopeImagesFromBitmap(scene, SceneScopeKey())
-                        Else
-                            UpdateScopeImagesFromBitmap(composite, Nothing)
-                        End If
-                    End Using
+                    Dim composite = BuildSceneWithCompositorObjects()
+                    If composite Is Nothing Then
+                        job.ScopeSource = scene.Copy()
+                        job.ScopeKey = SceneScopeKey()
+                    Else
+                        job.ScopeSource = composite
+                    End If
+                    job.SidebarMode = If(IsSidebarScopeVisible, ScopeSelectionViewModel.SidebarMode, Nothing)
+                    job.PanelMode = If(IsScopeInAdjustmentPanelsVisible, ScopeSelectionViewModel.PanelMode, Nothing)
                 End If
                 ' Der Untergrund der Tonwertkurve kommt aus DERSELBEN Szene: er zeigt damit den
                 ' Stand, gegen den man die Kurve gerade zieht, und nicht mehr den der Datei. Die
                 ' Objekte im Kompositor gehören NICHT dazu: sie liegen über der Reglerkette, die
                 ' globale Kurve verändert sie nicht. Bedienen die Regler eine Ebene, wirkt die
-                ' Kurve auf SIE, und der Untergrund kommt aus ihr (TryBuildObjectCurveCounts).
+                ' Kurve auf SIE, und der Untergrund kommt aus ihr (PrepareObjectCurveJob).
                 If IsCurveHistogramLive Then
-                    Dim objectCounts As (R As Integer(), G As Integer(), B As Integer(), L As Integer()) = Nothing
-                    _curveHistogramCounts = If(TryBuildObjectCurveCounts(objectCounts), objectCounts,
-                                               ImageProcessor.BuildChannelHistogramCounts(scene))
-                    Me.RaisePropertyChanged(NameOf(ActiveCurveHistogramCounts))
+                    job.CurveLive = True
+                    If Not PrepareObjectCurveJob(job) Then
+                        ' Ohne Kompositor-Objekte ist die Kopie fuers Analysebild schon die Szene.
+                        job.CurveSource = If(job.ScopeSource IsNot Nothing AndAlso job.ScopeKey IsNot Nothing,
+                                             Nothing, scene.Copy())
+                        job.CurveFromScopeSource = job.CurveSource Is Nothing
+                    End If
                 End If
                 _scopeDirty = False
+                RunScopeJob(job)
             Catch ex As Exception
                 DiagnosticLogService.LogException("Editor.UpdateScopeFromScene", ex)
             End Try
+        End Sub
+
+        ''' <summary>Ein Auftrag fuer Analysebild und Kurvenzahlen, eingesammelt auf dem Anzeigefaden
+        ''' und gerechnet im Hintergrund. Alle Bitmaps darin gehoeren dem Auftrag.
+        '''
+        ''' Vorher lief beides auf dem Anzeigefaden, gemessen im Mittel 46 ms und bis 112 ms je
+        ''' Aufruf, und beim Ziehen eines Reglers kam es zwischendurch immer wieder: so lange
+        ''' reagierte die Oberflaeche nicht, der Regler hakte (Nutzerbefund 2026-10-22).</summary>
+        Private NotInheritable Class ScopeJob
+            ''' Fuer welches Bild und welchen Stand - ein Ergebnis fuer ein anderes wird verworfen.
+            Public ImagePath As String = ""
+            Public Generation As Long
+            ''' Quelle des Analysebilds: eine Bitmap ODER ein Dateipfad (Ladefall ohne Vorschau).
+            Public ScopeSource As SKBitmap
+            Public ScopeKey As String
+            Public ScopePath As String
+            ''' Darstellung je Ort, Nothing = dort nicht sichtbar, also nicht rechnen.
+            Public SidebarMode As String
+            Public PanelMode As String
+            ''' Kurvenzahlen: gewuenscht? Aus einer eigenen Bitmap, aus der Quelle des
+            ''' Analysebilds, aus einem Pfad oder aus einer Ebene (ObjectAnnotation).
+            Public CurveLive As Boolean
+            Public CurveSource As SKBitmap
+            Public CurveFromScopeSource As Boolean
+            Public CurvePath As String
+            Public ObjectAnnotation As ImageAnnotation
+            Public ObjectContext As ImageAdjustments
+            Public ObjectWidth As Integer
+            Public ObjectHeight As Integer
+
+            Public Sub DisposeSources()
+                ScopeSource?.Dispose()
+                ScopeSource = Nothing
+                CurveSource?.Dispose()
+                CurveSource = Nothing
+            End Sub
+        End Class
+
+        Private _scopeJobRunning As Boolean
+        Private _scopeJobAgain As Boolean
+        ''' <summary>Zaehlt bei jedem Bildwechsel und beim Leeren hoch. Ein Auftrag, der mit einem
+        ''' anderen Stand zurueckkommt, wird verworfen statt angezeigt.</summary>
+        Private _scopeJobGeneration As Long
+
+        ''' <summary>Rechnet einen Auftrag im Hintergrund und uebernimmt sein Ergebnis auf dem
+        ''' Anzeigefaden. Es laeuft hoechstens einer; was waehrenddessen anfaellt, wird gemerkt
+        ''' (_scopeJobAgain) und danach EINMAL mit dem dann neuesten Stand nachgeholt.</summary>
+        Private Async Sub RunScopeJob(job As ScopeJob)
+            _scopeJobRunning = True
+            ' Je Ort ein eigener Zaehler: die Wahl der Infoleiste und die des Anpassungspanels
+            ' aendern sich unabhaengig, und ein Umschalten im Panel liesse den Zaehler der Leiste
+            ' unberuehrt - das alte Histogramm landete dann ueber der eben gewaehlten Waveform.
+            Dim sidebarPlacement = ScopeSelectionViewModel.Generation
+            Dim panelPlacement = ScopeSelectionViewModel.PanelGeneration
+            Dim sidebar As Bitmap = Nothing, panel As Bitmap = Nothing
+            Dim counts As (R As Integer(), G As Integer(), B As Integer(), L As Integer()) = Nothing
+            Dim hasCounts = False
+            Try
+                Await Task.Run(
+                    Sub()
+                        PerformanceTraceService.Measure("Editor: Analysebild im Hintergrund",
+                            Sub()
+                                If job.SidebarMode IsNot Nothing Then
+                                    sidebar = If(job.ScopeSource IsNot Nothing,
+                                                 ImageProcessor.BuildScopeImage(job.ScopeSource, 600, 300, job.ScopeKey, job.SidebarMode),
+                                                 ImageProcessor.BuildScopeImage(job.ScopePath, 600, 300, job.SidebarMode))
+                                End If
+                                If job.PanelMode IsNot Nothing Then
+                                    panel = If(job.ScopeSource IsNot Nothing,
+                                               ImageProcessor.BuildScopeImage(job.ScopeSource, 600, 300, job.ScopeKey, job.PanelMode),
+                                               ImageProcessor.BuildScopeImage(job.ScopePath, 600, 300, job.PanelMode))
+                                End If
+                                If job.CurveLive Then
+                                    If job.ObjectAnnotation IsNot Nothing Then
+                                        counts = ComputeObjectCurveCounts(job.ObjectAnnotation, job.ObjectContext,
+                                                                          job.ObjectWidth, job.ObjectHeight)
+                                    ElseIf job.CurveSource IsNot Nothing Then
+                                        counts = ImageProcessor.BuildChannelHistogramCounts(job.CurveSource)
+                                    ElseIf job.CurveFromScopeSource AndAlso job.ScopeSource IsNot Nothing Then
+                                        counts = ImageProcessor.BuildChannelHistogramCounts(job.ScopeSource)
+                                    ElseIf Not String.IsNullOrEmpty(job.CurvePath) Then
+                                        counts = ImageProcessor.BuildChannelHistogramCounts(job.CurvePath)
+                                    End If
+                                    hasCounts = counts.R IsNot Nothing
+                                End If
+                            End Sub)
+                    End Sub)
+                ' Fuer ein anderes Bild, einen geleerten Stand oder einen umgestellten Ort gerechnet:
+                ' nicht zeigen. Der Stand, der jetzt gilt, hat seinen eigenen Auftrag angestossen.
+                Dim current = job.Generation = _scopeJobGeneration AndAlso
+                              String.Equals(job.ImagePath, _currentImagePath, StringComparison.Ordinal)
+                If current AndAlso sidebarPlacement = ScopeSelectionViewModel.Generation AndAlso
+                   sidebar IsNot Nothing AndAlso IsSidebarScopeVisible Then
+                    InfoPanel.ScopeImage = sidebar
+                    sidebar = Nothing
+                End If
+                If current AndAlso panelPlacement = ScopeSelectionViewModel.PanelGeneration AndAlso
+                   panel IsNot Nothing AndAlso IsScopeInAdjustmentPanelsVisible Then
+                    PanelScopeImage = panel
+                    panel = Nothing
+                End If
+                If current AndAlso hasCounts Then
+                    _curveHistogramCounts = counts
+                    Me.RaisePropertyChanged(NameOf(ActiveCurveHistogramCounts))
+                End If
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Editor.ScopeJob", ex)
+            Finally
+                sidebar?.Dispose()
+                panel?.Dispose()
+                job.DisposeSources()
+                _scopeJobRunning = False
+            End Try
+            If _scopeJobAgain Then
+                _scopeJobAgain = False
+                _scopeDirty = True
+                EnsureScopeUpToDate()
+            End If
         End Sub
 
         ''' <summary>Steht das Analysebild in der Infoleiste? Zwei Bedingungen: der Ort ist
@@ -31252,35 +31421,6 @@ Namespace ViewModels
                 Return ScopeSelectionViewModel.ShowInInfoSidebar AndAlso IsInfoSidebarVisible
             End Get
         End Property
-
-        ''' <summary>Rechnet die Analysebilder BEIDER Orte aus derselben Bitmap - jedes in seiner
-        ''' eigenen Darstellung. Gerechnet wird nur, was auch jemand sieht. Der zweite Aufruf trifft
-        ''' bei gleicher Darstellung den Zwischenspeicher und kostet dann nur noch die Kopie.</summary>
-        Private Sub UpdateScopeImagesFromBitmap(source As SkiaSharp.SKBitmap, sourceKey As String)
-            If source Is Nothing Then Return
-            If IsSidebarScopeVisible Then
-                InfoPanel.ScopeImage = ImageProcessor.BuildScopeImage(source, 600, 300, sourceKey,
-                                                                      ScopeSelectionViewModel.SidebarMode)
-            End If
-            If IsScopeInAdjustmentPanelsVisible Then
-                PanelScopeImage = ImageProcessor.BuildScopeImage(source, 600, 300, sourceKey,
-                                                                 ScopeSelectionViewModel.PanelMode)
-            End If
-        End Sub
-
-        ''' <summary>Dasselbe aus einer Datei. Der Zwischenspeicher greift hier ueber Pfad und
-        ''' Aenderungszeit, der zweite Ort kostet also keinen zweiten Decode.</summary>
-        Private Sub UpdateScopeImagesFromPath(path As String)
-            If String.IsNullOrEmpty(path) Then Return
-            If IsSidebarScopeVisible Then
-                InfoPanel.ScopeImage = ImageProcessor.BuildScopeImage(path, 600, 300,
-                                                                      ScopeSelectionViewModel.SidebarMode)
-            End If
-            If IsScopeInAdjustmentPanelsVisible Then
-                PanelScopeImage = ImageProcessor.BuildScopeImage(path, 600, 300,
-                                                                 ScopeSelectionViewModel.PanelMode)
-            End If
-        End Sub
 
         ''' <summary>Analysebild und Kurvenzahlen zum geladenen Bild.
         '''
@@ -31293,6 +31433,8 @@ Namespace ViewModels
                 ClearHistogramData()
                 Return
             End If
+            ' Ein neuer Stand: was noch fuer den vorigen rechnet, kommt nicht mehr an.
+            _scopeJobGeneration += 1
             Dim buildScope = IsScopeLive
             If Not buildScope Then
                 ' Nichts rechnen, aber auch nichts Altes stehen lassen: sonst zeigte die Leiste beim
@@ -31301,32 +31443,48 @@ Namespace ViewModels
                 InfoPanel.ScopeImage = Nothing
                 PanelScopeImage = Nothing
             End If
+            ' Laeuft noch ein Auftrag, holt sein Ende diesen Stand nach (EnsureScopeUpToDate).
+            If _scopeJobRunning Then
+                _scopeJobAgain = True
+                _scopeDirty = True
+                Return
+            End If
+            ' Gerechnet wird im Hintergrund (RunScopeJob): der Ladefall dekodiert unter Umstaenden
+            ' die Datei, und das stand vorher auf dem Anzeigefaden.
+            Dim job As New ScopeJob With {.ImagePath = _currentImagePath, .Generation = _scopeJobGeneration, .CurveLive = True}
+            If buildScope Then
+                job.SidebarMode = If(IsSidebarScopeVisible, ScopeSelectionViewModel.SidebarMode, Nothing)
+                job.PanelMode = If(IsScopeInAdjustmentPanelsVisible, ScopeSelectionViewModel.PanelMode, Nothing)
+            End If
             If FpxService.IsFpx(_currentImagePath) Then
                 ' Eine geoeffnete FPX zeigt im Infopanel den gespeicherten Projektstand, nicht das
                 ' unveraenderte base.* und auch keinen spaeter neu berechneten Zwischen-Preview.
-                If buildScope Then
-                    UpdateScopeImagesFromPath(_currentImagePath)
-                    _scopeDirty = False
-                End If
-                _curveHistogramCounts = ImageProcessor.BuildChannelHistogramCounts(_currentImagePath)
-                Me.RaisePropertyChanged(NameOf(ActiveCurveHistogramCounts))
-                Return
-            End If
-            Dim previewSource = GetPreviewSource()
-            If previewSource IsNot Nothing Then
-                ' Kein Zwischenspeicher-Schluessel: die Vorschauquelle traegt keine Nummer, an der
-                ' sich ein Bildstand erkennen liesse. Das ist der Ladefall und faellt einmal an.
-                If buildScope Then UpdateScopeImagesFromBitmap(previewSource, Nothing)
-                _curveHistogramCounts = ImageProcessor.BuildChannelHistogramCounts(previewSource)
+                If buildScope Then job.ScopePath = _currentImagePath
+                job.CurvePath = _currentImagePath
             Else
-                If buildScope Then UpdateScopeImagesFromPath(RenderSourcePath)
-                _curveHistogramCounts = ImageProcessor.BuildChannelHistogramCounts(RenderSourcePath)
+                Dim previewSource = GetPreviewSource()
+                If previewSource IsNot Nothing Then
+                    ' Kein Zwischenspeicher-Schluessel: die Vorschauquelle traegt keine Nummer, an
+                    ' der sich ein Bildstand erkennen liesse. Das ist der Ladefall und faellt einmal
+                    ' an. Eine Kopie, weil die Quelle waehrenddessen getauscht werden kann.
+                    If buildScope Then
+                        job.ScopeSource = previewSource.Copy()
+                        job.CurveFromScopeSource = True
+                    Else
+                        job.CurveSource = previewSource.Copy()
+                    End If
+                Else
+                    If buildScope Then job.ScopePath = RenderSourcePath
+                    job.CurvePath = RenderSourcePath
+                End If
             End If
             If buildScope Then _scopeDirty = False
-            Me.RaisePropertyChanged(NameOf(ActiveCurveHistogramCounts))
+            RunScopeJob(job)
         End Sub
 
         Private Sub ClearHistogramData()
+            ' Was noch fuer das vorige Bild rechnet, kommt nicht mehr an.
+            _scopeJobGeneration += 1
             InfoPanel.ScopeImage = Nothing
             ' Ohne Bild gibt es nichts nachzuholen.
             _scopeDirty = False

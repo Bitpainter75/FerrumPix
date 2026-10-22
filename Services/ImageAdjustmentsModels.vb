@@ -1075,6 +1075,14 @@ Namespace Services
         ''' gehört NICHT zu den Eigenschaften, die ein einzelnes Objekt mitträgt (siehe StructuralPropertyNames).</summary>
         Public Property BackgroundHidden As Boolean = False
 
+        ''' <summary>Sperren der Hintergrund-Ebene (des Basisbilds), wie sie aus einer PSD kamen:
+        ''' Lage und transparente Bildpunkte. Das Basisbild ist kein Objekt und kennt selbst keine
+        ''' Sperren - verschieben laesst es sich ohnehin nicht. Gemerkt werden sie nur, damit der
+        ''' PSD-Export sie der untersten Ebene zurueckgibt; sonst verloere ein Rundweg sie. Gehoert
+        ''' der Datei (FileOwnedPropertyNames), gilt also nicht als Bearbeitung.</summary>
+        Public Property BaseLayerLockPosition As Boolean = False
+        Public Property BaseLayerLockTransparency As Boolean = False
+
         ''' <summary>True = die eingebackene Pixel-Ebene wird beim Zusammensetzen uebersprungen, der Render
         ''' laeuft also auf dem UNGEBACKENEN Basisbild. Das ist die Ebene "Retusche und Pinsel" im
         ''' Ebenen-Panel: Retusche, Striche und gerasterte Ebenen liegen alle in EINEM Arbeitsbild
@@ -1152,7 +1160,8 @@ Namespace Services
             "SelectionXPercent", "SelectionYPercent", "SelectionWidthPercent",
             "SelectionHeightPercent", "SelectionShapeMode", "SelectionShapePointsX", "SelectionShapePointsY",
             "SelectionMaskLeft", "SelectionMaskTop", "SelectionMaskRight", "SelectionMaskBottom",
-            "SelectionMaskPngBase64", "SelectionMaskRaster", "HasSelectionMaskData", "SelectionFeatherPixels", "SelectionMaskSoftBaked", "GlobalAdjustmentsHidden", "BackgroundHidden", "PixelLayerHidden"
+            "SelectionMaskPngBase64", "SelectionMaskRaster", "HasSelectionMaskData", "SelectionFeatherPixels", "SelectionMaskSoftBaked", "GlobalAdjustmentsHidden", "BackgroundHidden", "PixelLayerHidden",
+            "BaseLayerLockPosition", "BaseLayerLockTransparency"
         }
 
         ''' <summary>Startwert des Reglers fuer grobe Farbflecken bei einer RAW-Datei ohne Rezept: AUS.
@@ -1396,7 +1405,8 @@ Namespace Services
             "SelectionShapeMode", "SelectionShapePointsX", "SelectionShapePointsY",
             "SelectionMaskLeft", "SelectionMaskTop", "SelectionMaskRight", "SelectionMaskBottom",
             "SelectionMaskPngBase64", "SelectionFeatherPixels", "SelectionMaskSoftBaked",
-            "GlobalAdjustmentsHidden", "BackgroundHidden", "PixelLayerHidden"}
+            "GlobalAdjustmentsHidden", "BackgroundHidden", "PixelLayerHidden",
+            "BaseLayerLockPosition", "BaseLayerLockTransparency"}
 
         ''' <summary>Startwerte einer RAW, die mit der Kameratabelle und den Einstellungen wandern
         ''' (ForUneditedRaw): die Farbkalibrierung und die beiden Farbrausch-Vorgaben. Fuer die
@@ -1634,6 +1644,8 @@ Namespace Services
                 .SelectionMaskSoftBaked = SelectionMaskSoftBaked,
                 .GlobalAdjustmentsHidden = GlobalAdjustmentsHidden,
                 .BackgroundHidden = BackgroundHidden,
+                .BaseLayerLockPosition = BaseLayerLockPosition,
+                .BaseLayerLockTransparency = BaseLayerLockTransparency,
                 .PixelLayerHidden = PixelLayerHidden
             }
             ' Die Auswahlmaske wandert unveraendert mit: als Raster, wenn eines da ist, sonst als

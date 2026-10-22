@@ -12,7 +12,13 @@
   programs now also keep their angle, alignment and letter spacing when you open them as text.
 
 - **Locked layers stay locked in PSD files.** Locking a layer's position or its transparent
-  pixels now carries over to the PSD and back.
+  pixels now carries over to the PSD and back, also for the bottom layer.
+
+- **Smoother sliders in the editor.** The short freeze when you first grab a slider on a large
+  picture is gone, and the picture follows the slider more closely. When zoomed in, the sharp
+  detail view no longer keeps recalculating in the background while you drag; it appears as soon
+  as you hold still. Histogram and tone curve are now updated in the background, and highlights
+  and shadows are a little quicker to calculate.
 
 - **Smaller fixes:** invisible layers no longer turn into empty full-size layers in a PSD export,
   and PSD files open a little faster. The last page of the Windows installer now reads
@@ -28,6 +34,10 @@
   
 - **Histogram, waveform and RGB parade in the editor** now show the whole picture including its
   layers and objects. With layered PSD files they stayed empty.
+  
+- **Opening PSD files:** empty layers are kept as empty paint layers with their name and mask
+  instead of disappearing. Text that is skewed or mirrored now comes in as an image, so it keeps
+  its look instead of turning into straight text.
   
 - **Tone curve on a layer:** when you adjust a layer, the histogram behind the curve now shows
   that layer instead of the background, so it no longer stays empty with layered PSD files.

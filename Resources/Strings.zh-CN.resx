@@ -9891,7 +9891,7 @@
   <data name="0_Textebenen_ohne_sichtbaren_Inhalt_lassen_sich__bbfcd191" xml:space="preserve">
     <value>{0} 个没有可见内容的文字图层无法导入，已缺失。</value>
   </data>
-  <data name="0_Textebenen_sind_ungleich_gestreckt_und_kommen__50373be7" xml:space="preserve">
-    <value>{0} 个文字图层被不等比拉伸，将作为图像导入，其文字无法编辑。</value>
+  <data name="0_Textebenen_sind_gestreckt_geschert_oder_gespie_dc9f8b8b" xml:space="preserve">
+    <value>{0} 个文字图层被拉伸、倾斜或镜像，将作为图像导入，其文字无法编辑。</value>
   </data>
 </root>

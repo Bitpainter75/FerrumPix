@@ -9937,7 +9937,7 @@
   <data name="0_Textebenen_ohne_sichtbaren_Inhalt_lassen_sich__bbfcd191" xml:space="preserve">
     <value>Görünür içeriği olmayan {0} metin katmanı aktarılamıyor ve eksik.</value>
   </data>
-  <data name="0_Textebenen_sind_ungleich_gestreckt_und_kommen__50373be7" xml:space="preserve">
-    <value>{0} metin katmanı eşit olmayan biçimde gerilmiş ve görüntü olarak geliyor, metni düzenlenemez.</value>
+  <data name="0_Textebenen_sind_gestreckt_geschert_oder_gespie_dc9f8b8b" xml:space="preserve">
+    <value>{0} metin katmanı gerilmiş, eğilmiş veya yansıtılmış ve görüntü olarak geliyor, metni düzenlenemez.</value>
   </data>
 </root>

@@ -9911,7 +9911,7 @@
   <data name="0_Textebenen_ohne_sichtbaren_Inhalt_lassen_sich__bbfcd191" xml:space="preserve">
     <value>{0} Textebenen ohne sichtbaren Inhalt lassen sich nicht übernehmen und fehlen.</value>
   </data>
-  <data name="0_Textebenen_sind_ungleich_gestreckt_und_kommen__50373be7" xml:space="preserve">
-    <value>{0} Textebenen sind ungleich gestreckt und kommen als Bild, ihr Wortlaut lässt sich nicht bearbeiten.</value>
+  <data name="0_Textebenen_sind_gestreckt_geschert_oder_gespie_dc9f8b8b" xml:space="preserve">
+    <value>{0} Textebenen sind gestreckt, geschert oder gespiegelt und kommen als Bild, ihr Wortlaut lässt sich nicht bearbeiten.</value>
   </data>
 </root>

@@ -9937,7 +9937,7 @@
   <data name="0_Textebenen_ohne_sichtbaren_Inhalt_lassen_sich__bbfcd191" xml:space="preserve">
     <value>เลเยอร์ข้อความ {0} รายการที่ไม่มีเนื้อหาที่มองเห็นได้ไม่สามารถนำเข้าได้และหายไป</value>
   </data>
-  <data name="0_Textebenen_sind_ungleich_gestreckt_und_kommen__50373be7" xml:space="preserve">
-    <value>เลเยอร์ข้อความ {0} รายการถูกยืดไม่เท่ากันและนำเข้าเป็นภาพ จึงแก้ไขข้อความไม่ได้</value>
+  <data name="0_Textebenen_sind_gestreckt_geschert_oder_gespie_dc9f8b8b" xml:space="preserve">
+    <value>เลเยอร์ข้อความ {0} รายการถูกยืด เอียง หรือพลิกกลับ จึงนำเข้าเป็นภาพและแก้ไขข้อความไม่ได้</value>
   </data>
 </root>

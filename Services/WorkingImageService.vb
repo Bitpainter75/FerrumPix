@@ -61,7 +61,18 @@ Namespace Services
         Private Shared ReadOnly PreviewSampling As New SKSamplingOptions(SKCubicResampler.Mitchell)
 
         Private ReadOnly _lock As New Object()
+        ' Die Kennzahlen unten (_version, _initStamp, die Flags, ob _full gesetzt ist) werden NUR
+        ' unter _lock geschrieben, aber OHNE ihn gelesen. Der Anzeigefaden fragt sie bei jeder
+        ' Reglerbewegung ab, und unter _lock laufen auch Arbeiten ueber das ganze Bild: das
+        ' Verkleinern fuer die Zugquelle hielt ihn bei einem 33-MP-Bild rund 850 ms, und so lange
+        ' stand die Oberflaeche beim ersten Griff an einen Regler. Ein Leser sieht waehrend eines
+        ' laufenden Commits den Stand davor - dasselbe, als haette er einen Augenblick frueher
+        ' gefragt. Die Bildpunkte selbst liest weiterhin nur, wer _lock haelt.
         Private _full As SKBitmap
+        ''' Wie viele RenderDownscale gerade ausserhalb der Sperre in _full lesen, und was Init oder
+        ''' Clear in der Zeit ersetzt haben; freigegeben wird es, sobald der letzte Leser fertig ist.
+        Private _fullReaders As Integer
+        Private ReadOnly _retiredFull As New List(Of SKBitmap)()
         Private _preview As SKBitmap
         Private _version As Long
         ''' Zählt Init/Clear: ein Commit aus der Hintergrund-Queue, der ein ANDERES Arbeitsbild
@@ -196,7 +207,7 @@ Namespace Services
                     p.Kill()
                 Next
                 _patches.Clear()
-                _full?.Dispose()
+                RetireFullLocked()
                 _full = fullBitmap
                 _preview = preview
                 _version += 1
@@ -219,9 +230,7 @@ Namespace Services
         ''' der Hintergrund-Queue prüfen damit, ob sie noch dasselbe Bild meinen.</summary>
         Public ReadOnly Property InitStamp As Long
             Get
-                SyncLock _lock
-                    Return _initStamp
-                End SyncLock
+                Return Threading.Interlocked.Read(_initStamp)
             End Get
         End Property
 
@@ -256,9 +265,7 @@ Namespace Services
 
         Public ReadOnly Property IsInitialized As Boolean
             Get
-                SyncLock _lock
-                    Return _full IsNot Nothing
-                End SyncLock
+                Return Threading.Volatile.Read(_full) IsNot Nothing
             End Get
         End Property
 
@@ -266,9 +273,7 @@ Namespace Services
         ''' Base-Cache-Key und verwirft damit veraltete Pipeline-Caches.</summary>
         Public ReadOnly Property Version As Long
             Get
-                SyncLock _lock
-                    Return _version
-                End SyncLock
+                Return Threading.Interlocked.Read(_version)
             End Get
         End Property
 
@@ -276,9 +281,7 @@ Namespace Services
         ''' oder das Arbeitsbild aus einer .fpx-retouch.png geladen wurde.</summary>
         Public ReadOnly Property HasBakedContent As Boolean
             Get
-                SyncLock _lock
-                    Return _hasBakedContent
-                End SyncLock
+                Return Threading.Volatile.Read(_hasBakedContent)
             End Get
         End Property
 
@@ -292,9 +295,7 @@ Namespace Services
         ''' und eine Begleitdatei wuerde ihn stillschweigend verlieren.</summary>
         Public ReadOnly Property HasUnrecordedBakedContent As Boolean
             Get
-                SyncLock _lock
-                    Return _hasUnrecordedBakedContent
-                End SyncLock
+                Return Threading.Volatile.Read(_hasUnrecordedBakedContent)
             End Get
         End Property
 
@@ -302,9 +303,7 @@ Namespace Services
         ''' Arbeitsbild gestanzt hat - steuert Schachbrett und Transparenz beim Speichern.</summary>
         Public ReadOnly Property HasAlphaHoles As Boolean
             Get
-                SyncLock _lock
-                    Return _hasAlphaHoles
-                End SyncLock
+                Return Threading.Volatile.Read(_hasAlphaHoles)
             End Get
         End Property
 
@@ -350,16 +349,52 @@ Namespace Services
         End Function
 
         ''' <summary>Herunterskalierte Kopie des Arbeitsbilds (z.B. Zoom-Detail-Quelle), gleiche
-        ''' Skalierung wie die Vorschau-Ableitung. Nothing ohne Init.</summary>
+        ''' Skalierung wie die Vorschau-Ableitung. Nothing ohne Init.
+        '''
+        ''' <para>Das Verkleinern laeuft AUSSERHALB der Sperre: bei 33 MP dauert es rund 900 ms, und so
+        ''' lange wartete sonst jeder Commit und jede Uebernahme eines neuen Arbeitsbilds, auch auf
+        ''' dem Anzeigefaden (gemessen beim Uebernehmen eines RAW-Neuaufbaus). Unter der Sperre wird
+        ''' nur das Bitmap festgehalten; ersetzt Init oder Clear es inzwischen, wird es erst nach dem
+        ''' letzten Leser freigegeben (<see cref="RetireFullLocked"/>). Ein Commit waehrenddessen
+        ''' schreibt in denselben Speicher, das Ergebnis kann dann halb alt, halb neu sein. Das ist
+        ''' hier unschaedlich: beide Aufrufer binden es an die Version, die sie VOR dem Aufruf
+        ''' gelesen haben, und der Commit zaehlt sie weiter - es wird also nie als aktuell
+        ''' genommen.</para></summary>
         Public Function RenderDownscale(maxDimension As Integer) As SKBitmap
+            Dim full As SKBitmap
             SyncLock _lock
                 If _full Is Nothing Then Return Nothing
-                Dim scaled = ImageProcessor.CreatePreviewWorkingBitmap(_full, maxDimension)
-                If scaled Is Nothing Then Return Nothing
-                If Object.ReferenceEquals(scaled, _full) Then Return _full.Copy()
-                Return scaled
+                full = _full
+                _fullReaders += 1
             End SyncLock
+            Try
+                Dim scaled = ImageProcessor.CreatePreviewWorkingBitmap(full, maxDimension)
+                If scaled Is Nothing Then Return Nothing
+                If Object.ReferenceEquals(scaled, full) Then Return full.Copy()
+                Return scaled
+            Finally
+                SyncLock _lock
+                    _fullReaders -= 1
+                    If _fullReaders = 0 Then
+                        For Each retired In _retiredFull
+                            retired.Dispose()
+                        Next
+                        _retiredFull.Clear()
+                    End If
+                End SyncLock
+            End Try
         End Function
+
+        ''' <summary>Gibt das bisherige VOLL-Bitmap frei, oder merkt es vor, solange
+        ''' <see cref="RenderDownscale"/> noch ausserhalb der Sperre darin liest.</summary>
+        Private Sub RetireFullLocked()
+            If _full Is Nothing Then Return
+            If _fullReaders > 0 Then
+                _retiredFull.Add(_full)
+            Else
+                _full.Dispose()
+            End If
+        End Sub
 
         ' ── Commits + Undo-Patches (Infrastruktur Stufe B, genutzt ab Stufe D) ──────────
 
@@ -402,6 +437,10 @@ Namespace Services
                         End Using
                     End Using
                     before.Dispose()
+                    ' Die Bildpunkte sind wieder die alten, die Version zaehlt trotzdem weiter:
+                    ' RenderDownscale liest ausserhalb der Sperre und kann den halb geschriebenen
+                    ' Stand gesehen haben. Seine Aufrufer erkennen das nur an einer neuen Version.
+                    _version += 1
                     Throw
                 End Try
 
@@ -578,7 +617,7 @@ Namespace Services
                     p.Kill()
                 Next
                 _patches.Clear()
-                _full?.Dispose()
+                RetireFullLocked()
                 _full = Nothing
                 _preview = Nothing
                 _initStamp += 1

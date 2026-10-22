@@ -47,9 +47,10 @@ Namespace Services
             Public Property BrokenLayers As Integer
             Public Property AdjustmentLayers As Integer
             ''' <summary>Textebenen ohne sichtbaren Punkt, die nicht als Text kamen (Wahl "als
-            ''' Bild", oder gestreckt) und deshalb fehlen; als Bild gäbe es von ihnen nichts.</summary>
+            ''' Bild", oder verzerrt) und deshalb fehlen; als Bild gäbe es von ihnen nichts.</summary>
             Public Property DroppedTextLayers As Integer
-            ''' <summary>Textebenen mit Bildpunkten, die ungleich gestreckt sind und deshalb als
+            ''' <summary>Textebenen mit Bildpunkten, die gestreckt, geschert oder gespiegelt sind
+            ''' (<see cref="IsDistortedText"/>) und deshalb als
             ''' Bild kamen, unabhängig von der Wahl; ob das einen Hinweis wert ist, entscheidet der
             ''' Aufrufer, der weiß, was gewählt wurde.</summary>
             Public Property StretchedTextLayers As Integer
@@ -74,8 +75,8 @@ Namespace Services
             If doc.HasRecipeBlock Then Return 0
             Dim count = 0
             For Each layer In doc.Layers
-                ' Gestreckter Text kommt ohnehin als Bild, nach ihm muss niemand gefragt werden.
-                If Not String.IsNullOrWhiteSpace(layer.TextContent) AndAlso Not IsStretchedText(layer.TextStyle) Then count += 1
+                ' Verzerrter Text kommt ohnehin als Bild, nach ihm muss niemand gefragt werden.
+                If Not String.IsNullOrWhiteSpace(layer.TextContent) AndAlso Not IsDistortedText(layer.TextStyle) Then count += 1
             Next
             Return count
         End Function
@@ -122,6 +123,9 @@ Namespace Services
             If imported.Annotations IsNot Nothing Then merged.Annotations.InsertRange(0, imported.Annotations)
             If imported.AnnotationGroups IsNot Nothing Then merged.AnnotationGroups.AddRange(imported.AnnotationGroups)
             If imported.Masks IsNot Nothing Then merged.Masks.AddRange(imported.Masks)
+            ' Die Sperren der untersten Ebene gehören wie die Ebenen der Datei.
+            merged.BaseLayerLockPosition = imported.BaseLayerLockPosition
+            merged.BaseLayerLockTransparency = imported.BaseLayerLockTransparency
             Return merged
         End Function
 
@@ -155,9 +159,16 @@ Namespace Services
                     If fromRecipe IsNot Nothing Then fromRecipe = ImageProcessor.BuildPsdRoundtripRecipe(fromRecipe)
                     If fromRecipe IsNot Nothing Then
                         Dim basePath = Path.Combine(tempDir, "base.png")
-                        Dim ok = If(IsUsableAsBackground(doc.Layers(0), doc.Width, doc.Height),
+                        Dim asBackground = IsUsableAsBackground(doc.Layers(0), doc.Width, doc.Height)
+                        Dim ok = If(asBackground,
                                     WritePng(doc.Layers(0).Pixels, basePath, doc.IccProfile),
                                     WriteEmptyPng(doc.Width, doc.Height, basePath))
+                        ' Die Sperren stehen in der Datei, nicht im Block: wer die unterste Ebene
+                        ' danach anderswo gesperrt hat, soll das hier wiederfinden.
+                        If asBackground Then
+                            fromRecipe.BaseLayerLockPosition = doc.Layers(0).LockPosition
+                            fromRecipe.BaseLayerLockTransparency = doc.Layers(0).LockTransparency
+                        End If
                         If ok Then
                             success = True
                             Return New PsdImportResult With {
@@ -199,6 +210,10 @@ Namespace Services
                     baseImagePath = Path.Combine(tempDir, "base.png")
                     If Not WritePng(layers(0).Pixels, baseImagePath, doc.IccProfile) Then Return Nothing
                     firstIndex = 1
+                    ' Das Grundbild kennt keine Sperren; sie reisen im Rezept mit, damit der
+                    ' Export sie der untersten Ebene zurückgibt.
+                    adjustments.BaseLayerLockPosition = layers(0).LockPosition
+                    adjustments.BaseLayerLockTransparency = layers(0).LockTransparency
                 Else
                     baseImagePath = Path.Combine(tempDir, "base.png")
                     If Not WriteEmptyPng(doc.Width, doc.Height, baseImagePath) Then Return Nothing
@@ -219,21 +234,34 @@ Namespace Services
                         Continue For
                     End If
 
-                    ' Ohne Bildpunkte bleibt nur eine leere Textebene, und die nur als Text: als Bild
-                    ' gäbe es nichts zu zeigen. Kommt sie nicht als Text (Wahl "als Bild", oder
-                    ' gestreckt), fehlt sie - gezählt, damit die Rückfrage beim Öffnen es sagt.
+                    ' Ohne Bildpunkte bleibt eine leere Textebene nur als Text: als Bild gäbe es
+                    ' nichts zu zeigen. Kommt sie nicht als Text (Wahl "als Bild", oder verzerrt),
+                    ' fehlt sie - gezählt, damit die Rückfrage beim Öffnen es sagt. Eine gewöhnliche
+                    ' leere Bildebene bleibt dagegen; sie wird unten eine leere Malebene.
                     Dim asText = textAsText AndAlso Not String.IsNullOrWhiteSpace(layer.TextContent) AndAlso
-                                 Not IsStretchedText(layer.TextStyle)
-                    If layer.Pixels Is Nothing AndAlso Not asText Then
+                                 Not IsDistortedText(layer.TextStyle)
+                    If layer.Pixels Is Nothing AndAlso Not asText AndAlso Not layer.IsEmptyLayer Then
                         If Not String.IsNullOrWhiteSpace(layer.TextContent) Then droppedTextLayers += 1
                         Continue For
                     End If
-                    ' Gestreckter Text kommt als Bild, auch wenn Text als Text gewählt ist; gezählt,
+                    ' Verzerrter Text kommt als Bild, auch wenn Text als Text gewählt ist; gezählt,
                     ' damit der Editor sagen kann, warum dieser Wortlaut fest ist.
-                    If Not String.IsNullOrWhiteSpace(layer.TextContent) AndAlso IsStretchedText(layer.TextStyle) Then
+                    If Not String.IsNullOrWhiteSpace(layer.TextContent) AndAlso IsDistortedText(layer.TextStyle) Then
                         stretchedTextLayers += 1
                     End If
                     Dim groupId = If(openGroups.Count > 0, openGroups(openGroups.Count - 1).Id, "")
+
+                    ' Die leere Malebene deckt das ganze Bild, wie eine im Editor angelegte. Ihre
+                    ' Maske wird deshalb auf das ganze Bild aufgezogen (AddLayerMask zieht sie auf
+                    ' die Ebenenfläche): wer später darauf malt, soll ausserhalb des alten
+                    ' Maskenrechtecks nicht ins Leere malen.
+                    Dim emptyLayer = layer.Pixels Is Nothing AndAlso Not asText AndAlso layer.IsEmptyLayer
+                    If emptyLayer Then
+                        layer.Left = 0
+                        layer.Top = 0
+                        layer.Width = doc.Width
+                        layer.Height = doc.Height
+                    End If
 
                     ' Textebene als Textobjekt, wenn der Nutzer es so wollte. Fehlende Schriftwerte
                     ' werden aus dem Ebenenrechteck und den gerasterten Bildpunkten geschätzt.
@@ -277,6 +305,35 @@ Namespace Services
                     End If
 
                     Dim assetPath = Path.Combine(tempDir, "layer" & index.ToString() & ".png")
+                    If emptyLayer Then
+                        ' Dieselbe Gestalt wie eine im Editor angelegte Malebene (AddPaintLayer):
+                        ' ein durchsichtiges Raster in Bildgröße, Art SelectionImage, der Name in
+                        ' Text. Malen, Radieren und ein erneuter Export gelten damit unverändert.
+                        If Not WriteEmptyPng(doc.Width, doc.Height, assetPath) Then Continue For
+                        index += 1
+                        adjustments.Annotations.Add(New ImageAnnotation With {
+                            .Kind = "SelectionImage",
+                            .IsPaintLayer = True,
+                            .Text = If(String.IsNullOrWhiteSpace(layer.Name), "Layer", layer.Name),
+                            .CustomName = If(layer.Name, ""),
+                            .ImagePath = assetPath,
+                            .XPixels = 0,
+                            .YPixels = 0,
+                            .WidthPixels = doc.Width,
+                            .HeightPixels = doc.Height,
+                            .FillColor = "#00FFFFFF",
+                            .Opacity = layer.OpacityPercent,
+                            .BlendMode = layer.BlendMode,
+                            .ClipToLayerBelow = layer.ClipToLayerBelow,
+                            .IsVisible = layer.IsVisible,
+                            .MaskId = maskId,
+                            .GroupId = groupId,
+                            .LockAspect = False,
+                            .IsLocked = layer.LockPosition,
+                            .LockTransparentPixels = layer.LockTransparency
+                        })
+                        Continue For
+                    End If
                     If Not WritePng(layer.Pixels, assetPath, doc.IccProfile) Then Continue For
                     index += 1
 
@@ -492,6 +549,10 @@ Namespace Services
             If Not layer.IsVisible Then Return False
             If layer.ClipToLayerBelow Then Return False
             If layer.OpacityPercent < 99.5F Then Return False
+            ' Sperren hindern NICHT: Photoshops eigene Hintergrundebene gilt immer als gesperrt und
+            ' ist von einer gewöhnlichen gesperrten Ebene nicht sicher zu unterscheiden. Sie wird
+            ' Grundbild, und ihre Sperren reisen im Rezept mit (BaseLayerLockPosition), damit der
+            ' Export sie zurückschreibt.
             Return String.Equals(layer.BlendMode, "Normal", StringComparison.OrdinalIgnoreCase)
         End Function
 
@@ -530,27 +591,34 @@ Namespace Services
             End If
         End Sub
 
+        ''' <summary>Ob die Matrix der Textebene mehr tut als drehen und gleichmäßig skalieren:
+        ''' waagerecht anders strecken als senkrecht, scheren oder spiegeln. Ein Textobjekt kennt nur
+        ''' EINEN Schriftgrad und eine Drehung; als Text käme ein in Photoshop breit gezogener
+        ''' Schriftzug schmaler zurück, ein geschrägter gerade und ein gespiegelter seitenrichtig
+        ''' (die Spiegelung läse <see cref="ApplyPsdTextLayout"/> sogar als Drehung). Dann bleibt
+        ''' die Ebene ein Bild, und jeder Punkt stimmt.</summary>
+        Private Shared Function IsDistortedText(style As PsdEngineData) As Boolean
+            Dim m = style?.Matrix
+            If m Is Nothing Then Return False
+            Dim scaleX = Math.Sqrt(m(0) * m(0) + m(1) * m(1))
+            Dim scaleY = Math.Sqrt(m(2) * m(2) + m(3) * m(3))
+            If scaleX < 0.000001 OrElse scaleY < 0.000001 Then Return False
+            If Math.Abs(scaleX / scaleY - 1.0) > 0.01 Then Return True
+            ' Scherung: die zweite Achse steht nicht senkrecht auf der ersten. Dieselbe Schranke
+            ' wie in ApplyPsdTextLayout, das solche Matrizen sonst stillschweigend uebergeht.
+            If Math.Abs(m(0) * m(2) + m(1) * m(3)) > 0.001 * scaleX * scaleY Then Return True
+            ' Spiegelung: negative Determinante.
+            Return m(0) * m(3) - m(1) * m(2) < 0
+        End Function
+
         ''' <summary>Lage, Drehung, Ausrichtung und Zeichenabstand aus der Textebene.
         '''
         ''' Das Ebenenrechteck umschliesst nur die gezeichneten Bildpunkte, bei gedrehtem Text sogar
         ''' achsparallel. Der Rahmen im Textraum und die Matrix des TySh-Blocks sagen dagegen, wo
         ''' der Text WIRKLICH steht: die Mitte des Rahmens geht durch die Matrix ins Dokument, die
         ''' Kanten mit dem Massstab ihrer Achse, und der Winkel der ersten Achse ist die Drehung.
-        ''' Geschert oder gespiegelt bleibt es beim Ebenenrechteck, denn das kann ein Objekt nicht
-        ''' abbilden.</summary>
-        ''' <summary>Ob die Matrix der Textebene waagerecht anders streckt als senkrecht. Ein
-        ''' Textobjekt kennt nur EINEN Schriftgrad und keine Streckung; als Text käme ein in
-        ''' Photoshop breit gezogener Schriftzug schmaler und in anderer Höhe zurück. Dann bleibt
-        ''' die Ebene ein Bild, und jeder Punkt stimmt.</summary>
-        Private Shared Function IsStretchedText(style As PsdEngineData) As Boolean
-            Dim m = style?.Matrix
-            If m Is Nothing Then Return False
-            Dim scaleX = Math.Sqrt(m(0) * m(0) + m(1) * m(1))
-            Dim scaleY = Math.Sqrt(m(2) * m(2) + m(3) * m(3))
-            If scaleX < 0.000001 OrElse scaleY < 0.000001 Then Return False
-            Return Math.Abs(scaleX / scaleY - 1.0) > 0.01
-        End Function
-
+        ''' Gestreckt, geschert oder gespiegelt kommt eine Ebene gar nicht hierher, sondern als
+        ''' Bild (<see cref="IsDistortedText"/>).</summary>
         Private Shared Sub ApplyPsdTextLayout(annotation As ImageAnnotation, style As PsdEngineData)
             Select Case style.Justification
                 Case 1 : annotation.TextAlignment = "Right"

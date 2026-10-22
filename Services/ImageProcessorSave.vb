@@ -96,11 +96,15 @@ Namespace Services
 
             Try
                 If background IsNot Nothing Then
+                    ' Die Sperren, mit denen die unterste Ebene einst aus einer PSD kam - das Basisbild
+                    ' selbst kennt keine, ohne sie verloere der Rundweg sie (siehe BaseLayerLockPosition).
                     layers.Add(New PsdWriterService.PsdLayerInput With {
                         .Name = LocalizationService.T("Hintergrund"),
                         .Pixels = background,
                         .Left = 0,
-                        .Top = 0
+                        .Top = 0,
+                        .LockPosition = adj IsNot Nothing AndAlso adj.BaseLayerLockPosition,
+                        .LockTransparency = adj IsNot Nothing AndAlso adj.BaseLayerLockTransparency
                     })
                 End If
 
@@ -478,6 +482,8 @@ Namespace Services
                 .SourceWidthPixels = adj.SourceWidthPixels,
                 .SourceHeightPixels = adj.SourceHeightPixels,
                 .RecipeCoordinateVersion = adj.RecipeCoordinateVersion,
+                .BaseLayerLockPosition = adj.BaseLayerLockPosition,
+                .BaseLayerLockTransparency = adj.BaseLayerLockTransparency,
                 .Annotations = If(adj.Annotations, New List(Of ImageAnnotation)()).
                     Where(Function(a) a IsNot Nothing).Select(Function(a) a.Clone()).ToList(),
                 .AnnotationGroups = If(adj.AnnotationGroups, New List(Of AnnotationGroup)()).

@@ -66,6 +66,9 @@ Namespace Services
             Public Property IsVisible As Boolean = True
             ''' Die Bildpunkte der Ebene, so groß wie ihr Rechteck. Gehört dem Aufrufer.
             Public Property Pixels As SKBitmap
+            ''' <summary>Eine gewöhnliche Bildebene ohne einen Punkt (kein Rechteck, Pixels ist
+            ''' Nothing). Der Import macht daraus eine leere Malebene.</summary>
+            Public Property IsEmptyLayer As Boolean
             ''' <summary>Der Wortlaut, wenn es eine Textebene ist, sonst "". Nur der Wortlaut - was
             ''' die Schrift angeht, siehe PsdTextReader.</summary>
             Public Property TextContent As String = ""
@@ -389,10 +392,12 @@ Namespace Services
                     ' der Import nicht, wo eine Gruppe anfängt und wo sie aufhört. Ebenso eine
                     ' Textebene ohne sichtbaren Punkt (Text in durchsichtiger Farbe): sie hat ein
                     ' leeres Rechteck, ihr Wortlaut steht aber im Block TySh und soll als Text
-                    ' zurückkommen können. Pixels bleibt dann Nothing.
+                    ' zurückkommen können. Pixels bleibt dann Nothing. Und eine gewöhnliche Bildebene
+                    ' ohne Inhalt: sie kommt als leere Malebene zurück (IsEmptyLayer).
                     Dim emptyText = Not rec.HasPixels AndAlso Not String.IsNullOrWhiteSpace(rec.TextContent)
-                    If bmp Is Nothing AndAlso rec.SectionType = 0 AndAlso Not metadataOnly AndAlso Not emptyText Then Continue For
-                    If metadataOnly AndAlso Not rec.HasPixels AndAlso rec.SectionType = 0 AndAlso Not emptyText Then Continue For
+                    Dim emptyLayer = Not rec.HasPixels AndAlso rec.IsPlainEmpty
+                    If bmp Is Nothing AndAlso rec.SectionType = 0 AndAlso Not metadataOnly AndAlso Not emptyText AndAlso Not emptyLayer Then Continue For
+                    If metadataOnly AndAlso Not rec.HasPixels AndAlso rec.SectionType = 0 AndAlso Not emptyText AndAlso Not emptyLayer Then Continue For
 
                     layers.Add(New PsdLayerInfo With {
                         .Name = rec.Name,
@@ -405,6 +410,7 @@ Namespace Services
                         .ClipToLayerBelow = rec.Clipping <> 0,
                         .IsVisible = (rec.Flags And 2) = 0,
                         .Pixels = bmp,
+                        .IsEmptyLayer = emptyLayer,
                         .TextContent = rec.TextContent,
                         .TextStyle = rec.TextStyle,
                         .MaskPixels = maskBmp,
@@ -585,6 +591,9 @@ Namespace Services
             ''' <summary>Photoshop hat die Bildpunkte dieser Ebene aus etwas anderem gerechnet:
             ''' Text, Form oder Smartobjekt. Ihre Kante steckt dann schon in den Bildpunkten.</summary>
             Public Property IsRendered As Boolean
+            ''' <summary>Eine gewöhnliche Bildebene, nur ohne Inhalt. Zählt erst, wenn
+            ''' <see cref="HasPixels"/> falsch ist.</summary>
+            Public Property IsPlainEmpty As Boolean
         End Class
 
         Private Shared Function ReadLayerRecord(fs As FileStream, isPsb As Boolean) As LayerRecord
@@ -746,6 +755,12 @@ Namespace Services
             ' Photoshop dasselbe.
             rec.IsRendered = hasText OrElse hasSmart OrElse hasShapeContent OrElse
                              (hasVectorMask AndAlso (hasFill OrElse hasStroke))
+            ' Eine gewöhnliche Bildebene ohne einen Punkt: kein Text, keine Form, kein Smartobjekt,
+            ' keine Füll- oder Einstellungsebene. Sie geht als leere Ebene mit, statt zu fehlen -
+            ' der Export schreibt solche Ebenen ausdrücklich, und ohne sie verlöre ein Rundweg
+            ' Namen, Platz im Stapel und Maske.
+            rec.IsPlainEmpty = rec.SectionType = 0 AndAlso Not rec.IsAdjustment AndAlso
+                               Not (hasText OrElse hasSmart OrElse hasShapeContent OrElse hasFill OrElse hasStroke)
             If effectsBlock IsNot Nothing Then
                 rec.HasEffects = EffectsAreActive(effectsBlock)
             ElseIf hasLegacyEffects AndAlso rec.SectionType = 0 Then
@@ -1059,8 +1074,9 @@ Namespace Services
                 ' hat die Maße IHRES Rechtecks, nicht die der Ebene.
                 ' Auch eine GRUPPENZEILE darf eine Maske tragen; sie gilt dann für alles, was in der
                 ' Gruppe liegt. Deshalb hängt das Lesen hier nicht an den Bildpunkten. Dasselbe gilt
-                ' für eine leere Textebene, die als Text zurückkommen soll.
-                Dim carriesMask = rec.HasPixels OrElse rec.SectionType <> 0 OrElse Not String.IsNullOrWhiteSpace(rec.TextContent)
+                ' für eine leere Textebene, die als Text zurückkommen soll, und eine leere Bildebene.
+                Dim carriesMask = rec.HasPixels OrElse rec.SectionType <> 0 OrElse rec.IsPlainEmpty OrElse
+                                  Not String.IsNullOrWhiteSpace(rec.TextContent)
                 Dim wantMask = Not metadataOnly AndAlso carriesMask AndAlso
                                rec.HasMaskRect AndAlso id = rec.MaskChannelId AndAlso maskWidth > 0 AndAlso maskHeight > 0
                 Dim wantVectorMask = Not metadataOnly AndAlso carriesMask AndAlso
@@ -1128,8 +1144,8 @@ Namespace Services
             ' niemand mehr in die Hand bekommt, wäre nativer Speicher bis zum Finalisierer. Bei
             ' einer Gruppenzeile ist das anders: sie hat nie Bildpunkte, ihre Maske gilt trotzdem.
             If Not rec.HasPixels Then
-                ' Gruppenzeile und leere Textebene behalten ihre Maske (carriesMask oben).
-                If rec.SectionType <> 0 OrElse Not String.IsNullOrWhiteSpace(rec.TextContent) Then Return Nothing
+                ' Gruppenzeile, leere Textebene und leere Bildebene behalten ihre Maske (carriesMask oben).
+                If rec.SectionType <> 0 OrElse rec.IsPlainEmpty OrElse Not String.IsNullOrWhiteSpace(rec.TextContent) Then Return Nothing
                 Return DropMask(maskBitmap)
             End If
             ' Bei Graustufen gibt es nur den einen Kanal 0. Er wird auf alle drei gelegt, statt einen
