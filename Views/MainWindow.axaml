@@ -104,8 +104,8 @@
                                      Fill="{Binding WindowTitleColorLabelBrush}"
                                      IsVisible="{Binding HasWindowTitleColorLabel}"
                                      VerticalAlignment="Center"/>
-                            <!-- Akzentfarbe = entwickeltes RAW. Wird bei einem RAW nur die
-                                 eingebettete JPEG-Vorschau bearbeitet, bleibt der Name gedaempft
+                            <!-- Akzentfarbe = entwickeltes RAW, in Betrachter und Editor. Ist bei einem RAW nur die
+                                 eingebettete JPEG-Vorschau zu sehen, bleibt der Name gedaempft
                                  wie bei jedem anderen Bild. -->
                             <TextBlock Text="{Binding WindowTitleFileName}"
                                        Classes="window-title"

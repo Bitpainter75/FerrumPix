@@ -20,6 +20,19 @@
   as you hold still. Histogram and tone curve are now updated in the background, and highlights
   and shadows are a little quicker to calculate.
 
+- **Graphics card for image editing (try it out).** A new switch under Settings, Performance lets
+  the graphics card calculate colour and tones as well as all detail and effect tools such as
+  noise reduction, sharpening, clarity, haze, blur, grain and vignette, in the preview as well as
+  for export and batch processing. Sliders react noticeably faster on large pictures, and
+  sharpening with the deconvolution method no longer takes seconds. It is off by default; when you
+  turn it on, FerrumPix first checks that the card calculates the same picture as the processor
+  and otherwise stays with the processor. Colour grading, point colour and LUTs still run on the
+  processor for now.
+
+- **Developed RAWs are marked in the viewer too.** As in the editor, the file name at the top of
+  the window turns to the accent colour when the viewer shows a RAW developed by FerrumPix rather
+  than the camera's built-in preview.
+
 - **Smaller fixes:** invisible layers no longer turn into empty full-size layers in a PSD export,
   and PSD files open a little faster. The last page of the Windows installer now reads
   "Launch FerrumPix" in English instead of the German wording.
@@ -54,4 +67,8 @@
   
 - **Tone curve on a layer:** when you adjust a layer, the histogram behind the curve now shows
   that layer instead of the background, so it no longer stays empty with layered PSD files.
+  
+- **Face names from other photo programs:** named faces that another program stored in an XMP
+  sidecar file now come into FerrumPix with their name and position. Before, files in the common
+  notation of these programs were skipped.
 

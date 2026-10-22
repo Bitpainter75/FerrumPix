@@ -219,8 +219,26 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(HasNoMedia))
                 Me.RaisePropertyChanged(NameOf(IsSingleImageVisible))
                 Me.RaisePropertyChanged(NameOf(ShowBitmapLoading))
+                If Not Object.ReferenceEquals(previous, value) Then
+                    ' Die Akzentfarbe des Titels haengt am gezeigten Bild (IsRawDeveloped).
+                    Me.RaisePropertyChanged(NameOf(IsRawDeveloped))
+                    _mainVm?.RefreshWindowTitle()
+                End If
                 If previous IsNot Nothing AndAlso Not Object.ReferenceEquals(previous, value) Then DisposeDeferred(previous)
             End Set
+        End Property
+
+        ' Das Bild, das LibRaw fuer die Anzeige entwickelt hat. Nur eine Referenz zum Vergleich mit
+        ' CurrentImage: jedes andere Bild (eingebettete Vorschau, FPX-Komposit, leer) loest sie ab.
+        Private _rawDevelopedImage As Bitmap
+
+        ''' <summary>True, wenn das gezeigte Bild WIRKLICH ueber LibRaw entwickelt wurde und nicht
+        ''' die eingebettete Kamera-Vorschau ist. Der Dateiname in der Fensterleiste steht dann in
+        ''' der Akzentfarbe, wie im Editor.</summary>
+        Public ReadOnly Property IsRawDeveloped As Boolean
+            Get
+                Return _currentImage IsNot Nothing AndAlso Object.ReferenceEquals(_currentImage, _rawDevelopedImage)
+            End Get
         End Property
 
         ''' True nur, wenn weder ein Bild noch ein Video geladen ist - steuert den
@@ -2298,6 +2316,7 @@ Namespace ViewModels
 
         Private Async Sub RunBitmapLoad(path As String, token As Integer, isFpx As Boolean)
             Dim bmp As Bitmap = Nothing
+            Dim rawDeveloped = False
             ' Die Aenderungszeit VOR dem Decode: aendert sich die Datei waehrenddessen, passt das Bild
             ' nicht mehr zu ihr, und die Uebergabe an den Editor verwirft es.
             Dim writeTime = DateTime.MinValue
@@ -2308,12 +2327,17 @@ Namespace ViewModels
             Try
                 ' Bei jedem Laden neu gelesen, damit ein umgelegter Schalter beim naechsten Bild wirkt.
                 Dim reduced = Not AppSettingsService.Load().ViewerRawFullResolution
-                bmp = Await Task.Run(Function() DecodeViewerBitmapUnlessStale(path, reduced, token))
+                Dim decoded = Await Task.Run(Function() DecodeViewerBitmapUnlessStale(path, reduced, token))
+                bmp = decoded.Bitmap
+                rawDeveloped = decoded.RawDeveloped
             Catch
                 bmp = Nothing
             End Try
 
             If Not ApplyLoadedBitmap(token, bmp) Then Return
+            _rawDevelopedImage = If(rawDeveloped, bmp, Nothing)
+            Me.RaisePropertyChanged(NameOf(IsRawDeveloped))
+            _mainVm?.RefreshWindowTitle()
             _editorHandoffSource = If(QualifiesForEditorHandoff(path), bmp, Nothing)
             _editorHandoffPath = path
             _editorHandoffWriteTimeUtc = writeTime
@@ -2493,15 +2517,15 @@ Namespace ViewModels
         ''' Nur fuer eine RAW, die entwickelt wird: alles andere ist schnell genug, und eine
         ''' eingebettete Vorschau soll nicht hinter Hintergrundarbeit (Gesichter, Kacheln) an der
         ''' Schleuse warten.</summary>
-        Private Function DecodeViewerBitmapUnlessStale(path As String, reduced As Boolean, token As Integer) As Bitmap
-            If Not WillDevelopRawInViewer(path) Then Return DecodeViewerBitmap(path, reducedRawDecode:=reduced)
+        Private Function DecodeViewerBitmapUnlessStale(path As String, reduced As Boolean, token As Integer) As (Bitmap As Bitmap, RawDeveloped As Boolean)
+            If Not WillDevelopRawInViewer(path) Then Return DecodeViewerBitmapWithState(path, reducedRawDecode:=reduced)
             Return DecodeGate.Run(
-                Function() As Bitmap
+                Function() As (Bitmap As Bitmap, RawDeveloped As Boolean)
                     If token <> System.Threading.Volatile.Read(_bitmapLoadToken) Then
                         DiagnosticLogService.LogAlways("Viewer.StaleDecode", $"uebersprungen file={IO.Path.GetFileName(path)}")
-                        Return Nothing
+                        Return (Nothing, False)
                     End If
-                    Return DecodeViewerBitmap(path, reducedRawDecode:=reduced)
+                    Return DecodeViewerBitmapWithState(path, reducedRawDecode:=reduced)
                 End Function)
         End Function
 
@@ -2535,37 +2559,47 @@ Namespace ViewModels
         ''' Einstellung fuer volle Aufloesung aus ist; die Schnellvorschau setzt es immer.</param>
         Friend Shared Function DecodeViewerBitmap(path As String, Optional alwaysDevelop As Boolean = False,
                                                   Optional reducedRawDecode As Boolean = False) As Bitmap
-            If RawPreviewService.IsSupportedRaw(path) Then
-                ' Entwickelte Vorschau statt der schnellen eingebetteten: im Vergleich immer, sonst
-                ' bei aktiver Einstellung und vorhandener .fpxmp - oder bei der zweiten Einstellung
-                ' auch ohne Rezept. ApplyAdjustments liefert bereits orientiert + mit
-                ' Rezept-Geometrie. Einmal laden genuegt, beide Schalter stehen in derselben Datei.
-                Dim settings = AppSettingsService.Load()
-                If ShouldDevelopRaw(alwaysDevelop, RawDecodeService.IsAvailable,
-                                    settings.DevelopRawInViewer,
-                                    RawSidecarService.Exists(path),
-                                    settings.DevelopRawInViewerWithoutRecipe) Then
-                    ' Ohne Begleitdatei die Vorgabewerte: entwickelt wird trotzdem, nur eben ohne
-                    ' Rezept. Genau das ist im Vergleich und beim Schalter fuer unbearbeitete
-                    ' RAWs gewollt.
-                    Dim adj = If(RawSidecarService.Exists(path), RawSidecarService.TryRead(path), Nothing)
-                    If adj Is Nothing Then adj = ImageAdjustments.ForUneditedRaw(path)
-                    Try
-                        Dim developed = ImageProcessor.ApplyAdjustments(path, adj, preferReducedRawDecode:=reducedRawDecode)
-                        If developed IsNot Nothing Then Return developed
-                    Catch
-                        ' Faellt die Entwicklung aus (fehlendes LibRaw, defekte Datei), lieber die
-                        ' eingebettete Vorschau als eine leere Flaeche.
-                    End Try
-                End If
-                Using preview = RawPreviewService.ExtractPreviewWithFallback(path)
-                    ' Gedrehte RAWs tragen ihre Drehung im Sidecar (die Datei selbst wird nie
-                    ' neu geschrieben) - beim Anzeigen also wieder drauflegen.
-                    Return If(preview IsNot Nothing,
-                              ImageOrientationService.LoadOrientedAvaloniaBitmap(preview, RawSidecarService.ReadRotationDegrees(path), rawContainerPath:=path),
-                              Nothing)
-                End Using
+            Return DecodeViewerBitmapWithState(path, alwaysDevelop, reducedRawDecode).Bitmap
+        End Function
+
+        ''' <summary>Wie <see cref="DecodeViewerBitmap"/>, sagt aber dazu, ob LibRaw das Bild
+        ''' entwickelt hat. Faellt die Entwicklung aus, kommt die eingebettete Vorschau und damit
+        ''' False - die Einstellung allein belegt die Entwicklung nicht.</summary>
+        Friend Shared Function DecodeViewerBitmapWithState(path As String, Optional alwaysDevelop As Boolean = False,
+                                                           Optional reducedRawDecode As Boolean = False) As (Bitmap As Bitmap, RawDeveloped As Boolean)
+            If Not RawPreviewService.IsSupportedRaw(path) Then Return (DecodeNonRawViewerBitmap(path), False)
+            ' Entwickelte Vorschau statt der schnellen eingebetteten: im Vergleich immer, sonst
+            ' bei aktiver Einstellung und vorhandener .fpxmp - oder bei der zweiten Einstellung
+            ' auch ohne Rezept. ApplyAdjustments liefert bereits orientiert + mit
+            ' Rezept-Geometrie. Einmal laden genuegt, beide Schalter stehen in derselben Datei.
+            Dim settings = AppSettingsService.Load()
+            If ShouldDevelopRaw(alwaysDevelop, RawDecodeService.IsAvailable,
+                                settings.DevelopRawInViewer,
+                                RawSidecarService.Exists(path),
+                                settings.DevelopRawInViewerWithoutRecipe) Then
+                ' Ohne Begleitdatei die Vorgabewerte: entwickelt wird trotzdem, nur eben ohne
+                ' Rezept. Genau das ist im Vergleich und beim Schalter fuer unbearbeitete
+                ' RAWs gewollt.
+                Dim adj = If(RawSidecarService.Exists(path), RawSidecarService.TryRead(path), Nothing)
+                If adj Is Nothing Then adj = ImageAdjustments.ForUneditedRaw(path)
+                Try
+                    Dim developed = ImageProcessor.ApplyAdjustments(path, adj, preferReducedRawDecode:=reducedRawDecode)
+                    If developed IsNot Nothing Then Return (developed, True)
+                Catch
+                    ' Faellt die Entwicklung aus (fehlendes LibRaw, defekte Datei), lieber die
+                    ' eingebettete Vorschau als eine leere Flaeche.
+                End Try
             End If
+            Using preview = RawPreviewService.ExtractPreviewWithFallback(path)
+                ' Gedrehte RAWs tragen ihre Drehung im Sidecar (die Datei selbst wird nie
+                ' neu geschrieben) - beim Anzeigen also wieder drauflegen.
+                Return (If(preview IsNot Nothing,
+                           ImageOrientationService.LoadOrientedAvaloniaBitmap(preview, RawSidecarService.ReadRotationDegrees(path), rawContainerPath:=path),
+                           Nothing), False)
+            End Using
+        End Function
+
+        Private Shared Function DecodeNonRawViewerBitmap(path As String) As Bitmap
             If SvgPreviewService.IsSupportedSvg(path) Then
                 Using preview = SvgPreviewService.ExtractPreview(path)
                     Return If(preview IsNot Nothing, New Bitmap(preview), Nothing)

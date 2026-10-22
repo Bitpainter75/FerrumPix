@@ -537,12 +537,17 @@ Namespace ViewModels
             End Get
         End Property
 
-        ''' <summary>True, wenn im Editor ein WIRKLICH entwickeltes RAW offen ist. Der Dateiname in
-        ''' der Fensterleiste steht dann in der Akzentfarbe, damit auf einen Blick sichtbar ist, ob
-        ''' echte Sensordaten bearbeitet werden oder nur die eingebettete Vorschau.</summary>
+        ''' <summary>True, wenn im Betrachter oder Editor ein WIRKLICH entwickeltes RAW zu sehen
+        ''' ist. Der Dateiname in der Fensterleiste steht dann in der Akzentfarbe, damit auf einen
+        ''' Blick sichtbar ist, ob echte Sensordaten gezeigt werden oder nur die eingebettete
+        ''' Vorschau.</summary>
         Public ReadOnly Property IsWindowTitleRawDeveloped As Boolean
             Get
-                Return CurrentMode = AppMode.Editor AndAlso Editor IsNot Nothing AndAlso Editor.IsRawDeveloped
+                Select Case CurrentMode
+                    Case AppMode.Viewer : Return Viewer IsNot Nothing AndAlso Viewer.IsRawDeveloped
+                    Case AppMode.Editor : Return Editor IsNot Nothing AndAlso Editor.IsRawDeveloped
+                    Case Else : Return False
+                End Select
             End Get
         End Property
 
