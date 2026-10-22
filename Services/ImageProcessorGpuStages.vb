@@ -25,6 +25,11 @@ Namespace Services
             Private _info As SKImageInfo
             Private ReadOnly _raster As Boolean
 
+            ''' <summary>Die Stufen, die seit dem Hochladen auf der Karte liefen, mit ihrem
+            ''' Prozessor-Gegenstueck. Das Prozessorbild steht solange auf dem Stand VOR ihnen;
+            ''' scheitert das Zurueckholen, werden sie damit nachgerechnet, statt still zu fehlen.</summary>
+            Public ReadOnly Property PendingOnGpu As New List(Of (Name As String, Cpu As Func(Of SKBitmap, SKBitmap)))()
+
             Private Sub New(raster As Boolean)
                 _raster = raster
             End Sub
@@ -97,6 +102,11 @@ Namespace Services
             ''' wenn das Zuruecklesen scheitert.</summary>
             Public Function Download() As SKBitmap
                 If _surface Is Nothing Then Return Nothing
+                If FailNextDetailDownloadForCheck Then
+                    FailNextDetailDownloadForCheck = False
+                    Dispose()
+                    Return Nothing
+                End If
                 Dim result As SKBitmap = Nothing
                 Run(
                     Function(gr)
@@ -149,6 +159,11 @@ Namespace Services
         ''' Grafikkarte laeuft. Dort viel langsamer und deshalb nie im Betrieb.</summary>
         Friend Shared DetailStageShadersOnRaster As Boolean = False
 
+        ''' <summary>Pruefschalter: das naechste Zurueckholen einer Sitzung scheitert, als waere die
+        ''' Karte verloren. Damit prueft der Pruefstand, dass die Stufen dann auf dem Prozessor
+        ''' nachgerechnet werden (BringDetailSessionHome). Setzt sich nach einem Gebrauch zurueck.</summary>
+        Friend Shared FailNextDetailDownloadForCheck As Boolean = False
+
         ''' <summary>Eine Zielflaeche fuer eine Stufe: 8 Bit, vormultipliziert, wie das Zwischenbild
         ''' auf dem Prozessor. Ohne GRContext (Pruefmodus) im Speicher.</summary>
         Private Shared Function NewStageSurface(gr As GRContext, width As Integer, height As Integer) As SKSurface
@@ -167,7 +182,10 @@ Namespace Services
             If session IsNot Nothing AndAlso gpu IsNot Nothing Then
                 Dim done = PerformanceTraceService.Measure(measureName & " (Grafikkarte)",
                                                            Function() session.TryApply(processed, gpu))
-                If done Then Return processed
+                If done Then
+                    session.PendingOnGpu.Add((measureName, cpu))
+                    Return processed
+                End If
                 NoteGpuFallback(measureName & ": Lauf auf der Grafikkarte gescheitert (Fehlerdatei)")
             End If
             processed = BringDetailSessionHome(session, processed, owned)
@@ -180,14 +198,21 @@ Namespace Services
                                                        ByRef owned As Boolean) As SKBitmap
             If session Is Nothing OrElse Not session.OnGpu Then Return processed
             Dim back = PerformanceTraceService.Measure("Pixel: Zuruecklesen (Grafikkarte)", Function() session.Download())
-            If back Is Nothing Then
-                ' Die Stufen auf der Karte sind verloren. Ehrlich bleibt nur: ohne sie weiter, und
-                ' der Grund steht in der Fehlerdatei. Ein falsches Bild aus halben Stufen waere
-                ' schlimmer; GpuImageService hat den Weg dann ohnehin gesperrt.
-                NoteGpuFallback("Zuruecklesen gescheitert, die Stufen auf der Grafikkarte fehlen in diesem Bild")
-                Return processed
-            End If
-            Return ReplaceBitmapOwned(processed, back, owned)
+            Dim pending = session.PendingOnGpu.ToList()
+            session.PendingOnGpu.Clear()
+            If back IsNot Nothing Then Return ReplaceBitmapOwned(processed, back, owned)
+
+            ' Das Ergebnis der Karte ist verloren (Geraet weg, Zuruecklesen gescheitert). Das
+            ' Prozessorbild steht noch auf dem Stand vor den Stufen, die dort liefen; ohne sie
+            ' weiterzumachen hiesse, ein Bild ohne Schaerfe oder Rauschminderung zu speichern, und
+            ' niemand saehe es. Deshalb werden genau diese Stufen hier auf dem Prozessor
+            ' nachgerechnet, in derselben Reihenfolge.
+            NoteGpuFallback($"Zuruecklesen gescheitert, {pending.Count} Stufe(n) werden auf dem Prozessor nachgerechnet")
+            For Each stage In pending
+                Dim input = processed
+                processed = ReplaceBitmapOwned(processed, PerformanceTraceService.Measure(stage.Name, Function() stage.Cpu(input)), owned)
+            Next
+            Return processed
         End Function
 
         ' ── Gemeinsame Bausteine der Stufen-Shader ───────────────────────────────

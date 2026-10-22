@@ -39,7 +39,16 @@ Namespace Services
 
         Private Shared ReadOnly _gate As New Object()
         Private Shared _thread As Thread
-        Private Shared _queue As BlockingCollection(Of Action)
+        ''' <summary>Ein Auftrag fuer den GPU-Faden: die Arbeit, und was geschieht, wenn der Faden
+        ''' sie nicht mehr ausfuehrt (Karte verloren, Selbstpruefung durchgefallen). Ohne den
+        ''' Abbruchweg blieben eingereihte Auftraege beim Abschalten liegen, und ihre Aufrufer
+        ''' warteten in TryRun fuer immer.</summary>
+        Private NotInheritable Class GpuWork
+            Public Run As Action
+            Public Cancel As Action
+        End Class
+
+        Private Shared _queue As BlockingCollection(Of GpuWork)
         Private Shared _context As IGlContext
         Private Shared _currentScope As IDisposable
         Private Shared _gr As GRContext
@@ -95,9 +104,11 @@ Namespace Services
             If work Is Nothing OrElse Not IsAvailable Then Return False
             Dim value As T = Nothing
             Dim failure As Exception = Nothing
+            Dim cancelled = False
             Using done As New ManualResetEventSlim(False)
                 Try
-                    _queue.Add(Sub()
+                    _queue.Add(New GpuWork With {
+                        .Run = Sub()
                                    Try
                                        value = work(_gr)
                                    Catch ex As Exception
@@ -105,13 +116,20 @@ Namespace Services
                                    Finally
                                        done.Set()
                                    End Try
-                               End Sub)
+                               End Sub,
+                        .Cancel = Sub()
+                                      cancelled = True
+                                      done.Set()
+                                  End Sub})
                 Catch ex As InvalidOperationException
                     ' Die Schlange ist geschlossen: der Faden ist nach einem Fehler beendet.
                     Return False
                 End Try
                 done.Wait()
             End Using
+            ' Der Faden hat abgeschaltet, bevor er diesen Auftrag erreichte: ohne Karte weiter, der
+            ' Grund steht schon in der Fehlerdatei.
+            If cancelled Then Return False
             If failure IsNot Nothing Then
                 DiagnosticLogService.LogException("GpuImage", New GpuUnavailableException(
                     "Die Arbeit auf der Grafikkarte ist gescheitert, dieser Durchgang rechnet auf dem Prozessor.", failure))
@@ -138,7 +156,7 @@ Namespace Services
                 If Volatile.Read(_state) <> 0 OrElse _thread IsNot Nothing Then
                     ' Ein anderer Aufrufer startet gerade; unten auf sein Ergebnis warten.
                 Else
-                    _queue = New BlockingCollection(Of Action)()
+                    _queue = New BlockingCollection(Of GpuWork)()
                     started = New ManualResetEventSlim(False)
                     Dim signal = started
                     _thread = New Thread(Sub() RunWorker(signal)) With {.IsBackground = True, .Name = "FerrumPix GPU"}
@@ -205,9 +223,16 @@ Namespace Services
                 started.Set()
             End Try
 
-            For Each work In _queue.GetConsumingEnumerable()
-                work()
-                If Volatile.Read(_state) = 2 Then Exit For
+            ' Abgeschaltet wird nicht durch Abbrechen der Schleife: Fail schliesst die Schlange
+            ' (CompleteAdding), und die Schleife laeuft weiter, bis sie leer ist. Was nach dem
+            ' Abschalten noch darin liegt, wird nicht mehr gerechnet, sondern freigegeben, sonst
+            ' warteten seine Aufrufer in TryRun fuer immer.
+            For Each item In _queue.GetConsumingEnumerable()
+                If Volatile.Read(_state) = 2 Then
+                    item.Cancel()
+                Else
+                    item.Run()
+                End If
             Next
         End Sub
 
