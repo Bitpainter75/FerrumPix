@@ -1789,18 +1789,33 @@
     </Style>
     <!-- BEARBEITET: dieselbe Pille wie bei verworfen, in der Akzentfarbe statt Rot - ein Hinweis,
          keine Warnung. In der Fotowand (Klasse wall an der Kachel) nur beim Ueberfahren. -->
-    <Style Selector="Border.edited-badge">
+    <!-- Es ist ein Knopf (Klick öffnet den Editor): Polster weg, damit das Zeichen mittig in der
+         Pille sitzt, und beim Ueberfahren das hellere Akzent statt des grauen Knopfgrunds. -->
+    <Style Selector="Button.edited-badge">
         <Setter Property="Width" Value="26"/>
         <Setter Property="Height" Value="24"/>
+        <Setter Property="MinWidth" Value="0"/>
+        <Setter Property="MinHeight" Value="0"/>
+        <Setter Property="Padding" Value="0"/>
         <Setter Property="CornerRadius" Value="12"/>
         <Setter Property="Background" Value="{DynamicResource FP.Accent}"/>
         <Setter Property="BorderBrush" Value="#40FFFFFF"/>
         <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="HorizontalContentAlignment" Value="Center"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="Cursor" Value="Hand"/>
     </Style>
-    <Style Selector="Border.thumb-card.wall Border.edited-badge">
+    <Style Selector="Button.edited-badge:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource FP.Accent.Light}"/>
+        <Setter Property="BorderBrush" Value="#80FFFFFF"/>
+    </Style>
+    <Style Selector="Button.edited-badge:pressed /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource FP.Accent.Dark}"/>
+    </Style>
+    <Style Selector="Border.thumb-card.wall Button.edited-badge">
         <Setter Property="Opacity" Value="0"/>
     </Style>
-    <Style Selector="Border.thumb-card.wall:pointerover Border.edited-badge">
+    <Style Selector="Border.thumb-card.wall:pointerover Button.edited-badge">
         <Setter Property="Opacity" Value="1"/>
     </Style>
     <!-- Schaerfebalken einer Serie: Spur und Fuellung, links unten ueber den Sternen. -->

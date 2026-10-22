@@ -1192,6 +1192,11 @@ Namespace ViewModels
             End Get
             Set(value As String)
                 Me.RaiseAndSetIfChanged(_collageLayoutMode, If(String.IsNullOrWhiteSpace(value), "Grid", value))
+                ' Alle drei melden: an ihnen hängen die Markierung der Knöpfe und, bei Hero, der
+                ' Hinweis und die Wahl der Hero-Position. Fehlte eine, blieb die Markierung auf
+                ' dem Layout stehen, mit dem der Dialog geöffnet wurde.
+                Me.RaisePropertyChanged(NameOf(IsCollageGridMode))
+                Me.RaisePropertyChanged(NameOf(IsCollageHeroMode))
                 Me.RaisePropertyChanged(NameOf(IsCollageRandomMode))
                 Me.RaisePropertyChanged(NameOf(CollageMarginMinimum))
                 ' Raster und Hero kennen keinen negativen Rand.

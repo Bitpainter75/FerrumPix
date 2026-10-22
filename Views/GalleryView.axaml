@@ -2074,16 +2074,22 @@
                                                                        HorizontalAlignment="Center"
                                                                        VerticalAlignment="Center"/>
                                                     </Border>
+                                                    <!-- Ein KNOPF, kein reines Zeichen: ein Klick öffnet
+                                                         das Bild im Editor, wie "Anpassen" in der
+                                                         Hover-Leiste (derselbe Handler). Als Knopf fängt
+                                                         er den Druck selbst ab, die Kachel wählt dabei
+                                                         nichts aus und beginnt kein Ziehen. -->
                                                     <Panel IsVisible="{Binding DataContext.EditedBadgeEnabled, RelativeSource={RelativeSource AncestorType=UserControl}}">
-                                                        <Border Classes="edited-badge"
+                                                        <Button Classes="edited-badge tile-action-hit"
                                                                 IsVisible="{Binding IsEdited}"
+                                                                Click="OnHoverOpenEditorClick"
                                                                 ToolTip.Tip="Bearbeitet">
                                                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/adjustments-alt.svg"
                                                                            Width="15" Height="15"
                                                                            IconBrush="White"
                                                                            HorizontalAlignment="Center"
                                                                            VerticalAlignment="Center"/>
-                                                        </Border>
+                                                        </Button>
                                                     </Panel>
                                                 </StackPanel>
                                                 <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/folder.svg"
