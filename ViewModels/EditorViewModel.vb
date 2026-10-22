@@ -21071,6 +21071,7 @@ Namespace ViewModels
             ' mit ihnen ihre Kopien im Speicher.
             _objectPaintFiles.Clear()
             ObjectImageMemory.Clear()
+            ObjectImageCache.Clear()
             If String.IsNullOrWhiteSpace(tempDir) Then Return
 
             Try

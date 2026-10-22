@@ -361,7 +361,7 @@ Namespace Services
                     .IsAntialias = True,
                     .Color = New SKColor(255, 255, 255, alpha)}
                     ApplyCustomAnnotationBlender(paint, group.BlendMode)
-                    canvas.DrawBitmap(groupLayer, layerX - targetX, layerY - targetY, paint)
+                    DrawLayerBitmap(canvas, groupLayer, layerX - targetX, layerY - targetY, paint)
                 End Using
             End Using
         End Sub
@@ -1251,15 +1251,80 @@ Namespace Services
             End If
             Using paint = New SKPaint With {.BlendMode = ResolveAnnotationBlendMode(blendModeName), .IsAntialias = True}
                 ApplyCustomAnnotationBlender(paint, blendModeName)
-                canvas.DrawBitmap(layer, dx, dy, paint)
+                DrawLayerBitmap(canvas, layer, dx, dy, paint)
             End Using
         End Sub
 
         Private Shared Sub DrawAnnotationLayer(canvas As SKCanvas, layer As SKBitmap, blendModeName As String)
             Using paint = New SKPaint With {.BlendMode = ResolveAnnotationBlendMode(blendModeName), .IsAntialias = True}
                 ApplyCustomAnnotationBlender(paint, blendModeName)
-                canvas.DrawBitmap(layer, 0, 0, paint)
+                DrawLayerBitmap(canvas, layer, 0, 0, paint)
             End Using
+        End Sub
+
+        ''' <summary>Kantenlaenge der Kacheln, in denen <see cref="DrawLayerBitmap"/> nach Inhalt sucht.</summary>
+        Private Const BlenderTileSize As Integer = 32
+
+        ''' <summary>Zeichnet eine Ebene mit ihrem Paint. Traegt das Paint einen eigenen Blender (die
+        ''' Mischmethoden aus PsdBlendModes), nur die Kacheln mit Inhalt.
+        '''
+        ''' Diese Blender sind SkSL, und Skia rechnet sie auf dem Prozessor um ein Vielfaches
+        ''' langsamer als die eingebauten Methoden: ein Text in "Weiches Licht" auf 3600x1800 kostete
+        ''' 1,9 s, mit "Multiplizieren" 0,12 s. Die Ebene hat die Groesse des Bildes, der Blender lief
+        ''' also auch ueber alles, wo sie leer ist. Dort gibt er das Ziel unveraendert zurueck
+        ''' (Quelle Alpha 0: Ziel mal 1 plus 0); die leeren Kacheln auszulassen aendert das Bild
+        ''' deshalb nicht. Gezeichnet wird in Laeufen benachbarter Kacheln einer Kachelreihe, ohne
+        ''' Skalierung, an ganzzahligen Stellen: jeder Punkt der Quelle trifft genau seinen Punkt.</summary>
+        Private Shared Sub DrawLayerBitmap(canvas As SKCanvas, layer As SKBitmap, dx As Integer, dy As Integer, paint As SKPaint)
+            If paint.Blender Is Nothing OrElse
+               (layer.ColorType <> SKColorType.Bgra8888 AndAlso layer.ColorType <> SKColorType.Rgba8888) Then
+                canvas.DrawBitmap(layer, dx, dy, paint)
+                Return
+            End If
+            Dim w = layer.Width, h = layer.Height
+            Dim tilesX = (w + BlenderTileSize - 1) \ BlenderTileSize
+            Dim tilesY = (h + BlenderTileSize - 1) \ BlenderTileSize
+            Dim occupied = New Boolean(tilesX * tilesY - 1) {}
+            Dim stride = layer.RowBytes
+            Dim pixels = layer.GetPixels()
+            Parallel.For(0, tilesY,
+                Sub(ty)
+                    Dim y0 = ty * BlenderTileSize
+                    Dim y1 = Math.Min(h, y0 + BlenderTileSize)
+                    Dim row = New Byte(w * 4 - 1) {}
+                    For y = y0 To y1 - 1
+                        Marshal.Copy(pixels + y * stride, row, 0, row.Length)
+                        For tx = 0 To tilesX - 1
+                            If occupied(ty * tilesX + tx) Then Continue For
+                            Dim x1 = Math.Min(w, (tx + 1) * BlenderTileSize)
+                            For x = tx * BlenderTileSize To x1 - 1
+                                If row(x * 4 + 3) <> 0 Then
+                                    occupied(ty * tilesX + tx) = True
+                                    Exit For
+                                End If
+                            Next
+                        Next
+                    Next
+                End Sub)
+            For ty = 0 To tilesY - 1
+                Dim tx = 0
+                While tx < tilesX
+                    If Not occupied(ty * tilesX + tx) Then
+                        tx += 1
+                        Continue While
+                    End If
+                    Dim runStart = tx
+                    While tx < tilesX AndAlso occupied(ty * tilesX + tx)
+                        tx += 1
+                    End While
+                    Dim left = runStart * BlenderTileSize
+                    Dim top = ty * BlenderTileSize
+                    Dim right = Math.Min(w, tx * BlenderTileSize)
+                    Dim bottom = Math.Min(h, top + BlenderTileSize)
+                    canvas.DrawBitmap(layer, New SKRect(left, top, right, bottom),
+                                      New SKRect(left + dx, top + dy, right + dx, bottom + dy), paint)
+                End While
+            Next
         End Sub
 
         Private Shared Function IsNormalAnnotationBlendMode(blendModeName As String) As Boolean
@@ -2470,11 +2535,15 @@ Namespace Services
             If String.IsNullOrWhiteSpace(imagePath) OrElse Not File.Exists(imagePath) Then Return
 
             ' Ein eben gemalter Stand einer Ebene liegt noch im Speicher - dann nicht die Datei
-            ' dekodieren, die gerade erst aus genau diesem Raster geschrieben wurde.
-            Using bitmap = ObjectImageMemory.DecodeOrCopy(imagePath)
-                If bitmap Is Nothing OrElse bitmap.Width <= 0 OrElse bitmap.Height <= 0 Then Return
+            ' dekodieren, die gerade erst aus genau diesem Raster geschrieben wurde. Alle anderen
+            ' Bilder kommen einmal dekodiert aus ObjectImageCache.
+            Using painted = ObjectImageMemory.TryGetCopy(imagePath),
+                  paintedImage = If(painted Is Nothing, Nothing, SKImage.FromBitmap(painted)),
+                  lease = If(painted Is Nothing, ObjectImageCache.Acquire(imagePath), Nothing)
+                Dim image = If(paintedImage, lease?.Image)
+                If image Is Nothing OrElse image.Width <= 0 OrElse image.Height <= 0 Then Return
 
-                Dim fitRect = If(stretchToFill, rect, FitRectKeepingAspectRatio(rect, bitmap.Width, bitmap.Height))
+                Dim fitRect = If(stretchToFill, rect, FitRectKeepingAspectRatio(rect, image.Width, image.Height))
                 ' Im Kontur-Durchgang von "Kontur mitmischen" nur der Rahmen, das Bild selbst kam
                 ' schon im gemischten Durchgang (ObjectStrokeStyle.HideContent).
                 If _objectStrokeStyle Is Nothing OrElse Not _objectStrokeStyle.HideContent Then
@@ -2482,7 +2551,7 @@ Namespace Services
                         .IsAntialias = True,
                         .Color = New SKColor(255, 255, 255, CByte(Math.Max(0, Math.Min(255, 255 * Clamp(opacity, 0, 100) / 100.0F))))
                     }
-                        DrawBitmapSampled(canvas, bitmap, SKRect.Create(0, 0, bitmap.Width, bitmap.Height), fitRect, SamplingHigh, paint)
+                        canvas.DrawImage(image, SKRect.Create(0, 0, image.Width, image.Height), fitRect, SamplingHigh, paint)
                     End Using
                 End If
 

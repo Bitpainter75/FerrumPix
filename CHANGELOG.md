@@ -73,6 +73,10 @@
   sidecar file now come into FerrumPix with their name and position. Before, files in the common
   notation of these programs were skipped.
   
+- **Collages with many pictures react much faster:** picture objects are kept in memory instead
+  of being read from disk every time, and objects with blend modes like Soft Light are drawn
+  several times faster. Moving an object in a collage of 30 pictures no longer takes seconds.
+  
 - **Clean picture edges:** noise reduction, colour noise reduction, structure, glow, the soft
   filter and sharpening no longer darken the border of the picture or make it slightly
   transparent. With colour noise reduction the colours at the border no longer shift either.
