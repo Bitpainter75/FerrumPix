@@ -444,8 +444,12 @@ Namespace Services
             ' Mittel ueber die achtzehn Farbtonfelder mit 0,37; umgerechnet, damit die Automatik so
             ' weit geht wie die gemessene Buntheit verlangt. Hauttoene bekommen dabei weniger,
             ' Gruen und Blau mehr - wie beim Regler selbst.
+            ' Die Totzone gilt der WIRKUNG, nicht dem Reglerwert: mit der Nacheichung wirkt ein
+            ' Reglerschritt schwaecher, und dieselbe kaum sichtbare Wirkung lag ploetzlich ueber 3
+            ' Stufen. Schwelle wie vorher, 3 Stufen bei der damaligen Staerke 0,46.
             Dim vibranceWanted = AutoClamp((0.10 - meanChroma) * 250.0, 0.0, 30.0)
-            result.Vibrance = AutoDeadband(vibranceWanted * 0.5 / 0.37)
+            Dim vibranceEffect = vibranceWanted * 0.5
+            result.Vibrance = If(vibranceEffect < 3.0 * 0.46, 0.0, Math.Round(vibranceEffect / 0.37))
 
             ' ── 6) Weissabgleich ─────────────────────────────────────────────────────────────
             ' Grauwelt über die Mitteltöne: im Mittel sollte ein Bild neutral sein. Gedämpft und eng
