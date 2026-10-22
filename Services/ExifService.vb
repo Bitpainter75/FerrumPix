@@ -397,6 +397,7 @@ Namespace Services
                 data.Aperture = GetTagDescAcross(Of ExifSubIfdDirectory)(captureDirectories, ExifSubIfdDirectory.TagFNumber)
                 data.ShutterSpeed = GetShutterAcross(captureDirectories)
                 data.ISO = GetTagDescAcross(Of ExifSubIfdDirectory)(captureDirectories, ExifSubIfdDirectory.TagIsoEquivalent)
+                If String.IsNullOrWhiteSpace(data.ISO) Then data.ISO = ReadFallbackIso(captureDirectories)
                 data.ExposureCompensation = GetTagDescAcross(Of ExifSubIfdDirectory)(captureDirectories, ExifSubIfdDirectory.TagExposureBias)
                 ' Abmessungen und Farbraum gehoeren zum Composite, nicht zum Ursprungsbild.
                 data.ImageWidth = GetTagDescAcross(Of ExifSubIfdDirectory)(metaDirectories, ExifSubIfdDirectory.TagExifImageWidth)
@@ -778,7 +779,9 @@ Namespace Services
         ' werden; andernfalls blieben etwa 50-mm-Nikon-Aufnahmen dauerhaft als 75 mm sichtbar.
         ' 8 liest den Objektivnamen auch aus dem Herstellerteil (Canon, Olympus, Panasonic, Sony A,
         ' Pentax); ohne die Erhoehung blieben die Katalogzeilen dieser Gehaeuse ohne Objektiv.
-        Public Const SummaryFormatVersion As Integer = 8
+        ' 9 liest die ISO auch dort, wo das gewohnte EXIF-Feld fehlt (ReadFallbackIso, Nikon in
+        ' den Hi-Stufen); ohne die Erhoehung blieben solche JPGs im Katalog ohne ISO.
+        Public Const SummaryFormatVersion As Integer = 9
 
         Public Shared ReadOnly Property CurrentSummaryFormat As String
             Get
@@ -1114,6 +1117,41 @@ Namespace Services
         ''' Friend, weil die Objektivkorrektur dieselben Felder aus derselben Datei liest. Solange sie
         ''' das mit einer EIGENEN Kopie dieser Suche tat, konnten beide Seiten auseinanderlaufen - genau
         ''' das war zu sehen: die Anzeige nannte das Objektiv, die Korrektur fand es nicht.</summary>
+        ''' <summary>Die Empfindlichkeit, wenn das gewohnte EXIF-Feld (0x8827) fehlt.
+        '''
+        ''' Das tut es bei Nikon in den erweiterten Stufen ueber dem Nennbereich (Hi 0,3 bis Hi 2):
+        ''' die Kamera nennt nur die Art der Angabe (0x8830, Recommended Exposure Index), schreibt
+        ''' aber weder diesen Wert noch das gewohnte Feld. Die Zahl steht dann allein im
+        ''' Herstellerblock, als Paar "1 12800" - die 1 kennzeichnet die Hi-Stufe. Bei einer NEF
+        ''' fiel das nie auf, weil der RAW-Decoder die ISO nachliefert (siehe unten,
+        ''' ReadFileMetadata); bei einem JPG derselben Kamera blieb die Angabe leer, in der Galerie
+        ''' fehlte die ISO an jedem Bild ueber 6400 (Nutzerbefund, D7000).
+        '''
+        ''' Reihenfolge: erst die beiden anderen EXIF-Felder, die eine Empfindlichkeit tragen
+        ''' koennen (0x8832 Recommended Exposure Index, 0x8831 Standard Output Sensitivity), dann
+        ''' die beiden ISO-Felder des Nikon-Herstellerblocks (0x0002 gemessen, 0x0013 eingestellt),
+        ''' jeweils der letzte Wert des Paars.</summary>
+        Private Shared Function ReadFallbackIso(directories As IEnumerable(Of MetadataExtractor.Directory)) As String
+            For Each tag In {&H8832, &H8831}
+                For Each metaDir In directories.OfType(Of ExifSubIfdDirectory)()
+                    Dim value As Long
+                    If metaDir.TryGetInt64(tag, value) AndAlso value > 0 Then Return value.ToString(CultureInfo.InvariantCulture)
+                Next
+            Next
+            For Each tag In {&H2, &H13}
+                For Each metaDir In directories.OfType(Of MetadataExtractor.Formats.Exif.Makernotes.NikonType2MakernoteDirectory)()
+                    Dim values = TryCast(metaDir.GetObject(tag), Array)
+                    If values Is Nothing OrElse values.Length = 0 Then Continue For
+                    Dim last = values.GetValue(values.Length - 1)
+                    Dim iso As Long
+                    If last IsNot Nothing AndAlso Long.TryParse(Convert.ToString(last, CultureInfo.InvariantCulture), iso) AndAlso iso > 0 Then
+                        Return iso.ToString(CultureInfo.InvariantCulture)
+                    End If
+                Next
+            Next
+            Return ""
+        End Function
+
         Friend Shared Function GetTagDescAcross(Of TDirectory As MetadataExtractor.Directory)(
                 metaDirectories As IEnumerable(Of MetadataExtractor.Directory), tagType As Integer) As String
             For Each metaDir In metaDirectories.OfType(Of TDirectory)()

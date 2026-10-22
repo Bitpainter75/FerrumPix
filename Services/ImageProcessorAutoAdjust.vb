@@ -440,10 +440,12 @@ Namespace Services
             Dim meanChroma = If(chromaCount > 0, sumChroma / chromaCount, 0.0)
             ' Buntheit = mittlerer Kanalabstand (max-min) der Mitteltoene. Ein normales Farbfoto liegt
             ' bei etwa 0,10-0,20; erst darunter ist ein Bild wirklich blass.
-            ' Der Regler wirkt bis 50 mit 0,62/0,5 (ImageProcessor.MeasuredVibrance); umgerechnet,
-            ' damit die Automatik so weit geht wie die gemessene Buntheit verlangt.
+            ' Der Regler wirkt bei 50 je Farbton verschieden (ImageProcessor.VibranceHue50), im
+            ' Mittel ueber die achtzehn Farbtonfelder mit 0,46; umgerechnet, damit die Automatik so
+            ' weit geht wie die gemessene Buntheit verlangt. Hauttoene bekommen dabei weniger,
+            ' Gruen und Blau mehr - wie beim Regler selbst.
             Dim vibranceWanted = AutoClamp((0.10 - meanChroma) * 250.0, 0.0, 30.0)
-            result.Vibrance = AutoDeadband(vibranceWanted * 0.5 / 0.62)
+            result.Vibrance = AutoDeadband(vibranceWanted * 0.5 / 0.46)
 
             ' ── 6) Weissabgleich ─────────────────────────────────────────────────────────────
             ' Grauwelt über die Mitteltöne: im Mittel sollte ein Bild neutral sein. Gedämpft und eng

@@ -102,6 +102,10 @@ Namespace Services
             ''' lineare schlaegt auf Referenzstaerke schon bei -50 an der Null an, und -100 brachte
             ''' nichts mehr dazu.
             Public VibranceExponential As Boolean
+            ''' Positive Dynamik je Farbton: v der Formel sat * (1 + v * (1 - sat)) fuer 18 Felder
+            ''' zu 20 Grad, Mitte bei 10, 30, ... 350 Grad (siehe MeasuredVibranceByHue). Nothing bei
+            ''' negativer Dynamik, die ueber den Farbton gleich wirkt.
+            Public VibranceByHue As Single()
             ''' ScalarR/G/B halten nur die Kurven und wirken in ProPhoto-Primaerfarben mit
             ''' sRGB-Gammakurve (ApplyCurvesInMelissa); die Tonwertkurve steht dann in ToneBefore.
             Public CurvesInMelissa As Boolean
@@ -239,6 +243,11 @@ Namespace Services
             If adj.Vibrance <> 0 Then
                 chain.Vibrance = MeasuredVibrance(adj.Vibrance)
                 chain.VibranceExponential = adj.Vibrance < 0
+                If adj.Vibrance > 0 Then
+                    chain.VibranceByHue = MeasuredVibranceByHue(adj.Vibrance)
+                    ' Die gehaltene Leuchtdichte rechnet linear (siehe die Pixelschleife).
+                    EnsureGammaTables()
+                End If
                 chain.IsIdentity = False
             End If
 
@@ -1153,6 +1162,54 @@ Namespace Services
 
         ''' <summary>Exponent der negativen Dynamik bei -100 (linear im Reglerwert).</summary>
         Private Const VibranceNegativeK As Double = 3.2
+
+        ' Positive Dynamik je Farbton, gemessen gegen dieselbe Referenz an 57 Aufnahmen
+        ' (Diagnostics/Reglereichung, Stellungen dynamik+50 und dynamik+100): v der Formel
+        ' sat * (1 + v * (1 - sat)), abgelesen am Ausgabebild der Referenz gegen ihr Nullbild, Median je
+        ' Farbtonfeld zu 20 Grad und Saettigung bis 0,4, ueber die Bilder wieder der Median, leicht
+        ' geglaettet (1/4, 1/2, 1/4 ueber die Nachbarfelder). Die Referenz schont Rot, Orange und Pink
+        ' - die Hauttoene - deutlich und hebt Gruen bis Cyan am staerksten; die alte, ueber den Farbton
+        ' gleiche Formel gab der Haut bei +50 das Dreifache (Nutzerbefund: Dynamik wirkte wie
+        ' Saettigung). Die negative Dynamik wirkt bei der Referenz ueber den Farbton gleich und bleibt
+        ' bei MeasuredVibrance. Feld i hat seine Mitte bei 20 * i + 10 Grad.
+        Private Shared ReadOnly VibranceHue50 As Single() = {
+            0.21F, 0.32F, 0.45F, 0.53F, 0.56F, 0.57F, 0.6F, 0.62F, 0.6F,
+            0.58F, 0.54F, 0.49F, 0.46F, 0.44F, 0.44F, 0.41F, 0.3F, 0.21F}
+        Private Shared ReadOnly VibranceHue100 As Single() = {
+            0.85F, 1.19F, 1.71F, 2.14F, 2.33F, 2.33F, 2.28F, 2.24F, 2.2F,
+            2.16F, 1.99F, 1.7F, 1.54F, 1.62F, 1.83F, 1.71F, 1.23F, 0.86F}
+
+        ''' <summary>Verstaerkung der Tabellen, weil die Dynamik die Leuchtdichte haelt. Abgelesen
+        ''' sind die Tabellen an einer Wirkung, die die Helligkeit mitnimmt; ohne sie fiel die Wirkung
+        ''' bei +100 auf 11,9 gegen 14,9 der Referenz. Gemessen an 57 Aufnahmen, Abstand / Treffer:
+        ''' 1,0 ergab 6,17 / 59 % bei +100 und 2,40 / 55 % bei +50, 1,25 ergab 6,15 / 59 % und
+        ''' 2,23 / 58 %, 1,5 ergab 6,66 / 55 % und 2,43 / 54 %.</summary>
+        Private Const VibranceLumaKeepGain As Double = 1.25
+
+        ''' <summary>Positive Dynamik je Farbtonfeld: zwischen 0, +50 und +100 linear in den
+        ''' gemessenen Tabellen. Werte ueber 100 (handbearbeitete Rezepte) werden auf 100 begrenzt.</summary>
+        Private Shared Function MeasuredVibranceByHue(value As Single) As Single()
+            Dim v = Math.Max(0.0, Math.Min(1.0, value / 100.0))
+            Dim result(VibranceHue100.Length - 1) As Single
+            For i = 0 To result.Length - 1
+                result(i) = CSng(VibranceLumaKeepGain * If(v <= 0.5,
+                                    v / 0.5 * VibranceHue50(i),
+                                    VibranceHue50(i) + (v - 0.5) / 0.5 * (VibranceHue100(i) - VibranceHue50(i))))
+            Next
+            Return result
+        End Function
+
+        ''' <summary>v der positiven Dynamik am Farbton <paramref name="hue"/> (Grad), zwischen den
+        ''' Feldmitten linear und ueber 0/360 Grad hinweg geschlossen.</summary>
+        Private Shared Function SampleVibranceByHue(table As Single(), hue As Double) As Double
+            Dim n = table.Length
+            Dim position = hue / 20.0 - 0.5
+            Dim lower = CInt(Math.Floor(position))
+            Dim t = position - lower
+            Dim i0 = ((lower Mod n) + n) Mod n
+            Dim i1 = (i0 + 1) Mod n
+            Return table(i0) + t * (table(i1) - table(i0))
+        End Function
 
         ''' <summary>Farbmischer: die Luminanz je Band und Richtung gestaucht.
         ''' Unsere Wirkung lag bei +60 1,2- bis 2,9-fach, bei -60 2,1- bis 6,2-fach ueber der
@@ -2431,6 +2488,7 @@ Namespace Services
             Dim lumCurve = chain.LuminanceCurve
             Dim vibrance = chain.Vibrance
             Dim vibranceExponential = chain.VibranceExponential
+            Dim vibranceByHue = chain.VibranceByHue
             Dim curvesMelissa = chain.CurvesInMelissa
             Dim hslAdj = chain.Hsl
             Dim schattenToenung = chain.ShadowTint
@@ -2636,8 +2694,37 @@ Namespace Services
                             ' saturierte Pixel werden am staerksten angehoben, ein bereits kraeftiges
                             ' (sat=1) bleibt unangetastet, ein neutrales Grau (sat=0) bleibt neutral.
                             ' Damit kann Dynamik keine Farbe erfinden, die die Saettigung entfernt hat.
+                            ' Positiv zusaetzlich je Farbton (VibranceByHue): Hauttoene bekommen wie bei
+                            ' der Referenz deutlich weniger als Gruen, Cyan und Blau. Und sie haelt die
+                            ' LEUCHTDICHTE: mehr HSL-Saettigung bei gleichem HSL-L macht eine Farbe
+                            ' sichtbar heller (gemessen +3,3 L in den Mitten bei +100), die Referenz
+                            ' dagegen dunkelt leicht ab (-2,4). Mit gehaltener Leuchtdichte sank der
+                            ' Abstand zur Referenz bei +100 von 7,45 auf 6,15 (siehe VibranceLumaKeepGain).
                             If vibranceExponential Then
                                 sat = sat * Math.Exp(vibrance * (1.0 - sat))
+                            ElseIf vibranceByHue IsNot Nothing Then
+                                Dim v = SampleVibranceByHue(vibranceByHue, h)
+                                Dim satNew = Math.Max(0.0, Math.Min(1.0, sat * (1.0 + v * (1.0 - sat))))
+                                If satNew <> sat Then
+                                    Dim ar As Double, ag As Double, ab As Double
+                                    Dim br As Double, bg As Double, bbv As Double
+                                    HslToRgbF(h, sat, lum, ar, ag, ab)
+                                    HslToRgbF(h, satNew, lum, br, bg, bbv)
+                                    Dim lr = SampleTable(toLinear, CSng(br))
+                                    Dim lg = SampleTable(toLinear, CSng(bg))
+                                    Dim lb = SampleTable(toLinear, CSng(bbv))
+                                    Dim y0 = 0.2126 * SampleTable(toLinear, CSng(ar)) +
+                                             0.7152 * SampleTable(toLinear, CSng(ag)) +
+                                             0.0722 * SampleTable(toLinear, CSng(ab))
+                                    Dim y1 = 0.2126 * lr + 0.7152 * lg + 0.0722 * lb
+                                    If y1 > 0.000001 Then
+                                        Dim k = y0 / y1
+                                        br = SampleTable(toGamma, Clamp(CSng(lr * k), 0.0F, 1.0F))
+                                        bg = SampleTable(toGamma, Clamp(CSng(lg * k), 0.0F, 1.0F))
+                                        bbv = SampleTable(toGamma, Clamp(CSng(lb * k), 0.0F, 1.0F))
+                                    End If
+                                    RgbToHslF(br, bg, bbv, h, sat, lum)
+                                End If
                             ElseIf vibrance <> 0.0F Then
                                 sat = Math.Max(0.0, Math.Min(1.0, sat * (1.0 + vibrance * (1.0 - sat))))
                             End If

@@ -35,6 +35,13 @@
 - **Histogram, waveform and RGB parade in the editor** now show the whole picture including its
   layers and objects. With layered PSD files they stayed empty.
   
+- **Vibrance protects skin tones:** raising Vibrance now holds back on reds, oranges and skin
+  while lifting greens, blues and skies more, and it no longer brightens colours as it saturates
+  them. Before, it acted almost like Saturation.
+  
+- **ISO on Nikon JPGs:** pictures taken at the extended Hi ISO settings now show their ISO in the
+  gallery and the info panel. Before, only the NEF files had it.
+  
 - **Opening PSD files:** empty layers are kept as empty paint layers with their name and mask
   instead of disappearing. Text that is skewed or mirrored now comes in as an image, so it keeps
   its look instead of turning into straight text.
