@@ -190,47 +190,47 @@ Namespace Services
         ''' zusammen trennen "ausgelastet" von "blockiert".
         '''
         ''' 0 heisst: kein Ping unterwegs. Sonst der Zeitstempel, zu dem er losgeschickt wurde.</summary>
-        Private Shared _pingGesendetTicks As Long = 0
+        Private Shared _pingSentTicks As Long = 0
         Private Shared _pingGen2 As Integer = 0
         Private Shared _pingPauseTicks As Long = 0
-        Private Shared _pingGemeldet As Boolean = False
-        Private Shared _pingWobei As String = ""
+        Private Shared _pingReported As Boolean = False
+        Private Shared _pingContext As String = ""
 
-        Private Shared Sub PingAngekommen(gesendet As Long)
-            Dim dauerMs = (Stopwatch.GetTimestamp() - gesendet) * 1000.0 / Stopwatch.Frequency
-            If dauerMs >= StockungAbMs Then
+        Private Shared Sub PingArrived(sentTicks As Long)
+            Dim durationMs = (Stopwatch.GetTimestamp() - sentTicks) * 1000.0 / Stopwatch.Frequency
+            If durationMs >= StockungAbMs Then
                 Dim gen2 = GC.CollectionCount(2) - _pingGen2
                 Dim pauseMs = TimeSpan.FromTicks(GC.GetTotalPauseDuration().Ticks - _pingPauseTicks).TotalMilliseconds
-                Record("Anzeigefaden blockiert", dauerMs)
+                Record("Anzeigefaden blockiert", durationMs)
                 DiagnosticLogService.LogAlways("Messung",
-                    $"Anzeigefaden blockiert {dauerMs:F0} ms - Bereinigung darin: {gen2} Gen-2-Laeufe, Pause {pauseMs:F0} ms - {_pingWobei}")
+                    $"Anzeigefaden blockiert {durationMs:F0} ms - Bereinigung darin: {gen2} Gen-2-Laeufe, Pause {pauseMs:F0} ms - {_pingContext}")
             End If
-            _pingGemeldet = False
-            _pingWobei = ""
-            Threading.Volatile.Write(_pingGesendetTicks, 0L)
+            _pingReported = False
+            _pingContext = ""
+            Threading.Volatile.Write(_pingSentTicks, 0L)
         End Sub
 
-        Private Shared Sub PingPruefen()
-            Dim gesendet = Threading.Volatile.Read(_pingGesendetTicks)
-            If gesendet = 0 Then
-                Dim jetzt = Stopwatch.GetTimestamp()
+        Private Shared Sub CheckPing()
+            Dim sentTicks = Threading.Volatile.Read(_pingSentTicks)
+            If sentTicks = 0 Then
+                Dim now = Stopwatch.GetTimestamp()
                 _pingGen2 = GC.CollectionCount(2)
                 _pingPauseTicks = GC.GetTotalPauseDuration().Ticks
-                Threading.Volatile.Write(_pingGesendetTicks, jetzt)
-                Dispatcher.UIThread.Post(Sub() PingAngekommen(jetzt), DispatcherPriority.Send)
+                Threading.Volatile.Write(_pingSentTicks, now)
+                Dispatcher.UIThread.Post(Sub() PingArrived(now), DispatcherPriority.Send)
                 Return
             End If
             ' Unterwegs und schon lange: der Faden steht. Einmal festhalten, WOBEI - am Ende, wenn der
             ' Ping ankommt, ist der Messpunkt laengst geschlossen.
-            Dim wartetMs = (Stopwatch.GetTimestamp() - gesendet) * 1000.0 / Stopwatch.Frequency
-            If wartetMs < StockungAbMs OrElse _pingGemeldet Then Return
-            _pingGemeldet = True
-            Dim abschnitt = _currentSection
-            Dim seit = Threading.Volatile.Read(_sectionStartedTicks)
-            Dim abschnittMs = If(seit = 0, 0.0, (Stopwatch.GetTimestamp() - seit) * 1000.0 / Stopwatch.Frequency)
-            _pingWobei = If(String.IsNullOrEmpty(abschnitt),
-                            "kein Messpunkt offen - der Blockierer hat keinen",
-                            $"offener Messpunkt: {abschnitt} (seit {abschnittMs:F0} ms)")
+            Dim waitedMs = (Stopwatch.GetTimestamp() - sentTicks) * 1000.0 / Stopwatch.Frequency
+            If waitedMs < StockungAbMs OrElse _pingReported Then Return
+            _pingReported = True
+            Dim section = _currentSection
+            Dim since = Threading.Volatile.Read(_sectionStartedTicks)
+            Dim sectionMs = If(since = 0, 0.0, (Stopwatch.GetTimestamp() - since) * 1000.0 / Stopwatch.Frequency)
+            _pingContext = If(String.IsNullOrEmpty(section),
+                              "kein Messpunkt offen - der Blockierer hat keinen",
+                              $"offener Messpunkt: {section} (seit {sectionMs:F0} ms)")
         End Sub
 
         Private Shared Sub Herzschlag()
@@ -267,19 +267,19 @@ Namespace Services
             While Threading.Volatile.Read(_beobachterLauf) = meinLauf
                 Try
                     Threading.Thread.Sleep(50)
-                    PingPruefen()
+                    CheckPing()
                     Dim letzter = Threading.Volatile.Read(_letzterSchlagTicks)
                     If letzter = 0 Then Continue While
 
                     ' Ende einer gemeldeten Stockung: der Herzschlag ist weitergegangen.
                     If offenSeit <> 0 AndAlso letzter <> offenSeit Then
-                        Dim dauerMs = (letzter - offenSeit) * 1000.0 / Stopwatch.Frequency
+                        Dim durationMs = (letzter - offenSeit) * 1000.0 / Stopwatch.Frequency
                         Dim gen2 = GC.CollectionCount(2) - offenGen2
                         Dim pauseMs = TimeSpan.FromTicks(GC.GetTotalPauseDuration().Ticks - offenPause).TotalMilliseconds
-                        Record("Anzeigefaden Stockung ganz", dauerMs)
+                        Record("Anzeigefaden Stockung ganz", durationMs)
                         Record("Anzeigefaden Stockung davon Bereinigung", pauseMs)
                         DiagnosticLogService.LogAlways("Messung",
-                            $"Anzeigefaden stand {dauerMs:F0} ms - Bereinigung darin: {gen2} Gen-2-Laeufe, Pause {pauseMs:F0} ms - {offenWobei}")
+                            $"Anzeigefaden stand {durationMs:F0} ms - Bereinigung darin: {gen2} Gen-2-Laeufe, Pause {pauseMs:F0} ms - {offenWobei}")
                         offenSeit = 0
                     End If
 

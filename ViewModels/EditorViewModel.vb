@@ -31301,7 +31301,7 @@ Namespace ViewModels
         '''
         ''' Vorher lief beides auf dem Anzeigefaden, gemessen im Mittel 46 ms und bis 112 ms je
         ''' Aufruf, und beim Ziehen eines Reglers kam es zwischendurch immer wieder: so lange
-        ''' reagierte die Oberflaeche nicht, der Regler hakte (Nutzerbefund 2026-10-22).</summary>
+        ''' reagierte die Oberflaeche nicht, der Regler hakte.</summary>
         Private NotInheritable Class ScopeJob
             ''' Fuer welches Bild und welchen Stand - ein Ergebnis fuer ein anderes wird verworfen.
             Public ImagePath As String = ""

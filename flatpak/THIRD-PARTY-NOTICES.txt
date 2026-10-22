@@ -31,7 +31,7 @@ libraries are part of this package.
 -----------------
 
   Avalonia, Avalonia.Desktop, Avalonia.Themes.Fluent,
-  Avalonia.Controls.ColorPicker, Avalonia.Controls.ItemsRepeater
+  Avalonia.Controls.ItemsRepeater
   Copyright (c) .NET Foundation and Contributors
   MIT License
   https://github.com/AvaloniaUI/Avalonia/blob/master/licence.md
