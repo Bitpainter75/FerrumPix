@@ -42,7 +42,7 @@ Namespace Services
     ''' dekodierte Stand (Pfad + Änderungszeit) bleibt deshalb im Speicher (~180 MB) und wird als
     ''' Kopie herausgegeben; beim nächsten anderen Pfad wird er ersetzt.
     ''' </summary>
-    Public NotInheritable Class RawDecodeService
+    Partial Public NotInheritable Class RawDecodeService
 
         Private Sub New()
         End Sub
@@ -2012,6 +2012,61 @@ Namespace Services
         Private Shared _cachedRawDemosaic As Integer = -1
         Private Shared _cachedRawUnclip As Boolean = True
 
+        ''' <summary>Liegen die linearen Daten dieser Datei schon im 16-Bit-Zwischenspeicher, mit
+        ''' derselben Aenderungszeit, demselben Demosaic und demselben Entklemmen?</summary>
+        Private Shared Function HasRawCacheFor(path As String) As Boolean
+            Dim writeTime As DateTime
+            Try
+                writeTime = File.GetLastWriteTimeUtc(path)
+            Catch
+                Return False
+            End Try
+            SyncLock _cacheLock
+                Return _cachedRawBytes IsNot Nothing AndAlso
+                       String.Equals(_cachedRawPath, path, StringComparison.Ordinal) AndAlso
+                       _cachedRawWriteTimeUtc = writeTime AndAlso
+                       _cachedRawDemosaic = ConfiguredDemosaic() AndAlso
+                       _cachedRawUnclip = ConfiguredHighlightUnclip()
+            End SyncLock
+        End Function
+
+        ''' <summary>Fuellt den 16-Bit-Zwischenspeicher fuer <paramref name="path"/>, ohne ein Bild zu
+        ''' bauen. Gedacht fuer den Betrachter: bleibt eine RAW dort stehen, findet der Editor beim
+        ''' Oeffnen ihre linearen Daten schon vor und spart den LibRaw-Lauf (gemessen bei 33 MP:
+        ''' 2037 ms ohne, 551 ms mit Treffer). Der Schluessel dieser Stufe haengt nur an der Datei
+        ''' (Aenderungszeit, Demosaic, Entklemmen), nicht an Rezept, Belichtung oder Objektiv - darum
+        ''' trifft der Editor sie, was immer im Rezept steht.
+        '''
+        ''' Durch <see cref="DecodeGate"/> wie jeder Decode. Unter der Schleuse wird zuerst
+        ''' <paramref name="stillWanted"/> gefragt: ein inzwischen ueberholter Auftrag rechnet nicht.
+        ''' Liegen die Daten schon da (etwa weil der Betrachter selbst in voller Groesse entwickelt
+        ''' hat), laeuft nichts. Liefert True, wenn die Daten danach daliegen.</summary>
+        Public Shared Function WarmRawCache(path As String, Optional stillWanted As Func(Of Boolean) = Nothing) As Boolean
+            If String.IsNullOrWhiteSpace(path) OrElse Not IsAvailable Then Return False
+            Return DecodeGate.Run(
+                Function()
+                    If stillWanted IsNot Nothing AndAlso Not stillWanted() Then Return False
+                    If HasRawCacheFor(path) Then Return True
+                    Try
+                        Dim baseEv = BaseExposureForFile(path)
+                        Dim lens = LensCorrectionForFile(path, Nothing)
+                        PerformanceTraceService.Measure("RAW: Zwischenspeicher vorwaermen",
+                            Sub()
+                                If _reentrant Then
+                                    DecodeCore(path, baseEv, lens, warmOnly:=True)
+                                Else
+                                    SyncLock _nativeLock
+                                        DecodeCore(path, baseEv, lens, warmOnly:=True)
+                                    End SyncLock
+                                End If
+                            End Sub)
+                    Catch
+                        Return False
+                    End Try
+                    Return HasRawCacheFor(path)
+                End Function)
+        End Function
+
         Private Shared Sub DropRawBits()
             _cachedRawBytes = Nothing
             _cachedRawPath = ""
@@ -2701,12 +2756,16 @@ Namespace Services
             End Try
         End Function
 
+        ''' <param name="warmOnly">Nur den 16-Bit-Zwischenspeicher fuellen und danach aufhoeren,
+        ''' ohne das fertige Bild zu bauen (siehe <see cref="WarmRawCache"/>). Liefert dann immer
+        ''' Nothing.</param>
         Private Shared Function DecodeCore(path As String, baseEv As Double,
                                            lens As LensDataService.Korrektur,
                                            Optional useHalfSize As Boolean = False,
                                            Optional recoverHighlights As Boolean = False,
                                            Optional knee As Double = HighlightRecoveryKnee,
-                                           Optional sliderEv As Double = 0.0) As SKBitmap
+                                           Optional sliderEv As Double = 0.0,
+                                           Optional warmOnly As Boolean = False) As SKBitmap
             ' ZUERST DER 16-BIT-ZWISCHENSPEICHER. Alles, was die Rampe steuert, wird erst in
             ' Convert16 angewandt; liegen die linearen Daten noch da, ist ein LibRaw-Lauf
             ' vergeudet. Die halbe Kantenlaenge bleibt aussen vor: sie hat eine andere Groesse
@@ -2865,6 +2924,26 @@ Namespace Services
                 ' Die motivabhaengige Weisspunkt-Nachfuehrung aus, siehe AdjustMaximumThreshold.
                 If _setAdjustMaximumThr IsNot Nothing Then _setAdjustMaximumThr(handle, AdjustMaximumThreshold)
 
+                ' IM KAMERARAUM ENTWICKELN, wenn die Lichter rekonstruiert werden sollen: nur dort ist
+                ' noch zu erkennen, welcher Sensorkanal geklemmt hat (RawDecodeServiceHighlights.vb).
+                ' Die Matrix nach sRGB wenden wir danach selbst an - dieselbe, die LibRaw sonst nahm
+                ' (rgb_cam haengt nicht am Ausgabefarbraum, LibRaw liest sie beim Oeffnen). Eine
+                ' Kamera mit eigener Matrix kommt ohnehin im Kameraraum an (LibRaw kennt fuer sie
+                ' keine und rechnet mit der Einheitsmatrix).
+                Dim cameraMatrix As Single() = ownMatrix?.RgbFromCamera
+                If cameraMatrix Is Nothing AndAlso HighlightReconstruction AndAlso linearMoeglich AndAlso
+                   _getRgbCam IsNot Nothing Then
+                    Dim libRawMatrix = ReadRgbCamMatrix(handle)
+                    If IsUsableCameraMatrix(libRawMatrix) Then
+                        cameraMatrix = libRawMatrix
+                        _setOutputColor(handle, 0) ' Kameraraum
+                    End If
+                End If
+                Dim clipLevels = If(HighlightReconstruction AndAlso HighlightReconstructionRebuild AndAlso
+                                    unclipping AndAlso cameraMatrix IsNot Nothing,
+                                    CameraClipLevels(scaling), Nothing)
+                Dim libRawMatrixOwnedByUs = cameraMatrix IsNot Nothing AndAlso ownMatrix Is Nothing
+
                 If PerformanceTraceService.Measure("RAW: entwickeln (LibRaw)", Function() _process(handle)) <> 0 Then Return Nothing
                 Dim errc = 0
                 image = _makeMemImage(handle, errc)
@@ -2911,9 +2990,29 @@ Namespace Services
                     ' Die eigene Farbmatrix VOR dem Sichern: der Zwischenspeicher haelt dann schon
                     ' das richtige Bild, und das Umschalten der Lichterrettung braucht sie nicht
                     ' noch einmal.
-                    If ownMatrix IsNot Nothing Then
-                        ApplyCameraMatrix(pixels, width, height, ownMatrix.RgbFromCamera)
-                        DiagnosticLogService.LogAlways("RawDecodeService.CameraMatrix", "eigene Farbmatrix angewandt (LibRaw kennt die Kamera nicht)")
+                    ' Erst die Lichter im Kameraraum, dann die Matrix nach sRGB (siehe oben).
+                    If clipLevels IsNot Nothing AndAlso colors = 3 Then
+                        Dim measured = MeasureClipLevels(pixels, width, height, clipLevels)
+                        ' PLATZ UEBER DER GRENZE: der hellste Kanal klemmt nach dcraws Normierung genau
+                        ' bei 65535, ein aufgebauter Wert darueber haette keinen Platz. Die Daten werden
+                        ' deshalb um den Faktor geteilt, und die Normierung traegt ihn weiter - die
+                        ' Rampe rechnet ungeklemmte Werte also wie vorher.
+                        ScaleSamples(pixels, width, height, CSng(1.0 / ReconstructionHeadroom))
+                        For c = 0 To 2
+                            measured(c) /= ReconstructionHeadroom
+                        Next
+                        normalization *= ReconstructionHeadroom
+                        Dim rebuilt = PerformanceTraceService.Measure("RAW: Lichter rekonstruieren",
+                            Function() ReconstructClippedHighlights(pixels, width, height, measured))
+                        DiagnosticLogService.LogAlways("RawDecodeService.HighlightReconstruction",
+                            $"file={IO.Path.GetFileName(path)}; rebuilt={rebuilt}; " &
+                            $"clip={measured(0):F0}/{measured(1):F0}/{measured(2):F0} (gerechnet {clipLevels(0):F0}/{clipLevels(1):F0}/{clipLevels(2):F0})")
+                    End If
+                    If cameraMatrix IsNot Nothing Then
+                        ApplyCameraMatrix(pixels, width, height, cameraMatrix)
+                        If ownMatrix IsNot Nothing Then
+                            DiagnosticLogService.LogAlways("RawDecodeService.CameraMatrix", "eigene Farbmatrix angewandt (LibRaw kennt die Kamera nicht)")
+                        End If
                     End If
                     ' DIE LINEAREN DATEN ZUERST SICHERN, dann daraus umsetzen. Der Umweg ueber
                     ' den eigenen Puffer kostet eine Kopie (bei 24 Megapixeln rund 145 MB) und
@@ -2943,8 +3042,14 @@ Namespace Services
                             End SyncLock
                         End Try
                     End If
+                    If warmOnly Then Return Nothing
                     Return BuildFrom16Bit(pixels, width, height, lens, baseEv, normalization, wantedKnee, sliderEv)
                 End If
+                ' Ohne lineare Daten gibt es nichts vorzuwaermen.
+                If warmOnly Then Return Nothing
+                ' Im Kameraraum angefordert, aber nicht in 16 Bit geliefert: die Farben stimmten nicht,
+                ' und die Matrix fuer 8 Bit gibt es hier nicht. Lieber der Rueckfall des Aufrufers.
+                If libRawMatrixOwnedByUs Then Return Nothing
 
                 Dim bitmap = New SKBitmap(New SKImageInfo(width, height, SKColorType.Bgra8888, SKAlphaType.Opaque))
                 Try

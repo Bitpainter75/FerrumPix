@@ -2325,6 +2325,34 @@ Namespace ViewModels
             ' FPX: das schnelle Komposit steht - die volle, nun identische Szenenfassung zieht mit
             ' demselben Token nach.
             If isFpx AndAlso bmp IsNot Nothing Then LoadFpxFullResolutionBitmapAsync(path, token)
+            If RawPreviewService.IsSupportedRaw(path) Then WarmRawCacheAfterDwellAsync(path, token)
+        End Sub
+
+        ''' <summary>Wie lange eine RAW im Betrachter stehen muss, bevor ihr Decode fuer den Editor
+        ''' vorgewaermt wird. Kuerzer hiesse beim Blaettern staendig vorwaermen und den
+        ''' Zwischenspeicher (er haelt nur ein Bild) staendig umwerfen.</summary>
+        Private Const RawWarmDwellMs As Integer = 1500
+
+        ''' <summary>Bleibt eine RAW stehen, fuellt ein Decode im Hintergrund den 16-Bit-
+        ''' Zwischenspeicher, damit der Wechsel in den Editor ihn trifft (gemessen bei 33 MP: das
+        ''' Oeffnen spart rund 1,5 s). Der Betrachter zeigt ab Werk die eingebettete Vorschau oder
+        ''' entwickelt in halber Groesse, und beides fuellt diesen Speicher nicht.
+        '''
+        ''' Ein Bildwechsel ueberholt den Auftrag: vor der Wartezeit, danach und noch einmal unter
+        ''' der Schleuse wird der Token gefragt. Laeuft LibRaw schon, rechnet es zu Ende - einen
+        ''' Abbruch mitten im Lauf hat die Anbindung nicht. Warten muss darauf nur, wer im
+        ''' Betrachter selbst entwickelt; die eingebettete Vorschau geht nicht durch die Schleuse.
+        ''' Wer gleich in den Editor wechselt, wartet auf denselben Lauf und bekommt dessen Daten.</summary>
+        Private Async Sub WarmRawCacheAfterDwellAsync(path As String, token As Integer)
+            Try
+                Await Task.Delay(RawWarmDwellMs)
+                If token <> System.Threading.Volatile.Read(_bitmapLoadToken) Then Return
+                If Not RawDecodeService.IsAvailable Then Return
+                Await Task.Run(Function() RawDecodeService.WarmRawCache(
+                    path, Function() token = System.Threading.Volatile.Read(_bitmapLoadToken)))
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Viewer.WarmRawCache", ex)
+            End Try
         End Sub
 
         ' Zu welcher Datei das angezeigte Bild gehoert. Waehrend des Ladens steht hier noch die

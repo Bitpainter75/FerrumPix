@@ -38,6 +38,9 @@
 - **Faster browsing of developed RAWs in the viewer:** when you skip quickly through RAW files with
   development switched on, the viewer no longer develops the pictures you have already passed.
   
+- **RAWs open faster in the editor from the viewer:** while a RAW stays on screen in the viewer,
+  FerrumPix prepares it in the background, so switching to the editor takes noticeably less time.
+  
 - **Vibrance protects skin tones:** raising Vibrance now holds back on reds, oranges and skin
   while lifting greens, blues and skies more, and it no longer brightens colours as it saturates
   them. Before, it acted almost like Saturation.
