@@ -683,6 +683,13 @@ Namespace Services
         ''' aendern; deshalb ueberschreibt JEDE Probe den Eintrag, auch die beim Modelllauf.</summary>
         Public Property GpuProbeResults As New Dictionary(Of String, String)()
 
+        ''' <summary>Farbe und Tonwerte auf der Grafikkarte rechnen, in Vorschau, Export und
+        ''' Stapel. AB WERK AUS: der Weg ist unter Linux belegt, unter Windows und macOS nicht
+        ''' geprueft. Wer ihn einschaltet, bekommt beim ersten Einsatz eine Selbstpruefung gegen
+        ''' den Prozessor; faellt sie durch, rechnet die Sitzung auf dem Prozessor weiter (siehe
+        ''' <c>GpuImageService</c> und <c>ImageProcessor.CheckGpuImageProcessing</c>).</summary>
+        Public Property GpuImageProcessing As Boolean = False
+
         ''' <summary>Gesichter im eigenen Bestand suchen und zu Personen zusammenfassen. AB WERK AUS.
         '''
         ''' Kein Standardverhalten, sondern eine Entscheidung des Benutzers: die Erkennung liest den

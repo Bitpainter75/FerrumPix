@@ -26,8 +26,8 @@
   for export and batch processing. Sliders react noticeably faster on large pictures, and
   sharpening with the deconvolution method no longer takes seconds. It is off by default; when you
   turn it on, FerrumPix first checks that the card calculates the same picture as the processor
-  and otherwise stays with the processor. Colour grading, point colour and LUTs still run on the
-  processor for now.
+  and otherwise stays with the processor. Curves, colour grading, point colour and LUTs are
+  included.
 
 - **Developed RAWs are marked in the viewer too.** As in the editor, the file name at the top of
   the window turns to the accent colour when the viewer shows a RAW developed by FerrumPix rather

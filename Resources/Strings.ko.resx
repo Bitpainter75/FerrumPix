@@ -9940,4 +9940,22 @@
   <data name="0_Textebenen_sind_gestreckt_geschert_oder_gespie_dc9f8b8b" xml:space="preserve">
     <value>텍스트 레이어 {0}개가 늘어나거나 기울어지거나 뒤집혀 있어 이미지로 가져오며, 텍스트는 편집할 수 없습니다.</value>
   </data>
+  <data name="Grafikkarte_f_r_die_Bildbearbeitung_nutzen_f60eef73" xml:space="preserve">
+    <value>이미지 편집에 그래픽 카드 사용</value>
+  </data>
+  <data name="Rechnet_Farbe_und_Tonwerte_auf_der_Grafikkarte_s_254ec4a8" xml:space="preserve">
+    <value>미리보기, 내보내기, 일괄 처리에서 색상과 톤을 프로세서 대신 그래픽 카드로 계산합니다. 결과 차이는 최대 한 단계의 톤입니다. 지금은 카드가 일부 슬라이더만 맡고, 나머지는 계속 프로세서에서 계산됩니다.</value>
+  </data>
+  <data name="Rechnet_ein_Pr_fbild_auf_der_Grafikkarte_und_auf_52e95e3b" xml:space="preserve">
+    <value>테스트 이미지를 그래픽 카드와 프로세서에서 각각 계산하고 두 결과를 비교합니다.</value>
+  </data>
+  <data name="Gepr_ft_0_rechnet_wie_der_Prozessor_b0f38532" xml:space="preserve">
+    <value>확인됨: {0}이(가) 프로세서와 같은 결과를 계산합니다.</value>
+  </data>
+  <data name="Gepr_ft_0_weicht_um_1_Tonstufen_vom_Prozessor_ab_4aa335b8" xml:space="preserve">
+    <value>확인됨: {0}이(가) 프로세서와 {1}단계 톤 차이가 납니다. 이미지 편집은 프로세서에서 계산됩니다.</value>
+  </data>
+  <data name="Die_Grafikkarte_ist_hier_nicht_nutzbar_0_Die_Bil_7db4f7ac" xml:space="preserve">
+    <value>여기서는 그래픽 카드를 사용할 수 없습니다 ({0}). 이미지 편집은 프로세서에서 계산됩니다.</value>
+  </data>
 </root>

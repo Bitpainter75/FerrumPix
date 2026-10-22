@@ -9940,4 +9940,22 @@
   <data name="0_Textebenen_sind_gestreckt_geschert_oder_gespie_dc9f8b8b" xml:space="preserve">
     <value>{0} lapisan teks direntangkan, dimiringkan, atau dicerminkan dan masuk sebagai gambar, teksnya tidak dapat diedit.</value>
   </data>
+  <data name="Grafikkarte_f_r_die_Bildbearbeitung_nutzen_f60eef73" xml:space="preserve">
+    <value>Gunakan kartu grafis untuk penyuntingan gambar</value>
+  </data>
+  <data name="Rechnet_Farbe_und_Tonwerte_auf_der_Grafikkarte_s_254ec4a8" xml:space="preserve">
+    <value>Menghitung warna dan nada di kartu grafis, bukan di prosesor, pada pratinjau, saat ekspor, dan dalam pemrosesan massal. Hasilnya berbeda paling banyak satu tingkat nada. Untuk saat ini kartu hanya menangani sebagian penggeser, sisanya tetap dihitung di prosesor.</value>
+  </data>
+  <data name="Rechnet_ein_Pr_fbild_auf_der_Grafikkarte_und_auf_52e95e3b" xml:space="preserve">
+    <value>Menghitung gambar uji di kartu grafis dan di prosesor lalu membandingkan keduanya.</value>
+  </data>
+  <data name="Gepr_ft_0_rechnet_wie_der_Prozessor_b0f38532" xml:space="preserve">
+    <value>Diperiksa: {0} menghitung sama seperti prosesor.</value>
+  </data>
+  <data name="Gepr_ft_0_weicht_um_1_Tonstufen_vom_Prozessor_ab_4aa335b8" xml:space="preserve">
+    <value>Diperiksa: {0} berbeda {1} tingkat nada dari prosesor. Penyuntingan gambar dihitung di prosesor.</value>
+  </data>
+  <data name="Die_Grafikkarte_ist_hier_nicht_nutzbar_0_Die_Bil_7db4f7ac" xml:space="preserve">
+    <value>Kartu grafis tidak dapat digunakan di sini ({0}). Penyuntingan gambar dihitung di prosesor.</value>
+  </data>
 </root>

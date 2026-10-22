@@ -9936,4 +9936,22 @@
   <data name="0_Textebenen_sind_gestreckt_geschert_oder_gespie_dc9f8b8b" xml:space="preserve">
     <value>{0} tekstlag er strukket, skråstilt eller speilvendt og kommer inn som bilde, teksten kan ikke redigeres.</value>
   </data>
+  <data name="Grafikkarte_f_r_die_Bildbearbeitung_nutzen_f60eef73" xml:space="preserve">
+    <value>Bruk grafikkortet til bilderedigering</value>
+  </data>
+  <data name="Rechnet_Farbe_und_Tonwerte_auf_der_Grafikkarte_s_254ec4a8" xml:space="preserve">
+    <value>Beregner farger og toner på grafikkortet i stedet for prosessoren, i forhåndsvisningen, ved eksport og i satsbehandling. Resultatet avviker med høyst ett tonetrinn. Foreløpig tar kortet bare en del av glidebryterne, resten beregnes fortsatt på prosessoren.</value>
+  </data>
+  <data name="Rechnet_ein_Pr_fbild_auf_der_Grafikkarte_und_auf_52e95e3b" xml:space="preserve">
+    <value>Beregner et testbilde på grafikkortet og på prosessoren og sammenligner dem.</value>
+  </data>
+  <data name="Gepr_ft_0_rechnet_wie_der_Prozessor_b0f38532" xml:space="preserve">
+    <value>Kontrollert: {0} regner som prosessoren.</value>
+  </data>
+  <data name="Gepr_ft_0_weicht_um_1_Tonstufen_vom_Prozessor_ab_4aa335b8" xml:space="preserve">
+    <value>Kontrollert: {0} avviker med {1} tonetrinn fra prosessoren. Bilderedigeringen beregnes på prosessoren.</value>
+  </data>
+  <data name="Die_Grafikkarte_ist_hier_nicht_nutzbar_0_Die_Bil_7db4f7ac" xml:space="preserve">
+    <value>Grafikkortet kan ikke brukes her ({0}). Bilderedigeringen beregnes på prosessoren.</value>
+  </data>
 </root>

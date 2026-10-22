@@ -9940,4 +9940,22 @@
   <data name="0_Textebenen_sind_gestreckt_geschert_oder_gespie_dc9f8b8b" xml:space="preserve">
     <value>เลเยอร์ข้อความ {0} รายการถูกยืด เอียง หรือพลิกกลับ จึงนำเข้าเป็นภาพและแก้ไขข้อความไม่ได้</value>
   </data>
+  <data name="Grafikkarte_f_r_die_Bildbearbeitung_nutzen_f60eef73" xml:space="preserve">
+    <value>ใช้การ์ดจอสำหรับการแก้ไขภาพ</value>
+  </data>
+  <data name="Rechnet_Farbe_und_Tonwerte_auf_der_Grafikkarte_s_254ec4a8" xml:space="preserve">
+    <value>คำนวณสีและโทนบนการ์ดจอแทนโปรเซสเซอร์ ทั้งในภาพตัวอย่าง ตอนส่งออก และในการประมวลผลเป็นชุด ผลลัพธ์ต่างกันไม่เกินหนึ่งระดับโทน ตอนนี้การ์ดรับหน้าที่เพียงบางแถบเลื่อน ส่วนที่เหลือยังคำนวณบนโปรเซสเซอร์ตามเดิม</value>
+  </data>
+  <data name="Rechnet_ein_Pr_fbild_auf_der_Grafikkarte_und_auf_52e95e3b" xml:space="preserve">
+    <value>คำนวณภาพทดสอบบนการ์ดจอและบนโปรเซสเซอร์ แล้วเปรียบเทียบทั้งสอง</value>
+  </data>
+  <data name="Gepr_ft_0_rechnet_wie_der_Prozessor_b0f38532" xml:space="preserve">
+    <value>ตรวจแล้ว: {0} คำนวณได้เหมือนโปรเซสเซอร์</value>
+  </data>
+  <data name="Gepr_ft_0_weicht_um_1_Tonstufen_vom_Prozessor_ab_4aa335b8" xml:space="preserve">
+    <value>ตรวจแล้ว: {0} ต่างจากโปรเซสเซอร์ {1} ระดับโทน การแก้ไขภาพจะคำนวณบนโปรเซสเซอร์</value>
+  </data>
+  <data name="Die_Grafikkarte_ist_hier_nicht_nutzbar_0_Die_Bil_7db4f7ac" xml:space="preserve">
+    <value>ใช้การ์ดจอที่นี่ไม่ได้ ({0}) การแก้ไขภาพจะคำนวณบนโปรเซสเซอร์</value>
+  </data>
 </root>

@@ -1988,10 +1988,18 @@ Namespace Services
         ''' <paramref name="applyOwnWarp"/>: die eigene Verzerrung des Objekts hier rechnen, VOR den
         ''' Anpassungen (der Objekt-Bitmap-Cache). ObjectX und ObjectY geben dann die Lage des
         ''' Objektrechtecks im verzerrten Bitmap an.</summary>
+        ''' <summary>Messpunkt um ein einzelnes Objekt, wie es der Kompositor des Editors zeichnet.</summary>
         Public Shared Function RenderAnnotationOverlaySk(annotation As ImageAnnotation, pixelWidth As Integer, pixelHeight As Integer,
                                                          Optional maxRenderDimension As Single = MaxOverlayRenderDim,
                                                          Optional measureClip As SKPoint() = Nothing,
                                                          Optional applyOwnWarp As Boolean = False) As AnnotationOverlaySkRender
+            Return PerformanceTraceService.Measure("Objekte: einzelnes Objekt zeichnen",
+                Function() RenderAnnotationOverlaySkCore(annotation, pixelWidth, pixelHeight, maxRenderDimension, measureClip, applyOwnWarp))
+        End Function
+
+        Private Shared Function RenderAnnotationOverlaySkCore(annotation As ImageAnnotation, pixelWidth As Integer, pixelHeight As Integer,
+                                                              maxRenderDimension As Single, measureClip As SKPoint(),
+                                                              applyOwnWarp As Boolean) As AnnotationOverlaySkRender
             If annotation Is Nothing Then Return Nothing
             Dim layout = ComputeOverlayLayout(annotation, pixelWidth, pixelHeight, maxRenderDimension)
             Dim renderAnnotation = layout.RenderAnnotation
@@ -2682,7 +2690,10 @@ Namespace Services
                                                           sourceWidth As Integer, sourceHeight As Integer,
                                                           ownsInput As Boolean) As SKBitmap
             Dim owned = ownsInput
-            Dim processed = ApplyMaskedAdjustmentLayersCore(preMask, adj, sourceWidth, sourceHeight, Nothing, owned)
+            ' Messpunkt: jede Ebene laeuft durch die Pixelkette und laedt auf der Grafikkarte ihr
+            ' Bild einzeln hoch und zurueck. Ob sich eine gemeinsame Sitzung lohnt, sagt diese Zahl.
+            Dim processed = PerformanceTraceService.Measure("Ebenen: Maskenebenen anwenden",
+                Function() ApplyMaskedAdjustmentLayersCore(preMask, adj, sourceWidth, sourceHeight, Nothing, owned))
             If Object.ReferenceEquals(processed, preMask) Then Return Nothing
             Return TakeOwnership(processed, owned)
         End Function
@@ -2746,12 +2757,16 @@ Namespace Services
         Private Shared Function ApplyDetailAdjustmentStagesCore(source As SKBitmap, adj As ImageAdjustments,
                                                                 ByRef owned As Boolean) As SKBitmap
             Dim processed = source
+            Dim session = GpuDetailSession.TryCreate(processed)
+            Try
 
             ' "weich" steht im selben Select Case wie die 15 Farbpresets, ist aber als einziges KEINE
             ' Punktoperation, sondern eine echte räumliche Unschärfe. BuildFilterPresetMatrix liefert
             ' dafür bewusst Nothing; die Stufe läuft hier getrennt.
             If String.Equals(If(adj.FilterPreset, "").Trim(), "weich", StringComparison.OrdinalIgnoreCase) Then
-                processed = ReplaceBitmapOwned(processed, ApplySoftFocusBlur(processed, Clamp(adj.FilterStrength / 100.0F, 0, 1)), owned)
+                Dim softStrength = Clamp(adj.FilterStrength / 100.0F, 0, 1)
+                processed = RunDetailStage(session, processed, owned, "Pixel: Filter weich", SoftFocusOnGpu(softStrength),
+                                           Function(s) ApplySoftFocusBlur(s, softStrength))
             End If
 
             ' JE STUFE EIN MESSPUNKT. Die Kette kostet an einem realistischen Bild rund 150 ms
@@ -2759,82 +2774,100 @@ Namespace Services
             ' jede Beschleunigung geraten. Die Messung haengt in den If-Zweigen und kostet deshalb
             ' nur, was auch wirklich rechnet; bei ausgeschaltetem Diagnoselog kostet sie gar nichts
             ' (PerformanceTraceService prueft den Schalter zuerst).
+            '
+            ' JEDE STUFE GEHT UEBER RunDetailStage: sie rechnet auf der Grafikkarte, wenn die
+            ' Einstellung an ist und die Stufe einen Shader hat (zweites Argument nicht Nothing), und
+            ' laesst das Bild fuer die naechste dort liegen. Eine Stufe, die direkt auf `processed`
+            ' rechnete, saehe dann einen veralteten Stand - deshalb keine Abkuerzung daran vorbei.
             If adj.Clarity <> 0 Then
-                processed = ReplaceBitmapOwned(processed, PerformanceTraceService.Measure(
-                    "Pixel: Klarheit", Function() ApplyClarity(processed, adj.Clarity / 100.0F)), owned)
+                processed = RunDetailStage(session, processed, owned, "Pixel: Klarheit", ClarityOnGpu(adj.Clarity / 100.0F),
+                                           Function(s) ApplyClarity(s, adj.Clarity / 100.0F))
             End If
             If adj.[Structure] <> 0 Then
-                processed = ReplaceBitmapOwned(processed, PerformanceTraceService.Measure(
-                    "Pixel: Struktur", Function() ApplyStructure(processed, adj.[Structure] / 100.0F)), owned)
+                processed = RunDetailStage(session, processed, owned, "Pixel: Struktur", StructureOnGpu(adj.[Structure] / 100.0F),
+                                           Function(s) ApplyStructure(s, adj.[Structure] / 100.0F))
             End If
             If adj.Haze <> 0 Then
-                processed = ReplaceBitmapOwned(processed, PerformanceTraceService.Measure(
-                    "Pixel: Dunst", Function() ApplyHaze(processed, adj.Haze / 100.0F)), owned)
+                processed = RunDetailStage(session, processed, owned, "Pixel: Dunst",
+                                           If(adj.Haze > 0, HazeOnGpu(adj.Haze / 100.0F), DehazeOnGpu(adj.Haze / 100.0F)),
+                                           Function(s) ApplyHaze(s, adj.Haze / 100.0F))
             End If
 
             If adj.NoiseReduction > 0 Then
                 Select Case adj.NoiseReductionMethod
                     Case NoiseReductionMethod.Median
-                        processed = ReplaceBitmapOwned(processed, PerformanceTraceService.Measure(
-                            "Pixel: Rauschen (Median)", Function() ApplyMedianBlur(processed, adj.NoiseReduction / 100.0F)), owned)
+                        processed = RunDetailStage(session, processed, owned, "Pixel: Rauschen (Median)",
+                                                   MedianOnGpu(processed, adj.NoiseReduction / 100.0F),
+                                                   Function(s) ApplyMedianBlur(s, adj.NoiseReduction / 100.0F))
                     Case NoiseReductionMethod.Guided
-                        processed = ReplaceBitmapOwned(processed, PerformanceTraceService.Measure(
-                            "Pixel: Rauschen (Fuehrung)", Function() ApplyGuidedNoiseReduction(
-                                processed, adj.NoiseReduction / 100.0F, adj.NoiseReductionDetail / 100.0F)), owned)
+                        processed = RunDetailStage(session, processed, owned, "Pixel: Rauschen (Fuehrung)",
+                                                   GuidedNoiseReductionOnGpu(adj.NoiseReduction / 100.0F, adj.NoiseReductionDetail / 100.0F,
+                                                                             adaptive:=False, multiScale:=False),
+                                                   Function(s) ApplyGuidedNoiseReduction(
+                                                       s, adj.NoiseReduction / 100.0F, adj.NoiseReductionDetail / 100.0F))
                     Case NoiseReductionMethod.AdaptiveGuided
-                        processed = ReplaceBitmapOwned(processed, PerformanceTraceService.Measure(
-                            "Pixel: Rauschen (Fuehrung angepasst)", Function() ApplyMultiScaleGuidedNoiseReduction(
-                                processed, adj.NoiseReduction / 100.0F, adj.NoiseReductionDetail / 100.0F)), owned)
+                        processed = RunDetailStage(session, processed, owned, "Pixel: Rauschen (Fuehrung angepasst)",
+                                                   GuidedNoiseReductionOnGpu(adj.NoiseReduction / 100.0F, adj.NoiseReductionDetail / 100.0F,
+                                                                             adaptive:=True, multiScale:=True),
+                                                   Function(s) ApplyMultiScaleGuidedNoiseReduction(
+                                                       s, adj.NoiseReduction / 100.0F, adj.NoiseReductionDetail / 100.0F))
                     Case Else
-                        processed = ReplaceBitmapOwned(processed, PerformanceTraceService.Measure(
-                            "Pixel: Rauschen", Function() ApplyNoiseReduction(processed, adj.NoiseReduction / 100.0F, adj.NoiseReductionDetail / 100.0F)), owned)
+                        processed = RunDetailStage(session, processed, owned, "Pixel: Rauschen",
+                                                   NoiseReductionOnGpu(adj.NoiseReduction / 100.0F, adj.NoiseReductionDetail / 100.0F),
+                                                   Function(s) ApplyNoiseReduction(s, adj.NoiseReduction / 100.0F, adj.NoiseReductionDetail / 100.0F))
                 End Select
             End If
             ' Der Weichzeichner direkt hinter dem Glaetten und VOR der Schaerfe, der Vignette und der
             ' Koernung: Korn auf einem weichgezeichneten Bild soll scharf bleiben, wie auf Film.
             If adj.Blur > 0 Then
-                processed = ReplaceBitmapOwned(processed, PerformanceTraceService.Measure(
-                    "Pixel: Weichzeichnen", Function() ApplyImageBlur(processed, adj.Blur / 100.0F)), owned)
+                processed = RunDetailStage(session, processed, owned, "Pixel: Weichzeichnen", ImageBlurOnGpu(processed, adj.Blur / 100.0F),
+                                           Function(s) ApplyImageBlur(s, adj.Blur / 100.0F))
             End If
             ' Die beiden Seiten desselben Panel-Reglers: Minus glaettet die Farbanteile, Plus faerbt
             ' sie ein. Getrennte Felder, weil nur die Reduzierung eine Entsprechung in den Presets hat
             ' (crs:ColorNoiseReduction) - siehe ImageAdjustments.ColorNoiseAdd.
             If adj.ColorNoiseReduction > 0 Then
-                processed = ReplaceBitmapOwned(processed, PerformanceTraceService.Measure(
-                    "Pixel: Farbrauschen", Function() ApplyColorNoiseReduction(processed, adj.ColorNoiseReduction / 100.0F)), owned)
+                processed = RunDetailStage(session, processed, owned, "Pixel: Farbrauschen",
+                                           ColorNoiseReductionOnGpu(processed, adj.ColorNoiseReduction / 100.0F),
+                                           Function(s) ApplyColorNoiseReduction(s, adj.ColorNoiseReduction / 100.0F))
             End If
             ' NACH der einstufigen Glaettung: die nimmt das feine Farbkorn, diese Stufe die groben
             ' Flecken. Umgekehrt muesste die grobe Stufe erst durch das feine Korn hindurch.
             If adj.FarbrauschGrob > 0 Then
-                processed = ReplaceBitmapOwned(processed, PerformanceTraceService.Measure(
-                    "Pixel: Farbrauschen grob", Function() ApplyMultiScaleDenoise(
-                        processed, adj.FarbrauschGrob / 100.0F, adj.ColorNoiseCoarseScale / 100.0F)), owned)
+                processed = RunDetailStage(session, processed, owned, "Pixel: Farbrauschen grob",
+                                           MultiScaleDenoiseOnGpu(adj.FarbrauschGrob / 100.0F, adj.ColorNoiseCoarseScale / 100.0F),
+                                           Function(s) ApplyMultiScaleDenoise(
+                                               s, adj.FarbrauschGrob / 100.0F, adj.ColorNoiseCoarseScale / 100.0F))
             End If
             If adj.ColorNoiseAdd > 0 Then
-                processed = ReplaceBitmapOwned(processed, PerformanceTraceService.Measure(
-                    "Pixel: Farbflecken", Function() ApplyColorNoiseAdd(processed, adj.ColorNoiseAdd / 100.0F)), owned)
+                processed = RunDetailStage(session, processed, owned, "Pixel: Farbflecken", ColorNoiseAddOnGpu(adj.ColorNoiseAdd / 100.0F),
+                                           Function(s) ApplyColorNoiseAdd(s, adj.ColorNoiseAdd / 100.0F))
             End If
             If adj.DustScratches <> 0 Then
-                processed = ReplaceBitmapOwned(processed, PerformanceTraceService.Measure(
-                    "Pixel: Staub/Kratzer", Function() ApplyDustScratches(processed, adj.DustScratches / 100.0F)), owned)
+                processed = RunDetailStage(session, processed, owned, "Pixel: Staub/Kratzer", DustScratchesOnGpu(processed, adj.DustScratches / 100.0F),
+                                           Function(s) ApplyDustScratches(s, adj.DustScratches / 100.0F))
             End If
             If adj.Glow <> 0 Then
-                processed = ReplaceBitmapOwned(processed, PerformanceTraceService.Measure(
-                    "Pixel: Gluehen", Function() ApplyImageGlow(processed, adj.Glow / 100.0F)), owned)
+                processed = RunDetailStage(session, processed, owned, "Pixel: Gluehen", GlowOnGpu(adj.Glow / 100.0F),
+                                           Function(s) ApplyImageGlow(s, adj.Glow / 100.0F))
             End If
 
             If adj.Sharpness > 0 Then
-                processed = ReplaceBitmapOwned(processed, PerformanceTraceService.Measure(
-                    "Pixel: Schaerfe", Function() ApplySharpness(processed, adj.Sharpness / 100.0F, adj.SharpenRadius / 100.0F, adj.SharpenDetail / 100.0F, adj.SharpenMasking / 100.0F, adj.SharpenMethod)), owned)
+                processed = RunDetailStage(session, processed, owned, "Pixel: Schaerfe",
+                                           SharpnessOnGpu(adj.Sharpness / 100.0F, adj.SharpenRadius / 100.0F, adj.SharpenDetail / 100.0F,
+                                                          adj.SharpenMasking / 100.0F, adj.SharpenMethod),
+                                           Function(s) ApplySharpness(s, adj.Sharpness / 100.0F, adj.SharpenRadius / 100.0F, adj.SharpenDetail / 100.0F, adj.SharpenMasking / 100.0F, adj.SharpenMethod))
             End If
 
             ' Tilt-Shift HINTER der Schaerfe: das scharfe Band behaelt sie, die Unschaerfe davor und
             ' dahinter nimmt sie mit weg. Vor Vignette und Korn, aus demselben Grund wie beim
             ' Weichzeichner oben.
             If adj.TiltShiftAmount > 0 Then
-                processed = ReplaceBitmapOwned(processed, PerformanceTraceService.Measure(
-                    "Pixel: Tilt-Shift", Function() ApplyTiltShift(processed, adj.TiltShiftAmount / 100.0F, adj.TiltShiftCenterX, adj.TiltShiftCenterY,
-                                                                   adj.TiltShiftAngle, adj.TiltShiftFocus, adj.TiltShiftTransition)), owned)
+                processed = RunDetailStage(session, processed, owned, "Pixel: Tilt-Shift",
+                                           TiltShiftOnGpu(processed, adj.TiltShiftAmount / 100.0F, adj.TiltShiftCenterX, adj.TiltShiftCenterY,
+                                                          adj.TiltShiftAngle, adj.TiltShiftFocus, adj.TiltShiftTransition),
+                                           Function(s) ApplyTiltShift(s, adj.TiltShiftAmount / 100.0F, adj.TiltShiftCenterX, adj.TiltShiftCenterY,
+                                                                      adj.TiltShiftAngle, adj.TiltShiftFocus, adj.TiltShiftTransition))
             End If
 
             If adj.Vignette <> 0 Then
@@ -2842,25 +2875,36 @@ Namespace Services
                 ' 1,70-fach, das Aufhellen 1,18-fach zu stark; daher die Faktoren.
                 Dim vignetteAmount = adj.Vignette / 100.0F
                 vignetteAmount *= If(vignetteAmount > 0, 0.59F, 0.85F)
-                processed = ReplaceBitmapOwned(processed, PerformanceTraceService.Measure(
-                    "Pixel: Vignette", Function() ApplyVignette(processed, vignetteAmount, adj.VignetteTransition, adj.VignetteRoundness, adj.VignetteFeather, adj.VignetteCenterX, adj.VignetteCenterY, adj.VignetteStyle)), owned)
+                processed = RunDetailStage(session, processed, owned, "Pixel: Vignette",
+                                           VignetteOnGpu(processed, vignetteAmount, adj.VignetteTransition, adj.VignetteRoundness, adj.VignetteFeather, adj.VignetteCenterX, adj.VignetteCenterY, adj.VignetteStyle),
+                                           Function(s) ApplyVignette(s, vignetteAmount, adj.VignetteTransition, adj.VignetteRoundness, adj.VignetteFeather, adj.VignetteCenterX, adj.VignetteCenterY, adj.VignetteStyle))
             End If
 
             If adj.Grain > 0 Then
-                processed = ReplaceBitmapOwned(processed, PerformanceTraceService.Measure(
-                    "Pixel: Koernung", Function() ApplyGrain(processed, adj.Grain / 100.0F, adj.GrainSize / 100.0F, adj.GrainFrequency / 100.0F, adj.GrainColor / 100.0F)), owned)
+                processed = RunDetailStage(session, processed, owned, "Pixel: Koernung",
+                                           GrainOnGpu(processed, adj.Grain / 100.0F, adj.GrainSize / 100.0F, adj.GrainFrequency / 100.0F, adj.GrainColor / 100.0F),
+                                           Function(s) ApplyGrain(s, adj.Grain / 100.0F, adj.GrainSize / 100.0F, adj.GrainFrequency / 100.0F, adj.GrainColor / 100.0F))
             End If
             If adj.AddNoise > 0 Then
-                processed = ReplaceBitmapOwned(processed, ApplyAddNoise(processed, adj.AddNoise / 100.0F), owned)
+                processed = RunDetailStage(session, processed, owned, "Pixel: Rauschen hinzufuegen", AddNoiseOnGpu(adj.AddNoise / 100.0F),
+                                           Function(s) ApplyAddNoise(s, adj.AddNoise / 100.0F))
             ElseIf adj.AddNoise < 0 Then
                 ' Negative Haelfte = Rauschen REDUZIEREN (gleichmaessiges Weichzeichnen wie der
                 ' Gaussian-Modus der Rauschreduzierung) - ein Regler, beide Richtungen.
-                processed = ReplaceBitmapOwned(processed, ApplyNoiseReduction(processed, -adj.AddNoise / 100.0F), owned)
+                processed = RunDetailStage(session, processed, owned, "Pixel: Rauschen hinzufuegen",
+                                           NoiseReductionOnGpu(-adj.AddNoise / 100.0F),
+                                           Function(s) ApplyNoiseReduction(s, -adj.AddNoise / 100.0F))
             End If
 
             ' Der Rahmen war bis hierher die letzte Stufe der Pixelkette. Er ist jetzt ein OBJEKT
             ' und wird mit den anderen Objekten gezeichnet - deshalb steht hier nichts mehr.
 
+            processed = BringDetailSessionHome(session, processed, owned)
+            Finally
+                session?.Dispose()
+                ' Hat keine Stufe die Flaeche der Punktkette uebernommen, wird sie hier frei.
+                ReleasePointOpHandover()
+            End Try
             Return processed
         End Function
 

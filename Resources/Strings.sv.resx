@@ -9936,4 +9936,22 @@
   <data name="0_Textebenen_sind_gestreckt_geschert_oder_gespie_dc9f8b8b" xml:space="preserve">
     <value>{0} textlager är utsträckta, snedställda eller speglade och kommer in som bild, texten kan inte redigeras.</value>
   </data>
+  <data name="Grafikkarte_f_r_die_Bildbearbeitung_nutzen_f60eef73" xml:space="preserve">
+    <value>Använd grafikkortet för bildredigering</value>
+  </data>
+  <data name="Rechnet_Farbe_und_Tonwerte_auf_der_Grafikkarte_s_254ec4a8" xml:space="preserve">
+    <value>Beräknar färg och toner på grafikkortet i stället för processorn, i förhandsvisningen, vid export och i batchbehandling. Resultatet avviker högst ett tonsteg. Än så länge sköter kortet bara en del av reglagen, resten beräknas fortfarande på processorn.</value>
+  </data>
+  <data name="Rechnet_ein_Pr_fbild_auf_der_Grafikkarte_und_auf_52e95e3b" xml:space="preserve">
+    <value>Beräknar en testbild på grafikkortet och på processorn och jämför dem.</value>
+  </data>
+  <data name="Gepr_ft_0_rechnet_wie_der_Prozessor_b0f38532" xml:space="preserve">
+    <value>Kontrollerat: {0} räknar som processorn.</value>
+  </data>
+  <data name="Gepr_ft_0_weicht_um_1_Tonstufen_vom_Prozessor_ab_4aa335b8" xml:space="preserve">
+    <value>Kontrollerat: {0} avviker {1} tonsteg från processorn. Bildredigeringen beräknas på processorn.</value>
+  </data>
+  <data name="Die_Grafikkarte_ist_hier_nicht_nutzbar_0_Die_Bil_7db4f7ac" xml:space="preserve">
+    <value>Grafikkortet kan inte användas här ({0}). Bildredigeringen beräknas på processorn.</value>
+  </data>
 </root>

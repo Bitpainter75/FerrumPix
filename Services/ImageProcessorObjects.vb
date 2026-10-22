@@ -79,7 +79,14 @@ Namespace Services
             canvas.Restore()
         End Sub
 
+        ''' <summary>Messpunkt um das Zeichnen aller Objekte: der Teil der Vorschau nach der
+        ''' Pixelkette, der noch ganz auf dem Prozessor rechnet. Ohne ihn war nicht zu sagen, ob
+        ''' sich die Grafikkarte auch fuer die Objekte lohnt.</summary>
         Private Shared Function ApplyAnnotations(source As SKBitmap, adj As ImageAdjustments) As SKBitmap
+            Return PerformanceTraceService.Measure("Objekte: alle zeichnen", Function() ApplyAnnotationsCore(source, adj))
+        End Function
+
+        Private Shared Function ApplyAnnotationsCore(source As SKBitmap, adj As ImageAdjustments) As SKBitmap
             ' ARBEITSBILD-Umbau (Stufe D): Pinsel-/Radiererstriche sind ins Arbeitsbild eingebacken
             ' und laufen nicht mehr hier durch - hier rendern nur noch die Z-Order-Objekte.
             ' Ohne Objekte UND mit sichtbarem Hintergrund gibt es nichts zu tun. Ist der Hintergrund

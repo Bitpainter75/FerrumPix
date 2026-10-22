@@ -97,6 +97,7 @@ Namespace ViewModels
         Private _savedPsdTextImport As String = "Ask"
         Private _savedHiddenAdjustmentGroups As String = ""
         Private _savedGpuAccelerationEnabled As Boolean = False
+        Private _savedGpuImageProcessing As Boolean = False
         ' Heisst wie die EIGENSCHAFT und nicht wie das Feld dahinter, damit der Waechter ihn ohne
         ' Sonderregel findet; sein Inhalt ist der Schluessel der Karte, kein Listeneintrag.
         Private _savedSelectedGpuDevice As String = ""
@@ -274,6 +275,8 @@ Namespace ViewModels
         Private _gpuAccelerationEnabled As Boolean = False
         Private _gpuAccelerationDevice As String = ""
         Private _gpuAccelerationBusy As Boolean = False
+        Private _gpuImageProcessing As Boolean = False
+        Private _gpuImageCheckBusy As Boolean = False
         Private _savedTransparencyBackgroundMode As String = "Checkerboard"
         Private _savedTransparencyBackgroundColor As String = "#FFFFFFFF"
 
@@ -3007,6 +3010,63 @@ Namespace ViewModels
             End Try
         End Function
 
+        ''' <summary>Farbe und Tonwerte auf der Grafikkarte rechnen (Vorschau, Export, Stapel).
+        ''' Wirkt sofort, ohne Neustart: der Schalter setzt nur den Merker, den die Pixelkette vor
+        ''' jedem Bild liest. Beim Einschalten laeuft gleich die Selbstpruefung, damit der
+        ''' Statustext sagt, ob die Karte wirklich rechnet.</summary>
+        Public Property GpuImageProcessing As Boolean
+            Get
+                Return _gpuImageProcessing
+            End Get
+            Set(value As Boolean)
+                If _gpuImageProcessing = value Then Return
+                Me.RaiseAndSetIfChanged(_gpuImageProcessing, value)
+                GpuImageService.Enabled = value
+                AppSettingsService.Update(Sub(s) s.GpuImageProcessing = _gpuImageProcessing)
+                Me.RaisePropertyChanged(NameOf(GpuImageProcessingStatusText))
+                If value AndAlso ImageProcessor.LastGpuCheck.State = ImageProcessor.GpuCheckState.Untested Then
+                    Dim ignored = CheckGpuImageProcessingAsync()
+                End If
+            End Set
+        End Property
+
+        ''' <summary>Was ueber die Karte fuer die Bildbearbeitung bekannt ist.</summary>
+        Public ReadOnly Property GpuImageProcessingStatusText As String
+            Get
+                If _gpuImageCheckBusy Then Return LocalizationService.T("Die Grafikkarte wird geprüft")
+                Dim check = ImageProcessor.LastGpuCheck
+                Select Case check.State
+                    Case ImageProcessor.GpuCheckState.Works
+                        Return String.Format(LocalizationService.T("Geprüft: {0} rechnet wie der Prozessor."), check.Renderer)
+                    Case ImageProcessor.GpuCheckState.Deviates
+                        Return String.Format(LocalizationService.T("Geprüft: {0} weicht um {1} Tonstufen vom Prozessor ab. Die Bildbearbeitung rechnet auf dem Prozessor."),
+                                             check.Renderer, check.MaxDeviation)
+                    Case ImageProcessor.GpuCheckState.Unavailable
+                        Return String.Format(LocalizationService.T("Die Grafikkarte ist hier nicht nutzbar ({0}). Die Bildbearbeitung rechnet auf dem Prozessor."),
+                                             check.Detail)
+                    Case Else
+                        Return LocalizationService.T("Noch nicht geprüft.")
+                End Select
+            End Get
+        End Property
+
+        ''' <summary>Rechnet die Pruefflaeche auf Karte und Prozessor und vergleicht (siehe
+        ''' ImageProcessor.CheckGpuImageProcessing). Laeuft auch bei ausgeschaltetem Schalter: wer
+        ''' vor dem Einschalten wissen will, ob es geht, soll es erfahren.</summary>
+        Public Async Function CheckGpuImageProcessingAsync() As Task
+            If _gpuImageCheckBusy Then Return
+            _gpuImageCheckBusy = True
+            Me.RaisePropertyChanged(NameOf(GpuImageProcessingStatusText))
+            Try
+                Await Task.Run(Sub() ImageProcessor.CheckGpuImageProcessing())
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Settings.CheckGpuImageProcessing", ex)
+            Finally
+                _gpuImageCheckBusy = False
+                Me.RaisePropertyChanged(NameOf(GpuImageProcessingStatusText))
+            End Try
+        End Function
+
         ''' Gesichter im eigenen Bestand suchen und zu Personen zusammenfassen. AB WERK AUS - die
         ''' Erkennung liest den ganzen Bestand durch und legt biometrische Merkmale in der Bibliothek
         ''' ab, und das ist etwas anderes als ein Stichwort. Ohne die beiden Modelldateien bleibt der
@@ -3704,6 +3764,7 @@ Namespace ViewModels
         Public ReadOnly Property SetLanguageModeCommand As ICommand
         Public ReadOnly Property SetTransparencyBackgroundModeCommand As ICommand
         Public ReadOnly Property CheckGpuAccelerationCommand As ICommand
+        Public ReadOnly Property CheckGpuImageProcessingCommand As ICommand
         Public ReadOnly Property RemoveModelCommand As ICommand
         Public ReadOnly Property CleanupDatabaseCommand As ICommand
         Public ReadOnly Property RefreshThumbnailCacheCommand As ICommand
@@ -4275,6 +4336,7 @@ Namespace ViewModels
             _galleryInfoSidebarExpanded = _appSettings.GalleryInfoSidebarExpanded
             _videoHardwareAcceleration = _appSettings.VideoHardwareAcceleration
             _gpuAccelerationEnabled = _appSettings.GpuAccelerationEnabled
+            _gpuImageProcessing = _appSettings.GpuImageProcessing
             _gpuAccelerationDevice = If(_appSettings.GpuAccelerationDevice, "")
             _faceRecognitionEnabled = _appSettings.FaceRecognitionEnabled
             _photoMapEnabled = _appSettings.PhotoMapEnabled
@@ -4326,6 +4388,10 @@ Namespace ViewModels
             CheckGpuAccelerationCommand = ReactiveCommand.Create(
                 Sub()
                     Dim ignored = CheckGpuAccelerationAsync()
+                End Sub)
+            CheckGpuImageProcessingCommand = ReactiveCommand.Create(
+                Sub()
+                    Dim ignored = CheckGpuImageProcessingAsync()
                 End Sub)
             ResetCommand = ReactiveCommand.Create(Sub() ResetToDefaults())
             ' ERST fragen, ob geschlossen werden darf, DANN Stand sichern oder zuruecknehmen. Umgekehrt
@@ -4562,6 +4628,7 @@ Namespace ViewModels
             _savedPsdTextImport = _psdTextImport
             _savedHiddenAdjustmentGroups = _versteckteAnpassungsgruppen
             _savedGpuAccelerationEnabled = _gpuAccelerationEnabled
+            _savedGpuImageProcessing = _gpuImageProcessing
             _savedSelectedGpuDevice = _gpuAccelerationDevice
             _savedFaceRecognitionEnabled = _faceRecognitionEnabled
             _savedFaceMinimumSizePercent = _faceMinimumSizePercent
@@ -4734,6 +4801,7 @@ Namespace ViewModels
             ' hatte.
             HiddenAdjustmentGroups = _savedHiddenAdjustmentGroups
             GpuAccelerationEnabled = _savedGpuAccelerationEnabled
+            GpuImageProcessing = _savedGpuImageProcessing
             SelectedGpuDevice = GpuDeviceOptions.FirstOrDefault(
                 Function(o) String.Equals(o.Key, _savedSelectedGpuDevice, StringComparison.Ordinal))
             FaceRecognitionEnabled = _savedFaceRecognitionEnabled
@@ -4984,6 +5052,7 @@ Namespace ViewModels
             VideoHardwareAcceleration = False
             GpuAccelerationEnabled = False
             SelectedGpuDevice = GpuDeviceOptions.FirstOrDefault()
+            GpuImageProcessing = False
             ' Das Ausschalten der Erkennung loescht hier NICHTS im Stillen: der Schalter fragt vor
             ' dem Entfernen der gefundenen Gesichter nach (siehe SaveFeatureSettings).
             FaceRecognitionEnabled = False

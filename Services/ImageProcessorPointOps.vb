@@ -186,6 +186,8 @@ Namespace Services
             If source Is Nothing OrElse adj Is Nothing Then Return source
             Dim chain = BuildPointOpChain(adj, source, toneReference)
             If chain.IsIdentity Then Return source
+            Dim onGpu = TryRunPointOpChainOnGpu(source, chain)
+            If onGpu IsNot Nothing Then Return onGpu
             Return RunPointOpChain(source, chain)
         End Function
 

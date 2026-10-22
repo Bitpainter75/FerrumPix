@@ -9936,4 +9936,22 @@
   <data name="0_Textebenen_sind_gestreckt_geschert_oder_gespie_dc9f8b8b" xml:space="preserve">
     <value>{0} textových vrstev je roztaženo, zkoseno nebo zrcadleno a přichází jako obrázek, jejich text nelze upravit.</value>
   </data>
+  <data name="Grafikkarte_f_r_die_Bildbearbeitung_nutzen_f60eef73" xml:space="preserve">
+    <value>Používat grafickou kartu pro úpravy obrázků</value>
+  </data>
+  <data name="Rechnet_Farbe_und_Tonwerte_auf_der_Grafikkarte_s_254ec4a8" xml:space="preserve">
+    <value>Počítá barvy a tóny na grafické kartě místo na procesoru, v náhledu, při exportu i v dávkovém zpracování. Výsledek se liší nejvýše o jeden tónový stupeň. Zatím karta přebírá jen část posuvníků, zbytek se dál počítá na procesoru.</value>
+  </data>
+  <data name="Rechnet_ein_Pr_fbild_auf_der_Grafikkarte_und_auf_52e95e3b" xml:space="preserve">
+    <value>Vypočítá zkušební obrázek na grafické kartě i na procesoru a oba porovná.</value>
+  </data>
+  <data name="Gepr_ft_0_rechnet_wie_der_Prozessor_b0f38532" xml:space="preserve">
+    <value>Ověřeno: {0} počítá stejně jako procesor.</value>
+  </data>
+  <data name="Gepr_ft_0_weicht_um_1_Tonstufen_vom_Prozessor_ab_4aa335b8" xml:space="preserve">
+    <value>Ověřeno: {0} se od procesoru liší o {1} tónové stupně. Úpravy obrázků se počítají na procesoru.</value>
+  </data>
+  <data name="Die_Grafikkarte_ist_hier_nicht_nutzbar_0_Die_Bil_7db4f7ac" xml:space="preserve">
+    <value>Grafickou kartu zde nelze použít ({0}). Úpravy obrázků se počítají na procesoru.</value>
+  </data>
 </root>

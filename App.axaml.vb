@@ -367,6 +367,8 @@ Public Class App
             ' Zeichentablett-Modus VOR dem ersten Fenster anhaengen: die Stile setzen ClickMode, und
             ' ein spaeter angehaengter Stil muesste alles noch einmal durchstilen.
             TabletInputService.Apply(AppSettingsService.Load().TabletMode)
+            ' Nur der Merker; die Karte wird erst beim ersten Bild angesprochen.
+            GpuImageService.Enabled = AppSettingsService.Load().GpuImageProcessing
             ' EINMAL beim Start nachsehen, welche gelernten Modelle vorliegen. Danach steht fuer
             ' diese Sitzung fest, welche Funktionen es gibt; was fehlt, blendet die Oberflaeche aus.
             ' Vor dem ViewModel, damit dessen Bindungen schon den richtigen Stand sehen.

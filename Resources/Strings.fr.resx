@@ -9896,4 +9896,22 @@
   <data name="0_Textebenen_sind_gestreckt_geschert_oder_gespie_dc9f8b8b" xml:space="preserve">
     <value>{0} calques de texte sont étirés, inclinés ou mis en miroir et arrivent comme image, leur texte n'est pas modifiable.</value>
   </data>
+  <data name="Grafikkarte_f_r_die_Bildbearbeitung_nutzen_f60eef73" xml:space="preserve">
+    <value>Utiliser la carte graphique pour la retouche d'images</value>
+  </data>
+  <data name="Rechnet_Farbe_und_Tonwerte_auf_der_Grafikkarte_s_254ec4a8" xml:space="preserve">
+    <value>Calcule la couleur et les tons sur la carte graphique au lieu du processeur, dans l'aperçu, à l'exportation et dans le traitement par lots. Le résultat diffère d'au plus un niveau tonal. Pour l'instant, la carte ne prend en charge qu'une partie des curseurs, le reste continue d'être calculé sur le processeur.</value>
+  </data>
+  <data name="Rechnet_ein_Pr_fbild_auf_der_Grafikkarte_und_auf_52e95e3b" xml:space="preserve">
+    <value>Calcule une image de test sur la carte graphique et sur le processeur et compare les deux.</value>
+  </data>
+  <data name="Gepr_ft_0_rechnet_wie_der_Prozessor_b0f38532" xml:space="preserve">
+    <value>Vérifié : {0} calcule comme le processeur.</value>
+  </data>
+  <data name="Gepr_ft_0_weicht_um_1_Tonstufen_vom_Prozessor_ab_4aa335b8" xml:space="preserve">
+    <value>Vérifié : {0} s'écarte du processeur de {1} niveaux tonals. La retouche d'images est calculée sur le processeur.</value>
+  </data>
+  <data name="Die_Grafikkarte_ist_hier_nicht_nutzbar_0_Die_Bil_7db4f7ac" xml:space="preserve">
+    <value>La carte graphique n'est pas utilisable ici ({0}). La retouche d'images est calculée sur le processeur.</value>
+  </data>
 </root>

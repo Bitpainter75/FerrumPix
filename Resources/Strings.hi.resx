@@ -9940,4 +9940,22 @@
   <data name="0_Textebenen_sind_gestreckt_geschert_oder_gespie_dc9f8b8b" xml:space="preserve">
     <value>{0} टेक्स्ट परतें खिंची हुई, तिरछी या प्रतिबिंबित हैं और चित्र के रूप में आती हैं, उनका पाठ संपादित नहीं किया जा सकता।</value>
   </data>
+  <data name="Grafikkarte_f_r_die_Bildbearbeitung_nutzen_f60eef73" xml:space="preserve">
+    <value>छवि संपादन के लिए ग्राफ़िक्स कार्ड का उपयोग करें</value>
+  </data>
+  <data name="Rechnet_Farbe_und_Tonwerte_auf_der_Grafikkarte_s_254ec4a8" xml:space="preserve">
+    <value>रंग और टोन की गणना प्रोसेसर के बजाय ग्राफ़िक्स कार्ड पर करता है, पूर्वावलोकन में, निर्यात करते समय और बैच प्रोसेसिंग में। परिणाम में अधिकतम एक टोन स्तर का अंतर होता है। अभी कार्ड केवल कुछ स्लाइडर संभालता है, बाकी की गणना पहले की तरह प्रोसेसर पर होती है।</value>
+  </data>
+  <data name="Rechnet_ein_Pr_fbild_auf_der_Grafikkarte_und_auf_52e95e3b" xml:space="preserve">
+    <value>एक परीक्षण छवि की गणना ग्राफ़िक्स कार्ड और प्रोसेसर दोनों पर करता है और दोनों की तुलना करता है।</value>
+  </data>
+  <data name="Gepr_ft_0_rechnet_wie_der_Prozessor_b0f38532" xml:space="preserve">
+    <value>जाँचा गया: {0} प्रोसेसर की तरह ही गणना करता है।</value>
+  </data>
+  <data name="Gepr_ft_0_weicht_um_1_Tonstufen_vom_Prozessor_ab_4aa335b8" xml:space="preserve">
+    <value>जाँचा गया: {0} प्रोसेसर से {1} टोन स्तर अलग है। छवि संपादन की गणना प्रोसेसर पर होती है।</value>
+  </data>
+  <data name="Die_Grafikkarte_ist_hier_nicht_nutzbar_0_Die_Bil_7db4f7ac" xml:space="preserve">
+    <value>ग्राफ़िक्स कार्ड का यहाँ उपयोग नहीं किया जा सकता ({0})। छवि संपादन की गणना प्रोसेसर पर होती है।</value>
+  </data>
 </root>

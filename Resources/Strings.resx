@@ -9915,4 +9915,22 @@
   <data name="0_Textebenen_sind_gestreckt_geschert_oder_gespie_dc9f8b8b" xml:space="preserve">
     <value>{0} text layers are stretched, skewed or mirrored and come in as images, so their wording cannot be edited.</value>
   </data>
+  <data name="Grafikkarte_f_r_die_Bildbearbeitung_nutzen_f60eef73" xml:space="preserve">
+    <value>Use the graphics card for image editing</value>
+  </data>
+  <data name="Rechnet_Farbe_und_Tonwerte_auf_der_Grafikkarte_s_254ec4a8" xml:space="preserve">
+    <value>Computes color and tones on the graphics card instead of the processor, in the preview, when exporting and in batch processing. The result differs by at most one tonal step. So far the card handles only some of the sliders, the rest keeps running on the processor.</value>
+  </data>
+  <data name="Rechnet_ein_Pr_fbild_auf_der_Grafikkarte_und_auf_52e95e3b" xml:space="preserve">
+    <value>Computes a test image on the graphics card and on the processor and compares both.</value>
+  </data>
+  <data name="Gepr_ft_0_rechnet_wie_der_Prozessor_b0f38532" xml:space="preserve">
+    <value>Checked: {0} computes like the processor.</value>
+  </data>
+  <data name="Gepr_ft_0_weicht_um_1_Tonstufen_vom_Prozessor_ab_4aa335b8" xml:space="preserve">
+    <value>Checked: {0} differs from the processor by {1} tonal steps. Image editing runs on the processor.</value>
+  </data>
+  <data name="Die_Grafikkarte_ist_hier_nicht_nutzbar_0_Die_Bil_7db4f7ac" xml:space="preserve">
+    <value>The graphics card cannot be used here ({0}). Image editing runs on the processor.</value>
+  </data>
 </root>

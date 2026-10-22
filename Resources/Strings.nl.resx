@@ -9936,4 +9936,22 @@
   <data name="0_Textebenen_sind_gestreckt_geschert_oder_gespie_dc9f8b8b" xml:space="preserve">
     <value>{0} tekstlagen zijn uitgerekt, schuingetrokken of gespiegeld en komen binnen als afbeelding, hun tekst kan niet worden bewerkt.</value>
   </data>
+  <data name="Grafikkarte_f_r_die_Bildbearbeitung_nutzen_f60eef73" xml:space="preserve">
+    <value>Grafische kaart gebruiken voor beeldbewerking</value>
+  </data>
+  <data name="Rechnet_Farbe_und_Tonwerte_auf_der_Grafikkarte_s_254ec4a8" xml:space="preserve">
+    <value>Berekent kleur en tonen op de grafische kaart in plaats van de processor, in het voorbeeld, bij het exporteren en bij batchverwerking. Het resultaat wijkt hoogstens één toonstap af. Voorlopig neemt de kaart maar een deel van de schuifregelaars over, de rest wordt nog op de processor berekend.</value>
+  </data>
+  <data name="Rechnet_ein_Pr_fbild_auf_der_Grafikkarte_und_auf_52e95e3b" xml:space="preserve">
+    <value>Berekent een testbeeld op de grafische kaart en op de processor en vergelijkt beide.</value>
+  </data>
+  <data name="Gepr_ft_0_rechnet_wie_der_Prozessor_b0f38532" xml:space="preserve">
+    <value>Gecontroleerd: {0} rekent net als de processor.</value>
+  </data>
+  <data name="Gepr_ft_0_weicht_um_1_Tonstufen_vom_Prozessor_ab_4aa335b8" xml:space="preserve">
+    <value>Gecontroleerd: {0} wijkt {1} toonstappen af van de processor. De beeldbewerking wordt op de processor berekend.</value>
+  </data>
+  <data name="Die_Grafikkarte_ist_hier_nicht_nutzbar_0_Die_Bil_7db4f7ac" xml:space="preserve">
+    <value>De grafische kaart is hier niet bruikbaar ({0}). De beeldbewerking wordt op de processor berekend.</value>
+  </data>
 </root>

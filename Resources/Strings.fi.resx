@@ -9936,4 +9936,22 @@
   <data name="0_Textebenen_sind_gestreckt_geschert_oder_gespie_dc9f8b8b" xml:space="preserve">
     <value>{0} tekstitasoa on venytetty, vinoutettu tai peilattu, ja ne tuodaan kuvina, joten niiden tekstiä ei voi muokata.</value>
   </data>
+  <data name="Grafikkarte_f_r_die_Bildbearbeitung_nutzen_f60eef73" xml:space="preserve">
+    <value>Käytä näytönohjainta kuvankäsittelyyn</value>
+  </data>
+  <data name="Rechnet_Farbe_und_Tonwerte_auf_der_Grafikkarte_s_254ec4a8" xml:space="preserve">
+    <value>Laskee värit ja sävyt näytönohjaimella suorittimen sijaan esikatselussa, viennissä ja eräkäsittelyssä. Tulos poikkeaa enintään yhden sävyportaan. Toistaiseksi näytönohjain hoitaa vain osan liukusäätimistä, loput lasketaan edelleen suorittimella.</value>
+  </data>
+  <data name="Rechnet_ein_Pr_fbild_auf_der_Grafikkarte_und_auf_52e95e3b" xml:space="preserve">
+    <value>Laskee testikuvan näytönohjaimella ja suorittimella ja vertaa niitä.</value>
+  </data>
+  <data name="Gepr_ft_0_rechnet_wie_der_Prozessor_b0f38532" xml:space="preserve">
+    <value>Tarkistettu: {0} laskee kuten suoritin.</value>
+  </data>
+  <data name="Gepr_ft_0_weicht_um_1_Tonstufen_vom_Prozessor_ab_4aa335b8" xml:space="preserve">
+    <value>Tarkistettu: {0} poikkeaa suorittimesta {1} sävyporrasta. Kuvankäsittely lasketaan suorittimella.</value>
+  </data>
+  <data name="Die_Grafikkarte_ist_hier_nicht_nutzbar_0_Die_Bil_7db4f7ac" xml:space="preserve">
+    <value>Näytönohjainta ei voi käyttää tässä ({0}). Kuvankäsittely lasketaan suorittimella.</value>
+  </data>
 </root>

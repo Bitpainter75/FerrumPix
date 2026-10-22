@@ -369,7 +369,13 @@ Namespace Services
                         levels(index) = CByte(Math.Min(255, Math.Max(0, CInt(Math.Floor(mean)))))
                     Next
                 End Sub)
+            Return NoiseProfileFromBlocks(sigmas, levels)
+        End Function
 
+        ''' <summary>Die Auswertung der Bloecke zu einem Rauschprofil, getrennt von ihrer Messung:
+        ''' auf der Grafikkarte entstehen Streuung und Helligkeit je Block dort (ImageProcessorGpuStages),
+        ''' ausgewertet wird hier wie fuer den Prozessor.</summary>
+        Friend Shared Function NoiseProfileFromBlocks(sigmas As Single(), levels As Byte()) As Single()
             ' Je Helligkeitsstufe ein Histogramm der Blockstreuungen; das Perzentil daraus ist exakt
             ' genug (ein Achtel Grauwert) und braucht kein Sortieren.
             Dim histogram = New Integer(NoiseProfileBins * NoiseHistogramBuckets - 1) {}
@@ -1432,26 +1438,8 @@ Namespace Services
                         Next
                     End Sub)
 
-                ' Fuehrungsfilter mit sich selbst als Fuehrung: a = Varianz / (Varianz + eps).
-                Dim boxRadius = Math.Max(1, CInt(Math.Round(radius / factor)))
-                Dim cellCount = small.Length
-                Dim scratch(cellCount - 1) As Single
-                Dim meanI(cellCount - 1) As Single
-                Dim corrI(cellCount - 1) As Single
-                BoxMean(small, meanI, scratch, smallWidth, smallHeight, boxRadius)
-                For k = 0 To cellCount - 1
-                    corrI(k) = small(k) * small(k)
-                Next
-                BoxMean(corrI, corrI, scratch, smallWidth, smallHeight, boxRadius)
-                Dim coefA(cellCount - 1) As Single
-                Dim coefB(cellCount - 1) As Single
-                For k = 0 To cellCount - 1
-                    Dim variance = Math.Max(0.0F, corrI(k) - meanI(k) * meanI(k))
-                    coefA(k) = variance / (variance + ClarityEdgeEpsilon)
-                    coefB(k) = meanI(k) - coefA(k) * meanI(k)
-                Next
-                BoxMean(coefA, coefA, scratch, smallWidth, smallHeight, boxRadius)
-                BoxMean(coefB, coefB, scratch, smallWidth, smallHeight, boxRadius)
+                Dim coefA As Single() = Nothing, coefB As Single() = Nothing
+                ClarityCoefficients(small, smallWidth, smallHeight, Math.Max(1, CInt(Math.Round(radius / factor))), coefA, coefB)
 
                 ForEachRow(width, height,
                     Sub(y)
@@ -1493,6 +1481,33 @@ Namespace Services
                 ReturnPooledBuffer(dstBuf)
             End Try
         End Function
+
+        ''' <summary>Die Geraden der Klarheit auf dem verkleinerten Raster: Fuehrungsfilter mit sich
+        ''' selbst als Fuehrung, a = Varianz / (Varianz + eps), beide Koeffizienten noch einmal
+        ''' gemittelt. Eigene Funktion, weil der Weg ueber die Grafikkarte das Raster dort mittelt und
+        ''' hier weiterrechnet.</summary>
+        Friend Shared Sub ClarityCoefficients(small As Single(), smallWidth As Integer, smallHeight As Integer,
+                                              boxRadius As Integer, ByRef coefA As Single(), ByRef coefB As Single())
+                ' Fuehrungsfilter mit sich selbst als Fuehrung: a = Varianz / (Varianz + eps).
+                Dim cellCount = small.Length
+                Dim scratch(cellCount - 1) As Single
+                Dim meanI(cellCount - 1) As Single
+                Dim corrI(cellCount - 1) As Single
+                BoxMean(small, meanI, scratch, smallWidth, smallHeight, boxRadius)
+                For k = 0 To cellCount - 1
+                    corrI(k) = small(k) * small(k)
+                Next
+                BoxMean(corrI, corrI, scratch, smallWidth, smallHeight, boxRadius)
+                coefA = New Single(cellCount - 1) {}
+                coefB = New Single(cellCount - 1) {}
+                For k = 0 To cellCount - 1
+                    Dim variance = Math.Max(0.0F, corrI(k) - meanI(k) * meanI(k))
+                    coefA(k) = variance / (variance + ClarityEdgeEpsilon)
+                    coefB(k) = meanI(k) - coefA(k) * meanI(k)
+                Next
+                BoxMean(coefA, coefA, scratch, smallWidth, smallHeight, boxRadius)
+                BoxMean(coefB, coefB, scratch, smallWidth, smallHeight, boxRadius)
+        End Sub
 
         ''' Anders als Clarity (breiter, kantenerhaltender Mitteltonkontrast): Structure
         ''' arbeitet auf einem festen, kleinen Blur-Radius (feine Textur/Detailkontrast) - vorher rief
@@ -1634,38 +1649,8 @@ Namespace Services
                         Next
                     End Sub)
 
-                ' 2. Dunkelster Kanal, in einer Umgebung erodiert.
-                Dim patch = Math.Max(1, CInt(Math.Round(Math.Min(lw, lh) * DehazePatchFraction)))
-                Dim minChannel(count - 1) As Double
-                For i = 0 To count - 1
-                    minChannel(i) = Math.Min(lowR(i), Math.Min(lowG(i), lowB(i)))
-                Next
-                Dim dark = MinFilter(minChannel, lw, lh, patch)
-
-                ' 3. Das Licht des Dunstes: Mittel der Farben an den dunstigsten Stellen.
-                Dim brightest = Math.Max(1, CInt(Math.Ceiling(count * DehazeBrightestFraction)))
-                Dim order = Enumerable.Range(0, count).OrderByDescending(Function(i) dark(i)).Take(brightest).ToArray()
-                Dim atmR = Math.Max(0.05, order.Average(Function(i) lowR(i)))
-                Dim atmG = Math.Max(0.05, order.Average(Function(i) lowG(i)))
-                Dim atmB = Math.Max(0.05, order.Average(Function(i) lowB(i)))
-
-                ' 4. Durchlaessigkeit aus dem dunkelsten Kanal relativ zum Dunstlicht.
-                Dim omega = DehazeMaxOmega * strength
-                Dim normalized(count - 1) As Double
-                For i = 0 To count - 1
-                    normalized(i) = Math.Min(lowR(i) / atmR, Math.Min(lowG(i) / atmG, lowB(i) / atmB))
-                Next
-                Dim darkNormalized = MinFilter(normalized, lw, lh, patch)
-                Dim raw(count - 1) As Double
-                Dim guide(count - 1) As Double
-                For i = 0 To count - 1
-                    raw(i) = 1.0 - omega * Math.Min(1.0, darkNormalized(i))
-                    guide(i) = (lowR(i) + lowG(i) + lowB(i)) / 3.0
-                Next
-
-                ' 5. Kantenerhaltend glaetten, am Grauwert gefuehrt.
-                Dim guideRadius = Math.Max(1, CInt(Math.Round(Math.Min(lw, lh) * DehazeGuideFraction)))
-                Dim transmission = GuidedFilter(guide, raw, lw, lh, guideRadius, DehazeGuideEpsilon)
+                Dim atmR, atmG, atmB As Double
+                Dim transmission = DehazeTransmission(lowR, lowG, lowB, lw, lh, strength, atmR, atmG, atmB)
 
                 ' 6. Auf voller Aufloesung zurueckrechnen, t bilinear aus der Kopie.
                 Dim localDst = dstBuf
@@ -1705,6 +1690,48 @@ Namespace Services
                 ReturnPooledBuffer(srcBuf)
                 ReturnPooledBuffer(dstBuf)
             End Try
+        End Function
+
+        ''' <summary>Schritte 2 bis 5 von ApplyDehaze auf der verkleinerten Kopie: dunkelster Kanal,
+        ''' Dunstlicht, Durchlaessigkeit, kantenerhaltend geglaettet. Eigene Funktion, weil der Weg
+        ''' ueber die Grafikkarte die Kopie dort mittelt und hier weiterrechnet.</summary>
+        Friend Shared Function DehazeTransmission(lowR As Double(), lowG As Double(), lowB As Double(), lw As Integer, lh As Integer,
+                                                  strength As Double, ByRef atmR As Double, ByRef atmG As Double,
+                                                  ByRef atmB As Double) As Double()
+                Dim count = lw * lh
+                ' 2. Dunkelster Kanal, in einer Umgebung erodiert.
+                Dim patch = Math.Max(1, CInt(Math.Round(Math.Min(lw, lh) * DehazePatchFraction)))
+                Dim minChannel(count - 1) As Double
+                For i = 0 To count - 1
+                    minChannel(i) = Math.Min(lowR(i), Math.Min(lowG(i), lowB(i)))
+                Next
+                Dim dark = MinFilter(minChannel, lw, lh, patch)
+
+                ' 3. Das Licht des Dunstes: Mittel der Farben an den dunstigsten Stellen.
+                Dim brightest = Math.Max(1, CInt(Math.Ceiling(count * DehazeBrightestFraction)))
+                Dim order = Enumerable.Range(0, count).OrderByDescending(Function(i) dark(i)).Take(brightest).ToArray()
+                atmR = Math.Max(0.05, order.Average(Function(i) lowR(i)))
+                atmG = Math.Max(0.05, order.Average(Function(i) lowG(i)))
+                atmB = Math.Max(0.05, order.Average(Function(i) lowB(i)))
+                Dim atmRValue = atmR, atmGValue = atmG, atmBValue = atmB
+
+                ' 4. Durchlaessigkeit aus dem dunkelsten Kanal relativ zum Dunstlicht.
+                Dim omega = DehazeMaxOmega * strength
+                Dim normalized(count - 1) As Double
+                For i = 0 To count - 1
+                    normalized(i) = Math.Min(lowR(i) / atmRValue, Math.Min(lowG(i) / atmGValue, lowB(i) / atmBValue))
+                Next
+                Dim darkNormalized = MinFilter(normalized, lw, lh, patch)
+                Dim raw(count - 1) As Double
+                Dim guide(count - 1) As Double
+                For i = 0 To count - 1
+                    raw(i) = 1.0 - omega * Math.Min(1.0, darkNormalized(i))
+                    guide(i) = (lowR(i) + lowG(i) + lowB(i)) / 3.0
+                Next
+
+                ' 5. Kantenerhaltend glaetten, am Grauwert gefuehrt.
+                Dim guideRadius = Math.Max(1, CInt(Math.Round(Math.Min(lw, lh) * DehazeGuideFraction)))
+                Return GuidedFilter(guide, raw, lw, lh, guideRadius, DehazeGuideEpsilon)
         End Function
 
         ''' <summary>Ein Kanal zurueckgerechnet, mit weichem Auslauf unter <see cref="DehazeToe"/>
@@ -1893,24 +1920,33 @@ Namespace Services
             ' lange, fast senkrechte, leicht gewellte Kratzer - senkrecht, weil echte Kratzer vom
             ' Filmtransport in Laufrichtung entstehen. Fester Seed: gleiches Bild -> gleiches Muster.
             Dim result = CloneBitmap(source)
-            Dim random = New Random(source.Width * 997 Xor source.Height * 331)
             Using canvas = New SKCanvas(result)
-                Dim speckCount = CInt(Math.Round(source.Width * source.Height / 4500.0 * strength))
+                DrawDustAndScratches(canvas, source.Width, source.Height, strength)
+            End Using
+            Return result
+        End Function
+
+        ''' <summary>Die Staubkoerner und Kratzer von ApplyDustScratches, gezeichnet auf eine
+        ''' Zeichenflaeche. Eigene Methode, weil der Weg ueber die Grafikkarte dieselben Zuege aus
+        ''' demselben Zufallsstrom auf seine Flaeche zeichnet.</summary>
+        Private Shared Sub DrawDustAndScratches(canvas As SKCanvas, width As Integer, height As Integer, strength As Single)
+            Dim random = New Random(width * 997 Xor height * 331)
+                Dim speckCount = CInt(Math.Round(width * height / 4500.0 * strength))
                 For i = 0 To speckCount - 1
                     Dim bright = random.NextDouble() < 0.72
                     Dim tone = If(bright, CByte(210 + random.Next(0, 46)), CByte(random.Next(0, 40)))
                     Dim alpha = CByte(60 + random.Next(0, CInt(70 + 90 * strength)))
                     Using paint = New SKPaint With {.Color = New SKColor(tone, tone, tone, alpha), .IsAntialias = True}
-                        canvas.DrawCircle(random.Next(0, source.Width), random.Next(0, source.Height),
+                        canvas.DrawCircle(random.Next(0, width), random.Next(0, height),
                                           0.5F + CSng(random.NextDouble()) * 1.1F, paint)
                     End Using
                 Next
 
                 Dim scratchCount = Math.Max(1, CInt(Math.Round(9.0 * strength)))
                 For i = 0 To scratchCount - 1
-                    Dim x = CSng(random.NextDouble() * source.Width)
-                    Dim y = CSng(random.NextDouble() * source.Height * 0.6)
-                    Dim length = CSng(source.Height * (0.15 + random.NextDouble() * 0.35))
+                    Dim x = CSng(random.NextDouble() * width)
+                    Dim y = CSng(random.NextDouble() * height * 0.6)
+                    Dim length = CSng(height * (0.15 + random.NextDouble() * 0.35))
                     Dim bright = random.NextDouble() < 0.65
                     Dim tone = If(bright, CByte(225), CByte(25))
                     Dim alpha = CByte(35 + random.Next(0, CInt(30 + 60 * strength)))
@@ -1928,9 +1964,7 @@ Namespace Services
                         End Using
                     End Using
                 Next
-            End Using
-            Return result
-        End Function
+        End Sub
 
 
 

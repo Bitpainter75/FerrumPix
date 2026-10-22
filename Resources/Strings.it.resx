@@ -9896,4 +9896,22 @@
   <data name="0_Textebenen_sind_gestreckt_geschert_oder_gespie_dc9f8b8b" xml:space="preserve">
     <value>{0} livelli di testo sono allungati, inclinati o specchiati e arrivano come immagine, il loro testo non è modificabile.</value>
   </data>
+  <data name="Grafikkarte_f_r_die_Bildbearbeitung_nutzen_f60eef73" xml:space="preserve">
+    <value>Usa la scheda grafica per la modifica delle immagini</value>
+  </data>
+  <data name="Rechnet_Farbe_und_Tonwerte_auf_der_Grafikkarte_s_254ec4a8" xml:space="preserve">
+    <value>Calcola colore e toni sulla scheda grafica invece che sul processore, nell'anteprima, nell'esportazione e nell'elaborazione in serie. Il risultato differisce al massimo di un livello tonale. Per ora la scheda gestisce solo una parte dei cursori, il resto continua a essere calcolato sul processore.</value>
+  </data>
+  <data name="Rechnet_ein_Pr_fbild_auf_der_Grafikkarte_und_auf_52e95e3b" xml:space="preserve">
+    <value>Calcola un'immagine di prova sulla scheda grafica e sul processore e le confronta.</value>
+  </data>
+  <data name="Gepr_ft_0_rechnet_wie_der_Prozessor_b0f38532" xml:space="preserve">
+    <value>Verificato: {0} calcola come il processore.</value>
+  </data>
+  <data name="Gepr_ft_0_weicht_um_1_Tonstufen_vom_Prozessor_ab_4aa335b8" xml:space="preserve">
+    <value>Verificato: {0} differisce dal processore di {1} livelli tonali. La modifica delle immagini viene calcolata sul processore.</value>
+  </data>
+  <data name="Die_Grafikkarte_ist_hier_nicht_nutzbar_0_Die_Bil_7db4f7ac" xml:space="preserve">
+    <value>La scheda grafica non è utilizzabile qui ({0}). La modifica delle immagini viene calcolata sul processore.</value>
+  </data>
 </root>

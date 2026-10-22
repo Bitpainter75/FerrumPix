@@ -207,8 +207,13 @@ Namespace Services
             Return v.ToString("0.######", CultureInfo.InvariantCulture)
         End Function
 
+        ''' <summary>Ein Feld eines Eintrags, gleich in welcher der RDF-Schreibweisen. Die eigene
+        ''' schreibt Elemente. Exiv2 (und damit digiKam) haengt dagegen ein <c>rdf:Description</c>
+        ''' in den Listeneintrag und legt Name und Typ als ATTRIBUTE daran ab - wer nur am Eintrag
+        ''' selbst nach Attributen sucht, findet dort keinen Namen und verwirft jede Region.</summary>
         Private Shared Function ReadField(parent As XElement, name As XName) As String
-            Dim attribut = parent.Attribute(name)
+            Dim attribut = parent.DescendantsAndSelf().Select(Function(e) e.Attribute(name)).
+                           FirstOrDefault(Function(a) a IsNot Nothing)
             If attribut IsNot Nothing Then Return attribut.Value
             Dim element = parent.Descendants(name).FirstOrDefault()
             Return If(element Is Nothing, "", element.Value)

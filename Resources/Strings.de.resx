@@ -9914,4 +9914,22 @@
   <data name="0_Textebenen_sind_gestreckt_geschert_oder_gespie_dc9f8b8b" xml:space="preserve">
     <value>{0} Textebenen sind gestreckt, geschert oder gespiegelt und kommen als Bild, ihr Wortlaut lässt sich nicht bearbeiten.</value>
   </data>
+  <data name="Grafikkarte_f_r_die_Bildbearbeitung_nutzen_f60eef73" xml:space="preserve">
+    <value>Grafikkarte für die Bildbearbeitung nutzen</value>
+  </data>
+  <data name="Rechnet_Farbe_und_Tonwerte_auf_der_Grafikkarte_s_254ec4a8" xml:space="preserve">
+    <value>Rechnet Farbe und Tonwerte auf der Grafikkarte statt auf dem Prozessor, in der Vorschau, beim Exportieren und im Stapel. Das Ergebnis weicht höchstens um eine Tonstufe ab. Bisher übernimmt die Karte nur einen Teil der Regler, der Rest rechnet weiter auf dem Prozessor.</value>
+  </data>
+  <data name="Rechnet_ein_Pr_fbild_auf_der_Grafikkarte_und_auf_52e95e3b" xml:space="preserve">
+    <value>Rechnet ein Prüfbild auf der Grafikkarte und auf dem Prozessor und vergleicht beide.</value>
+  </data>
+  <data name="Gepr_ft_0_rechnet_wie_der_Prozessor_b0f38532" xml:space="preserve">
+    <value>Geprüft: {0} rechnet wie der Prozessor.</value>
+  </data>
+  <data name="Gepr_ft_0_weicht_um_1_Tonstufen_vom_Prozessor_ab_4aa335b8" xml:space="preserve">
+    <value>Geprüft: {0} weicht um {1} Tonstufen vom Prozessor ab. Die Bildbearbeitung rechnet auf dem Prozessor.</value>
+  </data>
+  <data name="Die_Grafikkarte_ist_hier_nicht_nutzbar_0_Die_Bil_7db4f7ac" xml:space="preserve">
+    <value>Die Grafikkarte ist hier nicht nutzbar ({0}). Die Bildbearbeitung rechnet auf dem Prozessor.</value>
+  </data>
 </root>

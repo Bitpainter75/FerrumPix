@@ -3377,7 +3377,31 @@
                             </StackPanel>
                         </Grid>
 
-
+                        <!-- Die Grafikkarte fuer die Bildbearbeitung steht bei der Leistung, die fuer
+                             die Modelle bei den Modellen: zwei getrennte Wege mit getrennter Probe.
+                             Der Statustext darunter sagt, ob die Selbstpruefung bestanden ist. -->
+                        <StackPanel Spacing="8">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                    <TextBlock Text="Grafikkarte für die Bildbearbeitung nutzen" FontSize="{DynamicResource FP.Font.Body}"/>
+                                    <TextBlock Text="Rechnet Farbe und Tonwerte auf der Grafikkarte statt auf dem Prozessor, in der Vorschau, beim Exportieren und im Stapel. Das Ergebnis weicht höchstens um eine Tonstufe ab. Bisher übernimmt die Karte nur einen Teil der Regler, der Rest rechnet weiter auf dem Prozessor." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                                    <Button Classes="ghost" Padding="12,7"
+                                            Command="{Binding CheckGpuImageProcessingCommand}"
+                                            ToolTip.Tip="Rechnet ein Prüfbild auf der Grafikkarte und auf dem Prozessor und vergleicht beide.">Prüfen</Button>
+                                    <ToggleSwitch IsChecked="{Binding GpuImageProcessing}"
+                                                  OnContent=""
+                                                  OffContent=""
+                                                  VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Grid>
+                            <TextBlock Text="{Binding GpuImageProcessingStatusText}"
+                                       Foreground="{DynamicResource FP.Text.Secondary}"
+                                       FontSize="{DynamicResource FP.Font.Small}"
+                                       TextWrapping="Wrap"
+                                       Classes="no-translate"/>
+                        </StackPanel>
 
                         <Grid ColumnDefinitions="*,Auto">
                             <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
