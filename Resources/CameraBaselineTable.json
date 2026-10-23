@@ -398,7 +398,7 @@
     "OLYMPUSOM1MARKII": -0.084,
     "OLYMPUSOM3": -0.204,
     "OLYMPUSOM5": -0.081,
-    "OLYMPUSOM5MARKII": -0.094,
+    "OLYMPUSOM5MARKII": -0.089,
     "OLYMPUSPENF": -0.402,
     "OLYMPUSSH2": 0.463,
     "OLYMPUSSP350": 0.716,
@@ -587,7 +587,7 @@
     "SONYILCE7CM2": -0.235,
     "SONYILCE7CR": -0.102,
     "SONYILCE7M2": -0.004,
-    "SONYILCE7M3": -0.199,
+    "SONYILCE7M3": -0.193,
     "SONYILCE7M4": -0.147,
     "SONYILCE7M5": -0.257,
     "SONYILCE7R": 0.85,
@@ -1017,6 +1017,15 @@
       "blueSaturation": 4,
       "shadowTint": 1
     },
+    "OLYMPUSOM5MARKII": {
+      "redHue": -9,
+      "redSaturation": 9,
+      "greenHue": 3,
+      "greenSaturation": -9,
+      "blueHue": -3,
+      "blueSaturation": -2,
+      "shadowTint": -1
+    },
     "PANASONICDCS1R": {
       "redHue": -4,
       "redSaturation": -1,
@@ -1295,6 +1304,15 @@
       "blueHue": -10,
       "blueSaturation": -4,
       "shadowTint": 4
+    },
+    "SONYILCE7M3": {
+      "redHue": -15,
+      "redSaturation": 7,
+      "greenHue": 14,
+      "greenSaturation": -3,
+      "blueHue": -1,
+      "blueSaturation": 11,
+      "shadowTint": 0
     },
     "SONYILCE7RM4A": {
       "redHue": -22,
