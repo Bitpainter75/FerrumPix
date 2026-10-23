@@ -2008,6 +2008,10 @@ Namespace Services
         Private Shared _cachedRawHeight As Integer
         Private Shared _cachedRawNormalization As Double = 1.0
         Private Shared _cachedRawPath As String = ""
+        ''' <summary>Wie oft ein Decode die linearen Daten aus dem Speicher nahm, statt LibRaw
+        ''' laufen zu lassen. Fuer den Pruefstand: an der Zeit allein laesst sich ein Treffer unter
+        ''' Last nicht erkennen (Vorwaermen und Treffer liegen bei einer kleinen RAW nah beieinander).</summary>
+        Friend Shared RawCacheHits As Long
         Private Shared _cachedRawWriteTimeUtc As DateTime
         Private Shared _cachedRawDemosaic As Integer = -1
         Private Shared _cachedRawUnclip As Boolean = True
@@ -2781,6 +2785,7 @@ Namespace Services
                     writeTime = File.GetLastWriteTimeUtc(path)
                     Dim reused = TryBuildFromCachedRaw(path, writeTime, demosaic, lens, baseEv, wantedKnee, sliderEv)
                     If reused IsNot Nothing Then
+                        Threading.Interlocked.Increment(RawCacheHits)
                         DiagnosticLogService.LogAlways("RawDecodeService.RawCache", "Treffer, LibRaw uebersprungen")
                         Return reused
                     End If
