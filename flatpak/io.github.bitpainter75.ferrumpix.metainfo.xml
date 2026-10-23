@@ -99,6 +99,40 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="0.9.70-1" date="2026-10-23">
+      <description>
+        <p>This update introduces optional GPU acceleration for image editing, makes sliders more responsive and improves how PSD files handle text and locked layers. There are also several other improvements and fixes:</p>
+        <p xml:lang="de">Mit diesem Update kann auf Wunsch die Grafikkarte die Bildbearbeitung beschleunigen. Regler reagieren flüssiger, und beim Arbeiten mit PSD-Dateien bleiben Texte und gesperrte Ebenen besser erhalten. Dazu kommen einige weitere Verbesserungen und Fehlerbehebungen:</p>
+        <ul>
+          <li>You can now enable GPU acceleration under Settings, Performance. This lets your graphics card handle colour and tone adjustments, detail enhancements and effects, both in the preview and during export or batch processing. Editing large photos can feel noticeably faster. The feature is disabled by default, and FerrumPix checks that your graphics card produces the same results before using it. If no suitable GPU is available, the CPU is faster, or the graphics driver becomes unstable, FerrumPix automatically falls back to the CPU.</li>
+          <li xml:lang="de">Unter Einstellungen, Leistung kannst du jetzt die GPU-Beschleunigung aktivieren. Damit übernimmt die Grafikkarte Farb- und Tonwertanpassungen, Detailverbesserungen und Effekte – sowohl in der Vorschau als auch beim Export und bei der Stapelverarbeitung. Besonders bei großen Fotos kann sich die Bearbeitung dadurch deutlich schneller anfühlen. Die Funktion ist standardmäßig ausgeschaltet. FerrumPix prüft vor der Nutzung, ob die Grafikkarte die gleichen Ergebnisse liefert. Ist keine geeignete Grafikkarte vorhanden, der Prozessor schneller oder der Grafiktreiber instabil, nutzt FerrumPix automatisch wieder den Prozessor.</li>
+
+          <li>Sliders in the editor now respond more smoothly, even with large photos. The preview keeps up better with your adjustments instead of briefly freezing.</li>
+          <li xml:lang="de">Die Regler im Editor reagieren jetzt auch bei großen Fotos flüssiger. Die Vorschau folgt deinen Anpassungen direkter, ohne zwischendurch kurz hängen zu bleiben.</li>
+
+          <li>Simple text is now exported to PSD files as an editable text layer. Locked layers also keep their locked state when working with PSD files.</li>
+          <li xml:lang="de">Einfacher Text wird beim PSD-Export jetzt als bearbeitbare Textebene gespeichert. Auch gesperrte Ebenen behalten ihren Schutz beim Arbeiten mit PSD-Dateien.</li>
+
+          <li>Collages with lots of photos are now much more responsive, even when using blend modes such as Soft Light.</li>
+          <li xml:lang="de">Collagen mit vielen Fotos lassen sich jetzt deutlich flüssiger bearbeiten, auch wenn Mischmodi wie Weiches Licht zum Einsatz kommen.</li>
+
+          <li>Vibrance adjustments now preserve natural skin tones better, so faces no longer take on an unwanted orange tint.</li>
+          <li xml:lang="de">Der Dynamikregler berücksichtigt Hauttöne jetzt besser. So bleiben Gesichter natürlich, statt bei stärkeren Anpassungen einen Orangestich zu bekommen.</li>
+
+          <li>RAW photos now open faster in the editor when launched from the viewer. The viewer also indicates developed RAW files in the window title.</li>
+          <li xml:lang="de">RAW-Fotos lassen sich aus dem Bildbetrachter jetzt schneller im Editor öffnen. Außerdem erkennst du im Fenstertitel, wenn eine RAW-Datei bereits entwickelt wurde.</li>
+
+          <li>The map view now includes photos from connected Immich and Nextcloud servers, using the location information stored on the server. Nextcloud 28 or newer is required.</li>
+          <li xml:lang="de">In der Kartenansicht erscheinen jetzt auch Fotos von verbundenen Immich- und Nextcloud-Servern. Sie werden anhand der dort gespeicherten Standortdaten auf der Karte angezeigt. Für Nextcloud wird mindestens Version 28 benötigt.</li>
+
+          <li>Face names saved by other photo applications are now imported along with their positions in the photo.</li>
+          <li xml:lang="de">Gesichtserkennungen aus anderen Fotoprogrammen werden jetzt mitsamt den zugehörigen Namen und Positionen im Bild übernommen.</li>
+
+          <li>Several smaller issues have been fixed as well. RAW photos no longer shift slightly after adjusting exposure, and the exposure slider now follows the mouse smoothly. White areas stay white when reducing a colour's luminance in the colour mixer, and noise reduction and sharpening no longer cause unwanted artefacts along image edges. We've also fixed the histogram and tone curve for layered PSD files, collage layout buttons and ISO information in Nikon JPEGs.</li>
+          <li xml:lang="de">Auch einige kleinere Fehler sind behoben: RAW-Fotos verändern sich nach dem Anpassen der Belichtung nicht mehr nachträglich, und der Belichtungsregler folgt der Maus jetzt genauso flüssig wie die anderen Regler. Im Farbmischer bleiben weiße Bereiche weiß, wenn du die Luminanz einer Farbe reduzierst. Außerdem entstehen bei der Rauschreduzierung und beim Schärfen keine unerwünschten Artefakte mehr an den Bildrändern. Auch das Histogramm und die Tonkurve bei PSD-Dateien mit Ebenen, die Schaltflächen für Collagenlayouts und die Anzeige der ISO-Werte bei Nikon-JPEGs wurden korrigiert.</li>
+        </ul>
+      </description>
+    </release>
       <release version="0.9.69-1" date="2026-10-22">
         <description>
           <p>This update improves how RAW photos handle exposure and highlights, makes it easier to find edited photos, and brings a number of other improvements:</p>
