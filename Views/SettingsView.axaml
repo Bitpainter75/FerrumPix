@@ -2619,58 +2619,6 @@
                             <TextBlock Classes="no-translate" Text="{Binding ModelFolder}" Foreground="{DynamicResource FP.Text.Muted}" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap"/>
                         </StackPanel>
 
-                        <!-- Die Grafikkarte steht HIER und nicht bei der Leistung: es geht um die
-                             Modelle und um nichts sonst, und wer die Dateien gerade geholt hat,
-                             steht ohnehin an dieser Stelle. Der Statustext gehoert unter den
-                             Schalter - "Grafikkarte nutzen" ohne die Angabe, WELCHE gefunden wurde
-                             und ob darauf wirklich etwas laeuft, waere ein Schalter ins Ungewisse. -->
-                        <StackPanel Spacing="8">
-                            <Grid ColumnDefinitions="*,Auto">
-                                <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
-                                    <TextBlock Text="Grafikkarte für gelernte Modelle nutzen" FontSize="{DynamicResource FP.Font.Body}"/>
-                                    <TextBlock Text="Lässt Entrauschen, Hochskalieren, Objektauswahl und Tiefenkarte auf der Grafikkarte rechnen statt auf dem Prozessor. Das Ergebnis bleibt dasselbe, nur die Wartezeit wird kürzer. Die übrigen Modelle bleiben beim Prozessor, weil sie dort gemessen schneller sind." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
-                                </StackPanel>
-                                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
-                                    <Button Classes="ghost" Padding="12,7"
-                                            Command="{Binding CheckGpuAccelerationCommand}"
-                                            IsEnabled="{Binding GpuAccelerationAvailable}"
-                                            ToolTip.Tip="Lädt ein Modell versuchsweise auf die Grafikkarte und schließt es sofort wieder. Nur so zeigt sich, ob der Treiber die Karte wirklich hergibt.">Prüfen</Button>
-                                    <ToggleSwitch IsChecked="{Binding GpuAccelerationEnabled}"
-                                                  IsEnabled="{Binding GpuAccelerationAvailable}"
-                                                  OnContent=""
-                                                  OffContent=""
-                                                  VerticalAlignment="Center"/>
-                                </StackPanel>
-                            </Grid>
-                            <TextBlock Text="{Binding GpuAccelerationStatusText}"
-                                       Foreground="{DynamicResource FP.Text.Secondary}"
-                                       FontSize="{DynamicResource FP.Font.Small}"
-                                       TextWrapping="Wrap"
-                                       Classes="no-translate"/>
-
-                            <!-- Die Auswahl erscheint NUR, wenn wirklich mehr als eine Karte im
-                                 Rechner steckt. Bei einer einzigen waere sie eine Frage ohne
-                                 Antwortmoeglichkeit - welche es ist, steht in der Zeile darueber. -->
-                            <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding HasMultipleGpuDevices}">
-                                <TextBlock Text="Verwendete Grafikkarte"
-                                           FontSize="{DynamicResource FP.Font.Body}"
-                                           VerticalAlignment="Center"/>
-                                <ComboBox Grid.Column="1"
-                                          ItemsSource="{Binding GpuDeviceOptions}"
-                                          SelectedItem="{Binding SelectedGpuDevice, Mode=TwoWay}"
-                                          IsEnabled="{Binding GpuAccelerationAvailable}"
-                                          MinWidth="260"
-                                          VerticalAlignment="Center"
-                                          FontSize="{DynamicResource FP.Font.Body}">
-                                    <ComboBox.ItemTemplate>
-                                        <DataTemplate>
-                                            <TextBlock Classes="no-translate" Text="{Binding Name}"/>
-                                        </DataTemplate>
-                                    </ComboBox.ItemTemplate>
-                                </ComboBox>
-                            </Grid>
-                        </StackPanel>
-
                         <Grid ColumnDefinitions="*,Auto">
                             <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
                                 <!-- Was die Ortstabelle leistet, sind NAMEN aus Koordinaten - und
@@ -3377,9 +3325,11 @@
                             </StackPanel>
                         </Grid>
 
-                        <!-- Die Grafikkarte fuer die Bildbearbeitung steht bei der Leistung, die fuer
-                             die Modelle bei den Modellen: zwei getrennte Wege mit getrennter Probe.
-                             Der Statustext darunter sagt, ob die Selbstpruefung bestanden ist. -->
+                        <!-- Beide Grafikkarten-Schalter stehen hier bei der Leistung, untereinander:
+                             zwei getrennte Wege (Skia fuer die Bildbearbeitung, die Laufzeit der
+                             Modelle fuer die gelernten Modelle) mit getrennter Probe. Der Statustext
+                             unter jedem Schalter sagt, ob die Probe bestanden ist und WELCHE Karte
+                             gefunden wurde; ein Schalter ohne diese Angabe waere einer ins Ungewisse. -->
                         <StackPanel Spacing="8">
                             <Grid ColumnDefinitions="*,Auto">
                                 <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
@@ -3401,6 +3351,53 @@
                                        FontSize="{DynamicResource FP.Font.Small}"
                                        TextWrapping="Wrap"
                                        Classes="no-translate"/>
+                        </StackPanel>
+
+                        <StackPanel Spacing="8">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                    <TextBlock Text="Grafikkarte für gelernte Modelle nutzen" FontSize="{DynamicResource FP.Font.Body}"/>
+                                    <TextBlock Text="Lässt Entrauschen, Hochskalieren, Objektauswahl und Tiefenkarte auf der Grafikkarte rechnen statt auf dem Prozessor. Das Ergebnis bleibt dasselbe, nur die Wartezeit wird kürzer. Die übrigen Modelle bleiben beim Prozessor, weil sie dort gemessen schneller sind." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                                    <Button Classes="ghost" Padding="12,7"
+                                            Command="{Binding CheckGpuAccelerationCommand}"
+                                            IsEnabled="{Binding GpuAccelerationAvailable}"
+                                            ToolTip.Tip="Lädt ein Modell versuchsweise auf die Grafikkarte und schließt es sofort wieder. Nur so zeigt sich, ob der Treiber die Karte wirklich hergibt.">Prüfen</Button>
+                                    <ToggleSwitch IsChecked="{Binding GpuAccelerationEnabled}"
+                                                  IsEnabled="{Binding GpuAccelerationAvailable}"
+                                                  OnContent=""
+                                                  OffContent=""
+                                                  VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Grid>
+                            <TextBlock Text="{Binding GpuAccelerationStatusText}"
+                                       Foreground="{DynamicResource FP.Text.Secondary}"
+                                       FontSize="{DynamicResource FP.Font.Small}"
+                                       TextWrapping="Wrap"
+                                       Classes="no-translate"/>
+
+                            <!-- Die Auswahl erscheint NUR, wenn wirklich mehr als eine Karte im
+                                 Rechner steckt. Bei einer einzigen waere sie eine Frage ohne
+                                 Antwortmoeglichkeit - welche es ist, steht in der Zeile darueber. -->
+                            <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding HasMultipleGpuDevices}">
+                                <TextBlock Text="Verwendete Grafikkarte"
+                                           FontSize="{DynamicResource FP.Font.Body}"
+                                           VerticalAlignment="Center"/>
+                                <ComboBox Grid.Column="1"
+                                          ItemsSource="{Binding GpuDeviceOptions}"
+                                          SelectedItem="{Binding SelectedGpuDevice, Mode=TwoWay}"
+                                          IsEnabled="{Binding GpuAccelerationAvailable}"
+                                          MinWidth="260"
+                                          VerticalAlignment="Center"
+                                          FontSize="{DynamicResource FP.Font.Body}">
+                                    <ComboBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Classes="no-translate" Text="{Binding Name}"/>
+                                        </DataTemplate>
+                                    </ComboBox.ItemTemplate>
+                                </ComboBox>
+                            </Grid>
                         </StackPanel>
 
                         <!-- Die Faeden der Modelle auf dem Prozessor. Die Obergrenze ist die Zahl
