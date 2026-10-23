@@ -32,3 +32,16 @@
   one, the gallery could fail to show new ones, and the viewer and editor could jump to or drop
   the wrong one.
 
+- **Faster browsing of RAW files in the viewer:** when the viewer develops RAW files, moving on
+  to the next picture now stops the development of the previous one instead of waiting for it to
+  finish.
+
+- **Closed eye in the adjustment groups easier to see:** while a group is hidden for comparison,
+  its closed eye now uses the text colour, which stands out on every theme, including the grey
+  ones.
+
+- **Film negatives without a colour cast from grain:** on grainy colour negatives, the grain of
+  the scan could decide the inversion and tint the whole picture, more so on a large monitor.
+  FerrumPix now measures the film so that the grain no longer counts, and the same scan turns out
+  the same on every screen.
+

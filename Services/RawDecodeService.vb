@@ -191,6 +191,102 @@ Namespace Services
             End Try
         End Sub
 
+        ' ── Abbruch mitten im Lauf ──────────────────────────────────────────────
+        '
+        ' LibRaw ruft zwischen seinen Stufen einen Fortschrittsrueckruf (libraw_types.h:
+        ' "int (*progress_callback)(void *data, enum LibRaw_progress stage, int iteration,
+        ' int expected)"); eine Rueckgabe ungleich null bricht ab, und die laufende Funktion meldet
+        ' LIBRAW_CANCELLED_BY_CALLBACK. Gemessen mit libraw_r 0.22 an einer 50-MP-ARW: Rueckrufe
+        ' beim Lesen der Rohdaten (Anfang und Ende), bei Farbskalierung, Vorinterpolation,
+        ' Interpolation und Umrechnung nach RGB; die laengste Strecke ohne Rueckruf ist die
+        ' Interpolation mit rund 170 ms. Ein Abbruch nach 200 ms kam 20 ms spaeter zurueck, statt den
+        ' Lauf bis 560 ms zu Ende zu rechnen.
+        '
+        ' WER abbrechen darf, sagt der Aufrufer ueber RunWhileWanted fuer seinen Faden. Ohne diese
+        ' Klammer wird kein Rueckruf gesetzt, und alles laeuft wie ohne die Funktion: Editor,
+        ' Kacheln und Export brechen nie ab.
+
+        <UnmanagedFunctionPointer(CallingConvention.Cdecl)>
+        Private Delegate Function ProgressCallback(data As IntPtr, stage As Integer, iteration As Integer, expected As Integer) As Integer
+        Private Delegate Sub SetProgressHandlerFn(handle As IntPtr, callback As IntPtr, data As IntPtr)
+
+        ''' <summary>LIBRAW_CANCELLED_BY_CALLBACK aus libraw_const.h.</summary>
+        Private Const LibRawCancelledByCallback As Integer = -100010
+
+        Private Shared _setProgressHandler As SetProgressHandlerFn
+        ''' Wie beim Datenfehler: der Delegat lebt in einem statischen Feld, sonst raeumte ihn die
+        ''' Speicherbereinigung weg, waehrend LibRaw noch seinen Zeiger haelt.
+        Private Shared ReadOnly _progressCallback As ProgressCallback = AddressOf OnLibRawProgress
+        Private Shared _progressCallbackPointer As IntPtr
+        ''' Je laufendem Handle die Frage, ob sein Ergebnis noch gebraucht wird. Das Handle geht
+        ''' als data-Zeiger an LibRaw, wie beim Datenfehler.
+        Private Shared ReadOnly _stillWantedByHandle As New Concurrent.ConcurrentDictionary(Of IntPtr, Func(Of Boolean))()
+
+        <ThreadStatic> Private Shared _stillWanted As Func(Of Boolean)
+
+        ''' <summary>Fuehrt <paramref name="work"/> aus und bricht jeden LibRaw-Lauf darin ab,
+        ''' sobald <paramref name="stillWanted"/> False liefert. Das Ergebnis ist dann Nothing wie
+        ''' bei einem gescheiterten Decode; der Aufrufer verwirft es ohnehin, weil er die Frage
+        ''' selbst stellt. Gilt fuer den aufrufenden Faden, der Decode laeuft unter DecodeGate
+        ''' auf demselben.</summary>
+        Public Shared Function RunWhileWanted(Of T)(stillWanted As Func(Of Boolean), work As Func(Of T)) As T
+            Dim previous = _stillWanted
+            _stillWanted = stillWanted
+            Try
+                Return work()
+            Finally
+                _stillWanted = previous
+            End Try
+        End Function
+
+        ''' <summary>True, wenn der laufende Faden in einer <see cref="RunWhileWanted"/>-Klammer
+        ''' steht, deren Ergebnis niemand mehr braucht. Damit ueberspringen die Rueckfaelle hinter
+        ''' einem abgebrochenen Decode (die eingebettete Vorschau) ihre Arbeit.</summary>
+        Friend Shared Function IsAbandoned() As Boolean
+            Dim check = _stillWanted
+            If check Is Nothing Then Return False
+            Try
+                Return Not check()
+            Catch
+                Return False
+            End Try
+        End Function
+
+        ''' <summary>Laeuft IM nativen Aufruf. Darf nichts werfen; im Zweifel weiterrechnen.</summary>
+        Private Shared Function OnLibRawProgress(data As IntPtr, stage As Integer, iteration As Integer, expected As Integer) As Integer
+            Try
+                Dim check As Func(Of Boolean) = Nothing
+                If _stillWantedByHandle.TryGetValue(data, check) AndAlso Not check() Then Return 1
+            Catch
+            End Try
+            Return 0
+        End Function
+
+        ''' <summary>Setzt den Rueckruf fuer <paramref name="handle"/>, wenn der Faden in einer
+        ''' <see cref="RunWhileWanted"/>-Klammer steht. True, wenn er gesetzt ist; dann gehoert ein
+        ''' <see cref="EndAbortable"/> in den Finally-Block.</summary>
+        Private Shared Function BeginAbortable(handle As IntPtr) As Boolean
+            Dim check = _stillWanted
+            If check Is Nothing OrElse _setProgressHandler Is Nothing OrElse _progressCallbackPointer = IntPtr.Zero Then Return False
+            _stillWantedByHandle(handle) = check
+            _setProgressHandler(handle, _progressCallbackPointer, handle)
+            Return True
+        End Function
+
+        Private Shared Sub EndAbortable(handle As IntPtr)
+            Dim ignored As Func(Of Boolean) = Nothing
+            _stillWantedByHandle.TryRemove(handle, ignored)
+        End Sub
+
+        ''' <summary>Schreibt einen Abbruch ins Protokoll und reicht die Rueckgabe durch.</summary>
+        Private Shared Function NoteIfCancelled(result As Integer, path As String, stage As String) As Integer
+            If result = LibRawCancelledByCallback Then
+                DiagnosticLogService.LogAlways("RawDecodeService.Cancelled",
+                    $"abgebrochen beim {stage}, Ergebnis nicht mehr gebraucht: {IO.Path.GetFileName(path)}")
+            End If
+            Return result
+        End Function
+
         ''' <summary>unpack mit Datenfehler-Pruefung. Liefert LibRaws Rueckgabe, oder -100
         ''' (LIBRAW_DATA_ERROR), wenn LibRaw zwar 0 meldet, waehrend des Entpackens aber beschaedigte
         ''' Daten gefunden hat UND der Dekoder einer ist, bei dem das das ganze Bild zerstoert. Ohne
@@ -402,6 +498,14 @@ Namespace Services
                         _setDataErrorHandler = Nothing
                         _getDecoderInfo = Nothing
                         _dataErrorCallbackPointer = IntPtr.Zero
+                    End Try
+                    ' OPTIONAL: ohne ihn laeuft ein ueberholter Decode zu Ende (siehe RunWhileWanted).
+                    Try
+                        _setProgressHandler = GetExport(Of SetProgressHandlerFn)(handle, "libraw_set_progress_handler")
+                        _progressCallbackPointer = Marshal.GetFunctionPointerForDelegate(_progressCallback)
+                    Catch
+                        _setProgressHandler = Nothing
+                        _progressCallbackPointer = IntPtr.Zero
                     End Try
                     Try
                         _setDemosaic = GetExport(Of SetIntFn)(handle, "libraw_set_demosaic")
@@ -2055,15 +2159,20 @@ Namespace Services
                     Try
                         Dim baseEv = BaseExposureForFile(path)
                         Dim lens = LensCorrectionForFile(path, Nothing)
+                        ' Mit derselben Frage bricht auch ein schon laufender LibRaw-Lauf ab.
                         PerformanceTraceService.Measure("RAW: Zwischenspeicher vorwaermen",
                             Sub()
-                                If _reentrant Then
-                                    DecodeCore(path, baseEv, lens, warmOnly:=True)
-                                Else
-                                    SyncLock _nativeLock
-                                        DecodeCore(path, baseEv, lens, warmOnly:=True)
-                                    End SyncLock
-                                End If
+                                RunWhileWanted(stillWanted,
+                                    Function() As Boolean
+                                        If _reentrant Then
+                                            DecodeCore(path, baseEv, lens, warmOnly:=True)
+                                        Else
+                                            SyncLock _nativeLock
+                                                DecodeCore(path, baseEv, lens, warmOnly:=True)
+                                            End SyncLock
+                                        End If
+                                        Return True
+                                    End Function)
                             End Sub)
                     Catch
                         Return False
@@ -2826,6 +2935,7 @@ Namespace Services
             Dim image As IntPtr = IntPtr.Zero
             ' Bei einem einkanaligen Bild die auf drei Kanaele aufgefaecherte Kopie (siehe unten).
             Dim expanded As IntPtr = IntPtr.Zero
+            Dim abortable = BeginAbortable(handle)
             Try
                 ' UTF-8-Pfad: korrekt auf Linux/macOS; unter Windows scheitern Nicht-ASCII-Pfade
                 ' im ANSI-Marshalling der C-API - dort greift dann der Vorschau-Rückfall.
@@ -2835,7 +2945,8 @@ Namespace Services
                 ' LibRaw sind die beiden Schritte, deren Dauer an der Einzelkernleistung haengt.
                 ' Mit Datenfehler-Pruefung: beschaedigte Rohdaten gelten als gescheitert, und der
                 ' Rueckfall auf die eingebettete Vorschau greift (siehe UnpackChecked).
-                If PerformanceTraceService.Measure("RAW: auspacken", Function() UnpackChecked(handle, path)) <> 0 Then Return Nothing
+                If NoteIfCancelled(PerformanceTraceService.Measure("RAW: auspacken", Function() UnpackChecked(handle, path)),
+                                   path, "Auspacken") <> 0 Then Return Nothing
 
                 ' Fuer eine Kachel reichen die 2x2-Bayer-Zellen von half_size. Einen C-API-Setter
                 ' gibt es dafuer nicht. Der Zugriff ueber params ist von LibRaw vorgesehen, seine
@@ -2979,7 +3090,8 @@ Namespace Services
                 ' nicht an, die Ecken kamen bis zu zwei Blenden zu dunkel (DngGainMapService).
                 ApplyDngGainMaps(handle, path)
 
-                If PerformanceTraceService.Measure("RAW: entwickeln (LibRaw)", Function() _process(handle)) <> 0 Then Return Nothing
+                If NoteIfCancelled(PerformanceTraceService.Measure("RAW: entwickeln (LibRaw)", Function() _process(handle)),
+                                   path, "Entwickeln") <> 0 Then Return Nothing
                 Dim errc = 0
                 image = _makeMemImage(handle, errc)
                 If image = IntPtr.Zero OrElse errc <> 0 Then Return Nothing
@@ -3078,6 +3190,14 @@ Namespace Services
                         End Try
                     End If
                     If warmOnly Then Return Nothing
+                    ' Der Aufbau aus 16 Bit ist der teuerste Schritt nach LibRaw und hat keinen
+                    ' Rueckruf; ein inzwischen ueberholter Lauf laesst ihn aus. Die linearen
+                    ' Daten liegen dann schon im Zwischenspeicher.
+                    If abortable AndAlso IsAbandoned() Then
+                        DiagnosticLogService.LogAlways("RawDecodeService.Cancelled",
+                            $"Aufbau aus 16 Bit ausgelassen, Ergebnis nicht mehr gebraucht: {IO.Path.GetFileName(path)}")
+                        Return Nothing
+                    End If
                     Return BuildFrom16Bit(pixels, width, height, lens, baseEv, normalization, wantedKnee, sliderEv)
                 End If
                 ' Ohne lineare Daten gibt es nichts vorzuwaermen.
@@ -3131,6 +3251,9 @@ Namespace Services
             Finally
                 If expanded <> IntPtr.Zero Then Marshal.FreeHGlobal(expanded)
                 If image <> IntPtr.Zero Then _clearMem(image)
+                ' VOR dem Schliessen austragen: danach kann ein neues Handle dieselbe Adresse
+                ' bekommen, und das Austragen naehme ihm seine Frage weg.
+                If abortable Then EndAbortable(handle)
                 _close(handle)
                 If pathPtr <> IntPtr.Zero Then Marshal.FreeCoTaskMem(pathPtr)
             End Try
@@ -3580,7 +3703,7 @@ Namespace Services
                             ' laeuft die Korrektur immer. Gemessen an 60 Bestandsdateien ohne
                             ' Rettung: sichtbar mehr als 0,1 Prozent der Flaeche nur bei zweien,
                             ' beide rosa Lichter; echte Farben wie Petunien bleiben unberuehrt.
-                            RecoverMagentaHighlight(r, g, b)
+                            If MagentaHighlightRecovery Then RecoverMagentaHighlight(r, g, b)
                             ' DIESELBE Schwelle fuer alle drei Kanaele eines Pixels (wie in der
                             ' Punktoperationskette): kanalweise verschiedene Schwellen faerben neutrale
                             ' Flaechen ein. (v*255 + T) \ 65535 liegt fuer T < 65535 immer in 0..255,
@@ -3610,6 +3733,15 @@ Namespace Services
                     Next
                 End Sub)
         End Sub
+
+        ''' <summary>MESSSCHALTER der Reglereichung, ab Werk an: die Korrektur rosa Lichter
+        ''' (<see cref="RecoverMagentaHighlight"/>). Gesetzt per Reflexion (REGLER_MAGENTA=0).
+        ''' Abgeschaltet werden die hellen Wolken der Eichbilder farbiger (Chroma der hellsten
+        ''' Flaechen 2,9 auf 5,8), aber im falschen Farbton: rosa, wo das Referenzprogramm warm
+        ''' zeigt, und auf 1,6 und 8,4 Prozent der Flaeche der beiden Bilder, fuer die die Korrektur
+        ''' gebaut ist. Die Flaechen liegen ueber dem Weisspunkt des Sensors; eine Schwelle erst
+        ''' kurz davor aenderte gemessen nichts.</summary>
+        Friend Shared MagentaHighlightRecovery As Boolean = True
 
         ''' <summary>Ergaenzt fehlendes Gruen in teils ausgefressenen, hellen Lichtern.
         '''

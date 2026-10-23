@@ -1989,7 +1989,16 @@ Namespace Services
 
         ''' <summary>Filmbasis = das hellste Tonwertniveau je Kanal (unbelichteter Träger), dichtester Punkt
         ''' = das dunkelste. Beides als Perzentil statt als Min/Max: ein einzelnes Staubkorn oder ein Kratzer
-        ''' würde sonst die gesamte Umrechnung des Bildes festlegen.</summary>
+        ''' würde sonst die gesamte Umrechnung des Bildes festlegen.
+        '''
+        ''' Eine Stichprobe ist das MITTEL eines Blocks, nicht ein einzelner Bildpunkt. BEFUND
+        ''' (Farbnegativ vom LS-5000): der Blaukanal eines Farbnegativs ist dunkel und verrauscht,
+        ''' sein 0,5-Perzentil fiel auf die dunkelsten Koernchen statt aufs Motiv. Am Scan lag der
+        ''' Dichtepunkt Blau bei 5 statt 11, das Positiv bekam einen Gelbgruenstich (Blau im Mittel
+        ''' 117 statt 159). Weil die Vorschau der Monitorkante folgt, hing der Stich zudem an der
+        ''' Bildschirmgroesse (Vorschau 2560: Dichte 8, 3840: Dichte 6). Ein Block deckt immer
+        ''' denselben Anteil des Bildes ab, die Messung ist damit von der Aufloesung unabhaengig.
+        ''' Gemittelt wird im Linearlicht, wie sich Licht durch den Film tatsaechlich mischt.</summary>
         Private Shared Function AnalyzeFilmNegativeCore(bmp As SKBitmap) As (BaseColor As SKColor, DensityColor As SKColor)
             Dim histR = New Integer(255) {}
             Dim histG = New Integer(255) {}
@@ -1999,18 +2008,38 @@ Namespace Services
             Dim buffer As Byte() = Nothing
             Dim stride As Integer = 0
             If bmp IsNot Nothing AndAlso TryBorrowBgraBuffer(bmp, buffer, stride) Then
-                ' Perzentile sind ab gut hunderttausend Stichproben stabil - jedes Pixel eines 40-MP-Scans
-                ' anzufassen würde die Messung nur verlangsamen, nicht verbessern.
+                ' Perzentile sind ab gut hunderttausend Stichproben stabil - mehr Bloecke machten
+                ' die Messung nicht genauer, nur die Bloecke kleiner und das Korn wieder sichtbar.
                 Dim stepPx = Math.Max(1, CInt(Math.Sqrt(bmp.Width * CDbl(bmp.Height) / 250000.0)))
                 Dim area = FindFilmHolderArea(buffer, stride, bmp.Width, bmp.Height, stepPx)
+                Dim toLinear = New Double(255) {}
+                For i = 0 To 255
+                    toLinear(i) = SrgbToLinear(i / 255.0F)
+                Next
+                Dim toByte = Function(linear As Double) As Integer
+                                 Return Math.Max(0, Math.Min(255, CInt(Math.Round(LinearToSrgb(CSng(linear)) * 255.0))))
+                             End Function
                 For y As Integer = area.Top To area.Bottom - 1 Step stepPx
-                    Dim row = y * stride
+                    Dim yEnd = Math.Min(area.Bottom, y + stepPx)
                     For x As Integer = area.Left To area.Right - 1 Step stepPx
-                        Dim o = row + x * 4
-                        If buffer(o + 3) < 8 Then Continue For
-                        histB(buffer(o)) += 1
-                        histG(buffer(o + 1)) += 1
-                        histR(buffer(o + 2)) += 1
+                        Dim xEnd = Math.Min(area.Right, x + stepPx)
+                        Dim sumB = 0.0, sumG = 0.0, sumR = 0.0
+                        Dim count = 0
+                        For by As Integer = y To yEnd - 1
+                            Dim row = by * stride
+                            For bx As Integer = x To xEnd - 1
+                                Dim o = row + bx * 4
+                                If buffer(o + 3) < 8 Then Continue For
+                                sumB += toLinear(buffer(o))
+                                sumG += toLinear(buffer(o + 1))
+                                sumR += toLinear(buffer(o + 2))
+                                count += 1
+                            Next
+                        Next
+                        If count = 0 Then Continue For
+                        histB(toByte(sumB / count)) += 1
+                        histG(toByte(sumG / count)) += 1
+                        histR(toByte(sumR / count)) += 1
                         total += 1
                     Next
                 Next

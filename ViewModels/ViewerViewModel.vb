@@ -2367,10 +2367,9 @@ Namespace ViewModels
         ''' entwickelt in halber Groesse, und beides fuellt diesen Speicher nicht.
         '''
         ''' Ein Bildwechsel ueberholt den Auftrag: vor der Wartezeit, danach und noch einmal unter
-        ''' der Schleuse wird der Token gefragt. Laeuft LibRaw schon, rechnet es zu Ende - einen
-        ''' Abbruch mitten im Lauf hat die Anbindung nicht. Warten muss darauf nur, wer im
-        ''' Betrachter selbst entwickelt; die eingebettete Vorschau geht nicht durch die Schleuse.
-        ''' Wer gleich in den Editor wechselt, wartet auf denselben Lauf und bekommt dessen Daten.</summary>
+        ''' der Schleuse wird der Token gefragt. Laeuft LibRaw schon, bricht es beim naechsten
+        ''' Fortschrittsrueckruf ab (RawDecodeService.RunWhileWanted). Wer gleich in den Editor
+        ''' wechselt, behaelt denselben Token, wartet auf denselben Lauf und bekommt dessen Daten.</summary>
         Private Async Sub WarmRawCacheAfterDwellAsync(path As String, token As Integer)
             Try
                 Await Task.Delay(RawWarmDwellMs)
@@ -2529,7 +2528,11 @@ Namespace ViewModels
                         DiagnosticLogService.LogAlways("Viewer.StaleDecode", $"uebersprungen file={IO.Path.GetFileName(path)}")
                         Return (Nothing, False)
                     End If
-                    Return DecodeViewerBitmapWithState(path, reducedRawDecode:=reduced)
+                    ' Wird waehrend der Entwicklung weitergeblaettert, bricht auch der LibRaw-Lauf ab
+                    ' (RawDecodeService.RunWhileWanted), statt das naechste Bild warten zu lassen.
+                    Return RawDecodeService.RunWhileWanted(
+                        Function() token = System.Threading.Volatile.Read(_bitmapLoadToken),
+                        Function() DecodeViewerBitmapWithState(path, reducedRawDecode:=reduced))
                 End Function)
         End Function
 
@@ -2593,6 +2596,8 @@ Namespace ViewModels
                     ' Faellt die Entwicklung aus (fehlendes LibRaw, defekte Datei), lieber die
                     ' eingebettete Vorschau als eine leere Flaeche.
                 End Try
+                ' Abgebrochen, weil weitergeblaettert wurde: die Vorschau braucht dann auch keiner.
+                If RawDecodeService.IsAbandoned() Then Return (Nothing, False)
             End If
             Using preview = RawPreviewService.ExtractPreviewWithFallback(path)
                 ' Gedrehte RAWs tragen ihre Drehung im Sidecar (die Datei selbst wird nie

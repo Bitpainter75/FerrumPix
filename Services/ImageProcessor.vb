@@ -768,6 +768,9 @@ Namespace Services
                     appliedEv = If(rawStage, exposureEv, 0.0)
                     Return developed
                 End If
+                ' Abgebrochen, weil niemand das Ergebnis mehr braucht (RawDecodeService.RunWhileWanted):
+                ' kein Rueckfall, sonst liefe die ganze Kette noch auf der Vorschau.
+                If RawDecodeService.IsAbandoned() Then Return Nothing
                 ' LibRaw kann die Datei nicht entwickeln: die eingebettete Vorschau, ohne zweiten
                 ' Versuch (DecodeOriented faellt mit developRaw auf denselben Weg zurueck).
                 Return DecodeOriented(path, False, lensChoice, recoverHighlights)
