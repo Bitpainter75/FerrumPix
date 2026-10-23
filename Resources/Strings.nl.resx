@@ -6183,6 +6183,9 @@
   <data name="Gepr_ft_es_l_uft_kein_Modell_darauf_0_34e7178e" xml:space="preserve">
     <value>Gecontroleerd: er draait geen model op ({0}).</value>
   </data>
+  <data name="FerrumPix_wurde_beim_letzten_Mal_mitten_in_der_A_d8285ad4" xml:space="preserve">
+    <value>FerrumPix werd de vorige keer midden in het werk van de videokaart afgesloten. De schakelaar staat daarom uit; zet hem weer aan om het opnieuw te proberen.</value>
+  </data>
   <data name="Noch_nicht_gepr_ft_2dd7563d" xml:space="preserve">
     <value>Nog niet gecontroleerd.</value>
   </data>

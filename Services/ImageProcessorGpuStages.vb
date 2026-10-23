@@ -23,6 +23,7 @@ Namespace Services
 
             Private _surface As SKSurface
             Private _info As SKImageInfo
+            Private _uploadSample As GpuResultSample
             Private ReadOnly _raster As Boolean
 
             ''' <summary>Die Stufen, die seit dem Hochladen auf der Karte liefen, mit ihrem
@@ -78,6 +79,8 @@ Namespace Services
                 ' wird es uebernommen statt hochgeladen (auf dem rufenden Faden geholt, die Ablage
                 ' gilt je Faden).
                 Dim handover = If(_surface Is Nothing AndAlso Not _raster, TakePointOpHandover(current), Nothing)
+                ' Die Stichproben fuer die Pruefung beim Zurueckholen, vom Bild, das hinaufgeht.
+                If _surface Is Nothing AndAlso Not _raster Then _uploadSample = SampleForGpuResult(current)
                 Dim done = Run(
                     Function(gr)
                         If _surface Is Nothing Then
@@ -129,6 +132,13 @@ Namespace Services
                 ' Ist der GPU-Faden schon tot, laesst sich die Textur nicht mehr freigeben; dann
                 ' gilt sie hier als verloren und wird nicht noch einmal angefasst.
                 _surface = Nothing
+                ' Ein leeres oder schwarzes Ergebnis gilt als verloren: der Aufrufer rechnet die
+                ' Stufen dann auf dem Prozessor nach (BringDetailSessionHome).
+                If result IsNot Nothing AndAlso Not AcceptGpuResult(JudgeGpuResult(_uploadSample, result), "Umgebungsstufen") Then
+                    result.Dispose()
+                    result = Nothing
+                End If
+                _uploadSample = Nothing
                 Return result
             End Function
 

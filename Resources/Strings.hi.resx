@@ -6180,6 +6180,9 @@
   <data name="Gepr_ft_es_l_uft_kein_Modell_darauf_0_34e7178e" xml:space="preserve">
     <value>चुना हुआ: उस पर कोई मॉडल नहीं चलता ({0})।</value>
   </data>
+  <data name="FerrumPix_wurde_beim_letzten_Mal_mitten_in_der_A_d8285ad4" xml:space="preserve">
+    <value>पिछली बार FerrumPix ग्राफ़िक्स कार्ड के काम के बीच में बंद हो गया था। इसलिए स्विच बंद है; फिर से आज़माने के लिए इसे दोबारा चालू करें।</value>
+  </data>
   <data name="Noch_nicht_gepr_ft_2dd7563d" xml:space="preserve">
     <value>अभी जाँचा नहीं गया।</value>
   </data>

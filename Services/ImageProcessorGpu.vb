@@ -227,6 +227,11 @@ Namespace Services
                 If kept IsNot Nothing Then DisposeOnGpu(kept)
                 Return Nothing
             End If
+            If Not AcceptGpuResult(JudgeGpuResult(SampleForGpuResult(source), result), "Punktkette") Then
+                result?.Dispose()
+                If kept IsNot Nothing Then DisposeOnGpu(kept)
+                Return Nothing
+            End If
             ' Die Flaeche bleibt fuer die Umgebungsstufen liegen, die meist gleich danach mit genau
             ' diesem Bild beginnen: das Hochladen dort faellt dann weg.
             _pointOpHandoverBitmap = result
@@ -287,6 +292,101 @@ Namespace Services
             _lastGpuFallbackReason = reason
             DiagnosticLogService.LogAlways("GpuImage", "Auf dem Prozessor: " & reason)
         End Sub
+
+        ''' <summary>Wie ein Ergebnis der Karte aussieht, gemessen an Stichproben aus dem Bild, das
+        ''' hinaufging.</summary>
+        Friend Enum GpuResultVerdict
+            Plausible
+            ''' <summary>Deckende Bildpunkte kamen durchsichtig zurueck: die Karte hat nicht oder
+            ''' nicht ganz geschrieben. Der Weg bleibt fuer die Sitzung zu.</summary>
+            Incomplete
+            ''' <summary>Alles schwarz, obwohl das Bild es nicht war. Dieser Durchgang rechnet auf dem
+            ''' Prozessor; ist das Bild wirklich schwarz, kostet das nur Zeit.</summary>
+            Black
+        End Enum
+
+        ''' <summary>Stichproben eines Bildes auf einem Raster von etwa 64 mal 64 Punkten: Deckung
+        ''' und ob der Punkt Farbe traegt. Anderswo belegt: ein Treiber, der lange Arbeit
+        ''' zuruecksetzt, liefert gueltige, aber leere Bilder, ohne einen Fehler zu melden.</summary>
+        Friend NotInheritable Class GpuResultSample
+            Public Width As Integer
+            Public Height As Integer
+            Public StepX As Integer
+            Public StepY As Integer
+            Public Alpha As Byte()
+            Public Lit As Boolean()
+        End Class
+
+        Private Const GpuResultGrid As Integer = 64
+
+        ''' <summary>Nothing fuer Formate, die nicht vier Bytes je Punkt haben; dann wird nicht
+        ''' geprueft.</summary>
+        Friend Shared Function SampleForGpuResult(bitmap As SKBitmap) As GpuResultSample
+            If bitmap Is Nothing OrElse bitmap.BytesPerPixel <> 4 Then Return Nothing
+            If bitmap.ColorType <> SKColorType.Bgra8888 AndAlso bitmap.ColorType <> SKColorType.Rgba8888 Then Return Nothing
+            Dim sample As New GpuResultSample With {
+                .Width = bitmap.Width, .Height = bitmap.Height,
+                .StepX = Math.Max(1, bitmap.Width \ GpuResultGrid), .StepY = Math.Max(1, bitmap.Height \ GpuResultGrid)}
+            Dim count = ((sample.Width - 1) \ sample.StepX + 1) * ((sample.Height - 1) \ sample.StepY + 1)
+            ReDim sample.Alpha(count - 1)
+            ReDim sample.Lit(count - 1)
+            ReadGpuResultSamples(bitmap, sample, sample.Alpha, sample.Lit)
+            Return sample
+        End Function
+
+        Private Shared Sub ReadGpuResultSamples(bitmap As SKBitmap, sample As GpuResultSample, alpha As Byte(), lit As Boolean())
+            Dim pixels = bitmap.GetPixelSpan()
+            Dim rowBytes = bitmap.RowBytes
+            Dim i = 0
+            For y = 0 To sample.Height - 1 Step sample.StepY
+                For x = 0 To sample.Width - 1 Step sample.StepX
+                    Dim o = y * rowBytes + x * 4
+                    ' Rot und Blau stehen je nach Format vertauscht; fuer "traegt Farbe" ist das gleich.
+                    alpha(i) = pixels(o + 3)
+                    lit(i) = pixels(o) <> 0 OrElse pixels(o + 1) <> 0 OrElse pixels(o + 2) <> 0
+                    i += 1
+                Next
+            Next
+        End Sub
+
+        ''' <summary>Vergleicht ein zurueckgelesenes Ergebnis mit den Stichproben seines Eingangs.
+        ''' Die Schwellen lassen jeder Stufe ihre Wirkung: ein Weichzeichner darf Deckung an einer
+        ''' Kante verschieben, aber nicht die Haelfte aller deckenden Punkte leeren.</summary>
+        Friend Shared Function JudgeGpuResult(sample As GpuResultSample, result As SKBitmap) As GpuResultVerdict
+            If sample Is Nothing OrElse result Is Nothing Then Return GpuResultVerdict.Plausible
+            If result.Width <> sample.Width OrElse result.Height <> sample.Height OrElse result.BytesPerPixel <> 4 Then Return GpuResultVerdict.Plausible
+            Dim alpha(sample.Alpha.Length - 1) As Byte
+            Dim lit(sample.Lit.Length - 1) As Boolean
+            ReadGpuResultSamples(result, sample, alpha, lit)
+            Dim opaque = 0, emptied = 0, colored = 0, blackened = 0
+            For i = 0 To alpha.Length - 1
+                If sample.Alpha(i) <> 255 Then Continue For
+                opaque += 1
+                If alpha(i) = 0 Then emptied += 1
+                If sample.Lit(i) Then
+                    colored += 1
+                    If alpha(i) = 255 AndAlso Not lit(i) Then blackened += 1
+                End If
+            Next
+            If opaque >= 16 AndAlso emptied * 2 >= opaque Then Return GpuResultVerdict.Incomplete
+            If colored >= 16 AndAlso blackened = colored Then Return GpuResultVerdict.Black
+            Return GpuResultVerdict.Plausible
+        End Function
+
+        ''' <summary>Folgt aus dem Urteil: bei Incomplete den Weg fuer die Sitzung schliessen. True,
+        ''' wenn das Ergebnis taugt.</summary>
+        Friend Shared Function AcceptGpuResult(verdict As GpuResultVerdict, what As String) As Boolean
+            Select Case verdict
+                Case GpuResultVerdict.Incomplete
+                    GpuImageService.MarkUnusable($"{what}: die Grafikkarte lieferte ein unvollstaendiges Bild (deckende Punkte kamen leer zurueck).")
+                    Return False
+                Case GpuResultVerdict.Black
+                    NoteGpuFallback($"{what}: die Grafikkarte lieferte ein schwarzes Bild, dieser Durchgang rechnet auf dem Prozessor")
+                    Return False
+                Case Else
+                    Return True
+            End Select
+        End Function
 
         ''' <summary>Derselbe Shader ueber Skia auf dem Prozessor, in Streifen parallel. Nur fuer die
         ''' Vergleichspruefung im Pruefstand (sie braucht keine Karte); als Rueckfall zu langsam,

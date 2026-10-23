@@ -46,7 +46,38 @@ Namespace Services
         Private NotInheritable Class GpuWork
             Public Run As Action
             Public Cancel As Action
+            ''' <summary>Vom GPU-Faden gesetzt, sobald er den Auftrag beginnt; ab dann laeuft die
+            ''' Frist <see cref="JobTimeout"/>. Die Zeit in der Schlange zaehlt nicht mit.</summary>
+            Public Started As Integer
         End Class
+
+        ''' <summary>So lange darf ein begonnener Auftrag dauern. Gemessen braucht die schwerste
+        ''' Stufe (Zurueckrechnen am 20-MP-Foto) an einer RTX 5060 rund 0,4 s; ein Treiber, der
+        ''' haengt, kommt dagegen nie zurueck. Ohne Frist stuende dann ein Export fuer immer.</summary>
+        Private Shared ReadOnly JobTimeout As TimeSpan = TimeSpan.FromSeconds(60)
+
+        ''' <summary>So lange darf das Anlegen des Kontexts dauern (gemessen 30 ms).</summary>
+        Private Shared ReadOnly StartTimeout As TimeSpan = TimeSpan.FromSeconds(30)
+
+        ''' <summary>Renderer, die das Bild in Software auf dem Prozessor rasterisieren. Sie rechnen
+        ''' richtig, die Selbstpruefung besteht also, aber Shader laufen dort viel langsamer als die
+        ''' eigene Prozessorkette. Anderswo gemessen: llvmpipe 6,3 s gegen 2,3 s fuer dasselbe Bild,
+        ''' auf vier Kernen Minuten. Typisch in virtuellen Maschinen und ohne Grafiktreiber.</summary>
+        Private Shared ReadOnly SoftwareRendererNames As String() = {
+            "llvmpipe", "softpipe", "swrast", "lavapipe", "SwiftShader",
+            "Microsoft Basic Render", "GDI Generic", "Apple Software Renderer"}
+
+        ''' <summary>Die Marke liegt neben den Einstellungen, solange die Karte arbeitet (Anlegen
+        ''' des Kontexts und jeder Auftrag). Stuerzt der Treiber ab, faengt kein Try das: der Prozess
+        ''' endet, und mit eingeschaltetem Schalter stuerzte er beim naechsten Bild wieder ab. Findet
+        ''' der naechste Start die Marke noch, schaltet er die Karte deshalb ab
+        ''' (<see cref="StartFromSettings"/>). Ein normales Ende raeumt sie weg (ProcessExit).</summary>
+        Private Shared ReadOnly MarkerPath As String = IO.Path.Combine(AppSettingsService.Folder, "gpu-busy.marker")
+        Private Shared _shuttingDown As Boolean
+        ''' <summary>Gesetzt, wenn die Karte haengt: die Marke bleibt dann auch beim normalen Ende
+        ''' liegen, damit der naechste Start den Schalter abschaltet.</summary>
+        Private Shared _markerSticky As Boolean
+        Private Shared _exitHooked As Integer
 
         Private Shared _queue As BlockingCollection(Of GpuWork)
         Private Shared _context As IGlContext
@@ -96,6 +127,74 @@ Namespace Services
             End Get
         End Property
 
+        ''' <summary>True, wenn dieser Start den Schalter ausgeschaltet hat, weil die letzte
+        ''' Sitzung mitten in der Arbeit der Karte endete (Marke gefunden). Die Einstellungen sagen
+        ''' das, bis der Schalter wieder eingeschaltet wird.</summary>
+        Public Shared Property SwitchedOffAfterCrash As Boolean
+
+        ''' <summary>Beim Start der Anwendung: liegt die Marke noch, endete die letzte Sitzung im
+        ''' Treiber. Dann geht der Schalter aus, und der Grund steht in der Fehlerdatei. Setzt
+        ''' danach <see cref="Enabled"/> aus der Einstellung.</summary>
+        Public Shared Sub StartFromSettings()
+            Dim leftover As String = Nothing
+            Try
+                If IO.File.Exists(MarkerPath) Then
+                    leftover = IO.File.ReadAllText(MarkerPath)
+                    IO.File.Delete(MarkerPath)
+                End If
+            Catch ex As Exception
+                DiagnosticLogService.LogException("GpuImage", ex)
+            End Try
+            If leftover IsNot Nothing AndAlso AppSettingsService.Load().GpuImageProcessing Then
+                AppSettingsService.Update(Sub(s) s.GpuImageProcessing = False)
+                SwitchedOffAfterCrash = True
+                DiagnosticLogService.LogException("GpuImage", New GpuUnavailableException(
+                    $"Die letzte Sitzung endete mitten in der Arbeit der Grafikkarte ({leftover.Trim()}). " &
+                    "Der Schalter ist deshalb ausgeschaltet, die Bildbearbeitung rechnet auf dem Prozessor."))
+            End If
+            Enabled = AppSettingsService.Load().GpuImageProcessing
+        End Sub
+
+        ''' <summary>Erkennt einen Software-Renderer an seinem Namen (GL_RENDERER). Nothing, wenn
+        ''' es eine echte Karte ist.</summary>
+        Friend Shared Function SoftwareRendererName(renderer As String) As String
+            If String.IsNullOrEmpty(renderer) Then Return Nothing
+            For Each name In SoftwareRendererNames
+                If renderer.IndexOf(name, StringComparison.OrdinalIgnoreCase) >= 0 Then Return name
+            Next
+            Return Nothing
+        End Function
+
+        Private Shared Sub ArmMarker(what As String)
+            If Volatile.Read(_shuttingDown) Then Return
+            If Interlocked.Exchange(_exitHooked, 1) = 0 Then
+                AddHandler AppDomain.CurrentDomain.ProcessExit, Sub(sender As Object, e As EventArgs)
+                                                                     Volatile.Write(_shuttingDown, True)
+                                                                     DisarmMarker()
+                                                                 End Sub
+            End If
+            Try
+                IO.Directory.CreateDirectory(AppSettingsService.Folder)
+                IO.File.WriteAllText(MarkerPath, $"{what}; {If(_renderer, "")}; {DateTime.Now:yyyy-MM-dd HH:mm:ss}")
+            Catch
+                ' Ohne Marke fehlt nur der Schutz beim naechsten Start; die Arbeit selbst geht.
+            End Try
+        End Sub
+
+        ''' <summary>Die Karte haengt im Treiber: Marke setzen und liegen lassen.</summary>
+        Private Shared Sub KeepMarkerForNextStart(what As String)
+            ArmMarker(what)
+            Volatile.Write(_markerSticky, True)
+        End Sub
+
+        Private Shared Sub DisarmMarker()
+            If Volatile.Read(_markerSticky) Then Return
+            Try
+                IO.File.Delete(MarkerPath)
+            Catch
+            End Try
+        End Sub
+
         ''' <summary>Wie viele Auftraege die Karte seit dem Start ohne Fehler erledigt hat. Belegt
         ''' im Pruefstand, dass ein Vergleich wirklich auf der Karte lief: faellt die Arbeit still
         ''' auf den Prozessor zurueck, sind beide Ergebnisse gleich und der Vergleich waere grundlos
@@ -116,28 +215,46 @@ Namespace Services
             Dim value As T = Nothing
             Dim failure As Exception = Nothing
             Dim cancelled = False
-            Using done As New ManualResetEventSlim(False)
-                Try
-                    _queue.Add(New GpuWork With {
-                        .Run = Sub()
-                                   Try
-                                       value = work(_gr)
-                                   Catch ex As Exception
-                                       failure = ex
-                                   Finally
-                                       done.Set()
-                                   End Try
-                               End Sub,
-                        .Cancel = Sub()
-                                      cancelled = True
-                                      done.Set()
-                                  End Sub})
-                Catch ex As InvalidOperationException
-                    ' Die Schlange ist geschlossen: der Faden ist nach einem Fehler beendet.
+            ' Das Ereignis wird bewusst nicht freigegeben: kehrt dieser Aufruf nach Ablauf der Frist
+            ' zurueck, setzt der GPU-Faden es vielleicht noch spaeter, und ein freigegebenes
+            ' Ereignis wuerde dort werfen und den Faden beenden.
+            Dim done As New ManualResetEventSlim(False)
+            Dim item As New GpuWork With {
+                .Run = Sub()
+                           Try
+                               value = work(_gr)
+                           Catch ex As Exception
+                               failure = ex
+                           Finally
+                               done.Set()
+                           End Try
+                       End Sub,
+                .Cancel = Sub()
+                              cancelled = True
+                              done.Set()
+                          End Sub}
+            Try
+                _queue.Add(item)
+            Catch ex As InvalidOperationException
+                ' Die Schlange ist geschlossen: der Faden ist nach einem Fehler beendet.
+                Return False
+            End Try
+            Dim startedAt As Long = 0
+            While Not done.Wait(500)
+                If Volatile.Read(item.Started) = 0 Then
+                    ' Noch in der Schlange. Ist der Weg inzwischen zu, weil ein anderer Auftrag im
+                    ' Treiber haengt, erreicht der Faden diesen nie mehr.
+                    If Volatile.Read(_state) = 2 Then Return False
+                    Continue While
+                End If
+                If startedAt = 0 Then startedAt = Stopwatch.GetTimestamp()
+                If Stopwatch.GetElapsedTime(startedAt) > JobTimeout Then
+                    KeepMarkerForNextStart("Auftrag haengt")
+                    Fail($"Ein Auftrag auf der Grafikkarte kam nach {JobTimeout.TotalSeconds:0} Sekunden nicht zurueck; der Treiber haengt.", Nothing)
                     Return False
-                End Try
-                done.Wait()
-            End Using
+                End If
+            End While
+            done.Dispose()
             ' Der Faden hat abgeschaltet, bevor er diesen Auftrag erreichte: ohne Karte weiter, der
             ' Grund steht schon in der Fehlerdatei.
             If cancelled Then Return False
@@ -176,8 +293,12 @@ Namespace Services
                 End If
             End SyncLock
             If started IsNot Nothing Then
-                started.Wait()
-                started.Dispose()
+                ' Nicht freigeben: kommt das Anlegen erst nach der Frist zurueck, setzt der Faden
+                ' das Ereignis noch.
+                If Not started.Wait(StartTimeout) Then
+                    KeepMarkerForNextStart("Anlegen haengt")
+                    Fail($"Das Anlegen des Grafikkontexts kam nach {StartTimeout.TotalSeconds:0} Sekunden nicht zurueck; der Treiber haengt.", Nothing)
+                End If
             Else
                 ' Warten, bis der startende Aufrufer fertig ist (der Zustand verlaesst die 0).
                 Dim spin As New SpinWait()
@@ -189,6 +310,7 @@ Namespace Services
 
         Private Shared Sub RunWorker(started As ManualResetEventSlim)
             Dim clock = Stopwatch.StartNew()
+            ArmMarker("Kontext anlegen")
             Try
                 Dim graphics = ResolvePlatformGraphics()
                 If graphics Is Nothing Then
@@ -224,7 +346,13 @@ Namespace Services
                 Catch
                     _renderer = ""
                 End Try
-                Volatile.Write(_state, 1)
+                Dim software = SoftwareRendererName(_renderer)
+                If software IsNot Nothing Then
+                    Fail($"{_renderer} zeichnet in Software auf dem Prozessor; die eigene Prozessorkette ist dort schneller.", Nothing)
+                    Return
+                End If
+                ' Fail kann waehrend des Anlegens schon gesetzt sein (Frist abgelaufen); dann bleibt es dabei.
+                If Interlocked.CompareExchange(_state, 1, 0) <> 0 Then Return
                 DiagnosticLogService.LogAlways("GpuImage",
                     $"bereit: {_renderer}; OpenGL {_context.Version.Major}.{_context.Version.Minor} ({_context.Version.Type}); " &
                     $"Plattformgrafik {graphics.GetType().Name}; {clock.ElapsedMilliseconds} ms")
@@ -232,6 +360,7 @@ Namespace Services
                 Fail("Der GPU-Faden ist beim Anlegen des Kontexts gescheitert.", ex)
                 Return
             Finally
+                DisarmMarker()
                 started.Set()
             End Try
 
@@ -243,7 +372,13 @@ Namespace Services
                 If Volatile.Read(_state) = 2 Then
                     item.Cancel()
                 Else
-                    item.Run()
+                    Volatile.Write(item.Started, 1)
+                    ArmMarker("Auftrag")
+                    Try
+                        item.Run()
+                    Finally
+                        DisarmMarker()
+                    End Try
                 End If
             Next
         End Sub

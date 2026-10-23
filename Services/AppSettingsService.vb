@@ -964,6 +964,14 @@ Namespace Services
         Private Shared ReadOnly SettingsPath As String =
             Path.Combine(SettingsDirectory, "settings.json")
 
+        ''' <summary>Der Ordner der Einstellungen, fuer Merkdateien, die neben ihnen liegen
+        ''' (etwa die Marke des GPU-Wegs, <see cref="GpuImageService"/>).</summary>
+        Friend Shared ReadOnly Property Folder As String
+            Get
+                Return SettingsDirectory
+            End Get
+        End Property
+
         ''' Der zuletzt bekannte, bereits normalisierte Stand als JSON. Load liest daraus statt von der
         ''' Platte: die Einstellungen werden an 148 Stellen abgefragt, unter anderem aus Vorschaubild-Threads.
         Private Shared ReadOnly _cacheLock As New Object()

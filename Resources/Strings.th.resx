@@ -6180,6 +6180,9 @@
   <data name="Gepr_ft_es_l_uft_kein_Modell_darauf_0_34e7178e" xml:space="preserve">
     <value>ติ๊กไว้: ไม่มีโมเดลทำงานอยู่บนนั้น ({0})</value>
   </data>
+  <data name="FerrumPix_wurde_beim_letzten_Mal_mitten_in_der_A_d8285ad4" xml:space="preserve">
+    <value>ครั้งที่แล้ว FerrumPix ปิดลงระหว่างที่การ์ดจอกำลังทำงาน จึงปิดสวิตช์ไว้ เปิดอีกครั้งเพื่อลองใหม่</value>
+  </data>
   <data name="Noch_nicht_gepr_ft_2dd7563d" xml:space="preserve">
     <value>ยังไม่ได้ตรวจสอบ</value>
   </data>

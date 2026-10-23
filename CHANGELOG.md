@@ -27,7 +27,8 @@
   sharpening with the deconvolution method no longer takes seconds. It is off by default; when you
   turn it on, FerrumPix first checks that the card calculates the same picture as the processor
   and otherwise stays with the processor. Curves, colour grading, point colour and LUTs are
-  included.
+  included. Without a real graphics card, for example in a virtual machine, and after the
+  graphics driver hung or crashed, FerrumPix also stays with the processor.
 
 - **Developed RAWs are marked in the viewer too.** As in the editor, the file name at the top of
   the window turns to the accent colour when the viewer shows a RAW developed by FerrumPix rather

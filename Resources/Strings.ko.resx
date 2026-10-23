@@ -6180,6 +6180,9 @@
   <data name="Gepr_ft_es_l_uft_kein_Modell_darauf_0_34e7178e" xml:space="preserve">
     <value>선택함: 여기에서는 모델이 실행되지 않습니다 ({0}).</value>
   </data>
+  <data name="FerrumPix_wurde_beim_letzten_Mal_mitten_in_der_A_d8285ad4" xml:space="preserve">
+    <value>FerrumPix가 지난번 그래픽 카드 작업 중에 종료되었습니다. 그래서 스위치가 꺼져 있습니다. 다시 시도하려면 다시 켜십시오.</value>
+  </data>
   <data name="Noch_nicht_gepr_ft_2dd7563d" xml:space="preserve">
     <value>아직 확인하지 않았습니다.</value>
   </data>

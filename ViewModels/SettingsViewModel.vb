@@ -3034,6 +3034,9 @@ Namespace ViewModels
         Public ReadOnly Property GpuImageProcessingStatusText As String
             Get
                 If _gpuImageCheckBusy Then Return LocalizationService.T("Die Grafikkarte wird geprüft")
+                If GpuImageService.SwitchedOffAfterCrash AndAlso Not _gpuImageProcessing Then
+                    Return LocalizationService.T("FerrumPix wurde beim letzten Mal mitten in der Arbeit der Grafikkarte beendet. Der Schalter ist deshalb aus; zum erneuten Versuch wieder einschalten.")
+                End If
                 Dim check = ImageProcessor.LastGpuCheck
                 Select Case check.State
                     Case ImageProcessor.GpuCheckState.Works
