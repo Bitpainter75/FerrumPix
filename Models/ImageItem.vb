@@ -1167,6 +1167,20 @@ Namespace Models
             _serverLongitude = longitude
         End Sub
 
+        ''' <summary>Uebernimmt eine BESTAETIGTE Antwort des Servers zum Ort, anders als
+        ''' <see cref="SetServerCoordinates"/> auch "kein Ort": dann faellt ein bekanntes Paar weg,
+        ''' weil der Ort auf dem Server entfernt wurde. Nur fuer Antworten, die ausdruecklich nach
+        ''' dem Ort gefragt haben (NextcloudService.GetCoordinatesAsync). True, wenn sich etwas
+        ''' geaendert hat.</summary>
+        Public Function ApplyConfirmedServerLocation(hasLocation As Boolean, latitude As Double, longitude As Double) As Boolean
+            Dim lat As Double? = If(hasLocation, latitude, CType(Nothing, Double?))
+            Dim lon As Double? = If(hasLocation, longitude, CType(Nothing, Double?))
+            If Nullable.Equals(_serverLatitude, lat) AndAlso Nullable.Equals(_serverLongitude, lon) Then Return False
+            _serverLatitude = lat
+            _serverLongitude = lon
+            Return True
+        End Function
+
         Private _hasExifMetadata As Boolean
         Public Property HasExifMetadata As Boolean
             Get

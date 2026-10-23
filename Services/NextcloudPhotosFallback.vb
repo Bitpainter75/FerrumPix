@@ -960,7 +960,7 @@ Namespace Services
                 photo.Latitude = latitude
                 photo.Longitude = longitude
                 EnsureCurrentConnectionMaps()
-                _gpsById(fileId) = {latitude, longitude}
+                RememberCoordinates(fileId, photo.ETag, photo.ETag, True, latitude, longitude)
             End If
 
             RememberPath(fileId, photo.FileName)
@@ -1073,27 +1073,77 @@ Namespace Services
         ''' Vergleichen eine Liste in der Datenbankabfrage; hundert halten den Rumpf klein.</summary>
         Private Const CoordinateBatchSize As Integer = 100
 
-        ''' <summary>Gemerkte Antworten je Kennung, ein leeres Feld heisst "der Server kennt keinen
-        ''' Ort". Ohne das fragte jedes Neurechnen der Karte dieselben Bilder wieder an. Wird mit den
-        ''' anderen Merklisten bei einem Kontowechsel geleert (siehe EnsureCurrentConnectionMaps).</summary>
-        Private Shared ReadOnly _gpsById As New Concurrent.ConcurrentDictionary(Of Long, Double())()
+        ''' <summary>Eine gemerkte Antwort des Servers zu einer Kennung: der Ort oder "kein Ort",
+        ''' der Etag, den der Server dabei meldete, der Etag des Elements, mit dem gefragt wurde, und
+        ''' wann.</summary>
+        Friend NotInheritable Class CoordinateAnswer
+            Public ETag As String = ""
+            Public AskedWithETag As String = ""
+            Public HasLocation As Boolean
+            Public Latitude As Double
+            Public Longitude As Double
+            Public AskedAt As Long
+        End Class
 
-        ''' <summary>Die Koordinaten zu den Kennungen, soweit der Server sie kennt. Schon Gefragtes
-        ''' kommt aus dem Speicher. Eine gescheiterte Anfrage wird nicht gemerkt, damit ein
-        ''' Netzaussetzer keinen Ort dauerhaft verschwinden laesst. Wirft nur beim Abbruch.</summary>
-        Public Shared Async Function GetCoordinatesAsync(fileIds As IEnumerable(Of String),
-                                                         cancellationToken As CancellationToken) As Task(Of Dictionary(Of String, (Latitude As Double, Longitude As Double)))
-            Dim result = New Dictionary(Of String, (Latitude As Double, Longitude As Double))(StringComparer.Ordinal)
-            If fileIds Is Nothing OrElse Not IsConfigured Then Return result
+        ''' <summary>So lange gilt eine Antwort, danach wird der Server wieder gefragt.
+        '''
+        ''' DER ETAG DES ELEMENTS ALLEIN REICHT NICHT. Er ist der Stand beim Laden der Liste und
+        ''' bleibt es, solange die Liste offen ist: er ist auch die Bedingung beim Zurueckschreiben
+        ''' (NextcloudOrigin, If-Match) und darf deshalb nicht still erneuert werden. Aendert jemand
+        ''' den Ort auf dem Server, sieht das Element davon nichts; erst die Nachfrage bringt den
+        ''' neuen Dateistand mit. Dazu kommt, dass der Server den Ort erst beim Einlesen der Datei
+        ''' ausliest und er bis dahin ohne neuen Etag fehlt.</summary>
+        Friend Shared ReadOnly CoordinateAnswerLifetime As TimeSpan = TimeSpan.FromMinutes(5)
+
+        ''' <summary>Gemerkte Antworten je Kennung. Ohne das fragte jedes Neurechnen der Karte
+        ''' dieselben Bilder wieder an. Wird mit den anderen Merklisten bei einem Kontowechsel
+        ''' geleert (siehe EnsureCurrentConnectionMaps).</summary>
+        Private Shared ReadOnly _gpsById As New Concurrent.ConcurrentDictionary(Of Long, CoordinateAnswer)()
+
+        ''' <summary>Ob eine gemerkte Antwort fuer ein Element mit <paramref name="etag"/> noch gilt:
+        ''' juenger als <see cref="CoordinateAnswerLifetime"/>, und das Element traegt den Etag, mit
+        ''' dem gefragt wurde, oder den, den der Server dabei meldete. Traegt es einen dritten, ist
+        ''' die Liste seitdem neu geladen, und es wird neu gefragt.</summary>
+        Friend Shared Function IsCoordinateAnswerCurrent(answer As CoordinateAnswer, etag As String, now As Long) As Boolean
+            If answer Is Nothing Then Return False
+            If TimeSpan.FromMilliseconds(now - answer.AskedAt) >= CoordinateAnswerLifetime Then Return False
+            Dim current = If(etag, "")
+            Return String.Equals(answer.AskedWithETag, current, StringComparison.Ordinal) OrElse
+                   String.Equals(answer.ETag, current, StringComparison.Ordinal)
+        End Function
+
+        Private Shared Sub RememberCoordinates(id As Long, etag As String, askedWithETag As String, hasLocation As Boolean,
+                                               latitude As Double, longitude As Double)
+            _gpsById(id) = New CoordinateAnswer With {
+                .ETag = If(etag, ""), .AskedWithETag = If(askedWithETag, ""), .HasLocation = hasLocation,
+                .Latitude = latitude, .Longitude = longitude, .AskedAt = Environment.TickCount64}
+        End Sub
+
+        ''' <summary>Die Antwort des Servers zu jeder Datei (Kennung und Etag): Ort oder bestaetigt
+        ''' kein Ort. Gefragtes kommt aus dem Speicher, solange es noch gilt
+        ''' (<see cref="IsCoordinateAnswerCurrent"/>). Eine Datei, deren Anfrage scheiterte, fehlt im
+        ''' Ergebnis ganz: ein Netzaussetzer ist keine Antwort, und der Aufrufer laesst ihren Ort
+        ''' dann stehen. Wirft nur beim Abbruch.</summary>
+        Public Shared Async Function GetCoordinatesAsync(files As IEnumerable(Of (FileId As String, ETag As String)),
+                                                         cancellationToken As CancellationToken) As Task(Of Dictionary(Of String, (HasLocation As Boolean, Latitude As Double, Longitude As Double)))
+            Dim result = New Dictionary(Of String, (HasLocation As Boolean, Latitude As Double, Longitude As Double))(StringComparer.Ordinal)
+            If files Is Nothing OrElse Not IsConfigured Then Return result
             EnsureCurrentConnectionMaps()
 
             Dim missing = New List(Of Long)()
-            For Each idText In fileIds.Distinct(StringComparer.Ordinal)
+            Dim seen = New HashSet(Of Long)()
+            Dim askedAs = New Dictionary(Of Long, String)()
+            Dim askedWith = New Dictionary(Of Long, String)()
+            Dim now = Environment.TickCount64
+            For Each file In files
                 Dim id As Long = 0
-                If Not Long.TryParse(idText, NumberStyles.Integer, CultureInfo.InvariantCulture, id) OrElse id <= 0 Then Continue For
-                Dim known As Double() = Nothing
-                If _gpsById.TryGetValue(id, known) Then
-                    If known.Length = 2 Then result(idText) = (known(0), known(1))
+                If Not Long.TryParse(file.FileId, NumberStyles.Integer, CultureInfo.InvariantCulture, id) OrElse id <= 0 Then Continue For
+                If Not seen.Add(id) Then Continue For
+                askedAs(id) = file.FileId
+                askedWith(id) = If(file.ETag, "").Trim(""""c)
+                Dim known As CoordinateAnswer = Nothing
+                If _gpsById.TryGetValue(id, known) AndAlso IsCoordinateAnswerCurrent(known, askedWith(id), now) Then
+                    result(file.FileId) = (known.HasLocation, known.Latitude, known.Longitude)
                 Else
                     missing.Add(id)
                 End If
@@ -1106,7 +1156,7 @@ Namespace Services
                 Dim body = New StringBuilder()
                 body.Append("<?xml version=""1.0"" encoding=""UTF-8""?>")
                 body.Append("<d:searchrequest xmlns:d=""DAV:"" xmlns:oc=""http://owncloud.org/ns"" xmlns:nc=""http://nextcloud.org/ns"">")
-                body.Append("<d:basicsearch><d:select><d:prop><oc:fileid/><nc:metadata-photos-gps/></d:prop></d:select>")
+                body.Append("<d:basicsearch><d:select><d:prop><oc:fileid/><d:getetag/><nc:metadata-photos-gps/></d:prop></d:select>")
                 body.Append("<d:from><d:scope><d:href>/files/").Append(XmlText(user)).Append("</d:href><d:depth>infinity</d:depth></d:scope></d:from>")
                 body.Append("<d:where><d:or>")
                 For Each id In batch
@@ -1125,20 +1175,26 @@ Namespace Services
                 For Each response In xml.Descendants(DavNs + "response")
                     Dim props = OkProps(response)
                     Dim id = FileIdOf(response)
-                    If id <= 0 Then Continue For
+                    If id <= 0 OrElse Not askedAs.ContainsKey(id) Then Continue For
                     answered.Add(id)
+                    ' Gemerkt mit dem Etag, den der Server JETZT meldet, und dem des Elements: das
+                    ' Element traegt weiter seinen alten, und auch der soll die Antwort finden.
+                    Dim etag = If(props Is Nothing, "", ValueOf(props, DavNs + "getetag").Trim(""""c))
                     Dim latitude As Double, longitude As Double
                     If ParseGps(If(props Is Nothing, Nothing, props.Element(NcNs + "metadata-photos-gps")), latitude, longitude) Then
-                        _gpsById(id) = {latitude, longitude}
-                        result(id.ToString(CultureInfo.InvariantCulture)) = (latitude, longitude)
+                        RememberCoordinates(id, etag, askedWith(id), True, latitude, longitude)
+                        result(askedAs(id)) = (True, latitude, longitude)
                     Else
-                        _gpsById(id) = Array.Empty(Of Double)()
+                        RememberCoordinates(id, etag, askedWith(id), False, 0, 0)
+                        result(askedAs(id)) = (False, 0, 0)
                     End If
                 Next
                 ' Wonach gefragt wurde und was nicht in der Antwort steht, hat der Server nicht
-                ' gefunden (geloescht, nicht mehr geteilt). Auch das ist eine Antwort.
+                ' gefunden (geloescht, nicht mehr geteilt). Auch das gilt nur fuer die Lebensdauer.
                 For Each id In batch
-                    If Not answered.Contains(id) Then _gpsById(id) = Array.Empty(Of Double)()
+                    If answered.Contains(id) Then Continue For
+                    RememberCoordinates(id, "", askedWith(id), False, 0, 0)
+                    result(askedAs(id)) = (False, 0, 0)
                 Next
             Next
             Return result

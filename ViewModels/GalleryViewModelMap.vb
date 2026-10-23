@@ -287,9 +287,10 @@ Namespace ViewModels
         ''' Serverbilder aus dem Element. Läuft im Hintergrund; überholt ein neuerer Aufruf, wird
         ''' das Ergebnis verworfen.
         '''
-        ''' Nextcloud-Bildern ohne Ort (Memories, Alben, Suchtreffer) fragt die Karte ihn danach
-        ''' gesammelt nach (<see cref="NextcloudService.GetCoordinatesAsync"/>). Gezeigt wird
-        ''' vorher schon, was bekannt ist, und nach der Antwort ein zweites Mal.</summary>
+        ''' Den Ort der Nextcloud-Bilder fragt die Karte danach gesammelt nach
+        ''' (<see cref="NextcloudService.GetCoordinatesAsync"/>), fuer alle, nicht nur die ohne Ort;
+        ''' was noch gilt, kommt dort aus dem Speicher. Gezeigt wird vorher schon, was bekannt ist,
+        ''' und nach der Antwort ein zweites Mal, wenn sich ein Ort geaendert hat.</summary>
         Private Async Sub RefreshMapPoints()
             If Not IsMapView Then Return
             Dim version = Interlocked.Increment(_mapRefreshVersion)
@@ -305,20 +306,25 @@ Namespace ViewModels
                 _mapCandidateCount = candidates.Count
                 MapPoints = points
 
-                Dim missing = candidates.
-                    Where(Function(i) i.IsNextcloudAsset AndAlso Not i.IsTrashed AndAlso Not i.ServerLatitude.HasValue).
+                ' Auch Bilder MIT Ort: ob gefragt wird, entscheidet der Dienst ueber den Etag, nicht
+                ' das Element. Sonst bliebe ein auf dem Server geaenderter oder entfernter Ort stehen.
+                Dim asked = candidates.
+                    Where(Function(i) i.IsNextcloudAsset AndAlso Not i.IsTrashed).
                     ToList()
-                If missing.Count = 0 OrElse Not NextcloudService.IsConfigured Then Return
+                If asked.Count = 0 OrElse Not NextcloudService.IsConfigured Then Return
                 Dim cts = New CancellationTokenSource()
                 _mapCoordinateCts = cts
-                Dim found = Await NextcloudService.GetCoordinatesAsync(missing.Select(Function(i) i.NextcloudFileId), cts.Token)
+                Dim found = Await NextcloudService.GetCoordinatesAsync(asked.Select(Function(i) (i.NextcloudFileId, i.NextcloudETag)), cts.Token)
                 If version <> Volatile.Read(_mapRefreshVersion) OrElse found.Count = 0 Then Return
-                For Each item In missing
-                    Dim coordinate As (Latitude As Double, Longitude As Double)
-                    If found.TryGetValue(item.NextcloudFileId, coordinate) Then
-                        item.SetServerCoordinates(coordinate.Latitude, coordinate.Longitude)
+                Dim changed = False
+                For Each item In asked
+                    Dim answer As (HasLocation As Boolean, Latitude As Double, Longitude As Double)
+                    If found.TryGetValue(item.NextcloudFileId, answer) AndAlso
+                       item.ApplyConfirmedServerLocation(answer.HasLocation, answer.Latitude, answer.Longitude) Then
+                        changed = True
                     End If
                 Next
+                If Not changed Then Return
                 points = Await Task.Run(Function() BuildMapPoints(candidates))
                 If version <> Volatile.Read(_mapRefreshVersion) Then Return
                 MapPoints = points
