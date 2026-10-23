@@ -41,6 +41,9 @@
 
 ### Fixes
 
+- **White stays white in the colour mixer:** lowering the luminance of a colour such as yellow
+  or green no longer tints bright clouds, white walls or blown highlights.
+
 - **Collage layout buttons:** the selected layout is highlighted again. Before, "Grid" stayed
   highlighted, and with "Hero" the hint and the choice of the hero position did not appear.
   

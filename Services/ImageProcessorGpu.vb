@@ -1315,7 +1315,7 @@ half4 main(float2 p) {
             float chromaC = sat * (1.0 - abs(2.0 * lum - 1.0));
             float gateCs = min(1.0, chromaC / 0.2);
             gateCs = gateCs * gateCs * (3.0 - 2.0 * gateCs);
-            float chromaW = min(1.0, sat / 0.1);
+            float chromaW = min(1.0, (lum > 0.5 ? chromaC : sat) / 0.1);
             chromaW = chromaW * chromaW * (3.0 - 2.0 * chromaW);
             h = mod(h + hueShift * gateCs + 360.0, 360.0);
             sat = satGain(sat, satShift * gateCs / 100.0);

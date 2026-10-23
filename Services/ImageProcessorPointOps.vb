@@ -2840,10 +2840,18 @@ Namespace Services
                                 ' alte S-Tor: ein C-Tor hebelte gemessen die dunklen Luminanzbaender
                                 ' (Aqua -43) mit aus und kippte die Tonlage (P50 0,091 -> 0,110). In
                                 ' den Mitten ist C ~ S, dort aendert sich praktisch nichts.
+                                '
+                                ' In den LICHTERN aber doch das C-Tor: dort ist S = d / (2 - max - min),
+                                ' der Nenner geht an Weiss gegen 0, und ein fast weisser Punkt hat
+                                ' S = 1. Mit dem S-Tor faerbte die Luminanz eines Bands ihn kraeftig
+                                ' ein: (255, 255, 254) mit Gelb-Luminanz -100 wurde (255, 255, 131),
+                                ' helle Wolken und ausgefressene Lichter wurden bunt. Ab L = 0,5 gilt
+                                ' deshalb C; dort ist C = S, der Uebergang ist stetig, die Tiefen
+                                ' bleiben beim S-Tor.
                                 Dim chromaC = sat * (1.0 - Math.Abs(2.0 * lum - 1.0))
                                 Dim gateCs = Math.Min(1.0, chromaC / 0.2)
                                 gateCs = gateCs * gateCs * (3.0 - 2.0 * gateCs)
-                                Dim chromaW = Math.Min(1.0, sat / 0.1)
+                                Dim chromaW = Math.Min(1.0, If(lum > 0.5, chromaC, sat) / 0.1)
                                 chromaW = chromaW * chromaW * (3.0 - 2.0 * chromaW)
                                 h = (h + hueShift * gateCs + 360.0) Mod 360.0
                                 sat = ApplyHslSaturationGain(sat, satShift * gateCs / 100.0)
