@@ -6183,6 +6183,9 @@
   <data name="Gepr_ft_es_l_uft_kein_Modell_darauf_0_34e7178e" xml:space="preserve">
     <value>Kontrollert: ingen modell kjører på det ({0}).</value>
   </data>
+  <data name="Gepr_ft_0_rechnet_wie_der_Prozessor_aber_langsam_14e19046" xml:space="preserve">
+    <value>Kontrollert: {0} regner som prosessoren, men tregere ({1} ms mot {2} ms). Bildebehandlingen bruker prosessoren.</value>
+  </data>
   <data name="FerrumPix_wurde_beim_letzten_Mal_mitten_in_der_A_d8285ad4" xml:space="preserve">
     <value>FerrumPix ble sist avsluttet midt i arbeidet til grafikkortet. Bryteren er derfor slått av; slå den på igjen for å prøve på nytt.</value>
   </data>

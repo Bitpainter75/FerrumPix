@@ -3041,6 +3041,9 @@ Namespace ViewModels
                 Select Case check.State
                     Case ImageProcessor.GpuCheckState.Works
                         Return String.Format(LocalizationService.T("Geprüft: {0} rechnet wie der Prozessor."), check.Renderer)
+                    Case ImageProcessor.GpuCheckState.Slower
+                        Return String.Format(LocalizationService.T("Geprüft: {0} rechnet wie der Prozessor, aber langsamer ({1} ms gegen {2} ms). Die Bildbearbeitung rechnet auf dem Prozessor."),
+                                             check.Renderer, check.GpuMilliseconds, check.CpuMilliseconds)
                     Case ImageProcessor.GpuCheckState.Deviates
                         Return String.Format(LocalizationService.T("Geprüft: {0} weicht um {1} Tonstufen vom Prozessor ab. Die Bildbearbeitung rechnet auf dem Prozessor."),
                                              check.Renderer, check.MaxDeviation)
@@ -4340,6 +4343,11 @@ Namespace ViewModels
             _videoHardwareAcceleration = _appSettings.VideoHardwareAcceleration
             _gpuAccelerationEnabled = _appSettings.GpuAccelerationEnabled
             _gpuImageProcessing = _appSettings.GpuImageProcessing
+            ' Der Tempovergleich der Karte kommt nach der Selbstpruefung im Hintergrund.
+            AddHandler ImageProcessor.GpuCheckChanged,
+                Sub(sender As Object, e As EventArgs)
+                    Avalonia.Threading.Dispatcher.UIThread.Post(Sub() Me.RaisePropertyChanged(NameOf(GpuImageProcessingStatusText)))
+                End Sub
             _gpuAccelerationDevice = If(_appSettings.GpuAccelerationDevice, "")
             _faceRecognitionEnabled = _appSettings.FaceRecognitionEnabled
             _photoMapEnabled = _appSettings.PhotoMapEnabled

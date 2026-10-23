@@ -6185,6 +6185,9 @@
   <data name="Gepr_ft_es_l_uft_kein_Modell_darauf_0_34e7178e" xml:space="preserve">
     <value>Verificato: nessun modello vi funziona ({0}).</value>
   </data>
+  <data name="Gepr_ft_0_rechnet_wie_der_Prozessor_aber_langsam_14e19046" xml:space="preserve">
+    <value>Verificato: {0} calcola come il processore, ma più lentamente ({1} ms contro {2} ms). L'elaborazione delle immagini usa il processore.</value>
+  </data>
   <data name="FerrumPix_wurde_beim_letzten_Mal_mitten_in_der_A_d8285ad4" xml:space="preserve">
     <value>L'ultima volta FerrumPix si è chiuso durante un lavoro della scheda grafica. Per questo l'interruttore è spento; riattivalo per riprovare.</value>
   </data>

@@ -6180,6 +6180,9 @@
   <data name="Gepr_ft_es_l_uft_kein_Modell_darauf_0_34e7178e" xml:space="preserve">
     <value>선택함: 여기에서는 모델이 실행되지 않습니다 ({0}).</value>
   </data>
+  <data name="Gepr_ft_0_rechnet_wie_der_Prozessor_aber_langsam_14e19046" xml:space="preserve">
+    <value>확인됨: {0}은(는) 프로세서와 같은 결과를 내지만 더 느립니다({1} ms 대 {2} ms). 이미지 편집은 프로세서에서 계산합니다.</value>
+  </data>
   <data name="FerrumPix_wurde_beim_letzten_Mal_mitten_in_der_A_d8285ad4" xml:space="preserve">
     <value>FerrumPix가 지난번 그래픽 카드 작업 중에 종료되었습니다. 그래서 스위치가 꺼져 있습니다. 다시 시도하려면 다시 켜십시오.</value>
   </data>

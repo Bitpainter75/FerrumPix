@@ -6180,6 +6180,9 @@
   <data name="Gepr_ft_es_l_uft_kein_Modell_darauf_0_34e7178e" xml:space="preserve">
     <value>İşaretli: üzerinde hiçbir model çalışmıyor ({0}).</value>
   </data>
+  <data name="Gepr_ft_0_rechnet_wie_der_Prozessor_aber_langsam_14e19046" xml:space="preserve">
+    <value>Denetlendi: {0} işlemci gibi hesaplıyor, ancak daha yavaş ({1} ms karşı {2} ms). Görüntü düzenleme işlemcide yapılır.</value>
+  </data>
   <data name="FerrumPix_wurde_beim_letzten_Mal_mitten_in_der_A_d8285ad4" xml:space="preserve">
     <value>FerrumPix geçen sefer ekran kartının çalışması sırasında kapandı. Bu nedenle anahtar kapalı; yeniden denemek için tekrar açın.</value>
   </data>

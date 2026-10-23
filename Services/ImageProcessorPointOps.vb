@@ -2049,6 +2049,17 @@ Namespace Services
             Public MeanA As Single()
             Public MeanB As Single()
             Public Smooth As Single()
+            Private _shaderValues As Short()
+            Private ReadOnly _shaderValuesLock As New Object()
+
+            ''' <summary>Die Werte fuer den Shader der Karte, einmal je Basis gewandelt
+            ''' (<paramref name="encode"/> bekommt Breite, Hoehe und die Basis).</summary>
+            Public Function ShaderValues(encode As Func(Of Integer, Integer, LocalToneBase, Short())) As Short()
+                SyncLock _shaderValuesLock
+                    If _shaderValues Is Nothing Then _shaderValues = encode(Width, Height, Me)
+                    Return _shaderValues
+                End SyncLock
+            End Function
 
             Public Sub Sample(x As Integer, y As Integer, gray As Single, ByRef baseValue As Single, ByRef smoothValue As Single)
                 Dim gx = Math.Max(0.0F, Math.Min(Width - 1.0F, (x - OriginX + 0.5F) / StepSize - 0.5F))
@@ -2173,6 +2184,77 @@ Namespace Services
             Dim gridVariance = Math.Max(0.0, (sigmaPixels * sigmaPixels - (CDbl(stepSize) * stepSize - 1.0) / 12.0) /
                                              (CDbl(stepSize) * stepSize))
             Dim smoothRadius = FractionalBoxRadiusForVariance(gridVariance / 3.0)
+
+            ' Alles ab hier haengt nur am Raster und an den Radien. Beim Ziehen von Lichtern,
+            ' Tiefen, Weiss, Schwarz oder Dynamik bleibt das Raster Bit fuer Bit gleich (die Stufen
+            ' vor den Tonzonen stecken schon darin), und das Glaetten waere dieselbe Rechnung noch
+            ' einmal: gemessen gut drei Viertel der Basis.
+            Dim cached = FindLocalToneBase(gray, coverage, gw, gh, stepSize, originX, originY, radius, smoothRadius)
+            If cached IsNot Nothing Then Return cached
+            Dim built = SmoothLocalToneBase(gray, coverage, gw, gh, stepSize, originX, originY, radius, smoothRadius)
+            RememberLocalToneBase(gray, coverage, radius, smoothRadius, built)
+            Return built
+        End Function
+
+        ''' <summary>Ein gemerktes Ergebnis der Basisschicht samt dem Raster, aus dem es entstand.</summary>
+        Private NotInheritable Class LocalToneBaseEntry
+            Public Gray As Single()
+            Public Coverage As Single()
+            Public Radius As Double
+            Public SmoothRadius As Double
+            Public Result As LocalToneBase
+        End Class
+
+        ''' <summary>Wenige Eintraege, weil Zugvorschau, volle Vorschau und Zoom-Detail
+        ''' abwechselnd mit verschiedenen Rastern kommen.</summary>
+        Private Const LocalToneBaseCacheSize As Integer = 4
+        Private Shared ReadOnly _localToneBaseCache As New List(Of LocalToneBaseEntry)()
+        Private Shared ReadOnly _localToneBaseCacheLock As New Object()
+
+        ''' <summary>Das gemerkte Ergebnis fuer genau dieses Raster, oder Nothing. Verglichen wird
+        ''' jeder Wert, nicht ein Fingerabdruck: ein Treffer liefert so dasselbe wie die Rechnung.</summary>
+        Private Shared Function FindLocalToneBase(gray As Single(), coverage As Single(), gw As Integer, gh As Integer,
+                                                  stepSize As Integer, originX As Integer, originY As Integer,
+                                                  radius As Double, smoothRadius As Double) As LocalToneBase
+            SyncLock _localToneBaseCacheLock
+                For i = 0 To _localToneBaseCache.Count - 1
+                    Dim entry = _localToneBaseCache(i)
+                    Dim r = entry.Result
+                    If r.Width <> gw OrElse r.Height <> gh OrElse r.StepSize <> stepSize OrElse
+                       r.OriginX <> originX OrElse r.OriginY <> originY OrElse
+                       entry.Radius <> radius OrElse entry.SmoothRadius <> smoothRadius Then Continue For
+                    If Not SameValues(entry.Gray, gray) OrElse Not SameValues(entry.Coverage, coverage) Then Continue For
+                    ' Nach vorn: die Eintraege stehen nach letzter Nutzung.
+                    _localToneBaseCache.RemoveAt(i)
+                    _localToneBaseCache.Insert(0, entry)
+                    Return r
+                Next
+            End SyncLock
+            Return Nothing
+        End Function
+
+        Private Shared Sub RememberLocalToneBase(gray As Single(), coverage As Single(), radius As Double, smoothRadius As Double,
+                                                 result As LocalToneBase)
+            SyncLock _localToneBaseCacheLock
+                _localToneBaseCache.Insert(0, New LocalToneBaseEntry With {
+                    .Gray = gray, .Coverage = coverage, .Radius = radius, .SmoothRadius = smoothRadius, .Result = result})
+                If _localToneBaseCache.Count > LocalToneBaseCacheSize Then _localToneBaseCache.RemoveAt(_localToneBaseCache.Count - 1)
+            End SyncLock
+        End Sub
+
+        Private Shared Function SameValues(a As Single(), b As Single()) As Boolean
+            If a.Length <> b.Length Then Return False
+            For i = 0 To a.Length - 1
+                If a(i) <> b(i) Then Return False
+            Next
+            Return True
+        End Function
+
+        ''' <summary>Der Teil der Basisschicht, der nur am Raster haengt: Fuehrungsfilter und Glaettung.
+        ''' Die Eingaben werden nicht veraendert (der Zwischenspeicher haelt sie).</summary>
+        Private Shared Function SmoothLocalToneBase(gray As Single(), coverage As Single(), gw As Integer, gh As Integer,
+                                                    stepSize As Integer, originX As Integer, originY As Integer,
+                                                    radius As Double, smoothRadius As Double) As LocalToneBase
             Dim squares = New Single(gray.Length - 1) {}
             For i = 0 To gray.Length - 1
                 squares(i) = gray(i) * gray(i)

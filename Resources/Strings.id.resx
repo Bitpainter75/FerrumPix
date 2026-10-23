@@ -6180,6 +6180,9 @@
   <data name="Gepr_ft_es_l_uft_kein_Modell_darauf_0_34e7178e" xml:space="preserve">
     <value>Dicentang: tidak ada model yang berjalan di atasnya ({0}).</value>
   </data>
+  <data name="Gepr_ft_0_rechnet_wie_der_Prozessor_aber_langsam_14e19046" xml:space="preserve">
+    <value>Diperiksa: {0} menghitung seperti prosesor, tetapi lebih lambat ({1} ms berbanding {2} ms). Penyuntingan gambar memakai prosesor.</value>
+  </data>
   <data name="FerrumPix_wurde_beim_letzten_Mal_mitten_in_der_A_d8285ad4" xml:space="preserve">
     <value>FerrumPix terakhir kali tertutup di tengah pekerjaan kartu grafis. Karena itu sakelar dimatikan; nyalakan lagi untuk mencoba kembali.</value>
   </data>

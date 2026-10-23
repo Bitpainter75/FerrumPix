@@ -49,7 +49,8 @@ Namespace Services
                 If source.ColorType <> SKColorType.Bgra8888 AndAlso source.ColorType <> SKColorType.Rgba8888 Then Return Nothing
                 If source.AlphaType = SKAlphaType.Unpremul Then Return Nothing
                 If DetailStageShadersOnRaster Then Return New GpuDetailSession(raster:=True)
-                If Not GpuImageService.Enabled Then Return Nothing
+                If Not GpuImageService.Enabled OrElse _gpuForcedOffOnThisThread Then Return Nothing
+                If Not WorthGpu(source) Then Return Nothing
                 If Not GpuImageService.IsAvailable Then Return Nothing
                 If LastGpuCheck.State = GpuCheckState.Untested Then CheckGpuImageProcessing()
                 If LastGpuCheck.State <> GpuCheckState.Works Then Return Nothing

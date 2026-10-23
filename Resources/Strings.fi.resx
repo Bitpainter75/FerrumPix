@@ -6183,6 +6183,9 @@
   <data name="Gepr_ft_es_l_uft_kein_Modell_darauf_0_34e7178e" xml:space="preserve">
     <value>Tarkistettu: malli ei toimi sillä ({0}).</value>
   </data>
+  <data name="Gepr_ft_0_rechnet_wie_der_Prozessor_aber_langsam_14e19046" xml:space="preserve">
+    <value>Tarkistettu: {0} laskee kuten suoritin, mutta hitaammin ({1} ms vastaan {2} ms). Kuvankäsittely käyttää suoritinta.</value>
+  </data>
   <data name="FerrumPix_wurde_beim_letzten_Mal_mitten_in_der_A_d8285ad4" xml:space="preserve">
     <value>FerrumPix sulkeutui viime kerralla kesken näytönohjaimen työn. Kytkin on siksi pois päältä; kytke se uudelleen päälle yrittääksesi uudestaan.</value>
   </data>

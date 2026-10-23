@@ -6183,6 +6183,9 @@
   <data name="Gepr_ft_es_l_uft_kein_Modell_darauf_0_34e7178e" xml:space="preserve">
     <value>Kontrolleret: der kører ingen model på det ({0}).</value>
   </data>
+  <data name="Gepr_ft_0_rechnet_wie_der_Prozessor_aber_langsam_14e19046" xml:space="preserve">
+    <value>Kontrolleret: {0} regner som processoren, men langsommere ({1} ms mod {2} ms). Billedredigeringen bruger processoren.</value>
+  </data>
   <data name="FerrumPix_wurde_beim_letzten_Mal_mitten_in_der_A_d8285ad4" xml:space="preserve">
     <value>FerrumPix blev sidst lukket midt i grafikkortets arbejde. Kontakten er derfor slået fra; slå den til igen for at prøve igen.</value>
   </data>

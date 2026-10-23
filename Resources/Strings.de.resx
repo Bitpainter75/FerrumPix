@@ -6182,6 +6182,9 @@
   <data name="Gepr_ft_es_l_uft_kein_Modell_darauf_0_34e7178e" xml:space="preserve">
     <value>Geprüft: es läuft kein Modell darauf ({0}).</value>
   </data>
+  <data name="Gepr_ft_0_rechnet_wie_der_Prozessor_aber_langsam_14e19046" xml:space="preserve">
+    <value>Geprüft: {0} rechnet wie der Prozessor, aber langsamer ({1} ms gegen {2} ms). Die Bildbearbeitung rechnet auf dem Prozessor.</value>
+  </data>
   <data name="FerrumPix_wurde_beim_letzten_Mal_mitten_in_der_A_d8285ad4" xml:space="preserve">
     <value>FerrumPix wurde beim letzten Mal mitten in der Arbeit der Grafikkarte beendet. Der Schalter ist deshalb aus; zum erneuten Versuch wieder einschalten.</value>
   </data>

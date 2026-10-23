@@ -6183,6 +6183,9 @@
   <data name="Gepr_ft_es_l_uft_kein_Modell_darauf_0_34e7178e" xml:space="preserve">
     <value>Sprawdzono: model na niej nie działa ({0}).</value>
   </data>
+  <data name="Gepr_ft_0_rechnet_wie_der_Prozessor_aber_langsam_14e19046" xml:space="preserve">
+    <value>Sprawdzono: {0} liczy tak jak procesor, ale wolniej ({1} ms wobec {2} ms). Obróbka obrazu korzysta z procesora.</value>
+  </data>
   <data name="FerrumPix_wurde_beim_letzten_Mal_mitten_in_der_A_d8285ad4" xml:space="preserve">
     <value>FerrumPix został ostatnio zamknięty w trakcie pracy karty graficznej. Dlatego przełącznik jest wyłączony; włącz go ponownie, aby spróbować jeszcze raz.</value>
   </data>

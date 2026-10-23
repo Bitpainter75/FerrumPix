@@ -17,8 +17,8 @@
 - **Smoother sliders in the editor.** The short freeze when you first grab a slider on a large
   picture is gone, and the picture follows the slider more closely. When zoomed in, the sharp
   detail view no longer keeps recalculating in the background while you drag; it appears as soon
-  as you hold still. Histogram and tone curve are now updated in the background, and highlights
-  and shadows are a little quicker to calculate.
+  as you hold still. Histogram and tone curve are now updated in the background, and dragging
+  highlights, shadows, whites, blacks or vibrance is noticeably quicker.
 
 - **Graphics card for image editing (try it out).** A new switch under Settings, Performance lets
   the graphics card calculate colour and tones as well as all detail and effect tools such as
@@ -27,8 +27,9 @@
   sharpening with the deconvolution method no longer takes seconds. It is off by default; when you
   turn it on, FerrumPix first checks that the card calculates the same picture as the processor
   and otherwise stays with the processor. Curves, colour grading, point colour and LUTs are
-  included. Without a real graphics card, for example in a virtual machine, and after the
-  graphics driver hung or crashed, FerrumPix also stays with the processor.
+  included. Without a real graphics card, for example in a virtual machine, with a graphics card
+  that turns out slower than the processor, and after the graphics driver hung or crashed,
+  FerrumPix also stays with the processor.
 
 - **Developed RAWs are marked in the viewer too.** As in the editor, the file name at the top of
   the window turns to the accent colour when the viewer shows a RAW developed by FerrumPix rather

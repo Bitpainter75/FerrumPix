@@ -6183,6 +6183,9 @@
   <data name="Gepr_ft_es_l_uft_kein_Modell_darauf_0_34e7178e" xml:space="preserve">
     <value>已检查：模型无法在其上运行（{0}）。</value>
   </data>
+  <data name="Gepr_ft_0_rechnet_wie_der_Prozessor_aber_langsam_14e19046" xml:space="preserve">
+    <value>已检查：{0} 的计算结果与处理器相同，但速度更慢（{1} 毫秒对 {2} 毫秒）。图像编辑使用处理器计算。</value>
+  </data>
   <data name="FerrumPix_wurde_beim_letzten_Mal_mitten_in_der_A_d8285ad4" xml:space="preserve">
     <value>FerrumPix 上次在显卡工作过程中退出。因此该开关已关闭；如需重试，请重新打开。</value>
   </data>

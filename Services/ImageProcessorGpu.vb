@@ -47,6 +47,9 @@ Namespace Services
             Unavailable
             ''' <summary>Die Karte rechnet, aber weiter vom Prozessor entfernt als erlaubt.</summary>
             Deviates
+            ''' <summary>Die Karte rechnet richtig, aber langsamer als der Prozessor (schwache
+            ''' Grafik im Prozessor, gemessen von <see cref="MeasureGpuSpeed"/>).</summary>
+            Slower
         End Enum
 
         Friend Structure GpuCheckResult
@@ -54,7 +57,36 @@ Namespace Services
             Public Renderer As String
             Public Detail As String
             Public MaxDeviation As Integer
+            ''' <summary>Aus dem Tempovergleich, 0 solange er nicht gelaufen ist.</summary>
+            Public GpuMilliseconds As Integer
+            Public CpuMilliseconds As Integer
         End Structure
+
+        ''' <summary>Meldet, dass sich <see cref="LastGpuCheck"/> geaendert hat; der Tempovergleich
+        ''' laeuft nach der Selbstpruefung im Hintergrund und kommt spaeter. Kommt auf einem
+        ''' beliebigen Faden.</summary>
+        Friend Shared Event GpuCheckChanged As EventHandler
+
+        ''' <summary>Unter dieser Bildgroesse rechnet der Prozessor: Hoch- und Zurueckladen und
+        ''' die Schlange des einen GPU-Fadens kosten mehr, als die Karte gewinnt. Betrifft vor
+        ''' allem bearbeitete Miniaturen (480 Punkte breit, rund 0,15 MP), die sonst alle
+        ''' nacheinander ueber den GPU-Faden liefen. Die Schwelle liegt bewusst knapp darueber, damit
+        ''' Ausschnitte des Editors auf der Karte bleiben. Der Pruefstand setzt den Wert fuer seine
+        ''' kleinen Pruefflaechen auf 0.</summary>
+        Friend Shared GpuMinimumPixels As Integer = 400000
+
+        ''' <summary>Fuer den Tempovergleich: auf diesem Faden die Prozessorkette erzwingen, auch
+        ''' wenn der Schalter an ist.</summary>
+        <ThreadStatic> Private Shared _gpuForcedOffOnThisThread As Boolean
+
+        Private Shared Function WorthGpu(source As SKBitmap) As Boolean
+            Return CLng(source.Width) * source.Height >= GpuMinimumPixels
+        End Function
+
+        ''' <summary>So viel langsamer als der Prozessor darf die Karte sein, bevor sie nicht genommen
+        ''' wird. Etwas Spielraum, weil der Vergleich auf einem Probebild laeuft und der Prozessor
+        ''' daneben noch anderes tut.</summary>
+        Private Const GpuSlowerFactor As Double = 1.25
 
         ''' <summary>Hoechste Abweichung eines Kanals in Tonstufen, die die Selbstpruefung noch
         ''' annimmt. Die Kette selbst kommt an Fotos auf eine (siehe Kopf), an der kuenstlichen
@@ -80,11 +112,85 @@ Namespace Services
         ''' Sitzung: eine Karte, die anders rechnet, ist schlechter als keine. Das Ergebnis steht
         ''' immer im Diagnoseprotokoll, ein Fehlschlag zusaetzlich in der Fehlerdatei.</summary>
         Friend Shared Function CheckGpuImageProcessing() As GpuCheckResult
+            Dim result As GpuCheckResult
             SyncLock _gpuCheckLock
                 _gpuCheck = RunGpuCheck()
-                Return _gpuCheck
+                result = _gpuCheck
             End SyncLock
+            RaiseEvent GpuCheckChanged(Nothing, EventArgs.Empty)
+            If result.State = GpuCheckState.Works Then
+                Dim ignored = Task.Run(Sub() MeasureGpuSpeed(result))
+            End If
+            Return result
         End Function
+
+        ''' <summary>Vergleicht nach bestandener Selbstpruefung das Tempo: ein Probebild von rund 3 MP
+        ''' (so gross wie die Vorschau beim Ziehen) mit einem ueblichen Rezept aus Ton, Klarheit,
+        ''' Rauschminderung und Schaerfe, einmal ueber die Karte samt Hoch- und Zurueckladen,
+        ''' einmal auf dem Prozessor, je das bessere von zwei Laeufen nach einem Aufwaermlauf. Im
+        ''' Hintergrund, damit das erste Bild nicht darauf wartet; bis dahin rechnet die Karte.
+        ''' Anderswo gemessen: integrierte Grafik kann deutlich langsamer sein als der Prozessor
+        ''' (Intel GT1 15 s gegen 3 s, Radeon 780M 3,6 s gegen 1,9 s fuer denselben Export).</summary>
+        Private Shared Sub MeasureGpuSpeed(checkedWith As GpuCheckResult)
+            Try
+                Const W = 2048, H = 1365
+                Using src = New SKBitmap(New SKImageInfo(W, H, SKColorType.Bgra8888, SKAlphaType.Premul))
+                    Dim pixels = src.GetPixelSpan()
+                    Dim buffer(pixels.Length - 1) As Byte
+                    Dim rnd As New Random(5)
+                    For y = 0 To H - 1
+                        For x = 0 To W - 1
+                            Dim o = (y * W + x) * 4
+                            Dim baseValue = 40 + (x * 150) \ W + (y * 40) \ H
+                            buffer(o) = CByte(Math.Min(255, baseValue + rnd.Next(12)))
+                            buffer(o + 1) = CByte(Math.Min(255, baseValue \ 2 + 60 + rnd.Next(12)))
+                            buffer(o + 2) = CByte(Math.Min(255, 220 - baseValue \ 2 + rnd.Next(12)))
+                            buffer(o + 3) = 255
+                        Next
+                    Next
+                    Marshal.Copy(buffer, 0, src.GetPixels(), buffer.Length)
+                    Dim adj As New ImageAdjustments With {
+                        .Exposure = 0.3F, .Contrast = 15, .Highlights = -40, .ShadowsLevel = 30, .Vibrance = 20,
+                        .Clarity = 20, .NoiseReduction = 30, .Sharpness = 40}
+                    Dim run = Function(cpu As Boolean) As Long
+                                  _gpuForcedOffOnThisThread = cpu
+                                  Try
+                                      Dim clock = Diagnostics.Stopwatch.StartNew()
+                                      Using result = ApplyPixelAdjustmentStages(src, adj)
+                                      End Using
+                                      Return clock.ElapsedMilliseconds
+                                  Finally
+                                      _gpuForcedOffOnThisThread = False
+                                  End Try
+                              End Function
+                    Dim jobsBefore = GpuImageService.CompletedJobs
+                    run(False)
+                    run(True)
+                    Dim gpuMs = Math.Min(run(False), run(False))
+                    Dim cpuMs = Math.Min(run(True), run(True))
+                    ' Lief der Kartenweg gar nicht ueber die Karte (Rueckfall), sagt der Vergleich nichts.
+                    If GpuImageService.CompletedJobs = jobsBefore Then Return
+                    Dim slower = gpuMs > cpuMs * GpuSlowerFactor
+                    SyncLock _gpuCheckLock
+                        ' Inzwischen neu geprueft: dieses Ergebnis gehoert zu einem alten Stand.
+                        If _gpuCheck.State <> GpuCheckState.Works OrElse
+                           Not String.Equals(_gpuCheck.Renderer, checkedWith.Renderer, StringComparison.Ordinal) Then Return
+                        _gpuCheck.GpuMilliseconds = CInt(gpuMs)
+                        _gpuCheck.CpuMilliseconds = CInt(cpuMs)
+                        If slower Then
+                            _gpuCheck.State = GpuCheckState.Slower
+                            _gpuCheck.Detail = $"{_gpuCheck.Renderer} rechnet richtig, aber langsamer als der Prozessor ({gpuMs} gegen {cpuMs} ms am Probebild)."
+                        End If
+                    End SyncLock
+                    DiagnosticLogService.LogAlways("GpuImage",
+                        $"Tempovergleich am Probebild {W}x{H}: Grafikkarte {gpuMs} ms, Prozessor {cpuMs} ms" &
+                        If(slower, "; die Karte ist langsamer, die Bildbearbeitung rechnet auf dem Prozessor", ""))
+                    RaiseEvent GpuCheckChanged(Nothing, EventArgs.Empty)
+                End Using
+            Catch ex As Exception
+                DiagnosticLogService.LogException("GpuImage", ex)
+            End Try
+        End Sub
 
         Private Shared Function RunGpuCheck() As GpuCheckResult
             Dim result As New GpuCheckResult With {.Renderer = "", .Detail = ""}
@@ -194,7 +300,8 @@ Namespace Services
         ''' bereitsteht, die Selbstpruefung bestanden ist und der Shader die Kette kann. Sonst
         ''' Nothing, und der Aufrufer rechnet auf dem Prozessor.</summary>
         Private Shared Function TryRunPointOpChainOnGpu(source As SKBitmap, chain As PointOpChain) As SKBitmap
-            If Not GpuImageService.Enabled Then Return Nothing
+            If Not GpuImageService.Enabled OrElse _gpuForcedOffOnThisThread Then Return Nothing
+            If Not WorthGpu(source) Then Return Nothing
             Dim reason As String = Nothing
             If Not CanRunPointOpChainShader(source, chain, reason) Then
                 NoteGpuFallback("Punktkette, Stufe ohne Shader: " & reason)
@@ -264,25 +371,37 @@ Namespace Services
         Private Shared Function BuildLocalBaseImage(localBase As LocalToneBase) As SKImage
             Dim w = If(localBase Is Nothing, 1, localBase.Width)
             Dim h = If(localBase Is Nothing, 1, localBase.Height)
-            Dim data(w * h * 3 * 4 - 1) As Short
-            Dim one = BitConverter.HalfToInt16Bits(CType(1.0F, Half))
-            Dim put = Sub(block As Integer, values As Single())
-                          For i = 0 To w * h - 1
-                              Dim o = (block * w * h + i) * 4
-                              Dim v = If(values Is Nothing, 0.0F, values(i))
-                              Dim hi = CType(v, Half)
-                              data(o) = BitConverter.HalfToInt16Bits(hi)
-                              data(o + 1) = BitConverter.HalfToInt16Bits(CType(v - CSng(hi), Half))
-                              data(o + 3) = one
-                          Next
-                      End Sub
-            put(0, localBase?.MeanA)
-            put(1, localBase?.MeanB)
-            put(2, localBase?.Smooth)
+            ' Die Wandlung in halbe Gleitkomma kostete gemessen rund 30 ms je Bild (Raster mit 1024
+            ' Feldern lange Kante). Die Basis bleibt beim Ziehen vieler Regler dieselbe
+            ' (FindLocalToneBase), deshalb liegen die Werte an ihr und werden nur einmal gewandelt.
+            Dim data = If(localBase Is Nothing, EncodeLocalBase(1, 1, Nothing), localBase.ShaderValues(AddressOf EncodeLocalBase))
             Using bitmap = New SKBitmap(New SKImageInfo(w, h * 3, SKColorType.RgbaF16, SKAlphaType.Premul))
                 Marshal.Copy(data, 0, bitmap.GetPixels(), data.Length)
                 Return SKImage.FromBitmap(bitmap)
             End Using
+        End Function
+
+        ''' <summary>Die drei Bloecke der Basis (A, B, geglaettetes Grau) als halbe Gleitkomma, je
+        ''' Wert zwei Kanaele (grob und Rest). Zeilenweise parallel.</summary>
+        Private Shared Function EncodeLocalBase(w As Integer, h As Integer, localBase As LocalToneBase) As Short()
+            Dim data(w * h * 3 * 4 - 1) As Short
+            Dim one = BitConverter.HalfToInt16Bits(CType(1.0F, Half))
+            Dim blocks = {localBase?.MeanA, localBase?.MeanB, localBase?.Smooth}
+            Parallel.For(0, 3 * h,
+                Sub(blockRow)
+                    Dim block = blockRow \ h
+                    Dim values = blocks(block)
+                    Dim first = (blockRow Mod h) * w
+                    For i = first To first + w - 1
+                        Dim o = (block * w * h + i) * 4
+                        Dim v = If(values Is Nothing, 0.0F, values(i))
+                        Dim hi = CType(v, Half)
+                        data(o) = BitConverter.HalfToInt16Bits(hi)
+                        data(o + 1) = BitConverter.HalfToInt16Bits(CType(v - CSng(hi), Half))
+                        data(o + 3) = one
+                    Next
+                End Sub)
+            Return data
         End Function
 
         ''' <summary>Schreibt einen Rueckfall ins Diagnoseprotokoll, aber nur bei neuem Grund - beim
