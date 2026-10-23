@@ -59,8 +59,9 @@ Namespace Services
 
             ''' <summary>Auf dem GPU-Faden, oder im Pruefmodus direkt hier mit Skia auf dem Prozessor
             ''' (GRContext dann Nothing, die Flaechen liegen im Speicher).</summary>
-            Private Function Run(Of T)(work As Func(Of GRContext, T), ByRef result As T) As Boolean
-                If Not _raster Then Return GpuImageService.TryRun(work, result)
+            Private Function Run(Of T)(work As Func(Of GRContext, T), ByRef result As T,
+                                       Optional owned As IDisposable = Nothing) As Boolean
+                If Not _raster Then Return GpuImageService.TryRun(work, result, owned)
                 Try
                     result = work(Nothing)
                     Return True
@@ -68,6 +69,8 @@ Namespace Services
                     DiagnosticLogService.LogException("GpuImage", ex)
                     result = Nothing
                     Return False
+                Finally
+                    owned?.Dispose()
                 End Try
             End Function
 
@@ -75,31 +78,47 @@ Namespace Services
             ''' auf dem Prozessor, falls das Bild noch nicht oben liegt. False, wenn die Karte
             ''' scheitert; das Bild liegt dann unveraendert da, wo es vorher lag.</summary>
             Public Function TryApply(current As SKBitmap, stage As Func(Of GRContext, SKImage, SKSurface)) As Boolean
-                Dim ok As Boolean
                 ' Liegt das Ergebnis der Punktkette noch auf der Karte und ist es genau dieses Bild,
                 ' wird es uebernommen statt hochgeladen (auf dem rufenden Faden geholt, die Ablage
                 ' gilt je Faden).
                 Dim handover = If(_surface Is Nothing AndAlso Not _raster, TakePointOpHandover(current), Nothing)
                 ' Die Stichproben fuer die Pruefung beim Zurueckholen, vom Bild, das hinaufgeht.
                 If _surface Is Nothing AndAlso Not _raster Then _uploadSample = SampleForGpuResult(current)
+                ' Hinauf geht eine eigene Kopie, nicht current: kehrt TryRun nach Ablauf der Frist
+                ' zurueck, gibt der Aufrufer current frei, waehrend der Auftrag noch liest.
+                Dim info = current.Info
+                Dim uploadImage = If(_surface Is Nothing AndAlso handover Is Nothing, SnapshotForGpu(current), Nothing)
+                ' Der Auftrag schreibt nicht in _surface, sondern gibt die neue Flaeche zurueck:
+                ' kommt er erst nach Ablauf der Frist zurueck, gibt der Dienst sie auf dem GPU-Faden
+                ' frei, und die Sitzung bleibt bei ihrem alten Stand.
+                Dim before = _surface
+                Dim nextSurface As SKSurface = Nothing
                 Dim done = Run(
                     Function(gr)
-                        If _surface Is Nothing Then
-                            _info = current.Info
-                            _surface = If(handover, Upload(gr, current))
+                        Dim surface = before
+                        If surface Is Nothing Then
+                            surface = If(handover, Upload(gr, uploadImage))
                             handover = Nothing
                         End If
-                        Using snapshot = _surface.Snapshot()
-                            Dim nextSurface = stage(gr, snapshot)
-                            If nextSurface Is Nothing Then Throw New InvalidOperationException("Zielflaeche auf der Grafikkarte nicht anlegbar.")
-                            _surface.Dispose()
-                            _surface = nextSurface
-                        End Using
-                        Return True
-                    End Function, ok)
+                        Try
+                            Using snapshot = surface.Snapshot()
+                                Dim staged = stage(gr, snapshot)
+                                If staged Is Nothing Then Throw New InvalidOperationException("Zielflaeche auf der Grafikkarte nicht anlegbar.")
+                                surface.Dispose()
+                                Return staged
+                            End Using
+                        Catch
+                            ' Eine eben hochgeladene Flaeche gehoert noch niemandem.
+                            If surface IsNot before Then surface.Dispose()
+                            Throw
+                        End Try
+                    End Function, nextSurface, uploadImage)
                 ' Kam der Lauf gar nicht erst an (Karte verloren), liegt die Uebergabe noch hier.
                 If handover IsNot Nothing Then DisposeOnGpu(handover)
-                Return done AndAlso ok
+                If Not done OrElse nextSurface Is Nothing Then Return False
+                If before Is Nothing Then _info = info
+                _surface = nextSurface
+                Return True
             End Function
 
             ''' <summary>Holt das Bild zurueck auf den Prozessor und gibt die Textur frei. Nothing,
@@ -111,6 +130,12 @@ Namespace Services
                     Dispose()
                     Return Nothing
                 End If
+                ' Der Auftrag uebernimmt die Flaeche vorab und gibt sie selbst frei, unabhaengig vom
+                ' Feld: kehrt Run nach Ablauf der Frist zurueck, laeuft er vielleicht noch, waehrend
+                ' die Sitzung schon ohne Flaeche dasteht. Sein spaetes Bitmap gibt der Dienst frei.
+                Dim surface = _surface
+                Dim info = _info
+                _surface = Nothing
                 Dim result As SKBitmap = Nothing
                 Run(
                     Function(gr)
@@ -119,20 +144,18 @@ Namespace Services
                                 gr.Flush()
                                 gr.Submit(True)
                             End If
-                            Dim bmp = New SKBitmap(_info)
-                            If Not _surface.ReadPixels(bmp.Info, bmp.GetPixels(), bmp.RowBytes, 0, 0) Then
+                            Dim bmp = New SKBitmap(info)
+                            If Not surface.ReadPixels(bmp.Info, bmp.GetPixels(), bmp.RowBytes, 0, 0) Then
                                 bmp.Dispose()
                                 Throw New InvalidOperationException("Zuruecklesen von der Grafikkarte gescheitert.")
                             End If
                             Return bmp
                         Finally
-                            _surface.Dispose()
-                            _surface = Nothing
+                            surface.Dispose()
                         End Try
                     End Function, result)
                 ' Ist der GPU-Faden schon tot, laesst sich die Textur nicht mehr freigeben; dann
-                ' gilt sie hier als verloren und wird nicht noch einmal angefasst.
-                _surface = Nothing
+                ' gilt sie als verloren, die Sitzung fasst sie nicht noch einmal an.
                 ' Ein leeres oder schwarzes Ergebnis gilt als verloren: der Aufrufer rechnet die
                 ' Stufen dann auf dem Prozessor nach (BringDetailSessionHome).
                 If result IsNot Nothing AndAlso Not AcceptGpuResult(JudgeGpuResult(_uploadSample, result), "Umgebungsstufen") Then
@@ -145,21 +168,23 @@ Namespace Services
 
             Public Sub Dispose() Implements IDisposable.Dispose
                 If _surface Is Nothing Then Return
+                ' Wie beim Zurueckholen: der Auftrag haelt seine Flaeche selbst, nicht ueber das Feld.
+                Dim surface = _surface
+                _surface = Nothing
                 Dim ignored As Boolean
                 Run(
                     Function(gr)
-                        _surface?.Dispose()
+                        surface.Dispose()
                         Return True
                     End Function, ignored)
-                _surface = Nothing
             End Sub
 
-            Private Shared Function Upload(gr As GRContext, source As SKBitmap) As SKSurface
+            ''' <summary><paramref name="source"/> ist die Kopie aus SnapshotForGpu; freigegeben wird
+            ''' sie mit dem Auftrag.</summary>
+            Private Shared Function Upload(gr As GRContext, source As SKImage) As SKSurface
                 Dim surface = NewStageSurface(gr, source.Width, source.Height)
-                Using raster = SKImage.FromBitmap(source)
-                    Using paint = New SKPaint With {.BlendMode = SKBlendMode.Src}
-                        surface.Canvas.DrawImage(raster, 0, 0, paint)
-                    End Using
+                Using paint = New SKPaint With {.BlendMode = SKBlendMode.Src}
+                    surface.Canvas.DrawImage(source, 0, 0, paint)
                 End Using
                 Return surface
             End Function

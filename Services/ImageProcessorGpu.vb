@@ -209,7 +209,8 @@ Namespace Services
                 Dim chain = BuildPointOpChain(adj, src)
                 Dim localBase = BuildLocalToneBaseFor(src, chain)
                 Dim onGpu As SKBitmap = Nothing
-                If Not GpuImageService.TryRun(Function(gr) RenderPointOpShaderOnGpu(gr, src, chain, localBase), onGpu) OrElse onGpu Is Nothing Then
+                Dim snapshot = SnapshotForGpu(src)
+                If Not GpuImageService.TryRun(Function(gr) RenderPointOpShaderOnGpu(gr, snapshot, chain, localBase), onGpu, snapshot) OrElse onGpu Is Nothing Then
                     result.State = GpuCheckState.Unavailable
                     result.Detail = If(String.IsNullOrEmpty(GpuImageService.FailureReason),
                                        "Der Shader laesst sich auf der Grafikkarte nicht ausfuehren.", GpuImageService.FailureReason)
@@ -321,19 +322,25 @@ Namespace Services
             ' Faden gesetzt, auf dem GPU-Faden stuende er auf 0.
             Dim localBase = BuildLocalToneBaseFor(source, chain)
             ReleasePointOpHandover()
-            Dim result As SKBitmap = Nothing
-            Dim kept As SKSurface = Nothing
+            ' Bild und zurueckgehaltene Flaeche kommen ZUSAMMEN als Ergebnis zurueck: kehrt der
+            ' Auftrag erst nach Ablauf der Frist zurueck, gibt der Dienst beide auf dem GPU-Faden frei.
+            Dim rendered As (Bitmap As SKBitmap, Surface As SKSurface) = Nothing
+            Dim snapshot = SnapshotForGpu(source)
             If Not PerformanceTraceService.Measure("Pixel: Punktkette (Grafikkarte)",
                     Function() GpuImageService.TryRun(Function(gr)
                                                           Dim surface As SKSurface = Nothing
-                                                          Dim bitmap = RenderPointOpShaderOnGpu(gr, source, chain, localBase, True, surface)
-                                                          kept = surface
-                                                          Return bitmap
-                                                      End Function, result)) Then
+                                                          Dim bitmap = RenderPointOpShaderOnGpu(gr, snapshot, chain, localBase, True, surface)
+                                                          Return (bitmap, surface)
+                                                      End Function, rendered, snapshot,
+                                                      Sub(late)
+                                                          late.Bitmap?.Dispose()
+                                                          late.Surface?.Dispose()
+                                                      End Sub)) Then
                 NoteGpuFallback("Punktkette, Lauf auf der Grafikkarte gescheitert (Fehlerdatei)")
-                If kept IsNot Nothing Then DisposeOnGpu(kept)
                 Return Nothing
             End If
+            Dim result = rendered.Bitmap
+            Dim kept = rendered.Surface
             If Not AcceptGpuResult(JudgeGpuResult(SampleForGpuResult(source), result), "Punktkette") Then
                 result?.Dispose()
                 If kept IsNot Nothing Then DisposeOnGpu(kept)
@@ -577,24 +584,32 @@ Namespace Services
                                    End Function, ignored)
         End Sub
 
-        Private Shared Function RenderPointOpShaderOnGpu(gr As GRContext, source As SKBitmap, chain As PointOpChain,
+        ''' <summary>Eine eigene Kopie der Bildpunkte fuer einen Auftrag der Karte, angelegt auf dem
+        ''' rufenden Faden. Sie geht als <c>owned</c> an <see cref="GpuImageService.TryRun"/>, das sie
+        ''' freigibt, wenn der Auftrag endet: kehrt TryRun nach Ablauf der Frist zurueck, darf der
+        ''' Aufrufer sein Bitmap freigeben, waehrend der haengende Auftrag noch liest.</summary>
+        Friend Shared Function SnapshotForGpu(bitmap As SKBitmap) As SKImage
+            Return SKImage.FromPixelCopy(bitmap.Info, bitmap.GetPixels(), bitmap.RowBytes)
+        End Function
+
+        Private Shared Function RenderPointOpShaderOnGpu(gr As GRContext, source As SKImage, chain As PointOpChain,
                                                          localBase As LocalToneBase) As SKBitmap
             Dim kept As SKSurface = Nothing
             Return RenderPointOpShaderOnGpu(gr, source, chain, localBase, False, kept)
         End Function
 
         ''' <summary>Mit <paramref name="keepSurface"/> bleibt die Zielflaeche auf der Karte und kommt
-        ''' in <paramref name="kept"/> zurueck, fuer die Umgebungsstufen danach.</summary>
-        Private Shared Function RenderPointOpShaderOnGpu(gr As GRContext, source As SKBitmap, chain As PointOpChain,
+        ''' in <paramref name="kept"/> zurueck, fuer die Umgebungsstufen danach. <paramref name="source"/>
+        ''' ist die Kopie aus <see cref="SnapshotForGpu"/>; freigegeben wird sie vom Dienst.</summary>
+        Private Shared Function RenderPointOpShaderOnGpu(gr As GRContext, source As SKImage, chain As PointOpChain,
                                                          localBase As LocalToneBase, keepSurface As Boolean,
                                                          ByRef kept As SKSurface) As SKBitmap
             kept = Nothing
             Dim effect = PointOpEffect()
             Dim gpuInfo = New SKImageInfo(source.Width, source.Height, SKColorType.Rgba8888, SKAlphaType.Premul)
-            Using rasterImage = SKImage.FromBitmap(source),
-                  table = BuildShaderTables(chain), dither = BuildDitherImage(), baseImage = BuildLocalBaseImage(localBase),
+            Using table = BuildShaderTables(chain), dither = BuildDitherImage(), baseImage = BuildLocalBaseImage(localBase),
                   cubeA = BuildCubeImage(chain, 0), cubeB = BuildCubeImage(chain, 1)
-                Using image = rasterImage.ToTextureImage(gr),
+                Using image = source.ToTextureImage(gr),
                       gpuTable = table.ToTextureImage(gr), gpuDither = dither.ToTextureImage(gr),
                       gpuBase = baseImage.ToTextureImage(gr),
                       gpuCubeA = cubeA.ToTextureImage(gr), gpuCubeB = cubeB.ToTextureImage(gr)

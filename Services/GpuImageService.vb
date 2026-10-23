@@ -46,15 +46,16 @@ Namespace Services
         Private NotInheritable Class GpuWork
             Public Run As Action
             Public Cancel As Action
-            ''' <summary>Vom GPU-Faden gesetzt, sobald er den Auftrag beginnt; ab dann laeuft die
-            ''' Frist <see cref="JobTimeout"/>. Die Zeit in der Schlange zaehlt nicht mit.</summary>
+            ''' <summary>0 in der Schlange, 1 vom GPU-Faden begonnen (ab dann laeuft die Frist
+            ''' <see cref="JobTimeout"/>, die Zeit in der Schlange zaehlt nicht mit), 2 nie begonnen
+            ''' und aufgegeben. Gesetzt nur ueber CompareExchange von 0 aus.</summary>
             Public Started As Integer
         End Class
 
         ''' <summary>So lange darf ein begonnener Auftrag dauern. Gemessen braucht die schwerste
         ''' Stufe (Zurueckrechnen am 20-MP-Foto) an einer RTX 5060 rund 0,4 s; ein Treiber, der
         ''' haengt, kommt dagegen nie zurueck. Ohne Frist stuende dann ein Export fuer immer.</summary>
-        Private Shared ReadOnly JobTimeout As TimeSpan = TimeSpan.FromSeconds(60)
+        Friend Shared JobTimeout As TimeSpan = TimeSpan.FromSeconds(60) ' der Pruefstand verkuerzt sie
 
         ''' <summary>So lange darf das Anlegen des Kontexts dauern (gemessen 30 ms).</summary>
         Private Shared ReadOnly StartTimeout As TimeSpan = TimeSpan.FromSeconds(30)
@@ -208,13 +209,34 @@ Namespace Services
         ''' <summary>Fuehrt <paramref name="work"/> auf dem GPU-Faden aus und wartet darauf. False,
         ''' wenn die Grafikkarte nicht bereitsteht oder die Arbeit scheitert - dann rechnet der
         ''' Aufrufer auf dem Prozessor. Ein Fehler in der Arbeit geht in die Fehlerdatei; ist das
-        ''' Geraet dabei verloren gegangen, bleibt der Weg fuer diese Sitzung zu.</summary>
-        Public Shared Function TryRun(Of T)(work As Func(Of GRContext, T), ByRef result As T) As Boolean
+        ''' Geraet dabei verloren gegangen, bleibt der Weg fuer diese Sitzung zu.
+        '''
+        ''' NACH ABLAUF DER FRIST kehrt dieser Aufruf zurueck, waehrend der Auftrag im Treiber
+        ''' weiterlaufen kann. Der Aufrufer rechnet dann auf dem Prozessor weiter und gibt seine
+        ''' Bilder frei; ein Auftrag darf deshalb keine NATIVEN Objekte des Aufrufers lesen
+        ''' (SKBitmap, SKImage), die dieser danach freigibt. Verwaltete Daten haelt der
+        ''' Speicherbereiniger am Leben. Was der Auftrag an Nativem braucht, kommt als
+        ''' <paramref name="owned"/>: eine eigene Kopie, die dieser Dienst freigibt, sobald der
+        ''' Auftrag wirklich endet oder sicher nie mehr beginnt; der Aufrufer fasst sie nicht mehr an.
+        '''
+        ''' Kommt ein Auftrag erst nach Ablauf der Frist zurueck, nimmt niemand sein Ergebnis mehr
+        ''' entgegen. Der Dienst gibt es dann auf dem GPU-Faden frei: mit <paramref name="discard"/>,
+        ''' sonst ueber IDisposable, wenn das Ergebnis eines ist. Wer mehrere native Objekte
+        ''' zurueckgibt, reicht deshalb <paramref name="discard"/> mit.</summary>
+        Public Shared Function TryRun(Of T)(work As Func(Of GRContext, T), ByRef result As T,
+                                            Optional owned As IDisposable = Nothing,
+                                            Optional discard As Action(Of T) = Nothing) As Boolean
             result = Nothing
-            If work Is Nothing OrElse Not IsAvailable Then Return False
+            If work Is Nothing OrElse Not IsAvailable Then
+                owned?.Dispose()
+                Return False
+            End If
             Dim value As T = Nothing
             Dim failure As Exception = Nothing
             Dim cancelled = False
+            ' Wer das Ergebnis hat: 0 offen, 1 der Aufrufer nimmt es, 2 der Aufrufer ist nach Ablauf
+            ' der Frist fort. Gesetzt nur ueber CompareExchange von 0 aus, wie Started.
+            Dim delivery As Integer = 0
             ' Das Ereignis wird bewusst nicht freigegeben: kehrt dieser Aufruf nach Ablauf der Frist
             ' zurueck, setzt der GPU-Faden es vielleicht noch spaeter, und ein freigegebenes
             ' Ereignis wuerde dort werfen und den Faden beenden.
@@ -226,32 +248,47 @@ Namespace Services
                            Catch ex As Exception
                                failure = ex
                            Finally
+                               owned?.Dispose()
+                               If Interlocked.CompareExchange(delivery, 1, 0) <> 0 Then DiscardLateResult(value, discard)
                                done.Set()
                            End Try
                        End Sub,
                 .Cancel = Sub()
                               cancelled = True
+                              owned?.Dispose()
                               done.Set()
                           End Sub}
             Try
                 _queue.Add(item)
             Catch ex As InvalidOperationException
                 ' Die Schlange ist geschlossen: der Faden ist nach einem Fehler beendet.
+                owned?.Dispose()
                 Return False
             End Try
             Dim startedAt As Long = 0
             While Not done.Wait(500)
                 If Volatile.Read(item.Started) = 0 Then
                     ' Noch in der Schlange. Ist der Weg inzwischen zu, weil ein anderer Auftrag im
-                    ' Treiber haengt, erreicht der Faden diesen nie mehr.
-                    If Volatile.Read(_state) = 2 Then Return False
+                    ' Treiber haengt, erreicht der Faden diesen nie mehr. Aufgegeben wird nur, wenn
+                    ' der Auftrag dabei sicher nicht mehr beginnt: wer Started von 0 wegsetzt,
+                    ' gewinnt, der Faden (auf 1, dann rechnet er) oder dieser Aufruf (auf 2).
+                    If Volatile.Read(_state) = 2 AndAlso Interlocked.CompareExchange(item.Started, 2, 0) = 0 Then
+                        owned?.Dispose()
+                        Return False
+                    End If
                     Continue While
                 End If
                 If startedAt = 0 Then startedAt = Stopwatch.GetTimestamp()
                 If Stopwatch.GetElapsedTime(startedAt) > JobTimeout Then
-                    KeepMarkerForNextStart("Auftrag haengt")
-                    Fail($"Ein Auftrag auf der Grafikkarte kam nach {JobTimeout.TotalSeconds:0} Sekunden nicht zurueck; der Treiber haengt.", Nothing)
-                    Return False
+                    If Interlocked.CompareExchange(delivery, 2, 0) = 0 Then
+                        KeepMarkerForNextStart("Auftrag haengt")
+                        Fail($"Ein Auftrag auf der Grafikkarte kam nach {JobTimeout.TotalSeconds:0} Sekunden nicht zurueck; der Treiber haengt.", Nothing)
+                        Return False
+                    End If
+                    ' Der Auftrag ist genau jetzt fertig geworden und hat das Ergebnis schon diesem
+                    ' Aufruf zugesprochen: abholen statt verwerfen.
+                    done.Wait()
+                    Exit While
                 End If
             End While
             done.Dispose()
@@ -270,6 +307,21 @@ Namespace Services
             Interlocked.Increment(_completedJobs)
             Return True
         End Function
+
+        ''' <summary>Gibt das Ergebnis eines Auftrags frei, dessen Aufrufer nach Ablauf der Frist
+        ''' schon fort ist. Laeuft auf dem GPU-Faden, Flaechen auf der Karte duerfen hier also direkt
+        ''' freigegeben werden. Ein Fehler dabei geht in die Fehlerdatei und beendet den Faden nicht.</summary>
+        Private Shared Sub DiscardLateResult(Of T)(value As T, discard As Action(Of T))
+            Try
+                If discard IsNot Nothing Then
+                    discard(value)
+                Else
+                    TryCast(CObj(value), IDisposable)?.Dispose()
+                End If
+            Catch ex As Exception
+                DiagnosticLogService.LogException("GpuImage", ex)
+            End Try
+        End Sub
 
         ''' <summary>Sperrt den Weg fuer diese Sitzung, weil die Karte zwar laeuft, aber nicht
         ''' brauchbar rechnet (die Selbstpruefung weicht ab). Der Grund geht wie jeder Fehlschlag in
@@ -368,11 +420,13 @@ Namespace Services
             ' (CompleteAdding), und die Schleife laeuft weiter, bis sie leer ist. Was nach dem
             ' Abschalten noch darin liegt, wird nicht mehr gerechnet, sondern freigegeben, sonst
             ' warteten seine Aufrufer in TryRun fuer immer.
+            ' Started entscheidet atomar, wer den Auftrag hat: hat sein Aufrufer schon aufgegeben
+            ' (2), ist auch dessen Kopie schon frei, und der Auftrag wird weder gerechnet noch
+            ' abgesagt.
             For Each item In _queue.GetConsumingEnumerable()
                 If Volatile.Read(_state) = 2 Then
-                    item.Cancel()
-                Else
-                    Volatile.Write(item.Started, 1)
+                    If Interlocked.CompareExchange(item.Started, 2, 0) = 0 Then item.Cancel()
+                ElseIf Interlocked.CompareExchange(item.Started, 1, 0) = 0 Then
                     ArmMarker("Auftrag")
                     Try
                         item.Run()
