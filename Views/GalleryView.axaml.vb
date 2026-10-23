@@ -563,7 +563,7 @@ Namespace Views
                                          reported IsNot Nothing AndAlso
                                          reported.Count > 0 AndAlso
                                          Not String.IsNullOrEmpty(_pendingFolderScrollReset) AndAlso
-                                         String.Equals(_pendingFolderScrollReset, vm.CurrentFolder, StringComparison.OrdinalIgnoreCase)
+                                         String.Equals(_pendingFolderScrollReset, vm.CurrentFolder, PathIdentity.Comparison)
             Dispatcher.UIThread.Post(
                 Sub()
                     ' Beim Umschalten von einem weit unten stehenden Ordner ist der erste Reset

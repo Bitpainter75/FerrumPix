@@ -9920,6 +9920,30 @@
   <data name="Die_Grafikkarte_ist_hier_nicht_nutzbar_0_Die_Bil_7db4f7ac" xml:space="preserve">
     <value>La scheda grafica non è utilizzabile qui ({0}). La modifica delle immagini viene calcolata sul processore.</value>
   </data>
+  <data name="die_Oberfl_che_zeichnet_ohne_Grafikbeschleunigun_c12d1025" xml:space="preserve">
+    <value>l'interfaccia disegna senza accelerazione grafica</value>
+  </data>
+  <data name="die_Grafikschnittstelle_dieses_Systems_wird_nich_752a5836" xml:space="preserve">
+    <value>l'interfaccia grafica di questo sistema non è supportata</value>
+  </data>
+  <data name="auf_der_Grafikkarte_l_sst_sich_kein_Zeichenkonte_cb473bca" xml:space="preserve">
+    <value>impossibile creare un contesto di disegno sulla scheda grafica</value>
+  </data>
+  <data name="0_rechnet_in_Software_auf_dem_Prozessor_fbaf1e5b" xml:space="preserve">
+    <value>{0} calcola via software sul processore</value>
+  </data>
+  <data name="der_Grafiktreiber_antwortet_nicht_be51d261" xml:space="preserve">
+    <value>il driver grafico non risponde</value>
+  </data>
+  <data name="das_Grafikger_t_ist_verloren_gegangen_b88479d8" xml:space="preserve">
+    <value>il dispositivo grafico è andato perso</value>
+  </data>
+  <data name="die_Selbstpr_fung_ist_nicht_bestanden_446fe494" xml:space="preserve">
+    <value>l'autotest non è stato superato</value>
+  </data>
+  <data name="ein_Probeshader_l_sst_sich_auf_der_Karte_nicht_a_51f5ef10" xml:space="preserve">
+    <value>uno shader di prova non può essere eseguito sulla scheda</value>
+  </data>
   <data name="Prozessorkerne_f_r_Modelle_779167cd" xml:space="preserve">
     <value>Core del processore per i modelli</value>
   </data>

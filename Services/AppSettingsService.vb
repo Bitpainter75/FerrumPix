@@ -2404,7 +2404,7 @@ Namespace Services
 
         Public Shared Function NormalizeXmpPresets(value As List(Of XmpPresetSettings)) As List(Of XmpPresetSettings)
             Dim result As New List(Of XmpPresetSettings)()
-            Dim seenPaths As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
+            Dim seenPaths As New HashSet(Of String)(PathIdentity.Comparer)
             For Each preset In If(value, New List(Of XmpPresetSettings)())
                 If preset Is Nothing Then Continue For
                 Dim presetPath = NormalizeFolderPath(preset.Path)
@@ -2422,7 +2422,7 @@ Namespace Services
 
         Public Shared Function NormalizeLutPresets(value As List(Of LutPresetSettings)) As List(Of LutPresetSettings)
             Dim result As New List(Of LutPresetSettings)()
-            Dim seenPaths As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
+            Dim seenPaths As New HashSet(Of String)(PathIdentity.Comparer)
             For Each preset In If(value, New List(Of LutPresetSettings)())
                 If preset Is Nothing Then Continue For
                 Dim presetPath = NormalizeFolderPath(preset.Path)

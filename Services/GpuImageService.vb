@@ -2,6 +2,7 @@ Imports System
 Imports System.Collections.Concurrent
 Imports System.Diagnostics
 Imports System.Reflection
+Imports System.Runtime.InteropServices
 Imports System.Threading
 Imports Avalonia
 Imports Avalonia.OpenGL
@@ -11,7 +12,8 @@ Imports SkiaSharp
 Namespace Services
 
     ''' <summary>Die Grafikkarte fuer die Bildbearbeitung: EIN eigener Faden mit EINEM eigenen
-    ''' OpenGL-Kontext und einem Skia-GRContext darauf.
+    ''' Grafikkontext (OpenGL unter Linux und Windows, Metal unter macOS) und einem Skia-GRContext
+    ''' darauf.
     '''
     ''' WARUM EIN EIGENER KONTEXT: Avalonia gibt seinen Skia-Kontext nur waehrend des Zeichnens im
     ''' Fenster heraus. Export und Stapel laufen aber im Hintergrund. Avalonias Plattformgrafik
@@ -20,9 +22,17 @@ Namespace Services
     ''' darum laeuft alles, was ihn braucht, auf genau diesem einen Faden (<see cref="TryRun"/>).
     ''' Probe 2026-10-22 an einer RTX 5060: Kontext 30 ms, ein Shader ueber 33 MP 1 bis 2 ms.
     '''
+    ''' UNTER macOS liefert Avalonia kein OpenGL, sondern ein Metal-Geraet (<c>MetalDevice</c>
+    ''' mit <c>Device</c> und <c>CommandQueue</c>). Skia legt darauf denselben GRContext an wie
+    ''' Avalonia selbst (<c>GRContext.CreateMetal</c>); die Shader der Stufen sind SkSL und laufen
+    ''' auf beiden Wegen unveraendert. Metal gibt seine Objekte ueber Autorelease-Pools frei, und
+    ''' einen solchen Pool hat nur der Hauptfaden: ohne eigenen Pool je Auftrag wuchs der Speicher
+    ''' dieses Fadens mit jedem Bild (Avalonia legt dafuer ebenso einen um jedes Zeichnen).
+    '''
     ''' WANN ER NICHT GEHT, faellt der Aufrufer auf den Prozessor zurueck: keine Plattformgrafik
-    ''' (Kopflos, Software), kein OpenGL-Kontext (etwa Metal unter macOS), kein GRContext, ein
-    ''' verlorenes Geraet. Der Grund steht in <see cref="FailureReason"/>, und ein Fehlschlag geht
+    ''' (Kopflos, Software), weder OpenGL noch Metal, kein GRContext, ein verlorenes Geraet. Der
+    ''' Grund steht in <see cref="FailureReason"/> (deutsch, fuer die Fehlerdatei) und als Art in
+    ''' <see cref="Failure"/> (fuer die Oberflaeche, die ihn uebersetzt), und ein Fehlschlag geht
     ''' IMMER in die Fehlerdatei (LogException) - auch ohne eingeschaltete Diagnose, denn genau dann
     ''' sucht jemand, warum sein Schalter nichts tut. Ablauf und Zeiten stehen nur im
     ''' Diagnoseprotokoll (Bereich "GpuImage").</summary>
@@ -80,12 +90,39 @@ Namespace Services
         Private Shared _markerSticky As Boolean
         Private Shared _exitHooked As Integer
 
+        ''' <summary>Warum die Karte nicht bereitsteht, als Art. Die Oberflaeche uebersetzt sie;
+        ''' <see cref="FailureReason"/> ist der ausfuehrliche Text fuer die Fehlerdatei und bleibt
+        ''' deutsch wie jede Protokollzeile.</summary>
+        Public Enum GpuFailure
+            None
+            ''' <summary>Avalonia zeichnet ohne Grafikkarte (Software, kopflos).</summary>
+            NoPlatformGraphics
+            ''' <summary>Die Plattformgrafik ist weder OpenGL noch Metal, oder gibt keinen Kontext heraus.</summary>
+            UnsupportedGraphics
+            ''' <summary>Skia legt auf dem Kontext keinen GRContext an.</summary>
+            NoSkiaContext
+            ''' <summary>Ein Renderer, der in Software auf dem Prozessor rasterisiert.</summary>
+            SoftwareRenderer
+            ''' <summary>Anlegen oder ein Auftrag kam nicht zurueck.</summary>
+            DriverHang
+            ''' <summary>Das Geraet ging waehrend der Arbeit verloren.</summary>
+            DeviceLost
+            ''' <summary>Die Selbstpruefung weicht ab.</summary>
+            Unusable
+        End Enum
+
         Private Shared _queue As BlockingCollection(Of GpuWork)
-        Private Shared _context As IGlContext
+        ''' <summary>Der Kontext der Plattformgrafik, gleich welcher Art.</summary>
+        Private Shared _context As IPlatformGraphicsContext
+        ''' <summary>Derselbe Kontext als OpenGL-Kontext, oder Nothing unter Metal.</summary>
+        Private Shared _glContext As IGlContext
+        ''' <summary>Metal (macOS): jeder Auftrag bekommt einen Autorelease-Pool.</summary>
+        Private Shared _isMetal As Boolean
         Private Shared _currentScope As IDisposable
         Private Shared _gr As GRContext
         Private Shared _state As Integer ' 0 unbekannt, 1 bereit, 2 gescheitert
         Private Shared _failureReason As String = ""
+        Private Shared _failure As GpuFailure = GpuFailure.None
         Private Shared _renderer As String = ""
 
         Private Shared _enabled As Boolean
@@ -121,7 +158,14 @@ Namespace Services
             End Get
         End Property
 
-        ''' <summary>Die Karte, die der Kontext meldet (GL_RENDERER).</summary>
+        ''' <summary>Warum die Grafikkarte nicht bereitsteht, als Art; None, solange nichts schiefging.</summary>
+        Public Shared ReadOnly Property Failure As GpuFailure
+            Get
+                Return _failure
+            End Get
+        End Property
+
+        ''' <summary>Die Karte, die der Kontext meldet (GL_RENDERER, unter Metal der Geraetename).</summary>
         Public Shared ReadOnly Property Renderer As String
             Get
                 Return _renderer
@@ -282,7 +326,7 @@ Namespace Services
                 If Stopwatch.GetElapsedTime(startedAt) > JobTimeout Then
                     If Interlocked.CompareExchange(delivery, 2, 0) = 0 Then
                         KeepMarkerForNextStart("Auftrag haengt")
-                        Fail($"Ein Auftrag auf der Grafikkarte kam nach {JobTimeout.TotalSeconds:0} Sekunden nicht zurueck; der Treiber haengt.", Nothing)
+                        Fail(GpuFailure.DriverHang, $"Ein Auftrag auf der Grafikkarte kam nach {JobTimeout.TotalSeconds:0} Sekunden nicht zurueck; der Treiber haengt.", Nothing)
                         Return False
                     End If
                     ' Der Auftrag ist genau jetzt fertig geworden und hat das Ergebnis schon diesem
@@ -299,7 +343,7 @@ Namespace Services
                 DiagnosticLogService.LogException("GpuImage", New GpuUnavailableException(
                     "Die Arbeit auf der Grafikkarte ist gescheitert, dieser Durchgang rechnet auf dem Prozessor.", failure))
                 If _gr Is Nothing OrElse _gr.IsAbandoned Then
-                    Fail("Das Grafikgeraet ist verloren gegangen.", failure)
+                    Fail(GpuFailure.DeviceLost, "Das Grafikgeraet ist verloren gegangen.", failure)
                 End If
                 Return False
             End If
@@ -327,7 +371,7 @@ Namespace Services
         ''' brauchbar rechnet (die Selbstpruefung weicht ab). Der Grund geht wie jeder Fehlschlag in
         ''' die Fehlerdatei.</summary>
         Public Shared Sub MarkUnusable(reason As String)
-            Fail(reason, Nothing)
+            Fail(GpuFailure.Unusable, reason, Nothing)
         End Sub
 
         Private Shared Sub EnsureStarted()
@@ -349,7 +393,7 @@ Namespace Services
                 ' das Ereignis noch.
                 If Not started.Wait(StartTimeout) Then
                     KeepMarkerForNextStart("Anlegen haengt")
-                    Fail($"Das Anlegen des Grafikkontexts kam nach {StartTimeout.TotalSeconds:0} Sekunden nicht zurueck; der Treiber haengt.", Nothing)
+                    Fail(GpuFailure.DriverHang, $"Das Anlegen des Grafikkontexts kam nach {StartTimeout.TotalSeconds:0} Sekunden nicht zurueck; der Treiber haengt.", Nothing)
                 End If
             Else
                 ' Warten, bis der startende Aufrufer fertig ist (der Zustand verlaesst die 0).
@@ -366,50 +410,45 @@ Namespace Services
             Try
                 Dim graphics = ResolvePlatformGraphics()
                 If graphics Is Nothing Then
-                    Fail("Keine Plattformgrafik: Avalonia zeichnet ohne Grafikkarte (Software oder kopflos).", Nothing)
+                    Fail(GpuFailure.NoPlatformGraphics, "Keine Plattformgrafik: Avalonia zeichnet ohne Grafikkarte (Software oder kopflos).", Nothing)
                     Return
                 End If
                 Dim created As IPlatformGraphicsContext
                 Try
                     created = graphics.CreateContext()
                 Catch ex As Exception
-                    Fail($"Die Plattformgrafik ({graphics.GetType().Name}) gibt keinen eigenen Kontext heraus.", ex)
+                    Fail(GpuFailure.UnsupportedGraphics, $"Die Plattformgrafik ({graphics.GetType().Name}) gibt keinen eigenen Kontext heraus.", ex)
                     Return
                 End Try
-                _context = TryCast(created, IGlContext)
-                If _context Is Nothing Then
-                    created?.Dispose()
-                    Fail($"Kein OpenGL-Kontext: die Plattformgrafik {graphics.GetType().Name} liefert {If(created?.GetType().Name, "nichts")}.", Nothing)
-                    Return
+                _context = created
+                _glContext = TryCast(created, IGlContext)
+                Dim backend As String
+                If _glContext IsNot Nothing Then
+                    If Not CreateOnGl() Then Return
+                    backend = $"OpenGL {_glContext.Version.Major}.{_glContext.Version.Minor} ({_glContext.Version.Type})"
+                Else
+                    Dim device, queue As IntPtr
+                    If Not TryReadMetalHandles(created, device, queue) Then
+                        created?.Dispose()
+                        _context = Nothing
+                        Fail(GpuFailure.UnsupportedGraphics,
+                             $"Weder OpenGL noch Metal: die Plattformgrafik {graphics.GetType().Name} liefert {If(created?.GetType().Name, "nichts")}.", Nothing)
+                        Return
+                    End If
+                    If Not CreateOnMetal(created, device, queue) Then Return
+                    backend = "Metal"
                 End If
-                _currentScope = _context.MakeCurrent()
-                Dim glInterface = GRGlInterface.Create(Function(name) _context.GlInterface.GetProcAddress(name))
-                If glInterface Is Nothing OrElse Not glInterface.Validate() Then
-                    Fail("Skia kann die OpenGL-Funktionen des Kontexts nicht binden.", Nothing)
-                    Return
-                End If
-                _gr = GRContext.CreateGl(glInterface)
-                If _gr Is Nothing Then
-                    Fail("Skia legt auf dem OpenGL-Kontext keinen GRContext an.", Nothing)
-                    Return
-                End If
-                Try
-                    _renderer = _context.GlInterface.GetString(&H1F01)
-                Catch
-                    _renderer = ""
-                End Try
                 Dim software = SoftwareRendererName(_renderer)
                 If software IsNot Nothing Then
-                    Fail($"{_renderer} zeichnet in Software auf dem Prozessor; die eigene Prozessorkette ist dort schneller.", Nothing)
+                    Fail(GpuFailure.SoftwareRenderer, $"{_renderer} zeichnet in Software auf dem Prozessor; die eigene Prozessorkette ist dort schneller.", Nothing)
                     Return
                 End If
                 ' Fail kann waehrend des Anlegens schon gesetzt sein (Frist abgelaufen); dann bleibt es dabei.
                 If Interlocked.CompareExchange(_state, 1, 0) <> 0 Then Return
                 DiagnosticLogService.LogAlways("GpuImage",
-                    $"bereit: {_renderer}; OpenGL {_context.Version.Major}.{_context.Version.Minor} ({_context.Version.Type}); " &
-                    $"Plattformgrafik {graphics.GetType().Name}; {clock.ElapsedMilliseconds} ms")
+                    $"bereit: {_renderer}; {backend}; Plattformgrafik {graphics.GetType().Name}; {clock.ElapsedMilliseconds} ms")
             Catch ex As Exception
-                Fail("Der GPU-Faden ist beim Anlegen des Kontexts gescheitert.", ex)
+                Fail(GpuFailure.NoSkiaContext, "Der GPU-Faden ist beim Anlegen des Kontexts gescheitert.", ex)
                 Return
             Finally
                 DisarmMarker()
@@ -428,17 +467,113 @@ Namespace Services
                     If Interlocked.CompareExchange(item.Started, 2, 0) = 0 Then item.Cancel()
                 ElseIf Interlocked.CompareExchange(item.Started, 1, 0) = 0 Then
                     ArmMarker("Auftrag")
+                    Dim pool = If(_isMetal, objc_autoreleasePoolPush(), IntPtr.Zero)
                     Try
                         item.Run()
                     Finally
+                        If pool <> IntPtr.Zero Then objc_autoreleasePoolPop(pool)
                         DisarmMarker()
                     End Try
                 End If
             Next
         End Sub
 
-        Private Shared Sub Fail(reason As String, inner As Exception)
+        ''' <summary>Skia auf dem OpenGL-Kontext: Kontext aktuell machen, Funktionen binden,
+        ''' GRContext anlegen, den Renderer lesen. False nach einem Fehlschlag (schon gemeldet).</summary>
+        Private Shared Function CreateOnGl() As Boolean
+            _currentScope = _glContext.MakeCurrent()
+            Dim glInterface = GRGlInterface.Create(Function(name) _glContext.GlInterface.GetProcAddress(name))
+            If glInterface Is Nothing OrElse Not glInterface.Validate() Then
+                Fail(GpuFailure.NoSkiaContext, "Skia kann die OpenGL-Funktionen des Kontexts nicht binden.", Nothing)
+                Return False
+            End If
+            _gr = GRContext.CreateGl(glInterface)
+            If _gr Is Nothing Then
+                Fail(GpuFailure.NoSkiaContext, "Skia legt auf dem OpenGL-Kontext keinen GRContext an.", Nothing)
+                Return False
+            End If
+            Try
+                _renderer = _glContext.GlInterface.GetString(&H1F01)
+            Catch
+                _renderer = ""
+            End Try
+            Return True
+        End Function
+
+        ''' <summary>Skia auf dem Metal-Geraet, wie Avalonia es fuer das Fenster tut
+        ''' (<c>SkiaMetalGpu</c>): GRContext aus Geraet und Befehlsschlange. Der Renderer ist der
+        ''' Name des Geraets (<c>MTLDevice.name</c>). False nach einem Fehlschlag (schon gemeldet).</summary>
+        Private Shared Function CreateOnMetal(created As IPlatformGraphicsContext, device As IntPtr, queue As IntPtr) As Boolean
+            _isMetal = True
+            _currentScope = created.EnsureCurrent()
+            Dim pool = objc_autoreleasePoolPush()
+            Try
+                Using backendContext As New GRMtlBackendContext With {.DeviceHandle = device, .QueueHandle = queue}
+                    _gr = GRContext.CreateMetal(backendContext)
+                End Using
+                If _gr Is Nothing Then
+                    Fail(GpuFailure.NoSkiaContext, "Skia legt auf dem Metal-Geraet keinen GRContext an.", Nothing)
+                    Return False
+                End If
+                _renderer = MetalDeviceName(device)
+                Return True
+            Finally
+                objc_autoreleasePoolPop(pool)
+            End Try
+        End Function
+
+        ''' <summary>Geraet und Befehlsschlange eines Metal-Kontexts. UEBER REFLEXION: Avalonia
+        ''' fuehrt die Schnittstelle (<c>Avalonia.Metal.IMetalDevice</c>) als PrivateApi; baut
+        ''' Avalonia sie um, faellt der Weg hier auf "nicht unterstuetzt" statt nicht zu uebersetzen.</summary>
+        Private Shared Function TryReadMetalHandles(created As IPlatformGraphicsContext, ByRef device As IntPtr, ByRef queue As IntPtr) As Boolean
+            device = IntPtr.Zero
+            queue = IntPtr.Zero
+            If created Is Nothing OrElse Not OperatingSystem.IsMacOS() Then Return False
+            Dim metal = created.GetType().GetInterfaces().FirstOrDefault(
+                Function(i) String.Equals(i.FullName, "Avalonia.Metal.IMetalDevice", StringComparison.Ordinal))
+            If metal Is Nothing Then Return False
+            Dim deviceValue = metal.GetProperty("Device")?.GetValue(created)
+            Dim queueValue = metal.GetProperty("CommandQueue")?.GetValue(created)
+            If TypeOf deviceValue Is IntPtr Then device = DirectCast(deviceValue, IntPtr)
+            If TypeOf queueValue Is IntPtr Then queue = DirectCast(queueValue, IntPtr)
+            Return device <> IntPtr.Zero AndAlso queue <> IntPtr.Zero
+        End Function
+
+        ''' <summary><c>[device name]</c> als Zeichenkette, leer, wenn sie sich nicht lesen laesst.</summary>
+        Private Shared Function MetalDeviceName(device As IntPtr) As String
+            Try
+                Dim name = objc_msgSend(device, sel_registerName("name"))
+                If name = IntPtr.Zero Then Return ""
+                Dim utf8 = objc_msgSend(name, sel_registerName("UTF8String"))
+                Return If(Marshal.PtrToStringUTF8(utf8), "")
+            Catch
+                Return ""
+            End Try
+        End Function
+
+        Private Const ObjCRuntime As String = "/usr/lib/libobjc.A.dylib"
+
+        ' Nur unter macOS erreicht: TryReadMetalHandles verlangt es, und nur danach wird Metal
+        ' angefasst. Auf den anderen Systemen wird keine dieser Deklarationen je geladen.
+        <DllImport(ObjCRuntime, CallingConvention:=CallingConvention.Cdecl)>
+        Private Shared Function objc_autoreleasePoolPush() As IntPtr
+        End Function
+
+        <DllImport(ObjCRuntime, CallingConvention:=CallingConvention.Cdecl)>
+        Private Shared Sub objc_autoreleasePoolPop(pool As IntPtr)
+        End Sub
+
+        <DllImport(ObjCRuntime, CallingConvention:=CallingConvention.Cdecl)>
+        Private Shared Function sel_registerName(name As String) As IntPtr
+        End Function
+
+        <DllImport(ObjCRuntime, CallingConvention:=CallingConvention.Cdecl)>
+        Private Shared Function objc_msgSend(receiver As IntPtr, selector As IntPtr) As IntPtr
+        End Function
+
+        Private Shared Sub Fail(kind As GpuFailure, reason As String, inner As Exception)
             _failureReason = reason
+            _failure = kind
             Volatile.Write(_state, 2)
             DiagnosticLogService.LogException("GpuImage", New GpuUnavailableException(
                 reason & " Die Bildbearbeitung rechnet auf dem Prozessor.", inner))

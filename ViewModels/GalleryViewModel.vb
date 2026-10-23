@@ -196,7 +196,7 @@ Namespace ViewModels
                 Return _currentFolder
             End Get
             Set(value As String)
-                If String.Equals(_currentFolder, value, StringComparison.OrdinalIgnoreCase) Then Return
+                If String.Equals(_currentFolder, value, PathIdentity.Comparison) Then Return
                 Me.RaiseAndSetIfChanged(_currentFolder, value)
                 Me.RaisePropertyChanged(NameOf(CurrentFolderName))
                 Me.RaisePropertyChanged(NameOf(BreadcrumbParent))
@@ -2302,7 +2302,7 @@ Namespace ViewModels
         Public Sub SelectItemByPath(path As String)
             If String.IsNullOrEmpty(path) Then Return
             Dim item = Items.FirstOrDefault(Function(i) i IsNot Nothing AndAlso
-                                                String.Equals(i.FilePath, path, StringComparison.OrdinalIgnoreCase))
+                                                String.Equals(i.FilePath, path, PathIdentity.Comparison))
             If item IsNot Nothing Then SelectOnly(item)
         End Sub
 
@@ -4727,7 +4727,7 @@ Namespace ViewModels
 
             For Each node In nodes
                 If node Is Nothing OrElse String.IsNullOrEmpty(node.FullPath) Then Continue For
-                If String.Equals(NormalizePath(node.FullPath), NormalizePath(folderPath), StringComparison.OrdinalIgnoreCase) Then
+                If String.Equals(NormalizePath(node.FullPath), NormalizePath(folderPath), PathIdentity.Comparison) Then
                     Return node
                 End If
 
@@ -4751,7 +4751,7 @@ Namespace ViewModels
 
             For Each node In nodes
                 If node Is Nothing OrElse String.IsNullOrEmpty(node.FullPath) Then Continue For
-                If String.Equals(NormalizePath(node.FullPath), NormalizePath(folderPath), StringComparison.OrdinalIgnoreCase) Then
+                If String.Equals(NormalizePath(node.FullPath), NormalizePath(folderPath), PathIdentity.Comparison) Then
                     Return node
                 End If
 
@@ -4820,7 +4820,7 @@ Namespace ViewModels
 
             SetInitialFolderNodeForPath(folder)
             Await NavigateToFolderAsync(folder)
-            Dim item = Items.FirstOrDefault(Function(i) String.Equals(i.FilePath, imagePath, StringComparison.OrdinalIgnoreCase))
+            Dim item = Items.FirstOrDefault(Function(i) String.Equals(i.FilePath, imagePath, PathIdentity.Comparison))
             If item IsNot Nothing Then
                 SelectOnly(item)
             Else
@@ -4871,8 +4871,8 @@ Namespace ViewModels
             Dim immichStem = If(ImmichService.IsImmichTempPath(imagePath), IO.Path.GetFileNameWithoutExtension(imagePath), Nothing)
             Dim nextcloudId = NextcloudService.FileIdFromTempPath(imagePath)
             Dim item = Items.FirstOrDefault(Function(i) i.IsImage AndAlso (
-                String.Equals(i.FilePath, imagePath, StringComparison.OrdinalIgnoreCase) OrElse
-                (i.IsRemoteAsset AndAlso Not String.IsNullOrEmpty(i.RemoteLocalPath) AndAlso String.Equals(i.RemoteLocalPath, imagePath, StringComparison.OrdinalIgnoreCase)) OrElse
+                String.Equals(i.FilePath, imagePath, PathIdentity.Comparison) OrElse
+                (i.IsRemoteAsset AndAlso Not String.IsNullOrEmpty(i.RemoteLocalPath) AndAlso String.Equals(i.RemoteLocalPath, imagePath, PathIdentity.Comparison)) OrElse
                 (i.IsImmichAsset AndAlso immichStem IsNot Nothing AndAlso String.Equals(i.ImmichAssetId, immichStem, StringComparison.OrdinalIgnoreCase)) OrElse
                 (i.IsNextcloudAsset AndAlso nextcloudId.Length > 0 AndAlso String.Equals(i.NextcloudFileId, nextcloudId, StringComparison.OrdinalIgnoreCase))))
             If item Is Nothing Then Return False
@@ -6187,7 +6187,7 @@ Namespace ViewModels
                 ' Die lokale Antwort ist vollständig genug für die unmittelbare Bedienung. Ein
                 ' Serverabgleich darf anschließend neue oder noch nicht indizierte Bilder ergänzen,
                 ' aber weder die bestehende Liste leeren noch den Filter-Klick aufhalten.
-                Dim knownPaths = New HashSet(Of String)(matches.Select(Function(i) i.FilePath), StringComparer.OrdinalIgnoreCase)
+                Dim knownPaths = New HashSet(Of String)(matches.Select(Function(i) i.FilePath), PathIdentity.Comparer)
                 Dim ignoredSupplement = SupplementCachedServerSearchAsync(node, knownPaths, thumbnailToken, token)
             Catch ex As OperationCanceledException
             Catch ex As Exception
@@ -6502,7 +6502,7 @@ Namespace ViewModels
                                    ' Prüfung den ersten sichtbaren Inhalt wieder ausbremsen. Die
                                    ' anschließende Dateisystem-Suche prüft und bereinigt den Bestand.
                                    If savedPaths.Count > 0 Then
-                                       Dim seenSaved As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
+                                       Dim seenSaved As New HashSet(Of String)(PathIdentity.Comparer)
                                        Dim published = 0
                                        For Each pathBatch In savedPaths.Chunk(180)
                                            token.ThrowIfCancellationRequested()
@@ -6958,11 +6958,11 @@ Namespace ViewModels
                 Dim root = IO.Path.GetFullPath(rootFolder).TrimEnd(IO.Path.DirectorySeparatorChar, IO.Path.AltDirectorySeparatorChar)
                 If includeSubfolders Then
                     Dim prefix = root & IO.Path.DirectorySeparatorChar
-                    Return fullPath.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)
+                    Return fullPath.StartsWith(prefix, PathIdentity.Comparison)
                 End If
 
                 Dim parent = IO.Path.GetDirectoryName(fullPath)
-                Return Not String.IsNullOrEmpty(parent) AndAlso String.Equals(parent, root, StringComparison.OrdinalIgnoreCase)
+                Return Not String.IsNullOrEmpty(parent) AndAlso String.Equals(parent, root, PathIdentity.Comparison)
             Catch
                 Return False
             End Try
@@ -8382,7 +8382,7 @@ Namespace ViewModels
                                        Dim info = ReadStorageInfo(folder)
                                        Dispatcher.UIThread.Post(Sub()
                                                                     ' Inzwischen woanders? Dann gehört die Zahl nicht mehr hierher.
-                                                                    If Not String.Equals(NormalizePath(folder), NormalizePath(_currentFolder), StringComparison.OrdinalIgnoreCase) Then Return
+                                                                    If Not String.Equals(NormalizePath(folder), NormalizePath(_currentFolder), PathIdentity.Comparison) Then Return
                                                                     StorageFreeText = info.FreeText
                                                                     StorageFillPercent = info.FillPercent
                                                                 End Sub, DispatcherPriority.Background)
@@ -9165,7 +9165,7 @@ Namespace ViewModels
                 Return
             End If
 
-            Dim existing = New Dictionary(Of String, ImageItem)(StringComparer.OrdinalIgnoreCase)
+            Dim existing = New Dictionary(Of String, ImageItem)(PathIdentity.Comparer)
             For Each item In _allItems
                 If item IsNot Nothing AndAlso Not item.IsParentFolderEntry AndAlso Not existing.ContainsKey(item.FilePath) Then
                     existing(item.FilePath) = item
@@ -9210,8 +9210,8 @@ Namespace ViewModels
             If syncResult.Rescanned.Count > 0 Then
                 Dim keptByPath = syncResult.Rebuilt.
                     Where(Function(i) i IsNot Nothing AndAlso Not i.IsFolder AndAlso Not i.IsParentFolderEntry).
-                    GroupBy(Function(i) i.FilePath, StringComparer.OrdinalIgnoreCase).
-                    ToDictionary(Function(g) g.Key, Function(g) g.First(), StringComparer.OrdinalIgnoreCase)
+                    GroupBy(Function(i) i.FilePath, PathIdentity.Comparer).
+                    ToDictionary(Function(g) g.Key, Function(g) g.First(), PathIdentity.Comparer)
                 For Each scanned In syncResult.Rescanned
                     Dim kept As ImageItem = Nothing
                     If Not keptByPath.TryGetValue(scanned.FilePath, kept) Then Continue For
@@ -9260,7 +9260,7 @@ Namespace ViewModels
         Private Function IsCurrentFolderLoad(folderPath As String, thumbnailToken As CancellationToken) As Boolean
             Return Not thumbnailToken.IsCancellationRequested AndAlso
                    Not _isVirtualFolder AndAlso
-                   String.Equals(NormalizePath(folderPath), NormalizePath(_currentFolder), StringComparison.OrdinalIgnoreCase)
+                   String.Equals(NormalizePath(folderPath), NormalizePath(_currentFolder), PathIdentity.Comparison)
         End Function
 
         ''' <summary>Prueft auch im Fehlerfall, ob ein Hintergrundlauf noch zur sichtbaren
@@ -9271,7 +9271,7 @@ Namespace ViewModels
             Return generation = Volatile.Read(_folderSyncGeneration) AndAlso
                    Not thumbnailToken.IsCancellationRequested AndAlso
                    Not _isVirtualFolder AndAlso
-                   String.Equals(folderPath, _currentFolder, StringComparison.OrdinalIgnoreCase)
+                   String.Equals(folderPath, _currentFolder, PathIdentity.Comparison)
         End Function
 
         Private Structure FolderSyncResult
@@ -9327,7 +9327,7 @@ Namespace ViewModels
             Dim newFiles = files.Where(Function(f) Not existing.ContainsKey(f.FullName)).ToArray()
             Dim itemsNeedingMetaRefresh As New List(Of ImageItem)()
             Dim newItems = BuildFileItems(newFiles, folderPath, thumbnailToken, itemsNeedingMetaRefresh)
-            Dim newItemsByPath = newItems.ToDictionary(Function(i) i.FilePath, StringComparer.OrdinalIgnoreCase)
+            Dim newItemsByPath = newItems.ToDictionary(Function(i) i.FilePath, PathIdentity.Comparer)
             Dim changedMetaRefresh As New List(Of ImageItem)()
             Dim rescanned = BuildFileItems(changedFiles, folderPath, thumbnailToken, changedMetaRefresh)
 
@@ -11624,9 +11624,24 @@ Namespace ViewModels
             Dim deletionAnchor = CaptureDeletionAnchor(targets)
             If _isVirtualFolder Then
                 Dim deletedSet = targets.ToHashSet(PathIdentity.Comparer)
-                _mainVm.RequestDeletePaths(targets, Nothing,
+                Dim hidden As New List(Of ImageItem)()
+                Dim viewName = _virtualFolderName
+                _mainVm.RequestDeletePaths(targets,
+                                           Sub()
+                                               ' Eine Suchansicht hat keinen Ordnerabgleich, der
+                                               ' zurueckholt, was sich nicht loeschen liess. Das
+                                               ' geschieht deshalb hier: was noch auf der Platte
+                                               ' liegt, kommt wieder in die Ansicht, sofern sie
+                                               ' inzwischen nicht gewechselt wurde.
+                                               If Not _isVirtualFolder OrElse Not String.Equals(_virtualFolderName, viewName, StringComparison.Ordinal) Then Return
+                                               Dim kept = hidden.Where(Function(i) File.Exists(i.FilePath) OrElse Directory.Exists(i.FilePath)).ToList()
+                                               If kept.Count = 0 Then Return
+                                               _allItems.AddRange(kept)
+                                               FilterAndSort()
+                                           End Sub,
                                            Sub()
                                                ClearSelection()
+                                               hidden.AddRange(_allItems.Where(Function(i) i IsNot Nothing AndAlso deletedSet.Contains(i.FilePath)))
                                                _allItems.RemoveAll(Function(i) i IsNot Nothing AndAlso deletedSet.Contains(i.FilePath))
                                                FilterAndSort()
                                                SelectAfterDeletion(deletionAnchor)
@@ -11634,7 +11649,7 @@ Namespace ViewModels
                 Return
             End If
             Dim currentFolderWasDeleted = Not String.IsNullOrEmpty(_currentFolder) AndAlso
-                                          targets.Any(Function(p) Directory.Exists(p) AndAlso String.Equals(NormalizePath(p), NormalizePath(_currentFolder), StringComparison.OrdinalIgnoreCase))
+                                          targets.Any(Function(p) Directory.Exists(p) AndAlso String.Equals(NormalizePath(p), NormalizePath(_currentFolder), PathIdentity.Comparison))
             Dim fallbackFolder = If(currentFolderWasDeleted, IO.Path.GetDirectoryName(_currentFolder), Nothing)
             ' Vor dem Löschen feststellen: danach sagt Directory.Exists nichts mehr. Nur wenn ein Ordner
             ' dabei war, muss der Baum neu aufgebaut werden.
@@ -11761,7 +11776,7 @@ Namespace ViewModels
 
             _mainVm.RequestRenamePath(target, Sub(newPath)
                                                   RefreshTree()
-                                                  If Directory.Exists(newPath) AndAlso String.Equals(NormalizePath(target), NormalizePath(_currentFolder), StringComparison.OrdinalIgnoreCase) Then
+                                                  If Directory.Exists(newPath) AndAlso String.Equals(NormalizePath(target), NormalizePath(_currentFolder), PathIdentity.Comparison) Then
                                                       CurrentFolder = newPath
                                                       LoadFolderImages(newPath)
                                                       RestoreCurrentFolderTreeSelection()
@@ -11855,7 +11870,7 @@ Namespace ViewModels
                 IO.Directory.CreateDirectory(target)
                 RefreshTree()
                 ExpandFolderInTreeByPath(folderPath)
-                If Not _isVirtualFolder AndAlso String.Equals(NormalizePath(folderPath), NormalizePath(_currentFolder), StringComparison.OrdinalIgnoreCase) Then
+                If Not _isVirtualFolder AndAlso String.Equals(NormalizePath(folderPath), NormalizePath(_currentFolder), PathIdentity.Comparison) Then
                     SyncFolderItems()
                 End If
             Catch ex As Exception
@@ -12353,7 +12368,7 @@ Namespace ViewModels
                     DiagnosticLogService.LogException("Server.DownloadToFolder", ex)
                 End Try
             Next
-            If Not _isVirtualFolder AndAlso String.Equals(NormalizePath(targetFolder), NormalizePath(_currentFolder), StringComparison.OrdinalIgnoreCase) Then
+            If Not _isVirtualFolder AndAlso String.Equals(NormalizePath(targetFolder), NormalizePath(_currentFolder), PathIdentity.Comparison) Then
                 SyncFolderItems()
             End If
             RefreshTree()
@@ -13897,7 +13912,7 @@ Namespace ViewModels
         End Sub
 
         Private Sub RefreshAfterBatchFileRewrite(paths As IEnumerable(Of String))
-            For Each item In Items.Where(Function(i) i IsNot Nothing AndAlso paths.Contains(i.FilePath, StringComparer.OrdinalIgnoreCase))
+            For Each item In Items.Where(Function(i) i IsNot Nothing AndAlso paths.Contains(i.FilePath, PathIdentity.Comparer))
                 item.EvictThumbnail()
             Next
             If Not _isVirtualFolder AndAlso Not String.IsNullOrEmpty(_currentFolder) Then SyncFolderItems()

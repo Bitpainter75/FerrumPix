@@ -1266,7 +1266,7 @@ Namespace ViewModels
             ' Original wird bei Bedarf geholt. Welcher Server, entscheidet das Element selbst.
             _immichSessionItems = sessionItems.Where(Function(i) i IsNot Nothing AndAlso i.IsRemoteAsset).ToList()
             _folderPaths = _immichSessionItems.Select(Function(i) i.FilePath).ToList()
-            _currentIndex = _folderPaths.FindIndex(Function(p) String.Equals(p, startPseudoPath, StringComparison.OrdinalIgnoreCase))
+            _currentIndex = _folderPaths.FindIndex(Function(p) String.Equals(p, startPseudoPath, PathIdentity.Comparison))
             If _currentIndex < 0 Then _currentIndex = 0
             LoadFilmstrip()
             LoadImmichAt(_currentIndex)
@@ -1386,14 +1386,14 @@ Namespace ViewModels
             _pinnedPath = If(path, "")
             For Each item In FilmstripItems
                 item.IsCompareAnchor = _pinnedPath.Length > 0 AndAlso
-                                       String.Equals(item.FilePath, _pinnedPath, StringComparison.OrdinalIgnoreCase)
+                                       String.Equals(item.FilePath, _pinnedPath, PathIdentity.Comparison)
             Next
         End Sub
 
         ''' <summary>Steht der Pfad als angeheftetes Bild im Vergleich?</summary>
         Private Function IsCompareAnchorPath(path As String) As Boolean
             Return _isCompareMode AndAlso Not String.IsNullOrEmpty(path) AndAlso
-                   String.Equals(path, _compareLeftPath, StringComparison.OrdinalIgnoreCase)
+                   String.Equals(path, _compareLeftPath, PathIdentity.Comparison)
         End Function
 
         Public ReadOnly Property PinnedFileName As String
@@ -1883,15 +1883,19 @@ Namespace ViewModels
         End Sub
 
         Private Sub AfterDeleteInCompare(pane As Integer, geloescht As String)
+            ' Liess sich die Datei nicht loeschen, bleibt alles stehen: der Rueckruf kommt auch nach
+            ' einem Fehlschlag, und die Flaechen zeigten sonst ein Nachruecken fuer ein Bild, das
+            ' weiter auf der Platte liegt.
+            If File.Exists(geloescht) Then Return
             ' Die Stelle in der Liste MERKEN, bevor der Pfad herausfaellt - "das naechste Bild" ist
             ' genau das, was danach an dieser Stelle steht.
-            Dim stelle = _folderPaths.FindIndex(Function(p) String.Equals(p, geloescht, StringComparison.OrdinalIgnoreCase))
-            _folderPaths.RemoveAll(Function(p) String.Equals(p, geloescht, StringComparison.OrdinalIgnoreCase))
+            Dim stelle = _folderPaths.FindIndex(Function(p) String.Equals(p, geloescht, PathIdentity.Comparison))
+            _folderPaths.RemoveAll(Function(p) String.Equals(p, geloescht, PathIdentity.Comparison))
             LoadFilmstrip()
 
             ' Beide Flaechen zeigten dasselbe Bild (direkt nach dem Anheften) - dann ist nach dem
             ' Loeschen nichts mehr zu vergleichen.
-            Dim beideGleich = String.Equals(_compareLeftPath, _compareRightPath, StringComparison.OrdinalIgnoreCase)
+            Dim beideGleich = String.Equals(_compareLeftPath, _compareRightPath, PathIdentity.Comparison)
 
             If _folderPaths.Count = 0 Then
                 ExitCompare(zurueckZumFokus:=False)
@@ -1910,7 +1914,7 @@ Namespace ViewModels
                 ' die es nicht mehr gibt.
                 Dim weiter = NextPathFrom(stelle, "")
                 ExitCompare(zurueckZumFokus:=False)
-                Dim wIdx = _folderPaths.FindIndex(Function(p) String.Equals(p, weiter, StringComparison.OrdinalIgnoreCase))
+                Dim wIdx = _folderPaths.FindIndex(Function(p) String.Equals(p, weiter, PathIdentity.Comparison))
                 If wIdx >= 0 Then LoadPathAt(wIdx)
                 Return
             End If
@@ -1934,13 +1938,13 @@ Namespace ViewModels
                 ' Nur noch EIN Bild uebrig - ein Vergleich mit sich selbst hat keinen Sinn.
                 Dim bleibt = If(String.IsNullOrEmpty(_compareLeftPath), naechster, _compareLeftPath)
                 ExitCompare(zurueckZumFokus:=False)
-                Dim idx = _folderPaths.FindIndex(Function(p) String.Equals(p, bleibt, StringComparison.OrdinalIgnoreCase))
+                Dim idx = _folderPaths.FindIndex(Function(p) String.Equals(p, bleibt, PathIdentity.Comparison))
                 If idx >= 0 Then LoadPathAt(idx)
                 Return
             End If
 
             _compareRightPath = naechster
-            _currentIndex = _folderPaths.FindIndex(Function(p) String.Equals(p, naechster, StringComparison.OrdinalIgnoreCase))
+            _currentIndex = _folderPaths.FindIndex(Function(p) String.Equals(p, naechster, PathIdentity.Comparison))
             _focusedComparePane = 0
             LoadCompareImages(nurRechts:=True)
             LoadCompareMarkers()
@@ -1963,7 +1967,7 @@ Namespace ViewModels
             Dim start = Math.Max(0, Math.Min(stelle, _folderPaths.Count - 1))
             For i = 0 To _folderPaths.Count - 1
                 Dim k = (start + i) Mod _folderPaths.Count
-                If Not String.Equals(_folderPaths(k), ausser, StringComparison.OrdinalIgnoreCase) Then Return _folderPaths(k)
+                If Not String.Equals(_folderPaths(k), ausser, PathIdentity.Comparison) Then Return _folderPaths(k)
             Next
             Return ""
         End Function
@@ -1999,7 +2003,7 @@ Namespace ViewModels
                 Return _isCompareMode AndAlso
                        Not String.IsNullOrEmpty(_compareLeftPath) AndAlso
                        Not String.IsNullOrEmpty(_compareRightPath) AndAlso
-                       Not String.Equals(_compareLeftPath, _compareRightPath, StringComparison.OrdinalIgnoreCase)
+                       Not String.Equals(_compareLeftPath, _compareRightPath, PathIdentity.Comparison)
             End Get
         End Property
 
@@ -2026,7 +2030,7 @@ Namespace ViewModels
 
             ' Das Weiterblaettern haengt am Index der RECHTEN Flaeche - er muss dem getauschten
             ' Bild folgen, sonst springt der naechste Tastendruck an eine fremde Stelle im Ordner.
-            Dim idx = _folderPaths.FindIndex(Function(p) String.Equals(p, _compareRightPath, StringComparison.OrdinalIgnoreCase))
+            Dim idx = _folderPaths.FindIndex(Function(p) String.Equals(p, _compareRightPath, PathIdentity.Comparison))
             If idx >= 0 Then _currentIndex = idx
 
             ShowDataOfFocusedPane()
@@ -2045,7 +2049,7 @@ Namespace ViewModels
         Public Sub SetCompareRight(path As String)
             If Not _isCompareMode OrElse String.IsNullOrWhiteSpace(path) Then Return
             If Not File.Exists(path) Then Return
-            If String.Equals(path, _compareRightPath, StringComparison.OrdinalIgnoreCase) Then Return
+            If String.Equals(path, _compareRightPath, PathIdentity.Comparison) Then Return
             _compareRightPath = path
             Me.RaisePropertyChanged(NameOf(CompareRightFileName))
             Me.RaisePropertyChanged(NameOf(CanSwapComparePanes))
@@ -2078,7 +2082,7 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(n)
             Next
             If Not zurueckZumFokus OrElse String.IsNullOrEmpty(focusPath) Then Return
-            Dim idx = _folderPaths.FindIndex(Function(pf) String.Equals(pf, focusPath, StringComparison.OrdinalIgnoreCase))
+            Dim idx = _folderPaths.FindIndex(Function(pf) String.Equals(pf, focusPath, PathIdentity.Comparison))
             If idx >= 0 Then LoadPathAt(idx)
         End Sub
 
@@ -2153,9 +2157,9 @@ Namespace ViewModels
             If allPaths IsNot Nothing Then
                 _folderPaths = allPaths.
                     Where(Function(p) Not String.IsNullOrEmpty(p)).
-                    Distinct(StringComparer.OrdinalIgnoreCase).
+                    Distinct(PathIdentity.Comparer).
                     ToList()
-                _currentIndex = _folderPaths.FindIndex(Function(p) String.Equals(p, imagePath, StringComparison.OrdinalIgnoreCase))
+                _currentIndex = _folderPaths.FindIndex(Function(p) String.Equals(p, imagePath, PathIdentity.Comparison))
                 LoadFilmstrip()
             ElseIf deferFolderContext Then
                 ' Leer starten, damit das Bild sofort kommt - die Liste trifft gleich ein.
@@ -2186,7 +2190,7 @@ Namespace ViewModels
         ''' <summary>Die Kachel des aktuellen Bildes im Filmstreifen neu holen, ohne das Bild selbst
         ''' neu zu laden: nach dem Speichern im Editor zeigt sie sonst den alten Stand.</summary>
         Friend Sub RefreshCurrentFilmstripThumbnail()
-            For Each filmItem In FilmstripItems.Where(Function(i) i IsNot Nothing AndAlso String.Equals(i.FilePath, _currentImagePath, StringComparison.OrdinalIgnoreCase))
+            For Each filmItem In FilmstripItems.Where(Function(i) i IsNot Nothing AndAlso String.Equals(i.FilePath, _currentImagePath, PathIdentity.Comparison))
                 filmItem.RefreshFileInfo()
                 filmItem.ClearThumbnail()
             Next
@@ -2249,7 +2253,7 @@ Namespace ViewModels
             Try
                 If String.IsNullOrEmpty(_currentImagePath) OrElse _mainVm Is Nothing Then Return
                 Await OpenCurrentInEditorAsync()
-                If _mainVm.Editor Is Nothing OrElse Not String.Equals(_mainVm.Editor.CurrentImagePath, _currentImagePath, StringComparison.OrdinalIgnoreCase) Then Return
+                If _mainVm.Editor Is Nothing OrElse Not String.Equals(_mainVm.Editor.CurrentImagePath, _currentImagePath, PathIdentity.Comparison) Then Return
                 _mainVm.Editor.CurrentTool = EditorTool.Transform
                 _mainVm.Editor.SetCropPercentages(cropLeft, cropTop, cropRight, cropBottom)
             Catch ex As Exception
@@ -2634,7 +2638,7 @@ Namespace ViewModels
                     full?.Dispose()
                     Return
                 End If
-                If Not String.Equals(path, _currentImagePath, StringComparison.OrdinalIgnoreCase) Then
+                If Not String.Equals(path, _currentImagePath, PathIdentity.Comparison) Then
                     full?.Dispose()
                     Return
                 End If
@@ -2902,7 +2906,7 @@ Namespace ViewModels
         Private Sub LoadFolderContext(folder As String, currentPath As String)
             Try
                 _folderPaths = ScanFolderImagePaths(folder)
-                _currentIndex = _folderPaths.FindIndex(Function(p) String.Equals(p, currentPath, StringComparison.OrdinalIgnoreCase))
+                _currentIndex = _folderPaths.FindIndex(Function(p) String.Equals(p, currentPath, PathIdentity.Comparison))
                 If _currentIndex < 0 Then _currentIndex = 0
                 LoadFilmstrip()
             Catch
@@ -2928,7 +2932,7 @@ Namespace ViewModels
                 If token <> _folderContextToken Then Return
 
                 _folderPaths = paths
-                Dim index = _folderPaths.FindIndex(Function(p) String.Equals(p, currentPath, StringComparison.OrdinalIgnoreCase))
+                Dim index = _folderPaths.FindIndex(Function(p) String.Equals(p, currentPath, PathIdentity.Comparison))
                 If index < 0 Then index = 0
                 _currentIndex = index
                 LoadFilmstrip()
@@ -3098,7 +3102,7 @@ Namespace ViewModels
             ' wenn er das Bild schon kennt (Nutzervorschlag), sonst leeren; (2) das EXIF-Ergebnis
             ' posten, SOBALD es gelesen ist; (3) das Histogramm separat nachschieben, ohne das
             ' EXIF-Update dahinter aufzuhalten.
-            If Not String.Equals(_infoPanelShownForPath, imagePath, StringComparison.OrdinalIgnoreCase) Then
+            If Not String.Equals(_infoPanelShownForPath, imagePath, PathIdentity.Comparison) Then
                 SetProvisionalInfoPanelForPath(imagePath)
             End If
 
@@ -3157,7 +3161,7 @@ Namespace ViewModels
                 Return _infoItem
             End If
             If _infoItem Is Nothing OrElse
-               Not String.Equals(_infoItem.FilePath, imagePath, StringComparison.OrdinalIgnoreCase) Then
+               Not String.Equals(_infoItem.FilePath, imagePath, PathIdentity.Comparison) Then
                 _infoItem = ImageItem.CreateLightweight(imagePath)
             End If
             Return _infoItem
@@ -3205,8 +3209,8 @@ Namespace ViewModels
             ' Während eines Immich-Wechsels zeigt das Infopanel bereits den neuen Pseudo-Pfad,
             ' _currentImagePath verweist aber bis zum Downloadende noch auf die alte Temp-Datei.
             ' In dieser Zwischenzeit kein Histogramm nachladen, sonst erscheint wieder das alte Bild.
-            If Not String.Equals(_infoPanelShownForPath, _currentImagePath, StringComparison.OrdinalIgnoreCase) Then Return
-            If String.Equals(_histogramLoadedForPath, _currentImagePath, StringComparison.OrdinalIgnoreCase) Then Return
+            If Not String.Equals(_infoPanelShownForPath, _currentImagePath, PathIdentity.Comparison) Then Return
+            If String.Equals(_histogramLoadedForPath, _currentImagePath, PathIdentity.Comparison) Then Return
 
             Dim imagePath = _currentImagePath
             ' Auch hier gilt der Stand der Darstellung beim START: wer zweimal schnell umschaltet,
@@ -3234,8 +3238,8 @@ Namespace ViewModels
                              histogram = ImageProcessor.BuildScopeImage(pixels, 600, 300, scopeKey)
                          End Using
                          Dispatcher.UIThread.Post(Sub()
-                                                       If Not String.Equals(_currentImagePath, imagePath, StringComparison.OrdinalIgnoreCase) OrElse
-                                                          Not String.Equals(_infoPanelShownForPath, imagePath, StringComparison.OrdinalIgnoreCase) OrElse
+                                                       If Not String.Equals(_currentImagePath, imagePath, PathIdentity.Comparison) OrElse
+                                                          Not String.Equals(_infoPanelShownForPath, imagePath, PathIdentity.Comparison) OrElse
                                                           scopeGeneration <> ScopeSelectionViewModel.Generation Then
                                                            histogram?.Dispose()
                                                            Return
@@ -3478,7 +3482,7 @@ Namespace ViewModels
             ' Angeheftet, aber noch kein Vergleich: das naechste Bild oeffnet ihn - angeheftet links,
             ' neu rechts. Dasselbe Bild nochmal anzusteuern tut nichts.
             If Not _isCompareMode AndAlso IsImagePinned AndAlso
-               Not String.Equals(_folderPaths(idx), _pinnedPath, StringComparison.OrdinalIgnoreCase) Then
+               Not String.Equals(_folderPaths(idx), _pinnedPath, PathIdentity.Comparison) Then
                 OpenCompare(_pinnedPath, _folderPaths(idx))
                 Return
             End If
@@ -3502,7 +3506,7 @@ Namespace ViewModels
             End If
             Dim nextPath = _folderPaths(idx)
             If String.IsNullOrEmpty(nextPath) OrElse Not File.Exists(nextPath) Then
-                _folderPaths.RemoveAll(Function(p) String.Equals(p, nextPath, StringComparison.OrdinalIgnoreCase))
+                _folderPaths.RemoveAll(Function(p) String.Equals(p, nextPath, PathIdentity.Comparison))
                 If _folderPaths.Count = 0 Then
                     InvalidatePendingBitmapLoad() : CurrentImage = Nothing
                     CurrentImagePath = ""
@@ -3567,7 +3571,7 @@ Namespace ViewModels
                 ' Ein Klick auf das angeheftete Bild im Filmstreifen tut nichts: es ist gedimmt, weil
                 ' es im Vergleich nicht rechts neben sich selbst stehen kann.
                 If IsCompareAnchorPath(item.FilePath) Then Return
-                Dim idx = _folderPaths.FindIndex(Function(p) String.Equals(p, item.FilePath, StringComparison.OrdinalIgnoreCase))
+                Dim idx = _folderPaths.FindIndex(Function(p) String.Equals(p, item.FilePath, PathIdentity.Comparison))
                 If idx >= 0 Then Await CommitNavigateAsync(idx)
             Catch ex As Exception
                 ' Absicherung: eine Ausnahme in einem Async Sub landet sonst beim Dispatcher
@@ -3603,6 +3607,16 @@ Namespace ViewModels
             If String.IsNullOrEmpty(_currentImagePath) Then Return
             Dim deletedPath = _currentImagePath
             _mainVm.RequestDeletePaths({deletedPath}, Sub()
+                                                           ' Der Rueckruf kommt auch, wenn das Loeschen
+                                                           ' scheiterte (Papierkorb nicht erreichbar,
+                                                           ' keine Rechte). Dann ist die Datei noch da:
+                                                           ' sie bleibt im Streifen und wird neu geladen,
+                                                           ' denn vor dem Loeschen wurde ihr Bild freigegeben.
+                                                           If File.Exists(deletedPath) Then
+                                                               Dim stillAt = _folderPaths.FindIndex(Function(p) String.Equals(p, deletedPath, PathIdentity.Comparison))
+                                                               If stillAt >= 0 AndAlso String.Equals(_currentImagePath, deletedPath, PathIdentity.Comparison) Then LoadPathAt(stillAt)
+                                                               Return
+                                                           End If
                                                            _folderPaths.Remove(deletedPath)
                                                            If _currentIndex >= _folderPaths.Count Then _currentIndex = _folderPaths.Count - 1
                                                            If _currentIndex >= 0 Then
@@ -3914,7 +3928,7 @@ Namespace ViewModels
             If String.IsNullOrEmpty(_currentImagePath) Then Return
             Dim oldPath = _currentImagePath
             _mainVm.RequestRenamePath(oldPath, Sub(newPath)
-                                                   Dim idx = _folderPaths.FindIndex(Function(p) String.Equals(p, oldPath, StringComparison.OrdinalIgnoreCase))
+                                                   Dim idx = _folderPaths.FindIndex(Function(p) String.Equals(p, oldPath, PathIdentity.Comparison))
                                                    If idx >= 0 Then _folderPaths(idx) = newPath
                                                    LoadFilmstrip()
                                                    OpenImage(newPath, _folderPaths)
@@ -3923,7 +3937,7 @@ Namespace ViewModels
 
         Public Sub ReleaseCurrentImageIfAny(paths As IEnumerable(Of String))
             If String.IsNullOrEmpty(_currentImagePath) OrElse paths Is Nothing Then Return
-            If paths.Any(Function(p) String.Equals(p, _currentImagePath, StringComparison.OrdinalIgnoreCase)) Then
+            If paths.Any(Function(p) String.Equals(p, _currentImagePath, PathIdentity.Comparison)) Then
                 InvalidatePendingBitmapLoad()
                 CurrentImage = Nothing
             End If

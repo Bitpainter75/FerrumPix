@@ -9964,6 +9964,30 @@
   <data name="Die_Grafikkarte_ist_hier_nicht_nutzbar_0_Die_Bil_7db4f7ac" xml:space="preserve">
     <value>ใช้การ์ดจอที่นี่ไม่ได้ ({0}) การแก้ไขภาพจะคำนวณบนโปรเซสเซอร์</value>
   </data>
+  <data name="die_Oberfl_che_zeichnet_ohne_Grafikbeschleunigun_c12d1025" xml:space="preserve">
+    <value>อินเทอร์เฟซวาดโดยไม่มีการเร่งกราฟิก</value>
+  </data>
+  <data name="die_Grafikschnittstelle_dieses_Systems_wird_nich_752a5836" xml:space="preserve">
+    <value>ไม่รองรับอินเทอร์เฟซกราฟิกของระบบนี้</value>
+  </data>
+  <data name="auf_der_Grafikkarte_l_sst_sich_kein_Zeichenkonte_cb473bca" xml:space="preserve">
+    <value>ไม่สามารถสร้างบริบทการวาดบนการ์ดจอได้</value>
+  </data>
+  <data name="0_rechnet_in_Software_auf_dem_Prozessor_fbaf1e5b" xml:space="preserve">
+    <value>{0} คำนวณด้วยซอฟต์แวร์บนโปรเซสเซอร์</value>
+  </data>
+  <data name="der_Grafiktreiber_antwortet_nicht_be51d261" xml:space="preserve">
+    <value>ไดรเวอร์กราฟิกไม่ตอบสนอง</value>
+  </data>
+  <data name="das_Grafikger_t_ist_verloren_gegangen_b88479d8" xml:space="preserve">
+    <value>อุปกรณ์กราฟิกสูญหาย</value>
+  </data>
+  <data name="die_Selbstpr_fung_ist_nicht_bestanden_446fe494" xml:space="preserve">
+    <value>การทดสอบตัวเองไม่ผ่าน</value>
+  </data>
+  <data name="ein_Probeshader_l_sst_sich_auf_der_Karte_nicht_a_51f5ef10" xml:space="preserve">
+    <value>ไม่สามารถเรียกใช้เชเดอร์ทดสอบบนการ์ดได้</value>
+  </data>
   <data name="Prozessorkerne_f_r_Modelle_779167cd" xml:space="preserve">
     <value>แกนประมวลผลสำหรับโมเดล</value>
   </data>

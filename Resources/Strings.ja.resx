@@ -9960,6 +9960,30 @@
   <data name="Die_Grafikkarte_ist_hier_nicht_nutzbar_0_Die_Bil_7db4f7ac" xml:space="preserve">
     <value>この環境ではグラフィックカードを使用できません ({0})。画像編集はプロセッサーで計算されます。</value>
   </data>
+  <data name="die_Oberfl_che_zeichnet_ohne_Grafikbeschleunigun_c12d1025" xml:space="preserve">
+    <value>インターフェースがグラフィックアクセラレーションなしで描画しています</value>
+  </data>
+  <data name="die_Grafikschnittstelle_dieses_Systems_wird_nich_752a5836" xml:space="preserve">
+    <value>このシステムのグラフィックインターフェースはサポートされていません</value>
+  </data>
+  <data name="auf_der_Grafikkarte_l_sst_sich_kein_Zeichenkonte_cb473bca" xml:space="preserve">
+    <value>グラフィックカード上に描画コンテキストを作成できません</value>
+  </data>
+  <data name="0_rechnet_in_Software_auf_dem_Prozessor_fbaf1e5b" xml:space="preserve">
+    <value>{0} はプロセッサー上でソフトウェア処理しています</value>
+  </data>
+  <data name="der_Grafiktreiber_antwortet_nicht_be51d261" xml:space="preserve">
+    <value>グラフィックドライバーが応答しません</value>
+  </data>
+  <data name="das_Grafikger_t_ist_verloren_gegangen_b88479d8" xml:space="preserve">
+    <value>グラフィックデバイスが失われました</value>
+  </data>
+  <data name="die_Selbstpr_fung_ist_nicht_bestanden_446fe494" xml:space="preserve">
+    <value>セルフテストに合格しませんでした</value>
+  </data>
+  <data name="ein_Probeshader_l_sst_sich_auf_der_Karte_nicht_a_51f5ef10" xml:space="preserve">
+    <value>テスト用シェーダーをカードで実行できません</value>
+  </data>
   <data name="Prozessorkerne_f_r_Modelle_779167cd" xml:space="preserve">
     <value>モデルが使うプロセッサーコア</value>
   </data>

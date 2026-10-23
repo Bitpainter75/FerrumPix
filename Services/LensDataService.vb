@@ -786,7 +786,7 @@ Namespace Services
                     ' Kein Profil in der Sammlung: dann die Korrekturwerte, die die Kamera selbst in
                     ' die RAW schreibt, nach derselben Regel.
                     If result Is Nothing AndAlso fromCaptureData Then
-                        result = CameraLensCorrectionService.TryCreate(directories, width, height)
+                        result = CameraLensCorrectionService.TryCreate(directories, width, height, path)
                         If result IsNot Nothing Then
                             result.LensName = If(String.IsNullOrWhiteSpace(lens), model, lens)
                             result.Brennweite = focalLength

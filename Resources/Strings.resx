@@ -9939,6 +9939,30 @@
   <data name="Die_Grafikkarte_ist_hier_nicht_nutzbar_0_Die_Bil_7db4f7ac" xml:space="preserve">
     <value>The graphics card cannot be used here ({0}). Image editing runs on the processor.</value>
   </data>
+  <data name="die_Oberfl_che_zeichnet_ohne_Grafikbeschleunigun_c12d1025" xml:space="preserve">
+    <value>the interface draws without graphics acceleration</value>
+  </data>
+  <data name="die_Grafikschnittstelle_dieses_Systems_wird_nich_752a5836" xml:space="preserve">
+    <value>the graphics interface of this system is not supported</value>
+  </data>
+  <data name="auf_der_Grafikkarte_l_sst_sich_kein_Zeichenkonte_cb473bca" xml:space="preserve">
+    <value>no drawing context can be created on the graphics card</value>
+  </data>
+  <data name="0_rechnet_in_Software_auf_dem_Prozessor_fbaf1e5b" xml:space="preserve">
+    <value>{0} renders in software on the processor</value>
+  </data>
+  <data name="der_Grafiktreiber_antwortet_nicht_be51d261" xml:space="preserve">
+    <value>the graphics driver does not respond</value>
+  </data>
+  <data name="das_Grafikger_t_ist_verloren_gegangen_b88479d8" xml:space="preserve">
+    <value>the graphics device was lost</value>
+  </data>
+  <data name="die_Selbstpr_fung_ist_nicht_bestanden_446fe494" xml:space="preserve">
+    <value>the self-test failed</value>
+  </data>
+  <data name="ein_Probeshader_l_sst_sich_auf_der_Karte_nicht_a_51f5ef10" xml:space="preserve">
+    <value>a test shader cannot run on the card</value>
+  </data>
   <data name="Prozessorkerne_f_r_Modelle_779167cd" xml:space="preserve">
     <value>Processor cores for models</value>
   </data>

@@ -56,6 +56,9 @@ Namespace Services
             Public State As GpuCheckState
             Public Renderer As String
             Public Detail As String
+            ''' <summary>Bei Unavailable die Art des Fehlschlags, fuer die uebersetzte Anzeige.
+            ''' Detail ist der deutsche Text fuer die Fehlerdatei und gehoert nicht in die Oberflaeche.</summary>
+            Public Failure As GpuImageService.GpuFailure
             Public MaxDeviation As Integer
             ''' <summary>Aus dem Tempovergleich, 0 solange er nicht gelaufen ist.</summary>
             Public GpuMilliseconds As Integer
@@ -197,6 +200,7 @@ Namespace Services
             If Not GpuImageService.IsAvailable Then
                 result.State = GpuCheckState.Unavailable
                 result.Detail = GpuImageService.FailureReason
+                result.Failure = GpuImageService.Failure
                 Return result
             End If
             result.Renderer = GpuImageService.Renderer
@@ -214,6 +218,7 @@ Namespace Services
                     result.State = GpuCheckState.Unavailable
                     result.Detail = If(String.IsNullOrEmpty(GpuImageService.FailureReason),
                                        "Der Shader laesst sich auf der Grafikkarte nicht ausfuehren.", GpuImageService.FailureReason)
+                    result.Failure = GpuImageService.Failure
                     Return result
                 End If
                 Using onGpu

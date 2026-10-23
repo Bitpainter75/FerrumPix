@@ -9,8 +9,8 @@ Namespace Services
     ''' als Rueckfall, wenn die Sammlung kein Profil fuer das Objektiv fuehrt
     ''' (<see cref="LensDataService.FindCorrectionForFile"/>).
     '''
-    ''' <para>Sony, Olympus/OM und Panasonic. Olympus siehe <see cref="ReadOlympus"/>, Panasonic
-    ''' <see cref="ReadPanasonic"/>.</para>
+    ''' <para>Sony, Olympus/OM, Panasonic und Fujifilm. Olympus siehe <see cref="ReadOlympus"/>,
+    ''' Panasonic <see cref="ReadPanasonic"/>, Fujifilm <see cref="ReadFujifilm"/>.</para>
     '''
     ''' <para>Sony: ARW-Dateien tragen im Feld 0x7037 die Verzeichnung und in 0x7035
     ''' den Farbquerfehler als Stuetzwerte. Der erste Wert ist die Zahl der Stuetzstellen
@@ -36,11 +36,13 @@ Namespace Services
         ''' brauchbaren traegt. Lauter Nullen heissen "nichts gemeldet", nicht "kein Fehler":
         ''' am Bestand stehen sie auch bei Brennweiten, an denen das Objektiv sichtbar verzeichnet.</summary>
         Public Shared Function TryCreate(directories As IEnumerable(Of Directory),
-                                         width As Integer, height As Integer) As LensDataService.Korrektur
+                                         width As Integer, height As Integer,
+                                         Optional path As String = Nothing) As LensDataService.Korrektur
             If directories Is Nothing OrElse width < 2 OrElse height < 2 Then Return Nothing
             Dim curves = ReadSony(directories)
             If curves.Distortion Is Nothing AndAlso curves.Red Is Nothing Then curves = ReadOlympus(directories)
             If curves.Distortion Is Nothing AndAlso curves.Red Is Nothing Then curves = ReadPanasonic(directories, width, height)
+            If curves.Distortion Is Nothing AndAlso curves.Red Is Nothing Then curves = ReadFujifilm(path, width, height)
             Dim distortionKnots = curves.Distortion
             Dim redKnots = curves.Red
             Dim blueKnots = curves.Blue
@@ -161,6 +163,158 @@ Namespace Services
                                       End Function)
             If knots.Any(Function(v) Double.IsNaN(v)) Then Return (Nothing, Nothing, Nothing)
             Return (knots, Nothing, Nothing)
+        End Function
+
+        Private Const FujifilmLensDirectoryTag As Integer = &HF000
+        Private Const FujifilmDistortionTag As Integer = &HF00B
+
+        ''' <summary>Fujifilm (RAF): die Verzeichnung steht nicht im EXIF, sondern im TIFF des
+        ''' RAW-Teils (Versatz in Byte 100 des RAF-Kopfes), Unterverzeichnis 0xF000, Feld 0xF00B, als
+        ''' vorzeichenbehaftete Brueche: ein Kopfwert, n Stuetzstellen, n Werte in Prozent.
+        '''
+        ''' DIE STUETZSTELLEN SIND RADIEN IN HALBEN DIAGONALEN, mit 1 in der Ecke. Aeltere Gehaeuse
+        ''' haben elf (0 bis 1), die GFX 50 acht (bis 1), die neueren neun, gleichmaessig in r^2
+        ''' (Wurzel aus k/8): dort liegt die ACHTE in der Ecke und die neunte (1,0607) dahinter. Die
+        ''' erste Lesart nahm die letzte Stuetzstelle als Ecke und las bei neun jeden Wert 6 % zu weit
+        ''' aussen. Gegen Adobes DNG derselben Dateien, Form der Kurve (beide auf die Mitte bezogen,
+        ''' Adobe vergroessert selbst), groesster Abstand bis zur Ecke in Prozent des Radius: an zehn
+        ''' Dateien mit neun Stuetzstellen 0,68 % mit der alten, 0,26 % mit dieser Lesart; ueber alle 53
+        ''' vergleichbaren Dateien im Median 0,27 %. Ausreisser sind Kompakte (XQ1, XQ2 3,6 %, X20,
+        ''' X30, X-S1 gut 1 %), fuer die Adobe vermutlich ein eigenes Profil nimmt.
+        '''
+        ''' Die Kamera tastet die Rohdaten an source = r (1 + D(source) / 100) ab, die Tabelle gilt also
+        ''' am VERZEICHNETEN Radius; geloest wird je Stuetzwert durch Einsetzen. Die Vergroesserung
+        ''' der Kamera, die den Rahmen fuellt, bleibt weg: die macht die Korrektur selbst.
+        '''
+        ''' Kopfwert mal Zahl der Stuetzstellen ist die halbe Diagonale des Bildes in Pixeln. Passt sie
+        ''' nicht zum Bild (X-S20, X-T30 III und X-M5 schreiben den Wert des 40-MP-Sensors, eine X-T5
+        ''' im Kamera-Ausschnitt einen anderen), bleibt die Datei unkorrigiert: an diesen Dateien lag
+        ''' die Kurve gegen Adobe bis 300 Pixel daneben. Der Farbquerfehler (0xF00F) und die
+        ''' Vignettierung (0xF010) werden nicht gelesen.</summary>
+        Private Shared Function ReadFujifilm(path As String, width As Integer, height As Integer) As (Distortion As Double(), Red As Double(), Blue As Double())
+            Dim none As (Distortion As Double(), Red As Double(), Blue As Double()) = (Nothing, Nothing, Nothing)
+            If String.IsNullOrEmpty(path) OrElse Not path.EndsWith(".raf", StringComparison.OrdinalIgnoreCase) Then Return none
+            Dim table = ReadFujifilmTable(path, FujifilmDistortionTag)
+            If table Is Nothing OrElse table.Length < 5 OrElse (table.Length - 1) Mod 2 <> 0 Then Return none
+            Dim n = (table.Length - 1) \ 2
+            Dim positions = table.Skip(1).Take(n).ToArray()
+            Dim values = table.Skip(1 + n).Take(n).ToArray()
+            If values.All(Function(v) v = 0) Then Return none
+            For i = 1 To n - 1
+                If positions(i) <= positions(i - 1) Then Return none
+            Next
+            Dim halfDiagonal = Math.Sqrt(CDbl(width) * width + CDbl(height) * height) / 2.0
+            If Math.Abs(table(0) * n - halfDiagonal) > 0.02 * halfDiagonal Then Return none
+            Return (FujifilmDistortionKnots(positions, values), Nothing, Nothing)
+        End Function
+
+        ''' <summary>Aus Stuetzstellen (Radien in halben Diagonalen) und Prozentwerten die
+        ''' Stuetzwerte dieses Dienstes: verzeichneter durch korrigierten Radius an gleichmaessig
+        ''' verteilten korrigierten Radien von der Mitte bis zur Ecke.</summary>
+        Friend Shared Function FujifilmDistortionKnots(positions As Double(), values As Double()) As Double()
+            ' Liegt die erste Stuetzstelle ausserhalb der Mitte, gilt dort 0 %.
+            Dim knots = positions.ToList()
+            Dim percent = values.ToList()
+            If knots(0) > 0 Then
+                knots.Insert(0, 0.0)
+                percent.Insert(0, 0.0)
+            End If
+            Dim at = Function(x As Double) As Double
+                         If x <= knots(0) Then Return percent(0)
+                         For i = 1 To knots.Count - 1
+                             If x <= knots(i) Then
+                                 Dim t = (x - knots(i - 1)) / (knots(i) - knots(i - 1))
+                                 Return percent(i - 1) + t * (percent(i) - percent(i - 1))
+                             End If
+                         Next
+                         Return percent(knots.Count - 1)
+                     End Function
+            Return SampleFormula(Function(r)
+                                     If r <= 0 Then Return 1.0 + at(0.0) / 100.0
+                                     Dim source = r
+                                     For iteration = 1 To 40
+                                         source = r * (1.0 + at(source) / 100.0)
+                                     Next
+                                     Return source / r
+                                 End Function)
+        End Function
+
+        ''' <summary>Ein Feld aus dem Unterverzeichnis 0xF000 des RAW-Teils einer RAF, als Zahlen;
+        ''' Nothing, wenn es fehlt oder die Datei anders gebaut ist.</summary>
+        Private Shared Function ReadFujifilmTable(path As String, tag As Integer) As Double()
+            Try
+                Using stream = New IO.FileStream(path, IO.FileMode.Open, IO.FileAccess.Read, IO.FileShare.Read)
+                    Dim head = ReadExactly(stream, 0, 104)
+                    If head Is Nothing OrElse Text.Encoding.ASCII.GetString(head, 0, 16) <> "FUJIFILMCCD-RAW " Then Return Nothing
+                    Dim baseOffset = (CLng(head(100)) << 24) Or (CLng(head(101)) << 16) Or (CLng(head(102)) << 8) Or CLng(head(103))
+                    Dim tiffHead = ReadExactly(stream, baseOffset, 8)
+                    If tiffHead Is Nothing Then Return Nothing
+                    Dim little As Boolean
+                    If tiffHead(0) = &H49 AndAlso tiffHead(1) = &H49 Then
+                        little = True
+                    ElseIf tiffHead(0) = &H4D AndAlso tiffHead(1) = &H4D Then
+                        little = False
+                    Else
+                        Return Nothing
+                    End If
+                    Dim u16 = Function(b As Byte(), o As Integer) As Integer
+                                  Return If(little, (CInt(b(o + 1)) << 8) Or CInt(b(o)), (CInt(b(o)) << 8) Or CInt(b(o + 1)))
+                              End Function
+                    Dim u32 = Function(b As Byte(), o As Integer) As Long
+                                  Return If(little,
+                                            (CLng(b(o + 3)) << 24) Or (CLng(b(o + 2)) << 16) Or (CLng(b(o + 1)) << 8) Or CLng(b(o)),
+                                            (CLng(b(o)) << 24) Or (CLng(b(o + 1)) << 16) Or (CLng(b(o + 2)) << 8) Or CLng(b(o + 3)))
+                              End Function
+                    Dim findEntry = Function(ifdOffset As Long, wanted As Integer) As (Type As Integer, Count As Long, Value As Long)?
+                                        Dim countBytes = ReadExactly(stream, baseOffset + ifdOffset, 2)
+                                        If countBytes Is Nothing Then Return Nothing
+                                        Dim count = u16(countBytes, 0)
+                                        If count <= 0 OrElse count > 1000 Then Return Nothing
+                                        Dim block = ReadExactly(stream, baseOffset + ifdOffset + 2, count * 12)
+                                        If block Is Nothing Then Return Nothing
+                                        For i = 0 To count - 1
+                                            If u16(block, i * 12) = wanted Then
+                                                Return (u16(block, i * 12 + 2), u32(block, i * 12 + 4), u32(block, i * 12 + 8))
+                                            End If
+                                        Next
+                                        Return Nothing
+                                    End Function
+                    Dim directoryEntry = findEntry(u32(tiffHead, 4), FujifilmLensDirectoryTag)
+                    If directoryEntry Is Nothing Then Return Nothing
+                    Dim tableEntry = findEntry(directoryEntry.Value.Value, tag)
+                    If tableEntry Is Nothing OrElse tableEntry.Value.Type <> 10 Then Return Nothing ' SRATIONAL
+                    Dim valueCount = tableEntry.Value.Count
+                    If valueCount < 1 OrElse valueCount > 200 Then Return Nothing
+                    Dim data = ReadExactly(stream, baseOffset + tableEntry.Value.Value, CInt(valueCount * 8))
+                    If data Is Nothing Then Return Nothing
+                    Dim result(CInt(valueCount) - 1) As Double
+                    For i = 0 To result.Length - 1
+                        Dim numerator = u32(data, i * 8)
+                        Dim denominator = u32(data, i * 8 + 4)
+                        If numerator >= 2147483648L Then numerator -= 4294967296L
+                        If denominator >= 2147483648L Then denominator -= 4294967296L
+                        If denominator = 0 Then Return Nothing
+                        result(i) = numerator / CDbl(denominator)
+                    Next
+                    Return result
+                End Using
+            Catch ex As Exception
+                DiagnosticLogService.LogException("CameraLensCorrection.Fujifilm", ex)
+                Return Nothing
+            End Try
+        End Function
+
+        Private Shared Function ReadExactly(stream As IO.Stream, offset As Long, length As Integer) As Byte()
+            If offset < 0 OrElse length <= 0 OrElse offset + length > stream.Length Then Return Nothing
+            stream.Seek(offset, IO.SeekOrigin.Begin)
+            Dim buffer(length - 1) As Byte
+            Dim read = 0
+            While read < length
+                Dim n = stream.Read(buffer, read, length - read)
+                If n <= 0 Then Return Nothing
+                read += n
+            End While
+            Return buffer
         End Function
 
         Private Shared Function PanasonicParameter(info As Directory, tag As Integer) As Double

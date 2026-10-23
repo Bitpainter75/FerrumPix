@@ -100,7 +100,7 @@ Namespace ViewModels
         ''' <summary>Das Bild, dessen Daten das Panel zeigt. Nothing leert es.</summary>
         Public Sub ShowItem(item As ImageItem)
             Dim path = If(item Is Nothing, "", If(item.FilePath, ""))
-            If Not _isSummary AndAlso String.Equals(path, _path, StringComparison.OrdinalIgnoreCase) AndAlso _item Is item Then Return
+            If Not _isSummary AndAlso String.Equals(path, _path, PathIdentity.Comparison) AndAlso _item Is item Then Return
 
             ' Jeder Wechsel macht laufende Hintergrundarbeit ungueltig. Ohne diese Marke setzte ein
             ' spaet zurueckkommender Lauf die Daten des VORHERIGEN Bildes ins Panel - genau der
@@ -194,7 +194,7 @@ Namespace ViewModels
         ''' geblieben.</summary>
         Public Sub SetOwnedPath(path As String)
             Dim wanted = If(path, "")
-            If String.Equals(_path, wanted, StringComparison.OrdinalIgnoreCase) Then Return
+            If String.Equals(_path, wanted, PathIdentity.Comparison) Then Return
             _path = wanted
             ClearAiTaggingStatus()
             RaiseStateChanged()
@@ -763,7 +763,7 @@ Namespace ViewModels
                 Else
                     found = Await Task.Run(Function() ImageTaggingService.TagFile(target))
                 End If
-                If String.Equals(_path, target, StringComparison.OrdinalIgnoreCase) Then
+                If String.Equals(_path, target, PathIdentity.Comparison) Then
                     LoadAiTags()
                     ' NOTHING heisst, dass die Analyse gar nicht gelaufen ist - eine leere Liste
                     ' heisst, dass sie lief und nichts erkannt hat (siehe ImageTaggingService).

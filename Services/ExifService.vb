@@ -179,7 +179,23 @@ Namespace Services
             Public Property LastWriteUtc As DateTime
             Public Property Size As Long
             Public Property Data As ExifData
+            ''' <summary>Die Stelle in <see cref="_cacheOrder"/>, damit ein Treffer sie ohne Suche
+            ''' nach vorn holt.</summary>
+            Public Property OrderNode As LinkedListNode(Of String)
         End Class
+
+        ''' <summary>Hoechstens so viele Dateien bleiben im Speicher, die zuletzt benutzten.
+        '''
+        ''' OHNE GRENZE wuchs er mit jeder gelesenen Datei bis zum Ende der Sitzung: der Katalogindex
+        ''' und die Ordnerlaeufe der Galerie lesen jede Datei hierueber, und jeder Eintrag traegt die
+        ''' vollstaendigen Tag-Listen, bei einer RAW samt MakerNote einige hundert. Ueber einen grossen
+        ''' Bestand waren das Hunderte Megabyte, die niemand mehr brauchte - deren Ergebnis steht
+        ''' ohnehin im Katalog. Gebraucht wird der Speicher beim Blaettern in Betrachter und Editor,
+        ''' und dafuer genuegt die Nachbarschaft des gerade gezeigten Bildes.</summary>
+        Private Const MaxCacheEntries As Integer = 1024
+
+        ''' <summary>Die Pfade des Speichers, zuletzt benutzt vorn. Nur unter <see cref="_cacheLock"/>.</summary>
+        Private Shared ReadOnly _cacheOrder As New LinkedList(Of String)()
 
         Private Shared ReadOnly _cacheLock As New Object()
         ' XMP-Sidecars gehören oft FREMDEN Programmen. Deshalb atomar schreiben
@@ -236,6 +252,8 @@ Namespace Services
             SyncLock _cacheLock
                 Dim entry As ExifCacheEntry = Nothing
                 If _cache.TryGetValue(imagePath, entry) AndAlso entry.LastWriteUtc = lastWriteUtc AndAlso entry.Size = size Then
+                    _cacheOrder.Remove(entry.OrderNode)
+                    _cacheOrder.AddFirst(entry.OrderNode)
                     Return WithSidecarOverrides(imagePath, CloneExifData(entry.Data))
                 End If
             End SyncLock
@@ -243,7 +261,12 @@ Namespace Services
             Dim freshData = ReadExifCore(imagePath, fileInfo)
 
             SyncLock _cacheLock
-                _cache(imagePath) = New ExifCacheEntry With {.LastWriteUtc = lastWriteUtc, .Size = size, .Data = freshData}
+                RemoveCacheEntry(imagePath)
+                Dim node = _cacheOrder.AddFirst(imagePath)
+                _cache(imagePath) = New ExifCacheEntry With {.LastWriteUtc = lastWriteUtc, .Size = size, .Data = freshData, .OrderNode = node}
+                While _cache.Count > MaxCacheEntries AndAlso _cacheOrder.Last IsNot Nothing
+                    RemoveCacheEntry(_cacheOrder.Last.Value)
+                End While
             End SyncLock
 
             Return WithSidecarOverrides(imagePath, CloneExifData(freshData))
@@ -288,8 +311,17 @@ Namespace Services
         Public Shared Sub Invalidate(imagePath As String)
             If String.IsNullOrWhiteSpace(imagePath) Then Return
             SyncLock _cacheLock
-                _cache.Remove(imagePath)
+                RemoveCacheEntry(imagePath)
             End SyncLock
+        End Sub
+
+        ''' <summary>Nimmt einen Pfad aus dem Speicher UND aus der Reihenfolge. Nur unter
+        ''' <see cref="_cacheLock"/>.</summary>
+        Private Shared Sub RemoveCacheEntry(imagePath As String)
+            Dim entry As ExifCacheEntry = Nothing
+            If Not _cache.TryGetValue(imagePath, entry) Then Return
+            _cache.Remove(imagePath)
+            If entry.OrderNode?.List IsNot Nothing Then _cacheOrder.Remove(entry.OrderNode)
         End Sub
 
         ''' <summary>Trägt Größe und Erstell-/Änderungsdatum der Datei nach - für Aufrufer, die ihre

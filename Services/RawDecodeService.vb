@@ -2655,6 +2655,30 @@ Namespace Services
             End Try
         End Function
 
+        ''' <summary>GainMaps aus OpcodeList2 auf den Rohpuffer, siehe DngGainMapService. Nur fuer
+        ''' Rohdaten mit Farbfilter (FindRawImage verlangt das); sonst und ohne Karte bleibt alles,
+        ''' wie LibRaw es gelesen hat.</summary>
+        Private Shared Sub ApplyDngGainMaps(handle As IntPtr, path As String)
+            Try
+                Dim maps = DngGainMapService.ReadStage2GainMaps(path)
+                If maps Is Nothing OrElse _getRawWidth Is Nothing OrElse _getRawHeight Is Nothing Then Return
+                Dim rawWidth = _getRawWidth(handle)
+                Dim rawHeight = _getRawHeight(handle)
+                If rawWidth <= 0 OrElse rawHeight <= 0 Then Return
+                If (Marshal.ReadInt16(handle, SizesRawWidthOffset) And &HFFFF) <> rawWidth OrElse
+                   (Marshal.ReadInt16(handle, SizesRawHeightOffset) And &HFFFF) <> rawHeight Then Return
+                Dim pitch = Marshal.ReadInt32(handle, SizesRawPitchOffset)
+                Dim rawImage = FindRawImage(handle)
+                If rawImage = IntPtr.Zero Then Return
+                Dim clock = Diagnostics.Stopwatch.StartNew()
+                Dim applied = DngGainMapService.ApplyToRaw(maps, rawImage, rawWidth, rawHeight, pitch)
+                DiagnosticLogService.LogAlways("RawDecodeService.GainMap",
+                    $"file={IO.Path.GetFileName(path)}; maps={maps.Maps.Count}; applied={applied}; {clock.ElapsedMilliseconds} ms")
+            Catch ex As Exception
+                DiagnosticLogService.LogException("RawDecodeService.GainMap", ex)
+            End Try
+        End Sub
+
         ''' <summary>Schwarz- und Weisspunkt einer Canon aus ihrer ColorData, oder Nothing.
         '''
         ''' Nur fuer Rohdaten mit Farbfilter: sRAW und mRAW tragen dieselbe ColorData, ihre Daten sind
@@ -2949,6 +2973,11 @@ Namespace Services
                                     unclipping AndAlso cameraMatrix IsNot Nothing,
                                     CameraClipLevels(scaling), Nothing)
                 Dim libRawMatrixOwnedByUs = cameraMatrix IsNot Nothing AndAlso ownMatrix Is Nothing
+
+                ' Die Abschattung aus OpcodeList2 einer DNG (Telefone, Sigma fp-L), auf den
+                ' Sensordaten vor dem Demosaic, wo die Spezifikation sie vorsieht. LibRaw wendet sie
+                ' nicht an, die Ecken kamen bis zu zwei Blenden zu dunkel (DngGainMapService).
+                ApplyDngGainMaps(handle, path)
 
                 If PerformanceTraceService.Measure("RAW: entwickeln (LibRaw)", Function() _process(handle)) <> 0 Then Return Nothing
                 Dim errc = 0

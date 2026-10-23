@@ -160,7 +160,7 @@ Namespace ViewModels
         Private _dialogBatchRenameStart As Integer = 1
         Private _dialogBatchRenameStep As Integer = 1
         Private _dialogBatchRenamePaths As List(Of String) = New List(Of String)()
-        Private ReadOnly _dialogBatchRenameExifCache As New Dictionary(Of String, ExifData)(StringComparer.OrdinalIgnoreCase)
+        Private ReadOnly _dialogBatchRenameExifCache As New Dictionary(Of String, ExifData)(PathIdentity.Comparer)
         Private _dialogSearchName As String = ""
         Private _dialogSearchSource As String = "Local"
         Private _dialogSearchText As String = ""
@@ -826,7 +826,7 @@ Namespace ViewModels
                     If Not Await ConfirmEditorLeaveAsync("den Viewer öffnest") Then Return
                 End If
                 If CurrentMode = AppMode.Viewer AndAlso Viewer IsNot Nothing AndAlso
-                   Not String.Equals(Viewer.CurrentImagePath, leftPath, StringComparison.OrdinalIgnoreCase) Then
+                   Not String.Equals(Viewer.CurrentImagePath, leftPath, PathIdentity.Comparison) Then
                     If Not Await ConfirmViewerLeaveAsync("ein anderes Bild öffnest") Then Return
                 End If
                 Viewer.OpenCompare(leftPath, rightPath, allPaths, cacheScopeId, cacheScopeName)
@@ -843,7 +843,7 @@ Namespace ViewModels
                 End If
                 If CurrentMode = AppMode.Viewer AndAlso
                    Viewer IsNot Nothing AndAlso
-                   Not String.Equals(Viewer.CurrentImagePath, imagePath, StringComparison.OrdinalIgnoreCase) Then
+                   Not String.Equals(Viewer.CurrentImagePath, imagePath, PathIdentity.Comparison) Then
                     If Not Await ConfirmViewerLeaveAsync("ein anderes Bild öffnest") Then Return
                 End If
                 Viewer.OpenImage(imagePath, allPaths, cacheScopeId, cacheScopeName)
@@ -879,7 +879,7 @@ Namespace ViewModels
             If _documentOpenInFlight Then Return
             _documentOpenInFlight = True
             Try
-                If CurrentMode = AppMode.Editor AndAlso Not String.Equals(Editor?.CurrentImagePath, path, StringComparison.OrdinalIgnoreCase) Then
+                If CurrentMode = AppMode.Editor AndAlso Not String.Equals(Editor?.CurrentImagePath, path, PathIdentity.Comparison) Then
                     If Not Await ConfirmEditorLeaveAsync("ein anderes Bild öffnest") Then Return
                 End If
                 If CurrentMode = AppMode.Viewer Then
@@ -5650,7 +5650,7 @@ Namespace ViewModels
             Dim pathList = angefragt.
                 Where(Function(p) Not String.IsNullOrEmpty(p) AndAlso (IO.File.Exists(p) OrElse IO.Directory.Exists(p))).
                 Where(Function(p) FileOperationPolicy.CanDelete(p)).
-                Distinct(StringComparer.OrdinalIgnoreCase).
+                Distinct(PathIdentity.Comparer).
                 ToList()
             If pathList.Count = 0 Then
                 ' Ein wortloser Abbruch ist die schlimmste Sorte: der Nutzer bestaetigt nichts, es
@@ -5687,7 +5687,15 @@ Namespace ViewModels
             End If
 
             Viewer.ReleaseCurrentImageIfAny(pathList)
-            Editor.ReleaseCurrentImageIfAny(pathList)
+            ' DER EDITOR MIT UNGESPEICHERTER BEARBEITUNG gibt sein Bild erst frei, wenn die Datei
+            ' wirklich weg ist. Die Freigabe wirft Vorschauquelle und Temp-Ordner weg, und zurueck
+            ' kommt man danach nur ueber ein neues Oeffnen, das Bearbeitung und Verlauf zuruecksetzt.
+            ' Scheitert das Loeschen (Papierkorb nicht erreichbar, keine Rechte), bleibt so der
+            ' ungespeicherte Stand erhalten.
+            Dim editorKeepsEdits = Editor IsNot Nothing AndAlso Editor.HasUnsavedChanges AndAlso
+                                   Not String.IsNullOrEmpty(Editor.CurrentImagePath) AndAlso
+                                   pathList.Any(Function(p) String.Equals(p, Editor.CurrentImagePath, PathIdentity.Comparison))
+            If Not editorKeepsEdits Then Editor?.ReleaseCurrentImageIfAny(pathList)
 
             beforeDelete?.Invoke()
 
@@ -5728,6 +5736,7 @@ Namespace ViewModels
             ' Ansicht zu verschwinden und beim naechsten Einlesen wieder aufzutauchen.
             Dim reallyGone = pathList.Where(Function(p) Not IO.File.Exists(p) AndAlso Not IO.Directory.Exists(p)).ToList()
             If reallyGone.Count > 0 Then Gallery?.RemovePathsFromCurrentView(reallyGone)
+            If editorKeepsEdits AndAlso reallyGone.Count > 0 Then Editor?.ReleaseCurrentImageIfAny(reallyGone)
 
             afterDelete?.Invoke()
 

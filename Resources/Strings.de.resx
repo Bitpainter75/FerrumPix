@@ -9938,6 +9938,30 @@
   <data name="Die_Grafikkarte_ist_hier_nicht_nutzbar_0_Die_Bil_7db4f7ac" xml:space="preserve">
     <value>Die Grafikkarte ist hier nicht nutzbar ({0}). Die Bildbearbeitung rechnet auf dem Prozessor.</value>
   </data>
+  <data name="die_Oberfl_che_zeichnet_ohne_Grafikbeschleunigun_c12d1025" xml:space="preserve">
+    <value>die Oberfläche zeichnet ohne Grafikbeschleunigung</value>
+  </data>
+  <data name="die_Grafikschnittstelle_dieses_Systems_wird_nich_752a5836" xml:space="preserve">
+    <value>die Grafikschnittstelle dieses Systems wird nicht unterstützt</value>
+  </data>
+  <data name="auf_der_Grafikkarte_l_sst_sich_kein_Zeichenkonte_cb473bca" xml:space="preserve">
+    <value>auf der Grafikkarte lässt sich kein Zeichenkontext anlegen</value>
+  </data>
+  <data name="0_rechnet_in_Software_auf_dem_Prozessor_fbaf1e5b" xml:space="preserve">
+    <value>{0} rechnet in Software auf dem Prozessor</value>
+  </data>
+  <data name="der_Grafiktreiber_antwortet_nicht_be51d261" xml:space="preserve">
+    <value>der Grafiktreiber antwortet nicht</value>
+  </data>
+  <data name="das_Grafikger_t_ist_verloren_gegangen_b88479d8" xml:space="preserve">
+    <value>das Grafikgerät ist verloren gegangen</value>
+  </data>
+  <data name="die_Selbstpr_fung_ist_nicht_bestanden_446fe494" xml:space="preserve">
+    <value>die Selbstprüfung ist nicht bestanden</value>
+  </data>
+  <data name="ein_Probeshader_l_sst_sich_auf_der_Karte_nicht_a_51f5ef10" xml:space="preserve">
+    <value>ein Probeshader lässt sich auf der Karte nicht ausführen</value>
+  </data>
   <data name="Prozessorkerne_f_r_Modelle_779167cd" xml:space="preserve">
     <value>Prozessorkerne für Modelle</value>
   </data>

@@ -9964,6 +9964,30 @@
   <data name="Die_Grafikkarte_ist_hier_nicht_nutzbar_0_Die_Bil_7db4f7ac" xml:space="preserve">
     <value>여기서는 그래픽 카드를 사용할 수 없습니다 ({0}). 이미지 편집은 프로세서에서 계산됩니다.</value>
   </data>
+  <data name="die_Oberfl_che_zeichnet_ohne_Grafikbeschleunigun_c12d1025" xml:space="preserve">
+    <value>인터페이스가 그래픽 가속 없이 그려집니다</value>
+  </data>
+  <data name="die_Grafikschnittstelle_dieses_Systems_wird_nich_752a5836" xml:space="preserve">
+    <value>이 시스템의 그래픽 인터페이스는 지원되지 않습니다</value>
+  </data>
+  <data name="auf_der_Grafikkarte_l_sst_sich_kein_Zeichenkonte_cb473bca" xml:space="preserve">
+    <value>그래픽 카드에서 그리기 컨텍스트를 만들 수 없습니다</value>
+  </data>
+  <data name="0_rechnet_in_Software_auf_dem_Prozessor_fbaf1e5b" xml:space="preserve">
+    <value>{0}이(가) 프로세서에서 소프트웨어로 계산합니다</value>
+  </data>
+  <data name="der_Grafiktreiber_antwortet_nicht_be51d261" xml:space="preserve">
+    <value>그래픽 드라이버가 응답하지 않습니다</value>
+  </data>
+  <data name="das_Grafikger_t_ist_verloren_gegangen_b88479d8" xml:space="preserve">
+    <value>그래픽 장치가 손실되었습니다</value>
+  </data>
+  <data name="die_Selbstpr_fung_ist_nicht_bestanden_446fe494" xml:space="preserve">
+    <value>자체 검사를 통과하지 못했습니다</value>
+  </data>
+  <data name="ein_Probeshader_l_sst_sich_auf_der_Karte_nicht_a_51f5ef10" xml:space="preserve">
+    <value>테스트 셰이더를 카드에서 실행할 수 없습니다</value>
+  </data>
   <data name="Prozessorkerne_f_r_Modelle_779167cd" xml:space="preserve">
     <value>모델용 프로세서 코어</value>
   </data>

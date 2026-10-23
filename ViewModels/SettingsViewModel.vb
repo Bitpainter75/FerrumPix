@@ -3089,12 +3089,36 @@ Namespace ViewModels
                                              check.Renderer, check.MaxDeviation)
                     Case ImageProcessor.GpuCheckState.Unavailable
                         Return String.Format(LocalizationService.T("Die Grafikkarte ist hier nicht nutzbar ({0}). Die Bildbearbeitung rechnet auf dem Prozessor."),
-                                             check.Detail)
+                                             GpuFailureText(check.Failure))
                     Case Else
                         Return LocalizationService.T("Noch nicht geprüft.")
                 End Select
             End Get
         End Property
+
+        ''' <summary>Der Grund, warum die Karte nicht nutzbar ist, als uebersetzter Kurztext. Der
+        ''' ausfuehrliche Grund (GpuImageService.FailureReason) ist deutsch und steht in der
+        ''' Fehlerdatei; in der Oberflaeche stand er frueher woertlich, mitten im uebersetzten Satz.</summary>
+        Private Shared Function GpuFailureText(failure As GpuImageService.GpuFailure) As String
+            Select Case failure
+                Case GpuImageService.GpuFailure.NoPlatformGraphics
+                    Return LocalizationService.T("die Oberfläche zeichnet ohne Grafikbeschleunigung")
+                Case GpuImageService.GpuFailure.UnsupportedGraphics
+                    Return LocalizationService.T("die Grafikschnittstelle dieses Systems wird nicht unterstützt")
+                Case GpuImageService.GpuFailure.NoSkiaContext
+                    Return LocalizationService.T("auf der Grafikkarte lässt sich kein Zeichenkontext anlegen")
+                Case GpuImageService.GpuFailure.SoftwareRenderer
+                    Return String.Format(LocalizationService.T("{0} rechnet in Software auf dem Prozessor"), GpuImageService.Renderer)
+                Case GpuImageService.GpuFailure.DriverHang
+                    Return LocalizationService.T("der Grafiktreiber antwortet nicht")
+                Case GpuImageService.GpuFailure.DeviceLost
+                    Return LocalizationService.T("das Grafikgerät ist verloren gegangen")
+                Case GpuImageService.GpuFailure.Unusable
+                    Return LocalizationService.T("die Selbstprüfung ist nicht bestanden")
+                Case Else
+                    Return LocalizationService.T("ein Probeshader lässt sich auf der Karte nicht ausführen")
+            End Select
+        End Function
 
         ''' <summary>Rechnet die Pruefflaeche auf Karte und Prozessor und vergleicht (siehe
         ''' ImageProcessor.CheckGpuImageProcessing). Laeuft auch bei ausgeschaltetem Schalter: wer

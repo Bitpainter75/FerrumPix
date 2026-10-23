@@ -1784,7 +1784,7 @@ Namespace ViewModels
                 ' nur fuer das Bild, das ihn ausgeloest hat. Ohne diese beiden Abbrueche laegen nach
                 ' einem Bildwechsel die Maske und die Masse des ALTEN Bildes auf dem neuen.
                 If generation <> Volatile.Read(_rangeMaskGeneration) OrElse
-                   Not String.Equals(requestedDocument, _currentImagePath, StringComparison.OrdinalIgnoreCase) OrElse
+                   Not String.Equals(requestedDocument, _currentImagePath, PathIdentity.Comparison) OrElse
                    Not IsExpectedRangeMaskMode("Color", isMask) Then Return
 
                 Dim size = GetAnnotationDisplayPixelSize()
@@ -1825,7 +1825,7 @@ Namespace ViewModels
                                                     End Using
                                             End Function)
                 If generation <> Volatile.Read(_rangeMaskGeneration) OrElse
-                   Not String.Equals(requestedDocument, _currentImagePath, StringComparison.OrdinalIgnoreCase) OrElse
+                   Not String.Equals(requestedDocument, _currentImagePath, PathIdentity.Comparison) OrElse
                    Not IsExpectedRangeMaskMode("Color", isMask) Then
                     result.Mask?.Dispose()
                     Return
@@ -1863,7 +1863,7 @@ Namespace ViewModels
             Await _rangeMaskGate.WaitAsync()
             Try
                 If generation <> Volatile.Read(_rangeMaskGeneration) OrElse
-                   Not String.Equals(requestedDocument, _currentImagePath, StringComparison.OrdinalIgnoreCase) OrElse
+                   Not String.Equals(requestedDocument, _currentImagePath, PathIdentity.Comparison) OrElse
                    Not IsExpectedRangeMaskMode("Luminance", isMask) Then Return
 
                 Dim from = _luminanceRangeFrom, [to] = _luminanceRangeTo, feather = _luminanceRangeFeather
@@ -1885,7 +1885,7 @@ Namespace ViewModels
                                                     Return (Mask:=mask, Bounds:=bounds)
                                             End Function)
                 If generation <> Volatile.Read(_rangeMaskGeneration) OrElse
-                   Not String.Equals(requestedDocument, _currentImagePath, StringComparison.OrdinalIgnoreCase) OrElse
+                   Not String.Equals(requestedDocument, _currentImagePath, PathIdentity.Comparison) OrElse
                    Not IsExpectedRangeMaskMode("Luminance", isMask) Then
                     result.Mask?.Dispose()
                     Return

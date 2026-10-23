@@ -2316,14 +2316,14 @@ Namespace ViewModels
         Private Sub SyncLastAppliedXmpPreset()
             For Each preset In SavedXmpPresets
                 preset.IsLastApplied = Not String.IsNullOrWhiteSpace(_lastAppliedXmpPresetPath) AndAlso
-                    String.Equals(preset.Path, _lastAppliedXmpPresetPath, StringComparison.OrdinalIgnoreCase)
+                    String.Equals(preset.Path, _lastAppliedXmpPresetPath, PathIdentity.Comparison)
             Next
         End Sub
 
         Private Sub SyncLastAppliedLutPreset()
             For Each preset In SavedLutPresets
                 preset.IsLastApplied = Not String.IsNullOrWhiteSpace(_lastAppliedLutPresetPath) AndAlso
-                    String.Equals(preset.Path, _lastAppliedLutPresetPath, StringComparison.OrdinalIgnoreCase)
+                    String.Equals(preset.Path, _lastAppliedLutPresetPath, PathIdentity.Comparison)
             Next
         End Sub
 
@@ -10534,7 +10534,7 @@ Namespace ViewModels
             Try
                 ' Während ein vorheriger Klick noch gerechnet hat, zählt nur der jüngste Auftrag.
                 If generation <> Volatile.Read(_magicWandGeneration) OrElse
-                   Not String.Equals(requestedDocument, _currentImagePath, StringComparison.OrdinalIgnoreCase) Then Return
+                   Not String.Equals(requestedDocument, _currentImagePath, PathIdentity.Comparison) Then Return
 
                 Dim selectionSize = GetAnnotationDisplayPixelSize()
                 Dim bw = selectionSize.Width, bh = selectionSize.Height
@@ -10571,7 +10571,7 @@ Namespace ViewModels
                                             End Function)
 
                 If generation <> Volatile.Read(_magicWandGeneration) OrElse
-                   Not String.Equals(requestedDocument, _currentImagePath, StringComparison.OrdinalIgnoreCase) Then
+                   Not String.Equals(requestedDocument, _currentImagePath, PathIdentity.Comparison) Then
                     result.Mask?.Dispose()
                     Return
                 End If
@@ -18334,7 +18334,21 @@ Namespace ViewModels
         Private Sub DeleteCurrent()
             If String.IsNullOrEmpty(_currentImagePath) Then Return
             Dim deletedPath = _currentImagePath
+            ' Mit ungespeicherter Bearbeitung gibt RequestDeletePaths das Bild erst nach gelungenem
+            ' Loeschen frei; scheitert es, steht der Editor unveraendert da.
+            Dim keptEdits = HasUnsavedChanges
             _mainVm.RequestDeletePaths({deletedPath}, Sub()
+                                                           ' Der Rueckruf kommt auch, wenn das Loeschen
+                                                           ' scheiterte. Dann ist die Datei noch da. Ohne
+                                                           ' ungespeicherte Bearbeitung wurde ihr Bild
+                                                           ' vorher freigegeben: neu oeffnen statt in die
+                                                           ' Galerie zu springen. MIT ihr bleibt alles
+                                                           ' stehen; ein neues Oeffnen setzte Bearbeitung
+                                                           ' und Verlauf zurueck.
+                                                           If File.Exists(deletedPath) Then
+                                                               If Not keptEdits Then OpenImage(deletedPath, _folderPaths.ToList())
+                                                               Return
+                                                           End If
                                                            _folderPaths.Remove(deletedPath)
                                                            CurrentImage = Nothing
                                                            PreviewImage = Nothing
@@ -18346,7 +18360,7 @@ Namespace ViewModels
 
         Public Sub ReleaseCurrentImageIfAny(paths As IEnumerable(Of String))
             If String.IsNullOrEmpty(_currentImagePath) OrElse paths Is Nothing Then Return
-            If paths.Any(Function(p) String.Equals(p, _currentImagePath, StringComparison.OrdinalIgnoreCase)) Then
+            If paths.Any(Function(p) String.Equals(p, _currentImagePath, PathIdentity.Comparison)) Then
                 CurrentImage = Nothing
                 PreviewImage = Nothing
                 ComparisonImage = Nothing
@@ -18395,7 +18409,7 @@ Namespace ViewModels
             Dim viewer = _mainVm.Viewer
             Dim sameServerImage = viewer IsNot Nothing AndAlso viewer.IsImmichSession AndAlso
                                   Not String.IsNullOrEmpty(_currentImagePath) AndAlso
-                                  String.Equals(viewer.CurrentImagePath, _currentImagePath, StringComparison.OrdinalIgnoreCase)
+                                  String.Equals(viewer.CurrentImagePath, _currentImagePath, PathIdentity.Comparison)
             If sameServerImage Then
                 viewer.ReloadCurrentImageFromDisk()
                 _mainVm.CurrentMode = AppMode.Viewer
@@ -18745,7 +18759,7 @@ Namespace ViewModels
 
         Public Async Function NavigateToFilmstripItemAsync(item As ImageItem) As Task
             If item Is Nothing OrElse IsDocumentLoadRunning Then Return
-            Dim idx = _folderPaths.FindIndex(Function(p) String.Equals(p, item.FilePath, StringComparison.OrdinalIgnoreCase))
+            Dim idx = _folderPaths.FindIndex(Function(p) String.Equals(p, item.FilePath, PathIdentity.Comparison))
             If idx < 0 Then Return
             If Not Await ConfirmSaveBeforeLeavingAsync("dieses Bild öffnest") Then Return
             _currentIndex = idx
@@ -18830,7 +18844,7 @@ Namespace ViewModels
         Private Async Function LoadImageContentCore(path As String) As Task
             If String.IsNullOrEmpty(path) OrElse Not File.Exists(path) Then
                 If Not String.IsNullOrEmpty(path) Then
-                    _folderPaths.RemoveAll(Function(p) String.Equals(p, path, StringComparison.OrdinalIgnoreCase))
+                    _folderPaths.RemoveAll(Function(p) String.Equals(p, path, PathIdentity.Comparison))
                 End If
 
                 If _folderPaths.Count = 0 Then
@@ -19266,7 +19280,7 @@ Namespace ViewModels
             ' Dasselbe von aussen: waehrend der Editor noch aufbaut, wird kein zweites Dokument
             ' daruebergelegt - auch nicht aus der Galerie oder dem Betrachter.
             If IsDocumentLoadRunning Then Return False
-            If Not String.IsNullOrEmpty(_currentImagePath) AndAlso Not String.Equals(_currentImagePath, imagePath, StringComparison.OrdinalIgnoreCase) Then
+            If Not String.IsNullOrEmpty(_currentImagePath) AndAlso Not String.Equals(_currentImagePath, imagePath, PathIdentity.Comparison) Then
                 If Not Await ConfirmSaveBeforeLeavingAsync("ein anderes Bild öffnest") Then Return False
             End If
             ' DAS STARTWERKZEUG VOR DEM LADEN SETZEN, nicht erst beim Betreten des Modus. Der
@@ -19664,7 +19678,7 @@ Namespace ViewModels
         ''' Bild ist, und laesst Personen, Ort und Stichwoerter dann stehen.</summary>
         Private Function EnsureInfoItem(imagePath As String) As ImageItem
             If _infoItem Is Nothing OrElse
-               Not String.Equals(_infoItem.FilePath, imagePath, StringComparison.OrdinalIgnoreCase) Then
+               Not String.Equals(_infoItem.FilePath, imagePath, PathIdentity.Comparison) Then
                 _infoItem = ImageItem.CreateLightweight(imagePath)
                 ' Bei einer Immich-Temp-Kopie sofort der zuletzt gespeicherte Ort aus dem Index -
                 ' der Serverabruf laeuft erst danach an, und ohne diesen Stand bliebe die Zeile bis
@@ -19708,13 +19722,13 @@ Namespace ViewModels
                     _folderPaths = allPaths.
                         Where(Function(p) Not String.IsNullOrEmpty(p)).
                         Where(Function(p) CanParticipateInEditorFilmstrip(p)).
-                        Distinct(StringComparer.OrdinalIgnoreCase).
+                        Distinct(PathIdentity.Comparer).
                         ToList()
 
                     FilmstripItems.ReplaceAll(_folderPaths.Select(Function(path) ImageItem.CreateLightweight(path, Nothing, _thumbCacheScopeId, _thumbCacheScopeName)))
                     RefreshFilmstripItemBadges()
 
-                    _currentIndex = _folderPaths.FindIndex(Function(p) String.Equals(p, imagePath, StringComparison.OrdinalIgnoreCase))
+                    _currentIndex = _folderPaths.FindIndex(Function(p) String.Equals(p, imagePath, PathIdentity.Comparison))
                     If _currentIndex < 0 Then _currentIndex = 0
                     Me.RaisePropertyChanged(NameOf(CurrentFilmstripIndex))
                     MarkCurrentFilmstripItem()
@@ -19752,7 +19766,7 @@ Namespace ViewModels
             FilmstripItems.ReplaceAll(_folderPaths.Select(Function(path) ImageItem.CreateLightweight(path)))
             RefreshFilmstripItemBadges()
 
-            _currentIndex = _folderPaths.FindIndex(Function(p) String.Equals(p, imagePath, StringComparison.OrdinalIgnoreCase))
+            _currentIndex = _folderPaths.FindIndex(Function(p) String.Equals(p, imagePath, PathIdentity.Comparison))
             If _currentIndex < 0 Then _currentIndex = 0
             Me.RaisePropertyChanged(NameOf(CurrentFilmstripIndex))
             MarkCurrentFilmstripItem()
@@ -19773,8 +19787,8 @@ Namespace ViewModels
             If Not CanParticipateInEditorFilmstrip(savedPath) Then Return
             If Not String.Equals(IO.Path.GetDirectoryName(savedPath), IO.Path.GetDirectoryName(_currentImagePath),
                                  StringComparison.OrdinalIgnoreCase) Then Return
-            If _folderPaths.Any(Function(p) String.Equals(p, savedPath, StringComparison.OrdinalIgnoreCase)) Then Return
-            Dim sourceIndex = _folderPaths.FindIndex(Function(p) String.Equals(p, _currentImagePath, StringComparison.OrdinalIgnoreCase))
+            If _folderPaths.Any(Function(p) String.Equals(p, savedPath, PathIdentity.Comparison)) Then Return
+            Dim sourceIndex = _folderPaths.FindIndex(Function(p) String.Equals(p, _currentImagePath, PathIdentity.Comparison))
             Dim insertAt = If(sourceIndex < 0, _folderPaths.Count, sourceIndex + 1)
             _folderPaths.Insert(insertAt, savedPath)
             Dim item = ImageItem.CreateLightweight(savedPath, Nothing, _thumbCacheScopeId, _thumbCacheScopeName)
@@ -22513,7 +22527,7 @@ Namespace ViewModels
                     End If
                     ExifService.Invalidate(targetPath)
                     _mainVm?.Gallery?.RefreshChangedFiles({targetPath})
-                    If _mainVm?.Viewer IsNot Nothing AndAlso String.Equals(_mainVm.Viewer.CurrentImagePath, targetPath, StringComparison.OrdinalIgnoreCase) Then
+                    If _mainVm?.Viewer IsNot Nothing AndAlso String.Equals(_mainVm.Viewer.CurrentImagePath, targetPath, PathIdentity.Comparison) Then
                         _mainVm.Viewer.ReloadCurrentImageFromDisk()
                     End If
                     ' Ein PDF ist ein AUSGABEformat, keine Arbeitsdatei: der Editor kann es nicht
@@ -22531,7 +22545,7 @@ Namespace ViewModels
                     ' Kein Neuoeffnen bei .fpx (das Rezept liegt im Buendel, das Basisbild bleibt
                     ' unangetastet - dort ist ein zweites Speichern folgenlos).
                     Dim savedPixelsIntoFile = Not savedAsPdf AndAlso Not isFpxSave
-                    Dim targetIsOtherFile = Not String.Equals(targetPath, _currentImagePath, StringComparison.OrdinalIgnoreCase)
+                    Dim targetIsOtherFile = Not String.Equals(targetPath, _currentImagePath, PathIdentity.Comparison)
                     If targetIsOtherFile Then AddSavedFileToFilmstrip(targetPath)
                     ' EINE ANDERE DATEI IST EINE ANDERE DATEI: das Ausgangsbild auf der Platte hat
                     ' sich nicht geaendert, der Editor kann also darauf weiterarbeiten. Ob er das
@@ -22565,7 +22579,7 @@ Namespace ViewModels
                         ' Steht die neue Datei schon im Streifen (selber Ordner, siehe
                         ' AddSavedFileToFilmstrip), bleibt die bisherige Nachbarschaft erhalten - auch
                         ' eine Such- oder Auswahlliste. Sonst wie bisher der Ordner der neuen Datei.
-                        Dim keepsFilmstrip = _folderPaths.Any(Function(p) String.Equals(p, targetPath, StringComparison.OrdinalIgnoreCase))
+                        Dim keepsFilmstrip = _folderPaths.Any(Function(p) String.Equals(p, targetPath, PathIdentity.Comparison))
                         If keepsFilmstrip Then
                             Await OpenImageAsync(targetPath, New List(Of String)(_folderPaths), _thumbCacheScopeId, _thumbCacheScopeName,
                                                  showLoadingState:=True)
@@ -22693,7 +22707,7 @@ Namespace ViewModels
             Dim localPath = Await ImmichService.DownloadOriginalToTempAsync(newAssetId, fileName)
             If Not String.IsNullOrEmpty(localPath) Then
                 Dim paths = _folderPaths.ToList()
-                Dim index = paths.FindIndex(Function(p) String.Equals(p, previousSourcePath, StringComparison.OrdinalIgnoreCase))
+                Dim index = paths.FindIndex(Function(p) String.Equals(p, previousSourcePath, PathIdentity.Comparison))
                 If index >= 0 Then
                     paths(index) = localPath
                 Else
@@ -30985,7 +30999,7 @@ Namespace ViewModels
         Public Sub SaveXmpPresetToSettings(xmpPath As String)
             If String.IsNullOrWhiteSpace(xmpPath) OrElse Not File.Exists(xmpPath) Then Return
             Dim normalizedPath = xmpPath.Trim()
-            Dim existing = SavedXmpPresets.FirstOrDefault(Function(p) String.Equals(p.Path, normalizedPath, StringComparison.OrdinalIgnoreCase))
+            Dim existing = SavedXmpPresets.FirstOrDefault(Function(p) String.Equals(p.Path, normalizedPath, PathIdentity.Comparison))
             If existing Is Nothing Then
                 SavedXmpPresets.Add(New XmpPresetSettings With {
                     .Id = Guid.NewGuid().ToString("N"),
@@ -30998,9 +31012,9 @@ Namespace ViewModels
 
         Public Sub RemoveXmpPresetFromSettings(xmpPath As String)
             If String.IsNullOrWhiteSpace(xmpPath) Then Return
-            Dim existing = SavedXmpPresets.FirstOrDefault(Function(p) String.Equals(p.Path, xmpPath.Trim(), StringComparison.OrdinalIgnoreCase))
+            Dim existing = SavedXmpPresets.FirstOrDefault(Function(p) String.Equals(p.Path, xmpPath.Trim(), PathIdentity.Comparison))
             If existing Is Nothing Then Return
-            If String.Equals(_lastAppliedXmpPresetPath, existing.Path, StringComparison.OrdinalIgnoreCase) Then
+            If String.Equals(_lastAppliedXmpPresetPath, existing.Path, PathIdentity.Comparison) Then
                 _lastAppliedXmpPresetPath = ""
             End If
             SavedXmpPresets.Remove(existing)
@@ -31050,7 +31064,7 @@ Namespace ViewModels
         Public Sub SaveLutPresetToSettings(cubePath As String)
             If String.IsNullOrWhiteSpace(cubePath) OrElse Not File.Exists(cubePath) Then Return
             Dim normalizedPath = cubePath.Trim()
-            Dim existing = SavedLutPresets.FirstOrDefault(Function(p) String.Equals(p.Path, normalizedPath, StringComparison.OrdinalIgnoreCase))
+            Dim existing = SavedLutPresets.FirstOrDefault(Function(p) String.Equals(p.Path, normalizedPath, PathIdentity.Comparison))
             If existing Is Nothing Then
                 SavedLutPresets.Add(New LutPresetSettings With {
                     .Id = Guid.NewGuid().ToString("N"),
@@ -31063,9 +31077,9 @@ Namespace ViewModels
 
         Public Sub RemoveLutPresetFromSettings(cubePath As String)
             If String.IsNullOrWhiteSpace(cubePath) Then Return
-            Dim existing = SavedLutPresets.FirstOrDefault(Function(p) String.Equals(p.Path, cubePath.Trim(), StringComparison.OrdinalIgnoreCase))
+            Dim existing = SavedLutPresets.FirstOrDefault(Function(p) String.Equals(p.Path, cubePath.Trim(), PathIdentity.Comparison))
             If existing Is Nothing Then Return
-            If String.Equals(_lastAppliedLutPresetPath, existing.Path, StringComparison.OrdinalIgnoreCase) Then
+            If String.Equals(_lastAppliedLutPresetPath, existing.Path, PathIdentity.Comparison) Then
                 _lastAppliedLutPresetPath = ""
             End If
             SavedLutPresets.Remove(existing)
@@ -31080,9 +31094,9 @@ Namespace ViewModels
 
             Dim savedName As String
             If isLut Then
-                savedName = SavedLutPresets.FirstOrDefault(Function(p) String.Equals(p.Path, path.Trim(), StringComparison.OrdinalIgnoreCase))?.Name
+                savedName = SavedLutPresets.FirstOrDefault(Function(p) String.Equals(p.Path, path.Trim(), PathIdentity.Comparison))?.Name
             Else
-                savedName = SavedXmpPresets.FirstOrDefault(Function(p) String.Equals(p.Path, path.Trim(), StringComparison.OrdinalIgnoreCase))?.Name
+                savedName = SavedXmpPresets.FirstOrDefault(Function(p) String.Equals(p.Path, path.Trim(), PathIdentity.Comparison))?.Name
             End If
             If String.IsNullOrWhiteSpace(savedName) Then Return
 
