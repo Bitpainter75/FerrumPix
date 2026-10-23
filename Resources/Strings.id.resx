@@ -9964,4 +9964,10 @@
   <data name="Die_Grafikkarte_ist_hier_nicht_nutzbar_0_Die_Bil_7db4f7ac" xml:space="preserve">
     <value>Kartu grafis tidak dapat digunakan di sini ({0}). Penyuntingan gambar dihitung di prosesor.</value>
   </data>
+  <data name="Prozessorkerne_f_r_Modelle_779167cd" xml:space="preserve">
+    <value>Inti prosesor untuk model</value>
+  </data>
+  <data name="Wie_viele_Kerne_des_Prozessors_die_Modelle_nutze_8b895e96" xml:space="preserve">
+    <value>Berapa banyak inti prosesor yang digunakan model, misalnya saat mengurangi derau. Bawaannya separuh, agar aplikasi tetap lancar saat model menghitung. Lebih banyak inti menghitung lebih cepat, selama model tidak berjalan di kartu grafis.</value>
+  </data>
 </root>

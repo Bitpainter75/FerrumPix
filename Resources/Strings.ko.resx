@@ -9964,4 +9964,10 @@
   <data name="Die_Grafikkarte_ist_hier_nicht_nutzbar_0_Die_Bil_7db4f7ac" xml:space="preserve">
     <value>여기서는 그래픽 카드를 사용할 수 없습니다 ({0}). 이미지 편집은 프로세서에서 계산됩니다.</value>
   </data>
+  <data name="Prozessorkerne_f_r_Modelle_779167cd" xml:space="preserve">
+    <value>모델용 프로세서 코어</value>
+  </data>
+  <data name="Wie_viele_Kerne_des_Prozessors_die_Modelle_nutze_8b895e96" xml:space="preserve">
+    <value>모델이 사용하는 프로세서 코어 수입니다(예: 노이즈 제거). 기본값은 절반으로, 모델이 계산하는 동안에도 조작이 부드럽게 유지됩니다. 모델이 그래픽 카드에서 실행되지 않는 한 코어가 많을수록 더 빠르게 계산합니다.</value>
+  </data>
 </root>

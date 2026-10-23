@@ -9960,4 +9960,10 @@
   <data name="Die_Grafikkarte_ist_hier_nicht_nutzbar_0_Die_Bil_7db4f7ac" xml:space="preserve">
     <value>De grafische kaart is hier niet bruikbaar ({0}). De beeldbewerking wordt op de processor berekend.</value>
   </data>
+  <data name="Prozessorkerne_f_r_Modelle_779167cd" xml:space="preserve">
+    <value>Processorkernen voor modellen</value>
+  </data>
+  <data name="Wie_viele_Kerne_des_Prozessors_die_Modelle_nutze_8b895e96" xml:space="preserve">
+    <value>Hoeveel processorkernen de modellen gebruiken, bijvoorbeeld bij ruisonderdrukking. Standaard de helft, zodat de bediening soepel blijft terwijl een model rekent. Meer kernen rekenen sneller, zolang het model niet op de grafische kaart draait.</value>
+  </data>
 </root>

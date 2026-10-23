@@ -690,6 +690,12 @@ Namespace Services
         ''' <c>GpuImageService</c> und <c>ImageProcessor.CheckGpuImageProcessing</c>).</summary>
         Public Property GpuImageProcessing As Boolean = False
 
+        ''' <summary>Mit wie vielen Faeden des Prozessors die Modelle rechnen (Entrauschen,
+        ''' Vergroessern, Auswahl, Tiefe). 0 heisst Vorgabe: die Haelfte der logischen Kerne, damit
+        ''' die Oberflaeche neben einem laufenden Modell bedienbar bleibt. Gelesen wird die Zahl
+        ''' beim Bau einer Sitzung; eine Aenderung baut die naechste neu (AiModelService).</summary>
+        Public Property ModelThreadCount As Integer = 0
+
         ''' <summary>Gesichter im eigenen Bestand suchen und zu Personen zusammenfassen. AB WERK AUS.
         '''
         ''' Kein Standardverhalten, sondern eine Entscheidung des Benutzers: die Erkennung liest den
@@ -1507,6 +1513,24 @@ Namespace Services
         ''' Deshalb bleibt es eine WAHL und wird keine neue Vorgabe.</summary>
         Public Shared Function NormalizeGalleryThumbnailMemoryCacheCapacity(value As Integer) As Integer
             Return Math.Max(50, Math.Min(10000, value))
+        End Function
+
+        ''' <summary>Die Vorgabe der Modellfaeden: die Haelfte der logischen Kerne, mindestens einer.</summary>
+        Public Shared Function DefaultModelThreadCount() As Integer
+            Return Math.Max(1, Environment.ProcessorCount \ 2)
+        End Function
+
+        ''' <summary>0 bleibt 0 (Vorgabe). Eine gemerkte Zahl wird auf die Kerne DIESES Rechners
+        ''' begrenzt: die Einstellungen koennen von einem groesseren Rechner stammen.</summary>
+        Public Shared Function NormalizeModelThreadCount(value As Integer) As Integer
+            If value <= 0 Then Return 0
+            Return Math.Min(value, Math.Max(1, Environment.ProcessorCount))
+        End Function
+
+        ''' <summary>Die Zahl, mit der wirklich gerechnet wird.</summary>
+        Public Shared Function EffectiveModelThreadCount(value As Integer) As Integer
+            Dim normalized = NormalizeModelThreadCount(value)
+            Return If(normalized = 0, DefaultModelThreadCount(), normalized)
         End Function
 
         Public Shared Function NormalizeJpgSaveQuality(value As Integer) As Integer

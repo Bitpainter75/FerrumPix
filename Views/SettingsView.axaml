@@ -3403,6 +3403,29 @@
                                        Classes="no-translate"/>
                         </StackPanel>
 
+                        <!-- Die Faeden der Modelle auf dem Prozessor. Die Obergrenze ist die Zahl
+                             der logischen Kerne dieses Rechners, die Vorgabe die Haelfte. -->
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Prozessorkerne für Modelle" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Wie viele Kerne des Prozessors die Modelle nutzen, etwa beim Entrauschen. Ab Werk die Hälfte, damit die Bedienung flüssig bleibt, während ein Modell rechnet. Mehr Kerne rechnen schneller, solange das Modell nicht auf der Grafikkarte läuft." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                                <icons:RoundSlider Width="150"
+                                                   Minimum="1"
+                                                   Maximum="{Binding ModelThreadsMaximum}"
+                                                   DefaultValue="{Binding ModelThreadsDefault}"
+                                                   Value="{Binding ModelThreads}"/>
+                                <TextBlock Text="{Binding ModelThreadsText}"
+                                           Classes="no-translate"
+                                           Foreground="{DynamicResource FP.Text.Secondary}"
+                                           FontSize="{DynamicResource FP.Font.Body}"
+                                           Width="46"
+                                           TextAlignment="Right"
+                                           VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Grid>
+
                         <Grid ColumnDefinitions="*,Auto">
                             <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
                                 <TextBlock Text="Fehlerdiagnose-Protokoll" FontSize="{DynamicResource FP.Font.Body}"/>

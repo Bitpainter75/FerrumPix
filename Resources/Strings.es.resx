@@ -9920,4 +9920,10 @@
   <data name="Die_Grafikkarte_ist_hier_nicht_nutzbar_0_Die_Bil_7db4f7ac" xml:space="preserve">
     <value>La tarjeta gráfica no se puede usar aquí ({0}). La edición de imágenes se calcula en el procesador.</value>
   </data>
+  <data name="Prozessorkerne_f_r_Modelle_779167cd" xml:space="preserve">
+    <value>Núcleos del procesador para modelos</value>
+  </data>
+  <data name="Wie_viele_Kerne_des_Prozessors_die_Modelle_nutze_8b895e96" xml:space="preserve">
+    <value>Cuántos núcleos del procesador usan los modelos, por ejemplo al reducir ruido. Por defecto la mitad, para que la aplicación siga respondiendo mientras un modelo calcula. Más núcleos calculan más rápido, siempre que el modelo no se ejecute en la tarjeta gráfica.</value>
+  </data>
 </root>

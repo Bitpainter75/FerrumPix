@@ -697,6 +697,9 @@ Namespace Services
         Private NotInheritable Class LoadedSession
             Public Property Session As InferenceSession
             Public Property Accelerator As String = ""
+            ''' Mit wie vielen Faeden des Prozessors sie gebaut wurde. Die Zahl liest die Laufzeit
+            ''' nur beim Bauen; eine geaenderte Einstellung braucht deshalb eine neue Sitzung.
+            Public Property Threads As Integer
         End Class
 
         ''' <summary>Die Sitzungsoptionen, mit denen jedes Modell geladen wird.
@@ -704,11 +707,12 @@ Namespace Services
         ''' Der Aufrufer gibt sie wieder frei - sie halten ein natives Handle. Das geht, sobald die
         ''' Sitzung steht: die Laufzeit liest die Optionen beim Bauen aus und braucht sie danach
         ''' nicht mehr.</summary>
-        Private Shared Function BuildOptions() As SessionOptions
+        Private Shared Function BuildOptions(threads As Integer) As SessionOptions
             Dim options = New SessionOptions()
             ' Ein Modell laeuft waehrend der Bearbeitung neben der Vorschau. Alle Kerne zu
-            ' belegen liesse die Oberflaeche stehen - die Haelfte, mindestens einer.
-            options.IntraOpNumThreads = Math.Max(1, Environment.ProcessorCount \ 2)
+            ' belegen liesse die Oberflaeche stehen; ab Werk deshalb die Haelfte, einstellbar
+            ' unter Leistung (AppSettings.ModelThreadCount).
+            options.IntraOpNumThreads = threads
             options.GraphOptimizationLevel = GraphOptimizationLevel.ORT_ENABLE_ALL
             ' Nur noch echte Fehler. Beim Optimieren meldet die Laufzeit sonst jede
             ' ungenutzte Groesse im Modell einzeln auf die Fehlerausgabe - hunderte Zeilen,
@@ -808,12 +812,13 @@ Namespace Services
             ' Leer heisst Prozessor. Steht dort ein Schluessel, ist es DIESE Karte - und eine
             ' andere Karte ist damit genauso ein Wechsel wie das Abschalten.
             Dim target = If(onGpu, GpuAccelerationService.ActiveDeviceKey, "")
+            Dim threads = AppSettingsService.EffectiveModelThreadCount(AppSettingsService.Load().ModelThreadCount)
 
             ' Der haeufige Fall: die Sitzung steht schon und passt. Dafuer reicht ein kurzer Blick
             ' in die Liste, ohne irgendjemanden aufzuhalten.
             SyncLock _lock
                 Dim ready As LoadedSession = Nothing
-                If _sessions.TryGetValue(filePath, ready) AndAlso ready.Accelerator = target Then
+                If _sessions.TryGetValue(filePath, ready) AndAlso ready.Accelerator = target AndAlso ready.Threads = threads Then
                     Return ready
                 End If
             End SyncLock
@@ -834,10 +839,11 @@ Namespace Services
                 onGpu = GpuAccelerationService.ShouldUse AndAlso IsGpuAllowed(fileName) AndAlso
                         Not IsGpuFailedModel(fileName, GpuAccelerationService.ActiveDeviceKey)
                 target = If(onGpu, GpuAccelerationService.ActiveDeviceKey, "")
+                threads = AppSettingsService.EffectiveModelThreadCount(AppSettingsService.Load().ModelThreadCount)
                 SyncLock _lock
                     Dim existing As LoadedSession = Nothing
                     If _sessions.TryGetValue(filePath, existing) Then
-                        If existing.Accelerator = target Then Return existing
+                        If existing.Accelerator = target AndAlso existing.Threads = threads Then Return existing
                         _sessions.Remove(filePath)
                     End If
                 End SyncLock
@@ -850,7 +856,7 @@ Namespace Services
                     Dim appliedTo As String = ""
                     Dim attemptedOn As String = ""
                     Try
-                        Using options = BuildOptions()
+                        Using options = BuildOptions(threads)
                             ' Vermerkt wird die Karte, die WIRKLICH angehaengt wurde, nicht das
                             ' vorhin gelesene Ziel: dazwischen kann eine andere gewaehlt worden
                             ' sein. Stuende hier das alte Ziel, liefe die Sitzung auf Karte B und
@@ -893,12 +899,12 @@ Namespace Services
                 End If
                 Try
                     If created Is Nothing Then
-                        Using options = BuildOptions()
+                        Using options = BuildOptions(threads)
                             created = New InferenceSession(filePath, options)
                         End Using
                         builtWith = ""
                     End If
-                    Dim entry = New LoadedSession With {.Session = created, .Accelerator = builtWith}
+                    Dim entry = New LoadedSession With {.Session = created, .Accelerator = builtWith, .Threads = threads}
                     ' Veroeffentlichen und Entsperren in EINEM Schritt unter _lock. Die Probe prueft und
                     ' sperrt unter demselben Schloss (NoteGpuFailedModelUnlessRunning): sie sieht die
                     ' Sitzung also entweder schon und sperrt nicht, oder sie sperrt vorher und die

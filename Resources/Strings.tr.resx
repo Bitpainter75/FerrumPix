@@ -9964,4 +9964,10 @@
   <data name="Die_Grafikkarte_ist_hier_nicht_nutzbar_0_Die_Bil_7db4f7ac" xml:space="preserve">
     <value>Ekran kartı burada kullanılamıyor ({0}). Görüntü düzenleme işlemcide hesaplanır.</value>
   </data>
+  <data name="Prozessorkerne_f_r_Modelle_779167cd" xml:space="preserve">
+    <value>Modeller için işlemci çekirdekleri</value>
+  </data>
+  <data name="Wie_viele_Kerne_des_Prozessors_die_Modelle_nutze_8b895e96" xml:space="preserve">
+    <value>Modellerin kaç işlemci çekirdeği kullandığı, örneğin gürültü azaltmada. Varsayılan olarak yarısı, böylece bir model hesaplarken arayüz akıcı kalır. Model ekran kartında çalışmadığı sürece daha fazla çekirdek daha hızlı hesaplar.</value>
+  </data>
 </root>

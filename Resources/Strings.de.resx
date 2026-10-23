@@ -9938,4 +9938,10 @@
   <data name="Die_Grafikkarte_ist_hier_nicht_nutzbar_0_Die_Bil_7db4f7ac" xml:space="preserve">
     <value>Die Grafikkarte ist hier nicht nutzbar ({0}). Die Bildbearbeitung rechnet auf dem Prozessor.</value>
   </data>
+  <data name="Prozessorkerne_f_r_Modelle_779167cd" xml:space="preserve">
+    <value>Prozessorkerne für Modelle</value>
+  </data>
+  <data name="Wie_viele_Kerne_des_Prozessors_die_Modelle_nutze_8b895e96" xml:space="preserve">
+    <value>Wie viele Kerne des Prozessors die Modelle nutzen, etwa beim Entrauschen. Ab Werk die Hälfte, damit die Bedienung flüssig bleibt, während ein Modell rechnet. Mehr Kerne rechnen schneller, solange das Modell nicht auf der Grafikkarte läuft.</value>
+  </data>
 </root>

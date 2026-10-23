@@ -98,6 +98,7 @@ Namespace ViewModels
         Private _savedHiddenAdjustmentGroups As String = ""
         Private _savedGpuAccelerationEnabled As Boolean = False
         Private _savedGpuImageProcessing As Boolean = False
+        Private _savedModelThreadCount As Integer = 0
         ' Heisst wie die EIGENSCHAFT und nicht wie das Feld dahinter, damit der Waechter ihn ohne
         ' Sonderregel findet; sein Inhalt ist der Schluessel der Karte, kein Listeneintrag.
         Private _savedSelectedGpuDevice As String = ""
@@ -276,6 +277,8 @@ Namespace ViewModels
         Private _gpuAccelerationDevice As String = ""
         Private _gpuAccelerationBusy As Boolean = False
         Private _gpuImageProcessing As Boolean = False
+        ''' Wie gemerkt: 0 heisst Vorgabe (die Haelfte der Kerne).
+        Private _modelThreadCount As Integer = 0
         Private _gpuImageCheckBusy As Boolean = False
         Private _savedTransparencyBackgroundMode As String = "Checkerboard"
         Private _savedTransparencyBackgroundColor As String = "#FFFFFFFF"
@@ -3030,6 +3033,43 @@ Namespace ViewModels
             End Set
         End Property
 
+        ''' <summary>Mit wie vielen Faeden des Prozessors die Modelle rechnen. Wirkt ohne Neustart:
+        ''' die naechste Modellnutzung baut ihre Sitzung mit der neuen Zahl (AiModelService). Steht
+        ''' der Regler auf der Vorgabe, wird 0 gemerkt, damit die Einstellungen auf einem anderen
+        ''' Rechner wieder dessen Haelfte nehmen.</summary>
+        Public Property ModelThreads As Integer
+            Get
+                Return AppSettingsService.EffectiveModelThreadCount(_modelThreadCount)
+            End Get
+            Set(value As Integer)
+                value = Math.Max(1, Math.Min(ModelThreadsMaximum, value))
+                Dim stored = If(value = AppSettingsService.DefaultModelThreadCount(), 0, value)
+                If _modelThreadCount = stored Then Return
+                _modelThreadCount = stored
+                Me.RaisePropertyChanged(NameOf(ModelThreads))
+                Me.RaisePropertyChanged(NameOf(ModelThreadsText))
+                AppSettingsService.Update(Sub(s) s.ModelThreadCount = stored)
+            End Set
+        End Property
+
+        Public ReadOnly Property ModelThreadsMaximum As Integer
+            Get
+                Return Math.Max(1, Environment.ProcessorCount)
+            End Get
+        End Property
+
+        Public ReadOnly Property ModelThreadsDefault As Integer
+            Get
+                Return AppSettingsService.DefaultModelThreadCount()
+            End Get
+        End Property
+
+        Public ReadOnly Property ModelThreadsText As String
+            Get
+                Return $"{ModelThreads} / {ModelThreadsMaximum}"
+            End Get
+        End Property
+
         ''' <summary>Was ueber die Karte fuer die Bildbearbeitung bekannt ist.</summary>
         Public ReadOnly Property GpuImageProcessingStatusText As String
             Get
@@ -4343,6 +4383,7 @@ Namespace ViewModels
             _videoHardwareAcceleration = _appSettings.VideoHardwareAcceleration
             _gpuAccelerationEnabled = _appSettings.GpuAccelerationEnabled
             _gpuImageProcessing = _appSettings.GpuImageProcessing
+            _modelThreadCount = AppSettingsService.NormalizeModelThreadCount(_appSettings.ModelThreadCount)
             ' Der Tempovergleich der Karte kommt nach der Selbstpruefung im Hintergrund.
             AddHandler ImageProcessor.GpuCheckChanged,
                 Sub(sender As Object, e As EventArgs)
@@ -4640,6 +4681,7 @@ Namespace ViewModels
             _savedHiddenAdjustmentGroups = _versteckteAnpassungsgruppen
             _savedGpuAccelerationEnabled = _gpuAccelerationEnabled
             _savedGpuImageProcessing = _gpuImageProcessing
+            _savedModelThreadCount = _modelThreadCount
             _savedSelectedGpuDevice = _gpuAccelerationDevice
             _savedFaceRecognitionEnabled = _faceRecognitionEnabled
             _savedFaceMinimumSizePercent = _faceMinimumSizePercent
@@ -4813,6 +4855,7 @@ Namespace ViewModels
             HiddenAdjustmentGroups = _savedHiddenAdjustmentGroups
             GpuAccelerationEnabled = _savedGpuAccelerationEnabled
             GpuImageProcessing = _savedGpuImageProcessing
+            ModelThreads = AppSettingsService.EffectiveModelThreadCount(_savedModelThreadCount)
             SelectedGpuDevice = GpuDeviceOptions.FirstOrDefault(
                 Function(o) String.Equals(o.Key, _savedSelectedGpuDevice, StringComparison.Ordinal))
             FaceRecognitionEnabled = _savedFaceRecognitionEnabled
@@ -5064,6 +5107,7 @@ Namespace ViewModels
             GpuAccelerationEnabled = False
             SelectedGpuDevice = GpuDeviceOptions.FirstOrDefault()
             GpuImageProcessing = False
+            ModelThreads = AppSettingsService.DefaultModelThreadCount()
             ' Das Ausschalten der Erkennung loescht hier NICHTS im Stillen: der Schalter fragt vor
             ' dem Entfernen der gefundenen Gesichter nach (siehe SaveFeatureSettings).
             FaceRecognitionEnabled = False

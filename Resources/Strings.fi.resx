@@ -9960,4 +9960,10 @@
   <data name="Die_Grafikkarte_ist_hier_nicht_nutzbar_0_Die_Bil_7db4f7ac" xml:space="preserve">
     <value>Näytönohjainta ei voi käyttää tässä ({0}). Kuvankäsittely lasketaan suorittimella.</value>
   </data>
+  <data name="Prozessorkerne_f_r_Modelle_779167cd" xml:space="preserve">
+    <value>Suoritinytimet malleille</value>
+  </data>
+  <data name="Wie_viele_Kerne_des_Prozessors_die_Modelle_nutze_8b895e96" xml:space="preserve">
+    <value>Kuinka montaa suorittimen ydintä mallit käyttävät, esimerkiksi kohinanpoistossa. Oletuksena puolet, jotta käyttö pysyy sujuvana mallin laskiessa. Useampi ydin laskee nopeammin, kunhan malli ei toimi näytönohjaimella.</value>
+  </data>
 </root>

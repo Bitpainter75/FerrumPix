@@ -9964,4 +9964,10 @@
   <data name="Die_Grafikkarte_ist_hier_nicht_nutzbar_0_Die_Bil_7db4f7ac" xml:space="preserve">
     <value>ग्राफ़िक्स कार्ड का यहाँ उपयोग नहीं किया जा सकता ({0})। छवि संपादन की गणना प्रोसेसर पर होती है।</value>
   </data>
+  <data name="Prozessorkerne_f_r_Modelle_779167cd" xml:space="preserve">
+    <value>मॉडलों के लिए प्रोसेसर कोर</value>
+  </data>
+  <data name="Wie_viele_Kerne_des_Prozessors_die_Modelle_nutze_8b895e96" xml:space="preserve">
+    <value>मॉडल प्रोसेसर के कितने कोर इस्तेमाल करते हैं, जैसे शोर हटाते समय। डिफ़ॉल्ट रूप से आधे, ताकि मॉडल की गणना के दौरान भी इंटरफ़ेस सहज बना रहे। जब तक मॉडल ग्राफ़िक्स कार्ड पर नहीं चल रहा, अधिक कोर तेज़ी से गणना करते हैं।</value>
+  </data>
 </root>
