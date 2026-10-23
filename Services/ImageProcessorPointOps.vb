@@ -1520,9 +1520,21 @@ Namespace Services
             ' Greift die Belichtung nur dem Neuaufbau aus der RAW-Stufe vor, rechnet sie wie dort und
             ' nicht mehr als Faktor im Linearlicht (ImageAdjustments.SourceFollowsRawExposure).
             Dim rawStageGain = 1.0F
+            Dim blackFrom = 0.0, blackTo = 0.0
             If adj.ChainExposureInRawStage() AndAlso exposureGain <> 1.0F Then
                 rawStageGain = exposureGain
                 exposureGain = 1.0F
+                ' Bei positiver Reglerbelichtung schrumpft der Schwarzabzug der Rampe mit dem
+                ' Weisspunkt (RawDecodeService.ToneRampFor). Beide Abzuege in Einheiten des
+                ' Weisspunkts des Quellbilds; fehlte das, lag der Vorgriff bei +1 Blende in den
+                ' Tiefen um rund 7 Tonwerte zu dunkel, und das Bild sprang beim Neuaufbau.
+                Dim share = adj.RampBlackShareInSource
+                If share > 0.0 Then
+                    Dim evFrom = adj.ExposureInSource / ImageAdjustments.ExposurePointsPerStop
+                    Dim evTo = adj.Exposure / ImageAdjustments.ExposurePointsPerStop
+                    blackFrom = share * 2.0 ^ (evFrom - Math.Max(evFrom, 0.0))
+                    blackTo = share * 2.0 ^ (evFrom - Math.Max(evTo, 0.0))
+                End If
             End If
             ' Ebenso das Knie der Lichterschulter, das der Lichter-Regler im Decode verschiebt
             ' (ImageAdjustments.ChainFollowsRawKnee). Gleiche Knie rechnen wie bisher.
@@ -1535,8 +1547,8 @@ Namespace Services
 
             Dim rgbPoints = If(includeRgbCurve, ParseCurvePoints(adj.CurveRgbPoints), Nothing)
 
-            Dim low = ToneTransfer(RawStageExposureAt(0.0F, rawStageGain, kneeFrom, kneeTo), exposureGain, brightness)
-            Dim high = ToneTransfer(RawStageExposureAt(1.0F, rawStageGain, kneeFrom, kneeTo), exposureGain, brightness)
+            Dim low = ToneTransfer(RawStageExposureAt(0.0F, rawStageGain, kneeFrom, kneeTo, blackFrom, blackTo), exposureGain, brightness)
+            Dim high = ToneTransfer(RawStageExposureAt(1.0F, rawStageGain, kneeFrom, kneeTo, blackFrom, blackTo), exposureGain, brightness)
             Dim overshootHigh = Math.Max(0.0F, high - 1.0F)
             Dim overshootLow = Math.Max(0.0F, -low)
             Dim shoulder = Clamp(ToneShoulderBase + 0.5F * overshootHigh, ToneShoulderBase, ToneShoulderMax)
@@ -1551,7 +1563,7 @@ Namespace Services
                 Dim v = i / CSng(PointOpTableSize - 1)
 
                 If includeTone Then
-                    Dim y = ToneTransfer(RawStageExposureAt(v, rawStageGain, kneeFrom, kneeTo), exposureGain, brightness)
+                    Dim y = ToneTransfer(RawStageExposureAt(v, rawStageGain, kneeFrom, kneeTo, blackFrom, blackTo), exposureGain, brightness)
                     Dim hard = Clamp(y, 0.0F, 1.0F)
                     Dim soft = SoftShoulder(y, toe, shoulder)
                     v = Clamp(hard + (soft - hard) * rolloff, 0.0F, 1.0F)
@@ -1570,8 +1582,10 @@ Namespace Services
 
         ''' <summary>Die Belichtung wie in der RAW-Stufe auf einen Tonwert des entwickelten Bildes
         ''' (Gammawert): zurueck ins Linearlicht und durch die umgekehrte ACR3-Kurve auf die Rampe,
-        ''' dort mal Faktor und bei 1 abgeschnitten, dann wieder durch die Kurve. Je Kanal statt nach
-        ''' der RGBTone-Regel des Decodes und ohne den Schwarzabzug der Rampe; fuer die Zeit bis zum
+        ''' dort mal Faktor und bei 1 abgeschnitten, dann wieder durch die Kurve. Mit
+        ''' <paramref name="blackFrom"/> und <paramref name="blackTo"/> rechnet sie den Schwarzabzug
+        ''' der Rampe vorher und nachher mit (<see cref="MoveRamp"/>), ohne beide wie frueher nur den
+        ''' Faktor. Je Kanal statt nach der RGBTone-Regel des Decodes; fuer die Zeit bis zum
         ''' Neuaufbau nah genug. Bei Faktor 1 der Wert selbst, bitgleich.
         '''
         ''' Unterscheiden sich <paramref name="kneeFrom"/> (das Knie im Quellbild) und
@@ -1581,14 +1595,27 @@ Namespace Services
         ''' liefert.</summary>
         Friend Shared Function RawStageExposureAt(v As Single, gain As Single,
                                                   Optional kneeFrom As Double = 1.0,
-                                                  Optional kneeTo As Double = 1.0) As Single
-            If gain = 1.0F AndAlso kneeFrom = kneeTo Then Return v
+                                                  Optional kneeTo As Double = 1.0,
+                                                  Optional blackFrom As Double = 0.0,
+                                                  Optional blackTo As Double = 0.0) As Single
+            If gain = 1.0F AndAlso kneeFrom = kneeTo AndAlso blackFrom = blackTo Then Return v
             Dim ramp = RawDecodeService.Acr3CurveInverse(SrgbToLinear(Clamp(v, 0.0F, 1.0F)))
             If kneeFrom = kneeTo Then
-                Return Clamp(LinearToSrgb(CSng(RawDecodeService.Acr3CurveAt(Math.Min(1.0, ramp * gain)))), 0.0F, 1.0F)
+                Return Clamp(LinearToSrgb(CSng(RawDecodeService.Acr3CurveAt(Math.Min(1.0, MoveRamp(ramp, gain, blackFrom, blackTo))))), 0.0F, 1.0F)
             End If
-            Dim scene = RawDecodeService.ShoulderInverse(ramp, kneeFrom) * gain
+            Dim scene = MoveRamp(RawDecodeService.ShoulderInverse(ramp, kneeFrom), gain, blackFrom, blackTo)
             Return Clamp(LinearToSrgb(CSng(RawDecodeService.Acr3CurveAt(RawDecodeService.ShoulderAt(scene, kneeTo)))), 0.0F, 1.0F)
+        End Function
+
+        ''' <summary>Eine Stelle der alten Rampe auf der neuen: zurueck auf den Sensorwert (in
+        ''' Einheiten des alten Weisspunkts, Abzug <paramref name="blackFrom"/>), dann vorwaerts mit
+        ''' dem um <paramref name="gain"/> tieferen Weisspunkt und dem Abzug
+        ''' <paramref name="blackTo"/>. Ohne Abzug genau <c>ramp * gain</c>. Den weichen Fuss der
+        ''' Rampe um den Schwarzpunkt laesst sie aus; er ist schmaler als eine Tonwertstufe.</summary>
+        Private Shared Function MoveRamp(ramp As Double, gain As Single, blackFrom As Double, blackTo As Double) As Double
+            If blackFrom = 0.0 AndAlso blackTo = 0.0 Then Return ramp * gain
+            Dim sensor = blackFrom + ramp * (1.0 - blackFrom)
+            Return Math.Max(0.0, (sensor - blackTo) / (1.0 / gain - blackTo))
         End Function
 
         ''' <summary>Gibt einer absichtlich abgesenkten Lichterzone nach positiver Belichtung wieder

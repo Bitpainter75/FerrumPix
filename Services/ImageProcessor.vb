@@ -4366,7 +4366,7 @@ Namespace Services
             ' komponierten auf veralteter Basis. Das gilt auch fuer APP-WEITE Render-Schalter,
             ' nicht nur adj-Felder - wer einen einfuehrt, muss ihn hier eintragen.
             Return String.Join("|", New Object() {
-                adj.Exposure, adj.ExposureInSource, adj.ChainExposureInRawStage(), adj.KneeInSource, adj.Brightness, adj.Contrast, adj.Saturation, adj.Highlights, adj.ShadowsLevel,
+                adj.Exposure, adj.ExposureInSource, adj.ChainExposureInRawStage(), adj.KneeInSource, adj.RampBlackShareInSource, adj.Brightness, adj.Contrast, adj.Saturation, adj.Highlights, adj.ShadowsLevel,
                 adj.Whites, adj.Blacks, adj.Temperature, adj.Tint, adj.Sharpness, adj.SharpenRadius, adj.SharpenDetail,
                 adj.WhiteBalanceModel, adj.WhiteBalanceAnchorX, adj.WhiteBalanceAnchorY,
                 adj.WhiteBalanceKelvin, adj.WhiteBalanceKelvinTint,

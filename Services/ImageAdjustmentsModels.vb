@@ -436,6 +436,14 @@ Namespace Services
         <System.Text.Json.Serialization.JsonIgnore>
         Public Property SourceFollowsRawExposure As Boolean = False
 
+        ''' <summary>Der Schwarzabzug der Rampe des Quellbilds als Anteil ihres Weisspunkts bei
+        ''' Reglerbelichtung 0 (RawDecodeService.RampBlackShareForFile). Gesetzt vom Editor fuer sein
+        ''' Arbeitsbild; gilt nur zusammen mit <see cref="SourceFollowsRawExposure"/>. 0 heisst:
+        ''' der Vorgriff rechnet ohne Abzug wie frueher. Wie <see cref="ExposureInSource"/> eine
+        ''' Eigenschaft des Bildes: nicht gespeichert, nicht uebertragen.</summary>
+        <System.Text.Json.Serialization.JsonIgnore>
+        Public Property RampBlackShareInSource As Double = 0.0
+
         ''' <summary>Rechnet die Kette ihre Belichtung wie die RAW-Stufe?
         ''' Siehe <see cref="SourceFollowsRawExposure"/>.</summary>
         Public Function ChainExposureInRawStage() As Boolean
@@ -1141,6 +1149,7 @@ Namespace Services
             "SourceWidthPixels", "SourceHeightPixels", "RecipeCoordinateVersion",
             "WhiteBalanceAnchorX", "WhiteBalanceAnchorY", "WhiteBalanceModel", "WhiteBalanceMode",
             "RawHighlightRecovery", "RawSensorEdgeCrop", "ExposureInSource", "SourceFollowsRawExposure", "KneeInSource",
+            "RampBlackShareInSource",
             "LensDistortion", "LensTca", "LensVignetting", "LensModel",
             "LensDistortionAmount", "LensTcaAmount", "LensVignettingAmount", "LensTcaRed", "LensTcaBlue",
             "WorkingImageVersion", "WorkingImageHasTransparency", "WorkingImageExposure",
@@ -1478,6 +1487,7 @@ Namespace Services
                 .ExposureInSource = ExposureInSource,
                 .SourceFollowsRawExposure = SourceFollowsRawExposure,
                 .KneeInSource = KneeInSource,
+                .RampBlackShareInSource = RampBlackShareInSource,
                 .BakedOperationsApplied = BakedOperationsApplied,
                 .Brightness = Brightness,
                 .Contrast = Contrast,

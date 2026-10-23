@@ -23157,6 +23157,7 @@ Namespace ViewModels
                 .ExposureInSource = If(_pixelLayerHidden, 0.0F, _workingImageExposure),
                 .SourceFollowsRawExposure = SourceFollowsRawExposure(),
                 .KneeInSource = _workingImageKnee,
+                .RampBlackShareInSource = If(SourceFollowsRawExposure(), RawDecodeService.RampBlackShareForFile(RenderSourcePath), 0.0),
                 .FilterPreset = _filterPreset,
                 .FilterStrength = CSng(_filterStrength),
                 .LutPath = _lutPath,

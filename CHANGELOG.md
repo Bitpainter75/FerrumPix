@@ -45,6 +45,9 @@
 
 ### Fixes
 
+- **Exposure no longer jumps after you let go:** when you raise the exposure of a RAW, the
+  picture no longer turns a little brighter in the shadows a moment after you release the slider.
+
 - **White stays white in the colour mixer:** lowering the luminance of a colour such as yellow
   or green no longer tints bright clouds, white walls or blown highlights.
 

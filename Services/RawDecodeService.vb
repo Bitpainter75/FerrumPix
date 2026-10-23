@@ -1981,6 +1981,7 @@ Namespace Services
                 _cachedBitmap = Nothing
                 _cachedPath = ""
                 _cachedGrundbelichtung = Double.NaN
+                _rampBlackShareByPath.Clear()
                 DropRawBits()
             End SyncLock
         End Sub
@@ -3780,6 +3781,20 @@ Namespace Services
 
         ''' <summary>PhotometricInterpretation eines Sensormusters (CFA) im DNG-Standard.</summary>
         Private Const ColorFilterArrayInterpretation As Integer = 32803
+
+        Private Shared ReadOnly _rampBlackShareByPath As New Concurrent.ConcurrentDictionary(Of String, Double)(StringComparer.Ordinal)
+
+        ''' <summary>Der Schwarzabzug der Rampe als Anteil ihres Weisspunkts, bei Reglerbelichtung 0:
+        ''' <c>BlackSubtraction * 2^Grundbelichtung</c>. Unabhaengig von der Normierung der
+        ''' Lichterrettung, die Abzug und Weisspunkt gleich teilt. Die Kette braucht ihn, um dem
+        ''' Neuaufbau mit positiver Belichtung vorzugreifen, bei der der Abzug mit dem Weisspunkt
+        ''' schrumpft (<see cref="ToneRampFor"/>); ohne ihn lag der Vorgriff in den Tiefen sichtbar
+        ''' zu dunkel, und das Bild sprang beim Neuaufbau. Je Datei gemerkt, weil die Grundbelichtung
+        ''' die Metadaten liest.</summary>
+        Friend Shared Function RampBlackShareForFile(path As String) As Double
+            If String.IsNullOrEmpty(path) Then Return BlackSubtraction * 2.0 ^ BaseExposureEv
+            Return _rampBlackShareByPath.GetOrAdd(path, Function(p) BlackSubtraction * 2.0 ^ BaseExposureForFile(p))
+        End Function
 
         ''' <summary>Die Grundbelichtung fuer DIESE Datei. Ohne die Einstellung bleibt es beim
         ''' festen Wert; mit ihr entscheidet das Kameramodell aus den EXIF-Daten. Ein unbekanntes
