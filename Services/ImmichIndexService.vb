@@ -115,6 +115,10 @@ Namespace Services
                 EnsureColumn(conn, "AssetList", "DateModified", "TEXT")
                 EnsureColumn(conn, "AssetList", "City", "TEXT")
                 EnsureColumn(conn, "AssetList", "Country", "TEXT")
+                ' Fuer die Kartenansicht. Leeren muss hier nicht sein: der Katalog wird nach jedem
+                ' vollstaendigen Abgleich ganz ersetzt, bis dahin fehlt nur der Ort auf der Karte.
+                EnsureColumn(conn, "AssetList", "GpsLatitude", "REAL")
+                EnsureColumn(conn, "AssetList", "GpsLongitude", "REAL")
                 ' DER ALTBESTAND MUSS WEG, NICHT NUR DIE SPALTE DAZU. Ein gespeicherter Eintrag gilt
                 ' so lange als gültig, wie sein UpdatedAt zum Server passt - ein alter Eintrag ohne
                 ' Ortsspalten sähe damit für immer aus wie "dieses Bild hat keinen Ort", und der
@@ -171,12 +175,15 @@ Namespace Services
                 Using conn = New SqliteConnection(_connectionString)
                     conn.Open()
                     Using cmd = conn.CreateCommand()
-                        cmd.CommandText = "SELECT AssetId,FileName,IsVideo,FileCreatedAt,FileModifiedAt,FileSize,DateTaken,DateModified,Width,Height,IsFavorite,UpdatedAt,City,Country " &
+                        cmd.CommandText = "SELECT AssetId,FileName,IsVideo,FileCreatedAt,FileModifiedAt,FileSize,DateTaken,DateModified,Width,Height,IsFavorite,UpdatedAt,City,Country,GpsLatitude,GpsLongitude " &
                                           "FROM AssetList WHERE ServerKey=$s ORDER BY Position"
                         cmd.Parameters.AddWithValue("$s", serverKey)
                         Using r = cmd.ExecuteReader()
                             While r.Read()
+                                Dim hasGps = Not r.IsDBNull(14) AndAlso Not r.IsDBNull(15)
                                 result.Add(New ImmichAsset With {
+                                    .GpsLatitude = If(hasGps, r.GetDouble(14), CType(Nothing, Double?)),
+                                    .GpsLongitude = If(hasGps, r.GetDouble(15), CType(Nothing, Double?)),
                                     .Id = r.GetString(0),
                                     .FileName = If(r.IsDBNull(1), "", r.GetString(1)),
                                     .IsVideo = Not r.IsDBNull(2) AndAlso r.GetInt32(2) <> 0,
@@ -220,8 +227,8 @@ Namespace Services
                         End Using
                         Using ins = conn.CreateCommand()
                             ins.Transaction = transaction
-                            ins.CommandText = "INSERT INTO AssetList(ServerKey,Position,AssetId,FileName,IsVideo,FileCreatedAt,FileModifiedAt,FileSize,DateTaken,DateModified,Width,Height,IsFavorite,UpdatedAt,City,Country) " &
-                                              "VALUES($s,$pos,$a,$n,$v,$c,$m,$fs,$dt,$dm,$w,$h,$f,$u,$city,$country)"
+                            ins.CommandText = "INSERT INTO AssetList(ServerKey,Position,AssetId,FileName,IsVideo,FileCreatedAt,FileModifiedAt,FileSize,DateTaken,DateModified,Width,Height,IsFavorite,UpdatedAt,City,Country,GpsLatitude,GpsLongitude) " &
+                                              "VALUES($s,$pos,$a,$n,$v,$c,$m,$fs,$dt,$dm,$w,$h,$f,$u,$city,$country,$lat,$lon)"
                             Dim pS = ins.Parameters.Add("$s", SqliteType.Text)
                             Dim pPos = ins.Parameters.Add("$pos", SqliteType.Integer)
                             Dim pA = ins.Parameters.Add("$a", SqliteType.Text)
@@ -238,6 +245,8 @@ Namespace Services
                             Dim pU = ins.Parameters.Add("$u", SqliteType.Text)
                             Dim pCity = ins.Parameters.Add("$city", SqliteType.Text)
                             Dim pCountry = ins.Parameters.Add("$country", SqliteType.Text)
+                            Dim pLat = ins.Parameters.Add("$lat", SqliteType.Real)
+                            Dim pLon = ins.Parameters.Add("$lon", SqliteType.Real)
                             pS.Value = serverKey
                             For i = 0 To assets.Count - 1
                                 Dim a = assets(i)
@@ -257,6 +266,9 @@ Namespace Services
                                 pU.Value = If(a.UpdatedAt, "")
                                 pCity.Value = If(a.City, "")
                                 pCountry.Value = If(a.Country, "")
+                                Dim hasGps = a.GpsLatitude.HasValue AndAlso a.GpsLongitude.HasValue
+                                pLat.Value = If(hasGps, CObj(a.GpsLatitude.Value), DBNull.Value)
+                                pLon.Value = If(hasGps, CObj(a.GpsLongitude.Value), DBNull.Value)
                                 ins.ExecuteNonQuery()
                             Next
                         End Using

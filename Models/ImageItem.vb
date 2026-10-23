@@ -1137,6 +1137,36 @@ Namespace Models
         End Property
         Private _placeCountry As String = ""
 
+        ''' <summary>Koordinaten eines SERVERBILDES, so wie der Server sie gemeldet hat.
+        '''
+        ''' Nur dort, aus demselben Grund wie <see cref="PlaceCity"/>: ein lokales Bild hat seine
+        ''' Koordinaten im Katalog, ein Serverbild steht in keinem. Die Kartenansicht liest sie hier.
+        ''' Gesetzt wird nur als PAAR (<see cref="SetServerCoordinates"/>); eine halbe Koordinate
+        ''' zeigt auf den Nullmeridian und damit auf einen Ort, den es nicht gibt.</summary>
+        Public ReadOnly Property ServerLatitude As Double?
+            Get
+                Return _serverLatitude
+            End Get
+        End Property
+
+        Public ReadOnly Property ServerLongitude As Double?
+            Get
+                Return _serverLongitude
+            End Get
+        End Property
+
+        Private _serverLatitude As Double?
+        Private _serverLongitude As Double?
+
+        ''' <summary>Setzt beide Koordinaten oder keine. Fehlt eine, bleibt ein schon bekanntes Paar
+        ''' stehen: eine Antwort ohne Koordinaten (aelterer Server, Liste ohne EXIF) heisst nicht,
+        ''' dass das Bild keinen Ort hat.</summary>
+        Public Sub SetServerCoordinates(latitude As Double?, longitude As Double?)
+            If Not latitude.HasValue OrElse Not longitude.HasValue Then Return
+            _serverLatitude = latitude
+            _serverLongitude = longitude
+        End Sub
+
         Private _hasExifMetadata As Boolean
         Public Property HasExifMetadata As Boolean
             Get
@@ -1570,6 +1600,7 @@ Namespace Models
             item.ExifShutterSpeed = asset.ShutterSpeed
             item.PlaceCity = If(asset.City, "")
             item.PlaceCountry = If(asset.Country, "")
+            item.SetServerCoordinates(asset.GpsLatitude, asset.GpsLongitude)
             Dim created = If(asset.FileCreatedAt.HasValue, asset.FileCreatedAt.Value, DateTime.MinValue)
             item.FileCreatedAt = created
             item.DateModified = If(asset.FileModifiedAt.HasValue, asset.FileModifiedAt.Value, created)
@@ -1597,6 +1628,7 @@ Namespace Models
             item.ImageWidth = photo.Width
             item.ImageHeight = photo.Height
             item.FileSize = photo.Size
+            item.SetServerCoordinates(photo.Latitude, photo.Longitude)
             ' Die Aufnahmezeit kommt als Sekunden seit 1970. TakenEpoch waehlt zwischen den beiden
             ' Feldnamen, die der Server je nach Endpunkt benutzt.
             If photo.TakenEpoch > 0 Then
@@ -1680,6 +1712,7 @@ Namespace Models
             ExifShutterSpeed = asset.ShutterSpeed
             PlaceCity = If(asset.City, "")
             PlaceCountry = If(asset.Country, "")
+            SetServerCoordinates(asset.GpsLatitude, asset.GpsLongitude)
             If replaceMissingDates OrElse asset.ExifDateTaken.HasValue Then ExifDateTaken = asset.ExifDateTaken
             If replaceMissingDates OrElse asset.ExifDateModified.HasValue Then ExifDateModified = asset.ExifDateModified
             If asset.FileCreatedAt.HasValue Then
@@ -2476,6 +2509,7 @@ Namespace Models
             End If
             If Not String.IsNullOrEmpty(photo.FileName) Then _nextcloudPath = photo.FileName
             _nextcloudPermissions = If(photo.Permissions, "")
+            SetServerCoordinates(photo.Latitude, photo.Longitude)
             Dim stichworte = photo.Tags
             If stichworte.Count > 0 Then Me.Tags = stichworte
             If photo.TakenEpoch > 0 AndAlso ExifDateTaken = DateTime.MinValue Then

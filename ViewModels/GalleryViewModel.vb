@@ -7495,6 +7495,10 @@ Namespace ViewModels
             ' wie Kamera und ISO: es ist dasselbe Suchmodell wie fuer eine lokale Datei. Ohne sie
             ' blieb das Feld Nothing, und eine Bedingung auf die BRENNWEITE konnte bei einem
             ' Serverbild nie greifen - sie steht in der Auswahlliste, der Wert kam aber nirgends an.
+            ' Die Koordinaten bringt meist schon die Liste mit (withExif); aus dem Detail nur, wenn
+            ' es ein PAAR hat, sonst aus der Liste - nie eine Haelfte von hier und eine von dort.
+            Dim gpsSource = If(detail IsNot Nothing AndAlso detail.GpsLatitude.HasValue AndAlso detail.GpsLongitude.HasValue,
+                               detail, asset)
             Return New LibraryImageMeta With {
                 .FilePath = ImmichService.MakePseudoPath(asset.Id, asset.FileName),
                 .IsFavorite = If(detail IsNot Nothing, detail.IsFavorite, asset.IsFavorite),
@@ -7511,8 +7515,8 @@ Namespace ViewModels
                 .Lens = If(detail IsNot Nothing, detail.Lens, ""),
                 .FocalLengthMm = If(detail IsNot Nothing, detail.FocalLengthMm, Nothing),
                 .ShutterSpeed = If(detail IsNot Nothing, detail.ShutterSpeed, ""),
-                .GpsLatitude = If(detail IsNot Nothing, detail.GpsLatitude, Nothing),
-                .GpsLongitude = If(detail IsNot Nothing, detail.GpsLongitude, Nothing)
+                .GpsLatitude = If(gpsSource IsNot Nothing, gpsSource.GpsLatitude, Nothing),
+                .GpsLongitude = If(gpsSource IsNot Nothing, gpsSource.GpsLongitude, Nothing)
             }
         End Function
 

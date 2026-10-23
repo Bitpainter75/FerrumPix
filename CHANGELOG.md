@@ -31,6 +31,10 @@
   that turns out slower than the processor, and after the graphics driver hung or crashed,
   FerrumPix also stays with the processor.
 
+- **Immich and Nextcloud photos on the map.** The map view now also shows pictures from a
+  connected Immich or Nextcloud server, using the location the server knows for them. For
+  Nextcloud this needs version 28 or newer.
+
 - **Developed RAWs are marked in the viewer too.** As in the editor, the file name at the top of
   the window turns to the accent colour when the viewer shows a RAW developed by FerrumPix rather
   than the camera's built-in preview.

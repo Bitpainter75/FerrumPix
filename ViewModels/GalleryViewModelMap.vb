@@ -15,9 +15,9 @@ Namespace ViewModels
     ''' ihrem Aufnahmeort. Es gibt sie nur, wenn sie in den Einstellungen freigegeben ist (siehe
     ''' AppSettingsService.MapViewEnabled); die Kacheln holt MapTileService.
     '''
-    ''' Die Koordinaten stehen nicht im ImageItem, sondern im Katalog. Gezeigt wird deshalb, was
-    ''' der Katalog zu den Bildern der aktuellen Liste kennt; Serverbilder haben dort keinen
-    ''' Eintrag und fehlen auf der Karte.</summary>
+    ''' Die Koordinaten eines lokalen Bildes stehen nicht im ImageItem, sondern im Katalog.
+    ''' Serverbilder (Immich, Nextcloud) haben dort keinen Eintrag; sie tragen die Koordinaten des
+    ''' Servers am Element selbst (ImageItem.ServerLatitude).</summary>
     Partial Public Class GalleryViewModel
 
         Public Const MapViewMode As String = "Map"
@@ -278,20 +278,51 @@ Namespace ViewModels
             _mapRefreshTimer.Start()
         End Sub
 
-        ''' <summary>Liest die Koordinaten der aktuellen Liste aus dem Katalog. Läuft im
-        ''' Hintergrund; überholt ein neuerer Aufruf, wird das Ergebnis verworfen.</summary>
+        ''' <summary>Die laufende Nachfrage nach Aufnahmeorten bei Nextcloud. Ein neues Neurechnen
+        ''' bricht sie ab; sonst stauten sich beim Blaettern durch Alben Anfragen fuer Listen, die
+        ''' niemand mehr sieht.</summary>
+        Private _mapCoordinateCts As CancellationTokenSource
+
+        ''' <summary>Liest die Koordinaten der aktuellen Liste: lokale Bilder aus dem Katalog,
+        ''' Serverbilder aus dem Element. Läuft im Hintergrund; überholt ein neuerer Aufruf, wird
+        ''' das Ergebnis verworfen.
+        '''
+        ''' Nextcloud-Bildern ohne Ort (Memories, Alben, Suchtreffer) fragt die Karte ihn danach
+        ''' gesammelt nach (<see cref="NextcloudService.GetCoordinatesAsync"/>). Gezeigt wird
+        ''' vorher schon, was bekannt ist, und nach der Antwort ein zweites Mal.</summary>
         Private Async Sub RefreshMapPoints()
             If Not IsMapView Then Return
             Dim version = Interlocked.Increment(_mapRefreshVersion)
+            _mapCoordinateCts?.Cancel()
+            _mapCoordinateCts = Nothing
             Dim candidates = Items.
                 Where(Function(i) i IsNot Nothing AndAlso Not i.IsFolder AndAlso Not i.IsParentFolderEntry AndAlso
-                                  Not i.IsGroupHeader AndAlso Not i.IsRemoteAsset AndAlso (i.IsImage OrElse i.IsVideoFile)).
+                                  Not i.IsGroupHeader AndAlso (i.IsImage OrElse i.IsVideoFile)).
                 ToList()
             Try
                 Dim points = Await Task.Run(Function() BuildMapPoints(candidates))
                 If version <> Volatile.Read(_mapRefreshVersion) Then Return
                 _mapCandidateCount = candidates.Count
                 MapPoints = points
+
+                Dim missing = candidates.
+                    Where(Function(i) i.IsNextcloudAsset AndAlso Not i.IsTrashed AndAlso Not i.ServerLatitude.HasValue).
+                    ToList()
+                If missing.Count = 0 OrElse Not NextcloudService.IsConfigured Then Return
+                Dim cts = New CancellationTokenSource()
+                _mapCoordinateCts = cts
+                Dim found = Await NextcloudService.GetCoordinatesAsync(missing.Select(Function(i) i.NextcloudFileId), cts.Token)
+                If version <> Volatile.Read(_mapRefreshVersion) OrElse found.Count = 0 Then Return
+                For Each item In missing
+                    Dim coordinate As (Latitude As Double, Longitude As Double)
+                    If found.TryGetValue(item.NextcloudFileId, coordinate) Then
+                        item.SetServerCoordinates(coordinate.Latitude, coordinate.Longitude)
+                    End If
+                Next
+                points = Await Task.Run(Function() BuildMapPoints(candidates))
+                If version <> Volatile.Read(_mapRefreshVersion) Then Return
+                MapPoints = points
+            Catch ex As OperationCanceledException
             Catch ex As Exception
                 DiagnosticLogService.LogException("GalleryViewModel.RefreshMapPoints", ex)
             End Try
@@ -299,14 +330,23 @@ Namespace ViewModels
 
         Private Shared Function BuildMapPoints(candidates As List(Of ImageItem)) As IReadOnlyList(Of MapPhotoPoint)
             If candidates.Count = 0 Then Return Array.Empty(Of MapPhotoPoint)()
-            Dim metaByPath = LibraryService.Instance.GetMetaForPaths(candidates.Select(Function(i) i.FilePath))
+            Dim metaByPath = LibraryService.Instance.GetMetaForPaths(
+                candidates.Where(Function(i) Not i.IsRemoteAsset).Select(Function(i) i.FilePath))
             Dim points As New List(Of MapPhotoPoint)()
             For Each item In candidates
-                Dim meta As LibraryImageMeta = Nothing
-                If Not metaByPath.TryGetValue(item.FilePath, meta) Then Continue For
-                If Not meta.GpsLatitude.HasValue OrElse Not meta.GpsLongitude.HasValue Then Continue For
-                Dim latitude = meta.GpsLatitude.Value
-                Dim longitude = meta.GpsLongitude.Value
+                Dim lat As Double?, lon As Double?
+                If item.IsRemoteAsset Then
+                    lat = item.ServerLatitude
+                    lon = item.ServerLongitude
+                Else
+                    Dim meta As LibraryImageMeta = Nothing
+                    If Not metaByPath.TryGetValue(item.FilePath, meta) Then Continue For
+                    lat = meta.GpsLatitude
+                    lon = meta.GpsLongitude
+                End If
+                If Not lat.HasValue OrElse Not lon.HasValue Then Continue For
+                Dim latitude = lat.Value
+                Dim longitude = lon.Value
                 If Double.IsNaN(latitude) OrElse Double.IsNaN(longitude) Then Continue For
                 If Math.Abs(latitude) > 90 OrElse Math.Abs(longitude) > 180 Then Continue For
                 ' Null/Null ist der Golf von Guinea und fast immer ein leeres Feld, das eine
@@ -337,7 +377,17 @@ Namespace ViewModels
         ''' angeklickten Häufchens. Der Doppelklick im Streifen kommt hier an.</summary>
         Public Sub OpenMapItem(item As ImageItem)
             If item Is Nothing OrElse String.IsNullOrEmpty(item.FilePath) Then Return
-            Dim paths = MapSelection.Select(Function(i) i.FilePath).ToList()
+            ' Ein Serverbild geht ueber die Sitzung wie in der Galerie (OpenRemoteItemInViewerAsync):
+            ' sein Pseudo-Pfad auf dem lokalen Weg endete in "Datei nicht gefunden". Geblaettert
+            ' wird auch hier durch das Haeufchen.
+            If item.IsRemoteAsset Then
+                Dim sessionItems = MapSelection.Where(Function(i) i.IsImage AndAlso i.IsRemoteAsset).ToList()
+                If Not sessionItems.Contains(item) Then sessionItems.Insert(0, item)
+                Dim sourceAlbumId = If(SelectedImmichNode IsNot Nothing AndAlso String.Equals(SelectedImmichNode.Kind, "ImmichAlbum", StringComparison.Ordinal), SelectedImmichNode.Id, Nothing)
+                _mainVm?.OpenImmichViewer(item.FilePath, sessionItems, sourceAlbumId)
+                Return
+            End If
+            Dim paths = MapSelection.Where(Function(i) Not i.IsRemoteAsset).Select(Function(i) i.FilePath).ToList()
             If Not paths.Contains(item.FilePath) Then paths.Insert(0, item.FilePath)
             _mainVm?.OpenImageInViewer(item.FilePath, paths,
                                        cacheScopeId:=CurrentThumbnailCacheScopeId,

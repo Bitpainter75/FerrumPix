@@ -452,6 +452,15 @@ Namespace Services
                 End Get
             End Property
 
+            ''' <summary>Aufnahmeort aus <c>nc:metadata-photos-gps</c> der WebDAV-Abfragen. Memories
+            ''' liefert ihn in Tagesliste und Einzelheiten nicht; JsonIgnore haelt die beiden Felder
+            ''' aus dem Modell des Serializers, sie werden nur gesetzt, nie gelesen.</summary>
+            <JsonIgnore>
+            Public Property Latitude As Double?
+
+            <JsonIgnore>
+            Public Property Longitude As Double?
+
             ''' <summary>Die Aufnahmezeit, gleich welcher Endpunkt sie geliefert hat.</summary>
             <JsonIgnore>
             Public ReadOnly Property TakenEpoch As Long

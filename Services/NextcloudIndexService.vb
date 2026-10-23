@@ -117,7 +117,7 @@ Namespace Services
                 Using conn = New SqliteConnection(_connectionString)
                     conn.Open()
                     Using cmd = conn.CreateCommand()
-                        cmd.CommandText = "SELECT Etag,FileSize,FilePath,Permissions,Tags,DateTaken " &
+                        cmd.CommandText = "SELECT Etag,FileSize,FilePath,Permissions,Tags,DateTaken,GpsLatitude,GpsLongitude " &
                                           "FROM PhotoMeta WHERE ServerKey=$s AND FileId=$f"
                         cmd.Parameters.AddWithValue("$s", serverKey)
                         cmd.Parameters.AddWithValue("$f", fileId)
@@ -135,6 +135,10 @@ Namespace Services
                             Dim epoch As Long
                             If Long.TryParse(taken, NumberStyles.Integer, CultureInfo.InvariantCulture, epoch) Then
                                 photo.DateTaken = epoch
+                            End If
+                            If Not r.IsDBNull(6) AndAlso Not r.IsDBNull(7) Then
+                                photo.Latitude = r.GetDouble(6)
+                                photo.Longitude = r.GetDouble(7)
                             End If
                             Return photo
                         End Using
@@ -207,10 +211,10 @@ Namespace Services
                     conn.Open()
                     Using cmd = conn.CreateCommand()
                         cmd.CommandText =
-                            "INSERT INTO PhotoMeta(ServerKey,FileId,Etag,FileSize,FilePath,Permissions,Tags,DateTaken) " &
-                            "VALUES($s,$f,$e,$sz,$p,$perm,$tags,$dt) " &
+                            "INSERT INTO PhotoMeta(ServerKey,FileId,Etag,FileSize,FilePath,Permissions,Tags,DateTaken,GpsLatitude,GpsLongitude) " &
+                            "VALUES($s,$f,$e,$sz,$p,$perm,$tags,$dt,$lat,$lon) " &
                             "ON CONFLICT(ServerKey,FileId) DO UPDATE SET " &
-                            "Etag=$e,FileSize=$sz,FilePath=$p,Permissions=$perm,Tags=$tags,DateTaken=$dt"
+                            "Etag=$e,FileSize=$sz,FilePath=$p,Permissions=$perm,Tags=$tags,DateTaken=$dt,GpsLatitude=$lat,GpsLongitude=$lon"
                         cmd.Parameters.AddWithValue("$s", serverKey)
                         cmd.Parameters.AddWithValue("$f", fileId)
                         cmd.Parameters.AddWithValue("$e", etag)
@@ -221,6 +225,11 @@ Namespace Services
                         cmd.Parameters.AddWithValue("$dt", If(photo.TakenEpoch > 0,
                                                               CObj(photo.TakenEpoch.ToString(CultureInfo.InvariantCulture)),
                                                               DBNull.Value))
+                        ' Nur als Paar, wie ueberall. Die Einzelheiten von Memories kennen keinen
+                        ' Ort; dort bleiben die Spalten leer, und die Karte fragt ueber WebDAV nach.
+                        Dim hasGps = photo.Latitude.HasValue AndAlso photo.Longitude.HasValue
+                        cmd.Parameters.AddWithValue("$lat", If(hasGps, CObj(photo.Latitude.Value), DBNull.Value))
+                        cmd.Parameters.AddWithValue("$lon", If(hasGps, CObj(photo.Longitude.Value), DBNull.Value))
                         cmd.ExecuteNonQuery()
                     End Using
                 End Using

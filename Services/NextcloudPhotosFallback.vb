@@ -437,7 +437,7 @@ Namespace Services
             body.Append("<d:basicsearch><d:select><d:prop>")
             body.Append("<d:getcontenttype/><d:getcontentlength/><d:getlastmodified/><d:getetag/>")
             body.Append("<oc:fileid/><oc:permissions/><oc:favorite/>")
-            body.Append("<nc:has-preview/><nc:metadata-photos-original_date_time/><nc:metadata-photos-size/>")
+            body.Append("<nc:has-preview/><nc:metadata-photos-original_date_time/><nc:metadata-photos-size/><nc:metadata-photos-gps/>")
             body.Append("</d:prop></d:select>")
             body.Append("<d:from><d:scope><d:href>/files/").Append(XmlText(user)).Append("</d:href><d:depth>infinity</d:depth></d:scope></d:from>")
             body.Append("<d:where><d:and>")
@@ -537,7 +537,7 @@ Namespace Services
                            "<d:propfind xmlns:d=""DAV:"" xmlns:oc=""http://owncloud.org/ns"" xmlns:nc=""http://nextcloud.org/ns"">" &
                            "<d:prop><d:getcontenttype/><d:getcontentlength/><d:getlastmodified/><d:getetag/>" &
                            "<oc:fileid/><oc:permissions/><oc:favorite/>" &
-                           "<nc:has-preview/><nc:metadata-photos-original_date_time/><nc:metadata-photos-size/>" &
+                           "<nc:has-preview/><nc:metadata-photos-original_date_time/><nc:metadata-photos-size/><nc:metadata-photos-gps/>" &
                            "</d:prop></d:propfind>"
             Dim xml = Await SendDavBodyAsync("PROPFIND", url, propfind, "1", cancellationToken).ConfigureAwait(False)
             If xml Is Nothing Then Return result
@@ -613,7 +613,7 @@ Namespace Services
             Dim report = "<?xml version=""1.0""?>" &
                          "<oc:filter-files xmlns:d=""DAV:"" xmlns:oc=""http://owncloud.org/ns"" xmlns:nc=""http://nextcloud.org/ns"">" &
                          "<d:prop><d:getcontenttype/><d:getcontentlength/><d:getlastmodified/><d:getetag/>" &
-                         "<oc:fileid/><oc:permissions/><nc:has-preview/><nc:metadata-photos-original_date_time/><nc:metadata-photos-size/></d:prop>" &
+                         "<oc:fileid/><oc:permissions/><nc:has-preview/><nc:metadata-photos-original_date_time/><nc:metadata-photos-size/><nc:metadata-photos-gps/></d:prop>" &
                          "<oc:filter-rules><oc:systemtag>" & XmlText(tagId) & "</oc:systemtag></oc:filter-rules>" &
                          "</oc:filter-files>"
             Dim xml = Await SendDavBodyAsync("REPORT", DavUrl(""), report, "1", cancellationToken).ConfigureAwait(False)
@@ -645,7 +645,8 @@ Namespace Services
         Private Shared _mapsSignature As String = ""
         Private Shared ReadOnly _mapsLock As New Object()
 
-        ''' <summary>Wirft beide Merklisten weg, sobald Server oder Konto wechseln.
+        ''' <summary>Wirft die Merklisten (Pfade, fehlende Vorschauen, Aufnahmeorte) weg, sobald
+        ''' Server oder Konto wechseln.
         '''
         ''' DAS IST KEINE HYGIENE, SONDERN EINE SICHERUNG. Eine Dateikennung ist NUR auf ihrem Server
         ''' eindeutig; zwei Nextclouds vergeben munter dieselbe 153. Bliebe der gemerkte Pfad stehen,
@@ -659,6 +660,7 @@ Namespace Services
                 If String.Equals(_mapsSignature, signature, StringComparison.Ordinal) Then Return
                 _pathById.Clear()
                 _withoutPreview.Clear()
+                _gpsById.Clear()
                 _mapsSignature = signature
             End SyncLock
         End Sub
@@ -702,7 +704,7 @@ Namespace Services
                        "<d:searchrequest xmlns:d=""DAV:"" xmlns:oc=""http://owncloud.org/ns"" xmlns:nc=""http://nextcloud.org/ns"">" &
                        "<d:basicsearch><d:select><d:prop>" &
                        "<d:getcontenttype/><d:getcontentlength/><d:getlastmodified/><d:getetag/>" &
-                       "<oc:fileid/><oc:permissions/><nc:metadata-photos-original_date_time/><nc:metadata-photos-size/>" &
+                       "<oc:fileid/><oc:permissions/><nc:metadata-photos-original_date_time/><nc:metadata-photos-size/><nc:metadata-photos-gps/>" &
                        "</d:prop></d:select>" &
                        "<d:from><d:scope><d:href>/files/" & XmlText(user) & "</d:href><d:depth>infinity</d:depth></d:scope></d:from>" &
                        "<d:where><d:eq><d:prop><oc:fileid/></d:prop><d:literal>" &
@@ -729,7 +731,7 @@ Namespace Services
                            "<d:propfind xmlns:d=""DAV:"" xmlns:oc=""http://owncloud.org/ns"" xmlns:nc=""http://nextcloud.org/ns"">" &
                            "<d:prop><d:getcontenttype/><d:getcontentlength/><d:getlastmodified/><d:getetag/>" &
                            "<oc:fileid/><oc:permissions/><oc:favorite/>" &
-                           "<nc:has-preview/><nc:metadata-photos-original_date_time/><nc:metadata-photos-size/></d:prop></d:propfind>"
+                           "<nc:has-preview/><nc:metadata-photos-original_date_time/><nc:metadata-photos-size/><nc:metadata-photos-gps/></d:prop></d:propfind>"
             Dim xml = Await SendDavBodyAsync("PROPFIND", FileUrl(TreePath(path)), propfind, "0", cancellationToken).ConfigureAwait(False)
             If xml Is Nothing Then Return Nothing
             Dim response = xml.Descendants(DavNs + "response").FirstOrDefault()
@@ -953,6 +955,14 @@ Namespace Services
                 photo.Height = height
             End If
 
+            Dim latitude As Double, longitude As Double
+            If ParseGps(props.Element(NcNs + "metadata-photos-gps"), latitude, longitude) Then
+                photo.Latitude = latitude
+                photo.Longitude = longitude
+                EnsureCurrentConnectionMaps()
+                _gpsById(fileId) = {latitude, longitude}
+            End If
+
             RememberPath(fileId, photo.FileName)
             ' Nur das ausdrueckliche "false" zaehlt: fehlt die Eigenschaft (etwa in einer aelteren
             ' Fassung), wird gefragt statt angenommen.
@@ -1004,6 +1014,134 @@ Namespace Services
             If parts.Length <> 2 Then Return False
             Return Integer.TryParse(parts(0).Trim(), width) AndAlso Integer.TryParse(parts(1).Trim(), height) AndAlso
                    width > 0 AndAlso height > 0
+        End Function
+
+        ''' <summary>Breite und Laenge aus <c>nc:metadata-photos-gps</c>.
+        '''
+        ''' UNGEMESSEN, anders als die Masse: angenommen ist dieselbe Form wie bei
+        ''' <see cref="ParseImageSize"/>, also Kinder <c>latitude</c>, <c>longitude</c> (und
+        ''' <c>altitude</c>) ohne Namensraum; JSON wird mitgenommen. Gelesen wird nur ein Paar im
+        ''' gueltigen Bereich. Fehlt die Eigenschaft (Server vor Nextcloud 28, oder die Datei ist noch
+        ''' nicht eingelesen), steht sie im 404-Block der Antwort und kommt hier gar nicht an.</summary>
+        Friend Shared Function ParseGps(element As XElement, ByRef latitude As Double, ByRef longitude As Double) As Boolean
+            latitude = 0 : longitude = 0
+            If element Is Nothing Then Return False
+
+            Dim latText As String = Nothing, lonText As String = Nothing
+            For Each child In element.Elements()
+                Select Case child.Name.LocalName.ToLowerInvariant()
+                    Case "latitude" : latText = child.Value.Trim()
+                    Case "longitude" : lonText = child.Value.Trim()
+                End Select
+            Next
+            If latText Is Nothing OrElse lonText Is Nothing Then
+                Dim value = element.Value.Trim()
+                If Not value.StartsWith("{", StringComparison.Ordinal) Then Return False
+                Try
+                    Using doc = JsonDocument.Parse(value)
+                        Dim jLat As JsonElement, jLon As JsonElement
+                        If Not doc.RootElement.TryGetProperty("latitude", jLat) OrElse
+                           Not doc.RootElement.TryGetProperty("longitude", jLon) Then Return False
+                        latText = jLat.ToString()
+                        lonText = jLon.ToString()
+                    End Using
+                Catch
+                    Return False
+                End Try
+            End If
+
+            If Not Double.TryParse(latText, NumberStyles.Float, CultureInfo.InvariantCulture, latitude) OrElse
+               Not Double.TryParse(lonText, NumberStyles.Float, CultureInfo.InvariantCulture, longitude) Then
+                latitude = 0 : longitude = 0
+                Return False
+            End If
+            If Double.IsNaN(latitude) OrElse Double.IsNaN(longitude) OrElse
+               Math.Abs(latitude) > 90 OrElse Math.Abs(longitude) > 180 Then
+                latitude = 0 : longitude = 0
+                Return False
+            End If
+            Return True
+        End Function
+
+        ' ── Aufnahmeorte fuer die Kartenansicht ─────────────────────────────────
+        '
+        ' Die Liste von Memories kennt keine Koordinaten, Alben und Suchtreffer auch nicht. Der
+        ' Server fuehrt sie aber unabhaengig von der App (nc:metadata-photos-gps, ab Nextcloud 28).
+        ' Gefragt wird gesammelt ueber die Dateikennung, nicht je Bild.
+
+        ''' <summary>Wie viele Kennungen in einer Suche stehen. Der Server macht aus der Kette von
+        ''' Vergleichen eine Liste in der Datenbankabfrage; hundert halten den Rumpf klein.</summary>
+        Private Const CoordinateBatchSize As Integer = 100
+
+        ''' <summary>Gemerkte Antworten je Kennung, ein leeres Feld heisst "der Server kennt keinen
+        ''' Ort". Ohne das fragte jedes Neurechnen der Karte dieselben Bilder wieder an. Wird mit den
+        ''' anderen Merklisten bei einem Kontowechsel geleert (siehe EnsureCurrentConnectionMaps).</summary>
+        Private Shared ReadOnly _gpsById As New Concurrent.ConcurrentDictionary(Of Long, Double())()
+
+        ''' <summary>Die Koordinaten zu den Kennungen, soweit der Server sie kennt. Schon Gefragtes
+        ''' kommt aus dem Speicher. Eine gescheiterte Anfrage wird nicht gemerkt, damit ein
+        ''' Netzaussetzer keinen Ort dauerhaft verschwinden laesst. Wirft nur beim Abbruch.</summary>
+        Public Shared Async Function GetCoordinatesAsync(fileIds As IEnumerable(Of String),
+                                                         cancellationToken As CancellationToken) As Task(Of Dictionary(Of String, (Latitude As Double, Longitude As Double)))
+            Dim result = New Dictionary(Of String, (Latitude As Double, Longitude As Double))(StringComparer.Ordinal)
+            If fileIds Is Nothing OrElse Not IsConfigured Then Return result
+            EnsureCurrentConnectionMaps()
+
+            Dim missing = New List(Of Long)()
+            For Each idText In fileIds.Distinct(StringComparer.Ordinal)
+                Dim id As Long = 0
+                If Not Long.TryParse(idText, NumberStyles.Integer, CultureInfo.InvariantCulture, id) OrElse id <= 0 Then Continue For
+                Dim known As Double() = Nothing
+                If _gpsById.TryGetValue(id, known) Then
+                    If known.Length = 2 Then result(idText) = (known(0), known(1))
+                Else
+                    missing.Add(id)
+                End If
+            Next
+
+            Dim user = If(AppSettingsService.Load().NextcloudUserName, "").Trim()
+            For start = 0 To missing.Count - 1 Step CoordinateBatchSize
+                cancellationToken.ThrowIfCancellationRequested()
+                Dim batch = missing.Skip(start).Take(CoordinateBatchSize).ToList()
+                Dim body = New StringBuilder()
+                body.Append("<?xml version=""1.0"" encoding=""UTF-8""?>")
+                body.Append("<d:searchrequest xmlns:d=""DAV:"" xmlns:oc=""http://owncloud.org/ns"" xmlns:nc=""http://nextcloud.org/ns"">")
+                body.Append("<d:basicsearch><d:select><d:prop><oc:fileid/><nc:metadata-photos-gps/></d:prop></d:select>")
+                body.Append("<d:from><d:scope><d:href>/files/").Append(XmlText(user)).Append("</d:href><d:depth>infinity</d:depth></d:scope></d:from>")
+                body.Append("<d:where><d:or>")
+                For Each id In batch
+                    body.Append("<d:eq><d:prop><oc:fileid/></d:prop><d:literal>")
+                    body.Append(id.ToString(CultureInfo.InvariantCulture))
+                    body.Append("</d:literal></d:eq>")
+                Next
+                body.Append("</d:or></d:where>")
+                body.Append("<d:limit><d:nresults>").Append(batch.Count.ToString(CultureInfo.InvariantCulture)).Append("</d:nresults></d:limit>")
+                body.Append("</d:basicsearch></d:searchrequest>")
+
+                Dim xml = Await SendDavBodyAsync("SEARCH", DavRootUrl(""), body.ToString(), "0", cancellationToken).ConfigureAwait(False)
+                ' Keine Antwort: nichts merken, beim naechsten Neurechnen wird wieder gefragt.
+                If xml Is Nothing Then Continue For
+                Dim answered = New HashSet(Of Long)()
+                For Each response In xml.Descendants(DavNs + "response")
+                    Dim props = OkProps(response)
+                    Dim id = FileIdOf(response)
+                    If id <= 0 Then Continue For
+                    answered.Add(id)
+                    Dim latitude As Double, longitude As Double
+                    If ParseGps(If(props Is Nothing, Nothing, props.Element(NcNs + "metadata-photos-gps")), latitude, longitude) Then
+                        _gpsById(id) = {latitude, longitude}
+                        result(id.ToString(CultureInfo.InvariantCulture)) = (latitude, longitude)
+                    Else
+                        _gpsById(id) = Array.Empty(Of Double)()
+                    End If
+                Next
+                ' Wonach gefragt wurde und was nicht in der Antwort steht, hat der Server nicht
+                ' gefunden (geloescht, nicht mehr geteilt). Auch das ist eine Antwort.
+                For Each id In batch
+                    If Not answered.Contains(id) Then _gpsById(id) = Array.Empty(Of Double)()
+                Next
+            Next
+            Return result
         End Function
 
         ''' <summary>Die Rechte in DER Schreibweise, die <see cref="NextcloudPhoto.CanReplaceOriginal"/>
