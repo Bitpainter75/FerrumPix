@@ -3790,10 +3790,13 @@ Namespace Services
         ''' Neuaufbau mit positiver Belichtung vorzugreifen, bei der der Abzug mit dem Weisspunkt
         ''' schrumpft (<see cref="ToneRampFor"/>); ohne ihn lag der Vorgriff in den Tiefen sichtbar
         ''' zu dunkel, und das Bild sprang beim Neuaufbau. Je Datei gemerkt, weil die Grundbelichtung
-        ''' die Metadaten liest.</summary>
+        ''' die Metadaten liest; der Schluessel traegt die Einstellung zur Kameratabelle mit, denn sie
+        ''' entscheidet, welche Grundbelichtung der Decode nimmt (<see cref="BaseExposureForFile"/>).
+        ''' Ohne sie rechnete die Vorschau nach dem Umschalten mit dem alten Abzug.</summary>
         Friend Shared Function RampBlackShareForFile(path As String) As Double
             If String.IsNullOrEmpty(path) Then Return BlackSubtraction * 2.0 ^ BaseExposureEv
-            Return _rampBlackShareByPath.GetOrAdd(path, Function(p) BlackSubtraction * 2.0 ^ BaseExposureForFile(p))
+            Dim key = If(AppSettingsService.Load().UseCameraBaselineTable, "T|", "F|") & path
+            Return _rampBlackShareByPath.GetOrAdd(key, Function(k) BlackSubtraction * 2.0 ^ BaseExposureForFile(path))
         End Function
 
         ''' <summary>Die Grundbelichtung fuer DIESE Datei. Ohne die Einstellung bleibt es beim

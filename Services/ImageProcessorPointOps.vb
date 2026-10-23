@@ -63,6 +63,14 @@ Namespace Services
             Public ToneBefore As Single()
             Public ToneZones As Single()
 
+            ''' <summary>Der Vorgriff auf den Neuaufbau aus der RAW-Stufe (Belichtung, Schwarzabzug,
+            ''' Schulter; RawStageExposureAt) als Tabelle auf dem Gammawert. Wirkt als ERSTE Stufe,
+            ''' weil die RAW-Stufe vor allem anderen liegt, und nach der RGBTone-Regel des Decodes
+            ''' (ApplyRawStageTone): die Tabelle auf dem hellsten und dem dunkelsten Kanal, der
+            ''' mittlere linear dazwischen. Je Kanal gerechnet lag der Vorgriff in gesaettigten Farben
+            ''' sichtbar neben dem Neuaufbau. Nothing, wenn nichts vorzugreifen ist.</summary>
+            Public RawStageTone As Single()
+
             ''' <summary>Lichter und Tiefen allein als Tabelle, ausgewertet nicht am Bildpunkt, sondern
             ''' an der Basisschicht seiner Umgebung (LocalToneBase, gebaut im Durchlauf aus dem Bild
             ''' selbst). ToneZones haelt dann die gemeinsame Tabelle aller fuenf Regler abzueglich
@@ -259,7 +267,13 @@ Namespace Services
             ' Genau hier verschwindet eine der 8-Bit-Stufen.
             ' Der Kontrast gehoert zu den Zonen (gemessene Kennlinie, farbtonerhaltend) und nicht
             ' zur Tonwertkurve.
-            Dim wantsTone = adj.ChainExposure() <> 0 OrElse adj.Brightness <> 0 OrElse adj.ChainFollowsRawKnee()
+            ' Der Vorgriff auf den Neuaufbau aus der RAW-Stufe ist eine eigene, erste Stufe.
+            chain.RawStageTone = BuildRawStageToneTable(adj)
+            If chain.RawStageTone IsNot Nothing Then
+                EnsureGammaTables()
+                chain.IsIdentity = False
+            End If
+            Dim wantsTone = (adj.ChainExposure() <> 0 AndAlso Not adj.ChainExposureInRawStage()) OrElse adj.Brightness <> 0
             Dim wantsTonal = adj.Highlights <> 0 OrElse adj.ShadowsLevel <> 0 OrElse
                              adj.Whites <> 0 OrElse adj.Blacks <> 0 OrElse adj.Contrast <> 0
             ' RGB-Kurve und Kanalkurven kommen in DIESELBE Tabelle. Heute steht dort
@@ -292,15 +306,22 @@ Namespace Services
                         If adj.ReadsImageStatistics() Then
                             reference = If(toneReference.IsMeasured, toneReference,
                                            MeasureToneReference(measured, chain))
-                            If reference.IsMeasured AndAlso chain.ToneBefore IsNot Nothing Then
+                            If reference.IsMeasured AndAlso (chain.ToneBefore IsNot Nothing OrElse chain.RawStageTone IsNot Nothing) Then
+                                ' Durch beide Stufen davor: den Vorgriff auf die RAW-Stufe (an Grau
+                                ' wirkt er wie je Kanal) und die Tonwertkurve.
                                 Dim toneBefore = chain.ToneBefore
-                                reference.MedianL = GrayVToLightness(SampleTable(toneBefore, CSng(LightnessToGrayV(reference.MedianL))))
-                                reference.TopL = GrayVToLightness(SampleTable(toneBefore, CSng(LightnessToGrayV(reference.TopL))))
+                                Dim rawStage = chain.RawStageTone
+                                Dim moved = Function(l As Double) As Double
+                                                Dim v = CSng(LightnessToGrayV(l))
+                                                If rawStage IsNot Nothing Then v = SampleTable(rawStage, v)
+                                                If toneBefore IsNot Nothing Then v = SampleTable(toneBefore, v)
+                                                Return GrayVToLightness(v)
+                                            End Function
+                                reference.MedianL = moved(reference.MedianL)
+                                reference.TopL = moved(reference.TopL)
                                 ' Der Anteil heller Bildpunkte wandert ebenso mit: gezaehlt wird, was
                                 ' NACH der Stufe ueber der Grenze liegt.
-                                reference.BrightShare = reference.ShareAboveAfter(
-                                    Function(l) GrayVToLightness(SampleTable(toneBefore, CSng(LightnessToGrayV(l)))),
-                                    ToneSliderCurves.BrightShareLimitL)
+                                reference.BrightShare = reference.ShareAboveAfter(moved, ToneSliderCurves.BrightShareLimitL)
                             End If
                         End If
                         ' Lichter und Tiefen in eine eigene Tabelle, die an der Basisschicht
@@ -1516,39 +1537,15 @@ Namespace Services
         Private Shared Function BuildPointOpScalarTable(adj As ImageAdjustments,
                                                         includeTone As Boolean,
                                                         includeRgbCurve As Boolean) As Single()
-            Dim exposureGain = CSng(Math.Pow(2.0, adj.ChainExposure() / 100.0 * 4.0))
-            ' Greift die Belichtung nur dem Neuaufbau aus der RAW-Stufe vor, rechnet sie wie dort und
-            ' nicht mehr als Faktor im Linearlicht (ImageAdjustments.SourceFollowsRawExposure).
-            Dim rawStageGain = 1.0F
-            Dim blackFrom = 0.0, blackTo = 0.0
-            If adj.ChainExposureInRawStage() AndAlso exposureGain <> 1.0F Then
-                rawStageGain = exposureGain
-                exposureGain = 1.0F
-                ' Bei positiver Reglerbelichtung schrumpft der Schwarzabzug der Rampe mit dem
-                ' Weisspunkt (RawDecodeService.ToneRampFor). Beide Abzuege in Einheiten des
-                ' Weisspunkts des Quellbilds; fehlte das, lag der Vorgriff bei +1 Blende in den
-                ' Tiefen um rund 7 Tonwerte zu dunkel, und das Bild sprang beim Neuaufbau.
-                Dim share = adj.RampBlackShareInSource
-                If share > 0.0 Then
-                    Dim evFrom = adj.ExposureInSource / ImageAdjustments.ExposurePointsPerStop
-                    Dim evTo = adj.Exposure / ImageAdjustments.ExposurePointsPerStop
-                    blackFrom = share * 2.0 ^ (evFrom - Math.Max(evFrom, 0.0))
-                    blackTo = share * 2.0 ^ (evFrom - Math.Max(evTo, 0.0))
-                End If
-            End If
-            ' Ebenso das Knie der Lichterschulter, das der Lichter-Regler im Decode verschiebt
-            ' (ImageAdjustments.ChainFollowsRawKnee). Gleiche Knie rechnen wie bisher.
-            Dim kneeFrom = 1.0, kneeTo = 1.0
-            If adj.ChainFollowsRawKnee() Then
-                kneeFrom = adj.KneeInSource
-                kneeTo = adj.RawHighlightKnee()
-            End If
+            ' Greift die Belichtung nur dem Neuaufbau aus der RAW-Stufe vor, steht sie nicht hier,
+            ' sondern in PointOpChain.RawStageTone (BuildRawStageToneTable).
+            Dim exposureGain = If(adj.ChainExposureInRawStage(), 1.0F, CSng(Math.Pow(2.0, adj.ChainExposure() / 100.0 * 4.0)))
             Dim brightness = adj.Brightness / 100.0F * 80.0F / 255.0F
 
             Dim rgbPoints = If(includeRgbCurve, ParseCurvePoints(adj.CurveRgbPoints), Nothing)
 
-            Dim low = ToneTransfer(RawStageExposureAt(0.0F, rawStageGain, kneeFrom, kneeTo, blackFrom, blackTo), exposureGain, brightness)
-            Dim high = ToneTransfer(RawStageExposureAt(1.0F, rawStageGain, kneeFrom, kneeTo, blackFrom, blackTo), exposureGain, brightness)
+            Dim low = ToneTransfer(0.0F, exposureGain, brightness)
+            Dim high = ToneTransfer(1.0F, exposureGain, brightness)
             Dim overshootHigh = Math.Max(0.0F, high - 1.0F)
             Dim overshootLow = Math.Max(0.0F, -low)
             Dim shoulder = Clamp(ToneShoulderBase + 0.5F * overshootHigh, ToneShoulderBase, ToneShoulderMax)
@@ -1563,7 +1560,7 @@ Namespace Services
                 Dim v = i / CSng(PointOpTableSize - 1)
 
                 If includeTone Then
-                    Dim y = ToneTransfer(RawStageExposureAt(v, rawStageGain, kneeFrom, kneeTo, blackFrom, blackTo), exposureGain, brightness)
+                    Dim y = ToneTransfer(v, exposureGain, brightness)
                     Dim hard = Clamp(y, 0.0F, 1.0F)
                     Dim soft = SoftShoulder(y, toe, shoulder)
                     v = Clamp(hard + (soft - hard) * rolloff, 0.0F, 1.0F)
@@ -1579,6 +1576,64 @@ Namespace Services
             Next
             Return table
         End Function
+
+        ''' <summary>Der Vorgriff auf den Neuaufbau aus der RAW-Stufe als Tabelle
+        ''' (<see cref="PointOpChain.RawStageTone"/>), oder Nothing, wenn das Quellbild nicht mit der
+        ''' Belichtung neu entsteht oder Belichtung und Knie schon stimmen.</summary>
+        Private Shared Function BuildRawStageToneTable(adj As ImageAdjustments) As Single()
+            If Not adj.ChainExposureInRawStage() Then Return Nothing
+            Dim gain = CSng(Math.Pow(2.0, adj.ChainExposure() / 100.0 * 4.0))
+            If gain = 1.0F AndAlso Not adj.ChainFollowsRawKnee() Then Return Nothing
+            ' Bei positiver Reglerbelichtung schrumpft der Schwarzabzug der Rampe mit dem
+            ' Weisspunkt (RawDecodeService.ToneRampFor). Beide Abzuege in Einheiten des
+            ' Weisspunkts des Quellbilds; fehlte das, lag der Vorgriff bei +1 Blende in den Tiefen
+            ' um rund 7 Tonwerte zu dunkel, und das Bild sprang beim Neuaufbau.
+            Dim blackFrom = 0.0, blackTo = 0.0
+            Dim share = adj.RampBlackShareInSource
+            If share > 0.0 Then
+                Dim evFrom = adj.ExposureInSource / ImageAdjustments.ExposurePointsPerStop
+                Dim evTo = adj.Exposure / ImageAdjustments.ExposurePointsPerStop
+                blackFrom = share * 2.0 ^ (evFrom - Math.Max(evFrom, 0.0))
+                blackTo = share * 2.0 ^ (evFrom - Math.Max(evTo, 0.0))
+            End If
+            ' Die Schulter immer, auch bei gleichem Knie (RawStageExposureAt).
+            Dim kneeFrom = adj.KneeInSource
+            Dim kneeTo = adj.RawHighlightKnee()
+            Dim table = New Single(PointOpTableSize - 1) {}
+            For i = 0 To PointOpTableSize - 1
+                table(i) = RawStageExposureAt(i / CSng(PointOpTableSize - 1), gain, kneeFrom, kneeTo, blackFrom, blackTo)
+            Next
+            Return table
+        End Function
+
+        ''' <summary>Wendet <see cref="PointOpChain.RawStageTone"/> nach der RGBTone-Regel des Decodes
+        ''' an (RawDecodeService.Convert16Rows): die Tabelle auf dem hellsten und dem dunkelsten
+        ''' Kanal, der mittlere an derselben Stelle zwischen beiden, im Linearlicht. Der Decode legt
+        ''' den mittleren Kanal mit dem Verhaeltnis seiner Sensorwerte fest; Belichtung und
+        ''' Schwarzabzug verschieben alle drei gleich, das Verhaeltnis bleibt also, und es laesst
+        ''' sich aus dem Quellbild selbst ablesen.</summary>
+        Private Shared Sub ApplyRawStageTone(ByRef rr As Single, ByRef gg As Single, ByRef bb As Single,
+                                             table As Single(), toLinear As Single(), toGamma As Single())
+            Dim hi = Math.Max(rr, Math.Max(gg, bb))
+            Dim lo = Math.Min(rr, Math.Min(gg, bb))
+            Dim hiOut = SampleTable(table, hi)
+            If hi - lo < 0.000001F Then
+                rr = hiOut : gg = hiOut : bb = hiOut
+                Return
+            End If
+            Dim loOut = SampleTable(table, lo)
+            Dim hiLin = SampleTable(toLinear, hi), loLin = SampleTable(toLinear, lo)
+            Dim hiOutLin = SampleTable(toLinear, hiOut), loOutLin = SampleTable(toLinear, loOut)
+            Dim span = hiLin - loLin
+            If span < 0.0000001F Then
+                rr = hiOut : gg = hiOut : bb = hiOut
+                Return
+            End If
+            Dim scale = (hiOutLin - loOutLin) / span
+            rr = SampleTable(toGamma, Clamp(loOutLin + (SampleTable(toLinear, rr) - loLin) * scale, 0.0F, 1.0F))
+            gg = SampleTable(toGamma, Clamp(loOutLin + (SampleTable(toLinear, gg) - loLin) * scale, 0.0F, 1.0F))
+            bb = SampleTable(toGamma, Clamp(loOutLin + (SampleTable(toLinear, bb) - loLin) * scale, 0.0F, 1.0F))
+        End Sub
 
         ''' <summary>Die Belichtung wie in der RAW-Stufe auf einen Tonwert des entwickelten Bildes
         ''' (Gammawert): zurueck ins Linearlicht und durch die umgekehrte ACR3-Kurve auf die Rampe,
@@ -1600,9 +1655,10 @@ Namespace Services
                                                   Optional blackTo As Double = 0.0) As Single
             If gain = 1.0F AndAlso kneeFrom = kneeTo AndAlso blackFrom = blackTo Then Return v
             Dim ramp = RawDecodeService.Acr3CurveInverse(SrgbToLinear(Clamp(v, 0.0F, 1.0F)))
-            If kneeFrom = kneeTo Then
-                Return Clamp(LinearToSrgb(CSng(RawDecodeService.Acr3CurveAt(Math.Min(1.0, MoveRamp(ramp, gain, blackFrom, blackTo))))), 0.0F, 1.0F)
-            End If
+            ' IMMER durch die Schulter, auch bei gleichem Knie: mit der Lichterrettung steht sie ab
+            ' Werk bei 0,45, und alles darueber ist gestaucht. Den gestauchten Wert nur mal Faktor
+            ' zu nehmen, machte die Lichter bei negativer Belichtung viel zu dunkel und flach, und
+            ' beim Neuaufbau kamen sie hell zurueck. Ohne Schulter (Knie 1) ist der Weg bitgleich.
             Dim scene = MoveRamp(RawDecodeService.ShoulderInverse(ramp, kneeFrom), gain, blackFrom, blackTo)
             Return Clamp(LinearToSrgb(CSng(RawDecodeService.Acr3CurveAt(RawDecodeService.ShoulderAt(scene, kneeTo)))), 0.0F, 1.0F)
         End Function
@@ -2417,6 +2473,7 @@ Namespace Services
         ''' den Tonzonen einfuegt, traegt sie hier nach.</summary>
         Private Shared Sub ApplyStagesBeforeToneZones(ByRef rr As Single, ByRef gg As Single, ByRef bb As Single,
                                                       chain As PointOpChain, toLinear As Single(), toGamma As Single())
+            If chain.RawStageTone IsNot Nothing Then ApplyRawStageTone(rr, gg, bb, chain.RawStageTone, toLinear, toGamma)
             If chain.NegR IsNot Nothing Then
                 rr = SampleTable(chain.NegR, rr)
                 gg = SampleTable(chain.NegG, gg)
@@ -2601,6 +2658,7 @@ Namespace Services
             Dim sb = chain.ScalarB
             Dim toneBefore = chain.ToneBefore
             Dim toneZones = chain.ToneZones
+            Dim rawStageTone = chain.RawStageTone
             Dim negR = chain.NegR
             Dim negG = chain.NegG
             Dim negB = chain.NegB
@@ -2678,6 +2736,9 @@ Namespace Services
                             If gg > 1.0F Then gg = 1.0F
                             If bb > 1.0F Then bb = 1.0F
                         End If
+
+                        ' --- 0. Vorgriff auf den Neuaufbau aus der RAW-Stufe (vor allem anderen) ---
+                        If rawStageTone IsNot Nothing Then ApplyRawStageTone(rr, gg, bb, rawStageTone, toLinear, toGamma)
 
                         ' --- 1. Filmnegativ (vor allen Farbanpassungen) ---
                         If negR IsNot Nothing Then

@@ -64,8 +64,10 @@
                      25 Punkte sind eine Stufe (siehe ExposureStopsConverter), der volle Weg also
                      plus/minus 5 - Adobes Bereich. Vorher stand hier eine blanke Zahl zwischen
                      -125 und 125, und die sagt einem Fotografen nichts; "-1,60" sagt alles.
-                     Zahlenfeld und Mausrad gehen in 0,01 Stufen, der Zug in 0,02; mit SHIFT
-                     geht das Zahlenfeld in Viertelstufen.
+                     Zahlenfeld und Mausrad gehen in 0,01 Stufen; mit SHIFT geht das Zahlenfeld
+                     in Viertelstufen. Der Zug folgt dem Zeiger wie bei den anderen Tonreglern:
+                     mit einem eigenen Schritt (0,02 je Pixel) lief der Griff dem Zeiger rund
+                     dreimal langsamer hinterher, und der Regler fuehlte sich traege an.
                      IN DER HISTORIE HEISST DER REGLER WEITER NUR "Belichtung"
                      (EditorViewModel.GetHistoryLabelForProperty): (EV) ist die Einheit der
                      Anzeige, nicht Teil seines Namens. -->
@@ -74,7 +76,7 @@
                            VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                 <icons:RoundSlider Grid.Column="1" Minimum="-125" Maximum="125"
                                    Value="{Binding Exposure}"
-                                   DragIncrement="0.5" WheelIncrement="0.25" Margin="0,0" />
+                                   WheelIncrement="0.25" Margin="0,0" />
                 <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
                                          Value="{Binding Exposure, Mode=TwoWay, Converter={StaticResource ExposureStopsConverter}}"
                                          Minimum="-5" Maximum="5"

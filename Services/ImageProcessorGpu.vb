@@ -273,7 +273,8 @@ Namespace Services
         Private Const RowLocalZones As Integer = 15
         Private Const RowLocalDetail As Integer = 16
         Private Const RowLocalColor As Integer = 17
-        Private Const ShaderTableRows As Integer = 18
+        Private Const RowRawStageTone As Integer = 18
+        Private Const ShaderTableRows As Integer = 19
 
         Private Shared _pointOpEffect As SKRuntimeEffect
         Private Shared ReadOnly _pointOpEffectLock As New Object()
@@ -669,6 +670,7 @@ Namespace Services
             u("baseSize") = If(localBase IsNot Nothing, New Single() {localBase.Width, localBase.Height}, New Single() {1, 1})
             u("baseOrigin") = If(localBase IsNot Nothing, New Single() {localBase.OriginX, localBase.OriginY}, New Single() {0, 0})
             u("baseStep") = If(localBase IsNot Nothing, CSng(localBase.StepSize), 1.0F)
+            u("useRawStage") = If(chain.RawStageTone IsNot Nothing, 1.0F, 0.0F)
             u("useNeg") = If(chain.NegR IsNot Nothing, 1.0F, 0.0F)
             u("negMono") = If(chain.NegMonochrome, 1.0F, 0.0F)
             SetMatrixRows(u, "wb", chain.WhiteBalanceMatrix, 3, 0)
@@ -881,6 +883,7 @@ Namespace Services
             put(RowLocalZones, chain.LocalToneZones)
             put(RowLocalDetail, chain.LocalDetailGain)
             put(RowLocalColor, chain.LocalColorGain)
+            put(RowRawStageTone, chain.RawStageTone)
             If chain.Hsl IsNot Nothing OrElse chain.VibranceByHue IsNot Nothing Then
                 Dim hue(ShaderTableWidth - 1) As Single, sat(ShaderTableWidth - 1) As Single
                 Dim lum(ShaderTableWidth - 1) As Single, vib(ShaderTableWidth - 1) As Single
@@ -929,6 +932,7 @@ uniform shader baseGrid;
 uniform float premulIn;
 uniform float useLocal; uniform float useLocalDetail; uniform float useLocalColor;
 uniform float2 baseSize; uniform float2 baseOrigin; uniform float baseStep;
+uniform float useRawStage;
 uniform float useNeg; uniform float negMono;
 uniform float useWb; uniform float3 wb0; uniform float3 wb1; uniform float3 wb2;
 uniform float useCm; uniform float3 cm0; uniform float3 cm1; uniform float3 cm2; uniform float3 cmOff;
@@ -1199,6 +1203,29 @@ half4 main(float2 p) {
         c = c / 255.0;
     }
     float rr = c.r; float gg = c.g; float bb = c.b;
+
+    if (useRawStage > 0.5) {
+        // ApplyRawStageTone: die Tabelle auf hellstem und dunkelstem Kanal, der mittlere linear dazwischen.
+        float hi = max(rr, max(gg, bb)); float lo = min(rr, min(gg, bb));
+        float hiOut = tab(18.0, hi);
+        float hiLin = tab(0.0, hi); float loLin = tab(0.0, lo);
+        float span = hiLin - loLin;
+        if (hi - lo < 0.000001 || span < 0.0000001) {
+            rr = hiOut; gg = hiOut; bb = hiOut;
+        } else {
+            // Jeder Tabellenzugriff fuer sich, nie tab im Argument von tab: verschachtelt lieferte
+            // Skia auf dem Raster-Weg der Pruefung falsche Werte (gemessen, Ergebnis fast schwarz).
+            float loOut = tab(18.0, lo);
+            float loOutLin = tab(0.0, loOut);
+            float hiOutLin = tab(0.0, hiOut);
+            float s = (hiOutLin - loOutLin) / span;
+            float rLin = tab(0.0, rr); float gLin = tab(0.0, gg); float bLin = tab(0.0, bb);
+            float rOut = clamp(loOutLin + (rLin - loLin) * s, 0.0, 1.0);
+            float gOut = clamp(loOutLin + (gLin - loLin) * s, 0.0, 1.0);
+            float bOut = clamp(loOutLin + (bLin - loLin) * s, 0.0, 1.0);
+            rr = tab(1.0, rOut); gg = tab(1.0, gOut); bb = tab(1.0, bOut);
+        }
+    }
 
     if (useNeg > 0.5) {
         rr = tab(2.0, rr); gg = tab(3.0, gg); bb = tab(4.0, bb);
