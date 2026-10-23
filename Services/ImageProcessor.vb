@@ -652,6 +652,9 @@ Namespace Services
             If developRaw AndAlso RawPreviewService.IsSupportedRaw(path) AndAlso RawDecodeService.IsAvailable Then
                 Dim developed = RawDecodeService.TryDecode(path, lensChoice, recoverHighlights)
                 If developed IsNot Nothing Then Return developed
+                ' Abgebrochen, weil niemand das Ergebnis mehr braucht (RawDecodeService.RunWhileWanted):
+                ' dann auch keine Vorschau als Rueckfall.
+                If RawDecodeService.IsAbandoned() Then Return Nothing
             ElseIf Not RawPreviewService.IsSupportedRaw(path) Then
                 ' Anderes Hauptbild -> der ~180-MB-Entwicklungs-Cache ist stale und kann weg.
                 RawDecodeService.ClearCache()
