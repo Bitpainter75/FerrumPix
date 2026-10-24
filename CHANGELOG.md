@@ -10,8 +10,8 @@
   processor cores denoising and the other models may use. By default it is still half of them, so
   the app stays responsive; more cores make the models faster when they run on the processor.
 
-- **Copy and paste adjustments in the gallery:** right click an edited RAW or PSD to copy its
-  adjustments, then paste them onto a whole selection. It uses the same clipboard as copy and
+- **Copy and paste adjustments in the gallery:** right click an edited RAW or PSD and choose
+  Adjustments, Copy adjustments, then paste them onto a whole selection. It uses the same clipboard as copy and
   paste in the editor, so you can copy in one place and paste in the other. RAW and PSD files
   get the adjustments in their sidecar file; JPG, PNG and WebP are overwritten after asking.
 
@@ -20,7 +20,14 @@
   shown correctly on the display the window is on, also on wide gamut monitors. Leave it empty
   where the system already does this, such as KDE Plasma with a color profile set.
 
+- **Shorter context menu:** applying, copying and pasting adjustments and the watermark now sit
+  together in an Adjustments submenu, rejecting and the series entries in a Sort out submenu. When
+  only one of them is available, it stays in the main menu.
+
 ### Fixes
+
+- **Display profiles on KDE Plasma:** the settings could say that no displays were found until
+  the window was moved once. The displays are now listed as soon as the settings open.
 
 - **Less memory over long sessions:** FerrumPix no longer keeps the full metadata of every
   picture it has ever read. With large watched folders this used to add up to a lot of memory.

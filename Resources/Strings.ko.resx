@@ -10036,4 +10036,7 @@
   <data name="0_JPG_PNG_oder_WebP_Datei_en_werden_dabei_bersch_b54ffa11" xml:space="preserve">
     <value>JPG, PNG 또는 WebP 파일 {0}개를 덮어씁니다. RAW 및 PSD 파일은 조정이 사이드카 파일에 저장됩니다.</value>
   </data>
+  <data name="Aussortieren_84f2a0fb" xml:space="preserve">
+    <value>골라내기</value>
+  </data>
 </root>

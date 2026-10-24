@@ -10010,4 +10010,7 @@
   <data name="0_JPG_PNG_oder_WebP_Datei_en_werden_dabei_bersch_b54ffa11" xml:space="preserve">
     <value>{0} JPG-, PNG- oder WebP-Datei(en) werden dabei überschrieben. RAW- und PSD-Dateien bekommen die Anpassungen in ihre Begleitdatei.</value>
   </data>
+  <data name="Aussortieren_84f2a0fb" xml:space="preserve">
+    <value>Aussortieren</value>
+  </data>
 </root>

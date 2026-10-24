@@ -9991,4 +9991,7 @@
   <data name="0_JPG_PNG_oder_WebP_Datei_en_werden_dabei_bersch_b54ffa11" xml:space="preserve">
     <value>{0} ficheiro(s) JPG, PNG ou WebP serão substituídos. Os ficheiros RAW e PSD recebem os ajustes no seu ficheiro complementar.</value>
   </data>
+  <data name="Aussortieren_84f2a0fb" xml:space="preserve">
+    <value>Triagem</value>
+  </data>
 </root>

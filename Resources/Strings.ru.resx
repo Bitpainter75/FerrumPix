@@ -10032,4 +10032,7 @@
   <data name="0_JPG_PNG_oder_WebP_Datei_en_werden_dabei_bersch_b54ffa11" xml:space="preserve">
     <value>Будет перезаписано файлов JPG, PNG или WebP: {0}. Файлы RAW и PSD получат настройки в своём сопутствующем файле.</value>
   </data>
+  <data name="Aussortieren_84f2a0fb" xml:space="preserve">
+    <value>Отбор</value>
+  </data>
 </root>

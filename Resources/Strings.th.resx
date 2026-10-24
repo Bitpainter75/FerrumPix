@@ -10036,4 +10036,7 @@
   <data name="0_JPG_PNG_oder_WebP_Datei_en_werden_dabei_bersch_b54ffa11" xml:space="preserve">
     <value>ไฟล์ JPG, PNG หรือ WebP จำนวน {0} ไฟล์จะถูกเขียนทับ ไฟล์ RAW และ PSD จะได้รับการปรับแต่งในไฟล์ประกอบ</value>
   </data>
+  <data name="Aussortieren_84f2a0fb" xml:space="preserve">
+    <value>คัดแยก</value>
+  </data>
 </root>

@@ -9990,4 +9990,7 @@
   <data name="0_JPG_PNG_oder_WebP_Datei_en_werden_dabei_bersch_b54ffa11" xml:space="preserve">
     <value>将覆盖 {0} 个 JPG、PNG 或 WebP 文件。RAW 和 PSD 文件的调整写入其附属文件。</value>
   </data>
+  <data name="Aussortieren_84f2a0fb" xml:space="preserve">
+    <value>筛选</value>
+  </data>
 </root>

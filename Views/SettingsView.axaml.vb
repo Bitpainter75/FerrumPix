@@ -145,6 +145,10 @@ Namespace Views
                 Next
             End If
             vm?.RefreshApplicationScaleScreens(screens)
+            ' Auch die Bildschirmprofile: die Seite entsteht beim ersten Betreten bereits sichtbar,
+            ' der Wechsel von IsVisible oben kommt dann nie. Ohne diesen Aufruf stand dort "Keine
+            ' Bildschirme erkannt", bis das Fenster einmal verschoben wurde.
+            vm?.RefreshDisplayProfiles()
 
         End Sub
 

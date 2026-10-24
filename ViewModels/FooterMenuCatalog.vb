@@ -121,6 +121,12 @@ Namespace ViewModels
             Return Build("Anpassungen anwenden", "filter", c)
         End Function
 
+        ''' <summary>Das Untermenue "Anpassungen": was eine Bearbeitung auf die Bilder legt, also
+        ''' Anwenden, Kopieren, Einfügen und das Wasserzeichen.</summary>
+        Public Shared Function Adjustments(children As IReadOnlyList(Of Object)) As AppAction
+            Return New AppAction(LocalizationService.T("Anpassungen"), "adjustments", Nothing, Nothing, children)
+        End Function
+
         Public Shared Function CopyAdjustments(c As ICommand) As AppAction
             Return Build("Anpassungen kopieren", "adjustments-share", c)
         End Function
@@ -234,6 +240,11 @@ Namespace ViewModels
         ''' dorthin zurueck, wo sie herkam.</summary>
         Public Shared Function RestoreFromTrash(c As ICommand) As AppAction
             Return Build("Wiederherstellen", "restore", c)
+        End Function
+
+        ''' <summary>Das Untermenue "Aussortieren": Verwerfen samt Serie und Stapel.</summary>
+        Public Shared Function Culling(children As IReadOnlyList(Of Object)) As AppAction
+            Return New AppAction(LocalizationService.T("Aussortieren"), "flag", Nothing, Nothing, children)
         End Function
 
         Public Shared Function Reject(c As ICommand) As AppAction

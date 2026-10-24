@@ -151,20 +151,25 @@ Namespace ViewModels
             Divider(list)
 
             ' --- Stapelarbeit am Bild ----------------------------------------------------------
+            ' "Anpassungen" (Untermenue) sammelt, was eine Bearbeitung auf die Bilder LEGT: ein Preset,
+            ' die Anpassungen einer anderen Kachel, ein Wasserzeichen. Groesse, Ausgabe und Drehung
+            ' bleiben im Hauptmenue.
             If showResize Then
-                AddIfOffered(list, commands.ResizeImage, FooterMenuCatalog.ResizeImage(commands.ResizeImage))
-                AddIfOffered(list, commands.ApplyWatermark, FooterMenuCatalog.ApplyWatermark(commands.ApplyWatermark))
-                AddIfOffered(list, commands.ApplyFilter, FooterMenuCatalog.ApplyFilter(commands.ApplyFilter))
+                Dim adjustmentChildren As New List(Of Object)()
+                AddIfOffered(adjustmentChildren, commands.ApplyFilter, FooterMenuCatalog.ApplyFilter(commands.ApplyFilter))
                 ' KOPIEREN nur von EINER Kachel mit Rezept (RAW oder PSD mit .fpxmp), EINFÜGEN, sobald
                 ' etwas in der Ablage liegt und mindestens ein Bild es annehmen kann. Dieselben
                 ' Fragen, die auch beim Ausführen entscheiden.
                 If singleItemActions AndAlso GalleryViewModel.HasCopyableAdjustments(first) Then
-                    AddIfOffered(list, commands.CopyAdjustments, FooterMenuCatalog.CopyAdjustments(commands.CopyAdjustments))
+                    AddIfOffered(adjustmentChildren, commands.CopyAdjustments, FooterMenuCatalog.CopyAdjustments(commands.CopyAdjustments))
                 End If
                 If commands.PasteAdjustments IsNot Nothing AndAlso GalleryViewModel.HasCopiedAdjustments AndAlso
                    images.Any(AddressOf GalleryViewModel.CanPasteAdjustments) Then
-                    AddIfOffered(list, commands.PasteAdjustments, FooterMenuCatalog.PasteAdjustments(commands.PasteAdjustments))
+                    AddIfOffered(adjustmentChildren, commands.PasteAdjustments, FooterMenuCatalog.PasteAdjustments(commands.PasteAdjustments))
                 End If
+                AddIfOffered(adjustmentChildren, commands.ApplyWatermark, FooterMenuCatalog.ApplyWatermark(commands.ApplyWatermark))
+                AddGroup(list, adjustmentChildren, AddressOf FooterMenuCatalog.Adjustments)
+                AddIfOffered(list, commands.ResizeImage, FooterMenuCatalog.ResizeImage(commands.ResizeImage))
             End If
             If showExport Then
                 AddIfOffered(list, commands.ConvertTo, FooterMenuCatalog.ConvertTo(commands.ConvertTo))
@@ -196,35 +201,38 @@ Namespace ViewModels
                 Divider(list)
             End If
 
-            ' --- Aussortieren ------------------------------------------------------------------
+            ' --- Aussortieren (Untermenue) -----------------------------------------------------
             ' Verwerfen ist eine Markierung im lokalen Katalog und gilt fuer lokale Bilder. Die
             ' Beschriftung folgt dem Zustand: sind ALLE schon verworfen, nimmt der Eintrag es zurueck.
             ' Serie und Stapel gibt es nur fuer EIN angeklicktes Bild - bei einer Auswahl waere
-            ' offen, welche Serie gemeint ist.
+            ' offen, welche Serie gemeint ist. Im Untermenue, weil die Serieneintraege nur an einer
+            ' Serie erscheinen und das Hauptmenue sonst von Bild zu Bild seine Laenge wechselte.
             If imageBatch AndAlso Not videoOnly AndAlso images.All(Function(i) Not i.IsRemoteAsset) Then
+                Dim cullChildren As New List(Of Object)()
                 If images.All(Function(i) i.IsRejected) Then
-                    AddIfOffered(list, commands.ToggleReject, FooterMenuCatalog.Unreject(commands.ToggleReject))
+                    AddIfOffered(cullChildren, commands.ToggleReject, FooterMenuCatalog.Unreject(commands.ToggleReject))
                 Else
-                    AddIfOffered(list, commands.ToggleReject, FooterMenuCatalog.Reject(commands.ToggleReject))
+                    AddIfOffered(cullChildren, commands.ToggleReject, FooterMenuCatalog.Reject(commands.ToggleReject))
                 End If
                 Dim stack = If(isSingle, first?.Stack, Nothing)
                 If stack IsNot Nothing AndAlso stack.IsBurst Then
-                    AddIfOffered(list, commands.RejectRestOfStack, FooterMenuCatalog.RejectRestOfStack(commands.RejectRestOfStack))
+                    AddIfOffered(cullChildren, commands.RejectRestOfStack, FooterMenuCatalog.RejectRestOfStack(commands.RejectRestOfStack))
                 End If
                 If stack IsNot Nothing AndAlso stack.IsBurst Then
                     ' Eine Serie oeffnet sich als eigene Ansicht, siehe GalleryViewModel.OpenOrCloseStack.
                     If first.IsInStackFocus Then
-                        AddIfOffered(list, commands.ToggleStack, FooterMenuCatalog.CloseSeries(commands.ToggleStack))
+                        AddIfOffered(cullChildren, commands.ToggleStack, FooterMenuCatalog.CloseSeries(commands.ToggleStack))
                     Else
-                        AddIfOffered(list, commands.ToggleStack, FooterMenuCatalog.OpenSeries(commands.ToggleStack))
+                        AddIfOffered(cullChildren, commands.ToggleStack, FooterMenuCatalog.OpenSeries(commands.ToggleStack))
                     End If
                 ElseIf stack IsNot Nothing Then
                     If stack.LeadShot.Primary.IsStackExpanded Then
-                        AddIfOffered(list, commands.ToggleStack, FooterMenuCatalog.CollapseStack(commands.ToggleStack))
+                        AddIfOffered(cullChildren, commands.ToggleStack, FooterMenuCatalog.CollapseStack(commands.ToggleStack))
                     Else
-                        AddIfOffered(list, commands.ToggleStack, FooterMenuCatalog.ExpandStack(commands.ToggleStack))
+                        AddIfOffered(cullChildren, commands.ToggleStack, FooterMenuCatalog.ExpandStack(commands.ToggleStack))
                     End If
                 End If
+                AddGroup(list, cullChildren, AddressOf FooterMenuCatalog.Culling)
                 Divider(list)
             End If
 
@@ -374,6 +382,21 @@ Namespace ViewModels
         ''' Nimmt den Eintrag nur auf, wenn der Bereich das Kommando ueberhaupt anbietet.
         Private Shared Sub AddIfOffered(list As List(Of Object), command As Object, entry As AppAction)
             If command IsNot Nothing Then list.Add(entry)
+        End Sub
+
+        ''' <summary>Haengt eine Gruppe als Untermenue an. Steht nur EIN Eintrag darin, kommt er
+        ''' direkt ins Hauptmenue: ein Untermenue fuer eine einzige Zeile kostet einen Schritt und
+        ''' spart nichts. Ohne Eintrag faellt die Gruppe ganz weg, wie "Metadaten".</summary>
+        Private Shared Sub AddGroup(list As List(Of Object), children As List(Of Object),
+                                    makeGroup As Func(Of IReadOnlyList(Of Object), AppAction))
+            TidySeparators(children)
+            Dim entries = children.Where(Function(o) Not TypeOf o Is Avalonia.Controls.Separator).ToList()
+            If entries.Count = 0 Then Return
+            If entries.Count = 1 Then
+                list.Add(entries(0))
+            Else
+                list.Add(makeGroup(children))
+            End If
         End Sub
 
         Private Shared Sub Divider(list As List(Of Object))
