@@ -10035,4 +10035,7 @@
   <data name="Aussortieren_84f2a0fb" xml:space="preserve">
     <value>Vytřídit</value>
   </data>
+  <data name="Gilt_f_r_die_Modelle_und_unter_Linux_auch_f_r_di_6f480e5a" xml:space="preserve">
+    <value>Platí pro modely a v Linuxu také pro úpravy obrázků. Úpravy obrázků se přepnou až po restartu a okno se pak vykresluje také na této kartě.</value>
+  </data>
 </root>

@@ -9995,4 +9995,7 @@
   <data name="Aussortieren_84f2a0fb" xml:space="preserve">
     <value>Cribar</value>
   </data>
+  <data name="Gilt_f_r_die_Modelle_und_unter_Linux_auch_f_r_di_6f480e5a" xml:space="preserve">
+    <value>Se aplica a los modelos y, en Linux, también a la edición de imágenes. La edición de imágenes cambia tras reiniciar, y la ventana se dibuja entonces también en esta tarjeta.</value>
+  </data>
 </root>

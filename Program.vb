@@ -40,6 +40,8 @@ Module Program
         ' AiModelService.SuppressRuntimeTelemetry.
         AiModelService.SuppressRuntimeTelemetry()
         AppSettingsService.ApplyApplicationScaleEnvironment()
+        ' Vor Avalonia: die Grafikbibliothek liest die Wahl der Karte nur beim Laden.
+        GpuImageService.ApplyRenderOffloadEnvironment()
 
         ' DIE BEIDEN SICHERHEITSNETZE GEHOEREN HIERHER, nicht in die Anwendungsklasse. Dort werden
         ' sie erst angemeldet, wenn Avalonia schon steht - ein Absturz beim Aufbau des Toolkits

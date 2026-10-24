@@ -10014,4 +10014,7 @@
   <data name="Aussortieren_84f2a0fb" xml:space="preserve">
     <value>Sort out</value>
   </data>
+  <data name="Gilt_f_r_die_Modelle_und_unter_Linux_auch_f_r_di_6f480e5a" xml:space="preserve">
+    <value>Applies to the models and, on Linux, to image editing as well. Image editing switches after a restart, and the window is then drawn on this card too.</value>
+  </data>
 </root>

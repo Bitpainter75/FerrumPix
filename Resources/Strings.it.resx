@@ -9995,4 +9995,7 @@
   <data name="Aussortieren_84f2a0fb" xml:space="preserve">
     <value>Cernita</value>
   </data>
+  <data name="Gilt_f_r_die_Modelle_und_unter_Linux_auch_f_r_di_6f480e5a" xml:space="preserve">
+    <value>Vale per i modelli e, su Linux, anche per la modifica delle immagini. La modifica delle immagini cambia solo dopo un riavvio, e la finestra viene allora disegnata anch'essa su questa scheda.</value>
+  </data>
 </root>

@@ -18,9 +18,14 @@ Namespace Controls.EditorPanels
             Me.FindControl(Of GradientStopEditor)("GradientStops")?.RemoveSelectedStop()
         End Sub
 
-        ''' <summary>Nach dem Speichern das Flyout schliessen; gespeichert hat der Befehl.</summary>
+        ''' <summary>Nach dem Speichern das Flyout schliessen; gespeichert hat der Befehl.
+        '''
+        ''' NACHGESTELLT, nicht sofort: Button.OnClick loest erst Click aus und liest DANACH sein
+        ''' Kommando. Schloss das Flyout hier sofort, hing sein Inhalt nicht mehr am Baum, die
+        ''' Bindung an SaveGradientPresetCommand fiel weg, und die Vorlage wurde nie gespeichert.</summary>
         Private Sub OnSavePresetClick(sender As Object, e As RoutedEventArgs)
-            Me.FindControl(Of Button)("SavePresetButton")?.Flyout?.Hide()
+            Avalonia.Threading.Dispatcher.UIThread.Post(
+                Sub() Me.FindControl(Of Button)("SavePresetButton")?.Flyout?.Hide())
         End Sub
 
         ''' <summary>Ein Flyout entsteht erst beim Oeffnen und haengt nicht im logischen Baum: ohne

@@ -14025,10 +14025,26 @@ Namespace ViewModels
             If changed AndAlso _filterEdited <> "All" Then FilterAndSort()
         End Sub
 
+        ''' <summary>Nach einem Stapel, der Dateien oder ihre Rezepte an Ort und Stelle geschrieben hat:
+        ''' Kacheln neu laden und den Vermerk "bearbeitet" nachziehen.
+        '''
+        ''' NEU LADEN, nicht EvictThumbnail: das storniert nur angeforderte Ladungen und ist bei einer
+        ''' schon geladenen Kachel wirkungslos. Ein Rezept in der Beistelldatei laesst die Bilddatei
+        ''' unberuehrt, also baut auch SyncFolderItems die Kachel nicht neu; sie zeigte den alten Stand
+        ''' ohne Plakette, bis sie zufaellig aus dem Speicher fiel.</summary>
         Private Sub RefreshAfterBatchFileRewrite(paths As IEnumerable(Of String))
-            For Each item In Items.Where(Function(i) i IsNot Nothing AndAlso paths.Contains(i.FilePath, PathIdentity.Comparer))
-                item.EvictThumbnail()
-            Next
+            Dim changedPaths = New HashSet(Of String)(paths.Where(Function(p) Not String.IsNullOrWhiteSpace(p)), PathIdentity.Comparer)
+            If changedPaths.Count > 0 Then
+                For Each item In Items.Where(Function(i) i IsNot Nothing AndAlso changedPaths.Contains(i.FilePath))
+                    item.ReloadThumbnail()
+                Next
+                Dim editedChanged = False
+                For Each item In _allItems.Where(Function(i) i IsNot Nothing AndAlso changedPaths.Contains(i.FilePath))
+                    Dim before = item.IsEdited
+                    If item.ResolveIsEdited() <> before Then editedChanged = True
+                Next
+                If editedChanged AndAlso _filterEdited <> "All" Then FilterAndSort()
+            End If
             If Not _isVirtualFolder AndAlso Not String.IsNullOrEmpty(_currentFolder) Then SyncFolderItems()
         End Sub
 

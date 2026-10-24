@@ -24,7 +24,18 @@
   together in an Adjustments submenu, rejecting and the series entries in a Sort out submenu. When
   only one of them is available, it stays in the main menu.
 
+- **One graphics card for everything on Linux:** on laptops with two graphics cards, the card you
+  choose in Settings under Performance is now used for image editing as well, not only for the
+  models. It takes effect after a restart, and the window is then drawn on that card too.
+
 ### Fixes
+
+- **Gallery tiles update after a batch:** after pasting or applying adjustments to RAW and PSD
+  files, the tiles kept showing the old picture without the edited badge until they were reloaded.
+  They now update right away.
+
+- **Saving your own gradient presets:** a gradient saved as a preset in the fill settings did not
+  appear in the list. It is now saved and can be removed again with the bin next to the list.
 
 - **Display profiles on KDE Plasma:** the settings could say that no displays were found until
   the window was moved once. The displays are now listed as soon as the settings open.

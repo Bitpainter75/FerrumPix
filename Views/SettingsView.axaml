@@ -3375,6 +3375,32 @@
                              Modelle fuer die gelernten Modelle) mit getrennter Probe. Der Statustext
                              unter jedem Schalter sagt, ob die Probe bestanden ist und WELCHE Karte
                              gefunden wurde; ein Schalter ohne diese Angabe waere einer ins Ungewisse. -->
+                        <!-- Die Auswahl der Karte steht VOR beiden Schaltern, weil sie fuer beide gilt
+                             (die Bildbearbeitung unter Linux ab dem naechsten Start, siehe
+                             GpuImageService.ApplyRenderOffloadEnvironment). Sie erscheint NUR, wenn
+                             wirklich mehr als eine Karte im Rechner steckt. Bei einer einzigen waere
+                             sie eine Frage ohne Antwortmoeglichkeit. -->
+                        <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding HasMultipleGpuDevices}">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Verwendete Grafikkarte" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Gilt für die Modelle und unter Linux auch für die Bildbearbeitung. Die Bildbearbeitung wechselt erst nach einem Neustart, und das Fenster wird dann ebenfalls auf dieser Karte gezeichnet."
+                                           Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <ComboBox Grid.Column="1"
+                                      ItemsSource="{Binding GpuDeviceOptions}"
+                                      SelectedItem="{Binding SelectedGpuDevice, Mode=TwoWay}"
+                                      IsEnabled="{Binding GpuAccelerationAvailable}"
+                                      MinWidth="260"
+                                      VerticalAlignment="Center"
+                                      FontSize="{DynamicResource FP.Font.Body}">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Classes="no-translate" Text="{Binding Name}"/>
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+                        </Grid>
+
                         <StackPanel Spacing="8">
                             <Grid ColumnDefinitions="*,Auto">
                                 <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
@@ -3421,28 +3447,6 @@
                                        FontSize="{DynamicResource FP.Font.Small}"
                                        TextWrapping="Wrap"
                                        Classes="no-translate"/>
-
-                            <!-- Die Auswahl erscheint NUR, wenn wirklich mehr als eine Karte im
-                                 Rechner steckt. Bei einer einzigen waere sie eine Frage ohne
-                                 Antwortmoeglichkeit - welche es ist, steht in der Zeile darueber. -->
-                            <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding HasMultipleGpuDevices}">
-                                <TextBlock Text="Verwendete Grafikkarte"
-                                           FontSize="{DynamicResource FP.Font.Body}"
-                                           VerticalAlignment="Center"/>
-                                <ComboBox Grid.Column="1"
-                                          ItemsSource="{Binding GpuDeviceOptions}"
-                                          SelectedItem="{Binding SelectedGpuDevice, Mode=TwoWay}"
-                                          IsEnabled="{Binding GpuAccelerationAvailable}"
-                                          MinWidth="260"
-                                          VerticalAlignment="Center"
-                                          FontSize="{DynamicResource FP.Font.Body}">
-                                    <ComboBox.ItemTemplate>
-                                        <DataTemplate>
-                                            <TextBlock Classes="no-translate" Text="{Binding Name}"/>
-                                        </DataTemplate>
-                                    </ComboBox.ItemTemplate>
-                                </ComboBox>
-                            </Grid>
                         </StackPanel>
 
                         <!-- Die Faeden der Modelle auf dem Prozessor. Die Obergrenze ist die Zahl

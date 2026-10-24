@@ -200,6 +200,140 @@ Namespace Services
             Enabled = AppSettingsService.Load().GpuImageProcessing
         End Sub
 
+        ''' <summary>Was <see cref="ApplyRenderOffloadEnvironment"/> beim Start gesetzt hat, leer, wenn
+        ''' nichts. Fuer das Protokoll und die Einstellungen.</summary>
+        Public Shared Property RenderOffloadApplied As String = ""
+
+        ''' <summary>UNTER LINUX DIE GEWAEHLTE KARTE AUCH FUER DIE BILDBEARBEITUNG. Muss vor Avalonia
+        ''' laufen (Program.Main).
+        '''
+        ''' Der Kontext dieses Dienstes kommt aus Avalonias Plattformgrafik, also von der Karte, die
+        ''' auch das Fenster zeichnet. Auf einem Laptop mit zwei Karten ist das die im Prozessor:
+        ''' die Modelle liefen auf der gewaehlten eigenen Karte, die Bildbearbeitung auf der anderen
+        ''' (Nutzerbefund, AMD im Prozessor und RTX 3050). OpenGL laesst sich eine Karte nur ueber
+        ''' die Umgebung beim Laden der Bibliothek zuweisen, genau wie "mit eigener Grafikkarte
+        ''' starten" der Desktops: der NVIDIA-Treiber ueber __NV_PRIME_RENDER_OFFLOAD und
+        ''' __GLX_VENDOR_LIBRARY_NAME, Mesa ueber DRI_PRIME mit der PCI-Adresse. Damit zeichnet auch
+        ''' das Fenster auf dieser Karte; anders laesst sich der Kontext nicht hinueberholen.
+        '''
+        ''' Nur mit eingeschaltetem Schalter und nur, wenn die gewaehlte Karte (ohne Wahl: die
+        ''' eigene) NICHT die ist, die das Bild ausgibt. Hat der Nutzer eine der Variablen selbst
+        ''' gesetzt, bleibt alles, wie er es will. Gesetzt wird NATIV (setenv): .NET fuehrt unter
+        ''' Unix eine eigene Kopie der Umgebung, die libGL nie sieht (siehe AiModelService).</summary>
+        Public Shared Sub ApplyRenderOffloadEnvironment()
+            If Not OperatingSystem.IsLinux() Then Return
+            Try
+                Dim settings = AppSettingsService.Load()
+                If Not settings.GpuImageProcessing Then Return
+                For Each name In {"DRI_PRIME", "__NV_PRIME_RENDER_OFFLOAD", "__GLX_VENDOR_LIBRARY_NAME"}
+                    If Not String.IsNullOrEmpty(Environment.GetEnvironmentVariable(name)) Then Return
+                Next
+
+                Dim cards = ReadDrmCards()
+                If cards.Count < 2 Then Return
+                Dim target = PickOffloadCard(cards, If(settings.GpuAccelerationDevice, "").Trim())
+                If target Is Nothing OrElse target.BootVga Then Return
+
+                Dim applied As String
+                If target.VendorId = &H10DE AndAlso IO.Directory.Exists("/sys/module/nvidia") Then
+                    SetNativeEnvironment("__NV_PRIME_RENDER_OFFLOAD", "1")
+                    SetNativeEnvironment("__GLX_VENDOR_LIBRARY_NAME", "nvidia")
+                    applied = "__NV_PRIME_RENDER_OFFLOAD=1 __GLX_VENDOR_LIBRARY_NAME=nvidia"
+                Else
+                    ' Mesa nimmt die Adresse mit Unterstrichen statt Doppelpunkt und Punkt.
+                    Dim value = "pci-" & target.PciAddress.Replace(":"c, "_"c).Replace("."c, "_"c)
+                    SetNativeEnvironment("DRI_PRIME", value)
+                    applied = "DRI_PRIME=" & value
+                End If
+                RenderOffloadApplied = applied
+                DiagnosticLogService.LogAlways("GpuImage", $"Bildbearbeitung auf {target.PciAddress} ({target.VendorId:x4}:{target.DeviceId:x4}): {applied}")
+            Catch ex As Exception
+                ' Ohne die Umgebung zeichnet alles auf der Karte des Fensters, wie vorher.
+                DiagnosticLogService.LogException("GpuImage", ex)
+            End Try
+        End Sub
+
+        Friend NotInheritable Class DrmCard
+            Public Property PciAddress As String = ""
+            Public Property VendorId As Integer
+            Public Property DeviceId As Integer
+            Public Property BootVga As Boolean
+        End Class
+
+        ''' <summary>Die Karten aus /sys/class/drm, je PCI-Geraet einmal. boot_vga = 1 ist die,
+        ''' die das Bild ausgibt.</summary>
+        Private Shared Function ReadDrmCards() As List(Of DrmCard)
+            Dim result As New List(Of DrmCard)()
+            Const root = "/sys/class/drm"
+            If Not IO.Directory.Exists(root) Then Return result
+            For Each cardDir In IO.Directory.GetDirectories(root, "card*")
+                Dim name = IO.Path.GetFileName(cardDir)
+                If name.Contains("-"c) Then Continue For ' Anschluesse wie card1-HDMI-A-1
+                Dim device = IO.Path.Combine(cardDir, "device")
+                ' Der Verweis zeigt relativ auf das PCI-Geraet ("../../../0000:01:00.0"); sein letztes
+                ' Stueck ist die Adresse. Nicht aufloesen: card1 ist selbst schon ein Verweis, und
+                ' relativ dazu aufgeloest ergaebe sich ein Pfad, den es nicht gibt.
+                Dim link = New IO.DirectoryInfo(device).LinkTarget
+                Dim address = If(link Is Nothing, "", IO.Path.GetFileName(link.TrimEnd("/"c)))
+                If address.Length = 0 OrElse result.Any(Function(c) c.PciAddress = address) Then Continue For
+                Dim card As New DrmCard With {
+                    .PciAddress = address,
+                    .VendorId = ReadHex(IO.Path.Combine(device, "vendor")),
+                    .DeviceId = ReadHex(IO.Path.Combine(device, "device")),
+                    .BootVga = ReadText(IO.Path.Combine(device, "boot_vga")) = "1"
+                }
+                If card.VendorId <> 0 Then result.Add(card)
+            Next
+            Return result
+        End Function
+
+        ''' <summary>Welche Karte die Bildbearbeitung bekommen soll. Die Wahl aus den Einstellungen
+        ''' (Schluessel "vvvv:dddd:steckplatz" der Modelle) zuerst ueber den Steckplatz, sonst ueber
+        ''' Hersteller und Modell; ohne Wahl oder ohne Treffer die erste Karte, die das Bild NICHT
+        ''' ausgibt, wie die Vorauswahl der Modelle, die die eigene Karte bevorzugt.</summary>
+        Friend Shared Function PickOffloadCard(cards As IList(Of DrmCard), chosenKey As String) As DrmCard
+            If cards Is Nothing OrElse cards.Count = 0 Then Return Nothing
+            Dim parts = If(chosenKey, "").Split(":"c, 3)
+            If parts.Length >= 2 Then
+                Dim vendor, device As Integer
+                If Integer.TryParse(parts(0), Globalization.NumberStyles.HexNumber, Nothing, vendor) AndAlso
+                   Integer.TryParse(parts(1), Globalization.NumberStyles.HexNumber, Nothing, device) Then
+                    Dim slot = If(parts.Length = 3, parts(2), "")
+                    Dim bySlot = cards.FirstOrDefault(Function(c) slot.Length > 0 AndAlso
+                        (String.Equals(c.PciAddress, slot, StringComparison.OrdinalIgnoreCase) OrElse
+                         c.PciAddress.EndsWith(slot, StringComparison.OrdinalIgnoreCase)))
+                    If bySlot IsNot Nothing Then Return bySlot
+                    Dim byId = cards.FirstOrDefault(Function(c) c.VendorId = vendor AndAlso c.DeviceId = device)
+                    If byId IsNot Nothing Then Return byId
+                End If
+            End If
+            Return cards.FirstOrDefault(Function(c) Not c.BootVga)
+        End Function
+
+        Private Shared Function ReadText(path As String) As String
+            Try
+                Return If(IO.File.Exists(path), IO.File.ReadAllText(path).Trim(), "")
+            Catch
+                Return ""
+            End Try
+        End Function
+
+        Private Shared Function ReadHex(path As String) As Integer
+            Dim text = ReadText(path)
+            If text.StartsWith("0x", StringComparison.OrdinalIgnoreCase) Then text = text.Substring(2)
+            Dim value As Integer
+            Return If(Integer.TryParse(text, Globalization.NumberStyles.HexNumber, Nothing, value), value, 0)
+        End Function
+
+        Private Shared Sub SetNativeEnvironment(name As String, value As String)
+            Environment.SetEnvironmentVariable(name, value)
+            NativeSetEnv(name, value, 1)
+        End Sub
+
+        <DllImport("libc", EntryPoint:="setenv")>
+        Private Shared Function NativeSetEnv(name As String, value As String, overwrite As Integer) As Integer
+        End Function
+
         ''' <summary>Erkennt einen Software-Renderer an seinem Namen (GL_RENDERER). Nothing, wenn
         ''' es eine echte Karte ist.</summary>
         Friend Shared Function SoftwareRendererName(renderer As String) As String
