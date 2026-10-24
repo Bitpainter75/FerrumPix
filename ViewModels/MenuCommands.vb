@@ -56,6 +56,11 @@ Namespace ViewModels
         Public Property ResizeImage As ICommand
         Public Property ApplyWatermark As ICommand
         Public Property ApplyFilter As ICommand
+        ''' <summary>Bildanpassungen EINER Kachel in die gemeinsame Ablage, die Ablage auf die
+        ''' Auswahl. Nur die Galerie bietet sie an; im Editor stehen Kopieren und Einfügen im
+        ''' Anpassen-Werkzeug.</summary>
+        Public Property CopyAdjustments As ICommand
+        Public Property PasteAdjustments As ICommand
         Public Property ConvertTo As ICommand
         Public Property ExportTo As ICommand
         Public Property RemoveMetadata As ICommand

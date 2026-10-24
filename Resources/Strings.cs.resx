@@ -10023,4 +10023,13 @@
   <data name="Das_Profil_hat_keine_Matrix_mit_Tonkurve_und_l_s_9f224130" xml:space="preserve">
     <value>Profil nemá matici s tónovou křivkou a nelze jej použít.</value>
   </data>
+  <data name="Die_Begleitdatei_lie_sich_nicht_lesen_9cd9adb4" xml:space="preserve">
+    <value>Doprovodný soubor se nepodařilo přečíst.</value>
+  </data>
+  <data name="Auf_diese_Bilder_lassen_sich_keine_Anpassungen_e_4d61eb65" xml:space="preserve">
+    <value>Na tyto obrázky nelze vložit úpravy.</value>
+  </data>
+  <data name="0_JPG_PNG_oder_WebP_Datei_en_werden_dabei_bersch_b54ffa11" xml:space="preserve">
+    <value>Bude přepsáno {0} souborů JPG, PNG nebo WebP. Soubory RAW a PSD dostanou úpravy do svého doprovodného souboru.</value>
+  </data>
 </root>

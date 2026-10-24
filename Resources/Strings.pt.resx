@@ -9982,4 +9982,13 @@
   <data name="Das_Profil_hat_keine_Matrix_mit_Tonkurve_und_l_s_9f224130" xml:space="preserve">
     <value>O perfil não tem matriz com curva tonal e não pode ser usado.</value>
   </data>
+  <data name="Die_Begleitdatei_lie_sich_nicht_lesen_9cd9adb4" xml:space="preserve">
+    <value>Não foi possível ler o ficheiro complementar.</value>
+  </data>
+  <data name="Auf_diese_Bilder_lassen_sich_keine_Anpassungen_e_4d61eb65" xml:space="preserve">
+    <value>Não é possível colar ajustes nestas imagens.</value>
+  </data>
+  <data name="0_JPG_PNG_oder_WebP_Datei_en_werden_dabei_bersch_b54ffa11" xml:space="preserve">
+    <value>{0} ficheiro(s) JPG, PNG ou WebP serão substituídos. Os ficheiros RAW e PSD recebem os ajustes no seu ficheiro complementar.</value>
+  </data>
 </root>

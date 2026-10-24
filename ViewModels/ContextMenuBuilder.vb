@@ -155,6 +155,16 @@ Namespace ViewModels
                 AddIfOffered(list, commands.ResizeImage, FooterMenuCatalog.ResizeImage(commands.ResizeImage))
                 AddIfOffered(list, commands.ApplyWatermark, FooterMenuCatalog.ApplyWatermark(commands.ApplyWatermark))
                 AddIfOffered(list, commands.ApplyFilter, FooterMenuCatalog.ApplyFilter(commands.ApplyFilter))
+                ' KOPIEREN nur von EINER Kachel mit Rezept (RAW oder PSD mit .fpxmp), EINFÜGEN, sobald
+                ' etwas in der Ablage liegt und mindestens ein Bild es annehmen kann. Dieselben
+                ' Fragen, die auch beim Ausführen entscheiden.
+                If singleItemActions AndAlso GalleryViewModel.HasCopyableAdjustments(first) Then
+                    AddIfOffered(list, commands.CopyAdjustments, FooterMenuCatalog.CopyAdjustments(commands.CopyAdjustments))
+                End If
+                If commands.PasteAdjustments IsNot Nothing AndAlso GalleryViewModel.HasCopiedAdjustments AndAlso
+                   images.Any(AddressOf GalleryViewModel.CanPasteAdjustments) Then
+                    AddIfOffered(list, commands.PasteAdjustments, FooterMenuCatalog.PasteAdjustments(commands.PasteAdjustments))
+                End If
             End If
             If showExport Then
                 AddIfOffered(list, commands.ConvertTo, FooterMenuCatalog.ConvertTo(commands.ConvertTo))

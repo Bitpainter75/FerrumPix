@@ -10,6 +10,11 @@
   processor cores denoising and the other models may use. By default it is still half of them, so
   the app stays responsive; more cores make the models faster when they run on the processor.
 
+- **Copy and paste adjustments in the gallery:** right click an edited RAW or PSD to copy its
+  adjustments, then paste them onto a whole selection. It uses the same clipboard as copy and
+  paste in the editor, so you can copy in one place and paste in the other. RAW and PSD files
+  get the adjustments in their sidecar file; JPG, PNG and WebP are overwritten after asking.
+
 - **Display profiles on Windows and Linux:** in Settings you can choose an ICC profile for each
   connected display, for example from a calibration. Photos in the viewer and editor are then
   shown correctly on the display the window is on, also on wide gamut monitors. Leave it empty

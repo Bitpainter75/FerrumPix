@@ -10002,4 +10002,13 @@
   <data name="Das_Profil_hat_keine_Matrix_mit_Tonkurve_und_l_s_9f224130" xml:space="preserve">
     <value>The profile has no matrix with tone curve and cannot be used.</value>
   </data>
+  <data name="Die_Begleitdatei_lie_sich_nicht_lesen_9cd9adb4" xml:space="preserve">
+    <value>The sidecar file could not be read.</value>
+  </data>
+  <data name="Auf_diese_Bilder_lassen_sich_keine_Anpassungen_e_4d61eb65" xml:space="preserve">
+    <value>Adjustments cannot be pasted onto these pictures.</value>
+  </data>
+  <data name="0_JPG_PNG_oder_WebP_Datei_en_werden_dabei_bersch_b54ffa11" xml:space="preserve">
+    <value>{0} JPG, PNG or WebP file(s) will be overwritten. RAW and PSD files get the adjustments in their sidecar file.</value>
+  </data>
 </root>

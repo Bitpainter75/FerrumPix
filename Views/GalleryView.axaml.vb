@@ -2775,6 +2775,8 @@ Namespace Views
                 .ResizeImage = vm.ResizeSelectedCommand,
                 .ApplyWatermark = vm.ApplyWatermarkSelectedCommand,
                 .ApplyFilter = vm.ApplyFilterSelectedCommand,
+                .CopyAdjustments = vm.CopyAdjustmentsCommand,
+                .PasteAdjustments = vm.PasteAdjustmentsCommand,
                 .ConvertTo = vm.BatchConvertSelectedCommand,
                 .ExportTo = vm.ExportSelectedCommand,
                 .RemoveMetadata = vm.RemoveMetadataSelectedCommand,

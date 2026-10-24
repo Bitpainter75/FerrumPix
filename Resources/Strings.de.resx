@@ -10001,4 +10001,13 @@
   <data name="Das_Profil_hat_keine_Matrix_mit_Tonkurve_und_l_s_9f224130" xml:space="preserve">
     <value>Das Profil hat keine Matrix mit Tonkurve und lässt sich nicht verwenden.</value>
   </data>
+  <data name="Die_Begleitdatei_lie_sich_nicht_lesen_9cd9adb4" xml:space="preserve">
+    <value>Die Begleitdatei ließ sich nicht lesen.</value>
+  </data>
+  <data name="Auf_diese_Bilder_lassen_sich_keine_Anpassungen_e_4d61eb65" xml:space="preserve">
+    <value>Auf diese Bilder lassen sich keine Anpassungen einfügen.</value>
+  </data>
+  <data name="0_JPG_PNG_oder_WebP_Datei_en_werden_dabei_bersch_b54ffa11" xml:space="preserve">
+    <value>{0} JPG-, PNG- oder WebP-Datei(en) werden dabei überschrieben. RAW- und PSD-Dateien bekommen die Anpassungen in ihre Begleitdatei.</value>
+  </data>
 </root>

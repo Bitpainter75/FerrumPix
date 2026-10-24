@@ -1853,6 +1853,10 @@ Namespace ViewModels
         Public ReadOnly Property NewDocumentCommand As ICommand
         Public ReadOnly Property ExportSelectedCommand As ICommand
         Public ReadOnly Property ApplyFilterSelectedCommand As ICommand
+        ''' <summary>Die Bildanpassungen EINER Kachel in die gemeinsame Ablage legen, dieselbe, in
+        ''' die der Editor kopiert; und die Ablage auf die Auswahl einfügen.</summary>
+        Public ReadOnly Property CopyAdjustmentsCommand As ICommand
+        Public ReadOnly Property PasteAdjustmentsCommand As ICommand
         Public ReadOnly Property RemoveMetadataSelectedCommand As ICommand
         Public ReadOnly Property IncreaseThumbnailSizeCommand As ICommand
         Public ReadOnly Property DecreaseThumbnailSizeCommand As ICommand
@@ -2220,6 +2224,8 @@ Namespace ViewModels
             ExportSelectedCommand = ReactiveCommand.Create(Sub() ExportSelected())
             PrintSelectedCommand = ReactiveCommand.CreateFromTask(Function() PrintSelectedAsync())
             ApplyFilterSelectedCommand = ReactiveCommand.Create(Sub() ApplyFilterSelected())
+            CopyAdjustmentsCommand = ReactiveCommand.Create(Sub() CopyAdjustmentsFromSelected())
+            PasteAdjustmentsCommand = ReactiveCommand.CreateFromTask(Function() PasteAdjustmentsToSelectedAsync())
             RemoveMetadataSelectedCommand = ReactiveCommand.CreateFromTask(Function() RemoveMetadataSelectedAsync())
             IncreaseThumbnailSizeCommand = ReactiveCommand.Create(Sub() ThumbnailSize += 24)
             DecreaseThumbnailSizeCommand = ReactiveCommand.Create(Sub() ThumbnailSize -= 24)
@@ -12524,7 +12530,8 @@ Namespace ViewModels
         ''' ihr Ergebnis nur uebernommen, wenn das Rezept dort noch genau so aussieht; hat es sich
         ''' dazwischen geaendert, wird dort neu gemessen. Das ist selten und dann richtig.</summary>
         Private Shared Function WriteRecipeInPlace(source As String, template As ImageAdjustments,
-                                                   isAutoEnhance As Boolean) As RawSidecarService.ModifyRecipeResult
+                                                   isAutoEnhance As Boolean,
+                                                   Optional replacePixelAdjustments As Boolean = False) As RawSidecarService.ModifyRecipeResult
             RawSidecarService.TryImportFromXmpSidecar(source)
             Dim isRaw = RawPreviewService.IsSupportedRaw(source)
             Dim makeStartValues = Function() If(isRaw, ImageAdjustments.ForUneditedRaw(source), New ImageAdjustments())
@@ -12560,7 +12567,13 @@ Namespace ViewModels
                         adj.CopyPixelAdjustmentsFrom(measured)
                         Return
                     End If
-                    adj.MergeNonDefaultPixelAdjustmentsFrom(template)
+                    ' Eingefuegte Anpassungen ERSETZEN die Bildanpassungen, wie "Anpassungen
+                    ' einfuegen" im Editor; eine Vorlage legt nur ihre gesetzten Regler auf.
+                    If replacePixelAdjustments Then
+                        adj.CopyPixelAdjustmentsFrom(template)
+                    Else
+                        adj.MergeNonDefaultPixelAdjustmentsFrom(template)
+                    End If
                     If isAutoEnhance Then ImageProcessor.ApplyAutoAdjustmentsTo(adj, source)
                 End Sub,
                 developedThumbnail:=True,
@@ -12579,7 +12592,8 @@ Namespace ViewModels
         ''' Nacheinander und im Hintergrund: die automatische Bildverbesserung dekodiert jedes Bild,
         ''' und es gibt nur einen Decode gleichzeitig.</summary>
         Private Async Function WriteRecipesInPlaceAsync(targets As List(Of String), template As ImageAdjustments,
-                                                        isAutoEnhance As Boolean) As Task(Of Integer)
+                                                        isAutoEnhance As Boolean,
+                                                        Optional replacePixelAdjustments As Boolean = False) As Task(Of Integer)
             If targets Is Nothing OrElse targets.Count = 0 Then Return 0
             Dim changedCount = 0
             Dim errorMessage As String = Nothing
@@ -12592,7 +12606,7 @@ Namespace ViewModels
                 Await Task.Run(Sub()
                     For Each source In targets
                         If BatchWasCancelled() Then Exit For
-                        Select Case WriteRecipeInPlace(source, template, isAutoEnhance)
+                        Select Case WriteRecipeInPlace(source, template, isAutoEnhance, replacePixelAdjustments)
                             Case RawSidecarService.ModifyRecipeResult.Written
                                 changedCount += 1
                             Case RawSidecarService.ModifyRecipeResult.Unreadable
@@ -13056,6 +13070,106 @@ Namespace ViewModels
                         .FilterStrength = result.Strength
                     }
             End Select
+        End Function
+
+        ' ── Anpassungen kopieren und einfügen ────────────────────────────────────────────────────
+        '
+        ' EINE Ablage für Editor und Galerie (AppSettings.CopiedAdjustments): im Editor kopieren und
+        ' hier einfügen geht genauso wie umgekehrt. Kopiert werden die Bildanpassungen
+        ' (ExtractPixelAdjustments), ohne Zuschnitt, Drehung, Retusche und Ebenen. Eingefügt wird wie
+        ' im Editor: die Bildanpassungen des Ziels werden ERSETZT (CopyPixelAdjustmentsFrom), seine
+        ' Geometrie und Retusche bleiben. "Anpassungen anwenden" mit einer Vorlage legt dagegen nur
+        ' die Regler auf, die die Vorlage setzt; das ist eine andere Frage ("diesen Look dazu") als
+        ' das Einfügen ("dasselbe wie dort").
+
+        ''' <summary>Trägt diese Kachel ein Rezept, das sich kopieren lässt? RAW und PSD mit einer
+        ''' .fpxmp daneben. Ein bearbeitetes JPG, PNG oder WebP hat seine Bearbeitung beim Speichern
+        ''' in die Bildpunkte gerechnet, da gibt es nichts mehr abzulesen.</summary>
+        Public Shared Function HasCopyableAdjustments(item As ImageItem) As Boolean
+            If item Is Nothing OrElse Not item.IsImage OrElse item.IsRemoteAsset Then Return False
+            If Not RawSidecarService.IsSidecarFormat(item.FilePath) Then Return False
+            Return File.Exists(RawSidecarService.SidecarPathFor(item.FilePath))
+        End Function
+
+        ''' <summary>Liegt etwas in der Ablage?</summary>
+        Public Shared ReadOnly Property HasCopiedAdjustments As Boolean
+            Get
+                Return Not String.IsNullOrWhiteSpace(AppSettingsService.Load().CopiedAdjustments)
+            End Get
+        End Property
+
+        ''' <summary>Lässt sich auf diese Kachel einfügen? RAW und PSD bekommen ihr Rezept, JPG, PNG
+        ''' und WebP neue Bildpunkte; alles andere (HEIC, TIFF, Serverbilder, Videos) nicht.</summary>
+        Public Shared Function CanPasteAdjustments(item As ImageItem) As Boolean
+            If item Is Nothing OrElse Not item.IsImage OrElse item.IsRemoteAsset OrElse Not item.CanEditFile Then Return False
+            Return IsBatchRecipeWritable(item) OrElse IsBatchImageEditWritable(item.FilePath)
+        End Function
+
+        Private Sub CopyAdjustmentsFromSelected()
+            Dim items = GetSelectedImageItems()
+            If items.Count <> 1 OrElse Not HasCopyableAdjustments(items(0)) Then Return
+            Dim recipe As ImageAdjustments = Nothing
+            Dim state = RawSidecarService.ReadRecipe(items(0).FilePath, recipe)
+            If state <> RawSidecarService.SidecarReadResult.Read OrElse recipe Is Nothing Then
+                StatusText = LocalizationService.T("Die Begleitdatei ließ sich nicht lesen.")
+                Return
+            End If
+            AppSettingsService.SaveCopiedAdjustments(FpxService.SerializeAdjustments(recipe.ExtractPixelAdjustments()))
+            StatusText = LocalizationService.T("Anpassungen kopiert")
+            RefreshContextActions()
+        End Sub
+
+        ''' <summary>Die Ablage auf die Auswahl einfügen. RAW und PSD bekommen sie ins Rezept, also
+        ''' ohne Verlust und rückgängig zu machen; JPG, PNG und WebP bekommen neue Bildpunkte, und
+        ''' davor wird gefragt, weil das die Originale überschreibt.</summary>
+        Private Async Function PasteAdjustmentsToSelectedAsync() As Task
+            Dim template As ImageAdjustments = Nothing
+            Try
+                template = FpxService.DeserializeAdjustments(AppSettingsService.Load().CopiedAdjustments)
+            Catch
+                ' Beschädigte Ablage (von Hand bearbeitete Einstellungsdatei): lieber nichts tun.
+                template = Nothing
+            End Try
+            If template Is Nothing Then Return
+
+            Dim targets = GetSelectedImageItems().Where(AddressOf CanPasteAdjustments).
+                Where(Function(i) File.Exists(i.FilePath)).ToList()
+            If targets.Count = 0 Then
+                StatusText = LocalizationService.T("Auf diese Bilder lassen sich keine Anpassungen einfügen.")
+                Return
+            End If
+            Dim recipePaths = targets.Where(AddressOf IsBatchRecipeWritable).Select(Function(i) i.FilePath).ToList()
+            Dim pixelPaths = targets.Where(Function(i) Not IsBatchRecipeWritable(i)).Select(Function(i) i.FilePath).ToList()
+            If pixelPaths.Count > 0 Then
+                Dim confirmed = Await _mainVm.ShowConfirmAsync(
+                    LocalizationService.T("Anpassungen einfügen"),
+                    String.Format(LocalizationService.T("{0} JPG-, PNG- oder WebP-Datei(en) werden dabei überschrieben. RAW- und PSD-Dateien bekommen die Anpassungen in ihre Begleitdatei."), pixelPaths.Count),
+                    "Überschreiben", "Abbrechen")
+                If Not confirmed Then Return
+            End If
+
+            Dim cancel = BeginBatchRun(targets.Count)
+            Try
+                StatusText = LocalizationService.T("Wende Anpassungen an...")
+                Dim quality = AppSettingsService.Load().JpgSaveQuality
+                Dim writer = Function(source As String, target As String)
+                                 Dim adj = BatchBaseAdjustments(source)
+                                 adj.CopyPixelAdjustmentsFrom(template)
+                                 Return ImageProcessor.SaveImage(source, target, adj, quality, preserveMetadata:=True,
+                                                                 developRaw:=BatchDevelopsRaw(source),
+                                                                 cancel:=cancel,
+                                                                 missingSource:=ImageProcessor.MissingSourceMetadata.SaveWithoutMetadata)
+                             End Function
+                Dim changedCount = Await WriteRecipesInPlaceAsync(recipePaths, template, isAutoEnhance:=False,
+                                                                  replacePixelAdjustments:=True)
+                changedCount += Await RewriteImagesInPlaceAsync(pixelPaths, writer)
+                StatusText = BatchResultText(LocalizationService.T("{0} von {1} Datei(en) angepasst"), changedCount, targets.Count)
+                RefreshAfterBatchFileRewrite(recipePaths.Concat(pixelPaths))
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Gallery.PasteAdjustments", ex)
+            Finally
+                EndBatchRun()
+            End Try
         End Function
 
         ''' <summary>Holt eine im Anpassen-Werkzeug gespeicherte Vorlage über ihren Namen aus den

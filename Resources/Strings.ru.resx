@@ -10023,4 +10023,13 @@
   <data name="Das_Profil_hat_keine_Matrix_mit_Tonkurve_und_l_s_9f224130" xml:space="preserve">
     <value>В профиле нет матрицы с тоновой кривой, его нельзя использовать.</value>
   </data>
+  <data name="Die_Begleitdatei_lie_sich_nicht_lesen_9cd9adb4" xml:space="preserve">
+    <value>Не удалось прочитать сопутствующий файл.</value>
+  </data>
+  <data name="Auf_diese_Bilder_lassen_sich_keine_Anpassungen_e_4d61eb65" xml:space="preserve">
+    <value>К этим изображениям нельзя вставить настройки.</value>
+  </data>
+  <data name="0_JPG_PNG_oder_WebP_Datei_en_werden_dabei_bersch_b54ffa11" xml:space="preserve">
+    <value>Будет перезаписано файлов JPG, PNG или WebP: {0}. Файлы RAW и PSD получат настройки в своём сопутствующем файле.</value>
+  </data>
 </root>

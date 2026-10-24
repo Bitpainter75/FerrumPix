@@ -10023,4 +10023,13 @@
   <data name="Das_Profil_hat_keine_Matrix_mit_Tonkurve_und_l_s_9f224130" xml:space="preserve">
     <value>Profil nie ma macierzy z krzywą tonalną i nie może zostać użyty.</value>
   </data>
+  <data name="Die_Begleitdatei_lie_sich_nicht_lesen_9cd9adb4" xml:space="preserve">
+    <value>Nie udało się odczytać pliku towarzyszącego.</value>
+  </data>
+  <data name="Auf_diese_Bilder_lassen_sich_keine_Anpassungen_e_4d61eb65" xml:space="preserve">
+    <value>Nie można wkleić ustawień do tych zdjęć.</value>
+  </data>
+  <data name="0_JPG_PNG_oder_WebP_Datei_en_werden_dabei_bersch_b54ffa11" xml:space="preserve">
+    <value>Plik(i) JPG, PNG lub WebP ({0}) zostaną nadpisane. Pliki RAW i PSD otrzymają ustawienia w swoim pliku towarzyszącym.</value>
+  </data>
 </root>

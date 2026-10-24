@@ -121,6 +121,14 @@ Namespace ViewModels
             Return Build("Anpassungen anwenden", "filter", c)
         End Function
 
+        Public Shared Function CopyAdjustments(c As ICommand) As AppAction
+            Return Build("Anpassungen kopieren", "adjustments-share", c)
+        End Function
+
+        Public Shared Function PasteAdjustments(c As ICommand) As AppAction
+            Return Build("Anpassungen einfügen", "adjustments-down", c)
+        End Function
+
         Public Shared Function ConvertTo(c As ICommand) As AppAction
             Return Build("Konvertieren nach", "transform", c)
         End Function

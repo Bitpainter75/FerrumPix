@@ -10023,4 +10023,13 @@
   <data name="Das_Profil_hat_keine_Matrix_mit_Tonkurve_und_l_s_9f224130" xml:space="preserve">
     <value>Profilen har ingen matrix med tonekurve og kan ikke bruges.</value>
   </data>
+  <data name="Die_Begleitdatei_lie_sich_nicht_lesen_9cd9adb4" xml:space="preserve">
+    <value>Sidecar-filen kunne ikke læses.</value>
+  </data>
+  <data name="Auf_diese_Bilder_lassen_sich_keine_Anpassungen_e_4d61eb65" xml:space="preserve">
+    <value>Justeringer kan ikke indsættes på disse billeder.</value>
+  </data>
+  <data name="0_JPG_PNG_oder_WebP_Datei_en_werden_dabei_bersch_b54ffa11" xml:space="preserve">
+    <value>{0} JPG-, PNG- eller WebP-fil(er) overskrives. RAW- og PSD-filer får justeringerne i deres sidecar-fil.</value>
+  </data>
 </root>
