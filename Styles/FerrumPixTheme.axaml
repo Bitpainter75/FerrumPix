@@ -1834,13 +1834,27 @@
     <Style Selector="Border.thumb-card.rejected Image.tile-thumb">
         <Setter Property="Opacity" Value="0.35"/>
     </Style>
-    <Style Selector="Border.reject-badge">
+    <!-- Ein Knopf (Klick hebt das Verwerfen auf): Polster weg wie beim Bearbeitet-Zeichen. -->
+    <Style Selector="Button.reject-badge">
         <Setter Property="Width" Value="26"/>
         <Setter Property="Height" Value="24"/>
+        <Setter Property="MinWidth" Value="0"/>
+        <Setter Property="MinHeight" Value="0"/>
+        <Setter Property="Padding" Value="0"/>
         <Setter Property="CornerRadius" Value="12"/>
         <Setter Property="Background" Value="#C08E2D2D"/>
         <Setter Property="BorderBrush" Value="#E0B23A3A"/>
         <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="HorizontalContentAlignment" Value="Center"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="Cursor" Value="Hand"/>
+    </Style>
+    <Style Selector="Button.reject-badge:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="#E0A83636"/>
+        <Setter Property="BorderBrush" Value="#FFD04A4A"/>
+    </Style>
+    <Style Selector="Button.reject-badge:pressed /template/ ContentPresenter">
+        <Setter Property="Background" Value="#E0702020"/>
     </Style>
     <!-- BEARBEITET: dieselbe Pille wie bei verworfen, in der Akzentfarbe statt Rot - ein Hinweis,
          keine Warnung. In der Fotowand (Klasse wall an der Kachel) nur beim Ueberfahren. -->

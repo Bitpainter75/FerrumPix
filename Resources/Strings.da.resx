@@ -8949,15 +8949,6 @@
   <data name="Farbrauschen_bei_unbearbeiteten_RAWs_0f8c070b" xml:space="preserve">
     <value>Farvestøj ved uredigerede RAW-filer</value>
   </data>
-  <data name="Farbflecken_bei_unbearbeiteten_RAWs_9c08c37c" xml:space="preserve">
-    <value>Farvepletter ved uredigerede RAW-filer</value>
-  </data>
-  <data name="Startwert_des_Reglers_Farbrauschen_wenn_ein_RAW__3af7cb22" xml:space="preserve">
-    <value>Startværdi for skyderen Farvestøj, når en RAW-fil uden redigering åbnes. Udglatter fin farvekorn, især ved høj ISO, men fjerner ved rene optagelser også fin farve og kræver regnetid ved hvert billedskift. 0 slår den fra.</value>
-  </data>
-  <data name="Startwert_des_Reglers_Farbflecken_wenn_ein_RAW_o_2d470b89" xml:space="preserve">
-    <value>Startværdi for skyderen Farvepletter, når en RAW-fil uden redigering åbnes. Fjerner grove farvepletter, ved rene optagelser dog også fin farve, og kræver mærkbar regnetid ved hvert billedskift. 0 slår den fra.</value>
-  </data>
   <data name="Anpassungen_anwenden_ab535739" xml:space="preserve">
     <value>Anvend justeringer</value>
   </data>
@@ -10052,5 +10043,50 @@
   </data>
   <data name="TAB_springt_zum_n_chsten_Namen_und_nach_dem_letz_6e48d7a8" xml:space="preserve">
     <value>TAB springer til næste navn og efter det sidste til næste billede.</value>
+  </data>
+  <data name="Ganzes_Bild_in_der_Rasteransicht_de99f0dc" xml:space="preserve">
+    <value>Hele billedet i gittervisningen</value>
+  </data>
+  <data name="Zeigt_das_Bild_in_der_Kachel_ganz_hochkant_oder__4c26da70" xml:space="preserve">
+    <value>Viser hele billedet i flisen, på højkant eller på tværs, i stedet for at beskære det til flisen. Fliserne beholder deres størrelse.</value>
+  </data>
+  <data name="Sch_rfe_bei_unbearbeiteten_RAWs_5cc1baef" xml:space="preserve">
+    <value>Skarphed for uredigerede RAW-filer</value>
+  </data>
+  <data name="Startwert_des_Reglers_Sch_rfe_wenn_ein_RAW_ohne__3353bd5a" xml:space="preserve">
+    <value>Startværdi for skyderen Skarphed, når en RAW uden redigering åbnes. Billeder, du allerede har redigeret, beholder deres værdier. 0 slår den fra.</value>
+  </data>
+  <data name="Rauschen_bei_unbearbeiteten_RAWs_75fa6c79" xml:space="preserve">
+    <value>Støj for uredigerede RAW-filer</value>
+  </data>
+  <data name="Startwert_des_Reglers_Rauschen_wenn_ein_RAW_ohne_5ff29d6e" xml:space="preserve">
+    <value>Startværdi for skyderen Støj, når en RAW uden redigering åbnes. Udglatter lysstøj og kræver regnetid ved hvert billedskift. Billeder, du allerede har redigeret, beholder deres værdier. 0 slår den fra.</value>
+  </data>
+  <data name="Auf_diesem_Bild_wurde_noch_nicht_nach_Personen_g_91c84fe1" xml:space="preserve">
+    <value>Der er endnu ikke søgt efter personer på dette billede.</value>
+  </data>
+  <data name="Nach_Personen_suchen_4d179a63" xml:space="preserve">
+    <value>Søg efter personer</value>
+  </data>
+  <data name="Dieses_Bild_lokal_nach_Gesichtern_durchsuchen_b0d45f52" xml:space="preserve">
+    <value>Gennemsøg dette billede lokalt for ansigter</value>
+  </data>
+  <data name="Personen_werden_gesucht_5a65f4f5" xml:space="preserve">
+    <value>Der søges efter personer.</value>
+  </data>
+  <data name="Dieses_Bild_lie_sich_f_r_die_Suche_nach_Personen_113c1add" xml:space="preserve">
+    <value>Dette billede kunne ikke læses til personsøgningen.</value>
+  </data>
+  <data name="Die_Suche_nach_Personen_ist_fehlgeschlagen_934373e4" xml:space="preserve">
+    <value>Søgningen efter personer mislykkedes.</value>
+  </data>
+  <data name="Startwert_des_Reglers_Farbrauschen_wenn_ein_RAW__3efc575e" xml:space="preserve">
+    <value>Startværdi for skyderen Farvestøj, når en RAW uden redigering åbnes. Fjerner den farvestøj, der måles i billedet, og lader ægte farver være. Kræver regnetid ved hvert billedskift. 0 slår den fra.</value>
+  </data>
+  <data name="Preset_St_rke_16aedefe" xml:space="preserve">
+    <value>Forudindstillingens styrke</value>
+  </data>
+  <data name="Wie_stark_das_eben_angewendete_Preset_wirkt_0_is_0e0abfab" xml:space="preserve">
+    <value>Hvor kraftigt den netop anvendte forudindstilling virker: 0 er billedet uden forudindstilling, 100 forudindstillingen, 200 dens ændringer dobbelt.</value>
   </data>
 </root>

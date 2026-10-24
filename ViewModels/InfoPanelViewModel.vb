@@ -78,6 +78,7 @@ Namespace ViewModels
             OpenAiTagSearchCommand = ReactiveCommand.Create(Of AiImageTag)(
                 Sub(tag) OpenTagSearch?.Invoke(If(tag?.Canonical, "")))
             AnalyzeAiTagsCommand = ReactiveCommand.CreateFromTask(AddressOf AnalyzeAiTagsAsync)
+            ScanFacesCommand = ReactiveCommand.CreateFromTask(AddressOf ScanFacesForImageAsync)
 
             ' Die Zeilenauswahl gilt anwendungsweit, und es gibt drei Leisten. Ohne dieses Abo
             ' zeigte nur die Ansicht, die beim Umschalten auf dem Schirm stand, den neuen Stand -
@@ -460,12 +461,110 @@ Namespace ViewModels
             End Get
         End Property
 
-        ''' <summary>Der Hinweis im offenen Reiter, wenn auf dem Bild niemand erkannt wurde.</summary>
+        ''' <summary>Der Hinweis im offenen Reiter, wenn auf dem Bild keine Gesichter stehen. Was er
+        ''' sagt, entscheiden die Schalter darunter: noch nicht gesucht, wird gerade gesucht,
+        ''' niemand erkannt oder nicht lesbar.</summary>
         Public ReadOnly Property ShowNoPeopleHint As Boolean
             Get
                 Return HasPeopleTab AndAlso People.Count = 0
             End Get
         End Property
+
+        ' DIE SUCHE AM EINZELNEN BILD. "Niemand erkannt" ist nur wahr, wenn auch jemand gesucht hat;
+        ' ein Bild aus einem Ordner, ueber den nie ein Durchlauf lief, sah sonst genauso aus wie
+        ' eine Landschaft. Ob gesucht wurde, sagt der Scan-Vermerk (FaceScanRunner.NeedsScan).
+        Private _needsFaceScan As Boolean
+        Private _isFaceScanning As Boolean
+        Private _faceScanUnreadable As Boolean
+        Private _faceScanStatus As String = ""
+
+        ''' <summary>Auf diesem Bild wurde noch nicht nach Personen gesucht: Hinweis und Knopf.</summary>
+        Public ReadOnly Property ShowFaceScanOffer As Boolean
+            Get
+                Return ShowNoPeopleHint AndAlso _needsFaceScan AndAlso Not _isFaceScanning
+            End Get
+        End Property
+
+        Public ReadOnly Property IsFaceScanning As Boolean
+            Get
+                Return ShowNoPeopleHint AndAlso _isFaceScanning
+            End Get
+        End Property
+
+        ''' <summary>Gesucht, und niemand gefunden.</summary>
+        Public ReadOnly Property ShowNobodyFound As Boolean
+            Get
+                Return ShowNoPeopleHint AndAlso Not _needsFaceScan AndAlso Not _isFaceScanning AndAlso Not _faceScanUnreadable
+            End Get
+        End Property
+
+        ''' <summary>Die Suche konnte das Bild nicht lesen. Getrennt von "niemand erkannt": das
+        ''' waere eine Aussage ueber das Bild, die keiner geprueft hat.</summary>
+        Public ReadOnly Property ShowFaceScanUnreadable As Boolean
+            Get
+                Return ShowNoPeopleHint AndAlso _faceScanUnreadable AndAlso Not _isFaceScanning
+            End Get
+        End Property
+
+        ''' <summary>Warum die Suche nicht begonnen hat (eine andere laeuft schon).</summary>
+        Public ReadOnly Property FaceScanStatus As String
+            Get
+                Return _faceScanStatus
+            End Get
+        End Property
+
+        Public ReadOnly Property HasFaceScanStatus As Boolean
+            Get
+                Return ShowNoPeopleHint AndAlso Not String.IsNullOrEmpty(_faceScanStatus)
+            End Get
+        End Property
+
+        ''' <summary>Durchsucht genau dieses eine Bild. Derselbe Durchlauf wie der Knopf der Galerie,
+        ''' nur mit einem Bild und ohne Zwang: ist es inzwischen durchsucht (ein Ordnerlauf kam
+        ''' zuvor), zeigt die Leiste einfach dessen Ergebnis.</summary>
+        Private Async Function ScanFacesForImageAsync() As Task
+            If _isFaceScanning OrElse _items.Count <> 1 Then Return
+            Dim target = _items(0)?.FilePath
+            If String.IsNullOrWhiteSpace(target) Then Return
+
+            _isFaceScanning = True
+            _faceScanStatus = ""
+            RaiseFaceScanState()
+            Dim result As FaceScanResult = Nothing
+            Try
+                result = Await FaceScanRunner.RunAsync({target}).ConfigureAwait(True)
+            Catch ex As Exception
+                DiagnosticLogService.LogException("InfoPanel.ScanFaces", ex)
+            Finally
+                _isFaceScanning = False
+            End Try
+
+            ' Inzwischen ein anderes Bild: dessen Zustand hat LoadPeople schon gesetzt.
+            If _items.Count <> 1 OrElse Not String.Equals(_items(0)?.FilePath, target, PathIdentity.Comparison) Then
+                RaiseFaceScanState()
+                Return
+            End If
+            LoadPeople()
+            If result Is Nothing Then
+                _faceScanStatus = LocalizationService.T("Die Suche nach Personen ist fehlgeschlagen.")
+            ElseIf result.BlockedByOtherWindow Then
+                _faceScanStatus = LocalizationService.T("Ein anderes Fenster arbeitet gerade am Katalog")
+            ElseIf result.NotStarted Then
+                _faceScanStatus = LocalizationService.T("Es läuft bereits eine Suche")
+            ElseIf result.Failed > 0 Then
+                _faceScanUnreadable = True
+            End If
+            RaiseFaceScanState()
+        End Function
+
+        Private Sub RaiseFaceScanState()
+            Me.RaisePropertyChanged(NameOf(ShowFaceScanOffer))
+            Me.RaisePropertyChanged(NameOf(IsFaceScanning))
+            Me.RaisePropertyChanged(NameOf(ShowNobodyFound))
+            Me.RaisePropertyChanged(NameOf(ShowFaceScanUnreadable))
+            Me.RaisePropertyChanged(NameOf(FaceScanStatus))
+            Me.RaisePropertyChanged(NameOf(HasFaceScanStatus))
+        End Sub
 
         ''' <summary>Die Gesichter des Bildes, JE MIT AUSSCHNITT.
         '''
@@ -480,12 +579,17 @@ Namespace ViewModels
             ' Einmal je Bild gefragt und gemerkt: der Reiter liest es bei jeder Meldung, und hinter
             ' Enabled steht die Suche nach den Modelldateien.
             _faceRecognitionOn = FaceDetectionService.Enabled
+            _needsFaceScan = False
+            _faceScanUnreadable = False
+            _faceScanStatus = ""
             If _items.Count <> 1 Then
                 RaisePeopleTabState()
                 Return
             End If
             Dim path = _items(0)?.FilePath
             Dim entries = FacePanelService.BuildEntries(path)
+            ' Nur gefragt, wo es zaehlt: mit Gesichtern ist die Frage beantwortet.
+            If _faceRecognitionOn AndAlso entries.Count = 0 Then _needsFaceScan = FaceScanRunner.NeedsScan(path)
             FacePanelService.FillNameSuggestions(PersonNameSuggestions)
             For Each entry In entries
                 People.Add(entry)
@@ -515,6 +619,7 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(HasPeopleTab))
             Me.RaisePropertyChanged(NameOf(ShowNoPeopleHint))
             Me.RaisePropertyChanged(NameOf(IsInfoTabPeople))
+            RaiseFaceScanState()
         End Sub
 
         ''' <summary>Gibt einer Gruppe ihren Namen. Traegt schon jemand denselben, verschmelzen beide
@@ -1639,6 +1744,7 @@ Namespace ViewModels
         Public ReadOnly Property OpenTagSearchCommand As ICommand
         Public ReadOnly Property OpenAiTagSearchCommand As ICommand
         Public ReadOnly Property AnalyzeAiTagsCommand As ICommand
+        Public ReadOnly Property ScanFacesCommand As ICommand
 
     End Class
 

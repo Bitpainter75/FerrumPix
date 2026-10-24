@@ -8909,15 +8909,6 @@
   <data name="Farbrauschen_bei_unbearbeiteten_RAWs_0f8c070b" xml:space="preserve">
     <value>Rumore cromatico per RAW non modificati</value>
   </data>
-  <data name="Farbflecken_bei_unbearbeiteten_RAWs_9c08c37c" xml:space="preserve">
-    <value>Macchie di colore per RAW non modificati</value>
-  </data>
-  <data name="Startwert_des_Reglers_Farbrauschen_wenn_ein_RAW__3af7cb22" xml:space="preserve">
-    <value>Valore iniziale del cursore Rumore cromatico quando si apre un RAW senza modifiche. Leviga la grana di colore fine, soprattutto a ISO alti, ma negli scatti puliti toglie anche colore fine e richiede tempo di calcolo a ogni cambio di immagine. 0 lo disattiva.</value>
-  </data>
-  <data name="Startwert_des_Reglers_Farbflecken_wenn_ein_RAW_o_2d470b89" xml:space="preserve">
-    <value>Valore iniziale del cursore Macchie di colore quando si apre un RAW senza modifiche. Rimuove le macchie di colore grossolane, negli scatti puliti però anche colore fine, e richiede un tempo di calcolo percepibile a ogni cambio di immagine. 0 lo disattiva.</value>
-  </data>
   <data name="Anpassungen_anwenden_ab535739" xml:space="preserve">
     <value>Applica regolazioni</value>
   </data>
@@ -10012,5 +10003,50 @@
   </data>
   <data name="TAB_springt_zum_n_chsten_Namen_und_nach_dem_letz_6e48d7a8" xml:space="preserve">
     <value>TAB passa al nome successivo e, dopo l'ultimo, alla foto successiva.</value>
+  </data>
+  <data name="Ganzes_Bild_in_der_Rasteransicht_de99f0dc" xml:space="preserve">
+    <value>Immagine intera nella vista a griglia</value>
+  </data>
+  <data name="Zeigt_das_Bild_in_der_Kachel_ganz_hochkant_oder__4c26da70" xml:space="preserve">
+    <value>Mostra l'immagine intera nella miniatura, verticale o orizzontale, invece di ritagliarla sulla miniatura. Le miniature mantengono le dimensioni.</value>
+  </data>
+  <data name="Sch_rfe_bei_unbearbeiteten_RAWs_5cc1baef" xml:space="preserve">
+    <value>Nitidezza per RAW non modificati</value>
+  </data>
+  <data name="Startwert_des_Reglers_Sch_rfe_wenn_ein_RAW_ohne__3353bd5a" xml:space="preserve">
+    <value>Valore iniziale del cursore Nitidezza quando si apre un RAW senza modifiche. Le immagini già modificate mantengono i loro valori. 0 la disattiva.</value>
+  </data>
+  <data name="Rauschen_bei_unbearbeiteten_RAWs_75fa6c79" xml:space="preserve">
+    <value>Rumore per RAW non modificati</value>
+  </data>
+  <data name="Startwert_des_Reglers_Rauschen_wenn_ein_RAW_ohne_5ff29d6e" xml:space="preserve">
+    <value>Valore iniziale del cursore Rumore quando si apre un RAW senza modifiche. Attenua il rumore di luminanza e richiede tempo di calcolo a ogni cambio di immagine. Le immagini già modificate mantengono i loro valori. 0 lo disattiva.</value>
+  </data>
+  <data name="Auf_diesem_Bild_wurde_noch_nicht_nach_Personen_g_91c84fe1" xml:space="preserve">
+    <value>In questa immagine non sono ancora state cercate persone.</value>
+  </data>
+  <data name="Nach_Personen_suchen_4d179a63" xml:space="preserve">
+    <value>Cerca persone</value>
+  </data>
+  <data name="Dieses_Bild_lokal_nach_Gesichtern_durchsuchen_b0d45f52" xml:space="preserve">
+    <value>Cerca volti in questa immagine in locale</value>
+  </data>
+  <data name="Personen_werden_gesucht_5a65f4f5" xml:space="preserve">
+    <value>Ricerca di persone in corso.</value>
+  </data>
+  <data name="Dieses_Bild_lie_sich_f_r_die_Suche_nach_Personen_113c1add" xml:space="preserve">
+    <value>Non è stato possibile leggere questa immagine per la ricerca di persone.</value>
+  </data>
+  <data name="Die_Suche_nach_Personen_ist_fehlgeschlagen_934373e4" xml:space="preserve">
+    <value>La ricerca di persone non è riuscita.</value>
+  </data>
+  <data name="Startwert_des_Reglers_Farbrauschen_wenn_ein_RAW__3efc575e" xml:space="preserve">
+    <value>Valore iniziale del cursore Rumore di colore quando si apre un RAW senza modifiche. Rimuove il rumore di colore misurato nell'immagine e lascia intatti i colori reali. Richiede tempo di calcolo a ogni cambio di immagine. 0 lo disattiva.</value>
+  </data>
+  <data name="Preset_St_rke_16aedefe" xml:space="preserve">
+    <value>Intensità del predefinito</value>
+  </data>
+  <data name="Wie_stark_das_eben_angewendete_Preset_wirkt_0_is_0e0abfab" xml:space="preserve">
+    <value>Quanto agisce il predefinito appena applicato: 0 è l'immagine senza predefinito, 100 il predefinito, 200 le sue modifiche raddoppiate.</value>
   </data>
 </root>

@@ -14,12 +14,26 @@ Namespace Views
 
     Public Class SettingsView
         Inherits UserControl
+        Implements IModeView
 
         ''' <summary>Beim Erscheinen den Fokus holen, sonst ist Escape tot - dieselbe Falle wie in
         ''' der Personenverwaltung: ein KeyDown an einer Ansicht laeuft nur, wenn der Fokus in ihrem
         ''' Teilbaum sitzt. Geoeffnet wird von einem Knopf ausserhalb, und dort blieb er auch.
-        ''' Ueber den Dispatcher, weil beim Anhaengen das Layout noch nicht steht.</summary>
+        ''' Ueber den Dispatcher, weil beim Anhaengen das Layout noch nicht steht.
+        '''
+        ''' Nur wenn die Einstellungen wirklich offen sind: das Fenster baut die Seite vorab im
+        ''' Hintergrund (MainWindow.PreloadModeView), und dabei darf sie der Galerie nicht die
+        ''' Tastatur wegnehmen.</summary>
         Private Sub OnAttachedFocus(sender As Object, e As EventArgs)
+            Avalonia.Threading.Dispatcher.UIThread.Post(
+                Sub()
+                    Dim host = TryCast(TopLevel.GetTopLevel(Me)?.DataContext, MainWindowViewModel)
+                    If host Is Nothing OrElse host.CurrentMode = AppMode.Settings Then Me.Focus()
+                End Sub)
+        End Sub
+
+        ''' <summary>Jedes weitere Betreten, auch das erste nach dem Vorabbau.</summary>
+        Public Sub OnModeEntered() Implements IModeView.OnModeEntered
             Avalonia.Threading.Dispatcher.UIThread.Post(Sub() Me.Focus())
         End Sub
 

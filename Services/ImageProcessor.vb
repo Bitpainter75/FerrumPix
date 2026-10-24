@@ -5937,32 +5937,72 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             Return stroke.WithPoints(points)
         End Function
 
-        ''' <summary>Unschaerfemaske mit Kreuz-Kern (5 Taps):
-        '''      0   -a    0
-        '''     -a  1+4a  -a
-        '''      0   -a    0
-        '''
-        ''' Lief bis ueber SKImageFilter.CreateMatrixConvolution. Skias CPU-Faltung ist
-        ''' dafuer pathologisch langsam: gemessen 8,6 s bei 6,3 MP - fuer fuenf Multiplikationen je
-        ''' Pixel. Zum Vergleich braucht die gesamte verschmolzene Farbkette 17 ms.
-        '''
-        ''' Randbehandlung wie zuvor SKShaderTileMode.Clamp: ausserhalb liegende Nachbarn werden auf
-        ''' den Rand geklemmt. Alpha bleibt unveraendert (entsprach convolveAlpha:=False).</summary>
-        ''' <summary>Schärfen. Ohne Radius/Detail/Maskierung (alle 0) die bisherige feste 3×3-Maske,
-        ''' bitgenau unverändert; sonst eine echte Unschärfemaske mit variablem Radius, Detailanhebung
-        ''' und Kantenmaskierung.</summary>
+        ''' <summary>Schärfen: die Unschärfemaske auf der Helligkeit, oder das Zurückrechnen.</summary>
         Private Shared Function ApplySharpness(source As SKBitmap, amount As Single, radiusAmount As Single,
                                                detailAmount As Single, maskingAmount As Single,
                                                Optional method As SharpenMethod = SharpenMethod.UnsharpMask) As SKBitmap
-            ' Das Zurueckrechnen hat keine 3x3-Abkuerzung: es IST schon bei Radius, Detail und
-            ' Maskierung 0 ein eigenes Verfahren, und dort muss es genauso rechnen wie bei 1.
             If method = SharpenMethod.Deconvolution Then
                 Return ApplyDeconvolutionSharpening(source, amount, radiusAmount, detailAmount, maskingAmount)
             End If
-            ' Die Maskierung MUSS die 3x3-Abkuerzung mit abwaehlen: dort gibt es keine Kantenmaske, ein
-            ' allein gezogener Maskierungsregler waere sonst ein stummer No-Op.
-            If radiusAmount <= 0 AndAlso detailAmount <= 0 AndAlso maskingAmount <= 0 Then Return ApplySharpness3x3(source, amount)
             Return ApplyUnsharpMask(source, amount, radiusAmount, detailAmount, maskingAmount)
+        End Function
+
+        ' ── Die Unschärfemaske, an der Referenz geeicht ────────────────────────────────────
+        '
+        ' GESCHAERFT WIRD NUR DIE HELLIGKEIT: der Hochpass der Rec.-709-Luma des fertigen Bildes,
+        ' derselbe Betrag auf alle drei Kanaele. Die Vorgaengerin schaerfte jeden Kanal fuer sich und
+        ' hob damit Farbsaeume, Farbrauschen und Fehlfarben des Demosaic gleich mit an; gemessen
+        ' aenderte sie bei 150 die Farbe fast so stark wie die Helligkeit (1,56 gegen 1,80), die
+        ' Referenz kaum (0,25).
+        '
+        ' DIE WIRKUNG HAENGT AN DER KANTE: der Hochpass d wird zu d / (1 + (|d| / Hof)^3) geformt,
+        ' starke Kanten bekommen also weniger als schwache, und dunkle Hoefe sind schwaecher als
+        ' helle. Stärke je Reglerwert, Sigma je Radius und die Faktoren von Detail sind an
+        ' Renderings der Referenz geeicht (Diagnostics/Reglereichung mit REGLER_KANTE=0, zwei
+        ' Konzertbilder bei ISO 200 und 12800), als Steigung der Wirkung je Kantenstaerke.
+        '
+        ' Die Regler meinen dasselbe wie in einem Preset: Schaerfe 0 bis 150, Radius 1,0 bis 3,0
+        ' (unser Regler 0 bis 100), Detail 0 bis 100 mit 25 als Mitte der Referenz.
+
+        ''' <summary>Stuetzstellen der Staerke: Reglerwert und Verstaerkung bei Radius 1, Detail 25.</summary>
+        Private Shared ReadOnly SharpenAmounts As Single() = {0.0F, 25.0F, 40.0F, 75.0F, 110.0F, 150.0F}
+        Private Shared ReadOnly SharpenGains As Single() = {0.0F, 0.3436F, 0.6312F, 1.3649F, 1.8733F, 2.1614F}
+        ''' <summary>Radius der Referenz und das Sigma der Unschaerfe dazu, dazu ein Faktor der Staerke.</summary>
+        Private Shared ReadOnly SharpenRadii As Single() = {1.0F, 1.5F, 2.0F, 3.0F}
+        Private Shared ReadOnly SharpenSigmas As Single() = {0.9F, 1.3F, 1.8F, 2.7F}
+        Private Shared ReadOnly SharpenRadiusGains As Single() = {1.0F, 0.887F, 0.722F, 0.517F}
+        ''' <summary>Detail 0, 25, 50, 75, 100: Faktor der Staerke.</summary>
+        Private Shared ReadOnly SharpenDetails As Single() = {0.0F, 0.25F, 0.5F, 0.75F, 1.0F}
+        Private Shared ReadOnly SharpenDetailGains As Single() = {0.293F, 1.0F, 1.417F, 1.718F, 1.95F}
+        ''' <summary>Hof-Massstab (Anteil der vollen Helligkeit) und Staerke dunkler Hoefe.</summary>
+        Private Const SharpenHalo As Single = 0.11F
+        Private Const SharpenDark As Single = 0.4F
+
+        Private Shared Function SharpenInterpolate(x As Single, xs As Single(), ys As Single()) As Single
+            If x <= xs(0) Then Return ys(0)
+            For i = 1 To xs.Length - 1
+                If x <= xs(i) Then Return ys(i - 1) + (ys(i) - ys(i - 1)) * (x - xs(i - 1)) / (xs(i) - xs(i - 1))
+            Next
+            Return ys(ys.Length - 1)
+        End Function
+
+        ''' <summary>Sigma, Verstaerkung (Anteil der vollen Helligkeit je Anteil Hochpass) und Hof fuer
+        ''' Schaerfe als Anteil von 100 (0 bis 1,5), Radius- und Detailregler als Anteil von 100.</summary>
+        Friend Shared Function SharpenParameters(amount As Single, radiusAmount As Single, detailAmount As Single) As (Sigma As Single, Gain As Single, Halo As Single, Dark As Single)
+            Dim radius = 1.0F + Clamp(radiusAmount, 0, 1) * 2.0F
+            Dim gain = SharpenInterpolate(Clamp(amount, 0, 1.5F) * 100.0F, SharpenAmounts, SharpenGains) *
+                       SharpenInterpolate(radius, SharpenRadii, SharpenRadiusGains) *
+                       SharpenInterpolate(Clamp(detailAmount, 0, 1), SharpenDetails, SharpenDetailGains)
+            Return (SharpenInterpolate(radius, SharpenRadii, SharpenSigmas), gain, SharpenHalo, SharpenDark)
+        End Function
+
+        ''' <summary>Die geformte Aenderung der Helligkeit fuer Hochpass <paramref name="d"/> (Anteil der
+        ''' vollen Helligkeit).</summary>
+        Private Shared Function SharpenDelta(d As Single, gain As Single, halo As Single, dark As Single) As Single
+            Dim r = Math.Abs(d) / halo
+            Dim shaped = d / (1.0F + r * r * r)
+            If shaped < 0 Then shaped *= dark
+            Return gain * shaped
         End Function
 
         ''' <summary>Kantenstärke, ab der die Maskierung voll durchlässt - gemessen als Summe der
@@ -6003,8 +6043,9 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             Return edge * edge * (3.0F - 2.0F * edge)
         End Function
 
-        ''' <summary>Unschärfemaske: Bild − Gaußunschärfe ergibt die Hochfrequenzanteile, die verstärkt
-        ''' aufaddiert werden. Radius steuert das Gauß-Sigma (Wirkgröße), Detail die Verstärkung.
+        ''' <summary>Unschärfemaske auf der Helligkeit: Luma minus ihre Gaußunschärfe ist der Hochpass,
+        ''' geformt nach <see cref="SharpenDelta"/> und gleich auf alle drei Kanäle addiert. Sigma,
+        ''' Stärke und Hof aus <see cref="SharpenParameters"/>.
         '''
         ''' MASKIERUNG (Adobes „Maskieren", crs:SharpenEdgeMasking): die Verstärkung wird je Pixel mit der
         ''' lokalen Kantenstärke gewichtet. 0 = überall voll (wie bisher), 100 = nur noch an Kanten. Die
@@ -6015,13 +6056,14 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
         ''' Flecken, weil benachbarte Pixel auf verschiedene Seiten fallen.</summary>
         Private Shared Function ApplyUnsharpMask(source As SKBitmap, amount As Single, radiusAmount As Single,
                                                  detailAmount As Single, maskingAmount As Single) As SKBitmap
-            Dim sigma = 0.8F + Clamp(radiusAmount, 0, 1) * 2.7F
-            Dim gain = amount * (1.0F + Clamp(detailAmount, 0, 1) * 1.5F)
+            Dim p = SharpenParameters(amount, radiusAmount, detailAmount)
+            Dim gain = p.Gain, halo = p.Halo, dark = p.Dark
             Dim masking = Clamp(maskingAmount, 0, 1)
 
             Dim result = New SKBitmap(source.Width, source.Height, source.ColorType, source.AlphaType)
-            ' Rand fortgesetzt, auf ein geleertes Ziel (siehe ApplyNoiseReduction).
-            Dim blurred = GaussianClamped(source, sigma)
+            ' Rand fortgesetzt, auf ein geleertes Ziel (siehe ApplyNoiseReduction). Die Unschaerfe
+            ' der Kanaele ergibt die Unschaerfe der Luma, die Luma ist linear in ihnen.
+            Dim blurred = GaussianClamped(source, p.Sigma)
 
             Dim srcBuf As Byte() = Nothing, blurBuf As Byte() = Nothing, dstBuf As Byte() = Nothing
             Dim stride, ri, gi, bi, ai As Integer
@@ -6059,10 +6101,11 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                             pixelGain = gain * ((1.0F - masking) + masking * edge)
                         End If
 
+                        Dim d = ((0.2126F * cr + 0.7152F * cg + 0.0722F * cb) -
+                                 (0.2126F * lr + 0.7152F * lg + 0.0722F * lb)) / 255.0F
+                        Dim delta = SharpenDelta(d, pixelGain, halo, dark) * 255.0F
                         WritePremultiplied(dstBuf, o, ri, gi, bi, ai,
-                            ClampToByte(cr + pixelGain * (cr - lr)),
-                            ClampToByte(cg + pixelGain * (cg - lg)),
-                            ClampToByte(cb + pixelGain * (cb - lb)), a)
+                            ClampToByte(cr + delta), ClampToByte(cg + delta), ClampToByte(cb + delta), a)
                     Next
                 End Sub)
 
@@ -6198,58 +6241,6 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             unsharpened.Grain = 0
             unsharpened.AddNoise = 0
             Return unsharpened
-        End Function
-
-        Private Shared Function ApplySharpness3x3(source As SKBitmap, amount As Single) As SKBitmap
-            Dim result = New SKBitmap(source.Width, source.Height, source.ColorType, source.AlphaType)
-            Dim srcBuf As Byte() = Nothing, dstBuf As Byte() = Nothing
-            Dim stride, ri, gi, bi, ai As Integer
-            Dim sLen = 0
-            Try
-            If Not TryRentRgbaLikeBuffer(source, srcBuf, sLen, stride, ri, gi, bi, ai) Then Return result
-
-            dstBuf = ArrayPool(Of Byte).Shared.Rent(sLen)
-            If stride <> source.Width * 4 Then Array.Clear(dstBuf, 0, sLen)
-            Dim w = source.Width
-            Dim h = source.Height
-            Dim center = 1.0F + 4.0F * amount
-
-            ForEachRow(w, h,
-                Sub(y)
-                    Dim top = If(y > 0, (y - 1) * stride, 0)
-                    Dim centered = y * stride
-                    Dim bottom = If(y < h - 1, (y + 1) * stride, (h - 1) * stride)
-                    For x = 0 To w - 1
-                        Dim o = centered + x * 4
-                        Dim left = centered + If(x > 0, (x - 1) * 4, 0)
-                        Dim right = centered + If(x < w - 1, (x + 1) * 4, (w - 1) * 4)
-                        Dim ob = top + x * 4
-                        Dim un = bottom + x * 4
-
-                        Dim cr As Integer, cg As Integer, cb As Integer, a As Integer
-                        ReadUnpremultiplied(srcBuf, o, ri, gi, bi, ai, cr, cg, cb, a)
-                        Dim lr As Integer, lg As Integer, lb As Integer, la As Integer
-                        Dim rr2 As Integer, rg As Integer, rb As Integer, ra As Integer
-                        Dim tr As Integer, tg As Integer, tb As Integer, ta As Integer
-                        Dim br As Integer, bg As Integer, bb As Integer, ba As Integer
-                        ReadUnpremultiplied(srcBuf, left, ri, gi, bi, ai, lr, lg, lb, la)
-                        ReadUnpremultiplied(srcBuf, right, ri, gi, bi, ai, rr2, rg, rb, ra)
-                        ReadUnpremultiplied(srcBuf, ob, ri, gi, bi, ai, tr, tg, tb, ta)
-                        ReadUnpremultiplied(srcBuf, un, ri, gi, bi, ai, br, bg, bb, ba)
-
-                        WritePremultiplied(dstBuf, o, ri, gi, bi, ai,
-                            ClampToByte(cr * center - amount * (lr + rr2 + tr + br)),
-                            ClampToByte(cg * center - amount * (lg + rg + tg + bg)),
-                            ClampToByte(cb * center - amount * (lb + rb + tb + bb)), a)
-                    Next
-                End Sub)
-
-            Runtime.InteropServices.Marshal.Copy(dstBuf, 0, result.GetPixels(), sLen)
-            Return result
-            Finally
-                ReturnPooledBuffer(srcBuf)
-                ReturnPooledBuffer(dstBuf)
-            End Try
         End Function
 
         Private Shared Function ApplyGeometryTransforms(source As SKBitmap, adj As ImageAdjustments,

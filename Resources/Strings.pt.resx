@@ -8908,15 +8908,6 @@
   <data name="Farbrauschen_bei_unbearbeiteten_RAWs_0f8c070b" xml:space="preserve">
     <value>Ruído de cor em RAW não editados</value>
   </data>
-  <data name="Farbflecken_bei_unbearbeiteten_RAWs_9c08c37c" xml:space="preserve">
-    <value>Manchas de cor em RAW não editados</value>
-  </data>
-  <data name="Startwert_des_Reglers_Farbrauschen_wenn_ein_RAW__3af7cb22" xml:space="preserve">
-    <value>Valor inicial do controlo Ruído de cor ao abrir um RAW sem edições. Suaviza o grão fino de cor, sobretudo com ISO alto, mas em fotografias limpas também remove cor fina e precisa de tempo de cálculo a cada mudança de imagem. 0 desliga-o.</value>
-  </data>
-  <data name="Startwert_des_Reglers_Farbflecken_wenn_ein_RAW_o_2d470b89" xml:space="preserve">
-    <value>Valor inicial do controlo Manchas de cor ao abrir um RAW sem edições. Remove manchas de cor grosseiras, mas em fotografias limpas também cor fina, e precisa de um tempo de cálculo notório a cada mudança de imagem. 0 desliga-o.</value>
-  </data>
   <data name="Anpassungen_anwenden_ab535739" xml:space="preserve">
     <value>Aplicar ajustes</value>
   </data>
@@ -10011,5 +10002,50 @@
   </data>
   <data name="TAB_springt_zum_n_chsten_Namen_und_nach_dem_letz_6e48d7a8" xml:space="preserve">
     <value>TAB passa para o nome seguinte e, depois do último, para a foto seguinte.</value>
+  </data>
+  <data name="Ganzes_Bild_in_der_Rasteransicht_de99f0dc" xml:space="preserve">
+    <value>Imagem inteira na vista em grelha</value>
+  </data>
+  <data name="Zeigt_das_Bild_in_der_Kachel_ganz_hochkant_oder__4c26da70" xml:space="preserve">
+    <value>Mostra a imagem inteira no mosaico, na vertical ou na horizontal, em vez de a recortar para o mosaico. Os mosaicos mantêm o tamanho.</value>
+  </data>
+  <data name="Sch_rfe_bei_unbearbeiteten_RAWs_5cc1baef" xml:space="preserve">
+    <value>Nitidez para RAW não editados</value>
+  </data>
+  <data name="Startwert_des_Reglers_Sch_rfe_wenn_ein_RAW_ohne__3353bd5a" xml:space="preserve">
+    <value>Valor inicial do controlo Nitidez ao abrir um RAW sem edições. As imagens já editadas mantêm os seus valores. 0 desativa-o.</value>
+  </data>
+  <data name="Rauschen_bei_unbearbeiteten_RAWs_75fa6c79" xml:space="preserve">
+    <value>Ruído para RAW não editados</value>
+  </data>
+  <data name="Startwert_des_Reglers_Rauschen_wenn_ein_RAW_ohne_5ff29d6e" xml:space="preserve">
+    <value>Valor inicial do controlo Ruído ao abrir um RAW sem edições. Suaviza o ruído de luminância e exige tempo de cálculo a cada mudança de imagem. As imagens já editadas mantêm os seus valores. 0 desativa-o.</value>
+  </data>
+  <data name="Auf_diesem_Bild_wurde_noch_nicht_nach_Personen_g_91c84fe1" xml:space="preserve">
+    <value>Ainda não foram procuradas pessoas nesta imagem.</value>
+  </data>
+  <data name="Nach_Personen_suchen_4d179a63" xml:space="preserve">
+    <value>Procurar pessoas</value>
+  </data>
+  <data name="Dieses_Bild_lokal_nach_Gesichtern_durchsuchen_b0d45f52" xml:space="preserve">
+    <value>Procurar rostos nesta imagem localmente</value>
+  </data>
+  <data name="Personen_werden_gesucht_5a65f4f5" xml:space="preserve">
+    <value>A procurar pessoas.</value>
+  </data>
+  <data name="Dieses_Bild_lie_sich_f_r_die_Suche_nach_Personen_113c1add" xml:space="preserve">
+    <value>Não foi possível ler esta imagem para a procura de pessoas.</value>
+  </data>
+  <data name="Die_Suche_nach_Personen_ist_fehlgeschlagen_934373e4" xml:space="preserve">
+    <value>A procura de pessoas falhou.</value>
+  </data>
+  <data name="Startwert_des_Reglers_Farbrauschen_wenn_ein_RAW__3efc575e" xml:space="preserve">
+    <value>Valor inicial do controlo Ruído de cor ao abrir um RAW sem edições. Remove o ruído de cor medido na imagem e mantém a cor real. Exige tempo de cálculo a cada mudança de imagem. 0 desativa-o.</value>
+  </data>
+  <data name="Preset_St_rke_16aedefe" xml:space="preserve">
+    <value>Intensidade da predefinição</value>
+  </data>
+  <data name="Wie_stark_das_eben_angewendete_Preset_wirkt_0_is_0e0abfab" xml:space="preserve">
+    <value>Quão forte atua a predefinição acabada de aplicar: 0 é a imagem sem predefinição, 100 a predefinição, 200 as suas alterações a dobrar.</value>
   </data>
 </root>

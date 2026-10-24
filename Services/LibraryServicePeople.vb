@@ -554,32 +554,84 @@ Namespace Services
             Return result
         End Function
 
-        ''' <summary>Alle Personen mit der Zahl der Bilder, in denen sie vorkommen. Gezaehlt werden
-        ''' BILDER, nicht Gesichter - steht jemand zweimal auf demselben Foto, ist das ein Bild.</summary>
+        ''' <summary>Alle Personen mit der Zahl der Fotos, auf denen sie vorkommen. Gezaehlt werden
+        ''' FOTOS, nicht Gesichter und nicht Dateien - steht jemand zweimal auf demselben Foto, ist
+        ''' das ein Foto, und ein RAW-JPEG-Paar ebenso (siehe <see cref="CountPhotos"/>).</summary>
         Public Function GetPeople() As List(Of PersonEntry)
             Dim result As New List(Of PersonEntry)()
             Using conn = New SqliteConnection(_connectionString)
                 conn.Open()
+                Dim filesByPerson As New Dictionary(Of String, List(Of String))(StringComparer.Ordinal)
+                Using cmd = conn.CreateCommand()
+                    cmd.CommandText = "SELECT DISTINCT PersonId, FilePath FROM Face WHERE PersonId IS NOT NULL"
+                    Using reader = cmd.ExecuteReader()
+                        While reader.Read()
+                            Dim personId = reader.GetString(0)
+                            Dim files As List(Of String) = Nothing
+                            If Not filesByPerson.TryGetValue(personId, files) Then
+                                files = New List(Of String)()
+                                filesByPerson(personId) = files
+                            End If
+                            files.Add(reader.GetString(1))
+                        End While
+                    End Using
+                End Using
                 Using cmd = conn.CreateCommand()
                     ' Die Sammelgruppe ganz nach hinten: sie ist keine Person, und oben stehen
                     ' die, mit denen man arbeitet.
                     cmd.CommandText =
-                        "SELECT p.Id, p.Name, COUNT(DISTINCT f.FilePath), p.IsUnknownBin " &
-                        "FROM Person p LEFT JOIN Face f ON f.PersonId = p.Id " &
-                        "GROUP BY p.Id, p.Name, p.IsUnknownBin " &
-                        "ORDER BY p.IsUnknownBin, p.Name = '' , p.Name COLLATE NOCASE"
+                        "SELECT Id, Name, IsUnknownBin FROM Person " &
+                        "ORDER BY IsUnknownBin, Name = '' , Name COLLATE NOCASE"
                     Using reader = cmd.ExecuteReader()
                         While reader.Read()
+                            Dim personId = reader.GetString(0)
+                            Dim files As List(Of String) = Nothing
+                            filesByPerson.TryGetValue(personId, files)
                             result.Add(New PersonEntry With {
-                                .Id = reader.GetString(0),
+                                .Id = personId,
                                 .Name = reader.GetString(1),
-                                .ImageCount = reader.GetInt32(2),
-                                .IsUnknownBin = reader.GetInt32(3) <> 0})
+                                .ImageCount = CountPhotos(files),
+                                .IsUnknownBin = reader.GetInt32(2) <> 0})
                         End While
                     End Using
                 End Using
             End Using
             Return result
+        End Function
+
+        ''' <summary>Wie viele FOTOS diese Dateien sind: ein RAW-JPEG-Paar zaehlt einmal.
+        '''
+        ''' Seit die Gesichtssuche RAWs ueber ihre eingebettete Vorschau liest, findet sie dieselben
+        ''' Gesichter in der RAW und im JPEG daneben, und eine Person stand mit zwei Bildern da, wo
+        ''' es eines ist. Durchsucht werden weiter beide: so findet die Personensuche jede der
+        ''' beiden Dateien, auch mit ausgeschalteten Stapeln, und das Infopanel zeigt an beiden die
+        ''' Gesichter. Zusammengefasst wird allein beim Zaehlen.
+        '''
+        ''' Ein Paar sind hier Dateien im selben Ordner mit gleichem Namen ohne Endung, eine RAW und
+        ''' ein JPEG oder HEIF, wie in der Galerie (ImageStackService); liegen RAW, JPEG und HEIF
+        ''' nebeneinander, sind es wie dort zwei Fotos. ANDERS als in der Galerie zaehlen Aufnahmezeit
+        ''' und Kamera nicht: dort soll ein von Hand exportiertes JPEG nicht hinter der RAW
+        ''' verschwinden, hier zeigt es dieselbe Person auf demselben Foto und ist zu Recht eines.
+        ''' Gefragt wird ohnehin nur nach Dateien, auf denen dieselbe Person erkannt wurde.</summary>
+        Public Shared Function CountPhotos(filePaths As IEnumerable(Of String)) As Integer
+            If filePaths Is Nothing Then Return 0
+            Dim standalone = 0
+            ' Je Ordner und Name: wie viele RAWs, wie viele Begleitdateien.
+            Dim groups As New Dictionary(Of String, (Raws As Integer, Companions As Integer))(StringComparer.OrdinalIgnoreCase)
+            For Each filePath In filePaths.Where(Function(p) Not String.IsNullOrWhiteSpace(p)).Distinct(StringComparer.Ordinal)
+                Dim isRaw = RawPreviewService.IsSupportedRaw(filePath)
+                Dim isCompanion = Not isRaw AndAlso ImageStackService.IsCompanionFormat(filePath)
+                If IsServerPseudoPath(filePath) OrElse (Not isRaw AndAlso Not isCompanion) Then
+                    standalone += 1
+                    Continue For
+                End If
+                Dim key = IO.Path.Combine(If(IO.Path.GetDirectoryName(filePath), ""), IO.Path.GetFileNameWithoutExtension(filePath))
+                Dim counts As (Raws As Integer, Companions As Integer) = Nothing
+                groups.TryGetValue(key, counts)
+                groups(key) = If(isRaw, (counts.Raws + 1, counts.Companions), (counts.Raws, counts.Companions + 1))
+            Next
+            ' Jede RAW nimmt hoechstens EINE Begleitdatei zu sich; was uebrig bleibt, zaehlt allein.
+            Return standalone + groups.Values.Sum(Function(g) Math.Max(g.Raws, g.Companions))
         End Function
 
         ''' <summary>Das GROESSTE Gesicht einer Person - ihr Aushaengeschild in der Liste.
@@ -605,20 +657,25 @@ Namespace Services
             End Using
         End Function
 
-        ''' <summary>Wie viele BILDER eine Person hat - gezaehlt werden Bilder, nicht Gesichter.
-        ''' Fuer die Kachel nach einer Aenderung: eine Zahl, die nicht mehr stimmt, ist schlimmer als
-        ''' keine.</summary>
+        ''' <summary>Wie viele FOTOS eine Person hat - gezaehlt wie in <see cref="GetPeople"/>, ein
+        ''' RAW-JPEG-Paar einmal. Fuer die Kachel nach einer Aenderung: eine Zahl, die nicht mehr
+        ''' stimmt, ist schlimmer als keine.</summary>
         Public Function GetPersonImageCount(personId As String) As Integer
             If String.IsNullOrWhiteSpace(personId) Then Return 0
+            Dim files As New List(Of String)()
             Using conn = New SqliteConnection(_connectionString)
                 conn.Open()
                 Using cmd = conn.CreateCommand()
-                    cmd.CommandText = "SELECT COUNT(DISTINCT FilePath) FROM Face WHERE PersonId=$p"
+                    cmd.CommandText = "SELECT DISTINCT FilePath FROM Face WHERE PersonId=$p"
                     cmd.Parameters.AddWithValue("$p", personId)
-                    Dim r = cmd.ExecuteScalar()
-                    Return If(r Is Nothing OrElse TypeOf r Is DBNull, 0, CInt(r))
+                    Using reader = cmd.ExecuteReader()
+                        While reader.Read()
+                            files.Add(reader.GetString(0))
+                        End While
+                    End Using
                 End Using
             End Using
+            Return CountPhotos(files)
         End Function
 
         ''' <summary>Alle Gesichter EINER Person, das groesste zuerst. Fuer die Personenverwaltung:

@@ -2065,15 +2065,19 @@
                                                             HorizontalAlignment="Center"
                                                             VerticalAlignment="Top"
                                                             Margin="0,6,0,0">
-                                                    <Border Classes="reject-badge"
+                                                    <!-- Ebenfalls ein KNOPF: ein Klick hebt das
+                                                         Verwerfen fuer genau dieses Bild auf, auch
+                                                         wenn es Teil einer Auswahl ist. -->
+                                                    <Button Classes="reject-badge tile-action-hit"
                                                             IsVisible="{Binding IsRejected}"
+                                                            Click="OnRejectBadgeClick"
                                                             ToolTip.Tip="Verworfen">
                                                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/flag-x.svg"
                                                                        Width="15" Height="15"
                                                                        IconBrush="White"
                                                                        HorizontalAlignment="Center"
                                                                        VerticalAlignment="Center"/>
-                                                    </Border>
+                                                    </Button>
                                                     <!-- Ein KNOPF, kein reines Zeichen: ein Klick öffnet
                                                          das Bild im Editor, wie "Anpassen" in der
                                                          Hover-Leiste (derselbe Handler). Als Knopf fängt

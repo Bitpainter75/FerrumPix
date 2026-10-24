@@ -1100,6 +1100,18 @@
                                           VerticalAlignment="Center"/>
                         </Grid>
 
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Ganzes Bild in der Rasteransicht" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Zeigt das Bild in der Kachel ganz, hochkant oder quer, statt es auf die Kachel zuzuschneiden. Die Kacheln bleiben gleich groß." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1"
+                                          IsChecked="{Binding GalleryTilesKeepAspect}"
+                                          OnContent=""
+                                          OffContent=""
+                                          VerticalAlignment="Center"/>
+                        </Grid>
+
                         <!-- Die Angaben unter dem Dateinamen einer Kachel und in der Liste: bis zu
                              drei Zeilen, je eine Auswahl links und rechts, angeordnet wie unter der
                              Kachel. Eine Zeile ohne Angabe gibt es dort nicht. -->
@@ -2153,21 +2165,20 @@
                                           VerticalAlignment="Center"/>
                         </Grid>
 
-                        <!-- Die beiden Farbrausch-Startwerte fuer eine RAW ohne Rezept (ImageAdjustments.ForUneditedRaw).
-                             Namen wie im Rauschen-Panel des Editors, 0 = aus. Ab Werk beide 0 (Messung in
-                             FALLEN_UND_ENTSCHEIDUNGEN.md, "Kein Farbrausch-Startwert fuer RAW ohne Rezept"). -->
+                        <!-- Startwerte von Schaerfe und Rauschen fuer eine RAW ohne Rezept
+                             (ImageAdjustments.ForUneditedRaw), wie die Farbrausch-Startwerte darunter. -->
                         <Grid ColumnDefinitions="*,Auto">
                             <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
-                                <TextBlock Text="Farbrauschen bei unbearbeiteten RAWs" FontSize="{DynamicResource FP.Font.Body}"/>
-                                <TextBlock Text="Startwert des Reglers Farbrauschen, wenn ein RAW ohne Bearbeitung geöffnet wird. Glättet feines Farbkorn, vor allem bei hoher ISO, nimmt bei sauberen Aufnahmen aber auch feine Farbe mit und braucht bei jedem Bildwechsel Rechenzeit. 0 schaltet ihn ab." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Text="Schärfe bei unbearbeiteten RAWs" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Startwert des Reglers Schärfe, wenn ein RAW ohne Bearbeitung geöffnet wird. Bereits bearbeitete Bilder behalten ihre Werte. 0 schaltet ihn ab." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </StackPanel>
                             <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
                                 <icons:RoundSlider Width="150"
                                                    Minimum="0"
-                                                   Maximum="100"
-                                                   DefaultValue="0"
-                                                   Value="{Binding UneditedRawColorNoise}"/>
-                                <TextBlock Text="{Binding UneditedRawColorNoise}"
+                                                   Maximum="150"
+                                                   DefaultValue="40"
+                                                   Value="{Binding UneditedRawSharpness}"/>
+                                <TextBlock Text="{Binding UneditedRawSharpness}"
                                            Foreground="{DynamicResource FP.Text.Secondary}"
                                            FontSize="{DynamicResource FP.Font.Body}"
                                            Width="52"
@@ -2178,16 +2189,16 @@
 
                         <Grid ColumnDefinitions="*,Auto">
                             <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
-                                <TextBlock Text="Farbflecken bei unbearbeiteten RAWs" FontSize="{DynamicResource FP.Font.Body}"/>
-                                <TextBlock Text="Startwert des Reglers Farbflecken, wenn ein RAW ohne Bearbeitung geöffnet wird. Nimmt grobe Farbflecken, bei sauberen Aufnahmen aber auch feine Farbe, und braucht bei jedem Bildwechsel spürbar Rechenzeit. 0 schaltet ihn ab." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Text="Rauschen bei unbearbeiteten RAWs" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Startwert des Reglers Rauschen, wenn ein RAW ohne Bearbeitung geöffnet wird. Glättet das Helligkeitsrauschen und braucht bei jedem Bildwechsel Rechenzeit. Bereits bearbeitete Bilder behalten ihre Werte. 0 schaltet ihn ab." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </StackPanel>
                             <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
                                 <icons:RoundSlider Width="150"
                                                    Minimum="0"
                                                    Maximum="100"
                                                    DefaultValue="0"
-                                                   Value="{Binding UneditedRawCoarseColorNoise}"/>
-                                <TextBlock Text="{Binding UneditedRawCoarseColorNoise}"
+                                                   Value="{Binding UneditedRawNoiseReduction}"/>
+                                <TextBlock Text="{Binding UneditedRawNoiseReduction}"
                                            Foreground="{DynamicResource FP.Text.Secondary}"
                                            FontSize="{DynamicResource FP.Font.Body}"
                                            Width="52"
@@ -2195,6 +2206,30 @@
                                            VerticalAlignment="Center"/>
                             </StackPanel>
                         </Grid>
+
+                        <!-- Die beiden Farbrausch-Startwerte fuer eine RAW ohne Rezept (ImageAdjustments.ForUneditedRaw).
+                             Namen wie im Rauschen-Panel des Editors, 0 = aus. Ab Werk Farbrauschen 25; Farbflecken hat keinen Startwert mehr (Messung in
+                             FALLEN_UND_ENTSCHEIDUNGEN.md, "Kein Farbrausch-Startwert fuer RAW ohne Rezept"). -->
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Farbrauschen bei unbearbeiteten RAWs" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Startwert des Reglers Farbrauschen, wenn ein RAW ohne Bearbeitung geöffnet wird. Nimmt das Farbrauschen, das im Bild gemessen wird, und lässt echte Farbe stehen. Braucht bei jedem Bildwechsel Rechenzeit. 0 schaltet ihn ab." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                                <icons:RoundSlider Width="150"
+                                                   Minimum="0"
+                                                   Maximum="100"
+                                                   DefaultValue="25"
+                                                   Value="{Binding UneditedRawColorNoise}"/>
+                                <TextBlock Text="{Binding UneditedRawColorNoise}"
+                                           Foreground="{DynamicResource FP.Text.Secondary}"
+                                           FontSize="{DynamicResource FP.Font.Body}"
+                                           Width="52"
+                                           TextAlignment="Right"
+                                           VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Grid>
+
                         <!-- DER SCHALTER "Lichter unbeschnitten aus den Sensordaten lesen" IST
                              HIER AUSGEBAUT, die Einstellung RawHighlightUnclip steht weiter auf
                              ihrer Vorgabe True. Er war der Rueckweg fuer einen Feldbericht ueber zu

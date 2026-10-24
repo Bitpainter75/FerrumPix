@@ -152,6 +152,9 @@ Namespace Services
         ''' Gelesen wird nur der KOPF, kein Decode: das laeuft ueber jedes Bild einer Person.</summary>
         Public Shared Function ReadOrientedPixelSize(imagePath As String) As (Width As Integer, Height As Integer)
             If String.IsNullOrWhiteSpace(imagePath) OrElse Not File.Exists(imagePath) Then Return (0, 0)
+            ' RAW, HEIF und Co. durchsucht der Scan ueber einen Umweg (bei RAW die eingebettete
+            ' Vorschau). Die Kaesten liegen in DEREN Bildpunkten, also zaehlt auch deren Groesse.
+            If FaceScanRunner.UsesConvertedSource(imagePath) Then Return FaceScanRunner.ReadConvertedSourceSize(imagePath)
             Try
                 Dim w = 0, h = 0
                 Using codec = SkiaSharp.SKCodec.Create(imagePath)

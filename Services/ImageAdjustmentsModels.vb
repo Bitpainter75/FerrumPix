@@ -1217,9 +1217,14 @@ Namespace Services
             ' einstufige ersetzen koennen. Ab Werk bleibt es beim bisherigen Bild.
             Dim settings = AppSettingsService.Load()
             Dim values = New ImageAdjustments With {
-                .FarbrauschGrob = Math.Max(0, Math.Min(100, settings.UneditedRawCoarseColorNoise)),
-                .ColorNoiseReduction = Math.Max(0, Math.Min(100, settings.UneditedRawColorNoise))
+                .FarbrauschGrob = UneditedRawCoarseColorNoise,
+                .ColorNoiseReduction = Math.Max(0, Math.Min(100, settings.UneditedRawColorNoise)),
+                .Sharpness = Math.Max(0, Math.Min(150, settings.UneditedRawSharpness)),
+                .NoiseReduction = Math.Max(0, Math.Min(100, settings.UneditedRawNoiseReduction))
             }
+            ' Mit Schaerfe startet Detail bei 25, der Mitte des Referenzprogramms; ohne bleibt das
+            ' Rezept neutral.
+            If values.Sharpness > 0 Then values.SharpenDetail = 25
             ' Der Sensorrand startet bei jeder RAW abgeschnitten, wie beim Referenzprogramm; je Bild
             ' laesst er sich abschalten. Nur hier und nicht als Vorgabe des Feldes: ein Rezept ohne
             ' das Feld stammt aus der Zeit davor und muss ohne Beschnitt weiterrechnen.

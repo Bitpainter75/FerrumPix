@@ -8949,15 +8949,6 @@
   <data name="Farbrauschen_bei_unbearbeiteten_RAWs_0f8c070b" xml:space="preserve">
     <value>Barevný šum u neupravených RAW</value>
   </data>
-  <data name="Farbflecken_bei_unbearbeiteten_RAWs_9c08c37c" xml:space="preserve">
-    <value>Barevné skvrny u neupravených RAW</value>
-  </data>
-  <data name="Startwert_des_Reglers_Farbrauschen_wenn_ein_RAW__3af7cb22" xml:space="preserve">
-    <value>Počáteční hodnota posuvníku Barevný šum při otevření RAW bez úprav. Vyhlazuje jemné barevné zrno, hlavně při vysokém ISO, u čistých snímků ale bere i jemnou barvu a při každé změně obrázku potřebuje čas na výpočet. 0 ho vypne.</value>
-  </data>
-  <data name="Startwert_des_Reglers_Farbflecken_wenn_ein_RAW_o_2d470b89" xml:space="preserve">
-    <value>Počáteční hodnota posuvníku Barevné skvrny při otevření RAW bez úprav. Odstraňuje hrubé barevné skvrny, u čistých snímků ale i jemnou barvu, a při každé změně obrázku znatelně zdržuje. 0 ho vypne.</value>
-  </data>
   <data name="Anpassungen_anwenden_ab535739" xml:space="preserve">
     <value>Použít úpravy</value>
   </data>
@@ -10052,5 +10043,50 @@
   </data>
   <data name="TAB_springt_zum_n_chsten_Namen_und_nach_dem_letz_6e48d7a8" xml:space="preserve">
     <value>TAB přejde na další jméno a po posledním na další fotografii.</value>
+  </data>
+  <data name="Ganzes_Bild_in_der_Rasteransicht_de99f0dc" xml:space="preserve">
+    <value>Celý snímek v zobrazení mřížky</value>
+  </data>
+  <data name="Zeigt_das_Bild_in_der_Kachel_ganz_hochkant_oder__4c26da70" xml:space="preserve">
+    <value>Zobrazí v dlaždici celý snímek, na výšku nebo na šířku, místo aby ho ořízl na dlaždici. Dlaždice si zachovají velikost.</value>
+  </data>
+  <data name="Sch_rfe_bei_unbearbeiteten_RAWs_5cc1baef" xml:space="preserve">
+    <value>Doostření u neupravených RAW</value>
+  </data>
+  <data name="Startwert_des_Reglers_Sch_rfe_wenn_ein_RAW_ohne__3353bd5a" xml:space="preserve">
+    <value>Výchozí hodnota posuvníku Doostření při otevření RAW bez úprav. Již upravené snímky si ponechají své hodnoty. 0 jej vypne.</value>
+  </data>
+  <data name="Rauschen_bei_unbearbeiteten_RAWs_75fa6c79" xml:space="preserve">
+    <value>Šum u neupravených RAW</value>
+  </data>
+  <data name="Startwert_des_Reglers_Rauschen_wenn_ein_RAW_ohne_5ff29d6e" xml:space="preserve">
+    <value>Výchozí hodnota posuvníku Šum při otevření RAW bez úprav. Vyhlazuje jasový šum a při každé změně snímku vyžaduje výpočetní čas. Již upravené snímky si ponechají své hodnoty. 0 jej vypne.</value>
+  </data>
+  <data name="Auf_diesem_Bild_wurde_noch_nicht_nach_Personen_g_91c84fe1" xml:space="preserve">
+    <value>Na tomto obrázku se zatím osoby nehledaly.</value>
+  </data>
+  <data name="Nach_Personen_suchen_4d179a63" xml:space="preserve">
+    <value>Hledat osoby</value>
+  </data>
+  <data name="Dieses_Bild_lokal_nach_Gesichtern_durchsuchen_b0d45f52" xml:space="preserve">
+    <value>Prohledat tento obrázek lokálně na tváře</value>
+  </data>
+  <data name="Personen_werden_gesucht_5a65f4f5" xml:space="preserve">
+    <value>Hledají se osoby.</value>
+  </data>
+  <data name="Dieses_Bild_lie_sich_f_r_die_Suche_nach_Personen_113c1add" xml:space="preserve">
+    <value>Tento obrázek se pro hledání osob nepodařilo načíst.</value>
+  </data>
+  <data name="Die_Suche_nach_Personen_ist_fehlgeschlagen_934373e4" xml:space="preserve">
+    <value>Hledání osob se nezdařilo.</value>
+  </data>
+  <data name="Startwert_des_Reglers_Farbrauschen_wenn_ein_RAW__3efc575e" xml:space="preserve">
+    <value>Výchozí hodnota posuvníku Barevný šum při otevření RAW bez úprav. Odstraní barevný šum změřený ve snímku a skutečné barvy ponechá. Při každé změně snímku vyžaduje výpočetní čas. 0 jej vypne.</value>
+  </data>
+  <data name="Preset_St_rke_16aedefe" xml:space="preserve">
+    <value>Síla předvolby</value>
+  </data>
+  <data name="Wie_stark_das_eben_angewendete_Preset_wirkt_0_is_0e0abfab" xml:space="preserve">
+    <value>Jak silně působí právě použitá předvolba: 0 je snímek bez předvolby, 100 předvolba, 200 její změny dvakrát.</value>
   </data>
 </root>

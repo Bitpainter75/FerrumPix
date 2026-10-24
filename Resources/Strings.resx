@@ -8928,15 +8928,6 @@
   <data name="Farbrauschen_bei_unbearbeiteten_RAWs_0f8c070b" xml:space="preserve">
     <value>Color noise for unedited raw files</value>
   </data>
-  <data name="Farbflecken_bei_unbearbeiteten_RAWs_9c08c37c" xml:space="preserve">
-    <value>Colour blotches for unedited raw files</value>
-  </data>
-  <data name="Startwert_des_Reglers_Farbrauschen_wenn_ein_RAW__3af7cb22" xml:space="preserve">
-    <value>Starting value of the Color noise slider when a raw file without edits is opened. Smooths fine color grain, above all at high ISO, but also takes away fine color on clean shots and needs computing time at every change of picture. 0 turns it off.</value>
-  </data>
-  <data name="Startwert_des_Reglers_Farbflecken_wenn_ein_RAW_o_2d470b89" xml:space="preserve">
-    <value>Starting value of the Colour blotches slider when a raw file without edits is opened. Removes coarse color blotches, but on clean shots also fine color, and needs noticeable computing time at every change of picture. 0 turns it off.</value>
-  </data>
   <data name="Anpassungen_anwenden_ab535739" xml:space="preserve">
     <value>Apply adjustments</value>
   </data>
@@ -10031,5 +10022,50 @@
   </data>
   <data name="TAB_springt_zum_n_chsten_Namen_und_nach_dem_letz_6e48d7a8" xml:space="preserve">
     <value>TAB moves to the next name, and after the last one to the next photo.</value>
+  </data>
+  <data name="Ganzes_Bild_in_der_Rasteransicht_de99f0dc" xml:space="preserve">
+    <value>Whole picture in the grid view</value>
+  </data>
+  <data name="Zeigt_das_Bild_in_der_Kachel_ganz_hochkant_oder__4c26da70" xml:space="preserve">
+    <value>Shows the whole picture in the tile, portrait or landscape, instead of cropping it to the tile. The tiles keep their size.</value>
+  </data>
+  <data name="Sch_rfe_bei_unbearbeiteten_RAWs_5cc1baef" xml:space="preserve">
+    <value>Sharpening for unedited RAWs</value>
+  </data>
+  <data name="Startwert_des_Reglers_Sch_rfe_wenn_ein_RAW_ohne__3353bd5a" xml:space="preserve">
+    <value>Starting value of the Sharpening slider when a RAW without edits is opened. Pictures you have already edited keep their values. 0 turns it off.</value>
+  </data>
+  <data name="Rauschen_bei_unbearbeiteten_RAWs_75fa6c79" xml:space="preserve">
+    <value>Noise for unedited RAWs</value>
+  </data>
+  <data name="Startwert_des_Reglers_Rauschen_wenn_ein_RAW_ohne_5ff29d6e" xml:space="preserve">
+    <value>Starting value of the Noise slider when a RAW without edits is opened. Smooths luminance noise and takes processing time on every picture change. Pictures you have already edited keep their values. 0 turns it off.</value>
+  </data>
+  <data name="Auf_diesem_Bild_wurde_noch_nicht_nach_Personen_g_91c84fe1" xml:space="preserve">
+    <value>This image has not been searched for people yet.</value>
+  </data>
+  <data name="Nach_Personen_suchen_4d179a63" xml:space="preserve">
+    <value>Search for people</value>
+  </data>
+  <data name="Dieses_Bild_lokal_nach_Gesichtern_durchsuchen_b0d45f52" xml:space="preserve">
+    <value>Search this image for faces locally</value>
+  </data>
+  <data name="Personen_werden_gesucht_5a65f4f5" xml:space="preserve">
+    <value>Searching for people.</value>
+  </data>
+  <data name="Dieses_Bild_lie_sich_f_r_die_Suche_nach_Personen_113c1add" xml:space="preserve">
+    <value>This image could not be read for the people search.</value>
+  </data>
+  <data name="Die_Suche_nach_Personen_ist_fehlgeschlagen_934373e4" xml:space="preserve">
+    <value>The search for people failed.</value>
+  </data>
+  <data name="Startwert_des_Reglers_Farbrauschen_wenn_ein_RAW__3efc575e" xml:space="preserve">
+    <value>Starting value of the Colour noise slider when a RAW without edits is opened. Removes the colour noise measured in the picture and leaves real colour alone. Takes processing time on every picture change. 0 turns it off.</value>
+  </data>
+  <data name="Preset_St_rke_16aedefe" xml:space="preserve">
+    <value>Preset amount</value>
+  </data>
+  <data name="Wie_stark_das_eben_angewendete_Preset_wirkt_0_is_0e0abfab" xml:space="preserve">
+    <value>How strongly the preset you just applied works: 0 is the picture without the preset, 100 the preset, 200 its changes twice.</value>
   </data>
 </root>

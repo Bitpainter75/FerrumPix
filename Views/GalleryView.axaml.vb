@@ -1948,6 +1948,17 @@ Namespace Views
             e.Handled = True
         End Sub
 
+        ''' <summary>Verworfen-Zeichen einer Kachel: hebt das Verwerfen fuer genau dieses Bild auf.
+        ''' Die Auswahl bleibt, wie sie ist; das Zeichen steht nur an verworfenen Bildern, der
+        ''' Umschalter nimmt also immer zurueck.</summary>
+        Public Sub OnRejectBadgeClick(sender As Object, e As RoutedEventArgs)
+            Dim item = TryCast(TryCast(sender, Control)?.DataContext, ImageItem)
+            Dim vm = GetVm()
+            If vm Is Nothing OrElse item Is Nothing OrElse Not item.IsRejected Then Return
+            vm.ToggleRejectFor({item})
+            e.Handled = True
+        End Sub
+
         Public Sub OnStackBadgeClick(sender As Object, e As RoutedEventArgs)
             Dim item = TryCast(TryCast(sender, Control)?.DataContext, ImageItem)
             Dim vm = GetVm()

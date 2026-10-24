@@ -265,11 +265,7 @@ Namespace Services
                         Continue For
                     End If
 
-                    ' Die Scan-Fassung gehoert MIT in den Vermerk, sonst gilt ein Bild als erledigt,
-                    ' das eine aeltere Fassung anders gesehen hat - siehe ScanVersion.
-                    Dim stamp = ScanVersion & "|" &
-                                If(isImmich, "immich",
-                                   File.GetLastWriteTimeUtc(filePath).ToString("o", CultureInfo.InvariantCulture))
+                    Dim stamp = ScanStamp(filePath, isImmich)
                     If Not force AndAlso Not library.NeedsFaceScan(filePath, stamp) Then
                         result.Skipped += 1
                         Continue For
@@ -302,6 +298,37 @@ Namespace Services
             Next
         End Sub
 
+        ''' <summary>Der Vermerk, unter dem ein Bild als durchsucht gilt. Die Scan-Fassung gehoert
+        ''' MIT hinein, sonst gilt ein Bild als erledigt, das eine aeltere Fassung anders gesehen
+        ''' hat - siehe <see cref="ScanVersion"/>. Eigene Funktion, damit der Durchlauf und
+        ''' <see cref="NeedsScan"/> nie verschiedene Stempel vergleichen.</summary>
+        Private Shared Function ScanStamp(filePath As String, isImmich As Boolean) As String
+            Dim version = If(Not isImmich AndAlso UsesConvertedSource(filePath),
+                             ScanVersion & "+" & ConvertedSourceVersion, ScanVersion)
+            Return version & "|" &
+                   If(isImmich, "immich",
+                      File.GetLastWriteTimeUtc(filePath).ToString("o", CultureInfo.InvariantCulture))
+        End Function
+
+        ''' <summary>Wurde dieses eine Bild noch nicht (oder vor seiner letzten Aenderung) nach
+        ''' Gesichtern durchsucht? Fuer die Infoleiste: "niemand erkannt" ist nur wahr, wenn
+        ''' auch jemand gesucht hat.
+        '''
+        ''' False fuer alles, was ein Durchlauf ohnehin ueberspringen wuerde (fehlende Datei,
+        ''' Serverbild ohne eingerichteten Server) - ein Knopf dafuer taete nichts.</summary>
+        Public Shared Function NeedsScan(filePath As String) As Boolean
+            If String.IsNullOrWhiteSpace(filePath) Then Return False
+            Dim isImmich = filePath.StartsWith("immich://", StringComparison.OrdinalIgnoreCase)
+            If isImmich AndAlso Not ImmichService.IsConfigured Then Return False
+            If Not isImmich AndAlso Not File.Exists(filePath) Then Return False
+            Try
+                Return LibraryService.Instance.NeedsFaceScan(filePath, ScanStamp(filePath, isImmich))
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Gesichter.NeedsScan", ex)
+                Return False
+            End Try
+        End Function
+
         ''' <summary>Dekodiert ein Bild fuer die Suche - AUFRECHT.
         '''
         ''' SKBitmap.Decode liefert die Bildpunkte so, wie sie in der Datei liegen, und laesst das
@@ -315,9 +342,155 @@ Namespace Services
         ''' geworden - dafuer steht die Fassung im Stempel (siehe ScanVersion).</summary>
         Private Shared Function DecodeForScan(filePath As String, isImmich As Boolean) As SKBitmap
             If isImmich Then Return DecodeImmichPreview(filePath)
+            Return DecodeUprightForFaces(filePath)
+        End Function
+
+        ''' <summary>Fassung der Bildquelle fuer Formate, die Skia nicht selbst liest (RAW, HEIF,
+        ''' JPEG XL, TIFF, PSD, ICO). Sie steht mit im Vermerk, und zwar NUR bei diesen Formaten:
+        ''' bis zu ihr gingen sie durch SKBitmap.Decode, scheiterten und galten trotzdem als
+        ''' durchsucht. Mit der Fassung im Vermerk kommen genau sie einmal neu dran, die uebrigen
+        ''' Bilder nicht. Faellt eine Bibliothek weg oder kommt dazu (HEIF, JPEG XL), wechselt der
+        ''' Vermerk mit und das Bild wird ebenfalls neu durchsucht.</summary>
+        Private Const ConvertedSourceVersion As String = "src1"
+
+        ''' <summary>Liest die Suche dieses Bild ueber einen Umweg statt direkt mit Skia? Dann gilt
+        ''' fuer Suche, Ausschnitte und Bildgroesse dieselbe Quelle, siehe
+        ''' <see cref="DecodeUprightForFaces"/>.</summary>
+        Public Shared Function UsesConvertedSource(filePath As String) As Boolean
+            If String.IsNullOrWhiteSpace(filePath) Then Return False
+            Return RawPreviewService.IsSupportedRaw(filePath) OrElse ForeignImageDecoder.CanDecode(filePath)
+        End Function
+
+        ''' <summary>Das Bild, in dem Gesichter gesucht werden und in dessen Bildpunkten ihre
+        ''' Kaesten liegen - AUFRECHT. EINE Stelle fuer Suche, Ausschnitte (FacePanelService) und
+        ''' Bildgroesse der XMP-Regionen (<see cref="ReadConvertedSourceSize"/>): weichen sie
+        ''' voneinander ab, sitzt jeder Kasten neben seinem Gesicht.
+        '''
+        ''' RAW ueber die GROESSTE EINGEBETTETE VORSCHAU, also das Bild, das die Kamera selbst daraus
+        ''' gerechnet hat. Entwickelt wird nicht: das kostete je Bild fast eine Sekunde in der
+        ''' Decode-Schleuse, und die Erkennung rechnet ohnehin auf 640 Punkten. Eine RAW ganz ohne
+        ''' Vorschau bleibt damit unlesbar. Die Drehung kommt wie bei den Kacheln aus der RAW, wenn
+        ''' die Vorschau selbst keine traegt (ImageOrientationService.RawPreviewOrigin).
+        '''
+        ''' HEIF, JPEG XL, TIFF, PSD und ICO ueber ihre eigenen Leser, die schon aufrecht liefern;
+        ''' alles andere wie bisher direkt mit Skia samt EXIF-Drehung.</summary>
+        Public Shared Function DecodeUprightForFaces(filePath As String) As SKBitmap
+            If String.IsNullOrWhiteSpace(filePath) Then Return Nothing
+            If RawPreviewService.IsSupportedRaw(filePath) Then
+                Using stream = OpenRawFaceSource(filePath)
+                    If stream Is Nothing Then Return Nothing
+                    ' NICHT SKCodec.Create(Stream): der schliesst den Strom (siehe
+                    ' ThumbnailCacheService.IsBigEnoughForTile).
+                    Using data = SKData.CreateCopy(stream.ToArray())
+                        Using codec = SKCodec.Create(data)
+                            If codec Is Nothing Then Return Nothing
+                            Dim origin = ImageOrientationService.RawPreviewOrigin(filePath, codec.EncodedOrigin,
+                                                                                  codec.Info.Width, codec.Info.Height)
+                            Return ApplyOrientationOwned(SKBitmap.Decode(codec), origin)
+                        End Using
+                    End Using
+                End Using
+            End If
+            If ForeignImageDecoder.CanDecode(filePath) Then Return ForeignImageDecoder.TryDecode(filePath)
             Dim decoded = SKBitmap.Decode(filePath)
             If decoded Is Nothing Then Return Nothing
             Return ApplyOrientationOwned(decoded, ImageOrientationService.ReadOrigin(filePath))
+        End Function
+
+        ''' <summary>Die gedrehte Groesse des Bildes aus <see cref="DecodeUprightForFaces"/>, ohne es
+        ''' zu dekodieren - fuer Formate, die Skia nicht selbst oeffnet. (0, 0), wo das ohne Decode
+        ''' nicht geht (TIFF, PSD, ICO): dort entstehen dann keine XMP-Regionen, wie bisher.
+        '''
+        ''' Kein Weg durch die Decode-Schleuse: gelesen werden nur Kopfdaten und bei RAW die
+        ''' eingebettete Vorschau, und gefragt wird auch beim Benennen aus der Oberflaeche.</summary>
+        Public Shared Function ReadConvertedSourceSize(filePath As String) As (Width As Integer, Height As Integer)
+            If String.IsNullOrWhiteSpace(filePath) Then Return (0, 0)
+            Try
+                If RawPreviewService.IsSupportedRaw(filePath) Then
+                    Using stream = OpenRawFaceSource(filePath)
+                        If stream Is Nothing Then Return (0, 0)
+                        Using data = SKData.CreateCopy(stream.ToArray())
+                            Using codec = SKCodec.Create(data)
+                                If codec Is Nothing Then Return (0, 0)
+                                Dim w = codec.Info.Width
+                                Dim h = codec.Info.Height
+                                Select Case ImageOrientationService.RawPreviewOrigin(filePath, codec.EncodedOrigin, w, h)
+                                    Case SKEncodedOrigin.LeftTop, SKEncodedOrigin.RightTop,
+                                         SKEncodedOrigin.RightBottom, SKEncodedOrigin.LeftBottom
+                                        Return (h, w)
+                                End Select
+                                Return (w, h)
+                            End Using
+                        End Using
+                    End Using
+                End If
+                If HeifDecodeService.IsSupportedHeif(filePath) AndAlso HeifDecodeService.IsAvailable Then
+                    Return HeifDecodeService.TryGetSize(filePath)
+                End If
+                If JxlDecodeService.IsSupportedJxl(filePath) AndAlso JxlDecodeService.IsAvailable Then
+                    Return JxlDecodeService.TryGetSize(filePath)
+                End If
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Gesichter.Bildgroesse", ex)
+            End Try
+            Return (0, 0)
+        End Function
+
+        ''' <summary>Die groesste eingebettete Vorschau einer RAW, ohne zu entwickeln.
+        '''
+        ''' Alle Wege werden gefragt und das groesste Bild genommen, nicht das erste brauchbare: so
+        ''' kommt bei jedem Aufruf dieselbe Vorschau heraus, ganz gleich, wer fragt. Das ist die
+        ''' Bedingung dafuer, dass die gespeicherten Kaesten zum Ausschnitt passen. Die Wege sind
+        ''' dieselben wie bei der grossen Anzeige (RawPreviewService.ExtractPreviewWithFallback),
+        ''' nur ohne dessen letzte Stufe, das Entwickeln.</summary>
+        Private Shared Function OpenRawFaceSource(filePath As String) As MemoryStream
+            Dim sources As New List(Of Func(Of MemoryStream)) From {
+                Function() RawPreviewService.ExtractPreview(filePath),
+                Function() RawDecodeService.TryExtractThumbnail(filePath)
+            }
+            ' DNG 1.7 traegt die grosse Vorschau als JPEG XL, die finden die beiden oben nicht.
+            If String.Equals(Path.GetExtension(filePath), ".dng", StringComparison.OrdinalIgnoreCase) Then
+                sources.Add(Function() DngJxlPreviewService.TryExtract(filePath))
+            End If
+
+            Dim best As MemoryStream = Nothing
+            Dim bestArea As Long = 0
+            For Each source In sources
+                Dim candidate As MemoryStream = Nothing
+                Try
+                    candidate = source()
+                Catch ex As Exception
+                    DiagnosticLogService.LogException("Gesichter.RawVorschau", ex)
+                End Try
+                If candidate Is Nothing Then Continue For
+                Dim area = PixelArea(candidate)
+                If area > bestArea Then
+                    best?.Dispose()
+                    best = candidate
+                    bestArea = area
+                Else
+                    candidate.Dispose()
+                End If
+            Next
+            If best IsNot Nothing Then best.Position = 0
+            Return best
+        End Function
+
+        ''' <summary>Breite mal Hoehe aus dem Kopf eines Bildstroms, 0 wenn er nicht lesbar ist.</summary>
+        Private Shared Function PixelArea(stream As MemoryStream) As Long
+            If stream Is Nothing OrElse stream.Length = 0 Then Return 0
+            Try
+                Using data = SKData.CreateCopy(stream.ToArray())
+                    Using codec = SKCodec.Create(data)
+                        If codec Is Nothing Then Return 0
+                        Return CLng(codec.Info.Width) * codec.Info.Height
+                    End Using
+                End Using
+            Catch
+                Return 0
+            Finally
+                stream.Position = 0
+            End Try
         End Function
 
         ''' <summary>Wirft zu kleine Gesichter weg, bevor sie ueberhaupt in die Bibliothek kommen.

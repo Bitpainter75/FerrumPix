@@ -60,6 +60,8 @@ Namespace Views
             ' Windows und Linux: das Profil des Bildschirms, auf dem das Fenster steht, fuer die
             ' Fotos in Betrachter und Editor. Folgt dem Fenster ueber Bildschirmgrenzen.
             AddHandler Opened, Sub(s, e) Services.DisplayProfileService.Attach(Me)
+            AddHandler Opened, Sub(s, e) StartSettingsPreload()
+            AddHandler Closed, Sub(s, e) StopSettingsPreload()
             ' Wer in den Einstellungen ein anderes Verfahren waehlt, soll es sofort sehen und nicht
             ' fuer jeden Versuch neu starten muessen.
             AddHandler Services.MacWindowColorSpaceService.MethodChanged, Sub(s, e) ApplyWindowColorSpace()
@@ -163,6 +165,9 @@ Namespace Views
             Dim content = vm.CurrentContent
             If content Is Nothing Then Return
 
+            ' Mitten im Vorabbau betreten: erst vervollstaendigen, dann zeigen.
+            If content Is _preloadContent Then CompletePreloadNow()
+
             Dim view As Control = Nothing
             Dim freshlyBuilt = False
             If Not _modeViews.TryGetValue(content, view) Then
@@ -196,7 +201,201 @@ Namespace Views
             Else
                 ' Beim ERSTEN Mal erledigt das Anhaengen an den Baum dieselbe Arbeit.
                 TryCast(view, IModeView)?.OnModeEntered()
+                ' Eine vorab gebaute Ansicht hat Teile, deren Vorlagen erst beim echten Layout
+                ' entstehen (alles ausserhalb der Abschnitte). Ihnen fehlt noch die Sprache - dafuer
+                ' nur IHR Teilbaum, nicht das ganze Fenster.
+                If _preloadedNotShown.Remove(view) Then
+                    Dim shown = view
+                    Dispatcher.UIThread.Post(Sub() LocalizationService.ApplyToVisualTree(shown), DispatcherPriority.Loaded)
+                End If
             End If
+        End Sub
+
+        Private _settingsPreloadTimer As DispatcherTimer
+
+        ''' <summary>Zeitpunkt der letzten Eingabe (Maus, Taste, Rad) in Millisekunden seit Start.</summary>
+        Private _lastInputTick As Long = Environment.TickCount64
+
+        ''' <summary>So lange muss die Oberflaeche unbedient sein, bevor die Einstellungen vorab
+        ''' entstehen.</summary>
+        Private Const SettingsPreloadIdleMilliseconds As Long = 10000
+
+        Private Sub NoteUserInput(sender As Object, e As RoutedEventArgs)
+            _lastInputTick = Environment.TickCount64
+        End Sub
+
+        ''' <summary>Darf der Vorabbau jetzt einen Schritt tun? Nur in der Galerie, ohne Dialog, und
+        ''' wenn die letzte Eingabe lange genug her ist.</summary>
+        Private Function CanContinuePreload(quietMilliseconds As Long) As Boolean
+            Dim vm = TryCast(DataContext, MainWindowViewModel)
+            If vm Is Nothing OrElse vm.CurrentMode <> AppMode.Gallery OrElse vm.IsDialogOpen Then Return False
+            Return Environment.TickCount64 - _lastInputTick >= quietMilliseconds
+        End Function
+
+        ''' <summary>Ruhe, die zwischen zwei Schritten des Vorabbaus mindestens herrschen muss.</summary>
+        Private Const PreloadStepQuietMilliseconds As Long = 500
+
+        ''' <summary>Baut die Einstellungen VORAB, damit schon das erste Oeffnen so schnell ist wie
+        ''' jedes weitere. Gemessen kostete das erste Betreten bis zu drei Sekunden (Aufbau der
+        ''' ueber viertausend Zeilen XAML, Stile, Vorlagen und das erste Layout), jedes weitere
+        ''' unter einer Zehntelsekunde, weil die Ansicht danach im Baum bleibt.
+        '''
+        ''' NUR WENN NIEMAND BEDIENT, UND IN HAEPPCHEN. Alles davon muss auf dem Anzeigefaden
+        ''' laufen, Avalonia erlaubt Steuerelemente nirgends sonst. In einem Stueck hielt es den
+        ''' Faden drei Sekunden an und traf das Rollen durch die erste Galerie. Deshalb beginnt es
+        ''' erst nach zehn Sekunden ohne Eingabe, und danach geht es Abschnitt fuer Abschnitt weiter
+        ''' (siehe <see cref="PreloadModeView"/>): kommt eine Eingabe, wartet der naechste Schritt,
+        ''' bis wieder eine halbe Sekunde Ruhe ist. Wer gerade bedient, wartet hoechstens auf den
+        ''' einen Schritt, der schon laeuft.</summary>
+        Private Sub StartSettingsPreload()
+            If _settingsPreloadTimer IsNot Nothing Then Return
+            ' Auch schon behandelte Ereignisse zaehlen: die Galerie faengt Klicks und Rad selbst ab.
+            Me.AddHandler(InputElement.PointerMovedEvent, AddressOf NoteUserInput, RoutingStrategies.Tunnel Or RoutingStrategies.Bubble, handledEventsToo:=True)
+            Me.AddHandler(InputElement.PointerPressedEvent, AddressOf NoteUserInput, RoutingStrategies.Tunnel Or RoutingStrategies.Bubble, handledEventsToo:=True)
+            Me.AddHandler(InputElement.PointerWheelChangedEvent, AddressOf NoteUserInput, RoutingStrategies.Tunnel Or RoutingStrategies.Bubble, handledEventsToo:=True)
+            Me.AddHandler(InputElement.KeyDownEvent, AddressOf NoteUserInput, RoutingStrategies.Tunnel Or RoutingStrategies.Bubble, handledEventsToo:=True)
+            _lastInputTick = Environment.TickCount64
+            _settingsPreloadTimer = New DispatcherTimer With {.Interval = TimeSpan.FromSeconds(2)}
+            AddHandler _settingsPreloadTimer.Tick,
+                Sub(s, e)
+                    Dim vm = TryCast(DataContext, MainWindowViewModel)
+                    If vm Is Nothing OrElse vm.Settings Is Nothing OrElse _modeViews.ContainsKey(vm.Settings) Then
+                        _settingsPreloadTimer.Stop()
+                        Return
+                    End If
+                    If Not CanContinuePreload(SettingsPreloadIdleMilliseconds) Then Return
+                    _settingsPreloadTimer.Stop()
+                    Dispatcher.UIThread.Post(Sub() PreloadModeView(vm.Settings), DispatcherPriority.ApplicationIdle)
+                End Sub
+            _settingsPreloadTimer.Start()
+        End Sub
+
+        ' Der laufende Vorabbau: welche Ansicht, wohin die Abschnitte gehoeren und welche noch fehlen.
+        Private _preloadContent As Object
+        Private _preloadSectionsPanel As Panel
+        Private ReadOnly _preloadPending As New Queue(Of Control)()
+        Private _preloadStepTimer As DispatcherTimer
+
+        ''' <summary>Vorab gebaute Ansichten, die noch nie gezeigt wurden.</summary>
+        Private ReadOnly _preloadedNotShown As New HashSet(Of Control)()
+
+        ''' <summary>Name des Panels, dessen Kinder der Vorabbau einzeln nachzieht.</summary>
+        Private Const PreloadSectionsPanelName As String = "SettingsSectionsPanel"
+
+        ''' <summary>Erster Schritt des Vorabbaus: die Ansicht erzeugen und OHNE ihre Abschnitte
+        ''' einhaengen. Sie bleibt dabei verborgen und kostet so kein Layout.
+        '''
+        ''' Die Abschnitte werden vor dem Einhaengen herausgenommen, denn das Anwenden der Stile beim
+        ''' Einhaengen ist der groesste Posten, und es faellt fuer den ganzen Teilbaum auf einmal an.
+        ''' Danach kommt je Schritt ein Abschnitt zurueck: einhaengen (Stile), von Hand vermessen (die
+        ''' Vorlagen entstehen erst dabei, und eine verborgene Ansicht vermisst das Layout nicht) und
+        ''' uebersetzen. Das Erzeugen selbst bleibt ein Stueck, dafuer muesste die Datei geteilt
+        ''' werden.</summary>
+        Private Sub PreloadModeView(content As Object)
+            Dim host = Me.FindControl(Of Panel)("MainContentHost")
+            If host Is Nothing OrElse content Is Nothing Then Return
+            If _modeViews.ContainsKey(content) Then Return
+            If Not CanContinuePreload(0) Then
+                ' In der Zwischenzeit hat sich etwas getan: spaeter noch einmal.
+                _settingsPreloadTimer?.Start()
+                Return
+            End If
+
+            Dim view As Control = Nothing
+            PerformanceTraceService.Measure("Vorab bauen: " & content.GetType().Name,
+                Sub()
+                    view = _viewLocator.Build(content)
+                    If view Is Nothing Then Return
+                    view.DataContext = content
+                    view.IsVisible = False
+                    _preloadSectionsPanel = view.FindControl(Of Panel)(PreloadSectionsPanelName)
+                    _preloadPending.Clear()
+                    If _preloadSectionsPanel IsNot Nothing Then
+                        For Each child In _preloadSectionsPanel.Children.ToList()
+                            _preloadPending.Enqueue(child)
+                        Next
+                        _preloadSectionsPanel.Children.Clear()
+                    End If
+                    _modeViews(content) = view
+                    _preloadContent = content
+                    _preloadedNotShown.Add(view)
+                    host.Children.Add(view)
+                    LocalizationService.ApplyTo(view)
+                End Sub)
+            If view Is Nothing Then Return
+            SchedulePreloadStep()
+        End Sub
+
+        Private Sub SchedulePreloadStep()
+            If _preloadContent Is Nothing Then Return
+            If _preloadPending.Count = 0 Then
+                FinishPreload()
+                Return
+            End If
+            If CanContinuePreload(PreloadStepQuietMilliseconds) Then
+                Dispatcher.UIThread.Post(AddressOf RunPreloadStep, DispatcherPriority.ApplicationIdle)
+                Return
+            End If
+            ' Jemand bedient gerade: in einer halben Sekunde wieder nachsehen.
+            If _preloadStepTimer Is Nothing Then
+                _preloadStepTimer = New DispatcherTimer With {.Interval = TimeSpan.FromMilliseconds(PreloadStepQuietMilliseconds)}
+                AddHandler _preloadStepTimer.Tick,
+                    Sub(s, e)
+                        _preloadStepTimer.Stop()
+                        SchedulePreloadStep()
+                    End Sub
+            End If
+            _preloadStepTimer.Start()
+        End Sub
+
+        Private Sub RunPreloadStep()
+            If _preloadContent Is Nothing Then Return
+            If _preloadPending.Count = 0 OrElse Not CanContinuePreload(PreloadStepQuietMilliseconds) Then
+                SchedulePreloadStep()
+                Return
+            End If
+            Dim section = _preloadPending.Dequeue()
+            PerformanceTraceService.Measure("Vorab bauen: Abschnitt",
+                Sub() AttachPreloadSection(section, measure:=True))
+            SchedulePreloadStep()
+        End Sub
+
+        ''' <summary>Haengt einen Abschnitt wieder an seinen Platz. Vermessen wird mit der Breite, die
+        ''' die Seite hoechstens hat; trifft sie nicht genau, misst das echte Layout nach, aber Stile
+        ''' und Vorlagen stehen dann schon.</summary>
+        Private Sub AttachPreloadSection(section As Control, measure As Boolean)
+            If _preloadSectionsPanel Is Nothing OrElse section Is Nothing Then Return
+            _preloadSectionsPanel.Children.Add(section)
+            If measure Then
+                Dim width = _preloadSectionsPanel.MaxWidth
+                If Double.IsNaN(width) OrElse Double.IsInfinity(width) OrElse width <= 0 Then width = 900
+                section.Measure(New Size(width, Double.PositiveInfinity))
+                LocalizationService.ApplyToVisualTree(section)
+            End If
+            LocalizationService.ApplyTo(section)
+        End Sub
+
+        ''' <summary>Zieht alle noch fehlenden Abschnitte auf einmal nach. Beim Betreten der Seite
+        ''' mitten im Vorabbau muss sie vollstaendig sein; auf den Rest wartet man dann eben.
+        ''' Vermessen wird hier nicht, das macht gleich das echte Layout.</summary>
+        Private Sub CompletePreloadNow()
+            If _preloadContent Is Nothing Then Return
+            While _preloadPending.Count > 0
+                AttachPreloadSection(_preloadPending.Dequeue(), measure:=False)
+            End While
+            FinishPreload()
+        End Sub
+
+        Private Sub FinishPreload()
+            _preloadStepTimer?.Stop()
+            _preloadContent = Nothing
+            _preloadSectionsPanel = Nothing
+        End Sub
+
+        ''' <summary>Ein geschlossenes Fenster baut nichts mehr vorab.</summary>
+        Private Sub StopSettingsPreload()
+            _settingsPreloadTimer?.Stop()
+            FinishPreload()
         End Sub
 
         Private Sub HandleDataContextChanged(sender As Object, e As EventArgs)

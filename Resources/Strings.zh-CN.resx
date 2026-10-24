@@ -8907,15 +8907,6 @@
   <data name="Farbrauschen_bei_unbearbeiteten_RAWs_0f8c070b" xml:space="preserve">
     <value>未编辑 RAW 的彩色杂色</value>
   </data>
-  <data name="Farbflecken_bei_unbearbeiteten_RAWs_9c08c37c" xml:space="preserve">
-    <value>未编辑 RAW 的色斑</value>
-  </data>
-  <data name="Startwert_des_Reglers_Farbrauschen_wenn_ein_RAW__3af7cb22" xml:space="preserve">
-    <value>打开未编辑的 RAW 时“彩色杂色”滑块的起始值。可平滑细小的彩色颗粒，尤其在高 ISO 时，但在干净的照片上也会去掉细微的颜色，并且每次切换图片都需要计算时间。0 表示关闭。</value>
-  </data>
-  <data name="Startwert_des_Reglers_Farbflecken_wenn_ein_RAW_o_2d470b89" xml:space="preserve">
-    <value>打开未编辑的 RAW 时“色斑”滑块的起始值。去除粗大的色斑，但在干净的照片上也会去掉细微的颜色，并且每次切换图片都会明显耗时。0 表示关闭。</value>
-  </data>
   <data name="Anpassungen_anwenden_ab535739" xml:space="preserve">
     <value>应用调整</value>
   </data>
@@ -10010,5 +10001,50 @@
   </data>
   <data name="TAB_springt_zum_n_chsten_Namen_und_nach_dem_letz_6e48d7a8" xml:space="preserve">
     <value>按 TAB 跳到下一个名称，最后一个之后跳到下一张照片。</value>
+  </data>
+  <data name="Ganzes_Bild_in_der_Rasteransicht_de99f0dc" xml:space="preserve">
+    <value>网格视图中显示完整图片</value>
+  </data>
+  <data name="Zeigt_das_Bild_in_der_Kachel_ganz_hochkant_oder__4c26da70" xml:space="preserve">
+    <value>在缩略图中显示完整图片，无论纵向还是横向，而不是裁切到缩略图大小。缩略图大小保持不变。</value>
+  </data>
+  <data name="Sch_rfe_bei_unbearbeiteten_RAWs_5cc1baef" xml:space="preserve">
+    <value>未编辑 RAW 的锐化</value>
+  </data>
+  <data name="Startwert_des_Reglers_Sch_rfe_wenn_ein_RAW_ohne__3353bd5a" xml:space="preserve">
+    <value>打开未编辑的 RAW 时“锐化”滑块的初始值。已编辑的图片保留其数值。0 表示关闭。</value>
+  </data>
+  <data name="Rauschen_bei_unbearbeiteten_RAWs_75fa6c79" xml:space="preserve">
+    <value>未编辑 RAW 的噪点</value>
+  </data>
+  <data name="Startwert_des_Reglers_Rauschen_wenn_ein_RAW_ohne_5ff29d6e" xml:space="preserve">
+    <value>打开未编辑的 RAW 时“噪点”滑块的初始值。平滑亮度噪点，每次切换图片都需要计算时间。已编辑的图片保留其数值。0 表示关闭。</value>
+  </data>
+  <data name="Auf_diesem_Bild_wurde_noch_nicht_nach_Personen_g_91c84fe1" xml:space="preserve">
+    <value>尚未在此图像中搜索人物。</value>
+  </data>
+  <data name="Nach_Personen_suchen_4d179a63" xml:space="preserve">
+    <value>搜索人物</value>
+  </data>
+  <data name="Dieses_Bild_lokal_nach_Gesichtern_durchsuchen_b0d45f52" xml:space="preserve">
+    <value>在本地搜索此图像中的人脸</value>
+  </data>
+  <data name="Personen_werden_gesucht_5a65f4f5" xml:space="preserve">
+    <value>正在搜索人物。</value>
+  </data>
+  <data name="Dieses_Bild_lie_sich_f_r_die_Suche_nach_Personen_113c1add" xml:space="preserve">
+    <value>无法读取此图像以搜索人物。</value>
+  </data>
+  <data name="Die_Suche_nach_Personen_ist_fehlgeschlagen_934373e4" xml:space="preserve">
+    <value>搜索人物失败。</value>
+  </data>
+  <data name="Startwert_des_Reglers_Farbrauschen_wenn_ein_RAW__3efc575e" xml:space="preserve">
+    <value>打开未编辑的 RAW 时“色彩噪点”滑块的初始值。去除图片中测得的色彩噪点，保留真实色彩。每次切换图片都需要计算时间。0 表示关闭。</value>
+  </data>
+  <data name="Preset_St_rke_16aedefe" xml:space="preserve">
+    <value>预设强度</value>
+  </data>
+  <data name="Wie_stark_das_eben_angewendete_Preset_wirkt_0_is_0e0abfab" xml:space="preserve">
+    <value>刚应用的预设作用多强：0 为不使用预设的图片，100 为预设，200 为其更改加倍。</value>
   </data>
 </root>

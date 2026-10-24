@@ -39,10 +39,51 @@
   buttons, turns the stacking of bursts and RAW+JPEG pairs on and off. It is the same setting as
   in Settings, so both always show the same state.
 
+- **Sharpening and colour noise reduction like the reference:** sharpening now works on brightness
+  only, so it no longer strengthens colour fringes and colour noise, and strong edges get smaller
+  halos. Colour noise reduction measures the noise in each picture and removes only that, instead
+  of washing out real colour. Both were matched against renders of the reference program, so
+  presets with sharpening and noise reduction come out much closer. Pictures that already use
+  sharpening or colour noise reduction will look somewhat different.
+
+- **Preset amount:** after applying an XMP preset that allows it, an Amount slider appears in the
+  preset panel. 0 % is the picture without the preset, 100 % the preset and 200 % its changes
+  twice. It goes away with the next edit, as in the reference program.
+
+- **Presets with colour curves apply completely:** presets that combine red, green and blue curves
+  with a tone curve, about a third of common presets, used to leave out their tone sliders, colour
+  mixer, calibration, sharpening and noise reduction. They now apply in full and come out clearly
+  closer to the reference program. Colour curves without a tone curve are ignored there, and now
+  here as well.
+
+- **Starting values for sharpening and noise:** a RAW without edits now starts with sharpening 40
+  and colour noise reduction 25, like in the reference program. In Settings you can change these
+  starting values and set one for noise reduction as well. Resetting all edits returns to them.
+
+- **Whole pictures in the gallery grid:** a new setting shows each picture complete in its tile,
+  portrait or landscape, instead of cropping it to the tile.
+
 - **Sensor border removed by default:** RAW files now start without the thin strip of unusable
   pixels at the edge of the sensor, in the gallery, the viewer and the editor. You can switch it
   off for a single picture under lens correction. Pictures you have already edited stay as they
   were.
+
+- **Search a single photo for people:** when a photo has never been searched for faces, the People
+  tab in the sidebar now says so and offers a button that searches just this photo. The message
+  that nobody was recognised only appears once the photo has actually been searched.
+
+- **People in RAW and HEIC photos:** face recognition now also finds people in RAW files, using
+  the picture the camera embedded in them, and in HEIC, JPEG XL, TIFF and PSD files. Before, these
+  photos were skipped without a word. Faces in RAW files also show their thumbnails in the sidebar
+  and are written to the sidecar file like those in JPEGs. Photos in these formats are searched
+  again the next time you search for faces. A RAW with the JPEG the camera saved next to it counts
+  as one photo for a person.
+
+- **Undo a reject from the tile:** clicking the red reject badge on a gallery tile takes back the
+  reject for that photo.
+
+- **Settings open faster:** the settings page is now prepared bit by bit while you are not using
+  the app, so opening it for the first time is as quick as every time after.
 
 ### Fixes
 

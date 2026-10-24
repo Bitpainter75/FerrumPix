@@ -69,6 +69,7 @@ Namespace ViewModels
         Private _galleryTileCaptionRight As String = TileCaptionSettings.DefaultRight
         Private _filmstripTileFrame As Boolean = True
         Private _filmstripTilesKeepAspect As Boolean = False
+        Private _galleryTilesKeepAspect As Boolean = False
         Private _galleryTileGap As Integer = 10
         Private _filmstripTileGap As Integer = 10
         Private _editorSaveAsOpensTarget As Boolean = False
@@ -246,6 +247,7 @@ Namespace ViewModels
         Private _savedGalleryTileCaptionRight As String = TileCaptionSettings.DefaultRight
         Private _savedFilmstripTileFrame As Boolean = True
         Private _savedFilmstripTilesKeepAspect As Boolean = False
+        Private _savedGalleryTilesKeepAspect As Boolean = False
         Private _savedGalleryTileGap As Integer = 10
         Private _savedFilmstripTileGap As Integer = 10
         Private _savedEditorSaveAsOpensTarget As Boolean = False
@@ -759,20 +761,35 @@ Namespace ViewModels
         End Property
         Private _uneditedRawColorNoise As Integer
 
-        ''' <summary>Startwert "Farbflecken" (grobe Farbrauschminderung) fuer eine RAW ohne Rezept,
-        ''' 0 bis 100, 0 = aus, und das ist die Vorgabe.</summary>
-        Public Property UneditedRawCoarseColorNoise As Integer
+        ''' <summary>Startwert "Schaerfe" fuer eine RAW ohne Rezept, 0 bis 150, 0 = aus. Wirkt beim
+        ''' naechsten Oeffnen eines unbearbeiteten RAWs, nicht auf schon bearbeitete.</summary>
+        Public Property UneditedRawSharpness As Integer
             Get
-                Return _uneditedRawCoarseColorNoise
+                Return _uneditedRawSharpness
+            End Get
+            Set(value As Integer)
+                value = Math.Max(0, Math.Min(150, value))
+                If _uneditedRawSharpness = value Then Return
+                Me.RaiseAndSetIfChanged(_uneditedRawSharpness, value)
+                AppSettingsService.Update(Sub(s) s.UneditedRawSharpness = value)
+            End Set
+        End Property
+        Private _uneditedRawSharpness As Integer
+
+        ''' <summary>Startwert "Rauschen" (Helligkeit) fuer eine RAW ohne Rezept, 0 bis 100, 0 = aus.</summary>
+        Public Property UneditedRawNoiseReduction As Integer
+            Get
+                Return _uneditedRawNoiseReduction
             End Get
             Set(value As Integer)
                 value = Math.Max(0, Math.Min(100, value))
-                If _uneditedRawCoarseColorNoise = value Then Return
-                Me.RaiseAndSetIfChanged(_uneditedRawCoarseColorNoise, value)
-                AppSettingsService.Update(Sub(s) s.UneditedRawCoarseColorNoise = value)
+                If _uneditedRawNoiseReduction = value Then Return
+                Me.RaiseAndSetIfChanged(_uneditedRawNoiseReduction, value)
+                AppSettingsService.Update(Sub(s) s.UneditedRawNoiseReduction = value)
             End Set
         End Property
-        Private _uneditedRawCoarseColorNoise As Integer = CInt(ImageAdjustments.UneditedRawCoarseColorNoise)
+        Private _uneditedRawNoiseReduction As Integer
+
 
         ''' <summary>Nur unter macOS sichtbar, und der Grund ist NICHT, dass es das Problem
         ''' anderswo nicht gäbe.
@@ -2037,6 +2054,21 @@ Namespace ViewModels
             Set(value As Boolean)
                 If _galleryTileFrame = value Then Return
                 Me.RaiseAndSetIfChanged(_galleryTileFrame, value)
+                _mainVm?.RefreshLayoutBindings()
+                SaveLayoutSettings()
+            End Set
+        End Property
+
+        ''' <summary>Im Raster der Galerie das ganze Bild in der Kachel zeigen, hochkant oder quer,
+        ''' statt es auf die Kachelflaeche zuzuschneiden (GalleryViewModel.TileImageStretch). Die
+        ''' Fotowand zeigt es ohnehin ganz.</summary>
+        Public Property GalleryTilesKeepAspect As Boolean
+            Get
+                Return _galleryTilesKeepAspect
+            End Get
+            Set(value As Boolean)
+                If _galleryTilesKeepAspect = value Then Return
+                Me.RaiseAndSetIfChanged(_galleryTilesKeepAspect, value)
                 _mainVm?.RefreshLayoutBindings()
                 SaveLayoutSettings()
             End Set
@@ -4376,7 +4408,8 @@ Namespace ViewModels
             _useCameraColorTable = _appSettings.UseCameraColorTable
             _lensCorrectionEnabled = _appSettings.LensCorrectionEnabled
             _uneditedRawColorNoise = Math.Max(0, Math.Min(100, _appSettings.UneditedRawColorNoise))
-            _uneditedRawCoarseColorNoise = Math.Max(0, Math.Min(100, _appSettings.UneditedRawCoarseColorNoise))
+            _uneditedRawSharpness = Math.Max(0, Math.Min(150, _appSettings.UneditedRawSharpness))
+            _uneditedRawNoiseReduction = Math.Max(0, Math.Min(100, _appSettings.UneditedRawNoiseReduction))
             _rawDemosaicAlgorithm = AppSettingsService.NormalizeRawDemosaicAlgorithm(_appSettings.RawDemosaicAlgorithm)
             _windowColorSpaceMethod = MacWindowColorSpaceService.NormalizeMethod(_appSettings.MacWindowColorSpaceMethod)
             _macRenderingMode = AppSettingsService.NormalizeMacRenderingMode(_appSettings.MacRenderingMode)
@@ -4410,6 +4443,7 @@ Namespace ViewModels
             _galleryTileCaptionRight = TileCaptionSettings.Format(TileCaptionSettings.Parse(_appSettings.GalleryTileCaptionRight))
             _filmstripTileFrame = _appSettings.FilmstripTileFrame
             _filmstripTilesKeepAspect = _appSettings.FilmstripTilesKeepAspect
+            _galleryTilesKeepAspect = _appSettings.GalleryTilesKeepAspect
             _galleryTileGap = AppSettingsService.NormalizeGalleryTileGap(_appSettings.GalleryTileGap)
             _filmstripTileGap = AppSettingsService.NormalizeFilmstripTileGap(_appSettings.FilmstripTileGap)
             _editorSaveAsOpensTarget = _appSettings.EditorSaveAsOpensTarget
@@ -4835,6 +4869,7 @@ Namespace ViewModels
             _savedGalleryTileCaptionRight = _galleryTileCaptionRight
             _savedFilmstripTileFrame = _filmstripTileFrame
             _savedFilmstripTilesKeepAspect = _filmstripTilesKeepAspect
+            _savedGalleryTilesKeepAspect = _galleryTilesKeepAspect
             _savedGalleryTileGap = _galleryTileGap
             _savedFilmstripTileGap = _filmstripTileGap
             _savedEditorSaveAsOpensTarget = _editorSaveAsOpensTarget
@@ -5015,6 +5050,7 @@ Namespace ViewModels
             SetGalleryTileCaption(_savedGalleryTileCaptionLeft, _savedGalleryTileCaptionRight)
             FilmstripTileFrame = _savedFilmstripTileFrame
             FilmstripTilesKeepAspect = _savedFilmstripTilesKeepAspect
+            GalleryTilesKeepAspect = _savedGalleryTilesKeepAspect
             GalleryTileGap = _savedGalleryTileGap
             FilmstripTileGap = _savedFilmstripTileGap
             EditorSaveAsOpensTarget = _savedEditorSaveAsOpensTarget
@@ -5154,6 +5190,7 @@ Namespace ViewModels
             SetGalleryTileCaption(TileCaptionSettings.DefaultLeft, TileCaptionSettings.DefaultRight)
             FilmstripTileFrame = True
             FilmstripTilesKeepAspect = False
+            GalleryTilesKeepAspect = False
             GalleryTileGap = 10
             FilmstripTileGap = 10
             EditorSaveAsOpensTarget = False
@@ -5463,6 +5500,7 @@ Namespace ViewModels
                                           s.GalleryWallBadgesOnHover = _galleryWallBadgesOnHover
                                           s.FilmstripTileFrame = _filmstripTileFrame
                                           s.FilmstripTilesKeepAspect = _filmstripTilesKeepAspect
+                                          s.GalleryTilesKeepAspect = _galleryTilesKeepAspect
                                           s.GalleryTileGap = _galleryTileGap
                                           s.FilmstripTileGap = _filmstripTileGap
                                           s.GalleryShowFooter = _galleryShowFooter

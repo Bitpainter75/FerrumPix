@@ -313,6 +313,10 @@ Namespace Services
         ''' Hochformat an einer voellig anderen Stelle.</summary>
         Private Shared Function DecodeForFace(path As String, faceSize As Double, ByRef scale As Double) As SkiaSharp.SKBitmap
             scale = 1
+            ' RAW, HEIF und Co.: dieselbe Quelle wie beim Suchen, in voller Groesse. Verkleinert
+            ' dekodieren kann nur der JPEG-Weg unten, und bei RAW ist die Vorschau ohnehin kleiner
+            ' als das Foto.
+            If FaceScanRunner.UsesConvertedSource(path) Then Return FaceScanRunner.DecodeUprightForFaces(path)
             Dim decoded As SkiaSharp.SKBitmap = Nothing
             Dim origin As SkiaSharp.SKEncodedOrigin
             Using codec = SkiaSharp.SKCodec.Create(path)
@@ -359,11 +363,12 @@ Namespace Services
             Next
         End Sub
 
-        ''' <summary>Alle Ausschnitte eines Bildes aus EINEM Decode. Ist die Datei nicht lesbar - ein
-        ''' RAW etwa dekodiert Skia nicht -, kommt eine Liste voller Nothing zurueck: die Zeile bleibt
-        ''' dann ohne Bild stehen, was immer noch besser ist als gar keine Zeile.
+        ''' <summary>Alle Ausschnitte eines Bildes aus EINEM Decode. Ist die Datei nicht lesbar - eine
+        ''' RAW ohne eingebettete Vorschau etwa -, kommt eine Liste voller Nothing zurueck: die Zeile
+        ''' bleibt dann ohne Bild stehen, was immer noch besser ist als gar keine Zeile.
         '''
-        ''' Auch hier AUFRECHT: die Boxen kommen aus dem gedrehten Bild (siehe DecodeForFace).</summary>
+        ''' Auch hier AUFRECHT und aus derselben Quelle wie beim Suchen
+        ''' (FaceScanRunner.DecodeUprightForFaces): die Boxen liegen in deren Bildpunkten.</summary>
         Private Shared Function CropAll(entries As IReadOnlyList(Of PersonFaceEntry), filePath As String,
                                         previewBytes As Byte()) As List(Of Bitmap)
             Dim result As New List(Of Bitmap)()
@@ -371,8 +376,7 @@ Namespace Services
             Try
                 source = If(previewBytes IsNot Nothing,
                             DecodePreviewOwned(previewBytes),
-                            FaceScanRunner.ApplyOrientationOwned(SkiaSharp.SKBitmap.Decode(filePath),
-                                                                 ImageOrientationService.ReadOrigin(filePath)))
+                            FaceScanRunner.DecodeUprightForFaces(filePath))
                 For Each entry In entries
                     result.Add(If(source Is Nothing, Nothing,
                                   CropFace(source, entry.BoxX, entry.BoxY, entry.BoxWidth, entry.BoxHeight)))

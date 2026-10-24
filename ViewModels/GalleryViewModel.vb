@@ -1610,11 +1610,14 @@ Namespace ViewModels
         End Property
 
         ''' <summary>Wie das Bild seine Flaeche fuellt. Im Raster ist die Kachel quadratisch und das
-        ''' Bild wird zugeschnitten (UniformToFill), in der Fotowand hat die Kachel das Verhaeltnis
-        ''' des Bildes, also passt es ganz hinein.</summary>
+        ''' Bild wird zugeschnitten (UniformToFill), ausser die Einstellung will es ganz sehen
+        ''' (GalleryTilesKeepAspect): dann steht es hochkant oder quer auf dem Grund der Kachel. In
+        ''' der Fotowand hat die Kachel das Verhaeltnis des Bildes, also passt es ganz hinein.</summary>
         Public ReadOnly Property TileImageStretch As Avalonia.Media.Stretch
             Get
-                Return If(IsWallView, Avalonia.Media.Stretch.Uniform, Avalonia.Media.Stretch.UniformToFill)
+                Dim whole = IsWallView OrElse (_mainVm IsNot Nothing AndAlso _mainVm.Settings IsNot Nothing AndAlso
+                                               _mainVm.Settings.GalleryTilesKeepAspect)
+                Return If(whole, Avalonia.Media.Stretch.Uniform, Avalonia.Media.Stretch.UniformToFill)
             End Get
         End Property
 

@@ -65,6 +65,18 @@
                                    Width="20" Height="20" />
                 </Button>
             </Grid>
+            <!-- Staerke des zuletzt angewendeten Presets (EditorViewModel.PresetAmount): nur
+                 solange das Preset frisch ist und es eine Staerke erlaubt. -->
+            <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center"
+                  IsVisible="{Binding HasPresetAmount}">
+                <TextBlock Text="Stärke" Foreground="{DynamicResource FP.Text.Secondary}"
+                           VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}"
+                           ToolTip.Tip="Wie stark das eben angewendete Preset wirkt: 0 ist das Bild ohne Preset, 100 das Preset, 200 seine Änderungen doppelt." />
+                <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="200" DefaultValue="100"
+                                   Value="{Binding PresetAmount}" Margin="0,0" />
+                <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                         Value="{Binding PresetAmount, Mode=TwoWay}" Minimum="0" Maximum="200" />
+            </Grid>
             <StackPanel Spacing="3" Margin="0,2,0,2">
                 <TextBlock Text="Zusätzlich anwenden" FontSize="{DynamicResource FP.Font.Small}"
                            Foreground="{DynamicResource FP.Text.Muted}" />

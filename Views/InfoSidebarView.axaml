@@ -637,9 +637,39 @@
                                 IsVisible="{Binding ShowNoPeopleHint}"
                                 Focusable="True"
                                 KeyDown="OnNoPeopleHintKeyDown">
-                            <TextBlock Text="Auf diesem Bild wurde niemand erkannt."
-                                       Foreground="{DynamicResource FP.Text.Secondary}"
-                                       TextWrapping="Wrap"/>
+                            <!-- Was der Hinweis sagt, haengt daran, ob ueberhaupt gesucht wurde:
+                                 "niemand erkannt" ist nur nach einer Suche wahr. Ohne Suche steht
+                                 hier der Knopf, der genau dieses Bild durchsucht. -->
+                            <StackPanel Spacing="8">
+                                <TextBlock Text="Auf diesem Bild wurde niemand erkannt."
+                                           IsVisible="{Binding ShowNobodyFound}"
+                                           Foreground="{DynamicResource FP.Text.Secondary}"
+                                           TextWrapping="Wrap"/>
+                                <TextBlock Text="Auf diesem Bild wurde noch nicht nach Personen gesucht."
+                                           IsVisible="{Binding ShowFaceScanOffer}"
+                                           Foreground="{DynamicResource FP.Text.Secondary}"
+                                           TextWrapping="Wrap"/>
+                                <Button Classes="ghost" Padding="10,5" HorizontalAlignment="Left"
+                                        IsVisible="{Binding ShowFaceScanOffer}"
+                                        Command="{Binding ScanFacesCommand}"
+                                        ToolTip.Tip="Dieses Bild lokal nach Gesichtern durchsuchen">
+                                    <TextBlock Text="Nach Personen suchen" FontSize="{DynamicResource FP.Font.Small}"/>
+                                </Button>
+                                <TextBlock Text="Personen werden gesucht."
+                                           IsVisible="{Binding IsFaceScanning}"
+                                           Foreground="{DynamicResource FP.Text.Secondary}"
+                                           TextWrapping="Wrap"/>
+                                <TextBlock Text="Dieses Bild ließ sich für die Suche nach Personen nicht lesen."
+                                           IsVisible="{Binding ShowFaceScanUnreadable}"
+                                           Foreground="{DynamicResource FP.Text.Secondary}"
+                                           TextWrapping="Wrap"/>
+                                <TextBlock Classes="no-translate"
+                                           Text="{Binding FaceScanStatus}"
+                                           IsVisible="{Binding HasFaceScanStatus}"
+                                           Foreground="{DynamicResource FP.Text.Muted}"
+                                           FontSize="{DynamicResource FP.Font.Small}"
+                                           TextWrapping="Wrap"/>
+                            </StackPanel>
                         </Border>
                         <StackPanel Spacing="4" IsVisible="{Binding HasPeople}">
                             <TextBlock Text="Name eintragen benennt die ganze Gruppe."

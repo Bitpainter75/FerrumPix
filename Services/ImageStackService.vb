@@ -91,6 +91,13 @@ Namespace Services
         Private Shared ReadOnly CompanionExtensions As New HashSet(Of String)(
             {".jpg", ".jpeg", ".heic", ".heif", ".hif"}, StringComparer.OrdinalIgnoreCase)
 
+        ''' <summary>Kann diese Datei der Endung nach die Begleitdatei einer RAW sein (JPEG oder
+        ''' HEIF)? Ob sie es ist, entscheidet <see cref="IsCompanion"/>; die Zaehlung der Personen
+        ''' braucht nur die Endung (siehe LibraryService.CountPhotos).</summary>
+        Public Shared Function IsCompanionFormat(filePath As String) As Boolean
+            Return Not String.IsNullOrEmpty(filePath) AndAlso CompanionExtensions.Contains(Path.GetExtension(filePath))
+        End Function
+
         Private Sub New()
         End Sub
 

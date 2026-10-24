@@ -23286,6 +23286,9 @@ Namespace ViewModels
             HideMaskOverlayAfterChange()
 
             If _suppressUndoCapture Then Return
+            ' Jeder andere Regler beendet die Preset-Staerke; sie rechnet nur zwischen den beiden
+            ' Staenden um das Preset herum, eine Aenderung daneben ginge beim naechsten Zug verloren.
+            If Not String.Equals(propertyName, NameOf(PresetAmount), StringComparison.Ordinal) Then EndPresetAmount()
 
             ' EIN ZUG AM REGLER IST EIN SCHRITT, und er entsteht beim LOSLASSEN. Waehrend des Zuges
             ' liegt der Stand von vorher schon bereit (BeginSliderUndoGesture) und bekommt hier nur
@@ -23709,6 +23712,7 @@ Namespace ViewModels
             If correctionLabel IsNot Nothing Then Return correctionLabel
 
             Select Case propertyName
+                Case NameOf(PresetAmount) : Return LocalizationService.T("Preset-Stärke")
                 ' Wortgleich mit den Ueberschriften im Auswahlwerkzeug.
                 Case "AnnotationAlign" : Return LocalizationService.T("Ausrichten")
                 Case "AnnotationDistribute" : Return LocalizationService.T("Verteilen")
@@ -24052,6 +24056,8 @@ Namespace ViewModels
             ' Ein noch offener Reglerzug gehoert VOR diese Aktion auf den Stapel, sonst stuende sein
             ' Stand von vorher hinterher ueber ihr.
             EndSliderUndoGesture()
+            ' Jede andere Aktion beendet die Preset-Staerke.
+            EndPresetAmount()
             ResetUndoCapture()
             Return New UndoEntry With {.Adjustments = GetCurrentAdjustments(),
                                        .WarpSession = CaptureWarpSession(),
@@ -24223,6 +24229,7 @@ Namespace ViewModels
             ' Ein offener Reglerzug wird erst zum Schritt gemacht, sonst nimmt Strg+Z den Schritt
             ' DAVOR zurueck und der eben gezogene Wert bliebe stehen.
             EndSliderUndoGesture()
+            EndPresetAmount()
             ' Auch Tastatur-Pfade (Strg+Z) respektieren die Commit-Sperre - siehe CanUndo.
             If _undoStack.Count = 0 OrElse _pendingWorkingCommits > 0 Then Return
             CommitSelectionAdjustModeToModel()
@@ -24477,6 +24484,7 @@ Namespace ViewModels
 
         Private Sub RedoAction()
             EndSliderUndoGesture()
+            EndPresetAmount()
             If _redoStack.Count = 0 OrElse _pendingWorkingCommits > 0 Then Return
             CommitSelectionAdjustModeToModel()
             ResetUndoCapture()
@@ -25105,6 +25113,10 @@ Namespace ViewModels
                 ' Beide Farbrausch-Startwerte kommen aus den Einstellungen; ohne diese Zeile fiele
                 ' "Farbrauschen" beim Zuruecksetzen auf null statt auf seinen Startwert.
                 _colorNoiseReduction = startwerte.ColorNoiseReduction
+                ' Ebenso Schaerfe und Rauschen, sobald dort ein Startwert eingestellt ist.
+                _sharpness = startwerte.Sharpness
+                _sharpenDetail = startwerte.SharpenDetail
+                _noiseReduction = startwerte.NoiseReduction
                 _exposure = startwerte.Exposure
                 ' Die Kamera-Farbkalibrierung gehoert genauso zum Startwert: ohne diese Zeilen
                 ' verloere eine RAW beim Zuruecksetzen ihre modellabhaengige Farbe.
@@ -25118,6 +25130,9 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(FarbrauschGrob))
                 Me.RaisePropertyChanged(NameOf(HasColorBlotches))
                 Me.RaisePropertyChanged(NameOf(ColorNoiseReduction))
+                Me.RaisePropertyChanged(NameOf(Sharpness))
+                Me.RaisePropertyChanged(NameOf(SharpenDetail))
+                Me.RaisePropertyChanged(NameOf(NoiseReduction))
                 Me.RaisePropertyChanged(NameOf(Exposure))
                 Me.RaisePropertyChanged(NameOf(CalibrationRedHue))
                 Me.RaisePropertyChanged(NameOf(CalibrationRedSaturation))
@@ -25136,6 +25151,7 @@ Namespace ViewModels
         End Function
 
         Private Sub ResetAdjustmentsInternal(Optional resetEditorUi As Boolean = False)
+            EndPresetAmount()
             ClearAutoAdjustState()
             ' Ein noch ausstehender Neuaufbau aus einem Objektivregler gehoert zum alten Stand.
             CancelPendingLensRebuild()
@@ -30728,6 +30744,9 @@ Namespace ViewModels
                 If look Is Nothing Then Return
 
                 PushUndo(LocalizationService.T("Preset angewendet"))
+                ' Der Stand VOR dem Preset, fuer die Preset-Staerke (nach PushUndo: das beendet eine
+                ' laufende Staerke des vorigen Presets).
+                Dim beforePreset = GetCurrentAdjustments()
                 _suppressUndoCapture = True
                 Dim profileNotice = ""
                 Try
@@ -30753,6 +30772,7 @@ Namespace ViewModels
 
                 RaiseExtendedAdjustmentProperties()
                 SetLastAppliedXmpPreset(xmpPath)
+                BeginPresetAmount(beforePreset, xmpPath)
                 ' AM RUECKGABEWERT entscheiden, nicht am angezeigten Text. Der Hinweis wird mit
                 ' T("Adobe-Profil erkannt: ") gebaut, die Abfrage stand auf T("Adobe-Profil erkannt:")
                 ' ohne Leerzeichen - zwei verschiedene Schluessel. Solange beide unuebersetzt sind,
@@ -30766,6 +30786,141 @@ Namespace ViewModels
                 StatusText = LocalizationService.T("XMP-Preset konnte nicht geladen werden: ") & ex.Message
             End Try
         End Sub
+
+        ' ── Preset-Staerke ──────────────────────────────────────────────────────────────────
+        '
+        ' Nach einem XMP-Preset, das es erlaubt (crs:SupportsAmount), steht im Preset-Panel der Regler
+        ' "Stärke" von 0 bis 200 Prozent. Er rechnet jeden Regler des Looks zwischen dem Stand VOR
+        ' dem Preset und dem MIT ihm: 0 ist das Bild ohne Preset, 100 das Preset, 200 seine
+        ' Aenderungen doppelt. Beide Staende werden beim Anwenden einmal festgehalten und jede
+        ' Staerke aus ihnen neu gerechnet; hin und her ziehen driftet also nicht. Gespeichert wird
+        ' nur das Ergebnis, wie beim Referenzprogramm. Jede andere Aenderung, Rueckgaengig,
+        ' Wiederholen und ein Bildwechsel beenden den Regler.
+        '
+        ' Wie sich die Regler dabei bewegen, hat die Referenz nicht dokumentiert und laesst sich
+        ' ueber den DNG-Konverter nicht messen: Zahlen gehen geradlinig, Kurven mischen ihre Ausgaben
+        ' an den Stuetzpunkten beider Kurven, Schalter und Texte nehmen ab 1 Prozent das Preset.
+        ' Ein Preset mit lokalen Korrekturen oder Geometrie bekommt keine Staerke; die liessen sich
+        ' nicht zwischen zwei Staenden rechnen.
+
+        Private _presetAmountBefore As ImageAdjustments
+        Private _presetAmountAfter As ImageAdjustments
+        Private _presetAmount As Double = 100
+        Private _applyingPresetAmount As Boolean
+
+        ''' <summary>Steht der Regler "Stärke" des zuletzt angewendeten Presets zur Verfügung?</summary>
+        Public ReadOnly Property HasPresetAmount As Boolean
+            Get
+                Return _presetAmountAfter IsNot Nothing
+            End Get
+        End Property
+
+        ''' <summary>Stärke des zuletzt angewendeten Presets, 0 bis 200 Prozent.</summary>
+        Public Property PresetAmount As Double
+            Get
+                Return _presetAmount
+            End Get
+            Set(value As Double)
+                value = Math.Max(0.0, Math.Min(200.0, value))
+                If _presetAmountAfter Is Nothing OrElse Math.Abs(_presetAmount - value) < 0.0001 Then Return
+                CaptureUndoState(NameOf(PresetAmount))
+                _presetAmount = value
+                Me.RaisePropertyChanged(NameOf(PresetAmount))
+                Dim blended = BlendPresetAmount(_presetAmountBefore, _presetAmountAfter, value / 100.0)
+                _applyingPresetAmount = True
+                _suppressUndoCapture = True
+                Try
+                    ApplyAdjustments(blended, scheduleRender:=False)
+                Finally
+                    _suppressUndoCapture = False
+                    _applyingPresetAmount = False
+                End Try
+                RaiseExtendedAdjustmentProperties()
+                RaiseResetButtonStateChanged()
+                SchedulePreviewForCurrentTarget()
+            End Set
+        End Property
+
+        Private Sub BeginPresetAmount(before As ImageAdjustments, xmpPath As String)
+            Dim after = GetCurrentAdjustments()
+            Dim layersBefore = If(before.MaskedAdjustmentLayers?.Count, 0)
+            Dim layersAfter = If(after.MaskedAdjustmentLayers?.Count, 0)
+            Dim geometryBefore = If(before.GeometryOperations?.Count, 0)
+            Dim geometryAfter = If(after.GeometryOperations?.Count, 0)
+            If Not XmpPresetService.PresetSupportsAmount(xmpPath) OrElse layersBefore <> layersAfter OrElse
+               geometryBefore <> geometryAfter Then
+                EndPresetAmount()
+                Return
+            End If
+            _presetAmountBefore = before
+            _presetAmountAfter = after
+            _presetAmount = 100
+            Me.RaisePropertyChanged(NameOf(PresetAmount))
+            Me.RaisePropertyChanged(NameOf(HasPresetAmount))
+        End Sub
+
+        Private Sub EndPresetAmount()
+            If _presetAmountAfter Is Nothing OrElse _applyingPresetAmount Then Return
+            _presetAmountBefore = Nothing
+            _presetAmountAfter = Nothing
+            Me.RaisePropertyChanged(NameOf(HasPresetAmount))
+        End Sub
+
+        ''' <summary>Die Regler des Looks bei Staerke <paramref name="k"/> (1 = Preset) zwischen
+        ''' <paramref name="before"/> und <paramref name="after"/>. Alles Uebrige kommt aus
+        ''' <paramref name="after"/>.</summary>
+        Friend Shared Function BlendPresetAmount(before As ImageAdjustments, after As ImageAdjustments, k As Double) As ImageAdjustments
+            Dim result = after.Clone()
+            For Each p In ImageAdjustments.PixelAdjustmentProperties()
+                Dim a = p.GetValue(before)
+                Dim b = p.GetValue(after)
+                If Equals(a, b) Then Continue For
+                If p.PropertyType Is GetType(Single) Then
+                    p.SetValue(result, CSng(BlendPresetNumber(p.Name, CSng(a), CSng(b), k)))
+                ElseIf p.PropertyType Is GetType(Double) Then
+                    p.SetValue(result, BlendPresetNumber(p.Name, CDbl(a), CDbl(b), k))
+                ElseIf p.PropertyType Is GetType(Integer) Then
+                    p.SetValue(result, CInt(Math.Round(BlendPresetNumber(p.Name, CInt(a), CInt(b), k))))
+                ElseIf p.PropertyType Is GetType(String) AndAlso p.Name.StartsWith("Curve", StringComparison.Ordinal) AndAlso
+                       p.Name.EndsWith("Points", StringComparison.Ordinal) Then
+                    p.SetValue(result, BlendPresetCurve(CStr(a), CStr(b), k,
+                                                        Not String.Equals(p.Name, NameOf(ImageAdjustments.CurveLuminancePoints), StringComparison.Ordinal)))
+                Else
+                    p.SetValue(result, If(k > 0.005, b, a))
+                End If
+            Next
+            Return result
+        End Function
+
+        ''' <summary>Geradlinig, und ueber 100 Prozent hinaus im Bereich des Reglers gehalten. Die
+        ''' Bereiche stehen nicht am Feld; genommen wird der kleinste der ueblichen, der beide
+        ''' Ausgangswerte fasst.</summary>
+        Private Shared Function BlendPresetNumber(name As String, a As Double, b As Double, k As Double) As Double
+            Dim v = a + (b - a) * k
+            If k <= 1.0 Then Return v
+            Dim lo = Math.Min(a, b), hi = Math.Max(a, b)
+            If String.Equals(name, NameOf(ImageAdjustments.Sharpness), StringComparison.Ordinal) Then Return Math.Max(0.0, Math.Min(150.0, v))
+            If lo >= 0 AndAlso hi <= 100 Then Return Math.Max(0.0, Math.Min(100.0, v))
+            If lo >= -100 AndAlso hi <= 100 Then Return Math.Max(-100.0, Math.Min(100.0, v))
+            If lo >= -150 AndAlso hi <= 150 Then Return Math.Max(-150.0, Math.Min(150.0, v))
+            Return v
+        End Function
+
+        ''' <summary>Zwei Kurven gemischt: an den Stuetzpunkten beider die Ausgaben geradlinig. Ist die
+        ''' Kurve vorher die Gerade, ist das genau die gemischte Kurve.</summary>
+        Private Shared Function BlendPresetCurve(a As String, b As String, k As Double, referenceSpline As Boolean) As String
+            Dim pa = ImageProcessor.ParseCurvePoints(a)
+            Dim pb = ImageProcessor.ParseCurvePoints(b)
+            Dim xs = pa.Select(Function(p) p.X).Concat(pb.Select(Function(p) p.X)).Distinct().OrderBy(Function(x) x).ToList()
+            Dim parts As New List(Of String)
+            For Each x In xs
+                Dim ya = ImageProcessor.EvaluateCurveFor(pa, x, referenceSpline)
+                Dim yb = ImageProcessor.EvaluateCurveFor(pb, x, referenceSpline)
+                Dim y = Math.Max(0.0, Math.Min(255.0, ya + (yb - ya) * k))
+                parts.Add(String.Format(Globalization.CultureInfo.InvariantCulture, "{0:0.##},{1:0.##}", x, y))
+            Next
+            Return String.Join(";", parts)
+        End Function
 
         ''' <summary>Übernimmt die explizit gewählten, nicht zum Look gehörenden XMP-Teile.
         ''' Die Werte werden auf einen vollständigen aktuellen Schnappschuss gesetzt, damit die

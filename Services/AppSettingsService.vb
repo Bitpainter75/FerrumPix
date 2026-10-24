@@ -303,6 +303,9 @@ Namespace Services
         ''' Kacheln des Filmstreifens im Seitenverhaeltnis des Bildes statt alle gleich breit. Ab
         ''' Werk aus.
         Public Property FilmstripTilesKeepAspect As Boolean = False
+        ''' Im RASTER der Galerie das ganze Bild in der Kachel, hochkant oder quer, statt es auf die
+        ''' Kachelflaeche zuzuschneiden. Die Kachel selbst bleibt gleich gross. Ab Werk aus.
+        Public Property GalleryTilesKeepAspect As Boolean = False
         ''' In der FOTOWAND alle Aufsaetze der Kachel (Sterne, Herz, Metadaten, Auswahlkreis,
         ''' Abspielknopf) erst beim Ueberfahren zeigen, auch die auf "immer anzeigen" gestellten.
         ''' AB WERK AN: die Fotowand soll Bild zeigen, nicht Bedienelemente.
@@ -805,15 +808,20 @@ Namespace Services
         ''' jeweiligen Objektivs, und ohne Messwerte passiert ohnehin nichts. Pro Bild ist
         ''' sie im Werkzeug uebersteuerbar.</summary>
         Public Property LensCorrectionEnabled As Boolean = True
-        ''' <summary>Startwert der einstufigen Farbrauschminderung (Regler "Farbrauschen", Adobes
-        ''' crs:ColorNoiseReduction) fuer eine RAW ohne Rezept, 0 bis 100. 0 heisst aus, und das ist
-        ''' die Vorgabe, wie bisher.</summary>
-        Public Property UneditedRawColorNoise As Integer = 0
-        ''' <summary>Startwert der groben, mehrskaligen Farbrauschminderung (Regler "Farbflecken")
-        ''' fuer eine RAW ohne Rezept, 0 bis 100. 0 heisst aus, und das ist die Vorgabe
-        ''' (ImageAdjustments.UneditedRawCoarseColorNoise, dort die Messung dazu). Bis 0.9.54 stand
-        ''' fest 30 ein.</summary>
-        Public Property UneditedRawCoarseColorNoise As Integer = CInt(ImageAdjustments.UneditedRawCoarseColorNoise)
+        ''' <summary>Startwert der Farbrauschminderung (Regler "Farbrauschen", crs:ColorNoiseReduction)
+        ''' fuer eine RAW ohne Rezept, 0 bis 100, 0 heisst aus. Vorgabe 25 wie beim Referenzprogramm
+        ''' (seit 2026-10-24, davor 0; siehe UneditedRawDefaultsVersion).</summary>
+        Public Property UneditedRawColorNoise As Integer = 25
+        ''' <summary>Fassung der RAW-Startwerte. Fehlt das Feld in der Datei, stammt sie von vor der
+        ''' Vorgabe 25 fuer Farbrauschen, und Load hebt eine 0 einmal an.</summary>
+        Public Property UneditedRawDefaultsVersion As Integer = 1
+        ''' <summary>Startwert der Schaerfe (crs:Sharpness, 0 bis 150) fuer eine RAW ohne Rezept, mit
+        ''' Detail 25. Vorgabe 40 wie beim Referenzprogramm; 0 heisst aus. Das Feld ist neu, eine
+        ''' aeltere Datei bekommt also die 40 ohne Migration.</summary>
+        Public Property UneditedRawSharpness As Integer = 40
+        ''' <summary>Startwert der Rauschminderung der Helligkeit (Regler "Rauschen",
+        ''' crs:LuminanceSmoothing, 0 bis 100) fuer eine RAW ohne Rezept. 0 heisst aus, die Vorgabe.</summary>
+        Public Property UneditedRawNoiseReduction As Integer = 0
         Public Property LensAssignments As New List(Of LensAssignment)()
 
         ''' <summary>Nur macOS: der Zeichenflaeche des Fensters den Farbraum sRGB aufpraegen.
@@ -1083,6 +1091,15 @@ Namespace Services
 
                 Dim settings = JsonSerializer.Deserialize(Of AppSettings)(json)
                 If settings Is Nothing Then Return New AppSettings()
+
+                ' STARTWERTE EINER UNBEARBEITETEN RAW, Fassung 1 (2026-10-24): Farbrauschen startet
+                ' bei 25 statt 0, mit dem neuen, an der Referenz geeichten Verfahren. Eine Datei ohne
+                ' das Feld stammt von davor; dort ist eine 0 der alte Werksstand und keine Wahl, sie
+                ' wird einmal angehoben. Wer danach 0 einstellt, behaelt 0.
+                If json.IndexOf("""UneditedRawDefaultsVersion""", StringComparison.Ordinal) < 0 Then
+                    If settings.UneditedRawColorNoise = 0 Then settings.UneditedRawColorNoise = 25
+                    settings.UneditedRawDefaultsVersion = 1
+                End If
 
                 settings.GalleryThumbnailSize = NormalizeThumbnailSize(settings.GalleryThumbnailSize)
                 settings.GalleryViewMode = NormalizeGalleryViewMode(settings.GalleryViewMode)

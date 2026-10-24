@@ -45,12 +45,12 @@ Namespace Services
         Private Const ChromaLevels As Integer = 4
         ''' <summary>Schwelle je Ebene (feinste zuerst) bei Wert 25, als Vielfaches des gemessenen
         ''' Rauschens der Ebene.</summary>
-        Private Shared ReadOnly ChromaThreshold As Double() = {7.0, 2.7, 2.1, 0.8, 0.8}
+        Private Shared ReadOnly ChromaThreshold As Double() = {2.988, 2.869, 1.108, 1.55, 3.24}
         ''' <summary>Wie die Schwelle mit dem Regler waechst: (Wert / 25) hoch diesem Exponenten.</summary>
-        Private Shared ReadOnly ChromaThresholdRise As Double() = {0.3, 0.3, 0.3, 0.3, 0.3}
+        Private Shared ReadOnly ChromaThresholdRise As Double() = {0.093, 0.233, 0.933, 0.648, 0.56}
         ''' <summary>Wie die Schwelle mit dem Rauschen der feinsten Ebene waechst (bezogen auf 0,01):
         ''' ein sauberes Bild behaelt mehr von seiner groben Farbe als ein verrauschtes.</summary>
-        Private Shared ReadOnly ChromaNoiseRise As Double() = {0.1, 0.1, 0.3, 0.3, 0.3}
+        Private Shared ReadOnly ChromaNoiseRise As Double() = {0.35, 0.35, 0.25, 0.25, 0.25}
         ''' <summary>Steilheit der weichen Schwelle.</summary>
         Private Const ChromaSteepness As Double = 3.0
         ''' <summary>Laesst sich eine Ebene nicht messen (zu klein, zu viel ausgebrannt), gilt das

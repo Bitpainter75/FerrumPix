@@ -1269,6 +1269,7 @@ Namespace ViewModels
             Gallery?.RaisePropertyChanged(NameOf(GalleryViewModel.TilesAreFlat))
             Gallery?.RaisePropertyChanged(NameOf(GalleryViewModel.TileBadgesOnHover))
             Gallery?.RaisePropertyChanged(NameOf(GalleryViewModel.TileImageCornerRadius))
+            Gallery?.RaisePropertyChanged(NameOf(GalleryViewModel.TileImageStretch))
             Gallery?.RaisePropertyChanged(NameOf(GalleryViewModel.TileListImageCornerRadius))
             Gallery?.RaisePropertyChanged(NameOf(GalleryViewModel.FilmstripTilesAreFlat))
             Gallery?.RaisePropertyChanged(NameOf(GalleryViewModel.FilmstripTilesKeepAspect))

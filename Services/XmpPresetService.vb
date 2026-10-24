@@ -33,6 +33,20 @@ Namespace Services
             Public Property HasEmbeddedProfileReference As Boolean
         End Class
 
+        ''' <summary>Erlaubt das Preset eine Staerke (crs:SupportsAmount="True" am Preset selbst)? Der
+        ''' gleichnamige Eintrag im Profilblock crs:Look gilt der Profilmenge und zaehlt hier nicht.</summary>
+        Public Shared Function PresetSupportsAmount(xmpPath As String) As Boolean
+            If String.IsNullOrWhiteSpace(xmpPath) OrElse Not File.Exists(xmpPath) Then Return False
+            Try
+                Dim text = Regex.Replace(File.ReadAllText(xmpPath), "<crs:Look(?:\s[^>]*)?(?<!/)>.*?</crs:Look>", "",
+                                         RegexOptions.Singleline)
+                Return Regex.IsMatch(text, "crs:SupportsAmount\s*=\s*""True""", RegexOptions.IgnoreCase) OrElse
+                       Regex.IsMatch(text, "<crs:SupportsAmount>\s*True\s*</crs:SupportsAmount>", RegexOptions.IgnoreCase)
+            Catch
+                Return False
+            End Try
+        End Function
+
         ''' <summary>Liest die importierbaren Zusatzteile. Adobe speichert in XMP normalerweise
         ''' nur eine Profil-REFERENZ; die 3D-Daten bleiben im Camera-Raw-Installationsordner. Daher
         ''' wird der Name bewusst getrennt gemeldet und nicht als vermeintlich exakte LUT behandelt.</summary>
@@ -116,13 +130,12 @@ Namespace Services
 
             Dim adj As ImageAdjustments = If(baseLook Is Nothing, New ImageAdjustments(), baseLook.Clone())
             Dim d As Double
-            ' PV2012-Tonwerte und eine Masterkurve wirken in Adobe in dessen RAW-/ProPhoto-Pipeline,
-            ' nicht auf einem bereits nach sRGB dekodierten Bild. Ein Preset mit allen drei
-            ' Kanalkurven PLUS dieser Tonwertstufe wurde deshalb in FerrumPix sichtbar milchig bzw.
-            ' gruen (Cool Glow / EOS R6), obwohl die Kanalkurven selbst den Referenz-Look trafen.
-            ' In diesem eng erkannten Fall bleibt der Farblook erhalten und nur die nicht sinnvoll
-            ' abbildbare Adobe-Tonwertstufe aus. Einfache PV2012-Presets bleiben unveraendert.
-            Dim useChannelCurveColorLook = HasComplexPv2012ChannelCurveLook(values, xmpText)
+            ' EIN PRESET KOMMT VOLLSTAENDIG AN (seit 2026-10-25). Bis dahin liess ein PV2012-Preset mit
+            ' allen drei Kanalkurven und einer Masterkurve (der "Kanalkurven-Look", etwa Cool Glow)
+            ' Tonregler, Masterkurve, Kalibrierung, Farbmischer, Schaerfe und Rauschminderung weg,
+            ' weil die Kombination auf dem alten sRGB-Weg milchig bzw. gruen wurde. Das betraf rund ein
+            ' Drittel aller Presets; heute rechnen Kurven im Raum und mit dem Spline der Referenz, und
+            ' andere Entwickler, die gegen sie messen, uebernehmen alles.
 
             ''' Die *2012-Schlüssel stammen aus Prozessversion 2012 und sind bei allem
             ''' üblich, was danach entstand. Ältere Presets (PV2003/PV2010) schreiben dieselben Regler OHNE
@@ -139,41 +152,41 @@ Namespace Services
             ' Das alte crs:Brightness (-150..+150) hat in PV2012 keine Entsprechung mehr; es kommt der
             ' Helligkeit am nächsten und wird auf deren ±100 gestaucht.
             If TryGetXmpDouble(values, "Brightness", d) Then adj.Brightness = Clamp100(d / 1.5)
-            If Not useChannelCurveColorLook Then
-                If TryGetXmpDouble(values, "Contrast2012", d) Then
-                    adj.Contrast = Clamp100(d)
-                ElseIf TryGetXmpDouble(values, "Contrast", d) Then
-                    adj.Contrast = Clamp100(d)
-                End If
-                If TryGetXmpDouble(values, "Highlights2012", d) Then adj.Highlights = Clamp100(d)
-                If TryGetXmpDouble(values, "Shadows2012", d) Then
-                    adj.ShadowsLevel = Clamp100(d)
-                ElseIf TryGetXmpDouble(values, "FillLight", d) Then
-                    ' PV2003/2010 hellte Schatten über „Aufhelllicht" auf: 0..100, nur in eine Richtung.
-                    adj.ShadowsLevel = Clamp(d, 0, 100)
-                End If
-                If TryGetXmpDouble(values, "Whites2012", d) Then adj.Whites = Clamp100(d)
-                If TryGetXmpDouble(values, "Blacks2012", d) Then adj.Blacks = Clamp100(d)
-                If TryGetXmpDouble(values, "Clarity2012", d) Then adj.Clarity = Clamp100(d)
+            If TryGetXmpDouble(values, "Contrast2012", d) Then
+                adj.Contrast = Clamp100(d)
+            ElseIf TryGetXmpDouble(values, "Contrast", d) Then
+                adj.Contrast = Clamp100(d)
             End If
+            If TryGetXmpDouble(values, "Highlights2012", d) Then adj.Highlights = Clamp100(d)
+            If TryGetXmpDouble(values, "Shadows2012", d) Then
+                adj.ShadowsLevel = Clamp100(d)
+            ElseIf TryGetXmpDouble(values, "FillLight", d) Then
+                ' PV2003/2010 hellte Schatten über „Aufhelllicht" auf: 0..100, nur in eine Richtung.
+                adj.ShadowsLevel = Clamp(d, 0, 100)
+            End If
+            If TryGetXmpDouble(values, "Whites2012", d) Then adj.Whites = Clamp100(d)
+            If TryGetXmpDouble(values, "Blacks2012", d) Then adj.Blacks = Clamp100(d)
+            If TryGetXmpDouble(values, "Clarity2012", d) Then adj.Clarity = Clamp100(d)
             If TryGetXmpDouble(values, "Texture", d) Then adj.[Structure] = Clamp100(d)
             If TryGetXmpDouble(values, "Dehaze", d) Then adj.Haze = Clamp100(-d)
             If TryGetXmpDouble(values, "Vibrance", d) Then adj.Vibrance = Clamp100(d)
             If TryGetXmpDouble(values, "Saturation", d) Then adj.Saturation = Clamp100(d)
-            If Not useChannelCurveColorLook Then
-                If TryGetXmpDouble(values, "Sharpness", d) Then adj.Sharpness = Clamp(d, 0, 150)   ' Adobe-Bereich 0..150
-                ' Schärfen-Feinregler. crs:SharpenRadius ist 0.5..3.0 (Adobe-Standard 1.0 = neutral),
-                ' unser Radius 0..100: (r-1)*50, unter 1.0 auf 0 geklemmt. crs:SharpenDetail ist 0..100.
-                If TryGetXmpDouble(values, "SharpenRadius", d) Then adj.SharpenRadius = Clamp((d - 1.0) * 50.0, 0, 100)
-                If TryGetXmpDouble(values, "SharpenDetail", d) Then adj.SharpenDetail = Clamp(d, 0, 100)
-                ' crs:SharpenEdgeMasking ist 0..100 wie unser Regler. Stand in 15 von 25 untersuchten Presets
-                ' mit Werten bis 85 und fiel bisher komplett weg: unser Import schärfte damit die ganze Fläche
-                ' inklusive Himmel und Haut, wo Adobe nur die Kanten anfasst.
-                If TryGetXmpDouble(values, "SharpenEdgeMasking", d) Then adj.SharpenMasking = Clamp(d, 0, 100)
-                If TryGetXmpDouble(values, "LuminanceSmoothing", d) Then adj.NoiseReduction = Clamp(d, 0, 100)
-                If TryGetXmpDouble(values, "LuminanceNoiseReductionDetail", d) Then adj.NoiseReductionDetail = Clamp(d, 0, 100)
-                If TryGetXmpDouble(values, "ColorNoiseReduction", d) Then adj.ColorNoiseReduction = Clamp(d, 0, 100)
-            End If
+            ' Schaerfe und Rauschminderung gelten AUCH im Kanalkurven-Look: sie haben mit dem
+            ' milchigen bzw. gruenen Ergebnis, gegen das er gebaut ist, nichts zu tun. Bis zum
+            ' 2026-10-25 fielen sie dort mit weg, Cool Glow kam ohne seine Schaerfe 25 und sein
+            ' Farbrauschen 25 an.
+            If TryGetXmpDouble(values, "Sharpness", d) Then adj.Sharpness = Clamp(d, 0, 150)   ' Adobe-Bereich 0..150
+            ' Schärfen-Feinregler. crs:SharpenRadius ist 0.5..3.0 (Adobe-Standard 1.0 = neutral),
+            ' unser Radius 0..100: (r-1)*50, unter 1.0 auf 0 geklemmt. crs:SharpenDetail ist 0..100.
+            If TryGetXmpDouble(values, "SharpenRadius", d) Then adj.SharpenRadius = Clamp((d - 1.0) * 50.0, 0, 100)
+            If TryGetXmpDouble(values, "SharpenDetail", d) Then adj.SharpenDetail = Clamp(d, 0, 100)
+            ' crs:SharpenEdgeMasking ist 0..100 wie unser Regler. Stand in 15 von 25 untersuchten Presets
+            ' mit Werten bis 85 und fiel bisher komplett weg: unser Import schärfte damit die ganze Fläche
+            ' inklusive Himmel und Haut, wo Adobe nur die Kanten anfasst.
+            If TryGetXmpDouble(values, "SharpenEdgeMasking", d) Then adj.SharpenMasking = Clamp(d, 0, 100)
+            If TryGetXmpDouble(values, "LuminanceSmoothing", d) Then adj.NoiseReduction = Clamp(d, 0, 100)
+            If TryGetXmpDouble(values, "LuminanceNoiseReductionDetail", d) Then adj.NoiseReductionDetail = Clamp(d, 0, 100)
+            If TryGetXmpDouble(values, "ColorNoiseReduction", d) Then adj.ColorNoiseReduction = Clamp(d, 0, 100)
             If TryGetXmpDouble(values, "GrainAmount", d) Then adj.Grain = Clamp(d, 0, 100)
             ' crs:GrainSize/GrainFrequency sind 0..100 wie unsere Regler.
             If TryGetXmpDouble(values, "GrainSize", d) Then adj.GrainSize = Clamp(d, 0, 100)
@@ -246,15 +259,13 @@ Namespace Services
             ' strukturell unvollstaendig an, ohne dass etwas darauf hindeutete.
             ' Achtung bei den Namen: crs:RedHue ist die KALIBRIERUNG, crs:HueAdjustmentRed dagegen
             ' das HSL-Farbband - zwei verschiedene Regler mit aehnlichem Namen.
-            If Not useChannelCurveColorLook Then
-                If TryGetXmpDouble(values, "RedHue", d) Then adj.CalibrationRedHue = Clamp100(d)
-                If TryGetXmpDouble(values, "RedSaturation", d) Then adj.CalibrationRedSaturation = Clamp100(d)
-                If TryGetXmpDouble(values, "GreenHue", d) Then adj.CalibrationGreenHue = Clamp100(d)
-                If TryGetXmpDouble(values, "GreenSaturation", d) Then adj.CalibrationGreenSaturation = Clamp100(d)
-                If TryGetXmpDouble(values, "BlueHue", d) Then adj.CalibrationBlueHue = Clamp100(d)
-                If TryGetXmpDouble(values, "BlueSaturation", d) Then adj.CalibrationBlueSaturation = Clamp100(d)
-                If TryGetXmpDouble(values, "ShadowTint", d) Then adj.CalibrationShadowTint = Clamp100(d)
-            End If
+            If TryGetXmpDouble(values, "RedHue", d) Then adj.CalibrationRedHue = Clamp100(d)
+            If TryGetXmpDouble(values, "RedSaturation", d) Then adj.CalibrationRedSaturation = Clamp100(d)
+            If TryGetXmpDouble(values, "GreenHue", d) Then adj.CalibrationGreenHue = Clamp100(d)
+            If TryGetXmpDouble(values, "GreenSaturation", d) Then adj.CalibrationGreenSaturation = Clamp100(d)
+            If TryGetXmpDouble(values, "BlueHue", d) Then adj.CalibrationBlueHue = Clamp100(d)
+            If TryGetXmpDouble(values, "BlueSaturation", d) Then adj.CalibrationBlueSaturation = Clamp100(d)
+            If TryGetXmpDouble(values, "ShadowTint", d) Then adj.CalibrationShadowTint = Clamp100(d)
 
             ' TORWÄCHTER crs:WhiteBalance. "As Shot" heißt: den Weißabgleich der AUFNAHME
             ' behalten, das Preset fasst ihn nicht an. Ein Preset in diesem Modus schleppt trotzdem oft
@@ -371,9 +382,6 @@ Namespace Services
             ' wird nirgends exportiert (nur gelesen).
             Const HueImportScale As Double = 0.3
             Const HueImportScaleAqua As Double = 0.12
-            ' Im Kanalkurven-Look bleibt der Farbmischer bewusst AUS: ohne ihn trifft ein solches
-            ' Preset den Referenz-Export besser als mit ihm.
-            If Not useChannelCurveColorLook Then
             If TryGetXmpDouble(values, "HueAdjustmentRed", d) Then adj.RedHue = Clamp100(d * HueImportScale)
             If TryGetXmpDouble(values, "SaturationAdjustmentRed", d) Then adj.RedSaturation = Clamp100(d)
             If TryGetXmpDouble(values, "LuminanceAdjustmentRed", d) Then adj.RedLuminance = Clamp100(d)
@@ -401,7 +409,6 @@ Namespace Services
             If TryGetXmpDouble(values, "HueAdjustmentMagenta", d) Then adj.MagentaHue = Clamp100(d * HueImportScale)
             If TryGetXmpDouble(values, "SaturationAdjustmentMagenta", d) Then adj.MagentaSaturation = Clamp100(d)
             If TryGetXmpDouble(values, "LuminanceAdjustmentMagenta", d) Then adj.MagentaLuminance = Clamp100(d)
-            End If
 
             ' PUNKTFARBE (crs:PointColors, je Farbfeld 19 Zahlen, dazu crs:ColorVariance). Steht das
             ' Element da, gilt es, auch wenn es nur die leere Auswahl trägt: ein Preset mit der
@@ -484,18 +491,21 @@ Namespace Services
             ''' Annäherung an Adobes Kurvenform, kein exakter Nachbau.
             ' Punktkurve: bevorzugt PV2012; fehlt sie (alte PV2003/2010-Presets), auf die Alt-Kurve
             ' <crs:ToneCurve> zurückfallen (gleiches rdf:Seq-Format). Beide durchlaufen dieselbe Faltung.
-            If Not useChannelCurveColorLook Then
-                Dim mainCurvePoints = ParseXmpCurvePoints(xmpText, "ToneCurvePV2012")
-                If mainCurvePoints Is Nothing Then mainCurvePoints = ParseXmpCurvePoints(xmpText, "ToneCurve")
-                Dim combinedCurve = ApplyParametricCurve(values, mainCurvePoints)
-                If combinedCurve IsNot Nothing Then adj.CurveRgbPoints = combinedCurve
+            Dim mainCurvePoints = ParseXmpCurvePoints(xmpText, "ToneCurvePV2012")
+            If mainCurvePoints Is Nothing Then mainCurvePoints = ParseXmpCurvePoints(xmpText, "ToneCurve")
+            Dim combinedCurve = ApplyParametricCurve(values, mainCurvePoints)
+            If combinedCurve IsNot Nothing Then adj.CurveRgbPoints = combinedCurve
+            ' KANALKURVEN NUR MIT GESAMTKURVE: die Referenz wendet ToneCurvePV2012Red/Green/Blue nur an,
+            ' wenn auch ToneCurvePV2012 im Preset steht, und sei es die Gerade; ohne sie blieb ihr Bild
+            ' bitgleich (gemessen 2026-10-24 an einem Preset nur mit den drei Kanalkurven).
+            If ParseXmpCurvePoints(xmpText, "ToneCurvePV2012") IsNot Nothing Then
+                Dim redCurve = ParseXmpCurvePoints(xmpText, "ToneCurvePV2012Red")
+                If redCurve IsNot Nothing Then adj.CurveRedPoints = redCurve
+                Dim greenCurve = ParseXmpCurvePoints(xmpText, "ToneCurvePV2012Green")
+                If greenCurve IsNot Nothing Then adj.CurveGreenPoints = greenCurve
+                Dim blueCurve = ParseXmpCurvePoints(xmpText, "ToneCurvePV2012Blue")
+                If blueCurve IsNot Nothing Then adj.CurveBluePoints = blueCurve
             End If
-            Dim redCurve = ParseXmpCurvePoints(xmpText, "ToneCurvePV2012Red")
-            If redCurve IsNot Nothing Then adj.CurveRedPoints = redCurve
-            Dim greenCurve = ParseXmpCurvePoints(xmpText, "ToneCurvePV2012Green")
-            If greenCurve IsNot Nothing Then adj.CurveGreenPoints = greenCurve
-            Dim blueCurve = ParseXmpCurvePoints(xmpText, "ToneCurvePV2012Blue")
-            If blueCurve IsNot Nothing Then adj.CurveBluePoints = blueCurve
 
             Return adj
         End Function
@@ -540,30 +550,6 @@ Namespace Services
             Dim points = ImageAdjustments.ExposurePointsPerStop
             Dim limit = points * 5.0
             Return Clamp(ev * points, -limit, limit)
-        End Function
-
-        ''' <summary>Erkennt den kleinen, aber folgenreichen Teil der Adobe-PV2012-Presets, in dem
-        ''' eine Master-/Parametrik-Tonwertstufe zusammen mit echten R/G/B-Kanalkurven steht.
-        ''' Unsere Engine hat keine Adobe-RAW-/ProPhoto-Tonwertpipeline; die Tonwertstufe nach sRGB
-        ''' zu falten verfälscht in genau dieser Kombination die Kanalkurven. Einfache Master- oder
-        ''' Kanalkurven und alle älteren Prozessversionen bleiben daher ausdrücklich ausgeschlossen.</summary>
-        Private Shared Function HasComplexPv2012ChannelCurveLook(values As Dictionary(Of String, String),
-                                                                  xmpText As String) As Boolean
-            Dim processVersion As Double
-            If Not TryGetXmpDouble(values, "ProcessVersion", processVersion) OrElse processVersion < 11.0 Then Return False
-
-            Dim red = ParseXmpCurvePoints(xmpText, "ToneCurvePV2012Red")
-            Dim green = ParseXmpCurvePoints(xmpText, "ToneCurvePV2012Green")
-            Dim blue = ParseXmpCurvePoints(xmpText, "ToneCurvePV2012Blue")
-            If red Is Nothing OrElse green Is Nothing OrElse blue Is Nothing OrElse
-               ImageAdjustments.IsIdentityCurve(red) OrElse ImageAdjustments.IsIdentityCurve(green) OrElse
-               ImageAdjustments.IsIdentityCurve(blue) Then Return False
-
-            If ParseXmpCurvePoints(xmpText, "ToneCurvePV2012") IsNot Nothing Then Return True
-            Return GetXmpDoubleOrDefault(values, "ParametricShadows", 0) <> 0 OrElse
-                   GetXmpDoubleOrDefault(values, "ParametricDarks", 0) <> 0 OrElse
-                   GetXmpDoubleOrDefault(values, "ParametricLights", 0) <> 0 OrElse
-                   GetXmpDoubleOrDefault(values, "ParametricHighlights", 0) <> 0
         End Function
 
         Private Shared Function ApplyParametricCurve(values As Dictionary(Of String, String), pointCurve As String) As String

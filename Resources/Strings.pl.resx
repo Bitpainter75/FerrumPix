@@ -8949,15 +8949,6 @@
   <data name="Farbrauschen_bei_unbearbeiteten_RAWs_0f8c070b" xml:space="preserve">
     <value>Szum kolorowy w nieedytowanych plikach RAW</value>
   </data>
-  <data name="Farbflecken_bei_unbearbeiteten_RAWs_9c08c37c" xml:space="preserve">
-    <value>Plamy barwne w nieedytowanych plikach RAW</value>
-  </data>
-  <data name="Startwert_des_Reglers_Farbrauschen_wenn_ein_RAW__3af7cb22" xml:space="preserve">
-    <value>Wartość początkowa suwaka Szum kolorowy przy otwieraniu pliku RAW bez edycji. Wygładza drobne ziarno barwne, zwłaszcza przy wysokim ISO, ale na czystych zdjęciach zabiera też drobny kolor i przy każdej zmianie zdjęcia wymaga czasu obliczeń. 0 go wyłącza.</value>
-  </data>
-  <data name="Startwert_des_Reglers_Farbflecken_wenn_ein_RAW_o_2d470b89" xml:space="preserve">
-    <value>Wartość początkowa suwaka Plamy barwne przy otwieraniu pliku RAW bez edycji. Usuwa grube plamy barwne, na czystych zdjęciach jednak także drobny kolor, i przy każdej zmianie zdjęcia wymaga odczuwalnie dużo czasu obliczeń. 0 go wyłącza.</value>
-  </data>
   <data name="Anpassungen_anwenden_ab535739" xml:space="preserve">
     <value>Zastosuj korekty</value>
   </data>
@@ -10052,5 +10043,50 @@
   </data>
   <data name="TAB_springt_zum_n_chsten_Namen_und_nach_dem_letz_6e48d7a8" xml:space="preserve">
     <value>TAB przechodzi do następnej nazwy, a po ostatniej do następnego zdjęcia.</value>
+  </data>
+  <data name="Ganzes_Bild_in_der_Rasteransicht_de99f0dc" xml:space="preserve">
+    <value>Całe zdjęcie w widoku siatki</value>
+  </data>
+  <data name="Zeigt_das_Bild_in_der_Kachel_ganz_hochkant_oder__4c26da70" xml:space="preserve">
+    <value>Pokazuje całe zdjęcie w kafelku, pionowo lub poziomo, zamiast przycinać je do kafelka. Kafelki zachowują rozmiar.</value>
+  </data>
+  <data name="Sch_rfe_bei_unbearbeiteten_RAWs_5cc1baef" xml:space="preserve">
+    <value>Wyostrzanie dla nieedytowanych RAW</value>
+  </data>
+  <data name="Startwert_des_Reglers_Sch_rfe_wenn_ein_RAW_ohne__3353bd5a" xml:space="preserve">
+    <value>Wartość początkowa suwaka Wyostrzanie przy otwieraniu RAW bez edycji. Już edytowane zdjęcia zachowują swoje wartości. 0 je wyłącza.</value>
+  </data>
+  <data name="Rauschen_bei_unbearbeiteten_RAWs_75fa6c79" xml:space="preserve">
+    <value>Szum dla nieedytowanych RAW</value>
+  </data>
+  <data name="Startwert_des_Reglers_Rauschen_wenn_ein_RAW_ohne_5ff29d6e" xml:space="preserve">
+    <value>Wartość początkowa suwaka Szum przy otwieraniu RAW bez edycji. Wygładza szum luminancji i przy każdej zmianie zdjęcia wymaga czasu obliczeń. Już edytowane zdjęcia zachowują swoje wartości. 0 je wyłącza.</value>
+  </data>
+  <data name="Auf_diesem_Bild_wurde_noch_nicht_nach_Personen_g_91c84fe1" xml:space="preserve">
+    <value>Na tym zdjęciu nie szukano jeszcze osób.</value>
+  </data>
+  <data name="Nach_Personen_suchen_4d179a63" xml:space="preserve">
+    <value>Szukaj osób</value>
+  </data>
+  <data name="Dieses_Bild_lokal_nach_Gesichtern_durchsuchen_b0d45f52" xml:space="preserve">
+    <value>Przeszukaj to zdjęcie lokalnie pod kątem twarzy</value>
+  </data>
+  <data name="Personen_werden_gesucht_5a65f4f5" xml:space="preserve">
+    <value>Trwa wyszukiwanie osób.</value>
+  </data>
+  <data name="Dieses_Bild_lie_sich_f_r_die_Suche_nach_Personen_113c1add" xml:space="preserve">
+    <value>Nie udało się odczytać tego zdjęcia do wyszukiwania osób.</value>
+  </data>
+  <data name="Die_Suche_nach_Personen_ist_fehlgeschlagen_934373e4" xml:space="preserve">
+    <value>Wyszukiwanie osób nie powiodło się.</value>
+  </data>
+  <data name="Startwert_des_Reglers_Farbrauschen_wenn_ein_RAW__3efc575e" xml:space="preserve">
+    <value>Wartość początkowa suwaka Szum koloru przy otwieraniu RAW bez edycji. Usuwa szum koloru zmierzony na zdjęciu i zostawia prawdziwe kolory. Przy każdej zmianie zdjęcia wymaga czasu obliczeń. 0 go wyłącza.</value>
+  </data>
+  <data name="Preset_St_rke_16aedefe" xml:space="preserve">
+    <value>Siła ustawienia</value>
+  </data>
+  <data name="Wie_stark_das_eben_angewendete_Preset_wirkt_0_is_0e0abfab" xml:space="preserve">
+    <value>Jak mocno działa właśnie zastosowane ustawienie: 0 to zdjęcie bez ustawienia, 100 ustawienie, 200 jego zmiany podwójnie.</value>
   </data>
 </root>

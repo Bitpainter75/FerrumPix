@@ -8949,15 +8949,6 @@
   <data name="Farbrauschen_bei_unbearbeiteten_RAWs_0f8c070b" xml:space="preserve">
     <value>Fargestøy for uredigerte RAW-filer</value>
   </data>
-  <data name="Farbflecken_bei_unbearbeiteten_RAWs_9c08c37c" xml:space="preserve">
-    <value>Fargeflekker for uredigerte RAW-filer</value>
-  </data>
-  <data name="Startwert_des_Reglers_Farbrauschen_wenn_ein_RAW__3af7cb22" xml:space="preserve">
-    <value>Startverdi for glidebryteren Fargestøy når en RAW-fil uten redigering åpnes. Glatter ut fint fargekorn, særlig ved høy ISO, men tar ved rene opptak også bort fin farge og krever regnetid ved hvert bildebytte. 0 slår den av.</value>
-  </data>
-  <data name="Startwert_des_Reglers_Farbflecken_wenn_ein_RAW_o_2d470b89" xml:space="preserve">
-    <value>Startverdi for glidebryteren Fargeflekker når en RAW-fil uten redigering åpnes. Fjerner grove fargeflekker, ved rene opptak likevel også fin farge, og krever merkbar regnetid ved hvert bildebytte. 0 slår den av.</value>
-  </data>
   <data name="Anpassungen_anwenden_ab535739" xml:space="preserve">
     <value>Bruk justeringer</value>
   </data>
@@ -10052,5 +10043,50 @@
   </data>
   <data name="TAB_springt_zum_n_chsten_Namen_und_nach_dem_letz_6e48d7a8" xml:space="preserve">
     <value>TAB hopper til neste navn og etter det siste til neste bilde.</value>
+  </data>
+  <data name="Ganzes_Bild_in_der_Rasteransicht_de99f0dc" xml:space="preserve">
+    <value>Hele bildet i rutenettvisningen</value>
+  </data>
+  <data name="Zeigt_das_Bild_in_der_Kachel_ganz_hochkant_oder__4c26da70" xml:space="preserve">
+    <value>Viser hele bildet i flisen, stående eller liggende, i stedet for å beskjære det til flisen. Flisene beholder størrelsen.</value>
+  </data>
+  <data name="Sch_rfe_bei_unbearbeiteten_RAWs_5cc1baef" xml:space="preserve">
+    <value>Skarphet for uredigerte RAW-filer</value>
+  </data>
+  <data name="Startwert_des_Reglers_Sch_rfe_wenn_ein_RAW_ohne__3353bd5a" xml:space="preserve">
+    <value>Startverdi for glidebryteren Skarphet når en RAW uten redigering åpnes. Bilder du allerede har redigert, beholder verdiene sine. 0 slår den av.</value>
+  </data>
+  <data name="Rauschen_bei_unbearbeiteten_RAWs_75fa6c79" xml:space="preserve">
+    <value>Støy for uredigerte RAW-filer</value>
+  </data>
+  <data name="Startwert_des_Reglers_Rauschen_wenn_ein_RAW_ohne_5ff29d6e" xml:space="preserve">
+    <value>Startverdi for glidebryteren Støy når en RAW uten redigering åpnes. Jevner ut luminansstøy og krever regnetid ved hvert bildebytte. Bilder du allerede har redigert, beholder verdiene sine. 0 slår den av.</value>
+  </data>
+  <data name="Auf_diesem_Bild_wurde_noch_nicht_nach_Personen_g_91c84fe1" xml:space="preserve">
+    <value>Det er ennå ikke søkt etter personer i dette bildet.</value>
+  </data>
+  <data name="Nach_Personen_suchen_4d179a63" xml:space="preserve">
+    <value>Søk etter personer</value>
+  </data>
+  <data name="Dieses_Bild_lokal_nach_Gesichtern_durchsuchen_b0d45f52" xml:space="preserve">
+    <value>Søk gjennom dette bildet etter ansikter lokalt</value>
+  </data>
+  <data name="Personen_werden_gesucht_5a65f4f5" xml:space="preserve">
+    <value>Søker etter personer.</value>
+  </data>
+  <data name="Dieses_Bild_lie_sich_f_r_die_Suche_nach_Personen_113c1add" xml:space="preserve">
+    <value>Dette bildet kunne ikke leses for personsøket.</value>
+  </data>
+  <data name="Die_Suche_nach_Personen_ist_fehlgeschlagen_934373e4" xml:space="preserve">
+    <value>Søket etter personer mislyktes.</value>
+  </data>
+  <data name="Startwert_des_Reglers_Farbrauschen_wenn_ein_RAW__3efc575e" xml:space="preserve">
+    <value>Startverdi for glidebryteren Fargestøy når en RAW uten redigering åpnes. Fjerner fargestøyen som måles i bildet, og lar ekte farger være. Krever regnetid ved hvert bildebytte. 0 slår den av.</value>
+  </data>
+  <data name="Preset_St_rke_16aedefe" xml:space="preserve">
+    <value>Forhåndsinnstillingens styrke</value>
+  </data>
+  <data name="Wie_stark_das_eben_angewendete_Preset_wirkt_0_is_0e0abfab" xml:space="preserve">
+    <value>Hvor sterkt den nettopp brukte forhåndsinnstillingen virker: 0 er bildet uten forhåndsinnstilling, 100 forhåndsinnstillingen, 200 endringene dobbelt.</value>
   </data>
 </root>

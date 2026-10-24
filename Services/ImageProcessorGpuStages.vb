@@ -2515,21 +2515,12 @@ half4 main(float2 p) {
         ' ── Schaerfe ─────────────────────────────────────────────────────────────
 
         ''' <summary>Die Schaerfe auf der Karte, oder Nothing fuer das Zurueckrechnen (das bleibt auf
-        ''' dem Prozessor). Rechnet wie ApplySharpness3x3 und ApplyUnsharpMask.</summary>
+        ''' dem Prozessor). Rechnet wie ApplyUnsharpMask.</summary>
         Private Shared Function SharpnessOnGpu(amount As Single, radiusAmount As Single, detailAmount As Single,
                                                maskingAmount As Single, method As SharpenMethod) As Func(Of GRContext, SKImage, SKSurface)
             If method = SharpenMethod.Deconvolution Then Return DeconvolutionOnGpu(amount, radiusAmount, detailAmount, maskingAmount)
-            If radiusAmount <= 0 AndAlso detailAmount <= 0 AndAlso maskingAmount <= 0 Then
-                Return Function(gr, image)
-                           Dim effect = StageEffect("Schaerfe 3x3", Sharpen3x3Shader)
-                           Dim u = New SKRuntimeEffectUniforms(effect)
-                           u("amount") = amount
-                           u("center") = 1.0F + 4.0F * amount
-                           Return DrawStage(gr, image.Width, image.Height, effect, u, ("src", image))
-                       End Function
-            End If
-            Dim sigma = 0.8F + Clamp(radiusAmount, 0, 1) * 2.7F
-            Dim gain = amount * (1.0F + Clamp(detailAmount, 0, 1) * 1.5F)
+            Dim p = SharpenParameters(amount, radiusAmount, detailAmount)
+            Dim sigma = p.Sigma
             Dim masking = Clamp(maskingAmount, 0, 1)
             If Not RasterBlurSupported(sigma) Then Return Nothing
             Return Function(gr, image)
@@ -2539,7 +2530,9 @@ half4 main(float2 p) {
                            Using blurred = blurSurface.Snapshot()
                                Dim effect = StageEffect("Unschaerfemaske", UnsharpMaskShader)
                                Dim u = New SKRuntimeEffectUniforms(effect)
-                               u("gain") = gain
+                               u("gain") = p.Gain
+                               u("halo") = p.Halo
+                               u("dark") = p.Dark
                                u("masking") = masking
                                Return DrawStage(gr, image.Width, image.Height, effect, u, ("src", image), ("blur", blurred))
                            End Using
@@ -2547,29 +2540,12 @@ half4 main(float2 p) {
                    End Function
         End Function
 
-        Private Const Sharpen3x3Shader As String = "
-uniform shader src;
-uniform float amount;
-uniform float center;
-half4 main(float2 p) {
-    float4 c = toBytes(src.eval(p));
-    float3 cc = unpremulBytes(c);
-    float3 l = unpremulBytes(toBytes(src.eval(p + float2(-1.0, 0.0))));
-    float3 r = unpremulBytes(toBytes(src.eval(p + float2(1.0, 0.0))));
-    float3 t = unpremulBytes(toBytes(src.eval(p + float2(0.0, -1.0))));
-    float3 b = unpremulBytes(toBytes(src.eval(p + float2(0.0, 1.0))));
-    float3 s = l + r + t + b;
-    float3 o = float3(clampByte(cc.r * center - amount * s.r),
-                      clampByte(cc.g * center - amount * s.g),
-                      clampByte(cc.b * center - amount * s.b));
-    return writePremul(o, c.a);
-}
-"
-
         Private Const UnsharpMaskShader As String = "
 uniform shader src;
 uniform shader blur;
 uniform float gain;
+uniform float halo;
+uniform float dark;
 uniform float masking;
 float lumaAt(float2 q) {
     float3 v = unpremulBytes(toBytes(src.eval(q)));
@@ -2587,9 +2563,13 @@ half4 main(float2 p) {
         edge = edge * edge * (3.0 - 2.0 * edge);
         pixelGain = gain * ((1.0 - masking) + masking * edge);
     }
-    float3 o = float3(clampByte(cc.r + pixelGain * (cc.r - lb.r)),
-                      clampByte(cc.g + pixelGain * (cc.g - lb.g)),
-                      clampByte(cc.b + pixelGain * (cc.b - lb.b)));
+    // SharpenDelta: Hochpass der Rec.-709-Luma, geformt, gleich auf alle Kanaele.
+    float d = (dot(cc, float3(0.2126, 0.7152, 0.0722)) - dot(lb, float3(0.2126, 0.7152, 0.0722))) / 255.0;
+    float r = abs(d) / halo;
+    float shaped = d / (1.0 + r * r * r);
+    if (shaped < 0.0) { shaped = shaped * dark; }
+    float delta = pixelGain * shaped * 255.0;
+    float3 o = float3(clampByte(cc.r + delta), clampByte(cc.g + delta), clampByte(cc.b + delta));
     return writePremul(o, c.a);
 }
 "
