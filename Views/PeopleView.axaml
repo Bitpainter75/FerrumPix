@@ -37,6 +37,10 @@
         <Style Selector="Panel.face-tile Button.tile-badge icons|SvgIcon">
             <Setter Property="Opacity" Value="1"/>
         </Style>
+        <!-- Auf der Akzentflaeche die Symbolfarbe, die sich davon abhebt (dunkel bei Gelb). -->
+        <Style Selector="Panel.face-tile Button.tile-badge:pointerover icons|SvgIcon">
+            <Setter Property="IconBrush" Value="{DynamicResource FP.OnAccent}"/>
+        </Style>
     </UserControl.Styles>
 
     <!-- EIGENER BEREICH und kein Abschnitt der Einstellungen mehr: hier arbeitet man am Bestand,

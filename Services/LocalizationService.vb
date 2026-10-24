@@ -313,6 +313,23 @@ Namespace Services
             Next
         End Sub
 
+        ''' <summary>Uebersetzt den Kurzhinweis EINES Steuerelements, wenn er ein blosser Text ist.
+        ''' Aufgerufen unmittelbar vor dem Anzeigen (App.LocalizeLateContent).
+        '''
+        ''' Der letzte Riegel fuer alles, was erst nach den Durchlaeufen entsteht: die Knoepfe in den
+        ''' Koepfen der Anpassungsgruppen (Vergleich und Zuruecksetzen) kommen aus einem
+        ''' HeaderTemplate und standen in der englischen Oberflaeche deutsch da (Nutzerbefund aus dem
+        ''' Forum, Farbe, Farbmischer, Farbkorrektur). Hier ankommen heisst angezeigt werden, eine
+        ''' Stelle kann also nicht mehr durchrutschen. Ueber den gemerkten Ursprung wie im
+        ''' Durchlauf, ein bereits uebersetzter Hinweis bleibt deshalb unveraendert.</summary>
+        Public Shared Sub ApplyToTip(control As Control)
+            If control Is Nothing Then Return
+            Dim tip = ToolTip.GetTip(control)
+            If Not TypeOf tip Is String Then Return
+            Dim merker = Ursprungstexte.GetValue(control, Function(ignoriert) New NodeTexts())
+            ToolTip.SetTip(control, TranslateRemembered(CStr(tip), merker.Tipp, appendSpace:=True))
+        End Sub
+
         Private Shared Function ResolveCultureCode(mode As String) As String
             Select Case NormalizeLanguageMode(mode)
                 Case "German" : Return "de"

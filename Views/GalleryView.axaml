@@ -2086,7 +2086,7 @@
                                                                 ToolTip.Tip="Bearbeitet">
                                                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/adjustments-alt.svg"
                                                                            Width="15" Height="15"
-                                                                           IconBrush="White"
+                                                                           IconBrush="{DynamicResource FP.OnAccent}"
                                                                            HorizontalAlignment="Center"
                                                                            VerticalAlignment="Center"/>
                                                         </Button>
@@ -2137,7 +2137,7 @@
                                                                    Width="22" Height="22"
                                                                    HorizontalAlignment="Center"
                                                                    VerticalAlignment="Center"
-                                                                   IconBrush="White"/>
+                                                                   IconBrush="{DynamicResource FP.OnAccent}"/>
                                                 </Button>
                                                 <!-- DIE TREFFERFLAECHE IST GROESSER ALS DER KREIS.
                                                      Sichtbar bleibt der 16er-Kreis an derselben
@@ -2657,7 +2657,7 @@
                                                                    Width="13" Height="13"
                                                                    HorizontalAlignment="Center"
                                                                    VerticalAlignment="Center"
-                                                                   IconBrush="White"/>
+                                                                   IconBrush="{DynamicResource FP.OnAccent}"/>
                                                 </Button>
                                                 <Button Classes="selection-badge compact"
                                                         Width="14"
@@ -3334,10 +3334,10 @@
                     <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/folder-check.svg"
                                    Width="18" Height="18"
                                    VerticalAlignment="Center"
-                                   IconBrush="#FFFFFFFF"/>
+                                   IconBrush="{DynamicResource FP.OnAccent}"/>
                     <TextBlock Grid.Column="1"
                                Text="Hier ablegen"
-                               Foreground="#FFFFFFFF"
+                               Foreground="{DynamicResource FP.OnAccent}"
                                FontWeight="SemiBold"
                                VerticalAlignment="Center"/>
                 </Grid>

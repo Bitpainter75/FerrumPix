@@ -2367,9 +2367,9 @@
                     <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/photo-plus.svg"
                                    Width="18" Height="18"
                                    VerticalAlignment="Center"
-                                   IconBrush="#FFFFFFFF"/>
+                                   IconBrush="{DynamicResource FP.OnAccent}"/>
                     <TextBlock Text="Als Ebene einfügen"
-                               Foreground="#FFFFFFFF"
+                               Foreground="{DynamicResource FP.OnAccent}"
                                FontWeight="SemiBold"
                                VerticalAlignment="Center"/>
                 </StackPanel>

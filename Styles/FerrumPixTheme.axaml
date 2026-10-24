@@ -48,6 +48,12 @@
         <SolidColorBrush x:Key="FP.Accent.Dark" Color="#BC6711"/>
         <SolidColorBrush x:Key="FP.Accent.Dim" Color="#2B1606"/>
         <SolidColorBrush x:Key="FP.Brand.Accent" Color="#F08A1A"/>
+        <!-- Schrift und Symbole AUF einer Akzentflaeche (markierte Ebene, aktive Auswahlmarke). Weiss
+             nur, solange es sich vom Akzent abhebt; auf Gelb oder hellem Gruen wird es dunkel.
+             Zur Laufzeit setzt SettingsViewModel alle drei neu (SetAccentBrushes). -->
+        <SolidColorBrush x:Key="FP.OnAccent" Color="#FFFFFFFF"/>
+        <SolidColorBrush x:Key="FP.OnAccent.Soft" Color="#CCFFFFFF"/>
+        <SolidColorBrush x:Key="FP.OnAccent.Dim" Color="#99FFFFFF"/>
         <!-- Einzelvergleich eines Reglers (Rechtsklick): die Gegenfarbe zum Akzent, damit sie sich
              bei jeder waehlbaren Akzentfarbe abhebt. Zur Laufzeit setzt SettingsViewModel beide neu. -->
         <SolidColorBrush x:Key="FP.Compare" Color="#1A80F0"/>
@@ -1284,20 +1290,21 @@
         <Setter Property="Background" Value="{DynamicResource FP.Accent}"/>
     </Style>
     <Style Selector="ListBox.layers-panel-list ListBoxItem:selected Border.layers-panel-row TextBlock.layer-name">
-        <Setter Property="Foreground" Value="#FFFFFFFF"/>
+        <Setter Property="Foreground" Value="{DynamicResource FP.OnAccent}"/>
     </Style>
-    <!-- Auge auf einer ausgewählten (orangefarbenen) Zeile: sichtbar = weiß, ausgeblendet = gedämpftes Weiß. -->
+    <!-- Auge auf einer ausgewählten Zeile: sichtbar = Schriftfarbe auf dem Akzent, ausgeblendet = dieselbe
+         gedämpft. Fest Weiss war auf einem gelben Akzent kaum zu lesen (FP.OnAccent wählt nach Kontrast). -->
     <Style Selector="ListBox.layers-panel-list ListBoxItem:selected Border.layers-panel-row ToggleButton.layer-eye icons|SvgIcon">
-        <Setter Property="IconBrush" Value="#99FFFFFF"/>
+        <Setter Property="IconBrush" Value="{DynamicResource FP.OnAccent.Dim}"/>
     </Style>
     <Style Selector="ListBox.layers-panel-list ListBoxItem:selected Border.layers-panel-row ToggleButton.layer-eye:checked icons|SvgIcon">
-        <Setter Property="IconBrush" Value="#FFFFFFFF"/>
+        <Setter Property="IconBrush" Value="{DynamicResource FP.OnAccent}"/>
     </Style>
 
     <!-- Typsymbol und Merkzeichen einer Ebene: normale Schriftfarbe, wie die Symbole der Historie.
          Das Typsymbol sitzt in seinem dunklen Kasten und traegt auf der ausgewaehlten Zeile den
-         Akzent; die Merkzeichen (Maske, Schnittmaske) stehen direkt auf der Zeile und bleiben dort
-         in der Schriftfarbe, auf der orangefarbenen Flaeche waere der Akzent unsichtbar. -->
+         Akzent; die Merkzeichen (Maske, Schnittmaske) stehen direkt auf der Zeile und tragen dort
+         die Schriftfarbe der Akzentflaeche, der Akzent selbst waere darauf unsichtbar. -->
     <Style Selector="Border.layers-panel-row icons|SvgIcon.layer-kind-icon">
         <Setter Property="IconBrush" Value="{DynamicResource FP.Text.Primary}"/>
     </Style>
@@ -1310,6 +1317,12 @@
     <Style Selector="Border.layers-panel-row icons|SvgIcon.layer-marker">
         <Setter Property="IconBrush" Value="{DynamicResource FP.Text.Primary}"/>
     </Style>
+    <Style Selector="ListBox.layers-panel-list ListBoxItem:selected Border.layers-panel-row icons|SvgIcon.layer-marker">
+        <Setter Property="IconBrush" Value="{DynamicResource FP.OnAccent}"/>
+    </Style>
+    <Style Selector="Border.layers-panel-row.multi-selected icons|SvgIcon.layer-marker">
+        <Setter Property="IconBrush" Value="{DynamicResource FP.OnAccent}"/>
+    </Style>
 
     <!-- MEHRFACHauswahl: die ListBox markiert nur EINE Zeile. Alle weiteren markierten Ebenen sehen
          deshalb über diese Klasse genauso aus wie die ausgewählte - sonst wirkte eine funktionierende
@@ -1318,13 +1331,13 @@
         <Setter Property="Background" Value="{DynamicResource FP.Accent}"/>
     </Style>
     <Style Selector="Border.layers-panel-row.multi-selected TextBlock.layer-name">
-        <Setter Property="Foreground" Value="#FFFFFFFF"/>
+        <Setter Property="Foreground" Value="{DynamicResource FP.OnAccent}"/>
     </Style>
     <Style Selector="Border.layers-panel-row.multi-selected ToggleButton.layer-eye icons|SvgIcon">
-        <Setter Property="IconBrush" Value="#99FFFFFF"/>
+        <Setter Property="IconBrush" Value="{DynamicResource FP.OnAccent.Dim}"/>
     </Style>
     <Style Selector="Border.layers-panel-row.multi-selected ToggleButton.layer-eye:checked icons|SvgIcon">
-        <Setter Property="IconBrush" Value="#FFFFFFFF"/>
+        <Setter Property="IconBrush" Value="{DynamicResource FP.OnAccent}"/>
     </Style>
 
     <!-- DIE REITER DES EBENEN-PANELS (Ebenen und Historie). Zwei Knoepfe und kein TabControl: die
@@ -1376,7 +1389,7 @@
         <Setter Property="IconBrush" Value="{DynamicResource FP.Accent}"/>
     </Style>
     <Style Selector="ListBox.layers-panel-list ListBoxItem:selected Border.history-row TextBlock.history-number">
-        <Setter Property="Foreground" Value="#CCFFFFFF"/>
+        <Setter Property="Foreground" Value="{DynamicResource FP.OnAccent.Soft}"/>
     </Style>
 
     <Style Selector="ListBoxItem:selected:pressed">
@@ -1992,7 +2005,7 @@
         <Setter Property="IconBrush" Value="{DynamicResource FP.Text.Secondary}"/>
     </Style>
     <Style Selector="Border.selection-badge-dot.active icons|SvgIcon.badge-glyph">
-        <Setter Property="IconBrush" Value="White"/>
+        <Setter Property="IconBrush" Value="{DynamicResource FP.OnAccent}"/>
     </Style>
     <Style Selector="Button.selection-badge.compact">
         <Setter Property="Width" Value="14"/>
@@ -2007,18 +2020,18 @@
     <Style Selector="Button.selection-badge.active">
         <Setter Property="Background" Value="{DynamicResource FP.Accent}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource FP.Accent}"/>
-        <Setter Property="Foreground" Value="White"/>
+        <Setter Property="Foreground" Value="{DynamicResource FP.OnAccent}"/>
     </Style>
     <Style Selector="Button.selection-badge.active /template/ ContentPresenter">
         <Setter Property="Background" Value="{DynamicResource FP.Accent}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource FP.Accent}"/>
-        <Setter Property="TextElement.Foreground" Value="White"/>
+        <Setter Property="TextElement.Foreground" Value="{DynamicResource FP.OnAccent}"/>
     </Style>
     <Style Selector="Button.selection-badge icons|SvgIcon.badge-glyph">
         <Setter Property="IconBrush" Value="{DynamicResource FP.Text.Secondary}"/>
     </Style>
     <Style Selector="Button.selection-badge.active icons|SvgIcon.badge-glyph">
-        <Setter Property="IconBrush" Value="White"/>
+        <Setter Property="IconBrush" Value="{DynamicResource FP.OnAccent}"/>
     </Style>
     <Style Selector="Button.favorite-btn:pointerover icons|SvgIcon.fav-heart">
         <Setter Property="IconBrush" Value="{DynamicResource FP.Text.Primary}"/>

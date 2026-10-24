@@ -46,7 +46,10 @@ Namespace Services
             Dim distortionKnots = curves.Distortion
             Dim redKnots = curves.Red
             Dim blueKnots = curves.Blue
-            If distortionKnots Is Nothing AndAlso redKnots Is Nothing Then Return Nothing
+            ' Die Vignettierung kennt bisher nur Fujifilm; sie steht auch in Dateien, deren
+            ' Verzeichnungstabelle leer ist.
+            Dim vignettingKnots = ReadFujifilmVignetting(path, width, height)
+            If distortionKnots Is Nothing AndAlso redKnots Is Nothing AndAlso vignettingKnots Is Nothing Then Return Nothing
 
             ' Normiert wird wie bei einem Profil, das genau an diesem Bild gemessen wurde: das
             ' Seitenverhaeltnis ist das des Bildes, der Crop-Quotient 1. Dann ist der Radius der
@@ -62,7 +65,9 @@ Namespace Services
                 .HasDistortion = distortionKnots IsNot Nothing,
                 .TcaRedKnots = redKnots,
                 .TcaBlueKnots = blueKnots,
-                .HasChromaticAberration = redKnots IsNot Nothing
+                .HasChromaticAberration = redKnots IsNot Nothing,
+                .VignettingKnots = vignettingKnots,
+                .HasVignetting = vignettingKnots IsNot Nothing
             }
             k.NormScale = LensDataService.NormScaleFor(k, width, height)
             Return k
@@ -189,8 +194,8 @@ Namespace Services
         ''' Kopfwert mal Zahl der Stuetzstellen ist die halbe Diagonale des Bildes in Pixeln. Passt sie
         ''' nicht zum Bild (X-S20, X-T30 III und X-M5 schreiben den Wert des 40-MP-Sensors, eine X-T5
         ''' im Kamera-Ausschnitt einen anderen), bleibt die Datei unkorrigiert: an diesen Dateien lag
-        ''' die Kurve gegen Adobe bis 300 Pixel daneben. Der Farbquerfehler (0xF00F) und die
-        ''' Vignettierung (0xF010) werden nicht gelesen.</summary>
+        ''' die Kurve gegen Adobe bis 300 Pixel daneben. Der Farbquerfehler (0xF00F) wird nicht
+        ''' gelesen, die Vignettierung (0xF010) in <see cref="ReadFujifilmVignetting"/>.</summary>
         Private Shared Function ReadFujifilm(path As String, width As Integer, height As Integer) As (Distortion As Double(), Red As Double(), Blue As Double())
             Dim none As (Distortion As Double(), Red As Double(), Blue As Double()) = (Nothing, Nothing, Nothing)
             If String.IsNullOrEmpty(path) OrElse Not path.EndsWith(".raf", StringComparison.OrdinalIgnoreCase) Then Return none
@@ -206,6 +211,68 @@ Namespace Services
             Dim halfDiagonal = Math.Sqrt(CDbl(width) * width + CDbl(height) * height) / 2.0
             If Math.Abs(table(0) * n - halfDiagonal) > 0.02 * halfDiagonal Then Return none
             Return (FujifilmDistortionKnots(positions, values), Nothing, Nothing)
+        End Function
+
+        Private Const FujifilmVignettingTag As Integer = &HF010
+
+        ''' <summary>Fujifilm: die Vignettierung in Feld 0xF010, gebaut wie die Verzeichnung (Kopfwert,
+        ''' n Stuetzstellen in halben Diagonalen, n Werte). Die Werte sind der VERBLEIBENDE Anteil
+        ''' des Lichts in Prozent, 100 in der Mitte; also genau der Abfall, durch den die Korrektur
+        ''' teilt. Zurueck kommen Stuetzwerte von der Mitte bis zur Ecke (1 = kein Abfall).
+        '''
+        ''' Gemessen gegen die Vignettierung, die der DNG-Konverter derselben Datei in OpcodeList2
+        ''' schreibt (FixVignetteRadial, Diagnostics/Fujimessung/vignette.py): er uebernimmt die
+        ''' Tabelle unveraendert. Der beste Exponent auf den Gewinn lag an 54 Dateien im Median bei
+        ''' 1,01 (0,97 bis 1,04); ein abgeschwaechter Gewinn hoch 0,85 laege bis 0,21 Blenden
+        ''' daneben. Zur Mitte siehe <see cref="FujifilmVignettingKnots"/>.
+        '''
+        ''' Wie bei der Verzeichnung muss Kopfwert mal n die halbe Diagonale treffen, sonst bleibt
+        ''' die Datei ohne.</summary>
+        Private Shared Function ReadFujifilmVignetting(path As String, width As Integer, height As Integer) As Double()
+            If String.IsNullOrEmpty(path) OrElse Not path.EndsWith(".raf", StringComparison.OrdinalIgnoreCase) Then Return Nothing
+            Dim table = ReadFujifilmTable(path, FujifilmVignettingTag)
+            If table Is Nothing OrElse table.Length < 5 OrElse (table.Length - 1) Mod 2 <> 0 Then Return Nothing
+            Dim n = (table.Length - 1) \ 2
+            Dim positions = table.Skip(1).Take(n).ToArray()
+            Dim values = table.Skip(1 + n).Take(n).ToArray()
+            ' Lauter 100 heisst "kein Abfall", nicht gemessen; Werte ausserhalb sind unbrauchbar.
+            If values.All(Function(v) v = 100) OrElse values.Any(Function(v) v <= 0 OrElse v > 200) Then Return Nothing
+            For i = 1 To n - 1
+                If positions(i) <= positions(i - 1) Then Return Nothing
+            Next
+            Dim halfDiagonal = Math.Sqrt(CDbl(width) * width + CDbl(height) * height) / 2.0
+            If Math.Abs(table(0) * n - halfDiagonal) > 0.02 * halfDiagonal Then Return Nothing
+            Return FujifilmVignettingKnots(positions, values)
+        End Function
+
+        ''' <summary>Aus Stuetzstellen (Radien in halben Diagonalen) und Prozentwerten des
+        ''' verbleibenden Lichts die Stuetzwerte der Vignettierung, gleichmaessig von der Mitte bis
+        ''' zur Ecke; dazwischen linear.
+        '''
+        ''' IN DER MITTE GILT 100 %. Die neueren Gehaeuse mit neun Stuetzstellen beginnen erst bei
+        ''' Wurzel(1/8) = 0,354 und tragen dort schon etwa 98,5. Wie bei der Verzeichnung (dort 0 %)
+        ''' wird die Mitte eingesetzt und bis zur ersten Stuetzstelle linear verbunden. Gegen den
+        ''' DNG-Konverter: groesster Fehler bis zur Ecke im Median 0,011, 90 % unter 0,026, hoechstens
+        ''' 0,045 Blenden. Den Wert der ersten Stuetzstelle bis zur Mitte durchzuziehen hellte das
+        ''' ganze Bild um gut 1 % auf (90 % unter 0,044 Blenden), ihn als Mitte zu nehmen verschob
+        ''' die Kurve ebenso weit.</summary>
+        Friend Shared Function FujifilmVignettingKnots(positions As Double(), values As Double()) As Double()
+            Dim knots = positions.ToList()
+            Dim percent = values.ToList()
+            If knots(0) > 0 Then
+                knots.Insert(0, 0.0)
+                percent.Insert(0, 100.0)
+            End If
+            Return SampleFormula(Function(r)
+                                     If r <= knots(0) Then Return percent(0) / 100.0
+                                     For i = 1 To knots.Count - 1
+                                         If r <= knots(i) Then
+                                             Dim t = (r - knots(i - 1)) / (knots(i) - knots(i - 1))
+                                             Return (percent(i - 1) + t * (percent(i) - percent(i - 1))) / 100.0
+                                         End If
+                                     Next
+                                     Return percent(knots.Count - 1) / 100.0
+                                 End Function)
         End Function
 
         ''' <summary>Aus Stuetzstellen (Radien in halben Diagonalen) und Prozentwerten die

@@ -496,7 +496,7 @@
                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/arrows-exchange.svg"
                                            Width="22" Height="22"
                                            HorizontalAlignment="Center" VerticalAlignment="Center"
-                                           IconBrush="White"/>
+                                           IconBrush="{DynamicResource FP.OnAccent}"/>
                         </Button>
 
                     </Grid>

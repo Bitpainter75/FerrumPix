@@ -156,6 +156,10 @@ Namespace Services
             Public Property Vk1 As Double
             Public Property Vk2 As Double
             Public Property Vk3 As Double
+            ''' Vignettierung als Stuetzwerte statt als Formel: der verbleibende Anteil des Lichts
+            ''' (1 = kein Abfall) an gleichmaessig verteilten Stellen von der Mitte bis zur ECKE.
+            ''' Belegt, ersetzt sie Vk1 bis Vk3. Kommt aus den Kameradaten (Fujifilm).
+            Public Property VignettingKnots As Double()
 
             Public ReadOnly Property HasAnything As Boolean
                 Get
@@ -234,9 +238,18 @@ Namespace Services
         ''' Korrigiert wird durch TEILEN durch diesen Wert - der Wert beschreibt den Fehler, nicht
         ''' seine Behebung.</summary>
         Public Shared Function VignettingFactor(k As Korrektur, rCorner As Double) As Double
-            Dim r2 = rCorner * rCorner
-            Dim r4 = r2 * r2
-            Dim c = 1.0 + k.Vk1 * r2 + k.Vk2 * r4 + k.Vk3 * r4 * r2
+            Dim c As Double
+            If k.VignettingKnots IsNot Nothing AndAlso k.VignettingKnots.Length >= 2 Then
+                ' Ueber die Ecke hinaus (Bildteile ausserhalb nach einer Drehung) gilt der letzte Wert.
+                Dim position = Math.Max(0.0, Math.Min(1.0, rCorner)) * (k.VignettingKnots.Length - 1)
+                Dim i0 = Math.Min(k.VignettingKnots.Length - 2, CInt(Math.Floor(position)))
+                Dim t = position - i0
+                c = k.VignettingKnots(i0) + (k.VignettingKnots(i0 + 1) - k.VignettingKnots(i0)) * t
+            Else
+                Dim r2 = rCorner * rCorner
+                Dim r4 = r2 * r2
+                c = 1.0 + k.Vk1 * r2 + k.Vk2 * r4 + k.Vk3 * r4 * r2
+            End If
             Return 1.0 + (c - 1.0) * k.VignettingStrength
         End Function
 
@@ -819,6 +832,7 @@ Namespace Services
                 .TcaBb = k.TcaBb, .TcaCb = k.TcaCb, .TcaVb = k.TcaVb,
                 .TcaRedFine = k.TcaRedFine, .TcaBlueFine = k.TcaBlueFine,
                 .HasVignetting = k.HasVignetting, .Vk1 = k.Vk1, .Vk2 = k.Vk2, .Vk3 = k.Vk3,
+                .VignettingKnots = k.VignettingKnots,
                 .DistortionStrength = k.DistortionStrength,
                 .ChromaticAberrationStrength = k.ChromaticAberrationStrength,
                 .VignettingStrength = k.VignettingStrength}

@@ -336,6 +336,10 @@ Public Class App
         ' auch solange er nirgends angezeigt wird.
         Avalonia.Controls.ToolTip.ToolTipOpeningEvent.AddClassHandler(Of Avalonia.Controls.Control)(
             Sub(control, e)
+                ' Ein Hinweis als blosser Text wird hier ebenfalls nachgezogen: er kann an einem
+                ' Steuerelement haengen, das erst nach den Durchlaeufen entstanden ist (Koepfe der
+                ' Anpassungsgruppen aus einem HeaderTemplate).
+                Services.LocalizationService.ApplyToTip(control)
                 Dim tip = TryCast(Avalonia.Controls.ToolTip.GetTip(control), Avalonia.LogicalTree.ILogical)
                 If tip IsNot Nothing Then Services.LocalizationService.ApplyTo(tip)
             End Sub)

@@ -3,7 +3,7 @@ Imports System.Collections.Concurrent
 Imports SkiaSharp
 
 Namespace Services
-    ''' <summary>Photoshop-Mischmethoden ohne Skia-Gegenstück. Eingabe und Ausgabe des
+    ''' <summary>Mischmethoden des Referenzprogramms ohne Skia-Gegenstück. Eingabe und Ausgabe des
     ''' Blenders sind vormultipliziert; die Mischfunktion arbeitet auf geraden Farben.</summary>
     Friend NotInheritable Class PsdBlendModes
         Private Sub New()
@@ -35,7 +35,12 @@ Namespace Services
                 Case "hardmix" : expression = "b >= 1.0 ? 1.0 : (b <= 0.0 ? 0.0 : (b + s >= 1.0 ? 1.0 : 0.0))"
                 Case "subtract" : expression = "max(0.0, b - s)"
                 Case "divide" : expression = "s <= 0.0 ? 1.0 : min(1.0, b / s)"
-                Case "softlight", "psdsoftlight" : expression = "s <= 0.5 ? 2.0 * b * s + b * b * (1.0 - 2.0 * s) : 2.0 * b * (1.0 - s) + sqrt(b) * (2.0 * s - 1.0)"
+                ' Weiches Licht nach W3C: in der oberen Haelfte wandert der Hintergrund zu D(b), und
+                ' D(b) ist unter einem Viertel die Kubik, erst darueber die Wurzel. Mit der Wurzel
+                ' durchgehend lag ein dunkler Hintergrund bis 23 Stufen zu hell, gemessen am
+                ' Gesamtbild des Referenzprogramms in der psd-tools-Datei rgb-blend-modes.psd
+                ' (Hintergrund 5, Quelle 253: Referenz 15, Wurzel 35, Kubik 19).
+                Case "softlight", "psdsoftlight" : expression = "s <= 0.5 ? 2.0 * b * s + b * b * (1.0 - 2.0 * s) : 2.0 * b * (1.0 - s) + softd(b) * (2.0 * s - 1.0)"
                 Case Else : Throw New ArgumentException("Unknown blend mode", NameOf(name))
             End Select
             Dim source = "half vivid(half b, half s) {" & vbLf &
@@ -43,6 +48,10 @@ Namespace Services
                 "  if (s >= 1.0) return 1.0;" & vbLf &
                 "  if (s < 0.5) return 1.0 - min(1.0, (1.0 - b) / (2.0 * s));" & vbLf &
                 "  return min(1.0, b / (2.0 * (1.0 - s)));" & vbLf &
+                "}" & vbLf &
+                "half softd(half b) {" & vbLf &
+                "  if (b <= 0.25) return ((16.0 * b - 12.0) * b + 4.0) * b;" & vbLf &
+                "  return sqrt(b);" & vbLf &
                 "}" & vbLf &
                 "half blend(half b, half s) { return " & expression & "; }" & vbLf &
                 "half4 main(half4 src, half4 dst) {" & vbLf &

@@ -697,33 +697,51 @@ Namespace Services
         ''' <summary>Nothing, wenn das Preset kein Profil nennt. Der Name steht als ATTRIBUT in der
         ''' verschachtelten rdf:Description, die Gruppe dagegen als Elementkörper in einem rdf:Alt -
         ''' beides braucht seinen eigenen Zugriff.</summary>
+        ''' <summary>Liest den Profilblock eines Presets.
+        '''
+        ''' ZWEI SCHREIBWEISEN DESSELBEN RDF. Meist stehen die Felder als Attribute einer inneren
+        ''' Beschreibung (<c>&lt;crs:Look&gt;&lt;rdf:Description crs:Name="…" crs:Amount="…"&gt;</c>).
+        ''' Ebenso gueltig ist die Elementform (<c>&lt;crs:Look rdf:parseType="Resource"&gt;
+        ''' &lt;crs:Amount&gt;0.5&lt;/crs:Amount&gt;</c>). Gelesen wurde nur die erste, und der
+        ''' Block selbst nur ohne Attribut: in der Elementform ging der ganze Look verloren, und
+        ''' ein Profil kam mit voller Staerke an.</summary>
         Private Shared Function ParseLookProfile(xmpText As String) As LookProfile
-            Dim block = Regex.Match(xmpText, "<crs:Look>(?<b>.*?)</crs:Look>", RegexOptions.Singleline)
+            ' Mit Attributen am Block, aber nicht das leere <crs:Look crs:Name=""/>.
+            Dim block = Regex.Match(xmpText, "<crs:Look(?:\s[^>]*)?(?<!/)>(?<b>.*?)</crs:Look>", RegexOptions.Singleline)
             If Not block.Success Then Return Nothing
             Dim body = block.Groups("b").Value
 
             Dim result As New LookProfile()
-            Dim nameMatch = Regex.Match(body, "crs:Name\s*=\s*""(?<v>[^""]*)""")
-            If nameMatch.Success Then result.Name = DecodeXmlEntities(nameMatch.Groups("v").Value)
+            Dim name = ReadLookField(body, "Name")
+            If name IsNot Nothing Then result.Name = DecodeXmlEntities(name)
             ' Gruppe: <crs:Group><rdf:Alt><rdf:li xml:lang="x-default">B&amp;W</rdf:li>…
             Dim groupMatch = Regex.Match(body, "<crs:Group>.*?<rdf:li[^>]*>(?<v>[^<]*)</rdf:li>", RegexOptions.Singleline)
             If groupMatch.Success Then result.Group = DecodeXmlEntities(groupMatch.Groups("v").Value)
 
-            Dim amountMatch = Regex.Match(body, "crs:Amount\s*=\s*""(?<v>[^""]*)""")
-            If amountMatch.Success Then
+            Dim amount = ReadLookField(body, "Amount")
+            If amount IsNot Nothing Then
                 Dim parsed As Double
-                If Double.TryParse(amountMatch.Groups("v").Value.Replace("+", ""), NumberStyles.Float,
+                If Double.TryParse(amount.Replace("+", ""), NumberStyles.Float,
                                    CultureInfo.InvariantCulture, parsed) Then
                     result.Amount = parsed
                     result.HasAmount = True
                 End If
             End If
-            Dim supportsMatch = Regex.Match(body, "crs:SupportsAmount\s*=\s*""(?<v>[^""]*)""")
-            If supportsMatch.Success Then
-                result.SupportsAmount = Not String.Equals(supportsMatch.Groups("v").Value, "false",
-                                                          StringComparison.OrdinalIgnoreCase)
+            Dim supports = ReadLookField(body, "SupportsAmount")
+            If supports IsNot Nothing Then
+                result.SupportsAmount = Not String.Equals(supports, "false", StringComparison.OrdinalIgnoreCase)
             End If
             Return result
+        End Function
+
+        ''' <summary>Ein einfaches Feld des Profilblocks, als Attribut <c>crs:Feld="…"</c> oder als
+        ''' Element <c>&lt;crs:Feld&gt;…&lt;/crs:Feld&gt;</c>; Nothing, wenn es fehlt.</summary>
+        Private Shared Function ReadLookField(body As String, field As String) As String
+            Dim attribute = Regex.Match(body, "crs:" & field & "\s*=\s*""(?<v>[^""]*)""")
+            If attribute.Success Then Return attribute.Groups("v").Value
+            Dim element = Regex.Match(body, "<crs:" & field & ">\s*(?<v>[^<]*?)\s*</crs:" & field & ">")
+            If element.Success Then Return element.Groups("v").Value
+            Return Nothing
         End Function
 
         ''' Profilnamen wie "B&amp;W 11" kommen XML-kodiert an; ohne Auflösung greift keine Namensprüfung.
@@ -744,7 +762,9 @@ Namespace Services
             If String.IsNullOrEmpty(text) Then Return ""
             For Each name In {"Look", "GradientBasedCorrections", "CircularGradientBasedCorrections",
                               "PaintBasedCorrections", "MaskGroupBasedCorrections", "RetouchAreas"}
-                text = Regex.Replace(text, "<crs:" & name & ">.*?</crs:" & name & ">", "", RegexOptions.Singleline)
+                ' Auch mit Attributen am Block (rdf:parseType="Resource" in der Elementform), aber
+                ' nicht die leere Form mit "/>", die keinen Endtag hat.
+                text = Regex.Replace(text, "<crs:" & name & "(?:\s[^>]*)?(?<!/)>.*?</crs:" & name & ">", "", RegexOptions.Singleline)
             Next
             Return text
         End Function

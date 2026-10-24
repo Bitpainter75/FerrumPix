@@ -2761,8 +2761,8 @@ Namespace Services
         Private Shared ReadOnly _cubeLutCache As New Dictionary(Of String, Lut3DData)(StringComparer.OrdinalIgnoreCase)
         Private Shared ReadOnly _cubeLutCacheLock As New Object()
 
-        ''' Lädt und parst eine .cube-3D-LUT-Datei (nur LUT_3D_SIZE wird unterstützt, kein LUT_1D_SIZE,
-        ''' Domain wird als 0..1 angenommen). Ergebnis wird pro Dateipfad gecacht, da eine LUT beim
+        ''' Lädt und parst eine .cube-Datei (3D, 1D oder 3D mit vorgeschalteter 1D-Kurve, siehe
+        ''' ParseCubeLut). Ergebnis wird pro Dateipfad gecacht, da eine LUT beim
         ''' Ziehen an einem Stärke-Regler sonst bei jedem Preview-Frame neu von der Platte geparst würde.
         ''' Speicher- (SaveImage) und Vorschau-Rendering (ApplyAdjustments) können diese Methode
         ''' gleichzeitig von verschiedenen Threads aufrufen, daher SyncLock um das Dictionary.
@@ -2795,30 +2795,75 @@ Namespace Services
             End SyncLock
         End Function
 
+        ''' <summary>Kantenlaenge der Tabelle, in die eine 1D-LUT, eine Vorstufe oder ein anderer
+        ''' Eingangsbereich eingerechnet wird. 64 ist die groesste uebliche Kante; an einer
+        ''' Vorstufe vor einer 33er Tabelle liegt die Naeherung damit bei wenigen Stufen von 255.</summary>
+        Private Const CubeBakeSize As Integer = 64
+
         ''' <summary>Die reine Datei-Arbeit, OHNE Cache und ohne Sperre - genau deshalb darf sie
         ''' ausserhalb des SyncLock laufen. Nothing heisst "nicht brauchbar" (fehlende Groesse,
         ''' falsche Anzahl Werte, unlesbare Datei); was damit geschieht, entscheidet der
-        ''' Aufrufer.</summary>
+        ''' Aufrufer.
+        '''
+        ''' DREI FORMEN EINER .cube-DATEI. Eine reine 3D-Tabelle (LUT_3D_SIZE) mit Eingang 0 bis 1
+        ''' geht unveraendert durch. Eine reine 1D-Tabelle (LUT_1D_SIZE) und eine 3D-Tabelle mit
+        ''' VORGESCHALTETER 1D-Kurve (beide Groessen, erst die 1D-Werte, dann die 3D-Werte; so
+        ''' schreiben viele Look-Pakete) werden einmal in eine 3D-Tabelle mit CubeBakeSize Teilungen
+        ''' eingerechnet. Ebenso eine Tabelle, deren Eingang nicht 0 bis 1 ist (DOMAIN_MIN/MAX je
+        ''' Kanal, LUT_1D_INPUT_RANGE und LUT_3D_INPUT_RANGE fuer beide Stufen getrennt).
+        ''' Vorschau, Export und GPU sehen danach nur noch eine gewoehnliche 3D-Tabelle.
+        '''
+        ''' BEFUND: Vorher zaehlte die Datei mit Vorstufe deren Zeilen als 3D-Werte mit, die Anzahl
+        ''' stimmte nicht, und die LUT wirkte STILL gar nicht. Ein anderer Eingangsbereich wurde als
+        ''' 0 bis 1 gelesen und damit falsch abgetastet.</summary>
         Private Shared Function ParseCubeLut(path As String) As Lut3DData
-            Dim size As Integer = 0
+            Dim size3d As Integer = 0
+            Dim size1d As Integer = 0
+            Dim domainMin = New Single() {0, 0, 0}
+            Dim domainMax = New Single() {1, 1, 1}
+            Dim range1dMin = Single.NaN, range1dMax = Single.NaN
+            Dim range3dMin = Single.NaN, range3dMax = Single.NaN
             Dim values As New List(Of Single)()
+            Dim culture = Globalization.CultureInfo.InvariantCulture
             Try
                 For Each rawLine In File.ReadLines(path)
                     Dim line = rawLine.Trim()
                     If line.Length = 0 OrElse line.StartsWith("#") Then Continue For
-                    If line.StartsWith("LUT_3D_SIZE", StringComparison.OrdinalIgnoreCase) Then
-                        Dim parts = line.Split({" "c, ControlChars.Tab}, StringSplitOptions.RemoveEmptyEntries)
-                        If parts.Length >= 2 Then Integer.TryParse(parts(1), Globalization.NumberStyles.Integer, Globalization.CultureInfo.InvariantCulture, size)
-                        Continue For
-                    End If
+                    Dim parts = line.Split({" "c, ControlChars.Tab}, StringSplitOptions.RemoveEmptyEntries)
+                    Dim keyword = parts(0).ToUpperInvariant()
+                    Select Case keyword
+                        Case "LUT_3D_SIZE"
+                            If parts.Length >= 2 Then Integer.TryParse(parts(1), Globalization.NumberStyles.Integer, culture, size3d)
+                            Continue For
+                        Case "LUT_1D_SIZE"
+                            If parts.Length >= 2 Then Integer.TryParse(parts(1), Globalization.NumberStyles.Integer, culture, size1d)
+                            Continue For
+                        Case "DOMAIN_MIN", "DOMAIN_MAX"
+                            Dim target = If(keyword = "DOMAIN_MIN", domainMin, domainMax)
+                            For c = 0 To Math.Min(2, parts.Length - 2)
+                                Single.TryParse(parts(c + 1), Globalization.NumberStyles.Float, culture, target(c))
+                            Next
+                            Continue For
+                        Case "LUT_1D_INPUT_RANGE", "LUT_3D_INPUT_RANGE"
+                            Dim low, high As Single
+                            If parts.Length >= 3 AndAlso
+                               Single.TryParse(parts(1), Globalization.NumberStyles.Float, culture, low) AndAlso
+                               Single.TryParse(parts(2), Globalization.NumberStyles.Float, culture, high) Then
+                                If keyword = "LUT_1D_INPUT_RANGE" Then
+                                    range1dMin = low : range1dMax = high
+                                Else
+                                    range3dMin = low : range3dMax = high
+                                End If
+                            End If
+                            Continue For
+                    End Select
                     If Not Char.IsDigit(line(0)) AndAlso line(0) <> "-"c AndAlso line(0) <> "+"c AndAlso line(0) <> "."c Then Continue For
 
-                    Dim comps = line.Split({" "c, ControlChars.Tab}, StringSplitOptions.RemoveEmptyEntries)
-                    If comps.Length < 3 Then Continue For
+                    If parts.Length < 3 Then Continue For
                     Dim r, g, b As Single
-                    If Single.TryParse(comps(0), Globalization.NumberStyles.Float, Globalization.CultureInfo.InvariantCulture, r) AndAlso
-                       Single.TryParse(comps(1), Globalization.NumberStyles.Float, Globalization.CultureInfo.InvariantCulture, g) AndAlso
-                       Single.TryParse(comps(2), Globalization.NumberStyles.Float, Globalization.CultureInfo.InvariantCulture, b) Then
+                    If Single.TryParse(parts(0), Globalization.NumberStyles.Float, culture, r) AndAlso
+                       Single.TryParse(parts(1), Globalization.NumberStyles.Float, culture, g) AndAlso
+                       Single.TryParse(parts(2), Globalization.NumberStyles.Float, culture, b) Then
                         values.Add(r)
                         values.Add(g)
                         values.Add(b)
@@ -2826,19 +2871,95 @@ Namespace Services
                 Next
             Catch
                 ' Unlesbare Datei: wie ein Parse-Fehler behandeln (negativ cachen, s.u.).
-                size = 0
+                size3d = 0
+                size1d = 0
             End Try
 
-            If size < 2 OrElse values.Count <> size * size * size * 3 Then
-                ' Nothing heisst hier "unbrauchbar", und der Aufrufer legt genau das in den Cache.
-                ' Das NEGATIVE Merken ist wichtig: ohne Eintrag wurde eine defekte .cube-Datei beim
-                ' Ziehen am LUT-Staerke-Regler mit JEDEM Vorschau-Frame neu geparst. Es gilt (wie
-                ' der Positiv-Cache) bis zum Programmende - eine extern reparierte Datei braucht
-                ' einen Neustart bzw. eine Neu-Auswahl.
-                Return Nothing
+            ' Nothing heisst "unbrauchbar", und der Aufrufer legt genau das in den Cache. Das
+            ' NEGATIVE Merken ist wichtig: ohne Eintrag wurde eine defekte .cube-Datei beim Ziehen
+            ' am LUT-Staerke-Regler mit JEDEM Vorschau-Frame neu geparst. Es gilt (wie der
+            ' Positiv-Cache) bis zum Programmende - eine extern reparierte Datei braucht einen
+            ' Neustart bzw. eine Neu-Auswahl.
+            Dim count1d = If(size1d >= 2, size1d * 3, 0)
+            Dim count3d = If(size3d >= 2, size3d * size3d * size3d * 3, 0)
+            If count1d + count3d = 0 OrElse values.Count <> count1d + count3d Then Return Nothing
+            Dim all = values.ToArray()
+
+            ' Die Eingangsbereiche. Ohne eigene Angabe gilt fuer die Stufe, die allein steht, DOMAIN;
+            ' bei Vorstufe und Tabelle beschreibt DOMAIN den Eingang der Vorstufe.
+            Dim in1dMin = If(Single.IsNaN(range1dMin), domainMin, New Single() {range1dMin, range1dMin, range1dMin})
+            Dim in1dMax = If(Single.IsNaN(range1dMax), domainMax, New Single() {range1dMax, range1dMax, range1dMax})
+            Dim in3dMin As Single(), in3dMax As Single()
+            If Not Single.IsNaN(range3dMin) Then
+                in3dMin = {range3dMin, range3dMin, range3dMin}
+                in3dMax = {range3dMax, range3dMax, range3dMax}
+            ElseIf count1d > 0 Then
+                in3dMin = {0, 0, 0}
+                in3dMax = {1, 1, 1}
+            Else
+                in3dMin = domainMin
+                in3dMax = domainMax
             End If
 
-            Return New Lut3DData With {.Size = size, .Table = values.ToArray()}
+            Dim isUnitRange = Function(low As Single(), high As Single()) As Boolean
+                                  Return low.All(Function(v) v = 0) AndAlso high.All(Function(v) v = 1)
+                              End Function
+            ' Der haeufigste Fall bleibt bitgleich: eine reine 3D-Tabelle mit Eingang 0 bis 1.
+            If count1d = 0 AndAlso isUnitRange(in3dMin, in3dMax) Then
+                Return New Lut3DData With {.Size = size3d, .Table = all}
+            End If
+            For c = 0 To 2
+                If Not (in1dMax(c) > in1dMin(c)) OrElse Not (in3dMax(c) > in3dMin(c)) Then Return Nothing
+            Next
+
+            Dim shaper As Single() = Nothing
+            Dim cube As Single() = Nothing
+            If count1d > 0 Then shaper = all.Take(count1d).ToArray()
+            If count3d > 0 Then cube = all.Skip(count1d).ToArray()
+
+            Dim n = CubeBakeSize
+            Dim baked = New Single(n * n * n * 3 - 1) {}
+            Dim input = New Single(2) {}
+            For bi = 0 To n - 1
+                For gi = 0 To n - 1
+                    For ri = 0 To n - 1
+                        input(0) = ri / CSng(n - 1)
+                        input(1) = gi / CSng(n - 1)
+                        input(2) = bi / CSng(n - 1)
+                        Dim o = (bi * n * n + gi * n + ri) * 3
+                        If shaper IsNot Nothing Then
+                            For c = 0 To 2
+                                input(c) = SampleCube1D(shaper, size1d, c, (input(c) - in1dMin(c)) / (in1dMax(c) - in1dMin(c)))
+                            Next
+                        End If
+                        If cube Is Nothing Then
+                            baked(o) = input(0) : baked(o + 1) = input(1) : baked(o + 2) = input(2)
+                        Else
+                            Dim coord = New Single(2) {}
+                            For c = 0 To 2
+                                coord(c) = Clamp((input(c) - in3dMin(c)) / (in3dMax(c) - in3dMin(c)), 0, 1) * (size3d - 1)
+                            Next
+                            Dim r0 = CInt(Math.Floor(coord(0))), g0 = CInt(Math.Floor(coord(1))), b0 = CInt(Math.Floor(coord(2)))
+                            Dim r1 = Math.Min(size3d - 1, r0 + 1), g1 = Math.Min(size3d - 1, g0 + 1), b1 = Math.Min(size3d - 1, b0 + 1)
+                            Dim rt = coord(0) - r0, gt = coord(1) - g0, bt = coord(2) - b0
+                            For c = 0 To 2
+                                baked(o + c) = TrilinearChannel(cube, size3d, r0, r1, g0, g1, b0, b1, rt, gt, bt, c)
+                            Next
+                        End If
+                    Next
+                Next
+            Next
+            Return New Lut3DData With {.Size = n, .Table = baked}
+        End Function
+
+        ''' <summary>Ein Kanal einer 1D-Tabelle an der Stelle t (0 bis 1, darueber geklemmt),
+        ''' linear zwischen den Stuetzstellen.</summary>
+        Private Shared Function SampleCube1D(table As Single(), size As Integer, channel As Integer, t As Single) As Single
+            Dim position = Clamp(t, 0, 1) * (size - 1)
+            Dim i0 = CInt(Math.Floor(position))
+            Dim i1 = Math.Min(size - 1, i0 + 1)
+            Dim f = position - i0
+            Return table(i0 * 3 + channel) + (table(i1 * 3 + channel) - table(i0 * 3 + channel)) * f
         End Function
 
         Private Shared Function LutChannel(table As Single(), size As Integer, r As Integer, g As Integer, b As Integer, channel As Integer) As Single

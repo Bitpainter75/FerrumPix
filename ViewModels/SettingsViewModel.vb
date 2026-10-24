@@ -5956,7 +5956,12 @@ Namespace ViewModels
 
         ''' <summary>Schluessel des Standarderscheinungsbilds, die eine FerrumPix-Farbe abbilden.
         ''' Links steht der Schluessel, den eine Standardvorlage liest, rechts die Farbe, die er
-        ''' haben soll.</summary>
+        ''' haben soll.
+        '''
+        ''' Die letzten neun sind Haekchen und Punkt auf der Akzentflaeche eines angehakten
+        ''' Kaestchens und eines gewaehlten Optionsfelds, auch beim Darueberfahren und Druecken:
+        ''' das Standarderscheinungsbild setzt sie fest weiss, auf einem gelben Akzent kaum zu
+        ''' sehen.</summary>
         Private Shared ReadOnly MirroredBrushKeys As (Target As String, Source As String)() = {
             ("MenuFlyoutPresenterBackground", "FP.Bg.Elevated"),
             ("MenuFlyoutPresenterBorderBrush", "FP.Border.Normal"),
@@ -6001,7 +6006,16 @@ Namespace ViewModels
             ("SystemControlHighlightListAccentHighBrush", "FP.Border.Strong"),
             ("SystemControlHighlightListLowBrush", "FP.Bg.Hover"),
             ("SystemControlHighlightListMediumBrush", "FP.Sel.Bg"),
-            ("SystemControlHighlightListHighBrush", "FP.Sel.Hover")
+            ("SystemControlHighlightListHighBrush", "FP.Sel.Hover"),
+            ("CheckBoxCheckGlyphForegroundChecked", "FP.OnAccent"),
+            ("CheckBoxCheckGlyphForegroundCheckedPointerOver", "FP.OnAccent"),
+            ("CheckBoxCheckGlyphForegroundCheckedPressed", "FP.OnAccent"),
+            ("CheckBoxCheckGlyphForegroundIndeterminate", "FP.OnAccent"),
+            ("CheckBoxCheckGlyphForegroundIndeterminatePointerOver", "FP.OnAccent"),
+            ("CheckBoxCheckGlyphForegroundIndeterminatePressed", "FP.OnAccent"),
+            ("RadioButtonCheckGlyphFill", "FP.OnAccent"),
+            ("RadioButtonCheckGlyphFillPointerOver", "FP.OnAccent"),
+            ("RadioButtonCheckGlyphFillPressed", "FP.OnAccent")
         }
 
         ''' <summary>DAS UNTERMENUE IST EIN EIGENES POPUP und holt sein Aussehen nicht aus unseren
@@ -6043,7 +6057,31 @@ Namespace ViewModels
             Dim compareColor = HslColor.ToRgb((hsl.H + 180.0) Mod 360.0, hsl.S, hsl.L)
             SetBrush("FP.Compare", ToHex(compareColor))
             SetBrush("FP.Compare.Dim", ToHex(Mix(compareColor, If(isDark, Color.Parse("#0B0E11"), Color.Parse("#E9EDF2")), If(isDark, 0.78, 0.82))))
+            ' Schrift auf der Akzentflaeche: fest Weiss war auf einem gelben Akzent kaum zu lesen
+            ' (Nutzerbefund aus dem Forum, markierte Ebene im Ebenenpanel).
+            Dim onAccent = OnAccentColor(baseColor)
+            ' ToHex laesst die Deckkraft fallen, die beiden gedaempften Stufen tragen sie deshalb selbst.
+            SetBrush("FP.OnAccent", ToHex(onAccent))
+            SetBrush("FP.OnAccent.Soft", "#CC" & ToHex(onAccent).Substring(1))
+            SetBrush("FP.OnAccent.Dim", "#99" & ToHex(onAccent).Substring(1))
         End Sub
+
+        ''' <summary>Weiss oder Dunkel fuer Schrift auf einer Flaeche in der Akzentfarbe, nach dem
+        ''' Kontrastverhaeltnis der WCAG (relative Leuchtdichte im Linearlicht).
+        '''
+        ''' Weiss bleibt, solange es mindestens 2,2 : 1 erreicht. Das haelt den Orange-Akzent ab Werk
+        ''' (2,5 : 1) bei Weiss, wie er gestaltet ist; Gelb (etwa 1,6 : 1), helles Gruen oder helles
+        ''' Blau bekommen die dunkle Schrift, die dort ein Vielfaches an Kontrast hat. Ein strenger
+        ''' Vergleich "was hebt sich mehr ab" haette schon das Orange umgestellt.</summary>
+        Friend Shared Function OnAccentColor(accent As Color) As Color
+            Dim toLinear = Function(channel As Byte) As Double
+                               Dim c = channel / 255.0
+                               Return If(c <= 0.04045, c / 12.92, Math.Pow((c + 0.055) / 1.055, 2.4))
+                           End Function
+            Dim luminance = 0.2126 * toLinear(accent.R) + 0.7152 * toLinear(accent.G) + 0.0722 * toLinear(accent.B)
+            Dim contrastWhite = 1.05 / (luminance + 0.05)
+            Return If(contrastWhite >= 2.2, Colors.White, Color.Parse("#0B0E11"))
+        End Function
 
         ''' <summary>Nimmt einer Farbe die Farbigkeit, ohne ihre HELLIGKEIT anzutasten. 100 lässt sie,
         ''' wie sie ist, 0 macht ein Grau daraus.

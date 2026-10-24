@@ -3021,7 +3021,7 @@
                                                                 VerticalAlignment="Center">
                                                             <TextBlock Text="überwacht"
                                                                        FontSize="{DynamicResource FP.Font.Label}"
-                                                                       Foreground="{DynamicResource FP.Bg.Base}"/>
+                                                                       Foreground="{DynamicResource FP.OnAccent}"/>
                                                         </Border>
                                                     </StackPanel>
                                                     <TextBlock Classes="no-translate"
