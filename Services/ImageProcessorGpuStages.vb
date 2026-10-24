@@ -772,60 +772,6 @@ half4 main(float2 p) {
             Return Function(gr, image) RasterBlurOnGpu(gr, image, sigma, clampEdges:=True)
         End Function
 
-        ''' <summary>ApplyColorNoiseReduction: Farbe aus der Weichzeichnung, Helligkeit vom
-        ''' Original, mit Schutz fuer kraeftige Farben. Rechnet wie dort auf den vormultiplizierten
-        ''' Bytes und nur fuer Bgra8888.</summary>
-        Private Shared Function ColorNoiseReductionOnGpu(source As SKBitmap, amount As Single) As Func(Of GRContext, SKImage, SKSurface)
-            If source.ColorType <> SKColorType.Bgra8888 Then Return Nothing
-            amount = Clamp(amount, 0, 1)
-            Dim fine = Clamp(amount * ChromaFineGain, 0, 1)
-            Dim sigma = 0.5F + fine * 2.0F
-            Dim coarseSigma = CoarseChromaSigma(source, amount)
-            If Not RasterBlurSupported(sigma) OrElse (coarseSigma > 0.5F AndAlso Not RasterBlurSupported(coarseSigma)) Then Return Nothing
-            Return Function(gr, image)
-                       Using blurred = RasterBlurOnGpu(gr, image, sigma, clampEdges:=True)
-                           If blurred Is Nothing Then Return Nothing
-                           Using blurImage = blurred.Snapshot()
-                               Dim effect = StageEffect("Farbrauschen", ColorNoiseShader)
-                               Dim u = New SKRuntimeEffectUniforms(effect)
-                               u("fine") = fine
-                               If coarseSigma <= 0.5F Then
-                                   Return DrawStage(gr, image.Width, image.Height, effect, u, ("src", image), ("mixed", blurImage))
-                               End If
-                               ' Der grobe Durchgang setzt auf dem feinen auf.
-                               Using coarse = RasterBlurOnGpu(gr, blurImage, coarseSigma, clampEdges:=True)
-                                   If coarse Is Nothing Then Return Nothing
-                                   Using coarseImage = coarse.Snapshot()
-                                       Return DrawStage(gr, image.Width, image.Height, effect, u, ("src", image), ("mixed", coarseImage))
-                                   End Using
-                               End Using
-                           End Using
-                       End Using
-                   End Function
-        End Function
-
-        Private Const ColorNoiseShader As String = "
-uniform shader src;
-uniform shader mixed;
-uniform float fine;
-half4 main(float2 p) {
-    float4 c = toBytes(src.eval(p));
-    float4 m = toBytes(mixed.eval(p));
-    // Rec.601-Luma ganzzahlig wie im Prozessor (x1000, abgeschnitten).
-    float lumaSrc = floor((299.0 * c.r + 587.0 * c.g + 114.0 * c.b) / 1000.0 + 0.0001);
-    float chroma = (abs(c.r - lumaSrc) + abs(c.b - lumaSrc)) / 2.0;
-    float schutz = 1.0 - clamp((chroma - 30.0) / 60.0, 0.0, 1.0);
-    float wirkung = fine * schutz;
-    float lumaMix = (299.0 * m.r + 587.0 * m.g + 114.0 * m.b) / 1000.0;
-    float delta = lumaSrc - lumaMix;
-    float3 nb = m.rgb + delta;
-    float3 o = float3(clampByte(c.r + (nb.r - c.r) * wirkung),
-                      clampByte(c.g + (nb.g - c.g) * wirkung),
-                      clampByte(c.b + (nb.b - c.b) * wirkung));
-    return half4(half3(o / 255.0), half(c.a / 255.0));
-}
-"
-
         ' ── Fuehrungsfilter gegen Rauschen (fest und angepasst, ueber mehrere Groessen) ──
         '
         ' ZWISCHENWERTE IN HALBER GLEITKOMMA, JE WERT ZWEI KANAELE. Skia legt auf der Karte keine

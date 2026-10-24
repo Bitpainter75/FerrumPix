@@ -3181,6 +3181,15 @@
                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/deselect.svg"
                                        Width="18" Height="18"/>
                     </Button>
+                    <!-- Derselbe Schalter wie "Serien und RAW+JPEG stapeln" in den Einstellungen,
+                         mit dessen Text: StacksEnabled speichert und meldet den Stand dorthin
+                         (SettingsViewModel.SyncGalleryStacks). -->
+                    <ToggleButton Classes="icon-btn" Width="28" Height="28"
+                                  IsChecked="{Binding StacksEnabled, Mode=TwoWay}"
+                                  ToolTip.Tip="Serien und RAW+JPEG stapeln">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/stack-2.svg"
+                                       Width="18" Height="18"/>
+                    </ToggleButton>
                     <TextBlock
                                Text="{Binding FooterStatusText}"
                                Foreground="{DynamicResource FP.Text.Secondary}"

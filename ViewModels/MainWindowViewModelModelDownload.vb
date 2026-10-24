@@ -25,6 +25,13 @@ Namespace ViewModels
     ''' nicht gepruefte teilt sich den Speicher mit der Oberflaeche (siehe
     ''' AppSettings.GpuAccelerationEnabled).
     '''
+    ''' Stecken mehrere Karten im Rechner, steht ueber dem Haken dieselbe Auswahl wie in den
+    ''' Einstellungen (SettingsViewModel.SelectedGpuDevice), denn sonst probte der Dialog die Karte,
+    ''' die die Automatik gerade nimmt. Gewechselt wird gleich dort: Statustext, Vorbelegung und Probe
+    ''' gelten fuer die aktive Karte. Eine Karte, die als untauglich bekannt ist, laesst die Auswahl
+    ''' stehen und nur den Haken aus. Wird der Dialog beim Fragen abgebrochen, kehrt die alte Wahl
+    ''' zurueck; wer abbricht, hat nichts eingestellt.
+    '''
     ''' Eingeschaltet wird erst NACH einer bestandenen Probe, und ihr Ergebnis steht sichtbar im
     ''' Dialog. Eine Karte, auf der kein Modell anlaeuft, einzuschalten hiesse, jeden kommenden
     ''' Modelllauf erst scheitern zu lassen.</summary>
@@ -43,6 +50,8 @@ Namespace ViewModels
         Private _dialogModelOfferGpu As Boolean
         Private _dialogModelUseGpu As Boolean
         Private _dialogModelGpuText As String = ""
+        Private _dialogModelGpuUsable As Boolean
+        Private _dialogModelOriginalDevice As String = ""
         Private _dialogModelProgress As Double
         Private _dialogModelStatus As String = ""
         Private _dialogModelFailed As Boolean
@@ -75,6 +84,57 @@ Namespace ViewModels
                 Return _dialogModelGpuText
             End Get
         End Property
+
+        ''' <summary>Der Haken laesst sich nur beim Fragen umlegen, und nur fuer eine Karte, die nicht
+        ''' schon als untauglich bekannt ist.</summary>
+        Public ReadOnly Property IsDialogModelGpuCheckable As Boolean
+            Get
+                Return _modelDialogPhase = ModelDialogPhase.Asking AndAlso _dialogModelGpuUsable
+            End Get
+        End Property
+
+        ''' <summary>Die Auswahl der Karte erscheint wie in den Einstellungen nur bei mehr als einer.</summary>
+        Public ReadOnly Property DialogModelOffersGpuDevice As Boolean
+            Get
+                Return _dialogModelOfferGpu AndAlso Settings IsNot Nothing AndAlso Settings.HasMultipleGpuDevices
+            End Get
+        End Property
+
+        ''' <summary>Dieselbe Liste wie in den Einstellungen, damit beide Stellen gleich lauten.</summary>
+        Public ReadOnly Property DialogModelGpuDevices As IEnumerable(Of GpuDeviceOption)
+            Get
+                Return If(Settings?.GpuDeviceOptions, Enumerable.Empty(Of GpuDeviceOption)())
+            End Get
+        End Property
+
+        Public Property DialogModelGpuDevice As GpuDeviceOption
+            Get
+                Return Settings?.SelectedGpuDevice
+            End Get
+            Set(value As GpuDeviceOption)
+                Dim settingsVm = Settings
+                If value Is Nothing OrElse settingsVm Is Nothing Then Return
+                If _modelDialogPhase <> ModelDialogPhase.Asking Then Return
+                settingsVm.SelectedGpuDevice = value
+                Me.RaisePropertyChanged(NameOf(DialogModelGpuDevice))
+                ApplyModelDialogGpuCard()
+            End Set
+        End Property
+
+        ''' <summary>Haken und Statustext nach der aktiven Karte stellen: beim Oeffnen und nach
+        ''' jedem Wechsel der Karte.</summary>
+        Private Sub ApplyModelDialogGpuCard()
+            Dim settingsVm = Settings
+            If settingsVm Is Nothing OrElse Not _dialogModelOfferGpu Then Return
+            Dim state = GpuAccelerationService.ProbeState
+            _dialogModelGpuUsable = state <> GpuAccelerationService.ProbeResult.Failed
+            _dialogModelUseGpu = _dialogModelGpuUsable AndAlso
+                (GpuAccelerationService.IsDiscrete OrElse state = GpuAccelerationService.ProbeResult.Works)
+            _dialogModelGpuText = settingsVm.GpuAccelerationStatusText
+            Me.RaisePropertyChanged(NameOf(DialogModelUseGpu))
+            Me.RaisePropertyChanged(NameOf(DialogModelGpuText))
+            Me.RaisePropertyChanged(NameOf(IsDialogModelGpuCheckable))
+        End Sub
 
         Public ReadOnly Property IsDialogModelAsking As Boolean
             Get
@@ -131,17 +191,21 @@ Namespace ViewModels
             If _modalModelDownload Then Return False
 
             Dim settingsVm = Settings
+            ' Eine untaugliche Karte nimmt das Angebot nur dann ganz weg, wenn es keine andere gibt;
+            ' sonst bleibt die Auswahl, und der Haken geht erst mit einer tauglichen Karte an.
             Dim offerGpu = settingsVm IsNot Nothing AndAlso
                            AiModelService.RuntimeAvailable AndAlso
                            GpuAccelerationService.Available AndAlso
                            Not settingsVm.GpuAccelerationEnabled AndAlso
-                           GpuAccelerationService.ProbeState <> GpuAccelerationService.ProbeResult.Failed AndAlso
+                           (GpuAccelerationService.ProbeState <> GpuAccelerationService.ProbeResult.Failed OrElse
+                            settingsVm.HasMultipleGpuDevices) AndAlso
                            missing.Any(Function(e) e.GpuAllowed)
             _dialogModelOfferGpu = offerGpu
-            _dialogModelUseGpu = offerGpu AndAlso
-                (GpuAccelerationService.IsDiscrete OrElse
-                 GpuAccelerationService.ProbeState = GpuAccelerationService.ProbeResult.Works)
-            _dialogModelGpuText = If(offerGpu, settingsVm.GpuAccelerationStatusText, "")
+            _dialogModelUseGpu = False
+            _dialogModelGpuUsable = False
+            _dialogModelGpuText = ""
+            _dialogModelOriginalDevice = If(settingsVm?.SelectedGpuDevice?.Key, "")
+            ApplyModelDialogGpuCard()
             _dialogModelProgress = 0
             _dialogModelStatus = ""
             _dialogModelFailed = False
@@ -156,7 +220,10 @@ Namespace ViewModels
             _modalModelDownload = True
             Try
                 Dim first = Await Task.WhenAny(start.Task, closed)
-                If first IsNot start.Task OrElse Not start.Task.Result Then Return False
+                If first IsNot start.Task OrElse Not start.Task.Result Then
+                    RestoreModelDialogGpuCard(settingsVm)
+                    Return False
+                End If
 
                 ' ── Download ──
                 _modelDialogCancellation = New CancellationTokenSource()
@@ -203,6 +270,7 @@ Namespace ViewModels
                 ' ── Ergebnis ──
                 _dialogModelOfferGpu = offerGpu AndAlso _dialogModelUseGpu
                 Me.RaisePropertyChanged(NameOf(DialogModelOfferGpu))
+                Me.RaisePropertyChanged(NameOf(DialogModelOffersGpuDevice))
                 SetModelDialogPhase(ModelDialogPhase.Done)
                 DialogConfirmText = LocalizationService.T("OK")
                 DialogCancelText = ""
@@ -249,6 +317,18 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(IsDialogModelAsking))
             Me.RaisePropertyChanged(NameOf(IsDialogModelDownloading))
             Me.RaisePropertyChanged(NameOf(IsDialogPrimaryEnabled))
+            Me.RaisePropertyChanged(NameOf(IsDialogModelGpuCheckable))
+        End Sub
+
+        ''' <summary>Abgebrochen beim Fragen: die Karte von vor dem Dialog wieder einsetzen.</summary>
+        Private Sub RestoreModelDialogGpuCard(settingsVm As SettingsViewModel)
+            If settingsVm Is Nothing Then Return
+            Dim current = If(settingsVm.SelectedGpuDevice?.Key, "")
+            If String.Equals(current, _dialogModelOriginalDevice, StringComparison.Ordinal) Then Return
+            Dim original = settingsVm.GpuDeviceOptions.FirstOrDefault(
+                Function(o) String.Equals(o.Key, _dialogModelOriginalDevice, StringComparison.Ordinal))
+            If original IsNot Nothing Then settingsVm.SelectedGpuDevice = original
+            Me.RaisePropertyChanged(NameOf(DialogModelGpuDevice))
         End Sub
 
         Private Sub SetModelDialogStatus(text As String, failed As Boolean)
@@ -261,6 +341,8 @@ Namespace ViewModels
 
         Private Sub RaiseModelDialogState()
             For Each n In {NameOf(DialogModelOfferGpu), NameOf(DialogModelUseGpu), NameOf(DialogModelGpuText),
+                           NameOf(DialogModelOffersGpuDevice), NameOf(DialogModelGpuDevices),
+                           NameOf(DialogModelGpuDevice), NameOf(IsDialogModelGpuCheckable),
                            NameOf(DialogModelProgress), NameOf(DialogModelStatus), NameOf(HasDialogModelStatus),
                            NameOf(DialogModelFailed)}
                 Me.RaisePropertyChanged(n)

@@ -699,9 +699,11 @@ Namespace Services
         ''' Schalter nichts.
         '''
         ''' Gehoert in die Objektivkorrektur, weil es wie sie im Decode sitzt und dem BILD gehoert.
-        ''' AUS ist die Vorgabe: der Beschnitt verschiebt das Koordinatensystem um den linken und
-        ''' oberen Rand, und Zuschnitt, Masken und Objekte eines Rezepts, das ohne ihn entstand,
-        ''' saessen um diese Pixel daneben.</summary>
+        ''' Eine RAW ohne Rezept startet MIT Beschnitt (ForUneditedRaw). Die Vorgabe des Feldes bleibt
+        ''' AUS: der Beschnitt verschiebt das Koordinatensystem um den linken und oberen Rand, und
+        ''' Zuschnitt, Masken und Objekte eines Rezepts, das ohne ihn entstand, saessen um diese
+        ''' Pixel daneben. Ein Rezept aus der Zeit vor dem Feld traegt es nicht und laedt deshalb
+        ''' ohne; eines danach traegt es immer ausdruecklich.</summary>
         Public Property RawSensorEdgeCrop As Boolean = False
 
         Public Property Vignette As Single = 0
@@ -1218,6 +1220,10 @@ Namespace Services
                 .FarbrauschGrob = Math.Max(0, Math.Min(100, settings.UneditedRawCoarseColorNoise)),
                 .ColorNoiseReduction = Math.Max(0, Math.Min(100, settings.UneditedRawColorNoise))
             }
+            ' Der Sensorrand startet bei jeder RAW abgeschnitten, wie beim Referenzprogramm; je Bild
+            ' laesst er sich abschalten. Nur hier und nicht als Vorgabe des Feldes: ein Rezept ohne
+            ' das Feld stammt aus der Zeit davor und muss ohne Beschnitt weiterrechnen.
+            values.RawSensorEdgeCrop = True
             Dim stops = RawDecodeService.BaselineExposureStops(path)
             If stops <> 0.0 Then values.Exposure = CSng(stops * ExposurePointsPerStop)
             ' Die Kamera-Farbkalibrierung ist dieselbe sichtbare Reglergruppe wie im Editor.
@@ -1402,9 +1408,9 @@ Namespace Services
 
         ''' <summary>Was zur DATEI gehoert und nicht zur Bearbeitung: Masse, Koordinatenfassung,
         ''' Aufnahme-Weissabgleich, Arbeitsbild, Auswahl und Ansichtszustand. Ein Rezept, das sich nur
-        ''' darin von den Startwerten unterscheidet, gilt nicht als bearbeitet. Die Decode-Schalter
-        ''' (Lichterrettung, Sensorrand) stehen NICHT hier: sie starten bei jeder RAW aus, und wer sie
-        ''' einschaltet, aendert das Bild sichtbar.</summary>
+        ''' darin von den Startwerten unterscheidet, gilt nicht als bearbeitet. Der Sensorrand steht
+        ''' NICHT hier: er startet bei jeder RAW an, und wer ihn abschaltet, aendert das Bild
+        ''' sichtbar.</summary>
         Private Shared ReadOnly FileOwnedPropertyNames As String() = {
             "SourceWidthPixels", "SourceHeightPixels", "RecipeCoordinateVersion",
             "WhiteBalanceAnchorX", "WhiteBalanceAnchorY", "WhiteBalanceModel", "WhiteBalanceMode",

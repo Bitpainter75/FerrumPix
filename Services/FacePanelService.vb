@@ -60,6 +60,7 @@ Namespace Services
                 For Each face In LibraryService.Instance.GetFacesForImage(filePath)
                     Dim entry As New PersonFaceEntry(face.FaceId, face.PersonId, face.Name)
                     entry.SetBox(face.X, face.Y, face.Width, face.Height)
+                    entry.IsManual = face.IsManual
                     result.Add(entry)
                 Next
             Catch ex As Exception

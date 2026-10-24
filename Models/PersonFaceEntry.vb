@@ -21,7 +21,7 @@ Namespace Models
 
         Public Sub New(faceId As String, personId As String, name As String)
             Me.FaceId = If(faceId, "")
-            Me.Id = If(personId, "")
+            _id = If(personId, "")
             _name = If(name, "")
         End Sub
 
@@ -32,7 +32,29 @@ Namespace Models
         ''' fuer dieses Gesicht hier.</summary>
         Public ReadOnly Property FaceId As String
 
+        Private _id As String
+
+        ''' <summary>Die Person, zu der das Gesicht gehoert. Aenderbar, weil eine Benennung das
+        ''' Gesicht in eine andere Gruppe schieben kann und die Zeile dann stehen bleibt (siehe
+        ''' <see cref="ApplyAssignment"/>).</summary>
         Public ReadOnly Property Id As String
+            Get
+                Return _id
+            End Get
+        End Property
+
+        ''' <summary>Uebernimmt Person, Name und Handarbeit aus einer frischen Abfrage, ohne die Zeile
+        ''' auszutauschen. Ein Austausch naehme dem Namensfeld den Fokus - beim Durchgehen mit TAB
+        ''' stuende man danach im Nichts.</summary>
+        Public Sub ApplyAssignment(personId As String, name As String, isManual As Boolean)
+            Dim newId = If(personId, "")
+            If Not String.Equals(_id, newId, StringComparison.Ordinal) Then
+                _id = newId
+                Notify(NameOf(Id))
+            End If
+            Me.Name = name
+            Me.IsManual = isManual
+        End Sub
 
         ''' <summary>Der Name der Gruppe. Beschreibbar, weil das Feld im Panel direkt darauf schreibt.</summary>
         Public Property Name As String
@@ -44,6 +66,8 @@ Namespace Models
                 _name = If(value, "")
                 Notify()
                 Notify(NameOf(IsNamed))
+                Notify(NameOf(IsSuggested))
+                Notify(NameOf(IsConfirmed))
             End Set
         End Property
 
@@ -83,6 +107,40 @@ Namespace Models
         Public ReadOnly Property IsNamed As Boolean
             Get
                 Return Not String.IsNullOrWhiteSpace(_name)
+            End Get
+        End Property
+
+        Private _isManual As Boolean
+
+        ''' <summary>Hat der Benutzer dieses Gesicht angefasst (benannt, verschoben, bestaetigt)?
+        ''' Sonst stammt die Zuordnung allein von der Erkennung, auch wenn ein Name daran steht -
+        ''' genau den Unterschied will man beim Durchsehen auf einen Blick sehen.</summary>
+        Public Property IsManual As Boolean
+            Get
+                Return _isManual
+            End Get
+            Set(value As Boolean)
+                If _isManual = value Then Return
+                _isManual = value
+                Notify()
+                Notify(NameOf(IsSuggested))
+                Notify(NameOf(IsConfirmed))
+            End Set
+        End Property
+
+        ''' <summary>Ein Name steht da, aber nur als Vorschlag der Erkennung. Dann zeigt die Zeile
+        ''' den Knopf zum Bestaetigen.</summary>
+        Public ReadOnly Property IsSuggested As Boolean
+            Get
+                Return IsNamed AndAlso Not _isManual
+            End Get
+        End Property
+
+        ''' <summary>Ein Name, den der Benutzer gesetzt oder bestaetigt hat. Ein herausgeloestes
+        ''' Gesicht ohne Namen ist zwar auch Handarbeit, traegt aber nichts, was bestaetigt waere.</summary>
+        Public ReadOnly Property IsConfirmed As Boolean
+            Get
+                Return IsNamed AndAlso _isManual
             End Get
         End Property
 

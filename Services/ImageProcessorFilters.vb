@@ -24,138 +24,330 @@ Namespace Services
 
     Partial Public Class ImageProcessor
 
-        ''' <summary>Radius des GROBEN Chroma-Durchgangs in Pixeln des GERADE bearbeiteten Bildes.
-        '''
-        ''' Bewusst relativ zur Bildkante: Farbflecken sind ein Anteil des Bildes, kein absolutes
-        ''' Pixelmass. Ein fester Radius traefe in der Vorschau (lange Kante ~1500 px) eine ganz
-        ''' andere Fleckengroesse als im Export (6000 px) - Vorschau und Ergebnis saehen verschieden
-        ''' aus. Weil `source` hier immer das ist, was auch angezeigt bzw. gespeichert wird, stimmen
-        ''' beide ueberein. Der Deckel haelt die Rechenzeit bei sehr grossen Bildern im Rahmen.</summary>
-        Private Shared Function CoarseChromaSigma(source As SKBitmap, amount As Single) As Single
-            Dim longEdge = CSng(Math.Max(source.Width, source.Height))
-            ' Der Teiler ist gemessen, nicht geschaetzt: bei 1600 px langer Kante und Flecken von
-            ' 6 bis 12 px bleiben mit /300 noch 36 bzw. 56 Prozent stehen, mit /150 nur noch 27
-            ' bzw. 39 Prozent - erst da ist der Vollausschlag das, was er verspricht. Feines
-            ' Pixelrauschen faellt dabei von 11 auf 0,5 Prozent.
-            Return Clamp(amount * longEdge / 150.0F, 0, 24.0F)
+        ' ── Farbrauschen (crs:ColorNoiseReduction) ─────────────────────────────────────────
+        '
+        ' Die Farbanteile, Rot und Blau gegen Gruen aus den WURZELN des Linearlichts (dort ist
+        ' Schrotrauschen in jeder Helligkeit etwa gleich stark), werden in eine Laplace-Pyramide
+        ' zerlegt. Je Ebene wird das Farbrauschen AM BILD gemessen: Effektivwert der Ebene in den
+        ' glattesten zehn Prozent der 8x8-Bloecke, denn echte Farbe kann einen Block nur unruhiger
+        ' machen. Was in einer Ebene nicht deutlich ueber einem Vielfachen davon liegt, faellt weg,
+        ' starke Farbkanten bleiben stehen. Die Helligkeit bleibt unberuehrt.
+        '
+        ' Die Vorgaengerin zeichnete die Farbe weich und schonte gesaettigte Bildpunkte. Gegen die
+        ' Referenz gemessen (Konzert-RAW, ISO 200, Wert 25) liess sie auf 2 bis 8 Bildpunkten nur
+        ' ein Viertel der Farbschwankung stehen, die Referenz zwei Drittel: sie nahm echte Farbe mit,
+        ' und ein satter Farbsaum blieb gerade wegen des Schutzes stehen.
+        '
+        ' Die Zahlen unten sind an Renderings der Referenz geeicht (Diagnostics/Detailmessung):
+        ' je Ebene der Anteil der Farbschwankung, der bei 10, 25, 50, 75 und 100 stehen bleibt, an
+        ' einem sauberen und einem stark verrauschten Konzertbild.
+
+        Private Const ChromaLevels As Integer = 4
+        ''' <summary>Schwelle je Ebene (feinste zuerst) bei Wert 25, als Vielfaches des gemessenen
+        ''' Rauschens der Ebene.</summary>
+        Private Shared ReadOnly ChromaThreshold As Double() = {7.0, 2.7, 2.1, 0.8, 0.8}
+        ''' <summary>Wie die Schwelle mit dem Regler waechst: (Wert / 25) hoch diesem Exponenten.</summary>
+        Private Shared ReadOnly ChromaThresholdRise As Double() = {0.3, 0.3, 0.3, 0.3, 0.3}
+        ''' <summary>Wie die Schwelle mit dem Rauschen der feinsten Ebene waechst (bezogen auf 0,01):
+        ''' ein sauberes Bild behaelt mehr von seiner groben Farbe als ein verrauschtes.</summary>
+        Private Shared ReadOnly ChromaNoiseRise As Double() = {0.1, 0.1, 0.3, 0.3, 0.3}
+        ''' <summary>Steilheit der weichen Schwelle.</summary>
+        Private Const ChromaSteepness As Double = 3.0
+        ''' <summary>Laesst sich eine Ebene nicht messen (zu klein, zu viel ausgebrannt), gilt das
+        ''' Rauschen der feineren mal diesem Faktor: entmosaiktes Rauschen nimmt nach grob hin ab.</summary>
+        Private Const ChromaCoarserNoise As Single = 0.6F
+        Private Shared ReadOnly ChromaTaps As Single() = {1.0F / 16, 4.0F / 16, 6.0F / 16, 4.0F / 16, 1.0F / 16}
+
+        ''' <summary>Die beiden Farbanteile einer Pyramidenebene.</summary>
+        Private NotInheritable Class ChromaPlane
+            Public ReadOnly Width As Integer
+            Public ReadOnly Height As Integer
+            Public ReadOnly Red As Single()
+            Public ReadOnly Blue As Single()
+            Public Sub New(planeWidth As Integer, planeHeight As Integer)
+                Width = planeWidth
+                Height = planeHeight
+                Red = New Single(planeWidth * planeHeight - 1) {}
+                Blue = New Single(planeWidth * planeHeight - 1) {}
+            End Sub
+        End Class
+
+        ''' <summary>Wo das Rauschen einer Ebene gemessen werden darf: kein Kanal nahe am
+        ''' Ausbrennen, und der Anteil schwarzer Bildpunkte.</summary>
+        Private NotInheritable Class ChromaMeasureMask
+            Public ReadOnly Width As Integer
+            Public ReadOnly Height As Integer
+            Public ReadOnly Unclipped As Boolean()
+            Public ReadOnly Black As Single()
+            Public Sub New(maskWidth As Integer, maskHeight As Integer)
+                Width = maskWidth
+                Height = maskHeight
+                Unclipped = New Boolean(maskWidth * maskHeight - 1) {}
+                Black = New Single(maskWidth * maskHeight - 1) {}
+            End Sub
+        End Class
+
+        Private Shared Function MirrorIndex(v As Integer, n As Integer) As Integer
+            v = Math.Abs(v)
+            If v >= n Then v = 2 * n - 2 - v
+            Return Math.Max(0, Math.Min(n - 1, v))
         End Function
 
-        ''' <summary>Farb-Rauschreduzierung (crs:ColorNoiseReduction): das Bild wird weichgezeichnet,
-        ''' danach bekommt jedes Pixel seine ORIGINAL-Helligkeit zurueck (Differenz der Rec.601-Luma
-        ''' auf alle Kanaele addiert). Ergebnis: Chroma aus dem Blur, Luminanz vom Original - Kanten
-        ''' und Details bleiben stehen, Farbflecken verschwinden. Chroma vertraegt deutlich mehr
-        ''' Glaettung als Helligkeit, daher ein groesseres Sigma als bei ApplyNoiseReduction.
-        '''
-        ''' ZWEI DURCHGAENGE (Messung): der feine Pass allein (Sigma bis 2,5 px) loescht
-        ''' pixelweises Farbrauschen restlos aus - genau das prueft die Diagnose seit.
-        ''' Das Farbrauschen eines hochgezogenen Nachthimmels ist aber TIEFFREQUENT: Flecken von
-        ''' 5 bis 15 px. Davon liessen 2,5 px gemessen 61 bis 78 Prozent stehen, der Regler war fuer
-        ''' den eigentlichen Anwendungsfall wirkungslos (Nachtaufnahme).
-        ''' Der grobe Pass setzt darum auf dem feinen auf; kaskadiert wirken beide wie ein Radius
-        ''' von Wurzel(fein^2 + grob^2), ohne dass der feine Anteil unten am Regler seine Wirkung
-        ''' verliert.</summary>
-        ''' <summary>Wie schnell der FEINE Durchgang mit dem Regler hochlaeuft. Er war frueher
-        ''' linear an den Reglerwert gekoppelt: bei 25 wurden 25 Prozent geglaettete Chroma mit
-        ''' 1,0 px Radius beigemischt. Gemessen an einem Konzert-RAW liess das vom Farbrauschen
-        ''' 3,26 von 4,39 stehen, waehrend die Referenz beim GLEICHEN Wert auf 1,25 kommt - unsere 25
-        ''' wirkten wie deren 5. Feines Pixelrauschen ist aber bei kleinem Radius erledigt oder gar
-        ''' nicht; ein Regler, der es erst bei Vollausschlag wegnimmt, ist falsch geeicht.
-        ''' Der feine Durchgang (Radius UND Beimischung) ist deshalb bei 42 voll ausgefahren -
-        ''' damit trifft 25, der uebliche Standardwert fuer RAWs, auch bei uns dessen Wirkung.
-        ''' Der obere Reglerbereich bleibt nicht tot: der GROBE Durchgang skaliert weiterhin mit
-        ''' dem rohen Reglerwert ueber die ganze Strecke, und nur er erreicht die tieffrequenten
-        ''' Farbflecken (siehe CoarseChromaSigma).</summary>
-        Private Const ChromaFineGain As Single = 3.2F
+        ''' <summary>Weichgezeichnet (Binomial 1-4-6-4-1) und halbiert.</summary>
+        Private Shared Function ChromaDown(p As ChromaPlane) As ChromaPlane
+            Dim w = (p.Width + 1) \ 2
+            Dim h = (p.Height + 1) \ 2
+            Dim wide = New ChromaPlane(w, p.Height)
+            ForEachRow(w, p.Height,
+                Sub(y)
+                    For x = 0 To w - 1
+                        Dim sr = 0.0F, sb = 0.0F
+                        For k = 0 To 4
+                            Dim i = y * p.Width + MirrorIndex(2 * x + k - 2, p.Width)
+                            sr += ChromaTaps(k) * p.Red(i)
+                            sb += ChromaTaps(k) * p.Blue(i)
+                        Next
+                        wide.Red(y * w + x) = sr
+                        wide.Blue(y * w + x) = sb
+                    Next
+                End Sub)
+            Dim result = New ChromaPlane(w, h)
+            ForEachRow(w, h,
+                Sub(y)
+                    For x = 0 To w - 1
+                        Dim sr = 0.0F, sb = 0.0F
+                        For k = 0 To 4
+                            Dim i = MirrorIndex(2 * y + k - 2, p.Height) * w + x
+                            sr += ChromaTaps(k) * wide.Red(i)
+                            sb += ChromaTaps(k) * wide.Blue(i)
+                        Next
+                        result.Red(y * w + x) = sr
+                        result.Blue(y * w + x) = sb
+                    Next
+                End Sub)
+            Return result
+        End Function
+
+        ''' <summary>Auf <paramref name="width"/> x <paramref name="height"/> verdoppelt und
+        ''' weichgezeichnet, wie eine Laplace-Pyramide eine Ebene aufweitet.</summary>
+        Private Shared Function ChromaUp(p As ChromaPlane, width As Integer, height As Integer) As ChromaPlane
+            Dim wide = New ChromaPlane(width, p.Height)
+            ForEachRow(width, p.Height,
+                Sub(y)
+                    Dim row = y * p.Width
+                    For x = 0 To width - 1
+                        Dim c = x \ 2
+                        If x Mod 2 = 0 Then
+                            Dim i0 = row + MirrorIndex(c - 1, p.Width), i1 = row + MirrorIndex(c, p.Width), i2 = row + MirrorIndex(c + 1, p.Width)
+                            wide.Red(y * width + x) = 0.125F * p.Red(i0) + 0.75F * p.Red(i1) + 0.125F * p.Red(i2)
+                            wide.Blue(y * width + x) = 0.125F * p.Blue(i0) + 0.75F * p.Blue(i1) + 0.125F * p.Blue(i2)
+                        Else
+                            Dim i0 = row + MirrorIndex(c, p.Width), i1 = row + MirrorIndex(c + 1, p.Width)
+                            wide.Red(y * width + x) = 0.5F * (p.Red(i0) + p.Red(i1))
+                            wide.Blue(y * width + x) = 0.5F * (p.Blue(i0) + p.Blue(i1))
+                        End If
+                    Next
+                End Sub)
+            Dim result = New ChromaPlane(width, height)
+            ForEachRow(width, height,
+                Sub(y)
+                    Dim c = y \ 2
+                    Dim o = y * width
+                    If y Mod 2 = 0 Then
+                        Dim r0 = MirrorIndex(c - 1, p.Height) * width, r1 = MirrorIndex(c, p.Height) * width, r2 = MirrorIndex(c + 1, p.Height) * width
+                        For x = 0 To width - 1
+                            result.Red(o + x) = 0.125F * wide.Red(r0 + x) + 0.75F * wide.Red(r1 + x) + 0.125F * wide.Red(r2 + x)
+                            result.Blue(o + x) = 0.125F * wide.Blue(r0 + x) + 0.75F * wide.Blue(r1 + x) + 0.125F * wide.Blue(r2 + x)
+                        Next
+                    Else
+                        Dim r0 = MirrorIndex(c, p.Height) * width, r1 = MirrorIndex(c + 1, p.Height) * width
+                        For x = 0 To width - 1
+                            result.Red(o + x) = 0.5F * (wide.Red(r0 + x) + wide.Red(r1 + x))
+                            result.Blue(o + x) = 0.5F * (wide.Blue(r0 + x) + wide.Blue(r1 + x))
+                        Next
+                    End If
+                End Sub)
+            Return result
+        End Function
+
+        ''' <summary>Halbiert wie <see cref="ChromaDown"/>: messbar, wo jeder gelesene Bildpunkt es
+        ''' ist, mit dem mittleren Anteil an Schwarz.</summary>
+        Private Shared Function ChromaMaskDown(m As ChromaMeasureMask) As ChromaMeasureMask
+            Dim w = (m.Width + 1) \ 2
+            Dim h = (m.Height + 1) \ 2
+            Dim result = New ChromaMeasureMask(w, h)
+            ForEachRow(w, h,
+                Sub(y)
+                    For x = 0 To w - 1
+                        Dim ok = True
+                        Dim black = 0.0F
+                        For dy = -2 To 2
+                            Dim row = MirrorIndex(2 * y + dy, m.Height) * m.Width
+                            For dx = -2 To 2
+                                Dim i = row + MirrorIndex(2 * x + dx, m.Width)
+                                ok = ok AndAlso m.Unclipped(i)
+                                black += m.Black(i) / 25.0F
+                            Next
+                        Next
+                        result.Unclipped(y * w + x) = ok
+                        result.Black(y * w + x) = black
+                    Next
+                End Sub)
+            Return result
+        End Function
+
+        ''' <summary>Das Farbrauschen einer Ebene (<paramref name="p"/> minus <paramref name="upper"/>):
+        ''' Effektivwert in den glattesten zehn Prozent der messbaren 8x8-Bloecke, bevorzugt ohne
+        ''' Schwarz. -1, wenn es weniger als 16 solcher Bloecke gibt.</summary>
+        Private Shared Function ChromaLevelNoise(p As ChromaPlane, upper As ChromaPlane, mask As ChromaMeasureMask) As Double
+            Const block = 8
+            Dim bw = p.Width \ block
+            Dim bh = p.Height \ block
+            If bw <= 0 OrElse bh <= 0 Then Return -1
+            Dim energy = New Double(bw * bh - 1) {}
+            Dim black = New Double(bw * bh - 1) {}
+            ForEachRow(bw, bh,
+                Sub(by)
+                    For bx = 0 To bw - 1
+                        Dim sum = 0.0, dark = 0.0
+                        Dim valid = True
+                        For y = by * block To by * block + block - 1
+                            For x = bx * block To bx * block + block - 1
+                                Dim i = y * p.Width + x
+                                If Not mask.Unclipped(i) Then valid = False : Exit For
+                                dark += mask.Black(i)
+                                Dim dr = p.Red(i) - upper.Red(i)
+                                Dim db = p.Blue(i) - upper.Blue(i)
+                                sum += dr * dr + db * db
+                            Next
+                            If Not valid Then Exit For
+                        Next
+                        energy(by * bw + bx) = If(valid, sum / (block * block), -1.0)
+                        black(by * bw + bx) = dark / (block * block)
+                    Next
+                End Sub)
+            ' Im dunklen, verrauschten Bild erreicht das Rauschen in vielen Bildpunkten Schwarz und
+            ' ist trotzdem Rauschen; nur wenn es ohne solche Bloecke zu wenige sind, zaehlen sie mit.
+            Dim pick = Function(mostBlack As Double) As List(Of Double)
+                           Dim list As New List(Of Double)
+                           For i = 0 To energy.Length - 1
+                               If energy(i) >= 0 AndAlso black(i) <= mostBlack Then list.Add(energy(i))
+                           Next
+                           Return list
+                       End Function
+            Dim energies = pick(0.0)
+            If energies.Count < 16 Then energies = pick(0.9)
+            If energies.Count < 16 Then Return -1
+            energies.Sort()
+            Return Math.Sqrt(energies(CInt(Math.Floor(energies.Count * 0.1))))
+        End Function
+
+        Private Shared Function ChromaFilter(p As ChromaPlane, mask As ChromaMeasureMask, finerNoise As Double,
+                                             finestNoise As Double, level As Integer, amount As Single) As ChromaPlane
+            If level > ChromaLevels OrElse p.Width < 4 OrElse p.Height < 4 Then Return p
+            Dim coarse = ChromaDown(p)
+            Dim upper = ChromaUp(coarse, p.Width, p.Height)
+            Dim measured = ChromaLevelNoise(p, upper, mask)
+            Dim noise As Double
+            If measured < 0 Then
+                noise = finerNoise * ChromaCoarserNoise
+            ElseIf level = 0 Then
+                noise = measured
+            Else
+                ' Entmosaiktes Rauschen ist nach grob hin nie staerker; mehr als in der feineren
+                ' Ebene ist echte Farbe.
+                noise = Math.Min(measured, finerNoise)
+            End If
+            If level = 0 Then finestNoise = noise
+            coarse = ChromaFilter(coarse, ChromaMaskDown(mask), noise, finestNoise, level + 1, amount)
+            Dim coarseUp = ChromaUp(coarse, p.Width, p.Height)
+            Dim threshold = ChromaThreshold(level) * Math.Pow(amount / 0.25, ChromaThresholdRise(level)) *
+                            noise * Math.Pow(Math.Max(finestNoise, 0.000001) / 0.01, ChromaNoiseRise(level))
+            Dim tPow = Math.Pow(threshold, ChromaSteepness)
+            Dim result = New ChromaPlane(p.Width, p.Height)
+            ForEachRow(p.Width, p.Height,
+                Sub(y)
+                    For i = y * p.Width To y * p.Width + p.Width - 1
+                        Dim dr = p.Red(i) - upper.Red(i)
+                        Dim db = p.Blue(i) - upper.Blue(i)
+                        Dim sizePow = Math.Pow(Math.Sqrt(dr * dr + db * db), ChromaSteepness)
+                        Dim keep = If(sizePow + tPow > 0, sizePow / (sizePow + tPow), 1.0)
+                        result.Red(i) = CSng(coarseUp.Red(i) + dr * keep)
+                        result.Blue(i) = CSng(coarseUp.Blue(i) + db * keep)
+                    Next
+                End Sub)
+            Return result
+        End Function
 
         Private Shared Function ApplyColorNoiseReduction(source As SKBitmap, amount As Single) As SKBitmap
             amount = Clamp(amount, 0, 1)
-            Dim fein = Clamp(amount * ChromaFineGain, 0, 1)
-            ' Feiner Pass: Sigma waechst bis 2,5 Pixel, und dieselbe Staerke blendet zwischen
-            ' Original-Chroma und geglaetteter Chroma ueber. BEIDES haengt an fein, nicht am rohen
-            ' Reglerwert - sonst waere der untere Reglerbereich zu schwach (siehe ChromaFineGain).
-            ' Historie, damit es nicht rueckwaerts repariert wird: als NUR das Sigma gesteuert wurde,
-            ' war der Regler ab etwa 30 wirkungslos (50 und 100 aenderten dieselben 53 bzw. 54 % der
-            ' Pixel um maximal 7 bzw. 6 Tonwerte) - deshalb kam die Ueberblendung dazu. Sie linear an
-            ' den Reglerwert zu haengen war dann die Uebertreibung in die andere Richtung.
-            Dim sigma = 0.5F + fein * 2.0F
-            ' Rand fortgesetzt (GaussianClamped): mit durchsichtigem Rand mischte die Weichzeichnung
-            ' dort Durchsichtigkeit in die vormultiplizierten Bytes, und weil diese Stufe sie roh
-            ' liest, verschob sich die Farbe am Bildrand (gemessen an einer Flaeche 180/120/60: in
-            ' der Ecke a47c54 statt b4783c).
-            Dim blurred = GaussianClamped(source, sigma)
-
-            ' Grober Pass auf dem feinen: nimmt die FLECKEN, die der feine Radius nicht erreicht.
-            Dim coarseSigma = CoarseChromaSigma(source, amount)
-            Dim coarse As SKBitmap = Nothing
-            If coarseSigma > 0.5F Then coarse = GaussianClamped(blurred, coarseSigma)
-
-            Dim srcBuf As Byte() = Nothing
-            Dim srcStride As Integer = 0
-            Dim blurBuf As Byte() = Nothing
-            Dim blurStride As Integer = 0
-            Dim coarseBuf As Byte() = Nothing
-            Dim coarseStride As Integer = 0
-            If Not TryBorrowBgraBuffer(source, srcBuf, srcStride) OrElse
-               Not TryBorrowBgraBuffer(blurred, blurBuf, blurStride) Then
-                coarse?.Dispose()
-                Return blurred
-            End If
-            If coarse IsNot Nothing AndAlso Not TryBorrowBgraBuffer(coarse, coarseBuf, coarseStride) Then
-                coarseBuf = Nothing
-            End If
-
-            ' SCHUTZ FUER ECHTE FARBEN: ein Chroma-Blur macht keinen Unterschied zwischen einem
-            ' Farbfleck und einem kleinen bunten Licht - beide sind "Farbe auf kleiner Flaeche".
-            ' Gemessen verlor eine 3x3 px grosse Fensterlampe bei Vollausschlag 80 Prozent ihrer
-            ' Saettigung. Rauschen ist aber SCHWACH gesaettigt und echte Lichter sind es stark:
-            ' ab einer Farbabweichung von 30 nimmt die Wirkung ab, ab 90 bleibt das Pixel ganz in
-            ' Ruhe. Der Schutz gilt fuer BEIDE Durchgaenge - am feinen allein vorbeigezogen haette
-            ' er nichts genuetzt, denn schon dessen 2,5 px bleichen ein so kleines Licht aus.
-            ' Farbsaum um ein Licht herum entsteht dadurch nicht nennenswert: die Farbe einer
-            ' 3x3-Lampe verteilt sich im Blur auf einige hundert Pixel und geht darin unter.
-            Const schutzVon As Double = 30.0
-            Const schutzBis As Double = 90.0
             Dim result = New SKBitmap(source.Width, source.Height, source.ColorType, source.AlphaType)
-            Dim dstBuf(srcBuf.Length - 1) As Byte
-            ForEachRow(source.Width, source.Height, Sub(y)
-                                                        Dim so = y * srcStride
-                                                        Dim bo = y * blurStride
-                                                        Dim co = y * coarseStride
-                                                        For x = 0 To source.Width - 1
-                                                            Dim colIdx = so + x * 4
-                                                            Dim bi = bo + x * 4
-                                                            ' Rec.601-Luma in Ganzzahlarithmetik (x1024).
-                                                            Dim lumaSrc = (299 * CInt(srcBuf(colIdx + 2)) + 587 * CInt(srcBuf(colIdx + 1)) + 114 * CInt(srcBuf(colIdx))) \ 1000
-                                                            Dim mix0 = CDbl(blurBuf(bi))
-                                                            Dim mix1 = CDbl(blurBuf(bi + 1))
-                                                            Dim mix2 = CDbl(blurBuf(bi + 2))
-                                                            If coarseBuf IsNot Nothing Then
-                                                                Dim ci = co + x * 4
-                                                                mix0 = CDbl(coarseBuf(ci))
-                                                                mix1 = CDbl(coarseBuf(ci + 1))
-                                                                mix2 = CDbl(coarseBuf(ci + 2))
-                                                            End If
-                                                            Dim chroma = (Math.Abs(CInt(srcBuf(colIdx + 2)) - lumaSrc) + Math.Abs(CInt(srcBuf(colIdx)) - lumaSrc)) / 2.0
-                                                            Dim schutz = 1.0 - Math.Max(0.0, Math.Min(1.0, (chroma - schutzVon) / (schutzBis - schutzVon)))
-                                                            Dim wirkung = fein * schutz
-                                                            Dim lumaMix = (299 * mix2 + 587 * mix1 + 114 * mix0) / 1000.0
-                                                            Dim delta = lumaSrc - lumaMix
-                                                            ' Chroma aus dem Blur, Luminanz vom Original - und beides
-                                                            ' anteilig ueber das Original geblendet, damit der Regler
-                                                            ' ueber den ganzen Weg etwas tut.
-                                                            Dim nb0 = mix0 + delta
-                                                            Dim nb1 = mix1 + delta
-                                                            Dim nb2 = mix2 + delta
-                                                            dstBuf(colIdx) = ClampToByte(CInt(srcBuf(colIdx)) + (nb0 - CInt(srcBuf(colIdx))) * wirkung)
-                                                            dstBuf(colIdx + 1) = ClampToByte(CInt(srcBuf(colIdx + 1)) + (nb1 - CInt(srcBuf(colIdx + 1))) * wirkung)
-                                                            dstBuf(colIdx + 2) = ClampToByte(CInt(srcBuf(colIdx + 2)) + (nb2 - CInt(srcBuf(colIdx + 2))) * wirkung)
-                                                            dstBuf(colIdx + 3) = srcBuf(colIdx + 3)
-                                                        Next
-                                                    End Sub)
-            blurred.Dispose()
-            coarse?.Dispose()
-            Runtime.InteropServices.Marshal.Copy(dstBuf, 0, result.GetPixels(), dstBuf.Length)
-            Return result
+            Dim srcBuf As Byte() = Nothing
+            Dim dstBuf As Byte() = Nothing
+            Dim stride, ri, gi, bi, ai As Integer
+            Dim sLen = 0
+            Try
+                If Not TryRentRgbaLikeBuffer(source, srcBuf, sLen, stride, ri, gi, bi, ai) Then Return result
+                Dim w = source.Width, h = source.Height
+                ' Byte -> Wurzel des Linearlichts, und zurueck ueber eine feine Tabelle der Wurzel.
+                Dim toRoot = New Single(255) {}
+                For v = 0 To 255
+                    toRoot(v) = CSng(Math.Sqrt(SrgbToLinear(v / 255.0F)))
+                Next
+                Const backSize = 4096
+                Dim toByte = New Byte(backSize) {}
+                For j = 0 To backSize
+                    Dim root = j / CSng(backSize)
+                    toByte(j) = ClampToByte(LinearToSrgb(root * root) * 255.0F)
+                Next
+
+                Dim plane = New ChromaPlane(w, h)
+                Dim luma = New Single(w * h - 1) {}
+                Dim alpha = New Byte(w * h - 1) {}
+                Dim mask = New ChromaMeasureMask(w, h)
+                ForEachRow(w, h,
+                    Sub(y)
+                        For x = 0 To w - 1
+                            Dim cr As Integer, cg As Integer, cb As Integer, a As Integer
+                            ReadUnpremultiplied(srcBuf, y * stride + x * 4, ri, gi, bi, ai, cr, cg, cb, a)
+                            Dim i = y * w + x
+                            Dim sr = toRoot(cr), sg = toRoot(cg), sb = toRoot(cb)
+                            luma(i) = (sr + 2.0F * sg + sb) * 0.25F
+                            plane.Red(i) = sr - sg
+                            plane.Blue(i) = sb - sg
+                            alpha(i) = CByte(a)
+                            ' Nahe am Ausbrennen hat ein Bildpunkt kein Rauschen zu messen (Linearlicht
+                            ' 0,95 entspricht 249 in sRGB).
+                            mask.Unclipped(i) = cr < 249 AndAlso cg < 249 AndAlso cb < 249
+                            mask.Black(i) = If(cr = 0 OrElse cg = 0 OrElse cb = 0, 1.0F, 0.0F)
+                        Next
+                    End Sub)
+
+                plane = ChromaFilter(plane, mask, 0, 0, 0, amount)
+
+                dstBuf = ArrayPool(Of Byte).Shared.Rent(sLen)
+                If stride <> w * 4 Then Array.Clear(dstBuf, 0, sLen)
+                Dim filtered = plane
+                ForEachRow(w, h,
+                    Sub(y)
+                        For x = 0 To w - 1
+                            Dim i = y * w + x
+                            Dim g = luma(i) - (filtered.Red(i) + filtered.Blue(i)) * 0.25F
+                            Dim r = Math.Max(0.0F, g + filtered.Red(i))
+                            Dim b = Math.Max(0.0F, g + filtered.Blue(i))
+                            g = Math.Max(0.0F, g)
+                            WritePremultiplied(dstBuf, y * stride + x * 4, ri, gi, bi, ai,
+                                               toByte(Math.Min(backSize, CInt(r * backSize))),
+                                               toByte(Math.Min(backSize, CInt(g * backSize))),
+                                               toByte(Math.Min(backSize, CInt(b * backSize))), alpha(i))
+                        Next
+                    End Sub)
+                Runtime.InteropServices.Marshal.Copy(dstBuf, 0, result.GetPixels(), sLen)
+                Return result
+            Finally
+                ReturnPooledBuffer(srcBuf)
+                ReturnPooledBuffer(dstBuf)
+            End Try
         End Function
 
         ''' <summary>Die PLUS-Seite des Farbrauschen-Reglers: faerbt das Bild ein, ohne es heller oder

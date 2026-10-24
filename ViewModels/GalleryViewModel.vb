@@ -2199,6 +2199,11 @@ Namespace ViewModels
             ScanFacesCommand = ReactiveCommand.CreateFromTask(Function() ScanFacesAsync())
             ReanalyzeAiTagsCommand = ReactiveCommand.CreateFromTask(Function() ReanalyzeAiTagsAsync())
             InfoPanel.OpenTagSearch = Sub(tag) OpenTagSearch(tag)
+            ' TAB im letzten Namensfeld der Leiste: naechste Kachel waehlen und dorthin rollen.
+            InfoPanel.NavigateImage = Sub(delta)
+                                          SelectByOffset(delta)
+                                          RaiseEvent RequestScrollToItem(Me, EventArgs.Empty)
+                                      End Sub
             ' Das Panel kennt nur ImageItem und koennte lokale Bilder nicht von Immich-Assets
             ' trennen. Die Wege stellt deshalb die Galerie - dieselbe Teilung wie im Sternemenue.
             InfoPanel.PersistRating = Sub(items, value) ApplyRatingTo(items, value)
@@ -9944,6 +9949,9 @@ Namespace ViewModels
                 Me.RaiseAndSetIfChanged(_stacksEnabled, value)
                 FilterAndSort()
                 SaveFileBrowserSettings()
+                ' Auch der Schalter in der Fusszeile setzt hier; der Einstellungsdialog soll
+                ' danach denselben Stand zeigen.
+                _mainVm?.Settings?.SyncGalleryStacks(value)
             End Set
         End Property
 

@@ -1986,6 +1986,14 @@ Namespace ViewModels
             RaiseGalleryViewModeProperties()
         End Sub
 
+        ' Wird von der Galerie gerufen, wenn die Stapel ueber den Schalter in ihrer Fusszeile
+        ' umgelegt werden. Gespeichert hat die Galerie schon, hier wird nur der Stand nachgezogen.
+        Public Sub SyncGalleryStacks(value As Boolean)
+            If _galleryStacks = value Then Return
+            _galleryStacks = value
+            Me.RaisePropertyChanged(NameOf(GalleryStacks))
+        End Sub
+
         Private Sub RaiseGalleryViewModeProperties()
             Me.RaisePropertyChanged(NameOf(IsGalleryViewModeGrid))
             Me.RaisePropertyChanged(NameOf(IsGalleryViewModeList))

@@ -2832,9 +2832,10 @@ Namespace Services
             ' Die beiden Seiten desselben Panel-Reglers: Minus glaettet die Farbanteile, Plus faerbt
             ' sie ein. Getrennte Felder, weil nur die Reduzierung eine Entsprechung in den Presets hat
             ' (crs:ColorNoiseReduction) - siehe ImageAdjustments.ColorNoiseAdd.
+            ' Die Pyramide der Farbanteile laeuft nur auf dem Prozessor: sie misst je Ebene das
+            ' Rauschen ueber das ganze Bild, das ist kein Einzelpunkt-Shader.
             If adj.ColorNoiseReduction > 0 Then
-                processed = RunDetailStage(session, processed, owned, "Pixel: Farbrauschen",
-                                           ColorNoiseReductionOnGpu(processed, adj.ColorNoiseReduction / 100.0F),
+                processed = RunDetailStage(session, processed, owned, "Pixel: Farbrauschen", Nothing,
                                            Function(s) ApplyColorNoiseReduction(s, adj.ColorNoiseReduction / 100.0F))
             End If
             ' NACH der einstufigen Glaettung: die nimmt das feine Farbkorn, diese Stufe die groben

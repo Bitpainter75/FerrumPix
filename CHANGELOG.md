@@ -26,7 +26,23 @@
 
 - **One graphics card for everything on Linux:** on laptops with two graphics cards, the card you
   choose in Settings under Performance is now used for image editing as well, not only for the
-  models. It takes effect after a restart, and the window is then drawn on that card too.
+  models. It takes effect after a restart, and the window is then drawn on that card too. The
+  same choice is also offered when a model is downloaded, next to the option to use the card.
+
+- **Naming people photo by photo:** the People tab in the sidebar now stays open while you flip
+  through your photos, also on photos without faces. Names the recognition filled in on its own
+  are shown in italics with a check mark next to them; click it or press ENTER to confirm the
+  name, so you can see at a glance which photos you have already been through. TAB moves from
+  name to name, and after the last one straight to the first name in the next photo.
+
+- **Stacks on and off from the gallery:** a button in the gallery footer, next to the selection
+  buttons, turns the stacking of bursts and RAW+JPEG pairs on and off. It is the same setting as
+  in Settings, so both always show the same state.
+
+- **Sensor border removed by default:** RAW files now start without the thin strip of unusable
+  pixels at the edge of the sensor, in the gallery, the viewer and the editor. You can switch it
+  off for a single picture under lens correction. Pictures you have already edited stay as they
+  were.
 
 ### Fixes
 

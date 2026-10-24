@@ -319,7 +319,8 @@ Namespace ViewModels
             For Each propertyName In {NameOf(IsSummary), NameOf(IsSingleImage), NameOf(HasScope), NameOf(HasInfoContent),
                                       NameOf(Name), NameOf(IsInfoTabGeneral), NameOf(IsInfoTabExif),
                                       NameOf(IsInfoTabIptc), NameOf(IsInfoTabXmp), NameOf(IsInfoTabIcc),
-                                      NameOf(IsInfoTabPeople), NameOf(PlaceText), NameOf(HasPlace),
+                                      NameOf(IsInfoTabPeople), NameOf(HasPeopleTab), NameOf(ShowNoPeopleHint),
+                                      NameOf(PlaceText), NameOf(HasPlace),
                                       NameOf(ShowPlaceRow)}
                 Me.RaisePropertyChanged(propertyName)
             Next
@@ -435,12 +436,34 @@ Namespace ViewModels
         ''' Namen ein zweites Mal zu tippen macht aus einer Person zwei.</summary>
         Public ReadOnly Property PersonNameSuggestions As New ObservableCollection(Of String)() Implements IInfoSidebarPanel.PersonNameSuggestions
 
-        ''' <summary>Zeigt das Panel den Personen-Abschnitt? Nur mit eingeschalteter Erkennung, bei
-        ''' genau einem Bild und wenn ueberhaupt jemand darauf erkannt wurde. Ein leerer Abschnitt
-        ''' unter jedem Landschaftsfoto waere nur Platzverbrauch.</summary>
+        ''' <summary>Steht auf dem Bild ueberhaupt jemand? Entscheidet zwischen der Gesichterliste
+        ''' und dem Hinweis, dass niemand erkannt wurde - NICHT ueber den Reiter, siehe
+        ''' <see cref="HasPeopleTab"/>.</summary>
         Public ReadOnly Property HasPeople As Boolean Implements IInfoSidebarPanel.HasPeople
             Get
                 Return People.Count > 0
+            End Get
+        End Property
+
+        Private _faceRecognitionOn As Boolean
+
+        ''' <summary>Gibt es den Personen-Reiter? Bei eingeschalteter Erkennung und genau einem Bild
+        ''' IMMER, auch wenn auf dem Bild niemand erkannt wurde.
+        '''
+        ''' Wer Bild fuer Bild Namen vergibt, blaettert mit offenem Reiter weiter. Hing der Reiter
+        ''' an den Gesichtern, verschwand er bei jedem Bild ohne Gesicht, die Leiste sprang auf
+        ''' "Allgemein", und beim naechsten Bild mit Gesichtern musste man ihn von Hand wieder
+        ''' waehlen. Ohne Erkennung bleibt er weg: dort stuende nie etwas darin.</summary>
+        Public ReadOnly Property HasPeopleTab As Boolean Implements IInfoSidebarPanel.HasPeopleTab
+            Get
+                Return _faceRecognitionOn AndAlso Not _isSummary AndAlso _items.Count = 1
+            End Get
+        End Property
+
+        ''' <summary>Der Hinweis im offenen Reiter, wenn auf dem Bild niemand erkannt wurde.</summary>
+        Public ReadOnly Property ShowNoPeopleHint As Boolean
+            Get
+                Return HasPeopleTab AndAlso People.Count = 0
             End Get
         End Property
 
@@ -454,6 +477,9 @@ Namespace ViewModels
         ''' und nicht jeder seinen eigenen Zuschnitt nachbaut.</summary>
         Private Sub LoadPeople()
             People.Clear()
+            ' Einmal je Bild gefragt und gemerkt: der Reiter liest es bei jeder Meldung, und hinter
+            ' Enabled steht die Suche nach den Modelldateien.
+            _faceRecognitionOn = FaceDetectionService.Enabled
             If _items.Count <> 1 Then
                 RaisePeopleTabState()
                 Return
@@ -465,6 +491,7 @@ Namespace ViewModels
                 People.Add(entry)
             Next
             RaisePeopleTabState()
+            RaisePendingFaceFocus()
 
             ' Die Ausschnitte kommen nach. Der Vergleich gegen die Marke haelt den Nachschub am
             ' richtigen Bild fest - beim schnellen Blaettern faellt er sonst ins naechste.
@@ -474,17 +501,19 @@ Namespace ViewModels
 
         ''' <summary>Meldet den Personen-Abschnitt UND seinen Reiter.
         '''
-        ''' Steht der Reiter gerade offen und das naechste Bild zeigt niemanden, waere er weg und
-        ''' sein Inhalt auch - die Leiste bliebe leer zurueck. Deshalb faellt die Auswahl dann auf
-        ''' "Allgemein".</summary>
+        ''' Gibt es den Reiter fuer das neue Bild nicht, weil die Erkennung aus ist, waere sein
+        ''' Inhalt weg und die Leiste bliebe leer zurueck. Deshalb faellt die Auswahl dann auf
+        ''' "Allgemein". Ein Bild ohne Gesichter laesst den Reiter dagegen stehen.</summary>
         Private Sub RaisePeopleTabState()
             ' Nur bei genau EINEM Bild entscheiden. Im Sammelmodus ist die Reiterleiste ohnehin weg,
             ' und der gemerkte Reiter soll die Rueckkehr zu einem Einzelbild ueberleben.
-            If Not _isSummary AndAlso _items.Count = 1 AndAlso People.Count = 0 AndAlso
+            If Not _isSummary AndAlso _items.Count = 1 AndAlso Not HasPeopleTab AndAlso
                _selectedTab = InfoSidebarTab.People Then
                 SelectedInfoTab = InfoSidebarTab.General
             End If
             Me.RaisePropertyChanged(NameOf(HasPeople))
+            Me.RaisePropertyChanged(NameOf(HasPeopleTab))
+            Me.RaisePropertyChanged(NameOf(ShowNoPeopleHint))
             Me.RaisePropertyChanged(NameOf(IsInfoTabPeople))
         End Sub
 
@@ -497,17 +526,77 @@ Namespace ViewModels
         Public Sub RenamePerson(personId As String, newName As String, faceId As String) Implements IInfoSidebarPanel.RenamePerson
             If String.IsNullOrWhiteSpace(personId) Then Return
             Try
-                ' NUR bei einer echten Aenderung neu aufbauen. Der Neuaufbau wirft die Gesichtszeilen
-                ' weg und legt sie neu an - stand dabei eine Vorschlagsliste offen, verschwand sie
-                ' mitsamt ihrem Feld, bevor der Klick ankam.
-                ' NUR bei einer echten Aenderung neu aufbauen. Der Neuaufbau wirft die Gesichtszeilen
-                ' weg und legt sie neu an - stand dabei eine Vorschlagsliste offen, verschwand sie
-                ' mitsamt ihrem Feld, bevor der Klick ankam.
+                ' NUR bei einer echten Aenderung nachziehen, und dann an Ort und Stelle. Ein Neuaufbau
+                ' wirft die Zeilen weg: stand eine Vorschlagsliste offen, verschwand sie mitsamt
+                ' ihrem Feld, bevor der Klick ankam, und der Fokus, den TAB gerade ans naechste Feld
+                ' gegeben hat, hing an einem Element, das es nicht mehr gab.
                 If LibraryService.Instance.ApplyPersonName(personId, newName, faceId) <>
-                   LibraryService.PersonNameOutcome.Unchanged Then LoadPeople()
+                   LibraryService.PersonNameOutcome.Unchanged Then RefreshPeopleInPlace()
             Catch ex As Exception
                 DiagnosticLogService.LogException("InfoPanel.RenamePerson", ex)
             End Try
+        End Sub
+
+        ''' <summary>Zieht Namen, Gruppen und Handarbeit aus der Bibliothek in die BESTEHENDEN Zeilen.
+        '''
+        ''' Eine Benennung aendert nie, WELCHE Gesichter auf dem Bild liegen, wohl aber mehr als die
+        ''' eine Zeile: eine Gruppe heisst auf jedem ihrer Gesichter anders, und eine Verschmelzung
+        ''' gibt ihnen eine neue Person. Stimmt die Menge der Gesichter ausnahmsweise nicht mehr,
+        ''' wird doch neu gebaut - lieber ohne Fokus als mit falschen Zeilen.</summary>
+        Private Sub RefreshPeopleInPlace()
+            If _items.Count <> 1 Then
+                LoadPeople()
+                Return
+            End If
+            Dim fresh = FacePanelService.BuildEntries(_items(0)?.FilePath)
+            Dim byFace = People.ToDictionary(Function(p) p.FaceId, StringComparer.Ordinal)
+            If fresh.Count <> People.Count OrElse fresh.Any(Function(f) Not byFace.ContainsKey(f.FaceId)) Then
+                LoadPeople()
+                Return
+            End If
+            For Each f In fresh
+                byFace(f.FaceId).ApplyAssignment(f.Id, f.Name, f.IsManual)
+            Next
+            FacePanelService.FillNameSuggestions(PersonNameSuggestions)
+        End Sub
+
+        ''' <summary>Wechselt zum Nachbarbild. Der Besitzer haengt sich hier ein, weil nur er weiss,
+        ''' was "das naechste Bild" ist: die Galerie waehlt die naechste Kachel, Betrachter und
+        ''' Editor blaettern im Filmstreifen. Ohne Besitzer (Nothing) gibt es kein Weiter.</summary>
+        Public Property NavigateImage As Action(Of Integer)
+
+        Private _focusAfterNavigate As (FromPath As String, ToLast As Boolean, Requested As Date)?
+
+        ''' <summary>Bittet die Leiste, ein Namensfeld zu fokussieren: das erste oder, beim Weg
+        ''' zurueck, das letzte. Ohne Gesichter auf dem Bild den Hinweis an ihrer Stelle.</summary>
+        Public Event FocusFaceRequested As EventHandler(Of FaceFocusRequest) Implements IInfoSidebarPanel.FocusFaceRequested
+
+        ''' <summary>TAB im letzten Namensfeld: weiter zum naechsten Bild, und dort wieder ins erste
+        ''' Feld. SHIFT+TAB im ersten Feld entsprechend zurueck ins letzte Feld des vorigen Bildes.
+        '''
+        ''' Der Fokus kann erst gesetzt werden, wenn das NEUE Bild in der Leiste steht, und das
+        ''' geschieht spaeter: Betrachter und Editor sammeln schnelle Schritte erst, bevor sie laden.
+        ''' Deshalb wird nur vorgemerkt, und <see cref="LoadPeople"/> loest es ein, sobald ein
+        ''' anderes Bild ankommt. Die Frist haelt eine Vormerkung am Listenende, wo nichts mehr
+        ''' kommt, davon ab, Minuten spaeter beim naechsten Klick den Fokus an sich zu reissen.</summary>
+        Public Function RequestAdjacentImage(delta As Integer) As Boolean Implements IInfoSidebarPanel.RequestAdjacentImage
+            If NavigateImage Is Nothing OrElse delta = 0 OrElse _items.Count <> 1 Then Return False
+            _focusAfterNavigate = (If(_items(0)?.FilePath, ""), delta < 0, Date.UtcNow)
+            NavigateImage.Invoke(delta)
+            Return True
+        End Function
+
+        ''' <summary>Loest eine vorgemerkte Fokusbitte ein, wenn inzwischen ein ANDERES Bild steht.</summary>
+        Private Sub RaisePendingFaceFocus()
+            If Not _focusAfterNavigate.HasValue OrElse _items.Count <> 1 Then Return
+            Dim pending = _focusAfterNavigate.Value
+            If (Date.UtcNow - pending.Requested).TotalSeconds > 10 Then
+                _focusAfterNavigate = Nothing
+                Return
+            End If
+            If String.Equals(If(_items(0)?.FilePath, ""), pending.FromPath, PathIdentity.Comparison) Then Return
+            _focusAfterNavigate = Nothing
+            RaiseEvent FocusFaceRequested(Me, New FaceFocusRequest(pending.ToLast))
         End Sub
 
         Private _placeText As String = ""
@@ -556,6 +645,25 @@ Namespace ViewModels
         ''' Person bleiben unberuehrt - geaendert wird nur dieses eine Gesicht. Danach steht das Feld
         ''' wieder leer, und der richtige Name traegt es in die richtige Gruppe (heisst schon jemand
         ''' so, verschmilzt die Bibliothek beides).</summary>
+        ''' <summary>Bestaetigt, dass die Erkennung dieses Gesicht richtig zugeordnet hat.
+        '''
+        ''' Der Name bleibt, wie er ist; nur das Gesicht gilt danach als von Hand gesetzt. Damit
+        ''' sieht man am Bild, ob es schon durchgesehen ist oder nur Vorschlaege der Erkennung
+        ''' traegt, und ein erneuter Durchlauf laesst das Gesicht stehen.</summary>
+        Public Sub ConfirmFace(faceId As String) Implements IInfoSidebarPanel.ConfirmFace
+            If String.IsNullOrWhiteSpace(faceId) Then Return
+            Try
+                If Not LibraryService.Instance.ConfirmFace(faceId) Then Return
+                ' Die Zeile wird AN ORT UND STELLE umgestellt, nicht neu gebaut: der Neuaufbau nimmt
+                ' dem Namensfeld den Fokus, und bestaetigt wird gerade beim Durchgehen mit der Tastatur.
+                For Each entry In People
+                    If String.Equals(entry.FaceId, faceId, StringComparison.Ordinal) Then entry.IsManual = True
+                Next
+            Catch ex As Exception
+                DiagnosticLogService.LogException("InfoPanel.ConfirmFace", ex)
+            End Try
+        End Sub
+
         Public Sub DetachFace(faceId As String) Implements IInfoSidebarPanel.DetachFace
             If String.IsNullOrWhiteSpace(faceId) Then Return
             Try
@@ -1487,12 +1595,11 @@ Namespace ViewModels
             End Get
         End Property
 
-        ''' <summary>Der Personen-Reiter gilt nur, solange auf dem Bild ueberhaupt jemand erkannt
-        ''' wurde - sonst gibt es den Reiter nicht, und ein Inhalt ohne Reiter waere nicht mehr zu
-        ''' verlassen.</summary>
+        ''' <summary>Der Personen-Reiter gilt nur, solange es ihn gibt (siehe
+        ''' <see cref="HasPeopleTab"/>) - ein Inhalt ohne Reiter waere nicht mehr zu verlassen.</summary>
         Public ReadOnly Property IsInfoTabPeople As Boolean
             Get
-                Return _selectedTab = InfoSidebarTab.People AndAlso HasPeople
+                Return _selectedTab = InfoSidebarTab.People AndAlso HasPeopleTab
             End Get
         End Property
 

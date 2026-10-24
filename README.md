@@ -55,7 +55,7 @@ One list in the settings shows every folder FerrumPix knows, grouped under the o
 
 An info sidebar shows the selected picture with its shot data, histogram, rating, label and keywords; with several selected it shows what they have in common and lets you set them all at once. You pick what it shows - camera, lens, aperture, shutter speed, ISO, focal length, the date the picture was taken, the technical facts about the file, and whether rating, label and keywords appear at all.
 
-Photos can be filtered by keyword, by person and by where they were taken, alone or in combination. FerrumPix finds the people in your photos, groups them, and you give each group its name; the names are stored beside the picture, so they stay with the photos. A people area of its own shows a wall of faces for sorting out a library that grew over years.
+Photos can be filtered by keyword, by person and by where they were taken, alone or in combination. FerrumPix finds the people in your photos, groups them, and you give each group its name; the names are stored beside the picture, so they stay with the photos. In the sidebar, names the recognition only suggested look different from the ones you set or confirmed. A people area of its own shows a wall of faces for sorting out a library that grew over years.
 
 Photos without a location can be given one: type a coordinate or just a town name, or copy the place from a picture that already has it and paste it onto the rest. JPEG files carry it inside the file, everything else in a sidecar next to the original. The town search runs on your own machine.
 

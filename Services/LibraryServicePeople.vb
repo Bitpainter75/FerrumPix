@@ -790,11 +790,15 @@ Namespace Services
         '''
         ''' Die FaceId kommt mit, weil sich eine Fehlzuordnung nur an EINEM Gesicht loesen laesst
         ''' (siehe <see cref="DetachFace"/>) - ueber die PersonId waere immer die ganze Gruppe
-        ''' gemeint, also auch jedes andere Bild.</summary>
+        ''' gemeint, also auch jedes andere Bild.
+        '''
+        ''' IsManual sagt, ob der Benutzer dieses Gesicht angefasst hat (benannt, verschoben,
+        ''' herausgeloest oder bestaetigt) oder ob die Zuordnung allein von der Erkennung stammt.</summary>
         Public Function GetFacesForImage(filePath As String) As List(Of (FaceId As String, PersonId As String, Name As String,
                                                                         X As Double, Y As Double,
-                                                                        Width As Double, Height As Double))
-            Dim result As New List(Of (FaceId As String, PersonId As String, Name As String, X As Double, Y As Double, Width As Double, Height As Double))()
+                                                                        Width As Double, Height As Double,
+                                                                        IsManual As Boolean))
+            Dim result As New List(Of (FaceId As String, PersonId As String, Name As String, X As Double, Y As Double, Width As Double, Height As Double, IsManual As Boolean))()
             If String.IsNullOrWhiteSpace(filePath) Then Return result
             Using conn = New SqliteConnection(_connectionString)
                 conn.Open()
@@ -802,7 +806,7 @@ Namespace Services
                     ' Nach Lage sortiert, links vor rechts: die Reihenfolge im Panel entspricht damit
                     ' der im Bild, und das Zuordnen faellt noch leichter.
                     cmd.CommandText =
-                        "SELECT f.Id, f.PersonId, COALESCE(p.Name,''), f.X, f.Y, f.Width, f.Height " &
+                        "SELECT f.Id, f.PersonId, COALESCE(p.Name,''), f.X, f.Y, f.Width, f.Height, f.IsManual " &
                         "FROM Face f LEFT JOIN Person p ON p.Id = f.PersonId " &
                         "WHERE f.FilePath=$p ORDER BY f.X"
                     cmd.Parameters.AddWithValue("$p", PathKey(filePath))
@@ -811,12 +815,38 @@ Namespace Services
                             If reader.IsDBNull(1) Then Continue While
                             result.Add((reader.GetString(0), reader.GetString(1), reader.GetString(2),
                                         reader.GetDouble(3), reader.GetDouble(4),
-                                        reader.GetDouble(5), reader.GetDouble(6)))
+                                        reader.GetDouble(5), reader.GetDouble(6),
+                                        Not reader.IsDBNull(7) AndAlso reader.GetInt64(7) <> 0))
                         End While
                     End Using
                 End Using
             End Using
             Return result
+        End Function
+
+        ''' <summary>Bestaetigt die Zuordnung EINES Gesichts, ohne Person oder Name zu aendern.
+        '''
+        ''' Fuer den Fall, dass die Erkennung ein Gesicht richtig einer benannten Person zugeordnet
+        ''' hat: der Name stimmt schon, es gibt nichts einzutippen, und trotzdem soll das Bild als
+        ''' durchgesehen gelten. Danach ist das Gesicht Handarbeit wie nach einer Benennung und
+        ''' bleibt bei jedem weiteren Durchlauf stehen.
+        '''
+        ''' Nur fuer Gesichter einer BENANNTEN Person. Ein namenloses zu bestaetigen hiesse nichts,
+        ''' und die Sammelgruppe ist ein Ablagekorb aus lauter verschiedenen Menschen. In die
+        ''' Beistelldatei wird nichts geschrieben: dort stehen Name und Lage, und beides bleibt.</summary>
+        ''' <returns>True, wenn sich etwas geaendert hat.</returns>
+        Public Function ConfirmFace(faceId As String) As Boolean
+            If String.IsNullOrWhiteSpace(faceId) Then Return False
+            Using conn = New SqliteConnection(_connectionString)
+                conn.Open()
+                Using cmd = conn.CreateCommand()
+                    cmd.CommandText =
+                        "UPDATE Face SET IsManual=1 WHERE Id=$f AND IsManual=0 AND PersonId IN " &
+                        "(SELECT Id FROM Person WHERE COALESCE(Name,'')<>'' AND IsUnknownBin=0)"
+                    cmd.Parameters.AddWithValue("$f", faceId)
+                    Return cmd.ExecuteNonQuery() > 0
+                End Using
+            End Using
         End Function
 
         ''' <summary>Loest EIN Gesicht aus seiner Person heraus - der Weg fuer eine Fehlzuordnung.

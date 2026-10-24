@@ -915,6 +915,9 @@ Namespace ViewModels
             InfoPanel.OwnerLoadsDetails = True
             InfoPanel.IsInfoSidebarVisible = IsInfoSidebarVisible
             InfoPanel.OpenTagSearch = Sub(tag) _mainVm?.OpenTagSearchInGallery(tag)
+            InfoPanel.NavigateImage = Sub(delta)
+                                          If delta > 0 Then NavigateNext() Else NavigatePrevious()
+                                      End Sub
             AddHandler InfoPanel.PropertyChanged,
                 Sub(sender, e)
                     If e.PropertyName = NameOf(InfoPanel.Rating) OrElse

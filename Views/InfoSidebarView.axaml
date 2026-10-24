@@ -22,6 +22,23 @@
             <Setter Property="MinWidth" Value="0"/>
             <Setter Property="Padding" Value="6"/>
         </Style>
+        <!-- Ein Name, den nur die Erkennung vergeben hat, steht schräg und gedämpft. So sieht man
+             beim Durchblättern, ob ein Bild schon durchgesehen ist. -->
+        <!-- Der Hinweis auf einem Bild ohne Gesichter kann den Fokus tragen (TAB von Bild zu
+             Bild); ein Rahmen zeigt, dass er ihn gerade hat. -->
+        <Style Selector="Border#NoPeopleHint">
+            <Setter Property="Padding" Value="6,4"/>
+            <Setter Property="CornerRadius" Value="4"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
+        </Style>
+        <Style Selector="Border#NoPeopleHint:focus">
+            <Setter Property="BorderBrush" Value="{DynamicResource FP.Accent}"/>
+        </Style>
+        <Style Selector="AutoCompleteBox.person-name.suggested">
+            <Setter Property="FontStyle" Value="Italic"/>
+            <Setter Property="Foreground" Value="{DynamicResource FP.Text.Secondary}"/>
+        </Style>
     </UserControl.Styles>
 
     <Border x:Name="InfoSidebarBorder" Classes="panel-right" Padding="14,14"
@@ -51,10 +68,10 @@
                     <Button Classes="info-tab" Command="{Binding SetInfoTabCommand}" CommandParameter="General" Classes.active="{Binding IsInfoTabGeneral}">
                         <TextBlock Text="Allgemein"/>
                     </Button>
-                    <!-- Nur da, wenn auf dem Bild jemand erkannt wurde. Ein Reiter, hinter dem nie
-                         etwas steht, wäre bei jedem Landschaftsfoto ein leeres Versprechen. -->
+                    <!-- Da, sobald die Gesichtserkennung an ist, auch auf einem Bild ohne Gesichter:
+                         wer Bild für Bild Namen vergibt, blättert mit offenem Reiter weiter. -->
                     <Button Classes="info-tab" Command="{Binding SetInfoTabCommand}" CommandParameter="People"
-                            Classes.active="{Binding IsInfoTabPeople}" IsVisible="{Binding HasPeople}">
+                            Classes.active="{Binding IsInfoTabPeople}" IsVisible="{Binding HasPeopleTab}">
                         <TextBlock Text="Personen"/>
                     </Button>
                     <Button Classes="info-tab" Command="{Binding SetInfoTabCommand}" CommandParameter="Exif" Classes.active="{Binding IsInfoTabExif}">
@@ -610,26 +627,45 @@
                          der Benutzer BEARBEITET - alles andere ist Anzeige. Als Abschnitt unter den
                          Aufnahmedaten schob eine Gruppenaufnahme mit zwanzig Gesichtern alles andere
                          aus der Leiste; hier hat die Liste die ganze Höhe für sich. Der Reiter
-                         erscheint nur, wenn jemand erkannt wurde. -->
+                         steht bei eingeschalteter Erkennung immer, auf einem Bild ohne Gesichter
+                         mit einem Hinweis statt der Liste. -->
                     <StackPanel Spacing="12" IsVisible="{Binding IsInfoTabPeople}" Margin="0,0,12,0">
-                        <StackPanel Spacing="4">
+                        <!-- FOKUSSIERBAR, obwohl nur ein Hinweis: wer mit TAB von Bild zu Bild
+                             benennt, landet auf einem Bild ohne Gesichter hier, und TAB führt von
+                             hier zum nächsten Bild weiter. -->
+                        <Border x:Name="NoPeopleHint"
+                                IsVisible="{Binding ShowNoPeopleHint}"
+                                Focusable="True"
+                                KeyDown="OnNoPeopleHintKeyDown">
+                            <TextBlock Text="Auf diesem Bild wurde niemand erkannt."
+                                       Foreground="{DynamicResource FP.Text.Secondary}"
+                                       TextWrapping="Wrap"/>
+                        </Border>
+                        <StackPanel Spacing="4" IsVisible="{Binding HasPeople}">
                             <TextBlock Text="Name eintragen benennt die ganze Gruppe."
                                        Foreground="{DynamicResource FP.Text.Secondary}"
                                        FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap"/>
                             <TextBlock Text="Ein Name, den es schon gibt, verschiebt nur dieses eine Gesicht dorthin."
                                        Foreground="{DynamicResource FP.Text.Secondary}"
                                        FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap"/>
+                            <TextBlock Text="Schräg gesetzte Namen hat die Erkennung vergeben. ENTER oder der Haken bestätigt sie."
+                                       Foreground="{DynamicResource FP.Text.Secondary}"
+                                       FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap"/>
+                            <TextBlock Text="TAB springt zum nächsten Namen und nach dem letzten ins nächste Bild."
+                                       Foreground="{DynamicResource FP.Text.Secondary}"
+                                       FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap"/>
                         </StackPanel>
 
-                        <ItemsControl ItemsSource="{Binding People}">
+                        <ItemsControl x:Name="PeopleList" ItemsSource="{Binding People}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
                                     <!-- Das GESICHT gehört neben das Feld. Fünf leere Felder
                                          untereinander sagen niemandem, welches zu wem gehört - mit
-                                         dem Ausschnitt daneben ist es offensichtlich. Der Knopf
-                                         rechts meint NUR dieses Gesicht: er löst es aus der Gruppe,
-                                         wenn die Erkennung jemanden verwechselt hat. -->
-                                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8" Margin="0,0,0,8"
+                                         dem Ausschnitt daneben ist es offensichtlich. Die Knöpfe
+                                         rechts meinen NUR dieses Gesicht: der Haken bestätigt einen
+                                         Namen, den die Erkennung vergeben hat, der zweite löst das
+                                         Gesicht aus der Gruppe, wenn sie jemanden verwechselt hat. -->
+                                    <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="8" Margin="0,0,0,8"
                                           AttachedToVisualTree="OnLocalizedItemAttachedToVisualTree">
                                         <Border Width="44" Height="44" CornerRadius="4"
                                                 ClipToBounds="True"
@@ -650,12 +686,35 @@
                                                          FilterMode="Contains"
                                                          MinimumPrefixLength="0"
                                                          PlaceholderText="Name eingeben"
-                                                         Classes="no-translate"
+                                                         Classes="no-translate person-name"
+                                                         Classes.suggested="{Binding IsSuggested}"
                                                          VerticalAlignment="Center"
                                                          LostFocus="OnPersonNameCommitted"
                                                          KeyDown="OnPersonNameKeyDown"
                                                          Tag="{Binding Id}"/>
-                                        <Button Grid.Column="2"
+                                        <!-- Haken als Knopf, solange der Name nur ein Vorschlag
+                                             ist; danach als stilles Zeichen an derselben Stelle,
+                                             damit die Zeile beim Bestätigen nicht springt. -->
+                                        <Panel Grid.Column="2" Width="28" Height="28" VerticalAlignment="Center">
+                                            <Button Classes="ghost"
+                                                    Width="28" Height="28" Padding="0"
+                                                    IsVisible="{Binding IsSuggested}"
+                                                    Click="OnConfirmFaceClick"
+                                                    Tag="{Binding FaceId}"
+                                                    ToolTip.Tip="Zuordnung bestätigen">
+                                                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/user-check.svg"
+                                                               Width="16" Height="16"
+                                                               HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                               Opacity="0.75"/>
+                                            </Button>
+                                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/circle-check.svg"
+                                                           Width="16" Height="16"
+                                                           HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                           IconBrush="{DynamicResource FP.Accent}"
+                                                           IsVisible="{Binding IsConfirmed}"
+                                                           ToolTip.Tip="Von Hand bestätigt"/>
+                                        </Panel>
+                                        <Button Grid.Column="3"
                                                 Classes="ghost"
                                                 Width="28" Height="28" Padding="0"
                                                 VerticalAlignment="Center"

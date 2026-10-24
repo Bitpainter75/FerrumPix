@@ -468,15 +468,38 @@
                         <!-- MODELL HERUNTERLADEN: Frage, Grafikkarte, Fortschritt und Ergebnis in einem
                              Dialog, der bis zum Ergebnis offen bleibt
                              (MainWindowViewModelModelDownload.vb). Die Grafikkarte steht nur da,
-                             wenn sie angeboten wird; der Haken laesst sich nur beim Fragen umlegen. -->
+                             wenn sie angeboten wird; der Haken laesst sich nur beim Fragen umlegen.
+                             Bei mehreren Karten steht davor dieselbe Auswahl wie in den
+                             Einstellungen, mit deren Texten, damit beide Stellen gleich lauten. -->
                         <StackPanel Grid.Row="3"
                                     Margin="0,16,0,0"
                                     Spacing="10"
                                     IsVisible="{Binding DialogShowsModelDownload}">
                             <StackPanel Spacing="4" IsVisible="{Binding DialogModelOfferGpu}">
+                                <Grid ColumnDefinitions="Auto,*"
+                                      Margin="0,0,0,4"
+                                      IsVisible="{Binding DialogModelOffersGpuDevice}">
+                                    <TextBlock Text="Verwendete Grafikkarte"
+                                               VerticalAlignment="Center"
+                                               Margin="0,0,12,0"
+                                               Foreground="{DynamicResource FP.Text.Secondary}"/>
+                                    <ComboBox Grid.Column="1"
+                                              ItemsSource="{Binding DialogModelGpuDevices}"
+                                              SelectedItem="{Binding DialogModelGpuDevice, Mode=TwoWay}"
+                                              IsEnabled="{Binding IsDialogModelAsking}"
+                                              HorizontalAlignment="Stretch"
+                                              FontSize="{DynamicResource FP.Font.Body}"
+                                              ToolTip.Tip="Gilt für die Modelle und unter Linux auch für die Bildbearbeitung. Die Bildbearbeitung wechselt erst nach einem Neustart, und das Fenster wird dann ebenfalls auf dieser Karte gezeichnet.">
+                                        <ComboBox.ItemTemplate>
+                                            <DataTemplate>
+                                                <TextBlock Classes="no-translate" Text="{Binding Name}"/>
+                                            </DataTemplate>
+                                        </ComboBox.ItemTemplate>
+                                    </ComboBox>
+                                </Grid>
                                 <CheckBox Content="Grafikbeschleunigung einschalten"
                                           IsChecked="{Binding DialogModelUseGpu, Mode=TwoWay}"
-                                          IsEnabled="{Binding IsDialogModelAsking}"
+                                          IsEnabled="{Binding IsDialogModelGpuCheckable}"
                                           ToolTip.Tip="Das Modell rechnet dann auf der Grafikkarte, meist um ein Vielfaches schneller. Vorher wird geprüft, ob es dort wirklich läuft; sonst bleibt es beim Prozessor."/>
                                 <TextBlock Classes="no-translate"
                                            Text="{Binding DialogModelGpuText}"

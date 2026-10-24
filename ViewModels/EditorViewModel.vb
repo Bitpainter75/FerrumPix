@@ -4836,6 +4836,9 @@ Namespace ViewModels
             InfoPanel.OwnerLoadsDetails = True
             InfoPanel.IsInfoSidebarVisible = IsInfoSidebarVisible
             InfoPanel.OpenTagSearch = Sub(tag) _mainVm?.OpenTagSearchInGallery(tag)
+            InfoPanel.NavigateImage = Sub(delta)
+                                          If delta > 0 Then NavigateNext() Else NavigatePrevious()
+                                      End Sub
             AddHandler InfoPanel.PropertyChanged,
                 Sub(sender, e)
                     If e.PropertyName = NameOf(InfoPanel.Rating) OrElse
@@ -7628,7 +7631,7 @@ Namespace ViewModels
             Dim hatteZuordnung = Not String.IsNullOrWhiteSpace(LensAssignment)
             Dim hatteSchalter = _lensDistortion.HasValue OrElse _lensTca.HasValue OrElse _lensVignetting.HasValue OrElse
                                 _lensDistortionAmount <> 100 OrElse _lensTcaAmount <> 100 OrElse _lensVignettingAmount <> 100 OrElse
-                                _lensTcaRed <> 0 OrElse _lensTcaBlue <> 0 OrElse _rawSensorEdgeCrop
+                                _lensTcaRed <> 0 OrElse _lensTcaBlue <> 0 OrElse _rawSensorEdgeCrop <> SensorEdgeCropStart
             If Not hatteZuordnung AndAlso Not hatteSchalter Then Return
             CaptureUndoState("Objektivkorrektur")
             _lensDistortion = Nothing
@@ -7639,7 +7642,7 @@ Namespace ViewModels
             _lensVignettingAmount = 100
             _lensTcaRed = 0
             _lensTcaBlue = 0
-            _rawSensorEdgeCrop = False
+            _rawSensorEdgeCrop = SensorEdgeCropStart
             _lensModel = ""
             If hatteZuordnung AndAlso Not String.IsNullOrWhiteSpace(_objektivExifName) Then
                 LensDataService.SetAssignment(_objektivExifName, "")
@@ -7649,9 +7652,10 @@ Namespace ViewModels
             RebuildWorkingImageForLens()
         End Sub
 
-        ''' <summary>Den Sensorrand einer RAW abschneiden, wie Adobe es tut. Steht bei der
-        ''' Objektivkorrektur, weil es wie sie im Decode sitzt; ab Werk aus. Das Umschalten kostet
-        ''' keinen neuen Decode, geschnitten wird hinter dem Zwischenspeicher.</summary>
+        ''' <summary>Den Sensorrand einer RAW abschneiden, wie das Referenzprogramm es tut. Steht bei
+        ''' der Objektivkorrektur, weil es wie sie im Decode sitzt; ab Werk an (siehe
+        ''' <see cref="SensorEdgeCropStart"/>). Das Umschalten kostet keinen neuen Decode,
+        ''' geschnitten wird hinter dem Zwischenspeicher.</summary>
         Public Property RawSensorEdgeCropEnabled As Boolean
             Get
                 Return _rawSensorEdgeCrop
@@ -7674,6 +7678,14 @@ Namespace ViewModels
             Get
                 If Not IsRawDeveloped Then Return False
                 Return RawDecodeService.SensorEdgeFor(RenderSourcePath).HasValue
+            End Get
+        End Property
+
+        ''' <summary>Der Startwert des Sensorrands, auf den die Zuruecksetzer gehen: bei einer RAW an,
+        ''' wie in ImageAdjustments.ForUneditedRaw, sonst aus.</summary>
+        Private ReadOnly Property SensorEdgeCropStart As Boolean
+            Get
+                Return RawPreviewService.IsSupportedRaw(RenderSourcePath)
             End Get
         End Property
 
@@ -25071,7 +25083,14 @@ Namespace ViewModels
             If Not confirmed Then Return
 
             PushUndo(LocalizationService.T("Alle Bearbeitungen zurückgesetzt"))
+            Dim sensorEdgeBefore = _rawSensorEdgeCrop
             ResetAdjustmentsInternal()
+            ' Der Sensorrand sitzt im Decode: war er abgeschaltet, muss neu entwickelt werden, sonst
+            ' steht der Haken wieder an und das Bild bleibt unbeschnitten.
+            If sensorEdgeBefore <> _rawSensorEdgeCrop Then
+                Me.RaisePropertyChanged(NameOf(RawSensorEdgeCropEnabled))
+                RebuildWorkingImageForLens()
+            End If
             ' EINE RAW KEHRT ZU IHREN STARTWERTEN ZURUECK, nicht zu lauter Nullen. Geoeffnet ohne
             ' Rezept beginnt sie mit ImageAdjustments.ForUneditedRaw; stuenden hier die Nullen,
             ' saehe das "Original" fleckiger aus als beim ersten Oeffnen, und ein Speichern
@@ -25209,8 +25228,9 @@ Namespace ViewModels
             ' Staerken auf 100, und das von Hand gewaehlte Objektiv samt Sucheingabe weg. Ohne diese
             ' Zeilen erbte Bild B die Objektivwahl von Bild A - und weil eine gesetzte Wahl den
             ' Namen aus den Aufnahmedaten SCHLAEGT, fand der Abgleich danach fuer gar kein Bild mehr
-            ' etwas.
-            _rawSensorEdgeCrop = False
+            ' etwas. Der Sensorrand geht auf seinen Startwert; beim Oeffnen setzt ihn danach das
+            ' Rezept oder ForUneditedRaw.
+            _rawSensorEdgeCrop = SensorEdgeCropStart
             _lensDistortion = Nothing
             _lensTca = Nothing
             _lensVignetting = Nothing
@@ -29850,7 +29870,7 @@ Namespace ViewModels
             ' und das Bild blieb korrigiert bzw. beschnitten.
             Dim decodeChanged = _lensDistortion.HasValue OrElse _lensTca.HasValue OrElse _lensVignetting.HasValue OrElse
                                 _lensDistortionAmount <> 100 OrElse _lensTcaAmount <> 100 OrElse _lensVignettingAmount <> 100 OrElse
-                                _lensTcaRed <> 0 OrElse _lensTcaBlue <> 0 OrElse _rawSensorEdgeCrop OrElse
+                                _lensTcaRed <> 0 OrElse _lensTcaBlue <> 0 OrElse _rawSensorEdgeCrop <> SensorEdgeCropStart OrElse
                                 Not String.IsNullOrEmpty(_lensModel)
             _lensDistortion = Nothing
             _lensTca = Nothing
@@ -29860,7 +29880,7 @@ Namespace ViewModels
             _lensVignettingAmount = 100
             _lensTcaRed = 0
             _lensTcaBlue = 0
-            _rawSensorEdgeCrop = False
+            _rawSensorEdgeCrop = SensorEdgeCropStart
             _lensModel = ""
             _vignette = 0
             _vignetteTransition = 55
