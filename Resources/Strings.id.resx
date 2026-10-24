@@ -9994,4 +9994,37 @@
   <data name="Wie_viele_Kerne_des_Prozessors_die_Modelle_nutze_8b895e96" xml:space="preserve">
     <value>Berapa banyak inti prosesor yang digunakan model, misalnya saat mengurangi derau. Bawaannya separuh, agar aplikasi tetap lancar saat model menghitung. Lebih banyak inti menghitung lebih cepat, selama model tidak berjalan di kartu grafis.</value>
   </data>
+  <data name="Bildschirmprofile_35ed1799" xml:space="preserve">
+    <value>Profil layar</value>
+  </data>
+  <data name="Ein_ICC_Profil_je_Bildschirm_etwa_aus_der_Kalibr_b0490dff" xml:space="preserve">
+    <value>Satu profil ICC per layar, misalnya dari kalibrasi dengan kolorimeter. Foto di penampil dan editor kemudian dikonversi untuk layar tempat jendela sedang berada. Biarkan kosong jika sistem sudah mengonversi sendiri, misalnya KDE Plasma dengan profil warna yang diatur.</value>
+  </data>
+  <data name="Profil_w_hlen_cae393b1" xml:space="preserve">
+    <value>Pilih profil</value>
+  </data>
+  <data name="0_x_1_Bildpunkte_2c8c4b0e" xml:space="preserve">
+    <value>{0} x {1} piksel</value>
+  </data>
+  <data name="Hauptbildschirm_7f05b486" xml:space="preserve">
+    <value>Layar utama</value>
+  </data>
+  <data name="Das_Fenster_steht_hier_9144d583" xml:space="preserve">
+    <value>Jendela ada di sini</value>
+  </data>
+  <data name="Kein_Profil_ea5990a9" xml:space="preserve">
+    <value>Tidak ada profil</value>
+  </data>
+  <data name="ICC_Profil_des_Bildschirms_w_hlen_8865260d" xml:space="preserve">
+    <value>Pilih profil ICC layar</value>
+  </data>
+  <data name="Die_Profildatei_fehlt_47c5bc7a" xml:space="preserve">
+    <value>File profil tidak ada.</value>
+  </data>
+  <data name="Die_Datei_ist_kein_lesbares_ICC_Profil_5f8175e1" xml:space="preserve">
+    <value>File ini bukan profil ICC yang dapat dibaca.</value>
+  </data>
+  <data name="Das_Profil_hat_keine_Matrix_mit_Tonkurve_und_l_s_9f224130" xml:space="preserve">
+    <value>Profil ini tidak memiliki matriks dengan kurva nada dan tidak dapat digunakan.</value>
+  </data>
 </root>

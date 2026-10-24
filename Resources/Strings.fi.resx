@@ -9990,4 +9990,37 @@
   <data name="Wie_viele_Kerne_des_Prozessors_die_Modelle_nutze_8b895e96" xml:space="preserve">
     <value>Kuinka montaa suorittimen ydintä mallit käyttävät, esimerkiksi kohinanpoistossa. Oletuksena puolet, jotta käyttö pysyy sujuvana mallin laskiessa. Useampi ydin laskee nopeammin, kunhan malli ei toimi näytönohjaimella.</value>
   </data>
+  <data name="Bildschirmprofile_35ed1799" xml:space="preserve">
+    <value>Näyttöprofiilit</value>
+  </data>
+  <data name="Ein_ICC_Profil_je_Bildschirm_etwa_aus_der_Kalibr_b0490dff" xml:space="preserve">
+    <value>Yksi ICC-profiili näyttöä kohden, esimerkiksi mittalaitteella tehdystä kalibroinnista. Katselimen ja muokkaimen kuvat muunnetaan silloin sille näytölle, jolla ikkuna juuri on. Jätä tyhjäksi, jos järjestelmä muuntaa jo itse, esimerkiksi KDE Plasma, jossa väriprofiili on asetettu.</value>
+  </data>
+  <data name="Profil_w_hlen_cae393b1" xml:space="preserve">
+    <value>Valitse profiili</value>
+  </data>
+  <data name="0_x_1_Bildpunkte_2c8c4b0e" xml:space="preserve">
+    <value>{0} x {1} pikseliä</value>
+  </data>
+  <data name="Hauptbildschirm_7f05b486" xml:space="preserve">
+    <value>Ensisijainen näyttö</value>
+  </data>
+  <data name="Das_Fenster_steht_hier_9144d583" xml:space="preserve">
+    <value>Ikkuna on tässä</value>
+  </data>
+  <data name="Kein_Profil_ea5990a9" xml:space="preserve">
+    <value>Ei profiilia</value>
+  </data>
+  <data name="ICC_Profil_des_Bildschirms_w_hlen_8865260d" xml:space="preserve">
+    <value>Valitse näytön ICC-profiili</value>
+  </data>
+  <data name="Die_Profildatei_fehlt_47c5bc7a" xml:space="preserve">
+    <value>Profiilitiedosto puuttuu.</value>
+  </data>
+  <data name="Die_Datei_ist_kein_lesbares_ICC_Profil_5f8175e1" xml:space="preserve">
+    <value>Tiedosto ei ole luettava ICC-profiili.</value>
+  </data>
+  <data name="Das_Profil_hat_keine_Matrix_mit_Tonkurve_und_l_s_9f224130" xml:space="preserve">
+    <value>Profiilissa ei ole matriisia ja sävykäyrää, eikä sitä voi käyttää.</value>
+  </data>
 </root>

@@ -9994,4 +9994,37 @@
   <data name="Wie_viele_Kerne_des_Prozessors_die_Modelle_nutze_8b895e96" xml:space="preserve">
     <value>मॉडल प्रोसेसर के कितने कोर इस्तेमाल करते हैं, जैसे शोर हटाते समय। डिफ़ॉल्ट रूप से आधे, ताकि मॉडल की गणना के दौरान भी इंटरफ़ेस सहज बना रहे। जब तक मॉडल ग्राफ़िक्स कार्ड पर नहीं चल रहा, अधिक कोर तेज़ी से गणना करते हैं।</value>
   </data>
+  <data name="Bildschirmprofile_35ed1799" xml:space="preserve">
+    <value>डिस्प्ले प्रोफ़ाइल</value>
+  </data>
+  <data name="Ein_ICC_Profil_je_Bildschirm_etwa_aus_der_Kalibr_b0490dff" xml:space="preserve">
+    <value>हर डिस्प्ले के लिए एक ICC प्रोफ़ाइल, जैसे कलरीमीटर से कैलिब्रेशन से मिली। तब व्यूअर और एडिटर की तस्वीरें उस डिस्प्ले के लिए बदली जाती हैं जिस पर विंडो अभी है। अगर सिस्टम पहले से खुद बदलता है, जैसे रंग प्रोफ़ाइल सेट वाला KDE Plasma, तो इसे खाली छोड़ें।</value>
+  </data>
+  <data name="Profil_w_hlen_cae393b1" xml:space="preserve">
+    <value>प्रोफ़ाइल चुनें</value>
+  </data>
+  <data name="0_x_1_Bildpunkte_2c8c4b0e" xml:space="preserve">
+    <value>{0} x {1} पिक्सेल</value>
+  </data>
+  <data name="Hauptbildschirm_7f05b486" xml:space="preserve">
+    <value>मुख्य डिस्प्ले</value>
+  </data>
+  <data name="Das_Fenster_steht_hier_9144d583" xml:space="preserve">
+    <value>विंडो यहाँ है</value>
+  </data>
+  <data name="Kein_Profil_ea5990a9" xml:space="preserve">
+    <value>कोई प्रोफ़ाइल नहीं</value>
+  </data>
+  <data name="ICC_Profil_des_Bildschirms_w_hlen_8865260d" xml:space="preserve">
+    <value>डिस्प्ले की ICC प्रोफ़ाइल चुनें</value>
+  </data>
+  <data name="Die_Profildatei_fehlt_47c5bc7a" xml:space="preserve">
+    <value>प्रोफ़ाइल फ़ाइल मौजूद नहीं है।</value>
+  </data>
+  <data name="Die_Datei_ist_kein_lesbares_ICC_Profil_5f8175e1" xml:space="preserve">
+    <value>यह फ़ाइल पढ़ने योग्य ICC प्रोफ़ाइल नहीं है।</value>
+  </data>
+  <data name="Das_Profil_hat_keine_Matrix_mit_Tonkurve_und_l_s_9f224130" xml:space="preserve">
+    <value>इस प्रोफ़ाइल में टोन कर्व वाला मैट्रिक्स नहीं है, इसलिए इसका उपयोग नहीं हो सकता।</value>
+  </data>
 </root>

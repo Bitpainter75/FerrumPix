@@ -94,6 +94,15 @@ Namespace Services
         ''' Motiv kreuzen - ein Dachfirst, ein Zaun, Schienen -, und keine stuerzenden Linien.</summary>
         Private Const AutoGeometryMinVanishingDistance As Double = 1.25
 
+        ''' <summary>Kleinster Abstand zweier Kanten (Anteil der Bildbreite bzw. -hoehe), damit ihr
+        ''' Paar in die robuste Fluchtpunktschaetzung eingeht.</summary>
+        Private Const AutoGeometryPairSeparation As Double = 0.03
+
+        ''' <summary>Wie genau eine Kante auf den geschaetzten Fluchtpunkt zulaufen muss (Grad), und
+        ''' welcher Anteil des Kantengewichts der Achse das tun muss.</summary>
+        Private Const AutoGeometryVanishingTolerance As Double = 0.5
+        Private Const AutoGeometryVanishingConsensus As Double = 0.5
+
         ''' <summary>Eine Kante des Bildes: ihre Normalenrichtung und ihr Abstand vom Ursprung, dazu
         ''' wie kraeftig sie abgestimmt hat.
         '''
@@ -647,73 +656,104 @@ Namespace Services
             Return True
         End Function
 
-        ''' <summary>Der Reglerwert fuer eine Achse, aus dem Fluchtpunkt ihrer Kanten.
+        ''' <summary>Der Fluchtpunkt einer Achse, robust geschaetzt.
         '''
-        ''' <para>Die Rechnung ist die UMKEHRUNG von <see cref="ImageGeometryMapper.WarpCorners"/>:
-        ''' dort schiebt der Regler die beiden Bildkanten um <c>dx = Breite · Regler/100 · 0,5/2</c>
-        ''' auseinander, und diese Verschiebung gehoert zu genau einer Fluchtlinie. Setzt man beide
-        ''' gleich, bleibt <c>Regler = 200 · (D−1) / (D+1)</c> mit <c>D = 1 − Bildhoehe /
-        ''' Fluchtpunkt</c>. Bei einem Fluchtpunkt zwei Bildhoehen ueber dem oberen Rand sind das 40
-        ''' von 100 - und bei Vollausschlag genau die halbe Bildbreite Mehrbreite oben, wie es die
-        ''' Kennlinie dort beschreibt.</para>
+        ''' <para>Jede fast senkrechte Kante hat eine Neigung (dx/dy) und eine Lage (ihr x auf der
+        ''' mittleren Bildzeile). Laufen die Kanten auf einen Fluchtpunkt zu, waechst die Neigung
+        ''' LINEAR mit der Lage, und die Steigung dieser Geraden ist 1 / (Bildmitte − Fluchtpunkt).
+        ''' Geschaetzt wird sie als gewichteter Median aller paarweisen Steigungen (Theil-Sen):
+        ''' eine einzelne falsch erkannte Kante zieht den Median nicht weg, waehrend sie eine
+        ''' Ausgleichsloesung mitzieht. Und parallele Kanten ergeben von selbst die Steigung null,
+        ''' also einen unendlich fernen Fluchtpunkt, statt ein fast singulaeres Gleichungssystem
+        ''' mit einer grossen Zufallszahl. Fuer die waagerechten Kanten gilt dasselbe mit
+        ''' vertauschten Achsen.</para>
         '''
-        ''' <para>Der Regler kippt SYMMETRISCH um die Bildmitte, der gemessene Fluchtpunkt liegt aber
-        ''' selten genau ueber ihr. Was daneben liegt, ist eine Drehung - und die gehoert der anderen
-        ''' Funktion, nicht dieser. Deshalb geht hier nur die eine Koordinate ein.</para></summary>
+        ''' <para>Paare, deren Kanten fast an derselben Stelle liegen (beide Raender eines Strichs,
+        ''' Echos der Hough-Tabelle), tragen nichts: ihre Steigung ist ein Quotient zweier kleiner
+        ''' Zahlen. Sie bleiben draussen.</para>
+        '''
+        ''' <para>VORHER eine gewichtete Ausgleichsloesung aller Kanten mit einer Sperre unter 0,75
+        ''' Grad Faecher. Gemessen gegen gezeichnete Bilder mit bekanntem Sollwert treffen beide
+        ''' saubere Faelle gleich gut (eine Reglereinheit). Eine einzelne schraege Kante (ein Mast)
+        ''' zwischen sonst PARALLELEN Kanten stellte die Ausgleichsloesung aber auf 38 statt 0, mit
+        ''' Fluchtpunkt fuenf Bildhoehen entfernt auf 21 statt 18. An 400 Fotos des Bestands
+        ''' korrigierte sie rund ein Drittel, haeufig bis zum Anschlag, auch Schreibtisch, Obst und
+        ''' Waldrand; diese Schaetzung korrigiert dort nichts und bei Architektur in derselben
+        ''' Richtung, nur massvoller.</para></summary>
         Private Shared Function TryMeasureAutoVanishingPoint(lines As List(Of AutoGeometryLine), vertical As Boolean,
                                                              width As Integer, height As Integer,
                                                              ByRef vanishing As SKPoint) As Boolean
             vanishing = New SKPoint(0, 0)
-
-            Dim selected As New List(Of AutoGeometryLine)()
+            ' Die Querlinie, auf der die Lage gemessen wird: die mittlere Zeile fuer senkrechte
+            ' Kanten, die mittlere Spalte fuer waagerechte.
+            Dim centre = If(vertical, height / 2.0, width / 2.0)
+            Dim positions As New List(Of Double)()
+            Dim slopes As New List(Of Double)()
+            Dim strengths As New List(Of Double)()
             For Each line In lines
-                If Math.Abs(AutoGeometryAxisDeviation(line.NormalAngleDegrees, vertical)) <= AutoGeometryAxisWindow Then
-                    selected.Add(line)
+                If Math.Abs(AutoGeometryAxisDeviation(line.NormalAngleDegrees, vertical)) > AutoGeometryAxisWindow Then Continue For
+                Dim radians = line.NormalAngleDegrees * Math.PI / 180.0
+                Dim c = Math.Cos(radians), s = Math.Sin(radians)
+                ' x·c + y·s = Abstand. Senkrecht: x = (Abstand − y·s) / c, Neigung dx/dy = −s/c.
+                Dim along = If(vertical, c, s)
+                Dim across = If(vertical, s, c)
+                If Math.Abs(along) < 0.000001 Then Continue For
+                slopes.Add(-across / along)
+                positions.Add((line.Offset - centre * across) / along)
+                strengths.Add(line.Strength)
+            Next
+            If slopes.Count < AutoGeometryMinAxisLines Then Return False
+
+            Dim minimumSeparation = AutoGeometryPairSeparation * If(vertical, width, height)
+            Dim pairSlopes As New List(Of Double)()
+            Dim pairWeights As New List(Of Double)()
+            For i As Integer = 0 To slopes.Count - 2
+                For j As Integer = i + 1 To slopes.Count - 1
+                    Dim distance = positions(j) - positions(i)
+                    If Math.Abs(distance) < minimumSeparation Then Continue For
+                    pairSlopes.Add((slopes(j) - slopes(i)) / distance)
+                    pairWeights.Add(strengths(i) * strengths(j))
+                Next
+            Next
+            If pairSlopes.Count < AutoGeometryMinAxisLines Then Return False
+
+            Dim k = AutoGeometryWeightedMedian(pairSlopes, pairWeights)
+            If Math.Abs(k) < 0.000000001 Then Return False
+
+            ' Wo jede Kante die Querachse des Fluchtpunkts kreuzt; ihr Median ist dessen Lage quer
+            ' zur gemessenen Richtung.
+            Dim crossings As New List(Of Double)()
+            For i As Integer = 0 To slopes.Count - 1
+                crossings.Add(positions(i) - slopes(i) / k)
+            Next
+            Dim crossing = AutoGeometryWeightedMedian(crossings, strengths)
+            Dim coordinate = centre - 1.0 / k
+
+            ' EINIGKEITSPROBE. Ein Median liefert IMMER eine Zahl, auch aus Kanten, die gar nicht
+            ' auf einen gemeinsamen Punkt zulaufen: Aeste, Haare, schraege Motive. An echten Fotos
+            ' ohne Architektur schlug die Schaetzung ohne diese Probe bis zum Anschlag aus. Gezaehlt
+            ' wird das Gewicht der Kanten, deren Neigung die geschaetzte auf ein halbes Grad trifft.
+            Dim agreeing As Double = 0, agreeingCount As Integer = 0, total As Double = 0
+            For i As Integer = 0 To slopes.Count - 1
+                total += strengths(i)
+                Dim expected = k * (positions(i) - crossing)
+                Dim difference = Math.Abs(Math.Atan(slopes(i)) - Math.Atan(expected)) * 180.0 / Math.PI
+                If difference <= AutoGeometryVanishingTolerance Then
+                    agreeing += strengths(i)
+                    agreeingCount += 1
                 End If
             Next
-            If selected.Count < AutoGeometryMinAxisLines Then Return False
-
-            ' Fluchtpunkt als gewichtete Ausgleichsloesung von x·cos + y·sin = Abstand.
-            Dim sumXx As Double = 0, sumXy As Double = 0, sumYy As Double = 0
-            Dim sumXr As Double = 0, sumYr As Double = 0
-            Dim spread As Double = 0
-            Dim reference = AutoGeometryAxisDeviation(selected(0).NormalAngleDegrees, vertical)
-            For Each line In selected
-                Dim radians = line.NormalAngleDegrees * Math.PI / 180.0
-                Dim cx = Math.Cos(radians), cy = Math.Sin(radians)
-                Dim weight = line.Strength
-                sumXx += weight * cx * cx
-                sumXy += weight * cx * cy
-                sumYy += weight * cy * cy
-                sumXr += weight * cx * line.Offset
-                sumYr += weight * cy * line.Offset
-                spread = Math.Max(spread, Math.Abs(AutoGeometryAxisDeviation(line.NormalAngleDegrees, vertical) - reference))
-            Next
-
-            ' LAUFEN DIE KANTEN PARALLEL, gibt es keinen Fluchtpunkt - und genau das ist der
-            ' Normalfall eines geraden Fotos. Ohne diese Probe rechnet die Ausgleichsloesung an
-            ' einem beinahe singulaeren Gleichungssystem und liefert eine grosse Zufallszahl.
-            If spread < 0.75 Then Return False
-
-            Dim determinant = sumXx * sumYy - sumXy * sumXy
-            If Math.Abs(determinant) < 0.000001 * Math.Max(1.0, sumXx + sumYy) Then Return False
-
-            Dim vanishingX = (sumYy * sumXr - sumXy * sumYr) / determinant
-            Dim vanishingY = (sumXx * sumYr - sumXy * sumXr) / determinant
-
-            If Double.IsNaN(vanishingX) OrElse Double.IsInfinity(vanishingX) OrElse
-               Double.IsNaN(vanishingY) OrElse Double.IsInfinity(vanishingY) Then Return False
+            If agreeingCount < AutoGeometryMinAxisLines OrElse agreeing < total * AutoGeometryVanishingConsensus Then Return False
 
             Dim extent = If(vertical, CDbl(height), CDbl(width))
-            Dim coordinate = If(vertical, vanishingY, vanishingX)
-
-            ' Der Fluchtpunkt muss weit genug AUSSERHALB liegen. Innerhalb des Bildes kreuzen sich
-            ' Kanten des Motivs, nicht stuerzende Linien.
-            Dim distance = If(coordinate < 0, -coordinate, coordinate - extent)
-            If distance < extent * (AutoGeometryMinVanishingDistance - 1.0) Then Return False
+            If Double.IsNaN(coordinate) OrElse Double.IsInfinity(coordinate) OrElse
+               Double.IsNaN(crossing) OrElse Double.IsInfinity(crossing) Then Return False
+            ' Wie bei der Ausgleichsloesung: der Fluchtpunkt liegt weit genug AUSSERHALB.
+            Dim beyond = If(coordinate < 0, -coordinate, coordinate - extent)
+            If beyond < extent * (AutoGeometryMinVanishingDistance - 1.0) Then Return False
             If Math.Abs(coordinate) > extent * 200.0 Then Return False
 
-            vanishing = New SKPoint(CSng(vanishingX), CSng(vanishingY))
+            vanishing = If(vertical, New SKPoint(CSng(crossing), CSng(coordinate)), New SKPoint(CSng(coordinate), CSng(crossing)))
             Return True
         End Function
 

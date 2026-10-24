@@ -782,13 +782,56 @@ Namespace ViewModels
         ''' selbst um, sobald die Zeichenfläche einen Farbraum trägt - deshalb genügt dort das
         ''' Aufprägen. Windows rechnet für gewöhnliche Fenster gar nicht um (erst Windows 11 tut es
         ''' mit eingeschalteter automatischer Farbverwaltung), und unter X11 gibt es nichts
-        ''' dergleichen. Dort hülfe kein Farbraum an der Fläche, sondern nur eine eigene Umrechnung
-        ''' auf das Bildschirmprofil - eine andere Baustelle, siehe OFFENE_PUNKTE.</summary>
+        ''' dergleichen. Dort hilft kein Farbraum an der Fläche, sondern nur eine eigene Umrechnung
+        ''' auf das Bildschirmprofil: <see cref="DisplayProfileService"/> mit den Bildschirmprofilen
+        ''' unten.</summary>
         Public ReadOnly Property IsWindowColorSpaceFixSupported As Boolean
             Get
                 Return OperatingSystem.IsMacOS()
             End Get
         End Property
+
+        ''' <summary>Bildschirmprofile je erkanntem Bildschirm, nur Windows und Linux.</summary>
+        Public ReadOnly Property IsDisplayProfileSupported As Boolean
+            Get
+                Return DisplayProfileService.IsSupported
+            End Get
+        End Property
+
+        Public ReadOnly Property DisplayProfileRows As New ObservableCollection(Of DisplayProfileRow)()
+
+        Public ReadOnly Property HasNoDetectedScreens As Boolean
+            Get
+                Return DisplayProfileRows.Count = 0
+            End Get
+        End Property
+
+        ''' <summary>Baut die Liste der Bildschirme neu auf: beim Zeigen der Seite, nach einer Wahl und
+        ''' wenn ein Bildschirm dazukommt oder das Fenster hinüberwandert. Ein Bildschirm, der
+        ''' gerade nicht angeschlossen ist, steht nicht in der Liste; sein Profil bleibt gespeichert
+        ''' und gilt wieder, sobald er zurück ist.</summary>
+        Public Sub RefreshDisplayProfiles()
+            If Not DisplayProfileService.IsSupported Then Return
+            Dim profiles = AppSettingsService.Load().DisplayProfiles
+            Dim current = DisplayProfileService.CurrentScreenKey
+            DisplayProfileRows.Clear()
+            For Each screen In DisplayProfileService.DetectedScreens()
+                Dim key = DisplayProfileService.ScreenKey(screen)
+                Dim path As String = Nothing
+                If profiles IsNot Nothing Then profiles.TryGetValue(key, path)
+                DisplayProfileRows.Add(New DisplayProfileRow(key, screen.Bounds.Width, screen.Bounds.Height, screen.IsPrimary,
+                                                             String.Equals(key, current, StringComparison.Ordinal), path,
+                                                             Sub(row) SetDisplayProfile(row.ScreenKey, Nothing)))
+            Next
+            Me.RaisePropertyChanged(NameOf(HasNoDetectedScreens))
+        End Sub
+
+        ''' <summary>Setzt das Profil eines Bildschirms (leer nimmt es heraus) und wendet es sofort an.</summary>
+        Public Sub SetDisplayProfile(screenKey As String, profilePath As String)
+            AppSettingsService.SaveDisplayProfile(screenKey, profilePath)
+            DisplayProfileService.Refresh()
+            RefreshDisplayProfiles()
+        End Sub
 
         ''' <summary>Farben an den Bildschirm anpassen, als EIN Schalter für gewöhnliche Anwender.
         '''

@@ -9994,4 +9994,37 @@
   <data name="Wie_viele_Kerne_des_Prozessors_die_Modelle_nutze_8b895e96" xml:space="preserve">
     <value>모델이 사용하는 프로세서 코어 수입니다(예: 노이즈 제거). 기본값은 절반으로, 모델이 계산하는 동안에도 조작이 부드럽게 유지됩니다. 모델이 그래픽 카드에서 실행되지 않는 한 코어가 많을수록 더 빠르게 계산합니다.</value>
   </data>
+  <data name="Bildschirmprofile_35ed1799" xml:space="preserve">
+    <value>디스플레이 프로필</value>
+  </data>
+  <data name="Ein_ICC_Profil_je_Bildschirm_etwa_aus_der_Kalibr_b0490dff" xml:space="preserve">
+    <value>디스플레이마다 하나의 ICC 프로필(예: 측색기로 보정한 결과). 뷰어와 편집기의 사진은 창이 현재 있는 디스플레이에 맞게 변환됩니다. 시스템이 이미 스스로 변환하는 경우(예: 색상 프로필이 설정된 KDE Plasma) 비워 두세요.</value>
+  </data>
+  <data name="Profil_w_hlen_cae393b1" xml:space="preserve">
+    <value>프로필 선택</value>
+  </data>
+  <data name="0_x_1_Bildpunkte_2c8c4b0e" xml:space="preserve">
+    <value>{0} x {1} 픽셀</value>
+  </data>
+  <data name="Hauptbildschirm_7f05b486" xml:space="preserve">
+    <value>기본 디스플레이</value>
+  </data>
+  <data name="Das_Fenster_steht_hier_9144d583" xml:space="preserve">
+    <value>창이 여기에 있습니다</value>
+  </data>
+  <data name="Kein_Profil_ea5990a9" xml:space="preserve">
+    <value>프로필 없음</value>
+  </data>
+  <data name="ICC_Profil_des_Bildschirms_w_hlen_8865260d" xml:space="preserve">
+    <value>디스플레이의 ICC 프로필 선택</value>
+  </data>
+  <data name="Die_Profildatei_fehlt_47c5bc7a" xml:space="preserve">
+    <value>프로필 파일이 없습니다.</value>
+  </data>
+  <data name="Die_Datei_ist_kein_lesbares_ICC_Profil_5f8175e1" xml:space="preserve">
+    <value>이 파일은 읽을 수 있는 ICC 프로필이 아닙니다.</value>
+  </data>
+  <data name="Das_Profil_hat_keine_Matrix_mit_Tonkurve_und_l_s_9f224130" xml:space="preserve">
+    <value>이 프로필에는 톤 곡선이 있는 행렬이 없어 사용할 수 없습니다.</value>
+  </data>
 </root>

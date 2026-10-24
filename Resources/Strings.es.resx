@@ -9950,4 +9950,37 @@
   <data name="Wie_viele_Kerne_des_Prozessors_die_Modelle_nutze_8b895e96" xml:space="preserve">
     <value>Cuántos núcleos del procesador usan los modelos, por ejemplo al reducir ruido. Por defecto la mitad, para que la aplicación siga respondiendo mientras un modelo calcula. Más núcleos calculan más rápido, siempre que el modelo no se ejecute en la tarjeta gráfica.</value>
   </data>
+  <data name="Bildschirmprofile_35ed1799" xml:space="preserve">
+    <value>Perfiles de pantalla</value>
+  </data>
+  <data name="Ein_ICC_Profil_je_Bildschirm_etwa_aus_der_Kalibr_b0490dff" xml:space="preserve">
+    <value>Un perfil ICC por pantalla, por ejemplo de una calibración con un colorímetro. Las fotos del visor y del editor se convierten entonces para la pantalla en la que está la ventana en ese momento. Déjalo vacío si el sistema ya convierte por sí mismo, por ejemplo KDE Plasma con un perfil de color configurado.</value>
+  </data>
+  <data name="Profil_w_hlen_cae393b1" xml:space="preserve">
+    <value>Elegir perfil</value>
+  </data>
+  <data name="0_x_1_Bildpunkte_2c8c4b0e" xml:space="preserve">
+    <value>{0} x {1} píxeles</value>
+  </data>
+  <data name="Hauptbildschirm_7f05b486" xml:space="preserve">
+    <value>Pantalla principal</value>
+  </data>
+  <data name="Das_Fenster_steht_hier_9144d583" xml:space="preserve">
+    <value>La ventana está aquí</value>
+  </data>
+  <data name="Kein_Profil_ea5990a9" xml:space="preserve">
+    <value>Sin perfil</value>
+  </data>
+  <data name="ICC_Profil_des_Bildschirms_w_hlen_8865260d" xml:space="preserve">
+    <value>Elegir el perfil ICC de la pantalla</value>
+  </data>
+  <data name="Die_Profildatei_fehlt_47c5bc7a" xml:space="preserve">
+    <value>Falta el archivo de perfil.</value>
+  </data>
+  <data name="Die_Datei_ist_kein_lesbares_ICC_Profil_5f8175e1" xml:space="preserve">
+    <value>El archivo no es un perfil ICC legible.</value>
+  </data>
+  <data name="Das_Profil_hat_keine_Matrix_mit_Tonkurve_und_l_s_9f224130" xml:space="preserve">
+    <value>El perfil no tiene matriz con curva tonal y no se puede usar.</value>
+  </data>
 </root>

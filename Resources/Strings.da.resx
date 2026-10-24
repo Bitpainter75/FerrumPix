@@ -9990,4 +9990,37 @@
   <data name="Wie_viele_Kerne_des_Prozessors_die_Modelle_nutze_8b895e96" xml:space="preserve">
     <value>Hvor mange processorkerner modellerne bruger, for eksempel ved støjreduktion. Som standard halvdelen, så betjeningen forbliver flydende, mens en model regner. Flere kerner regner hurtigere, så længe modellen ikke kører på grafikkortet.</value>
   </data>
+  <data name="Bildschirmprofile_35ed1799" xml:space="preserve">
+    <value>Skærmprofiler</value>
+  </data>
+  <data name="Ein_ICC_Profil_je_Bildschirm_etwa_aus_der_Kalibr_b0490dff" xml:space="preserve">
+    <value>Én ICC-profil pr. skærm, for eksempel fra en kalibrering med et måleinstrument. Fotos i fremviseren og editoren omregnes så til den skærm, vinduet står på lige nu. Lad feltet være tomt, hvis systemet allerede omregner selv, for eksempel KDE Plasma med en indstillet farveprofil.</value>
+  </data>
+  <data name="Profil_w_hlen_cae393b1" xml:space="preserve">
+    <value>Vælg profil</value>
+  </data>
+  <data name="0_x_1_Bildpunkte_2c8c4b0e" xml:space="preserve">
+    <value>{0} x {1} pixels</value>
+  </data>
+  <data name="Hauptbildschirm_7f05b486" xml:space="preserve">
+    <value>Primær skærm</value>
+  </data>
+  <data name="Das_Fenster_steht_hier_9144d583" xml:space="preserve">
+    <value>Vinduet er her</value>
+  </data>
+  <data name="Kein_Profil_ea5990a9" xml:space="preserve">
+    <value>Ingen profil</value>
+  </data>
+  <data name="ICC_Profil_des_Bildschirms_w_hlen_8865260d" xml:space="preserve">
+    <value>Vælg skærmens ICC-profil</value>
+  </data>
+  <data name="Die_Profildatei_fehlt_47c5bc7a" xml:space="preserve">
+    <value>Profilfilen mangler.</value>
+  </data>
+  <data name="Die_Datei_ist_kein_lesbares_ICC_Profil_5f8175e1" xml:space="preserve">
+    <value>Filen er ikke en læsbar ICC-profil.</value>
+  </data>
+  <data name="Das_Profil_hat_keine_Matrix_mit_Tonkurve_und_l_s_9f224130" xml:space="preserve">
+    <value>Profilen har ingen matrix med tonekurve og kan ikke bruges.</value>
+  </data>
 </root>

@@ -2266,7 +2266,7 @@ Namespace Views
             Dim detailTop = iy + vm.ZoomDetailFracTop * ih
             Dim detailW = Math.Max(1.0, vm.ZoomDetailFracWidth * iw)
             Dim detailH = Math.Max(1.0, vm.ZoomDetailFracHeight * ih)
-            detailImg.Source = bmp
+            detailImg.Source = DirectCast(Controls.ColorManagedBitmap.Wrap(bmp), IImage)
             Avalonia.Controls.Canvas.SetLeft(detailImg, detailLeft)
             Avalonia.Controls.Canvas.SetTop(detailImg, detailTop)
             detailImg.Width = detailW
@@ -2280,7 +2280,7 @@ Namespace Views
 
                 Dim beforeBmp = vm.ZoomDetailBeforeImage
                 If beforeDetailImg IsNot Nothing AndAlso beforeBmp IsNot Nothing Then
-                    beforeDetailImg.Source = beforeBmp
+                    beforeDetailImg.Source = DirectCast(Controls.ColorManagedBitmap.Wrap(beforeBmp), IImage)
                     Avalonia.Controls.Canvas.SetLeft(beforeDetailImg, detailLeft)
                     Avalonia.Controls.Canvas.SetTop(beforeDetailImg, detailTop)
                     beforeDetailImg.Width = detailW

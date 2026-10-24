@@ -814,6 +814,51 @@
                             </StackPanel>
                         </StackPanel>
 
+                        <!-- Windows und Linux: dort rechnet kein System die Werte eines Fensters auf
+                             den Bildschirm um. Je erkanntem Bildschirm ein ICC-Profil; umgerechnet
+                             werden die Fotos in Betrachter und Editor, auf dem Bildschirm, auf dem
+                             das Fenster gerade steht (DisplayProfileService). -->
+                        <StackPanel Spacing="8" IsVisible="{Binding IsDisplayProfileSupported}">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660">
+                                <TextBlock Text="Bildschirmprofile" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Ein ICC-Profil je Bildschirm, etwa aus der Kalibrierung mit einem Messgerät. Fotos in Betrachter und Editor werden dann für den Bildschirm umgerechnet, auf dem das Fenster gerade steht. Leer lassen, wenn das System schon selbst umrechnet, etwa KDE Plasma mit gesetztem Farbprofil."
+                                           Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <TextBlock Text="Keine Bildschirme erkannt."
+                                       IsVisible="{Binding HasNoDetectedScreens}"
+                                       Foreground="{DynamicResource FP.Text.Muted}" FontSize="{DynamicResource FP.Font.Body}"/>
+                            <ItemsControl ItemsSource="{Binding DisplayProfileRows}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid ColumnDefinitions="*,Auto,Auto" Margin="0,4,0,0"
+                                              AttachedToVisualTree="OnLocalizedItemAttachedToVisualTree">
+                                            <StackPanel Grid.Column="0" Spacing="2" Margin="0,0,16,0" VerticalAlignment="Center">
+                                                <TextBlock Classes="no-translate" Text="{Binding ScreenKey}"
+                                                           FontSize="{DynamicResource FP.Font.Body}" FontWeight="SemiBold"/>
+                                                <TextBlock Classes="no-translate" Text="{Binding Detail}"
+                                                           Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}"/>
+                                                <TextBlock Classes="no-translate" Text="{Binding ProfileText}"
+                                                           Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}"
+                                                           TextTrimming="CharacterEllipsis"
+                                                           ToolTip.Tip="{Binding ProfilePath}"/>
+                                                <TextBlock Classes="no-translate" Text="{Binding StatusText}"
+                                                           IsVisible="{Binding HasStatus}"
+                                                           Foreground="{DynamicResource FP.Text.Accent}" FontSize="{DynamicResource FP.Font.Small}"
+                                                           TextWrapping="Wrap"/>
+                                            </StackPanel>
+                                            <Button Grid.Column="1" Classes="ghost" Padding="12,7" Margin="0,0,8,0"
+                                                    VerticalAlignment="Center"
+                                                    Click="OnChooseDisplayProfileClick">Profil wählen</Button>
+                                            <Button Grid.Column="2" Classes="ghost" Padding="12,7"
+                                                    VerticalAlignment="Center"
+                                                    IsVisible="{Binding HasProfile}"
+                                                    Command="{Binding RemoveCommand}">Entfernen</Button>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+
                         <!-- Anwendungsskalierung wirkt nur auf Avalonias X11-Backend, siehe
                              IsApplicationScaleSupported - unter Windows und macOS skaliert das
                              System selbst pro Monitor. Eine Zeile je Bildschirm: Avalonia nimmt

@@ -836,7 +836,7 @@
                                 Background="{Binding TransparencyBackgroundBrush}"
                                 IsHitTestVisible="False" />
                         <Image x:Name="AfterImageControl"
-                               Source="{Binding DisplayImage}"
+                               Source="{Binding DisplayImage, Converter={x:Static icons:ColorManagedBitmapConverter.Instance}}"
                                Stretch="Fill"
                                RenderOptions.BitmapInterpolationMode="HighQuality" />
                         <!-- STUFE 3 (Zoom-Detail): hochaufgeloester Viewport-Ausschnitt ueber dem
@@ -849,7 +849,7 @@
                                IsVisible="False"
                                RenderOptions.BitmapInterpolationMode="HighQuality" />
                         <Image x:Name="BeforeImageControl"
-                               Source="{Binding BeforeDisplayImage}"
+                               Source="{Binding BeforeDisplayImage, Converter={x:Static icons:ColorManagedBitmapConverter.Instance}}"
                                Stretch="Fill"
                                RenderOptions.BitmapInterpolationMode="HighQuality" />
                         <!-- Vorher-Seite des Zoom-Details (Original, nur Geometrie): liegt ueber dem

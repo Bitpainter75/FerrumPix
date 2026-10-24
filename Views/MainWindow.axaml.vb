@@ -57,6 +57,9 @@ Namespace Views
             ' haengen koennte. Der Aufruf prueft die Einstellung selbst und tut ausserhalb von
             ' macOS nichts.
             AddHandler Opened, Sub(s, e) ApplyWindowColorSpace()
+            ' Windows und Linux: das Profil des Bildschirms, auf dem das Fenster steht, fuer die
+            ' Fotos in Betrachter und Editor. Folgt dem Fenster ueber Bildschirmgrenzen.
+            AddHandler Opened, Sub(s, e) Services.DisplayProfileService.Attach(Me)
             ' Wer in den Einstellungen ein anderes Verfahren waehlt, soll es sofort sehen und nicht
             ' fuer jeden Versuch neu starten muessen.
             AddHandler Services.MacWindowColorSpaceService.MethodChanged, Sub(s, e) ApplyWindowColorSpace()

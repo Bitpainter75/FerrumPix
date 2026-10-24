@@ -54,6 +54,36 @@ Namespace Views
             AvaloniaXamlLoader.Load(Me)
             AddHandler Me.AttachedToVisualTree, AddressOf OnAttachedFocus
             AddHandler Loaded, AddressOf HandleLoaded
+            ' Die Bildschirme kennt erst das offene Fenster, und sie koennen wechseln, waehrend die
+            ' Seite verborgen ist. Deshalb beim Zeigen neu, und wenn ein Bildschirm kommt oder geht.
+            AddHandler Me.PropertyChanged,
+                Sub(s, e)
+                    If e.Property Is IsVisibleProperty AndAlso IsVisible Then TryCast(DataContext, SettingsViewModel)?.RefreshDisplayProfiles()
+                End Sub
+            AddHandler DisplayProfileService.Changed,
+                Sub(s, e) TryCast(DataContext, SettingsViewModel)?.RefreshDisplayProfiles()
+        End Sub
+
+        ''' <summary>Ein ICC-Profil fuer einen Bildschirm waehlen. Der Auswahldialog haengt am
+        ''' TopLevel, deshalb hier und nicht im ViewModel.</summary>
+        Private Async Sub OnChooseDisplayProfileClick(sender As Object, e As RoutedEventArgs)
+            Dim row = TryCast(TryCast(sender, Control)?.DataContext, DisplayProfileRow)
+            Dim vm = TryCast(DataContext, SettingsViewModel)
+            If row Is Nothing OrElse vm Is Nothing Then Return
+            Try
+                Dim topLevel As TopLevel = TopLevel.GetTopLevel(Me)
+                If topLevel Is Nothing Then Return
+                Dim files = Await topLevel.StorageProvider.OpenFilePickerAsync(New FilePickerOpenOptions With {
+                    .Title = LocalizationService.T("ICC-Profil des Bildschirms wählen"),
+                    .AllowMultiple = False,
+                    .FileTypeFilter = {New FilePickerFileType("ICC") With {.Patterns = {"*.icc", "*.icm", "*.ICC", "*.ICM"}}}
+                })
+                Dim path = files?.FirstOrDefault()?.Path?.LocalPath
+                If String.IsNullOrEmpty(path) Then Return
+                vm.SetDisplayProfile(row.ScreenKey, path)
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Settings.DisplayProfile", ex)
+            End Try
         End Sub
 
         Private ReadOnly _search As New SettingsSearch()

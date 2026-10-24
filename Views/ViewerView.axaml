@@ -256,7 +256,7 @@
                                     </TransformGroup>
                                 </Border.RenderTransform>
                                 <Image Name="MainImage"
-                                       Source="{Binding CurrentImage}"
+                                       Source="{Binding CurrentImage, Converter={x:Static icons:ColorManagedBitmapConverter.Instance}}"
                                        Stretch="Uniform"
                                        Margin="-1"
                                        RenderOptions.BitmapInterpolationMode="HighQuality"
@@ -303,7 +303,7 @@
                                       PointerMoved="OnComparePaneMoved"
                                       PointerReleased="OnComparePaneReleased"
                                       PointerCaptureLost="OnComparePaneReleased">
-                            <Image Name="CompareLeftImage" Source="{Binding CompareLeftImage}"
+                            <Image Name="CompareLeftImage" Source="{Binding CompareLeftImage, Converter={x:Static icons:ColorManagedBitmapConverter.Instance}}"
                                    Stretch="Uniform"
                                    RenderOptions.BitmapInterpolationMode="HighQuality" />
                         </ScrollViewer>
@@ -398,7 +398,7 @@
                                       PointerMoved="OnComparePaneMoved"
                                       PointerReleased="OnComparePaneReleased"
                                       PointerCaptureLost="OnComparePaneReleased">
-                            <Image Name="CompareRightImage" Source="{Binding CompareRightImage}"
+                            <Image Name="CompareRightImage" Source="{Binding CompareRightImage, Converter={x:Static icons:ColorManagedBitmapConverter.Instance}}"
                                    Stretch="Uniform"
                                    RenderOptions.BitmapInterpolationMode="HighQuality" />
                         </ScrollViewer>
@@ -808,7 +808,7 @@
                     VerticalAlignment="Center"
                     Background="{Binding TransparencyBackgroundBrush}">
                 <Image Name="FullscreenImage"
-                       Source="{Binding CurrentImage}"
+                       Source="{Binding CurrentImage, Converter={x:Static icons:ColorManagedBitmapConverter.Instance}}"
                        Margin="-1"
                        RenderOptions.BitmapInterpolationMode="HighQuality"/>
             </Border>

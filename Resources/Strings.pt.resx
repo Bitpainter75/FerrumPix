@@ -9949,4 +9949,37 @@
   <data name="Wie_viele_Kerne_des_Prozessors_die_Modelle_nutze_8b895e96" xml:space="preserve">
     <value>Quantos núcleos do processador os modelos usam, por exemplo ao reduzir ruído. Por padrão metade, para que a aplicação continue fluida enquanto um modelo calcula. Mais núcleos calculam mais depressa, desde que o modelo não esteja a correr na placa gráfica.</value>
   </data>
+  <data name="Bildschirmprofile_35ed1799" xml:space="preserve">
+    <value>Perfis de ecrã</value>
+  </data>
+  <data name="Ein_ICC_Profil_je_Bildschirm_etwa_aus_der_Kalibr_b0490dff" xml:space="preserve">
+    <value>Um perfil ICC por ecrã, por exemplo de uma calibração com um colorímetro. As fotos no visualizador e no editor são então convertidas para o ecrã onde a janela está nesse momento. Deixe vazio se o sistema já converte por si, por exemplo KDE Plasma com um perfil de cor definido.</value>
+  </data>
+  <data name="Profil_w_hlen_cae393b1" xml:space="preserve">
+    <value>Escolher perfil</value>
+  </data>
+  <data name="0_x_1_Bildpunkte_2c8c4b0e" xml:space="preserve">
+    <value>{0} x {1} píxeis</value>
+  </data>
+  <data name="Hauptbildschirm_7f05b486" xml:space="preserve">
+    <value>Ecrã principal</value>
+  </data>
+  <data name="Das_Fenster_steht_hier_9144d583" xml:space="preserve">
+    <value>A janela está aqui</value>
+  </data>
+  <data name="Kein_Profil_ea5990a9" xml:space="preserve">
+    <value>Sem perfil</value>
+  </data>
+  <data name="ICC_Profil_des_Bildschirms_w_hlen_8865260d" xml:space="preserve">
+    <value>Escolher o perfil ICC do ecrã</value>
+  </data>
+  <data name="Die_Profildatei_fehlt_47c5bc7a" xml:space="preserve">
+    <value>O ficheiro do perfil está em falta.</value>
+  </data>
+  <data name="Die_Datei_ist_kein_lesbares_ICC_Profil_5f8175e1" xml:space="preserve">
+    <value>O ficheiro não é um perfil ICC legível.</value>
+  </data>
+  <data name="Das_Profil_hat_keine_Matrix_mit_Tonkurve_und_l_s_9f224130" xml:space="preserve">
+    <value>O perfil não tem matriz com curva tonal e não pode ser usado.</value>
+  </data>
 </root>

@@ -9994,4 +9994,37 @@
   <data name="Wie_viele_Kerne_des_Prozessors_die_Modelle_nutze_8b895e96" xml:space="preserve">
     <value>จำนวนแกนของหน่วยประมวลผลที่โมเดลใช้ เช่น ตอนลดสัญญาณรบกวน ค่าเริ่มต้นคือครึ่งหนึ่ง เพื่อให้การใช้งานยังลื่นไหลขณะโมเดลคำนวณ ยิ่งแกนมากยิ่งคำนวณเร็ว ตราบใดที่โมเดลไม่ได้ทำงานบนการ์ดจอ</value>
   </data>
+  <data name="Bildschirmprofile_35ed1799" xml:space="preserve">
+    <value>โปรไฟล์หน้าจอ</value>
+  </data>
+  <data name="Ein_ICC_Profil_je_Bildschirm_etwa_aus_der_Kalibr_b0490dff" xml:space="preserve">
+    <value>โปรไฟล์ ICC หนึ่งไฟล์ต่อหน้าจอ เช่น จากการปรับเทียบด้วยเครื่องวัดสี รูปภาพในตัวดูและตัวแก้ไขจะถูกแปลงสำหรับหน้าจอที่หน้าต่างอยู่ในขณะนั้น เว้นว่างไว้หากระบบแปลงเองอยู่แล้ว เช่น KDE Plasma ที่ตั้งค่าโปรไฟล์สีไว้</value>
+  </data>
+  <data name="Profil_w_hlen_cae393b1" xml:space="preserve">
+    <value>เลือกโปรไฟล์</value>
+  </data>
+  <data name="0_x_1_Bildpunkte_2c8c4b0e" xml:space="preserve">
+    <value>{0} x {1} พิกเซล</value>
+  </data>
+  <data name="Hauptbildschirm_7f05b486" xml:space="preserve">
+    <value>หน้าจอหลัก</value>
+  </data>
+  <data name="Das_Fenster_steht_hier_9144d583" xml:space="preserve">
+    <value>หน้าต่างอยู่ที่นี่</value>
+  </data>
+  <data name="Kein_Profil_ea5990a9" xml:space="preserve">
+    <value>ไม่มีโปรไฟล์</value>
+  </data>
+  <data name="ICC_Profil_des_Bildschirms_w_hlen_8865260d" xml:space="preserve">
+    <value>เลือกโปรไฟล์ ICC ของหน้าจอ</value>
+  </data>
+  <data name="Die_Profildatei_fehlt_47c5bc7a" xml:space="preserve">
+    <value>ไม่พบไฟล์โปรไฟล์</value>
+  </data>
+  <data name="Die_Datei_ist_kein_lesbares_ICC_Profil_5f8175e1" xml:space="preserve">
+    <value>ไฟล์นี้ไม่ใช่โปรไฟล์ ICC ที่อ่านได้</value>
+  </data>
+  <data name="Das_Profil_hat_keine_Matrix_mit_Tonkurve_und_l_s_9f224130" xml:space="preserve">
+    <value>โปรไฟล์นี้ไม่มีเมทริกซ์พร้อมเส้นโค้งโทน จึงใช้งานไม่ได้</value>
+  </data>
 </root>

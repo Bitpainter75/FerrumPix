@@ -10,6 +10,11 @@
   processor cores denoising and the other models may use. By default it is still half of them, so
   the app stays responsive; more cores make the models faster when they run on the processor.
 
+- **Display profiles on Windows and Linux:** in Settings you can choose an ICC profile for each
+  connected display, for example from a calibration. Photos in the viewer and editor are then
+  shown correctly on the display the window is on, also on wide gamut monitors. Leave it empty
+  where the system already does this, such as KDE Plasma with a color profile set.
+
 ### Fixes
 
 - **Less memory over long sessions:** FerrumPix no longer keeps the full metadata of every
@@ -58,6 +63,11 @@
 
 - **XMP presets with the profile written in another form:** the profile and its amount were lost
   when a preset stored them as separate entries instead of attributes. Both forms are now read.
+
+- **Automatic perspective correction only where lines really converge:** a single slanted edge,
+  branches or other edges in the picture could make it tilt photos without any architecture, often
+  as far as it goes. It now only corrects when most edges run towards a common vanishing point,
+  and leaves the rest alone.
 
 - **Tooltips in the adjustment groups translated:** the tooltips of the compare and reset buttons
   in the group headers sometimes appeared in German, for example in Colour, Colour mixer and

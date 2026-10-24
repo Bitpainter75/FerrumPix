@@ -9968,4 +9968,37 @@
   <data name="Wie_viele_Kerne_des_Prozessors_die_Modelle_nutze_8b895e96" xml:space="preserve">
     <value>Wie viele Kerne des Prozessors die Modelle nutzen, etwa beim Entrauschen. Ab Werk die Hälfte, damit die Bedienung flüssig bleibt, während ein Modell rechnet. Mehr Kerne rechnen schneller, solange das Modell nicht auf der Grafikkarte läuft.</value>
   </data>
+  <data name="Bildschirmprofile_35ed1799" xml:space="preserve">
+    <value>Bildschirmprofile</value>
+  </data>
+  <data name="Ein_ICC_Profil_je_Bildschirm_etwa_aus_der_Kalibr_b0490dff" xml:space="preserve">
+    <value>Ein ICC-Profil je Bildschirm, etwa aus der Kalibrierung mit einem Messgerät. Fotos in Betrachter und Editor werden dann für den Bildschirm umgerechnet, auf dem das Fenster gerade steht. Leer lassen, wenn das System schon selbst umrechnet, etwa KDE Plasma mit gesetztem Farbprofil.</value>
+  </data>
+  <data name="Profil_w_hlen_cae393b1" xml:space="preserve">
+    <value>Profil wählen</value>
+  </data>
+  <data name="0_x_1_Bildpunkte_2c8c4b0e" xml:space="preserve">
+    <value>{0} x {1} Bildpunkte</value>
+  </data>
+  <data name="Hauptbildschirm_7f05b486" xml:space="preserve">
+    <value>Hauptbildschirm</value>
+  </data>
+  <data name="Das_Fenster_steht_hier_9144d583" xml:space="preserve">
+    <value>Das Fenster steht hier</value>
+  </data>
+  <data name="Kein_Profil_ea5990a9" xml:space="preserve">
+    <value>Kein Profil</value>
+  </data>
+  <data name="ICC_Profil_des_Bildschirms_w_hlen_8865260d" xml:space="preserve">
+    <value>ICC-Profil des Bildschirms wählen</value>
+  </data>
+  <data name="Die_Profildatei_fehlt_47c5bc7a" xml:space="preserve">
+    <value>Die Profildatei fehlt.</value>
+  </data>
+  <data name="Die_Datei_ist_kein_lesbares_ICC_Profil_5f8175e1" xml:space="preserve">
+    <value>Die Datei ist kein lesbares ICC-Profil.</value>
+  </data>
+  <data name="Das_Profil_hat_keine_Matrix_mit_Tonkurve_und_l_s_9f224130" xml:space="preserve">
+    <value>Das Profil hat keine Matrix mit Tonkurve und lässt sich nicht verwenden.</value>
+  </data>
 </root>

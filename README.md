@@ -117,7 +117,7 @@ Lens defects are corrected from measured data covering more than 1500 lenses on 
 
 Save a RAW and your edits go into a small sidecar next to it; the RAW itself is never modified, and opening the photo again brings the edits back. Save it as a JPEG or a PNG instead and you get that one file, with the edits baked in and no sidecar. A Lightroom sidecar with develop settings is converted once, so a photo edited elsewhere opens the way you left it.
 
-A picture that carries its own colour profile, such as Adobe RGB or Display P3, is converted when it is opened, so it looks the way it was meant to instead of flat and shifted. That covers JPEG, PNG, WEBP, TIFF, Photoshop files, HEIC and JPEG XL. Pictures without a profile are left exactly as they are, and what you save is sRGB and says so. On macOS, the colours are also matched to the screen you are using.
+A picture that carries its own colour profile, such as Adobe RGB or Display P3, is converted when it is opened, so it looks the way it was meant to instead of flat and shifted. That covers JPEG, PNG, WEBP, TIFF, Photoshop files, HEIC and JPEG XL. Pictures without a profile are left exactly as they are, and what you save is sRGB and says so. On macOS, the colours are also matched to the screen you are using. On Windows and Linux you can set an ICC profile for each display, and photos are matched to the display the window is on.
 
 Pictures from a phone or a scanner open too, and your edit is saved as a new file next to them. A Photoshop file keeps its layers, masks and groups, so a picture can go back to Photoshop, Affinity or GIMP and still be worked on there, and text stays text you can keep typing on. Photoshop files that FerrumPix cannot take apart open as one finished picture.
 

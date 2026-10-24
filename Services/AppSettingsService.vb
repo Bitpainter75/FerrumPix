@@ -843,6 +843,11 @@ Namespace Services
         ''' Farbanpassung.</summary>
         Public Property MacWindowColorSpaceDefaultApplied As Boolean = False
 
+        ''' <summary>ICC-Profil je Bildschirm (Windows und Linux): Name des Bildschirms (unter X11 der
+        ''' RandR-Name des Anschlusses, etwa "DP-1") auf den Pfad der Profildatei. Fehlt ein
+        ''' Bildschirm, bleibt er unumgerechnet. Siehe <see cref="DisplayProfileService"/>.</summary>
+        Public Property DisplayProfiles As New Dictionary(Of String, String)(StringComparer.Ordinal)
+
         ''' <summary>Nur macOS: welchen Zeichenweg Avalonia nehmen soll (siehe
         ''' <see cref="AppSettingsService.MacRenderingModeChoices"/>). Ab Werk "Auto", also die
         ''' Reihenfolge des Toolkits.
@@ -2718,6 +2723,19 @@ Namespace Services
             Update(Sub(s)
                        If s.GpuProbeResults Is Nothing Then s.GpuProbeResults = New Dictionary(Of String, String)()
                        s.GpuProbeResults(deviceKey) = If(result, "")
+                   End Sub)
+        End Sub
+
+        ''' <summary>Setzt das Profil eines Bildschirms; ein leerer Pfad nimmt es heraus.</summary>
+        Public Shared Sub SaveDisplayProfile(screenKey As String, profilePath As String)
+            If String.IsNullOrEmpty(screenKey) Then Return
+            Update(Sub(s)
+                       If s.DisplayProfiles Is Nothing Then s.DisplayProfiles = New Dictionary(Of String, String)(StringComparer.Ordinal)
+                       If String.IsNullOrWhiteSpace(profilePath) Then
+                           s.DisplayProfiles.Remove(screenKey)
+                       Else
+                           s.DisplayProfiles(screenKey) = profilePath
+                       End If
                    End Sub)
         End Sub
 
