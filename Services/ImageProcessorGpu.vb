@@ -280,7 +280,8 @@ Namespace Services
         Private Const RowLocalColor As Integer = 17
         Private Const RowRawStageTone As Integer = 18
         Private Const RowRawShadow As Integer = 19
-        Private Const ShaderTableRows As Integer = 20
+        Private Const RowToneChroma As Integer = 20
+        Private Const ShaderTableRows As Integer = 21
 
         Private Shared _pointOpEffect As SKRuntimeEffect
         Private Shared ReadOnly _pointOpEffectLock As New Object()
@@ -706,6 +707,7 @@ Namespace Services
             u("useScalar") = If(chain.ScalarR IsNot Nothing, 1.0F, 0.0F)
             u("useToneBefore") = If(chain.ToneBefore IsNot Nothing, 1.0F, 0.0F)
             u("useToneZones") = If(chain.ToneZones IsNot Nothing, 1.0F, 0.0F)
+            u("useToneChroma") = If(chain.ToneChroma IsNot Nothing, 1.0F, 0.0F)
             u("useLum") = If(chain.LuminanceCurve IsNot Nothing, 1.0F, 0.0F)
             u("useHsl") = If(chain.Hsl IsNot Nothing, 1.0F, 0.0F)
             ' Wie hslBlockAktiv in RunPointOpChain: auch Farbgradierung und Punktfarbe gehen durch
@@ -912,6 +914,7 @@ Namespace Services
             put(RowScalarB, chain.ScalarB)
             put(RowToneBefore, chain.ToneBefore)
             put(RowToneZones, chain.ToneZones)
+            put(RowToneChroma, chain.ToneChroma)
             put(RowLumCurve, chain.LuminanceCurve)
             put(RowLocalZones, chain.LocalToneZones)
             put(RowLocalDetail, chain.LocalDetailGain)
@@ -980,7 +983,7 @@ uniform float useRawStage; uniform float useRawShadow;
 uniform float useNeg; uniform float negMono;
 uniform float useWb; uniform float3 wb0; uniform float3 wb1; uniform float3 wb2;
 uniform float useCm; uniform float3 cm0; uniform float3 cm1; uniform float3 cm2; uniform float3 cmOff;
-uniform float useScalar; uniform float useToneBefore; uniform float useToneZones;
+uniform float useScalar; uniform float useToneBefore; uniform float useToneZones; uniform float useToneChroma;
 uniform float hslActive; uniform float useLum; uniform float useHsl;
 uniform float vibMode; uniform float vibrance;
 uniform float shadowTint;
@@ -1330,6 +1333,8 @@ float4 preMixer(float3 c, float2 p) {
         if (useToneZones > 0.5 || useLocal > 0.5 || useMelissa > 0.5) {
             if (useToneBefore > 0.5) { rr = tab(8.0, rr); gg = tab(8.0, gg); bb = tab(8.0, bb); }
         }
+        // Helligkeit vor den Tonzonen, fuer die Buntheit von Weiss und Schwarz (ApplyToneChroma).
+        float lightnessBefore = 0.299 * rr + 0.587 * gg + 0.114 * bb;
         if (useLocal > 0.5) {
             // LocalToneGray, LocalToneBase.Sample und ApplyLocalToneZones.
             float yl = 0.2126 * tab(0.0, rr) + 0.7152 * tab(0.0, gg) + 0.0722 * tab(0.0, bb);
@@ -1366,6 +1371,13 @@ float4 preMixer(float3 c, float2 p) {
                 float sc = (newMax - newMin) / (zMax - zMin);
                 rr = newMin + (rr - zMin) * sc; gg = newMin + (gg - zMin) * sc; bb = newMin + (bb - zMin) * sc;
             }
+        }
+        if (useToneChroma > 0.5) {
+            float tf = tab(20.0, clamp(lightnessBefore, 0.0, 1.0));
+            float tg = 0.299 * rr + 0.587 * gg + 0.114 * bb;
+            rr = clamp(tg + (rr - tg) * tf, 0.0, 1.0);
+            gg = clamp(tg + (gg - tg) * tf, 0.0, 1.0);
+            bb = clamp(tg + (bb - tg) * tf, 0.0, 1.0);
         }
         if (useMelissa > 0.5) {
             // ApplyCurvesInMelissa: Kurven in ProPhoto-Primaerfarben mit sRGB-Gammakurve.

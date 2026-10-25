@@ -62,6 +62,9 @@ Namespace Services
             ''' Kurven. Ohne die vier Regler bleibt alles in ScalarR/G/B verschmolzen.</summary>
             Public ToneBefore As Single()
             Public ToneZones As Single()
+            ''' <summary>Nur bei Weiss oder Schwarz gesetzt: Faktor auf den Abstand der Kanaele vom
+            ''' Grau nach den Tonzonen, ueber die Helligkeit VOR ihnen (BuildToneChromaTable).</summary>
+            Public ToneChroma As Single()
 
             ''' <summary>Der Vorgriff auf den Neuaufbau aus der RAW-Stufe (Belichtung, Schwarzabzug,
             ''' Schulter; RawStageExposureAt) als Tabelle auf dem Gammawert. Wirkt als ERSTE Stufe,
@@ -198,8 +201,11 @@ Namespace Services
             If source Is Nothing OrElse adj Is Nothing Then Return source
             Dim chain = BuildPointOpChain(adj, source, toneReference)
             If chain.IsIdentity Then Return source
-            Dim onGpu = TryRunPointOpChainOnGpu(source, chain)
-            If onGpu IsNot Nothing Then Return onGpu
+            ' Der Messversuch im ProPhoto-HSV hat keinen Shader: dann immer auf dem Prozessor.
+            If Not (MixerInProPhoto AndAlso chain.Hsl IsNot Nothing) Then
+                Dim onGpu = TryRunPointOpChainOnGpu(source, chain)
+                If onGpu IsNot Nothing Then Return onGpu
+            End If
             Return RunPointOpChain(source, chain)
         End Function
 
@@ -373,6 +379,7 @@ Namespace Services
                         Else
                             chain.ToneZones = BuildToneZoneTable(adj, reference)
                         End If
+                        chain.ToneChroma = BuildToneChromaTable(adj)
                     End If
                 End If
                 If curvesInMelissa Then
@@ -408,7 +415,8 @@ Namespace Services
 
             ' --- HSL-Baender: exakt die Bedingung aus ApplyHsl ---
             If adj.HasHslChanges() Then
-                chain.Hsl = ReferenceHslLuminance(adj)
+                ' Der Messversuch im ProPhoto-HSV hat eigene Staerken und nimmt die Reglerwerte roh.
+                chain.Hsl = If(MixerInProPhoto, adj, ReferenceHslLuminance(adj))
                 chain.IsIdentity = False
             End If
 
@@ -890,6 +898,77 @@ Namespace Services
                    ToneSliderCurves.LiftByTop("Whites", adj.Whites, d0, reference.TopL) +
                    ToneSliderCurves.Lift("Blacks", adj.Blacks, d0) + highlightsShadows
         End Function
+
+        ''' <summary>Die Buntheit von Weiss und Schwarz, gemessen gegen das Referenzprogramm
+        ''' (Diagnostics/Reglereichung/tonbuntheit.py, 57 Bilder, 2026-10-25). Die Tonzonen wirken auf
+        ''' den groessten und den kleinsten Kanal, die Buntheit folgt damit der Steigung der Kennlinie.
+        ''' Fuer Weiss nach unten und Schwarz nach oben nimmt das zu viel Farbe heraus: bei Weiss -100
+        ''' behielt die Referenz in den Lichtern 103 Prozent ihrer Buntheit, wir 86, bei Schwarz +100
+        ''' in den Mitten 98 gegen 82. Je Stellung steht hier das Verhaeltnis Referenz durch uns an
+        ''' vier Helligkeiten des Bildpunkts vor der Tonstufe (Mitten der Messstufen L 0-30, 30-50,
+        ''' 50-70, 70-100, gelesen als Gammawert); dazwischen linear, ueber die Reglerstellung im
+        ''' Logarithmus, bei 0 ohne Wirkung. Weiss und Schwarz zusammen multiplizieren sich.</summary>
+        Private Shared ReadOnly ToneChromaKnots As Double() = {0.15, 0.4, 0.6, 0.85}
+        Private Shared ReadOnly WhitesChroma As Double()() = {
+            New Double() {1.035, 1.053, 1.112, 1.199},   ' -100
+            New Double() {1.033, 1.046, 1.076, 1.071},   ' -50
+            New Double() {0.993, 1.014, 1.013, 1.029},   ' +50
+            New Double() {1.013, 1.041, 0.948, 0.565}}   ' +100
+        Private Shared ReadOnly BlacksChroma As Double()() = {
+            New Double() {0.635, 1.009, 1.012, 1.033},
+            New Double() {1.025, 1.001, 0.995, 1.005},
+            New Double() {0.963, 1.036, 1.072, 1.065},
+            New Double() {1.044, 1.185, 1.205, 1.158}}
+
+        ''' <summary>Faktor auf den Abstand vom Grau je Helligkeit vor der Tonstufe, oder Nothing ohne
+        ''' Weiss und Schwarz.</summary>
+        Private Shared Function BuildToneChromaTable(adj As ImageAdjustments) As Single()
+            If adj.Whites = 0 AndAlso adj.Blacks = 0 Then Return Nothing
+            Dim n = PointOpTableSize - 1
+            Dim table = New Single(n) {}
+            For i = 0 To n
+                Dim l = i / CDbl(n)
+                Dim logFactor = ToneChromaLog(WhitesChroma, adj.Whites, l) + ToneChromaLog(BlacksChroma, adj.Blacks, l)
+                table(i) = CSng(Math.Exp(logFactor))
+            Next
+            Return table
+        End Function
+
+        ''' <summary>Logarithmus des Faktors einer Tabelle bei <paramref name="value"/> (-100 bis 100)
+        ''' und der Helligkeit <paramref name="l"/>.</summary>
+        Private Shared Function ToneChromaLog(rows As Double()(), value As Double, l As Double) As Double
+            If value = 0 Then Return 0.0
+            Dim v = Math.Max(-100.0, Math.Min(100.0, value))
+            Dim at = Function(row As Integer) As Double
+                         Dim k = ToneChromaKnots
+                         Dim r = rows(row)
+                         If l <= k(0) Then Return Math.Log(r(0))
+                         For j = 1 To k.Length - 1
+                             If l <= k(j) Then
+                                 Dim t = (l - k(j - 1)) / (k(j) - k(j - 1))
+                                 Return Math.Log(r(j - 1)) + (Math.Log(r(j)) - Math.Log(r(j - 1))) * t
+                             End If
+                         Next
+                         Return Math.Log(r(k.Length - 1))
+                     End Function
+            If v < 0 Then
+                If v >= -50 Then Return at(1) * (-v / 50.0)
+                Return at(1) + (at(0) - at(1)) * ((-v - 50.0) / 50.0)
+            End If
+            If v <= 50 Then Return at(2) * (v / 50.0)
+            Return at(2) + (at(3) - at(2)) * ((v - 50.0) / 50.0)
+        End Function
+
+        ''' <summary>Die Buntheitskorrektur der Tonstufe auf einen Bildpunkt: der Abstand jedes Kanals
+        ''' vom Grau (Rec.601 auf den Gammawerten) mal dem Faktor an der Helligkeit davor.</summary>
+        Private Shared Sub ApplyToneChroma(ByRef rr As Single, ByRef gg As Single, ByRef bb As Single,
+                                           table As Single(), lightnessBefore As Single)
+            Dim f = SampleTable(table, Clamp(lightnessBefore, 0.0F, 1.0F))
+            Dim gray = 0.299F * rr + 0.587F * gg + 0.114F * bb
+            rr = Clamp(gray + (rr - gray) * f, 0.0F, 1.0F)
+            gg = Clamp(gray + (gg - gray) * f, 0.0F, 1.0F)
+            bb = Clamp(gray + (bb - gray) * f, 0.0F, 1.0F)
+        End Sub
 
         ''' <summary>Lichter/Tiefen/Weiss/Schwarz als monotone Tabelle, oder Nothing, solange die
         ''' Kennlinie ohnehin nirgends flacher als ToneZoneMinSlope wird. Die fallenden Flanken der
@@ -1484,6 +1563,101 @@ Namespace Services
             rr = SampleTable(toGamma, Clamp(nr, 0.0F, 1.0F))
             gg = SampleTable(toGamma, Clamp(ng, 0.0F, 1.0F))
             bb = SampleTable(toGamma, Clamp(nb, 0.0F, 1.0F))
+        End Sub
+
+        ''' <summary>MESSVERSUCH, ab Werk aus: der Farbmischer im HSV von LINEAREM ProPhoto statt in
+        ''' HSL von sRGB. Zwei Messungen am Referenzprogramm (Fremdprojekte RAWMAKASE.md, Punkt 23,
+        ''' und RAPIDONE.md) legen ihn dort hin: ein Farbtonregler laesst HSV-Saettigung und Wert
+        ''' in diesem Raum unveraendert. Gesetzt nur von der Reglereichung (REGLER_MISCHER_PROPHOTO);
+        ''' die Grafikkarte kennt den Zweig nicht.
+        '''
+        ''' Die Bandmitten sind die Nennwerte des Referenzprogramms im ProPhoto-HSV; fuenf der acht
+        ''' gemessenen Mitten in sRGB-HSL (ReferenceBandFrom) sind deren Abbild auf 2 bis 5 Grad.
+        ''' Die Luminanz folgt dem Regler nicht linear (beim Abdunkeln mit Exponent 1,6, beim
+        ''' Aufhellen 0,79, ebenfalls nach RAWmakase) und wirkt als Faktor auf den Wert; die
+        ''' Staerken sind Startwerte fuer die Eichung.</summary>
+        Friend Shared MixerInProPhoto As Boolean = False
+        Friend Shared MixerProPhotoCenters As Double() = {0.0, 30.0, 60.0, 120.0, 180.0, 240.0, 270.0, 300.0}
+        ''' <summary>Grad je Reglerschritt des Farbtons im ProPhoto-HSV.</summary>
+        Friend Shared MixerProPhotoHueGain As Double = 1.0
+        ''' <summary>Log2 des Werts bei Luminanz -100 bzw. +100 (Betrag).</summary>
+        Friend Shared MixerProPhotoLumDown As Double = 1.0
+        Friend Shared MixerProPhotoLumUp As Double = 0.6
+        ''' <summary>Verstaerkung der Saettigung nach unten bzw. oben (1 = Reglerwert wie er ist).</summary>
+        Friend Shared MixerProPhotoSatDown As Double = 1.0
+        Friend Shared MixerProPhotoSatUp As Double = 1.0
+        ''' <summary>HSV-Saettigung der Fuehrungsfarbe, ab der ein Band voll greift; darunter
+        ''' smoothstep gegen 0, damit kein Band ein Grau bewegt.</summary>
+        Friend Shared MixerProPhotoGate As Double = 0.1
+
+        ''' <summary>Der Farbmischer im HSV von linearem ProPhoto, auf einem Bildpunkt in sRGB mit
+        ''' Gamma (rein und raus). Band und Tor aus der Fuehrungsfarbe, wie im sRGB-Zweig.</summary>
+        Private Shared Sub ApplyMixerInProPhoto(ByRef r As Double, ByRef g As Double, ByRef b As Double,
+                                                guideR As Double, guideG As Double, guideB As Double,
+                                                adj As ImageAdjustments)
+            Dim pr = PointColorMath.SrgbDecode(Math.Max(0.0, Math.Min(1.0, r)))
+            Dim pg = PointColorMath.SrgbDecode(Math.Max(0.0, Math.Min(1.0, g)))
+            Dim pb = PointColorMath.SrgbDecode(Math.Max(0.0, Math.Min(1.0, b)))
+            PointColorMath.Transform(PointColorMath.SrgbToProPhoto, pr, pg, pb)
+            Dim h As Double, s As Double, v As Double
+            If Not PointColorMath.ToHsv(pr, pg, pb, h, s, v) Then Return
+
+            Dim qr = PointColorMath.SrgbDecode(Math.Max(0.0, Math.Min(1.0, guideR)))
+            Dim qg = PointColorMath.SrgbDecode(Math.Max(0.0, Math.Min(1.0, guideG)))
+            Dim qb = PointColorMath.SrgbDecode(Math.Max(0.0, Math.Min(1.0, guideB)))
+            PointColorMath.Transform(PointColorMath.SrgbToProPhoto, qr, qg, qb)
+            Dim gh As Double, gs As Double, gv As Double
+            If Not PointColorMath.ToHsv(qr, qg, qb, gh, gs, gv) Then Return
+
+            Dim gate = Math.Min(1.0, gs / MixerProPhotoGate)
+            gate = gate * gate * (3.0 - 2.0 * gate)
+            If gate <= 0.0 Then Return
+
+            Dim hueShift As Single = 0, satShift As Single = 0, lumShift As Single = 0
+            GetBandAdjustmentsAt(gh * 180.0 / Math.PI, MixerProPhotoCenters, adj, hueShift, satShift, lumShift)
+
+            h += hueShift * MixerProPhotoHueGain * gate * Math.PI / 180.0
+            Dim sa = satShift * gate / 100.0
+            s = ApplyHslSaturationGain(s, sa * If(sa < 0.0, MixerProPhotoSatDown, MixerProPhotoSatUp))
+            Dim a = Math.Max(-1.0, Math.Min(1.0, lumShift * gate / 100.0))
+            If a < 0.0 Then
+                v *= Math.Pow(2.0, -MixerProPhotoLumDown * Math.Pow(-a, 1.6))
+            ElseIf a > 0.0 Then
+                v *= Math.Pow(2.0, MixerProPhotoLumUp * Math.Pow(a, 0.79))
+            End If
+
+            PointColorMath.FromHsv(h, s, v, pr, pg, pb)
+            PointColorMath.Transform(PointColorMath.ProPhotoToSrgb, pr, pg, pb)
+            r = PointColorMath.SrgbEncode(Math.Max(0.0, Math.Min(1.0, pr)))
+            g = PointColorMath.SrgbEncode(Math.Max(0.0, Math.Min(1.0, pg)))
+            b = PointColorMath.SrgbEncode(Math.Max(0.0, Math.Min(1.0, pb)))
+        End Sub
+
+        ''' <summary>Wie GetHslBandAdjustments, mit eigenen Bandmitten (aufsteigend, Grad).</summary>
+        Private Shared Sub GetBandAdjustmentsAt(hue As Double, centers As Double(), adj As ImageAdjustments,
+                                                ByRef hueShift As Single, ByRef satShift As Single, ByRef lumShift As Single)
+            Dim h = ((hue Mod 360.0) + 360.0) Mod 360.0
+            Dim lo = 7
+            For k = 0 To 7
+                If h < centers(k) Then
+                    lo = (k + 7) Mod 8
+                    Exit For
+                End If
+            Next
+            Dim hi = (lo + 1) Mod 8
+            Dim span = centers(hi) - centers(lo)
+            If span <= 0.0 Then span += 360.0
+            Dim pos = h - centers(lo)
+            If pos < 0.0 Then pos += 360.0
+            Dim t = If(span > 0.0, pos / span, 0.0)
+            If t < 0.0 Then t = 0.0 Else If t > 1.0 Then t = 1.0
+            Dim w = CSng(t * t * (3.0 - 2.0 * t))
+            Dim h0, s0, l0, h1, s1, l1 As Single
+            GetHslBandValues(lo, adj, h0, s0, l0)
+            GetHslBandValues(hi, adj, h1, s1, l1)
+            hueShift = h0 + (h1 - h0) * w
+            satShift = s0 + (s1 - s0) * w
+            lumShift = l0 + (l1 - l0) * w
         End Sub
 
         ''' <summary>Farbton fuer die Bandsuche des Farbmischers. Gemessen an 34 Aufnahmen
@@ -2728,7 +2902,7 @@ Namespace Services
         ''' Bildpunkt und fuer seine Fuehrungsfarbe (MixerGuideSigma).</summary>
         Private NotInheritable Class PreMixerStages
             Private ReadOnly m, wbm, toLinear, toGamma, sr, sg, sb, toneBefore, toneZones, rawStageTone,
-                             negR, negG, negB, localZones, localDetail, localColor, rawShadow As Single()
+                             negR, negG, negB, localZones, localDetail, localColor, rawShadow, toneChroma As Single()
             Private ReadOnly negMono, curvesMelissa As Boolean
             Private ReadOnly localBase As LocalToneBase
 
@@ -2742,6 +2916,7 @@ Namespace Services
                 sb = chain.ScalarB
                 toneBefore = chain.ToneBefore
                 toneZones = chain.ToneZones
+                toneChroma = chain.ToneChroma
                 rawStageTone = chain.RawStageTone
                 rawShadow = chain.RawStageShadowSaturation
                 negR = chain.NegR
@@ -2853,6 +3028,7 @@ Namespace Services
                             gg = SampleTable(toneBefore, gg)
                             bb = SampleTable(toneBefore, bb)
                         End If
+                        Dim lightnessBefore = 0.299F * rr + 0.587F * gg + 0.114F * bb
                         If localZones IsNot Nothing Then
                             Dim gray = LocalToneGray(rr, gg, bb, toLinear, toGamma)
                             Dim baseValue As Single, smoothValue As Single
@@ -2866,6 +3042,7 @@ Namespace Services
                         ElseIf toneZones IsNot Nothing Then
                             ApplyToneZones(rr, gg, bb, toneZones)
                         End If
+                        If toneChroma IsNot Nothing Then ApplyToneChroma(rr, gg, bb, toneChroma, lightnessBefore)
                     End If
                     If curvesMelissa Then
                         ApplyCurvesInMelissa(rr, gg, bb, sr, sg, sb, toLinear, toGamma)
@@ -3054,6 +3231,7 @@ Namespace Services
                         ' Die Fuehrungsfarbe des Farbmischers: dieselbe Stelle des geglaetteten
                         ' Bilds durch dieselben Stufen (siehe MixerGuideSigma).
                         Dim guideH As Double, guideSat As Double, guideLum As Double
+                        Dim guideRgbR As Double, guideRgbG As Double, guideRgbB As Double
                         Dim hasGuide = False
                         If guideBuf IsNot Nothing Then
                             Dim ga = guideBuf(o + ai)
@@ -3070,6 +3248,7 @@ Namespace Services
                                     guideB = Math.Min(1.0F, guideBuf(o + bi) * inv)
                                 End If
                                 stages.Apply(guideR, guideG, guideB, x, y)
+                                guideRgbR = guideR : guideRgbG = guideG : guideRgbB = guideB
                                 RgbToHslF(guideR, guideG, guideB, guideH, guideSat, guideLum)
                                 If lumCurve IsNot Nothing Then
                                     guideLum = SampleTable(lumCurve, Clamp(CSng(guideLum), 0.0F, 1.0F))
@@ -3133,7 +3312,18 @@ Namespace Services
                                 sat = Math.Max(0.0, Math.Min(1.0, sat * (1.0 + vibrance * (1.0 - sat))))
                             End If
 
-                            If hslAdj IsNot Nothing Then
+                            If hslAdj IsNot Nothing AndAlso MixerInProPhoto Then
+                                ' Messversuch: Hin nach sRGB, dort im ProPhoto-HSV mischen, zurueck nach
+                                ' HSL fuer die Stufen danach. Ohne Fuehrung fuehrt der Bildpunkt selbst.
+                                Dim mr As Double, mg As Double, mb As Double
+                                HslToRgbF(h, sat, lum, mr, mg, mb)
+                                If hasGuide Then
+                                    ApplyMixerInProPhoto(mr, mg, mb, guideRgbR, guideRgbG, guideRgbB, hslAdj)
+                                Else
+                                    ApplyMixerInProPhoto(mr, mg, mb, mr, mg, mb, hslAdj)
+                                End If
+                                RgbToHslF(mr, mg, mb, h, sat, lum)
+                            ElseIf hslAdj IsNot Nothing Then
                                 ' Band und Tore aus der FUEHRUNGSFARBE (MixerGuideSigma), angewandt auf
                                 ' den Bildpunkt selbst: Nachbarn mit derselben Farbe bekommen dieselbe
                                 ' Behandlung, auch wenn ihr Rauschen sie ueber eine Bandgrenze oder durch
