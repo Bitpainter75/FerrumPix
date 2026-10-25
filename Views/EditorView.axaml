@@ -1758,20 +1758,14 @@
                             <panels:NoisePanel Margin="0,7,0,0"
                                                IsVisible="{Binding ShowDetailAdjustments}" />
 
-                            <!-- SCHÄRFE -->
+                            <!-- SCHÄRFEN + VIGNETTE (je eigene Karte im Panel) -->
                             <panels:SharpnessPanel Margin="0,7,0,0"
                                                    IsVisible="{Binding ShowDetailAdjustments}" />
-
-                            <!-- Die Tiefen-Unschaerfe steht am Ende der Details: sie wird gebacken,
-                                 alles davor bleibt ein Rezeptwert - was man wieder loswird, gehoert
-                                 vor das, was bleibt. -->
-                            <panels:BokehPanel Margin="0,7,0,0"
-                                               IsVisible="{Binding ShowDetailAdjustments}" />
 
                             <!-- EFFEKTE: eigenes Werkzeug. Was hier steht, fuegt dem Bild etwas hinzu,
                                  was vorher nicht da war - die Details darueber holen nur heraus, was
                                  in der Aufnahme steckt. -->
-                            <!-- VIGNETTE + KÖRNUNG (je eigene Karte im Panel) -->
+                            <!-- KÖRNUNG (rahmt sich selbst) -->
                             <panels:EffectsPanel Margin="0,7,0,0"
                                                  IsVisible="{Binding ShowEffectsAdjustments}" />
 
@@ -1798,6 +1792,12 @@
                                 </Border.IsVisible>
                                 <panels:ThresholdPanel />
                             </Border>
+
+                            <!-- Die Tiefen-Unschaerfe wird gebacken und rahmt sich selbst; sie steht
+                                 nach den Pixelreglern der Effekte, was man wieder loswird, gehoert
+                                 vor das, was bleibt. -->
+                            <panels:BokehPanel Margin="0,7,0,0"
+                                               IsVisible="{Binding ShowEffectsAdjustments}" />
 
                             <Border Classes="adjustment-group" Margin="0,7,0,0"
                                     >

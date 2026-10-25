@@ -10086,9 +10086,6 @@
   <data name="Legt_gleichm_iges_Rauschen_ber_das_Bild_44c6a0d9" xml:space="preserve">
     <value>在整幅图像上叠加均匀的杂色。</value>
   </data>
-  <data name="Unregelm_igkeit_c030988c" xml:space="preserve">
-    <value>粗糙度</value>
-  </data>
   <data name="Sch_rfen_bei_unbearbeiteten_RAWs_2070c2f9" xml:space="preserve">
     <value>未编辑 RAW 的锐化</value>
   </data>
@@ -10112,5 +10109,8 @@
   </data>
   <data name="Entfernt_Farbrauschen_gegl_ttet_werden_nur_die_F_a42219ec" xml:space="preserve">
     <value>去除彩色杂色：只平滑颜色成分（色度），亮度和细节保持不变。</value>
+  </data>
+  <data name="F_gt_Staubk_rner_und_Kratzer_hinzu_wie_auf_gesca_1bb5f58f" xml:space="preserve">
+    <value>添加灰尘颗粒和划痕，如同扫描的胶片。</value>
   </data>
 </root>

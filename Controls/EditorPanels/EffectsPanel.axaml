@@ -2,117 +2,9 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:icons="clr-namespace:FerrumPix.Controls"
              x:Class="FerrumPix.Controls.EditorPanels.EffectsPanel">
-    <!-- MEHRERE Gruppen in einem Panel: dann rahmt jede sich selbst, und EditorView darf
-         nicht noch einmal darum herum rahmen. -->
+    <!-- Die Gruppe rahmt sich selbst, EditorView darf nicht noch einmal darum herum rahmen.
+         Die Vignette stand frueher hier und steht seit 0.9.71 im SharpnessPanel. -->
     <StackPanel Spacing="7">
-        <Border Classes="adjustment-group"
-        IsVisible="{Binding HiddenAdjustmentGroups, Converter={StaticResource NotInListConverter}, ConverterParameter=vignette}">
-        <Expander Header="Vignette" icons:ExpanderState.Key="vignette">
-            <Expander.HeaderTemplate>
-                <DataTemplate>
-                    <Grid ColumnDefinitions="*,Auto,Auto" VerticalAlignment="Center">
-                        <StackPanel Orientation="Horizontal" Spacing="8"
-                                    VerticalAlignment="Center">
-                            <icons:SvgIcon
-                                Source="avares://FerrumPix/Assets/Icons/outline/frame.svg"
-                                Width="14" Height="14" />
-                            <TextBlock Text="{Binding}" FontWeight="SemiBold" />
-                        </StackPanel>
-                        <!-- Gruppenvergleich, beschrieben in LightPanel.axaml. Er blendet nur die
-                             Vignette aus, anders als der Zuruecksetzer daneben. -->
-                        <Button Grid.Column="1"
-                                Classes="icon-btn group-compare"
-                                Classes.comparing="{Binding DataContext.ComparingAdjustmentGroups, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource InListConverter}, ConverterParameter=vignette}"
-                                IsVisible="{Binding DataContext.CanCompareAdjustmentGroups, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                Width="28" Height="28" Padding="0"
-                                Command="{Binding DataContext.ToggleAdjustmentGroupCompareCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                CommandParameter="vignette"
-                                ToolTip.Tip="Gruppe vorübergehend ausblenden, um vorher und nachher zu vergleichen">
-                            <icons:SvgIcon Width="14" Height="14" />
-                        </Button>
-                        <Button Grid.Column="2"
-                                Classes="icon-btn group-reset"
-                                Width="28"
-                                Height="28"
-                                Padding="0"
-                                Command="{Binding DataContext.ResetVignetteCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                ToolTip.Tip="Vignette zurücksetzen">
-                            <icons:SvgIcon
-                                Source="avares://FerrumPix/Assets/Icons/outline/rotate-clockwise.svg"
-                                Width="14" Height="14" />
-                        </Button>
-                    </Grid>
-                </DataTemplate>
-            </Expander.HeaderTemplate>
-            <StackPanel Spacing="2" Margin="0,8,0,0">
-                <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
-                    <TextBlock Text="Stärke" Foreground="{DynamicResource FP.Text.Secondary}"
-                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
-                    <icons:RoundSlider Grid.Column="1" Minimum="-150" Maximum="150"
-                                       Value="{Binding Vignette}" Margin="0,0" />
-                    <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
-                                             Value="{Binding Vignette, Mode=TwoWay}" Minimum="-150" Maximum="150" />
-                </Grid>
-                <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
-                    <TextBlock Text="Übergang" Foreground="{DynamicResource FP.Text.Secondary}"
-                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
-                    <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
-                                       DefaultValue="55"
-                                       Value="{Binding VignetteTransition}" Margin="0,0" />
-                    <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
-                                             Value="{Binding VignetteTransition, Mode=TwoWay}" Minimum="0" Maximum="100" />
-                </Grid>
-                <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
-                    <TextBlock Text="Rundheit" Foreground="{DynamicResource FP.Text.Secondary}"
-                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
-                    <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100"
-                                       Value="{Binding VignetteRoundness}" Margin="0,0" />
-                    <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
-                                             Value="{Binding VignetteRoundness, Mode=TwoWay}" Minimum="-100" Maximum="100" />
-                </Grid>
-                <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
-                    <TextBlock Text="Weiche Kante" Foreground="{DynamicResource FP.Text.Secondary}"
-                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap" />
-                    <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
-                                       DefaultValue="70"
-                                       Value="{Binding VignetteFeather}" Margin="0,0" />
-                    <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
-                                             Value="{Binding VignetteFeather, Mode=TwoWay}" Minimum="0" Maximum="100" />
-                </Grid>
-                <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
-                    <TextBlock Text="Mitte X" Foreground="{DynamicResource FP.Text.Secondary}"
-                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
-                    <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
-                                       DefaultValue="50"
-                                       Value="{Binding VignetteCenterX}" Margin="0,0" />
-                    <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
-                                             Value="{Binding VignetteCenterX, Mode=TwoWay}" Minimum="0" Maximum="100" />
-                </Grid>
-                <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
-                    <TextBlock Text="Mitte Y" Foreground="{DynamicResource FP.Text.Secondary}"
-                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
-                    <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
-                                       DefaultValue="50"
-                                       Value="{Binding VignetteCenterY}" Margin="0,0" />
-                    <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
-                                             Value="{Binding VignetteCenterY, Mode=TwoWay}" Minimum="0" Maximum="100" />
-                </Grid>
-                <Grid ColumnDefinitions="92,*" VerticalAlignment="Center">
-                    <TextBlock Text="Stil" Foreground="{DynamicResource FP.Text.Secondary}"
-                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
-                    <ComboBox Name="VignetteStyleComboBox"
-                              Grid.Column="1"
-                              ItemsSource="{Binding VignetteStyleOptions}"
-                              SelectedItem="{Binding VignetteStyleLabel}"
-                              FontSize="{DynamicResource FP.Font.Small}"
-                              Margin="6,0,0,0"
-                              HorizontalAlignment="Stretch"
-                              DropDownOpened="OnMatchWidthDropDownOpened"
-                              ToolTip.Tip="Wie die Vignette abdunkelt: Farb-Priorität hält die Farbe, Lichter-Priorität schont helle Bereiche, Überlagerung entsättigt zu einem flachen Grauverlauf." />
-                </Grid>
-            </StackPanel>
-        </Expander>
-        </Border>
         <Border Classes="adjustment-group"
         IsVisible="{Binding HiddenAdjustmentGroups, Converter={StaticResource NotInListConverter}, ConverterParameter=grain}">
             <Expander Header="Körnung" icons:ExpanderState.Key="grain">
@@ -171,7 +63,7 @@
                                                  Value="{Binding GrainSize, Mode=TwoWay}" Minimum="0" Maximum="100" />
                     </Grid>
                     <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
-                        <TextBlock Text="Unregelmäßigkeit" Foreground="{DynamicResource FP.Text.Secondary}"
+                        <TextBlock Text="Rauheit" Foreground="{DynamicResource FP.Text.Secondary}"
                                    VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap"
                                    ToolTip.Tip="Unregelmäßigkeit des Korns: höher = fleckiger (manche Bereiche stärker gekörnt)." />
                         <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
@@ -188,9 +80,9 @@
                         <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
                                                  Value="{Binding GrainColor, Mode=TwoWay}" Minimum="0" Maximum="100" />
                     </Grid>
-                    <!-- Die beiden Regler, die Rauschen HINZUFUEGEN, stehen hier bei der Koernung und
-                         nicht in der Rauschreduzierung: dort wird nur entfernt, wie beim
-                         Referenzprogramm. Beide sind eigene Stufen der Pixelkette ohne XMP-Feld. -->
+                    <!-- Die Regler, die Rauschen und Staub HINZUFUEGEN, stehen hier bei der Koernung
+                         und nicht in der Rauschreduzierung: dort wird nur entfernt, wie beim
+                         Referenzprogramm. Alle drei sind eigene Stufen der Pixelkette ohne XMP-Feld. -->
                     <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center" Margin="0,6,0,0">
                         <TextBlock Text="Rauschen" Foreground="{DynamicResource FP.Text.Secondary}"
                                    VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap"
@@ -208,6 +100,15 @@
                                            Value="{Binding ColorNoiseAdd}" Margin="0,0" />
                         <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
                                                  Value="{Binding ColorNoiseAdd, Mode=TwoWay}" Minimum="0" Maximum="100" />
+                    </Grid>
+                    <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
+                        <TextBlock Text="Staub/Kratzer" Foreground="{DynamicResource FP.Text.Secondary}"
+                                   VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap"
+                                   ToolTip.Tip="Fügt Staubkörner und Kratzer hinzu wie auf gescanntem Film." />
+                        <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
+                                           Value="{Binding DustScratches}" Margin="0,0" />
+                        <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                                 Value="{Binding DustScratches, Mode=TwoWay}" Minimum="0" Maximum="100" />
                     </Grid>
                 </StackPanel>
             </Expander>

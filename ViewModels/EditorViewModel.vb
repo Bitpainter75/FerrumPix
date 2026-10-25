@@ -6904,7 +6904,9 @@ Namespace ViewModels
                 Return _dustScratches
             End Get
             Set(value As Double)
-                SetUndoableDouble(_dustScratches, Math.Max(-100, Math.Min(100, value)), NameOf(DustScratches))
+                ' Der Regler fuegt nur noch hinzu. Ein negativer Wert kommt nur aus einem alten Rezept
+                ' (ueber ApplyAdjustments, nicht hier) und wird weiter als Median gerechnet.
+                SetUndoableDouble(_dustScratches, Math.Max(0, Math.Min(100, value)), NameOf(DustScratches))
             End Set
         End Property
 
@@ -17305,7 +17307,6 @@ Namespace ViewModels
         Public ReadOnly Property AutoPerspectiveCommand As ICommand
         Public ReadOnly Property ResetSharpnessCommand As ICommand
         Public ReadOnly Property ResetSharpenCommand As ICommand
-        Public ReadOnly Property ResetSoftenCommand As ICommand
         Public ReadOnly Property ResetRauschenCommand As ICommand
         Public ReadOnly Property ResetGrainCommand As ICommand
         Public ReadOnly Property ResetDetailGroupCommand As ICommand
@@ -17959,10 +17960,6 @@ Namespace ViewModels
                                                              PushUndo(ResetHistoryLabel("Schärfen"))
                                                              ResetSharpenGroupInternal()
                                                          End Sub)
-            ResetSoftenCommand = ReactiveCommand.Create(Sub()
-                                                            PushUndo(ResetHistoryLabel("Weichzeichnen"))
-                                                            ResetSoftenGroupInternal()
-                                                        End Sub)
             ResetRauschenCommand = ReactiveCommand.Create(Sub()
                                                               PushUndo(ResetHistoryLabel("Rauschreduzierung"))
                                                               ResetNoiseGroupInternal()
@@ -23836,7 +23833,7 @@ Namespace ViewModels
                 Case NameOf(VignetteStyleLabel) : Return CombineHistoryLabel("Vignette", "Stil")
                 Case NameOf(Grain) : Return CombineHistoryLabel("Körnung", "Stärke")
                 Case NameOf(GrainSize) : Return CombineHistoryLabel("Körnung", "Größe")
-                Case NameOf(GrainFrequency) : Return CombineHistoryLabel("Körnung", "Unregelmäßigkeit")
+                Case NameOf(GrainFrequency) : Return CombineHistoryLabel("Körnung", "Rauheit")
                 Case NameOf(GrainColor) : Return CombineHistoryLabel("Körnung", "Farbe")
                 Case NameOf(CropLeft), NameOf(CropTop), NameOf(CropRight), NameOf(CropBottom)
                     Return LocalizationService.T("Zuschneiden")
@@ -24227,8 +24224,8 @@ Namespace ViewModels
                      NameOf(CalibrationBlueHue), NameOf(CalibrationBlueSaturation),
                      NameOf(CalibrationShadowTint)
                     Return outline & "color-filter.svg"
-                Case NameOf([Structure]), NameOf(Haze), NameOf(DustScratches), NameOf(Glow),
-                     NameOf(AddNoise), NameOf(ColorNoiseReduction), NameOf(ColorNoiseAdd),
+                Case NameOf([Structure]), NameOf(Haze), NameOf(Glow),
+                     NameOf(ColorNoiseReduction),
                      NameOf(FarbrauschGrob), NameOf(ColorNoiseCoarseScale)
                     Return outline & "adjustments.svg"
                 Case NameOf(LutPath), NameOf(LutStrength)
@@ -24258,7 +24255,8 @@ Namespace ViewModels
                     Return outline & "adjustments.svg"
                 Case NameOf(Vignette), NameOf(VignetteTransition), NameOf(VignetteRoundness), NameOf(VignetteFeather),
                      NameOf(VignetteCenterX), NameOf(VignetteCenterY), NameOf(VignetteStyleLabel),
-                     NameOf(Grain), NameOf(GrainSize), NameOf(GrainFrequency), NameOf(GrainColor)
+                     NameOf(Grain), NameOf(GrainSize), NameOf(GrainFrequency), NameOf(GrainColor),
+                     NameOf(AddNoise), NameOf(ColorNoiseAdd), NameOf(DustScratches)
                     Return outline & "sparkles.svg"
                 Case NameOf(FilterPreset), NameOf(FilterStrength)
                     Return outline & "palette.svg"
@@ -29920,14 +29918,27 @@ Namespace ViewModels
             _colorNoiseReduction = 0
             _farbrauschGrob = 0
             _farbrauschGrobSkala = 50
-            _colorNoiseAdd = 0
             _noiseReductionMethod = NoiseReductionMethod.AdaptiveGuided
-            _dustScratches = 0
             _haze = 0
-            _addNoise = 0
+            ' Ein negatives Rauschen eines alten Rezepts war eine Reduzierung und gehoert hierher,
+            ' das Hinzufuegen steht in der Koernung und geht mit den Effekten zurueck.
+            If _addNoise < 0 Then _addNoise = 0
             _structure = 0
             _glow = 0
+            ' Die Vignette steht seit 0.9.71 im Werkzeug Details, unter dem Schaerfen.
+            _vignette = 0
+            _vignetteTransition = 55
+            _vignetteRoundness = 0
+            _vignetteFeather = 70
+            _vignetteCenterX = 50
+            _vignetteCenterY = 50
+            _vignetteStyle = VignetteStyle.ColorPriority
             RaiseDetailPropertiesChanged()
+            For Each n In {NameOf(Vignette), NameOf(VignetteTransition), NameOf(VignetteRoundness),
+                           NameOf(VignetteFeather), NameOf(VignetteCenterX), NameOf(VignetteCenterY),
+                           NameOf(VignetteStyleLabel)}
+                Me.RaisePropertyChanged(n)
+            Next
             RaiseResetButtonStateChanged()
             SchedulePreviewUpdate()
         End Sub
@@ -29953,18 +29964,17 @@ Namespace ViewModels
             _lensTcaBlue = 0
             _rawSensorEdgeCrop = SensorEdgeCropStart
             _lensModel = ""
-            _vignette = 0
-            _vignetteTransition = 55
-            _vignetteRoundness = 0
-            _vignetteFeather = 70
-            _vignetteCenterX = 50
-            _vignetteCenterY = 50
-            _vignetteStyle = VignetteStyle.ColorPriority
             _grain = 0
             _grainSize = 0
             _grainFrequency = 0
             _grainColor = 0
+            If _addNoise > 0 Then _addNoise = 0
+            _colorNoiseAdd = 0
+            _dustScratches = 0
             RaiseEffectsPropertiesChanged()
+            For Each n In {NameOf(AddNoise), NameOf(ColorNoiseAdd), NameOf(ColorNoiseAmount), NameOf(DustScratches)}
+                Me.RaisePropertyChanged(n)
+            Next
             RaiseResetButtonStateChanged()
             If decodeChanged Then
                 RefreshLensCorrection()
@@ -30012,18 +30022,9 @@ Namespace ViewModels
             SchedulePreviewForCurrentTarget()
         End Sub
 
-        ''' <summary>Nur die Weichzeichnen-Gruppe; seit die Luminanz in die Rauschreduzierung gezogen
-        ''' ist, steht dort nur noch der Weichzeichner.</summary>
-        Private Sub ResetSoftenGroupInternal()
-            _blur = 0
-            Me.RaisePropertyChanged(NameOf(Blur))
-            RaiseResetButtonStateChanged()
-            SchedulePreviewForCurrentTarget()
-        End Sub
-
         ''' <summary>Die Rauschreduzierung: alles, was im Panel zusammensteht. Das Weichzeichnen
-        ''' gehoert NICHT dazu - es hat seine eigene Gruppe mit eigenem Knopf, und ein Zuruecksetzer,
-        ''' der ueber die Gruppengrenze hinaus greift, ueberrascht nur.</summary>
+        ''' gehoert NICHT dazu - es steht in den Details, und ein Zuruecksetzer, der ueber die
+        ''' Gruppengrenze hinaus greift, ueberrascht nur.</summary>
         Private Sub ResetNoiseGroupInternal()
             ' Auch das gespeicherte Entrauschen mit Modell gehoert hierher: es steht in derselben
             ' Gruppe, und ohne diesen Weg gaebe es keinen, es wieder loszuwerden.
@@ -30063,9 +30064,10 @@ Namespace ViewModels
             SchedulePreviewForCurrentTarget()
         End Sub
 
-        ''' <summary>Nur die Körnung-Gruppe (Stärke, Größe, Unregelmäßigkeit, Farbe, dazu Rauschen
-        ''' und Farbrauschen hinzufügen). Ein negatives "Rauschen" eines alten Rezepts bleibt: es war
-        ''' eine Reduzierung und gehoert der Rauschreduzierung.</summary>
+        ''' <summary>Nur die Körnung-Gruppe (Stärke, Größe, Rauheit, Farbe, dazu Rauschen,
+        ''' Farbrauschen und Staub/Kratzer). Ein negatives "Rauschen" eines alten Rezepts bleibt: es
+        ''' war eine Reduzierung und gehoert der Rauschreduzierung. Ein negatives Staub/Kratzer eines
+        ''' alten Rezepts geht dagegen mit weg, es hat keine andere Gruppe.</summary>
         Private Sub ResetGrainGroupInternal()
             _grain = 0
             _grainSize = 0
@@ -30073,6 +30075,7 @@ Namespace ViewModels
             _grainColor = 0
             If _addNoise > 0 Then _addNoise = 0
             _colorNoiseAdd = 0
+            _dustScratches = 0
             Me.RaisePropertyChanged(NameOf(Grain))
             Me.RaisePropertyChanged(NameOf(GrainSize))
             Me.RaisePropertyChanged(NameOf(GrainFrequency))
@@ -30080,12 +30083,13 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(AddNoise))
             Me.RaisePropertyChanged(NameOf(ColorNoiseAdd))
             Me.RaisePropertyChanged(NameOf(ColorNoiseAmount))
+            Me.RaisePropertyChanged(NameOf(DustScratches))
             RaiseResetButtonStateChanged()
             SchedulePreviewForCurrentTarget()
         End Sub
 
-        ''' <summary>Nur die Regler im Aufklapper Details: Klarheit, Struktur, Dunst, Staub und
-        ''' Kratzer, Glühen. Schärfe, Weichzeichnen, Rauschen und Körnung haben eigene Zurücksetzer.
+        ''' <summary>Nur die Regler im Aufklapper Details: Klarheit, Struktur, Dunst, Glühen,
+        ''' Weichzeichnen. Schärfen, Rauschreduzierung und Körnung haben eigene Zurücksetzer.
         '''
         ''' JEDER ZURÜCKSETZER BLEIBT IN SEINER GRUPPE. Hier standen früher auch Rauschen, Farbrauschen und grobes Farbrauschen aus dem Aufklapper Rauschen,
         ''' ein Überbleibsel aus der Zeit, als beides eine Gruppe war; das grobe Farbrauschen
@@ -30095,15 +30099,15 @@ Namespace ViewModels
         ''' Der breite <see cref="ResetDetailInternal"/> bleibt für das Ersetzen des ganzen Looks.</summary>
         Private Sub ResetDetailGroupInternal()
             _clarity = 0
-            _dustScratches = 0
             _haze = 0
             _structure = 0
             _glow = 0
+            _blur = 0
             Me.RaisePropertyChanged(NameOf(Clarity))
-            Me.RaisePropertyChanged(NameOf(DustScratches))
             Me.RaisePropertyChanged(NameOf(Haze))
             Me.RaisePropertyChanged(NameOf([Structure]))
             Me.RaisePropertyChanged(NameOf(Glow))
+            Me.RaisePropertyChanged(NameOf(Blur))
             RaiseResetButtonStateChanged()
             SchedulePreviewForCurrentTarget()
         End Sub

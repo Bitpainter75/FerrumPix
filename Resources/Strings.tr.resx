@@ -10132,9 +10132,6 @@
   <data name="Legt_gleichm_iges_Rauschen_ber_das_Bild_44c6a0d9" xml:space="preserve">
     <value>Görüntünün üzerine düzgün bir gürültü koyar.</value>
   </data>
-  <data name="Unregelm_igkeit_c030988c" xml:space="preserve">
-    <value>Pürüzlülük</value>
-  </data>
   <data name="Sch_rfen_bei_unbearbeiteten_RAWs_2070c2f9" xml:space="preserve">
     <value>Düzenlenmemiş RAW dosyaları için keskinleştirme</value>
   </data>
@@ -10158,5 +10155,8 @@
   </data>
   <data name="Entfernt_Farbrauschen_gegl_ttet_werden_nur_die_F_a42219ec" xml:space="preserve">
     <value>Renk gürültüsünü giderir: yalnızca renk bileşenleri (kroma) yumuşatılır, parlaklık ve ayrıntılar korunur.</value>
+  </data>
+  <data name="F_gt_Staubk_rner_und_Kratzer_hinzu_wie_auf_gesca_1bb5f58f" xml:space="preserve">
+    <value>Taranmış filmdeki gibi toz zerreleri ve çizikler ekler.</value>
   </data>
 </root>

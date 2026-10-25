@@ -16,11 +16,14 @@
   get the adjustments in their sidecar file; JPG, PNG and WebP are overwritten after asking.
 
 - **Detail sliders named and grouped as in the reference program:** the luminance noise reduction,
-  formerly Smooth in the Soften group, now sits as Luminance with its Detail and Method in the
+  formerly Smoothing in the Blur group, now sits as Luminance with its Detail and Method in the
   renamed Noise Reduction group, next to Color, and sharpening is Amount, Radius, Detail and
   Masking. Color there only removes color noise now. Adding noise and color noise moved to the
-  Grain group as the Noise and Color noise sliders. The rarely useful Color blotches and Blotch size
-  sliders and the negative half of Noise are gone; pictures edited with them keep their look.
+  Grain group as the Noise and Color noise sliders, together with Dust/scratches, which now
+  only adds and goes further at its maximum. Blur has no group of its own any more and sits in
+  Details. Vignette moved to the Details tool below Sharpen, Depth blur to the Effects tool below
+  Threshold. The rarely useful Color blotches and Blotch size sliders and the negative halves of
+  Noise and Dust/scratches are gone; pictures edited with them keep their look.
 
 - **Display profiles on Windows and Linux:** in Settings you can choose an ICC profile for each
   connected display, for example from a calibration. Photos in the viewer and editor are then

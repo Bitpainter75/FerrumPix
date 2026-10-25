@@ -1698,12 +1698,11 @@ Namespace Services
                     ("details", "Details"),
                     ("rauschen", "Rauschreduzierung"),
                     ("sharpen", "Schärfen"),
-                    ("soften", "Weichzeichnen"),
-                    ("bokeh", "Tiefen-Unschärfe"),
                     ("vignette", "Vignette"),
                     ("grain", "Körnung"),
                     ("posterize", "Tontrennung"),
                     ("threshold", "Schwellenwert"),
+                    ("bokeh", "Tiefen-Unschärfe"),
                     ("tiltshift", "Tilt-Shift"),
                     ("fog", "Nebel nach Tiefe"),
                     ("frame", "Rahmen"),
@@ -1731,8 +1730,8 @@ Namespace Services
                     ("Adjust", New String() {"adjust-presets", "light", "curve", "objektivkorrektur", "film-negative"}),
                     ("Color", New String() {"color", "hsl", "color-grading", "channel-mixer",
                                             "gradient-map", "calibration"}),
-                    ("Details", New String() {"details", "rauschen", "sharpen", "soften", "bokeh"}),
-                    ("Effects", New String() {"vignette", "grain", "posterize", "threshold", "tiltshift", "fog", "frame"}),
+                    ("Details", New String() {"details", "rauschen", "sharpen", "vignette"}),
+                    ("Effects", New String() {"grain", "posterize", "threshold", "bokeh", "tiltshift", "fog", "frame"}),
                     ("Filters", New String() {"filter", "lut", "xmp-preset"})}
             End Get
         End Property
@@ -1756,8 +1755,8 @@ Namespace Services
 
         ''' <summary>Die Bloecke des Kompaktwerkzeugs, die sich sortieren lassen, in der Reihenfolge
         ''' des Panels. Ein Block ist ein direktes Kind von AdjustmentsStackPanel in EditorView.axaml
-        ''' und traegt eine oder mehrere Gruppen: Schaerfe und Weichzeichnen stehen in EINEM Panel,
-        ''' Vignette und Koernung ebenso, und wandern deshalb zusammen. Seine Kennung ist der erste
+        ''' und traegt eine oder mehrere Gruppen: Schaerfen und Vignette stehen in EINEM Panel und
+        ''' wandern deshalb zusammen. Seine Kennung ist der erste
         ''' Schluessel. Muss zum XAML passen; ein Waechter im Pruefstand vergleicht beides.</summary>
         Public Shared ReadOnly Property CompactGroupBlocks As String()()
             Get
@@ -1766,8 +1765,8 @@ Namespace Services
                     New String() {"objektivkorrektur"}, New String() {"film-negative"},
                     New String() {"color"}, New String() {"hsl"}, New String() {"color-grading"}, New String() {"channel-mixer"}, New String() {"gradient-map"},
                     New String() {"calibration"},
-                    New String() {"details"}, New String() {"rauschen"}, New String() {"sharpen", "soften"}, New String() {"bokeh"},
-                    New String() {"vignette", "grain"}, New String() {"posterize"}, New String() {"threshold"}, New String() {"tiltshift"}, New String() {"fog"}, New String() {"frame"},
+                    New String() {"details"}, New String() {"rauschen"}, New String() {"sharpen", "vignette"},
+                    New String() {"grain"}, New String() {"posterize"}, New String() {"threshold"}, New String() {"bokeh"}, New String() {"tiltshift"}, New String() {"fog"}, New String() {"frame"},
                     New String() {"filter"}, New String() {"xmp-preset"}, New String() {"lut"}}
             End Get
         End Property

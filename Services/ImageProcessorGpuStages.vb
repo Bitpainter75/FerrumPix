@@ -1728,10 +1728,11 @@ half4 main(float2 p) {
 }
 "
 
-        ''' <summary>ApplyDustScratches. Entfernen: Median, mit der Staerke als Deckkraft darueber.
-        ''' Hinzufuegen: dieselben Staubkoerner und Kratzer aus demselben Zufallsstrom, gezeichnet auf
-        ''' der Karte. Ihre Kanten glaettet die Karte etwas anders als Skia auf dem Prozessor; die
-        ''' Koerner sind einen bis zwei Punkte gross, dort kann ein Wert sichtbar anders ausfallen.</summary>
+        ''' <summary>ApplyDustScratches. Entfernen (nur noch aus alten Rezepten): Median, mit der
+        ''' Staerke als Deckkraft darueber. Hinzufuegen: dieselben Staubkoerner und Kratzer aus
+        ''' demselben Zufallsstrom, gezeichnet auf der Karte. Ihre Kanten glaettet die Karte etwas
+        ''' anders als Skia auf dem Prozessor; die Koerner sind einen bis vier Punkte gross, dort
+        ''' kann ein Wert sichtbar anders ausfallen.</summary>
         Private Shared Function DustScratchesOnGpu(source As SKBitmap, amount As Single) As Func(Of GRContext, SKImage, SKSurface)
             Dim strength = Clamp(amount, -1, 1)
             If Math.Abs(strength) <= 0.001F Then Return Nothing

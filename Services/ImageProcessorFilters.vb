@@ -2072,7 +2072,10 @@ Namespace Services
         ''' <summary>Staub/Kratzer, Richtung wie bei den Nachbarn im Panel (positiv = den benannten
         ''' Effekt HINZUFUEGEN): positiv streut Staubkoerner und wenige fast senkrechte Kratzer wie
         ''' auf gescanntem Film, negativ ENTFERNT Stoerungen per Medianfilter (vorher war es genau
-        ''' umgekehrt und die zufaelligen Querstriche sahen nach nichts aus -).</summary>
+        ''' umgekehrt und die zufaelligen Querstriche sahen nach nichts aus -). Der Regler im Editor
+        ''' kennt seit 0.9.71 nur noch die positive Seite: der Median hatte keine Schwelle und
+        ''' hoechstens drei Punkte Radius, war also ein flaechiges Weichzeichnen und kein Entfernen
+        ''' von Staub. Die negative Seite bleibt fuer alte Rezepte.</summary>
         Private Shared Function ApplyDustScratches(source As SKBitmap, amount As Single) As SKBitmap
             Dim strength = Clamp(amount, -1, 1)
             If Math.Abs(strength) <= 0.001F Then Return source
@@ -2108,25 +2111,27 @@ Namespace Services
         ''' demselben Zufallsstrom auf seine Flaeche zeichnet.</summary>
         Private Shared Sub DrawDustAndScratches(canvas As SKCanvas, width As Integer, height As Integer, strength As Single)
             Dim random = New Random(width * 997 Xor height * 331)
-                Dim speckCount = CInt(Math.Round(width * height / 4500.0 * strength))
+                ' Anzahl, Groesse und Deckung wachsen gleichmaessig mit dem Regler; am Anschlag sind
+                ' es rund ein Korn je 3000 Punkte und vierzehn Kratzer.
+                Dim speckCount = CInt(Math.Round(width * height / 3000.0 * strength))
                 For i = 0 To speckCount - 1
                     Dim bright = random.NextDouble() < 0.72
                     Dim tone = If(bright, CByte(210 + random.Next(0, 46)), CByte(random.Next(0, 40)))
-                    Dim alpha = CByte(60 + random.Next(0, CInt(70 + 90 * strength)))
+                    Dim alpha = CByte(60 + random.Next(0, CInt(70 + 120 * strength)))
                     Using paint = New SKPaint With {.Color = New SKColor(tone, tone, tone, alpha), .IsAntialias = True}
                         canvas.DrawCircle(random.Next(0, width), random.Next(0, height),
-                                          0.5F + CSng(random.NextDouble()) * 1.1F, paint)
+                                          0.5F + CSng(random.NextDouble()) * (1.1F + 0.6F * strength), paint)
                     End Using
                 Next
 
-                Dim scratchCount = Math.Max(1, CInt(Math.Round(9.0 * strength)))
+                Dim scratchCount = Math.Max(1, CInt(Math.Round(14.0 * strength)))
                 For i = 0 To scratchCount - 1
                     Dim x = CSng(random.NextDouble() * width)
                     Dim y = CSng(random.NextDouble() * height * 0.6)
                     Dim length = CSng(height * (0.15 + random.NextDouble() * 0.35))
                     Dim bright = random.NextDouble() < 0.65
                     Dim tone = If(bright, CByte(225), CByte(25))
-                    Dim alpha = CByte(35 + random.Next(0, CInt(30 + 60 * strength)))
+                    Dim alpha = CByte(35 + random.Next(0, CInt(30 + 90 * strength)))
                     Using path = New SKPath()
                         path.MoveTo(x, y)
                         Dim segments = Math.Max(3, CInt(length / 14.0F))

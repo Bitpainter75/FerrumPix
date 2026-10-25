@@ -10132,9 +10132,6 @@
   <data name="Legt_gleichm_iges_Rauschen_ber_das_Bild_44c6a0d9" xml:space="preserve">
     <value>이미지 전체에 고른 노이즈를 입힙니다.</value>
   </data>
-  <data name="Unregelm_igkeit_c030988c" xml:space="preserve">
-    <value>거칠기</value>
-  </data>
   <data name="Sch_rfen_bei_unbearbeiteten_RAWs_2070c2f9" xml:space="preserve">
     <value>편집하지 않은 RAW의 선명하게 하기</value>
   </data>
@@ -10158,5 +10155,8 @@
   </data>
   <data name="Entfernt_Farbrauschen_gegl_ttet_werden_nur_die_F_a42219ec" xml:space="preserve">
     <value>컬러 노이즈를 제거합니다. 색 성분(크로마)만 부드럽게 하고 밝기와 디테일은 유지합니다.</value>
+  </data>
+  <data name="F_gt_Staubk_rner_und_Kratzer_hinzu_wie_auf_gesca_1bb5f58f" xml:space="preserve">
+    <value>스캔한 필름처럼 먼지와 긁힘을 더합니다.</value>
   </data>
 </root>

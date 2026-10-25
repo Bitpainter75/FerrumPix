@@ -10128,9 +10128,6 @@
   <data name="Legt_gleichm_iges_Rauschen_ber_das_Bild_44c6a0d9" xml:space="preserve">
     <value>画像全体に均一なノイズを加えます。</value>
   </data>
-  <data name="Unregelm_igkeit_c030988c" xml:space="preserve">
-    <value>粗さ</value>
-  </data>
   <data name="Sch_rfen_bei_unbearbeiteten_RAWs_2070c2f9" xml:space="preserve">
     <value>未編集 RAW のシャープ</value>
   </data>
@@ -10154,5 +10151,8 @@
   </data>
   <data name="Entfernt_Farbrauschen_gegl_ttet_werden_nur_die_F_a42219ec" xml:space="preserve">
     <value>カラーノイズを除去します。滑らかにするのは色成分 (クロマ) だけで、明るさとディテールは保たれます。</value>
+  </data>
+  <data name="F_gt_Staubk_rner_und_Kratzer_hinzu_wie_auf_gesca_1bb5f58f" xml:space="preserve">
+    <value>スキャンしたフィルムのようなほこりと傷を加えます。</value>
   </data>
 </root>

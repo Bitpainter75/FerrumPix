@@ -69,15 +69,6 @@
                                              Increment="0.1" FormatString="F1" />
                 </Grid>
                 <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
-                    <TextBlock Text="Staub/Kratzer" Foreground="{DynamicResource FP.Text.Secondary}"
-                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap"
-                               ToolTip.Tip="Positiv fügt Staubkörner und Kratzer hinzu (Film-Look), negativ entfernt Störungen kantenerhaltend." />
-                    <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100"
-                                       Value="{Binding DustScratches}" Margin="0,0" />
-                    <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
-                                             Value="{Binding DustScratches, Mode=TwoWay}" Minimum="-100" Maximum="100" />
-                </Grid>
-                <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
                     <TextBlock Text="Glühen" Foreground="{DynamicResource FP.Text.Secondary}"
                                VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                     <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100"
@@ -85,6 +76,16 @@
                     <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value slider-value-wide"
                                              Value="{Binding Glow, Mode=TwoWay}" Minimum="-100" Maximum="100"
                                              Increment="0.1" FormatString="F1" />
+                </Grid>
+                <!-- Weichzeichnen hatte frueher eine eigene Gruppe mit diesem einen Regler. -->
+                <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
+                    <TextBlock Text="Weichzeichnen" Foreground="{DynamicResource FP.Text.Secondary}"
+                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap"
+                               ToolTip.Tip="Zeichnet das ganze Bild gleichmäßig weich. Die Stärke richtet sich nach der Bildgröße, Vorschau und Export sehen gleich aus." />
+                    <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
+                                       Value="{Binding Blur}" Margin="0,0" />
+                    <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                             Value="{Binding Blur, Mode=TwoWay}" Minimum="0" Maximum="100" />
                 </Grid>
             </StackPanel>
         </Expander>

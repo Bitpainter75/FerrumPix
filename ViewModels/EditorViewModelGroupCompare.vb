@@ -77,7 +77,6 @@ Namespace ViewModels
                 Case "threshold" : Return ("Schwellenwert", Sub() NeutralizeCorrectionGroup(AddressOf ResetThresholdValues))
                 Case "tiltshift" : Return ("Tilt-Shift", Sub() NeutralizeCorrectionGroup(AddressOf ResetTiltShiftValues))
                 Case "sharpen" : Return ("Schärfen", AddressOf ResetSharpenGroupInternal)
-                Case "soften" : Return ("Weichzeichnen", AddressOf ResetSoftenGroupInternal)
                 Case "rauschen" : Return ("Rauschreduzierung", AddressOf ResetNoiseSlidersInternal)
                 Case "details" : Return ("Details", AddressOf ResetDetailGroupInternal)
                 Case "vignette" : Return ("Vignette", AddressOf ResetVignetteGroupInternal)
@@ -292,9 +291,9 @@ Namespace ViewModels
             SchedulePreviewForCurrentTarget()
         End Sub
 
-        ''' <summary>Nur die Vignette. Ihr Knopf im Gruppenkopf setzt das ganze Werkzeug Effekte
-        ''' zurueck (ResetEffectsInternal), samt Objektivkorrektur und Koernung; der Vergleich der
-        ''' Vignette blendet nur die Vignette aus.</summary>
+        ''' <summary>Nur die Vignette, fuer ihren Knopf im Gruppenkopf und ihren Vergleich. Das
+        ''' Zuruecksetzen des ganzen Werkzeugs Details nimmt sie ebenfalls mit
+        ''' (ResetDetailInternal).</summary>
         Private Sub ResetVignetteGroupInternal()
             _vignette = 0
             _vignetteTransition = 55
