@@ -142,6 +142,8 @@ Namespace Services
             ''' Nur im Messversuch MixerInProPhoto: die Bandwerte mit der geeichten Luminanz des
             ''' bisherigen Wegs (ReferenceHslLuminance), fuer die Luminanz nach MixerProPhotoLumFromHsl.
             Public HslReference As ImageAdjustments
+            ''' Ebenso: die Entsaettigung der Baender, die sie auf dem alten Weg rechnen (BuildHslDownReference).
+            Public HslDownReference As ImageAdjustments
             ''' Die wirksamen Farbfelder der Punktfarbe, oder Nothing (PointColorMath).
             Public PointColors As PointColorMath.Prepared()
             ''' Die Farbgradierung, oder Nothing. Die Toenung ist ein Versatz in Y/Cb/Cr je Zone
@@ -420,7 +422,10 @@ Namespace Services
             If adj.HasHslChanges() Then
                 ' Der Messversuch im ProPhoto-HSV hat eigene Staerken und nimmt die Reglerwerte roh.
                 chain.Hsl = If(MixerInProPhoto, adj, ReferenceHslLuminance(adj))
-                If MixerInProPhoto Then chain.HslReference = ReferenceHslLuminance(adj)
+                If MixerInProPhoto Then
+                    chain.HslReference = ReferenceHslLuminance(adj)
+                    chain.HslDownReference = BuildHslDownReference(adj)
+                End If
                 chain.IsIdentity = False
             End If
 
@@ -1596,6 +1601,9 @@ Namespace Services
         ''' <summary>HSV-Saettigung der Fuehrungsfarbe, ab der ein Band voll greift; darunter
         ''' smoothstep gegen 0, damit kein Band ein Grau bewegt.</summary>
         Friend Shared MixerProPhotoGate As Double = 0.1
+        ''' <summary>Zusaetzlich das Tor des alten Wegs an der echten Buntheit in sRGB (siehe
+        ''' ApplyMixerInProPhoto).</summary>
+        Friend Shared MixerProPhotoChromaGate As Boolean = True
         ''' <summary>Staerken JE BAND (Rot, Orange, Gelb, Gruen, Aqua, Blau, Lila, Magenta), mal den
         ''' Gesamtwerten oben. Aus der zweiten Runde (2026-10-25, 57 Bilder, je Stellung +-60): der
         ''' Kehrwert des gemessenen Faktors. Aqua beim Farbton auf 2,5 gedeckelt (gemessen 0,25, der
@@ -1610,6 +1618,27 @@ Namespace Services
         ''' dort), nach oben im ProPhoto-HSV. Bei -60 traf der bisherige Weg Gruen, Gelb und Rot besser
         ''' (65, 55, 68 gegen 56, 44, 66 Prozent).</summary>
         Friend Shared MixerProPhotoSatDownFromHsl As Boolean = False
+        ''' <summary>Dasselbe JE BAND (Rot, Orange, Gelb, Gruen, Aqua, Blau, Lila, Magenta). Runde vier
+        ''' (2026-10-25, Saettigung -60): der alte Weg traf Gruen, Gelb und Rot besser (65, 55, 68
+        ''' gegen 56, 44, 66 Prozent), der ProPhoto-HSV Blau, Magenta, Orange und Lila (50, 47, 61, 46
+        ''' gegen 43, 20, 54, 37). Mit MixerProPhotoSatDownFromHsl gilt der alte Weg fuer alle.</summary>
+        Friend Shared MixerProPhotoSatDownFromHslBands As Boolean() = {True, False, True, True, False, False, False, False}
+
+        ''' <summary>Gilt fuer dieses Band die Entsaettigung auf dem alten Weg?</summary>
+        Private Shared Function SatDownOnHsl(band As Integer) As Boolean
+            Return MixerProPhotoSatDownFromHsl OrElse MixerProPhotoSatDownFromHslBands(band)
+        End Function
+
+        ''' <summary>Die Bandwerte fuer die Entsaettigung auf dem alten Weg: nur die negativen
+        ''' Saettigungen der Baender, die ihn nehmen (SatDownOnHsl), alles andere null.</summary>
+        Private Shared Function BuildHslDownReference(adj As ImageAdjustments) As ImageAdjustments
+            Dim d = Function(value As Single, band As Integer) If(value < 0 AndAlso SatDownOnHsl(band), value, 0.0F)
+            Return New ImageAdjustments With {
+                .RedSaturation = d(adj.RedSaturation, 0), .OrangeSaturation = d(adj.OrangeSaturation, 1),
+                .YellowSaturation = d(adj.YellowSaturation, 2), .GreenSaturation = d(adj.GreenSaturation, 3),
+                .AquaSaturation = d(adj.AquaSaturation, 4), .BlueSaturation = d(adj.BlueSaturation, 5),
+                .PurpleSaturation = d(adj.PurpleSaturation, 6), .MagentaSaturation = d(adj.MagentaSaturation, 7)}
+        End Function
         Friend Shared MixerProPhotoSatDownGains As Double() = {0.625, 0.743, 0.556, 1.25, 0.915, 0.72, 0.904, 0.735}
         Friend Shared MixerProPhotoSatUpGains As Double() = {0.33, 0.435, 0.36, 0.698, 0.6, 0.577, 0.75, 0.6}
         ''' <summary>Die Luminanz auf dem bisherigen Weg (HSL von sRGB, geeichte Faktoren, Tor und
@@ -1665,6 +1694,15 @@ Namespace Services
 
             Dim gate = Math.Min(1.0, gs / MixerProPhotoGate)
             gate = gate * gate * (3.0 - 2.0 * gate)
+            If MixerProPhotoChromaGate Then
+                ' Dazu das Tor des alten Wegs: die echte Buntheit der Fuehrung in sRGB (max - min),
+                ' voll ab 0,2. Die HSV-Saettigung im linearen Raum ist gerade in tiefen Schatten auch bei
+                ' Rauschen gross; ohne dieses Tor faerbte Cool Glow die dunklen Flaechen der
+                ' Konzertbilder rot (Tiefen R +8 statt +4 gegen den Export).
+                Dim chroma = Math.Max(guideR, Math.Max(guideG, guideB)) - Math.Min(guideR, Math.Min(guideG, guideB))
+                Dim cg = Math.Min(1.0, Math.Max(0.0, chroma) / 0.2)
+                gate *= cg * cg * (3.0 - 2.0 * cg)
+            End If
             If gate <= 0.0 Then Return
 
             Dim hueShift As Single = 0, satShift As Single = 0, lumShift As Single = 0
@@ -1716,10 +1754,8 @@ Namespace Services
             h0 = CSng(h0 * If(h0 < 0, MixerProPhotoHueDownGains(lo), MixerProPhotoHueGains(lo)))
             h1 = CSng(h1 * If(h1 < 0, MixerProPhotoHueDownGains(hi), MixerProPhotoHueGains(hi)))
             ' Mit MixerProPhotoSatDownFromHsl rechnet der Aufrufer die Entsaettigung auf dem alten Weg.
-            If MixerProPhotoSatDownFromHsl Then
-                If s0 < 0 Then s0 = 0
-                If s1 < 0 Then s1 = 0
-            End If
+            If s0 < 0 AndAlso SatDownOnHsl(lo) Then s0 = 0
+            If s1 < 0 AndAlso SatDownOnHsl(hi) Then s1 = 0
             s0 = CSng(s0 * If(s0 < 0, MixerProPhotoSatDownGains(lo), MixerProPhotoSatUpGains(lo)))
             s1 = CSng(s1 * If(s1 < 0, MixerProPhotoSatDownGains(hi), MixerProPhotoSatUpGains(hi)))
             hueShift = h0 + (h1 - h0) * w
@@ -3406,11 +3442,16 @@ Namespace Services
                                         lWeight *= lDark * lDark * (3.0 - 2.0 * lDark)
                                     End If
                                     lum = ApplyHslBandGain(lum, lLum * lWeight / 100.0)
-                                    If MixerProPhotoSatDownFromHsl AndAlso lSat < 0 Then
-                                        ' Nur die Entsaettigung, Tor an der echten Buntheit wie im sRGB-Zweig.
-                                        Dim lGateCs = Math.Min(1.0, lChroma / 0.2)
-                                        lGateCs = lGateCs * lGateCs * (3.0 - 2.0 * lGateCs)
-                                        sat = ApplyHslSaturationGain(sat, lSat * lGateCs / 100.0)
+                                    If chain.HslDownReference IsNot Nothing Then
+                                        ' Nur die Entsaettigung der Baender, die den alten Weg nehmen, Tor an
+                                        ' der echten Buntheit wie im sRGB-Zweig.
+                                        Dim dHue As Single = 0, dSat As Single = 0, dLum As Single = 0
+                                        GetHslBandAdjustments(ReferenceBandHue(lBandHue), chain.HslDownReference, dHue, dSat, dLum)
+                                        If dSat < 0 Then
+                                            Dim lGateCs = Math.Min(1.0, lChroma / 0.2)
+                                            lGateCs = lGateCs * lGateCs * (3.0 - 2.0 * lGateCs)
+                                            sat = ApplyHslSaturationGain(sat, dSat * lGateCs / 100.0)
+                                        End If
                                     End If
                                 End If
                             ElseIf hslAdj IsNot Nothing Then
