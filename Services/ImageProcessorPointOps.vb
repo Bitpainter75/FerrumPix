@@ -139,6 +139,9 @@ Namespace Services
             ''' HSL-Baender und Split-Toning brauchen die Reglerwerte im Pixel - der Zustand wird
             ''' mitgefuehrt statt kopiert.
             Public Hsl As ImageAdjustments
+            ''' Nur im Messversuch MixerInProPhoto: die Bandwerte mit der geeichten Luminanz des
+            ''' bisherigen Wegs (ReferenceHslLuminance), fuer die Luminanz nach MixerProPhotoLumFromHsl.
+            Public HslReference As ImageAdjustments
             ''' Die wirksamen Farbfelder der Punktfarbe, oder Nothing (PointColorMath).
             Public PointColors As PointColorMath.Prepared()
             ''' Die Farbgradierung, oder Nothing. Die Toenung ist ein Versatz in Y/Cb/Cr je Zone
@@ -417,6 +420,7 @@ Namespace Services
             If adj.HasHslChanges() Then
                 ' Der Messversuch im ProPhoto-HSV hat eigene Staerken und nimmt die Reglerwerte roh.
                 chain.Hsl = If(MixerInProPhoto, adj, ReferenceHslLuminance(adj))
+                If MixerInProPhoto Then chain.HslReference = ReferenceHslLuminance(adj)
                 chain.IsIdentity = False
             End If
 
@@ -1592,6 +1596,43 @@ Namespace Services
         ''' <summary>HSV-Saettigung der Fuehrungsfarbe, ab der ein Band voll greift; darunter
         ''' smoothstep gegen 0, damit kein Band ein Grau bewegt.</summary>
         Friend Shared MixerProPhotoGate As Double = 0.1
+        ''' <summary>Staerken JE BAND (Rot, Orange, Gelb, Gruen, Aqua, Blau, Lila, Magenta), mal den
+        ''' Gesamtwerten oben. Aus der zweiten Runde (2026-10-25, 57 Bilder, je Stellung +-60): der
+        ''' Kehrwert des gemessenen Faktors. Aqua beim Farbton auf 2,5 gedeckelt (gemessen 0,25, der
+        ''' Treffer blieb dort aber auch bei gleicher Staerke niedrig); Magenta hat nur bei
+        ''' Saettigung -60 genug Bildpunkte, sonst 1 bzw. der Gesamtwert.</summary>
+        Friend Shared MixerProPhotoHueGains As Double() = {0.97, 1.02, 0.77, 2.2, 2.5, 1.63, 2.35, 1.0}
+        Friend Shared MixerProPhotoSatDownGains As Double() = {0.625, 0.743, 0.556, 1.25, 0.915, 0.72, 0.904, 0.735}
+        Friend Shared MixerProPhotoSatUpGains As Double() = {0.33, 0.435, 0.36, 0.698, 0.6, 0.577, 0.75, 0.6}
+        ''' <summary>Die Luminanz auf dem bisherigen Weg (HSL von sRGB, geeichte Faktoren, Tor und
+        ''' Bandlage wie dort) statt als Faktor auf den HSV-Wert. In Runde zwei traf die Luminanz im
+        ''' ProPhoto-HSV auch bei richtiger Staerke schlechter (Treffer 21 bis 35 statt 36 bis 46
+        ''' Prozent bei Rot und Blau): die Form ist dort eine andere.</summary>
+        Friend Shared MixerProPhotoLumFromHsl As Boolean = True
+        ''' <summary>Kodierung der ProPhoto-Werte vor HSV: 0 linear, 1 Gamma 1,8 (ProPhoto nach Norm),
+        ''' 2 sRGB-Kurve (wie die Kurven der Referenz, ApplyCurvesInMelissa). Eine Farbtondrehung
+        ''' laesst groessten und kleinsten Kanal bei JEDER Kodierung stehen; was sich unterscheidet,
+        ''' sind der Farbton eines Bildpunkts und wie Saettigung und Wert auf eine Aenderung
+        ''' reagieren.</summary>
+        Friend Shared MixerProPhotoEncoding As Integer = 0
+
+        Private Shared Function EncodeProPhoto(v As Double) As Double
+            If v <= 0.0 Then Return 0.0
+            Select Case MixerProPhotoEncoding
+                Case 1 : Return Math.Pow(v, 1.0 / 1.8)
+                Case 2 : Return PointColorMath.SrgbEncode(Math.Min(1.0, v))
+                Case Else : Return v
+            End Select
+        End Function
+
+        Private Shared Function DecodeProPhoto(v As Double) As Double
+            If v <= 0.0 Then Return 0.0
+            Select Case MixerProPhotoEncoding
+                Case 1 : Return Math.Pow(v, 1.8)
+                Case 2 : Return PointColorMath.SrgbDecode(Math.Min(1.0, v))
+                Case Else : Return v
+            End Select
+        End Function
 
         ''' <summary>Der Farbmischer im HSV von linearem ProPhoto, auf einem Bildpunkt in sRGB mit
         ''' Gamma (rein und raus). Band und Tor aus der Fuehrungsfarbe, wie im sRGB-Zweig.</summary>
@@ -1602,6 +1643,7 @@ Namespace Services
             Dim pg = PointColorMath.SrgbDecode(Math.Max(0.0, Math.Min(1.0, g)))
             Dim pb = PointColorMath.SrgbDecode(Math.Max(0.0, Math.Min(1.0, b)))
             PointColorMath.Transform(PointColorMath.SrgbToProPhoto, pr, pg, pb)
+            pr = EncodeProPhoto(pr) : pg = EncodeProPhoto(pg) : pb = EncodeProPhoto(pb)
             Dim h As Double, s As Double, v As Double
             If Not PointColorMath.ToHsv(pr, pg, pb, h, s, v) Then Return
 
@@ -1609,6 +1651,7 @@ Namespace Services
             Dim qg = PointColorMath.SrgbDecode(Math.Max(0.0, Math.Min(1.0, guideG)))
             Dim qb = PointColorMath.SrgbDecode(Math.Max(0.0, Math.Min(1.0, guideB)))
             PointColorMath.Transform(PointColorMath.SrgbToProPhoto, qr, qg, qb)
+            qr = EncodeProPhoto(qr) : qg = EncodeProPhoto(qg) : qb = EncodeProPhoto(qb)
             Dim gh As Double, gs As Double, gv As Double
             If Not PointColorMath.ToHsv(qr, qg, qb, gh, gs, gv) Then Return
 
@@ -1622,7 +1665,8 @@ Namespace Services
             h += hueShift * MixerProPhotoHueGain * gate * Math.PI / 180.0
             Dim sa = satShift * gate / 100.0
             s = ApplyHslSaturationGain(s, sa * If(sa < 0.0, MixerProPhotoSatDown, MixerProPhotoSatUp))
-            Dim a = Math.Max(-1.0, Math.Min(1.0, lumShift * gate / 100.0))
+            ' Mit MixerProPhotoLumFromHsl rechnet der Aufrufer die Luminanz danach auf dem alten Weg.
+            Dim a = If(MixerProPhotoLumFromHsl, 0.0, Math.Max(-1.0, Math.Min(1.0, lumShift * gate / 100.0)))
             If a < 0.0 Then
                 v *= Math.Pow(2.0, -MixerProPhotoLumDown * Math.Pow(-a, 1.6))
             ElseIf a > 0.0 Then
@@ -1630,13 +1674,16 @@ Namespace Services
             End If
 
             PointColorMath.FromHsv(h, s, v, pr, pg, pb)
+            pr = DecodeProPhoto(pr) : pg = DecodeProPhoto(pg) : pb = DecodeProPhoto(pb)
             PointColorMath.Transform(PointColorMath.ProPhotoToSrgb, pr, pg, pb)
             r = PointColorMath.SrgbEncode(Math.Max(0.0, Math.Min(1.0, pr)))
             g = PointColorMath.SrgbEncode(Math.Max(0.0, Math.Min(1.0, pg)))
             b = PointColorMath.SrgbEncode(Math.Max(0.0, Math.Min(1.0, pb)))
         End Sub
 
-        ''' <summary>Wie GetHslBandAdjustments, mit eigenen Bandmitten (aufsteigend, Grad).</summary>
+        ''' <summary>Wie GetHslBandAdjustments, mit eigenen Bandmitten (aufsteigend, Grad) und den
+        ''' Staerken je Band (MixerProPhotoHueGains, MixerProPhotoSatDownGains/UpGains) schon auf den
+        ''' Bandwerten, bevor zwischen zwei Baendern gemischt wird.</summary>
         Private Shared Sub GetBandAdjustmentsAt(hue As Double, centers As Double(), adj As ImageAdjustments,
                                                 ByRef hueShift As Single, ByRef satShift As Single, ByRef lumShift As Single)
             Dim h = ((hue Mod 360.0) + 360.0) Mod 360.0
@@ -1658,6 +1705,9 @@ Namespace Services
             Dim h0, s0, l0, h1, s1, l1 As Single
             GetHslBandValues(lo, adj, h0, s0, l0)
             GetHslBandValues(hi, adj, h1, s1, l1)
+            h0 = CSng(h0 * MixerProPhotoHueGains(lo)) : h1 = CSng(h1 * MixerProPhotoHueGains(hi))
+            s0 = CSng(s0 * If(s0 < 0, MixerProPhotoSatDownGains(lo), MixerProPhotoSatUpGains(lo)))
+            s1 = CSng(s1 * If(s1 < 0, MixerProPhotoSatDownGains(hi), MixerProPhotoSatUpGains(hi)))
             hueShift = h0 + (h1 - h0) * w
             satShift = s0 + (s1 - s0) * w
             lumShift = l0 + (l1 - l0) * w
@@ -3326,6 +3376,23 @@ Namespace Services
                                     ApplyMixerInProPhoto(mr, mg, mb, mr, mg, mb, hslAdj)
                                 End If
                                 RgbToHslF(mr, mg, mb, h, sat, lum)
+                                If MixerProPhotoLumFromHsl AndAlso chain.HslReference IsNot Nothing Then
+                                    ' Die Luminanz wie im sRGB-Zweig unten: Band aus der Fuehrung nach der
+                                    ' Bandlage der Referenz, Tor an Buntheit und Saettigung wie dort.
+                                    Dim lBandHue = If(hasGuide, guideH, h)
+                                    Dim lGateSat = If(hasGuide, guideSat, sat)
+                                    Dim lGateLum = If(hasGuide, guideLum, lum)
+                                    Dim lHue As Single = 0, lSat As Single = 0, lLum As Single = 0
+                                    GetHslBandAdjustments(ReferenceBandHue(lBandHue), chain.HslReference, lHue, lSat, lLum)
+                                    Dim lChroma = lGateSat * (1.0 - Math.Abs(2.0 * lGateLum - 1.0))
+                                    Dim lWeight = Math.Min(1.0, If(lGateLum > 0.5, lChroma, lGateSat) / 0.1)
+                                    lWeight = lWeight * lWeight * (3.0 - 2.0 * lWeight)
+                                    If lGateLum <= 0.5 Then
+                                        Dim lDark = Math.Min(1.0, lChroma / 0.1)
+                                        lWeight *= lDark * lDark * (3.0 - 2.0 * lDark)
+                                    End If
+                                    lum = ApplyHslBandGain(lum, lLum * lWeight / 100.0)
+                                End If
                             ElseIf hslAdj IsNot Nothing Then
                                 ' Band und Tore aus der FUEHRUNGSFARBE (MixerGuideSigma), angewandt auf
                                 ' den Bildpunkt selbst: Nachbarn mit derselben Farbe bekommen dieselbe
