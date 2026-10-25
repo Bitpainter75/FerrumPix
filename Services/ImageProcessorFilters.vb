@@ -2622,23 +2622,21 @@ Namespace Services
             Dim pos = h - HslBandCenters(lo)
             If pos < 0.0 Then pos += 360.0
 
-            ' KERN VOLL, nur um die Bandgrenze herum ueberblenden. Ohne den Kern lief die Kurve
-            ' vom einen Anker glatt zum naechsten durch, und volle Wirkung hatte ein Regler NUR
-            ' genau auf seinem Ankerfarbton - gemessen auf 11 Prozent des Farbkreises. Ein Laub bei
-            ' Farbton 93 bekam vom Gruen-Regler 0,58, ein Himmel bei 208 vom Blau-Regler 0,69: der
-            ' Regler machte dort knapp die Haelfte dessen, was draufsteht. Mit dem Kern hat jedes
-            ' Band auf seinem inneren Bereich die volle Wirkung (55 Prozent des Farbkreises), die
-            ' Ueberblendung passiert im mittleren Bereich zwischen zwei Ankern. Die Kernbreite ist
-            ' gemessen: 0,25 / 0,30 / 0,35 brachten an echten Bildfarben 68/70/70 Prozent mehr
-            ' Chroma bei Laub und 62/68/72 bei Nadelgruen - ueber 0,30 hinaus wird nur noch der
-            ' Uebergang schmaler, ohne dass die Wirkung nennenswert steigt.
+            ' VON ANKER ZU ANKER GLATT UEBERBLENDEN (smoothstep ueber den ganzen Abstand, die
+            ' Ableitung an beiden Ankern null): keine Kante quer durch einen Verlauf, der eine
+            ' Bandgrenze kreuzt.
             '
-            ' Die Ableitung bleibt an BEIDEN Enden null (smoothstep auf dem gestauchten Bereich,
-            ' danach konstant) - genau darum ging es beim Umbau von den harten Grenzen weg: keine
-            ' Kante quer durch einen Verlauf, der eine Bandgrenze kreuzt.
-            Const kern As Double = 0.30
+            ' KEIN KERN MIT VOLLER WIRKUNG MEHR. Ein Kern von 0,30 (jedes Band voll auf seinem
+            ' inneren Bereich, Ueberblendung nur in den mittleren 40 Prozent) war gegen echte
+            ' Bildfarben gewaehlt, ohne Referenz. Gegen den DNG-Konverter gemessen (2026-10-25, 62
+            ' Bilder, alle 40 Stellungen hsl-*+-60) trifft die glatte Ueberblendung besser: im
+            ' Mittel 39,6 statt 37,3 Prozent, 28 Stellungen besser, 11 schlechter (Aqua, Magenta
+            ' Saettigung -60, Blau Farbton). Und der steile Uebergang verstaerkte Rauschen: liegen
+            ' zwei Nachbarbaender weit auseinander (Cool Glow: Blau -7, Lila +60 Farbton, Saettigung
+            ' 0 gegen -63), sprangen einzelne Bildpunkte, deren Farbton um die Grenze schwankt;
+            ' eine halbe 8-Bit-Stufe am Eingang aenderte bei 0,118 Prozent der Bildpunkte die Farbe
+            ' um mehr als 3 dE, glatt bei 0,036 Prozent (TEL_0674, Schriftzug im Hintergrund).
             Dim t = If(span > 0.0, pos / span, 0.0)
-            t = (t - kern) / (1.0 - 2.0 * kern)
             If t < 0.0 Then t = 0.0 Else If t > 1.0 Then t = 1.0
             Dim w = CSng(t * t * (3.0 - 2.0 * t))
 

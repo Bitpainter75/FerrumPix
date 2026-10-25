@@ -74,6 +74,13 @@ Namespace Services
             ''' Wo Canons ColorData ihre Pegel hat, je Fassung und Laenge ("66|3778"): Wort des
             ''' ersten Schwarzwerts; SpecularWhiteLevel steht fuenf Worte dahinter.
             Public ReadOnly CanonColorDataLayouts As New Dictionary(Of String, Integer)(StringComparer.Ordinal)
+            ''' Generation des Referenzprofils je Modell, nur wo sie vom Standard abweicht.
+            Public ReadOnly ProfileGenerations As New Dictionary(Of String, Integer)(StringComparer.Ordinal)
+            Public DefaultProfileGeneration As Integer = 1
+            ''' Die Daempfung der Tiefen: Faktor auf die Farbigkeit je linearer Helligkeit
+            ''' (ShadowSaturationSteps Stufen), und fuer welche Generation sie gilt.
+            Public ShadowSaturation As Single()
+            Public ShadowSaturationGeneration As Integer
 
             Public Sub New(referenceOffsetEv As Double, maxShiftEv As Double,
                            offsets As Dictionary(Of String, Double),
@@ -110,6 +117,10 @@ Namespace Services
             Dim levelColorData As New Dictionary(Of String, (Version As Integer, BlackWord As Integer, WhiteWord As Integer))(StringComparer.OrdinalIgnoreCase)
             Dim canonLayouts As New Dictionary(Of String, Integer)(StringComparer.Ordinal)
             Dim defaultCalibration As ColorCalibration = Nothing
+            Dim generations As New Dictionary(Of String, Integer)(StringComparer.Ordinal)
+            Dim defaultGeneration = 1
+            Dim shadowSaturation As Single() = Nothing
+            Dim shadowSaturationGeneration = 0
             ' Anker und Deckel werden erst zugewiesen, wenn die ganze Datei gelesen ist. Sonst
             ' stuende nach einem Abbruch zwischen beiden der eine Wert aus der Datei neben dem
             ' anderen aus dem Notbehelf - eine Mischung, die es nirgends geben darf.
@@ -175,6 +186,23 @@ Namespace Services
                                 canonLayouts(entry.Name) = entry.Value.GetInt32()
                             Next
                         End If
+                        ' Die Generation des Referenzprofils und die Daempfung der Tiefen, die nur an
+                        ' einer Generation gilt (siehe ShadowSaturationFor).
+                        Dim generationEntries, generationDefault, shadowEntry As JsonElement
+                        If root.TryGetProperty("profileGenerations", generationEntries) Then
+                            For Each entry In generationEntries.EnumerateObject()
+                                generations(entry.Name) = entry.Value.GetInt32()
+                            Next
+                        End If
+                        If root.TryGetProperty("profileGenerationDefault", generationDefault) Then
+                            defaultGeneration = generationDefault.GetInt32()
+                        End If
+                        If root.TryGetProperty("shadowSaturation", shadowEntry) Then
+                            shadowSaturation = BuildShadowSaturation(
+                                shadowEntry.GetProperty("lightness").EnumerateArray().Select(Function(v) v.GetDouble()).ToArray(),
+                                shadowEntry.GetProperty("factor").EnumerateArray().Select(Function(v) v.GetDouble()).ToArray())
+                            shadowSaturationGeneration = shadowEntry.GetProperty("generation").GetInt32()
+                        End If
                         referenceOffsetEv = readReferenceOffsetEv
                         maxShiftEv = readMaxShiftEv
                     End Using
@@ -187,6 +215,10 @@ Namespace Services
                 levels.Clear()
                 levelColorData.Clear()
                 canonLayouts.Clear()
+                generations.Clear()
+                defaultGeneration = 1
+                shadowSaturation = Nothing
+                shadowSaturationGeneration = 0
                 referenceOffsetEv = DefaultReferenceOffsetEv
                 maxShiftEv = DefaultMaxShiftEv
             End Try
@@ -198,7 +230,45 @@ Namespace Services
             For Each pair In canonLayouts
                 result.CanonColorDataLayouts(pair.Key) = pair.Value
             Next
+            For Each pair In generations
+                result.ProfileGenerations(pair.Key) = pair.Value
+            Next
+            result.DefaultProfileGeneration = defaultGeneration
+            result.ShadowSaturation = shadowSaturation
+            result.ShadowSaturationGeneration = shadowSaturationGeneration
             Return result
+        End Function
+
+        ''' <summary>Stufen der Daempfungstabelle ueber die lineare Helligkeit 0 bis 1.</summary>
+        Friend Const ShadowSaturationSteps As Integer = 1024
+
+        ''' <summary>Die Kennlinie der Ressource (Faktor je L*) als Tabelle ueber die LINEARE
+        ''' Helligkeit, weil die RAW-Stufe linear rechnet. Zwischen den Stuetzstellen linear, vor der
+        ''' ersten und nach der letzten waagerecht.</summary>
+        Private Shared Function BuildShadowSaturation(lightness As Double(), factor As Double()) As Single()
+            If lightness.Length = 0 OrElse lightness.Length <> factor.Length Then
+                Throw New InvalidDataException("Daempfung der Tiefen: Stuetzstellen passen nicht zusammen.")
+            End If
+            Dim table(ShadowSaturationSteps - 1) As Single
+            For i = 0 To ShadowSaturationSteps - 1
+                Dim y = i / (ShadowSaturationSteps - 1.0)
+                Dim l = If(y > 0.008856, 116.0 * Math.Pow(y, 1.0 / 3.0) - 16.0, 903.3 * y)
+                Dim f As Double
+                If l <= lightness(0) Then
+                    f = factor(0)
+                ElseIf l >= lightness(lightness.Length - 1) Then
+                    f = factor(factor.Length - 1)
+                Else
+                    Dim k = 1
+                    While lightness(k) < l
+                        k += 1
+                    End While
+                    Dim t = (l - lightness(k - 1)) / (lightness(k) - lightness(k - 1))
+                    f = factor(k - 1) + t * (factor(k) - factor(k - 1))
+                End If
+                table(i) = CSng(f)
+            Next
+            Return table
         End Function
 
         Private Shared Function ReadColorCalibration(item As JsonElement) As ColorCalibration
@@ -298,6 +368,35 @@ Namespace Services
             Dim k = Key(maker, model)
             Return k.Length > 0 AndAlso Resource.ColorCalibrations.ContainsKey(k)
         End Function
+
+        ''' <summary>Die Daempfung der Tiefen fuer dieses Modell, oder Nothing, wenn sie dort nicht
+        ''' gilt.
+        '''
+        ''' WOZU: das Referenzprogramm entwickelt Kameras ab etwa 2014 in den Tiefen blasser als
+        ''' aeltere, seine Profile dafuer tragen eine eigene Generation. Unsere Basis kennt diesen
+        ''' Unterschied nicht und lag an diesen Kameras in den Tiefen rund ein Viertel zu satt, an
+        ''' den aelteren innerhalb weniger Prozent (RAW_UND_FARBE.md, Daempfung der Tiefen). Die
+        ''' Ressource traegt je Modell nur die Generation; die Kennlinie ist an unseren Eichbildern
+        ''' gegen die Referenz gemessen. Unbekannte Modelle bekommen den Standard, die neueste
+        ''' Generation: unbekannt ist meist, was nach der Messung erschienen ist.</summary>
+        Friend Shared Function ShadowSaturationFor(maker As String, model As String) As Single()
+            If Resource.ShadowSaturation Is Nothing Then Return Nothing
+            ' TryGetValue setzt bei einem Fehlschlag 0, deshalb erst danach auf den Standard.
+            Dim generation As Integer
+            Dim k = Key(maker, model)
+            If k.Length = 0 OrElse Not Resource.ProfileGenerations.TryGetValue(k, generation) Then
+                generation = Resource.DefaultProfileGeneration
+            End If
+            Return If(generation = Resource.ShadowSaturationGeneration, Resource.ShadowSaturation, Nothing)
+        End Function
+
+        ''' <summary>Anzahl der Modelle mit eigener Generation des Referenzprofils. Fuer die
+        ''' Diagnose.</summary>
+        Friend Shared ReadOnly Property ProfileGenerationCount As Integer
+            Get
+                Return Resource.ProfileGenerations.Count
+            End Get
+        End Property
 
         ''' <summary>Die Kalibrierungsregler fuer dieses Modell: sein eigener Eintrag, sonst der
         ''' Standard, sonst Nothing. Ohne Kameranamen gibt es ebenfalls den Standard, denn er haengt

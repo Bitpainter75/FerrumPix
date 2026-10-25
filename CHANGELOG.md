@@ -46,8 +46,33 @@
   presets with sharpening and noise reduction come out much closer. Pictures that already use
   sharpening or colour noise reduction will look somewhat different.
 
-- **Preset amount:** after applying an XMP preset that allows it, an Amount slider appears in the
-  preset panel. 0 % is the picture without the preset, 100 % the preset and 200 % its changes
+- **No more jagged edges and speckles from the colour mixer:** colour noise reduction now runs
+  before all colour and tone adjustments, and the colour mixer no longer changes the brightness of
+  nearly grey, noisy shadows. Presets that treat neighbouring colours very differently left jagged
+  edges around coloured lights and speckles on calm surfaces.
+
+- **Calmer colours with presets that use the colour mixer:** neighbouring colour bands now blend
+  smoothly into each other, and the colour mixer decides on a slightly smoothed colour which band
+  a pixel belongs to. Presets that treat two neighbouring colours very differently left blotchy,
+  speckled areas where a colour sits between them, for example on lettering in the background.
+
+- **Sharper colour edges in saved JPEGs:** JPEG files you save or export, and collages, now keep
+  the full colour resolution instead of halving it. Coloured edges such as stage lights and text
+  stay crisp, the files get about a third larger.
+
+- **Less saturated shadows on newer cameras:** RAW files from cameras of roughly the last ten years
+  came out with too strong colours in dark areas, most visible in reds and skin under stage light.
+  FerrumPix now tones them down for these cameras the way the reference program does, while older
+  cameras keep their colours. Edited pictures from these cameras will look a little calmer in the
+  shadows.
+
+- **Camera calibration closer to the reference:** shadow tint now works across the whole picture
+  like in the reference program instead of only in the shadows, where it was far too strong and
+  turned red and skin tones. All calibration sliders now have the strength of the reference,
+  several of them used together no longer cancel each other out, and together with the curves of
+  a preset they no longer push reds too far.
+
+- **Preset amount:** after applying an XMP preset, an Amount slider appears in the preset panel. 0 % is the picture without the preset, 100 % the preset and 200 % its changes
   twice. It goes away with the next edit, as in the reference program.
 
 - **Presets with colour curves apply completely:** presets that combine red, green and blue curves

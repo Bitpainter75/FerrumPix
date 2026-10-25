@@ -29,23 +29,13 @@ Namespace Services
             Public Property HasCropBottom As Boolean
             Public Property HasLensCorrection As Boolean
             Public Property HasChromaticAberration As Boolean
+            ''' Das Preset schaltet die Profilkorrektur ausdruecklich ab (LensProfileEnable="0").
+            Public Property LensCorrectionOff As Boolean
+            ''' Das Preset schaltet die Farbsaumkorrektur ausdruecklich ab (AutoLateralCA="0").
+            Public Property ChromaticAberrationOff As Boolean
             Public Property ProfileName As String = ""
             Public Property HasEmbeddedProfileReference As Boolean
         End Class
-
-        ''' <summary>Erlaubt das Preset eine Staerke (crs:SupportsAmount="True" am Preset selbst)? Der
-        ''' gleichnamige Eintrag im Profilblock crs:Look gilt der Profilmenge und zaehlt hier nicht.</summary>
-        Public Shared Function PresetSupportsAmount(xmpPath As String) As Boolean
-            If String.IsNullOrWhiteSpace(xmpPath) OrElse Not File.Exists(xmpPath) Then Return False
-            Try
-                Dim text = Regex.Replace(File.ReadAllText(xmpPath), "<crs:Look(?:\s[^>]*)?(?<!/)>.*?</crs:Look>", "",
-                                         RegexOptions.Singleline)
-                Return Regex.IsMatch(text, "crs:SupportsAmount\s*=\s*""True""", RegexOptions.IgnoreCase) OrElse
-                       Regex.IsMatch(text, "<crs:SupportsAmount>\s*True\s*</crs:SupportsAmount>", RegexOptions.IgnoreCase)
-            Catch
-                Return False
-            End Try
-        End Function
 
         ''' <summary>Liest die importierbaren Zusatzteile. Adobe speichert in XMP normalerweise
         ''' nur eine Profil-REFERENZ; die 3D-Daten bleiben im Camera-Raw-Installationsordner. Daher
@@ -101,6 +91,13 @@ Namespace Services
                 (TryGetXmpDouble(values, "ChromaticAberrationR", caValue) AndAlso Math.Abs(caValue) > 0.0001) OrElse
                 IsXmpTrue(values, "RemoveChromaticAberration") OrElse
                 IsXmpTrue(values, "AutoLateralCA")
+            ' AUSDRUECKLICH AUS: ein Preset, das LensProfileEnable="0" traegt, rechnet beim
+            ' Referenzprogramm ohne Profilkorrektur, auch wenn sie dort sonst an waere. Ebenso der
+            ' Farbsaum, wenn AutoLateralCA="0" steht und nichts anderes ihn verlangt.
+            Dim lensFlag = GetXmpString(values, "LensProfileEnable")
+            result.LensCorrectionOff = Not String.IsNullOrWhiteSpace(lensFlag) AndAlso Not result.HasLensCorrection
+            Dim caFlag = GetXmpString(values, "AutoLateralCA")
+            result.ChromaticAberrationOff = Not String.IsNullOrWhiteSpace(caFlag) AndAlso Not result.HasChromaticAberration
             Return result
         End Function
 

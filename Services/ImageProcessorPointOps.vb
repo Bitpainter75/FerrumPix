@@ -70,6 +70,10 @@ Namespace Services
             ''' mittlere linear dazwischen. Je Kanal gerechnet lag der Vorgriff in gesaettigten Farben
             ''' sichtbar neben dem Neuaufbau. Nothing, wenn nichts vorzugreifen ist.</summary>
             Public RawStageTone As Single()
+            ''' Die Daempfung der Tiefen der RAW-Stufe (ImageAdjustments.ShadowSaturationInSource),
+            ''' nur zusammen mit RawStageTone: der Vorgriff hebt sie bei der alten Helligkeit auf und
+            ''' daempft bei der neuen.
+            Public RawStageShadowSaturation As Single()
 
             ''' <summary>Lichter und Tiefen allein als Tabelle, ausgewertet nicht am Bildpunkt, sondern
             ''' an der Basisschicht seiner Umgebung (LocalToneBase, gebaut im Durchlauf aus dem Bild
@@ -145,8 +149,8 @@ Namespace Services
             Public SplitHighTable As Single()
             Public SplitLumTable As Single()
 
-            ''' Gruen-/Magenta-Verschiebung nur in den Tiefen (crs:ShadowTint). Luminanzabhaengig,
-            ''' laesst sich also nicht in die Matrix falten.
+            ''' Gruen-/Magenta-Verschiebung, am staerksten in den Tiefen (crs:ShadowTint).
+            ''' Luminanzabhaengig, laesst sich also nicht in die Matrix falten.
             Public ShadowTint As Single
 
             ''' Preset-Farbmatrix samt Ueberblendstaerke (das Preset wird ueber das Original geblendet).
@@ -237,12 +241,34 @@ Namespace Services
                              adj.Saturation <> 0 OrElse adj.Contrast <> 0 OrElse
                              adj.Brightness <> 0
             ' Kalibrierung wirkt auf die Primaerfarben und gehoert damit VOR Weissabgleich und
-            ' Saettigung - dieselbe Reihenfolge wie ueblich. Beide Matrizen werden zu EINER
-            ' verrechnet, der Pixeldurchlauf bleibt also unveraendert schnell.
+            ' Saettigung - dieselbe Reihenfolge wie ueblich.
+            '
+            ' SIE RECHNET LINEAR, in derselben Matrix wie der Weissabgleich (3x3 ohne Versatz), der
+            ' Pixeldurchlauf bleibt also unveraendert schnell. Als Matrix auf gammakodierten Werten
+            ' schaukelte sie sich mit den Kurven eines Presets auf: an TEL_0674 mit Cool Glow Rot
+            ' 1,34 statt 1,20 der Buntheit der Referenz, der Farbton 6 statt 3 Grad daneben. Linear
+            ' und neu geeicht trifft auch jeder Regler fuer sich besser (CalibrationGains).
             Dim kalibrierung = BuildCalibrationMatrix(adj)
-            If wantsColor OrElse kalibrierung IsNot Nothing Then
-                Dim wb = If(wantsColor, BuildPointOpColorMatrix(adj), Nothing)
-                chain.ColorMatrix = ComposeColorMatrix(wb, kalibrierung)
+            If kalibrierung IsNot Nothing Then
+                Dim cal = {kalibrierung(0), kalibrierung(1), kalibrierung(2),
+                           kalibrierung(5), kalibrierung(6), kalibrierung(7),
+                           kalibrierung(10), kalibrierung(11), kalibrierung(12)}
+                Dim w = chain.WhiteBalanceMatrix
+                If w IsNot Nothing Then
+                    Dim combined(8) As Single
+                    For i = 0 To 2
+                        For j = 0 To 2
+                            combined(i * 3 + j) = w(i * 3) * cal(j) + w(i * 3 + 1) * cal(3 + j) + w(i * 3 + 2) * cal(6 + j)
+                        Next
+                    Next
+                    cal = combined
+                End If
+                chain.WhiteBalanceMatrix = cal
+                chain.IsIdentity = False
+                EnsureGammaTables()
+            End If
+            If wantsColor Then
+                chain.ColorMatrix = BuildPointOpColorMatrix(adj)
                 chain.IsIdentity = False
             End If
 
@@ -270,6 +296,7 @@ Namespace Services
             ' Der Vorgriff auf den Neuaufbau aus der RAW-Stufe ist eine eigene, erste Stufe.
             chain.RawStageTone = BuildRawStageToneTable(adj)
             If chain.RawStageTone IsNot Nothing Then
+                chain.RawStageShadowSaturation = adj.ShadowSaturationInSource
                 EnsureGammaTables()
                 chain.IsIdentity = False
             End If
@@ -523,6 +550,51 @@ Namespace Services
         ''' Die Drehung um die Grauachse haelt Neutralgrau neutral - eine naive Kanalvertauschung
         ''' wuerde dagegen jedes Grau einfaerben.
         ''' Nothing, wenn alle sechs Regler auf 0 stehen (kein Rechenaufwand im Normalfall).</summary>
+        ' SCHATTENTOENUNG nach der Referenz (geeicht 2026-10-25 an 57 Bildern, Reglereichung mit
+        ' kal-schattentoenung+-50). Sie wirkt dort ueber das GANZE Bild, am staerksten bei L 10 bis 20
+        ' und zu den Lichtern hin auslaufend, und laesst die Helligkeit stehen. Die Vorgaengerin wirkte
+        ' nur unter der Bildmitte, in den tiefsten Schatten doppelt so stark und drehte Rot- und
+        ' Hauttoene dort sechsmal so weit (Farbton der Rottoene +35,7 Grad gegen +5,6 bei -50).
+        Private Const ShadowTintStrength As Single = 0.062F
+        Private Const ShadowTintRed As Single = 0.7F
+        Private Const ShadowTintBlue As Single = 0.483F
+        Private Shared ReadOnly ShadowTintLevels As Single() = {0.0F, 0.05F, 0.15F, 0.27F, 0.42F, 0.6F, 0.85F, 1.0F}
+        Private Shared ReadOnly ShadowTintWeights As Single() = {0.217F, 0.483F, 1.0F, 0.977F, 0.828F, 0.51F, 0.229F, 0.038F}
+
+        ''' <summary>Dieselben Zahlen fuer den Shader der Punktkette.</summary>
+        Private Shared Function ShadowTintParameters() As (Strength As Single, Red As Single, Blue As Single, Weights As Single())
+            Return (ShadowTintStrength, ShadowTintRed, ShadowTintBlue, ShadowTintWeights)
+        End Function
+
+        ''' <summary>Gewicht der Schattentoenung ueber der Helligkeit (Rec.601, 0 bis 1).</summary>
+        Private Shared Function ShadowTintWeight(brightness As Single) As Single
+            If brightness <= ShadowTintLevels(0) Then Return ShadowTintWeights(0)
+            For i = 1 To ShadowTintLevels.Length - 1
+                If brightness <= ShadowTintLevels(i) Then
+                    Dim t = (brightness - ShadowTintLevels(i - 1)) / (ShadowTintLevels(i) - ShadowTintLevels(i - 1))
+                    Return ShadowTintWeights(i - 1) + (ShadowTintWeights(i) - ShadowTintWeights(i - 1)) * t
+                End If
+            Next
+            Return ShadowTintWeights(ShadowTintWeights.Length - 1)
+        End Function
+
+        ''' <summary>STAERKE JE KALIBRIERUNGSREGLER, in dieser Folge: Rot Farbton, Rot Saettigung plus
+        ''' und minus, dann Gruen und Blau ebenso. Ein Feld, damit die Reglereichung sie per Reflexion
+        ''' setzen kann (REGLER_KAL_GAINS).
+        '''
+        ''' Geeicht 2026-10-25 an 62 Bildern fuer die lineare Kalibrierung (Reglereichung kal-* +-50):
+        ''' je Regler der Kehrwert unserer Wirkungsstaerke durch die der Referenz. Treffer gegen die
+        ''' fruehere Matrix auf gammakodierten Werten: Rot Farbton 43/43 auf 61/60 %, Rot Saettigung
+        ''' 53/59 auf 58/64, Gruen Farbton 39/39 auf 53/47, Gruen Saettigung 58/59 auf 68/72, Blau
+        ''' Farbton 57/59 auf 62/64, Blau Saettigung +50 58 wie vorher, -50 50 auf 51.</summary>
+        Friend Shared CalibrationGains As Single() = {0.8F, 0.97F, 1.38F, 1.04F, 0.56F, 0.78F, 1.66F, 2.97F, 3.2F}
+
+        ''' <summary>Wie weit Blau entsaettigt werden darf: Faktor bis -1, also ueber Grau hinaus.
+        ''' Bei 0 (wie Rot und Gruen) blieb Blau -50 an dieser Grenze stehen, Staerke 2,55 gegen 4,09
+        ''' der Referenz und 41 % Treffer; mit -1 und der Verstaerkung 3,2 sind es 3,76 und 51 %. Rot
+        ''' und Gruen behalten Grau als Grenze, gemessen ist dort nur +-50, wo sie nicht greift.</summary>
+        Private Const BlueSaturationFloor As Single = -1.0F
+
         Private Shared Function BuildCalibrationMatrix(adj As ImageAdjustments) As Single()
             If adj.CalibrationRedHue = 0 AndAlso adj.CalibrationRedSaturation = 0 AndAlso
                adj.CalibrationGreenHue = 0 AndAlso adj.CalibrationGreenSaturation = 0 AndAlso
@@ -530,8 +602,8 @@ Namespace Services
 
             ' Primaerfarbe drehen und saettigen. Rueckgabe: die neue Spalte der Matrix.
             Dim Wandeln =
-                Function(p As Single(), hue As Single, sat As Single) As Single()
-                    ' +/-100 entsprechen +/-30 Grad - der Bereich, in dem sich Adobes Regler bewegen.
+                Function(p As Single(), hue As Single, sat As Single, floor As Single) As Single()
+                    ' +/-100 entsprechen +/-30 Grad - der Bereich, in dem sich die Regler der Referenz bewegen.
                     Dim angle = hue / 100.0 * 30.0 * Math.PI / 180.0
                     Dim c = Math.Cos(angle), sn = Math.Sin(angle)
                     ' Drehung um die Grauachse (1,1,1)/sqrt(3), Standardform.
@@ -546,26 +618,51 @@ Namespace Services
                     Dim g = CSng(m(3) * p(0) + m(4) * p(1) + m(5) * p(2))
                     Dim b = CSng(m(6) * p(0) + m(7) * p(1) + m(8) * p(2))
                     ' Saettigung: Abstand von der Grauachse skalieren, Helligkeit unangetastet.
-                    Dim factor = 1.0F + sat / 100.0F
+                    Dim factor = Math.Max(floor, 1.0F + sat / 100.0F)
                     Dim grau = 0.299F * r + 0.587F * g + 0.114F * b
                     Return New Single() {grau + (r - grau) * factor,
                                          grau + (g - grau) * factor,
                                          grau + (b - grau) * factor}
                 End Function
 
-            Dim pr = Wandeln(New Single() {1, 0, 0}, adj.CalibrationRedHue, adj.CalibrationRedSaturation)
-            Dim pg = Wandeln(New Single() {0, 1, 0}, adj.CalibrationGreenHue, adj.CalibrationGreenSaturation)
-            Dim pb = Wandeln(New Single() {0, 0, 1}, adj.CalibrationBlueHue, adj.CalibrationBlueSaturation)
+            ' Staerke je Primaerfarbe und Richtung: CalibrationGains.
+            Dim DirectedSaturation = Function(sat As Single, plus As Single, minus As Single) As Single
+                                 Return sat * If(sat >= 0, plus, minus)
+                             End Function
+            Dim gains = CalibrationGains
+            Dim pr = Wandeln(New Single() {1, 0, 0}, adj.CalibrationRedHue * gains(0), DirectedSaturation(adj.CalibrationRedSaturation, gains(1), gains(2)), 0.0F)
+            Dim pg = Wandeln(New Single() {0, 1, 0}, adj.CalibrationGreenHue * gains(3), DirectedSaturation(adj.CalibrationGreenSaturation, gains(4), gains(5)), 0.0F)
+            Dim pb = Wandeln(New Single() {0, 0, 1}, adj.CalibrationBlueHue * gains(6), DirectedSaturation(adj.CalibrationBlueSaturation, gains(7), gains(8)), BlueSaturationFloor)
 
             ' Spalten sind die gewandelten Primaerfarben - Skia-Layout (5 Spalten je Zeile).
-            ' ZEILENSUMMEN AUF 1 NORMIEREN: ohne das bleibt Neutralgrau nicht neutral. Grau ist
-            ' (1,1,1); die Matrix bildet es auf die SUMME der drei Primaerfarben ab, und sobald auch
-            ' nur eine gedreht wurde, ist die Summe nicht mehr grau. Gemessen wurde aus (128,128,128)
-            ' ein (116,170,96) - ein deutlicher Gruenstich auf jeder neutralen Flaeche.
+            ' JEDE PRIMAERFARBE IHRE EIGENE MATRIX, nacheinander (erst Blau, dann Gruen, dann Rot).
+            ' Alle drei Spalten in EINE Matrix gelegt und dann normiert, hoben sich die Regler
+            ' gegenseitig auf: am Konzertbild mit Cool Glow (Rot +22/-15, Blau -15/+11) nahm die
+            ' Referenz dem Rot 1,11 Chroma, wir 0,18, obwohl jeder Regler fuer sich traf. Nacheinander
+            ' addieren sich die Wirkungen wie dort.
+            Dim identity = {New Single() {1, 0, 0}, New Single() {0, 1, 0}, New Single() {0, 0, 1}}
+            Dim mr = NormalizedCalibrationColumns(pr, identity(1), identity(2))
+            Dim mg = NormalizedCalibrationColumns(identity(0), pg, identity(2))
+            Dim mb = NormalizedCalibrationColumns(identity(0), identity(1), pb)
+            Dim combined = MultiplyMatrix3(mr, MultiplyMatrix3(mg, mb))
+
+            Return New Single() {
+                combined(0)(0), combined(0)(1), combined(0)(2), 0, 0,
+                combined(1)(0), combined(1)(1), combined(1)(2), 0, 0,
+                combined(2)(0), combined(2)(1), combined(2)(2), 0, 0,
+                0, 0, 0, 1, 0
+            }
+        End Function
+
+        ''' <summary>Matrix aus drei Spalten, die Zeilensummen auf 1 normiert.
+        ''' Ohne die Normierung bleibt Neutralgrau nicht neutral: Grau ist (1,1,1), die Matrix bildet
+        ''' es auf die SUMME der Spalten ab, und sobald eine gedreht wurde, ist die Summe nicht mehr
+        ''' grau. Gemessen wurde aus (128,128,128) ein (116,170,96).</summary>
+        Private Shared Function NormalizedCalibrationColumns(c0 As Single(), c1 As Single(), c2 As Single()) As Single()()
             Dim rows = {
-                New Single() {pr(0), pg(0), pb(0)},
-                New Single() {pr(1), pg(1), pb(1)},
-                New Single() {pr(2), pg(2), pb(2)}
+                New Single() {c0(0), c1(0), c2(0)},
+                New Single() {c0(1), c1(1), c2(1)},
+                New Single() {c0(2), c1(2), c2(2)}
             }
             For Each row In rows
                 Dim sum = row(0) + row(1) + row(2)
@@ -573,36 +670,15 @@ Namespace Services
                     row(0) /= sum : row(1) /= sum : row(2) /= sum
                 End If
             Next
-
-            Return New Single() {
-                rows(0)(0), rows(0)(1), rows(0)(2), 0, 0,
-                rows(1)(0), rows(1)(1), rows(1)(2), 0, 0,
-                rows(2)(0), rows(2)(1), rows(2)(2), 0, 0,
-                0, 0, 0, 1, 0
-            }
+            Return rows
         End Function
 
-        ''' <summary>Verkettet zwei Skia-Farbmatrizen zu einer (erst <paramref name="innen"/>, dann
-        ''' <paramref name="aussen"/>). So kostet die Kalibrierung KEINEN zweiten Durchlauf pro
-        ''' Pixel - sie wird einmal beim Bauen in die vorhandene Matrix hineingerechnet.</summary>
-        Private Shared Function ComposeColorMatrix(outer As Single(), inner As Single()) As Single()
-            If outer Is Nothing Then Return inner
-            If inner Is Nothing Then Return outer
-            Dim r = New Single(19) {}
-            For row = 0 To 3
-                For column = 0 To 3
-                    Dim sum = 0.0F
-                    For k = 0 To 3
-                        sum += outer(row * 5 + k) * inner(k * 5 + column)
-                    Next
-                    r(row * 5 + column) = sum
+        Private Shared Function MultiplyMatrix3(a As Single()(), b As Single()()) As Single()()
+            Dim r = {New Single(2) {}, New Single(2) {}, New Single(2) {}}
+            For i = 0 To 2
+                For j = 0 To 2
+                    r(i)(j) = a(i)(0) * b(0)(j) + a(i)(1) * b(1)(j) + a(i)(2) * b(2)(j)
                 Next
-                ' Offset-Spalte: aussen wirkt auf die Offsets von innen, plus eigener Offset.
-                Dim off = outer(row * 5 + 4)
-                For k = 0 To 3
-                    off += outer(row * 5 + k) * inner(k * 5 + 4)
-                Next
-                r(row * 5 + 4) = off
             Next
             Return r
         End Function
@@ -1613,7 +1689,33 @@ Namespace Services
         ''' Schwarzabzug verschieben alle drei gleich, das Verhaeltnis bleibt also, und es laesst
         ''' sich aus dem Quellbild selbst ablesen.</summary>
         Private Shared Sub ApplyRawStageTone(ByRef rr As Single, ByRef gg As Single, ByRef bb As Single,
-                                             table As Single(), toLinear As Single(), toGamma As Single())
+                                             table As Single(), toLinear As Single(), toGamma As Single(),
+                                             Optional shadow As Single() = Nothing)
+            ' Die Daempfung der Tiefen sitzt in der RAW-Stufe nach der Tonkurve und haengt an der
+            ' Helligkeit (RawDecodeService.Convert16Rows). Vor dem Vorgriff wird sie aufgehoben,
+            ' danach bei der neuen Helligkeit wieder angewandt, wie es der Neuaufbau tut.
+            If shadow IsNot Nothing Then ScaleShadowSaturation(rr, gg, bb, shadow, toLinear, toGamma, True)
+            ApplyRawStageToneCore(rr, gg, bb, table, toLinear, toGamma)
+            If shadow IsNot Nothing Then ScaleShadowSaturation(rr, gg, bb, shadow, toLinear, toGamma, False)
+        End Sub
+
+        ''' <summary>Die Daempfung der Tiefen wie in der RAW-Stufe: linear um die Helligkeit des
+        ''' Bildpunkts skaliert, mit dem Faktor der Tabelle an dieser Helligkeit; mit
+        ''' <paramref name="undo"/> geteilt statt multipliziert.</summary>
+        Private Shared Sub ScaleShadowSaturation(ByRef rr As Single, ByRef gg As Single, ByRef bb As Single,
+                                                 shadow As Single(), toLinear As Single(), toGamma As Single(),
+                                                 undo As Boolean)
+            Dim lr = SampleTable(toLinear, rr), lg = SampleTable(toLinear, gg), lb = SampleTable(toLinear, bb)
+            Dim yl = 0.2126F * lr + 0.7152F * lg + 0.0722F * lb
+            Dim f = shadow(Math.Max(0, Math.Min(shadow.Length - 1, CInt(yl * (shadow.Length - 1)))))
+            If undo Then f = 1.0F / Math.Max(f, 0.05F)
+            rr = SampleTable(toGamma, Clamp(yl + f * (lr - yl), 0.0F, 1.0F))
+            gg = SampleTable(toGamma, Clamp(yl + f * (lg - yl), 0.0F, 1.0F))
+            bb = SampleTable(toGamma, Clamp(yl + f * (lb - yl), 0.0F, 1.0F))
+        End Sub
+
+        Private Shared Sub ApplyRawStageToneCore(ByRef rr As Single, ByRef gg As Single, ByRef bb As Single,
+                                                 table As Single(), toLinear As Single(), toGamma As Single())
             Dim hi = Math.Max(rr, Math.Max(gg, bb))
             Dim lo = Math.Min(rr, Math.Min(gg, bb))
             Dim hiOut = SampleTable(table, hi)
@@ -2473,7 +2575,7 @@ Namespace Services
         ''' den Tonzonen einfuegt, traegt sie hier nach.</summary>
         Private Shared Sub ApplyStagesBeforeToneZones(ByRef rr As Single, ByRef gg As Single, ByRef bb As Single,
                                                       chain As PointOpChain, toLinear As Single(), toGamma As Single())
-            If chain.RawStageTone IsNot Nothing Then ApplyRawStageTone(rr, gg, bb, chain.RawStageTone, toLinear, toGamma)
+            If chain.RawStageTone IsNot Nothing Then ApplyRawStageTone(rr, gg, bb, chain.RawStageTone, toLinear, toGamma, chain.RawStageShadowSaturation)
             If chain.NegR IsNot Nothing Then
                 rr = SampleTable(chain.NegR, rr)
                 gg = SampleTable(chain.NegG, gg)
@@ -2620,10 +2722,203 @@ Namespace Services
             Return sum / weight
         End Function
 
+        ''' <summary>Die Stufen der Kette bis vor den HSL-Block: Vorgriff auf die RAW-Stufe,
+        ''' Filmnegativ, Weissabgleich (mit Kalibrierung), Farbmatrix und Tonstufe. Eine eigene
+        ''' Einheit, weil sie je Bildpunkt ZWEIMAL laeuft, wenn der Farbmischer aktiv ist: fuer den
+        ''' Bildpunkt und fuer seine Fuehrungsfarbe (MixerGuideSigma).</summary>
+        Private NotInheritable Class PreMixerStages
+            Private ReadOnly m, wbm, toLinear, toGamma, sr, sg, sb, toneBefore, toneZones, rawStageTone,
+                             negR, negG, negB, localZones, localDetail, localColor, rawShadow As Single()
+            Private ReadOnly negMono, curvesMelissa As Boolean
+            Private ReadOnly localBase As LocalToneBase
+
+            Public Sub New(chain As PointOpChain, base As LocalToneBase, linearTable As Single(), gammaTable As Single())
+                m = chain.ColorMatrix
+                wbm = chain.WhiteBalanceMatrix
+                toLinear = linearTable
+                toGamma = gammaTable
+                sr = chain.ScalarR
+                sg = chain.ScalarG
+                sb = chain.ScalarB
+                toneBefore = chain.ToneBefore
+                toneZones = chain.ToneZones
+                rawStageTone = chain.RawStageTone
+                rawShadow = chain.RawStageShadowSaturation
+                negR = chain.NegR
+                negG = chain.NegG
+                negB = chain.NegB
+                negMono = chain.NegMonochrome
+                curvesMelissa = chain.CurvesInMelissa
+                localZones = chain.LocalToneZones
+                localDetail = chain.LocalDetailGain
+                localColor = chain.LocalColorGain
+                localBase = base
+            End Sub
+
+            ''' <summary>Rechnet die Stufen auf (rr, gg, bb) und liefert die HSL-Saettigung vor der
+            ''' Tonstufe fuer deren Restore (0, wenn er nicht greift).</summary>
+            Public Function Apply(ByRef rr As Single, ByRef gg As Single, ByRef bb As Single, x As Integer, y As Integer) As Double
+                ' --- 0. Vorgriff auf den Neuaufbau aus der RAW-Stufe (vor allem anderen) ---
+                If rawStageTone IsNot Nothing Then ApplyRawStageTone(rr, gg, bb, rawStageTone, toLinear, toGamma, rawShadow)
+
+                ' --- 1. Filmnegativ (vor allen Farbanpassungen) ---
+                If negR IsNot Nothing Then
+                    rr = SampleTable(negR, rr)
+                    gg = SampleTable(negG, gg)
+                    bb = SampleTable(negB, bb)
+                    If negMono Then
+                        ' Erst kanalweise auf die eigene Basis normiert (nimmt auch dem
+                        ' S/W-Traeger seinen Eigenfarbton), DANN entsaettigen - wie die
+                        ' Compose-Reihenfolge der Altstufe (Tabelle innen, Graumatrix aussen).
+                        Dim gray = 0.299F * rr + 0.587F * gg + 0.114F * bb
+                        rr = gray : gg = gray : bb = gray
+                    End If
+                End If
+
+                ' --- 1b. Weissabgleich als Adaption, im LINEARLICHT ---
+                ' Dekodieren, 3x3, kodieren. Die Klemmung liegt im LINEAREN Raum, also VOR
+                ' dem Kodieren: eine Adaption kann einen Kanal ueber 1 heben (bei starker
+                ' Erwaermung das Rot), und das Kodieren einer Zahl groesser 1 gaebe Werte
+                ' ausserhalb der Tabelle.
+                If wbm IsNot Nothing Then
+                    Dim linR = SampleTable(toLinear, rr)
+                    Dim linG = SampleTable(toLinear, gg)
+                    Dim linB = SampleTable(toLinear, bb)
+                    Dim ar = wbm(0) * linR + wbm(1) * linG + wbm(2) * linB
+                    Dim ag = wbm(3) * linR + wbm(4) * linG + wbm(5) * linB
+                    Dim ab = wbm(6) * linR + wbm(7) * linG + wbm(8) * linB
+                    rr = SampleTable(toGamma, If(ar < 0.0F, 0.0F, If(ar > 1.0F, 1.0F, ar)))
+                    gg = SampleTable(toGamma, If(ag < 0.0F, 0.0F, If(ag > 1.0F, 1.0F, ag)))
+                    bb = SampleTable(toGamma, If(ab < 0.0F, 0.0F, If(ab > 1.0F, 1.0F, ab)))
+                End If
+
+                ' --- 2. Farbmatrix. Skia klemmt danach auf [0,1] (gemessen) - hier ebenso. ---
+                If m IsNot Nothing Then
+                    Dim nr = m(0) * rr + m(1) * gg + m(2) * bb + m(4)
+                    Dim ng = m(5) * rr + m(6) * gg + m(7) * bb + m(9)
+                    Dim nb = m(10) * rr + m(11) * gg + m(12) * bb + m(14)
+                    rr = If(nr < 0.0F, 0.0F, If(nr > 1.0F, 1.0F, nr))
+                    gg = If(ng < 0.0F, 0.0F, If(ng > 1.0F, 1.0F, ng))
+                    bb = If(nb < 0.0F, 0.0F, If(nb > 1.0F, 1.0F, nb))
+                End If
+
+                ' --- 3. Verschmolzene Skalarkette (Ton + Tonwerte + RGB-/Kanalkurven) ---
+                ' Die HSL-Saettigung VOR der Tonstufe festhalten: die per-Kanal-Kurven
+                ' duerfen sie nach unten nicht druecken (Restore unten). Gemessen am
+                ' Adobe-Referenz-Render (DCP-Basis, DNG-SDK-Reihenfolge) desselben Fotos:
+                ' Die Grundabstimmung der Referenz hebt die Tiefen mit KOMPRESSIVER Steigung
+                ' (~0,6) und verdoppelt dabei trotzdem die Chroma - das geht nur, wenn die
+                ' Tonstufen sich konstant-S verhalten (Chroma waechst mit der Hebung mit).
+                ' Unsere per-Kanal-Anwendung skaliert die Chroma dagegen mit der Steigung
+                ' und entsaettigte die Tiefen (0,059 gegen LRs 0,106 am Konzertfoto).
+                ' NUR nach unten begrenzen: wo die Kurve die Saettigung ERHOEHT (S-Kurven-
+                ' Kontrast in den Mitten), bleibt die per-Kanal-Wirkung erhalten. Und NUR
+                ' fuer die TIEFEN (Gewicht 1 unter L 0,10, smoothstep auslaufend bis 0,25):
+                ' der Vergleich traegt nur den Schatten-Lift als konstant-S; ein globaler
+                ' Restore uebersaettigte gemessen die Mitten (Bin 0,2-0,3: 0,169 gegen LRs
+                ' 0,067), wo die Referenz der per-Kanal-Senkung des Presets folgt.
+                '
+                ' CHROMA-TOR ist Pflicht: HSL-S ist in den Tiefen riesig,
+                ' obwohl kaum Farbe da ist - ein fast schwarzes Pixel (4,0,0) hat S = 1,0.
+                ' Ohne Tor haette der Restore aus einem einzelnen Sensor-LSB nach der
+                ' Aufhellung gesaettigtes Rot gemacht ((61,0,0) statt (31,30,30)). Getort
+                ' wird an der ECHTEN Chroma (max-min), die in HSL genau der Zaehler von S
+                ' ist: dunkles Teal (10,25,25) hat 0,059 und kommt voll durch, ein LSB
+                ' Rauschen 0,016 und bleibt draussen.
+                Dim satVorTon As Double = 0.0
+                If sr IsNot Nothing Then
+                    ' S und L direkt aus max/min statt ueber RgbToHslF: der Farbton wird hier
+                    ' nicht gebraucht, und diese Stufe laeuft bei JEDER Tonbearbeitung.
+                    Dim vMax = If(rr > gg, If(rr > bb, rr, bb), If(gg > bb, gg, bb))
+                    Dim vMin = If(rr < gg, If(rr < bb, rr, bb), If(gg < bb, gg, bb))
+                    Dim lVor = (vMax + vMin) / 2.0
+                    Dim chromaVor = vMax - vMin
+                    If lVor < 0.25 AndAlso chromaVor > 0.02 Then
+                        Dim nenner = 1.0 - Math.Abs(2.0 * lVor - 1.0)
+                        If nenner > 0.00001 Then
+                            satVorTon = chromaVor / nenner
+                            Dim torC = Math.Min(1.0, (chromaVor - 0.02) / 0.04)
+                            torC = torC * torC * (3.0 - 2.0 * torC)
+                            Dim tFade = 1.0
+                            If lVor > 0.1 Then
+                                tFade = 1.0 - (lVor - 0.1) / 0.15
+                                tFade = tFade * tFade * (3.0 - 2.0 * tFade)
+                            End If
+                            satVorTon *= torC * tFade
+                        End If
+                    End If
+                    If toneZones IsNot Nothing OrElse localZones IsNot Nothing OrElse curvesMelissa Then
+                        If toneBefore IsNot Nothing Then
+                            rr = SampleTable(toneBefore, rr)
+                            gg = SampleTable(toneBefore, gg)
+                            bb = SampleTable(toneBefore, bb)
+                        End If
+                        If localZones IsNot Nothing Then
+                            Dim gray = LocalToneGray(rr, gg, bb, toLinear, toGamma)
+                            Dim baseValue As Single, smoothValue As Single
+                            localBase.Sample(x, y, gray, baseValue, smoothValue)
+                            Dim smoothAt = Clamp(smoothValue, 0.0F, 1.0F)
+                            Dim detailShift = If(localDetail IsNot Nothing,
+                                                 SampleTable(localDetail, smoothAt) * (gray - smoothValue),
+                                                 0.0F)
+                            Dim colorExcess = If(localColor IsNot Nothing, SampleTable(localColor, smoothAt), 0.0F)
+                            ApplyLocalToneZones(rr, gg, bb, toneZones, localZones, baseValue, gray, detailShift, colorExcess)
+                        ElseIf toneZones IsNot Nothing Then
+                            ApplyToneZones(rr, gg, bb, toneZones)
+                        End If
+                    End If
+                    If curvesMelissa Then
+                        ApplyCurvesInMelissa(rr, gg, bb, sr, sg, sb, toLinear, toGamma)
+                    Else
+                        rr = SampleTable(sr, rr)
+                        gg = SampleTable(sg, gg)
+                        bb = SampleTable(sb, bb)
+                    End If
+                End If
+                Return satVorTon
+            End Function
+        End Class
+
+        ''' <summary>WIE STARK DIE FUEHRUNGSFARBE DES FARBMISCHERS GEGLAETTET IST (Gauss, Sigma in
+        ''' Bildpunkten). Band und Tore des Mischers kommen aus dieser Farbe, die Wirkung trifft den
+        ''' Bildpunkt selbst. Ohne sie entschied das Rauschen jedes Bildpunkts, welches Band und
+        ''' wie viel davon greift: zwischen zwei weit auseinanderliegenden Baendern oder im steilen
+        ''' Teil eines Tors wechselten Nachbarn die Behandlung, und eine Flaeche wurde fleckig
+        ''' (TEL_0674 mit Cool Glow, Schriftzug im Hintergrund).</summary>
+        Friend Shared MixerGuideSigma As Single = 1.5F
+
+        ''' <summary>Das geglaettete Bild, aus dem der Farbmischer seine Fuehrungsfarbe nimmt, im
+        ''' Format der Quelle; Nothing ohne Farbmischer oder ohne Glaettung. Raster-Skia fuer
+        ''' Prozessor und Karte gleichermassen, damit beide dieselbe Fuehrung sehen.</summary>
+        Friend Shared Function BuildMixerGuide(source As SKBitmap, chain As PointOpChain) As SKBitmap
+            If source Is Nothing Then Return Nothing
+            Using image = SKImage.FromBitmap(source)
+                Return BuildMixerGuide(image, chain)
+            End Using
+        End Function
+
+        ''' <summary>Dasselbe aus einem Bild, fuer die Wege ueber den Shader.</summary>
+        Friend Shared Function BuildMixerGuide(source As SKImage, chain As PointOpChain) As SKBitmap
+            If source Is Nothing OrElse chain Is Nothing OrElse chain.Hsl Is Nothing OrElse MixerGuideSigma <= 0.0F Then Return Nothing
+            ' Ein Raster-Canvas zeichnet nur vormultipliziert oder deckend; eine Quelle mit geradem
+            ' Alpha (PSD, ICO) behaelt die Fuehrung am Bildpunkt selbst.
+            If source.AlphaType = SKAlphaType.Unpremul Then Return Nothing
+            If source.ColorType <> SKColorType.Bgra8888 AndAlso source.ColorType <> SKColorType.Rgba8888 Then Return Nothing
+            Dim info = New SKImageInfo(source.Width, source.Height, source.ColorType, source.AlphaType)
+            Dim guide = New SKBitmap(info)
+            Using canvas = New SKCanvas(guide),
+                  filter = SKImageFilter.CreateBlur(MixerGuideSigma, MixerGuideSigma, SKShaderTileMode.Clamp),
+                  paint = New SKPaint With {.ImageFilter = filter, .BlendMode = SKBlendMode.Src}
+                canvas.Clear(SKColors.Transparent)
+                canvas.DrawImage(source, 0, 0, paint)
+            End Using
+            Return guide
+        End Function
+
         ' ── Der eine Durchlauf ───────────────────────────────────────────────────
 
         Private Shared Function RunPointOpChain(source As SKBitmap, chain As PointOpChain) As SKBitmap
-            Dim srcBuf As Byte() = Nothing, dstBuf As Byte() = Nothing
+            Dim srcBuf As Byte() = Nothing, dstBuf As Byte() = Nothing, guideBuf As Byte() = Nothing
             Dim stride, ri, gi, bi, ai As Integer
             Dim sLen = 0, dstLen = 0
             Try
@@ -2700,6 +2995,22 @@ Namespace Services
                     Function() BuildLocalToneBase(srcBuf, stride, width, source.Height, ri, gi, bi, ai, srcPremul, chain,
                                                   _localToneReferenceEdge))
             End If
+            Dim stages = New PreMixerStages(chain, localBase, toLinear, toGamma)
+            ' Die Fuehrung des Farbmischers in derselben Anordnung wie die Quelle (Zeilenbreite,
+            ' Kanalfolge), damit derselbe Versatz beide liest.
+            If hslAdj IsNot Nothing Then
+                Using guide = PerformanceTraceService.Measure("Pixel: Punktkette, Fuehrung des Farbmischers",
+                                                              Function() BuildMixerGuide(source, chain))
+                    If guide IsNot Nothing Then
+                        Dim gLen = 0, gStride, gri, ggi, gbi, gai As Integer
+                        If TryRentRgbaLikeBuffer(guide, guideBuf, gLen, gStride, gri, ggi, gbi, gai) AndAlso
+                           (gStride <> stride OrElse gri <> ri OrElse ggi <> gi OrElse gbi <> bi OrElse gai <> ai) Then
+                            ArrayPool(Of Byte).Shared.Return(guideBuf)
+                            guideBuf = Nothing
+                        End If
+                    End If
+                End Using
+            End If
 
             ForEachRow(width, source.Height,
                 Sub(y)
@@ -2737,121 +3048,33 @@ Namespace Services
                             If bb > 1.0F Then bb = 1.0F
                         End If
 
-                        ' --- 0. Vorgriff auf den Neuaufbau aus der RAW-Stufe (vor allem anderen) ---
-                        If rawStageTone IsNot Nothing Then ApplyRawStageTone(rr, gg, bb, rawStageTone, toLinear, toGamma)
+                        ' --- 0. bis 3.: Vorgriff, Filmnegativ, Weissabgleich, Farbmatrix, Tonstufe ---
+                        Dim satVorTon = stages.Apply(rr, gg, bb, x, y)
 
-                        ' --- 1. Filmnegativ (vor allen Farbanpassungen) ---
-                        If negR IsNot Nothing Then
-                            rr = SampleTable(negR, rr)
-                            gg = SampleTable(negG, gg)
-                            bb = SampleTable(negB, bb)
-                            If negMono Then
-                                ' Erst kanalweise auf die eigene Basis normiert (nimmt auch dem
-                                ' S/W-Traeger seinen Eigenfarbton), DANN entsaettigen - wie die
-                                ' Compose-Reihenfolge der Altstufe (Tabelle innen, Graumatrix aussen).
-                                Dim gray = 0.299F * rr + 0.587F * gg + 0.114F * bb
-                                rr = gray : gg = gray : bb = gray
-                            End If
-                        End If
-
-                        ' --- 1b. Weissabgleich als Adaption, im LINEARLICHT ---
-                        ' Dekodieren, 3x3, kodieren. Die Klemmung liegt im LINEAREN Raum, also VOR
-                        ' dem Kodieren: eine Adaption kann einen Kanal ueber 1 heben (bei starker
-                        ' Erwaermung das Rot), und das Kodieren einer Zahl groesser 1 gaebe Werte
-                        ' ausserhalb der Tabelle.
-                        If wbm IsNot Nothing Then
-                            Dim linR = SampleTable(toLinear, rr)
-                            Dim linG = SampleTable(toLinear, gg)
-                            Dim linB = SampleTable(toLinear, bb)
-                            Dim ar = wbm(0) * linR + wbm(1) * linG + wbm(2) * linB
-                            Dim ag = wbm(3) * linR + wbm(4) * linG + wbm(5) * linB
-                            Dim ab = wbm(6) * linR + wbm(7) * linG + wbm(8) * linB
-                            rr = SampleTable(toGamma, If(ar < 0.0F, 0.0F, If(ar > 1.0F, 1.0F, ar)))
-                            gg = SampleTable(toGamma, If(ag < 0.0F, 0.0F, If(ag > 1.0F, 1.0F, ag)))
-                            bb = SampleTable(toGamma, If(ab < 0.0F, 0.0F, If(ab > 1.0F, 1.0F, ab)))
-                        End If
-
-                        ' --- 2. Farbmatrix. Skia klemmt danach auf [0,1] (gemessen) - hier ebenso. ---
-                        If m IsNot Nothing Then
-                            Dim nr = m(0) * rr + m(1) * gg + m(2) * bb + m(4)
-                            Dim ng = m(5) * rr + m(6) * gg + m(7) * bb + m(9)
-                            Dim nb = m(10) * rr + m(11) * gg + m(12) * bb + m(14)
-                            rr = If(nr < 0.0F, 0.0F, If(nr > 1.0F, 1.0F, nr))
-                            gg = If(ng < 0.0F, 0.0F, If(ng > 1.0F, 1.0F, ng))
-                            bb = If(nb < 0.0F, 0.0F, If(nb > 1.0F, 1.0F, nb))
-                        End If
-
-                        ' --- 3. Verschmolzene Skalarkette (Ton + Tonwerte + RGB-/Kanalkurven) ---
-                        ' Die HSL-Saettigung VOR der Tonstufe festhalten: die per-Kanal-Kurven
-                        ' duerfen sie nach unten nicht druecken (Restore unten). Gemessen am
-                        ' Adobe-Referenz-Render (DCP-Basis, DNG-SDK-Reihenfolge) desselben Fotos:
-                        ' Die Grundabstimmung der Referenz hebt die Tiefen mit KOMPRESSIVER Steigung
-                        ' (~0,6) und verdoppelt dabei trotzdem die Chroma - das geht nur, wenn die
-                        ' Tonstufen sich konstant-S verhalten (Chroma waechst mit der Hebung mit).
-                        ' Unsere per-Kanal-Anwendung skaliert die Chroma dagegen mit der Steigung
-                        ' und entsaettigte die Tiefen (0,059 gegen LRs 0,106 am Konzertfoto).
-                        ' NUR nach unten begrenzen: wo die Kurve die Saettigung ERHOEHT (S-Kurven-
-                        ' Kontrast in den Mitten), bleibt die per-Kanal-Wirkung erhalten. Und NUR
-                        ' fuer die TIEFEN (Gewicht 1 unter L 0,10, smoothstep auslaufend bis 0,25):
-                        ' der Vergleich traegt nur den Schatten-Lift als konstant-S; ein globaler
-                        ' Restore uebersaettigte gemessen die Mitten (Bin 0,2-0,3: 0,169 gegen LRs
-                        ' 0,067), wo die Referenz der per-Kanal-Senkung des Presets folgt.
-                        '
-                        ' CHROMA-TOR ist Pflicht: HSL-S ist in den Tiefen riesig,
-                        ' obwohl kaum Farbe da ist - ein fast schwarzes Pixel (4,0,0) hat S = 1,0.
-                        ' Ohne Tor haette der Restore aus einem einzelnen Sensor-LSB nach der
-                        ' Aufhellung gesaettigtes Rot gemacht ((61,0,0) statt (31,30,30)). Getort
-                        ' wird an der ECHTEN Chroma (max-min), die in HSL genau der Zaehler von S
-                        ' ist: dunkles Teal (10,25,25) hat 0,059 und kommt voll durch, ein LSB
-                        ' Rauschen 0,016 und bleibt draussen.
-                        Dim satVorTon As Double = 0.0
-                        If sr IsNot Nothing Then
-                            ' S und L direkt aus max/min statt ueber RgbToHslF: der Farbton wird hier
-                            ' nicht gebraucht, und diese Stufe laeuft bei JEDER Tonbearbeitung.
-                            Dim vMax = If(rr > gg, If(rr > bb, rr, bb), If(gg > bb, gg, bb))
-                            Dim vMin = If(rr < gg, If(rr < bb, rr, bb), If(gg < bb, gg, bb))
-                            Dim lVor = (vMax + vMin) / 2.0
-                            Dim chromaVor = vMax - vMin
-                            If lVor < 0.25 AndAlso chromaVor > 0.02 Then
-                                Dim nenner = 1.0 - Math.Abs(2.0 * lVor - 1.0)
-                                If nenner > 0.00001 Then
-                                    satVorTon = chromaVor / nenner
-                                    Dim torC = Math.Min(1.0, (chromaVor - 0.02) / 0.04)
-                                    torC = torC * torC * (3.0 - 2.0 * torC)
-                                    Dim tFade = 1.0
-                                    If lVor > 0.1 Then
-                                        tFade = 1.0 - (lVor - 0.1) / 0.15
-                                        tFade = tFade * tFade * (3.0 - 2.0 * tFade)
-                                    End If
-                                    satVorTon *= torC * tFade
+                        ' Die Fuehrungsfarbe des Farbmischers: dieselbe Stelle des geglaetteten
+                        ' Bilds durch dieselben Stufen (siehe MixerGuideSigma).
+                        Dim guideH As Double, guideSat As Double, guideLum As Double
+                        Dim hasGuide = False
+                        If guideBuf IsNot Nothing Then
+                            Dim ga = guideBuf(o + ai)
+                            If ga > 0 Then
+                                Dim guideR As Single, guideG As Single, guideB As Single
+                                If ga = 255 OrElse Not srcPremul Then
+                                    guideR = guideBuf(o + ri) / 255.0F
+                                    guideG = guideBuf(o + gi) / 255.0F
+                                    guideB = guideBuf(o + bi) / 255.0F
+                                Else
+                                    Dim inv = 1.0F / ga
+                                    guideR = Math.Min(1.0F, guideBuf(o + ri) * inv)
+                                    guideG = Math.Min(1.0F, guideBuf(o + gi) * inv)
+                                    guideB = Math.Min(1.0F, guideBuf(o + bi) * inv)
                                 End If
-                            End If
-                            If toneZones IsNot Nothing OrElse localZones IsNot Nothing OrElse curvesMelissa Then
-                                If toneBefore IsNot Nothing Then
-                                    rr = SampleTable(toneBefore, rr)
-                                    gg = SampleTable(toneBefore, gg)
-                                    bb = SampleTable(toneBefore, bb)
+                                stages.Apply(guideR, guideG, guideB, x, y)
+                                RgbToHslF(guideR, guideG, guideB, guideH, guideSat, guideLum)
+                                If lumCurve IsNot Nothing Then
+                                    guideLum = SampleTable(lumCurve, Clamp(CSng(guideLum), 0.0F, 1.0F))
                                 End If
-                                If localZones IsNot Nothing Then
-                                    Dim gray = LocalToneGray(rr, gg, bb, toLinear, toGamma)
-                                    Dim baseValue As Single, smoothValue As Single
-                                    localBase.Sample(x, y, gray, baseValue, smoothValue)
-                                    Dim smoothAt = Clamp(smoothValue, 0.0F, 1.0F)
-                                    Dim detailShift = If(localDetail IsNot Nothing,
-                                                         SampleTable(localDetail, smoothAt) * (gray - smoothValue),
-                                                         0.0F)
-                                    Dim colorExcess = If(localColor IsNot Nothing, SampleTable(localColor, smoothAt), 0.0F)
-                                    ApplyLocalToneZones(rr, gg, bb, toneZones, localZones, baseValue, gray, detailShift, colorExcess)
-                                ElseIf toneZones IsNot Nothing Then
-                                    ApplyToneZones(rr, gg, bb, toneZones)
-                                End If
-                            End If
-                            If curvesMelissa Then
-                                ApplyCurvesInMelissa(rr, gg, bb, sr, sg, sb, toLinear, toGamma)
-                            Else
-                                rr = SampleTable(sr, rr)
-                                gg = SampleTable(sg, gg)
-                                bb = SampleTable(sb, bb)
+                                hasGuide = True
                             End If
                         End If
 
@@ -2911,8 +3134,15 @@ Namespace Services
                             End If
 
                             If hslAdj IsNot Nothing Then
+                                ' Band und Tore aus der FUEHRUNGSFARBE (MixerGuideSigma), angewandt auf
+                                ' den Bildpunkt selbst: Nachbarn mit derselben Farbe bekommen dieselbe
+                                ' Behandlung, auch wenn ihr Rauschen sie ueber eine Bandgrenze oder durch
+                                ' den steilen Teil eines Tors traegt.
+                                Dim bandHue = If(hasGuide, guideH, h)
+                                Dim gateSat = If(hasGuide, guideSat, sat)
+                                Dim gateLum = If(hasGuide, guideLum, lum)
                                 Dim hueShift As Single = 0, satShift As Single = 0, lumShift As Single = 0
-                                GetHslBandAdjustments(ReferenceBandHue(h), hslAdj, hueShift, satShift, lumShift)
+                                GetHslBandAdjustments(ReferenceBandHue(bandHue), hslAdj, hueShift, satShift, lumShift)
                                 ' Bandwirkung mit der Chroma GEWICHTEN: ein neutrales Grau hat keinen
                                 ' Farbton, bekam aber ueber h=0 die volle LUMINANZ des Rot-Bands ab (nur
                                 ' satShift war durch sat*x=0 automatisch neutral) - der Regler
@@ -2936,11 +3166,20 @@ Namespace Services
                                 ' helle Wolken und ausgefressene Lichter wurden bunt. Ab L = 0,5 gilt
                                 ' deshalb C; dort ist C = S, der Uebergang ist stetig, die Tiefen
                                 ' bleiben beim S-Tor.
-                                Dim chromaC = sat * (1.0 - Math.Abs(2.0 * lum - 1.0))
+                                Dim chromaC = gateSat * (1.0 - Math.Abs(2.0 * gateLum - 1.0))
                                 Dim gateCs = Math.Min(1.0, chromaC / 0.2)
                                 gateCs = gateCs * gateCs * (3.0 - 2.0 * gateCs)
-                                Dim chromaW = Math.Min(1.0, If(lum > 0.5, chromaC, sat) / 0.1)
+                                ' In den Tiefen zusaetzlich ein schwaches C-Tor (voll ab C 0,04): ein
+                                ' dunkles Teal (C 0,06) bleibt voll im Band, ein fast neutraler, nur
+                                ' verrauschter Punkt nicht. Ohne das sprang am Rand eines roten
+                                ' Scheinwerfers unter Cool Glow jeder dunkle Punkt zwischen Aqua -43,
+                                ' Blau -38, Lila +24 und Magenta +28 und zog eine zackige Kante.
+                                Dim chromaW = Math.Min(1.0, If(gateLum > 0.5, chromaC, gateSat) / 0.1)
                                 chromaW = chromaW * chromaW * (3.0 - 2.0 * chromaW)
+                                If gateLum <= 0.5 Then
+                                    Dim darkGate = Math.Min(1.0, chromaC / 0.1)
+                                    chromaW *= darkGate * darkGate * (3.0 - 2.0 * darkGate)
+                                End If
                                 h = (h + hueShift * gateCs + 360.0) Mod 360.0
                                 sat = ApplyHslSaturationGain(sat, satShift * gateCs / 100.0)
                                 lum = ApplyHslBandGain(lum, lumShift * chromaW / 100.0)
@@ -2985,18 +3224,16 @@ Namespace Services
                             End If
                         End If
 
-                        ' --- Schattentoenung (Kalibrierung): Gruen/Magenta nur in den Tiefen ---
+                        ' --- Schattentoenung (Kalibrierung): Gruen/Magenta, am staerksten in den Tiefen ---
                         If schattenToenung <> 0.0F Then
                             Dim brightness = 0.299F * rr + 0.587F * gg + 0.114F * bb
-                            ' Gewicht faellt linear bis zur Bildmitte auf 0 - darueber unberuehrt.
-                            Dim gewicht = Math.Max(0.0F, 1.0F - brightness * 2.0F)
-                            If gewicht > 0.0F Then
-                                Dim strength = schattenToenung / 100.0F * 0.12F * gewicht
-                                ' Positiv = Magenta (Gruen runter), negativ = Gruen. Uebliche Belegung.
-                                gg = Clamp(gg - strength, 0.0F, 1.0F)
-                                rr = Clamp(rr + strength * 0.5F, 0.0F, 1.0F)
-                                bb = Clamp(bb + strength * 0.5F, 0.0F, 1.0F)
-                            End If
+                            Dim strength = schattenToenung / 100.0F * ShadowTintStrength * ShadowTintWeight(brightness)
+                            ' Positiv = Magenta, negativ = Gruen; die Helligkeit bleibt (Rec.601).
+                            Dim dr = ShadowTintRed * strength
+                            Dim db = ShadowTintBlue * strength
+                            rr = Clamp(rr + dr, 0.0F, 1.0F)
+                            bb = Clamp(bb + db, 0.0F, 1.0F)
+                            gg = Clamp(gg - (0.299F * dr + 0.114F * db) / 0.587F, 0.0F, 1.0F)
                         End If
 
                         ' --- 6b. Weitere Korrekturen: auf das fertig korrigierte Farbbild, vor Preset
@@ -3092,6 +3329,7 @@ Namespace Services
             Finally
                 ReturnPooledBuffer(srcBuf)
                 ReturnPooledBuffer(dstBuf)
+                ReturnPooledBuffer(guideBuf)
             End Try
         End Function
 

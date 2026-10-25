@@ -2743,6 +2743,17 @@ Namespace Services
                                                               Optional toneReference As ToneReference = Nothing) As SKBitmap
             Dim processed = source
 
+            ' FARBRAUSCHEN VOR ALLEN FARB- UND TONSTUFEN, wie beim Referenzprogramm am Kamerabild.
+            ' Lief es zuletzt, sah der Farbmischer noch das volle Farbrauschen: an der Grenze zweier
+            ' Baender, die ein Preset verschieden behandelt (Cool Glow: Lila entsaettigt und
+            ' aufgehellt, Blau satt und dunkel), entschied das Rauschen je Bildpunkt, welches Band
+            ' griff, und auf einer ruhigen Flaeche standen dunkelblaue Sprenkel.
+            If adj IsNot Nothing AndAlso adj.ColorNoiseReduction > 0 Then
+                Dim input = processed
+                processed = ReplaceBitmapOwned(processed, PerformanceTraceService.Measure(
+                    "Pixel: Farbrauschen", Function() ApplyColorNoiseReduction(input, adj.ColorNoiseReduction / 100.0F)), owned)
+            End If
+
             ' Alle Farb-Punktoperationen laufen in EINER verschmolzenen Gleitkomma-Stufe
             ' (ImageProcessorPointOps.vb): Filmnegativ, Farbmatrix, Tonwertkurve, Lichter/Tiefen/
             ' Weiß/Schwarz, RGB- und Kanalkurven, Luminanzkurve, HSL-Bänder, Split-Toning,
@@ -2832,14 +2843,9 @@ Namespace Services
             ' Die beiden Seiten desselben Panel-Reglers: Minus glaettet die Farbanteile, Plus faerbt
             ' sie ein. Getrennte Felder, weil nur die Reduzierung eine Entsprechung in den Presets hat
             ' (crs:ColorNoiseReduction) - siehe ImageAdjustments.ColorNoiseAdd.
-            ' Die Pyramide der Farbanteile laeuft nur auf dem Prozessor: sie misst je Ebene das
-            ' Rauschen ueber das ganze Bild, das ist kein Einzelpunkt-Shader.
-            If adj.ColorNoiseReduction > 0 Then
-                processed = RunDetailStage(session, processed, owned, "Pixel: Farbrauschen", Nothing,
-                                           Function(s) ApplyColorNoiseReduction(s, adj.ColorNoiseReduction / 100.0F))
-            End If
-            ' NACH der einstufigen Glaettung: die nimmt das feine Farbkorn, diese Stufe die groben
-            ' Flecken. Umgekehrt muesste die grobe Stufe erst durch das feine Korn hindurch.
+            ' Das Farbrauschen (crs:ColorNoiseReduction) laeuft nicht hier, sondern vor der
+            ' Punktkette (ApplyToneAdjustmentStagesCore); die groben Farbflecken kommen danach, auf
+            ' einem Bild, dessen feines Farbkorn schon weg ist.
             If adj.FarbrauschGrob > 0 Then
                 processed = RunDetailStage(session, processed, owned, "Pixel: Farbrauschen grob",
                                            MultiScaleDenoiseOnGpu(adj.FarbrauschGrob / 100.0F, adj.ColorNoiseCoarseScale / 100.0F),
@@ -4329,7 +4335,8 @@ Namespace Services
             tone.Clarity = neutral.Clarity : tone.Structure = neutral.Structure : tone.Haze = neutral.Haze
             tone.NoiseReduction = neutral.NoiseReduction : tone.NoiseReductionMethod = neutral.NoiseReductionMethod
             tone.NoiseReductionDetail = neutral.NoiseReductionDetail : tone.Blur = neutral.Blur
-            tone.ColorNoiseReduction = neutral.ColorNoiseReduction : tone.FarbrauschGrob = neutral.FarbrauschGrob
+            ' Das Farbrauschen bleibt im Schluessel: es laeuft VOR der Punktkette, gehoert also zum Tonstand.
+            tone.FarbrauschGrob = neutral.FarbrauschGrob
             tone.ColorNoiseCoarseScale = neutral.ColorNoiseCoarseScale : tone.ColorNoiseAdd = neutral.ColorNoiseAdd
             tone.DustScratches = neutral.DustScratches : tone.Glow = neutral.Glow
             tone.Sharpness = neutral.Sharpness : tone.SharpenRadius = neutral.SharpenRadius
@@ -4373,7 +4380,7 @@ Namespace Services
             ' komponierten auf veralteter Basis. Das gilt auch fuer APP-WEITE Render-Schalter,
             ' nicht nur adj-Felder - wer einen einfuehrt, muss ihn hier eintragen.
             Return String.Join("|", New Object() {
-                adj.Exposure, adj.ExposureInSource, adj.ChainExposureInRawStage(), adj.KneeInSource, adj.RampBlackShareInSource, adj.Brightness, adj.Contrast, adj.Saturation, adj.Highlights, adj.ShadowsLevel,
+                adj.Exposure, adj.ExposureInSource, adj.ChainExposureInRawStage(), adj.KneeInSource, adj.RampBlackShareInSource, If(adj.ShadowSaturationInSource IsNot Nothing, 1, 0), adj.Brightness, adj.Contrast, adj.Saturation, adj.Highlights, adj.ShadowsLevel,
                 adj.Whites, adj.Blacks, adj.Temperature, adj.Tint, adj.Sharpness, adj.SharpenRadius, adj.SharpenDetail,
                 adj.WhiteBalanceModel, adj.WhiteBalanceAnchorX, adj.WhiteBalanceAnchorY,
                 adj.WhiteBalanceKelvin, adj.WhiteBalanceKelvinTint,

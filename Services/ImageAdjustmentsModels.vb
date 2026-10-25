@@ -444,6 +444,14 @@ Namespace Services
         <System.Text.Json.Serialization.JsonIgnore>
         Public Property RampBlackShareInSource As Double = 0.0
 
+        ''' <summary>Die Daempfung der Tiefen, mit der die RAW-Stufe das Quellbild entwickelt hat
+        ''' (RawDecodeService.ShadowSaturationForFile), oder Nothing. Gesetzt vom Editor wie
+        ''' <see cref="RampBlackShareInSource"/>: der Vorgriff auf eine neue Belichtung hebt die
+        ''' Daempfung bei der alten Helligkeit auf und daempft bei der neuen, sonst saehe das Bild bis
+        ''' zum Neuaufbau anders aus als danach. Nicht gespeichert, nicht uebertragen.</summary>
+        <System.Text.Json.Serialization.JsonIgnore>
+        Public Property ShadowSaturationInSource As Single() = Nothing
+
         ''' <summary>Rechnet die Kette ihre Belichtung wie die RAW-Stufe?
         ''' Siehe <see cref="SourceFollowsRawExposure"/>.</summary>
         Public Function ChainExposureInRawStage() As Boolean
@@ -1151,7 +1159,7 @@ Namespace Services
             "SourceWidthPixels", "SourceHeightPixels", "RecipeCoordinateVersion",
             "WhiteBalanceAnchorX", "WhiteBalanceAnchorY", "WhiteBalanceModel", "WhiteBalanceMode",
             "RawHighlightRecovery", "RawSensorEdgeCrop", "ExposureInSource", "SourceFollowsRawExposure", "KneeInSource",
-            "RampBlackShareInSource",
+            "RampBlackShareInSource", "ShadowSaturationInSource",
             "LensDistortion", "LensTca", "LensVignetting", "LensModel",
             "LensDistortionAmount", "LensTcaAmount", "LensVignettingAmount", "LensTcaRed", "LensTcaBlue",
             "WorkingImageVersion", "WorkingImageHasTransparency", "WorkingImageExposure",
@@ -1429,12 +1437,15 @@ Namespace Services
             "BaseLayerLockPosition", "BaseLayerLockTransparency"}
 
         ''' <summary>Startwerte einer RAW, die mit der Kameratabelle und den Einstellungen wandern
-        ''' (ForUneditedRaw): die Farbkalibrierung und die beiden Farbrausch-Vorgaben. Fuer die
-        ''' nachsichtige Pruefung zaehlen sie nicht als Bearbeitung.</summary>
+        ''' (ForUneditedRaw): die Farbkalibrierung, die Farbrausch-Vorgaben, Schaerfe und Rauschen
+        ''' aus den Einstellungen und der Sensorrand. Fuer die nachsichtige Pruefung zaehlen sie nicht
+        ''' als Bearbeitung: eine aeltere Begleitdatei ohne Vermerk, etwa nur mit Sternen, traegt dort
+        ''' die Vorgaben von damals (Schaerfe 0, Sensorrand aus).</summary>
         Private Shared ReadOnly MovingStartValueNames As String() = {
             "CalibrationRedHue", "CalibrationRedSaturation", "CalibrationGreenHue", "CalibrationGreenSaturation",
             "CalibrationBlueHue", "CalibrationBlueSaturation", "CalibrationShadowTint",
-            "FarbrauschGrob", "ColorNoiseReduction"}
+            "FarbrauschGrob", "ColorNoiseReduction",
+            "Sharpness", "SharpenDetail", "NoiseReduction", "RawSensorEdgeCrop"}
 
         ''' <summary>Wie weit die Belichtung in der nachsichtigen Pruefung von der Grundbelichtung
         ''' abweichen darf, in Blendenstufen: die Kameratabelle verschiebt sie bei einem neuen Eingang
@@ -1499,6 +1510,7 @@ Namespace Services
                 .SourceFollowsRawExposure = SourceFollowsRawExposure,
                 .KneeInSource = KneeInSource,
                 .RampBlackShareInSource = RampBlackShareInSource,
+                .ShadowSaturationInSource = ShadowSaturationInSource,
                 .BakedOperationsApplied = BakedOperationsApplied,
                 .Brightness = Brightness,
                 .Contrast = Contrast,

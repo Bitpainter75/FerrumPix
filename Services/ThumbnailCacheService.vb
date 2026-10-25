@@ -240,11 +240,18 @@ Namespace Services
         ''' aus ist oder keine .fpxmp existiert (dann gilt der eingebettete-JPG-Schlüssel unverändert).
         ''' Sonst der Zeitstempel der .fpxmp - so baut jede Bearbeitung (die die .fpxmp neu schreibt) die
         ''' Kachel neu, ohne alte Kacheln zu entwerten.</summary>
+        ''' <summary>Fassung der RAW-Basisstufe fuer entwickelte Kacheln. Erhoehen, wenn sich die
+        ''' Entwicklung einer RAW aendert, ohne dass Datei oder Rezept sich aendern; nur die
+        ''' entwickelten RAW-Kacheln werden dann neu gerechnet, nicht der ganze Bestand wie bei
+        ''' CacheFormatVersion. 2 seit der Daempfung der Tiefen nach Kameragenerationen.</summary>
+        Private Const DevelopedRawBaseVersion As Integer = 2
+
         Private Shared Function DevelopedThumbnailSuffix(filePath As String) As String
             If Not RawPreviewService.IsSupportedRaw(filePath) OrElse Not RawSidecarService.Exists(filePath) Then Return ""
             If Not DevelopsThumbnail(filePath) Then Return ""
             Try
-                Return "_dev" & File.GetLastWriteTimeUtc(RawSidecarService.SidecarPathFor(filePath)).Ticks.ToString(Globalization.CultureInfo.InvariantCulture)
+                Return "_dev" & File.GetLastWriteTimeUtc(RawSidecarService.SidecarPathFor(filePath)).Ticks.ToString(Globalization.CultureInfo.InvariantCulture) &
+                       If(DevelopedRawBaseVersion = 1, "", $"_b{DevelopedRawBaseVersion}")
             Catch
                 Return ""
             End Try

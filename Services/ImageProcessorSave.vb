@@ -931,7 +931,9 @@ Namespace Services
                                 Using image = SKImage.FromBitmap(toEncode)
                                     Using data = If(fileFormat = SKEncodedImageFormat.Png,
                                                     PngEncoder.Encode(toEncode, PngPurpose.Export),
-                                                    image.Encode(fileFormat, quality))
+                                                    If(fileFormat = SKEncodedImageFormat.Jpeg,
+                                                       JpegEncoder.Encode(toEncode, quality),
+                                                       image.Encode(fileFormat, quality)))
                                         ' Atomar: erst daneben schreiben, dann darüberbewegen - ein
                                         ' abgebrochener Encode darf das Original nicht zerstören.
                                         ' Mit Aufnahmedaten kommen sie vorher im Speicher hinzu.

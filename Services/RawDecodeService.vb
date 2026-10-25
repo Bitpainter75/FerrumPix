@@ -2199,7 +2199,8 @@ Namespace Services
         Private Shared Function BuildFrom16Bit(data As IntPtr, width As Integer, height As Integer,
                                                lens As LensDataService.Korrektur,
                                                baseEv As Double, normalization As Double,
-                                               knee As Double, sliderEv As Double) As SKBitmap
+                                               knee As Double, sliderEv As Double,
+                                               shadowSaturation As Single()) As SKBitmap
             Dim bitmap = New SKBitmap(New SKImageInfo(width, height, SKColorType.Bgra8888, SKAlphaType.Opaque))
             Try
                 ' ZEILENWEISE direkt in die Bitmap. Ein 8-Bit-Vollbildpuffer waere bei 45
@@ -2221,7 +2222,7 @@ Namespace Services
                 Dim ramp = ToneRampFor(baseEv, normalization, sliderEv)
                 Convert16Rows(data, width, height,
                               Sub(y, row) Marshal.Copy(row, 0, IntPtr.Add(targetPtr, y * targetStride), rowLength),
-                              lens, ramp.ExposureEv, ramp.BlackLevel, knee)
+                              lens, ramp.ExposureEv, ramp.BlackLevel, knee, shadowSaturation)
                 Return bitmap
             Catch
                 bitmap.Dispose()
@@ -2253,7 +2254,8 @@ Namespace Services
 
             Dim pin = GCHandle.Alloc(bytes, GCHandleType.Pinned)
             Try
-                Return BuildFrom16Bit(pin.AddrOfPinnedObject(), width, height, lens, baseEv, normalization, knee, sliderEv)
+                Return BuildFrom16Bit(pin.AddrOfPinnedObject(), width, height, lens, baseEv, normalization, knee, sliderEv,
+                                      ShadowSaturationForFile(path))
             Finally
                 pin.Free()
             End Try
@@ -3199,7 +3201,8 @@ Namespace Services
                             $"Aufbau aus 16 Bit ausgelassen, Ergebnis nicht mehr gebraucht: {IO.Path.GetFileName(path)}")
                         Return Nothing
                     End If
-                    Return BuildFrom16Bit(pixels, width, height, lens, baseEv, normalization, wantedKnee, sliderEv)
+                    Return BuildFrom16Bit(pixels, width, height, lens, baseEv, normalization, wantedKnee, sliderEv,
+                                          ShadowSaturationForFile(path))
                 End If
                 ' Ohne lineare Daten gibt es nichts vorzuwaermen.
                 If warmOnly Then Return Nothing
@@ -3299,6 +3302,11 @@ Namespace Services
         ''' quantisiert. Positionsbasiert und damit deterministisch - derselbe Decode liefert
         ''' bitgleiche Ergebnisse, was der Vorschau-Cache voraussetzt.</summary>
         Private Shared ReadOnly DitherThresholds As Integer() = BuildDitherThresholds()
+
+        ''' <summary>MESSSCHALTER, ab Werk an: das Dither beim Umsetzen nach 8 Bit. Aus wird gerundet
+        ''' (REGLER_DITHER=0), damit sich messen laesst, wie stark die Kette auf eine halbe Stufe
+        ''' am Eingang reagiert.</summary>
+        Friend Shared DitherEnabled As Boolean = True
 
         Private Shared Function BuildDitherThresholds() As Integer()
             ' Rekursive Bayer-Konstruktion: M(2n) = [4M(n), 4M(n)+2; 4M(n)+3, 4M(n)+1]
@@ -3563,9 +3571,12 @@ Namespace Services
                                          Optional lens As LensDataService.Korrektur = Nothing,
                                          Optional exposureEv As Double = BaseExposureEv,
                                          Optional blackLevel As Double = BlackSubtraction,
-                                         Optional knee As Double = 1.0)
-            Dim thresholds = DitherThresholds
+                                         Optional knee As Double = 1.0,
+                                         Optional shadowSaturation As Single() = Nothing)
+            Dim thresholds = If(DitherEnabled, DitherThresholds, Enumerable.Repeat(32767, 64).ToArray())
             Dim ton = ToneTableFor(exposureEv, blackLevel, knee)
+            Dim shadowSteps = If(shadowSaturation Is Nothing, 0, shadowSaturation.Length - 1)
+            Dim shadowScale = shadowSteps / 65535.0F
             Dim gamma = GammaTable
             Dim rowBytes = width * 6
 
@@ -3723,6 +3734,15 @@ Namespace Services
                                 gg = tTief + CInt(CLng(delta) * (g - tief) \ span)
                                 bb = tTief + CInt(CLng(delta) * (b - tief) \ span)
                             End If
+                            If shadowSaturation IsNot Nothing Then
+                                ' Um die Helligkeit des Bildpunkts, linear: die Helligkeit bleibt,
+                                ' nur der Abstand der Kanaele von ihr wird kleiner.
+                                Dim yl = 0.2126F * rr + 0.7152F * gg + 0.0722F * bb
+                                Dim f = shadowSaturation(Math.Min(shadowSteps, CInt(yl * shadowScale)))
+                                rr = Math.Max(0, Math.Min(65535, CInt(yl + f * (rr - yl))))
+                                gg = Math.Max(0, Math.Min(65535, CInt(yl + f * (gg - yl))))
+                                bb = Math.Max(0, Math.Min(65535, CInt(yl + f * (bb - yl))))
+                            End If
                             Dim t = thresholds(ditherRow Or (x And 7))
                             rowBuffer(d) = CByte((gamma(bb) * 255 + t) \ 65535)
                             rowBuffer(d + 1) = CByte((gamma(gg) * 255 + t) \ 65535)
@@ -3743,6 +3763,38 @@ Namespace Services
         ''' gebaut ist. Die Flaechen liegen ueber dem Weisspunkt des Sensors; eine Schwelle erst
         ''' kurz davor aenderte gemessen nichts.</summary>
         Friend Shared MagentaHighlightRecovery As Boolean = True
+
+        ''' <summary>MESSSCHALTER der Reglereichung, ab Werk an: die Daempfung der Tiefen nach der
+        ''' Generation des Kameramodells (<see cref="ShadowSaturationForFile"/>). Gesetzt per
+        ''' Reflexion (REGLER_TIEFENSAETTIGUNG=0), damit sich die Kennlinie gegen die Basis ohne sie
+        ''' nachmessen laesst.</summary>
+        Friend Shared ShadowSaturationEnabled As Boolean = True
+
+        Private Shared ReadOnly _shadowSaturationByPath As New Concurrent.ConcurrentDictionary(Of String, Single())(StringComparer.Ordinal)
+
+        ''' <summary>Die Daempfung der Tiefen fuer DIESE Datei, oder Nothing. Nachgeschlagen wie die
+        ''' Farbkalibrierung: LibRaws Name zuerst, die EXIF-Angaben als zweiter Anlauf. Je Datei
+        ''' gemerkt, weil jeder Aufbau aus 16 Bit sie braucht und der Metadatenlauf das nicht soll.</summary>
+        Friend Shared Function ShadowSaturationForFile(path As String) As Single()
+            If Not ShadowSaturationEnabled OrElse String.IsNullOrEmpty(path) Then Return Nothing
+            Return _shadowSaturationByPath.GetOrAdd(path,
+                Function(p)
+                    Try
+                        Dim facts = ReadFileMetadata(p)
+                        If facts IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(facts.NormalizedModel) Then
+                            Return CameraBaselineTable.ShadowSaturationFor(facts.NormalizedMake, facts.NormalizedModel)
+                        End If
+                        Dim verzeichnisse = ExifService.ReadMetadataDirectories(p)
+                        Dim ifd0 = verzeichnisse.OfType(Of MetadataExtractor.Formats.Exif.ExifIfd0Directory)().FirstOrDefault()
+                        If ifd0 Is Nothing Then Return CameraBaselineTable.ShadowSaturationFor("", "")
+                        Return CameraBaselineTable.ShadowSaturationFor(
+                            ifd0.GetDescription(MetadataExtractor.Formats.Exif.ExifDirectoryBase.TagMake),
+                            ifd0.GetDescription(MetadataExtractor.Formats.Exif.ExifDirectoryBase.TagModel))
+                    Catch
+                        Return Nothing
+                    End Try
+                End Function)
+        End Function
 
         ''' <summary>Ergaenzt fehlendes Gruen in teils ausgefressenen, hellen Lichtern.
         '''

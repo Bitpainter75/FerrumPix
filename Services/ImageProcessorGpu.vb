@@ -279,7 +279,8 @@ Namespace Services
         Private Const RowLocalDetail As Integer = 16
         Private Const RowLocalColor As Integer = 17
         Private Const RowRawStageTone As Integer = 18
-        Private Const ShaderTableRows As Integer = 19
+        Private Const RowRawShadow As Integer = 19
+        Private Const ShaderTableRows As Integer = 20
 
         Private Shared _pointOpEffect As SKRuntimeEffect
         Private Shared ReadOnly _pointOpEffectLock As New Object()
@@ -381,6 +382,19 @@ Namespace Services
         ''' <summary>Das Raster der Basis als Bild: drei Bloecke uebereinander (A, B, geglaettetes
         ''' Grau), je Wert zwei Kanaele wie bei den Tabellen. Ohne Basis ein Bildpunkt, damit der
         ''' Shader immer ein Kind hat.</summary>
+        ''' <summary>Die Fuehrung des Farbmischers als Bild fuer den Shader (BuildMixerGuide), sonst ein
+        ''' einzelner durchsichtiger Punkt: der Shader braucht immer ein Kind, und an der Groesse
+        ''' erkennt PointOpShader, ob es eine Fuehrung ist.</summary>
+        Private Shared Function BuildGuideImage(source As SKImage, chain As PointOpChain) As SKImage
+            Using guide = BuildMixerGuide(source, chain)
+                If guide IsNot Nothing Then Return SKImage.FromBitmap(guide)
+            End Using
+            Using placeholder = New SKBitmap(New SKImageInfo(1, 1, SKColorType.Rgba8888, SKAlphaType.Premul))
+                placeholder.Erase(SKColors.Transparent)
+                Return SKImage.FromBitmap(placeholder)
+            End Using
+        End Function
+
         Private Shared Function BuildLocalBaseImage(localBase As LocalToneBase) As SKImage
             Dim w = If(localBase Is Nothing, 1, localBase.Width)
             Dim h = If(localBase Is Nothing, 1, localBase.Height)
@@ -532,7 +546,8 @@ Namespace Services
             Dim localBase = BuildLocalToneBaseFor(source, chain)
             Using table = BuildShaderTables(chain), dither = BuildDitherImage(), image = SKImage.FromBitmap(source),
                   baseImage = BuildLocalBaseImage(localBase),
-                  cubeA = BuildCubeImage(chain, 0), cubeB = BuildCubeImage(chain, 1)
+                  cubeA = BuildCubeImage(chain, 0), cubeB = BuildCubeImage(chain, 1),
+                  guide = BuildGuideImage(image, chain)
                 Const BandRows = 128
                 Dim bands = (source.Height + BandRows - 1) \ BandRows
                 Dim basePtr = result.GetPixels()
@@ -543,7 +558,7 @@ Namespace Services
                         Dim rows = Math.Min(BandRows, source.Height - y0)
                         Dim bandInfo = New SKImageInfo(source.Width, rows, source.ColorType, source.AlphaType)
                         Using surface = SKSurface.Create(bandInfo, basePtr + y0 * rowBytes, rowBytes)
-                            Using shader = PointOpShader(effect, chain, image, table, dither, baseImage, cubeA, cubeB, localBase,
+                            Using shader = PointOpShader(effect, chain, image, table, dither, baseImage, cubeA, cubeB, guide, localBase,
                                                          source.AlphaType = SKAlphaType.Premul)
                                 Using paint = New SKPaint With {.Shader = shader, .BlendMode = SKBlendMode.Src}
                                     surface.Canvas.Translate(0, -y0)
@@ -614,18 +629,21 @@ Namespace Services
             Dim effect = PointOpEffect()
             Dim gpuInfo = New SKImageInfo(source.Width, source.Height, SKColorType.Rgba8888, SKAlphaType.Premul)
             Using table = BuildShaderTables(chain), dither = BuildDitherImage(), baseImage = BuildLocalBaseImage(localBase),
-                  cubeA = BuildCubeImage(chain, 0), cubeB = BuildCubeImage(chain, 1)
+                  cubeA = BuildCubeImage(chain, 0), cubeB = BuildCubeImage(chain, 1),
+                  guide = BuildGuideImage(source, chain)
                 Using image = source.ToTextureImage(gr),
                       gpuTable = table.ToTextureImage(gr), gpuDither = dither.ToTextureImage(gr),
                       gpuBase = baseImage.ToTextureImage(gr),
-                      gpuCubeA = cubeA.ToTextureImage(gr), gpuCubeB = cubeB.ToTextureImage(gr)
+                      gpuCubeA = cubeA.ToTextureImage(gr), gpuCubeB = cubeB.ToTextureImage(gr),
+                      gpuGuide = guide.ToTextureImage(gr)
                     Dim surface = SKSurface.Create(gr, False, gpuInfo)
                     Try
                         If image Is Nothing OrElse gpuTable Is Nothing OrElse gpuDither Is Nothing OrElse
-                           gpuBase Is Nothing OrElse gpuCubeA Is Nothing OrElse gpuCubeB Is Nothing OrElse surface Is Nothing Then
+                           gpuBase Is Nothing OrElse gpuCubeA Is Nothing OrElse gpuCubeB Is Nothing OrElse
+                           gpuGuide Is Nothing OrElse surface Is Nothing Then
                             Throw New InvalidOperationException("Textur oder Zielflaeche auf der Grafikkarte nicht anlegbar.")
                         End If
-                        Using shader = PointOpShader(effect, chain, image, gpuTable, gpuDither, gpuBase, gpuCubeA, gpuCubeB, localBase,
+                        Using shader = PointOpShader(effect, chain, image, gpuTable, gpuDither, gpuBase, gpuCubeA, gpuCubeB, gpuGuide, localBase,
                                                      source.AlphaType = SKAlphaType.Premul)
                             Using paint = New SKPaint With {.Shader = shader, .BlendMode = SKBlendMode.Src}
                                 surface.Canvas.DrawRect(0, 0, source.Width, source.Height, paint)
@@ -665,10 +683,12 @@ Namespace Services
 
         Private Shared Function PointOpShader(effect As SKRuntimeEffect, chain As PointOpChain, image As SKImage,
                                               table As SKImage, dither As SKImage, baseImage As SKImage,
-                                              cubeA As SKImage, cubeB As SKImage,
+                                              cubeA As SKImage, cubeB As SKImage, guide As SKImage,
                                               localBase As LocalToneBase, premul As Boolean) As SKShader
             Dim u = New SKRuntimeEffectUniforms(effect)
             u("premulIn") = If(premul, 1.0F, 0.0F)
+            ' Ohne Fuehrung liegt dort ein einzelner Platzhalterpunkt (BuildGuideImage).
+            u("useGuide") = If(chain.Hsl IsNot Nothing AndAlso guide.Width = image.Width AndAlso guide.Height = image.Height, 1.0F, 0.0F)
             u("useLocal") = If(localBase IsNot Nothing, 1.0F, 0.0F)
             u("useLocalDetail") = If(chain.LocalDetailGain IsNot Nothing, 1.0F, 0.0F)
             u("useLocalColor") = If(chain.LocalColorGain IsNot Nothing, 1.0F, 0.0F)
@@ -676,6 +696,7 @@ Namespace Services
             u("baseOrigin") = If(localBase IsNot Nothing, New Single() {localBase.OriginX, localBase.OriginY}, New Single() {0, 0})
             u("baseStep") = If(localBase IsNot Nothing, CSng(localBase.StepSize), 1.0F)
             u("useRawStage") = If(chain.RawStageTone IsNot Nothing, 1.0F, 0.0F)
+            u("useRawShadow") = If(chain.RawStageTone IsNot Nothing AndAlso chain.RawStageShadowSaturation IsNot Nothing, 1.0F, 0.0F)
             u("useNeg") = If(chain.NegR IsNot Nothing, 1.0F, 0.0F)
             u("negMono") = If(chain.NegMonochrome, 1.0F, 0.0F)
             SetMatrixRows(u, "wb", chain.WhiteBalanceMatrix, 3, 0)
@@ -701,6 +722,11 @@ Namespace Services
             u("vibMode") = If(chain.VibranceExponential, 1.0F, If(chain.VibranceByHue IsNot Nothing, 2.0F, If(chain.Vibrance <> 0.0F, 3.0F, 0.0F)))
             u("vibrance") = chain.Vibrance
             u("shadowTint") = chain.ShadowTint
+            Dim tint = ShadowTintParameters()
+            u("shadowTintK") = tint.Strength
+            u("shadowTintRB") = New Single() {tint.Red, tint.Blue}
+            u("stw0") = New Single() {tint.Weights(0), tint.Weights(1), tint.Weights(2), tint.Weights(3)}
+            u("stw1") = New Single() {tint.Weights(4), tint.Weights(5), tint.Weights(6), tint.Weights(7)}
             SetMatrixRows(u, "mix", chain.Mixer, 4, 3)
             u("useMixer") = If(chain.Mixer IsNot Nothing, 1.0F, 0.0F)
             u("useMap") = If(chain.MapShadow IsNot Nothing, 1.0F, 0.0F)
@@ -724,7 +750,8 @@ Namespace Services
                 dither.ToShader(SKShaderTileMode.Repeat, SKShaderTileMode.Repeat, New SKSamplingOptions(SKFilterMode.Nearest)),
                 baseImage.ToShader(SKShaderTileMode.Clamp, SKShaderTileMode.Clamp, New SKSamplingOptions(SKFilterMode.Linear)),
                 cubeA.ToShader(SKShaderTileMode.Clamp, SKShaderTileMode.Clamp, New SKSamplingOptions(SKFilterMode.Nearest)),
-                cubeB.ToShader(SKShaderTileMode.Clamp, SKShaderTileMode.Clamp, New SKSamplingOptions(SKFilterMode.Nearest))}
+                cubeB.ToShader(SKShaderTileMode.Clamp, SKShaderTileMode.Clamp, New SKSamplingOptions(SKFilterMode.Nearest)),
+                guide.ToShader(SKShaderTileMode.Clamp, SKShaderTileMode.Clamp, New SKSamplingOptions(SKFilterMode.Nearest))}
             Try
                 Dim children = New SKRuntimeEffectChildren(effect)
                 children("src") = parts(0)
@@ -733,6 +760,7 @@ Namespace Services
                 children("baseGrid") = parts(3)
                 children("cubeA") = parts(4)
                 children("cubeB") = parts(5)
+                children("guide") = parts(6)
                 Return effect.ToShader(u, children)
             Finally
                 For Each part In parts
@@ -889,6 +917,15 @@ Namespace Services
             put(RowLocalDetail, chain.LocalDetailGain)
             put(RowLocalColor, chain.LocalColorGain)
             put(RowRawStageTone, chain.RawStageTone)
+            If chain.RawStageShadowSaturation IsNot Nothing Then
+                ' Ueber die lineare Helligkeit wie im Prozessor (ScaleShadowSaturation).
+                Dim shadow = chain.RawStageShadowSaturation
+                Dim row(ShaderTableWidth - 1) As Single
+                For i = 0 To ShaderTableWidth - 1
+                    row(i) = shadow(Math.Min(shadow.Length - 1, CInt(i / CDbl(ShaderTableWidth - 1) * (shadow.Length - 1))))
+                Next
+                put(RowRawShadow, row)
+            End If
             If chain.Hsl IsNot Nothing OrElse chain.VibranceByHue IsNot Nothing Then
                 Dim hue(ShaderTableWidth - 1) As Single, sat(ShaderTableWidth - 1) As Single
                 Dim lum(ShaderTableWidth - 1) As Single, vib(ShaderTableWidth - 1) As Single
@@ -934,10 +971,12 @@ uniform shader src;
 uniform shader tables;
 uniform shader dither;
 uniform shader baseGrid;
+uniform shader guide;
+uniform float useGuide;
 uniform float premulIn;
 uniform float useLocal; uniform float useLocalDetail; uniform float useLocalColor;
 uniform float2 baseSize; uniform float2 baseOrigin; uniform float baseStep;
-uniform float useRawStage;
+uniform float useRawStage; uniform float useRawShadow;
 uniform float useNeg; uniform float negMono;
 uniform float useWb; uniform float3 wb0; uniform float3 wb1; uniform float3 wb2;
 uniform float useCm; uniform float3 cm0; uniform float3 cm1; uniform float3 cm2; uniform float3 cmOff;
@@ -945,6 +984,10 @@ uniform float useScalar; uniform float useToneBefore; uniform float useToneZones
 uniform float hslActive; uniform float useLum; uniform float useHsl;
 uniform float vibMode; uniform float vibrance;
 uniform float shadowTint;
+uniform float shadowTintK;
+uniform float2 shadowTintRB;
+uniform float4 stw0;
+uniform float4 stw1;
 uniform float useMixer; uniform float3 mix0; uniform float3 mix1; uniform float3 mix2; uniform float3 mixOff;
 uniform float useMap; uniform float3 mapS; uniform float3 mapH; uniform float mapAmount;
 uniform float usePreset; uniform float3 pm0; uniform float3 pm1; uniform float3 pm2; uniform float3 pmOff; uniform float presetStrength;
@@ -1194,21 +1237,37 @@ float applyPointColors(inout float3 c) {
     return shown;
 }
 
-half4 main(float2 p) {
-    half4 pix = src.eval(p);
-    float a = float(pix.a);
-    float a255 = floor(a * 255.0 + 0.5);
-    if (a255 <= 0.0) return half4(0.0);
-    // Aus dem Byte gerechnet wie im Prozessor (Byte / 255, vormultipliziert Byte * (1 / Alpha)),
-    // damit Werte auf einer Stufengrenze auf derselben Seite landen.
+// Aus dem Byte gerechnet wie im Prozessor (Byte / 255, vormultipliziert Byte * (1 / Alpha)),
+// damit Werte auf einer Stufengrenze auf derselben Seite landen.
+float3 decodePixel(half4 pix, float a255) {
     float3 c = floor(float3(pix.rgb) * 255.0 + 0.5);
     if (a255 < 255.0 && premulIn > 0.5) {
         c = min(c * (1.0 / a255), float3(1.0));
     } else {
         c = c / 255.0;
     }
+    return c;
+}
+
+// ScaleShadowSaturation: die Daempfung der Tiefen der RAW-Stufe, linear um die Helligkeit.
+float3 scaleShadow(float3 c, float undo) {
+    float3 l = float3(tab(0.0, c.r), tab(0.0, c.g), tab(0.0, c.b));
+    float yl = 0.2126 * l.r + 0.7152 * l.g + 0.0722 * l.b;
+    float f = tab(19.0, yl);
+    if (undo > 0.5) f = 1.0 / max(f, 0.05);
+    float3 o = clamp(float3(yl) + f * (l - float3(yl)), 0.0, 1.0);
+    return float3(tab(1.0, o.r), tab(1.0, o.g), tab(1.0, o.b));
+}
+
+// PreMixerStages: die Stufen bis vor den HSL-Block, fuer den Bildpunkt und fuer seine
+// Fuehrungsfarbe. Rueckgabe: Farbe und die Saettigung vor der Tonstufe.
+float4 preMixer(float3 c, float2 p) {
     float rr = c.r; float gg = c.g; float bb = c.b;
 
+    if (useRawStage > 0.5 && useRawShadow > 0.5) {
+        float3 u0 = scaleShadow(float3(rr, gg, bb), 1.0);
+        rr = u0.r; gg = u0.g; bb = u0.b;
+    }
     if (useRawStage > 0.5) {
         // ApplyRawStageTone: die Tabelle auf hellstem und dunkelstem Kanal, der mittlere linear dazwischen.
         float hi = max(rr, max(gg, bb)); float lo = min(rr, min(gg, bb));
@@ -1230,6 +1289,10 @@ half4 main(float2 p) {
             float bOut = clamp(loOutLin + (bLin - loLin) * s, 0.0, 1.0);
             rr = tab(1.0, rOut); gg = tab(1.0, gOut); bb = tab(1.0, bOut);
         }
+    }
+    if (useRawStage > 0.5 && useRawShadow > 0.5) {
+        float3 u1 = scaleShadow(float3(rr, gg, bb), 0.0);
+        rr = u1.r; gg = u1.g; bb = u1.b;
     }
 
     if (useNeg > 0.5) {
@@ -1327,6 +1390,30 @@ half4 main(float2 p) {
             rr = tab(5.0, rr); gg = tab(6.0, gg); bb = tab(7.0, bb);
         }
     }
+    return float4(rr, gg, bb, satVorTon);
+}
+
+half4 main(float2 p) {
+    half4 pix = src.eval(p);
+    float a = float(pix.a);
+    float a255 = floor(a * 255.0 + 0.5);
+    if (a255 <= 0.0) return half4(0.0);
+    float4 pre = preMixer(decodePixel(pix, a255), p);
+    float rr = pre.r; float gg = pre.g; float bb = pre.b;
+    float satVorTon = pre.a;
+
+    // Die Fuehrungsfarbe des Farbmischers (MixerGuideSigma): dieselbe Stelle des geglaetteten
+    // Bilds durch dieselben Stufen, dann nach HSL und durch die Luminanzkurve.
+    float3 guideHsl = float3(-1.0);
+    if (useGuide > 0.5) {
+        half4 gpix = guide.eval(p);
+        float ga255 = floor(float(gpix.a) * 255.0 + 0.5);
+        if (ga255 > 0.0) {
+            float4 gpre = preMixer(decodePixel(gpix, ga255), p);
+            guideHsl = rgbToHsl(gpre.rgb);
+            if (useLum > 0.5) guideHsl.z = tab(10.0, clamp(guideHsl.z, 0.0, 1.0));
+        }
+    }
 
     float pointShown = -1.0;
     if (hslActive > 0.5) {
@@ -1356,14 +1443,22 @@ half4 main(float2 p) {
             sat = clamp(sat * (1.0 + vibrance * (1.0 - sat)), 0.0, 1.0);
         }
         if (useHsl > 0.5) {
-            float hueShift = hueTab(11.0, h) * 360.0;
-            float satShift = hueTab(12.0, h) * 100.0;
-            float lumShift = hueTab(13.0, h) * 100.0;
-            float chromaC = sat * (1.0 - abs(2.0 * lum - 1.0));
+            bool hasGuide = guideHsl.x >= 0.0;
+            float bandHue = hasGuide ? guideHsl.x : h;
+            float gateSat = hasGuide ? guideHsl.y : sat;
+            float gateLum = hasGuide ? guideHsl.z : lum;
+            float hueShift = hueTab(11.0, bandHue) * 360.0;
+            float satShift = hueTab(12.0, bandHue) * 100.0;
+            float lumShift = hueTab(13.0, bandHue) * 100.0;
+            float chromaC = gateSat * (1.0 - abs(2.0 * gateLum - 1.0));
             float gateCs = min(1.0, chromaC / 0.2);
             gateCs = gateCs * gateCs * (3.0 - 2.0 * gateCs);
-            float chromaW = min(1.0, (lum > 0.5 ? chromaC : sat) / 0.1);
+            float chromaW = min(1.0, (gateLum > 0.5 ? chromaC : gateSat) / 0.1);
             chromaW = chromaW * chromaW * (3.0 - 2.0 * chromaW);
+            if (gateLum <= 0.5) {
+                float darkGate = min(1.0, chromaC / 0.1);
+                chromaW *= darkGate * darkGate * (3.0 - 2.0 * darkGate);
+            }
             h = mod(h + hueShift * gateCs + 360.0, 360.0);
             sat = satGain(sat, satShift * gateCs / 100.0);
             lum = bandGain(lum, lumShift * chromaW / 100.0);
@@ -1388,14 +1483,21 @@ half4 main(float2 p) {
     }
 
     if (shadowTint != 0.0) {
-        float brightness = 0.299 * rr + 0.587 * gg + 0.114 * bb;
-        float gewicht = max(0.0, 1.0 - brightness * 2.0);
-        if (gewicht > 0.0) {
-            float strength = shadowTint / 100.0 * 0.12 * gewicht;
-            gg = clamp(gg - strength, 0.0, 1.0);
-            rr = clamp(rr + strength * 0.5, 0.0, 1.0);
-            bb = clamp(bb + strength * 0.5, 0.0, 1.0);
-        }
+        // ShadowTintWeight: stueckweise linear ueber 0, .05, .15, .27, .42, .6, .85, 1.
+        float y = clamp(0.299 * rr + 0.587 * gg + 0.114 * bb, 0.0, 1.0);
+        float w = y < 0.05 ? mix(stw0.x, stw0.y, y / 0.05)
+                : y < 0.15 ? mix(stw0.y, stw0.z, (y - 0.05) / 0.10)
+                : y < 0.27 ? mix(stw0.z, stw0.w, (y - 0.15) / 0.12)
+                : y < 0.42 ? mix(stw0.w, stw1.x, (y - 0.27) / 0.15)
+                : y < 0.60 ? mix(stw1.x, stw1.y, (y - 0.42) / 0.18)
+                : y < 0.85 ? mix(stw1.y, stw1.z, (y - 0.60) / 0.25)
+                : mix(stw1.z, stw1.w, (y - 0.85) / 0.15);
+        float strength = shadowTint / 100.0 * shadowTintK * w;
+        float dr = shadowTintRB.x * strength;
+        float db = shadowTintRB.y * strength;
+        rr = clamp(rr + dr, 0.0, 1.0);
+        bb = clamp(bb + db, 0.0, 1.0);
+        gg = clamp(gg - (0.299 * dr + 0.114 * db) / 0.587, 0.0, 1.0);
     }
     if (useMixer > 0.5) {
         float3 v = float3(rr, gg, bb);

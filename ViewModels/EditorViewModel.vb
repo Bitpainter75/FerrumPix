@@ -23184,6 +23184,7 @@ Namespace ViewModels
                 .SourceFollowsRawExposure = SourceFollowsRawExposure(),
                 .KneeInSource = _workingImageKnee,
                 .RampBlackShareInSource = If(SourceFollowsRawExposure(), RawDecodeService.RampBlackShareForFile(RenderSourcePath), 0.0),
+                .ShadowSaturationInSource = If(SourceFollowsRawExposure(), RawDecodeService.ShadowSaturationForFile(RenderSourcePath), Nothing),
                 .FilterPreset = _filterPreset,
                 .FilterStrength = CSng(_filterStrength),
                 .LutPath = _lutPath,
@@ -30772,7 +30773,7 @@ Namespace ViewModels
 
                 RaiseExtendedAdjustmentProperties()
                 SetLastAppliedXmpPreset(xmpPath)
-                BeginPresetAmount(beforePreset, xmpPath)
+                BeginPresetAmount(beforePreset)
                 ' AM RUECKGABEWERT entscheiden, nicht am angezeigten Text. Der Hinweis wird mit
                 ' T("Adobe-Profil erkannt: ") gebaut, die Abfrage stand auf T("Adobe-Profil erkannt:")
                 ' ohne Leerzeichen - zwei verschiedene Schluessel. Solange beide unuebersetzt sind,
@@ -30789,7 +30790,7 @@ Namespace ViewModels
 
         ' ── Preset-Staerke ──────────────────────────────────────────────────────────────────
         '
-        ' Nach einem XMP-Preset, das es erlaubt (crs:SupportsAmount), steht im Preset-Panel der Regler
+        ' Nach jedem XMP-Preset steht im Preset-Panel der Regler
         ' "Stärke" von 0 bis 200 Prozent. Er rechnet jeden Regler des Looks zwischen dem Stand VOR
         ' dem Preset und dem MIT ihm: 0 ist das Bild ohne Preset, 100 das Preset, 200 seine
         ' Aenderungen doppelt. Beide Staende werden beim Anwenden einmal festgehalten und jede
@@ -30841,14 +30842,16 @@ Namespace ViewModels
             End Set
         End Property
 
-        Private Sub BeginPresetAmount(before As ImageAdjustments, xmpPath As String)
+        Private Sub BeginPresetAmount(before As ImageAdjustments)
             Dim after = GetCurrentAdjustments()
             Dim layersBefore = If(before.MaskedAdjustmentLayers?.Count, 0)
             Dim layersAfter = If(after.MaskedAdjustmentLayers?.Count, 0)
             Dim geometryBefore = If(before.GeometryOperations?.Count, 0)
             Dim geometryAfter = If(after.GeometryOperations?.Count, 0)
-            If Not XmpPresetService.PresetSupportsAmount(xmpPath) OrElse layersBefore <> layersAfter OrElse
-               geometryBefore <> geometryAfter Then
+            ' JEDES Preset bekommt die Staerke, nicht nur eines mit crs:SupportsAmount="True" wie beim
+            ' Referenzprogramm (entschieden 2026-10-25): viele Presets tragen die Angabe nicht,
+            ' Cool Glow etwa. Ausgenommen bleibt, was sich nicht zwischen zwei Staenden rechnen laesst.
+            If layersBefore <> layersAfter OrElse geometryBefore <> geometryAfter Then
                 EndPresetAmount()
                 Return
             End If
@@ -30972,6 +30975,14 @@ Namespace ViewModels
             ' vorhandene FerrumPix-Objektivdatenbank vorgenommen, niemals über einen geratenen Namen.
             If ImportXmpLensCorrections AndAlso extras.HasLensCorrection Then LensDistortionEnabled = True
             If ImportXmpChromaticAberration AndAlso extras.HasChromaticAberration Then LensTcaEnabled = True
+            ' Steht die Korrektur im Preset ausdruecklich auf aus, rechnet die Referenz ohne sie: dann
+            ' auch hier, sonst laege das Bild anders im Rahmen als dort (Verzeichnung) und haette eine
+            ' andere Randabdunklung.
+            If ImportXmpLensCorrections AndAlso extras.LensCorrectionOff Then
+                LensDistortionEnabled = False
+                LensVignettingEnabled = False
+            End If
+            If ImportXmpChromaticAberration AndAlso extras.ChromaticAberrationOff Then LensTcaEnabled = False
             Return profileNotice
         End Function
 
