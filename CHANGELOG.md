@@ -25,6 +25,10 @@
   Threshold, and Frame now opens the Effects tool above Grain. The rarely useful Color blotches and Blotch size sliders and the negative halves of
   Noise and Dust/scratches are gone; pictures edited with them keep their look.
 
+- **Whites and Blacks keep the colours:** lowering Whites or raising Blacks no longer drains colour
+  from bright areas and midtones; the colours now stay as strong as in the reference program.
+  Pictures that use these sliders look a little more colourful than before.
+
 - **Histogram next to the sliders by default:** the analysis graph now sits above the adjustment
   sliders from the start, as Histogram in Adjust, RGB parade in Color and Waveform in Details and
   Effects. Switching it in a tool is remembered as before, and Settings can turn it off. It is
@@ -84,7 +88,8 @@
   like in the reference program instead of only in the shadows, where it was far too strong and
   turned red and skin tones. All calibration sliders now have the strength of the reference,
   several of them used together no longer cancel each other out, and together with the curves of
-  a preset they no longer push reds too far.
+  a preset they no longer push reds too far. The colours matched to each camera model (an option
+  in Settings) have been measured again on this basis, for 80 models.
 
 - **True colours under artificial light:** most cameras come with two colour profiles, one for
   daylight and one for warm tungsten light. FerrumPix now blends between them according to the

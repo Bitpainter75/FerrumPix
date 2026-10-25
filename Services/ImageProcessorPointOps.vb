@@ -909,16 +909,19 @@ Namespace Services
         ''' 50-70, 70-100, gelesen als Gammawert); dazwischen linear, ueber die Reglerstellung im
         ''' Logarithmus, bei 0 ohne Wirkung. Weiss und Schwarz zusammen multiplizieren sich.</summary>
         Private Shared ReadOnly ToneChromaKnots As Double() = {0.15, 0.4, 0.6, 0.85}
+        ' Zweite Runde: die Werte der ersten mal dem Verhaeltnis, das danach noch blieb. Die
+        ' Interpolation zwischen den Stufen laesst eine starke Stufe in die Nachbarstufe wirken
+        ' (Schwarz -100 bei L 30-50), das gleicht die zweite Runde aus.
         Private Shared ReadOnly WhitesChroma As Double()() = {
-            New Double() {1.035, 1.053, 1.112, 1.199},   ' -100
-            New Double() {1.033, 1.046, 1.076, 1.071},   ' -50
-            New Double() {0.993, 1.014, 1.013, 1.029},   ' +50
-            New Double() {1.013, 1.041, 0.948, 0.565}}   ' +100
+            New Double() {1.033, 1.061, 1.132, 1.247},   ' -100
+            New Double() {1.031, 1.053, 1.089, 1.075},   ' -50
+            New Double() {0.988, 1.017, 1.015, 1.041},   ' +50
+            New Double() {1.01, 1.052, 0.947, 0.465}}    ' +100
         Private Shared ReadOnly BlacksChroma As Double()() = {
-            New Double() {0.635, 1.009, 1.012, 1.033},
-            New Double() {1.025, 1.001, 0.995, 1.005},
-            New Double() {0.963, 1.036, 1.072, 1.065},
-            New Double() {1.044, 1.185, 1.205, 1.158}}
+            New Double() {0.536, 1.075, 1.012, 1.043},
+            New Double() {1.034, 0.998, 0.993, 1.009},
+            New Double() {0.944, 1.046, 1.085, 1.059},
+            New Double() {1.03, 1.227, 1.221, 1.147}}
 
         ''' <summary>Faktor auf den Abstand vom Grau je Helligkeit vor der Tonstufe, oder Nothing ohne
         ''' Weiss und Schwarz.</summary>

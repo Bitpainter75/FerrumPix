@@ -630,725 +630,725 @@
   },
   "referenceOffsetEv": -0.26,
   "colorCalibrations": {
-    "CANONEOS1100D": {
-      "redHue": 4,
-      "redSaturation": -1,
-      "greenHue": 21,
-      "greenSaturation": 17,
-      "blueHue": -14,
-      "blueSaturation": -1,
-      "shadowTint": 7
+    "CANONEOS1000D": {
+      "redHue": -8,
+      "redSaturation": 33,
+      "greenHue": 3,
+      "greenSaturation": 8,
+      "blueHue": 4,
+      "blueSaturation": -2,
+      "shadowTint": 2
     },
-    "CANONEOS50D": {
-      "redHue": -13,
-      "redSaturation": 40,
-      "greenHue": 6,
-      "greenSaturation": 3,
-      "blueHue": -21,
-      "blueSaturation": 13,
-      "shadowTint": 10
-    },
-    "CANONEOS5DMARKIII": {
-      "redHue": 8,
-      "redSaturation": 25,
-      "greenHue": 23,
-      "greenSaturation": 3,
-      "blueHue": -16,
-      "blueSaturation": 3,
+    "CANONEOS550D": {
+      "redHue": -9,
+      "redSaturation": 22,
+      "greenHue": 13,
+      "greenSaturation": 33,
+      "blueHue": 5,
+      "blueSaturation": 4,
       "shadowTint": -1
     },
-    "CANONEOS600D": {
-      "redHue": -10,
-      "redSaturation": 8,
-      "greenHue": 0,
-      "greenSaturation": 1,
-      "blueHue": 3,
-      "blueSaturation": -1,
-      "shadowTint": -5
+    "CANONEOS7D": {
+      "redHue": 0,
+      "redSaturation": 15,
+      "greenHue": 14,
+      "greenSaturation": 33,
+      "blueHue": 0,
+      "blueSaturation": 19,
+      "shadowTint": 9
     },
     "CANONEOSM6": {
-      "redHue": -9,
-      "redSaturation": 30,
-      "greenHue": 8,
-      "greenSaturation": 3,
-      "blueHue": -4,
-      "blueSaturation": -2,
-      "shadowTint": 3
+      "redHue": -21,
+      "redSaturation": 28,
+      "greenHue": 14,
+      "greenSaturation": 16,
+      "blueHue": 13,
+      "blueSaturation": -4,
+      "shadowTint": 20
     },
     "CANONEOSR10": {
+      "redHue": 0,
+      "redSaturation": -5,
+      "greenHue": 12,
+      "greenSaturation": 9,
+      "blueHue": 2,
+      "blueSaturation": -5,
+      "shadowTint": 3
+    },
+    "CANONEOSR100": {
       "redHue": -2,
-      "redSaturation": -8,
-      "greenHue": 3,
-      "greenSaturation": 3,
-      "blueHue": -5,
+      "redSaturation": -10,
+      "greenHue": 6,
+      "greenSaturation": 18,
+      "blueHue": -12,
       "blueSaturation": -4,
-      "shadowTint": 1
+      "shadowTint": -6
+    },
+    "CANONEOSR5": {
+      "redHue": -4,
+      "redSaturation": -6,
+      "greenHue": 17,
+      "greenSaturation": 31,
+      "blueHue": 10,
+      "blueSaturation": -10,
+      "shadowTint": 12
     },
     "CANONEOSR50": {
-      "redHue": -24,
-      "redSaturation": 3,
-      "greenHue": 0,
-      "greenSaturation": 3,
-      "blueHue": -9,
-      "blueSaturation": 1,
-      "shadowTint": -3
+      "redHue": -15,
+      "redSaturation": -1,
+      "greenHue": 18,
+      "greenSaturation": 13,
+      "blueHue": 0,
+      "blueSaturation": 3,
+      "shadowTint": 5
     },
     "CANONEOSR5MARKII": {
-      "redHue": -8,
-      "redSaturation": 9,
-      "greenHue": 5,
-      "greenSaturation": -5,
-      "blueHue": -12,
-      "blueSaturation": -6,
-      "shadowTint": 2
+      "redHue": 2,
+      "redSaturation": -5,
+      "greenHue": 20,
+      "greenSaturation": 19,
+      "blueHue": 6,
+      "blueSaturation": -23,
+      "shadowTint": 3
     },
     "CANONEOSR6": {
-      "redHue": -3,
-      "redSaturation": 14,
-      "greenHue": 9,
-      "greenSaturation": -17,
-      "blueHue": -9,
-      "blueSaturation": -2,
-      "shadowTint": 1
-    },
-    "CANONEOSR6MARKII": {
-      "redHue": -16,
-      "redSaturation": 12,
-      "greenHue": 2,
-      "greenSaturation": -9,
-      "blueHue": 1,
-      "blueSaturation": 0,
-      "shadowTint": 5
-    },
-    "CANONEOSR6MARKIII": {
-      "redHue": -16,
-      "redSaturation": 5,
+      "redHue": 1,
+      "redSaturation": -5,
       "greenHue": 17,
-      "greenSaturation": -5,
-      "blueHue": -2,
-      "blueSaturation": -1,
-      "shadowTint": -1
-    },
-    "CANONEOSR7": {
-      "redHue": -16,
-      "redSaturation": -1,
-      "greenHue": 10,
-      "greenSaturation": -1,
-      "blueHue": -5,
-      "blueSaturation": 0,
-      "shadowTint": -1
-    },
-    "CANONEOSR8": {
-      "redHue": -15,
-      "redSaturation": 12,
-      "greenHue": 0,
-      "greenSaturation": -11,
-      "blueHue": -3,
-      "blueSaturation": -2,
-      "shadowTint": 5
-    },
-    "CANONPOWERSHOTSX710HS": {
-      "redHue": -26,
-      "redSaturation": -23,
-      "greenHue": 0,
-      "greenSaturation": -40,
-      "blueHue": 17,
-      "blueSaturation": -32,
-      "shadowTint": 1
-    },
-    "FUJIFILMGFX100II": {
-      "redHue": -22,
-      "redSaturation": 27,
-      "greenHue": -2,
-      "greenSaturation": 2,
-      "blueHue": -23,
-      "blueSaturation": -7,
-      "shadowTint": -3
-    },
-    "FUJIFILMGFX100RF": {
-      "redHue": -6,
-      "redSaturation": 40,
-      "greenHue": -4,
-      "greenSaturation": 40,
-      "blueHue": -29,
-      "blueSaturation": 10,
-      "shadowTint": -1
-    },
-    "FUJIFILMGFX100SII": {
-      "redHue": -11,
-      "redSaturation": 3,
-      "greenHue": 14,
-      "greenSaturation": -9,
-      "blueHue": 8,
-      "blueSaturation": -6,
+      "greenSaturation": 10,
+      "blueHue": 3,
+      "blueSaturation": -15,
       "shadowTint": 0
     },
-    "FUJIFILMGFX50R": {
-      "redHue": -24,
-      "redSaturation": 9,
-      "greenHue": -7,
-      "greenSaturation": 3,
-      "blueHue": -4,
-      "blueSaturation": 4,
-      "shadowTint": 13
-    },
-    "FUJIFILMX100F": {
-      "redHue": -6,
-      "redSaturation": 15,
-      "greenHue": 20,
-      "greenSaturation": 1,
-      "blueHue": -3,
-      "blueSaturation": -8,
-      "shadowTint": 1
-    },
-    "FUJIFILMX100VI": {
-      "redHue": 0,
-      "redSaturation": 19,
-      "greenHue": 8,
-      "greenSaturation": -11,
-      "blueHue": -9,
-      "blueSaturation": -3,
-      "shadowTint": -1
-    },
-    "FUJIFILMXH2S": {
-      "redHue": -5,
-      "redSaturation": 26,
-      "greenHue": 1,
-      "greenSaturation": 0,
-      "blueHue": -1,
-      "blueSaturation": -7,
+    "CANONEOSR6MARKII": {
+      "redHue": -13,
+      "redSaturation": 7,
+      "greenHue": 3,
+      "greenSaturation": 7,
+      "blueHue": -12,
+      "blueSaturation": -30,
       "shadowTint": 7
     },
-    "FUJIFILMXS10": {
-      "redHue": -13,
-      "redSaturation": -5,
-      "greenHue": 6,
-      "greenSaturation": -3,
-      "blueHue": -9,
-      "blueSaturation": 2,
-      "shadowTint": 1
-    },
-    "FUJIFILMXT30II": {
-      "redHue": -5,
-      "redSaturation": 0,
-      "greenHue": 8,
-      "greenSaturation": -5,
-      "blueHue": -9,
+    "CANONEOSR7": {
+      "redHue": -14,
+      "redSaturation": -7,
+      "greenHue": 16,
+      "greenSaturation": 11,
+      "blueHue": 8,
       "blueSaturation": -1,
+      "shadowTint": 3
+    },
+    "CANONEOSR8MARKII": {
+      "redHue": -7,
+      "redSaturation": -5,
+      "greenHue": 19,
+      "greenSaturation": -7,
+      "blueHue": 18,
+      "blueSaturation": -7,
+      "shadowTint": 3
+    },
+    "CANONPOWERSHOTSX710HS": {
+      "redHue": -16,
+      "redSaturation": -10,
+      "greenHue": 10,
+      "greenSaturation": -31,
+      "blueHue": -25,
+      "blueSaturation": -40,
+      "shadowTint": -1
+    },
+    "FUJIFILMGFX100II": {
+      "redHue": -4,
+      "redSaturation": 11,
+      "greenHue": 7,
+      "greenSaturation": 15,
+      "blueHue": -19,
+      "blueSaturation": -4,
+      "shadowTint": 4
+    },
+    "FUJIFILMGFX100SII": {
+      "redHue": -20,
+      "redSaturation": 7,
+      "greenHue": 18,
+      "greenSaturation": 2,
+      "blueHue": 30,
+      "blueSaturation": -17,
+      "shadowTint": -3
+    },
+    "FUJIFILMGFX50R": {
+      "redHue": -19,
+      "redSaturation": 2,
+      "greenHue": 7,
+      "greenSaturation": 8,
+      "blueHue": 0,
+      "blueSaturation": -9,
+      "shadowTint": 14
+    },
+    "FUJIFILMX100F": {
+      "redHue": 5,
+      "redSaturation": 7,
+      "greenHue": 28,
+      "greenSaturation": 15,
+      "blueHue": 5,
+      "blueSaturation": -9,
+      "shadowTint": 3
+    },
+    "FUJIFILMXH2S": {
+      "redHue": -4,
+      "redSaturation": 11,
+      "greenHue": 24,
+      "greenSaturation": 15,
+      "blueHue": 8,
+      "blueSaturation": -3,
+      "shadowTint": 10
+    },
+    "FUJIFILMXM5": {
+      "redHue": -5,
+      "redSaturation": 7,
+      "greenHue": 10,
+      "greenSaturation": 7,
+      "blueHue": -2,
+      "blueSaturation": -9,
+      "shadowTint": 9
+    },
+    "FUJIFILMXT3": {
+      "redHue": 16,
+      "redSaturation": 14,
+      "greenHue": 34,
+      "greenSaturation": 23,
+      "blueHue": 12,
+      "blueSaturation": -9,
       "shadowTint": 2
     },
-    "HASSELBLAD5015COATED5FFF": {
-      "redHue": -8,
-      "redSaturation": -5,
-      "greenHue": 1,
-      "greenSaturation": -17,
-      "blueHue": 7,
+    "FUJIFILMXT30II": {
+      "redHue": -10,
+      "redSaturation": 7,
+      "greenHue": 10,
+      "greenSaturation": 3,
+      "blueHue": 8,
       "blueSaturation": -9,
-      "shadowTint": 1
+      "shadowTint": 5
     },
-    "MINOLTADG5D": {
-      "redHue": -11,
-      "redSaturation": 30,
-      "greenHue": -15,
-      "greenSaturation": 9,
-      "blueHue": -7,
-      "blueSaturation": 6,
-      "shadowTint": 23
+    "HASSELBLAD5015COATED5FFF": {
+      "redHue": -7,
+      "redSaturation": 13,
+      "greenHue": 1,
+      "greenSaturation": -4,
+      "blueHue": 2,
+      "blueSaturation": -25,
+      "shadowTint": 2
+    },
+    "NIKOND300": {
+      "redHue": -12,
+      "redSaturation": 29,
+      "greenHue": 7,
+      "greenSaturation": 8,
+      "blueHue": 0,
+      "blueSaturation": -3,
+      "shadowTint": 17
+    },
+    "NIKOND3S": {
+      "redHue": 12,
+      "redSaturation": 32,
+      "greenHue": 6,
+      "greenSaturation": 23,
+      "blueHue": -14,
+      "blueSaturation": -1,
+      "shadowTint": 15
     },
     "NIKOND4": {
-      "redHue": -24,
-      "redSaturation": -15,
-      "greenHue": 4,
-      "greenSaturation": 3,
-      "blueHue": -9,
-      "blueSaturation": 2,
-      "shadowTint": -7
+      "redHue": -20,
+      "redSaturation": 35,
+      "greenHue": 12,
+      "greenSaturation": -7,
+      "blueHue": 0,
+      "blueSaturation": -9,
+      "shadowTint": -1
     },
     "NIKOND500": {
-      "redHue": -19,
-      "redSaturation": 21,
-      "greenHue": 12,
-      "greenSaturation": 3,
-      "blueHue": -5,
-      "blueSaturation": 5,
-      "shadowTint": 1
+      "redHue": -18,
+      "redSaturation": 23,
+      "greenHue": 24,
+      "greenSaturation": 23,
+      "blueHue": 8,
+      "blueSaturation": -11,
+      "shadowTint": 9
     },
     "NIKOND5100": {
-      "redHue": -16,
-      "redSaturation": 40,
-      "greenHue": 12,
-      "greenSaturation": 17,
-      "blueHue": -3,
-      "blueSaturation": 11,
+      "redHue": -9,
+      "redSaturation": 18,
+      "greenHue": 17,
+      "greenSaturation": 26,
+      "blueHue": 6,
+      "blueSaturation": -13,
       "shadowTint": -7
     },
     "NIKOND5600": {
-      "redHue": -11,
-      "redSaturation": 4,
-      "greenHue": 20,
-      "greenSaturation": 14,
-      "blueHue": -9,
-      "blueSaturation": -9,
-      "shadowTint": -4
+      "redHue": -2,
+      "redSaturation": 13,
+      "greenHue": 17,
+      "greenSaturation": 12,
+      "blueHue": 0,
+      "blueSaturation": -22,
+      "shadowTint": -14
     },
     "NIKOND600": {
-      "redHue": -10,
-      "redSaturation": 40,
-      "greenHue": 8,
-      "greenSaturation": 4,
-      "blueHue": -17,
-      "blueSaturation": 1,
-      "shadowTint": 4
+      "redHue": -13,
+      "redSaturation": 9,
+      "greenHue": 9,
+      "greenSaturation": 20,
+      "blueHue": 2,
+      "blueSaturation": 0,
+      "shadowTint": 13
     },
     "NIKOND700": {
       "redHue": -8,
-      "redSaturation": 8,
-      "greenHue": 5,
-      "greenSaturation": 20,
-      "blueHue": -4,
-      "blueSaturation": 18,
-      "shadowTint": 7
+      "redSaturation": 23,
+      "greenHue": 7,
+      "greenSaturation": 17,
+      "blueHue": 1,
+      "blueSaturation": 6,
+      "shadowTint": 25
+    },
+    "NIKOND7000": {
+      "redHue": -8,
+      "redSaturation": 16,
+      "greenHue": -2,
+      "greenSaturation": 1,
+      "blueHue": 0,
+      "blueSaturation": -27,
+      "shadowTint": 1
     },
     "NIKOND7100": {
-      "redHue": -8,
-      "redSaturation": 29,
+      "redHue": -7,
+      "redSaturation": 4,
       "greenHue": 1,
-      "greenSaturation": 7,
-      "blueHue": -3,
-      "blueSaturation": 4,
-      "shadowTint": 5
+      "greenSaturation": 11,
+      "blueHue": 1,
+      "blueSaturation": 15,
+      "shadowTint": 21
     },
     "NIKOND750": {
-      "redHue": -2,
-      "redSaturation": 7,
-      "greenHue": 24,
-      "greenSaturation": -1,
-      "blueHue": 12,
-      "blueSaturation": -9,
+      "redHue": 2,
+      "redSaturation": -4,
+      "greenHue": 19,
+      "greenSaturation": 19,
+      "blueHue": 6,
+      "blueSaturation": -22,
       "shadowTint": -7
     },
     "NIKOND7500": {
-      "redHue": -8,
-      "redSaturation": 0,
-      "greenHue": 10,
-      "greenSaturation": -1,
-      "blueHue": -7,
-      "blueSaturation": -4,
-      "shadowTint": 1
+      "redHue": -2,
+      "redSaturation": 3,
+      "greenHue": 6,
+      "greenSaturation": 16,
+      "blueHue": -10,
+      "blueSaturation": -26,
+      "shadowTint": 2
     },
     "NIKOND800": {
-      "redHue": -8,
+      "redHue": -4,
       "redSaturation": 3,
-      "greenHue": 7,
-      "greenSaturation": 3,
-      "blueHue": -10,
-      "blueSaturation": 8,
-      "shadowTint": 6
+      "greenHue": 12,
+      "greenSaturation": 17,
+      "blueHue": 0,
+      "blueSaturation": -9,
+      "shadowTint": -3
     },
     "NIKOND850": {
-      "redHue": -22,
-      "redSaturation": 12,
+      "redHue": -18,
+      "redSaturation": 14,
       "greenHue": 14,
-      "greenSaturation": 11,
-      "blueHue": 2,
-      "blueSaturation": 2,
+      "greenSaturation": 13,
+      "blueHue": 7,
+      "blueSaturation": -17,
       "shadowTint": 1
     },
     "NIKONDF": {
-      "redHue": -8,
-      "redSaturation": 9,
-      "greenHue": -4,
-      "greenSaturation": 2,
-      "blueHue": -23,
-      "blueSaturation": -15,
-      "shadowTint": 5
-    },
-    "NIKONZ6": {
-      "redHue": -8,
-      "redSaturation": 9,
+      "redHue": -1,
+      "redSaturation": -5,
       "greenHue": 14,
-      "greenSaturation": 3,
-      "blueHue": -15,
+      "greenSaturation": 17,
+      "blueHue": -6,
       "blueSaturation": -6,
-      "shadowTint": 3
+      "shadowTint": 4
     },
-    "OLYMPUSE510": {
-      "redHue": -18,
-      "redSaturation": 22,
-      "greenHue": -2,
-      "greenSaturation": 5,
-      "blueHue": -4,
-      "blueSaturation": 5,
-      "shadowTint": 5
-    },
-    "OLYMPUSEM1MARKII": {
-      "redHue": -5,
-      "redSaturation": 7,
-      "greenHue": 3,
-      "greenSaturation": -17,
-      "blueHue": -21,
-      "blueSaturation": -6,
-      "shadowTint": 2
-    },
-    "OLYMPUSEM1MARKIII": {
-      "redHue": -3,
-      "redSaturation": 6,
-      "greenHue": 10,
-      "greenSaturation": 1,
-      "blueHue": -17,
-      "blueSaturation": 1,
-      "shadowTint": 3
-    },
-    "OLYMPUSOM1MARKII": {
-      "redHue": -19,
-      "redSaturation": 12,
-      "greenHue": 4,
-      "greenSaturation": 3,
-      "blueHue": 1,
-      "blueSaturation": -6,
-      "shadowTint": 5
-    },
-    "OLYMPUSOM3": {
-      "redHue": 0,
-      "redSaturation": 17,
-      "greenHue": 2,
-      "greenSaturation": 4,
-      "blueHue": -11,
-      "blueSaturation": 4,
-      "shadowTint": 1
-    },
-    "OLYMPUSOM5MARKII": {
-      "redHue": -9,
-      "redSaturation": 9,
-      "greenHue": 3,
-      "greenSaturation": -9,
-      "blueHue": -3,
-      "blueSaturation": -2,
+    "NIKONZ52": {
+      "redHue": -10,
+      "redSaturation": -5,
+      "greenHue": 16,
+      "greenSaturation": 11,
+      "blueHue": 4,
+      "blueSaturation": -9,
       "shadowTint": -1
     },
-    "PANASONICDCS1R": {
-      "redHue": -4,
+    "NIKONZ6": {
+      "redHue": -2,
+      "redSaturation": -2,
+      "greenHue": 9,
+      "greenSaturation": 9,
+      "blueHue": -4,
+      "blueSaturation": -13,
+      "shadowTint": 7
+    },
+    "OLYMPUSE510": {
+      "redHue": -14,
+      "redSaturation": 29,
+      "greenHue": -6,
+      "greenSaturation": 3,
+      "blueHue": 6,
+      "blueSaturation": -17,
+      "shadowTint": 11
+    },
+    "OLYMPUSEM1MARKII": {
+      "redHue": -9,
+      "redSaturation": -8,
+      "greenHue": 16,
+      "greenSaturation": -13,
+      "blueHue": -10,
+      "blueSaturation": -19,
+      "shadowTint": 1
+    },
+    "OLYMPUSEM1MARKIII": {
+      "redHue": 4,
+      "redSaturation": 6,
+      "greenHue": 13,
+      "greenSaturation": 19,
+      "blueHue": 13,
+      "blueSaturation": -19,
+      "shadowTint": 9
+    },
+    "OLYMPUSOM1": {
+      "redHue": -10,
+      "redSaturation": 10,
+      "greenHue": 18,
+      "greenSaturation": 25,
+      "blueHue": 16,
+      "blueSaturation": -17,
+      "shadowTint": 7
+    },
+    "OLYMPUSOM1MARKII": {
+      "redHue": -8,
       "redSaturation": -1,
-      "greenHue": 14,
-      "greenSaturation": -3,
-      "blueHue": -15,
-      "blueSaturation": -4,
+      "greenHue": 10,
+      "greenSaturation": 21,
+      "blueHue": 16,
+      "blueSaturation": -17,
+      "shadowTint": 7
+    },
+    "OLYMPUSOM3": {
+      "redHue": -10,
+      "redSaturation": 33,
+      "greenHue": 8,
+      "greenSaturation": 23,
+      "blueHue": 12,
+      "blueSaturation": -23,
+      "shadowTint": 22
+    },
+    "PANASONICDCG9M2": {
+      "redHue": -20,
+      "redSaturation": 6,
+      "greenHue": 6,
+      "greenSaturation": 11,
+      "blueHue": 8,
+      "blueSaturation": -13,
+      "shadowTint": 7
+    },
+    "PANASONICDCS1R": {
+      "redHue": -1,
+      "redSaturation": -2,
+      "greenHue": 18,
+      "greenSaturation": 2,
+      "blueHue": -11,
+      "blueSaturation": -24,
       "shadowTint": 1
     },
     "PANASONICDCS5M2": {
-      "redHue": -10,
-      "redSaturation": 17,
-      "greenHue": 4,
-      "greenSaturation": 3,
-      "blueHue": -1,
-      "blueSaturation": -4,
-      "shadowTint": 5
+      "redHue": -14,
+      "redSaturation": 9,
+      "greenHue": 9,
+      "greenSaturation": 14,
+      "blueHue": 16,
+      "blueSaturation": -15,
+      "shadowTint": 11
     },
     "PANASONICDMCCM1": {
-      "redHue": 0,
-      "redSaturation": -8,
-      "greenHue": 0,
-      "greenSaturation": -1,
-      "blueHue": -13,
-      "blueSaturation": -6,
-      "shadowTint": -3
-    },
-    "PANASONICDMCFZ150": {
-      "redHue": -9,
-      "redSaturation": 28,
-      "greenHue": -12,
-      "greenSaturation": 4,
-      "blueHue": -1,
-      "blueSaturation": 1,
-      "shadowTint": -5
-    },
-    "PANASONICDMCFZ200": {
-      "redHue": -12,
-      "redSaturation": 33,
-      "greenHue": -7,
-      "greenSaturation": 13,
-      "blueHue": -17,
-      "blueSaturation": -2,
-      "shadowTint": 2
-    },
-    "PANASONICDMCFZ28": {
-      "redHue": -17,
-      "redSaturation": 2,
-      "greenHue": 9,
-      "greenSaturation": 1,
-      "blueHue": -5,
-      "blueSaturation": 0,
-      "shadowTint": -5
-    },
-    "PANASONICDMCFZ35": {
-      "redHue": 8,
-      "redSaturation": 40,
-      "greenHue": 31,
-      "greenSaturation": 24,
-      "blueHue": -3,
-      "blueSaturation": -5,
-      "shadowTint": 22
-    },
-    "PANASONICDMCG1": {
-      "redHue": -6,
-      "redSaturation": 13,
-      "greenHue": -1,
-      "greenSaturation": 7,
-      "blueHue": -15,
-      "blueSaturation": 2,
-      "shadowTint": 5
-    },
-    "PANASONICDMCG2": {
-      "redHue": 8,
-      "redSaturation": 23,
-      "greenHue": 16,
-      "greenSaturation": 5,
-      "blueHue": -8,
-      "blueSaturation": 6,
-      "shadowTint": 9
-    },
-    "PANASONICDMCG6": {
       "redHue": -1,
-      "redSaturation": 39,
-      "greenHue": 3,
-      "greenSaturation": 4,
-      "blueHue": -9,
-      "blueSaturation": 20,
-      "shadowTint": -5
-    },
-    "PANASONICDMCGF2": {
-      "redHue": -16,
-      "redSaturation": 31,
-      "greenHue": -5,
-      "greenSaturation": 19,
-      "blueHue": -8,
-      "blueSaturation": 3,
-      "shadowTint": 13
-    },
-    "PANASONICDMCGF5": {
-      "redHue": -8,
-      "redSaturation": 9,
-      "greenHue": 22,
-      "greenSaturation": 11,
-      "blueHue": -1,
-      "blueSaturation": 6,
-      "shadowTint": -3
-    },
-    "PANASONICDMCGF6": {
-      "redHue": -8,
-      "redSaturation": 25,
-      "greenHue": 16,
-      "greenSaturation": 18,
-      "blueHue": -25,
-      "blueSaturation": -3,
-      "shadowTint": 10
-    },
-    "PANASONICDMCGF7": {
-      "redHue": 5,
-      "redSaturation": 26,
-      "greenHue": 11,
-      "greenSaturation": 4,
-      "blueHue": -1,
-      "blueSaturation": 1,
-      "shadowTint": -1
-    },
-    "PANASONICDMCGF8": {
-      "redHue": -12,
-      "redSaturation": 27,
-      "greenHue": 18,
-      "greenSaturation": 3,
-      "blueHue": -7,
-      "blueSaturation": 1,
-      "shadowTint": -1
-    },
-    "PANASONICDMCGH3": {
-      "redHue": -5,
-      "redSaturation": 40,
-      "greenHue": 14,
-      "greenSaturation": -2,
-      "blueHue": -34,
-      "blueSaturation": -20,
-      "shadowTint": -3
-    },
-    "PANASONICDMCGM1": {
-      "redHue": -3,
-      "redSaturation": 40,
-      "greenHue": -37,
-      "greenSaturation": -6,
-      "blueHue": -10,
-      "blueSaturation": -16,
-      "shadowTint": -4
-    },
-    "PANASONICDMCGM5": {
-      "redHue": -7,
-      "redSaturation": 6,
-      "greenHue": 3,
-      "greenSaturation": -14,
-      "blueHue": -17,
-      "blueSaturation": -2,
-      "shadowTint": -2
-    },
-    "PANASONICDMCGX7": {
-      "redHue": -10,
-      "redSaturation": 40,
-      "greenHue": -10,
-      "greenSaturation": 13,
-      "blueHue": -17,
-      "blueSaturation": -20,
-      "shadowTint": 27
-    },
-    "PANASONICDMCLC1": {
-      "redHue": 8,
-      "redSaturation": 14,
-      "greenHue": 4,
-      "greenSaturation": 3,
-      "blueHue": -25,
-      "blueSaturation": 2,
-      "shadowTint": 1
-    },
-    "PANASONICDMCLX100": {
-      "redHue": -8,
-      "redSaturation": 12,
-      "greenHue": 14,
-      "greenSaturation": -3,
-      "blueHue": -11,
-      "blueSaturation": -7,
-      "shadowTint": 3
-    },
-    "PANASONICDMCLX2": {
-      "redHue": -14,
-      "redSaturation": 34,
-      "greenHue": -2,
-      "greenSaturation": 9,
-      "blueHue": -10,
-      "blueSaturation": 23,
-      "shadowTint": -12
-    },
-    "PANASONICDMCLX3": {
-      "redHue": -27,
-      "redSaturation": 39,
-      "greenHue": -8,
-      "greenSaturation": 31,
-      "blueHue": -9,
-      "blueSaturation": 0,
-      "shadowTint": 6
-    },
-    "PANASONICDMCLX5": {
-      "redHue": -8,
-      "redSaturation": 13,
-      "greenHue": -12,
-      "greenSaturation": 3,
-      "blueHue": -5,
-      "blueSaturation": -6,
-      "shadowTint": 3
-    },
-    "PANASONICDMCZS50": {
-      "redHue": -8,
-      "redSaturation": 10,
-      "greenHue": 3,
-      "greenSaturation": -12,
-      "blueHue": -9,
-      "blueSaturation": 5,
-      "shadowTint": -1
-    },
-    "PENTAXK10D": {
-      "redHue": 19,
-      "redSaturation": -6,
-      "greenHue": 36,
-      "greenSaturation": -7,
-      "blueHue": -22,
-      "blueSaturation": -4,
-      "shadowTint": 5
-    },
-    "PENTAXK1MARKII": {
-      "redHue": -21,
-      "redSaturation": -13,
-      "greenHue": 5,
-      "greenSaturation": 1,
-      "blueHue": -7,
-      "blueSaturation": -7,
-      "shadowTint": 2
-    },
-    "SONYDSCRX1RM3": {
-      "redHue": -12,
       "redSaturation": 1,
-      "greenHue": -16,
-      "greenSaturation": -7,
-      "blueHue": -9,
-      "blueSaturation": -7,
-      "shadowTint": 1
-    },
-    "SONYDSLRA700": {
-      "redHue": -16,
-      "redSaturation": 28,
-      "greenHue": 2,
-      "greenSaturation": 13,
-      "blueHue": -4,
-      "blueSaturation": 3,
-      "shadowTint": 1
-    },
-    "SONYILCE6400": {
-      "redHue": -11,
-      "redSaturation": 17,
-      "greenHue": 7,
-      "greenSaturation": -11,
-      "blueHue": 2,
-      "blueSaturation": -4,
-      "shadowTint": 3
-    },
-    "SONYILCE7CR": {
-      "redHue": 2,
-      "redSaturation": 9,
-      "greenHue": 5,
-      "greenSaturation": -6,
-      "blueHue": -10,
-      "blueSaturation": -4,
-      "shadowTint": 4
-    },
-    "SONYILCE7M3": {
-      "redHue": -15,
-      "redSaturation": 7,
-      "greenHue": 14,
-      "greenSaturation": -3,
-      "blueHue": -1,
-      "blueSaturation": 11,
-      "shadowTint": 0
-    },
-    "SONYILCE7RM4A": {
-      "redHue": -22,
-      "redSaturation": 12,
       "greenHue": 8,
       "greenSaturation": 1,
-      "blueHue": -1,
-      "blueSaturation": 1,
+      "blueHue": 4,
+      "blueSaturation": -7,
+      "shadowTint": -10
+    },
+    "PANASONICDMCFX150": {
+      "redHue": -4,
+      "redSaturation": 10,
+      "greenHue": 4,
+      "greenSaturation": 10,
+      "blueHue": 0,
+      "blueSaturation": -9,
       "shadowTint": 7
     },
-    "SONYILCE9M3": {
-      "redHue": 0,
-      "redSaturation": 4,
-      "greenHue": 3,
-      "greenSaturation": -5,
-      "blueHue": -1,
-      "blueSaturation": -1,
-      "shadowTint": -1
-    },
-    "SONYILMEFX2": {
-      "redHue": -2,
-      "redSaturation": 12,
-      "greenHue": 0,
-      "greenSaturation": -13,
-      "blueHue": -12,
-      "blueSaturation": 0,
+    "PANASONICDMCFZ1000": {
+      "redHue": -3,
+      "redSaturation": -5,
+      "greenHue": 5,
+      "greenSaturation": 6,
+      "blueHue": -4,
+      "blueSaturation": -6,
       "shadowTint": 3
     },
-    "SONYZVE10M2": {
-      "redHue": -20,
-      "redSaturation": 24,
-      "greenHue": 7,
-      "greenSaturation": -9,
-      "blueHue": -11,
-      "blueSaturation": -3,
+    "PANASONICDMCFZ150": {
+      "redHue": -6,
+      "redSaturation": 5,
+      "greenHue": -6,
+      "greenSaturation": 31,
+      "blueHue": 8,
+      "blueSaturation": -9,
+      "shadowTint": -3
+    },
+    "PANASONICDMCFZ200": {
+      "redHue": -7,
+      "redSaturation": 6,
+      "greenHue": 1,
+      "greenSaturation": 16,
+      "blueHue": -19,
+      "blueSaturation": -9,
+      "shadowTint": 5
+    },
+    "PANASONICDMCFZ28": {
+      "redHue": -3,
+      "redSaturation": -4,
+      "greenHue": 10,
+      "greenSaturation": 2,
+      "blueHue": 0,
+      "blueSaturation": -17,
+      "shadowTint": 7
+    },
+    "PANASONICDMCFZ35": {
+      "redHue": 5,
+      "redSaturation": 40,
+      "greenHue": 21,
+      "greenSaturation": 25,
+      "blueHue": 34,
+      "blueSaturation": -17,
+      "shadowTint": 29
+    },
+    "PANASONICDMCG2": {
+      "redHue": 6,
+      "redSaturation": 13,
+      "greenHue": 5,
+      "greenSaturation": 12,
+      "blueHue": -4,
+      "blueSaturation": -5,
+      "shadowTint": 15
+    },
+    "PANASONICDMCG3": {
+      "redHue": 0,
+      "redSaturation": 1,
+      "greenHue": 2,
+      "greenSaturation": 4,
+      "blueHue": -3,
+      "blueSaturation": -9,
+      "shadowTint": 1
+    },
+    "PANASONICDMCG6": {
+      "redHue": -3,
+      "redSaturation": 25,
+      "greenHue": 6,
+      "greenSaturation": 8,
+      "blueHue": -1,
+      "blueSaturation": 2,
       "shadowTint": -2
+    },
+    "PANASONICDMCG7": {
+      "redHue": 11,
+      "redSaturation": 14,
+      "greenHue": 24,
+      "greenSaturation": 17,
+      "blueHue": 4,
+      "blueSaturation": 5,
+      "shadowTint": 6
+    },
+    "PANASONICDMCGF1": {
+      "redHue": -11,
+      "redSaturation": 15,
+      "greenHue": 2,
+      "greenSaturation": 25,
+      "blueHue": 4,
+      "blueSaturation": -8,
+      "shadowTint": 3
+    },
+    "PANASONICDMCGF2": {
+      "redHue": -22,
+      "redSaturation": 36,
+      "greenHue": -2,
+      "greenSaturation": 12,
+      "blueHue": 8,
+      "blueSaturation": 13,
+      "shadowTint": 28
+    },
+    "PANASONICDMCGF5": {
+      "redHue": 8,
+      "redSaturation": 2,
+      "greenHue": 37,
+      "greenSaturation": 4,
+      "blueHue": 14,
+      "blueSaturation": -15,
+      "shadowTint": 7
+    },
+    "PANASONICDMCGF6": {
+      "redHue": -4,
+      "redSaturation": 3,
+      "greenHue": 6,
+      "greenSaturation": 20,
+      "blueHue": 0,
+      "blueSaturation": 10,
+      "shadowTint": -1
+    },
+    "PANASONICDMCGF7": {
+      "redHue": 16,
+      "redSaturation": 17,
+      "greenHue": 25,
+      "greenSaturation": 16,
+      "blueHue": 2,
+      "blueSaturation": 2,
+      "shadowTint": 13
+    },
+    "PANASONICDMCGF8": {
+      "redHue": -10,
+      "redSaturation": 12,
+      "greenHue": 19,
+      "greenSaturation": 13,
+      "blueHue": 4,
+      "blueSaturation": -15,
+      "shadowTint": 3
+    },
+    "PANASONICDMCGH3": {
+      "redHue": -4,
+      "redSaturation": 19,
+      "greenHue": 3,
+      "greenSaturation": -1,
+      "blueHue": 6,
+      "blueSaturation": -8,
+      "shadowTint": -5
+    },
+    "PANASONICDMCGM1": {
+      "redHue": 16,
+      "redSaturation": -5,
+      "greenHue": 7,
+      "greenSaturation": 37,
+      "blueHue": -3,
+      "blueSaturation": -1,
+      "shadowTint": 3
+    },
+    "PANASONICDMCGM5": {
+      "redHue": -8,
+      "redSaturation": -9,
+      "greenHue": 6,
+      "greenSaturation": 3,
+      "blueHue": -6,
+      "blueSaturation": -13,
+      "shadowTint": -1
+    },
+    "PANASONICDMCGX7": {
+      "redHue": -3,
+      "redSaturation": 17,
+      "greenHue": -4,
+      "greenSaturation": 9,
+      "blueHue": -4,
+      "blueSaturation": -9,
+      "shadowTint": -19
+    },
+    "PANASONICDMCLX100": {
+      "redHue": -11,
+      "redSaturation": -2,
+      "greenHue": 10,
+      "greenSaturation": 10,
+      "blueHue": 0,
+      "blueSaturation": -9,
+      "shadowTint": 8
+    },
+    "PANASONICDMCLX5": {
+      "redHue": 2,
+      "redSaturation": 17,
+      "greenHue": 4,
+      "greenSaturation": 9,
+      "blueHue": 0,
+      "blueSaturation": -11,
+      "shadowTint": 9
+    },
+    "PANASONICDMCZS40": {
+      "redHue": -6,
+      "redSaturation": 3,
+      "greenHue": 8,
+      "greenSaturation": 12,
+      "blueHue": 2,
+      "blueSaturation": -7,
+      "shadowTint": -3
+    },
+    "PENTAXK1MARKII": {
+      "redHue": -22,
+      "redSaturation": 0,
+      "greenHue": 15,
+      "greenSaturation": 5,
+      "blueHue": 0,
+      "blueSaturation": 3,
+      "shadowTint": 17
+    },
+    "SONYDSCRX100M7": {
+      "redHue": -12,
+      "redSaturation": 12,
+      "greenHue": 20,
+      "greenSaturation": 15,
+      "blueHue": 16,
+      "blueSaturation": -9,
+      "shadowTint": 7
+    },
+    "SONYDSCRX1RM3": {
+      "redHue": -20,
+      "redSaturation": 21,
+      "greenHue": 16,
+      "greenSaturation": 14,
+      "blueHue": 14,
+      "blueSaturation": -13,
+      "shadowTint": 7
+    },
+    "SONYILCE7CM2": {
+      "redHue": -26,
+      "redSaturation": 24,
+      "greenHue": 4,
+      "greenSaturation": 3,
+      "blueHue": 22,
+      "blueSaturation": -25,
+      "shadowTint": -2
+    },
+    "SONYILCE7CR": {
+      "redHue": 3,
+      "redSaturation": -5,
+      "greenHue": 23,
+      "greenSaturation": 8,
+      "blueHue": 0,
+      "blueSaturation": -3,
+      "shadowTint": 7
+    },
+    "SONYILCE7M4": {
+      "redHue": -4,
+      "redSaturation": 20,
+      "greenHue": 32,
+      "greenSaturation": 28,
+      "blueHue": 10,
+      "blueSaturation": -15,
+      "shadowTint": 6
+    },
+    "SONYILMEFX2": {
+      "redHue": 2,
+      "redSaturation": -6,
+      "greenHue": 13,
+      "greenSaturation": -1,
+      "blueHue": 11,
+      "blueSaturation": -15,
+      "shadowTint": 6
     }
   },
   "levelOverrides": {
@@ -1441,13 +1441,13 @@
   },
   "canonColorDataLayoutsDescription": "Where Canon's ColorData (tag 0x4001; in CR2 in the maker notes, in CR3 in the CTMD track) holds the levels, keyed by version|length: the word of the first of four per-channel black levels; NormalWhiteLevel and SpecularWhiteLevel follow, the latter five words after the first black word. Used for every Canon without its own entry in levelOverrides, only for raw data with a colour filter array (not sRAW/mRAW). LibRaw 0.22.2 uses a higher white level for almost all of these (mostly 16383); Canon's SpecularWhiteLevel is what Adobe's DNG carries for most of them. Found by matching Adobe's and LibRaw's levels across 96 files of 40 models on 2026-09-27.",
   "colorCalibrationDefault": {
-    "redHue": -8,
-    "redSaturation": 17,
-    "greenHue": 4,
-    "greenSaturation": 3,
-    "blueHue": -9,
-    "blueSaturation": 2,
-    "shadowTint": 1
+    "redHue": -4,
+    "redSaturation": 11,
+    "greenHue": 8,
+    "greenSaturation": 7,
+    "blueHue": 0,
+    "blueSaturation": -9,
+    "shadowTint": 3
   },
   "colorCalibrationsDescription": "Start values for the seven calibration sliders of an unedited raw file, applied only with the setting that matches colors to the camera model. colorCalibrationDefault is fitted over all reference pictures of all cameras; an entry in colorCalibrations replaces it completely and exists only where it matched held-out pictures of that model better than the default.",
   "profileGenerationDefault": 1,
