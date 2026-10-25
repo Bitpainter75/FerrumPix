@@ -27,7 +27,8 @@
 
 - **Histogram next to the sliders by default:** the analysis graph now sits above the adjustment
   sliders from the start, as Histogram in Adjust, RGB parade in Color and Waveform in Details and
-  Effects. Switching it in a tool is remembered as before, and Settings can turn it off.
+  Effects. Switching it in a tool is remembered as before, and Settings can turn it off. It is
+  also switched on once after the update, so if you had turned it off before, turn it off again.
 
 - **Display profiles on Windows and Linux:** in Settings you can choose an ICC profile for each
   connected display, for example from a calibration. Photos in the viewer and editor are then
@@ -105,6 +106,8 @@
 - **Starting values for sharpening and noise:** a RAW without edits now starts with sharpening 40
   and colour noise reduction 25, like in the reference program. In Settings you can change these
   starting values and set one for noise reduction as well. Resetting all edits returns to them.
+  A colour noise starting value of 0 is raised to 25 once after the update; set it back to 0 if
+  you chose that on purpose.
 
 - **Whole pictures in the gallery grid:** a new setting shows each picture complete in its tile,
   portrait or landscape, instead of cropping it to the tile.
