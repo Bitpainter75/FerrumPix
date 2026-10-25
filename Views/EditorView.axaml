@@ -1758,63 +1758,17 @@
                             <panels:NoisePanel Margin="0,7,0,0"
                                                IsVisible="{Binding ShowDetailAdjustments}" />
 
-                            <!-- SCHÄRFEN + VIGNETTE (je eigene Karte im Panel) -->
+                            <!-- SCHÄRFEN -->
                             <panels:SharpnessPanel Margin="0,7,0,0"
                                                    IsVisible="{Binding ShowDetailAdjustments}" />
+
+                            <!-- VIGNETTE: eigenes Panel, damit sie im Kompaktwerkzeug ein eigener Block ist -->
+                            <panels:VignettePanel Margin="0,7,0,0"
+                                                  IsVisible="{Binding ShowDetailAdjustments}" />
 
                             <!-- EFFEKTE: eigenes Werkzeug. Was hier steht, fuegt dem Bild etwas hinzu,
                                  was vorher nicht da war - die Details darueber holen nur heraus, was
                                  in der Aufnahme steckt. -->
-                            <!-- KÖRNUNG (rahmt sich selbst) -->
-                            <panels:EffectsPanel Margin="0,7,0,0"
-                                                 IsVisible="{Binding ShowEffectsAdjustments}" />
-
-                            <!-- Tontrennung und Schwellenwert: Pixelregler wie die Farbkorrekturen
-                                 (EditorViewModelCorrections.vb), gerechnet am Ende der Punktkette. -->
-                            <Border Classes="adjustment-group" Margin="0,7,0,0"
-                                    >
-                                <Border.IsVisible>
-                                    <MultiBinding Converter="{StaticResource AllTrueConverter}">
-                                        <Binding Path="ShowEffectsAdjustments"/>
-                                        <Binding Path="HiddenAdjustmentGroups" Converter="{StaticResource NotInListConverter}" ConverterParameter="posterize"/>
-                                    </MultiBinding>
-                                </Border.IsVisible>
-                                <panels:PosterizePanel />
-                            </Border>
-
-                            <Border Classes="adjustment-group" Margin="0,7,0,0"
-                                    >
-                                <Border.IsVisible>
-                                    <MultiBinding Converter="{StaticResource AllTrueConverter}">
-                                        <Binding Path="ShowEffectsAdjustments"/>
-                                        <Binding Path="HiddenAdjustmentGroups" Converter="{StaticResource NotInListConverter}" ConverterParameter="threshold"/>
-                                    </MultiBinding>
-                                </Border.IsVisible>
-                                <panels:ThresholdPanel />
-                            </Border>
-
-                            <!-- Die Tiefen-Unschaerfe wird gebacken und rahmt sich selbst; sie steht
-                                 nach den Pixelreglern der Effekte, was man wieder loswird, gehoert
-                                 vor das, was bleibt. -->
-                            <panels:BokehPanel Margin="0,7,0,0"
-                                               IsVisible="{Binding ShowEffectsAdjustments}" />
-
-                            <Border Classes="adjustment-group" Margin="0,7,0,0"
-                                    >
-                                <Border.IsVisible>
-                                    <MultiBinding Converter="{StaticResource AllTrueConverter}">
-                                        <Binding Path="ShowEffectsAdjustments"/>
-                                        <Binding Path="HiddenAdjustmentGroups" Converter="{StaticResource NotInListConverter}" ConverterParameter="tiltshift"/>
-                                    </MultiBinding>
-                                </Border.IsVisible>
-                                <panels:TiltShiftPanel />
-                            </Border>
-
-                            <!-- Der Nebel nach Tiefe wird gebacken wie die Tiefen-Unschaerfe und rahmt
-                                 sich deshalb selbst (BokehPanel.axaml). -->
-                            <panels:FogPanel Margin="0,7,0,0"
-                                             IsVisible="{Binding ShowEffectsAdjustments}" />
-
                             <Border Classes="adjustment-group" Margin="0,7,0,0"
                                     >
                                 <Border.IsVisible>
@@ -1859,6 +1813,56 @@
                                     </MultiBinding>
                                 </Border.IsVisible>
                                 <panels:AnnotationGlowPanel />
+                            </Border>
+
+                            <!-- KÖRNUNG (rahmt sich selbst) -->
+                            <panels:EffectsPanel Margin="0,7,0,0"
+                                                 IsVisible="{Binding ShowEffectsAdjustments}" />
+
+                            <!-- Tontrennung und Schwellenwert: Pixelregler wie die Farbkorrekturen
+                                 (EditorViewModelCorrections.vb), gerechnet am Ende der Punktkette. -->
+                            <Border Classes="adjustment-group" Margin="0,7,0,0"
+                                    >
+                                <Border.IsVisible>
+                                    <MultiBinding Converter="{StaticResource AllTrueConverter}">
+                                        <Binding Path="ShowEffectsAdjustments"/>
+                                        <Binding Path="HiddenAdjustmentGroups" Converter="{StaticResource NotInListConverter}" ConverterParameter="posterize"/>
+                                    </MultiBinding>
+                                </Border.IsVisible>
+                                <panels:PosterizePanel />
+                            </Border>
+
+                            <Border Classes="adjustment-group" Margin="0,7,0,0"
+                                    >
+                                <Border.IsVisible>
+                                    <MultiBinding Converter="{StaticResource AllTrueConverter}">
+                                        <Binding Path="ShowEffectsAdjustments"/>
+                                        <Binding Path="HiddenAdjustmentGroups" Converter="{StaticResource NotInListConverter}" ConverterParameter="threshold"/>
+                                    </MultiBinding>
+                                </Border.IsVisible>
+                                <panels:ThresholdPanel />
+                            </Border>
+
+                            <!-- Die Tiefen-Unschaerfe wird gebacken und rahmt sich selbst; sie steht
+                                 nach den Pixelreglern der Effekte, was man wieder loswird, gehoert
+                                 vor das, was bleibt. -->
+                            <panels:BokehPanel Margin="0,7,0,0"
+                                               IsVisible="{Binding ShowEffectsAdjustments}" />
+
+                            <!-- Der Nebel nach Tiefe wird gebacken wie die Tiefen-Unschaerfe und rahmt
+                                 sich deshalb selbst (BokehPanel.axaml). -->
+                            <panels:FogPanel Margin="0,7,0,0"
+                                             IsVisible="{Binding ShowEffectsAdjustments}" />
+
+                            <Border Classes="adjustment-group" Margin="0,7,0,0"
+                                    >
+                                <Border.IsVisible>
+                                    <MultiBinding Converter="{StaticResource AllTrueConverter}">
+                                        <Binding Path="ShowEffectsAdjustments"/>
+                                        <Binding Path="HiddenAdjustmentGroups" Converter="{StaticResource NotInListConverter}" ConverterParameter="tiltshift"/>
+                                    </MultiBinding>
+                                </Border.IsVisible>
+                                <panels:TiltShiftPanel />
                             </Border>
 
                             <Border Classes="adjustment-group" Margin="0,7,0,0"

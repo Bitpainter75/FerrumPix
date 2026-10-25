@@ -1445,6 +1445,7 @@ Namespace Views
             For Each ancestor In slider.GetVisualAncestors()
                 If TypeOf ancestor Is SharpnessPanel OrElse TypeOf ancestor Is NoisePanel OrElse
                    TypeOf ancestor Is DetailsPanel OrElse TypeOf ancestor Is EffectsPanel OrElse
+                   TypeOf ancestor Is VignettePanel OrElse
                    TypeOf ancestor Is BokehPanel OrElse TypeOf ancestor Is LensCorrectionPanel Then
                     Return SliderKind.ScaleSensitive
                 End If

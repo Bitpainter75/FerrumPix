@@ -22,7 +22,7 @@
   Grain group as the Noise and Color noise sliders, together with Dust/scratches, which now
   only adds and goes further at its maximum. Blur has no group of its own any more and sits in
   Details. Vignette moved to the Details tool below Sharpen, Depth blur to the Effects tool below
-  Threshold. The rarely useful Color blotches and Blotch size sliders and the negative halves of
+  Threshold, and Frame now opens the Effects tool above Grain. The rarely useful Color blotches and Blotch size sliders and the negative halves of
   Noise and Dust/scratches are gone; pictures edited with them keep their look.
 
 - **Display profiles on Windows and Linux:** in Settings you can choose an ICC profile for each
