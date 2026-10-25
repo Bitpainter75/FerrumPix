@@ -10105,4 +10105,58 @@
   <data name="Dieser_Immich_Server_kann_keine_Bearbeitungen_sp_16cdc673" xml:space="preserve">
     <value>이 Immich 서버는 편집을 저장할 수 없습니다. Immich 2.5 이상이 필요합니다.</value>
   </data>
+  <data name="Sch_rfen_zur_cksetzen_d9baf89c" xml:space="preserve">
+    <value>선명하게 하기 재설정</value>
+  </data>
+  <data name="Betrag_ff7324af" xml:space="preserve">
+    <value>양</value>
+  </data>
+  <data name="Maskieren_e4d7a7d4" xml:space="preserve">
+    <value>마스킹</value>
+  </data>
+  <data name="Unsharp_Mask_verst_rkt_Kanten_und_legt_dabei_hel_d09c3b4a" xml:space="preserve">
+    <value>Unsharp Mask: 가장자리를 강화하고 밝고 어두운 테두리를 만듭니다. Deconvolution: 흐림을 역으로 계산하여 미세한 디테일이 테두리 없이 다시 선명해집니다. 여기서 세부는 반복 횟수를 뜻합니다.</value>
+  </data>
+  <data name="Rauschreduzierung_03a92e86" xml:space="preserve">
+    <value>노이즈 감소</value>
+  </data>
+  <data name="Rauschreduzierung_zur_cksetzen_f3c4bac3" xml:space="preserve">
+    <value>노이즈 감소 재설정</value>
+  </data>
+  <data name="Sch_tzt_Kanten_bei_der_Luminanz_h_her_mehr_Detai_f6ba22d8" xml:space="preserve">
+    <value>광도 노이즈 감소에서 가장자리를 보호합니다. 높을수록 디테일이 더 남습니다.</value>
+  </data>
+  <data name="Rauschen_hinzuf_gen_69b1c750" xml:space="preserve">
+    <value>노이즈 추가</value>
+  </data>
+  <data name="Legt_gleichm_iges_Rauschen_ber_das_Bild_44c6a0d9" xml:space="preserve">
+    <value>이미지 전체에 고른 노이즈를 입힙니다.</value>
+  </data>
+  <data name="Unregelm_igkeit_c030988c" xml:space="preserve">
+    <value>거칠기</value>
+  </data>
+  <data name="Sch_rfen_bei_unbearbeiteten_RAWs_2070c2f9" xml:space="preserve">
+    <value>편집하지 않은 RAW의 선명하게 하기</value>
+  </data>
+  <data name="Startwert_des_Reglers_Betrag_beim_Sch_rfen_wenn__7988da1d" xml:space="preserve">
+    <value>편집하지 않은 RAW를 열 때 선명하게 하기의 양 슬라이더 시작값입니다. 이미 편집한 이미지는 값을 유지합니다. 0이면 꺼집니다.</value>
+  </data>
+  <data name="Luminanz_Rauschreduzierung_bei_unbearbeiteten_RA_96d73674" xml:space="preserve">
+    <value>편집하지 않은 RAW의 광도 노이즈 감소</value>
+  </data>
+  <data name="Startwert_des_Reglers_Luminanz_in_der_Rauschredu_67e20672" xml:space="preserve">
+    <value>편집하지 않은 RAW를 열 때 노이즈 감소의 광도 슬라이더 시작값입니다. 밝기 노이즈를 부드럽게 하며 이미지를 바꿀 때마다 계산 시간이 듭니다. 이미 편집한 이미지는 값을 유지합니다. 0이면 꺼집니다.</value>
+  </data>
+  <data name="Farb_Rauschreduzierung_bei_unbearbeiteten_RAWs_7e4c79c0" xml:space="preserve">
+    <value>편집하지 않은 RAW의 색상 노이즈 감소</value>
+  </data>
+  <data name="Startwert_des_Reglers_Farbe_in_der_Rauschreduzie_788f2f27" xml:space="preserve">
+    <value>편집하지 않은 RAW를 열 때 노이즈 감소의 색상 슬라이더 시작값입니다. 이미지에서 측정한 색상 노이즈를 없애고 실제 색은 유지합니다. 이미지를 바꿀 때마다 계산 시간이 듭니다. 0이면 꺼집니다.</value>
+  </data>
+  <data name="Legt_farbiges_Rauschen_ber_das_Bild_die_Helligke_c3730661" xml:space="preserve">
+    <value>사진에 색이 있는 노이즈를 더합니다. 밝기는 그대로입니다.</value>
+  </data>
+  <data name="Entfernt_Farbrauschen_gegl_ttet_werden_nur_die_F_a42219ec" xml:space="preserve">
+    <value>컬러 노이즈를 제거합니다. 색 성분(크로마)만 부드럽게 하고 밝기와 디테일은 유지합니다.</value>
+  </data>
 </root>

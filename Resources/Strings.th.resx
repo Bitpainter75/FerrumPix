@@ -10105,4 +10105,58 @@
   <data name="Dieser_Immich_Server_kann_keine_Bearbeitungen_sp_16cdc673" xml:space="preserve">
     <value>เซิร์ฟเวอร์ Immich นี้บันทึกการแก้ไขไม่ได้ ต้องใช้ Immich 2.5 ขึ้นไป</value>
   </data>
+  <data name="Sch_rfen_zur_cksetzen_d9baf89c" xml:space="preserve">
+    <value>รีเซ็ตการเพิ่มความคมชัด</value>
+  </data>
+  <data name="Betrag_ff7324af" xml:space="preserve">
+    <value>ปริมาณ</value>
+  </data>
+  <data name="Maskieren_e4d7a7d4" xml:space="preserve">
+    <value>การมาสก์</value>
+  </data>
+  <data name="Unsharp_Mask_verst_rkt_Kanten_und_legt_dabei_hel_d09c3b4a" xml:space="preserve">
+    <value>Unsharp Mask: เสริมขอบและสร้างขอบสว่างและมืด Deconvolution: คำนวณความเบลอย้อนกลับ รายละเอียดละเอียดกลับมาคมชัดโดยไม่มีขอบ ตรงนั้นรายละเอียดหมายถึงจำนวนรอบ</value>
+  </data>
+  <data name="Rauschreduzierung_03a92e86" xml:space="preserve">
+    <value>การลดนอยส์</value>
+  </data>
+  <data name="Rauschreduzierung_zur_cksetzen_f3c4bac3" xml:space="preserve">
+    <value>รีเซ็ตการลดนอยส์</value>
+  </data>
+  <data name="Sch_tzt_Kanten_bei_der_Luminanz_h_her_mehr_Detai_f6ba22d8" xml:space="preserve">
+    <value>ปกป้องขอบในการลดนอยส์ความสว่าง ค่าที่สูงขึ้นเก็บรายละเอียดได้มากขึ้น</value>
+  </data>
+  <data name="Rauschen_hinzuf_gen_69b1c750" xml:space="preserve">
+    <value>เพิ่มนอยส์</value>
+  </data>
+  <data name="Legt_gleichm_iges_Rauschen_ber_das_Bild_44c6a0d9" xml:space="preserve">
+    <value>ใส่นอยส์สม่ำเสมอลงบนภาพ</value>
+  </data>
+  <data name="Unregelm_igkeit_c030988c" xml:space="preserve">
+    <value>ความหยาบ</value>
+  </data>
+  <data name="Sch_rfen_bei_unbearbeiteten_RAWs_2070c2f9" xml:space="preserve">
+    <value>การเพิ่มความคมชัดสำหรับ RAW ที่ยังไม่แก้ไข</value>
+  </data>
+  <data name="Startwert_des_Reglers_Betrag_beim_Sch_rfen_wenn__7988da1d" xml:space="preserve">
+    <value>ค่าเริ่มต้นของแถบเลื่อนปริมาณในการเพิ่มความคมชัดเมื่อเปิด RAW ที่ยังไม่แก้ไข ภาพที่แก้ไขแล้วจะคงค่าเดิมไว้ 0 คือปิด</value>
+  </data>
+  <data name="Luminanz_Rauschreduzierung_bei_unbearbeiteten_RA_96d73674" xml:space="preserve">
+    <value>การลดนอยส์ความสว่างสำหรับ RAW ที่ยังไม่แก้ไข</value>
+  </data>
+  <data name="Startwert_des_Reglers_Luminanz_in_der_Rauschredu_67e20672" xml:space="preserve">
+    <value>ค่าเริ่มต้นของแถบเลื่อนความสว่างในการลดนอยส์เมื่อเปิด RAW ที่ยังไม่แก้ไข ทำให้นอยส์ความสว่างเรียบขึ้นและใช้เวลาประมวลผลทุกครั้งที่เปลี่ยนภาพ ภาพที่แก้ไขแล้วจะคงค่าเดิมไว้ 0 คือปิด</value>
+  </data>
+  <data name="Farb_Rauschreduzierung_bei_unbearbeiteten_RAWs_7e4c79c0" xml:space="preserve">
+    <value>การลดนอยส์สีสำหรับ RAW ที่ยังไม่แก้ไข</value>
+  </data>
+  <data name="Startwert_des_Reglers_Farbe_in_der_Rauschreduzie_788f2f27" xml:space="preserve">
+    <value>ค่าเริ่มต้นของแถบเลื่อนสีในการลดนอยส์เมื่อเปิด RAW ที่ยังไม่แก้ไข ลบนอยส์สีที่วัดได้ในภาพและคงสีจริงไว้ ใช้เวลาประมวลผลทุกครั้งที่เปลี่ยนภาพ 0 คือปิด</value>
+  </data>
+  <data name="Legt_farbiges_Rauschen_ber_das_Bild_die_Helligke_c3730661" xml:space="preserve">
+    <value>เพิ่มนอยส์สีลงบนภาพ ความสว่างยังคงเดิม</value>
+  </data>
+  <data name="Entfernt_Farbrauschen_gegl_ttet_werden_nur_die_F_a42219ec" xml:space="preserve">
+    <value>ลบสัญญาณรบกวนสี: ปรับให้เรียบเฉพาะส่วนประกอบสี (โครมา) ความสว่างและรายละเอียดยังคงอยู่</value>
+  </data>
 </root>

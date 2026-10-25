@@ -10061,4 +10061,58 @@
   <data name="Dieser_Immich_Server_kann_keine_Bearbeitungen_sp_16cdc673" xml:space="preserve">
     <value>Questo server Immich non può salvare le modifiche, serve Immich 2.5 o successivo.</value>
   </data>
+  <data name="Sch_rfen_zur_cksetzen_d9baf89c" xml:space="preserve">
+    <value>Ripristina nitidezza</value>
+  </data>
+  <data name="Betrag_ff7324af" xml:space="preserve">
+    <value>Fattore</value>
+  </data>
+  <data name="Maskieren_e4d7a7d4" xml:space="preserve">
+    <value>Mascheratura</value>
+  </data>
+  <data name="Unsharp_Mask_verst_rkt_Kanten_und_legt_dabei_hel_d09c3b4a" xml:space="preserve">
+    <value>Unsharp Mask: rafforza i bordi creando aloni chiari e scuri. Deconvolution: annulla la sfocatura, il dettaglio fine torna nitido senza aloni. Lì Dettagli indica il numero di passaggi.</value>
+  </data>
+  <data name="Rauschreduzierung_03a92e86" xml:space="preserve">
+    <value>Riduzione disturbo</value>
+  </data>
+  <data name="Rauschreduzierung_zur_cksetzen_f3c4bac3" xml:space="preserve">
+    <value>Ripristina riduzione disturbo</value>
+  </data>
+  <data name="Sch_tzt_Kanten_bei_der_Luminanz_h_her_mehr_Detai_f6ba22d8" xml:space="preserve">
+    <value>Protegge i bordi nella riduzione del disturbo di luminanza: un valore più alto conserva più dettagli.</value>
+  </data>
+  <data name="Rauschen_hinzuf_gen_69b1c750" xml:space="preserve">
+    <value>Aggiungi disturbo</value>
+  </data>
+  <data name="Legt_gleichm_iges_Rauschen_ber_das_Bild_44c6a0d9" xml:space="preserve">
+    <value>Applica un disturbo uniforme sull’immagine.</value>
+  </data>
+  <data name="Unregelm_igkeit_c030988c" xml:space="preserve">
+    <value>Ruvidità</value>
+  </data>
+  <data name="Sch_rfen_bei_unbearbeiteten_RAWs_2070c2f9" xml:space="preserve">
+    <value>Nitidezza per RAW non modificati</value>
+  </data>
+  <data name="Startwert_des_Reglers_Betrag_beim_Sch_rfen_wenn__7988da1d" xml:space="preserve">
+    <value>Valore iniziale del cursore Fattore della nitidezza quando si apre un RAW senza modifiche. Le immagini già modificate mantengono i loro valori. 0 lo disattiva.</value>
+  </data>
+  <data name="Luminanz_Rauschreduzierung_bei_unbearbeiteten_RA_96d73674" xml:space="preserve">
+    <value>Riduzione disturbo di luminanza per RAW non modificati</value>
+  </data>
+  <data name="Startwert_des_Reglers_Luminanz_in_der_Rauschredu_67e20672" xml:space="preserve">
+    <value>Valore iniziale del cursore Luminanza della riduzione disturbo quando si apre un RAW senza modifiche. Smussa il disturbo di luminosità e richiede tempo di calcolo a ogni cambio di immagine. Le immagini già modificate mantengono i loro valori. 0 lo disattiva.</value>
+  </data>
+  <data name="Farb_Rauschreduzierung_bei_unbearbeiteten_RAWs_7e4c79c0" xml:space="preserve">
+    <value>Riduzione disturbo di colore per RAW non modificati</value>
+  </data>
+  <data name="Startwert_des_Reglers_Farbe_in_der_Rauschreduzie_788f2f27" xml:space="preserve">
+    <value>Valore iniziale del cursore Colore della riduzione disturbo quando si apre un RAW senza modifiche. Rimuove il disturbo di colore misurato nell’immagine e mantiene il colore reale. Richiede tempo di calcolo a ogni cambio di immagine. 0 lo disattiva.</value>
+  </data>
+  <data name="Legt_farbiges_Rauschen_ber_das_Bild_die_Helligke_c3730661" xml:space="preserve">
+    <value>Aggiunge rumore colorato all'immagine, la luminosità resta invariata.</value>
+  </data>
+  <data name="Entfernt_Farbrauschen_gegl_ttet_werden_nur_die_F_a42219ec" xml:space="preserve">
+    <value>Rimuove il rumore cromatico: vengono levigate solo le componenti di colore (croma), luminosità e dettagli restano invariati.</value>
+  </data>
 </root>

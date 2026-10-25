@@ -808,18 +808,18 @@ Namespace Services
         ''' jeweiligen Objektivs, und ohne Messwerte passiert ohnehin nichts. Pro Bild ist
         ''' sie im Werkzeug uebersteuerbar.</summary>
         Public Property LensCorrectionEnabled As Boolean = True
-        ''' <summary>Startwert der Farbrauschminderung (Regler "Farbrauschen", crs:ColorNoiseReduction)
+        ''' <summary>Startwert der Farbrauschminderung (Regler "Farbe" der Rauschreduzierung, crs:ColorNoiseReduction)
         ''' fuer eine RAW ohne Rezept, 0 bis 100, 0 heisst aus. Vorgabe 25 wie beim Referenzprogramm
         ''' (seit 2026-10-24, davor 0; siehe UneditedRawDefaultsVersion).</summary>
         Public Property UneditedRawColorNoise As Integer = 25
         ''' <summary>Fassung der RAW-Startwerte. Fehlt das Feld in der Datei, stammt sie von vor der
         ''' Vorgabe 25 fuer Farbrauschen, und Load hebt eine 0 einmal an.</summary>
         Public Property UneditedRawDefaultsVersion As Integer = 1
-        ''' <summary>Startwert der Schaerfe (crs:Sharpness, 0 bis 150) fuer eine RAW ohne Rezept, mit
+        ''' <summary>Startwert des Betrags beim Schaerfen (crs:Sharpness, 0 bis 150) fuer eine RAW ohne Rezept, mit
         ''' Detail 25. Vorgabe 40 wie beim Referenzprogramm; 0 heisst aus. Das Feld ist neu, eine
         ''' aeltere Datei bekommt also die 40 ohne Migration.</summary>
         Public Property UneditedRawSharpness As Integer = 40
-        ''' <summary>Startwert der Rauschminderung der Helligkeit (Regler "Rauschen",
+        ''' <summary>Startwert der Rauschminderung der Helligkeit (Regler "Luminanz" der Rauschreduzierung,
         ''' crs:LuminanceSmoothing, 0 bis 100) fuer eine RAW ohne Rezept. 0 heisst aus, die Vorgabe.</summary>
         Public Property UneditedRawNoiseReduction As Integer = 0
         Public Property LensAssignments As New List(Of LensAssignment)()
@@ -1696,8 +1696,8 @@ Namespace Services
                     ("objektivkorrektur", "Objektivkorrektur"),
                     ("film-negative", "Filmnegativ"),
                     ("details", "Details"),
-                    ("rauschen", "Rauschen"),
-                    ("sharpen", "Schärfe"),
+                    ("rauschen", "Rauschreduzierung"),
+                    ("sharpen", "Schärfen"),
                     ("soften", "Weichzeichnen"),
                     ("bokeh", "Tiefen-Unschärfe"),
                     ("vignette", "Vignette"),

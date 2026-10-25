@@ -10060,4 +10060,58 @@
   <data name="Dieser_Immich_Server_kann_keine_Bearbeitungen_sp_16cdc673" xml:space="preserve">
     <value>Este servidor Immich não consegue guardar edições, é preciso o Immich 2.5 ou mais recente.</value>
   </data>
+  <data name="Sch_rfen_zur_cksetzen_d9baf89c" xml:space="preserve">
+    <value>Repor nitidez</value>
+  </data>
+  <data name="Betrag_ff7324af" xml:space="preserve">
+    <value>Quantidade</value>
+  </data>
+  <data name="Maskieren_e4d7a7d4" xml:space="preserve">
+    <value>Mascaramento</value>
+  </data>
+  <data name="Unsharp_Mask_verst_rkt_Kanten_und_legt_dabei_hel_d09c3b4a" xml:space="preserve">
+    <value>Unsharp Mask: reforça as margens e cria halos claros e escuros. Deconvolution: reverte o desfoque, o detalhe fino volta a ficar nítido sem halos. Aí, Detalhe define o número de passagens.</value>
+  </data>
+  <data name="Rauschreduzierung_03a92e86" xml:space="preserve">
+    <value>Redução de ruído</value>
+  </data>
+  <data name="Rauschreduzierung_zur_cksetzen_f3c4bac3" xml:space="preserve">
+    <value>Repor redução de ruído</value>
+  </data>
+  <data name="Sch_tzt_Kanten_bei_der_Luminanz_h_her_mehr_Detai_f6ba22d8" xml:space="preserve">
+    <value>Protege as margens na redução de ruído de luminância: valores mais altos mantêm mais detalhe.</value>
+  </data>
+  <data name="Rauschen_hinzuf_gen_69b1c750" xml:space="preserve">
+    <value>Adicionar ruído</value>
+  </data>
+  <data name="Legt_gleichm_iges_Rauschen_ber_das_Bild_44c6a0d9" xml:space="preserve">
+    <value>Coloca um ruído uniforme sobre a imagem.</value>
+  </data>
+  <data name="Unregelm_igkeit_c030988c" xml:space="preserve">
+    <value>Aspereza</value>
+  </data>
+  <data name="Sch_rfen_bei_unbearbeiteten_RAWs_2070c2f9" xml:space="preserve">
+    <value>Nitidez para RAW não editados</value>
+  </data>
+  <data name="Startwert_des_Reglers_Betrag_beim_Sch_rfen_wenn__7988da1d" xml:space="preserve">
+    <value>Valor inicial do controlo Quantidade da nitidez ao abrir um RAW sem edições. As imagens já editadas mantêm os seus valores. 0 desliga-o.</value>
+  </data>
+  <data name="Luminanz_Rauschreduzierung_bei_unbearbeiteten_RA_96d73674" xml:space="preserve">
+    <value>Redução de ruído de luminância para RAW não editados</value>
+  </data>
+  <data name="Startwert_des_Reglers_Luminanz_in_der_Rauschredu_67e20672" xml:space="preserve">
+    <value>Valor inicial do controlo Luminância da redução de ruído ao abrir um RAW sem edições. Suaviza o ruído de brilho e exige tempo de cálculo a cada mudança de imagem. As imagens já editadas mantêm os seus valores. 0 desliga-o.</value>
+  </data>
+  <data name="Farb_Rauschreduzierung_bei_unbearbeiteten_RAWs_7e4c79c0" xml:space="preserve">
+    <value>Redução de ruído de cor para RAW não editados</value>
+  </data>
+  <data name="Startwert_des_Reglers_Farbe_in_der_Rauschreduzie_788f2f27" xml:space="preserve">
+    <value>Valor inicial do controlo Cor da redução de ruído ao abrir um RAW sem edições. Remove o ruído de cor medido na imagem e mantém a cor real. Exige tempo de cálculo a cada mudança de imagem. 0 desliga-o.</value>
+  </data>
+  <data name="Legt_farbiges_Rauschen_ber_das_Bild_die_Helligke_c3730661" xml:space="preserve">
+    <value>Adiciona ruído colorido à imagem, o brilho mantém-se.</value>
+  </data>
+  <data name="Entfernt_Farbrauschen_gegl_ttet_werden_nur_die_F_a42219ec" xml:space="preserve">
+    <value>Remove o ruído de cor: apenas os componentes de cor (croma) são suavizados, o brilho e os detalhes mantêm-se.</value>
+  </data>
 </root>

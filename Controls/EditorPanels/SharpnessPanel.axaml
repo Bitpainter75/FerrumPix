@@ -5,7 +5,7 @@
     <StackPanel Spacing="7">
         <Border Classes="adjustment-group"
         IsVisible="{Binding HiddenAdjustmentGroups, Converter={StaticResource NotInListConverter}, ConverterParameter=sharpen}">
-            <Expander Header="Schärfe" icons:ExpanderState.Key="sharpen">
+            <Expander Header="Schärfen" icons:ExpanderState.Key="sharpen">
                 <Expander.HeaderTemplate>
                     <DataTemplate>
                         <Grid ColumnDefinitions="*,Auto,Auto" VerticalAlignment="Center">
@@ -32,7 +32,7 @@
                                     Height="28"
                                     Padding="0"
                                     Command="{Binding DataContext.ResetSharpenCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                    ToolTip.Tip="Schärfe zurücksetzen">
+                                    ToolTip.Tip="Schärfen zurücksetzen">
                                 <icons:SvgIcon
                                     Source="avares://FerrumPix/Assets/Icons/outline/rotate-clockwise.svg"
                                     Width="14" Height="14" />
@@ -42,7 +42,7 @@
                 </Expander.HeaderTemplate>
                 <StackPanel Spacing="2" Margin="0,8,0,0">
                     <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
-                        <TextBlock Text="Schärfe" Foreground="{DynamicResource FP.Text.Secondary}"
+                        <TextBlock Text="Betrag" Foreground="{DynamicResource FP.Text.Secondary}"
                                    VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                         <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="150"
                                            Value="{Binding Sharpness}" Margin="0,0" />
@@ -60,7 +60,7 @@
                                                  Increment="0.1" FormatString="F1" />
                     </Grid>
                     <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
-                        <TextBlock Text="Detail" Foreground="{DynamicResource FP.Text.Secondary}"
+                        <TextBlock Text="Details" Foreground="{DynamicResource FP.Text.Secondary}"
                                    VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}"
                                    ToolTip.Tip="Hebt die feinen Details bei der Schärfung stärker hervor." />
                         <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
@@ -69,7 +69,7 @@
                                                  Value="{Binding SharpenDetail, Mode=TwoWay}" Minimum="0" Maximum="100" />
                     </Grid>
                     <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
-                        <TextBlock Text="Maskierung" Foreground="{DynamicResource FP.Text.Secondary}"
+                        <TextBlock Text="Maskieren" Foreground="{DynamicResource FP.Text.Secondary}"
                                    VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}"
                                    ToolTip.Tip="Beschränkt die Schärfung auf Kanten: 0 schärft die ganze Fläche, höher lässt glatte Flächen wie Himmel und Haut ruhig. Mit dem Zeiger darauf einmal ALT antippen zeigt die Gewichtung: hell wird geschärft, dunkel bleibt ruhig. Noch einmal ALT nimmt sie weg." />
                         <icons:RoundSlider x:Name="MaskingSlider" Grid.Column="1" Minimum="0" Maximum="100"
@@ -88,7 +88,7 @@
                                   Margin="6,0,0,0"
                                   HorizontalAlignment="Stretch"
                                   DropDownOpened="OnMatchWidthDropDownOpened"
-                                  ToolTip.Tip="Unsharp Mask: verstärkt Kanten und legt dabei helle und dunkle Säume an. Deconvolution: rechnet die Unschärfe zurück, feine Zeichnung wird ohne Säume wieder steil. Detail steht dort für die Zahl der Durchläufe." />
+                                  ToolTip.Tip="Unsharp Mask: verstärkt Kanten und legt dabei helle und dunkle Säume an. Deconvolution: rechnet die Unschärfe zurück, feine Zeichnung wird ohne Säume wieder steil. Details steht dort für die Zahl der Durchläufe." />
                     </Grid>
                 </StackPanel>
             </Expander>
@@ -138,37 +138,6 @@
                                            Value="{Binding Blur}" Margin="0,0" />
                         <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
                                                  Value="{Binding Blur, Mode=TwoWay}" Minimum="0" Maximum="100" />
-                    </Grid>
-                    <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center" Margin="0,6,0,0">
-                        <TextBlock Text="Glätten" Foreground="{DynamicResource FP.Text.Secondary}"
-                                   VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap"
-                                   ToolTip.Tip="Mindert Rauschen und lässt Kanten und Zeichnung stehen. Ein sauberes Foto verändert sich dabei kaum." />
-                        <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
-                                           Value="{Binding NoiseReduction}" Margin="0,0" />
-                        <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
-                                                 Value="{Binding NoiseReduction, Mode=TwoWay}" Minimum="0" Maximum="100" />
-                    </Grid>
-                    <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
-                        <TextBlock Text="Detail" Foreground="{DynamicResource FP.Text.Secondary}"
-                                   VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}"
-                                   ToolTip.Tip="Schützt Kanten beim Glätten: höher = mehr Details bleiben erhalten." />
-                        <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
-                                           Value="{Binding NoiseReductionDetail}" Margin="0,0" />
-                        <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
-                                                 Value="{Binding NoiseReductionDetail, Mode=TwoWay}" Minimum="0" Maximum="100" />
-                    </Grid>
-                    <Grid ColumnDefinitions="92,*" VerticalAlignment="Center">
-                        <TextBlock Text="Methode" Foreground="{DynamicResource FP.Text.Secondary}"
-                                   VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
-                        <ComboBox Name="NoiseReductionMethodComboBox"
-                                  Grid.Column="1"
-                                  ItemsSource="{Binding NoiseReductionMethodOptions}"
-                                  SelectedItem="{Binding NoiseReductionMethodLabel}"
-                                  FontSize="{DynamicResource FP.Font.Small}"
-                                  Margin="6,0,0,0"
-                                  HorizontalAlignment="Stretch"
-                                  DropDownOpened="OnMatchWidthDropDownOpened"
-                                  ToolTip.Tip="Adaptive: glättet so stark, wie das Bild bei der jeweiligen Helligkeit rauscht. Guided: glättet mit fester Schwelle nur flache Flächen. Gaussian: glättet gleichmäßig mit kleinem Radius. Median: kantenerhaltend, echte Rauschunterdrückung." />
                     </Grid>
                 </StackPanel>
             </Expander>

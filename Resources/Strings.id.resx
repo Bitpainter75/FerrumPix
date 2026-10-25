@@ -10105,4 +10105,58 @@
   <data name="Dieser_Immich_Server_kann_keine_Bearbeitungen_sp_16cdc673" xml:space="preserve">
     <value>Server Immich ini tidak dapat menyimpan suntingan, diperlukan Immich 2.5 atau lebih baru.</value>
   </data>
+  <data name="Sch_rfen_zur_cksetzen_d9baf89c" xml:space="preserve">
+    <value>Atur ulang penajaman</value>
+  </data>
+  <data name="Betrag_ff7324af" xml:space="preserve">
+    <value>Jumlah</value>
+  </data>
+  <data name="Maskieren_e4d7a7d4" xml:space="preserve">
+    <value>Masking</value>
+  </data>
+  <data name="Unsharp_Mask_verst_rkt_Kanten_und_legt_dabei_hel_d09c3b4a" xml:space="preserve">
+    <value>Unsharp Mask: memperkuat tepi dan menambahkan lingkaran terang dan gelap. Deconvolution: menghitung balik keburaman, detail halus kembali tajam tanpa lingkaran. Di sana Detail menentukan jumlah putaran.</value>
+  </data>
+  <data name="Rauschreduzierung_03a92e86" xml:space="preserve">
+    <value>Pengurangan Noise</value>
+  </data>
+  <data name="Rauschreduzierung_zur_cksetzen_f3c4bac3" xml:space="preserve">
+    <value>Atur ulang pengurangan noise</value>
+  </data>
+  <data name="Sch_tzt_Kanten_bei_der_Luminanz_h_her_mehr_Detai_f6ba22d8" xml:space="preserve">
+    <value>Melindungi tepi pada pengurangan noise luminans: nilai lebih tinggi mempertahankan lebih banyak detail.</value>
+  </data>
+  <data name="Rauschen_hinzuf_gen_69b1c750" xml:space="preserve">
+    <value>Tambah noise</value>
+  </data>
+  <data name="Legt_gleichm_iges_Rauschen_ber_das_Bild_44c6a0d9" xml:space="preserve">
+    <value>Menaruh noise yang merata di atas gambar.</value>
+  </data>
+  <data name="Unregelm_igkeit_c030988c" xml:space="preserve">
+    <value>Kekasaran</value>
+  </data>
+  <data name="Sch_rfen_bei_unbearbeiteten_RAWs_2070c2f9" xml:space="preserve">
+    <value>Penajaman untuk RAW yang belum disunting</value>
+  </data>
+  <data name="Startwert_des_Reglers_Betrag_beim_Sch_rfen_wenn__7988da1d" xml:space="preserve">
+    <value>Nilai awal penggeser Jumlah pada penajaman saat RAW tanpa suntingan dibuka. Gambar yang sudah disunting mempertahankan nilainya. 0 mematikannya.</value>
+  </data>
+  <data name="Luminanz_Rauschreduzierung_bei_unbearbeiteten_RA_96d73674" xml:space="preserve">
+    <value>Pengurangan noise luminans untuk RAW yang belum disunting</value>
+  </data>
+  <data name="Startwert_des_Reglers_Luminanz_in_der_Rauschredu_67e20672" xml:space="preserve">
+    <value>Nilai awal penggeser Luminans pada pengurangan noise saat RAW tanpa suntingan dibuka. Menghaluskan noise kecerahan dan memerlukan waktu proses setiap kali gambar berganti. Gambar yang sudah disunting mempertahankan nilainya. 0 mematikannya.</value>
+  </data>
+  <data name="Farb_Rauschreduzierung_bei_unbearbeiteten_RAWs_7e4c79c0" xml:space="preserve">
+    <value>Pengurangan noise warna untuk RAW yang belum disunting</value>
+  </data>
+  <data name="Startwert_des_Reglers_Farbe_in_der_Rauschreduzie_788f2f27" xml:space="preserve">
+    <value>Nilai awal penggeser Warna pada pengurangan noise saat RAW tanpa suntingan dibuka. Menghapus noise warna yang diukur pada gambar dan mempertahankan warna asli. Memerlukan waktu proses setiap kali gambar berganti. 0 mematikannya.</value>
+  </data>
+  <data name="Legt_farbiges_Rauschen_ber_das_Bild_die_Helligke_c3730661" xml:space="preserve">
+    <value>Menambahkan derau berwarna pada gambar, kecerahan tetap.</value>
+  </data>
+  <data name="Entfernt_Farbrauschen_gegl_ttet_werden_nur_die_F_a42219ec" xml:space="preserve">
+    <value>Menghapus derau warna: hanya komponen warna (kroma) yang dihaluskan, kecerahan dan detail tetap terjaga.</value>
+  </data>
 </root>

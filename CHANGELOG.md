@@ -15,6 +15,13 @@
   paste in the editor, so you can copy in one place and paste in the other. RAW and PSD files
   get the adjustments in their sidecar file; JPG, PNG and WebP are overwritten after asking.
 
+- **Detail sliders named and grouped as in the reference program:** the luminance noise reduction,
+  formerly Smooth in the Soften group, now sits as Luminance with its Detail and Method in the
+  renamed Noise Reduction group, next to Color, and sharpening is Amount, Radius, Detail and
+  Masking. Color there only removes color noise now. Adding noise and color noise moved to the
+  Grain group as the Noise and Color noise sliders. The rarely useful Color blotches and Blotch size
+  sliders and the negative half of Noise are gone; pictures edited with them keep their look.
+
 - **Display profiles on Windows and Linux:** in Settings you can choose an ICC profile for each
   connected display, for example from a calibration. Photos in the viewer and editor are then
   shown correctly on the display the window is on, also on wide gamut monitors. Leave it empty

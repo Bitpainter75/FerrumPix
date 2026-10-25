@@ -10101,4 +10101,58 @@
   <data name="Dieser_Immich_Server_kann_keine_Bearbeitungen_sp_16cdc673" xml:space="preserve">
     <value>Deze Immich-server kan geen bewerkingen opslaan, daarvoor is Immich 2.5 of nieuwer nodig.</value>
   </data>
+  <data name="Sch_rfen_zur_cksetzen_d9baf89c" xml:space="preserve">
+    <value>Verscherping herstellen</value>
+  </data>
+  <data name="Betrag_ff7324af" xml:space="preserve">
+    <value>Hoeveelheid</value>
+  </data>
+  <data name="Maskieren_e4d7a7d4" xml:space="preserve">
+    <value>Masker</value>
+  </data>
+  <data name="Unsharp_Mask_verst_rkt_Kanten_und_legt_dabei_hel_d09c3b4a" xml:space="preserve">
+    <value>Unsharp Mask: versterkt randen en legt daarbij lichte en donkere halo’s. Deconvolution: rekent de onscherpte terug, fijne tekening wordt weer scherp zonder halo’s. Detail staat daar voor het aantal doorgangen.</value>
+  </data>
+  <data name="Rauschreduzierung_03a92e86" xml:space="preserve">
+    <value>Ruisreductie</value>
+  </data>
+  <data name="Rauschreduzierung_zur_cksetzen_f3c4bac3" xml:space="preserve">
+    <value>Ruisreductie herstellen</value>
+  </data>
+  <data name="Sch_tzt_Kanten_bei_der_Luminanz_h_her_mehr_Detai_f6ba22d8" xml:space="preserve">
+    <value>Beschermt randen bij luminantieruisreductie: hoger behoudt meer detail.</value>
+  </data>
+  <data name="Rauschen_hinzuf_gen_69b1c750" xml:space="preserve">
+    <value>Ruis toevoegen</value>
+  </data>
+  <data name="Legt_gleichm_iges_Rauschen_ber_das_Bild_44c6a0d9" xml:space="preserve">
+    <value>Legt gelijkmatige ruis over de afbeelding.</value>
+  </data>
+  <data name="Unregelm_igkeit_c030988c" xml:space="preserve">
+    <value>Ruwheid</value>
+  </data>
+  <data name="Sch_rfen_bei_unbearbeiteten_RAWs_2070c2f9" xml:space="preserve">
+    <value>Verscherping voor onbewerkte RAW’s</value>
+  </data>
+  <data name="Startwert_des_Reglers_Betrag_beim_Sch_rfen_wenn__7988da1d" xml:space="preserve">
+    <value>Beginwaarde van de schuifregelaar Hoeveelheid bij verscherping wanneer een RAW zonder bewerking wordt geopend. Al bewerkte afbeeldingen behouden hun waarden. 0 schakelt hem uit.</value>
+  </data>
+  <data name="Luminanz_Rauschreduzierung_bei_unbearbeiteten_RA_96d73674" xml:space="preserve">
+    <value>Luminantieruisreductie voor onbewerkte RAW’s</value>
+  </data>
+  <data name="Startwert_des_Reglers_Luminanz_in_der_Rauschredu_67e20672" xml:space="preserve">
+    <value>Beginwaarde van de schuifregelaar Luminantie bij ruisreductie wanneer een RAW zonder bewerking wordt geopend. Vlakt helderheidsruis af en kost rekentijd bij elke afbeeldingswissel. Al bewerkte afbeeldingen behouden hun waarden. 0 schakelt hem uit.</value>
+  </data>
+  <data name="Farb_Rauschreduzierung_bei_unbearbeiteten_RAWs_7e4c79c0" xml:space="preserve">
+    <value>Kleurruisreductie voor onbewerkte RAW’s</value>
+  </data>
+  <data name="Startwert_des_Reglers_Farbe_in_der_Rauschreduzie_788f2f27" xml:space="preserve">
+    <value>Beginwaarde van de schuifregelaar Kleur bij ruisreductie wanneer een RAW zonder bewerking wordt geopend. Verwijdert de in de afbeelding gemeten kleurruis en behoudt echte kleur. Kost rekentijd bij elke afbeeldingswissel. 0 schakelt hem uit.</value>
+  </data>
+  <data name="Legt_farbiges_Rauschen_ber_das_Bild_die_Helligke_c3730661" xml:space="preserve">
+    <value>Voegt gekleurde ruis toe aan de foto, de helderheid blijft gelijk.</value>
+  </data>
+  <data name="Entfernt_Farbrauschen_gegl_ttet_werden_nur_die_F_a42219ec" xml:space="preserve">
+    <value>Verwijdert kleurruis: alleen de kleurcomponenten (chroma) worden gladgemaakt, helderheid en details blijven behouden.</value>
+  </data>
 </root>

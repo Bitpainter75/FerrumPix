@@ -746,7 +746,7 @@ Namespace ViewModels
         End Property
         Private _lensCorrectionEnabled As Boolean
 
-        ''' <summary>Startwert "Farbrauschen" fuer eine RAW ohne Rezept, 0 bis 100, 0 = aus. Wirkt
+        ''' <summary>Startwert "Farbe" der Rauschreduzierung fuer eine RAW ohne Rezept, 0 bis 100, 0 = aus. Wirkt
         ''' beim naechsten Oeffnen eines unbearbeiteten RAWs, nicht auf schon bearbeitete.</summary>
         Public Property UneditedRawColorNoise As Integer
             Get
@@ -761,7 +761,7 @@ Namespace ViewModels
         End Property
         Private _uneditedRawColorNoise As Integer
 
-        ''' <summary>Startwert "Schaerfe" fuer eine RAW ohne Rezept, 0 bis 150, 0 = aus. Wirkt beim
+        ''' <summary>Startwert "Betrag" beim Schaerfen fuer eine RAW ohne Rezept, 0 bis 150, 0 = aus. Wirkt beim
         ''' naechsten Oeffnen eines unbearbeiteten RAWs, nicht auf schon bearbeitete.</summary>
         Public Property UneditedRawSharpness As Integer
             Get
@@ -776,7 +776,7 @@ Namespace ViewModels
         End Property
         Private _uneditedRawSharpness As Integer
 
-        ''' <summary>Startwert "Rauschen" (Helligkeit) fuer eine RAW ohne Rezept, 0 bis 100, 0 = aus.</summary>
+        ''' <summary>Startwert "Luminanz" der Rauschreduzierung fuer eine RAW ohne Rezept, 0 bis 100, 0 = aus.</summary>
         Public Property UneditedRawNoiseReduction As Integer
             Get
                 Return _uneditedRawNoiseReduction

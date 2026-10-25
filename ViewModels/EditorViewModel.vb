@@ -6922,7 +6922,9 @@ Namespace ViewModels
                 Return _addNoise
             End Get
             Set(value As Double)
-                SetUndoableDouble(_addNoise, Math.Max(-100, Math.Min(100, value)), NameOf(AddNoise))
+                ' Nur noch 0 bis 100: der negative Bereich (gleichmaessig weichzeichnen) ist aus dem
+                ' Panel genommen. Ein altes Rezept mit negativem Wert rechnet die Pixelkette weiter.
+                SetUndoableDouble(_addNoise, Math.Max(0, Math.Min(100, value)), NameOf(AddNoise))
             End Set
         End Property
 
@@ -17954,7 +17956,7 @@ Namespace ViewModels
             ' Eigenständige Gruppen-Zurücksetzer, seit Schärfe/Weichzeichnen/Körnung je einen eigenen
             ' Expander haben - jeder räumt NUR seine Gruppe, nicht die Nachbargruppen.
             ResetSharpenCommand = ReactiveCommand.Create(Sub()
-                                                             PushUndo(ResetHistoryLabel("Schärfe"))
+                                                             PushUndo(ResetHistoryLabel("Schärfen"))
                                                              ResetSharpenGroupInternal()
                                                          End Sub)
             ResetSoftenCommand = ReactiveCommand.Create(Sub()
@@ -17962,7 +17964,7 @@ Namespace ViewModels
                                                             ResetSoftenGroupInternal()
                                                         End Sub)
             ResetRauschenCommand = ReactiveCommand.Create(Sub()
-                                                              PushUndo(ResetHistoryLabel("Rauschen"))
+                                                              PushUndo(ResetHistoryLabel("Rauschreduzierung"))
                                                               ResetNoiseGroupInternal()
                                                           End Sub)
             ResetGrainCommand = ReactiveCommand.Create(Sub()
@@ -23782,19 +23784,21 @@ Namespace ViewModels
                 Case NameOf(Temperature) : Return LocalizationService.T("Temperatur")
                 Case NameOf(Tint) : Return LocalizationService.T("Tönung")
                 Case NameOf(Clarity) : Return LocalizationService.T("Klarheit")
-                Case NameOf(Sharpness) : Return LocalizationService.T("Schärfe")
-                Case NameOf(SharpenRadius) : Return CombineHistoryLabel("Schärfe", "Radius")
-                Case NameOf(SharpenDetail) : Return CombineHistoryLabel("Schärfe", "Detail")
-                Case NameOf(SharpenMasking) : Return CombineHistoryLabel("Schärfe", "Maskierung")
-                Case NameOf(SharpenMethodLabel) : Return CombineHistoryLabel("Schärfe", "Methode")
-                ' Die Wortlaute sind die der Panels: der Regler NoiseReduction heisst dort
-                ' "Glätten", "Rauschen" ist der Regler, der welches HINZUFUEGT.
-                Case NameOf(NoiseReduction) : Return LocalizationService.T("Glätten")
-                Case NameOf(NoiseReductionDetail) : Return CombineHistoryLabel("Glätten", "Detail")
-                Case NameOf(NoiseReductionMethodLabel) : Return CombineHistoryLabel("Glätten", "Methode")
+                ' Die Wortlaute sind die der Panels, benannt wie beim Referenzprogramm: Schaerfen mit
+                ' Betrag, Radius, Details, Maskieren; Rauschreduzierung mit Luminanz, Details, Farbe.
+                Case NameOf(Sharpness) : Return CombineHistoryLabel("Schärfen", "Betrag")
+                Case NameOf(SharpenRadius) : Return CombineHistoryLabel("Schärfen", "Radius")
+                Case NameOf(SharpenDetail) : Return CombineHistoryLabel("Schärfen", "Details")
+                Case NameOf(SharpenMasking) : Return CombineHistoryLabel("Schärfen", "Maskieren")
+                Case NameOf(SharpenMethodLabel) : Return CombineHistoryLabel("Schärfen", "Methode")
+                Case NameOf(NoiseReduction) : Return CombineHistoryLabel("Rauschreduzierung", "Luminanz")
+                Case NameOf(NoiseReductionDetail) : Return CombineHistoryLabel("Rauschreduzierung", "Details")
+                Case NameOf(NoiseReductionMethodLabel) : Return CombineHistoryLabel("Rauschreduzierung", "Methode")
                 Case NameOf(Blur) : Return LocalizationService.T("Weichzeichnen")
-                Case NameOf(AddNoise) : Return LocalizationService.T("Rauschen")
-                Case NameOf(ColorNoiseReduction), NameOf(ColorNoiseAdd) : Return LocalizationService.T("Farbrauschen")
+                Case NameOf(AddNoise) : Return CombineHistoryLabel("Körnung", "Rauschen")
+                Case NameOf(ColorNoiseAdd) : Return CombineHistoryLabel("Körnung", "Farbrauschen")
+                Case NameOf(ColorNoiseReduction), NameOf(ColorNoiseAmount)
+                    Return CombineHistoryLabel("Rauschreduzierung", "Farbe")
                 Case NameOf(FarbrauschGrob) : Return LocalizationService.T("Farbflecken")
                 Case NameOf(ColorNoiseCoarseScale) : Return LocalizationService.T("Fleckengröße")
                 Case NameOf([Structure]) : Return LocalizationService.T("Struktur")
@@ -23832,7 +23836,7 @@ Namespace ViewModels
                 Case NameOf(VignetteStyleLabel) : Return CombineHistoryLabel("Vignette", "Stil")
                 Case NameOf(Grain) : Return CombineHistoryLabel("Körnung", "Stärke")
                 Case NameOf(GrainSize) : Return CombineHistoryLabel("Körnung", "Größe")
-                Case NameOf(GrainFrequency) : Return CombineHistoryLabel("Körnung", "Rauheit")
+                Case NameOf(GrainFrequency) : Return CombineHistoryLabel("Körnung", "Unregelmäßigkeit")
                 Case NameOf(GrainColor) : Return CombineHistoryLabel("Körnung", "Farbe")
                 Case NameOf(CropLeft), NameOf(CropTop), NameOf(CropRight), NameOf(CropBottom)
                     Return LocalizationService.T("Zuschneiden")
@@ -30008,24 +30012,18 @@ Namespace ViewModels
             SchedulePreviewForCurrentTarget()
         End Sub
 
-        ''' <summary>Nur die Weichzeichnen-Gruppe (Weichzeichnen, Glätten, Detail, Methode).</summary>
+        ''' <summary>Nur die Weichzeichnen-Gruppe; seit die Luminanz in die Rauschreduzierung gezogen
+        ''' ist, steht dort nur noch der Weichzeichner.</summary>
         Private Sub ResetSoftenGroupInternal()
-            _noiseReduction = 0
-            _noiseReductionDetail = 0
             _blur = 0
-            _noiseReductionMethod = NoiseReductionMethod.AdaptiveGuided
-            Me.RaisePropertyChanged(NameOf(NoiseReduction))
-            Me.RaisePropertyChanged(NameOf(NoiseReductionDetail))
             Me.RaisePropertyChanged(NameOf(Blur))
-            Me.RaisePropertyChanged(NameOf(NoiseReductionMethod))
-            Me.RaisePropertyChanged(NameOf(NoiseReductionMethodLabel))
             RaiseResetButtonStateChanged()
             SchedulePreviewForCurrentTarget()
         End Sub
 
-        ''' <summary>Die Rauschen-Gruppe: die drei Stufen, die im Panel zusammenstehen. Das
-        ''' Weichzeichnen gehoert NICHT dazu - es hat seine eigene Gruppe mit eigenem Knopf, und ein
-        ''' Zuruecksetzer, der ueber die Gruppengrenze hinaus greift, ueberrascht nur.</summary>
+        ''' <summary>Die Rauschreduzierung: alles, was im Panel zusammensteht. Das Weichzeichnen
+        ''' gehoert NICHT dazu - es hat seine eigene Gruppe mit eigenem Knopf, und ein Zuruecksetzer,
+        ''' der ueber die Gruppengrenze hinaus greift, ueberrascht nur.</summary>
         Private Sub ResetNoiseGroupInternal()
             ' Auch das gespeicherte Entrauschen mit Modell gehoert hierher: es steht in derselben
             ' Gruppe, und ohne diesen Weg gaebe es keinen, es wieder loszuwerden.
@@ -30041,16 +30039,23 @@ Namespace ViewModels
             ResetNoiseSlidersInternal()
         End Sub
 
-        ''' <summary>Nur die Regler der Rauschen-Gruppe, ohne das gespeicherte Entrauschen. Der
-        ''' Gruppenvergleich nimmt diesen Weg: den Vermerk wegzuwerfen holte kein Vergleich zurueck.</summary>
+        ''' <summary>Nur die Regler der Rauschreduzierung, ohne das gespeicherte Entrauschen. Der
+        ''' Gruppenvergleich nimmt diesen Weg: den Vermerk wegzuwerfen holte kein Vergleich zurueck.
+        ''' Farbflecken und Fleckengroesse haben keinen Regler mehr, ein altes Rezept traegt sie aber
+        ''' noch; das Zuruecksetzen nimmt sie mit weg. Ein negatives "Rauschen" eines alten Rezepts
+        ''' ebenfalls, denn es war eine Reduzierung. Das HINZUFUEGEN gehoert zur Koernung.</summary>
         Private Sub ResetNoiseSlidersInternal()
-            _addNoise = 0
+            _noiseReduction = 0
+            _noiseReductionDetail = 0
+            _noiseReductionMethod = NoiseReductionMethod.AdaptiveGuided
+            If _addNoise < 0 Then _addNoise = 0
             _colorNoiseReduction = 0
-            _colorNoiseAdd = 0
             _farbrauschGrob = 0
             _farbrauschGrobSkala = 50
-            For Each n In {NameOf(AddNoise), NameOf(ColorNoiseAmount), NameOf(ColorNoiseReduction),
-                           NameOf(ColorNoiseAdd), NameOf(FarbrauschGrob), NameOf(ColorNoiseCoarseScale),
+            For Each n In {NameOf(NoiseReduction), NameOf(NoiseReductionDetail), NameOf(NoiseReductionMethod),
+                           NameOf(NoiseReductionMethodLabel),
+                           NameOf(AddNoise), NameOf(ColorNoiseAmount), NameOf(ColorNoiseReduction),
+                           NameOf(FarbrauschGrob), NameOf(ColorNoiseCoarseScale),
                            NameOf(HasColorBlotches)}
                 Me.RaisePropertyChanged(n)
             Next
@@ -30058,16 +30063,23 @@ Namespace ViewModels
             SchedulePreviewForCurrentTarget()
         End Sub
 
-        ''' <summary>Nur die Körnung-Gruppe (Stärke, Größe, Rauheit, Farbe).</summary>
+        ''' <summary>Nur die Körnung-Gruppe (Stärke, Größe, Unregelmäßigkeit, Farbe, dazu Rauschen
+        ''' und Farbrauschen hinzufügen). Ein negatives "Rauschen" eines alten Rezepts bleibt: es war
+        ''' eine Reduzierung und gehoert der Rauschreduzierung.</summary>
         Private Sub ResetGrainGroupInternal()
             _grain = 0
             _grainSize = 0
             _grainFrequency = 0
             _grainColor = 0
+            If _addNoise > 0 Then _addNoise = 0
+            _colorNoiseAdd = 0
             Me.RaisePropertyChanged(NameOf(Grain))
             Me.RaisePropertyChanged(NameOf(GrainSize))
             Me.RaisePropertyChanged(NameOf(GrainFrequency))
             Me.RaisePropertyChanged(NameOf(GrainColor))
+            Me.RaisePropertyChanged(NameOf(AddNoise))
+            Me.RaisePropertyChanged(NameOf(ColorNoiseAdd))
+            Me.RaisePropertyChanged(NameOf(ColorNoiseAmount))
             RaiseResetButtonStateChanged()
             SchedulePreviewForCurrentTarget()
         End Sub

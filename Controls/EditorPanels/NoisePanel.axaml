@@ -2,13 +2,17 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:icons="clr-namespace:FerrumPix.Controls"
              x:Class="FerrumPix.Controls.EditorPanels.NoisePanel">
-    <!-- ALLES ZUM RAUSCHEN an einem Ort. "Rauschen" und "Farbrauschen" lagen vorher bei den
-         Details, mitten zwischen Struktur, Klarheit und Staub - drei Regler zu einer Sache, verteilt
-         auf zwei Gruppen. Das Glaetten bleibt bewusst in der Gruppe Weichzeichnen, neben dem
-         Weichzeichner: beide machen das Bild ruhiger, das eine nur dort, wo es rauscht. -->
+    <!-- ALLES ZUM RAUSCHEN an einem Ort, benannt und geordnet wie die Rauschreduzierung des
+         Referenzprogramms: Luminanz (crs:LuminanceSmoothing) mit Details und eigener Methode, dann
+         Farbe (crs:ColorNoiseReduction, nur noch 0 bis 100). Hier wird nur ENTFERNT. Die Luminanz
+         stand frueher als "Glaetten" beim Weichzeichnen, obwohl sie mit ihm nichts teilt; Rauschen
+         und Farbrauschen HINZUFUEGEN stehen jetzt bei der Koernung. Der fruehere negative Bereich von
+         "Rauschen" (gleichmaessig weichzeichnen) und die Farbflecken samt Fleckengroesse sind aus dem
+         Panel genommen; alte Rezepte mit diesen Werten rechnet die Pixelkette weiter wie
+         gespeichert, das Zuruecksetzen der Gruppe nullt sie. -->
     <Border Classes="adjustment-group"
             IsVisible="{Binding HiddenAdjustmentGroups, Converter={StaticResource NotInListConverter}, ConverterParameter=rauschen}">
-        <Expander Header="Rauschen" icons:ExpanderState.Key="rauschen">
+        <Expander Header="Rauschreduzierung" icons:ExpanderState.Key="rauschen">
             <Expander.HeaderTemplate>
                 <DataTemplate>
                     <Grid ColumnDefinitions="*,Auto,Auto" VerticalAlignment="Center">
@@ -33,7 +37,7 @@
                                 Classes="icon-btn group-reset"
                                 Width="28" Height="28" Padding="0"
                                 Command="{Binding DataContext.ResetRauschenCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                ToolTip.Tip="Rauschen zurücksetzen">
+                                ToolTip.Tip="Rauschreduzierung zurücksetzen">
                             <icons:SvgIcon
                                 Source="avares://FerrumPix/Assets/Icons/outline/rotate-clockwise.svg"
                                 Width="14" Height="14" />
@@ -43,48 +47,44 @@
             </Expander.HeaderTemplate>
             <StackPanel Spacing="2" Margin="0,8,0,0">
                 <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
-                    <TextBlock Text="Rauschen" Foreground="{DynamicResource FP.Text.Secondary}"
+                    <TextBlock Text="Luminanz" Foreground="{DynamicResource FP.Text.Secondary}"
                                VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap"
-                               ToolTip.Tip="Positiv fügt Rauschen hinzu, negativ reduziert es (gleichmäßiges Weichzeichnen)." />
-                    <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100"
-                                       DefaultValue="0"
-                                       Value="{Binding AddNoise}" Margin="0,0" />
-                    <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
-                                             Value="{Binding AddNoise, Mode=TwoWay}" Minimum="-100" Maximum="100" />
-                </Grid>
-                <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
-                    <TextBlock Text="Farbrauschen" Foreground="{DynamicResource FP.Text.Secondary}"
-                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap"
-                               ToolTip.Tip="Negativ entfernt Farbrauschen: geglättet werden nur die Farbanteile (Chroma), Helligkeit und Details bleiben erhalten. Positiv fügt farbiges Rauschen hinzu." />
-                    <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100"
-                                       DefaultValue="0"
-                                       Value="{Binding ColorNoiseAmount}" Margin="0,0" />
-                    <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
-                                             Value="{Binding ColorNoiseAmount, Mode=TwoWay}" Minimum="-100" Maximum="100" />
-                </Grid>
-
-                <!-- Die dritte Stufe. Sie arbeitet auf MEHREREN Groessen und holt damit das, woran
-                     die beiden darueber nicht herankommen: grosse Farbflecken aus hochgezogenen
-                     Aufnahmen. Ein einstufiger Filter braeuchte dafuer einen Radius, der alles
-                     andere gleich mitfrisst. -->
-                <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
-                    <TextBlock Text="Farbflecken" Foreground="{DynamicResource FP.Text.Secondary}"
-                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap"
-                               ToolTip.Tip="Gegen große Farbflecken aus hochgezogenen Aufnahmen. Arbeitet auf mehreren Größen und lässt Kanten und feine Struktur stehen." />
+                               ToolTip.Tip="Mindert Rauschen und lässt Kanten und Zeichnung stehen. Ein sauberes Foto verändert sich dabei kaum." />
                     <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
-                                       Value="{Binding FarbrauschGrob}" Margin="0,0" />
+                                       Value="{Binding NoiseReduction}" Margin="0,0" />
                     <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
-                                             Value="{Binding FarbrauschGrob, Mode=TwoWay}" Minimum="0" Maximum="100" />
+                                             Value="{Binding NoiseReduction, Mode=TwoWay}" Minimum="0" Maximum="100" />
                 </Grid>
-                <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center"
-                      IsEnabled="{Binding HasColorBlotches}">
-                    <TextBlock Text="Fleckengröße" Foreground="{DynamicResource FP.Text.Secondary}"
-                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap"
-                               ToolTip.Tip="Wie große Flecken noch erfasst werden. Höher greift weiter, kostet aber mehr Zeit." />
-                    <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100" DefaultValue="50"
-                                       Value="{Binding ColorNoiseCoarseScale}" Margin="0,0" />
+                <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
+                    <TextBlock Text="Details" Foreground="{DynamicResource FP.Text.Secondary}"
+                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}"
+                               ToolTip.Tip="Schützt Kanten bei der Luminanz: höher = mehr Details bleiben erhalten." />
+                    <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
+                                       Value="{Binding NoiseReductionDetail}" Margin="0,0" />
                     <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
-                                             Value="{Binding ColorNoiseCoarseScale, Mode=TwoWay}" Minimum="0" Maximum="100" />
+                                             Value="{Binding NoiseReductionDetail, Mode=TwoWay}" Minimum="0" Maximum="100" />
+                </Grid>
+                <Grid ColumnDefinitions="92,*" VerticalAlignment="Center">
+                    <TextBlock Text="Methode" Foreground="{DynamicResource FP.Text.Secondary}"
+                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                    <ComboBox Name="NoiseReductionMethodComboBox"
+                              Grid.Column="1"
+                              ItemsSource="{Binding NoiseReductionMethodOptions}"
+                              SelectedItem="{Binding NoiseReductionMethodLabel}"
+                              FontSize="{DynamicResource FP.Font.Small}"
+                              Margin="6,0,0,0"
+                              HorizontalAlignment="Stretch"
+                              DropDownOpened="OnMatchWidthDropDownOpened"
+                              ToolTip.Tip="Adaptive: glättet so stark, wie das Bild bei der jeweiligen Helligkeit rauscht. Guided: glättet mit fester Schwelle nur flache Flächen. Gaussian: glättet gleichmäßig mit kleinem Radius. Median: kantenerhaltend, echte Rauschunterdrückung." />
+                </Grid>
+                <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center" Margin="0,6,0,0">
+                    <TextBlock Text="Farbe" Foreground="{DynamicResource FP.Text.Secondary}"
+                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap"
+                               ToolTip.Tip="Entfernt Farbrauschen: geglättet werden nur die Farbanteile (Chroma), Helligkeit und Details bleiben erhalten." />
+                    <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
+                                       Value="{Binding ColorNoiseReduction}" Margin="0,0" />
+                    <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                             Value="{Binding ColorNoiseReduction, Mode=TwoWay}" Minimum="0" Maximum="100" />
                 </Grid>
 
                 <!-- ENTRAUSCHEN MIT MODELL: kein Regler, sondern ein Zug in die Pixel - bei
