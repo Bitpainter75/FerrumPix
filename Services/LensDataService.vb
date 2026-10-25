@@ -160,6 +160,11 @@ Namespace Services
             ''' (1 = kein Abfall) an gleichmaessig verteilten Stellen von der Mitte bis zur ECKE.
             ''' Belegt, ersetzt sie Vk1 bis Vk3. Kommt aus den Kameradaten (Fujifilm).
             Public Property VignettingKnots As Double()
+            ''' Massstab der Achse fuer die Stuetzwerte von Farbquerfehler und Vignettierung: die Lage
+            ''' auf ihr ist der Radius mit 1 in der Ecke DIESES Bildes. Allein aus Kameradaten ist er 1;
+            ''' stehen Kamerastuetzwerte in einem Profil, rechnet das Profil seine Achse mit dem
+            ''' Crop-Verhaeltnis, und der Massstab nimmt es wieder heraus (1 / CropRatio).
+            Public Property KnotAxisScale As Double = 1.0
 
             Public ReadOnly Property HasAnything As Boolean
                 Get
@@ -223,7 +228,7 @@ Namespace Services
             Dim knots = If(rot, k.TcaRedKnots, k.TcaBlueKnots)
             Dim f As Double
             If knots IsNot Nothing Then
-                f = InterpolateKnots(knots, ru * k.CornerScale)
+                f = InterpolateKnots(knots, ru * k.CornerScale * k.KnotAxisScale)
             Else
                 Dim b = If(rot, k.TcaBr, k.TcaBb)
                 Dim c = If(rot, k.TcaCr, k.TcaCb)
@@ -241,7 +246,7 @@ Namespace Services
             Dim c As Double
             If k.VignettingKnots IsNot Nothing AndAlso k.VignettingKnots.Length >= 2 Then
                 ' Ueber die Ecke hinaus (Bildteile ausserhalb nach einer Drehung) gilt der letzte Wert.
-                Dim position = Math.Max(0.0, Math.Min(1.0, rCorner)) * (k.VignettingKnots.Length - 1)
+                Dim position = Math.Max(0.0, Math.Min(1.0, rCorner * k.KnotAxisScale)) * (k.VignettingKnots.Length - 1)
                 Dim i0 = Math.Min(k.VignettingKnots.Length - 2, CInt(Math.Floor(position)))
                 Dim t = position - i0
                 c = k.VignettingKnots(i0) + (k.VignettingKnots(i0 + 1) - k.VignettingKnots(i0)) * t
@@ -805,6 +810,26 @@ Namespace Services
                             result.Brennweite = focalLength
                             result.Aperture = aperture
                         End If
+                    ElseIf result IsNot Nothing AndAlso fromCaptureData Then
+                        ' FARBQUERFEHLER UND VIGNETTIERUNG AUS DER KAMERA GEHEN DEM PROFIL VOR, die
+                        ' Verzeichnung bleibt beim Profil. Die Kamera misst jede Aufnahme selbst
+                        ' (Brennweite, Blende, Entfernung), und das Referenzprogramm nimmt bei diesen
+                        ' Herstellern ihre Werte. Gegen dessen DNGs am Bestand: Farbquerfehler im Median
+                        ' 0,01 bis 0,19 Pixel gegen 0,56 bis 1,09 mit dem Profil, Vignettierung 0,01
+                        ' gegen 0,4 bis 0,6 Blenden (RAW_UND_FARBE.md, „Weitere Kameradaten“).
+                        Dim camera = CameraLensCorrectionService.TryCreate(directories, width, height, path)
+                        If camera IsNot Nothing AndAlso (camera.TcaRedKnots IsNot Nothing OrElse camera.VignettingKnots IsNot Nothing) Then
+                            result.KnotAxisScale = If(result.CropRatio > 0.0, 1.0 / result.CropRatio, 1.0)
+                            If camera.TcaRedKnots IsNot Nothing AndAlso camera.TcaBlueKnots IsNot Nothing Then
+                                result.TcaRedKnots = camera.TcaRedKnots
+                                result.TcaBlueKnots = camera.TcaBlueKnots
+                                result.HasChromaticAberration = True
+                            End If
+                            If camera.VignettingKnots IsNot Nothing Then
+                                result.VignettingKnots = camera.VignettingKnots
+                                result.HasVignetting = True
+                            End If
+                        End If
                     End If
                 End If
             Catch
@@ -832,7 +857,7 @@ Namespace Services
                 .TcaBb = k.TcaBb, .TcaCb = k.TcaCb, .TcaVb = k.TcaVb,
                 .TcaRedFine = k.TcaRedFine, .TcaBlueFine = k.TcaBlueFine,
                 .HasVignetting = k.HasVignetting, .Vk1 = k.Vk1, .Vk2 = k.Vk2, .Vk3 = k.Vk3,
-                .VignettingKnots = k.VignettingKnots,
+                .VignettingKnots = k.VignettingKnots, .KnotAxisScale = k.KnotAxisScale,
                 .DistortionStrength = k.DistortionStrength,
                 .ChromaticAberrationStrength = k.ChromaticAberrationStrength,
                 .VignettingStrength = k.VignettingStrength}
