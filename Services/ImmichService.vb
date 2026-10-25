@@ -1561,7 +1561,12 @@ Namespace Services
                 Dim ext = IO.Path.GetExtension(If(originalFileName, "")).ToLowerInvariant()
                 Dim safeName = SafeFileStem(assetId) & ext
                 Dim targetPath = IO.Path.Combine(ImmichTempDir, safeName)
-                If File.Exists(targetPath) Then Return targetPath
+                ' Das Rezept einer RAW oder PSD kommt bei JEDEM Holen vom Server, auch wenn die
+                ' Kopie schon daliegt: es kann inzwischen auf einem anderen Rechner gespeichert sein.
+                If File.Exists(targetPath) Then
+                    Await SyncRecipeToTempAsync(assetId, targetPath, cancellationToken).ConfigureAwait(False)
+                    Return targetPath
+                End If
 
                 Dim client = GetClient()
                 Using resp = Await client.GetAsync(ApiUrl($"assets/{Uri.EscapeDataString(assetId)}/original"), HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(False)
@@ -1581,6 +1586,7 @@ Namespace Services
                         Catch
                         End Try
                     End Try
+                    Await SyncRecipeToTempAsync(assetId, targetPath, cancellationToken).ConfigureAwait(False)
                     Return targetPath
                 End Using
             Catch ex As OperationCanceledException When cancellationToken.IsCancellationRequested
@@ -1622,6 +1628,165 @@ Namespace Services
                 End Try
                 DiagnosticLogService.LogException("Immich.DownloadOriginalWork", ex)
                 Return Nothing
+            End Try
+        End Function
+
+        ' ===================== DAS REZEPT AM ASSET =====================
+        ' Eine RAW oder PSD aus Immich laesst sich nicht zurueckspeichern: ein Render an ihrer Stelle
+        ' waere Verlust, und die .fpxmp neben der Temp-Kopie ginge mit ihr verloren. Seit Immich 2.5
+        ' duerfen Apps aber eigene Daten an ein Asset haengen (GET und PUT /assets/{id}/metadata). Dort
+        ' liegt das Rezept unter dem Schluessel "ferrumpix", als Text der .fpxmp in einem kleinen
+        ' JSON-Umschlag. Das Original bleibt unangetastet, die Bearbeitung sieht auf jedem Rechner
+        ' gleich aus und uebersteht das Leeren des Zwischenspeichers.
+        '
+        ' GESCHRIEBEN WIRD NUR BEIM SPEICHERN, wie lokal: kein Abgleich im Hintergrund. Gelesen wird
+        ' beim Holen des Originals, und der Stand des Servers gilt dann auch fuer die Temp-Kopie.
+        '
+        ' GEGEN DAS STILLE UEBERSCHREIBEN merkt sich jedes Asset den Zeitstempel (updatedAt), mit dem
+        ' sein Rezept zuletzt gelesen oder geschrieben wurde. Steht auf dem Server beim Speichern ein
+        ' anderer, hat ein anderer Rechner inzwischen gespeichert, und der Editor fragt.
+
+        Private Const RecipeMetadataKey As String = "ferrumpix"
+        Private Const RecipeFormatVersion As Integer = 1
+
+        ''' <summary>Je Asset der Zeitstempel des Rezepts beim letzten Lesen oder Schreiben.</summary>
+        Private Shared ReadOnly _recipeStamps As New System.Collections.Concurrent.ConcurrentDictionary(Of String, String)(StringComparer.Ordinal)
+
+        Public Enum RecipeSaveResult
+            Saved
+            ''' <summary>Auf dem Server liegt inzwischen ein anderer Stand.</summary>
+            Conflict
+            ''' <summary>Der Server kennt keine App-Daten am Asset (vor Immich 2.5).</summary>
+            Unsupported
+            Failed
+        End Enum
+
+        Private Structure RecipeFetch
+            ''' <summary>Der Server hat geantwortet, mit oder ohne Rezept.</summary>
+            Public Reachable As Boolean
+            Public Found As Boolean
+            Public Content As String
+            Public UpdatedAt As String
+        End Structure
+
+        Private Shared Function RecipeUrl(assetId As String) As String
+            Return ApiUrl($"assets/{Uri.EscapeDataString(assetId)}/metadata/{RecipeMetadataKey}")
+        End Function
+
+        Private Shared Async Function FetchRecipeAsync(assetId As String, cancellationToken As CancellationToken) As Task(Of RecipeFetch)
+            Dim result As New RecipeFetch()
+            Using resp = Await GetClient().GetAsync(RecipeUrl(assetId), cancellationToken).ConfigureAwait(False)
+                Dim body = Await resp.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(False)
+                If resp.StatusCode = Net.HttpStatusCode.NotFound OrElse
+                   (resp.StatusCode = Net.HttpStatusCode.BadRequest AndAlso body.IndexOf("not found", StringComparison.OrdinalIgnoreCase) >= 0) Then
+                    result.Reachable = True
+                    Return result
+                End If
+                If Not resp.IsSuccessStatusCode Then
+                    LastError = $"HTTP {CInt(resp.StatusCode)}"
+                    Return result
+                End If
+                result.Reachable = True
+                Using doc = JsonDocument.Parse(body)
+                    Dim root = doc.RootElement
+                    Dim value As JsonElement, text As JsonElement, stamp As JsonElement
+                    If root.TryGetProperty("value", value) AndAlso value.ValueKind = JsonValueKind.Object AndAlso
+                       value.TryGetProperty("fpxmp", text) AndAlso text.ValueKind = JsonValueKind.String Then
+                        result.Found = True
+                        result.Content = text.GetString()
+                    End If
+                    If root.TryGetProperty("updatedAt", stamp) AndAlso stamp.ValueKind = JsonValueKind.String Then
+                        result.UpdatedAt = stamp.GetString()
+                    End If
+                End Using
+            End Using
+            Return result
+        End Function
+
+        ''' <summary>Legt das Rezept des Assets vom Server als .fpxmp neben die Temp-Kopie, oder
+        ''' entfernt eine dort liegende, wenn der Server keins hat. Nur fuer RAW und PSD. Ist der Server
+        ''' nicht zu erreichen, bleibt die Temp-Kopie, wie sie ist; das Holen des Originals scheitert
+        ''' daran nicht.</summary>
+        Private Shared Async Function SyncRecipeToTempAsync(assetId As String, localImagePath As String,
+                                                            cancellationToken As CancellationToken) As Task
+            If Not RawSidecarService.IsSidecarFormat(localImagePath) Then Return
+            Try
+                Using timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken)
+                    timeout.CancelAfter(TimeSpan.FromSeconds(5))
+                    Dim fetched = Await FetchRecipeAsync(assetId, timeout.Token).ConfigureAwait(False)
+                    If Not fetched.Reachable Then Return
+                    Dim sidecar = RawSidecarService.SidecarPathFor(localImagePath)
+                    If fetched.Found Then
+                        Dim tempPath = $"{sidecar}.{Guid.NewGuid():N}.part"
+                        File.WriteAllText(tempPath, fetched.Content, New UTF8Encoding(False))
+                        File.Move(tempPath, sidecar, overwrite:=True)
+                        _recipeStamps(assetId) = If(fetched.UpdatedAt, "")
+                    Else
+                        If File.Exists(sidecar) Then File.Delete(sidecar)
+                        Dim ignored As String = Nothing
+                        _recipeStamps.TryRemove(assetId, ignored)
+                    End If
+                End Using
+            Catch ex As OperationCanceledException When cancellationToken.IsCancellationRequested
+                Throw
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Immich.RecipeFetch", ex)
+            End Try
+        End Function
+
+        ''' <summary>Schreibt die .fpxmp der Temp-Kopie als Rezept an das Asset. Ohne
+        ''' <paramref name="overwrite"/> wird nicht geschrieben, wenn der Server inzwischen einen
+        ''' anderen Stand traegt als beim letzten Lesen (Conflict).</summary>
+        Public Shared Async Function SaveRecipeAsync(assetId As String, localSidecarPath As String, overwrite As Boolean,
+                                                     Optional cancellationToken As CancellationToken = Nothing) As Task(Of RecipeSaveResult)
+            If Not IsConfigured OrElse String.IsNullOrWhiteSpace(assetId) OrElse Not File.Exists(localSidecarPath) Then Return RecipeSaveResult.Failed
+            LastError = Nothing
+            Try
+                Dim content = File.ReadAllText(localSidecarPath, Encoding.UTF8)
+                If Not overwrite Then
+                    Dim current = Await FetchRecipeAsync(assetId, cancellationToken).ConfigureAwait(False)
+                    If Not current.Reachable Then Return RecipeSaveResult.Failed
+                    Dim known As String = Nothing
+                    Dim hadStamp = _recipeStamps.TryGetValue(assetId, known)
+                    If current.Found AndAlso (Not hadStamp OrElse Not String.Equals(known, current.UpdatedAt, StringComparison.Ordinal)) Then
+                        Return RecipeSaveResult.Conflict
+                    End If
+                End If
+                Dim body = JsonSerializer.Serialize(New With {
+                    .items = {New With {.key = RecipeMetadataKey,
+                                        .value = New With {.format = RecipeFormatVersion, .fpxmp = content}}}})
+                Using request = New StringContent(body, Encoding.UTF8, "application/json")
+                    Using resp = Await GetClient().PutAsync(ApiUrl($"assets/{Uri.EscapeDataString(assetId)}/metadata"), request, cancellationToken).ConfigureAwait(False)
+                        If resp.StatusCode = Net.HttpStatusCode.NotFound Then
+                            DiagnosticLogService.LogAlways("Immich.RecipeSave", $"HTTP 404, Server ohne App-Daten am Asset (asset {assetId})")
+                            Return RecipeSaveResult.Unsupported
+                        End If
+                        If Not resp.IsSuccessStatusCode Then
+                            LastError = $"HTTP {CInt(resp.StatusCode)}"
+                            DiagnosticLogService.LogAlways("Immich.RecipeSave", $"{LastError} (asset {assetId})")
+                            Return RecipeSaveResult.Failed
+                        End If
+                        Dim answer = Await resp.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(False)
+                        Dim stamp = ""
+                        Using doc = JsonDocument.Parse(answer)
+                            If doc.RootElement.ValueKind = JsonValueKind.Array Then
+                                For Each entry In doc.RootElement.EnumerateArray()
+                                    Dim key As JsonElement, updated As JsonElement
+                                    If entry.TryGetProperty("key", key) AndAlso key.GetString() = RecipeMetadataKey AndAlso
+                                       entry.TryGetProperty("updatedAt", updated) Then stamp = If(updated.GetString(), "")
+                                Next
+                            End If
+                        End Using
+                        _recipeStamps(assetId) = stamp
+                        Return RecipeSaveResult.Saved
+                    End Using
+                End Using
+            Catch ex As OperationCanceledException When cancellationToken.IsCancellationRequested
+                Throw
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Immich.RecipeSave", ex)
+                LastError = ex.Message
+                Return RecipeSaveResult.Failed
             End Try
         End Function
 

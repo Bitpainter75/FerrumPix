@@ -16618,12 +16618,12 @@ Namespace ViewModels
         ''' sinnvoll, wenn es das Quell-Asset ersetzen darf - siehe SavesBackToImmich.
         Public ReadOnly Property CanSaveInPlace As Boolean
             Get
-                ' Immich-RAW/PSD: das Server-Original zu ERSETZEN hieße, die RAW
-                ' durch einen Render zu zerstören, und eine .fpxmp neben der Temp-Kopie ginge mit
-                ' ihr verloren - für diese Kombination bleibt nur "Speichern unter" (neues Asset).
-                ' Vorher lief der Pfad in SaveImage gegen den RAW-Ziel-Guard und scheiterte immer
-                ' kommentarlos mit "Speichern fehlgeschlagen".
-                If SavesBackToImmich AndAlso IsCurrentImageSidecarFormat Then Return False
+                ' Immich-RAW/PSD: das Server-Original zu ERSETZEN hieße, die RAW durch einen
+                ' Render zu zerstören. "Speichern" schreibt stattdessen das Rezept als App-Daten an
+                ' das Asset (SaveSidecarToImmichAsync), unabhaengig von der Einstellung "Vorhandene
+                ' Assets aktualisieren": das Original wird dabei nicht angefasst.
+                If CurrentImmichAssetId() IsNot Nothing AndAlso IsCurrentImageSidecarFormat AndAlso
+                   String.IsNullOrEmpty(_currentFpxPath) Then Return CanSaveSidecar
                 ' Ein GEÖFFNETES FPX-Dokument ist immer sein eigenes Projektziel. Die
                 ' Bildpipeline arbeitet dafür zwar auf dem entpackten Basisbild, gespeichert wird
                 ' aber ausschließlich in _currentFpxPath durch FpxService.Save. Keine Prüfung des
@@ -22206,7 +22206,9 @@ Namespace ViewModels
             End If
             ' "Speichern" bei einem Immich-Bild schreibt nicht die Temp-Kopie zurück, sondern das Asset.
             DiagnosticLogService.LogAlways("Editor.Save", "stage=beforeDestinationBranches")
-            If Not saveAs AndAlso SavesBackToImmich Then Return Await SaveBackToImmichAsync()
+            ' Nicht bei RAW und PSD: deren "Speichern" ist das Rezept am Asset, eine Zeile darunter.
+            If Not saveAs AndAlso SavesBackToImmich AndAlso
+               Not (IsCurrentImageSidecarFormat AndAlso String.IsNullOrEmpty(_currentFpxPath)) Then Return Await SaveBackToImmichAsync()
             ' "Speichern" bei RAW oder PSD = Rezept in die Begleitdatei (.fpxmp) schreiben -
             ' keines dieser Formate ist je ein Schreibziel.
             ' Ein geöffnetes .fpx kann ein RAW-/PSD-Basisbild haben. IsCurrentImageSidecarFormat
@@ -22220,6 +22222,9 @@ Namespace ViewModels
                 ' dann hochgeladen - das Original wird dabei nicht angefasst. Das gilt AUCH mit
                 ' eingeschaltetem Ersetzen: eine RAW durch einen Render zu ersetzen waere Verlust.
                 If Not String.IsNullOrEmpty(_nextcloudSourcePath) Then Return Await SaveSidecarToNextcloudAsync()
+                ' Stammt es aus Immich, geht das Rezept als App-Daten an das Asset.
+                Dim immichAsset = CurrentImmichAssetId()
+                If immichAsset IsNot Nothing Then Return Await SaveSidecarToImmichAsync(immichAsset)
                 Return TrySaveSidecar()
             End If
             ' "Speichern" bei einem Nextcloud-Bild mit der Einstellung "Originale ersetzen": die
@@ -22891,6 +22896,51 @@ Namespace ViewModels
             End If
             StatusText = LocalizationService.T("Bearbeitung in Begleitdatei gespeichert")
             Return True
+        End Function
+
+        ''' <summary>"Speichern" fuer eine RAW oder PSD aus Immich: das Rezept entsteht wie lokal
+        ''' neben der Temp-Kopie und geht dann als App-Daten an das Asset
+        ''' (<see cref="ImmichService.SaveRecipeAsync"/>). Wie bei Nextcloud gilt erst der zweite
+        ''' Schritt als gespeichert; eine .fpxmp im Temp-Ordner allein ueberstuende das naechste
+        ''' Aufraeumen nicht. Hat ein anderer Rechner inzwischen gespeichert, wird gefragt.</summary>
+        Private Async Function SaveSidecarToImmichAsync(assetId As String) As Task(Of Boolean)
+            FlushPendingLensRebuild()
+            If Not TrySaveSidecar() Then Return False
+            Dim lokal = RawSidecarService.SidecarPathFor(RenderSourcePath)
+            If Not File.Exists(lokal) Then
+                StatusText = LocalizationService.T("Begleitdatei konnte nicht geschrieben werden")
+                Return False
+            End If
+            StatusText = LocalizationService.T("Wird gespeichert…")
+            Dim result = Await ImmichService.SaveRecipeAsync(assetId, lokal, overwrite:=False)
+            If result = ImmichService.RecipeSaveResult.Conflict AndAlso _mainVm IsNot Nothing Then
+                Dim replace = Await _mainVm.ShowConfirmAsync(
+                    LocalizationService.T("Bearbeitung in Immich geändert"),
+                    LocalizationService.T("In Immich wurde diese Bearbeitung inzwischen von einem anderen Rechner gespeichert. Soll sie überschrieben werden?"),
+                    LocalizationService.T("Überschreiben"),
+                    LocalizationService.T("Abbrechen"))
+                If replace Then result = Await ImmichService.SaveRecipeAsync(assetId, lokal, overwrite:=True)
+            End If
+            If result = ImmichService.RecipeSaveResult.Saved Then
+                StatusText = LocalizationService.T("Bearbeitung in Immich gespeichert")
+                Return True
+            End If
+            ' Nicht gespeichert: die Aenderungen bleiben offen, sonst hielte der Nutzer sie fuer
+            ' gesichert, obwohl sie nur in der Temp-Kopie stehen.
+            _hasChanges = True
+            Me.RaisePropertyChanged(NameOf(HasUnsavedChanges))
+            Select Case result
+                Case ImmichService.RecipeSaveResult.Unsupported
+                    StatusText = LocalizationService.T("Dieser Immich-Server kann keine Bearbeitungen speichern, das geht erst ab Immich 2.5.")
+                    Await _mainVm?.ShowMessageAsync(LocalizationService.T("Speichern fehlgeschlagen"), StatusText)
+                Case ImmichService.RecipeSaveResult.Conflict
+                    StatusText = LocalizationService.T("Bearbeitung in Immich geändert")
+                Case Else
+                    StatusText = If(String.IsNullOrEmpty(ImmichService.LastError),
+                                    LocalizationService.T("Speichern fehlgeschlagen"),
+                                    LocalizationService.T("Immich-Fehler: ") & ImmichService.LastError)
+            End Select
+            Return False
         End Function
 
         Private Function TrySaveSidecar() As Boolean

@@ -10089,4 +10089,16 @@
   <data name="Wie_stark_das_eben_angewendete_Preset_wirkt_0_is_0e0abfab" xml:space="preserve">
     <value>Hvor kraftigt den netop anvendte forudindstilling virker: 0 er billedet uden forudindstilling, 100 forudindstillingen, 200 dens ændringer dobbelt.</value>
   </data>
+  <data name="Bearbeitung_in_Immich_gespeichert_3660256c" xml:space="preserve">
+    <value>Redigering gemt i Immich</value>
+  </data>
+  <data name="Bearbeitung_in_Immich_ge_ndert_c0efd12e" xml:space="preserve">
+    <value>Redigering ændret i Immich</value>
+  </data>
+  <data name="In_Immich_wurde_diese_Bearbeitung_inzwischen_von_8dd6dbff" xml:space="preserve">
+    <value>Denne redigering er i mellemtiden gemt i Immich fra en anden computer. Vil du overskrive den?</value>
+  </data>
+  <data name="Dieser_Immich_Server_kann_keine_Bearbeitungen_sp_16cdc673" xml:space="preserve">
+    <value>Denne Immich-server kan ikke gemme redigeringer, det kræver Immich 2.5 eller nyere.</value>
+  </data>
 </root>
