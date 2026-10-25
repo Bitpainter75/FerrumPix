@@ -24,6 +24,12 @@ Namespace Services
         ''' es ist offen, ob LibRaw sie schon nach unpack fertig hat.</summary>
         Public Property RgbCamAfterProcess As Single()
 
+        ''' <summary>Farbort des Aufnahmeweisses (x, y) aus den zwei Kameramatrizen
+        ''' (<see cref="CameraIlluminantMatrixTable"/>), oder Nothing, wenn die Kamera dort fehlt.
+        ''' Steht er da, gilt er vor der Rechnung über rgb_cam: der Decode entwickelt das Bild mit
+        ''' genau diesem Weiss.</summary>
+        Public Property IlluminantWhite As Double()
+
     End Class
 
     ''' <summary>Der Weißabgleich der Aufnahme als Zahl.</summary>
@@ -90,8 +96,22 @@ Namespace Services
         ''' Multiplikatoren, und dann gibt es die Zahl eben nicht.</summary>
         Public Shared Function FromCameraFacts(facts As CameraColorFacts) As CaptureWhiteBalance
             If facts Is Nothing Then Return Nothing
+            If facts.IlluminantWhite IsNot Nothing Then Return FromWhitePoint(facts.IlluminantWhite(0), facts.IlluminantWhite(1))
             Dim matrix = If(facts.RgbCamAfterProcess, facts.RgbCam)
             Return FromMultipliers(facts.CamMul, facts.PreMul, matrix)
+        End Function
+
+        ''' <summary>Der Weißabgleich zu einem schon bekannten Farbort des Aufnahmelichts.</summary>
+        Public Shared Function FromWhitePoint(x As Double, y As Double) As CaptureWhiteBalance
+            If Not (Double.IsFinite(x) AndAlso Double.IsFinite(y) AndAlso y > 0.0) Then Return Nothing
+            Dim kelvin = CorrelatedColorTemperature(x, y)
+            If Double.IsNaN(kelvin) Then Return Nothing
+            Return New CaptureWhiteBalance With {
+                .Kelvin = kelvin,
+                .Tint = TintFromDaylightLocus(x, y, kelvin),
+                .X = x,
+                .Y = y
+            }
         End Function
 
         ''' <summary>Dieselbe Rechnung mit einzeln übergebenen Größen - so kann die Messung eine

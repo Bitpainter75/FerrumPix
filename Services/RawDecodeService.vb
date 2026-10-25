@@ -1948,10 +1948,16 @@ Namespace Services
         ''' einem der beiden ersetzt wäre die Farbtemperatur falsch statt fehlend.</summary>
         Private Shared Function ReadColorFactsFromHandle(handle As IntPtr) As CameraColorFacts
             Dim own = OwnCameraMatrix(handle)
+            Dim camMul = ReadFourMultipliers(_getCamMul, handle)
+            ' Mit zwei Matrizen kommt das Aufnahmeweiss aus derselben Rechnung, mit der der Decode
+            ' das Bild entwickelt; sonst passten Kelvin-Zahl und Bild nicht zueinander.
+            Dim illuminant = If(IlluminantMatricesEnabled AndAlso AreUsableMultipliers(camMul),
+                                IlluminantSolution(handle, camMul), Nothing)
             Return New CameraColorFacts With {
-                .CamMul = ReadFourMultipliers(_getCamMul, handle),
+                .CamMul = camMul,
                 .PreMul = If(own?.DaylightMultipliers, ReadFourMultipliers(_getPreMul, handle)),
-                .RgbCam = If(own?.RgbFromCamera, ReadRgbCamMatrix(handle))
+                .RgbCam = If(own?.RgbFromCamera, ReadRgbCamMatrix(handle)),
+                .IlluminantWhite = If(illuminant Is Nothing, Nothing, New Double() {illuminant.WhiteX, illuminant.WhiteY})
             }
         End Function
 
@@ -1984,6 +1990,21 @@ Namespace Services
             Return matrix
         End Function
 
+        ''' <summary>Die Umrechnung mit zwei Kameramatrizen fuer die Kamera dieses Handles und diese
+        ''' Multiplikatoren, oder Nothing, wenn die Tabelle die Kamera nicht kennt. Nachgeschlagen
+        ''' wird unter LibRaws vereinheitlichtem Namen, wie bei der eigenen D65-Tabelle. Gueltig nach
+        ''' open_file.</summary>
+        Private Shared Function IlluminantSolution(handle As IntPtr, camMul As Single()) As CameraIlluminantMatrixTable.Solution
+            If handle = IntPtr.Zero OrElse _getIparams Is Nothing Then Return Nothing
+            If CameraIlluminantMatrixTable.Entries.Count = 0 Then Return Nothing
+            Dim iparams = _getIparams(handle)
+            If iparams = IntPtr.Zero Then Return Nothing
+            Dim make = FixedText(iparams, IparamsNormalizedMakeOffset)
+            Dim model = FixedText(iparams, IparamsNormalizedModelOffset)
+            If Not IsPlausibleText(make) OrElse Not IsPlausibleText(model) Then Return Nothing
+            Return CameraIlluminantMatrixTable.Solve(CameraIlluminantMatrixTable.ForCamera(make, model), camMul)
+        End Function
+
         ''' <summary>Wendet rgb_cam auf LibRaws lineare 16-Bit-Ausgabe an, an Ort und Stelle.
         '''
         ''' WARUM DAS DASSELBE IST WIE BEI LIBRAW. Mit der Einheitsmatrix und sRGB als Ausgabe
@@ -1996,6 +2017,11 @@ Namespace Services
         ''' Ausgabe oder bei einer fertig gerenderten RGB-Datei, und die braucht keine.</summary>
         Public Shared Sub ApplyCameraMatrix(data As IntPtr, width As Integer, height As Integer, rgbFromCamera As Single())
             Dim m = rgbFromCamera
+            Dim compression = If(GamutCompressionEnabled, GamutCompressionFor(m), Nothing)
+            If compression IsNot Nothing Then
+                ApplyCameraMatrixCompressed(data, width, height, m, compression)
+                Return
+            End If
             Dim rowValues = width * 3
             ' Versatz in Integer, siehe Convert16Rows: die Schranke des Aufrufers ist auf 6 Byte je
             ' Pixel bemessen, also auf genau diese Schrittweite.
@@ -2016,6 +2042,92 @@ Namespace Services
                             row(x) = ToUInt16Bits(m(0) * r + m(1) * g + m(2) * b)
                             row(x + 1) = ToUInt16Bits(m(3) * r + m(4) * g + m(5) * b)
                             row(x + 2) = ToUInt16Bits(m(6) * r + m(7) * g + m(8) * b)
+                        Next
+                        Marshal.Copy(row, 0, rowPtr, rowValues)
+                    Next
+                End Sub)
+        End Sub
+
+        ''' <summary>MESSSCHALTER, ab Werk aus: Farben, die nach der Kameramatrix ausserhalb von sRGB
+        ''' liegen (ein Kanal unter null), zur Unbuntachse stauchen statt den Kanal abzuschneiden.
+        ''' Gesetzt per Reflexion (FARBE_GAMUT=1, REGLER_GAMUT=1).</summary>
+        Friend Shared GamutCompressionEnabled As Boolean = False
+
+        ''' <summary>Ab diesem Abstand zur Unbuntachse wird gestaucht; darunter bleibt jede Farbe,
+        ''' wie sie ist. Abstand heisst (max - Kanal) / max, also 1 bei einem Kanal auf null.</summary>
+        Private Const GamutThreshold As Single = 0.8F
+        Private Const GamutPower As Single = 1.2F
+
+        ''' <summary>Je Ausgabekanal die Stauchung, oder Nothing, wenn kein Kanal unter null fallen
+        ''' kann. Wie weit ein Kanal hoechstens faellt, sagen die Spalten der Matrix: jede ist die
+        ''' Farbe eines reinen Kamerakanals, und ihr Abstand zur Unbuntachse ist die Grenze, die
+        ''' auf 1 abgebildet wird. Die Kurve ist die der Gamut-Kompression aus ACES:
+        ''' d' = s + e / (1 + (e / k)^p)^(1/p) mit e = d - s, k so gewaehlt, dass die Grenze auf 1
+        ''' faellt.</summary>
+        Private Shared Function GamutCompressionFor(m As Single()) As Single()
+            Dim limits(2) As Single
+            For column = 0 To 2
+                Dim r = m(column), g = m(3 + column), b = m(6 + column)
+                Dim peak = Math.Max(r, Math.Max(g, b))
+                If peak <= 0.0F Then Continue For
+                limits(0) = Math.Max(limits(0), (peak - r) / peak)
+                limits(1) = Math.Max(limits(1), (peak - g) / peak)
+                limits(2) = Math.Max(limits(2), (peak - b) / peak)
+            Next
+            Dim scales(2) As Single
+            Dim any = False
+            For c = 0 To 2
+                If limits(c) <= 1.0F Then
+                    scales(c) = 0.0F
+                    Continue For
+                End If
+                Dim span = limits(c) - GamutThreshold
+                scales(c) = CSng(span / Math.Pow(Math.Pow((1.0 - GamutThreshold) / span, -GamutPower) - 1.0, 1.0 / GamutPower))
+                any = True
+            Next
+            Return If(any, scales, Nothing)
+        End Function
+
+        Private Shared Function CompressDistance(distance As Single, scale As Single) As Single
+            If scale <= 0.0F OrElse distance <= GamutThreshold Then Return distance
+            Dim excess = distance - GamutThreshold
+            Return GamutThreshold + CSng(excess / Math.Pow(1.0 + Math.Pow(excess / scale, GamutPower), 1.0 / GamutPower))
+        End Function
+
+        ''' <summary>Wie <see cref="ApplyCameraMatrix"/>, mit der Stauchung vor dem Beschneiden.</summary>
+        Private Shared Sub ApplyCameraMatrixCompressed(data As IntPtr, width As Integer, height As Integer,
+                                                       m As Single(), scales As Single())
+            Dim rowValues = width * 3
+            Dim rowBytes = width * 6
+            Const BandRows = 64
+            Dim bandCount = (height + BandRows - 1) \ BandRows
+            Parallel.For(0, bandCount,
+                Sub(band As Integer)
+                    Dim row(rowValues - 1) As Short
+                    Dim rgb(2) As Single
+                    Dim lastRow = Math.Min(height, (band + 1) * BandRows) - 1
+                    For y = band * BandRows To lastRow
+                        Dim rowPtr = data + y * rowBytes
+                        Marshal.Copy(rowPtr, row, 0, rowValues)
+                        For x = 0 To rowValues - 1 Step 3
+                            Dim r = CInt(row(x)) And &HFFFF
+                            Dim g = CInt(row(x + 1)) And &HFFFF
+                            Dim b = CInt(row(x + 2)) And &HFFFF
+                            rgb(0) = m(0) * r + m(1) * g + m(2) * b
+                            rgb(1) = m(3) * r + m(4) * g + m(5) * b
+                            rgb(2) = m(6) * r + m(7) * g + m(8) * b
+                            Dim achromatic = Math.Max(rgb(0), Math.Max(rgb(1), rgb(2)))
+                            If achromatic > 0.0F Then
+                                For c = 0 To 2
+                                    Dim distance = (achromatic - rgb(c)) / achromatic
+                                    If distance > GamutThreshold Then
+                                        rgb(c) = achromatic - CompressDistance(distance, scales(c)) * achromatic
+                                    End If
+                                Next
+                            End If
+                            row(x) = ToUInt16Bits(rgb(0))
+                            row(x + 1) = ToUInt16Bits(rgb(1))
+                            row(x + 2) = ToUInt16Bits(rgb(2))
                         Next
                         Marshal.Copy(row, 0, rowPtr, rowValues)
                     Next
@@ -2121,9 +2233,17 @@ Namespace Services
         Private Shared _cachedRawWriteTimeUtc As DateTime
         Private Shared _cachedRawDemosaic As Integer = -1
         Private Shared _cachedRawUnclip As Boolean = True
+        Private Shared _cachedRawColorPath As Integer = -1
+
+        ''' <summary>Die Schalter, die VOR dem Sichern der linearen Daten auf die Farbe wirken, als
+        ''' eine Zahl fuer den Schluessel des Zwischenspeichers.</summary>
+        Private Shared Function ColorPathState() As Integer
+            Return If(IlluminantMatricesEnabled, 1, 0) Or If(GamutCompressionEnabled, 2, 0)
+        End Function
 
         ''' <summary>Liegen die linearen Daten dieser Datei schon im 16-Bit-Zwischenspeicher, mit
-        ''' derselben Aenderungszeit, demselben Demosaic und demselben Entklemmen?</summary>
+        ''' derselben Aenderungszeit, demselben Demosaic, demselben Entklemmen und denselben
+        ''' Kameramatrizen?</summary>
         Private Shared Function HasRawCacheFor(path As String) As Boolean
             Dim writeTime As DateTime
             Try
@@ -2136,7 +2256,8 @@ Namespace Services
                        String.Equals(_cachedRawPath, path, StringComparison.Ordinal) AndAlso
                        _cachedRawWriteTimeUtc = writeTime AndAlso
                        _cachedRawDemosaic = ConfiguredDemosaic() AndAlso
-                       _cachedRawUnclip = ConfiguredHighlightUnclip()
+                       _cachedRawUnclip = ConfiguredHighlightUnclip() AndAlso
+                       _cachedRawColorPath = ColorPathState()
             End SyncLock
         End Function
 
@@ -2243,6 +2364,7 @@ Namespace Services
                 If Not String.Equals(_cachedRawPath, path, StringComparison.Ordinal) Then Return Nothing
                 If _cachedRawWriteTimeUtc <> writeTime OrElse _cachedRawDemosaic <> demosaic Then Return Nothing
                 If _cachedRawUnclip <> ConfiguredHighlightUnclip() Then Return Nothing
+                If _cachedRawColorPath <> ColorPathState() Then Return Nothing
                 ' Die REFERENZ unter der Sperre nehmen, das Feld selbst danach nicht mehr
                 ' anfassen: der Inhalt wird nach dem Fuellen nie wieder veraendert, nur das Feld
                 ' zeigt irgendwann woandershin.
@@ -3074,7 +3196,18 @@ Namespace Services
                 ' (rgb_cam haengt nicht am Ausgabefarbraum, LibRaw liest sie beim Oeffnen). Eine
                 ' Kamera mit eigener Matrix kommt ohnehin im Kameraraum an (LibRaw kennt fuer sie
                 ' keine und rechnet mit der Einheitsmatrix).
-                Dim cameraMatrix As Single() = ownMatrix?.RgbFromCamera
+                '
+                ' ZWEI KAMERAMATRIZEN, gemischt nach dem Weissabgleich dieser Aufnahme
+                ' (CameraIlluminantMatrixTable). Geht vor LibRaws Matrix und vor der eigenen
+                ' D65-Tabelle; braucht die lineare Ausgabe, weil die Matrix dann hier angewandt wird.
+                Dim illuminant = If(IlluminantMatricesEnabled AndAlso linearMoeglich AndAlso usingCamMul,
+                                    IlluminantSolution(handle, camMul), Nothing)
+                Dim cameraMatrix As Single() = If(illuminant?.RgbFromCamera, ownMatrix?.RgbFromCamera)
+                If illuminant IsNot Nothing Then
+                    _setOutputColor(handle, 0) ' Kameraraum
+                    DiagnosticLogService.LogAlways("RawDecodeService.CameraMatrix",
+                        $"zwei Matrizen: {illuminant.Kelvin:F0} K, Anteil der warmen {illuminant.Weight:F3}")
+                End If
                 If cameraMatrix Is Nothing AndAlso HighlightReconstruction AndAlso linearMoeglich AndAlso
                    _getRgbCam IsNot Nothing Then
                     Dim libRawMatrix = ReadRgbCamMatrix(handle)
@@ -3153,7 +3286,9 @@ Namespace Services
                         Next
                         normalization *= ReconstructionHeadroom
                         Dim rebuilt = PerformanceTraceService.Measure("RAW: Lichter rekonstruieren",
-                            Function() ReconstructClippedHighlights(pixels, width, height, measured))
+                            Function() If(HighlightReconstructionMethod = 1,
+                                          ReconstructOpposed(pixels, width, height, measured),
+                                          ReconstructClippedHighlights(pixels, width, height, measured)))
                         DiagnosticLogService.LogAlways("RawDecodeService.HighlightReconstruction",
                             $"file={IO.Path.GetFileName(path)}; rebuilt={rebuilt}; " &
                             $"clip={measured(0):F0}/{measured(1):F0}/{measured(2):F0} (gerechnet {clipLevels(0):F0}/{clipLevels(1):F0}/{clipLevels(2):F0})")
@@ -3181,6 +3316,7 @@ Namespace Services
                                 _cachedRawWriteTimeUtc = writeTime
                                 _cachedRawDemosaic = demosaic
                                 _cachedRawUnclip = ConfiguredHighlightUnclip()
+                                _cachedRawColorPath = ColorPathState()
                             End SyncLock
                             DiagnosticLogService.LogAlways("RawDecodeService.RawCache",
                                 $"abgelegt, {keep.Length \ (1024 * 1024)} MB")
@@ -3764,11 +3900,20 @@ Namespace Services
         ''' kurz davor aenderte gemessen nichts.</summary>
         Friend Shared MagentaHighlightRecovery As Boolean = True
 
-        ''' <summary>MESSSCHALTER der Reglereichung, ab Werk an: die Daempfung der Tiefen nach der
-        ''' Generation des Kameramodells (<see cref="ShadowSaturationForFile"/>). Gesetzt per
-        ''' Reflexion (REGLER_TIEFENSAETTIGUNG=0), damit sich die Kennlinie gegen die Basis ohne sie
-        ''' nachmessen laesst.</summary>
-        Friend Shared ShadowSaturationEnabled As Boolean = True
+        ''' <summary>MESSSCHALTER der Reglereichung, ab Werk AUS: die Daempfung der Tiefen nach der
+        ''' Generation des Kameramodells (<see cref="ShadowSaturationForFile"/>). Die Kennlinie der
+        ''' Generation 1 stammt aus 22 Bildern weniger, besonders satter Kameras; an 75 Bildern des
+        ''' Bestands machte sie die Tiefen 15 bis 20 Prozent blasser als die Referenz (Farbabstand
+        ''' 4,02 ohne, 5,30 mit). Gesetzt per Reflexion (REGLER_TIEFENSAETTIGUNG=1).</summary>
+        Friend Shared ShadowSaturationEnabled As Boolean = False
+
+        ''' <summary>MESSSCHALTER der Reglereichung, ab Werk an: die zwei Kameramatrizen, gemischt
+        ''' nach dem Weissabgleich der Aufnahme (<see cref="CameraIlluminantMatrixTable"/>). Aus
+        ''' entwickelt der Decode wie vorher mit LibRaws D65-Matrix. Gesetzt per Reflexion
+        ''' (REGLER_ZWEI_MATRIZEN=0, FARBE_ZWEI_MATRIZEN=0). Teil des Schluessels des
+        ''' 16-Bit-Zwischenspeichers (<see cref="ColorPathState"/>), weil die Matrix VOR dem Sichern
+        ''' angewandt wird.</summary>
+        Friend Shared IlluminantMatricesEnabled As Boolean = True
 
         Private Shared ReadOnly _shadowSaturationByPath As New Concurrent.ConcurrentDictionary(Of String, Single())(StringComparer.Ordinal)
 

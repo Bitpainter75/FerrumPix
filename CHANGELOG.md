@@ -60,17 +60,23 @@
   the full colour resolution instead of halving it. Coloured edges such as stage lights and text
   stay crisp, the files get about a third larger.
 
-- **Less saturated shadows on newer cameras:** RAW files from cameras of roughly the last ten years
-  came out with too strong colours in dark areas, most visible in reds and skin under stage light.
-  FerrumPix now tones them down for these cameras the way the reference program does, while older
-  cameras keep their colours. Edited pictures from these cameras will look a little calmer in the
-  shadows.
+- **More colour in blown highlights:** where a RAW file clipped only some colour channels, for
+  example in a bright sky or a lit face, FerrumPix now rebuilds the missing channel from the others
+  and from the colours around it. Pulling down exposure or highlights brings back more natural
+  colour there instead of flat white, while bright lamps and the sun stay neutral.
 
 - **Camera calibration closer to the reference:** shadow tint now works across the whole picture
   like in the reference program instead of only in the shadows, where it was far too strong and
   turned red and skin tones. All calibration sliders now have the strength of the reference,
   several of them used together no longer cancel each other out, and together with the curves of
   a preset they no longer push reds too far.
+
+- **True colours under artificial light:** most cameras come with two colour profiles, one for
+  daylight and one for warm tungsten light. FerrumPix now blends between them according to the
+  white balance of each RAW file, as the reference program does, instead of always using the
+  daylight one. Photos under tungsten, stage or other warm light come out with clearly more
+  accurate colours, daylight photos change only slightly. The colour temperature shown for a RAW
+  file is calculated the same way and can differ a little from before.
 
 - **Preset amount:** after applying an XMP preset, an Amount slider appears in the preset panel.
   0 % is the picture without the preset, 100 % the preset and 200 % its changes twice. It goes

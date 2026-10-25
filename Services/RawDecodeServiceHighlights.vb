@@ -1,4 +1,6 @@
 Imports System
+Imports System.Collections.Generic
+Imports System.Linq
 Imports System.Runtime.InteropServices
 Imports System.Threading
 Imports System.Threading.Tasks
@@ -28,14 +30,15 @@ Namespace Services
     ' getrennt, ein geschriebener Punkt wird nie als Nachbar gelesen.
     Partial Public NotInheritable Class RawDecodeService
 
-        ''' <summary>Messschalter: Lichter rekonstruieren. AB WERK AUS: gegen die Referenz gemessen
-        ''' bringt es nichts (2026-10-22, 29 Bilder mit ausgefressenen Lichtern, Flaeche ueber L 90:
-        ''' reines Weiss 25,4 auf 25,7 %, Lichter -100 senkt -9,39 auf -9,26 L, Referenz 24,3 % und
-        ''' -9,95; an den drei Wolkenbildern 30,0 auf 28,7 % gegen 15,0 % der Referenz). Die Luecke
-        ''' liegt in der Tonabbildung ueber Weiss, nicht an geklemmten Kanaelen. Ausgeschaltet
-        ''' entwickelt der Decode wie vorher (LibRaw rechnet nach sRGB um); die Messung legt ihn per
-        ''' Reflexion um (Reglereichung, REGLER_LICHTER_REKONSTRUKTION).</summary>
-        Friend Shared HighlightReconstruction As Boolean = False
+        ''' <summary>Lichter rekonstruieren, AB WERK AN, mit dem zweiten Verfahren
+        ''' (<see cref="HighlightReconstructionMethod"/>). Gemessen punktweise in der ausgefressenen
+        ''' Flaeche der 29 Bilder mit ausgefressenen Lichtern, bei Belichtung -1 und Lichter -100, wo
+        ''' sichtbar wird, was ueber Weiss liegt: Farbabstand zur Referenz 10,36 ohne, 9,82 mit dem
+        ''' ersten, 9,67 mit dem zweiten Verfahren; im Nullbild 3,58 auf 3,51. Die Flaechenmasse vom
+        ''' 2026-10-22 (reines Weiss, L-Abfall) bewegten sich dagegen kaum: die Luecke dort liegt in
+        ''' der Tonabbildung ueber Weiss. Die Messung legt den Schalter per Reflexion um
+        ''' (Reglereichung, REGLER_LICHTER_REKONSTRUKTION).</summary>
+        Friend Shared HighlightReconstruction As Boolean = True
 
         ''' <summary>Messschalter: mit <see cref="HighlightReconstruction"/> an zwar im Kameraraum
         ''' entwickeln, aber nichts rekonstruieren. Damit laesst sich pruefen, dass der Weg ueber den
@@ -429,6 +432,435 @@ Namespace Services
                 largest = Math.Max(largest, values(i))
             Next
             Return New Double() {65535.0 * values(0) / largest, 65535.0 * values(1) / largest, 65535.0 * values(2) / largest}
+        End Function
+
+        ' ZWEITES VERFAHREN, nur als Messschalter: Gegenkanaele mit Push-Pull, wie RapidRAW 1.6.7
+        ' (highlight_reconstruction.rs, AGPL; uebertragen ist das Verfahren, die Konstanten sind
+        ' dieselben). Ein geklemmter Kanal wird aus dem Mittel der Kubikwurzeln der beiden anderen
+        ' geschaetzt, verschoben um einen Versatz, den eine Push-Pull-Karte aus ungeklemmten Punkten
+        ' am Rand der hellen Flaeche liefert. Nahe am Vollbeschnitt wird die Farbe zurueckgenommen
+        ' (Lichtquellen bleiben neutral), und ganz ausgebrannte Punkte bekommen zur Haelfte die Farbe
+        ' der Umgebung aus einer zweiten Push-Pull-Karte. Alles skaliert mit den Daten, die
+        ' Konstanten gelten deshalb auf den 16-Bit-Werten genauso wie auf RapidRAWs 0 bis 1.
+
+        ''' <summary>Welches Verfahren <see cref="HighlightReconstruction"/> nimmt: 0 Nachbarn und
+        ''' Farbkarte, 1 Gegenkanaele mit Push-Pull (ab Werk, in der Messung oben das bessere).
+        ''' Gesetzt per Reflexion (REGLER_LICHTER_VERFAHREN=0 oder 1).</summary>
+        Friend Shared HighlightReconstructionMethod As Integer = 1
+
+        Private Const OpposedClipThreshold As Single = 0.985F
+        Private Const OpposedSoftThreshold As Single = 0.9F
+        Private Const OpposedMinSampleLevel As Single = 0.2F
+        Private Const OpposedBorderExclusion As Integer = 2
+        Private Const OpposedSampleBand As Integer = 24
+        Private Const OpposedIterations As Integer = 3
+        Private Const OpposedFullClipChroma As Single = 0.35F
+        Private Const OpposedHeadroomFade As Single = 0.3F
+        Private Const OpposedFillSupportDivisor As Single = 28.0F
+        Private Const OpposedFillSpreadStart As Single = 0.25F
+        Private Const OpposedFillSpreadEnd As Single = 0.6F
+        Private Const OpposedFillStrength As Single = 0.5F
+        Private Const OpposedFillSampleSpread As Single = 0.25F
+
+        ''' <summary>Ein grobes Raster mit drei Werten je Zelle, bilinear abgetastet.</summary>
+        Private NotInheritable Class OpposedGrid
+            Public ReadOnly Width As Integer
+            Public ReadOnly Height As Integer
+            Public ReadOnly Data As Single()
+
+            Public Sub New(width As Integer, height As Integer, data As Single())
+                Me.Width = width
+                Me.Height = height
+                Me.Data = data
+            End Sub
+
+            Public Sub Sample(x As Single, y As Single, result As Single())
+                x = Math.Clamp(x, 0.0F, Width - 1)
+                y = Math.Clamp(y, 0.0F, Height - 1)
+                Dim x0 = CInt(Math.Floor(x)), y0 = CInt(Math.Floor(y))
+                Dim x1 = Math.Min(x0 + 1, Width - 1), y1 = Math.Min(y0 + 1, Height - 1)
+                Dim fx = x - x0, fy = y - y0
+                For i = 0 To 2
+                    Dim a = Data((y0 * Width + x0) * 3 + i), b = Data((y0 * Width + x1) * 3 + i)
+                    Dim c = Data((y1 * Width + x0) * 3 + i), d = Data((y1 * Width + x1) * 3 + i)
+                    Dim upper = a + (b - a) * fx
+                    Dim lower = c + (d - c) * fx
+                    result(i) = upper + (lower - upper) * fy
+                Next
+            End Sub
+        End Class
+
+        Private Shared Function SmoothStep(edge0 As Single, edge1 As Single, x As Single) As Single
+            Dim t = Math.Clamp((x - edge0) / (edge1 - edge0), 0.0F, 1.0F)
+            Return t * t * (3.0F - 2.0F * t)
+        End Function
+
+        Private Shared Function Opposed(roots As Single(), c As Integer) As Single
+            Dim m = 0.5F * (roots((c + 1) Mod 3) + roots((c + 2) Mod 3))
+            Return m * m * m
+        End Function
+
+        ''' <summary>Baut geklemmte Kanaele nach dem zweiten Verfahren auf; Gegenstueck zu
+        ''' <see cref="ReconstructClippedHighlights"/> mit derselben Schnittstelle.</summary>
+        Friend Shared Function ReconstructOpposed(data As IntPtr, width As Integer, height As Integer,
+                                                  clipLevels As Double()) As Integer
+            If data = IntPtr.Zero OrElse width < 4 OrElse height < 4 Then Return 0
+            If clipLevels Is Nothing OrElse clipLevels.Length < 3 Then Return 0
+            Dim clips(2) As Single, thresholds(2) As Single, softStarts(2) As Single
+            For c = 0 To 2
+                If Not Double.IsFinite(clipLevels(c)) OrElse clipLevels(c) <= 1.0 Then Return 0
+                clips(c) = CSng(clipLevels(c))
+                thresholds(c) = clips(c) * OpposedClipThreshold
+                softStarts(c) = clips(c) * OpposedSoftThreshold
+            Next
+
+            Dim rowValues = width * 3
+            Dim rowBytes = width * 6
+            ' ERST DIE MASKE, dann der Gleitkommapuffer: der kostet zwoelf Byte je Punkt (bei 24 MP
+            ' rund 290 MB) und wird nur gebraucht, wenn wirklich etwas klemmt.
+            Dim mask(width * height - 1) As Byte
+            Dim anyClipped = 0
+            Parallel.For(0, height,
+                Sub(y As Integer)
+                    Dim row(rowValues - 1) As Short
+                    Marshal.Copy(data + y * rowBytes, row, 0, rowValues)
+                    Dim local = False
+                    For x = 0 To width - 1
+                        Dim bits = 0
+                        For c = 0 To 2
+                            If (CInt(row(x * 3 + c)) And &HFFFF) >= thresholds(c) Then bits = bits Or (1 << c)
+                        Next
+                        mask(y * width + x) = CByte(bits)
+                        If bits <> 0 Then local = True
+                    Next
+                    If local Then Interlocked.Exchange(anyClipped, 1)
+                End Sub)
+            If anyClipped = 0 Then Return 0
+            Dim px(CInt(CLng(width) * height * 3) - 1) As Single
+            Parallel.For(0, height,
+                Sub(y As Integer)
+                    Dim row(rowValues - 1) As Short
+                    Marshal.Copy(data + y * rowBytes, row, 0, rowValues)
+                    Dim start = y * width * 3
+                    For k = 0 To rowValues - 1
+                        px(start + k) = CInt(row(k)) And &HFFFF
+                    Next
+                End Sub)
+
+            Dim cell = Math.Clamp(Math.Max(width, height) \ 1024, 1, 8)
+            Dim offsets = OpposedInpaintOffsets(px, width, height, mask, cell, clips, thresholds)
+
+            Dim invCell = 1.0F / cell
+            Dim blownX(height - 1) As List(Of Integer)
+            Dim blownObserved(height - 1) As List(Of Single)
+            Dim blownFull(height - 1) As List(Of Single)
+            Dim changedRows(height - 1) As Boolean
+            Parallel.For(0, height,
+                Sub(y As Integer)
+                    Dim offset(2) As Single, observed(2) As Single, blend(2) As Single, roots(2) As Single
+                    Dim gy = (y + 0.5F) * invCell - 0.5F
+                    For x = 0 To width - 1
+                        Dim i = (y * width + x) * 3
+                        Dim anyBlend = False
+                        For c = 0 To 2
+                            observed(c) = px(i + c)
+                            blend(c) = SmoothStep(softStarts(c), thresholds(c), observed(c))
+                            If blend(c) > 0.0F Then anyBlend = True
+                        Next
+                        If Not anyBlend Then Continue For
+                        changedRows(y) = True
+                        Dim full = Math.Min(blend(0), Math.Min(blend(1), blend(2)))
+                        If full > 0.0F Then
+                            If blownX(y) Is Nothing Then
+                                blownX(y) = New List(Of Integer)()
+                                blownObserved(y) = New List(Of Single)()
+                                blownFull(y) = New List(Of Single)()
+                            End If
+                            blownX(y).Add(x)
+                            blownObserved(y).Add(observed(0)) : blownObserved(y).Add(observed(1)) : blownObserved(y).Add(observed(2))
+                            blownFull(y).Add(full)
+                        End If
+
+                        offsets.Sample((x + 0.5F) * invCell - 0.5F, gy, offset)
+                        For c = 0 To 2
+                            roots(c) = MathF.Cbrt(Math.Max(0.0F, observed(c)))
+                        Next
+                        For iteration = 0 To OpposedIterations - 1
+                            For c = 0 To 2
+                                If blend(c) > 0.0F Then
+                                    Dim rebuilt = Math.Max(observed(c), Opposed(roots, c) + offset(c))
+                                    px(i + c) = observed(c) + (rebuilt - observed(c)) * blend(c)
+                                End If
+                            Next
+                            If iteration + 1 < OpposedIterations Then
+                                For c = 0 To 2
+                                    If blend(c) > 0.0F Then roots(c) = MathF.Cbrt(Math.Max(0.0F, px(i + c)))
+                                Next
+                            End If
+                        Next
+
+                        ' Wie viel Abstand zur Grenze der hellste ungeklemmte Kanal noch hat:
+                        ' ohne jeden wird die Farbe auf ein Drittel zurueckgenommen.
+                        Dim bits = mask(y * width + x)
+                        Dim headroom = 0.0F
+                        For c = 0 To 2
+                            If (bits And (1 << c)) = 0 Then headroom = Math.Max(headroom, 1.0F - observed(c) / clips(c))
+                        Next
+                        Dim keep = OpposedFullClipChroma + (1.0F - OpposedFullClipChroma) * SmoothStep(0.0F, OpposedHeadroomFade, headroom)
+                        Dim mean = (px(i) + px(i + 1) + px(i + 2)) / 3.0F
+                        For c = 0 To 2
+                            If blend(c) > 0.0F Then
+                                Dim faded = Math.Max(observed(c), mean + (px(i + c) - mean) * keep)
+                                px(i + c) = observed(c) + (faded - observed(c)) * blend(c)
+                            End If
+                        Next
+                    Next
+                End Sub)
+
+            If blownX.Any(Function(list) list IsNot Nothing) Then
+                OpposedFillBlown(px, width, height, mask, blownX, blownObserved, blownFull, cell)
+            End If
+
+            Dim changed = 0
+            Parallel.For(0, height,
+                Sub(y As Integer)
+                    If Not changedRows(y) Then Return
+                    Dim row(rowValues - 1) As Short
+                    Dim start = y * width * 3
+                    For k = 0 To rowValues - 1
+                        row(k) = ToUInt16Bits(px(start + k))
+                    Next
+                    Marshal.Copy(row, 0, data + y * rowBytes, rowValues)
+                    Interlocked.Increment(changed)
+                End Sub)
+            Return changed
+        End Function
+
+        ''' <summary>Der Versatz zwischen echtem Kanal und Gegenkanal-Schaetzung, gesammelt an
+        ''' ungeklemmten Punkten nahe der geklemmten Flaeche und per Push-Pull ueber das Raster
+        ''' verteilt.</summary>
+        Private Shared Function OpposedInpaintOffsets(px As Single(), width As Integer, height As Integer, mask As Byte(),
+                                                      cell As Integer, clips As Single(), thresholds As Single()) As OpposedGrid
+            Dim nearClip = DilateMask(mask, width, height, OpposedBorderExclusion)
+            Dim low(2) As Single, invClips(2) As Single
+            For c = 0 To 2
+                low(c) = clips(c) * OpposedMinSampleLevel
+                invClips(c) = 1.0F / clips(c)
+            Next
+            Dim gw = (width + cell - 1) \ cell
+            Dim gh = (height + cell - 1) \ cell
+            Dim clippedCells = CellMask(mask, width, height, cell, gw, gh)
+            Dim band = DilateMask(clippedCells, gw, gh, (OpposedSampleBand + cell - 1) \ cell)
+
+            Dim weights(gw * gh * 3 - 1) As Single
+            Dim sums(gw * gh * 3 - 1) As Single
+            Parallel.For(0, gh,
+                Sub(gy As Integer)
+                    Dim roots(2) As Single
+                    For y = gy * cell To Math.Min(height, (gy + 1) * cell) - 1
+                        For gx = 0 To gw - 1
+                            Dim channels = band(gy * gw + gx)
+                            If channels = 0 Then Continue For
+                            For x = gx * cell To Math.Min(width, (gx + 1) * cell) - 1
+                                Dim i = (y * width + x) * 3
+                                Dim usable = channels And Not nearClip(y * width + x)
+                                Dim haveRoots = False
+                                For c = 0 To 2
+                                    Dim p = px(i + c)
+                                    If (usable And (1 << c)) = 0 OrElse p <= low(c) OrElse p >= thresholds(c) Then Continue For
+                                    If Not haveRoots Then
+                                        For k = 0 To 2
+                                            roots(k) = MathF.Cbrt(Math.Max(0.0F, px(i + k)))
+                                        Next
+                                        haveRoots = True
+                                    End If
+                                    Dim level = p * invClips(c)
+                                    Dim w = level * level
+                                    Dim target = (gy * gw + gx) * 3 + c
+                                    weights(target) += w
+                                    sums(target) += w * (p - Opposed(roots, c))
+                                Next
+                            Next
+                        Next
+                    Next
+                End Sub)
+            Return PushPull(weights, sums, gw, gh, 0.25F * cell * cell)
+        End Function
+
+        ''' <summary>Ganz ausgebrannte Punkte zur Haelfte in die Farbe der Umgebung ziehen, gesammelt
+        ''' an Punkten mit genau einem geklemmten Kanal und per Push-Pull verteilt.</summary>
+        Private Shared Sub OpposedFillBlown(px As Single(), width As Integer, height As Integer, mask As Byte(),
+                                            blownX As List(Of Integer)(), blownObserved As List(Of Single)(),
+                                            blownFull As List(Of Single)(), cell As Integer)
+            Dim blownMask(width * height - 1) As Byte
+            For y = 0 To height - 1
+                If blownX(y) Is Nothing Then Continue For
+                For Each x In blownX(y)
+                    blownMask(y * width + x) = 1
+                Next
+            Next
+            Dim nearBlown = DilateMask(blownMask, width, height, OpposedBorderExclusion)
+            Dim gw = (width + cell - 1) \ cell
+            Dim gh = (height + cell - 1) \ cell
+            Dim blownCells = CellMask(blownMask, width, height, cell, gw, gh)
+            Dim band = DilateMask(blownCells, gw, gh, (OpposedSampleBand + cell - 1) \ cell)
+
+            Dim weights(gw * gh * 3 - 1) As Single
+            Dim sums(gw * gh * 3 - 1) As Single
+            Parallel.For(0, gh,
+                Sub(gy As Integer)
+                    For y = gy * cell To Math.Min(height, (gy + 1) * cell) - 1
+                        For x = 0 To width - 1
+                            Dim cellIndex = gy * gw + x \ cell
+                            If band(cellIndex) = 0 Then Continue For
+                            Dim m = mask(y * width + x)
+                            If m <> 1 AndAlso m <> 2 AndAlso m <> 4 Then Continue For
+                            If nearBlown(y * width + x) <> 0 Then Continue For
+                            Dim i = (y * width + x) * 3
+                            If px(i) <= 0.0F OrElse px(i + 1) <= 0.0F OrElse px(i + 2) <= 0.0F Then Continue For
+                            Dim rg = MathF.Log(px(i) / px(i + 1))
+                            Dim bg = MathF.Log(px(i + 2) / px(i + 1))
+                            Dim spread = (Math.Max(Math.Max(rg, bg), 0.0F) - Math.Min(Math.Min(rg, bg), 0.0F)) / OpposedFillSampleSpread
+                            Dim w = 1.0F / (1.0F + spread * spread)
+                            weights(cellIndex * 3) += w
+                            weights(cellIndex * 3 + 1) += w
+                            sums(cellIndex * 3) += w * rg
+                            sums(cellIndex * 3 + 1) += w * bg
+                        Next
+                    Next
+                End Sub)
+            Dim support = Math.Max(width, height) / OpposedFillSupportDivisor
+            Dim chroma = PushPull(weights, sums, gw, gh, 0.5F * support * support)
+
+            Dim invCell = 1.0F / cell
+            Parallel.For(0, height,
+                Sub(y As Integer)
+                    If blownX(y) Is Nothing Then Return
+                    Dim sample(2) As Single, tint(2) As Single
+                    Dim gy = (y + 0.5F) * invCell - 0.5F
+                    For k = 0 To blownX(y).Count - 1
+                        Dim x = blownX(y)(k)
+                        Dim full = blownFull(y)(k)
+                        chroma.Sample((x + 0.5F) * invCell - 0.5F, gy, sample)
+                        Dim rg = sample(0), bg = sample(1)
+                        Dim spread = Math.Max(Math.Max(rg, bg), 0.0F) - Math.Min(Math.Min(rg, bg), 0.0F)
+                        Dim strength = OpposedFillStrength * (1.0F - SmoothStep(OpposedFillSpreadStart, OpposedFillSpreadEnd, spread))
+                        tint(0) = MathF.Exp(rg * strength) : tint(1) = 1.0F : tint(2) = MathF.Exp(bg * strength)
+                        Dim i = (y * width + x) * 3
+                        Dim brightness = (px(i) + px(i + 1) + px(i + 2)) / (tint(0) + tint(1) + tint(2))
+                        Dim scale = brightness
+                        For c = 0 To 2
+                            scale = Math.Max(scale, blownObserved(y)(k * 3 + c) / tint(c))
+                        Next
+                        For c = 0 To 2
+                            px(i + c) += (scale * tint(c) - px(i + c)) * full
+                        Next
+                    Next
+                End Sub)
+        End Sub
+
+        ''' <summary>Die Bits einer Maske je Rasterzelle zusammengefasst (ODER).</summary>
+        Private Shared Function CellMask(mask As Byte(), width As Integer, height As Integer, cell As Integer,
+                                         gw As Integer, gh As Integer) As Byte()
+            Dim cells(gw * gh - 1) As Byte
+            Parallel.For(0, gh,
+                Sub(gy As Integer)
+                    For y = gy * cell To Math.Min(height, (gy + 1) * cell) - 1
+                        For x = 0 To width - 1
+                            cells(gy * gw + x \ cell) = cells(gy * gw + x \ cell) Or mask(y * width + x)
+                        Next
+                    Next
+                End Sub)
+            Return cells
+        End Function
+
+        ''' <summary>Erweitert eine Bitmaske um <paramref name="radius"/> in jede Richtung (ODER im
+        ''' Quadrat).</summary>
+        Private Shared Function DilateMask(mask As Byte(), width As Integer, height As Integer, radius As Integer) As Byte()
+            Dim result(mask.Length - 1) As Byte
+            Parallel.For(0, height,
+                Function() New Byte(width - 1) {},
+                Function(y As Integer, state As ParallelLoopState, vertical As Byte())
+                    Array.Clear(vertical)
+                    For yy = Math.Max(0, y - radius) To Math.Min(height - 1, y + radius)
+                        For x = 0 To width - 1
+                            vertical(x) = vertical(x) Or mask(yy * width + x)
+                        Next
+                    Next
+                    For x = 0 To width - 1
+                        Dim value As Byte = 0
+                        For xx = Math.Max(0, x - radius) To Math.Min(width - 1, x + radius)
+                            value = value Or vertical(xx)
+                        Next
+                        result(y * width + x) = value
+                    Next
+                    Return vertical
+                End Function,
+                Sub(vertical As Byte())
+                End Sub)
+            Return result
+        End Function
+
+        ''' <summary>Push-Pull: Gewichte und gewichtete Summen in einer Pyramide bis auf eine Zelle
+        ''' zusammenfassen, dann von oben nach unten auffuellen. Eine Zelle mit eigenem Gewicht
+        ''' setzt sich gegen das Grobere durch, voll ab <paramref name="fullWeight"/>.</summary>
+        Private Shared Function PushPull(weights As Single(), sums As Single(), width As Integer, height As Integer,
+                                         fullWeight As Single) As OpposedGrid
+            Dim levelWeights As New List(Of Single()) From {weights}
+            Dim levelSums As New List(Of Single()) From {sums}
+            Dim levelSizes As New List(Of (W As Integer, H As Integer)) From {(width, height)}
+            While levelSizes(levelSizes.Count - 1).W > 1 OrElse levelSizes(levelSizes.Count - 1).H > 1
+                Dim pw = levelSizes(levelSizes.Count - 1).W, ph = levelSizes(levelSizes.Count - 1).H
+                Dim prevW = levelWeights(levelWeights.Count - 1), prevS = levelSums(levelSums.Count - 1)
+                Dim nw = (pw + 1) \ 2, nh = (ph + 1) \ 2
+                Dim nextW(nw * nh * 3 - 1) As Single, nextS(nw * nh * 3 - 1) As Single
+                For y = 0 To nh - 1
+                    For x = 0 To nw - 1
+                        For yy = 2 * y To Math.Min(2 * y + 2, ph) - 1
+                            For xx = 2 * x To Math.Min(2 * x + 2, pw) - 1
+                                For i = 0 To 2
+                                    nextW((y * nw + x) * 3 + i) += prevW((yy * pw + xx) * 3 + i)
+                                    nextS((y * nw + x) * 3 + i) += prevS((yy * pw + xx) * 3 + i)
+                                Next
+                            Next
+                        Next
+                    Next
+                Next
+                levelWeights.Add(nextW) : levelSums.Add(nextS) : levelSizes.Add((nw, nh))
+            End While
+
+            Dim top = levelWeights.Count - 1
+            Dim topData(2) As Single
+            For i = 0 To 2
+                topData(i) = If(levelWeights(top)(i) > 0.0F, levelSums(top)(i) / levelWeights(top)(i), 0.0F)
+            Next
+            Dim filled As New OpposedGrid(1, 1, topData)
+            For level = top - 1 To 0 Step -1
+                Dim w = levelSizes(level).W, h = levelSizes(level).H
+                Dim lw = levelWeights(level), ls = levelSums(level)
+                Dim scaleX = CSng(filled.Width / w), scaleY = CSng(filled.Height / h)
+                Dim data(w * h * 3 - 1) As Single
+                Dim coarseGrid = filled
+                Parallel.For(0, h,
+                    Sub(y As Integer)
+                        Dim coarse(2) As Single
+                        Dim sy = (y + 0.5F) * scaleY - 0.5F
+                        For x = 0 To w - 1
+                            coarseGrid.Sample((x + 0.5F) * scaleX - 0.5F, sy, coarse)
+                            For i = 0 To 2
+                                Dim k = (y * w + x) * 3 + i
+                                If lw(k) > 0.0F Then
+                                    Dim alpha = Math.Min(lw(k) / fullWeight, 1.0F)
+                                    data(k) = coarse(i) + (ls(k) / lw(k) - coarse(i)) * alpha
+                                Else
+                                    data(k) = coarse(i)
+                                End If
+                            Next
+                        Next
+                    End Sub)
+                filled = New OpposedGrid(w, h, data)
+            Next
+            Return filled
         End Function
 
         ''' <summary>Taugt die Matrix als Kameraraum-nach-sRGB? Endlich und mit Zeilensummen um 1

@@ -68,6 +68,8 @@
     <EmbeddedResource Include="Resources\CameraBaselineTable.json" />
     <!-- Eigene Farbmatrizen fuer Kameras, die die geladene LibRaw noch nicht kennt. -->
     <EmbeddedResource Include="Resources\CameraColorMatrices.json" />
+    <!-- Kameramatrizen fuer Normlicht A und D65 je Kamera, gemischt nach dem Weissabgleich (zweimatrizen.py). -->
+    <EmbeddedResource Include="Resources\CameraIlluminantMatrices.json" />
     <!-- Sensorrand je Kamera und Bildgroesse, aus Adobes DefaultCrop (sensorrand.py). -->
     <EmbeddedResource Include="Resources\CameraSensorCrops.json" />
     <!-- Gemessene Kennlinien der Tonregler fuer Tonmodell 2 (Diagnostics/Reglereichung). -->
