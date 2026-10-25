@@ -1602,6 +1602,14 @@ Namespace Services
         ''' Treffer blieb dort aber auch bei gleicher Staerke niedrig); Magenta hat nur bei
         ''' Saettigung -60 genug Bildpunkte, sonst 1 bzw. der Gesamtwert.</summary>
         Friend Shared MixerProPhotoHueGains As Double() = {0.97, 1.02, 0.77, 2.2, 2.5, 1.63, 2.35, 1.0}
+        ''' <summary>Der Farbton nach UNTEN, je Band. Lila traf in Runde zwei mit 1,0 bei -60 noch 41
+        ''' Prozent, in Runde drei mit 2,35 nur 8; nach oben gewann es mit 2,35 (15 auf 40). Die
+        ''' uebrigen Baender gewannen in Runde drei in beide Richtungen.</summary>
+        Friend Shared MixerProPhotoHueDownGains As Double() = {0.97, 1.02, 0.77, 2.2, 2.5, 1.63, 1.0, 1.0}
+        ''' <summary>Die Saettigung nach UNTEN auf dem bisherigen Weg (HSL von sRGB, Band und Tor wie
+        ''' dort), nach oben im ProPhoto-HSV. Bei -60 traf der bisherige Weg Gruen, Gelb und Rot besser
+        ''' (65, 55, 68 gegen 56, 44, 66 Prozent).</summary>
+        Friend Shared MixerProPhotoSatDownFromHsl As Boolean = False
         Friend Shared MixerProPhotoSatDownGains As Double() = {0.625, 0.743, 0.556, 1.25, 0.915, 0.72, 0.904, 0.735}
         Friend Shared MixerProPhotoSatUpGains As Double() = {0.33, 0.435, 0.36, 0.698, 0.6, 0.577, 0.75, 0.6}
         ''' <summary>Die Luminanz auf dem bisherigen Weg (HSL von sRGB, geeichte Faktoren, Tor und
@@ -1705,7 +1713,13 @@ Namespace Services
             Dim h0, s0, l0, h1, s1, l1 As Single
             GetHslBandValues(lo, adj, h0, s0, l0)
             GetHslBandValues(hi, adj, h1, s1, l1)
-            h0 = CSng(h0 * MixerProPhotoHueGains(lo)) : h1 = CSng(h1 * MixerProPhotoHueGains(hi))
+            h0 = CSng(h0 * If(h0 < 0, MixerProPhotoHueDownGains(lo), MixerProPhotoHueGains(lo)))
+            h1 = CSng(h1 * If(h1 < 0, MixerProPhotoHueDownGains(hi), MixerProPhotoHueGains(hi)))
+            ' Mit MixerProPhotoSatDownFromHsl rechnet der Aufrufer die Entsaettigung auf dem alten Weg.
+            If MixerProPhotoSatDownFromHsl Then
+                If s0 < 0 Then s0 = 0
+                If s1 < 0 Then s1 = 0
+            End If
             s0 = CSng(s0 * If(s0 < 0, MixerProPhotoSatDownGains(lo), MixerProPhotoSatUpGains(lo)))
             s1 = CSng(s1 * If(s1 < 0, MixerProPhotoSatDownGains(hi), MixerProPhotoSatUpGains(hi)))
             hueShift = h0 + (h1 - h0) * w
@@ -3392,6 +3406,12 @@ Namespace Services
                                         lWeight *= lDark * lDark * (3.0 - 2.0 * lDark)
                                     End If
                                     lum = ApplyHslBandGain(lum, lLum * lWeight / 100.0)
+                                    If MixerProPhotoSatDownFromHsl AndAlso lSat < 0 Then
+                                        ' Nur die Entsaettigung, Tor an der echten Buntheit wie im sRGB-Zweig.
+                                        Dim lGateCs = Math.Min(1.0, lChroma / 0.2)
+                                        lGateCs = lGateCs * lGateCs * (3.0 - 2.0 * lGateCs)
+                                        sat = ApplyHslSaturationGain(sat, lSat * lGateCs / 100.0)
+                                    End If
                                 End If
                             ElseIf hslAdj IsNot Nothing Then
                                 ' Band und Tore aus der FUEHRUNGSFARBE (MixerGuideSigma), angewandt auf
