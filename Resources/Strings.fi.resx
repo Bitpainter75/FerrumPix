@@ -10155,4 +10155,10 @@
   <data name="F_gt_Staubk_rner_und_Kratzer_hinzu_wie_auf_gesca_1bb5f58f" xml:space="preserve">
     <value>Lisää pölyhiukkasia ja naarmuja kuin skannatussa filmissä.</value>
   </data>
+  <data name="Bearbeitung_in_Immich_entfernt_1cf9e19e" xml:space="preserve">
+    <value>Muokkaus poistettu Immichistä</value>
+  </data>
+  <data name="In_Immich_wurde_diese_Bearbeitung_inzwischen_ent_1e7f30dc" xml:space="preserve">
+    <value>Tämä muokkaus on sillä välin poistettu Immichistä, esimerkiksi toiselta tietokoneelta. Tallennetaanko se uudelleen?</value>
+  </data>
 </root>

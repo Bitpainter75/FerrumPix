@@ -25,6 +25,10 @@
   Threshold, and Frame now opens the Effects tool above Grain. The rarely useful Color blotches and Blotch size sliders and the negative halves of
   Noise and Dust/scratches are gone; pictures edited with them keep their look.
 
+- **Histogram next to the sliders by default:** the analysis graph now sits above the adjustment
+  sliders from the start, as Histogram in Adjust, RGB parade in Color and Waveform in Details and
+  Effects. Switching it in a tool is remembered as before, and Settings can turn it off.
+
 - **Display profiles on Windows and Linux:** in Settings you can choose an ICC profile for each
   connected display, for example from a calibration. Photos in the viewer and editor are then
   shown correctly on the display the window is on, also on wide gamut monitors. Leave it empty

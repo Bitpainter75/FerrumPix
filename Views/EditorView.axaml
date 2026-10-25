@@ -1784,8 +1784,10 @@
                             <!-- Füllung, Schatten und Glühen des Rahmens: DIESELBEN Panels wie beim
                                  Textobjekt, als eigene Gruppen unter der Rahmengruppe und nur bei
                                  aktivem Rahmen. Sie meinen den Rahmen über IsFrameStyleContext,
-                                 derselbe Mechanismus wie bei der Auswahl (IsSelectionStyleContext). -->
-                            <Border Classes="adjustment-group" Margin="0,7,0,0">
+                                 derselbe Mechanismus wie bei der Auswahl (IsSelectionStyleContext).
+                                 Das Tag bindet sie im Kompaktmodus an den Block des Rahmens
+                                 (CompactBlockOf), sie wandern beim Sortieren direkt mit ihm. -->
+                            <Border Classes="adjustment-group" Margin="0,7,0,0" Tag="frame">
                                 <Border.IsVisible>
                                     <MultiBinding Converter="{StaticResource AllTrueConverter}">
                                         <Binding Path="IsFrameStyleContext"/>
@@ -1795,7 +1797,7 @@
                                 <panels:FillPanel />
                             </Border>
 
-                            <Border Classes="adjustment-group" Margin="0,7,0,0">
+                            <Border Classes="adjustment-group" Margin="0,7,0,0" Tag="frame">
                                 <Border.IsVisible>
                                     <MultiBinding Converter="{StaticResource AllTrueConverter}">
                                         <Binding Path="IsFrameStyleContext"/>
@@ -1805,7 +1807,7 @@
                                 <panels:AnnotationShadowPanel />
                             </Border>
 
-                            <Border Classes="adjustment-group" Margin="0,7,0,0">
+                            <Border Classes="adjustment-group" Margin="0,7,0,0" Tag="frame">
                                 <Border.IsVisible>
                                     <MultiBinding Converter="{StaticResource AllTrueConverter}">
                                         <Binding Path="IsFrameStyleContext"/>

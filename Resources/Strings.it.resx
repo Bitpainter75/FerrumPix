@@ -10115,4 +10115,10 @@
   <data name="F_gt_Staubk_rner_und_Kratzer_hinzu_wie_auf_gesca_1bb5f58f" xml:space="preserve">
     <value>Aggiunge granelli di polvere e graffi come su una pellicola scansionata.</value>
   </data>
+  <data name="Bearbeitung_in_Immich_entfernt_1cf9e19e" xml:space="preserve">
+    <value>Modifica rimossa in Immich</value>
+  </data>
+  <data name="In_Immich_wurde_diese_Bearbeitung_inzwischen_ent_1e7f30dc" xml:space="preserve">
+    <value>Questa modifica è stata nel frattempo rimossa in Immich, ad esempio da un altro computer. Salvarla di nuovo?</value>
+  </data>
 </root>

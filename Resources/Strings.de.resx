@@ -10133,4 +10133,10 @@
   <data name="F_gt_Staubk_rner_und_Kratzer_hinzu_wie_auf_gesca_1bb5f58f" xml:space="preserve">
     <value>Fügt Staubkörner und Kratzer hinzu wie auf gescanntem Film.</value>
   </data>
+  <data name="Bearbeitung_in_Immich_entfernt_1cf9e19e" xml:space="preserve">
+    <value>Bearbeitung in Immich entfernt</value>
+  </data>
+  <data name="In_Immich_wurde_diese_Bearbeitung_inzwischen_ent_1e7f30dc" xml:space="preserve">
+    <value>In Immich wurde diese Bearbeitung inzwischen entfernt, etwa von einem anderen Rechner. Soll sie wieder gespeichert werden?</value>
+  </data>
 </root>

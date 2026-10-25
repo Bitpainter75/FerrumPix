@@ -1656,6 +1656,9 @@ Namespace Services
             Saved
             ''' <summary>Auf dem Server liegt inzwischen ein anderer Stand.</summary>
             Conflict
+            ''' <summary>Das Rezept, das beim letzten Lesen oder Schreiben auf dem Server lag, ist
+            ''' dort inzwischen entfernt.</summary>
+            Removed
             ''' <summary>Der Server kennt keine App-Daten am Asset (vor Immich 2.5).</summary>
             Unsupported
             Failed
@@ -1736,7 +1739,9 @@ Namespace Services
 
         ''' <summary>Schreibt die .fpxmp der Temp-Kopie als Rezept an das Asset. Ohne
         ''' <paramref name="overwrite"/> wird nicht geschrieben, wenn der Server inzwischen einen
-        ''' anderen Stand traegt als beim letzten Lesen (Conflict).</summary>
+        ''' anderen Stand traegt als beim letzten Lesen (Conflict) oder das damals vorhandene Rezept
+        ''' dort entfernt wurde (Removed). Ein bekannter Zeitstempel heisst: beim letzten Lesen oder
+        ''' Schreiben lag ein Rezept am Asset; fehlt er, lag keins da.</summary>
         Public Shared Async Function SaveRecipeAsync(assetId As String, localSidecarPath As String, overwrite As Boolean,
                                                      Optional cancellationToken As CancellationToken = Nothing) As Task(Of RecipeSaveResult)
             If Not IsConfigured OrElse String.IsNullOrWhiteSpace(assetId) OrElse Not File.Exists(localSidecarPath) Then Return RecipeSaveResult.Failed
@@ -1751,6 +1756,7 @@ Namespace Services
                     If current.Found AndAlso (Not hadStamp OrElse Not String.Equals(known, current.UpdatedAt, StringComparison.Ordinal)) Then
                         Return RecipeSaveResult.Conflict
                     End If
+                    If Not current.Found AndAlso hadStamp Then Return RecipeSaveResult.Removed
                 End If
                 Dim body = JsonSerializer.Serialize(New With {
                     .items = {New With {.key = RecipeMetadataKey,

@@ -22901,7 +22901,8 @@ Namespace ViewModels
         ''' neben der Temp-Kopie und geht dann als App-Daten an das Asset
         ''' (<see cref="ImmichService.SaveRecipeAsync"/>). Wie bei Nextcloud gilt erst der zweite
         ''' Schritt als gespeichert; eine .fpxmp im Temp-Ordner allein ueberstuende das naechste
-        ''' Aufraeumen nicht. Hat ein anderer Rechner inzwischen gespeichert, wird gefragt.</summary>
+        ''' Aufraeumen nicht. Hat ein anderer Rechner inzwischen gespeichert oder die Bearbeitung
+        ''' entfernt, wird gefragt.</summary>
         Private Async Function SaveSidecarToImmichAsync(assetId As String) As Task(Of Boolean)
             FlushPendingLensRebuild()
             If Not TrySaveSidecar() Then Return False
@@ -22919,6 +22920,15 @@ Namespace ViewModels
                     LocalizationService.T("Überschreiben"),
                     LocalizationService.T("Abbrechen"))
                 If replace Then result = Await ImmichService.SaveRecipeAsync(assetId, lokal, overwrite:=True)
+            ElseIf result = ImmichService.RecipeSaveResult.Removed AndAlso _mainVm IsNot Nothing Then
+                ' Auch eine Loeschung ist eine Aenderung von anderswo: ohne Rueckfrage kaeme die
+                ' Bearbeitung still zurueck, die dort gerade jemand entfernt hat.
+                Dim restore = Await _mainVm.ShowConfirmAsync(
+                    LocalizationService.T("Bearbeitung in Immich entfernt"),
+                    LocalizationService.T("In Immich wurde diese Bearbeitung inzwischen entfernt, etwa von einem anderen Rechner. Soll sie wieder gespeichert werden?"),
+                    LocalizationService.T("Speichern"),
+                    LocalizationService.T("Abbrechen"))
+                If restore Then result = Await ImmichService.SaveRecipeAsync(assetId, lokal, overwrite:=True)
             End If
             If result = ImmichService.RecipeSaveResult.Saved Then
                 StatusText = LocalizationService.T("Bearbeitung in Immich gespeichert")
@@ -22934,6 +22944,8 @@ Namespace ViewModels
                     Await _mainVm?.ShowMessageAsync(LocalizationService.T("Speichern fehlgeschlagen"), StatusText)
                 Case ImmichService.RecipeSaveResult.Conflict
                     StatusText = LocalizationService.T("Bearbeitung in Immich geändert")
+                Case ImmichService.RecipeSaveResult.Removed
+                    StatusText = LocalizationService.T("Bearbeitung in Immich entfernt")
                 Case Else
                     StatusText = If(String.IsNullOrEmpty(ImmichService.LastError),
                                     LocalizationService.T("Speichern fehlgeschlagen"),

@@ -204,8 +204,12 @@ Namespace Services
         Public Property ScopeInInfoSidebar As Boolean = True
         ''' <summary>Das Analysebild zusaetzlich in den Anpassungspanels des Editors (Anpassen,
         ''' Farbe, Details, Effekte, Filter). Dort sitzt es neben den Reglern, auf die es antwortet -
-        ''' die Infoleiste liegt auf der anderen Bildschirmseite und ist oft zugeklappt.</summary>
-        Public Property ScopeInAdjustmentPanels As Boolean = False
+        ''' die Infoleiste liegt auf der anderen Bildschirmseite und ist oft zugeklappt. Ab Werk an,
+        ''' abschalten laesst es sich in den Einstellungen.</summary>
+        Public Property ScopeInAdjustmentPanels As Boolean = True
+        ''' <summary>Fassung der Vorgaben des Analysebildes. Fehlt das Feld in der Datei, stammt sie
+        ''' von vor "ab Werk an", und Load schaltet ScopeInAdjustmentPanels einmal ein.</summary>
+        Public Property ScopeDefaultsVersion As Integer = 1
         ''' <summary>Die Darstellung im Anpassungspanel - EIGENE Wahl neben ScopeMode. Wer das Bild
         ''' an zwei Orten sieht, will dort meist zwei verschiedene Fragen beantwortet haben.</summary>
         Public Property ScopePanelMode As String = "Parade"
@@ -1099,6 +1103,15 @@ Namespace Services
                 If json.IndexOf("""UneditedRawDefaultsVersion""", StringComparison.Ordinal) < 0 Then
                     If settings.UneditedRawColorNoise = 0 Then settings.UneditedRawColorNoise = 25
                     settings.UneditedRawDefaultsVersion = 1
+                End If
+
+                ' ANALYSEBILD BEI DEN REGLERN, Fassung 1 (2026-10-25): ab Werk an statt aus. Eine
+                ' Datei ohne das Feld stammt von davor; dort ist ein "aus" der alte Werksstand und
+                ' keine Wahl, es wird einmal eingeschaltet. Wer danach abschaltet, behaelt aus. Die
+                ' je Werkzeug gemerkten Darstellungen bleiben, sie sind gewaehlt.
+                If json.IndexOf("""ScopeDefaultsVersion""", StringComparison.Ordinal) < 0 Then
+                    settings.ScopeInAdjustmentPanels = True
+                    settings.ScopeDefaultsVersion = 1
                 End If
 
                 settings.GalleryThumbnailSize = NormalizeThumbnailSize(settings.GalleryThumbnailSize)
@@ -2013,7 +2026,10 @@ Namespace Services
                    End Sub)
         End Sub
 
-        ''' <summary>Die gemerkte Darstellung eines Werkzeugs, sonst die allgemeine Vorgabe.</summary>
+        ''' <summary>Die gemerkte Darstellung eines Werkzeugs. Ohne Merker die Vorgabe des Werkzeugs:
+        ''' an den Lichtreglern die Verteilung, an den Farbreglern die Kanaltrennung, bei Details und
+        ''' Effekten die Helligkeit ueber die Bildbreite. Filter und das Kompaktwerkzeug haben keine
+        ''' eigene Vorgabe und nehmen die letzte Wahl.</summary>
         Public Shared Function ScopePanelModeForTool(tool As String) As String
             Dim settings = Load()
             If Not String.IsNullOrWhiteSpace(tool) AndAlso settings.ScopePanelToolModes IsNot Nothing Then
@@ -2023,6 +2039,11 @@ Namespace Services
                     End If
                 Next
             End If
+            Select Case If(tool, "").Trim().ToLowerInvariant()
+                Case "adjust" : Return "Histogram"
+                Case "color" : Return "Parade"
+                Case "details", "effects" : Return "Waveform"
+            End Select
             Return NormalizeScopeMode(settings.ScopePanelMode)
         End Function
 
