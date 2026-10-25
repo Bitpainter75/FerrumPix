@@ -10064,9 +10064,6 @@
   <data name="Sch_rfen_zur_cksetzen_d9baf89c" xml:space="preserve">
     <value>Ripristina nitidezza</value>
   </data>
-  <data name="Betrag_ff7324af" xml:space="preserve">
-    <value>Fattore</value>
-  </data>
   <data name="Maskieren_e4d7a7d4" xml:space="preserve">
     <value>Mascheratura</value>
   </data>
@@ -10091,8 +10088,8 @@
   <data name="Sch_rfen_bei_unbearbeiteten_RAWs_2070c2f9" xml:space="preserve">
     <value>Nitidezza per RAW non modificati</value>
   </data>
-  <data name="Startwert_des_Reglers_Betrag_beim_Sch_rfen_wenn__7988da1d" xml:space="preserve">
-    <value>Valore iniziale del cursore Fattore della nitidezza quando si apre un RAW senza modifiche. Le immagini già modificate mantengono i loro valori. 0 lo disattiva.</value>
+  <data name="Startwert_des_Reglers_St_rke_beim_Sch_rfen_wenn__b6028fd8" xml:space="preserve">
+    <value>Valore iniziale del cursore Intensità della nitidezza quando si apre un RAW senza modifiche. Le immagini già modificate mantengono i loro valori. 0 lo disattiva.</value>
   </data>
   <data name="Luminanz_Rauschreduzierung_bei_unbearbeiteten_RA_96d73674" xml:space="preserve">
     <value>Riduzione disturbo di luminanza per RAW non modificati</value>

@@ -10108,9 +10108,6 @@
   <data name="Sch_rfen_zur_cksetzen_d9baf89c" xml:space="preserve">
     <value>รีเซ็ตการเพิ่มความคมชัด</value>
   </data>
-  <data name="Betrag_ff7324af" xml:space="preserve">
-    <value>ปริมาณ</value>
-  </data>
   <data name="Maskieren_e4d7a7d4" xml:space="preserve">
     <value>การมาสก์</value>
   </data>
@@ -10135,8 +10132,8 @@
   <data name="Sch_rfen_bei_unbearbeiteten_RAWs_2070c2f9" xml:space="preserve">
     <value>การเพิ่มความคมชัดสำหรับ RAW ที่ยังไม่แก้ไข</value>
   </data>
-  <data name="Startwert_des_Reglers_Betrag_beim_Sch_rfen_wenn__7988da1d" xml:space="preserve">
-    <value>ค่าเริ่มต้นของแถบเลื่อนปริมาณในการเพิ่มความคมชัดเมื่อเปิด RAW ที่ยังไม่แก้ไข ภาพที่แก้ไขแล้วจะคงค่าเดิมไว้ 0 คือปิด</value>
+  <data name="Startwert_des_Reglers_St_rke_beim_Sch_rfen_wenn__b6028fd8" xml:space="preserve">
+    <value>ค่าเริ่มต้นของแถบเลื่อนความแรงในการเพิ่มความคมชัดเมื่อเปิด RAW ที่ยังไม่แก้ไข ภาพที่แก้ไขแล้วจะคงค่าเดิมไว้ 0 คือปิด</value>
   </data>
   <data name="Luminanz_Rauschreduzierung_bei_unbearbeiteten_RA_96d73674" xml:space="preserve">
     <value>การลดนอยส์ความสว่างสำหรับ RAW ที่ยังไม่แก้ไข</value>

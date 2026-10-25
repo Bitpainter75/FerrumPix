@@ -2170,7 +2170,7 @@
                         <Grid ColumnDefinitions="*,Auto">
                             <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
                                 <TextBlock Text="Schärfen bei unbearbeiteten RAWs" FontSize="{DynamicResource FP.Font.Body}"/>
-                                <TextBlock Text="Startwert des Reglers Betrag beim Schärfen, wenn ein RAW ohne Bearbeitung geöffnet wird. Bereits bearbeitete Bilder behalten ihre Werte. 0 schaltet ihn ab." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Text="Startwert des Reglers Stärke beim Schärfen, wenn ein RAW ohne Bearbeitung geöffnet wird. Bereits bearbeitete Bilder behalten ihre Werte. 0 schaltet ihn ab." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </StackPanel>
                             <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
                                 <icons:RoundSlider Width="150"

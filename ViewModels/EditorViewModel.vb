@@ -23793,9 +23793,9 @@ Namespace ViewModels
                 Case NameOf(Temperature) : Return LocalizationService.T("Temperatur")
                 Case NameOf(Tint) : Return LocalizationService.T("Tönung")
                 Case NameOf(Clarity) : Return LocalizationService.T("Klarheit")
-                ' Die Wortlaute sind die der Panels, benannt wie beim Referenzprogramm: Schaerfen mit
-                ' Betrag, Radius, Details, Maskieren; Rauschreduzierung mit Luminanz, Details, Farbe.
-                Case NameOf(Sharpness) : Return CombineHistoryLabel("Schärfen", "Betrag")
+                ' Die Wortlaute sind die der Panels, weitgehend wie beim Referenzprogramm: Schaerfen mit
+                ' Staerke, Radius, Details, Maskieren; Rauschreduzierung mit Luminanz, Details, Farbe.
+                Case NameOf(Sharpness) : Return CombineHistoryLabel("Schärfen", "Stärke")
                 Case NameOf(SharpenRadius) : Return CombineHistoryLabel("Schärfen", "Radius")
                 Case NameOf(SharpenDetail) : Return CombineHistoryLabel("Schärfen", "Details")
                 Case NameOf(SharpenMasking) : Return CombineHistoryLabel("Schärfen", "Maskieren")

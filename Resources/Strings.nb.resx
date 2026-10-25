@@ -10104,9 +10104,6 @@
   <data name="Sch_rfen_zur_cksetzen_d9baf89c" xml:space="preserve">
     <value>Tilbakestill skarphet</value>
   </data>
-  <data name="Betrag_ff7324af" xml:space="preserve">
-    <value>Mengde</value>
-  </data>
   <data name="Maskieren_e4d7a7d4" xml:space="preserve">
     <value>Maskering</value>
   </data>
@@ -10131,8 +10128,8 @@
   <data name="Sch_rfen_bei_unbearbeiteten_RAWs_2070c2f9" xml:space="preserve">
     <value>Skarphet for uredigerte RAW-filer</value>
   </data>
-  <data name="Startwert_des_Reglers_Betrag_beim_Sch_rfen_wenn__7988da1d" xml:space="preserve">
-    <value>Startverdi for glidebryteren Mengde under skarphet når en RAW uten redigering åpnes. Bilder som allerede er redigert, beholder verdiene sine. 0 slår den av.</value>
+  <data name="Startwert_des_Reglers_St_rke_beim_Sch_rfen_wenn__b6028fd8" xml:space="preserve">
+    <value>Startverdi for glidebryteren Styrke under skarphet når en RAW uten redigering åpnes. Bilder som allerede er redigert, beholder verdiene sine. 0 slår den av.</value>
   </data>
   <data name="Luminanz_Rauschreduzierung_bei_unbearbeiteten_RA_96d73674" xml:space="preserve">
     <value>Luminansstøyreduksjon for uredigerte RAW-filer</value>

@@ -10082,9 +10082,6 @@
   <data name="Sch_rfen_zur_cksetzen_d9baf89c" xml:space="preserve">
     <value>Schärfen zurücksetzen</value>
   </data>
-  <data name="Betrag_ff7324af" xml:space="preserve">
-    <value>Betrag</value>
-  </data>
   <data name="Maskieren_e4d7a7d4" xml:space="preserve">
     <value>Maskieren</value>
   </data>
@@ -10109,8 +10106,8 @@
   <data name="Sch_rfen_bei_unbearbeiteten_RAWs_2070c2f9" xml:space="preserve">
     <value>Schärfen bei unbearbeiteten RAWs</value>
   </data>
-  <data name="Startwert_des_Reglers_Betrag_beim_Sch_rfen_wenn__7988da1d" xml:space="preserve">
-    <value>Startwert des Reglers Betrag beim Schärfen, wenn ein RAW ohne Bearbeitung geöffnet wird. Bereits bearbeitete Bilder behalten ihre Werte. 0 schaltet ihn ab.</value>
+  <data name="Startwert_des_Reglers_St_rke_beim_Sch_rfen_wenn__b6028fd8" xml:space="preserve">
+    <value>Startwert des Reglers Stärke beim Schärfen, wenn ein RAW ohne Bearbeitung geöffnet wird. Bereits bearbeitete Bilder behalten ihre Werte. 0 schaltet ihn ab.</value>
   </data>
   <data name="Luminanz_Rauschreduzierung_bei_unbearbeiteten_RA_96d73674" xml:space="preserve">
     <value>Luminanz-Rauschreduzierung bei unbearbeiteten RAWs</value>

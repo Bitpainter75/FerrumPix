@@ -17,7 +17,7 @@
 
 - **Detail sliders named and grouped as in the reference program:** the luminance noise reduction,
   formerly Smoothing in the Blur group, now sits as Luminance with its Detail and Method in the
-  renamed Noise Reduction group, next to Color, and sharpening is Amount, Radius, Detail and
+  renamed Noise Reduction group, next to Color, and sharpening is Strength, Radius, Detail and
   Masking. Color there only removes color noise now. Adding noise and color noise moved to the
   Grain group as the Noise and Color noise sliders, together with Dust/scratches, which now
   only adds and goes further at its maximum. Blur has no group of its own any more and sits in

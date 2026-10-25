@@ -761,7 +761,7 @@ Namespace ViewModels
         End Property
         Private _uneditedRawColorNoise As Integer
 
-        ''' <summary>Startwert "Betrag" beim Schaerfen fuer eine RAW ohne Rezept, 0 bis 150, 0 = aus. Wirkt beim
+        ''' <summary>Startwert "Staerke" beim Schaerfen fuer eine RAW ohne Rezept, 0 bis 150, 0 = aus. Wirkt beim
         ''' naechsten Oeffnen eines unbearbeiteten RAWs, nicht auf schon bearbeitete.</summary>
         Public Property UneditedRawSharpness As Integer
             Get

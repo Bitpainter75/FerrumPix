@@ -10064,9 +10064,6 @@
   <data name="Sch_rfen_zur_cksetzen_d9baf89c" xml:space="preserve">
     <value>Restablecer enfoque</value>
   </data>
-  <data name="Betrag_ff7324af" xml:space="preserve">
-    <value>Cantidad</value>
-  </data>
   <data name="Maskieren_e4d7a7d4" xml:space="preserve">
     <value>Máscara</value>
   </data>
@@ -10091,8 +10088,8 @@
   <data name="Sch_rfen_bei_unbearbeiteten_RAWs_2070c2f9" xml:space="preserve">
     <value>Enfoque en RAW sin editar</value>
   </data>
-  <data name="Startwert_des_Reglers_Betrag_beim_Sch_rfen_wenn__7988da1d" xml:space="preserve">
-    <value>Valor inicial del control Cantidad del enfoque al abrir un RAW sin ediciones. Las imágenes ya editadas conservan sus valores. 0 lo desactiva.</value>
+  <data name="Startwert_des_Reglers_St_rke_beim_Sch_rfen_wenn__b6028fd8" xml:space="preserve">
+    <value>Valor inicial del control Intensidad del enfoque al abrir un RAW sin ediciones. Las imágenes ya editadas conservan sus valores. 0 lo desactiva.</value>
   </data>
   <data name="Luminanz_Rauschreduzierung_bei_unbearbeiteten_RA_96d73674" xml:space="preserve">
     <value>Reducción de ruido de luminancia en RAW sin editar</value>

@@ -10108,9 +10108,6 @@
   <data name="Sch_rfen_zur_cksetzen_d9baf89c" xml:space="preserve">
     <value>Keskinleştirmeyi sıfırla</value>
   </data>
-  <data name="Betrag_ff7324af" xml:space="preserve">
-    <value>Miktar</value>
-  </data>
   <data name="Maskieren_e4d7a7d4" xml:space="preserve">
     <value>Maskeleme</value>
   </data>
@@ -10135,8 +10132,8 @@
   <data name="Sch_rfen_bei_unbearbeiteten_RAWs_2070c2f9" xml:space="preserve">
     <value>Düzenlenmemiş RAW dosyaları için keskinleştirme</value>
   </data>
-  <data name="Startwert_des_Reglers_Betrag_beim_Sch_rfen_wenn__7988da1d" xml:space="preserve">
-    <value>Düzenlenmemiş bir RAW açıldığında keskinleştirmedeki Miktar kaydırıcısının başlangıç değeri. Önceden düzenlenmiş görüntüler değerlerini korur. 0 kapatır.</value>
+  <data name="Startwert_des_Reglers_St_rke_beim_Sch_rfen_wenn__b6028fd8" xml:space="preserve">
+    <value>Düzenlenmemiş bir RAW açıldığında keskinleştirmedeki Güç kaydırıcısının başlangıç değeri. Önceden düzenlenmiş görüntüler değerlerini korur. 0 kapatır.</value>
   </data>
   <data name="Luminanz_Rauschreduzierung_bei_unbearbeiteten_RA_96d73674" xml:space="preserve">
     <value>Düzenlenmemiş RAW dosyaları için parlaklık gürültüsü azaltma</value>

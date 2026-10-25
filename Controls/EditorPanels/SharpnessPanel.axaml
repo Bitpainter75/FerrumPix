@@ -42,7 +42,7 @@
                 </Expander.HeaderTemplate>
                 <StackPanel Spacing="2" Margin="0,8,0,0">
                     <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
-                        <TextBlock Text="Betrag" Foreground="{DynamicResource FP.Text.Secondary}"
+                        <TextBlock Text="Stärke" Foreground="{DynamicResource FP.Text.Secondary}"
                                    VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                         <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="150"
                                            Value="{Binding Sharpness}" Margin="0,0" />

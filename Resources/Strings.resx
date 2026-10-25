@@ -10083,9 +10083,6 @@
   <data name="Sch_rfen_zur_cksetzen_d9baf89c" xml:space="preserve">
     <value>Reset sharpening</value>
   </data>
-  <data name="Betrag_ff7324af" xml:space="preserve">
-    <value>Amount</value>
-  </data>
   <data name="Maskieren_e4d7a7d4" xml:space="preserve">
     <value>Masking</value>
   </data>
@@ -10110,8 +10107,8 @@
   <data name="Sch_rfen_bei_unbearbeiteten_RAWs_2070c2f9" xml:space="preserve">
     <value>Sharpening for unedited RAWs</value>
   </data>
-  <data name="Startwert_des_Reglers_Betrag_beim_Sch_rfen_wenn__7988da1d" xml:space="preserve">
-    <value>Starting value of the sharpening Amount slider when a RAW without edits is opened. Pictures already edited keep their values. 0 turns it off.</value>
+  <data name="Startwert_des_Reglers_St_rke_beim_Sch_rfen_wenn__b6028fd8" xml:space="preserve">
+    <value>Starting value of the sharpening Strength slider when a RAW without edits is opened. Pictures already edited keep their values. 0 turns it off.</value>
   </data>
   <data name="Luminanz_Rauschreduzierung_bei_unbearbeiteten_RA_96d73674" xml:space="preserve">
     <value>Luminance noise reduction for unedited RAWs</value>

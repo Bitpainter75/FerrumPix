@@ -10104,9 +10104,6 @@
   <data name="Sch_rfen_zur_cksetzen_d9baf89c" xml:space="preserve">
     <value>Obnovit zostření</value>
   </data>
-  <data name="Betrag_ff7324af" xml:space="preserve">
-    <value>Míra</value>
-  </data>
   <data name="Maskieren_e4d7a7d4" xml:space="preserve">
     <value>Maskování</value>
   </data>
@@ -10131,8 +10128,8 @@
   <data name="Sch_rfen_bei_unbearbeiteten_RAWs_2070c2f9" xml:space="preserve">
     <value>Zostření u neupravených RAW</value>
   </data>
-  <data name="Startwert_des_Reglers_Betrag_beim_Sch_rfen_wenn__7988da1d" xml:space="preserve">
-    <value>Výchozí hodnota posuvníku Míra u zostření při otevření RAW bez úprav. Již upravené obrázky si své hodnoty ponechají. 0 jej vypne.</value>
+  <data name="Startwert_des_Reglers_St_rke_beim_Sch_rfen_wenn__b6028fd8" xml:space="preserve">
+    <value>Výchozí hodnota posuvníku Síla u zostření při otevření RAW bez úprav. Již upravené obrázky si své hodnoty ponechají. 0 jej vypne.</value>
   </data>
   <data name="Luminanz_Rauschreduzierung_bei_unbearbeiteten_RA_96d73674" xml:space="preserve">
     <value>Redukce jasového šumu u neupravených RAW</value>
