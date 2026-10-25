@@ -72,8 +72,9 @@
   several of them used together no longer cancel each other out, and together with the curves of
   a preset they no longer push reds too far.
 
-- **Preset amount:** after applying an XMP preset, an Amount slider appears in the preset panel. 0 % is the picture without the preset, 100 % the preset and 200 % its changes
-  twice. It goes away with the next edit, as in the reference program.
+- **Preset amount:** after applying an XMP preset, an Amount slider appears in the preset panel.
+  0 % is the picture without the preset, 100 % the preset and 200 % its changes twice. It goes
+  away with the next edit, as in the reference program.
 
 - **Presets with colour curves apply completely:** presets that combine red, green and blue curves
   with a tone curve, about a third of common presets, used to leave out their tone sliders, colour
