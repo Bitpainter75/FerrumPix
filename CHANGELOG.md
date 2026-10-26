@@ -8,6 +8,10 @@
 - **Smoother sliders:** dragging a slider in the editor stuttered again in 0.9.71. It runs
   smoothly again.
 
+- **Colour noise reduction off by default again:** a RAW without edits now starts with colour
+  noise reduction at 0, because reds looked too strong with bold presets. If you set your own
+  value in Settings, it stays.
+
 ## 0.9.71
 
 ### What's new

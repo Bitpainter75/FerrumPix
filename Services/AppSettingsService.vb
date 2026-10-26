@@ -813,12 +813,13 @@ Namespace Services
         ''' sie im Werkzeug uebersteuerbar.</summary>
         Public Property LensCorrectionEnabled As Boolean = True
         ''' <summary>Startwert der Farbrauschminderung (Regler "Farbe" der Rauschreduzierung, crs:ColorNoiseReduction)
-        ''' fuer eine RAW ohne Rezept, 0 bis 100, 0 heisst aus. Vorgabe 25 wie beim Referenzprogramm
-        ''' (seit 2026-10-24, davor 0; siehe UneditedRawDefaultsVersion).</summary>
-        Public Property UneditedRawColorNoise As Integer = 25
-        ''' <summary>Fassung der RAW-Startwerte. Fehlt das Feld in der Datei, stammt sie von vor der
-        ''' Vorgabe 25 fuer Farbrauschen, und Load hebt eine 0 einmal an.</summary>
-        Public Property UneditedRawDefaultsVersion As Integer = 1
+        ''' fuer eine RAW ohne Rezept, 0 bis 100, 0 heisst aus. Vorgabe 0: mit 25 wie beim
+        ''' Referenzprogramm wirkte Rot unter kraeftigen Presets zu satt, und die Stufe lief bei jedem
+        ''' Reglerschritt neu mit (siehe UneditedRawDefaultsVersion).</summary>
+        Public Property UneditedRawColorNoise As Integer = 0
+        ''' <summary>Fassung der RAW-Startwerte. Fassung 2: Farbrauschen startet bei 0. Load setzt
+        ''' den Werkswert 25 der Fassung 1 einmal auf 0.</summary>
+        Public Property UneditedRawDefaultsVersion As Integer = 2
         ''' <summary>Startwert des Betrags beim Schaerfen (crs:Sharpness, 0 bis 150) fuer eine RAW ohne Rezept, mit
         ''' Detail 25. Vorgabe 40 wie beim Referenzprogramm; 0 heisst aus. Das Feld ist neu, eine
         ''' aeltere Datei bekommt also die 40 ohne Migration.</summary>
@@ -1096,13 +1097,14 @@ Namespace Services
                 Dim settings = JsonSerializer.Deserialize(Of AppSettings)(json)
                 If settings Is Nothing Then Return New AppSettings()
 
-                ' STARTWERTE EINER UNBEARBEITETEN RAW, Fassung 1 (2026-10-24): Farbrauschen startet
-                ' bei 25 statt 0, mit dem neuen, an der Referenz geeichten Verfahren. Eine Datei ohne
-                ' das Feld stammt von davor; dort ist eine 0 der alte Werksstand und keine Wahl, sie
-                ' wird einmal angehoben. Wer danach 0 einstellt, behaelt 0.
-                If json.IndexOf("""UneditedRawDefaultsVersion""", StringComparison.Ordinal) < 0 Then
-                    If settings.UneditedRawColorNoise = 0 Then settings.UneditedRawColorNoise = 25
-                    settings.UneditedRawDefaultsVersion = 1
+                ' STARTWERTE EINER UNBEARBEITETEN RAW, Fassung 2 (2026-10-26): Farbrauschen startet
+                ' wieder bei 0. In Fassung 1 war 25 der Werksstand und keine Wahl, er wird einmal auf 0
+                ' gesetzt; ein anderer Wert ist gewaehlt und bleibt. Eine Datei ohne das Feld stammt
+                ' von vor Fassung 1, dort stand ohnehin 0.
+                If json.IndexOf("""UneditedRawDefaultsVersion""", StringComparison.Ordinal) < 0 OrElse
+                   settings.UneditedRawDefaultsVersion < 2 Then
+                    If settings.UneditedRawColorNoise = 25 Then settings.UneditedRawColorNoise = 0
+                    settings.UneditedRawDefaultsVersion = 2
                 End If
 
                 ' ANALYSEBILD BEI DEN REGLERN, Fassung 1 (2026-10-25): ab Werk an statt aus. Eine

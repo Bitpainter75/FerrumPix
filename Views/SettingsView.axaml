@@ -2196,7 +2196,7 @@
                         </Grid>
 
                         <!-- Der Farbrausch-Startwert fuer eine RAW ohne Rezept (ImageAdjustments.ForUneditedRaw).
-                             Namen wie in der Rauschreduzierung des Editors, 0 = aus. Ab Werk 25 wie beim Referenzprogramm. -->
+                             Namen wie in der Rauschreduzierung des Editors, 0 = aus. Ab Werk 0. -->
                         <Grid ColumnDefinitions="*,Auto">
                             <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
                                 <TextBlock Text="Farb-Rauschreduzierung bei unbearbeiteten RAWs" FontSize="{DynamicResource FP.Font.Body}"/>
@@ -2206,7 +2206,7 @@
                                 <icons:RoundSlider Width="150"
                                                    Minimum="0"
                                                    Maximum="100"
-                                                   DefaultValue="25"
+                                                   DefaultValue="0"
                                                    Value="{Binding UneditedRawColorNoise}"/>
                                 <TextBlock Text="{Binding UneditedRawColorNoise}"
                                            Foreground="{DynamicResource FP.Text.Secondary}"
