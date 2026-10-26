@@ -146,6 +146,9 @@
   were developed as if in daylight, so pictures taken under indoor light looked deep yellow.
   FerrumPix now works out the white balance from the picture for them.
 
+- **Raising the exposure of a RAW no longer flashes strong colours too bright:** until the
+  picture was rebuilt in the background, strongly coloured areas looked brighter than afterwards.
+
 - **Gallery tiles update after a batch:** after pasting or applying adjustments to RAW and PSD
   files, the tiles kept showing the old picture without the edited badge until they were reloaded.
   They now update right away.

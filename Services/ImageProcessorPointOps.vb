@@ -2034,6 +2034,11 @@ Namespace Services
                                                   Optional blackFrom As Double = 0.0,
                                                   Optional blackTo As Double = 0.0) As Single
             If gain = 1.0F AndAlso kneeFrom = kneeTo AndAlso blackFrom = blackTo Then Return v
+            ' Eine 0 im Quellbild ist kein Wert AUF dem Schwarzpunkt, sondern einer an oder unter ihm,
+            ' meist ein Kanal, den die Umrechnung nach sRGB unter null schob (gesaettigte Farben). Der
+            ' Neuaufbau laesst ihn bei 0; der kleinere Schwarzabzug einer positiven Belichtung hob
+            ' ihn hier an, und eine kraeftig farbige Flaeche kam im Vorgriff zu hell.
+            If v <= 0.0F Then Return 0.0F
             Dim ramp = RawDecodeService.Acr3CurveInverse(SrgbToLinear(Clamp(v, 0.0F, 1.0F)))
             ' IMMER durch die Schulter, auch bei gleichem Knie: mit der Lichterrettung steht sie ab
             ' Werk bei 0,45, und alles darueber ist gestaucht. Den gestauchten Wert nur mal Faktor
