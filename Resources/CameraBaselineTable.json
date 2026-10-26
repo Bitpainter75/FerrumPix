@@ -1,6 +1,6 @@
 {
   "formatVersion": 1,
-  "description": "Camera baseline offsets in EV, keyed by normalized maker/model: the mean of our own development measured against Adobe's rendering and Adobe's BaselineExposure, relative to the anchor camera (Canon EOS R6).",
+  "description": "Camera baseline offsets in EV, keyed by normalized maker/model: the mean of our own development measured against Adobe's rendering and Adobe's BaselineExposure, relative to the fixed anchor referenceOffsetEv (the earlier entry of the Canon EOS R6, which is now measured like every model).",
   "maxShiftEv": 2.0,
   "offsets": {
     "CANONEOS1000D": -0.137,
@@ -68,7 +68,7 @@
     "CANONEOSM50MARKII": 0.671,
     "CANONEOSM6": -0.014,
     "CANONEOSM6MARKII": 0.214,
-    "CANONEOSR": -0.211,
+    "CANONEOSR": -0.213,
     "CANONEOSR10": -0.059,
     "CANONEOSR100": 0.505,
     "CANONEOSR3": 0.105,
@@ -76,7 +76,7 @@
     "CANONEOSR50": -0.067,
     "CANONEOSR50V": 0.026,
     "CANONEOSR5MARKII": -0.306,
-    "CANONEOSR6": -0.26,
+    "CANONEOSR6": 0.058,
     "CANONEOSR6MARKII": -0.052,
     "CANONEOSR6MARKIII": -0.076,
     "CANONEOSR7": -0.005,

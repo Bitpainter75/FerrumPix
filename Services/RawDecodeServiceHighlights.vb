@@ -30,15 +30,25 @@ Namespace Services
     ' getrennt, ein geschriebener Punkt wird nie als Nachbar gelesen.
     Partial Public NotInheritable Class RawDecodeService
 
-        ''' <summary>Lichter rekonstruieren, AB WERK AN, mit dem zweiten Verfahren
-        ''' (<see cref="HighlightReconstructionMethod"/>). Gemessen punktweise in der ausgefressenen
+        ''' <summary>Lichter rekonstruieren, AB WERK AUS seit dem 2026-10-27, mit dem zweiten Verfahren
+        ''' (<see cref="HighlightReconstructionMethod"/>), wenn eingeschaltet.
+        '''
+        ''' WARUM AUS: in farbigem Buehnenlicht macht sie den Uebergang vom gesaettigten Licht in die
+        ''' ausgefressene Flaeche hart. An einer R6 im roten Licht (WID_4447) hielt sie Gruen am Rand
+        ''' der Flaeche bei 13 bis 17, wo das Referenzprogramm schon 126 bis 161 zeigt, und sprang dann
+        ''' auf 150; ohne sie lag der Verlauf naeher an der Referenz (83 bis 149). Die aufgebauten Werte
+        ''' finden bei uns keinen Platz: eine Blende Kopfraum im 16-Bit-Speicher, danach ein festes
+        ''' Knie. Wieder einschalten, wenn die RAW-Stufe ueber Weiss in Gleitkomma rechnet
+        ''' (OFFENE_PUNKTE.md).
+        '''
+        ''' Gemessen punktweise in der ausgefressenen
         ''' Flaeche der 29 Bilder mit ausgefressenen Lichtern, bei Belichtung -1 und Lichter -100, wo
         ''' sichtbar wird, was ueber Weiss liegt: Farbabstand zur Referenz 10,36 ohne, 9,82 mit dem
         ''' ersten, 9,67 mit dem zweiten Verfahren; im Nullbild 3,58 auf 3,51. Die Flaechenmasse vom
         ''' 2026-10-22 (reines Weiss, L-Abfall) bewegten sich dagegen kaum: die Luecke dort liegt in
         ''' der Tonabbildung ueber Weiss. Die Messung legt den Schalter per Reflexion um
         ''' (Reglereichung, REGLER_LICHTER_REKONSTRUKTION).</summary>
-        Friend Shared HighlightReconstruction As Boolean = True
+        Friend Shared HighlightReconstruction As Boolean = False
 
         ''' <summary>Messschalter: mit <see cref="HighlightReconstruction"/> an zwar im Kameraraum
         ''' entwickeln, aber nichts rekonstruieren. Damit laesst sich pruefen, dass der Weg ueber den

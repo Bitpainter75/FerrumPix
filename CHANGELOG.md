@@ -5,6 +5,19 @@
 - **Canon EOS R8 Mark II colours:** its RAW files were developed as if shot in daylight, because
   the camera's white balance was not read. They now use the white balance set in the camera.
 
+- **Canon EOS R6 brightness:** with the brightness matched to the camera model, its RAW files
+  were developed brighter than other cameras. The R6 now gets its own measured value like every
+  other model, so unedited pictures start a little darker.
+
+- **Soft transitions in coloured stage light:** where strongly coloured light blew out skin or
+  clothing, the bright area had a hard edge against the coloured light around it and looked
+  washed out orange. RAW files are now developed with more room for strong colours, so the light
+  fades smoothly into the bright area.
+
+- **Converted DNG files no longer too bright:** a DNG made from another RAW file, for example
+  with the DNG Converter or Lightroom, often started brighter than the original RAW.
+  It now develops like the original.
+
 - **Smoother sliders:** dragging a slider in the editor stuttered again in 0.9.71. It runs
   smoothly again.
 

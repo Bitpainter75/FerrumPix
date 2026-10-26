@@ -33,9 +33,10 @@ Namespace Services
     ''' Grundbelichtung eingestellt wurden. Deshalb ist sie eine EINSTELLUNG und nicht das
     ''' Standardverhalten.
     '''
-    ''' VERANKERUNG: Alle Werte sind RELATIV zu verstehen. Angewendet wird die Differenz zur
-    ''' Referenzkamera, an der die Grundbelichtung gefittet wurde - die behaelt damit exakt ihr
-    ''' bisheriges Ergebnis.
+    ''' VERANKERUNG: Alle Werte sind RELATIV zu verstehen. Angewendet wird die Differenz zum Anker,
+    ''' einer FESTEN Zahl: dem frueheren Eintrag der EOS R6, an der die Grundbelichtung gefittet
+    ''' wurde. Die R6 selbst ist seitdem ein Modell wie jedes andere mit eigenem, gemessenem
+    ''' Eintrag. Eine neue Messung der R6 bewegt deshalb nur sie und keine der uebrigen Kameras.
     '''
     ''' WO DIE ZAHLEN STEHEN: in Resources/CameraBaselineTable.json, als eingebettete Ressource.
     ''' Diese Klasse liest sie EINMAL und faellt bei einem Lesefehler geschlossen auf leere
@@ -46,9 +47,10 @@ Namespace Services
         Private Sub New()
         End Sub
 
-        ''' <summary>Versatz der Kamera, an der GrundbelichtungEv gefittet wurde (Canon EOS R6).
-        ''' Nur diese eine Zahl verankert die Tabelle absolut - alles andere ist relativ. Die
-        ''' Ressource bringt sie mit; dieser Wert ist der Notbehelf, wenn sie nicht lesbar ist.</summary>
+        ''' <summary>Der Anker: der fruehere Eintrag der Kamera, an der BaseExposureEv gefittet wurde
+        ''' (Canon EOS R6). Er bleibt fest, auch wenn sich ihr eigener Eintrag mit einer Messung
+        ''' aendert. Nur diese eine Zahl verankert die Tabelle absolut - alles andere ist relativ.
+        ''' Die Ressource bringt sie mit; dieser Wert ist der Notbehelf, wenn sie nicht lesbar ist.</summary>
         Private Const DefaultReferenceOffsetEv As Double = -0.26
 
         ''' <summary>Aeusserste Grenze der Verschiebung, als Notbehelf; die Ressource bringt ihren
@@ -373,7 +375,7 @@ Namespace Services
             If k.Length = 0 Then Return standardEv
             Dim offset As Double
             If Not Resource.Offsets.TryGetValue(k, offset) Then Return standardEv
-            ' Relativ zur Referenzkamera: die behaelt exakt ihren bisherigen Wert.
+            ' Relativ zum festen Anker.
             Dim delta = offset - Resource.ReferenceOffsetEv
             If delta > Resource.MaxShiftEv Then delta = Resource.MaxShiftEv
             If delta < -Resource.MaxShiftEv Then delta = -Resource.MaxShiftEv

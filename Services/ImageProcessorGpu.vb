@@ -705,6 +705,7 @@ Namespace Services
             u("baseStep") = If(localBase IsNot Nothing, CSng(localBase.StepSize), 1.0F)
             u("useRawStage") = If(chain.RawStageTone IsNot Nothing, 1.0F, 0.0F)
             u("useRawShadow") = If(chain.RawStageTone IsNot Nothing AndAlso chain.RawStageShadowSaturation IsNot Nothing, 1.0F, 0.0F)
+            u("rawPro") = If(chain.RawStageTone IsNot Nothing AndAlso chain.RawStageInProPhoto, 1.0F, 0.0F)
             u("useNeg") = If(chain.NegR IsNot Nothing, 1.0F, 0.0F)
             u("negMono") = If(chain.NegMonochrome, 1.0F, 0.0F)
             SetMatrixRows(u, "wb", chain.WhiteBalanceMatrix, 3, 0)
@@ -1005,7 +1006,7 @@ uniform float useGuide;
 uniform float premulIn;
 uniform float useLocal; uniform float useLocalDetail; uniform float useLocalColor;
 uniform float2 baseSize; uniform float2 baseOrigin; uniform float baseStep;
-uniform float useRawStage; uniform float useRawShadow;
+uniform float useRawStage; uniform float useRawShadow; uniform float rawPro;
 uniform float useNeg; uniform float negMono;
 uniform float useWb; uniform float3 wb0; uniform float3 wb1; uniform float3 wb2;
 uniform float useCm; uniform float3 cm0; uniform float3 cm1; uniform float3 cm2; uniform float3 cmOff;
@@ -1325,7 +1326,26 @@ float4 preMixer(float3 c, float2 p) {
         float3 u0 = scaleShadow(float3(rr, gg, bb), 1.0);
         rr = u0.r; gg = u0.g; bb = u0.b;
     }
-    if (useRawStage > 0.5) {
+    if (useRawStage > 0.5 && rawPro > 0.5) {
+        // ApplyRawStageToneProPhoto: dasselbe in linearem ProPhoto, wie die RAW-Stufe mit WideToneStage.
+        float3 l = float3(tab(0.0, rr), tab(0.0, gg), tab(0.0, bb));
+        float3 q = max(float3(dot(toPro0, l), dot(toPro1, l), dot(toPro2, l)), float3(0.0));
+        float hi = max(q.r, max(q.g, q.b)); float lo = min(q.r, min(q.g, q.b));
+        // Jeder Tabellenzugriff fuer sich, nie tab im Argument von tab (siehe unten).
+        float hiG = tab(1.0, clamp(hi, 0.0, 1.0));
+        float hiT = tab(18.0, hiG);
+        float hiOut = tab(0.0, hiT);
+        float3 o = float3(hiOut);
+        if (hi - lo >= 0.0000001) {
+            float loG = tab(1.0, clamp(lo, 0.0, 1.0));
+            float loT = tab(18.0, loG);
+            float loOut = tab(0.0, loT);
+            float k = (hiOut - loOut) / (hi - lo);
+            o = float3(loOut) + (q - float3(lo)) * k;
+        }
+        float3 sl = clamp(float3(dot(fromPro0, o), dot(fromPro1, o), dot(fromPro2, o)), 0.0, 1.0);
+        rr = tab(1.0, sl.r); gg = tab(1.0, sl.g); bb = tab(1.0, sl.b);
+    } else if (useRawStage > 0.5) {
         // ApplyRawStageTone: die Tabelle auf hellstem und dunkelstem Kanal, der mittlere linear dazwischen.
         float hi = max(rr, max(gg, bb)); float lo = min(rr, min(gg, bb));
         float hiOut = tab(18.0, hi);

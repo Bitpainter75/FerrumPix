@@ -77,6 +77,9 @@ Namespace Services
             ''' nur zusammen mit RawStageTone: der Vorgriff hebt sie bei der alten Helligkeit auf und
             ''' daempft bei der neuen.
             Public RawStageShadowSaturation As Single()
+            ''' Rechnet die RAW-Stufe ihre Tonkurve in ProPhoto (RawDecodeService.WideToneStage)? Dann
+            ''' der Vorgriff ebenso, sonst lag er bei satten Farben bis zum Neuaufbau daneben.
+            Public RawStageInProPhoto As Boolean
 
             ''' <summary>Lichter und Tiefen allein als Tabelle, ausgewertet nicht am Bildpunkt, sondern
             ''' an der Basisschicht seiner Umgebung (LocalToneBase, gebaut im Durchlauf aus dem Bild
@@ -305,6 +308,7 @@ Namespace Services
             chain.RawStageTone = BuildRawStageToneTable(adj)
             If chain.RawStageTone IsNot Nothing Then
                 chain.RawStageShadowSaturation = adj.ShadowSaturationInSource
+                chain.RawStageInProPhoto = RawDecodeService.WideToneStage
                 EnsureGammaTables()
                 chain.IsIdentity = False
             End If
@@ -1968,12 +1972,17 @@ Namespace Services
         ''' sich aus dem Quellbild selbst ablesen.</summary>
         Private Shared Sub ApplyRawStageTone(ByRef rr As Single, ByRef gg As Single, ByRef bb As Single,
                                              table As Single(), toLinear As Single(), toGamma As Single(),
-                                             Optional shadow As Single() = Nothing)
+                                             Optional shadow As Single() = Nothing,
+                                             Optional inProPhoto As Boolean = False)
             ' Die Daempfung der Tiefen sitzt in der RAW-Stufe nach der Tonkurve und haengt an der
             ' Helligkeit (RawDecodeService.Convert16Rows). Vor dem Vorgriff wird sie aufgehoben,
             ' danach bei der neuen Helligkeit wieder angewandt, wie es der Neuaufbau tut.
             If shadow IsNot Nothing Then ScaleShadowSaturation(rr, gg, bb, shadow, toLinear, toGamma, True)
-            ApplyRawStageToneCore(rr, gg, bb, table, toLinear, toGamma)
+            If inProPhoto Then
+                ApplyRawStageToneProPhoto(rr, gg, bb, table, toLinear, toGamma)
+            Else
+                ApplyRawStageToneCore(rr, gg, bb, table, toLinear, toGamma)
+            End If
             If shadow IsNot Nothing Then ScaleShadowSaturation(rr, gg, bb, shadow, toLinear, toGamma, False)
         End Sub
 
@@ -2013,6 +2022,41 @@ Namespace Services
             rr = SampleTable(toGamma, Clamp(loOutLin + (SampleTable(toLinear, rr) - loLin) * scale, 0.0F, 1.0F))
             gg = SampleTable(toGamma, Clamp(loOutLin + (SampleTable(toLinear, gg) - loLin) * scale, 0.0F, 1.0F))
             bb = SampleTable(toGamma, Clamp(loOutLin + (SampleTable(toLinear, bb) - loLin) * scale, 0.0F, 1.0F))
+        End Sub
+
+        Private Shared ReadOnly RawToProPhoto As Single() = PointColorMath.SrgbToProPhoto.Select(Function(v) CSng(v)).ToArray()
+        Private Shared ReadOnly RawFromProPhoto As Single() = PointColorMath.ProPhotoToSrgb.Select(Function(v) CSng(v)).ToArray()
+
+        ''' <summary>Wie <see cref="ApplyRawStageToneCore"/>, aber in linearem ProPhoto, wie die
+        ''' RAW-Stufe mit <c>RawDecodeService.WideToneStage</c> rechnet: hellster und dunkelster
+        ''' Kanal dort durch die Tabelle, der mittlere im Verhaeltnis seiner Lage, dann zurueck nach
+        ''' sRGB. Die Tabelle haengt nur am linearen Wert, sie gilt in beiden Raeumen. Was das
+        ''' Quellbild schon ausserhalb von sRGB abgeschnitten hat, kommt nicht zurueck; dafuer ist der
+        ''' Neuaufbau da.</summary>
+        Private Shared Sub ApplyRawStageToneProPhoto(ByRef rr As Single, ByRef gg As Single, ByRef bb As Single,
+                                                     table As Single(), toLinear As Single(), toGamma As Single())
+            Dim m = RawToProPhoto
+            Dim lr = SampleTable(toLinear, rr), lg = SampleTable(toLinear, gg), lb = SampleTable(toLinear, bb)
+            Dim pr = Math.Max(0.0F, m(0) * lr + m(1) * lg + m(2) * lb)
+            Dim pg = Math.Max(0.0F, m(3) * lr + m(4) * lg + m(5) * lb)
+            Dim pb = Math.Max(0.0F, m(6) * lr + m(7) * lg + m(8) * lb)
+            Dim hi = Math.Max(pr, Math.Max(pg, pb))
+            Dim lo = Math.Min(pr, Math.Min(pg, pb))
+            Dim hiOut = SampleTable(toLinear, SampleTable(table, SampleTable(toGamma, Clamp(hi, 0.0F, 1.0F))))
+            Dim qr As Single, qg As Single, qb As Single
+            If hi - lo < 0.0000001F Then
+                qr = hiOut : qg = hiOut : qb = hiOut
+            Else
+                Dim loOut = SampleTable(toLinear, SampleTable(table, SampleTable(toGamma, Clamp(lo, 0.0F, 1.0F))))
+                Dim k = (hiOut - loOut) / (hi - lo)
+                qr = loOut + (pr - lo) * k
+                qg = loOut + (pg - lo) * k
+                qb = loOut + (pb - lo) * k
+            End If
+            Dim s = RawFromProPhoto
+            rr = SampleTable(toGamma, Clamp(s(0) * qr + s(1) * qg + s(2) * qb, 0.0F, 1.0F))
+            gg = SampleTable(toGamma, Clamp(s(3) * qr + s(4) * qg + s(5) * qb, 0.0F, 1.0F))
+            bb = SampleTable(toGamma, Clamp(s(6) * qr + s(7) * qg + s(8) * qb, 0.0F, 1.0F))
         End Sub
 
         ''' <summary>Die Belichtung wie in der RAW-Stufe auf einen Tonwert des entwickelten Bildes
@@ -2858,7 +2902,7 @@ Namespace Services
         ''' den Tonzonen einfuegt, traegt sie hier nach.</summary>
         Private Shared Sub ApplyStagesBeforeToneZones(ByRef rr As Single, ByRef gg As Single, ByRef bb As Single,
                                                       chain As PointOpChain, toLinear As Single(), toGamma As Single())
-            If chain.RawStageTone IsNot Nothing Then ApplyRawStageTone(rr, gg, bb, chain.RawStageTone, toLinear, toGamma, chain.RawStageShadowSaturation)
+            If chain.RawStageTone IsNot Nothing Then ApplyRawStageTone(rr, gg, bb, chain.RawStageTone, toLinear, toGamma, chain.RawStageShadowSaturation, chain.RawStageInProPhoto)
             If chain.NegR IsNot Nothing Then
                 rr = SampleTable(chain.NegR, rr)
                 gg = SampleTable(chain.NegG, gg)
@@ -3012,7 +3056,7 @@ Namespace Services
         Private NotInheritable Class PreMixerStages
             Private ReadOnly m, wbm, toLinear, toGamma, sr, sg, sb, toneBefore, toneZones, rawStageTone,
                              negR, negG, negB, localZones, localDetail, localColor, rawShadow, toneChroma As Single()
-            Private ReadOnly negMono, curvesMelissa As Boolean
+            Private ReadOnly negMono, curvesMelissa, rawInProPhoto As Boolean
             Private ReadOnly localBase As LocalToneBase
 
             Public Sub New(chain As PointOpChain, base As LocalToneBase, linearTable As Single(), gammaTable As Single())
@@ -3028,6 +3072,7 @@ Namespace Services
                 toneChroma = chain.ToneChroma
                 rawStageTone = chain.RawStageTone
                 rawShadow = chain.RawStageShadowSaturation
+                rawInProPhoto = chain.RawStageInProPhoto
                 negR = chain.NegR
                 negG = chain.NegG
                 negB = chain.NegB
@@ -3043,7 +3088,7 @@ Namespace Services
             ''' Tonstufe fuer deren Restore (0, wenn er nicht greift).</summary>
             Public Function Apply(ByRef rr As Single, ByRef gg As Single, ByRef bb As Single, x As Integer, y As Integer) As Double
                 ' --- 0. Vorgriff auf den Neuaufbau aus der RAW-Stufe (vor allem anderen) ---
-                If rawStageTone IsNot Nothing Then ApplyRawStageTone(rr, gg, bb, rawStageTone, toLinear, toGamma, rawShadow)
+                If rawStageTone IsNot Nothing Then ApplyRawStageTone(rr, gg, bb, rawStageTone, toLinear, toGamma, rawShadow, rawInProPhoto)
 
                 ' --- 1. Filmnegativ (vor allen Farbanpassungen) ---
                 If negR IsNot Nothing Then

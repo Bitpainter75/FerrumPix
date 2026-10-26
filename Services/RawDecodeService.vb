@@ -2057,7 +2057,13 @@ Namespace Services
 
         ''' <summary>Ab diesem Abstand zur Unbuntachse wird gestaucht; darunter bleibt jede Farbe,
         ''' wie sie ist. Abstand heisst (max - Kanal) / max, also 1 bei einem Kanal auf null.</summary>
-        Private Const GamutThreshold As Single = 0.8F
+        ''' Messschalter (GamutThresholdValue): ab Werk 0,8 wie in RapidRAW.
+        Friend Shared GamutThresholdValue As Double = 0.8
+        Private Shared ReadOnly Property GamutThreshold As Single
+            Get
+                Return CSng(GamutThresholdValue)
+            End Get
+        End Property
         Private Const GamutPower As Single = 1.2F
 
         ''' <summary>Je Ausgabekanal die Stauchung, oder Nothing, wenn kein Kanal unter null fallen
@@ -2247,6 +2253,8 @@ Namespace Services
         Private Shared _cachedRawWidth As Integer
         Private Shared _cachedRawHeight As Integer
         Private Shared _cachedRawNormalization As Double = 1.0
+        ''' Die Matrix der Tonstufe in ProPhoto zu den Daten im Zwischenspeicher, oder Nothing (alter Weg).
+        Private Shared _cachedRawToneMatrix As Single()
         Private Shared _cachedRawPath As String = ""
         ''' <summary>Wie oft ein Decode die linearen Daten aus dem Speicher nahm, statt LibRaw
         ''' laufen zu lassen. Fuer den Pruefstand: an der Zeit allein laesst sich ein Treffer unter
@@ -2270,7 +2278,43 @@ Namespace Services
         ''' <summary>Die Schalter, die VOR dem Sichern der linearen Daten auf die Farbe wirken, als
         ''' eine Zahl fuer den Schluessel des Zwischenspeichers.</summary>
         Private Shared Function ColorPathState() As Integer
-            Return If(IlluminantMatricesEnabled, 1, 0) Or If(GamutCompressionEnabled, 2, 0)
+            Return If(IlluminantMatricesEnabled, 1, 0) Or If(GamutCompressionEnabled, 2, 0) Or If(WideToneStage, 4, 0)
+        End Function
+
+        ''' <summary>Die Tonstufe der RAW in Gleitkomma und in ProPhoto, AB WERK AN seit dem
+        ''' 2026-10-27. Der Zwischenspeicher haelt die Daten im Kameraraum; erst beim Umsetzen
+        ''' (<see cref="Convert16Rows"/>) geht jeder Bildpunkt in Gleitkomma durch die Kameramatrix
+        ''' nach ProPhoto, durch Rampe, Schulter und ACR3-Kurve nach der RGBTone-Regel, und erst
+        ''' danach nach sRGB, wo zum ersten Mal begrenzt wird - wie im DNG-SDK.
+        '''
+        ''' WARUM: vorher wandte der Decode die Matrix in 16 Bit ohne Vorzeichen an. Satte Farben
+        ''' ausserhalb von sRGB verloren dort alles unter null und ueber dem Kopfraum, BEVOR die
+        ''' Tonkurve sie sah. In rotem Buehnenlicht (R6, WID_4447) blieben Gruen und Blau deshalb
+        ''' haengen, waehrend das Licht heller wurde, und sprangen an der Klemmgrenze: eine harte
+        ''' Kante zwischen Rot und einer fahl orangen Flaeche, wo das Referenzprogramm weich nach
+        ''' Weiss auslaeuft. Unbunte Bildpunkte rechnen in beiden Raeumen gleich.
+        '''
+        ''' Aus: der alte Weg, Matrix vor dem Sichern (Messschalter, Teil von
+        ''' <see cref="ColorPathState"/>).</summary>
+        Friend Shared WideToneStage As Boolean = True
+
+        ''' <summary>Die Matrix vom Kameraraum (nach Weissabgleich) nach linearem ProPhoto, aus der nach
+        ''' linearem sRGB; ohne sie (LibRaw lieferte schon sRGB) die Umrechnung sRGB nach ProPhoto.</summary>
+        Private Shared Function ToneStageMatrix(cameraToSrgb As Single()) As Single()
+            Dim p = PointColorMath.SrgbToProPhoto
+            Dim result(8) As Single
+            For row = 0 To 2
+                For column = 0 To 2
+                    If cameraToSrgb Is Nothing Then
+                        result(row * 3 + column) = CSng(p(row * 3 + column))
+                    Else
+                        result(row * 3 + column) = CSng(p(row * 3) * cameraToSrgb(column) +
+                                                        p(row * 3 + 1) * cameraToSrgb(3 + column) +
+                                                        p(row * 3 + 2) * cameraToSrgb(6 + column))
+                    End If
+                Next
+            Next
+            Return result
         End Function
 
         ''' <summary>Liegen die linearen Daten dieser Datei schon im 16-Bit-Zwischenspeicher, mit
@@ -2354,7 +2398,8 @@ Namespace Services
                                                lens As LensDataService.Korrektur,
                                                baseEv As Double, normalization As Double,
                                                knee As Double, sliderEv As Double,
-                                               shadowSaturation As Single()) As SKBitmap
+                                               shadowSaturation As Single(),
+                                               toneMatrix As Single()) As SKBitmap
             Dim bitmap = New SKBitmap(New SKImageInfo(width, height, SKColorType.Bgra8888, SKAlphaType.Opaque))
             Try
                 ' ZEILENWEISE direkt in die Bitmap. Ein 8-Bit-Vollbildpuffer waere bei 45
@@ -2376,9 +2421,10 @@ Namespace Services
                 Dim ramp = ToneRampFor(baseEv, normalization, sliderEv)
                 Convert16Rows(data, width, height,
                               Sub(y, row) Marshal.Copy(row, 0, IntPtr.Add(targetPtr, y * targetStride), rowLength),
-                              lens, ramp.ExposureEv, ramp.BlackLevel, knee, shadowSaturation)
+                              lens, ramp.ExposureEv, ramp.BlackLevel, knee, shadowSaturation, toneMatrix)
                 Return bitmap
-            Catch
+            Catch ex As Exception
+                DiagnosticLogService.LogException("RawDecodeService.BuildFrom16Bit", ex)
                 bitmap.Dispose()
                 Return Nothing
             End Try
@@ -2393,6 +2439,7 @@ Namespace Services
             Dim bytes As Byte() = Nothing
             Dim width = 0, height = 0
             Dim normalization = 1.0
+            Dim toneMatrix As Single() = Nothing
             SyncLock _cacheLock
                 If _cachedRawBytes Is Nothing Then Return Nothing
                 If _cachedRawHalf <> halfSize Then Return Nothing
@@ -2407,12 +2454,13 @@ Namespace Services
                 width = _cachedRawWidth
                 height = _cachedRawHeight
                 normalization = _cachedRawNormalization
+                toneMatrix = _cachedRawToneMatrix
             End SyncLock
 
             Dim pin = GCHandle.Alloc(bytes, GCHandleType.Pinned)
             Try
                 Return BuildFrom16Bit(pin.AddrOfPinnedObject(), width, height, lens, baseEv, normalization, knee, sliderEv,
-                                      ShadowSaturationForFile(path))
+                                      ShadowSaturationForFile(path), toneMatrix)
             Finally
                 pin.Free()
             End Try
@@ -3265,7 +3313,9 @@ Namespace Services
                     DiagnosticLogService.LogAlways("RawDecodeService.CameraMatrix",
                         $"zwei Matrizen: {illuminant.Kelvin:F0} K, Anteil der warmen {illuminant.Weight:F3}")
                 End If
-                If cameraMatrix Is Nothing AndAlso HighlightReconstruction AndAlso linearMoeglich AndAlso
+                ' LibRaws eigene Matrix ebenfalls selbst anwenden, wenn die Rekonstruktion oder die
+                ' Tonstufe in ProPhoto die Daten im Kameraraum braucht.
+                If cameraMatrix Is Nothing AndAlso (HighlightReconstruction OrElse WideToneStage) AndAlso linearMoeglich AndAlso
                    _getRgbCam IsNot Nothing Then
                     Dim libRawMatrix = ReadRgbCamMatrix(handle)
                     If IsUsableCameraMatrix(libRawMatrix) Then
@@ -3350,7 +3400,10 @@ Namespace Services
                             $"file={IO.Path.GetFileName(path)}; rebuilt={rebuilt}; " &
                             $"clip={measured(0):F0}/{measured(1):F0}/{measured(2):F0} (gerechnet {clipLevels(0):F0}/{clipLevels(1):F0}/{clipLevels(2):F0})")
                     End If
-                    If cameraMatrix IsNot Nothing Then
+                    ' In der Tonstufe in ProPhoto bleiben die Daten im Kameraraum, die Matrix wirkt erst
+                    ' beim Umsetzen (WideToneStage); sonst wie bisher hier, in 16 Bit.
+                    Dim toneMatrix As Single() = If(WideToneStage AndAlso colors = 3, ToneStageMatrix(cameraMatrix), Nothing)
+                    If cameraMatrix IsNot Nothing AndAlso toneMatrix Is Nothing Then
                         ApplyCameraMatrix(pixels, width, height, cameraMatrix)
                         If ownMatrix IsNot Nothing Then
                             DiagnosticLogService.LogAlways("RawDecodeService.CameraMatrix", "eigene Farbmatrix angewandt (LibRaw kennt die Kamera nicht)")
@@ -3369,6 +3422,7 @@ Namespace Services
                                 _cachedRawWidth = width
                                 _cachedRawHeight = height
                                 _cachedRawNormalization = normalization
+                                _cachedRawToneMatrix = toneMatrix
                                 _cachedRawPath = path
                                 _cachedRawWriteTimeUtc = writeTime
                                 _cachedRawDemosaic = demosaic
@@ -3396,7 +3450,7 @@ Namespace Services
                         Return Nothing
                     End If
                     Return BuildFrom16Bit(pixels, width, height, lens, baseEv, normalization, wantedKnee, sliderEv,
-                                          ShadowSaturationForFile(path))
+                                          ShadowSaturationForFile(path), toneMatrix)
                 End If
                 ' Ohne lineare Daten gibt es nichts vorzuwaermen.
                 If warmOnly Then Return Nothing
@@ -3688,6 +3742,37 @@ Namespace Services
             Return t
         End Function
 
+        ''' <summary>Was die Tonstufe fuer Werte UEBER dem Bereich der Tontabelle braucht: dieselbe Rampe
+        ''' und Schulter wie <see cref="BuildToneTable"/>, nur einzeln gerechnet.</summary>
+        Private Structure ToneBeyond
+            Public Black As Double
+            Public Slope As Double
+            Public Knee As Double
+        End Structure
+
+        Private Shared Function ToneBeyondWhite(ev As Double, blackLevel As Double, knee As Double) As ToneBeyond
+            Return New ToneBeyond With {.Black = blackLevel, .Slope = 1.0 / (1.0 / (2.0 ^ ev) - blackLevel), .Knee = knee}
+        End Function
+
+        ''' <summary>Die Tonstufe an einem linearen Wert in Gleitkomma (1 = Vollaussteuerung der
+        ''' 16-Bit-Daten), Ergebnis linear 0..1. Bis 1 aus der Tontabelle, zwischen ihren Stufen
+        ''' linear; darueber, wo nur die Tonstufe in ProPhoto hinkommt, Rampe, Schulter und ACR3-Kurve
+        ''' wie beim Bau der Tabelle.</summary>
+        <Runtime.CompilerServices.MethodImpl(Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)>
+        Private Shared Function ToneAt(table As Single(), ByRef beyond As ToneBeyond, x As Single) As Single
+            If x <= 0.0F Then Return table(0)
+            If x < 1.0F Then
+                Dim pos = x * 65535.0F
+                ' Abschneiden statt Runden (Fix), und knapp unter 1 rundet Single die Stelle auf
+                ' 65535 auf; der Nachbar fehlt dort.
+                Dim i = Math.Min(65534, CInt(Fix(pos)))
+                Dim f = pos - i
+                Return table(i) + (table(i + 1) - table(i)) * f
+            End If
+            Dim v = ShoulderAt((x - beyond.Black) * beyond.Slope, beyond.Knee)
+            Return CSng(Math.Max(0.0, Math.Min(1.0, Acr3CurveAt(v))))
+        End Function
+
         ''' <summary>Die ACR3-Kurve an einer Stelle der Rampe (0..1), linear interpoliert zwischen
         ''' den 129 Stuetzstellen; das Ergebnis ist linear wie die Eingabe. Dieselbe Rechnung wie in
         ''' der Tontabelle, damit die Automatik die Wirkung der Belichtung in der RAW-Stufe mit genau
@@ -3766,9 +3851,28 @@ Namespace Services
                                          Optional exposureEv As Double = BaseExposureEv,
                                          Optional blackLevel As Double = BlackSubtraction,
                                          Optional knee As Double = 1.0,
-                                         Optional shadowSaturation As Single() = Nothing)
+                                         Optional shadowSaturation As Single() = Nothing,
+                                         Optional toneMatrix As Single() = Nothing)
             Dim thresholds = If(DitherEnabled, DitherThresholds, Enumerable.Repeat(32767, 64).ToArray())
             Dim ton = ToneTableFor(exposureEv, blackLevel, knee)
+            ' Tonstufe in ProPhoto (WideToneStage): die Matrix nach ProPhoto, schon durch 65535 geteilt,
+            ' und der Rueckweg nach linearem sRGB.
+            Dim wide = toneMatrix IsNot Nothing
+            Dim pm(8) As Single, sm(8) As Single
+            ' Die Tontabelle als Gleitkomma 0..1, einmal je Umsetzung; der Schleife spart das
+            ' die Umrechnung je Bildpunkt.
+            Dim tonF As Single() = Nothing
+            If wide Then
+                For i = 0 To 8
+                    pm(i) = toneMatrix(i) / 65535.0F
+                    sm(i) = CSng(PointColorMath.ProPhotoToSrgb(i))
+                Next
+                tonF = New Single(65535) {}
+                For i = 0 To 65535
+                    tonF(i) = ton(i) / 65535.0F
+                Next
+            End If
+            Dim beyond = ToneBeyondWhite(exposureEv, blackLevel, knee)
             Dim shadowSteps = If(shadowSaturation Is Nothing, 0, shadowSaturation.Length - 1)
             Dim shadowScale = shadowSteps / 65535.0F
             Dim gamma = GammaTable
@@ -3855,6 +3959,7 @@ Namespace Services
                             ' UShort-Marshalling ueber Marshal.Copy).
                             Dim g = rowShorts(x * 3 + 1) And &HFFFF
                             Dim r As Integer, b As Integer
+                            Dim vignetteGain = 1.0F
                             If korrigiert Then
                                 Dim dxPix = x - cx
                                 ' EIN Radius fuer beide Korrekturen - die Wurzel ist der teuerste Anteil
@@ -3889,9 +3994,14 @@ Namespace Services
                                     ' Sehr kleine Werte wuerden das Rauschen der Bildecke ins Unermessliche
                                     ' heben; drei Blendenstufen sind die Grenze des Sinnvollen.
                                     If abfall < 0.125 Then abfall = 0.125
-                                    r = Math.Min(65535, CInt(r / abfall))
-                                    g = Math.Min(65535, CInt(g / abfall))
-                                    b = Math.Min(65535, CInt(b / abfall))
+                                    If wide Then
+                                        ' Ohne Deckel: die Tonstufe in ProPhoto nimmt Werte ueber 1.
+                                        vignetteGain = CSng(1.0 / abfall)
+                                    Else
+                                        r = Math.Min(65535, CInt(r / abfall))
+                                        g = Math.Min(65535, CInt(g / abfall))
+                                        b = Math.Min(65535, CInt(b / abfall))
+                                    End If
                                 End If
                             Else
                                 r = rowShorts(x * 3) And &HFFFF
@@ -3914,19 +4024,48 @@ Namespace Services
                             ' Punktoperationskette): kanalweise verschiedene Schwellen faerben neutrale
                             ' Flaechen ein. (v*255 + T) \ 65535 liegt fuer T < 65535 immer in 0..255,
                             ' CByte kann nicht ueberlaufen.
-                            Dim high = Math.Max(r, Math.Max(g, b))
-                            Dim tief = Math.Min(r, Math.Min(g, b))
-                            Dim tHoch = ton(high)
-                            Dim tTief = ton(tief)
                             Dim rr As Integer, gg As Integer, bb As Integer
-                            If high = tief Then
-                                rr = tHoch : gg = tHoch : bb = tHoch
+                            If wide Then
+                                ' Kameraraum nach linearem ProPhoto, in Gleitkomma. Unter null wird
+                                ' auf null gesetzt wie im DNG-SDK; ueber 1 bleibt, was es ist.
+                                Dim fr = r * vignetteGain, fg = g * vignetteGain, fb = b * vignetteGain
+                                Dim pr = Math.Max(0.0F, pm(0) * fr + pm(1) * fg + pm(2) * fb)
+                                Dim pg = Math.Max(0.0F, pm(3) * fr + pm(4) * fg + pm(5) * fb)
+                                Dim pb = Math.Max(0.0F, pm(6) * fr + pm(7) * fg + pm(8) * fb)
+                                ' RGBTone: die Kurve auf dem hellsten und dem dunkelsten Kanal, der
+                                ' mittlere zwischen beiden, im Verhaeltnis seiner Lage.
+                                Dim hi = Math.Max(pr, Math.Max(pg, pb))
+                                Dim lo = Math.Min(pr, Math.Min(pg, pb))
+                                Dim th = ToneAt(tonF, beyond, hi)
+                                Dim tl = ToneAt(tonF, beyond, lo)
+                                Dim qr As Single, qg As Single, qb As Single
+                                If hi - lo < 0.0000001F Then
+                                    qr = th : qg = th : qb = th
+                                Else
+                                    Dim k = (th - tl) / (hi - lo)
+                                    qr = tl + (pr - lo) * k
+                                    qg = tl + (pg - lo) * k
+                                    qb = tl + (pb - lo) * k
+                                End If
+                                ' Erst jetzt nach sRGB, und erst hier wird begrenzt.
+                                ' CInt rundet selbst; ein Zuschlag von 0,5 hobe die 1 auf 65536.
+                                rr = CInt(Math.Max(0.0F, Math.Min(1.0F, sm(0) * qr + sm(1) * qg + sm(2) * qb)) * 65535.0F)
+                                gg = CInt(Math.Max(0.0F, Math.Min(1.0F, sm(3) * qr + sm(4) * qg + sm(5) * qb)) * 65535.0F)
+                                bb = CInt(Math.Max(0.0F, Math.Min(1.0F, sm(6) * qr + sm(7) * qg + sm(8) * qb)) * 65535.0F)
                             Else
-                                Dim span = high - tief
-                                Dim delta = tHoch - tTief
-                                rr = tTief + CInt(CLng(delta) * (r - tief) \ span)
-                                gg = tTief + CInt(CLng(delta) * (g - tief) \ span)
-                                bb = tTief + CInt(CLng(delta) * (b - tief) \ span)
+                                Dim high = Math.Max(r, Math.Max(g, b))
+                                Dim tief = Math.Min(r, Math.Min(g, b))
+                                Dim tHoch = ton(high)
+                                Dim tTief = ton(tief)
+                                If high = tief Then
+                                    rr = tHoch : gg = tHoch : bb = tHoch
+                                Else
+                                    Dim span = high - tief
+                                    Dim delta = tHoch - tTief
+                                    rr = tTief + CInt(CLng(delta) * (r - tief) \ span)
+                                    gg = tTief + CInt(CLng(delta) * (g - tief) \ span)
+                                    bb = tTief + CInt(CLng(delta) * (b - tief) \ span)
+                                End If
                             End If
                             If shadowSaturation IsNot Nothing Then
                                 ' Um die Helligkeit des Bildpunkts, linear: die Helligkeit bleibt,
@@ -4268,6 +4407,10 @@ Namespace Services
         ''' <summary>DNG-Feld BaselineExposure (0xC62A) im Verzeichnis IFD0.</summary>
         Private Const BaselineExposureTag As Integer = &HC62A
 
+        ''' <summary>DNG-Feld OriginalRawFileName (0xC68B) im Verzeichnis IFD0: die Datei ist aus einer
+        ''' anderen RAW umgewandelt (DNG-Konverter, Lightroom, MLVFS).</summary>
+        Private Const OriginalRawFileNameTag As Integer = &HC68B
+
         ''' <summary>Aeusserste Grenze, in Blendenstufen: so weit reicht der Regler.</summary>
         Private Const BaselineExposureLimit As Double = 5.0
 
@@ -4278,7 +4421,8 @@ Namespace Services
         ''' nichts sagt - und das ist der Normalfall.
         '''
         ''' <para>Drei Quellen. Bei einer DNG das Feld BaselineExposure, eingetragen vom Schreiber der
-        ''' Datei: der Kamera, dem Umwandler oder einer Firmware wie CHDK. Der Bestandslauf über 462
+        ''' Datei: der Kamera oder einer Firmware wie CHDK; eine aus einer anderen RAW umgewandelte
+        ''' DNG (OriginalRawFileName) sagt nichts, sie entwickelt wie ihr Original. Der Bestandslauf über 462
         ''' RAW-Dateien fand 21 DNGs, davon 17 mit dem Feld und 16 mit einem Wert ungleich null:
         ''' alle negativ zwischen -0,2 und -1,0 Stufen. Bei einer Fujifilm-RAF der DR-Modus der
         ''' Kamera (siehe <see cref="FujiDynamicRangePercent"/>), bei einer Canon-CR2 oder -CR3 die
@@ -4342,6 +4486,17 @@ Namespace Services
                     Return 0.0
                 End If
                 Dim ifd0 = verzeichnisse.OfType(Of MetadataExtractor.Formats.Exif.ExifIfd0Directory)().FirstOrDefault()
+                ' EINE UMGEWANDELTE DNG entwickelt wie ihr Original. Der Umwandler schreibt seinen
+                ' Wert fuer das Kameramodell hinein, und genau der steckt schon im Eintrag der
+                ' Kameratabelle; die Original-RAW bekommt keinen Startwert. Mit ihm kam eine aus
+                ' einer ARW umgewandelte DNG der A7 IV um 0,35 Stufen heller heraus als die ARW
+                ' selbst und als das Referenzprogramm. Kamera-eigene DNGs tragen das Feld nicht.
+                If ifd0 IsNot Nothing AndAlso ifd0.ContainsTag(OriginalRawFileNameTag) Then
+                    SyncLock BaselineExposuresLock
+                        BaselineExposures(path) = 0.0
+                    End SyncLock
+                    Return 0.0
+                End If
                 Dim gelesen As Single
                 If ifd0 IsNot Nothing AndAlso
                    MetadataExtractor.DirectoryExtensions.TryGetSingle(ifd0, BaselineExposureTag, gelesen) AndAlso
