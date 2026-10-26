@@ -1440,6 +1440,12 @@
     "66|3778": 656
   },
   "canonColorDataLayoutsDescription": "Where Canon's ColorData (tag 0x4001; in CR2 in the maker notes, in CR3 in the CTMD track) holds the levels, keyed by version|length: the word of the first of four per-channel black levels; NormalWhiteLevel and SpecularWhiteLevel follow, the latter five words after the first black word. Used for every Canon without its own entry in levelOverrides, only for raw data with a colour filter array (not sRAW/mRAW). LibRaw 0.22.2 uses a higher white level for almost all of these (mostly 16383); Canon's SpecularWhiteLevel is what Adobe's DNG carries for most of them. Found by matching Adobe's and LibRaw's levels across 96 files of 40 models on 2026-09-27.",
+  "canonColorDataWhiteBalance": {
+    "48|3778": 105,
+    "64|4528": 105,
+    "67|3447": 105
+  },
+  "canonColorDataWhiteBalanceDescription": "Where Canon's ColorData holds the as-shot white balance (WB_RGGBLevelsAsShot: red, green, green, blue levels), keyed by version|length like canonColorDataLayouts. Used only when LibRaw reports no camera white balance, as for the EOS R8 Mark II with LibRaw 0.22.2. Found on 2026-10-26: at word 105 the levels match Adobe's AsShotNeutral to 0.002 in all 29 files of the EOS R5 Mark II (version 64), R6 Mark II and R8 (48) and R8 Mark II (67).",
   "colorCalibrationDefault": {
     "redHue": -4,
     "redSaturation": 11,

@@ -74,6 +74,9 @@ Namespace Services
             ''' Wo Canons ColorData ihre Pegel hat, je Fassung und Laenge ("66|3778"): Wort des
             ''' ersten Schwarzwerts; SpecularWhiteLevel steht fuenf Worte dahinter.
             Public ReadOnly CanonColorDataLayouts As New Dictionary(Of String, Integer)(StringComparer.Ordinal)
+            ''' Wo Canons ColorData den Aufnahme-Weissabgleich hat, je Fassung und Laenge: Wort des
+            ''' ersten von vier Pegeln R, G, G, B (WB_RGGBLevelsAsShot).
+            Public ReadOnly CanonColorDataWhiteBalance As New Dictionary(Of String, Integer)(StringComparer.Ordinal)
             ''' Generation des Referenzprofils je Modell, nur wo sie vom Standard abweicht.
             Public ReadOnly ProfileGenerations As New Dictionary(Of String, Integer)(StringComparer.Ordinal)
             Public DefaultProfileGeneration As Integer = 1
@@ -116,6 +119,7 @@ Namespace Services
             Dim levels As New Dictionary(Of String, (Black As Integer, Range As Integer, White As Integer))(StringComparer.OrdinalIgnoreCase)
             Dim levelColorData As New Dictionary(Of String, (Version As Integer, BlackWord As Integer, WhiteWord As Integer))(StringComparer.OrdinalIgnoreCase)
             Dim canonLayouts As New Dictionary(Of String, Integer)(StringComparer.Ordinal)
+            Dim canonWhiteBalance As New Dictionary(Of String, Integer)(StringComparer.Ordinal)
             Dim defaultCalibration As ColorCalibration = Nothing
             Dim generations As New Dictionary(Of String, Integer)(StringComparer.Ordinal)
             Dim defaultGeneration = 1
@@ -186,6 +190,14 @@ Namespace Services
                                 canonLayouts(entry.Name) = entry.Value.GetInt32()
                             Next
                         End If
+                        ' Ebenso der Aufnahme-Weissabgleich, fuer Canons, deren Weissabgleich LibRaw
+                        ' nicht kennt (RawDecodeService.AsShotMultipliers).
+                        Dim whiteBalanceEntries As JsonElement
+                        If root.TryGetProperty("canonColorDataWhiteBalance", whiteBalanceEntries) Then
+                            For Each entry In whiteBalanceEntries.EnumerateObject()
+                                canonWhiteBalance(entry.Name) = entry.Value.GetInt32()
+                            Next
+                        End If
                         ' Die Generation des Referenzprofils und die Daempfung der Tiefen, die nur an
                         ' einer Generation gilt (siehe ShadowSaturationFor).
                         Dim generationEntries, generationDefault, shadowEntry As JsonElement
@@ -215,6 +227,7 @@ Namespace Services
                 levels.Clear()
                 levelColorData.Clear()
                 canonLayouts.Clear()
+                canonWhiteBalance.Clear()
                 generations.Clear()
                 defaultGeneration = 1
                 shadowSaturation = Nothing
@@ -229,6 +242,9 @@ Namespace Services
             Next
             For Each pair In canonLayouts
                 result.CanonColorDataLayouts(pair.Key) = pair.Value
+            Next
+            For Each pair In canonWhiteBalance
+                result.CanonColorDataWhiteBalance(pair.Key) = pair.Value
             Next
             For Each pair In generations
                 result.ProfileGenerations(pair.Key) = pair.Value
@@ -322,6 +338,15 @@ Namespace Services
         Friend Shared ReadOnly Property CanonColorDataLayouts As Dictionary(Of String, Integer)
             Get
                 Return Resource.CanonColorDataLayouts
+            End Get
+        End Property
+
+        ''' <summary>Wo Canons ColorData den Aufnahme-Weissabgleich hat, je Fassung und Laenge: Wort
+        ''' des Rotpegels, dahinter G, G, B. Gilt nur, wo LibRaw keinen Weissabgleich liest; siehe
+        ''' RawDecodeService.AsShotMultipliers.</summary>
+        Friend Shared ReadOnly Property CanonColorDataWhiteBalance As Dictionary(Of String, Integer)
+            Get
+                Return Resource.CanonColorDataWhiteBalance
             End Get
         End Property
 

@@ -1,3 +1,10 @@
+## 0.9.72
+
+### Fixes
+
+- **Canon EOS R8 Mark II colours:** its RAW files were developed as if shot in daylight, because
+  the camera's white balance was not read. They now use the white balance set in the camera.
+
 ## 0.9.71
 
 ### What's new

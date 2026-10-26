@@ -51,6 +51,17 @@ Namespace Services
             Return (black, white)
         End Function
 
+        ''' <summary>Der Aufnahme-Weissabgleich aus bereits gelesenen Worten: vier Pegel R, G, G, B ab
+        ''' <paramref name="word"/>, als Multiplikatoren in LibRaws Reihenfolge R, G, B, G2. Nothing,
+        ''' wenn die Worte nicht passen: ein Pegel null oder unter 100, oder die beiden Gruen mehr als
+        ''' zwei auseinander (dann steht dort kein Weissabgleich).</summary>
+        Public Shared Function WhiteBalanceFromWords(words As UShort(), word As Integer) As Single()
+            If words Is Nothing OrElse word < 1 OrElse word + 3 >= words.Length Then Return Nothing
+            Dim r = CInt(words(word)), g1 = CInt(words(word + 1)), g2 = CInt(words(word + 2)), b = CInt(words(word + 3))
+            If r < 100 OrElse g1 < 100 OrElse g2 < 100 OrElse b < 100 OrElse Math.Abs(g1 - g2) > 2 Then Return Nothing
+            Return New Single() {r, g1, b, g2}
+        End Function
+
         ''' <summary>Die Worte von ColorData, oder Nothing. Bei einer CR3 aus der CTMD-Spur, bei einer
         ''' CR2 aus dem Herstellerblock der EXIF-Daten.</summary>
         Public Shared Function ReadColorData(path As String) As UShort()

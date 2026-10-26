@@ -1861,7 +1861,7 @@ Namespace Services
                 ' unpack, die Lesezeit faellt von 31 bis 126 ms auf unter eine Millisekunde. Das
                 ' ist der Unterschied zwischen "der Preset-Import holt die Zahl nebenbei" und
                 ' "er braucht dafuer einen Zwischenspeicher".
-                Dim facts = ReadColorFactsFromHandle(handle)
+                Dim facts = ReadColorFactsFromHandle(handle, path)
 
                 ' SICHERHEITSNETZ fuer Formate, die bei der Messung nicht auf dem Tisch lagen
                 ' (RAF, ORF): liefert der schnelle Weg keine brauchbaren Multiplikatoren, wird
@@ -1870,7 +1870,7 @@ Namespace Services
                 Dim unpacked = False
                 If Not HasUsableMultipliers(facts) Then
                     unpacked = _unpack(handle) = 0
-                    If unpacked Then facts = ReadColorFactsFromHandle(handle)
+                    If unpacked Then facts = ReadColorFactsFromHandle(handle, path)
                 End If
 
                 If includeProcessed Then
@@ -1946,9 +1946,11 @@ Namespace Services
         ''' (<see cref="OwnCameraMatrix"/>), kommen Matrix UND Tageslicht-Multiplikatoren von dort:
         ''' LibRaw bildet pre_mul aus derselben fehlenden Matrix und meldet dann 1/1/1. Mit nur
         ''' einem der beiden ersetzt wäre die Farbtemperatur falsch statt fehlend.</summary>
-        Private Shared Function ReadColorFactsFromHandle(handle As IntPtr) As CameraColorFacts
+        Private Shared Function ReadColorFactsFromHandle(handle As IntPtr, path As String) As CameraColorFacts
             Dim own = OwnCameraMatrix(handle)
-            Dim camMul = ReadFourMultipliers(_getCamMul, handle)
+            ' Derselbe Weissabgleich wie im Decode (AsShotMultipliers), sonst passten Kelvin-Zahl
+            ' und Bild bei einer Canon ohne LibRaw-Weissabgleich nicht zueinander.
+            Dim camMul = AsShotMultipliers(handle, path)
             ' Mit zwei Matrizen kommt das Aufnahmeweiss aus derselben Rechnung, mit der der Decode
             ' das Bild entwickelt; sonst passten Kelvin-Zahl und Bild nicht zueinander.
             Dim illuminant = If(IlluminantMatricesEnabled AndAlso AreUsableMultipliers(camMul),
@@ -2160,6 +2162,26 @@ Namespace Services
         '''
         ''' Nur die ersten drei Kanaele zaehlen: der vierte ist das zweite Gruen und ist bei den
         ''' meisten Sensoren 0.</summary>
+        ''' <summary>Der Aufnahme-Weissabgleich: LibRaws cam_mul, und wo LibRaw keinen kennt, bei einer
+        ''' Canon der aus ihrer ColorData (CameraBaselineTable.CanonColorDataWhiteBalance). Die EOS R8
+        ''' Mark II meldet mit LibRaw 0.22.2 nur den Platzhalter 0/1/0; entwickelt wurde sie dann mit
+        ''' Tageslicht und lag an vier Aufnahmen bei 5 bis 7 dE gegen die Referenz. Ohne beides bleibt
+        ''' es bei LibRaws Wert, und der Aufrufer prueft ihn wie bisher.</summary>
+        Private Shared Function AsShotMultipliers(handle As IntPtr, path As String) As Single()
+            Dim camMul = ReadFourMultipliers(_getCamMul, handle)
+            If AreUsableMultipliers(camMul) OrElse String.IsNullOrEmpty(path) Then Return camMul
+            If CameraBaselineTable.CanonColorDataWhiteBalance.Count = 0 OrElse _getIparams Is Nothing Then Return camMul
+            Dim iparams = _getIparams(handle)
+            If iparams = IntPtr.Zero Then Return camMul
+            If Not String.Equals(FixedText(iparams, IparamsNormalizedMakeOffset).Trim(), "Canon", StringComparison.OrdinalIgnoreCase) Then Return camMul
+            Dim words = CanonColorData.ReadColorData(path)
+            If words Is Nothing OrElse words.Length = 0 Then Return camMul
+            Dim word As Integer
+            Dim layoutKey = words(0).ToString(Globalization.CultureInfo.InvariantCulture) & "|" & words.Length.ToString(Globalization.CultureInfo.InvariantCulture)
+            If Not CameraBaselineTable.CanonColorDataWhiteBalance.TryGetValue(layoutKey, word) Then Return camMul
+            Return If(CanonColorData.WhiteBalanceFromWords(words, word), camMul)
+        End Function
+
         Private Shared Function AreUsableMultipliers(values As Single()) As Boolean
             If values Is Nothing OrElse values.Length < 3 Then Return False
             For i = 0 To 2
@@ -3164,7 +3186,7 @@ Namespace Services
                 '
                 ' STEHT VOR DEM LICHTERMODUS, seit der Normierungsfaktor daran haengt: dcraw
                 ' ersetzt pre_mul durch user_mul und bildet erst danach Minimum und Maximum.
-                Dim camMul = ReadFourMultipliers(_getCamMul, handle)
+                Dim camMul = AsShotMultipliers(handle, path)
                 Dim usingCamMul = AreUsableMultipliers(camMul)
                 If usingCamMul Then
                     For i = 0 To 3
