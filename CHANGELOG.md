@@ -141,6 +141,11 @@
 
 ### Fixes
 
+- **Old Canon RAW files no longer come out yellow:** CRW files from cameras such as the
+  PowerShot G3, G5, G6, S50, S70, Pro1 and EOS D30 that were shot with automatic white balance
+  were developed as if in daylight, so pictures taken under indoor light looked deep yellow.
+  FerrumPix now works out the white balance from the picture for them.
+
 - **Gallery tiles update after a batch:** after pasting or applying adjustments to RAW and PSD
   files, the tiles kept showing the old picture without the edited badge until they were reloaded.
   They now update right away.
